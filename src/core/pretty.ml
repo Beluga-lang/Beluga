@@ -1507,12 +1507,12 @@ module Int = struct
             (fmt_ppr_cmp_typ cD lvl) tau
 
     let fmt_ppr_sgn_decl lvl ppf = function
-      | Sgn.Const (c, a) ->
+      | Sgn.Const (_, c, a) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_cid_term c)
             (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
-      | Sgn.Typ (a, k) ->
+      | Sgn.Typ (_, a, k) ->
           fprintf ppf "%s : %a.@.@?"
             (R.render_cid_typ  a)
             (fmt_ppr_lf_kind LF.Null lvl) k

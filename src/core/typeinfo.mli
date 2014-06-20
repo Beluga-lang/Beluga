@@ -43,5 +43,17 @@ module Comp : sig
 	val add : Syntax.Int.Loc.t -> entry -> string -> unit
 	val get : Syntax.Int.Loc.t -> entry
 	val clear : unit -> unit
-	
+end
+
+module Sgn : sig
+	type typ_or_kind = Typ of Syntax.Int.LF.typ | Kind of Syntax.Int.LF.kind
+
+	type entry = {
+		sgn : typ_or_kind
+	}
+
+	val mk_entry : typ_or_kind -> entry
+	val add : Syntax.Int.Loc.t -> entry -> string -> unit
+	val get : Syntax.Int.Loc.t -> entry
+	val clear : unit -> unit
 end

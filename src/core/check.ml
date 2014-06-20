@@ -496,7 +496,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
                        (TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)) in
         let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
-        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
+        (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
           checkBranches (IndexObj (phat, tR)) cD cG branches tau_s (tau, t);
@@ -506,7 +506,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         begin match C.cwhnfCTyp (syn cD cG i) with
           | (TypBox (loc', tA, cPsi),  t') ->
               let tau_s = TypBox (loc', C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
-              Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 2" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
+             (*  Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 2" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
               let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
                                 P.expSynToString cD cG i ^
                                 "\n   has type " ^ P.compTypToString cD tau_s)
@@ -805,17 +805,17 @@ module Sgn = struct
   let rec check_sgn_decls = function
     | [] -> ()
 
-    | Syntax.Int.Sgn.Typ (_a, tK) :: decls ->
+    | Syntax.Int.Sgn.Typ (l, _a, tK):: decls ->
         let cD   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
           LF.checkKind cD cPsi tK;
-          check_sgn_decls decls
+          check_sgn_decls decls;
 
-    | Syntax.Int.Sgn.Const (_c, tA) :: decls ->
+    | Syntax.Int.Sgn.Const (l, _c, tA)  :: decls ->
         let cD   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
           LF.checkTyp cD cPsi (tA, Substitution.LF.id);
-          check_sgn_decls decls
+          check_sgn_decls decls;
 
     | Syntax.Int.Sgn.Schema (_w, schema) :: decls ->
         let cD   = Syntax.Int.LF.Empty in

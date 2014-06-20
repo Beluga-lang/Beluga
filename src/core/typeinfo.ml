@@ -1,9 +1,11 @@
 module Loc = Syntax.Int.Loc
+module P = Pretty.Int.DefaultPrinter
 open Lexing
 
 let generate_annotations = ref false;
 
 module Annot = struct
+  open Syntax.Int
   type entry = {
     typ : string
   }
@@ -66,13 +68,14 @@ module Annot = struct
 end
 
 module LF = struct
+  open Syntax.Int
   type entry = {
-    ctx : Syntax.Int.LF.mctx;
-    psi : Syntax.Int.LF.dctx;
-    tc : Syntax.Int.LF.tclo
+    ctx : LF.mctx;
+    psi : LF.dctx;
+    tc : LF.tclo
   }
 
-  let mk_entry (c : Syntax.Int.LF.mctx) (p : Syntax.Int.LF.dctx) (t : Syntax.Int.LF.tclo) : entry =
+  let mk_entry (c : LF.mctx) (p : LF.dctx) (t : LF.tclo) : entry =
   {
     ctx = c;
     psi = p;
@@ -83,8 +86,8 @@ module LF = struct
   let add (l : Loc.t) (e : entry) (s : string) = 
     if l <> Loc.ghost
       then begin                                      
-        (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ Pretty.Int.DefaultPrinter.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
-        Annot.add l (Annot.mk_entry ((* s ^ " :: " ^ *) Pretty.Int.DefaultPrinter.typToString e.ctx e.psi e.tc));
+        (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ P.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
+        Annot.add l (Annot.mk_entry ((* s ^ " :: " ^ *) P.typToString e.ctx e.psi e.tc));
         Hashtbl.add store l e
       end else ()
 
@@ -94,12 +97,13 @@ module LF = struct
 end
 
 module Comp = struct
+  open Syntax.Int
   type entry = {
-    ctx : Syntax.Int.LF.mctx;
-    tc: Syntax.Int.Comp.tclo;
+    ctx : LF.mctx;
+    tc: Comp.tclo
   }
 
-  let mk_entry (c : Syntax.Int.LF.mctx) (t : Syntax.Int.Comp.tclo) : entry = 
+  let mk_entry (c : LF.mctx) (t : Comp.tclo) : entry = 
   {
     ctx = c;
     tc = t
@@ -109,14 +113,43 @@ module Comp = struct
   let add (l : Loc.t) (e : entry) (s : string) = if l <> Loc.ghost
                                     then   
                                       begin
-                                      (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ Pretty.Int.DefaultPrinter.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
-                                      Annot.add l (Annot.mk_entry ((* s ^ " :: " ^  *)Pretty.Int.DefaultPrinter.subCompTypToString e.ctx e.tc)) ; 
+                                      (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
+                                      Annot.add l (Annot.mk_entry ((* s ^ " :: " ^  *)P.subCompTypToString e.ctx e.tc)) ; 
                                       Hashtbl.add store l e
                                       end
                                     else
                                       ()
   let get           = Hashtbl.find store
   let clear ()      = Hashtbl.clear store
+
+end
+
+module Sgn = struct
+  open Syntax.Int
+  type typ_or_kind = Typ of LF.typ | Kind of LF.kind
+
+  type entry = {
+    sgn : typ_or_kind
+  }
+
+  let mk_entry (decl : typ_or_kind) : entry =
+    {sgn = decl}
+
+  let store = Hashtbl.create 0
+
+  let add : Loc.t -> entry -> string -> unit = 
+    fun l e _ -> if l <> Loc.ghost then begin
+      let s = match e.sgn with
+      | Typ t -> P.typToString LF.Empty LF.Null (t, LF.EmptySub)
+      | Kind k -> P.kindToString LF.Null (k, LF.EmptySub)
+      in
+      Annot.add l (Annot.mk_entry s);
+      Hashtbl.add store l e
+    end
+
+  let get : Loc.t -> entry = Hashtbl.find store
+
+  let clear : unit -> unit = fun () -> Hashtbl.clear store
 
 end
 
@@ -129,11 +162,15 @@ let print_annot (name : string) : unit =
 
 let type_of_position (pos : int) : string =
   let sorted =
+    let cmp l1 l2 = (Loc.start_off l1) - (Loc.start_off l2) in
     let l = Hashtbl.fold (fun k v acc -> (k,v)::acc) Annot.store [] in
-      List.sort (fun (key1,_) (key2,_) -> compare key1 key2) l in
+      List.sort (fun (key1,_) (key2,_) -> cmp key1 key2) l in
+  let f (l, _) = print_string ((string_of_int (Loc.start_off l)) ^ ", " ^ (string_of_int (Loc.stop_off l)) ^ "\n") in
+  let _ = List.iter f sorted in
   let contains_pos (l, _) =
     (Loc.start_off l <= pos) && (pos <= Loc.stop_off l) in(* 
   let _ = print_string (string_of_int (List.length sorted)) in *)
-  try let (_, s) = List.find contains_pos sorted in (s.Annot.typ ^ "\n")
-  with _ -> ("No type information found for point: " ^ (string_of_int pos) ^ "\n")
+  match List.fold_left (fun acc x -> if contains_pos x then (Some x) else acc) None sorted with
+  | Some (_, s) -> (s.Annot.typ ^ "\n")
+  | None -> ("No type information found for point: " ^ (string_of_int pos) ^ "\n")
 

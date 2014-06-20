@@ -1186,7 +1186,7 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = app_or_sub   ->
+  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = app_or_sub; "]"   ->
      begin match (phat_or_psi, tM) with
        | (Dctx cPsi, Term tM)   -> (fun i -> Comp.MApp (_loc, i,
                                                         Comp.MetaObjAnn(_loc, cPsi,  tM)))
@@ -1195,6 +1195,13 @@ isuffix:
        | (Dctx cPsi, Sub s) ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
        | (Hat phat, Sub s)  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
      end
+
+  (*|    "["; phat_or_psi = clf_hat_or_dctx ; turnstile; h = clf_head; ","; t = clf_head; "]" ->
+    let s = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)), LF.Head t) in
+     begin match phat_or_psi with
+       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
+       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
+     end*)
 
   | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
      begin match phat_or_psi with
@@ -1278,12 +1285,15 @@ clf_pattern :
     app_or_sub:
   [
     [
+     h = SYMBOL; ","; t = SYMBOL ->
+            let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
+            Sub su
 (*        (* h = SELF; ",";  *)subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
          let su = List.fold_left (fun acc s -> match s with 
            |LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) (List.rev subs)
        in Sub su *)
-     tM = clf_term_app; "]" -> Term tM
-    | s  = clf_sub_new; "]" -> Sub s
+    | tM = clf_term_app -> Term tM
+    | s  = clf_sub_new -> Sub s
     ]
   ];
 

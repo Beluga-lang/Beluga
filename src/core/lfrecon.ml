@@ -1265,7 +1265,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   FCVar.add p (cD, Int.LF.Decl (p, Int.LF.PTyp (Whnf.normTyp (tB, s_inst), cPhi)));
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
 
-         (*     | (false, Apx.LF.Nil) -> failwith "ERROR" *)
+             | (false, Apx.LF.Nil) -> failwith "ERROR"
 (*                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
@@ -1736,7 +1736,7 @@ and elClosedTerm' recT cD cPsi r = match r with
     		  raise (Error (loc, CompTypAnn))
           end
 
-(*   | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
       let index = Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) index 1
@@ -1784,7 +1784,8 @@ and elClosedTerm' recT cD cPsi r = match r with
           | _  ->
         dprint (fun () -> "[elClosedTerm'] Looking for p " ^ P.headToString cD cPsi' h);
         raise (Error (loc, CompTypAnn))
-        end *)
+        end
+  | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.FPVar(_,_), k ) , spine ) -> failwith "NamedProj case"
   | Apx.LF.Root (loc, _ , _ ) ->
       (dprint (fun () -> "[elClosedTerm'] Head not covered?");
       raise (Error (loc, CompTypAnn )))

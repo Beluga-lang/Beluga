@@ -275,6 +275,68 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                end in
         Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s'), j)
 
+    | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset, s), j) ->
+      let l_delta = lengthApxMCtx delta in
+      let offset' = (offset - l_delta)  in
+      let _ = dprint (fun () -> "[cnormApxTerm] Proj (PVar _ ) . " ^ j.Id.string_of_name ^ " : offset = " ^ string_of_int offset ) in
+      let _ = dprint (fun () -> "[cnormApxTerm] Proj (PVar _ ) . " ^ j.Id.string_of_name ^ " : offset' = " ^ string_of_int offset' ) in
+      let _ = dprint (fun () -> "[cnormApxTerm] l_delta = " ^ string_of_int l_delta ) in
+      let _ = dprint (fun () -> "[cnormApxTerm] t = " ^ P.msubToString cD'' t ^ "\n") in
+      let _ = dprint (fun () -> "[cnormApxTerm] (original) cD = " ^ P.mctxToString cD ^ "\n") in
+        if offset > l_delta then
+          begin match Substitution.LF.applyMSub offset t with
+            | Int.LF.MV offset' ->
+                Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.Offset offset',
+                                         cnormApxSub cD delta s (cD'', t)),
+                            j)
+            | Int.LF.PObj (_phat, h) ->
+                let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done -- resulted in PObj  ") in
+
+                let _ = dprint (fun () -> "[cnormApxTerm] offset' = " ^ string_of_int offset' ^ "\n") in
+                let _ = dprint (fun () -> "[cnormApxTerm] offset = " ^ string_of_int offset ^ "\n") in
+                let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
+                let _ = dprint (fun () -> "[cnormApxTerm] tP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ "\n") in
+                  (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
+                     Given cD'' |- t : cD, l_delta
+                     produce t' s.t. cD'' |- t' : cD   and t',t_delta = t
+                  *)
+                let rec drop t l_delta = match (l_delta, t) with
+                  | (0, t) -> t
+                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
+
+                let t' = drop t l_delta in
+                  Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, Whnf.cnormTyp (tP,t'), Whnf.cnormDCtx (cPhi,t')),
+                                           cnormApxSub cD delta s (cD'', t)),
+                              j)
+
+            | Int.LF.MObj (phat, tM) ->
+                (dprint (fun () -> "[cnormApxTerm] MObj :" ^
+                           P.normalToString cD (Context.hatToDCtx phat) (tM, Substitution.LF.id) ^ "\n") ;
+                 raise (Error.Violation "MObj found -- expected PObj"))
+          end
+        else
+          Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset, cnormApxSub cD delta s (cD'', t)), j)
+
+  | Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) ->
+      let (tA', cPhi')  = (Whnf.cnormTyp (tA, t), Whnf.cnormDCtx (cPhi, t)) in
+      let s' = cnormApxSub cD delta s (cD'', t) in
+      let h' = begin match h with
+               | Int.LF.BVar _ -> h
+               | Int.LF.PVar (Int.LF.Offset q, s1) ->
+                   begin match Substitution.LF.applyMSub q t with
+                     | Int.LF.MV q' ->
+                         let s1' = Whnf.cnormSub (s1, t) in
+                           Int.LF.PVar (Int.LF.Offset q', s1')
+                     | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) ->
+                         let s1' = Whnf.cnormSub (s1, t) in
+                           Int.LF.PVar (p, s1')
+                   end
+               | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+                   Int.LF.PVar (p, Whnf.cnormSub (s1, t))
+
+               end in
+        Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s'), j)
+
   | _ -> h
 
 and cnormApxSub cD delta s (cD'', t) = match s with
@@ -867,6 +929,13 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
           let (offset, _) = Whnf.mctxMVarPos cD p  in
             Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
 
+  | Apx.LF.NamedProj (Apx.LF.FPVar (p,s), j) ->
+      let s' = fmvApxSub fMVs cD d_param  s in
+        if List.mem p fMVs then
+          Apx.LF.NamedProj (Apx.LF.FPVar (p, s'), j)
+        else
+          let (offset, _) = Whnf.mctxMVarPos cD p  in
+            Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
 
   (* bound meta-variables / parameters *)
   | Apx.LF.MVar (Apx.LF.Offset offset, s) ->
@@ -890,6 +959,12 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
         else
           Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset offset, s'), j)
 
+  | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset,s), j) ->
+      let s' = fmvApxSub fMVs cD d_param  s in
+        if offset > (l_delta+k) then
+          Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset (offset + l_cd1), s'), j)
+        else
+          Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset, s'), j)
 
   (* approx. terms may already contain valid LF objects due to
      applying the refinement substitution eagerly to the body of
@@ -968,6 +1043,35 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
                        Int.LF.PVar (p, Whnf.cnormSub (s1, r))
                    end in
         Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)
+
+  | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) ->
+      (* let _ = Printf.printf "fmvApx PVar MInst ?\n" in  *)
+      let s' = fmvApxSub fMVs cD d_param  s in
+      let rec mvar_dot t l_delta = match l_delta with
+        | 0 -> t
+        | l_delta' ->
+            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
+      in
+      (* cD',cD0 ; cPhi |- h => tA   where cD',cD0 = cD
+             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0
+         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
+       *)
+      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
+      let h'     = begin match h with
+                   | Int.LF.BVar _k -> h
+                   | Int.LF.PVar (Int.LF.Offset k ,s1) ->
+                       let s1' =  Whnf.cnormSub (s1, r) in
+                         begin match Substitution.LF.applyMSub k r with
+                           | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
+                               (* other cases are impossible *)
+                         end
+                   (* | Int.LF.PVar (Int.LF.PInst (_, {contents = Some h1} , _cPsi, _tA, _ ), s1) ->
+                       Int.LF.PVar (h1, Whnf.cnormMSub (s1, r)) *)
+
+                   | Int.LF.PVar (Int.LF.PInst (_, {contents = _ }, _cPsi, _tA, _ ) as p ,s1) ->
+                       Int.LF.PVar (p, Whnf.cnormSub (s1, r))
+                   end in
+        Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)
 
   | _ ->  h
 

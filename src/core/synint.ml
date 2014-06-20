@@ -224,21 +224,41 @@ module LF = struct
   (* getIndex traverses the typ_rec from left to right;
      target is the name of the projection we're looking for
 
+    Precondition: acc is 1 when the function is 1st called
      acc is an accumulator set to 1 when the function is called
 
   *)
-  let rec getIndex head s_recA target acc = match s_recA with
-    | (SigmaLast(None, _), s) -> raise Not_found
-    | (SigmaLast(Some name, _), s) ->
+let rec getIndex' trec target acc = match trec with
+  | SigmaLast(None, _) -> raise Not_found
+  | SigmaLast(Some name, _) ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    else raise Not_found
+  | SigmaElem(name, _, trec') ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+  else getIndex' trec' target (acc + 1)
+
+let getIndex head s_recA target acc = 
+  let (trec, _) = s_recA in getIndex' trec target acc
+  (* match s_recA with
+    | (SigmaLast(None, _), _) -> raise Not_found
+    | (SigmaLast(Some name, _),_) ->
       if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
       else raise Not_found
 
     | (SigmaElem (name, _tA, recA), s) -> 
       if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
       else let tPj = Proj (head, acc) in
-      getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1)
+      getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1) *)
         
 
+  let rec getIndex' trec target acc = match trec with
+  | SigmaLast(None, _) -> raise Not_found
+  | SigmaLast(Some name, _) ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    else raise Not_found
+  | SigmaElem(name, _, trec') ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+  else getIndex' trec' target (acc + 1)
 
 end
 

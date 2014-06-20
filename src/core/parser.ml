@@ -232,8 +232,8 @@ GLOBAL: sgn;
   rArr:  [[ "=>" -> ()
          | "⇒" -> () ]];  (* Unicode double right arrow (HTML &rArr;) *)
 
-  dots: [[ "."; "." -> ()
-         | "…" -> () ]];  (* Unicode ellipsis (HTML &hellip;) *)
+(*   dots: [[ "."; "." -> ()
+         | "…" -> () ]];  (* Unicode ellipsis (HTML &hellip;) *) *)
 
   gLambda: [[ "FN" -> ()
          | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
@@ -802,38 +802,35 @@ GLOBAL: sgn;
 
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
-
-      |
-        "#"; p = SYMBOL;  sigmaOpt = OPT [ sigma = clf_sub_new -> sigma] ->
-          begin match sigmaOpt with
-            | None -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
-            | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
-
-          end
-
-      (*|
+      | 
         "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
-          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))*)
+          LF.NamedProjPVar(_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))
+      |
+        "#"; p = SYMBOL;  sigma = clf_sub_new ->
+           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
 
-(*      |  "#"; p = SYMBOL ->
-           LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
-*)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
 
+      |  
+          "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
+          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))
       |
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
-
-      (*|  
-          "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
-          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))*)
       |
         x = SYMBOL; "."; k = INTLIT ->
           LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
       |
         x = SYMBOL; "."; k = SYMBOL ->
           LF.NamedProjName (_loc, Id.mk_name (Id.SomeString k), Id.mk_name (Id.SomeString x))
+      
+      |
+        "#"; p = SYMBOL; "."; k = SYMBOL ->
+          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+      |
+        "#"; p = SYMBOL ->
+            LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
@@ -860,7 +857,7 @@ GLOBAL: sgn;
           "^" ->
           LF.EmptySub (_loc )
 
-      |    dots  ->
+      |    DOTS  ->
           LF.Id (_loc)
 
       |
@@ -1189,7 +1186,7 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = app_or_sub; "]"   ->
+  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = app_or_sub   ->
      begin match (phat_or_psi, tM) with
        | (Dctx cPsi, Term tM)   -> (fun i -> Comp.MApp (_loc, i,
                                                         Comp.MetaObjAnn(_loc, cPsi,  tM)))
@@ -1281,12 +1278,12 @@ clf_pattern :
     app_or_sub:
   [
     [
-       h = SELF; ","; subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
+(*        (* h = SELF; ",";  *)subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
          let su = List.fold_left (fun acc s -> match s with 
            |LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) (List.rev subs)
-       in Sub su
-    |  tM = clf_term_app -> Term tM
-    | s  = clf_sub_new -> Sub s
+       in Sub su *)
+     tM = clf_term_app; "]" -> Term tM
+    | s  = clf_sub_new; "]" -> Sub s
     ]
   ];
 

@@ -31,7 +31,7 @@ schema eqCtx = block x:exp, _t:eq x x;
 rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U ..) (U ..)] =
  mlam g => mlam U =>
    case [g |- U ..] of
-  | [g |- #p.1 ..] => [g |- #p.2 ..]
+  | [g |- #p.x ..] => [g |- #p._t ..]
 
   | [g |- lam \x. L .. x] =>
       let

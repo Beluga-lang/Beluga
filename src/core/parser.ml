@@ -374,9 +374,11 @@ GLOBAL: sgn;
         decls = LIST1 sgn_decl; "end" ; ";"  ->
         let decls = List.map (fun [x] -> x) decls in
         [Sgn.Module(_loc, Id.mk_name(Id.SomeString n), Some(Sgn.Sig t), decls)]
-
-      | "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
+      | 
+        "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
         [Sgn.Signature(_loc, Id.mk_name(Id.SomeString n), decls)]
+      | 
+        "#open"; n = SYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))]
       ]
     ]
   ;
@@ -408,6 +410,17 @@ GLOBAL: sgn;
       |
         "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
           Sgn.CompTypAbbrevSig (_loc, Id.mk_name (Id.SomeString a), k, tau)
+
+      |
+        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
+           begin match k_or_a with
+             | Kind k -> Sgn.TypSig   (_loc, Id.mk_name (Id.SomeString a_or_c), k)
+             | Typ  a -> Sgn.ConstSig (_loc, Id.mk_name (Id.SomeString a_or_c), a)
+           end
+      | 
+        "rec"; x = SYMBOL; ":"; tA = cmp_typ ; ";" ->
+          Sgn.RecSig(_loc, Id.mk_name (Id.SomeString x), tA)
+
 
       ]
     ]

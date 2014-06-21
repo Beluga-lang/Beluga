@@ -500,3 +500,12 @@ and recSgnDecl d =
           end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
+
+    | Ext.Sgn.Module(loc, name, sig_opt, decls) -> 
+      ()
+
+    | Ext.Sgn.Signature(loc, name, sigs) ->
+      ()
+
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
+      ()

@@ -191,6 +191,7 @@ let lex_token loc = lexer
   | "#opts"
   | "%not"
   | "%query"
+  | "#open"
   | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 

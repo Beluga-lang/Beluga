@@ -705,6 +705,9 @@ and collectApxHead fMVs h = match h with
   | Apx.LF.Proj(Apx.LF.FPVar (p, s), _k) ->
       collectApxSub (p::fMVs) s
 
+  | Apx.LF.NamedProj(Apx.LF.FPVar (p, s), _k) ->
+      collectApxSub (p::fMVs) s
+
   | _ -> fMVs
 
 and collectApxSub fMVs s = match s with

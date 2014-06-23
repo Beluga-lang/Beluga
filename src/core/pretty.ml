@@ -426,7 +426,7 @@ module Int = struct
         | LF.Shift (LF.NegCtxShift _, _) when hasCtxVar  -> fprintf ppf ".."    (* ??? *)
         | LF.Shift (LF.NegCtxShift _, _) when not hasCtxVar  ->    ()    (* ??? *)
         | LF.FSVar (s_name, (_, n), s) ->
-          fprintf ppf "$ FSV %s^%d[%a]"
+          fprintf ppf "|- FSV %s^%d[%a]"
             (R.render_name s_name )
             n
             (fmt_ppr_lf_sub cD cPsi lvl) s
@@ -1045,14 +1045,14 @@ module Int = struct
       | Comp.MetaSObj (_, phat, s) ->
           let cond = lvl > 1 in
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a |- $ %a]%s"
+            fprintf ppf "%s[%a |- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) s
               (r_paren_if cond)
       | Comp.MetaSObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a$ %a]%s"
+            fprintf ppf "%s[%a |- %a]%s"
               (l_paren_if cond)
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) tM

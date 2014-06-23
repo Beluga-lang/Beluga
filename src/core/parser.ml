@@ -1186,7 +1186,7 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = app_or_sub; "]"   ->
+  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = term_or_sub; "]"   ->
      begin match (phat_or_psi, tM) with
        | (Dctx cPsi, Term tM)   -> (fun i -> Comp.MApp (_loc, i,
                                                         Comp.MetaObjAnn(_loc, cPsi,  tM)))
@@ -1277,11 +1277,14 @@ clf_pattern :
   term_or_sub:
   [
     [
-      tM = clf_term_app -> Term tM
+     h = SYMBOL; ","; t = SYMBOL ->
+            let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
+            Sub su
+    | tM = clf_term_app -> Term tM
     | s  = clf_sub_new -> Sub s
     ]
   ];
-
+(*
     app_or_sub:
   [
     [
@@ -1295,7 +1298,7 @@ clf_pattern :
     | tM = clf_term_app -> Term tM
     | s  = clf_sub_new -> Sub s
     ]
-  ];
+  ];*)
 
   cmp_branch_pattern:
     [

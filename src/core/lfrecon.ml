@@ -479,23 +479,40 @@ let rec isProjPatSub s = match s with
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar _k,_j)), s) ->
      isProjPatSub s
 
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.NamedProj(Apx.LF.BVar _k,_j)), s) ->
+     isProjPatSub s
+
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
   | Apx.LF.SVar _ -> false
   | Apx.LF.FSVar _ -> false
 
-let rec flattenProjPat s conv_list = match s with
+let rec flattenProjPat s conv_list cPsi = match s with
   | Apx.LF.Id cpsi -> Apx.LF.Id cpsi
   | Apx.LF.EmptySub -> Apx.LF.EmptySub
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
-      let s' = flattenProjPat s conv_list in
+      let s' = flattenProjPat s conv_list cPsi in
         Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar (ConvSigma.new_index k conv_list )), s')
 
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, j)), s) ->
-      let s' = flattenProjPat s conv_list in
+      let s' = flattenProjPat s conv_list cPsi in
       let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
       let k' = (ConvSigma.new_index k conv_list) - j + 1  in
+        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')  
+
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.NamedProj(Apx.LF.BVar k, j)), s) ->
+      let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
+        begin try Context.ctxSigmaDec cPsi k with
+          _ -> raise Not_found
+        end in
+      let indk = begin try Int.LF.getIndex (Int.LF.BVar k) (recA, Substitution.LF.id) j 1
+                     with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
+      end
+       in
+      let s' = flattenProjPat s conv_list cPsi in
+      let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ j.string_of_name ^ "\n") in
+      let k' = (ConvSigma.new_index k conv_list) - indk + 1  in
         Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')
 
  (* these are the only cases which can happen *)
@@ -1024,7 +1041,7 @@ and elTerm' recT cD cPsi r sP = match r with
              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n") in
              let _ = dprint (fun () -> "conv_list " ^ conv_listToString conv_list ) in
-             let flat_s = flattenProjPat s conv_list in
+             let flat_s = flattenProjPat s conv_list cPsi in
              let _ = dprint (fun () -> "flattenProjPat done " ) in
 
              let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in

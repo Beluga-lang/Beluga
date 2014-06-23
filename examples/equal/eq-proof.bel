@@ -31,11 +31,11 @@ schema eqCtx = block x:exp, _t:eq x x;
 rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U ..) (U ..)] =
  mlam g => mlam U =>
    case [g |- U ..] of
-  | [g |- #p.x ..] => [g |- #p._t ..]
+  | [g |- #p.1 ..] => [g |- #p.2 ..]
 
   | [g |- lam \x. L .. x] =>
       let
-          [g,e:block yyy:exp, _t:eq yyy yyy |-  V .. e] = ref [g, e:block q:exp, _t:eq q q] [g, e |-  L .. e.q]
+          [g,e:block yyy:exp, _t:eq yyy yyy |-  V .. e] = ref [g, e:block q:exp, _t:eq q q] [g, e |-  L .. e.1]
       in
         [g |- eq_lam \x. \w. (V .. <x, w>)]  % : eq (L .. x) (L .. x)
 
@@ -58,14 +58,14 @@ rec trans: {g:eqCtx}
       case e1 of
 
 |{#p : [g |- block yy:exp, _t:eq yy yy]}
-       [g |- #p._t ..] => e2
+       [g |- #p.2 ..] => e2
 
 | [g |- eq_lam \x.\u. D1 .. x u] =>
    let [g |- eq_lam \xx.\uu. D2 .. xx uu] =  e2  in
    let [g, b:block x:exp, _t:eq x x |-  E .. b] =
      trans [g, b:block x':exp, _t:eq x' x']
-         [g, b |-  D1 .. b.x' b._t]
-         [g, b |-  D2 .. b.x' b._t]
+         [g, b |-  D1 .. b.1 b.2]
+         [g, b |-  D2 .. b.1 b.2]
     in
       [g |- eq_lam \x. \u. E .. <x, u>]
 

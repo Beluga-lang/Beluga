@@ -1,3 +1,4 @@
+#opts +strengthen;
 % Definition of types and expressions
 tp: type.  %name tp T.
 arr: tp -> tp -> tp.
@@ -64,21 +65,21 @@ mlam g => mlam E => fn d => fn f => case [g |- E .. ] of
   let [g |- t_lam (\x.(\u. D .. x u))] = d in
   let [g |- t_lam (\x.(\u. F .. x u))] = f in
   let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1]
-                      [g,b |- (E .. b.x) ] [g,b |- D .. b.x b._t] [g,b |- F .. b.x b._t] in
+                      [g,b |- (E .. b.1) ] [g,b |- D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
  let [ |- C1] = refl [ |- T1 ] in
    [ |- e_arr C1 C2]
 
-| [g |- #p.x ..] =>
+| [g |- #p.1 ..] =>
    % #p: l          block a:exp. type_of a R
    % d : (type_of (#p.1 ..) T)[g]
    % f : (type_of (#p.1 ..) T')[g]
 
-  let [g |- #q._t ..] = d  in  % d : type_of #p.1 T
+  let [g |- #q.2 ..] = d  in  % d : type_of #p.1 T
    % #q : block y:exp. type_of y S
    % #q.2 : type_of (#q.1 ..) S  = d : type_of (#p.1 ..) T
    %  S = T  #q = #p, S = R
 
-  let [g |- #r._t ..] = f  in  % f : type_of #p.1 T'
+  let [g |- #r.2 ..] = f  in  % f : type_of #p.1 T'
    % #r : block y:exp. type_of y S'
    % #r.2 : type_of (#r.1 ..) S'  = f : type_of (#p.1 ..) T'
    % S' = T' ,  #r=#p  , R = S'
@@ -106,12 +107,12 @@ mlam g => mlam E => fn d => fn f => case [g |- E .. ] of
   let [g |- t_lam (\x.(\u. D .. x u))] = d in
   let [g |- t_lam (\x.(\u. F .. x u))] = f in
   let [ |- e_ref] = unique2 [g,b: block x:exp, _t:type_of x T1]
-                      [g,b |- (E .. b.x) ] [g,b |- D .. b.x b._t] [g,b |- F .. b.x b._t] in
+                      [g,b |- (E .. b.1) ] [g,b |- D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
    [ |- e_ref]
 
-| [g |- #p.x ..] =>
-  let [g |- #q._t ..] = d  in  % d : type_of #p.1 T
-  let [g |- #r._t ..] = f  in  % f : type_of #p.1 T'
+| [g |- #p.1 ..] =>
+  let [g |- #q.2 ..] = d  in  % d : type_of #p.1 T
+  let [g |- #r.2 ..] = f  in  % f : type_of #p.1 T'
     [ |- e_ref]
 
 ;
@@ -130,10 +131,10 @@ fn d => fn f => case d of
 
 | [g |- t_lam (\x.\u. D .. x u)] =>
   let [g |- t_lam (\x.\u. F .. x u)] = f in
-  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D .. b.x b._t] [g,b |- F .. b.x b._t] in
+  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
    [ |- e_ref]
 
-| [g |- #q._t ..] =>           % d : type_of #q.1 T
-  let [g |- #r._t ..] = f  in  % f : type_of #q.1 T'
+| [g |- #q.2 ..] =>           % d : type_of #q.1 T
+  let [g |- #r.2 ..] = f  in  % f : type_of #q.1 T'
     [ |- e_ref]
 ;

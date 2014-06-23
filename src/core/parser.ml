@@ -828,6 +828,10 @@ GLOBAL: sgn;
       |
         "#"; p = SYMBOL; "."; k = SYMBOL ->
           LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+
+      |
+        "#"; p = SYMBOL; "."; k = UPSYMBOL ->
+          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
       |
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)

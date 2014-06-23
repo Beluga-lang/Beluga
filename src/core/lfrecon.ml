@@ -36,6 +36,7 @@ type error =
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
   | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
+  | ProjNotFound of Int.LF.mctx * Int.LF.dctx * name * Int.LF.tclo
   | HolesFunction
   | ParamFun
   | CtxVarSchema of Id.name
@@ -97,6 +98,12 @@ let _ = Error.register_printer
             Format.fprintf ppf
               "Cannot get the %s. projection from type %a."
               (string_of_int k)
+              (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+
+        | ProjNotFound (cD, cPsi, k, sA) ->
+            Format.fprintf ppf
+              "Cannot find the %s. projection from type %a."
+              (k.string_of_name)
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
@@ -507,7 +514,8 @@ let rec flattenProjPat s conv_list cPsi = match s with
           _ -> raise Not_found
         end in
       let indk = begin try Int.LF.getIndex (Int.LF.BVar k) (recA, Substitution.LF.id) j 1
-                     with _ -> dprint (fun () -> "Cannot find projection."); raise Not_found
+                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
       end
        in
       let s' = flattenProjPat s conv_list cPsi in
@@ -1275,7 +1283,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let s'' = elSub loc recT cD cPsi s cPhi in
           let indk =  begin try
                          Int.LF.getIndex  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1
-                    with _ -> raise (Error (loc, ProjNotValid (cD, cPhi, 0,
+                    with _ -> raise (Error (loc, ProjNotFound (cD, cPhi, k,
                                                          (tA, Substitution.LF.id))))
                     end
               in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), indk), spine)) sP
@@ -1519,7 +1527,8 @@ and elTerm' recT cD cPsi r sP = match r with
           _ -> raise Not_found
         end in
       let indk       = begin try Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
-                     with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
+                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
                      end
        in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , indk),  spine)) sP
 
@@ -1530,7 +1539,8 @@ and elTerm' recT cD cPsi r sP = match r with
           let t' = elSub loc recT cD  cPsi t cPsi' in
           let indk = begin try
                       Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1
-                   with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
+                   with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
                     end
           in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), indk),  spine)) sP
     end
@@ -1549,7 +1559,8 @@ and elTerm' recT cD cPsi r sP = match r with
         let s''       = elSub loc recT cD cPsi s' cPhi in
         let indk        = begin try
                            Int.LF.getIndex h (recA, s'') k 1
-                        with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
+                        with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
+                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
                         end
         in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), indk), spine)) sP
        with _ -> raise Not_found
@@ -1785,7 +1796,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
       let index = Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) index 1
-                     with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, index,
+                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
                      end
        in
@@ -1798,7 +1809,7 @@ and elClosedTerm' recT cD cPsi r = match r with
             let t' = elSub loc recT cD  cPsi t cPsi' in
             let index = Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in
             let  sA = begin try Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') index 1
-                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, index,
+                      with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                       end
             in

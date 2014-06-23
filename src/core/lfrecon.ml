@@ -507,7 +507,7 @@ let rec flattenProjPat s conv_list cPsi = match s with
           _ -> raise Not_found
         end in
       let indk = begin try Int.LF.getIndex (Int.LF.BVar k) (recA, Substitution.LF.id) j 1
-                     with _ -> dprint (fun () -> "[elTerm] Violation: Cannot find projection."); raise Not_found
+                     with _ -> dprint (fun () -> "Cannot find projection."); raise Not_found
       end
        in
       let s' = flattenProjPat s conv_list cPsi in

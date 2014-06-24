@@ -1068,17 +1068,28 @@ GLOBAL: sgn;
     ]
   ]
   ;
+  
+  fn_exp:
+  [
+    [ 
+      f = SYMBOL -> f
+    ]
+  ]
+  ;
 
   cmp_exp_chkX:
     [ LEFTA
-      [  "fn"; f = SYMBOL; rArr; e = cmp_exp_chk ->
+      [  (*"fn"; f = SYMBOL; rArr; e = cmp_exp_chk ->
            Comp.Fun (_loc, Id.mk_name (Id.SomeString f), e)
+
+      |*)  "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
+        List.fold_left (fun acc f -> Comp.Fun (_loc, (Id.mk_name (Id.SomeString f)), acc)) e (List.rev fs)
 
       | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
 
       | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
-        List.fold_left (fun acc (s, t) -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s), t), acc)) e args
+        List.fold_left (fun acc (s, t) -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s), t), acc)) e (List.rev args)
 
 
     (*   | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
@@ -1091,10 +1102,7 @@ GLOBAL: sgn;
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.SObj), e)
 
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
-
-      | "mlam"; args = LIST1 [ x = SYMBOL -> x ] SEP ","; rArr; e = cmp_exp_chk -> 
-          List.fold_left (fun acc p -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString p)), Comp.PObj), acc)) e args *)
+          Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e) *)
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)

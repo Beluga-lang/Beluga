@@ -847,17 +847,9 @@ GLOBAL: sgn;
     ]
   ;
 
-  clf_sub_new:
+  clf_sub_term:
     [
-      [
-        h = SELF; ","; subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
-         List.fold_left (fun acc s -> match s with 
-           | LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) (List.rev subs)
-
-      ]
-    |
-      "atomic"
-      [ 
+     [
           "^" ->
           LF.EmptySub (_loc )
 
@@ -867,6 +859,14 @@ GLOBAL: sgn;
       |
          "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+     ]
+    ]
+;
+
+  clf_sub_new:
+    [
+      [ 
+          s = clf_sub_term -> s
 
       |
         sigma = SELF;  h = clf_head ->
@@ -874,6 +874,14 @@ GLOBAL: sgn;
 
       |
         sigma = SELF; tM = clf_normal ->
+          LF.Dot (_loc, sigma, LF.Normal tM)
+
+      |      
+        sigma = clf_sub_term; ","; h = clf_head ->
+          LF.Dot (_loc, sigma, LF.Head h)
+
+      |      
+        sigma = clf_sub_term; ","; tM = clf_normal ->
           LF.Dot (_loc, sigma, LF.Normal tM)
 
       |

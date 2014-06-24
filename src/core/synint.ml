@@ -249,16 +249,6 @@ let getIndex head s_recA target acc =
       if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
       else let tPj = Proj (head, acc) in
       getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1) *)
-        
-
-  let rec getIndex' trec target acc = match trec with
-  | SigmaLast(None, _) -> raise Not_found
-  | SigmaLast(Some name, _) ->
-    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
-    else failwith "Projection Not found"
-  | SigmaElem(name, _, trec') ->
-    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
-  else getIndex' trec' target (acc + 1)
 
 end
 

@@ -1054,6 +1054,21 @@ GLOBAL: sgn;
     ]];
 
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
+
+  mlam_exp:
+  [
+    [
+      f = SYMBOL -> (f, Comp.CObj)
+    |
+      f = UPSYMBOL -> (f, Comp.MObj)
+    |
+      "#"; f = SYMBOL -> (f, Comp.PObj)
+    |
+      "#"; f = UPSYMBOL -> (f, Comp.SObj)
+    ]
+  ]
+  ;
+
   cmp_exp_chkX:
     [ LEFTA
       [  "fn"; f = SYMBOL; rArr; e = cmp_exp_chk ->
@@ -1062,7 +1077,11 @@ GLOBAL: sgn;
       | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
 
-      | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
+      | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
+        List.fold_left (fun acc (s, t) -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s), t), acc)) e args
+
+
+    (*   | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
 
       | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
@@ -1074,8 +1093,8 @@ GLOBAL: sgn;
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
 
-      | "mlam"; args = LIST1 SYMBOL SEP ","; rArr; e = cmp_exp_chk -> 
-          List.fold_left (fun acc p -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString p)), Comp.PObj), acc)) e args
+      | "mlam"; args = LIST1 [ x = SYMBOL -> x ] SEP ","; rArr; e = cmp_exp_chk -> 
+          List.fold_left (fun acc p -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString p)), Comp.PObj), acc)) e args *)
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)

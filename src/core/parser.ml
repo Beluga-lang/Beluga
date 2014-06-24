@@ -1074,6 +1074,9 @@ GLOBAL: sgn;
       | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
           Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e)
 
+      | "mlam"; args = LIST1 SYMBOL SEP ","; rArr; e = cmp_exp_chk -> 
+          List.fold_left (fun acc p -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString p)), Comp.PObj), acc)) e args
+
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
 

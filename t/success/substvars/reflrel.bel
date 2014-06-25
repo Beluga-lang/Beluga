@@ -13,7 +13,7 @@ schema xaG = block x:tm, u:aeq x x;
 datatype Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa   : Ctx_xaR [phi] [psi] [psi |- #S[..] ]
-           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] b.1 ]
+           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..], b.1 ]
 ;
 
 
@@ -56,12 +56,12 @@ mlam phi => mlam M => fn cr => case [phi  |-  M ..] of
 % explicitly.
 
 datatype Eq : {phi:xG}{psi:xaG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
-| Eq_v: Eq [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1 ]
+| Eq_v: Eq [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..], b.1 ]
          [phi, x:tm  |-  x]
          [psi, b:block (x:tm, u:aeq x x)  |-  b.1 ]
 
 | Eq_p : Eq [phi] [psi] [psi |- #S[..] ] [phi |-  #p ..][psi |-  #q.1 ..]
-   -> Eq [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] b.1 ]
+   -> Eq [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..], b.1 ]
                 [phi, x:tm  |-  #p ..] [psi, b:block (x:tm, u:aeq x x)  |-  #q.1 .. ]
 
 | Eq_a:
@@ -70,7 +70,7 @@ datatype Eq : {phi:xG}{psi:xaG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ct
     Eq [phi] [psi] [psi |- #S[..] ] [phi |-  app (M ..) (N ..)] [psi |-  app (M' ..) (N' ..)]
 
 | Eq_l :
-    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1]
+    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..], b.1]
        [phi,x:tm |-  M .. x] [psi, b:block (x:tm, u:aeq x  x) |-  M' .. b.1]
     -> Eq [phi] [psi] [psi |- #S[..] ]
          [phi  |-  lam \x. M .. x] [psi  |-  lam \x. M' .. x]
@@ -188,7 +188,7 @@ schema daG =  block x: tm, ae_v:aeq x x, de_v:deq x x ;
 datatype Ctx_xdR : {phi:xG} {psi: xdG} {#S: psi |- phi} ctype =
 | Nil_xd : Ctx_xdR [] [] [ |- ^ ]
 | Cons_xd   : Ctx_xdR [phi] [psi] [psi |- #S[..] ]
-           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..] b.1 ]
+           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..], b.1 ]
 ;
 
 datatype Ctx_adR : {phi:xaG} {psi: xdG} ctype =
@@ -205,12 +205,12 @@ datatype Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 % and some of these relations would go away.
 
 datatype Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
-| Eq'_v: Eq' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..] b.1 ]
+| Eq'_v: Eq' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..], b.1 ]
          [phi, x:tm  |-  x]
          [psi, b:block (x:tm, u:deq x x)  |-  b.1 ]
 
 | Eq'_p : Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  #p ..][psi |-  #q.1 ..]
-   -> Eq' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..] b.1 ]
+   -> Eq' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..], b.1 ]
                 [phi, x:tm  |-  #p ..] [psi, b:block (x:tm, u:deq x x)  |-  #q.1 .. ]
 
 | Eq'_a:
@@ -220,7 +220,7 @@ datatype Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> c
     ..)]
 
 | Eq'_l :
-    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..] b.1]
+    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..], b.1]
        [phi,x:tm |-  M .. x] [psi, b:block (x:tm, u:deq x  x) |-  M' .. b.1]
     -> Eq' [phi] [psi] [psi |- #S[..] ]
          [phi  |-  lam \x. M .. x] [psi  |-  lam \x. M' .. x]

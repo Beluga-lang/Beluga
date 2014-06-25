@@ -154,6 +154,7 @@ let rec index_kind cvars bvars fvars = function
 
 and index_typ cvars bvars fvars = function
   | Ext.LF.Atom (loc, a, s) ->
+    let _ = dprint (fun () -> g 0 s) in
     begin
       try
         let a' = Typ.index_of_name a in
@@ -180,10 +181,27 @@ and index_typ cvars bvars fvars = function
       let (typRec', fvars') = index_typ_rec cvars bvars fvars typRec in
       (Apx.LF.Sigma typRec' , fvars')
 
+and spaces i = if i <= 0 then "" else " " ^ (spaces (i-1))
+
+
+and g i a = begin match a with
+  | Ext.LF.Nil -> ""
+  | Ext.LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+
+and f i = function
+  | Ext.LF.Lam(_,_,n) -> (spaces i) ^ "Lam\n" ^ (f (i+1) n)
+  | Ext.LF.Root(_,Ext.LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
+  | Ext.LF.Tuple(_,_) -> "Tuple"
+  | Ext.LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
+
+
 and index_typ_rec cvars bvars fvars = function
-  | Ext.LF.SigmaLast a ->
+  | Ext.LF.SigmaLast(n, a) ->
       let (last, fvars') = index_typ cvars bvars fvars a in
-        (Apx.LF.SigmaLast last , fvars')
+        (Apx.LF.SigmaLast (n,last) , fvars')
   | Ext.LF.SigmaElem (x, a, rest) ->
       let (a', fvars1)    = index_typ cvars bvars fvars a in
       let bvars'          = BVar.extend bvars (BVar.mk_entry x) in
@@ -236,6 +254,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
       let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
         (Apx.LF.Proj(bvar, k), fvs')
 
+  | Ext.LF.NamedProjName (loc, k, n) ->
+      let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
+        (Apx.LF.NamedProj(bvar, k), fvs')
+
   | Ext.LF.PVar (loc, p, s) ->
       if lookup_fv fvars (FPV p) then
         let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
@@ -261,6 +283,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.ProjPVar (loc, k, (p, s)) ->
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
         (Apx.LF.Proj (pvar, k), fvs')
+
+  | Ext.LF.NamedProjPVar (loc, k, (p, s)) ->
+      let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
+        (Apx.LF.NamedProj (pvar, k), fvs')
 
 
   | Ext.LF.Hole _loc ->
@@ -478,9 +504,9 @@ let rec index_mctx cvars fvars = function
  * We need to change the datatype for typ_rec to be typ_decl ctx
  *)
 let rec index_typrec cvars bvars fvars = function
-  | Ext.LF.SigmaLast last_a ->
+  | Ext.LF.SigmaLast (n, last_a) ->
       let (last, fvars') = index_typ cvars bvars fvars last_a in
-      (Apx.LF.SigmaLast last, fvars')
+      (Apx.LF.SigmaLast(n, last), fvars')
 
   | Ext.LF.SigmaElem (x, a, arec) ->
       let (a', fvars') = index_typ cvars bvars fvars a in

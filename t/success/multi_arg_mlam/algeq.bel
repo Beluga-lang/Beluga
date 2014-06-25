@@ -80,7 +80,7 @@ datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctyp
 % Half a dozen straightforward constructions on renaming substitutions:
 rec wknVar : Lookup [g] [g' |-  M ..] [ |- A] -> IsVarSub [g] [g'] [h] [h' |- #W[..]]
  -> Lookup [h] [h' |-  M #W[..]] [ |- A]=
-fn iv => fn ivs => case iv of
+fn iv, ivs => case iv of
 | Top =>    let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
 
@@ -88,7 +88,7 @@ fn iv => fn ivs => case iv of
 rec renCompose : IsVarSub [g] [g'] [h] [h' |- #W[..]]
                    -> IsVarSub [h] [h'] [h0] [h0' |- #W2[..]]
                    -> IsVarSub [g] [g'] [h0] [h0' |- #W[#W2[..]]] =
-fn r1 => fn r2 => case r1 of
+fn r1, r2 => case r1 of
 | Nil => Nil
 | Cons ivs' iv => Cons (renCompose ivs' r2) (wknVar iv r2);
 
@@ -143,7 +143,7 @@ fn iv => let iv : IsVarSub [g] [g'] [h] [h' |- #W[..]] = iv in fn e => case e of
 | LogBase v => LogBase (algEqN_Monotone iv v)
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
   LogArr [h' |-  M1 #W[..]] [h' |-  M2 #W[..]]
-   (mlam h0 => mlam h0' => mlam #W2 => mlam N1 => mlam N2 => fn rh => fn iv' => fn rn =>
+   (mlam h0, h0', #W2, N1, N2 => fn rh, iv', rn =>
     f [h0] [h0'] [h0' |- #W[#W2[..]]] [h0' |-  N1 ..] [h0' |-  N2 ..] rh (renCompose iv iv') rn
    )
 ;
@@ -154,11 +154,11 @@ mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r i
 | [ |- i] => LogBase (AlgBase [g' |-  refl] [g' |-  refl] r)
 | [ |- arr A B] =>
   LogArr [g' |-  M1 ..] [g' |-  M2 ..]
-   (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+   (mlam h, h', #W, N1, N2 => fn rh, iv, rn =>
     reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
 and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
-fn r => fn e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
+fn r, e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
 | LogBase a => a
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
   AlgArr (reify (RCons r) (f [g,b:block x:tm,y:oft x _] [g',x:tm] [g',x |- ..] [g',x |-  x] [g',x |-  x]
@@ -198,14 +198,14 @@ rec wknLogEqSub :
   IsVarSub [h] [h'] [h0] [h0' |- #W[..]]
 -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
 -> LogEqSub [g] [g'] [h0] [h0' |- #S1[#W[..]]] [h0' |- #S2[#W[..]]] =
-fn iv => fn es => case es of
+fn iv, es => case es of
 | Nil => Nil
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
 ;
 
 % Transitivity of mstep
 rec mstep_trans : (g':ctx) [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (N ..) (P ..)] -> [g' |-  mstep (M ..) (P ..)] =
-fn s1 => fn s2 => case s1 of
+fn s1, s2 => case s1 of
 | [g' |-  refl] => let [g' |-  S2 ..] = s2 in [g' |-  S2 ..]
 | [g' |-  trans1 (S1 ..) (MS1 ..)] => let [g' |-  MSR ..] = mstep_trans [g' |-  MS1 ..] s2 in
   [g' |-  trans1 (S1 ..) (MSR ..)]
@@ -213,7 +213,7 @@ fn s1 => fn s2 => case s1 of
 
 % Boxed form of trans1 for convenience
 rec trans1' : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  mstep (N ..) (P ..)] -> [g' |-  mstep (M ..) (P ..)] =
-fn s1 => fn s2 => case (s1,s2) of
+fn s1, s2 => case (s1,s2) of
 | ([g' |-  S ..], [g' |-  MS ..]) => [g' |-  trans1 (S ..) (MS ..)]
 ;
 
@@ -227,13 +227,13 @@ fn s1 => case s1 of
 rec closed : [g' |-  mstep (N1 ..) (M1 ..)] -> [g' |-  mstep (N2 ..) (M2 ..)]
   -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
   -> LogEq [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T] =
-fn s1 => fn s2 => fn e => case e of
+fn s1, s2, e => case e of
 | LogBase (AlgBase [g' |-  S1' ..] [g' |-  S2' ..] a) =>
   LogBase (AlgBase (mstep_trans s1 [g' |-  S1' ..]) (mstep_trans s2 [g' |-  S2' ..]) a)
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
   let [g' |-  S1 ..] = s1 in
   let [g' |-  S2 ..] = s2 in
-  LogArr [g' |-  _] [g' |-  _] (mlam h => mlam h' => mlam #W => mlam P1 => mlam P2 => fn rh => fn iv => fn rp =>
+  LogArr [g' |-  _] [g' |-  _] (mlam h, h', #W, P1, P2 => fn rh, iv, rp =>
    let q0 = f [h] [h'] [h' |- #W[..]] [h' |-  P1 ..] [h' |-  P2 ..] rh iv rp in
    closed (mstep_app [h' |-  S1 #W[..]] ) (mstep_app [h' |-  S2 #W[..]]) q0
   );
@@ -242,7 +242,7 @@ fn s1 => fn s2 => fn e => case e of
 rec lookup : Lookup [g] [g' |-  M1 ..] [ |- T]
  -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
  -> LogEq [h] [h' |-  M1 #S1[..]] [h' |-  M1 #S2[..]] [ |- T] =
-fn v => fn s => case v of
+fn v, s => case v of
 | Top =>    let Dot s' e = s in e
 | Pop v' => let Dot s' e = s in lookup v' s'
 ;
@@ -269,7 +269,7 @@ rec logEqSym :
 fn e => case e of
 | LogBase a => LogBase (algEqNSym a)
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
-  LogArr [g' |-  M2 ..] [g' |-  M1 ..] (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+  LogArr [g' |-  M2 ..] [g' |-  M1 ..] (mlam h, h', #W, N1, N2 => fn rh, iv, rn =>
    logEqSym (f [h] [h'] [h' |- #W[..]] [h' |-  N2 ..] [h' |-  N1 ..] rh iv (logEqSym rn))
   );
 
@@ -292,7 +292,7 @@ rec varEqUnique :
   Lookup [g] [g' |-  M ..] [ |- T]
 -> Lookup [g] [g' |-  M ..] [ |- S]
 -> EqTp [ |- T] [ |- S] =
-fn e1 => fn e2 => case (e1,e2) of
+fn e1, e2 => case (e1,e2) of
 | (Top,Top) => ReflTp
 | (Pop e1', Pop e2') => varEqUnique e1' e2'
 ;
@@ -302,7 +302,7 @@ rec algEqRUnique :
   AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
 -> AlgEqR [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- S]
 -> EqTp [ |- T] [ |- S] =
-fn e1 => fn e2 => case (e1,e2) of
+fn e1, e2 => case (e1,e2) of
 | (AlgVar e1', AlgVar e2') =>
   varEqUnique e1' e2'
 | (AlgApp a1 a2, AlgApp b1 b2) =>
@@ -315,7 +315,7 @@ datatype EqTm : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
 
 % Determinacy of weak head reduction
 rec determinacy : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  step (M ..) (P ..)] -> EqTm [g' |-  N ..] [g' |-  P ..] =
-fn s1 => fn s2 => case (s1,s2) of
+fn s1, s2 => case (s1,s2) of
 | ([g' |-  beta],[g' |-  beta]) => ReflTm
 | ([g' |-  stepapp (S1 ..)],[g' |-  stepapp (S2 ..)]) =>
   let ReflTm = determinacy [g' |-  S1 ..] [g' |-  S2 ..] in ReflTm
@@ -327,7 +327,7 @@ datatype HasCommonReduct : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
 % Confluence is trivial because it's deterministic. This is just a convenient
 % way to work with determinacy
 rec confluence : [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (M ..) (P ..)] -> HasCommonReduct [g' |-  N ..] [g' |-  P ..] =
-fn s1 => fn s2 => case (s1,s2) of
+fn s1, s2 => case (s1,s2) of
 | ([g' |-  refl],s2) => Common s2 [g' |-  refl]
 | (s1,[g' |-  refl]) => Common [g' |-  refl] s1
 | ([g' |-  trans1 (S1 ..) (MS1 ..)],[g' |-  trans1 (S2 ..) (MS2 ..)]) =>
@@ -342,7 +342,7 @@ rec neutral_doesnt_step :
   [g' |-  step (M ..) (N ..)]
 -> AlgEqR [g] [g' |-  M ..] [g' |-  P ..] [ |- T]
 -> [ |- empty] =
-fn s => fn e => case (s,e) of
+fn s, e => case (s,e) of
 | ([g' |-  stepapp (S ..)], AlgApp r n) => neutral_doesnt_step [g' |-  S ..] r;
 
 % Similarly for multi-step reduction
@@ -350,7 +350,7 @@ rec neutral_mstep :
   [g' |-  mstep (M ..) (N ..)]
 -> AlgEqR [g] [g' |-  M ..] [g' |-  P ..] [ |- T]
 -> EqTm [g' |-  M ..] [g' |-  N ..] =
-fn s => fn e => case s of
+fn s, e => case s of
 | [g' |-  refl] => ReflTm
 | [g' |-  trans1 (S1 ..) (MS ..)] => impossible (neutral_doesnt_step [g' |-  S1 ..] e) in [];
 
@@ -360,7 +360,7 @@ rec determinacy' :
 -> AlgEqR [g] [g' |-  N1 ..] [g' |-  M1 ..] [ |- T]
 -> AlgEqR [g] [g' |-  M2 ..] [g' |-  N2 ..] [ |- T]
 -> EqTm [g' |-  M1 ..] [g' |-  M2 ..] =
-fn s1 => fn s2 => fn e1 => fn e2 => case (confluence s1 s2) of
+fn s1, s2, e1, e2 => case (confluence s1 s2) of
 | Common s1' s2' =>
   let ReflTm = neutral_mstep s1' (algEqRSym e1) in
   let ReflTm = neutral_mstep s2' e2 in
@@ -372,7 +372,7 @@ rec algEqRTrans :
   AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
 -> AlgEqR [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- T]
 -> AlgEqR [g] [g' |-  N1 ..] [g' |-  N3 ..] [ |- T] =
-fn a1 => fn a2 => case (a1,a2) of
+fn a1, a2 => case (a1,a2) of
 | (AlgVar e1, AlgVar e2) => AlgVar e1
 | (AlgApp a1' b1, AlgApp a2' b2) =>
   let ReflTp = algEqRUnique a1' a2' in
@@ -381,7 +381,7 @@ and algEqNTrans :
   AlgEqN [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
 -> AlgEqN [g] [g' |-  N2 ..] [g' |-  N3 ..] [ |- T]
 -> AlgEqN [g] [g' |-  N1 ..] [g' |-  N3 ..] [ |- T] =
-fn a1 => fn a2 => case (a1,a2) of
+fn a1, a2 => case (a1,a2) of
 | (AlgBase s1 s2 a1', AlgBase s2' s3 a2') =>
   let ReflTm = determinacy' s2 s2' a1' a2' in
   AlgBase s1 s3 (algEqRTrans a1' a2')
@@ -393,10 +393,10 @@ rec logEqTrans :
    LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- T]
  -> LogEq [g] [g' |-  N ..] [g' |-  P ..] [ |- T]
  -> LogEq [g] [g' |-  M ..] [g' |-  P ..] [ |- T] =
-fn e1 => fn e2 => case (e1, e2) of
+fn e1, e2 => case (e1, e2) of
 | (LogBase a1, LogBase a2) => LogBase (algEqNTrans a1 a2)
 | (LogArr [g' |-  M ..] [g' |-  N ..] f1, LogArr [g' |-  N ..] [g' |-  P ..] f2) =>
-  LogArr [g' |-  M ..] [g' |-  P ..] (mlam h => mlam h' => mlam #W => mlam V1 => mlam V2 => fn rh => fn iv => fn v =>
+  LogArr [g' |-  M ..] [g' |-  P ..] (mlam h, h', #W, V1, V2 => fn rh, iv, v =>
    logEqTrans (f1 [h] [h'] [h' |- #W[..]] [h' |-  V1 ..] [h' |-  V2 ..] rh iv v)
               (f2 [h] [h'] [h' |- #W[..]] [h' |-  V2 ..] [h' |-  V2 ..] rh iv
                 (logEqTrans (logEqSym v) v)));
@@ -406,7 +406,7 @@ rec logEqSubTrans :
    LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
  -> LogEqSub [g] [g'] [h] [h' |- #S2[..]] [h' |- #S3[..]]
  -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S3[..]] =
-fn e1 => fn e2 => case (e1, e2) of
+fn e1, e2 => case (e1, e2) of
 | (Nil, Nil) => Nil
 | (Dot e1' x1, Dot e2' x2) => Dot (logEqSubTrans e1' e2') (logEqTrans x1 x2);
 
@@ -416,19 +416,19 @@ rec thm :  DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
         -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
         -> LogEq [h] [h' |-  M1 #S1[..]] [h' |-  M2 #S2[..]] [ |- T] =
 fn d => let d : DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T] = d in
- fn r => fn s => let s : LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]] = s in
+ fn r, s => let s : LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]] = s in
 case d of
 | DecVar v => lookup v s
 | DecApp d1 d2 => let LogArr [h' |-  M1 ..] [h' |-  M2 ..] f = thm d1 r s in
     f [h] [h'] [h' |- ..] [h' |-  _] [h' |-  _] r (idIsVarSub r) (thm d2 r s)
 | (DecLam d1) : DecEq [g] [g' |-  lam (\x. M1 .. x)] [g' |-  lam (\x. M2 .. x)] [ |- arr T S] =>
    LogArr [h' |-  lam (\x. M1 #S1[..] x)] [h' |-  lam (\x. M2 #S2[..] x)]
-     (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+     (mlam h0, h0', #W, N1, N2 => fn rh, iv, rn =>
      let q2 = thm d1 rh (Dot (wknLogEqSub iv s) rn) in
      closed [h0' |-  trans1 beta refl] [h0' |-  trans1 beta refl] q2
    )
 | DecExt d1 =>
-  LogArr [h' |-  _] [h' |-  _] (mlam h0 => mlam h0' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
+  LogArr [h' |-  _] [h' |-  _] (mlam h0, h0', #W, N1, N2 => fn rh, iv, rn =>
    thm d1 rh (Dot (wknLogEqSub iv s) rn)
   )
 | DecBeta d1 d2 =>
@@ -448,5 +448,5 @@ fn r => case r of
 rec completeness : CtxRel [g] [g']
 -> DecEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
 -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T] =
-fn r => fn e => reify r (thm e r (idLogEqSub r));
+fn r, e => reify r (thm e r (idLogEqSub r));
 

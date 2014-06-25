@@ -8,24 +8,63 @@
 open Syntax.Ext
 open Id
 
-(* let rec spaces i = if i <= 0 then "" else "-" ^ (spaces (i-1))
+let rec spaces i = if i = 0 then "" else if i = 1 then "|" else
+  let s = String.make (i-2) ' ' in s ^ "|-"
+(* 
 
-and g i a = begin match a with
+  if i <= 0 then "" else "-" ^ (spaces (i-1)) *)
+(* 
+  and normal =
+    | Lam  of Loc.t * name * normal
+    | Root of Loc.t * head * spine
+    | Tuple of Loc.t * tuple
+    | Ann of Loc.t * normal * typ
+    | TList of Loc.t * normal list
+    | NTyp of Loc.t * typ
+
+  and head =
+    | Name  of Loc.t * name
+    | MVar  of Loc.t * name * sub
+    | Hole  of Loc.t
+    | PVar  of Loc.t * name * sub
+    | ProjName  of Loc.t * int * name
+    | ProjPVar  of Loc.t * int * (name * sub)
+
+  and sub =
+    | EmptySub of Loc.t
+    | Dot      of Loc.t * sub * front
+    | Id       of Loc.t
+    | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
+ *)
+
+and na n = n.Id.string_of_name
+
+and h i = function
+  | LF.EmptySub _ -> (spaces i) ^ "EmptySub\n"
+  | LF.Dot(_, sub, LF.Normal n) -> (spaces i) ^ "Dot\n" ^ (f (i+1) n) ^ (h (i+1) sub) 
+  | LF.Dot(_, sub, LF.Head (LF.Name(_, u))) -> (spaces i) ^ "Dot (name): " ^ (na u) ^ "\n" ^ (h (i+1) sub)
+  | LF.Dot(_, sub, LF.Head (LF.MVar(_, u, sub'))) -> (spaces i) ^ "Dot (MVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub') ^ (h (i+1) sub)
+  | LF.Dot(_, sub, LF.Head (LF.PVar(_, u, sub'))) -> (spaces i) ^ "Dot (PVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub') ^ (h (i+1) sub)
+  | LF.Dot(_, sub, LF.Head _) -> (spaces i) ^ "Dot (?)\n" ^ (h (i+1) sub)
+  | LF.Id _ -> (spaces i) ^ "..\n"
+  | LF.SVar (_, n, s) -> (spaces i) ^ "Svar: " ^ (na n) ^ "\n" ^ (h (i+1) s)
+
+and g i = function
   | LF.Nil -> (spaces i) ^ ".\n"
-  | LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+  | LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) 
 
 and f i = function
   | LF.Lam(_,u,n) -> (spaces i) ^ "Lam: " ^ (u.Id.string_of_name) ^ "\n" ^ (f (i+1) n)
-  | LF.Root(_,LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
-  | LF.Root(_,LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
-  | LF.Root(_,LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
+  | LF.Root(_,LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (na u) ^ "\n" ^ (g (i+1) s)
+  | LF.Root(_,LF.MVar(_, u, sub), s) -> (spaces i) ^ "Root (MVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub) ^ (g (i+1) s)
+  | LF.Root(_,LF.PVar(_, u, sub), s) -> (spaces i) ^ "Root (PVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub) ^ (g (i+1) s)
   | LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
   | LF.Tuple(_,_) -> "Tuple"
   | LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
   | LF.TList(_,nl) -> (spaces i) ^ "TList\n" ^ (List.fold_right (fun n acc -> (f (i+1) n) ^ acc) nl "")
 
 and normalToString n = f 0 n
- *)
+
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 exception MixError of (Format.formatter -> unit)
@@ -786,6 +825,7 @@ GLOBAL: sgn;
   clf_term_x:
     [  "atomic"
         [
+         
            a = clf_normal ->
               a
         |
@@ -794,30 +834,58 @@ GLOBAL: sgn;
         |
            u = UPSYMBOL ; sigma' = clf_sub_new ->
               LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+
         ]
     ]
   ;
+
+  term_or_sub:
+  [
+    [
+      a = term_or_sub; b = clf_normal ->  
+        begin match a with
+        | Term (LF.TList(_, l)) -> Term (LF.TList(_loc, l@[b]))
+        | Term t -> Term (LF.TList(_loc, t::[b])) 
+        | Sub s -> Sub (LF.Dot(_loc, s, LF.Normal b))   
+        end 
+    |
+      s = clf_sub_new -> 
+        begin match s with
+        (* Infix operator case *)
+        | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
+          let op' = LF.Root(l, op, LF.Nil) in 
+          Term(LF.TList(_loc, op'::[t2]))
+
+    (*     (* Postfix case *)
+        | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> (* print_string u.string_of_name; print_string "\n"; *) Term(LF.Root(l, op, LF.Nil))
+ *)
+        | _ -> (Sub s)
+        
+      end
+    |
+      x = clf_term_x; ms = LIST0 clf_normal -> Term (LF.TList(_loc, x::ms))
+    ]
+  ]
+  ;
+
 
   clf_term_app:
-    [ 
-      "infix"
+    [
       [
-        "|"; u = UPSYMBOL; ms = LIST0 clf_normal; "|" -> 
-              LF.TList(_loc, ((LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil))::ms))
+        u = UPSYMBOL; a = OPT[term_or_sub ]-> let n = begin match a with
+          | Some(Sub sigma') -> LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+          | Some(Term (LF.TList(_, l)) )-> 
+            let n = LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) in
+            LF.TList(_loc, n::l)
+          | Some(Term t)-> 
+            let n = LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) in
+            LF.TList(_loc, n::[t])
+          | None -> LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
+          end in print_string (normalToString n); n
+      |
+        x = clf_term_x; ms = LIST0 clf_normal -> let n = LF.TList(_loc, x::ms) in ignore (normalToString n); n
       ]
-    |
-      LEFTA
-        [
-           x = clf_term_x; ms = LIST0 clf_normal -> LF.TList(_loc, x::ms)
-        ]
-    |
-      "atomic"
-        [
-          x = clf_term_x -> x
-        ]
-    ]
-  ;
-
+  ];
   clf_head:
     [
       [
@@ -831,11 +899,6 @@ GLOBAL: sgn;
             | Some sigma ->           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
           end
 
-
-
-(*      |  "#"; p = SYMBOL ->
-           LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc)
-*)
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       |
@@ -847,11 +910,6 @@ GLOBAL: sgn;
       |
         x = SYMBOL ->
          LF.Name (_loc, Id.mk_name (Id.SomeString x))
-(*       | x = UPSYMBOL ->
-         LF.MVar (_loc, Id.mk_name (Id.SomeString x), LF.EmptySub _loc)
- *)
- (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
       ]
     ]
   ;

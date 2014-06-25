@@ -349,7 +349,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     let _ = List.iter (fun x -> dprint(fun () -> p1 x)) b in
     let _ = dprint (fun () -> "NORMALS") in
     let _ = List.iter (fun x -> dprint(fun () -> normalToString x)) a in
-    failwith "ERROR IN RECONSTRUCTION OF TERM LIST"
+    failwith "Error in indexing"
 
   and take (i : int) (l : Ext.LF.normal list) : Ext.LF.normal list * Ext.LF.normal list = 
     let rec aux n l c = match l with

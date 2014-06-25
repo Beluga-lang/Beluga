@@ -30,7 +30,7 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype =
 rec sem_wkn : {g:ctx} {h:ctx}{#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g => mlam h => mlam #W => fn e =>
 case e of
-| Syn [g |- R ..] => Syn ([h |- R #W[..]])
+| Syn [g |- R ..] => Syn ([h |- R, #W[..]])
 | Slam [g] [ |- A] [ |- B] f =>
     Slam [h] [ |- A] [ |- B] (mlam h' => mlam #W2 => fn e => f [h'] [h' |- #W[#W2[..]]] e
     )

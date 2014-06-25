@@ -767,6 +767,9 @@ GLOBAL: sgn;
         |
            u = UPSYMBOL ; sigma' = clf_sub_new ->
               LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+        |
+           u = UPSYMBOL ; ","; sigma' = clf_sub_new ->
+              LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
         ]
     ]
   ;

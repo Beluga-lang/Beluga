@@ -760,6 +760,12 @@ GLOBAL: sgn;
      [ RIGHTA
        [
           "\\"; x = SYMBOL; "."; m = clf_term_app ->
+            let m = begin match m with
+              | LF.TList(l, (LF.Root(_, LF.MVar (l2, u, LF.EmptySub _), LF.Nil)) :: [LF.Root(_, (LF.Name _ as h), LF.Nil)]) -> 
+                  print_string (u.string_of_name);
+                  LF.Root(l, LF.MVar(l2, u, LF.Dot(l2, LF.EmptySub l2, LF.Head h)), LF.Nil)
+              | _ -> m
+            end in
             LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
        ]
 
@@ -856,9 +862,9 @@ GLOBAL: sgn;
           let op' = LF.Root(l, op, LF.Nil) in 
           Term(LF.TList(_loc, op'::[t2]))
 
-    (*     (* Postfix case *)
+        (* Postfix case *)
         | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> (* print_string u.string_of_name; print_string "\n"; *) Term(LF.Root(l, op, LF.Nil))
- *)
+
         | _ -> (Sub s)
         
       end
@@ -881,7 +887,7 @@ GLOBAL: sgn;
             let n = LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil) in
             LF.TList(_loc, n::[t])
           | None -> LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
-          end in print_string (normalToString n); n
+          end in ignore (normalToString n); n
       |
         x = clf_term_x; ms = LIST0 clf_normal -> let n = LF.TList(_loc, x::ms) in ignore (normalToString n); n
       ]

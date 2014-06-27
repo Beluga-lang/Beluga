@@ -475,7 +475,7 @@ let rec mgTyp cD cPsi tA = begin match tA with
  end
 
  and mgTypRec cD cPsi trec = begin match trec with
-   | Int.LF.SigmaLast tA -> Int.LF.SigmaLast (mgTyp cD cPsi tA)
+   | Int.LF.SigmaLast(n, tA) -> Int.LF.SigmaLast (n, mgTyp cD cPsi tA)
    | Int.LF.SigmaElem (x, tA, trec) ->
        let tA' = mgTyp cD cPsi tA in
        let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in
@@ -1008,7 +1008,8 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
         else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
           (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
 
-let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
+
+let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
   | Apx.Comp.MetaObj (_loc', psihat, m) , Int.LF.Decl (_, Int.LF.MTyp (tA, cPsi, _)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
         begin try
@@ -1145,6 +1146,24 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
       let theta' = Int.LF.MDot (Int.LF.CObj (cPsi'), theta) in
       let mC = Int.Comp.MetaCtx (loc', cPsi') in
         (Int.Comp.MApp (loc, i, mC), (tau, theta'))
+  | Apx.Comp.MetaObj (_loc', psihat, m) , Int.LF.Decl (_, Int.LF.STyp (tA, cPsi, _)) ->
+      begin try
+        let sub = match m with
+      | Apx.LF.Root(_, h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, Apx.LF.EmptySub)
+      | _ -> Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub) in
+      elApply cD (loc, i, Apx.Comp.MetaSub(_loc', psihat, sub)) (mdec, tau) theta depend  
+      with  
+      | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSubTyp (tA, cPsi), theta)))) 
+    end
+  | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.Decl (_, Int.LF.STyp (tA, cPsi, _)) ->
+      begin (* try *)
+        let sub = match m with
+        | Apx.LF.Root(_, h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, Apx.LF.EmptySub)
+        | _ -> Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub) in
+        elApply cD (loc, i, Apx.Comp.MetaSubAnn(_loc', psi, sub)) (mdec, tau) theta depend  
+(*         with  
+      | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSubTyp (tA, cPsi), theta))))  *)
+    end
   | _ , Int.LF.Decl(_psi, Int.LF.CTyp (sW, _dep)) ->
       raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSchema sW, theta))))
   | _ , Int.LF.Decl (_, Int.LF.PTyp (tA, cPsi, _dep)) ->

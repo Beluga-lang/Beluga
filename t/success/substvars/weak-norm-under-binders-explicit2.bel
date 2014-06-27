@@ -21,12 +21,12 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 datatype IsVar : (g:ctx){M:[g |- tm A]} ctype =
 | IsVar : {#p:[g |- tm A]} IsVar [g |- #p ..];
 
-datatype IsVarSub : {g:ctx} (h:ctx) {#S: g[h]}ctype =
-| Nil : IsVarSub [] [h $ ^ ]
-| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:g[h]}{M:[h |- tm A]}
-      IsVarSub [g] [h $ #S[..] ]
+datatype IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
+| Nil : IsVarSub [] [h |- ^ ]
+| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:h |- g}{M:[h |- tm A]}
+      IsVarSub [g] [h |- #S[..] ]
          -> IsVar [h |- M ..] % I would like to directly quantify over #p, but bugs
-         -> IsVarSub [g,x:tm A] [h $ #S[..] (M ..)  ]
+         -> IsVarSub [g,x:tm A] [h |- #S[..] (M ..)  ]
 ;
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
@@ -53,53 +53,53 @@ datatype Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A]} ctype =
 | Base : Halts [g |- M ..] -> Reduce [ |- i] [g |- M ..]
 | Arr :  {M:[h0 |- tm (arr A B)]}
          ({h:ctx} {#R:h0[h]} {N:[h |- tm A]}
-          IsVarSub [h0] [h $ #R[..] ] -> Reduce [ |- A] [h |- N ..]
+          IsVarSub [h0] [h |- #R[..] ] -> Reduce [ |- A] [h |- N ..]
           -> Reduce [ |- B ] [h |- app (M #R[..]) (N ..)])
          -> Reduce [ |- arr A B] [h0 |-  M ..]
 ;
 }%
-rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A]}{#W:g[h]}
+rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A]}{#W:h |- g}
 % {g:ctx}{#p:[g |- tm A]}
-     IsVarSub [g] [h $ #W[..]]
+     IsVarSub [g] [h |- #W[..]]
    -> IsVar [h |- #p #W[..]] =
  mlam g => mlam A => mlam #p => mlam #W => fn ivs =>
 % mlam g => mlam #p => fn ivs =>
 case [g |- #p ..] of
 | [g',x:tm B |-  x] =>
-  let  {#R:g'[h]} Cons [g'] [h] [ |- B] [h $ #R[..]] [h |- M ..] ivs' iv = ivs in
+  let  {#R:h |- g'} Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M ..] ivs' iv = ivs in
 %       Cons ivs' iv = ivs in
   iv
 | {#q : [g' |-  tm T]} [g',x:tm B |-  #q ..] =>
-   let  Cons [g'] [h] [ |- B] [h $ #R[..]] [h |- M ..] ivs' iv = ivs in
-   wknVar [g'] [ |- T] [g' |-  #q ..] [h $ #R[..]] ivs'
+   let  Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M ..] ivs' iv = ivs in
+   wknVar [g'] [ |- T] [g' |-  #q ..] [h |- #R[..]] ivs'
 % let  Cons  ivs' iv = ivs in
 % wknVar [g'] [g' |-  #q ..]  ivs'
 ;
 
 
-rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{#W:g[h]}{#W2:h[h']}
-    IsVarSub [g] [h  $ #W[..]]
- -> IsVarSub [h] [h' $ #W2[..]]
- -> IsVarSub [g] [h' $ #W[#W2[..]]] =
+rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{#W:h |- g}{#W2:h' |- h}
+    IsVarSub [g] [h  |- #W[..]]
+ -> IsVarSub [h] [h' |- #W2[..]]
+ -> IsVarSub [g] [h' |- #W[#W2[..]]] =
 mlam g => mlam h => mlam h' => mlam #W => mlam #W2 => fn r1 => fn r2 =>
 case r1 of
 | Nil => Nil
-| Cons [g'] [h] [ |- B] [h $ #R[..]] [h |- M ..] ivs' iv =>
-  let q0 = varSubCompose' [g'] [h] [h'] [h $ #R[..]] [h' $ #W2[..]] ivs' r2 in
+| Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M ..] ivs' iv =>
+  let q0 = varSubCompose' [g'] [h] [h'] [h |- #R[..]] [h' |- #W2[..]] ivs' r2 in
   let IsVar [h |- #p ..] = iv in
-  let q1 = wknVar [h] [ |- B] [h |- #p ..] [h' $ #W2[..]] r2 in
-  Cons [g'] [h'] [ |- B] [h' $ #R[#W2[..]]] [h' |-  _] q0 q1
+  let q1 = wknVar [h] [ |- B] [h |- #p ..] [h' |- #W2[..]] r2 in
+  Cons [g'] [h'] [ |- B] [h' |- #R[#W2[..]]] [h' |-  _] q0 q1
 
 
 
 %{case [g |- i] of % Would prefer to pattern match on r1, but can't, because bugs
 | [ |- i] => Nil
 | [g',x:tm A |-  i] =>
-  let {#R:g'[h]} Cons [g'] [h] [ |- B] [h $ #R[..]] [h |- M ..] ivs' iv = r1 in
-  let q0 = varSubCompose' [g'] [h] [h'] [h $ #R[..]] [h' $ #W2[..]] ivs' r2 in
+  let {#R:g'[h]} Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M ..] ivs' iv = r1 in
+  let q0 = varSubCompose' [g'] [h] [h'] [h |- #R[..]] [h' |- #W2[..]] ivs' r2 in
   let IsVar [h |- #p ..] = iv in
-  let q1 = wknVar [h] [ |- B] [h |- #p ..] [h' $ #W2[..]] r2 in
-  Cons [g'] [h'] [ |- B] [h' $ #R[#W2[..]]] [h' |-  _] q0 q1
+  let q1 = wknVar [h] [ |- B] [h |- #p ..] [h' |- #W2[..]] r2 in
+  Cons [g'] [h'] [ |- B] [h' |- #R[#W2[..]]] [h' |-  _] q0 q1
 }%
 ;
 
@@ -114,40 +114,40 @@ mlam S => fn r => let (r : Reduce [ |- A] [g |- M' ..]) = r in  case r of
 | Base ha => Base (haltsMstep2 [g |- _] [g |- S ..] ha)
 | Arr [g |- M ..] f => Arr [g |- _]
   (mlam h => mlam #W => mlam N => fn iv => fn rn =>
-     closed2 [h |- stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h |- N ..] iv rn)
+     closed2 [h |- stepapp (S #W[..]) refl] (f [h] [h |- #W[..]] [h |- N ..] iv rn)
   )
 
 ;
 
-rec wknVarSub : {g:ctx}{h:ctx}{#S:g[h]}{A:[ |- tp]} IsVarSub [g] [h $ #S[..] ]
- -> IsVarSub [g] <h,x:tm A $ #S[..] > =
+rec wknVarSub : {g:ctx}{h:ctx}{#S:h |- g}{A:[ |- tp]} IsVarSub [g] [h |- #S[..] ]
+ -> IsVarSub [g] <h,x:tm A |- #S[..] > =
 mlam g => mlam h => mlam #S => mlam A => fn r =>
 case [g |- i] of % Would prefer to pattern match on r, but can't
 | [ |- i] =>  Nil
 | [g',x:tm B |-  i] =>
- let {#R:g'[h]} Cons [g'] [h] [ |- B] [h $ #R[..] ] [h |- M ..] r' iv = r in
- let q0 = wknVarSub [g'] [h] [h $ #R[..]] [ |- A] r' in
+ let {#R:g'[h]} Cons [g'] [h] [ |- B] [h |- #R[..] ] [h |- M ..] r' iv = r in
+ let q0 = wknVarSub [g'] [h] [h |- #R[..]] [ |- A] r' in
  let IsVar [h |- #p ..] = iv in
- Cons [g'] [h,x:tm A] [ |- B] [h,x:tm A $ #R[..]] [h,x:tm A |-  #p ..] q0 (IsVar [h,x:tm A |-  #p ..])
+ Cons [g'] [h,x:tm A] [ |- B] [h,x:tm A |- #R[..]] [h,x:tm A |-  #p ..] q0 (IsVar [h,x:tm A |-  #p ..])
 ;
 
 
 
-rec extVarSub : {g:ctx} {h:ctx}{A:[ |- tp]} {#S:g[h]} IsVarSub [g] [h $ #S[..]]
- -> IsVarSub [g,x:tm A] [h,x:tm A $ #S[..] x ] =
+rec extVarSub : {g:ctx} {h:ctx}{A:[ |- tp]} {#S:h |- g} IsVarSub [g] [h |- #S[..]]
+ -> IsVarSub [g,x:tm A] [h,x:tm A |- #S[..] x ] =
 mlam g => mlam h => mlam A => mlam #S => fn r =>
-Cons [g] [h,x:tm A] [ |- A] [h,x:tm A $ #S[..]] [h,x:tm A |-  x] (wknVarSub [g] [h] [h $ #S[..]] [ |- A] r) (IsVar [h,x:tm A |-  x])
+Cons [g] [h,x:tm A] [ |- A] [h,x:tm A |- #S[..]] [h,x:tm A |-  x] (wknVarSub [g] [h] [h |- #S[..]] [ |- A] r) (IsVar [h,x:tm A |-  x])
 ;
 
-rec idIsVarSub : {g:ctx} IsVarSub [g] [g $ .. ] =
+rec idIsVarSub : {g:ctx} IsVarSub [g] [g |- .. ] =
 mlam g => case [g |- i] of % Because we can't pattern match directly on contexts yet
 | [ |- i] => Nil
-| [g,x:tm _ |-  i] => extVarSub [g] [g] [ |- _] [g $ ..] (idIsVarSub [g])
+| [g,x:tm _ |-  i] => extVarSub [g] [g] [ |- _] [g |- ..] (idIsVarSub [g])
 ;
 
-rec shiftIsVarSub : {g:ctx}{A:[ |- tp]} IsVarSub [g] [ g,x:tm A $ .. ] =
+rec shiftIsVarSub : {g:ctx}{A:[ |- tp]} IsVarSub [g] [ g,x:tm A |- .. ] =
 mlam g => mlam A =>
-wknVarSub [g] [g] [g $ ..] [ |- A] (idIsVarSub [g])
+wknVarSub [g] [g] [g |- ..] [ |- A] (idIsVarSub [g])
 ;
 
 rec varIsNeutral : {g:ctx}{M:[g |- tm A]} IsVar [g |- M ..] -> IsNeutral [g |- M ..] =
@@ -155,29 +155,29 @@ mlam g => mlam M => fn r =>
 let IsVar [g |- #p ..] = r in Var [g |- #p ..]
 ;
 
-rec rwkn : {g:ctx}{h:ctx}{R:[g |- tm A]}{#W:g[h]}
+rec rwkn : {g:ctx}{h:ctx}{R:[g |- tm A]}{#W:h |- g}
      IsNeutral [g |- R ..]
-  -> IsVarSub [g]  [h $ #W[..]]
+  -> IsVarSub [g]  [h |- #W[..]]
   -> IsNeutral [h |- R #W[..]] =
 mlam g => mlam h => mlam R => mlam #W => fn r => fn iv =>
 case r of
 | Var [g |- #p ..] =>
-  varIsNeutral [h] [h |- _] (wknVar [g] [ |- _] [g |- #p ..] [h $ #W[..]] iv)
+  varIsNeutral [h] [h |- _] (wknVar [g] [ |- _] [g |- #p ..] [h |- #W[..]] iv)
 | App r' n =>
-  App (rwkn [g] [h] [g |- _] [h $ #W[..]] r' iv)
-      (nwkn [g] [h] [g |- _] [h $ #W[..]] n iv)
+  App (rwkn [g] [h] [g |- _] [h |- #W[..]] r' iv)
+      (nwkn [g] [h] [g |- _] [h |- #W[..]] n iv)
 
-and nwkn : {g:ctx}{h:ctx}{N:[g |- tm A]}{#W:g[h]}
+and nwkn : {g:ctx}{h:ctx}{N:[g |- tm A]}{#W:h |- g}
      IsNormal [g |- N ..]
-  -> IsVarSub [g] [h $ #W[..]]
+  -> IsVarSub [g] [h |- #W[..]]
   -> IsNormal [h |- N #W[..]] =
 mlam g => mlam h => mlam N => mlam #W => fn r => fn iv =>
 case r of
-| Neut r' => Neut (rwkn [g] [h] [g |- N ..] [h $ #W[..]] r' iv)
+| Neut r' => Neut (rwkn [g] [h] [g |- N ..] [h |- #W[..]] r' iv)
 | Lam n =>
-  Lam  (nwkn [g,x:tm _] [h,x:tm _]  [g,x |- _] [h,x $ #W[..] x]
+  Lam  (nwkn [g,x:tm _] [h,x:tm _]  [g,x |- _] [h,x |- #W[..] x]
             n
-            (extVarSub [g] [h] [ |- _] [h $ #W[..]] iv)
+            (extVarSub [g] [h] [ |- _] [h |- #W[..]] iv)
       )
 ;
 
@@ -191,7 +191,7 @@ mlam g => mlam A => mlam R => fn r => case [ |- A] of
     let Halts [h |- MS ..] n = reify  rm2 in
     closed2 [h |- stepapp refl (MS ..)]
      (reflect [h] [ |- B] [h |- app (R #W[..]) _]
-        (App (rwkn [g] [h] [g |- R ..] [h $ #W[..]] r iv)
+        (App (rwkn [g] [h] [g |- R ..] [h |- #W[..]] r iv)
           n))
   )
 
@@ -200,99 +200,99 @@ and reify : (g:ctx) Reduce [ |- A] [g |- M ..] -> Halts [g |- M ..] =
 | Base h => h
 | {M:[g |- tm (arr T S)]} Arr [g |- M ..] f =>
   let q0 = (reflect [g,x:tm T] [ |- T] [g,x:tm T |-  x] (Var [g,x:tm T |-  x])) in
-  let q1 = f [g,x:tm T] [g,x:tm T $ ..] [g,x:tm T |-  x] (shiftIsVarSub [g] [ |- T]) q0 in
+  let q1 = f [g,x:tm T] [g,x:tm T |- ..] [g,x:tm T |-  x] (shiftIsVarSub [g] [ |- T]) q0 in
   let Halts [g,x:tm T |-  MS .. x] q2 = reify  q1 in
   Halts [g |- trans (eta _) (steplam (\x. MS .. x))] (Lam q2)
 ;
 
-rec wknRed : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[g |- tm A]}{#W:g[h]}
+rec wknRed : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[g |- tm A]}{#W:h |- g}
     Reduce  [ |- A] [g |- M ..]
- -> IsVarSub [g] [h $ #W[..] ]
+ -> IsVarSub [g] [h |- #W[..] ]
  -> Reduce [ |- A] [h |- M #W[..]] =
 mlam g => mlam h => mlam A => mlam M => mlam #W => fn r => fn iv =>
 case r of
 | Base h =>
   let Halts [g |- S ..] q2 = h in
-  Base (Halts [h |- S #W[..]] (nwkn [g] [h] [g |- _] [h $ #W[..]] q2 iv))
+  Base (Halts [h |- S #W[..]] (nwkn [g] [h] [g |- _] [h |- #W[..]] q2 iv))
 | Arr [g |- M ..] f =>
   Arr [h |- M #W[..]]
    (mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
-    f [h'] [h' $ #W[#W2[..]]] [h' |-  N ..] (varSubCompose' [g] [h] [h'] [h $ #W[..]] [h' $ #W2[..]] iv iv2) rn
+    f [h'] [h' |- #W[#W2[..]]] [h' |-  N ..] (varSubCompose' [g] [h] [h'] [h |- #W[..]] [h' |- #W2[..]] iv iv2) rn
    )
 ;
 
-datatype RedSub : {g:ctx}(h:ctx){#S:g[h]} ctype =
-| Nil : RedSub [] [h $ ^ ]
-| Dot : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[h |- tm A]}{#S:g[h]}
-        RedSub [g] [h $ #S[..] ] -> Reduce [ |- A] [h |- M ..]
-         -> RedSub [g,x:tm A] [h $ #S[..] (M ..) ]
+datatype RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
+| Nil : RedSub [] [h |- ^ ]
+| Dot : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[h |- tm A]}{#S:h |- g}
+        RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M ..]
+         -> RedSub [g,x:tm A] [h |- #S[..] (M ..) ]
 ;
 
-rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:g[h]}{#W:h[h']}
-    RedSub [g] [h $ #S[..] ]
- -> IsVarSub [h] [h' $ #W[..] ]
- -> RedSub [g] [h' $ #S[#W[..]] ] =
+rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:h |- g}{#W:h[h']}
+    RedSub [g] [h |- #S[..] ]
+ -> IsVarSub [h] [h' |- #W[..] ]
+ -> RedSub [g] [h' |- #S[#W[..]] ] =
 mlam g => mlam h => mlam h' => mlam #S => mlam #W => fn rs => fn iv =>
 case [g |- i] of % Pattern match on g because pattern matching on rs is giving me trouble
 | [ |- i] =>  Nil % Should suffice. Need to make these unifiable? Missing simplifySub somewhere?
 | [g',x:tm A |-  i] =>
-  let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h $ #R[..] ] rs' rN = rs in
-  let wrs' = wknRedSub [g'] [h] [h'] [h $ #R[..]] [h' $ #W[..]] rs' iv in
-  let wrN  = wknRed [h] [h'] [ |- A] [h |- M ..] [h' $ #W[..]] rN iv in
-  Dot [g'] [h'] [ |- A] [h' |-  M #W[..]] [h' $ #R[#W[..]] ] wrs' wrN
+  let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h |- #R[..] ] rs' rN = rs in
+  let wrs' = wknRedSub [g'] [h] [h'] [h |- #R[..]] [h' |- #W[..]] rs' iv in
+  let wrN  = wknRed [h] [h'] [ |- A] [h |- M ..] [h' |- #W[..]] rN iv in
+  Dot [g'] [h'] [ |- A] [h' |-  M #W[..]] [h' |- #R[#W[..]] ] wrs' wrN
 % For some reason I can't case on rs, although I'd prefer to:
 % case rs of
 % | Nil => Nil
-% | Dot [g'] [h] [ |- A] [h |- M ..] [h $ #R[..] ] rs' rm => ?
+% | Dot [g'] [h] [ |- A] [h |- M ..] [h |- #R[..] ] rs' rm => ?
 % % Will need to use wknRed in this case
 ;
 
-rec redVar : {g:ctx}(h:ctx){#S:g[h]}{#p:[g |- tm T]} RedSub [g] [h $ #S[..]]
+rec redVar : {g:ctx}(h:ctx){#S:h |- g}{#p:[g |- tm T]} RedSub [g] [h |- #S[..]]
               ->  Reduce [ |- T] [h |- #p #S[..] ] =
 mlam g =>  mlam #S => mlam #p => fn rs =>
 case [g |- #p ..] of
  | [g',x:tm A |-  x] =>
-    let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h $ #R[..] ] rs' rN = rs in rN
+    let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h |- #R[..] ] rs' rN = rs in rN
  | [g',x:tm A |-  #q ..] =>
-    let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h $ #R[..] ] rs' rN = rs in
-     redVar [g'] [h $ #R[..] ] [g' |-  #q ..] rs'
+    let {#R:g'[h]} Dot [g'] [h] [ |- A] [h |- M ..] [h |- #R[..] ] rs' rN = rs in
+     redVar [g'] [h |- #R[..] ] [g' |-  #q ..] rs'
 ;
 
-rec eval : {g:ctx}{h:ctx}{M:[g |- tm A]}{#S:g[h]}
-    RedSub [g] <h $ #S[..] >
+rec eval : {g:ctx}{h:ctx}{M:[g |- tm A]}{#S:h |- g}
+    RedSub [g] <h |- #S[..] >
  -> Reduce [ |- A] [h |- M #S[..] ] =
 mlam g => mlam h =>  mlam M => mlam #S => fn rs =>
  case [g |- M ..] of
-| [g' |-  #p ..] => redVar [g'] [h $ #S[..] ] [g' |-  #p ..] rs
+| [g' |-  #p ..] => redVar [g'] [h |- #S[..] ] [g' |-  #p ..] rs
 | [g' |-  app (M1 ..) (M2 ..)]  =>
-  let rN = eval [g'] [h] [g' |-  M2 ..] [h $ #S[..] ] rs in
+  let rN = eval [g'] [h] [g' |-  M2 ..] [h |- #S[..] ] rs in
   let Arr [h0 |- N1 ..] f =
-    eval [g'] [h]  [g' |-  M1 ..] [h $ #S[..] ] rs in
-   f [h] [h $ .. ] [h |- _] (idIsVarSub [h]) rN
+    eval [g'] [h]  [g' |-  M1 ..] [h |- #S[..] ] rs in
+   f [h] [h |- .. ] [h |- _] (idIsVarSub [h]) rN
 
 | {M1:[g',x:tm T1 |-  tm T2]}
   [g' |-  lam (\x. M1 .. x)] =>
    Arr [h |- lam (\x. M1 #S[..] x)]
    (mlam h' => mlam #W => mlam N => fn isVS => fn rN =>
-     let q1 = (wknRedSub [g'] [h] [h'] [h $ #S[..]] [h' $ #W[..]] rs isVS) in
-     let q0 = (eval [g',x:tm _] [h'] [g',x |-  M1 .. x] [h' $ #S[#W[..]] (N ..)]
-         (Dot [g'] [h'] [ |- T1] [h' |-  _] [h' $ #S[#W[..]] ] q1 rN)
+     let q1 = (wknRedSub [g'] [h] [h'] [h |- #S[..]] [h' |- #W[..]] rs isVS) in
+     let q0 = (eval [g',x:tm _] [h'] [g',x |-  M1 .. x] [h' |- #S[#W[..]] (N ..)]
+         (Dot [g'] [h'] [ |- T1] [h' |-  _] [h' |- #S[#W[..]] ] q1 rN)
       ) in
      closed2 [h' |-  beta] q0
    )
 ;
 
-rec idRedSub : {g:ctx} RedSub [g] <g $ ..> =
+rec idRedSub : {g:ctx} RedSub [g] <g |- ..> =
 mlam g => case [g |- i] of % Can't pattern match directly on g
 | [ |- i] => Nil
 | [g',x:tm A |-  i] =>
- let q0 = (wknRedSub [g'] [g'] [g',x:tm A] [g' $ ..] [g',x $ ..] (idRedSub [g']) (shiftIsVarSub [g'] [ |- A])) in
+ let q0 = (wknRedSub [g'] [g'] [g',x:tm A] [g' |- ..] [g',x |- ..] (idRedSub [g']) (shiftIsVarSub [g'] [ |- A])) in
  let q1 = (reflect [g',x:tm A] [ |- A] [g',x:tm A |-  x] (Var [g',x:tm A |-  x])) in
- Dot [g'] [g',x:tm A] [ |- A] [g',x |-  x] [g',x $ ..] q0 q1
+ Dot [g'] [g',x:tm A] [ |- A] [g',x |-  x] [g',x |- ..] q0 q1
 ;
 
 rec weakNorm : {g:ctx}{A:[ |- tp]}{M:[g |- tm A]} Halts  [g |- M ..] =
 mlam g => mlam A => mlam M =>
-reify (eval [g] [g] [g |- M ..] [g $ ..] (idRedSub [g]))
+reify (eval [g] [g] [g |- M ..] [g |- ..] (idRedSub [g]))
 ;
 }%

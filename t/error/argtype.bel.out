@@ -1,1 +1,2 @@
-Found box-expression that does not have type [ |- nat] -> [ |- nat].
+Found box-expression that does not have type [ |- nat] ->
+[ |- nat].

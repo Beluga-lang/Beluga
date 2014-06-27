@@ -301,7 +301,7 @@ and recSgnDecl d =
          if (!Debug.chatter) == 0 then ()
          else (Format.printf "\nschema %s = @[%a@];@."
                  (g.string_of_name)
-                 (P.fmt_ppr_lf_schema Pretty.std_lvl) sW'))
+                 (P.fmt_ppr_lf_schema ~useName:false Pretty.std_lvl) sW'))
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->
@@ -409,7 +409,7 @@ and recSgnDecl d =
 
         let reconFun f e =
           let apx_e   = Index.exp vars' e in
-          let _       = dprint (fun () -> "\n  Indexing  expression done \n") in
+          let _       = dprint (fun () -> "\n  Indexing expression done \n") in
           let tau'    = lookupFun cG f in
           let e'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG apx_e (tau', C.m_id)) in
 
@@ -520,14 +520,13 @@ and recSgnDecl d =
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
         begin try
+          let cid =
           begin match v_name with
             | None ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None
             | Some x ->
-                let _cid_tp = Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                  (Some (Gensym.VarData.name_gensym x)) in
-                  (* Int.Sgn.Pragma(Int.LF.NamePrag(cid_tp)) *) ()
-          end
+                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
+                  (Some (Gensym.VarData.name_gensym x))
+          end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end

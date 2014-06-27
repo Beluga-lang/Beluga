@@ -137,7 +137,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
       (tB, Substitution.LF.dot1 s2)
-
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
@@ -178,7 +177,7 @@ and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
   let loop (tuple, s1) (typRec, s2) = match tuple, typRec with
-    | Last tM,   SigmaLast tA -> checkW cD cPsi (tM, s1) (tA, s2)
+    | Last tM,   SigmaLast (n, tA) -> checkW cD cPsi (tM, s1) (tA, s2)
     | Cons (tM, tuple),   SigmaElem (_x, tA, typRec) ->
       checkW cD cPsi (tM, s1) (tA, s2);
       checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2))
@@ -262,13 +261,14 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr), s) ->
+  | MVar (Inst (_n, {contents = None}, cPsi', tA, _cnstr, _), s) ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
-  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr) , (t', r)) ->
+
+  | MMVar (MInst (_n, {contents = None}, cD' , cPsi', tA, _cnstr, _) , (t', r)) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -296,7 +296,7 @@ and inferHead loc cD cPsi head = match head with
     TClo (tA, s)
 
 
-  | PVar (PInst (_, {contents = None}, cPsi', tA, _ ) , s) ->
+  | PVar (PInst (_, {contents = None}, cPsi', tA, _ , _) , s) ->
     (* cD ; cPsi' |- tA <= type *)
     dprnt "[inferHead] PVar case";
     dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cD cPsi s);
@@ -474,7 +474,7 @@ and checkTyp cD cPsi sA = checkTyp' cD cPsi (Whnf.whnfTyp sA)
  * succeeds iff cD ; cPsi |- [s]recA <= type
  *)
 and checkTypRec cD cPsi (typRec, s) = match typRec with
-  | SigmaLast lastA ->
+  | SigmaLast(n, lastA) ->
     checkTyp cD cPsi (lastA, s)
 
   | SigmaElem(_x, tA, recA) ->
@@ -564,7 +564,7 @@ and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
   let _ = dprint (fun () -> "instanceOfSchElem...") in
   let sArec = match Whnf.whnfTyp (tA, s) with
     | (Sigma tArec,s') -> (tArec, s')
-    | (nonsigma, s') ->   (SigmaLast nonsigma, s') in
+    | (nonsigma, s') -> (SigmaLast (None, nonsigma), s') in
   let _ = dprint (fun () -> "tA =" ^ P.typToString cD cPsi (tA, s)) in
   let dctx        = projectCtxIntoDctx some_part in
   let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in
@@ -640,7 +640,7 @@ and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
   let tA_k (* : tclo *) = getType var (trec, Substitution.LF.id) k 1 in
   let _ = dprint (fun () -> "instanceOfSchElemProj...") in
   let (_tA'_k, subst) =
-    instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
+  instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (None, TClo tA_k)))
   (* tA'_k = [subst] (tA_k) = [s]tA *)
   in
   (trec, subst)
@@ -730,10 +730,10 @@ for each tA in tArec, check that  Subord.relevant  tA basis = []
 *)
 
  and elemPostfix sArec sBrec = match (sArec, sBrec) with
-   | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+   | ((SigmaLast(_, lastA), s), (SigmaLast(_, lastB), s')) ->
        None
 
-   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast tB, s')) ->
+   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast(_, tB), s')) ->
        Some (recA,s)
 
    | ((SigmaElem (_xA, _tA, recA), s), (SigmaElem(_xB, _tB, recB), s')) ->
@@ -766,7 +766,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi))) ->
+    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
@@ -781,13 +781,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
       if Whnf.convMTyp mtyp1 mtyp2 then checkMSub loc cD ms cD1'
       else raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi))) ->
+    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi))) ->
+    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi, _))) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with
@@ -808,3 +808,5 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
                             P.mctxToString cD ^ " |- " ^
                             P.msubToString cD ms ^ " <= "
                          ^ " = " ^ P.mctxToString cD'))
+
+

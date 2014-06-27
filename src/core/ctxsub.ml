@@ -75,7 +75,7 @@ let ctxToSub_mclosed cD psi cPsi =
 
       let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
         (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
-        (Dec (cD', Decl(u_name , MTyp (tA', Whnf.cnormDCtx (psi, MShift k)))), result, k+1)
+        (Dec (cD', Decl(u_name , MTyp (tA', Whnf.cnormDCtx (psi, MShift k), Maybe))), result, k+1)
   in
     toSub cPsi
 
@@ -145,18 +145,18 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 (* TODO: Clean this up more *)
 let declToCVar (n, ctypn) = match ctypn with
-  | MTyp (tA, cPsi) ->
-    let u     = Whnf.newMVar (Some n) (cPsi, tA) in
-    let phat  = Context.dctxToHat cPsi in
-    MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil))
-  | PTyp (tA, cPsi) ->
-	let p    = Whnf.newPVar (Some n) (cPsi, tA) in
-	let phat = dctxToHat cPsi in
-	PObj (phat, PVar (p, Substitution.LF.id))
-  | STyp (cPhi, cPsi) ->
-        let u     = Whnf.newSVar (Some n) (cPsi, cPhi) (* I guess these swap? *) in
-	let phat  = Context.dctxToHat cPsi in
-        SObj (phat, SVar (u, 0, Substitution.LF.id))
+  | MTyp (tA, cPsi, dep) ->
+      let u     = Whnf.newMVar (Some n) (cPsi, tA) dep in
+      let phat  = Context.dctxToHat cPsi in
+      MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil))
+  | PTyp (tA, cPsi, dep) ->
+    	let p    = Whnf.newPVar (Some n) (cPsi, tA) dep in
+    	let phat = dctxToHat cPsi in
+    	PObj (phat, PVar (p, Substitution.LF.id))
+  | STyp (cPhi, cPsi, dep) ->
+      let u     = Whnf.newSVar (Some n) (cPsi, cPhi) dep (* I guess these swap? *) in
+  	  let phat  = Context.dctxToHat cPsi in
+      SObj (phat, SVar (u, 0, Substitution.LF.id))
   | CTyp (sW, _) ->
         let cvar = Whnf.newCVar (Some n) sW in
 	CObj (CtxVar cvar)
@@ -169,16 +169,16 @@ let rec mctxToMSub cD = match cD with
       MDot (declToCVar (n, ctypn) , t)
 
 let mdeclToMMVar cD0 n mtyp = match mtyp with
-  | MTyp (tA, cPsi) ->
-    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) in
+  | MTyp (tA, cPsi, dep) ->
+    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep in
     let phat  = Context.dctxToHat cPsi in
     MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil))
-  | STyp (cPhi, cPsi) ->
-    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) in
+  | STyp (cPhi, cPsi, dep) ->
+    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) dep in
     let phat  = Context.dctxToHat cPsi in
     SObj (phat, MSVar (u, 0, (Whnf.m_id, Substitution.LF.id)))
-  | PTyp (tA, cPsi) ->
-    let p    = Whnf.newPVar (Some n) (cPsi, tA) in
+  | PTyp (tA, cPsi, dep) ->
+    let p    = Whnf.newPVar (Some n) (cPsi, tA) dep in
     let phat = dctxToHat cPsi in
     PObj (phat, PVar (p, Substitution.LF.id))
   | CTyp (sW, _) ->
@@ -205,9 +205,9 @@ let rec isomorphic cD1 cD2 = match (cD1, cD2) with
        isomorphic cD1' cD2' && isomorphic_ctyp_decl dec1 dec2
 
 and isomorphic_ctyp_decl dec1 dec2 = match (dec1, dec2) with
-  | (MDecl(_, tA1, dctx1),  MDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
-  | (PDecl(_, tA1, dctx1),  PDecl(_, tA2, dctx2)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
-  | (SDecl(_, dctx1A, dctx1B),  SDecl(_, dctx2A, dctx2B)) -> isomorphic_dctx dctx1A dctx2A && isomorphic_dctx dctx2A dctx2B
+  | (MDecl(_, tA1, dctx1, _),  MDecl(_, tA2, dctx2, _)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2              
+  | (PDecl(_, tA1, dctx1, _),  PDecl(_, tA2, dctx2, _)) -> isomorphic_typ tA1 tA2 && isomorphic_dctx dctx1 dctx2
+  | (SDecl(_, dctx1A, dctx1B, _),  SDecl(_, dctx2A, dctx2B, _)) -> isomorphic_dctx dctx1A dctx2A && isomorphic_dctx dctx2A dctx2B
   | (CDecl _, CDecl _) -> false  (* unsupported *)
   | (MDeclOpt _, MDeclOpt _) -> true
   | (PDeclOpt _, PDeclOpt _) -> true

@@ -6,6 +6,10 @@ open Pragma
 module Loc = Camlp4.PreCast.Loc
 
 module LF = struct
+  
+  type depend =
+    | Maybe
+    | No
 
   type kind =
     | Typ     of Loc.t
@@ -16,11 +20,21 @@ module LF = struct
     | TypDecl of name * typ
 (*      | TypDeclOpt of name  *)
 
-  and ctyp_decl =
+(*   and ctyp_decl =
     | MDecl of Loc.t * name * typ  * dctx
     | PDecl of Loc.t * name * typ  * dctx
     | SDecl of Loc.t * name * dctx * dctx
-    | CDecl of Loc.t * name * name
+    | CDecl of Loc.t * name * name *)
+
+  and ctyp =
+    | MTyp of Loc.t * typ * dctx * depend
+    | PTyp of Loc.t * typ * dctx * depend
+    | STyp of Loc.t * dctx * dctx * depend
+    | CTyp of Loc.t * name * depend
+
+  and ctyp_decl =
+    | Decl of name * ctyp
+    | DeclOpt of name
 
   and typ =
     | Atom   of Loc.t * name * spine
@@ -44,7 +58,9 @@ module LF = struct
     | Hole  of Loc.t
     | PVar  of Loc.t * name * sub
     | ProjName  of Loc.t * int * name
+    | NamedProjName  of Loc.t * name * name
     | ProjPVar  of Loc.t * int * (name * sub)
+    | NamedProjPVar  of Loc.t * name * (name * sub)
 
   and spine =
     | Nil
@@ -61,7 +77,7 @@ module LF = struct
     | Normal   of normal
 
   and typ_rec =
-    | SigmaLast of typ
+    | SigmaLast of name option * typ
     | SigmaElem of name * typ * typ_rec
 
   and tuple =
@@ -93,10 +109,6 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
- type depend =
-   | Implicit
-   | Explicit
-
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
@@ -125,7 +137,7 @@ module Comp = struct
    | TypSub   of Loc.t * LF.dctx * LF.dctx      (*    | Phi[Psi]           *)
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
-   | TypPiBox of Loc.t * (LF.ctyp_decl * depend) * typ
+   | TypPiBox of Loc.t * LF.ctyp_decl * typ
                                                 (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
 
@@ -200,7 +212,7 @@ module Comp = struct
  type  kind =
    | Ctype of Loc.t
 (*     | ArrKind of Loc.t * meta_typ  * kind *)
-   | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+   | PiKind  of Loc.t * LF.ctyp_decl * kind
 
 
  (* Useful for debugging the parser, but there should be a better place for them... *)

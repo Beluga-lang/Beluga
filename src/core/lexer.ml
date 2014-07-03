@@ -102,7 +102,9 @@ let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>"                   (* exclude < and > *)
+
+                          "<>" '|'                    (* exclude < and > *)
+
                        ]
 (* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
 
@@ -150,6 +152,10 @@ let mk_symbol  s = Token.SYMBOL  s
 
 let mk_integer  s = Token.INTLIT s
 
+let mk_dots s = Token.DOTS s
+
+(* let mk_turnstile s = Token.TURNSTILE s *)
+
 (**********)
 (* Lexers *)
 (**********)
@@ -158,6 +164,9 @@ let mk_integer  s = Token.INTLIT s
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let lex_token loc = lexer
+  | "…"
+  | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
+(*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
   | "->"
   | "<-"
   | "::"
@@ -190,7 +199,7 @@ let lex_token loc = lexer
   | "#stratify"
   | "strust"
   | "total"
-  | "%opts"
+  | "#opts"
   | "%not"
   | "%query"
   | "?"

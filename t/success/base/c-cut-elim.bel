@@ -76,7 +76,7 @@ mlam g => mlam A' => fn d => fn e => case e of
 %    in
 %      [g] foralll (T ..) (\h1. E1' .. h1) (H ..)
 
- | [g, h:hyp (imp (A1 ..) (A2 ..)) |-  impl (GGGGG ..) (\h2. HHHHH) h] => % impl (E1  .. %{ h }% ) (\h2. WWWW) %{ (\h2. E2 .. h h2) }% h  =>
+ | [g, h:hyp (imp (A1 ..) (A2 ..)) |-  impl (GGGGG ..) (\h2. HHHHH ..) h] => % impl (E1  .. %{ h }% ) (\h2. WWWW) %{ (\h2. E2 .. h h2) }% h  =>
 %
 %    let [g] impr \h1. D2 .. h1  = d in
 %    let [g] E1' .. = (ca [g] <g. A' .. > d) ([g,h ] E1 .. h) in

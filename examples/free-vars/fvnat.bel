@@ -1,3 +1,5 @@
+#opts -strengthen;
+
 tp: type.
 nat: tp.
 bool: tp.

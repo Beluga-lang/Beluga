@@ -1,3 +1,4 @@
+#opts -strengthen;
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 %
@@ -20,7 +21,7 @@ s   : exp nat -> exp nat.
 tt  : exp bool.
 add : exp nat -> exp nat -> exp nat.
 letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
-%%% letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
+% letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
 
 schema expCtx = some [t:tp] exp t;
 schema natCtx = exp nat;
@@ -55,7 +56,6 @@ case x of
 | [ |- s U]  =>
   let [ |- V] = plus [ |- U] y in [ |- s V]
 
-% formerly missing cases (jd 2010-05-23):
 | [ |- add U V] => plus [ |- U] [ |- V]
 | [ |- W] => let [ |- V] = y in [ |- add W V]
 ;
@@ -75,7 +75,7 @@ mlam g =>
  fn e =>
   case e of  % e : exp (S .. x) [g, x:exp (T ..)]
 
-   | {T':[g |- tp]}
+   | % {T':[g |- tp]}
      [g,x : exp (T' ..)  |-  tt]
      => [ |- z]
 
@@ -89,20 +89,10 @@ mlam g =>
   | [g,x : exp _  |-  (U .. )]  => [ |- z]
 
   | [g,x : exp _  |-  s (W .. x)]  => cntV [g] [g,x |- (W .. x)]
-%
-%
-%  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer
-%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
-%
-%   | [g,x : exp _ ] letv  (U1 .. x) (\y . (U2 ..  x y)) =>
-%             plus (cntV [g]  ([g,x] (U1 .. x)))
-%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 .. x y)))
 
-
-   | [g,x : exp _  |-  letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV [g]          [g,x |- (U1 .. x)])
-            (cntV [g, y:exp _]  [g,y,x |-  (U2 .. x y)])
-
+  | [g,x : exp _  |- letv (T1 ..) (U1 .. x) (\y . (U2 ..  x y))] =>
+             plus (cntV [g]  [g,x |- U1 .. x])
+                  (cntV [g, y:exp _ ]  [g,y,x |- U2 .. x y])
 
    | [g,x: exp _  |-  add (U .. x) (W .. x)]  =>
      plus (cntV [g] [g,x |- (U .. x)])

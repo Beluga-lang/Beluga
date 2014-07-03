@@ -63,7 +63,7 @@ let enabled = ref false
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
 
 let sub_smaller phat s = match phat , s with 
-  | (_ , n) , LF.Shift (_, n') -> 
+  | (_ , n) , LF.Shift n' -> 
       (n-n') < n'
   | _ -> false
 
@@ -302,30 +302,33 @@ let get_order_for f  =
 
 *)
 
-
-let gen_var loc cD cdecl = match cdecl with
-  | LF.MDecl (n, tA, cPsi) ->
+let gen_var' loc cD (x, cU) = match cU with
+  | LF.MTyp (tA, cPsi, _dep) ->
       let psihat  = Context.dctxToHat cPsi in
-      let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) n Substitution.LF.id in
+      let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x Substitution.LF.id in
         ( Comp.MetaObj (loc, psihat, tM) ,
           LF.MObj (psihat, tM) )
-  | LF.PDecl (p, tA, cPsi) ->
+  | LF.PTyp (tA, cPsi, dep) ->
       let psihat  = Context.dctxToHat cPsi in
-      let p     = Whnf.newMPVar (Some p) (cD, cPsi, tA) in
+      let p     = Whnf.newMPVar (Some x) (cD, cPsi, tA) dep in
       let h     = LF.MPVar (p, (Whnf.m_id, Substitution.LF.id)) in
         (Comp.MetaParam (loc, psihat, h) ,
          LF.PObj (psihat, h) )
 
-  | LF.SDecl (s, cPhi, cPsi) ->
+  | LF.STyp (cPhi, cPsi, dep) ->
       let psihat  = Context.dctxToHat cPsi in
-      let s     =  Whnf.newMSVar (Some s) (cD, cPsi, cPhi) in
-      let sigma = LF.MSVar (s, (LF.NoCtxShift, 0), (Whnf.m_id, Substitution.LF.id)) in
+      let s     =  Whnf.newMSVar (Some x) (cD, cPsi, cPhi) dep in
+      let sigma = LF.MSVar (s, 0, (Whnf.m_id, Substitution.LF.id)) in
         (Comp.MetaSObj (loc, psihat, sigma) ,
          LF.SObj (psihat, sigma) )
 
-  | LF.CDecl(psi_name, schema_cid, _) ->
-      let cPsi = LF.CtxVar (LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
+  | LF.CTyp (schema_cid, _) ->
+      let cPsi = LF.CtxVar (LF.CInst (x, ref None, schema_cid, cD, Whnf.m_id)) in
         (Comp.MetaCtx (loc, cPsi) , LF.CObj (cPsi) )
+
+
+let gen_var loc cD cdecl = match cdecl with 
+  | LF.Decl (x, cU) -> gen_var' loc cD (x, cU) 
 
 (* Given i and tau, compute vector V
   s.t. for all k < i
@@ -355,11 +358,11 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
             (Comp.DC :: spine, tau_r)
   else
     match (i, ttau) with
-      | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
+      | (1 , (Comp.TypPiBox ((LF.Decl (_, cU) as cdecl), tau) , theta) ) ->
           begin try
-	    print_string ("rec_spine: Unify " ^ P.cdeclToString cD cU ^ 
+	    print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
 			    "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");
-            Unify.unifyCDecl cD (cU, Whnf.m_id) (cdecl, theta);
+            Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU, theta));
             let ft = mobjToFront cM in
             let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
               (Comp.M cM::spine, tau_r )
@@ -368,16 +371,15 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
           end
 
   | (1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta)) ->
-      let u = Id.mk_name (Id.MVarName None) in
-      let cdec = LF.MDecl(u, tA, cPsi) in
+      let cU' = LF.MTyp (tA, cPsi, LF.No) in
         begin try
-          Unify.unifyCDecl cD (cU, Whnf.m_id) (cdec, theta);
+          Unify.unifyMTyp cD cU (Whnf.cnormMTyp (cU', theta));
           let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1,(tau, theta)) in
             (Comp.M cM::spine, tau_r )
         with
             _ -> raise Not_compatible
         end
-  | (n ,  (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
+  | (n ,  (Comp.TypPiBox (cdecl, tau) , theta) ) ->
       let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
       let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
         (Comp.M cN :: spine, tau_r)
@@ -400,7 +402,7 @@ let rec rec_spine' cD (x, tau)  (i, k, ttau) =
             (Comp.DC :: spine, tau_r)
   else
     match (i, ttau) with
-      | (1 , (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
+      | (1 , (Comp.TypPiBox (cdecl, tau) , theta) ) ->
 	  raise Not_compatible (* Error *)
 
   | (1, (Comp.TypArr (tau1, tau2), theta)) -> 
@@ -411,7 +413,7 @@ let rec rec_spine' cD (x, tau)  (i, k, ttau) =
         with
             _ -> raise Not_compatible
         end
-  | (n ,  (Comp.TypPiBox ((cdecl, _ ) , tau) , theta) ) ->
+  | (n ,  (Comp.TypPiBox (cdecl, tau) , theta) ) ->
       let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
       let (spine, tau_r)  = rec_spine' cD (x,tau) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
         (Comp.M cN :: spine, tau_r)
@@ -422,31 +424,23 @@ let rec rec_spine' cD (x, tau)  (i, k, ttau) =
 
 
 let gen_meta_obj (cdecl, theta) k = match cdecl with
-  | LF.CDecl (psi_name, schema_cid, _ ) ->
+  | LF.CTyp (schema_cid, _ ) ->
       Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset k))
 (*  | LF.SDecl (s,cPhi, cPsi) -> todo *)
-  | LF.MDecl (u, tA, cPsi) ->
+  | LF.MTyp (tA, cPsi, _dep) ->
       let phat  = Context.dctxToHat cPsi in
       let psihat' = Whnf.cnorm_psihat phat theta in
       let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
       let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
         Comp.MetaObj (Syntax.Loc.ghost, psihat', tM)
 
-  | LF.PDecl (p, tA, cPsi) ->
+  | LF.PTyp (tA, cPsi, _dep) ->
       let phat  = Context.dctxToHat cPsi in
       let psihat' = Whnf.cnorm_psihat phat theta in
       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
         Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
 
-  | LF.SDecl _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SDecl in Total.gen_meta_obj"))
-
-  | LF.MDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.MDeclOpt in Total.gen_meta_obj"))
-
-  | LF.PDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.PDelOpt in Total.gen_meta_obj"))
-
-  | LF.CDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.CDelOpt in Total.gen_meta_obj"))
-
-  | LF.SDeclOpt _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SDelOpt in Total.gen_meta_obj"))
+  | LF.STyp _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.STyp in Total.gen_meta_obj"))
 
 
 
@@ -484,9 +478,9 @@ let rec generalize args = match args with
 
 let rec gen_rec_calls cD cIH (cD', j) = match cD' with
   | LF.Empty -> cIH
-  | LF.Dec (cD', cdecl) ->
-        let cM  = gen_meta_obj (cdecl, LF.MShift (j+1)) (j+1) in
-        let cU  = Whnf.cnormCDecl (cdecl, LF.MShift (j+1)) in
+  | LF.Dec (cD', LF.Decl (_, cU)) ->
+        let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
+        let cU'  = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
         let mf_list = get_order () in
 	(* let _ = print_string ("Considering a total of " ^ 
 				string_of_int (List.length mf_list)  ^ 
@@ -497,7 +491,7 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
 				  "\n") in *)
-          let (args, tau) = rec_spine cD (cM, cU) (x,k,ttau) in
+          let (args, tau) = rec_spine cD (cM, cU') (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
           let _ = print_string ("\nGenerated Recursive Call : " ^
@@ -630,7 +624,7 @@ let rec weakSub cD cPsi cPsi' =
 		  (print_string (" Found at " ^ string_of_int k ^ "\n");
 		  LF.Dot( LF.Head (LF.BVar k), s))
 	      | None -> print_string (" Not Found.\n") ; raise WkViolation)
-       | _ -> LF.Shift (LF.NoCtxShift, Context.dctxLength cPsi))
+       | _ -> LF.Shift (Context.dctxLength cPsi))
 
 (* convDCtxMod cPsi cPsi' = sigma 
   
@@ -795,10 +789,17 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
 *)
 
 (*  ------------------------------------------------------------------------ *) 
+let mark_inductive cU = match cU with 
+  | LF.MTyp (tA, cPsi, _ ) -> LF.MTyp (tA, cPsi, LF.Inductive)
+  | LF.PTyp (tA, cPsi, _ ) -> LF.PTyp (tA, cPsi, LF.Inductive)
+  | LF.STyp (cPhi, cPsi, _ ) -> LF.STyp (cPhi, cPsi, LF.Inductive)
+  | LF.CTyp (cPsi, _ ) -> LF.CTyp (cPsi, LF.Inductive)
+
+
 
 let annotate loc f tau = 
   let rec ann tau pos = match tau , pos with
-  | Comp.TypPiBox ( (cdecl, _), tau) , 1 -> Comp.TypPiBox ((cdecl, Comp.Inductive), tau)
+  | Comp.TypPiBox (LF.Decl (x, cU), tau) , 1 -> Comp.TypPiBox (LF.Decl (x, mark_inductive cU), tau)
   | Comp.TypArr (tau1, tau2) , 1 -> Comp.TypArr (Comp.TypInd tau1, tau2)
   | Comp.TypArr (tau1, tau2) , n -> Comp.TypArr (tau1, ann tau2 (n-1))
   | Comp.TypPiBox (cd , tau) , n -> Comp.TypPiBox( cd, ann tau (n-1))
@@ -933,7 +934,7 @@ let rec less_meta_obj mC1 mC2 =
 	(  
 	  let p = prefix_hat phat1 phat2 in
 	  match p with
-	    | Some k -> Whnf.conv (tM1, LF.Shift(LF.NoCtxShift, k)) (tM2, Substitution.LF.id)
+	    | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id)
 	    | _ -> false
 	)
 	
@@ -960,7 +961,7 @@ let rec less_meta_obj mC1 mC2 =
     | Comp.MetaParam (_, phat1, tH1) , Comp. MetaParam (_, phat2, tH2) -> 
       (let p = prefix_hat phat1 phat2 in
        match p with
-	 | Some k -> Whnf.convHead (tH1, LF.Shift(LF.NoCtxShift, k)) (tH2, Substitution.LF.id)
+	 | Some k -> Whnf.convHead (tH1, LF.Shift k) (tH2, Substitution.LF.id)
 	 | _ -> false
       )
      (*  (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id))  *)
@@ -1008,7 +1009,7 @@ let rec get_target cD tau =
   match tau with
     | Comp.TypBase (_, _, mS)      -> (cD,  mS)
     | Comp.TypArr (tau1, tau2)     ->   get_target cD tau2
-    | Comp.TypPiBox ((dec,_), tau')    ->   get_target (LF.Dec (cD, dec)) tau'
+    | Comp.TypPiBox (dec, tau')    ->   get_target (LF.Dec (cD, dec)) tau'
     | _   -> raise Not_compatible
 
 let rec mS_size mS = 
@@ -1058,7 +1059,7 @@ let rec compare a cD tau1  mC2 n =
 	)
     | Comp.TypArr   (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
     | Comp.TypCross (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
-    | Comp.TypPiBox ((dec,_), tau)   ->
+    | Comp.TypPiBox (dec, tau)   ->
       compare a (LF.Dec (cD, dec))  tau    (Whnf.cnormMetaObj   (mC2 , LF.MShift  1))  n 
     | Comp.TypBox _    -> true
     | Comp.TypClo _    -> true
@@ -1113,7 +1114,7 @@ let stratify a tau n =
 	  let tau2' = Whnf.cnormCTyp (tau2, LF.MShift(k-k0)) in	  
 	  (compare a cD tau1' mC n) && (compare a cD tau2' mC n)
 		
-	| Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau'
+	| Comp.TypPiBox (dec, tau')    ->  strat (LF.Dec (cD0, dec)) tau'
 	| Comp.TypClo  _            -> raise Unimplemented
 	| Comp.TypBool               -> true
     in 

@@ -36,14 +36,14 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar    : Id.name option -> mctx * dctx * typ -> mm_var
-val newMPVar    : Id.name option -> mctx * dctx * typ -> mm_var
-val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
+val newMMVar    : Id.name option -> mctx * dctx * typ -> depend -> mm_var
+val newMPVar    : Id.name option -> mctx * dctx * typ -> depend -> mm_var
+val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> depend -> mm_var
                   (* cD ; cPsi |- msvar : cPhi *)
 
-val newMVar     : Id.name option -> dctx * typ -> cvar
-val newPVar     : Id.name option -> dctx * typ -> cvar
-val newSVar     : Id.name option -> dctx (* cPsi *) * dctx (* cPhi *) -> cvar
+val newMVar     : Id.name option -> dctx * typ -> depend -> cvar
+val newPVar     : Id.name option -> dctx * typ -> depend -> cvar
+val newSVar     : Id.name option -> dctx (* cPsi *) * dctx (* cPhi *) -> depend -> cvar
                   (* cPsi |- svar : cPhi *)
 val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
 
@@ -83,16 +83,14 @@ val m_invert     : msub -> msub
 (* val invExp     : Comp.exp_chk * msub -> int -> Comp.exp_chk
 val invTerm    : normal    * msub -> int -> normal
 *)
+val mctxLookup : mctx -> int -> Id.name * ctyp
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
 val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
 val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 
 
-val mctxCVarPos : mctx -> Id.name -> (Id.offset * Id.cid_schema)
-val mctxMVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
-val mctxPVarPos : mctx -> Id.name -> (Id.offset * (typ * dctx))
-val mctxSVarPos : mctx -> Id.name -> (Id.offset * (dctx * dctx))
+val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)
 
 
 val cnorm      : normal * msub -> normal
@@ -102,6 +100,7 @@ val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
+val cnormMTyp  : ctyp * msub -> ctyp
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
@@ -125,7 +124,7 @@ val cnormExp'  : Comp.exp_syn * msub -> Comp.exp_syn
 val normCtx    : Comp.gctx -> Comp.gctx
 val normCTyp   : Comp.typ  -> Comp.typ
 
-
+val convMTyp   : ctyp -> ctyp -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
 val conv_hat_ctx: psi_hat -> psi_hat -> bool

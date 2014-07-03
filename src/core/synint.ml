@@ -9,8 +9,8 @@ module Loc = Camlp4.PreCast.Loc
 module LF = struct
 
   type depend =
-    | No
-    | Maybe
+    | No      (* Explicit *)
+    | Maybe   (* Implicit *)
     | Inductive
 
   type kind =
@@ -21,21 +21,19 @@ module LF = struct
     | TypDecl of name * typ                   (* D := x:A                       *)
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
-  and ctyp_decl =                             (* Contextual Declarations        *)
-    | MDecl of name * typ  * dctx             (* D ::= u::A[Psi]                *)
-    | PDecl of name * typ  * dctx             (*   |   p::A[Psi]                *)
-    | SDecl of name * dctx (* Phi *) * dctx  (* Psi *) 
+  and ctyp =                                  (* Contextual Declarations        *)
+    | MTyp of typ * dctx * depend             (* D ::= u::A[Psi]                *)
+    | PTyp of typ * dctx * depend             (*   |   p::A[Psi]                *)
+    | STyp of dctx (* Phi*) * dctx (* Psi *) * depend
                                               (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
-    | CDecl of name * cid_schema * depend
-    | MDeclOpt of name
-    | PDeclOpt of name
-    | CDeclOpt of name
-    | SDeclOpt of name
-     
-                                              (* Potentially, A is Sigma type? *)
+    | CTyp of cid_schema * depend
+
+  and ctyp_decl =                             (* Contextual Declarations        *)
+    | Decl of name * ctyp
+    | DeclOpt of name
 
   and typ =                                   (* LF level                       *)
-    | Atom  of Loc.t * cid_typ * spine (* A ::= a M1 ... Mn              *)
+    | Atom  of Loc.t * cid_typ * spine        (* A ::= a M1 ... Mn              *)
     | PiTyp of (typ_decl * depend) * typ      (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
     | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
@@ -72,14 +70,13 @@ module LF = struct
     | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
   and sub =                                   (* Substitutions                  *)
-    | Shift of ctx_offset * offset            (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar *
-        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
-    | FSVar of name *
-        (ctx_offset * offset) * sub           (*   | s[sigma]                   *)
+    | Shift of offset                         (* sigma ::= ^n                   *)
+    | SVar  of cvar *  offset * sub           (*   | s[sigma]                   *)
+    | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
-    | MSVar of mm_var *
-        (ctx_offset * offset) * (msub * sub)  (*   | u[t ; s]                   *)
+    | MSVar of mm_var * offset * (msub * sub) (*   | u[t ; s]                   *)
+    | EmptySub                                (*   | e                          *)
+    | Undefs
 
   and front =                                 (* Fronts:                        *)
     | Head of head                            (* Ft ::= H                       *)
@@ -103,25 +100,22 @@ module LF = struct
    | CShift of int                           (* delta ::= ^n                   *)
    | CDot   of dctx * csub                   (*       | cPsi .delta            *)
 
- and ctx_offset =
-    | CtxShift of ctx_var
-    | NoCtxShift
-    | NegCtxShift of ctx_var
-
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of name * normal option ref * dctx * typ * cnstr list ref
-        (* D ; Psi |- M <= A   provided constraint *)
-    | PInst  of name * head   option ref * dctx * typ * cnstr list ref
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
+        (* D ; Psi |- M <= A
+           provided constraint *)
+    | PInst  of name * head   option ref * dctx * typ * cnstr list ref * depend
         (* D ; Psi |- H => A  provided constraint *)
-    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref
+    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref  * depend
         (* D ; Psi |- sigma <= cPhi  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref
-        (* D ; Psi |- M <= A     provided constraint *)
-    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref
-    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend
+        (* D ; Psi |- M <= A
+           provided constraint *)
+    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref * depend
+    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref * depend
         (* cD ; cPsi |- s <= cPhi *)
 
   and tvar =
@@ -168,8 +162,8 @@ module LF = struct
 
 
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of typ                             (* ... . B *)
-    |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
+    |  SigmaLast of name option * typ                        (* ... . B *)
+    |  SigmaElem of name * typ * typ_rec                (* xk : Ak, ... *)
 
   and tuple =
     | Last of normal
@@ -181,7 +175,7 @@ module LF = struct
   (**********************)
   (* Type Abbreviations *)
   (**********************)
-
+  
   type nclo     = normal  * sub          (* Ns = [s]N                      *)
   type sclo     = spine   * sub          (* Ss = [s]S                      *)
   type tclo     = typ     * sub          (* As = [s]A                      *)
@@ -212,7 +206,7 @@ module LF = struct
     val getType : head -> trec_clo -> int -> int -> tclo
   *)
   let rec getType head s_recA target j = match (s_recA, target) with
-    | ((SigmaLast lastA, s), 1) ->
+    | ((SigmaLast (_, lastA), s), 1) ->
         (lastA, s)
 
     | ((SigmaElem (_x, tA, _recA), s), 1) ->
@@ -223,6 +217,36 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
+ 
+  (* getIndex traverses the typ_rec from left to right;
+     target is the name of the projection we're looking for
+
+    Precondition: acc is 1 when the function is 1st called
+     acc is an accumulator set to 1 when the function is called
+
+  *)
+let rec getIndex' trec target acc = match trec with
+  | SigmaLast(None, _) -> raise Not_found
+  | SigmaLast(Some name, _) ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    else failwith "Projection Not found"
+  | SigmaElem(name, _, trec') ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+  else getIndex' trec' target (acc + 1)
+
+let getIndex head s_recA target acc = 
+  let (trec, _) = s_recA in getIndex' trec target acc
+  (* match s_recA with
+    | (SigmaLast(None, _), _) -> raise Not_found
+    | (SigmaLast(Some name, _),_) ->
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else raise Not_found
+
+    | (SigmaElem (name, _tA, recA), s) -> 
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else let tPj = Proj (head, acc) in
+      getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1) *)
+
 
 end
 
@@ -231,14 +255,9 @@ end
 (** Internal Computation Syntax *)
 module Comp = struct
 
-  type depend =
-    | Implicit   (* Maybe *)
-    | Explicit   (* No *)
-    | Inductive
-
   type  kind =
     | Ctype of Loc.t
-    | PiKind  of Loc.t * (LF.ctyp_decl * depend) * kind
+    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
   type meta_typ =
     | MetaTyp of LF.typ * LF.dctx
@@ -266,10 +285,11 @@ module Comp = struct
     | TypBox    of Loc.t * meta_typ
     | TypArr    of typ * typ
     | TypCross  of typ * typ
-    | TypPiBox  of (LF.ctyp_decl * depend) * typ
+    | TypPiBox  of LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
     | TypBool 
     | TypInd of typ 
+
 
   (* For ih *)
   type args =
@@ -277,6 +297,7 @@ module Comp = struct
     | V  of offset
     | E  
     | DC (* don't care *)
+
 
   type ctyp_decl =
     | WfRec of name * args list * typ

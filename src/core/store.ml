@@ -1,6 +1,5 @@
 open Syntax
 
-
 type error =
   | FrozenType of Id.cid_typ
 
@@ -72,6 +71,16 @@ module Cid = struct
          cid_tp)
 
 
+    let rec cid_of_typ : Int.LF.typ -> Id.cid_typ = function
+      | Int.LF.Atom (_, a, _ ) -> a
+      | Int.LF.PiTyp(_, tA) -> cid_of_typ tA
+      | Int.LF.Sigma typRec -> cid_of_typRec typRec
+      | Int.LF.TClo (tA, s) -> cid_of_typ tA
+
+    and cid_of_typRec = function
+    | Int.LF.SigmaLast (n, tA) -> cid_of_typ tA
+    | Int.LF.SigmaElem(_, _, rest) -> cid_of_typRec rest
+    
     let var_gen cid_tp =  (get cid_tp).var_generator
     let mvar_gen cid_tp =  (get cid_tp).mvar_generator
 
@@ -82,7 +91,7 @@ module Cid = struct
       | Int.LF.TClo (tA, s) -> gen_var_name tA
 
     and gen_var_name_typRec = function
-      | Int.LF.SigmaLast tA -> gen_var_name tA
+      | Int.LF.SigmaLast (_, tA) -> gen_var_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_var_name_typRec rest
 
     let rec gen_mvar_name tA = match tA with
@@ -92,7 +101,7 @@ module Cid = struct
       | Int.LF.Sigma typRec    -> gen_mvar_name_typRec typRec
 
     and gen_mvar_name_typRec = function
-      | Int.LF.SigmaLast tA -> gen_mvar_name tA
+      | Int.LF.SigmaLast (n, tA) -> gen_mvar_name tA
       | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
 
 
@@ -295,6 +304,12 @@ module Cid = struct
     let get = DynArray.get store
 
     let get_schema name = (get name).schema
+
+    let get_name_from_schema s =
+      let f a b = if (b.schema = s) then Some(b.name) else a in
+      let n = DynArray.fold_left f None store in match n with
+      | Some(n) -> n
+      | _ -> raise Not_found
 
     let clear () =
       DynArray.clear store;
@@ -563,6 +578,88 @@ module Cid = struct
 
   end
 
+
+  module NamedHoles = struct
+
+    let printingHoles = ref false
+
+    let usingRealNames = ref false
+
+    let newNames = ref []
+
+    let conventions = ref []
+
+    let explicitNames = ref []
+
+    let addExplicitName s = explicitNames := (s :: !explicitNames) 
+
+    let addNameConvention cid mvar var =
+      let vgen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
+      conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen))::!conventions
+
+    let rec first_unique gen = 
+      let s = Stream.next gen in
+      if List.exists (fun (_, new_name) -> new_name = s) !newNames then first_unique gen else s
+
+    let haveNameFor n = try
+      Some(List.assoc n.Id.string_of_name !newNames)
+    with
+    | _ -> None
+
+    let getName ?(tA=None) n = 
+      if n.Id.was_generated && (not !usingRealNames) then
+        let s = n.Id.string_of_name in
+        try
+          List.assoc s !newNames
+        with
+        | Not_found -> 
+          let newName = match tA with
+          | None -> 
+            if (n.Id.uppercase) then 
+              Gensym.MVarData.gensym () 
+            else Gensym.VarData.gensym ()
+          | Some(tA) -> 
+            let cid = Typ.cid_of_typ tA in 
+            try 
+              let (_, mvar_gen, _, var_gen) = List.assoc cid !conventions in
+              if n.Id.uppercase then
+                first_unique mvar_gen 
+              else match var_gen with
+              | None -> Gensym.VarData.gensym ()
+              | Some x -> first_unique x
+            with _ -> 
+              if (n.Id.uppercase) then 
+                Gensym.MVarData.gensym () 
+              else Gensym.VarData.gensym ()
+
+
+           (*  let gen = 
+              if n.Id.uppercase then
+                Cid.Typ.gen_var_name tA
+              else (Cid.Typ.gen_mvar_name tA)
+            in begin match gen with
+              | None -> 
+                if (n.Id.uppercase) then 
+                  (Gensym.MVarData.gensym () )
+                else Gensym.VarData.gensym ()
+              | Some x -> x ()
+            end *)
+          in
+            (newNames := (s,newName) :: (!newNames)) ; newName        
+      else 
+        let s = n.Id.string_of_name in (newNames := (s,s) :: (!newNames)); s
+        
+      let reset () = 
+        Gensym.MVarData.reset () ; 
+        Gensym.VarData.reset (); 
+        newNames := []; 
+        conventions := List.map (fun (cid, (mvar, _, var, _)) -> 
+                        let vargen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
+                        (cid, (mvar, Gensym.create_symbols [|mvar|], var, vargen)))
+                       !conventions
+  end
+
+
   module type RENDERER = sig
 
     open Id
@@ -591,7 +688,11 @@ module Cid = struct
 
     open Id
 
-    let render_name       n    = n.string_of_name
+    let render_name n = 
+      if !NamedHoles.printingHoles then 
+        match NamedHoles.haveNameFor n with Some x -> x | _ ->  (n.string_of_name)
+      else n.string_of_name
+
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
@@ -609,12 +710,16 @@ module Cid = struct
   end (* Int.DefaultRenderer *)
 
 
-  (* RENDERER for Internal Syntax using names *)
+  (* RENDERER for Internal Syntax using names *)  (****)
   module NamedRenderer : RENDERER = struct
 
     open Id
 
-    let render_name        n   = n.string_of_name
+    let render_name n = 
+      if !NamedHoles.printingHoles then 
+        match NamedHoles.haveNameFor n with Some x -> x | _ ->  (n.string_of_name)
+      else n.string_of_name
+
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
@@ -684,7 +789,6 @@ module BVar = struct
   let get          = List.nth
 
 end
-
 
 
 (* Free Bound Variables *)

@@ -19,8 +19,13 @@ OCAMLPACKS[] =
 
 # DEBUG = true
 
+<<<<<<< HEAD
 OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-37-11 \
                            , -w Aep-44 -warn-error A-37-11)
+=======
+OCAMLFLAGS += $(if $(DEBUG), -w Ae-44  -warn-error Ap-32-37 \
+                           , -w Aep-44 -warn-error A-32-37)
+>>>>>>> master
 
 OCAMLFLAGS += $(if $(RELEASE), -warn-error a)
 

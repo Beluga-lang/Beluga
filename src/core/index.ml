@@ -154,6 +154,7 @@ let rec index_kind cvars bvars fvars = function
 
 and index_typ cvars bvars fvars = function
   | Ext.LF.Atom (loc, a, s) ->
+    let _ = dprint (fun () -> g 0 s) in
     begin
       try
         let a' = Typ.index_of_name a in
@@ -180,10 +181,27 @@ and index_typ cvars bvars fvars = function
       let (typRec', fvars') = index_typ_rec cvars bvars fvars typRec in
       (Apx.LF.Sigma typRec' , fvars')
 
+and spaces i = if i <= 0 then "" else " " ^ (spaces (i-1))
+
+
+and g i a = begin match a with
+  | Ext.LF.Nil -> ""
+  | Ext.LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) end
+
+and f i = function
+  | Ext.LF.Lam(_,_,n) -> (spaces i) ^ "Lam\n" ^ (f (i+1) n)
+  | Ext.LF.Root(_,Ext.LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,Ext.LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (R.render_name u) ^ "\n" ^ (g (i+1) s)
+  | Ext.LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
+  | Ext.LF.Tuple(_,_) -> "Tuple"
+  | Ext.LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
+
+
 and index_typ_rec cvars bvars fvars = function
-  | Ext.LF.SigmaLast a ->
+  | Ext.LF.SigmaLast(n, a) ->
       let (last, fvars') = index_typ cvars bvars fvars a in
-        (Apx.LF.SigmaLast last , fvars')
+        (Apx.LF.SigmaLast (n,last) , fvars')
   | Ext.LF.SigmaElem (x, a, rest) ->
       let (a', fvars1)    = index_typ cvars bvars fvars a in
       let bvars'          = BVar.extend bvars (BVar.mk_entry x) in
@@ -236,6 +254,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
       let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
         (Apx.LF.Proj(bvar, k), fvs')
 
+  | Ext.LF.NamedProjName (loc, k, n) ->
+      let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
+        (Apx.LF.NamedProj(bvar, k), fvs')
+
   | Ext.LF.PVar (loc, p, s) ->
       if lookup_fv fvars (FPV p) then
         let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
@@ -261,6 +283,10 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.ProjPVar (loc, k, (p, s)) ->
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
         (Apx.LF.Proj (pvar, k), fvs')
+
+  | Ext.LF.NamedProjPVar (loc, k, (p, s)) ->
+      let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
+        (Apx.LF.NamedProj (pvar, k), fvs')
 
 
   | Ext.LF.Hole _loc ->
@@ -427,31 +453,34 @@ let rec index_ctx cvars bvars fvars = function
         (Apx.LF.Dec (psi', dec'), bvars'', fvars'')
 
 let index_cdecl cvars fvars = function
-  | Ext.LF.MDecl (loc, u, a, psi) ->
+  | Ext.LF.Decl(u, Ext.LF.MTyp(loc, a, psi, dep)) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
       let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.MV u)) in
-        (Apx.LF.MDecl (u, a', psi'), cvars', fvars'')
+      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+        (Apx.LF.Decl (u, Apx.LF.MTyp(a', psi', dep)), cvars', fvars'')
 
-  | Ext.LF.PDecl (loc, p, a, psi) ->
+  | Ext.LF.Decl(p, Ext.LF.PTyp(loc, a, psi, dep)) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (a', fvars')           = index_typ  cvars bvars' fvars' a in
       let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.PV p)) in
-        (Apx.LF.PDecl (p, a', psi') , cvars', fvars')
+      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+      (Apx.LF.Decl (p, Apx.LF.PTyp(a', psi', dep)), cvars', fvars')
 
-  | Ext.LF.SDecl (loc, s, phi, psi) ->
+  | Ext.LF.Decl(s, Ext.LF.STyp(loc, phi, psi, dep)) ->
       let (psi', _bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (phi', _bvars', fvars'') = index_dctx cvars (BVar.create ()) fvars' phi in
       let _              = dprint (fun () -> "Extend cvars with " ^ R.render_name s) in
       let cvars'         = CVar.extend cvars (CVar.mk_entry (CVar.SV s)) in
-        (Apx.LF.SDecl (s, phi', psi') , cvars', fvars'')
+      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+        (Apx.LF.Decl (s, Apx.LF.STyp(phi', psi', dep)), cvars', fvars'')
 
-  | Ext.LF.CDecl (loc , ctx_name, schema_name) ->
+  | Ext.LF.Decl(ctx_name, Ext.LF.CTyp(loc, schema_name, dep)) ->
     begin try
-
       let cvars'        = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
       let schema_cid    = Schema.index_of_name schema_name in
-        (Apx.LF.CDecl (ctx_name, schema_cid), cvars', fvars)
+      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+        (Apx.LF.Decl (ctx_name, Apx.LF.CTyp(schema_cid, dep)), cvars', fvars)
     with
         Not_found -> raise (Error (loc, UnboundCtxSchemaName schema_name))
     end
@@ -465,7 +494,7 @@ let rec index_mctx cvars fvars = function
       let (omega', delta', cvars', fvars') = index_mctx cvars fvars delta in
       let (cdec', cvars'', fvars'') = index_cdecl cvars' fvars' cdec in
         begin match cdec' with
-          | Apx.LF.CDecl _ -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
+          | Apx.LF.Decl (_, Apx.LF.CTyp (_, _)) -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
               (* (Apx.LF.Dec(omega', cdec'), delta', cvars'', fvars'') *)
           | _       -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
         end
@@ -475,9 +504,9 @@ let rec index_mctx cvars fvars = function
  * We need to change the datatype for typ_rec to be typ_decl ctx
  *)
 let rec index_typrec cvars bvars fvars = function
-  | Ext.LF.SigmaLast last_a ->
+  | Ext.LF.SigmaLast (n, last_a) ->
       let (last, fvars') = index_typ cvars bvars fvars last_a in
-      (Apx.LF.SigmaLast last, fvars')
+      (Apx.LF.SigmaLast(n, last), fvars')
 
   | Ext.LF.SigmaElem (x, a, arec) ->
       let (a', fvars') = index_typ cvars bvars fvars a in
@@ -564,11 +593,10 @@ let index_meta_typ cvars fcvars = function
 let rec index_compkind cvars fcvars = function
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
 
-  | Ext.Comp.PiKind (loc, (cdecl , dep), cK) ->
+  | Ext.Comp.PiKind (loc, cdecl, cK) ->
       let (cdecl', cvars', fcvars') = index_cdecl cvars fcvars cdecl in
-      let dep' = match dep with Ext.Comp.Explicit -> Apx.Comp.Explicit | Ext.Comp.Implicit -> Apx.Comp.Implicit in
       let cK' = index_compkind cvars' fcvars' cK in
-        Apx.Comp.PiKind (loc, (cdecl', dep'), cK')
+        Apx.Comp.PiKind (loc, cdecl', cK')
 
 
 let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
@@ -607,13 +635,10 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 	(Apx.Comp.TypCross (tau1, tau2), fcvars2)
 
 
-  | Ext.Comp.TypPiBox (_loc, (cdecl, dep), tau)    ->
+  | Ext.Comp.TypPiBox (_loc, cdecl, tau)    ->
       let (cdecl', cvars', fcvars1) = index_cdecl cvars fcvars cdecl in
       let (tau', fcvars2) = index_comptyp cvars' fcvars1 tau in
-      let apxdep = match dep with
-	  Ext.Comp.Explicit -> Apx.Comp.Explicit
-	| Ext.Comp.Implicit -> Apx.Comp.Implicit in
-        (Apx.Comp.TypPiBox ((cdecl', apxdep), tau'), fcvars2)
+      (Apx.Comp.TypPiBox (cdecl', tau'), fcvars2)
 
   | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
 
@@ -1015,11 +1040,11 @@ let comptypdef (cT, cK) =
   let cK' = index_compkind (CVar.create ())  ([], term_closed) cK in
   let rec unroll cK cvars = begin match cK with
     | Apx.Comp.Ctype _ -> cvars
-    | Apx.Comp.PiKind (loc, (cdecl, dep), cK) ->
-        let cvars' = match cdecl with
-                       | Apx.LF.MDecl (u ,_a, _psi) -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
-                       | Apx.LF.PDecl (p ,_a, _psi) -> CVar.extend cvars (CVar.mk_entry (CVar.PV p))
-                       | Apx.LF.CDecl (psi,_sW) -> CVar.extend cvars (CVar.mk_entry (CVar.CV psi))
+    | Apx.Comp.PiKind (loc, Apx.LF.Decl(u, ctyp), cK) ->
+        let cvars' = match ctyp with
+                       | Apx.LF.MTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
+                       | Apx.LF.PTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.PV u))
+                       | Apx.LF.CTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.CV u))
                       in
             unroll cK cvars'
    end in

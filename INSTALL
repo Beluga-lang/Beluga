@@ -1,146 +1,131 @@
-This document describes the compilation and installation procedures
-for Beluga.
+========================================================================
+Beluga Installation & Configuration Guide
+========================================================================
 
-*      [Prerequisites]
-       *        [GODI]
-       *        [GODI Installation Instructions]
+Table of contents:
 
-*      [Building]
+1. Installation
+  1.1 Generic prerequisites
+    1.1.1 Debian/Ubuntu
+    1.1.2 Windows
+  1.2 Building
+    1.2.1 Compilation options
+  1.3 Troubleshooting
+2. Configuration
+  2.1 Running Ruby script to convert to new syntax
+  2.2 Beluga-mode for Emacs
+
+=========================
+1. Installation
+=========================
+
+1.1 Generic Prerequisites
+=========================
+
+The following packages must be installed to use Beluga:
+
+ocaml 3.12.2+:           http://caml.inria.fr/download.en.html
+extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
+ulex:                    http://www.cduce.org/download.html#side
+
+Users not running Windows may wish to build using omake:
+
+omake:			 http://omake.metaprl.org/index.html
+
+Optional dependencies (for improved interactive mode):
+
+rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 
 
-Prerequisites
-=============
-
-Debian
-------
+1.1.1 Debian/Ubuntu
+-------------------
 
 Under Debian Linux, all the necessary prerequisites can be installed
 with just the following command:
 
-# apt-get install ocaml omake ocaml-findlib libextlib-ocaml-dev libounit-ocaml-dev ocaml-ulex
-
-The same might hold for other distributions.
+# apt-get install ocaml ocaml-findlib libextlib-ocaml-dev ocaml-ulex
 
 The interactive mode is greatly improved if you have rlwrap installed,
 so you might also want to consider:
 
 # apt-get install rlwrap
 
-Generic
--------
+These commands may work under other distributions.
 
-*IMPORTANT NOTE: Before downloading and installing any of these, or
- giving up in despair, see the following section about the OCaml GODI
- distribution.*
+1.1.2 Windows
+-------------
 
-ocaml 3.11.2 or greater: http://caml.inria.fr/download.en.html
-extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
-ulex:                    http://www.cduce.org/download.html#side
-omake:                   http://omake.metaprl.org/index.html
-ounit:                   http://ounit.forge.ocamlcore.org/
+Beluga can be executed on Windows through Cygwin. The necessary prerequisites can be installed
+using an OCalm package manager called WODI. 
 
-Optional dependencies (for improved interactive mode):
+1. Download WODI's graphical installer wodi32/64.exe
+http://wodi.forge.ocamlcore.org/download.html
 
-rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
+2. Run wodi32/64.exe and step through the installation wizard
+Note: if you don't already have Cygwin installed, it will be installed for you. The installation directory you select will be the root directory within the WODI Cygwin terminal.
 
-GODI
-----
+3. From the start menu, select Wodi32/64 Package Manager. Don't be alarmed if WODI cannot read all PATH entries.
 
-The above list of required packages may seem excessive and you may
-feel that you shouldn't have to manually download and install five or
-more separate packages to compile this software.
+4. Search for each of the prerequisite packages: extlib, ulex, ounit, findlib. Check the box beside each of the packages and click "Apply". The checkbox will be greyed out if the package has already been installed.
 
-That's why, rather than downloading the extremely barebones OCaml
-compiler, you can instead download the OCaml GODI] distribution
-and have it download and install the necessary packages for you.
+More inforamtion about WODI: http://wodi.forge.ocamlcore.org/
+More information about Cygwin: http://www.cygwin.com/
 
- http://godi.camlcity.org/godi/index.html
+1.2 Building
+============
 
+Compile by running "make" from the Beluga directory.
 
-GODI Installation Instructions
-------------------------------
+./beluga
+# make
 
-1. Download the most recent GODI tarball, e.g.,
-   `godi-rocketboost-20080630.tar.gz`
+You can now run Beluga programs with the newly 
+"beluga" executable in the "bin" directory
 
-2. Extract the GODI tarball to somewhere convenient, e.g.,
-   `/tmp/godi-rocketboost-20080630`
+./beluga
+# ./bin/beluga path/to/program.bel
 
-3. `cd /tmp/godi-rocketboost-20080630` or wherever you extracted to.
+1.2.1 Compilation options
+-------------------------
 
-4. Run the first bootstrap script, placing the GODI installation
-   somewhere convenient, e.g.,
+Setting the following environment variables for "make" enables the
+following compilation option:
 
-       $ ./bootstrap -prefix ~/local/GODI
+BYTE:          sets byte-code compilation instead of native
+DEBUG:         enables the -g option of ocamlc
+PROFILE:       enables the -p option of ocamlc
+WARN_PATTERN:  enables warning for non-exhaustive patterns
+VERBOSE:       sets verbosity level of ocamlbuild
+PARALLEL:      sets max number of parallel processes
 
-5. After the bootstrap completes, make sure to add the GODI bin and
-   man directories to your $PATH and $MANPATH variables respectively,
-   e.g.,
+For instance, to enable byte-code compilation, run:
 
-       # GODI
-       export PATH=~/local/GODI/bin:~/local/GODI/sbin:$PATH
-       export MANPATH=~/local/GODI/man:$MANPATH
+make BYTE=true
 
-6. Either restart your terminal, or refresh your shell configuration,
+Running `make clean' will clean the directory of compilation results
 
-       $ source ~/.profile
+1.3 Troubleshooting
+===================
 
-   if you use `~/.profile` to set your environment variables.
+Attempting to build Beluga before installing the prequisites may cause
+libraries to be only partially updated. You may recieve a new error message
+once you've set up the prereq packages.
 
-7. Still within `/tmp/godi-rocketboost-20080630`, run
+Error: The files [path/to/file]
+        and [path/to/file]
+        make inconsistent assumptions over interface [library name]
 
-       $ ./bootstrap_stage2
+Try cleaning the Beluga directory.
 
-   During this phase, your GODI installation will synchronize with the
-   central GODI repository and obtain the necessary information to
-   download and build the packages.
+./beluga
+# ./make clean all
 
-   *NOTE: If this stage fails, it may give you a message about PCRE
-   not being found.  If this is the case, edit and uncomment the line:
-   `GODI_BASEPKG_PCRE=yes` in `~/local/GODI/etc/godi.conf`, then rerun
-   `./bootstrap_stage2`.*
+=========================
+2. Configuration
+=========================
 
-   This phase will take a little while since it will download,
-   compile, and install the basic ocaml compiler and several other
-   fundamental packages.  Once the second bootstrap phase has
-   completed, you have a basic GODI installation.
-
-8. Now we will install the Beluga dependencies mentioned above:
-
-       $ godi_wish -build godi-extlib -build godi-ulex -build godi-omake -build godi-ounit
-
-       $ godi_perform -wishes
-
-   You should now see GODI begin to build and install the packages.
-   Once this stage finishes, you are ready to follow the build
-   instructions below for Beluga itself.
-
-
-Building
-========
-
-Install the dependencies and then run "omake", after which you'll have an
-"interpreter" executable in the "bin" directory.
-
-
-Native code compilation
-========================
-
-If Beluga seems too slow, try using the OCaml native code compiler:
-
-  omake NATIVE_ENABLED=true
-
-This typically results in about a 6x speedup.  Note, however, that if you
-ever need to run `omake clean', you should pass the same option:
-
-  omake NATIVE_ENABLED=true clean
-
-Running `omake clean' without setting NATIVE_ENABLED may not properly
-remove the native code.
-
-
-Running Ruby script to convert to new syntax
-=============================================
+2.1 Running Ruby script to convert to new syntax
+================================================
 
 You will need Ruby 1.9 for running the script.
 
@@ -160,3 +145,28 @@ Then you can say:
 
 Note, you will want to add .rvm/bin to your .bashrc directory, so you will be able to
 find rvm without giving the full path.
+
+2.2 Beluga-mode for GNU Emacs
+=============================
+
+Beluga includes a major mode for programming in Emacs. The elisp file is locationed in the
+./beluga/tools directory. To configure Beluga-mode:
+
+1. Update your ~/.emacs configuration file with the lines written below. XEmacs users must 
+update ~/.xemacs and ~/.xema.cs/init.el with the same text. Create any of these files if 
+they do not exist already.
+
+(add-to-list 'load-path "/home/bpientka/complogic/beluga/tools/")
+(load "beluga-mode.el")
+
+NOTE: Feel free to move ther beluga-mode.el file to another directory so long as you 
+ensure its location is included in the Emacs load-path.
+
+2. Restart Emacs.
+ .
+Emacs will now launch in Beluga-mode automatically when you open a Beluga program. 
+
+
+
+
+

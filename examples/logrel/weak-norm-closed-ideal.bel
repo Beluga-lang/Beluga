@@ -1,3 +1,4 @@
+#opts +strengthen;
 % Sketch of weak normalization for STLC that doesn't go under binders
 % This doesn't currently work, but this is what I imagine would be possible
 % with some improvements to reconstruction
@@ -67,16 +68,20 @@ fn r => case r of
 ;
 
 %  h |- #s : g
-datatype RedSub : {g:ctx}{#S:g[]} ctype =
-| Nil : RedSub  [ ] [ $ ^ ]
-| Dot :     RedSub  [g] [ $ #S[^] ]  % #S : g[]
+datatype RedSub : {g:ctx}{#S: |- g} ctype =
+| Nil : RedSub  [ ] [ |- ^ ]
+| Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
           -> Reduce [ |- M]              % A:[ |- tp], M:[ |- tm A]
-          -> RedSub [g, x:tm A] [ $ #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
+          -> RedSub [g, x:tm A] [ |- #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
 ;
 
 
+<<<<<<< HEAD
 rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ $ #S[^]] -> Reduce [ |- #p #S[^]] =
 % / total p (lookup g a p _ _) /
+=======
+rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [ |- #p #S[^]] =
+>>>>>>> master
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
@@ -84,7 +89,7 @@ mlam g => mlam #p => fn rs => case [g |- #p ..] of
 
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- M #S[^]] =
+rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce  [ |- M #S[^]] =
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs
 | [g |- lam (\x. M1 .. x)] =>

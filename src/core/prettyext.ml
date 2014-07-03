@@ -372,12 +372,8 @@ module Ext = struct
                suffix
        in
        let rec ppr_elements cD cPsi ppf = function
-         | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-         | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
-             begin
-               ppr_element cD cPsi  ppf ". " (x, tA1);
-               fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
-             end
+         | LF.SigmaLast (Some x, tA) -> ppr_element cD cPsi  ppf "" (x, tA)
+         | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
          | LF.SigmaElem (x, tA, tAs)  ->
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
@@ -408,7 +404,7 @@ module Ext = struct
               (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
     and frugal_block cD cPsi lvl ppf = function
-      | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+      | LF.SigmaLast (_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
       | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
@@ -510,25 +506,25 @@ module Ext = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.MDecl (_, u, tA, cPsi) ->
+      | LF.Decl (u, LF.MTyp(_, tA, cPsi, _)) ->
           fprintf ppf "{%s :: %a[%a]}"
             (R.render_name u)
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
 
-      | LF.PDecl (_, p, tA, cPsi) ->
+      | LF.Decl (p, LF.PTyp(_, tA, cPsi, _)) ->
           fprintf ppf "{#%s :: %a[%a]}"
             (R.render_name p)
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
 
-      | LF.SDecl (_, u, cPhi, cPsi) ->
+      | LF.Decl (u, LF.STyp(_, cPhi, cPsi, _)) ->
           fprintf ppf "{%s :: %a[%a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi
 
-      | LF.CDecl (_, name, schemaName) ->
+      | LF.Decl (name, LF.CTyp(_, schemaName, _)) ->
           fprintf ppf "{%s :: (%s)*}"
             (R.render_name name)
             (R.render_name schemaName)
@@ -536,7 +532,7 @@ module Ext = struct
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
       | Comp.Ctype _ -> fprintf ppf "ctype"
-      | Comp.PiKind (_, (ctyp_decl, _dep), cK) ->
+      | Comp.PiKind (_, ctyp_decl, cK) ->
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s%a@ %a%s@]"
               (l_paren_if cond)
@@ -624,17 +620,17 @@ module Ext = struct
               (R.render_name w)
               (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, psi, w))) 0) tau
               (r_paren_if cond)
-*)
-      | Comp.TypPiBox (_, (LF.CDecl (l, name, schema), Comp.Implicit), tau) ->
+*)    
+      | Comp.TypPiBox (_loc, (LF.Decl(name, LF.CTyp(l, schema, LF.Maybe)) as cdecl), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:(%s)*)@ %a%s"
               (l_paren_if cond)
               (R.render_name name)
               (R.render_name schema)
-              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, name, schema))) 0) tau
+              (fmt_ppr_cmp_typ (LF.Dec(cD, cdecl)) 0) tau
               (r_paren_if cond)
 
-      | Comp.TypPiBox (_, (ctyp_decl, _dep), tau) ->
+      | Comp.TypPiBox (_, ctyp_decl, tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)

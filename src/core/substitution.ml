@@ -23,7 +23,7 @@ module LF = struct
    *
    * Note: we do not take into account weakening here.
    *)
-  let id =  Shift (NoCtxShift , 0)
+  let id =  Shift 0
 
   (* shift = ^1
    *
@@ -31,7 +31,7 @@ module LF = struct
    *
    * cPsi, x:tA |- ^ : cPsi     ^ is patsub
    *)
-  let shift =  Shift (NoCtxShift , 1)
+  let shift =  Shift 1
 
   (* invShift = ^-1 = _.^0
    *
@@ -41,6 +41,16 @@ module LF = struct
    *)
   let invShift = Dot (Undef, id)
 
+  let rec shiftComp n s2 = match (n, s2) with
+    | (0,s) -> s
+    | (n,EmptySub) -> raise (NotComposable "Shift, EmptySub")
+    | (n,Undefs) -> Undefs
+    | (n,SVar(s, k, r)) -> SVar (s, (k+n), r)
+    | (n,MSVar(s, k, (t,r))) -> MSVar (s, (k+n), (t,r))
+    | (n,FSVar (s, k, tau)) -> FSVar (s, (k+n), tau)
+    | (n,Shift m) -> Shift (n + m)
+    | (n,Dot (_ft, s)) -> shiftComp (n - 1) s
+ 
   (* comp s1 s2 = s'
    *
    * Invariant:
@@ -54,151 +64,18 @@ module LF = struct
    * then s' patsub
    *)
   let rec comp s1 s2 = match (s1, s2) with
+    | (EmptySub, s2) -> EmptySub
+    | (Undefs, s2) -> Undefs
+    | (s, Shift 0) -> s (* Optimization *)
+    | (Shift n , s2) -> shiftComp n s2
+    | (SVar (s, n, tau), s2) ->
+        SVar (s, n, comp tau s2)
 
-    | (Shift (NoCtxShift , 0), s2) ->
-        (*  Psi |- s1 : Psi   and Psi2 |- s2 : Psi
-         *  therefore   Psi2 |- s2 : Psi  and s2 = s1 o s2
-         *)
-        s2
+    | (MSVar (s, n, (theta, tau)), s2) ->
+        MSVar (s, n, (theta, comp tau s2))
 
-    | (s, Shift (NoCtxShift, 0)) ->
-        (*  Psi1 |- s1 : Psi   and Psi1 |- s2 : Psi1
-         *  therefore   Psi1 |- s1 : Psi  and s1 = s1 o s2
-         *)
-        s
-
-    (* Case: Shift(CtxShift psi, m) o Shift(CtxShift psi', n) impossible *)
-
-    | (Shift (NoCtxShift, n), SVar(s, (ctx_shift, k), r)) ->
-        (* psi, Psi |- s1 : psi   where |Psi| = n
-
-           ctx_shift must be either NoCtxShift or NegCtxShift
-
-           Phi |- SVar(s, k, r): psi, Psi
-
-           where  psi,Psi, Psi_k |- ^k : psi, Psi
-           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
-          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
-                and  psi, Psi, Psi_k |- ^(n+k) : psi
-         *)
-      SVar (s, (ctx_shift, k+n), r)
-
-    | (Shift (NoCtxShift, n), MSVar(s, (ctx_shift, k), (t,r))) ->
-        (* psi, Psi |- s1 : psi   where |Psi| = n
-
-           ctx_shift must be either NoCtxShift or NegCtxShift
-
-           Phi |- SVar(s, k, r): psi, Psi
-
-           where  psi,Psi, Psi_k |- ^k : psi, Psi
-           where  Phi' |- s: psi,Psi, Psi_k  and Phi |- r : Phi'
-          therefore  Phi |- SVar (s, (ctx_shift, k+n), r) : psi
-                and  psi, Psi, Psi_k |- ^(n+k) : psi
-         *)
-      MSVar (s, (ctx_shift, k+n), (t,r))
-
-    | (Shift (NoCtxShift, n), FSVar (s, (ctx_shift, k), tau)) ->
-       FSVar (s, (ctx_shift, k+n), tau)
-
-    | (Shift (NoCtxShift, n), Shift (NoCtxShift, m)) ->
-        (* psi, Psi |- s1 : psi, Psi1   and psi, Psi2 |- s2: psi, Psi
-         *  therefore  psi, Psi2 |- s : psi, Psi1  where s = s1 o s2
-         *)
-        Shift (NoCtxShift, n + m)
-
-    | (Shift (CtxShift psi, n), Shift (NegCtxShift psi', k)) ->
-        (* Psi{n}, Psi'{k} |- s2 : psi, Psi{n}    and   psi, Psi{n} |- s1 : .
-         * therefore  Psi{n},Psi'{k} |- s : .
-         *)
-        (* if psi = psi' then   *)
-          Shift (NoCtxShift, n+k)
-(*        else
-        raise (Error "Composition undefined (1) : encountered different context variables! ")*)
-
-    | (Shift (CtxShift psi , m), s2) ->
-       (* psi, cPsi |-  s1 : .     and     cPsi' |- s2 : psi, cPsi  *)
-        let rec ctx_shift n s2 = match s2 with
-          | Dot(_ft, s) -> ctx_shift (n - 1) s
-              (*  psi, Psi |- s1 : .   and Psi2 |- s2. ft : psi, Psi  *)
-
-          | Shift (NoCtxShift, k) -> Shift (CtxShift psi, k + n)
-              (*  psi, Psi |- s1 : .   and (psi, Psi), Psi2 |- s2 : psi, Psi
-               *  psi |-  s : .
-               *)
-
-          | Shift (NegCtxShift _psi, k) -> Shift (NoCtxShift, k + n)
-              (* psi, Psi |- s1 : .    and Psi, Psi' |- s2 : psi, Psi
-               * Psi, Psi' |- s1 o s2 : .
-               *)
-
-          | Shift (CtxShift _ , _ ) ->  raise (NotComposable "Composition       undefined - 2")
-
-          | SVar (offset, (NegCtxShift psi', k), s') ->
-                comp (Shift (NoCtxShift, k)) s'
-
-          | SVar (offset, (NoCtxShift, k), s') ->
-            (* if    . |- offset : psi  then return s' *)
-            SVar (offset, (CtxShift psi, k + n), s')
-
-          | SVar (offset, (CtxShift _, k), s') ->
-              raise (NotComposable "Ill-typed composition: SVar CtxShift")
-            (* ctx_shift = CtxShift phi cannot happen *)
-(*            SVar (offset, (ctx_shift, k + n), s')
-*)
-          | FSVar (s, (NegCtxShift psi', k), s') ->
-                comp (Shift (NoCtxShift, k)) s'
-
-          | FSVar (s, (NoCtxShift, k), s') ->
-              FSVar (s, (CtxShift psi, k + n), s')
-
-          | MSVar (s, (NoCtxShift, k), (t',s')) ->
-              MSVar (s, (CtxShift psi, k + n), (t',s'))
-
-          | MSVar (s, (NegCtxShift psi', k), (t',s')) ->
-              (* mcomp  with t' *)
-              comp (Shift (NoCtxShift, k)) s'
-
-          | MSVar (s, (CtxShift _, k), (t',s')) ->
-              raise (NotComposable "Ill-typed composition: MSVar CtxShift")
-
-          | FSVar (s, (CtxShift _, k), s') ->
-              raise (NotComposable "Ill-typed composition: FSVar CtxShift")
-              (* ctxShift = CtxShift phi cannot happen *)
-(*              FSVar (s, (ctx_shift, k + n), s')
-*)
-        in
-          ctx_shift m s2
-
-    | (Shift (NegCtxShift psi, k), Shift (NoCtxShift, m)) ->
-        (* Psi1 |- s1 : psi     and   Psi1, Psi |- s2 : Psi1
-         *  therefore   Psi1, Psi |- s : psi      where s = s1 o s2
-         *)
-        Shift (NegCtxShift psi, k + m)
-
-    | (Shift (NegCtxShift psi, 0), Shift (CtxShift psi', m)) ->
-        (* . |- s1 : psi     and  psi,Psi' |- s2 : .
-         *  therefore   psi, Psi' |- s : psi      where s = s1 o s2
-         *)
-        (* if psi = psi' then *)
-          Shift (NoCtxShift, m)
-        (*else
-          raise (Error "Composition not defined (3) : encountered different context variables")*)
-
-
-    (*    | (Shift (psi, n), SVar (s, tau)) -> Shift (|Psi''|) *)
-
-    | (Shift (psi,n), Dot (_ft, s)) ->
-        comp (Shift (psi, n - 1)) s
-
-    | (SVar (s, (ctx_shift, n), tau), s2) ->
-        SVar (s, (ctx_shift, n), comp tau s2)
-
-    | (MSVar (s, (ctx_shift, n), (theta, tau)), s2) ->
-      (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
-        MSVar (s, (ctx_shift, n), (theta, comp tau s2))
-
-    | (FSVar (s, (ctx_shift, n), tau), s2) ->
-        FSVar (s, (ctx_shift, n), comp tau s2)
+    | (FSVar (s, n, tau), s2) ->
+        FSVar (s, n, comp tau s2)
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
@@ -211,47 +88,6 @@ module LF = struct
         let h = frontSub ft s' in
           Dot (h, comp s s')
 
-(*    | (Shift (CtxShift _, _ ), _s2) ->
-       raise (Error "Composition not defined?  Shift CtxShift")
-*)
-
-    | (Shift (NoCtxShift, k1), Shift (NegCtxShift psi2, k2)) ->
-    (*
-     * s2 = Shift(NegCtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
-     *    k1, k2 |- s2 : psi, k1              psi, k1 |-  s1 : psi
-     *
-     *    k1, k2 |- s1 o s2 : psi
-     *
-     *  s1 o s2 = Shift(NegCtxShift psi2, k1 + k2)
-     *)
-(*        Shift (NegCtxShift psi2, k1 + k2)     (* ADDED -jd 2010-06-25 *) *)
-        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^
-                                " o NegCtxShift " ^ string_of_int k2 ^ "\n"))
-
-    (*  Psi, Psi' |- Shift n : Psi    |Psi'| = n    *)
-    | (Shift (NoCtxShift, k1 ), Shift (CtxShift psi2, k2 )) ->
-    (*
-     * s2 = Shift(CtxShift psi2, k2)               s1 = Shift(NoCtxShift, k1)
-     *      psi, k1, k2     |- s2 : k1           k1  |- s1 : .
-     *
-     *      psi, k1, k2     |- s1 o s2 : .
-     *
-     *  s1 o s2 = Shift(CtxShift psi2, k1 + k2)
-     *)
-(*        Shift (CtxShift psi2, k1 + k2)           (* ADDED -jd 2010-06-24 *) *)
-        raise (NotComposable ("Composition not defined? NoCtxShift " ^ string_of_int k1 ^ " o CtxShift " ^ string_of_int k2 ^ "?"))
-
-    | (Shift (NegCtxShift psi, k), SVar(offset, (CtxShift psi', n), s)) ->
-       if psi = psi' then
-        SVar (offset, (NoCtxShift, k+n), s)
-       else
-        raise (NotComposable "Composition not defined?") (* SVar (offset, (NegCtxShift psi, k+n), s) *)
-      (*Shift (NegCtxShift psi, k) *)
-    (* raise (NotComposable "Composition not defined? NegCtxShift") *)
-    | (_s1, _s2) ->
-        raise (NotComposable "Composition not defined?")
-
-
   (* bvarSub n s = Ft'
    *
    * Invariant:
@@ -262,9 +98,10 @@ module LF = struct
    * and Psi |- Ft' <= [s]A
    *)
   and bvarSub n s = match (n, s) with
+    | (_, Undefs) -> Undef
     | (1, Dot (ft, _s))  -> ft
     | (n, Dot (_ft, s))  -> bvarSub (n - 1) s
-    | (n, Shift (_ , k)) -> Head (BVar (n + k))
+    | (n, Shift k) -> Head (BVar (n + k))
 (*    | (n, MSVar (s, (_cshift, k), (mt, sigma ))) ->
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ...
@@ -274,11 +111,11 @@ module LF = struct
 
       Can this happen ?
 *)
-    | (n, SVar (s, (_cshift, k), sigma )) ->
+    | (n, SVar (s, k, sigma )) ->
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
-    | (n, MSVar (s, (_cshift, k), (t,sigma ))) ->
+    | (n, MSVar (s, k, (t,sigma ))) ->
       Head (HMClo (n+k, s, (t,sigma)))
 (*        (print_string "[bvarSub] n, MSVar - not implemented";
         raise (NotComposable "grr"))
@@ -360,9 +197,7 @@ module LF = struct
   (* roughly 15% on standard suite for Twelf 1.1 *)
   (* Sat Feb 14 10:16:16 1998 -fp *)
   and dot1 s = match s with
-    | Shift (CtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
-    | Shift (NegCtxShift _ , 0) -> Dot (Head (BVar 1), comp s shift)
-    | Shift (_ , 0) -> s
+    | Shift 0 -> s
     | s             -> Dot (Head (BVar 1), comp s shift)
 
 
@@ -413,6 +248,8 @@ module LF = struct
    *)
   let invert s =
     let rec lookup n s p = match s with
+      | EmptySub                -> None
+      | Undefs                  -> None
       | Shift _                 -> None
       | Dot (Undef, s')         -> lookup (n + 1) s' p
       | Dot (Head (BVar k), s') ->
@@ -431,27 +268,23 @@ module LF = struct
           in
             invert'' (p - 1) (Dot (front, si)) in
 
-    let rec invert' n s = match s with
+    let rec invert' n s maxoffset = match s with
+      | EmptySub ->
+          invert'' maxoffset Undefs
+      | Undefs ->
+          invert'' maxoffset Undefs
 
-      | Shift (NoCtxShift, p) ->
-          invert'' p (Shift (NoCtxShift, n))
+      | Shift p ->
+          invert'' p (Shift n)
 
-      | Shift (CtxShift(psi), p) ->
-          invert'' p (Shift (NegCtxShift(psi), n))
+      | Dot (Head (BVar k), s') ->
+          invert' (n + 1) s' (max k maxoffset)
 
-      | Shift (NegCtxShift(psi), 0) ->
-          (* . |- s : psi  Hence psi |- si : . *)
-          Shift (CtxShift(psi), 0)
-
-      | Shift (NegCtxShift(psi), p) ->
-          (* Psi |- s : psi  Hence psi |- si : Psi *)
-          invert'' p (Shift (CtxShift psi, n))
-
-      | Dot (_, s') ->
-          invert' (n + 1) s'
+      | Dot (_,s') -> (* Is this really necessary? -ac *)
+          invert' (n + 1) s' maxoffset
 
     in
-      invert' 0 s
+      invert' 0 s 0
 
 
   (* strengthen s Psi = Psi'
@@ -460,16 +293,10 @@ module LF = struct
    * then D ; Psi'  |- s : Psi  and Psi' subcontext of Psi
    *)
   let rec strengthen s cPsi = match (s, cPsi) with
-    | (Shift (NoCtxShift, _ (* 0 *)), Null) ->
+    | (Shift  _ (* 0 *) , Null) ->
         Null
 
-    | (Shift (CtxShift _psi, _ (* 0 *)), Null) ->
-        Null
-
-    | (Shift (NegCtxShift _psi, _ ), CtxVar _psi') ->
-        Null
-
-    | (Shift (NoCtxShift, _ ), CtxVar psi) ->
+    | (Shift _ , CtxVar psi) ->
         CtxVar psi
 
     | (Dot (Head (BVar _k) (* k = 1 *), t), DDec (cPsi, decl)) ->
@@ -483,8 +310,8 @@ module LF = struct
     | (Dot (Undef, t), DDec (cPsi, _)) ->
         strengthen t cPsi
 
-    | (Shift (psi, n), cPsi) ->
-        strengthen (Dot (Head (BVar (n + 1)), Shift (psi, n + 1))) cPsi
+    | (Shift n, cPsi) ->
+        strengthen (Dot (Head (BVar (n + 1)), Shift (n + 1))) cPsi
 
 
   (* isId : sub -> bool
@@ -496,7 +323,7 @@ module LF = struct
    *)
   let isId s =
     let rec isId' s k' = match s with
-      | Shift (NoCtxShift, k)   -> k = k'
+      | Shift k   -> k = k'
       | Dot (Head (BVar n), s') -> n = (k' + 1) && isId' s' (k' + 1)
       | _                       -> false
     in
@@ -568,8 +395,8 @@ let rec applyMSub n t = match (n, t) with
    *)
   let identity cPsi =
     let rec inner n = function
-    | Null -> Shift(NoCtxShift, n)
-    | CtxVar _ -> Shift(NoCtxShift, n)
+    | Null -> Shift n
+    | CtxVar _ -> Shift n
     | DDec(cPsi, _) -> let n = n + 1 in Dot(Head (BVar n), inner n cPsi)
     in
       inner 0 cPsi
@@ -583,8 +410,8 @@ let rec applyMSub n t = match (n, t) with
    *)
   let justCtxVar cPsi =
     let rec inner n = function
-    | Null -> Shift(NoCtxShift, n)
-    | CtxVar _ -> Shift(NoCtxShift, n)
+    | Null -> Shift n
+    | CtxVar _ -> Shift n
     | DDec(cPsi, _) -> let n = n + 1 in inner n cPsi
     in
       inner 0 cPsi

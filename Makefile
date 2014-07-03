@@ -5,6 +5,8 @@
 #BYTE = true
 PARALLEL = 4
 
+EXT = $(if $(BYTE),byte,native)
+
 OCAMLBUILD = ocamlbuild -use-ocamlfind \
 	$(if $(PARALLEL),-j $(PARALLEL),) \
 	$(if $(PROFILE),-tag profile,) \
@@ -14,14 +16,21 @@ OCAMLBUILD = ocamlbuild -use-ocamlfind \
 
 .PHONY: all clean
 
-all: all.otarget
-	rm -f main.native
+
+all: bin/beluga bin/beli
+
+bin/beluga: src/beluga/main.$(EXT)
 	mkdir -p bin
-	cp  _build/src/beluga/main.native bin/beluga
-	cp  _build/src/beli/main.native bin/beli
+	cp _build/$< $@
+
+bin/beli: src/beli/main.$(EXT)
+	mkdir -p bin
+	cp _build/$< $@
+
 
 clean:
 	$(OCAMLBUILD) -clean
+	rm -rf bin
 
 %:
 	$(OCAMLBUILD) $@

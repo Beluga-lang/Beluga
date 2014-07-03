@@ -1,0 +1,36 @@
+% Types
+tp  : type.                %name tp T.
+o   : tp.
+arr : tp -> tp -> tp.
+
+
+% Intrinsically well-typed expressions
+exp   : tp -> type.        %name exp E.
+value : tp -> type.
+app   : exp (arr A B) -> exp A -> exp B.
+lam   : {A:tp}(value A -> exp B) -> value (arr A B).
+ret   : value A -> exp A.
+
+
+term: type.
+lam' : (term -> term) -> term.
+app' : term -> term -> term.
+
+schema ctx = some [t:tp] block x:term , _t:value t ;
+
+rec conv: (g:ctx)[g |- exp T] -> [g |- term] =
+fn e => case e of
+| [g |- app (E1 .. ) (E2 ..)] =>
+  let [g |- T1 ..] = conv [g |- E1 ..] in
+  let [g |- T2 ..] = conv [g |- E2 ..] in
+    [g |- app' (T1 .. ) (T2 ..)]
+| [g |- ret (V .. )] => convv [g |- V .. ]
+
+and convv: (g:ctx)[g |- value T] -> [g |- term] =
+fn v => case v of
+| [g |- #p._t ..] => [g |- #p.x ..]
+| [g |- lam A (\v. E .. v)] =>
+    let [g,b:block x:term, _t:value A |-  T .. b.x] = conv [g,b:block (x:term , _t:value A) |-  E .. b._t] in 
+      [g |- lam' \x. T .. x]
+
+;

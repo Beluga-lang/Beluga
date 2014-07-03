@@ -54,19 +54,19 @@ fn r => case r of
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
-          -> Reduce [ |- M]              % A:[ |- tp], M:[ |- tm A]
+          -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
           -> RedSub [g, x:tm A] [ |- #S[^], M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
 ;
 
 
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [ |- #p #S[^]] =
+rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
                       lookup [g'] [g' |-  #q ..] rs'
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce  [ |- M #S[^]] =
+rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M #S[^]] =
 
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs

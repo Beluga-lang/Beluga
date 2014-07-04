@@ -261,8 +261,15 @@ module Comp = struct
 
   let is_inductive case_typ = match case_typ with
     | IndDataObj -> true 
-    | IndIndexObj (_ , _ ) -> true
+    | IndIndexObj (phat , tM) -> true
     | _ -> false
+
+  let is_indMObj cD (I.Offset x) = match Whnf.mctxLookup cD x with
+    | (_, I.MTyp (_, _, I.Inductive)) -> true
+    | (_, I.PTyp (_, _, I.Inductive)) -> true
+    | (_, I.STyp (_, _, I.Inductive)) -> true
+    | (_, I.CTyp ( _, I.Inductive)) -> true
+    | (_, _ ) -> false
 
 (*  let ind_to_string case_typ = match case_typ with
     | IndDataObj -> "IndDataObj"
@@ -554,13 +561,13 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
              branches), (tau, t)) ->
         let (total_pragma, tau_sc, projOpt) =  (match  tR with
                    | I.Root (_, I.PVar (x,s) , _ ) ->
-		       let order = if !Total.enabled then IndIndexObj (phat, tR) else IndexObj(phat, tR) in
+		       let order = if !Total.enabled && is_indMObj cD x then IndIndexObj (phat, tR) else IndexObj(phat, tR) in
                        (order, TypBox(loc, MetaParamTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)
                    | I.Root (_, I.Proj (I.PVar (x,s), k ), _ ) ->
-		       let order = if  !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
+		       let order = if  !Total.enabled && is_indMObj cD x then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
                        (order, TypBox (loc, MetaParamTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k)
 		   | I.Root (_, I.MVar (x,s), _ ) -> 
-		       let order = if  !Total.enabled then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
+		       let order = if  !Total.enabled && is_indMObj cD x then IndIndexObj(phat, tR) else IndexObj(phat, tR) in
                        (order, TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)
 		   | _ -> 
 		       (IndexObj (phat, tR), TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)		       ) in
@@ -645,7 +652,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
       (* let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^ 
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
       let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
-	| TypInd tau -> tau
+	| TypInd tau -> tau 
 	| _ -> tau' in 
       if Total.exists_total_decl f then
         (Some cIH, tau, C.m_id)

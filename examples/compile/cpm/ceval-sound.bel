@@ -26,7 +26,7 @@ result : eval_step E K W
 rec csd :
           [ |- mstep (st K (ev E)) (answer W) ]
        -> [ |- eval_step E K W ] =
-/ total c (csd k e w c) /
+
 fn c => case c of
 
   [ |- << C' st_z] => [ |- result ev_z C']
@@ -97,7 +97,6 @@ fn c => case c of
 ;
 
 rec ceval_sound : [ |- ceval E V] -> [ |- eval E V] =
-/ total c (ceval_sound e v c) /
 fn c => let [ |- cev C] = c in
         let [ |- result D (<< stop st_init)] = csd [ |- C] in [ |- D]
 ;

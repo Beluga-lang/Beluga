@@ -32,7 +32,7 @@ schema ctx = value T ;
 
 
  rec var : {g:ctx}{#p:[g |- value S]}  [ |- exp' S] = 
-/ total g (var g) /
+/ total p (var g s p) /
 mlam g => mlam #p => case [g |- #p ..] of
 | [g,x:value S |- x] =>  [ |- one]
 | [g,x:value S |- #q ..] => 

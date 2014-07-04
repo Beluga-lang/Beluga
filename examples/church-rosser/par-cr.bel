@@ -39,7 +39,7 @@ dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''.
 
 rec dia : (g:ctx) [g |- pred (M ..) (M1 ..)] -> [g |- pred (M ..) (M2 ..)]
           -> [g |- dia_prop (M1 ..) (M2 ..)] =
-/ total d (dia g m m1 m2 d e) /
+% / total e (dia g m m1 m2 d e) /
 fn d => fn e => case d of
 | [g |- ap (R1 ..) (R2 ..)] =>
   (case e of
@@ -104,7 +104,7 @@ strip_result: pred* M' N -> pred M'' N
 
 rec strip_lemma: (g:ctx)[g |- pred (M ..) (M' ..)] -> [g |- pred* (M ..) (M'' ..)]
                 -> [g |- strip_prop (M' ..) (M'' ..)] =
-/ total s (strip_lemma g m m' m'' r s) /
+% / total s (strip_lemma g m m' m'' r s) /
 fn r => fn s => let [g |- R ..] = r in case s of
  | [g |- id*] => [g |- strip_result id* (R ..)]
 
@@ -122,7 +122,7 @@ conf_result: pred* M' N -> pred* M'' N
 
 rec conf : (g:ctx) [g |- pred* (M ..) (M' ..)] -> [g |- pred* (M ..) (M'' ..)]
          -> [g |- conf_prop (M' ..) (M'' .. )] =
-/ total r (conf g m m' m'' r s) /
+% / total r (conf g m m' m'' r s) /
 fn r => fn s => case r of
 | [g |- id*] => let [g |- R* ..] = s in [g |- conf_result (R* ..) id*]
 | [g |- next (R1 ..) (R2* ..)] =>
@@ -141,7 +141,7 @@ cr_result: pred* M N  ->  pred* M'  N
 
 
 rec cr: (g:ctx) [g |- pred= (M ..)  (M' ..)]  ->  [g |- cr_prop (M ..) (M' ..)] =
-/ total e (cr g m m' e) /
+% / total e (cr g m m' e) /
 fn e => case e of
 |[g |- reduce (R* ..)] => [g |- cr_result (R* ..) id*]
 |[g |- expand (R* ..)] => [g |- cr_result id* (R* ..)]

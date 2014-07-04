@@ -441,9 +441,11 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
         Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
 
-  | LF.STyp _ ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.STyp in Total.gen_meta_obj"))
-
-
+  | LF.STyp (cPsi, cPhi, _dep) ->  
+      let sv = LF.SVar (LF.Offset k, 0, Substitution.LF.id) in 
+      let phat  = Context.dctxToHat cPsi in
+      let psihat' = Whnf.cnorm_psihat phat theta in
+	Comp.MetaSObj (Syntax.Loc.ghost, psihat', sv)
 
 let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
   | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
@@ -487,7 +489,7 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
 				string_of_int (List.length mf_list)  ^ 
 				" rec. functions\n") in *)
         let mk_wfrec (f,x,k,ttau) =
-	  (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
+	   (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
 				  (LF.Decl (u,cU)) ^  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
@@ -497,7 +499,7 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
           let d = Comp.WfRec (f, args, tau) in
           (* let _ = print_string ("\nGenerated Recursive Call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in*)
+                                ^ "\n\n") in *)
             d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -555,7 +557,7 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ( (*print_string ("Generate recursive calls from \n" 
+    ( (* print_string ("Generate recursive calls from \n" 
 		     ^ "cD = " ^ P.mctxToString cD 
 		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");*)
     let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in

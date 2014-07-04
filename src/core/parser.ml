@@ -1199,6 +1199,10 @@ GLOBAL: sgn;
       | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
+(*      | "let"; x = SYMBOL; ":"; tau = cmp_typ; "="; e1 = cmp_exp_chk; "in"; e2 = cmp_exp_chk ->
+	  let i =  Comp.Ann (_loc, e1, tau) in
+          Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e2))   
+*)
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;turnstile; mobj = clf_pattern; "]";
@@ -1348,7 +1352,6 @@ cmp_exp_syn:
  [ LEFTA [
    "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
         Comp.BoxVal (_loc, cPsi, tR)
-
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
        Comp.Apply (_loc, h, begin match p_or_a with
@@ -1364,6 +1367,7 @@ cmp_exp_syn:
    | "("; i = SELF; p_or_a = cmp_pair_atom_syn -> match p_or_a with
        | Pair_syn i2 -> Comp.PairVal (_loc, i, i2)
        | Atom_syn -> i
+
  ]];
 
 (* pattern spine: something that can follow a constructor; returns a function

@@ -40,13 +40,13 @@ let _ = Error.register_printer
 		   Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
 	    )
 	| NoPositiveCheck n -> 
-  	  Format.fprintf ppf "Datatype %s hasn't done positivity or stratification checking."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "Datatype %s has not been checked for positivity or stratification."  n (* (R.render_name n) *)
 	| NoStratifyCheck n -> 
-  	  Format.fprintf ppf "Datatype %s hasn't done stratification checking."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "Datatype %s has not been checked for stratification."  n (* (R.render_name n) *)
 	| NoStratifyOrPositiveCheck n -> 
-  	  Format.fprintf ppf "Datatype %s hasn't done stratification or positivity checking."  n (* (R.render_name n) *)
+  	  Format.fprintf ppf "Datatype %s has not been checked for stratification or positivity."  n (* (R.render_name n) *)
 	| WrongArgNum (n, num) -> 
-  	  Format.fprintf ppf "Stratification declaration for %s uses a wrong argument number %d" (R.render_cid_comp_typ n) num
+  	  Format.fprintf ppf "Stratification declaration for %s uses the argument number %d which is out of bounds." (R.render_cid_comp_typ n) num
 	| NotImplemented n      -> 
   	  Format.fprintf ppf "The case %s is not implemented yet."  n
 
@@ -74,12 +74,12 @@ let rec smaller_meta_obj cM = match  cM with
         | LF.Const _ -> true
         | LF.BVar _ -> true
 	| LF.PVar (_, s) -> 
-	    (print_string "Checking whether pvar is smaller (0)\n";
+	    ((* print_string "Checking whether pvar is smaller (0)\n"; *)
 	     match spine with 
 	       | LF.Nil -> sub_smaller phat s
 	       | _ -> true)
 	| LF.Proj (h, _ ) -> 
-	    (print_string "Checking whether proj is smaller (1)\n";
+	    ((* print_string "Checking whether proj is smaller (1)\n"; *)
 	    smaller_meta_obj (Comp.MetaObj (l, phat, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller phat  s
         | _ -> false)
@@ -88,12 +88,12 @@ let rec smaller_meta_obj cM = match  cM with
         | LF.Const _ -> true
         | LF.BVar _ -> true
 	| LF.PVar (_, s) -> 
-	    (print_string "Checking whether pvar is smaller (1)\n";
+	    ((* print_string "Checking whether pvar is smaller (1)\n"; *)
 	     match spine with 
 	       | LF.Nil -> sub_smaller (Context.dctxToHat cPsi) s
 	       | _ -> true)
 	| LF.Proj (h, _ ) -> 
-	    (print_string "Checking whether proj is smaller (1)\n";
+	    ((* print_string "Checking whether proj is smaller (1)\n"; *)
 	    smaller_meta_obj (Comp.MetaObjAnn (l, cPsi, LF.Root(l', h, spine))))
 	| LF.MVar (_, s) -> sub_smaller (Context.dctxToHat cPsi) s
 	| _ -> false
@@ -101,7 +101,8 @@ let rec smaller_meta_obj cM = match  cM with
   | Comp.MetaParam (_, phat, h ) ->
       match h with 
 	| LF.PVar (_, s) -> 
-	    (print_string "Checking whether proj is smaller (1)\n";sub_smaller phat s)
+	    ((* print_string "Checking whether proj is smaller(1)\n";*)
+		sub_smaller phat s) 
 	| _ -> false
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
@@ -358,11 +359,11 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
             (Comp.DC :: spine, tau_r)
   else
     match (i, ttau) with
-      | (1 , (Comp.TypPiBox ((LF.Decl (_, cU) as cdecl), tau) , theta) ) ->
+      | (1 , (Comp.TypPiBox ((LF.Decl (_, cU') as _cdecl), tau) , theta) ) ->
           begin try
-	    print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
-			    "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");
-            Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU, theta));
+	    (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
+			    "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
+            Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU', theta));
             let ft = mobjToFront cM in
             let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
               (Comp.M cM::spine, tau_r )
@@ -478,7 +479,7 @@ let rec generalize args = match args with
 
 let rec gen_rec_calls cD cIH (cD', j) = match cD' with
   | LF.Empty -> cIH
-  | LF.Dec (cD', LF.Decl (_, cU)) ->
+  | LF.Dec (cD', LF.Decl (u, cU)) ->
         let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
         let cU'  = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
         let mf_list = get_order () in
@@ -486,17 +487,17 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
 				string_of_int (List.length mf_list)  ^ 
 				" rec. functions\n") in *)
         let mk_wfrec (f,x,k,ttau) =
-	  (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD cU ^ 
-				  " ") in 
+	  (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
+				  (LF.Decl (u,cU)) ^  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
 				  "\n") in *)
           let (args, tau) = rec_spine cD (cM, cU') (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
-          let _ = print_string ("\nGenerated Recursive Call : " ^
+          (* let _ = print_string ("\nGenerated Recursive Call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in
+                                ^ "\n\n") in*)
             d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -526,9 +527,9 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 	  let (args, tau) = rec_spine' cD (y, tau) (x,k,ttau) in 
 	  let args = generalize args in 
 	  let d = Comp.WfRec (f, args, tau) in 
-          let _ = print_string ("\nRecursive call : " ^
+          (* let _ = print_string ("\nRecursive call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in
+                                ^ "\n\n") in*)
 	    d 
 	in 
 	let rec mk_all cIH mf_list = match mf_list with
@@ -617,13 +618,13 @@ let rec weakSub cD cPsi cPsi' =
     (match cPsi' with 
        | LF.DDec (cPsi', LF.TypDecl (x, tA)) -> 
 	   let s = weakSub cD cPsi cPsi' in (*  cPsi |- s : cPsi' *)
-	   let _ = print_string ("Is " ^ P.typToString cD cPsi' (tA, Substitution.LF.id)
-	     ^ "\n in " ^ P.dctxToString cD cPsi ^ " ? \n") in
+	   (* let _ = print_string ("Is " ^ P.typToString cD cPsi' (tA, Substitution.LF.id)
+	     ^ "\n in " ^ P.dctxToString cD cPsi ^ " ? \n") in*)
 	   (match pos cPsi (Whnf.normTyp (tA,s)) 1 with 
 	      | Some k ->  
-		  (print_string (" Found at " ^ string_of_int k ^ "\n");
+		  ((* print_string (" Found at " ^ string_of_int k ^ "\n"); *)
 		  LF.Dot( LF.Head (LF.BVar k), s))
-	      | None -> print_string (" Not Found.\n") ; raise WkViolation)
+	      | None -> (* print_string (" Not Found.\n") ; *) raise WkViolation)
        | _ -> LF.Shift (Context.dctxLength cPsi))
 
 (* convDCtxMod cPsi cPsi' = sigma 
@@ -648,9 +649,9 @@ let convDCtxMod cD cPsi cPhi =
 	  Some (Substitution.LF.comp wk_sub s_proj)
     with _ -> 
       try 
-	let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n" ;
+	(* let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n" ;
 		 print_string (" cPsi = " ^ P.dctxToString cD cPsi ^ "\n");
-		 print_string (" cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") ) in
+		 print_string (" cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") ) in*)
       let wk_sub = weakSub cD cPhi' cPsi in 
 	  Some (Substitution.LF.comp wk_sub s_proj)
       with _ -> None
@@ -734,8 +735,8 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
     let cIH' = filter cD cG cIH (loc, e2) in
     let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in 
     let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in 
-    let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
-			    "\n           EXPECTED " ^ P.dctxToString cD cPsi ^ "\n\n") in
+    (* let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
+			    "\n           EXPECTED " ^ P.dctxToString cD cPsi ^  "\n\n") in *)
       if Whnf.convDCtx cPsi cPhi then 
 	LF.Dec (cIH', Comp.WfRec (f, args, tau))
       else 
@@ -750,9 +751,9 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     if Whnf.convMetaObj cM' cM then
-      (print_string  ("IH and recursive call agree on : "
+      ((* print_string  ("IH and recursive call agree on : "
                       ^ P.metaObjToString cD cM' ^ " == " ^
-                      P.metaObjToString cD cM ^ "\n");
+                      P.metaObjToString cD cM ^ "\n");*)
       LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau' is understood as the approximate type *)
     else
@@ -806,8 +807,8 @@ let annotate loc f tau =
   |  _ , _ -> raise (Error (loc, TooManyArg f))
   in
     match get_order_for f with 
-      Some x -> (print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
-				 " in pos = " ^ string_of_int x ^ "\n"); 
+      Some x -> ((* print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
+				 " in pos = " ^ string_of_int x ^ "\n"); *)
 		 ann tau x)
       | None -> tau 
 

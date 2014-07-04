@@ -34,14 +34,6 @@ datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratify 1 =
     ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
   -> Reduce [ |- arr A B] [ |- M]
 ;
-
-datatype Reduce : {M:[ |- tm A]} ctype  #stratify 1 =
-| I : [ |- halts M] -> Reduce [ |- M]
-| Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ |- N] -> Reduce  [ |- app M N])
-  -> Reduce  [ |- M]
-;
-
 rec haltsMstep : {MS:[ |- mstep M M']} [ |- halts M'] -> [ |- halts M] = 
 / total (haltsMstep) /
 mlam MS => fn h => let [ |- halts/m MS' V] = h in
@@ -50,8 +42,8 @@ mlam MS => fn h => let [ |- halts/m MS' V] = h in
 ;
 
 % CR2
-rec closed : {MS:[ |- mstep M M']} Reduce [ |- M'] -> Reduce [ |- M] =
-%/ total r (closed _ _ _ r)/
+rec closed : {MS:[ |- mstep M M']} Reduce [ |- A] [ |- M'] -> Reduce [|- A] [ |- M] =
+/ total r (closed _ _ _ r)/
 mlam MS => fn r => case r of
 | I ha => I (haltsMstep [ |- MS] ha)
 | Arr ha f => Arr (haltsMstep [ |- MS] ha)
@@ -60,7 +52,7 @@ mlam MS => fn r => case r of
 ;
 
 % CR1
-rec cr1 : Reduce [ |- M] -> [ |- halts M] = 
+rec cr1 : Reduce [|- A] [ |- M] -> [ |- halts M] = 
 / total r (cr1 _ r)/ 
 fn r => case r of
 | I h => h
@@ -71,17 +63,12 @@ fn r => case r of
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
-          -> Reduce [ |- M]              % A:[ |- tp], M:[ |- tm A]
+          -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
           -> RedSub [g, x:tm A] [ |- #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
 ;
 
-
-<<<<<<< HEAD
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ $ #S[^]] -> Reduce [ |- #p #S[^]] =
+rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
 % / total p (lookup g a p _ _) /
-=======
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [ |- #p #S[^]] =
->>>>>>> master
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
@@ -89,7 +76,7 @@ mlam g => mlam #p => fn rs => case [g |- #p ..] of
 
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce  [ |- M #S[^]] =
+rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce  [|- A] [ |- M #S[^]] =
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs
 | [g |- lam (\x. M1 .. x)] =>

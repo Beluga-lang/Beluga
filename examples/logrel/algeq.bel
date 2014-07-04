@@ -60,17 +60,11 @@ and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 ;
 
 % Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
-<<<<<<< HEAD
-datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: g'[h']} ctype   =
-| Nil : IsVarSub [] [] [h] [h' $ ^ ]
-| Cons :  IsVarSub [g] [g'] [h] [h' $ #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
-         -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' $ #S[..] (M ..)];
-=======
 datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' |- #S[..] (M ..)];
->>>>>>> master
+
 
 % Logical equivalence. _|-_~~_:_ in the paper
 datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  =
@@ -102,14 +96,10 @@ fn r1 => fn r2 => case r1 of
 | Cons ivs' iv => Cons (renCompose ivs' r2) (wknVar iv r2);
 
 % Weakening a renaming is still a renaming
-<<<<<<< HEAD
-rec wknVarSub : IsVarSub [g] [g'] [h] [h' $ #S[..]]
- -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm $ #S[..] ] =
-% / total r (wknVarSub _ _ _ _ _ _ r )/
-=======
+
 rec wknVarSub : IsVarSub [g] [g'] [h] [h' |- #S[..]]
  -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm |- #S[..] ] =
->>>>>>> master
+% / total r (wknVarSub _ _ _ _ _ _ r )/
 fn r => case r of
 | Nil => Nil
 | Cons r' v => Cons (wknVarSub r') (pop' v);
@@ -211,16 +201,10 @@ datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1: h' |- g'}{#S2: h' |- g
 
 % Monotonicity of logical equivalence on substitutions
 rec wknLogEqSub :
-<<<<<<< HEAD
-  IsVarSub [h] [h'] [h0] [h0' $ #W[..]]
--> LogEqSub [g] [g'] [h] [h' $ #S1[..]] [h' $ #S2[..]]
--> LogEqSub [g] [g'] [h0] [h0' $ #S1[#W[..]]] [h0' $ #S2[#W[..]]] = 
-% / total es (wknLogEqSub _ _ _ _ _ _ _ _ _ iv es )/
-=======
   IsVarSub [h] [h'] [h0] [h0' |- #W[..]]
 -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
 -> LogEqSub [g] [g'] [h0] [h0' |- #S1[#W[..]]] [h0' |- #S2[#W[..]]] =
->>>>>>> master
+% / total es (wknLogEqSub _ _ _ _ _ _ _ _ _ iv es )/
 fn iv => fn es => case es of
 | Nil => Nil
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)

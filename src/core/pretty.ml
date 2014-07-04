@@ -928,6 +928,7 @@ module Int = struct
           begin match dep with
             | LF.No -> false
             | LF.Maybe -> true
+            | LF.Inductive -> false
           end
 
     and dependent_string = function
@@ -938,6 +939,7 @@ module Int = struct
           begin match dep with
             | LF.No -> "^e"
             | LF.Maybe -> "^i"
+	    | LF.Inductive -> "*"
           end
 
     (* Computation-level *)

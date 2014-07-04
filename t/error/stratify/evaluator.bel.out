@@ -1,9 +1,1 @@
-
-Generated Recursive Call : eval [ |- N]  : [ |- result]
-
-
-Generated Recursive Call : eval [ |- M]  : [ |- result]
-
-IH and recursive call agree on : [ |- M] == [ |- M]
-IH and recursive call agree on : [ |- N] == [ |- N]
 Recursive call not structurally smaller.

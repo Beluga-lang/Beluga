@@ -4,7 +4,7 @@ suc  : exp -> exp. #postfix suc 4
 
 letv : exp -> (exp -> exp) -> exp. #infix letv 3 left
 lam  : (exp -> exp) -> exp. #postfix lam 1
-app  : exp -> exp -> exp.   #infix app 1. 
+app  : exp -> exp -> exp.   #infix app 1 none 
 
 tp   : type.   %name tp T.
 nat  : tp.

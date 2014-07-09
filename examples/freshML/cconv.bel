@@ -34,7 +34,7 @@ mlam #p => fn env => case env  of
      [arg', xve |-  arg']
   else
      (let [arg':target, xve:target |-  U arg' xve] = genTVar [g |- #p .. ] [g |- T .. ]  in
-     [arg', xve |-  U arg' (tsnd xve)])
+     [arg', xve |-  U \ arg' (tsnd xve)])
 ;
 
 

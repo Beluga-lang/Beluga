@@ -45,7 +45,7 @@ mlam g => fn e =>
 rec fffNo-g-MVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
   case e of
-  | [g, x:term |-  U x] => [g |- z]       % x could refer to vars in g, so this is effectively like U .. x
+  | [g, x:term |-  U \ x] => [g |- z]       % x could refer to vars in g, so this is effectively like U .. x
 ;
 
 

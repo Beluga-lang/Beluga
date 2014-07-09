@@ -711,10 +711,17 @@ GLOBAL: sgn;
           "("; a = SELF; ")" ->
             a
 
-        |
+     (*    |
            a = SYMBOL; ms = LIST0 clf_normal ->
              let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
+          |
+             a = SYMBOL; ms = LIST0 clf_normal ->
+                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
+          |
+             a = UPSYMBOL; ms = LIST0 clf_normal ->
+                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+
 
 
         ]
@@ -784,6 +791,9 @@ GLOBAL: sgn;
 
         |
            "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+        |
+           "("; u = UPSYMBOL; "\\"; sigma' = clf_sub_new; ")"   ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
         |
             h = clf_head ->
@@ -885,6 +895,9 @@ GLOBAL: sgn;
   clf_term_app:
     [
       [
+        u = UPSYMBOL; "\\"; s = clf_sub_new ->
+          LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
+      |
         u = UPSYMBOL; s = OPT[clf_sub_new] -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
           let n = begin match s with
@@ -1593,21 +1606,24 @@ clf_pattern :
                     mixtau2)
 
       |
-          "#";"["; cPsi = clf_dctx; turnstile; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+          "#";"["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]"  ->
+(*             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) *)
+              MTPBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
 
 
-      |
-          "["; cPsi = clf_dctx; turnstile; "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "]"  ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+(*      |
+          "["; cPsi = clf_dctx; turnstile; "("; ms = LIST1 clf_normal; ")"; "]"  ->
+(*             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+ *)              MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
 
-
+*)
       |
-          "["; cPsi = clf_dctx; turnstile; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+          "["; cPsi = clf_dctx; turnstile;(*  a = SYMBOL; *)  ms = LIST1 clf_normal; "]"  ->
+            (* let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) *)
+              MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
  
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->
           let cPhi0 = LF.Null in

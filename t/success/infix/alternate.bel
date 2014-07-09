@@ -6,7 +6,7 @@ exp : type.
 lam : (exp -> exp) -> exp.
 app : exp -> exp -> exp. #infix app 1 left
 
-eq : exp -> exp -> type. #infix eq 3.
+eq : exp -> exp -> type. #infix eq 3 none
 refl : M eq M.
 
 notLam : exp -> type. #postfix notLam 2 

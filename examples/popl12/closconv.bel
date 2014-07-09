@@ -31,7 +31,7 @@ schema cctx = ctm;
 
 rec addProjs : (g:cctx) [ |- nat] -> [g, e:envr  |-  ctm] ->  [e:envr  |-  ctm] =
 fn n => fn m => case m of
-| [ e:envr  |-  M e ] => [e:envr  |-  M e]
+| [ e:envr  |-  M \ e ] => [e:envr  |-  M \ e]
 | [ g,x:ctm, e:envr  |-  M .. x e] =>
   let [ |- N] = n in
    addProjs [ |- s N] [g, e:envr  |-  M .. (proj e N) e]
@@ -67,9 +67,9 @@ fn cr => fn m => case m of
 
 | [g |- lam \x. M .. x ] =>
   let [h,x:ctm  |-  M' .. x] = conv (Rsnoc cr) [g,x:tm  |-  M .. x] in
-  let [e:envr  |-  N e] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M' .. x] in
+  let [e:envr  |-  N \ e] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M' .. x] in
   let [h |- Env .. ]  = ctxToEnv (Ctx [h]) in
-    [h |- close (clam \e. N e) (Env .. )]
+    [h |- close (clam \e. N \ e) (Env .. )]
 
 | [g |- app (M ..) (N ..) ] =>
   let [h |- M' .. ] = conv cr [g |- M .. ] in

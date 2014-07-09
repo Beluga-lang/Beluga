@@ -144,8 +144,8 @@ fn d => fn ev => case ev of
     [ |- is_# D']
  )
 | [ |- ~>_#2] =>
-  let  {D':[a:tp |-  has (E a) (T a)] }
-     [ |- is_# (is_tlam (\a. D' a))]  : [ |- has (ann _ T2) (T T2)] = d in [ |- D' T2]
+  let  {D':[a:tp |-  has (E, a) (T, a)] }
+     [ |- is_# (is_tlam (\a. D', a))]  : [ |- has (ann _ T2) (T T2)] = d in [ |- D' T2]
 
 | [ |- ~>_unroll2 VL] =>
   let [ |- is_unroll (is_roll D)]  = d in  [ |- D]

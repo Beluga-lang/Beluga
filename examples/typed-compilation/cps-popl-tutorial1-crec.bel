@@ -60,7 +60,7 @@ let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
 rec test : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
 fn x => let [b:block (x:value o , _t:cvalue o) |-  V', b] = cps [b:block (x:value o , _t:cvalue o) |-  b.1] in
-	[b,k |- cthrow k (V' b)] ;
+	[b,k |- cthrow k (V', b)] ;
 
 let r1' = test ttrue ;
 

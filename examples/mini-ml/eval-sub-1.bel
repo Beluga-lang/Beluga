@@ -31,9 +31,9 @@ fn e =>
  | [|- add U W]  =>
        add (eval [|- U]) (eval [|- W])
 
- | [|- letv U (\ x . (W x))]  =>
+ | [|- letv U (\ x . (W, x))]  =>
 
     case (eval [|- U]) of
         [|- V]  =>
-          eval [|- (W V)]
+          eval [|- (W, V)]
 );

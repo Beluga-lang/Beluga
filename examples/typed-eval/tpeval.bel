@@ -57,7 +57,7 @@ rec eval : [ |- exp T] -> [ |- exp T] =
      | [ |- ff] => eval [ |- E2]
      )
 
-   | [ |- letv  E (\x . (E1 x))]  =>
+   | [ |- letv  E (\x . (E1, x))]  =>
    let [ |- V] = eval [ |- E] in eval [ |- (E1 V)]
 ;
 

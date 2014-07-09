@@ -788,13 +788,30 @@ GLOBAL: sgn;
           |  *)
           u = UPSYMBOL ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
-
         |
+          "("; u = UPSYMBOL; s = clf_sub_new; ")" -> 
+            let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
+            let n = begin match s with
+              (* Infix operator case *)
+              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
+                let op' = LF.Root(l, op, LF.Nil) in 
+                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
+
+              (* Postfix case *)
+              | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> 
+                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::[LF.Root(l, op, LF.Nil)])
+
+              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
+            end in ignore (normalToString n); n
+        |
+          "("; u = UPSYMBOL ; ","; sigma' = clf_sub_new; ")" ->
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+ (*        |
            "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
         |
            "("; u = UPSYMBOL; ","; sigma' = clf_sub_new; ")"   ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) *)
         |
             h = clf_head ->
              LF.Root (_loc, h, LF.Nil)

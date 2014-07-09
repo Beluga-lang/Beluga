@@ -34,9 +34,9 @@ fn e =>
        add (eval [|- U]) (eval [|- W])
 
  | {U:[|- exp]}{W:[x : nat |- exp]}
-   [|- letv U (\x . (W x))] : [|- exp] =>
+   [|- letv U (\x . (W, x))] : [|- exp] =>
 
     case (eval [|- U]) of
        {V:[|- nat]} [|- V] : [|- nat] =>
-          eval [|- (W V)]
+          eval [|- (W, V)]
 );

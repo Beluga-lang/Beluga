@@ -401,6 +401,26 @@ module Sgn = struct
     | Schema        of cid_schema * LF.schema
     | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
     | Pragma        of LF.prag
+    | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
+    | Module        of Loc.t * name * signature option * decl list
+    | ModuleType    of  Loc.t * name * module_sig list
+
+  and module_sig =
+    | SchemaSig of Loc.t * name * LF.schema   
+    | ValSig of Loc.t * name * Comp.typ       
+    | RecSig of Loc.t * name * Comp.typ       
+    | ConstSig    of Loc.t * name * LF.typ    
+    | TypSig      of Loc.t * name * LF.kind   
+    | CompTypSig  of Loc.t * name * Comp.kind   
+    | CompCotypSig of Loc.t * name * Comp.kind
+    | CompConstSig of Loc.t * name * Comp.typ
+    | CompDestSig of Loc.t * name * Comp.typ
+    | CompTypAbbrevSig of Loc.t * name * Comp.kind * Comp.typ   
+    | MRecTypSig  of Loc.t * module_sig list list 
+
+  and signature =
+    | Name of name
+    | Sig of module_sig list
 
   type sgn = decl list
 

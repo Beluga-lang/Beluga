@@ -1,6 +1,14 @@
 open Id
 open Syntax.Int
 
+module Modules : sig
+  val current : string list ref
+  val modules : (string list, Sgn.decl list ref) Hashtbl.t
+  val signatures : (string list, Sgn.signature list ref) Hashtbl.t
+  val addSgnToCurrent : Sgn.decl -> unit
+  val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
+  val sig_to_decl : Syntax.Ext.Sgn.module_sig -> Syntax.Ext.Sgn.decl
+end
 
 module Cid : sig
 
@@ -20,7 +28,7 @@ module Cid : sig
 
     val freeze : cid_typ -> unit
 
-    val entry_list : Id.cid_typ list ref
+    val entry_list : (string list, Id.cid_typ list ref) Hashtbl.t
 
     val mk_entry          : name -> LF.kind -> int -> entry
     val add               : entry -> cid_typ
@@ -204,21 +212,21 @@ module Cid : sig
 
     open Id
     open Syntax.Int
-    val render_name         : name         -> string
-    val render_cid_comp_typ : cid_comp_typ -> string
+    val render_name           : name         -> string
+    val render_cid_comp_typ   : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
-    val render_cid_comp_dest : cid_comp_dest -> string
-    val render_cid_typ      : cid_typ      -> string
-    val render_cid_term     : cid_term     -> string
-    val render_cid_schema   : cid_schema   -> string
-    val render_cid_prog     : cid_prog     -> string
-    val render_offset       : offset       -> string
+    val render_cid_comp_dest  : cid_comp_dest -> string
+    val render_cid_typ        : cid_typ      -> string
+    val render_cid_term       : cid_term     -> string
+    val render_cid_schema     : cid_schema   -> string
+    val render_cid_prog       : cid_prog     -> string
+    val render_offset         : offset       -> string
 
-    val render_ctx_var      : LF.mctx    -> offset   -> string
-    val render_cvar         : LF.mctx    -> offset   -> string
-    val render_bvar         : LF.dctx    -> offset   -> string
-    val render_var          : Comp.gctx  -> var      -> string
+    val render_ctx_var        : LF.mctx    -> offset   -> string
+    val render_cvar           : LF.mctx    -> offset   -> string
+    val render_bvar           : LF.dctx    -> offset   -> string
+    val render_var            : Comp.gctx  -> var      -> string
 
   end
 

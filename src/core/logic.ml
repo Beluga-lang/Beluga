@@ -372,7 +372,7 @@ module Index = struct
      Store all type constants in the `types' table.
   *)
   let robStore () =
-    List.iter storeTypConst !Cid.Typ.entry_list
+    List.iter storeTypConst !(Hashtbl.find Cid.Typ.entry_list !(Modules.current))
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.

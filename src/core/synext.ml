@@ -238,7 +238,7 @@ module Sgn = struct
     | OptsPrag of string list
     | NamePrag of name * string * string option
     | NotPrag
-    | OpenPrag of name
+    (* | OpenPrag of name *)
 
   type decl =
     | Const    of Loc.t * name * LF.typ
@@ -255,7 +255,7 @@ module Sgn = struct
     | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query    of Loc.t * name option * LF.typ * int option * int option
     | Module of Loc.t * name * signature option * decl list
-    | Signature of  Loc.t * name * module_sig list
+    | ModuleType of  Loc.t * name * module_sig list
 
   and module_sig =
     | SchemaSig of Loc.t * name * LF.schema   

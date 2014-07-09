@@ -99,7 +99,8 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkKind Int.LF.Empty cK)) in
 	let _         = (Monitor.timer ("Type abbrev. : Type Check",
 					fun () -> Check.Comp.checkTyp cD tau)) in
-        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
+        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in 
+        ()
 
     | Ext.Sgn.CompTyp (_ , a, extK) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
@@ -504,8 +505,8 @@ and recSgnDecl d =
     | Ext.Sgn.Module(loc, name, sig_opt, decls) -> 
       ()
 
-    | Ext.Sgn.Signature(loc, name, sigs) ->
+    | Ext.Sgn.ModuleType(loc, name, sigs) ->
       ()
 
-    | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
-      ()
+    (* | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
+      () *)

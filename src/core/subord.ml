@@ -73,8 +73,8 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28])
 
 let dump_subord () =
   Printf.printf "## Dumping subordination relation (over %d types) ##\n"
-                (List.length !Types.entry_list);
-  let typeList = List.rev (!Types.entry_list) in
+                (List.length !(Hashtbl.find Types.entry_list !Store.Modules.current));
+  let typeList = List.rev (!(Hashtbl.find Types.entry_list !Store.Modules.current)) in
   let dump_entry a b =
     if Types.is_subordinate_to a b then print_string (R.render_cid_typ b ^ " ")
 
@@ -87,8 +87,8 @@ let dump_subord () =
 
 let dump_typesubord () =
   Printf.printf "## Dumping type-level subordination relation (over %d types) ##\n"
-                (List.length !Types.entry_list);
-  let typeList = List.rev (!Types.entry_list) in
+                (List.length !(Hashtbl.find Types.entry_list !Store.Modules.current));
+  let typeList = List.rev (!(Hashtbl.find Types.entry_list !Store.Modules.current)) in
   let dump_entry a b =
     if Types.is_typesubordinate_to a b then print_string (R.render_cid_typ b ^ " ")
 

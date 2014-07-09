@@ -3,9 +3,9 @@
     printing.  Names should never be constructed directly.
     See `mk_name'. *)
 type name     = private {
+  modules : string list;
   string_of_name : string ;
-  was_generated : bool ;
-  uppercase : bool
+  was_generated : bool
 }
 
 (** A constant identifier for types *)
@@ -56,4 +56,4 @@ type name_guide =
 
 (** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
-val mk_name : name_guide -> name
+val mk_name : ?modules:string list -> name_guide -> name

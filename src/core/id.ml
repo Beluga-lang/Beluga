@@ -1,26 +1,26 @@
 type name     = {
+  modules : string list;
   string_of_name : string ;
   was_generated : bool ;
-  uppercase : bool
 }
 
-type cid_typ    = int
+type cid_typ    = (string list, int)
 
-type cid_term   = int
+type cid_term   = (string list, int)
 
-type cid_schema = int
+type cid_schema = (string list, int)
 
-type cid_coercion = int
+type cid_coercion = (string list, int)
 
-type cid_comp_typ = int
+type cid_comp_typ = (string list, int)
 
-type cid_comp_cotyp = int
+type cid_comp_cotyp = (string list, int)
 
-type cid_comp_const = int
+type cid_comp_const = (string list, int)
 
-type cid_comp_dest = int
+type cid_comp_dest = (string list, int)
 
-type cid_prog   = int
+type cid_prog   = (string list, int)
 
 type offset     = int
 
@@ -35,43 +35,36 @@ type name_guide =
   | SomeName of name
   | SomeString of string
 
-(* returns true iff c is an uppercase letter *)
-let is_uppercase (c : char) : bool = 0 = (Char.compare c (Char.uppercase c))
-
-let mk_name = function
+let mk_name ?(modules=[]) : name_guide -> name = function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is
        looked up, we never have to compare a {!string option}.
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)  ->
-      let x = vGen() in
-        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
+        { modules = modules; string_of_name = vGen() ; was_generated = true}
 
   | MVarName None  ->
-      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true }
+      { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true }
 
   | PVarName (Some vGen)  ->
-      let x = vGen() in
-        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
+        { modules = modules; string_of_name = vGen() ; was_generated = true }
 
   | PVarName None  ->
-      { string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true; uppercase = false }
+      { modules = modules; string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true }
 
   | SVarName None ->
-      { string_of_name = Gensym.MVarData.gensym() ; was_generated = true; uppercase = true}
+      { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true}
       
   | SVarName (Some vGen) ->
-      let x = vGen() in
-        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
+        { modules = modules; string_of_name = vGen() ; was_generated = true }
 
   | BVarName (Some vGen)   ->
-        let x = vGen() in
-        { string_of_name = x ; was_generated = true; uppercase = is_uppercase (x.[0]) }
+        { modules = modules; string_of_name = vGen() ; was_generated = true}
 
   | SomeName x  -> x
 
   | SomeString x -> 
-        { string_of_name = x ; was_generated = false; uppercase = is_uppercase (x.[0]) }
+        { modules = modules; string_of_name = x ; was_generated = false }
 
-  | _     -> { string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true; uppercase = false}
+  | _     -> { modules = modules; string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true }

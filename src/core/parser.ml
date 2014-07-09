@@ -195,14 +195,6 @@ let check_codatatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
-let convert : Sgn.decl -> Sgn.module_sig = function
-    | Sgn.Const(l, n, t) -> Sgn.ConstSig(l, n, t)
-    | Sgn.Typ(l, n, k) -> Sgn.TypSig(l, n, k)
-    | Sgn.CompTyp(l, n, k) -> Sgn.CompTypSig(l, n, k)
-    | Sgn.CompCotyp(l, n, k) -> Sgn.CompCotypSig(l, n, k)
-    | Sgn.CompConst(l, n, t) -> Sgn.CompConstSig(l, n, t)
-    | Sgn.CompDest(l, n, t) -> Sgn.CompDestSig(l, n, t)
-    | Sgn.CompTypAbbrev(l, n, k, t) -> Sgn.CompTypAbbrevSig(l, n, k, t) 
 
 (*******************************)
 (* Global Grammar Entry Points *)
@@ -307,8 +299,8 @@ GLOBAL: sgn;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
 *)
-(*       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)] *)
+       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+           [Sgn.MRecTyp(_loc, f)]
 (*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
           check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
@@ -373,15 +365,15 @@ GLOBAL: sgn;
         let decls = List.map (fun [x] -> x) decls in
         [Sgn.Module(_loc, Id.mk_name(Id.SomeString n), s, decls)]
 
-      | "module"; n = UPSYMBOL; ":"; t = LIST1 module_sig ; "="; "struct";
+      | "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end" "="; "struct";
         decls = LIST1 sgn_decl; "end" ; ";"  ->
         let decls = List.map (fun [x] -> x) decls in
         [Sgn.Module(_loc, Id.mk_name(Id.SomeString n), Some(Sgn.Sig t), decls)]
       | 
         "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-        [Sgn.Signature(_loc, Id.mk_name(Id.SomeString n), decls)]
-      | 
-        "#open"; n = SYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))]
+        [Sgn.ModuleType(_loc, Id.mk_name(Id.SomeString n), decls)]
+      (* | 
+        "#open"; n = UPSYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))] *)
       ]
     ]
   ;
@@ -399,16 +391,16 @@ GLOBAL: sgn;
         g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
                 | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
           begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map convert f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map convert l) (f::g'))
+            | None -> Sgn.MRecTypSig(_loc, [List.map Store.Modules.decl_to_sig f])
+            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map Store.Modules.decl_to_sig l) (f::g'))
           end
       |
         "codatatype"; f = cocmp_cdat;
         g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
                 | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
           begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map convert f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map convert l) (f::g'))
+            | None -> Sgn.MRecTypSig(_loc, [List.map Store.Modules.decl_to_sig f])
+            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map Store.Modules.decl_to_sig l) (f::g'))
           end
       |
         "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->

@@ -793,7 +793,7 @@ GLOBAL: sgn;
            "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
         |
-           "("; u = UPSYMBOL; "\\"; sigma' = clf_sub_new; ")"   ->
+           "("; u = UPSYMBOL; ","; sigma' = clf_sub_new; ")"   ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
         |
             h = clf_head ->
@@ -895,9 +895,6 @@ GLOBAL: sgn;
   clf_term_app:
     [
       [
-        u = UPSYMBOL; "\\"; s = clf_sub_new ->
-          LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-      |
         u = UPSYMBOL; s = OPT[clf_sub_new] -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
           let n = begin match s with

@@ -60,8 +60,8 @@ fn n => case n of
 
 rec makeproj: [ |- nat] -> [xenv:target |-  target] =
 fn n =>
-   let [xenv:target |-  T \ xenv] = makeproj' n in
-       [xenv:target |-  tfst (T \ xenv)]
+   let [xenv:target |-  T, xenv] = makeproj' n in
+       [xenv:target |-  tfst (T, xenv)]
 ;
 
 
@@ -153,12 +153,12 @@ mlam h => fn map => fn e => case e of
 
 |[g |- elam (\x.(U..x))] =>
  let [g |- FV..] = fvar e in
- let [xenv:target |-  U' \ xenv] =
+ let [xenv:target |-  U', xenv] =
      convert [xenv:target]
 	     (b_map (fn e => [xenv:target |-  tunit]) [g |- (FV..)] [ |- z])
 	     [g,x:term |-  U..x] in
 let [h |- (T2..)] = b_env [h] map [g |- FV..] in
-  [h |- tpack( tpair (tlam (\xenv. U' xenv)) (T2..))]
+  [h |- tpack( tpair (tlam (\xenv. U', xenv)) (T2..))]
 
 |[g |- elet (U..) (\x.(V..x))] =>
  let [h |- (U'..)] = convert [h] map [g |- U..] in

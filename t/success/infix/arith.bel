@@ -8,23 +8,23 @@ fn x => fn y =>  case x of
 | [ |- z]  => y
 | [ |- U s]  =>
   let [ |- V] = plus [ |- U ] y in
-    [ |- s V]
+    [ |- V s]
 ;
 
 rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => case x of
 | [ |- z]  => (fn y => y)
-| [ |- s U] =>
+| [ |- U s] =>
   fn y =>
    let [ |- V] = plus' [ |- U] y in
-     [ |- s V]
+     [ |- V s]
 ;
 
 
 rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y =>  case x of
 | [ |- z]  => y
-| [ |- s U]  =>
+| [ |- U s]  =>
   let [ |- V] = mult [ |- U ] y  in
     plus [ |- V] y
 ;
@@ -33,7 +33,7 @@ fn x => fn y =>  case x of
 rec mult : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y => case x of
 | [ |- z] => [ |- z]
-| [ |- s U] =>
+| [ |- U s] =>
   let [ |- V] = mult [ |- U] y in
     plus [ |- V] y
 ;
@@ -41,13 +41,13 @@ fn x => fn y => case x of
 
 rec fact : [ |- nat] -> [ |- nat] =
 fn x => case x of
-| [ |- z] => [ |- s z]
-| [ |- s U] =>
+| [ |- z] => [ |- z s]
+| [ |- U s] =>
   let [ |- V] = fact [ |- U]  in
      mult [ |- V] x
 ;
 
-let x = plus [ |- z] [ |- s z] ;
-let y = fact [ |- s (s z)];
-let w = fact [ |- s (s (s z))];
+let x = plus [ |- z] [ |- z s] ;
+let y = fact [ |- (z s) s];
+let w = fact [ |- ((z s) s) s];
 

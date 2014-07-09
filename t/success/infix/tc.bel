@@ -78,7 +78,7 @@ and check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
 ;
 
 let r1 = (check []) ;
-let r2 = (check []) [ |- suc (suc z)];
-let r3 = (check []) [ |- suc (suc z)] [ |- even];
+let r2 = (check []) [ |- (z suc) suc];
+let r3 = (check []) [ |- (z suc) suc] [ |- even];
 let r4 = r2 [ |- even];
-let r5 = r1 [ |- suc (suc z)] [ |- even];
+let r5 = r1 [ |- (z suc) suc] [ |- even];

@@ -19,7 +19,7 @@ app: exp -> exp -> exp. #infix app 3 right.
 lam: (exp -> exp) -> exp. #postfix lam 1.
 
 eq: exp -> exp -> type.   %name eq Q u. #infix eq 1 left.
-eq_app : E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2).
+eq_app : E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2). #infix eq_app 1.
 
 eq_lam :  ({x : exp} x eq x -> (E x) eq (F x))
           -> ((\x. E x) lam) eq ((\x. F x) lam).
@@ -42,7 +42,7 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- (U ..) eq (U ..)] =
    | [g |- app (A1 ..) (A2 ..)] : [g |- exp] =>
        let [g |- EQ1 ..] = ref [g] [g |- A1 .. ] in
        let [g |- EQ2 ..] = ref [g] [g |- A2 .. ] in
-          [g |- eq_app (EQ1 ..) (EQ2 ..)]
+          [g |- (EQ1 ..) eq_app (EQ2 ..)]
 ;
 
 
@@ -69,14 +69,14 @@ rec trans: {g:eqCtx}
     in
       [g |- eq_lam \x. \u. E .. <x, u>]
 
-| [g |- eq_app (D1 ..) (D2 ..)] =>
+| [g |- (D1 ..) eq_app (D2 ..)] =>
        (case e2 of
-         [g |- eq_app (F1 ..) (F2 ..)] =>
+         [g |- (F1 ..) eq_app  (F2 ..)] =>
          let [g |- E1 ..] = trans [g]  [g |- D1 ..]  [g |- F1 ..]
          in
          let [g |- E2 ..] = trans [g]  [g |- D2 ..]  [g |- F2 ..]
          in
-             [g |- eq_app  (E1 ..)  (E2 ..)]
+             [g |- (E1 ..) eq_app  (E2 ..)]
        )
 ;
 

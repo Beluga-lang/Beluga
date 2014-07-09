@@ -70,6 +70,7 @@ module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 exception MixError of (Format.formatter -> unit)
 exception IllFormedDataDecl
 exception WrongConsType of Id.name * Id.name * Id.name
+exception InvalidAssociativity
 
 (** Remove any trailing newlines. Named after the Perl function that
     does the same thing. *)
@@ -103,6 +104,10 @@ let _ = Error.register_printer
         ("Parse Error: Wrong datatype for constructor " ^ c.string_of_name ^ ".")
         "Expected datatype" Format.pp_print_string a.string_of_name
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
+
+let _ = Error.register_printer
+  (fun (InvalidAssociativity) -> Error.print (fun ppf ->
+    Format.fprintf ppf "Invalid Associativity"))
 
 let last l = match List.rev l with
   | [] -> None
@@ -413,19 +418,30 @@ GLOBAL: sgn;
         [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
       |
-        "#infix"; i = SYMBOL; p = INTLIT; assoc = SYMBOL ->
+        "#infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
           begin
             match assoc with
-            | "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Left))]
-            | "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Right))]
-            | _ -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.None))]
+            | Some "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left))]
+            | Some "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Right))]
+            | Some "none" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.None))]
+            | None -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, None))]
+            | _ -> raise InvalidAssociativity
           end
       |
-        "#postfix"; i = SYMBOL; p = INTLIT ->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Sgn.Left))]
+        "#postfix"; i = SYMBOL; p = INTLIT; "." ->
+          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
       |
-        "#prefix"; i = SYMBOL; p = INTLIT->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Sgn.Left ))]
+        "#prefix"; i = SYMBOL; p = INTLIT; "."->
+          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left ))]
+
+      | "#assoc"; assoc = SYMBOL; "." ->
+        begin match assoc with
+        | "left" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Left)]
+        | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
+        | "none" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.None)]
+        | _ -> raise InvalidAssociativity
+          
+        end
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]

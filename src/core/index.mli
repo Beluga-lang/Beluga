@@ -12,6 +12,7 @@ type error =
   | PatVarNotUnique
   | IllFormedCompTyp
   | MispacedOperator of Id.name
+  | ParseError
 
 exception Error of Syntax.Loc.t * error
 

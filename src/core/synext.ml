@@ -251,8 +251,9 @@ module Sgn = struct
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
-    | FixPrag of name * fix * precedence * assoc
+    | FixPrag of name * fix * precedence * assoc option
     | NotPrag
+    | DefaultAssocPrag of assoc
 
   type decl =
     | Const    of Loc.t * name * LF.typ

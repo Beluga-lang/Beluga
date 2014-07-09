@@ -1,6 +1,6 @@
 nat :  type.     %name nat N x.
 z : nat.
-s : nat -> nat.  #postfix s 1
+s : nat -> nat.  #postfix s 1.
 
 
 rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =

@@ -1,21 +1,21 @@
 exp  : type.   %name exp E x.
 z    : exp.
-suc  : exp -> exp. #postfix suc 4 
+suc  : exp -> exp. #postfix suc 4.
 
-letv : exp -> (exp -> exp) -> exp. #infix letv 3 left
-lam  : (exp -> exp) -> exp. #postfix lam 1
-app  : exp -> exp -> exp.   #infix app 1 none 
+letv : exp -> (exp -> exp) -> exp. #infix letv 3 left.
+lam  : (exp -> exp) -> exp. #postfix lam 1.
+app  : exp -> exp -> exp.   #infix app 1. 
 
 tp   : type.   %name tp T.
 nat  : tp.
 even : tp.
 odd : tp.
-arrow  : tp -> tp -> tp. #infix arrow 1 right
+arrow  : tp -> tp -> tp. #infix arrow 1 right.
 sect   : tp -> tp -> tp.
 
 
 % Evaluation
-eval : exp -> exp -> type.  %name eval F. #infix eval 1 right
+eval : exp -> exp -> type.  %name eval F. #infix eval 1 right.
 ev_z : z eval z.
 
 ev_s : V eval E -> (V suc) eval (E suc).
@@ -29,8 +29,8 @@ ev_app: E1 eval ((\x. E x) lam) -> E2 eval V2 -> (E V2) eval V
 
 % Typing
 
-oft : exp -> tp -> type. #infix oft 1 left %name oft D u. 
-subtype : tp -> tp -> type.  %name subtype SUB sub. #infix subtype 2 left
+oft : exp -> tp -> type. #infix oft 1 left. %name oft D u. 
+subtype : tp -> tp -> type.  %name subtype SUB sub. #infix subtype 2 left.
 
 boolean : type.
 true : boolean.

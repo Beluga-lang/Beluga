@@ -40,6 +40,7 @@ type error =
   | PatVarNotUnique
   | IllFormedCompTyp
   | MispacedOperator of Id.name
+  | ParseError
 
 exception Error of Syntax.Loc.t * error
 
@@ -72,7 +73,9 @@ let _ = Error.register_printer
       | PatVarNotUnique ->
           Format.fprintf ppf "Pattern variable not linear."
       | IllFormedCompTyp ->
-	       Format.fprintf ppf "Ill-formed computation-level type."))
+	       Format.fprintf ppf "Ill-formed computation-level type."
+      | ParseError ->
+        Format.fprintf ppf "Unable to parse operators into valid structure"))
 
 
 type free_cvars =
@@ -253,9 +256,18 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | _ -> false
   in
   let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool = 
-     p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
-    (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence && o.Store.OpPragmas.assoc = Ext.Sgn.Left)
-  in
+    let p_p = p.Store.OpPragmas.precedence in
+    let o_p = o.Store.OpPragmas.precedence in
+    let o_a = match o.Store.OpPragmas.assoc with
+      | Some a -> a
+      | None -> !Store.OpPragmas.default in
+    p_p < o_p ||
+    (p_p = o_p && o_a = Ext.Sgn.Left)
+(*      p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
+    (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence && 
+      ((o.Store.OpPragmas.assoc = None && !Store.OpPragmas.default = Ext.Sgn.Left) ||
+       o.Store.OpPragmas.assoc = Some Ext.Sgn.Left))
+ *)  in
   let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine = function
     | [] -> Ext.LF.Nil
     | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
@@ -358,7 +370,15 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       | h::t when n > 0 -> aux (n-1) t (h::c)
       | _  -> (c, l)
   in aux i l []
-in parse (l, [], [])
+in try parse (l, [], []) 
+
+  with 
+  | (Error _) as e -> raise e
+  | _ -> begin 
+    let l = match List.hd l with 
+      | Ext.LF.Lam(l, _, _) | Ext.LF.Root(l, _, _) | Ext.LF.Tuple(l, _)
+      | Ext.LF.Ann(l, _, _) | Ext.LF.TList(l, _)   | Ext.LF.NTyp(l, _) -> l
+    in raise (Error(l, ParseError)) end
 
 and index_typ_rec cvars bvars fvars = function
   | Ext.LF.SigmaLast(n, a) ->

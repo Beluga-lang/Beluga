@@ -1,14 +1,14 @@
 tm: type. %name tm T.
-lam: (tm -> tm) -> tm. #postfix lam 2
-app: tm -> tm -> tm. #infix app 1 none
+lam: (tm -> tm) -> tm. #postfix lam 2.
+app: tm -> tm -> tm. #infix app 1.
 
 path: type. %name path P.
-bind: (path -> path) -> path. #postfix bind 2
-left: path -> path. #postfix left 1
-right: path -> path. #postfix right 3
+bind: (path -> path) -> path. #postfix bind 2.
+left: path -> path. #postfix left 1.
+right: path -> path. #postfix right 3.
 done: path.
 
-is_path: path -> tm -> type. %name is_path I. #infix is_path 1 none
+is_path: path -> tm -> type. %name is_path I. #infix is_path 1.
 
 p_lam: (P bind) is_path (E lam)
        <- ({x:tm}{q:path}q is_path x -> (P q) is_path (E x)).

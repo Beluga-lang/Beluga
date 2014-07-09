@@ -6,12 +6,14 @@ module OpPragmas : sig
     name : Id.name;
     fix : Syntax.Ext.Sgn.fix;
     precedence : int;
-    assoc : Syntax.Ext.Sgn.assoc;
+    assoc : Syntax.Ext.Sgn.assoc option;
   }
+
+  val default : Syntax.Ext.Sgn.assoc ref
 
   val clear : unit -> unit
 
-  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int -> Syntax.Ext.Sgn.assoc -> unit
+  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int -> Syntax.Ext.Sgn.assoc option-> unit
 
   val getPragma : Id.name -> fixPragma option
 

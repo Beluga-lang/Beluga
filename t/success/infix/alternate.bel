@@ -4,15 +4,15 @@
 
 exp : type.
 lam : (exp -> exp) -> exp.
-app : exp -> exp -> exp. #infix app 1 left
+app : exp -> exp -> exp. #infix app 1 left.
 
-eq : exp -> exp -> type. #infix eq 3 none
+eq : exp -> exp -> type. #infix eq 3.
 refl : M eq M.
 
-notLam : exp -> type. #postfix notLam 2 
+notLam : exp -> type. #postfix notLam 2.
 notLam : (M app N) notLam.
 
-eval : exp -> exp -> type. #infix eval 1 left
+eval : exp -> exp -> type. #infix eval 1 left.
 eval_lam : ({x:exp} x eval x -> x notLam -> (M x) eval (N x))
            -> (lam M) eval (lam N).
 eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.

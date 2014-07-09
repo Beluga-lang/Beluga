@@ -95,6 +95,7 @@ let rec recSgnDecls = function
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.DefaultAssocPrag a) -> OpPragmas.default := a
     | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) -> 
         let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
         

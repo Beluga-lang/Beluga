@@ -6,14 +6,14 @@ tm : type.
 arr : tp -> tp -> tp.
 
 % Terms
-app : tm -> tm -> tm.           #infix app 2 left
+app : tm -> tm -> tm.           #infix app 2 left.
 lam : tp -> (tm -> tm) -> tm.
 
 % Values
 value : tm -> type.
 
 
-step: tm -> tm -> type.         #infix step 1 left
+step: tm -> tm -> type.         #infix step 1 left.
 
 s_app1 : (E1 step E1') -> 
          (E1 app E2) step (E1' app E2).

@@ -11,13 +11,11 @@ module Modules = struct
 
   let current : string list ref = ref []
 
-  let ( ++ ) (x : 'a ) (l : 'a list ref) : unit = l := x :: !l
-
   let modules : (string list, Syntax.Int.Sgn.decl list ref) Hashtbl.t = Hashtbl.create 0
 
   let signatures : (string list, Sgn.signature list ref) Hashtbl.t = Hashtbl.create 0
 
-  let addSgnToCurrent (decl : Int.Sgn.decl) : unit = decl ++ (Hashtbl.find modules !current)
+  let addSgnToCurrent (decl : Int.Sgn.decl) : unit = let l = (Hashtbl.find modules !current) in l := decl :: !l
 
   let decl_to_sig : Ext.Sgn.decl -> Ext.Sgn.module_sig = function
     | Ext.Sgn.Const(l, n, t) -> Ext.Sgn.ConstSig(l, n, t)

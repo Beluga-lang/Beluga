@@ -66,7 +66,7 @@ datatype RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
 | Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm (A #S[..])]} % !!!!
         RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A #S[..] ] [h |- M ..]
-         -> RedSub [g,x:tm (A ..)] [h] [h |- #S[..] (M ..) ]
+         -> RedSub [g,x:tm (A ..)] [h] [h |- #S[..], (M ..) ]
 ;
 %{
 rec redVar : {g:ctx}{h:ctx}{T:[g |- tp]}{#S:h |- g}{#p:[g |- tm (T ..)]} RedSub [g] [h] [h |- #S[..] ]

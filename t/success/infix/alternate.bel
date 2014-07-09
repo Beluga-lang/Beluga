@@ -13,7 +13,7 @@ notLam : exp -> type. #postfix notLam 2.
 notLam : (M app N) notLam.
 
 eval : exp -> exp -> type. #infix eval 1 left.
-eval_lam : ({x:exp} x eval x -> x notLam -> (M x) eval (N x))
+eval_lam : ({x:exp} x eval x -> (x notLam) -> (M x) eval (N x))
            -> (lam M) eval (lam N).
 eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.
 eval_app2 : M eval M' -> M' notLam  -> N eval N' -> (M app N) eval (M' app N').

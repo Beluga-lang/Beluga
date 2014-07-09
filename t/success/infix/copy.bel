@@ -35,7 +35,7 @@ mlam g => fn e => case e of
 | [g |- (E1 ..) app (E2 ..)] =>
   let [g |- F1 .. ] = copy [g] [g |- E1 ..] in
   let [g |- F2 .. ] = copy [g] [g |- E2 ..] in
-    [g |- app (F1 ..) (F2 ..)]
+    [g |- (F1 ..) app (F2 ..)]
 
 ;
 

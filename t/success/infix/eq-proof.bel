@@ -16,13 +16,13 @@
 
 exp: type.    %name exp E x.
 app: exp -> exp -> exp. #infix app 3 right.
-lam: (exp -> exp) -> exp. #postfix lam 1.
+lam: (exp -> exp) -> exp.
 
 eq: exp -> exp -> type.   %name eq Q u. #infix eq 1 left.
 eq_app : E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2).
 
 eq_lam :  ({x : exp} x eq x -> (E x) eq (F x))
-          -> ((\x. E x) lam) eq ((\x. F x) lam).
+          -> (lam (\x. E x)) eq (lam (\x. F x)).
 
 
 schema eqCtx = block x:exp, _t:x eq x;
@@ -39,7 +39,7 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- (U ..) eq (U ..)] =
       in
         [g |- eq_lam \x. \w. (V .. <x, w>)]  % : eq (L .. x) (L .. x)
 
-   | [g |- app (A1 ..) (A2 ..)] : [g |- exp] =>
+   | [g |- (A1 ..) app (A2 ..)] : [g |- exp] =>
        let [g |- EQ1 ..] = ref [g] [g |- A1 .. ] in
        let [g |- EQ2 ..] = ref [g] [g |- A2 .. ] in
           [g |- eq_app (EQ1 ..) (EQ2 ..)]

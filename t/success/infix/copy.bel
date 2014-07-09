@@ -3,13 +3,13 @@ bool: tp.
 nat: tp.
 arrow: tp -> tp -> tp. #infix arrow 1 left.
 
-term : tp -> type.  %name term E x. #postfix term 2.
+term : tp -> type.  %name term E x. #postfix term 3.
 
-z    : term nat. 
-s    : term nat -> term nat. #postfix s 2.
+z    : nat term. 
+s    : nat term -> nat term. #postfix s 2.
 
-lam  : (term T -> term T') -> term (T arrow T'). 
-app  : term (T arrow T') -> term T -> term T'. #infix app 1.
+lam  : (T term -> T' term) -> (T arrow T') term. 
+app  : (T arrow T') term -> T term -> T' term. #infix app 1.
 
 
 schema tctx = some [t:tp] t term;
@@ -41,8 +41,8 @@ mlam g => fn e => case e of
 
 
 let t = copy [ ] [ |- z] ;
-let t = copy [x:term nat ] [x:term nat  |-  x];
-let t = copy [x:term _ ] [x : term nat |-  x s];
+let t = copy [x: nat term] [x:nat term |-  x];
+let t = copy [x: _ term] [x : nat term |-  x s];
 %{ let t : (term (nat arrow nat))[ ] =
      copy [ ] ([ ] lam \x. x);
  let t : (term ((bool arrow nat) arrow (bool arrow nat)))[ ]

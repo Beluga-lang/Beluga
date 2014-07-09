@@ -13,7 +13,7 @@ notLam : exp -> type. #postfix notLam 2.
 notLam : (M app N) notLam.
 
 eval : exp -> exp -> type. #infix eval 1 left.
-eval_lam : ({x:exp} x eval x -> (x notLam) -> (M x) eval (N x))
+eval_lam : ({x:exp} x eval x -> x notLam -> (M x) eval (N x))
            -> (lam M) eval (lam N).
 eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.
 eval_app2 : M eval M' -> M' notLam  -> N eval N' -> (M app N) eval (M' app N').
@@ -43,7 +43,7 @@ case d of
      [g,b |- F1 .. b.1 b.2 b.3] in
   [g |- refl]
 
-| [g |- eval_app1 (D1 ..) (D2 ..)] : [g |- (((M ..) app (N ..)) eval (R ..))] =>
+| [g |- eval_app1 (D1 ..) (D2 ..)] : [g |- ((M ..) app (N ..) eval (R ..))] =>
   (case f of
     | [g |- eval_app1 (F1 ..) (F2 ..)] =>
       let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in

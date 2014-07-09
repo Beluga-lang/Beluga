@@ -757,23 +757,31 @@ GLOBAL: sgn;
 
     | "atomic"
         [
-          "("; a = SELF; ")" ->
-            a
+(*           "("; x = clf_term_app; ")" -> 
+          begin match x with
+          | LF.NTyp(_, tA)
+          | LF.TList(_, [LF.NTyp(_, tA)]) -> tA
+          | _ -> LF.AtomTerm(_loc, x) end
+        |
+          x = clf_term_app -> 
+          begin match x with
+          | LF.NTyp(_, tA)
+          | LF.TList(_, [LF.NTyp(_, tA)]) -> tA
+          | _ -> LF.AtomTerm(_loc, x) end *)
 
-        |
-           a = SYMBOL; ms = LIST0 clf_normal ->
-              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
-        |
+           (* a = SYMBOL; *) ms = LIST1 clf_normal ->
+              LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
+(*         |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
               LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
               (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
-
+ *)
         ]
     | "sigma"
         [
-          "("; a = SELF; ")" ->
+(*           "("; a = SELF; ")" ->
             a
-        |
+        | *)
           a = SYMBOL; ms = LIST0 clf_normal ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
@@ -790,7 +798,6 @@ GLOBAL: sgn;
           "\\"; x = SYMBOL; "."; m = clf_term_app ->
             let m = begin match m with
               | LF.TList(l, (LF.Root(_, LF.MVar (l2, u, LF.EmptySub _), LF.Nil)) :: [LF.Root(_, (LF.Name _ as h), LF.Nil)]) -> 
-                  print_string (u.string_of_name);
                   LF.Root(l, LF.MVar(l2, u, LF.Dot(l2, LF.EmptySub l2, LF.Head h)), LF.Nil)
               | _ -> m
             end in
@@ -799,35 +806,14 @@ GLOBAL: sgn;
 
     | "atomic"
         [
-         (* u = UPSYMBOL; "["; sigma' = clf_sub_new; "]"   ->
-                     LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
-          |  *)
           u = UPSYMBOL ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
         |
-          "("; u = UPSYMBOL; s = clf_sub_new; ")" -> 
-            let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
-            let n = begin match s with
-              (* Infix operator case *)
-              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
-                let op' = LF.Root(l, op, LF.Nil) in 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
-
-              (* Postfix case *)
-              | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::[LF.Root(l, op, LF.Nil)])
-
-              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-            end in ignore (normalToString n); n
-        |
-          "("; u = UPSYMBOL ; ","; sigma' = clf_sub_new; ")" ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
- (*        |
-           "("; u = UPSYMBOL; sigma' = clf_sub_new; ")"   ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
-        |
-           "("; u = UPSYMBOL; ","; sigma' = clf_sub_new; ")"   ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil) *)
+           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
+           begin match ann with
+           | None -> m
+           | Some a -> LF.Ann (_loc, m, a)
+           end
         |
             h = clf_head ->
              LF.Root (_loc, h, LF.Nil)
@@ -835,12 +821,6 @@ GLOBAL: sgn;
             "_" ->
             LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
-        |
-           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
-           begin match ann with
-           | None -> m
-           | Some a -> LF.Ann (_loc, m, a)
-           end
         |
            "<"; ms = LIST1 clf_term_app SEP ","; ">"  ->
              let rec fold = function [m] -> LF.Last m

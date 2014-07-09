@@ -23,7 +23,7 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 datatype IsVarSub : {g:ctx}  {h:ctx} {#S: h |- g}ctype =
 | Nil : IsVarSub [] [h] [h |- ^ ]
 | Cons : {A:[g |- tp]}{#S: h |- g}{#p:[h |- tm (A #S[..])]} IsVarSub [g] [h] [h |- #S[..] ]
-         -> IsVarSub [g,x:tm (A ..)] [h] [h |- #S[..] (#p ..)  ]
+         -> IsVarSub [g,x:tm (A ..)] [h] [h |- #S[..], (#p ..)  ]
 ;
 
 
@@ -76,7 +76,7 @@ mlam g => mlam h => mlam #S => mlam A => fn r =>
 ;
 
 rec extVarSub : {g:ctx} {h:ctx}{A:[g |- tp]} {#S: h |- g} IsVarSub [g] [h] [h |- #S[..]]
- -> IsVarSub [g,x:tm (A ..)] [h,x:tm (A #S[..])] [h,x:tm (A #S[..]) |- #S[..] x ] =
+ -> IsVarSub [g,x:tm (A ..)] [h,x:tm (A #S[..])] [h,x:tm (A #S[..]) |- #S[..], x ] =
 mlam g => mlam h => mlam A => mlam #S => fn r =>
 Cons [g |- A ..] [h,x:tm (A #S[..]) |- #S[..]] [h,x:tm (A #S[..]) |- x] (wknVarSub [g] [h] [h |- #S[..]] [h |- A #S[..]] r)
 ;
@@ -144,7 +144,7 @@ case r of
 | Neut r' => Neut (rwkn [g] [h] [g |- A ..] [g |- N ..] [h |- #W[..]] r' iv)
 | Lam [g |- A ..] [g |- B ..] [g,x:tm (A ..) |-  M .. x] n =>
   Lam [h |- A #W[..]] [h |- B #W[..]] [h,x:tm (A #W[..]) |- M #W[..] x]
-      (nwkn [g,x:tm (A ..)] [h,x:tm (A #W[..])] [g,x:tm (A ..) |-  B ..] [g,x |- M .. x] [h,x |- #W[..] x]
+      (nwkn [g,x:tm (A ..)] [h,x:tm (A #W[..])] [g,x:tm (A ..) |-  B ..] [g,x |- M .. x] [h,x |- #W[..], x]
             n
             (extVarSub [g] [h] [g |- A ..] [h |- #W[..]] iv)
       )
@@ -197,7 +197,7 @@ datatype RedSub : {g:ctx}{h:ctx}{#S: h |- g} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
 | Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S: h |- g}{M:[h |- tm (A #S[..])]}
         RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A #S[..] ] [h |- M ..]
-         -> RedSub [g,x:tm (A ..)] [h] [h |- #S[..] (M ..) ]
+         -> RedSub [g,x:tm (A ..)] [h] [h |- #S[..], (M ..) ]
 ;
 
 rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S: h |- g}{#W:h' |- h}

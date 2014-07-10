@@ -116,7 +116,7 @@ fn d => fn ev => case ev of
     [ |- is_# D']
  )
 | [ |- ~>_#2] =>
-  let {D':[a:tp |-  has (E, a) (T, a)] }
+  let {D':[a:tp |-  has (E a) (T a)] }
      [ |- is_# (is_lAM (\a. D' a))]  : [ |- has (ann _ T2) (T T2)] = d in [ |- D' T2]
 ;
 

@@ -25,19 +25,19 @@ fn e =>  case e of
 
 | [ |- app E1 E2] =>
   let [ |- lam (\x. E x)]  =  eval [ |- E1] in
-    eval [ |- (E, E2)]
+    eval [ |- (E E2)]
 
-| [ |- lam (\x. (E, x))] =>  e
+| [ |- lam (\x. (E x))] =>  e
 
 | [ |- letv E1 (\x. E2 x )] =>
   let [ |- V1] = eval [ |- E1] in
-    eval [ |- E2, V1]
+    eval [ |- E2 V1]
 
 | [ |- letn E1 (\x. E2 x)]  =>
-   eval [ |- (E2, E1)]
+   eval [ |- (E2 E1)]
 
 | [ |- fix (\x. E x)]  =>
-   eval [ |- E (fix (\ x. E, x))]
+   eval [ |- E (fix (\ x. E x))]
 ;
 
 

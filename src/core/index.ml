@@ -49,7 +49,7 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
       | MispacedOperator n ->
-        Format.fprintf ppf ("Invalid use of operator %s.") (R.render_name n)
+        Format.fprintf ppf ("Illegal use of operator %s.") (R.render_name n)
 
       | UnboundName n ->
           Format.fprintf ppf

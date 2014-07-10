@@ -70,7 +70,7 @@ module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 exception MixError of (Format.formatter -> unit)
 exception IllFormedDataDecl
 exception WrongConsType of Id.name * Id.name * Id.name
-exception InvalidAssociativity
+exception InvalidAssociativity of string
 
 (** Remove any trailing newlines. Named after the Perl function that
     does the same thing. *)
@@ -106,8 +106,8 @@ let _ = Error.register_printer
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
 let _ = Error.register_printer
-  (fun (InvalidAssociativity) -> Error.print (fun ppf ->
-    Format.fprintf ppf "Invalid Associativity"))
+  (fun (InvalidAssociativity s) -> Error.print (fun ppf ->
+    Format.fprintf ppf "Invalid Associativity \"%s\"" s))
 
 let last l = match List.rev l with
   | [] -> None
@@ -425,12 +425,12 @@ GLOBAL: sgn;
             | Some "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Right))]
             | Some "none" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.None))]
             | None -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, None))]
-            | _ -> raise InvalidAssociativity
+            | Some s -> raise (InvalidAssociativity s)
           end
-      |
+  (*     |
         "#postfix"; i = SYMBOL; p = INTLIT; "." ->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
-      |
+   *)    |
         "#prefix"; i = SYMBOL; p = INTLIT; "."->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left ))]
 
@@ -439,7 +439,7 @@ GLOBAL: sgn;
         | "left" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Left)]
         | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
         | "none" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.None)]
-        | _ -> raise InvalidAssociativity
+        | s -> raise (InvalidAssociativity s)
           
         end
       (* A naked expression, in REPL. *)
@@ -757,18 +757,8 @@ GLOBAL: sgn;
 
     | "atomic"
         [
-(*           "("; x = clf_term_app; ")" -> 
-          begin match x with
-          | LF.NTyp(_, tA)
-          | LF.TList(_, [LF.NTyp(_, tA)]) -> tA
-          | _ -> LF.AtomTerm(_loc, x) end
+          "("; a=SELF;")" -> a
         |
-          x = clf_term_app -> 
-          begin match x with
-          | LF.NTyp(_, tA)
-          | LF.TList(_, [LF.NTyp(_, tA)]) -> tA
-          | _ -> LF.AtomTerm(_loc, x) end *)
-
            (* a = SYMBOL; *) ms = LIST1 clf_normal ->
               LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
 (*         |
@@ -779,9 +769,9 @@ GLOBAL: sgn;
         ]
     | "sigma"
         [
-(*           "("; a = SELF; ")" ->
+          "("; a = SELF; ")" ->
             a
-        | *)
+        |
           a = SYMBOL; ms = LIST0 clf_normal ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
@@ -856,55 +846,6 @@ GLOBAL: sgn;
   ;
 
 
-(*   clf_term_x:
-    [  "atomic"
-        [
-         
-           a = clf_normal ->
-              a
-        |
-          u = UPSYMBOL ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
-        |
-           u = UPSYMBOL ; sigma' = clf_sub_new ->
-              LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
-        |
-           u = UPSYMBOL ; ","; sigma' = clf_sub_new ->
-              LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
-        ]
-    ]
-  ; *)
-
-(*   term_or_sub:
-  [
-    [
-      a = term_or_sub; b = clf_normal ->  
-        begin match a with
-        | Term (LF.TList(_, l)) -> Term (LF.TList(_loc, l@[b]))
-        | Term t -> Term (LF.TList(_loc, t::[b])) 
-        | Sub s -> Sub (LF.Dot(_loc, s, LF.Normal b))   
-        end 
-    |
-      s = clf_sub_new -> 
-        begin match s with
-        (* Infix operator case *)
-        | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
-          let op' = LF.Root(l, op, LF.Nil) in 
-          Term(LF.TList(_loc, op'::[t2]))
-
-        (* Postfix case *)
-        | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> (* print_string u.string_of_name; print_string "\n"; *) Term(LF.Root(l, op, LF.Nil))
-
-        | _ -> (Sub s)
-        
-      end
-    |
-      x = clf_term_x; ms = LIST0 clf_normal -> Term (LF.TList(_loc, x::ms))
-    ]
-  ]
-  ; *)
-
-
   clf_term_app:
     [
       [
@@ -918,10 +859,10 @@ GLOBAL: sgn;
                 let op' = LF.Root(l, op, LF.Nil) in 
                 LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
 
-              (* Postfix case *)
+    (*           (* Postfix case *)
               | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> 
                 LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::[LF.Root(l, op, LF.Nil)])
-
+ *)
               | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
             end in ignore (normalToString n); n
       |

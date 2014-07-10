@@ -22,8 +22,10 @@ module OpPragmas = struct
   
   let clear () = pragmas := []
   
-  let addPragma n f p a = 
-(*     let _ = print_string (n.Id.string_of_name ^ "; ")in *)
+  let default_precedence = -1
+
+  let addPragma n f p_option a = 
+  let p = match p_option with Some x -> x | None -> default_precedence in
     if (List.exists (fun x -> x.name = n) !pragmas) then
       pragmas := List.map
         (fun x -> if x.name = n then {name = n; fix = f; precedence = p; assoc = a} else x)
@@ -246,7 +248,7 @@ module Cid = struct
 (*       let a = args entry.kind in
       print_string ("Name: " ^ (entry.name.Id.string_of_name) ^ " Args: " ^ (string_of_int a) ^ " Implicit: " ^ (string_of_int entry.implicit_arguments) ^ "\n");
  *) 
-      OpPragmas.addPragma entry.name Ext.Sgn.Prefix (-1) (Some Ext.Sgn.Left) ;
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
@@ -316,7 +318,7 @@ module Cid = struct
 
 
     let add loc e_typ entry =
-      OpPragmas.addPragma entry.name Ext.Sgn.Prefix (-1) (Some Ext.Sgn.Left) ;
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tm = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tm;

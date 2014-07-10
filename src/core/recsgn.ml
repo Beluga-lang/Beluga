@@ -100,20 +100,22 @@ and recSgnDecl d =
         let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
         
         if fix = Ext.Sgn.Prefix then 
-          OpPragmas.addPragma name fix precedence assoc
+          OpPragmas.addPragma name fix (Some precedence) assoc
         else begin
           let args_expected = match fix with
             | Ext.Sgn.Postfix -> 1
             | Ext.Sgn.Infix   -> 2 in
           
           let actual = 
-            try Typ.args_of_name name
+            try Some (Typ.args_of_name name)
             with _ -> 
-              try Term.args_of_name name
-              with _ -> -1 in
-          if actual = -1 then () else
+              try Some (Term.args_of_name name)
+              with _ -> None in
+          match actual with
+          | None -> ()
+          | Some actual -> 
             if args_expected = actual then 
-              OpPragmas.addPragma name fix precedence assoc
+              OpPragmas.addPragma name fix (Some precedence) assoc
             else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
         end
 

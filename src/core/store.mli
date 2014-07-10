@@ -13,7 +13,7 @@ module OpPragmas : sig
 
   val clear : unit -> unit
 
-  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int -> Syntax.Ext.Sgn.assoc option-> unit
+  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int option -> Syntax.Ext.Sgn.assoc option-> unit
 
   val getPragma : Id.name -> fixPragma option
 

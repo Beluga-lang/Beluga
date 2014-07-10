@@ -187,11 +187,11 @@ let lex_token loc = lexer
   | "schema"
   | "some"
   | "then"
-  | "type"
   | "module"
   | "sig"
   | "struct"
   | "end"
+  | "signature"
   | "ttrue"
   | "ffalse"
   | "%name"
@@ -199,6 +199,7 @@ let lex_token loc = lexer
   | "%not"
   | "%query"
   | "#open"
+  | "type"
   | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 

@@ -401,9 +401,9 @@ module Sgn = struct
     | Schema        of cid_schema * LF.schema
     | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
     | Pragma        of LF.prag
-    | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
-    | Module        of Loc.t * name * signature option * decl list
-    | ModuleType    of  Loc.t * name * module_sig list
+    | Val           of Loc.t * name * Comp.typ option * Comp.exp_chk
+    | Module        of Loc.t * string * signature option * decl list
+    | ModuleType    of  Loc.t * string * module_sig list
 
   and module_sig =
     | SchemaSig of Loc.t * name * LF.schema   
@@ -419,7 +419,7 @@ module Sgn = struct
     | MRecTypSig  of Loc.t * module_sig list list 
 
   and signature =
-    | Name of name
+    | Name of string
     | Sig of module_sig list
 
   type sgn = decl list

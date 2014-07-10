@@ -287,8 +287,8 @@ GLOBAL: sgn;
 
   sgn_decl:
     [
-      [
-         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
+      [ 
+        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
            begin match k_or_a with
              | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
              | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
@@ -299,7 +299,7 @@ GLOBAL: sgn;
         const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
           Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
 *)
-       | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
            [Sgn.MRecTyp(_loc, f)]
 (*
       | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
@@ -358,31 +358,37 @@ GLOBAL: sgn;
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
-
-      | "module"; n = UPSYMBOL; t = OPT [ ": "; t = UPSYMBOL -> Id.mk_name(Id.SomeString t)]; "="; "struct";
-        decls = LIST1 sgn_decl; "end" ; ";"  ->
-        let s = match t with None -> None | Some x -> Some (Sgn.Name x) in
-        let decls = List.map (fun [x] -> x) decls in
-        [Sgn.Module(_loc, Id.mk_name(Id.SomeString n), s, decls)]
-
-      | "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end" "="; "struct";
-        decls = LIST1 sgn_decl; "end" ; ";"  ->
-        let decls = List.map (fun [x] -> x) decls in
-        [Sgn.Module(_loc, Id.mk_name(Id.SomeString n), Some(Sgn.Sig t), decls)]
-      | 
-        "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-        [Sgn.ModuleType(_loc, Id.mk_name(Id.SomeString n), decls)]
       (* | 
         "#open"; n = UPSYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))] *)
+
+      | m = module_dec -> m
+
       ]
     ]
   ;
 
+  module_dec:
+  [
+    [
+        "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end"; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+        let decls = List.map (fun [x] -> x) decls in
+        [Sgn.Module(_loc, n, Some(Sgn.Sig t), decls)]
+      |  
+        "module"; n = UPSYMBOL; t = OPT [ ": "; t = UPSYMBOL -> t]; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+        let s = match t with None -> None | Some x -> Some (Sgn.Name x) in
+        let decls = List.map (fun [x] -> x) decls in
+        [Sgn.Module(_loc, n, s, decls)]
+      | 
+        "signature"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
+        [Sgn.ModuleType(_loc, n, decls)]
+    ]
+  ]
+  ;
 
   module_sig:
     [
       [
-        "val"; x = SYMBOL; ":"; tau = cmp_typ; ";" -> Sgn.ValSig(_loc, Id.mk_name(Id.SomeString x), tau)
+        "let"; x = SYMBOL; ":"; tau = cmp_typ; ";" -> Sgn.ValSig(_loc, Id.mk_name(Id.SomeString x), tau)
       |
         "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
           Sgn.SchemaSig (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
@@ -514,9 +520,10 @@ GLOBAL: sgn;
           "("; a = SELF; ")" ->
             a
         |
-          a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
+          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
+            let modules = match l with None -> [] | Some l -> l in
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
         ]
     ]
   ;
@@ -559,12 +566,13 @@ GLOBAL: sgn;
   lf_head:
     [
       [
-         u = UPSYMBOL  ->
-            LF.Name (_loc, Id.mk_name (Id.SomeString u))
+        u = UPSYMBOL  ->
+          LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       |
-        x = SYMBOL ->
-                LF.Name (_loc, Id.mk_name (Id.SomeString x))
+        l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
+          let modules = match l with None -> [] | Some l -> l in
+          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
 
       ]
     ]
@@ -738,9 +746,10 @@ GLOBAL: sgn;
           "("; a = SELF; ")" ->
             a
         |
-          a = SYMBOL; ms = LIST0 clf_normal ->
+          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
+            let modules = match l with None -> [] | Some l -> l in
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
         |
           typRec = clf_typ_rec_block
           ->  LF.Sigma (_loc, typRec)
@@ -896,8 +905,9 @@ GLOBAL: sgn;
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
-        x = SYMBOL ->
-         LF.Name (_loc, Id.mk_name (Id.SomeString x))
+        l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
+          let modules = match l with None -> [] | Some l -> l in
+          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
 
  (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
@@ -1328,8 +1338,9 @@ isuffix:
      end
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
-   | x = SYMBOL   ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
+   | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
+        let modules = begin match l with None -> [] | Some l -> l end in
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x)))))
    | x = UPSYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->
@@ -1352,8 +1363,9 @@ cmp_exp_syn:
                                     | Atom    ->   e
                             end)
    | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
-   | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
-
+   | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
+      let modules = match l with None -> [] | Some l -> l in
+      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)
 
@@ -1494,12 +1506,16 @@ clf_pattern :
   mixtyp:
     [ RIGHTA
       [
-        "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.No))) in
+        "{"; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; "}"; mixtau = SELF ->
+          let modules = match l with None -> [] | Some l -> l in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.No))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
-  | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.Maybe))) in
+      | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
+          let modules = match l with None -> [] | Some l -> l in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.Maybe))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
@@ -1530,8 +1546,9 @@ clf_pattern :
             let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
               MTBase (_loc, Id.mk_name (Id.SomeString a), sp)
 
-      | a = SYMBOL ->
-          MTCtx (_loc, Id.mk_name (Id.SomeString a))
+      | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL ->
+          let modules = match l with None -> [] | Some l -> l in
+          MTCtx (_loc, Id.mk_name ~modules:modules (Id.SomeString a))
       |
         "("; mixtau = mixtyp ; ")" ->
            mixtau

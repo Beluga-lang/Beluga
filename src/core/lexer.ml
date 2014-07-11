@@ -191,7 +191,6 @@ let lex_token loc = lexer
   | "sig"
   | "struct"
   | "end"
-  | "signature"
   | "ttrue"
   | "ffalse"
   | "%name"

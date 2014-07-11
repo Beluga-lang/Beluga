@@ -289,6 +289,7 @@ and recSgnDecl d =
           let _                  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           let tau'               = Whnf.cnormCTyp (tau, theta) in
           let i'                 = Whnf.cnormExp' (i', Whnf.m_id) in
+
           let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ x.string_of_name ^
 					     "\n   : " ^ P.compTypToString cD tau' ^
 					     "\n  =  " ^
@@ -517,9 +518,18 @@ and recSgnDecl d =
     | Ext.Sgn.Module(loc, name, sig_opt, decls) -> 
       let orig = !Store.Modules.current in 
       let _ = Store.Modules.current := orig @ [name] in
+      let _ = Printf.printf "module %s %s= struct" 
+          (name)
+          (match sig_opt with 
+            | None -> "" 
+            | Some Ext.Sgn.Name s -> (": " ^ s) 
+            | Some Ext.Sgn.Sig l -> ": sig ... end ") in
       let _ = List.iter recSgnDecl decls in
-
+      let _ = Printf.printf "end;" in
+      
       (* TODO: NEED TO CHECK AGAINST SIG *)
+
+      (* TODO: fix pretty printer to allow for EVERYTHING in the signature to be printed *)
 
       let _ = Store.Modules.current := orig in
       ()

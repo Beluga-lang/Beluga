@@ -288,7 +288,7 @@ GLOBAL: sgn;
   sgn_decl:
     [
       [ 
-        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
+        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ->
            begin match k_or_a with
              | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
              | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
@@ -358,31 +358,23 @@ GLOBAL: sgn;
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
+
+      | "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end"; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+          let decls = List.map (fun [x] -> x) decls in
+          [Sgn.Module(_loc, n, Some(Sgn.Sig t), decls)]
+      |  
+        "module"; n = UPSYMBOL; t = OPT [ ": "; t = UPSYMBOL -> t]; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+          let s = match t with None -> None | Some x -> Some (Sgn.Name x) in
+          let decls = List.map (fun [x] -> x) decls in
+          [Sgn.Module(_loc, n, s, decls)]
+      | 
+        "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
+          [Sgn.ModuleType(_loc, n, decls)]
       (* | 
         "#open"; n = UPSYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))] *)
 
-      | m = module_dec -> m
-
       ]
     ]
-  ;
-
-  module_dec:
-  [
-    [
-        "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end"; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-        let decls = List.map (fun [x] -> x) decls in
-        [Sgn.Module(_loc, n, Some(Sgn.Sig t), decls)]
-      |  
-        "module"; n = UPSYMBOL; t = OPT [ ": "; t = UPSYMBOL -> t]; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-        let s = match t with None -> None | Some x -> Some (Sgn.Name x) in
-        let decls = List.map (fun [x] -> x) decls in
-        [Sgn.Module(_loc, n, s, decls)]
-      | 
-        "signature"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-        [Sgn.ModuleType(_loc, n, decls)]
-    ]
-  ]
   ;
 
   module_sig:
@@ -413,7 +405,7 @@ GLOBAL: sgn;
           Sgn.CompTypAbbrevSig (_loc, Id.mk_name (Id.SomeString a), k, tau)
 
       |
-        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
+        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ; "."->
            begin match k_or_a with
              | Kind k -> Sgn.TypSig   (_loc, Id.mk_name (Id.SomeString a_or_c), k)
              | Typ  a -> Sgn.ConstSig (_loc, Id.mk_name (Id.SomeString a_or_c), a)
@@ -421,8 +413,6 @@ GLOBAL: sgn;
       | 
         "rec"; x = SYMBOL; ":"; tA = cmp_typ ; ";" ->
           Sgn.RecSig(_loc, Id.mk_name (Id.SomeString x), tA)
-
-
       ]
     ]
   ;
@@ -453,11 +443,11 @@ GLOBAL: sgn;
              end
 
         |
-          "type" ->
+          "type";  "."->
              Kind (LF.Typ _loc)
 
         |
-          a = lf_typ LEVEL "atomic" ->
+          a = lf_typ LEVEL "atomic";  "." ->
               Typ a
 
         ]
@@ -517,13 +507,17 @@ GLOBAL: sgn;
 
     | "atomic"
         [
-          "("; a = SELF; ")" ->
+          "("; a = lf_typ ; ")" ->
             a
         |
-          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
-            let modules = match l with None -> [] | Some l -> l in
+          modules = LIST1 [x = UPSYMBOL; "." -> x]; a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
+            if List.length modules > 0 then print_string "HERE";
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
+        |
+          a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         ]
     ]
   ;
@@ -565,14 +559,18 @@ GLOBAL: sgn;
 
   lf_head:
     [
+      "module"
       [
+        modules = LIST1 [x = UPSYMBOL; "." -> x]; x = SYMBOL ->
+          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
+      ]
+    | 
+      "atomic" [
         u = UPSYMBOL  ->
           LF.Name (_loc, Id.mk_name (Id.SomeString u))
-
       |
-        l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
-          let modules = match l with None -> [] | Some l -> l in
-          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
+        u = SYMBOL  ->
+          LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       ]
     ]
@@ -720,7 +718,17 @@ GLOBAL: sgn;
 
 
   clf_typ:
-    [ RIGHTA
+    [ 
+      "modules"
+      [
+          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
+            let modules = match l with None -> [] | Some l -> l in
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
+      ]
+
+    |
+      RIGHTA
         [
            "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
@@ -734,10 +742,10 @@ GLOBAL: sgn;
           "("; a = SELF; ")" ->
             a
 
-        |
+(*         |
            a = SYMBOL; ms = LIST0 clf_normal ->
              let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
 
 
         ]
@@ -745,11 +753,6 @@ GLOBAL: sgn;
         [
           "("; a = SELF; ")" ->
             a
-        |
-          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
-            let modules = match l with None -> [] | Some l -> l in
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
         |
           typRec = clf_typ_rec_block
           ->  LF.Sigma (_loc, typRec)
@@ -764,6 +767,12 @@ GLOBAL: sgn;
             LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
        ]
 
+    | "module"
+      [
+        modules = LIST1 [ x = UPSYMBOL; "." -> x]; n = SYMBOL ->
+          let name = Id.mk_name ~modules:modules (Id.SomeString n) in
+          LF.Root(_loc, LF.Name(_loc, name), LF.Nil)
+      ]
     | "atomic"
         [
          (* u = UPSYMBOL; "["; sigma' = clf_sub_new; "]"   ->
@@ -868,7 +877,6 @@ GLOBAL: sgn;
   clf_head:
     [
       [
-
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       | 
@@ -1352,7 +1360,16 @@ isuffix:
  ]];
 
 cmp_exp_syn:
- [ LEFTA [
+ [ 
+  "modules"[
+     l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
+      let modules = match l with None -> [] | Some l -> l in
+      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
+  ]
+
+  |
+
+ LEFTA [
    "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
         Comp.BoxVal (_loc, cPsi, tR)
 
@@ -1363,9 +1380,6 @@ cmp_exp_syn:
                                     | Atom    ->   e
                             end)
    | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
-   | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
-      let modules = match l with None -> [] | Some l -> l in
-      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)
 

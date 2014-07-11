@@ -9,4 +9,14 @@ module Nats = struct
   | [ |- N ] => [ |- s N];
 end;
 
-let x = [ |- Nats.z];
+let x = [ |- Nats.z ];
+
+let y = [ |- Nats.s Nats.z];
+
+let z = Nats.suc [ |- Nats.z ];
+
+list : Nats.nat -> type.
+
+nil : list Nats.z.
+
+cons : list N -> list (Nats.s N).

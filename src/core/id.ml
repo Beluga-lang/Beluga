@@ -4,23 +4,23 @@ type name     = {
   was_generated : bool ;
 }
 
-type cid_typ    = string list * int
+type cid_typ    = string list * string list * int
 
-type cid_term   = string list * int
+type cid_term   = string list * string list * int
 
-type cid_schema = string list * int
+type cid_schema = string list * string list * int
 
-type cid_coercion = string list * int
+type cid_coercion = string list * string list * int
 
-type cid_comp_typ = string list * int
+type cid_comp_typ = string list * string list * int
 
-type cid_comp_cotyp = string list * int
+type cid_comp_cotyp = string list * string list * int
 
-type cid_comp_const = string list * int
+type cid_comp_const = string list * string list * int
 
-type cid_comp_dest = string list * int
+type cid_comp_dest = string list * string list * int
 
-type cid_prog   = string list * int
+type cid_prog   = string list * string list * int
 
 type offset     = int
 

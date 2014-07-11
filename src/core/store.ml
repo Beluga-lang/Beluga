@@ -37,6 +37,38 @@ module Modules = struct
     | Ext.Sgn.CompDestSig(l, n, t) -> Ext.Sgn.CompDest(l, n, t)
     | Ext.Sgn.CompTypAbbrevSig(l, n, k, t) -> Ext.Sgn.CompTypAbbrev(l, n, k, t) 
 
+  let rec forceTyp = function [] -> (fun x -> x) | ml -> function
+    | Int.LF.Atom (loc, (l,m,x), s) -> Int.LF.Atom(loc, (ml@l, m, x), s)
+    | Int.LF.PiTyp(l, tA) -> Int.LF.PiTyp(forceTypDecl ml l, forceTyp ml tA)
+    | Int.LF.Sigma tRec -> Int.LF.Sigma(forceTRec ml tRec)
+    | Int.LF.TClo (tA, s) -> Int.LF.TClo(forceTyp ml tA, s)
+  and forceTRec = function [] -> (fun x -> x) | ml -> function
+    | Int.LF.SigmaLast(n, tA) -> Int.LF.SigmaLast(n, forceTyp ml tA)
+    | Int.LF.SigmaElem(n, tA, tRec) -> (Int.LF.SigmaElem(n, forceTyp ml tA, forceTRec ml tRec))
+  and forceTypDecl = function [] -> (fun x -> x) | ml -> function
+    | (Int.LF.TypDecl (n, tA), dep) -> (Int.LF.TypDecl(n, forceTyp ml tA), dep)
+    | (Int.LF.TypDeclOpt _ , _) as x -> x
+
+  let forceCTypDecl = function [] -> (fun x -> x) | ml -> function
+    | Int.LF.Decl(n, Int.LF.MTyp(tA, cD, dep)) -> Int.LF.Decl(n, Int.LF.MTyp(forceTyp ml tA, cD, dep))
+    | Int.LF.Decl(n, Int.LF.PTyp(tA, cD, dep)) -> Int.LF.Decl(n, Int.LF.PTyp(forceTyp ml tA, cD, dep))
+    | Int.LF.Decl(n, Int.LF.STyp _ ) as x -> x
+    | Int.LF.Decl(n, Int.LF.CTyp _ ) as x -> x
+    | Int.LF.DeclOpt n -> Int.LF.DeclOpt n
+
+  let rec forceCompTyp = function [] -> (fun x -> x) | ml -> function
+    | Int.Comp.TypBox(l, tA, cD) -> Int.Comp.TypBox(l, forceTyp ml tA, cD)
+    | Int.Comp.TypParam(l, tA, cD) -> Int.Comp.TypParam(l, forceTyp ml tA, cD)
+    | Int.Comp.TypArr(a,b) -> Int.Comp.TypArr(forceCompTyp ml a, forceCompTyp ml b)
+    | Int.Comp.TypCross(a,b) -> Int.Comp.TypCross(forceCompTyp ml a, forceCompTyp ml b)
+    | Int.Comp.TypPiBox(cTypDecl, t) -> Int.Comp.TypPiBox(forceCTypDecl ml cTypDecl, forceCompTyp ml t)
+    | Int.Comp.TypClo(t, mSub) -> Int.Comp.TypClo(forceCompTyp ml t, mSub)
+    | x -> x
+
+  let rec forceKind = function [] -> (fun x -> x) | ml -> function
+    | Int.LF.Typ -> Int.LF.Typ
+    | Int.LF.PiKind(tDecl, k) -> Int.LF.PiKind(forceTypDecl ml tDecl, forceKind ml k)    
+
 end
 
 
@@ -94,11 +126,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceKind m e.kind}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceKind m e.kind}
 
     let freeze a =
           (get a).frozen <- true
@@ -332,10 +364,12 @@ module Cid = struct
       typ                : Int.LF.typ
     }
 
-    let mk_entry n t i = {
+    let mk_entry n t i = 
+      let modules = n.Id.modules in
+      {
       name               = n;
       implicit_arguments = i;
-      typ                = t
+      typ                = Modules.forceTyp modules t
     }
 
     let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
@@ -383,11 +417,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceTyp m e.typ}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceTyp m e.typ }
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -651,11 +685,10 @@ module Cid = struct
       typ                : Int.Comp.typ
     }
 
-
     let mk_entry name tau implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ               = tau
+      typ               = Modules.forceCompTyp name.Id.modules tau
     }
 
     (*  store : entry DynArray.t *)
@@ -706,11 +739,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ }
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ }
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -730,7 +763,7 @@ module Cid = struct
     let mk_entry name tau implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ               = tau
+      typ               = Modules.forceCompTyp name.Id.modules tau
     }
    (*  store : entry DynArray.t *)
     let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
@@ -780,11 +813,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -810,7 +843,7 @@ module Cid = struct
       implicit_arguments = i;
       kind               = k;
       mctx               = cD;
-      typ                = t
+      typ                = Modules.forceCompTyp n.Id.modules t
     }
 
     (*  store : entry DynArray.t *)
@@ -860,11 +893,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -888,7 +921,7 @@ module Cid = struct
     let mk_entry name typ implicit_arguments v name_list = {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ                = typ;
+      typ                = Modules.forceCompTyp name.Id.modules typ;
       prog               = v;
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
@@ -943,11 +976,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
 
     let clear () =
       DynArray.clear (Hashtbl.find store !(Modules.current));

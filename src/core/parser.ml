@@ -288,7 +288,7 @@ GLOBAL: sgn;
   sgn_decl:
     [
       [ 
-        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ->
+        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
            begin match k_or_a with
              | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
              | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
@@ -443,11 +443,11 @@ GLOBAL: sgn;
              end
 
         |
-          "type";  "."->
+          "type"->
              Kind (LF.Typ _loc)
 
         |
-          a = lf_typ LEVEL "atomic";  "." ->
+          a = lf_typ LEVEL "atomic" ->
               Typ a
 
         ]
@@ -475,7 +475,7 @@ GLOBAL: sgn;
              LF.ArrKind (_loc, a2, k)
 
         |
-          "type" -> LF.Typ _loc
+          "type"-> LF.Typ _loc
         ]
 
     | LEFTA
@@ -487,6 +487,15 @@ GLOBAL: sgn;
         ]
     ]
   ;
+
+  module_sym:
+    [
+      [
+        x = UPSYMBOL; "."; (l,n) = module_sym -> (x::l, n)
+      |
+        a = SYMBOL -> ([], a)
+      ]
+    ];
 
   lf_typ:
     [ RIGHTA
@@ -510,14 +519,13 @@ GLOBAL: sgn;
           "("; a = lf_typ ; ")" ->
             a
         |
-          modules = LIST1 [x = UPSYMBOL; "." -> x]; a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
-            if List.length modules > 0 then print_string "HERE";
+          (modules, a) = module_sym; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
               LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
-        |
+(*         |
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
+              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
         ]
     ]
   ;
@@ -558,18 +566,14 @@ GLOBAL: sgn;
   ;
 
   lf_head:
-    [
-      "module"
+    [ "module"
       [
-        modules = LIST1 [x = UPSYMBOL; "." -> x]; x = SYMBOL ->
+        (modules, x) = module_sym ->
           LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
       ]
-    | 
-      "atomic" [
+    | "atomic"
+      [
         u = UPSYMBOL  ->
-          LF.Name (_loc, Id.mk_name (Id.SomeString u))
-      |
-        u = SYMBOL  ->
           LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       ]

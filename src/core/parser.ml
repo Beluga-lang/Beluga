@@ -756,11 +756,15 @@ GLOBAL: sgn;
         ]
 
     | "atomic"
-        [
+        [(* 
           "("; a=SELF;")" -> a
-        |
+        | *)
            (* a = SYMBOL; *) ms = LIST1 clf_normal ->
-              LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
+            begin match ms with
+              | [LF.NTyp(_, a)] -> a
+              | _ -> LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
+            end
+              
 (*         |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
               LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
@@ -783,7 +787,8 @@ GLOBAL: sgn;
   ;
 
   clf_normal:
-     [ RIGHTA
+     [ 
+      RIGHTA
        [
           "\\"; x = SYMBOL; "."; m = clf_term_app ->
             let m = begin match m with
@@ -870,6 +875,8 @@ GLOBAL: sgn;
           LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
       |
         ms = LIST1 clf_normal -> let n = LF.TList(_loc, ms) in ignore (normalToString n); n
+      |
+        a = clf_typ -> LF.NTyp(_loc, a)
       ]
   ];
 

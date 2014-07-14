@@ -17,8 +17,10 @@ type t =
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
   | DOTS of string
-  | MODULESYM of string   (* a period followed by a lowercase symbol   '.z' *)
-  
+  | MODULESYM of string   (* Any string that would represent a module i.e. 'Nat.z' 'List.Nat.z' etc.
+                             NOTE: the regular expression for this DOES NOT match ordinary symbols (i.e. 'z') 
+                             and as such should be used in the parser as l = [a = MODULESYM -> a | a = SYMBOL -> a] *)
+
 (*   | TURNSTILE of string *)
 
 let to_string = function

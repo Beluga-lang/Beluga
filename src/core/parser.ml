@@ -195,12 +195,12 @@ let check_codatatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
-let rec split (m : string) : (string list * string) = 
+let rec split (c : char) (m : string) : (string list * string) = 
   try
-    let i = String.index m '.' in
+    let i = String.index m c in
     let l = String.length m in
     let (a, rest) = (String.sub m 0 i, String.sub m (i+1) (l- i - 1)) in
-    let (l, n) = split rest in (a::l, n)
+    let (l, n) = split c rest in (a::l, n)
   with
   | Not_found -> ([], m)
 
@@ -521,7 +521,7 @@ GLOBAL: sgn;
         |
           x = [a = MODULESYM -> a | a = SYMBOL -> a]; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-            let (modules, a) = split x in
+            let (modules, a) = split '.' x in
               LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
 (*         |
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
@@ -569,7 +569,7 @@ GLOBAL: sgn;
   lf_head:
     [ (* "module" *)
       [
-        x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
+        x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split '.' x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
       (* ] *)
     | (* "atomic"
       [
@@ -918,7 +918,7 @@ GLOBAL: sgn;
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
         m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-          let (l, x) = split m in
+          let (l, x) = split '.' m in
           LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))
       
  (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
@@ -1366,7 +1366,7 @@ cmp_exp_syn:
  [ 
   "modules"[
      m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-     let (modules, n) = split m in
+     let (modules, n) = split '.' m in
       Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n))
   ]
 

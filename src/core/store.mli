@@ -3,6 +3,8 @@ open Syntax.Int
 
 module Modules : sig
   val current : string list ref
+  val opened  : string list list ref
+  val open_module : string list -> unit
   val modules : (string list, Sgn.decl list ref) Hashtbl.t
   val signatures : (string list, Sgn.signature list ref) Hashtbl.t
   val addSgnToCurrent : Sgn.decl -> unit

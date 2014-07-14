@@ -379,8 +379,8 @@ GLOBAL: sgn;
       | 
         "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
           [Sgn.ModuleType(_loc, n, decls)]
-      (* | 
-        "#open"; n = UPSYMBOL ->[Sgn.Pragma(_loc, Sgn.OpenPrag(Id.mk_name(Id.SomeString n)))] *)
+      | 
+        "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
 
       ]
     ]
@@ -1563,37 +1563,42 @@ clf_pattern :
             let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
               MTBase (_loc, Id.mk_name (Id.SomeString a), sp)
 
-      | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL ->
-          let modules = match l with None -> [] | Some l -> l in
+      | x = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+          let (modules, a) = split '.' x in
           MTCtx (_loc, Id.mk_name ~modules:modules (Id.SomeString a))
       |
         "("; mixtau = mixtyp ; ")" ->
            mixtau
 
-      |   "(" ; "[";  cPsi = clf_dctx; turnstile; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ),
+      |   "(" ; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
+              let (modules, a) = split '.' x in
+              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
                     mixtau2)
 
-      |   "(" ; "#"; "[";  cPsi = clf_dctx; turnstile; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ),
+      |   "(" ; "#"; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
+              let (modules, a) = split '.' x in
+              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
                     mixtau2)
 
       |
-          "#";"["; cPsi = clf_dctx; turnstile; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+          "#";"["; cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  ms = LIST0 clf_normal; "]"  ->
+              let (modules, a) = split '.' x in
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+              MTPBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp), cPsi )
 
 
       |
-          "["; cPsi = clf_dctx; turnstile; "("; a = SYMBOL;  ms = LIST0 clf_normal; ")"; "]"  ->
+          "["; cPsi = clf_dctx; turnstile; "("; x = [a = MODULESYM -> a | a = SYMBOL -> a];  ms = LIST0 clf_normal; ")"; "]"  ->
+              let (modules, a) = split '.' x in
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+              MTBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp), cPsi )
 
 
       |
-          "["; cPsi = clf_dctx; turnstile; a = SYMBOL;  ms = LIST0 clf_normal; "]"  ->
+          "["; cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  ms = LIST0 clf_normal; "]"  ->
+              let (modules, a) = split '.' x in
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
+              MTBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp), cPsi )
 
 
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->

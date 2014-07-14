@@ -17,6 +17,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 type error =
   | UnexpectedSucess
   | IllegalOptsPrag
+  | InvalidOpenPrag of string
 
 exception Error of Syntax.Loc.t * error
 
@@ -24,10 +25,12 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-	| UnexpectedSucess ->
-	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
-        | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
+      | InvalidOpenPrag s ->
+        Format.fprintf ppf "Invalid module in pragma '#open %s'" s
+    	| UnexpectedSucess ->
+    	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
+      | IllegalOptsPrag ->
+        Format.fprintf ppf "%%opts pragma can only appear before any declarations."))
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -200,7 +203,8 @@ and recSgnDecl d =
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
                                         fun () -> Check.Comp.checkTyp cD tau'))
         in      let cid_ctypfamily = get_target_cid_compcotyp tau' in
-        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in ()
+        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in 
+        Store.Modules.addSgnToCurrent (Int.Sgn.CompDest(loc, c, tau'))
 
 
     | Ext.Sgn.Typ (_, a, extK)   ->
@@ -342,11 +346,11 @@ and recSgnDecl d =
             let v = Opsem.eval i'' in
             let _x = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in
             if (!Debug.chatter) <> 0 then
-	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
-		(R.render_name x)
-		(P.compTypToString cD tau')
-		(P.expChkToString cD cG i'')
-		(P.valueToString v)
+        	    Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
+            		(R.render_name x)
+            		(P.compTypToString cD tau')
+            		(P.expChkToString cD cG i'')
+            		(P.valueToString v)
   	  end
 
     | Ext.Sgn.MRecTyp (_, recDats) ->
@@ -435,7 +439,7 @@ and recSgnDecl d =
                 (R.render_name f)
                 (P.compTypToString cD tau')
                 (P.expChkToString cD cG e_r');
-            if !Coverage.enableCoverage then
+            if !Coverage.enableCoverage && !Debug.chatter <> 0 then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
@@ -455,7 +459,7 @@ and recSgnDecl d =
                 (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
                 (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl)
                 (Whnf.cnormExp (e_r', Whnf.m_id));
-            if !Coverage.enableCoverage then
+            if !Coverage.enableCoverage&& !Debug.chatter <> 0 then
               Printf.printf "\n## Coverage checking done: %s  ##\n"
                 (R.render_name f);
             dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
@@ -517,25 +521,32 @@ and recSgnDecl d =
 
     | Ext.Sgn.Module(loc, name, sig_opt, decls) -> 
       let orig = !Store.Modules.current in 
+      let opened = !Store.Modules.opened in
       let _ = Store.Modules.current := orig @ [name] in
-      let _ = Printf.printf "module %s %s= struct" 
-          (name)
-          (match sig_opt with 
-            | None -> "" 
-            | Some Ext.Sgn.Name s -> (": " ^ s) 
-            | Some Ext.Sgn.Sig l -> ": sig ... end ") in
+      let _ = if !Debug.chatter <> 0 then begin
+        let _ = Format.printf "@.module %s %s= struct@." 
+            (name)
+            (match sig_opt with 
+              | None -> "" 
+              | Some Ext.Sgn.Name s -> (": " ^ s ^ " ") 
+              | Some Ext.Sgn.Sig l -> ": sig ... end ") in
+        Format.open_box 5 end in
       let _ = List.iter recSgnDecl decls in
-      let _ = Printf.printf "end;" in
-      
+      let _ = if !Debug.chatter <> 0 then begin
+        Format.close_box ();
+        Format.printf "end;@.@?" 
+      end in
       (* TODO: NEED TO CHECK AGAINST SIG *)
 
-      (* TODO: fix pretty printer to allow for EVERYTHING in the signature to be printed *)
-
+      (* TODO: allow for EVERYTHING in the signature to be printed *)
       let _ = Store.Modules.current := orig in
+      let _ = Store.Modules.opened := opened in
       ()
 
     | Ext.Sgn.ModuleType(loc, name, sigs) ->
       ()
 
-    (* | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
-      () *)
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
+      try 
+        Modules.open_module n
+      with Not_found -> raise (Error(loc, (InvalidOpenPrag (String.concat "." n))))

@@ -238,7 +238,7 @@ module Sgn = struct
     | OptsPrag of string list
     | NamePrag of name * string * string option
     | NotPrag
-    (* | OpenPrag of name *)
+    | OpenPrag of string list
 
   type decl =
     | Const    of Loc.t * name * LF.typ

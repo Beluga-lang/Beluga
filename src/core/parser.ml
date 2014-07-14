@@ -195,6 +195,15 @@ let check_codatatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
+let rec split (m : string) : (string list * string) = 
+  try
+    let i = String.index m '.' in
+    let l = String.length m in
+    let (a, rest) = (String.sub m 0 i, String.sub m (i+1) (l- i - 1)) in
+    let (l, n) = split rest in (a::l, n)
+  with
+  | Not_found -> ([], m)
+
 
 (*******************************)
 (* Global Grammar Entry Points *)
@@ -488,15 +497,6 @@ GLOBAL: sgn;
     ]
   ;
 
-  module_sym:
-    [
-      [
-        x = UPSYMBOL; "."; (l,n) = module_sym -> (x::l, n)
-      |
-        a = SYMBOL -> ([], a)
-      ]
-    ];
-
   lf_typ:
     [ RIGHTA
         [
@@ -519,8 +519,9 @@ GLOBAL: sgn;
           "("; a = lf_typ ; ")" ->
             a
         |
-          (modules, a) = module_sym; ms = LIST0 (lf_term LEVEL "atomic") ->
+          x = [a = MODULESYM -> a | a = SYMBOL -> a]; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+            let (modules, a) = split x in
               LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
 (*         |
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
@@ -566,14 +567,13 @@ GLOBAL: sgn;
   ;
 
   lf_head:
-    [ "module"
+    [ (* "module" *)
       [
-        (modules, x) = module_sym ->
-          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
-      ]
-    | "atomic"
+        x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
+      (* ] *)
+    | (* "atomic"
       [
-        u = UPSYMBOL  ->
+ *)        u = UPSYMBOL  ->
           LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       ]
@@ -917,13 +917,12 @@ GLOBAL: sgn;
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
-        l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
-          let modules = match l with None -> [] | Some l -> l in
-          LF.Name (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
-
+        m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+          let (l, x) = split m in
+          LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))
+      
  (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
-
 
       ]
     ]
@@ -1366,9 +1365,9 @@ isuffix:
 cmp_exp_syn:
  [ 
   "modules"[
-     l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
-      let modules = match l with None -> [] | Some l -> l in
-      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x))
+     m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+     let (modules, n) = split m in
+      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n))
   ]
 
   |

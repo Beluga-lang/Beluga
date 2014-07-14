@@ -17,6 +17,8 @@ type t =
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
   | DOTS of string
+  | MODULESYM of string   (* a period followed by a lowercase symbol   '.z' *)
+  
 (*   | TURNSTILE of string *)
 
 let to_string = function
@@ -26,6 +28,8 @@ let to_string = function
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
   | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
   | DOTS s -> Printf.sprintf "DOTS %S"  s
+  | MODULESYM s -> Printf.sprintf "MODULESYM %S" s
+
 (*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
 
 (** Pretty print a token using {!Format} functionality. *)
@@ -50,6 +54,7 @@ let extract_string = function
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
   | DOTS s -> s
+  | MODULESYM s -> s
 (*   | TURNSTILE s -> s *)
 
 

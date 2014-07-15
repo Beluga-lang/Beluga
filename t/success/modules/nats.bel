@@ -7,6 +7,9 @@ module Nats = struct
   fn n => case n of
   | [ |- z ] => [ |- s z]
   | [ |- N ] => [ |- s N];
+
+  let two = [ |- s (s z)];
+  let three = suc two;
 end;
 
 let x = [ |- Nats.z ];
@@ -34,5 +37,12 @@ module Arith = struct
 		let [ |- N' ] = add [ |- N ] y in
 		[ |- s N'];
 
+	let five = add two three;
 end;
 
+
+let two' = Nats.two;
+
+
+#open Nats
+let l2 = [ |- cons z nil];

@@ -86,6 +86,11 @@ module Modules = struct
     | Int.LF.Typ -> Int.LF.Typ
     | Int.LF.PiKind(tDecl, k) -> Int.LF.PiKind(forceTypDecl ml tDecl, forceKind ml k)    
 
+  let rec forceCompKind = function [] -> (fun x -> x) | ml -> function
+    | Int.Comp.Ctype l -> Int.Comp.Ctype l
+    | Int.Comp.PiKind (l, cTypDecl, k) -> 
+        Int.Comp.PiKind(l, forceCTypDecl ml cTypDecl, forceCompKind ml k)
+
 end
 
 
@@ -599,11 +604,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceCompKind m e.kind}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceCompKind m e.kind}
 
     let freeze a =
           (get a).frozen <- true
@@ -681,11 +686,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceCompKind m e.kind}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); kind = Modules.forceCompKind m e.kind}
 
     let freeze a =
           (get a).frozen <- true
@@ -916,11 +921,11 @@ module Cid = struct
     let get = function
     | (m, [], n) -> 
         let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
+        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ; kind = Modules.forceCompKind m e.kind}
     | (m, l, n) -> 
       let e = try DynArray.get (Hashtbl.find store l) n
       with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ}
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)); typ = Modules.forceCompTyp m e.typ; kind = Modules.forceCompKind m e.kind}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 

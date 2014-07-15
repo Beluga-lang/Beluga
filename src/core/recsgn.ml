@@ -524,17 +524,17 @@ and recSgnDecl d =
       let opened = !Store.Modules.opened in
       let _ = Store.Modules.current := orig @ [name] in
       let _ = if !Debug.chatter <> 0 then begin
-        let _ = Format.printf "@.module %s %s= struct@." 
+        let _ = Format.printf "@.module %s %s= struct" 
             (name)
             (match sig_opt with 
               | None -> "" 
               | Some Ext.Sgn.Name s -> (": " ^ s ^ " ") 
               | Some Ext.Sgn.Sig l -> ": sig ... end ") in
-        Format.open_box 5 end in
+        Format.open_vbox 5 end in
       let _ = List.iter recSgnDecl decls in
       let _ = if !Debug.chatter <> 0 then begin
         Format.close_box ();
-        Format.printf "end;@.@?" 
+        Format.printf "end;@ @?" 
       end in
       (* TODO: NEED TO CHECK AGAINST SIG *)
 

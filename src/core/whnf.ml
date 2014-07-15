@@ -2286,8 +2286,8 @@ and convMFront front1 front2 = match (front1, front2) with
 
 
 and convTyp' sA sB = match (sA, sB) with
-  | ((Atom (_, a1, spine1), s1), (Atom (_, a2, spine2), s2)) ->
-      if a1 = a2 then
+  | ((Atom (_, (_, a, b), spine1), s1), (Atom (_, (_, a', b'), spine2), s2)) ->
+      if a = a' && b = b' then
            convSpine (spine1, s1) (spine2, s2)
       else false
 (*      a1 = a2 && convSpine (spine1, s1) (spine2, s2)*)
@@ -2686,7 +2686,7 @@ let mctxMVarPos cD u =
     | (Comp.LetPair (loc, i, (x, y, e)), t) ->
         Comp.LetPair (loc, cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
-    | (Comp.Let (loc, i, (x, e)), t) ->
+    | (Comp.Let (loc, i, (x, e)), t) -> 
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
     | (Comp.Box (loc, cM), t) ->

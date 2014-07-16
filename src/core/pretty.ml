@@ -1598,13 +1598,13 @@ module Int = struct
 
       | Sgn.Module(_, name, None, decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-          fprintf ppf "@\nmodule %s = struct@ @[<v2>@\n%a@]@ end;@\n"
+          fprintf ppf "@\nmodule %s = struct@\n@[<v2>@\n%a@]@\nend;@\n"
             (name)
             (aux) decls
 
       | Sgn.Module(_, name, Some (Sgn.Name s), decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-          fprintf ppf "@\nmodule %s %s= struct@ @[<v2>@\n%a@]@ end;@\n"
+          fprintf ppf "@\nmodule %s: %s = struct@\n@[<v2>@\n%a@]@\nend;@\n"
             (name)
             (s)
             (aux) decls
@@ -1612,7 +1612,7 @@ module Int = struct
       | Sgn.Module(_, name, (Some (Sgn.Sig l)), decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
           let aux' fmt t = List.iter (fun x -> (fmt_ppr_module_sig lvl fmt x)) t in
-          fprintf ppf "@\nmodule %s: sig@ @[<v2>@\n%a@]@ end = struct@ @[<v2>@\n%a@]@ end;@\n"
+          fprintf ppf "@\nmodule %s: sig@ @[<v2>@\n%a@]@\nend = struct@\n@[<v2>@\n%a@]@\nend;@\n"
             (name)
             (aux') l
             (aux) decls

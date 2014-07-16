@@ -258,9 +258,6 @@ module Sgn = struct
     | ModuleType of  Loc.t * string * module_sig list
 
   and module_sig =
-    | SchemaSig of Loc.t * name * LF.schema   
-    | ValSig of Loc.t * name * Comp.typ       
-    | RecSig of Loc.t * name * Comp.typ       
     | ConstSig    of Loc.t * name * LF.typ    
     | TypSig      of Loc.t * name * LF.kind   
     | CompTypSig  of Loc.t * name * Comp.kind   
@@ -269,6 +266,9 @@ module Sgn = struct
     | CompDestSig of Loc.t * name * Comp.typ
     | CompTypAbbrevSig of Loc.t * name * Comp.kind * Comp.typ   
     | MRecTypSig  of Loc.t * module_sig list list 
+    | SchemaSig of Loc.t * name * LF.schema   
+    | ValSig of Loc.t * name * Comp.typ       
+    | RecSig of Loc.t * name * Comp.typ       
 
   and signature =
     | Name of string

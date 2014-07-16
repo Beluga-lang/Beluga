@@ -368,14 +368,11 @@ GLOBAL: sgn;
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | "module"; n = UPSYMBOL; ":"; "sig"; t = LIST1 module_sig; "end"; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+      | "module"; n = UPSYMBOL; 
+          sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t]; 
+          "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
           let decls = List.map (fun [x] -> x) decls in
-          [Sgn.Module(_loc, n, Some(Sgn.Sig t), decls)]
-      |  
-        "module"; n = UPSYMBOL; t = OPT [ ": "; t = UPSYMBOL -> t]; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-          let s = match t with None -> None | Some x -> Some (Sgn.Name x) in
-          let decls = List.map (fun [x] -> x) decls in
-          [Sgn.Module(_loc, n, s, decls)]
+          [Sgn.Module(_loc, n,sig_opt, decls)]
       | 
         "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
           [Sgn.ModuleType(_loc, n, decls)]

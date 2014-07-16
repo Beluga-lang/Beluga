@@ -13,7 +13,6 @@ module Modules : sig
   val instantiateModule : string -> unit
   val instantiateModuleType : string -> unit
   val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
-  val sig_to_decl : Syntax.Ext.Sgn.module_sig -> Syntax.Ext.Sgn.decl
 end
 
 module Cid : sig

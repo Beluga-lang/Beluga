@@ -1,0 +1,7 @@
+module type NATS = sig
+	nat : type.
+	z : nat.
+	s : nat -> nat.
+end;
+
+let x = [ |- NATS.s NATS.z];

@@ -19,6 +19,13 @@ module Modules = struct
 
   let signatures : (string list, Int.Sgn.module_sig list ref) Hashtbl.t = Hashtbl.create 0
 
+  let is_signature (n : string list) : bool =
+    try
+      ignore(Hashtbl.find signatures n); true
+      with | Not_found -> try
+        ignore(Hashtbl.find signatures (!current @ n)); true
+      with | Not_found -> false
+
   let open_module (l : string list) : unit =
     let x = try let _ = Hashtbl.find modules l in l 
       with Not_found -> let _ = Hashtbl.find modules (!current @ l) in !current @ l
@@ -72,16 +79,8 @@ module Modules = struct
     | Ext.Sgn.CompCotyp(l, n, k) -> Ext.Sgn.CompCotypSig(l, n, k)
     | Ext.Sgn.CompConst(l, n, t) -> Ext.Sgn.CompConstSig(l, n, t)
     | Ext.Sgn.CompDest(l, n, t) -> Ext.Sgn.CompDestSig(l, n, t)
-    | Ext.Sgn.CompTypAbbrev(l, n, k, t) -> Ext.Sgn.CompTypAbbrevSig(l, n, k, t) 
-
-  let sig_to_decl : Ext.Sgn.module_sig -> Ext.Sgn.decl = function
-    | Ext.Sgn.ConstSig(l, n, t) -> Ext.Sgn.Const(l, n, t)
-    | Ext.Sgn.TypSig(l, n, k) -> Ext.Sgn.Typ(l, n, k)
-    | Ext.Sgn.CompTypSig(l, n, k) -> Ext.Sgn.CompTyp(l, n, k)
-    | Ext.Sgn.CompCotypSig(l, n, k) -> Ext.Sgn.CompCotyp(l, n, k)
-    | Ext.Sgn.CompConstSig(l, n, t) -> Ext.Sgn.CompConst(l, n, t)
-    | Ext.Sgn.CompDestSig(l, n, t) -> Ext.Sgn.CompDest(l, n, t)
-    | Ext.Sgn.CompTypAbbrevSig(l, n, k, t) -> Ext.Sgn.CompTypAbbrev(l, n, k, t) 
+    | Ext.Sgn.CompTypAbbrev(l, n, k, t) -> Ext.Sgn.CompTypAbbrevSig(l, n, k, t)
+    | Ext.Sgn.Schema(l, n, sw) -> Ext.Sgn.SchemaSig(l, n, sw)
 
   let rec forceTyp = function [] -> (fun x -> x) | ml -> function
     | Int.LF.Atom (loc, (l,m,x), s) -> Int.LF.Atom(loc, (ml@l, m, x), s)
@@ -169,6 +168,7 @@ module Cid = struct
         Modules.find directory (fun x -> Hashtbl.find x n)
         (* Hashtbl.find (Hashtbl.find directory (!Modules.current)) n *)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -434,6 +434,7 @@ module Cid = struct
     | n when n.Id.modules = [] -> 
         Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -510,6 +511,7 @@ module Cid = struct
     | n when n.Id.modules = [] -> 
       Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -596,6 +598,7 @@ module Cid = struct
     | n when n.Id.modules = [] -> 
       Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -678,6 +681,7 @@ module Cid = struct
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -758,6 +762,7 @@ module Cid = struct
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -832,6 +837,7 @@ module Cid = struct
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -913,6 +919,7 @@ module Cid = struct
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
@@ -992,6 +999,7 @@ module Cid = struct
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
     | n -> 
+      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 

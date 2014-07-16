@@ -18,6 +18,7 @@ type error =
   | UnexpectedSucess
   | IllegalOptsPrag
   | InvalidOpenPrag of string
+  | MissingSignature of Int.Sgn.module_sig
 
 exception Error of Syntax.Loc.t * error
 
@@ -504,7 +505,7 @@ and recSgnDecl d =
     | Ext.Sgn.Module(loc, name, sig_opt, decls) -> 
       let (signature, sig_opt') = begin match sig_opt with
         | Some (Ext.Sgn.Name n) -> 
-            (Some !(Hashtbl.find Modules.signatures (!Modules.current @ [name])), Some(Int.Sgn.Name name))
+            (Some !(Hashtbl.find Modules.signatures (!Modules.current @ [n])), Some(Int.Sgn.Name n))
         | Some (Ext.Sgn.Sig l) -> 
 
             let Int.Sgn.ModuleType(_, _, l') = recSgnDecl (Ext.Sgn.ModuleType(loc, name ^ "TYPE", l)) in 
@@ -517,10 +518,38 @@ and recSgnDecl d =
       let decls' = List.map recSgnDecl decls in
 
       (* TODO: NEED TO CHECK AGAINST SIG *)
-
+      let decls'' = begin match signature with
+        | None -> decls'
+        | Some signature -> 
+          let checkDecl (_dec : Int.Sgn.decl) (_sgn : Int.Sgn.module_sig) : bool = 
+          let module R = Store.Cid.NamedRenderer in
+          begin match (_dec, _sgn) with
+            | (Int.Sgn.Const(n, t), Int.Sgn.ConstSig(_, n', t')) ->
+                (R.render_cid_term n) = n'.string_of_name && t = t'
+            | (Int.Sgn.Typ(n, k), Int.Sgn.TypSig(_, n', k')) ->
+                (R.render_cid_typ n) = n'.Id.string_of_name && k = k'
+            | (Int.Sgn.CompTyp(_, n, k), Int.Sgn.CompTypSig(_, n', k')) ->
+                n.Id.string_of_name = n'.Id.string_of_name && k = k'
+            | (Int.Sgn.CompCotyp(_, n, k), Int.Sgn.CompCotypSig(_, n', k')) ->
+                n.Id.string_of_name = n'.Id.string_of_name && k = k'
+            | (Int.Sgn.CompConst(_, n, t), Int.Sgn.CompConstSig(_, n', t')) ->
+                n.Id.string_of_name = n'.Id.string_of_name && t = t'
+            | (Int.Sgn.CompDest(_, n, t), Int.Sgn.CompDestSig(_, n', t')) ->
+                n.Id.string_of_name = n'.Id.string_of_name && t = t'
+            | (Int.Sgn.CompTypAbbrev(_, n, k, t), Int.Sgn.CompTypAbbrevSig(_, n', k', t')) ->
+                n.Id.string_of_name = n'.Id.string_of_name && k = k' && t = t'
+            | (Int.Sgn.Schema(n, sw), Int.Sgn.SchemaSig(_, n', sw')) ->
+                (R.render_cid_schema n) = n'.Id.string_of_name && sw = sw'
+            | (_, _) -> false
+            
+          end in
+          let declExists (_sgn: Int.Sgn.module_sig) = () in
+          List.iter declExists signature;
+          List.filter (fun dec -> List.exists (checkDecl dec) signature) decls'
+        end in
       let _ = Store.Modules.current := orig in
       let _ = Store.Modules.opened := opened in
-      let sgn = Int.Sgn.Module(loc, name, sig_opt', decls') in
+      let sgn = Int.Sgn.Module(loc, name, sig_opt', decls'') in
       Store.Modules.addSgnToCurrent sgn;
       sgn
 

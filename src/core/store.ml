@@ -9,13 +9,15 @@ exception Error of Syntax.Loc.t * error
 
 module Modules = struct
 
+  exception NotUnique of string
+
   let current : string list ref = ref []
 
   let opened : string list list ref = ref []
 
   let modules : (string list, Int.Sgn.decl list ref) Hashtbl.t = Hashtbl.create 0
 
-  let signatures : (string list, Int.Sgn.signature list ref) Hashtbl.t = Hashtbl.create 0
+  let signatures : (string list, Int.Sgn.module_sig list ref) Hashtbl.t = Hashtbl.create 0
 
   let open_module (l : string list) : unit =
     let x = try let _ = Hashtbl.find modules l in l 
@@ -35,6 +37,33 @@ module Modules = struct
   let addSgnToCurrent (decl : Int.Sgn.decl) : unit = 
     try let l = (Hashtbl.find modules !current) in l := decl :: !l 
     with Not_found -> Hashtbl.add modules !current (ref [decl])
+
+  let addSigToCurrent (sgn : Int.Sgn.module_sig) : unit =
+    try let l = (Hashtbl.find signatures !current) in l := sgn :: !l
+    with Not_found -> let l = ref [sgn] in Hashtbl.add signatures !current l
+
+  
+  let instantiateModule (name : string) : unit =
+    let l = !current @ [name] in
+    try
+      let _ = Hashtbl.find modules l in
+      raise (NotUnique name)
+    with
+    | Not_found -> try
+        let _ = Hashtbl.find signatures l in
+        raise (NotUnique name)
+      with | Not_found -> current := l; Hashtbl.add modules l (ref [])
+
+  let instantiateModuleType (name : string) : unit =
+    let l = !current @ [name] in
+    try
+      let _ = Hashtbl.find modules l in
+      raise (NotUnique name)
+    with
+    | Not_found -> try
+        let _ = Hashtbl.find signatures l in
+        raise (NotUnique name)
+      with | Not_found -> current := l; Hashtbl.add signatures l (ref [])
 
   let decl_to_sig : Ext.Sgn.decl -> Ext.Sgn.module_sig = function
     | Ext.Sgn.Const(l, n, t) -> Ext.Sgn.ConstSig(l, n, t)
@@ -1395,7 +1424,10 @@ let clear () =
   Cid.Term.clear ();
   Cid.Schema.clear ();
   Cid.CompTyp.clear ();
+  Cid.CompCotyp.clear();
   Cid.CompConst.clear ();
+  Cid.CompDest.clear ();
+  Cid.CompTypDef.clear ();
   Cid.Comp.clear ()
 
 let _ = Error.register_printer

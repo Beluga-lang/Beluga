@@ -183,6 +183,7 @@ module LF = struct
   type prag =
     | NamePrag of cid_typ
     | NotPrag
+    | OpenPrag of string list
 
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function
@@ -399,11 +400,13 @@ module Sgn = struct
     | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
-    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
     | Pragma        of LF.prag
-    | Val           of Loc.t * name * Comp.typ option * Comp.exp_chk
+    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk
+    | MRecTyp       of Loc.t * decl list list
     | Module        of Loc.t * string * signature option * decl list
     | ModuleType    of  Loc.t * string * module_sig list
+    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
 
   and module_sig =
     | SchemaSig of Loc.t * name * LF.schema   
@@ -415,8 +418,8 @@ module Sgn = struct
     | CompCotypSig of Loc.t * name * Comp.kind
     | CompConstSig of Loc.t * name * Comp.typ
     | CompDestSig of Loc.t * name * Comp.typ
-    | CompTypAbbrevSig of Loc.t * name * Comp.kind * Comp.typ   
-    | MRecTypSig  of Loc.t * module_sig list list 
+    | CompTypAbbrevSig of Loc.t * name * Comp.kind * Comp.typ
+    | MRecTypSig       of Loc.t * module_sig list list
 
   and signature =
     | Name of string

@@ -2,12 +2,16 @@ open Id
 open Syntax.Int
 
 module Modules : sig
+  exception NotUnique of string
   val current : string list ref
   val opened  : string list list ref
   val open_module : string list -> unit
   val modules : (string list, Sgn.decl list ref) Hashtbl.t
-  val signatures : (string list, Sgn.signature list ref) Hashtbl.t
+  val signatures : (string list, Sgn.module_sig list ref) Hashtbl.t
   val addSgnToCurrent : Sgn.decl -> unit
+  val addSigToCurrent : Sgn.module_sig -> unit
+  val instantiateModule : string -> unit
+  val instantiateModuleType : string -> unit
   val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
   val sig_to_decl : Syntax.Ext.Sgn.module_sig -> Syntax.Ext.Sgn.decl
 end

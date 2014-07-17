@@ -1,5 +1,5 @@
 module type NATS = sig
-	nat : type.
+	nat : type.	
 	z : nat.
 	s : nat -> nat.
 end;
@@ -12,5 +12,5 @@ module Nats : NATS = struct
 	rec suc : [ |- nat ] -> [ |- nat ] =
 	fn x => 
 	let [ |- N ] = x in [ |- s N];
-	
 end;
+

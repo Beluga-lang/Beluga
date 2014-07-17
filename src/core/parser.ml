@@ -369,13 +369,13 @@ GLOBAL: sgn;
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
       | "module"; n = UPSYMBOL; 
-          sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t]; 
+          (* sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t];  *)
           "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
           let decls = List.map (fun [x] -> x) decls in
-          [Sgn.Module(_loc, n,sig_opt, decls)]
-      | 
+          [Sgn.Module(_loc, n,None, decls)]
+(*       | 
         "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-          [Sgn.ModuleType(_loc, n, decls)]
+          [Sgn.ModuleType(_loc, n, decls)] *)
       | 
         "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
 
@@ -383,7 +383,7 @@ GLOBAL: sgn;
     ]
   ;
 
-  module_sig:
+ (*  module_sig:
     [
       [
         "let"; x = SYMBOL; ":"; tau = cmp_typ; ";" -> Sgn.ValSig(_loc, Id.mk_name(Id.SomeString x), tau)
@@ -421,7 +421,7 @@ GLOBAL: sgn;
           Sgn.RecSig(_loc, Id.mk_name (Id.SomeString x), tA)
       ]
     ]
-  ;
+  ; *)
 
   bound:
     [

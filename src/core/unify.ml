@@ -1195,6 +1195,7 @@ match sigma with
       prune' cD0 cPsi' phat (Whnf.whnf sM) ss rOccur
 
   and prune' cD0 cPsi' ((cvar, offset) as phat) sM ss rOccur = match sM with
+    | (LFHole _ as n, s)-> n
     | (Lam (loc, x, tM),   s) ->
         let _ = dprint (fun () -> "[prune] Lam " ) in
         let _ = dprint (fun () -> "[prune[ sM = " ^
@@ -2799,7 +2800,7 @@ match sigma with
 
     | (FMVar (u, s) , FMVar(u', s')) ->
         if u = u' then unifySub mflag cD0 cPsi s s'
-        else raise (Failure "Bound MVar clash")
+        else raise (Failure "Bound MVar clash'")
 
     | (FPVar (q, s), FPVar (p, s'))
         ->   (if p = q then

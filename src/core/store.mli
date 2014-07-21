@@ -3,15 +3,18 @@ open Syntax.Int
 
 module Modules : sig
   exception NotUnique of string
-  val current : string list ref
-  val opened  : string list list ref
+  val current : module_id ref
+  val currentName : string list ref
+  val opened  : module_id list ref
+  val directory : (string list, module_id) Hashtbl.t
+  val id_of_name : string list -> module_id
+  val name_of_id : module_id -> string list
   val open_module : string list -> unit
-  val modules : (string list, Sgn.decl list ref) Hashtbl.t
-  val signatures : (string list, Sgn.module_sig list ref) Hashtbl.t
+  val modules : Sgn.decl list ref DynArray.t
+  val signatures : (string list, Sgn.module_sig list) Hashtbl.t
   val addSgnToCurrent : Sgn.decl -> unit
-  val addSigToCurrent : Sgn.module_sig -> unit
-  val instantiateModule : string -> unit
-  val instantiateModuleType : string -> unit
+  val addSignatures : string list -> Sgn.module_sig list -> unit
+  val instantiateModule : string -> module_id
   val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
 end
 
@@ -33,7 +36,7 @@ module Cid : sig
 
     val freeze : cid_typ -> unit
 
-    val entry_list : (string list, Id.cid_typ list ref) Hashtbl.t
+    val entry_list : (Id.cid_typ list ref) DynArray.t
 
     val mk_entry          : name -> LF.kind -> int -> entry
     val add               : entry -> cid_typ

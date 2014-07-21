@@ -154,12 +154,12 @@ let main () =
             printf "\n## Pretty-printing of the external syntax : ##\n";
           List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
         end;
-        if !Debug.chatter != 0 then
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;
         let sgn' = Recsgn.recSgnDecls sgn in
         if !Debug.chatter <> 0 then
           List.iter Pretty.Int.DefaultPrinter.ppr_sgn_decl sgn';
-        if !Debug.chatter != 0 then
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
         ignore (Coverage.force
                   (function

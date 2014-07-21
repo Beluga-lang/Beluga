@@ -2782,14 +2782,6 @@ match sigma with
           raise (Failure "Bound variable clash")
 
     | (Const ((m, i, id) as _c1), Const ((m', i', id') as _c2)) ->
-        let _ = dprint (fun () -> 
-          "C1: " ^ (String.concat "." m) ^ 
-          "\n   "^ (String.concat "." i) ^
-          "\n   "^ (string_of_int id) ^ "\n" ^
-          "C2: " ^ (String.concat "." m') ^ 
-          "\n   "^ (String.concat "." i') ^
-          "\n   "^ (string_of_int id')
-        ) in
         if i = i' && id = id' then
           ()
         else

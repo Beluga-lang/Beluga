@@ -11,66 +11,61 @@ module Modules = struct
 
   exception NotUnique of string
 
-  let current : string list ref = ref []
+  let current : Id.module_id ref = ref 0
+  let currentName : string list ref = ref []
 
-  let opened : string list list ref = ref []
+  let opened : Id.module_id list ref = ref []
 
-  let modules : (string list, Int.Sgn.decl list ref) Hashtbl.t = Hashtbl.create 0
+  let directory : (string list, Id.module_id) Hashtbl.t = 
+    let x = Hashtbl.create 1 in Hashtbl.add x [] 0; x
 
-  let signatures : (string list, Int.Sgn.module_sig list ref) Hashtbl.t = Hashtbl.create 0
+  let modules : (Int.Sgn.decl list ref) DynArray.t = 
+    let x = DynArray.create () in DynArray.add x (ref []); x
 
-  let is_signature (n : string list) : bool =
-    try
-      ignore(Hashtbl.find signatures n); true
-      with | Not_found -> try
-        ignore(Hashtbl.find signatures (!current @ n)); true
-      with | Not_found -> false
+  let signatures : (string list, Int.Sgn.module_sig list) Hashtbl.t = 
+    let x = Hashtbl.create 1 in Hashtbl.add x [] []; x
 
-  let open_module (l : string list) : unit =
-    let x = try let _ = Hashtbl.find modules l in l 
-      with Not_found -> let _ = Hashtbl.find modules (!current @ l) in !current @ l
+  let id_of_name (n : string list) : Id.module_id = Hashtbl.find directory n
+
+  let name_of_id (id : Id.module_id) : string list = 
+    match Hashtbl.fold (fun l id' init -> if id = id' then Some(l) else init) directory None with
+    | None -> raise Not_found
+    | Some l -> l
+
+  let open_module (m : string list) : unit =
+    let x = try Hashtbl.find directory m 
+      with _ -> 
+      Hashtbl.find directory (!currentName @ m)
     in opened := x :: !opened
 
-  let find (x : (string list, 'a) Hashtbl.t) (f : 'a -> 'b) : 'b =
+  let find (n : Id.name) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
+    let id = id_of_name n.Id.modules in
+    let id' = id_of_name (!currentName @ n.Id.modules) in
     try
-      f (Hashtbl.find x !current)
+      f (DynArray.get x id)
     with
-    | Not_found ->
-      let rec iter_find (l : string list list) : 'b = match l with 
+    | _ -> 
+      try
+        f (DynArray.get x id')
+      with _ ->
+      let rec iter_find (l : Id.module_id list) : 'b = match l with 
         | [] -> raise Not_found
-        | h::t -> try f (Hashtbl.find x h) with Not_found -> iter_find t
+        | h::t -> try f (DynArray.get x h) with Not_found -> iter_find t
       in iter_find !opened
 
   let addSgnToCurrent (decl : Int.Sgn.decl) : unit = 
-    try let l = (Hashtbl.find modules !current) in l := decl :: !l 
-    with Not_found -> Hashtbl.add modules !current (ref [decl])
+    let l = (DynArray.get modules !current) in l := decl :: !l 
 
-  let addSigToCurrent (sgn : Int.Sgn.module_sig) : unit =
-    try let l = (Hashtbl.find signatures !current) in l := sgn :: !l
-    with Not_found -> let l = ref [sgn] in Hashtbl.add signatures !current l
-
+  let addSignatures (sig_name : string list) (sgns : Int.Sgn.module_sig list) : unit =
+    Hashtbl.replace signatures sig_name sgns
   
-  let instantiateModule (name : string) : unit =
-    let l = !current @ [name] in
-    try
-      let _ = Hashtbl.find modules l in
-      raise (NotUnique name)
-    with
-    | Not_found -> try
-        let _ = Hashtbl.find signatures l in
-        raise (NotUnique name)
-      with | Not_found -> current := l; Hashtbl.add modules l (ref [])
-
-  let instantiateModuleType (name : string) : unit =
-    let l = !current @ [name] in
-    try
-      let _ = Hashtbl.find modules l in
-      raise (NotUnique name)
-    with
-    | Not_found -> try
-        let _ = Hashtbl.find signatures l in
-        raise (NotUnique name)
-      with | Not_found -> current := l; Hashtbl.add signatures l (ref [])
+  let instantiateModule (name : string) : Id.module_id =
+    let l = !currentName@[name] in
+    let module_id = DynArray.length modules in
+    if (Hashtbl.mem directory l) || (Hashtbl.mem signatures l) 
+    then raise (NotUnique name)
+    else current := module_id; currentName := l; 
+        DynArray.insert modules module_id (ref []); Hashtbl.replace directory l module_id; module_id
 
   let decl_to_sig : Ext.Sgn.decl -> Ext.Sgn.module_sig = function
     | Ext.Sgn.Const(l, n, t) -> Ext.Sgn.ConstSig(l, n, t)
@@ -138,7 +133,7 @@ module Cid = struct
       mutable typesubordinated : BitSet.t (* unused at the moment *)
     }
 
-    let entry_list : (string list, Id.cid_typ list ref) Hashtbl.t = Hashtbl.create 0
+    let entry_list : (Id.cid_typ list ref) DynArray.t = DynArray.create ()
 
     let mk_entry name kind implicit_arguments =
       {
@@ -155,35 +150,26 @@ module Cid = struct
 
 
     (*  store is used for storing the information associated with a cid *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = 
-      Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory keeps track of which cid a name is associated with
         and provides a way to quickly look up this information. *)
-    let directory : (string list, (Id.name, Id.cid_typ) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
-        Modules.find directory (fun x -> Hashtbl.find x n)
-        (* Hashtbl.find (Hashtbl.find directory (!Modules.current)) n *)
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with _ -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        (* let e = DynArray.get (Hashtbl.find store (!Modules.current)) n in *)
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
@@ -203,10 +189,10 @@ module Cid = struct
                        typesubordinated = entry.typesubordinated
                       } in
         let store =   
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin 
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            DynArray.add store x;
             x 
           end in
         let (_,_, n) = cid_tp in
@@ -289,7 +275,7 @@ module Cid = struct
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
            (* Call below could be replaced by
               subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
-           subord_iter (fun aa -> addSubord ([], [], aa) b) a_e.subordinates;
+           subord_iter (fun aa -> addSubord ([], !Modules.current, aa) b) a_e.subordinates;
           )
 
 (*
@@ -342,43 +328,41 @@ module Cid = struct
       | Int.LF.PiKind((Int.LF.TypDecl(_name, tA1), _depend), tK2) ->
           inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
 
-    let add entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add entry = begin
       let cid_tp = 
         let store =   
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin 
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
         DynArray.add store entry;
         ([], !Modules.current, (DynArray.length store) - 1) in
 
         let directory =   
-          try Hashtbl.find directory (!Modules.current)
+          try DynArray.get directory (!Modules.current)
           with _ -> begin 
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x; 
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x; 
             x
           end in
         Hashtbl.replace directory entry.name cid_tp;
 
         let entry_list =   
-          try Hashtbl.find entry_list (!Modules.current)
+          try DynArray.get entry_list (!Modules.current)
           with _ -> begin 
             let x = ref [] in
-            Hashtbl.add entry_list (!Modules.current) x;
+            while DynArray.length entry_list < (!Modules.current ) do DynArray.add entry_list (ref []) done;
+            DynArray.add entry_list x;
             x
           end in
         entry_list := cid_tp :: !entry_list;
 
         inspectKind cid_tp [] entry.kind;
         cid_tp end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory l) n'
 
     let addConstructor loc typ c tA =
       let entry = get typ in
@@ -395,9 +379,9 @@ module Cid = struct
             ()
 
     let clear () =
-      (Hashtbl.find entry_list (!Modules.current)) := [];
-      DynArray.clear (Hashtbl.find store (!Modules.current));
-      Hashtbl.clear (Hashtbl.find directory (!Modules.current))
+      (DynArray.get entry_list (!Modules.current)) := [];
+      DynArray.clear (DynArray.get store (!Modules.current));
+      Hashtbl.clear (DynArray.get directory (!Modules.current))
 
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
@@ -425,64 +409,56 @@ module Cid = struct
       typ                = t
     }
 
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
-    let directory : (string list, (Id.name, Id.cid_term) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_term) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
-        Modules.find directory (fun x -> Hashtbl.find x n)
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
+      let id = Modules.id_of_name m in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory id) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add loc e_typ entry = match entry.name.Id.modules with
-    | [] -> begin 
+    let add loc e_typ entry = begin 
       let cid_tm = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_tm;
         Typ.addConstructor loc e_typ cid_tm entry.typ;
         cid_tm end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)) }
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let clear () =
-      DynArray.clear (Hashtbl.find store (!Modules.current));
-      Hashtbl.clear (Hashtbl.find directory  (!Modules.current))
+      DynArray.clear (DynArray.get store (!Modules.current));
+      Hashtbl.clear (DynArray.get directory  (!Modules.current))
 
   end
 
@@ -500,71 +476,62 @@ module Cid = struct
     }
 
     (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory : (Id.name, Id.cid_term) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_schema) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_schema) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
-      Modules.find directory (fun x -> Hashtbl.find x n)
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add entry = begin
       let cid_schema = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_schema;
         cid_schema end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let get_schema name = (get name).schema
 
     let get_name_from_schema s =
       let f a b = if (b.schema = s) then Some(b.name) else a in
-      let n = DynArray.fold_left f None (Hashtbl.find store (!Modules.current)) in match n with
+      let n = DynArray.fold_left f None (DynArray.get store (!Modules.current)) in match n with
       | Some(n) -> n
       | _ -> raise Not_found
 
     let clear () =
-      DynArray.clear (Hashtbl.find store (!Modules.current));
-      Hashtbl.clear (Hashtbl.find directory (!Modules.current))
+      DynArray.clear (DynArray.get store (!Modules.current));
+      Hashtbl.clear (DynArray.get directory (!Modules.current))
 
   end
 
@@ -587,58 +554,49 @@ module Cid = struct
     }
 
     (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory : (Id.name, Id.cid_comp_typ) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_comp_typ) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
-      Modules.find directory (fun x -> Hashtbl.find x n)
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add entry = begin
       let cid_comp_typ = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_comp_typ;
         cid_comp_typ end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
@@ -649,8 +607,8 @@ module Cid = struct
         entry.constructors <- c :: entry.constructors
 
     let clear () =
-      DynArray.clear (Hashtbl.find store (!Modules.current));
-      Hashtbl.clear (Hashtbl.find directory (!Modules.current))
+      DynArray.clear (DynArray.get store (!Modules.current));
+      Hashtbl.clear (DynArray.get directory (!Modules.current))
   end
 
  module CompCotyp = struct
@@ -672,56 +630,47 @@ module Cid = struct
     }
 
 
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
-
-    let directory : (string list, (Id.name, Id.cid_comp_const) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
+    | n when n.Id.modules = [] -> 
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add entry = begin
       let cid_comp_const = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_comp_const;
         cid_comp_const end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
@@ -732,8 +681,8 @@ module Cid = struct
         entry.destructors <- c :: entry.destructors
 
     let clear () =
-      DynArray.clear (Hashtbl.find store (!Modules.current));
-      Hashtbl.clear (Hashtbl.find directory (!Modules.current))
+      DynArray.clear (DynArray.get store (!Modules.current));
+      Hashtbl.clear (DynArray.get directory (!Modules.current))
   end
 
 
@@ -752,65 +701,57 @@ module Cid = struct
     }
 
     (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_comp_const) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
+    | n when n.Id.modules = [] -> 
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add cid_ctyp entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add cid_ctyp entry = begin
       let cid_comp_const = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_comp_const;
         CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)) }
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name)) }
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
+      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let clear () =
-      DynArray.clear (Hashtbl.find store !(Modules.current));
-      Hashtbl.clear (Hashtbl.find directory !(Modules.current))
+      DynArray.clear (DynArray.get store !(Modules.current));
+      Hashtbl.clear (DynArray.get directory !(Modules.current))
   end
 
   module CompDest = struct
@@ -827,65 +768,57 @@ module Cid = struct
       typ               = tau
     }
    (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory : (Id.name, Id.cid_comp_dest) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_comp_dest) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_comp_dest) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
+    | n when n.Id.modules = [] -> 
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add cid_ctyp entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add cid_ctyp entry = begin
       let cid_comp_dest = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_comp_dest;
         CompCotyp.addDestructor cid_comp_dest cid_ctyp;
         cid_comp_dest end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let clear () =
-      DynArray.clear (Hashtbl.find store !(Modules.current));
-      Hashtbl.clear (Hashtbl.find directory !(Modules.current))
+      DynArray.clear (DynArray.get store !(Modules.current));
+      Hashtbl.clear (DynArray.get directory !(Modules.current))
   end
 
 
@@ -909,64 +842,56 @@ module Cid = struct
     }
 
     (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_comp_typ) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
+    | n when n.Id.modules = [] -> 
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add entry = match entry.name.Id.modules with
-    | [] -> begin
+    let add entry = begin
       let cid_typdef = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           DynArray.add store entry;
           ([], !Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_typdef;
         cid_typdef end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString entry.name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) =
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let clear () =
-      DynArray.clear (Hashtbl.find store !(Modules.current));
-      Hashtbl.clear (Hashtbl.find directory !(Modules.current))
+      DynArray.clear (DynArray.get store !(Modules.current));
+      Hashtbl.clear (DynArray.get directory !(Modules.current))
 
   end
 
@@ -990,65 +915,56 @@ module Cid = struct
     }
 
     (*  store : entry DynArray.t *)
-    let store : (string list, entry DynArray.t) Hashtbl.t = Hashtbl.create 0
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
     (*  directory : (Id.name, Id.cid_prog) Hashtbl.t *)
-    let directory : (string list, (Id.name, Id.cid_prog) Hashtbl.t) Hashtbl.t = Hashtbl.create 0
+    let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> Modules.find directory (fun x -> Hashtbl.find x n)
+    | n when n.Id.modules = [] -> 
+        Modules.find n directory (fun x -> Hashtbl.find x n)
     | n -> 
-      if Modules.is_signature n.Id.modules then raise Not_found else
       let m = n.Id.modules in
       let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let (_,l,i) = 
-        try Hashtbl.find (Hashtbl.find directory n.Id.modules) n'
-        with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ n.Id.modules)) n' in
+        try Hashtbl.find (DynArray.get directory (Modules.id_of_name m)) n'
+        with Not_found -> Hashtbl.find (DynArray.get directory (Modules.id_of_name (!Modules.currentName @ m))) n' in
       (m,l,i)
 
-    let add f =
-    let name = (f ([], [], 0)).name in
-    match name.Id.modules with
-    | [] -> begin
+    let add f = begin
+      let m = (f ([], 0, 0)).name.Id.modules in
       let (cid_prog, e) = 
         let store = 
-          try Hashtbl.find store (!Modules.current)
+          try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
-            Hashtbl.add store (!Modules.current) x;
+            while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
+            DynArray.add store x;
             x
           end in
           let l = DynArray.length store in
-          let e = f ([], [], l) in
+          let e = f (m, !Modules.current, l) in
           DynArray.add store e;
-          (([], !Modules.current, l), e) in
+          ((m, !Modules.current, l), e) in
       
         let directory = 
-          try Hashtbl.find directory (!Modules.current) 
+          try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            Hashtbl.add directory (!Modules.current) x;
+            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory e.name cid_prog;
         cid_prog end
-    | l ->
-      let n' = Id.mk_name (Id.SomeString name.Id.string_of_name) in
-      try Hashtbl.find (Hashtbl.find directory l) n'
-      with Not_found -> Hashtbl.find (Hashtbl.find directory (!Modules.current @ l)) n'
 
-    let get = function
-    | (m, [], n) -> 
-        let e = Modules.find store (fun x -> DynArray.get x n) in
-        {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
-    | (m, l, n) -> 
-      let e = try DynArray.get (Hashtbl.find store l) n
-      with Not_found -> DynArray.get (Hashtbl.find store (!Modules.current @ l)) n in
+    let get (m, l, n) = 
+      let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
 
     let clear () =
-      DynArray.clear (Hashtbl.find store !(Modules.current));
-      Hashtbl.clear (Hashtbl.find directory !(Modules.current))
+      DynArray.clear (DynArray.get store !(Modules.current));
+      Hashtbl.clear (DynArray.get directory !(Modules.current))
 
   end
 

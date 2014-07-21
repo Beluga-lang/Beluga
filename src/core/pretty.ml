@@ -1575,7 +1575,7 @@ module Int = struct
           fprintf ppf " | %s : @[%a@]@\n"
             (R.render_name c)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
-      
+      | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl lvl ppf) (List.flatten l)
       | Sgn.Val (_, x, tau, i) -> 
           fprintf ppf "@\nlet %s : %a = %a@\n"
             (R.render_name x)

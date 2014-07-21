@@ -239,8 +239,7 @@ and index_term cvars bvars fvars = function
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
-      (* let _        = dprint (fun () -> "Indexing name " ^ n.string_of_name)
-         in *)
+      let _ = dprint (fun () -> "Indexing name " ^ n.string_of_name) in
       begin try
         (Apx.LF.BVar (BVar.index_of_name bvars n) , fvs)
       with Not_found -> try

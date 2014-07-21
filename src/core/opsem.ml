@@ -62,6 +62,7 @@ let convolve_spines f spine pat_spine =
 let rec add_mrecs n_list (theta, eta) = match n_list with
   | [] ->  eta
   | n'::n_list' ->
+      dprint (fun () -> n'.Id.string_of_name);
       let cid' = Store.Cid.Comp.index_of_name n' in
       let v = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
       let eta' = add_mrecs n_list' (theta, eta) in
@@ -79,9 +80,14 @@ let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
+
+      dprint (fun () -> let (m, _, _) = cid in "Module: " ^ (String.concat "." m));
+      dprint (fun () -> let (_, l, _) = cid in "Store: " ^ (String.concat "." (Store.Modules.name_of_id l)));
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
         | Comp.RecValue (cid, e', theta', eta') ->
+          dprint (fun () -> let (m, _, _) = cid in "Module: " ^ (String.concat "." m));
+          dprint (fun () -> let (_, l, _) = cid in "Store: " ^ (String.concat "." (Store.Modules.name_of_id l)));
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') in
           dprint (fun () -> "[eval_syn] Const is RecValue " ^ R.render_cid_prog cid);

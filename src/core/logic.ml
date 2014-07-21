@@ -373,8 +373,8 @@ module Index = struct
   *)
   let robStore () =
     try 
-      List.iter storeTypConst !(Hashtbl.find Cid.Typ.entry_list !(Modules.current))
-    with Not_found -> ()
+      List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
+    with _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.

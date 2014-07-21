@@ -555,17 +555,16 @@ and recSgnDecl d =
       Store.Modules.addSgnToCurrent sgn;
       sgn
 
-    | Ext.Sgn.ModuleType(loc, name, sigs) ->
+(*     | Ext.Sgn.ModuleType(loc, name, sigs) ->
       let orig = !Store.Modules.current in
       let opened = !Store.Modules.opened in
       (* let _ = Store.Modules.opened := [] in *)
-      let _ = Store.Modules.instantiateModuleType name in
       let sigs' = List.map recSgnSig sigs in
       let _ = Store.Modules.current := orig in
       let _ = Store.Modules.opened := opened in 
       let sgn = Int.Sgn.ModuleType(loc, name, sigs') in
       Store.Modules.addSgnToCurrent sgn;
-      sgn
+      sgn *)
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
       try 
@@ -573,7 +572,7 @@ and recSgnDecl d =
         Int.Sgn.Pragma(Int.LF.OpenPrag n)
       with Not_found -> raise (Error(loc, (InvalidOpenPrag (String.concat "." n))))
 
-and recSgnSig = function
+(* and recSgnSig = function
   | Ext.Sgn.SchemaSig (_loc, g, schema) ->
        let apx_schema = Index.schema schema in
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
@@ -804,4 +803,4 @@ and recSgnSig = function
         let recConts'= List.map (fun x -> List.map recSgnSig x) recConts in
         let sgn = Int.Sgn.MRecTypSig (loc, List.map2 (fun x y -> x::y) recTyps' recConts') in
         Store.Modules.addSigToCurrent sgn;
-        sgn
+        sgn *)

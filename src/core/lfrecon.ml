@@ -1850,8 +1850,8 @@ and elClosedTerm' recT cD cPsi r = match r with
         raise (Error (loc, CompTypAnn))
         end
   | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.FPVar(_,_), k ) , spine ) -> failwith "NamedProj case"
-  | Apx.LF.Root (loc, _ , _ ) ->
-      (dprint (fun () -> "[elClosedTerm'] Head not covered?");
+  | Apx.LF.Root (loc, h , _ ) ->
+      (dprint (fun () -> "[elClosedTerm'] Head not covered? - " ^ (what_head h));
       raise (Error (loc, CompTypAnn )))
 
   | Apx.LF.Lam (loc, _, _ ) ->

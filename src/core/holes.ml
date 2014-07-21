@@ -58,7 +58,37 @@ let gctxToString cD =
       toString cG ^ "\n" ^ shift ^ (nameString n) ^ ": " ^ P.compTypToString cD tau
   in toString ++ Whnf.normCtx
 
+(* 
+  type typ =
+    | TypBase   of Loc.t * cid_comp_typ * meta_spine
+    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
+    | TypDef    of Loc.t * cid_comp_typ * meta_spine
+    | TypBox    of Loc.t * LF.typ  * LF.dctx
+    | TypParam  of Loc.t * LF.typ  * LF.dctx
+    | TypSub    of Loc.t * LF.dctx * LF.dctx
+    | TypArr    of typ * typ
+    | TypCross  of typ * typ
+    | TypPiBox  of LF.ctyp_decl * typ
+    | TypClo    of typ *  LF.msub
+    | TypBool
+
+
+ *)
+let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list = 
+  let rec aux acc c = function
+    | LF.Empty -> acc
+    | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
+      begin try
+        Unify.StdTrail.resetGlobalCnstrs ();
+        let tA' = Whnf.cnormCTyp (tA', LF.MShift c) in
+        Unify.StdTrail.unifyCompTyp cD tA (tA', LF.MShift 0);
+        aux (n::acc) (c+1) cG'
+      with | _ -> aux acc (c+1) cG' end
+    | LF.Dec (cG', _) -> aux acc (c + 1) cG'
+  in aux [] 1 cG
+
 let printOne (loc, cD, cG, (tau, theta)) =
+  let l = iterGctx (Whnf.normMCtx cD) cG (tau, theta) in
   Store.Cid.NamedHoles.reset () ;
   let b1 = "________________________________________________________________________________" in
   let b2 = "================================================================================" in
@@ -66,8 +96,8 @@ let printOne (loc, cD, cG, (tau, theta)) =
   let gctx = (gctxToString cD cG) in
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   Printf.printf 
-    "\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s\n"
-    (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
+    "\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s\n    - Suggestion(s): %s"
+    (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
 
 let printAll () =
   Store.Cid.NamedHoles.printingHoles := true;

@@ -1,4 +1,4 @@
-(* module Holes *)
+(* module Lfholes *)
 
 module P = Pretty.Int.DefaultPrinter
 module Loc = Syntax.Loc

@@ -39,19 +39,12 @@ module Modules = struct
     in opened := x :: !opened
 
   let find (n : Id.name) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
-    let id = id_of_name n.Id.modules in
-    let id' = id_of_name (!currentName @ n.Id.modules) in
+    let rec iter_find : Id.module_id list -> 'b = function
+      | [] -> raise Not_found
+      | h::t -> try f (DynArray.get x h) with _ -> iter_find t in
     try
-      f (DynArray.get x id)
-    with
-    | _ -> 
-      try
-        f (DynArray.get x id')
-      with _ ->
-      let rec iter_find (l : Id.module_id list) : 'b = match l with 
-        | [] -> raise Not_found
-        | h::t -> try f (DynArray.get x h) with Not_found -> iter_find t
-      in iter_find !opened
+      f (DynArray.get x !current)
+    with | _ -> iter_find !opened
 
   let addSgnToCurrent (decl : Int.Sgn.decl) : unit = 
     let l = (DynArray.get modules !current) in l := decl :: !l 
@@ -932,7 +925,6 @@ module Cid = struct
       (m,l,i)
 
     let add f = begin
-      let m = (f ([], 0, 0)).name.Id.modules in
       let (cid_prog, e) = 
         let store = 
           try DynArray.get store (!Modules.current)
@@ -943,15 +935,15 @@ module Cid = struct
             x
           end in
           let l = DynArray.length store in
-          let e = f (m, !Modules.current, l) in
+          let e = f ([], !Modules.current, l) in
           DynArray.add store e;
-          ((m, !Modules.current, l), e) in
+          (([], !Modules.current, l), e) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
           with _ -> begin
             let x = Hashtbl.create 0 in
-            while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
+            while DynArray.length directory < (!Modules.current) do DynArray.add directory (Hashtbl.create 0) done;
             DynArray.add directory x;
             x
           end in

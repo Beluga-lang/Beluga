@@ -512,6 +512,7 @@ and recSgnDecl d =
         | None -> (None, None)
       end in *)
       let orig = !Store.Modules.current in 
+      let origName = !Store.Modules.currentName in
       let opened = !Store.Modules.opened in
       let _ = Store.Modules.instantiateModule name in
       let decls' = List.map recSgnDecl decls in
@@ -549,8 +550,9 @@ and recSgnDecl d =
           List.iter declExists signature;
           List.filter (fun dec -> List.exists (checkDecl dec) signature) decls'
         end in *)
-      let _ = Store.Modules.current := orig in
       let _ = Store.Modules.opened := opened in
+      let _ = Store.Modules.currentName := origName in
+      let _ = Store.Modules.current := orig in
       let sgn = Int.Sgn.Module(loc, name, None, decls') in
       Store.Modules.addSgnToCurrent sgn;
       sgn

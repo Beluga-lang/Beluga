@@ -564,13 +564,11 @@ GLOBAL: sgn;
   ;
 
   lf_head:
-    [ (* "module" *)
+    [ 
       [
         x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split '.' x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
-      (* ] *)
-    | (* "atomic"
-      [
- *)        u = UPSYMBOL  ->
+    |
+        u = UPSYMBOL  ->
           LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       ]

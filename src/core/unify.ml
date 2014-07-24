@@ -172,7 +172,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi')) No in
+    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi'))  in
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -1285,7 +1285,7 @@ match sigma with
                         let tP'    = Whnf.cnormTyp (tP, i_id_msub) in
                         let _ = dprint (fun () -> "[prune] cnormTyp tP - MMVar case ") in
 
-                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub)) mdep in
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', i_sub))  in
                       let tN = Root (loc, MMVar (v, (id_msub, id_sub)), Nil) in
                       let _ = dprint (fun () -> "[prune] new mmvar created : " ^ P.normalToString cD1 cPsi1 (tN, Substitution.LF.id)) in
                       let _ = dprint (fun () -> "[prune] new mmvar has type : "
@@ -1353,7 +1353,7 @@ match sigma with
                          cD2 ; cPsi2' |-  [id_sub_i]  [|id_msub^-1|] tP
                       *)
                       let tP' = Whnf.cnormTyp (tP, id_msub_i) in
-                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i)) mdep in
+                      let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i))  in
                       let _  = instantiateMMVar (r, Root (loc, MMVar (v, (id_msub, idsub)), Nil), !cnstrs) in
                       let tM'= Whnf.cnorm (Whnf.norm (tM, comp s ssubst), ms) in
                         tM'
@@ -1388,7 +1388,7 @@ match sigma with
                            cD ; cPsi1 |- idsub <= cPsi2 and
                            cD ; cPsi |- t o s o idsub <= cPsi2 *)
                       let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) mdep in
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
 
                       let _  = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
                        Clo(tM, comp s ssubst)
@@ -1420,7 +1420,7 @@ match sigma with
                            29 Jan, 2011  -bp  *)
                          (* *)
                       let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i)) mdep in
+                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
                       (* let _ = print_string ("prune non-pattern sub s  where u[s] \n") in *)
                       let _ = dprint (fun () -> "[prune] BEFORE Inst. r = " ^
                                      P.normalToString cD0 (Context.hatToDCtx phat) (tM,s) ) in
@@ -1532,7 +1532,7 @@ match sigma with
                     if isPatSub t then
                       let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                         (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                      let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) mDep(* p::([(idsub)^-1]tA)[cPsi2] *) in
+                      let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1]tA)[cPsi2] *) in
                       let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) in
                         (* [|p[idsub] / q|] *)
                         (* h = p[[ssubst] ([t] idsub)] *)
@@ -1577,7 +1577,7 @@ match sigma with
                       let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in
                       let tA'    = Whnf.cnormTyp (tA, i_id_msub) in
 
-                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub)) mDep in
+                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub))  in
 
                       let _ = instantiateMPVar (r, MPVar (v, (id_msub, id_sub)), !cnstrs) in
                         (* [|p[id_msub, id_sub] / q|] *)
@@ -1631,7 +1631,7 @@ match sigma with
                       let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in
                       let tA'    = Whnf.cnormTyp (tA, i_id_msub) in
 
-                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub)) mDep in
+                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub))  in
 
                       let _ = instantiateMPVar (r, MPVar (v, (id_msub, id_sub)), !cnstrs) in
                         (* [|p[id_msub, id_sub] / q|] *)
@@ -1652,7 +1652,7 @@ match sigma with
                   if isPatSub t then
                     let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
                       (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                    let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) mDep(* p::([(idsub)^-1] tA)[cPsi2] *) in
+                    let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
                     let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
                     let s_comp = comp (comp t idsub) ssubst in
                       returnNeutral (Proj (PVar(p, s_comp), i))
@@ -2129,7 +2129,7 @@ match sigma with
                     let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
 
-                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) mdep1 in
+                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss'))  in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -2434,7 +2434,7 @@ match sigma with
                     let tP1_n  = Whnf.cnormTyp (TClo(tP1,ss'), mtt') in
 
 
-                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n) mdep1 in
+                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n)  in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -2898,7 +2898,7 @@ match sigma with
                 let tA1_n  = Whnf.cnormTyp (TClo(tA1,ss'), mtt') in
 
 
-                let w = Whnf.newMPVar None (cD', cPsi_n, tA1_n) mDep1 in
+                let w = Whnf.newMPVar None (cD', cPsi_n, tA1_n)  in
                       (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -2952,7 +2952,7 @@ match sigma with
                  let cPsi2'' = Whnf.cnormDCtx (cPsi2', i_msub) in
                  let tA2'    = Whnf.cnormTyp (Whnf.normTyp (tA2, i_id_sub), i_msub) in
 
-                 let v = Whnf.newMPVar None (cD2', cPsi2'', tA2') mDep1 in
+                 let v = Whnf.newMPVar None (cD2', cPsi2'', tA2')  in
 
                    (instantiateMPVar (q2, MPVar(v, (id_msub , id_sub)), !cnstr2);
 
@@ -3067,7 +3067,7 @@ match sigma with
                      parameter variables exists *)
                 let ss' = invert (Whnf.normSub s') in
                   (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
-                let w = Whnf.newPVar None (cPsi', TClo(tA1, ss')) mDep1 in
+                let w = Whnf.newPVar None (cPsi', TClo(tA1, ss'))  in
                   (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
                   (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1)
                      [|w[s']/u|](u[t]) = [t](w[s'])
@@ -3104,7 +3104,7 @@ match sigma with
                    (* cPsi' =/= Null ! otherwise no instantiation for
                       parameter variables exists *)
                  *)
-                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s'))) mDep1 in
+                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s')))  in
                    (* p::([s'^-1]tA2)[cPsi'] and
                       [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
 

@@ -59,21 +59,40 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
     | LF.Dec (cD', _) -> aux acc (c + 1) cD'
   in aux [] 1 cD
 
+let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
+  let rec aux acc c = function
+    | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
+      begin try 
+        Unify.StdTrail.resetGlobalCnstrs ();
+        (* let tA' = Whnf.cnormTyp (tA', LF.MShift c) in *)
+        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
+        aux (n::acc) (c+1) cPsi'
+      with | _ -> aux acc (c+1) cPsi' end
+    | LF.DDec(cPsi', _) -> aux acc (c+1) cPsi'
+    | _ -> acc
+  in
+    aux [] 1 cPsi
+
 let printOne (loc, cD, cPsi, typ) =
-  let l = iterMctx (Whnf.normMCtx cD) cPsi typ in
+  let _ = Store.Cid.NamedHoles.reset () in
+  let cD = (Whnf.normMCtx cD) in
+  let cPsi  = (Whnf.normDCtx cPsi) in
+  let l = (iterMctx cD cPsi typ)@(iterDctx cD cPsi typ) in
+  let mctx =(mctxToString cD) in
+  let dctx = (cpsiToString cD cPsi) in
+  let goal = (P.typToString cD cPsi typ) in
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
-  Store.Cid.NamedHoles.reset () ;
-    Printf.printf "\n%s\n  - Meta-Context: %s\n%s\n  - LF Context: %s\n\n%s\n  - Goal Type: %s\n  - Suggestion(s): %s"
-    (Loc.to_string loc)
-    (mctxToString cD)
-    (b1)
-    (cpsiToString cD cPsi)
-    (b2)
-    (P.typToString cD cPsi typ)
-    (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
+  let _ = if List.length l > 0 then
+    Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n  - Suggestion%s: %s@\n"
+      (Loc.to_string loc) (mctx) (b1) (dctx) (b2) (goal)
+      (if List.length l = 1 then "" else "s") (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
+  else
+    Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n"
+      (Loc.to_string loc) (mctx) (b1) (dctx) (b2) (goal)
+  in ()
 
 let printAll () =
-  Store.Cid.NamedHoles.printingHoles := true;
-  DynArray.iter printOne holes;
+  let _ = Store.Cid.NamedHoles.printingHoles := true in
+  let _ = DynArray.iter printOne holes in
   Store.Cid.NamedHoles.printingHoles := false

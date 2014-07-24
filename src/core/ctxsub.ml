@@ -14,9 +14,12 @@ module P = Pretty.Int.DefaultPrinter
 let rec subToString = function
   | Shift n -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
   | SVar _ -> "SVar(_,_)"
-  | FSVar _ -> "FSVar(_,_)"
+  | FSVar (n, i,_) -> "FSVar(" ^ n.Id.string_of_name ^ ", " ^ string_of_int i ^ ")"
   | Dot(front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"
-
+  | MSVar _ -> "MSVar_"
+  | EmptySub -> "EmptySub"
+  | Undefs -> "Undefs"
+  
 and frontToString = function
   | Head h -> "Head _"
   | Obj tM -> "Obj _"
@@ -146,15 +149,15 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 (* TODO: Clean this up more *)
 let declToCVar (n, ctypn) = match ctypn with
   | MTyp (tA, cPsi, dep) ->
-      let u     = Whnf.newMVar (Some n) (cPsi, tA) dep in
+      let u     = Whnf.newMVar (Some n) (cPsi, tA)  in
       let phat  = Context.dctxToHat cPsi in
       MObj (phat, Root (Syntax.Loc.ghost, MVar (u, Substitution.LF.id), Nil))
   | PTyp (tA, cPsi, dep) ->
-    	let p    = Whnf.newPVar (Some n) (cPsi, tA) dep in
+    	let p    = Whnf.newPVar (Some n) (cPsi, tA)  in
     	let phat = dctxToHat cPsi in
     	PObj (phat, PVar (p, Substitution.LF.id))
   | STyp (cPhi, cPsi, dep) ->
-      let u     = Whnf.newSVar (Some n) (cPsi, cPhi) dep (* I guess these swap? *) in
+      let u     = Whnf.newSVar (Some n) (cPsi, cPhi)  (* I guess these swap? *) in
   	  let phat  = Context.dctxToHat cPsi in
       SObj (phat, SVar (u, 0, Substitution.LF.id))
   | CTyp (sW, _) ->
@@ -170,15 +173,15 @@ let rec mctxToMSub cD = match cD with
 
 let mdeclToMMVar cD0 n mtyp = match mtyp with
   | MTyp (tA, cPsi, dep) ->
-    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep in
+    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA)  in
     let phat  = Context.dctxToHat cPsi in
     MObj (phat, Root (Syntax.Loc.ghost, MMVar (u, (Whnf.m_id, Substitution.LF.id)), Nil))
   | STyp (cPhi, cPsi, dep) ->
-    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) dep in
+    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi)  in
     let phat  = Context.dctxToHat cPsi in
     SObj (phat, MSVar (u, 0, (Whnf.m_id, Substitution.LF.id)))
   | PTyp (tA, cPsi, dep) ->
-    let p    = Whnf.newPVar (Some n) (cPsi, tA) dep in
+    let p    = Whnf.newPVar (Some n) (cPsi, tA)  in
     let phat = dctxToHat cPsi in
     PObj (phat, PVar (p, Substitution.LF.id))
   | CTyp (sW, _) ->

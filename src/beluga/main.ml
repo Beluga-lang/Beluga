@@ -175,6 +175,7 @@ let main () =
             (* Subord.dump_typesubord() *)
           end;
           print_newline ();
+          Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
             printf "\n## Holes: %s  ##" file_name;
             Holes.printAll ()
@@ -183,7 +184,7 @@ let main () =
             printf "\n\n## LF Holes: %s  ##" file_name;
             Lfholes.printAll ()
           end;
-          Logic.runLogic ();
+          print_newline();
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer ()
       with e ->

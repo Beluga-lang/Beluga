@@ -690,7 +690,7 @@ module Cid = struct
 
     let render_name n = 
       if !NamedHoles.printingHoles then 
-        match NamedHoles.haveNameFor n with Some x -> x | _ ->  (n.string_of_name)
+        match NamedHoles.haveNameFor n with Some x -> x | None ->  (n.string_of_name)
       else n.string_of_name
 
     let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name

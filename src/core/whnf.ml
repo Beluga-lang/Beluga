@@ -20,6 +20,7 @@ module T = Store.Cid.Typ
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible
+exception InvalidLFHole of Loc.t
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [18])
 
@@ -155,9 +156,9 @@ let newCVar n (sW) = match n with
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
- let newPVar n (cPsi, tA) mDep= match n with
-  | None -> PInst (Id.mk_name (Id.BVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], mDep)
-  | Some name -> PInst (name, ref None, cPsi, tA, ref [], mDep)
+ let newPVar n (cPsi, tA) = match n with
+  | None -> PInst (Id.mk_name (Id.BVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], Maybe)
+  | Some name -> PInst (name, ref None, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
 
 
 (* newMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
@@ -170,14 +171,14 @@ let newCVar n (sW) = match n with
  *)
 
 
-let newMVar n (cPsi, tA) mdep = match n with
-  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], mdep)
-  | Some name -> Inst (name, ref None, cPsi, tA, ref [], mdep)
+let newMVar n (cPsi, tA) = match n with
+  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], Maybe)
+  | Some name -> Inst (name, ref None, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
 
 (* *)
-let newSVar n (cPsi, cPhi) mDep = match n with
-  | None -> SInst (Id.mk_name Id.NoName, ref None, cPsi, cPhi, ref [], mDep)
-  | Some name -> SInst (name, ref None, cPsi, cPhi, ref [], mDep)
+let newSVar n (cPsi, cPhi) = match n with
+  | None -> SInst (Id.mk_name Id.NoName, ref None, cPsi, cPhi, ref [], Maybe)
+  | Some name -> SInst (name, ref None, cPsi, cPhi, ref [], if name.Id.was_generated then Maybe else No)
 
 
 (* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
@@ -188,7 +189,7 @@ let newSVar n (cPsi, cPhi) mDep = match n with
  *   or  tA =   Pi (x:tB, tB')
  *   but tA =/= TClo (_, _)
  *)
-let newMMVar n (cD, cPsi, tA) mdep= match n with
+let newMMVar n (cD, cPsi, tA) = match n with
   (* flatten blocks in cPsi, and create appropriate indices in tA
      together with an appropriate substitution which moves us between
      the flattened cPsi_f and cPsi.
@@ -196,17 +197,17 @@ let newMMVar n (cD, cPsi, tA) mdep= match n with
      this will allow to later prune MMVars.
      Tue Dec  1 09:49:06 2009 -bp
    *)
-  | None -> MInst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], mdep)
-  | Some name -> MInst (name, ref None, cD, cPsi, tA, ref [], mdep)
+  | None -> MInst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], Maybe)
+  | Some name -> MInst (name, ref None, cD, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
 
-let newMPVar n (cD, cPsi, tA) mDep= match n with
-  | None -> MPInst (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], mDep)
-  | Some name -> MPInst (name, ref None, cD, cPsi, tA, ref [], mDep)
+let newMPVar n (cD, cPsi, tA) = match n with
+  | None -> MPInst (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], Maybe)
+  | Some name -> MPInst (name, ref None, cD, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
 
 
-let newMSVar n (cD, cPsi, cPhi) mDep = match n with
-  | None -> MSInst (Id.mk_name (Id.SVarName None), ref None, cD, cPsi, cPhi, ref [], mDep)
-  | Some name -> MSInst (name, ref None, cD, cPsi, cPhi, ref [], mDep)
+let newMSVar n (cD, cPsi, cPhi)  = match n with
+  | None -> MSInst (Id.mk_name (Id.SVarName None), ref None, cD, cPsi, cPhi, ref [], Maybe)
+  | Some name -> MSInst (name, ref None, cD, cPsi, cPhi, ref [], if name.Id.was_generated then Maybe else No)
   (* Note : cPsi | - s : cPhi *)
 
 (******************************)
@@ -223,7 +224,7 @@ let rec lowerMVar' cPsi sA' = match sA' with
       lowerMVar' cPsi (tA, LF.comp s s')
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) Maybe in (*?*)
+      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  in 
         (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
@@ -513,6 +514,7 @@ and norm (tM, sigma) = match tM with
 
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
+  | LFHole _ -> tM
   | Root (loc, HClo (i, s, sigma'), tS) ->
     let sigma'' = normSub (LF.comp sigma' sigma) in
     let tS'     = normSpine (tS, sigma) in
@@ -722,6 +724,7 @@ and normSpine (tS, sigma) =
  *  cPsi |  s  : cPsi''      cPsi'' |- tM <= tA''       [s]tA'' = tA'
  *)
 and reduce sM spine = match (sM, spine) with
+  | ((LFHole l, _), _) -> raise (InvalidLFHole l)
   | ((Root (_, _, _) as root, s), Nil)    -> norm (root, s)
   | ((Lam (_, _y, tM'), s), App (tM, tS)) -> reduce (tM', Dot (Obj tM, s)) tS
   | ((Clo (tM, s'), s), tS)               ->
@@ -892,6 +895,8 @@ and cnorm (tM, t) = match tM with
     | Tuple (loc, tuple) -> Tuple (loc, cnormTuple (tuple, t))
 
     | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
+
+    | LFHole _loc -> LFHole _loc
     
     | Root (loc, head, tS) ->
         begin match head with
@@ -2019,6 +2024,7 @@ and whnf sM = match sM with
 
   | (Root (_, Proj (MPVar _, _), _), _) -> (dprint (fun () -> "oops 3"); exit 3)
 
+  | (LFHole _loc, _s) -> (LFHole _loc, _s)
   | _ -> (dprint (fun () -> "oops 4"); exit 4)
 
 (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
@@ -2031,6 +2037,7 @@ and whnf sM = match sM with
  *    [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2]
  *)
 and whnfRedex (sM, sS) = match (sM, sS) with
+  | ((LFHole l, s1), _) -> raise (InvalidLFHole l)
   | ((Root (_, _, _) as root, s1), (Nil, _s2)) ->
       whnf (root, s1)
 
@@ -2952,7 +2959,7 @@ let rec etaExpandMV cPsi sA n s' =  etaExpandMV' cPsi (whnfTyp sA) n s'
 and etaExpandMV' cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
 
-      let u = newMVar (Some n) (cPsi, TClo(tP,s)) Maybe in (*?*)
+      let u = newMVar (Some n) (cPsi, TClo(tP,s)) in 
         Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
@@ -2971,7 +2978,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA
 
 and etaExpandMMV' loc cD cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar None (cD , cPsi, TClo(tP,s)) Maybe in (*?*)
+      let u = newMMVar None (cD , cPsi, TClo(tP,s))  in 
         Root (loc, MMVar (u, (m_id, s')), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->

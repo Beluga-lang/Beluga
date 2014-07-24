@@ -271,7 +271,7 @@ and recSgnDecl d =
          if (!Debug.chatter) == 0 then ()
          else (Format.printf "\nschema %s = @[%a@];@."
                  (g.string_of_name)
-                 (P.fmt_ppr_lf_schema ~useName:false Pretty.std_lvl) sW'))
+                 (P.fmt_ppr_lf_schema Pretty.std_lvl) sW'))
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->

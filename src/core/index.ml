@@ -232,6 +232,9 @@ and index_term cvars bvars fvars = function
       let (s', fvars2) = index_spine cvars bvars fvars1 s in
         (Apx.LF.Root (loc, h', s') , fvars2)
 
+  | Ext.LF.LFHole loc -> (Apx.LF.LFHole loc, fvars)
+
+
   | Ext.LF.Ann (loc, m, a) ->
     let (a', fvars') = index_typ cvars bvars fvars a in
     let (m', fvars'') = index_term cvars bvars fvars' m in

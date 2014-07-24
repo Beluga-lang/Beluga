@@ -289,6 +289,8 @@ module Int = struct
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
+        | LF.LFHole _ ->
+          fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple
@@ -632,7 +634,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n ->
           fprintf ppf "%s"
-            (if !Store.Cid.NamedHoles.printingHoles then
+            (if !Store.Cid.NamedHoles.printingHoles && false then
               Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
              else (R.render_cvar cD n))
 

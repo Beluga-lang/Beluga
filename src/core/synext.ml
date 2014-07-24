@@ -48,7 +48,9 @@ module LF = struct
     | Hole  of Loc.t
     | PVar  of Loc.t * name * sub
     | ProjName  of Loc.t * int * name
+    | NamedProjName  of Loc.t * name * name
     | ProjPVar  of Loc.t * int * (name * sub)
+    | NamedProjPVar  of Loc.t * name * (name * sub)
 
   and spine =
     | Nil
@@ -65,7 +67,7 @@ module LF = struct
     | Normal   of normal
 
   and typ_rec =
-    | SigmaLast of typ
+    | SigmaLast of name option * typ
     | SigmaElem of name * typ * typ_rec
 
   and tuple =

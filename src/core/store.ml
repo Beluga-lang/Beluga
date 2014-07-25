@@ -12,6 +12,7 @@ module Modules = struct
   exception NotUnique of string
 
   let current : Id.module_id ref = ref 0
+
   let currentName : string list ref = ref []
 
   let opened : Id.module_id list ref = ref []
@@ -59,6 +60,11 @@ module Modules = struct
     then raise (NotUnique name)
     else current := module_id; currentName := l; 
         DynArray.insert modules module_id (ref []); Hashtbl.replace directory l module_id; module_id
+
+  let reset () : unit = 
+    current := 0;
+    opened := [];
+    currentName := []
 
   let decl_to_sig : Ext.Sgn.decl -> Ext.Sgn.module_sig = function
     | Ext.Sgn.Const(l, n, t) -> Ext.Sgn.ConstSig(l, n, t)
@@ -162,8 +168,13 @@ module Cid = struct
       (m,l,i)
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
           (get a).frozen <- true
@@ -444,8 +455,13 @@ module Cid = struct
         cid_tm end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -511,8 +527,13 @@ module Cid = struct
         cid_schema end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let get_schema name = (get name).schema
 
@@ -589,8 +610,13 @@ module Cid = struct
         cid_comp_typ end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
           (get a).frozen <- true
@@ -663,8 +689,13 @@ module Cid = struct
         cid_comp_const end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
           (get a).frozen <- true
@@ -737,8 +768,13 @@ module Cid = struct
         cid_comp_const end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -804,8 +840,13 @@ module Cid = struct
         cid_comp_dest end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -877,8 +918,13 @@ module Cid = struct
         cid_typdef end
 
     let get (m, l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -951,8 +997,13 @@ module Cid = struct
         cid_prog end
 
     let get (m, l, n) = 
+      let l' = Modules.name_of_id l in
+      let m' =  if List.length l' > List.length m && 
+                   (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then l' else m in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));

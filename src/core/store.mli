@@ -15,6 +15,7 @@ module Modules : sig
   val addSgnToCurrent : Sgn.decl -> unit
   val addSignatures : string list -> Sgn.module_sig list -> unit
   val instantiateModule : string -> module_id
+  val reset : unit -> unit
   val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
 end
 

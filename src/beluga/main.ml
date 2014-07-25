@@ -157,8 +157,9 @@ let main () =
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;
         let sgn' = Recsgn.recSgnDecls sgn in
+        let _ = Store.Modules.reset () in
         if !Debug.chatter <> 0 then
-          List.iter Pretty.Int.DefaultPrinter.ppr_sgn_decl sgn';
+          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
         ignore (Coverage.force

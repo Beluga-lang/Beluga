@@ -295,7 +295,33 @@ GLOBAL: sgn;
 
 
   sgn_decl:
-    [
+    [ "non-private"
+      [
+          "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
+          [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
+
+        | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
+          if Option.is_some x then
+            let p = Id.mk_name (Id.SomeString (Option.get x)) in
+            [Sgn.Query (_loc, Some p, a, e, t)]
+          else
+            [Sgn.Query (_loc, None, a, e, t)]
+
+        | "%not" ->
+          [Sgn.Pragma (_loc, Sgn.NotPrag)]
+          
+        | "private"; x = sgn_decl LEVEL "decl" -> [Sgn.Private(_loc, x)]
+
+        | "module"; n = UPSYMBOL; 
+            (* sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t];  *)
+            "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+            let decls = List.map (fun [x] -> x) decls in
+            [Sgn.Module(_loc, n,None, decls)]
+  (*       | 
+          "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
+            [Sgn.ModuleType(_loc, n, decls)] *)
+      ]
+    | "decl" 
       [ 
         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
            begin match k_or_a with
@@ -351,36 +377,16 @@ GLOBAL: sgn;
         "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
           [Sgn.Rec (_loc, f)]
 
-      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-        [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-
-      | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
-        if Option.is_some x then
-          let p = Id.mk_name (Id.SomeString (Option.get x)) in
-          [Sgn.Query (_loc, Some p, a, e, t)]
-        else
-          [Sgn.Query (_loc, None, a, e, t)]
-
-      | "%not" ->
-        [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | "module"; n = UPSYMBOL; 
-          (* sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t];  *)
-          "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-          let decls = List.map (fun [x] -> x) decls in
-          [Sgn.Module(_loc, n,None, decls)]
-(*       | 
-        "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-          [Sgn.ModuleType(_loc, n, decls)] *)
       | 
         "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
-
-      ]
     ]
+  
+  ]
   ;
 
  (*  module_sig:
@@ -1344,9 +1350,9 @@ isuffix:
      end
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
-   | l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; x = SYMBOL ->
-        let modules = begin match l with None -> [] | Some l -> l end in
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString x)))))
+   |  m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+        let (modules, n) = split '.' m in
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
    | x = UPSYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->

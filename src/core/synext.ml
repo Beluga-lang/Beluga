@@ -256,7 +256,8 @@ module Sgn = struct
     | Query    of Loc.t * name option * LF.typ * int option * int option
     | Module of Loc.t * string * signature option * decl list
     | ModuleType of  Loc.t * string * module_sig list
-
+    | Private of Loc.t * decl list
+    
   and module_sig =
     | ConstSig    of Loc.t * name * LF.typ    
     | TypSig      of Loc.t * name * LF.kind   

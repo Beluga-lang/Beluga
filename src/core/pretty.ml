@@ -1593,11 +1593,17 @@ module Int = struct
           List.iter (fmt_ppr_rec lvl ppf "and") t
 
       | Sgn.Pragma (LF.OpenPrag n) ->  
-          let _ = Store.Modules.open_module n in
-          fprintf ppf "#open %s@\n" (String.concat "." n)
+          let n' = Store.Modules.name_of_id n in
+          let _ = Store.Modules.open_module n' in
+          fprintf ppf "#open %s@\n" (String.concat "." n')
 
       | Sgn.Pragma _ -> ()
 
+      | Sgn.Private(_, l) -> 
+          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
+
+          fprintf ppf "@\nprivate %a" (aux) l
+          
       | Sgn.Module(_, name, None, decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
 

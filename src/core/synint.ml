@@ -183,7 +183,7 @@ module LF = struct
   type prag =
     | NamePrag of cid_typ
     | NotPrag
-    | OpenPrag of string list
+    | OpenPrag of module_id
 
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function
@@ -407,6 +407,7 @@ module Sgn = struct
     | Module        of Loc.t * string * signature option * decl list
     | ModuleType    of  Loc.t * string * module_sig list
     | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Private of Loc.t * decl list
 
   and module_sig =
     | SchemaSig of Loc.t * name * LF.schema   

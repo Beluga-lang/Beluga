@@ -58,6 +58,17 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
+let rec addHidden : Int.Sgn.decl -> unit = function
+  | Int.Sgn.Typ (x, _) -> Typ.addHidden x
+  | Int.Sgn.Const(x, _) -> Term.addHidden x
+  | Int.Sgn.CompTyp(_, n, _) -> CompTyp.addHidden (CompTyp.index_of_name n)
+  | Int.Sgn.CompCotyp(_, n, _) -> CompCotyp.addHidden (CompCotyp.index_of_name n)
+  | Int.Sgn.CompDest (_, n, _) -> CompDest.addHidden (CompDest.index_of_name n)
+  | Int.Sgn.CompTypAbbrev (_, n, _, _) -> CompTypDef.addHidden (CompTypDef.index_of_name n)
+  | Int.Sgn.Schema(x, _) -> Schema.addHidden x
+  | Int.Sgn.Rec l -> List.iter (fun (x, _, _) -> Comp.addHidden x) l
+  | Int.Sgn.Val (_, n, _, _) -> Comp.addHidden (Comp.index_of_name n)
+  | Int.Sgn.MRecTyp (_, l) -> List.iter (fun x -> List.iter addHidden x) l
 
 let rec recSgnDecls = function
   | [] -> []
@@ -501,6 +512,11 @@ and recSgnDecl d =
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
 
+    | Ext.Sgn.Private(loc, decl_list) ->
+        let decl_list' = List.map recSgnDecl decl_list in
+        List.iter addHidden decl_list';
+        Int.Sgn.Private(loc, decl_list')
+
     | Ext.Sgn.Module(loc, name, None, decls) -> 
 (*       let (signature, sig_opt') = begin match sig_opt with
         | Some (Ext.Sgn.Name n) -> 
@@ -570,8 +586,10 @@ and recSgnDecl d =
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
       try 
-        Modules.open_module n;
-        Int.Sgn.Pragma(Int.LF.OpenPrag n)
+        let x = Modules.open_module n in
+        let sgn = Int.Sgn.Pragma(Int.LF.OpenPrag x) in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
       with Not_found -> raise (Error(loc, (InvalidOpenPrag (String.concat "." n))))
 
 (* and recSgnSig = function

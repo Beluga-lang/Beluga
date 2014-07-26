@@ -67,7 +67,7 @@ let rec addHidden : Int.Sgn.decl -> unit = function
   | Int.Sgn.CompTypAbbrev (_, n, _, _) -> CompTypDef.addHidden (CompTypDef.index_of_name n)
   | Int.Sgn.Schema(x, _) -> Schema.addHidden x
   | Int.Sgn.Rec l -> List.iter (fun (x, _, _) -> Comp.addHidden x) l
-  | Int.Sgn.Val (_, n, _, _) -> Comp.addHidden (Comp.index_of_name n)
+  | Int.Sgn.Val (_, n, _, _, _) -> Comp.addHidden (Comp.index_of_name n)
   | Int.Sgn.MRecTyp (_, l) -> List.iter (fun x -> List.iter addHidden x) l
 
 let rec recSgnDecls = function
@@ -315,12 +315,12 @@ and recSgnDecl d =
           let _                  = Monitor.timer ("Function Check", fun () ->
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-    let sgn = Int.Sgn.Val(loc, x, tau', i'') in
-    let _ = Store.Modules.addSgnToCurrent sgn in
-	  if Holes.none () then begin
+    let v = if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _ = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in ()
-	  end;
+            let _ = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in Some v
+    end else None in
+    let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
+    let _ = Store.Modules.addSgnToCurrent sgn in
     sgn
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
@@ -349,12 +349,12 @@ and recSgnDecl d =
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
           let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-    let sgn = Int.Sgn.Val(loc, x, tau', i'') in
-    let _ = Store.Modules.addSgnToCurrent sgn in
-    if Holes.none () then begin
+    let v = if Holes.none () then begin
             let v = Opsem.eval i'' in
-            let _ = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in ()
-    end;
+            let _ = Comp.add (fun _ -> Comp.mk_entry x tau' 0 v []) in Some v
+    end else None in
+    let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
+    let _ = Store.Modules.addSgnToCurrent sgn in
     sgn
 
     | Ext.Sgn.MRecTyp (loc, recDats) ->

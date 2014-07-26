@@ -402,7 +402,7 @@ module Sgn = struct
     | Schema        of cid_schema * LF.schema
     | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
     | Pragma        of LF.prag
-    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk
+    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
     | MRecTyp       of Loc.t * decl list list
     | Module        of Loc.t * string * signature option * decl list
     | ModuleType    of  Loc.t * string * module_sig list

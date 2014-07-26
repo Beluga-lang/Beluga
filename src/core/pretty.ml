@@ -1575,13 +1575,21 @@ module Int = struct
           fprintf ppf " | %s : @[%a@]@\n"
             (R.render_name c)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            
       | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl lvl ppf) (List.flatten l)
-      | Sgn.Val (_, x, tau, i) -> 
+
+      | Sgn.Val (_, x, tau, i, None) -> 
           fprintf ppf "@\nlet %s : %a = %a@\n"
             (R.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
-            (* (fmt_ppr_cmp_value lvl) (Opsem.eval i) *)
+
+      | Sgn.Val (_, x, tau, i, Some v) -> 
+          fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
+            (R.render_name x)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
+            (fmt_ppr_cmp_value lvl) v
 
       | Sgn.Schema (w, schema) ->
           fprintf ppf "schema %s = @[%a@];@\n"
@@ -1787,6 +1795,7 @@ module Int = struct
 (*      let cK' = Whnf.normCKind cK in  *)
         fmt_ppr_cmp_kind cD std_lvl str_formatter cK
         ; flush_str_formatter ()
+
 
     let msubToString cD   s    =
       let s' = Whnf.cnormMSub s in

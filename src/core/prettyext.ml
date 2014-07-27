@@ -438,16 +438,11 @@ module Ext = struct
               (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
     and frugal_block cD cPsi lvl ppf = function
-<<<<<<< .merge_file_99NnTg
-      | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+      | LF.SigmaLast (_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
       | other -> 
         fprintf ppf "%s (%a)" 
         (to_html "block" Keyword)
         (fmt_ppr_lf_typ_rec cD cPsi lvl) other
-=======
-      | LF.SigmaLast (_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-      | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
->>>>>>> .merge_file_iP21CY
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
       | LF.SchElem (_, LF.Empty, sgmDecl) ->

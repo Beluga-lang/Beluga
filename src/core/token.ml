@@ -17,6 +17,7 @@ type t =
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
   | COMMENT of string
+  | DOTS of string
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"
@@ -25,6 +26,8 @@ let to_string = function
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
   | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
   | COMMENT s -> Printf.sprintf "COMMENT %S" s
+  | DOTS s -> Printf.sprintf "DOTS %S"  s
+(*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
 
 (** Pretty print a token using {!Format} functionality. *)
 let print ppf x = Format.pp_print_string ppf (to_string x)
@@ -48,6 +51,8 @@ let extract_string = function
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
   | COMMENT s -> s
+  | DOTS s -> s
+(*   | TURNSTILE s -> s *)
 
 
 

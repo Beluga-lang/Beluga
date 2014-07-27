@@ -36,7 +36,7 @@ module LF = struct
     | Sigma of typ_rec
 
   and typ_rec =
-    | SigmaLast of typ
+    | SigmaLast of name option * typ
     | SigmaElem of name * typ * typ_rec
 
   and tuple =
@@ -54,6 +54,7 @@ module LF = struct
     | Const of cid_term
     | MVar  of cvar * sub
     | Proj  of head * int
+    | NamedProj  of head * name
     | Hole
     | PVar  of cvar * sub
     | FVar  of name

@@ -406,12 +406,8 @@ module Ext = struct
                suffix
        in
        let rec ppr_elements cD cPsi ppf = function
-         | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-(*          | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
-             begin
-               ppr_element cD cPsi  ppf ", " (x, tA1);
-               fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
-             end *)
+         | LF.SigmaLast (Some x, tA) -> ppr_element cD cPsi  ppf "" (x, tA)
+         | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
          | LF.SigmaElem (x, tA, tAs)  ->
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
@@ -442,11 +438,16 @@ module Ext = struct
               (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
     and frugal_block cD cPsi lvl ppf = function
+<<<<<<< .merge_file_99NnTg
       | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
       | other -> 
         fprintf ppf "%s (%a)" 
         (to_html "block" Keyword)
         (fmt_ppr_lf_typ_rec cD cPsi lvl) other
+=======
+      | LF.SigmaLast (_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+      | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
+>>>>>>> .merge_file_iP21CY
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
       | LF.SchElem (_, LF.Empty, sgmDecl) ->

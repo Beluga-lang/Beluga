@@ -18,7 +18,6 @@ type t =
   | INTLIT  of string
   | COMMENT of string
   | DOTS of string
-(*   | TURNSTILE of string *)
 
 let to_string = function
   | EOI       -> Printf.sprintf "EOI"

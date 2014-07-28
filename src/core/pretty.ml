@@ -1510,7 +1510,7 @@ module Int = struct
             (fmt_ppr_cmp_exp_chk  LF.Empty
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
-    let fmt_ppr_module_sig lvl ppf = function
+(*     let fmt_ppr_module_sig lvl ppf = function
       | Sgn.ConstSig (_, c, a) ->
           fprintf ppf "%s : %a.@\n"
             (R.render_name c)
@@ -1545,7 +1545,7 @@ module Int = struct
       | Sgn.SchemaSig (_, w, schema) ->
           fprintf ppf "schema %s = @[%a@];@\n"
             (R.render_name  w)
-            (fmt_ppr_lf_schema ~useName:false lvl) schema
+            (fmt_ppr_lf_schema ~useName:false lvl) schema *)
 
 
 
@@ -1616,20 +1616,16 @@ module Int = struct
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
 
           (* Necessary to enforce correct printing *)
-          let orig = !Store.Modules.current in 
-          let origName = !Store.Modules.currentName in
-          let opened = !Store.Modules.opened in
+          let ((_, origName, _) as state) = Store.Modules.getState () in
           let newName = origName@[name] in
           let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
           let _ = Store.Modules.currentName := newName in          
           let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>@\n%a@]@\nend;@\n"
                     (name) (aux) decls in
-          let _ = Store.Modules.opened := opened in
-          let _ = Store.Modules.currentName := origName in
-          Store.Modules.current := orig
+          Store.Modules.setState state
 
 
-      | Sgn.Module(_, name, Some (Sgn.Name s), decls) ->
+(*       | Sgn.Module(_, name, Some (Sgn.Name s), decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
 
           (* Necessary to enforce correct printing *)
@@ -1666,8 +1662,8 @@ module Int = struct
       | Sgn.ModuleType(_, name, sigs) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_module_sig lvl fmt x)) t in
           fprintf ppf "@\nmodule type %s = sig@\n@[<v2>@\n%a@]@\nend;@\n"
-            (name)
-            (aux) sigs
+            (name) 
+            (aux) sigs*)
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter

@@ -48,6 +48,16 @@ let _ = Error.register_printer
         "Expected datatype" Format.pp_print_string a.string_of_name
         "Actual datatype"   Format.pp_print_string a'.string_of_name))
 
+(* let decl_to_sig : Sgn.decl -> Sgn.module_sig = function
+  | Sgn.Const(l, n, t) -> Sgn.ConstSig(l, n, t)
+  | Sgn.Typ(l, n, k) -> Sgn.TypSig(l, n, k)
+  | Sgn.CompTyp(l, n, k) -> Sgn.CompTypSig(l, n, k)
+  | Sgn.CompCotyp(l, n, k) -> Sgn.CompCotypSig(l, n, k)
+  | Sgn.CompConst(l, n, t) -> Sgn.CompConstSig(l, n, t)
+  | Sgn.CompDest(l, n, t) -> Sgn.CompDestSig(l, n, t)
+  | Sgn.CompTypAbbrev(l, n, k, t) -> Sgn.CompTypAbbrevSig(l, n, k, t)
+  | Sgn.Schema(l, n, sw) -> Sgn.SchemaSig(l, n, sw) *)
+
 let last l = match List.rev l with
   | [] -> None
   | h::t -> Some (h, t)
@@ -401,16 +411,16 @@ GLOBAL: sgn;
         g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
                 | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
           begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map Store.Modules.decl_to_sig f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map Store.Modules.decl_to_sig l) (f::g'))
+            | None -> Sgn.MRecTypSig(_loc, [List.map decl_to_sig f])
+            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map decl_to_sig l) (f::g'))
           end
       |
         "codatatype"; f = cocmp_cdat;
         g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
                 | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
           begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map Store.Modules.decl_to_sig f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map Store.Modules.decl_to_sig l) (f::g'))
+            | None -> Sgn.MRecTypSig(_loc, [List.map decl_to_sig f])
+            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map decl_to_sig l) (f::g'))
           end
       |
         "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->

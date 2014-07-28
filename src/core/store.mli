@@ -2,22 +2,30 @@ open Id
 open Syntax.Int
 
 module Modules : sig
-  exception NotUnique of string
+  type state = Id.module_id * string list * Id.module_id list
+
+  val getState : unit -> state
+  val setState : state -> unit
+
   val current : module_id ref
   val currentName : string list ref
   val opened  : module_id list ref
   val ignoreHidden : bool ref
+
   val directory : (string list, module_id) Hashtbl.t
+  val modules : Sgn.decl list ref DynArray.t
+  
   val id_of_name : string list -> module_id
   val name_of_id : module_id -> string list
+  
+  val instantiateModule : string -> module_id
   val open_module : string list -> module_id
-  val modules : Sgn.decl list ref DynArray.t
+  
+  val addSignatures : string list -> Sgn.module_sig list -> unit
+  val reset : unit -> unit
+
   val signatures : (string list, Sgn.module_sig list) Hashtbl.t
   val addSgnToCurrent : Sgn.decl -> unit
-  val addSignatures : string list -> Sgn.module_sig list -> unit
-  val instantiateModule : string -> module_id
-  val reset : unit -> unit
-  val decl_to_sig : Syntax.Ext.Sgn.decl -> Syntax.Ext.Sgn.module_sig
 end
 
 module Cid : sig

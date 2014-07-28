@@ -8,14 +8,17 @@ exception Error of Syntax.Loc.t * error
 (* Register error printer at the end of this module. *)
 
 module Modules = struct
-
-  exception NotUnique of string
+  type state = Id.module_id * string list * Id.module_id list
 
   let current : Id.module_id ref = ref 0
 
   let currentName : string list ref = ref []
 
   let opened : Id.module_id list ref = ref []
+
+  let getState () = (!current, !currentName, !opened)
+
+  let setState (a, b, c) = current := a; currentName := b; opened := c
 
   let ignoreHidden : bool ref = ref false
 
@@ -67,25 +70,13 @@ module Modules = struct
   let instantiateModule (name : string) : Id.module_id =
     let l = !currentName@[name] in
     let module_id = DynArray.length modules in
-    if (Hashtbl.mem directory l) || (Hashtbl.mem signatures l) 
-    then raise (NotUnique name)
-    else current := module_id; currentName := l; 
+    current := module_id; currentName := l; 
         DynArray.insert modules module_id (ref []); Hashtbl.replace directory l module_id; module_id
 
   let reset () : unit = 
     current := 0;
     opened := [];
     currentName := []
-
-  let decl_to_sig : Ext.Sgn.decl -> Ext.Sgn.module_sig = function
-    | Ext.Sgn.Const(l, n, t) -> Ext.Sgn.ConstSig(l, n, t)
-    | Ext.Sgn.Typ(l, n, k) -> Ext.Sgn.TypSig(l, n, k)
-    | Ext.Sgn.CompTyp(l, n, k) -> Ext.Sgn.CompTypSig(l, n, k)
-    | Ext.Sgn.CompCotyp(l, n, k) -> Ext.Sgn.CompCotypSig(l, n, k)
-    | Ext.Sgn.CompConst(l, n, t) -> Ext.Sgn.CompConstSig(l, n, t)
-    | Ext.Sgn.CompDest(l, n, t) -> Ext.Sgn.CompDestSig(l, n, t)
-    | Ext.Sgn.CompTypAbbrev(l, n, k, t) -> Ext.Sgn.CompTypAbbrevSig(l, n, k, t)
-    | Ext.Sgn.Schema(l, n, sw) -> Ext.Sgn.SchemaSig(l, n, sw)
 
   let correct m l = 
     let rec aux m l = match (m, l) with

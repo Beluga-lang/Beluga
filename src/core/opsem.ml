@@ -82,7 +82,8 @@ let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
-      let (m, _, _) = cid in
+      let (_, l, _) = cid in 
+      let m = Store.Modules.name_of_id l in
       dprint (fun () -> let (m, _, _) = cid in "Module: " ^ (String.concat "." m));
       dprint (fun () -> let (_, l, _) = cid in "Store: " ^ (String.concat "." (Store.Modules.name_of_id l)));
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
@@ -110,7 +111,8 @@ let rec eval_syn i (theta, eta) =
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
         | Comp.RecValue (cid, e', theta', eta') ->
-          let (m, _, _) = cid in
+          let (_, l, _) = cid in
+          let m = Store.Modules.name_of_id l in
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') m in
           dprint (fun () -> "[eval_syn] Lookup found RecValue " ^ R.render_cid_prog cid);
@@ -381,6 +383,8 @@ and eval_cofun codataval branches acc (theta, eta) =
 let eval e =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
+  Store.Modules.ignoreHidden := true;
   let result = eval_chk e (LF.MShift 0, Comp.Empty) in
+  Store.Modules.ignoreHidden := false;
   Debug.outdent 2;
   result

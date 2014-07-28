@@ -17,6 +17,8 @@ module Modules = struct
 
   let opened : Id.module_id list ref = ref []
 
+  let ignoreHidden : bool ref = ref false
+
   let directory : (string list, Id.module_id) Hashtbl.t = 
     let x = Hashtbl.create 1 in Hashtbl.add x [] 0; x
 
@@ -120,7 +122,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_typ) : bool = try try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_typ) : bool =     
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let mk_entry name kind implicit_arguments =
       {
@@ -412,7 +416,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_term) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_term) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -495,7 +501,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_schema) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_schema) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -587,7 +595,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_comp_typ = function
     | n when n.Id.modules = [] -> 
@@ -675,7 +685,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -762,7 +774,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -843,7 +857,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_dest) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_comp_dest) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -931,7 +947,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_typ = function
     | n when n.Id.modules = [] -> 
@@ -1017,7 +1035,9 @@ module Cid = struct
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_prog) : bool = try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
+    let is_hidden ((_, m, n) : Id.cid_prog) : bool = 
+    if !Modules.ignoreHidden then false else
+    try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
     let index_of_name : Id.name -> Id.cid_prog = function
     | n when n.Id.modules = [] -> 

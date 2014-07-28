@@ -1696,7 +1696,6 @@ and synNamedSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schem
 and elClosedTerm' recT cD cPsi r = match r with
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
-      dprint (fun () -> "HERE") ;
       let i  = (Term.get c).Term.implicit_arguments in
       (* let s  = mkShift recT cPsi in *)
       let s = Substitution.LF.id in

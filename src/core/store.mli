@@ -6,6 +6,7 @@ module Modules : sig
   val current : module_id ref
   val currentName : string list ref
   val opened  : module_id list ref
+  val ignoreHidden : bool ref
   val directory : (string list, module_id) Hashtbl.t
   val id_of_name : string list -> module_id
   val name_of_id : module_id -> string list

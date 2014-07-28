@@ -197,8 +197,6 @@ let lex_token loc = lexer
   | "%not"
   | "%query"
   | "?"
-  | "%{"
-  | "}%"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 
   | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
@@ -233,8 +231,60 @@ let lex_token loc = lexer
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
-  | '%' '{'  ([^'%'])* '}' '%' -> mk_tok_of_lexeme mk_comment loc lexbuf
+  | "<html>" ([^'<'] | ['<'][^'/'] | ['<']['/'][^'h' 'H'] | ['<']['/']['h' 'H' ][^'t' 'T']| 
+      ['<']['/']['h' 'H']['t' 'T'][^'m' 'M'] | ['<']['/']['h''H']['t''T']['m''M'][^'l''L']) * "</html>" 
+    -> mk_tok_of_lexeme mk_comment loc lexbuf
 
+let skip_nestable depth loc =
+(*        print_string ("NEST " ^ Loc.to_string !loc ^ "\n")      ; *)
+lexer
+  | '\n' ->
+      loc := Loc.move_line 1 !loc
+
+  | '%'+ [^'{' '%' '\n'] ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | [^'\n' '%' '}' ]+ ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | '}' [^'%' '\n']+ ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | '}' '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+
+  | '}' '%' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; if !depth <= 0 then
+        ( print_string ("Parse error: \"}%\" with no comment to close\n");
+          raise Ulexing.Error )
+      else
+        depth := !depth - 1
+
+  | '%'+ '{' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; depth := !depth + 1
+
+  | '%'+ '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+
+let skip_nested_comment loc = lexer
+  | '%' '{' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; let depth = ref 1 in
+(*      print_string ("nested comment\n") ; flush_all() ; *)
+      while !depth > 0 do
+(*        print_string ("NC-BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
+        skip_nestable depth loc lexbuf ;
+(*        print_string ("NC-AFT " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
+      done
+
+  | '}' '%' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
+          raise Ulexing.Error )
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
@@ -268,6 +318,7 @@ let skip_newlines    loc = lexer
 (******************)
 
 type skip_state =
+  | Comment
   | LineComment
   | Newline
   | Whitespace
@@ -280,6 +331,18 @@ let mk () = fun loc strm ->
   let rec skip ()   =
     if !skip_failures < 4 then
       match !state with
+        | Comment  ->
+              begin
+                try
+                  skip_nested_comment loc_ref lexbuf
+                ; skip_failures := 0
+                with
+                  | Ulexing.Error ->
+                      incr skip_failures
+              end
+            ; state := LineComment
+            ; skip ()
+
         | LineComment  ->
               begin
                 try
@@ -313,7 +376,7 @@ let mk () = fun loc strm ->
                   | Ulexing.Error ->
                       incr skip_failures
               end
-            ; state := LineComment
+            ; state := Comment
             ; skip ()
     else
       skip_failures := 0 in

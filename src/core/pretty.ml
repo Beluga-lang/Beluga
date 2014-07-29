@@ -635,7 +635,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n ->
           fprintf ppf "%s"
-            (if !Store.Cid.NamedHoles.printingHoles then
+            (if !Store.Cid.NamedHoles.printingHoles && false then
               Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
              else (R.render_cvar cD n))
 
@@ -1465,6 +1465,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
               | LF.DeclOpt psi -> psi 
+              | LF.Decl(psi, _) -> psi
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1488,6 +1489,7 @@ module Int = struct
           let p =
             begin match decl with
               | LF.Decl(p, LF.PTyp (_ , _, _) ) -> p
+              | LF.Decl(p, _) -> p
               | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"

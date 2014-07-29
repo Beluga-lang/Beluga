@@ -812,12 +812,12 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       I.Dec (ctxToMCtx cQ', I.Decl (psi, I.CTyp (s_cid, I.Maybe)))
 
   | I.Dec (cQ', FMV (Pure, u, Some mtyp)) ->
-      let mtyp' = begin match mtyp with
-        | I.MTyp(tA, cPsi, _) -> I.MTyp(tA, cPsi, dep')
-        | I.PTyp(tA, cPsi, _) -> I.PTyp(tA, cPsi, dep')
-        | I.STyp(cPhi, cPsi, _) -> I.STyp(cPhi, cPsi, dep')
-      end in
-      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp'))
+(*       let mtyp' = begin match mtyp with
+        | I.MTyp(tA, cPsi, d) -> I.MTyp(tA, cPsi, d)
+        | I.PTyp(tA, cPsi, d) -> I.PTyp(tA, cPsi, d)
+        | I.STyp(cPhi, cPsi, d) -> I.STyp(cPhi, cPsi, d)
+      end in *)
+      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx cQ', I.Decl (x, I.CTyp (w, dep)))

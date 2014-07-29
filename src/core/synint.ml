@@ -162,7 +162,7 @@ module LF = struct
 
 
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of typ                             (* ... . B *)
+    |  SigmaLast of name option * typ                             (* ... . B *)
     |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
 
   and tuple =
@@ -206,7 +206,7 @@ module LF = struct
     val getType : head -> trec_clo -> int -> int -> tclo
   *)
   let rec getType head s_recA target j = match (s_recA, target) with
-    | ((SigmaLast lastA, s), 1) ->
+    | ((SigmaLast (_, lastA), s), 1) ->
         (lastA, s)
 
     | ((SigmaElem (_x, tA, _recA), s), 1) ->
@@ -217,8 +217,35 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
+ 
+  (* getIndex traverses the typ_rec from left to right;
+     target is the name of the projection we're looking for
 
+    Precondition: acc is 1 when the function is 1st called
+     acc is an accumulator set to 1 when the function is called
 
+  *)
+let rec getIndex' trec target acc = match trec with
+  | SigmaLast(None, _) -> raise Not_found
+  | SigmaLast(Some name, _) ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    else failwith "Projection Not found"
+  | SigmaElem(name, _, trec') ->
+    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+  else getIndex' trec' target (acc + 1)
+
+let getIndex head s_recA target acc = 
+  let (trec, _) = s_recA in getIndex' trec target acc
+  (* match s_recA with
+    | (SigmaLast(None, _), _) -> raise Not_found
+    | (SigmaLast(Some name, _),_) ->
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else raise Not_found
+
+    | (SigmaElem (name, _tA, recA), s) -> 
+      if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+      else let tPj = Proj (head, acc) in
+      getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1) *)
 
 end
 

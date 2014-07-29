@@ -604,7 +604,7 @@ and cnstr_typ_decl st_decl = match st_decl with
 
 
 and cnstr_typ_rec (t_rec, s) = match t_rec with
-  | I.SigmaLast tA -> cnstr_typ (tA, s)
+  | I.SigmaLast (_, tA) -> cnstr_typ (tA, s)
   | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, s) && cnstr_typ_rec (t_rec, s)
 
 (* index_of cQ n = i
@@ -1227,9 +1227,9 @@ and collectTyp p cQ ((cvar, offset) as phat) sA = match sA with
 
 
 and collectTypRec p cQ ((cvar, offset) as phat) = function
-  | (I.SigmaLast tA, s) ->
+  | (I.SigmaLast(n, tA), s) ->
       let (cQ', tA') = collectTyp p cQ phat (tA, s) in
-        (cQ', I.SigmaLast tA')
+        (cQ', I.SigmaLast(n,tA'))
 
   | (I.SigmaElem(loc, tA, typRec), s) ->
        let (cQ',tA') = collectTyp p cQ phat (tA, s) in
@@ -1369,7 +1369,7 @@ and abstractTypW cQ offset sA = match sA with
 
 
 and abstractTypRec cQ offset = function
-  | (I.SigmaLast tA, s) -> I.SigmaLast (abstractTyp cQ offset (tA, s))
+  | (I.SigmaLast(n, tA), s) -> I.SigmaLast(n, (abstractTyp cQ offset (tA, s)))
   | (I.SigmaElem(x, tA, typRec), s) ->
       let tA = abstractTyp cQ offset (tA, s) in
       let typRec = abstractTypRec cQ offset (typRec, LF.dot1 s) in
@@ -1528,7 +1528,7 @@ and abstractMVarTypW cQ offset sA = match sA with
 
 
 and abstractMVarTypRec cQ offset = function
-  | (I.SigmaLast tA, s) -> I.SigmaLast (abstractMVarTyp cQ offset (tA, s))
+  | (I.SigmaLast(n, tA), s) -> I.SigmaLast(n, (abstractMVarTyp cQ offset (tA, s)))
   | (I.SigmaElem(x, tA, typRec), s) ->
       let tA = abstractMVarTyp cQ offset (tA, s) in
       let typRec = abstractMVarTypRec cQ offset (typRec, LF.dot1 s) in

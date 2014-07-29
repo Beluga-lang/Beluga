@@ -813,9 +813,9 @@ and normTyp (tA, sigma) =  match tA with
       Sigma (normTypRec (recA, sigma))
 
 and normTypRec (recA, sigma) = match recA with
-  | SigmaLast lastA ->
+  | SigmaLast (n, lastA) ->
       let tA = normTyp (lastA, sigma) in
-      SigmaLast tA
+      SigmaLast(n,tA)
 
   | SigmaElem (x, tA, recA') ->
       let tA = normTyp (tA, sigma) in
@@ -1603,7 +1603,7 @@ and cnorm (tM, t) = match tM with
       -> Sigma(cnormTypRec (recA, t))
 
   and cnormTypRec (typRec, t) = match typRec with
-    |  SigmaLast lastA -> SigmaLast(cnormTyp (lastA, t))
+    |  SigmaLast (n,lastA) -> SigmaLast(n, cnormTyp (lastA, t))
     |  SigmaElem (x, tA, recA') ->
          let tA = cnormTyp (tA, t) in
            SigmaElem (x, tA, cnormTypRec (recA', t))
@@ -2322,7 +2322,7 @@ and convTyp sA sB = convTyp' (whnfTyp sA) (whnfTyp sB)
  *    cD ; cPsi |- [s]recA = [s']recB <= type
  *)
 and convTypRec sArec sBrec = match (sArec, sBrec) with
-  | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+  | ((SigmaLast(_, lastA), s), (SigmaLast(_, lastB), s')) ->
       convTyp (lastA, s) (lastB, s')
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
@@ -2383,10 +2383,10 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
  *    cD ; cPsi |-   [s']recB is a prefix of [s]recA
  *)
 and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
-  | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+  | ((SigmaLast (_,lastA), s), (SigmaLast (_,lastB), s')) ->
       convTyp (lastA, s) (lastB, s')
 
-  | ((SigmaElem (_xA, tA, _recA), s), (SigmaLast tB, s')) ->
+  | ((SigmaElem (_xA, tA, _recA), s), (SigmaLast(_, tB), s')) ->
       convTyp (tA, s) (tB, s')
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
@@ -3030,7 +3030,7 @@ and closedTypW (tA,s) = match tA with
   | Sigma recA ->  closedTypRec (recA, s)
 
 and closedTypRec (recA, s) = match recA with
-  | SigmaLast tA -> closedTyp (tA,s)
+  | SigmaLast (_, tA) -> closedTyp (tA,s)
   | SigmaElem (_, tA, recA') ->
       closedTyp (tA, s) &&
       closedTypRec (recA', LF.dot1 s)

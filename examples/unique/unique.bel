@@ -1,4 +1,6 @@
+
 #opts +strengthen;
+
 % Definition of types and expressions
 tp: type.  %name tp T.
 arr: tp -> tp -> tp.

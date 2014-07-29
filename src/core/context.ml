@@ -37,8 +37,8 @@ let rec sigmaShift typrec k = match typrec with
       SigmaElem (x, TClo (tA, Shift (NoCtxShift, k)), sigmaShift typrec (k (*+ 1*) ))
 *)
 let rec sigmaShift typrec s = match typrec with
-  | SigmaLast tA ->
-      SigmaLast (TClo (tA, s))
+  | SigmaLast(n, tA) ->
+      SigmaLast (n, TClo (tA, s))
 
   | SigmaElem (x, tA, typrec) ->
       SigmaElem (x, TClo (tA, s), sigmaShift typrec (Substitution.LF.dot1 s))

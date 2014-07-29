@@ -88,7 +88,7 @@ module Int = struct
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
-    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
+    val fmt_ppr_lf_schema     : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
@@ -435,7 +435,8 @@ module Int = struct
         | LF.Shift _ when hasCtxVar -> fprintf ppf ".."
         | LF.Shift _ when not hasCtxVar -> ()
         | LF.FSVar (s_name, _, s) ->
-          fprintf ppf "$ FSV %s[%a]"
+          fprintf ppf "|- FSV %s[%a]"
+
             (R.render_name s_name )
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
@@ -709,12 +710,13 @@ module Int = struct
                suffix
        in
        let rec ppr_elements cD cPsi ppf = function
-         | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-         | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
+         | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+         | LF.SigmaLast (Some x, tA) ->  ppr_element cD cPsi ppf "" (x, tA)
+(*          | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
              begin
                ppr_element cD cPsi  ppf ". " (x, tA1);
                fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
-             end
+             end *)
          | LF.SigmaElem (x, tA, tAs)  ->
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
@@ -732,24 +734,27 @@ module Int = struct
          |  LF.Empty -> LF.Null
          |  LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
 
-    and fmt_ppr_lf_schema lvl ppf s = 
-      try
-        fprintf ppf "%s" (R.render_name (Store.Cid.Schema.get_name_from_schema s))
-      with
-        | _ -> match s with
-          | LF.Schema [] -> ()
+    and fmt_ppr_lf_schema ?(useName=true) lvl ppf s = 
+      let print_without_name = function
+        | LF.Schema [] -> ()
 
-          | LF.Schema (f :: []) ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_sch_elem lvl) f
+        | LF.Schema (f :: []) ->
+              fprintf ppf "%a"
+                (fmt_ppr_lf_sch_elem lvl) f
 
-          | LF.Schema (f :: fs) ->
-                fprintf ppf "@[%a@]@ +@ @[%a@]"
-                  (fmt_ppr_lf_sch_elem lvl) f
-                  (fmt_ppr_lf_schema lvl) (LF.Schema fs)
+        | LF.Schema (f :: fs) ->
+              fprintf ppf "@[%a@]@ +@ @[%a@]"
+                (fmt_ppr_lf_sch_elem lvl) f
+                (fmt_ppr_lf_schema lvl) (LF.Schema fs)
+      in
+      if useName then
+        try
+          fprintf ppf "%s" (R.render_name (Store.Cid.Schema.get_name_from_schema s))
+        with | _ -> print_without_name s
+      else print_without_name s
 
     and frugal_block cD cPsi lvl ppf = function
-      | LF.SigmaLast tA -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+      | LF.SigmaLast(_,  tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
       | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
     and fmt_ppr_lf_sch_elem lvl ppf = function
@@ -989,7 +994,7 @@ module Int = struct
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) s
       | Comp.MetaSObjAnn (_, cPsi, tM) ->
-            fprintf ppf "[%a$ %a]"
+            fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) tM
       | Comp.MetaParam (_, phat, h) ->
@@ -1520,7 +1525,7 @@ module Int = struct
       | Sgn.Schema (w, schema) ->
           fprintf ppf "schema %s : %a;@.@?"
             (R.render_cid_schema  w)
-            (fmt_ppr_lf_schema lvl) schema
+            (fmt_ppr_lf_schema ~useName:false lvl) schema
 
       | Sgn.Rec (f, tau, e) ->
           fprintf ppf "rec %s : %a =@ @[<2>%a ;@]@?@."

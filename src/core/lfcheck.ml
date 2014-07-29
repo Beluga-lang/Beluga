@@ -182,7 +182,7 @@ and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
   let loop (tuple, s1) (typRec, s2) = match tuple, typRec with
-    | Last tM,   SigmaLast tA -> checkW cD cPsi (tM, s1) (tA, s2)
+    | Last tM,   SigmaLast (n, tA) -> checkW cD cPsi (tM, s1) (tA, s2)
     | Cons (tM, tuple),   SigmaElem (_x, tA, typRec) ->
       checkW cD cPsi (tM, s1) (tA, s2);
       checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2))
@@ -479,7 +479,7 @@ and checkTyp cD cPsi sA = checkTyp' cD cPsi (Whnf.whnfTyp sA)
  * succeeds iff cD ; cPsi |- [s]recA <= type
  *)
 and checkTypRec cD cPsi (typRec, s) = match typRec with
-  | SigmaLast lastA ->
+  | SigmaLast(n, lastA) ->
     checkTyp cD cPsi (lastA, s)
 
   | SigmaElem(_x, tA, recA) ->
@@ -569,7 +569,7 @@ and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
   let _ = dprint (fun () -> "instanceOfSchElem...") in
   let sArec = match Whnf.whnfTyp (tA, s) with
     | (Sigma tArec,s') -> (tArec, s')
-    | (nonsigma, s') ->   (SigmaLast nonsigma, s') in
+    | (nonsigma, s') -> (SigmaLast (None, nonsigma), s') in
   let _ = dprint (fun () -> "tA =" ^ P.typToString cD cPsi (tA, s)) in
   let dctx        = projectCtxIntoDctx some_part in
   let _ =  dprint (fun () -> "***Check if it is an instance of a schema element ...") in
@@ -645,7 +645,7 @@ and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
   let tA_k (* : tclo *) = getType var (trec, Substitution.LF.id) k 1 in
   let _ = dprint (fun () -> "instanceOfSchElemProj...") in
   let (_tA'_k, subst) =
-    instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (TClo tA_k)))
+  instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (None, TClo tA_k)))
   (* tA'_k = [subst] (tA_k) = [s]tA *)
   in
   (trec, subst)
@@ -735,10 +735,10 @@ for each tA in tArec, check that  Subord.relevant  tA basis = []
 *)
 
  and elemPostfix sArec sBrec = match (sArec, sBrec) with
-   | ((SigmaLast lastA, s), (SigmaLast lastB, s')) ->
+   | ((SigmaLast(_, lastA), s), (SigmaLast(_, lastB), s')) ->
        None
 
-   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast tB, s')) ->
+   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast(_, tB), s')) ->
        Some (recA,s)
 
    | ((SigmaElem (_xA, _tA, recA), s), (SigmaElem(_xB, _tB, recB), s')) ->

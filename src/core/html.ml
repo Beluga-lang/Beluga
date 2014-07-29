@@ -59,7 +59,6 @@ let append innerHtml =
 	page := (!page) ^ "<br><pre><code>" ^ innerHtml ^ "</code></pre>"
 
 let appendAsComment innerHtml = 
-	let innerHtml = Str.global_replace (Str.regexp "\\({-\\|-}\\)") "" innerHtml in
 	let innerHtml = replaceNewLine innerHtml in
 	page := (!page) ^ "\n" ^ "<p>" ^ innerHtml ^ "</p>"
 

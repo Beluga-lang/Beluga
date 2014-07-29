@@ -61,7 +61,7 @@ let setup_linenums () =
     let s = ("\n" ^ (String.make (6-l) ' ') ^ (string_of_int !line_num) ^ " ") in
     let _ = incr line_num in
     x.out_string s 0 7
-  with e -> failwith "HERE"
+  with e -> x.out_newline ()
   in 
   let z = {x with out_newline = y} in
   set_formatter_out_functions z

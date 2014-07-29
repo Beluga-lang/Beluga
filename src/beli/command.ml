@@ -151,7 +151,7 @@ let constructors = {name = "constructors";
 
 
 let helpme = {name = "help";
-              run = (fun ppf _ -> List.iter (fun x -> fprintf ppf "%%:%15s\t %s\n" x.name x.help) !reg);
+              run = (fun ppf _ -> List.iter (fun x -> fprintf ppf "%%:%20s\t %s\n" x.name x.help) !reg);
               help = "list all availale commands with a short description"}
 
 

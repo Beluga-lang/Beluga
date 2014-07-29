@@ -3,7 +3,7 @@
     @see http://caml.inria.fr/resources/doc/guides/format.html
 *)
 
-open Format
+include Format
 
 (* Explanation of formatting markup:
 
@@ -47,6 +47,24 @@ open Format
 type lvl    = int
 
 let std_lvl = 0
+
+let line_num = ref 1
+
+let printing_nums = ref false 
+
+let setup_linenums () = 
+  let _ = printing_nums := true in
+  let x = get_formatter_out_functions () in
+  let y () = try
+    if not !printing_nums then x.out_newline () else
+    let l = (int_of_float (log10(float_of_int !line_num))) + 2 in
+    let s = ("\n" ^ (String.make (6-l) ' ') ^ (string_of_int !line_num) ^ " ") in
+    let _ = incr line_num in
+    x.out_string s 0 7
+  with e -> failwith "HERE"
+  in 
+  let z = {x with out_newline = y} in
+  set_formatter_out_functions z
 
 let l_paren_if cond =
   if cond
@@ -1551,28 +1569,28 @@ module Int = struct
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (c, a) ->
-          fprintf ppf "%s : %a.@\n"
+          fprintf ppf "@\n%s : %a.@\n"
             (R.render_cid_term c)
             (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
       | Sgn.Typ (a, k) ->
-          fprintf ppf "%s : %a.@\n"
+          fprintf ppf "@\n%s : %a.@\n"
             (R.render_cid_typ  a)
             (fmt_ppr_lf_kind LF.Null lvl) k
 
       | Sgn.CompTyp (_, a, cK) ->
-          fprintf ppf "datatype %s : @[%a@] = @\n"
+          fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
              (R.render_name a)
              (fmt_ppr_cmp_kind LF.Empty lvl) cK
 
       | Sgn.CompCotyp (_, a, cK) ->
-          fprintf ppf "codatatype %s : @[%a@] = @\n"
+          fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
              (R.render_name a)
              (fmt_ppr_cmp_kind LF.Empty lvl) cK
 
       | Sgn.CompDest (_, c, tau)
       | Sgn.CompConst (_, c, tau) ->
-          fprintf ppf " | %s : @[%a@]@\n"
+          fprintf ppf "@\n | %s : @[%a@]@\n"
             (R.render_name c)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             
@@ -1592,7 +1610,7 @@ module Int = struct
             (fmt_ppr_cmp_value lvl) v
 
       | Sgn.Schema (w, schema) ->
-          fprintf ppf "schema %s = @[%a@];@\n"
+          fprintf ppf "@\nschema %s = @[%a@];@\n"
             (R.render_cid_schema  w)
             (fmt_ppr_lf_schema ~useName:false lvl) schema
 
@@ -1603,7 +1621,7 @@ module Int = struct
       | Sgn.Pragma (LF.OpenPrag n) ->  
           let n' = Store.Modules.name_of_id n in
           let _ = Store.Modules.open_module n' in
-          fprintf ppf "#open %s@\n" (String.concat "." n')
+          fprintf ppf "@\n#open %s@\n" (String.concat "." n')
 
       | Sgn.Pragma _ -> ()
 

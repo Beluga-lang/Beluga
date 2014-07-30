@@ -1413,6 +1413,7 @@ match sigma with
                       let _ = dprint (fun () -> "[prune] ss = " ^
                                         P.subToString cD0 cPsi' ssubst) in
                        let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
+		       let _ = dprint (fun () -> "[prune] idsub = " ^ P.subToString cD0 cPsi1 idsub) in
                       (* Psi1 |- idsub   : Psi2
                          Psi2 |- idsub_i : Psi1
                        *)
@@ -1854,7 +1855,14 @@ match sigma with
     | (EmptySub, Null) -> (id, Null)
     | (Undefs, Null) -> (id, Null)
 
-    | (Shift ( _n), CtxVar psi) -> (id, CtxVar psi)
+    | (Shift n, CtxVar psi) ->
+      let (_, ssubst) = ss in
+      let rec shiftInvSub n ss = match ss with
+	| Undefs -> (EmptySub,Null)
+	| Shift k -> (id, CtxVar psi)
+        | Dot (ft, ss') -> shiftInvSub (n-1) ss'
+      in 
+      shiftInvSub n ssubst
 
     | (SVar (s, cshift, sigma), cPsi1) ->
         (*     D ; cPsi1' | cshift : cPsi1

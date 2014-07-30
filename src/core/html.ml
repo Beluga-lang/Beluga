@@ -1,7 +1,7 @@
 let genHtml = ref false
 let printingHtml = ref false
 let genCSS = ref true
-let page = ref ""
+let page = Buffer.create 0
 
 
 (* display:block; border: 1px dashed maroon;
@@ -39,7 +39,7 @@ let generatePage filename =
 begin
 	(* Merge different code blocks into, as long as there isn't anything inbetween *)
 	let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-	let page = Str.global_replace fixCodeRegex "\\1" !page in
+	let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
 
 	(* Output the HTML file *)
 	let oc = open_out filename in
@@ -53,14 +53,14 @@ begin
 	close_out oc
 end
 
-let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>"
+(* let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>" *)
 
 let append innerHtml =
-	page := (!page) ^ "<br><pre><code>" ^ innerHtml ^ "</code></pre>"
+	Buffer.add_string page ("<br><pre><code>" ^ innerHtml ^ "</code></pre>")
 
 let appendAsComment innerHtml = 
-	let innerHtml = replaceNewLine innerHtml in
-	page := (!page) ^ "\n" ^ "<p>" ^ innerHtml ^ "</p>"
+	let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
+	Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
 
 let ids = ref []
 

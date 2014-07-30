@@ -94,27 +94,28 @@ Beluga lexical categories:
 let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
                           '0'-'9'                 (* exclude digits *)
-                          "<>"                    (* exclude < and >, which can only be used with certain other characters *)
+                          "<>"   '`'                 (* exclude < and >, which can only be used with certain other characters *)
                        ]
 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>" '|'                    (* exclude < and > *)
+                          "<>" '|'     '`'               (* exclude < and > *)
                        ]
 (* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z' '\''
-                          '0'-'9'
+                          '0'-'9' '`'
                           "<>"
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z'
-                          '#' '\''
+                          '#' '\'' 
+                          '`'
                           '0'-'9'
                           "<>"
                        ]
@@ -162,6 +163,7 @@ let mk_dots s = Token.DOTS s
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let lex_token loc = lexer
+  | "```" ([^'`'])* "```" -> mk_tok_of_lexeme mk_comment loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
 (*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
@@ -231,9 +233,6 @@ let lex_token loc = lexer
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
-  | "<html>" ([^'<'] | ['<'][^'/'] | ['<']['/'][^'h' 'H'] | ['<']['/']['h' 'H' ][^'t' 'T']| 
-      ['<']['/']['h' 'H']['t' 'T'][^'m' 'M'] | ['<']['/']['h''H']['t''T']['m''M'][^'l''L']) * "</html>" 
-    -> mk_tok_of_lexeme mk_comment loc lexbuf
 
 let skip_nestable depth loc =
 (*        print_string ("NEST " ^ Loc.to_string !loc ^ "\n")      ; *)

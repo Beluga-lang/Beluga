@@ -250,7 +250,7 @@ GLOBAL: sgn;
 
   sgn_eoi:
    [
-     [ decl = sgn_decl; decls = SELF -> decl @ decls
+     [ decl = sgn_decl; decls = sgn_eoi -> decl @ decls
      | `EOI -> []
      ]
    ];

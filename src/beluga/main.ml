@@ -39,6 +39,8 @@ let usage () =
         ^ "    -realNames    Print holes using freshly generated names\n"
         ^ "    +annot        Generate a .annot file for use in emacs\n"
         ^ "    +locs         Output location information (for testing)\n"
+        ^ "    -i [loc]      Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
+
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -87,6 +89,11 @@ let process_option arg rest = match arg with
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
   | "+locs"       -> Locs.gen_loc_info := true; rest
+  | "-i" -> begin match rest with
+      | h::t when ((h.[0] <> '-' && h.[0] <> '+'))->
+        Unix.execvp h (Array.append [| h |] (Array.of_list t))
+      | _ -> Unix.execvp "bin/beli" (Array.append [| "bin/beli" |] (Array.of_list rest))
+  end
   | _ -> usage ()
 
 let rec process_options = function

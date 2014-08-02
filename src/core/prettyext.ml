@@ -336,6 +336,17 @@ module Ext = struct
           fprintf ppf "%s%s"
           (R.render_name x)
           ("." ^ string_of_int k)
+
+      | LF.NamedProjName (_, n, n') ->
+          fprintf ppf "%s.%s"
+            (R.render_name n)
+            (R.render_name n')
+
+      | LF.NamedProjPVar(_, n, (n', sigma)) ->
+          fprintf ppf "#%s.%s%a"
+            (R.render_name n)
+            (R.render_name n')
+            (fmt_ppr_lf_sub cD cPsi 0) sigma
       end
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
@@ -637,6 +648,23 @@ module Ext = struct
               (symbol_to_html Turnstile)
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
+      | Comp.MetaSObj (_, phat, s) ->
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "[%a %s %a]"
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+               (symbol_to_html Turnstile)
+              (fmt_ppr_lf_sub cD cPsi 0) s
+      | Comp.MetaSObjAnn (_, cPsi, tM) ->
+            fprintf ppf "[%a %s %a]"
+               (fmt_ppr_lf_dctx cD 0) cPsi
+               (symbol_to_html Turnstile)
+              (fmt_ppr_lf_sub cD cPsi 0) tM
+      | Comp.MetaParam (_, phat, h) ->
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "[%a %s %a]"
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+               (symbol_to_html Turnstile)
+              (fmt_ppr_lf_head cD cPsi 0) h
 
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, x, mS)->
@@ -779,6 +807,9 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
+      | Comp.Cofun (_, l) -> 
+          fprintf ppf "Some Cofun"
+
       | Comp.MLam (_, (x, Comp.MObj), e) ->
           let cond = lvl > 0 in
             fprintf ppf "%s%s %s %s %a%s"
@@ -856,13 +887,52 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.Case (_, Pragma.RegularCase, i, [b]) -> 
-          let Comp.Branch(_, cD, Comp.PatMetaObj(_, m0), e) = b in
-          fprintf ppf "%s %a = %a %s@ %a"
-          (to_html "let" Keyword)
-          (fmt_ppr_meta_obj cD 0) m0
-          (fmt_ppr_cmp_exp_syn cD 0) i
-          (to_html "in" Keyword)
-          (fmt_ppr_cmp_exp_chk cD 0) e
+        let rec ppr_ctyp_decls' ppf = function
+          | LF.Dec (LF.Empty, decl) ->
+              fprintf ppf "%a"
+                (fmt_ppr_lf_ctyp_decl cD 1) decl
+          | LF.Dec (cD, decl) ->
+              fprintf ppf "%a @ %a"
+                (ppr_ctyp_decls' ) cD
+              (fmt_ppr_lf_ctyp_decl cD 1) decl
+        and ppr_ctyp_decls ppf = function
+          | LF.Empty -> ()
+          | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
+        in
+        begin match b with
+          | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
+              fprintf ppf "%s %a %a = %a %s@ %a"
+                (to_html "let" Keyword)
+                (fmt_ppr_cmp_branch_prefix 0) cD'
+                (fmt_ppr_meta_obj cD' 0) m0
+                (fmt_ppr_cmp_exp_syn cD' 0) (strip_mapp_args cD i)
+                (to_html "in" Keyword)
+                (fmt_ppr_cmp_exp_chk cD' 0) e
+          | Comp.Branch(_, cD', pat, e) ->
+              fprintf ppf "%s %a %a = %a %s@ %a"
+                (to_html "let" Keyword)
+                (fmt_ppr_cmp_branch_prefix  0) cD'
+                (fmt_ppr_pat_obj cD' 0) pat
+                (fmt_ppr_cmp_exp_syn cD' 0) (strip_mapp_args cD i)
+                (to_html "in" Keyword)
+                (fmt_ppr_cmp_exp_chk cD' 0) e
+
+          | Comp.BranchSBox (_, cD1', (cPsi, s, _cs), e) -> 
+              fprintf ppf "%s %a@[([%a] %a)@  = %a %s@ %a"
+                (to_html "let" Keyword)
+                (ppr_ctyp_decls ) cD1'
+                (fmt_ppr_lf_dctx cD1' 0) cPsi
+                (fmt_ppr_lf_sub  cD cPsi 0) s             
+                (fmt_ppr_cmp_exp_syn cD1' 0) (strip_mapp_args cD i)
+                (to_html "in" Keyword)
+                (fmt_ppr_cmp_exp_chk cD1' 0) e
+          | _ ->
+            fprintf ppf "%s %a %s%a"
+              (to_html "case" Keyword)
+              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (to_html "of" Keyword)
+              (fmt_ppr_cmp_branches cD 0) [b]
+        end
 
       | Comp.Case (_, prag, i, bs) ->
             fprintf ppf "%s %a %s%s%a"
@@ -963,6 +1033,10 @@ module Ext = struct
               (fmt_ppr_cmp_typ cD 2) tau
               (r_paren_if cond)
 
+      | Comp.PairVal(_, i1, i2) ->
+          fprintf ppf "(%a , %a)"
+            (fmt_ppr_cmp_exp_syn cD 1) i1
+            (fmt_ppr_cmp_exp_syn cD 1) i2
 
 
       | Comp.Equal (_, i1, i2) ->

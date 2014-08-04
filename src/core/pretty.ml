@@ -1627,7 +1627,6 @@ module Int = struct
 
       | Sgn.Private(_, l) -> 
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-
           fprintf ppf "@\nprivate %a" (aux) l
           
       | Sgn.Module(_, name, None, decls) ->
@@ -1638,7 +1637,7 @@ module Int = struct
           let newName = origName@[name] in
           let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
           let _ = Store.Modules.currentName := newName in          
-          let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>@\n%a@]@\nend;@\n"
+          let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
                     (name) (aux) decls in
           Store.Modules.setState state
 

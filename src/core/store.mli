@@ -55,7 +55,7 @@ module Cid : sig
     val gen_var_name      : LF.typ -> (unit -> string) option
     val gen_mvar_name     : LF.typ -> (unit -> string) option
     val cid_of_typ        : LF.typ -> cid_typ
-    val get               : cid_typ -> entry
+    val get               : ?fixName:bool -> cid_typ -> entry
     val index_of_name     : name -> cid_typ
     val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
@@ -78,7 +78,7 @@ module Cid : sig
     val addHidden     : cid_term -> unit
     val mk_entry      : name -> LF.typ -> int -> entry
     val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
-    val get           : cid_term -> entry
+    val get           : ?fixName:bool -> cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val clear         : unit -> unit
@@ -98,7 +98,7 @@ module Cid : sig
 
     val addHidden     : cid_comp_typ -> unit
     val add           : entry -> cid_comp_typ
-    val get           : cid_comp_typ -> entry
+    val get           : ?fixName:bool -> cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
@@ -120,7 +120,7 @@ module Cid : sig
 
 
     val add           : entry -> cid_comp_cotyp
-    val get           : cid_comp_cotyp -> entry
+    val get           : ?fixName:bool -> cid_comp_cotyp -> entry
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
     val index_of_name : name -> cid_comp_typ
@@ -138,7 +138,7 @@ module Cid : sig
     val addHidden     : cid_comp_const -> unit
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_typ -> entry -> cid_comp_const
-    val get           : cid_comp_const -> entry
+    val get           : ?fixName:bool -> cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
     val index_of_name : name -> cid_comp_const
     val clear         : unit -> unit
@@ -155,7 +155,7 @@ module Cid : sig
     val addHidden     : cid_comp_dest -> unit
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_cotyp -> entry -> cid_comp_dest
-    val get           : cid_comp_dest -> entry
+    val get           : ?fixName:bool -> cid_comp_dest -> entry
     val get_implicit_arguments : cid_comp_dest -> int
     val index_of_name : name -> cid_comp_dest
     val clear         : unit -> unit
@@ -173,7 +173,7 @@ module Cid : sig
     val addHidden     : cid_comp_typ -> unit
     val mk_entry      : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
     val add           : entry -> cid_comp_typ
-    val get           : cid_comp_typ -> entry
+    val get           : ?fixName:bool -> cid_comp_typ -> entry
     val get_implicit_arguments : cid_comp_typ -> int
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
@@ -200,7 +200,7 @@ module Cid : sig
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
     val add           : (cid_prog -> entry) -> cid_prog
-    val get           : cid_prog -> entry
+    val get           : ?fixName:bool -> cid_prog -> entry
     val index_of_name : name -> cid_prog
 
     val clear         : unit -> unit
@@ -217,7 +217,7 @@ module Cid : sig
     val addHidden       : cid_schema -> unit
     val mk_entry        : name -> LF.schema -> entry
     val add             : entry -> cid_schema
-    val get             : cid_schema -> entry
+    val get             : ?fixName:bool -> cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
     val get_name_from_schema : LF.schema -> name

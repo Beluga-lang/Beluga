@@ -25,6 +25,9 @@ module Modules = struct
   let directory : (string list, Id.module_id) Hashtbl.t = 
     let x = Hashtbl.create 1 in Hashtbl.add x [] 0; x
 
+  let rev_directory : (string list) DynArray.t =
+    let x = DynArray.create () in DynArray.add x []; x
+
   let modules : (Int.Sgn.decl list ref) DynArray.t = 
     let x = DynArray.create () in DynArray.add x (ref []); x
 
@@ -33,10 +36,7 @@ module Modules = struct
 
   let id_of_name (n : string list) : Id.module_id = Hashtbl.find directory n
 
-  let name_of_id (id : Id.module_id) : string list = 
-    match Hashtbl.fold (fun l id' init -> if id = id' then Some(l) else init) directory None with
-    | None -> raise Not_found
-    | Some l -> l
+  let name_of_id (id : Id.module_id) : string list = DynArray.get rev_directory id
 
   let open_module (m : string list) : Id.module_id =
     let x = try Hashtbl.find directory m 
@@ -71,7 +71,10 @@ module Modules = struct
     let l = !currentName@[name] in
     let module_id = DynArray.length modules in
     current := module_id; currentName := l; 
-        DynArray.insert modules module_id (ref []); Hashtbl.replace directory l module_id; module_id
+    DynArray.insert modules module_id (ref []); 
+    Hashtbl.replace directory l module_id; 
+    DynArray.insert rev_directory module_id l;
+    module_id
 
   let reset () : unit = 
     current := 0;
@@ -150,10 +153,10 @@ module Cid = struct
       if is_hidden (m, l, i) then raise Not_found else (m, l, i)
 
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -447,10 +450,10 @@ module Cid = struct
         Typ.addConstructor loc e_typ cid_tm entry.typ;
         cid_tm end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -530,10 +533,10 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_schema;
         cid_schema end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -624,10 +627,10 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_comp_typ;
         cid_comp_typ end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -714,10 +717,10 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_comp_const;
         cid_comp_const end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -804,10 +807,10 @@ module Cid = struct
         CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -887,10 +890,10 @@ module Cid = struct
         CompCotyp.addDestructor cid_comp_dest cid_ctyp;
         cid_comp_dest end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -976,10 +979,10 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_typdef;
         cid_typdef end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -1066,10 +1069,10 @@ module Cid = struct
         Hashtbl.replace directory e.name cid_prog;
         cid_prog end
 
-    let get ((m, l, n) as cid) =
+    let get ?(fixName=false) ((m, l, n) as cid) =
       if is_hidden cid then raise Not_found else 
       let l' = Modules.name_of_id l in
-      let m' =  if List.length l' > List.length m && 
+      let m' =  if fixName && List.length l' > List.length m && 
                    (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct m l' else m in
@@ -1191,14 +1194,14 @@ module Cid = struct
       | [] -> n.string_of_name
       | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
 
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
-    let render_cid_typ    a    = render_name (Typ.get a).Typ.name
-    let render_cid_term   c    = render_name (Term.get c).Term.name
-    let render_cid_schema w    = render_name (Schema.get w).Schema.name
-    let render_cid_prog   f    = render_name (Comp.get f).Comp.name
+    let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
+    let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    let render_cid_typ    a    = render_name (Typ.get ~fixName:true a).Typ.name
+    let render_cid_term   c    = render_name (Term.get ~fixName:true c).Term.name
+    let render_cid_schema w    = render_name (Schema.get ~fixName:true w).Schema.name
+    let render_cid_prog   f    = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
     let render_bvar  _cPsi i   = string_of_int i
@@ -1221,14 +1224,14 @@ module Cid = struct
       | [] -> n.string_of_name
       | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
 
-    let render_cid_comp_typ c  = render_name (CompTyp.get c).CompTyp.name
-    let render_cid_comp_cotyp c = render_name (CompCotyp.get c).CompCotyp.name
-    let render_cid_comp_const c = render_name (CompConst.get c).CompConst.name
-    let render_cid_comp_dest c = render_name (CompDest.get c).CompDest.name
-    let render_cid_typ     a   = render_name (Typ.get a).Typ.name
-    let render_cid_term    c   = render_name (Term.get c).Term.name
-    let render_cid_schema  w   = render_name (Schema.get w).Schema.name
-    let render_cid_prog    f   = render_name (Comp.get f).Comp.name
+    let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
+    let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
+    let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    let render_cid_typ     a   = render_name (Typ.get ~fixName:true a).Typ.name
+    let render_cid_term    c   = render_name (Term.get ~fixName:true c).Term.name
+    let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
+    let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)

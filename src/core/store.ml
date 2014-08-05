@@ -81,13 +81,13 @@ module Modules = struct
     opened := [];
     currentName := []
 
-  let correct m l = 
+  let correct (l : string list ) : string list = 
     let rec aux m l = match (m, l) with
       | _ when m = l -> m
       | ([], _) -> l
       | (h::t, h'::t') when h=h' -> aux t t'
       | _ -> m in
-  aux m (List.fold_left aux (aux l !currentName) (List.map name_of_id !opened))
+    aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName
 end
 
 
@@ -111,12 +111,12 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_typ) : unit =
+    let addHidden ((m, n) : Id.cid_typ) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_typ) : bool =     
+    let is_hidden ((m, n) : Id.cid_typ) : bool =     
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
@@ -142,24 +142,20 @@ module Cid = struct
         and provides a way to quickly look up this information. *)
     let directory : ((Id.name, Id.cid_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -186,7 +182,7 @@ module Cid = struct
             DynArray.add store x;
             x 
           end in
-        let (_,_, n) = cid_tp in
+        let (_, n) = cid_tp in
         (DynArray.set store n new_entry;
          cid_tp)
 
@@ -252,7 +248,7 @@ module Cid = struct
        Terms of type family b can contain terms of type family a.
      *)
     let rec addSubord a b =
-      let (_, a_l, a_n) = a in
+      let (a_l, a_n) = a in
       let a_e = get a in
       let b_e = get b in
         if BitSet.is_set b_e.subordinates a_n then
@@ -265,7 +261,7 @@ module Cid = struct
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
            (* Call below could be replaced by
               subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
-           subord_iter (fun aa -> addSubord ([], a_l, aa) b) a_e.subordinates;
+           subord_iter (fun aa -> addSubord (a_l, aa) b) a_e.subordinates;
           )
 
 (*
@@ -329,7 +325,7 @@ module Cid = struct
             x
           end in
         DynArray.add store entry;
-        ([], !Modules.current, (DynArray.length store) - 1) in
+        (!Modules.current, (DynArray.length store) - 1) in
 
         let directory =   
           try DynArray.get directory (!Modules.current)
@@ -375,12 +371,12 @@ module Cid = struct
 
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
-      let (_, _, b_n) = b in
+      let (_, b_n) = b in
         (*subord_read*)BitSet.is_set a_e.subordinates b_n
 
     let is_typesubordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let b_e = get b in
-      let (_, _, a_n) = a in
+      let (_, a_n) = a in
         (*subord_read*)BitSet.is_set b_e.typesubordinated a_n
   end
 
@@ -405,24 +401,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_term) : unit =
+    let addHidden ((m, n) : Id.cid_term) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_term) : bool = 
+    let is_hidden ((m, n) : Id.cid_term) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
 
     let add loc e_typ entry = begin 
@@ -436,7 +429,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -450,13 +443,12 @@ module Cid = struct
         Typ.addConstructor loc e_typ cid_tm entry.typ;
         cid_tm end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -490,24 +482,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_schema) : unit =
+    let addHidden ((m, n) : Id.cid_schema) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_schema) : bool = 
+    let is_hidden ((m, n) : Id.cid_schema) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add entry = begin
       let cid_schema = 
@@ -520,7 +509,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -533,13 +522,12 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_schema;
         cid_schema end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -584,24 +572,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_comp_typ) : unit =
+    let addHidden ((m, n) : Id.cid_comp_typ) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = 
+    let is_hidden ((m, n) : Id.cid_comp_typ) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_comp_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_comp_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add entry = begin
       let cid_comp_typ = 
@@ -614,7 +599,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -627,13 +612,12 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_comp_typ;
         cid_comp_typ end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -674,24 +658,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_comp_const) : unit =
+    let addHidden ((m, n) : Id.cid_comp_const) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = 
+    let is_hidden ((m, n) : Id.cid_comp_const) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add entry = begin
       let cid_comp_const = 
@@ -704,7 +685,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -717,13 +698,12 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_comp_const;
         cid_comp_const end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -763,24 +743,21 @@ module Cid = struct
 
         let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_comp_const) : unit =
+    let addHidden ((m, n) : Id.cid_comp_const) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_const) : bool = 
+    let is_hidden ((m, n) : Id.cid_comp_const) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add cid_ctyp entry = begin
       let cid_comp_const = 
@@ -793,7 +770,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -807,13 +784,12 @@ module Cid = struct
         CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -846,24 +822,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_comp_dest) : unit =
+    let addHidden ((m, n) : Id.cid_comp_dest) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_dest) : bool = 
+    let is_hidden ((m, n) : Id.cid_comp_dest) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add cid_ctyp entry = begin
       let cid_comp_dest = 
@@ -876,7 +849,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -890,13 +863,12 @@ module Cid = struct
         CompCotyp.addDestructor cid_comp_dest cid_ctyp;
         cid_comp_dest end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -936,24 +908,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_comp_typ) : unit =
+    let addHidden ((m, n) : Id.cid_comp_typ) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_comp_typ) : bool = 
+    let is_hidden ((m, n) : Id.cid_comp_typ) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_typ = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add entry = begin
       let cid_typdef = 
@@ -966,7 +935,7 @@ module Cid = struct
             x
           end in
           DynArray.add store entry;
-          ([], !Modules.current, (DynArray.length store) - 1) in
+          (!Modules.current, (DynArray.length store) - 1) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -979,13 +948,12 @@ module Cid = struct
         Hashtbl.replace directory entry.name cid_typdef;
         cid_typdef end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
+    let get ?(fixName=false) ((l, n) as cid) =
       if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
@@ -1024,24 +992,21 @@ module Cid = struct
 
     let hidden : BitSet.t DynArray.t = DynArray.create ()
 
-    let addHidden ((_, m, n) : Id.cid_prog) : unit =
+    let addHidden ((m, n) : Id.cid_prog) : unit =
       while DynArray.length hidden <= m do DynArray.add hidden (BitSet.empty ()) done;
       let x = DynArray.get hidden m in
       BitSet.set x n
 
-    let is_hidden ((_, m, n) : Id.cid_prog) : bool = 
+    let is_hidden ((m, n) : Id.cid_prog) : bool = 
     if !Modules.ignoreHidden then false else
     try (m <> !Modules.current) && (BitSet.is_set (DynArray.get hidden m) n) with _ -> false
 
-    let index_of_name : Id.name -> Id.cid_prog = function
-    | n when n.Id.modules = [] -> 
-        let x = Modules.find n directory (fun x -> Hashtbl.find x n) in
-        if is_hidden x then raise Not_found else x
-    | n -> 
-      let m = n.Id.modules in
-      let n' = Id.mk_name (Id.SomeString n.Id.string_of_name) in
-      let (_, l, i) = Modules.find n directory (fun x -> Hashtbl.find x n') in
-      if is_hidden (m, l, i) then raise Not_found else (m, l, i)
+    let index_of_name : Id.name -> Id.cid_prog = fun (n : Id.name) ->
+      let n' = match n.Id.modules with 
+        | [] -> n 
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
+      if is_hidden cid then raise Not_found else cid
 
     let add f = begin
       let (cid_prog, e) = 
@@ -1054,9 +1019,9 @@ module Cid = struct
             x
           end in
           let l = DynArray.length store in
-          let e = f ([], !Modules.current, l) in
+          let e = f (!Modules.current, l) in
           DynArray.add store e;
-          (([], !Modules.current, l), e) in
+          ((!Modules.current, l), e) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -1069,13 +1034,12 @@ module Cid = struct
         Hashtbl.replace directory e.name cid_prog;
         cid_prog end
 
-    let get ?(fixName=false) ((m, l, n) as cid) =
-      if is_hidden cid then raise Not_found else 
+    let get ?(fixName=false) ((l, n) as cid) =
+      if is_hidden cid then raise Not_found else
       let l' = Modules.name_of_id l in
-      let m' =  if fixName && List.length l' > List.length m && 
-                   (l <> !Modules.current) &&
+      let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct m l' else m in
+                then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 

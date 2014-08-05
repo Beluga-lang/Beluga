@@ -2286,7 +2286,7 @@ and convMFront front1 front2 = match (front1, front2) with
 
 
 and convTyp' sA sB = match (sA, sB) with
-  | ((Atom (_, (_, a, b), spine1), s1), (Atom (_, (_, a', b'), spine2), s2)) ->
+  | ((Atom (_, (a, b), spine1), s1), (Atom (_, (a', b'), spine2), s2)) ->
       if a = a' && b = b' then
            convSpine (spine1, s1) (spine2, s2)
       else false

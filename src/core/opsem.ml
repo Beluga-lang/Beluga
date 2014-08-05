@@ -82,15 +82,11 @@ let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const cid ->
-      let (_, l, _) = cid in 
+      let (l, _) = cid in 
       let m = Store.Modules.name_of_id l in
-      dprint (fun () -> let (m, _, _) = cid in "Module: " ^ (String.concat "." m));
-      dprint (fun () -> let (_, l, _) = cid in "Store: " ^ (String.concat "." (Store.Modules.name_of_id l)));
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
         | Comp.RecValue (cid, e', theta', eta') ->
-          dprint (fun () -> let (m, _, _) = cid in "Module: " ^ (String.concat "." m));
-          dprint (fun () -> let (_, l, _) = cid in "Store: " ^ (String.concat "." (Store.Modules.name_of_id l)));
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') m in
           dprint (fun () -> "[eval_syn] Const is RecValue " ^ R.render_cid_prog cid);
@@ -111,7 +107,7 @@ let rec eval_syn i (theta, eta) =
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
         | Comp.RecValue (cid, e', theta', eta') ->
-          let (_, l, _) = cid in
+          let (l, _) = cid in
           let m = Store.Modules.name_of_id l in
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') m in

@@ -6,23 +6,23 @@ type name     = {
 
 type module_id = int
 
-type cid_typ    = string list * int * int
+type cid_typ    = module_id * int
 
-type cid_term   = string list * int * int
+type cid_term   = module_id * int
 
-type cid_schema = string list * int * int
+type cid_schema = module_id * int
 
-type cid_coercion = string list * int * int
+type cid_coercion = module_id * int
 
-type cid_comp_typ = string list * int * int
+type cid_comp_typ = module_id * int
 
-type cid_comp_cotyp = string list * int * int
+type cid_comp_cotyp = module_id * int
 
-type cid_comp_const = string list * int * int
+type cid_comp_const = module_id * int
 
-type cid_comp_dest = string list * int * int
+type cid_comp_dest = module_id * int
 
-type cid_prog   = string list * int * int
+type cid_prog   = module_id * int
 
 type offset     = int
 

@@ -8,40 +8,35 @@ type name     = private {
   was_generated : bool
 }
 
-(** cid_ now includes a first string list for the module begin referenced by this call
-    (i.e. [Nats] if orignal was Nats.z).
-
-    cids will be considered equal if the module_id and the int are equal *)
-
 type module_id = int
 
 (** A constant identifier for types *)
-type cid_typ  = string list * module_id * int
+type cid_typ  = module_id * int
 
 (** A constant identifier for terms *)
-type cid_term = string list * module_id * int
+type cid_term = module_id * int
 
 (** A constant identifier for schemas *)
-type cid_schema = string list * module_id * int
+type cid_schema = module_id * int
 
 
 (** A constant identifier for coercions *)
-type cid_coercion = string list * module_id * int
+type cid_coercion = module_id * int
 
 (** A constant identifier for computation-level data-types *)
-type cid_comp_typ = string list * module_id * int
+type cid_comp_typ = module_id * int
 
 (** A constant identifier for computation-level codata-types *)
-type cid_comp_cotyp = string list * module_id * int
+type cid_comp_cotyp = module_id * int
 
 (** A constant identifier for computation-level constructors *)
-type cid_comp_const = string list * module_id * int
+type cid_comp_const = module_id * int
 
 (** A constant identifier for computation-level destructors *)
-type cid_comp_dest = string list * module_id * int
+type cid_comp_dest = module_id * int
 
 (** A constant identifier for recursive computations/programs *)
-type cid_prog = string list * module_id * int
+type cid_prog = module_id * int
 
 
 (** An offset to be used during shifting for a DeBruijn variable

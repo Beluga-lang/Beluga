@@ -40,7 +40,8 @@ let usage () =
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
         ^ "    +html         Generate an html page of the source code\n"
-        ^ "    -css          Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage"
+        ^ "    +htmltest    Run HTML mode on file, but do not create final HTML page\n"
+        ^ "    -css          Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -87,10 +88,9 @@ let process_option arg rest = match arg with
   | "-strengthen" -> Lfrecon.strengthen := false; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
-  | "+html"
-  | "+HTML" -> Html.genHtml := true; rest
-  | "-css"
-  | "-CSS"  -> Html.genCSS := false; rest
+  | _ when (String.lowercase arg = "+htmltest") -> Html.genHtml := true; Html.filename := "/dev/null"; rest
+  | "+html"| "+HTML" -> Html.genHtml := true; rest
+  | "-css" | "-CSS"  -> Html.genCSS := false; rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -188,8 +188,12 @@ let main () =
           end;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
-          if !Html.genHtml then
-            Html.generatePage (file_name ^ ".html") ;
+          if !Html.genHtml then begin
+            if !Html.filename <> "/dev/null" then
+              let l = String.length file_name in 
+              Html.filename := ((String.sub file_name 0 (l-3)) ^ "html");
+            Html.generatePage () 
+          end;
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
         output_string stderr (Printexc.to_string e);

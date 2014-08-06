@@ -1,6 +1,7 @@
 let genHtml = ref false
 let printingHtml = ref false
 let genCSS = ref true
+let filename = ref "out.html"
 let page = Buffer.create 0
 
 
@@ -35,14 +36,14 @@ let header =
 "\n\t</style>\t" ^
 "</head>\n"
 
-let generatePage filename = 
+let generatePage () = 
 begin
 	(* Merge different code blocks into, as long as there isn't anything inbetween *)
 	let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
 	let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
 
 	(* Output the HTML file *)
-	let oc = open_out filename in
+	let oc = open_out !filename in
 	if !genCSS then begin
 		output_string oc header;
 		output_string oc "<body>\n";

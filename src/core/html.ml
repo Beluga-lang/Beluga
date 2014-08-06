@@ -1,14 +1,16 @@
-let genHtml = ref false
-let printingHtml = ref false
-let genCSS = ref true
-let filename = ref "out.html"
-let page = Buffer.create 0
+type css = Normal | NoCSS | File of string
+
+let genHtml : bool ref = ref false
+let printingHtml : bool ref = ref false
+let css : css ref = ref Normal
+let filename : string ref = ref "out.html"
+let page : Buffer.t = Buffer.create 0
 
 
 (* display:block; border: 1px dashed maroon;
  *)
 let header =
-"<head>" ^
+"<html>\n<head>" ^
 "\n\t<style type=\"text/css\">" ^
 "\n\t\tbody {" ^
 "\n\t\t\tpadding: 2em 1em 2em 1em;" ^
@@ -38,30 +40,39 @@ let header =
 
 let generatePage () = 
 begin
-	(* Merge different code blocks into, as long as there isn't anything inbetween *)
-	let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-	let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
+  (* Merge different code blocks into, as long as there isn't anything inbetween *)
+  let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
+  let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
 
-	(* Output the HTML file *)
-	let oc = open_out !filename in
-	if !genCSS then begin
-		output_string oc header;
-		output_string oc "<body>\n";
-		output_string oc  (page ^ "\n");
-		output_string oc "</body>\n" ;
-	end else
-		output_string oc  (page ^ "\n");
-	close_out oc
+  (* Output the HTML file *)
+  let oc = open_out !filename in
+  let out = output_string oc in
+  begin match !css with
+  | NoCSS -> out  (page ^ "\n");
+  | Normal -> begin
+      out header;
+      out "<body>\n";
+      out  page;
+      out "\n</body>\n</html>\n"
+    end
+  | File s -> begin
+      out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
+      out s; out "\">\n</head>\n<body>\n";
+      out page;
+      out "\n</body>\n</html>\n"
+    end
+  end;
+  close_out oc
 end
 
 (* let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>" *)
 
 let append innerHtml =
-	Buffer.add_string page ("<br><pre><code>" ^ innerHtml ^ "</code></pre>")
+  Buffer.add_string page ("<br><pre><code>" ^ innerHtml ^ "</code></pre>")
 
 let appendAsComment innerHtml = 
-	let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
-	Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
+  let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
+  Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
 
 let ids = ref []
 

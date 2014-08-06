@@ -39,9 +39,10 @@ let usage () =
         ^ "    -strengthen   Turn off metavariable strengthening.\n"
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
-        ^ "    +html         Generate an html page of the source code\n"
-        ^ "    +htmltest    Run HTML mode on file, but do not create final HTML page\n"
+        ^ "    +html         Generate an html page of the source code using default CSS\n"
+        ^ "    +htmltest     Run HTML mode on file, but do not create final HTML page\n"
         ^ "    -css          Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
+        ^ "    +cssfile      Specify css file to link to from HTML page\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -90,7 +91,13 @@ let process_option arg rest = match arg with
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | _ when (String.lowercase arg = "+htmltest") -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html"| "+HTML" -> Html.genHtml := true; rest
-  | "-css" | "-CSS"  -> Html.genCSS := false; rest
+  | "-css" | "-CSS"  -> Html.css := Html.NoCSS; rest
+  | _ when (String.lowercase arg = "+cssfile") -> 
+      begin match rest with
+      | arg::rest when arg.[0] <> '-' && arg.[0] <> '+' ->
+          Html.css := Html.File arg; rest
+      | _ -> bailout "-cssfile requires an argument"
+      end
   | _ -> usage ()
 
 let rec process_options = function

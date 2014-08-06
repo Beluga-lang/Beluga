@@ -59,7 +59,7 @@ fn iv => fn ivs => case iv of
 rec varSubCompose' : IsVarSub [g] [h  $ #W[..]] -> IsVarSub [h] [h' $ #W2[..]] -> IsVarSub [g] [h' $ #W[#W2[..]]] =
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
-| Cons ivs' iv => Cons (varSubCompose' ivs' r2) (wknVar' iv r2);
+| Cons ivs' iv =>  Cons (varSubCompose' ivs' r2) (wknVar' iv r2);
 
 rec haltsMstep2 : {S:[g |- mstep (M ..) (M' ..)]} Halts [ |- A] [g |- M' ..] -> Halts [ |- A] [g |- M ..] =
  mlam S => fn h => let (h : Halts [ |- A] [g |- M' ..]) = h in
@@ -69,8 +69,9 @@ rec closed2 : {S:[g |- mstep (M ..) (M' ..)]} Reduce [ |- A] [g |- M' ..] -> Red
 mlam S => fn r => let (r : Reduce [ |- A] [g |- M' ..]) = r in  case r of
 | Base ha => Base (haltsMstep2  [g |- S ..] ha)
 | Arr [g |- M ..] f => Arr [g |- _]
-  (mlam h => mlam #W => mlam N => fn iv => fn rn =>
-    closed2 [h |- stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h |- N ..] iv rn));
+  (mlam h => mlam #W => mlam N => fn iv => fn rn => 
+    closed2 [h |- stepapp (S #W[..]) refl] (f [h] [h $ #W[..]] [h |- N ..] iv rn)
+);
 
 rec wknVarSub : IsVarSub [g] [h $ #S[..]] -> IsVarSub [g] [h,x:tm A $ #S[..] ] =
 fn r => case r of

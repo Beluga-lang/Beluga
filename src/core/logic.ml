@@ -372,7 +372,9 @@ module Index = struct
      Store all type constants in the `types' table.
   *)
   let robStore () =
-    List.iter storeTypConst !Cid.Typ.entry_list
+    try 
+      List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
+    with _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.

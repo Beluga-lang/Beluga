@@ -258,6 +258,15 @@ let check_codatatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
+let rec split (c : char) (m : string) : (string list * string) = 
+  try
+    let i = String.index m c in
+    let l = String.length m in
+    let (a, rest) = (String.sub m 0 i, String.sub m (i+1) (l- i - 1)) in
+    let (l, n) = split c rest in (a::l, n)
+  with
+  | Not_found -> ([], m)
+
 
 (*******************************)
 (* Global Grammar Entry Points *)
@@ -349,74 +358,78 @@ GLOBAL: sgn;
 
 
   sgn_decl:
-    [
+    [ 
       [
-         a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ ; "." ->
-           begin match k_or_a with
-             | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
-             | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
-           end
+          "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
+            [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
-(*      |
-        "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
-        const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
-          Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-*)
-      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
-(*
-      | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
-          check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-          Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
-*)
+        | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
+            if Option.is_some x then
+              let p = Id.mk_name (Id.SomeString (Option.get x)) in
+              [Sgn.Query (_loc, Some p, a, e, t)]
+            else
+              [Sgn.Query (_loc, None, a, e, t)]
 
-      | "datatype"; f = cmp_cdat;
-        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> [Sgn.MRecTyp(_loc, [f])]
-            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-          end
+        | "%not" ->
+            [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
-      | "codatatype"; f = cocmp_cdat;
-        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> [Sgn.MRecTyp(_loc, [f])]
-            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-          end
+        | "module"; n = UPSYMBOL; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+              let decls = List.map (fun [x] -> x) decls in
+              [Sgn.Module(_loc, n, decls)]
+      
+        | a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
+             begin match k_or_a with
+               | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
+               | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
+             end
 
-      | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
-          [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
-      |
-        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
-          [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
+  (*      |
+          "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
+          const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
+            Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+  *)
+        | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+             [Sgn.MRecTyp(_loc, f)]
+  (*
+        | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
+            check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+  *)
 
-      |
-        "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
-        "="; i = cmp_exp_syn;  ";" ->
-          [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
+        | "datatype"; f = cmp_cdat;
+          g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
+                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+            begin match g with
+              | None -> [Sgn.MRecTyp(_loc, [f])]
+              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+            end
 
-      |
-(*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
-          Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
-*)
+        | "codatatype"; f = cocmp_cdat;
+          g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
+                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+            begin match g with
+              | None -> [Sgn.MRecTyp(_loc, [f])]
+              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+            end
 
-        "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
-          [Sgn.Rec (_loc, f)]
+        | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
+            [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
+        |
+          "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
+            [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
 
-      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-        [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
+        |
+          "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
+          "="; i = cmp_exp_syn;  ";" ->
+            [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
 
-      | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
-        if Option.is_some x then
-          let p = Id.mk_name (Id.SomeString (Option.get x)) in
-          [Sgn.Query (_loc, Some p, a, e, t)]
-        else
-          [Sgn.Query (_loc, None, a, e, t)]
+        |
+  (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
+            Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
+  *)
 
-      | "%not" ->
-        [Sgn.Pragma (_loc, Sgn.NotPrag)]
+          "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
+            [Sgn.Rec (_loc, f)]
 
       |
         "#infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
@@ -447,8 +460,11 @@ GLOBAL: sgn;
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      ]
+        | 
+          "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
+      
     ]
+  ]
   ;
 
   bound:
@@ -508,7 +524,7 @@ GLOBAL: sgn;
              LF.ArrKind (_loc, a2, k)
 
         |
-          "type" -> LF.Typ _loc
+          "type"-> LF.Typ _loc
         ]
 
     | LEFTA
@@ -540,11 +556,16 @@ GLOBAL: sgn;
 
     | "atomic"
         [
-          term = lf_term -> match term with
+          term = lf_term -> begin match term with
             | LF.NTyp(_, t) -> t
             | LF.TList(_, [LF.NTyp(_,t)]) -> t
             | LF.TList(_, [n]) -> LF.AtomTerm(_loc, n)
-            | _ -> LF.AtomTerm (_loc, term)
+            | _ -> LF.AtomTerm (_loc, term) end
+        |
+          x = [a = MODULESYM -> a | a = SYMBOL -> a]; ms = LIST0 (lf_term LEVEL "atomic") ->
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+            let (modules, a) = split '.' x in
+              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
 (*         |
           a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
@@ -585,14 +606,12 @@ GLOBAL: sgn;
   ;
 
   lf_head:
-    [
+    [ 
       [
-         u = UPSYMBOL  ->
-            LF.Name (_loc, Id.mk_name (Id.SomeString u))
-
-      |
-        x = SYMBOL ->
-            LF.Name (_loc, Id.mk_name (Id.SomeString x))
+        x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split '.' x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
+    |
+        u = UPSYMBOL  ->
+          LF.Name (_loc, Id.mk_name (Id.SomeString u))
 
       ]
     ]
@@ -747,7 +766,17 @@ GLOBAL: sgn;
 
 
   clf_typ:
-    [ RIGHTA
+    [ 
+      "modules"
+      [
+          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
+            let modules = match l with None -> [] | Some l -> l in
+            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
+              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
+      ]
+
+    |
+      RIGHTA
         [
            "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
@@ -756,30 +785,23 @@ GLOBAL: sgn;
              LF.ArrTyp (_loc, a2, a)
         ]
 
-    | "atomic"
-        [(* 
-          "("; a=SELF;")" -> a
-        | *)
+    | "atomic" [
            (* a = SYMBOL; *) ms = LIST1 clf_normal ->
             begin match ms with
               | [LF.NTyp(_, a)] -> a
               | _ -> LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
             end
               
-(*         |
+           |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
               LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
               (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
- *)
+
         ]
     | "sigma"
         [
           "("; a = SELF; ")" ->
             a
-        |
-          a = SYMBOL; ms = LIST0 clf_normal ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp)
         |
           typRec = clf_typ_rec_block
           ->  LF.Sigma (_loc, typRec)
@@ -800,6 +822,12 @@ GLOBAL: sgn;
             LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
        ]
 
+    | "module"
+      [
+        modules = LIST1 [ x = UPSYMBOL; "." -> x]; n = SYMBOL ->
+          let name = Id.mk_name ~modules:modules (Id.SomeString n) in
+          LF.Root(_loc, LF.Name(_loc, name), LF.Nil)
+      ]
     | "atomic"
         [
           u = UPSYMBOL ->
@@ -894,7 +922,6 @@ GLOBAL: sgn;
   clf_head:
     [
       [
-
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
           LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
       | 
@@ -931,8 +958,13 @@ GLOBAL: sgn;
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
-        x = SYMBOL ->
-         LF.Name (_loc, Id.mk_name (Id.SomeString x))
+        m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+          let (l, x) = split '.' m in
+          LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))
+      
+ (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
+          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
+
       ]
     ]
   ;
@@ -1358,8 +1390,9 @@ isuffix:
      end
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
-   | x = SYMBOL   ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name (Id.SomeString x)))))
+   |  m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+        let (modules, n) = split '.' m in
+       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
    | x = UPSYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
    | "ttrue"      ->
@@ -1371,7 +1404,16 @@ isuffix:
  ]];
 
 cmp_exp_syn:
- [ LEFTA [
+ [ 
+  "modules"[
+     m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+     let (modules, n) = split '.' m in
+      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n))
+  ]
+
+  |
+
+ LEFTA [
    "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
         Comp.BoxVal (_loc, cPsi, tR)
 
@@ -1382,8 +1424,6 @@ cmp_exp_syn:
                                     | Atom    ->   e
                             end)
    | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
-   | x = SYMBOL ->  Comp.Var (_loc, Id.mk_name (Id.SomeString x))
-
    | "ttrue"    ->   Comp.Boolean (_loc, true)
    | "ffalse"   ->   Comp.Boolean (_loc, false)
 
@@ -1524,12 +1564,16 @@ clf_pattern :
   mixtyp:
     [ RIGHTA
       [
-        "{"; psi = SYMBOL; ":";  w = SYMBOL; "}"; mixtau = SELF ->
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.No))) in
+        "{"; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; "}"; mixtau = SELF ->
+          let modules = match l with None -> [] | Some l -> l in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.No))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
-  | "("; psi = SYMBOL; ":";  w = SYMBOL; ")"; mixtau = SELF ->
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.Maybe))) in
+      | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
+          let modules = match l with None -> [] | Some l -> l in
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.Maybe))) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
@@ -1560,18 +1604,21 @@ clf_pattern :
             let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
               MTBase (_loc, Id.mk_name (Id.SomeString a), sp)
 
-      | a = SYMBOL ->
-          MTCtx (_loc, Id.mk_name (Id.SomeString a))
+      | x = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+          let (modules, a) = split '.' x in
+          MTCtx (_loc, Id.mk_name ~modules:modules (Id.SomeString a))
       |
         "("; mixtau = mixtyp ; ")" ->
            mixtau
 
-      |   "(" ; "[";  cPsi = clf_dctx; turnstile; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ),
+      |   "(" ; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
+              let (modules, a) = split '.' x in
+              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
                     mixtau2)
 
-      |   "(" ; "#"; "[";  cPsi = clf_dctx; turnstile; a = SYMBOL;  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), LF.Nil), cPsi ),
+      |   "(" ; "#"; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
+              let (modules, a) = split '.' x in
+              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
                     mixtau2)
 
       |

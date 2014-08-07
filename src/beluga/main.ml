@@ -39,6 +39,7 @@ let usage () =
         ^ "    -strengthen   Turn off metavariable strengthening.\n"
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
+        ^ "    +n            Print line numbers\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -85,6 +86,7 @@ let process_option arg rest = match arg with
   | "-strengthen" -> Lfrecon.strengthen := false; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
+  | "+n" | "+N"  -> Pretty.setup_linenums (); rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -154,10 +156,15 @@ let main () =
             printf "\n## Pretty-printing of the external syntax : ##\n";
           List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
         end;
-        if !Debug.chatter != 0 then
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;
-        Recsgn.recSgnDecls sgn;
-        if !Debug.chatter != 0 then
+        let sgn' = Recsgn.recSgnDecls sgn in
+        let _ = Store.Modules.reset () in
+        let _ = Pretty.line_num := 1 in
+        if !Debug.chatter <> 0 then
+          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
+        Pretty.printing_nums := false;
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
         ignore (Coverage.force
                   (function

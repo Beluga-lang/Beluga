@@ -260,11 +260,11 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool = 
     let p_p = p.Store.OpPragmas.precedence in
     let o_p = o.Store.OpPragmas.precedence in
-    let o_a = match o.Store.OpPragmas.assoc with
+    let p_a = match p.Store.OpPragmas.assoc with
       | Some a -> a
       | None -> !Store.OpPragmas.default in
     p_p < o_p ||
-    (p_p = o_p && o_a = Ext.Sgn.Left)
+    (p_p = o_p && p_a = Ext.Sgn.Left)
 (*      p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
     (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence && 
       ((o.Store.OpPragmas.assoc = None && !Store.OpPragmas.default = Ext.Sgn.Left) ||
@@ -439,8 +439,7 @@ and index_term cvars bvars fvars = function
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
-      (* let _        = dprint (fun () -> "Indexing name " ^ n.string_of_name)
-         in *)
+      let _ = dprint (fun () -> "Indexing name " ^ n.string_of_name) in
       begin try
         (Apx.LF.BVar (BVar.index_of_name bvars n) , fvs)
       with Not_found -> try

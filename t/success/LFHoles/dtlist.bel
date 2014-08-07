@@ -23,9 +23,16 @@ fn f => fn l => case l of
 | [ |- nil ]      => [ |- nil ]
 | [ |- cons H T ] => let [ |- H' ] = f [ |- H ] in
                    let [ |- T' ] = map f [ |- T ] in
-                       [ |- cons H' ? ]
+                   let l' = [ |- cons H' T' ] in ?
 ;
 
+rec map : ([ |- bool ] -> [ |- bool]) -> [ |- list N ] -> [ |- list N ] =
+fn f => fn l => case l of
+| [ |- nil ]      => [ |- nil ]
+| [ |- cons H T ] => let [ |- H' ] = f [ |- H ] in
+                   let [ |- T' ] = map f [ |- T ] in
+                   [ |- cons ? T' ]
+;
 
 rec head : [ |- list (succ N) ] -> [ |- bool ] =
 fn l => let [ |- cons H _ ] = l in [ |- H ]

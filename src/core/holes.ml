@@ -59,17 +59,16 @@ let gctxToString cD =
   in toString ++ Whnf.normCtx
 
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list = 
-  let rec aux acc c = function
+  let rec aux acc = function
     | LF.Empty -> acc
     | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
-        let tA' = Whnf.cnormCTyp (tA', LF.MShift c) in
         Unify.StdTrail.unifyCompTyp cD tA (tA', LF.MShift 0);
-        aux (n::acc) (c+1) cG'
-      with | _ -> aux acc (c+1) cG' end
-    | LF.Dec (cG', _) -> aux acc (c + 1) cG'
-  in aux [] 1 cG
+        aux (n::acc) cG'
+      with | _ -> aux acc cG' end
+    | LF.Dec (cG', _) -> aux acc cG'
+  in aux [] cG
 
 let printOne (loc, cD, cG, (tau, theta)) =
   let _ = Store.Cid.NamedHoles.reset () in

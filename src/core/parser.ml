@@ -433,7 +433,7 @@ GLOBAL: sgn;
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
    *)    |
         "#prefix"; i = SYMBOL; p = INTLIT; "."->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left ))]
+          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Prefix, int_of_string p, Some Sgn.Left ))]
 
       | "#assoc"; assoc = SYMBOL; "." ->
         begin match assoc with

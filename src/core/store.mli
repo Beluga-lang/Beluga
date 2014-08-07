@@ -1,6 +1,27 @@
 open Id
 open Syntax.Int
 
+module OpPragmas : sig
+  type fixPragma = {
+    name : Id.name;
+    fix : Syntax.Ext.Sgn.fix;
+    precedence : int;
+    assoc : Syntax.Ext.Sgn.assoc option;
+  }
+
+  val default : Syntax.Ext.Sgn.assoc ref
+
+  val clear : unit -> unit
+
+  val addPragma : Id.name -> Syntax.Ext.Sgn.fix -> int option -> Syntax.Ext.Sgn.assoc option-> unit
+
+  val getPragma : Id.name -> fixPragma option
+
+  val pragmaExists : Id.name -> bool
+
+  val pragmaCount : int ref
+
+end
 
 module Cid : sig
 
@@ -32,6 +53,7 @@ module Cid : sig
     val index_of_name     : name -> cid_typ
     val addConstructor    : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear             : unit -> unit
+    val args_of_name      : name -> int
 
     (* see subord.ml for an explanation of term-level subordination
          and type-level subordination *)
@@ -53,6 +75,7 @@ module Cid : sig
     val get           : cid_term -> entry
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
+    val args_of_name  : name -> int
     val clear         : unit -> unit
   end
 

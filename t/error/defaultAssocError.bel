@@ -1,0 +1,26 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+bool : type.
+t : bool.
+f : bool.
+
+list : nat -> type.
+nil : list z.
+@ : bool -> list N -> list (s N).
+
+
+#assoc left.
+#infix @ 5.
+
+let l1 = [ |- t @ t @ t @ nil];
+
+
+rec copy : [ |- list N ] -> [ |- list N] =
+fn l => case l of
+| [ |- nil ] => [ |- nil ]
+| [ |- X @ T ] =>
+	let [ |- T' ] = copy [ |- T ] in [ |- X @ T' ];
+
+

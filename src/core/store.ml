@@ -6,6 +6,45 @@ type error =
 exception Error of Syntax.Loc.t * error
 
 (* Register error printer at the end of this module. *)
+module OpPragmas = struct
+  type fixPragma = {
+    name : Id.name;
+    fix : Ext.Sgn.fix;
+    precedence : int;
+    assoc : Ext.Sgn.assoc option;
+  }
+
+  let default = ref Syntax.Ext.Sgn.None
+  
+  let pragmaCount = ref 0
+
+  let pragmas = ref []
+  
+  let clear () = pragmas := []
+  
+  let default_precedence = -1
+
+  let addPragma n f p_option a = 
+  let p = match p_option with Some x -> x | None -> default_precedence in
+    if (List.exists (fun x -> x.name = n) !pragmas) then
+      pragmas := List.map
+        (fun x -> if x.name = n then {name = n; fix = f; precedence = p; assoc = a} else x)
+        !pragmas
+    else
+      let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
+      pragmas := new_entry :: !pragmas ; incr pragmaCount
+
+  let getPragma name = 
+    begin
+      try
+        Some(List.find ((fun p -> name = p.name)) (!pragmas))
+      with
+      | _ -> None
+    end
+
+  let pragmaExists name = List.exists (fun x -> x.name = name) !pragmas
+
+end
 
 module Cid = struct
 
@@ -48,6 +87,14 @@ module Cid = struct
     let directory = Hashtbl.create 0
 
     let index_of_name n = Hashtbl.find directory n
+
+    let rec args = function
+    | Int.LF.Typ -> 0
+    | Int.LF.PiKind(_, k) -> 1 + (args k)
+
+    let args_of_name n = 
+      let entry = DynArray.get store (index_of_name n) in
+      (args (entry.kind)) - entry.implicit_arguments
 
     let get = DynArray.get store
 
@@ -198,6 +245,10 @@ module Cid = struct
           inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
 
     let add entry =
+(*       let a = args entry.kind in
+      print_string ("Name: " ^ (entry.name.Id.string_of_name) ^ " Args: " ^ (string_of_int a) ^ " Implicit: " ^ (string_of_int entry.implicit_arguments) ^ "\n");
+ *) 
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tp = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tp;
@@ -241,7 +292,8 @@ module Cid = struct
       typ                : Int.LF.typ
     }
 
-    let mk_entry n t i = {
+    let mk_entry n t i = 
+      {
       name               = n;
       implicit_arguments = i;
       typ                = t
@@ -256,7 +308,17 @@ module Cid = struct
 
     let index_of_name name = Hashtbl.find directory name
 
+    let rec args = function
+    | Int.LF.PiTyp(_, tA) -> 1 + args tA
+    | _ -> 0
+
+    let args_of_name n = 
+      let e = (DynArray.get store (index_of_name n)) in
+      (args e.typ) - e.implicit_arguments
+
+
     let add loc e_typ entry =
+      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tm = DynArray.length store in
         DynArray.add store entry;
         Hashtbl.replace directory entry.name cid_tm;
@@ -961,7 +1023,8 @@ let clear () =
   Cid.Schema.clear ();
   Cid.CompTyp.clear ();
   Cid.CompConst.clear ();
-  Cid.Comp.clear ()
+  Cid.Comp.clear ();
+  OpPragmas.clear()
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->

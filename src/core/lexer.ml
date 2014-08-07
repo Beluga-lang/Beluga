@@ -194,6 +194,9 @@ let lex_token loc = lexer
   | "#opts"
   | "%not"
   | "%query"
+  | "#infix"
+  | "#postfix"
+  | "#assoc"
   | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 

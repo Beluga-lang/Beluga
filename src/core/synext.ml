@@ -42,6 +42,7 @@ module LF = struct
     | PiTyp  of Loc.t * typ_decl * typ
     | Sigma of Loc.t * typ_rec
     | Ctx   of Loc.t * dctx
+    | AtomTerm of Loc.t * normal
 
   and normal =
     | Lam  of Loc.t * name * normal
@@ -49,6 +50,8 @@ module LF = struct
     | Tuple of Loc.t * tuple
     | LFHole of Loc.t
     | Ann of Loc.t * normal * typ
+    | TList of Loc.t * normal list
+    | NTyp of Loc.t * typ
 
   and head =
     | Name  of Loc.t * name
@@ -242,10 +245,16 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
+  type assoc = Left | Right | None
+  type precedence = int
+  type fix = Prefix | Postfix | Infix
+  
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
+    | FixPrag of name * fix * precedence * assoc option
     | NotPrag
+    | DefaultAssocPrag of assoc
 
   type decl =
     | Const    of Loc.t * name * LF.typ

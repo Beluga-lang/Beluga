@@ -55,7 +55,7 @@ case e of
  | [ |- plus U W]  =>
     add (eval  [ |- U]) (eval [ |- W])
 
- | [ |- letv  U (\x . (W  x))]  =>
+ | [ |- letv  U (\x . (W x))]  =>
    let [ |- V] = eval  [ |- U] in
-      eval [ |- (W V)]
+      eval [ |- (W, V)]
 ;

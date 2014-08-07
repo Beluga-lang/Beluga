@@ -1,2 +1,1 @@
-Found box-expression that does not have type [ |- nat] ->
-[ |- nat].
+Illegal use of operator s.

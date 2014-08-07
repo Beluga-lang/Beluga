@@ -60,13 +60,12 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   in aux [] 1 cD
 
 let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
-  let (_, sub) = tA in
   let rec aux acc c = function
     | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
       begin try 
         Unify.StdTrail.resetGlobalCnstrs ();
         (* let tA' = Whnf.cnormTyp (tA', LF.MShift c) in *)
-        Unify.StdTrail.unifyTyp cD cPsi' tA (tA', sub);
+        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
         aux (n::acc) (c+1) cPsi'
       with | _ -> aux acc (c+1) cPsi' end
     | LF.DDec(cPsi', _) -> aux acc (c+1) cPsi'

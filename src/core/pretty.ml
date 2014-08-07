@@ -1528,45 +1528,6 @@ module Int = struct
             (fmt_ppr_cmp_exp_chk  LF.Empty
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
-(*     let fmt_ppr_module_sig lvl ppf = function
-      | Sgn.ConstSig (_, c, a) ->
-          fprintf ppf "%s : %a.@\n"
-            (R.render_name c)
-            (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
-
-      | Sgn.TypSig (_, a, k) ->
-          fprintf ppf "%s : %a.@\n"
-            (R.render_name  a)
-            (fmt_ppr_lf_kind LF.Null lvl) k
-
-      | Sgn.CompTypSig (_, a, cK) ->
-          fprintf ppf "datatype %s : @[%a@] = @\n"
-             (R.render_name a)
-             (fmt_ppr_cmp_kind LF.Empty lvl) cK
-
-      | Sgn.CompCotypSig (_, a, cK) ->
-          fprintf ppf "codatatype %s : @[%a@] = @\n"
-             (R.render_name a)
-             (fmt_ppr_cmp_kind LF.Empty lvl) cK
-
-      | Sgn.CompDestSig (_, c, tau)
-      | Sgn.CompConstSig (_, c, tau) ->
-          fprintf ppf " | %s : @[%a@]@\n"
-            (R.render_name c)
-            (fmt_ppr_cmp_typ LF.Empty lvl) tau
-      
-      | Sgn.ValSig (_, x, tau) -> 
-          fprintf ppf "@\nlet %s : %a@\n"
-            (R.render_name x)
-            (fmt_ppr_cmp_typ LF.Empty lvl) tau
-
-      | Sgn.SchemaSig (_, w, schema) ->
-          fprintf ppf "schema %s = @[%a@];@\n"
-            (R.render_name  w)
-            (fmt_ppr_lf_schema ~useName:false lvl) schema *)
-
-
-
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (c, a) ->
           fprintf ppf "@\n%s : %a.@\n"
@@ -1624,12 +1585,8 @@ module Int = struct
           fprintf ppf "@\n#open %s@\n" (String.concat "." n')
 
       | Sgn.Pragma _ -> ()
-
-      | Sgn.Private(_, l) -> 
-          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-          fprintf ppf "@\nprivate %a" (aux) l
           
-      | Sgn.Module(_, name, None, decls) ->
+      | Sgn.Module(_, name, decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
 
           (* Necessary to enforce correct printing *)
@@ -1640,47 +1597,6 @@ module Int = struct
           let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
                     (name) (aux) decls in
           Store.Modules.setState state
-
-
-(*       | Sgn.Module(_, name, Some (Sgn.Name s), decls) ->
-          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-
-          (* Necessary to enforce correct printing *)
-          let orig = !Store.Modules.current in 
-          let origName = !Store.Modules.currentName in
-          let opened = !Store.Modules.opened in
-          let newName = origName@[name] in
-          let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
-          let _ = Store.Modules.currentName := newName in          
-          let _ = fprintf ppf "@\nmodule %s: %s = struct@\n@[<v2>@\n%a@]@\nend;@\n"
-                    (name) (s) (aux) decls in
-          let _ = Store.Modules.opened := opened in
-          let _ = Store.Modules.currentName := origName in
-          Store.Modules.current := orig
-
-
-      | Sgn.Module(_, name, (Some (Sgn.Sig l)), decls) ->
-          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-          let aux' fmt t = List.iter (fun x -> (fmt_ppr_module_sig lvl fmt x)) t in
-
-          (* Necessary to enforce correct printing *)
-          let orig = !Store.Modules.current in 
-          let origName = !Store.Modules.currentName in
-          let opened = !Store.Modules.opened in
-          let newName = origName@[name] in
-          let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
-          let _ = Store.Modules.currentName := newName in
-          let _ = fprintf ppf "@\nmodule %s: sig@ @[<v2>@\n%a@]@\nend = struct@\n@[<v2>@\n%a@]@\nend;@\n"
-                    (name) (aux') l (aux) decls in
-          let _ = Store.Modules.opened := opened in
-          let _ = Store.Modules.currentName := origName in
-          Store.Modules.current := orig
-
-      | Sgn.ModuleType(_, name, sigs) ->
-          let aux fmt t = List.iter (fun x -> (fmt_ppr_module_sig lvl fmt x)) t in
-          fprintf ppf "@\nmodule type %s = sig@\n@[<v2>@\n%a@]@\nend;@\n"
-            (name) 
-            (aux) sigs*)
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter

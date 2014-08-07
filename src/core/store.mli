@@ -10,7 +10,8 @@ module Modules : sig
   val current : module_id ref
   val currentName : string list ref
   val opened  : module_id list ref
-  val ignoreHidden : bool ref
+
+  val addSgnToCurrent : Sgn.decl -> unit
 
   val directory : (string list, module_id) Hashtbl.t
   val modules : Sgn.decl list ref DynArray.t
@@ -21,11 +22,8 @@ module Modules : sig
   val instantiateModule : string -> module_id
   val open_module : string list -> module_id
   
-  val addSignatures : string list -> Sgn.module_sig list -> unit
   val reset : unit -> unit
 
-  val signatures : (string list, Sgn.module_sig list) Hashtbl.t
-  val addSgnToCurrent : Sgn.decl -> unit
 end
 
 module Cid : sig
@@ -48,7 +46,6 @@ module Cid : sig
 
     val entry_list : (Id.cid_typ list ref) DynArray.t
 
-    val addHidden         : cid_typ -> unit
     val mk_entry          : name -> LF.kind -> int -> entry
     val add               : entry -> cid_typ
     val addNameConvention : name -> (unit -> string) option  -> (unit -> string) option -> cid_typ
@@ -75,7 +72,6 @@ module Cid : sig
       typ                : LF.typ
     }
 
-    val addHidden     : cid_term -> unit
     val mk_entry      : name -> LF.typ -> int -> entry
     val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
     val get           : ?fixName:bool -> cid_term -> entry
@@ -96,7 +92,6 @@ module Cid : sig
 
     val mk_entry  : name -> Comp.kind -> int -> entry
 
-    val addHidden     : cid_comp_typ -> unit
     val add           : entry -> cid_comp_typ
     val get           : ?fixName:bool -> cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
@@ -115,7 +110,6 @@ module Cid : sig
       mutable destructors : cid_comp_dest list
     }
 
-    val addHidden : cid_comp_cotyp -> unit
     val mk_entry  : name -> Comp.kind -> int -> entry
 
 
@@ -135,7 +129,6 @@ module Cid : sig
       typ                : Comp.typ
     }
 
-    val addHidden     : cid_comp_const -> unit
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_typ -> entry -> cid_comp_const
     val get           : ?fixName:bool -> cid_comp_const -> entry
@@ -152,7 +145,7 @@ module Cid : sig
       typ                : Comp.typ
     }
 
-    val addHidden     : cid_comp_dest -> unit
+
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_cotyp -> entry -> cid_comp_dest
     val get           : ?fixName:bool -> cid_comp_dest -> entry
@@ -170,7 +163,7 @@ module Cid : sig
       mctx               : LF.mctx;
       typ                : Comp.typ
     }
-    val addHidden     : cid_comp_typ -> unit
+    
     val mk_entry      : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
     val add           : entry -> cid_comp_typ
     val get           : ?fixName:bool -> cid_comp_typ -> entry
@@ -191,7 +184,7 @@ module Cid : sig
     }
 
     val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
-    val addHidden     : Id.cid_prog -> unit
+    
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
@@ -214,7 +207,7 @@ module Cid : sig
       schema : LF.schema
     }
 
-    val addHidden       : cid_schema -> unit
+    
     val mk_entry        : name -> LF.schema -> entry
     val add             : entry -> cid_schema
     val get             : ?fixName:bool -> cid_schema -> entry

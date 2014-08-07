@@ -254,26 +254,7 @@ module Sgn = struct
     | Rec      of Loc.t * Comp.rec_fun list
     | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query    of Loc.t * name option * LF.typ * int option * int option
-    | Module of Loc.t * string * signature option * decl list
-    | ModuleType of  Loc.t * string * module_sig list
-    | Private of Loc.t * decl list
-    
-  and module_sig =
-    | ConstSig    of Loc.t * name * LF.typ    
-    | TypSig      of Loc.t * name * LF.kind   
-    | CompTypSig  of Loc.t * name * Comp.kind   
-    | CompCotypSig of Loc.t * name * Comp.kind
-    | CompConstSig of Loc.t * name * Comp.typ
-    | CompDestSig of Loc.t * name * Comp.typ
-    | CompTypAbbrevSig of Loc.t * name * Comp.kind * Comp.typ   
-    | MRecTypSig  of Loc.t * module_sig list list 
-    | SchemaSig of Loc.t * name * LF.schema   
-    | ValSig of Loc.t * name * Comp.typ       
-    | RecSig of Loc.t * name * Comp.typ       
-
-  and signature =
-    | Name of string
-    | Sig of module_sig list
+    | Module of Loc.t * string * decl list
 
   type sgn = decl list
 

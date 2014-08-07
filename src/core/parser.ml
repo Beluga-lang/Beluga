@@ -305,139 +305,90 @@ GLOBAL: sgn;
 
 
   sgn_decl:
-    [ "non-private"
+    [ 
       [
           "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-          [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
+            [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
         | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
-          if Option.is_some x then
-            let p = Id.mk_name (Id.SomeString (Option.get x)) in
-            [Sgn.Query (_loc, Some p, a, e, t)]
-          else
-            [Sgn.Query (_loc, None, a, e, t)]
+            if Option.is_some x then
+              let p = Id.mk_name (Id.SomeString (Option.get x)) in
+              [Sgn.Query (_loc, Some p, a, e, t)]
+            else
+              [Sgn.Query (_loc, None, a, e, t)]
 
         | "%not" ->
-          [Sgn.Pragma (_loc, Sgn.NotPrag)]
-          
-        | "private"; x = sgn_decl LEVEL "decl" -> [Sgn.Private(_loc, x)]
+            [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
-        | "module"; n = UPSYMBOL; 
-            (* sig_opt = OPT[":"; "sig"; t = LIST1 module_sig; "end" -> Sgn.Sig t | ":"; t = UPSYMBOL -> Sgn.Name t];  *)
-            "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-            let decls = List.map (fun [x] -> x) decls in
-            [Sgn.Module(_loc, n,None, decls)]
-  (*       | 
-          "module"; "type"; n = UPSYMBOL; "="; "sig"; decls = LIST1 module_sig; "end"; ";" ->
-            [Sgn.ModuleType(_loc, n, decls)] *)
-      ]
-    | "decl" 
-      [ 
-        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
-           begin match k_or_a with
-             | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
-             | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
-           end
+        | "module"; n = UPSYMBOL; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
+              let decls = List.map (fun [x] -> x) decls in
+              [Sgn.Module(_loc, n, decls)]
+      
+        | a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
+             begin match k_or_a with
+               | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
+               | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
+             end
 
-(*      |
-        "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
-        const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
-          Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-*)
-      | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
-           [Sgn.MRecTyp(_loc, f)]
-(*
-      | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
-          check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-          Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
-*)
+  (*      |
+          "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
+          const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
+            Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+  *)
+        | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+             [Sgn.MRecTyp(_loc, f)]
+  (*
+        | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
+            check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
+            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+  *)
 
-      | "datatype"; f = cmp_cdat;
-        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> [Sgn.MRecTyp(_loc, [f])]
-            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-          end
+        | "datatype"; f = cmp_cdat;
+          g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
+                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+            begin match g with
+              | None -> [Sgn.MRecTyp(_loc, [f])]
+              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+            end
 
-      | "codatatype"; f = cocmp_cdat;
-        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> [Sgn.MRecTyp(_loc, [f])]
-            | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-          end
+        | "codatatype"; f = cocmp_cdat;
+          g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
+                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+            begin match g with
+              | None -> [Sgn.MRecTyp(_loc, [f])]
+              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+            end
 
-      | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
-          [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
-      |
-        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
-          [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
+        | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
+            [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
+        |
+          "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
+            [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
 
-      |
-        "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
-        "="; i = cmp_exp_syn;  ";" ->
-          [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
+        |
+          "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
+          "="; i = cmp_exp_syn;  ";" ->
+            [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
 
-      |
-(*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
-          Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
-*)
+        |
+  (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
+            Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
+  *)
 
-        "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
-          [Sgn.Rec (_loc, f)]
+          "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
+            [Sgn.Rec (_loc, f)]
 
 
-      (* A naked expression, in REPL. *)
-      | i = cmp_exp_syn ->
-        [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
+        (* A naked expression, in REPL. *)
+        | i = cmp_exp_syn ->
+          [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | 
-        "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
+        | 
+          "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
+      
     ]
-  
   ]
   ;
-
- (*  module_sig:
-    [
-      [
-        "let"; x = SYMBOL; ":"; tau = cmp_typ; ";" -> Sgn.ValSig(_loc, Id.mk_name(Id.SomeString x), tau)
-      |
-        "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
-          Sgn.SchemaSig (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)
-      |
-        "datatype"; f = cmp_cdat;
-        g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map decl_to_sig f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map decl_to_sig l) (f::g'))
-          end
-      |
-        "codatatype"; f = cocmp_cdat;
-        g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
-                | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-          begin match g with
-            | None -> Sgn.MRecTypSig(_loc, [List.map decl_to_sig f])
-            | Some g' -> Sgn.MRecTypSig(_loc, List.map (fun l -> List.map decl_to_sig l) (f::g'))
-          end
-      |
-        "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
-          Sgn.CompTypAbbrevSig (_loc, Id.mk_name (Id.SomeString a), k, tau)
-
-      |
-        a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ; "."->
-           begin match k_or_a with
-             | Kind k -> Sgn.TypSig   (_loc, Id.mk_name (Id.SomeString a_or_c), k)
-             | Typ  a -> Sgn.ConstSig (_loc, Id.mk_name (Id.SomeString a_or_c), a)
-           end
-      | 
-        "rec"; x = SYMBOL; ":"; tA = cmp_typ ; ";" ->
-          Sgn.RecSig(_loc, Id.mk_name (Id.SomeString x), tA)
-      ]
-    ]
-  ; *)
 
   bound:
     [

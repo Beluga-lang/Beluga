@@ -379,8 +379,6 @@ and eval_cofun codataval branches acc (theta, eta) =
 let eval e =
   dprint (fun () -> "Opsem.eval");
   Debug.indent 2;
-  Store.Modules.ignoreHidden := true;
   let result = eval_chk e (LF.MShift 0, Comp.Empty) in
-  Store.Modules.ignoreHidden := false;
   Debug.outdent 2;
   result

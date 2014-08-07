@@ -45,7 +45,7 @@ let mctxToString =
 let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
-  (* let tA = Whnf.normTyp tA in *)
+  let (_, sub) = tA in
   let rec aux acc c = function
     | LF.Empty -> acc
     | LF.Dec (cD', LF.Decl(n, LF.MTyp(tA', cPsi', LF.No)))
@@ -53,19 +53,20 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
         let tA' = Whnf.cnormTyp (tA', LF.MShift c) in
-        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
+        Unify.StdTrail.unifyTyp cD cPsi tA (tA', sub);
         aux (n::acc) (c+1) cD'
       with | _ -> aux acc (c+1) cD' end
     | LF.Dec (cD', _) -> aux acc (c + 1) cD'
   in aux [] 1 cD
 
 let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
+  let (_, sub) = tA in
   let rec aux acc c = function
     | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
       begin try 
         Unify.StdTrail.resetGlobalCnstrs ();
         (* let tA' = Whnf.cnormTyp (tA', LF.MShift c) in *)
-        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
+        Unify.StdTrail.unifyTyp cD cPsi' tA (tA', sub);
         aux (n::acc) (c+1) cPsi'
       with | _ -> aux acc (c+1) cPsi' end
     | LF.DDec(cPsi', _) -> aux acc (c+1) cPsi'
@@ -84,7 +85,7 @@ let printOne (loc, cD, cPsi, typ) =
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
   let _ = if List.length l > 0 then
-    Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n  - Suggestion%s: %s@\n"
+    Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n  - Variable%s of this type: %s@\n"
       (Loc.to_string loc) (mctx) (b1) (dctx) (b2) (goal)
       (if List.length l = 1 then "" else "s") (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else

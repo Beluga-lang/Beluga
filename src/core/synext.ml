@@ -18,13 +18,6 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
-(*      | TypDeclOpt of name  *)
-
-(*   and ctyp_decl =
-    | MDecl of Loc.t * name * typ  * dctx
-    | PDecl of Loc.t * name * typ  * dctx
-    | SDecl of Loc.t * name * dctx * dctx
-    | CDecl of Loc.t * name * name *)
 
   and ctyp =
     | MTyp of Loc.t * typ * dctx * depend
@@ -42,6 +35,7 @@ module LF = struct
     | PiTyp  of Loc.t * typ_decl * typ
     | Sigma of Loc.t * typ_rec
     | Ctx   of Loc.t * dctx
+    | AtomTerm of Loc.t * normal
 
   and normal =
     | Lam  of Loc.t * name * normal
@@ -49,6 +43,8 @@ module LF = struct
     | Tuple of Loc.t * tuple
     | LFHole of Loc.t
     | Ann of Loc.t * normal * typ
+    | TList of Loc.t * normal list
+    | NTyp of Loc.t * typ
 
   and head =
     | Name  of Loc.t * name
@@ -242,10 +238,17 @@ end
 (** External Signature Syntax *)
 module Sgn = struct
 
+  type assoc = Left | Right | None
+  type precedence = int
+  type fix = Prefix | Postfix | Infix
+  
   type pragma =
     | OptsPrag of string list
     | NamePrag of name * string * string option
+    | FixPrag of name * fix * precedence * assoc option
     | NotPrag
+    | DefaultAssocPrag of assoc
+    | OpenPrag of string list
 
   type decl =
     | Const    of Loc.t * name * LF.typ
@@ -261,7 +264,10 @@ module Sgn = struct
     | Rec      of Loc.t * Comp.rec_fun list
     | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query    of Loc.t * name option * LF.typ * int option * int option
+    | Module of Loc.t * string * decl list
 
   type sgn = decl list
+
+
 
 end

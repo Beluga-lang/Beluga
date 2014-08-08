@@ -123,6 +123,8 @@ let regexp letter = [ 'a'-'z' 'A'-'Z' ]
 
 let regexp digit  = [ '0'-'9' ]
 
+let regexp upper = ['A' - 'Z']
+
 (**************************************************)
 (* Location Update and Token Generation Functions *)
 (**************************************************)
@@ -150,6 +152,7 @@ let mk_integer  s = Token.INTLIT s
 
 let mk_dots s = Token.DOTS s
 
+let mk_module s = Token.MODULESYM s
 (* let mk_turnstile s = Token.TURNSTILE s *)
 
 (**********)
@@ -160,6 +163,7 @@ let mk_dots s = Token.DOTS s
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let lex_token loc = lexer
+  | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
 (*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
@@ -187,13 +191,20 @@ let lex_token loc = lexer
   | "schema"
   | "some"
   | "then"
-  | "type"
+  | "module"
+  | "struct"
+  | "end"
   | "ttrue"
   | "ffalse"
   | "%name"
   | "#opts"
   | "%not"
   | "%query"
+  | "#infix"
+  | "#prefix"
+  | "#assoc"
+  | "#open"
+  | "type"
   | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
 

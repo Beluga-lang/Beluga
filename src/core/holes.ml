@@ -121,17 +121,16 @@ let setStagedHolePos i l =
       let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
       DynArray.set stagedholes i (l, cD, cG, tclo)
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list = 
-  let rec aux acc c = function
+  let rec aux acc = function
     | LF.Empty -> acc
     | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
-        let tA' = Whnf.cnormCTyp (tA', LF.MShift c) in
         Unify.StdTrail.unifyCompTyp cD tA (tA', LF.MShift 0);
-        aux (n::acc) (c+1) cG'
-      with | _ -> aux acc (c+1) cG' end
-    | LF.Dec (cG', _) -> aux acc (c + 1) cG'
-  in aux [] 1 cG
+        aux (n::acc) cG'
+      with | _ -> aux acc cG' end
+    | LF.Dec (cG', _) -> aux acc cG'
+  in aux [] cG
 
 let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
   Store.Cid.NamedHoles.reset () ;
@@ -163,7 +162,7 @@ let printOne (loc, cD, cG, (tau, theta)) =
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   if List.length l > 0 then
     Format.printf 
-      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Suggestion%s: %s@\n"
+      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
       (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
       (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else

@@ -2790,8 +2790,8 @@ match sigma with
         else
           raise (Failure "Bound variable clash")
 
-    | (Const c1, Const c2) ->
-        if c1 = c2 then
+    | (Const ((i, id) as _c1), Const ((i', id') as _c2)) ->
+        if i = i' && id = id' then
           ()
         else
           raise (Failure "Constant clash")
@@ -3575,8 +3575,8 @@ match sigma with
    and unifyTyp mflag cD0 cPsi sA sB = unifyTypW mflag cD0 cPsi (Whnf.whnfTyp sA) (Whnf.whnfTyp sB)
 
     and unifyTypW mflag cD0 cPsi sA sB = match (sA, sB) with
-      | ((Atom (_, a, tS1), s1),   (Atom (_, b, tS2), s2))  ->
-          if a = b then
+      | ((Atom (_, (a, b), tS1), s1),   (Atom (_, (a', b'), tS2), s2))  ->
+          if a = a' && b = b' then
             ((* dprint (fun () -> "Unify Atomic types " ^ P.typToString cD0 cPsi sA
                        ^ " == " ^ P.typToString cD0 cPsi sB);*)
             unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))

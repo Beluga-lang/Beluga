@@ -9,6 +9,10 @@ type lvl
 
 val std_lvl : lvl
 
+val line_num : int ref
+val printing_nums : bool ref
+val setup_linenums : unit -> unit
+
 module Control : sig
   type substitution_style = Natural | DeBruijn
 

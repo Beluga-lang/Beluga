@@ -48,7 +48,7 @@ let chatteroff = {name = "chatteroff";
 
 let types = {name = "types";
              run = (fun ppf _ ->
-               let entrylist = List.rev_map Typ.get (!Typ.entry_list) in
+               let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
                let dctx = Synint.LF.Null in
                List.iter (fun x -> fprintf ppf " - %s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
              help = "Print out all types currently defined"}
@@ -59,7 +59,9 @@ let load = {name = "load";
               try
                 let arg = List.hd arglist in
                 let sgn = Parser.parse_file ~name:arg Parser.sgn in
-                Recsgn.recSgnDecls sgn;
+                let sgn' = Recsgn.recSgnDecls sgn in
+                if !Debug.chatter <> 0 then
+                  List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
                 fprintf ppf " - The file has been successfully loaded.\n"
               with
               |Failure _ -> fprintf ppf " - Please provide the file name\n");
@@ -137,7 +139,7 @@ let constructors = {name = "constructors";
                     run = (fun ppf arglist ->
                       try
                         let arg = List.hd arglist in
-                        let entrylist = List.rev_map Typ.get (!Typ.entry_list) in
+                        let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
                         let entry = List.find (fun x -> arg = x.Typ.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
                         let dctx = Synint.LF.Null in
@@ -257,7 +259,7 @@ let compconst = {name = "constructors-comp";
                     run = (fun ppf arglist ->
                       try
                         let arg = List.hd arglist in
-                        let entrylist = List.rev_map CompTyp.get (!CompTyp.entry_list) in
+                        let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
                         let entry = List.find (fun x -> arg = x.CompTyp.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
                         let termlist = List.rev_map CompConst.get (entry.CompTyp.constructors) in
@@ -272,7 +274,7 @@ let signature = {name = "fsig";
                     run = (fun ppf arglist ->
                       try
                         let arg = List.hd arglist in
-                        let (cidlist,_) = List.split (!Comp.entry_list) in
+                        let (cidlist,_) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
                         let entrylist = List.rev_map Comp.get cidlist in
                         let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
 
@@ -288,12 +290,12 @@ let printfun = {name = "fdef";
                     run = (fun ppf arglist ->
                       try
                         let arg = List.hd arglist in
-                        let (cidlist,_) = List.split (!Comp.entry_list) in
+                        let (cidlist,_) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
                         let entrylist = List.rev_map Comp.get cidlist in
                         let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
                         (match entry.Comp.prog with
                         | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
-                            fprintf ppf " - "; ppr_sgn_decl (Synint.Sgn.Rec(prog,entry.Comp.typ ,ec))
+                            fprintf ppf " - "; ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
                         |     _  -> fprintf ppf " - %s is not a function. \n" arg
                             )
                       with

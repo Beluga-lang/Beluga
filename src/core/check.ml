@@ -823,11 +823,12 @@ module Sgn = struct
           LF.checkSchema (Syntax.Loc.ghost) cD cPsi schema;
           check_sgn_decls decls
 
-    | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->
+    | Syntax.Int.Sgn.Rec (l) :: decls ->
         let cD = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
+        List.iter (fun (f, tau, e)->
           Comp.checkTyp cD tau;
-          Comp.check cD cG e (tau, Whnf.m_id);
+          Comp.check cD cG e (tau, Whnf.m_id)) l;
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->

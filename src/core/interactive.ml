@@ -251,11 +251,18 @@ let replaceHole i exp =
 
   let funOfHole i =
     let (loc, _cD, _cG, (_tau, _mS)) = Holes.getOneHole i in
-    let entries = !Store.Cid.Comp.entry_list in
-    try
-      let (cid_prog,loc') =  List.find (fun (_,loc') -> Holes.locWithin loc' loc) entries  in
-      (Store.Cid.Comp.get cid_prog, loc')
-    with Not_found -> failwith "Error in Interactive.funOfHole" in
+    let entries = DynArray.to_list Store.Cid.Comp.entry_list in
+    let opt =  
+      List.fold_left (fun found_opt entries' -> 
+        match found_opt with
+        | None -> 
+          begin try 
+            Some(List.find (fun (_,loc') -> Holes.locWithin loc' loc) !entries')
+          with _ -> None end
+        | Some _ -> found_opt) None entries in
+    match opt with
+    | Some (cid_prog, loc') -> (Store.Cid.Comp.get cid_prog, loc')
+    | _ -> failwith "Error in Interactive.funOfHole" in
 
   let (entry, loc) = funOfHole i in
   let Some lh = Holes.getHolePos i in
@@ -267,7 +274,7 @@ let replaceHole i exp =
             Store.Cid.Comp.mk_entry entry.Store.Cid.Comp.name entry.Store.Cid.Comp.typ entry.Store.Cid.Comp.implicit_arguments
               (Synint.Comp.RecValue (cid, ec', ms, env))
               entry.Store.Cid.Comp.mut_rec) in
-      P.ppr_sgn_decl (Synint.Sgn.Rec(prog,entry.Store.Cid.Comp.typ ,ec'))
+      P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
   | _ -> Holes.stashHoles (); failwith ("Error in replaceHole: "^(entry.Store.Cid.Comp.name.Id.string_of_name)^" is not a function\n")  )
 
 

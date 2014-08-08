@@ -85,7 +85,7 @@ let rec process_options = function
 
 let init_repl ppf =
   fprintf ppf "        Beluga (interactive) version %s@.@." Version.beluga_version;
-  whale ppf;
+  if not !Options.emacs then whale ppf;
   Sys.catch_break true
 
 let rec loop ppf =
@@ -100,7 +100,9 @@ let rec loop ppf =
             Command.do_command ppf cmd
           | `Input input ->
               let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
-                Recsgn.recSgnDecls sgn
+              let sgn' = Recsgn.recSgnDecls sgn in
+              if !Debug.chatter <> 0 then
+                List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
     with
       | End_of_file -> exit 0
       | Sys.Break -> fprintf ppf "Interrupted.@."
@@ -129,7 +131,9 @@ let main () =
     try
       let arg = List.hd files in
       let sgn = Parser.parse_file ~name:arg Parser.sgn in
-      Recsgn.recSgnDecls sgn;
+      let sgn' = Recsgn.recSgnDecls sgn in
+        if !Debug.chatter <> 0 then
+          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
       fprintf ppf "The file has been successfully loaded.\n"
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;

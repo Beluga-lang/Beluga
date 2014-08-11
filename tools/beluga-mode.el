@@ -32,6 +32,85 @@
 (eval-when-compile (require 'cl))
 (require 'smie nil t)                   ;Use smie when available.
 
+(provide 'beluga-unicode-input-method)
+(require 'quail)
+
+(quail-define-package
+ "beluga-unicode" ;; name
+ "UTF-8" ;; language
+ "\\" ;; title
+ t ;; guidance
+ "Beluga unicode input method: actually replaces keyword strings with a single unicode character instead of merely representing the keywords in unicode using Font Lock mode."
+  nil nil nil nil nil nil nil nil nil nil t)
+  
+
+(quail-define-rules
+ ;; Greek letters
+ ("alpha " ["α"])
+ ("Alpha " ["Α"])
+ ("beta " ["β"])
+ ("Beta " ["Β"])
+ ("gamma " ["γ"])
+ ("Gamma " ["Γ"])
+ ("delta " ["δ"])
+ ("Delta " ["Δ"])
+ ("epsilon " ["ε"])
+ ("Epsilon " ["Ε"])
+ ("zeta " ["ζ"])
+ ("Zeta " ["Ζ"])
+ ("eta " ["η"])
+ ("Eta " ["Η"])
+ ("theta " ["θ"])
+ ("Theta " ["Θ"])
+ ("iota " ["ι"])
+ ("Iota " ["Ι"])
+ ("kappa " ["κ"])
+ ("Kappa " ["Κ"])
+ ("lambda " ["λ"])
+ ("Lambda " ["Λ"])
+ ("lamda " ["λ"])
+ ("Lamda " ["Λ"])
+ ("mu " ["μ"])
+ ("Mu " ["Μ"])
+ ("nu " ["ν"])
+ ("Nu " ["Ν"])
+ ("xi " ["ξ"])
+ ("Xi " ["Ξ"])
+ ("omicron " ["ο"])
+ ("Omicron " ["Ο"])
+ ("pi " ["π"])
+ ("Pi " ["Π"])
+ ("rho " ["ρ"])
+ ("Rho " ["Ρ"])
+ ("sigma " ["σ"])
+ ("Sigma " ["Σ"])
+ ("tau " ["τ"])
+ ("Tau " ["Τ"])
+ ("upsilon " ["υ"])
+ ("Upsilon " ["Υ"])
+ ("phi " ["φ"])
+ ("Phi " ["Φ"])
+ ("chi " ["χ"])
+ ("Chi " ["Χ"])
+ ("psi " ["ψ"])
+ ("Psi " ["Ψ"])
+ ("omega " ["ω"])
+ ("Omega " ["Ω"])
+
+
+ ;; Arrows
+ ("->" ["→"])
+ ("<-" ["←"])
+ ("=>" ["⇒"])
+ 
+ ;;LF
+ ("|-" ["⊢"])
+ ("not" ["¬"])
+ ("::" ["∷"])
+ (".." ["…"]) 
+ ("FN" ["Λ"])
+)
+
 (defgroup beluga-mode ()
   "Editing support for the Beluga language."
   :group 'languages)
@@ -225,12 +304,22 @@ If a previous beli process already exists, kill it first."
   (assert (eq (current-buffer) (process-buffer proc)))
   (while (and (progn
                 (goto-char comint-last-input-end)
-                (not (re-search-forward comint-prompt-regexp nil t)))
-              (accept-process-output proc))))
+                (not (re-search-forward "\n.*\n" nil t)))
+              (accept-process-output proc 0.25))))
+
+(defun chomp (str)
+  "Chomp leading and tailing whitespace from STR."
+  (replace-regexp-in-string (rx (or (: bos (* (any " \t\n")))
+                                    (: (* (any " \t\n")) eos)))
+                            ""
+                            str))
+(defun trim (str)
+  (let ((str2 (chomp str)))
+    (substring str2 0 (1- (length str2)))))
 
 (defun beluga--send (cmd)
   "Send commands to beli."
-  (interactive)
+  ; (interactive)
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
       (beluga--wait proc)
@@ -245,7 +334,7 @@ If a previous beli process already exists, kill it first."
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
       (beluga--wait proc)
-      (buffer-substring-no-properties comint-last-input-end (point-max)))))
+      (chomp (buffer-substring-no-properties comint-last-input-end (point-max))))))
 
 (defun beluga--rpc (cmd)
   (beluga--send cmd)
@@ -280,21 +369,21 @@ If a previous beli process already exists, kill it first."
   '((t :background "yellow")) ;; :foreground "white"
   "Face used to highlight holes in Beluga mode.")
 
-(defun beluga--pos (_line _bol offset)
+(defun beluga--pos (line bol offset)
   ;; According to http://caml.inria.fr/mantis/view.php?id=5159,
   ;; `line' can refer to line numbers in various source files,
   ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
   ;; the actual parsed stream.
   ;; So if there might be #line directives, we need to do:
-  ;;  (save-excursion
-  ;;    (goto-char (point-min))
-  ;;    (forward-line (1- line)) ;Lines count from 1 :-(
-  ;;    (+ (point) (- offset bol)))
+   (save-excursion
+     (goto-char (point-min))
+     (forward-line (1- line)) ;Lines count from 1 :-(
+     (+ (point) (- offset bol))))
   ;; But as long as we know there's no #line directive, we can ignore all that
   ;; and use the more efficient code below.  When #line directives can appear,
   ;; we will need to make further changes anyway, such as passing the file-name
   ;; to select the appropriate buffer.
-  (+ (point-min) offset))
+  ; (+ (point-min) offset))
 
 (defun beluga--create-overlay (pos)
   "Create an overlay at the position described by POS (a Loc.to_tuple)."
@@ -316,7 +405,6 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (beluga-erase-holes)
   (let ((numholes (string-to-number (beluga--rpc "numholes"))))
-    (message "Numholes: %d" numholes)
     (dotimes (i numholes)
       (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
              (ol (beluga--create-overlay pos))
@@ -361,6 +449,12 @@ If a previous beli process already exists, kill it first."
        (append '(?|) (if (boundp 'electric-indent-chars)
                          electric-indent-chars
                        '(?\n))))
+  ;;QUAIL
+  (add-hook 'beluga-mode-hook 
+    (lambda () (set-input-method "beluga-unicode")))
+   
+  ;;Turn off hilighting
+;;(setq input-method-highlight-flag nil)
 
   ;; SMIE setup.
   (set (make-local-variable 'parse-sexp-ignore-comments) t)

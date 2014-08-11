@@ -37,11 +37,11 @@ let countholes = {name = "countholes";
                   help = "Print the total number of holes"}
 
 let numholes = {name = "numholes";
-                  run = (fun ppf _ -> fprintf ppf "%d" (Holes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "%d\n" (Holes.getNumHoles()));
                   help = "Print the total number of holes"}
 
 let numlfholes = {name = "numlfholes";
-                  run = (fun ppf _ -> fprintf ppf "%d" (Lfholes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "%d\n" (Lfholes.getNumHoles()));
                   help = "Print the total number of lf holes"}
 
 let chatteron = {name = "chatteron";
@@ -118,7 +118,7 @@ let lochole = {name = "lochole";
                             stop_off,
                             _ghost) = Core.Syntax.Loc.to_tuple loc in
                        fprintf ppf
-                         " - (\"%s\" %d %d %d %d %d %d)\n"
+                         "(\"%s\" %d %d %d %d %d %d)\n"
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
@@ -142,7 +142,7 @@ let loclfhole = {name = "lochole-lf";
                             stop_off,
                             _ghost) = Core.Syntax.Loc.to_tuple loc in
                        fprintf ppf
-                         " - (\"%s\" %d %d %d %d %d %d)\n"
+                         "(\"%s\" %d %d %d %d %d %d)\n"
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off

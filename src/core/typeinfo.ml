@@ -165,8 +165,8 @@ let type_of_position (pos : int) : string =
     let cmp l1 l2 = (Loc.start_off l1) - (Loc.start_off l2) in
     let l = Hashtbl.fold (fun k v acc -> (k,v)::acc) Annot.store [] in
       List.sort (fun (key1,_) (key2,_) -> cmp key1 key2) l in
-  let f (l, _) = print_string ((string_of_int (Loc.start_off l)) ^ ", " ^ (string_of_int (Loc.stop_off l)) ^ "\n") in
-  let _ = List.iter f sorted in
+  (* let f (l, _) = print_string ((string_of_int (Loc.start_off l)) ^ ", " ^ (string_of_int (Loc.stop_off l)) ^ "\n") in
+  let _ = List.iter f sorted in *)
   let contains_pos (l, _) =
     (Loc.start_off l <= pos) && (pos <= Loc.stop_off l) in(* 
   let _ = print_string (string_of_int (List.length sorted)) in *)

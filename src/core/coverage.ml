@@ -758,7 +758,7 @@ let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
     let constructors = (Types.get a).Types.constructors in
       (* Reverse the list so coverage will be checked in the order that the
 	 constructors were declared, which is more natural to the user *)
-    let constructors = List.rev constructors in
+    let constructors = List.rev !constructors in
     let tH_tA_list   = List.map (function c -> (LF.Const c,
 						(Const.get  c).Const.typ))
                                 constructors
@@ -1553,7 +1553,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 
   | Comp.TypBase (_, c, mS) ->
       let _ = dprint (fun () -> "\n[genPatCGoals] for " ^ P.compTypToString cD tau  ^ "\n") in
-      let constructors = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors in
+      let constructors = !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors) in
       let _ = if constructors = [] then dprint (fun () -> "[genPatCGoals] No Constructors defined for " ^ P.compTypToString cD tau) else () in
       let constructors = List.rev constructors in
       let ctau_list   = List.map (function c ->

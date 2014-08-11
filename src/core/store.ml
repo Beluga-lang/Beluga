@@ -132,10 +132,10 @@ module Cid = struct
       kind                 : Int.LF.kind;
       var_generator        : (unit -> string) option;
       mvar_generator       : (unit -> string) option;
-      mutable frozen       : bool;
-      mutable constructors : Id.cid_term list;
-      mutable subordinates : BitSet.t;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
-      mutable typesubordinated : BitSet.t (* unused at the moment *)
+      frozen       : bool ref;
+      constructors : Id.cid_term list ref;
+      subordinates : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
+      typesubordinated : BitSet.t ref (* unused at the moment *)
     }
 
     let entry_list : (Id.cid_typ list ref) DynArray.t = DynArray.create ()
@@ -148,10 +148,10 @@ module Cid = struct
         kind               = kind;
         var_generator      = None;
         mvar_generator     = None;
-        frozen             = false;
-        constructors       = [];
-        subordinates       = BitSet.empty ();
-        typesubordinated   = BitSet.empty ()
+        frozen             = ref false;
+        constructors       = ref [];
+        subordinates       = ref (BitSet.empty ());
+        typesubordinated   = ref (BitSet.empty ())
       }
 
 
@@ -188,7 +188,7 @@ module Cid = struct
       (args (entry.kind)) - entry.implicit_arguments
 
     let freeze a =
-          (get a).frozen <- true
+          (get a).frozen := true
 
     let addNameConvention cid_name var_name_generator mvar_name_generator =
       let cid_tp = index_of_name cid_name in
@@ -279,17 +279,17 @@ module Cid = struct
       let (a_l, a_n) = a in
       let a_e = get a in
       let b_e = get b in
-        if BitSet.is_set b_e.subordinates a_n then
+        if BitSet.is_set !(b_e.subordinates) a_n then
           (* a is already in the subordinate relation for b, i.e. b depends on a *)
           ()
         else
           (* a is not yet in the subordinate relation for b, i.e. b depends on a *)
-          (BitSet.set b_e.subordinates a_n;
+          (BitSet.set !(b_e.subordinates) a_n;
            (* Take transitive closure:
               If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
            (* Call below could be replaced by
               subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
-           subord_iter (fun aa -> addSubord (a_l, aa) b) a_e.subordinates;
+           subord_iter (fun aa -> addSubord (a_l, aa) b) !(a_e.subordinates);
           )
 
 (*
@@ -381,10 +381,10 @@ module Cid = struct
 
     let addConstructor loc typ c tA =
       let entry = get typ in
-        if entry.frozen then
+        if !(entry.frozen) then
           raise (Error (loc, FrozenType typ))
         else
-          let _ = entry.constructors <- c :: entry.constructors in
+          let _ = entry.constructors := c :: !(entry.constructors) in
           let _ = inspect [] tA in
           (* type families occuring tA are added to the subordination relation
              BP: This insepction should be done once for each type family - not
@@ -401,12 +401,12 @@ module Cid = struct
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
       let (_, b_n) = b in
-        (*subord_read*)BitSet.is_set a_e.subordinates b_n
+        (*subord_read*)BitSet.is_set !(a_e.subordinates) b_n
 
     let is_typesubordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let b_e = get b in
       let (_, a_n) = a in
-        (*subord_read*)BitSet.is_set b_e.typesubordinated a_n
+        (*subord_read*)BitSet.is_set !(b_e.typesubordinated) a_n
   end
 
   module Term = struct
@@ -564,16 +564,16 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      mutable frozen       : bool;
-      mutable constructors: Id.cid_comp_const list
+      frozen       : bool ref;
+      constructors: Id.cid_comp_const list ref
     }
 
     let mk_entry name kind implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
-      frozen             = false;
-      constructors       = []
+      frozen             = ref false;
+      constructors       = ref []
     }
 
     let entry_list : (Id.cid_comp_typ list ref) DynArray.t = DynArray.create ()
@@ -637,11 +637,11 @@ module Cid = struct
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let freeze a =
-          (get a).frozen <- true
+          (get a).frozen := true
 
     let addConstructor c typ =
       let entry = get typ in
-        entry.constructors <- c :: entry.constructors
+        entry.constructors := c :: !(entry.constructors)
 
     let clear () =
       (DynArray.get entry_list !Modules.current) := [];
@@ -655,16 +655,16 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      mutable frozen       : bool;
-      mutable destructors: Id.cid_comp_dest list
+      frozen       : bool ref;
+      destructors: Id.cid_comp_dest list ref
     }
 
     let mk_entry name kind implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
-      frozen             = false;
-      destructors        = []
+      frozen             = ref false;
+      destructors        = ref []
     }
 
 
@@ -712,11 +712,11 @@ module Cid = struct
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
     let freeze a =
-          (get a).frozen <- true
+          (get a).frozen := true
 
     let addDestructor c typ =
       let entry = get typ in
-        entry.destructors <- c :: entry.destructors
+        entry.destructors := c :: !(entry.destructors)
 
     let clear () =
       DynArray.clear (DynArray.get store (!Modules.current));

@@ -58,10 +58,10 @@ module Cid : sig
       kind                 : LF.kind;
       var_generator        : (unit -> string) option;
       mvar_generator       : (unit -> string) option;
-      mutable frozen       : bool;
-      mutable constructors : Id.cid_term list;
-      mutable subordinates : BitSet.t;
-      mutable typesubordinated : BitSet.t
+      frozen       : bool ref;
+      constructors : Id.cid_term list ref;
+      subordinates : BitSet.t ref;
+      typesubordinated : BitSet.t ref
     }
 
     val freeze : cid_typ -> unit
@@ -110,8 +110,8 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       kind               : Comp.kind;
-      mutable frozen             : bool;
-      mutable constructors : cid_comp_const list
+      frozen             : bool ref;
+      constructors : cid_comp_const list ref
     }
 
     val entry_list : (Id.cid_comp_typ list ref) DynArray.t
@@ -132,8 +132,8 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       kind               : Comp.kind;
-      mutable frozen             : bool;
-      mutable destructors : cid_comp_dest list
+      frozen             : bool ref;
+      destructors : cid_comp_dest list ref
     }
 
     val mk_entry  : name -> Comp.kind -> int -> entry

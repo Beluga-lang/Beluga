@@ -351,7 +351,7 @@ module Index = struct
   *)
   let storeTypConst cidTyp =
     let typEntry = Cid.Typ.get cidTyp in
-    let typConstr = typEntry.Cid.Typ.constructors in
+    let typConstr = !(typEntry.Cid.Typ.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
       addSgnClause typConst (compileSgnClause cidTerm) in

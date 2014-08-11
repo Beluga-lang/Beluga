@@ -36,6 +36,14 @@ let countholes = {name = "countholes";
                   run = (fun ppf _ -> fprintf ppf " - Computation Level Holes: %d\n - LF Level Holes: %d\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
                   help = "Print the total number of holes"}
 
+let numholes = {name = "numholes";
+                  run = (fun ppf _ -> fprintf ppf "%d" (Holes.getNumHoles()));
+                  help = "Print the total number of holes"}
+
+let numlfholes = {name = "numlfholes";
+                  run = (fun ppf _ -> fprintf ppf "%d" (Lfholes.getNumHoles()));
+                  help = "Print the total number of lf holes"}
+
 let chatteron = {name = "chatteron";
                  run = (fun ppf _ -> Debug.chatter :=1; fprintf ppf " - The chatter is on now.\n");
                  help = "Turn on the chatter"}
@@ -53,6 +61,14 @@ let types = {name = "types";
                List.iter (fun x -> fprintf ppf " - %s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
              help = "Print out all types currently defined"}
 
+let reset = {name= "reset";
+             run=
+                (fun ppf _ ->
+                  Store.clear ();
+                  Typeinfo.clear_all ();
+                  Holes.clear();
+                  Lfholes.clear (); fprintf ppf "Reset successful@\n");
+              help="Reset the store"}
 
 let load = {name = "load";
             run = (fun ppf arglist ->
@@ -140,10 +156,11 @@ let constructors = {name = "constructors";
                       try
                         let arg = List.hd arglist in
                         let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
-                        let entry = List.find (fun x -> arg = x.Typ.name.Id.string_of_name) entrylist in
+                        let entry = List.find (fun x -> 
+                            arg = x.Typ.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
                         let dctx = Synint.LF.Null in
-                        let termlist = List.rev_map Term.get (entry.Typ.constructors) in
+                        let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
                         List.iter (fun x -> fprintf ppf " - %s: [%d] " x.Term.name.Id.string_of_name x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist
                       with
                       | Not_found -> fprintf ppf " - Such type does not exist!!\n"
@@ -262,7 +279,7 @@ let compconst = {name = "constructors-comp";
                         let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
                         let entry = List.find (fun x -> arg = x.CompTyp.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
-                        let termlist = List.rev_map CompConst.get (entry.CompTyp.constructors) in
+                        let termlist = List.rev_map (CompConst.get ~fixName:true) !(entry.CompTyp.constructors) in
                         List.iter (fun x -> fprintf ppf " - %s: [%d] " x.CompConst.name.Id.string_of_name x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist
                       with
                       | Not_found -> fprintf ppf " - Such type does not exist!!\n"
@@ -342,12 +359,6 @@ let query = {name = "query";
                     | e -> fprintf ppf " - Error in query : %s\n" (Printexc.to_string e));
             help = "%:query EXPECTED TRIES TYP.\tQuery solutions to a given type"}
 
-let reset = {name= "reset";
-             run=
-                (fun _ _ ->
-                  Store.clear ();
-                  Typeinfo.clear_all ());
-              help="Reset the store"}
 
 let get_type = {name = "get-type";
                 run =
@@ -366,6 +377,8 @@ let _ = reg := [
         chatteron    ;
         load         ;
         countholes   ;
+        numholes     ;
+        numlfholes   ;
         lochole      ;
         loclfhole    ;
         printhole    ;

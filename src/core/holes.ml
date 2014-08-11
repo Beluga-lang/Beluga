@@ -195,3 +195,6 @@ let getHolePos i =
       let  (loc, _, _, (_, _)) = DynArray.get holes i in Some loc
     with
       | DynArray.Invalid_arg (_, _, _) -> None
+
+let clear () =
+    DynArray.clear holes

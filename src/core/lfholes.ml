@@ -173,3 +173,6 @@ let printAll () =
   let _ = Store.Cid.NamedHoles.printingHoles := true in
   let _ = DynArray.iter printOne holes in
   Store.Cid.NamedHoles.printingHoles := false
+
+let clear () =
+    DynArray.clear holes

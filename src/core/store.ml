@@ -461,8 +461,8 @@ module Cid = struct
             DynArray.add directory x;
             x
           end in
-        Hashtbl.replace directory entry.name cid_tm;
-        Typ.addConstructor loc e_typ cid_tm entry.typ;
+        let _ = Hashtbl.replace directory entry.name cid_tm in
+        let _ = Typ.addConstructor loc e_typ cid_tm entry.typ in
         cid_tm end
 
     let get ?(fixName=false) (l, n) =

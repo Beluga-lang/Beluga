@@ -18,3 +18,5 @@ val commitHoles : unit -> unit
 val stashHoles : unit -> unit
 val getStagedHoleNum : Loc.t -> int
 val setStagedHolePos : int -> Loc.t -> unit
+
+val clear : unit -> unit

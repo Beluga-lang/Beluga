@@ -315,7 +315,8 @@ If a previous beli process already exists, kill it first."
   "Create overlays for each of the holes and color them."
   (interactive)
   (beluga-erase-holes)
-  (let ((numholes (string-to-number (beluga--rpc "countholes"))))
+  (let ((numholes (string-to-number (beluga--rpc "numholes"))))
+    (message "Numholes: %d" numholes)
     (dotimes (i numholes)
       (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
              (ol (beluga--create-overlay pos))

@@ -5,6 +5,7 @@ module Options = struct
   let readline = ref true
   let emacs = ref false
   let debug = ref false
+  let interrupt_count = ref 0
 end
 
 let whale ppf = fprintf ppf
@@ -105,7 +106,10 @@ let rec loop ppf =
                 List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
     with
       | End_of_file -> exit 0
-      | Sys.Break -> fprintf ppf "Interrupted.@."
+      | Sys.Break -> 
+          if !Options.interrupt_count = 2 then begin fprintf ppf "@\n@."; exit 0 end else begin
+          incr Options.interrupt_count;
+          fprintf ppf "Interrupted (press %d more times to quit).@." (3 - !Options.interrupt_count) end
       | err ->
         output_string stderr (Printexc.to_string err);
         flush stderr

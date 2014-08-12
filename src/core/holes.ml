@@ -197,4 +197,4 @@ let getHolePos i =
       | DynArray.Invalid_arg (_, _, _) -> None
 
 let clear () =
-    DynArray.clear holes
+    DynArray.clear holes; print_int (DynArray.length holes)

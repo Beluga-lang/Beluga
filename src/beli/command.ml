@@ -70,9 +70,15 @@ let reset = {name= "reset";
                   Lfholes.clear (); fprintf ppf "Reset successful@\n");
               help="Reset the store"}
 
+let clearholes = {name = "clearholes";
+                  run = (fun _ _ ->
+                          Holes.clear(); Lfholes.clear ());
+                  help= "Clear all computation level and LF level holes"}
+
 let load = {name = "load";
             run = (fun ppf arglist ->
               try
+                clearholes.run ppf [];
                 let arg = List.hd arglist in
                 let sgn = Parser.parse_file ~name:arg Parser.sgn in
                 let sgn' = Recsgn.recSgnDecls sgn in
@@ -82,8 +88,6 @@ let load = {name = "load";
               with
               |Failure _ -> fprintf ppf " - Please provide the file name\n");
             help = "Load the file \"filename\" into the interpreter"}
-
-
 
 let printhole = {name = "printhole";
                  run = (fun ppf arglist ->
@@ -376,6 +380,7 @@ let _ = reg := [
         chatteroff   ;
         chatteron    ;
         load         ;
+        clearholes   ;
         countholes   ;
         numholes     ;
         numlfholes   ;

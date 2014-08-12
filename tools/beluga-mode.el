@@ -359,7 +359,8 @@ If a previous beli process already exists, kill it first."
   "Loads the current file in beli."
   (interactive)
   (beluga--start)
-  (beluga--send (concat "load " (buffer-file-name))))
+  (beluga--send (concat "load " (buffer-file-name)))
+  (message "%s" "File successfully loaded"))
 
 (defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
@@ -404,6 +405,7 @@ If a previous beli process already exists, kill it first."
   "Create overlays for each of the holes and color them."
   (interactive)
   (beluga-erase-holes)
+  (beluga--send (concat "load " (buffer-file-name)))
   (let ((numholes (string-to-number (beluga--rpc "numholes"))))
     (dotimes (i numholes)
       (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
@@ -411,7 +413,16 @@ If a previous beli process already exists, kill it first."
              (info (beluga--rpc (format "printhole %d" i))))
         (overlay-put ol 'help-echo info)
         (push ol beluga--holes-overlays)
-        ))))
+        )))
+  (let ((numholes (string-to-number (beluga--rpc "numlfholes"))))
+    (dotimes (i numholes)
+      (let* ((pos (read (beluga--rpc (format "lochole-lf %d" i))))
+             (ol (beluga--create-overlay pos))
+             (info (beluga--rpc (format "printhole-lf %d" i))))
+        (overlay-put ol 'help-echo info)
+        (push ol beluga--holes-overlays)
+        )))
+  )
 
 (defun beluga-erase-holes ()
   (interactive)

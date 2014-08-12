@@ -150,7 +150,7 @@ let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
     | Some exp -> (P.expChkToString cD cG exp))
     with _ -> "Can't split on s") *)
 
-let printOne (loc, cD, cG, (tau, theta)) =
+let printOne i (loc, cD, cG, (tau, theta)) =
   let _ = Store.Cid.NamedHoles.reset () in
   let cD = (Whnf.normMCtx cD) in
   let cG = (Whnf.normCtx cG) in
@@ -162,24 +162,24 @@ let printOne (loc, cD, cG, (tau, theta)) =
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   if List.length l > 0 then
     Format.printf 
-      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
-      (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
-      (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
+      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
+        (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
+        (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else
     Format.printf 
-      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n"
-      (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
+      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n"
+       (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
 let printAll () =
   Store.Cid.NamedHoles.printingHoles := true;
-  DynArray.iter printOne holes;
+  DynArray.iteri printOne holes;
   Store.Cid.NamedHoles.printingHoles := false
 
 let printOneHole i =
   if none () then Printf.printf " - There are no holes.\n"
   else
     try
-      printOne (DynArray.get holes i)
+      printOne i (DynArray.get holes i)
     with
       | DynArray.Invalid_arg (_, _, _) -> 
           if !Debug.chatter != 0 then
@@ -196,5 +196,4 @@ let getHolePos i =
     with
       | DynArray.Invalid_arg (_, _, _) -> None
 
-let clear () =
-    DynArray.clear holes; print_int (DynArray.length holes)
+let clear () = DynArray.clear holes

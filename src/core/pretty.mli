@@ -18,6 +18,7 @@ module Control : sig
 
   val substitutionStyle : substitution_style ref
   val printImplicit : bool ref
+  val printNormal : bool ref
 
   val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
 end

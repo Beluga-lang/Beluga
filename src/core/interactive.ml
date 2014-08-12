@@ -144,7 +144,7 @@ let branchCovGoals loc i cG0 tA cgs =
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
       let loc' = nextLoc loc in
-      Printf.printf "CovPat %s \n" (P.msubToString cD ms);
+(*       Printf.printf "CovPat %s \n" (P.msubToString cD ms); *)
       Holes.collect(loc', cD, gctxToCompgctx cG, Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
       Comp.Branch(Loc.ghost, cD, gctxToCompgctx cG , patt, ms, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
         ) cgs

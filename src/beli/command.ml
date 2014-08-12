@@ -33,15 +33,15 @@ let split = {name = "split";
 let reg : command list ref = ref []
 
 let countholes = {name = "countholes";
-                  run = (fun ppf _ -> fprintf ppf " - Computation Level Holes: %d\n - LF Level Holes: %d\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf " - Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
                   help = "Print the total number of holes"}
 
 let numholes = {name = "numholes";
-                  run = (fun ppf _ -> fprintf ppf "%d\n" (Holes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "%d;\n" (Holes.getNumHoles()));
                   help = "Print the total number of holes"}
 
 let numlfholes = {name = "numlfholes";
-                  run = (fun ppf _ -> fprintf ppf "%d\n" (Lfholes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "%d;\n" (Lfholes.getNumHoles()));
                   help = "Print the total number of lf holes"}
 
 let chatteron = {name = "chatteron";
@@ -73,12 +73,13 @@ let reset = {name= "reset";
 let clearholes = {name = "clearholes";
                   run = (fun _ _ ->
                           Holes.clear(); Lfholes.clear ());
-                  help= "Clear all computation level and LF level holes"}
+                  help= "Clear all computation level holes"}
 
 let load = {name = "load";
             run = (fun ppf arglist ->
               try
-                clearholes.run ppf [];
+                let _ = Holes.clear() in
+                let _ = Lfholes.clear () in
                 let arg = List.hd arglist in
                 let sgn = Parser.parse_file ~name:arg Parser.sgn in
                 let sgn' = Recsgn.recSgnDecls sgn in
@@ -93,18 +94,18 @@ let printhole = {name = "printhole";
                  run = (fun ppf arglist ->
                    try
                      let arg = List.hd arglist in
-                     Holes.printOneHole (to_int arg)
+                     Holes.printOneHole (to_int arg); fprintf ppf ";\n\n"
                    with
-                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
+                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list;\n");
                  help = "Print out all the information of the i-th hole passed as a parameter"}
 
 let printlfhole = {name = "printhole-lf";
                  run = (fun ppf arglist ->
                    try
                      let arg = List.hd arglist in
-                     Lfholes.printOneHole (to_int arg)
+                     Lfholes.printOneHole (to_int arg); fprintf ppf ";\n"
                    with
-                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
+                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list;\n");
                  help = "Print out all the information of the i-th LF hole passed as a parameter"}
 
 let lochole = {name = "lochole";
@@ -122,13 +123,13 @@ let lochole = {name = "lochole";
                             stop_off,
                             _ghost) = Core.Syntax.Loc.to_tuple loc in
                        fprintf ppf
-                         "(\"%s\" %d %d %d %d %d %d)\n"
+                         "(\"%s\" %d %d %d %d %d %d);\n"
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
-                   | None -> fprintf ppf " - Error no such hole"
+                   | None -> fprintf ppf " - Error no such hole;\n"
                  with
-                 |Failure _ -> fprintf ppf " - Error occured when analyzing argument list\n");
+                 |Failure _ -> fprintf ppf " - Error occured when analyzing argument list;\n");
                help = "Print out the location information of the i-th hole passed as a parameter"}
 
 let loclfhole = {name = "lochole-lf";
@@ -146,7 +147,7 @@ let loclfhole = {name = "lochole-lf";
                             stop_off,
                             _ghost) = Core.Syntax.Loc.to_tuple loc in
                        fprintf ppf
-                         "(\"%s\" %d %d %d %d %d %d)\n"
+                         "(\"%s\" %d %d %d %d %d %d);\n"
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
@@ -250,18 +251,21 @@ let fill = { name = "fill" ;
 let split = { name = "split" ;
               run = (fun ppf args ->
                 Printexc.record_backtrace true;
-                try
-                  if (List.length args) < 2 then failwith "2 arguments expected, 1 - name of the variable 2 - hole #" else (
-                  let e = (List.hd args) in
-                  let i = to_int (List.hd (List.tl args)) in
+                try begin
+                  if (List.length args) < 2 then failwith " - 2 arguments expected, 1 - hole #  2 - variable to split on;\n" else (
+                  let i = to_int (List.hd args) in
+                  let e = (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with
-                  | None -> fprintf ppf " - No variable %s found\n" e
-                  | Some exp -> Interactive.replaceHole i exp ))
-                with
-                | Failure s  -> fprintf ppf " - Error in split: %s \n" s;  (Printexc.print_backtrace stdout)
-                | _  -> fprintf ppf " - Error in split. \n";  (Printexc.print_backtrace stdout)
-                      );
-              help = "split e n  tries to split on variable e in the nth hole"}
+                  | None -> fprintf ppf " - No variable %s found;\n" e
+                  | Some exp -> 
+                      let (_, cD, cG, _) = Holes.getOneHole i in
+                      Pretty.Control.printNormal := true;
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      Pretty.Control.printNormal := false;
+                      (* Interactive.replaceHole i exp  *)))
+                end with
+                | e  -> fprintf ppf " - Error in split.\n%s;\n" (Printexc.to_string e));
+              help = "split n e tries to split on variable e in the nth hole"}
 
 let intro = {name = "intro";
               run = (fun ppf args ->

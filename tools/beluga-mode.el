@@ -118,10 +118,10 @@
 (defvar beluga-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-c" 'compile)
-    (define-key map "\C-c\C-l" 'beluga-load)
-    (define-key map "\C-c\C-p" 'beluga-highlight-holes)
+    (define-key map "\C-c\C-l" 'beluga-highlight-holes)
     (define-key map "\C-c\C-x" 'beli-cmd)
     (define-key map "\C-c\C-t" 'beli--type)
+    (define-key map "\C-c\C-s" 'beluga-split-hole)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -304,8 +304,8 @@ If a previous beli process already exists, kill it first."
   (assert (eq (current-buffer) (process-buffer proc)))
   (while (and (progn
                 (goto-char comint-last-input-end)
-                (not (re-search-forward "\n.*\n" nil t)))
-              (accept-process-output proc 0.25))))
+                (not (re-search-forward ".*;" nil t)))
+              (accept-process-output proc 0.4))))
 
 (defun chomp (str)
   "Chomp leading and tailing whitespace from STR."
@@ -334,7 +334,7 @@ If a previous beli process already exists, kill it first."
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
       (beluga--wait proc)
-      (chomp (buffer-substring-no-properties comint-last-input-end (point-max))))))
+      (trim (buffer-substring-no-properties comint-last-input-end (point-max))))))
 
 (defun beluga--rpc (cmd)
   (beluga--send cmd)
@@ -353,12 +353,19 @@ If a previous beli process already exists, kill it first."
 (defun beli-cmd (cmd)
   "Run a command in beli"
   (interactive "MCommand: ")
-  (beluga--rpc cmd))
+  (message "%s" (beluga--rpc cmd)))
+
+(defun maybe-save ()
+  (if (buffer-modified-p)
+    (if (y-or-n-p "Save current file?")
+      (save-buffer)
+      ())))
 
 (defun beluga-load ()
   "Loads the current file in beli."
   (interactive)
   (beluga--start)
+  (maybe-save)
   (beluga--send (concat "load " (buffer-file-name)))
   (message "%s" "File successfully loaded"))
 
@@ -367,7 +374,7 @@ If a previous beli process already exists, kill it first."
 (make-variable-buffer-local 'beluga--holes-overlays)
 
 (defface beluga-holes
-  '((t :background "yellow")) ;; :foreground "white"
+  '((t :background "cyan")) ;; :foreground "white"
   "Face used to highlight holes in Beluga mode.")
 
 (defun beluga--pos (line bol offset)
@@ -404,8 +411,8 @@ If a previous beli process already exists, kill it first."
 (defun beluga-highlight-holes ()
   "Create overlays for each of the holes and color them."
   (interactive)
+  (beluga-load)
   (beluga-erase-holes)
-  (beluga--send (concat "load " (buffer-file-name)))
   (let ((numholes (string-to-number (beluga--rpc "numholes"))))
     (dotimes (i numholes)
       (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
@@ -423,6 +430,23 @@ If a previous beli process already exists, kill it first."
         (push ol beluga--holes-overlays)
         )))
   )
+
+(defun beluga-split-hole (hole var)
+  "Split on a hole"
+  (interactive "nHole to split: \nsVariable to split on: ")
+  (let ((resp (beluga--rpc (format "split %d %s" hole var))))
+    (if (string= " - " (substring resp 0 2))
+      (message "%s" resp)
+      (let* ((ovr (nth hole beluga--holes-overlays))
+             (start (overlay-start ovr))
+             (end (overlay-end ovr)))
+        (delete-overlay ovr)
+        (delete-region start end)
+        (goto-char start)
+        (insert (format "(%s)" resp))
+        (save-buffer)
+        (beluga-load)
+        (beluga-highlight-holes)))))
 
 (defun beluga-erase-holes ()
   (interactive)

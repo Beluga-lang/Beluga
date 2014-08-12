@@ -81,7 +81,7 @@ module Control = struct
 
   let substitutionStyle = ref Natural
   let printImplicit = ref false
-
+  let printNormal = ref false
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
 
@@ -925,7 +925,7 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
-          if not !Control.printImplicit && (isInferred mtyp) && printing_holes then () else
+          if (not !Control.printImplicit && (isInferred mtyp) || !Control.printNormal) then () else
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
@@ -1222,7 +1222,11 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.Hole (loc, f) ->
-          fprintf ppf " ? %%{ %d }%%" ( try f() with _ -> -1 )
+          try
+             let x = f () in
+             fprintf ppf " ? %%{ %d }%%" x
+           with
+           | _ -> fprintf ppf " ? "
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1357,7 +1361,7 @@ module Int = struct
                 fprintf ppf "%a"
                   (fmt_ppr_lf_ctyp_decl LF.Empty 1) decl
             | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
+                fprintf ppf "%a@ %a"
                   (fmt_ppr_ctyp_decls') cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           in
@@ -1387,14 +1391,29 @@ module Int = struct
 
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat, t) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@  "
-            (fmt_ppr_cmp_branch_prefix  0) cD1
-            (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
-            (fmt_ppr_refinement cD1 cD 2) t
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]@]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+          else
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+              (fmt_ppr_refinement cD1 cD 2) t
 
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a  : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
+        if !Control.printNormal then
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]  => @]@ @[<2>@ %a@]@]@ "
+            (fmt_ppr_cmp_branch_prefix  0) cD1'
+            (fmt_ppr_meta_obj cD1' 0) mO
+            (* NOTE: Technically: cD |- cG ctx and
+             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+             * -bp
+             *)
+            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+        else
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* this point is where the " : " is in the string above *)
@@ -1409,18 +1428,29 @@ module Int = struct
           let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
           let cG_ext = Context.append cG_t cG' in
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-             (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_cmp_gctx cD1' 0) cG'
-             (fmt_ppr_pat_obj cD1' cG' 0) pat
-            (* this point is where the " : " is in the string a
-          bove *)
-            (fmt_ppr_refinement cD1' cD 2) t
-            (* NOTE: Technically: cD |- cG ctx and
-             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-             * -bp
-             *)
-            (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
+                 (fmt_ppr_cmp_branch_prefix  0) cD1'
+                (fmt_ppr_cmp_gctx cD1' 0) cG'
+                 (fmt_ppr_pat_obj cD1' cG' 0) pat
+                (* NOTE: Technically: cD |- cG ctx and
+                 *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+                 * -bp
+                 *)
+                (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          else          
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+               (fmt_ppr_cmp_branch_prefix  0) cD1'
+              (fmt_ppr_cmp_gctx cD1' 0) cG'
+               (fmt_ppr_pat_obj cD1' cG' 0) pat
+              (* this point is where the " : " is in the string a
+            bove *)
+              (fmt_ppr_refinement cD1' cD 2) t
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
       | Comp.BranchBox (_, cD1', (cPsi, pattern, t, _cs)) ->
           let rec ppr_ctyp_decls' ppf = function
@@ -1437,6 +1467,17 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ @]  => @]@ @[<2>@ %a@]@]@ "
+              (ppr_ctyp_decls ) cD1'
+              (fmt_ppr_lf_dctx cD1' 0) cPsi
+              (fmt_ppr_pattern cD1' cPsi) pattern
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_branch_body cD1' cG t) pattern
+          else
             fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi

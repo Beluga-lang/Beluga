@@ -122,6 +122,8 @@
     (define-key map "\C-c\C-x" 'beli-cmd)
     (define-key map "\C-c\C-t" 'beli--type)
     (define-key map "\C-c\C-s" 'beluga-split-hole)
+    (define-key map "\C-c\C-i" 'beluga-intro-hole)
+    (define-key map "\C-c\C-j" 'hole-jump)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -343,7 +345,7 @@ If a previous beli process already exists, kill it first."
 (defun beli--type ()
   "Get the type at the current cursor position (if it exists)"
   (interactive)
-  (beluga--rpc (format "get-type %d" (point))))
+  (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
 
 (defun beli ()
   "Start beli mode"
@@ -366,12 +368,20 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (beluga--start)
   (maybe-save)
-  (beluga--send (concat "load " (buffer-file-name)))
-  (message "%s" "File successfully loaded"))
+  (message "%s" (beluga--rpc (concat "load " (buffer-file-name)))))
 
 (defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
 (make-variable-buffer-local 'beluga--holes-overlays)
+
+(defun beluga-sorted-holes ()
+  (defun hole-comp (a b)
+     (let* ((s1 (overlay-start a))
+            (s2 (overlay-start b)))
+       (< s1 s2)))
+  (sort beluga--holes-overlays `hole-comp))
+
+
 
 (defface beluga-holes
   '((t :background "cyan")) ;; :foreground "white"
@@ -428,16 +438,15 @@ If a previous beli process already exists, kill it first."
              (info (beluga--rpc (format "printhole-lf %d" i))))
         (overlay-put ol 'help-echo info)
         (push ol beluga--holes-overlays)
-        )))
-  )
+        ))))
 
 (defun beluga-split-hole (hole var)
   "Split on a hole"
-  (interactive "nHole to split: \nsVariable to split on: ")
+  (interactive "nHole to split at: \nsVariable to split on: ")
   (let ((resp (beluga--rpc (format "split %d %s" hole var))))
-    (if (string= " - " (substring resp 0 2))
+    (if (string= "-" (substring resp 0 1))
       (message "%s" resp)
-      (let* ((ovr (nth hole beluga--holes-overlays))
+      (let* ((ovr (nth hole (beluga-sorted-holes)))
              (start (overlay-start ovr))
              (end (overlay-end ovr)))
         (delete-overlay ovr)
@@ -447,6 +456,29 @@ If a previous beli process already exists, kill it first."
         (save-buffer)
         (beluga-load)
         (beluga-highlight-holes)))))
+
+(defun beluga-intro-hole (hole)
+  "Introduce variables into a hole"
+  (interactive "nHole to introduce variables into: ")
+  (let ((resp (beluga--rpc (format "intro %d" hole))))
+    (if (string= "-" (substring resp 0 1))
+      (message "%s" resp)
+      (let* ((ovr (nth hole (beluga-sorted-holes)))
+             (start (overlay-start ovr))
+             (end (overlay-end ovr)))
+        (delete-overlay ovr)
+        (delete-region start end)
+        (goto-char start)
+        (insert resp)
+        (save-buffer)
+        (beluga-load)
+        (beluga-highlight-holes)))))
+
+(defun hole-jump (hole)
+  (interactive "nHole to jump to: ")
+  (let* ((ovr (nth hole (beluga-sorted-holes)))
+             (start (overlay-start ovr)))
+    (goto-char start)))
 
 (defun beluga-erase-holes ()
   (interactive)

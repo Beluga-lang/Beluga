@@ -33,7 +33,7 @@ let split = {name = "split";
 let reg : command list ref = ref []
 
 let countholes = {name = "countholes";
-                  run = (fun ppf _ -> fprintf ppf " - Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "- Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
                   help = "Print the total number of holes"}
 
 let numholes = {name = "numholes";
@@ -45,12 +45,12 @@ let numlfholes = {name = "numlfholes";
                   help = "Print the total number of lf holes"}
 
 let chatteron = {name = "chatteron";
-                 run = (fun ppf _ -> Debug.chatter :=1; fprintf ppf " - The chatter is on now.\n");
+                 run = (fun ppf _ -> Debug.chatter :=1; fprintf ppf "- The chatter is on now.\n");
                  help = "Turn on the chatter"}
 
 
 let chatteroff = {name = "chatteroff";
-                  run = (fun ppf _ -> Debug.chatter :=0; fprintf ppf " - The chatter is off now.\n");
+                  run = (fun ppf _ -> Debug.chatter := 0; fprintf ppf "- The chatter is off now.\n");
                   help = "Turn off the chatter"}
 
 
@@ -58,7 +58,7 @@ let types = {name = "types";
              run = (fun ppf _ ->
                let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
                let dctx = Synint.LF.Null in
-               List.iter (fun x -> fprintf ppf " - %s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
+               List.iter (fun x -> fprintf ppf "- %s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
              help = "Print out all types currently defined"}
 
 let reset = {name= "reset";
@@ -85,9 +85,10 @@ let load = {name = "load";
                 let sgn' = Recsgn.recSgnDecls sgn in
                 if !Debug.chatter <> 0 then
                   List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
-                fprintf ppf " - The file has been successfully loaded.\n"
+                fprintf ppf "- The file has been successfully loaded;\n"
               with
-              |Failure _ -> fprintf ppf " - Please provide the file name\n");
+              |Failure _ -> fprintf ppf "- Please provide the file name;\n"
+              | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e));
             help = "Load the file \"filename\" into the interpreter"}
 
 let printhole = {name = "printhole";
@@ -96,7 +97,7 @@ let printhole = {name = "printhole";
                      let arg = List.hd arglist in
                      Holes.printOneHole (to_int arg); fprintf ppf ";\n\n"
                    with
-                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list;\n");
+                   |Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
                  help = "Print out all the information of the i-th hole passed as a parameter"}
 
 let printlfhole = {name = "printhole-lf";
@@ -105,7 +106,7 @@ let printlfhole = {name = "printhole-lf";
                      let arg = List.hd arglist in
                      Lfholes.printOneHole (to_int arg); fprintf ppf ";\n"
                    with
-                   |Failure _ -> fprintf ppf " - Error occurs when analyzing argument list;\n");
+                   |Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
                  help = "Print out all the information of the i-th LF hole passed as a parameter"}
 
 let lochole = {name = "lochole";
@@ -127,9 +128,9 @@ let lochole = {name = "lochole";
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
-                   | None -> fprintf ppf " - Error no such hole;\n"
+                   | None -> fprintf ppf "- Error no such hole;\n"
                  with
-                 |Failure _ -> fprintf ppf " - Error occured when analyzing argument list;\n");
+                 |Failure _ -> fprintf ppf "- Error occured when analyzing argument list;\n");
                help = "Print out the location information of the i-th hole passed as a parameter"}
 
 let loclfhole = {name = "lochole-lf";
@@ -151,9 +152,9 @@ let loclfhole = {name = "lochole-lf";
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
-                   | None -> fprintf ppf " - Error no such hole"
+                   | None -> fprintf ppf "- Error no such hole"
                  with
-                 |Failure _ -> fprintf ppf " - Error occured when analyzing argument list\n");
+                 |Failure _ -> fprintf ppf "- Error occured when analyzing argument list\n");
                help = "Print out the location information of the i-th hole passed as a parameter"}
 
 let constructors = {name = "constructors";
@@ -166,10 +167,11 @@ let constructors = {name = "constructors";
                         let mctx = Synint.LF.Empty in
                         let dctx = Synint.LF.Null in
                         let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
-                        List.iter (fun x -> fprintf ppf " - %s: [%d] " x.Term.name.Id.string_of_name x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist
+                        List.iter (fun x -> fprintf ppf "- %s: [%d] " x.Term.name.Id.string_of_name x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist;
+                        fprintf ppf ";\n"
                       with
-                      | Not_found -> fprintf ppf " - Such type does not exist!!\n"
-                      | Failure _ -> fprintf ppf " - An error occured when analyzing argument list\n");
+                      | Not_found -> fprintf ppf "- Such type does not exist!!\n"
+                      | Failure _ -> fprintf ppf "- An error occured when analyzing argument list\n");
                     help = "Print all constructors of a given type passed as a parameter"}
 
 
@@ -192,13 +194,13 @@ let fill = { name = "fill" ;
                    let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,outexp))::[])::[] = sgn in
                    (try
                      let (loc, cD, cG, tclo) = Holes.getOneHole i in
-                     (if !Debug.chatter != 0 then fprintf ppf " - Fill: EXT done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: EXT done\n");
                      let vars = Interactive.gctxToVars cG in
                      let cvars = Interactive.mctxToCVars cD in
                      let apxexp = Index.hexp cvars vars outexp in
-                     (if !Debug.chatter != 0 then fprintf ppf " - Fill: APX done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: APX done\n");
                      let intexp = Reconstruct.elExp cD cG apxexp tclo in
-                     (if !Debug.chatter != 0 then fprintf ppf " - Fill: INT done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: INT done\n");
                      Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
                      let intexp' = Interactive.mapHoleChk (fun ll -> fun _ ->
                        let i = Holes.getStagedHoleNum ll in
@@ -207,11 +209,11 @@ let fill = { name = "fill" ;
                        Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in (* makes sure that new holes have unique location *)
                      Interactive.replaceHole i intexp'
                    with
-                   | e -> fprintf ppf " - Error while replacing hole with expression : %s" (Printexc.to_string e) ))
+                   | e -> fprintf ppf "- Error while replacing hole with expression : %s" (Printexc.to_string e) ))
                  else
-                   failwith " - See help"
+                   failwith "- See help"
                with
-               | e -> fprintf ppf " - \nError in fill: %s\n" (Printexc.to_string e));
+               | e -> fprintf ppf "- \nError in fill: %s\n" (Printexc.to_string e));
              help = "\"fill\" i \"with\" exp fills the ith hole with exp"}
 
 (* let fill-lf = { name = "filllf" ;
@@ -226,13 +228,13 @@ let fill = { name = "fill" ;
                    let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,outexp))::[])::[] = sgn in
                    (try
                      let (loc, cD, psi, tclo) = Lfholes.getOneHole i in
-                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: EXT done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- LF Fill: EXT done\n");
                      let vars = Interactive.dctxToMVars psi in
                      let cvars = Interactive.mctxToCVars cD in
                      let apxexp = Index.hexp cvars vars outexp in
-                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: APX done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- LF Fill: APX done\n");
                      let intexp = Reconstruct.elExp cD cG apxexp tclo in
-                     (if !Debug.chatter != 0 then fprintf ppf " - LF Fill: INT done\n");
+                     (if !Debug.chatter != 0 then fprintf ppf "- LF Fill: INT done\n");
                      Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
                      let intexp' = Interactive.mapHoleChk (fun ll -> fun _ ->
                        let i = Holes.getStagedHoleNum ll in
@@ -241,22 +243,22 @@ let fill = { name = "fill" ;
                        Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in (* makes sure that new holes have unique location *)
                      Interactive.replaceHole i intexp'
                    with
-                   | e -> fprintf ppf " - Error while replacing LF hole with expression : %s" (Printexc.to_string e) ))
+                   | e -> fprintf ppf "- Error while replacing LF hole with expression : %s" (Printexc.to_string e) ))
                  else
-                   failwith " - See help"
+                   failwith "- See help"
                with
-               | e -> fprintf ppf " - \nError in fill-lf: %s\n" (Printexc.to_string e));
+               | e -> fprintf ppf "- \nError in fill-lf: %s\n" (Printexc.to_string e));
               help = "'fill-lf' i 'with' exp fills the ith lf hole with exp" } *)
 
 let split = { name = "split" ;
               run = (fun ppf args ->
                 Printexc.record_backtrace true;
                 try begin
-                  if (List.length args) < 2 then failwith " - 2 arguments expected, 1 - hole #  2 - variable to split on;\n" else (
+                  if (List.length args) < 2 then failwith "- 2 arguments expected, 1 - hole #  2 - variable to split on;\n" else (
                   let i = to_int (List.hd args) in
                   let e = (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with
-                  | None -> fprintf ppf " - No variable %s found;\n" e
+                  | None -> fprintf ppf "- No variable %s found;\n" e
                   | Some exp -> 
                       let (_, cD, cG, _) = Holes.getOneHole i in
                       Pretty.Control.printNormal := true;
@@ -264,7 +266,7 @@ let split = { name = "split" ;
                       Pretty.Control.printNormal := false;
                       (* Interactive.replaceHole i exp  *)))
                 end with
-                | e  -> fprintf ppf " - Error in split.\n%s;\n" (Printexc.to_string e));
+                | e  -> fprintf ppf "- Error in split.\n%s;\n" (Printexc.to_string e));
               help = "split n e tries to split on variable e in the nth hole"}
 
 let intro = {name = "intro";
@@ -272,12 +274,16 @@ let intro = {name = "intro";
                 try
                   let i = to_int (List.hd args) in
                   (match (Interactive.intro i) with
-                  | None -> fprintf ppf " - Nothing to introduce in hole %d. \n" i
-                  | Some exp -> Interactive.replaceHole i exp)
+                  | None -> fprintf ppf "- Nothing to introduce in hole %d;\n" i
+                  | Some exp -> 
+                      let (_, cD, cG, _) = Holes.getOneHole i in
+                      Pretty.Control.printNormal := true;
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      Pretty.Control.printNormal := false)
                 with
-                | Failure s -> fprintf ppf " - Error in intro: %s\n" s
-                |  _ ->      fprintf ppf " - Error in intro\n"  );
-              help = " - intro n tries to introduce variables in the nth hole"}
+                | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
+                |  _ ->      fprintf ppf "- Error in intro;\n"  );
+              help = "- intro n tries to introduce variables in the nth hole"}
 
 
 let compconst = {name = "constructors-comp";
@@ -288,10 +294,11 @@ let compconst = {name = "constructors-comp";
                         let entry = List.find (fun x -> arg = x.CompTyp.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
                         let termlist = List.rev_map (CompConst.get ~fixName:true) !(entry.CompTyp.constructors) in
-                        List.iter (fun x -> fprintf ppf " - %s: [%d] " x.CompConst.name.Id.string_of_name x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist
+                        List.iter (fun x -> fprintf ppf "- %s: [%d] " x.CompConst.name.Id.string_of_name x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist;
+                        fprintf ppf ";\n"
                       with
-                      | Not_found -> fprintf ppf " - Such type does not exist!!\n"
-                      | Failure _ -> fprintf ppf " - Error occured when analyzing argument list\n");
+                      | Not_found -> fprintf ppf "- Such type does not exist;\n"
+                      | Failure _ -> fprintf ppf "- Error occured when analyzing argument list;\n");
                     help = "Print all constructors of a given computational datatype passed as a parameter"}
 
 
@@ -304,10 +311,11 @@ let signature = {name = "fsig";
                         let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
 
                         let mctx = Synint.LF.Empty in
-                        fprintf ppf " - %s:  " entry.Comp.name.Id.string_of_name; ppr_cmp_typ mctx entry.Comp.typ; fprintf ppf "\n"
+                        fprintf ppf "- %s:  " entry.Comp.name.Id.string_of_name; ppr_cmp_typ mctx entry.Comp.typ; fprintf ppf "\n";
+                        fprintf ppf ";\n"
                       with
-                      | Not_found -> fprintf ppf " - Such function does not exist!\n"
-                      | Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
+                      | Not_found -> fprintf ppf "- Such function does not exist!;\n"
+                      | Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
                     help = "fsig e : Prints the signature of the function e, if such function is currently defined" }
 
 
@@ -320,12 +328,13 @@ let printfun = {name = "fdef";
                         let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
                         (match entry.Comp.prog with
                         | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
-                            fprintf ppf " - "; ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
-                        |     _  -> fprintf ppf " - %s is not a function. \n" arg
+                            ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)]);
+                            fprintf ppf ";\n"
+                        |     _  -> fprintf ppf "- %s is not a function.;\n" arg
                             )
                       with
-                      | Not_found -> fprintf ppf " - Such function does not exist!\n"
-                      | Failure _ -> fprintf ppf " - Error occurs when analyzing argument list\n");
+                      | Not_found -> fprintf ppf "- Such function does not exist!;\n"
+                      | Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
                     help = "Print all the type of the functions currently defined" }
 
 
@@ -361,22 +370,22 @@ let query = {name = "query";
                                                       fun () -> Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)) in
                         let _c'      = Logic.storeQuery name (tA', i) expected tries in
                         let _ = Logic.runLogic() in
-                        ()
+                        fprintf ppf ";\n"
                       end
                     with
-                    | e -> fprintf ppf " - Error in query : %s\n" (Printexc.to_string e));
+                    | e -> fprintf ppf "- Error in query : %s;\n" (Printexc.to_string e));
             help = "%:query EXPECTED TRIES TYP.\tQuery solutions to a given type"}
 
 
 let get_type = {name = "get-type";
                 run =
                   (fun ppf args ->
-                    let typ = 
-                      try Typeinfo.type_of_position (int_of_string (List.hd args))
-                      with e -> fprintf ppf " - Error in get-type : %s\n" (Printexc.to_string e); ""
-                    in
-                    fprintf ppf "%s" typ);
-                help = "Get the location based on the distance from the start of the buffer (for use in emacs)"}
+                    try 
+                      let line = int_of_string (List.hd args) in
+                      let col = int_of_string (List.hd (List.tl args)) in
+                      let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
+                    with e -> fprintf ppf "- Error in get-type : %s;\n" (Printexc.to_string e));
+                help = "get-type [line] [column] Get the location based on the distance from the start of the buffer (for use in emacs)\n"}
 (* Registering built-in commands *)
 
 let _ = reg := [

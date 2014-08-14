@@ -58,16 +58,37 @@ let gctxToString cD =
       toString cG ^ "\n" ^ shift ^ (nameString n) ^ ": " ^ P.compTypToString cD tau
   in toString ++ Whnf.normCtx
 
+let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list = 
+  let rec aux acc = function
+    | LF.Empty -> acc
+    | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
+      begin try
+        Unify.StdTrail.resetGlobalCnstrs ();
+        Unify.StdTrail.unifyCompTyp cD tA (tA', LF.MShift 0);
+        aux (n::acc) cG'
+      with | _ -> aux acc cG' end
+    | LF.Dec (cG', _) -> aux acc cG'
+  in aux [] cG
+
 let printOne (loc, cD, cG, (tau, theta)) =
-  Store.Cid.NamedHoles.reset () ;
+  let _ = Store.Cid.NamedHoles.reset () in
+  let cD = (Whnf.normMCtx cD) in
+  let cG = (Whnf.normCtx cG) in
+  let l = iterGctx cD cG (tau, theta) in
   let b1 = "________________________________________________________________________________" in
   let b2 = "================================================================================" in
   let mctx = (mctxToString cD) in
   let gctx = (gctxToString cD cG) in
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
-  Printf.printf 
-    "\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s\n"
-    (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
+  if List.length l > 0 then
+    Format.printf 
+      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
+      (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
+      (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
+  else
+    Format.printf 
+      "@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n"
+      (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
 let printAll () =
   Store.Cid.NamedHoles.printingHoles := true;

@@ -41,6 +41,7 @@ module LF = struct
   and normal =                                (* normal terms                   *)
     | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
     | Root of Loc.t * head * spine            (*   | h . S                      *)
+    | LFHole of Loc.t
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
@@ -180,9 +181,14 @@ module LF = struct
   type tclo     = typ     * sub          (* As = [s]A                      *)
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
+  type assoc = Left | Right | NoAssoc
+  type fix = Prefix | Postfix | Infix
   type prag =
     | NamePrag of cid_typ
     | NotPrag
+    | OpenPrag of module_id
+    | DefaultAssocPrag of assoc
+    | FixPrag of name * fix * int * assoc option
 
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function
@@ -399,8 +405,13 @@ module Sgn = struct
     | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
-    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
     | Pragma        of LF.prag
+    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
+    | MRecTyp       of Loc.t * decl list list
+    | Module        of Loc.t * string * decl list
+    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Comment       of Loc.t * string
 
   type sgn = decl list
 

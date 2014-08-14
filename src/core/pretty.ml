@@ -3,7 +3,7 @@
     @see http://caml.inria.fr/resources/doc/guides/format.html
 *)
 
-open Format
+include Format
 
 (* Explanation of formatting markup:
 
@@ -47,6 +47,24 @@ open Format
 type lvl    = int
 
 let std_lvl = 0
+
+let line_num = ref 1
+
+let printing_nums = ref false 
+
+let setup_linenums () = 
+  let _ = printing_nums := true in
+  let x = get_formatter_out_functions () in
+  let y () = try
+    if not !printing_nums then x.out_newline () else
+    let l = (int_of_float (log10(float_of_int !line_num))) + 2 in
+    let s = ("\n" ^ (String.make (6-l) ' ') ^ (string_of_int !line_num) ^ " ") in
+    let _ = incr line_num in
+    x.out_string s 0 7
+  with e -> x.out_newline ()
+  in 
+  let z = {x with out_newline = y} in
+  set_formatter_out_functions z
 
 let l_paren_if cond =
   if cond
@@ -289,6 +307,8 @@ module Int = struct
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
+        | LF.LFHole _ ->
+          fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple
@@ -632,7 +652,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n ->
           fprintf ppf "%s"
-            (if !Store.Cid.NamedHoles.printingHoles then
+            (if !Store.Cid.NamedHoles.printingHoles && false then
               Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
              else (R.render_cvar cD n))
 
@@ -1033,7 +1053,7 @@ module Int = struct
 
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a ->@ %a%s"
+            fprintf ppf "%s%a -> %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_typ cD 0) tau1
               (fmt_ppr_cmp_typ cD 0) tau2
@@ -1049,7 +1069,7 @@ module Int = struct
 
       | Comp.TypPiBox (ctyp_decl, tau) ->
         let cond = lvl > 1 in
-        fprintf ppf "%s%a@ %a%s"
+        fprintf ppf "%s%a %a%s"
           (l_paren_if cond)
           (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
           (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
@@ -1502,32 +1522,85 @@ module Int = struct
             (R.render_name x)
             (fmt_ppr_cmp_typ cD lvl) tau
 
-    let fmt_ppr_sgn_decl lvl ppf = function
-      | Sgn.Const (c, a) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_cid_term c)
-            (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
-
-      | Sgn.Typ (a, k) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_cid_typ  a)
-            (fmt_ppr_lf_kind LF.Null lvl) k
-
-      | Sgn.Schema (w, schema) ->
-          fprintf ppf "schema %s : %a;@.@?"
-            (R.render_cid_schema  w)
-            (fmt_ppr_lf_schema ~useName:false lvl) schema
-
-      | Sgn.Rec (f, tau, e) ->
-          fprintf ppf "rec %s : %a =@ @[<2>%a ;@]@?@."
+    let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
+      fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"
+            (prefix)
             (R.render_cid_prog  f)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             (fmt_ppr_cmp_exp_chk  LF.Empty
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
-      | Sgn.Pragma (LF.NamePrag _cid_tp) ->  ()
+    let rec fmt_ppr_sgn_decl lvl ppf = function
+      | Sgn.Const (c, a) ->
+          fprintf ppf "@\n%s : %a.@\n"
+            (R.render_cid_term c)
+            (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
+      | Sgn.Typ (a, k) ->
+          fprintf ppf "@\n%s : %a.@\n"
+            (R.render_cid_typ  a)
+            (fmt_ppr_lf_kind LF.Null lvl) k
 
+      | Sgn.CompTyp (_, a, cK) ->
+          fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
+             (R.render_name a)
+             (fmt_ppr_cmp_kind LF.Empty lvl) cK
+
+      | Sgn.CompCotyp (_, a, cK) ->
+          fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
+             (R.render_name a)
+             (fmt_ppr_cmp_kind LF.Empty lvl) cK
+
+      | Sgn.CompDest (_, c, tau)
+      | Sgn.CompConst (_, c, tau) ->
+          fprintf ppf "@\n | %s : @[%a@]@\n"
+            (R.render_name c)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            
+      | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl lvl ppf) (List.flatten l)
+
+      | Sgn.Val (_, x, tau, i, None) -> 
+          fprintf ppf "@\nlet %s : %a = %a@\n"
+            (R.render_name x)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
+
+      | Sgn.Val (_, x, tau, i, Some v) -> 
+          fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
+            (R.render_name x)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
+            (fmt_ppr_cmp_value lvl) v
+
+      | Sgn.Schema (w, schema) ->
+          fprintf ppf "@\nschema %s = @[%a@];@\n"
+            (R.render_cid_schema  w)
+            (fmt_ppr_lf_schema ~useName:false lvl) schema
+
+      | Sgn.Rec (h::t) ->
+          fmt_ppr_rec lvl ppf "rec" h;
+          List.iter (fmt_ppr_rec lvl ppf "and") t
+
+      | Sgn.Pragma (LF.OpenPrag n) ->  
+          let n' = Store.Modules.name_of_id n in
+          let _ = Store.Modules.open_module n' in
+          fprintf ppf "@\n#open %s@\n" (String.concat "." n')
+
+      | Sgn.Pragma _ -> ()
+          
+      | Sgn.Module(_, name, decls) ->
+          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
+
+          (* Necessary to enforce correct printing *)
+          let ((_, origName, _) as state) = Store.Modules.getState () in
+          let newName = origName@[name] in
+          let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
+          let _ = Store.Modules.currentName := newName in          
+          let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
+                    (name) (aux) decls in
+          Store.Modules.setState state
+
+      | Sgn.Comment _ -> ()
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
@@ -1655,6 +1728,7 @@ module Int = struct
 (*      let cK' = Whnf.normCKind cK in  *)
         fmt_ppr_cmp_kind cD std_lvl str_formatter cK
         ; flush_str_formatter ()
+
 
     let msubToString cD   s    =
       let s' = Whnf.cnormMSub s in

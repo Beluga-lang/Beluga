@@ -1,0 +1,32 @@
+module Arith = struct
+	module Nats = struct
+	  nat : type.
+	  z : nat.
+	  s : nat -> nat.
+
+	  rec suc : [ |- nat ] -> [ |- nat] =
+	  fn n => let [ |- N ] = n in [ |- s N];
+
+	  let two = [ |- s (s z)];
+	  let three = suc two;
+	end;
+
+	#open Nats
+
+	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
+	fn x, y => case x of
+	| [ |- z ] => y
+	| [ |- s N ] => 
+		let [ |- N' ] = add [ |- N ] y in
+		[ |- s N'];
+
+	let five = add two three;
+end;
+
+let x = [ |- Arith.Nats.z ];
+
+let y = [ |- Arith.Nats.s Arith.Nats.z];
+
+let z = Arith.Nats.suc [ |- Arith.Nats.z ];
+
+let will_fail = Nats.suc x;

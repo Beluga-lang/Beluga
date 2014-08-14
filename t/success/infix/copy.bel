@@ -1,0 +1,52 @@
+tp: type.   %name tp T.
+bool: tp.
+nat: tp.
+arrow: tp -> tp -> tp. #infix arrow 1 left.
+
+term : tp -> type.  %name term E x.
+
+z    : term nat. 
+s    : term nat -> term nat.
+
+lam  : (term T -> term T') -> term (T arrow T'). 
+app  : term (T arrow T') -> term T -> term T'. #infix app 1.
+
+
+schema tctx = some [t:tp] term t;
+% schema W = nat term;
+
+% total ([g] [g |- M ..])  (copy [g] [g |- M ..] ).
+
+rec copy : {g:tctx} [g |- term (T ..)] -> [g |- term (T ..)] =
+mlam g => fn e => case e of
+
+| [g |- z]      => [g |- z]
+
+| [g |- s (E ..)] =>
+  let [g |- (F ..)] = copy [g] [g |- (E .. )] in
+     [g |- s (F ..)]
+
+| [g |- #p .. ]   => [g |- #p ..]
+
+| [g |- lam  (\x. (U .. x))] =>
+  let [g,x :  term _  |-  V .. x] = copy [g, x:term _ ] [g,x  |-  U .. x]  in
+    [g |- lam  (\x. (V .. x))]
+
+| [g |- (E1 ..) app (E2 ..)] =>
+  let [g |- F1 .. ] = copy [g] [g |- E1 ..] in
+  let [g |- F2 .. ] = copy [g] [g |- E2 ..] in
+    [g |- (F1 ..) app (F2 ..)]
+
+;
+
+
+let t = copy [ ] [ |- z] ;
+let t = copy [x:term nat] [x:term nat |-  x];
+let t = copy [x:term _] [x :term nat |-  s x];
+%{ let t : (term (nat arrow nat))[ ] =
+     copy [ ] ([ ] lam \x. x);
+ let t : (term ((bool arrow nat) arrow (bool arrow nat)))[ ]
+     = copy [ ] ([ ] lam \x. (lam \y. x app y));
+ let t = copy [y:term (((bool arrow nat) arrow (bool arrow nat)) arrow nat)] ([y] app y (lam \x. (lam \y. x app y)));
+ let t = copy [y:term nat,x:term bool] ([x,y] s x);
+}%

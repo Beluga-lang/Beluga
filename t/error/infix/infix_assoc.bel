@@ -1,0 +1,16 @@
+datatype bool : type =
+| f : bool
+| t : bool;
+
+datatype nat : type =
+| z : nat
+| s : nat -> nat;
+
+datatype list : nat -> type =
+| nil : list z
+| @ : bool -> list N -> list (s N);
+
+% This would work if it was right associative
+#infix @ 1 left.
+
+let test = [ |- f @ f @ f @ nil];

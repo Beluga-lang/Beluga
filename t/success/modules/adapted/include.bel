@@ -1,0 +1,63 @@
+%{
+  The purpose of this is to verify modules opened via the #open pragma are included
+  in addition to anything declared in the module itself, i.e.
+  tp, exp, etc. should all be accessible after the '#open FVNatExplicit' because of the
+  '#open Common' in FVNatExplicit
+
+}%
+
+
+#opts -strengthen;
+
+module Common = struct
+  tp: type.
+  nat: tp.
+  bool: tp.
+
+
+  exp : tp -> type.
+  z   : exp nat.
+  suc : exp nat -> exp nat.
+  andalso : exp bool -> exp bool -> exp bool.
+  tt  : exp bool.
+  ff  : exp bool.
+
+end;
+
+
+module FVNatExplicit = struct
+  #open Common
+
+  opt: type.
+  nothing: opt.
+  something: {T : tp} exp T -> opt.
+
+  schema expCtx = some [t:tp] exp t;
+
+end;
+
+#open FVNatExplicit 
+rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp T] -> [g |- opt] =
+  mlam g => mlam T => fn e =>
+   (case e of
+      [g |- z]            : [g |- (exp nat)]   => [g |- nothing]
+    | [g |- tt]           : [g |- (exp bool)]  => [g |- nothing]
+    | [g |- ff]           : [g |- (exp bool)]  => [g |- nothing]
+
+   | {T':[ |- tp]} {#p:[g |- exp T']}
+      [g |- (#p ..)]     : [g |- (exp T')] => [g |- something T' (#p ..)]
+
+    | {U:[g |- exp nat]}
+      [g |- suc (U ..)] : [g |- (exp nat)]   => free_var [g] [ |- nat ]  [g |- (U ..)]
+
+   | {U:[g |- exp bool]} {V:[g |- exp bool]}
+      [g |- andalso (U ..) (V ..)] : [g |- (exp bool)]  =>
+
+         (case free_var [g] [ |- bool ] [g |- (U ..)] of
+            [g |- nothing]                  : [g |- opt] => free_var [g] [ |- bool ] [g |- (V ..)]
+
+         | {T':[ |- tp]} {U:[g |- (exp T')]}
+            [g |- something T' (U ..)] : [g |- opt] => [g |- something T' (U ..)]
+         )
+  )
+  ;

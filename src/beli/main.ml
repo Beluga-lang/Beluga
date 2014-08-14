@@ -46,7 +46,7 @@ let rec loop ppf =
       pp_print_flush ppf ();
       let input = read_line () in
       let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
-      Recsgn.recSgnDecls sgn
+      ignore(Recsgn.recSgnDecls sgn)
     with
       | End_of_file -> exit 0
       | Sys.Break -> fprintf ppf "Interrupted.@."

@@ -71,7 +71,35 @@ let append innerHtml =
   Buffer.add_string page ("<br><pre><code>" ^ innerHtml ^ "</code></pre>")
 
 let appendAsComment innerHtml = 
+  let from_markdown s =
+       (* H3 Header -- needs to be before H2 and H1*)
+       Str.global_replace (Str.regexp "^###\\([^\n]*\\)$") "<h3>\\1</h3>" s
+       (* H2 Header -- needs to be before H1 *)
+    |> Str.global_replace (Str.regexp "^##\\([^\n]*\\)$") "<h2>\\1</h2>"
+       (* H1 Header *)
+    |> Str.global_replace (Str.regexp "^#\\([^\n]*\\)$") "<h1>\\1</h1>"
+       (* Inline Code *)
+    |> Str.global_replace (Str.regexp "`\\([^`]*\\)`") "<code>\\1</code>"
+       (* Bold -- Needs to be before italics *)
+    |> Str.global_replace (Str.regexp "\\*\\*\\([^\\*]*\\)\\*\\*") "<b>\\1</b>"
+       (* Italics *)
+    |> Str.global_replace (Str.regexp "\\*\\([^\\*]*\\)\\*") "<i>\\1</i>"
+       (* Unordered Lists *)
+    |> Str.global_replace (Str.regexp "^-\\([^-]\\)\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ul><li>\\1\\2</li></ul>" 
+       (* Fix Unordered Lists *)
+    |> Str.global_replace (Str.regexp "</ul>\\([ \n\r]?\\)<ul>") "\\1"
+       (* Ordered Lists *)
+    |> Str.global_replace (Str.regexp "^[0-9]+\\.\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ol><li>\\1</li></ol>" 
+       (* Fix Ordered Lists *)
+    |> Str.global_replace (Str.regexp "</ol>\\([ \n\r]?\\)<ol>") "\\1"
+       (* Two space at the end of a line for a <br> *)
+    |> Str.global_replace (Str.regexp "  $") "<br>"
+       (* 5+ dashes for <hr> *)
+    |> Str.global_replace (Str.regexp "^-----+") "<hr>"
+  in
   let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
+  let innerHtml = Str.global_replace (Str.regexp_string "|-") "&#8866;" innerHtml in
+  let innerHtml = from_markdown innerHtml in
   Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
 
 let ids = ref []

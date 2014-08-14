@@ -43,6 +43,7 @@ let usage () =
         ^ "    +htmltest     Run HTML mode on file, but do not create final HTML page\n"
         ^ "    -css          Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
         ^ "    +cssfile      Specify css file to link to from HTML page\n"
+        ^ "    +n            Print line numbers\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -98,6 +99,7 @@ let process_option arg rest = match arg with
           Html.css := Html.File arg; rest
       | _ -> bailout "-cssfile requires an argument"
       end
+  | "+n" | "+N"  -> Pretty.setup_linenums (); rest
   | _ -> usage ()
 
 let rec process_options = function
@@ -167,10 +169,15 @@ let main () =
             printf "\n## Pretty-printing of the external syntax : ##\n";
           List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
         end;
-        if !Debug.chatter != 0 then
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;
-        Recsgn.recSgnDecls sgn;
-        if !Debug.chatter != 0 then
+        let sgn' = Recsgn.recSgnDecls sgn in
+        let _ = Store.Modules.reset () in
+        let _ = Pretty.line_num := 1 in
+        if !Debug.chatter <> 0 then
+          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
+        Pretty.printing_nums := false;
+        if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
         ignore (Coverage.force
                   (function
@@ -193,6 +200,11 @@ let main () =
             printf "\n## Holes: %s  ##" file_name;
             Holes.printAll ()
           end;
+          if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
+            printf "\n\n## LF Holes: %s  ##" file_name;
+            Lfholes.printAll ()
+          end;
+          print_newline();
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
           if !Html.genHtml then begin

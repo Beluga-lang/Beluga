@@ -229,7 +229,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in (*?*)
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) in 
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand
@@ -351,7 +351,7 @@ module Index = struct
   *)
   let storeTypConst cidTyp =
     let typEntry = Cid.Typ.get cidTyp in
-    let typConstr = typEntry.Cid.Typ.constructors in
+    let typConstr = !(typEntry.Cid.Typ.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
       addSgnClause typConst (compileSgnClause cidTerm) in
@@ -372,7 +372,9 @@ module Index = struct
      Store all type constants in the `types' table.
   *)
   let robStore () =
-    List.iter storeTypConst !Cid.Typ.entry_list
+    try 
+      List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
+    with _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.

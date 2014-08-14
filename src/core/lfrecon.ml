@@ -32,6 +32,7 @@ type error =
   | LeftoverConstraints of Id.name
   | PruningFailed
   | CompTypAnn
+  | InvalidLFHole
   | CompTypAnnSub
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
@@ -147,7 +148,11 @@ let _ = Error.register_printer
 
         | CompTypAnn ->
           Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
-  
+        | InvalidLFHole ->
+          Format.fprintf ppf
+            "Invalid LF Hole at %s"
+            (Loc.to_string loc)
+        
         | CompTypAnnSub ->
           Format.fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
 
@@ -214,7 +219,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Maybe in (*?*)
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in 
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -249,7 +254,7 @@ let unify_phat cD psihat phihat =
               if d = d' then
                 ((match c_var with
                    | Int.LF.CtxName psi ->
-                       FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.No)))
+                       FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.Maybe)))
                    | _ -> ());
                   cref := Some (Int.LF.CtxVar (c_var))  ; true)
               else
@@ -853,6 +858,8 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
     let tM = elTerm recT cD cPsi m (tB, Substitution.LF.id) in
     let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
     tM
+  | (Apx.LF.LFHole loc, tA) ->
+      Lfholes.collect (loc, cD, cPsi, sA); Int.LF.LFHole loc
 
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
@@ -876,6 +883,9 @@ and elTerm' recT cD cPsi r sP = match r with
 
   | Apx.LF.Ann (_loc, m, a) ->
     elTerm' recT cD cPsi m sP
+    
+  | Apx.LF.LFHole loc -> 
+    Lfholes.collect (loc, cD, cPsi, sP); Int.LF.LFHole loc
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
@@ -950,7 +960,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc, Int.LF.FVar x, tS)
 		with NotPatSpine ->
                   (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in
-                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in   (*?*)
+                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP)  in  
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                    add_fvarCnstr (tAvar, m, v);
                    Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
@@ -974,7 +984,7 @@ and elTerm' recT cD cPsi r sP = match r with
           | Pi ->
               (* let u =  Whnf.newMVar (cPsi, tA) in
                 Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
-              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
+              let u =  Whnf.newMVar None (Int.LF.Null, tA)  in
                 Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
           | Pibox ->
               begin match tA with
@@ -988,10 +998,10 @@ and elTerm' recT cD cPsi r sP = match r with
                                    let ssi' = Substitution.LF.invert ss' in
                                      (* cPhi' |- ssi : cPhi *)
                                      (* cPhi' |- [ssi]tQ    *)
-                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in (*?*)
+                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi'))  in 
                                      Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj))
                                  else
-                                   let u = Whnf.newMMVar None (cD, cPhi, tA') Int.LF.Maybe in (*?*)
+                                   let u = Whnf.newMMVar None (cD, cPhi, tA')  in
                                      Int.LF.MMVar (u, (Whnf.m_id, s_proj))
                     in
                       Int.LF.Root (loc, h, tS)
@@ -1066,7 +1076,7 @@ and elTerm' recT cD cPsi r sP = match r with
 	      let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
 				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
 				"[" ^ P.dctxToString cD cPhi ^ "]") in
-                FCVar.add u (cD, Int.LF.Decl(u, Int.LF.MTyp (tP, cPhi, Int.LF.No)));    (*The depend paramater here affects both mlam vars and case vars*)
+                FCVar.add u (cD, Int.LF.Decl(u, Int.LF.MTyp (tP, cPhi, Int.LF.Maybe)));    (*The depend paramater here affects both mlam vars and case vars*)
                 Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
           else
            if isProjPatSub s then
@@ -1119,7 +1129,7 @@ and elTerm' recT cD cPsi r sP = match r with
                  | Apx.LF.SVar (_ , _ ) ->
                      raise (Error (loc, CompTypAnnSub ))
                  | _ ->
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
                 add_fcvarCnstr (m, v);
                 Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
 
@@ -1183,7 +1193,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 
             | (Apx.LF.Nil, false) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil)
 
@@ -1257,7 +1267,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
 
             | (false, Apx.LF.Nil) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in
                   add_fcvarCnstr (m, q);
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
 
@@ -1694,6 +1704,8 @@ and synNamedSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schem
 
 
 and elClosedTerm' recT cD cPsi r = match r with
+  | Apx.LF.LFHole loc -> 
+      raise (Error (loc, InvalidLFHole))
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
       let i  = (Term.get c).Term.implicit_arguments in
@@ -1849,8 +1861,8 @@ and elClosedTerm' recT cD cPsi r = match r with
         raise (Error (loc, CompTypAnn))
         end
   | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.FPVar(_,_), k ) , spine ) -> failwith "NamedProj case"
-  | Apx.LF.Root (loc, _ , _ ) ->
-      (dprint (fun () -> "[elClosedTerm'] Head not covered?");
+  | Apx.LF.Root (loc, h , _ ) ->
+      (dprint (fun () -> "[elClosedTerm'] Head not covered? - " ^ (what_head h));
       raise (Error (loc, CompTypAnn )))
 
   | Apx.LF.Lam (loc, _, _ ) ->

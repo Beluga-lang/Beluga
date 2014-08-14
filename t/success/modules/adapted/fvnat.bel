@@ -1,0 +1,149 @@
+#opts -strengthen;
+
+module Common = struct
+  tp: type.
+  nat: tp.
+  bool: tp.
+
+
+  exp : tp -> type.
+  z   : exp nat.
+  suc : exp nat -> exp nat.
+  andalso : exp bool -> exp bool -> exp bool.
+  tt  : exp bool.
+  ff  : exp bool.
+
+
+  schema w = some [t:tp] exp t;
+end;
+
+module FVNat = struct
+  #open Common
+
+
+  arr : tp -> tp -> tp.
+  app:  exp (arr T T') -> exp T -> exp T'.
+  lam : (exp T -> exp T') -> exp (arr T T').  
+
+  opt: type.
+  nothing: opt.
+  something: exp T -> opt.
+
+  rec free_var : {g:w} [g |- exp (T ..)] -> [g |- opt] =
+  mlam g  => % mlam T  =>
+   fn e =>
+   case e of
+    [g |- z]         => [g |- nothing]
+  | [g |- tt]        => [g |- nothing]
+  | [g |- ff]        => [g |- nothing]
+
+  | [g |- (#p ..)]    => [g |- something  (#p ..)]
+
+  | [g |- suc (U ..)] => free_var [g] [g |- (U ..)]
+
+  | [g |- andalso (U ..) (V ..)]  =>
+    (case free_var [g] [g |- (U ..)] of
+       [g |- nothing]   => free_var [g] [g |- V ..]
+  %   | [g] something  (#p ..)  => [g] something  (#p ..)
+      | [g |- something (U ..)]     => [g |- something (U .. )]
+    )
+
+  | [g |- app (U ..) (V ..)]  =>
+      (case free_var [g] [g |- (U ..)] of
+         [g |- nothing]   => free_var [g] [g |- (V ..)]
+  %     | [g] something  (#p ..)  => [g] something  (#p ..)
+       | [g |- something (U ..)]     => [g |- something (U .. )])
+
+  | [g |- lam (\x . (U .. x))] =>
+
+     (case (free_var [g, x:exp _ ] [g, x |-  (U .. x)]) of
+        [g, x: exp _  |-  nothing]       => [g |- nothing]
+      | [g, x: exp _  |-  something x]   => [g |- nothing]
+             % technically we need to initiate backtracking
+   %   | [g, x: exp _ ] something (#p ..) => [g] something (#p ..)
+      | [g, x: exp _  |-  something (U .. )]  => [g |- something (U ..)]
+      | [g, x: exp _  |-  something (U .. x)]  => [g |- nothing]
+     )
+  ;
+
+end;
+
+module FVNatCrec = struct
+  #open Common
+
+  arr : tp -> tp -> tp.
+  app:  exp (arr T T') -> exp T -> exp T'.
+  lam : (exp T -> exp T') -> exp (arr T T').
+
+  opt: type.
+  nothing: opt.
+  something: exp T -> opt.
+
+  rec free_var : (g:w) [g |- exp (T ..)] -> [g |- opt] =
+  fn e =>  case e of
+    [g |- z]         => [g |- nothing]
+  | [g |- tt]        => [g |- nothing]
+  | [g |- ff]        => [g |- nothing]
+
+  | [g |- (#p ..)]    => [g |- something  (#p ..)]
+
+  | [g |- suc (U ..)] => free_var [g |- (U ..)]
+
+  | [g |- andalso (U ..) (V ..)]  =>
+    (case free_var [g |- (U ..)] of
+       [g |- nothing]   => free_var [g |- V ..]
+     | [g |- something  (T ..)]  => [g |- something  (T ..)])
+
+  | [g |- app (U ..) (V ..)]  =>
+      (case free_var [g |- (U ..)] of
+         [g |- nothing]   => free_var [g |- (V ..)]
+       | [g |- something  (T ..)]  => [g |- something  (T ..)])
+
+  | [g |- lam (\x . (U .. x))] =>
+
+     (case (free_var [g, x:exp _ |-  (U .. x)]) of
+        [g, x: exp _  |-  nothing]       => [g |- nothing]
+      | [g, x: exp _  |-  something x]   => [g |- nothing]
+             % technically we need to initiate backtracking
+  %    | [g, x: exp _ ] something (#p ..) => [g] something (#p ..)
+      | [g, x: exp _  |-  something (U .. )]  => [g |- something (U ..)]
+      | [g, x: exp _  |-  something (U .. x)]  => [g |- nothing]
+
+     );
+end;
+
+module FVNatExplicit = struct
+  #open Common
+
+  opt: type.
+  nothing: opt.
+  something: {T : tp} exp T -> opt.
+
+  schema expCtx = some [t:tp] exp t;
+
+  rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp T] -> [g |- opt] =
+  mlam g => mlam T => fn e =>
+   (case e of
+      [g |- z]            : [g |- (exp nat)]   => [g |- nothing]
+    | [g |- tt]           : [g |- (exp bool)]  => [g |- nothing]
+    | [g |- ff]           : [g |- (exp bool)]  => [g |- nothing]
+
+   | {T':[ |- tp]} {#p:[g |- exp T']}
+      [g |- (#p ..)]     : [g |- (exp T')] => [g |- something T' (#p ..)]
+
+    | {U:[g |- exp nat]}
+      [g |- suc (U ..)] : [g |- (exp nat)]   => free_var [g] [ |- nat ]  [g |- (U ..)]
+
+   | {U:[g |- exp bool]} {V:[g |- exp bool]}
+      [g |- andalso (U ..) (V ..)] : [g |- (exp bool)]  =>
+
+         (case free_var [g] [ |- bool ] [g |- (U ..)] of
+            [g |- nothing]                  : [g |- opt] => free_var [g] [ |- bool ] [g |- (V ..)]
+
+         | {T':[ |- tp]} {U:[g |- (exp T')]}
+            [g |- something T' (U ..)] : [g |- opt] => [g |- something T' (U ..)]
+         )
+  )
+  ;
+
+end;

@@ -11,6 +11,7 @@ PROGRAM = beluga
 
 # Declare the files the program is built from
 FILES[] = main
+		  beli
 
 # Declare some phony empty targets so omake doesn't try to build
 # camlp4lib. May be a more elegant way to do this.

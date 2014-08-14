@@ -293,9 +293,9 @@ If a previous beli process already exists, kill it first."
   (beluga--stop)
   (setq beluga--proc
         (get-buffer-process
-         (make-comint "beli"
-                      "beli"
-                      nil "-emacs"))))
+         (make-comint "beluga"
+                      "beluga"
+                      nil "-I" "-emacs" ))))
 
 (defun beluga--stop ()
   "Stop the beli process."

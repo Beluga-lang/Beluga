@@ -13,34 +13,30 @@ let bailout msg =
 
 let usage () =
   let options =
-          "    -d            turn all debugging printing off (default)\n"
-        ^ "    +d            turn all debugging printing on\n"
-        ^ "    +ext          print external syntax before reconstruction\n"
-        ^ "    -s=natural    print substitutions in a \"natural\" style (default)\n"
-        ^ "    -s=debruijn   print substitutions in deBruijn-ish style (when debugging Beluga)\n"
-        ^ "    +implicit     print implicit arguments\n"
-        ^ "    -implicit     don't print implicit arguments (default)\n"
-        ^ "    -t            turn timing off (default)\n"
-        ^ "    +t            print timing information\n"
-        ^ "    +tfile        print timing information to file \"time.txt\"\n"
-        ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
-        ^ "    +coverage     turn on coverage checker (experimental)\n"
-        ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
-        ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
-        ^ "    +printSubord  print subordination relations (experimental)\n"
-        ^ "    +print        turn printing on (default)\n"
-        ^ "    -print        turn printing off\n"
-        ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
-        ^ "    +logic        turn on logic programming engine\n"
-        ^ "    +test         Make output suitable for test harness. Implies -print\n"
-        ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
-        ^ "    -strengthen   Turn off metavariable strengthening.\n"
-        ^ "    +realNames    Print holes using real names (default)\n"
-        ^ "    -realNames    Print holes using freshly generated names\n"
-        ^ "    +annot        Generate a .annot file for use in emacs\n"
-        ^ "    +locs         Output location information (for testing)\n"
-        ^ "    -i [loc]      Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
-        ^ "    +n            Print line numbers\n"
+          "    +d                    Turn all debugging printing on - note that in interactive mode\n"
+        ^ "    +ext                      debugging information is piped to '"^ !Debug.filename ^ ".out" ^ "'\n"
+        ^ "    +ext                  Print external syntax before reconstruction\n"
+        ^ "    -s=debruijn           Print substitutions in deBruijn-ish style (when debugging Beluga)\n"
+        ^ "    +implicit             Print implicit arguments\n"
+        ^ "    +t                    Print timing information\n"
+        ^ "    +tfile                Print timing information to file \"time.txt\"\n"
+        ^ "    +coverage             Turn on coverage checker (experimental)\n"
+        ^ "    +covdepth nn          \"Extra\" depth for coverage checker\n"
+        ^ "    +warncover            Turn on coverage checker (experimental), but give warnings only\n"
+        ^ "    +printSubord          Print subordination relations (experimental)\n"
+        ^ "    -print                Turn printing off\n"
+        ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
+        ^ "    -logic                Turn off logic programming engine\n"
+        ^ "    +test                 Make output suitable for test harness. Implies -print\n"
+        ^ "    -strengthen           Turn off metavariable strengthening.\n"
+        ^ "    -realNames            Print holes using freshly generated names to improve readability (default)\n"
+        ^ "    +annot                Generate a .annot file for use in emacs\n"
+        ^ "    +locs                 Output location information (for testing)\n"
+        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
+        ^ "                          beli-options: \n"
+        ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
+        ^ "                              -readLine     disabe readline support using rlwrap \n"
+        ^ "    +n                    Print line numbers\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -81,7 +77,7 @@ let process_option arg rest = match arg with
         with Failure "int_of_string" ->
           bailout "-width needs a numeric argument"
     end
-  | "+logic" -> Logic.Options.enableLogic := true ; rest
+  | "-logic" -> Logic.Options.enableLogic := false ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
   | "+strengthen" -> Lfrecon.strengthen := true; rest
   | "-strengthen" -> Lfrecon.strengthen := false; rest
@@ -89,11 +85,9 @@ let process_option arg rest = match arg with
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
   | "+locs"       -> Locs.gen_loc_info := true; rest
-  | "-i" -> begin match rest with
-      | h::t when ((h.[0] <> '-' && h.[0] <> '+'))->
-        Unix.execvp h (Array.append [| h |] (Array.of_list t))
-      | _ -> Unix.execvp "bin/beli" (Array.append [| "bin/beli" |] (Array.of_list rest))
-  end
+  | "-I" -> begin
+      try Beli.run rest
+      with Beli.Invalid_Arg -> usage () end
   | "+n" | "+N"  -> Pretty.setup_linenums (); rest
   | _ -> usage ()
 

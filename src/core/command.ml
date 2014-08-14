@@ -1,4 +1,3 @@
-open Core
 open ExtString.String
 open Store.Cid
 open Pretty.Int.DefaultPrinter
@@ -34,7 +33,7 @@ let reg : command list ref = ref []
 
 let countholes = {name = "countholes";
                   run = (fun ppf _ -> fprintf ppf "- Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
-                  help = "Print the total number of holes"}
+                  help = "Print the total number of LF and computation level holes"}
 
 let numholes = {name = "numholes";
                   run = (fun ppf _ -> fprintf ppf "%d;\n" (Holes.getNumHoles()));
@@ -122,7 +121,7 @@ let lochole = {name = "lochole";
                             stop_line,
                             stop_bol,
                             stop_off,
-                            _ghost) = Core.Syntax.Loc.to_tuple loc in
+                            _ghost) = Syntax.Loc.to_tuple loc in
                        fprintf ppf
                          "(\"%s\" %d %d %d %d %d %d);\n"
                          file_name
@@ -146,7 +145,7 @@ let loclfhole = {name = "lochole-lf";
                             stop_line,
                             stop_bol,
                             stop_off,
-                            _ghost) = Core.Syntax.Loc.to_tuple loc in
+                            _ghost) = Syntax.Loc.to_tuple loc in
                        fprintf ppf
                          "(\"%s\" %d %d %d %d %d %d);\n"
                          file_name
@@ -385,7 +384,7 @@ let get_type = {name = "get-type";
                       let col = int_of_string (List.hd (List.tl args)) in
                       let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
                     with e -> fprintf ppf "- Error in get-type : %s;\n" (Printexc.to_string e));
-                help = "get-type [line] [column] Get the location based on the distance from the start of the buffer (for use in emacs)\n"}
+                help = "get-type [line] [column] Get the type at a location (for use in emacs)"}
 (* Registering built-in commands *)
 
 let _ = reg := [

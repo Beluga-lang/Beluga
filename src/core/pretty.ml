@@ -925,11 +925,11 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
-          if (not !Control.printImplicit && (isInferred mtyp) || !Control.printNormal) then () else
+          if (((not !Control.printImplicit) && (isImplicit mtyp) && printing_holes) || (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "")
+            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "") end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -940,7 +940,7 @@ module Int = struct
       | LF.PTyp (tA, _, _) -> Some tA
       | _ -> None
 
-    and isInferred = function
+    and isImplicit = function
       | LF.MTyp (_, _, dep)
       | LF.PTyp (_, _, dep)
       | LF.STyp (_, _, dep)
@@ -1111,7 +1111,6 @@ module Int = struct
       | Comp.PatConst (_, c, pat_spine) ->
           let pat_spine = deimplicitize_spine c pat_spine in
           let cond = lvl > 1 in
-          let pat_spine = deimplicitize_spine c pat_spine in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
               (R.render_cid_comp_const c)

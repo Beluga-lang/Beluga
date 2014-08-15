@@ -34,12 +34,10 @@ module Arith = struct
 
 end;
 
-let x = [ |- Arith.Nats.z ];
+%abbrev Arith.Nats N
 
-let y = [ |- Arith.Nats.s Arith.Nats.z];
+let x = [ |- N.z ];
 
-let z = Arith.Nats.suc [ |- Arith.Nats.z ];
+let y = [ |- N.s N.z];
 
-%open Arith
-
-let test = Nats.suc x;
+let z = N.suc [ |- N.z ];

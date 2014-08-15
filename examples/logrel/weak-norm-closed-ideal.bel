@@ -1,4 +1,4 @@
-#opts +strengthen;
+%opts +strengthen;
 % Sketch of weak normalization for STLC that doesn't go under binders
 % This doesn't currently work, but this is what I imagine would be possible
 % with some improvements to reconstruction

@@ -329,7 +329,7 @@ GLOBAL: sgn;
 
   sgn_pragma_opts:
     [
-      [ "#opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
+      [ "%opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
     ];
 
   sgn_lf_typ :
@@ -432,7 +432,7 @@ GLOBAL: sgn;
             [Sgn.Rec (_loc, f)]
 
       |
-        "#infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
+        "%infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
           begin
             match assoc with
             | Some "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left))]
@@ -445,10 +445,10 @@ GLOBAL: sgn;
         "#postfix"; i = SYMBOL; p = INTLIT; "." ->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
    *)    |
-        "#prefix"; i = SYMBOL; p = INTLIT; "."->
+        "%prefix"; i = SYMBOL; p = INTLIT; "."->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Prefix, int_of_string p, Some Sgn.Left ))]
 
-      | "#assoc"; assoc = SYMBOL; "." ->
+      | "%assoc"; assoc = SYMBOL; "." ->
         begin match assoc with
         | "left" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Left)]
         | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
@@ -461,7 +461,7 @@ GLOBAL: sgn;
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
       | 
-        "#open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] -> 
+        "%open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] -> 
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.OpenPrag(l@[last]))]
       | 

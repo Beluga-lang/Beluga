@@ -1584,7 +1584,7 @@ module Int = struct
       | Sgn.Pragma (LF.OpenPrag n) ->  
           let n' = Store.Modules.name_of_id n in
           let _ = Store.Modules.open_module n' in
-          fprintf ppf "@\n#open %s@\n" (String.concat "." n')
+          fprintf ppf "@\n%%open %s@\n" (String.concat "." n')
 
       | Sgn.Pragma _ -> ()
           

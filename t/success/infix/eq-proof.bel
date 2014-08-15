@@ -15,11 +15,11 @@
 %   definition of `extend' and the use of `extend' in `eqfun'
 
 exp: type.    %name exp E x.
-app: exp -> exp -> exp. #infix app 3 right.
+app: exp -> exp -> exp. %infix app 3 right.
 lam: (exp -> exp) -> exp.
 
-eq: exp -> exp -> type.   %name eq Q u. #infix eq 1 left.
-eq_app : E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2). #infix eq_app 1.
+eq: exp -> exp -> type.   %name eq Q u. %infix eq 1 left.
+eq_app : E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2). %infix eq_app 1.
 
 eq_lam :  ({x : exp} x eq x -> (E x) eq (F x))
           -> (lam (\x. E x)) eq (lam (\x. F x)).

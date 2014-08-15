@@ -1,4 +1,4 @@
-#opts +strengthen;
+%opts +strengthen;
 % Natural Deduction - Hilbert Translation
 % adapted from Handbook article on Logical Frameworks
 % by F. Pfenning

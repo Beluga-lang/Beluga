@@ -11,6 +11,6 @@ datatype list : nat -> type =
 | @ : bool -> list N -> list (s N);
 
 % This would work if it was right associative
-#infix @ 1 left.
+%infix @ 1 left.
 
 let test = [ |- f @ f @ f @ nil];

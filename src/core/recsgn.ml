@@ -40,7 +40,7 @@ let _ = Error.register_printer
             (actual)
             (expected) end
       | InvalidOpenPrag s ->
-        Format.fprintf ppf "Invalid module in pragma '#open %s'" s
+        Format.fprintf ppf "Invalid module in pragma '%%open %s'" s
       | InvalidAbbrev (l, s) ->
         Format.fprintf ppf "Invalid module in pragma '%%abbrev %s %s'" (String.concat "." l) s))
 

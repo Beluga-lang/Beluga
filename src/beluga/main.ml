@@ -25,18 +25,12 @@ let usage () =
         ^ "    -t            turn timing off (default)\n"
         ^ "    +t            print timing information\n"
         ^ "    +tfile        print timing information to file \"time.txt\"\n"
-        ^ "    -coverage     turn off coverage checker (default, since coverage checker is incomplete)\n"
-        ^ "    +coverage     turn on coverage checker (experimental)\n"
-        ^ "    +covdepth nn  \"extra\" depth for coverage checker\n"
-        ^ "    +warncover    turn on coverage checker (experimental), but give warnings only\n"
         ^ "    +printSubord  print subordination relations (experimental)\n"
         ^ "    +print        turn printing on (default)\n"
         ^ "    -print        turn printing off\n"
         ^ "    -width nnn    set output width to nnn (default 86; minimum 40)\n"
         ^ "    +logic        turn on logic programming engine\n"
         ^ "    +test         Make output suitable for test harness. Implies -print\n"
-        ^ "    +strengthen   Perform metavariable strengthening automatically.\n"
-        ^ "    -strengthen   Turn off metavariable strengthening.\n"
         ^ "    +realNames    Print holes using real names (default)\n"
         ^ "    -realNames    Print holes using freshly generated names\n"
         ^ "    +n            Print line numbers\n"
@@ -63,9 +57,6 @@ let process_option arg rest = match arg with
   | "+t" -> Monitor.on := true; rest
   | "+tfile" -> Monitor.onf := true; rest
   | "-t" -> Monitor.on := false; Monitor.onf := false; rest
-  | "+coverage" -> Coverage.enableCoverage := true; rest
-  | "+warncover" -> Coverage.enableCoverage := true; Coverage.warningOnly := true; rest
-  | "-coverage" -> Coverage.enableCoverage := false; rest
   | "+printsubord" -> Subord.dump := true; rest
   | "+print" -> rest
   | "-print" -> Debug.chatter := 0; rest
@@ -82,8 +73,6 @@ let process_option arg rest = match arg with
     end
   | "+logic" -> Logic.Options.enableLogic := true ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
-  | "+strengthen" -> Lfrecon.strengthen := true; rest
-  | "-strengthen" -> Lfrecon.strengthen := false; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "-realNames" -> Store.Cid.NamedHoles.usingRealNames := false; rest
   | "+n" | "+N"  -> Pretty.setup_linenums (); rest
@@ -146,11 +135,15 @@ let main () =
       let abort_session () = raise SessionFatal in
       try
         let sgn = Parser.parse_file ~name:file_name Parser.sgn in
-        (* If the file starts with an %opts pragma then process it now. *)
-        let sgn = match sgn with
-          | Synext.Sgn.Pragma (_, Synext.Sgn.OptsPrag opts) :: sgn ->
-            ignore (process_options opts); sgn
-          | _ -> sgn in
+        (* If the file starts with a global pragma then process it now. *)
+        let rec extract_global_pragmas = function
+          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.NoStrengthen) :: t -> begin Lfrecon.strengthen := false; extract_global_pragmas t end
+          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.Coverage(opt))::t -> begin 
+            Coverage.enableCoverage := true;
+            begin match opt with | `Warn -> Coverage.warningOnly := true | `Error -> () end;
+            extract_global_pragmas t end
+          | l -> l in
+        let sgn = extract_global_pragmas sgn in
         if !externall then begin
           if !Debug.chatter != 0 then
             printf "\n## Pretty-printing of the external syntax : ##\n";

@@ -315,7 +315,7 @@ GLOBAL: sgn;
 
   sgn:
     [
-      [ prag = sgn_pragma_opts; decls = sgn_eoi -> Sgn.Pragma (_loc, prag) :: decls
+      [ prag = sgn_global_prag; decls = sgn -> prag :: decls
       | decls = sgn_eoi -> decls
       ]
     ];
@@ -327,10 +327,16 @@ GLOBAL: sgn;
      ]
    ];
 
-  sgn_pragma_opts:
+  sgn_global_prag:
+  [
     [
-      [ "%opts"; opts = LIST1 [ opt = SYMBOL -> opt]; ";" -> Sgn.OptsPrag opts ]
-    ];
+        "%noStrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
+      |
+        "%coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
+      |
+        "%warncoverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Warn))
+    ]  
+  ];
 
   sgn_lf_typ :
     [
@@ -469,6 +475,7 @@ GLOBAL: sgn;
         "%abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
+
     ]
   ]
   ;

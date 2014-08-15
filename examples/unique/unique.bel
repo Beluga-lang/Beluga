@@ -1,5 +1,5 @@
 
-%opts +strengthen;
+
 
 % Definition of types and expressions
 tp: type.  %name tp T.

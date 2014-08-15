@@ -1,4 +1,4 @@
-%opts -strengthen;
+%noStrengthen
 
 module Common = struct
   tp: type.

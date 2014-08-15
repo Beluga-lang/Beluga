@@ -1,4 +1,4 @@
-%opts -strengthen;
+%noStrengthen
 % Proof of weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 

@@ -16,7 +16,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
   | UnexpectedSucess
-  | IllegalOptsPrag
+  | IllegalOptsPrag of string
   | IllegalOperatorPrag of name * Ext.Sgn.fix * int
   | InvalidOpenPrag of string
   | InvalidAbbrev of string list * string
@@ -29,9 +29,9 @@ let _ = Error.register_printer
       match err with
       	| UnexpectedSucess ->
       	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
-        | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."
-        | IllegalOperatorPrag(n, f, actual) -> begin
+        | IllegalOptsPrag s ->
+          Format.fprintf ppf "\"%s\" pragma must appear before any declarations." s
+        | IllegalOperatorPrag(n, f, actual) -> begin 
           let (fix, expected) = match f with Ext.Sgn.Infix -> ("infix", 2) | Ext.Sgn.Postfix -> ("postfix", 1) in
           Format.fprintf ppf 
             "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted" 
@@ -91,8 +91,12 @@ let rec recSgnDecls = function
   (* %not declaration with nothing following *)
   | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> []
 
-  | Ext.Sgn.Pragma(loc, Ext.Sgn.OptsPrag _) :: rest ->
-    raise (Error (loc, IllegalOptsPrag))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Warn ) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%warncoverage"))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Error ) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%coverage"))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.NoStrengthen) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%noStrengthen"))
 
   | decl :: rest ->
     let decl' = recSgnDecl decl in

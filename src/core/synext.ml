@@ -243,29 +243,35 @@ module Sgn = struct
   type fix = Prefix | Postfix | Infix
   
   type pragma =
-    | OptsPrag of string list
-    | NamePrag of name * string * string option
-    | FixPrag of name * fix * precedence * assoc option
+    | OptsPrag          of string list
+    | NamePrag          of name * string * string option
+    | FixPrag           of name * fix * precedence * assoc option
     | NotPrag
-    | DefaultAssocPrag of assoc
-    | OpenPrag of string list
-    | AbbrevPrag of string list * string
+    | DefaultAssocPrag  of assoc
+    | OpenPrag          of string list
+    | AbbrevPrag        of string list * string
+
+  (* Pragmas that need to be declared first *)
+  type global_pragma = 
+    | NoStrengthen
+    | Coverage     of [`Error | `Warn]
 
   type decl =
-    | Const    of Loc.t * name * LF.typ
-    | Typ      of Loc.t * name * LF.kind
-    | CompTyp  of Loc.t * name * Comp.kind
-    | CompCotyp of Loc.t * name * Comp.kind
-    | CompConst of Loc.t * name * Comp.typ
-    | CompDest of Loc.t * name * Comp.typ
+    | Const         of Loc.t * name * LF.typ
+    | Typ           of Loc.t * name * LF.kind
+    | CompTyp       of Loc.t * name * Comp.kind
+    | CompCotyp     of Loc.t * name * Comp.kind
+    | CompConst     of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema   of Loc.t * name * LF.schema
-    | Pragma   of Loc.t * pragma
-    | MRecTyp  of Loc.t * decl list list
-    | Rec      of Loc.t * Comp.rec_fun list
-    | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
-    | Query    of Loc.t * name option * LF.typ * int option * int option
-    | Module of Loc.t * string * decl list
+    | Schema        of Loc.t * name * LF.schema
+    | Pragma        of Loc.t * pragma
+    | GlobalPragma  of Loc.t * global_pragma
+    | MRecTyp       of Loc.t * decl list list
+    | Rec           of Loc.t * Comp.rec_fun list
+    | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
+    | Query         of Loc.t * name option * LF.typ * int option * int option
+    | Module        of Loc.t * string * decl list
 
   type sgn = decl list
 

@@ -1,4 +1,4 @@
-%opts -strengthen;
+%noStrengthen
 schema ctx = !v A;
 
 rec identity : {P: [ |- atm]}  [ |- !^ (imp (atom P ) (atom P))] =

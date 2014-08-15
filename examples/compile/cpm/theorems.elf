@@ -4,7 +4,7 @@ ccf : eval E V
        -> ({K} {W} K # (return V) =>* (answer W) -> K # (ev E) =>* (answer W))
        -> type.
 
-%mode ccf +D -C.
+% mode ccf +D -C.
 %lex {D} ccf D _.
 
 
@@ -14,7 +14,7 @@ peq : csd C D C'
        -> ccp D C' C
        -> type.
 
-%mode peq +SD -CP.
+% mode peq +SD -CP.
 %lex {SD} peq SD _.
 
 
@@ -24,6 +24,6 @@ peqr : ccp D C' C
        -> csd C D C'
        -> type.
 
-%mode peqr +CP -SD.
+% mode peqr +CP -SD.
 %lex {CP} peqr CP _.
 

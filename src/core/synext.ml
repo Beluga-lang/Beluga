@@ -249,6 +249,7 @@ module Sgn = struct
     | NotPrag
     | DefaultAssocPrag of assoc
     | OpenPrag of string list
+    | AbbrevPrag of string list * string
 
   type decl =
     | Const    of Loc.t * name * LF.typ

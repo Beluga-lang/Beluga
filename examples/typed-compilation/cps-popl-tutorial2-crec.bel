@@ -65,10 +65,10 @@ fn e => case e of
 % Twelf Solution
 
 cps : value A -> cvalue A -> type.
-%mode cps +X1 -X2.
+% mode cps +X1 -X2.
 
 cpse : exp A -> ((cvalue A -> contra) -> contra) -> type.
-%mode cpse +X1 -X2.
+% mode cpse +X1 -X2.
 
 cps/lam : cps (lam (E : value A -> exp B))
               (clam (E' : cvalue A -> (cvalue B -> contra) -> contra))
@@ -83,7 +83,7 @@ cpse/app : cpse (app (E1:exp (B => A)) (E2:exp B))
 cpse/ret : cpse (ret (V:value A)) ([c:(cvalue A -> contra)] c V')
                 <- cps V (V':cvalue A).
 
-%block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
-%worlds (cpsb) (cps _ _) (cpse _ _).
-%total (E V) (cps E _) (cpse V _).
+% block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
+% worlds (cpsb) (cps _ _) (cpse _ _).
+% total (E V) (cps E _) (cpse V _).
 }%

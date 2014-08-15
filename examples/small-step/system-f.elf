@@ -5,19 +5,19 @@ tm : type.
 
 % Types
 nat : tp.
-arr : tp -> tp -> tp.  %infix left 5 =>.
+arr : tp -> tp -> tp.  % infix left 5 =>.
 forall : (tp -> tp) -> tp.
 
 % Terms
 z : tm.
 s : tm -> tm.
-app : tm -> tm -> tm.  %infix left 5 @.
+app : tm -> tm -> tm.  % infix left 5 @.
 lam : tp -> (tm -> tm) -> tm.
 lAM : (tp -> tm) -> tm.
-ann : tm -> tp -> tm.  %infix left 5 #.
+ann : tm -> tp -> tm.  % infix left 5 #.
 
 % Typing
-has : tm -> tp -> type. %infix left 5 is.
+has : tm -> tp -> type. % infix left 5 is.
 
 is_z   :
        % ----------
@@ -59,7 +59,7 @@ value_lAM : value (lAM (\a. E a)).
 
 % Operational semantics
 
-~> : tm -> tm -> type. %infix left 5 ~>.
+~> : tm -> tm -> type. % infix left 5 ~>.
 
 ~>_s : ~> E E' ->
      % ---------------
@@ -88,7 +88,7 @@ value_lAM : value (lAM (\a. E a)).
 
 % Preservation
 pres : (has E T) -> (~>  E E') -> (has E' T) -> type.
-%mode pres +D1 +EV -D2.
+% mode pres +D1 +EV -D2.
 
 pres_s : pres D EV D' ->
        % ----------------------------------
@@ -117,8 +117,8 @@ pres_#2 :
           {D:{x:tp} has (X1 x) (X2 x)}
           pres (is_# (is_lAM (\a. D a)) ) (~>_#2) (D T).
 
-%worlds () (pres D1 E D2).
-%total E (pres _ E _).
+% worlds () (pres D1 E D2).
+% total E (pres _ E _).
 
 % Progress (much trickier)
 
@@ -132,39 +132,39 @@ val : (value E) -> step_or_val E.
 
 prog_@_lemma :  (has E1 (arr T1 T2)) -> step_or_val E1 -> step_or_val E2 ->
                 step_or_val (app E1 E2) -> type.
-%mode prog_@_lemma +D +SV1 +SV2 -SV3.
+% mode prog_@_lemma +D +SV1 +SV2 -SV3.
 
 prog_@_lemma_s  : prog_@_lemma _ (step EV) _ (step (~>_@1 EV)).
 prog_@_lemma_vs : prog_@_lemma _ (val VL) (step EV) (step (~>_@2 VL EV)).
 prog_@_lemma_vs : prog_@_lemma _ (val VL1) (val VL2) (step (~>_@3 VL2)).
 
-%worlds () (prog_@_lemma D SV1 SV2 SV3).
-%total {SV1 SV2} (prog_@_lemma _ SV1 SV2 _).
+% worlds () (prog_@_lemma D SV1 SV2 SV3).
+% total {SV1 SV2} (prog_@_lemma _ SV1 SV2 _).
 
 
 prog_#_lemma :  {T2:tp} (has E  (forall (\a. T1 a))) -> step_or_val E ->
                 step_or_val (ann E T2) -> type.
-%mode prog_#_lemma +T2 +D +SV1 -SV2.
+% mode prog_#_lemma +T2 +D +SV1 -SV2.
 
 prog_#_lemma_s : prog_#_lemma _ _ (step EV) (step (~>_#1 EV)).
 prog_#_lemma_v : prog_#_lemma _ _ (val VL) (step (~>_#2)).
 
-%worlds () (prog_#_lemma T2 D SV1 SV2).
-%total {SV1} (prog_#_lemma _ _ SV1 _).
+% worlds () (prog_#_lemma T2 D SV1 SV2).
+% total {SV1} (prog_#_lemma _ _ SV1 _).
 
 prog_s_lemma :  step_or_val E -> step_or_val (s E) -> type.
-%mode prog_s_lemma +SV1 -SV2.
+% mode prog_s_lemma +SV1 -SV2.
 
 prog_s_lemma_s  : prog_s_lemma (step EV) (step (~>_s EV)).
 prog_s_lemma_v  : prog_s_lemma (val VL) (val (value_s VL)).
 
-%worlds () (prog_s_lemma SV1 SV2).
-%total (SV1) (prog_s_lemma SV1 _).
+% worlds () (prog_s_lemma SV1 SV2).
+% total (SV1) (prog_s_lemma SV1 _).
 
 % Now we can prove progress by simply using the above lemmas
 
 prog : (has E T) -> step_or_val E -> type.
-%mode prog +D -SV.
+% mode prog +D -SV.
 
 prog_z   : prog (is_z) (val value_z).
 
@@ -192,7 +192,7 @@ prog_lAM :
          % -------------------------------------------
            prog (is_lAM (\a. D a)) (val value_lAM).
 
-%worlds () (prog D SV).
-%total D (prog D _).
+% worlds () (prog D SV).
+% total D (prog D _).
 
 % QED

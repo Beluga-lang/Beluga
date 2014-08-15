@@ -460,9 +460,15 @@ GLOBAL: sgn;
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-        | 
-          "#open"; n = LIST1 [x = UPSYMBOL -> x] SEP "." ->[Sgn.Pragma(_loc, Sgn.OpenPrag(n))]
+      | 
+        "#open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] -> 
+          let (l,last) = split '.' n in
+          [Sgn.Pragma(_loc, Sgn.OpenPrag(l@[last]))]
+      | 
       
+        "%abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
+          let (l,last) = split '.' n in
+          [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
     ]
   ]
   ;

@@ -1,5 +1,5 @@
 tp:type. %name tp T a.
-arr: tp -> tp -> tp. %infix right 10 => .
+arr: tp -> tp -> tp. % infix right 10 => .
 
 exp: type. %name exp E x.
 

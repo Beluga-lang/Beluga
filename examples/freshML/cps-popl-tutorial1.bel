@@ -79,10 +79,10 @@ let r3 = cps [ ] [ |- (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. r
 % Twelf version from POPL Tutorial
 
 cps : value A -> cvalue A -> type.
-%mode cps +X1 -X2.
+% mode cps +X1 -X2.
 
 cpse : exp A -> (ccont A -> contra) -> type.
-%mode cpse +X1 -X2.
+% mode cpse +X1 -X2.
 
 cps/lam : cps (lam (E:value A -> exp B))
               (clam (E':cvalue A -> ccont B -> contra))
@@ -97,7 +97,7 @@ cpse/app : cpse (app (E1:exp (B => A)) (E2:exp B))
 cpse/ret : cpse (ret (V:value A)) ([c:ccont A] cthrow c V')
             <- cps V (V':cvalue A).
 
-%block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
-%worlds (cpsb) (cps _ _) (cpse _ _).
-%total (E V) (cps E _) (cpse V _).
+% block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
+% worlds (cpsb) (cps _ _) (cpse _ _).
+% total (E V) (cps E _) (cpse V _).
 }%

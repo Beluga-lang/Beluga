@@ -3,8 +3,8 @@
 
 trans  : env -> exp' -> exp -> type.  %name trans C.
 vtrans : val -> exp -> type.          %name vtrans U.
-%mode trans +K +F -E.  % and other modes!
-%mode vtrans +W -V.
+% mode trans +K +F -E.  % and other modes!
+% mode vtrans +W -V.
 
 % Natural numbers
 tr_z     : trans K z' z.

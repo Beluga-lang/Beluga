@@ -124,6 +124,7 @@ let regexp letter = [ 'a'-'z' 'A'-'Z' ]
 let regexp digit  = [ '0'-'9' ]
 
 let regexp upper = ['A' - 'Z']
+let regexp lower = ['a' - 'z']
 
 (**************************************************)
 (* Location Update and Token Generation Functions *)
@@ -153,6 +154,7 @@ let mk_integer  s = Token.INTLIT s
 let mk_dots s = Token.DOTS s
 
 let mk_module s = Token.MODULESYM s
+
 (* let mk_turnstile s = Token.TURNSTILE s *)
 
 (**********)
@@ -163,7 +165,8 @@ let mk_module s = Token.MODULESYM s
 
 (* Main lexical analyzer.  Converts a lexeme to a token. *)
 let lex_token loc = lexer
-  | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
+  | (upper sym* ".")+ lower sym* -> mk_tok_of_lexeme mk_module loc lexbuf
+  | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
 (*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
@@ -204,6 +207,7 @@ let lex_token loc = lexer
   | "#prefix"
   | "#assoc"
   | "#open"
+  | "%abbrev"
   | "type"
   | "?"
 (*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
@@ -297,7 +301,7 @@ let skip_nested_comment loc = lexer
 let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)
 (*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
-  | '%' ( [^ '\n' 'n' 'q' '{'] [^ '\n' ]* ) '\n' ->
+  | '%' ( [^ '\n' '{' 'a'-'z'] [^ '\n' ]* ) '\n' ->
 (*      print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc

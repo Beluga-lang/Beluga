@@ -20,7 +20,7 @@ type t =
   | MODULESYM of string   (* Any string that would represent a module i.e. 'Nat.z' 'List.Nat.z' etc.
                              NOTE: the regular expression for this DOES NOT match ordinary symbols (i.e. 'z') 
                              and as such should be used in the parser as l = [a = MODULESYM -> a | a = SYMBOL -> a] *)
-
+  | UPSYMBOL_LIST of string
 (*   | TURNSTILE of string *)
 
 let to_string = function
@@ -31,6 +31,7 @@ let to_string = function
   | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
   | DOTS s -> Printf.sprintf "DOTS %S"  s
   | MODULESYM s -> Printf.sprintf "MODULESYM %S" s
+  | UPSYMBOL_LIST s -> Printf.sprintf "UPSYMBOL_LIST %S" s
 
 (*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
 
@@ -57,6 +58,7 @@ let extract_string = function
   | INTLIT  s -> s
   | DOTS s -> s
   | MODULESYM s -> s
+  | UPSYMBOL_LIST s -> s
 (*   | TURNSTILE s -> s *)
 
 

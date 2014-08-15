@@ -2,9 +2,9 @@
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
 %%% Single step transition.
-step : state -> state -> type.  %infix none 10 =>.
+step : state -> state -> type.  % infix none 10 =>.
 			      %name step R.
-%mode => +St -St'.
+% mode => +St -St'.
 
 % Variables
 
@@ -83,7 +83,7 @@ c_fix  : step (st (push Ks K) (prog (ev (fix' F))  P) S)
 
 %%% Multi-step transition
 
-mstep  : state -> state -> type.  %infix none 10 =>*.
+mstep  : state -> state -> type.  % infix none 10 =>*.
 		 		  %name mstep C.
 
 id_step : mstep St St.
@@ -97,7 +97,7 @@ to    : step (st K P S) (st K' P' S')
     -> mstep (st K' P' S') (st K'' P'' S'')
     -> mstep (st K P S)  (st K'' P'' S'').
 
-%infix right 10 ~.
+% infix right 10 ~.
 
 %%% Evaluation in environment K
 
@@ -109,17 +109,17 @@ run :  mstep  (st (push emptys K) (prog (ev F) done) (empty))
 
 %%% Executable versions.
 
-exec  : state -> state -> type.  %infix none 10 >=>*.
-%mode >=>* +St -St'.
+exec  : state -> state -> type.  % infix none 10 >=>*.
+% mode >=>* +St -St'.
 
 id<   : exec St  St.
 to<   : exec St  St''
 	 <- step St  St'
 	 <- exec St'  St''.
-%infix left 10 <=<.
+% infix left 10 <=<.
 
 >ceval : env -> exp' -> val -> type.
-%mode >ceval +K +F -W.
+% mode >ceval +K +F -W.
 
 >run   : >ceval K F W
 	  <- exec (st (push emptys K) (prog (ev F) done) (empty))

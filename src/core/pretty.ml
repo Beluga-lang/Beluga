@@ -1592,7 +1592,7 @@ module Int = struct
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
 
           (* Necessary to enforce correct printing *)
-          let ((_, origName, _) as state) = Store.Modules.getState () in
+          let ((_, origName, _, _) as state) = Store.Modules.getState () in
           let newName = origName@[name] in
           let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
           let _ = Store.Modules.currentName := newName in          

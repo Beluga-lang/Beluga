@@ -5,7 +5,7 @@ code : tp -> tp -> tp.
 cross: tp -> tp -> tp.
 unit :tp.
 
-%source lang
+% source lang
 term: tp -> type.   %name term M.
 elam: (term T -> term S) -> term (arr T S).
 eapp: term (arr T S) -> term T -> term S.

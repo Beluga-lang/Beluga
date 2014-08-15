@@ -10,23 +10,25 @@ module Nats = struct
   let three = suc two;
 end;
 
-let x = [ |- Nats.z ];
+%abbrev Nats N
 
-let y = [ |- Nats.s Nats.z];
+let x = [ |- N.z ];
 
-let z = Nats.suc [ |- Nats.z ];
+let y = [ |- N.s N.z];
 
-list : Nats.nat -> type.
+let z = N.suc [ |- N.z ];
 
-nil : list Nats.z.
+list : N.nat -> type.
 
-cons : Nats.nat -> list N -> list (Nats.s N).
+nil : list N.z.
+
+cons : N.nat -> list N -> list (N.s N).
 
 
-let l1 = [ |- cons Nats.z (cons (Nats.s Nats.z) nil)];
+let l1 = [ |- cons N.z (cons (N.s N.z) nil)];
 
 module Arith = struct
-	#open Nats
+	#open N
 
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of
@@ -39,9 +41,9 @@ module Arith = struct
 end;
 
 
-let two' = Nats.two;
+let two' = N.two;
 
 
-#open Nats
+#open N
 let l2 = [ |- cons z nil];
 

@@ -5,7 +5,7 @@
 % Terms can contain free variables without explicit
 % assumptions about them (for multi-step reduction)
 
-%block ltm : block {x:term}.
+% block ltm : block {x:term}.
 schema tctx = term;
 
 % Transitivity of multi-step reduction

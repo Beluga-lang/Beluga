@@ -24,7 +24,10 @@ module OpPragmas : sig
 end
 
 module Modules : sig
-  type state = Id.module_id * string list * Id.module_id list
+  type state = Id.module_id * string list * Id.module_id list * (string * string list) list
+
+  val abbrevs : (string * string list) list ref
+  val addAbbrev : string list -> string -> unit
 
   val getState : unit -> state
   val setState : state -> unit

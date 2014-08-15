@@ -47,7 +47,7 @@ module OpPragmas = struct
 end
 
 module Modules = struct
-  type state = Id.module_id * string list * Id.module_id list
+  type state = Id.module_id * string list * Id.module_id list * (string * string list) list
 
   let current : Id.module_id ref = ref 0
 
@@ -55,9 +55,11 @@ module Modules = struct
 
   let opened : Id.module_id list ref = ref []
 
-  let getState () = (!current, !currentName, !opened)
+  let abbrevs : (string * string list) list ref = ref []
 
-  let setState (a, b, c) = current := a; currentName := b; opened := c
+  let getState () = (!current, !currentName, !opened, !abbrevs)
+
+  let setState (a, b, c, d) = current := a; currentName := b; opened := c; abbrevs := d
 
   let directory : (string list, Id.module_id) Hashtbl.t = 
     let x = Hashtbl.create 1 in Hashtbl.add x [] 0; x
@@ -70,19 +72,30 @@ module Modules = struct
 
   let id_of_name (n : string list) : Id.module_id = Hashtbl.find directory n
 
-  let name_of_id (id : Id.module_id) : string list = DynArray.get rev_directory id
+  let name_of_id (id : Id.module_id) : string list = 
+    let x = DynArray.get rev_directory id in
+    match List.fold_left (fun acc (ab,o) -> if o=x then Some(ab) else acc) None !abbrevs with
+    | Some s -> [s]
+    | None -> x
 
   let open_module (m : string list) : Id.module_id =
-    let x = try Hashtbl.find directory m 
-    with _ -> Hashtbl.find directory (!currentName @ m) in 
+    let x = let m = match m with
+      | [m'] when List.mem_assoc m' !abbrevs -> List.assoc m' !abbrevs
+      | _ -> m in
+      try Hashtbl.find directory m 
+      with _ -> Hashtbl.find directory (!currentName @ m) in 
     let l = x::
       (List.map (fun (Int.Sgn.Pragma(Int.LF.OpenPrag x)) -> x) 
         (List.filter (function (Int.Sgn.Pragma(Int.LF.OpenPrag _)) -> true | _ -> false) !(DynArray.get modules x))) in
     opened := l@ !opened; x
 
+  let addAbbrev (orig : string list) (abbrev : string) : unit =
+    if Hashtbl.mem directory orig then abbrevs := (abbrev, orig)::!abbrevs else raise Not_found
+
   (* Precondition: the name check in f is using a name with Id.modules = [] *)
   let find (n : Id.name) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
     let m = n.Id.modules in
+    let m = match m with [m'] -> begin try List.assoc m' !abbrevs with _ -> m end | _ -> m in
     let rec iter_find : Id.module_id list -> 'b = function
       | [] -> raise Not_found
       | h::t -> try f (DynArray.get x h) with _ -> iter_find t in
@@ -112,7 +125,7 @@ module Modules = struct
     opened := [];
     currentName := []
 
-  let correct (l : string list ) : string list = 
+  let correct (l : string list) : string list = 
     let rec aux m l = match (m, l) with
       | _ when m = l -> m
       | ([], _) -> l

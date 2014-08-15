@@ -19,6 +19,7 @@ type error =
   | IllegalOptsPrag
   | IllegalOperatorPrag of name * Ext.Sgn.fix * int
   | InvalidOpenPrag of string
+  | InvalidAbbrev of string list * string
 
 exception Error of Syntax.Loc.t * error
 
@@ -39,7 +40,9 @@ let _ = Error.register_printer
             (actual)
             (expected) end
       | InvalidOpenPrag s ->
-        Format.fprintf ppf "Invalid module in pragma '#open %s'" s))
+        Format.fprintf ppf "Invalid module in pragma '#open %s'" s
+      | InvalidAbbrev (l, s) ->
+        Format.fprintf ppf "Invalid module in pragma '%%abbrev %s %s'" (String.concat "." l) s))
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -99,6 +102,10 @@ let rec recSgnDecls = function
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
     match d with
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.AbbrevPrag(orig, abbrev)) ->
+      begin try Store.Modules.addAbbrev orig abbrev 
+      with Not_found -> raise (Error(loc, InvalidAbbrev(orig, abbrev))) end;
+      Int.Sgn.Pragma(Int.LF.AbbrevPrag(orig, abbrev))
     | Ext.Sgn.Pragma(loc, Ext.Sgn.DefaultAssocPrag a) -> OpPragmas.default := a; 
         let a' = match a with
         | Ext.Sgn.Left -> Int.LF.Left

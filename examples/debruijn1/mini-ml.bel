@@ -41,7 +41,7 @@ env    : type.  %name env K.
 val    : type.  %name val W.
 
 empty  : env.
-cons   : env -> val -> env.   %infix left 10 ;.
+cons   : env -> val -> env.   % infix left 10 ;.
 
 clo    : env -> exp' -> val.
 

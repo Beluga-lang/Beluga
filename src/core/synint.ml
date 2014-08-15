@@ -189,6 +189,7 @@ module LF = struct
     | OpenPrag of module_id
     | DefaultAssocPrag of assoc
     | FixPrag of name * fix * int * assoc option
+    | AbbrevPrag of string list * string
 
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function

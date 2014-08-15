@@ -8,8 +8,8 @@
 less: mstep (st KS1 P1 S1)  (st KS P S)
      -> mstep (st KS2 P2 S2)  (st KS P S)
      -> type.
-%infix none 8 <.
-%mode < +C +C'.
+% infix none 8 <.
+% mode < +C +C'.
 
 sub_imm : less C  (to R  C).
 
@@ -25,7 +25,7 @@ sub_med : less C C'
 %%}%
 
 tr_less : less C1 C2 -> less C2 C3 -> less C1 C3 -> type.
-%mode tr_less +R1 +R2 -R3.
+% mode tr_less +R1 +R2 -R3.
 
 tr_less_imm : tr_less R1 (sub_imm) (sub_med R1).
 tr_less_med : tr_less R1 (sub_med R2) (sub_med R3)
@@ -47,7 +47,7 @@ spl : {C : mstep (st (push KS K) (prog (ev F) P) S) (st (emptys) (done) (vcons e
       feval K F W ->
       {C' : mstep (st KS P (vcons S  W)) (st (emptys) (done) (vcons empty W'))}
       less C' C -> type.
-%mode spl +C -D -C' -C'<C.
+% mode spl +C -D -C' -C'<C.
 
 % C = id  is impossible, since  (ev F & P)  is different from  (done).
 
@@ -131,13 +131,13 @@ spl_fix : spl (to c_fix C1) (fev_fix D1) C2 (sub_med C2<C1)
 %%%{
 %%Soundness Theorem: For every complete computation
 %%  E :: ceval K F W
-%%there exists an evaluation
+%% there exists an evaluation
 %%  D :: feval K F W
 
 %%Proof: By the splitting lemma for computations.
 %%}%
 
 cls_sound : ceval K F W -> feval K F W -> type.
-%mode cls_sound +CE -D.
+% mode cls_sound +CE -D.
 
 clss : cls_sound (run C) D <- spl C D (id_step) Id<C.

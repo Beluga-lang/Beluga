@@ -70,6 +70,16 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
+let sgnDeclToHtml = function
+  | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
+  | d -> 
+    let margin = Format.get_margin () in
+    let _ = Html.printingHtml := true in
+    let _ = Format.set_margin 100000 in
+    let _ = Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d in
+    let _ = Format.set_margin margin in
+    let _ = Html.printingHtml := false in
+    Html.append (Format.flush_str_formatter ())
 
 let rec recSgnDecls = function
   | [] -> []
@@ -96,7 +106,7 @@ let rec recSgnDecls = function
   | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Error ) :: rest ->
     raise (Error (loc, IllegalOptsPrag "%coverage"))
   | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.NoStrengthen) :: rest ->
-    raise (Error (loc, IllegalOptsPrag "%noStrengthen"))
+    raise (Error (loc, IllegalOptsPrag "%nostrengthen"))
 
   | decl :: rest ->
     let decl' = recSgnDecl decl in
@@ -105,7 +115,10 @@ let rec recSgnDecls = function
 
 and recSgnDecl d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
+    if !Html.genHtml then sgnDeclToHtml d;
     match d with
+    | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment(l, s)
+        
     | Ext.Sgn.Pragma(loc, Ext.Sgn.AbbrevPrag(orig, abbrev)) ->
       begin try Store.Modules.addAbbrev orig abbrev 
       with Not_found -> raise (Error(loc, InvalidAbbrev(orig, abbrev))) end;

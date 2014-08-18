@@ -412,6 +412,7 @@ module Sgn = struct
     | MRecTyp       of Loc.t * decl list list
     | Module        of Loc.t * string * decl list
     | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Comment       of Loc.t * string
 
   type sgn = decl list
 

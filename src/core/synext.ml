@@ -272,7 +272,7 @@ module Sgn = struct
     | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query         of Loc.t * name option * LF.typ * int option * int option
     | Module        of Loc.t * string * decl list
-
+    | Comment of Loc.t * string
   type sgn = decl list
 
 

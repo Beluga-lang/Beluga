@@ -1,0 +1,62 @@
+```
+# Level 1 Header
+## Level 2 Header
+### Level 3 Header
+
+for a breakline, put two spaces at the end of the line  
+
+Inline code `[ |- nat ]`.  
+
+Italics: *like this*.  
+
+Bold: **like this**.  
+
+### 5 or more '-' for a horizontal line
+---------
+
+### Ordered lists can be seperated by a single line inbetween them
+1. First item
+2. Second item
+3. ...
+
+1. First item
+2. second item
+3. third item
+
+### As can unordered lists
+- 1
+- 2
+- 3
+
+- 1
+- 2
+- 3
+
+In addition, all normal HTML tags are included. So if someone
+wanted a centered header, for example, they could still put
+
+<h1 align="center">A Centered HTML Tag</h1>
+
+by using &lt;h1 align="center"&gt;A Centered HTML Tag&lt;/h1&gt;
+
+### Useful Special characters
+
+- &Gamma; &rarr; &amp;Gamma;
+- &Delta; &rarr; &amp;Delta;
+- &forall; &rarr; &amp;forall;
+- &exist; &rarr; &amp;exist;
+- &#8866; are replaced automatically  
+```
+
+nat :  type.     
+
+z : nat.
+s : nat -> nat.
+
+rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
+fn x => fn y =>  case x of
+| [ |- z]  => y
+| [ |- s U]  =>
+  let [ |- V] = plus [ |- U ] y in
+    [ |- s V]
+;

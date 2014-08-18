@@ -94,27 +94,28 @@ Beluga lexical categories:
 let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
                           '0'-'9'                 (* exclude digits *)
-                          "<>"                    (* exclude < and >, which can only be used with certain other characters *)
+                          "<>"   '`'                 (* exclude < and >, which can only be used with certain other characters *)
                        ]
 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>" '|'                    (* exclude < and > *)
+                          "<>" '|'     '`'               (* exclude < and > *)
                        ]
 (* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
 
 let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z' '\''
-                          '0'-'9'
+                          '0'-'9' '`'
                           "<>"
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z'
-                          '#' '\''
+                          '#' '\'' 
+                          '`'
                           '0'-'9'
                           "<>"
                        ]
@@ -151,6 +152,8 @@ let mk_symbol  s = Token.SYMBOL  s
 
 let mk_integer  s = Token.INTLIT s
 
+let mk_comment s = Token.COMMENT s
+
 let mk_dots s = Token.DOTS s
 
 let mk_module s = Token.MODULESYM s
@@ -167,6 +170,8 @@ let mk_module s = Token.MODULESYM s
 let lex_token loc = lexer
   | (upper sym* ".")+ lower sym* -> mk_tok_of_lexeme mk_module loc lexbuf
   | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
+  | "```" ([^'`']|(['`'][^'`']))* "```" -> mk_tok_of_lexeme mk_comment loc lexbuf
+  | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
 (*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
@@ -201,7 +206,7 @@ let lex_token loc = lexer
   | "ffalse"
   | "%name"
   | "%coverage"
-  | "%noStrengthen"
+  | "%nostrengthen"
   | "%not"
   | "%query"
   | "%infix"
@@ -296,8 +301,6 @@ let skip_nested_comment loc = lexer
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
           raise Ulexing.Error )
-
-
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc = lexer
 (*   | '%' [^ '\n' ]* '\n'   ->   *)

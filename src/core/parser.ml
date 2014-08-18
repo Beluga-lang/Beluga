@@ -322,7 +322,7 @@ GLOBAL: sgn;
 
   sgn_eoi:
    [
-     [ decl = sgn_decl; decls = SELF -> decl @ decls
+     [ decl = sgn_decl; decls = sgn_eoi -> decl @ decls
      | `EOI -> []
      ]
    ];
@@ -330,7 +330,7 @@ GLOBAL: sgn;
   sgn_global_prag:
   [
     [
-        "%noStrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
+        "%nostrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
       |
         "%coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
       |
@@ -475,6 +475,8 @@ GLOBAL: sgn;
         "%abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
+      |
+	    x = COMMENT -> [Sgn.Comment(_loc, x)]     
 
     ]
   ]

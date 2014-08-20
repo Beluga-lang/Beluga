@@ -2083,7 +2083,7 @@ and elHead loc recT cD cPsi = function
       let Int.LF.TypDecl (_, tA') = Context.ctxDec (Whnf.cnormDCtx (cPsi, Whnf.m_id)) x in
       let _ = dprint (fun () -> "[elHead] done") in
         (Int.LF.BVar x,  (tA' , Substitution.LF.id))
-      with _ -> failwith "Hello?" (*raise (Error (loc, BVarTypMissing (cD, cPsi, Int.LF.BVar x)))*)
+      with _ -> raise (Error (loc, BVarTypMissing (cD, cPsi, Int.LF.BVar x)))
       end
   | Apx.LF.Const c ->
       let tA = (Term.get c).Term.typ in

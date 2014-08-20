@@ -81,7 +81,7 @@ module Control = struct
 
   let substitutionStyle = ref Natural
   let printImplicit = ref false
-
+  let printNormal = ref false
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
 
@@ -178,6 +178,7 @@ module Int = struct
     val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
@@ -924,11 +925,11 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
-          if not !Control.printImplicit && (isInferred mtyp) && printing_holes then () else
+          if (((not !Control.printImplicit) && (isImplicit mtyp) && printing_holes) || (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "")
+            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "") end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -939,7 +940,7 @@ module Int = struct
       | LF.PTyp (tA, _, _) -> Some tA
       | _ -> None
 
-    and isInferred = function
+    and isImplicit = function
       | LF.MTyp (_, _, dep)
       | LF.PTyp (_, _, dep)
       | LF.STyp (_, _, dep)
@@ -1218,7 +1219,12 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (_) -> fprintf ppf " ? "
+      | Comp.Hole (loc, f) ->
+          try
+             let x = f () in
+             fprintf ppf " ? %%{ %d }%%" x
+           with
+           | _ -> fprintf ppf " ? "
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1226,11 +1232,11 @@ module Int = struct
       else
         let (i', _ ) = strip_mapp_args' cD cG i in i'
     and strip_mapp_args' cD cG i = match i with
-      | Comp.Const prog ->
+      | Comp.Const (_, prog) ->
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           begin match Context.lookup cG x with
               None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
@@ -1262,19 +1268,19 @@ module Int = struct
       | _ -> []
     end
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           fprintf ppf "%s"
             (R.render_var cG x)
 
-      | Comp.Const prog ->
+      | Comp.Const (_, prog) ->
           fprintf ppf "%s"
             (R.render_cid_prog prog)
 
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
-      | Comp.DataDest c ->
+      | Comp.DataDest (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_dest c)
 
@@ -1352,7 +1358,7 @@ module Int = struct
                 fprintf ppf "%a"
                   (fmt_ppr_lf_ctyp_decl LF.Empty 1) decl
             | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
+                fprintf ppf "%a@ %a"
                   (fmt_ppr_ctyp_decls') cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           in
@@ -1382,14 +1388,29 @@ module Int = struct
 
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat, t) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@  "
-            (fmt_ppr_cmp_branch_prefix  0) cD1
-            (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
-            (fmt_ppr_refinement cD1 cD 2) t
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]@]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+          else
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+              (fmt_ppr_refinement cD1 cD 2) t
 
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a  : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
+        if !Control.printNormal then
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]  => @]@ @[<2>@ %a@]@]@ "
+            (fmt_ppr_cmp_branch_prefix  0) cD1'
+            (fmt_ppr_meta_obj cD1' 0) mO
+            (* NOTE: Technically: cD |- cG ctx and
+             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+             * -bp
+             *)
+            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+        else
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* this point is where the " : " is in the string above *)
@@ -1404,18 +1425,29 @@ module Int = struct
           let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
           let cG_ext = Context.append cG_t cG' in
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-             (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_cmp_gctx cD1' 0) cG'
-             (fmt_ppr_pat_obj cD1' cG' 0) pat
-            (* this point is where the " : " is in the string a
-          bove *)
-            (fmt_ppr_refinement cD1' cD 2) t
-            (* NOTE: Technically: cD |- cG ctx and
-             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-             * -bp
-             *)
-            (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
+                 (fmt_ppr_cmp_branch_prefix  0) cD1'
+                (fmt_ppr_cmp_gctx cD1' 0) cG'
+                 (fmt_ppr_pat_obj cD1' cG' 0) pat
+                (* NOTE: Technically: cD |- cG ctx and
+                 *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+                 * -bp
+                 *)
+                (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          else          
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+               (fmt_ppr_cmp_branch_prefix  0) cD1'
+              (fmt_ppr_cmp_gctx cD1' 0) cG'
+               (fmt_ppr_pat_obj cD1' cG' 0) pat
+              (* this point is where the " : " is in the string a
+            bove *)
+              (fmt_ppr_refinement cD1' cD 2) t
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
       | Comp.BranchBox (_, cD1', (cPsi, pattern, t, _cs)) ->
           let rec ppr_ctyp_decls' ppf = function
@@ -1432,6 +1464,17 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ @]  => @]@ @[<2>@ %a@]@]@ "
+              (ppr_ctyp_decls ) cD1'
+              (fmt_ppr_lf_dctx cD1' 0) cPsi
+              (fmt_ppr_pattern cD1' cPsi) pattern
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_branch_body cD1' cG t) pattern
+          else
             fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -1468,6 +1511,7 @@ module Int = struct
           fprintf ppf "%a@ ,@ %a"
             (fmt_ppr_refine_elem cD decl 1) f
             (fmt_ppr_refinement cD cD' lvl) s
+      | _ -> fprintf ppf "No match"
     end
 
 
@@ -1477,6 +1521,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
               | LF.DeclOpt psi -> psi 
+              | LF.Decl(psi, _) -> psi
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1488,6 +1533,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(u, LF.MTyp (_ , _, _) ) -> u
               | LF.DeclOpt u -> u
+              | LF.Decl(u, _) -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1499,6 +1545,7 @@ module Int = struct
           let p =
             begin match decl with
               | LF.Decl(p, LF.PTyp (_ , _, _) ) -> p
+              | LF.Decl(p, _) -> p
               | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"
@@ -1531,12 +1578,12 @@ module Int = struct
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
-      | Sgn.Const (c, a) ->
+      | Sgn.Const (_, c, a) ->
           fprintf ppf "@\n%s : %a.@\n"
             (R.render_cid_term c)
             (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
-      | Sgn.Typ (a, k) ->
+      | Sgn.Typ (_, a, k) ->
           fprintf ppf "@\n%s : %a.@\n"
             (R.render_cid_typ  a)
             (fmt_ppr_lf_kind LF.Null lvl) k
@@ -1723,6 +1770,11 @@ module Int = struct
       let tau' = Whnf.normCTyp (Whnf.cnormCTyp (tau, Whnf.m_id)) in
         fmt_ppr_cmp_typ cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
+
+    let subCompTypToString cD sA  =
+      let tA = Whnf.normCTyp (Whnf.cnormCTyp sA) in
+        fmt_ppr_cmp_typ cD std_lvl str_formatter tA
+        ; flush_str_formatter ()        
 
     let compKindToString cD cK  =
 (*      let cK' = Whnf.normCKind cK in  *)

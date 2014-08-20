@@ -5,11 +5,15 @@ module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
+type lfhole = Loc.t * LF.mctx * LF.dctx * LF.tclo
+
 let holes = DynArray.create ()
+
+let stagedholes = DynArray.create ()
 
 let none () = DynArray.empty holes
 
-let collect (loc, cD, cPsi, typ) =
+let collect ((loc, cD, cPsi, typ) : lfhole) : unit =
   DynArray.add holes (loc, cD, cPsi, typ)
 
 let ( ++ ) f g = function x -> f (g x)
@@ -43,6 +47,16 @@ let mctxToString =
   in toString ++ Whnf.normMCtx
 
 let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
+
+let getNumHoles () = DynArray.length holes
+
+let getHolePos i =
+    try
+      let  (loc, _, _, (_, _)) = DynArray.get holes i in Some loc
+    with
+      | DynArray.Invalid_arg (_, _, _) -> None
+
+let getOneHole i = DynArray.get holes i
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
   let (_, sub) = tA in
@@ -83,16 +97,82 @@ let printOne (loc, cD, cPsi, typ) =
   let goal = (P.typToString cD cPsi typ) in
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
-  let _ = if List.length l > 0 then
+  if List.length l > 0 then
     Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n  - Variable%s of this type: %s@\n"
       (Loc.to_string loc) (mctx) (b1) (dctx) (b2) (goal)
       (if List.length l = 1 then "" else "s") (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else
     Format.printf "@\n%s@\n  - Meta-Context: %s@\n%s@\n  - LF Context: %s@\n@\n%s@\n  - Goal Type: %s@\n"
       (Loc.to_string loc) (mctx) (b1) (dctx) (b2) (goal)
-  in ()
+
+let printOneHole i =
+  if none () then Printf.printf " - There are no lf holes.\n"
+  else
+    try
+      printOne (DynArray.get holes i)
+    with
+      | DynArray.Invalid_arg (_, _, _) -> 
+          if !Debug.chatter != 0 then
+            Printf.printf " - There is no lf hole # %d.\n" i
+
+let getStagedHoleNum loc =
+    DynArray.index_of
+      (fun (loc', _cD, _cG, (_tau, _mS)) -> if loc = loc' then true else false) stagedholes
+
+let setStagedHolePos i l =
+      let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
+      DynArray.set stagedholes i (l, cD, cG, tclo)
+
+(* loc -> loc' -> bool : is loc' within loc? *)
+let locWithin loc loc' =
+      let (file_name,
+           start_line,
+           start_bol,
+           start_off,
+           stop_line,
+           stop_bol,
+           stop_off,
+           _ghost) = Loc.to_tuple loc in
+      let (file_name',
+           start_line',
+           start_bol',
+           start_off',
+           stop_line',
+           stop_bol',
+           stop_off',
+           _ghost') = Loc.to_tuple loc' in
+      if (file_name = file_name') then
+        (if (stop_line' < stop_line || (stop_line' = stop_line && stop_off' <= stop_off)) then
+          (if (start_line' > start_line || (start_line' = start_line && start_off' >= start_off)) then
+            (if (start_line' = start_line && (stop_line' = stop_line && (start_off' = start_off && start_bol <> start_bol'))) then
+              false
+            else
+              true)
+          else
+            false)
+        else
+          false)
+      else
+        false
+
+(* removes all holes located within the given loc (e.g. of a function being shadowed) *)
+let destroyHoles loc =
+  DynArray.filter
+    (fun (loc', _cD, _cG, (_tau, _mS)) -> not (locWithin loc loc'))
+      holes
+
+let commitHoles () =
+  DynArray.append (DynArray.copy stagedholes) holes;
+  DynArray.clear stagedholes
+
+let stashHoles () =
+  DynArray.clear stagedholes
+
 
 let printAll () =
   let _ = Store.Cid.NamedHoles.printingHoles := true in
   let _ = DynArray.iter printOne holes in
   Store.Cid.NamedHoles.printingHoles := false
+
+let clear () =
+    DynArray.clear holes

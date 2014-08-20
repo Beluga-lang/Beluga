@@ -332,13 +332,13 @@ module Comp = struct
     | Box    of Loc.t * meta_obj
     | Case   of Loc.t * case_pragma * exp_syn * branch list
     | If     of Loc.t * exp_syn * exp_chk * exp_chk
-    | Hole   of Loc.t
+    | Hole   of Loc.t * (unit -> int)
 
   and exp_syn =
-    | Var    of offset
-    | DataConst of cid_comp_const
-    | DataDest of cid_comp_dest
-    | Const  of cid_prog
+    | Var    of Loc.t * offset
+    | DataConst of Loc.t * cid_comp_const
+    | DataDest of Loc.t * cid_comp_dest
+    | Const  of Loc.t * cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ
@@ -398,8 +398,8 @@ end
 module Sgn = struct
 
   type decl =
-    | Typ           of cid_typ  * LF.kind
-    | Const         of cid_term * LF.typ
+    | Typ           of Loc.t * cid_typ  * LF.kind
+    | Const         of Loc.t * cid_term * LF.typ
     | CompTyp       of Loc.t * name * Comp.kind
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ

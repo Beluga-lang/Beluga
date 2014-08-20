@@ -117,6 +117,7 @@ module Cid : sig
       constructors : cid_comp_const list ref
     }
 
+    val entry_list : (Id.cid_comp_typ list ref) DynArray.t
     val mk_entry  : name -> Comp.kind -> int -> entry
 
     val add           : entry -> cid_comp_typ
@@ -125,6 +126,7 @@ module Cid : sig
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
+    val get_implicit_arguments : cid_comp_typ -> int
   end
 
   module CompCotyp : sig
@@ -219,13 +221,14 @@ module Cid : sig
         this 'add' function expects a function to which it will
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot. *)
-    val add           : (cid_prog -> entry) -> cid_prog
+    val add           : Loc.t -> (cid_prog -> entry) -> (Loc.t option * cid_prog)
     val get           : ?fixName:bool -> cid_prog -> entry
+
     val index_of_name : name -> cid_prog
 
+    val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t
     val clear         : unit -> unit
   end
-
 
   module Schema : sig
 
@@ -286,8 +289,6 @@ module Cid : sig
 end
 
 val clear : unit -> unit
-
-
 
 module BVar : sig
 
@@ -387,4 +388,3 @@ module CVar : sig
   val length        : t -> int
 
 end
-

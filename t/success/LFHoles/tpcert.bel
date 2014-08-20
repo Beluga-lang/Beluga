@@ -1,4 +1,4 @@
-%noStrengthen
+%nostrengthen
 tp   : type.  %name tp T.
 nat  : tp.
 bool : tp.

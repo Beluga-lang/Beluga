@@ -5,9 +5,7 @@
     @author Joshua Dunfield
 *)
 
-open Core
 open Printf
-
 
 let bailout msg =
   fprintf stderr "%s\n" msg;
@@ -15,23 +13,30 @@ let bailout msg =
 
 let usage () =
   let options =
-          "    +d                 Turn all debugging printing on\n"
-        ^ "    +ext               Print external syntax before reconstruction\n"
-        ^ "    -s=debruijn        Print substitutions in deBruijn-ish style (when debugging Beluga)\n"
-        ^ "    +implicit          Print implicit arguments\n"
-        ^ "    +t                 Print timing information\n"
-        ^ "    +tfile             Print timing information to file \"time.txt\"\n"
-        ^ "    +printSubord       Print subordination relations (experimental)\n"
-        ^ "    -print             Turn printing off\n"
-        ^ "    -width nnn         Set output width to nnn (default 86; minimum 40)\n"
-        ^ "    -logic             Turn off logic programming engine\n"
-        ^ "    +test              Make output suitable for test harness. Implies -print\n"
+          "    +d                    Turn all debugging printing on - note that in interactive mode\n"
+        ^ "                              debugging information is piped to '"^ !Debug.filename ^ ".out" ^ "'\n"
+        ^ "    +ext                  Print external syntax before reconstruction\n"
+        ^ "    -s=debruijn           Print substitutions in deBruijn-ish style (when debugging Beluga)\n"
+        ^ "    +implicit             Print implicit arguments\n"
+        ^ "    +t                    Print timing information\n"
+        ^ "    +tfile                Print timing information to file \"time.txt\"\n"
+        ^ "    +printSubord          Print subordination relations (experimental)\n"
+        ^ "    -print                Turn printing off\n"
+        ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
+        ^ "    -logic                Turn off logic programming engine\n"
+        ^ "    +test                 Make output suitable for test harness. Implies -print\n"
         ^ "    +realNames         Print holes using real names\n"
         ^ "    +html              Generate an html page of the source code using default CSS\n"
         ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
         ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
         ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
-        ^ "    +n                 Print line numbers\n"
+        ^ "    +annot                Generate a .annot file for use in emacs\n"
+        ^ "    +locs                 Output location information (for testing)\n"
+        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
+        ^ "                          beli-options: \n"
+        ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
+        ^ "                              -readLine     disabe readline support using rlwrap \n"
+        ^ "    +n                    Print line numbers\n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr
@@ -76,6 +81,11 @@ let process_option arg rest = match arg with
           Html.css := Html.File arg; rest
       | _ -> bailout "-cssfile requires an argument"
       end
+  | "+annot"      -> Typeinfo.generate_annotations := true; rest
+  | "+locs"       -> Locs.gen_loc_info := true; rest
+  | "-I" -> begin
+      try Beli.run rest
+      with Beli.Invalid_Arg -> usage () end
   | "+n" | "+N"  -> Pretty.setup_linenums (); rest
   | _ -> usage ()
 
@@ -160,7 +170,7 @@ let main () =
         Pretty.printing_nums := false;
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-        ignore (Coverage.force
+          ignore (Coverage.force
                   (function
                     | Coverage.Success -> ()
                     | Coverage.Failure message ->
@@ -168,6 +178,7 @@ let main () =
                         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
                       else
                         raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
+
           if !Coverage.enableCoverage then
             (if !Debug.chatter != 0 then
                 printf "\n## Coverage checking done: %s  ##\n" file_name);
@@ -185,6 +196,11 @@ let main () =
             printf "\n\n## LF Holes: %s  ##" file_name;
             Lfholes.printAll ()
           end;
+          if !Typeinfo.generate_annotations then
+            Typeinfo.print_annot file_name;
+          if !Locs.gen_loc_info then begin
+            List.iter Loctesting.store_locs sgn;
+            Locs.print_loc_info file_name end;
           print_newline();
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;

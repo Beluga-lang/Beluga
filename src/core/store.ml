@@ -474,8 +474,8 @@ module Cid = struct
             DynArray.add directory x;
             x
           end in
-        Hashtbl.replace directory entry.name cid_tm;
-        Typ.addConstructor loc e_typ cid_tm entry.typ;
+        let _ = Hashtbl.replace directory entry.name cid_tm in
+        let _ = Typ.addConstructor loc e_typ cid_tm entry.typ in
         cid_tm end
 
     let get ?(fixName=false) (l, n) =
@@ -589,11 +589,13 @@ module Cid = struct
       constructors       = ref []
     }
 
-    (*  store : entry DynArray.t *)
+    let entry_list : (Id.cid_comp_typ list ref) DynArray.t = DynArray.create ()
+
+    (*  store : (entry DynArray.t) DynArray.t *)
     let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
 
-    (*  directory : (Id.name, Id.cid_comp_typ) Hashtbl.t *)
+    (*  directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t ) DynArray.t *)
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_comp_typ = fun (n : Id.name) ->
@@ -625,6 +627,16 @@ module Cid = struct
             x
           end in
         Hashtbl.replace directory entry.name cid_comp_typ;
+
+        let entry_list = 
+          try DynArray.get entry_list (!Modules.current)
+        with _ -> begin
+          let x = ref [] in
+          while DynArray.length entry_list < (!Modules.current) do DynArray.add entry_list (ref []) done;
+          DynArray.add entry_list x;
+          x  
+        end in
+        entry_list := cid_comp_typ :: !entry_list;
         cid_comp_typ end
 
     let get ?(fixName=false) (l, n) =
@@ -635,6 +647,8 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
+    let get_implicit_arguments c = (get c).implicit_arguments
+
     let freeze a =
           (get a).frozen := true
 
@@ -643,8 +657,9 @@ module Cid = struct
         entry.constructors := c :: !(entry.constructors)
 
     let clear () =
-      DynArray.clear (DynArray.get store (!Modules.current));
-      Hashtbl.clear (DynArray.get directory (!Modules.current))
+      (DynArray.get entry_list !Modules.current) := [];
+      DynArray.clear (DynArray.get store !Modules.current);
+      Hashtbl.clear (DynArray.get directory !Modules.current)
   end
 
  module CompCotyp = struct
@@ -950,7 +965,8 @@ module Cid = struct
       mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
     }
 
-    (*  store : entry DynArray.t *)
+    let entry_list : ((Id.cid_prog * Loc.t) list ref) DynArray.t = DynArray.create ()
+
     let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
     (*  directory : (Id.name, Id.cid_prog) Hashtbl.t *)
@@ -963,7 +979,7 @@ module Cid = struct
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
-    let add f = begin
+    let add loc f = begin
       let (cid_prog, e) = 
         let store = 
           try DynArray.get store (!Modules.current)
@@ -974,9 +990,10 @@ module Cid = struct
             x
           end in
           let l = DynArray.length store in
-          let e = f (!Modules.current, l) in
+          let cid = (!Modules.current, l) in
+          let e = f cid in
           DynArray.add store e;
-          ((!Modules.current, l), e) in
+          (cid, e) in
       
         let directory = 
           try DynArray.get directory (!Modules.current) 
@@ -987,7 +1004,26 @@ module Cid = struct
             x
           end in
         Hashtbl.replace directory e.name cid_prog;
-        cid_prog end
+
+        let entry_list =
+          try DynArray.get entry_list (!Modules.current)
+        with _ -> begin
+          let x = ref [] in
+          while DynArray.length entry_list < (!Modules.current) do DynArray.add entry_list (ref []) done;
+          DynArray.add entry_list x;
+          x
+        end in
+        try
+          let cid_prog' = Hashtbl.find directory e.name in
+          let loc' = List.assoc cid_prog'  !entry_list in
+          Hashtbl.replace directory e.name cid_prog;
+          entry_list := (cid_prog,loc)::(List.remove_assoc cid_prog' !entry_list);
+          (Some loc', cid_prog')
+        with Not_found ->
+          Hashtbl.replace directory e.name cid_prog;
+          entry_list := (cid_prog,loc) :: !entry_list;
+          (None, cid_prog)
+        end
 
     let get ?(fixName=false) (l, n) =
       let l' = Modules.name_of_id l in

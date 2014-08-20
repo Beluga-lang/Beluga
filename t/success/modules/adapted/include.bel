@@ -7,7 +7,7 @@
 }%
 
 
-%noStrengthen
+%nostrengthen
 
 module Common = struct
   tp: type.

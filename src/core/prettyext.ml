@@ -1104,7 +1104,7 @@ module Ext = struct
 
     and fmt_ppr_cmp_branch cD _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a] @]  @]@  "
+          fprintf ppf "[PrettyExt - EmptyBranch] @ @[<v2>| @[<v0>%a@[[ %a] @]  @]@  "
             (fmt_ppr_cmp_branch_prefix  0) cD1
             (fmt_ppr_pat_obj cD1 0) pat
 
@@ -1181,7 +1181,7 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
-    let fmt_ppr_cmp_rec lvl ppf = function
+    let fmt_ppr_cmp_rec lvl ppf = function (* +ext Pretty Printing Descends from here. *)
       | Comp.RecFun (x, a, e) ->
           fprintf ppf "%s %s : %a = %a"
             (to_html "rec" Keyword)
@@ -1254,7 +1254,7 @@ module Ext = struct
 
 
     (* Regular Pretty Printers *)
-    let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
+     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
     let ppr_lf_ctyp_decl  cD   = fmt_ppr_lf_ctyp_decl cD    std_lvl std_formatter
     let ppr_lf_kind cPsi       = fmt_ppr_lf_kind cPsi          std_lvl std_formatter
     let ppr_lf_typ  cD cPsi    = fmt_ppr_lf_typ cD cPsi     std_lvl std_formatter

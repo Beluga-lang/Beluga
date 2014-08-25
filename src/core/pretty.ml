@@ -48,24 +48,6 @@ type lvl    = int
 
 let std_lvl = 0
 
-let line_num = ref 1
-
-let printing_nums = ref false 
-
-let setup_linenums () = 
-  let _ = printing_nums := true in
-  let x = get_formatter_out_functions () in
-  let y () = try
-    if not !printing_nums then x.out_newline () else
-    let l = (int_of_float (log10(float_of_int !line_num))) + 2 in
-    let s = ("\n" ^ (String.make (6-l) ' ') ^ (string_of_int !line_num) ^ " ") in
-    let _ = incr line_num in
-    x.out_string s 0 7
-  with e -> x.out_newline ()
-  in 
-  let z = {x with out_newline = y} in
-  set_formatter_out_functions z
-
 let l_paren_if cond =
   if cond
   then "("

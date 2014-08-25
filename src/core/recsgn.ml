@@ -113,9 +113,9 @@ let rec recSgnDecls = function
     let rest' = recSgnDecls rest in
     decl'::rest'
 
-and recSgnDecl d =
+and recSgnDecl ?(pauseHtml=false) d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
-    if !Html.genHtml then sgnDeclToHtml d;
+    if !Html.genHtml && not pauseHtml then sgnDeclToHtml d;
     match d with
     | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment(l, s)
         
@@ -435,9 +435,9 @@ and recSgnDecl d =
 
     | Ext.Sgn.MRecTyp (loc, recDats) ->
         let recTyps = List.map List.hd recDats in
-        let   recTyps'   =  recSgnDecls recTyps in
+        let   recTyps'   =  List.map (recSgnDecl ~pauseHtml:true) recTyps in
         let recConts = List.map List.tl recDats in
-        let   recConts'   = List.map recSgnDecls recConts in
+        let   recConts'   = List.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
         let  _  = List.map freeze_from_name recTyps in
         Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x::y) recTyps' recConts')
 

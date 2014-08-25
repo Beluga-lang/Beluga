@@ -627,10 +627,11 @@ module Ext = struct
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
       | Comp.Ctype _ -> fprintf ppf "%s" (to_html "ctype" Keyword)
       | Comp.PiKind (_, ctyp_decl, cK) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s%a@ %a%s"
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a %s %a%s"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
+              (symbol_to_html RArr)
               (fmt_ppr_cmp_kind (LF.Dec(cD, ctyp_decl)) 1) cK
               (r_paren_if cond)
 
@@ -686,7 +687,7 @@ module Ext = struct
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
-              (R.render_name x)
+              (to_html (R.render_name x) Link)
               (fmt_ppr_meta_spine cD 2) mS
               (r_paren_if cond)
 
@@ -709,7 +710,7 @@ module Ext = struct
 
       | Comp.TypCtx (_, x) ->
             fprintf ppf "%s"
-              (R.render_name x)
+              (to_html (R.render_name x) Link)
 
       | Comp.TypSub (_, cPhi, cPsi) ->
           fprintf ppf "[%a %s %a]"
@@ -1202,7 +1203,7 @@ module Ext = struct
             (fmt_ppr_lf_typ LF.Empty LF.Null lvl)  a
 
       | Sgn.CompConst (_, x, a) ->
-          fprintf ppf "@\n%s : %a."
+          fprintf ppf "@\n| %s : %a"
             (to_html (R.render_name x) (ID Constructor))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
 
@@ -1212,21 +1213,24 @@ module Ext = struct
             (fmt_ppr_lf_kind LF.Null lvl) k
 
       | Sgn.CompTypAbbrev (_, x, k, a) ->
-          fprintf ppf "%s@\n : %a.@\n%a"
+          fprintf ppf "%s %s@\n : %a = @\n%a;"
+            (to_html "datatype" Keyword)
             (R.render_name  x)
-            (fmt_ppr_cmp_kind LF.Empty lvl) k
-            (fmt_ppr_cmp_typ LF.Empty lvl)  a
+            (fmt_ppr_cmp_kind LF.Empty 0) k
+            (fmt_ppr_cmp_typ LF.Empty 0)  a
 
+      | Sgn.CompCotyp(_, x, k)
       | Sgn.CompTyp (_, x, k) ->
-          fprintf ppf "@\n%s : %a."
+          fprintf ppf "@\n%s %s : %a = "
+            (to_html "datatype" Keyword)
             (to_html (R.render_name x) (ID Typ))
-            (fmt_ppr_cmp_kind LF.Empty lvl) k
+            (fmt_ppr_cmp_kind LF.Empty 0) k
 
       | Sgn.Schema (_, x, schema) ->
           fprintf ppf "@\n%s %s = %a;"
             (to_html "schema" Keyword)
             (to_html (R.render_name  x) (ID Schema))
-            (fmt_ppr_lf_schema lvl) schema
+            (fmt_ppr_lf_schema 0) schema
 
      | Sgn.Rec (_, lrec) ->
            (fmt_ppr_rec lvl ppf) lrec
@@ -1250,6 +1254,16 @@ module Ext = struct
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
           fprintf ppf "@\n%s %s = %s@\n@[<v2>%a@]@\n%s;@\n"
                     (to_html "module" Keyword) (name) (to_html "struct" Keyword) (aux) decls (to_html "end" Keyword)
+      | Sgn.MRecTyp(l, decls) ->
+          let getType : Sgn.decl -> [`Cmp | `LF] = function
+          | Sgn.CompTyp _ | Sgn.CompConst _ | Sgn.CompCotyp _ -> `Cmp
+          | Sgn.Typ _ | Sgn.Const _-> `LF
+          | _ -> failwith "Invalid MRecTyp" in
+          let aux x = 
+            match getType(List.hd x) with
+            | `Cmp -> List.iter (fun i -> fmt_ppr_sgn_decl lvl ppf i) x; fprintf ppf ";"
+            | `LF -> List.iter (fun i -> fmt_ppr_sgn_decl lvl ppf i) x
+          in List.iter aux decls
       | _ -> ()
 
 

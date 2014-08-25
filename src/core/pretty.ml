@@ -1629,7 +1629,7 @@ module Int = struct
                     (name) (aux) decls in
           Store.Modules.setState state
 
-      | Sgn.Comment _ -> ()
+      |  _ -> ()
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter

@@ -1245,6 +1245,7 @@ let comptypdef (cT, cK) =
                        | Apx.LF.MTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
                        | Apx.LF.PTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.PV u))
                        | Apx.LF.CTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.CV u))
+                       | Apx.LF.STyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.SV u))
                       in
             unroll cK cvars'
    end in

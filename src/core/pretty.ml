@@ -1560,6 +1560,7 @@ module Int = struct
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
+      | Sgn.CompTypAbbrev (_,_,_,_) -> ()
       | Sgn.Const (_, c, a) ->
           fprintf ppf "@\n%s : %a.@\n"
             (R.render_cid_term c)

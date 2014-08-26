@@ -11,6 +11,7 @@ let page : Buffer.t = Buffer.create 0
  *)
 let header =
 "<html>\n<head>" ^
+"\n\t<meta charset=\"UTF-8\">"
 "\n\t<style type=\"text/css\">" ^
 "\n\t\tbody {" ^
 "\n\t\t\tpadding: 2em 1em 2em 1em;" ^

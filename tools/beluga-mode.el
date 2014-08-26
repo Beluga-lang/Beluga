@@ -524,8 +524,8 @@ If a previous beli process already exists, kill it first."
                          electric-indent-chars
                        '(?\n))))
   ;;QUAIL
-  (add-hook 'beluga-mode-hook 
-    (lambda () (set-input-method "beluga-unicode")))
+  ; (add-hook 'beluga-mode-hook 
+    ; (lambda () (set-input-method "beluga-unicode")))
    
   ;;Turn off hilighting
 ;;(setq input-method-highlight-flag nil)

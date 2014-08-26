@@ -6,16 +6,19 @@ This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/b
 
 ## Syntax
 We first represent the simply-typed lambda-calculus in the logical framework LF: the LF type <code>tp</code> describes the types of our simply typed lambda-calculus, and the LF type <code>tm</code> characterizes the terms of the lambda-calculus.<br>
-The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since <code>arr</code> is a constructor which takes in two arguments, its type is <code>tp -> tp -> tp</code>.```
+The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since `arr` is a constructor which takes in two arguments, its type is `tp -> tp -> tp`.
 ```
+
 % Definition of types and expressions
 datatype tp: type =  
 | arr: tp -> tp -> tp
 | nat: tp
 ;
+
 ```
 ### Definition of lambda-terms
-The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.```
+The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.
+```
 
 datatype term: type = 
 | lam : tp -> (term -> term) -> term

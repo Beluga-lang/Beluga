@@ -1,0 +1,227 @@
+% Basic Context Reasoning
+% Author: Brigitte Pientka
+%
+
+% Definition of lambda-terms
+tm: type. %name tm M x.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+% ---------------------------------------------------------------------------
+% Algorithmic Equality
+aeq: tm -> tm -> type. %name aeq Q u.
+ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
+
+ae_l : ({x : tm} aeq x x -> aeq (M x) (N x))
+          -> aeq (lam (\x. M x)) (lam (\x. N x)).
+
+% ---------------------------------------------------------------------------
+% Declarative Equality
+deq: tm -> tm -> type.
+de_l: ({x:tm} deq x x -> deq (M x) (M' x))
+     -> deq (lam (\x. M x)) (lam (\x. M' x)).
+de_a: deq M1 N1 -> deq M2 N2
+     -> deq (app M1 M2) (app N1 N2).
+de_r: deq M M.
+de_t: deq M L -> deq L N
+     -> deq M N.
+% Symmetry
+de_s: deq T S -> deq S T.
+
+% ---------------------------------------------------------------------------
+% Context schemas
+schema xaG = block x:tm, ae_v:aeq x x;
+schema daG = block x: tm, ae_v:aeq x x, de_v:deq x x ;
+
+% ---------------------------------------------------------------------------
+% Reflexivity: We prove reflexivity in the generalized version
+%
+rec reflG: {g:xaG} {M:[g |- tm]} [g |- aeq (M ..) (M ..)] =
+mlam g => mlam M => case [g |- (M ..)] of
+| [g |- #p.1 ..] => [g |- #p.2 ..]
+| [g |- lam \x. M .. x] =>
+  let [g,b:block y:tm, ae_v:aeq y y |- D .. b.1 b.2] =
+         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M .. b.1]
+  in
+   [g |- ae_l \x. \w. (D .. x w)] % : eq (L .. x) (L .. x)
+| [g |- app (M1 ..) (M2 ..)] =>
+  let [g |- D1 ..] = reflG [g] [g |- M1 .. ] in
+  let [g |- D2 ..] = reflG [g] [g |- M2 .. ] in
+    [g |- ae_a (D1 ..) (D2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% General transitivity is admissible
+rec transG: (g:xaG)
+   [g |- aeq (M ..) (L ..)] -> [g |- aeq (L ..) (N ..)]
+ -> [g |- aeq (M ..) (N ..)] =
+fn d1 => fn d2 => case d1 of
+| [g |- #p.2 ..] => d2
+| [g |- ae_l \x.\u. D1 .. x u] =>
+  let [g |- ae_l \x.\u. D2 .. x u] = d2 in
+  let [g, b:block x:tm, ae_v:aeq x x |- E .. b.1 b.2] =
+         transG [g, b:block x':tm, ae_v:aeq x' x' |- D1 .. b.1 b.2]
+               [g, b |- D2 .. b.1 b.2]
+  in
+    [g |- ae_l \x. \u. E .. x u]
+| [g |- ae_a (D1 ..) (D2 ..)] =>
+  let [g |- ae_a (F1 ..) (F2 ..)] = d2 in
+  let [g |- E1 ..] = transG [g |- D1 ..] [g |- F1 ..] in
+  let [g |- E2 ..] = transG [g |- D2 ..] [g |- F2 ..] in
+    [g |- ae_a (E1 ..) (E2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% General symmetry is admissible
+rec symG: (g:xaG)
+   [g |- aeq (M ..) (L ..)] -> [g |- aeq (L ..) (M ..)] =
+fn d => case d of
+| [g |- #p.2 ..] => d
+| [g |- ae_l \x.\u. D1 .. x u] =>
+  let [g, b:block x:tm, ae_v:aeq x x |- E .. b.1 b.2] =
+         symG [g, b:block x':tm, ae_v:aeq x' x' |- D1 .. b.1 b.2]
+  in
+    [g |- ae_l \x. \u. E .. x u]
+| [g |- ae_a (D1 ..) (D2 ..)] =>
+  let [g |- E1 ..] = symG [g |- D1 ..] in
+  let [g |- E2 ..] = symG [g |- D2 ..] in
+    [g |- ae_a (E1 ..) (E2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% Completeness
+
+rec ceq: (g:daG) [g |- deq (M ..) (N ..)] -> [g |- aeq (M ..) (N ..)] =
+fn e => case e of
+| [g |- #p.3 ..] => [g |- #p.2 ..]
+| [g |- de_r] => reflG [g] [g |- _ ]
+| [g |- de_a (D1 ..) (D2 ..)] =>
+  let [g |- F1 ..] = ceq [g |- D1 ..] in
+  let [g |- F2 ..] = ceq [g |- D2 ..] in
+    [g |- ae_a (F1 ..) (F2 ..)]
+| [g |- de_l (\x.(\u. (D .. x u)))] =>
+  let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F .. b.1 b.2] =
+        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D .. b.1 b.3]
+  in
+     [g |- ae_l (\x.\v. F .. x v)]
+| [g |- de_t (D1 ..) (D2 ..)] =>
+  let [g |- F2 ..] = ceq [g |- D2 ..] in
+  let [g |- F1 ..] = ceq [g |- D1 ..] in
+    transG [g |- F1 ..] [g |- F2 ..]
+| [g |- de_s (D ..)] =>
+  let [g |- F ..] = ceq [g |- D ..] in
+  symG [g |- F ..]
+;% Basic Context Reasoning
+% Author: Brigitte Pientka
+%
+
+% Definition of lambda-terms
+tm: type. %name tm M x.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+% ---------------------------------------------------------------------------
+% Algorithmic Equality
+aeq: tm -> tm -> type. %name aeq Q u.
+ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
+
+ae_l : ({x : tm} aeq x x -> aeq (M x) (N x))
+          -> aeq (lam (\x. M x)) (lam (\x. N x)).
+
+% ---------------------------------------------------------------------------
+% Declarative Equality
+deq: tm -> tm -> type.
+de_l: ({x:tm} deq x x -> deq (M x) (M' x))
+     -> deq (lam (\x. M x)) (lam (\x. M' x)).
+de_a: deq M1 N1 -> deq M2 N2
+     -> deq (app M1 M2) (app N1 N2).
+de_r: deq M M.
+de_t: deq M L -> deq L N
+     -> deq M N.
+% Symmetry
+de_s: deq T S -> deq S T.
+
+% ---------------------------------------------------------------------------
+% Context schemas
+schema xaG = block x:tm, ae_v:aeq x x;
+schema daG = block x: tm, ae_v:aeq x x, de_v:deq x x ;
+
+% ---------------------------------------------------------------------------
+% Reflexivity: We prove reflexivity in the generalized version
+%
+rec reflG: {g:xaG} {M:[g |- tm]} [g |- aeq (M ..) (M ..)] =
+mlam g => mlam M => case [g |- (M ..)] of
+| [g |- #p.1 ..] => [g |- #p.2 ..]
+| [g |- lam \x. M .. x] =>
+  let [g,b:block y:tm, ae_v:aeq y y |- D .. b.1 b.2] =
+         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M .. b.1]
+  in
+   [g |- ae_l \x. \w. (D .. x w)] % : eq (L .. x) (L .. x)
+| [g |- app (M1 ..) (M2 ..)] =>
+  let [g |- D1 ..] = reflG [g] [g |- M1 .. ] in
+  let [g |- D2 ..] = reflG [g] [g |- M2 .. ] in
+    [g |- ae_a (D1 ..) (D2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% General transitivity is admissible
+rec transG: (g:xaG)
+   [g |- aeq (M ..) (L ..)] -> [g |- aeq (L ..) (N ..)]
+ -> [g |- aeq (M ..) (N ..)] =
+fn d1 => fn d2 => case d1 of
+| [g |- #p.2 ..] => d2
+| [g |- ae_l \x.\u. D1 .. x u] =>
+  let [g |- ae_l \x.\u. D2 .. x u] = d2 in
+  let [g, b:block x:tm, ae_v:aeq x x |- E .. b.1 b.2] =
+         transG [g, b:block x':tm, ae_v:aeq x' x' |- D1 .. b.1 b.2]
+               [g, b |- D2 .. b.1 b.2]
+  in
+    [g |- ae_l \x. \u. E .. x u]
+| [g |- ae_a (D1 ..) (D2 ..)] =>
+  let [g |- ae_a (F1 ..) (F2 ..)] = d2 in
+  let [g |- E1 ..] = transG [g |- D1 ..] [g |- F1 ..] in
+  let [g |- E2 ..] = transG [g |- D2 ..] [g |- F2 ..] in
+    [g |- ae_a (E1 ..) (E2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% General symmetry is admissible
+rec symG: (g:xaG)
+   [g |- aeq (M ..) (L ..)] -> [g |- aeq (L ..) (M ..)] =
+fn d => case d of
+| [g |- #p.2 ..] => d
+| [g |- ae_l \x.\u. D1 .. x u] =>
+  let [g, b:block x:tm, ae_v:aeq x x |- E .. b.1 b.2] =
+         symG [g, b:block x':tm, ae_v:aeq x' x' |- D1 .. b.1 b.2]
+  in
+    [g |- ae_l \x. \u. E .. x u]
+| [g |- ae_a (D1 ..) (D2 ..)] =>
+  let [g |- E1 ..] = symG [g |- D1 ..] in
+  let [g |- E2 ..] = symG [g |- D2 ..] in
+    [g |- ae_a (E1 ..) (E2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% Completeness
+
+rec ceq: (g:daG) [g |- deq (M ..) (N ..)] -> [g |- aeq (M ..) (N ..)] =
+fn e => case e of
+| [g |- #p.3 ..] => [g |- #p.2 ..]
+| [g |- de_r] => reflG [g] [g |- _ ]
+| [g |- de_a (D1 ..) (D2 ..)] =>
+  let [g |- F1 ..] = ceq [g |- D1 ..] in
+  let [g |- F2 ..] = ceq [g |- D2 ..] in
+    [g |- ae_a (F1 ..) (F2 ..)]
+| [g |- de_l (\x.(\u. (D .. x u)))] =>
+  let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F .. b.1 b.2] =
+        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D .. b.1 b.3]
+  in
+     [g |- ae_l (\x.\v. F .. x v)]
+| [g |- de_t (D1 ..) (D2 ..)] =>
+  let [g |- F2 ..] = ceq [g |- D2 ..] in
+  let [g |- F1 ..] = ceq [g |- D1 ..] in
+    transG [g |- F1 ..] [g |- F2 ..]
+| [g |- de_s (D ..)] =>
+  let [g |- F ..] = ceq [g |- D ..] in
+  symG [g |- F ..]
+;

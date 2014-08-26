@@ -289,6 +289,19 @@ let replaceHole i exp =
 
 
 (* intro: int -> Comp.exp_chk option *)
+let is_inferred = function 
+| LF.Decl(_, ctyp) -> begin match ctyp with
+  | LF.MTyp (_, _, dep)
+  | LF.PTyp (_, _, dep)
+  | LF.STyp (_, _, dep)
+  | LF.CTyp (_, dep) ->
+    begin match dep with
+      | LF.No -> false
+      | LF.Maybe -> true
+    end
+  end 
+| _ -> false
+
 let  intro i =
   let used = ref false in
   let (loc, cDT, cGT, (tau, mS)) = Holes.getOneHole i in
@@ -311,7 +324,7 @@ let  intro i =
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
          Some (Comp.Fun(Loc.ghost, nam, exp))
            )
- | Comp.TypPiBox (tdec, t') ->
+ | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
      used := true;
      let nam = nameOfLFcTypDecl tdec in
      let Some exp = crawl (LF.Dec (cD, tdec)) cG t' in

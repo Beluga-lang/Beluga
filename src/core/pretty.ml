@@ -135,6 +135,8 @@ module Int = struct
     val ppr_cmp_branch    : LF.mctx -> Comp.gctx -> Comp.branch      -> unit
 
     (* Conversion to string *)
+    val sgnDeclToString   : Sgn.decl -> string
+
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
@@ -1770,6 +1772,8 @@ module Int = struct
       fmt_ppr_lf_msub cD std_lvl str_formatter s'
       ; flush_str_formatter ()
 
+    let sgnDeclToString   : Sgn.decl -> string = fun d ->
+      fmt_ppr_sgn_decl std_lvl str_formatter d; flush_str_formatter ()
   end (* Int.Make *)
 
   (* Default Error Pretty Printer Functor Instantiation *)

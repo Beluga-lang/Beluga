@@ -55,19 +55,22 @@ let generatePage orig =
     let oc = open_out !filename in
     let out = output_string oc in
     begin match !css with
-    | NoCSS -> out  (page ^ "\n");
+    | NoCSS -> begin
+        out  (page ^ "\n");
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+      end
     | Normal -> begin
         out header;
         out "<body>\n";
         out  page;
-        out ("To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a>\n");
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
         out "\n</body>\n</html>\n"
       end
     | File s -> begin
         out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
         out s; out "\">\n</head>\n<body>\n";
         out page;
-        out ("To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a>\n");
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
         out "\n</body>\n</html>\n"
       end
     end;

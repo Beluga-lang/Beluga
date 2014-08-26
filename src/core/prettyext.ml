@@ -406,6 +406,9 @@ module Ext = struct
 
         | LF.EmptySub _ ->
             fprintf ppf ""
+        | LF.SVar(_, s, LF.EmptySub _) -> 
+            fprintf ppf "#%s[^]"
+            (R.render_name s)
         | LF.SVar (_, s, f) ->
             fprintf ppf "#%s[%a]"
               (R.render_name s)
@@ -669,12 +672,21 @@ module Ext = struct
               (symbol_to_html Turnstile)
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)
+      | Comp.MetaSObj (_, phat, LF.EmptySub _) ->
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "[%a %s ^]"
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+               (symbol_to_html Turnstile)           
       | Comp.MetaSObj (_, phat, s) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
                (symbol_to_html Turnstile)
               (fmt_ppr_lf_sub cD cPsi 0) s
+      | Comp.MetaSObjAnn (_, cPsi, LF.EmptySub _) ->
+            fprintf ppf "[%a %s ^]"
+               (fmt_ppr_lf_dctx cD 0) cPsi
+               (symbol_to_html Turnstile)
       | Comp.MetaSObjAnn (_, cPsi, tM) ->
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
@@ -840,7 +852,7 @@ module Ext = struct
 
       | Comp.MLam (_, (x, Comp.PObj), e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s # %s %s %a%s"
+            fprintf ppf "%s%s #%s %s %a%s"
               (l_paren_if cond)
               (to_html "mlam" Keyword)
               (R.render_name x)
@@ -862,7 +874,7 @@ module Ext = struct
           let cond = lvl > 0 in
             fprintf ppf "%s%s %s %s %a%s"
               (l_paren_if cond)
-              (to_html "FN" Keyword)
+              (to_html "mlam" Keyword)
               (R.render_name x)
               (symbol_to_html DblRArr)
               (fmt_ppr_cmp_exp_chk cD 0) e
@@ -1110,7 +1122,6 @@ module Ext = struct
           fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a]@]@]@]"
             (fmt_ppr_cmp_branch_prefix  0) cD1
             (fmt_ppr_pat_obj cD1 0) pat
-
 
       | Comp.Branch (_, cD1', Comp.PatMetaObj (_, mO), e) ->
           fprintf ppf "@ @[<v2>| @[<v0>%a@[%a %s @] @[<2>@ %a@]@]@]@ "

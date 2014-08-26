@@ -146,13 +146,17 @@ let mk_tok_of_lexeme tok_cons loc lexbuf =
 (*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^ "\n") in *)
       tok
 
+
 let mk_keyword s = Token.KEYWORD s
 
 let mk_symbol  s = Token.SYMBOL  s
 
 let mk_integer  s = Token.INTLIT s
 
-let mk_comment s = Token.COMMENT s
+let mk_comment loc s = 
+  let n = ref 0 in 
+  let _ = String.iter (fun c -> if c = '\n' then incr n) s in
+  let _ = loc := Loc.move_line !n !loc in Token.COMMENT s
 
 let mk_dots s = Token.DOTS s
 
@@ -170,7 +174,7 @@ let mk_module s = Token.MODULESYM s
 let lex_token loc = lexer
   | (upper sym* ".")+ lower sym* -> mk_tok_of_lexeme mk_module loc lexbuf
   | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
-  | "```" ([^'`']|(['`'][^'`']))* "```" -> mk_tok_of_lexeme mk_comment loc lexbuf
+  | "```" ([^'`']|(['`'][^'`']))* "```" -> mk_tok_of_lexeme (mk_comment loc) loc lexbuf
   | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf

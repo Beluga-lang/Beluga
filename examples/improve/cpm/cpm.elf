@@ -22,11 +22,11 @@ cont : type.  %name cont K.
 
 init : cont.
 c    : cont -> (val -> inst) -> cont.
-%infix left 8 ;.
+% infix left 8 ;.
 
 % Continuation Machine States
 state : type.  %name state S.
 
 st : cont -> inst -> state.
 answer : val -> state.
-%infix none 7 #.
+% infix none 7 #.

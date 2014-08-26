@@ -1,0 +1,242 @@
+<html>
+<head>
+	<link rel="stylesheet" type="te../../css" href="../../css/bootstrap.css">
+</head>
+<body>
+
+<p> 
+<h1> Algorithmic Equality for the Polymorphic Lambda-calculus (G-version)</h1>
+This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/EqualPoly.orbi" target="_blank">EqualPoly.orbi</a>. We examine Theorems 11, 18, & 19 and Lemma 18 from <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>, proving each by the <i>generalized context</i> (G) approach.<br></p>
+<p><ul>
+<ul><li><b>Theorem 11(Admissibility of Reflexivity for Types):</b> If <code>g &#8866; is_tp A</code> then <code>g &#8866; atp A A</code>.<br></li>
+<li><b>Theorem 13 (Admissibility of Reflexivity for Terms):</b> If <code>g &#8866; is_tm M</code> then <code>g &#8866; aeq M M</code>.<br></li>
+<li><b>Lemma 18 (G-Promotion for Reflexivity, Symmetry, and Transitivity):</b></li></ul>
+<ol><br>
+<ul><li>If <code>g:atpCtx</code> and <code>g &#8866; is_tm M</code> then <code>g &#8866; aeq M M</code>.<br></li>
+<li>If <code>g:atpCtx</code> and <code>g &#8866; aeq M L</code> and <code>g &#8866; aeq L N</code> then <code>g &#8866; aeq M N</code>.<br></li>
+<li>If <code>g:atpCtx</code> and <code>g &#8866; aeq M N</code> then <code>g &#8866; aeq N M</code>.<br></li></ul>
+</ol>
+<ul><li><b>Theorem 19 (Completeness):</b> If <code>g:dtpCtx</code> and <code>g &#8866; deq M N</code> then <code>g &#8866; aeq M N</code>.</li></ul>
+</ul></p>
+<p><h2> Syntax</h2>
+The polymorphic lambda-calculus is introduced with the following declarations: </p><br><pre><code>
+<span class="typ" id="tp">tp</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> tp T a<br>
+<span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>.<br>
+<span class="constructor" id="all">all</span> : (<a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>) &#x2192 <a href="#tp">tp</a>.<br>
+<span class="typ" id="term">term</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> term M x<br>
+<span class="constructor" id="app">app</span> : <a href="#term">term</a> &#x2192 <a href="#term">term</a> &#x2192 <a href="#term">term</a>.<br>
+<span class="constructor" id="lam">lam</span> : (<a href="#term">term</a> &#x2192 <a href="#term">term</a>) &#x2192 <a href="#term">term</a>.<br>
+<span class="constructor" id="tlam">tlam</span> : (<a href="#tp">tp</a> &#x2192 <a href="#term">term</a>) &#x2192 <a href="#term">term</a>.<br>
+<span class="constructor" id="tapp">tapp</span> : <a href="#term">term</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#term">term</a>.</code></pre>
+<p>Note that we extend the untyped syntax with constructors for type abstraction <code>tlam</code>, type application <code>tapp</code>, and existential quantification over types <code>all</code>.</p>
+<p><h2> Judgements and Rules</h2>
+We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.</p>
+<p><h3> Algorithmic Equality for types</h3>
+We of course cannot define a term equality judgement only in our Untyped Equality case studies. We add the judgement for type equality, <code>atp A B</code></p><br><pre><code>
+<span class="typ" id="atp">atp</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br><keyword>%name</keyword> atp Q u<br>
+<span class="constructor" id="at_al">at_al</span> : {a : <a href="#tp">tp</a>} (<a href="#atp">atp</a> a a &#x2192 <a href="#atp">atp</a> (T a) (S a)) &#x2192 <a href="#atp">atp</a> (<a href="#all">all</a> T) (<a href="#all">all</a> S).<br>
+<span class="constructor" id="at_arr">at_arr</span> : <a href="#atp">atp</a> T1 T2 &#x2192 <a href="#atp">atp</a> S1 S2 &#x2192 <a href="#atp">atp</a> (<a href="#arr">arr</a> T1 S1) (<a href="#arr">arr</a> T2 S2).</code></pre>
+<p><h3> Algorithmic Equality for terms</h3>
+We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.</p><br><pre><code>
+<span class="typ" id="aeq">aeq</span> : <a href="#term">term</a> &#x2192 <a href="#term">term</a> &#x2192 <keyword>type</keyword>.<br><keyword>%name</keyword> aeq D u<br>
+<span class="constructor" id="ae_a">ae_a</span> : <a href="#aeq">aeq</a> M1 N1 &#x2192 <a href="#aeq">aeq</a> M2 N2 &#x2192 <a href="#aeq">aeq</a> (<a href="#app">app</a> M1 M2) (<a href="#app">app</a> N1 N2).<br>
+<span class="constructor" id="ae_l">ae_l</span> : {x : <a href="#term">term</a>} (<a href="#aeq">aeq</a> x x &#x2192 <a href="#aeq">aeq</a> (M x) (N x)) &#x2192 <a href="#aeq">aeq</a> (<a href="#lam">lam</a> (\x. M x)) (<a href="#lam">lam</a> (\x. N x)).<br>
+<span class="constructor" id="ae_tl">ae_tl</span> : {a : <a href="#tp">tp</a>} (<a href="#atp">atp</a> a a &#x2192 <a href="#aeq">aeq</a> (M a) (N a)) &#x2192 <a href="#aeq">aeq</a> (<a href="#tlam">tlam</a> (\a. M a)) (<a href="#tlam">tlam</a> (\a. N a)).<br>
+<span class="constructor" id="ae_ta">ae_ta</span> : <a href="#aeq">aeq</a> M N &#x2192 <a href="#atp">atp</a> T S &#x2192 <a href="#aeq">aeq</a> (<a href="#tapp">tapp</a> M T) (<a href="#tapp">tapp</a> N S).</code></pre>
+<p>Note that type equality <code>atp A B</code> can be defined independently of term equality <code>aeq M N</code>. In other words, <code>aeq M N</code> depends on <code>atp A B</code>, but not vice-versa.</p>
+<p><h3> Declarative Equality for types</h3>
+We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.</p><br><pre><code>
+<span class="typ" id="dtp">dtp</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br><keyword>%name</keyword> atp P u<br>
+<span class="constructor" id="dt_al">dt_al</span> : {a : <a href="#tp">tp</a>} (<a href="#dtp">dtp</a> a a &#x2192 <a href="#dtp">dtp</a> (T a) (S a)) &#x2192 <a href="#dtp">dtp</a> (<a href="#all">all</a> T) (<a href="#all">all</a> S).<br>
+<span class="constructor" id="dt_arr">dt_arr</span> : <a href="#dtp">dtp</a> T1 T2 &#x2192 <a href="#dtp">dtp</a> S1 S2 &#x2192 <a href="#dtp">dtp</a> (<a href="#arr">arr</a> T1 S1) (<a href="#arr">arr</a> T2 S2).<br>
+<span class="constructor" id="dt_r">dt_r</span> : <a href="#dtp">dtp</a> T T.<br>
+<span class="constructor" id="dt_t">dt_t</span> : <a href="#dtp">dtp</a> T R &#x2192 <a href="#dtp">dtp</a> R S &#x2192 <a href="#dtp">dtp</a> T S.<br>
+<span class="constructor" id="dt_s">dt_s</span> : <a href="#dtp">dtp</a> T S &#x2192 <a href="#dtp">dtp</a> S T.</code></pre>
+<p><h3> Declarative Equality for terms</h3>
+Declarative equality for terms is encoded similarly to its counterpart. Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction <code>de_tl</code> and type application <code>de_ta</code> </p><br><pre><code>
+<span class="typ" id="deq">deq</span> : <a href="#term">term</a> &#x2192 <a href="#term">term</a> &#x2192 <keyword>type</keyword>.<br>
+<span class="constructor" id="de_l">de_l</span> : {x : <a href="#term">term</a>} (<a href="#deq">deq</a> x x &#x2192 <a href="#deq">deq</a> (M x) (N x)) &#x2192 <a href="#deq">deq</a> (<a href="#lam">lam</a> (\x. M x)) (<a href="#lam">lam</a> (\x. N x)).<br>
+<span class="constructor" id="de_a">de_a</span> : <a href="#deq">deq</a> M1 N1 &#x2192 <a href="#deq">deq</a> M2 N2 &#x2192 <a href="#deq">deq</a> (<a href="#app">app</a> M1 M2) (<a href="#app">app</a> N1 N2).<br>
+<span class="constructor" id="de_tl">de_tl</span> : {a : <a href="#tp">tp</a>} (<a href="#dtp">dtp</a> a a &#x2192 <a href="#deq">deq</a> (M a) (N a)) &#x2192 <a href="#deq">deq</a> (<a href="#tlam">tlam</a> (\a. M a)) (<a href="#tlam">tlam</a> (\a. N a)).<br>
+<span class="constructor" id="de_ta">de_ta</span> : <a href="#deq">deq</a> M N &#x2192 <a href="#dtp">dtp</a> T S &#x2192 <a href="#deq">deq</a> (<a href="#tapp">tapp</a> M T) (<a href="#tapp">tapp</a> N S).<br>
+<span class="constructor" id="de_r">de_r</span> : <a href="#deq">deq</a> M M.<br>
+<span class="constructor" id="de_t">de_t</span> : <a href="#deq">deq</a> M L &#x2192 <a href="#deq">deq</a> L N &#x2192 <a href="#deq">deq</a> M N.<br>
+<span class="constructor" id="de_s">de_s</span> : <a href="#deq">deq</a> T S &#x2192 <a href="#deq">deq</a> S T.</code></pre>
+<p><h2> Context declarations</h2>
+To establish reflexivity, transitivity, and symmetry of type equality, we define context of schema <code>atpCtx</code>.</p><br><pre><code>
+<keyword>schema</keyword> <span class="schema" id="atpCtx">atpCtx</span> = <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a);</code></pre>
+<p>Since the case for lambda-abstraction <code>lam</code> deals with term assumptions while the type abstraction <code>tlam</code> introduces type assumptions, we need to specify <i>alternating</i> assumptions. This alternation of blocks is described by using <code>+</code> in Beluga's concrete syntax.</p><br><pre><code>
+<keyword>schema</keyword> <span class="schema" id="aeqCtx">aeqCtx</span> = <keyword>block</keyword> (x:<a href="#term">term</a>, _u:<a href="#aeq">aeq</a> x x)
++
+<keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a);</code></pre>
+<p>We encode schemas to define meaningful contexts for declarative equality in a similar fashion. Clearly, <code>dtpCtx</code> and <code>deqCtx</code> are linear extensions of <code>atpCtx</code> and <code>aeqCtx</code>. respectively.</p><br><pre><code>
+<keyword>schema</keyword> <span class="schema" id="dtpCtx">dtpCtx</span> = <keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a);<br>
+<keyword>schema</keyword> <span class="schema" id="deqCtx">deqCtx</span> = <keyword>block</keyword> (x:<a href="#term">term</a>, u:<a href="#aeq">aeq</a> x x, _t:<a href="#deq">deq</a> x x)
++
+<keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a);</code></pre>
+<p><h2> Proof of Reflexivity for Types</h2>
+The reflexivity for types (Theorem 11) can be implemented as a recursive function called <code>reftp</code> of type: <code>{g:atpCtx}{T:[g &#8866; tp ]}[g &#8866; atp (T ..)(T ..)]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g &#8866; atp (T ..)(T ..)]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.</p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="reftp">reftp</span> : {g : <a href="#atpCtx">atpCtx</a>} {T : [g &#x22A2 <a href="#tp">tp</a>]} [g &#x22A2 <a href="#atp">atp</a> (T ..) (T ..)] = <keyword>FN</keyword> g &#x21D2 <keyword>mlam</keyword> T &#x21D2 <keyword>case</keyword> [g &#x22A2 (T ..)] <keyword>of</keyword>
+| [g &#x22A2 #p.1 ..]   &#x21D2 
+   [g &#x22A2 #p.2 ..] 
+| [g &#x22A2 <a href="#all">all</a> (\x. T .. x)]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#reftp">reftp</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a)] [b, g &#x22A2 T .. b.1] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_al">at_al</a> (\x. (\w. D .. x w))] 
+| [g &#x22A2 <a href="#arr">arr</a> (T ..) (S ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#reftp">reftp</a> [g] [g &#x22A2 T ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#reftp">reftp</a> [g] [g &#x22A2 S ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_arr">at_arr</a> (D1 ..) (D2 ..)]
+ </code></pre>
+<p>In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[g &#8866; T ..]</code> using pattern matching. There are three possible cases for <code>T</code>:
+<ul>
+<ul><li><b>Variable case.</b> If <code>T</code> is a variable from <code>g</code>, we write <code>[g &#8866; #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>atpCtx</code>, it contains blocks <code>a:tp , _t:atp a a;</code>. The first projection allows us to extract the type component, while the second projection denotes the proof of <code>_t:atp a a;</code>.</li>
+<li><b>Existential case.</b> If <code>T</code> is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening as described in the companion paper (Felty et al, 2014), which allows us to use <code>T</code> that has type <code>[g, a:tp &#8866; tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a &#8866; D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.</li>
+<li><b>Arrow case.</b> If <code>T</code> is an arrow type, we appeal twice to the induction hypothesis and build a proof for <code>[g &#8866; atp (arr (T ..) (S ..)) (arr (T ..) (S ..))]</code>.</li></ul>
+</ul></p>
+<p><h2> Proof of Reflexivity for Terms</h2>
+The reflexivity for terms (Theorem 13) is likewise implemented as a recursive function, called <code>ref</code> of type: <code>{g:aeqCtx} {M:[g &#8866; term]} [g &#8866; aeq (M ..) (M ..)]]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g &#8866; aeq (M ..)(M ..)]</code>.</p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="ref">ref</span> : {g : <a href="#aeqCtx">aeqCtx</a>} {M : [g &#x22A2 <a href="#term">term</a>]} [g &#x22A2 <a href="#aeq">aeq</a> (M ..) (M ..)] = <keyword>FN</keyword> g &#x21D2 <keyword>mlam</keyword> M &#x21D2 <keyword>case</keyword> [g &#x22A2 (M ..)] <keyword>of</keyword>
+| [g &#x22A2 #p.1 ..]   &#x21D2 
+   [g &#x22A2 #p.2 ..] 
+| [g &#x22A2 <a href="#lam">lam</a> (\x. M .. x)]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (y:<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> y y) &#x22A2 D .. b.1 b.2] = <a href="#ref">ref</a> [g, b : <keyword>block</keyword> (y:<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> y y)] [b, g &#x22A2 M .. b.1] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\w. (D .. x w)))] 
+| [g &#x22A2 <a href="#app">app</a> (M1 ..) (M2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ref">ref</a> [g] [g &#x22A2 M1 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#ref">ref</a> [g] [g &#x22A2 M2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 ..) (D2 ..)] 
+| [g &#x22A2 <a href="#tlam">tlam</a> (\a. M .. a)]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#ref">ref</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a)] [b, g &#x22A2 M .. b.1] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\x. (\w. (D .. x w)))] 
+| [g &#x22A2 <a href="#tapp">tapp</a> (M ..) (T ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ref">ref</a> [g] [g &#x22A2 M ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#reftp">reftp</a> [g] [g &#x22A2 T ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D1 ..) (D2 ..)]
+ </code></pre>
+<p>This time, there are five possible cases for our meta-variable <code>M</code>:
+<ul>
+<ul><li><b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[g &#8866; #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>aeqCtx</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.</li>
+<li><b>Lambda-abstraction case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening as described in the companion paper (Felty et al, 2014), which allows us to use M that has type <code>[g, x:tm &#8866; tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y &#8866; D .. b.1 b.2]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.</li>
+<li><b>Term application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[g &#8866; aeq (app (M1 ..) (M2 ..)) (app (M1 ..) (M2 ..))]</code>.</li>
+<li><b>Type abstraction case.</b> If <code>M</code> is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call. We use <code>M</code> that has type <code>[g, a:tp &#8866; tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code> and construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a &#8866; D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.</li>
+<li><b>Type application case.</b> If <code>M</code> is a type application, we appeal twice to the induction hypothesis and build a proof for <code>[g &#8866; aeqCtx (tapp (M ..) (T ..)) (tapp (M ..) (T ..))]</code>.</li></ul>
+</ul></p>
+<p><h2> Proof of Transitivity for Types</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="transtp">transtp</span> : (g:<a href="#atpCtx">atpCtx</a>) [g &#x22A2 <a href="#atp">atp</a> (T ..) (R ..)] &#x2192 [g &#x22A2 <a href="#atp">atp</a> (R ..) (S ..)] &#x2192 [g &#x22A2 <a href="#atp">atp</a> (T ..) (S ..)] = <keyword>fn</keyword> ae1 &#x21D2 <keyword>fn</keyword> ae2 &#x21D2 <keyword>case</keyword> ae1 <keyword>of</keyword>
+| [g &#x22A2 #p.2 ..]   &#x21D2 
+   ae2 
+| [g &#x22A2 <a href="#at_al">at_al</a> (\a. (\u. D1 .. a u))]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#at_al">at_al</a> (\a. (\u. D2 .. a u))] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#transtp">transtp</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D1 .. b.1 b.2] [b, g &#x22A2 D2 .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_al">at_al</a> (\a. (\u. D .. a u))] 
+| [g &#x22A2 <a href="#at_arr">at_arr</a> (D1 ..) (D2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#at_arr">at_arr</a> (D3 ..) (D4 ..)] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D ..] = <a href="#transtp">transtp</a> [g &#x22A2 D1 ..] [g &#x22A2 D3 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D' ..] = <a href="#transtp">transtp</a> [g &#x22A2 D2 ..] [g &#x22A2 D4 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_arr">at_arr</a> (D ..) (D' ..)]
+ </code></pre>
+<p><h2> Proof of Transitivity for Terms</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="trans">trans</span> : (g:<a href="#aeqCtx">aeqCtx</a>) [g &#x22A2 <a href="#aeq">aeq</a> (T ..) (R ..)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (R ..) (S ..)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (T ..) (S ..)] = <keyword>fn</keyword> ae1 &#x21D2 <keyword>fn</keyword> ae2 &#x21D2 <keyword>case</keyword> ae1 <keyword>of</keyword>
+| [g &#x22A2 #p.2 ..]   &#x21D2 
+   ae2 
+| [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\u. D1 .. x u))]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\u. D2 .. x u))] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> x x) &#x22A2 D .. b.1 b.2] = <a href="#trans">trans</a> [g, b : <keyword>block</keyword> (x':<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> x' x') &#x22A2 D1 .. b.1 b.2] [b, g &#x22A2 D2 .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\u. D .. x u))] 
+| [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 ..) (D2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#ae_a">ae_a</a> (D3 ..) (D4 ..)] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D ..] = <a href="#trans">trans</a> [g &#x22A2 D1 ..] [g &#x22A2 D3 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D' ..] = <a href="#trans">trans</a> [g &#x22A2 D2 ..] [g &#x22A2 D4 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_a">ae_a</a> (D ..) (D' ..)] 
+| [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\a. (\u. D1 .. a u))]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\a. (\u. D2 .. a u))] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#trans">trans</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D1 .. b.1 b.2] [b, g &#x22A2 D2 .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\x. (\u. D .. x u))] 
+| [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D1 ..) (Q1 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D2 ..) (Q2 ..)] = ae2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D ..] = <a href="#trans">trans</a> [g &#x22A2 D1 ..] [g &#x22A2 D2 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 Q ..] = <a href="#transtp">transtp</a> [g &#x22A2 Q1 ..] [g &#x22A2 Q2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D ..) (Q ..)]
+ </code></pre>
+<p><h2> Proof of Symmetry for Types</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="symtp">symtp</span> : (g:<a href="#atpCtx">atpCtx</a>) [g &#x22A2 <a href="#atp">atp</a> (T ..) (R ..)] &#x2192 [g &#x22A2 <a href="#atp">atp</a> (R ..) (T ..)] = <keyword>fn</keyword> ae &#x21D2 <keyword>case</keyword> ae <keyword>of</keyword>
+| [g &#x22A2 #p.2 ..]   &#x21D2 
+   ae 
+| [g &#x22A2 <a href="#at_al">at_al</a> (\x. (\u. D .. x u))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D' .. b.1 b.2] = <a href="#symtp">symtp</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_al">at_al</a> (\x. (\u. D' .. x u))] 
+| [g &#x22A2 <a href="#at_arr">at_arr</a> (D1 ..) (D2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1' ..] = <a href="#symtp">symtp</a> [g &#x22A2 D1 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2' ..] = <a href="#symtp">symtp</a> [g &#x22A2 D2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_arr">at_arr</a> (D1' ..) (D2' ..)]
+ </code></pre>
+<p><h2> Proof of Symmetry for Terms</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="sym">sym</span> : (g:<a href="#aeqCtx">aeqCtx</a>) [g &#x22A2 <a href="#aeq">aeq</a> (T ..) (R ..)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (R ..) (T ..)] = <keyword>fn</keyword> ae &#x21D2 <keyword>case</keyword> ae <keyword>of</keyword>
+| [g &#x22A2 #p.2 ..]   &#x21D2 
+   ae 
+| [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\u. D .. x u))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> x x) &#x22A2 D' .. b.1 b.2] = <a href="#sym">sym</a> [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#aeq">aeq</a> x x) &#x22A2 D .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (\x. (\u. D' .. x u))] 
+| [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 ..) (D2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1' ..] = <a href="#sym">sym</a> [g &#x22A2 D1 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2' ..] = <a href="#sym">sym</a> [g &#x22A2 D2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_a">ae_a</a> (D1' ..) (D2' ..)] 
+| [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\x. (\u. D .. x u))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D' .. b.1 b.2] = <a href="#sym">sym</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, _t:<a href="#atp">atp</a> a a) &#x22A2 D .. b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_tl">ae_tl</a> (\x. (\u. D' .. x u))] 
+| [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D ..) (Q ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D' ..] = <a href="#sym">sym</a> [g &#x22A2 D ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 Q' ..] = <a href="#symtp">symtp</a> [g &#x22A2 Q ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D' ..) (Q' ..)]
+ </code></pre>
+<p><h2> Proof of Completeness for Types</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="ctp">ctp</span> : (g:<a href="#dtpCtx">dtpCtx</a>) [g &#x22A2 <a href="#dtp">dtp</a> (T ..) (S ..)] &#x2192 [g &#x22A2 <a href="#atp">atp</a> (T ..) (S ..)] = <keyword>fn</keyword> e &#x21D2 <keyword>case</keyword> e <keyword>of</keyword>
+| [g &#x22A2 #p.3 ..]   &#x21D2 
+   [g &#x22A2 #p.2 ..] 
+| [g &#x22A2 <a href="#dt_r">dt_r</a>]   &#x21D2 
+   <a href="#reftp">reftp</a> [g] [g &#x22A2 _] 
+| [g &#x22A2 <a href="#dt_arr">dt_arr</a> (F1 ..) (F2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ctp">ctp</a> [g &#x22A2 F1 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#ctp">ctp</a> [g &#x22A2 F2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_arr">at_arr</a> (D1 ..) (D2 ..)] 
+| [g &#x22A2 <a href="#dt_al">dt_al</a> ((\x. (\u. F .. x u)))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#ctp">ctp</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a) &#x22A2 F .. b.1 b.3] <keyword>in</keyword>
+    [g &#x22A2 <a href="#at_al">at_al</a> ((\x. (\v. D .. x v)))] 
+| [g &#x22A2 <a href="#dt_t">dt_t</a> (F1 ..) (F2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#ctp">ctp</a> [g &#x22A2 F2 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ctp">ctp</a> [g &#x22A2 F1 ..] <keyword>in</keyword>
+    <a href="#transtp">transtp</a> [g &#x22A2 D1 ..] [g &#x22A2 D2 ..] 
+| [g &#x22A2 <a href="#dt_s">dt_s</a> (F ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D ..] = <a href="#ctp">ctp</a> [g &#x22A2 F ..] <keyword>in</keyword>
+    <a href="#symtp">symtp</a> [g &#x22A2 D ..]
+ </code></pre>
+<p><h2> Proof of Completeness for Terms</h2></p><br><pre><code>
+<keyword>rec</keyword> <span class="function" id="ceq">ceq</span> : (g:<a href="#deqCtx">deqCtx</a>) [g &#x22A2 <a href="#deq">deq</a> (T ..) (S ..)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (T ..) (S ..)] = <keyword>fn</keyword> e &#x21D2 <keyword>case</keyword> e <keyword>of</keyword>
+| [g &#x22A2 #p.3 ..]   &#x21D2 
+   [g &#x22A2 #p.2 ..] 
+| [g &#x22A2 <a href="#de_r">de_r</a>]   &#x21D2 
+   <a href="#ref">ref</a> [g] [g &#x22A2 _] 
+| [g &#x22A2 <a href="#de_a">de_a</a> (F1 ..) (F2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ceq">ceq</a> [g &#x22A2 F1 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#ceq">ceq</a> [g &#x22A2 F2 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 ..) (D2 ..)] 
+| [g &#x22A2 <a href="#de_l">de_l</a> ((\x. (\u. F .. x u)))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, u:<a href="#aeq">aeq</a> x x, _t:<a href="#deq">deq</a> x x) &#x22A2 D .. b.1 b.2] = <a href="#ceq">ceq</a> [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, u:<a href="#aeq">aeq</a> x x, _t:<a href="#deq">deq</a> x x) &#x22A2 F .. b.1 b.3] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> ((\x. (\v. D .. x v)))] 
+| [g &#x22A2 <a href="#de_t">de_t</a> (F1 ..) (F2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D2 ..] = <a href="#ceq">ceq</a> [g &#x22A2 F2 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ceq">ceq</a> [g &#x22A2 F1 ..] <keyword>in</keyword>
+    <a href="#trans">trans</a> [g &#x22A2 D1 ..] [g &#x22A2 D2 ..] 
+| [g &#x22A2 <a href="#de_s">de_s</a> (F ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 D ..] = <a href="#ceq">ceq</a> [g &#x22A2 F ..] <keyword>in</keyword>
+    <a href="#sym">sym</a> [g &#x22A2 D ..] 
+| [g &#x22A2 <a href="#de_tl">de_tl</a> ((\a. (\u. F .. a u)))]   &#x21D2 
+   <keyword>let</keyword>  [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a) &#x22A2 D .. b.1 b.2] = <a href="#ceq">ceq</a> [g, b : <keyword>block</keyword> (a:<a href="#tp">tp</a>, u:<a href="#atp">atp</a> a a, _t:<a href="#dtp">dtp</a> a a) &#x22A2 F .. b.1 b.3] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_tl">ae_tl</a> ((\x. (\v. D .. x v)))] 
+| [g &#x22A2 <a href="#de_ta">de_ta</a> (F1 ..) (P2 ..)]   &#x21D2 
+   <keyword>let</keyword>  [g &#x22A2 Q2 ..] = <a href="#ctp">ctp</a> [g &#x22A2 P2 ..] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D1 ..] = <a href="#ceq">ceq</a> [g &#x22A2 F1 ..] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_ta">ae_ta</a> (D1 ..) (Q2 ..)]
+ </code></pre>
+</body>
+</html>

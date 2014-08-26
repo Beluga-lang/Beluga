@@ -14,7 +14,7 @@ p_lam: is_path (bind P) (lam E)
        <- ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)).
 
 p_left: is_path (left P) (app M N)
-       <- is_path P M.
+       <- is_path P M. 
 
 p_right: is_path (right P) (app M N)
        <- is_path P N.

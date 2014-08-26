@@ -1,0 +1,62 @@
+
+tp : type.
+tm : type.
+
+% Types
+arr : tp -> tp -> tp.
+
+% Terms
+app : tm -> tm -> tm.           %infix app 2 left.
+lam : tp -> (tm -> tm) -> tm.
+
+% Values
+value : tm -> type.
+
+
+step: tm -> tm -> type.         %infix step 3 left.
+
+s_app1 : (E1 step E1') -> 
+         (E1 app E2) step (E1' app E2). 
+
+% This works given app has higher precedence than step (see t/success/lambda_infix.bel)
+s_app2 : value E1 ->
+         E2 step E2' ->
+      % --------------------------
+         E1 app E2 step E1 app E2'.
+
+s_app3 : value E2 ->
+      % --------------------------
+        ((lam T (\x. E1 x)) app E2) step (E1 E2).
+
+
+% Typing
+has_type : tm -> tp -> type. %infix has_type 1 left.
+
+is_app : E1 has_type (arr T1 T2) ->
+         E2 has_type T1 ->
+       % -------------------
+         (E1 app E2) has_type T2. %infix is_app 2 left.
+
+is_lam : ({x:tm} x has_type T1 -> (E x) has_type T2) ->
+       % -----------------------------------
+         (lam T1 (\x. E x)) has_type (arr T1 T2).
+
+% Preservation
+rec pres : [ |- E has_type T] -> [ |- E step E'] -> [ |- E' has_type T] =
+fn d => fn s =>
+case s of
+  [ |- s_app1 S1] => 
+    let [ |- D1 is_app D2] = d in
+    let [ |- D1']          = pres [ |- D1] [ |- S1] in
+      [ |- D1' is_app D2]
+
+ | [ |- s_app2 V S2] =>
+    let [ |- D1 is_app D2] = d in
+    let [ |- D2']            = pres [ |- D2] [ |- S2] in
+      [ |- D1 is_app D2']
+
+ | [ |- s_app3 V] =>
+   let [ |- (is_lam (\x. (\d. (D1 x d)))) is_app D2] = d in
+     [ |- (D1 _ D2)]
+;
+

@@ -1,0 +1,49 @@
+module Nats = struct
+  nat : type.
+  z : nat.
+  s : nat -> nat.
+
+  rec suc : [ |- nat ] -> [ |- nat] =
+  fn n => let [ |- N ] = n in [ |- s N];
+
+  let two = [ |- s (s z)];
+  let three = suc two;
+end;
+
+%abbrev Nats N
+
+let x = [ |- N.z ];
+
+let y = [ |- N.s N.z];
+
+let z = N.suc [ |- N.z ];
+
+list : N.nat -> type.
+
+nil : list N.z.
+
+cons : N.nat -> list N -> list (N.s N).
+
+
+let l1 = [ |- cons N.z (cons (N.s N.z) nil)];
+
+module Arith = struct
+	%open N
+
+	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
+	fn x, y => case x of
+	| [ |- z ] => y
+	| [ |- s N ] => 
+		let [ |- N' ] = add [ |- N ] y in
+		[ |- s N'];
+
+	let five = add two three;
+end;
+
+
+let two' = N.two;
+
+
+%open N
+let l2 = [ |- cons z nil];
+

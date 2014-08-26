@@ -10,20 +10,20 @@
 %
 
 
-%term is the source language
+% term is the source language
 term: type.
 elam:(term -> term) -> term.
 eapp:term -> term -> term.
 elet:term -> (term -> term) -> term.
 
-%targer is the target language
+% targer is the target language
 target:type.
-tunit: target. %used as nil to list with pairs
+tunit: target. % used as nil to list with pairs
 tfst: target -> target.
 tsnd: target -> target.
 tpair: target -> target -> target.
-tapp: target -> target -> target. %app is wrapped in topen
-tlam: (target -> target) -> target. %lam is wrapped in tpack
+tapp: target -> target -> target. % app is wrapped in topen
+tlam: (target -> target) -> target. % lam is wrapped in tpack
 tlet: target -> (target -> target) -> target.
 tpack: target -> target.
 topen: target -> (target -> target) -> target.
@@ -32,7 +32,7 @@ nat: type.
 z:nat.
 suc: nat -> nat.
 
-%list of term
+% list of term
 fvlist: type.
 nil:fvlist.
 cons: term -> fvlist -> fvlist.
@@ -48,8 +48,8 @@ fn a => fn b => case a of
       [g |- cons (E..) (B'..)]
 ;
 
-%makeproj return the nth project of pair y
-%makeproj n = tfst( ... (tfst y))
+% makeproj return the nth project of pair y
+% makeproj n = tfst( ... (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
 fn n => case n of
 | [ |- z] => [xenv:target |-  (tfst xenv)]
@@ -60,8 +60,8 @@ fn n => case n of
 
 rec makeproj: [ |- nat] -> [xenv:target |-  target] =
 fn n =>
-   let [xenv:target |-  T xenv] = makeproj' n in
-       [xenv:target |-  tfst (T xenv)]
+   let [xenv:target |-  T, xenv] = makeproj' n in
+       [xenv:target |-  tfst (T, xenv)]
 ;
 
 
@@ -75,7 +75,7 @@ fn l => case l of
 				   [g |- cons (#p..) (L'..)]
 ;
 
-%Extend the mapping with id function, used for the local variable in lam and let.
+% Extend the mapping with id function, used for the local variable in lam and let.
 rec e_map : (g:ctx){h:tctx} ([g |- term] -> [h |- target])  ->  [g,x:term |-  term] -> [h,x:target |-  target] =
 mlam h => fn map =>
    fn e' => case e' of
@@ -85,8 +85,8 @@ mlam h => fn map =>
     	 [h,x:target |-  (F..)]
 ;
 
- %Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
- %Resulting should be a term closed under the environement tuple xenv and the local variable x.
+ % Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
+ % Resulting should be a term closed under the environement tuple xenv and the local variable x.
 
 rec b_map:(g:ctx)([g,x:term |-  term] -> [xenv:target |-  target]) -> [g |- fvlist] -> [ |- nat] ->
 	  [g,x:term |-  term] -> [xenv:target |-  target] =
@@ -107,7 +107,7 @@ fn map => fn l => fn n => case l of
 
 
 
-%Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
+% Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
 rec b_env:(g:ctx){h:tctx}( [g |- term] -> [h |- target]) -> [g |- fvlist] -> [h |- target] =
 mlam h => fn map => fn fvar => case fvar of
 | [g |- nil] => [h |- tunit]
@@ -140,7 +140,7 @@ fn e => case e of
 ;
 
 %
-%outer conversion
+% outer conversion
 %
 rec convert:(g:ctx){h:tctx} ([g |- term] -> [h |- target]) -> [g |- term] -> [h |- target] =
 mlam h => fn map => fn e => case e of
@@ -153,12 +153,12 @@ mlam h => fn map => fn e => case e of
 
 |[g |- elam (\x.(U..x))] =>
  let [g |- FV..] = fvar e in
- let [xenv:target |-  U' xenv] =
+ let [xenv:target |-  U', xenv] =
      convert [xenv:target]
 	     (b_map (fn e => [xenv:target |-  tunit]) [g |- (FV..)] [ |- z])
 	     [g,x:term |-  U..x] in
 let [h |- (T2..)] = b_env [h] map [g |- FV..] in
-  [h |- tpack( tpair (tlam (\xenv. U' xenv)) (T2..))]
+  [h |- tpack( tpair (tlam (\xenv. U', xenv)) (T2..))]
 
 |[g |- elet (U..) (\x.(V..x))] =>
  let [h |- (U'..)] = convert [h] map [g |- U..] in

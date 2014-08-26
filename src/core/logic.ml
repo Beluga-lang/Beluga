@@ -26,9 +26,6 @@ module Options = struct
   (* Type check the proof terms. *)
   let checkProofs = ref false
 
-  (* Interrupt solver after time limit expires. *)
-  let timeOut = ref (Some 5) (* sec. *)
-
 end
 
 
@@ -229,7 +226,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in (*?*)
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) in 
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand
@@ -351,7 +348,7 @@ module Index = struct
   *)
   let storeTypConst cidTyp =
     let typEntry = Cid.Typ.get cidTyp in
-    let typConstr = typEntry.Cid.Typ.constructors in
+    let typConstr = !(typEntry.Cid.Typ.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
       addSgnClause typConst (compileSgnClause cidTerm) in
@@ -372,7 +369,9 @@ module Index = struct
      Store all type constants in the `types' table.
   *)
   let robStore () =
-    List.iter storeTypConst !Cid.Typ.entry_list
+    try 
+      List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
+    with _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
@@ -390,6 +389,25 @@ module Index = struct
      Empty the local storage.
   *)
   let clearIndex () = DynArray.clear queries ; Hashtbl.clear types
+
+
+  let singleQuery (p, (tM, i), e, t) f =
+    let (q, tM', s, xs) = (Convert.typToQuery (tM, i)) in
+    ignore (querySub := s) ;
+    robStore();
+    let bchatter = !Options.chatter in
+    Options.chatter := 0;
+    let sgnQ = { query = q ;
+        typ = tM ;
+        skinnyTyp = tM' ;
+        optName = p ;
+        expected = e ;
+        tries = t ;
+        instMVars = xs } in
+    f sgnQ;
+    Options.chatter := bchatter;
+   Hashtbl.clear types
+
 
 end
 
@@ -685,24 +703,6 @@ module Frontend = struct
 
   exception Done                        (* Solved query successfully. *)
   exception AbortQuery of string        (* Abort solving the query.   *)
-  exception TimeLimit                   (* Time limit reached.        *)
-
-  (* timeLimit o f = ()
-     Effects:
-       If o = Some (ref t), sets a signal handler to raise the TimeLimit
-     exception when SIGALARM is received and schedules a signal alarm in
-     t seconds.
-       Any effects (f ()) might have.
-  *)
-  let timeLimit optLimit f =
-    match Sys.os_type with
-      | "Unix" | "Cygwin" ->
-        (match optLimit with
-          | Some t -> Sys.set_signal Sys.sigalrm
-            (Sys.Signal_handle (fun _ -> raise TimeLimit)) ;
-            ignore (Unix.alarm t) ; f ()
-          | None -> f ())
-      | "Win32" -> () (* Unsupported *)
 
   (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
@@ -796,15 +796,14 @@ module Frontend = struct
           P.printQuery sgnQuery
         else () ;
         try
-          (* Enforce time limit for solving the query. *)
-          timeLimit !Options.timeOut
-            (fun () -> Solver.solve sgnQuery.query scInit) ;
+          
+          Solver.solve sgnQuery.query scInit ;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with
           | Done -> printf "Done.\n"
-          | TimeLimit -> printf "---------- TIME OUT ----------\n"
           | AbortQuery (s) -> printf "%s\n" s
+          | _ -> ()
       end
 
     else if !Options.chatter >= 2 then
@@ -839,3 +838,7 @@ let runLogic () =
       Index.clearIndex ()
     end
   else () (* NOP *)
+
+
+let runLogicOn n (tA,i) e t  =
+  Index.singleQuery (n,(tA,i),e,t) Frontend.solve

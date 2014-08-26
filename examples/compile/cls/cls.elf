@@ -17,10 +17,10 @@ bind   : instruction.
 
 done : program.
 prog : instruction -> program -> program.
-%infix right 10 &.
+% infix right 10 &.
 
 emptys : envstack.
 push   : envstack -> env -> envstack.
-%infix left 10 ;;.
+% infix left 10 ;;.
 
 st : envstack -> program -> env -> state.

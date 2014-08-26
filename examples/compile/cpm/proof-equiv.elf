@@ -5,7 +5,7 @@ peq : csd C D C'
        -> ccp D C' C
        -> type.
 
-%mode peq +SD -CP.
+% mode peq +SD -CP.
 
 % Natural Numbers
 peq_z : peq (csd_z) (ccp_z).
@@ -50,7 +50,7 @@ peq_fix : peq (csd_fix SD1) (ccp_fix CP1)
 peq_vl : peq (csd_vl) (ccp_vl).
 
 
-%worlds () (peq _ _).
+% worlds () (peq _ _).
 
 %%% For complete evaluations
 

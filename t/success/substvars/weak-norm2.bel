@@ -1,4 +1,4 @@
-#opts -strengthen;
+%nostrengthen
 % Sketch of weak normalization for STLC that goes under binders
 % Author: Andrew Cave
 
@@ -67,10 +67,10 @@ rec wknVarSub : {g:ctx}{h:ctx}{#S: h |- g}{A:[h |- tp]} IsVarSub [g] [h] [h |- #
  -> IsVarSub [g] [h,x:tm (A ..)] [h,x:tm (A ..) |- #S[..] ] =
 mlam g => mlam h => mlam #S => mlam A => fn r =>
 ?
-%case r of
-%| Nil => Nil
+% case r of
+% | Nil => Nil
 % TODO: There's a case not implemented yet in pruneSubst where the head is a PVar
-%| {A:[g |- tp]}{#S: h |- g}{#p:[h |- tm (A #S[..])]}
+% | {A:[g |- tp]}{#S: h |- g}{#p:[h |- tm (A #S[..])]}
 %  Cons [g |- A ..] [h |- #S[..] ] [h |- #p ..] r =>
 %  ? % Make a recursive call, etc
 ;
@@ -114,12 +114,12 @@ rec wknVar : {g:ctx}{h:ctx}{A:[g |- tp]}{#p:[g |- tm (A ..)]}{#W: h |- g}
   -> IsNeutral [h] [h |- A #W[..]] [h |- #p #W[..]] =
 mlam g => mlam h => mlam A => mlam #p => mlam #W => fn iv =>
 ?
-%case [g |- #p ..] of
-%| {A:[g' |-  tp]} [g',x:tm (A ..) |-  x] =>
+% case [g |- #p ..] of
+% | {A:[g' |-  tp]} [g',x:tm (A ..) |-  x] =>
 %  let {#R:h |- g'}{A:[g' |- tp]}{#r:[h |- tm (A #R[..])]}
 %      Cons [g' |-  A ..] [h |- #R[..]] [h |- #r ..] iv' = iv in
 %   ?
-%| {#q : [g' |-  tm (T ..)]} [g',x:tm (A ..) |-  #q ..] => ?
+% | {#q : [g' |-  tm (T ..)]} [g',x:tm (A ..) |-  #q ..] => ?
 ;
 
 rec rwkn : {g:ctx}{h:ctx}{A:[g |- tp]}{R:[g |- tm (A ..)]}{#W: h |- g}
@@ -128,7 +128,7 @@ rec rwkn : {g:ctx}{h:ctx}{A:[g |- tp]}{R:[g |- tm (A ..)]}{#W: h |- g}
   -> IsNeutral [h] [h |- A #W[..]] [h |- R #W[..]] =
 mlam g => mlam h => mlam A => mlam R => mlam #W => fn r => fn iv =>
 case r of
-%TODO: | {A:[g |- tp]}{#p:[g |- tm (A ..)]}
+% TODO: | {A:[g |- tp]}{#p:[g |- tm (A ..)]}
 %  Var [g |- A ..] [g |- #p ..] => wknVar [g] [h] [g |- A ..] [g |- #p ..] [h |- #W[..]] iv
 | App [g |- B ..] [g |- A ..] [g |- R' ..] [g |- N ..] r' n =>
   App [h |- B #W[..]] [h |- A #W[..]] [h |- R' #W[..]] [h |- N #W[..]]
@@ -206,7 +206,7 @@ rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S: h |- g}{#W:h' |- h}
  -> RedSub [g] [h'] [h' |- #S[#W[..]] ] =
 mlam g => mlam h => mlam h' => mlam #S => mlam #W => fn rs => fn iv =>
 case rs of
-| Nil [h0] => ? %Nil [h'] % Should suffice. Need to make these convertible
+| Nil [h0] => ? % Nil [h'] % Should suffice. Need to make these convertible
 %| {#R:g0[h]}{A:[g0 |-  tp]}{M:[h |- tm (A #R[..])]}
 %  Dot [g0] [h] [g0 |-  A ..] [h |- #R[..] ] [h |- M ..] rs' rm => ?
 % Will need to use wknRed in this case

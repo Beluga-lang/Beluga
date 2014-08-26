@@ -36,9 +36,9 @@ fn t => fn e => case t of
     [g' |-  tlet (T1 .. ) (\c. (tapp (tfst c) (tpair (T2 .. ) (tsnd c))))]
 
 | [g |- lam \x. F .. x] =>
-  let [y:target |-  T y] = cconv [g,x:term |-  F .. x] [y:target |-  y] in
+  let [y:target |-  T, y] = cconv [g,x:term |-  F .. x] [y:target |-  y] in
   let [g' |-  E ..] = e in
-    [g' |-  tpair (tabs \y. T  y) (E .. )]
+    [g' |-  tpair (tabs \y. T, y) (E .. )]
 ;
 
 

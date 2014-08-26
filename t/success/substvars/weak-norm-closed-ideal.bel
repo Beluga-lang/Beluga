@@ -1,4 +1,4 @@
-#opts +strengthen;
+
 % Weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
@@ -50,7 +50,6 @@ fn r => case r of
 | Arr h f => h;
 
 %  h |- #s : g
-
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]

@@ -1,0 +1,12 @@
+nat : type.
+z : nat.
+s : nat -> nat. %prefix s 5.
+
+t : type.
+test : nat -> nat -> t. %infix test 5.
+
+
+rec test_fun : [ |- nat ] -> [ |- t] =
+fn n =>
+let [ |- N ] = n in
+[ |- s N test N];

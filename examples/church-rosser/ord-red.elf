@@ -1,7 +1,7 @@
 %%% Ordinary reduction for the untyped lambda-calculus
 %%% Author: Frank Pfenning
 
---> : term -> term -> type.  %infix none 10 -->.
+--> : term -> term -> type.  % infix none 10 -->.
 			     %name --> R.
 
 beta1 :   --> (app (lam M1) M2) (M1 M2).
@@ -17,7 +17,7 @@ apr1  :              --> M2 M2'
 
 % Multi-step reduction
 
--->* : term -> term -> type.  %infix none 10 -->*.
+-->* : term -> term -> type.  % infix none 10 -->*.
 			      %name -->* R*.
 
 id1   :    -->* M  M.
@@ -29,7 +29,7 @@ step1 : --> M M' -> -->* M' M'' -> -->* M M''.
 
 % Conversion
 
-<-> : term -> term -> type.  %infix none 10 <->.
+<-> : term -> term -> type.  % infix none 10 <->.
 			     %name <-> C.
 
 refl :     <-> M M.

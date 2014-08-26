@@ -216,7 +216,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) Int.LF.Maybe in               (*?*)
+      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in               
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -250,7 +250,7 @@ let unifyDCtxWithFCVar cD cPsi1 cPsi2 =
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.No)))
+            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.Maybe)))
           | _ -> ()
       end
 
@@ -260,7 +260,7 @@ let unifyDCtxWithFCVar cD cPsi1 cPsi2 =
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.No)))
+            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.Maybe)))
           | _ -> ()
       end
 
@@ -348,7 +348,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
              let c_var' = Int.LF.CtxName psi in
                raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var', schema))))
       with Not_found ->
-        (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.No)));
+        (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.Maybe)));
          Int.LF.CtxVar (Int.LF.CtxName psi))
       end
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
@@ -433,11 +433,11 @@ let mgAtomicTyp cD cPsi a kK =
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi')) Int.LF.Maybe in (*?*)
+                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi'))  in
                      let ss_proj = LF.comp ss' s_proj in
                        Int.LF.MMVar (u, (Whnf.m_id, ss_proj)))
                    else
-                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1') Int.LF.Maybe in (*?*)
+                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1')  in 
                      Int.LF.MMVar (u, (Whnf.m_id, s_proj))
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
@@ -512,7 +512,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, theta) in
 
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') Int.LF.Maybe in
+      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
       let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
       (* let tM'   = etaExpandMMVstr loc cD  cPsi' (tA', LF.id) in *)
         let _   = dprint (fun () -> "[genMApp] Generated #meta^2-variable ") in
@@ -530,7 +530,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi' = C.cnormDCtx (cPhi, theta) in
-      let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') Int.LF.Maybe in
+      let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
       let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
       let _   = dprint (fun () -> "[genMApp] Generated meta^2-variable " ^
                             P.dctxToString cD cPsi' ^ " . " ^
@@ -748,7 +748,7 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let tA'   = C.cnormTyp (tA, theta) in
 
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') Int.LF.Maybe in
+      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
       let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
 
       let mS    = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.PObj (psihat, h), theta)) in
@@ -891,7 +891,7 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, t) in
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') dep in
+      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
       let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
         (Int.Comp.MetaParam (loc', psihat, h) ,
          Int.LF.PObj (psihat, h))
@@ -905,7 +905,7 @@ let genMetaVar loc' cD (loc, cdecl, t) = match cdecl with
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let cPhi'   = C.cnormDCtx (cPhi, t) in
-      let s = Whnf.newMSVar None (cD, cPsi', cPhi') dep in
+      let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
       let s' = Int.LF.MSVar (s, 0,
                              (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
       let s' = Whnf.normSub s' in
@@ -1405,7 +1405,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.Hole (loc), (tau, theta)) ->
     let () = Holes.collect (loc, cD, cG, (tau, theta)) in
-    Int.Comp.Hole (loc)
+    Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
@@ -1419,27 +1419,27 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta)))
 
 and elExp' cD cG i = match i with
-  | Apx.Comp.Var offset ->
+  | Apx.Comp.Var (loc, offset) ->
       let tau = lookup cG offset in
       let _ = dprint (fun () -> "[elExp'] Variable " ^ R.render_var cG offset
                         ^ " has type " ^
                         P.compTypToString cD tau) in
-      (Int.Comp.Var offset, (tau, C.m_id))
+      (Int.Comp.Var (loc, offset), (tau, C.m_id))
 
-  | Apx.Comp.DataConst c ->
+  | Apx.Comp.DataConst (loc, c) ->
       let _ = dprint (fun () -> "[elExp'] DataConst " ^ R.render_cid_comp_const  c ^
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompConst.get c).CompConst.typ)) in
-     (Int.Comp.DataConst c, ((CompConst.get c).CompConst.typ, C.m_id))
+     (Int.Comp.DataConst (loc, c), ((CompConst.get c).CompConst.typ, C.m_id))
 
-  | Apx.Comp.DataDest c ->
+  | Apx.Comp.DataDest (loc, c) ->
       let _ = dprint (fun () -> "[elExp'] DataDest " ^ R.render_cid_comp_dest  c ^
                         "\n has type " ^ P.mctxToString cD ^ " |- " ^
                         P.compTypToString cD ((CompDest.get c).CompDest.typ)) in
-     (Int.Comp.DataDest c, ((CompDest.get c).CompDest.typ, C.m_id))
+     (Int.Comp.DataDest (loc, c), ((CompDest.get c).CompDest.typ, C.m_id))
 
-  | Apx.Comp.Const prog ->
-     (Int.Comp.Const prog, ((Comp.get prog).Comp.typ, C.m_id))
+  | Apx.Comp.Const (loc, prog) ->
+     (Int.Comp.Const (loc, prog), ((Comp.get prog).Comp.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
       let _ = dprint (fun () -> "[elExp'] Apply") in
@@ -1633,7 +1633,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
                               ^ R.render_name psi ^ " with schema " ^
                               R.render_cid_schema s_cid ^
                               " to FCVar");
-                   FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.No))))
+                   FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (s_cid, Int.LF.Maybe))))
           end
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , _tA2))) ->
@@ -1870,7 +1870,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let tA'   = C.cnormTyp (tA, theta) in
              let psihat  = Context.dctxToHat cPsi' in
 
-             let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA') Int.LF.Maybe, (Whnf.m_id, LF.id)) in   (*?*)
+             let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA'), (Whnf.m_id, LF.id)) in 
              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, psihat, p)) in
              let ttau' = (tau, Int.LF.MDot (Int.LF.PObj (psihat, p), theta)) in
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1880,7 +1880,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let cPsi' = C.cnormDCtx (cPsi, theta) in
                let psihat  = Context.dctxToHat cPsi' in
                let cPhi' = C.cnormDCtx (cPhi, theta) in
-               let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') Int.LF.Maybe in
+               let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
                let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
                let ttau'  = (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)) in
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaSObj (loc, psihat, sigma)) in
@@ -1938,7 +1938,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let tA'   = C.cnormTyp (tA, theta) in
              let psihat  = Context.dctxToHat cPsi' in
 
-             let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA') Int.LF.Maybe , (Whnf.m_id, LF.id)) in (*?*)
+             let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA') , (Whnf.m_id, LF.id)) in (*?*)
              let _   = dprint (fun () -> "[elPatSpine] new MPVar #p = " ^ P.headToString cD cPsi' p ^ "\n") in
               let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, psihat, p)) in
              let ttau' = (tau, Int.LF.MDot (Int.LF.PObj (psihat, p), theta)) in
@@ -1951,7 +1951,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
                let cPsi' = C.cnormDCtx (cPsi, theta) in
                let psihat  = Context.dctxToHat cPsi' in
                let cPhi' = C.cnormDCtx (cPhi, theta) in
-               let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') Int.LF.Maybe in
+               let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
                let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
                let ttau'  = (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)) in
                let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaSObj (loc, psihat, sigma)) in

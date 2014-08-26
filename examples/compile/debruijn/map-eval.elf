@@ -72,8 +72,8 @@ mp_fix : map_eval (ev_fix D1) (tr_fix (\w.\x.\u. C1 w x u))
 		  (fev_fix D1') U1
 	  <- map_eval D1 (C1 (fix' F1) (fix (\x. E1 x)) (tr_fix (\w.\x.\u. C1 w x u))) D1' U1.
 
-%mode map_eval +D +C -D' -U.
-%worlds () (map_eval D C D' U).
+% mode map_eval +D +C -D' -U.
+% worlds () (map_eval D C D' U).
 
 % The copy of map_eval exists only to allow totality to be checked
 % using a different mode.
@@ -150,6 +150,6 @@ mp_fix : map_eval' (ev_fix D1) (tr_fix (\w.\x.\u. C1 w x u))
 	  <- map_eval' D1 (C1 (fix' F1) (fix (\x. E1 x)) (tr_fix (\w.\x.\u. C1 w x u))) D1' U1.
 
 
-%mode map_eval' -D +C +D' -U.
-%worlds () (map_eval' D C D' U).
-%covers map_eval' -D +C +D' -U.
+% mode map_eval' -D +C +D' -U.
+% worlds () (map_eval' D C D' U).
+% covers map_eval' -D +C +D' -U.

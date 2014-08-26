@@ -3,38 +3,40 @@
     printing.  Names should never be constructed directly.
     See `mk_name'. *)
 type name     = private {
+  modules : string list;
   string_of_name : string ;
-  was_generated : bool ;
-  uppercase : bool
+  was_generated : bool
 }
 
+type module_id = int
+
 (** A constant identifier for types *)
-type cid_typ  = int
+type cid_typ  = module_id * int
 
 (** A constant identifier for terms *)
-type cid_term = int
+type cid_term = module_id * int
 
 (** A constant identifier for schemas *)
-type cid_schema = int
+type cid_schema = module_id * int
 
 
 (** A constant identifier for coercions *)
-type cid_coercion = int
+type cid_coercion = module_id * int
 
 (** A constant identifier for computation-level data-types *)
-type cid_comp_typ = int
+type cid_comp_typ = module_id * int
 
 (** A constant identifier for computation-level codata-types *)
-type cid_comp_cotyp = int
+type cid_comp_cotyp = module_id * int
 
 (** A constant identifier for computation-level constructors *)
-type cid_comp_const = int
+type cid_comp_const = module_id * int
 
 (** A constant identifier for computation-level destructors *)
-type cid_comp_dest = int
+type cid_comp_dest = module_id * int
 
 (** A constant identifier for recursive computations/programs *)
-type cid_prog = int
+type cid_prog = module_id * int
 
 
 (** An offset to be used during shifting for a DeBruijn variable
@@ -56,4 +58,4 @@ type name_guide =
 
 (** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
-val mk_name : name_guide -> name
+val mk_name : ?modules:string list -> name_guide -> name

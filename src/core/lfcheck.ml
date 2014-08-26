@@ -132,35 +132,40 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
  * otherwise exception Error is raised
  *)
 let rec checkW cD cPsi sM sA = match sM, sA with
-  | (Lam (_, _, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) ->
+  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)    
     check cD
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
-      (tB, Substitution.LF.dot1 s2)
+      (tB, Substitution.LF.dot1 s2);
+      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Lam" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
+
+  | (LFHole _, _), _ -> ()
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->
-    checkTuple loc cD cPsi (tuple, s1) (typRec, s2)
+  | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
+    checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
+    Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Tuple" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
 
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->
+  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->    
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
     begin
       try
-        let _ = dprint (fun () -> "[check] " ^
+        let _ = dprint (fun () -> "[ROOT check] " ^
 	  P.mctxToString cD ^ " ; " ^
 	  P.dctxToString cD cPsi ^ " |- " ^
 	  P.normalToString cD cPsi sM ^
           " <= " ^ P.typToString cD cPsi sA ) in
         let sP = syn cD cPsi sM in
-        let _ = dprint (fun () -> "[check] synthesized " ^
+        let _ = dprint (fun () -> "[ROOT check] synthesized " ^
 	  P.mctxToString cD ^ " ; " ^
 	  P.dctxToString cD cPsi ^ " |- " ^
 	  P.normalToString cD cPsi sM ^
           " => " ^ P.typToString cD cPsi sP ) in
+  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
 	let _ = dprint (fun () -> "       against " ^
 	  P.typToString cD cPsi sA) in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
@@ -198,7 +203,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
   let rec syn tS sA = match tS, sA with
     | (Nil, _), sP -> sP
 
-    | (SClo (tS, s'), s), sA ->
+    | (SClo (tS, s'), s), sA ->    
       syn (tS, Substitution.LF.comp s' s) sA
 
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
@@ -209,7 +214,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
   let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS then
-    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
+    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
   syn (tS, s) (sA', s')
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)

@@ -5,19 +5,19 @@ tm : type.
 
 % Types
 nat : tp.
-arr : tp -> tp -> tp.  %infix left 5 =>.
+arr : tp -> tp -> tp.  % infix left 5 =>.
 forall : (tp -> tp) -> tp.
 
 % Terms
 z : tm.
 s : tm -> tm.
-app : tm -> tm -> tm.  %infix left 5 @.
+app : tm -> tm -> tm.  % infix left 5 @.
 lam : tp -> (tm -> tm) -> tm.
 lAM : (tp -> tm) -> tm.
-ann : tm -> tp -> tm.  %infix left 5 #.
+ann : tm -> tp -> tm.  % infix left 5 #.
 
 % Typing
-has : tm -> tp -> type. %infix left 5 is.
+has : tm -> tp -> type. % infix left 5 is.
 
 is_z   :
        % ----------
@@ -59,7 +59,7 @@ value_lAM : value (lAM (\a. E a)).
 
 % Operational semantics
 
-~> : tm -> tm -> type. %infix left 5 ~>.
+~> : tm -> tm -> type. % infix left 5 ~>.
 
 ~>_s : ~> E E' ->
      % ---------------

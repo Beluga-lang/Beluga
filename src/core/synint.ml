@@ -41,6 +41,7 @@ module LF = struct
   and normal =                                (* normal terms                   *)
     | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
     | Root of Loc.t * head * spine            (*   | h . S                      *)
+    | LFHole of Loc.t
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
@@ -180,9 +181,15 @@ module LF = struct
   type tclo     = typ     * sub          (* As = [s]A                      *)
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
+  type assoc = Left | Right | NoAssoc
+  type fix = Prefix | Postfix | Infix
   type prag =
     | NamePrag of cid_typ
     | NotPrag
+    | OpenPrag of module_id
+    | DefaultAssocPrag of assoc
+    | FixPrag of name * fix * int * assoc option
+    | AbbrevPrag of string list * string
 
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function
@@ -325,13 +332,13 @@ module Comp = struct
     | Box    of Loc.t * meta_obj
     | Case   of Loc.t * case_pragma * exp_syn * branch list
     | If     of Loc.t * exp_syn * exp_chk * exp_chk
-    | Hole   of Loc.t
+    | Hole   of Loc.t * (unit -> int)
 
   and exp_syn =
-    | Var    of offset
-    | DataConst of cid_comp_const
-    | DataDest of cid_comp_dest
-    | Const  of cid_prog
+    | Var    of Loc.t * offset
+    | DataConst of Loc.t * cid_comp_const
+    | DataDest of Loc.t * cid_comp_dest
+    | Const  of Loc.t * cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ
@@ -391,16 +398,21 @@ end
 module Sgn = struct
 
   type decl =
-    | Typ           of cid_typ  * LF.kind
-    | Const         of cid_term * LF.typ
+    | Typ           of Loc.t * cid_typ  * LF.kind
+    | Const         of Loc.t * cid_term * LF.typ
     | CompTyp       of Loc.t * name * Comp.kind
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
-    | Rec           of cid_prog   * Comp.typ * Comp.exp_chk
+    | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
     | Pragma        of LF.prag
+    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
+    | MRecTyp       of Loc.t * decl list list
+    | Module        of Loc.t * string * decl list
+    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Comment       of Loc.t * string
 
   type sgn = decl list
 

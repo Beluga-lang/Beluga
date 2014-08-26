@@ -4,7 +4,7 @@
 % If M => N then M -->* N.
 
 eq1 : pred M N  ->  -->*  M N  ->  type.
-%mode eq1 +R -S*.
+% mode eq1 +R -S*.
 
 eq1_beta : eq1 (beta R1 R2) S*
          <- ({x:term} {eqx : pred x x}
@@ -29,16 +29,16 @@ eq1_lm : eq1 (lm R1) S*
        <- lm1* S1* S*.
 
 %{
-%block leq1 : block {x:term} {eqx:x => x} {e:eq1 eqx id1}.
-%worlds (leq1) (eq1 R S*).
-%covers eq1 +R -S*.
-%terminates R (eq1 R _).
-%total R (eq1 R _).
+% block leq1 : block {x:term} {eqx:x => x} {e:eq1 eqx id1}.
+% worlds (leq1) (eq1 R S*).
+% covers eq1 +R -S*.
+% terminates R (eq1 R _).
+% total R (eq1 R _).
 }%
 % If M --> N then M => N.
 
 eq2 : --> M  N  -> pred M N  ->  type.
-%mode eq2 +R -S.
+% mode eq2 +R -S.
 
 eq2_beta1 : eq2 (beta1) (beta I1 I2)
           <- ({x:term} {eqx : pred x x}
@@ -58,30 +58,30 @@ eq2_apr1  : eq2 (apr1 R2) (ap I1 S2)
           <- eq2 R2 S2
           <- identity M1 I1.
 
-%worlds (lid) (eq2 R S).
-%covers eq2 +R -S.
-%terminates R (eq2 R _).
-%total R (eq2 R _).
+% worlds (lid) (eq2 R S).
+% covers eq2 +R -S.
+% terminates R (eq2 R _).
+% total R (eq2 R _).
 
 % If M -->* N then M =>* N.
 
 eq3 : -->* M N  ->  pred* M  N  ->  type.
-%mode eq3 +R* -S*.
+% mode eq3 +R* -S*.
 
 eq3_id : eq3 id1 id*.
 eq3_step : eq3 (step1 R1 R2*) (next S1 S2*)
          <- eq2 R1 S1
          <- eq3 R2* S2*.
 
-%worlds () (eq3 R* S*).
-%covers eq3 +R* -S*.
-%terminates R* (eq3 R* _).
-%total R* (eq3 R* _).
+% worlds () (eq3 R* S*).
+% covers eq3 +R* -S*.
+% terminates R* (eq3 R* _).
+% total R* (eq3 R* _).
 
 % If M =>* N then M -->* N.
 
 eq4 : pred* M  N  -> -->*  M N  ->  type.
-%mode eq4 +R* -S*.
+% mode eq4 +R* -S*.
 
 eq4_id : eq4 id* id1.
 eq4_step : eq4 (next R1  R2*) S*
@@ -89,15 +89,15 @@ eq4_step : eq4 (next R1  R2*) S*
          <- eq4 R2* S2*
          <- appd S1* S2* S*.
 
-%worlds () (eq4 R* S*).
-%covers eq4 +R* -S*.
-%terminates R* (eq4 R* _).
-%total R* (eq4 R* _).
+% worlds () (eq4 R* S*).
+% covers eq4 +R* -S*.
+% terminates R* (eq4 R* _).
+% total R* (eq4 R* _).
 
 % If M <=> N then M <-> N.
 
 eq5 : pred= M N  ->  <-> M N  ->  type.
-%mode eq5 +C -C'.
+% mode eq5 +C -C'.
 
 eq5_red   : eq5 (reduce R*) (red S*)
           <- eq4 R* S*.
@@ -109,15 +109,15 @@ eq5_trans : eq5 (next= C1 C2) (trans C2' C1')
           <- eq5 C1 C1'
           <- eq5 C2 C2'.
 
-%worlds () (eq5 C C').
-%covers eq5 +C -C'.
-%terminates C (eq5 C _).
-%total C (eq5 C _).
+% worlds () (eq5 C C').
+% covers eq5 +C -C'.
+% terminates C (eq5 C _).
+% total C (eq5 C _).
 
 % If M <=> N then N <=> M.
 
 sym_pconv : pred= M N  ->  pred= N M  ->  type.
-%mode sym_pconv +C -C'.
+% mode sym_pconv +C -C'.
 
 spc_red   : sym_pconv (reduce R*) (expand R*).
 spc_exp   : sym_pconv (expand R*) (reduce R*).
@@ -125,10 +125,10 @@ spc_trans : sym_pconv (next= C1 C2) (next= C2' C1')
           <- sym_pconv C1 C1'
           <- sym_pconv C2 C2'.
 
-%worlds () (sym_pconv C C').
-%covers sym_pconv +C -C'.
-%terminates C (sym_pconv C _).
-%total C (sym_pconv C _).
+% worlds () (sym_pconv C C').
+% covers sym_pconv +C -C'.
+% terminates C (sym_pconv C _).
+% total C (sym_pconv C _).
 
 % The following is a bug not detected by term reconstruction
 % spc_wrong : sym_pconv (C1 ;; C2) (C1' ;; C2')
@@ -138,7 +138,7 @@ spc_trans : sym_pconv (next= C1 C2) (next= C2' C1')
 % If M <-> N then M <=> N.
 
 eq6 : <-> M N  -> pred= M N  ->  type.
-%mode eq6 +C -C'.
+% mode eq6 +C -C'.
 
 eq6_refl  : eq6 refl (reduce id*).
 eq6_sym   : eq6 (sym C1) C'
@@ -152,7 +152,7 @@ eq6_trans : eq6 (trans C2 C1) (next= C1' C2')
 eq6_red   : eq6 (red R*) (reduce S*)
           <- eq3 R* S*.
 
-%worlds () (eq6 C C').
-%covers eq6 +C -C'.
-%terminates C (eq6 C _).
-%total C (eq6 C _).
+% worlds () (eq6 C C').
+% covers eq6 +C -C'.
+% terminates C (eq6 C _).
+% total C (eq6 C _).

@@ -51,7 +51,7 @@ let getLocation e = match e with
   | Comp.Box (loc, _)    -> loc
   | Comp.Case (loc, _, _, _ ) -> loc
   | Comp.If (loc, _, _, _ ) -> loc
-  | Comp.Hole loc -> loc
+  | Comp.Hole (loc, _) -> loc
 
 
 
@@ -812,12 +812,12 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       I.Dec (ctxToMCtx cQ', I.Decl (psi, I.CTyp (s_cid, I.Maybe)))
 
   | I.Dec (cQ', FMV (Pure, u, Some mtyp)) ->
-      let mtyp' = begin match mtyp with
-        | I.MTyp(tA, cPsi, _) -> I.MTyp(tA, cPsi, dep')
-        | I.PTyp(tA, cPsi, _) -> I.PTyp(tA, cPsi, dep')
-        | I.STyp(cPhi, cPsi, _) -> I.STyp(cPhi, cPsi, dep')
-      end in
-      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp'))
+(*       let mtyp' = begin match mtyp with
+        | I.MTyp(tA, cPsi, d) -> I.MTyp(tA, cPsi, d)
+        | I.PTyp(tA, cPsi, d) -> I.PTyp(tA, cPsi, d)
+        | I.STyp(cPhi, cPsi, d) -> I.STyp(cPhi, cPsi, d)
+      end in *)
+      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx cQ', I.Decl (x, I.CTyp (w, dep)))
@@ -864,6 +864,8 @@ and collectTermW p cQ ((cvar, offset) as phat) sM = match sM with
       let (cQ', h') = collectHead p cQ phat loc (h, s) in
       let (cQ'', tS') =  collectSpine p cQ' phat (tS, s) in
         (cQ'', I.Root(loc, h', tS'))
+  | (I.LFHole _loc, s) ->
+      (cQ, I.LFHole _loc)
 
 
 and collectTuple p cQ phat = function
@@ -1544,6 +1546,9 @@ and abstractMVarTermW cQ offset sM = match sM with
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
+  | (I.LFHole _loc, s) -> 
+      I.LFHole _loc
+
 and abstractMVarTuple cQ offset = function
   | (I.Last tM, s) ->
       let tM' = abstractMVarTerm cQ offset (tM, s) in
@@ -2049,13 +2054,13 @@ let rec collectExp cQ e = match e with
       let (cQ2, e2') = collectExp cQ1 e2 in
         (cQ2, Comp.If (loc, i', e1', e2'))
 
-  | Comp.Hole (loc) -> (cQ, Comp.Hole (loc))
+  | Comp.Hole (loc, f) -> (cQ, Comp.Hole (loc, f))
 
 and collectExp' cQ i = match i with
-  | Comp.Var _x -> (cQ , i)
-  | Comp.DataConst _c ->  (cQ , i)
-  | Comp.DataDest _c -> (cQ , i)
-  | Comp.Const _c ->  (cQ , i)
+  | Comp.Var (_, _x) -> (cQ , i)
+  | Comp.DataConst (_, _c) ->  (cQ , i)
+  | Comp.DataDest (_, _c) -> (cQ , i)
+  | Comp.Const (_, _c) ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in
       let (cQ'', e') = collectExp cQ' e in

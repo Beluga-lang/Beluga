@@ -14,9 +14,9 @@
 
   vtrv_lam   : vtrans_val (vtr_lam U1) (val_lam).
 
-%mode vtrans_val +U -P.
-%worlds () (vtrans_val U P).
-%covers vtrans_val +U -P.
+% mode vtrans_val +U -P.
+% worlds () (vtrans_val U P).
+% covers vtrans_val +U -P.
 
   %%% Values evaluate only to themselves.
   val_eval  : value E -> eval E E -> type.
@@ -31,6 +31,6 @@
 
   vev_lam   : val_eval (val_lam) (ev_lam).
 
-%mode val_eval +P -D.
-%worlds () (val_eval P D).
-%covers val_eval +P -D.
+% mode val_eval +P -D.
+% worlds () (val_eval P D).
+% covers val_eval +P -D.

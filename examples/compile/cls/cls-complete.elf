@@ -17,7 +17,7 @@ append : mstep (st Ks P S)  (st Ks' P' S')
        -> mstep (st Ks' P' S') (st Ks'' P'' S'')
        -> mstep (st Ks P S) (st Ks'' P'' S'')
        -> type.
-%mode append +C +C' -C''.
+% mode append +C +C' -C''.
 
 apd_id   : append (id_step) C' C'.
 apd_step : append (to R C) C' (to R C'')
@@ -36,7 +36,7 @@ subcomp : feval K F W
 	   -> mstep (st (push Ks K) (prog (ev F) P) S) (st Ks P (vcons S  W))
 	   -> type.
 
-%mode +{K} +{F} +{W} +{D:feval K F W}
+% mode +{K} +{F} +{W} +{D:feval K F W}
 %      +{Ks} +{P} +{S} -{C:st (Ks ;; K) (ev F & P) S =>* st Ks P (S ; W)}
 %      subcomp D C.
 
@@ -121,6 +121,6 @@ sc_fix : subcomp (fev_fix D1) (to c_fix C1)
 % }%
 
 cev_complete : feval K F W -> ceval K F W -> type.
-%mode cev_complete +D -CE.
+% mode cev_complete +D -CE.
 
 cevc : cev_complete D (run C) <- subcomp D C.

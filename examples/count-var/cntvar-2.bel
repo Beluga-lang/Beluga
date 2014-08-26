@@ -1,4 +1,4 @@
-#opts -strengthen;
+%nostrengthen
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 %

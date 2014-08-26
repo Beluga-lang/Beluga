@@ -58,6 +58,7 @@ and strans_normW cD (tM, s) conv_list = match tM with
       let h' = strans_head loc cD h conv_list in
       let tS' = strans_spine cD (tS, s) conv_list in
         Int.LF.Root(loc, h', tS')
+  | Int.LF.LFHole _ as n -> n
 
 and strans_head loc cD h conv_list = match h with
   | Int.LF.BVar x -> Int.LF.BVar (new_index x conv_list)

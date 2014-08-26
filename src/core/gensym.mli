@@ -1,3 +1,6 @@
+val create_symbols : string array -> string Stream.t
+
+
 (** Functionality for generating unique symbols *)
 module type GENSYM = sig
 

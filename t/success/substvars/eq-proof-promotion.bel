@@ -97,18 +97,18 @@ fn d => case d of
 
 % ---------------------------------------------------------------------------
 % Promotion lemmas (explicit)
-datatype CtxRel : {g:daG} {h:xaG} {#W:h[g]} ctype = 
-| Cnil : CtxRel [] [] [ $ ^ ] 
-| Ccons: {g:daG}{h:xaG}{#W:h[g]}
-         CtxRel [g] [h] [g $ #W[..] ] 
+datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
+| Cnil : CtxRel [] [] [ |- ^ ] 
+| Ccons: {g:daG}{h:xaG}{#W:g |- h}
+         CtxRel [g] [h] [g |- #W[..] ] 
 	 -> CtxRel [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		   [h, b:block (x:tm, u:aeq x x)]
-		   [g, b:block (x:tm, u:aeq x x, v: deq x x) $ #W[..] <b.1, b.2>]
+		   [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1, b.2>]
 ;
 
 datatype StrTm : (g:daG)[g |- tm] ->  ctype = 
-| StrTm :  {g:daG}{h:xaG}{#W: h[g]} 
-	  CtxRel [g] [h] [g $ #W[..] ] 
+| StrTm :  {g:daG}{h:xaG}{#W:g |- h} 
+	  CtxRel [g] [h] [g |- #W[..] ] 
       -> {M: [h |- tm]} StrTm [g |- M #W[..] ];
 
 datatype Ctx_daG : {g:daG} ctype = Ctx_daG : {g:daG} Ctx_daG [g] ;
@@ -117,24 +117,24 @@ datatype Ctx_xaG : {g:xaG} ctype = Ctx_xaG : {g:xaG} Ctx_xaG [g] ;
 datatype EqCtx : {h:xaG} {h':xaG} ctype = 
 | RefCtx : EqCtx [h] [h] ;
 
-datatype EqSub : {g:daG}{h:xaG}{h':xaG} {#W:h[g]}{#W':h'[g]} ctype = 
-| RefSub : {g:daG}{h:xaG}  {#W:h[g]} 
-		  EqSub [g] [h] [h] [g $ #W[..] ] [g $ #W[..] ] ;
+datatype EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g |- h'} ctype = 
+| RefSub : {g:daG}{h:xaG}  {#W:g |- h} 
+		  EqSub [g] [h] [h] [g |- #W[..] ] [g |- #W[..] ] ;
 
-rec deterministic_CtxRel : CtxRel [g] [h] [g $ #W[..] ] 
-			   -> CtxRel [g] [h'] [g $ #W'[..] ] 
-			   -> (EqCtx [h] [h'] * EqSub [g] [h] [h'] [g $ #W[..]] [g $ #W'[..]]) =
+rec deterministic_CtxRel : CtxRel [g] [h] [g |- #W[..] ] 
+			   -> CtxRel [g] [h'] [g |- #W'[..] ] 
+			   -> (EqCtx [h] [h'] * EqSub [g] [h] [h'] [g |- #W[..]] [g |- #W'[..]]) =
 fn cr1 => fn cr2 => case (cr1 , cr2) of
-| (Cnil , Cnil) => (RefCtx ,  RefSub [] [] [ $ ^ ])
-| (Ccons [g] [h] [g $ #W[..] ] cr1, Ccons [g] [h'] [g $ #W'[..] ] cr2  ) => 
-  let (RefCtx , RefSub [g] [h] [g $ #W[..] ] ) = deterministic_CtxRel cr1 cr2 in 
+| (Cnil , Cnil) => (RefCtx ,  RefSub [] [] [ |- ^ ])
+| (Ccons [g] [h] [g |- #W[..] ] cr1, Ccons [g] [h'] [g |- #W'[..] ] cr2  ) => 
+  let (RefCtx , RefSub [g] [h] [g |- #W[..] ] ) = deterministic_CtxRel cr1 cr2 in 
    (RefCtx , RefSub [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		    [h, b:block (x:tm, u:aeq x x)]
-		    [g, b:block (x:tm, u:aeq x x, v: deq x x) $ #W[..] <b.1, b.2>])
+		    [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1, b.2>])
    ;
 
 datatype Exists_xaG : {g:daG} ctype = 
-| Exists_xaG : {h:xaG} CtxRel [g] [h] [g $ #W[..] ] -> Exists_xaG [g];
+| Exists_xaG : {h:xaG} CtxRel [g] [h] [g |- #W[..] ] -> Exists_xaG [g];
 
 datatype Context_daG : {g:daG} ctype = 
 | Context_daG : {g:daG} Context_daG [g];
@@ -144,57 +144,57 @@ fn g => case g of
 | Context_daG [ ] =>  Exists_xaG [] Cnil 
 | Context_daG [g, b:block (x:tm, u:aeq x x, v:deq x x)] => 
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in 
-  let (cr : CtxRel [g] [h] [g $ #W[..] ] ) = cr in 
-  Exists_xaG [h, b:block (x:tm, u:aeq x x)] (Ccons [g] [h] [g $ #W[..] ] cr)
+  let (cr : CtxRel [g] [h] [g |- #W[..] ] ) = cr in 
+  Exists_xaG [h, b:block (x:tm, u:aeq x x)] (Ccons [g] [h] [g |- #W[..] ] cr)
 ;
 
 rec str_tm : {g:daG}{M:[g |- tm]} StrTm [g |- M .. ] = 
 mlam g => mlam M => case [g |- M ..] of 
 | [g,b:block (x:tm, ae_v: aeq x x, de_v:deq x x)  |-  b.1] => 
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in 
-  let (cr : CtxRel [g] [h] [g $ #W[..] ] ) = cr in 
+  let (cr : CtxRel [g] [h] [g |- #W[..] ] ) = cr in 
    StrTm [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) $ #W[..] < b.1, b.2 > ]
-	 (Ccons [g] [h] [g $ #W[..] ] cr)
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1, b.2 > ]
+	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
 
 | [g,b:block (x:tm, ae_v: aeq x x, de_v:deq x x)  |-  N .. ] => 
-  let StrTm [g] [h] [g $ #W[..] ] cr [h |- N' ..] 
+  let StrTm [g] [h] [g |- #W[..] ] cr [h |- N' ..] 
       = str_tm [g] [g |- N ..] in 
      StrTm [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) $ #W[..] < b.1, b.2 > ]
-	 (Ccons [g] [h] [g $ #W[..] ] cr)
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1, b.2 > ]
+	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  N' ..]
 
 
 | [g |- lam \x. M .. x ] => 
- let {#W:h[g]}
+ let {#W:g |- h}
      StrTm [g,b:block (x:tm, u:aeq x x,v:deq x x)]
            [h,b:block (x:tm, u:aeq x x)]
-	   [g,b:block (x:tm, u:aeq x x,v:deq x x) $ #W[..] <b.1, b.2>]
-           (Ccons [g] [h] [g $ #W[..] ] cr) [h, b:block (x:tm, u:aeq x x) |- M' .. b.1] = 
+	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..] <b.1, b.2>]
+           (Ccons [g] [h] [g |- #W[..] ] cr) [h, b:block (x:tm, u:aeq x x) |- M' .. b.1] = 
        str_tm [g, b:block (x:tm, u:aeq x x,v:deq x x)] [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M .. b.1] in 
- StrTm [g] [h] [g $ #W[..] ] cr [h |- lam \y. M' .. y] 
+ StrTm [g] [h] [g |- #W[..] ] cr [h |- lam \y. M' .. y] 
 
 | [g |- app (M ..) (N ..) ] => 
- let StrTm [g] [h] [g $ #W[..] ] cr [h |- M' ..] = str_tm [g] [g |- M ..] in 
-  let StrTm [g] [h] [g $ #W'[..] ] cr' [h |- N' ..] = str_tm [g] [g |- N ..] in 
-  let (RefCtx , RefSub [g] [h] [g $ #W[..]] ) = deterministic_CtxRel cr cr' in 
-  StrTm [g] [h] [g $ #W[..] ] cr  [h |- app (M' ..) (N' ..)]
+ let StrTm [g] [h] [g |- #W[..] ] cr [h |- M' ..] = str_tm [g] [g |- M ..] in 
+  let StrTm [g] [h] [g |- #W'[..] ] cr' [h |- N' ..] = str_tm [g] [g |- N ..] in 
+  let (RefCtx , RefSub [g] [h] [g |- #W[..]] ) = deterministic_CtxRel cr cr' in 
+  StrTm [g] [h] [g |- #W[..] ] cr  [h |- app (M' ..) (N' ..)]
  ;
 
 rec promote_refl : {g:daG}{M:[g |- tm]} [g |- aeq (M ..) (M ..)] = 
 mlam g => mlam M => 
-let StrTm [g] [h] [g $ #W[..] ] cr [h |- N ..] = str_tm [g] [g |- M ..]  in 
+let StrTm [g] [h] [g |- #W[..] ] cr [h |- N ..] = str_tm [g] [g |- M ..]  in 
 let [h |- D .. ] = reflG [h] [h |- N ..] in 
   [g |- D #W[..] ] 
 ;
 
 datatype StrAeq : (g:daG){M:[g |- tm]}{N:[g |- tm]}[g |- aeq (M ..) (N ..)] ->  ctype = 
-| StrAeq :  {g:daG}{h:xaG}{#W: h[g]} {M:[h |- tm]}{N:[h |- tm]}
-  	    CtxRel [g] [h] [g $ #W[..] ] -> 
+| StrAeq :  {g:daG}{h:xaG}{#W:g |- h} {M:[h |- tm]}{N:[h |- tm]}
+  	    CtxRel [g] [h] [g |- #W[..] ] -> 
 	    {D: [h |- aeq (M ..) (N ..)]}
 	    StrAeq [g |- M #W[..]] [g |- N #W[..]] [g |- D #W[..]];
 
@@ -203,33 +203,33 @@ rec str_aeq : {g:daG}{M:[g |- tm]}{N:[g |- tm]}
 mlam g => mlam M => mlam N => mlam D => case [g |- D ..] of 
 | [g, b:block (x:tm, u:aeq x x, v:deq x x) |-  b.2] => 
   let Exists_xaG [h] cr = exists_CtxRel (Context_daG [g]) in 
-  let (cr : CtxRel [g] [h] [g $ #W[..] ] ) = cr in 
+  let (cr : CtxRel [g] [h] [g |- #W[..] ] ) = cr in 
   StrAeq [g, b:block (x:tm, u:aeq x x, v:deq x x)] 
 	 [h, b:block (x:tm, u:aeq x x)] 
-	 [g, b:block (x:tm, u:aeq x x, v:deq x x) $ #W[..] < b.1, b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v:deq x x) |- #W[..] < b.1, b.2 > ]
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
-	 (Ccons [g] [h] [g $ #W[..] ] cr)
+	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  b.2]
  
 | [g |- ae_a (D1 ..) (D2 ..) ] => 
- let StrAeq [g] [h] [g $ #W[..] ] 
+ let StrAeq [g] [h] [g |- #W[..] ] 
             [h |- _ ] [h |- _ ] cr [h |- D1' ..] = str_aeq [g] [g |- _ ] [g |- _ ] [g |- D1 ..] in 
-  let StrAeq [g] [h] [g $ #W'[..] ] 
+  let StrAeq [g] [h] [g |- #W'[..] ] 
              [h |- _ ] [h |- _ ] cr' [h |- D2' ..] = str_aeq [g] [g |- _ ] [g |- _ ] [g |- D2 ..] in 
-  let (RefCtx , RefSub [g] [h] [g $ #W[..]] ) = deterministic_CtxRel cr cr' in 
+  let (RefCtx , RefSub [g] [h] [g |- #W[..]] ) = deterministic_CtxRel cr cr' in 
 
-  StrAeq [g] [h] [g $ #W[..] ] [h |- _ ] [h |- _ ] cr [h |- ae_a (D1' ..) (D2' ..)]
+  StrAeq [g] [h] [g |- #W[..] ] [h |- _ ] [h |- _ ] cr [h |- ae_a (D1' ..) (D2' ..)]
 
  
 | {D:[g,x:tm, u:aeq x x |-  aeq (M .. x) (N .. x)]}
   [g |- ae_l (\x.\u. D .. x u) ] =>  
- let {#W:h[g]}
+ let {#W:g |- h}
      StrAeq [g,b:block (x:tm, u:aeq x x,v:deq x x)]
             [h,b:block (x:tm, u:aeq x x)]
-	    [g,b:block (x:tm, u:aeq x x,v:deq x x) $ #W[..] <b.1, b.2>]
+	    [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..] <b.1, b.2>]
             [h,b:block (x:tm, u:aeq x x)  |-  M' .. b.1 ]  [h,b:block (x:tm, u:aeq x x)  |-  N' .. b.1 ] 
-           (Ccons [g] [h] [g $ #W[..] ] cr) 
+           (Ccons [g] [h] [g |- #W[..] ] cr) 
             [h, b:block (x:tm, u:aeq x x) |- D' .. b.1 b.2] = 
        str_aeq [g, b:block (x:tm, u:aeq x x,v:deq x x)] 
 	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M .. b.1] 
@@ -237,20 +237,20 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D ..] of
                [g,b:block (x:tm, u:aeq x x,v:deq x x) |- D .. b.1 b.2]
 
  in 
- StrAeq [g] [h] [g $ #W[..] ] 
+ StrAeq [g] [h] [g |- #W[..] ] 
    [h |- lam \x.M' .. x ] [h |- lam \x.N' .. x ] cr [h |- ae_l \y.\u. D' .. y u] 
 
 | {D:[g |- aeq (M ..) (N ..)]}
   [g, b:block (x:tm, u:aeq x x, v:deq x x) |-  D ..] => 
-  let StrAeq [g] [h] [g $ #W[..] ] [h |- M' ..] [h |- N' ..] cr [h |- D' ..]
+  let StrAeq [g] [h] [g |- #W[..] ] [h |- M' ..] [h |- N' ..] cr [h |- D' ..]
       = str_aeq [g] [g |- M ..] [g |- N ..] [g |- D ..] 
   in 
      StrAeq [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) $ #W[..] < b.1, b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1, b.2 > ]
 	 [h, b:block (x:tm, u:aeq x x) |-  M' ..]
 	 [h, b:block (x:tm, u:aeq x x) |-  N' ..]
-	 (Ccons [g] [h] [g $ #W[..] ] cr)
+	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  D' ..]
 ;
 
@@ -258,7 +258,7 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D ..] of
 rec promote_sym : (g:daG) [g |- aeq (M ..) (N ..)] -> [g |- aeq (N ..) (M ..)] = 
 fn d => 
 let ([g |- D ..] : [g |- aeq (M ..) (N ..)]) = d in 
-let StrAeq [g] [h] [g $ #W[..] ] [h |- M' ..] [h |- N' ..] cr [h |- D' ..] = 
+let StrAeq [g] [h] [g |- #W[..] ] [h |- M' ..] [h |- N' ..] cr [h |- D' ..] = 
     str_aeq [g] [g |- M ..] [g |- N ..] [g |- D ..] in 
 let [h |- F ..] = symG [h |- D' ..] in 
   [g |- F #W[..] ]
@@ -279,8 +279,8 @@ let ([g |- D2 ..] : [g |- aeq (L ..) (N ..)]) = d2 in
 let str1  = str_aeq [g] [g |- M ..] [g |- _ ] [g |- D1 ..] in 
 let str2  = str_aeq [g] [g |- L ..] [g |- _ ] [g |- D2 ..] in  
 let AndStrAeq 
-	(StrAeq [g] [h] [g $ #W[..] ] [h |- M' ..] [h |- L' ..] cr [h |- D1' ..])
-	(StrAeq [g] [h] [g $ #W[..] ] [h |- L' ..] [h |- N' ..] cr' [h |- D2' ..]) 
+	(StrAeq [g] [h] [g |- #W[..] ] [h |- M' ..] [h |- L' ..] cr [h |- D1' ..])
+	(StrAeq [g] [h] [g |- #W[..] ] [h |- L' ..] [h |- N' ..] cr' [h |- D2' ..]) 
  = AndStrAeq str1 str2 in 
   let [h |- F ..] = transG [h |- D1' ..] [h |- D2' ..] in 
   [g |- F #W[..] ]

@@ -1,7 +1,5 @@
 #opts +strengthen;
-% Sketch of weak normalization for STLC that doesn't go under binders
-% This doesn't currently work, but this is what I imagine would be possible
-% with some improvements to reconstruction
+% Weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
 tp : type.                %name tp T.
@@ -31,57 +29,45 @@ halts/m : mstep M M' -> val M' -> halts M.
 datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype =
 | I : [ |- halts M] -> Reduce [ |- i] [ |- M]
 | Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
-  -> Reduce [ |- arr A B] [ |- M]
-;
-
-datatype Reduce : {M:[ |- tm A]} ctype =
-| I : [ |- halts M] -> Reduce [ |- M]
-| Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ |- N] -> Reduce  [ |- app M N])
-  -> Reduce  [ |- M]
-;
+	 ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
+	 -> Reduce [ |- arr A B] [ |- M];
 
 rec haltsMstep : {MS:[ |- mstep M M']} [ |- halts M'] -> [ |- halts M] =
 mlam MS => fn h => let [ |- halts/m MS' V] = h in
- [ |- halts/m (trans MS MS') V]
-
-;
+ [ |- halts/m (trans MS MS') V];
 
 % CR2
-rec closed : {MS:[ |- mstep M M']} Reduce [ |- M'] -> Reduce [ |- M] =
+rec closed : {MS:[ |- mstep M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 mlam MS => fn r => case r of
 | I ha => I (haltsMstep [ |- MS] ha)
 | Arr ha f =>   Arr (haltsMstep [ |- MS] ha)
   (mlam N => fn rn => closed [ |- stepapp MS refl] (f [ |- N] rn))
-
 ;
 
-% CR1
-rec cr1 : Reduce [ |- M] -> [ |- halts M] =
+rec cr1 : Reduce [ |- A] [ |- M] -> [ |- halts M] =
 fn r => case r of
 | I h => h
-| Arr h f => h
-;
+| Arr h f => h;
 
 %  h |- #s : g
-datatype RedSub : {g:ctx}{#S:g[]} ctype =
-| Nil : RedSub  [ ] [ $ ^ ]
-| Dot :     RedSub  [g] [ $ #S[^] ]  % #S : g[]
-          -> Reduce [ |- M]              % A:[ |- tp], M:[ |- tm A]
-          -> RedSub [g, x:tm A] [ $ #S[^] M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[..] ]
+
+datatype RedSub : {g:ctx}{#S: |- g} ctype =
+| Nil : RedSub  [ ] [ |- ^ ]
+| Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
+          -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
+          -> RedSub [g, x:tm A] [ |- #S[^], M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
 ;
 
 
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ $ #S[^]] -> Reduce [ |- #p #S[^]] =
+rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
 mlam g => mlam #p => fn rs => case [g |- #p ..] of
  | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
                       lookup [g'] [g' |-  #q ..] rs'
-
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- M #S[^]] =
+rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M #S[^]] =
+
  mlam g => mlam M => fn rs => case [g |- M ..] of
 | [g |- #p ..] => lookup [g] [g |- #p ..] rs
 | [g |- lam (\x. M1 .. x)] =>
@@ -92,9 +78,7 @@ rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ $ #S[^]] -> Reduce  [ |- M #S[^]]
   let Arr ha f = eval [g] [g |- M1 ..] rs in
   f [ |- _ ] (eval [g] [g |- M2 ..] rs)
 | [g' |-  c] => I [ |- halts/m refl val/c]
-
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
-mlam M => cr1 (eval [] [ |- M] Nil)
-;
+mlam M => cr1 (eval [] [ |- M] Nil);

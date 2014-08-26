@@ -40,7 +40,7 @@ mlam MS => fn h => let [ |- halts/m MS' V] = h in
 rec closed : {MS:[ |- mstep M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 mlam MS => fn r => case r of
 | I ha => I (haltsMstep [ |- MS] ha)
-| Arr ha f => Arr (haltsMstep [ |- MS] ha)
+| Arr ha f =>   Arr (haltsMstep [ |- MS] ha)
   (mlam N => fn rn => closed [ |- stepapp MS refl] (f [ |- N] rn))
 ;
 

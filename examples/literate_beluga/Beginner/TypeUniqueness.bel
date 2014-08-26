@@ -1,6 +1,8 @@
-```# Type Uniqueness for the Simply-typed Lambda-calculus
-This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/TypingSimply.orbi" target="_blank">TypingSimply.orbi</a>.  We prove that every lambda term has a unique type. For a detailled description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
+% Author: Brigitte Pientka
 
+```
+# Type Uniqueness for the Simply-typed Lambda-calculus
+This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/TypingSimply.orbi" target="_blank">TypingSimply.orbi</a>.  We prove that every lambda term has a unique type. For a detailled description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 
 ## Syntax
 We first represent the simply-typed lambda-calculus in the logical framework LF: the LF type <code>tp</code> describes the types of our simply typed lambda-calculus, and the LF type <code>tm</code> characterizes the terms of the lambda-calculus.<br>

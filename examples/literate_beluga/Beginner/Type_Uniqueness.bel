@@ -1,13 +1,13 @@
 % Author: Brigitte Pientka
 
-```
+%{{
 # Type Uniqueness for the Simply-typed Lambda-calculus
 We prove that every lambda term has a unique type. Type uniqueness is also a benchmark in <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 
 ## Syntax: Types and Lambda-terms
 We first represent the simply-typed lambda-calculus in the logical framework LF: the LF type <code>tp</code> describes the types of our simply typed lambda-calculus, and the LF type <code>tm</code> characterizes the terms of the lambda-calculus.<br>
 The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since `arr` is a constructor which takes in two arguments, its type is `tp -> tp -> tp`.
-```
+}}%
 
 % Definition of types and expressions
 datatype tp: type =  
@@ -15,18 +15,18 @@ datatype tp: type =
 | nat: tp
 ;
 
-```
+%{{
 
 The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.
-```
+}}%
 
 datatype term: type = 
 | lam : tp -> (term -> term) -> term
 | app : term -> term -> term
 ;
 
-```##  Typing Rules
-We describe typing judgment using the type family <code>has_type</code> which relates terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.```
+%{{##  Typing Rules
+We describe typing judgment using the type family <code>has_type</code> which relates terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.}}%
 
 datatype hastype: term -> tp -> type = 
 | h_lam: ({x:term}hastype x T1 -> hastype (M x) T2)
@@ -35,20 +35,20 @@ datatype hastype: term -> tp -> type =
        -> hastype (app M1 M2) T
 ;
 
-```
+%{{
 ## Equality 
-Since Beluga does not support equality types, we implement equality by reflexivity using the type family <code>equal</code>.```
+Since Beluga does not support equality types, we implement equality by reflexivity using the type family <code>equal</code>.}}%
 
 equal: tp -> tp -> type.
 e_ref: equal T T.
 
-```## Schema
-The schema <code>txG</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>hastype x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta (used only in contexts) to tie <code>x</code> to <code>hastype x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>txG</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.```
+%{{## Schema
+The schema <code>txG</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>hastype x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta (used only in contexts) to tie <code>x</code> to <code>hastype x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>txG</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.}}%
 
 schema xtG = some [t:tp] block x:term, _t:hastype x t;
 
-```## Typing uniqueness proof 
-Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype (M ..) T]</code>.```
+%{{## Typing uniqueness proof 
+Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype (M ..) T]</code>.}}%
 
 % induction on [g |-  hastype (M ..) T]
 rec unique : (g:xtG)[g |-  hastype (M ..) T] -> [g |-  hastype (M ..) T']
@@ -68,7 +68,7 @@ fn d => fn f => case d of
   let [g |-  #r.2 ..] = f in   % f : hastype #p.1 T'
     [ |-  e_ref]
 ;
-```
+%{{
 Consider each case individually.
 <ul>
 <li><b>Application case.</b> 
@@ -78,4 +78,4 @@ If the first derivation d concludes with <code>h_app</code>, it matches the patt
 <p>Now we can appeal to the induction hypothesis using <code>D1 .. b.x b.u</code> and <code>F1 .. b.x b.u</code> in the context <code>g,b: block x:term, u:hastype x S</code>. From the i.h. we get a contextual object, a closed derivation of <code>(eq (arr T T') (arr S S’))[ ]</code>. The only rule that could derive this is ref, and pattern matching establishes that <code>S</code> must equal <code>S’</code>, since we must have arr T S = arr T1 S’. Therefore, there is a proof of <code>[ |- equal S S’]</code>, and we can finish with the reflexivity rule <code>e_ref</code>.</p></li>
 <li><b>Variable case.</b> Since our context consists of blocks containing variables of type <code>tm</code> and assumptions <code>hastype x T</code>, we pattern match on <code>[g |- #p.2 ..]</code>, i.e., we project out the second argument of the block. By the given assumptions, we know that <code>[g |- #p.2 ..]</code> has type <code>[g |- hastype (#p.1 ..) T]</code>, because <code>#p</code> has type <code>[g |-  block x:tm , u:hastype x T]</code>. We also know that the second input, called <code>f</code>, to the function unique has type <code>[g |-  hastype (#p.1 ..) T']</code>. By inversion on <code>f</code>, we know that the only possible object that can inhabit this type is <code>[g |- #p.2 ..]</code> and therefore <code>T'</code> must be identical to <code>T</code>. Moreover, <code>#r</code> denotes the same block as <code>#p</code>.</li>
 </ul>
-```
+}}%

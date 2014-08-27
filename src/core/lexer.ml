@@ -174,7 +174,7 @@ let mk_module s = Token.MODULESYM s
 let lex_token loc = lexer
   | (upper sym* ".")+ lower sym* -> mk_tok_of_lexeme mk_module loc lexbuf
   | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
-  | "```" ([^'`']|(['`'][^'`']))* "```" -> mk_tok_of_lexeme (mk_comment loc) loc lexbuf
+  | "%{{" ([^'}']|(['}'][^'}'])|(['}']['}'][^'%']))* "}}%" -> mk_tok_of_lexeme (mk_comment loc) loc lexbuf
   | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
@@ -291,7 +291,7 @@ lexer
     ; loc := Loc.move_line 1 !loc
 
 let skip_nested_comment loc = lexer
-  | '%' '{' ->
+  | '%' '{' [^'{']->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; let depth = ref 1 in
 (*      print_string ("nested comment\n") ; flush_all() ; *)
@@ -301,7 +301,7 @@ let skip_nested_comment loc = lexer
 (*        print_string ("NC-AFT " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
       done
 
-  | '}' '%' ->
+  | [^'}'] '}' '%' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
           raise Ulexing.Error )

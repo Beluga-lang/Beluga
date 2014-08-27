@@ -8,64 +8,6 @@
 open Syntax.Ext
 open Id
 
-let rec spaces i = if i = 0 then "" else if i = 1 then "|" else
-  let s = String.make (i-2) ' ' in s ^ "|-"
-(* 
-
-  if i <= 0 then "" else "-" ^ (spaces (i-1)) *)
-(* 
-  and normal =
-    | Lam  of Loc.t * name * normal
-    | Root of Loc.t * head * spine
-    | Tuple of Loc.t * tuple
-    | Ann of Loc.t * normal * typ
-    | TList of Loc.t * normal list
-    | NTyp of Loc.t * typ
-
-  and head =
-    | Name  of Loc.t * name
-    | MVar  of Loc.t * name * sub
-    | Hole  of Loc.t
-    | PVar  of Loc.t * name * sub
-    | ProjName  of Loc.t * int * name
-    | ProjPVar  of Loc.t * int * (name * sub)
-
-  and sub =
-    | EmptySub of Loc.t
-    | Dot      of Loc.t * sub * front
-    | Id       of Loc.t
-    | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
- *)
-
-and na n = n.Id.string_of_name
-
-and h i = function
-  | LF.EmptySub _ -> (spaces i) ^ "EmptySub\n"
-  | LF.Dot(_, sub, LF.Normal n) -> (spaces i) ^ "Dot\n" ^ (f (i+1) n) ^ (h (i+1) sub) 
-  | LF.Dot(_, sub, LF.Head (LF.Name(_, u))) -> (spaces i) ^ "Dot (name): " ^ (na u) ^ "\n" ^ (h (i+1) sub)
-  | LF.Dot(_, sub, LF.Head (LF.MVar(_, u, sub'))) -> (spaces i) ^ "Dot (MVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub') ^ (h (i+1) sub)
-  | LF.Dot(_, sub, LF.Head (LF.PVar(_, u, sub'))) -> (spaces i) ^ "Dot (PVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub') ^ (h (i+1) sub)
-  | LF.Dot(_, sub, LF.Head _) -> (spaces i) ^ "Dot (?)\n" ^ (h (i+1) sub)
-  | LF.Id _ -> (spaces i) ^ "..\n"
-  | LF.SVar (_, n, s) -> (spaces i) ^ "Svar: " ^ (na n) ^ "\n" ^ (h (i+1) s)
-
-and g i = function
-  | LF.Nil -> (spaces i) ^ ".\n"
-  | LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) 
-
-and f i = function
-  | LF.Lam(_,u,n) -> (spaces i) ^ "Lam: " ^ (u.Id.string_of_name) ^ "\n" ^ (f (i+1) n)
-  | LF.Root(_,LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (na u) ^ "\n" ^ (g (i+1) s)
-  | LF.Root(_,LF.MVar(_, u, sub), s) -> (spaces i) ^ "Root (MVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub) ^ (g (i+1) s)
-  | LF.Root(_,LF.PVar(_, u, sub), s) -> (spaces i) ^ "Root (PVar): " ^ (na u) ^ "\n" ^ (h (i+1) sub) ^ (g (i+1) s)
-  | LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
-  | LF.Tuple(_,_) -> "Tuple"
-  | LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
-  | LF.TList(_,nl) -> (spaces i) ^ "TList\n" ^ (List.fold_right (fun n acc -> (f (i+1) n) ^ acc) nl "")
-  | LF.LFHole _ -> (spaces i) ^ "LFHole\n"
-
-and normalToString n = f 0 n
-
 module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
 
 exception MixError of (Format.formatter -> unit)
@@ -910,25 +852,20 @@ GLOBAL: sgn;
       [
         u = UPSYMBOL; s = OPT[clf_sub_new] -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
-          let n = begin match s with
+          begin match s with
             | None -> LF.Root(_loc, m, LF.Nil)
             | Some s -> match s with
               (* Infix operator case *)
               | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
                 let op' = LF.Root(l, op, LF.Nil) in 
                 LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
-
-    (*           (* Postfix case *)
-              | LF.Dot(l, LF.EmptySub _, LF.Head (LF.Name (_, u) as op)) -> 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::[LF.Root(l, op, LF.Nil)])
- *)
               | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-            end in ignore (normalToString n); n
+            end
       |
         u = UPSYMBOL ; ","; sigma' = clf_sub_new ->
           LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
       |
-        ms = LIST1 clf_normal -> let n = LF.TList(_loc, ms) in ignore (normalToString n); n
+        ms = LIST1 clf_normal -> LF.TList(_loc, ms)
       |
         a = clf_typ -> LF.NTyp(_loc, a)
       ]

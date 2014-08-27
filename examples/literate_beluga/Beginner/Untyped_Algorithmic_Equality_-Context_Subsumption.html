@@ -29,7 +29,7 @@
 </head>
 <body>
 
-<p>
+<p></p><p>
 <h1> Algorithmic Equality for the Untyped Lambda-calculus (Generalized context version)</h1>
 We discuss completeness of algorithmic equality for untyped lambda-terms with respect to declarative equality of lambda-terms. 
 This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
@@ -40,30 +40,27 @@ The mechanization highlights several aspects:
 <li>Stating and proving properties in a generalized context</li>
 <li>Reasoning using context subsumption</li>
 </ul>
-</p>
-<p>
+</p><p></p>
+<p></p><p>
 <h2> Syntax</h2>
-We first define lambda-terms in the logical framework LF. </p><br><pre><code>
-<keyword>datatype</keyword> <span class="typ" id="tm">tm</span> : <keyword>type</keyword> = 
+We first define lambda-terms in the logical framework LF. </p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="tm">tm</span> : <keyword>type</keyword> = 
 | <span class="constructor" id="app">app</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>
 | <span class="constructor" id="lam">lam</span> : (<a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>) &#x2192 <a href="#tm">tm</a>;
 </code></pre>
-<p>
+<p></p><p>
 The type for <code>lam</code> reflects that binders are represented in the object language using binders in the HOAS meta-language.
 <br>
 <h2> Judgements and Rules</h2>
 We describe algorithmic and declarative equality for the untyped lambda-calculus using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.</p>
-<p>
+<p></p><p>
 <h3> Algorithmic Equality</h3>
-For algorithmic equality, we have the predicate <code>aeq</code> of type <code>tm -> tm -> type</code>, and inference rules for term applications <code>ae_a</code> and lambda-abstractions <code>ae_l</code></p><br><pre><code>
-<keyword>datatype</keyword> <span class="typ" id="aeq">aeq</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword> = 
+For algorithmic equality, we have the predicate <code>aeq</code> of type <code>tm -> tm -> type</code>, and inference rules for term applications <code>ae_a</code> and lambda-abstractions <code>ae_l</code></p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="aeq">aeq</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword> = 
 | <span class="constructor" id="ae_a">ae_a</span> : <a href="#aeq">aeq</a> M1 N1 &#x2192 <a href="#aeq">aeq</a> M2 N2 &#x2192 <a href="#aeq">aeq</a> <a href="#app">app</a> M1 M2 <a href="#app">app</a> N1 N2
 | <span class="constructor" id="ae_l">ae_l</span> : {x : <a href="#tm">tm</a>} <a href="#aeq">aeq</a> x x &#x2192 <a href="#aeq">aeq</a> M x N x &#x2192 <a href="#aeq">aeq</a> <a href="#lam">lam</a> (&lambda;x. M x) <a href="#lam">lam</a> (&lambda;x. N x);
 </code></pre>
-<p>
+<p></p><p>
 <h3> Declarative Equality</h3>
-Next we define declarative equality in order to establish its equivalence with algorithmic equality and prove completeness. Note that the only difference between the two judgements is that declarative equality explicitly includes inference rules for reflexivity <code>de_r</code>, transitivity <code>de_t</code>, and symmetry <code>de_s</code>: properties which we will prove to be intrinsic to algorithmic equality in the untyped lambda-calculus.</p><br><pre><code>
-<keyword>datatype</keyword> <span class="typ" id="deq">deq</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword> = 
+Next we define declarative equality in order to establish its equivalence with algorithmic equality and prove completeness. Note that the only difference between the two judgements is that declarative equality explicitly includes inference rules for reflexivity <code>de_r</code>, transitivity <code>de_t</code>, and symmetry <code>de_s</code>: properties which we will prove to be intrinsic to algorithmic equality in the untyped lambda-calculus.</p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="deq">deq</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword> = 
 | <span class="constructor" id="de_l">de_l</span> : {x : <a href="#tm">tm</a>} <a href="#deq">deq</a> x x &#x2192 <a href="#deq">deq</a> M x M' x &#x2192 <a href="#deq">deq</a> <a href="#lam">lam</a> (&lambda;x. M x) <a href="#lam">lam</a> (&lambda;x. M' x)
 | <span class="constructor" id="de_a">de_a</span> : <a href="#deq">deq</a> M1 N1 &#x2192 <a href="#deq">deq</a> M2 N2 &#x2192 <a href="#deq">deq</a> <a href="#app">app</a> M1 M2 <a href="#app">app</a> N1 N2
 | <span class="constructor" id="de_r">de_r</span> : <a href="#deq">deq</a> M M
@@ -71,24 +68,21 @@ Next we define declarative equality in order to establish its equivalence with a
 | <span class="constructor" id="de_s">de_s</span> : <a href="#deq">deq</a> T S &#x2192 <a href="#deq">deq</a> S T;
 </code></pre>
 <p> ## Context schemas
-Just as types classify expressions, contexts are classified by context schemas.</p><br><pre><code>
-<keyword>schema</keyword> <span class="schema" id="xaG">xaG</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x);<br>
-<keyword>schema</keyword> <span class="schema" id="daG">daG</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x, de_v:<a href="#deq">deq</a> x x);</code></pre>
-<p>
+Just as types classify expressions, contexts are classified by context schemas.</p><br><pre><code><keyword>schema</keyword> <span class="schema" id="xaG">xaG</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x);
+<br><keyword>schema</keyword> <span class="schema" id="daG">daG</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x, de_v:<a href="#deq">deq</a> x x);
+</code></pre>
+<p></p><p>
 <h2> Proof of Reflexivity</h2>
 We first prove admissibility of reflexivity. The proof is implemented as a recursive function called <code>reflG</code> of type <code>{g:xaG}{M:[g &#8866; tm ]}[g &#8866; aeq (M &hellip;)(M &hellip;)]</code>: for all contexts <code>g</code> that have schema <code>xaG</code>, for all terms <code>M</code>, we have a proof that <code>[g &#8866; aeq (M &hellip;)(M &hellip;)]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam M => e</code>.</p><br><pre><code><keyword>rec</keyword> <span class="function" id="reflG">reflG</span> : {g : <a href="#xaG">xaG</a>} {M : [g &#x22A2 <a href="#tm">tm</a>]} [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (M &hellip;)] =
-<keyword>FN</keyword> g &#x21D2 <keyword>mlam</keyword> M &#x21D2 <keyword>case</keyword> [g &#x22A2 M &hellip;] <keyword>of</keyword>
-  | [g &#x22A2 #p.1 &hellip;] &#x21D2   [g &#x22A2 #p.2 &hellip;]
-  
-  | [g &#x22A2 <a href="#lam">lam</a> (&lambda;x. M &hellip; x)] &#x21D2  
-     <keyword>let</keyword>  [g, b : <keyword>block</keyword> (y:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> y y) &#x22A2 D &hellip; b.1 b.2] = <a href="#reflG">reflG</a> [g, b : <keyword>block</keyword> (y:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> y y)] [b, g &#x22A2 M &hellip; b.1] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;w. D &hellip; x w)]
-  
-  | [g &#x22A2 <a href="#app">app</a> (M1 &hellip;) (M2 &hellip;)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 D1 &hellip;] = <a href="#reflG">reflG</a> [g] [g &#x22A2 M1 &hellip;] <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 D2 &hellip;] = <a href="#reflG">reflG</a> [g] [g &#x22A2 M2 &hellip;] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)]
-  ;
+<keyword>mlam</keyword> g &#x21D2 <keyword>mlam</keyword> M &#x21D2 <keyword>case</keyword> [g &#x22A2 M &hellip;] <keyword>of</keyword> 
+  | [g &#x22A2 #p.1 &hellip;] &#x21D2 [g &#x22A2 #p.2 &hellip;]
+  | [g &#x22A2 <a href="#lam">lam</a> (&lambda;x. M &hellip; x)] &#x21D2
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (y:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> y y) &#x22A2 D &hellip; b.1 b.2] =
+    <a href="#reflG">reflG</a> [g, b : <keyword>block</keyword> (y:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> y y)] [g, b &#x22A2 M &hellip; b.1] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;w. D &hellip; x w)]
+  | [g &#x22A2 <a href="#app">app</a> (M1 &hellip;) (M2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 D1 &hellip;] = <a href="#reflG">reflG</a> [g] [g &#x22A2 M1 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 D2 &hellip;] = <a href="#reflG">reflG</a> [g] [g &#x22A2 M2 &hellip;] <keyword>in</keyword> [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)];
 </code></pre>
 <p>In the proof for <code>reflG</code> we begin by introducing and <code>M</code> followed by a case analysis on <code>[g &#8866; M &hellip;]</code> using pattern matching. There are three possible cases for <code>M</code>:
 <ul>
@@ -98,74 +92,60 @@ We first prove admissibility of reflexivity. The proof is implemented as a recur
 </ul></p>
 <p><h2> Proof of Transitivity</h2>
 Next, we prove admissibility of transitivity. We encode the proof of transitivity by pattern-matching on the first derivation <code>[g &#8866; aeq (M &hellip;) (L &hellip;)]</code> to arrive at the second <code>[g &#8866; aeq (L &hellip;) (N &hellip;)]</code>. The recursive function <code>transG</code> handles the three cases for variables, lambda-terms, and applications in a similar fashion to <code>reflG</code>}. The context <code>g:xaG</code> is surrounded by parentheses <code>( )</code> to indicate that it is implicit in the actual proof and need to be reconstructed. </p><br><pre><code><keyword>rec</keyword> <span class="function" id="transG">transG</span> : (g:<a href="#xaG">xaG</a>) [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (L &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (L &hellip;) (N &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (N &hellip;)] =
-<keyword>fn</keyword> d1 &#x21D2 <keyword>fn</keyword> d2 &#x21D2 <keyword>case</keyword> d1 <keyword>of</keyword>
-  | [g &#x22A2 #p.2 &hellip;] &#x21D2   d2
-  
-  | [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D1 &hellip; x u)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D2 &hellip; x u)] = d2 <keyword>in</keyword>
-      <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x) &#x22A2 E &hellip; b.1 b.2] = <a href="#transG">transG</a> [g, b : <keyword>block</keyword> (x':<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x' x') &#x22A2 D1 &hellip; b.1 b.2] [b, g &#x22A2 D2 &hellip; b.1 b.2] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. E &hellip; x u)]
-  
-  | [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 <a href="#ae_a">ae_a</a> (F1 &hellip;) (F2 &hellip;)] = d2 <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 E1 &hellip;] = <a href="#transG">transG</a> [g &#x22A2 D1 &hellip;] [g &#x22A2 F1 &hellip;] <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 E2 &hellip;] = <a href="#transG">transG</a> [g &#x22A2 D2 &hellip;] [g &#x22A2 F2 &hellip;] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_a">ae_a</a> (E1 &hellip;) (E2 &hellip;)]
-  ;
+<keyword>fn</keyword> d1 &#x21D2 <keyword>fn</keyword> d2 &#x21D2 <keyword>case</keyword> d1 <keyword>of</keyword> 
+  | [g &#x22A2 #p.2 &hellip;] &#x21D2 d2
+  | [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D1 &hellip; x u)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D2 &hellip; x u)] = d2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x) &#x22A2 E &hellip; b.1 b.2] =
+    <a href="#transG">transG</a> [g, b : <keyword>block</keyword> (x':<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x' x') &#x22A2 D1 &hellip; b.1 b.2] [g, b &#x22A2 D2 &hellip; b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. E &hellip; x u)]
+  | [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#ae_a">ae_a</a> (F1 &hellip;) (F2 &hellip;)] = d2 <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 E1 &hellip;] = <a href="#transG">transG</a> [g &#x22A2 D1 &hellip;] [g &#x22A2 F1 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 E2 &hellip;] = <a href="#transG">transG</a> [g &#x22A2 D2 &hellip;] [g &#x22A2 F2 &hellip;] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_a">ae_a</a> (E1 &hellip;) (E2 &hellip;)];
 </code></pre>
 <p>Here, the variable case exploits that if <code>aeq M N</code> is an element of the context <code>g</code>, then <code>M = N</code>. Note that the recursive calls do not take the context <code>g</code> as an explicit argument.</p>
-<p>
+<p></p><p>
 <h2> Proof of Symmetry</h2>
 Again, we encode the proof of symmetry as a recursive function <code>symG</code>. As in <code>transG</code>, the context <code>g</code> is implicit. Furthermore, we handle the variable case using the same property in both functions.
-</p><br><pre><code><keyword>rec</keyword> <span class="function" id="symG">symG</span> : (g:<a href="#xaG">xaG</a>) [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (L &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (L &hellip;) (M &hellip;)] =
-<keyword>fn</keyword> d &#x21D2 <keyword>case</keyword> d <keyword>of</keyword>
-  | [g &#x22A2 #p.2 &hellip;] &#x21D2   d
-  
-  | [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D1 &hellip; x u)] &#x21D2  
-     <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x) &#x22A2 E &hellip; b.1 b.2] = <a href="#symG">symG</a> [g, b : <keyword>block</keyword> (x':<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x' x') &#x22A2 D1 &hellip; b.1 b.2] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. E &hellip; x u)]
-  
-  | [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 E1 &hellip;] = <a href="#symG">symG</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 E2 &hellip;] = <a href="#symG">symG</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_a">ae_a</a> (E1 &hellip;) (E2 &hellip;)]
-  ;
+</p><p></p><br><pre><code><keyword>rec</keyword> <span class="function" id="symG">symG</span> : (g:<a href="#xaG">xaG</a>) [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (L &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (L &hellip;) (M &hellip;)] =
+<keyword>fn</keyword> d &#x21D2 <keyword>case</keyword> d <keyword>of</keyword> 
+  | [g &#x22A2 #p.2 &hellip;] &#x21D2 d
+  | [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. D1 &hellip; x u)] &#x21D2
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x x) &#x22A2 E &hellip; b.1 b.2] =
+    <a href="#symG">symG</a> [g, b : <keyword>block</keyword> (x':<a href="#tm">tm</a>, ae_v:<a href="#aeq">aeq</a> x' x') &#x22A2 D1 &hellip; b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;u. E &hellip; x u)]
+  | [g &#x22A2 <a href="#ae_a">ae_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 E1 &hellip;] = <a href="#symG">symG</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 E2 &hellip;] = <a href="#symG">symG</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword> [g &#x22A2 <a href="#ae_a">ae_a</a> (E1 &hellip;) (E2 &hellip;)];
 </code></pre>
-<p>
+<p></p><p>
 <h2> Proof of Completeness</h2>
 Finally, we implement the completeness proof as as a recursive function <code>ceqG</code>.
-</p><br><pre><code><keyword>rec</keyword> <span class="function" id="ceq">ceq</span> : (g:<a href="#daG">daG</a>) [g &#x22A2 <a href="#deq">deq</a> (M &hellip;) (N &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (N &hellip;)] =
-<keyword>fn</keyword> e &#x21D2 <keyword>case</keyword> e <keyword>of</keyword>
-  | [g &#x22A2 #p.3 &hellip;] &#x21D2   [g &#x22A2 #p.2 &hellip;]
-  
-  | [g &#x22A2 <a href="#de_r">de_r</a>] &#x21D2  
-                                                    <a href="#reflG">reflG</a> [g] [g &#x22A2 _]
-  
-  | [g &#x22A2 <a href="#de_a">de_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 F1 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_a">ae_a</a> (F1 &hellip;) (F2 &hellip;)]
-  
-  | [g &#x22A2 <a href="#de_l">de_l</a> (&lambda;x. &lambda;u. D &hellip; x u)] &#x21D2  
-     <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, _t:<a href="#aeq">aeq</a> x x, u:<a href="#deq">deq</a> x x) &#x22A2 F &hellip; b.1 b.2] = <a href="#ceq">ceq</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, _t:<a href="#aeq">aeq</a> x x, u:<a href="#deq">deq</a> x x) &#x22A2 D &hellip; b.1 b.3] <keyword>in</keyword>
-      [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;v. F &hellip; x v)]
-  
-  | [g &#x22A2 <a href="#de_t">de_t</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2  
-     <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword>
-      <keyword>let</keyword>  [g &#x22A2 F1 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
-      <a href="#transG">transG</a> [g &#x22A2 F1 &hellip;] [g &#x22A2 F2 &hellip;]
-  
-  | [g &#x22A2 <a href="#de_s">de_s</a> (D &hellip;)] &#x21D2  
-                                                                 <keyword>let</keyword>  [g &#x22A2 F &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D &hellip;] <keyword>in</keyword>
-                                                                 <a href="#symG">symG</a> [g &#x22A2 F &hellip;]
-  ;
+</p><p></p><br><pre><code><keyword>rec</keyword> <span class="function" id="ceq">ceq</span> : (g:<a href="#daG">daG</a>) [g &#x22A2 <a href="#deq">deq</a> (M &hellip;) (N &hellip;)] &#x2192 [g &#x22A2 <a href="#aeq">aeq</a> (M &hellip;) (N &hellip;)] =
+<keyword>fn</keyword> e &#x21D2 <keyword>case</keyword> e <keyword>of</keyword> 
+  | [g &#x22A2 #p.3 &hellip;] &#x21D2 [g &#x22A2 #p.2 &hellip;]
+  | [g &#x22A2 <a href="#de_r">de_r</a>] &#x21D2 <a href="#reflG">reflG</a> [g] [g &#x22A2 _]
+  | [g &#x22A2 <a href="#de_a">de_a</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 F1 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword> [g &#x22A2 <a href="#ae_a">ae_a</a> (F1 &hellip;) (F2 &hellip;)]
+  | [g &#x22A2 <a href="#de_l">de_l</a> (&lambda;x. &lambda;u. D &hellip; x u)] &#x21D2
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, _t:<a href="#aeq">aeq</a> x x, u:<a href="#deq">deq</a> x x) &#x22A2 F &hellip; b.1 b.2] =
+    <a href="#ceq">ceq</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, _t:<a href="#aeq">aeq</a> x x, u:<a href="#deq">deq</a> x x) &#x22A2 D &hellip; b.1 b.3] <keyword>in</keyword>
+    [g &#x22A2 <a href="#ae_l">ae_l</a> (&lambda;x. &lambda;v. F &hellip; x v)]
+  | [g &#x22A2 <a href="#de_t">de_t</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D2 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 F1 &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D1 &hellip;] <keyword>in</keyword> <a href="#transG">transG</a> [g &#x22A2 F1 &hellip;] [g &#x22A2 F2 &hellip;]
+  | [g &#x22A2 <a href="#de_s">de_s</a> (D &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 F &hellip;] = <a href="#ceq">ceq</a> [g &#x22A2 D &hellip;] <keyword>in</keyword> <a href="#symG">symG</a> [g &#x22A2 F &hellip;];
 </code></pre>
-<p>
+<p></p><p>
 <p>We explain here the three cases shown in the informal proof in the companion paper (Felty et al, 2014). First, let us consider the case where we used an assumption from the context. Since the context <code>g</code> consists of blocks with the following structure: <code>block x:tm , ae_v:aeq x x,de_v: deq x x</code>, we in fact want to match on the third element of such a block. This is written as <code>#p.3 &hellip;</code>. The type of <code>#p.3</code> is <code>deq (#p.1 &hellip;) (#p.1 &hellip;)</code>. Since our context always contains a block and the parameter variable <code>#p &hellip;</code> describes such a block, we know that there exists a proof for <code>aeq (#p.1 &hellip;) (#p.1 &hellip;)</code>, which can be described by <code>#p.2 &hellip;</code>.</p>
 <br><br><p>Second, we consider the case where we applied the reflexivity rule <code>de_r</code> as a last step. In this case, we need to refer to the reflexivity lemma we proved about algorithmic equality. To use the function <code>reflG</code>, which implements the reflexivity lemma for algorithmic equality, we need a context of schema <code>xaG</code>; however, the context used in the proof for <code>ceqG</code> is of schema <code>daG</code> and we rely on context subsumption to justify passing a context <code>daG</code> in place of a context <code>xaG</code>. The cases for transitivity and symmetry are similar.</p>
-<br><br><p>Third, we consider the case for <code>de_l</code>, the case for lambda-abstractions. In this case, we extend the context with the new declarations about variables and pass to the recursive call <code>ceqG</code> the derivation <code>[g, b:block (x:tm ,ae_v:aeq x x, de_v: deq x x) &#8866; D &hellip; b.1 b.3]</code>. Declaration weakening (in the informal proof d-wk (Felty et al, 2014)) is built-in. In the pattern, the derivation <code>D</code> has type <code>[g, x:tm , ae_v:aeq x x &#8866; deq (M &hellip;x)(N &hellip; x)]</code>. We hence construct a weakening substitution <code>&hellip; b.1 b.3</code> that allows us to move <code>D</code> to the context <code>g, b:block (x:tm,ae_v:aeq x x, de_v:deq x x)</code>. The result of recursive call is a derivation <code>F</code>, where <code>F</code> only depends on <code>x:tm</code> and <code>u:aeq x x</code>. In the on-paper proof we refer to declaration strengthening (d-str) to justify that <code>F</code> cannot depend on <code>de_v</code> assumptions. In Beluga, the programmer uses strengthening by stating which assumptions <code>F</code> can depend on. The coverage checker will then subsequently rely on subordination to verify that the restricted case is sufficient and no other cases have been forgotten. Subordination allows us to verify that indeed assumptions of type <code>de_v: deq x x</code> cannot be used in proofs for <code>aeq (M &hellip; b.1) (N &hellip; b.1)</code>. Finally, we use <code>F</code> to assemble the final result <code>ae_l (&lambda;x.&lambda;v. F &hellip; x v)</code>.</p>
+<br><br><p>Third, we consider the case for <code>de_l</code>, the case for lambda-abstractions. In this case, we extend the context with the new declarations about variables and pass to the recursive call <code>ceqG</code> the derivation <code>[g, b:block (x:tm ,ae_v:aeq x x, de_v: deq x x) &#8866; D &hellip; b.1 b.3]</code>. Declaration weakening (in the informal proof d-wk (Felty et al, 2014)) is built-in. In the pattern, the derivation <code>D</code> has type <code>[g, x:tm , ae_v:aeq x x &#8866; deq (M &hellip;x)(N &hellip; x)]</code>. We hence construct a weakening substitution <code>&hellip; b.1 b.3</code> that allows us to move <code>D</code> to the context <code>g, b:block (x:tm,ae_v:aeq x x, de_v:deq x x)</code>. The result of recursive call is a derivation <code>F</code>, where <code>F</code> only depends on <code>x:tm</code> and <code>u:aeq x x</code>. In the on-paper proof we refer to declaration strengthening (d-str) to justify that <code>F</code> cannot depend on <code>de_v</code> assumptions. In Beluga, the programmer uses strengthening by stating which assumptions <code>F</code> can depend on. The coverage checker will then subsequently rely on subordination to verify that the restricted case is sufficient and no other cases have been forgotten. Subordination allows us to verify that indeed assumptions of type <code>de_v: deq x x</code> cannot be used in proofs for <code>aeq (M &hellip; b.1) (N &hellip; b.1)</code>. Finally, we use <code>F</code> to assemble the final result <code>ae_l (\x.\v. F &hellip; x v)</code>.</p>
 <br><br><p>We conclude this example with a few observations: The statement of the theorem is directly and succinctly represented in Beluga using contextual types and contextual objects. Every case in the on-paper proof corresponds directly to a case in the implementation of the recursive function. Type reconstruction is used to reconstruct implicit type arguments and infer the type of free contextual variables that occur in patterns. This is crucial to achieve a palatable source language. Weakening and strengthening are supported in Beluga through the typing rules and on the level of context variables and context schemas using context subsumption. If schema <code>W</code> is a prefix of a schema <code>W'</code>, then we can always use a context of schema <code>W'</code> in place of a context of schema <code>W</code>.</p>
-</p>To download the code: <a href="AlgEqual.bel" target="_blank">AlgEqual.bel</a>
+</p><p></p><br><br><h3>To download the code: <a href="Untyped_Algorithmic_Equality_-Context_Subsumption.bel" target="_blank">Untyped_Algorithmic_Equality_-Context_Subsumption.bel</a></h3>
 
 </body>
 </html>

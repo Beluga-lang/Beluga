@@ -161,7 +161,6 @@ let rec index_kind cvars bvars fvars = function
 
 and index_typ cvars bvars fvars = function
   | Ext.LF.Atom (loc, a, s) ->
-    let _ = dprint (fun () -> g 0 s) in
     begin
       try
         let a' = Typ.index_of_name a in
@@ -189,11 +188,9 @@ and index_typ cvars bvars fvars = function
       (Apx.LF.Sigma typRec' , fvars')
 
   | Ext.LF.AtomTerm(loc, n) ->
-      let _ = dprint (fun () -> "Start:\n" ^ normalToString ~x:true n ) in
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
             let Ext.LF.Root(_, Ext.LF.Name(_, a), s') as n = shunting_yard nl in
-            let _ = dprint (fun () -> "End:\n" ^ normalToString ~x:true n) in
             index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s')) 
         | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) -> 
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, sp))
@@ -206,27 +203,6 @@ and locOfNormal = function
   | Ext.LF.Ann(l,_,_) -> l
   | Ext.LF.TList(l,_) -> l
   | Ext.LF.LFHole l -> l
-
-(* Functions for getting string representions of normals & spines for debugging *)
-and spaces i = if i = 0 then "" else if i = 1 then "|" else
-  let s = String.make (i-2) ' ' in s ^ "|-"
-
-and g i = function
-  | Ext.LF.Nil -> (spaces i) ^ ".\n"
-  | Ext.LF.App(_,n, s) -> (spaces i) ^ "App\n" ^ (f (i+1) n) ^ (g (i+1) s) 
-
-and f i = function
-  | Ext.LF.Lam(_,u,n) -> (spaces i) ^ "Lam: " ^ (u.Id.string_of_name) ^ "\n" ^ (f (i+1) n)
-  | Ext.LF.Root(_,Ext.LF.Name(_, u),s) -> (spaces i) ^ "Root (Name): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
-  | Ext.LF.Root(_,Ext.LF.MVar(_, u, _), s) -> (spaces i) ^ "Root (MVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
-  | Ext.LF.Root(_,Ext.LF.PVar(_, u, _), s) -> (spaces i) ^ "Root (PVar): " ^ (u.Id.string_of_name) ^ "\n" ^ (g (i+1) s)
-  | Ext.LF.Root(_,_, s) -> (spaces i) ^ "Root (?)\n" ^ (g (i+1) s)
-  | Ext.LF.Tuple(_,_) -> "Tuple"
-  | Ext.LF.Ann(_,n,_) -> (spaces i) ^ "Ann\n" ^ (f (i+1) n)
-  | Ext.LF.TList(_,nl) -> (spaces i) ^ "TList\n" ^ (List.fold_right (fun n acc -> (f (i+1) n) ^ acc) nl "")
-  | Ext.LF.LFHole _ -> (spaces i) ^ "LFHole\n"
-
-and normalToString ?(x = false) n = if x then f 0 n else ""
 
 (* Adaptation of Dijkstra's 'shunting yard' algorithm for
  * parsing infix, postfix, and prefix operators from a list
@@ -318,24 +294,16 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     end
   | i, h ::t, y, z -> parse(i+1, t, (i, h)::y, z)
   | _, [], y, z -> 
-    let p (_,x) = dprint (fun () -> normalToString ~x:true x) in
-    let o (_,x) = dprint (fun () -> x.Store.OpPragmas.name.string_of_name) in
-    let _ = dprint (fun () -> "After Parsing: \nExpressions: ") in
-    let _ = List.iter p y in
-    let _ = dprint (fun () -> "Operators: ") in
-    let _ = List.iter o z in
     reconstruct (y, z)
 
   and reconstruct : (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma) list -> Ext.LF.normal = function
-  | [(_, e)], [] -> dprint( fun () -> "AFTER RECONSTRUCT\n" ^(normalToString ~x:true e)); e
+  | [(_, e)], [] -> e
   | exps, (i, o)::os when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
     let args_expected = 
       try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
       try Term.args_of_name o.Store.OpPragmas.name with _ -> 
         failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
     let (ops, es) = take args_expected exps in
-    let _ = dprint (fun () -> "Args taken from TAKE (should be " ^ (string_of_int args_expected) ^")") in
-    let _ = List.iter (fun (_, x) -> dprint (fun () -> normalToString ~x:true x)) (ops) in
     let loc = 
       if args_expected > 0 then 
         try let (_,x) = List.hd ops in locOfNormal x
@@ -361,21 +329,13 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       reconstruct((i, e')::es, os) end
     else raise (Error(loc, MispacedOperator o.Store.OpPragmas.name))
 
-  | l, [] -> 
-    let _ = dprint (fun () -> "List with no operators:") in
-    let _ = List.iter (fun (_,x) -> dprint (fun () -> normalToString ~x:true x)) l in
-    
+  | l, [] ->     
     let l' = List.rev l in
     let (_, Ext.LF.Root(loc, h, Ext.LF.Nil)) :: t = l' in 
     let t = List.map (fun (_,x) -> x) t in
     Ext.LF.Root(loc, h, normalListToSpine t)
 
   | a, b ->
-    let p1 x = x.Store.OpPragmas.name.Id.string_of_name  in
-    let _ = dprint (fun () -> "***ERROR IN SHUNTING YARD***\nOPERATORS:") in
-    let _ = List.iter (fun (_,x) -> dprint(fun () -> p1 x)) b in
-    let _ = dprint (fun () -> "NORMALS") in
-    let _ = List.iter (fun (_,x) -> dprint(fun () -> normalToString x)) a in
     failwith "Error in indexing"
 
   and take : type a b. int -> (a * b) list -> ((a * b) list) * ((a * b) list) = fun i l ->

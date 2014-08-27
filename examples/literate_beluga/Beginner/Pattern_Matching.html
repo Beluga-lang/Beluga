@@ -1,69 +1,94 @@
 <html>
 <head>
-	<link rel="stylesheet" type="te../../css" href="../../css/bootstrap.css">
+	<meta charset="UTF-8">
+	<style type="text/css">
+		body {
+			padding: 2em 1em 2em 1em;
+			margin: 0;
+			font-family: sans-serif;
+			color: black;
+			background: white;}
+		a{text-decoration:none;}
+		a:link { color: #00C; background: transparent }
+		a:visited { color: #00C; background: transparent }
+		a:active { color: #C00; background: transparent }
+		keyword { color: #3333cc ; background: transparent }
+		p {display: inline;}
+		pre {
+			border: 1px dashed maroon;  display:block;
+			padding:8px; background-color: #dddddd;}
+		code {
+			background-color: #dddddd;
+			color: black; font-family: "courier";margin:0;
+			white-space: pre-wrap; }
+		.typ {color: #660000; font-weight:bold}
+		.constructor {color: #335C85; font-weight:bold}
+		.function {color: #660033; font-weight:bold}
+		.schema {color: #6600CC; font-weight:bold}
+	</style>
 </head>
 <body>
 
-<p><h1> Type Uniqueness for the Simply-typed Lambda-calculus</h1>
-This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/TypingSimply.orbi" target="_blank">TypingSimply.orbi</a>. We examine Theorem 24 from <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
-<ul>
-<li><b>Theorem 24 (Type Uniqueness):</b> If <code>g &#8866; hastype M T</code> and <code>g &#8866; hastype M T'</code> then <code>equal T T'</code>.</li>
-</ul>
-
+<p></p><p>
+<h1> Type Uniqueness for the Simply-typed Lambda-calculus</h1>
+This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/TypingSimply.orbi" target="_blank">TypingSimply.orbi</a>.  We prove that every lambda term has a unique type. For a detailled description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
+</p><p>
+</p><p>
 <h2> Syntax</h2>
-To represent the simply-typed lambda-calculus in the logical framework LF, we define two LF types: the LF type <code>tp</code> for describing the types of our simply typed lambda-calculus, and the LF type <code>tm</code> for characterizing the terms of the lambda-calculus.<br>
-<h3> Definition of types and expressions</h3>
-The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since <code>arr</code> is a constructor which takes in two arguments, its type is <code>tp -> tp -> tp</code>.</p><br><pre><code>
-<span class="typ" id="tp">tp</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> tp T <br>
-<span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>.<br>
-<span class="constructor" id="nat">nat</span> : <a href="#tp">tp</a>.</code></pre>
-<p>
+We first represent the simply-typed lambda-calculus in the logical framework LF: the LF type <code>tp</code> describes the types of our simply typed lambda-calculus, and the LF type <code>tm</code> characterizes the terms of the lambda-calculus.<br>
+The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since <code>arr</code> is a constructor which takes in two arguments, its type is <code>tp -> tp -> tp</code>.
+</p><p></p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="tp">tp</span> : <keyword>type</keyword> = 
+| <span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>
+| <span class="constructor" id="nat">nat</span> : <a href="#tp">tp</a>;
+</code></pre>
+<p></p><p>
 <h3> Definition of lambda-terms</h3>
-The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.</p><br><pre><code>
-<span class="typ" id="term">term</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> term M <br>
-<span class="constructor" id="lam">lam</span> : <a href="#tp">tp</a> &#x2192 (<a href="#term">term</a> &#x2192 <a href="#term">term</a>) &#x2192 <a href="#term">term</a>.<br>
-<span class="constructor" id="app">app</span> : <a href="#term">term</a> &#x2192 <a href="#term">term</a> &#x2192 <a href="#term">term</a>.</code></pre>
-<p><h2> Judgements and Rules</h2>
-We describe typing judgement and equality for the simply-typed lambda-calculus using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.
-<h3> Typing judgement</h3>
-The type family <code>has_type</code> is indexed by terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.</p><br><pre><code>
-<span class="typ" id="hastype">hastype</span> : <a href="#term">term</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br><keyword>%name</keyword> hastype H <br>
-<span class="constructor" id="h_lam">h_lam</span> : {x : <a href="#term">term</a>} (<a href="#hastype">hastype</a> x T1 &#x2192 <a href="#hastype">hastype</a> (M x) T2) &#x2192 <a href="#hastype">hastype</a> (<a href="#lam">lam</a> T1 M) (<a href="#arr">arr</a> T1 T2).<br>
-<span class="constructor" id="h_app">h_app</span> : <a href="#hastype">hastype</a> M1 (<a href="#arr">arr</a> T2 T) &#x2192 <a href="#hastype">hastype</a> M2 T2 &#x2192 <a href="#hastype">hastype</a> (<a href="#app">app</a> M1 M2) T.</code></pre>
-<p><h3> Equality predicates</h3>
-Since Beluga does not support equality types, we implement equality using two LF type families <code>eq</code> and <code>equal</code>, both indexing two objects <code>tp</code>. Note that <code>eq</code> closely follows <code>tp</code> whereas <code>equal</code> is inhabited by a single constant for reflexivity of <code>equal T1 T2</code>.</p><br><pre><code>
-<span class="typ" id="eq">eq</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br>
-<span class="constructor" id="e_arr">e_arr</span> : <a href="#eq">eq</a> T1 S1 &#x2192 <a href="#eq">eq</a> T2 S2 &#x2192 <a href="#eq">eq</a> (<a href="#arr">arr</a> T1 T2) (<a href="#arr">arr</a> S1 S2).<br>
-<span class="constructor" id="e_nat">e_nat</span> : <a href="#eq">eq</a> <a href="#nat">nat</a> <a href="#nat">nat</a>.<br>
-<span class="typ" id="equal">equal</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br>
-<span class="constructor" id="e_ref">e_ref</span> : <a href="#equal">equal</a> T T.</code></pre>
-<p><h2> Context declarations</h2>
-The schema <code>txG</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>hastype x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta (used only in contexts) to tie <code>x</code> to <code>hastype x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>txG</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.</p><br><pre><code>
-<keyword>schema</keyword> <span class="schema" id="xtG">xtG</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#hastype">hastype</a> x t);</code></pre>
+The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.
+</p><p></p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="term">term</span> : <keyword>type</keyword> = 
+| <span class="constructor" id="lam">lam</span> : <a href="#tp">tp</a> &#x2192 (<a href="#term">term</a> &#x2192 <a href="#term">term</a>) &#x2192 <a href="#term">term</a>
+| <span class="constructor" id="app">app</span> : <a href="#term">term</a> &#x2192 <a href="#term">term</a> &#x2192 <a href="#term">term</a>;
+</code></pre>
+<p></p><p>
+<h2>  Typing rules</h2>
+We describe typing judgment using the type family <code>has_type</code> which relates terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.
+</p><p></p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="hastype">hastype</span> : <a href="#term">term</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword> = 
+| <span class="constructor" id="h_lam">h_lam</span> : {x : <a href="#term">term</a>} <a href="#hastype">hastype</a> x T1 &#x2192 <a href="#hastype">hastype</a> M x T2 &#x2192 <a href="#hastype">hastype</a> <a href="#lam">lam</a> T1 M <a href="#arr">arr</a> T1 T2
+| <span class="constructor" id="h_app">h_app</span> : <a href="#hastype">hastype</a> M1 <a href="#arr">arr</a> T2 T &#x2192 <a href="#hastype">hastype</a> M2 T2 &#x2192 <a href="#hastype">hastype</a> <a href="#app">app</a> M1 M2 T;
+</code></pre>
+<p></p><p>
+<h3> Equality predicates</h3>
+Since Beluga does not support equality types, we implement equality by reflexivity using the type family <code>equal</code>.
+</p><p></p><br><pre><code><span class="typ" id="equal">equal</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.
+<br><span class="constructor" id="e_ref">e_ref</span> : <a href="#equal">equal</a> T T.
+</code></pre>
+<p><h2> Schema</h2>
+The schema <code>txG</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>hastype x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta (used only in contexts) to tie <code>x</code> to <code>hastype x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>txG</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.</p><br><pre><code><keyword>schema</keyword> <span class="schema" id="xtG">xtG</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#hastype">hastype</a> x t);
+</code></pre>
 <p><h2> Typing Uniqueness by Induction of the First Derivation</h2>
-Our final proof of type uniqueness <code>rec unique3</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g &#8866;  hastype (M ..) T]</code>.</p><br><pre><code>
-<keyword>rec</keyword> <span class="function" id="unique3">unique3</span> : {g : <a href="#xtG">xtG</a>} [g &#x22A2 <a href="#hastype">hastype</a> (M ..) T] &#x2192 [g &#x22A2 <a href="#hastype">hastype</a> (M ..) T'] &#x2192 [ &#x22A2 <a href="#equal">equal</a> T T'] = <keyword>FN</keyword> g &#x21D2 <keyword>fn</keyword> d &#x21D2 <keyword>fn</keyword> f &#x21D2 <keyword>case</keyword> d <keyword>of</keyword>
-| [g &#x22A2 <a href="#h_app">h_app</a> (D1 ..) (D2 ..)]   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 <a href="#h_app">h_app</a> (F1 ..) (F2 ..)] = f <keyword>in</keyword>
-    <keyword>let</keyword>  [ &#x22A2 <a href="#e_ref">e_ref</a>] = <a href="#unique3">unique3</a> [g] [g &#x22A2 D1 ..] [g &#x22A2 F1 ..] <keyword>in</keyword>
-    [ &#x22A2 <a href="#e_ref">e_ref</a>] 
-| [g &#x22A2 <a href="#h_lam">h_lam</a> ((\x. ((\u. D .. x u))))]   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 <a href="#h_lam">h_lam</a> ((\x. ((\u. F .. x u))))] = f <keyword>in</keyword>
-    <keyword>let</keyword>  [ &#x22A2 <a href="#e_ref">e_ref</a>] = <a href="#unique3">unique3</a> [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, _t:<a href="#hastype">hastype</a> x _)] [b, g &#x22A2 D .. b.1 b.2] [b, g &#x22A2 F .. b.1 b.2] <keyword>in</keyword>
-    [ &#x22A2 <a href="#e_ref">e_ref</a>] 
-| [g &#x22A2 #q.2 ..]   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 #r.2 ..] = f <keyword>in</keyword>
+Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g &#8866;  hastype (M &hellip;) T]</code>.</p><br><pre><code><keyword>rec</keyword> <span class="function" id="unique">unique</span> : (g:<a href="#xtG">xtG</a>) [g &#x22A2 <a href="#hastype">hastype</a> (M &hellip;) T] &#x2192 [g &#x22A2 <a href="#hastype">hastype</a> (M &hellip;) T'] &#x2192 [ &#x22A2 <a href="#equal">equal</a> T T'] =
+<keyword>fn</keyword> d &#x21D2 <keyword>fn</keyword> f &#x21D2 <keyword>case</keyword> d <keyword>of</keyword> 
+  | [g &#x22A2 <a href="#h_app">h_app</a> (D1 &hellip;) (D2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#h_app">h_app</a> (F1 &hellip;) (F2 &hellip;)] = f <keyword>in</keyword>
+    <keyword>let</keyword>  [ &#x22A2 <a href="#e_ref">e_ref</a>] = <a href="#unique">unique</a> [g &#x22A2 D1 &hellip;] [g &#x22A2 F1 &hellip;] <keyword>in</keyword>
     [ &#x22A2 <a href="#e_ref">e_ref</a>]
- </code></pre>
-<p>
+  | [g &#x22A2 <a href="#h_lam">h_lam</a> (&lambda;x. &lambda;u. D &hellip; x u)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#h_lam">h_lam</a> (&lambda;x. &lambda;u. F &hellip; x u)] = f <keyword>in</keyword>
+    <keyword>let</keyword>  [ &#x22A2 <a href="#e_ref">e_ref</a>] =
+    <a href="#unique">unique</a> [g, b : <keyword>block</keyword> (x:<a href="#term">term</a>, u:<a href="#hastype">hastype</a> x _) &#x22A2 D &hellip; x.b u.b] [g, b &#x22A2 F &hellip; x.b u.b] <keyword>in</keyword>
+    [ &#x22A2 <a href="#e_ref">e_ref</a>]
+  | [g &#x22A2 #q.2 &hellip;] &#x21D2 <keyword>let</keyword>  [g &#x22A2 #r.2 &hellip;] = f <keyword>in</keyword> [ &#x22A2 <a href="#e_ref">e_ref</a>];
+</code></pre>
+<p></p><p>
 Consider each case individually.
 <ul>
-<li><b>Application case.</b> If the first derivation d concludes with <code>h_app</code>, it matches the pattern <code>[g &#8866;  h_app (D1 ..) (D2 ..)]</code>, and forms a contextual object in the context <code>g</code> of type <code>[g &#8866;  hastype (M ..) T']</code>. <code>D1</code> corresponds to the first premise of the typing rule for applications with contextual type <code>[g &#8866; hastype (M1 ..) (arr T' T)]</code>. Using a let-binding, we invert the second argument, the derivation <code>f</code> which must have type <code>[g &#8866; hastype (app (M1 ..) (M2 ..)) T]</code>. <code>F1</code> corresponds to the first premise of the typing rule for applications and has the contextual type <code>[g &#8866; hastype (M1 ..) (arr S' S)]</code>. The appeal to the induction hypothesis using <code>D1</code> and <code>F1</code> in the on-paper proof corresponds to the recursive call <code>unique3 [g] [g &#8866;  D1 ..] [g &#8866;  F1 ..]</code>. Note that while <code>unique3</code>’s type says it takes a context variable <code>{g:xtG}</code>, we do not pass it explicitly; Beluga infers it from the context in the first argument passed. The result of the recursive call is a contextual object of type <code>[ &#8866; eq (arr T1 T2) (arr S1 S2)]</code>. The only rule that could derive such an object is <code>e_ref</code>, and pattern matching establishes that <code>arr T T' = arr S S’</code> and hence <code>T = S and T' = S’</code>.</li>
-<li><p><b>Lambda case.</b> If the first derivation <code>d</code> concludes with <code>h_lam</code>, it matches the pattern <code>[g &#8866;  h_lam (\x.(\u. D .. x u))]</code>, and is a contextual object in the context <code>g</code> of type <code>hastype (lam T M .. x) (arr T T')</code>. Pattern matching—through a let-binding—serves to invert the second derivation <code>f</code>, which must have been by <code>h_lam</code> with a subderivation <code>F .. x u</code> to reach <code>hastype (M .. x) S</code> that can use <code>x, _t:hastype x T</code>, and assumptions from <code>g</code>.</p>
-<p>The use of the induction hypothesis on <code>D</code> and <code>F</code> in a paper proof corresponds to the recursive call to <code>unique3</code>. To appeal to the induction hypothesis, we need to extend the context by pairing up <code>x</code> and the typing assumption <code>hastype x T</code>. This is accomplished by creating the declaration <code>b: block x:term, _t:hastype x T</code>. In the code, we wrote an underscore <code>_</code> instead of <code>T</code>, which tells Beluga to reconstruct it since we cannot write <code>T</code> there without binding it by explicitly giving the type of <code>D</code>. To retrieve <code>x</code> we take the first projection <code>b.1</code>, and to retrieve <code>x</code>’s typing assumption we take the second projection <code>b.2</code>.</p>
-<p>Now we can appeal to the induction hypothesis using <code>D1 .. b.1 b.2</code> and <code>F1 .. b.1 b.2</code> in the context <code>g,b: block x:term, _t:hastype x S</code>. From the i.h. we get a contextual object, a closed derivation of <code>(eq (arr T T') (arr S S’))[ ]</code>. The only rule that could derive this is ref, and pattern matching establishes that <code>S</code> must equal <code>S’</code>, since we must have arr T S = arr T1 S’. Therefore, there is a proof of <code>[ ] equal S S’</code>, and we can finish with the reflexivity rule <code>e_ref</code>.</p></li>
-<li><b>Variable case.</b> Since our context consists of blocks containing variables of type <code>tm</code> and assumptions <code>hastype x T</code>, we pattern match on <code>[g &#8866; #p.2 ..]</code>, i.e., we project out the second argument of the block. By the given assumptions, we know that <code>[g &#8866; #p.2 ..]</code> has type <code>[g &#8866; hastype (#p.1 ..) T]</code>, because <code>#p</code> has type <code>[g &#8866;  block x:tm , u:hastype x T]</code>. We also know that the second input, called <code>f</code>, to the function unique has type <code>[g &#8866;  hastype (#p.1 ..) T']</code>. By inversion on <code>f</code>, we know that the only possible object that can inhabit this type is <code>[g &#8866; #p.2 ..]</code> and therefore <code>T'</code> must be identical to <code>T</code>. Moreover, <code>#r</code> denotes the same block as <code>#p</code>.</li>
+<li><b>Application case.</b> 
+If the first derivation d concludes with <code>h_app</code>, it matches the pattern <code>[g &#8866;  h_app (D1 &hellip;) (D2 &hellip;)]</code>, and forms a contextual object in the context <code>g</code> of type <code>[g &#8866;  hastype (M &hellip;) T']</code>. <code>D1</code> corresponds to the first premise of the typing rule for applications with contextual type <code>[g &#8866; hastype (M1 &hellip;) (arr T' T)]</code>. Using a let-binding, we invert the second argument, the derivation <code>f</code> which must have type <code>[g &#8866; hastype (app (M1 &hellip;) (M2 &hellip;)) T]</code>. <code>F1</code> corresponds to the first premise of the typing rule for applications and has the contextual type <code>[g &#8866; hastype (M1 &hellip;) (arr S' S)]</code>. The appeal to the induction hypothesis using <code>D1</code> and <code>F1</code> in the on-paper proof corresponds to the recursive call <code>unique [g &#8866;  D1 &hellip;] [g &#8866;  F1 &hellip;]</code>. Note that while <code>unique</code>’s type says it takes a context variable <code>(g:xtG)</code>, we do not pass it explicitly; Beluga infers it from the context in the first argument passed. The result of the recursive call is a contextual object of type <code>[ &#8866; eq (arr T1 T2) (arr S1 S2)]</code>. The only rule that could derive such an object is <code>e_ref</code>, and pattern matching establishes that <code>arr T T' = arr S S’</code> and hence <code>T = S and T' = S’</code>.</li>
+<li><p><b>Lambda case.</b> If the first derivation <code>d</code> concludes with <code>h_lam</code>, it matches the pattern <code>[g &#8866;  h_lam (\x.\u. D &hellip; x u)]</code>, and is a contextual object in the context <code>g</code> of type <code>hastype (lam T M &hellip; x) (arr T T')</code>. Pattern matching—through a let-binding—serves to invert the second derivation <code>f</code>, which must have been by <code>h_lam</code> with a subderivation <code>F &hellip; x u</code> to reach <code>hastype (M &hellip; x) S</code> that can use <code>x, _t:hastype x T</code>, and assumptions from <code>g</code>.</p>
+<p>The use of the induction hypothesis on <code>D</code> and <code>F</code> in a paper proof corresponds to the recursive call to <code>unique</code>. To appeal to the induction hypothesis, we need to extend the context by pairing up <code>x</code> and the typing assumption <code>hastype x T</code>. This is accomplished by creating the declaration <code>b: block x:term, u:hastype x T</code>. In the code, we wrote an underscore <code>_</code> instead of <code>T</code>, which tells Beluga to reconstruct it since we cannot write <code>T</code> there without binding it by explicitly giving the type of <code>D</code>. To retrieve <code>x</code> we take the first projection <code>b.x</code>, and to retrieve <code>x</code>’s typing assumption we take the second projection <code>b.u</code>.</p>
+<p>Now we can appeal to the induction hypothesis using <code>D1 &hellip; b.x b.u</code> and <code>F1 &hellip; b.x b.u</code> in the context <code>g,b: block x:term, u:hastype x S</code>. From the i.h. we get a contextual object, a closed derivation of <code>(eq (arr T T') (arr S S’))[ ]</code>. The only rule that could derive this is ref, and pattern matching establishes that <code>S</code> must equal <code>S’</code>, since we must have arr T S = arr T1 S’. Therefore, there is a proof of <code>[ &#8866; equal S S’]</code>, and we can finish with the reflexivity rule <code>e_ref</code>.</p></li>
+<li><b>Variable case.</b> Since our context consists of blocks containing variables of type <code>tm</code> and assumptions <code>hastype x T</code>, we pattern match on <code>[g &#8866; #p.2 &hellip;]</code>, i.e., we project out the second argument of the block. By the given assumptions, we know that <code>[g &#8866; #p.2 &hellip;]</code> has type <code>[g &#8866; hastype (#p.1 &hellip;) T]</code>, because <code>#p</code> has type <code>[g &#8866;  block x:tm , u:hastype x T]</code>. We also know that the second input, called <code>f</code>, to the function unique has type <code>[g &#8866;  hastype (#p.1 &hellip;) T']</code>. By inversion on <code>f</code>, we know that the only possible object that can inhabit this type is <code>[g &#8866; #p.2 &hellip;]</code> and therefore <code>T'</code> must be identical to <code>T</code>. Moreover, <code>#r</code> denotes the same block as <code>#p</code>.</li>
 </ul>
-</p>
+</p><p></p><br><br><h3>To download the code: <a href="Pattern_Matching.bel" target="_blank">Pattern_Matching.bel</a></h3>
+
 </body>
 </html>

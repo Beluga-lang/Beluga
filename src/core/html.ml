@@ -50,7 +50,6 @@ let generatePage orig =
     let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
     let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
     let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
-    let page = Str.global_replace (Str.regexp_string "\\") "&lambda;" page in
     (* Output the HTML file *)
     let oc = open_out !filename in
     let out = output_string oc in
@@ -108,10 +107,12 @@ let appendAsComment innerHtml =
     |> Str.global_replace (Str.regexp "</ol>\\([ \n\r]?\\)<ol>") "\\1"
        (* Two space at the end of a line for a <br> *)
     |> Str.global_replace (Str.regexp "  $") "<br>"
+       (* An empty line to start a new paragraph *)
+    |> Str.global_replace (Str.regexp "^[ \t]*$") "</p><p>"
        (* 5+ dashes for <hr> *)
     |> Str.global_replace (Str.regexp "^-----+") "<hr>"
   in
-  let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
+  let innerHtml = String.sub innerHtml 3 ((String.length innerHtml)-6) in
   let innerHtml = from_markdown innerHtml in
   Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
 

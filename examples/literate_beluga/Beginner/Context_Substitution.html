@@ -1,85 +1,114 @@
 <html>
 <head>
-	<link rel="stylesheet" type="te../../css" href="../../css/bootstrap.css">
+	<meta charset="UTF-8">
+	<style type="text/css">
+		body {
+			padding: 2em 1em 2em 1em;
+			margin: 0;
+			font-family: sans-serif;
+			color: black;
+			background: white;}
+		a{text-decoration:none;}
+		a:link { color: #00C; background: transparent }
+		a:visited { color: #00C; background: transparent }
+		a:active { color: #C00; background: transparent }
+		keyword { color: #3333cc ; background: transparent }
+		p {display: inline;}
+		pre {
+			border: 1px dashed maroon;  display:block;
+			padding:8px; background-color: #dddddd;}
+		code {
+			background-color: #dddddd;
+			color: black; font-family: "courier";margin:0;
+			white-space: pre-wrap; }
+		.typ {color: #660000; font-weight:bold}
+		.constructor {color: #335C85; font-weight:bold}
+		.function {color: #660033; font-weight:bold}
+		.schema {color: #6600CC; font-weight:bold}
+	</style>
 </head>
 <body>
 
-<p>
+<p></p><p>
 <h1> Type Preservation for Parallel Reduction for the Simply-typed Lambda-calculus </h1>
 This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/ParRed.orbi" target="_blank">ParRed.orbi</a>. We examine Lemma 25 and Theorem 26 from <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 <ul>
 <li><b>Lemma 25 (Substitution):</b> If <code>g:tCtx</code> and <code>g, is_tm x; x:A &#8866; M : B</code> and <code>g &#8866; N : A</code>, then <code>g &#8866; [N/x]M:B</code></li><br>
 <li><b>Theorem 26 (Type Preservation for Parallel Reduction):</b> Assume <code>r ~ g</code>. If  <code>r &#8866; M &#8605; N</code> and <code>r &#8866; M : A</code>, then <code>g &#8866; N : A</code>.</b> </li>
 </ul>
-
+</p><p>
 <h2> Syntax</h2>
 To represent the simply-typed lambda-calculus in the logical framework LF, we define two LF types: the LF type <code>tp</code> for describing the types of our simply typed lambda-calculus, and the LF type <code>tm</code> for characterizing the terms of the lambda-calculus.<br>
 <h3> Definition of types and expressions</h3>
-The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since <code>arr</code> is a constructor which takes in two arguments, its type is <code>tp -> tp -> tp</code>.</p><br><pre><code>
-<span class="typ" id="tp">tp</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> tp T <br>
-<span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>.<br>
-<span class="constructor" id="nat">nat</span> : <a href="#tp">tp</a>.</code></pre>
-<p>
+The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since <code>arr</code> is a constructor which takes in two arguments, its type is <code>tp -> tp -> tp</code>.</p><br><pre><code><span class="typ" id="tp">tp</span> : <keyword>type</keyword>.
+<br><keyword>%name</keyword> tp T 
+<br><span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>.
+<br><span class="constructor" id="nat">nat</span> : <a href="#tp">tp</a>.
+</code></pre>
+<p></p><p>
 <h3> Definition of lambda-terms</h3>
-The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports &alpha;-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to &Beta;-reduction in the logical framework LF.</p><br><pre><code>
-<span class="typ" id="tm">tm</span> : <keyword>type</keyword>.<br><keyword>%name</keyword> tm M x<br>
-<span class="constructor" id="app">app</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>.<br>
-<span class="constructor" id="lam">lam</span> : (<a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>) &#x2192 <a href="#tm">tm</a>.</code></pre>
-<p>
+The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports &alpha;-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to &Beta;-reduction in the logical framework LF.</p><br><pre><code><span class="typ" id="tm">tm</span> : <keyword>type</keyword>.
+<br><keyword>%name</keyword> tm M x
+<br><span class="constructor" id="app">app</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>.
+<br><span class="constructor" id="lam">lam</span> : (<a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a>) &#x2192 <a href="#tm">tm</a>.
+</code></pre>
+<p></p><p>
 <h2> Judgements and RulesWe describe parallel reduction and typing judgement for the simply-typed lambda-calculus using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.</h2>
 <h3> Parallel reduction</h3>
-In this case study, we discuss a similar proof for an evaluation relation that "goes under a lambda" instead of proceeding by induction on (closed) evaluation and inversion on typing, hence only addressing contexts in a marginal way. We choose parallel reduction because it is a standard relation also used in other important case studies such as the Church-Rosser Theorem.</p><br><pre><code>
-<span class="typ" id="pr">pr</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword>.<br>
-<span class="constructor" id="pr_l">pr_l</span> : {x : <a href="#tm">tm</a>} (<a href="#pr">pr</a> x x &#x2192 <a href="#pr">pr</a> (M x) (N x)) &#x2192 <a href="#pr">pr</a> (<a href="#lam">lam</a> M) (<a href="#lam">lam</a> N).<br>
-<span class="constructor" id="pr_b">pr_b</span> : {x : <a href="#tm">tm</a>} (<a href="#pr">pr</a> x x &#x2192 <a href="#pr">pr</a> (M x) (M' x)) &#x2192 <a href="#pr">pr</a> N N' &#x2192 <a href="#pr">pr</a> (<a href="#app">app</a> (<a href="#lam">lam</a> M) N) (M' N').<br>
-<span class="constructor" id="pr_a">pr_a</span> : <a href="#pr">pr</a> M M' &#x2192 <a href="#pr">pr</a> N N' &#x2192 <a href="#pr">pr</a> (<a href="#app">app</a> M N) (<a href="#app">app</a> M' N').</code></pre>
-<p>
+In this case study, we discuss a similar proof for an evaluation relation that "goes under a lambda" instead of proceeding by induction on (closed) evaluation and inversion on typing, hence only addressing contexts in a marginal way. We choose parallel reduction because it is a standard relation also used in other important case studies such as the Church-Rosser Theorem.</p><br><pre><code><span class="typ" id="pr">pr</span> : <a href="#tm">tm</a> &#x2192 <a href="#tm">tm</a> &#x2192 <keyword>type</keyword>.
+<br><span class="constructor" id="pr_l">pr_l</span> : {x : <a href="#tm">tm</a>} <a href="#pr">pr</a> x x &#x2192 <a href="#pr">pr</a> M x N x &#x2192 <a href="#pr">pr</a> <a href="#lam">lam</a> M <a href="#lam">lam</a> N.
+<br><span class="constructor" id="pr_b">pr_b</span> : {x : <a href="#tm">tm</a>} <a href="#pr">pr</a> x x &#x2192 <a href="#pr">pr</a> M x M' x &#x2192 <a href="#pr">pr</a> N N' &#x2192 <a href="#pr">pr</a> <a href="#app">app</a> (<a href="#lam">lam</a> M) N M' N'.
+<br><span class="constructor" id="pr_a">pr_a</span> : <a href="#pr">pr</a> M M' &#x2192 <a href="#pr">pr</a> N N' &#x2192 <a href="#pr">pr</a> <a href="#app">app</a> M N <a href="#app">app</a> M' N'.
+</code></pre>
+<p></p><p>
 <h3> Typing judgement</h3>
-Following the judgements-as-types principle, we define the type family <code>oft</code> which is indexed by terms <code>tm</code> and types <code>tp</code>. Each inference rule is then represented as a constant of the type <code>oft M T</code>. The rule <code>of_app</code> encodes the typing rule for applications: from derivations of <code>oft M1 (arr T2 T)</code> and <code>oft M2 T2</code>, we obtain a derivation for <code>oft (app M1 M2) T</code>. The rule <code>of_lam</code> encodes directly the parametric hypothetical derivation “for all <code>x</code> assuming <code>oft x T1</code> we can derive <code>oft M T2</code> using the dependent function type <code>{x:tm} oft x T1 -> oft (M x) T2</code>. While in the on-paper formulation of the rule, we silently assumed that we renamed <code>x</code> appropriately to ensure that <code>x</code> is new, we explicitly rename the bound variables in the representation of this rule in LF, achieved by the LF application <code>M x</code>.</p><br><pre><code>
-<span class="typ" id="oft">oft</span> : <a href="#tm">tm</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.<br><keyword>%name</keyword> oft H <br>
-<span class="constructor" id="of_app">of_app</span> : <a href="#oft">oft</a> M1 (<a href="#arr">arr</a> T2 T) &#x2192 <a href="#oft">oft</a> M2 T2 &#x2192 <a href="#oft">oft</a> (<a href="#app">app</a> M1 M2) T.<br>
-<span class="constructor" id="of_lam">of_lam</span> : {x : <a href="#tm">tm</a>} (<a href="#oft">oft</a> x T1 &#x2192 <a href="#oft">oft</a> (M x) T2) &#x2192 <a href="#oft">oft</a> (<a href="#lam">lam</a> M) (<a href="#arr">arr</a> T1 T2).</code></pre>
-<p>
+Following the judgements-as-types principle, we define the type family <code>oft</code> which is indexed by terms <code>tm</code> and types <code>tp</code>. Each inference rule is then represented as a constant of the type <code>oft M T</code>. The rule <code>of_app</code> encodes the typing rule for applications: from derivations of <code>oft M1 (arr T2 T)</code> and <code>oft M2 T2</code>, we obtain a derivation for <code>oft (app M1 M2) T</code>. The rule <code>of_lam</code> encodes directly the parametric hypothetical derivation “for all <code>x</code> assuming <code>oft x T1</code> we can derive <code>oft M T2</code> using the dependent function type <code>{x:tm} oft x T1 -> oft (M x) T2</code>. While in the on-paper formulation of the rule, we silently assumed that we renamed <code>x</code> appropriately to ensure that <code>x</code> is new, we explicitly rename the bound variables in the representation of this rule in LF, achieved by the LF application <code>M x</code>.</p><br><pre><code><span class="typ" id="oft">oft</span> : <a href="#tm">tm</a> &#x2192 <a href="#tp">tp</a> &#x2192 <keyword>type</keyword>.
+<br><keyword>%name</keyword> oft H 
+<br><span class="constructor" id="of_app">of_app</span> : <a href="#oft">oft</a> M1 <a href="#arr">arr</a> T2 T &#x2192 <a href="#oft">oft</a> M2 T2 &#x2192 <a href="#oft">oft</a> <a href="#app">app</a> M1 M2 T.
+<br><span class="constructor" id="of_lam">of_lam</span> : {x : <a href="#tm">tm</a>} <a href="#oft">oft</a> x T1 &#x2192 <a href="#oft">oft</a> M x T2 &#x2192 <a href="#oft">oft</a> <a href="#lam">lam</a> M <a href="#arr">arr</a> T1 T2.
+</code></pre>
+<p></p><p>
 <h2> Context declarations</h2>
-Just as types classify expressions, contexts are classified by context schemas. The context schema <code>rCtx</code>, for example, defines the assumptions under which parallel reduction is meaningful.</p><br><pre><code>
-<keyword>schema</keyword> <span class="schema" id="rCtx">rCtx</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, pr_v:<a href="#pr">pr</a> x x);</code></pre>
-<p>
-The schema <code>tCtx</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>oft x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta; (used only in contexts) to tie <code>x</code> to <code>oft x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>tCtx</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.</p><br><pre><code>
-<keyword>schema</keyword> <span class="schema" id="tCtx">tCtx</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x t);</code></pre>
-<p>
-We extend <code>rCtx</code> and <code>tCtx</code> with the schema <code>trCtx</code> to apply typing judgements to parallel reductions.</p><br><pre><code>
-<keyword>schema</keyword> <span class="schema" id="trCtx">trCtx</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x t, pr_v:<a href="#pr">pr</a> x x);</code></pre>
-<p>
+Just as types classify expressions, contexts are classified by context schemas. The context schema <code>rCtx</code>, for example, defines the assumptions under which parallel reduction is meaningful.</p><br><pre><code><keyword>schema</keyword> <span class="schema" id="rCtx">rCtx</span> = <keyword>block</keyword> (x:<a href="#tm">tm</a>, pr_v:<a href="#pr">pr</a> x x);
+</code></pre>
+<p></p><p>
+The schema <code>tCtx</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>oft x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta; (used only in contexts) to tie <code>x</code> to <code>oft x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>tCtx</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.</p><br><pre><code><keyword>schema</keyword> <span class="schema" id="tCtx">tCtx</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x t);
+</code></pre>
+<p></p><p>
+We extend <code>rCtx</code> and <code>tCtx</code> with the schema <code>trCtx</code> to apply typing judgements to parallel reductions.</p><br><pre><code><keyword>schema</keyword> <span class="schema" id="trCtx">trCtx</span> = <keyword>some</keyword> [t : <a href="#tp">tp</a>] <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x t, pr_v:<a href="#pr">pr</a> x x);
+</code></pre>
+<p></p><p>
 <h2> Substitution Lemma</h2>
 Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free since substitutivity is just a by-product of
-hypothetical-parametric judgements. Strictly speaking, the substitution lemma does not need to be stated explicitly in order to prove type preservation for parallel reduction but we've encoded it regardless. While this is usually proved by induction on the first derivation, we show it as a corollary of the substitution principles.</p><br><pre><code>
-<keyword>rec</keyword> <span class="function" id="subst">subst</span> : (g:<a href="#tCtx">tCtx</a>) [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T) &#x22A2 <a href="#oft">oft</a> (M .. b.1) S] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (N ..) T] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (M .. (N ..)) S] = <keyword>fn</keyword> d1 &#x21D2 <keyword>fn</keyword> d2 &#x21D2 <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T) &#x22A2 D1 .. b.1 b.2] = d1 <keyword>in</keyword>
-<keyword>let</keyword>  [g &#x22A2 D2 ..] = d2 <keyword>in</keyword>
-[g &#x22A2 D1 .. _ (D2 ..)] </code></pre>
-<p>
+hypothetical-parametric judgements. Strictly speaking, the substitution lemma does not need to be stated explicitly in order to prove type preservation for parallel reduction but we've encoded it regardless. While this is usually proved by induction on the first derivation, we show it as a corollary of the substitution principles.</p><br><pre><code><keyword>rec</keyword> <span class="function" id="subst">subst</span> : (g:<a href="#tCtx">tCtx</a>) [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T) &#x22A2 <a href="#oft">oft</a> (M &hellip; b.1) S] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (N &hellip;) T] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (M &hellip; (N &hellip;)) S] =
+<keyword>fn</keyword> d1 &#x21D2 <keyword>fn</keyword> d2 &#x21D2 <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T) &#x22A2 D1 &hellip; b.1 b.2] =
+                                                                  d1 <keyword>in</keyword>
+                                                                  <keyword>let</keyword>  [g &#x22A2 D2 &hellip;] = d2 <keyword>in</keyword> [g &#x22A2 D1 &hellip; _ (D2 &hellip;)];
+</code></pre>
+<p></p><p>
 <h2> Type Preservation for Parallel Reductions</h2>
-Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions (Theorem 26): when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free. Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context <code>g</code></p><br><pre><code>
-<keyword>rec</keyword> <span class="function" id="tps">tps</span> : (g:<a href="#trCtx">trCtx</a>) [g &#x22A2 <a href="#pr">pr</a> (M ..) (N ..)] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (M ..) A] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (N ..) A] = <keyword>fn</keyword> r &#x21D2 <keyword>fn</keyword> d &#x21D2 <keyword>case</keyword> r <keyword>of</keyword>
-| [g &#x22A2 #p.3 ..]   &#x21D2 
-   d 
-| [g &#x22A2 <a href="#pr_b">pr_b</a> ((\x. (\pr_v. R1 .. x pr_v))) (R2 ..)] 
-   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 <a href="#of_app">of_app</a> (<a href="#of_lam">of_lam</a> ((\x. (\of_v. D1 .. x of_v)))) (D2 ..)] = d <keyword>in</keyword>
-    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T, pr_v:<a href="#pr">pr</a> x x) &#x22A2 F1 .. b.1 b.2] = <a href="#tps">tps</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x _, pr_v:<a href="#pr">pr</a> x x) &#x22A2 R1 .. b.1 b.3] [b, g &#x22A2 D1 .. b.1 b.2] <keyword>in</keyword>
-    <keyword>let</keyword>  [g &#x22A2 F2 ..] = <a href="#tps">tps</a> [g &#x22A2 R2 ..] [g &#x22A2 D2 ..] <keyword>in</keyword>
-    [g &#x22A2 F1 .. _ (F2 ..)] 
-| [g &#x22A2 <a href="#pr_l">pr_l</a> (\x. (\pr_v. R .. x pr_v))]   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 <a href="#of_lam">of_lam</a> (\x. (\of_v. D .. x of_v))] = d <keyword>in</keyword>
-    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T, pr_v:<a href="#pr">pr</a> x x) &#x22A2 F .. b.1 b.2] = <a href="#tps">tps</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x _, pr_v:<a href="#pr">pr</a> x x) &#x22A2 R .. b.1 b.3] [b, g &#x22A2 D .. b.1 b.2] <keyword>in</keyword>
-    [g &#x22A2 <a href="#of_lam">of_lam</a> (\x. (\of_v. F .. x of_v))] 
-| [g &#x22A2 <a href="#pr_a">pr_a</a> (R1 ..) (R2 ..)]   &#x21D2 
-   <keyword>let</keyword>  [g &#x22A2 <a href="#of_app">of_app</a> (D1 ..) (D2 ..)] = d <keyword>in</keyword>
-    <keyword>let</keyword>  [g &#x22A2 F1 ..] = <a href="#tps">tps</a> [g &#x22A2 R1 ..] [g &#x22A2 D1 ..] <keyword>in</keyword>
-    <keyword>let</keyword>  [g &#x22A2 F2 ..] = <a href="#tps">tps</a> [g &#x22A2 R2 ..] [g &#x22A2 D2 ..] <keyword>in</keyword>
-    [g &#x22A2 <a href="#of_app">of_app</a> (F1 ..) (F2 ..)]
- </code></pre>
-<p>
-Consider the clause <code>pr_b: pr (app (lam \x.M ..x) (N ..)) (M .. (N ..))</code>. Then we have as assumption <code>d:[g &#8866; oft (app (lam A (\x. M ..x))(N ..)) (arr A B)</code>. By inversion, we know that <code>d:[g &#8866; of_a (of_l \x. \u. D1 ..x u)(D2 ..) ]</code> where <code>D1</code> stands for <code>oft (M ..x) B</code> in the extended context <code>g, x:tm , u:oft x A</code>. We also know that <code>D2</code> describes a derivation <code>oft (N ..)A</code>. By the i.h. (recursive call) on <code>D2</code>, we therefore know <code>F2:oft (N' ..)A</code>. By the i.h. (recursive call) on <code>D1</code>, we obtain a derivation <code/>F1:oft (M' ..x) B</code> in <code>g, b:block (x:tm , of_x:oft x A)</code>. We now want to substitute for <code>x</code> the term <code>N'</code>, and for the derivation <code>oft x A</code> the derivation <code>F2</code>. This is achieved by applying to <code>F1</code> the substitution <code>.. _ (F2 ..)</code>. Since in the program above we do not have the name <code>N</code> available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
-</p>
+Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions (Theorem 26): when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free. Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context <code>g</code></p><br><pre><code><keyword>rec</keyword> <span class="function" id="tps">tps</span> : (g:<a href="#trCtx">trCtx</a>) [g &#x22A2 <a href="#pr">pr</a> (M &hellip;) (N &hellip;)] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (M &hellip;) A] &#x2192 [g &#x22A2 <a href="#oft">oft</a> (N &hellip;) A] =
+<keyword>fn</keyword> r &#x21D2 <keyword>fn</keyword> d &#x21D2 <keyword>case</keyword> r <keyword>of</keyword> 
+  | [g &#x22A2 #p.3 &hellip;] &#x21D2 d
+  | [g &#x22A2 <a href="#pr_b">pr_b</a> (&lambda;x. &lambda;pr_v. R1 &hellip; x pr_v) (R2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#of_app">of_app</a> <a href="#of_lam">of_lam</a> (&lambda;x. &lambda;of_v. D1 &hellip; x of_v) (D2 &hellip;)] = d <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T, pr_v:<a href="#pr">pr</a> x x) &#x22A2 F1 &hellip; b.1 b.2] =
+    <a href="#tps">tps</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x _, pr_v:<a href="#pr">pr</a> x x) &#x22A2 R1 &hellip; b.1 b.3] [g, b &#x22A2 D1 &hellip; b.1 b.2] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#tps">tps</a> [g &#x22A2 R2 &hellip;] [g &#x22A2 D2 &hellip;] <keyword>in</keyword> [g &#x22A2 F1 &hellip; _ (F2 &hellip;)]
+  | [g &#x22A2 <a href="#pr_l">pr_l</a> (&lambda;x. &lambda;pr_v. R &hellip; x pr_v)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#of_lam">of_lam</a> (&lambda;x. &lambda;of_v. D &hellip; x of_v)] = d <keyword>in</keyword>
+    <keyword>let</keyword>  [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x T, pr_v:<a href="#pr">pr</a> x x) &#x22A2 F &hellip; b.1 b.2] =
+    <a href="#tps">tps</a> [g, b : <keyword>block</keyword> (x:<a href="#tm">tm</a>, of_v:<a href="#oft">oft</a> x _, pr_v:<a href="#pr">pr</a> x x) &#x22A2 R &hellip; b.1 b.3] [g, b &#x22A2 D &hellip; b.1 b.2] <keyword>in</keyword>
+    [g &#x22A2 <a href="#of_lam">of_lam</a> (&lambda;x. &lambda;of_v. F &hellip; x of_v)]
+  | [g &#x22A2 <a href="#pr_a">pr_a</a> (R1 &hellip;) (R2 &hellip;)] &#x21D2
+    <keyword>let</keyword>  [g &#x22A2 <a href="#of_app">of_app</a> (D1 &hellip;) (D2 &hellip;)] = d <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 F1 &hellip;] = <a href="#tps">tps</a> [g &#x22A2 R1 &hellip;] [g &#x22A2 D1 &hellip;] <keyword>in</keyword>
+    <keyword>let</keyword>  [g &#x22A2 F2 &hellip;] = <a href="#tps">tps</a> [g &#x22A2 R2 &hellip;] [g &#x22A2 D2 &hellip;] <keyword>in</keyword>
+    [g &#x22A2 <a href="#of_app">of_app</a> (F1 &hellip;) (F2 &hellip;)];
+</code></pre>
+<p></p><p>
+Consider the clause <code>pr_b: pr (app (lam \x.M &hellip;x) (N &hellip;)) (M &hellip; (N &hellip;))</code>. Then we have as assumption <code>d:[g &#8866; oft (app (lam A (\x. M &hellip;x))(N &hellip;)) (arr A B)</code>. By inversion, we know that <code>d:[g &#8866; of_a (of_l \x. \u. D1 &hellip;x u)(D2 &hellip;) ]</code> where <code>D1</code> stands for <code>oft (M &hellip;x) B</code> in the extended context <code>g, x:tm , u:oft x A</code>. We also know that <code>D2</code> describes a derivation <code>oft (N &hellip;)A</code>. By the i.h. (recursive call) on <code>D2</code>, we therefore know <code>F2:oft (N' &hellip;)A</code>. By the i.h. (recursive call) on <code>D1</code>, we obtain a derivation <code/>F1:oft (M' &hellip;x) B</code> in <code>g, b:block (x:tm , of_x:oft x A)</code>. We now want to substitute for <code>x</code> the term <code>N'</code>, and for the derivation <code>oft x A</code> the derivation <code>F2</code>. This is achieved by applying to <code>F1</code> the substitution <code>&hellip; _ (F2 &hellip;)</code>. Since in the program above we do not have the name <code>N</code> available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
+</p><p></p><br><br><h3>To download the code: <a href="Context_Substitution.bel" target="_blank">Context_Substitution.bel</a></h3>
+
 </body>
 </html>

@@ -1,9 +1,9 @@
 % Beluga Development
 % Author: Brigitte Pientka
-``` 
+%{{
 # Algorithmic Equality for the Polymorphic Lambda-calculus (G-version)
-This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/EqualPoly.orbi" target="_blank">EqualPoly.orbi</a>. We examine Theorems 11, 18, & 19 and Lemma 18 from <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>, proving each by the <i>generalized context</i> (G) approach.  ```
-```<ul>
+This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/EqualPoly.orbi" target="_blank">EqualPoly.orbi</a>. We examine Theorems 11, 18, & 19 and Lemma 18 from <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>, proving each by the <i>generalized context</i> (G) approach.  }}%
+%{{<ul>
 -<b>Theorem 11(Admissibility of Reflexivity for Types):</b> If <code>g |- is_tp A</code> then <code>g |- atp A A</code>.<br>
 -<b>Theorem 13 (Admissibility of Reflexivity for Terms):</b> If <code>g |- is_tm M</code> then <code>g |- aeq M M</code>.<br>
 -<b>Lemma 18 (G-Promotion for Reflexivity, Symmetry, and Transitivity):</b>
@@ -13,10 +13,10 @@ This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/b
 -If <code>g:atpCtx</code> and <code>g |- aeq M N</code> then <code>g |- aeq N M</code>.<br>
 </ol>
 -<b>Theorem 19 (Completeness):</b> If <code>g:dtpCtx</code> and <code>g |- deq M N</code> then <code>g |- aeq M N</code>.
-</ul>```
+</ul>}}%
 
-```## Syntax
-The polymorphic lambda-calculus is introduced with the following declarations: ```
+%{{## Syntax
+The polymorphic lambda-calculus is introduced with the following declarations: }}%
 tp : type. %name tp T a.
 arr : tp -> tp -> tp.
 all : (tp -> tp) -> tp.
@@ -26,21 +26,21 @@ app : term -> term -> term.
 lam : (term -> term) -> term.
 tlam: (tp -> term) -> term.
 tapp: term -> tp -> term.
-```Note that we extend the untyped syntax with constructors for type abstraction <code>tlam</code>, type application <code>tapp</code>, and existential quantification over types <code>all</code>.```
+%{{Note that we extend the untyped syntax with constructors for type abstraction <code>tlam</code>, type application <code>tapp</code>, and existential quantification over types <code>all</code>.}}%
 
-```## Judgements and Rules
-We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.```
+%{{## Judgements and Rules
+We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.}}%
 % ----------------------------------------------------------------- 
-```### Algorithmic Equality for types
-We of course cannot define a term equality judgement only in our Untyped Equality case studies. We add the judgement for type equality, <code>atp A B</code>```
+%{{### Algorithmic Equality for types
+We of course cannot define a term equality judgement only in our Untyped Equality case studies. We add the judgement for type equality, <code>atp A B</code>}}%
 atp: tp -> tp -> type. %name atp Q u.
 at_al : ({a:tp} atp a a -> atp (T a) (S a))
 -> atp (all T) (all S).
 at_arr: atp T1 T2 -> atp S1 S2
 -> atp (arr T1 S1) (arr T2 S2).
 
-```### Algorithmic Equality for terms
-We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.```
+%{{### Algorithmic Equality for terms
+We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.}}%
 aeq: term -> term -> type. %name aeq D u.
 ae_a : aeq M1 N1 -> aeq M2 N2
     -> aeq (app M1 M2) (app N1 N2).
@@ -50,10 +50,10 @@ ae_tl: ({a:tp} atp a a -> aeq (M a) (N a))
         -> aeq (tlam (\a. M a)) (tlam (\a. N a)).
 ae_ta : aeq M N -> atp T S
     -> aeq (tapp M T) (tapp N S).
-```Note that type equality <code>atp A B</code> can be defined independently of term equality <code>aeq M N</code>. In other words, <code>aeq M N</code> depends on <code>atp A B</code>, but not vice-versa.```
+%{{Note that type equality <code>atp A B</code> can be defined independently of term equality <code>aeq M N</code>. In other words, <code>aeq M N</code> depends on <code>atp A B</code>, but not vice-versa.}}%
 % ----------------------------------------------------------------- %
-```### Declarative Equality for types
-We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.```
+%{{### Declarative Equality for types
+We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.}}%
 dtp: tp -> tp -> type. %name atp P u.
 dt_al : ({a:tp}dtp a a -> dtp (T a) (S a))
 -> dtp (all T) (all S).
@@ -64,8 +64,8 @@ dt_t: dtp T R -> dtp R S
      -> dtp T S.
 dt_s: dtp T S -> dtp S T.
 
-```### Declarative Equality for terms
-Declarative equality for terms is encoded similarly to its counterpart. Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction <code>de_tl</code> and type application <code>de_ta</code> ```
+%{{### Declarative Equality for terms
+Declarative equality for terms is encoded similarly to its counterpart. Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction <code>de_tl</code> and type application <code>de_ta</code> }}%
 deq: term -> term -> type.
 de_l: ({x:term} deq x x -> deq (M x) (N x))
      -> deq (lam (\x. M x)) (lam (\x. N x)).
@@ -81,20 +81,20 @@ de_t: deq M L -> deq L N
 de_s: deq T S -> deq S T.
 
 % ----------------------------------------------------------------- %
-```## Context declarations
-To establish reflexivity, transitivity, and symmetry of type equality, we define context of schema <code>atpCtx</code>.```
+%{{## Context declarations
+To establish reflexivity, transitivity, and symmetry of type equality, we define context of schema <code>atpCtx</code>.}}%
 schema atpCtx = block a:tp , _t:atp a a;
-```Since the case for lambda-abstraction <code>lam</code> deals with term assumptions while the type abstraction <code>tlam</code> introduces type assumptions, we need to specify <i>alternating</i> assumptions. This alternation of blocks is described by using <code>+</code> in Beluga's concrete syntax.```
+%{{Since the case for lambda-abstraction <code>lam</code> deals with term assumptions while the type abstraction <code>tlam</code> introduces type assumptions, we need to specify <i>alternating</i> assumptions. This alternation of blocks is described by using <code>+</code> in Beluga's concrete syntax.}}%
 schema aeqCtx = block (x:term, _u:aeq x x) + block (a:tp , _t:atp a a);
-```We encode schemas to define meaningful contexts for declarative equality in a similar fashion. Clearly, <code>dtpCtx</code> and <code>deqCtx</code> are linear extensions of <code>atpCtx</code> and <code>aeqCtx</code>. respectively.``` 
+%{{We encode schemas to define meaningful contexts for declarative equality in a similar fashion. Clearly, <code>dtpCtx</code> and <code>deqCtx</code> are linear extensions of <code>atpCtx</code> and <code>aeqCtx</code>. respectively.}}% 
 schema dtpCtx = block a: tp, u:atp a a , _t:dtp a a ;
 schema deqCtx = block x: term, u:aeq x x , _t:deq x x
    + block a: tp, u:atp a a , _t:dtp a a ;
 
 % ----------------------------------------------------------------- %
 % Admissibility of Reflexivity
-```## Proof of Reflexivity for Types
-The reflexivity for types (Theorem 11) can be implemented as a recursive function called <code>reftp</code> of type: <code>{g:atpCtx}{T:[g |- tp ]}[g |- atp (T ..)(T ..)]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g |- atp (T ..)(T ..)]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.```
+%{{## Proof of Reflexivity for Types
+The reflexivity for types (Theorem 11) can be implemented as a recursive function called <code>reftp</code> of type: <code>{g:atpCtx}{T:[g |- tp ]}[g |- atp (T ..)(T ..)]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g |- atp (T ..)(T ..)]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.}}%
 rec reftp : {g:atpCtx} {T:[g |- tp]} [g |- atp (T ..) (T ..)] =
 mlam g => mlam T => case [g |- (T ..)] of
 | [g |- #p.1 ..] => [g |- #p.2 ..]
@@ -110,15 +110,15 @@ mlam g => mlam T => case [g |- (T ..)] of
   let [g |- D2 ..] = reftp [g] [g |- S .. ] in
     [g |- at_arr (D1 ..) (D2 ..)]
 ;
-```In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[g |- T ..]</code> using pattern matching. There are three possible cases for <code>T</code>:
+%{{In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[g |- T ..]</code> using pattern matching. There are three possible cases for <code>T</code>:
 <ul>
 -<b>Variable case.</b> If <code>T</code> is a variable from <code>g</code>, we write <code>[g |- #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>atpCtx</code>, it contains blocks <code>a:tp , _t:atp a a;</code>. The first projection allows us to extract the type component, while the second projection denotes the proof of <code>_t:atp a a;</code>.
 -<b>Existential case.</b> If <code>T</code> is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening as described in the companion paper (Felty et al, 2014), which allows us to use <code>T</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
 -<b>Arrow case.</b> If <code>T</code> is an arrow type, we appeal twice to the induction hypothesis and build a proof for <code>[g |- atp (arr (T ..) (S ..)) (arr (T ..) (S ..))]</code>.
-</ul>```
+</ul>}}%
 
-```## Proof of Reflexivity for Terms
-The reflexivity for terms (Theorem 13) is likewise implemented as a recursive function, called <code>ref</code> of type: <code>{g:aeqCtx} {M:[g |- term]} [g |- aeq (M ..) (M ..)]]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g |- aeq (M ..)(M ..)]</code>.```
+%{{## Proof of Reflexivity for Terms
+The reflexivity for terms (Theorem 13) is likewise implemented as a recursive function, called <code>ref</code> of type: <code>{g:aeqCtx} {M:[g |- term]} [g |- aeq (M ..) (M ..)]]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g |- aeq (M ..)(M ..)]</code>.}}%
 rec ref : {g:aeqCtx} {M:[g |- term]} [g |- aeq (M ..) (M ..)] =
 mlam g => mlam M => case [g |- (M ..)] of
 | [g |- #p.1 ..] => [g |- #p.2 ..]
@@ -145,18 +145,18 @@ mlam g => mlam M => case [g |- (M ..)] of
   let [g |- D2 ..] = reftp [g] [g |- T .. ] in
     [g |- ae_ta (D1 ..) (D2 ..)]
 ;
-```This time, there are five possible cases for our meta-variable <code>M</code>:
+%{{This time, there are five possible cases for our meta-variable <code>M</code>:
 <ul>
 -<b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[g |- #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>aeqCtx</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.
 -<b>Lambda-abstraction case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening as described in the companion paper (Felty et al, 2014), which allows us to use M that has type <code>[g, x:tm |- tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y |- D .. b.1 b.2]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.
 -<b>Term application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeq (app (M1 ..) (M2 ..)) (app (M1 ..) (M2 ..))]</code>.
 -<b>Type abstraction case.</b> If <code>M</code> is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call. We use <code>M</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code> and construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
 -<b>Type application case.</b> If <code>M</code> is a type application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeqCtx (tapp (M ..) (T ..)) (tapp (M ..) (T ..))]</code>.
-</ul>```
+</ul>}}%
 
 % ----------------------------------------------------------------- %
 % General transitivity is admissible
-```## Proof of Transitivity for Types```
+%{{## Proof of Transitivity for Types}}%
 rec transtp: (g:atpCtx)
    [g |- atp (T ..) (R ..)] -> [g |- atp (R ..) (S ..)]
  -> [g |- atp (T ..) (S ..)] =
@@ -178,7 +178,7 @@ fn ae1 => fn ae2 => case ae1 of
     [g |- at_arr (D ..) (D' ..)]
 ;
 
-```## Proof of Transitivity for Terms```
+%{{## Proof of Transitivity for Terms}}%
 rec trans: (g:aeqCtx)
    [g |- aeq (T ..) (R ..)] -> [g |- aeq (R ..) (S ..)]
  -> [g |- aeq (T ..) (S ..)] =
@@ -216,7 +216,7 @@ fn ae1 => fn ae2 => case ae1 of
 
 % ----------------------------------------------------------------- %
 % General symmetry is admissible
-```## Proof of Symmetry for Types```
+%{{## Proof of Symmetry for Types}}%
 rec symtp: (g:atpCtx)
  [g |- atp (T ..) (R ..)] -> [g |- atp (R ..) (T ..)] =
 fn ae => case ae of
@@ -231,7 +231,7 @@ fn ae => case ae of
     [g |- at_arr (D1' ..) (D2' ..)]
  ;
 
-```## Proof of Symmetry for Terms```
+%{{## Proof of Symmetry for Terms}}%
 rec sym: (g:aeqCtx)
  [g |- aeq (T ..) (R ..)] -> [g |- aeq (R ..) (T ..)] =
 fn ae => case ae of
@@ -256,7 +256,7 @@ fn ae => case ae of
 
 % ----------------------------------------------------------------- %
 % Completeness
-```## Proof of Completeness for Types```
+%{{## Proof of Completeness for Types}}%
 rec ctp: (g:dtpCtx)
          [g |- dtp (T ..) (S ..)] -> [g |- atp (T ..) (S ..)] =
 fn e => case e of
@@ -282,7 +282,7 @@ fn e => case e of
      symtp [g |-  D ..]
 ;
 
-```## Proof of Completeness for Terms```
+%{{## Proof of Completeness for Terms}}%
 rec ceq: (g:deqCtx)
          [g |-  deq (T ..) (S ..)] -> [g |- aeq (T ..) (S ..)] =
 fn e => case e of

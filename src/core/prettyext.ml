@@ -480,7 +480,7 @@ module Ext = struct
               (fmt_ppr_lf_sch_elem lvl) f
 
       | LF.Schema (f :: fs) ->
-            fprintf ppf "%a@ +@ %a"
+            fprintf ppf "@[%a@] + @[%a@]"
               (fmt_ppr_lf_sch_elem lvl) f
               (fmt_ppr_lf_schema lvl) (LF.Schema fs)
 
@@ -535,9 +535,9 @@ module Ext = struct
             (R.render_name x)
 
       | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
-          fprintf ppf "%a, %s"
-            (fmt_ppr_lf_psi_hat cD 0) cPsi
+          fprintf ppf "%s, %a"
             (R.render_name x)
+            (fmt_ppr_lf_psi_hat cD 0) cPsi
 
     and fmt_ppr_lf_dctx cD _lvl ppf = function
       | LF.Null ->
@@ -577,7 +577,7 @@ module Ext = struct
           let name = R.render_name x in
 
           let cond = lvl > 0 in
-            fprintf ppf "%s{%s : %a}@ %a%s"
+            fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
               (name)
               (fmt_ppr_lf_typ LF.Empty cPsi  0) a
@@ -712,7 +712,7 @@ module Ext = struct
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
-            (fmt_ppr_lf_typ cD cPsi 0) tA
+            (fmt_ppr_lf_typ cD cPsi 1) tA
 
 (*       | Comp.TypPBox (_, tA, (LF.Null as cPsi)) ->
           fprintf ppf "%a"
@@ -888,7 +888,7 @@ module Ext = struct
 
       | Comp.LetPair(_, i, (x, y, e)) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%s <%s,%s> = %a %s %a%s"
+            fprintf ppf "%s%s <%s,%s> =@ %a %s %a%s"
               (l_paren_if cond)
               (to_html "let" Keyword)
               (R.render_name x)
@@ -900,7 +900,7 @@ module Ext = struct
 
       | Comp.Let(_, i, (x, e)) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%s %s = %a %s %a%s"
+            fprintf ppf "%s%s %s =@ %a %s@ %a%s"
               (l_paren_if cond)
               (to_html "let" Keyword)
               (R.render_name x)
@@ -922,16 +922,16 @@ module Ext = struct
               fprintf ppf "%a"
                 (fmt_ppr_lf_ctyp_decl cD 1) decl
           | LF.Dec (cD, decl) ->
-              fprintf ppf "%a @ %a"
+              fprintf ppf "%a %a"
                 (ppr_ctyp_decls' ) cD
               (fmt_ppr_lf_ctyp_decl cD 1) decl
         and ppr_ctyp_decls ppf = function
           | LF.Empty -> ()
-          | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
+          | other -> fprintf ppf "%a" (ppr_ctyp_decls') other
         in
         begin match b with
           | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
-              fprintf ppf "%s %a %a = %a %s@ %a"
+              fprintf ppf "@[%s %a %a =@ %a %s@ %a@]"
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix 0) cD'
                 (fmt_ppr_meta_obj cD' 0) m0
@@ -939,7 +939,7 @@ module Ext = struct
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
           | Comp.Branch(_, cD', pat, e) ->
-              fprintf ppf "%s %a %a = %a %s@ %a"
+              fprintf ppf "@[%s %a %a=@ %a %s@ %a@]"
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix  0) cD'
                 (fmt_ppr_pat_obj cD' 0) pat
@@ -948,7 +948,7 @@ module Ext = struct
                 (fmt_ppr_cmp_exp_chk cD' 0) e
 
           | Comp.BranchSBox (_, cD1', (cPsi, s, _cs), e) -> 
-              fprintf ppf "%s %a([%a] %a)@  = %a %s@ %a"
+              fprintf ppf "@[%s %a([%a] %a)= %a %s@ %a@]"
                 (to_html "let" Keyword)
                 (ppr_ctyp_decls ) cD1'
                 (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -965,7 +965,7 @@ module Ext = struct
         end
 
       | Comp.Case (_, prag, i, bs) ->
-            fprintf ppf "%s %a %s%s%a"
+            fprintf ppf "%s %a %s %s%a"
               (to_html "case" Keyword)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (to_html "of" Keyword)
@@ -1094,7 +1094,7 @@ module Ext = struct
                   (fmt_ppr_ctyp_decls') cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           in
-            fprintf ppf "@[%a@]@ " (fmt_ppr_ctyp_decls') other
+            fprintf ppf "@[%a@] " (fmt_ppr_ctyp_decls') other
           )
 
     and fmt_ppr_cmp_branches cD lvl ppf = function
@@ -1119,12 +1119,12 @@ module Ext = struct
 
     and fmt_ppr_cmp_branch cD _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a]@]@]@]"
+          fprintf ppf "@ @[<hov2>| @[%a[%a]@]@]"
             (fmt_ppr_cmp_branch_prefix  0) cD1
             (fmt_ppr_pat_obj cD1 0) pat
 
       | Comp.Branch (_, cD1', Comp.PatMetaObj (_, mO), e) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a %s @] @[<2>@ %a@]@]@]@ "
+          fprintf ppf "@ @[<hov2>| %a%a %s@ @[<v2>%a@]@]"
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
@@ -1135,8 +1135,7 @@ module Ext = struct
             (fmt_ppr_cmp_exp_chk cD1' 1) e
 
       | Comp.Branch (_, cD1', pat, e) ->
-
-          fprintf ppf "@ @[<v2>| @[<v0>@[%a |- %a @] %s @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<hov2>| %a%a %s@ @[<v2>%a@]@]"
              (fmt_ppr_cmp_branch_prefix  0) cD1'
              (fmt_ppr_pat_obj cD1' 0) pat
              (symbol_to_html DblRArr)
@@ -1156,7 +1155,7 @@ module Ext = struct
             | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
           in
 
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a] %a)@ @] %s @]@ @[<2>@ @]@]@ "
+            fprintf ppf "@ @[<hov2>| %a@[([%a] %a)@ %s @]@]"
               (ppr_ctyp_decls ) cD1'
 
               (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -1169,7 +1168,7 @@ module Ext = struct
                 fprintf ppf "%a"
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
             | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
+                fprintf ppf "%a@ %a"
                   (ppr_ctyp_decls' ) cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           and ppr_ctyp_decls ppf = function
@@ -1177,7 +1176,7 @@ module Ext = struct
             | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
           in
 
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[([%a] %a)@ @] %s %a"
+            fprintf ppf "@ @[<v2>| %a ([%a] %a) %s@ @[<v2>%a@]@]"
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_lf_sub  cD cPsi 0) s
@@ -1197,7 +1196,7 @@ module Ext = struct
 
     let fmt_ppr_cmp_rec prefix lvl ppf = function (* +ext Pretty Printing Descends from here. *)
       | Comp.RecFun (x, a, e) ->
-          fprintf ppf "%s %s : %a =@[<v2>%a@]"
+          fprintf ppf "@[<h>%s %s : %a@] =@[<v2>%a@]"
             (to_html prefix Keyword)
             (to_html (R.render_name x) (ID Fun))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
@@ -1207,11 +1206,11 @@ module Ext = struct
       | [] -> ()
       | h::t -> fmt_ppr_cmp_rec "rec" lvl ppf h;
                 List.iter (fun x -> fmt_ppr_cmp_rec "and" lvl ppf x) t;
-                fprintf ppf ";@\n"
+                fprintf ppf ";@ "
 
     let fmt_ppr_mrec prefix lvl ppf = function
       | Sgn.Typ(_, n, kA) ->
-        fprintf ppf "@\n%s %s : %a = "
+        fprintf ppf "%s %s : %a = "
           (to_html prefix Keyword)
           (to_html (R.render_name n) (ID Typ))
           (fmt_ppr_lf_kind LF.Null 0) kA
@@ -1221,7 +1220,7 @@ module Ext = struct
             (fmt_ppr_lf_typ LF.Empty LF.Null 0)  tA
       | Sgn.CompTyp(_, n, kA)
       | Sgn.CompCotyp(_, n, kA) ->
-          fprintf ppf "@\n%s %s : %a = "
+          fprintf ppf "%s %s : %a = "
             (to_html prefix Keyword)
             (to_html (R.render_name n) (ID Typ))
             (fmt_ppr_cmp_kind LF.Empty 0) kA
@@ -1240,22 +1239,22 @@ module Ext = struct
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
-          fprintf ppf "@\n%s : %a."
+          fprintf ppf "@[<h>%s : %a.@]@\n"
             (to_html (R.render_name x) (ID Constructor))
             (fmt_ppr_lf_typ LF.Empty LF.Null lvl)  a
 
-      | Sgn.CompConst (_, x, a) ->
-          fprintf ppf "@\n| %s : %a"
-            (to_html (R.render_name x) (ID Constructor))
-            (fmt_ppr_cmp_typ LF.Empty lvl)  a
-
       | Sgn.Typ (_, x, k) ->
-          fprintf ppf "@\n%s : %a."
+          fprintf ppf "@[<h>%s : %a.@]@\n"
             (to_html (R.render_name x) (ID Typ))
             (fmt_ppr_lf_kind LF.Null lvl) k
 
+      | Sgn.CompConst (_, x, a) ->
+          fprintf ppf "@[<h>| %s : %a@]@\n"
+            (to_html (R.render_name x) (ID Constructor))
+            (fmt_ppr_cmp_typ LF.Empty lvl)  a
+
       | Sgn.CompTypAbbrev (_, x, k, a) ->
-          fprintf ppf "%s %s@\n : %a = @\n%a;"
+          fprintf ppf "@[<v>%s %s : %a =@ %a;@]@\n"
             (to_html "datatype" Keyword)
             (R.render_name  x)
             (fmt_ppr_cmp_kind LF.Empty 0) k
@@ -1263,13 +1262,13 @@ module Ext = struct
 
       | Sgn.CompCotyp(_, x, k)
       | Sgn.CompTyp (_, x, k) ->
-          fprintf ppf "@\n%s %s : %a = "
+          fprintf ppf "@[<v>%s %s : %a = @]@\n"
             (to_html "datatype" Keyword)
             (to_html (R.render_name x) (ID Typ))
             (fmt_ppr_cmp_kind LF.Empty 0) k
 
       | Sgn.Schema (_, x, schema) ->
-          fprintf ppf "@\n%s %s = %a;"
+          fprintf ppf "@[<h>%s %s = %a;@]@\n"
             (to_html "schema" Keyword)
             (to_html (R.render_name  x) (ID Schema))
             (fmt_ppr_lf_schema 0) schema
@@ -1278,12 +1277,12 @@ module Ext = struct
            (fmt_ppr_rec lvl ppf) lrec
 
       | Sgn.Pragma (_, Sgn.NamePrag(name, s, s_opt)) -> 
-         fprintf ppf "%s %s %s %s"
+         fprintf ppf "@[<h>%s %s %s %s@]@\n"
           (to_html "%name" Keyword) (R.render_name name)
           s (match s_opt with None -> "" | Some x -> x)
 
       | Sgn.Val (_, x, _, i) ->
-          fprintf ppf "@\n%s %s = %a"
+          fprintf ppf "@[%s %s = %a@]@\n"
             (to_html "let" Keyword)
             (R.render_name  x)
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
@@ -1294,7 +1293,7 @@ module Ext = struct
 
       | Sgn.Module(_, name, decls) ->
           let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
-          fprintf ppf "@\n%s %s = %s@\n@[<v2>%a@]@\n%s;@\n"
+          fprintf ppf "@[%s %s = %s@ @[<v2>%a@]@ %s;@]@\n"
                     (to_html "module" Keyword) (name) (to_html "struct" Keyword) (aux) decls (to_html "end" Keyword)
       | Sgn.MRecTyp(l, decls) ->
           fmt_ppr_mrecs 0 ppf (List.flatten decls)

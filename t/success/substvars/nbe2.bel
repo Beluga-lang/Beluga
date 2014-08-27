@@ -17,71 +17,67 @@ embed : neut b -> norm b.
 schema ctx = neut T;
 
 datatype Sem : {g:ctx} [ |- tp] -> ctype =
-| Syn :  [g |- norm b] -> Sem [g] [ |- b]
-| Slam : {g:ctx}({h:ctx} {#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Base :  [g |- norm b] -> Sem [g] [ |- b]
+| Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
-rec sem_wkn : {g:ctx} {h:ctx} {#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
-mlam g => mlam h => mlam #W => fn e =>
+rec sem_wkn : {h:ctx} {#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+mlam h => mlam #W => fn e =>
 case e of
-| Syn [g |- R ..] => Syn ([h |- R #W[..]])
-| Slam [g] f =>
-  Slam [h] (mlam h' => mlam #W2 => f [h'] [h' |- #W[#W2[..]]])
+| Base [g |- R ..] => Base [h |- R #W[..]]
+| Arr [g] f =>
+  Arr [h] (mlam h' => mlam #W2 => f [h'] [h' |- #W[#W2[..]]])
 ;
 
 typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T]} Sem [h] [ |- T]);
 
-rec env_ext : {g:tctx} Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S] [h] =
-mlam g => fn s => fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p ..] of
+rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S] [h] =
+fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p ..] of
 | [g,x:tm S |-  x] => e
 | [g,x:tm S |-  #q .. ] => s [ |- T ] [g |- #q ..]
 ;
 
 rec env_wkn : {h':ctx}{h:ctx}{#W:h' |- h} Env [g] [h] -> Env [g] [h'] =
 mlam h' => mlam h => mlam #W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
-sem_wkn [h] [h'] [h' |- #W[..]] (s [ |- T] [g |- #p ..])
+sem_wkn [h'] [h' |- #W[..]] (s [ |- T] [g |- #p ..])
 ;
 
-rec eval : {g:tctx}{h:ctx} Env [g] [h] -> [g |- tm S] -> Sem [h] [ |- S]  =
-mlam g => mlam h =>  fn s => fn t =>
+rec eval : [g |- tm S] -> Env [g] [h] -> Sem [h] [ |- S]  =
+fn t => fn s => let s : Env [g] [h] = s in
 case t of
 | [g |- #p .. ] =>  s [ |- _] [g |- #p .. ]
 | [g |- lam (\x. E .. x) ] =>
-  Slam [h] (mlam h' => mlam #W => fn e =>
-         eval [g,x:tm _] [h'] (env_ext [g] (env_wkn [h'] [h] [h' |- #W[..]] s) e)
-              [g,x:tm _ |- E .. x]
-         )
+  Arr [h] (mlam h' => mlam #W => fn e =>
+     eval [g,x:tm _ |- E .. x] (env_ext (env_wkn [h'] [h] [h' |- #W[..]] s) e))
 | [g |- app (E1 ..) (E2 ..) ] =>
-  let (Slam [h] f) = eval [g] [h] s [g |- E1 ..] in
-      f [h] [h |- ..] (eval [g] [h] s [g |- E2 ..])
+  let Arr [h] f = eval [g |- E1 ..] s in
+   f [h] [h |- ..] (eval [g |- E2 ..] s)
 ;
-
 
 rec reflect : [g |- neut A] ->  Sem [g] [ |- A] =
 fn r => let [g |- R .. ] : [g |- neut A] = r in
 case [ |- A] of
-| [ |- b ] => Syn [g |- embed (R ..)]
-| [ |- arr T S ] =>  Slam [g] (body [g |- R ..])
+| [ |- b ] => Base [g |- embed (R ..)]
+| [ |- arr T S ] =>  Arr [g] (body [g |- R ..])
 
-and body : (g:ctx) {R : [g |- neut (arr T S)]} {h : ctx} {#W : h |- g} Sem [h] [ |- T] -> Sem [h] [ |- S] =
+and body : (g:ctx) {R:[g |- neut (arr T S)]}{h:ctx}{#W : h |- g} Sem [h] [ |- T] -> Sem [h] [ |- S] =
 mlam R => mlam h => mlam #W => fn e =>
 let [h |- N ..] = reify e in reflect [h |- rapp (R #W[..]) (N ..)]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A] =
 fn e => case e of
-| Syn [g |- R ..] => [g |- R ..]
-| Slam [g] f =>
+| Base [g |- R ..] => [g |- R ..]
+| Arr [g] f =>
      let s = (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x])) in
      let [g,x:neut _ |-  E .. x] = reify s
      in [g |- nlam (\x. E .. x)]
 ;
 
-rec initialMap :  {T:[ |- tp]}{#p:[ |- tm T]} Sem [ ] [ |- T] =
+rec emp_env : Env [] [] =
 mlam T => mlam #p => impossible [ |- #p] in [ ];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
-fn t => reify (eval [] [] initialMap t)
-;
+fn t => reify (eval t emp_env);
 
 

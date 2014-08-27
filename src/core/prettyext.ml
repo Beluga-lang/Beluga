@@ -234,7 +234,7 @@ module Ext = struct
               (l_paren_if cond)
               (fmt_ppr_lf_typ cD cPsi 2) t1
               (symbol_to_html RArr)
-              (fmt_ppr_lf_typ cD cPsi 0) t2
+              (fmt_ppr_lf_typ cD cPsi 1) t2
               (r_paren_if cond)
 
       | LF.ArrTyp (_, t1, t2) ->
@@ -308,11 +308,11 @@ module Ext = struct
         | LF.TList(_, [x]) -> fmt_ppr_lf_normal cD cPsi lvl ppf x
         | LF.TList(_, l) ->
           let length = List.length l in 
-          fprintf ppf "%s" (l_paren_if (lvl > 1));
+          fprintf ppf "%s" (l_paren_if (lvl > 0));
           List.iteri (fun i x -> 
             if i = length - 1 then fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x
             else fprintf ppf "%a " (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x) l;
-          fprintf ppf "%s" (r_paren_if (lvl > 1));
+          fprintf ppf "%s" (r_paren_if (lvl > 0));
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && true
@@ -1213,22 +1213,22 @@ module Ext = struct
         fprintf ppf "%s %s : %a = "
           (to_html prefix Keyword)
           (to_html (R.render_name n) (ID Typ))
-          (fmt_ppr_lf_kind LF.Null 0) kA
+          (fmt_ppr_lf_kind LF.Null 1) kA
       | Sgn.Const(_, n, tA) -> 
           fprintf ppf "@\n| %s : %a"
             (to_html (R.render_name n) (ID Constructor))
-            (fmt_ppr_lf_typ LF.Empty LF.Null 0)  tA
+            (fmt_ppr_lf_typ LF.Empty LF.Null 1)  tA
       | Sgn.CompTyp(_, n, kA)
       | Sgn.CompCotyp(_, n, kA) ->
           fprintf ppf "%s %s : %a = "
             (to_html prefix Keyword)
             (to_html (R.render_name n) (ID Typ))
-            (fmt_ppr_cmp_kind LF.Empty 0) kA
+            (fmt_ppr_cmp_kind LF.Empty 1) kA
       | Sgn.CompConst(_, n, tA)
       | Sgn.CompDest(_, n, tA) ->
         fprintf ppf "@\n| %s : %a"
           (to_html (R.render_name n) (ID Constructor))
-          (fmt_ppr_cmp_typ LF.Empty 0)  tA
+          (fmt_ppr_cmp_typ LF.Empty 1)  tA
       | _ -> ()
 
     let fmt_ppr_mrecs lvl ppf = function

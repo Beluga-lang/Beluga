@@ -24,7 +24,6 @@ let header =
 \n\t\ta:visited { color: #00C; background: transparent }\
 \n\t\ta:active { color: #C00; background: transparent }\
 \n\t\tkeyword { color: #3333cc ; background: transparent }\
-\n\t\tp {display: inline;}\
 \n\t\tpre {\
 \n\t\t\tborder: 1px dashed maroon;  display:block;\
 \n\t\t\tpadding:8px; background-color: #dddddd;}\

@@ -2,9 +2,9 @@
 
 ```
 # Type Uniqueness for the Simply-typed Lambda-calculus
-This case-study is a mechanization of <a href="https://github.com/pientka/ORBI/blob/master/benchmarks/TypingSimply.orbi" target="_blank">TypingSimply.orbi</a>.  We prove that every lambda term has a unique type. For a detailled description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
+We prove that every lambda term has a unique type. Type uniqueness is also a benchmark in <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 
-## Syntax
+## Syntax: Types and Lambda-terms
 We first represent the simply-typed lambda-calculus in the logical framework LF: the LF type <code>tp</code> describes the types of our simply typed lambda-calculus, and the LF type <code>tm</code> characterizes the terms of the lambda-calculus.<br>
 The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corresponding to the types <code>nat</code> and <code>arr T S</code>, respectively. Since `arr` is a constructor which takes in two arguments, its type is `tp -> tp -> tp`.
 ```
@@ -16,7 +16,7 @@ datatype tp: type =
 ;
 
 ```
-### Definition of lambda-terms
+
 The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.
 ```
 
@@ -25,7 +25,7 @@ datatype term: type =
 | app : term -> term -> term
 ;
 
-```##  Typing rules
+```##  Typing Rules
 We describe typing judgment using the type family <code>has_type</code> which relates terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.```
 
 datatype hastype: term -> tp -> type = 
@@ -35,7 +35,8 @@ datatype hastype: term -> tp -> type =
        -> hastype (app M1 M2) T
 ;
 
-```### Equality predicates
+```
+## Equality 
 Since Beluga does not support equality types, we implement equality by reflexivity using the type family <code>equal</code>.```
 
 equal: tp -> tp -> type.
@@ -46,7 +47,7 @@ The schema <code>txG</code> describes a context containing assumptions <code>x:t
 
 schema xtG = some [t:tp] block x:term, _t:hastype x t;
 
-```## Typing Uniqueness by Induction of the First Derivation
+```## Typing uniqueness proof 
 Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype (M ..) T]</code>.```
 
 % induction on [g |-  hastype (M ..) T]

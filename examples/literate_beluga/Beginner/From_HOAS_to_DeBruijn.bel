@@ -1,0 +1,129 @@
+%{{
+# From HOAS to De Bruijn, and back
+
+We show that the HOAS (Higher-Order Abstract Syntax) term
+representation, where we use the LF-level abstraction as a generic
+binder, is isomorphic to the first-order De Bruijn representation,
+where variables are represented by naturals.
+}}%
+
+datatype tp : type =
+  | o : tp
+  | arr : tp -> tp -> tp;
+
+%{{
+## Simply typed λ-terms in HOAS
+
+They are represented as customary, as an LF-level `type`.
+}}%
+
+datatype hoas : tp -> type =
+  | lam : (hoas A -> hoas B) -> hoas (arr A B)
+  | app : hoas (arr A B) -> hoas A -> hoas B;
+
+%{{
+These terms are intrinsically well-typed: values of LF type `hoas` correspond uniquely to λ-terms up to α-equivalence. For instance, here is an HOAS λ-term with one free variable, `z`:
+}}%
+
+let ex1 : [z : hoas (arr o o) |- hoas (arr (arr o o) (arr o o))] =
+    [z:hoas (arr o o) |- lam \x. lam \y. app z (app x y)];
+
+%{{
+If we traverse such a term, we will have to represent open terms,
+that are valid in a context of a certain form. This context schema is
+a list of terms together with their types:
+}}%
+
+schema ctx = some [t:tp] hoas t;
+
+%{{
+## Simply typed λ-terms with De Bruijn indexes
+
+We can define first-order, De Bruijn-indexed λ-terms as a
+computational type, a `ctype`, since it is strictly positive. They are
+parameterized by a (LF-level) type `tp` and a context `ctx`. Instead
+of defining a data type of list of types, we reuse Beluga's built-in
+data structure of context, classified by the schema above.
+}}%
+
+datatype DB : {g:ctx} [|- tp] -> ctype =
+  | Lam : DB [g, x:hoas A] [|- B] -> DB [g] [|- arr A B]
+  | App : DB [g] [|- arr A B] -> DB [g] [|- A] -> DB [g] [|- B]
+  | O : DB [g, x:hoas A] [|- A]
+  | S : DB [g] [|- B] -> DB [g, x:hoas A] [|- B];
+
+%{{
+For instance, here is the same λ-term as above, in De Bruijn encoding:
+}}%
+
+let ex2 : DB [z:hoas (arr o o)] [|- arr (arr o o) (arr o o)] =
+    Lam (Lam (App (S (S O)) (App (S O) O)));
+
+%{{
+## From HOAS to De Bruijn
+
+The following function descend recursively inside a (possibly open) LF
+object of type `hoas A` to construct the equivalent De Bruijn term.
+}}%
+
+rec db : (g:ctx) [g |- hoas A] -> DB [g] [|- A] =
+    fn m => case m of
+    | [g |- app (M ..) (N ..)] => App (db [g |- M ..]) (db [g |- N ..])
+    | [g |- lam \x. M .. x] : [ g |- hoas (arr A B)] =>
+      Lam (db [g, x:hoas A |- M .. x])
+    | [g, x:hoas A |- x ] => O
+    | [g, x:hoas B |-  #p ..] => S (db [g |- #p .. ]);
+
+%{{
+
+Note that, in the `lam` case, we used type annotation in the pattern
+to bind a type variable `A` refered to in the branch. The
+quantification over contexts `(g:ctx)` in the type is implicit: `g` is
+not bound in the term (nor is `A`). There are two variable cases,
+corresponding respectively to whether the variable is the "top"
+variable, or a variable deeper in the environment.
+
+As a test, the following declaration computes the expected value,
+i.e. `ex2`:
+
+}}%
+
+let test : DB [z : hoas (arr o o)] [|- arr (arr o o) (arr o o)] = db ex1;
+
+%{{
+## From De Bruijn to HOAS
+
+The following recursive function descend recursively in an indexed,
+computational object `DB` to construct the equivalent HOAS contextual
+object.
+}}%
+
+rec hoas : (g:ctx) DB [g] [|- A] -> [g |- hoas A] =
+    fn m => case m of
+    | Lam m =>
+      let [g, x: hoas _ |- M .. x] = hoas m in
+      [g |- lam \x. M .. x]
+    | App m n =>
+      let [g |- M ..] = hoas m in
+      let [g |- N ..] = hoas n in
+      [g |- app (M ..) (N ..)]
+    | O =>
+       let (m : DB [g, x:hoas _] [|- B]) = m in
+      [g, x:hoas _ |- x]
+    | S m =>
+      let [g |- M ..] = hoas m in
+      [g, x |- M ..];
+%{{
+
+Note that, contrarily to the previous function, the recursive calls'
+values are bound to metavariables by `let`s, and cannot be inlined in
+the returned value, because they belong to the LF level. In the `O`
+case, a dummy `let` is used to bind the environment tail `g`, so that
+it can be refered to in the returned value.
+
+As a test, the following declaration computes the expected value,
+i.e. `ex1`:
+}}%
+
+let test : [z : hoas (arr o o) |- hoas (arr (arr o o) (arr o o))] =
+    hoas ex2;

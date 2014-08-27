@@ -1,0 +1,132 @@
+%{{
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+# Normalization by Evaluation
+
+This case study shows how to implement a type-preserving normalizer using normalization by evaluation [Berger and Schwichtenberg 1991]. Here we compute $\eta$-long normal forms for the simply-typed lambda calculus. See also [Cave and Pientka 2012] for more information on this example.
+
+The setup is a standard intrinsically-typed lambda calculus: 
+}}%
+
+tp : type.                %name tp T.
+b : tp.
+arr: tp -> tp -> tp.
+
+tm : tp -> type.          %name tm E.
+app : tm (arr T S) -> tm T -> tm S.
+lam : (tm T -> tm S) -> tm (arr T S).
+
+schema tctx = tm T;
+
+%{{
+Below, we describe $\eta$-long normal forms. Notice that we allow embedding of neutral terms into normal terms only at base type `b`: this enforces $\eta$-longness.
+}}%
+
+neut : tp -> type.       %name neut R.
+norm : tp -> type.       %name norm M.
+nlam : (neut T -> norm S) -> norm (arr T S).
+rapp : neut (arr T S) -> norm T -> neut S.
+embed : neut b -> norm b.
+
+schema ctx = neut T;
+
+%{{
+The key idea is to evaluate terms into a special domain of semantic values, which can then be reified back into normal forms.
+Below we describe the domain of semantic values, which we can think of as being defined by recursion on the type. At base type, semantic values are precisely normal forms. At arrow type `arr A B`, a semantic value `Sem [g] [ |- arr A B]` is a function from semantic values of type `A` in an extended context `h` to semantic values of type `B` in `h`. The extension of a context is tracked by a substitution `#W` which transports normal terms in context `g` to normal terms in context `h`.
+
+In the course of this development, `#W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g,x1:neut T1,...,xn:neut Tn`, but the extra generality does no harm here.
+}}%
+
+datatype Sem : {g:ctx} [ |- tp] -> ctype =
+| Base :  [g |- norm b] -> Sem [g] [ |- b]
+| Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+           -> Sem [g] [ |- arr A B]
+;
+
+%{{
+We can weaken semantic values:
+}}%
+
+rec sem_wkn : {h:ctx} {#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+mlam h => mlam #W => fn e =>
+case e of
+| Base [g |- R ..] => Base [h |- R #W[..]]
+| Arr [g] f =>
+  Arr [h] (mlam h' => mlam #W2 => f [h'] [h' |- #W[#W2[..]]])
+;
+
+%{{
+Environments:
+}}%
+
+typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T]} Sem [h] [ |- T]);
+
+rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S] [h] =
+fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p ..] of
+| [g,x:tm S |-  x] => e
+| [g,x:tm S |-  #q .. ] => s [ |- T ] [g |- #q ..]
+;
+
+rec env_wkn : {h':ctx}{h:ctx}{#W:h' |- h} Env [g] [h] -> Env [g] [h'] =
+mlam h' => mlam h => mlam #W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
+sem_wkn [h'] [h' |- #W[..]] (s [ |- T] [g |- #p ..])
+;
+
+%{{
+We evaluate a term in an environment providing semantic values for each free variable:
+}}%
+
+rec eval : [g |- tm S] -> Env [g] [h] -> Sem [h] [ |- S]  =
+fn t => fn s => let s : Env [g] [h] = s in
+case t of
+| [g |- #p .. ] =>  s [ |- _] [g |- #p .. ]
+| [g |- lam (\x. E .. x) ] =>
+  Arr [h] (mlam h' => mlam #W => fn e =>
+     eval [g,x:tm _ |- E .. x] (env_ext (env_wkn [h'] [h] [h' |- #W[..]] s) e))
+| [g |- app (E1 ..) (E2 ..) ] =>
+  let Arr [h] f = eval [g |- E1 ..] s in
+   f [h] [h |- ..] (eval [g |- E2 ..] s)
+;
+
+%{{
+Reflect and reify
+}}%
+
+rec reflect : [g |- neut A] ->  Sem [g] [ |- A] =
+fn r => let [g |- R .. ] : [g |- neut A] = r in
+case [ |- A] of
+| [ |- b ] => Base [g |- embed (R ..)]
+| [ |- arr T S ] =>  Arr [g] (body [g |- R ..])
+
+and body : (g:ctx) {R:[g |- neut (arr T S)]}{h:ctx}{#W : h |- g} Sem [h] [ |- T] -> Sem [h] [ |- S] =
+mlam R => mlam h => mlam #W => fn e =>
+let [h |- N ..] = reify e in reflect [h |- rapp (R #W[..]) (N ..)]
+
+and reify : Sem [g] [ |- A] -> [g |- norm A] =
+fn e => case e of
+| Base [g |- R ..] => [g |- R ..]
+| Arr [g] f =>
+     let s = (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x])) in
+     let [g,x:neut _ |-  E .. x] = reify s
+     in [g |- nlam (\x. E .. x)]
+;
+
+%{{
+Finally, we can normalize terms, by first evaluating them into semantic values, then reifying them back into semantic values.
+}}%
+
+rec emp_env : Env [] [] =
+mlam T => mlam #p => impossible [ |- #p] in [ ];
+
+rec nbe : [ |- tm A] -> [ |- norm A] =
+fn t => reify (eval t emp_env);
+
+%{{
+One could also implement `nbe` to directly normalize terms in an environment: `[g |- tm A] -> [h |- norm A]` where `h` is appropriately related to `g`. We leave this as an exercise for the reader.
+}}%
+
+

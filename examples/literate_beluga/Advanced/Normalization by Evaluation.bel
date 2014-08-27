@@ -110,9 +110,8 @@ and reify : Sem [g] [ |- A] -> [g |- norm A] =
 fn e => case e of
 | Base [g |- R ..] => [g |- R ..]
 | Arr [g] f =>
-     let s = (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x])) in
-     let [g,x:neut _ |-  E .. x] = reify s
-     in [g |- nlam (\x. E .. x)]
+ let [g,x:neut _ |- E .. x] = reify (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x]))
+ in [g |- nlam (\x. E .. x)]
 ;
 
 %{{

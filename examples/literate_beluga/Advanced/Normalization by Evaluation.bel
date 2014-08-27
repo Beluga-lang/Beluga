@@ -96,15 +96,15 @@ case t of
 Reflect and reify
 }}%
 
+rec app' : (g:ctx) {R:[g |- neut (arr T S)]} [g |- norm T] -> [g |- neut S] =
+mlam R => fn n => let [g |- N ..] = n in [g |- rapp (R ..) (N ..)];
+
 rec reflect : [g |- neut A] ->  Sem [g] [ |- A] =
 fn r => let [g |- R .. ] : [g |- neut A] = r in
 case [ |- A] of
 | [ |- b ] => Base [g |- embed (R ..)]
-| [ |- arr T S ] =>  Arr [g] (body [g |- R ..])
-
-and body : (g:ctx) {R:[g |- neut (arr T S)]}{h:ctx}{#W : h |- g} Sem [h] [ |- T] -> Sem [h] [ |- S] =
-mlam R => mlam h => mlam #W => fn e =>
-let [h |- N ..] = reify e in reflect [h |- rapp (R #W[..]) (N ..)]
+| [ |- arr T S ] =>
+ Arr [g] (mlam h => mlam #W => fn e => reflect (app' [h |- R #W[..]] (reify e)))
 
 and reify : Sem [g] [ |- A] -> [g |- norm A] =
 fn e => case e of

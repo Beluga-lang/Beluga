@@ -211,7 +211,7 @@ module Ext = struct
               (l_paren_if cond)
               (name)
               (fmt_ppr_lf_typ cD cPsi 0) a
-              (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
+              (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 2) b
               (r_paren_if cond)
       | LF.PiTyp (_,LF.TypDecl (x, a), b) ->
           let cond = lvl > 1 in

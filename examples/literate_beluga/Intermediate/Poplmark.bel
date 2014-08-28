@@ -136,7 +136,7 @@ rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S ..) (Q ..)] -> [g |- sub (Q..) (T
 
 
 %{{
-We only mark out in this special case: <br>
+We only mark out this special case: <br>
 if &emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;`d1 : [g |- sub (forall (S1..) (S2..)) (forall (Q1..) (Q2..))]`  <br>
 and &emsp;`d2 : [g |- sub (forall (Q1..) (Q2..)) (forall (T1..) (T2..))]`<br>
  then  `f  : [g |- sub (forall (S1..) (S2..)) (forall (T1..) (T2..))]`.

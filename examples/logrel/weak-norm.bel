@@ -111,13 +111,12 @@ mlam S ⇒ fn h =>
  [ |- halts/m (onestep S MS') V]
 ;
 
-%{{
-Next we prove closure of Reduce under expansion. This fol-
-lows the handwritten proof, proceeding by induction on the type
-A which is an implicit argument. In the base case we appeal to
-`halts_step`, while in the `Arr` case we must also appeal to the
-induction hypothesis at the range type, going inside the function
-position of applications.
+%{{ 
+Next we prove closure of Reduce under expansion. This follows the
+handwritten proof, proceeding by induction on the type A which is an
+implicit argument. In the base case we appeal to `halts_step`, while
+in the `Arr` case we must also appeal to the induction hypothesis at
+the range type, going inside the function position of applications.
 }}%
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- T] [ |- M'] -> Reduce [|- T] [ |- M] =
 mlam MS => fn r => case r of

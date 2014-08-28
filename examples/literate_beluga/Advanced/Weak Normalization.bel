@@ -1,0 +1,182 @@
+%coverage
+%{{
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+$\frac 1 2$
+
+# Weak head normalization for simply-typed lambda calculus
+
+This example follows the proof presented in 
+<a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
+Cave and Pientka[2013]</a>.
+
+First, let's define a simply typed &lambda;-calculus with one type:
+}}%
+datatype tp : type =
+| b :  tp
+| arr : tp -> tp -> tp
+;
+%name tp T.        
+
+tm : tp -> type.          %name tm E.
+app : tm (arr T S) -> tm T -> tm S.
+lam : (tm T -> tm S) -> tm (arr T S).
+c : tm b.
+
+%{{ The type `tm` defines our family of simply-typed lambda terms
+indexed by their type as an LF signature. In typical higher-order
+abstract syntax (HOAS) fashion, lambda abstraction takes a function
+representing the abstraction of a term over a variable. There is no
+case for variables, as they are treated implicitly in HOAS.
+
+We now encode the step relation of the operational semantics. In
+particular, we create the `step` type indexed by two terms that
+represent each step of the computation.
+}}%
+step : tm A → tm A → type.
+beta : step (app (lam M) N) (M N).
+stepapp : step M M' -> step (app M N) (app M' N).
+
+%{{Notice how the `beta` rule re-uses the LF notion of substitution by
+computing the application of `M` to `N`. <br/>
+
+Finally, we define:
+-  a multiple step reduction `mstep`. 
+- values `val`
+- `halts` to encode that a term halts if it steps into a value.
+}}%
+
+mstep : tm A -> tm A -> type.  %name mstep S.
+refl : mstep M M.
+onestep : step M M' -> mstep M' M'' -> mstep M M''.
+
+val : tm A -> type. %name val V.
+val/c : val c.
+val/lam : val (lam M).
+
+halts : tm A -> type.  %name halts H.
+halts/m : mstep M M' -> val M' -> halts M.
+
+%{{
+
+## Reducibility
+
+Reducibility cannot be directly encoded at the LF layer, since it
+involves a strong, computational function space. Hence we move to the
+computation layer of Beluga, and employ an indexed recursive
+type. Contextual LF objects and contexts which are embedded into
+computation-level types and programs are written inside `[ ]`.
+}}%
+
+datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
+| I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| Arr :  [ |- halts M] ->
+    ({N:[ |- tm A]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
+  -> Reduce [ ⊢ arr A B ] [ |- M]
+;
+
+%{{
+A term of type `i` is reducible if it halts, and a `term M` of type
+`arr A B` is reducible if it halts, and moreover for every reducible
+`N` of type `A`, the application `app M N` is reducible. We write
+`{N:[.tm A]}` for explicit &Pi;-quantification over `N`, a closed term
+of type `A`. To the left of the turnstile in `[|- tm A]` is where one
+writes the context the term is defined in – in this case, it is empty.  
+
+In this definition, the arrows represent the usual computational
+function space, not the weak function space of LF. We note that this
+definition is not (strictly) positive, since `Reduce` appears to the
+left of an arrow in the `Arr` case. Allowing unrestricted such
+definitions destroys the soundness of our system. Here we note that
+this definition is stratified by the type: the recursive occurrences
+of `Reduce` are at types `A` and `B` which are smaller than `arr A B`.
+`Reduce` is defined by induction on the type of the reducible
+term(additionally this is why we cannot leave the type implicit).
+
+
+Now, we need to prove some more or less trivial lemmas that are
+usually omitted in paper presentations.  
+
+First, we prove that halts is closed under expansion in the `halts_step` lemma.
+}}%
+
+rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
+mlam S ⇒ fn h =>
+ let [ |- halts/m MS' V] = h in
+ [ |- halts/m (onestep S MS') V]
+;
+
+%{{ 
+Next we prove closure of Reduce under expansion. This follows the
+handwritten proof, proceeding by induction on the type A which is an
+implicit argument. In the base case we appeal to `halts_step`, while
+in the `Arr` case we must also appeal to the induction hypothesis at
+the range type, going inside the function position of applications.
+}}%
+rec bwd_closed : {S:[ |- step M M']} Reduce [|- T] [ |- M'] -> Reduce [|- T] [ |- M] =
+mlam MS => fn r => case r of
+| I ha => I (halts_step [ |- MS] ha)
+| Arr ha f => Arr (halts_step [ |- MS] ha)
+  (mlam N => fn rn =>
+   bwd_closed [ |- stepapp MS] (f [ |- N] rn))
+;
+
+
+%{{
+The trivial fact that reducible terms halt has a corresponding
+trivial proof, analyzing the construction of the the proof of 
+'Reduce[|- T] [|- M]'
+}}%
+rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
+fn r => case r of
+| I h => h
+| Arr h f => h
+;
+
+%{{
+# Reducibility of substitutions
+}}%
+
+schema ctx = tm T;
+
+datatype RedSub : {g:ctx}{#S: |- g} ctype =
+| Nil : RedSub  [ ] [ |- ^ ]
+| Dot : RedSub  [g] [ |- #S[^] ] → Reduce [|- A] [ |- M]
+     → RedSub [g, x:tm A] [ |- #S[^] M ] 
+;
+
+
+
+rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
+mlam g => mlam #p => fn rs => case [g |- #p ..] of
+ | [g',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
+ | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
+                      lookup [g'] [g' |-  #q ..] rs'
+;
+
+%{{
+# Main theorem
+}}%
+
+rec main : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
+ mlam g => mlam M => fn rs => case [g |- M ..] of
+| [g |- #p ..] => lookup [g] [g |- #p ..] rs
+| [g |- lam (\x. M1 .. x)] =>
+ Arr [ |- halts/m refl val/lam]
+   (mlam N => fn rN =>
+    bwd_closed [ |- beta] (main [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
+ | [g |- app (M1 ..) (M2 ..)] =>
+  let Arr ha f = main [g] [g |- M1 ..] rs in
+  f [ |- _ ] (main [g] [g |- M2 ..] rs)
+| [g' |-  c] => I [ |- halts/m refl val/c]
+;
+
+rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
+mlam M => reduce_halts (main [] [ |- M] Nil)
+;
+

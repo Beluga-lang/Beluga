@@ -187,7 +187,7 @@ module Ext = struct
     | RArr -> if !Html.printingHtml then "&#x2192" else "->"
     | DblRArr -> if !Html.printingHtml then "&#x21D2" else "=>"
     | Dots -> if !Html.printingHtml then "&hellip;" else ".."
-    | Lam -> if !Html.printingHtml then "&lambda;" else "=>"
+    | Lam -> if !Html.printingHtml then "&lambda;" else "\\"
     
     let rec fmt_ppr_lf_typ  cD cPsi lvl ppf = function
       | LF.AtomTerm(_, n) -> fmt_ppr_lf_normal cD cPsi lvl ppf n

@@ -49,6 +49,8 @@ let generatePage orig =
     let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
     let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
     let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
+    let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
+    let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
     (* Output the HTML file *)
     let oc = open_out !filename in
     let out = output_string oc in

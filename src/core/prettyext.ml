@@ -1282,7 +1282,7 @@ module Ext = struct
           s (match s_opt with None -> "" | Some x -> x)
 
       | Sgn.Val (_, x, _, i) ->
-          fprintf ppf "@[%s %s = %a@]@\n"
+          fprintf ppf "@[%s %s = %a;@]@\n"
             (to_html "let" Keyword)
             (R.render_name  x)
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i

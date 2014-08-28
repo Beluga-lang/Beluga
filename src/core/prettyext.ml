@@ -814,7 +814,7 @@ module Ext = struct
       | Comp.PatTrue _ -> fprintf ppf "tt"
       | Comp.PatFalse _ -> fprintf ppf "ff"
       | Comp.PatAnn (_, pat, tau) ->
-          fprintf ppf "(%a : %a)"
+          fprintf ppf "%a : %a"
             (fmt_ppr_pat_obj cD 0) pat
             (fmt_ppr_cmp_typ cD 0) tau
 
@@ -1132,14 +1132,14 @@ module Ext = struct
              * -bp
              *)
             (symbol_to_html DblRArr)
-            (fmt_ppr_cmp_exp_chk cD1' 1) e
+            (fmt_ppr_cmp_exp_chk cD1' 0) e
 
       | Comp.Branch (_, cD1', pat, e) ->
           fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v2>%a@]@]"
              (fmt_ppr_cmp_branch_prefix  0) cD1'
              (fmt_ppr_pat_obj cD1' 0) pat
              (symbol_to_html DblRArr)
-             (fmt_ppr_cmp_exp_chk cD1' 1) e
+             (fmt_ppr_cmp_exp_chk cD1' 0) e
 
       | Comp.BranchBox (_, cD1', (cPsi, pattern, _cs)) ->
           let rec ppr_ctyp_decls' ppf = function
@@ -1281,10 +1281,17 @@ module Ext = struct
           (to_html "%name" Keyword) (R.render_name name)
           s (match s_opt with None -> "" | Some x -> x)
 
-      | Sgn.Val (_, x, _, i) ->
+      | Sgn.Val (_, x, None, i) ->
           fprintf ppf "@[%s %s = %a;@]@\n"
             (to_html "let" Keyword)
             (R.render_name  x)
+            (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
+
+      | Sgn.Val (_, x, Some(tA), i) ->
+          fprintf ppf "@[%s %s : %a =@ %a;@]@\n"
+            (to_html "let" Keyword)
+            (R.render_name  x)
+            (fmt_ppr_cmp_typ LF.Empty 0) tA
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
 
       | Sgn.Query _ ->

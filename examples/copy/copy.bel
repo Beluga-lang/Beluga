@@ -50,4 +50,3 @@ let t = copy [x:term _ ] [x : term nat |-  s x];
  let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat)] ([y] app y (lam \x. (lam \y. app x y)));
  let t = copy [y:term nat,x:term bool] ([x,y] s x);
 }%
-}%

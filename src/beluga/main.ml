@@ -162,8 +162,12 @@ let main () =
           printf "\n## Type Reconstruction: %s ##\n" file_name;
         let sgn' = Recsgn.recSgnDecls sgn in
         let _ = Store.Modules.reset () in
-        if !Debug.chatter <> 0 then
-          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
+        if !Debug.chatter <> 0 then begin 
+          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn' end
+        else begin 
+          let _ = List.map (fun x -> Pretty.Int.DefaultPrinter.sgnDeclToString x) sgn' in ()
+        end;
+
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;
           ignore (Coverage.force
@@ -201,10 +205,7 @@ let main () =
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
           if !Html.genHtml then begin
-            if !Html.filename <> "/dev/null" then
-              let l = String.length file_name in 
-              Html.filename := ((String.sub file_name 0 (l-3)) ^ "html");
-            Html.generatePage () 
+            Html.generatePage file_name
           end;
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");

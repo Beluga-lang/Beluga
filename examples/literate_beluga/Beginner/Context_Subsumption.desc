@@ -1,1 +1,0 @@
-This example demonstrates Beluga's capacity for automatic context subsumption. If schema W is a prefix of a schema W0, then we can always use a context of schema W0 in place of a context of schema W. Essentially, we allow the user to pass a context of schema W0 where a context with schema W if W0 contains at least as much information as W.

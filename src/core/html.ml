@@ -10,61 +10,70 @@ let page : Buffer.t = Buffer.create 0
 (* display:block; border: 1px dashed maroon;
  *)
 let header =
-"<html>\n<head>" ^
-"\n\t<meta charset=\"UTF-8\">"
-"\n\t<style type=\"text/css\">" ^
-"\n\t\tbody {" ^
-"\n\t\t\tpadding: 2em 1em 2em 1em;" ^
-"\n\t\t\tmargin: 0;" ^
-"\n\t\t\tfont-family: sans-serif;" ^
-"\n\t\t\tcolor: black;" ^
-"\n\t\t\tbackground: white;}" ^
-"\n\t\ta{text-decoration:none;}"^
-"\n\t\ta:link { color: #00C; background: transparent }" ^
-"\n\t\ta:visited { color: #00C; background: transparent }" ^
-"\n\t\ta:active { color: #C00; background: transparent }" ^
-"\n\t\tkeyword { color: #3333cc ; background: transparent }" ^
-"\n\t\tp {display: inline;}"^
-"\n\t\tpre {"^
-"\n\t\t\tborder: 1px dashed maroon;  display:block; "^
-"\n\t\t\tpadding:8px; background-color: #dddddd;}" ^
-"\n\t\tcode {" ^
-"\n\t\t\tbackground-color: #dddddd;"^
-"\n\t\t\tcolor: black; font-family: \"courier\";margin:0; "^
-"\n\t\t\twhite-space: pre-wrap; }" ^
-"\n\t\t.typ {color: #660000; font-weight:bold}" ^
-"\n\t\t.constructor {color: #335C85; font-weight:bold}" ^
-"\n\t\t.function {color: #660033; font-weight:bold}" ^
-"\n\t\t.schema {color: #6600CC; font-weight:bold}" ^
-"\n\t</style>\t" ^
-"</head>\n"
+"<html>\n<head>\
+\n\t<meta charset=\"UTF-8\">\
+\n\t<style type=\"text/css\">\
+\n\t\tbody {\
+\n\t\t\tpadding: 2em 1em 2em 1em;\
+\n\t\t\tmargin: 0;\
+\n\t\t\tfont-family: sans-serif;\
+\n\t\t\tcolor: black;\
+\n\t\t\tbackground: white;}\
+\n\t\ta{text-decoration:none;}\
+\n\t\ta:link { color: #00C; background: transparent }\
+\n\t\ta:visited { color: #00C; background: transparent }\
+\n\t\ta:active { color: #C00; background: transparent }\
+\n\t\tkeyword { color: #3333cc ; background: transparent }\
+\n\t\tpre {\
+\n\t\t\tborder: 1px dashed maroon;  display:block;\
+\n\t\t\tpadding:8px; background-color: #dddddd;}\
+\n\t\tcode {\
+\n\t\t\tbackground-color: #dddddd;\
+\n\t\t\tcolor: black; font-family: \"courier\";margin:0;\
+\n\t\t\twhite-space: pre-wrap; }\
+\n\t\t.typ {color: #660000; font-weight:bold}\
+\n\t\t.constructor {color: #335C85; font-weight:bold}\
+\n\t\t.function {color: #660033; font-weight:bold}\
+\n\t\t.schema {color: #6600CC; font-weight:bold}\
+\n\t</style>\n\
+</head>\n"
 
-let generatePage () = 
-begin
-  (* Merge different code blocks into, as long as there isn't anything inbetween *)
-  let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-  let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
-
-  (* Output the HTML file *)
-  let oc = open_out !filename in
-  let out = output_string oc in
-  begin match !css with
-  | NoCSS -> out  (page ^ "\n");
-  | Normal -> begin
-      out header;
-      out "<body>\n";
-      out  page;
-      out "\n</body>\n</html>\n"
-    end
-  | File s -> begin
-      out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
-      out s; out "\">\n</head>\n<body>\n";
-      out page;
-      out "\n</body>\n</html>\n"
-    end
-  end;
-  close_out oc
-end
+let generatePage orig = 
+  if not (!filename = "/dev/null") then
+    let l = String.length orig in 
+    filename := ((String.sub orig 0 (l-3)) ^ "html");
+  begin
+    let orig = Filename.basename orig in
+    (* Merge different code blocks into, as long as there isn't anything inbetween *)
+    let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
+    let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
+    let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
+    let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
+    (* Output the HTML file *)
+    let oc = open_out !filename in
+    let out = output_string oc in
+    begin match !css with
+    | NoCSS -> begin
+        out  (page ^ "\n");
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+      end
+    | Normal -> begin
+        out header;
+        out "<body>\n";
+        out  page;
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+        out "\n</body>\n</html>\n"
+      end
+    | File s -> begin
+        out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
+        out s; out "\">\n</head>\n<body>\n";
+        out page;
+        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+        out "\n</body>\n</html>\n"
+      end
+    end;
+    close_out oc
+  end
 
 (* let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>" *)
 
@@ -97,11 +106,12 @@ let appendAsComment innerHtml =
     |> Str.global_replace (Str.regexp "</ol>\\([ \n\r]?\\)<ol>") "\\1"
        (* Two space at the end of a line for a <br> *)
     |> Str.global_replace (Str.regexp "  $") "<br>"
+       (* An empty line to start a new paragraph *)
+    |> Str.global_replace (Str.regexp "^[ \t]*$") "</p><p>"
        (* 5+ dashes for <hr> *)
     |> Str.global_replace (Str.regexp "^-----+") "<hr>"
   in
-  let innerHtml = Str.global_replace (Str.regexp_string "```") "" innerHtml in
-  let innerHtml = Str.global_replace (Str.regexp_string "|-") "&#8866;" innerHtml in
+  let innerHtml = String.sub innerHtml 3 ((String.length innerHtml)-6) in
   let innerHtml = from_markdown innerHtml in
   Buffer.add_string page  ("\n" ^ "<p>" ^ innerHtml ^ "</p>")
 

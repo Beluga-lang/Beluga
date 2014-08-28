@@ -89,6 +89,8 @@ module Int : sig
     val ppr_cmp_branch    : LF.mctx -> Comp.gctx -> Comp.branch      -> unit
 
     (* Conversion to string *)
+    val sgnDeclToString   : Sgn.decl -> string
+    
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
@@ -115,6 +117,7 @@ module Int : sig
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
     val subCompTypToString   : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
+
 
   end
 

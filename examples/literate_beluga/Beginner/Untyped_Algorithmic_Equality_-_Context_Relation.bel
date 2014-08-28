@@ -1,4 +1,4 @@
-```	
+%{{	
 #Algorithmic Equality for the Untyped Lambda-calculus (R-version)
 We discuss completeness of algorithmic equality for untyped lambda-terms with respect to declarative equality of lambda-terms. 
 This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
@@ -9,10 +9,10 @@ The mechanization highlights several aspects:
 - First-class substitution variables
 - Context weakening and strengthening with inductive datatypes
 
-```
+}}%
 % Definition of lambda-terms
-```<h3>Syntax</h3>
-Untyped lambda-terms are introduced with LF-level declarations. The context schemas translate directly from the ORBI file. ```
+%{{<h3>Syntax</h3>
+Untyped lambda-terms are introduced with LF-level declarations. The context schemas translate directly from the ORBI file. }}%
 
 tm: type.
 app: tm -> tm -> tm.
@@ -23,21 +23,21 @@ ae_l: ({x:tm} aeq x x -> aeq (M x) (N x))
           -> aeq (lam (\x. M x)) (lam (\x. N x)).
 ae_a: aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
 
-``````
+
 
 schema xG = tm;
 schema xaG = block x:tm, u:aeq x x;
 
-```
+%{{
 ## Context Relationships via Inductive Datatypes
 
-The key to express context weakening and strengthening is the ability to relate two contexts via a substitution. In Beluga, we can describe context relations using <i>inductive datatypes</i> as a relation between context <code>phi</code>, context <code>psi</code>, and a substitution <code>#S</code> that maps variables from <code>phi</code> to the context <code>psi</code>, formally <code>#S:psi |- phi</code> as follows:```
+The key to express context weakening and strengthening is the ability to relate two contexts via a substitution. In Beluga, we can describe context relations using <i>inductive datatypes</i> as a relation between context <code>phi</code>, context <code>psi</code>, and a substitution <code>#S</code> that maps variables from <code>phi</code> to the context <code>psi</code>, formally <code>#S:psi |- phi</code> as follows:}}%
 datatype Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa : Ctx_xaR [phi] [psi] [psi |- #S[..] ]
            -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] b.1 ]
 ;
-```The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.```
+%{{The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.}}%
 
 datatype EqV : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
 | EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1 ]
@@ -64,9 +64,9 @@ datatype Eq : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> cty
          [phi |-  lam \x. M .. x] [psi |-  lam \x. M' .. x]
 ;
 
-```
+%{{
 <h3>Proof of Reflexivity, Compact version</h3>
-The recursive function <code>refl</code> of type <code>{phi:xG}{M: [phi |-  tm]} Ctx_xaR [phi] [psi] [ psi |- #S[..] ] -> [psi |-  aeq (M #S[..]) (M #S[..])]</code>:  for all contexts <code>phi</code> and <code>psi</code> that have schema <code>xG</code> and <code>xaG</code>, respectively, if we have a substitution <code>#S</code> s.t. <code>#S:psi |- phi</code> then for all terms <code>M</code> depending on <code>phi</code>, we have a proof that <code>[ psi |- aeq (#p #S[..]) (#p #S[..])]</code>." Since the term <code>M</code> depends only on the context <code>phi</code>, it is explicitly weakened through applying <code>#S</code> to move it to the context <code>psi</code>.```
+The recursive function <code>refl</code> of type <code>{phi:xG}{M: [phi |-  tm]} Ctx_xaR [phi] [psi] [ psi |- #S[..] ] -> [psi |-  aeq (M #S[..]) (M #S[..])]</code>:  for all contexts <code>phi</code> and <code>psi</code> that have schema <code>xG</code> and <code>xaG</code>, respectively, if we have a substitution <code>#S</code> s.t. <code>#S:psi |- phi</code> then for all terms <code>M</code> depending on <code>phi</code>, we have a proof that <code>[ psi |- aeq (#p #S[..]) (#p #S[..])]</code>." Since the term <code>M</code> depends only on the context <code>phi</code>, it is explicitly weakened through applying <code>#S</code> to move it to the context <code>psi</code>.}}%
 
 rec ctx_membership :
           {#p: [phi |-  tm] }
@@ -105,15 +105,15 @@ mlam phi => mlam M => fn cr => case [phi |-  M ..] of
   [psi |-  ae_l \x.\u. D .. x u]
 
 ;
-```In the application case, we appeal to the induction hypothesis on <code>[phi |- M1 ..]</code> and <code>[ |- M2 ::]</code> through a recursive call. Since the context <code>phi</code> and the context <code>psi</code> do not change, we can simply make the recursive all on <code>[phi |- M1 ::]</code> and <code>[phi |- M2 ::]</code> respectively using the relation <code>cr</code>.
+%{{In the application case, we appeal to the induction hypothesis on <code>[phi |- M1 ..]</code> and <code>[ |- M2 ::]</code> through a recursive call. Since the context <code>phi</code> and the context <code>psi</code> do not change, we can simply make the recursive all on <code>[phi |- M1 ::]</code> and <code>[phi |- M2 ::]</code> respectively using the relation <code>cr</code>.
 <br><br>
 When we have <code>[phi |- lam \x.M :: x]</code>, we want to appeal to the induction hypothesis on <code>[phi |- x:tm. M ::x]</code>. In this instance, we also need a witness relating the context <code>[phi |- x:tm. M ::x]</code> to the context <code>[psi, b:block (x:tm,u:aeq x x)]</code>. Recall that <code>cr</code> stands for <code>Ctx_xaR [phi] [psi] [psi |- #S]</code>. Therefore, by <code>Cons_xa</code>, we know there exists <code>Ctx_xaR [phi ,x:tm] [psi ,b:block (x:tm,u:aeq x x)] [psi, b |- #S b.1]</code> and we appeal to the induction hypothesis by <code>reflR [phi,x:tm] [phi,x:tm.M ::x] (Cons_xa cr)</code>.
 <br><br>
-Finally, we take a close look at the variable case. We distinguish two different cases depending on the position of the variable in the context by pattern matching on the shape of <code>phi</code>. If <code>[phi,x:tm |- x]</code>, then we inspect the context relation <code>cr</code>. Pattern matching forces the original context <code>phi</code> to be <code>phi,x:tm</code>. By pattern matching on <code>cr'</code>, we observe that there exists a relation <code>cr'</code>, s.t. <code>Ctx_xaR [phi] [psi] [psi |- #S]</code>. Moreover, <code>psi = psi,b:block (x:tm,u:aeq x x)</code> and <code>#S = #S b.1</code> where the left hand side denotes the original context and substitution, while the right hand side shows the context and substitution refinement after pattern matching. We must show that there exists a proof for <code>aeq x x</code> in the context <code>psi, b:block (x:tm,u:aeq x x)</code>. This is simply <code>b.2</code>.```
-```<br><br>
+Finally, we take a close look at the variable case. We distinguish two different cases depending on the position of the variable in the context by pattern matching on the shape of <code>phi</code>. If <code>[phi,x:tm |- x]</code>, then we inspect the context relation <code>cr</code>. Pattern matching forces the original context <code>phi</code> to be <code>phi,x:tm</code>. By pattern matching on <code>cr'</code>, we observe that there exists a relation <code>cr'</code>, s.t. <code>Ctx_xaR [phi] [psi] [psi |- #S]</code>. Moreover, <code>psi = psi,b:block (x:tm,u:aeq x x)</code> and <code>#S = #S b.1</code> where the left hand side denotes the original context and substitution, while the right hand side shows the context and substitution refinement after pattern matching. We must show that there exists a proof for <code>aeq x x</code> in the context <code>psi, b:block (x:tm,u:aeq x x)</code>. This is simply <code>b.2</code>.}}%
+%{{<br><br>
 Following we generalize reasoning about terms which contain substitution variables, reasoning explicitly about equality between terms <code>M</code> and <code>M #S[..]</code>. Since we cannot pattern match directly on <code>M #S[..]</code> (because <code>#S</code> is a general substitution and we do not enforce on the type-level that it is a variable-variable substitution) we cannot use unification to solve equations; If <code>#S</code> would be known to be a pattern substitution, then we could solve equations such as <code>M #S[..] = app (M1 ..) (M2 ..)</code>; we hence encode such equalities explicitly.
 
-<h3>Proof of Reflexivity, Expanded</h3>```
+<h3>Proof of Reflexivity, Expanded</h3>}}%
 
 rec ctx_member :
           {#p: [phi |-  tm] }
@@ -248,7 +248,7 @@ datatype Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 ;
 
 % ---------------------------------------------------------------------------
-``` Equality in addition to properties about equality, such as deterministic and existence. These properties are all encoded relationally, because we do not support functions in computation-level types. If we were to support functions in computation-level types, these proofs and some of these relations would go away.```
+%{{ Equality in addition to properties about equality, such as deterministic and existence. These properties are all encoded relationally, because we do not support functions in computation-level types. If we were to support functions in computation-level types, these proofs and some of these relations would go away.}}%
 
 datatype EqV' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
 | EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..] b.1 ]

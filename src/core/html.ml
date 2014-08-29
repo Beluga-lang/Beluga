@@ -51,7 +51,7 @@ let generatePage orig =
     let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
     let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
     let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
-    let page = Str.global_replace (Str.regexp "\\([^$]\\)\\") "\\1&lambda;" page in
+    let page = Str.global_replace (Str.regexp "\\\\\\([a-z][a-z0-9]*\\.\\)") "&lambda;\\1" page in
     (* Output the HTML file *)
     let oc = open_out !filename in
     let out = output_string oc in

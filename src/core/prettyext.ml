@@ -931,7 +931,7 @@ module Ext = struct
         in
         begin match b with
           | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
-              fprintf ppf "@[%s %a %a =@ %a %s@ @]%a"
+              fprintf ppf "@[<0>%s %a %a =@ %a %s@ @]%a"
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix 0) cD'
                 (fmt_ppr_meta_obj cD' 0) m0
@@ -1124,7 +1124,7 @@ module Ext = struct
             (fmt_ppr_pat_obj cD1 0) pat
 
       | Comp.Branch (_, cD1', Comp.PatMetaObj (_, mO), e) ->
-          fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v2>%a@]@]"
+          fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v>%a@]@]"
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
@@ -1135,7 +1135,7 @@ module Ext = struct
             (fmt_ppr_cmp_exp_chk cD1' 0) e
 
       | Comp.Branch (_, cD1', pat, e) ->
-          fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v2>%a@]@]"
+          fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v>%a@]@]"
              (fmt_ppr_cmp_branch_prefix  0) cD1'
              (fmt_ppr_pat_obj cD1' 0) pat
              (symbol_to_html DblRArr)
@@ -1176,7 +1176,7 @@ module Ext = struct
             | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
           in
 
-            fprintf ppf "@\n@[<v2>| %a ([%a] %a) %s@ @[<v2>%a@]@]"
+            fprintf ppf "@\n@[<v2>| %a ([%a] %a) %s@ @[<v>%a@]@]"
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
               (fmt_ppr_lf_sub  cD cPsi 0) s

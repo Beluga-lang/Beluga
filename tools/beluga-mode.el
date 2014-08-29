@@ -244,7 +244,9 @@ Regexp match data 0 points to the chars."
              (regexp-opt
               '("FN" "and" "block" "case" "datatype" "else" "ffalse" "fn" "if"
                 "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
-                "then" "type" "ttrue" "%name" "%not"))
+                "then" "type" "ttrue" "%name" "%not" "module" "struct" "end"
+                "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
+                 "%open"  "%abbrev"))
              "\\_>\\|\\\\")
     (,(concat "^\\(" beluga-syntax-id-re
               "\\)[ \t\n]*:\\([^.]*\\_<type\\_>[ \t\n]*.\\)?")

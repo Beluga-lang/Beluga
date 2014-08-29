@@ -51,10 +51,11 @@ let generatePage orig =
     let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
     let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
     let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
+    let page = Str.global_replace (Str.regexp "\\([^$]\\)\\") "\\1&lambda;" page in
     (* Output the HTML file *)
     let oc = open_out !filename in
     let out = output_string oc in
-    begin match !css with
+    begin match !css with    
     | NoCSS -> begin
         out  (page ^ "\n");
         out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");

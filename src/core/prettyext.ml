@@ -931,7 +931,7 @@ module Ext = struct
         in
         begin match b with
           | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
-              fprintf ppf "@[%s %a %a =@ %a %s@ %a@]"
+              fprintf ppf "@[%s %a %a =@ %a %s@ @]%a"
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix 0) cD'
                 (fmt_ppr_meta_obj cD' 0) m0
@@ -939,7 +939,7 @@ module Ext = struct
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
           | Comp.Branch(_, cD', pat, e) ->
-              fprintf ppf "@[%s %a %a=@ %a %s@ %a@]"
+              fprintf ppf "@[%s %a %a=@ %a %s@ @]%a"
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix  0) cD'
                 (fmt_ppr_pat_obj cD' 0) pat
@@ -948,7 +948,7 @@ module Ext = struct
                 (fmt_ppr_cmp_exp_chk cD' 0) e
 
           | Comp.BranchSBox (_, cD1', (cPsi, s, _cs), e) -> 
-              fprintf ppf "@[%s %a([%a] %a)= %a %s@ %a@]"
+              fprintf ppf "@[%s %a([%a] %a)= %a %s@ @]%a"
                 (to_html "let" Keyword)
                 (ppr_ctyp_decls ) cD1'
                 (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -957,7 +957,7 @@ module Ext = struct
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD1' 0) e
           | _ ->
-            fprintf ppf "@[%s %a %s%a@]"
+            fprintf ppf "%s %a %s%a"
               (to_html "case" Keyword)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (to_html "of" Keyword)

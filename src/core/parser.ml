@@ -1563,34 +1563,12 @@ clf_pattern :
         "("; mixtau = mixtyp ; ")" ->
            mixtau
 
-      |   "(" ; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              let (modules, a) = split '.' x in
-              MTArr(_loc, MTBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
-                    mixtau2)
-
-      |   "(" ; "#"; "[";  cPsi = clf_dctx; turnstile; x = [a = MODULESYM -> a | a = SYMBOL -> a];  "]" ; rarr; mixtau2 = mixtyp ; ")" ->
-              let (modules, a) = split '.' x in
-              MTArr(_loc, MTPBox (_loc, MTAtom(_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.Nil), cPsi ),
-                    mixtau2)
-
       |
           "#";"["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]"  ->
-(*             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTPBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) *)
               MTPBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
 
-
-(*      |
-          "["; cPsi = clf_dctx; turnstile; "("; ms = LIST1 clf_normal; ")"; "]"  ->
-(*             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi )
- *)              MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
-
-*)
       |
-          "["; cPsi = clf_dctx; turnstile;(*  a = SYMBOL; *)  ms = LIST1 clf_normal; "]"  ->
-            (* let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              MTBox (_loc, MTAtom(_loc, Id.mk_name (Id.SomeString a), sp), cPsi ) *)
+          "["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]"  ->
               MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi )
  
       | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->

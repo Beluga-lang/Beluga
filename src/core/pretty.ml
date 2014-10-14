@@ -1308,14 +1308,31 @@ module Int = struct
       | Comp.Boolean false ->
           fprintf ppf "ffalse"
 
-    and fmt_ppr_cmp_value lvl ppf = function
+    and fmt_ppr_cmp_value lvl ppf = 
+      let rec countSpine = function
+      	| Comp.DataNil -> 0
+      	| Comp.DataApp (v, spine) -> countSpine spine + 1
+      in
+      let rec dropSpineRight ms n = match (ms, n) with
+      	| (_, 0) -> Comp.DataNil
+      	| (Comp.DataNil, _) -> Comp.DataNil
+      	| (Comp.DataApp (v, spine), _) ->
+      	   Comp.DataApp (v, dropSpineRight spine (n-1))
+      in let deimplicitize_spine c ms =
+           let ia = if !Control.printImplicit
+                    then 0
+                    else  Store.Cid.CompConst.get_implicit_arguments c in
+      	   let l = countSpine ms in
+      	   dropSpineRight ms (l - ia) in
+     
+      function
       | Comp.FunValue _ -> fprintf ppf " fn "
       | Comp.RecValue _ -> fprintf ppf " rec "
       | Comp.MLamValue _ -> fprintf ppf " mlam "
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
       | Comp.BoxValue (phat, tM) ->
-        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf
+        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl  ppf
           (Comp.Box (Syntax.Loc.ghost, Comp.MetaObj (Syntax.Loc.ghost ,phat, tM)))
       | Comp.ConstValue _ -> fprintf ppf " const "
       | Comp.BoolValue true -> fprintf ppf "ttrue"
@@ -1329,10 +1346,19 @@ module Int = struct
           | Comp.DataNil -> ()
           | Comp.DataApp (v, spine) ->
             print_spine ppf spine;
-            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
-        in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
+            fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
+        in 
+	let pat_spine = deimplicitize_spine c spine in
+	let cond = lvl > 0 &&  countSpine pat_spine > 1 in
+        fprintf ppf " %s%s%a%s"
+ 		(l_paren_if cond) 
+ 		(R.render_cid_comp_const c) print_spine pat_spine
+ 		(r_paren_if cond)
+
       | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
       | Comp.CofunValue _ -> fprintf ppf " cofun "
+
+
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()

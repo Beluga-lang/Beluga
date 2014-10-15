@@ -39,13 +39,26 @@ mlam g => fn e => case e of
 
 ;
 
+datatype Term : [|- term T] -> ctype = 
+| Tm : {M:[|- term T]} Term [ |- M];
+
 
 let t = copy [ ] [ |- z] ;
 let t = copy [x:term nat ] [x:term nat  |-  x];
 let t = copy [x:term _ ] [x : term nat |-  s x];
-%{ let t : (term (arrow nat nat))[ ] =
-     copy [ ] ([ ] lam \x. x);
- let t : (term (arrow (arrow bool nat) (arrow bool nat)))[ ]
+
+let t : [ |- term (arrow nat nat)] =
+     copy [ ] [ |- lam \x. x];
+
+rec mkTm : {M:[|- term (arrow nat nat)]}  Term [|- M] = 
+mlam M =>  Tm [|- M];
+
+let t  =
+   mkTm [|- lam \x.x];
+
+
+
+%{ let t : (term (arrow (arrow bool nat) (arrow bool nat)))[ ]
      = copy [ ] ([ ] lam \x. (lam \y. app x y));
  let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat)] ([y] app y (lam \x. (lam \y. app x y)));
  let t = copy [y:term nat,x:term bool] ([x,y] s x);

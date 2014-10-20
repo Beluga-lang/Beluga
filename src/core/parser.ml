@@ -3,7 +3,7 @@
    trash the layout. *)
 
 (* Load the camlp4 extensible grammar syntax extension *)
-#load "pa_extend.cmo";;
+(* #load "pa_extend.cmo";; *)
 
 open Syntax.Ext
 open Id

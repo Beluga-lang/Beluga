@@ -1,0 +1,264 @@
+% --------------------------------------------------------------------------
+% Bounded subtype polymorphism
+% Author: Brigitte Pientka
+% --------------------------------------------------------------------------
+% We represent variables here with a separate category lifting the
+% definition for subtyping to indexed recursive types.
+% --------------------------------------------------------------------------
+% Definition of types
+
+tp : type.  %name tp T.
+
+top   : tp.
+arr   : tp -> tp -> tp.			% Functions: A1 => A2
+forall: tp -> (tp -> tp) -> tp.           % Universal Type: forall x>:A1. A2
+                                        % forall A1 ([x] A2 x)
+
+% => = arrow.  %infix right 11 =>.
+
+schema a_ctx = tp;
+assm : tp -> tp -> type.  %% subtyping assumptions
+schema as_ctx =  some [u:tp]  block a:tp, w: assm a U;
+% --------------------------------------------------------------------------
+%%%%%  Declarative subtyping  %%%%%
+
+datatype Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
+| Subtype_top    : Subtype [g |- T ..] [g |- top]
+| Subtype_refl   : Subtype [g |- T..] [g |- T ..]
+| Subtype_trans  : Subtype [g |- T1 ..] [g |- T2 ..] -> Subtype [g |- T2..] [g |- T3..]
+                   -> Subtype [g |- T1 ..] [g |- T3..]
+| Subtype_arrow  : Subtype [g |- T1 ..] [g |- S1..] -> Subtype [g |- S2 ..] [g |- T2..]
+                   -> Subtype [g |-  arr (S1 ..) (S2 ..)] [g |- arr (T1 ..) (T2..)]
+
+| Subtype_forall : Subtype [g |- T1 ..] [g |- S1 ..]
+		 -> Subtype [g, b:block (x:tp, u:assm x (T1 ..)) |- S2.. b.1]
+                           [g,b |- T2 .. b.1]
+                 -> Subtype [g |-  forall (S1 ..) (\x.S2 .. x)] [g |- forall (T1 ..) (\x.T2 .. x)]
+;
+
+
+% --------------------------------------------------------------------------
+% Algorithmic subtyping
+%
+% Remark:
+% 0) We use logic programming style and write C <- B <- A instead of
+%    A -> B -> C  (we reverse the arrows)
+% 1) we view transitivity as follows:
+%
+% G |- a < U      U < T
+% -----------------------
+%    G |- a < T
+%
+% 2) we do not give a general reflexivity and transitivity rule
+% for type variables, but instead we provide for each type variable
+% its own reflexivity and transitivity version. In other words,
+% our rule for polymorphic types implements the following:
+%
+% G |- T1 < S1
+% G, tr: a < U -> U < T -> a < T,  w: a < T1, ref:a < a |- S2 < T2
+% ------------------------------------------------------------------
+%   G |- (forall a < S1. S2)  < (forall a < T1. T2)
+
+datatype Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
+| Sa_top    : Sub [g |- S..] [g |- top]
+| Sa_refl   : {#p:[g |- block (a:tp, u: assm a (U ..))]}Sub [g |- #p.1 ..] [g |- #p.1 ..]
+| Sa_trans  : {#p:[g |- block (a:tp, u: assm a (U ..))]}
+                Sub [g |- U ..] [g |- T ..]
+              -> Sub [g |- #p.1 ..] [g |- T..]
+| Sa_arrow  : Sub [g |- T1 ..] [g |- S1..] -> Sub [g |- S2 ..] [g |- T2..]
+              -> Sub [g |-  arr (S1 ..) (S2 ..)] [g |- arr (T1 ..) (T2..)]
+
+| Sa_forall : Sub [g |- T1 ..] [g |- S1 ..]
+	      -> Sub [g, b:block (x:tp, u:assm x (T1 ..)) |- S2.. b.1]
+                        [g,b |- T2 .. b.1 ]
+              -> Sub [g |-  forall (S1 ..) (\x.S2 .. x)] [g |- forall (T1 ..) (\x.T2 .. x)]
+;
+
+
+% -----------------------------------------------------------------
+% Admissibility of reflexivity
+
+rec refl : {g:as_ctx} {T:[g |-  tp]} Sub [g |- T ..] [g |- T ..] =
+mlam g => mlam T => case [g |-  T ..] of
+| [g |-  top] => Sa_top
+| [g |-  arr (T1 ..) (T2 ..)] =>
+  let s1 = refl [g] [g |- T1 ..] in
+  let s2 = refl [g] [g |- T2 ..] in
+    Sa_arrow s1 s2
+| [g |-  #p.1..] => Sa_refl [g |- #p ..]
+| [g |-  forall (U ..) (\a.T .. a)] =>
+  let r' = refl [g] [g |-  U ..] in
+  let r  = refl [g, b: block a:tp, w: assm a (U ..)] [g, b |- T .. b.1] in
+    Sa_forall r' r
+
+;
+
+% -------------------------------------------------------------
+%{
+datatype Concat : {g0:as_ctx}{g1:as_ctx}{g:as_ctx}  ctype =
+| Nil : Concat [g0] [ ] [g0]
+| Cons: Concat [g0] [g'] [g]
+      -> Concat [g0] [g', b:block (a:tp, w:assm a (U ..))]  [g, b:block (a:tp, w:assm a (U ..))]
+;
+}%
+%{
+rec trans : (g:as_ctx)% {Q:[g |- tp]}
+             Sub [g |- S ..] [g |- Q ..] -> Sub [g |- Q..] [g |- T ..]
+	    -> Sub [g |- S ..] [g |- T ..] =
+ fn d1 => fn d2 => case d1 of
+ | Sa_refl [g |- #p ..] => % refl : sub a a
+   d2
+
+| Sa_trans [g |-  #p..] s1 =>
+  let d = trans  s1 d2 in
+    Sa_trans [g |- #p ..] d
+
+| Sa_top => let  Sa_top = d2 in Sa_top
+
+| Sa_arrow s1 s2 =>
+  (case d2 of
+    | Sa_arrow r1 r2 =>
+     let t1 = trans  r1 s1 in
+     let t2 = trans  s2 r2 in
+      Sa_arrow t1 t2
+   | Sa_top => Sa_top
+  )
+
+| Sa_forall s1 s2 =>
+   case d2 of
+    | Sa_forall r1 r2 =>
+	let t1 = trans r1 s1  in
+    ?
+    | Sa_top => Sa_top
+
+and narrow :
+                 Concat [g0, b: block (x:tp, u:assm x (Q ..))] [g1] [g] ->
+                 Concat [g0, b: block (x:tp, u:assm x (P ..))] [g1] [g']
+                 -> Sub [g . M .. ] [g |-  N ..]
+                 -> Sub [g0 . P .. ] [g0. Q .. ]
+                 -> Sub [g' . M .. ] [g'. N .. ] = ?
+;
+}%
+%{
+rec sound : (g:ss_ctx) [g |-  sub (T ..) (S ..)] -> [g |-  subtype (T ..) (S ..)] =
+fn d => case d of
+% Assumption w : sub a Q
+| [g |-  #p.3 ..] =>  [g |- #p.5 ..]
+% reflexivity: sub a a
+| [g |-  #p.4 ..] => % refl: sub a a
+  [g |-  subtype_refl]
+% transitivity
+| {#p: [g |-  block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+ 	          w: sub a (U ..), ref: sub a a, w': subtype a (U ..))]}
+   {D1:[g |-  sub (#p.1 ..) (U ..)]}
+  [g |-  (#p.2 ..) (U ..) (Q ..) (D2 ..) (D1 ..)] =>
+  let [g |-  F2 ..] = sound [g |-  D2 ..] in
+  let [g |-  F1 ..] = sound [g |-  D1 ..] in
+  [g |-  subtype_trans (F2 ..) (F1 ..)]
+
+| [g |-  sa_top] => [g |-  subtype_top]
+
+| [g |-  sa_arr (D2 ..) (D1 ..)] =>
+  let [g |-  F1 ..] = sound [g |-  D1 ..] in
+  let [g |-  F2 ..] = sound [g |-  D2 ..] in
+    [g |-  subtype_arrow (F2 ..) (F1 ..)]
+
+| [g . sa_all (D2 ..) (D1 ..)] : [g |-  sub (forall (S1 ..) (S2 ..)) (forall (T1 ..) (T2 ..))] =>
+  let [g |-  F1 ..] = sound [g |-  D1 ..] in
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . F2 .. b.1 b.5] =
+      sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . D2 .. b.1 b.2 b.3 b.4 ] in
+  [g |-  subtype_forall (F2 ..) (F1 ..)]
+
+;
+
+rec complete :(g:ss_ctx) [g |- subtype (T ..) (S ..)] -> [g |-  sub (T ..) (S ..)] =
+fn d => case d of
+| [g |-  #p.5 ..] => [g |-  #p.3 ..]
+| [g |-  subtype_refl] => refl [g] [g |-  _ ]
+| [g |-  subtype_top ] => [g |-  sa_top]
+| [g |-  subtype_trans (F2 ..) (F1 ..)] =>
+  let [g |-  D2 ..] = complete [g |-  F2 ..] in
+  let [g |-  D1 ..] = complete [g |-  F1 ..] in
+  trans [g |-  _ ] [g |- D1 ..] [g |-  D2 ..]
+
+| [g |- subtype_arrow (F2 ..) (F1 ..) ] =>
+  let [g |-  D2 ..] = complete [g |-  F2 ..] in
+  let [g |-  D1 ..] = complete [g |-  F1 ..] in
+  [g |-  sa_arr (D2 ..) (D1 ..)]
+
+| [g |- subtype_forall (F2 ..) (F1 ..)] : [g |-  subtype (forall (S1 ..) (S2 ..)) (forall (T1 ..) (T2 ..))] =>
+  let [g |-  D1 ..] = complete [g |-  F1 ..] in
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . D2 .. b.1 b.2 b.3 b.4] =
+      complete [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..)) . F2 .. b.1 b.5 ]
+  in
+      [g |-  sa_all (D2 ..) (D1 ..)]
+
+
+;
+
+
+% -------------------------------------------------------------
+%{
+Benefits:
+---------------
+
+1) Purely higher-order approach.
+   We not only use higher-order abstract syntax for implementing the
+   types but exploit the full power of parametric and higher-order
+   judgements. As a key benefit we get the narrowing lemma for free.
+2) Our reasoning is purely structural, and does not require any extra
+   argument about the size of a type or size of a derivation.
+
+
+Comments about the all case:
+-----------------------------
+
+We are proving in this case:
+if   D:: G |- (forall a < S1. S2) < (forall a < U1. U2)  and
+     E:: G |- (forall a < U1. U2) < (forall a < T1. T2)
+then F:: G |- (forall a < S1. S2) < (forall a < T1. T2).
+
+
+By inversion on D:
+
+D1 : G |- U1 < S1
+D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a  |- S2 < U2
+
+By inversion on E:
+E1 : G |- T1 < U1
+E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a  |- U2 < T2
+
+By i.h. on E1 and D1 we can obtain a derivation
+F1 : G |- T1 < S1
+
+Applying the induction hypothesis on D2 and E2 will not work
+because D2 depends on the assumption w:a<U1 while E2 depends
+on the assumption v:a<T1. We need to first create a derivation D2'
+which depends on v:a<T1 ! How can this be done?
+Recall D2 is a parametric and hypothetical derivation which can be
+viewed as a function which expects as inputs ref: a<A,
+tr: a<U -> U<T -> a<T, and an object of type a<U1. In other words,
+we need to turn a function which expects a<U1 into a function which
+expects an object v of type a<T1.
+
+                  ------v    E1
+                  a < T1   T1 < U1
+                   ----------------tr
+ref:a<a   tr:...   a<U1
+
+
+   D2
+
+ S2 < U2
+
+
+So we substitute for w: a<U1   a derivation (tr v E1)!
+
+}%
+
+% --------------------------------------------------------------------------
+}%

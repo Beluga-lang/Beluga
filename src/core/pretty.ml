@@ -1328,7 +1328,8 @@ module Int = struct
       | Comp.DataValue (c, spine) ->
 	 (* Note: Arguments in data spines are accumulated in reverse order, to
             allow applications of data values in constant time. *)
-	 let k = Store.Cid.CompConst.get_implicit_arguments c in
+	 let k = if !Control.printImplicit then 0
+		 else Store.Cid.CompConst.get_implicit_arguments c in
          (* the function drop and print_spine can probably be combined
             to avoid traversing the spine twice.
 	  *) 
@@ -1339,18 +1340,20 @@ module Int = struct
 	      if k' < k then (ms', k'+1)
 	      else (Comp.DataApp (v, ms'), k'+1)
 	 in
-        let rec print_spine ppf = function
-          | Comp.DataNil -> ()
-          | Comp.DataApp (v, spine) ->
-            print_spine ppf spine;
-            fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
-        in 
-	let (pat_spine, k') = drop spine in (* k = length of original spine *)
-	let cond = lvl > 0 &&  (k' - k) > 1 in
-        fprintf ppf " %s%s%a%s"
- 		(l_paren_if cond) 
- 		(R.render_cid_comp_const c) print_spine pat_spine
- 		(r_paren_if cond)
+         let rec print_spine ppf = function
+           | Comp.DataNil -> ()
+           | Comp.DataApp (v, spine) ->
+              print_spine ppf spine;
+              fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
+         in 
+	 let (pat_spine, k') = drop spine in (* k = length of original spine *)
+	 
+
+	 let cond = lvl > 0 &&  (k' - k) > 1 in
+         fprintf ppf "%s%s%a%s"
+ 		 (l_paren_if cond) 
+ 		 (R.render_cid_comp_const c) print_spine pat_spine
+ 		 (r_paren_if cond)
 
       | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
       | Comp.CofunValue _ -> fprintf ppf " cofun "

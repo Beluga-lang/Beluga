@@ -152,10 +152,10 @@ module Comp = struct
               "Ill-typed pattern."
               "Expected type"
               (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, Whnf.normTyp sA', Whnf.normDCtx cPsi'))
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
               "Inferred type"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, Whnf.normTyp sA, Whnf.normDCtx cPsi))
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
 
           | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
             Format.fprintf ppf
@@ -217,12 +217,12 @@ module Comp = struct
           | AppMismatch (cD, (MetaTyp (tP, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tP, cPsi), theta))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, MetaTyp (tP, cPsi)), theta))
 
           | MAppMismatch (cD, (MetaTyp (tA, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, tA, cPsi), theta))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, MetaTyp (tA, cPsi)), theta))
 
           | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), theta)) ->
               let cPhi', cPsi'  = Whnf.cnormDCtx (cPhi, theta) , Whnf.cnormDCtx  (cPsi, theta) in
@@ -374,7 +374,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         let cK = (CompCotyp.get c).CompCotyp.kind in
           checkMetaSpine loc cD mS (cK , C.m_id)
 
-    | TypBox (_ , tA, cPsi) ->
+    | TypBox (_ , MetaTyp (tA, cPsi)) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
 
@@ -471,7 +471,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
-    | (Box (loc, MetaObj (metaLoc , _phat, tM)), (TypBox (l, tA, cPsi), t)) -> (* Offset by 1 *)				
+    | (Box (loc, MetaObj (metaLoc , _phat, tM)), (TypBox (l, MetaTyp (tA, cPsi)), t)) -> (* Offset by 1 *)				
         begin try
         let _ = dprint (fun () -> "[comp check ] " ^
 	  P.mctxToString cD ^ " ; " ^
@@ -485,7 +485,8 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
-    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, tA', cPsi')),
+    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)),
+			     TypBox (_, MetaTyp(tA', cPsi'))),
              branches), (tau, t)) ->				
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
@@ -493,8 +494,8 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
                    | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
                        (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), Some k);                       
                    | _ ->
-                       (TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None)) in
-        let tau_s = TypBox (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi') in
+                       (TypBox (loc, MetaTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
+        let tau_s = TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
@@ -504,8 +505,8 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | (Case (loc, prag, i, branches), (tau, t)) ->				
         begin match C.cwhnfCTyp (syn cD cG i) with
-          | (TypBox (loc', tA, cPsi),  t') ->
-              let tau_s = TypBox (loc', C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t')) in
+          | (TypBox (loc', MetaTyp(tA, cPsi)),  t') ->
+              let tau_s = TypBox (loc', MetaTyp (C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t'))) in
              (*  Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 2" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
               let _ = dprint (fun () -> "[check] Case - Scrutinee " ^
                                 P.expSynToString cD cG i ^
@@ -658,7 +659,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with
-          | (TypBox (_, tA, cPhi) , theta) ->
+          | (TypBox (_, MetaTyp (tA, cPhi)) , theta) ->
               let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
                                 P.mctxToString cD ^
                                 "context of expected  type " ^
@@ -672,7 +673,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | PatMetaObj (loc, mO) ->
         (match ttau with
-          | (TypBox (_, tA, cPsi) , theta) ->
+          | (TypBox (_, MetaTyp(tA, cPsi)) , theta) ->
               checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
@@ -758,7 +759,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern\n") in
           let _ = dprint (fun () -> "where scrutinee has type" ^
                             P.compTypToString cD tau_s) in
-          let TypBox (_, (I.Atom(_, a, _) as tP) , cPsi) = tau_s in
+          let TypBox (_, MetaTyp ((I.Atom(_, a, _) as tP) , cPsi)) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
           let tP1   = Whnf.cnormTyp (tP, t1) in
           let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in

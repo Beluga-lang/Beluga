@@ -286,7 +286,8 @@ module Comp = struct
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
-    | TypBox    of Loc.t * LF.typ  * LF.dctx
+    | TypBox of Loc.t * meta_typ 
+(*  | TypBox    of Loc.t * LF.typ  * LF.dctx *)
     | TypParam  of Loc.t * LF.typ  * LF.dctx
     | TypSub    of Loc.t * LF.dctx * LF.dctx
     | TypArr    of typ * typ
@@ -310,7 +311,7 @@ module Comp = struct
     | RecValue   of cid_prog * exp_chk * LF.msub * env
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
-    | BoxValue   of LF.psi_hat * LF.normal
+    | BoxValue   of meta_obj
     | ParamValue of LF.psi_hat * LF.head
     | PsiValue   of LF.dctx
     | ConstValue of cid_prog

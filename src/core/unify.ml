@@ -3807,7 +3807,7 @@ match sigma with
 
           else
             raise (Failure "Type Constant Clash")
-      | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) ->
+      | ((Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)), t) , (Comp.TypBox (_, Comp.MetaTyp(tA', cPsi')), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
            (* dprint (fun () -> "[unifyCompTyp] Unifying contexts done");

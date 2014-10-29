@@ -1046,13 +1046,11 @@ module Ext = struct
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
 
-      | Comp.BoxVal (_, cPsi, normal) ->
+      | Comp.BoxVal (_, m0) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a %s %a]%s"
+            fprintf ppf "%s[%a]%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (symbol_to_html Turnstile)
-              (fmt_ppr_lf_normal cD cPsi 0) normal
+              (fmt_ppr_meta_obj cD 0) m0
               (r_paren_if cond)
 
       | Comp.Ann (_, e, tau) ->

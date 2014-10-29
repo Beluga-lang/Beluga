@@ -1258,12 +1258,16 @@ GLOBAL: sgn;
     | "atomic"
       [
 
-        "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tM = clf_term_app;  "]"  ->
-          begin match phat_or_psi with
-            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM))
-            | Hat phat  ->                 Comp.Box (_loc, Comp.MetaObj (_loc, phat, tM))
-      end
+        "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
+        begin match phat_or_psi, tR with
+	      | Dctx cPsi , Term tM  -> Comp.Syn (_loc,  Comp.BoxVal (_loc, Comp.MetaObjAnn(_loc, cPsi, tM)))
+	      | Hat phat  , Term tM  -> Comp.Box (_loc, Comp.MetaObj(_loc, phat, tM))
+	      | Dctx cPsi , Sub s    -> Comp.Syn (_loc, Comp.BoxVal (_loc, Comp.MetaSObjAnn (_loc,cPsi, s)))
+	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
+	end
 
+      | "["; cPsi = clf_dctx; "]" ->
+	 Comp.Box (_loc, Comp.MetaCtx (_loc, cPsi))
 
 (*        "["; phat_or_psi = clf_hat_or_dctx ; " . " ; tM = clf_term_app; "]" ->
           begin match phat_or_psi with
@@ -1363,8 +1367,17 @@ cmp_exp_syn:
   |
 
  LEFTA [
-   "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
-        Comp.BoxVal (_loc, cPsi, tR)
+(*   "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
+        Comp.BoxVal (_loc, Comp.MetaObjAnn (_loc, cPsi, tR))
+ *)
+  "["; cPsi = clf_dctx; turnstile; tR = term_or_sub ; "]" ->
+     begin match tR with
+       | Term tM   -> Comp.BoxVal (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
+       | Sub s ->  Comp.BoxVal (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
+     end
+
+   | "["; cPsi = clf_dctx; "]" ->
+      Comp.BoxVal (_loc, Comp.MetaCtx (_loc, cPsi))
 
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->

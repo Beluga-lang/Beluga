@@ -1021,10 +1021,9 @@ module Int = struct
               (fmt_ppr_meta_spine cD lvl) mS
               (r_paren_if cond)
 
-      | Comp.TypBox (_, tA, cPsi) ->
-          fprintf ppf "[%a |- %a]"
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 0) tA
+      | Comp.TypBox (_, mT) ->
+          fprintf ppf "%a"
+		  (fmt_ppr_meta_typ cD 0) mT
 
       | Comp.TypParam (_, tA, cPsi) ->
           fprintf ppf "#[%a |- %a]"
@@ -1315,9 +1314,7 @@ module Int = struct
       | Comp.MLamValue _ -> fprintf ppf " mlam "
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
-      | Comp.BoxValue (phat, tM) ->
-        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl  ppf
-          (Comp.Box (Syntax.Loc.ghost, Comp.MetaObj (Syntax.Loc.ghost ,phat, tM)))
+      | Comp.BoxValue mC -> fprintf ppf "[%a]"  (fmt_ppr_meta_obj LF.Empty 0) mC
       | Comp.ConstValue _ -> fprintf ppf " const "
       | Comp.BoolValue true -> fprintf ppf "ttrue"
       | Comp.BoolValue false -> fprintf ppf "ffalse"

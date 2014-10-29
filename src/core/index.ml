@@ -903,10 +903,10 @@ and index_exp' cvars vars fcvars = function
       let (mobj', _ )  = index_meta_obj cvars fcvars mO in
         Apx.Comp.MApp (loc, i', mobj')
 
-  | Ext.Comp.BoxVal (loc, psi, m) ->
-      let (psi', bvars, _ ) = index_dctx cvars  (BVar.create ()) fcvars  psi in
-      let (m', _ ) = index_term cvars bvars fcvars m in
-        Apx.Comp.BoxVal (loc, psi', m')
+  | Ext.Comp.BoxVal (loc, m0) ->
+      let (mobj', _ )  = index_meta_obj cvars fcvars m0 in
+        Apx.Comp.BoxVal (loc, mobj')
+
   | Ext.Comp.PairVal (loc, i1, i2) ->
       let i1' = index_exp' cvars vars fcvars i1 in
       let i2' = index_exp' cvars vars fcvars i2 in

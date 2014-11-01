@@ -2524,16 +2524,21 @@ let mctxMVarPos cD u =
     | STyp (cPhi,cPsi, dep) -> STyp (normDCtx cPhi, normDCtx cPsi, dep)
     | CTyp (g,d) -> CTyp (g,d)
 
+  let normMetaTyp = function
+    | Comp.MetaTyp (tA, cPsi) -> Comp.MetaTyp (normTyp (tA, LF.id), normDCtx cPsi)
+    | Comp.MetaParamTyp (tA, cPsi) -> Comp.MetaParamTyp (normTyp (tA, LF.id), normDCtx cPsi)
+    | Comp.MetaSubTyp (cPhi,cPsi) -> Comp.MetaSubTyp (normDCtx cPhi, normDCtx cPsi)
+    | Comp.MetaSchema (g) -> Comp.MetaSchema (g)
+
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
         Comp.TypBase (loc, c, normMetaSpine mS)
     | Comp.TypCobase (loc, c, mS) ->
         Comp.TypCobase (loc, c, normMetaSpine mS)
-    | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi))
-      -> Comp.TypBox(loc, Comp.MetaTyp (normTyp(tA, LF.id), normDCtx cPsi))
+    | Comp.TypBox (loc, mT)
+      -> Comp.TypBox(loc, normMetaTyp mT)
     | Comp.TypParam (loc, tA, cPsi)
       -> Comp.TypParam(loc, normTyp(tA, LF.id), normDCtx cPsi)
-
     | Comp.TypSub (loc, cPsi, cPsi')
       -> Comp.TypSub (loc, normDCtx cPsi, normDCtx cPsi')
 

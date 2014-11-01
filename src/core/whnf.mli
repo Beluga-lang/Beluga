@@ -131,5 +131,6 @@ val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool
 val closedGCtx : Comp.gctx -> bool
+val closedMetaObj : Comp.meta_obj -> bool
 
 val constraints_solved : cnstr list -> bool

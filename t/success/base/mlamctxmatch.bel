@@ -1,0 +1,10 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+schema ctx = nat;
+
+rec f : {g:ctx} [ |- nat] =
+mlam g => case [g] of
+    | [ ] => [ |- z]
+;

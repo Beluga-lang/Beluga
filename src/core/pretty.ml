@@ -148,7 +148,7 @@ module Int = struct
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
-
+    val metaTypToString   : LF.mctx -> Comp.meta_typ -> string
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string
@@ -1741,6 +1741,11 @@ module Int = struct
     let schElemToString sch_elem =
       fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem
       ; flush_str_formatter ()
+
+    let metaTypToString  cD cT =
+      let mT' = Whnf.cnormMetaTyp (cT, Whnf.m_id) in
+        fmt_ppr_meta_typ cD std_lvl str_formatter mT'
+        ; flush_str_formatter ()
 
     let metaObjToString  cD mO =
       let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in

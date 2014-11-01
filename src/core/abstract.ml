@@ -1716,6 +1716,17 @@ and abstractMVarMTyp cQ mtyp loff = match mtyp with
     I.STyp (abstractMVarDctx cQ loff cPhi, abstractMVarDctx cQ loff cPsi, dep)
   | I.CTyp (sW, dep) -> I.CTyp (sW, dep)
 
+
+and abstractMVarMetaTyp cQ mtyp loff = match mtyp with
+  | Int.Comp.MetaTyp (tA, cPsi) ->
+    Int.Comp.MetaTyp (abstractMVarTyp cQ loff (tA, LF.id), abstractMVarDctx cQ loff cPsi)
+  | Int.Comp.MetaParamTyp (tA, cPsi) ->
+    Int.Comp.MetaParamTyp (abstractMVarTyp cQ loff (tA, LF.id), abstractMVarDctx cQ loff cPsi)
+  | Int.Comp.MetaSubTyp (cPhi, cPsi) ->
+    Int.Comp.MetaSubTyp (abstractMVarDctx cQ loff cPhi, abstractMVarDctx cQ loff cPsi)
+  | Int.Comp.MetaSchema sW -> mtyp
+
+
 and abstractMVarCdecl cQ loff cdecl = match cdecl with
   | I.Decl (u, mtyp) -> I.Decl (u, abstractMVarMTyp cQ mtyp loff)
 
@@ -1955,6 +1966,15 @@ and collect_meta_spine p cQ cS = match cS with
       let (cQ'', cS') = collect_meta_spine p cQ' cS in
         (cQ'', Comp.MetaApp (cM', cS'))
 
+let collectMetaTyp loc p cQ mT = match mT with 
+  | Comp.MetaTyp (tA, cPsi) -> 
+      let phat = Context.dctxToHat cPsi in
+      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
+      let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in
+	(cQ'', Comp.MetaTyp (tA', cPsi'))
+  | Comp.MetaSchema _w -> (cQ, mT)
+
+
 let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) ->
       let (cQ', ms') = collect_meta_spine p cQ ms in
@@ -1963,11 +1983,9 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ', ms') = collect_meta_spine p cQ ms in
         (cQ', Comp.TypCobase (loc, a, ms'))
 
-  | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-      let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in
-        (cQ'', Comp.TypBox (loc, Comp.MetaTyp (tA', cPsi')))
+  | Comp.TypBox (loc, mT) ->
+      let (cQ', mT') = collectMetaTyp loc p cQ mT in
+        (cQ', Comp.TypBox (loc, mT'))
 
   | Comp.TypSub (loc, cPhi, cPsi) ->
       let phat = Context.dctxToHat cPsi in
@@ -2387,6 +2405,18 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
     (cD, cPsi2, (phat, tM2), tA2)
 
 
+let abstrMObjPatt cD1 cM mT =
+  let (cQ1, cD1') = collectMctx I.Empty cD1 in
+  let (cQ2, cM') = collect_meta_obj 0 cQ1 cM in
+  let (cQ3, mT') = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
+  let cQ'     = abstractMVarCtx cQ3 0 in
+  let offset  = Context.length cD1' in
+  let cM'     = abstractMVarMetaObj cQ' (0, offset) cM' in
+  let mT'      = abstractMVarMetaTyp cQ' mT' (0, offset) in
+  let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
+  let cD'     = ctxToMCtx ~dep':I.No cQ' in
+  let cD      = Context.append cD' cD2 in
+    (cD, cM', mT')
 
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
@@ -2514,3 +2544,4 @@ let exp = abstrExp
 let pattern = abstrPattern
 let patobj = abstrPatObj
 let subpattern = abstrSubPattern
+let mobj = abstrMObjPatt

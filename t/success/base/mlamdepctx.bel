@@ -1,0 +1,26 @@
+nat : type.
+z : nat.
+s : nat -> nat.
+
+tp: nat -> type.
+n: tp nat.
+a: tp A -> tp (s A).
+
+schema ctx = tp N;
+
+rec f : {g:ctx} [ |- nat] =
+mlam g => case [g] of
+| [ ] => [ |- z]
+| [g, x:tp _ ] => let [|- N] = f [g] in [|- s N]
+;
+
+datatype Ctx: {g:ctx} ctype = 
+| Empty : Ctx []
+| Cons  : Ctx [g] -> Ctx [g, x:tp A]
+;
+
+rec g : {g:ctx} Ctx [g] =
+mlam g => case [g] of
+| [ ] => Empty
+| [g, x:tp _ ] =>  Cons (g [g])
+;

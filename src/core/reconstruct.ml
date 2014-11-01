@@ -1565,27 +1565,24 @@ and elExp' cD cG i = match i with
 
 
 (* We don't check that each box-expression has approximately
- *  the same type as the expression we analyze.
+ * the same type as the expression we analyze.
  *
  *)
 (*
 
-  recPattern cD cPsi omega delta psi m tPopt =
+  recPattern cD delta psi m tPopt =
 
   Assumptions:
       cO ; cD ; cPsi |- tPopt
       omega ; delta ; psi |- m
 
 
-* recMObj cD cPsi omega delta mO tPopt =
-  based on recPattern.
-
 * recPattern becomes redundant when we adopt the new parser as default.
 
 *)
-and recMObj cD' cM (cD, mTskel) = match cM, mTskel with
+and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
   | Apx.Comp.MetaCtx (loc, psi), CT w -> 
-      let cPsi' = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
+      let cPsi' = Lfrecon.checkDCtx loc Lfrecon.Pibox cD' psi w in
       let _    = Lfrecon.solve_constraints  cD' in
       let (cD1', cM', mT') =
 	Abstract.mobj cD' (Int.Comp.MetaCtx (loc, cPsi')) (Int.Comp.MetaSchema w) in
@@ -2317,7 +2314,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
               let typAnn = (cD, mtypeSkelet mT) in
               let cD'    = elMCtx  Lfrecon.Pibox delta in
 		(* ***************  RECONSTRUCT PATTERN BEGIN *************** *)
-              let ((l_cd1', l_delta), cD1', mO', mT1') = recMObj cD' mO typAnn in
+              let ((l_cd1', l_delta), cD1', mO', mT1') = recMObj loc' cD' mO typAnn in
 		(* ***************  RECONSTRUCT PATTERN DONE  *************** *)
               let mT =  Whnf.cnormMetaTyp (mT, Int.LF.MShift l_cd1') in 
 		(* NOW: cD , cD1 |- mO : mT   and  cD1 |- mO' : mT1'          *)

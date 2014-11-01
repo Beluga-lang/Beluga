@@ -6,5 +6,6 @@ schema ctx = nat;
 
 rec f : {g:ctx} [ |- nat] =
 mlam g => case [g] of
-    | [ ] => [ |- z]
+| [ ] => [ |- z]
+| [g, x:nat] => let [|- N] = f [g] in [|- s N]
 ;

@@ -1,0 +1,84 @@
+exp  : type.   %name exp E x.
+z    : exp.
+suc  : exp -> exp.
+
+letv : exp -> (exp -> exp) -> exp. %infix letv 3 left.
+lam  : (exp -> exp) -> exp. 
+app  : exp -> exp -> exp.   %infix app 1. 
+
+tp   : type.   %name tp T.
+nat  : tp.
+even : tp.
+odd : tp.
+arrow  : tp -> tp -> tp. %infix arrow 1 right.
+sect   : tp -> tp -> tp.
+
+
+% Evaluation
+eval : exp -> exp -> type.  %name eval F. %infix eval 1 right.
+ev_z : z eval z.
+
+ev_s : V eval E -> (suc V) eval (suc E).
+
+ev_l : (E2 V1) eval V  -> E1 eval V1 -> (E1 letv (\x. E2 x)) eval V.
+
+ev_lam: (lam (\x. E x)) eval (lam (\x. E x)).
+
+ev_app: E1 eval (lam (\x. E x)) -> E2 eval V2 -> (E V2) eval V
+     -> (E1 app E2) eval V.
+
+% Typing
+
+oft : exp -> tp -> type. %infix oft 1 left. %name oft D u. 
+subtype : tp -> tp -> type.  %name subtype SUB sub. %infix subtype 2 left.
+
+boolean : type.
+true : boolean.
+false : boolean.
+
+oft-option : type.
+sometype : E oft T -> oft-option.
+none : oft-option.
+
+tp_z     : z oft even.
+tp_s-base     : E oft nat ->
+	   (suc E) oft nat.
+
+tp_s-even : E oft even ->
+	   (suc E) oft odd.
+tp_s-odd : E oft odd ->
+	   (suc E) oft even.
+
+sub_odd<nat :  odd subtype nat.
+sub_even<nat : even subtype nat.
+sub_arrow : B1 subtype A1 -> A2 subtype B2 -> (A2 arrow A1) subtype (B2 arrow B1).
+
+tp_sub : E oft T1 -> T1 subtype T2 -> E oft T2.
+
+
+tp_lam :   ({x:exp} x oft T1 -> (E x) oft T2)
+        -> (lam (\ x . E x)) oft (T2 arrow T1).
+
+tp_app : E2 oft T2 ->
+         E1 oft (T1 arrow T2)
+	 -> (E1 app E2) oft T1.
+
+tp_letv : ({x:exp} x oft T1 -> (E2 x) oft T2) ->
+	  E1 oft T1
+        -> (E1 letv (\ x . E2 x)) oft T2.
+
+schema expCtx = exp ;
+
+rec synth : {g:expCtx} {E : [g |- exp]} [ |- oft-option] =
+  mlam g => mlam E =>
+     [ |- none]
+and check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
+  mlam g => mlam E => mlam T =>
+    [ |- false]
+;
+
+let r1 = (check []) ;
+let r2 = (check []) [ |- suc (suc z)];
+let r3 = (check []) [ |- suc (suc z)] [ |- even];
+let r4 = r2 [ |- even];
+let r5 = r1 [ |- suc (suc z)] [ |- even];

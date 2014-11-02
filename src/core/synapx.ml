@@ -46,6 +46,7 @@ module LF = struct
   and normal =
     | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
+    | LFHole of Loc.t
     | Tuple of Loc.t * tuple
     | Ann of Loc.t * normal * typ
 
@@ -160,15 +161,15 @@ module Comp = struct
      | Hole   of Loc.t
 
   and exp_syn =
-     | Var    of offset                                     (* x              *)
+     | Var    of Loc.t * offset                                     (* x              *)
      | FVar   of name                                       (* x              *)
-     | DataConst of cid_comp_const                          (* c              *)
-     | DataDest of cid_comp_dest                            (* c              *)
-     | Const  of Loc.t * cid_prog                           (* c              *)
+     | DataConst of Loc.t * cid_comp_const                          (* c              *)
+     | DataDest of Loc.t * cid_comp_dest                            (* c              *)
+     | Const  of Loc.t * cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
 
      | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
-     | BoxVal of Loc.t * LF.dctx * LF.normal                (* box (Psi. tR)  *)
+     | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn

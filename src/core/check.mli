@@ -61,8 +61,9 @@ module Comp : sig
     | SBoxMismatch    of LF.mctx * gctx  * LF.dctx  * LF.dctx
     | SynMismatch     of LF.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
-    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
-                         (LF.mctx * LF.dctx * LF.tclo)
+    | PattMismatch    of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
+(*    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
+                         (LF.mctx * LF.dctx * LF.tclo)*)
     | IfMismatch      of LF.mctx * gctx  * tclo
     | EqMismatch      of LF.mctx * tclo (* arg1 *) * tclo (* arg2 *)
     | EqTyp           of LF.mctx * tclo

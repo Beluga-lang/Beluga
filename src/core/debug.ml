@@ -4,6 +4,10 @@
 
 let chatter : int ref =  ref 1
 
+let pipeDebug = ref false
+
+let filename = ref "debug"
+
 type flags = int
 
 let r_flags : flags ref = ref 0
@@ -47,43 +51,64 @@ let popIndentationLevel () =
     indentLevelStack := rest;
     level := poppedLevel
 
-let print_level_spaces() =
-  let rec p n = if n < 1 then () else (print_string " "; p (n - 1))
+let print_level_spaces f () =
+  let rec p n = if n < 1 then () else (f " "; p (n - 1))
   in
      p (!level)
 
-let rec print_noticing_newlines s x len =
+let rec print_noticing_newlines f s x len =
   if x >= len then ()
   else
     let ch = String.get s x in
      (if ch = '\n' then
-        (print_string "\n";
-         print_level_spaces())
+        (f "\n";
+         print_level_spaces f ())
       else
-        print_char ch);
-      print_noticing_newlines s (x + 1) len
+        f (Char.escaped ch));
+      print_noticing_newlines f s (x + 1) len
 
 
 let print flags f =
-    if flags land !r_flags == 0 then
-        ()
-    else
-        (print_level_spaces();
-         let s = try f()
-         with
-                   | Match_failure (file, line, column) -> (print_string ("*** Match_failure("
-                           ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
-                           ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
-                                             exit 200)
-                   | exn -> (print_string ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
-                             flush_all();
-                             raise exn) in
-           print_noticing_newlines s 0 (String.length s);
-           print_string "\n";
-           flush_all())
+  if (flags land !r_flags) = 0 then
+    ()
+  else begin
+    if !pipeDebug then begin
+      let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o640 (!filename ^ ".out") in
+      let out = output_string oc in
+      (print_level_spaces out ();
+      let s = try f()
+      with
+        | Match_failure (file, line, column) -> (out ("*** Match_failure("
+                ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
+                ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
+                                  exit 200)
+        | exn -> (out ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
+                  flush_all();
+                  raise exn) in
+      let _ = print_noticing_newlines out s 0 (String.length s) in
+      let _ = out "\n" in
+      close_out oc;
+      flush_all()) 
+    end else begin
+      let out = print_string in
+      (print_level_spaces out ();
+      let s = try f()
+      with
+        | Match_failure (file, line, column) -> (out ("*** Match_failure("
+                ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
+                ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
+                                  exit 200)
+        | exn -> (out ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
+                  flush_all();
+                  raise exn) in
+      print_noticing_newlines out s 0 (String.length s);
+      out "\n";
+      flush_all()) 
+      end
+    end
 
 let prnt flags s =
-    print flags (fun () -> s)
+  print flags (fun () -> s)
 
 let makeFunctions flags =
   (print flags, prnt flags)

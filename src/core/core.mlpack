@@ -1,6 +1,7 @@
 Abstract
 Apxnorm
 Check
+Command
 Context
 ConvSigma
 Coverage
@@ -9,6 +10,8 @@ Debug
 Error
 Gensym
 Holes
+Lfholes
+Interactive
 Id
 Index
 Lexer
@@ -32,6 +35,8 @@ Synint
 Syntax
 Token
 Trail
+Typeinfo
+Locs
 Unify
 Version
 Whnf

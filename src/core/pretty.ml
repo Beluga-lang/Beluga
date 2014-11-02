@@ -3,7 +3,7 @@
     @see http://caml.inria.fr/resources/doc/guides/format.html
 *)
 
-open Format
+include Format
 
 (* Explanation of formatting markup:
 
@@ -63,7 +63,7 @@ module Control = struct
 
   let substitutionStyle = ref Natural
   let printImplicit = ref false
-
+  let printNormal = ref false
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
 
@@ -135,6 +135,8 @@ module Int = struct
     val ppr_cmp_branch    : LF.mctx -> Comp.gctx -> Comp.branch      -> unit
 
     (* Conversion to string *)
+    val sgnDeclToString   : Sgn.decl -> string
+
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
@@ -146,7 +148,7 @@ module Int = struct
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
-
+    val metaTypToString   : LF.mctx -> Comp.meta_typ -> string
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string
@@ -161,6 +163,7 @@ module Int = struct
     val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
@@ -290,6 +293,8 @@ module Int = struct
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
+        | LF.LFHole _ ->
+          fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple
@@ -633,7 +638,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n ->
           fprintf ppf "%s"
-            (if !Store.Cid.NamedHoles.printingHoles then
+            (if !Store.Cid.NamedHoles.printingHoles && false then
               Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
              else (R.render_cvar cD n))
 
@@ -905,11 +910,11 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
-          if not !Control.printImplicit && (isInferred mtyp) && printing_holes then () else
+          if (((not !Control.printImplicit) && (isImplicit mtyp) && printing_holes) || (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "")
+            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "") end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -920,7 +925,7 @@ module Int = struct
       | LF.PTyp (tA, _, _) -> Some tA
       | _ -> None
 
-    and isInferred = function
+    and isImplicit = function
       | LF.MTyp (_, _, dep)
       | LF.PTyp (_, _, dep)
       | LF.STyp (_, _, dep)
@@ -1018,25 +1023,12 @@ module Int = struct
               (R.render_cid_comp_cotyp c)
               (fmt_ppr_meta_spine cD lvl) mS
               (r_paren_if cond)
-
-      | Comp.TypBox (_, Comp.MetaTyp(tA, cPsi)) ->
-          fprintf ppf "[%a |- %a]"
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 0) tA
-
-      | Comp.TypBox (_, Comp.MetaParamTyp (tA, cPsi)) ->
-          fprintf ppf "#[%a |- %a]"
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 0) tA
-
-      | Comp.TypBox (_, Comp.MetaSubTyp(cPhi, cPsi)) ->
-          fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_dctx cD 0) cPhi
-
+      | Comp.TypBox (_, mT) ->
+          fprintf ppf "%a"
+		  (fmt_ppr_meta_typ cD 0) mT
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a ->@ %a%s"
+            fprintf ppf "%s%a -> %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_typ cD 0) tau1
               (fmt_ppr_cmp_typ cD 0) tau2
@@ -1052,7 +1044,7 @@ module Int = struct
 
       | Comp.TypPiBox (ctyp_decl, tau) ->
         let cond = lvl > 1 in
-        fprintf ppf "%s%a@ %a%s"
+        fprintf ppf "%s%a %a%s"
           (l_paren_if cond)
           (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
           (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
@@ -1204,7 +1196,12 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (_) -> fprintf ppf " ? "
+      | Comp.Hole (loc, f) ->
+          try
+             let x = f () in
+             fprintf ppf " ? %%{ %d }%%" x
+           with
+           | _ -> fprintf ppf " ? "
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1214,9 +1211,9 @@ module Int = struct
     and strip_mapp_args' cD cG i = match i with
       | Comp.Const (_, prog) ->
           (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           begin match Context.lookup cG x with
               None -> (i, [])
             | Some tau -> (i,  implicitCompArg tau)
@@ -1248,7 +1245,7 @@ module Int = struct
       | _ -> []
     end
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
-      | Comp.Var x ->
+      | Comp.Var (_, x) ->
           fprintf ppf "%s"
             (R.render_var cG x)
 
@@ -1256,11 +1253,11 @@ module Int = struct
           fprintf ppf "%s"
             (R.render_cid_prog prog)
 
-      | Comp.DataConst c ->
+      | Comp.DataConst (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
-      | Comp.DataDest c ->
+      | Comp.DataDest (_, c) ->
           fprintf ppf "%s"
             (R.render_cid_comp_dest c)
 
@@ -1304,15 +1301,14 @@ module Int = struct
       | Comp.Boolean false ->
           fprintf ppf "ffalse"
 
-    and fmt_ppr_cmp_value lvl ppf = function
+    and fmt_ppr_cmp_value lvl ppf = 
+      function
       | Comp.FunValue _ -> fprintf ppf " fn "
       | Comp.RecValue _ -> fprintf ppf " rec "
       | Comp.MLamValue _ -> fprintf ppf " mlam "
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.PsiValue psi -> fprintf ppf "[%a]" (fmt_ppr_lf_dctx LF.Empty lvl) psi
-      | Comp.BoxValue (phat, tM) ->
-        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl ppf
-          (Comp.Box (Syntax.Loc.ghost, Comp.MetaObj (Syntax.Loc.ghost ,phat, tM)))
+      | Comp.BoxValue mC -> fprintf ppf "[%a]"  (fmt_ppr_meta_obj LF.Empty 0) mC
       | Comp.ConstValue _ -> fprintf ppf " const "
       | Comp.BoolValue true -> fprintf ppf "ttrue"
       | Comp.BoolValue false -> fprintf ppf "ffalse"
@@ -1321,14 +1317,39 @@ module Int = struct
           (fmt_ppr_cmp_value 0) v1
           (fmt_ppr_cmp_value 0) v2
       | Comp.DataValue (c, spine) ->
-        let rec print_spine ppf = function
-          | Comp.DataNil -> ()
-          | Comp.DataApp (v, spine) ->
-            print_spine ppf spine;
-            fprintf ppf " %a" (fmt_ppr_cmp_value lvl) v
-        in fprintf ppf "%s%a" (R.render_cid_comp_const c) print_spine spine
+	 (* Note: Arguments in data spines are accumulated in reverse order, to
+            allow applications of data values in constant time. *)
+	 let k = if !Control.printImplicit then 0
+		 else Store.Cid.CompConst.get_implicit_arguments c in
+         (* the function drop and print_spine can probably be combined
+            to avoid traversing the spine twice.
+	  *) 
+	 let rec drop ms = match ms with
+	   | Comp.DataNil -> (Comp.DataNil, 0)
+	   | Comp.DataApp (v, spine) -> 
+	      let (ms', k') = drop spine in 
+	      if k' < k then (ms', k'+1)
+	      else (Comp.DataApp (v, ms'), k'+1)
+	 in
+         let rec print_spine ppf = function
+           | Comp.DataNil -> ()
+           | Comp.DataApp (v, spine) ->
+              print_spine ppf spine;
+              fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
+         in 
+	 let (pat_spine, k') = drop spine in (* k = length of original spine *)
+	 
+
+	 let cond = lvl > 0 &&  (k' - k) > 1 in
+         fprintf ppf "%s%s%a%s"
+ 		 (l_paren_if cond) 
+ 		 (R.render_cid_comp_const c) print_spine pat_spine
+ 		 (r_paren_if cond)
+
       | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
       | Comp.CofunValue _ -> fprintf ppf " cofun "
+
+
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()
@@ -1338,7 +1359,7 @@ module Int = struct
                 fprintf ppf "%a"
                   (fmt_ppr_lf_ctyp_decl LF.Empty 1) decl
             | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
+                fprintf ppf "%a@ %a"
                   (fmt_ppr_ctyp_decls') cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           in
@@ -1368,14 +1389,29 @@ module Int = struct
 
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat, t) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@  "
-            (fmt_ppr_cmp_branch_prefix  0) cD1
-            (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
-            (fmt_ppr_refinement cD1 cD 2) t
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]@]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+          else
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1
+              (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
+              (fmt_ppr_refinement cD1 cD 2) t
 
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a  : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
+        if !Control.printNormal then
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]  => @]@ @[<2>@ %a@]@]@ "
+            (fmt_ppr_cmp_branch_prefix  0) cD1'
+            (fmt_ppr_meta_obj cD1' 0) mO
+            (* NOTE: Technically: cD |- cG ctx and
+             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+             * -bp
+             *)
+            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+        else
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* this point is where the " : " is in the string above *)
@@ -1390,18 +1426,29 @@ module Int = struct
           let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
           let cG_ext = Context.append cG_t cG' in
 
-          fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-             (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_cmp_gctx cD1' 0) cG'
-             (fmt_ppr_pat_obj cD1' cG' 0) pat
-            (* this point is where the " : " is in the string a
-          bove *)
-            (fmt_ppr_refinement cD1' cD 2) t
-            (* NOTE: Technically: cD |- cG ctx and
-             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-             * -bp
-             *)
-            (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
+                 (fmt_ppr_cmp_branch_prefix  0) cD1'
+                (fmt_ppr_cmp_gctx cD1' 0) cG'
+                 (fmt_ppr_pat_obj cD1' cG' 0) pat
+                (* NOTE: Technically: cD |- cG ctx and
+                 *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+                 * -bp
+                 *)
+                (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+          else          
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+               (fmt_ppr_cmp_branch_prefix  0) cD1'
+              (fmt_ppr_cmp_gctx cD1' 0) cG'
+               (fmt_ppr_pat_obj cD1' cG' 0) pat
+              (* this point is where the " : " is in the string a
+            bove *)
+              (fmt_ppr_refinement cD1' cD 2) t
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
       | Comp.BranchBox (_, cD1', (cPsi, pattern, t, _cs)) ->
           let rec ppr_ctyp_decls' ppf = function
@@ -1418,6 +1465,17 @@ module Int = struct
           in
 (*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
 (*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
+          if !Control.printNormal then
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ @]  => @]@ @[<2>@ %a@]@]@ "
+              (ppr_ctyp_decls ) cD1'
+              (fmt_ppr_lf_dctx cD1' 0) cPsi
+              (fmt_ppr_pattern cD1' cPsi) pattern
+              (* NOTE: Technically: cD |- cG ctx and
+               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+               * -bp
+               *)
+              (fmt_ppr_branch_body cD1' cG t) pattern
+          else
             fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
               (ppr_ctyp_decls ) cD1'
               (fmt_ppr_lf_dctx cD1' 0) cPsi
@@ -1454,6 +1512,7 @@ module Int = struct
           fprintf ppf "%a@ ,@ %a"
             (fmt_ppr_refine_elem cD decl 1) f
             (fmt_ppr_refinement cD cD' lvl) s
+      | _ -> fprintf ppf "No match"
     end
 
 
@@ -1463,6 +1522,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
               | LF.DeclOpt psi -> psi 
+              | LF.Decl(psi, _) -> psi
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1474,6 +1534,7 @@ module Int = struct
             begin match decl with
               | LF.Decl(u, LF.MTyp (_ , _, _) ) -> u
               | LF.DeclOpt u -> u
+              | LF.Decl(u, _) -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1485,6 +1546,7 @@ module Int = struct
           let p =
             begin match decl with
               | LF.Decl(p, LF.PTyp (_ , _, _) ) -> p
+              | LF.Decl(p, _) -> p
               | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"
@@ -1508,32 +1570,86 @@ module Int = struct
             (R.render_name x)
             (fmt_ppr_cmp_typ cD lvl) tau
 
-    let fmt_ppr_sgn_decl lvl ppf = function
-      | Sgn.Const (c, a) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_cid_term c)
-            (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
-
-      | Sgn.Typ (a, k) ->
-          fprintf ppf "%s : %a.@.@?"
-            (R.render_cid_typ  a)
-            (fmt_ppr_lf_kind LF.Null lvl) k
-
-      | Sgn.Schema (w, schema) ->
-          fprintf ppf "schema %s : %a;@.@?"
-            (R.render_cid_schema  w)
-            (fmt_ppr_lf_schema ~useName:false lvl) schema
-
-      | Sgn.Rec (f, tau, e) ->
-          fprintf ppf "rec %s : %a =@ @[<2>%a ;@]@?@."
+    let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
+      fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"
+            (prefix)
             (R.render_cid_prog  f)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             (fmt_ppr_cmp_exp_chk  LF.Empty
                (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau)))  lvl) e
 
-      | Sgn.Pragma (LF.NamePrag _cid_tp) ->  ()
+    let rec fmt_ppr_sgn_decl lvl ppf = function
+      | Sgn.CompTypAbbrev (_,_,_,_) -> ()
+      | Sgn.Const (_, c, a) ->
+          fprintf ppf "@\n%s : %a.@\n"
+            (R.render_cid_term c)
+            (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
+      | Sgn.Typ (_, a, k) ->
+          fprintf ppf "@\n%s : %a.@\n"
+            (R.render_cid_typ  a)
+            (fmt_ppr_lf_kind LF.Null lvl) k
 
+      | Sgn.CompTyp (_, a, cK, _) ->
+          fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
+             (R.render_name a)
+             (fmt_ppr_cmp_kind LF.Empty lvl) cK
+
+      | Sgn.CompCotyp (_, a, cK) ->
+          fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
+             (R.render_name a)
+             (fmt_ppr_cmp_kind LF.Empty lvl) cK
+
+      | Sgn.CompDest (_, c, tau)
+      | Sgn.CompConst (_, c, tau) ->
+          fprintf ppf "@\n | %s : @[%a@]@\n"
+            (R.render_name c)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            
+      | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl lvl ppf) (List.flatten l)
+
+      | Sgn.Val (_, x, tau, i, None) -> 
+          fprintf ppf "@\nlet %s : %a = %a@\n"
+            (R.render_name x)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
+
+      | Sgn.Val (_, x, tau, i, Some v) -> 
+          fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
+            (R.render_name x)
+            (fmt_ppr_cmp_typ LF.Empty lvl) tau
+            (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
+            (fmt_ppr_cmp_value lvl) v
+
+      | Sgn.Schema (w, schema) ->
+          fprintf ppf "@\nschema %s = @[%a@];@\n"
+            (R.render_cid_schema  w)
+            (fmt_ppr_lf_schema ~useName:false lvl) schema
+
+      | Sgn.Rec (h::t) ->
+          fmt_ppr_rec lvl ppf "rec" h;
+          List.iter (fmt_ppr_rec lvl ppf "and") t
+
+      | Sgn.Pragma (LF.OpenPrag n) ->  
+          let n' = Store.Modules.name_of_id n in
+          let _ = Store.Modules.open_module n' in
+          fprintf ppf "@\n%%open %s@\n" (String.concat "." n')
+
+      | Sgn.Pragma _ -> ()
+          
+      | Sgn.Module(_, name, decls) ->
+          let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl lvl fmt x)) t in
+
+          (* Necessary to enforce correct printing *)
+          let ((_, origName, _, _) as state) = Store.Modules.getState () in
+          let newName = origName@[name] in
+          let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
+          let _ = Store.Modules.currentName := newName in          
+          let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
+                    (name) (aux) decls in
+          Store.Modules.setState state
+
+      |  _ -> ()
 
     (* Regular Pretty Printers *)
     let ppr_sgn_decl           = fmt_ppr_sgn_decl              std_lvl std_formatter
@@ -1624,6 +1740,11 @@ module Int = struct
       fmt_ppr_lf_ctyp_decl cD std_lvl str_formatter cdecl
       ; flush_str_formatter ()
 
+    let metaTypToString  cD cT =
+      let mT' = Whnf.cnormMetaTyp (cT, Whnf.m_id) in
+        fmt_ppr_meta_typ cD std_lvl str_formatter mT'
+        ; flush_str_formatter ()
+
     let metaObjToString  cD mO =
       let mO' = Whnf.cnormMetaObj (mO, Whnf.m_id) in
         fmt_ppr_meta_obj cD std_lvl str_formatter mO'
@@ -1661,16 +1782,24 @@ module Int = struct
         fmt_ppr_cmp_typ cD std_lvl str_formatter tau'
         ; flush_str_formatter ()
 
+    let subCompTypToString cD sA  =
+      let tA = Whnf.normCTyp (Whnf.cnormCTyp sA) in
+        fmt_ppr_cmp_typ cD std_lvl str_formatter tA
+        ; flush_str_formatter ()        
+
     let compKindToString cD cK  =
 (*      let cK' = Whnf.normCKind cK in  *)
         fmt_ppr_cmp_kind cD std_lvl str_formatter cK
         ; flush_str_formatter ()
+
 
     let msubToString cD   s    =
       let s' = Whnf.cnormMSub s in
       fmt_ppr_lf_msub cD std_lvl str_formatter s'
       ; flush_str_formatter ()
 
+    let sgnDeclToString   : Sgn.decl -> string = fun d ->
+      fmt_ppr_sgn_decl std_lvl str_formatter d; flush_str_formatter ()
   end (* Int.Make *)
 
   (* Default Error Pretty Printer Functor Instantiation *)

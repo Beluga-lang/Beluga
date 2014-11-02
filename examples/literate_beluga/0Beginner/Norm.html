@@ -1,0 +1,65 @@
+<html>
+<head>
+	<meta charset="UTF-8">
+	<style type="text/css">
+		body {
+			padding: 2em 1em 2em 1em;
+			margin: 0;
+			font-family: sans-serif;
+			color: black;
+			background: white;}
+		a{text-decoration:none;}
+		a:link { color: #00C; background: transparent }
+		a:visited { color: #00C; background: transparent }
+		a:active { color: #C00; background: transparent }
+		keyword { color: #3333cc ; background: transparent }
+		p {display: inline;}
+		pre {
+			border: 1px dashed maroon;  display:block;
+			padding:8px; background-color: #dddddd;}
+		code {
+			background-color: #dddddd;
+			color: black; font-family: "courier";margin:0;
+			white-space: pre-wrap; }
+		.typ {color: #660000; font-weight:bold}
+		.constructor {color: #335C85; font-weight:bold}
+		.function {color: #660033; font-weight:bold}
+		.schema {color: #6600CC; font-weight:bold}
+	</style>
+</head>
+<body>
+
+<p></p><p>
+<h1> Normalizing lambda-terms</h1>
+</p><p></p>
+<p></p><p>
+<h2> Syntax</h2>
+We define first intrinsically well-typed lambda-terms using the base type <code>nat</code> and function type.
+</p><p></p><br><pre><code><keyword>datatype</keyword> <span class="typ" id="tp">tp</span> : <keyword>type</keyword> = 
+| <span class="constructor" id="nat">nat</span> : <a href="#tp">tp</a>
+| <span class="constructor" id="arr">arr</span> : <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a> &#x2192 <a href="#tp">tp</a>;
+<br><keyword>datatype</keyword> <span class="typ" id="exp">exp</span> : <a href="#tp">tp</a> &#x2192 <keyword>type</keyword> = 
+| <span class="constructor" id="lam">lam</span> : (<a href="#exp">exp</a> T1 &#x2192 <a href="#exp">exp</a> T2) &#x2192 <a href="#exp">exp</a> <a href="#arr">arr</a> T1 T2
+| <span class="constructor" id="app">app</span> : <a href="#exp">exp</a> <a href="#arr">arr</a> T2 T &#x2192 <a href="#exp">exp</a> T2 &#x2192 <a href="#exp">exp</a> T;
+</code></pre>
+<p></p><p>
+Next, we define the context schema expressing the fact that all declarations must be instances of the type <code>exp T</code> for some <code>T</code>.
+</p><p></p><br><pre><code><keyword>schema</keyword> <span class="schema" id="ctx">ctx</span> = <a href="#exp">exp</a> T;
+</code></pre>
+<p></p><p>
+Finally, we write a function which traverses a lambda-term and normalizes it. In the type of the function <code>norm</code> we leave context variables implicit by writing <code>(g:ctx)</code>. As a consequence, we can omit passing a concrete context for it when calling <code>norm</code>. In the program, we distinguish between three different cases: the variable case <code>[ &#8866; #p &hellip; ]</code>, the abstraction case <code>[g &#8866; lam \x. M &hellip; x]</code>, and the application case <code>[g &#8866; app (M &hellip;) (N &hellip;)]</code>. In the variable case, we simply return the variable. In the abstraction case, we recursively normalize <code>[g, x:exp _ &#8866; M &hellip; x]</code> extending the context with the additional declaration <code>x:exp _</code>. Since we do not have a concrete name for the type of <code>x</code>, we simply write an underscore and let Beluga's reconstruction algorithm infer the argument. In the application case, we first normalize recursively <code>[g &#8866; M &hellip;]</code>. If this results in an abstraction <code>[g &#8866; lam \x. M' &hellip; x]</code>, then we continue to normalize <code>[g &#8866; M' &hellip; (N &hellip;)]</code> substituting for <code>x</code> the term <code>N</code>. Otherwise, we normalize recursively <code>[g &#8866; N]</code> and rebuild the application.
+</p><p></p><br><pre><code><keyword>rec</keyword> <span class="function" id="norm">norm</span> : (g:<a href="#ctx">ctx</a>) [g &#x22A2 <a href="#exp">exp</a> T] &#x2192 [g &#x22A2 <a href="#exp">exp</a> T] =
+<keyword>fn</keyword> e &#x21D2 <keyword>case</keyword> e <keyword>of</keyword> 
+  | [g &#x22A2 #p &hellip;] &#x21D2 [g &#x22A2 #p &hellip;]
+  | [g &#x22A2 <a href="#lam">lam</a> (&lambda;x. M &hellip; x)] &#x21D2
+    <keyword>let</keyword>  [g, x : <a href="#exp">exp</a> _ &#x22A2 M' &hellip; x] = <a href="#norm">norm</a> [g, x : <a href="#exp">exp</a> _ &#x22A2 M &hellip; x] <keyword>in</keyword>
+    [g &#x22A2 <a href="#lam">lam</a> (&lambda;x. M' &hellip; x)]
+  | [g &#x22A2 <a href="#app">app</a> (M &hellip;) (N &hellip;)] &#x21D2
+    <keyword>case</keyword> <a href="#norm">norm</a> [g &#x22A2 M &hellip;] <keyword>of</keyword> 
+      | [g &#x22A2 <a href="#lam">lam</a> (&lambda;x. M' &hellip; x)] &#x21D2 <a href="#norm">norm</a> [g &#x22A2 M' &hellip; (N &hellip;)]
+      | [g &#x22A2 M' &hellip;] &#x21D2
+        <keyword>let</keyword>  [g &#x22A2 N' &hellip;] = <a href="#norm">norm</a> [g &#x22A2 N &hellip;] <keyword>in</keyword> [g &#x22A2 <a href="#app">app</a> (M' &hellip;) (N' &hellip;)];
+</code></pre><br><br><h3>To download the code: <a href="Norm.bel" target="_blank">Norm.bel</a></h3>
+
+</body>
+</html>

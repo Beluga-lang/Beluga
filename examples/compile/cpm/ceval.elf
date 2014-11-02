@@ -3,7 +3,7 @@
 
 %%% Single Step Transitions
 step : state -> state -> type.		%name step St.
-%infix none 6 =>.
+% infix none 6 =>.
 
 % Natural Numbers
 st_z : step (st K  (ev z))
@@ -77,13 +77,13 @@ st_init   : step (st init (return V))  (answer V).
 
 %%% Multi-Step Computation
 mstep : state -> state -> type.		%name mstep C.
-%infix none 5 =>*.
+% infix none 5 =>*.
 
 stop : mstep S S.
 << : mstep S S''
       <- step S  S'
       <- mstep S'  S''.
-%infix left 5 <<.
+% infix left 5 <<.
 % Because of evaluation order, computation sequences are displayed
 % in reverse, using "<<" as a left-associative infix operator.
 

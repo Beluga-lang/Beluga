@@ -2,7 +2,7 @@
 %%% Author: Frank Pfenning
 
 ca : {A:o} conc A -> (hyp A -> conc C) -> conc C -> type.
-%mode ca +A +D +E -F.
+% mode ca +A +D +E -F.
 
 %% Axiom Conversions
 
@@ -154,10 +154,10 @@ car_existsl : ca A D (\h. existsl (\a.\h1. E1 h a h1) H) (existsl (\a.\h1. E1'  
 
 
 
-%block l1 : some {A:o} block {h:hyp A}.
-%block l2 : block {a:i}.
-%block l3 : block {p:o}.
-%worlds (l1 | l2 | l3) (ca A D E F).
-%covers ca +A +D +E -F.
-%terminates {A [D E]} (ca A D E _).
-%total {A [D E]} (ca A D E _).
+% block l1 : some {A:o} block {h:hyp A}.
+% block l2 : block {a:i}.
+% block l3 : block {p:o}.
+% worlds (l1 | l2 | l3) (ca A D E F).
+% covers ca +A +D +E -F.
+% terminates {A [D E]} (ca A D E _).
+% total {A [D E]} (ca A D E _).

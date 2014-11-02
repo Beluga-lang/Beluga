@@ -103,4 +103,6 @@ fn f => fn d => case f of
   let [ |- tp_letv (\x.\u. D2 x u) D1]     = d in
   let [ |- C1]                = tps [ |- F1] [ |- D1] in
     tps [ |- F2] [ |- D2 _ C1]
+
 ;
+

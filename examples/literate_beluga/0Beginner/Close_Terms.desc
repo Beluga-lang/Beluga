@@ -1,0 +1,1 @@
+We build a simple program that closes open terms, converting each free variable to one bound by a lambda abstraction. The example demonstrates pattern matching on contexts and Beluga's built-in mechanism for variable substitution.

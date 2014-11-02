@@ -14,6 +14,7 @@ module Control : sig
 
   val substitutionStyle : substitution_style ref
   val printImplicit : bool ref
+  val printNormal : bool ref
 
   val db : unit -> bool  (* true if !substitutionStyle = DeBruijn *)
 end
@@ -88,6 +89,8 @@ module Int : sig
     val ppr_cmp_branch    : LF.mctx -> Comp.gctx -> Comp.branch      -> unit
 
     (* Conversion to string *)
+    val sgnDeclToString   : Sgn.decl -> string
+    
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
@@ -99,7 +102,7 @@ module Int : sig
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
-
+    val metaTypToString   : LF.mctx -> Comp.meta_typ -> string
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string
@@ -113,7 +116,9 @@ module Int : sig
     val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
+    val subCompTypToString   : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
+
 
   end
 

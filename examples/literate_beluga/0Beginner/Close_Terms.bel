@@ -1,0 +1,118 @@
+% Simple program to close terms using lambdas
+% Authors: Rohan Jacob-Rao & Matthias Puech 
+% Last edited: 26 Aug 2014
+
+%coverage
+
+%{{#Closing terms with free variables
+
+We'll first defining what terms are in the untyped lambda calculus.}}%
+
+datatype tm : type =
+  | lam : (tm -> tm) -> tm
+  | app : tm -> tm -> tm
+;
+
+%{{Recall that Beluga has two levels of language: the index level (for
+representing data) and the computation-level. Note that type name and
+constructors for an index-level type are lower case.
+
+##Open terms in Beluga
+
+One thing that's unique about Beluga is that we can easily represent open terms,
+that is, terms with free variables. For example, the term `x + 1` is open because
+it contains the free variable `x`. In Beluga, we can represent such terms if we
+declare the free variable to be part of a "context". So a term in Beluga has a
+context as part of its type, which we shall see in the example.
+
+Something we might want to do is interpret the free variable in an open term as
+the argument of a lambda term. That is, we might want to convert `x + 1` to a
+lambda term `lam (\x -> x + 1)`. This second term will no longer need `x` in its
+context, as the variable is now bound to the lambda. If we have a term with
+multiple free variables, we can apply this process repeatedly to turn them all
+into bound variables. The aim of this example is to write a function to do this
+in Beluga.
+
+##Simple case: removing one free variable
+
+Let's start by closing a term with just one free variable. Observe that the free
+variables in the argument and return value are expressed in the type signature.
+The parameter type is a term with one variable in its context, whereas the return
+type has an empty context (so return values of this function must be closed if
+they are to be well-typed).}}%
+
+rec close-only1 : [x:tm |- tm] -> [ |- tm] =
+  fn t => let [x:tm |- T x] = t in [ |- lam \u. T u]
+;
+
+%{{The idea of the function body is simply to make the term's free variable a
+lambda variable. We name the free variable `x` and replace it with the lambda
+variable `u`. Notice how we do this by writing `T` like a function of `x`. Also
+note how the term is named with an upper case letter, which is required to
+distinguish index-level terms.
+
+##Removing one free variable (out of many)
+
+We now want to write a function that closes more general terms, i.e. terms with
+more free variables. In order for such terms to be well-typed, however, their
+free variables must be mentioned in their contexts. Hence we specify that our
+contexts are lists of terms, using the `schema` keyword.}}%
+
+schema ctx = tm;
+
+%{{Now we can try to replace just the last free variable in the context list
+with a lambda abstraction. Notice the new context parameter in braces, which we
+use as part of the context of the input term. (The parameter type is "dependent"
+on `g`.) We distinguish one variable `x` from the input context, and remove it
+from the output context.}}%
+
+rec close1 : {g:ctx} [g, x:tm |- tm] -> [g |- tm] =
+  mlam g => fn t =>
+    let [g, x:tm |- T .. x] = t in [g |- lam \u. T .. u]
+;
+
+%{{In this function we must use "mlam", which is the equivalent of "fn" for
+context parameters. Notice that the function body is very similar to that of
+`close-only1`. The only difference is that `T` may now depend on other variables
+in its context besides `x`. But since we are only replacing the `x` variable, we
+need a way to say to skip over the other variables. The `..` symbol represents
+the free variables in `g` without naming them.
+
+##General case: removing all free variables
+
+The idea here is to use `close1` repeatedly to replace all free variables
+with lambda abstractions. Notice the new type signature, where the parameter
+type has a general context (with any number of free variables) and the return
+type has the empty context, implying that the output term is closed.}}%
+
+rec close : {g:ctx} [g |- tm] -> [ |- tm] =
+  mlam g => fn t => case t of
+    | [ |- _] => t
+    | [g', x:tm |- T .. x] =>
+      close [g'] (close1 [g'] t)
+;
+
+%{{The function is recursive on the input's context list (not the actual
+term!). The base case is when the context is empty. This means that the term is
+already closed, so we simply return it. We need not even name the unboxed term.
+
+The recursive case produces the scenario we had in `close1`: a nonempty
+context with at least one free variable `x`. In this case we apply `close1` to
+remove `x` from the term and then recursively call `close` with a smaller
+context.
+
+We can also write the `close1` function inline to produce a more concise
+solution.}}%
+
+rec close' : {g:ctx} [g |- tm] -> [ |- tm] =
+  mlam g => fn t => case t of
+    | [ |- _] => t
+    | [g', x:tm |- T .. x] =>
+      close' [g'] [g' |- lam \u. T .. u]
+;
+
+%{{Notice how Beluga allows us to perform pattern matching on both the context
+and the actual term in a boxed expression. Also notice how we have the ability
+to substitute variables built in to the language. The use of "higher order
+abstract syntax" lets us avoid name clashing issues when we substitute
+variables.}}%

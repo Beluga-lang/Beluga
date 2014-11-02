@@ -46,8 +46,8 @@ mlam T => case [ |- T] of
 
 Proof by induction on E.
 }%
-%block l = some [t:tp] block x:exp. type_of x t;
-%world tctx = l
+% block l = some [t:tp] block x:exp. type_of x t;
+% world tctx = l
 
 schema tctx =  some [t:tp] block x:exp, _t:type_of x t;
 

@@ -10,8 +10,8 @@ p : type.  % atomic formulas
 %name p P. % Q
 
 atom   : p -> o.
-&      : o -> o -> o.  %%infix right 11 &.
-imp    : o -> o -> o.  %%infix right 10 imp.
+&      : o -> o -> o.  %% infix right 11 &.
+imp    : o -> o -> o.  %% infix right 10 imp.
 true   : o.
 forall : (i -> o) -> o.
 

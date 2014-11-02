@@ -16,7 +16,12 @@ type t =
   | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
   | INTLIT  of string
+  | COMMENT of string
   | DOTS of string
+  | MODULESYM of string   (* Any string that would represent a module i.e. 'Nat.z' 'List.Nat.z' etc.
+                             NOTE: the regular expression for this DOES NOT match ordinary symbols (i.e. 'z') 
+                             and as such should be used in the parser as l = [a = MODULESYM -> a | a = SYMBOL -> a] *)
+  | UPSYMBOL_LIST of string
 (*   | TURNSTILE of string *)
 
 let to_string = function
@@ -25,7 +30,11 @@ let to_string = function
   | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
   | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
   | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
+  | COMMENT s -> Printf.sprintf "COMMENT %S" s
   | DOTS s -> Printf.sprintf "DOTS %S"  s
+  | MODULESYM s -> Printf.sprintf "MODULESYM %S" s
+  | UPSYMBOL_LIST s -> Printf.sprintf "UPSYMBOL_LIST %S" s
+
 (*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
 
 (** Pretty print a token using {!Format} functionality. *)
@@ -49,7 +58,10 @@ let extract_string = function
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
   | INTLIT  s -> s
+  | COMMENT s -> s
   | DOTS s -> s
+  | MODULESYM s -> s
+  | UPSYMBOL_LIST s -> s
 (*   | TURNSTILE s -> s *)
 
 

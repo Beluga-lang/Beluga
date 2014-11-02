@@ -205,6 +205,8 @@ let rec lookup cG k = match (cG, k) with
   | (Dec (_cG', _ ), 1) ->  None
   | (Dec ( cG', _ ), k) ->
       lookup cG' (k - 1)
+  | _ -> None
+
 
 let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
   | (Dec (_cD, Decl (_, CTyp (cid_schema, _))), 1) -> cid_schema

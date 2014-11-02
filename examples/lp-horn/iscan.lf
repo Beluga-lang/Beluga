@@ -3,8 +3,8 @@
 
 iscan : tocan A D D' -> can A D' -> type.
 isatm : toatm D D' -> atm D' -> type.
-%mode iscan +TC -C.
-%mode isatm +TA -A.
+% mode iscan +TC -C.
+% mode isatm +TA -A.
 
 
 isc_and : iscan (tc_and TC2 TC1) (can_andi CN2 CN1)

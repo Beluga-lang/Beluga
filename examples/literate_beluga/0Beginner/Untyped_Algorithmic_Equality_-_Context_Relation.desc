@@ -1,0 +1,1 @@
+Context relationships can be defined explicitly using inductive datatypes. In this proof we use inductive datatypes to establish strengthening and weakening between contexts.

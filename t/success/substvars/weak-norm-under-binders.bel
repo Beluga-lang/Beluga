@@ -1,4 +1,4 @@
-#opts +strengthen;
+
 % Weak normalization under binders.
 
 tp : type.                %name tp T.
@@ -22,7 +22,7 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 datatype IsVar : (g:ctx){M:[g |- tm A]} ctype =
 | IsVar : {#p:[g |- tm A]} IsVar [g |- #p ..];
 
-datatype IsVarSub : {g:ctx} (h:ctx) {#S: h |- g}ctype =
+datatype IsVarSub : {g:ctx} (h:ctx) {#S : h |- g} ctype =
 | Nil : IsVarSub [] [h |- ^ ]
 | Cons :  IsVarSub [g] [h |- #S[..]] -> IsVar [h |- M ..]
          -> IsVarSub [g,x:tm A] [h |- #S[..] (M ..)];
@@ -59,7 +59,7 @@ fn iv => fn ivs => case iv of
 rec varSubCompose' : IsVarSub [g] [h  |- #W[..]] -> IsVarSub [h] [h' |- #W2[..]] -> IsVarSub [g] [h' |- #W[#W2[..]]] =
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
-| Cons ivs' iv => Cons (varSubCompose' ivs' r2) (wknVar' iv r2);
+| Cons ivs' iv =>  Cons (varSubCompose' ivs' r2) (wknVar' iv r2);
 
 rec haltsMstep2 : {S:[g |- mstep (M ..) (M' ..)]} Halts [ |- A] [g |- M' ..] -> Halts [ |- A] [g |- M ..] =
  mlam S => fn h => let (h : Halts [ |- A] [g |- M' ..]) = h in

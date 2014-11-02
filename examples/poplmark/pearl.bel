@@ -23,7 +23,7 @@ arr   : tp -> tp -> tp.			% Functions: A1 => A2
 forall: tp -> (tp -> tp) -> tp.           % Universal Type: forall x>:A1. A2
                                         % forall A1 ([x] A2 x)
 
-% => = arrow.  %infix right 11 =>.
+% => = arrow.  % infix right 11 =>.
 
 schema a_ctx = tp;
 % --------------------------------------------------------------------------

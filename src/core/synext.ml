@@ -18,13 +18,6 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
-(*      | TypDeclOpt of name  *)
-
-(*   and ctyp_decl =
-    | MDecl of Loc.t * name * typ  * dctx
-    | PDecl of Loc.t * name * typ  * dctx
-    | SDecl of Loc.t * name * dctx * dctx
-    | CDecl of Loc.t * name * name *)
 
   and ctyp =
     | MTyp of Loc.t * typ * dctx * depend
@@ -42,12 +35,16 @@ module LF = struct
     | PiTyp  of Loc.t * typ_decl * typ
     | Sigma of Loc.t * typ_rec
     | Ctx   of Loc.t * dctx
+    | AtomTerm of Loc.t * normal
 
   and normal =
     | Lam  of Loc.t * name * normal
     | Root of Loc.t * head * spine
     | Tuple of Loc.t * tuple
+    | LFHole of Loc.t
     | Ann of Loc.t * normal * typ
+    | TList of Loc.t * normal list
+    | NTyp of Loc.t * typ
 
   and head =
     | Name  of Loc.t * name
@@ -157,7 +154,7 @@ module Comp = struct
      | Const  of Loc.t * name                   (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
      | MApp of Loc.t * exp_syn * meta_obj       (*    | i [C]               *)
-     | BoxVal of Loc.t * LF.dctx * LF.normal
+     | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
      | Equal  of Loc.t * exp_syn * exp_syn
@@ -224,7 +221,7 @@ module Comp = struct
      | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
 (*     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)" *)
      | MApp   (_loc,  syn, _) -> "MApp(" ^ synToString syn ^ ", ...)"
-     | BoxVal (_loc, _, _) -> "BoxVal(...)"
+     | BoxVal (_loc, _) -> "BoxVal(...)"
      | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
      | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"
      | Boolean (_loc, _) -> "Boolean(_)"
@@ -251,26 +248,43 @@ module Sgn = struct
     | Stratify of Loc.t * (string  option)
     (* | Stratify of Loc.t * Comp.order * name * (name option) list  *)
 
+  type assoc = Left | Right | None
+  type precedence = int
+  type fix = Prefix | Postfix | Infix
+  
   type pragma =
-    | OptsPrag of string list
-    | NamePrag of name * string * string option
+    | OptsPrag          of string list
+    | NamePrag          of name * string * string option
+    | FixPrag           of name * fix * precedence * assoc option
     | NotPrag
+    | DefaultAssocPrag  of assoc
+    | OpenPrag          of string list
+    | AbbrevPrag        of string list * string
+
+  (* Pragmas that need to be declared first *)
+  type global_pragma = 
+    | NoStrengthen
+    | Coverage     of [`Error | `Warn]
 
   type decl =
-    | Const    of Loc.t * name * LF.typ
-    | Typ      of Loc.t * name * LF.kind
-    | CompTyp  of Loc.t * name * Comp.kind  * positivity_flag option
-    | CompCotyp of Loc.t * name * Comp.kind
-    | CompConst of Loc.t * name * Comp.typ
-    | CompDest of Loc.t * name * Comp.typ
+    | Const         of Loc.t * name * LF.typ
+    | Typ           of Loc.t * name * LF.kind
+    | CompTyp       of Loc.t * name * Comp.kind  * positivity_flag option
+    | CompCotyp     of Loc.t * name * Comp.kind
+    | CompConst     of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema   of Loc.t * name * LF.schema
-    | Pragma   of Loc.t * pragma
-    | MRecTyp  of Loc.t * decl list list
-    | Rec      of Loc.t * Comp.rec_fun list
-    | Val      of Loc.t * name * Comp.typ option * Comp.exp_syn
-    | Query    of Loc.t * name option * LF.typ * int option * int option
-
+    | Schema        of Loc.t * name * LF.schema
+    | Pragma        of Loc.t * pragma
+    | GlobalPragma  of Loc.t * global_pragma
+    | MRecTyp       of Loc.t * decl list list
+    | Rec           of Loc.t * Comp.rec_fun list
+    | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
+    | Query         of Loc.t * name option * LF.typ * int option * int option
+    | Module        of Loc.t * string * decl list
+    | Comment of Loc.t * string
   type sgn = decl list
+
+
 
 end

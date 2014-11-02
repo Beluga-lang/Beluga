@@ -1,0 +1,59 @@
+% Proof that a big step evaluation relation for lambda terms is deterministic
+% (An an argument for using refl for equality instead of algorithmic equality)
+% Author: Andrew Cave
+
+exp : type.
+lam : (exp -> exp) -> exp.
+app : exp -> exp -> exp. %infix app 4.
+
+eq : exp -> exp -> type. %infix eq 5.
+refl : M eq M.
+
+notLam : exp -> type.
+notLam : notLam (M app N).
+
+eval : exp -> exp -> type. %infix eval 4.
+eval_lam : ({x:exp} x eval x -> notLam x -> (M x) eval (N x))
+           -> (lam M) eval (lam N).
+eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.   %infix eval_app1 4.
+eval_app2 : M eval M' -> notLam M' -> N eval N' -> (M app N) eval (M' app N').
+
+schema evctx = block x:exp, u:x eval x, _t:notLam x;
+
+rec deterministic : (g:evctx) [g |- (M ..) eval (R ..)] -> [g |- (M ..) eval (R' ..)]
+-> [g |- (R ..) eq (R' ..)] =
+fn d => fn f =>
+case d of
+| [g |- eval_app2 (D1 ..) (NL ..) (D2 ..)] =>
+  (case f of
+    | [g |- eval_app2 (F1 ..) (NL' ..) (F2 ..)] =>
+      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
+      let [g |- refl] = deterministic [g |- D2 ..] [g |- F2 ..] in
+      [g |- refl]
+
+    | [g |- (F1 ..) eval_app1 (F2 ..)] =>
+      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
+       impossible [g |- NL ..] in [g])
+
+ | [g |- eval_lam (\x.\u.\v. D1 .. x u v)] =>
+  let [g |- eval_lam (\x.\u.\v. F1 .. x u v)] = f in
+  let [g,b:block x:exp, v:x eval x, _t:notLam x |-  refl] =
+    deterministic
+     [g,b:block x:exp, v:x eval x, _t:notLam x |-  D1 .. b.1 b.2 b.3]
+     [g,b |- F1 .. b.1 b.2 b.3] in
+  [g |- refl]
+
+| [g |- (D1 ..) eval_app1 (D2 ..)] : [g |- (((M ..) app (N ..)) eval (R ..))] =>
+  (case f of
+    | [g |- (F1 ..) eval_app1 (F2 ..)] =>
+      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
+      deterministic [g |- D2 ..] [g |- F2 ..]
+
+    | [g |- eval_app2 (F1 ..) (NL ..) (F2 ..)] =>
+      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
+      impossible [g |- NL ..] in [g])
+
+| [g |- #p.2 ..] => let [g |- #q.2 ..] = f in [g |- refl]
+;
+
+

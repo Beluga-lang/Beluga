@@ -35,7 +35,7 @@ ccp : eval E V
        -> mstep (st K (ev E)) (answer W)
        -> type.
 
-%mode ccp +D +E -F.
+% mode ccp +D +E -F.
 %name ccp CP.
 %%lex {D} ccp D _ _.
 
@@ -93,7 +93,7 @@ ccp_fix : ccp (ev_fix D1) C' (<< C1  st_fix)
 ccp_vl : ccp (ev_vl) C' (<< C'  st_vl).
 
 
-%worlds () (ccp _ _ _).
+% worlds () (ccp _ _ _).
 
 
 % %{ Completeness Theorem:

@@ -66,7 +66,7 @@ fn d1 => fn d2 => case d1 of
          transG [g, b:block x':tm, ae_v:aeq x' x'  |-  D1 .. b.1 b.2]
                [g, b |-  D2 .. b.1 b.2]
   in
-    [g |- ae_l \x. \u. E .. x u]
+   [g |- ae_l \x. \u. E .. x u]
        
 | [g |- ae_a (D1 ..) (D2 ..)] =>
   let [g |- ae_a (F1 ..) (F2 ..)] = d2 in 

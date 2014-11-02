@@ -58,7 +58,7 @@ tp_app : has_type (app E1 E2) T1
 
 tps : eval E V -> has_type E T -> has_type V T -> type.
 
-%%mode tps +D +P -Q.
+%% mode tps +D +P -Q.
 
 % Natural Numbers
 tps_z     : tps (ev_z) (tp_z) (tp_z).

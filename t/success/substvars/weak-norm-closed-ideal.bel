@@ -1,4 +1,3 @@
-#opts +strengthen;
 % Weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
@@ -42,7 +41,6 @@ rec haltsMstep : [ |- mstep M M'] -> [ |- halts M'] -> [ |- halts M] =
 / total (haltsMstep) /
 fn s => fn h => let [ |- MS] = s in let [ |- halts/m MS' V] = h in
  [ |- halts/m (trans MS MS') V]
-
 ;
 
 % CR1
@@ -69,7 +67,6 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
 ;
 
 %  h |- #s : g
-
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]

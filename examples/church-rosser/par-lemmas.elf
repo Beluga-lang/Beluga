@@ -4,7 +4,7 @@
 % Every term reduces to itself (in parallel)
 
 identity : {M:term} pred M M  ->  type.
-%mode identity +M -R.
+% mode identity +M -R.
 
 id_lam : identity (lam M1) (lm R1)
        <- ({x:term} {eqx: pred x x}
@@ -15,24 +15,24 @@ id_app : identity (app M1 M2) (ap R1 R2)
        <- identity M2 R2.
 
 %{
-%block lid : block {x:term} {eqx: x => x} {u:identity x eqx}.
-%worlds (lid) (identity M R).
-%covers identity +M -R.
-%terminates M (identity M _).
-%total M (identity M _).
+% block lid : block {x:term} {eqx: x => x} {u:identity x eqx}.
+% worlds (lid) (identity M R).
+% covers identity +M -R.
+% terminates M (identity M _).
+% total M (identity M _).
 }%
 %  Parallel multi-step reduction is transitive.
 
 append : pred* M M'  ->  pred* M' M''  ->  pred* M M''  -> type.
-%mode append +R* +S* -S*'.
+% mode append +R* +S* -S*'.
 
 append_id   : append id* S* S*.
 append_step : append (next R1 R2*) S* (next R1 S2*')
            <- append R2* S* S2*'.
 
 %{
-%worlds () (append R* S* S*').
-%covers append +R* +S* -S*'.
-%terminates R* (append R* S* _).
-%total R* (append R* S* _).
+% worlds () (append R* S* S*').
+% covers append +R* +S* -S*'.
+% terminates R* (append R* S* _).
+% total R* (append R* S* _).
 }%

@@ -16,7 +16,6 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
   | UnexpectedSucess
-  | IllegalOptsPrag
   | TotalDeclError of name * name 
   | MutualTotalDecl of name
   | MutualTotalDeclAfter of name
@@ -24,6 +23,10 @@ type error =
   | NoStratify of string
   | NoStratifyOrPositive of string
   | TotalArgsError of name
+  | IllegalOptsPrag of string
+  | IllegalOperatorPrag of name * Ext.Sgn.fix * int
+  | InvalidOpenPrag of string
+  | InvalidAbbrev of string list * string
 
 
 exception Error of Syntax.Loc.t * error
@@ -32,10 +35,6 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-	| UnexpectedSucess ->
-	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
-        | IllegalOptsPrag ->
-          Format.fprintf ppf "%%opts pragma can only appear before any declarations."
 	| TotalDeclError (f, f') -> 
 	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n" 
 	    (R.render_name f) (R.render_name f')
@@ -53,8 +52,26 @@ let _ = Error.register_printer
 	| TotalArgsError f ->
 	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
 
-    )
+      	| UnexpectedSucess ->
+      	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
+        | IllegalOptsPrag s ->
+          Format.fprintf ppf "\"%s\" pragma must appear before any declarations." s
+        | IllegalOperatorPrag(n, f, actual) -> begin 
+          let (fix, expected) = match f with Ext.Sgn.Infix -> ("infix", 2) | Ext.Sgn.Postfix -> ("postfix", 1) in
+          Format.fprintf ppf 
+            "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted" 
+            (fix)
+            (R.render_name n)
+            (actual)
+            (expected) end
+      | InvalidOpenPrag s ->
+        Format.fprintf ppf "Invalid module in pragma '%%open %s'" s
+      | InvalidAbbrev (l, s) ->
+        Format.fprintf ppf "Invalid module in pragma '%%abbrev %s %s'"
+      	  (String.concat "." l) s
+				  )
   )
+
 
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
@@ -82,38 +99,102 @@ let freeze_from_name tau = match tau with
                                CompCotyp.freeze a;
                                 ()
 
+let sgnDeclToHtml = function
+  | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
+  | d -> 
+    let margin = Format.pp_get_margin Format.str_formatter () in
+    let _ = Html.printingHtml := true in
+    (* let _ = Format.set_margin 150 in *)
+    let _ = Format.pp_set_margin Format.str_formatter 200 in
+    let _ = Prettyext.Ext.DefaultPrinter.fmt_ppr_sgn_decl Prettyext.std_lvl Format.str_formatter d in
+    let _ = Html.append (Format.flush_str_formatter ()) in
+    let _ = Format.pp_set_margin (Format.str_formatter) margin in
+    Html.printingHtml := false
 
 let rec recSgnDecls = function
-  | [] -> ()
+  | [] -> []
 
   | Ext.Sgn.Pragma(loc, Ext.Sgn.NotPrag) :: not'd_decl :: rest ->
     let not'd_decl_succeeds =
       begin
-	try
-	  recSgnDecl not'd_decl; true
-	with _ ->
-	  if !Debug.chatter != 0 then
-	    print_string ("Reconstruction fails for %not'd declaration\n");
-          false
-      end in
+    try
+      let _ = recSgnDecl not'd_decl in true
+    with _ ->
+      if !Debug.chatter != 0 then
+        print_string ("Reconstruction fails for %not'd declaration\n");
+            false
+        end in
     if not'd_decl_succeeds
     then raise (Error (loc, UnexpectedSucess))
     else recSgnDecls rest
 
   (* %not declaration with nothing following *)
-  | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> ()
+  | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> []
 
-  | Ext.Sgn.Pragma(loc, Ext.Sgn.OptsPrag _) :: rest ->
-    raise (Error (loc, IllegalOptsPrag))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Warn ) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%warncoverage"))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Error ) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%coverage"))
+  | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.NoStrengthen) :: rest ->
+    raise (Error (loc, IllegalOptsPrag "%nostrengthen"))
 
   | decl :: rest ->
-    recSgnDecl decl;
-    recSgnDecls rest
+    let decl' = recSgnDecl decl in
+    let rest' = recSgnDecls rest in
+    decl'::rest'
 
-and recSgnDecl d =
+and recSgnDecl ?(pauseHtml=false) d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
+    if !Html.genHtml && not pauseHtml then sgnDeclToHtml d;
     match d with
+    | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment(l, s)
+        
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.AbbrevPrag(orig, abbrev)) ->
+      begin try Store.Modules.addAbbrev orig abbrev 
+      with Not_found -> raise (Error(loc, InvalidAbbrev(orig, abbrev))) end;
+      Int.Sgn.Pragma(Int.LF.AbbrevPrag(orig, abbrev))
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.DefaultAssocPrag a) -> OpPragmas.default := a; 
+        let a' = match a with
+        | Ext.Sgn.Left -> Int.LF.Left
+        | Ext.Sgn.Right -> Int.LF.Right
+        | Ext.Sgn.None -> Int.LF.NoAssoc in
+        Int.Sgn.Pragma(Int.LF.DefaultAssocPrag a')
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) -> 
+        let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
+        
+        if fix = Ext.Sgn.Prefix then 
+          OpPragmas.addPragma name fix (Some precedence) assoc
+        else begin
+          let args_expected = match fix with
+            | Ext.Sgn.Postfix -> 1
+            | Ext.Sgn.Infix   -> 2 in
+          
+          let actual = 
+            try Some (Typ.args_of_name name)
+            with _ -> 
+              try Some (Term.args_of_name name)
+              with _ -> None in
+          match actual with
+          | None -> ()
+          | Some actual -> 
+            if args_expected = actual then 
+              OpPragmas.addPragma name fix (Some precedence) assoc
+            else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
+        end; 
+        let assoc' = match assoc with
+        | None -> None
+        | Some x -> Some(match x with
+          | Ext.Sgn.Left -> Int.LF.Left
+          | Ext.Sgn.Right -> Int.LF.Right
+          | Ext.Sgn.None -> Int.LF.NoAssoc) in
+        let fix' = match fix with
+          | Ext.Sgn.Postfix -> Int.LF.Postfix
+          | Ext.Sgn.Prefix -> Int.LF.Prefix
+          | Ext.Sgn.Infix -> Int.LF.Infix in
+        Int.Sgn.Pragma(Int.LF.FixPrag(name, fix', precedence, assoc'))
+
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
+        dprint (fun () -> "[RecSgn Checking] CompTypAbbrev at: \n" ^ Syntax.Loc.to_string loc);
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
@@ -126,7 +207,10 @@ and recSgnDecl d =
 					fun () -> Check.Comp.checkKind Int.LF.Empty cK)) in
 	let _         = (Monitor.timer ("Type abbrev. : Type Check",
 					fun () -> Check.Comp.checkTyp cD tau)) in
-        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in ()
+        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in 
+        let sgn = Int.Sgn.CompTypAbbrev(loc, a, cK, tau) in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn        
 
     | Ext.Sgn.CompTyp (loc , a, extK, pflag) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
@@ -149,7 +233,6 @@ and recSgnDecl d =
             fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
 	    dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
             " successful!");
-
 	(* let p = match pflag with  *)
 	(*   | None -> Int.Sgn. Noflag  *)
 	(*   | Some Ext. Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
@@ -170,10 +253,15 @@ and recSgnDecl d =
           (if (!Debug.chatter) == 0 then ()
           else (Format.printf "\ndatatype %s : @[%a@] = \n"
                  (a.string_of_name)
-                 (P.fmt_ppr_cmp_kind Int.LF.Empty Pretty.std_lvl) cK'))
+                 (P.fmt_ppr_cmp_kind Int.LF.Empty Pretty.std_lvl) cK'));
+        let sgn = Int.Sgn.CompTyp(loc, a, cK', p) in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
 
-  | Ext.Sgn.CompCotyp (_ , a, extK) ->
+
+  | Ext.Sgn.CompCotyp (loc , a, extK) ->
+        dprint (fun () -> "[RecSgn Checking] CompCotyp at: \n" ^ Syntax.Loc.to_string loc);
         let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
@@ -194,10 +282,14 @@ and recSgnDecl d =
             fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
             dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^a.string_of_name ^
             " successful!");
-        let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in ()
+        let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in
+        let sgn = Int.Sgn.CompCotyp(loc, a, cK') in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
 
     | Ext.Sgn.CompConst (loc , c, tau) ->
+        dprint (fun () -> "[RecSgn Checking] CompConst at: \n" ^ Syntax.Loc.to_string loc);
         let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -241,14 +333,14 @@ and recSgnDecl d =
 	(* else () ); *)
 
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
-          (if (!Debug.chatter) == 0 then ()
-           else (Format.printf " | %s : @[%a@] \n"
-                   (c.string_of_name)
-                   (P.fmt_ppr_cmp_typ Int.LF.Empty Pretty.std_lvl) tau'))
+        let sgn = Int.Sgn.CompConst(loc, c, tau') in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
 
 
-   | Ext.Sgn.CompDest (_ , c, tau) ->
+   | Ext.Sgn.CompDest (loc , c, tau) ->
+        dprint (fun () -> "[RecSgn Checking] CompDest at: \n" ^ Syntax.Loc.to_string loc);
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
@@ -265,10 +357,14 @@ and recSgnDecl d =
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
                                         fun () -> Check.Comp.checkTyp cD tau'))
         in      let cid_ctypfamily = get_target_cid_compcotyp tau' in
-        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in ()
+        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in 
+        let sgn = Int.Sgn.CompDest(loc, c, tau') in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
 
-    | Ext.Sgn.Typ (_, a, extK)   ->
+    | Ext.Sgn.Typ (loc, a, extK)   ->
+        dprint (fun () -> "[RecSgn Checking] Typ at: \n" ^ Syntax.Loc.to_string loc);
         let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
         let (apxK, _ ) = Index.kind extK in
         let _        = FVar.clear () in
@@ -290,10 +386,14 @@ and recSgnDecl d =
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^a.string_of_name ^
 				  " successful!")) in
-        let _a = Typ.add (Typ.mk_entry a tK' i) in ()
-
+        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
+        let _a = Typ.add (Typ.mk_entry a tK' i) in
+        let sgn = Int.Sgn.Typ(loc, _a, tK') in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
     | Ext.Sgn.Const (loc, c, extT) ->
+        dprint (fun () -> "[RecSgn Checking] Const at: \n" ^ Syntax.Loc.to_string loc);
         let (apxT, _ ) = Index.typ extT in
         let rec get_type_family = function
                            | Apx.LF.Atom(_loc, a, _spine) -> a
@@ -320,10 +420,14 @@ and recSgnDecl d =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
-	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in ()
+        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
+	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
+        let sgn = Int.Sgn.Const(loc, _c, tA') in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
 
-
-    | Ext.Sgn.Schema (_, g, schema) ->
+    | Ext.Sgn.Schema (loc, g, schema) ->
+        dprint (fun () -> "[RecSgn Checking] Schema at: \n" ^ Syntax.Loc.to_string loc);
         let apx_schema = Index.schema schema in
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
         let _        = FVar.clear () in
@@ -335,22 +439,24 @@ and recSgnDecl d =
 			Unify.resetGlobalCnstrs ()) in
 
         let sW'      = Abstract.schema sW in
-        (Check.LF.checkSchemaWf sW' ;
-	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
-         let _s = Schema.add (Schema.mk_entry g sW') in ();
-         if (!Debug.chatter) == 0 then ()
-         else (Format.printf "\nschema %s = @[%a@];@."
-                 (g.string_of_name)
-                 (P.fmt_ppr_lf_schema ~useName:false Pretty.std_lvl) sW'))
+        let _ = Check.LF.checkSchemaWf sW' in
+      	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
+         let _s = Schema.add (Schema.mk_entry g sW') in 
+         let sgn = Int.Sgn.Schema(_s, sW') in
+         Store.Modules.addSgnToCurrent sgn;
+         sgn
+
 
 
     | Ext.Sgn.Val (loc, x, None, i) ->
+          dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
           let apx_i              = Index.exp' (Var.create ()) i in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
           let _                  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           let tau'               = Whnf.cnormCTyp (tau, theta) in
           let i'                 = Whnf.cnormExp' (i', Whnf.m_id) in
+
           let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ x.string_of_name ^
 					     "\n   : " ^ P.compTypToString cD tau' ^
 					     "\n  =  " ^
@@ -360,18 +466,26 @@ and recSgnDecl d =
           let _                  = Monitor.timer ("Function Check", fun () ->
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-	  if Holes.none () then begin
-            let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
-            if (!Debug.chatter) <> 0 then
-              Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
-                (R.render_name x)
-                (P.compTypToString cD tau')
-                (P.expChkToString cD cG i'')
-                (P.valueToString v)
+	  let v = if Holes.none () then 
+	    begin
+              let v = Opsem.eval i'' in
+            let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in	      
+              if (!Debug.chatter) <> 0 then
+		Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
+                  (R.render_name x)
+                  (P.compTypToString cD tau')
+                  (P.expChkToString cD cG i'')
+                  (P.valueToString v);
+	      Some v
 	  end
+	  else None in
+    let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
+    let _ = Store.Modules.addSgnToCurrent sgn in
+    sgn
+
 
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
+          dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
           let apx_tau = Index.comptyp tau in
 	  let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
           let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
@@ -395,28 +509,25 @@ and recSgnDecl d =
                                 P.expChkToString cD cG i' ^ "\n") in
 
           let i''     = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
-          let _       = Monitor.timer ("Function Check", fun () ->
-					 Check.Comp.check cD  cG i'' (tau', C.m_id)) in
-	  if Holes.none () then begin
-            let v = Opsem.eval i'' in
-            let _x = Comp.add (fun _ -> Comp.mk_entry x tau' false v []) in
-            if (!Debug.chatter) <> 0 then
-	      Printf.printf "\nlet %s : %s = %s\n===>  %s\n"
-		(R.render_name x)
-		(P.compTypToString cD tau')
-		(P.expChkToString cD cG i'')
-		(P.valueToString v)
-  	  end
+          let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-    | Ext.Sgn.MRecTyp (_, recDats) ->
-          let recTyps = List.map List.hd recDats in
-          let   _   =  recSgnDecls recTyps in
-          let recConts = List.map List.tl recDats in
-          let recConts' = List.flatten recConts in
-          let   _   = recSgnDecls recConts' in
-          let  _  = List.map freeze_from_name recTyps in
-               ()
-    | Ext.Sgn.Rec (_, recFuns) ->
+	  let v = if Holes.none () then begin
+            let v = Opsem.eval i'' in
+            let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in Some v
+            end else None in
+	  let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
+	  let _ = Store.Modules.addSgnToCurrent sgn in
+	    sgn
+
+    | Ext.Sgn.MRecTyp (loc, recDats) ->
+        let recTyps   = List.map List.hd recDats in
+        let recTyps'  = List.map (recSgnDecl ~pauseHtml:true) recTyps in
+        let recConts  = List.map List.tl recDats in
+        let recConts' = List.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
+        let  _  = List.map freeze_from_name recTyps in
+        Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x::y) recTyps' recConts')
+
+    | Ext.Sgn.Rec (loc, recFuns) ->
         (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
         let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
 
@@ -527,6 +638,7 @@ and recSgnDecl d =
           let e_r'    = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
 
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
+
 	  let tau_ann = if !Total.enabled then Total.annotate loc f tau' 
  	                else tau' in 
           let _       = Monitor.timer ("Function Check", fun () ->
@@ -539,7 +651,7 @@ and recSgnDecl d =
         let rec reconRecFun recFuns = match recFuns with
           | [] ->   (Coverage.enableCoverage := false ;
                      Total.enabled := false;
-                     ())
+                     [])
           | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun loc f  e in
             if !Debug.chatter <> 0 then
@@ -567,56 +679,66 @@ and recSgnDecl d =
 		Printf.printf "\n## Coverage checking done: %s  ##\n"
                   (R.render_name f);
               dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
-              let _x = Comp.add
+              let (loc_opt, cid) = Comp.add loc
 		(fun cid ->
-                  Comp.mk_entry f tau' (is_total total)
+                  Comp.mk_entry f tau' 0 (is_total total)
                     (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                     n_list) in
-              reconRecFun lf in
-
-(* For checking totality of mutual recursive functions,
-   we should check all functions together by creating a variable
-   which collects all total declarations *)
-        begin match recFuns with
-          | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
-            let (e_r' , tau') = reconFun loc f e in
-            if !Debug.chatter <> 0 then
-              Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
-                (R.render_name f)
-                (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
-                (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl)
-                (Whnf.cnormExp (e_r', Whnf.m_id));
-              begin match total with
-              | None -> ()
-	      | Some (Ext.Comp.Trust _ ) -> 
-		Printf.printf "\n## Totality checking: %s is trusted. ##\n"
-		  (R.render_name f) 
-              | Some t -> let x = get_rec_arg t in
-                  Total.clear () ;
-		  (match x with 
-		     | Some x -> 
-			 Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-			   (R.render_name f) (R.render_name x)
-		     | None -> 
-			 Printf.printf "\n## Totality checking: %s terminates ##\n"
-			   (R.render_name f))
-              end ;
-            if !Coverage.enableCoverage then
-              Printf.printf "\n## Coverage checking done: %s  ##\n"
-                (R.render_name f);
-            dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
-            let _x = Comp.add
-              (fun cid ->
-                Comp.mk_entry f tau' (is_total total)
-                  (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-                  n_list) in
-            reconRecFun lf
+	      let _ = match loc_opt with
+                | Some loc -> Holes.destroyHoles(loc)
+                | None -> () in
+              let _ = Holes.commitHoles() in
+		(cid, tau', e_r')::(reconRecFun lf) in
+	  (* For checking totality of mutual recursive functions,
+	     we should check all functions together by creating a variable
+	     which collects all total declarations *)
+          begin match recFuns with
+            | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
+		let (e_r' , tau') = reconFun loc f e in
+		  if !Debug.chatter <> 0 then
+		    Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
+                      (R.render_name f)
+                      (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
+                      (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl)
+                      (Whnf.cnormExp (e_r', Whnf.m_id));
+		  begin match total with
+		    | None -> ()
+		    | Some (Ext.Comp.Trust _ ) -> 
+			Printf.printf "\n## Totality checking: %s is trusted. ##\n"
+			  (R.render_name f) 
+		    | Some t -> let x = get_rec_arg t in
+			Total.clear () ;
+			(match x with 
+			   | Some x -> 
+			       Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
+				 (R.render_name f) (R.render_name x)
+			   | None -> 
+			       Printf.printf "\n## Totality checking: %s terminates ##\n"
+				 (R.render_name f))
+		  end ;
+		  if !Coverage.enableCoverage then
+		    Printf.printf "\n## Coverage checking done: %s  ##\n"
+                      (R.render_name f);
+		  dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
+		  let (loc_opt, cid) = Comp.add loc
+		    (fun cid ->
+                       Comp.mk_entry  f tau' 0 (is_total total)
+			 (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+			 n_list) in
+		  let _ = match loc_opt with
+		    | Some loc -> Holes.destroyHoles(loc)
+		    | None -> () in
+		  let _ = Holes.commitHoles() in
+		  let sgn = Int.Sgn.Rec((cid, tau', e_r')::(reconRecFun lf)) in
+		    Store.Modules.addSgnToCurrent sgn;
+		    sgn
 
           | _ -> raise (Error.Violation "No recursive function defined")
         end
 
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
+      dprint (fun () -> "[RecSgn Checking] Query at: \n" ^ Syntax.Loc.to_string loc); 
       let (apxT, _ ) = Index.typ extT in
       let _          = dprint (fun () -> "Reconstructing query.") in
 
@@ -644,9 +766,11 @@ and recSgnDecl d =
       let _        = Monitor.timer ("Constant Check",
                                     fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)) in
       let _c'       = Logic.storeQuery name (tA', i) expected tries in
-      ()
+      Int.Sgn.Query(loc, name, (tA', i), expected, tries)
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+        dprint (fun () -> "[RecSgn Checking] Pragma at: \n" ^ Syntax.Loc.to_string loc); 
         begin try
           let cid =
           begin match v_name with
@@ -655,26 +779,26 @@ and recSgnDecl d =
             | Some x ->
                 Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
                   (Some (Gensym.VarData.name_gensym x))
-          end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name
+          end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name; Int.Sgn.Pragma(Int.LF.NamePrag cid)
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
 
-(*    | Ext.Sgn.Pragma (loc, Ext.Sgn.Total (order, c, args)) ->
-        begin try
-          let rec pos x args k = match args with
-            | [] -> raise (Index.Error (loc, Index.UnboundName x))
-            | (Some y)::ys -> if x = y then k else pos x ys (k+1)
-            | None::ys -> pos x ys (k+1)
-          in
-            match order with
-              | Ext.Sgn.Arg x ->
-                  (* check that p refers to a type we can do induction over *)
-                  let p = pos x args 1 in
-                    (Printf.printf "\n## Totality declaration: %s terminates in position %s ##\n"
-                      (R.render_name c) (string_of_int p);
-                    Comp.add_total c (Order.Dec (Order.Arg p, Order.Empty)))
-              | _ -> ()
-        with
-            _ -> raise (Index.Error (loc, Index.UnboundName c))
-        end
-*)
+    | Ext.Sgn.Module(loc, name, decls) -> 
+
+      let state = Store.Modules.getState () in
+      let _ = Store.Modules.instantiateModule name in
+      let decls' = List.map recSgnDecl decls in
+
+      let _ = Store.Modules.setState state in
+      let sgn = Int.Sgn.Module(loc, name, decls') in
+      Store.Modules.addSgnToCurrent sgn;
+      sgn
+
+    | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
+      try 
+        let x = Modules.open_module n in
+        let sgn = Int.Sgn.Pragma(Int.LF.OpenPrag x) in
+        Store.Modules.addSgnToCurrent sgn;
+        sgn
+      with Not_found -> raise (Error(loc, (InvalidOpenPrag (String.concat "." n))))
+

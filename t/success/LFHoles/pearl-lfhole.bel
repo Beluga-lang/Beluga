@@ -1,0 +1,287 @@
+% --------------------------------------------------------------------------
+% Bounded subtype polymorphism
+% Author: Brigitte Pientka
+% --------------------------------------------------------------------------
+% Key features: This implementation not only uses higher-order
+% abstract syntax in specifying the types, but we will exploit extensively
+% the power of parametric and hypothetical judgment. As a benefit we
+% do not need to implement a narrowing lemma separately, but get it
+% "for free". The implementation follows the proof pearl description
+% which appeared at ITP.
+%
+% This development has previously been done in Twelf. We show here that
+% Beluga and Beluga's coverage checker are equally powerful and we in fact
+% avoid some problems such as requiring to weaken some of the definitions to
+% to enable context subsumption in Twelf.
+% --------------------------------------------------------------------------
+% Definition of types
+
+tp : type.  %name tp T.
+
+top   : tp.
+arr   : tp -> tp -> tp.			% Functions: A1 => A2
+forall: tp -> (tp -> tp) -> tp.           % Universal Type: forall x>:A1. A2
+                                        % forall A1 ([x] A2 x)
+
+% => = arrow.  % infix right 11 =>.
+
+schema a_ctx = tp;
+% --------------------------------------------------------------------------
+%%%%%  Declarative subtyping  %%%%%
+
+subtype : tp -> tp -> type.
+
+subtype_top    : subtype T top.
+
+subtype_refl   : subtype T T.
+
+subtype_trans  : subtype T1 T3
+		 <- subtype T1 T2
+		 <- subtype T2 T3.
+
+subtype_arrow  : subtype (arr S1 S2) (arr T1 T2)
+		 <- subtype T1 S1
+		 <- subtype S2 T2.
+
+subtype_forall : subtype (forall S1 S2) (forall T1 T2)
+		 <- subtype T1 S1
+		 <- ({x:tp} subtype x T1 -> subtype (S2 x) (T2 x)).
+
+
+schema as_ctx =  some [u:tp]  block a:tp, w: subtype a U;
+
+
+% --------------------------------------------------------------------------
+% Algorithmic subtyping
+%
+% Remark:
+% 0) We use logic programming style and write C <- B <- A instead of
+%    A -> B -> C  (we reverse the arrows)
+% 1) we view transitivity as follows:
+%
+% G |- a < U      U < T
+% -----------------------
+%    G |- a < T
+%
+% 2) we do not give a general reflexivity and transitivity rule
+% for type variables, but instead we provide for each type variable
+% its own reflexivity and transitivity version. In other words,
+% our rule for polymorphic types implements the following:
+%
+% G |- T1 < S1
+% G, tr: a < U -> U < T -> a < T,  w: a < T1, ref:a < a |- S2 < T2
+% ------------------------------------------------------------------
+%   G |- (forall a < S1. S2)  < (forall a < T1. T2)
+
+sub : tp -> tp -> type.                %name sub S.
+
+
+sa_top : sub S top.
+
+sa_arr : sub (arr S1 S2) (arr T1 T2)
+        <- sub T1 S1
+	<- sub S2 T2.
+
+sa_all : sub (forall S1 S2) (forall T1 T2)
+	 <- sub T1 S1
+         <- ({a:tp} ({U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T')
+            -> sub a T1
+	    -> sub a a
+	    -> sub (S2 a) (T2 a)).
+
+
+schema s_ctx   = some [u:tp] block a:tp, tr:{U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T', w: sub a u, ref: sub a a ;
+schema ss_ctx =  some [u:tp]  block a:tp, tr:{U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T', w: sub a u, ref: sub a a, w': subtype a u;
+
+
+% -----------------------------------------------------------------
+% Admissibility of reflexivity
+
+rec refl : {g:s_ctx} {T:[g |- tp]} [g |- sub (T ..) (T ..)] =
+mlam g => mlam T => case [g |- T ..] of
+| [g |- top] => [g |- sa_top]
+| [g |- arr (T1 ..) (T2 ..)] =>
+    let [g |- S1 ..] = refl [g] [g |- T1 ..] in
+    let [g |- S2 ..] = refl [g] [g |- T2 ..] in
+      [g |- sa_arr (S2 ..) (S1 ..)]
+| [g |- #p.1..] => [g |- #p.4 ..]
+| [g |- forall (U ..) (\a.T .. a)] =>
+  let [g |- R' ..] = refl [g] [g |- U ..] in
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+                   w: sub a (U ..), ref: sub a a) |-
+       R .. b.1 b.2 b.3 b.4] =
+       refl [g, b: block a:tp, tr:{u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t',
+                   w: sub a (U ..), ref: sub a a ]
+            [g, b  |-  T .. b.1] in
+[g |- sa_all (R ..) ?]
+
+;
+
+% -------------------------------------------------------------
+rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S ..) (Q ..)] -> [g |- sub (Q..) (T ..)]
+	    -> [g |- sub (S ..) (T ..)] =
+mlam Q => fn d1 => fn d2 => case d1 of
+ | [g |- #p.3 ..] =>  % w: sub a Q
+     let [g |- D2 ..] = d2 in
+     [g |- (#p.2 ..) (Q ..) _ (D2 ..) (#p.3 ..)]
+ | [g |- #p.4 ..] => % refl : sub a a
+		 d2
+
+|
+   {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+			   w: sub a (U ..), ref: sub a a)]}
+   {D1:[g |- sub (#p.1 ..) (U ..)]}
+  [g |- (#p.2 ..) (U ..) (Q ..) (D2 ..) (D1 ..)] =>
+  let [g |- F' ..] = trans [g |- Q ..] [g |- D2 ..] d2 in
+    [g |- (#p.2 ..)  (U ..) _  (F' ..) (D1 ..)]
+
+| [g |- sa_top] => let  [g |- sa_top] = d2 in [g |- sa_top]
+
+| [g |- sa_arr (D2 ..) (D1 ..)] =>
+  let [g |- D2 ..] : [g |- sub (S2 ..) (Q2 ..)] = [g |- D2 ..] in
+  let [g |- D1 ..] : [g |- sub (Q1 ..) (S1 ..)] = [g |- D1 ..] in
+  (case d2 of
+    | [g |- sa_arr (E2 ..) (E1 ..)] =>
+     let [g |- F1 ..] = trans [g |- Q1 ..] [g |- E1 ..] [g |- D1 ..] in
+     let [g |- F2 ..] = trans [g |- Q2 ..] [g |- D2 ..] [g |- E2 ..] in
+       [g |- sa_arr (F2 ..) (F1 ..)]
+   | [g |- sa_top] => [g |- sa_top]
+  )
+
+| [g |- sa_all (D2 ..) (D1 ..)]  : [g |- sub (forall (S1 ..) (S2 ..)) (forall (Q1 ..) (Q2 ..))] =>
+    case d2 of
+    | [g |- sa_all (E2 ..) (E1 ..)]  =>
+	let [g |- F1 ..] = trans [g |- Q1 ..] [g |- E1 ..] [g |- D1 ..] in
+	let [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+			 w: sub a _, ref: sub a a) |-
+	       F2 .. b.1 b.2 b.3 b.4   ] =
+	      trans [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a _, ref: sub a a)  |-  Q2 .. b.1]
+		    [g, b |-  D2 .. b.1 b.2 (b.2 _ (Q1 ..) (E1 ..) b.3) b.4 ]
+		    [g, b |-  E2 .. b.1 b.2 b.3 b.4] in
+	  [g |- sa_all (F2 ..) (F1 ..)]
+    | [g |- sa_top] => [g |- sa_top]
+
+;
+
+rec sound : (g:ss_ctx) [g |- sub (T ..) (S ..)] -> [g |- subtype (T ..) (S ..)] =
+fn d => case d of
+% Assumption w : sub a Q
+| [g |- #p.3 ..] =>  [g |- #p.5 ..]
+% reflexivity: sub a a
+| [g |- #p.4 ..] => % refl: sub a a
+  [g |- subtype_refl]
+% transitivity
+| {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+ 	          w: sub a (U ..), ref: sub a a, w': subtype a (U ..))]}
+   {D1:[g |- sub (#p.1 ..) (U ..)]}
+  [g |- (#p.2 ..) (U ..) (Q ..) (D2 ..) (D1 ..)] =>
+  let [g |- F2 ..] = sound [g |- D2 ..] in
+  let [g |- F1 ..] = sound [g |- D1 ..] in
+  [g |- subtype_trans (F2 ..) (F1 ..)]
+
+| [g |- sa_top] => [g |- subtype_top]
+
+| [g |- sa_arr (D2 ..) (D1 ..)] =>
+  let [g |- F1 ..] = sound [g |- D1 ..] in
+  let [g |- F2 ..] = sound [g |- D2 ..] in
+    [g |- subtype_arrow (F2 ..) (F1 ..)]
+
+| [g |- sa_all (D2 ..) (D1 ..)] : [g |- sub (forall (S1 ..) (S2 ..)) (forall (T1 ..) (T2 ..))] =>
+  let [g |- F1 ..] = sound [g |- D1 ..] in
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..))  |-  F2 .. b.1 b.5] =
+      sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..))  |-  D2 .. b.1 b.2 b.3 b.4 ] in
+  [g |- subtype_forall (F2 ..) (F1 ..)]
+
+;
+
+rec complete :(g:ss_ctx) [g |- subtype (T ..) (S ..)] -> [g |- sub (T ..) (S ..)] =
+fn d => case d of
+| [g |- #p.5 ..] => [g |- #p.3 ..]
+| [g |- subtype_refl] => refl [g] [g |- _ ]
+| [g |- subtype_top ] => [g |- sa_top]
+| [g |- subtype_trans (F2 ..) (F1 ..)] =>
+  let [g |- D2 ..] = complete [g |- F2 ..] in
+  let [g |- D1 ..] = complete [g |- F1 ..] in
+  trans [g |- _ ] [g |- D1 ..] [g |- D2 ..]
+
+| [g |- subtype_arrow (F2 ..) (F1 ..) ] =>
+  let [g |- D2 ..] = complete [g |- F2 ..] in
+  let [g |- D1 ..] = complete [g |- F1 ..] in
+  [g |- sa_arr (D2 ..) (D1 ..)]
+
+| [g |- subtype_forall (F2 ..) (F1 ..)] : [g |- subtype (forall (S1 ..) (S2 ..)) (forall (T1 ..) (T2 ..))] =>
+  let [g |- D1 ..] = complete [g |- F1 ..] in
+  let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..))  |-  D2 .. b.1 b.2 b.3 b.4] =
+      complete [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+				 w: sub a (T1 ..), ref: sub a a, w': subtype a (T1 ..))  |-  F2 .. b.1 b.5 ]
+  in
+      [g |- sa_all (D2 ..) (D1 ..)]
+
+
+;
+
+
+% -------------------------------------------------------------
+%{
+Benefits:
+---------------
+
+1) Purely higher-order approach.
+   We not only use higher-order abstract syntax for implementing the
+   types but exploit the full power of parametric and higher-order
+   judgements. As a key benefit we get the narrowing lemma for free.
+2) Our reasoning is purely structural, and does not require any extra
+   argument about the size of a type or size of a derivation.
+
+
+Comments about the all case:
+-----------------------------
+
+We are proving in this case:
+if   D:: G |- (forall a < S1. S2) < (forall a < U1. U2)  and
+     E:: G |- (forall a < U1. U2) < (forall a < T1. T2)
+then F:: G |- (forall a < S1. S2) < (forall a < T1. T2).
+
+
+By inversion on D:
+
+D1 : G |- U1 < S1
+D2 : G, tr: a < U -> U < T -> a < T, w:a<U1, r: a<a  |- S2 < U2
+
+By inversion on E:
+E1 : G |- T1 < U1
+E2 : G, tr: a < U -> U < T -> a < T, v:a<T1, r: a<a  |- U2 < T2
+
+By i.h. on E1 and D1 we can obtain a derivation
+F1 : G |- T1 < S1
+
+Applying the induction hypothesis on D2 and E2 will not work
+because D2 depends on the assumption w:a<U1 while E2 depends
+on the assumption v:a<T1. We need to first create a derivation D2'
+which depends on v:a<T1 ! How can this be done?
+Recall D2 is a parametric and hypothetical derivation which can be
+viewed as a function which expects as inputs ref: a<A,
+tr: a<U -> U<T -> a<T, and an object of type a<U1. In other words,
+we need to turn a function which expects a<U1 into a function which
+expects an object v of type a<T1.
+
+                  ------v    E1
+                  a < T1   T1 < U1
+                   ----------------tr
+ref:a<a   tr:...   a<U1
+
+
+   D2
+
+ S2 < U2
+
+
+So we substitute for w: a<U1   a derivation (tr v E1)!
+
+}%
+
+% --------------------------------------------------------------------------

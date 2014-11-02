@@ -311,14 +311,14 @@ let gen_var' loc cD (x, cU) = match cU with
           LF.MObj (psihat, tM) )
   | LF.PTyp (tA, cPsi, dep) ->
       let psihat  = Context.dctxToHat cPsi in
-      let p     = Whnf.newMPVar (Some x) (cD, cPsi, tA) dep in
+      let p     = Whnf.newMPVar (Some x) (cD, cPsi, tA) in
       let h     = LF.MPVar (p, (Whnf.m_id, Substitution.LF.id)) in
         (Comp.MetaParam (loc, psihat, h) ,
          LF.PObj (psihat, h) )
 
   | LF.STyp (cPhi, cPsi, dep) ->
       let psihat  = Context.dctxToHat cPsi in
-      let s     =  Whnf.newMSVar (Some x) (cD, cPsi, cPhi) dep in
+      let s     =  Whnf.newMSVar (Some x) (cD, cPsi, cPhi) in
       let sigma = LF.MSVar (s, 0, (Whnf.m_id, Substitution.LF.id)) in
         (Comp.MetaSObj (loc, psihat, sigma) ,
          LF.SObj (psihat, sigma) )

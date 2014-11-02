@@ -66,8 +66,10 @@ module Comp = struct
     | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
     | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
-    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
-                         (I.mctx * I.dctx * I.tclo)
+    | PattMismatch    of (I.mctx * meta_obj * meta_typ) * 
+	                 (I.mctx * meta_typ)
+(*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
+                         (I.mctx * I.dctx * I.tclo) *)
     | IfMismatch      of I.mctx * gctx  * tclo
     | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
     | EqTyp           of I.mctx * tclo
@@ -155,16 +157,26 @@ module Comp = struct
               "In pattern: %a@."
               (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
 
-          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
+          | PattMismatch ((cD, _cM, mT) , (cD', mT')) ->
             Error.report_mismatch ppf
               "Ill-typed pattern."
               "Expected type"
               (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, MetaTyp(Whnf.normTyp sA', Whnf.normDCtx cPsi')))
+              (TypBox (Syntax.Loc.ghost, mT'))
               "Inferred type"
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, MetaTyp(Whnf.normTyp sA, Whnf.normDCtx cPsi)))
+              (TypBox (Syntax.Loc.ghost, mT))
 
+(*          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
+            Error.report_mismatch ppf
+              "Ill-typed pattern."
+              "Expected type"
+              (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
+              "Inferred type"
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
+*)
           | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
             Format.fprintf ppf
               "Expected: %a\n  in context %a\n  Used in context %a"
@@ -226,7 +238,6 @@ module Comp = struct
             Format.fprintf ppf
               "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, MetaTyp(tP, cPsi)), theta))
-
           | MAppMismatch (cD, (MetaTyp (tA, cPsi), theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
@@ -290,6 +301,16 @@ module Comp = struct
 
 
 *)
+
+  let getLoc cM = match cM with 
+    | MetaObj(loc, _, _ ) -> loc
+    | MetaObjAnn (loc, _, _ ) -> loc
+    | MetaCtx (loc, _ ) -> loc
+    | MetaSObj (loc, _, _ ) -> loc
+    | MetaSObjAnn (loc, _, _ ) -> loc
+    | MetaParam (loc, _, _ ) -> loc
+
+
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
@@ -479,7 +500,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
           | Box (_,cM) -> Total.filter cD cG cIH (loc, M cM)
-          | Syn(_ , Var x)  -> Total.filter cD cG cIH (loc, V x)
+          | Syn(_ , Var (_ , x))  -> Total.filter cD cG cIH (loc, V x)
 	  | _i -> Total.filter cD cG cIH (loc, E)
           (* | _      -> raise (Error (loc, InvalidRecCall)) *)
     in
@@ -509,31 +530,38 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
    *)
 
   let rec checkW cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) e ttau = match (e, ttau) with
-    | (Rec (_, f, e), (tau, t)) ->
-        check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), cIH) e ttau
+    | (Rec (loc, f, e), (tau, t)) ->				
+        check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), cIH) e ttau;
+        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Rec" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Fun (_, x, e), (TypArr (tau1, tau2), t)) ->
-        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), cIH) e (tau2, t)
+    | (Fun (loc, x, e), (TypArr (tau1, tau2), t)) ->				
+        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), cIH) e (tau2, t);
+        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Cofun (_, bs), (TypCobase (_, cid, sp), t)) ->
+    | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->				
          let f = fun (CopatApp (loc, dest, csp), e') ->
            let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
            in check cD (cG,cIH) e' ttau'
-         in let _ = List.map f bs in ()
+         in 
+	 let _ = List.map f bs in 
+           Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Cofun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (MLam (_, u, e), (TypPiBox (cdec, tau), t)) ->
+    | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->				
         check (extend_mctx cD (u, cdec, t))
-          (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))   e (tau, C.mvar_dot1 t)
+          (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))   e (tau, C.mvar_dot1 t);
+          Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("MLam" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Pair (_, e1, e2), (TypCross (tau1, tau2), t)) ->
+    | (Pair (loc, e1, e2), (TypCross (tau1, tau2), t)) ->
         check cD (cG,cIH) e1 (tau1, t);
-        check cD (cG,cIH) e2 (tau2, t)
+        check cD (cG,cIH) e2 (tau2, t);
+        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Pair" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Let (_, i, (x, e)), (tau, t)) ->
+    | (Let (loc, i, (x, e)), (tau, t)) ->
         let (_ , tau', t') = syn cD (cG,cIH) i in
         let (tau', t') =  C.cwhnfCTyp (tau',t') in
         let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
-          check cD (cG',cIH) e (tau,t)
+          check cD (cG',cIH) e (tau,t);
+          Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Let" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
         let (_ , tau', t') = syn cD (cG,cIH) i in
@@ -545,17 +573,16 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
-    | (Box (_, MetaObj (_ , _phat, tM)), (TypBox (_, MetaTyp(tA, cPsi)), t)) ->
+    | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)				
         begin try
-        let _ = dprint (fun () -> "[comp check ] " ^
-	  P.mctxToString cD ^ " ; " ^
-	  P.dctxToString cD cPsi ^ " |- " ^
-	  P.normalToString cD cPsi (tM, S.LF.id) ^
-          " <= " ^ P.typToString cD cPsi (tA, S.LF.id) ) in
-            LF.check cD  cPsi (tM, S.LF.id) (tA, S.LF.id)
+	  checkMetaObj loc cD cM (mT, t);
+          Typeinfo.Comp.add (getLoc cM) (Typeinfo.Comp.mk_entry cD ttau) 
+	    ("Box" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
+          dprint (fun () -> "loc <> metaLoc " ^ string_of_bool(loc <> (getLoc cM)))
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
+
 
     | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, MetaTyp(tA', cPsi'))),
              branches), (tau, t)) ->
@@ -573,6 +600,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 		       (IndexObj (phat, tR), TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)		       ) in
         let tau_s = TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
+        (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
           checkBranches total_pragma cD (cG,cIH) branches tau_s (tau, t);
@@ -599,7 +627,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 	in 
 	  if !Total.enabled then
 	    (match i with 
-	       | Var x ->  
+	       | Var (_, x) ->  
 		   let (f,tau') = lookup cG x in
 (*		   let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
@@ -619,10 +647,12 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 	    chkBranch DataObj cD (cG,cIH) i branches (tau,t)
 
     | (Syn (loc, i), (tau, t)) ->
+	let _ = dprint (fun () -> "check --> syn") in 
         let (_, tau',t') = syn cD (cG,cIH) i in
         let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
         if C.convCTyp (tau,t)  (tau',t') then
-          ()
+          (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Syn" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e) ;
+          ())
         else
           raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
 
@@ -632,11 +662,14 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           begin match  (tau',t') with
           | (TypBool , _ ) ->
               (check cD (cG,cIH) e1 (tau,t) ;
-               check cD (cG,cIH) e1 (tau,t) )
+               check cD (cG,cIH) e1 (tau,t) ;
+              Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("If" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e))
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
-    | (Hole (_loc), (_tau, _t)) -> ()
+    | (Hole (_loc, _f), (_tau, _t)) -> 
+      Typeinfo.Comp.add _loc (Typeinfo.Comp.mk_entry cD ttau) ("Hole" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
+      ()
 
   and check cD (cG, cIH) e (tau, t) =
     let _ =  dprint (fun () -> "[check]  " ^
@@ -647,8 +680,11 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
     checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
 
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
-    | Var x   ->
+    | Var (loc, x)   ->
       let (f,tau') = lookup cG x in
+      let _ =  Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau', C.m_id))  	       
+ 	                             ("Var" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e)
+      in 
       (* let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^ 
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
       let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
@@ -659,12 +695,18 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
       else
           (None, tau, C.m_id)
 
-    | DataConst c ->
-        (None,(CompConst.get c).CompConst.typ, C.m_id)
-    | DataDest c ->
-        (None,(CompDest.get c).CompDest.typ, C.m_id)
+    | DataConst (loc, c) ->
+        (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((CompConst.get c).CompConst.typ, C.m_id)) 
+	   ("DataConst" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
+        (None,(CompConst.get c).CompConst.typ, C.m_id))
+
+    | DataDest (loc, c) ->
+	(dprint (fun () -> "DataDest ... ");
+        (None,(CompDest.get c).CompDest.typ, C.m_id))
 
     | Const (loc,prog) ->
+	(Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id)) 
+	   ("Const" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
         if !Total.enabled then
           if (Comp.get prog).Comp.total then
             ((* print_string ("Call to " ^ R.render_cid_prog prog ^
@@ -673,7 +715,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           else
             raise (Error (loc, MissingTotal prog))
         else
-          (None,(Comp.get prog).Comp.typ, C.m_id)
+          (None,(Comp.get prog).Comp.typ, C.m_id))
 
     | Apply (loc , e1, e2) ->
         let (cIH_opt , tau1, t1) = syn cD (cG,cIH) e1 in
@@ -688,7 +730,9 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
               dprint (fun () -> match cIH_opt with
                 | None -> "" | Some ih -> "[APPLY IH] IH = " ^ Total.ih_to_string cD ih);
               check cD (cG,cIH) e2 (tau2, t);
+              Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, t)) ("Apply" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
               (useIH loc cD cG cIH_opt e2, tau, t)
+
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
@@ -703,22 +747,30 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
               (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
                dprint (fun () -> "[check: syn] tau1 = " ^
                           P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
+	      Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, theta')) 
+		("MApp 1" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
                  (useIH loc cD cG cIH_opt (Box (loc, mC)) , tau, theta')
 
           | (MetaObj (loc, psihat, tM) , (TypPiBox ((I.Decl (_u, I.MTyp (tA, cPsi, _ ))), tau), t)) ->
               checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
+	      Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.MObj (psihat, tM), t))) 
+		("MApp 2" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
               (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.MObj (psihat, tM), t))
           | (MetaParam(_, phat, h), (TypPiBox ((I.Decl(_, I.PTyp (tA, cPsi, _))), tau), t)) ->
               let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
                                  P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
               let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
                 if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
-                  (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.PObj (phat, h), t))
+                  (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.PObj (phat, h), t))) 
+		     ("MApp 3" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
+                  (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.PObj (phat, h), t)))
                 else
                   raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (MetaSObj(_, phat, s), (TypPiBox ((I.Decl(_, I.STyp (tA, cPsi, _))), tau), t)) ->
-              LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
-              (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.SObj (phat, s), t))
+          | (MetaSObj(loc, phat, s), (TypPiBox ((I.Decl(_, I.STyp (tA, cPsi, _))), tau), t)) ->
+              (LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
+              Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.SObj (phat,s), t))) 
+                   ("MApp 4" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
+              (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(I.SObj (phat, s), t)))
 
           | ( _ , ((TypPiBox (I.Decl _ , _ )) as tau, t) ) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
@@ -870,23 +922,20 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           let _ = dprint (fun () -> "\nCheckBranch with normal pattern") in
           let _ = dprint (fun () -> "where scrutinee has type" ^
                             P.compTypToString cD tau_s) in
-          let TypBox (_, MetaTyp ((I.Atom(_, a, _) as tP) , cPsi)) = tau_s in
+          let TypBox (_, mT) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
-          let tP1   = Whnf.cnormTyp (tP, t1) in
-          let cPsi1 = Whnf.cnormDCtx (cPsi, t1) in
+	  let mT1 = Whnf.cnormMetaTyp (mT, t1) in
           let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
           let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
-          let tau'  = Whnf.cnormCTyp (tau, t'') in
+          let tau'  = Whnf.cnormCTyp (tau, t'') in          
           let _ = dprint (fun () -> "\nCheckBranch with pattern\n") in
           let _ = dprint (fun () -> "\nChecking refinement substitution\n") in
           let _     = LF.checkMSub loc cD1' t1 cD in
           let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
-                            ^ "\n   has type " ^  P.typToString cD1'  cPsi1  (tP1, S.LF.id)
-                            ^ "\n   in " ^ P.dctxToString cD1' cPsi1 ) in
-          let _     = checkMetaObj loc cD1' mO  (MetaTyp (tP1, cPsi1), C.m_id)
-          in
+                            ^ "\n   has type " ^  P.metaTypToString cD1'  mT1 ) in
+          let _ = checkMetaObj loc cD1' mO  (mT1, C.m_id) in
 	  (* let _ = print_string ("[check] Branch " ^ (ind_to_string caseTyp) ^ "\n") in *)
           let cIH'  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
 	    ((* print_string "Generate recursive calls .. \n";*)
@@ -937,17 +986,17 @@ module Sgn = struct
   let rec check_sgn_decls = function
     | [] -> ()
 
-    | Syntax.Int.Sgn.Typ (_a, tK) :: decls ->
+    | Syntax.Int.Sgn.Typ (l, _a, tK):: decls ->
         let cD   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
           LF.checkKind cD cPsi tK;
-          check_sgn_decls decls
+          check_sgn_decls decls;
 
-    | Syntax.Int.Sgn.Const (_c, tA) :: decls ->
+    | Syntax.Int.Sgn.Const (l, _c, tA)  :: decls ->
         let cD   = Syntax.Int.LF.Empty in
         let cPsi = Syntax.Int.LF.Null in
           LF.checkTyp cD cPsi (tA, Substitution.LF.id);
-          check_sgn_decls decls
+          check_sgn_decls decls;
 
     | Syntax.Int.Sgn.Schema (_w, schema) :: decls ->
         let cD   = Syntax.Int.LF.Empty in
@@ -955,16 +1004,20 @@ module Sgn = struct
           LF.checkSchema (Syntax.Loc.ghost) cD cPsi schema;
           check_sgn_decls decls
 
-    | Syntax.Int.Sgn.Rec (f, tau, e) :: decls ->
+    | Syntax.Int.Sgn.Rec (l) :: decls ->
         let cD = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
-(*        let _  = Total.initialize f in *)
-          Comp.checkTyp cD tau; 
-          Comp.check cD cG e (tau, Whnf.m_id);
+        List.iter (fun (f, tau, e)->
+          Comp.checkTyp cD tau;
+          Comp.check cD cG e (tau, Whnf.m_id)) l;
           check_sgn_decls decls
 
     | Syntax.Int.Sgn.Pragma (_a) :: decls ->
         check_sgn_decls decls
 
 
- end
+
+
+end
+
+

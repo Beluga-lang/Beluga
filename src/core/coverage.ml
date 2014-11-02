@@ -170,7 +170,7 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) LF.Maybe in             (*?*)
+      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) in             
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -758,7 +758,7 @@ let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
     let constructors = (Types.get a).Types.constructors in
       (* Reverse the list so coverage will be checked in the order that the
 	 constructors were declared, which is more natural to the user *)
-    let constructors = List.rev constructors in
+    let constructors = List.rev !constructors in
     let tH_tA_list   = List.map (function c -> (LF.Const c,
 						(Const.get  c).Const.typ))
                                 constructors
@@ -1528,7 +1528,6 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
 	[ (cD, cg, Whnf.m_id) ]
 
-
   | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
       let (cgoals, _ ) = genCGoals cD (LF.Decl(Id.mk_name(Id.NoName), LF.MTyp (tA, cPsi, LF.Maybe))) in
 
@@ -2006,7 +2005,18 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
-  | Comp.TypBox(loc, Comp.MetaTyp(tA, cPsi)) ->
+  | Comp.TypBox(loc, Comp.MetaSchema w) ->
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.CTyp (w, LF.Maybe))) in
+      let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
+      let cPsi       = LF.CtxVar (LF.CtxOffset 1) in
+      let covGoal    = CovCtx cPsi in 
+      let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+
+      let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
+      let loc = Syntax.Loc.ghost in
+	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, Comp.MetaCtx (loc,cPsi)) ) ]
+
+  | Comp.TypBox(loc, Comp.MetaTyp (tA, cPsi)) ->
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.MTyp (tA, cPsi, LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in

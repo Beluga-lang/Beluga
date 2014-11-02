@@ -8,10 +8,10 @@ i : type.  % individuals
 o : type.  % formulas
 %name o A. % B C % more than one currently disallowed
 
-&    : o -> o -> o.    %infix right 11 &.
-imp    : o -> o -> o.  %infix right 10 imp.
-or     : o -> o -> o.  %infix right 11 or.
-not    : o -> o.       %prefix 12 not.
+&    : o -> o -> o.    % infix right 11 &.
+imp    : o -> o -> o.  % infix right 10 imp.
+or     : o -> o -> o.  % infix right 11 or.
+not    : o -> o.       % prefix 12 not.
 true   : o.
 false  : o.
 forall : (i -> o) -> o.

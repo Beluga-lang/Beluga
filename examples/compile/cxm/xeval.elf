@@ -3,7 +3,7 @@
 
 %%% One-Step Reductions
 step : exp -> exp -> type.
-%infix none 8 ==>.
+% infix none 8 ==>.
 
 red_z      : step  z                     (vl z*).
 red_s      : step (s (vl V))             (vl (s* V)).

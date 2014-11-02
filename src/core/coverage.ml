@@ -2005,6 +2005,17 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
+  | Comp.TypBox(loc, Comp.MetaSchema w) ->
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.CTyp (w, LF.Maybe))) in
+      let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
+      let cPsi       = LF.CtxVar (LF.CtxOffset 1) in
+      let covGoal    = CovCtx cPsi in 
+      let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+
+      let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
+      let loc = Syntax.Loc.ghost in
+	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, Comp.MetaCtx (loc,cPsi)) ) ]
+
   | Comp.TypBox(loc, Comp.MetaTyp (tA, cPsi)) ->
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.MTyp (tA, cPsi, LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in

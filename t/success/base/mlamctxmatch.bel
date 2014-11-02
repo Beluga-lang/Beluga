@@ -1,3 +1,5 @@
+%coverage
+
 nat : type.
 z : nat.
 s : nat -> nat.

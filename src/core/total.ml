@@ -99,11 +99,12 @@ let rec smaller_meta_obj cM = match  cM with
 	| _ -> false
       )
   | Comp.MetaParam (_, phat, h ) ->
-      match h with 
+      (match h with 
 	| LF.PVar (_, s) -> 
 	    ((* print_string "Checking whether proj is smaller(1)\n";*)
 		sub_smaller phat s) 
-	| _ -> false
+	| _ -> false)
+  | _ -> false
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 *)

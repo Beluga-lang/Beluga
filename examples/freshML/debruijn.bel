@@ -17,7 +17,7 @@ app'   : exp'  -> exp'  -> exp'.
 
 schema ctx = exp;
 
-rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
+%{rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
  / total p (vhoas2db g p ) /
 mlam g => mlam #p =>  case [g |- #p ..] of
    % f [h] _
@@ -28,7 +28,18 @@ mlam g => mlam #p =>  case [g |- #p ..] of
    let [ |- Db] = vhoas2db [h] [h |- #p ..] in
      [ |- shift Db]
 ;
+}%
 
+rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
+ / total g (vhoas2db g  ) /
+mlam g => mlam #p =>  case [g] of 
+| [] => impossible [ |- #p ] in []
+| [h, x:exp] => (case [h, x:exp |- #p ..] of 
+ | [h,x:exp |- x] => [ |- one ]
+ | [h,x:exp |- #p .. ] =>
+   let [ |- Db] = vhoas2db [h] [h |- #p ..] in
+     [ |- shift Db])
+;
 
 rec hoas2db : (g:ctx) [g |- exp] ->  [ |- exp' ] = / total e ( hoas2db _  e) /
  fn e =>  case e of

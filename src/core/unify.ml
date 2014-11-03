@@ -1497,7 +1497,15 @@ match sigma with
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
                 let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
 (*                let t' = comp t s in *)
+		let _ = dprint (fun () -> "[prune] FMV : domain of FMV " ^
+				  P.dctxToString cD0 cPsi1 ^ "\n[prune] FMV:associated subst. = " ^ 
+				  P.subToString cD0  (Context.hatToDCtx phat)
+				  t') in
+		let (ms, ssubst) = ss in
+		let _ = dprint (fun () -> "[prune] ss subst = " ^ 
+				  P.subToString cD0 cPsi' ssubst) in
                 let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
+		let _ = dprint (fun () -> "[prune] inverted subst " ) in
                   returnNeutral (FMVar (u, s'))
 
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
@@ -2731,6 +2739,7 @@ match sigma with
                                   P.normalToString cD0 cPsi sM1 ^ "\n    " ^
                                   P.normalToString cD0 cPsi sM2 ^ "\n") in
 
+	       let _ = dprint (fun () -> "[UNIFY(3) t' = " ^ P.subToString cD0 cPsi t') in
               let ss   = invert t' in
               let mtt  = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in

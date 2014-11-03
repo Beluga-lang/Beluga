@@ -96,11 +96,11 @@ case t of
 ;
 
 
-rec reflect : (g:ctx) [g |- neut A] ->  Sem [g] [ |- A] =
+rec reflect : (g:ctx) {A:[|- tp]}[g |- neut A] ->  Sem [g] [ |- A] =
 / total a (reflect g a) /
-fn r => let [g |- R .. ] : [g |- neut A] = r in
+mlam A => fn r => 
 case [ |- A] of
-| [ |- atomic P ] => Syn [g |- R ..]
+| [ |- atomic P ] => Syn r
 | [ |- arr T S ] =>  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
@@ -112,7 +112,7 @@ and extendSem : [g |- neut (arr A B)] ->
 fn r => mlam h => fn s => fn e =>
 let [h |- N .. ] = reify e in
 let [h |- R' .. ] = weak_neut s r in
-  reflect [h |- rapp (R' ..) (N ..)]
+  reflect [ |- _ ] [h |- rapp (R' ..) (N ..)]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A] =
 / total a (reify g a) /
@@ -121,7 +121,7 @@ fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>
-     let s = (f [g,x:neut T ] (Succ [g] Zero) (reflect [g ,x:neut T |-  x])) in
+     let s = (f [g,x:neut T ] (Succ [g] Zero) (reflect [ |- _ ] [g ,x:neut T |-  x])) in
      let [g,x:neut T |-  E .. x] = reify s
      in [g |- nlam (\x. E .. x)])
 ;

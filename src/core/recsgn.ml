@@ -563,7 +563,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 	      (* print_string ("Reconstructing function " ^  f.string_of_name ^ " \n"); *)
               let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
               let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
-              let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+              let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
                 (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
               let _        = dprint (fun () ->  "Elaboration of function type " ^ f.string_of_name ^
                                        " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in

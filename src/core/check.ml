@@ -81,11 +81,29 @@ module Comp = struct
     | UnsolvableConstraints of Id.name * string
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
+    | IllTypedMetaObj of I.mctx * meta_obj * meta_typ 
 
 (*  type rec_call = bool *)
 
   exception Error of Syntax.Loc.t * error
 
+  let convToParamTyp mT = match mT with
+    | MetaTyp (tA, cPsi) -> MetaParamTyp (tA, cPsi)
+    | mT -> mT
+(*  let matchMetaV mC = match mC with 
+    | MetaCtx (_, I.CtxVar _ ) -> true
+    | MetaObj (_, phat, I.Root (_ , I.MVar (_ , s), _ )) -> 
+	s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaObjAnn (_, cPsi, I.Root (_ , I.MVar (_ , s), _ )) -> 
+	s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
+    | MetaParam (_, phat, I.Root (_ , I.PVar (_ , s ), _ )) -> 
+	s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaSubObj (_, phat, I.SVar (_, 0, s)) -> 
+	s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaSubObjAnn (_, cPsi, I.SVar (_, 0, s)) -> 
+	s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
+    | _ -> false
+*)
   let string_of_typeVariant = function
     | VariantCross -> "product type"
     | VariantArrow -> "function type"
@@ -97,6 +115,11 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
+	  | IllTypedMetaObj (cD, cM, mT) -> 
+            Format.fprintf ppf
+              "Meta object %a does not have type %a."
+              (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+              (P.fmt_ppr_meta_typ cD Pretty.std_lvl) mT
           | MissingTotal prog ->
             Format.fprintf ppf "Function %s not known to be total."
               (R.render_cid_prog prog)
@@ -265,14 +288,19 @@ module Comp = struct
                 (Whnf.cnormCTyp (tau2, theta2))))
 
   type caseType =
-    | IndexObj of I.psi_hat * I.normal
+    | IndexObj of meta_obj
+    | DataObj
+    | IndDataObj
+    | IndIndexObj of meta_obj
+
+(*    | IndexObj of I.psi_hat * I.normal
     | DataObj
     | IndDataObj
     | IndIndexObj of I.psi_hat * I.normal
-
+*)
   let is_inductive case_typ = match case_typ with
     | IndDataObj -> true 
-    | IndIndexObj (phat , tM) -> true
+    | IndIndexObj mC -> true
     | _ -> false
 
   let is_indMObj cD (I.Offset x) = match Whnf.mctxLookup cD x with
@@ -380,6 +408,14 @@ let checkParamTypeValid cD cPsi tA =
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
+
+  | (MetaObj (loc', phat, I.Root (_, h, I.Nil)), (cT, t)) -> 
+      checkMetaObj loc cD (MetaParam (loc', phat, h)) (cT, t)
+
+  | (MetaObjAnn (loc', cPhi, I.Root (_, h, I.Nil)), (cT, t)) -> 
+      checkMetaObj loc cD (MetaParam (loc', Context.dctxToHat cPhi, h)) (cT, t)
+
+  | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, Whnf.cnormMetaTyp cTt))))
 ;
 
     (* The case for parameter types should be handled separately, for better error messages -bp *)
@@ -582,9 +618,30 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
+    | (Case (loc, prag, Ann (Box (_, cM), TypBox (_, mT)), branches), (tau, t)) ->
+        let (total_pragma, tau_sc, projOpt) =  (match  cM with
+                   | MetaObj (_ , _, I.Root (_, I.PVar (x,s) , _ )) | MetaParam (_ , _, I.PVar (x,s) )  ->
+		       let order = if !Total.enabled && is_indMObj cD x then IndIndexObj cM  else IndexObj cM in
+                       (order, TypBox(loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), None)
+                   | MetaObj (_, _, I.Root (_, I.Proj (I.PVar (x,s), k ), _ )) | MetaParam (_, _, I.Proj (I.PVar (x,s), k )) ->
+		       let order = if  !Total.enabled && is_indMObj cD x then IndIndexObj cM else IndexObj cM in
+                       (order, TypBox (loc, convToParamTyp(Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
+		   | MetaObj (_, _, I.Root (_, I.MVar (x,s), _ )) | MetaObjAnn (_, _,I.Root (_, I.MVar (x,s), _ )) -> 
+		       let order = if  !Total.enabled && is_indMObj cD x then IndIndexObj cM else IndexObj cM in
+                       (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+		   | MetaCtx (_, I.CtxVar (I.CtxOffset k)) -> 
+		       let order = if  !Total.enabled && is_indMObj cD (I.Offset k) then IndIndexObj cM else IndexObj cM in
+                       (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+		   | _ -> 
+		       (IndexObj cM, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)		       ) in
+        let _  = checkMetaObj loc cD  cM (convToParamTyp mT, C.m_id)  in
+        (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
+        let problem = Coverage.make loc prag cD branches tau_sc in
+          (* Coverage.stage problem; *)
+          checkBranches total_pragma cD (cG,cIH) branches tau_sc (tau, t);
+          Coverage.process problem projOpt
 
-
-    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, MetaTyp(tA', cPsi'))),
+(*    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)), TypBox (_, MetaTyp(tA', cPsi'))),
              branches), (tau, t)) ->
         let (total_pragma, tau_sc, projOpt) =  (match  tR with
                    | I.Root (_, I.PVar (x,s) , _ ) ->
@@ -605,17 +662,13 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
           (* Coverage.stage problem; *)
           checkBranches total_pragma cD (cG,cIH) branches tau_s (tau, t);
           Coverage.process problem projOpt
-
+*)
     | (Case (loc, prag, i, branches), (tau, t)) ->
 	let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) = 
           let (_ , tau', t') = syn cD (cG,cIH) i in
             begin match C.cwhnfCTyp (tau',t') with
-              | (TypBox (loc', MetaTyp(tA, cPsi)),  t') ->
-		  let tau_s = TypBox (loc', MetaTyp(C.cnormTyp (tA, t'), C.cnormDCtx (cPsi, t'))) in
-(*		  let _ = print_string ("[check] Case " ^ ind_to_string total_pragma ^ " - Scrutinee " ^
-                                    P.expSynToString cD cG i ^
-                                    "\n   has type " ^ P.compTypToString cD tau_s ^ "\n") in 		  
-*)		    
+              | (TypBox (loc', mT),  t') ->
+		  let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
 		  let problem = Coverage.make loc prag cD branches tau_s in
                     checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
                     Coverage.process problem None
@@ -627,7 +680,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 	in 
 	  if !Total.enabled then
 	    (match i with 
-	       | Var (_, x) ->  
+	       | Var (_, x)  ->  
 		   let (f,tau') = lookup cG x in
 (*		   let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
@@ -822,7 +875,7 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with
-          | (TypBox (_, MetaTyp(tA, cPhi)) , theta) ->
+          | (TypBox (_, MetaTyp(tA, cPhi)) , theta) | (TypBox (_, MetaParamTyp (tA, cPhi)), theta) ->
               let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
                                 P.mctxToString cD ^
                                 "context of expected  type " ^
@@ -836,8 +889,8 @@ let useIH loc cD cG cIH_opt  e2 = match cIH_opt with
 
     | PatMetaObj (loc, mO) ->
         (match ttau with
-          | (TypBox (_, MetaTyp(tA, cPsi)) , theta) ->
-              checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta)
+          | (TypBox (_, mT) , theta) ->
+              checkMetaObj loc cD mO (mT, theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->

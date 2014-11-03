@@ -19,9 +19,7 @@ fn cn => case cn of
 
 |[g |- can_truei] => [g |- s_true]
 
-| % {D:[g |- pf (atom (P ..))]}
-  % {AT1:[g |- atm (D ..)]}
-  [g |- can_atm (AT1 ..)] =>
+|  [g |- can_atm (AT1 ..)] =>
   let [g,q:p,u:focus (A ..) q |-  I1 .. q u] = cmpai [g |- andalso _ (AT1 .. )] in
     [g |- I1 .. _ (i_atom)]
 

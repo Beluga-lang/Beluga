@@ -537,7 +537,7 @@ and norm (tM, sigma) = match tM with
 
   | Root (_, MMVar (MInst (_, { contents = Some tM}, _, _, _, _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
-      let tM' = cnorm (tM, t) in
+      let tM'  = cnorm (tM, t) in
       let tM'' = norm (tM', r) in
       reduce (tM'', sigma) (normSpine (tS, sigma))
 

@@ -75,6 +75,7 @@ module Comp : sig
     | UnsolvableConstraints of Id.name * string
     | InvalidRecCall
     | MissingTotal    of Id.cid_prog
+    | IllTypedMetaObj of LF.mctx * meta_obj * meta_typ 
 
   exception Error of Syntax.Loc.t * error
 

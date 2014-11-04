@@ -73,6 +73,17 @@ let _ = Error.register_printer
   )
 
 
+let rec stripInd tau = match tau with 
+  | Int.Comp.TypArr (tau1, tau2) -> 
+      Int.Comp.TypArr (stripInd tau1, stripInd tau2)
+  | Int.Comp.TypCross (tau1, tau2) -> 
+      Int.Comp.TypCross (stripInd tau1, stripInd tau2)
+  | Int.Comp.TypInd tau -> 
+      stripInd tau
+  | Int.Comp.TypPiBox (cdec, tau) -> 
+      Int.Comp.TypPiBox (cdec, stripInd tau)
+  | tau -> tau
+
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
       if f = f' then tau else
@@ -602,7 +613,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 		      )
                 end ;
 		 let (cG, vars, n_list) = preprocess lf (m+1) in
-                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
+                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
         in
 
@@ -612,7 +623,8 @@ and recSgnDecl ?(pauseHtml=false) d =
           let apx_e   = Index.exp vars' e in
           let _       = dprint (fun () -> "\n  Indexing expression done \n") in
           let tau'    = lookupFun cG f in
-          let e'      = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp cG apx_e (tau', C.m_id)) in
+          let e'      = Monitor.timer ("Function Elaboration", fun () ->
+					 Reconstruct.exp cG apx_e (stripInd tau', C.m_id)) in
 
           let _       = dprint (fun () ->  "\n Elaboration of function " ^ f.string_of_name ^
                                   "\n   type: " ^ P.compTypToString cD tau' ^

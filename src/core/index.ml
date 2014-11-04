@@ -792,12 +792,10 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
       let (tau2, fcvars2) = index_comptyp cvars fcvars1 tau' in
       (Apx.Comp.TypArr (tau1, tau2), fcvars2)
 
-
   | Ext.Comp.TypCross (_loc, tau, tau') ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
       let (tau2, fcvars2) = index_comptyp cvars fcvars1 tau' in
 	(Apx.Comp.TypCross (tau1, tau2), fcvars2)
-
 
   | Ext.Comp.TypPiBox (_loc, cdecl, tau)    ->
       let (cdecl', cvars', fcvars1) = index_cdecl cvars fcvars cdecl in
@@ -806,6 +804,9 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 
   | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
 
+  | Ext.Comp.TypInd (tau) ->
+      let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
+	(Apx.Comp.TypInd tau1, fcvars1)
 
 let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->

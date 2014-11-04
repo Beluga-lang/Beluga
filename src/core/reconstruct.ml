@@ -902,6 +902,7 @@ let rec elCompTyp cD tau = match tau with
         Int.Comp.TypPiBox (cdecl', tau')
 
   | Apx.Comp.TypBool -> Int.Comp.TypBool
+  | Apx.Comp.TypInd tau -> Int.Comp.TypInd (elCompTyp cD tau)
  
 (* *******************************************************************************)
 

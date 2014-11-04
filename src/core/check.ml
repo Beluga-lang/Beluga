@@ -510,7 +510,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         checkTyp (I.Dec (cD, cdecl)) tau'
 
     | TypBool -> ()
-
+    | TypInd tau -> checkTyp cD tau
 ;;
 
 

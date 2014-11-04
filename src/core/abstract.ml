@@ -2011,6 +2011,9 @@ let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBool  -> (cQ, tau)
   | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
                       raise Error.NotImplemented)
+  | Comp.TypInd tau -> 
+      let (cQ', tau') = collectCompTyp p cQ tau in 
+	(cQ', Comp.TypInd tau')
 
 
 let rec collectGctx cQ cG = match cG with
@@ -2246,6 +2249,7 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypCobase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypCobase (loc, a , cS')
+
   | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
@@ -2267,7 +2271,8 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
     Comp.TypPiBox ((abstractMVarCdecl cQ offset cdecl), abstractMVarCompTyp cQ (l,d+1) tau)
 
   | Comp.TypBool -> Comp.TypBool
-
+  | Comp.TypInd tau ->
+      Comp.TypInd (abstractMVarCompTyp cQ offset tau)
 
 let rec abstractMVarGctx cQ offset cG = match cG with
   | I.Empty -> I.Empty

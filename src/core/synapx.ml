@@ -12,6 +12,7 @@ module LF = struct
   type depend =
     | No
     | Maybe
+    | Inductive
 
   type kind =
     | Typ
@@ -144,6 +145,7 @@ module Comp = struct
    | TypCross   of typ * typ
    | TypPiBox   of LF.ctyp_decl * typ
    | TypBool
+   | TypInd of typ 
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn

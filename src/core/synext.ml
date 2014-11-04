@@ -10,6 +10,7 @@ module LF = struct
   type depend =
     | Maybe
     | No
+    | Inductive
 
   type kind =
     | Typ     of Loc.t
@@ -129,9 +130,9 @@ module Comp = struct
    | TypBox  of Loc.t * meta_typ
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
-   | TypPiBox of Loc.t * LF.ctyp_decl * typ
-                                                (*     | Pi u::U.tau       *)
+   | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
+   | TypInd of typ 
 
   and exp_chk =                            (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)

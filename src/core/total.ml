@@ -490,17 +490,17 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
 				string_of_int (List.length mf_list)  ^ 
 				" rec. functions\n") in *)
         let mk_wfrec (f,x,k,ttau) =
-	   (* let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
+	   let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
 				  (LF.Decl (u,cU)) ^  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 
 				  " considering in total " ^ string_of_int k ^
-				  "\n") in *)
+				  "\n") in 
           let (args, tau) = rec_spine cD (cM, cU') (x,k,ttau) in
           let args = generalize args in
           let d = Comp.WfRec (f, args, tau) in
-          (* let _ = print_string ("\nGenerated Recursive Call : " ^
+          let _ = print_string ("\nGenerated Recursive Call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in *)
+                                ^ "\n\n") in 
             d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -530,9 +530,9 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 	  let (args, tau) = rec_spine' cD (y, tau) (x,k,ttau) in 
 	  let args = generalize args in 
 	  let d = Comp.WfRec (f, args, tau) in 
-          (* let _ = print_string ("\nRecursive call : " ^
+          let _ = print_string ("\nRecursive call : " ^
                                   calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in*)
+                                ^ "\n\n") in
 	    d 
 	in 
 	let rec mk_all cIH mf_list = match mf_list with
@@ -558,9 +558,9 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ( (* print_string ("Generate recursive calls from \n" 
+    ( print_string ("Generate recursive calls from \n" 
 		     ^ "cD = " ^ P.mctxToString cD 
-		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");*)
+		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");
     let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
       gen_rec_calls' cD cIH (cG, 0)) 
   else
@@ -754,9 +754,9 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     if Whnf.convMetaObj cM' cM then
-      ((* print_string  ("IH and recursive call agree on : "
+      ( print_string  ("IH and recursive call agree on : "
                       ^ P.metaObjToString cD cM' ^ " == " ^
-                      P.metaObjToString cD cM ^ "\n");*)
+                      P.metaObjToString cD cM ^ "\n");
       LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau' is understood as the approximate type *)
     else
@@ -810,8 +810,8 @@ let annotate loc f tau =
   |  _ , _ -> raise (Error (loc, TooManyArg f))
   in
     match get_order_for f with 
-      Some x -> ((* print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
-				 " in pos = " ^ string_of_int x ^ "\n"); *)
+      Some x -> ( print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
+				 " in pos = " ^ string_of_int x ^ "\n"); 
 		 ann tau x)
       | None -> tau 
 

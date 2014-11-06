@@ -893,7 +893,7 @@ and collectSpine (p:int) cQ phat sS = match sS with
       collectSpine p cQ phat (tS, LF.comp s' s)
 
   | (I.App (tM, tS), s) ->
-    let (cQ', tM') = collectTerm p cQ phat (tM, LF.id)  in
+    let (cQ', tM') = collectTerm p cQ phat (tM, s)  in
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 

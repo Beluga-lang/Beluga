@@ -1638,6 +1638,7 @@ and cnorm (tM, t) = match tM with
 
     | DDec(cPsi, decl) ->
         DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
+
 and cnormMTyp (mtyp, t) = match mtyp with
     | MTyp (tA, cPsi, dep) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in

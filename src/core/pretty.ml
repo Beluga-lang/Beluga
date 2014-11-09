@@ -914,7 +914,8 @@ module Int = struct
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "") end
+            (if printing_holes && !Control.printImplicit then dependent_string
+	       mtyp else inductive_string mtyp) end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -944,6 +945,17 @@ module Int = struct
           begin match dep with
             | LF.No -> "^e"
             | LF.Maybe -> "^i"
+	    | LF.Inductive -> "*"
+          end
+
+    and inductive_string = function
+      | LF.MTyp (_, _, dep)
+      | LF.PTyp (_, _, dep)
+      | LF.STyp (_, _, dep)
+      | LF.CTyp (_, dep) ->
+          begin match dep with
+            | LF.No -> ""
+            | LF.Maybe -> ""
 	    | LF.Inductive -> "*"
           end
 

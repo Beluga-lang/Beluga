@@ -4,6 +4,7 @@ datatype nat : type =
 | z : nat
 | s : nat -> nat
 ;
+%name nat N.
 
 % The sub-term relation on naturals
 
@@ -13,16 +14,17 @@ datatype le : nat -> nat -> type =
 ;
 
 datatype Acc-le : [|- nat] -> ctype =
-  | Acc : ({Y : [|- nat]} [|- le Y X] -> Acc-le [|- Y]) -> Acc-le [|- X]
+  | Acc : ({W : [|- nat]} [|- le W X] -> Acc-le [|- W]) -> Acc-le [|- X]
 ;
 
-rec wf-rel' : {X : [|- nat]} {Y : [|- nat]}[|- le Y X] -> Acc-le [|- Y] =
+rec wf-rel' : {N : [|- nat]} {M : [|- nat]}[|- le M N] -> Acc-le [|- M] =
 / total x (wf-rel' x) /
-mlam X => mlam Y => fn p => case [ |- X ] of
+ mlam X => mlam Y => fn p => case [ |- X ] of
 | [|- z] => impossible p in []
-| [|- s X'] => (case p of 
-   | [|- le-base] => Acc (wf-rel' [|- X'])
-   | [|- le-step P] => wf-rel' [|- X'] [|- Y] [|- P])
+| [|- s X'] => let ih = wf-rel' [|- X'] in (case p of 
+%    | [|- le-base] => Acc (wf-rel' [|- X'])
+   | [|- le-base] => Acc ih
+   | [|- le-step P] => ih [|- Y] [|- P])
 ;
 
 rec wf-rel : {X : [|- nat]} Acc-le [|- X] =
@@ -31,7 +33,7 @@ mlam X => Acc (wf-rel' [|- X])
 ;
 
 rec half-wf : {M : [|- nat]} Acc-le [|- M] -> [|- nat] =
-/ total p (half-wf _  p) /
+/ total p (half-wf _ p) /
 mlam M => fn p => case [|- M] of
 | [|- z] => [|- z]
 | [|- s z] => [|- z]

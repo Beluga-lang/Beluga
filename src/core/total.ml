@@ -62,6 +62,27 @@ let enabled = ref false
 
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
 
+let shiftArg k arg = match arg with 
+  | Comp.V x -> Comp.V (x+k)
+  | _ -> arg
+
+let rec shiftIH cIH k = match cIH with 
+  | LF.Empty -> LF.Empty
+  | LF.Dec (cIH', Comp.WfRec (f, args, tau)) -> 
+      let args' = List.map (shiftArg k) args in
+      LF.Dec (shiftIH cIH' k, Comp.WfRec (f, args', tau))
+  | LF.Dec (cIH', d) -> 
+      LF.Dec (shiftIH cIH' k, d)
+
+let shift cIH = shiftIH cIH 1
+
+let is_inductive cU =  match cU with 
+  | LF.MTyp (tA, cPsi, LF.Inductive ) -> true
+  | LF.PTyp (tA, cPsi, LF.Inductive ) -> true
+  | LF.STyp (cPhi, cPsi, LF.Inductive ) -> true
+  | LF.CTyp (cPsi, LF.Inductive ) -> true
+  | _ -> false
+
 let sub_smaller phat s = match phat , s with 
   | (_ , n) , LF.Shift n' -> 
       (n-n') < n'
@@ -239,31 +260,29 @@ let mobjToFront cM = match cM with
   | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 
-let rec args_to_string cD args = match args with
+let rec args_to_string cD cG args = match args with
   | [] -> ""
   | (Comp.M cM)::args ->
       P.metaObjToString cD cM ^ " " ^
-        args_to_string cD args
+        args_to_string cD cG args
   | Comp.DC ::args ->
      " _ " ^
-        args_to_string cD args
-  | Comp.V _ ::args ->
-     " (V _) " ^
-        args_to_string cD args
+        args_to_string cD cG args
+  | Comp.V x ::args ->
+     " (V " ^ R.render_var cG x ^ ") " ^
+        args_to_string cD cG args
 
 
-
-let calls_to_string cD (f, args, tau) =
-(*   (R.render_cid_prog f) ^ " " ^ *)
+let calls_to_string cD cG (f, args, tau) =
   (R.render_name f) ^ " " ^
-    args_to_string cD args ^ " : "  ^
+    args_to_string cD cG args ^ " : "  ^
     P.compTypToString cD tau
 
-let rec ih_to_string cD cIH = match cIH with
+let rec ih_to_string cD cG cIH = match cIH with
   | LF.Empty -> "\n"
   | LF.Dec(cIH, Comp.WfRec (f, args, tau) ) ->
-   "IH: " ^  calls_to_string cD (f, args, tau) ^ "\n"
-     ^ ih_to_string cD cIH
+   "IH: " ^  calls_to_string cD cG (f, args, tau) ^ "\n"
+     ^ ih_to_string cD cG cIH
 
 
 let get_order () =
@@ -348,160 +367,167 @@ let gen_var loc cD cdecl = match cdecl with
 *)
 
 
-let rec rec_spine cD (cM, cU)  (i, k, ttau) =
-  if i = 0 then
-    match (k, ttau) with
-      | (0, _ ) -> ([], Whnf.cnormCTyp ttau)
-      | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
-          let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
-            (Comp.DC :: spine, tau_r)
-      | (n, (Comp.TypArr (_, tau), theta)) ->
-          let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
-            (Comp.DC :: spine, tau_r)
+let rec rec_spine cD (cM, cU)  (i, k, ttau) = match i, ttau with 
+  | 0, _ ->  ([], Whnf.cnormCTyp ttau)
+(*  | 0, n, (Comp.TypPiBox ( _ , tau), theta) ->
+      let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
+        (Comp.DC :: spine, tau_r)
+  | 0, n, (Comp.TypArr (_, tau), theta) ->
+      let (spine, tau_r) = rec_spine cD (cM,cU) (i, k-1, (tau,theta)) in
+        (Comp.DC :: spine, tau_r)
   else
-    match (i, ttau) with
-      | (1 , (Comp.TypPiBox ((LF.Decl (_, cU') as _cdecl), tau) , theta) ) ->
-          begin try
-	    (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
-			    "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
-            Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU', theta));
-            let ft = mobjToFront cM in
-            let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
-              (Comp.M cM::spine, tau_r )
-          with
-              _ -> raise Not_compatible
-          end
+*)
+  | 1 , (Comp.TypPiBox ((LF.Decl (_, cU') as _cdecl), tau) , theta)  ->
+      begin try
+	(*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
+	  "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
+        Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU', theta));
+        let ft = mobjToFront cM in
+        let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
+          (Comp.M cM::spine, tau_r )
+      with
+          _ -> raise Not_compatible
+      end
 
-  | (1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta)) ->
+  | 1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta) ->
       let cU' = LF.MTyp (tA, cPsi, LF.No) in
         begin try
           Unify.unifyMTyp cD cU (Whnf.cnormMTyp (cU', theta));
           let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1,(tau, theta)) in
-            (Comp.M cM::spine, tau_r )
+	    (Comp.M cM::spine, tau_r )
         with
-            _ -> raise Not_compatible
+	    _ -> raise Not_compatible
         end
-  | (n ,  (Comp.TypPiBox (cdecl, tau) , theta) ) ->
+  | 1, _ -> raise Not_compatible
+  | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
       let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
       let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
         (Comp.M cN :: spine, tau_r)
-
-  | (n, (Comp.TypArr (_, tau2), theta) ) ->
+	  
+  | n, (Comp.TypArr (_, tau2), theta)  ->
       let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, k-1, (tau2, theta)) in
         (Comp.DC :: spine, tau_r)
-
-
-
-let rec rec_spine' cD (x, tau)  (i, k, ttau) =
-  if i = 0 then
-    match (k, ttau) with
-      | (0, _ ) -> ([], Whnf.cnormCTyp ttau)
-      | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
+	      
+let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
+  | 0, _  -> ([], Whnf.cnormCTyp ttau)
+(* i = 0, k =/= 0 
+   | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
           let (spine, tau_r) = rec_spine' cD (x,tau) (i, k-1, (tau,theta)) in
             (Comp.DC :: spine, tau_r)
       | (n, (Comp.TypArr (_, tau), theta)) ->
           let (spine, tau_r) = rec_spine' cD (x,tau) (i, k-1, (tau,theta)) in
             (Comp.DC :: spine, tau_r)
-  else
-    match (i, ttau) with
-      | (1 , (Comp.TypPiBox (cdecl, tau) , theta) ) ->
-	  raise Not_compatible (* Error *)
+*)
+  | 1 , (Comp.TypPiBox (cdecl, tau) , theta)  ->
+      raise Not_compatible (* Error *)
 
-  | (1, (Comp.TypArr (tau1, tau2), theta)) -> 
-        begin try
-          Unify.unifyCompTyp cD (tau, Whnf.m_id) (tau1, theta);
-          let (spine, tau_r)  = rec_spine' cD (x, tau) (0, k-1,(tau2, theta)) in
-            (Comp.V x::spine, tau_r )
-        with
-            _ -> raise Not_compatible
-        end
-  | (n ,  (Comp.TypPiBox (cdecl, tau) , theta) ) ->
-      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-      let (spine, tau_r)  = rec_spine' cD (x,tau) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
-        (Comp.M cN :: spine, tau_r)
+  | 1, (Comp.TypArr (tau1, tau2), theta) -> 
+      begin try
+	(* print_string ("Can generate IH for arg " ^ 
+			P.compTypToString cD tau0 ^ 
+			"\nExpected: " ^ 
+			P.compTypToString cD (Whnf.cnormCTyp (tau1,theta)) ^ "\n"); *)
+        Unify.unifyCompTyp cD (tau0, Whnf.m_id) (tau1, theta);
+	 let (spine, tau_r)  = rec_spine' cD (x, tau0) (0, k-1,(tau2, theta)) in
+	   (Comp.V x::spine, tau_r )
+       with
+	   _ -> raise Not_compatible
+       end
+   | n ,  (Comp.TypPiBox (cdecl, tau) , theta)  ->
+       let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+       let (spine, tau_r)  = rec_spine' cD (x,tau0) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
+	 (Comp.M cN :: spine, tau_r)
 
-  | (n, (Comp.TypArr (_, tau2), theta) ) ->
-      let (spine, tau_r) = rec_spine' cD (x,tau) (n-1, k-1, (tau2, theta)) in
-        (Comp.DC :: spine, tau_r)
+   | n, (Comp.TypArr (_, tau2), theta)  ->
+       let (spine, tau_r) = rec_spine' cD (x,tau0) (n-1, k-1, (tau2, theta)) in
+	 (Comp.DC :: spine, tau_r)
 
 
-let gen_meta_obj (cdecl, theta) k = match cdecl with
-  | LF.CTyp (schema_cid, _ ) ->
-      Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset k))
-(*  | LF.SDecl (s,cPhi, cPsi) -> todo *)
-  | LF.MTyp (tA, cPsi, _dep) ->
-      let phat  = Context.dctxToHat cPsi in
-      let psihat' = Whnf.cnorm_psihat phat theta in
-      let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
-      let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-        Comp.MetaObj (Syntax.Loc.ghost, psihat', tM)
+ let gen_meta_obj (cdecl, theta) k = match cdecl with
+   | LF.CTyp (schema_cid, _ ) ->
+       Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset k))
+ (*  | LF.SDecl (s,cPhi, cPsi) -> todo *)
+   | LF.MTyp (tA, cPsi, _dep) ->
+       let phat  = Context.dctxToHat cPsi in
+       let psihat' = Whnf.cnorm_psihat phat theta in
+       let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
+       let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
+	 Comp.MetaObj (Syntax.Loc.ghost, psihat', tM)
 
-  | LF.PTyp (tA, cPsi, _dep) ->
-      let phat  = Context.dctxToHat cPsi in
-      let psihat' = Whnf.cnorm_psihat phat theta in
-      let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
-        Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
+   | LF.PTyp (tA, cPsi, _dep) ->
+       let phat  = Context.dctxToHat cPsi in
+       let psihat' = Whnf.cnorm_psihat phat theta in
+       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
+	 Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
 
-  | LF.STyp (cPsi, cPhi, _dep) ->  
-      let sv = LF.SVar (LF.Offset k, 0, Substitution.LF.id) in 
-      let phat  = Context.dctxToHat cPsi in
-      let psihat' = Whnf.cnorm_psihat phat theta in
-	Comp.MetaSObj (Syntax.Loc.ghost, psihat', sv)
+   | LF.STyp (cPsi, cPhi, _dep) ->  
+       let sv = LF.SVar (LF.Offset k, 0, Substitution.LF.id) in 
+       let phat  = Context.dctxToHat cPsi in
+       let psihat' = Whnf.cnorm_psihat phat theta in
+	 Comp.MetaSObj (Syntax.Loc.ghost, psihat', sv)
 
-let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
-  | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
-  | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
-      (match h with
-        | LF.MMVar (_ , _ ) -> true
-        | _ -> false)
-  | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
-      (match h with
-        | LF.MMVar (_ , _ ) -> true
-        | _ -> false)
-  | Comp.MetaParam (_, (Some _ , n), h ) ->
-      if n > 0 then
-        match h with LF.MPVar (_, _) -> true
-          | _ -> false
-      else
-        false
-  | Comp.MetaSObj (_, _phat, LF.MSVar (_, _ , _ )) -> true
-  | Comp.MetaSObjAnn (_, _cPsi, LF.MSVar (_, _ , _ )) -> true
-  | _ -> false
+ let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
+   | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
+   | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+       (match h with
+	 | LF.MMVar (_ , _ ) -> true
+	 | _ -> false)
+   | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
+       (match h with
+	 | LF.MMVar (_ , _ ) -> true
+	 | _ -> false)
+   | Comp.MetaParam (_, (Some _ , n), h ) ->
+       if n > 0 then
+	 match h with LF.MPVar (_, _) -> true
+	   | _ -> false
+       else
+	 false
+   | Comp.MetaSObj (_, _phat, LF.MSVar (_, _ , _ )) -> true
+   | Comp.MetaSObjAnn (_, _cPsi, LF.MSVar (_, _ , _ )) -> true
+   | _ -> false
 
-let rec generalize args = match args with
-  | [] -> []
-  | Comp.M cM :: args ->
-      if uninstantiated_arg cM then
-        Comp.DC :: generalize args
-      else
-        Comp.M cM :: generalize args
-  | Comp.V x :: args ->
-      Comp.V x:: generalize args
-  | Comp.DC :: args ->
-      Comp.DC :: generalize args
+ let rec generalize args = match args with
+   | [] -> []
+   | Comp.M cM :: args ->
+       if uninstantiated_arg cM then
+	 Comp.DC :: generalize args
+       else
+	 Comp.M cM :: generalize args
+   | Comp.V x :: args ->
+       Comp.V x:: generalize args
+   | Comp.DC :: args ->
+       Comp.DC :: generalize args
 
-let rec gen_rec_calls cD cIH (cD', j) = match cD' with
-  | LF.Empty -> cIH
-  | LF.Dec (cD', LF.Decl (u, cU)) ->
-        let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
-        let cU'  = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
-        let mf_list = get_order () in
-	(* let _ = print_string ("Considering a total of " ^ 
-				string_of_int (List.length mf_list)  ^ 
-				" rec. functions\n") in *)
-        let mk_wfrec (f,x,k,ttau) =
-	   let _ = print_string ("mk_wf_rec ...for " ^ P.cdeclToString cD
-				  (LF.Decl (u,cU)) ^  " ") in 
-	  let _ = print_string ("for position " ^ string_of_int x ^ 
-				  " considering in total " ^ string_of_int k ^
-				  "\n") in 
-          let (args, tau) = rec_spine cD (cM, cU') (x,k,ttau) in
-          let args = generalize args in
-          let d = Comp.WfRec (f, args, tau) in
-          let _ = print_string ("\nGenerated Recursive Call : " ^
-                                  calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in 
-            d
+
+ let valid_args args = match List.rev args with 
+   | Comp.DC :: _ -> false
+   | _ -> true
+
+
+
+ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
+   | LF.Empty -> cIH
+   | LF.Dec (cD', LF.Decl (u, cU)) ->
+       if not (is_inductive cU) then
+	 gen_rec_calls cD cIH (cD', j+1)
+       else 
+	 let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
+	 let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
+	 let mf_list = get_order () in
+	 (* let _ = print_string ("Generate rec. calls given variable " ^ P.cdeclToString cD (LF.Decl (u, cU))^ "\n") in*)
+	 (* let _ = print_string ("Considering a total of " ^ 
+				 string_of_int (List.length mf_list)  ^ 
+				 " rec. functions\n") in *)
+	 let mk_wfrec (f,x,k,ttau) =
+          (* let _ = print_string ("mk_wf_rec ... for " ^ P.cdeclToString cD (LF.Decl (u,cU)) ^  " ") in 
+	  let _ = print_string ("for position " ^ string_of_int x ^ 			  "\n") in 
+	  let _ = print_string ("Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in *)
+	  let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in 
+	  (* let _ = print_string ("Generated Arguments for rec. call " ^  args_to_string cD args ^ "\n") in *)
+	  let args = generalize args in
+	  let d = Comp.WfRec (f, args, tau) in
+	  (* let _ = print_string ("\nGenerated Recursive Call : " ^ calls_to_string cD (f, args, tau) "\n\n") in  *)
+	    d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
           | [] -> cIH
@@ -521,18 +547,26 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
           gen_rec_calls cD cIH'  (cD', j+1)
 
 
-let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
+(* =================================================================================== *)
+(* Generating recursive calls on computation-level variables *)
+let rec get_return_type (i, tau) = match tau with 
+  | Comp.TypArr (_tau1 , tau0) -> get_return_type (i, tau0)
+  | Comp.TypPiBox (_, tau0) -> get_return_type (i, tau0)
+  | tau -> (i, tau)
+
+let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Empty -> cIH
-  | LF.Dec(cG', Comp.CTypDecl (_x, tau)) ->
+  | LF.Dec(cG', Comp.CTypDecl (_x, tau0)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
+	(* let _ = print_string ("[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in *)
+	let (_i, tau0') = get_return_type (Comp.Var (Syntax.Loc.ghost, y), tau0) in
 	let mk_wfrec (f,x,k, ttau) = 
-	  let (args, tau) = rec_spine' cD (y, tau) (x,k,ttau) in 
+	  let (args, tau) = rec_spine' cD (y, tau0') (x,k,ttau) in  
 	  let args = generalize args in 
 	  let d = Comp.WfRec (f, args, tau) in 
-          let _ = print_string ("\nRecursive call : " ^
-                                  calls_to_string cD (f, args, tau)
-                                ^ "\n\n") in
+          (* let _ = print_string ("\nRecursive call : " ^ 
+				  calls_to_string cD cG (f, args, tau) ^ "\n\n") in  *)
 	    d 
 	in 
 	let rec mk_all cIH mf_list = match mf_list with
@@ -551,18 +585,19 @@ let rec gen_rec_calls' cD cIH (cG0, j) = match cG0 with
 	      end 
 	in
 	let cIH' = mk_all cIH mf_list in
-          gen_rec_calls' cD cIH' (cG', j+1)
-
-	
+          gen_rec_calls' cD cG cIH' (cG', j+1)
 
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ( print_string ("Generate recursive calls from \n" 
-		     ^ "cD = " ^ P.mctxToString cD 
-		     ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n\n");
-    let cIH = gen_rec_calls cD (LF.Empty) (cD, 0) in
-      gen_rec_calls' cD cIH (cG, 0)) 
+    ((* print_string ("Generate recursive calls from \n" 
+		   ^ "cD = " ^ P.mctxToString cD 
+		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");*)
+    let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
+    let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in 
+      (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");*)
+      cIH'
+    ) 
   else
     LF.Empty
 
@@ -754,25 +789,34 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     if Whnf.convMetaObj cM' cM then
-      ( print_string  ("IH and recursive call agree on : "
+      (  (* print_string  ("IH and recursive call agree on : "
                       ^ P.metaObjToString cD cM' ^ " == " ^
-                      P.metaObjToString cD cM ^ "\n");
+                      P.metaObjToString cD cM ^ "\n");*)
       LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau' is understood as the approximate type *)
     else
-      (dprint (fun () -> ("IH and recursive call do NOT agree : "
+      ((* print_string ("IH and recursive call do NOT agree : "
         ^ P.metaObjToString cD cM' ^ " == " ^
-          P.metaObjToString cD cM));
+          P.metaObjToString cD cM  ^ "\n");*)
       cIH')
 
   | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     if x = y then
-      LF.Dec (cIH', Comp.WfRec (f, args, tau))
+      ((* print_string  ("IH and recursive call agree on : " ^
+			(R.render_var cG x)
+		      ^ " == " ^ (R.render_var cG y)
+		      ^ "\n");*)
+      LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau is the overall return type of ih type
          and it is not the type of f args : tau *)
     else
-      cIH'
+      ((* print_string ("Given cG=" ^ P.gctxToString cD cG ^ "\n");
+	print_string  ("IH and recursive call DO NOT agree on : " ^
+			(R.render_var cG x)
+		      ^ " =/= " ^ (R.render_var cG y)
+		      ^ "\n");*)
+      cIH')
   | _ , LF.Dec (cIH,Comp.WfRec (f , Comp.DC :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
       LF.Dec (cIH', Comp.WfRec (f, args, tau))
@@ -782,7 +826,9 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
 (* other cases are invalid /not valid recursive calls *)
 
 
-
+let filter cD cG cIH (loc, e) = 
+((* print_string ("[filter] IH = " ^ ih_to_string cD cG cIH ^ "\n");*)
+ filter cD cG cIH (loc, e))
 
 (* check a recursive call in the program is wf
 
@@ -800,19 +846,22 @@ let mark_inductive cU = match cU with
   | LF.CTyp (cPsi, _ ) -> LF.CTyp (cPsi, LF.Inductive)
 
 
-
 let annotate loc f tau = 
   let rec ann tau pos = match tau , pos with
-  | Comp.TypPiBox (LF.Decl (x, cU), tau) , 1 -> Comp.TypPiBox (LF.Decl (x, mark_inductive cU), tau)
+  | Comp.TypPiBox (LF.Decl (x, cU), tau) , 1 -> 
+      Comp.TypPiBox (LF.Decl (x, mark_inductive cU), 
+		     tau)
   | Comp.TypArr (tau1, tau2) , 1 -> Comp.TypArr (Comp.TypInd tau1, tau2)
   | Comp.TypArr (tau1, tau2) , n -> Comp.TypArr (tau1, ann tau2 (n-1))
   | Comp.TypPiBox (cd , tau) , n -> Comp.TypPiBox( cd, ann tau (n-1))
   |  _ , _ -> raise (Error (loc, TooManyArg f))
   in
     match get_order_for f with 
-      Some x -> ( print_string ("Annotate " ^ P.compTypToString LF.Empty tau ^
-				 " in pos = " ^ string_of_int x ^ "\n"); 
-		 ann tau x)
+      Some x -> (let tau' = ann tau x in 
+		   (* print_string ("Annotated " ^ P.compTypToString LF.Empty tau' ^
+				 " in pos = " ^ string_of_int x ^ "\n"); *)
+		   tau')
+
       | None -> tau 
 
 
@@ -886,9 +935,6 @@ let rec positive a tau =
 
 (* stratification  *)
 
-
-(*should compare *)
-
 let rec less_dctx cPsi1 cPsi2 = 
   match cPsi1, cPsi2 with
     | LF.Null, LF.Null -> false  
@@ -905,18 +951,7 @@ let rec less_dctx cPsi1 cPsi2 =
 (*     | (None, offset1)    , (None, offset2)     -> offset1 < offset2 *)
 (*     | _ , _  -> false *)
 
-(* let  less_phat phat1 phat2 = *)
-(*   match prefix_hat phat1 phat2 with *)
-(*     | Some k -> k > 0 *)
-(*     | _ -> false  *)
-
-
 let equal_meta_obj = Whnf.convMetaObj  
-  (* match cM1, cM2 with *)
-  (*   | Comp.MetaCtx (_, cPsi1),     Comp.MetaCtx (_, cPsi2) -> true *)
-  (*   | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (_, phat2, tM2) -> true  *)
-  (*   | _, _  -> false  *)
-
 
 let rec less_meta_obj mC1 mC2 = 
   match mC1, mC2 with
@@ -1000,7 +1035,7 @@ and leq_meta_obj mC1 mC2 =
 (*find the meta obj needs to be compared*)
 let rec find_meta_obj mS n =
   match mS, n with
-    | Comp.MetaApp (mC, _)  , 1   ->  mC (* print_string ((P.metaObjToString LF.Empty  obj)^"\n" ); *) 
+    | Comp.MetaApp (mC, _)  , 1   ->  mC 
     | Comp.MetaApp (mC, mS'), _   -> find_meta_obj  mS' (n-1)
     | Comp.MetaNil          , _   -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
 
@@ -1046,12 +1081,11 @@ let rec compare a cD tau1  mC2 n =
   match  tau1 with
     | Comp.TypBase  (loc, c, mS1) ->
       if a = c then
-	let  mC1 =  find_meta_obj mS1 n in
-	
+	let  mC1 =  find_meta_obj mS1 n in	
 	let _ = dprint (fun () ->  ("mC1: " ^  (P.metaObjToString cD  mC1)^"\n"  ^
-				       "mC2: " ^  (P.metaObjToString cD  mC2)^"\n" ) ) in
+				      "mC2: " ^  (P.metaObjToString cD  mC2)^"\n" ) ) in
 	let _ = dprint (fun () ->  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ^
-				       "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in	
+				      "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in	
 	less_meta_obj mC1 mC2
       else
 	(match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
@@ -1161,113 +1195,3 @@ let stratifyAll a tau =
     else 0
   in stratAll mSize
 
-
-
-(* let rec compare a (cD1',tau1) n (cD2, mC2) cD0=  *)
-(*   match  tau1 with *)
-(*     | Comp.TypBase  (loc, c, mS) -> *)
-(*       not (a = c) ||      *)
-(* 	let (cD1, mC1) =  find_meta_obj cD1' mS n in *)
-
-(* 	(\*  cD1  = cD0, cDa *\) *)
-(* 	(\*  cD2  = cD0, cDb *\) *)
-(* 	(\* k0 = | cD0 | *\) *)
-(* 	(\* k1 = | cD1 | *\) *)
-(* 	(\* k2 = | cD2 | *\) *)
-
-(* 	let rec ctxlength cD =  *)
-(* 	  match cD with *)
-(* 	    | LF. Empty -> 0 *)
-(* 	    | LF. Dec (cD', _) -> ctxlength cD' + 1 *)
-(* 	in *)
-
-(* 	let k0  = ctxlength cD0  in *)
-(* 	let k1  = ctxlength cD1  in *)
-(* 	let k2  = ctxlength cD2  in	 *)
-	
-(* 	let _ = dprint (fun () -> ("cD1 : " ^ (P.mctxToString  cD1) ^ "\n" ) ^ *)
-(* 	  ("cD2 : " ^ (P.mctxToString  cD2) ^ "\n" ) ^ *)
-(* 	  ("cD0 : " ^ (P.mctxToString  cD0) ^ "\n" ) ^ *)
-(* 	  ((P.metaObjToString cD1  mC1 )^"  shift offset:"^(string_of_int (k1-k0))^"\n" )^  *)
-(* 	  ((P.metaObjToString cD2  mC2) ^"  shift offset:"^(string_of_int (k2-k0))^"\n" ) )in *)
-
-	
-(* 	let mC1 = Whnf.cnormMetaObj   (mC1 , LF.MShift  (k0-k1)) in *)
-(* 	let mC2 = Whnf.cnormMetaObj   (mC2 , LF.MShift  (k0-k2)) in *)
-	
-
-(* 	let _ = dprint (fun () ->  *)
-(* 	  ("mC1: " ^  (P.metaObjToString cD0  mC1)^"\n" ) ^ *)
-(* 	    ("mC2: " ^  (P.metaObjToString cD0  mC2)^"\n" ) ) in *)
-(* 	let _ = dprint (fun () ->  *)
-(* 	  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ) ^ *)
-(* 	    ("meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ) ) in *)
-
-	
-(* 	less_meta_obj mC1 mC2 *)
-
-(*     | Comp.TypArr   (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0) *)
-(*     | Comp.TypCross (tau, tau')  -> (compare a (cD1', tau) n (cD2, mC2) cD0) && (compare a (cD1', tau') n (cD2, mC2) cD0) *)
-(*     | Comp.TypPiBox ((dec,_), tau)   -> compare a (LF.Dec (cD1', dec), tau)  n  (cD2, mC2) cD0 *)
-(*     | Comp.TypBox _    -> true *)
-(*     | Comp.TypClo _    -> true *)
-(*     | Comp.TypBool     -> true *)
-(*     | Comp.TypCobase _ -> true *)
-(*     | Comp.TypDef _    -> true *)
-
-
-
-
-(* let stratify a tau n = *)
-(*   let (cD, mS) = get_target LF.Empty tau in *)
-(*   let mSize = mS_size mS in *)
-(*   if (mSize < n || n <=0 )  *)
-(*   then raise (Error ( (Syntax.Loc.ghost) , (WrongArgNum (a, n)))) *)
-(*   else *)
-(*     let (cD', mC') = find_meta_obj cD mS n  in *)
-(*     let rec strat cD0 tau0 =  *)
-(*       match tau0 with *)
-(* 	| Comp.TypBase _   -> true *)
-(* 	| Comp.TypCobase _ -> true *)
-(* 	| Comp.TypDef  _   -> raise Unimplemented *)
-(* 	| Comp.TypBox  _   -> true *)
-(* 	| Comp.TypArr   (tau1, tau2)   -> *)
-	  
-(* 	  let k0  = mctxlength cD0  in *)
-(* 	  let k'  = mctxlength cD'  in		 *)
-(* 	  let tau1' = Whnf.cnormTyp (tau1, LF.MShif(k'-k0)) in *)
-(* 	  (compare a (cD',tau1') n (cD', mC') cD0) && (strat cD0 tau2) *)
-	
-(* 	| Comp.TypCross (tau1, tau2)   ->  *)
-(* 	  let k0  = mctxlength cD0  in *)
-(* 	  let k'  = mctxlength cD'  in		 *)
-(* 	  let tau1' = Whnf.cnormTyp (tau1, LF.MShif(k'-k0)) in *)
-
-	  
-(* 	  (compare a (cD',tau1) n (cD', mC') cD0) && (compare a (cD0,tau2) n (cD',mC') cD0) *)
-	
-	
-(* 	| Comp.TypPiBox ((dec,_), tau')    ->  strat (LF.Dec (cD0, dec)) tau' *)
-(* 	| Comp.TypClo  _            -> raise Unimplemented *)
-(* 	| Comp.TypBool               -> true *)
-(*     in  *)
-(*     strat LF.Empty tau *)
-
-
-(* stratifyAll a tau = bool
-Preconditions:
-    |- tau : ctype
-    type_family (tau) = a, i.e. the target type of tau has type family a
-
-if the target type has not arguments , then check positvity
-otherwise check whether there is a position of arguments which makes stratification satisfied
-*)  
-
-(* let stratifyAll a tau = *)
-(*   let (cD, mS) = get_target LF.Empty tau in *)
-(*   let mSize = mS_size mS in *)
-(*   if mSize = 0 then positive a tau *)
-(*   else  *)
-(*     let rec stratAll n = *)
-(*       (n>=1) &&  ((stratify a tau n) || stratAll (n-1)) *)
-(*     in stratAll mSize *)

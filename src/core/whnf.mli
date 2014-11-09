@@ -90,9 +90,7 @@ val mctxPDec   : mctx -> int -> Id.name * typ * dctx
 val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
 val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 
-
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)
-
 
 val cnorm      : normal * msub -> normal
 val cnormHead : head * msub -> head

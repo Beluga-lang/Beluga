@@ -60,7 +60,7 @@ mlam h,g, S => fn s => fn e => case e of
 and nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 	    -> [g |- norm S]
             -> [h |- norm S] =
-/ total n (nosubst g h s n) /
+/ total n (nosubst g h _ s n) /
 fn s => fn n =>
 let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 case n of

@@ -4,7 +4,7 @@ datatype nat : type =
 | z : nat
 | s : nat -> nat
 ;
-
+%name nat N.
 % The sub-term relation on naturals
 
 datatype le : nat -> nat -> type =

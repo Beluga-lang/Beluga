@@ -149,31 +149,27 @@ module Comp = struct
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
-     | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
-     | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
-     | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
-     | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
-     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-                                                (* let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)
-                                                (* let x = i in e      *)
-     | Box    of Loc.t * meta_obj               (* box (Psi hat. M)    *)
+     | Fun    of Loc.t * name * exp_chk                         (* fn   f => e         *)
+     | Cofun  of Loc.t * (copattern_spine * exp_chk) list       (* Cofun hd => e | tl => e' *)
+     | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
+     | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)
+     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
+     | Let    of Loc.t * exp_syn * (name * exp_chk)             (* let x = i in e      *)
+     | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
-     | If      of Loc.t * exp_syn * exp_chk * exp_chk
+     | If     of Loc.t * exp_syn * exp_chk * exp_chk
      | Hole   of Loc.t
 
   and exp_syn =
-     | Var    of Loc.t * offset                                     (* x              *)
-     | FVar   of name                                       (* x              *)
-     | DataConst of Loc.t * cid_comp_const                          (* c              *)
-     | DataDest of Loc.t * cid_comp_dest                            (* c              *)
-     | Const  of Loc.t * cid_prog                                   (* c              *)
-     | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
-
-     | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
+     | Var    of Loc.t * offset                                 (* x              *)
+     | DataConst of Loc.t * cid_comp_const                      (* c              *)
+     | DataDest of Loc.t * cid_comp_dest                        (* d              *)
+     | Const  of Loc.t * cid_prog                               (* c              *)
+     | Apply  of Loc.t * exp_syn * exp_chk                      (* i e            *)
+     | MApp   of Loc.t * exp_syn * meta_obj                     (* i [Psi_hat. M] *)
      | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of exp_chk * typ                              (* e : tau        *)
+     | Ann    of exp_chk * typ                                  (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 

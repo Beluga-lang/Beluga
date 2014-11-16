@@ -1552,6 +1552,8 @@ and elExp' cD cG i = match i with
      raise (Error (loc, ErrorMsg "Found ParamObj"))
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaSub (_loc', _phat, _r)) ->
      raise (Error (loc, ErrorMsg "Found SubstObj"))
+  | Apx.Comp.BoxVal (loc, Apx.Comp.MetaSubAnn (_loc', _phat, _r)) ->
+     raise (Error (loc, ErrorMsg "Found SubstObj"))
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaCtx (loc', cpsi)) ->
 (*     raise (Error (loc, ErrorMsg "Found CtxObj")) *)
      begin 
@@ -1571,7 +1573,6 @@ and elExp' cD cG i = match i with
 	  end
      end
 	
-
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in
       let (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in

@@ -76,6 +76,9 @@ module type UNIFY = sig
 
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
+  val unifyMetaTyp : mctx -> (Comp.meta_typ * msub) -> (Comp.meta_typ * msub) -> unit
+  val unifyMetaObj : mctx -> (Comp.meta_obj * msub) -> (Comp.meta_obj * msub) ->
+                    (Comp.meta_typ * msub) -> unit
 
   val matchTerm    : mctx -> dctx -> nclo -> nclo -> unit
   val matchTyp     : mctx -> dctx -> tclo -> tclo -> unit
@@ -3688,19 +3691,22 @@ match sigma with
            raise (Failure "Context clash"))
 
    (* **************************************************************** *)
+  let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = 
+    let Decl (_u, cT) = cdecl in
+      unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
-  let unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = match ((mO, t) , (mO', t')) with
+  and unifyMObj cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
     | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') ->
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
     | (Comp.MetaParam (_, phat, h) , t) , (Comp.MetaParam (_, phat', h') , t') ->
-        let Decl (_u, PTyp (_tA, cPsi, _)) = cdecl in
+        let PTyp (_tA, cPsi,_) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           unifyHead Unification cD cPsi
             (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
 
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
-        let Decl (_u, MTyp (_tA, cPsi, _)) = cdecl in
+        let MTyp (_tA, cPsi, _) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
 (*        let cPsi  = Context.hatToDCtx phat in
         let cPsi' = Context.hatToDCtx phat' in
@@ -3731,7 +3737,7 @@ match sigma with
            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
 
     | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
-        let Decl (_u, STyp (_cPhi, cPsi, _)) = cdecl in
+        let STyp (_cPhi, cPsi, _) = cT in
         let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
         let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
         let _ = dprint (fun () -> "      cPsi = " ^ P.dctxToString cD cPsi1) in
@@ -3782,6 +3788,7 @@ match sigma with
 	    if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
 	  | _ , _ -> raise (Failure "Computation-level Type Clash")
 
+
     let rec unifyCompTyp cD tau_t tau_t' =
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
 
@@ -3807,7 +3814,7 @@ match sigma with
 
           else
             raise (Failure "Type Constant Clash")
-      | ((Comp.TypBox (_, tA, cPsi), t) , (Comp.TypBox (_, tA', cPsi'), t')) ->
+      | ((Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)), t) , (Comp.TypBox (_, Comp.MetaTyp(tA', cPsi')), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
            (* dprint (fun () -> "[unifyCompTyp] Unifying contexts done");
@@ -4087,6 +4094,20 @@ let unify_phat psihat phihat =
 
     let matchTyp cD0 cPsi sA sB =
       unifyTyp' Matching cD0 cPsi sA sB
+
+      let metaTypToCDecl mT = match mT with
+	| Comp.MetaTyp (tP, cPsi) -> LF.MTyp (tP, cPsi, LF.Maybe)
+	| Comp.MetaParamTyp (tP, cPsi) -> LF.PTyp (tP, cPsi, LF.Maybe)
+	| Comp.MetaSubTyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi, LF.Maybe)
+	| Comp.MetaSchema w -> LF.CTyp (w, LF.Maybe)
+
+    let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) = 
+      unifyMObj cD (cM, ms) (cM', ms) (metaTypToCDecl mT, mt)
+
+    let unifyMetaTyp cD (mT, ms) (mT', ms') = 
+	unifyCLFTyp Unification cD (metaTypToCDecl (Whnf.cnormMetaTyp (mT, ms)))
+ 	                           (metaTypToCDecl (Whnf.cnormMetaTyp (mT', ms')))
+
 
     let unifyCompTyp cD ttau ttau' =
       begin try

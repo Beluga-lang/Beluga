@@ -308,7 +308,7 @@ let  intro i =
   let rec crawl cD cG  = (function
  | Comp.TypArr (t1,t2) ->
      ( match t1 with
-     | Comp.TypBox (l,tA,psi) ->
+     | Comp.TypBox (l, Comp.MetaTyp(tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
@@ -360,7 +360,7 @@ let split e i =
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
       if (nameString n) = e then
         (match tau with
-        | Comp.TypBox (l, tA, cPsi) -> (* tA:typ, cPsi: dctx *)
+        | Comp.TypBox (l, Comp.MetaTyp (tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
@@ -388,8 +388,13 @@ let rec searchMctx i = function
           (if (nameString n) = e then
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
-             let (vPsi, vOff) = dctxToHat cPsi in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.MVar (LF.Offset i, LF.Shift  vOff), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let ((_ , vOff) as phat) = dctxToHat cPsi in
+	     let m0 = Comp.MetaObj(Loc.ghost, phat,
+				   LF.Root (Loc.ghost,
+					    LF.MVar (LF.Offset i, LF.Shift vOff),
+					    LF.Nil)) in
+             let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
+				    Comp.TypBox(Loc.ghost, Comp.MetaTyp(tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
@@ -397,8 +402,9 @@ let rec searchMctx i = function
           (if (nameString n) = e then
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in
-             let (vPsi, vOff) = dctxToHat cPsi in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift vOff), LF.Nil))), Comp.TypBox(Loc.ghost, tA,cPsi)) in
+             let ((vPsi, vOff) as phat) = dctxToHat cPsi in
+	     let m0 = Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift vOff), LF.Nil)) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, Comp.MetaTyp (tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')

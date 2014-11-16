@@ -2,6 +2,7 @@
 %%% Author: Frank Pfenning
 %%% Adapted: Brigitte Pientka
 
+%nostrengthen
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 
 rec cmpcs: {g:c_ctx}[g |- can (A ..) (D ..) ] -> [g |- solve (A ..) ] =

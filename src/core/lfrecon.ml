@@ -45,6 +45,7 @@ type error =
   | SpineLengthMisMatch
   | IllTypedSubVar of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | NotPatSub
+  | IncompatibleSchemaForCtxVar of Int.LF.mctx * Int.LF.ctx_var * Id.cid_schema * Id.cid_schema
 
 exception Error of Syntax.Loc.t * error
 
@@ -162,7 +163,14 @@ let _ = Error.register_printer
         | MissingSchemaForCtxVar psi ->
           Format.fprintf ppf
             "Missing schema for context variable %s."
-            (R.render_name psi)))
+            (R.render_name psi)
+        | IncompatibleSchemaForCtxVar (_cD, _psi, w, w') ->
+	    (* (Pretty.fmt_ppr_lf_dctx cD 0) (Int.LF.CtxVar psi) *)
+          Error.report_mismatch ppf
+	    "Ill-typed context variable"
+            "Expected schema for context variable"  (Format.pp_print_string) (RR.render_cid_schema w) 
+	    "Actual type" (Format.pp_print_string) (RR.render_cid_schema w')
+  ))
 
 let rec conv_listToString clist = match clist with
   | [] -> " "
@@ -2410,6 +2418,36 @@ let rec elDCtx recT cD psi = match psi with
       let _ = dprint (fun () -> "[elDCtx] " ^ R.render_name x ^ ":" ^
                         P.typToString cD cPsi (tA, Substitution.LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+
+
+let checkCtxVar loc cD c_var w = match c_var with
+  | Apx.LF.CtxOffset offset  -> 
+      if Context.lookupSchema cD offset = w then Int.LF.CtxOffset offset
+      else 
+	raise (Error (loc, IncompatibleSchemaForCtxVar (cD, Int.LF.CtxOffset offset, w,
+							Context.lookupSchema cD offset)))
+  | Apx.LF.CtxName psi       -> 
+      (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (w, Int.LF.Maybe)));
+       Int.LF.CtxName psi)
+
+let rec checkDCtx loc recT cD psi w = match psi with
+  | Apx.LF.Null -> Int.LF.Null
+
+  | Apx.LF.CtxVar (c_var) ->  Int.LF.CtxVar(checkCtxVar loc cD c_var w) 
+
+  | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
+      let cPsi = checkDCtx loc recT cD psi' w in
+      let tA   = elTyp  recT cD cPsi a in
+      let _ = dprint (fun () -> "[elDCtx] " ^ R.render_name x ^ ":" ^
+                        P.typToString cD cPsi (tA, Substitution.LF.id)) in
+      let Syntax.Int.LF.Schema s_elems = Schema.get_schema w in
+      let _ = begin try
+                Check.LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems 
+             with _ -> raise (Check.Comp.Error (Syntax.Loc.ghost, Check.Comp.IllegalParamTyp  (cD, cPsi, tA)))
+             end
+      in
+        Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+
 
 (* ******************************************************************* *)
 (* Solve free variable constraints *)

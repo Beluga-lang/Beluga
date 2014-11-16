@@ -544,10 +544,9 @@ and cnormApxExp' cD delta i cDt = match i with
       let mobj'     = cnormApxMetaObj cD delta mobj cDt in
         Apx.Comp.MApp (loc, i', mobj')
 
-  | Apx.Comp.BoxVal (loc, psi, m) ->
-      let psi' = cnormApxDCtx loc cD delta psi cDt in
-      let m'   = cnormApxTerm cD delta m cDt in
-        Apx.Comp.BoxVal (loc, psi', m')
+  | Apx.Comp.BoxVal (loc, mobj) ->
+      let mobj'     = cnormApxMetaObj cD delta mobj cDt in
+        Apx.Comp.BoxVal (loc, mobj')
 
 (*  | Apx.Comp.Ann (e, tau) ->
       let e' = cnormApxExp e cDt in
@@ -1261,10 +1260,9 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let mobj' = fmvApxMetaObj fMVs cD d_param  mobj in
         Apx.Comp.MApp (loc, i', mobj')
 
-  | Apx.Comp.BoxVal (loc, psi, m) ->
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let m'   = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.BoxVal (loc, psi', m')
+  | Apx.Comp.BoxVal (loc, mobj) ->
+      let mobj' = fmvApxMetaObj fMVs cD d_param  mobj in
+        Apx.Comp.BoxVal (loc, mobj')
 
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let i1' = fmvApxExp' fMVs cD d_param  i1 in

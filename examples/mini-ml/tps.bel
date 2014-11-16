@@ -74,18 +74,7 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 % Type preservation proof
 rec tps :  [ |- eval E V] -> [ |- oft E T]
          -> [ |- oft V T]  = 
-fn e => fn d => case e of 
-| [ |- ev_z ] => ? 
-| [ |- ev_s E ] =>
-  let [ |- tp_s D] = d in ? 
-%  let [ |- F] = tps [ |- E] [ |- D] in 
-% [ |- tp_s F]
-
-;
-
-
-
-%{ fn f => fn d => case f of
+ fn f => fn d => case f of
 | [ |- ev_z] => d
 
 | [ |- ev_s F1]  =>
@@ -118,4 +107,4 @@ fn e => fn d => case e of
     tps [ |- F2] [ |- D2 _ C1]
 
 ;
-}%
+

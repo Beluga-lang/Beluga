@@ -102,7 +102,7 @@ module Int : sig
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
-
+    val metaTypToString   : LF.mctx -> Comp.meta_typ -> string
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string

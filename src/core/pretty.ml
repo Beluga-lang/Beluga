@@ -909,7 +909,11 @@ module Int = struct
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp) ->
-          if (((not !Control.printImplicit) && (isImplicit mtyp) && printing_holes) || (!Control.printNormal)) then () else begin
+
+	(* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
+	(* This modification won't print it if Control.printImplicit is false*)
+
+          if ((not !Control.printImplicit) && (isImplicit mtyp)|| (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp

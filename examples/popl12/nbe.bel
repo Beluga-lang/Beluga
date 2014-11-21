@@ -74,8 +74,7 @@ case t of
 | [g |- #p .. ]           : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
 | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>
   Slam  (mlam h' => fn s' => fn e =>
-         eval (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e)
-              [g,x:tm A |-  E .. x])
+        ? )
 
 | [g |- app (E1 ..) (E2 ..) ] =>
   let (Slam f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1 ..] in

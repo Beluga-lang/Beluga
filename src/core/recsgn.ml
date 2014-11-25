@@ -261,15 +261,9 @@ and recSgnDecl ?(pauseHtml=false) d =
                 ) in
 	Total.stratNum := -1 ;
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
-          (if (!Debug.chatter) == 0 then ()
-          else (Format.printf "\ndatatype %s : @[%a@] = \n"
-                 (a.string_of_name)
-                 (P.fmt_ppr_cmp_kind Int.LF.Empty Pretty.std_lvl) cK'));
         let sgn = Int.Sgn.CompTyp(loc, a, cK', p) in
         Store.Modules.addSgnToCurrent sgn;
         sgn
-
-
 
   | Ext.Sgn.CompCotyp (loc , a, extK) ->
         dprint (fun () -> "[RecSgn Checking] CompCotyp at: \n" ^ Syntax.Loc.to_string loc);
@@ -480,14 +474,8 @@ and recSgnDecl ?(pauseHtml=false) d =
 	  let v = if Holes.none () then 
 	    begin
               let v = Opsem.eval i'' in
-            let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in	      
-              if (!Debug.chatter) <> 0 then
-		Printf.printf  "\n\nlet %s : %s = %s  \n ===>  %s \n"
-                  (R.render_name x)
-                  (P.compTypToString cD tau')
-                  (P.expChkToString cD cG i'')
-                  (P.valueToString v);
-	      Some v
+              let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in	      
+		Some v
 	  end
 	  else None in
     let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
@@ -547,12 +535,6 @@ and recSgnDecl ?(pauseHtml=false) d =
           | (Some y)::ys -> if x = y then k else pos loc x ys (k+1)
           | None::ys -> pos loc x ys (k+1)
         in
-
-        let get_rec_arg (Ext.Comp.Total (_loc, order, _f, _args)) =
-          match order with
-            | Some (Ext.Comp.Arg x) -> Some x
-	    | None -> None
-        in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
 	  (* print_string ("args length: "^string_of_int (List.length args) ^"\n" ); *)
 	  if f = f' then 
@@ -604,7 +586,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 	   	      Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
 		    else 
 		      (if m = 1 then 
-			  (Coverage.enableCoverage := true;
+			  ( (*Coverage.enableCoverage := true; *)
 			   Total.enabled := true;
 			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
 			   Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
@@ -661,17 +643,12 @@ and recSgnDecl ?(pauseHtml=false) d =
         in
 
         let rec reconRecFun recFuns = match recFuns with
-          | [] ->   (Coverage.enableCoverage := false ;
+          | [] ->   (Coverage.enableCoverage := !Coverage.enableCoverage ;
                      Total.enabled := false;
                      [])
           | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
             let (e_r' , tau') = reconFun loc f  e in
-            if !Debug.chatter <> 0 then
-              Printf.printf  "and %s : %s =\n %s\n"
-                (R.render_name f)
-                (P.compTypToString cD tau')
-                (P.expChkToString cD cG e_r');
-              begin match total with
+              (* begin match total with
                 | None -> ()
 		| Some (Ext.Comp.Trust _) ->   
 		      Printf.printf "\n## Totality checking: %s is trusted. ##\n"
@@ -686,10 +663,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 		      Printf.printf "\n## Totality checking: %s terminates. ##\n"
 			(R.render_name f) )
 		    
-              end ;
-              if !Coverage.enableCoverage then
-		Printf.printf "\n## Coverage checking done: %s  ##\n"
-                  (R.render_name f);
+              end ;*)
               dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
               let (loc_opt, cid) = Comp.add loc
 		(fun cid ->
@@ -707,13 +681,7 @@ and recSgnDecl ?(pauseHtml=false) d =
           begin match recFuns with
             | Ext.Comp.RecFun (loc, f, total, _tau, e) :: lf ->
 		let (e_r' , tau') = reconFun loc f e in
-		  if !Debug.chatter <> 0 then
-		    Format.printf "\nrec %s :@[<2>@ %a@] = @.@[<2>%a@]@.\n"
-                      (R.render_name f)
-                      (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.normCTyp tau')
-                      (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl)
-                      (Whnf.cnormExp (e_r', Whnf.m_id));
-		  begin match total with
+		  (* begin match total with
 		    | None -> ()
 		    | Some (Ext.Comp.Trust _ ) -> 
 			Printf.printf "\n## Totality checking: %s is trusted. ##\n"
@@ -727,10 +695,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 			   | None -> 
 			       Printf.printf "\n## Totality checking: %s terminates ##\n"
 				 (R.render_name f))
-		  end ;
-		  if !Coverage.enableCoverage then
-		    Printf.printf "\n## Coverage checking done: %s  ##\n"
-                      (R.render_name f);
+		  end ;*)
 		  dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
 		  let (loc_opt, cid) = Comp.add loc
 		    (fun cid ->
@@ -741,6 +706,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 		    | Some loc -> Holes.destroyHoles(loc)
 		    | None -> () in
 		  let _ = Holes.commitHoles() in
+		  let _ = Total.clear () in
 		  let sgn = Int.Sgn.Rec((cid, tau', e_r')::(reconRecFun lf)) in
 		    Store.Modules.addSgnToCurrent sgn;
 		    sgn

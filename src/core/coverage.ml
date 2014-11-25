@@ -32,8 +32,8 @@ let _ = Error.register_printer
   (fun (Error (loc, e)) ->
     Error.print_with_location loc (fun ppf ->
       match e with
-	| NoCover s -> Format.fprintf ppf "Coverage checking failed: %s" s
-	| MatchError s -> Format.fprintf ppf "Coverage checking failed: Matching fails due to %s." s
+	| NoCover s -> Format.fprintf ppf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##   %s\n##" s
+	| MatchError s -> Format.fprintf ppf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##  Matching fails due to %s." s
 	| NothingToRefine -> Format.pp_print_string ppf "Nothing to refine"
 	| NoCoverageGoalsGenerated -> Format.pp_print_string ppf "No coverage goals generated"))
 
@@ -1969,8 +1969,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 	gen_candidates loc cD covGoal plist
       else
 	raise (Error (loc, NoCover
-			(Printf.sprintf "\n##   Empty Pattern ##\n   %s\n\n##   Case expression of type : \n##   %s\n##   is not empty.\n\n"
-			   (Syntax.Loc.to_string loc)
+			(Printf.sprintf "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %s\n##   is not empty.\n\n"
 			   (P.typToString cD_p cPsi sA))))
 
   | (cD_p, EmptyParamPatt (cPsi, sA) ) :: plist ->
@@ -1978,8 +1977,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 	gen_candidates loc cD covGoal plist
       else
 	raise (Error (loc, NoCover
-			(Printf.sprintf "\n##   Empty Parameter Pattern ##\n    %s\n\n##   Case expression of parameter type : \n##   %s\n##   is not empty.\n\n"
-			   (Syntax.Loc.to_string loc)
+			(Printf.sprintf "\n##   Empty Parameter Pattern ##\n \n##   Case expression of parameter type : \n##   %s\n##   is not empty.\n\n"
 			   (P.typToString cD_p cPsi sA))))
   | (cD_p, (MetaPatt(cPhi, _tN, sB') as pat)) :: plist ->
       let CovGoal (cPsi', _, sA') =  covGoal in
@@ -2017,7 +2015,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, Comp.MetaCtx (loc,cPsi)) ) ]
 
   | Comp.TypBox(loc, Comp.MetaTyp (tA, cPsi)) ->
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.MTyp (tA, cPsi, LF.Maybe))) in
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.MVarName None), LF.MTyp (tA, cPsi, LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2032,7 +2030,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', tM) )) ]
 
   | Comp.TypBox(loc, Comp.MetaParamTyp(tA, cPsi)) ->
-      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
+(*      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in*)
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.PTyp (tA, cPsi, LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
@@ -2126,10 +2124,9 @@ let check_coverage_success problem  =
 	(dprint (fun () -> "\n ###### COVERS ####### \n ");
 	 Success)
       else
-	 (* Check if the open coverage goals can be proven to be impossible *)
-        Failure (Printf.sprintf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##   %s\n##   %s\n\n"
-                   (Syntax.Loc.to_string problem.loc)
-                   ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
+	(* Check if the open coverage goals can be proven to be impossible *)
+	Failure (Printf.sprintf "    %s\n\n"
+		   ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
 
     | Pragma.PragmaNotCase ->
       if !open_cov_goals = [] then
@@ -2154,9 +2151,7 @@ let check_coverage_success problem  =
   Fails, otherwise
 *)
 let covers problem projObj =
-if not (!enableCoverage)
-  then Success
-else
+if !Total.enabled || !enableCoverage then 
   (let _ = dprint (fun () -> "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = " ^
 		     P.compTypToString problem.cD problem.ctype) in
    let _ = (Debug.pushIndentationLevel(); Debug.indent 2) in
@@ -2190,6 +2185,10 @@ else
     open_cov_goals :=  revisited_og ;
     check_coverage_success problem
   )
+else
+  Success
+
+
 
 let process problem projObj =
   reset_cov_problem () ;

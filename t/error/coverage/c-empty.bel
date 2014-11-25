@@ -1,0 +1,19 @@
+% coverage checking example:
+%
+%   a trivial example of an empty (or "absurd") case
+
+%coverage
+constructorless : type.
+
+nat : type.
+zero : nat.
+succ : nat -> nat.
+
+schema constructorlesses = constructorless;
+
+rec empty-example-3X : (g:constructorlesses) [g |- constructorless] -> [ |- nat] =
+  fn c =>
+    case c of 
+      [g |- {} ]
+;
+

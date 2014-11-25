@@ -131,8 +131,7 @@ module Comp = struct
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
           | UnsolvableConstraints (f,cnstrs) ->
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables.\
-\nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is considered ill-typed. "
               cnstrs (R.render_name f)
           | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
@@ -784,13 +783,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 	    (match i with 
 	       | Var (_, x)  ->  
 		   let (f,tau') = lookup cG x in
-(*		   let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
+		    (* let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
 		   let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
 		     | TypInd _tau -> ( (* print_string ("Encountered Var " ^ 
 					 P.expSynToString cD cG i ^ " -	INDUCTIVE\n"); *) true)
-		     | _ -> ((* print_string ("Encountered Var " ^ 
-					 P.expSynToString cD cG i ^ " -	NON-INDUCTIVE\n");*) false) in 
+		     | _ -> ( (* print_string ("Encountered Var " ^ 
+					      P.expSynToString cD cG i ^ " -	NON-INDUCTIVE\n");*) false) in 
 		   if ind then
 		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
 		   else 

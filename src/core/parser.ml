@@ -1665,7 +1665,7 @@ clf_pattern :
       | "["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]" ->
               MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No )
  
-      | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->
+(*      | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->
           let cPhi0 = LF.Null in
             MTSub (_loc, cPhi0, cPsi, LF.No)
 
@@ -1687,6 +1687,7 @@ clf_pattern :
           let cPhi0 = LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi)) in
           let cPhi = List.fold_left (fun d ds -> LF.DDec(d, ds)) cPhi0 decls in
             MTSub (_loc, cPhi, cPsi, LF.No)
+*)
     ]
   ] ;
 

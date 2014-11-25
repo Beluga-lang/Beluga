@@ -1,7 +1,7 @@
 % coverage checking example:
 %
 %   a trivial example of an empty (or "absurd") case
-
+% 
 constructorless : type.
 
 nat : type.
@@ -16,7 +16,6 @@ rec empty-example : [ |- constructorless] -> [ |- nat] =
       [ |- {}]
 ;
 
-
 schema nats = nat;
 
 rec empty-example-2 : (g:nats) [g |- constructorless] -> [ |- nat] =
@@ -26,12 +25,4 @@ rec empty-example-2 : (g:nats) [g |- constructorless] -> [ |- nat] =
       [g |- {}]
 ;
 
-schema constructorlesses = constructorless;
-
-rec empty-example-3X : (g:constructorlesses) [g |- constructorless] -> [ |- nat] =
-% / total c (empty-example-3X g c)/
-  fn c =>
-    case c of 
-      [g |- {} ]
-;
 

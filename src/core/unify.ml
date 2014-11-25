@@ -1473,6 +1473,7 @@ match sigma with
                           dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
                           returnNeutral (MVar (Offset v, s'))
                       with
+			| NotInvertible -> raise (Failure "Bound meta-variable more general than existential meta-variable")
                         | Error.Violation msg ->
                             (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
                               "\n Looking for " ^ R.render_cvar cD0 u ^
@@ -2744,10 +2745,10 @@ match sigma with
               let mtt  = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in
               let _ = dprint (fun () -> "                sM1 (expected pruned result) =   " ^
-             P.normalToString cD2 cPsi2 (Whnf.cnorm (Whnf.norm sM1,mtt),  Substitution.LF.id)) in
+				P.normalToString cD2 cPsi2 (Whnf.cnorm (Whnf.norm sM1,mtt),  Substitution.LF.id)) in
               let sM1' = trail (fun () -> prune cD2 cPsi2 phat sM1 (mtt, ss) (MMVarRef r)) in
               let _ = dprint (fun () -> "   (012) - normal - MMVar cD2 = " ^
-              P.mctxToString cD0) in
+				P.mctxToString cD0) in
               let _ = dprint (fun () -> "   pruned sM1 = ") in
               let _ = dprint (fun () -> "                  " ^
                                 P.normalToString cD2 cPsi2 (sM1', Substitution.LF.id)) in
@@ -3874,9 +3875,10 @@ match sigma with
 
    (* **************************************************************** *)
     let rec unify1 mflag cD0 cPsi sM1 sM2 =
-      unifyTerm mflag cD0 cPsi sM1 sM2;
-      dprint (fun () -> "Forcing constraint...") ;
-      forceCnstr mflag (nextCnstr ())
+	(unifyTerm mflag cD0 cPsi sM1 sM2;
+	dprint (fun () -> "Forcing constraint...") ;
+	forceCnstr mflag (nextCnstr ()))
+
 
     (* NOTE: We sometimes flip the position when we generate constraints;
        if matching requires that the first argument is fixed then this may
@@ -3891,8 +3893,8 @@ match sigma with
                 forceCnstr mflag (nextCnstr ()))
             | Eqn (cD, cPsi, tM1, tM2) ->
                 let _ = solveConstraint cnstr in
-(*                let tM1' = Whnf.norm (tM1, id) in
-                let tM2' = Whnf.norm (tM2, id) in  *)
+                (* let tM1 = Whnf.norm (tM1, id) in
+                   let tM2 = Whnf.norm (tM2, id) in   *)
                   (dprint (fun () ->  "Solve constraint: " ^ P.normalToString cD cPsi (tM1, id)  ^
                         " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
                    if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial...")
@@ -3912,30 +3914,32 @@ match sigma with
                         " = " ^ P.headToString cD cPsi h2 ^ "\n"))
           end )
 
-(*    and forceGlobalCnstr ()      =
-      let cnstr = !globalCnstrs in
+    and forceGlobalCnstr cnstr      =
         (resetGlobalCnstrs ();
         forceGlobalCnstr' cnstr;
         begin match !globalCnstrs with
           | [] -> ()
           | _ -> raise (Failure "Unresolved constraints")
         end)
-*)
-    and forceGlobalCnstr c_list = match c_list with
+
+    and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()
       | c::cnstrs ->
           match !c with
-            | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
+            | Queued (* in process elsewhere *) -> forceGlobalCnstr' cnstrs
             |  Eqn (cD, cPsi, tM1, tM2) ->
                  let _ = solveConstraint c in
+		 let l = List.length (!globalCnstrs) in 
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
                         " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
                     begin try
                       (unify1 Unification cD cPsi (tM1, id) (tM2, id);
-                       dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
-                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
-                      forceGlobalCnstr cnstrs)
+		       if l = List.length (!globalCnstrs) then 
+			 (dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
+				    " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
+			  forceGlobalCnstr' cnstrs)
+		       else raise (Failure "Constraints generated"))
                     with Failure _ ->
                       let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
                       let getLoc tM1 = begin match tM1 with
@@ -3946,22 +3950,29 @@ match sigma with
                     end)
             | Eqh (cD, cPsi, h1, h2)   ->
                 let _ = solveConstraint c in
+		 let l = List.length (!globalCnstrs) in 
                   (dprint (fun () -> "Solve global constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
                    begin try
-                     unifyHead Unification cD cPsi h1 h2;
-                     dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
-                            " = " ^ P.headToString cD cPsi h2 ^ "\n");
-                      forceGlobalCnstr cnstrs
+                     (unifyHead Unification cD cPsi h1 h2;
+		     if l = List.length (!globalCnstrs) then 
+                       (dprint (fun () -> "Solved global constraint (H): " ^ P.headToString cD cPsi h1  ^
+				  " = " ^ P.headToString cD cPsi h2 ^ "\n");
+			forceGlobalCnstr' cnstrs)
+		     else raise (Failure "Constraints generated"))
                    with Failure _ ->
                      let cnstr_string = (P.headToString cD cPsi h1  ^ " =/= " ^ P.headToString cD cPsi h2) in
                      let loc = Syntax.Loc.ghost in
                        raise (GlobalCnstrFailure (loc, cnstr_string))
                    end)
             | Eqs (cD, cPsi, s1, s2) ->
-	      let _ = solveConstraint c in
-	      begin try
-		      (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)
+		let _ = solveConstraint c in
+		let l = List.length (!globalCnstrs) in 
+		  begin try
+		    (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr' cnstrs;
+		     if not(l = List.length (!globalCnstrs)) then 
+		       raise (Failure  "Constraints generated")
+		      )
 		with Failure _ -> raise (GlobalCnstrFailure (Syntax.Loc.ghost, "s1 =/= s2"))
 	      end 
 
@@ -3972,6 +3983,7 @@ match sigma with
         resetGlobalCnstrs () ;
         false
       with Failure _ -> resetGlobalCnstrs () ; true
+	| GlobalCnstrFailure _ -> resetGlobalCnstrs () ; true 
       end
 
     let unify' mflag cD0 cPsi sM1 sM2 =

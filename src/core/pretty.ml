@@ -1599,12 +1599,12 @@ module Int = struct
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.CompTypAbbrev (_,_,_,_) -> ()
       | Sgn.Const (_, c, a) ->
-          fprintf ppf "@\n%s : %a.@\n"
+          fprintf ppf "%s : %a.@\n"
             (R.render_cid_term c)
             (fmt_ppr_lf_typ LF.Empty  LF.Null lvl)  a
 
       | Sgn.Typ (_, a, k) ->
-          fprintf ppf "@\n%s : %a.@\n"
+          fprintf ppf "%s : %a.@\n"
             (R.render_cid_typ  a)
             (fmt_ppr_lf_kind LF.Null lvl) k
 
@@ -1620,7 +1620,7 @@ module Int = struct
 
       | Sgn.CompDest (_, c, tau)
       | Sgn.CompConst (_, c, tau) ->
-          fprintf ppf "@\n | %s : @[%a@]@\n"
+          fprintf ppf "@ | %s : @[%a@]@\n"
             (R.render_name c)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             
@@ -1644,9 +1644,12 @@ module Int = struct
             (R.render_cid_schema  w)
             (fmt_ppr_lf_schema ~useName:false lvl) schema
 
-      | Sgn.Rec (h::t) ->
-          fmt_ppr_rec lvl ppf "rec" h;
-          List.iter (fmt_ppr_rec lvl ppf "and") t
+      | Sgn.Rec (((f, _, _ ) as h)::t) ->
+	  let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total  
+	                  then " total" else ""
+	  in 
+          fmt_ppr_rec lvl ppf ("rec"^total) h;
+          List.iter (fmt_ppr_rec lvl ppf ("and"^total)) t
 
       | Sgn.Pragma (LF.OpenPrag n) ->  
           let n' = Store.Modules.name_of_id n in

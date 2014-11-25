@@ -1,14 +1,14 @@
 exp : type.
- z : exp.
+z : exp.
 
- pred : exp -> type.
- yep : {N:exp} pred N.
+pred : exp -> type.
+yep : {N:exp} pred N.
 
- schema ctx = exp;
+schema ctx = exp;
 
- rec foo : (g:ctx) [ g |- pred M ] -> [ |- exp ] =
- fn p => case p of 
- | [g |- yep z] => [ |- z ];
+rec foo : (g:ctx) [ g |- pred M ] -> [ |- exp ] =
+fn p => case p of 
+| [g |- yep z] => [ |- z ];
 
 rec bar : {g:ctx} {N : [ g |- exp ]} [ |- exp ] =
  mlam g => mlam N => foo [ g |- yep (N ..) ];

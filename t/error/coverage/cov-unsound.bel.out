@@ -1,0 +1,11 @@
+
+######   COVERAGE FAILURE: Case expression doesn't cover: ######
+##       CASE(S) NOT COVERED :
+
+(1)   ., {h : tctx}, {Y : [h, y : target |- target]}
+ .
+  |-  [h, y : target |- Y ..]
+
+
+
+##

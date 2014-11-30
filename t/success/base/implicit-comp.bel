@@ -1,0 +1,32 @@
+datatype nat : type = 
+| z : nat
+| s : nat -> nat
+;
+
+datatype bool : type =
+| tt : bool
+| ff : bool
+;
+
+datatype vec : nat -> type =
+| nil : vec z
+| cons : bool -> vec N -> vec (s N)
+;
+
+% the sub-vec relation
+
+datatype LTvec : [|- vec M] -> [|- vec N] -> ctype =
+| LTcons : LTvec [|- V] [|- cons B V] % B has to be left implicit for some reason (if explicit it fails)
+% | LTcons : {B : [|- bool]} LTvec [|- V] [|- cons B V] % B has to be left implicit for some reason (if explicit it fails)		   
+| LTstep : LTvec [|- V] [|- W] -> LTvec [|- V] [|- cons B W]
+;  
+
+% the accessibility predicate on LTvec
+
+datatype Acc-LTvec : [|- vec N] -> ctype =
+% W has to be explicit or there is a pattern matching failure
+| Acc : ({V : [|- vec M]} LTvec [|- V] [|- W] -> Acc-LTvec [|- V]) -> Acc-LTvec [|- W]
+% this works
+% | Acc : {W : [|- vec N]}({V : [|- vec M]} LTvec [|- V] [|- W] -> Acc-LTvec [|- V]) -> Acc-LTvec [|- W]
+;
+

@@ -1,3 +1,4 @@
+%nostrengthen
 irrel : type.
 irrel_ctor : irrel.
 

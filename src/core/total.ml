@@ -676,6 +676,12 @@ let rec weakSub cD cPsi cPsi' =
 
    Note: this could be generalized to allow for subordination
 
+-bp: Generalize this to allow for permutation substitutions:
+
+Example: cPsi = g, x:tm, y:tm  ~~ g, y:tm, x:tm
+  - substitutions:  Id    -or-   (x/y, y/x)
+
+
 *)
 let convDCtxMod cD cPsi cPhi = 
   let cPhi', conv_list = ConvSigma.flattenDCtx cD cPhi in 
@@ -687,10 +693,10 @@ let convDCtxMod cD cPsi cPhi =
 	  Some (Substitution.LF.comp wk_sub s_proj)
     with _ -> 
       try 
-	(* let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n" ;
+(*	 let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n" ;
 		 print_string (" cPsi = " ^ P.dctxToString cD cPsi ^ "\n");
-		 print_string (" cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") ) in*)
-      let wk_sub = weakSub cD cPhi' cPsi in 
+		 print_string (" cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") ) in
+*)     let wk_sub = weakSub cD cPhi' cPsi in 
 	  Some (Substitution.LF.comp wk_sub s_proj)
       with _ -> None
     end
@@ -827,7 +833,7 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
 
 
 let filter cD cG cIH (loc, e) = 
-((* print_string ("[filter] IH = " ^ ih_to_string cD cG cIH ^ "\n");*)
+( (* print_string ("[filter] IH = " ^ ih_to_string cD cG cIH ^ "\n");*)
  filter cD cG cIH (loc, e))
 
 (* check a recursive call in the program is wf

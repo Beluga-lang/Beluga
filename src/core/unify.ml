@@ -166,13 +166,19 @@ let rec blockdeclInDctx cPsi = match cPsi with
           cPsi  |- ss_proj : cPhi'
   *)
   let genMMVarstr loc cD cPsi (Atom (_, a, _tS) as tP, s) =
+    let _ = dprint (fun () -> "[genMMVarstr] of type " ^ P.typToString cD cPsi (tP,s)) in 
+    let _ = dprint (fun () -> "     in context cPsi = " ^ P.dctxToString cD cPsi) in
     let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
     let s_proj = ConvSigma.gen_conv_sub conv_list in
     let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
       (*  cPsi |- s_proj : cPhi
           cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
 
+    let _ = dprint (fun () -> "[genMMVarstr] flattened type " ^ P.typToString cD cPhi (tQ,Substitution.LF.id)) in 
+    let _ = dprint (fun () -> "     in context cPhi = " ^ P.dctxToString cD cPhi) in
     let (ss', cPhi') = Subord.thin' cD a cPhi in
+    let _ = dprint (fun () -> "     thinned context cPhi' = " ^ P.dctxToString cD cPhi') in
+
       (* cPhi |- ss' : cPhi' *)
     let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
@@ -1168,6 +1174,7 @@ match sigma with
   (* prune cD0 cPsi'' (phat, (tM, s), ss, rOccur) = tM'
 
      Given: cD ; cPsi  |- s <= cPsi'  and
+            cD0        |- ms : cD
             cD ; cPsi' |- tM <= tA    and phat = hat(cPsi)
             ss = (ss')^-1 is a pattern substitution where
 
@@ -1370,6 +1377,7 @@ match sigma with
 
             | MVar (Inst (_n, r, cPsi1, tP, cnstrs, mdep) (*as u*), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
+		let _ = dprint (fun () -> "[prune] 003a - MVar]") in
                 let t  = simplifySub cD0 cPsi' (Whnf.normSub (comp t s)) in
                   (* by invariant: MVars are lowered since tM is in whnf *)
                   if eq_cvarRef (MVarRef r) rOccur then
@@ -1450,28 +1458,25 @@ match sigma with
 
 
             | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
-                ( dprint (fun () -> "Pruning bound meta-variable " ^             (R.render_cvar cD0 u)) ;
+                ( dprint (fun () -> "Pruning bound meta-variable ") ;
                 begin match applyMSub u ms with
                   | MV v ->
                       begin try
+			let _ = dprint (fun () -> "[prune] 003b - bound mvar]") in
                         let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 v in
                         let _ = dprint (fun () -> "   cPsi1 (context of mvar)  " ^             (R.render_cvar cD0 v)
                                           ^ " ) = " ^ P.dctxToString cD0 cPsi1) in
                         let _ = dprint (fun () -> "   cPsi' " ^ P.dctxToString cD0 cPsi') in
 
-                        let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-(*                         let s0 = invSub cD0 phat (comp t s, cPsi1) ss rOccur
-                           in
-                        let s' = simplifySub  cD0 cPsi' s0 in *)
+                        let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in 
                         let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
                         let (_, ssSubst) = ss in
-                          dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
-                          dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
+                        let r = returnNeutral (MVar (Offset v, s')) in
+			  dprint (fun () -> "##       cPsi' = " ^ P.dctxToString cD0 cPsi');
                           dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
-(*                          dprint (fun () -> "##       s0' = " ^ P.subToString cD0 cPsi' s0);*)
                           dprint (fun () -> "##       s' = " ^ P.subToString   cD0 cPsi' s');
-                          dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
-                          returnNeutral (MVar (Offset v, s'))
+			  dprint (fun () -> "## Result = " ^ P.normalToString cD0 cPsi' (r, Substitution.LF.id));
+			  r		      
                       with
 			| NotInvertible -> raise (Failure "Bound meta-variable more general than existential meta-variable")
                         | Error.Violation msg ->
@@ -2729,6 +2734,9 @@ match sigma with
           (dprnt "(012) - blockinDCtx";
           let tN = genMMVarstr loc cD2 cPsi2 (tP, id) in
             instantiateMMVar (r, tN,!cnstrs);
+	    dprint (fun () -> ("(012) Unify MMVar  " ^ 
+				 P.normalToString cD0 cPsi sM1));
+	    dprint (fun () -> ("   with flattened MMVar :" ^ P.normalToString cD0 cPsi sM2));
             unifyTerm mflag cD0 cPsi sM1 sM2)
         else
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
@@ -2738,9 +2746,9 @@ match sigma with
                                 "UNIFY(3): normal-MMVar" ^
                                   P.mctxToString cD0 ^ "\n" ^
                                   P.normalToString cD0 cPsi sM1 ^ "\n    " ^
-                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
+                                  P.normalToString cD0 cPsi sM2 ^ "\n\n"
+			      ^ " t' = " ^ P.subToString cD0 cPsi t') in
 
-	       let _ = dprint (fun () -> "[UNIFY(3) t' = " ^ P.subToString cD0 cPsi t') in
               let ss   = invert t' in
               let mtt  = Whnf.m_invert (Whnf.cnormMSub mt) in
               let phat = Context.dctxToHat cPsi in

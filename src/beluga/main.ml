@@ -55,7 +55,7 @@ let process_option arg rest = match arg with
   | "+implicit" -> PC.printImplicit := true; rest
   | "+t" -> Monitor.on := true; rest
   | "+tfile" -> Monitor.onf := true; rest
-  | "+printsubord" -> Subord.dump := true; rest
+  | "+printSubord" -> Subord.dump := true; rest
   | "-print" -> Debug.chatter := 0; rest
   | "-width" ->
     begin match rest with

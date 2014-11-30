@@ -4,7 +4,7 @@
 
 (1)   ., {h : tctx}, {Y : [h, y : target |- target]}
  .
-  |-  [h, y : target |- Y ..]
+  |-  [h, y : target |- Y .. y]
 
 
 

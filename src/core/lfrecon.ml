@@ -1359,6 +1359,9 @@ and elTerm' recT cD cPsi r sP = match r with
           begin match (isPatSub s, spine) with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
+                let _ = dprint (fun () -> "#p is used in context cPsi = " ^  P.dctxToString cD cPsi) in
+                let _ = dprint (fun () -> "           at type tP = " ^ P.typToString cD cPsi sP) in
+                let _ = dprint (fun () -> "Context of #p : cPhi = " ^ P.dctxToString cD cPhi) in
                 let si          = Substitution.LF.invert s'' in
                 let tP = pruningTyp loc cD cPsi
 		  (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
@@ -1482,7 +1485,10 @@ and elTerm' recT cD cPsi r sP = match r with
 	      Int.LF.Clo(tN, s'')
 	    with Error.Violation msg  ->
               (dprint (fun () -> "[elTerm] Violation: " ^ msg);
-               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+               dprint (fun () -> "[elTerm] Encountered term: " ^
+			 P.normalToString cD cPsi (tN,s''));
+		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
+		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
                raise (Error (loc, CompTypAnn)))
               |  Unify.Failure msg  ->
 		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;

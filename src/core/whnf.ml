@@ -538,8 +538,10 @@ and norm (tM, sigma) = match tM with
   | Root (_, MMVar (MInst (_, { contents = Some tM}, _, _, _, _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
       let tM'  = cnorm (tM, t) in
+(*      let tM'' = norm (tM', normSub (LF.comp r sigma)) in 
+	reduce (tM'', LF.id) (normSpine (tS, sigma))*)
       let tM'' = norm (tM', r) in
-      reduce (tM'', sigma) (normSpine (tS, sigma))
+      reduce (tM'', sigma) (normSpine (tS, sigma)) 
 
   | Root (loc, MMVar (MInst (_, {contents = None}, _, _, Atom _, _, _) as u, (t, r)), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)

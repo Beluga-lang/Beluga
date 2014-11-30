@@ -147,6 +147,25 @@ let rec lower cPsi sA = match sA with
   | (LF.PiTyp ((decl, _ ), tB), s) -> lower (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s)
 
 
+let gen_str cD cPsi (LF.Atom (_, a, _tS) as tP) =  
+  let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+  let s_proj            = ConvSigma.gen_conv_sub conv_list in
+  let tQ                = ConvSigma.strans_typ cD (tP, S.LF.id) conv_list in
+    (*  cPsi |- s_proj : cPhi
+        cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+  let (ss', cPhi') = Subord.thin' cD a cPhi in
+    (* cPhi |- ss' : cPhi' *)
+  let ssi' = S.LF.invert ss' in
+    (* cPhi' |- ssi : cPhi *)
+    (* cPhi' |- [ssi]tQ    *)
+    (* cPhi |- ss'    : cPhi'
+       cPsi |- s_proj : cPhi
+       cPsi |- comp  ss' s_proj   : cPhi' *)
+  let ss_proj = S.LF.comp ss' s_proj in
+     (ss_proj , (cPhi', LF.TClo(tQ,ssi')))
+
+
+
 (* etaExpandMVstr cPsi sA  = tN
  *
  *  cPsi   |- [s]A <= typ
@@ -2015,35 +2034,49 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, Comp.MetaCtx (loc,cPsi)) ) ]
 
   | Comp.TypBox(loc, Comp.MetaTyp (tA, cPsi)) ->
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.MVarName None), LF.MTyp (tA, cPsi, LF.Maybe))) in
+(*      let cD = problem.cD in
+      let _ = print_string ("\n Initialize Coverage problem at type: \n     " ^
+			      P.metaTypToString cD (Comp.MetaTyp (tA, cPsi)) ^
+			      "\n")  in
+      let _ = print_string ("\n in cD = " ^ P.mctxToString cD ^ "\n")in *)
+      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
+(*      let _ = print_string ("\n Initialize Coverage problem with (str) mvar of type: " ^
+			      P.metaTypToString cD (Comp.MetaTyp (tA', cPsi')) ^
+	"\n")  in *)
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.MVarName None), LF.MTyp (tA', cPsi', LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = LF.MVar (LF.Offset 1, idSub) in
+      let mv         = LF.MVar (LF.Offset 1, s) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-      let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-      let tA'        = Whnf.cnormTyp (tA, LF.MShift 1) in
-      let covGoal    = CovGoal (cPsi', tM, (tA', S.LF.id)) in
-
+      let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+      let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
+      let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in
+(*      let _          = print_string "\nGenerated Coverage goal: " in 
+      let _          = print_string (covGoalToString cD' covGoal) in
+      let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
+      let _          = print_string "\n\n" in
+*)
       let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
 
       let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
       let loc = Syntax.Loc.ghost in
-	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', tM) )) ]
+	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi, tM) )) ]
 
   | Comp.TypBox(loc, Comp.MetaParamTyp(tA, cPsi)) ->
 (*      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in*)
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.PTyp (tA, cPsi, LF.Maybe))) in
+      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.PTyp (tA', cPsi', LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
+      let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, s) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, s), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-      let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-      let tA'        = Whnf.cnormTyp (tA, LF.MShift 1) in
-      let covGoal    = CovGoal (cPsi', tM, (tA', S.LF.id)) in
+      let cPsi      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+      let tA        = Whnf.cnormTyp (tA, LF.MShift 1) in
+      let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in
 
       let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
 
       let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
       let loc = Syntax.Loc.ghost in
-	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', tM) )) ]
+	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi, tM) )) ]
 
  | tau ->  (* tau := Bool | Cross (tau1, tau2) | U *)
       let loc_ghost = Syntax.Loc.ghost in

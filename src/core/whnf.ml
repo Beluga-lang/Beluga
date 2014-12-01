@@ -420,7 +420,7 @@ and mfrontMSub ft t = match ft with
         | CObj(cPsi) -> CObj (cPsi)
         | SObj(phat, s) -> SObj(phat,s)
         | MV k'         -> MV k'
-        (* other cases impossible *)
+        (* other cases impossible - MUndef *)
       end
 
 (*  | MV u ->

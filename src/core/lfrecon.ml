@@ -1118,7 +1118,13 @@ and elTerm' recT cD cPsi r sP = match r with
              let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
                 Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
              let t = createMSub d in
-               (Whnf.cnormTyp (tQ, t) , Whnf.cnormDCtx (cPhi, t)))
+	     let roccur = Unify.MVarRef (ref None) (* create dummy mmvar since pruning requires it *) in
+	     let cPhi' = Unify.pruneDCtx cD cPhi t roccur in
+	     let tQ'   = Unify.pruneTyp cD cPhi' (Context.dctxToHat cPhi') 
+	                       (tQ, Substitution.LF.id) (t, Substitution.LF.id)
+			       roccur
+	     in
+               (tQ' , cPhi'))
 
            in
           (* For type reconstruction to succeed, we must have

@@ -97,7 +97,7 @@ module type UNIFY = sig
 
 
   val pruneTyp : mctx -> dctx -> psi_hat -> tclo  -> (msub * sub)  -> cvarRef -> typ
-
+  val pruneDCtx : mctx -> dctx ->  msub -> cvarRef -> dctx
 end
 
 (* Unification *)
@@ -2001,6 +2001,30 @@ match sigma with
       let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in
       let typ_rec'' = pruneTypRec cD0 cPsi phat (typ_rec', dot1 s) (mss, dot1 ss) rOccur in
         SigmaElem (x, tA', typ_rec'')
+
+
+  and pruneDCtx cD cPsi ms rOccur = match cPsi with
+    | Null -> Null
+    | CtxVar (CtxOffset psi) ->
+        begin match applyMSub psi ms with
+          | CObj (cPsi') -> Whnf.normDCtx cPsi'
+          | MV k -> CtxVar (CtxOffset k)
+        end
+
+    | CtxVar (CInst (_n, ({contents = None}), _schema,  _mctx, _theta )) ->
+	cPsi
+
+    | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
+	pruneDCtx cD cPhi (Whnf.mcomp theta ms) rOccur
+
+    | CtxVar _ -> cPsi
+
+    | DDec(cPsi, TypDecl (x, tA)) -> 
+	let cPsi' = pruneDCtx cD cPsi ms rOccur in 
+	let tA' = pruneTyp cD cPsi' (Context.dctxToHat cPsi') 
+       	                  (tA, Substitution.LF.id) (ms, Substitution.LF.id) rOccur in
+	  DDec (cPsi', TypDecl (x, tA'))
+
 
   (* pruneCtx cD (phat, (t, Psi1), ss) = (s', cPsi2)
 

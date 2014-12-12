@@ -2952,11 +2952,11 @@ match sigma with
           )
 
 
-    | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) , h) ->
+    | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) , h) 
+    | (h, MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) ) ->
         (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
         dprnt "(013) _-MPVar - head";
-      if isVar h then
-        if isPatSub s1 && isPatMSub mt1 then
+      if isVar h && isPatSub s1 && isPatMSub mt1 then
           let ss = invert (Whnf.normSub s1) in
           let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
            begin match h with
@@ -2971,27 +2971,6 @@ match sigma with
 
              | _ -> raise (Failure "Meta^2-Parameter failure")
            end
-        else
-          raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
-
-
-    | (h, MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) ) ->
-        dprnt "(013) _-MPVar - head";
-      if isVar h then
-        if isPatSub s1 && isPatMSub mt1 then
-          let ss = invert (Whnf.normSub s1) in
-          let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
-           begin match h with
-             | BVar k -> begin match bvarSub k ss with
-                         | Head h -> instantiateMPVar (q1, h, !cnstr1)
-                         | _ -> raise (Failure ("Looking up " ^ string_of_int k ^ "\n"))
-                         end
-             | PVar (p,s) -> begin match Whnf.cnormHead (h, mtt) with
-                             | PVar(q, s') ->  instantiateMPVar (q1,PVar(q, comp s' s1), !cnstr1)
-                             | _ -> raise (Failure "Meta^2-parameter failure")
-                             end
-             | _ -> raise (Failure "Meta^2-Parameter failure")
-          end
         else
           raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
 

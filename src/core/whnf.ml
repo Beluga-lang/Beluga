@@ -335,75 +335,9 @@ and mfrontMSub ft t = match ft with
   | SObj (phat, tM)     ->
       let phat = cnorm_psihat phat t in
         SObj (phat, cnormSub(tM, t))
-
-  | PObj (phat, PVar (Offset k, s))  ->
-      let phat = cnorm_psihat phat t in
-      begin match LF.applyMSub k t with
-        | PObj(phat', BVar k') ->
-            begin match LF.bvarSub k' (cnormSub (s,t)) with
-              | Head(BVar j) -> PObj(phat', BVar j)
-              | Head(PVar (q, s')) -> PObj(phat', PVar(q, s'))
-              (* no case for LF.Head(MVar(u, s')) since u not guaranteed
-                 to be of atomic type. *)
-              | Obj tM      -> MObj(phat', tM)
-            end
-        | PObj(phat', PVar (q, s')) -> PObj(phat', cnormHead (PVar(q, LF.comp s' s), m_id))
-
-        | MV k'  -> PObj (phat, PVar (Offset k', s))
-          (* other cases impossible *)
-      end
-  | PObj (phat, BVar _k)  ->
-      let phat = cnorm_psihat phat t in
-        PObj (phat, BVar _k)
-
-  | PObj (phat, FPVar (p, s))  ->
-      let phat = cnorm_psihat phat t in
-        PObj (phat, FPVar (p, cnormSub (s,t)))
-
-  | PObj (phat, PVar (PInst (_n, {contents = Some (BVar x)}, _cPsi, _tA, _, _) , r)) ->
-      let phat = cnorm_psihat phat t in
-        begin match LF.bvarSub x (cnormSub (r,t)) with
-          | Head (BVar k)  ->  PObj (phat, BVar k)
-          | Head (PVar (q,s))  ->  PObj (phat, PVar (q,s))
-          | Obj tM  -> MObj (phat, tM)
-        end
-
-  | PObj (phat, PVar (PInst (_n, {contents = Some (PVar (q,s))}, _cPsi, _tA, _ , _) , r)) ->
-        mfrontMSub (PObj (phat, PVar (q, LF.comp s r))) t
-
-  | PObj (phat, (PVar (PInst (_n, {contents = None}, _cPsi, _tA, _ , _) as p, r) )) ->
-      let phat = cnorm_psihat phat t in
-      let r' = cnormSub (r,t) in
-        PObj (phat, PVar (p, r'))
-
-  | PObj (phat, MPVar (MPInst (_n, {contents = Some h}, _cD, _cPsi, _tA, _, _ ) , (ms, s))) ->
-      let _ = dprint (fun () -> "PObj MPVAR MPInst Some" ) in
-      let h' = cnormHead (h, ms) in
-        begin match h' with
-          | BVar i -> begin match LF.bvarSub i s with
-                        | Obj tM -> MObj (cnorm_psihat phat t, cnorm (tM, t))
-                        | Head (BVar k) -> PObj (cnorm_psihat phat t,  BVar k)
-                        | Head h        -> PObj (cnorm_psihat phat t, cnormHead (h, t))
-                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                            (* Undef should not happen ! *)
-                      end
-          | PVar (p, s') -> mfrontMSub (PObj (phat, PVar (p, LF.comp s' s))) t
-          | MPVar (q, (t', r')) -> mfrontMSub (PObj (phat, MPVar (q, ((mcomp t' ms), LF.comp r' s)))) t
-          (* anything else not allowed *)
-        end
-
-  | PObj (phat, MPVar (MPInst (_n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep ), (ms, s))) ->
-      let phat = cnorm_psihat phat t in
-      let s'   = cnormSub (s,t) in
-      let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p' = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
-        PObj (phat, MPVar(p', (mcomp ms t, s') ))
-
-  | PObj (phat, Proj (h, k)) ->
-      let phat = cnorm_psihat phat t in
-      let h'   = cnormHead (h,t) in
-        PObj (phat, Proj (h', k))
-
+  | PObj (phat, h) ->
+    let phat = cnorm_psihat phat t in
+    PObj (phat, cnormHead (h, t))
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
 
   | MV k ->
@@ -415,16 +349,6 @@ and mfrontMSub ft t = match ft with
         | MV k'         -> MV k'
         (* other cases impossible *)
       end
-
-(*  | MV u ->
-      begin match LF.applyMSub u t with
-        | MObj(phat, tM) ->  MObj(phat, tM)
-        | MV u'          ->  MV u'
-        (* other cases impossible *)
-      end
-*)
-
-
 
 (* m_invert t = t'
 
@@ -1321,45 +1245,8 @@ and cnorm (tM, t) = match tM with
           raise (Error.Violation "Cannot guarantee that parameter variable remains head(2)")
     | PVar (p, r) ->
         if isPatSVSub r then
-          begin match p with
-            | PInst (_, {contents = None}, _cPsi, _tA, _, _ ) -> PVar (p, r)
-            | PInst (_, {contents = Some (BVar x)}, _cPsi, _tA, _, _ ) ->
-                let Head h = LF.bvarSub x r in
-                  h
-            | PInst (_, {contents = Some (Proj(BVar x, k))}, _cPsi, _tA, _, _ ) ->
-                let Head h = LF.bvarSub x r in
-                  Proj(h, k)
-
-            | PInst (_, {contents = Some (PVar (q, s))}, _cPsi, _tA, _ , _) ->
-                cnormHead (PVar (q, (LF.comp s r)), t)
-
-            | PInst (_, {contents = Some (Proj(PVar (q, s), k))}, _cPsi, _tA, _, _ ) ->
-                cnormHead (Proj( PVar (q, (LF.comp s r)), k), t)
-
-            | Offset k  ->
-                begin match LF.applyMSub k t with
-                  | MV  k'            -> PVar (Offset k', cnormSub (r, t))
-                  | PObj (_phat, BVar i) ->
-                      let Head h = LF.bvarSub i r in h
-                  | PObj (_phat, PVar(Offset i, r')) ->
-                      PVar(Offset i, LF.comp r' r)
-
-                  | PObj (_phat, PVar(PInst (_, {contents = None}, _, _, _ , _) as p, r')) ->
-                      PVar(p, LF.comp r' r)
-
-                  | PObj (_phat, PVar(PInst (_, {contents = Some (PVar (x, rx))}, _, _, _, _ ), r')) ->
-                      PVar (x, LF.comp rx (LF.comp r' r))
-
-                  | PObj (_phat, PVar(PInst (_, {contents = Some (BVar x)}, _, _, _, _ ), r')) ->
-                      begin match LF.bvarSub x r' with
-                        | Head (BVar i)  ->
-                            let Head h = LF.bvarSub i r in h
-                        | Head (PVar(q, s)) -> PVar(q,  LF.comp s r)
-                            (* Other case MObj _ should not happen -- ill-typed *)
-                      end
-
-                end
-          end
+	  let Root (_,h,Nil) = cnorm (Root(Syntax.Loc.ghost,h,Nil), t)
+	  in h (* This is weird. We should factor out a normHead to avoid this *)
         else
           raise (Error.Violation "Cannot guarantee that parameter variable remains head(3)")
 

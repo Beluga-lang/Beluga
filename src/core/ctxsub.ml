@@ -155,9 +155,9 @@ let mdeclToMMVar cD0 n mtyp = match mtyp with
     let phat  = Context.dctxToHat cPsi in
     SObj (phat, MSVar (u, 0, (Whnf.m_id, Substitution.LF.id)))
   | PTyp (tA, cPsi, dep) ->
-    let p    = Whnf.newPVar (Some n) (cPsi, tA)  in (* Why is this a PVar instead of MPVar? *)
+    let p    = Whnf.newMPVar (Some n) (cD0, cPsi, tA)  in
     let phat = dctxToHat cPsi in
-    PObj (phat, PVar (p, Substitution.LF.id))
+    PObj (phat, MPVar (p, (Whnf.m_id, Substitution.LF.id)))
   | CTyp (sW, _) ->
     let cvar = Whnf.newCVar (Some n) sW in
     CObj (CtxVar cvar)

@@ -469,15 +469,6 @@ and normFt' (ft,s) = match ft with
   | Head h -> normHead (h,s)
   | Obj tM -> Obj (norm (tM, s))
 
-(* and normITerm (tM,s) = match tM with *)
-(*   | INorm n -> INorm (norm (n, s)) *)
-(*   | IHead h -> *)
-(*     begin match (normHead (h,s)) with *)
-(*       | Head h' -> IHead h' *)
-(*       | Obj n -> INorm n *)
-(*     end  *)
-(*   | ISub r -> ISub (normSub' (r,s)) *)
-
 and cnormITerm (tM,mt) = match tM with
   | INorm n -> INorm (cnorm (n,mt))
   | IHead h -> IHead (cnormHead (h,mt))

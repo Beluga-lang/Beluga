@@ -177,17 +177,17 @@ let newMMVar n (cD, cPsi, tA) = match n with
      this will allow to later prune MMVars.
      Tue Dec  1 09:49:06 2009 -bp
    *)
-  | None -> MInst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], Maybe)
-  | Some name -> MInst (name, ref None, cD, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
+  | None -> (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, IMTyp(cPsi, tA), ref [], Maybe)
+  | Some name -> (name, ref None, cD, IMTyp(cPsi, tA), ref [], if name.Id.was_generated then Maybe else No)
 
 let newMPVar n (cD, cPsi, tA) = match n with
-  | None -> MPInst (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, cPsi, tA, ref [], Maybe)
-  | Some name -> MPInst (name, ref None, cD, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
+  | None -> (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, IPTyp(cPsi, tA), ref [], Maybe)
+  | Some name -> (name, ref None, cD, IPTyp(cPsi, tA), ref [], if name.Id.was_generated then Maybe else No)
 
 
 let newMSVar n (cD, cPsi, cPhi)  = match n with
-  | None -> MSInst (Id.mk_name (Id.SVarName None), ref None, cD, cPsi, cPhi, ref [], Maybe)
-  | Some name -> MSInst (name, ref None, cD, cPsi, cPhi, ref [], if name.Id.was_generated then Maybe else No)
+  | None -> (Id.mk_name (Id.SVarName None), ref None, cD, ISTyp(cPsi, cPhi), ref [], Maybe)
+  | Some name -> (name, ref None, cD, ISTyp(cPsi, cPhi), ref [], if name.Id.was_generated then Maybe else No)
   (* Note : cPsi | - s : cPhi *)
 
 (******************************)
@@ -326,15 +326,7 @@ and mfrontMSub ft t = match ft with
     PObj (phat, cnormHead (h, t))
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
 
-  | MV k ->
-      begin match LF.applyMSub k t with  (* DOUBLE CHECK - bp Wed Jan  7 13:47:43 2009 -bp *)
-        | PObj(phat, p) ->  PObj(phat, p)
-        | MObj(phat, tM) ->  MObj(phat, tM)
-        | CObj(cPsi) -> CObj (cPsi)
-        | SObj(phat, s) -> SObj(phat,s)
-        | MV k'         -> MV k'
-        (* other cases impossible *)
-      end
+  | MV k -> LF.applyMSub k t
 
 (* m_invert t = t'
 
@@ -438,18 +430,18 @@ and norm (tM, sigma) = match tM with
             (* Undef should not happen ! *)
       end
 
-  | Root (_, MMVar (MInst (_, { contents = Some tM}, _, _, _, _, _),(t, r)), tS) ->
+  | Root (_, MMVar ((_, { contents = Some (INorm tM)}, _, IMTyp(_, _), _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in
       let tM'' = norm (tM', r) in
       reduce (tM'', sigma) (normSpine (tS, sigma))
 
-  | Root (loc, MMVar (MInst (_, {contents = None}, _, _, Atom _, _, _) as u, (t, r)), tS) ->
+  | Root (loc, MMVar ((_, {contents = None}, _, IMTyp(_, Atom _), _, _) as u, (t, r)), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
       Root (loc, MMVar (u, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
 
-  | Root (loc, MMVar (MInst (n, ({contents = None} as r), cD, cPsi, TClo (tA, s'), cnstr, mdep), (t, s)), tS) ->
-      Root (loc, MMVar (MInst (n, r, cD, cPsi, normTyp (tA, s'), cnstr, mdep),
+  | Root (loc, MMVar ((n, ({contents = None} as r), cD, IMTyp(cPsi, TClo (tA, s')), cnstr, mdep), (t, s)), tS) ->
+      Root (loc, MMVar ((n, r, cD, IMTyp(cPsi, normTyp (tA, s')), cnstr, mdep),
                         (t, normSub (LF.comp s sigma))), normSpine (tS, sigma))
 
   (* Meta-variables *)
@@ -471,11 +463,11 @@ and norm (tM, sigma) = match tM with
       let tAn = normTyp (tA, s') in
         norm (Root (loc, MVar (Inst (n, r, cPsi, tAn, cnstr, mdep), s), tS), sigma)
 
-  | Root (_, MVar (Inst (_, {contents = None}, _, _tA, _, _) as u, _r), _tS) ->
+  | Root (_, MVar (Inst (_, {contents = None}, _, _tA, _, _) as _u, _r), _tS) ->
       (* Meta-variable is not atomic and tA = Pi x:B1.B2
        * lower u, and normalize the lowered meta-variable
        *)
-      let _ = lowerMVar u in
+      (* let _ = lowerMVar u in *)
         norm (tM, sigma)
 
   (* Parameter variables *)
@@ -490,7 +482,7 @@ and norm (tM, sigma) = match tM with
   | Root (loc, FPVar (p, r), tS) ->
       Root (loc, FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
 
-  | Root (loc, MPVar (MPInst (_, { contents = Some h}, _, _, _, _, _),(t, r)), tS) ->
+  | Root (loc, MPVar ((_, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _),(t, r)), tS) ->
       (* constraints associated with u must be in solved form *)
       let _ = dprint (fun () -> "[norm] MPVar MPInst Some" ) in
       let h' = cnormHead (h, t) in
@@ -508,10 +500,10 @@ and norm (tM, sigma) = match tM with
           (* anything else not allowed *)
         end
 
-  | Root (loc, MPVar (MPInst (_n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep), (t, r)), tS) ->
+  | Root (loc, MPVar ((_n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t, r)), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
       let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
+      let p = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
       Root (loc, MPVar (p, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
 
 
@@ -535,7 +527,7 @@ and norm (tM, sigma) = match tM with
   | Root (loc, Proj (PVar (q, s), k), tS) ->
       Root (loc, Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
 
-  | Root (loc, Proj (MPVar (MPInst (_, { contents = Some h}, _, _, _, _, _),(t, r)), index), tS) ->
+  | Root (loc, Proj (MPVar ((_, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _),(t, r)), index), tS) ->
       (* constraints associated with u must be in solved form *)
       let _ = dprint (fun () -> "[norm] Proj MPVar MPInst Some" ) in
       let h' = cnormHead (h, t) in
@@ -552,14 +544,44 @@ and norm (tM, sigma) = match tM with
           (* anything else not allowed *)
         end
 
-  | Root (loc, Proj(MPVar (MPInst (_n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep), (t, r)), index), tS) ->
+  | Root (loc, Proj(MPVar ((_n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t, r)), index), tS) ->
       (* meta-variable is of atomic type; tS = Nil *)
       let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
+      let p = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
       Root (loc, Proj(MPVar (p, (t, normSub (LF.comp r sigma))), index), normSpine (tS, sigma))
 
   | Root (loc, FVar x, tS) ->
       Root (loc, FVar x, normSpine (tS, sigma))
+
+(* and normHead (h, sigma) = match h with *)
+(*   | BVar k -> LF.bvarSub k sigma *)
+(*   | Const c -> Head (Const c) *)
+(*   | PVar (p, s) -> Head (PVar (p, normSub' (s, sigma))) *)
+(*   | AnnH (h, t) -> normHead h *)
+(*   | Proj (h, i) -> reduceTupleFt(normHead (h, sigma), i) *)
+(*   | FVar n -> Head (Fvar n) *)
+(*   | FMVar (n,s) -> Head (FMVar (n, normSub' (s, sigma))) *)
+(*   | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma))) *)
+(*   | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma))) *)
+(*   | HMClo (k, mm, mts) -> ? *)
+(*   | MMVar (MInst mm, mts) -> ? *)
+(*   | MPVar (mm, mts) -> ? *)
+(*   | MVar (cv, s) -> ? *)
+
+(* and normMMVar ((n,r,cD,cPsi,tA,cnstr,d) as mm, (t,r)) = match !r with *)
+(*   | None -> MMVar (mm, mts) *)
+(*   | Some tM -> Result (norm(cnorm (tM,t),r)) *)
+
+(* and reduceTupleFt (ft, i) = match ft with *)
+(*   | Head h -> Head (Proj (h, i)) *)
+(*   | Obj tM -> Obj (reduceTuple (tM, i)) *)
+
+and reduceTuple = function
+  | (Last tM, 1) -> tM
+  | (Cons (tM, _rest), 1) -> tM
+  | (Cons (_, rest), k) -> reduceTuple (rest, k-1)
+
+(* and normSub' (r,sigma) = normSub (LF.comp r sigma) (\* this is slightly weird *\) *)
 
 and normTuple (tuple, t) = match tuple with
   | Last tM -> Last (norm (tM, t))
@@ -599,7 +621,7 @@ and normSub s = match s with
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
   | SVar (offset, n, s') -> SVar (offset, n, normSub s')
-  | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs, mDep),
+  | MSVar ((_n, {contents = Some (ISub s)}, _cD0, ISTyp(_cPhi, _cPsi), _cnstrs, mDep),
     n, (mt, s')) ->
       let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
       LF.comp (Shift n) s0
@@ -612,7 +634,7 @@ and normFt ft = match ft with
       etaContract(norm (tM, LF.id))
   | Head (BVar _k)                -> ft
   | Head (FVar _k)                -> ft
-  | Head (MPVar (MPInst (_n, { contents = Some h}, _, _, _, _, _), (t, r))) ->
+  | Head (MPVar ((_n, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _), (t, r))) ->
       let h' = cnormHead (h,t) in
         begin match h' with
           | BVar i -> LF.bvarSub i r
@@ -620,7 +642,7 @@ and normFt ft = match ft with
           | MPVar (q, (t',r')) -> normFt (Head (MPVar (q, (t', LF.comp r' r))))
         end
   | Head (MPVar (p, (t, s')))     -> Head (MPVar (p, (cnormMSub t, normSub s')))
-  | Head (MMVar (MInst (_n, { contents = Some tN}, _, _, _, _, _), (t, s'))) ->
+  | Head (MMVar ((_n, { contents = Some (INorm tN)}, _, IMTyp(_, _), _, _), (t, s'))) ->
      Obj (norm (cnorm (tN, t), s'))
   | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
   | Head (MVar (Inst (_, { contents = Some tM}, _, _, _, _), s)) ->
@@ -630,7 +652,7 @@ and normFt ft = match ft with
   | Head (PVar (p, s'))           -> Head (PVar (p, normSub s'))
   | Head (FPVar (p, s'))          -> Head (FPVar (p, normSub s'))
   | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k))
-  | Head (Proj(MPVar (MPInst (_n, { contents = Some h}, _, _, _, _, _), (t, r)),k)) ->
+  | Head (Proj(MPVar ((_n, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _), (t, r)),k)) ->
       let h' = cnormHead (h,t) in
         begin match h' with
           | BVar i -> let Head h = LF.bvarSub i r in Head (Proj(h,k))
@@ -762,12 +784,12 @@ and cnorm (tM, t) = match tM with
             end
           | HMClo (h, s, (t',sigma)) ->
             (match s with
-              | MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstr, _) ->
+              | (_n, {contents = None}, _cD0, ISTyp(_cPhi, _cPsi), _cnstr, _) ->
                 let sigma' = cnormSub (sigma,t) in
                 let t'' = cnormMSub (mcomp t' t) in
                 let tS' = cnormSpine (tS, t) in
                 Root(loc, HMClo(h, s, (t'',sigma')), tS')
-              | MSInst (_n, {contents = Some s}, _cD0, cPhi, _cPsi, _constr, _) ->
+              | (_n, {contents = Some (ISub s)}, _cD0, ISTyp(cPhi, _cPsi), _constr, _) ->
                 (* -ac: double check! *)
                 begin match LF.bvarSub h (cnormSub (LF.comp (cnormSub (s, t')) sigma, t)) with
                   | Obj tM        ->  reduce (tM, LF.id) (cnormSpine (tS, t))
@@ -779,7 +801,7 @@ and cnorm (tM, t) = match tM with
 
           | BVar i -> Root(loc, BVar i, cnormSpine (tS, t))
 
-          | MMVar (MInst (_n, {contents = Some tN}, _D, _cPsi, _tA, _cnstr, _), (t',s')) ->
+          | MMVar ((_n, {contents = Some (INorm tN)}, _D, IMTyp(_cPsi, _tA), _cnstr, _), (t',s')) ->
               (* Assumes tS = Nil because _n is of atomic type *)
               (*   cD, cPsi |- tM <= tA   and   r = (t,s)
                *   cD'      |- t <= cD   and cD' ; cPsi' |- s <= |[t]|cPsi
@@ -790,7 +812,7 @@ and cnorm (tM, t) = match tM with
               let tN'' = norm (tN', s') in
                 cnorm (tN'', t)
 
-          | MMVar (MInst (_n, {contents = None}, _cD , _cPsi, _tA, _cnstr, _) as u , (t', r)) ->
+          | MMVar ((_n, {contents = None}, _cD , IMTyp(_cPsi, _tA), _cnstr, _) as u , (t', r)) ->
               (* if constraints_solved (!cnstr) then  *)
                 (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
                 let r'  = cnormSub (r, t) in
@@ -799,7 +821,7 @@ and cnorm (tM, t) = match tM with
               (* else
                 raise (Error.Violation "uninstantiated meta-variables with unresolved constraints") *)
 
-          | MPVar (MPInst (_n, {contents = Some h}, _D, _cPsi, _tA, _cnstr, mDep), (t',s')) ->
+          | MPVar ((_n, {contents = Some (IHead h)}, _D, IPTyp(_cPsi, _tA), _cnstr, mDep), (t',s')) ->
               (*   cD, cPsi |- tM <= tA   and   r = (t,s)
                *   cD'      |- t <= cD   and cD' ; cPsi' |- s <= |[t]|cPsi
                *   cD ; |[t]|cPsi |- |[t]|tM <= |[t]|tA
@@ -833,13 +855,13 @@ and cnorm (tM, t) = match tM with
                       (* anything else not allowed *)
                 end
 
-          | MPVar (MPInst (_n, ({contents = None} as pref), cD , cPsi, tA, cnstr, mDep), (t', r)) ->
+          | MPVar ((_n, ({contents = None} as pref), cD , IPTyp(cPsi, tA), cnstr, mDep), (t', r)) ->
               (* if constraints_solved (!cnstr) then  *)
                 (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
                 let r'  = cnormSub (r, t) in
                 let t'' = cnormMSub (mcomp t' t) in
                 let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-                let p = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
+                let p = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
                 Root (loc, MPVar(p, (t'', r')), cnormSpine (tS, t))
 
           (* Meta-variables *)
@@ -894,9 +916,9 @@ and cnorm (tM, t) = match tM with
             ->
               let pobj_base_cases h = begin match h with
                 | PVar(i, r') -> PVar(i, LF.comp r' (cnormSub (r,t)))
-                | MPVar (MPInst (_n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep) , (mr, r')) ->
+                | MPVar ((_n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep) , (mr, r')) ->
                   let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-                  let p' = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
+                  let p' = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
                     MPVar(p', (mr, LF.comp r' (cnormSub (r,t))))
                 | FPVar (p,r') -> FPVar (p, LF.comp r' (cnormSub (r,t)))
                 |  _ -> (print_string "encountered parameter object not covered \n"; exit 189)
@@ -912,7 +934,7 @@ and cnorm (tM, t) = match tM with
                     | Head h  -> Root(loc, Proj(h,k), cnormSpine (tS, t))
 (*                    | Obj tM  -> Clo (whnfRedex ((tM, LF.id), (cnormSpine (tS, t), LF.id))) *)
                 end
-              | PObj (_phat, MPVar (MPInst (_, {contents = Some h}, _cD, _cPsi, _tA, _, _), (mr, r'))) ->
+              | PObj (_phat, MPVar ((_, {contents = Some (IHead h)}, _cD, IPTyp(_cPsi, _tA), _, _), (mr, r'))) ->
                   let h' = cnormHead (h, mr) in
                   let _ = dprint (fun () -> "[cnorm] Offset replaced by MPVar MPInst Some ") in
                     begin match h' with
@@ -928,7 +950,7 @@ and cnorm (tM, t) = match tM with
                       (* anything else not allowed *)
                 end
 
-              | PObj (_phat, Proj(MPVar (MPInst (_, {contents = Some h}, _cD, _cPsi, _tA, _, _), (mr, r')), k)) ->
+              | PObj (_phat, Proj(MPVar ((_, {contents = Some (IHead h)}, _cD, IPTyp(_cPsi, _tA), _, _), (mr, r')), k)) ->
                   let h' = cnormHead (h, mr) in
                   let _ = dprint (fun () -> "[cnorm] Offset replaced by Proj MPVar MPInst Some ") in
                     begin match h' with
@@ -968,7 +990,7 @@ and cnorm (tM, t) = match tM with
               raise (Error.Violation "Encountered a free variable during normalization.")
 
           (* Projections *)
-          | Proj(MPVar (MPInst (_n, {contents = Some h}, _D, _cPsi, _tA, _cnstr, _), (t',s')), k) ->
+          | Proj(MPVar ((_n, {contents = Some (IHead h)}, _D, IPTyp(_cPsi, _tA), _cnstr, _), (t',s')), k) ->
               (*   cD, cPsi |- tM <= tA   and   r = (t,s)
                *   cD'      |- t <= cD   and cD' ; cPsi' |- s <= |[t]|cPsi
                *   cD ; |[t]|cPsi |- |[t]|tM <= |[t]|tA
@@ -996,13 +1018,13 @@ and cnorm (tM, t) = match tM with
                       (* anything else not allowed *)
                 end
 
-          | Proj(MPVar (MPInst (_n, ({contents = None} as pref), cD , cPsi, tA, cnstr, mDep) , (t', r)), k) ->
+          | Proj(MPVar ((_n, ({contents = None} as pref), cD , IPTyp(cPsi, tA), cnstr, mDep) , (t', r)), k) ->
               (* if constraints_solved (!cnstr) then  *)
                 (* raise (Error "Encountered Un-Instantiated MVar with reference ?\n") *)
                 let r'  = cnormSub (r, t) in
                 let t'' = cnormMSub (mcomp t' t) in
                 let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-                let p' = MPInst (_n, pref, cD, cPsi', tA', cnstr, mDep) in
+                let p' = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
                 Root (loc, Proj(MPVar(p', (t'', r')),k), cnormSpine (tS, t))
           | Proj (BVar i, k)
             -> Root (loc, Proj (BVar i, k), cnormSpine (tS, t))
@@ -1043,11 +1065,11 @@ and cnorm (tM, t) = match tM with
 
                   | MV  k'            -> wrap (PVar (k', cnormSub (s, t)))
 
-                  | PObj (_phat, MPVar (MPInst (_, {contents=None}, _cD, _cPsi, _tA, _cnstr, _) as p, (mr, r))) ->
+                  | PObj (_phat, MPVar ((_, {contents=None}, _cD, IPTyp(_cPsi, _tA), _cnstr, _) as p, (mr, r))) ->
                       wrap  (MPVar (p, (mr, LF.comp r (cnormSub (s,t)))))
 
 
-                  | PObj (_phat, MPVar (MPInst (_, {contents=Some h}, _cD, _cPsi, _tA, _cnstr, _), (mr, r))) ->
+                  | PObj (_phat, MPVar ((_, {contents=Some (IHead h)}, _cD, IPTyp(_cPsi, _tA), _cnstr, _), (mr, r))) ->
                   let h' = cnormHead (h, mr) in
                   let _ = dprint (fun () -> "[cnorm] Proj PVar Offset replaced by MPVar MPInst Some -1-") in
                   let h''= begin match h' with
@@ -1087,9 +1109,9 @@ and cnorm (tM, t) = match tM with
         let _ = dprint (fun () -> "[cnormHead] MPVar ] ") in
         if isPatSVSub s && isPatMSub ms then
           begin match p with
-            | MPInst (_, {contents = None}, _cD, _cPsi, _tA, _cnstr, _) ->
+            | (_, {contents = None}, _cD, IPTyp(_cPsi, _tA), _cnstr, _) ->
                 MPVar (p, (mcomp ms t, s))
-            | MPInst (_, {contents = Some h0}, _cD, cPsi, _tA, _cnstr, _) ->
+            | (_, {contents = Some (IHead h0)}, _cD, IPTyp(cPsi, _tA), _cnstr, _) ->
                 let _ = dprint (fun () -> "[cnormHead] MPVar - MPInst " ) in
                 let h' = cnormHead (h0, ms) in
                   begin match h' with
@@ -1155,7 +1177,7 @@ and cnorm (tM, t) = match tM with
     | FSVar (s_name, n, s') ->
         FSVar (s_name, n, cnormSub (s', t))
 
-    | MSVar (MSInst (_n, {contents = Some s}, _cD0, _cPhi, _cPsi, _cnstrs, _),
+    | MSVar ((_n, {contents = Some (ISub s)}, _cD0, ISTyp(_cPhi, _cPsi), _cnstrs, _),
              n, (mt,s')) ->
         let _ = dprint (fun () -> "[cnormSub] MSVar - MSInst") in
         let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
@@ -1177,11 +1199,11 @@ and cnorm (tM, t) = match tM with
         end
     | Head (HMClo (h , s, (theta,sigma)))  ->
       (match s with
-        | MSInst (_n, {contents = None}, _cD,_cPhi, _cPsi, _cnstr, _) ->
+        | (_n, {contents = None}, _cD,ISTyp(_cPhi, _cPsi), _cnstr, _) ->
           let t'' = cnormMSub (mcomp theta t) in
           let s' = cnormSub (sigma, t) in
           Head (HMClo (h, s, (t'', s')))
-        | MSInst (_n, {contents = Some s}, _cD, _cPhi, _cPsi, _cnstr, _) ->
+        | (_n, {contents = Some (ISub s)}, _cD, ISTyp(_cPhi, _cPsi), _cnstr, _) ->
           let s' = cnormSub (sigma, t) in
           let t'' = cnormMSub (mcomp theta t) in
           cnormFront (LF.bvarSub h (LF.comp s s'), t'')
@@ -1423,7 +1445,7 @@ and whnf sM = match sM with
       end
 
   (* Meta^2-variable *)
-  | (Root (loc, MPVar (MPInst (_, {contents = Some h}, _cD, _cPsi, _tA, _, _), (t,r)), tS), sigma) ->
+  | (Root (loc, MPVar ((_, {contents = Some (IHead h)}, _cD, IPTyp(_cPsi, _tA), _, _), (t,r)), tS), sigma) ->
       (* constraints associated with q must be in solved form *)
       let h' = cnormHead (h, t) in
         begin match h' with
@@ -1438,13 +1460,13 @@ and whnf sM = match sM with
           | MPVar (q, (t', r')) -> whnf (Root (loc, MPVar (q, (t', LF.comp r' r)), SClo (tS, sigma)), LF.id)
         end
 
-  | (Root (loc, MPVar (MPInst (n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep), (t,r)), tS), sigma) ->
+  | (Root (loc, MPVar ((n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t,r)), tS), sigma) ->
       (* constraints associated with q must be in solved form *)
       let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p' = MPInst (n, pref, cD, cPsi', tA', cnstr, mDep) in
+      let p' = (n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
         (Root (loc, MPVar (p', (t, LF.comp r sigma)),  SClo(tS, sigma)), LF.id)
 
-  | (Root (_, MMVar (MInst (_, {contents = Some tM}, _cD, _cPsi, _tA, _, _), (t,r)), tS), sigma) ->
+  | (Root (_, MMVar ((_, {contents = Some (INorm tM)}, _cD, IMTyp(_cPsi, _tA), _, _), (t,r)), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in
       let tM'' = norm (tM', r) in
@@ -1453,14 +1475,14 @@ and whnf sM = match sM with
 (*      let sR =  whnfRedex ((tM', LF.comp r sigma), (tS, sigma)) in *)
         sR
 
-  | (Root (loc, MMVar (MInst (n, ({contents = None} as uref), cD, cPsi, tA, cnstr, mdep), (t, r)), tS), sigma) ->
+  | (Root (loc, MMVar ((n, ({contents = None} as uref), cD, IMTyp(cPsi, tA), cnstr, mdep), (t, r)), tS), sigma) ->
       (* note: we could split this case based on tA;
        *      this would avoid possibly building closures with id
        *)
       begin match whnfTyp (tA, LF.id) with
         | (Atom (loc', a, tS'), _s (* id *)) ->
             (* meta-variable is of atomic type; tS = Nil  *)
-            let u' = MInst (n, uref, cD, cPsi, Atom (loc', a, tS'), cnstr, mdep) in
+            let u' = (n, uref, cD, IMTyp(cPsi, Atom (loc', a, tS')), cnstr, mdep) in
               (Root (loc, MMVar (u', (t, LF.comp r sigma)), SClo (tS, sigma)), LF.id)
         | (PiTyp _, _s)->
             (* Meta-variable is not atomic and tA = Pi x:B1.B2:
@@ -1539,7 +1561,7 @@ and whnf sM = match sM with
   (* Free variables *)
   | (Root (loc, FVar x, tS), sigma) ->
       (Root (loc, FVar x, SClo (tS, sigma)), LF.id)
-  | (Root (loc, Proj(MPVar (MPInst (_, {contents = Some h}, _cD, _cPsi, _tA, _, _), (t,r)), k), tS), sigma) ->
+  | (Root (loc, Proj(MPVar ((_, {contents = Some (IHead h)}, _cD, IPTyp(_cPsi, _tA), _, _), (t,r)), k), tS), sigma) ->
       (* constraints associated with q must be in solved form *)
       let h' = cnormHead (h, t) in
         begin match h' with
@@ -1554,10 +1576,10 @@ and whnf sM = match sM with
         end
 
 
-  | (Root (loc, Proj(MPVar (MPInst (n, ({contents = None} as pref), cD, cPsi, tA, cnstr, mDep), (t,r)), k), tS), sigma) ->
+  | (Root (loc, Proj(MPVar ((n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t,r)), k), tS), sigma) ->
       (* constraints associated with q must be in solved form *)
       let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p' = MPInst (n, pref, cD, cPsi', tA', cnstr, mDep) in
+      let p' = (n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
         (Root (loc, Proj(MPVar (p', (t, LF.comp r sigma)) , k), SClo(tS, sigma)), LF.id)
 
   | (Root (_, Proj (MPVar _, _), _), _) -> (dprint (fun () -> "oops 3"); exit 3)
@@ -1591,10 +1613,7 @@ and whnfRedex (sM, sS) = match (sM, sS) with
   | ((Clo (tM, s), s1), sS) ->
       whnfRedex ((tM, LF.comp s s1), sS)
 
-and whnfTupleRedex (tup,s) k = match (tup, k) with
-  | (Last tM, 1)  -> (tM,s)
-  | (Cons (tM, _rest) , 1) -> (tM,s)
-  | (Cons (_ , rest) , k) -> whnfTupleRedex (rest,s) (k-1)
+and whnfTupleRedex (tup,s) k = reduceTuple (tup, k), s
 
 (* whnfTyp (tA, sigma) = tA'
  *
@@ -1675,11 +1694,11 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
   | (Const c1, Const c2) ->
       c1 = c2
 
-  | (MMVar (MInst(_n, u, _cD, _cPsi, _tA, _cnstr, _) , (_t', s')), MMVar (MInst(_, w, _, _, _, _ , _), (_t'',s''))) ->
+  | (MMVar ((_n, u, _cD, IMTyp(_cPsi, _tA), _cnstr, _) , (_t', s')), MMVar ((_, w, _, IMTyp(_, _), _ , _), (_t'',s''))) ->
       u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
         (* && convMSub   -bp *)
 
-  | (MPVar (MPInst(_n, u, _cD, _cPsi, _tA, _cnstr, _) , (_t', s')), MPVar (MPInst(_, w, _, _, _, _, _ ), (_t'',s''))) ->
+  | (MPVar ((_n, u, _cD, IPTyp(_cPsi, _tA), _cnstr, _) , (_t', s')), MPVar ((_, w, _, IPTyp(_, _), _, _ ), (_t'',s''))) ->
       u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
         (* && convMSub   -bp *)
 
@@ -2533,7 +2552,7 @@ and closedW (tM,s) = match  tM with
       closedSpine (tS,s)
 
 and closedHead h = match h with
-  | MMVar (MInst (_, {contents = None}, _, _, _, _, _), _) -> false
+  | MMVar ((_, {contents = None}, _, IMTyp(_, _), _, _), _) -> false
   | MVar (Inst (_, {contents = None}, _, _, _, _), _) -> false
   | PVar (_, r) ->
       closedSub r

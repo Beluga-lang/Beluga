@@ -105,12 +105,16 @@ module LF = struct
     | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
        (* D ; Psi |- M <= A provided constraint *)
 
-  and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend
-     (* D ; Psi |- M <= A provided constraint *)
-    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref * depend
-    | MSInst   of name * sub option ref * mctx * dctx * dctx * cnstr list ref * depend
-     (* cD ; cPsi |- s <= cPhi *)
+  and mm_var = name * iterm option ref * mctx * ityp * cnstr list ref * depend
+
+  and iterm =
+    | INorm of normal
+    | IHead of head
+    | ISub of sub
+  and ityp =
+    | IMTyp of dctx * typ
+    | IPTyp of dctx * typ
+    | ISTyp of dctx * dctx
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref

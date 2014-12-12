@@ -180,8 +180,18 @@ module Int = struct
 
     let inst_hashtbl : string InstHashtbl.t = InstHashtbl.create 0
 
+    module MInstHashedType = struct
+      type t    = LF.iterm option ref
+      let equal = (==)
+      let hash  = Hashtbl.hash
+    end
+
+    module MInstHashtbl = Hashtbl.Make (MInstHashedType)
+
+    let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0
+
     module SInstHashedType = struct
-      type t    = LF.sub option ref
+      type t    = LF.iterm option ref
       let equal = (==)
       let hash  = Hashtbl.hash
     end
@@ -191,7 +201,7 @@ module Int = struct
     let sinst_hashtbl : string SInstHashtbl.t = SInstHashtbl.create 0
 
     module PInstHashedType = struct
-      type t    = LF.head option ref
+      type t    = LF.iterm option ref
       let equal = (==)
       let hash  = Hashtbl.hash
     end
@@ -562,7 +572,7 @@ module Int = struct
           fprintf ppf "_ "
 
     and fmt_ppr_lf_mmvar lvl ppf = function
-      | LF.MPInst (_, ({ contents = None } as u), _, _, tA, _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.IPTyp(_, tA), _, mDep) ->
           begin
             try
               fprintf ppf "?#%s"
@@ -576,16 +586,16 @@ module Int = struct
                       PInstHashtbl.replace pinst_hashtbl u sym
                     ; fprintf ppf "?#%s" sym
           end
-      | LF.MPInst (_, {contents = Some h}, cD, cPsi, _, _, mDep) ->
+      | (_, {contents = Some (LF.IHead h)}, cD, LF.IPTyp(cPsi, _), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | LF.MInst (_, ({ contents = None } as u), _, _, tA, _, _) ->
+      | (_, ({ contents = None } as u), _, LF.IMTyp(_, tA), _, _) ->
           begin
             try
               fprintf ppf "?%s"
-                (InstHashtbl.find inst_hashtbl u)
+                (MInstHashtbl.find minst_hashtbl u)
             with
               | Not_found ->
                   (* (* Should probably create a sep. generator for this -dwm *)
@@ -596,16 +606,16 @@ module Int = struct
                               | Some vGen -> vGen ()
                               | None -> Gensym.MVarData.gensym ()
                   in
-                      InstHashtbl.replace inst_hashtbl u sym
+                      MInstHashtbl.replace minst_hashtbl u sym
                     ; fprintf ppf "?%s" sym
           end
 
-      | LF.MInst (_, {contents = Some m}, cD, cPsi, _, _, _) ->
+      | (_, {contents = Some (LF.INorm m)}, cD, LF.IMTyp (cPsi, _), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
-      | LF.MSInst (_, ({ contents = None } as u), _, _, cPsi, _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.ISTyp(_, cPsi), _, mDep) ->
           begin
             try
               fprintf ppf "?%s"
@@ -622,7 +632,7 @@ module Int = struct
                     ; fprintf ppf "#?%s" sym
           end
 
-      | LF.MSInst (_, {contents = Some s}, cD, cPsi, _, _, mDep) ->
+      | (_, {contents = Some (LF.ISub s)}, cD, LF.ISTyp(cPsi, _), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " #%a"
             (fmt_ppr_lf_sub cD cPsi lvl) s

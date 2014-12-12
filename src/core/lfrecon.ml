@@ -1150,7 +1150,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
 
 
-  | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) as m ->
+  | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) as _m ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.PTyp (tA, cPhi, _))) = FCVar.get p in
 	let d = Context.length cD - Context.length cD_d in
@@ -1200,10 +1200,10 @@ and elTerm' recT cD cPsi r sP = match r with
                   FCVar.add p (cD, Int.LF.Decl(p, Int.LF.PTyp (Whnf.normTyp (tP,Substitution.LF.id),  cPhi, Int.LF.Maybe)));
                   Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 
-            | (Apx.LF.Nil, false) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
-                  add_fcvarCnstr (m, q);
-                  Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil)
+            | (Apx.LF.Nil, false) -> failwith "Not implemented"
+                (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in *)
+                (*   add_fcvarCnstr (m, q); *)
+                (*   Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil) *)
 
             | (_, _) ->  raise (Error (loc, NotPatternSpine))
           end
@@ -1213,7 +1213,7 @@ and elTerm' recT cD cPsi r sP = match r with
       end
 
   (* Reconstruct: Projection *)
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), k), spine) as m ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), k), spine) as _m ->
       (* Other case where spine is not empty is not implemented -bp *)
         begin try
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
@@ -1274,10 +1274,10 @@ and elTerm' recT cD cPsi r sP = match r with
                   FCVar.add p (cD, Int.LF.Decl (p, Int.LF.PTyp (Whnf.normTyp (tB, s_inst), cPhi, Int.LF.Maybe)));
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
 
-            | (false, Apx.LF.Nil) ->
-                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in
-                  add_fcvarCnstr (m, q);
-                  Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
+            | (false, Apx.LF.Nil) -> failwith "Not implemented"
+                (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in *)
+                (*   add_fcvarCnstr (m, q); *)
+                (*   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil) *)
 
             | ( _ , _ ) -> raise (Error (loc, ParamFun))
           end

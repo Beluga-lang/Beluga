@@ -411,177 +411,78 @@ and norm (tM, sigma) = match tM with
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
   | LFHole _ -> tM
-  | Root (loc, HClo (i, s, sigma'), tS) ->
-    let sigma'' = normSub (LF.comp sigma' sigma) in
-    let tS'     = normSpine (tS, sigma) in
-      Root (loc, HClo (i, s, sigma''), tS')
-
-  | Root (loc, HMClo (i, s, (theta,sigma')), tS) ->
-    let sigma'' = normSub (LF.comp sigma' sigma) in
-    let tS'     = normSpine (tS, sigma) in
-      Root (loc, HMClo (i, s, (theta,sigma'')), tS')
-
-  | Root (loc, BVar i, tS) ->
-      begin match LF.bvarSub i sigma with
-        | Obj tM        -> reduce (tM, LF.id) (normSpine (tS, sigma))
-        | Head (BVar k) ->  Root (loc, BVar k, normSpine (tS, sigma))
-        | Head head     ->  norm (Root (loc, head, normSpine (tS, sigma)), LF.id)
-        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-            (* Undef should not happen ! *)
-      end
-
-  | Root (_, MMVar ((_, { contents = Some (INorm tM)}, _, IMTyp(_, _), _, _),(t, r)), tS) ->
-      (* constraints associated with u must be in solved form *)
-      let tM' = cnorm (tM, t) in
-      let tM'' = norm (tM', r) in
-      reduce (tM'', sigma) (normSpine (tS, sigma))
-
-  | Root (loc, MMVar ((_, {contents = None}, _, IMTyp(_, Atom _), _, _) as u, (t, r)), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
-      Root (loc, MMVar (u, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
-
-  | Root (loc, MMVar ((n, ({contents = None} as r), cD, IMTyp(cPsi, TClo (tA, s')), cnstr, mdep), (t, s)), tS) ->
-      Root (loc, MMVar ((n, r, cD, IMTyp(cPsi, normTyp (tA, s')), cnstr, mdep),
-                        (t, normSub (LF.comp s sigma))), normSpine (tS, sigma))
-
-  (* Meta-variables *)
-
-  | Root (loc, MVar (Offset _ as u, r), tS) ->
-      Root (loc, MVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
-
-  | Root (_, MVar (Inst (_, { contents = Some tM}, _, _, _, _), r), tS) ->
-      (* constraints associated with u must be in solved form *)
-        reduce (norm (tM, r),  sigma) (normSpine (tS, sigma))
-      (* reduce (norm (tM, LF.id), LF.comp r sigma) (normSpine (tS, sigma))   *)
-
-  | Root (loc, MVar (Inst (_, {contents = None}, _, Atom _, _, _) as u, r), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
-      let s' =  normSub (LF.comp r sigma) in
-      Root (loc, MVar (u, s'), normSpine (tS, sigma))
-
-  | Root (loc, MVar (Inst (n, ({contents = None} as r), cPsi, TClo (tA, s'), cnstr, mdep), s), tS) ->
-      let tAn = normTyp (tA, s') in
-        norm (Root (loc, MVar (Inst (n, r, cPsi, tAn, cnstr, mdep), s), tS), sigma)
-
-  | Root (_, MVar (Inst (_, {contents = None}, _, _tA, _, _) as _u, _r), _tS) ->
-      (* Meta-variable is not atomic and tA = Pi x:B1.B2
-       * lower u, and normalize the lowered meta-variable
-       *)
-      (* let _ = lowerMVar u in *)
-        norm (tM, sigma)
-
-  (* Parameter variables *)
-  | Root (loc, FMVar (u, r), tS) ->
-      Root (loc, FMVar (u, normSub (LF.comp r sigma)), normSpine (tS, sigma))
-
-  (* Parameter variables *)
-  | Root (loc, PVar (p, r), tS) ->
-      Root (loc, PVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
-
-  (* Parameter variables *)
-  | Root (loc, FPVar (p, r), tS) ->
-      Root (loc, FPVar (p, normSub (LF.comp r sigma)), normSpine (tS, sigma))
-
-  | Root (loc, MPVar ((_, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _),(t, r)), tS) ->
-      (* constraints associated with u must be in solved form *)
-      let _ = dprint (fun () -> "[norm] MPVar MPInst Some" ) in
-      let h' = cnormHead (h, t) in
-        begin match h' with
-          | BVar i -> begin match LF.bvarSub i (LF.comp r sigma) with
-                        | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
-                        | Head (BVar k) -> Root (loc, BVar k , normSpine (tS, sigma))
-                        | Head h        -> norm (Root (loc, h, normSpine (tS, sigma)), LF.id)
-                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                            (* Undef should not happen ! *)
-                      end
-          | PVar (p, s) -> Root (loc, PVar (p, LF.comp(LF.comp s r) sigma), normSpine (tS, sigma))
-          | MPVar (q, (t', r')) ->
-              norm (Root (loc, MPVar (q, (t', LF.comp r' r)), tS), sigma)
-          (* anything else not allowed *)
-        end
-
-  | Root (loc, MPVar ((_n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t, r)), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
-      let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
-      Root (loc, MPVar (p, (t, normSub (LF.comp r sigma))), normSpine (tS, sigma))
+  | Root (loc, h, tS) ->
+    begin match normHead (h,sigma) with
+      | Head h' -> Root(loc, h', normSpine (tS, sigma))
+      | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
+    end 
 
 
-  (* Constants *)
-  | Root (loc, Const c, tS) ->
-      Root (loc, Const c, normSpine (tS, sigma))
+and normHead (h, sigma) = match h with
+  | BVar k -> LF.bvarSub k sigma
+  | Const c -> Head (Const c)
+  | PVar (p, s) -> Head (PVar (p, normSub' (s, sigma)))
+  | AnnH (h, t) -> normHead (h, sigma)
+  | Proj (h, i) -> reduceTupleFt(normHead (h, sigma), i)
+  | FVar n -> Head (FVar n)
+  | FMVar (n,s) -> Head (FMVar (n, normSub' (s, sigma)))
+  | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma)))
+  | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma)))
+  | HMClo (k, mm, (mt,s)) -> (* TODO: This is kind of repetitive...*)
+    begin match normMMVar (mm,(mt,s)) with
+      | ResMM (mm',(mt',s')) -> Head (HMClo(k,mm',(mt',normSub' (s', sigma))))
+      | Result (ISub r) -> LF.bvarSub k (normSub' (r,sigma))
+    end 
+  | MMVar (mm, (mt,s)) ->
+    begin match normMMVar (mm,(mt,s)) with
+      | ResMM (mm',(mt',s')) -> Head (MMVar (mm', (mt',normSub' (s', sigma))))
+      | Result (INorm n) -> Obj (norm (n,sigma))
+    end 
+  | MPVar (mm, (mt,s)) ->
+    begin match normMMVar (mm,(mt,s)) with
+      | ResMM (mm',(mt',s')) -> Head (MPVar (mm', (mt',normSub' (s',sigma))))
+      | Result (IHead h) -> normHead (h,sigma)
+      | Result (INorm n) -> Obj (norm (n,sigma))
+    end 
+  | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
+  | MVar (Inst (n,({contents=None} as r),cPsi,tA,cnstr,dep), s) ->
+    Head (MVar (Inst (n,r,cPsi,normTyp(tA,LF.id),cnstr,dep), normSub' (s,sigma)))
+  | MVar (Inst (_,{contents=Some tM},_,_,_,_), s) ->
+    Obj (norm (norm(tM,s),sigma))
 
-  (* Projections *)
-  | Root (loc, Proj (BVar i, k), tS) ->
-      begin match LF.bvarSub i sigma with
-        | Head (BVar j)      -> Root (loc, Proj (BVar j, k), normSpine (tS, sigma))
-        | Head (PVar (p, s)) ->  norm (Root (loc, Proj (PVar (p, s), k), SClo (tS, sigma)), LF.id)
-        | Obj (Tuple (_ , tup)) -> Clo (whnfRedex ((whnfTupleRedex (tup, LF.id) k),  (tS, sigma)))
+and normMMVar ((n,r,cD,ityp,cnstr,d), (t,s)) = match !r with
+  | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), (t,s))
+  | Some tM -> Result (normITerm(cnormITerm (tM,t),s))
 
-                (* Root (loc, Proj (PVar (p, s), k), normSpine (tS, sigma)) *)
-      end
+and normITyp = function
+  | IMTyp (cPsi, tA) -> IMTyp(cPsi, normTyp(tA, LF.id))
+  | IPTyp (cPsi, tA) -> IPTyp(cPsi, normTyp(tA, LF.id))
+  | ISTyp (cPsi, cPhi) -> ISTyp(cPsi,cPhi)
 
-  | Root (loc, Proj (FPVar(p,r), k),  tS) ->
-      Root (loc, Proj (FPVar (p, normSub (LF.comp r sigma)), k), normSpine (tS, sigma))
+and normITerm (tM,s) = match tM with
+  | INorm n -> INorm (norm (n, s))
+  | IHead h ->
+    begin match (normHead (h,s)) with
+      | Head h' -> IHead h'
+      | Obj n -> INorm n
+    end 
+  | ISub r -> ISub (normSub' (r,s))
 
-  | Root (loc, Proj (PVar (q, s), k), tS) ->
-      Root (loc, Proj (PVar (q, LF.comp s sigma), k), normSpine (tS, sigma))
+and cnormITerm (tM,mt) = match tM with
+  | INorm n -> INorm (cnorm (n,mt))
+  | IHead h -> IHead (cnormHead (h,mt))
+  | ISub s -> ISub (cnormSub (s,mt))    
 
-  | Root (loc, Proj (MPVar ((_, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _),(t, r)), index), tS) ->
-      (* constraints associated with u must be in solved form *)
-      let _ = dprint (fun () -> "[norm] Proj MPVar MPInst Some" ) in
-      let h' = cnormHead (h, t) in
-        begin match h' with
-          | BVar i -> begin match LF.bvarSub i (LF.comp r sigma) with
-                        | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
-                        | Head (BVar k) -> Root (loc, Proj(BVar k , index), normSpine (tS, sigma))
-                        | Head h        -> norm (Root (loc, Proj(h, index), tS), sigma)
-                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                            (* Undef should not happen ! *)
-                      end
-          | PVar (p, s) -> norm (Root (loc, Proj(PVar (p, LF.comp (LF.comp s r) sigma), index), normSpine (tS, sigma)), LF.id)
-          | MPVar (q, (t', r')) -> norm (Root (loc, Proj(MPVar (q, (t', LF.comp r' r)), index), tS), sigma)
-          (* anything else not allowed *)
-        end
-
-  | Root (loc, Proj(MPVar ((_n, ({contents = None} as pref), cD, IPTyp(cPsi, tA), cnstr, mDep), (t, r)), index), tS) ->
-      (* meta-variable is of atomic type; tS = Nil *)
-      let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
-      let p = (_n, pref, cD, IPTyp(cPsi', tA'), cnstr, mDep) in
-      Root (loc, Proj(MPVar (p, (t, normSub (LF.comp r sigma))), index), normSpine (tS, sigma))
-
-  | Root (loc, FVar x, tS) ->
-      Root (loc, FVar x, normSpine (tS, sigma))
-
-(* and normHead (h, sigma) = match h with *)
-(*   | BVar k -> LF.bvarSub k sigma *)
-(*   | Const c -> Head (Const c) *)
-(*   | PVar (p, s) -> Head (PVar (p, normSub' (s, sigma))) *)
-(*   | AnnH (h, t) -> normHead h *)
-(*   | Proj (h, i) -> reduceTupleFt(normHead (h, sigma), i) *)
-(*   | FVar n -> Head (Fvar n) *)
-(*   | FMVar (n,s) -> Head (FMVar (n, normSub' (s, sigma))) *)
-(*   | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma))) *)
-(*   | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma))) *)
-(*   | HMClo (k, mm, mts) -> ? *)
-(*   | MMVar (MInst mm, mts) -> ? *)
-(*   | MPVar (mm, mts) -> ? *)
-(*   | MVar (cv, s) -> ? *)
-
-(* and normMMVar ((n,r,cD,cPsi,tA,cnstr,d) as mm, (t,r)) = match !r with *)
-(*   | None -> MMVar (mm, mts) *)
-(*   | Some tM -> Result (norm(cnorm (tM,t),r)) *)
-
-(* and reduceTupleFt (ft, i) = match ft with *)
-(*   | Head h -> Head (Proj (h, i)) *)
-(*   | Obj tM -> Obj (reduceTuple (tM, i)) *)
+and reduceTupleFt (ft, i) = match ft with
+  | Head h -> Head (Proj (h, i))
+  | Obj (Tuple (_loc,tM)) -> Obj (reduceTuple (tM, i))
 
 and reduceTuple = function
   | (Last tM, 1) -> tM
   | (Cons (tM, _rest), 1) -> tM
   | (Cons (_, rest), k) -> reduceTuple (rest, k-1)
 
-(* and normSub' (r,sigma) = normSub (LF.comp r sigma) (\* this is slightly weird *\) *)
+and normSub' (r,sigma) = normSub (LF.comp r sigma) (* this is slightly weird *)
 
 and normTuple (tuple, t) = match tuple with
   | Last tM -> Last (norm (tM, t))
@@ -1149,7 +1050,6 @@ and cnorm (tM, t) = match tM with
   end
 
 
-
   and cnormSpine (tS, t) = match tS with
     | Nil            -> Nil
     | App  (tN, tS)  -> App (cnorm (tN, t), cnormSpine (tS, t))
@@ -1613,7 +1513,7 @@ and whnfRedex (sM, sS) = match (sM, sS) with
   | ((Clo (tM, s), s1), sS) ->
       whnfRedex ((tM, LF.comp s s1), sS)
 
-and whnfTupleRedex (tup,s) k = reduceTuple (tup, k), s
+(* and whnfTupleRedex (tup,s) k = reduceTuple (tup, k), s *)
 
 (* whnfTyp (tA, sigma) = tA'
  *

@@ -104,8 +104,6 @@ module LF = struct
     | Offset of offset                        (* Bound Variables                *)
     | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
        (* D ; Psi |- M <= A provided constraint *)
-    | PInst  of name * head option ref * dctx * typ * cnstr list ref * depend
-       (* D ; Psi |- H => A  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
     | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend

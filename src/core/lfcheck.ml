@@ -300,24 +300,6 @@ and inferHead loc cD cPsi head = match head with
     (* Return p's type from cD *)
     TClo (tA, s)
 
-
-  | PVar (PInst (_, {contents = None}, cPsi', tA, _ , _) , s) ->
-    (* cD ; cPsi' |- tA <= type *)
-    dprnt "[inferHead] PVar case";
-    dprint (fun () -> "[inferHead] PVar case:    s = " ^ P.subToString cD cPsi s);
-    dprint (fun () -> "check: cPsi' (context of pvar)    = " ^ P.dctxToString cD cPsi' ^ "\n"
-      ^ "check:  cPsi (context in pattern) = " ^ P.dctxToString cD cPsi ^ "\n"
-      ^ "check: synthesizing " ^ P.typToString cD cPsi (tA, s) ^ " for PVar" ^ "\n"
-      ^ "check: cD = " ^ P.mctxToString cD);
-    checkSub loc cD cPsi s cPsi';
-    (* Check that something of type tA could possibly appear in cPsi *)
-    if not (canAppear cD cPsi head (tA, s) loc) then
-      raise (Error (loc, ParamVarInst (cD, cPsi, (tA, s))))
-      (* raise (Error.Violation ("Parameter variable of type " ^ P.typToString cD cPsi (tA, s)
-                              ^ "\ncannot possibly appear in context " ^ P.dctxToString cD cPsi)) *);
-    (* Return p's type from cD *)
-    TClo (tA, s)
-
   | FVar _ ->
     raise (Error (loc, LeftoverFV))
 

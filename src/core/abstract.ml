@@ -277,16 +277,6 @@ let rec collectionToString cQ = match cQ with
      ^ " " ^ R.render_name u ^ " : "
      ^ P.mtypToString cD mtyp ^"\n"
 
-  | I.Dec(cQ, PV (_ , (I.PVar (I.PInst(_n, _r, cPsi, tA', _c, _), _s) as h))) ->
-      let (ctx_var, tA) = raiseType cPsi tA' in
-      let cD = I.Empty in
-       collectionToString cQ
-     ^ " " ^ P.normalToString cD I.Null (I.Root (Syntax.Loc.ghost, h, I.Nil), LF.id) ^ " : "
-     ^ P.typToString cD I.Null (tA', LF.id)
-     ^ " : "
-     ^ ctxVarToString ctx_var ^ " . " ^ P.typToString cD I.Null (tA , LF.id)
-     ^ "\n"
-
   | I.Dec(cQ, FV (_marker, _n, None)) ->  collectionToString cQ ^ ",  FV _ .\n"
 
   | I.Dec(cQ, FV (_marker, n, Some tA)) ->
@@ -423,11 +413,6 @@ let eqSVar mV1 mV2 = match (mV1, mV2) with
    where B iff mV and mV' represent same variable
 *)
 let eqPVar mV1 mV2 = match (mV1, mV2) with
-  | (I.PVar (I.PInst (_, r1, _, _, _, _), _s) , PV (marker , I.PVar (I.PInst (_, r2, _, _, _, _), _s'))) ->
-       if r1 == r2 then
-         match marker with Pure -> Yes | Impure -> Cycle
-       else
-         No
   | _ -> No
 
 (* eqFVar n fV' = B
@@ -565,17 +550,6 @@ and cnstr_head h = match h with
        (if constraints_solved (!cnstr) then
           cnstr_sub s
         else false)
-
-  | I.PVar(I.PInst (_, _p, _, _, {contents = cnstr}, _), s) ->
-      (if constraints_solved cnstr then
-         cnstr_sub s
-       else false)
-
- | I.Proj (I.PVar (I.PInst (_, _p, _, _, {contents = cnstr}, _), s), _ ) ->
-      (if constraints_solved cnstr then
-         cnstr_sub s
-       else false)
-
  |  _  -> false
 
 
@@ -792,11 +766,6 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       (* let psi = Id.mk_name (NoName) in *)
       (* this case should not happen? -bp *)
       I.Dec (ctxToMCtx cQ', I.Decl (n, I.CTyp (s_cid, I.No)))
-
-  (* Can this case ever happen?  I don't think so. -bp *)
-  | I.Dec (cQ', PV (Pure, I.PVar (I.PInst (n, _, cPsi, tA, _, dep), _s))) ->
-      (* let p = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in *)
-      I.Dec (ctxToMCtx cQ', I.Decl (n, I.PTyp (tA, cPsi, dep)))
 
   | I.Dec (cQ', FCV (psi, Some (s_cid))) ->
       I.Dec (ctxToMCtx cQ', I.Decl (psi, I.CTyp (s_cid, I.Maybe)))
@@ -1146,29 +1115,6 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
           | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
         end
 
-
-  | (I.PVar (I.PInst (n, r, cPsi, tA, ({contents = cnstr} as c), dep), s') as p,  s) ->
-      if constraints_solved cnstr then
-        begin match checkOccurrence (eqPVar p) cQ with
-          | Yes ->
-              let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in
-                (cQ', I.PVar (I.PInst (n, r, cPsi, tA, c, dep), sigma))
-            | No ->
-                (*  checkEmpty !cnstrs ? -bp *)
-                let (cQ2, sigma) = collectSub k cQ phat (LF.comp s' s) in
-                let cQ' = (I.Dec(cQ2, PV(Impure, p))) in
-                let psihat = Context.dctxToHat cPsi in
-
-                let (cQ1, cPsi')  = collectDctx loc k cQ' psihat cPsi in
-                let (cQ'', tA') = collectTyp k cQ1  psihat (tA, LF.id) in
-
-                let p' = I.PVar (I.PInst (n, r, cPsi', tA', c, dep), sigma) in
-                  (I.Dec (cQ'', PV (Pure, p')) , p')
-            | Cycle -> raise (Error (loc, CyclicDependency VariantPV))
-          end
-      else
-        raise (Error (loc, LeftoverConstraints))
-
   | (I.PVar (I.Offset k', s'), _s) ->
       let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in
         (cQ', I.PVar (I.Offset k', sigma))
@@ -1427,15 +1373,6 @@ and abstractCtx cQ =  match cQ with
       let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr, dep), s') in
         I.Dec (cQ', MV (Pure, u'))
 
-  | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (n, r, cPsi, tA, cnstr, dep), s))) ->
-      let cQ'   = abstractCtx cQ  in
-      let l     = length cPsi in
-      let cPsi' = abstractDctx cQ cPsi l in
-      let tA'   = abstractTyp cQ l (tA, LF.id) in
-      let s'    = abstractSub cQ l s in
-      let p'    = I.PVar (I.PInst (n, r, cPsi', tA', cnstr, dep), s') in
-        I.Dec (cQ', PV (Pure, p'))
-
   | I.Dec (cQ, FV (Pure, f, Some tA)) ->
       let cQ' = abstractCtx cQ in
       let tA' = abstractTyp cQ 0 (tA, LF.id) in
@@ -1532,10 +1469,6 @@ and abstractMVarTuple cQ offset = function
 and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
   | I.BVar x ->
       I.BVar x
-
-  | I.PVar (I.PInst(_n, _r, _cPsi, _tA , _cnstr, _), s) ->
-      let x = index_of cQ (PV (Pure, tH)) + d in
-        I.PVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.FPVar (p, s) ->
       let x = index_of cQ (FMV (Pure, p, None)) + d in
@@ -1752,15 +1685,6 @@ and abstractMVarCtx cQ l =  match cQ with
         (* Do we need to consider the substitution s here? -bp *)
       let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr, dep), s') in
         I.Dec (cQ', MV (Pure, u'))
-
-  | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (n, r, cPsi, tA, cnstr, dep), s))) ->
-      let cQ'   = abstractMVarCtx  cQ (l-1) in
-      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,0)  (tA, LF.id) in
-      let s'    = abstractMVarSub cQ (l,0) s in
-        (* Do we need to consider the substitution s here? -bp *)
-      let p'    = I.PVar (I.PInst (n, r, cPsi', tA', cnstr, dep), s') in
-        I.Dec (cQ', PV (Pure, p'))
 
   | I.Dec (cQ, CV (cPsi)) -> (* cPsi = CtxVar (CInst _ ) *)
       let cQ'   = abstractMVarCtx  cQ (l-1) in

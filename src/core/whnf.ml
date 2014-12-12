@@ -22,6 +22,11 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Loc.t
 
+
+type mm_res =
+    | ResMM of mm_var * msub
+    | Result of iterm
+
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [18])
 
 let rec raiseType cPsi tA = match cPsi with
@@ -429,20 +434,21 @@ and normHead (h, sigma) = match h with
   | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma)))
   | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma)))
   | HMClo (k, mm, (mt,s)) -> (* TODO: This is kind of repetitive...*)
-    begin match normMMVar (mm,(mt,s)) with
-      | ResMM (mm',(mt',s')) -> Head (HMClo(k,mm',(mt',normSub' (s', sigma))))
-      | Result (ISub r) -> LF.bvarSub k (normSub' (r,sigma))
+    begin match normMMVar (mm,mt) with
+      | ResMM (mm',mt') -> Head (HMClo(k,mm',(mt',normSub' (s,sigma))))
+      | Result (ISub r) -> normFt' (normFt' (LF.bvarSub k r, s), sigma)
     end 
   | MMVar (mm, (mt,s)) ->
-    begin match normMMVar (mm,(mt,s)) with
-      | ResMM (mm',(mt',s')) -> Head (MMVar (mm', (mt',normSub' (s', sigma))))
-      | Result (INorm n) -> Obj (norm (n,sigma))
+    begin match normMMVar (mm,mt) with
+    (* The order in which we normalize mm, n, s, and sigma seems to matter..*)
+      | ResMM (mm',mt') -> Head (MMVar (mm', (mt',normSub' (s,sigma))))
+      | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
     end 
   | MPVar (mm, (mt,s)) ->
-    begin match normMMVar (mm,(mt,s)) with
-      | ResMM (mm',(mt',s')) -> Head (MPVar (mm', (mt',normSub' (s',sigma))))
-      | Result (IHead h) -> normHead (h,sigma)
-      | Result (INorm n) -> Obj (norm (n,sigma))
+    begin match normMMVar (mm,mt) with
+      | ResMM (mm',mt') -> Head (MPVar (mm', (mt',normSub' (s,sigma))))
+      | Result (IHead h) -> normFt' (normHead (h,s),sigma)
+      | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
     end 
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
   | MVar (Inst (n,({contents=None} as r),cPsi,tA,cnstr,dep), s) ->
@@ -450,23 +456,27 @@ and normHead (h, sigma) = match h with
   | MVar (Inst (_,{contents=Some tM},_,_,_,_), s) ->
     Obj (norm (norm(tM,s),sigma))
 
-and normMMVar ((n,r,cD,ityp,cnstr,d), (t,s)) = match !r with
-  | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), (t,s))
-  | Some tM -> Result (normITerm(cnormITerm (tM,t),s))
+and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
+  | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), t)
+  | Some tM -> Result (cnormITerm (tM,t))
 
 and normITyp = function
   | IMTyp (cPsi, tA) -> IMTyp(cPsi, normTyp(tA, LF.id))
   | IPTyp (cPsi, tA) -> IPTyp(cPsi, normTyp(tA, LF.id))
   | ISTyp (cPsi, cPhi) -> ISTyp(cPsi,cPhi)
 
-and normITerm (tM,s) = match tM with
-  | INorm n -> INorm (norm (n, s))
-  | IHead h ->
-    begin match (normHead (h,s)) with
-      | Head h' -> IHead h'
-      | Obj n -> INorm n
-    end 
-  | ISub r -> ISub (normSub' (r,s))
+and normFt' (ft,s) = match ft with
+  | Head h -> normHead (h,s)
+  | Obj tM -> Obj (norm (tM, s))
+
+(* and normITerm (tM,s) = match tM with *)
+(*   | INorm n -> INorm (norm (n, s)) *)
+(*   | IHead h -> *)
+(*     begin match (normHead (h,s)) with *)
+(*       | Head h' -> IHead h' *)
+(*       | Obj n -> INorm n *)
+(*     end  *)
+(*   | ISub r -> ISub (normSub' (r,s)) *)
 
 and cnormITerm (tM,mt) = match tM with
   | INorm n -> INorm (cnorm (n,mt))

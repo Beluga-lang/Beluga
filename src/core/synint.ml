@@ -107,10 +107,6 @@ module LF = struct
 
   and mm_var = name * iterm option ref * mctx * ityp * cnstr list ref * depend
 
-  and mm_res =
-    | ResMM of mm_var * (msub * sub)
-    | Result of iterm
-
   and iterm =
     | INorm of normal
     | IHead of head

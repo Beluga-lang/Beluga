@@ -1318,7 +1318,7 @@ and cnorm (tM, t) = match tM with
           end
         else
           (* if this arises the function needs to be generalized to return not a head but "either a head or a term" *)
-          raise (Error.Violation "Cannot guarantee that parameter variable remains head")
+          raise (Error.Violation "Cannot guarantee that parameter variable remains head(2)")
     | PVar (p, r) ->
         if isPatSVSub r then
           begin match p with
@@ -1361,7 +1361,7 @@ and cnorm (tM, t) = match tM with
                 end
           end
         else
-          raise (Error.Violation "Cannot guarantee that parameter variable remains head")
+          raise (Error.Violation "Cannot guarantee that parameter variable remains head(3)")
 
     (* Projections *)
     | Proj(BVar i, k) -> Proj (BVar i, k)
@@ -1420,7 +1420,7 @@ and cnorm (tM, t) = match tM with
           MSVar (s, n, (cnormMSub (mcomp mt t), s'))
 
     | _ -> (dprint (fun () -> "[cnormSub] undefined ? ");
-            raise (Error.Violation "Cannot guarantee that parameter variable remains head"))
+            raise (Error.Violation "Cannot guarantee that parameter variable remains head(1)"))
 
   and cnormFront (ft, t) = match ft with
     | Head (HClo (h , Offset i , sigma))  ->
@@ -1610,92 +1610,8 @@ and cnormMSub t = match t with
         let t' = cnormMSub t in
         let cPsi' = cnormDCtx (normDCtx cPsi, m_id) in
           MDot (CObj cPsi' , t')
-
-  | MDot (PObj(phat, PVar(Offset k, s)), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, PVar(Offset k, s)), cnormMSub t)
-
-  | MDot (PObj(phat, Proj(PVar(Offset k, s), i)), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, Proj (PVar(Offset k, s),i)), cnormMSub t)
-
-  | MDot (PObj(phat, BVar k), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, BVar k), cnormMSub t)
-
-  | MDot (PObj(phat, Proj(BVar k, i)), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, Proj(BVar k,i)), cnormMSub t)
-
-  | MDot (PObj(phat, PVar(PInst (_, {contents = None}, _cPsi, _tA, _ , _) as p,  s)), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, PVar(p, s)), cnormMSub t)
-
-  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (BVar x)}, _cPsi, _tA, _ , _) , r)), t) ->
-        let t' = cnormMSub t in
-        begin match LF.bvarSub x r with
-          | Head h  ->
-             MDot (PObj(cnorm_psihat phat m_id, h), t')
-          | Obj tM  ->
-              MDot (MObj(cnorm_psihat phat m_id,  norm (tM, LF.id)), t')
-        end
-
-  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (Proj(BVar x, i))}, _cPsi, _tA, _, _ ) , r)), t) ->
-        let t' = cnormMSub t in
-        begin match LF.bvarSub x r with
-          | Head h ->
-             MDot (PObj(cnorm_psihat phat m_id, Proj(h, i)), t')
-        end
-
-  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (PVar (q,s))}, _cPsi, _tA, _ , _) , r)), t) ->
-      cnormMSub (MDot (PObj (cnorm_psihat phat m_id, PVar(q, LF.comp s r)), t))
-
-  | MDot(PObj(phat, PVar (PInst (_, {contents = Some (Proj (PVar (q,s), i))}, _cPsi, _tA, _ , _) , r)), t) ->
-      cnormMSub (MDot (PObj (cnorm_psihat phat m_id, Proj (PVar(q, LF.comp s r), i)), t))
-
-
-  (* MPVar cases *)
-  | MDot (PObj(phat, MPVar(MPInst (_, {contents = None}, _, _cPsi, _tA, _, _ ) as p, (mt, s))), t) ->
-      MDot (PObj(cnorm_psihat phat m_id, MPVar(p, (mt,s))), cnormMSub t)
-
-  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (BVar x)}, _, _cPsi, _tA, _, _) , (_mt,r))), t) ->
-        let t' = cnormMSub t in
-        begin match LF.bvarSub x r with
-          | Head h  ->
-             MDot (PObj(cnorm_psihat phat m_id, h), t')
-          | Obj tM  ->
-              MDot (MObj(cnorm_psihat phat m_id,  norm (tM, LF.id)), t')
-        end
-
-  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (Proj(BVar x, i))}, _, _cPsi, _tA, _ , _) , (_mt, r))), t) ->
-        let t' = cnormMSub t in
-        begin match LF.bvarSub x r with
-          | Head h ->
-             MDot (PObj(cnorm_psihat phat m_id, Proj(h, i)), t')
-        end
-
-  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (PVar (q,s))}, _, _cPsi, _tA, _, _ ) , (mt,r))), t) ->
-      let p = cnormHead (PVar (q,s) , mt) in
-      let mf = begin match p with
-          | BVar i -> begin match LF.bvarSub i r with
-                        | Obj tM -> MObj (cnorm_psihat phat t, tM)
-                        | Head (BVar k) -> PObj (cnorm_psihat phat m_id,  BVar k)
-                        | Head h        -> PObj (cnorm_psihat phat m_id, h)
-                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                            (* Undef should not happen ! *)
-            end
-          | PVar (p, s') -> PObj (phat, PVar (p, LF.comp s' r))
-      end in
-        MDot (mf, cnormMSub t)
-
-  | MDot(PObj(phat, MPVar (MPInst (_, {contents = Some (Proj (PVar (q,s), i))}, _, _cPsi, _tA, _, _ ) , (mt, r))), t) ->
-      let p = cnormHead (Proj (PVar (q,s), i), mt) in
-      let mf = begin match p with
-          | BVar k -> begin match LF.bvarSub k r with
-(*                        | Obj tM -> MObj (cnorm_psihat phat t, tM) *)
-                        | Head (BVar k) -> PObj (cnorm_psihat phat m_id,  Proj  (BVar k, i))
-                        | Head h        -> PObj (cnorm_psihat phat m_id, Proj  (h, i))
-                        | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                            (* Undef should not happen ! *)
-            end
-          | PVar (p, s') -> PObj (phat, Proj (PVar (p, LF.comp s' r), i))
-      end in
-        MDot (mf, cnormMSub t)
+  | MDot (PObj(phat, h), t) ->
+    MDot (PObj(cnorm_psihat phat m_id, cnormHead (h, m_id)), cnormMSub t)
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 

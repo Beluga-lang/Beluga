@@ -243,7 +243,7 @@ and inferHead loc cD cPsi head = match head with
           " where " ^ P.headToString cD cPsi tuple_head ^
 	  " has type " ^ P.typRecToString cD cPsi (recA, Substitution.LF.id)) in
         (recA, Substitution.LF.id)
-      | PVar (Offset p, s) ->
+      | PVar (p, s) ->
         let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
         checkSub loc cD cPsi s cPsi';
         (recA, s)
@@ -284,7 +284,7 @@ and inferHead loc cD cPsi head = match head with
     TClo(Whnf.cnormTyp (tA, t'), r)
 
 
-  | PVar (Offset p, s) ->
+  | PVar (p, s) ->
     (* cD ; cPsi' |- tA <= type *)
     let (_, tA, cPsi') = Whnf.mctxPDec cD p in
     dprnt "[inferHead] PVar case";
@@ -338,7 +338,7 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
     | cPsi, Undefs, Null -> ()
     | Null, Shift 0, Null -> ()
 
-    | cPhi, SVar (Offset offset, k, s'), cPsi ->
+    | cPhi, SVar (offset, k, s'), cPsi ->
       (*  cD ; cPhi |- SVar (offset, shift, s') : cPsi
           cD(offset) =  Psi'[Phi'] (i.e. Phi'  |- offset  : Psi')
                           Psi'  |- shift (cs , k) : Psi

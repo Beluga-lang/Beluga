@@ -198,14 +198,14 @@ and cnormApxHead cD delta h (cD'', t) = match h with
       let s' = cnormApxSub cD delta s (cD'', t) in
       let h' = begin match h with
                | Int.LF.BVar _ -> h
-               | Int.LF.PVar (Int.LF.Offset q, s1) ->
+               | Int.LF.PVar (q, s1) ->
                    begin match Substitution.LF.applyMSub q t with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (Int.LF.Offset q', s1')
-                     | Int.LF.PObj (_hat, Int.LF.PVar (Int.LF.Offset q', s2)) ->
+                           Int.LF.PVar (q', s1')
+                     | Int.LF.PObj (_hat, Int.LF.PVar (q', s2)) ->
                          let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (Int.LF.Offset q', Substitution.LF.comp s1' s2)
+                           Int.LF.PVar (q', Substitution.LF.comp s1' s2)
                    end
                end in
         Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s')
@@ -263,11 +263,11 @@ and cnormApxHead cD delta h (cD'', t) = match h with
       let s' = cnormApxSub cD delta s (cD'', t) in
       let h' = begin match h with
                | Int.LF.BVar _ -> h
-               | Int.LF.PVar (Int.LF.Offset q, s1) ->
+               | Int.LF.PVar (q, s1) ->
                    begin match Substitution.LF.applyMSub q t with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (Int.LF.Offset q', s1')
+                           Int.LF.PVar (q', s1')
                      | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
@@ -322,11 +322,11 @@ and cnormApxHead cD delta h (cD'', t) = match h with
       let s' = cnormApxSub cD delta s (cD'', t) in
       let h' = begin match h with
                | Int.LF.BVar _ -> h
-               | Int.LF.PVar (Int.LF.Offset q, s1) ->
+               | Int.LF.PVar (q, s1) ->
                    begin match Substitution.LF.applyMSub q t with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (Int.LF.Offset q', s1')
+                           Int.LF.PVar (q', s1')
                      | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
@@ -993,10 +993,10 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
       let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
       let h'     = begin match h with
                    | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (Int.LF.Offset k ,s1) ->
+                   | Int.LF.PVar (k ,s1) ->
                        let s1' =  Whnf.cnormSub (s1, r) in
                          begin match Substitution.LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
+                           | Int.LF.MV k' -> Int.LF.PVar (k' ,s1')
                                (* other cases are impossible *)
                          end
                    end in
@@ -1017,10 +1017,10 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
       let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
       let h'     = begin match h with
                    | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (Int.LF.Offset k ,s1) ->
+                   | Int.LF.PVar (k ,s1) ->
                        let s1' =  Whnf.cnormSub (s1, r) in
                          begin match Substitution.LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
+                           | Int.LF.MV k' -> Int.LF.PVar (k' ,s1')
                                (* other cases are impossible *)
                          end
                    end in
@@ -1041,10 +1041,10 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
       let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
       let h'     = begin match h with
                    | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (Int.LF.Offset k ,s1) ->
+                   | Int.LF.PVar (k ,s1) ->
                        let s1' =  Whnf.cnormSub (s1, r) in
                          begin match Substitution.LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (Int.LF.Offset k' ,s1')
+                           | Int.LF.MV k' -> Int.LF.PVar (k' ,s1')
                                (* other cases are impossible *)
                          end
                    (* | Int.LF.PVar (Int.LF.PInst (_, {contents = Some h1} , _cPsi, _tA, _ ), s1) ->

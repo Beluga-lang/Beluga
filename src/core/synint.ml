@@ -51,7 +51,7 @@ module LF = struct
     | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
     | MPVar of mm_var * (msub * sub)          (*   | p[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
-    | PVar  of cvar * sub                     (*   | p[s]                       *)
+    | PVar  of offset * sub                   (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
@@ -61,7 +61,7 @@ module LF = struct
                                                  reconstruction                 *)
     | FPVar of name * sub                     (* free parameter variable for type
                                                  reconstruction                 *)
-    | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
+    | HClo  of offset * offset * sub            (*   | HClo(x, #S[sigma])         *)
     | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *)
 
   and spine =                                 (* spine                          *)
@@ -71,7 +71,7 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
-    | SVar  of cvar *  offset * sub           (*   | s[sigma]                   *)
+    | SVar  of offset * int * sub           (*   | s[sigma]                   *)
     | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of mm_var * offset * (msub * sub) (*   | u[t ; s]                   *)

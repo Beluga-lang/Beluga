@@ -496,10 +496,7 @@ let isVar h = match h with
     let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
 match sigma with
     | SVar (s , ( _ ), _s2 ) ->
-      let (cPhi, cPsi1) = match s with
-    (* cPhi |- s : cPsi1 *)
-        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-      in
+      let (_, cPsi1, cPhi) = Whnf.mctxSDec cD0 s in
       begin match cPsi1 with
         | Null -> EmptySub
         | _     -> sigma
@@ -781,12 +778,12 @@ match sigma with
         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
           Root (loc, FPVar (p, s'), Nil)
 
-    | (Root (loc, PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, PVar (p, t), _tS (* Nil *)), s (* id *)) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
         let t' = comp t s (* t' = t, since s = Id *) in
           begin match applyMSub p ms with
             | MV q ->
-                Root(loc, PVar(Offset q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
+                Root(loc, PVar(q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
             | MUndef -> raise NotInvertible
           end
 
@@ -866,62 +863,21 @@ match sigma with
           end
 
 
-    | PVar (Offset p, t) ->
+    | PVar (p, t) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
           begin match applyMSub p ms with
             | MV q ->
-                PVar(Offset q, invSub cD0 phat (t, cPsi1) ss rOccur)
+                PVar(q, invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
 
-
-    | PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t) ->
-        let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
-        if eq_cvarRef (MVarRef r) rOccur then
-          raise NotInvertible
-        else
-          if isPatSub t then
-            let (_ , ssubst) = ss in
-              let (s', _cPsi2) = pruneCtx phat (t, cPsi1) ss in
-                (* D ; Psi  |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then
-                  PVar(u, comp t ssubst)
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              PVar(u, invSub cD0 phat (t, cPsi1) ss rOccur)
-
-    | Proj(PVar (Offset p, t), i) ->
+    | Proj(PVar (p, t), i) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
           begin match applyMSub p ms with
             | MV q ->
-                Proj(PVar(Offset q, invSub cD0 phat (t, cPsi1) ss rOccur), i)
+                Proj(PVar(q, invSub cD0 phat (t, cPsi1) ss rOccur), i)
             | MUndef -> raise NotInvertible
           end
-
-
-    | Proj(PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t), i) ->
-        let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
-        if eq_cvarRef (MVarRef r) rOccur then
-          raise NotInvertible
-        else
-          if isPatSub t then
-            let (_ , ssubst) = ss in
-              let (s', _cPsi2) = pruneCtx phat (t, cPsi1) ss in
-                (* D ; Psi  |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then
-                  Proj(PVar(u, comp t ssubst), i)
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              PVar(u, invSub cD0 phat (t, cPsi1) ss rOccur)
-
-
-
 
   (* invSub cD0 (phat, s, ss, rOccur) = s'
 
@@ -951,13 +907,11 @@ match sigma with
 
     | (SVar (s, 0, sigma), CtxVar psi) ->
         (* other cases ? -bp *)
-        let (s,cPhi, cPsi') = (match s with
-                     | Offset offset -> (match applyMSub offset ms with
+        let (s,cPhi, cPsi') = (match applyMSub s ms with
                                            | MV v -> let (_, cPhi, cPsi') =
-                                               Whnf.mctxSDec cD0  v in (Offset v, cPhi, cPsi')
+                                               Whnf.mctxSDec cD0  v in (v, cPhi, cPsi')
                                            | MUndef -> raise NotInvertible
-                                        )
-                    ) in
+                                        ) in
 
         let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
         ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
@@ -987,13 +941,13 @@ match sigma with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | (SVar (Offset s, (n), t), cPsi1) -> (* This is probably
+    | (SVar (s, (n), t), cPsi1) -> (* This is probably
       buggy. Need to deal with the n *)
           begin match applyMSub s ms with
             | MV v ->
                 let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
                   (* applyMSub to ctx_offset ? *)
-                SVar(Offset v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
+                SVar(v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
     | (FSVar (s_name, n , t), cPsi1) ->
@@ -1408,23 +1362,23 @@ match sigma with
                 let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                   returnNeutral (FPVar (p, s'))
 
-            | PVar (Offset p, t)   (* tS = Nil,   s = id *) ->
+            | PVar (p, t)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
                       let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
                       let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (PVar (Offset q, s'))
+                        returnNeutral (PVar (q, s'))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency")
                 end
 
-            | Proj (PVar (Offset p, t), i)   (* tS = Nil,   s = id *) ->
+            | Proj (PVar (p, t), i)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
                       let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
                       let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (Proj (PVar (Offset q, s'), i))
+                        returnNeutral (Proj (PVar (q, s'), i))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency in projection")
                 end
 
@@ -1626,9 +1580,7 @@ match sigma with
           ** because s must be in nf, sv = None **
       *)
       let _ = dprint (fun () -> "[pruneSubst] SVar case ") in
-      let cPsi' = (match sv with
-                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD  offset in cPsi'
-                    ) in
+      let cPsi' = (let (_, _cPhi, cPsi') = Whnf.mctxSDec cD sv in cPsi') in
         SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (FSVar (s_name, n , sigma), cPsi1) ->
@@ -1737,11 +1689,9 @@ match sigma with
       let s' , cPsi1' = (id, cPsi1) in
 
 
-      let cPsi' = (match s with
-                     | Offset offset -> (match applyMSub offset mt with
+      let cPsi' = (match applyMSub s mt with
                                            | MV v -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
                                            | MUndef -> raise NotInvertible
-                                        )
                     ) in
 
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
@@ -2676,7 +2626,7 @@ match sigma with
                 unifySub mflag cD0 cPsi s s'
               else raise (Failure "Front FPVar mismatch"))
 
-    | (PVar (Offset k, s) , PVar(Offset k', s')) ->
+    | (PVar (k, s) , PVar(k', s')) ->
         if k = k' then
            unifySub mflag cD0 cPsi s s'
         else raise (Failure "Parameter variable clash")
@@ -2928,10 +2878,10 @@ match sigma with
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")
 
-      | (SVar(Offset s1, n1, sigma1), Shift ( 0) ) -> ()
-      | (Shift ( 0), SVar(Offset s1, n1, sigma1) ) -> ()
+      | (SVar(s1, n1, sigma1), Shift ( 0) ) -> ()
+      | (Shift ( 0), SVar(s1, n1, sigma1) ) -> ()
 
-      | (SVar(Offset s1, n1, sigma1), SVar(Offset s2, n2, sigma2))
+      | (SVar(s1, n1, sigma1), SVar(s2, n2, sigma2))
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")

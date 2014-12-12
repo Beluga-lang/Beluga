@@ -912,9 +912,9 @@ and collectSub (p:int) cQ phat s = match s with
           | Cycle -> raise (Error ((Syntax.Loc.ghost), CyclicDependency VariantFSV))
         end
 
-  | I.SVar (I.Offset offset, n, s) ->
+  | I.SVar (offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in
-       (cQ1, I.SVar(I.Offset offset, n, s'))
+       (cQ1, I.SVar(offset, n, s'))
 
   | I.MSVar (I.MSInst (n, s, cD, cPsi, cPhi, ({contents = cnstr} as c), dep) as sv, k, (ms',s')) as sigma ->
     if constraints_solved cnstr then
@@ -1115,9 +1115,9 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
           | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
         end
 
-  | (I.PVar (I.Offset k', s'), _s) ->
+  | (I.PVar (k', s'), _s) ->
       let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in
-        (cQ', I.PVar (I.Offset k', sigma))
+        (cQ', I.PVar (k', sigma))
 
 
   | (I.Proj (head, j),  s) ->
@@ -1472,7 +1472,7 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
 
   | I.FPVar (p, s) ->
       let x = index_of cQ (FMV (Pure, p, None)) + d in
-        I.PVar (I.Offset x, abstractMVarSub cQ offset s)
+        I.PVar (x, abstractMVarSub cQ offset s)
 
   | I.MMVar (I.MInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr, _), (_ms, s)) ->
       let x = index_of cQ (MMV (Pure, tH)) + d in
@@ -1483,7 +1483,7 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
 
   | I.MPVar (I.MPInst(_n, _r, I.Empty, _cPsi, _tP , _cnstr, _), (_ms, s)) ->
       let x = index_of cQ (MPV (Pure, tH)) + d in
-        I.PVar (I.Offset x, abstractMVarSub cQ offset s)
+        I.PVar (x, abstractMVarSub cQ offset s)
 
   | I.MPVar (I.MPInst(_n, _r, _cD, _cPsi, _tP , _cnstr, _), (_ms, _s)) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMPV))
@@ -1517,12 +1517,12 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
       let head = abstractMVarHead cQ offset head in   (* ??? -jd *)
         I.Proj (head, k)
 
-  | I.PVar (I.Offset p , s) ->
+  | I.PVar (p , s) ->
       let k = lengthCollection cQ in
       (* let k = Context.length cQ in *)
-      if p > d then  I.PVar (I.Offset (p+k), abstractMVarSub cQ offset s)
+      if p > d then  I.PVar ((p+k), abstractMVarSub cQ offset s)
       else
-        I.PVar (I.Offset p, abstractMVarSub cQ offset s)
+        I.PVar (p, abstractMVarSub cQ offset s)
 
 
   (* other cases impossible for object level *)
@@ -1550,23 +1550,23 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Obj tM, s) ->
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.Offset s, n, sigma) ->
+  | I.SVar (s, n, sigma) ->
       let _ = dprint (fun () -> "[abstractMVarSub] d = " ^ string_of_int d) in
 (*      let k = lengthCollection cQ in
       if s > d then I.SVar (I.Offset (s + k), (ctx_offset, n), abstractMVarSub' cQ offset sigma)
       else*)
-        I.SVar (I.Offset s, n, abstractMVarSub' cQ offset sigma)
+        I.SVar (s, n, abstractMVarSub' cQ offset sigma)
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
   | I.FSVar (s, n, sigma) ->
       let x = index_of cQ (FMV (Pure, s, None)) + d in
-      I.SVar (I.Offset x, n, abstractMVarSub cQ offset sigma)
+      I.SVar (x, n, abstractMVarSub cQ offset sigma)
 
   | I.MSVar (I.MSInst (_n, _r, _cD, _cPsi, _cPhi, _cnstr, _), k, (_mt, s')) as sigma ->
     let s = index_of cQ (MSV (Pure, sigma)) + d  in
-    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
+    I.SVar (s, k, abstractMVarSub' cQ offset s')
 
 
 and abstractMVarHat cQ (l,offset) phat = match phat with

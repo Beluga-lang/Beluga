@@ -838,7 +838,7 @@ let genPVar (cD, cPsi, tP)   =
 	      let id_psi = Substitution.LF.justCtxVar cPsi' in
 		(* cO ; cD_ext, pdec   ; cPsi' |- id_psi : cvar_psi  *)
 
-	      let h      = LF.PVar (LF.Offset 1, id_psi) in
+	      let h      = LF.PVar (1, id_psi) in
 	      let tA' = Whnf.normTyp (Whnf.cnormTyp (tA, LF.MShift 1), id_psi) in
 		(* cO ; cD', pdec ; cPsi'  |- p[id_psi] : [id_psi](trec[|MShift 1|])
 		   or to put it differently
@@ -1200,7 +1200,7 @@ let rec check_empty_pattern k candidates = match candidates with
 
 				 | EmptyParamPatt (_cPhi, _sB) ->
 				     (match tR with
-					|LF.Root (_, LF.PVar (LF.Offset k', _ ), LF.Nil ) -> not (k = k' )
+					|LF.Root (_, LF.PVar (k', _ ), LF.Nil ) -> not (k = k' )
 					| _ -> true)
 
 				 | _ -> true )
@@ -1595,7 +1595,7 @@ and mvInSplit cD vlist slist = match slist with
 	mvInSplit cD vlist sl
       else mvInSplit cD (pvlist, cvlist, (u::mvlist)) sl
 
-  | Split (CovGoal (_, LF.Root (_ , LF.PVar (LF.Offset k, _ ) , _ ), _ ), _ ) :: sl ->
+  | Split (CovGoal (_, LF.Root (_ , LF.PVar (k, _ ) , _ ), _ ), _ ) :: sl ->
       let (pvlist, cvlist , mvlist) = vlist in
       if List.mem (LF.Offset k) mvlist then
 	mvInSplit cD vlist sl
@@ -2036,7 +2036,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.PTyp (tA, cPsi, LF.Maybe))) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = match projOpt with None -> LF.PVar (LF.Offset 1, idSub) | Some k -> LF.Proj(LF.PVar (LF.Offset 1, idSub), k) in
+      let mv         = match projOpt with None -> LF.PVar (1, idSub) | Some k -> LF.Proj(LF.PVar (1, idSub), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
       let cPsi'      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
       let tA'        = Whnf.cnormTyp (tA, LF.MShift 1) in

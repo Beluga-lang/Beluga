@@ -1437,7 +1437,7 @@ and elTerm' recT cD cPsi r sP = match r with
         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
         let s'' = elSub loc recT cD cPsi s' cPhi in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-        let tR = Int.LF.Root (loc, Int.LF.PVar (Int.LF.Offset p, s''), tS) in
+        let tR = Int.LF.Root (loc, Int.LF.PVar (p, s''), tS) in
         begin
 	  try
             Unify.unifyTyp cD cPsi sQ sP ;
@@ -1478,20 +1478,20 @@ and elTerm' recT cD cPsi r sP = match r with
         | (_, Int.LF.Sigma recA, cPsi') ->
           let t' = elSub loc recT cD  cPsi t cPsi' in
           let sA = begin try
-                      Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1
+                      Int.LF.getType (Int.LF.PVar (p, t')) (recA,  t') k 1
                    with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                     end
           in
           let _ = dprint (fun () -> "[elTerm'] PVar " ^ P.headToString cD cPsi
-                            (Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p, t'), k))) in
+                            (Int.LF.Proj (Int.LF.PVar (p, t'), k))) in
 
           let _ = dprint (fun () -> "[elTerm'] against type " ^ P.typToString cD cPsi sA) in
           let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
           begin
 	    try
               Unify.unifyTyp cD cPsi sQ sP;
-              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS)
+              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS)
 	    with
 	      | Unify.Failure msg ->
                 raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
@@ -1555,7 +1555,7 @@ and elTerm' recT cD cPsi r sP = match r with
         | (_, Int.LF.Sigma recA, cPsi') ->
           let t' = elSub loc recT cD  cPsi t cPsi' in
           let indk = begin try
-                      Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA,  t') k 1
+                      Int.LF.getIndex (Int.LF.PVar (p, t')) (recA,  t') k 1
                    with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
                     end
@@ -1742,7 +1742,7 @@ and elClosedTerm' recT cD cPsi r = match r with
         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
         let s'' = elSub loc recT cD cPsi s' cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-          (Int.LF.Root (loc, Int.LF.PVar (Int.LF.Offset p, s''), tS) , sQ)
+          (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS) , sQ)
       with Error.Violation msg  ->
         dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
          raise (Error (loc, CompTypAnn ))
@@ -1784,13 +1784,13 @@ and elClosedTerm' recT cD cPsi r = match r with
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
             let t' = elSub loc recT cD  cPsi t cPsi' in
-            let  sA = begin try Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1
+            let  sA = begin try Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k 1
                       with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                       end
             in
             let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), k), tS) , sQ)
+              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS) , sQ)
         | _  ->
 	    dprint (fun () -> "[elClosedTerm'] Looking for p with offset " ^ R.render_offset p);
 	    dprint (fun () -> "in context cD = " ^ P.mctxToString cD);
@@ -1799,13 +1799,13 @@ and elClosedTerm' recT cD cPsi r = match r with
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), k ) , spine ) ->
       begin match (h, tA) with
-	| (Int.LF.PVar (Int.LF.Offset p, s') , Int.LF.Sigma recA) ->
+	| (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
 	    let t' = elSub loc recT cD  cPsi s cPsi' in
 	    let s = Substitution.LF.comp s' t' in
               begin try
-	        let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, s)) (recA, t') k 1 in
+	        let  sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
 	        let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,s), k), tS) , sQ)
+            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), k), tS) , sQ)
               with
                   _ ->
                     raise (Error (loc, ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t'))))
@@ -1831,14 +1831,14 @@ and elClosedTerm' recT cD cPsi r = match r with
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
             let t' = elSub loc recT cD  cPsi t cPsi' in
-            let index = Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') k 1 in
-            let  sA = begin try Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, t')) (recA, t') index 1
+            let index = Int.LF.getIndex (Int.LF.PVar (p, t')) (recA, t') k 1 in
+            let  sA = begin try Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') index 1
                       with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                       end
             in
             let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,t'), index), tS) , sQ)
+              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), index), tS) , sQ)
         | _  ->
       dprint (fun () -> "[elClosedTerm'] Looking for p with offset " ^ R.render_offset p);
       dprint (fun () -> "in context cD = " ^ P.mctxToString cD);
@@ -1847,15 +1847,15 @@ and elClosedTerm' recT cD cPsi r = match r with
 
   | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), k ) , spine ) ->
     begin match (h, tA) with
-    | (Int.LF.PVar (Int.LF.Offset p, s') , Int.LF.Sigma recA) ->
+    | (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
         let t' = elSub loc recT cD  cPsi s cPsi' in
         let s = Substitution.LF.comp s' t' in
         begin try
-              let index = Int.LF.getIndex (Int.LF.PVar (Int.LF.Offset p, s)) (recA, t') k 1 in
+              let index = Int.LF.getIndex (Int.LF.PVar (p, s)) (recA, t') k 1 in
               begin try
-                let  sA = Int.LF.getType (Int.LF.PVar (Int.LF.Offset p, s)) (recA, t') index 1 in
+                let  sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') index 1 in
                 let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-                  (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (Int.LF.Offset p,s), index), tS) , sQ)
+                  (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), index), tS) , sQ)
               with
                Not_found ->
                   raise (Error (loc, ProjNotValid (cD, cPsi, index, (Int.LF.Sigma recA, t'))))
@@ -1951,7 +1951,7 @@ and elSub' loc recT cD cPsi s cPhi =
     if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
                       (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
       let s' = elSub' loc recT cD cPsi s cPhi2 in
-      let sigma = Int.LF.SVar (Int.LF.Offset offset, 0, s') in
+      let sigma = Int.LF.SVar (offset, 0, s') in
       let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
                         P.subToString cD cPsi sigma) in
       let _ = dprint (fun () -> "[elSub] domain : " ^ P.dctxToString cD cPhi) in
@@ -2111,7 +2111,7 @@ and elHead loc recT cD cPsi = function
       begin try
         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
         let s' = elSub loc recT cD cPsi s cPhi in
-          (Int.LF.PVar (Int.LF.Offset p, s') , (tA, s'))
+          (Int.LF.PVar (p, s') , (tA, s'))
       with Error.Violation msg  ->
         dprint (fun () -> "[elHead] Violation: " ^ msg);
         raise (Error (loc, CompTypAnn ))
@@ -2147,7 +2147,7 @@ and elHead loc recT cD cPsi = function
   | Apx.LF.FPVar (p, s) ->
       let (offset, Int.LF.PTyp (tA, cPhi, _)) = Whnf.mctxMVarPos cD p  in
       let s' = elSub loc recT cD cPsi s cPhi in
-        (Int.LF.PVar (Int.LF.Offset offset, s') , (tA, s'))
+        (Int.LF.PVar (offset, s') , (tA, s'))
 
   | Apx.LF.Proj (head, i) ->
       let (head', sA) = elHead loc recT cD cPsi head in

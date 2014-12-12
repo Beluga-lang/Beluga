@@ -323,7 +323,7 @@ module Int = struct
       | LF.HClo (h, s, sigma) ->
           fprintf ppf "%s[#%a[%a]]"
             (R.render_bvar cPsi h)
-            (fmt_ppr_lf_cvar cD lvl) s
+            (fmt_ppr_lf_offset cD lvl) s
             (fmt_ppr_lf_sub  cD cPsi lvl) sigma
       | LF.HMClo (h, s, (theta,sigma)) ->
           fprintf ppf "%s[#%a[%a ; %a]]"
@@ -376,7 +376,7 @@ module Int = struct
       | LF.PVar (c, s) ->
           fprintf ppf "%s#%a%s%a%s"
             (l_paren_if (paren s))
-            (fmt_ppr_lf_cvar cD lvl) c
+            (fmt_ppr_lf_offset cD lvl) c
             proj
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
@@ -444,7 +444,7 @@ module Int = struct
 
         | LF.SVar (c, _, s) ->
             fprintf ppf "#%a[%a]"
-               (fmt_ppr_lf_cvar cD lvl) c
+               (fmt_ppr_lf_offset cD lvl) c
                (self lvl) s
         | LF.MSVar (_sigma, _, (t,s)) ->
             fprintf ppf "#?S[%a ; %a]"
@@ -490,7 +490,7 @@ module Int = struct
 	  fprintf ppf
                   "#^%s %a[%a]"
                   (R.render_offset n)
-                  (fmt_ppr_lf_cvar cD lvl) c
+                  (fmt_ppr_lf_offset cD lvl) c
                   (self lvl) s
 
         | LF.MSVar (_sigma, n, (t,s)) ->
@@ -634,12 +634,14 @@ module Int = struct
       | (LF.Dec (cD, _ ) , k) -> typOfMCtx cD (k-1)
       | _ -> None
 
-    and fmt_ppr_lf_cvar cD _lvl ppf = function
-      | LF.Offset n ->
+    and fmt_ppr_lf_offset cD _lvl ppf n = 
           fprintf ppf "%s"
             (if !Store.Cid.NamedHoles.printingHoles && false then
               Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
              else (R.render_cvar cD n))
+
+    and fmt_ppr_lf_cvar cD _lvl ppf = function
+      | LF.Offset n -> fmt_ppr_lf_offset cD _lvl ppf n
 
       | LF.Inst (_, ({ contents = None } as u), _, tA, _, _) ->
           begin

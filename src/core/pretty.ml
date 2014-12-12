@@ -669,21 +669,21 @@ module Int = struct
                     ; fprintf ppf "%s" sym
           end
 
-      | LF.SInst (_, ({ contents = None } as s), _, _, _, mDep) ->
-          begin
-            try
-              fprintf ppf "?%s"
-                (SInstHashtbl.find sinst_hashtbl s)
-            with
-              | Not_found ->
-                  let sym = String.lowercase (Gensym.VarData.gensym ()) in
-                      SInstHashtbl.replace sinst_hashtbl s sym
-                    ; fprintf ppf "%s" sym
-          end
+      (* | LF.SInst (_, ({ contents = None } as s), _, _, _, mDep) -> *)
+      (*     begin *)
+      (*       try *)
+      (*         fprintf ppf "?%s" *)
+      (*           (SInstHashtbl.find sinst_hashtbl s) *)
+      (*       with *)
+      (*         | Not_found -> *)
+      (*             let sym = String.lowercase (Gensym.VarData.gensym ()) in *)
+      (*                 SInstHashtbl.replace sinst_hashtbl s sym *)
+      (*               ; fprintf ppf "%s" sym *)
+      (*     end *)
 
       | LF.PInst _ ->               fprintf ppf "?PINST _ "
       | LF.Inst _ ->               fprintf ppf "?INST _ "
-      | LF.SInst _ ->               fprintf ppf "?SINST _ "
+      (* | LF.SInst _ ->               fprintf ppf "?SINST _ " *)
 
     and fmt_ppr_lf_ctx_var cD ppf = function
       | LF.CInst (n, {contents = None}, _schema, _cD, theta) ->

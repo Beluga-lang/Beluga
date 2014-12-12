@@ -313,7 +313,6 @@ let isVar h = match h with
   | _ -> false
 
 
-
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
@@ -411,11 +410,11 @@ let isVar h = match h with
     globalCnstrs := cnstrL @ !globalCnstrs
 
 
-  let instantiateSVar (s, sigma, cnstrL) =
-    s := Some sigma;
-    T.log globalTrail (InstSub s);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+  (* let instantiateSVar (s, sigma, cnstrL) = *)
+  (*   s := Some sigma; *)
+  (*   T.log globalTrail (InstSub s); *)
+  (*   delayedCnstrs := cnstrL @ !delayedCnstrs; *)
+  (*   globalCnstrs := cnstrL @ !globalCnstrs *)
 
   let instantiateMMVar (u, tM, cnstrL) =
     u := Some tM;
@@ -500,7 +499,6 @@ match sigma with
       let (cPhi, cPsi1) = match s with
     (* cPhi |- s : cPsi1 *)
         | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-        | SInst (_,  _ ,  cPhi, cPsi1, _, _ ) -> (cPhi, cPsi1)
       in
       begin match cPsi1 with
         | Null -> EmptySub
@@ -1004,14 +1002,15 @@ match sigma with
                                                Whnf.mctxSDec cD0  v in (Offset v, cPhi, cPsi')
                                            | MUndef -> raise NotInvertible
                                         )
-                     | SInst (_ , {contents=None}, cPhi, _cPsi', _ , _) -> (s,cPhi, _cPsi')
                     ) in
 
         let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
         ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
         P.dctxToString cD0 cPsi') in
 
-        SVar(s, ( 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
+        SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
+    | (MSVar (MSInst(_,{contents=None},cD,cPhi,cPsi', _, _) as s0, 0, (mt,sigma)), CtxVar psi) ->
+      MSVar(s0, 0, (invMSub cD0 (mt, cD) ms rOccur, invSub cD0 phat (sigma, cPsi') ss rOccur))
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1710,11 +1709,6 @@ match sigma with
       let _ = dprint (fun () -> "[pruneSubst] SVar case ") in
       let cPsi' = (match sv with
                      | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD  offset in cPsi'
-                     | SInst (_ , ({contents=None} as r), cPsi', _cPhi', _, _ ) ->
-                       if eq_cvarRef (SVarRef r) rOccur then
-                         raise (Failure "Variable occurrence")
-                       else
-                         cPsi'
                     ) in
         SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
@@ -1829,8 +1823,6 @@ match sigma with
                                            | MV v -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
                                            | MUndef -> raise NotInvertible
                                         )
-
-                     | SInst (_ , {contents=None}, cPsi', _cPhi', _, _ ) -> cPsi'
                     ) in
 
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
@@ -3356,40 +3348,6 @@ match sigma with
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
-
-      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs, mDep),  ( 0), s), s2) -> (* offset may not always be 0 ? -bp *)
-        let s = Whnf.normSub s in
-        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
-        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
-          begin match isPatSub s with
-            | true ->
-                begin try
-                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
-                    instantiateSVar (r, s2', !cnstrs)
-                with
-                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-                end
-            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-          end
-
-      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs, mDep), ( 0), s))  ->
-          (* other cases ? -bp *)
-        let s = Whnf.normSub s in
-        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
-        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
-          begin match isPatSub s with
-            | true ->
-                begin try
-                  let _ = dprint (fun () -> "[unifySub] SVar - ispatsub ") in
-                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
-                    instantiateSVar (r, s2', !cnstrs)
-                with
-                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-                end
-            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-          end
 
       | (Dot (f, s), Dot (f', s'))
         -> (unifyFront mflag cD0 cPsi f f' ;

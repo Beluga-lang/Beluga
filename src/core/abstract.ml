@@ -415,12 +415,6 @@ let eqMVar mV1 mV2 = match (mV1, mV2) with
    where B iff mV and mV' represent same variable
 *)
 let eqSVar mV1 mV2 = match (mV1, mV2) with
-  | (I.SVar (I.SInst (_, r1, _, _, _, _), _, _ ) ,
-     SV (marker , I.SVar (I.SInst (_, r2, _, _, _, _),_, _))) ->
-       if r1 == r2 then
-         match marker with Pure -> Yes | Impure -> Cycle
-       else
-         No
   | _ -> No
 
 
@@ -794,10 +788,6 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
       I.Dec (ctxToMCtx cQ', I.Decl (n, I.MTyp (tA, cPsi, dep)))
 
-  | I.Dec (cQ', SV (Pure, I.SVar (I.SInst (n, _, cPsi, cPhi, _, dep), _, _s))) ->
-      (* let u = Id.mk_name (Id.MVarName (Typ.gen_var_name tA)) in *)
-      I.Dec (ctxToMCtx cQ', I.Decl (n, I.STyp (cPhi, cPsi, dep)))
-
   | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
       (* this case should not happen? -bp *)
@@ -956,25 +946,6 @@ and collectSub (p:int) cQ phat s = match s with
   | I.SVar (I.Offset offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in
        (cQ1, I.SVar(I.Offset offset, n, s'))
-
-  | I.SVar (I.SInst (n, s, cPsi, cPhi, ({contents = cnstr} as c), dep) as sv, k, s') as sigma ->
-    if constraints_solved cnstr then
-      begin match checkOccurrence (eqSVar sigma) cQ with
-        | Yes ->  let (cQ', s') = collectSub p cQ phat s' in
-                    (cQ', I.SVar(sv, k, s'))
-        | No  ->  let (cQ0, s') = collectSub p cQ phat s' in
-                  let cQ' = I.Dec(cQ0, SV(Impure, sigma)) in
-                  let psihat = Context.dctxToHat cPsi in
-                  let (cQ1, cPsi')  = collectDctx (Syntax.Loc.ghost) k cQ' psihat cPsi in
-                  let phihat = Context.dctxToHat cPhi in
-                  let (cQ2, cPhi')  = collectDctx  (Syntax.Loc.ghost) k cQ1 phihat cPhi in
-                  let sigma' = I.SVar (I.SInst (n,s, cPsi', cPhi', c, dep), k , s') in
-                  (I.Dec (cQ2, SV (Pure, sigma')), sigma')
-
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantSV))
-      end
-    else
-        raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
   | I.MSVar (I.MSInst (n, s, cD, cPsi, cPhi, ({contents = cnstr} as c), dep) as sv, k, (ms',s')) as sigma ->
     if constraints_solved cnstr then
@@ -1656,10 +1627,6 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
-  | I.SVar (I.SInst (_n, _r, _cPsi, _cPhi, _cnstr, _), k, s') as sigma ->
-    let s = index_of cQ (SV (Pure, sigma)) + d  in
-    I.SVar (I.Offset s, k, abstractMVarSub' cQ offset s')
-
   | I.FSVar (s, n, sigma) ->
       let x = index_of cQ (FMV (Pure, s, None)) + d in
       I.SVar (I.Offset x, n, abstractMVarSub cQ offset sigma)
@@ -1785,16 +1752,6 @@ and abstractMVarCtx cQ l =  match cQ with
         (* Do we need to consider the substitution s here? -bp *)
       let u'    = I.MVar (I.Inst (n, r, cPsi', tA', cnstr, dep), s') in
         I.Dec (cQ', MV (Pure, u'))
-
-  | I.Dec (cQ, SV (Pure, I.SVar (I.SInst (n, r, cPsi, cPhi, cnstr, dep), k, s))) ->
-      let cQ'   = abstractMVarCtx  cQ (l-1) in
-      let cPsi' = abstractMVarDctx cQ (l,0) cPsi in
-      let cPhi' = abstractMVarDctx cQ (l,0) cPhi in
-      let s'    = abstractMVarSub cQ (l,0) s in
-        (* Do we need to consider the substitution s here? -bp *)
-      let sigma' = I.SVar (I.SInst (n, r, cPsi', cPhi', cnstr, dep), k, s') in
-        I.Dec (cQ', SV (Pure, sigma'))
-
 
   | I.Dec (cQ, PV (Pure, I.PVar (I.PInst (n, r, cPsi, tA, cnstr, dep), s))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in

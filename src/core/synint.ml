@@ -102,18 +102,17 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of (normal, typ) cvar_body  (* D ; Psi |- M <= A provided constraint *)
-    | PInst  of (head, typ) cvar_body (* D ; Psi |- H => A  provided constraint *)
-    | SInst  of (sub, dctx) cvar_body (* D ; Psi |- sigma <= cPhi  provided constraint *)
-
-  and ('a,'b) cvar_body = name * 'a option ref * dctx * 'b * cnstr list ref * depend
+    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
+       (* D ; Psi |- M <= A provided constraint *)
+    | PInst  of name * head option ref * dctx * typ * cnstr list ref * depend
+       (* D ; Psi |- H => A  provided constraint *)
 
   and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of (normal, typ) mm_var_body (* D ; Psi |- M <= A provided constraint *)
-    | MPInst   of (head, typ) mm_var_body 
-    | MSInst   of (sub, dctx) mm_var_body (* cD ; cPsi |- s <= cPhi *)
-
-  and ('a, 'b) mm_var_body = name * 'a option ref * mctx * dctx * 'b * cnstr list ref * depend
+    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend
+     (* D ; Psi |- M <= A provided constraint *)
+    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref * depend
+    | MSInst   of name * sub option ref * mctx * dctx * dctx * cnstr list ref * depend
+     (* cD ; cPsi |- s <= cPhi *)
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref

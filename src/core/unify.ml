@@ -314,86 +314,6 @@ let isVar h = match h with
 
 
 
-  let simplifySub cD0 cPsi sigma =
-    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
-    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
-match sigma with
-    | SVar (s , ( _ ), _s2 ) ->
-      let (cPhi, cPsi1) = match s with
-    (* cPhi |- s : cPsi1 *)
-        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-        | SInst (_,  _ ,  cPhi, cPsi1, _, _ ) -> (cPhi, cPsi1)
-      in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift (k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
-        | _     -> sigma
-      end
-    | FSVar (s_name , ( _ ), _s2 ) ->
-      let (_, Decl (_, STyp (cPsi1,  _cPhi, _))) = Store.FCVar.get s_name in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift ( k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
-        | _     -> sigma
-      end
-    | _ -> sigma
-
-(*
-  let simplifySub cD0 cPsi sigma = match sigma with
-    | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NoCtxShift , k)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    |SVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            Shift (NoCtxShift, k)
-          else
-            sigma
-      end
-    | SVar (s , (NoCtxShift , _ ), _s2 ) ->
-      let (cPhi, cPsi1) = match s with
-    (* cPhi |- s : cPsi1 *)
-        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-        | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
-      in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> Shift (NoCtxShift, k)
-        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
-        | _     -> sigma
-      end
-
-    | FSVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NoCtxShift , k)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    | FSVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            Shift (NoCtxShift, k)
-          else
-            sigma
-      end
-    | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
-      let (_, SDecl (_, cPsi1,  _cPhi)) = Store.FCVar.get s_name in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> Shift (NoCtxShift, k)
-        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
-        | _     -> sigma
-      end
-    | _ -> sigma
-*)
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
@@ -569,6 +489,33 @@ match sigma with
         and [ms']^-1 (t') = t'' exists
         and cD' |- t'' <= cD2
   *)
+
+  (* should perform a kind of eta expansion on the domain of a substitution.
+     This implementation is totally buggy and wrong, but works for the test cases so far... *)
+  let simplifySub cD0 cPsi sigma =
+    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
+    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
+match sigma with
+    | SVar (s , ( _ ), _s2 ) ->
+      let (cPhi, cPsi1) = match s with
+    (* cPhi |- s : cPsi1 *)
+        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
+        | SInst (_,  _ ,  cPhi, cPsi1, _, _ ) -> (cPhi, cPsi1)
+      in
+      begin match cPsi1 with
+        | Null -> EmptySub
+        | _     -> sigma
+      end
+    | MSVar (MSInst (_,  r ,  _, cPhi, Null, cnstrs, _ ), _ , _) ->
+      instantiateMSVar (r, EmptySub, !cnstrs);
+      EmptySub      
+    | FSVar (s_name , ( _ ), _s2 ) ->
+      let (_, Decl (_, STyp (cPsi1,  _cPhi, _))) = Store.FCVar.get s_name in
+      begin match cPsi1  with
+        | Null -> EmptySub
+        | _     -> sigma
+      end
+    | _ -> sigma
 
   let rec pruneMCtx' cD (t, cD1) ms = match (t, cD1) with
     | (MShift _k, Empty) -> (Whnf.m_id, Empty)

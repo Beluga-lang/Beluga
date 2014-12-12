@@ -7,7 +7,7 @@ open Syntax.Int
 
 type varvariant =
     VariantFV | VariantFCV | VariantMMV | VariantMPV | VariantMSV
-  | VariantMV | VariantFMV | VariantPV | VariantFPV | VariantSV
+  | VariantMV | VariantFMV | VariantFPV
   | VariantFSV
 
 type error =

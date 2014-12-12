@@ -19,7 +19,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [3])
 
 type varvariant =
     VariantFV | VariantFCV | VariantMMV | VariantMPV | VariantMSV
-  | VariantMV | VariantFMV | VariantPV | VariantFPV | VariantSV
+  | VariantMV | VariantFMV | VariantFPV 
   | VariantFSV
 
 type error =
@@ -64,7 +64,6 @@ let string_of_varvariant = function
   | VariantMSV -> "meta^2-substitution variables and free variables"
   | VariantMV  -> "meta-variables and free variables"
   | VariantFMV -> "free meta-variables"
-  | VariantPV  -> "parameter-variables and free variables"
   | VariantFPV -> "free parameter-variables"
   | VariantFSV -> "free substitution-variables"
 
@@ -176,12 +175,7 @@ type free_var =
                                       and    cD' ; Psi' |- u[ms, s] <= [ms ; s]P      *)
   | MV of marker * I.head          (* Y ::= u[s]   where h = MVar(u, Psi, P, _)
                                       and    cD' ; Psi' |- u[s] <= [s]P               *)
-  | PV of marker * I.head          (*    |  p[s]   where h = PVar(p, Psi, A, _)
-                                     and    cD' ; Psi' |- p[s] <=
-                                      [s]A               *)
   | CV of I.dctx
-
-  | SV of marker * I.sub
 
   | MSV of marker * I.sub
 
@@ -323,10 +317,8 @@ let rec lengthCollection cQ = match cQ with
   | I.Dec (cQ', MPV(Impure, _ )) -> lengthCollection cQ'
   | I.Dec (cQ', MSV(Impure, _ )) -> lengthCollection cQ'
   | I.Dec (cQ', MV(Impure, _ )) -> lengthCollection cQ'
-  | I.Dec (cQ', PV(Impure, _ )) -> lengthCollection cQ'
   | I.Dec (cQ', FV(Impure, _ , _ )) -> lengthCollection cQ'
   | I.Dec (cQ', FMV(Impure, _ , _ )) -> lengthCollection cQ'
-  | I.Dec (cQ', SV(Impure, _ )) -> lengthCollection cQ'
   | I.Dec (cQ', _ )  -> lengthCollection cQ' + 1
 
 
@@ -398,21 +390,6 @@ let eqMVar mV1 mV2 = match (mV1, mV2) with
          match marker with Pure -> Yes | Impure -> Cycle
        else
          No
-  | _ -> No
-
-
-(* eqSVar mV mV' = B
-   where B iff mV and mV' represent same variable
-*)
-let eqSVar mV1 mV2 = match (mV1, mV2) with
-  | _ -> No
-
-
-
-(* eqPVar mV mV' = B
-   where B iff mV and mV' represent same variable
-*)
-let eqPVar mV1 mV2 = match (mV1, mV2) with
   | _ -> No
 
 (* eqFVar n fV' = B
@@ -592,13 +569,7 @@ let rec index_of cQ n =
   | (I.Dec (cQ', MSV(Impure, _ )), _ ) ->
       index_of cQ' n
 
-  | (I.Dec (cQ', SV(Impure, _ )), _ ) ->
-      index_of cQ' n
-
   | (I.Dec (cQ', MV(Impure, _ )), _ ) ->
-      index_of cQ' n
-
-  | (I.Dec (cQ', PV(Impure, _ )), _ ) ->
       index_of cQ' n
 
   | (I.Dec (cQ', FMV(Impure, _ , _ )), _ ) ->
@@ -633,20 +604,6 @@ let rec index_of cQ n =
         | Yes -> 1
         | No ->  (index_of cQ' n) + 1
         | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMV))
-      end
-
-  | (I.Dec (cQ', SV (Pure, u1)), SV (Pure, u2)) ->
-      begin match eqSVar u1 (SV (Pure, u2)) with
-        | Yes -> 1
-        | No ->  (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantMV))
-      end
-
-  | (I.Dec (cQ', PV (Pure, p1)), PV (Pure, p2)) ->
-      begin match eqPVar p1 (PV (Pure, p2)) with
-        | Yes -> 1
-        | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantPV))
       end
 
   | (I.Dec (cQ', FV (Pure, f1, _)), FV (Pure, f2, tA)) ->
@@ -1358,8 +1315,6 @@ and abstractCtx cQ =  match cQ with
       I.Empty
   | I.Dec (cQ, MV (Impure, _ )) ->
       abstractCtx cQ
-  | I.Dec (cQ, PV (Impure, _ )) ->
-      abstractCtx cQ
 
   | I.Dec (cQ, FV (Impure, _ , _ )) ->
       abstractCtx cQ
@@ -1704,12 +1659,6 @@ and abstractMVarCtx cQ l =  match cQ with
       I.Dec (cQ', FMV (Pure, u, Some mtyp'))
 
   | I.Dec (cQ, MV (Impure, _u)) ->
-      abstractMVarCtx  cQ l
-
-  | I.Dec (cQ, SV (Impure, _u)) ->
-      abstractMVarCtx  cQ l
-
-  | I.Dec (cQ, PV (Impure, _u)) ->
       abstractMVarCtx  cQ l
 
   | I.Dec (cQ, MMV (Impure, _u)) ->

@@ -1126,7 +1126,8 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
       I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (loc, (I.MVar (I.Inst ((_n, _r, _, I.IMTyp(cPsi, _tP), _cnstr, _) as tH), s)), _tS (* Nil *)), _s (* LF.id *)) ->
+  | (I.Root (loc, (I.MVar (I.Inst ((_n, _r, _, I.IMTyp(cPsi, _tP), _cnstr, _) as tH), s)), _tS (* Nil *)), _s)
+  | (I.Root (loc, I.MMVar ((_n,_r,_,I.IMTyp(cPsi,_tP),_cnstr,_) as tH, (_,s)), _tS), _s) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MMV (Pure, tH)) + offset in
         I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)

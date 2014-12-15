@@ -145,6 +145,7 @@ module Int = struct
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.dctx -> LF.head     -> string
+    val mmvarToString     : LF.mm_var -> string
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string
@@ -1712,6 +1713,9 @@ module Int = struct
       let tM = Whnf.norm sM in
         fmt_ppr_lf_normal cD cPsi std_lvl str_formatter tM
         ; flush_str_formatter ()
+    let mmvarToString m =
+      fmt_ppr_lf_mmvar std_lvl str_formatter m
+	; flush_str_formatter ()
 
     let dctxToString cD cPsi =
       fmt_ppr_lf_dctx cD std_lvl str_formatter (Whnf.normDCtx cPsi);

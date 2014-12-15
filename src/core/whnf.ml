@@ -166,6 +166,10 @@ let newMVar n (cPsi, tA) = match n with
   | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], Maybe)
   | Some name -> Inst (name, ref None, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
 
+let newMVar' n (cPsi, tA) = match n with
+  | None -> (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, Empty, IMTyp(cPsi, tA), ref [], Maybe)
+  | Some name -> (name, ref None, Empty, IMTyp(cPsi, tA), ref [], if name.Id.was_generated then Maybe else No)
+
 (* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
  * Invariant:

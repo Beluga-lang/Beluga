@@ -6,7 +6,7 @@
 open Syntax.Int
 
 type varvariant =
-    VariantFV | VariantFCV | VariantMMV | VariantMPV | VariantMSV
+    VariantFV | VariantFCV | VariantMMV
   | VariantMV | VariantFMV | VariantFPV
   | VariantFSV
 

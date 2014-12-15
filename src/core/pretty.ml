@@ -141,6 +141,7 @@ module Int = struct
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
     val mtypToString      : LF.mctx -> LF.ctyp -> string
+    val itypToString      : LF.mctx -> LF.ityp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
@@ -872,6 +873,22 @@ module Int = struct
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
 
+    and fmt_ppr_lf_ityp cD ppf = function
+      | LF.IMTyp (cPsi, tA) ->
+          fprintf ppf "[%a |- %a]"
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 0) tA
+
+      | LF.IPTyp (cPsi, tA) ->
+          fprintf ppf "#[%a |- %a]"
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_typ cD cPsi 0) tA 
+
+      | LF.ISTyp (cPhi, cPsi) ->
+          fprintf ppf "[%a |- %a]"
+            (fmt_ppr_lf_dctx cD 0) cPsi
+            (fmt_ppr_lf_dctx cD 0) cPhi
+
     and fmt_ppr_lf_mtyp cD ppf = function
       | LF.MTyp (tA, cPsi, _) ->
           fprintf ppf "[%a |- %a]"
@@ -887,7 +904,6 @@ module Int = struct
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
-
       | LF.CTyp (schemaName, _) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
@@ -1690,6 +1706,9 @@ module Int = struct
       (* let tA = Whnf.normTyp sA in *)
         fmt_ppr_lf_mtyp cD str_formatter mtyp
         ; flush_str_formatter ()
+    let itypToString cD mtyp =
+      fmt_ppr_lf_ityp cD str_formatter mtyp
+	; flush_str_formatter ()
 
     let typRecToString cD cPsi typrec_clo =
       let typrec = Whnf.normTypRec typrec_clo in

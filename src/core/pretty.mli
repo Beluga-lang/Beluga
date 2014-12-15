@@ -95,6 +95,7 @@ module Int : sig
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
     val mtypToString      : LF.mctx -> LF.ctyp -> string
+    val itypToString      : LF.mctx -> LF.ityp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string

@@ -245,7 +245,7 @@ let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
     Whnf.normTyp sA
   else
     begin try
-      Unify.pruneTyp cD cPsi phat sA (ms, ss) (Unify.MVarRef (ref None))
+      Unify.pruneTyp cD cPsi phat sA (ms, ss) (Unify.MMVarRef (ref None))
     with _ -> raise (Error (locOpt, PruningFailed))
     end
 
@@ -2455,7 +2455,7 @@ let rec checkDCtx loc recT cD psi w = match psi with
 let rec solve_fvarCnstr recT cD cnstr = match cnstr with
   | [] -> ()
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, ({contents = None} as r), cPsi, tP, _, _)) :: cnstrs) ->
+      Int.LF.Inst (_, ({contents = None} as r), _, Int.LF.IMTyp(cPsi, tP), _, _)) :: cnstrs) ->
       begin try
 	begin match FVar.get x with
           | Int.LF.Type tA ->
@@ -2470,7 +2470,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 	      begin
 		try
                   Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id);
-                  r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS));
+                  r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS)));
                   solve_fvarCnstr recT cD cnstrs
 		with
 		  | Unify.Failure msg ->
@@ -2484,7 +2484,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, {contents = Some tR}, cPsi, tP, _ , _)) :: cnstrs) ->
+      Int.LF.Inst (_, {contents = Some (Int.LF.INorm tR)}, _, Int.LF.IMTyp(cPsi, tP), _ , _)) :: cnstrs) ->
       begin try
         begin match FVar.get x with
         | Int.LF.Type tA ->
@@ -2518,20 +2518,20 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 let rec solve_fcvarCnstr cD cnstr = match cnstr with
   | [] -> ()
-  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, cPsi, _, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, _, Int.LF.IMTyp(cPsi, _), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.MTyp (_tP, cPhi, _))) = FCVar.get u in
 	let d = Context.length cD - Context.length cD_d in
 	let cPhi = (if d = 0 then cPhi else
                       Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
         let s'' = elSub loc Pibox cD cPsi s cPhi in
-          r := Some (Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil));
+          r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)));
           solve_fcvarCnstr cD cnstrs
       with Not_found ->
         raise (Error (loc, LeftoverConstraints u))
       end
 
-  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, cPsi, _, _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, _, Int.LF.IMTyp(cPsi, _), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.PTyp (tA, cPhi, _))) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in
@@ -2542,7 +2542,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
 
         (* let tS = elSpine cPsi spine (tA, LF.id) (tP,s) in *)
         let (tS, _ ) = elSpine loc Pibox cD cPsi spine (tA, s'') in
-          r := Some (Int.LF.Root (loc, Int.LF.FPVar (x,s''), tS));
+          r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FPVar (x,s''), tS)));
           solve_fcvarCnstr cD cnstrs
       with Not_found ->
         raise (Error (loc, LeftoverConstraints x))

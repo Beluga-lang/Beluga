@@ -163,8 +163,8 @@ let newCVar n (sW) = match n with
 
 
 let newMVar n (cPsi, tA) = match n with
-  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cPsi, tA, ref [], Maybe)
-  | Some name -> Inst (name, ref None, cPsi, tA, ref [], if name.Id.was_generated then Maybe else No)
+  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, Empty, IMTyp(cPsi, tA), ref [], Maybe)
+  | Some name -> Inst (name, ref None, Empty, IMTyp(cPsi, tA), ref [], if name.Id.was_generated then Maybe else No)
 
 let newMVar' n (cPsi, tA) = match n with
   | None -> (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, Empty, IMTyp(cPsi, tA), ref [], Maybe)
@@ -219,9 +219,9 @@ let rec lowerMVar' cPsi sA' = match sA' with
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA = match (u, sA) with
-  | (Inst (_n, r, cPsi, _, _, _), (PiTyp _, _)) ->
+  | (Inst (_n, r, _, IMTyp(cPsi, _), _, _), (PiTyp _, _)) ->
       let (u', tM) = lowerMVar' cPsi sA in
-        r := Some tM; (* [| tM / u |] *)
+        r := Some (INorm tM); (* [| tM / u |] *)
         u'            (* this is the new lowered meta-variable of atomic type *)
 
   | (_, (TClo (tA, s), s')) ->
@@ -249,7 +249,7 @@ and lowerMVar1 u sA = match (u, sA) with
  *   -- Tue Dec 16 00:19:06 EST 2008
  *)
 and lowerMVar = function
-  | Inst (_n, _r, _cPsi, tA, { contents = [] }, mdep) as u ->
+  | Inst (_n, _r, _, IMTyp(_cPsi, tA), { contents = [] }, mdep) as u ->
       lowerMVar1 u (tA, LF.id)
 
   | _ ->
@@ -455,9 +455,9 @@ and normHead (h, sigma) = match h with
       | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
     end 
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
-  | MVar (Inst (n,({contents=None} as r),cPsi,tA,cnstr,dep), s) ->
-    Head (MVar (Inst (n,r,cPsi,normTyp(tA,LF.id),cnstr,dep), normSub' (s,sigma)))
-  | MVar (Inst (_,{contents=Some tM},_,_,_,_), s) ->
+  | MVar (Inst (n,({contents=None} as r),cD,IMTyp(cPsi,tA),cnstr,dep), s) ->
+    Head (MVar (Inst (n,r,cD,IMTyp(cPsi,normTyp(tA,LF.id)),cnstr,dep), normSub' (s,sigma)))
+  | MVar (Inst (_,{contents=Some (INorm tM)},_,_,_,_), s) ->
     Obj (norm (norm(tM,s),sigma))
 
 and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
@@ -551,7 +551,7 @@ and normFt ft = match ft with
   | Head (MMVar ((_n, { contents = Some (INorm tN)}, _, IMTyp(_, _), _, _), (t, s'))) ->
      Obj (norm (cnorm (tN, t), s'))
   | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
-  | Head (MVar (Inst (_, { contents = Some tM}, _, _, _, _), s)) ->
+  | Head (MVar (Inst (_, { contents = Some (INorm tM)}, _, _, _, _), s)) ->
       Obj(norm (tM, s))
   | Head (MVar (u, s'))           -> Head (MVar (u, normSub s'))
   | Head (FMVar (u, s'))          -> Head (FMVar (u, normSub s'))
@@ -795,7 +795,7 @@ and cnorm (tM, t) = match tM with
 
           | FMVar (u, r) -> Root (loc, FMVar (u, cnormSub (r,t)),  cnormSpine (tS, t))
 
-          | MVar (Inst (_n, {contents = Some tM}, _cPsi, _tA, _cnstr, _), r) ->
+          | MVar (Inst (_n, {contents = Some (INorm tM)}, _cPsi, _tA, _cnstr, _), r) ->
               (* We could normalize [r]tM *)
               let tM' = norm (tM, r) in
                 cnorm (tM', t)
@@ -1408,7 +1408,7 @@ and whnf sM = match sM with
   | (Root (loc, FMVar (u, r), tS), sigma) ->
       (Root (loc, FMVar (u, LF.comp (normSub r) sigma), SClo (tS, sigma)), LF.id)
 
-  | (Root (_, MVar (Inst (_, {contents = Some tM}, _cPsi, _tA, _, _), r), tS), sigma) ->
+  | (Root (_, MVar (Inst (_, {contents = Some (INorm tM)}, _cPsi, _tA, _, _), r), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
       let r' = normSub r in
       let tM' = begin match r' with
@@ -1419,7 +1419,7 @@ and whnf sM = match sM with
       let sR =  whnfRedex ((tM',  sigma), (tS, sigma)) in
         sR
 
-  | (Root (loc, MVar (Inst (n, ({contents = None} as uref), cPsi, tA, cnstr, mdep) as u, r), tS) as tM, sigma) ->
+  | (Root (loc, MVar (Inst (n, ({contents = None} as uref), _cD, IMTyp(cPsi, tA), cnstr, mdep) as u, r), tS) as tM, sigma) ->
       (* note: we could split this case based on tA;
        *      this would avoid possibly building closures with id
        *)
@@ -1427,7 +1427,7 @@ and whnf sM = match sM with
       begin match whnfTyp (tA, LF.id) with
         | (Atom (loc', a, tS'), _s (* id *)) ->
             (* meta-variable is of atomic type; tS = Nil  *)
-            let u' = Inst (n, uref, cPsi, Atom (loc', a, tS'), cnstr, mdep) in
+            let u' = Inst (n, uref, _cD, IMTyp(cPsi, Atom (loc', a, tS')), cnstr, mdep) in
               (Root (loc, MVar (u', LF.comp r' sigma), SClo (tS, sigma)), LF.id)
         | (PiTyp _, _s)->
             (* Meta-variable is not atomic and tA = Pi x:B1.B2:

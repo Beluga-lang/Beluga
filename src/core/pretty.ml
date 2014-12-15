@@ -173,7 +173,7 @@ module Int = struct
   module Make : functor (R : Store.Cid.RENDERER) -> PRINTER = functor (R : Store.Cid.RENDERER) -> struct
 
     module InstHashedType = struct
-      type t    = LF.normal option ref
+      type t    = LF.iterm option ref
       let equal = (==)
       let hash  = Hashtbl.hash
     end
@@ -655,7 +655,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n -> fmt_ppr_lf_offset cD _lvl ppf n
 
-      | LF.Inst (_, ({ contents = None } as u), _, tA, _, _) ->
+      | LF.Inst (_, ({ contents = None } as u), _, LF.IMTyp(_, tA), _, _) ->
           begin
             try
               fprintf ppf "?%s"

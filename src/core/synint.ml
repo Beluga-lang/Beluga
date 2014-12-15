@@ -102,7 +102,7 @@ module LF = struct
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
+    | Inst   of name * iterm option ref * mctx * ityp * cnstr list ref * depend
        (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var = name * iterm option ref * mctx * ityp * cnstr list ref * depend

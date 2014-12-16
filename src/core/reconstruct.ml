@@ -1076,19 +1076,13 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       in Int.Comp.Cofun (loc, bs')
 
   (* Allow uniform abstractions for all meta-objects *)
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.MTyp(_,_),Int.LF.No)) as cdec, tau), theta))
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.PTyp(_,_),Int.LF.No)) as cdec, tau), theta))
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.STyp(_,_),Int.LF.No)) as cdec, tau), theta))
-  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.CTyp(_),Int.LF.No)) as cdec, tau), theta)) ->
+  | (Apx.Comp.MLam (loc, u, e) , (Int.Comp.TypPiBox((Int.LF.Decl(_,_,Int.LF.No)) as cdec, tau), theta)) ->
       let cD' = extend_mctx cD (u, cdec, theta) in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
         Int.Comp.MLam (loc, u, e')
 
-  | (e, (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.MTyp(_,_),Int.LF.Maybe)) as cdec, tau), theta))  
-  | (e, (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.PTyp(_,_),Int.LF.Maybe)) as cdec, tau), theta))  
-  | (e, (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.STyp(_,_),Int.LF.Maybe)) as cdec, tau), theta))  
-  | (e, (Int.Comp.TypPiBox((Int.LF.Decl(_,Int.LF.CTyp(_),Int.LF.Maybe)) as cdec, tau), theta))  ->
+  | (e, (Int.Comp.TypPiBox((Int.LF.Decl(_,_,Int.LF.Maybe)) as cdec, tau), theta))  ->
       let u = mk_name_cdec cdec in
       let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
       let cD' = extend_mctx cD (u, cdec, theta) in

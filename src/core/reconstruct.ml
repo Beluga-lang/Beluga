@@ -1748,67 +1748,19 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (cG', pat) = elPatChk cD cG pat' (tau1, theta) in
              let (cG'', pat_spine, ttau2) = elPatSpine cD cG' pat_spine' (tau2, theta) in
                (cG'', Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-
-         | (Int.Comp.TypPiBox ((Int.LF.Decl (n, Int.LF.MTyp (tA, cPsi), Int.LF.Maybe)), tau), theta) ->
-             let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
+	 | (Int.Comp.TypPiBox ((Int.LF.Decl (n, ctyp, Int.LF.Maybe)), tau), theta) ->
+	     let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
                       dprint (fun () -> "       " ^ P.compTypToString cD (Whnf.cnormCTyp ttau))) in
-             let cPsi' = Whnf.normDCtx (C.cnormDCtx (cPsi, theta)) in
-             let _ = dprint (fun () -> "cnormDCtx done .... cPsi' = " ^
-                               P.dctxToString cD cPsi') in
-             let tA'   = Whnf.normTyp (C.cnormTyp (tA, theta), LF.id) in
-             let _ = dprint (fun () -> "cnormTyp done ... tA' = " ^
-                               P.typToString cD cPsi' (tA', LF.id)) in
-             let psihat  = Context.dctxToHat cPsi' in
-             let _ = dprint (fun () -> "call etaExpandMMV ... ") in
-             (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-             let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
-                         else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
-             let _ = dprint (fun () -> "...generated MMVar " ^ P.normalToString cD cPsi' (tM', LF.id)) in
-             let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaObj (loc, psihat, tM')) in
-             let ttau' = (tau, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta))
+	     let (mO,mF) = genMetaVar loc cD (loc, n, ctyp, theta) in
+             let pat'  = Int.Comp.PatMetaObj (loc, mO) in
+             let ttau' = (tau, Int.LF.MDot (mF, theta))
              in
              let _ = (dprint (fun() -> "[elPatSpine] elaborate spine against " );
-                      dprint (fun () -> "theta = " ^ P.msubToString cD (Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)));
+                      dprint (fun () -> "theta = " ^ P.msubToString cD (Int.LF.MDot (mF, theta)));
                       dprint (fun () -> "ttau'   " ^ P.compTypToString cD (Whnf.cnormCTyp ttau'))) in
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-
-           | (Int.Comp.TypPiBox ((Int.LF.Decl (n, Int.LF.PTyp (tA, cPsi), Int.LF.Maybe)), tau), theta) ->
-             let _ = dprint (fun () -> "[elPatSpine] TypPiBox #p implicit ttau = " ^
-                               P.compTypToString cD (Whnf.cnormCTyp ttau)) in
-             let cPsi' = C.cnormDCtx (cPsi, theta) in
-             let tA'   = C.cnormTyp (tA, theta) in
-             let psihat  = Context.dctxToHat cPsi' in
-
-             let p   =  Int.LF.MPVar(Whnf.newMPVar (Some n) (cD, cPsi', tA') , (Whnf.m_id, LF.id)) in (*?*)
-             let _   = dprint (fun () -> "[elPatSpine] new MPVar #p = " ^ P.headToString cD cPsi' p ^ "\n") in
-              let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaParam (loc, psihat, p)) in
-             let ttau' = (tau, Int.LF.MDot (Int.LF.PObj (psihat, p), theta)) in
-             let _ = (dprint (fun () -> "theta = " ^ P.msubToString cD (Int.LF.MDot (Int.LF.PObj (psihat, p), theta)));
-                      dprint (fun () -> "ttau'   " ^ P.compTypToString cD (Whnf.cnormCTyp ttau'))) in
-             let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
-               (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-
-           | (Int.Comp.TypPiBox ((Int.LF.Decl(n, Int.LF.STyp (cPhi, cPsi), Int.LF.Maybe)), tau), theta) ->
-               let cPsi' = C.cnormDCtx (cPsi, theta) in
-               let psihat  = Context.dctxToHat cPsi' in
-               let cPhi' = C.cnormDCtx (cPhi, theta) in
-               let s     =  Whnf.newMSVar (Some n) (cD, cPsi', cPhi') in
-               let sigma = Int.LF.MSVar (s, 0, (Whnf.m_id, LF.id)) in
-               let ttau'  = (tau, Int.LF.MDot (Int.LF.SObj (psihat, sigma), theta)) in
-               let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaSObj (loc, psihat, sigma)) in
-               let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
-                 (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-
-          | (Int.Comp.TypPiBox ((Int.LF.Decl(n, Int.LF.CTyp w, Int.LF.Maybe)), tau), theta) ->
-             let _ = dprint (fun () -> "[elPatSpine] TypPiBox CDecl implicit ttau = " ^
-                               P.compTypToString cD (Whnf.cnormCTyp ttau)) in
-               let cPsi  = Int.LF.CtxVar (Int.LF.CInst (n, ref None, w, cD, Whnf.m_id)) in
-               let ttau' = (tau, Int.LF.MDot (Int.LF.CObj (cPsi), theta)) in
-               let pat'  = Int.Comp.PatMetaObj (loc, Int.Comp.MetaCtx (loc, cPsi)) in
-               let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
-                 (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-
+	     
           | (Int.Comp.TypPiBox (cdecl, tau), theta) ->  
              let _ = dprint (fun () -> "[elPatSpine] TypPiBox explicit ttau = " ^
                                P.compTypToString cD (Whnf.cnormCTyp ttau)) in

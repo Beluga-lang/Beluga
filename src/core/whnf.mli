@@ -102,6 +102,7 @@ val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
+val cnormCDecl : ctyp_decl * msub -> ctyp_decl
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 

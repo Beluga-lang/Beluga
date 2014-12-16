@@ -178,15 +178,8 @@ let rec get_ctxvar cPsi  = match cPsi with
       cD, x:[t]U  mctx
 
  *)
-let extend_mctx cD (x, cdecl, t) = match cdecl with
-  | Int.LF.Decl(_psi, Int.LF.CTyp (schema,dep) ) ->
-        Int.LF.Dec(cD, Int.LF.Decl(x, Int.LF.CTyp (schema, dep)))
-  | Int.LF.Decl(_u, Int.LF.MTyp (tA, cPsi, dep)) ->
-      Int.LF.Dec(cD, Int.LF.Decl(x, Int.LF.MTyp (C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), dep)))
-  | Int.LF.Decl(_u, Int.LF.PTyp (tA, cPsi, dep)) ->
-      Int.LF.Dec(cD, Int.LF.Decl(x, Int.LF.PTyp (C.cnormTyp (tA, t), C.cnormDCtx (cPsi, t), dep)))
-  | Int.LF.Decl (_s, Int.LF.STyp (cPhi, cPsi, dep)) ->
-      Int.LF.Dec(cD, Int.LF.Decl(x, Int.LF.STyp (C.cnormDCtx (cPhi, t), C.cnormDCtx (cPsi, t), dep)))
+let extend_mctx cD (x, cdecl, t) = 
+ Int.LF.Dec(cD, Whnf.cnormCDecl (cdecl, t))
 
 
 (* TODO: Cleanup? *)
@@ -983,37 +976,28 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in
         Int.Comp.TypArr (tau1', tau2')
 
-  | Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.MTyp ((Int.LF.Atom (_, a, _ ) as tP), cPsi, dep))), tau) ->
-      let cPsi' = mgCtx cD' (cD_s, cPsi) in
-      let tP'   = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
-      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, Int.LF.MTyp (tP', cPsi', dep))))
-                               (Int.LF.Dec (cD_s, Int.LF.Decl(x, Int.LF.MTyp (tP, cPsi, dep))), tau) in
-        Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.MTyp (tP', cPsi', dep))), tau')
-
-  | Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.PTyp (tA, cPsi, dep))), tau) ->
-      let cPsi' = mgCtx cD' (cD_s, cPsi) in
-      let tA'   = mgTyp cD' cPsi' tA in (* TODO: SHould this be PTyp?! *)
-      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, Int.LF.MTyp (tA', cPsi', dep))))
-                               (Int.LF.Dec (cD_s, Int.LF.Decl(x, Int.LF.MTyp (tA, cPsi, dep))), tau) in
-        Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.PTyp (tA', cPsi', dep))), tau')
-
-
-  | Int.Comp.TypPiBox((Int.LF.Decl(name, Int.LF.CTyp (sW, dep))), tau) ->
-      let tau' = inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl (name, Int.LF.CTyp (sW, dep))))
-                              (Int.LF.Dec (cD_s, Int.LF.Decl (name, Int.LF.CTyp (sW, dep))),  tau) in
-        Int.Comp.TypPiBox((Int.LF.Decl(name, Int.LF.CTyp (sW, dep))), tau')
-
-  | Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.STyp (cPhi, cPsi, dep))), tau) ->
-      let cPsi' = mgCtx cD' (cD_s, cPsi) in
-      let cPhi' = mgCtx cD' (cD_s, cPhi) in
-      let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, Int.LF.STyp (cPhi', cPsi', dep))))
-                               (Int.LF.Dec (cD_s, Int.LF.Decl(x, Int.LF.STyp (cPhi, cPsi, dep))), tau) in
-        Int.Comp.TypPiBox ((Int.LF.Decl (x, Int.LF.STyp (cPhi', cPsi', dep))), tau')
+  | Int.Comp.TypPiBox ((Int.LF.Decl (x, mtyp)), tau) ->
+    let mtyp' = mgCTyp cD' cD_s mtyp in
+    let tau'  = inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, mtyp')))
+                             (Int.LF.Dec (cD_s, Int.LF.Decl(x, mtyp)), tau) in
+    Int.Comp.TypPiBox (Int.LF.Decl (x, mtyp'), tau')
 
   | Int.Comp.TypBox (loc, Int.Comp.MetaTyp ((Int.LF.Atom(_, a, _) as _tP) , cPsi))  ->
       let cPsi' = mgCtx cD' (cD_s, cPsi) in
       let tP' = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
         Int.Comp.TypBox (loc, Int.Comp.MetaTyp (tP', cPsi'))
+
+and mgCTyp cD' cD_s = function
+  | Int.LF.MTyp (tA, cPsi, dep) ->
+    let cPsi' = mgCtx cD' (cD_s, cPsi) in
+    Int.LF.MTyp (mgTyp cD' cPsi' tA, cPsi', dep)
+  | Int.LF.PTyp (tA, cPsi, dep) ->
+    let cPsi' = mgCtx cD' (cD_s, cPsi) in
+    Int.LF.PTyp (mgTyp cD' cPsi' tA, cPsi', dep)
+  | Int.LF.STyp (cPhi, cPsi, dep) ->
+    let cPsi' = mgCtx cD' (cD_s, cPsi) in
+    Int.LF.STyp (mgCtx cD' (cD_s, cPhi), cPsi', dep)
+  | Int.LF.CTyp (sW, dep) -> Int.LF.CTyp (sW, dep)
 
 
 let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_s, Whnf.m_id))

@@ -936,50 +936,29 @@ match sigma with
         D'' |- [ms]mt <= cD'
    *)
   and invMSub cD0 (mt, cD1) ms  rOccur = match (mt, cD1) with
-    | (MShift n, Dec(_cD', _dec)) ->
-        invMSub cD0 (MDot (MV (n + 1), MShift (n + 1)), cD1) ms rOccur
-
-    | (MShift  n, Empty) -> Whnf.mcomp (MShift  n) ms
-
-    | (MDot (MV n, mt'), Dec(cD', _dec)) ->
-        begin match applyMSub n ms with
-          | MUndef ->
-              let msi = invMSub cD0 (mt', cD') ms rOccur in
-                MDot(MUndef, msi)
-                (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
-          | ft    -> MDot (ft, invMSub cD0 (mt', cD') ms rOccur)
-        end
-
-    | (MDot (MObj (phat, tM), mt'), Dec(cD', Decl _))        ->
-        (* below may raise NotInvertible *)
-        let tM' = invNorm cD0 (phat, (tM, id), (ms, id), rOccur) in
-          MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
-
-    | (MDot (CObj cPsi, mt'), Dec(cD', Decl _))        ->
-        raise (Error.Violation "Not Implemented")
-(*        (* below may raise NotInvertible *)
-        let tM' = invDCtx cD0  cPsi (ms, id) rOccur in
-          MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
-*)
-    | (MDot (PObj (phat, h), mt'), Dec(cD', Decl _))        ->
-        (* below may raise NotInvertible *)
-        let h' = invHead cD0 (phat, h, (ms, id), rOccur) in
-          MDot (PObj (phat, h'), invMSub cD0 (mt', cD') ms rOccur)
-
+    | (MShift  n, _) -> checkDefined (Whnf.mcomp (MShift  n) ms)
     | (MDot (SObj (phat, sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi, _))))   ->
-        (* Below may raise NotInvertible *)
-        let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
-          MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
+      let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
+      MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
+    | (MDot (mobj, mt'), Dec(cD',_)) ->
+      MDot(invMObj cD0 mobj ms rOccur, invMSub cD0 (mt', cD') ms rOccur)
 
+  and invMObj cD0 mobj ms rOccur = match mobj with
+    | MV n ->
+      begin match applyMSub n ms with
+	| MUndef -> raise NotInvertible
+	| ft -> ft
+      end 
+    | MObj (phat, tM) -> MObj (phat, invNorm cD0 (phat, (tM, id), (ms, id), rOccur))
+    | CObj cPsi -> raise (Error.Violation "Not implemented")
+    | PObj (phat, h) -> PObj (phat, invHead cD0 (phat, h, (ms, id), rOccur))
+   (* | SObj (phat, sigma) -> SObj (phat, invSub cD0 phat (sigma, *)
 
-(*  and invDCtx cD cPsi ms rOccur = match cPsi with
-    | Null -> Null
-    | DDec (cPsi, dec) ->
-        let cPsi' = invDCtx cD cPsi ms rOccur in
-        let dec'  = invDec  cD dec ms rOccur in
-          DDec (cPsi', dec')
-    | CtxVar
-*)
+  and checkDefined = function
+    | MShift n -> MShift n
+    | MDot (MUndef, _) -> raise NotInvertible
+    | MDot (m,mt) -> MDot(m,checkDefined mt)
+
   (* prune cD0 cPsi'' (phat, (tM, s), ss, rOccur) = tM'
 
      Given: cD ; cPsi  |- s <= cPsi'  and

@@ -376,10 +376,11 @@ and normHead (h, sigma) = match h with
       | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
     end 
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
-  | MVar (Inst (n,({contents=None} as r),cD,IMTyp(cPsi,tA),cnstr,dep), s) ->
-    Head (MVar (Inst (n,r,cD,IMTyp(cPsi,normTyp(tA,LF.id)),cnstr,dep), normSub' (s,sigma)))
-  | MVar (Inst (_,{contents=Some (INorm tM)},_,_,_,_), s) ->
-    Obj (norm (norm(tM,s),sigma))
+  | MVar (Inst mm, s) ->
+    begin match normMMVar (mm,MShift 0) with
+      | ResMM (mm',_) -> Head (MVar (Inst mm', normSub' (s,sigma)))
+      | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
+    end 
 
 and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
   | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), t)

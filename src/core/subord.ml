@@ -240,7 +240,7 @@ let thin0 cD a cPsi =
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
           | CInst ( _, _ , cid_schema, _, _ ) -> cid_schema
           | CtxName psi ->
-              let (_,Decl (_, CTyp (s_cid, _)))  = Store.FCVar.get psi in s_cid
+              let (_,Decl (_, CTyp s_cid, _))  = Store.FCVar.get psi in s_cid
         end
         in
         if relevantSchema (Schema.get_schema schema) basis then
@@ -272,7 +272,7 @@ let thin' cD a cPsi =
   begin match Context.ctxVar cPsi with
   | Some (CtxName psi) ->
       begin try
-        let (_,Decl (_, CTyp (_, _)))  = Store.FCVar.get psi in
+        let (_,Decl (_, CTyp _, _))  = Store.FCVar.get psi in
           thin0 cD a cPsi
       with
           Not_found -> (Shift 0, cPsi)

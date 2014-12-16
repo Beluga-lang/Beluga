@@ -486,7 +486,7 @@ match sigma with
       instantiateMSVar (r, EmptySub, !cnstrs);
       EmptySub      
     | FSVar (s_name , ( _ ), _s2 ) ->
-      let (_, Decl (_, STyp (cPsi1,  _cPhi, _))) = Store.FCVar.get s_name in
+      let (_, Decl (_, STyp (cPsi1,  _cPhi), _)) = Store.FCVar.get s_name in
       begin match cPsi1  with
         | Null -> EmptySub
         | _     -> sigma
@@ -499,7 +499,7 @@ match sigma with
    | (MShift k, Dec (_, _)) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
-   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp))) ->
+   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp,dep))) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
          (* cD1 |- mt' <= cD2 *)
          begin match applyMSub k ms with
@@ -511,7 +511,7 @@ match sigma with
                (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
                   A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
                let mtt'  = Whnf.m_invert (Whnf.cnormMSub mt') in
-               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt')))))
+               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt'), dep))))
          end
 
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
@@ -617,14 +617,14 @@ match sigma with
      and  mt' patsub   s.t.  [mt1]mt'  = [mt2]mt'
   *)
   let rec m_intersection  subst1 subst2 cD' = begin match (subst1, subst2, cD') with
-    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp))) ->
+    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp,dep))) ->
         let (mt', cD'') = m_intersection  mt1 mt2 cD' in
           (* cD' |- mt' : cD'' where cD'' =< cD' *)
           if k1 = k2 then
             let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
               (* cD'' |- mtt' <= cD' *)
               (* NOTE: Can't create m-closures CtxMClo(cPsi, mtt') and TMClo(tA'', mtt') *)
-              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, (Whnf.cnormMTyp (ctyp, mtt')))))
+              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, Whnf.cnormMTyp (ctyp, mtt'), dep)))
 
           else  (* k1 =/= k2 *)
             (Whnf.mcomp mt' (MShift 1), cD'')
@@ -725,7 +725,7 @@ match sigma with
           end
 
     | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl(_, (MTyp (_tA, cPsi1, _)))) = Store.FCVar.get u in
+        let (cD_d, Decl(_, MTyp (_tA, cPsi1), _)) = Store.FCVar.get u in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	   Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -733,7 +733,7 @@ match sigma with
           Root (loc, FMVar (u, s'), Nil)
 
     | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+        let (cD_d, Decl (_, PTyp (_tA, cPsi1), _)) = Store.FCVar.get p in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	  Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -914,7 +914,7 @@ match sigma with
           end
     | (FSVar (s_name, n , t), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
-        let (_, Decl (_, (STyp (_cPhi,  cPsi', _)))) = Store.FCVar.get s_name in
+        let (_, Decl (_, (STyp (_cPhi,  cPsi')), _)) = Store.FCVar.get s_name in
         FSVar (s_name, n, invSub cD0 phat (t, cPsi') ss rOccur))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
@@ -937,7 +937,7 @@ match sigma with
    *)
   and invMSub cD0 (mt, cD1) ms  rOccur = match (mt, cD1) with
     | (MShift  n, _) -> checkDefined (Whnf.mcomp (MShift  n) ms)
-    | (MDot (SObj (phat, sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi, _))))   ->
+    | (MDot (SObj (phat, sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi), _)))   ->
       let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
       MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
     | (MDot (mobj, mt'), Dec(cD',_)) ->
@@ -1285,7 +1285,7 @@ match sigma with
                 end
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, MTyp (_tA, cPsi1, _))) = Store.FCVar.get u in
+                let (cD_d, Decl (_, MTyp (_tA, cPsi1), _)) = Store.FCVar.get u in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1295,7 +1295,7 @@ match sigma with
                   returnNeutral (FMVar (u, s'))
 
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+                let (cD_d, Decl (_, PTyp (_tA, cPsi1),_)) = Store.FCVar.get p in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1427,7 +1427,7 @@ match sigma with
 
             | Proj (FPVar(p,t), i)   (* tS = Nil,   s = id *) ->
                 begin try
-                  let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+                  let (cD_d, Decl (_, PTyp (_tA, cPsi1),_)) = Store.FCVar.get p in
                   let d = Context.length cD0 - Context.length cD_d in
 	          let cPsi1 = if d = 0 then cPsi1 else
 	                        Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1527,7 +1527,7 @@ match sigma with
 
     | (FSVar (s_name, n , sigma), cPsi1) ->
       let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
-      let (_, Decl (_, STyp (_cPhi,  cPsi', _))) = Store.FCVar.get s_name in
+      let (_, Decl (_, STyp (_cPhi,  cPsi'),_)) = Store.FCVar.get s_name in
         FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
     | (MSVar (((_ ,( {contents=None} as r), _cD, ISTyp(cPhi1, cPhi2), _cnstrs, _) as rho),
@@ -1658,7 +1658,7 @@ match sigma with
         *)
       let s' , cPsi1' = (id, cPsi1) in
 
-        let (_, Decl (_, STyp (_cPhi,  cPsi', _))) = Store.FCVar.get s in
+        let (_, Decl (_, STyp (_cPhi,  cPsi'),_)) = Store.FCVar.get s in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
         (s', cPsi1')
 
@@ -2914,7 +2914,7 @@ match sigma with
 
    (* **************************************************************** *)
   let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = 
-    let Decl (_u, cT) = cdecl in
+    let Decl (_u, cT,_) = cdecl in
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
   and unifyMObj cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
@@ -2922,13 +2922,13 @@ match sigma with
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
     | (Comp.MetaParam (_, phat, h) , t) , (Comp.MetaParam (_, phat', h') , t') ->
-        let PTyp (_tA, cPsi,_) = cT in
+        let PTyp (_tA, cPsi) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           unifyHead Unification cD cPsi
             (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
 
     | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
-        let MTyp (_tA, cPsi, _) = cT in
+        let MTyp (_tA, cPsi) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
 (*        let cPsi  = Context.hatToDCtx phat in
         let cPsi' = Context.hatToDCtx phat' in
@@ -2959,7 +2959,7 @@ match sigma with
            (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
 
     | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
-        let STyp (_cPhi, cPsi, _) = cT in
+        let STyp (_cPhi, cPsi) = cT in
         let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
         let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
         let _ = dprint (fun () -> "      cPsi = " ^ P.dctxToString cD cPsi1) in
@@ -2997,16 +2997,16 @@ match sigma with
 
  
   let unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
-	  | MTyp (tA1, cPsi1, _) , MTyp (tA2, cPsi2, _) ->
+	  | MTyp (tA1, cPsi1) , MTyp (tA2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | PTyp (tA1, cPsi1, _) , PTyp (tA2, cPsi2, _) ->
+	  | PTyp (tA1, cPsi1) , PTyp (tA2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | STyp (cPhi1, cPsi1, _) , STyp (cPhi2, cPsi2, _) ->
+	  | STyp (cPhi1, cPsi1) , STyp (cPhi2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyDCtx1 Unification cD cPhi1 cPhi2
-	  | CTyp (schema1, _) , CTyp (schema2 , _) ->
+	  | CTyp (schema1) , CTyp (schema2) ->
 	    if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
 	  | _ , _ -> raise (Failure "Computation-level Type Clash")
 
@@ -3058,22 +3058,22 @@ match sigma with
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
-      | ((Comp.TypPiBox ( (Decl(psi, CTyp (schema , dep))), tau), t) ,
-         (Comp.TypPiBox ( (Decl(_,   CTyp (schema', dep'))), tau'), t')) ->
+      | ((Comp.TypPiBox ( (Decl(psi, CTyp schema, dep)), tau), t) ,
+         (Comp.TypPiBox ( (Decl(_,   CTyp schema', dep')), tau'), t')) ->
           if schema = schema' && dep = dep' then
             unifyCompTyp
-              (Dec(cD, Decl (psi, CTyp (schema, dep)))) (* TODO: Clean this up, merge with case below.
+              (Dec(cD, Decl (psi, CTyp schema, dep))) (* TODO: Clean this up, merge with case below.
 						      Add dep to all Decls? *)
               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
           else
             raise (Failure "CtxPi schema clash")
 
-      | ((Comp.TypPiBox ((Decl(u, ctyp1)), tau), t),
-         (Comp.TypPiBox ((Decl(_, ctyp2)), tau'), t')) ->
+      | ((Comp.TypPiBox ((Decl(u, ctyp1,dep)), tau), t),
+         (Comp.TypPiBox ((Decl(_, ctyp2,_)), tau'), t')) ->
 	let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
 	let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
 	(unifyCLFTyp Unification cD ctyp1n ctyp2n;
-	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
+	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n,dep))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
       | _ -> raise (Failure "Computation-level Type Clash")
@@ -3318,10 +3318,10 @@ let unify_phat psihat phihat =
       unifyTyp' Matching cD0 cPsi sA sB
 
       let metaTypToCDecl mT = match mT with
-	| Comp.MetaTyp (tP, cPsi) -> LF.MTyp (tP, cPsi, LF.Maybe)
-	| Comp.MetaParamTyp (tP, cPsi) -> LF.PTyp (tP, cPsi, LF.Maybe)
-	| Comp.MetaSubTyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi, LF.Maybe)
-	| Comp.MetaSchema w -> LF.CTyp (w, LF.Maybe)
+	| Comp.MetaTyp (tP, cPsi) -> LF.MTyp (tP, cPsi)
+	| Comp.MetaParamTyp (tP, cPsi) -> LF.PTyp (tP, cPsi)
+	| Comp.MetaSubTyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi)
+	| Comp.MetaSchema w -> LF.CTyp w
 
     let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) = 
       unifyMObj cD (cM, ms) (cM', ms) (metaTypToCDecl mT, mt)

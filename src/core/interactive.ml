@@ -35,15 +35,15 @@ let rec insertIMSub i mfront ms = match (i, ms) with
 let nameString n = n.Id.string_of_name
 
 let nameOfLFcTypDecl = (function
-| LF.Decl(n, _) -> n
+| LF.Decl(n, _, _) -> n
 | LF.DeclOpt n -> n)
 
 let cvarOfLFcTypDecl td =
  match td with
-| LF.Decl(n, LF.MTyp _) -> Store.CVar.MV n
-| LF.Decl(n, LF.PTyp _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
-| LF.Decl(n, LF.STyp _) -> Store.CVar.SV n
-| LF.Decl(n, LF.CTyp _) -> Store.CVar.CV n
+| LF.Decl(n, LF.MTyp _, _) -> Store.CVar.MV n
+| LF.Decl(n, LF.PTyp _, _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
+| LF.Decl(n, LF.STyp _, _) -> Store.CVar.SV n
+| LF.Decl(n, LF.CTyp _, _) -> Store.CVar.CV n
 | LF.DeclOpt(n) -> Store.CVar.MV n
 
 let nameOfCompcTypDecl = function
@@ -290,16 +290,11 @@ let replaceHole i exp =
 
 (* intro: int -> Comp.exp_chk option *)
 let is_inferred = function 
-| LF.Decl(_, ctyp) -> begin match ctyp with
-  | LF.MTyp (_, _, dep)
-  | LF.PTyp (_, _, dep)
-  | LF.STyp (_, _, dep)
-  | LF.CTyp (_, dep) ->
+| LF.Decl(_, ctyp, dep) -> 
     begin match dep with
       | LF.No -> false
       | LF.Maybe -> true
     end
-  end 
 | _ -> false
 
 let  intro i =
@@ -377,14 +372,14 @@ let rec searchMctx i = function
   | LF.Empty ->
       None
   | LF.Dec (cD', ctypDecl) ->
-      let LF.Decl(n, ctyp) = ctypDecl in
+      let LF.Decl(n, ctyp,_) = ctypDecl in
      (match ctyp with
-      | LF.CTyp(_, _) ->
+      | LF.CTyp(_) ->
           (if (nameString n) = e then
             failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
           else
               searchMctx (i+1) cD' )
-      | LF.MTyp (tA,cPsi, _) ->
+      | LF.MTyp (tA,cPsi) ->
           (if (nameString n) = e then
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
@@ -398,7 +393,7 @@ let rec searchMctx i = function
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
-      | LF.PTyp (tA,cPsi, _ ) ->
+      | LF.PTyp (tA,cPsi) ->
           (if (nameString n) = e then
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in

@@ -640,8 +640,8 @@ module Int = struct
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
     and typOfMCtx cD n = match (cD, n) with
-      | (LF.Dec (_cD, LF.Decl(_, LF.MTyp(tA, _, _))), 1)
-      | (LF.Dec (_cD, LF.Decl(_, LF.PTyp(tA, _, _))), 1) -> Some tA
+      | (LF.Dec (_cD, LF.Decl(_, LF.MTyp(tA, _), _)), 1)
+      | (LF.Dec (_cD, LF.Decl(_, LF.PTyp(tA, _), _)), 1) -> Some tA
       | (LF.Dec (_cD, LF.DeclOpt u), 1) -> None
       | (LF.Dec (cD, _ ) , k) -> typOfMCtx cD (k-1)
       | _ -> None
@@ -890,64 +890,54 @@ module Int = struct
             (fmt_ppr_lf_dctx cD 0) cPhi
 
     and fmt_ppr_lf_mtyp cD ppf = function
-      | LF.MTyp (tA, cPsi, _) ->
+      | LF.MTyp (tA, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
-      | LF.PTyp (tA, cPsi, _) ->
+      | LF.PTyp (tA, cPsi) ->
           fprintf ppf "#[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 0) tA 
 
-      | LF.STyp (cPhi, cPsi, _) ->
+      | LF.STyp (cPhi, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
-      | LF.CTyp (schemaName, _) ->
+      | LF.CTyp schemaName ->
           fprintf ppf "%a"
             (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
-      | LF.Decl (u, mtyp) ->
+      | LF.Decl (u, mtyp,dep) ->
 
 	(* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
 	(* This modification won't print it if Control.printImplicit is false*)
 
-          if ((not !Control.printImplicit) && (isImplicit mtyp)|| (!Control.printNormal)) then () else begin
+          if ((not !Control.printImplicit) && (isImplicit dep)|| (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string mtyp else "") end
+            (if printing_holes && !Control.printImplicit then dependent_string dep else "") end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
             (R.render_name name)
 
     and getTyp = function
-      | LF.MTyp (tA, _, _)
-      | LF.PTyp (tA, _, _) -> Some tA
+      | LF.MTyp (tA, _)
+      | LF.PTyp (tA, _) -> Some tA
       | _ -> None
 
-    and isImplicit = function
-      | LF.MTyp (_, _, dep)
-      | LF.PTyp (_, _, dep)
-      | LF.STyp (_, _, dep)
-      | LF.CTyp (_, dep) ->
-          begin match dep with
+    and isImplicit = function  
             | LF.No -> false
             | LF.Maybe -> true
-          end
+          
 
     and dependent_string = function
-      | LF.MTyp (_, _, dep)
-      | LF.PTyp (_, _, dep)
-      | LF.STyp (_, _, dep)
-      | LF.CTyp (_, dep) ->
-          begin match dep with
             | LF.No -> "^e"
             | LF.Maybe -> "^i"
-          end
+          
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
@@ -1249,7 +1239,7 @@ module Int = struct
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
-      | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_, LF.Maybe))), tau) ->
+      | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_), LF.Maybe)), tau) ->
           (false)::(implicitCompArg tau)
       | Comp.TypPiBox (_ , tau) ->
           (true)::(implicitCompArg tau)
@@ -1531,9 +1521,9 @@ module Int = struct
       | LF.CObj (cPsi) ->
           let psi    =
             begin match decl with
-              | LF.Decl(psi, LF.CTyp (_ , _)) -> psi
+              | LF.Decl(psi, LF.CTyp _ , _) -> psi
               | LF.DeclOpt psi -> psi 
-              | LF.Decl(psi, _) -> psi
+              | LF.Decl(psi, _,_) -> psi
             end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1543,9 +1533,9 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let u    =
             begin match decl with
-              | LF.Decl(u, LF.MTyp (_ , _, _) ) -> u
+              | LF.Decl(u, LF.MTyp (_ , _), _ ) -> u
               | LF.DeclOpt u -> u
-              | LF.Decl(u, _) -> u
+              | LF.Decl(u, _,_) -> u
             end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1556,8 +1546,7 @@ module Int = struct
           let cPsi = phatToDCtx psihat in
           let p =
             begin match decl with
-              | LF.Decl(p, LF.PTyp (_ , _, _) ) -> p
-              | LF.Decl(p, _) -> p
+              | LF.Decl(p, _, _) -> p
               | LF.DeclOpt p -> p
             end in
           fprintf ppf "%a |- %a = #%s"

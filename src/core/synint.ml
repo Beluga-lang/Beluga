@@ -21,13 +21,13 @@ module LF = struct
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
   and ctyp =
-    | MTyp of typ * dctx * depend
-    | PTyp of typ * dctx * depend
-    | STyp of dctx * dctx * depend
-    | CTyp of cid_schema * depend
+    | MTyp of typ * dctx
+    | PTyp of typ * dctx
+    | STyp of dctx * dctx 
+    | CTyp of cid_schema
 
   and ctyp_decl =                             (* Contextual Declarations        *)
-    | Decl of name * ctyp
+    | Decl of name * ctyp * depend
     | DeclOpt of name
                                               (* Potentially, A is Sigma type? *)
 

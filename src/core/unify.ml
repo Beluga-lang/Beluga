@@ -2128,9 +2128,6 @@ match sigma with
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
               | (true, true, true, true) ->
-                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
-                    ()
-                  else
                     let phat = Context.dctxToHat cPsi in
                     let (s', cPsi') = intersection phat (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
@@ -2212,22 +2209,13 @@ match sigma with
                                       ^ "\n") in
                     let phat = Context.dctxToHat cPsi in
                     let _    = dprint (fun () -> "ss1 = " ^ P.subToString cD0 cPsi1 ss1 ) in
-		      (* is this really necessary? Can't we just prune regardless?
-                         there seems to be one test that loops if we remove this... -ac *)
-                      if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
-                        let tM2 = Whnf.norm sM2 in
-                        let tM2' = Whnf.norm (Whnf.cnorm (tM2, mtt1), ss1) in
-                          (instantiateMMVar (r1, tM2', !cnstrs1);
-                          dprint (fun () -> "Instantiated with sM1 with pruned tM2' (convertible sub) " ^
-                                        P.normalToString cD0 cPsi sM1))
-                      else
                         let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt1, ss1) (MMVarRef r1)) in
                           dprint (fun () -> "Pruned tM2' " ^
                                     P.normalToString cD0 cPsi1 (tM2', Substitution.LF.id));
                           (* sM2 = [ss1][s2]tM2 *)
                           dprint (fun () -> "sM1 (prior to inst.) " ^
                                     P.normalToString cD0 cPsi sM1);
-                          instantiateMMVar (r1, tM2', !cnstrs1);
+                          instantiateMMVar (r1, Whnf.norm(tM2',id), !cnstrs1);
                           dprint (fun () -> "Instantiated with sM1 with pruned tM2' " ^
                                         P.normalToString cD0 cPsi sM1)
 

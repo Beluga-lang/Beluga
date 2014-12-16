@@ -536,38 +536,8 @@ and normSub s = match s with
       MSVar (sigma, n, (mt, normSub s'))
 
 and normFt ft = match ft with
-  | Obj tM ->
-      etaContract(norm (tM, LF.id))
-  | Head (BVar _k)                -> ft
-  | Head (FVar _k)                -> ft
-  | Head (MPVar ((_n, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _), (t, r))) ->
-      let h' = cnormHead (h,t) in
-        begin match h' with
-          | BVar i -> LF.bvarSub i r
-          | PVar (p, s) -> Head (PVar (p, LF.comp r s))
-          | MPVar (q, (t',r')) -> normFt (Head (MPVar (q, (t', LF.comp r' r))))
-        end
-  | Head (MPVar (p, (t, s')))     -> Head (MPVar (p, (cnormMSub t, normSub s')))
-  | Head (MMVar ((_n, { contents = Some (INorm tN)}, _, IMTyp(_, _), _, _), (t, s'))) ->
-     Obj (norm (cnorm (tN, t), s'))
-  | Head (MMVar (u, (t, s')))     -> Head (MMVar (u, (cnormMSub t, normSub s')))
-  | Head (MVar (Inst (_, { contents = Some (INorm tM)}, _, _, _, _), s)) ->
-      Obj(norm (tM, s))
-  | Head (MVar (u, s'))           -> Head (MVar (u, normSub s'))
-  | Head (FMVar (u, s'))          -> Head (FMVar (u, normSub s'))
-  | Head (PVar (p, s'))           -> Head (PVar (p, normSub s'))
-  | Head (FPVar (p, s'))          -> Head (FPVar (p, normSub s'))
-  | Head (Proj (PVar (p, s'), k)) -> Head (Proj (PVar (p, normSub s'), k))
-  | Head (Proj(MPVar ((_n, { contents = Some (IHead h)}, _, IPTyp(_, _), _, _), (t, r)),k)) ->
-      let h' = cnormHead (h,t) in
-        begin match h' with
-          | BVar i -> let Head h = LF.bvarSub i r in Head (Proj(h,k))
-          | PVar (p, s) -> Head (Proj(PVar (p, LF.comp r s), k))
-          | MPVar (q, (t',r')) -> Head (Proj(MPVar (q, (t', LF.comp r' r)), k))
-        end
-  | Head (Proj (MPVar (p, (ms,s')), k)) -> Head (Proj (MPVar (p, (cnormMSub ms, normSub s')), k))
-  | Head h                        -> Head h
-  | Undef                         -> Undef  (* -bp Tue Dec 23 2008 : DOUBLE CHECK *)
+  | Obj tM -> etaContract(norm (tM, LF.id))
+  | Head h -> normHead (h, LF.id)
 
 
 
@@ -1034,8 +1004,10 @@ and cnorm (tM, t) = match tM with
           raise (Error.Violation "Cannot guarantee that parameter variable remains head(2)")
     | PVar (p, r) ->
         if isPatSVSub r then
-	  let Root (_,h,Nil) = cnorm (Root(Syntax.Loc.ghost,h,Nil), t)
-	  in h (* This is weird. We should factor out a normHead to avoid this *)
+	  begin match LF.applyMSub p t with
+	    | MV j -> PVar (j, cnormSub (r, t))
+	    | PObj (_, h) -> let Head h' = normHead (h,cnormSub(r,t)) in h'
+	  end
         else
           raise (Error.Violation "Cannot guarantee that parameter variable remains head(3)")
 

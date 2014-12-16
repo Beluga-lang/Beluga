@@ -659,92 +659,10 @@ and cnorm (tM, t) = match tM with
              n, (mt,s')) ->
           MSVar (s, n, (cnormMSub (mcomp mt t), s'))
 
-  and cnormFront (ft, t) = match ft with
-    | Head (HClo (h , i , sigma))  ->
-        begin match LF.applyMSub i t with
-          | MV k -> Head (HClo (h, k, cnormSub (sigma, t)))
-          | SObj (phat, s) ->
-            let s' = cnormSub (sigma, t) in
-              LF.bvarSub h (LF.comp s s')
-        end
-    | Head (HMClo (h , s, (theta,sigma)))  ->
-      (match s with
-        | (_n, {contents = None}, _cD,ISTyp(_cPhi, _cPsi), _cnstr, _) ->
-          let t'' = cnormMSub (mcomp theta t) in
-          let s' = cnormSub (sigma, t) in
-          Head (HMClo (h, s, (t'', s')))
-        | (_n, {contents = Some (ISub s)}, _cD, ISTyp(_cPhi, _cPsi), _cnstr, _) ->
-          let s' = cnormSub (sigma, t) in
-          let t'' = cnormMSub (mcomp theta t) in
-          cnormFront (LF.bvarSub h (LF.comp s s'), t'')
-      )
-
-    | Head (BVar _ )            -> ft
-    | Head (Const _ )           -> ft
-    | Head (PVar (i, r)) ->
-        begin match LF.applyMSub i t with
-          | PObj(_phat, PVar(n, s')) ->
-             Head(PVar(n, LF.comp s' (cnormSub (r,t))))
-          | PObj (_phat, BVar j)    ->  LF.bvarSub j (cnormSub (r,t))
-          | MV k -> Head(PVar (k, cnormSub (r,t)))
-          | PObj(_phat, FPVar (p, s)) ->
-              Head (FPVar (p, LF.comp s (cnormSub (r,t))))
-          | PObj(_phat, MPVar(p, (mt,s))) ->
-              let mt' = cnormMSub (mcomp mt t) in
-              Head (MPVar (p, (mt', LF.comp s (cnormSub (r,t)))))
-          | _ -> raise (Error.Violation "PVar is replaced by an MVar")
-              (* other case MObj _ cannot happen *)
-        end
-
-    | Head (FPVar (p, r)) ->
-        let r'  = cnormSub (r,t) in
-          Head (FPVar (p, r'))
-
-
-    | Head (MPVar (p, (mr, r))) ->
-        let r'  = cnormSub (r,t) in
-        let mr' = cnormMSub (mcomp mr t) in
-          Head (MPVar (p, (mr', r')))
-
-    | Head (MMVar (u, (mr, r))) ->
-        let r'  = cnormSub (r,t) in
-        let mr' = cnormMSub (mcomp mr t) in
-          Head (MMVar (u, (mr', r')))
-
-    | Head (MVar (Offset i, r)) ->
-        begin match LF.applyMSub i t with
-          | MObj (_phat, tM)    -> Obj(Clo (tM, cnormSub (r,t)))
-          | MV k -> Head(MVar (Offset k, cnormSub (r,t)))
-        end
-
-    | Head (MVar (u, r)) ->
-        let r'  = cnormSub (r,t) in
-          Head (MVar (u, r'))
-
-    | Head (Proj (BVar _, _))    -> ft
-    | Head (Proj (PVar (i, r), k)) ->
-        let r' = cnormSub (r,t) in
-        begin match LF.applyMSub i t with
-          | PObj (_phat, BVar j)  ->
-              begin match LF.bvarSub j r' with
-                | Head(BVar j') -> Head(Proj (BVar j', k))
-                | Head(PVar (j, s')) -> Head (Proj (PVar (j, s'), k))
-                (* other cases impossible for projections *)
-              end
-          | PObj (_phat, PVar(j, s'))   ->
-              Head(Proj (PVar(j, LF.comp s' r'), k))
-          | MV j' -> Head (Proj (PVar (j', r'), k))
-          (* other case MObj _ cannot happen *)
-        end
-    | Head (Proj (MVar _ , _)) -> raise (Error.Violation "Head MVar")
-    | Head (Proj (Const _ , _)) -> raise (Error.Violation "Head Const")
-    | Head (Proj (Proj _ , _)) -> raise (Error.Violation "Head Proj Proj")
-    | Head (Proj (MMVar _ , _)) -> raise (Error.Violation "Head MMVar ")
-    | Head (Proj (MPVar _ , _)) -> raise (Error.Violation "Head MPVar ")
-
-    | Obj (tM) -> Obj(cnorm (tM, t))
-
-    | Undef -> Undef
+  and cnormFront = function
+    | Head h , t -> cnormHead' (h, t) 
+    | Obj tM , t -> Obj (cnorm (tM , t))
+    | Undef , t -> Undef
 
 
   (* cnormTyp (tA, t) = tA'

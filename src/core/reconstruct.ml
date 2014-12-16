@@ -696,37 +696,9 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.Ctype _ , _ )) ->
        raise (Error (loc, TooManyMetaObj))
 
-  | (s, (Int.Comp.PiKind (_ , Int.LF.Decl (psi_name , Int.LF.CTyp schema_cid, Int.LF.Maybe), cK), theta )) ->
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (psi_name, ref None, schema_cid, cD, Whnf.m_id)) in
-      let _ = dprint (fun () -> "[elMetaSpine] Implicit context quantification K = " ) in
-      let _ = dprint (fun () ->  P.compKindToString cD (Whnf.cnormCKind (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta)))) in
-      let cS = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.CObj(cPsi), theta))
-      in
-        Int.Comp.MetaApp (Int.Comp.MetaCtx (loc, cPsi), cS)
-
-  | (s, (Int.Comp.PiKind (_loc, Int.LF.Decl (n , Int.LF.MTyp (tA, cPsi), Int.LF.Maybe), cK), theta )) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let tA'   = C.cnormTyp (tA, theta) in
-      let psihat  = Context.dctxToHat cPsi' in
-      (* let tM'   = Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in *)
-      let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
-                  else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
-      let mO    = Int.Comp.MetaObj (loc, psihat, tM') in
-      let mS    = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta)) in
-      let _     = dprint (fun () -> "[elMetaSpine] Insert MMVar for implicit  argument " ^ P.metaObjToString cD mO) in
-        Int.Comp.MetaApp (mO, mS)
-
-  | (s, (Int.Comp.PiKind (_loc, Int.LF.Decl (n , Int.LF.PTyp (tA, cPsi), Int.LF.Maybe), cK), theta )) ->
-      let psihat  = Context.dctxToHat cPsi in
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let tA'   = C.cnormTyp (tA, theta) in
-
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
-      let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
-
-      let mS    = elMetaSpine loc cD s (cK, Int.LF.MDot (Int.LF.PObj (psihat, h), theta)) in
-        Int.Comp.MetaApp (Int.Comp.MetaParam (loc, psihat, h), mS)
-
+  | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (n, ctyp, Int.LF.Maybe), cK), theta)) -> 
+    let (mO,mF) = genMetaVar loc cD (loc', n, ctyp, theta) in
+    Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, Int.LF.MDot (mF, theta)))
 
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, cdecl, cK) , theta)) ->
       begin match cdecl with

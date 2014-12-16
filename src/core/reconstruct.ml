@@ -369,14 +369,14 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
                         P.typToString cD cPsi (tA, LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
-let elCDecl recT cD (Apx.LF.Decl(u, ctyp)) = match ctyp with (*?*)
-  | Apx.LF.MTyp (a, psi, dep) ->
+let elCDecl recT cD (Apx.LF.Decl(u, ctyp,dep)) = match ctyp with (*?*)
+  | Apx.LF.MTyp (a, psi) ->
     let cPsi = Lfrecon.elDCtx recT cD psi in
     let tA   = Lfrecon.elTyp recT cD cPsi a in
     let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
     Int.LF.Decl (u, Int.LF.MTyp (tA, cPsi), dep)  
 
-  | Apx.LF.PTyp (a, psi, dep) ->
+  | Apx.LF.PTyp (a, psi) ->
     let cPsi = Lfrecon.elDCtx recT cD psi in
     let tA   = Lfrecon.elTyp recT cD cPsi a in
     (* The type tA is valid, if it either is part of the context schema
@@ -390,13 +390,13 @@ let elCDecl recT cD (Apx.LF.Decl(u, ctyp)) = match ctyp with (*?*)
     let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
     Int.LF.Decl (u, Int.LF.PTyp (tA, cPsi), dep)
 
-  | Apx.LF.STyp ( phi, psi, dep) ->
+  | Apx.LF.STyp ( phi, psi) ->
     let cPsi = Lfrecon.elDCtx recT cD psi in
     let cPhi = Lfrecon.elDCtx recT cD phi in
     let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
       Int.LF.Decl (u, Int.LF.STyp (cPhi, cPsi), dep)
 
-  | Apx.LF.CTyp (schema_cid, dep) ->
+  | Apx.LF.CTyp schema_cid ->
     let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in
     Int.LF.Decl (u, Int.LF.CTyp schema_cid, dep)
 

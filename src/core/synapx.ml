@@ -21,13 +21,13 @@ module LF = struct
     | TypDecl of name * typ
 
   and ctyp =
-    | MTyp of typ * dctx * depend
-    | PTyp of typ * dctx * depend
-    | STyp of dctx * dctx * depend
-    | CTyp of cid_schema * depend
+    | MTyp of typ * dctx
+    | PTyp of typ * dctx
+    | STyp of dctx * dctx
+    | CTyp of cid_schema
 
   and ctyp_decl =
-    | Decl of name * ctyp
+    | Decl of name * ctyp * depend
     | DeclOpt of name
 
   and typ =

@@ -182,12 +182,8 @@ let extend_mctx cD (x, cdecl, t) =
  Int.LF.Dec(cD, Whnf.cnormCDecl (cdecl, t))
 
 
-(* TODO: Cleanup? *)
 let mk_name_cdec cdec = match cdec with
-  | Int.LF.Decl (u, Int.LF.MTyp (tA, cPsi, _)) -> mk_name (SomeName u) (* mk_name (MVarName (Typ.gen_mvar_name tA)) *)
-  | Int.LF.Decl (p, Int.LF.PTyp (tA, cPsi, _)) -> mk_name (PVarName None)
-  | Int.LF.Decl (psi_name, Int.LF.CTyp (schema_cid, _) ) -> mk_name (SomeName (psi_name))
-  | Int.LF.Decl (s, Int.LF.STyp (cPsi, cPhi, _)) -> mk_name (SomeName s)
+  | Int.LF.Decl (u, _) -> mk_name (SomeName u) 
 
 (* etaExpandMMV loc cD cPsi sA  = tN
  *
@@ -245,13 +241,6 @@ let annMObj cM mT = match cM , mT with
   | Int.Comp.MetaSObj (l, _phat, s) , Int.Comp.MetaSubTyp (cPsi, _ ) -> 
       Int.Comp.MetaSObjAnn (l, cPsi, s)
   | _ , _ -> cM
-
-(* let metaTypToCDecl mT = match mT with
-  | Int.Comp.MetaTyp (tP, cPsi) -> Int.LF.MTyp (tP, cPsi, Int.LF.Maybe)
-  | Int.Comp.MetaParamTyp (tP, cPsi) -> Int.LF.PTyp (tP, cPsi, Int.LF.Maybe)
-  | Int.Comp.MetaSubTyp (cPsi, cPhi) -> Int.LF.STyp (cPsi, cPhi, Int.LF.Maybe)
-  | Int.Comp.MetaSchema w -> Int.LF.CTyp (w, Int.LF.Maybe)
-*)
 
 (** This function does the same thing as unifyDCtx in unify.ml, but in
     addition records new names for variables left free by the user

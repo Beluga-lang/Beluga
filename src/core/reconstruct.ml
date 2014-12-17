@@ -485,6 +485,12 @@ let rec mgTyp cD cPsi tA = begin match tA with
 	 Int.LF.SigmaElem (x, tA', trec')
  end
 
+let metaObjToFt = function
+  | Int.Comp.MetaObj (loc, psihat, tM) -> Int.LF.MObj (psihat, tM)
+  | Int.Comp.MetaParam (loc, psihat, h) -> Int.LF.PObj (psihat, h)
+  | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
+  | Int.Comp.MetaSObj (loc', psihat, s') -> Int.LF.SObj (psihat, s')
+
 let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
   | Int.LF.MTyp (tA, cPsi) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
@@ -492,8 +498,7 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
       let tA'   = C.cnormTyp (tA, t) in
       let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
                   else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
-        (Int.Comp.MetaObj (loc', psihat, tM') ,
-         Int.LF.MObj (psihat, tM'))
+        Int.Comp.MetaObj (loc', psihat, tM')
 
   | Int.LF.PTyp (tA, cPsi) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
@@ -501,13 +506,11 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
       let tA'   = C.cnormTyp (tA, t) in
       let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
       let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
-        (Int.Comp.MetaParam (loc', psihat, h) ,
-         Int.LF.PObj (psihat, h))
+        Int.Comp.MetaParam (loc', psihat, h)
 
   | Int.LF.CTyp schema_cid ->
       let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid, cD, Whnf.m_id)) in
-        (Int.Comp.MetaCtx (loc', cPsi),
-         Int.LF.CObj cPsi)
+        Int.Comp.MetaCtx (loc', cPsi)
 
   | Int.LF.STyp (cPhi, cPsi) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
@@ -517,15 +520,18 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
       let s' = Int.LF.MSVar (s, 0,
                              (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
       let s' = Whnf.normSub s' in
-        (Int.Comp.MetaSObj (loc', psihat, s') ,
-         Int.LF.SObj (psihat, s'))
+        Int.Comp.MetaSObj (loc', psihat, s')
+
+let genMetaVar' loc' cD (loc, n , ctyp, t) =
+  let mO = genMetaVar loc' cD (loc, n, ctyp, t) in
+  (mO, Int.LF.MDot(metaObjToFt mO,t))
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
   | (Int.Comp.TypPiBox (Int.LF.Decl(n, ctyp, Int.LF.Maybe), tau), theta) ->
-    let (cM,mF) = genMetaVar loc cD (loc, n, ctyp, theta) in
-    genMApp loc cD (Int.Comp.MApp (loc, i, cM), (tau, Int.LF.MDot (mF, theta)))
+    let (cM,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+    genMApp loc cD (Int.Comp.MApp (loc, i, cM), (tau, t'))
   | _ ->
       let _ = dprint (fun () -> "[genMApp]  done " ^
                                 P.mctxToString cD ^ " \n   |- " ^
@@ -686,22 +692,19 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
   | (Apx.Comp.MetaObjAnn(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
     (* The case for parameter types should be handled separately, for better error messages -bp *)
 
-and elMetaObjCTyp loc cD m theta = function
+and elMetaObjCTyp' loc cD m theta = function
   | Int.LF.CTyp schema_cid ->
-    let (Int.Comp.MetaCtx (loc, cPsi') as cM)  = elMetaObj cD m ((Int.Comp.MetaSchema schema_cid), theta) in
-    (cM, Int.LF.MDot (Int.LF.CObj(cPsi'), theta))
+    elMetaObj cD m ((Int.Comp.MetaSchema schema_cid), theta)
   | Int.LF.MTyp (tA, cPsi) ->
-    let (Int.Comp.MetaObj (loc, psihat, tM) as cM) = elMetaObj cD m (Int.Comp.MetaTyp (tA, cPsi), theta) in
-    (cM, Int.LF.MDot (Int.LF.MObj(psihat, tM), theta))
+    elMetaObj cD m (Int.Comp.MetaTyp (tA, cPsi), theta)
   | Int.LF.PTyp (tA, cPsi) ->
-    let (Int.Comp.MetaParam (_, psihat, h) as cM) = elMetaObj cD m (Int.Comp.MetaParamTyp (tA, cPsi), theta) in
-     if Unify.isVar h then
-     (cM, Int.LF.MDot (Int.LF.PObj(psihat, h), theta))
-     else
-     raise (Error (loc,  MetaObjectClash (cD, (Int.Comp.MetaParamTyp (tA, cPsi), theta))))
+    elMetaObj cD m (Int.Comp.MetaParamTyp (tA, cPsi), theta)
   | Int.LF.STyp (cPhi, cPsi) ->
-    let (Int.Comp.MetaSObj (loc, psihat, tM) as cM) = elMetaObj cD m (Int.Comp.MetaSubTyp (cPhi, cPsi), theta)
-    in (cM, Int.LF.MDot (Int.LF.SObj(psihat, tM), theta))
+    elMetaObj cD m (Int.Comp.MetaSubTyp (cPhi, cPsi), theta)
+
+and elMetaObjCTyp loc cD m theta ctyp =
+  let cM = elMetaObjCTyp' loc cD m theta ctyp in
+  (cM, Int.LF.MDot (metaObjToFt cM, theta))
 
 and elMetaSpine loc cD s cKt  = match (s, cKt) with
   | (Apx.Comp.MetaNil , (Int.Comp.Ctype _ , _ )) -> Int.Comp.MetaNil
@@ -713,8 +716,8 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
        raise (Error (loc, TooManyMetaObj))
 
   | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (n, ctyp, Int.LF.Maybe), cK), theta)) -> 
-    let (mO,mF) = genMetaVar loc cD (loc', n, ctyp, theta) in
-    Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, Int.LF.MDot (mF, theta)))
+    let (mO,t') = genMetaVar' loc cD (loc', n, ctyp, theta) in
+    Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, t'))
 
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, Int.LF.Decl(_,ctyp,_), cK) , theta)) ->
     let (mO,t') = elMetaObjCTyp loc cD m theta ctyp in
@@ -800,8 +803,8 @@ let mgCompTyp cD (loc, c) =
   let rec genMetaSpine (cK, t) = match (cK, t) with
     | (Int.Comp.Ctype _, _t) -> Int.Comp.MetaNil
     | (Int.Comp.PiKind (loc', Int.LF.Decl(n,ctyp,_), cK), t) ->
-        let (mO, mF) = genMetaVar loc cD (loc', n , ctyp, t) in
-        let mS = genMetaSpine (cK, Int.LF.MDot (mF, t)) in
+        let (mO, t') = genMetaVar' loc cD (loc', n , ctyp, t) in
+        let mS = genMetaSpine (cK, t') in
           Int.Comp.MetaApp (mO, mS) in
   let mS = genMetaSpine (cK, Whnf.m_id) in
     Int.Comp.TypBase (loc, c, mS)
@@ -1625,9 +1628,9 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatNil loc ->
       (match ttau with
 	| (Int.Comp.TypPiBox (Int.LF.Decl (n, ctyp, Int.LF.Maybe), tau), theta) ->
-	  let (mO,mF) = genMetaVar loc cD (loc, n, ctyp, theta) in
+	  let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
           let pat'  = Int.Comp.PatMetaObj (loc, mO) in
-          let ttau' = (tau, Int.LF.MDot (mF, theta)) in
+          let ttau' = (tau, t') in
           let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
               (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
           | _ ->   (cG, Int.Comp.PatNil, ttau))
@@ -1645,12 +1648,12 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 	 | (Int.Comp.TypPiBox ((Int.LF.Decl (n, ctyp, Int.LF.Maybe)), tau), theta) ->
 	     let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
                       dprint (fun () -> "       " ^ P.compTypToString cD (Whnf.cnormCTyp ttau))) in
-	     let (mO,mF) = genMetaVar loc cD (loc, n, ctyp, theta) in
+	     let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
              let pat'  = Int.Comp.PatMetaObj (loc, mO) in
-             let ttau' = (tau, Int.LF.MDot (mF, theta))
+             let ttau' = (tau, t')
              in
              let _ = (dprint (fun() -> "[elPatSpine] elaborate spine against " );
-                      dprint (fun () -> "theta = " ^ P.msubToString cD (Int.LF.MDot (mF, theta)));
+                      dprint (fun () -> "theta = " ^ P.msubToString cD t');
                       dprint (fun () -> "ttau'   " ^ P.compTypToString cD (Whnf.cnormCTyp ttau'))) in
              let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
                (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)

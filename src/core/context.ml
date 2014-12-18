@@ -15,7 +15,7 @@ let addToHat (ctxvarOpt, length) =
 (* More appropriate: Psi into psihat  Oct  4 2008 -bp *)
 let rec dctxToHat = function
   | Null            -> (None, 0)
-  | CtxVar (CInst (_, {contents = Some cPsi}, _G, _cD, _ ))   ->
+  | CtxVar (CInst ((_, {contents = Some (ICtx cPsi)}, _cD, _G, _, _), _ ))   ->
       dctxToHat cPsi
   | CtxVar psi      -> (Some psi, 0)
   | DDec (cPsi', _) -> addToHat (dctxToHat cPsi')
@@ -68,7 +68,7 @@ let ctxDec cPsi k =
     | (DDec (cPsi', _), k') ->
         ctxDec' (cPsi', k'-1)
 
-    | (CtxVar (CInst (_psiname, {contents = Some (cPsi)}, _, _, _ )), k) ->
+    | (CtxVar (CInst ((_psiname, {contents = Some (ICtx cPsi)}, _, _, _, _), _ )), k) ->
         ctxDec' (cPsi, k)
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
@@ -97,7 +97,7 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-    | (CtxVar (CInst (_n, {contents = Some cPhi }, _schema, _octx, _mctx)) , k) ->
+    | (CtxVar (CInst ((_n, {contents = Some (ICtx cPhi) }, _schema, _octx, _, _), _mctx)) , k) ->
         ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in

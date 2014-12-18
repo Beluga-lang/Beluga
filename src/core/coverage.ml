@@ -1463,7 +1463,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
 	((pv1, Whnf.cnormCTyp (tau1,t))::cG ,
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
   | (Comp.TypPiBox ((LF.Decl(x, LF.CTyp sW, _)), tau), t) ->
-      let cPsi' = LF.CtxVar (LF.CInst (x, ref None, sW, LF.Empty, Whnf.m_id)) in
+      let cPsi' = LF.CtxVar (LF.CInst ((x, ref None, LF.Empty, LF.CTyp sW, ref [], LF.Maybe), Whnf.m_id)) in
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
 				  Comp.MetaCtx (Syntax.Loc.ghost, cPsi')) in
       let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in

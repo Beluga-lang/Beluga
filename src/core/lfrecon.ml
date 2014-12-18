@@ -251,26 +251,26 @@ let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
 
 let unify_phat cD psihat phihat =
   match phihat with
-    | (Some (Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ )), d) ->
+    | (Some (Int.LF.CInst ((_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _), _ )), d) ->
         begin match psihat with
-          | (Some (Int.LF.CInst (_, ({contents = None} as cref'), _, _, _) as c_var) , d') ->
+          | (Some (Int.LF.CInst ((_, ({contents = None} as cref'), _, _, _, _), _) as c_var) , d') ->
 	      if cref == cref' then
 		d = d'
 	      else
-		(cref := Some (Int.LF.CtxVar (c_var))  ; true)
+		(cref := Some (Int.LF.ICtx (Int.LF.CtxVar (c_var)))  ; true)
           | ((Some (c_var)) , d') ->
               if d = d' then
                 ((match c_var with
                    | Int.LF.CtxName psi ->
                        FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp s_cid, Int.LF.Maybe))
                    | _ -> ());
-                  cref := Some (Int.LF.CtxVar (c_var))  ; true)
+                  cref := Some (Int.LF.ICtx (Int.LF.CtxVar (c_var)))  ; true)
               else
                 (dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");
                  raise Error.NotImplemented)
           | (None , d') ->
               if d = d' then
-                (cref := Some (Int.LF.Null) ; true)
+                (cref := Some (Int.LF.ICtx (Int.LF.Null)) ; true)
               else
                 (dprint (fun () -> "[unify_phat - 2] unify ctx_var with a full context");
                  raise Error.NotImplemented)
@@ -1892,8 +1892,8 @@ and elSub' loc recT cD cPsi s cPhi =
 
   | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
     begin match cvar with
-      | Int.LF.CInst (_, ({contents = None} as cref), s_cid, _, _ ) ->
-        (cref := Some (Int.LF.Null); Int.LF.EmptySub
+      | Int.LF.CInst ((_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _), _ ) ->
+        (cref := Some (Int.LF.ICtx (Int.LF.Null)); Int.LF.EmptySub
          (* begin match Context.dctxToHat cPsi with *)
          (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
          (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
@@ -2043,7 +2043,7 @@ and elSub' loc recT cD cPsi s cPhi =
 
   | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.CtxVar cvar) ->
     begin match cvar with
-      | Int.LF.CInst (_phi, ({contents = None} as _cref), s_cid, _cD', _ms') ->
+      | Int.LF.CInst ((_phi, ({contents = None} as _cref), _cD', Int.LF.CTyp s_cid, _, _), _ms') ->
           raise (Error (loc, MissingInformationCtx (cD, cPhi)))
     (*          begin try
             let tA = synTyp loc recT cD cPsi m in

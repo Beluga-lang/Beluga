@@ -40,7 +40,7 @@ module type UNIFY = sig
   val unwind : unit -> unit
 
   val instantiateMVar : iterm option ref * normal * cnstr list -> unit
-  val instantiateCtxVar : dctx option ref * dctx -> unit
+  val instantiateCtxVar : iterm option ref * dctx -> unit
 
   val resetDelayedCnstrs : unit -> unit
   val resetGlobalCnstrs : unit -> unit
@@ -302,7 +302,6 @@ let isVar h = match h with
 
   type action =
     | InstI      of iterm option ref
-    | InstCtx    of dctx   option ref
     | Add        of cnstr list ref
     | Solve      of cnstr * constrnt   (* FIXME: names *)
 
@@ -370,8 +369,8 @@ let isVar h = match h with
 
 
   let instantiateCtxVar (ctx_ref, cPsi) =
-    ctx_ref := Some cPsi;
-    T.log globalTrail (InstCtx ctx_ref)
+    ctx_ref := Some (ICtx cPsi);
+    T.log globalTrail (InstI ctx_ref)
 
 
   (* let instantiatePVar (q, head, cnstrL) = *)
@@ -2860,13 +2859,13 @@ match sigma with
  and unifyDCtx1' mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
-      | (CtxVar (CInst (n1, ({contents = None} as cvar_ref1), schema1, cD1, theta1)) ,
-         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), _schema2,  _cD2, theta2))) ->
+      | (CtxVar (CInst ((n1, ({contents = None} as cvar_ref1), cD1, CTyp schema1, _, _), theta1)) ,
+         CtxVar (CInst ((_n2, ({contents = None} as cvar_ref2), _cD2, CTyp _schema2,  _,_), theta2))) ->
           if cvar_ref1 == cvar_ref2 then
              begin match ( isPatMSub theta1 , isPatMSub theta2) with
                 | (true , true ) ->  (if  Whnf.convMSub theta1 theta2 then () else
                    let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
-                    let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                    let cPsi = CtxVar (CInst ((n1, {contents = None}, cD', CTyp schema1, ref [], Maybe), mt')) in
                       instantiateCtxVar (cvar_ref1, cPsi)
                                      )
                 | ( _ , _ ) ->
@@ -2881,8 +2880,8 @@ match sigma with
               | _ -> raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
             end
 
-      | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta)) , cPsi)
-      | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta) )) ->
+      | (CtxVar (CInst ((_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _), theta)) , cPsi)
+      | (cPsi , CtxVar (CInst ((_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _), theta) )) ->
           if isPatMSub theta then
             let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
               instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
@@ -3249,16 +3248,16 @@ match sigma with
 
 let unify_phat psihat phihat =
   match phihat with
-    | (Some (CInst (n1, ({contents = None} as cref), schema1, cD1, theta1 )), d) ->
+    | (Some (CInst ((n1, ({contents = None} as cref), cD1, CTyp schema1, _, _), theta1 )), d) ->
         begin match psihat with
-          | (Some (CInst (n2, ({contents = None} as cref'), schema2, cD2, theta2)) , d') ->
+          | (Some (CInst ((n2, ({contents = None} as cref'), cD2, CTyp schema2, _, _), theta2)) , d') ->
 	      if cref == cref' then
                 (if  Whnf.convMSub theta1 theta2 then
 		   (if d = d' then () else raise (Failure "Hat context mismatch- 1"))
                  else
                    (if isPatMSub theta1 && isPatMSub theta2 then
                       let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
-                      let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                      let cPsi = CtxVar (CInst ((n1, {contents = None}, cD', CTyp schema1, ref [], Maybe), mt')) in
                         instantiateCtxVar (cref, cPsi)
                     else
                       raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
@@ -3266,28 +3265,28 @@ let unify_phat psihat phihat =
 	      else
                 (if isPatMSub theta1 && isPatMSub theta2 then
                    let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta1) in
-		     cref := Some (CtxVar (CInst (n2, cref', schema2, cD2,  Whnf.mcomp theta2 mtt1 )))
+		     cref := Some (ICtx (CtxVar (CInst ((n2, cref', cD2, CTyp schema2, ref [], Maybe),  Whnf.mcomp theta2 mtt1 ))))
                  else
                    raise (Error.Violation "Case where we need to unify the context variables which are associated with different meta-stitutions which are non-patterns is not handled"))
           | ((Some (c_var)) , d') ->
               if d = d' then
-                cref := Some (CtxVar (c_var))
+                cref := Some (ICtx (CtxVar (c_var)))
               else
                 (* (Some (cref), d) == (Some cpsi, d')   d' = d0+d  *)
                 (if d'< d then raise (Failure "Hat Context's do not unify")
                  else
                    let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in
-                     cref := Some (cPsi))
+                     cref := Some (ICtx cPsi))
 
           | (None , d') ->
               if d = d' then
-                cref := Some (Null)
+                cref := Some (ICtx Null)
               else
                 (* (Some (cref), d) == (None, d')   d' = d0+d  *)
                 (if d'< d then raise (Failure "Hat Context's do not unify")
                  else
                    let cPsi = Context.hatToDCtx (None, d'-d) in
-                     cref := Some (cPsi))
+                     cref := Some (ICtx cPsi))
 
         end
 

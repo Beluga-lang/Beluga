@@ -70,8 +70,8 @@ let etaContract tM = begin match tM with
  *
  *)
 let newCVar n (sW) = match n with
-  | None -> CInst (Id.mk_name Id.NoName, ref None, sW, Empty, MShift 0)
-  | Some name -> CInst (name, ref None, sW, Empty, MShift 0)
+  | None -> CInst ((Id.mk_name Id.NoName, ref None, Empty, CTyp sW, ref [], Maybe), MShift 0)
+  | Some name -> CInst ((name, ref None, Empty, CTyp sW, ref [], Maybe), MShift 0)
 
 (* newMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
@@ -527,9 +527,9 @@ and normDecl (decl, sigma) = match decl with
 
 and cnorm_psihat (phat: psi_hat) t = match phat with
   | (None , _ ) -> phat
-  | (Some (CInst (_n, ({contents = None} as cvar_ref), _schema, _cD, theta)),  k) ->
-      (Some (CInst (_n, cvar_ref, _schema, _cD, mcomp theta t)), k)
-  | (Some (CInst (_n, {contents = Some cPsi}, _schema, _cD, theta)),  k) ->
+  | (Some (CInst ((_n, ({contents = None} as cvar_ref), cD, schema, cnstr,dep), theta)),  k) ->
+      (Some (CInst ((_n, cvar_ref, cD, schema, cnstr, dep), mcomp theta t)), k)
+  | (Some (CInst ((_n, {contents = Some (ICtx cPsi)}, _cD, _schema, _cnstr, _dep), theta)),  k) ->
       begin match Context.dctxToHat (cnormDCtx (cPsi, mcomp theta t))  with
         | (None, i) -> (None, k+i) (* cnorm_psihat (None, k+i) t *)
         | (Some cvar', i) -> (Some cvar', i+k) (* cnorm_psihat (Some cvar', i+k) t *)
@@ -709,10 +709,10 @@ and cnorm (tM, t) = match tM with
   and cnormDCtx (cPsi, t) = match cPsi with
     | Null       ->  Null
 
-    | CtxVar (CInst (_n, ({contents = None} as cvar_ref), _schema,  _mctx, theta )) ->
-        CtxVar (CInst (_n, cvar_ref , _schema,  _mctx, mcomp theta t))
+    | CtxVar (CInst ((_n, ({contents = None} as cvar_ref), mctx, schema, cnstr, dep), theta )) ->
+        CtxVar (CInst ((_n, cvar_ref , mctx, schema , cnstr, dep), mcomp theta t))
 
-    | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
+    | CtxVar (CInst ((_n, {contents = Some (ICtx cPhi)} ,_mctx, _schema, cnstr, dep), theta)) ->
         cnormDCtx (cPhi, mcomp theta t)
 
     | CtxVar (CtxOffset psi) ->
@@ -774,9 +774,9 @@ and normKind sK = match sK with
 and normDCtx cPsi = match cPsi with
   | Null -> Null
 
-  | CtxVar (CInst (_n, {contents = None} , _schema, _mctx, _theta )) -> cPsi
+  | CtxVar (CInst ((_n, {contents = None} , _mctx, _schema, _cnstr,_dep), _theta )) -> cPsi
 
-  | CtxVar (CInst (_n, {contents = Some cPhi} ,_schema, _mctx, theta)) ->
+  | CtxVar (CInst ((_n, {contents = Some (ICtx cPhi)}, _mctx, _schema, _cnstr,_dep), theta)) ->
       normDCtx (cnormDCtx (cPhi,theta))
 
   | CtxVar psi -> CtxVar psi
@@ -1961,8 +1961,8 @@ and closedDecl (tdecl, s) = match tdecl with
 
 let rec closedDCtx cPsi = match cPsi with
   | Null     -> true
-  | CtxVar (CInst (_, {contents = None}, _, _, _)) -> false
-  | CtxVar (CInst (_, {contents = Some cPsi}, _,_ , theta)) ->
+  | CtxVar (CInst ((_, {contents = None}, _, _, _, _), _)) -> false
+  | CtxVar (CInst ((_, {contents = Some (ICtx cPsi)}, _,_,_,_ ), theta)) ->
      closedDCtx (cnormDCtx (cPsi, theta))
   | CtxVar _ -> true
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)

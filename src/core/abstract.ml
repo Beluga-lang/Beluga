@@ -203,7 +203,7 @@ let rec raiseKind cPsi tK = match cPsi with
 
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
-  | I.Dec(cQ, CV(I.CtxVar(I.CInst(_n, _r, s_cid, _, _theta)) as cPsi)) ->
+  | I.Dec(cQ, CV(I.CtxVar(I.CInst((_n, _r, _, I.CTyp s_cid, _, _), _theta)) as cPsi)) ->
       collectionToString cQ ^ " " ^ P.dctxToString I.Empty cPsi ^ " : " ^ R.render_cid_schema s_cid ^ "\n"
 
   | I.Dec(cQ, FCV(psi, Some s_cid)) ->
@@ -355,7 +355,7 @@ let eqFCVar n1 fV2 = match (n1, fV2) with
    where B iff n and fV' represent same variable
 *)
 let eqCVar n1 fV2 = match (n1, fV2) with
-  | (I.CInst (_, r, _, _, _theta ) ,  CV (I.CtxVar (I.CInst (_, r_psi, _, _, _theta' )))) ->
+  | (I.CInst ((_, r, _, _, _, _), _theta ) ,  CV (I.CtxVar (I.CInst ((_, r_psi, _, _, _, _), _theta' )))) ->
       if r == r_psi then
          Yes
       else
@@ -579,7 +579,7 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
   | I.Dec (_cQ', MMV (Pure, (_, _, _cD, _, _, _))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
-  | I.Dec (cQ', CV (I.CtxVar (I.CInst (n, {contents = None}, s_cid, _, _theta)))) ->
+  | I.Dec (cQ', CV (I.CtxVar (I.CInst ((n, {contents = None}, _, I.CTyp s_cid, _, _), _theta)))) ->
       (* let psi = Id.mk_name (NoName) in *)
       (* this case should not happen? -bp *)
       I.Dec (ctxToMCtx cQ', I.Decl (n, I.CTyp s_cid, I.No))
@@ -987,14 +987,14 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst (_, {contents=Some cPsi}, _, _, theta )), k ) ->
+  | (Some (I.CInst ((_, {contents=Some (I.ICtx cPsi)}, _, _, _, _), theta )), k ) ->
        let phat' = begin match Context.dctxToHat (Whnf.cnormDCtx (cPsi, theta)) with
                   | (None, i) -> (None, k+i)
                   | (Some cvar', i) -> (Some cvar', i+k)
                   end
        in
          collectHat p cQ phat'
-  | (Some (I.CInst (_, {contents=None}, _, _, _theta ) as psi), _ ) ->
+  | (Some (I.CInst ((_, {contents=None}, _, _, _, _), _theta ) as psi), _ ) ->
        (* this case should not happen -bp *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, phat)
@@ -1029,10 +1029,10 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         end
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi} , _, _cD, theta)) ->
+  | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)} , _cD, _, _, _), theta)) ->
       collectDctx' loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
-  | I.CtxVar (I.CInst (_, {contents = None} , _, _cD, _theta) as psi) ->
+  | I.CtxVar (I.CInst ((_, {contents = None} , _cD, _, _, _), _theta) as psi) ->
         (* this case should not happen *)
         begin match checkOccurrence (eqCVar psi) cQ with
           | Yes -> (cQ, cPsi)
@@ -1389,7 +1389,7 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
         (Some (I.CtxOffset x), k)
   (* case where contents = Some cPsi cannot happen,
      since collect normalized phat *)
-  | (Some (I.CInst (_, {contents = None}, _, _, _theta ) as psi), k) ->
+  | (Some (I.CInst ((_, {contents = None}, _, _, _, _), _theta ) as psi), k) ->
       let x = index_of cQ (CV (I.CtxVar psi)) + offset in
         (Some (I.CtxOffset x  ), k)
   |  _ -> abstractMVarHat cQ (l,offset) (Whnf.cnorm_psihat phat Whnf.m_id)
@@ -1405,9 +1405,9 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
   | I.CtxVar (I.CtxName psi) ->
       let x = index_of cQ (FCV (psi, None)) + offset in
         I.CtxVar (I.CtxOffset x)
-  | I.CtxVar (I.CInst (_, {contents = Some cPsi}, _, _, theta )) ->
+  | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)}, _, _, _, _), theta )) ->
       abstractMVarDctx cQ (l,offset) (Whnf.cnormDCtx (cPsi, theta))
-  | I.CtxVar (I.CInst (_, {contents = None}, _, _, _theta)) ->
+  | I.CtxVar (I.CInst ((_, {contents = None}, _, _, _, _), _theta)) ->
       (* this case should not happen -bp *)
       let x = index_of cQ (CV cPsi) + offset in
         I.CtxVar (I.CtxOffset x)

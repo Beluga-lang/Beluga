@@ -671,12 +671,12 @@ module Int = struct
       | LF.Inst _ ->               fprintf ppf "?INST _ "
 
     and fmt_ppr_lf_ctx_var cD ppf = function
-      | LF.CInst (n, {contents = None}, _schema, _cD, theta) ->
+      | LF.CInst ((n, {contents = None}, _cD, _schema, _cnstr,_dep), theta) ->
           fprintf ppf "?%s[%a]"
             (R.render_name n)
             (fmt_ppr_lf_msub cD 0) theta
 
-      | LF.CInst (_n, {contents = Some cPsi}, _schema, cD', theta) ->
+      | LF.CInst ((_n, {contents = Some (LF.ICtx cPsi)}, cD', _schema, _cnstr, _dep), theta) ->
           fprintf ppf "%a"
           (fmt_ppr_lf_dctx cD' 0) (Whnf.cnormDCtx (cPsi, theta))
 

@@ -110,6 +110,7 @@ module LF = struct
     | INorm of normal
     | IHead of head
     | ISub of sub
+    | ICtx of dctx
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref
@@ -132,7 +133,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of name * dctx option ref * cid_schema * mctx * msub
+    | CInst  of mm_var * msub
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)

@@ -249,12 +249,12 @@ let unifyDCtxWithFCVar cD cPsi1 cPsi2 =
   let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
     | (Int.LF.Null , Int.LF.Null) -> ()
 
-    | (Int.LF.CtxVar (Int.LF.CInst (_n1, ({contents = None} as cvar_ref1), _schema1, _cO1, _cD1)),
-       Int.LF.CtxVar (Int.LF.CInst (_n2, ({contents = None} as cvar_ref2), _schema2, _cO2, _cD2))) ->
+    | (Int.LF.CtxVar (Int.LF.CInst ((_n1, ({contents = None} as cvar_ref1), _cO1, _schema1, _, _), _cD1)),
+       Int.LF.CtxVar (Int.LF.CInst ((_n2, ({contents = None} as cvar_ref2), _cO2, _schema2, _, _), _cD2))) ->
       if cvar_ref1 != cvar_ref2 then
         Unify.instantiateCtxVar (cvar_ref1, cPsi2)
 
-    | (Int.LF.CtxVar (Int.LF.CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD)) , cPsi) ->
+    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp s_cid, _, _), _cD)) , cPsi) ->
       begin
         Unify.instantiateCtxVar (cvar_ref, cPsi);
         match Context.ctxVar cPsi with
@@ -264,7 +264,7 @@ let unifyDCtxWithFCVar cD cPsi1 cPsi2 =
           | _ -> ()
       end
 
-    | (cPsi, Int.LF.CtxVar (Int.LF.CInst (_n, ({contents = None} as cvar_ref), s_cid, _cO, _cD))) ->
+    | (cPsi, Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp s_cid, _, _), _cD))) ->
       begin
         Unify.instantiateCtxVar (cvar_ref, cPsi);
         match Context.ctxVar cPsi with
@@ -509,7 +509,7 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
         Int.Comp.MetaObj (loc', psihat, Int.LF.IHead h)
 
   | Int.LF.CTyp schema_cid ->
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst (n, ref None, schema_cid, cD, Whnf.m_id)) in
+      let cPsi = Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD, Int.LF.CTyp schema_cid, ref [], Int.LF.Maybe), Whnf.m_id)) in
         Int.Comp.MetaCtx (loc', cPsi)
 
   | Int.LF.STyp (cPhi, cPsi) ->
@@ -812,8 +812,8 @@ let mgCompTyp cD (loc, c) =
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
       let (n , sW) = Whnf.mctxCDec cD psi_var in
-	Int.LF.CtxVar (Int.LF.CInst (n, ref None, sW,
-                                      cD, Whnf.m_id))
+	Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD, Int.LF.CTyp sW,
+                                      ref [], Int.LF.Maybe), Whnf.m_id))
   | Int.LF.Null -> Int.LF.Null
   | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->
       let cPsi' = mgCtx cD' (cD, cPsi) in

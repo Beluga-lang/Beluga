@@ -667,7 +667,7 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
     ^ P.dctxToString cD cPsi ^ " against " ^ P.schemaToString schema);
   match cPsi with
     | Null -> ()
-    | CtxVar (CInst (_, {contents = Some cPhi}, _, _, _ )) ->
+    | CtxVar (CInst ((_, {contents = Some (ICtx cPhi)}, _, _, _, _), _ )) ->
       checkSchema loc cD cPhi schema
     | CtxVar ((CtxOffset _ ) as phi) ->
       let Schema phiSchemaElements =

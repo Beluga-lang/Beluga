@@ -295,8 +295,6 @@ module Comp = struct
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
     | BoxValue   of meta_obj
-    | ParamValue of LF.psi_hat * LF.head
-    | PsiValue   of LF.dctx
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
     | BoolValue  of bool

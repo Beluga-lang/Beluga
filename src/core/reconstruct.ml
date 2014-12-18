@@ -643,6 +643,7 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
            cPhi, if psi is not in cD *)
         try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
+      let cPhi = Whnf.normDCtx cPhi in
       let phat = Context.dctxToHat cPhi  in
       let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in
       let tA' = C.cnormTyp (tA, theta) in
@@ -881,7 +882,7 @@ let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
       let cPsi  = C.cnormDCtx (cPsi, theta) in
       let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
         (begin try
-           Unify.unifyDCtx cD cPsi cPsi'
+           unifyDCtxWithFCVar cD cPsi cPsi'
          with
            | Unify.Failure "Context clash" ->
                let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.MTyp(Whnf.cnormTyp (tA, theta),

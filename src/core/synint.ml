@@ -357,7 +357,6 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub)
 
   and copattern_spine =
     | CopatNil of Loc.t

@@ -1352,13 +1352,6 @@ module Int = struct
             (fmt_ppr_cmp_branch cD cG 0) b
             (fmt_ppr_cmp_branches cD cG lvl) bs
 
-    and fmt_ppr_pattern cD1' cPsi ppf = function
-      | Comp.NormalPattern (tM, _) -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
-      | Comp.EmptyPattern ->fprintf ppf "@[{}@]"
-
-    and fmt_ppr_branch_body cD1' cG t ppf = function
-      | Comp.NormalPattern (_, e) -> fmt_ppr_cmp_exp_chk cD1' (Whnf.cnormCtx (cG, t)) 1 ppf e
-      | Comp.EmptyPattern -> ()
 
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat, t) ->
@@ -1422,45 +1415,6 @@ module Int = struct
                * -bp
                *)
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-
-      | Comp.BranchBox (_, cD1', (cPsi, pattern, t)) ->
-          let rec ppr_ctyp_decls' ppf = function
-            | LF.Dec (LF.Empty, decl) ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-            | LF.Dec (cD, decl) ->
-                fprintf ppf "%a @ %a"
-                  (ppr_ctyp_decls' ) cD
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-          and ppr_ctyp_decls ppf = function
-            | LF.Empty -> ()
-            | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
-          in
-(*            fprintf ppf "%a @ [%a] %a : %a[%a] => @ @[<2>%a@]@ " *)
-(*            fprintf ppf "%a @ %a @ ([%a] %a) @ : %a ; %a  => @ @[<2>%a@]@ " *)
-          if !Control.printNormal then
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ @]  => @]@ @[<2>@ %a@]@]@ "
-              (ppr_ctyp_decls ) cD1'
-              (fmt_ppr_lf_dctx cD1' 0) cPsi
-              (fmt_ppr_pattern cD1' cPsi) pattern
-              (* NOTE: Technically: cD |- cG ctx and
-               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-               * -bp
-               *)
-              (fmt_ppr_branch_body cD1' cG t) pattern
-          else
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a |- %a]@ : %a @]  => @]@ @[<2>@ %a@]@]@ "
-              (ppr_ctyp_decls ) cD1'
-              (fmt_ppr_lf_dctx cD1' 0) cPsi
-              (fmt_ppr_pattern cD1' cPsi) pattern
-                 (* this point is where the " : " is in the string above *)
-              (fmt_ppr_refinement cD1' cD 2) t
-              (* NOTE: Technically: cD |- cG ctx and
-               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-               * -bp
-               *)
-              (fmt_ppr_branch_body cD1' cG t) pattern
-
 
     (* cD |- t : cD'  *)
 

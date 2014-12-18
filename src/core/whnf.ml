@@ -1722,23 +1722,6 @@ let mctxMVarPos cD u =
      Comp.Branch (loc, cD, cG, pat,
                   cnormMSub t, cnormExp (e, m_id))
 
-    | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t)),  theta) ->
-    (* cD' |- t <= cD    and   FMV(e) = cD' while
-       cD' |- theta' <= cD0
-       cD0' |- theta <= cD0
-     * Hence, no substitution into e at this point -- technically, we
-     * need to unify theta' and theta and then create a new cD'' under which the
-     * branch makes sense
-     *)
-      Comp.BranchBox (cO, cD', (cPsi,
-                                Comp.NormalPattern (norm (tM,LF.id), cnormExp (e,m_id)),
-                                cnormMSub t))
-
-    | (Comp.BranchBox (cO, cD', (cPsi, Comp.EmptyPattern, t)),  theta) ->
-          Comp.BranchBox (cO, cD', (cPsi,
-                                    Comp.EmptyPattern,
-                                    cnormMSub t))
-
 
   let cnormMTyp (ctyp, mtt') = match ctyp with
      | CTyp w -> CTyp w

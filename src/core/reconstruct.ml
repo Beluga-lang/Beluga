@@ -870,66 +870,6 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
 
 
 let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
-  | Apx.Comp.MetaObj (_loc', psihat, m) , Int.LF.MTyp (tA, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-        begin try
-          let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' m (C.cnormTyp (tA, theta), LF.id) in
-          if depend then
-            let theta' =  Int.LF.MDot (Int.LF.MObj (psihat, tM'), theta) in
-            let cM = Int.Comp.MetaObj (loc, psihat, Int.LF.INorm tM') in
-            (Int.Comp.MApp (loc, i, cM), (tau, theta'))
-          else
-            let cM = Int.Comp.MetaObj (loc, psihat, Int.LF.INorm tM') in
-            (Int.Comp.Apply (loc, i, Int.Comp.Box (loc, cM)), (tau, theta))
-        with Error.Violation msg ->
-          dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-          raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
-        end
-  | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.MTyp (tA, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let cPhi =  Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-        (begin try
-           Unify.unifyDCtx cD cPsi' cPhi
-         with
-           | Unify.Failure "Context clash" ->
-               let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost,
-						   Int.LF.MTyp(Whnf.cnormTyp (tA, theta), Whnf.cnormDCtx (cPsi, theta)))   in
-                 raise (Error (loc, CtxMismatch (cD, expected_tau, cPhi)))
-         end;
-         begin try
-           let cPhi' = Whnf.normDCtx cPhi in
-           let phihat' = Context.dctxToHat cPhi'  in
-           let i_norm = Whnf.cnormExp' (i, Whnf.m_id) in
-           let tM'    = Lfrecon.elTerm Lfrecon.Pibox cD cPhi' m (C.cnormTyp (tA, theta), LF.id) in
-             if depend then
-               let theta' = Int.LF.MDot (Int.LF.MObj (phihat', tM'), theta) in
-               let tau'' = Whnf.cnormCTyp (tau, theta') in
-               let cM = Int.Comp.MetaObj (loc, phihat', Int.LF.INorm tM') in
-                 (Int.Comp.MApp (loc, i_norm, cM), (tau'', Whnf.m_id))
-             else
-               let cM = Int.Comp.MetaObj (loc, phihat', Int.LF.INorm tM') in
-               (Int.Comp.Apply (loc, i_norm, Int.Comp.Box (loc, cM)), (tau, theta))
-         with Error.Violation msg ->
-           dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-           raise (Lfrecon.Error (loc, Lfrecon.CompTypAnn))
-         end)
-
-  | Apx.Comp.MetaObj (_loc', psihat , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
-      Int.LF.PTyp (tA, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
-      let theta' = Int.LF.MDot (Int.LF.PObj (psihat, h'), theta) in
-      let sA' = (C.cnormTyp (tA, theta), LF.id) in
-      let cM = Int.Comp.MetaObj (loc,psihat, Int.LF.IHead h') in
-        begin try
-          (Unify.unifyTyp cD cPsi' sB  sA' ;
-           dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
-           (Int.Comp.MApp (loc, i, cM), (tau, theta')))
-        with Unify.Failure msg ->
-          (Printf.printf "%s\n" msg;
-           raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
-        end
-
   | Apx.Comp.MetaObjAnn (_loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
        Int.LF.PTyp (tA, cPsi) ->
       let cPsi  = C.cnormDCtx (cPsi, theta) in
@@ -967,54 +907,6 @@ let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec w
               raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
         )
 
-
-  |  Apx.Comp.MetaSub (loc', psihat, s) , Int.LF.STyp (cPhi, cPsi) ->
-       begin try
-         let cPsi' = C.cnormDCtx (cPsi, theta) in
-         let s'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' s (C.cnormDCtx (cPhi, theta)) in
-         let theta' = Int.LF.MDot (Int.LF.SObj (psihat, s'), theta) in
-         let mC = Int.Comp.MetaObj (loc, psihat, Int.LF.ISub s') in
-           (Int.Comp.MApp (loc, i, mC), (tau, theta'))
-       with Error.Violation msg ->
-         dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-                 raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.STyp (cPhi,cPsi), theta))))
-       end
-  |  Apx.Comp.MetaSubAnn (loc', psi, s) , Int.LF.STyp (cPhi, cPsi) ->
-      let cPsi  = C.cnormDCtx (cPsi, theta) in
-      let cPhi' = C.cnormDCtx (cPhi, theta) in
-      let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-        (begin try
-           Unify.unifyDCtx cD cPsi cPsi'
-         with
-           | Unify.Failure "Context clash" ->
-                 raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.STyp (cPhi,cPsi), theta))))
-         end ;
-       begin try
-         let cPsi' = Whnf.normDCtx cPsi' in
-         let psihat' = Context.dctxToHat cPsi'  in
-         let cPhi' = Whnf.normDCtx cPhi' in
-         let s'    = Lfrecon.elSub loc' Lfrecon.Pibox cD cPsi' s cPhi' in
-         let theta' = Int.LF.MDot (Int.LF.SObj (psihat', s'), theta) in
-         let mC     = Int.Comp.MetaObj (loc', psihat', Int.LF.ISub s') in
-           (Int.Comp.MApp (loc, i, mC), (tau, theta'))
-       with Error.Violation msg ->
-         dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-         raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.STyp (cPhi,cPsi), theta))))
-       end)
-  | Apx.Comp.MetaCtx (loc', cPsi) , Int.LF.CTyp sW ->
-      let cPsi'  = Lfrecon.elDCtx Lfrecon.Pibox cD cPsi in
-      let theta' = Int.LF.MDot (Int.LF.CObj (cPsi'), theta) in
-      let mC = Int.Comp.MetaCtx (loc', cPsi') in
-        (Int.Comp.MApp (loc, i, mC), (tau, theta'))
-  | Apx.Comp.MetaObj (_loc', psihat, m) , Int.LF.STyp (tA, cPsi) ->
-      begin try
-        let sub = match m with
-      | Apx.LF.Root(_, h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, Apx.LF.EmptySub)
-      | _ -> Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub) in
-      elApply cD (loc, i, Apx.Comp.MetaSub(_loc', psihat, sub)) (mdec, tau) theta depend  
-      with  
-      | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.STyp (tA, cPsi), theta)))) 
-    end
   | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.STyp (tA, cPsi) ->
       begin (* try *)
         let sub = match m with
@@ -1023,15 +915,19 @@ let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec w
         elApply cD (loc, i, Apx.Comp.MetaSubAnn(_loc', psi, sub)) (mdec, tau) theta depend  
 (*         with  
       | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSubTyp (tA, cPsi), theta))))  *)
-    end
-  | _ , Int.LF.CTyp sW ->
-      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.CTyp sW, theta))))
-  | _ , Int.LF.PTyp (tA, cPsi) ->
-      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.PTyp (tA, cPsi), theta))))
-  | _ , Int.LF.MTyp (tA, cPsi) ->
-      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.MTyp (tA, cPsi), theta))))
-  | _ , Int.LF.STyp (tA, cPsi) ->
-      raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.LF.STyp (tA, cPsi), theta))))
+      end
+  | _, _ ->
+    begin try
+    let cM = elMetaObj cD mobj (mdec, theta) in
+      if depend then
+        let theta' =  Int.LF.MDot (metaObjToFt cM, theta) in
+        (Int.Comp.MApp (loc, i, cM), (tau, theta'))
+      else
+        (Int.Comp.Apply (loc, i, Int.Comp.Box (loc, cM)), (tau, theta))
+      with Error.Violation msg ->
+       dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
+          raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (mdec, theta))))
+     end
 
 
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)

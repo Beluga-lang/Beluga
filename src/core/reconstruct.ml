@@ -488,8 +488,11 @@ let rec mgTyp cD cPsi tA = begin match tA with
 let metaObjToFt = function
   | Int.Comp.MetaObj (loc, psihat, Int.LF.INorm tM) -> Int.LF.MObj (psihat, tM)
   | Int.Comp.MetaObj (loc, psihat, Int.LF.IHead h) -> Int.LF.PObj (psihat, h)
-  | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
   | Int.Comp.MetaObj (loc', psihat, Int.LF.ISub s') -> Int.LF.SObj (psihat, s')
+  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.INorm tM) -> Int.LF.MObj (Context.dctxToHat cPsi, tM)
+  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.IHead tH) -> Int.LF.PObj (Context.dctxToHat cPsi, tH)
+  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub s) -> Int.LF.SObj (Context.dctxToHat cPsi, s)
+  | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
 
 let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
   | Int.LF.MTyp (tA, cPsi) ->
@@ -692,18 +695,8 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
   | (Apx.Comp.MetaObjAnn(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
     (* The case for parameter types should be handled separately, for better error messages -bp *)
 
-and elMetaObjCTyp' loc cD m theta = function
-  | Int.LF.CTyp schema_cid ->
-    elMetaObj cD m ((Int.LF.CTyp schema_cid), theta)
-  | Int.LF.MTyp (tA, cPsi) ->
-    elMetaObj cD m (Int.LF.MTyp (tA, cPsi), theta)
-  | Int.LF.PTyp (tA, cPsi) ->
-    elMetaObj cD m (Int.LF.PTyp (tA, cPsi), theta)
-  | Int.LF.STyp (cPhi, cPsi) ->
-    elMetaObj cD m (Int.LF.STyp (cPhi, cPsi), theta)
-
 and elMetaObjCTyp loc cD m theta ctyp =
-  let cM = elMetaObjCTyp' loc cD m theta ctyp in
+  let cM = elMetaObj cD m (ctyp, theta) in
   (cM, Int.LF.MDot (metaObjToFt cM, theta))
 
 and elMetaSpine loc cD s cKt  = match (s, cKt) with
@@ -723,6 +716,11 @@ and elMetaSpine loc cD s cKt  = match (s, cKt) with
     let (mO,t') = elMetaObjCTyp loc cD m theta ctyp in
     Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, t'))
 
+let rec spineToMSub cS' ms = match cS' with
+  | Int.Comp.MetaNil -> ms
+  | Int.Comp.MetaApp (mO, mS) ->
+    spineToMSub mS (Int.LF.MDot(metaObjToFt mO, ms))
+
 let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypBase (loc, a, cS) ->
       let _ = dprint (fun () -> "[elCompTyp] Base : " ^ R.render_cid_comp_typ a) in
@@ -741,17 +739,6 @@ let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypDef (loc, a, cS) ->
       let tK = (CompTypDef.get a).CompTypDef.kind in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
-      let rec spineToMSub cS' ms = match cS' with
-        | Int.Comp.MetaNil -> ms
-        | Int.Comp.MetaApp (mO, mS) ->
-            let mf = begin match mO with
-              | Int.Comp.MetaObj (loc, phat, Int.LF.INorm tM) -> Int.LF.MObj (phat, tM)
-              | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.INorm tM) -> Int.LF.MObj (Context.dctxToHat cPsi, tM)
-              | Int.Comp.MetaObj (loc, phat, Int.LF.IHead h) -> Int.LF.PObj (phat, h)
-              | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj (cPsi)
-            end in
-              spineToMSub mS (Int.LF.MDot(mf, ms))
-      in
       let tau = (CompTypDef.get a).CompTypDef.typ in
         (* eager expansion of type definitions - to make things simple for now
            -bp *)

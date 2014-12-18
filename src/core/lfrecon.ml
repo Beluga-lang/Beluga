@@ -1412,7 +1412,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
   (* Reconstruction for parameter variables *)
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), spine) ->
-      begin try
+      begin (* try *)
         let s'' = elSub loc recT cD cPsi s' cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
         let _ = Unify.unifyTyp cD cPsi sQ sP  in
@@ -1423,10 +1423,11 @@ and elTerm' recT cD cPsi r sP = match r with
                     | Int.LF.Head (Int.LF.PVar (p,r'))   -> Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r' s''), tS)
                   end
               | Int.LF.PVar (p, r) -> Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r s''), tS)
+	      (* | Int.LF.Proj (Int.LF.PVar (p,r), i) -> Int.LF.Root (loc, Int.LF *)
             end
 
-      with _  ->
-        raise (Error (loc, CompTypAnn ))
+      (* with _  -> *)
+      (*   raise (Error (loc, CompTypAnn )) *)
         (* raise (Error (loc, TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
 
@@ -2276,7 +2277,7 @@ and elSpine loc recT cD cPsi spine sA =
   let rec typLength = function
     | Int.LF.Atom _ -> 0
     | Int.LF.PiTyp (_, tB2) -> 1 + typLength tB2
-    | Int.LF.Sigma _ -> raise (Error (loc, SigmaTypImpos (cD, cPsi, sA))) in
+    | Int.LF.Sigma _ -> 0 (* raise (Error (loc, SigmaTypImpos (cD, cPsi, sA))) *) in 
 
   (* Check first that we didn't supply too many arguments. *)
   if typLength (fst (Whnf.whnfTyp sA)) < spineLength spine then

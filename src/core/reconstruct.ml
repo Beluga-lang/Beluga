@@ -876,46 +876,7 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
           (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
 
 
-let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
-  | Apx.Comp.MetaObjAnn (_loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
-       Int.LF.PTyp (tA, cPsi) ->
-      let cPsi  = C.cnormDCtx (cPsi, theta) in
-      let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-        (begin try
-           unifyDCtxWithFCVar cD cPsi cPsi'
-         with
-           | Unify.Failure "Context clash" ->
-               let expected_tau = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.MTyp(Whnf.cnormTyp (tA, theta),
-										      Whnf.cnormDCtx (cPsi, theta)) )  in
-                 raise (Error (loc, CtxMismatch (cD, expected_tau, cPsi')))
-         end ;
-
-         let cPsi' = Whnf.normDCtx cPsi' in
-         let psihat' = Context.dctxToHat cPsi'  in
-         let _ = dprint (fun () -> "[elExp'] Mapp case :  PDecl ") in
-         let (h', sB) = Lfrecon.elHead loc Lfrecon.Pibox cD cPsi' h  in
-         let _ = dprint (fun () -> "\n[elExp'] PDecl instantiated with " ^ P.headToString cD cPsi' h') in
-         let theta' = Int.LF.MDot (Int.LF.PObj (psihat', h'), theta)  in
-         let sA' = (C.cnormTyp (tA, theta), LF.id) in
-         let i_norm = Whnf.cnormExp' (i, Whnf.m_id) in
-           (if Unify.isVar h' then
-              begin
-                try
-                  (Unify.unifyTyp cD cPsi' sB  sA' ;
-                   dprint (fun () -> "[elExp'] unification of PDecl with inferred type done");
-                   (Int.Comp.MApp (loc, i_norm,
-                                   Int.Comp.MetaObj (loc, psihat', Int.LF.IHead h')),
-                    (tau, theta')))
-                with Unify.Failure msg ->
-                  (Printf.printf "%s\n" msg;
-                   raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
-              end
-            else
-              raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
-        )
-
-
-  | _, _ ->
+let elApply cD (loc, i, mobj) (mdec, tau) theta depend =
     begin try
     let cM = elMetaObj cD mobj (mdec, theta) in
       if depend then

@@ -463,6 +463,7 @@ and normSub s = match s with
 and normFt ft = match ft with
   | Obj tM -> etaContract(norm (tM, LF.id))
   | Head h -> normHead (h, LF.id)
+  | Undef -> Undef
 
 
 

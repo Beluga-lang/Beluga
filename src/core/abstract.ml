@@ -378,7 +378,7 @@ let rec constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = I.Queued} :: cnstrs) ->
       constraints_solved cnstrs
-  | ({contents = I.Eqn (_cD, cPsi, tM, tN)} :: cnstrs) ->
+  | ({contents = I.Eqn (_cD, cPsi, I.INorm tM, I.INorm tN)} :: cnstrs) ->
       if Whnf.conv (tM, LF.id) (tN, LF.id) then
         constraints_solved cnstrs
       else
@@ -386,7 +386,7 @@ let rec constraints_solved cnstr = match cnstr with
            P.normalToString I.Empty cPsi (tM, LF.id) ^ " == " ^
            P.normalToString I.Empty cPsi (tN, LF.id) ^ "\n\n") ;
          false )
-  | ({contents = I.Eqs (_cD, cPsi, s, s')} :: cnstrs) ->
+  | ({contents = I.Eqn (_cD, cPsi, I.ISub s, I.ISub s')} :: cnstrs) ->
       if Whnf.convSub s s' then
         constraints_solved cnstrs
       else
@@ -394,7 +394,7 @@ let rec constraints_solved cnstr = match cnstr with
            P.subToString I.Empty cPsi s ^ " == " ^
            P.subToString I.Empty cPsi s' ^ "\n\n") ;
          false )
- | ({contents = I.Eqh (_cD, _cPsi, h1, h2)} :: cnstrs) ->
+ | ({contents = I.Eqn (_cD, _cPsi, I.IHead h1, I.IHead h2)} :: cnstrs) ->
       if Whnf.convHead (h1, LF.id) (h2, LF.id) then
         constraints_solved cnstrs
       else false

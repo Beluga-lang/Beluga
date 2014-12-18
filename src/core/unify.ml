@@ -352,7 +352,7 @@ let isVar h = match h with
 
   let addConstraint (cnstrs, cnstr) =
   (begin match cnstr with
-    | {contents= (Eqn (cD0, cPsi, tM, tN))} ->
+    | {contents= (Eqn (cD0, cPsi, INorm tM, INorm tN))} ->
         dprint (fun () -> "Add constraint: " ^ P.normalToString cD0 cPsi (tM, id)  ^
                    " = " ^ P.normalToString cD0 cPsi (tN, id))
     | _ -> () end ;
@@ -1898,9 +1898,9 @@ match sigma with
                       instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
 
               | (true, false) ->
-                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
               | (false, true) ->
-                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
               | (false, false) ->
                   if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
@@ -1912,7 +1912,7 @@ match sigma with
                               P.normalToString cD0 cPsi sM2 ^  "\n with type: " ^
                               P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint\n"
                           );*)
-                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *))
+                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sN), INorm (Clo sM))))  (* XXX double-check *))
           else
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) ->
@@ -1941,7 +1941,7 @@ match sigma with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n "; *)
 			  (dprint (fun () -> "Add constraint (0)");
-                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
                   end
               | (false, true) ->
                   begin try
@@ -1972,7 +1972,7 @@ match sigma with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n" ; *)
 			  (dprint (fun () -> "Add constraint (6)");
-                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))))
+                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM2), INorm (Clo sM1))))))
                   end
               | (false , false) ->
                   (* Check if t1' or t2' are proj-patt sub *)
@@ -2009,7 +2009,7 @@ match sigma with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 				(dprint (fun () -> "Add constraint (7)");
-                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
                         end
 
 
@@ -2027,13 +2027,13 @@ match sigma with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 				(dprint (fun () -> "Add constraint (8)");
-                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
                         end
 
 
                     | ( false , false ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
+                        let cnstr = ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))) in
                           dprint (fun () -> "neither pat sub"); addConstraint (cnstrs1, cnstr)
                   end
             end
@@ -2069,7 +2069,7 @@ match sigma with
               | NotInvertible ->
                   (* Printf.printf "Added constraints: NotInvertible: \n";*)
                   (dprint (fun () -> "Add constraint (9)");
-		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm (Clo sM2)))))
             else
               if isProjPatSub t' then
                 begin try
@@ -2084,13 +2084,13 @@ match sigma with
                   | NotInvertible ->
                       ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 			(dprint (fun () -> "Add constraint (10)");
-                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
               end
             else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi sM1
                               ^ " = " ^ P.normalToString cD0 cPsi sM2);
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
 
     (* MMVar-MMVar case *)
     | (((Root (_, MMVar ((_n1, r1,  cD1, MTyp(tP1, cPsi1), cnstrs1, mdep1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
@@ -2149,18 +2149,18 @@ match sigma with
 
               | (true, true, _, false) ->
                   (* t2' is not a pattern substitution *)
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM), INorm(Clo sN)))) (* XXX double-check *)
 
               | (true, true, false, _ ) ->
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM), INorm(Clo sN)))) (* XXX double-check *)
 
               | (false, _, _, _) ->
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
+                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sN), INorm(Clo sM))))  (* XXX double-check *)
 
               | (_, false, _, _) ->
                   (* t1' is not a pattern substitution *)
 
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
+                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sN), INorm(Clo sM))))  (* XXX double-check *)
 
           else
             begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
@@ -2200,7 +2200,7 @@ match sigma with
                   with
                     | NotInvertible ->
                       (dprint (fun () -> "Add constraint (1)");
-		      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+		      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                   end
               | (_ , _, true, true) ->
                   begin try
@@ -2227,7 +2227,7 @@ match sigma with
                   with
                     | NotInvertible ->
 		      (dprint (fun () -> "Add constraint (2)");
-                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
+                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM2), INorm(Clo sM1)))))
                   end
 (*              | ( _ , false , _ , _ ) ->
                   (* neither t1' is not pattern substitutions -- add projPat case *)
@@ -2265,7 +2265,7 @@ match sigma with
                         with
                           | NotInvertible ->
 			    (dprint (fun () -> "Add constraint (3)");
-                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                         end
 
 
@@ -2282,14 +2282,14 @@ match sigma with
                         with
                           | NotInvertible ->
 			    (dprint (fun () -> "Add constraint (4)");
-                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                         end
 
 
 
                     | ( _ , _ ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
+                        let cnstr = ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2))) in
 			let _ = dprint (fun () -> "Add constraint (5)") in
                           addConstraint (cnstrs1, cnstr)
                   end
@@ -2333,7 +2333,7 @@ match sigma with
                               P.normalToString cD0 cPsi sM1)
             with
               | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2))))
             end
           else
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
@@ -2385,11 +2385,11 @@ match sigma with
                   instantiateMMVar (r, sM2', !cnstrs)
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
-                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
               end
           else
              (dprint (fun () -> "(011) Add constraints ");
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
 
     | (((Root(_, h1,tS1), s1) as _sM1), ((Root(_, h2, tS2), s2) as _sM2)) ->
         dprnt "(020) Root-Root";
@@ -2501,13 +2501,13 @@ match sigma with
                   instantiateMPVar (q2, MPVar(w, (mt', s')), !cnstr2)
 
             | (true, true, _, false) ->
-                addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
+                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
             | (true, true, false, _) ->
-                addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
+                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
             | (false, _, _, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *)
+                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
             | (_, false, _, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *)
+                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
            )
         else
           ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
@@ -2582,10 +2582,10 @@ match sigma with
 
              | (false, _, _ , _ ) ->
                  (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
+                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
              | (_, false, _ , _ ) ->
                  (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
+                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
              (* | (_, _, false , _ ) -> *)
              (*     (\* neither s1' nor s2' are patsub *\) *)
              (*     addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head2, head1))) *)
@@ -2736,9 +2736,9 @@ match sigma with
                 let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD (Whnf.cnormDCtx (cPhi2, mt)) (Whnf.normSub s2')) in
                 instantiateMSVar (r, s2', !cnstrs)
               with
-                | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+                | NotInvertible -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
             end
-          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
         end
       | (EmptySub, _) -> ()
       | (_,EmptySub) -> ()
@@ -3095,7 +3095,7 @@ match sigma with
             | Queued (* in process elsewhere *) ->
                 (dprint (fun () -> "Constrait is queued\n") ;
                 forceCnstr mflag (nextCnstr ()))
-            | Eqn (cD, cPsi, tM1, tM2) ->
+            | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                 let _ = solveConstraint cnstr in
 (*                let tM1' = Whnf.norm (tM1, id) in
                 let tM2' = Whnf.norm (tM2, id) in  *)
@@ -3109,7 +3109,7 @@ match sigma with
                                 P.normalToString cD cPsi (tM1, id)  ^
                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n"))
                   )
-            | Eqh (cD, cPsi, h1, h2)   ->
+            | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
                 let _ = solveConstraint cnstr in
                   (dprint (fun () -> "Solve constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
@@ -3132,7 +3132,7 @@ match sigma with
       | c::cnstrs ->
           match !c with
             | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
-            |  Eqn (cD, cPsi, tM1, tM2) ->
+            |  Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                  let _ = solveConstraint c in
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
@@ -3150,7 +3150,7 @@ match sigma with
                         | Tuple (loc, _ ) -> loc  end in
                         raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
                     end)
-            | Eqh (cD, cPsi, h1, h2)   ->
+            | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
                 let _ = solveConstraint c in
                   (dprint (fun () -> "Solve global constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
@@ -3164,7 +3164,7 @@ match sigma with
                      let loc = Syntax.Loc.ghost in
                        raise (GlobalCnstrFailure (loc, cnstr_string))
                    end)
-            | Eqs (cD, cPsi, s1, s2) ->
+            | Eqn (cD, cPsi, ISub s1, ISub s2) ->
 	      let _ = solveConstraint c in
 	      begin try
 		      (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)

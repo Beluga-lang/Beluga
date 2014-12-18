@@ -1025,12 +1025,12 @@ and constraints_solved cnstr = match cnstr with
   | [] -> true
   | ({contents = Queued} :: cnstrs) ->
       constraints_solved cnstrs
-  | ({contents = Eqn (_cD, _phat, tM, tN)} :: cnstrs) ->
+  | ({contents = Eqn (_cD, _phat, INorm tM, INorm tN)} :: cnstrs) ->
       if conv (tM, LF.id) (tN, LF.id) then
         constraints_solved cnstrs
       else
          false
- | ({contents = Eqh (_cD, _phat, h1, h2)} :: cnstrs) ->
+ | ({contents = Eqn (_cD, _phat, IHead h1, IHead h2)} :: cnstrs) ->
       if convHead (h1, LF.id) (h2, LF.id) then
         constraints_solved cnstrs
       else false

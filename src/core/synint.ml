@@ -115,9 +115,7 @@ module LF = struct
 
   and constrnt =                             (* Constraint                     *)
     | Queued                                 (* constraint ::= Queued          *)
-    | Eqn of mctx * dctx * normal * normal   (*            | Psi |-(M1 == M2)  *)
-    | Eqh of mctx * dctx * head * head       (*            | Psi |-(H1 == H2)  *)
-    | Eqs of mctx * dctx * sub * sub         (*            | Psi |-(s1 == s2)  *)
+    | Eqn of mctx * dctx * iterm * iterm     (*            | Psi |-(M1 == M2)  *)
 
   and cnstr = constrnt ref
 
@@ -356,7 +354,6 @@ module Comp = struct
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
-
 
   and copattern_spine =
     | CopatNil of Loc.t

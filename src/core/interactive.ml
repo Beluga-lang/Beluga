@@ -308,7 +308,7 @@ let  intro i =
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
          Some (Comp.Fun(l, nam, exp))
-     | Comp.TypParam (l,tA,psi) ->
+     | Comp.TypBox (l,LF.PTyp(tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in

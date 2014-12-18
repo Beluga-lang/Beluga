@@ -404,7 +404,7 @@ let rec constraints_solved cnstr = match cnstr with
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
   | Comp.TypBox (_, I.MTyp (tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
-  | Comp.TypSub (_, cPhi, cPsi) -> cnstr_dctx cPhi && cnstr_dctx cPsi
+  | Comp.TypBox (_, I.STyp(cPhi, cPsi)) -> cnstr_dctx cPhi && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
   | (I.Atom  (_, _a, spine),  s)  -> cnstr_spine (spine , s)
@@ -1616,12 +1616,6 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ', mT') = collectMetaTyp loc p cQ mT in
         (cQ', Comp.TypBox (loc, mT'))
 
-  | Comp.TypSub (loc, cPhi, cPsi) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-      let (cQ'', cPhi') = collectDctx loc p cQ phat cPhi in
-        (cQ'', Comp.TypSub (loc, cPhi', cPsi'))
-
   | Comp.TypArr (tau1, tau2) ->
       let (cQ1, tau1') = collectCompTyp p cQ tau1 in
       let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
@@ -1880,10 +1874,10 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
         Comp.TypBox (loc, Int.LF.MTyp (tA', cPsi'))
 
-  | Comp.TypSub (loc, cPhi, cPsi) ->
+  | Comp.TypBox (loc, Int.LF.STyp(cPhi, cPsi)) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let cPhi' = abstractMVarDctx cQ offset cPhi in
-        Comp.TypSub (loc, cPhi', cPsi')
+        Comp.TypBox (loc, Int.LF.STyp(cPhi', cPsi'))
 
   | Comp.TypArr (tau1, tau2) ->
       Comp.TypArr (abstractMVarCompTyp cQ offset tau1,

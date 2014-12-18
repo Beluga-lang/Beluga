@@ -1944,7 +1944,7 @@ let extract_patterns tau branch_patt = match branch_patt with
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', pat), ms, _e) ->
       let (tA, cPhi) = match tau with
         | Comp.TypBox (_, LF.MTyp (tA, cPhi)) -> (tA, cPhi)
-        | Comp.TypParam (_, tA, cPhi) -> (tA, cPhi) in
+        | Comp.TypBox (_, LF.PTyp(tA, cPhi)) -> (tA, cPhi) in
       let (cPsi, tR) = (match pat with
 			  | Comp.MetaObjAnn (loc', cPsi, LF.INorm tR) ->
 			      (cPsi, tR) (* [ms]cPhi = cPsi *)
@@ -1954,7 +1954,7 @@ let extract_patterns tau branch_patt = match branch_patt with
   | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms)  ->
       begin match tau with
         | Comp.TypBox (_, LF.MTyp (tA, cPhi)) ->	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
-        | Comp.TypParam (_, tA, cPhi) -> (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+        | Comp.TypBox (_, LF.PTyp(tA, cPhi)) -> (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
       end
 
   | Comp.Branch (loc, cD, cG, pat, ms, _e) ->
@@ -2032,7 +2032,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 	[ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , Comp.MetaObjAnn (loc, cPsi', LF.INorm tM) )) ]
 
 
-  | Comp.TypParam(loc, tA, cPsi) ->
+  | Comp.TypBox(loc, LF.PTyp(tA, cPsi)) ->
       let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.PTyp (tA, cPsi), LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in

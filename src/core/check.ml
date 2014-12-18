@@ -395,7 +395,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
 
-    | TypSub (_ , cPhi, cPsi) ->
+    | TypBox (_ , I.STyp(cPhi, cPsi)) ->
         LF.checkDCtx cD cPsi;
         LF.checkDCtx cD cPhi
 
@@ -503,9 +503,9 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
              branches), (tau, t)) ->				
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
-                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None);                       
+                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None);                       
                    | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
-                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), Some k);                       
+                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k);                       
                    | _ ->
                        (TypBox (loc, I.MTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
         let tau_s = TypBox (loc, I.MTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in

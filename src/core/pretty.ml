@@ -1003,16 +1003,6 @@ module Int = struct
           fprintf ppf "%a"
 		  (fmt_ppr_meta_typ cD 0) mT
 
-      | Comp.TypParam (_, tA, cPsi) ->
-          fprintf ppf "#[%a |- %a]"
-                (fmt_ppr_lf_dctx cD 0) cPsi
-                (fmt_ppr_lf_typ cD cPsi 0) tA
-
-      | Comp.TypSub (_, cPhi, cPsi) ->
-          fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_dctx cD 0) cPhi
-
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a -> %a%s"

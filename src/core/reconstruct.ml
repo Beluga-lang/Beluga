@@ -771,7 +771,7 @@ let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypSub (loc, psi, phi) ->
       let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
-        Int.Comp.TypSub (loc, cPsi, cPhi)
+        Int.Comp.TypBox (loc, Int.LF.STyp(cPsi, cPhi))
 
   | Apx.Comp.TypArr (tau1, tau2) ->
       let tau1' = elCompTyp cD tau1 in

@@ -266,7 +266,6 @@ module Comp = struct
   type meta_spine =
     | MetaNil
     | MetaApp of meta_obj * meta_spine
-  (* MetaSClo of meta_spine * msub *)
 
   type typ =
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
@@ -362,9 +361,6 @@ module Comp = struct
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
     | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
-
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
-        (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
 
   and copattern_spine =
     | CopatNil of Loc.t

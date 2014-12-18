@@ -1423,7 +1423,7 @@ module Int = struct
                *)
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
-      | Comp.BranchBox (_, cD1', (cPsi, pattern, t, _cs)) ->
+      | Comp.BranchBox (_, cD1', (cPsi, pattern, t)) ->
           let rec ppr_ctyp_decls' ppf = function
             | LF.Dec (LF.Empty, decl) ->
                 fprintf ppf "%a"

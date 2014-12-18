@@ -112,7 +112,6 @@ val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
 val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 
 val cnormMSub  : msub -> msub
-val cnormCSub  : (csub * msub) -> csub
 
 val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp  : Comp.typ * msub -> Comp.typ

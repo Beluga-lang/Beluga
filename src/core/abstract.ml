@@ -1807,14 +1807,14 @@ and collectBranch cQ branch = match branch with
         (cQ', Comp.Branch (loc, cD, cG, pat, msub, e'))
   | Comp.EmptyBranch _  ->
         (cQ, branch)
-  | Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e), msub, csub)) ->
+  | Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e), msub)) ->
       (* pat and cD cannot contain any free meta-variables *)
       let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e'), msub, csub)))
+        (cQ', Comp.BranchBox (cO, cD, (dctx, Comp.NormalPattern(pat, e'), msub)))
 
-  | Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub, csub)) ->
+  | Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub)) ->
       (* pat and cD cannot contain any free meta-variables *)
-        (cQ, Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub, csub)))
+        (cQ, Comp.BranchBox (cO, cD, (dctx, Comp.EmptyPattern, msub)))
 
 and collectBranches cQ branches = match branches with
   | [] -> (cQ, [])

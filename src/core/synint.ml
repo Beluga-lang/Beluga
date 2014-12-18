@@ -96,10 +96,6 @@ module LF = struct
    | MShift of int                           (* theta ::= ^n                   *)
    | MDot   of mfront * msub                 (*       | MFt . theta            *)
 
- and csub =                                  (* Context substitutions          *)
-   | CShift of int                           (* delta ::= ^n                   *)
-   | CDot   of dctx * csub                   (*       | cPsi .delta            *)
-
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
@@ -361,7 +357,7 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
+    | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub)
 
   and copattern_spine =
     | CopatNil of Loc.t

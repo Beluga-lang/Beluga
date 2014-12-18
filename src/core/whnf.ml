@@ -1377,12 +1377,6 @@ let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
 
 
 
-let rec cnormCSub (cs, t) = begin match cs with
-  | CShift k -> CShift k
-  | CDot (cPsi, cs) ->
-      CDot (cnormDCtx (cPsi, t) , cnormCSub (cs, t))
-end
-
 let mctxLookup cD k = 
  let rec lookup cD k' = 
    match (cD, k') with
@@ -1728,7 +1722,7 @@ let mctxMVarPos cD u =
      Comp.Branch (loc, cD, cG, pat,
                   cnormMSub t, cnormExp (e, m_id))
 
-    | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t, cs)),  theta) ->
+    | (Comp.BranchBox (cO, cD', (cPsi, Comp.NormalPattern(tM, e), t)),  theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while
        cD' |- theta' <= cD0
        cD0' |- theta <= cD0
@@ -1738,14 +1732,12 @@ let mctxMVarPos cD u =
      *)
       Comp.BranchBox (cO, cD', (cPsi,
                                 Comp.NormalPattern (norm (tM,LF.id), cnormExp (e,m_id)),
-                                cnormMSub t,
-                                cs))
+                                cnormMSub t))
 
-    | (Comp.BranchBox (cO, cD', (cPsi, Comp.EmptyPattern, t, cs)),  theta) ->
+    | (Comp.BranchBox (cO, cD', (cPsi, Comp.EmptyPattern, t)),  theta) ->
           Comp.BranchBox (cO, cD', (cPsi,
                                     Comp.EmptyPattern,
-                                    cnormMSub t,
-                                    cs))
+                                    cnormMSub t))
 
 
   let cnormMTyp (ctyp, mtt') = match ctyp with

@@ -875,21 +875,6 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
         else raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
           (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
 
-
-let elApply cD (loc, i, mobj) (mdec, tau) theta depend =
-    begin try
-    let cM = elMetaObj cD mobj (mdec, theta) in
-      if depend then
-        let theta' =  Int.LF.MDot (metaObjToFt cM, theta) in
-        (Int.Comp.MApp (loc, i, cM), (tau, theta'))
-      else
-        (Int.Comp.Apply (loc, i, Int.Comp.Box (loc, cM)), (tau, theta))
-      with Error.Violation msg ->
-       dprint (fun () -> "[elTerm] Error.Violation: " ^ msg);
-          raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (mdec, theta))))
-     end
-
-
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
@@ -1169,11 +1154,12 @@ and elExp' cD cG i = match i with
       let (i', tau_theta') = genMApp loc cD (i0, tau_t) in
         begin match tau_theta' with
           | (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
-              elApply cD (loc, i', mC) (ctyp, tau) theta true
-
+	        let cM = elMetaObj cD mC (ctyp, theta) in
+	        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
           | (Int.Comp.TypArr (tau1, tau), theta) -> begin match tau1 with
-              | Int.Comp.TypBox(_, Int.LF.MTyp(tP, cPsi)) ->
-                  elApply cD (loc, i', mC) (Int.LF.MTyp (tP, cPsi), tau) theta false
+              | Int.Comp.TypBox(_, ctyp) ->
+                let cM = elMetaObj cD mC (ctyp, theta) in
+		(Int.Comp.Apply (loc, i', Int.Comp.Box (loc, cM)), (tau, theta))
                 | _ ->
                     raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, (tau1, theta))))
             end

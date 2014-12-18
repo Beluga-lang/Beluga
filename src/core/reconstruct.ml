@@ -583,7 +583,13 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
           Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
       else
          raise (Error.Violation ("Contexts do not match - MetaSObj not of the appropriate meta-type" ))
-
+  | Apx.Comp.MetaObjAnn (_loc', psi, m) , (Int.LF.STyp (tA, cPsi) , theta) ->
+      begin
+        let sub = match m with
+        | Apx.LF.Root(_, h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, Apx.LF.EmptySub)
+        | _ -> Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub) in
+        elMetaObj cD (Apx.Comp.MetaSubAnn(_loc', psi, sub)) cTt
+      end
   | (Apx.Comp.MetaSubAnn (loc, cPhi, s), (Int.LF.STyp (cPsi0, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
@@ -869,7 +875,7 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
           (*  | (Apx.Comp.CopatMeta (loc, mo, csp'), (Int.Comp.*)
 
 
-let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
+let elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec with
   | Apx.Comp.MetaObjAnn (_loc', psi , Apx.LF.Root (_, h, Apx.LF.Nil)) ,
        Int.LF.PTyp (tA, cPsi) ->
       let cPsi  = C.cnormDCtx (cPsi, theta) in
@@ -907,15 +913,7 @@ let rec elApply cD (loc, i, mobj) (mdec, tau) theta depend = match mobj , mdec w
               raise (Lfrecon.Error (loc, Lfrecon.TypMismatchElab (cD, cPsi', sA', sB))))
         )
 
-  | Apx.Comp.MetaObjAnn (_loc', psi, m) , Int.LF.STyp (tA, cPsi) ->
-      begin (* try *)
-        let sub = match m with
-        | Apx.LF.Root(_, h, Apx.LF.Nil) -> Apx.LF.Dot(Apx.LF.Head h, Apx.LF.EmptySub)
-        | _ -> Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub) in
-        elApply cD (loc, i, Apx.Comp.MetaSubAnn(_loc', psi, sub)) (mdec, tau) theta depend  
-(*         with  
-      | _ -> raise (Check.Comp.Error (loc, Check.Comp.MAppMismatch (cD, (Int.Comp.MetaSubTyp (tA, cPsi), theta))))  *)
-      end
+
   | _, _ ->
     begin try
     let cM = elMetaObj cD mobj (mdec, theta) in

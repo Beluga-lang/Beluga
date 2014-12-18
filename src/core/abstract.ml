@@ -1572,28 +1572,28 @@ let rec collect_meta_obj p cQ cM = match cM with
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
         (cQ', Comp.MetaCtx (loc, cPsi'))
-  | Comp.MetaObj (loc, phat, tM) ->
+  | Comp.MetaObj (loc, phat, Int.LF.INorm tM) ->
       let (cQ', phat') = collectHat p cQ phat in
       let (cQ', tM') = collectTerm p cQ' phat' (tM, LF.id) in
-        (cQ', Comp.MetaObj (loc, phat', tM'))
-  | Comp.MetaObjAnn (loc, cPsi, tM) ->
+        (cQ', Comp.MetaObj (loc, phat', Int.LF.INorm tM'))
+  | Comp.MetaObjAnn (loc, cPsi, Int.LF.INorm tM) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
       let (cQ'', tM') = collectTerm p cQ' phat (tM, LF.id) in
-        (cQ'', Comp.MetaObjAnn (loc, cPsi', tM'))
-  | Comp.MetaParam (loc, phat, h) ->
+        (cQ'', Comp.MetaObjAnn (loc, cPsi', Int.LF.INorm tM'))
+  | Comp.MetaObj (loc, phat, Int.LF.IHead h) ->
       let (cQ', phat') = collectHat p cQ phat in
       let (cQ'', h') = collectHead p cQ' phat loc (h, LF.id) in
-        (cQ'', Comp.MetaParam (loc, phat', h'))
-  | Comp.MetaSObj (loc, phat, tM) ->
+        (cQ'', Comp.MetaObj (loc, phat', Int.LF.IHead h'))
+  | Comp.MetaObj (loc, phat, Int.LF.ISub tM) ->
       let (cQ', phat') = collectHat p cQ phat in
       let (cQ', tM') = collectSub p cQ' phat' tM in
-        (cQ', Comp.MetaSObj (loc, phat', tM'))
-  | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+        (cQ', Comp.MetaObj (loc, phat', Int.LF.ISub tM'))
+  | Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub tM) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
       let (cQ'', tM') = collectSub p cQ' phat tM in
-        (cQ'', Comp.MetaSObjAnn (loc, cPsi', tM'))
+        (cQ'', Comp.MetaObjAnn (loc, cPsi', Int.LF.ISub tM'))
 
 and collect_meta_spine p cQ cS = match cS with
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
@@ -1847,26 +1847,26 @@ let rec abstractMVarMetaObj cQ offset cM = match cM with
   | Comp.MetaCtx (loc, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
         Comp.MetaCtx (loc, cPsi')
-  | Comp.MetaObj (loc, phat, tM) ->
+  | Comp.MetaObj (loc, phat, Int.LF.INorm tM) ->
       let phat' = abstractMVarHat cQ offset phat in
       let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
-        Comp.MetaObj (loc, phat', tM')
-  | Comp.MetaObjAnn (loc, cPsi, tM) ->
+        Comp.MetaObj (loc, phat', Int.LF.INorm tM')
+  | Comp.MetaObjAnn (loc, cPsi, Int.LF.INorm tM) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
-        Comp.MetaObjAnn (loc, cPsi', tM')
-  | Comp.MetaParam (loc, phat, h) ->
+        Comp.MetaObjAnn (loc, cPsi', Int.LF.INorm tM')
+  | Comp.MetaObj (loc, phat, Int.LF.IHead h) ->
       let phat' = abstractMVarHat cQ offset phat in
       let h' = abstractMVarHead cQ offset h in
-        Comp.MetaParam (loc, phat', h')
-  | Comp.MetaSObj (loc, phat, tM) ->
+        Comp.MetaObj (loc, phat', Int.LF.IHead h')
+  | Comp.MetaObj (loc, phat, Int.LF.ISub tM) ->
       let phat' = abstractMVarHat cQ offset phat in
       let tM' = abstractMVarSub  cQ  offset tM in
-        Comp.MetaSObj (loc, phat', tM')
-  | Comp.MetaSObjAnn (loc, cPsi, tM) ->
+        Comp.MetaObj (loc, phat', Int.LF.ISub tM')
+  | Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub tM) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tM' = abstractMVarSub  cQ  offset tM in
-        Comp.MetaSObjAnn (loc, cPsi', tM')
+        Comp.MetaObjAnn (loc, cPsi', Int.LF.ISub tM')
 
 and abstractMVarMetaSpine cQ offset cS = match cS with
   | Comp.MetaNil -> Comp.MetaNil

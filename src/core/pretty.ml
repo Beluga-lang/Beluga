@@ -959,25 +959,25 @@ module Int = struct
       | Comp.MetaCtx (_, cPsi) ->
             fprintf ppf "[%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
-      | Comp.MetaObj (_, phat, tM) ->
+      | Comp.MetaObj (_, phat, LF.INorm tM) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
-      | Comp.MetaObjAnn (_, cPsi, tM) ->
+      | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) ->
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
-      | Comp.MetaSObj (_, phat, s) ->
+      | Comp.MetaObj (_, phat, LF.ISub s) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) s
-      | Comp.MetaSObjAnn (_, cPsi, tM) ->
+      | Comp.MetaObjAnn (_, cPsi, LF.ISub tM) ->
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) tM
-      | Comp.MetaParam (_, phat, h) ->
+      | Comp.MetaObj (_, phat, LF.IHead h) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi

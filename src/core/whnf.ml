@@ -1439,16 +1439,16 @@ let mctxMVarPos cD u =
   let rec normMetaObj mO = match mO with
     | Comp.MetaCtx (loc, cPsi) ->
         Comp.MetaCtx (loc, normDCtx cPsi)
-    | Comp.MetaObj (loc, phat, tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat m_id, norm (tM, LF.id))
-    | Comp.MetaObjAnn (loc, cPsi, tM) ->
-        Comp.MetaObjAnn (loc, normDCtx cPsi, norm (tM, LF.id))
-    | Comp.MetaSObj (loc, phat, tM) ->
-        Comp.MetaSObj (loc, cnorm_psihat phat m_id, normSub tM)
-    | Comp.MetaSObjAnn (loc, cPsi, tM) ->
-        Comp.MetaSObjAnn (loc, normDCtx cPsi, normSub tM)
+    | Comp.MetaObj (loc, phat, INorm tM) ->
+        Comp.MetaObj (loc, cnorm_psihat phat m_id, INorm (norm (tM, LF.id)))
+    | Comp.MetaObjAnn (loc, cPsi, INorm tM) ->
+        Comp.MetaObjAnn (loc, normDCtx cPsi, INorm (norm (tM, LF.id)))
+    | Comp.MetaObj (loc, phat, ISub tM) ->
+        Comp.MetaObj (loc, cnorm_psihat phat m_id, ISub (normSub tM))
+    | Comp.MetaObjAnn (loc, cPsi, ISub tM) ->
+        Comp.MetaObjAnn (loc, normDCtx cPsi, ISub (normSub tM))
 
-    | Comp.MetaParam (loc, phat, _ ) ->    mO
+    | Comp.MetaObj (loc, phat, IHead _ ) ->    mO
 
   and normMetaSpine mS = match mS with
     | Comp.MetaNil -> mS
@@ -1509,15 +1509,15 @@ let mctxMVarPos cD u =
   let rec cnormMetaObj (mO,t) = match mO with
     | Comp.MetaCtx (loc, cPsi) ->
         Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
-    | Comp.MetaObj (loc, phat, tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat t, norm (cnorm (tM, t), LF.id))
-    | Comp.MetaObjAnn (loc, cPsi, tM) ->
-        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), norm (cnorm (tM, t), LF.id))
-    | Comp.MetaSObj (loc, phat, sigma) ->
-        Comp.MetaSObj (loc, cnorm_psihat phat t, normSub (cnormSub (sigma, t)))
-    | Comp.MetaSObjAnn (loc, cPsi, sigma) ->
-        Comp.MetaSObjAnn (loc, cnormDCtx (cPsi, t), normSub (cnormSub (sigma, t)))
-    | Comp.MetaParam (loc, phat, h ) ->  Comp.MetaParam (loc, cnorm_psihat phat t, cnormHead (h, t))
+    | Comp.MetaObj (loc, phat, INorm tM) ->
+        Comp.MetaObj (loc, cnorm_psihat phat t, INorm (norm (cnorm (tM, t), LF.id)))
+    | Comp.MetaObjAnn (loc, cPsi, INorm tM) ->
+        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), INorm (norm (cnorm (tM, t), LF.id)))
+    | Comp.MetaObj (loc, phat, ISub sigma) ->
+        Comp.MetaObj (loc, cnorm_psihat phat t, ISub (normSub (cnormSub (sigma, t))))
+    | Comp.MetaObjAnn (loc, cPsi, ISub sigma) ->
+        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), ISub (normSub (cnormSub (sigma, t))))
+    | Comp.MetaObj (loc, phat, IHead h ) ->  Comp.MetaObj (loc, cnorm_psihat phat t, IHead (cnormHead (h, t)))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
@@ -1802,11 +1802,11 @@ let mctxMVarPos cD u =
   let rec convMetaObj mO mO' = match (mO , mO) with
     | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  ->
         convDCtx  cPsi cPsi'
-    | (Comp.MetaObj (_, _phat, tM) , Comp.MetaObj (_, _phat', tM')) ->
+    | (Comp.MetaObj (_, _phat, INorm tM) , Comp.MetaObj (_, _phat', INorm tM')) ->
         conv (tM, LF.id) (tM', LF.id)
-    | (Comp.MetaParam (_, _phat, tH) , Comp.MetaParam (_, _phat', tH')) ->
+    | (Comp.MetaObj (_, _phat, IHead tH) , Comp.MetaObj (_, _phat', IHead tH')) ->
         convHead (tH, LF.id) (tH', LF.id)
-    | (Comp.MetaSObj (_, _phat, s) , Comp.MetaSObj (_, _phat', s')) ->
+    | (Comp.MetaObj (_, _phat, ISub s) , Comp.MetaObj (_, _phat', ISub s')) ->
         convSub s s'
     | _ -> false
 
@@ -2004,9 +2004,9 @@ let rec closedMetaSpine mS = match mS with
 
 and closedMetaObj mO = match mO with
   | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi
-  | Comp.MetaObj (_, phat, tM) ->
+  | Comp.MetaObj (_, phat, INorm tM) ->
       closedDCtx (Context.hatToDCtx phat) && closed (tM, LF.id)
-  | Comp.MetaSObj (_, phat, sigma) ->
+  | Comp.MetaObj (_, phat, ISub sigma) ->
       closedDCtx (Context.hatToDCtx phat) && closedSub sigma
 
 let closedMetaTyp cT = match cT with 

@@ -104,16 +104,12 @@ module LF = struct
     | Offset of offset                        (* Bound Variables                *)
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
-  and mm_var = name * iterm option ref * mctx * ityp * cnstr list ref * depend
+  and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
 
   and iterm =
     | INorm of normal
     | IHead of head
     | ISub of sub
-  and ityp =
-    | IMTyp of dctx * typ
-    | IPTyp of dctx * typ
-    | ISTyp of dctx * dctx
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref

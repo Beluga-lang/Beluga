@@ -141,7 +141,6 @@ module Int = struct
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
     val mtypToString      : LF.mctx -> LF.ctyp -> string
-    val itypToString      : LF.mctx -> LF.ityp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
@@ -574,7 +573,7 @@ module Int = struct
           fprintf ppf "_ "
 
     and fmt_ppr_lf_mmvar lvl ppf = function
-      | (_, ({ contents = None } as u), _, LF.IPTyp(_, tA), _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.PTyp(tA,_), _, mDep) ->
           begin
             try
               fprintf ppf "?#%s"
@@ -588,12 +587,12 @@ module Int = struct
                       PInstHashtbl.replace pinst_hashtbl u sym
                     ; fprintf ppf "?#%s" sym
           end
-      | (_, {contents = Some (LF.IHead h)}, cD, LF.IPTyp(cPsi, _), _, mDep) ->
+      | (_, {contents = Some (LF.IHead h)}, cD, LF.PTyp(_,cPsi), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | (_, ({ contents = None } as u), _, LF.IMTyp(_, tA), _, _) ->
+      | (_, ({ contents = None } as u), _, LF.MTyp(tA,_), _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -612,12 +611,12 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
 
-      | (_, {contents = Some (LF.INorm m)}, cD, LF.IMTyp (cPsi, _), _, _) ->
+      | (_, {contents = Some (LF.INorm m)}, cD, LF.MTyp (_,cPsi), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
-      | (_, ({ contents = None } as u), _, LF.ISTyp(_, cPsi), _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.STyp(cPsi,_), _, mDep) ->
           begin
             try
               fprintf ppf "?%s"
@@ -634,7 +633,7 @@ module Int = struct
                     ; fprintf ppf "#?%s" sym
           end
 
-      | (_, {contents = Some (LF.ISub s)}, cD, LF.ISTyp(cPsi, _), _, mDep) ->
+      | (_, {contents = Some (LF.ISub s)}, cD, LF.STyp(_,cPsi), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " #%a"
             (fmt_ppr_lf_sub cD cPsi lvl) s
@@ -655,7 +654,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n -> fmt_ppr_lf_offset cD _lvl ppf n
 
-      | LF.Inst (_, ({ contents = None } as u), _, LF.IMTyp(_, tA), _, _) ->
+      | LF.Inst (_, ({ contents = None } as u), _, LF.MTyp(tA,_), _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -872,22 +871,6 @@ module Int = struct
               (fmt_ppr_lf_typ LF.Empty cPsi  1) a
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
-
-    and fmt_ppr_lf_ityp cD ppf = function
-      | LF.IMTyp (cPsi, tA) ->
-          fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 0) tA
-
-      | LF.IPTyp (cPsi, tA) ->
-          fprintf ppf "#[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 0) tA 
-
-      | LF.ISTyp (cPhi, cPsi) ->
-          fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_dctx cD 0) cPhi
 
     and fmt_ppr_lf_mtyp cD ppf = function
       | LF.MTyp (tA, cPsi) ->
@@ -1695,9 +1678,6 @@ module Int = struct
       (* let tA = Whnf.normTyp sA in *)
         fmt_ppr_lf_mtyp cD str_formatter mtyp
         ; flush_str_formatter ()
-    let itypToString cD mtyp =
-      fmt_ppr_lf_ityp cD str_formatter mtyp
-	; flush_str_formatter ()
 
     let typRecToString cD cPsi typrec_clo =
       let typrec = Whnf.normTypRec typrec_clo in

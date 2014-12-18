@@ -2455,7 +2455,7 @@ let rec checkDCtx loc recT cD psi w = match psi with
 let rec solve_fvarCnstr recT cD cnstr = match cnstr with
   | [] -> ()
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, ({contents = None} as r), _, Int.LF.IMTyp(cPsi, tP), _, _)) :: cnstrs) ->
+      Int.LF.Inst (_, ({contents = None} as r), _, Int.LF.MTyp(tP,cPsi), _, _)) :: cnstrs) ->
       begin try
 	begin match FVar.get x with
           | Int.LF.Type tA ->
@@ -2484,7 +2484,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 
   | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, {contents = Some (Int.LF.INorm tR)}, _, Int.LF.IMTyp(cPsi, tP), _ , _)) :: cnstrs) ->
+      Int.LF.Inst (_, {contents = Some (Int.LF.INorm tR)}, _, Int.LF.MTyp(tP,cPsi), _ , _)) :: cnstrs) ->
       begin try
         begin match FVar.get x with
         | Int.LF.Type tA ->
@@ -2518,7 +2518,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
 
 let rec solve_fcvarCnstr cD cnstr = match cnstr with
   | [] -> ()
-  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, _, Int.LF.IMTyp(cPsi, _), _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, _, Int.LF.MTyp(_,cPsi), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.MTyp (_tP, cPhi), _)) = FCVar.get u in
 	let d = Context.length cD - Context.length cD_d in
@@ -2531,7 +2531,7 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
         raise (Error (loc, LeftoverConstraints u))
       end
 
-  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, _, Int.LF.IMTyp(cPsi, _), _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, _, Int.LF.MTyp(_,cPsi), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.PTyp (tA, cPhi), _)) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in

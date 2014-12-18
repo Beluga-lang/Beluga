@@ -403,7 +403,7 @@ let rec constraints_solved cnstr = match cnstr with
 
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
-  | Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
+  | Comp.TypBox (_, I.MTyp (tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
   | Comp.TypSub (_, cPhi, cPsi) -> cnstr_dctx cPhi && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
@@ -1427,14 +1427,7 @@ and abstractMVarMTyp cQ mtyp loff = match mtyp with
   | I.CTyp sW -> I.CTyp sW
 
 
-and abstractMVarMetaTyp cQ mtyp loff = match mtyp with
-  | Int.Comp.MetaTyp (tA, cPsi) ->
-    Int.Comp.MetaTyp (abstractMVarTyp cQ loff (tA, LF.id), abstractMVarDctx cQ loff cPsi)
-  | Int.Comp.MetaParamTyp (tA, cPsi) ->
-    Int.Comp.MetaParamTyp (abstractMVarTyp cQ loff (tA, LF.id), abstractMVarDctx cQ loff cPsi)
-  | Int.Comp.MetaSubTyp (cPhi, cPsi) ->
-    Int.Comp.MetaSubTyp (abstractMVarDctx cQ loff cPhi, abstractMVarDctx cQ loff cPsi)
-  | Int.Comp.MetaSchema sW -> mtyp
+and abstractMVarMetaTyp cQ mtyp loff = abstractMVarMTyp cQ mtyp loff
 
 
 and abstractMVarCdecl cQ loff cdecl = match cdecl with
@@ -1603,12 +1596,12 @@ and collect_meta_spine p cQ cS = match cS with
         (cQ'', Comp.MetaApp (cM', cS'))
 
 let collectMetaTyp loc p cQ mT = match mT with 
-  | Comp.MetaTyp (tA, cPsi) -> 
+  | Int.LF.MTyp (tA, cPsi) -> 
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
       let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in
-	(cQ'', Comp.MetaTyp (tA', cPsi'))
-  | Comp.MetaSchema _w -> (cQ, mT)
+	(cQ'', Int.LF.MTyp (tA', cPsi'))
+  | Int.LF.CTyp _w -> (cQ, mT)
 
 
 let rec collectCompTyp p cQ tau = match tau with
@@ -1882,10 +1875,10 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypCobase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypCobase (loc, a , cS')
-  | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
+  | Comp.TypBox (loc, Int.LF.MTyp (tA, cPsi)) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
       let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
-        Comp.TypBox (loc, Comp.MetaTyp (tA', cPsi'))
+        Comp.TypBox (loc, Int.LF.MTyp (tA', cPsi'))
 
   | Comp.TypSub (loc, cPhi, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in

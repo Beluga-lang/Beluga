@@ -3036,7 +3036,7 @@ match sigma with
 
           else
             raise (Failure "Type Constant Clash")
-      | ((Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)), t) , (Comp.TypBox (_, Comp.MetaTyp(tA', cPsi')), t')) ->
+      | ((Comp.TypBox (_, LF.MTyp (tA, cPsi)), t) , (Comp.TypBox (_, LF.MTyp(tA', cPsi')), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
            (* dprint (fun () -> "[unifyCompTyp] Unifying contexts done");
@@ -3318,10 +3318,10 @@ let unify_phat psihat phihat =
       unifyTyp' Matching cD0 cPsi sA sB
 
       let metaTypToCDecl mT = match mT with
-	| Comp.MetaTyp (tP, cPsi) -> LF.MTyp (tP, cPsi)
-	| Comp.MetaParamTyp (tP, cPsi) -> LF.PTyp (tP, cPsi)
-	| Comp.MetaSubTyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi)
-	| Comp.MetaSchema w -> LF.CTyp w
+	| LF.MTyp (tP, cPsi) -> LF.MTyp (tP, cPsi)
+	| LF.PTyp (tP, cPsi) -> LF.PTyp (tP, cPsi)
+	| LF.STyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi)
+	| LF.CTyp w -> LF.CTyp w
 
     let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) = 
       unifyMObj cD (cM, ms) (cM', ms) (metaTypToCDecl mT, mt)

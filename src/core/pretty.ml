@@ -936,13 +936,13 @@ module Int = struct
           end
 
     let fmt_ppr_meta_typ cD lvl ppf = function
-      | Comp.MetaTyp (tA, cPsi) ->
+      | LF.MTyp (tA, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
-      | Comp.MetaSchema (s_cid) ->
+      | LF.CTyp (s_cid) ->
           fprintf ppf "%s" (R.render_cid_schema s_cid)
-      | Comp.MetaSubTyp (cPhi, cPsi) ->
+      | LF.STyp (cPhi, cPsi) ->
            fprintf ppf "%a[%a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_dctx cD lvl) cPhi

@@ -256,11 +256,7 @@ module Comp = struct
     | Ctype of Loc.t
     | PiKind  of Loc.t * LF.ctyp_decl * kind
 
-  type meta_typ =
-    | MetaTyp of LF.typ * LF.dctx
-    | MetaParamTyp of LF.typ * LF.dctx
-    | MetaSubTyp of LF.dctx * LF.dctx
-    | MetaSchema of cid_schema
+  type meta_typ = LF.ctyp
 
   type meta_obj =
     | MetaCtx of Loc.t * LF.dctx

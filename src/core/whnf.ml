@@ -1462,10 +1462,10 @@ let mctxMVarPos cD u =
     | CTyp g -> CTyp g
 
   let normMetaTyp = function
-    | Comp.MetaTyp (tA, cPsi) -> Comp.MetaTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | Comp.MetaParamTyp (tA, cPsi) -> Comp.MetaParamTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | Comp.MetaSubTyp (cPhi,cPsi) -> Comp.MetaSubTyp (normDCtx cPhi, normDCtx cPsi)
-    | Comp.MetaSchema (g) -> Comp.MetaSchema (g)
+    | MTyp (tA, cPsi) -> MTyp (normTyp (tA, LF.id), normDCtx cPsi)
+    | PTyp (tA, cPsi) -> PTyp (normTyp (tA, LF.id), normDCtx cPsi)
+    | STyp (cPhi,cPsi) -> STyp (normDCtx cPhi, normDCtx cPsi)
+    | CTyp (g) -> CTyp (g)
 
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
@@ -1492,18 +1492,18 @@ let mctxMVarPos cD u =
     | Comp.TypBool -> Comp.TypBool
 
   let cnormMetaTyp (mC, t) = match mC with
-    | Comp.MetaTyp (tA, cPsi) ->
+    | MTyp (tA, cPsi) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          Comp.MetaTyp (tA', cPsi')
-    | Comp.MetaParamTyp (tA, cPsi) ->
+          MTyp (tA', cPsi')
+    | PTyp (tA, cPsi) ->
         let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          Comp.MetaParamTyp (tA', cPsi')
-    | Comp.MetaSubTyp (cPhi, cPsi) ->
+          PTyp (tA', cPsi')
+    | STyp (cPhi, cPsi) ->
         let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
         let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          Comp.MetaSubTyp (cPhi', cPsi')
+          STyp (cPhi', cPsi')
     | mC -> mC
 
   let rec cnormMetaObj (mO,t) = match mO with
@@ -1827,15 +1827,7 @@ let mctxMVarPos cD u =
     | (CTyp cid_schema) , (CTyp cid_schema') ->
        cid_schema = cid_schema'
 
-  let convMetaTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
-    | (Comp.MetaTyp (tA1, cPsi1) , Comp.MetaTyp (tA2, cPsi2)) ->
-        convTyp (tA1, LF.id) (tA2, LF.id) && convDCtx cPsi1 cPsi2
-    | (Comp.MetaSubTyp (cPhi, cPsi) , Comp.MetaSubTyp (cPhi', cPsi')) ->
-        convDCtx cPhi cPhi' && convDCtx cPsi cPsi'
-    | (Comp.MetaParamTyp (tA, cPsi) , Comp.MetaParamTyp (tA', cPsi')) ->
-       convTyp (tA, LF.id) (tA', LF.id)  && convDCtx cPsi cPsi'
-    | (Comp.MetaSchema (cid_schema) , Comp.MetaSchema (cid_schema')) ->
-        cid_schema = cid_schema'
+  let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
 
   let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 
@@ -2010,10 +2002,10 @@ and closedMetaObj mO = match mO with
       closedDCtx (Context.hatToDCtx phat) && closedSub sigma
 
 let closedMetaTyp cT = match cT with 
-  | Comp.MetaTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | Comp.MetaSchema _ -> true
-  | Comp.MetaParamTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | Comp.MetaSubTyp (cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
+  | MTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | CTyp _ -> true
+  | PTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | STyp (cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true

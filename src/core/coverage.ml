@@ -531,29 +531,29 @@ let rec pre_match_dctx cD cD_p cPsi cPhi_patt matchCands splitCands =
 let rec match_metaobj cD cD_p mO mO_p mC sC = match (mO, mO_p) with
   | (Comp.MetaCtx (_, cPsi) , _w) , (Comp.MetaCtx (_ , cPsi'), _w') ->
       pre_match_dctx cD cD_p cPsi cPsi' mC sC
-  | (Comp.MetaObj (_, _, LF.INorm tR), Comp.MetaTyp (tA, cPsi)),
-      (Comp.MetaObj (_, _ , LF.INorm tR') , Comp.MetaTyp (tA', cPsi'))  ->
+  | (Comp.MetaObj (_, _, LF.INorm tR), LF.MTyp (tA, cPsi)),
+      (Comp.MetaObj (_, _ , LF.INorm tR') , LF.MTyp (tA', cPsi'))  ->
       let (mC1, sC1) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
       let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
       let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
 	pre_match cD cD_p covGoal pat mC1 sC1
 
-  | (Comp.MetaObjAnn (loc, _cPsi, tR) , Comp.MetaTyp (tA, cPsi)) , mO_p ->
+  | (Comp.MetaObjAnn (loc, _cPsi, tR) , LF.MTyp (tA, cPsi)) , mO_p ->
       match_metaobj cD cD_p
-	(Comp.MetaObj (loc, Context.dctxToHat cPsi, tR), Comp.MetaTyp (tA, cPsi))
+	(Comp.MetaObj (loc, Context.dctxToHat cPsi, tR), LF.MTyp (tA, cPsi))
 	mO_p mC sC
 
-  | mO, (Comp.MetaObjAnn (loc, _cPsi', tR') , Comp.MetaTyp (tA', cPsi'))  ->
+  | mO, (Comp.MetaObjAnn (loc, _cPsi', tR') , LF.MTyp (tA', cPsi'))  ->
       match_metaobj cD cD_p mO
-	(Comp.MetaObj (loc, Context.dctxToHat cPsi', tR'), Comp.MetaTyp (tA', cPsi'))
+	(Comp.MetaObj (loc, Context.dctxToHat cPsi', tR'), LF.MTyp (tA', cPsi'))
 	  mC sC
 
 let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
 match (pat, ttau) , (pat_p, ttau_p) with
-  | (Comp.PatMetaObj (loc, mO) , (Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)), t)) ,
-    (Comp.PatMetaObj (_loc, mO'), (Comp.TypBox (_, Comp.MetaTyp (tA', cPsi')), t')) ->
-      let tau = Comp.MetaTyp( Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
-      let tau' = Comp.MetaTyp( Whnf.cnormTyp (tA',t'), Whnf.cnormDCtx (cPsi', t')) in
+  | (Comp.PatMetaObj (loc, mO) , (Comp.TypBox (_, LF.MTyp (tA, cPsi)), t)) ,
+    (Comp.PatMetaObj (_loc, mO'), (Comp.TypBox (_, LF.MTyp (tA', cPsi')), t')) ->
+      let tau = LF.MTyp( Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
+      let tau' = LF.MTyp( Whnf.cnormTyp (tA',t'), Whnf.cnormDCtx (cPsi', t')) in
       match_metaobj cD cD_p (mO, tau) (mO', tau') mC sC
   | (Comp.PatConst (_, c, pS) , (Comp.TypBase _, t)) ,
     (Comp.PatConst (loc, c', pS'), (Comp.TypBase _,t')) ->
@@ -622,8 +622,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
     (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.Decl (_, LF.MTyp (tA', cPsi'), _)), tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
-      let tau1 = Comp.MetaTyp (Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
-      let tau1' = Comp.MetaTyp (Whnf.cnormTyp (tA',t), Whnf.cnormDCtx (cPsi', t')) in
+      let tau1 = LF.MTyp (Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
+      let tau1' = LF.MTyp (Whnf.cnormTyp (tA',t), Whnf.cnormDCtx (cPsi', t')) in
       let t2 = (match mO with
             | Comp.MetaObj (_, phat, LF.INorm tM) ->  LF.MDot(LF.MObj(phat, tM), t)
             | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) -> LF.MDot (LF.MObj(Context.dctxToHat cPsi, tM), t)
@@ -640,8 +640,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
     (Comp.PatApp (_, pat', pS') , (Comp.TypPiBox ((LF.Decl(_,LF.CTyp w',_ )) , tau2'), t')) ->
       let Comp.PatMetaObj (_, mO) = pat in
       let Comp.PatMetaObj (_, mO') = pat' in
-      let tau1 = Comp.MetaSchema w in
-      let tau1' = Comp.MetaSchema w' in
+      let tau1 = LF.CTyp w in
+      let tau1' = LF.CTyp w' in
       let t2 = (match mO with
             | Comp.MetaCtx (_, cPsi) ->  LF.MDot(LF.CObj(cPsi), t)
               ) in
@@ -1528,7 +1528,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
 	[ (cD, cg, Whnf.m_id) ]
 
-  | Comp.TypBox (loc, Comp.MetaTyp (tA, cPsi)) ->
+  | Comp.TypBox (loc, LF.MTyp (tA, cPsi)) ->
       let (cgoals, _ ) = genCGoals cD (LF.Decl(Id.mk_name(Id.NoName), LF.MTyp (tA, cPsi), LF.Maybe)) in
 
 	List.map (fun (cD', cg, ms) ->
@@ -1539,7 +1539,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 				      P.mctxToString cD) in
 		    let ghost_loc = Syntax.Loc.ghost in
 		    let pat_r = Comp.PatMetaObj (ghost_loc , Comp.MetaObjAnn (ghost_loc, cPsi', LF.INorm tR)) in
-	            let tau_r = (Comp.TypBox (loc, Comp.MetaTyp (LF.TClo sA', cPsi')), Whnf.m_id) in
+	            let tau_r = (Comp.TypBox (loc, LF.MTyp (LF.TClo sA', cPsi')), Whnf.m_id) in
 		    let cG' = cnormCtx (cG1, ms)@cnormCtx(cG2,ms) in
 		    let _ = dprint (fun () -> "[genPatCGoals] " ^
 				      "old cG = " ^ P.gctxToString cD (gctxToCompgctx (cG1@cG2))) in
@@ -1943,7 +1943,7 @@ let extract_patterns tau branch_patt = match branch_patt with
 	(cD, MetaCtx (cPsi))
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', pat), ms, _e) ->
       let (tA, cPhi) = match tau with
-        | Comp.TypBox (_, Comp.MetaTyp (tA, cPhi)) -> (tA, cPhi)
+        | Comp.TypBox (_, LF.MTyp (tA, cPhi)) -> (tA, cPhi)
         | Comp.TypParam (_, tA, cPhi) -> (tA, cPhi) in
       let (cPsi, tR) = (match pat with
 			  | Comp.MetaObjAnn (loc', cPsi, LF.INorm tR) ->
@@ -1953,7 +1953,7 @@ let extract_patterns tau branch_patt = match branch_patt with
 	(cD, MetaPatt (cPsi, tR, (Whnf.cnormTyp (tA, ms), S.LF.id)))
   | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms)  ->
       begin match tau with
-        | Comp.TypBox (_, Comp.MetaTyp (tA, cPhi)) ->	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+        | Comp.TypBox (_, LF.MTyp (tA, cPhi)) ->	(cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
         | Comp.TypParam (_, tA, cPhi) -> (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
       end
 
@@ -2005,7 +2005,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
-  | Comp.TypBox(loc, Comp.MetaSchema w) ->
+  | Comp.TypBox(loc, LF.CTyp w) ->
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.CTyp w, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let cPsi       = LF.CtxVar (LF.CtxOffset 1) in
@@ -2016,7 +2016,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let loc = Syntax.Loc.ghost in
 	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, Comp.MetaCtx (loc,cPsi)) ) ]
 
-  | Comp.TypBox(loc, Comp.MetaTyp (tA, cPsi)) ->
+  | Comp.TypBox(loc, LF.MTyp (tA, cPsi)) ->
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.MTyp (tA, cPsi), LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, idSub) in

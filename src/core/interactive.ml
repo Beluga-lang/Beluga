@@ -303,7 +303,7 @@ let  intro i =
   let rec crawl cD cG  = (function
  | Comp.TypArr (t1,t2) ->
      ( match t1 with
-     | Comp.TypBox (l, Comp.MetaTyp(tA,psi)) ->
+     | Comp.TypBox (l, LF.MTyp(tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
@@ -355,7 +355,7 @@ let split e i =
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
       if (nameString n) = e then
         (match tau with
-        | Comp.TypBox (l, Comp.MetaTyp (tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
+        | Comp.TypBox (l, LF.MTyp (tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
@@ -389,7 +389,7 @@ let rec searchMctx i = function
 					    LF.MVar (LF.Offset i, LF.Shift vOff),
 					    LF.Nil))) in
              let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
-				    Comp.TypBox(Loc.ghost, Comp.MetaTyp(tA,cPsi))) in
+				    Comp.TypBox(Loc.ghost, LF.MTyp(tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
@@ -399,7 +399,7 @@ let rec searchMctx i = function
             let bl = branchCovGoals loc i cG0 tH cgs in
              let ((vPsi, vOff) as phat) = dctxToHat cPsi in
 	     let m0 = Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.INorm (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil))) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, Comp.MetaTyp (tA,cPsi))) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.MTyp (tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')

@@ -602,83 +602,29 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
-      let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in
-      let cPsi0' = C.cnormDCtx (cPsi0, theta) in
-      let _        = dprint (fun () -> "[elMetaSObj] (domain) cPsi0 = " ^ P.dctxToString cD cPsi0' ) in
-      let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPsi0' in
-      let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-      let _        = Unify.resetGlobalCnstrs () in
-        (* RETURN POSSIBLY A PARAMETER OBJECT *)
-      let _        = dprint (fun () -> "[elMetaSObj] s = " ^ P.subToString cD cPsi' s') in
-        Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
+      elMetaObj cD (Apx.Comp.MetaSub (loc, phat, s)) cTt
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.LF.MTyp (tA, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
-      (* let _    = inferCtxSchema (cD, cPsi') (cD, cPhi) in  *)
       let _ =
-        (* unifying two contexts AND inferring schema for psi in
-           cPhi, if psi is not in cD *)
         try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
-      let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in
-      let tA' = C.cnormTyp (tA, theta) in
-      let _        = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in
-      let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-      let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        (* RETURN POSSIBLY A PARAMETER OBJECT *)
-      let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
-        Int.Comp.MetaObj (loc, phat, Int.LF.INorm tM')
+      elMetaObj cD (Apx.Comp.MetaObj (loc, phat, tM)) cTt
 
   | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.LF.PTyp (tA, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
-      let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
-      let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
-      let _ =
-        (* unifying two contexts AND inferring schema for psi in
-           cPhi, if psi is not in cD *)
-        try unifyDCtxWithFCVar cD cPsi' cPhi
+      let _ = try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
-      let cPhi = Whnf.normDCtx cPhi in
       let phat = Context.dctxToHat cPhi  in
-      let _ = dprint (fun () -> "[elMetaObjAnn] unfied contexts") in
-      let tA' = C.cnormTyp (tA, theta) in
-      let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in
-      let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-      let h   = begin match tM' with
-                  | Int.LF.Root(_, ((Int.LF.FPVar (p,s)) as h), Int.LF.Nil) -> h
-                  | Int.LF.Root(_, ((Int.LF.PVar (p,s)) as h), Int.LF.Nil) -> h
-                  | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h
-                  | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
-                end in
-      let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-      let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
-        Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
+      elMetaObj cD (Apx.Comp.MetaObj (loc, phat, tM)) cTt
 
-
-  | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.PTyp (tA, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let tA'   = C.cnormTyp (tA, theta) in
-      if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
-        let _ = dprint (fun () -> "[elMetaObj/Param] cPsi = " ^ P.dctxToString cD  cPsi') in
-        let _   = dprint (fun () -> "[elMetaObj]/Param tA = " ^ P.typToString cD cPsi' (tA',LF.id) ) in
-        let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-        let h   = begin match tM' with
-          | Int.LF.Root(_, ((Int.LF.FPVar (p,s)) as h), Int.LF.Nil) -> h
-          | Int.LF.Root(_, ((Int.LF.PVar (p,s)) as h), Int.LF.Nil) -> h
-          | Int.LF.Root (_, ((Int.LF.BVar k) as h), Int.LF.Nil) -> h
-          | Int.LF.Root (_, (Int.LF.Proj (_, _ ) as h), Int.LF.Nil) -> h
-        end in
-        let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _   = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
-          Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
-      else
-        raise (Error.Violation ("ParamObj not of the appropriate meta-type"
-                                ^ P.typToString cD cPsi (tA, LF.id)))
+  | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi), theta)) ->
+    elMetaObj cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
 
   | (Apx.Comp.MetaParam (loc, phat, h), (Int.LF.PTyp (tA, cPsi), theta)) ->
       let cPsi' = C.cnormDCtx (cPsi, theta) in

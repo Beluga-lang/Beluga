@@ -408,19 +408,6 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
-(*    | (Int.LF.PiKind ((Int.LF.TypDecl (_, tA1), _ ), kK), s) ->
-        let u  = Whnf.newMMVar (cD, cPsi , Int.LF.TClo (tA1,s)) in
-        let h  = Int.LF.MMVar (u, (Whnf.m_id, LF.id)) in
-        let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
-        let _ = dprint (fun () -> "Generated meta^2-variable " ^
-                          P.normalToString cD cPsi (tR, LF.id)) in
-        let _ = dprint (fun () -> "of type : " ^ P.dctxToString cD cPsi ^
-                          " |- " ^ P.typToString cD cPsi (tA1,s)) in
-        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in
-        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  (* -bp would not work if h is functional type *) *)
-          Int.LF.App (tR, tS)
-*)
-
     | (Int.LF.PiKind ((Int.LF.TypDecl (n, tA1), _ ), kK), s) ->
         let tA1' = strans_typ cD (tA1, s) conv_list in
         let h    = if !strengthen then
@@ -872,19 +859,6 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Box (loc, cM), (Int.Comp.TypBox (_loc, cT), theta)) ->
      Int.Comp.Box (loc, elMetaObj cD cM (cT, theta))
 
-(*  | (Apx.Comp.SBox (loc, psihat, sigma), ((Int.Comp.TypSub (_loc, cPhi, cPsi), theta))) ->
-   (* if psihat = Context.dctxToHat cPsi then *)
-      if Lfrecon.unify_phat cD psihat (Context.dctxToHat cPsi) then
-        let sigma' = Lfrecon.elSub loc Lfrecon.Pibox cD (C.cnormDCtx (cPsi, theta)) sigma (C.cnormDCtx (cPhi, theta)) in
-        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-          Int.Comp.SBox (loc, psihat, sigma')
-      else
-        (* raise (Error (loc, Check.Comp.BoxCtxMismatch (cD, cPsi, (psihat, tM')))) *)
-        (let (_ , k) = psihat in
-           dprint (fun () -> "cPsi = " ^ P.dctxToString cD (C.cnormDCtx (cPsi, theta))  ^ "\n psihat  = " ^ string_of_int k ^ "\n") ;
-           raise (Check.Comp.Error (loc, Check.Comp.SBoxMismatch (cD, cG, (C.cnormDCtx (cPhi, theta)), (C.cnormDCtx (cPsi, theta)))) ))
-
-*)
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
       let _ = dprint (fun () -> "[elExp] case ") in
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
@@ -1448,82 +1422,6 @@ and recPatObj loc cD pat (cD_s, tau_s) =
       with
           _ -> raise (Error (loc,MCtxIllformed cD1))
       end
-
-(* ********************************************************************************)
-(* recPattern will become obsolete when we switch to the new syntax *)
-(*  and recPattern (cD, cPsi) delta psi m tPopt =
-  let cD'     = elMCtx  Lfrecon.Pibox delta in
-  let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
-  let _       = inferCtxSchema Syntax.Loc.ghost (cD, cPsi) (cD', cPsi') in
-
-  let _ = dprint (fun () -> "[recPattern] (specified pattern) cPsi' = " ^
-                    P.dctxToString cD'  cPsi' ) in
-  let _ = (dprint (fun () -> "[recPattern] " ^ P.mctxToString cD' ^ " [ " ^ P.dctxToString cD' cPsi' ^ "]")) in
-  let tP'     = begin match tPopt with
-                  | FullTyp  a    ->
-                      let tP' = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi' a  in
-                        (* recTyp Lfrecon.Pibox cD' cPsi' (tP', LF.id) ;*) tP'
-                  | PartialTyp a  ->
-                      let _ = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
-                                        P.dctxToString cD' cPsi' ) in
-                      mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind
-                end in
-
-  let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^
-                               P.typToString cD' cPsi' (tP', LF.id)) in
-
-  let m' = Apxnorm.cnormApxTerm cD' Apx.LF.Empty m (cD', Int.LF.MShift 0) in
-  let tR = Lfrecon.elTerm' Lfrecon.Pibox cD' cPsi' m' (tP', LF.id) in
-
-  let _  = Lfrecon.solve_constraints cD'  in
-
-  let _   = dprint (fun () -> "recPattern: Elaborated pattern...\n" ^ P.mctxToString cD' ^ "  ;   " ^
-                      P.dctxToString cD' cPsi' ^ "\n   |-\n    "  ^ P.normalToString cD' cPsi' (tR, LF.id) ^
-                      "\n has type " ^ P.typToString  cD' cPsi' (tP', LF.id) ^ "\n") in
-
-  let phat = Context.dctxToHat cPsi' in
-
-  let (cD1', cPsi1', (_phat, tR1'), tP1') =  Abstract.pattern cD' cPsi' (phat, tR) tP' in
-
-  let _       = dprint (fun () -> "recPattern: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
-                          P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ^ "\n   |-\n    "  ^
-                          P.normalToString cD1' cPsi1' (tR1', LF.id) ^ "\n has type \n " ^
-                          P.typToString cD1' cPsi1'  (tP1', LF.id)) in
-  let n       = Context.length cD1' in
-  let k       = Context.length cD'  in
-    ((n,k), cD1', cPsi1', Some tR1', tP1')
-
-*)
-(* and recEmptyPattern (cD, cPsi) delta psi tPopt =
-  let cD'     = elMCtx  Lfrecon.Pibox delta in
-  let cPsi'   = Lfrecon.elDCtx  Lfrecon.Pibox cD' psi in
-  let _ = dprint (fun () -> "[recPattern] cPsi' = " ^ P.dctxToString cD' cPsi' ) in
-
-  let _ = (dprint (fun () -> "[recPattern] " ^ P.mctxToString cD' ^ " [ " ^ P.dctxToString cD' cPsi' ^ "]")) in
-
-  let tP'     = begin match tPopt with
-                  | FullTyp  a    ->
-                      let tP' = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi' a  in
-                        (* recTyp Lfrecon.Pibox cD' cPsi' (tP', LF.id) ;*) tP'
-                  | PartialTyp a  ->
-                      let _ = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
-                                        P.dctxToString cD' cPsi' ) in
-                      mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind
-                end in
-
-  let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of type  " ^
-                               P.typToString cD' cPsi' (tP', LF.id)) in
-
-  let _  = Lfrecon.solve_constraints cD'  in
-  let (cD1', cPsi1', tP1') =  (cD', cPsi', tP') in
-
-  let _       = dprint (fun () -> "recPattern: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
-                          P.mctxToString cD1' ^ "  ;   " ^ P.dctxToString cD1' cPsi1' ) in
-  let n       = Context.length cD1' in
-  let k       = Context.length cD'  in
-    ((n,k), cD1', cPsi1', None, tP1')
-
-*)
 
 (* synRefine caseT (cD, cD1) (Some tR1) (cPsi, tP) (cPsi1, tP1) = (t, cD1')
 

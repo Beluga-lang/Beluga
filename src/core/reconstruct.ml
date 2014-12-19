@@ -191,32 +191,6 @@ let mk_name_cdec cdec = match cdec with
  *
  *  cD ; cPsi   |- tN   <= [s]A
  *)
-let rec etaExpandMMVstr loc cD cPsi sA  n =
-  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n
-
-and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
-  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-      let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
-      (*  cPsi |- s_proj : cPhi
-          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
-
-      let (ss', cPhi') = Subord.thin' cD a cPhi in
-      (* cPhi |- ss' : cPhi' *)
-      let ssi' = LF.invert ss' in
-      (* cPhi' |- ssi : cPhi *)
-      (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in               
-      (* cPhi |- ss'    : cPhi'
-         cPsi |- s_proj : cPhi
-         cPsi |- comp  ss' s_proj   : cPhi' *)
-      let ss_proj = LF.comp ss' s_proj in
-        Int.LF.Root (loc, Int.LF.MMVar (u, (Whnf.m_id, ss_proj)), Int.LF.Nil)
-
-  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Int.LF.Lam (loc, x,
-                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) x )
 
 
 type caseType  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *) 
@@ -479,8 +453,7 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
       let cPsi' = C.cnormDCtx (cPsi, t) in
       let psihat  = Context.dctxToHat cPsi' in
       let tA'   = C.cnormTyp (tA, t) in
-      let tM'   = if !strengthen then etaExpandMMVstr loc cD  cPsi' (tA', LF.id) n
-                  else Whnf.etaExpandMMV loc cD  cPsi' (tA', LF.id) n LF.id in
+      let tM'   = Int.LF.Root(loc, Int.LF.MMVar (Whnf.newMMVar (Some n) (cD, cPsi', tA'), (Whnf.m_id, LF.id)), Int.LF.Nil) in
         Int.Comp.MetaObj (loc', psihat, Int.LF.INorm tM')
 
   | Int.LF.PTyp (tA, cPsi) ->

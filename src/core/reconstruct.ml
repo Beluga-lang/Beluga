@@ -30,7 +30,7 @@ type error =
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | ContextSchemaClash  of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
-  | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ * Int.LF.msub)
+  | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
   | MissingMetaObj
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
@@ -140,11 +140,11 @@ let _ = Error.register_printer
             "Expected context"    (P.fmt_ppr_lf_dctx cD Pretty.std_lvl)  cPsi
             "Encountered context" (P.fmt_ppr_lf_dctx cD' Pretty.std_lvl) cPsi';
 
-       | MetaObjectClash (cD, (mC, theta)) ->
+       | MetaObjectClash (cD, mC) ->
            Format.fprintf ppf
              "Meta-object type clash.@ \
               Expected meta-object of type: %a"
-             (P.fmt_ppr_meta_typ cD Pretty.std_lvl) (Whnf.cnormMetaTyp (mC, theta));
+             (P.fmt_ppr_meta_typ cD Pretty.std_lvl) mC;
 
        | MissingMetaObj      ->
            Format.fprintf ppf
@@ -552,41 +552,44 @@ let rec elCompKind cD k = match k with
       let tK     = elCompKind  (Int.LF.Dec (cD, cdecl')) k' in
         Int.Comp.PiKind (loc, cdecl', tK)
 
-let rec elMetaObj cD cM cTt = match  (cM, cTt) with
-  | (Apx.Comp.MetaCtx (loc, psi), (Int.LF.CTyp  w, _)) ->
+let getLoc = function
+  | Apx.Comp.MetaCtx (loc,_)
+  | Apx.Comp.MetaObj (loc,_,_)
+  | Apx.Comp.MetaSub (loc,_,_) 
+  | Apx.Comp.MetaParam (loc,_,_)
+  | Apx.Comp.MetaObjAnn (loc,_,_)
+  | Apx.Comp.MetaSubAnn (loc,_,_) -> loc
+
+let rec elMetaObj' cD cM cTt = match cM , cTt with
+  | (Apx.Comp.MetaCtx (loc, psi), (Int.LF.CTyp  w)) ->
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
         Int.Comp.MetaCtx (loc, cPsi')
 
-  | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.MTyp (tA, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
+  | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.MTyp (tA, cPsi'))) ->
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
-        let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (C.cnormTyp (tA, theta), LF.id) in
+        let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
         let _   = begin try Unify.forceGlobalCnstr (!Unify.globalCnstrs)
                         with _ -> raise (Error.Violation ("Unresolved constraints - MetaObj cannot be reconstructed"))
                   end  in
-        let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi (tA, LF.id) ) in
-        let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi (tM', LF.id) ) in
+        let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA, LF.id) ) in
+        let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
           Int.Comp.MetaObj (loc, phat, Int.LF.INorm tM')
       else
          raise (Error.Violation ("Contexts do not match - MetaObj not of the appropriate meta-type"
-                                ^ P.typToString cD cPsi (tA, LF.id)))
-  | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.STyp (cPhi, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let cPhi' = C.cnormDCtx (cPhi, theta) in
+                                ^ P.typToString cD cPsi' (tA, LF.id)))
+  | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.STyp (cPhi', cPsi'))) ->
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPhi' in
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
         let _        = Unify.resetGlobalCnstrs () in
-        let _        = dprint (fun () -> "[elMetaSObj] cPhi = " ^ P.dctxToString cD cPhi) in
-        let _        = dprint (fun () -> "[elMetaSObj] cPsi = " ^ P.dctxToString cD cPsi) in
-        let _        = dprint (fun () -> "[elMetaSObj] cPsi |- s : cPhi = " ^ P.subToString cD cPsi s' ) in
+        let _        = dprint (fun () -> "[elMetaSObj] cPhi = " ^ P.dctxToString cD cPhi') in
+        let _        = dprint (fun () -> "[elMetaSObj] cPsi = " ^ P.dctxToString cD cPsi') in
+        let _        = dprint (fun () -> "[elMetaSObj] cPsi |- s : cPhi = " ^ P.subToString cD cPsi' s' ) in
           Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
       else
          raise (Error.Violation ("Contexts do not match - MetaSObj not of the appropriate meta-type" ))
 
-  | (Apx.Comp.MetaParam (loc, phat, h), (Int.LF.PTyp (tA, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
-      let tA'   = C.cnormTyp (tA, theta) in
+  | (Apx.Comp.MetaParam (loc, phat, h), (Int.LF.PTyp (tA', cPsi'))) ->
       if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
@@ -596,15 +599,14 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
           Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
       else
         raise (Error.Violation ("MetaParameter not of the appropriate meta-type"
-                                ^ P.typToString cD cPsi (tA, LF.id)))
+                                ^ P.typToString cD cPsi' (tA', LF.id)))
 
-  | Apx.Comp.MetaObjAnn (_loc', psi, m) , (Int.LF.STyp (tA, cPsi) , theta) ->
-      elMetaObj cD (Apx.Comp.MetaSubAnn(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
-  | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi), theta)) ->
-    elMetaObj cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
+  | Apx.Comp.MetaObjAnn (_loc', psi, m) , (Int.LF.STyp (tA, cPsi)) ->
+      elMetaObj' cD (Apx.Comp.MetaSubAnn(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
+  | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi))) ->
+    elMetaObj' cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
 
-  | (Apx.Comp.MetaSubAnn (loc, cPhi, s), (Int.LF.STyp (cPsi0, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
+  | (Apx.Comp.MetaSubAnn (loc, cPhi, s), (Int.LF.STyp (cPsi0, cPsi'))) ->
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
@@ -612,10 +614,9 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
-      elMetaObj cD (Apx.Comp.MetaSub (loc, phat, s)) cTt
+      elMetaObj' cD (Apx.Comp.MetaSub (loc, phat, s)) cTt
 
-  | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.LF.MTyp (tA, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
+  | (Apx.Comp.MetaObjAnn (loc, cPhi, tM), (Int.LF.MTyp (tA, cPsi'))) ->
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
@@ -623,24 +624,20 @@ let rec elMetaObj cD cM cTt = match  (cM, cTt) with
         try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
-      elMetaObj cD (Apx.Comp.MetaObj (loc, phat, tM)) cTt
+      elMetaObj' cD (Apx.Comp.MetaObj (loc, phat, tM)) cTt
 
-  | (Apx.Comp.MetaObjAnn (loc, cPhi, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi), theta)) ->
-      let cPsi' = C.cnormDCtx (cPsi, theta) in
+  | (Apx.Comp.MetaObjAnn (loc, cPhi, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi'))) ->
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = try unifyDCtxWithFCVar cD cPsi' cPhi
         with Unify.Failure _ -> raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
       let phat = Context.dctxToHat cPhi  in
-      elMetaObj cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
+      elMetaObj' cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
 
 
-  | (Apx.Comp.MetaCtx(loc, _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
-  | (Apx.Comp.MetaObj(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
-  | (Apx.Comp.MetaSub(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
-  | (Apx.Comp.MetaSubAnn(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
-  | (Apx.Comp.MetaParam(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
-  | (Apx.Comp.MetaObjAnn(loc, _ , _ ) , (mC, theta)) -> raise (Error (loc,  MetaObjectClash (cD, (mC,theta))))
+  | (_ , _) -> raise (Error (getLoc cM,  MetaObjectClash (cD, cTt)))
     (* The case for parameter types should be handled separately, for better error messages -bp *)
+
+and elMetaObj cD m cTt = elMetaObj' cD m (C.cnormMTyp cTt)
 
 and elMetaObjCTyp loc cD m theta ctyp =
   let cM = elMetaObj cD m (ctyp, theta) in

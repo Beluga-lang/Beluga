@@ -571,11 +571,6 @@ and cnormApxMetaObj cD delta mobj cDt = let (_cD', t) = cDt in
         let m'   = cnormApxTerm cD delta m cDt in
           Apx.Comp.MetaObjAnn (loc', psi', m')
 
-    | Apx.Comp.MetaParam (loc, phat, h) ->
-        let phat'     = Whnf.cnorm_psihat phat t in
-        let h' = cnormApxHead cD delta h cDt in
-          Apx.Comp.MetaParam (loc, phat', h')
-
     | Apx.Comp.MetaSub (loc, phat, sigma) ->
       let phat'  = Whnf.cnorm_psihat phat t in
       let sigma' = cnormApxSub cD delta sigma cDt in
@@ -1282,11 +1277,6 @@ and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) mobj = match mobj wit
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
       let m' = fmvApxTerm fMVs cD d_param  m in
         Apx.Comp.MetaObjAnn (loc, psi', m')
-
-  | Apx.Comp.MetaParam (loc, phat, h) ->
-      let phat' = fmvApxHat loc fMVs cD d_param phat in
-      let h' = fmvApxHead fMVs cD d_param  h in
-        Apx.Comp.MetaParam (loc, phat', h')
 
   | Apx.Comp.MetaSub (loc, phat, sigma) ->
       let phat' = fmvApxHat loc fMVs cD d_param phat in

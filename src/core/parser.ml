@@ -1260,9 +1260,9 @@ GLOBAL: sgn;
 
         "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
         begin match phat_or_psi, tR with
-	      | Dctx cPsi , Term tM  -> Comp.Syn (_loc,  Comp.BoxVal (_loc, Comp.MetaObjAnn(_loc, cPsi, tM)))
+	      | Dctx cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
 	      | Hat phat  , Term tM  -> Comp.Box (_loc, Comp.MetaObj(_loc, phat, tM))
-	      | Dctx cPsi , Sub s    -> Comp.Syn (_loc, Comp.BoxVal (_loc, Comp.MetaSObjAnn (_loc,cPsi, s)))
+	      | Dctx cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
 	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
 	end
 

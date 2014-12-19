@@ -121,7 +121,6 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaParam of Loc.t * LF.psi_hat * LF.head
    | MetaSub of Loc.t * LF.psi_hat * LF.sub
    | MetaSubAnn of Loc.t * LF.dctx * LF.sub
 

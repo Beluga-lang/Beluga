@@ -235,13 +235,6 @@ let mtypeSkelet mT = match mT with
   | Int.LF.MTyp (Int.LF.Atom(_, a, _), cPsi) -> MT (a, cPsi)
   | Int.LF.CTyp w -> CT w
 
-let annMObj cM mT = match cM , mT with
-  | Int.Comp.MetaObj (l, _phat, tM) , Int.LF.MTyp (_ , cPsi) -> 
-      Int.Comp.MetaObjAnn (l, cPsi, tM)
-  | Int.Comp.MetaObj (l, _phat, Int.LF.ISub s) , Int.LF.STyp (cPsi, _ ) -> 
-      Int.Comp.MetaObjAnn (l, cPsi, Int.LF.ISub s)
-  | _ , _ -> cM
-
 (** This function does the same thing as unifyDCtx in unify.ml, but in
     addition records new names for variables left free by the user
     when they are instantiated. *)
@@ -556,7 +549,6 @@ let getLoc = function
   | Apx.Comp.MetaCtx (loc,_)
   | Apx.Comp.MetaObj (loc,_,_)
   | Apx.Comp.MetaSub (loc,_,_) 
-  | Apx.Comp.MetaParam (loc,_,_)
   | Apx.Comp.MetaObjAnn (loc,_,_)
   | Apx.Comp.MetaSubAnn (loc,_,_) -> loc
 
@@ -576,16 +568,14 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPhi' in
           Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
 
-  | (Apx.Comp.MetaParam (loc, phat, h), (Int.LF.PTyp (tA', cPsi'))) ->
+  | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root (_,h,_)), (Int.LF.PTyp (tA', cPsi'))) ->
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
           Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
 
-  (* These two cases fix up annoying ambiguities *)
+  (* This case fixes up annoying ambiguities *)
   | Apx.Comp.MetaObj (_loc', psi, m) , (Int.LF.STyp (tA, cPsi)) ->
     elMetaObj' cD (Apx.Comp.MetaSub(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
-  | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root(_,h,_)), (Int.LF.PTyp (tA, cPsi))) ->
-    elMetaObj' cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
 
   | (Apx.Comp.MetaSubAnn (_, cPhi, _), (Int.LF.STyp (_, cPsi')))
   | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.MTyp (_, cPsi')))
@@ -1089,8 +1079,6 @@ and elExp' cD cG i = match i with
 
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObj (_loc', phat, _r)) ->
      raise (Error (loc, ErrorMsg "Found MetaObj"))
-  | Apx.Comp.BoxVal (loc, Apx.Comp.MetaParam (_loc', _phat, _r)) ->
-     raise (Error (loc, ErrorMsg "Found ParamObj"))
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaSub (_loc', _phat, _r)) ->
      raise (Error (loc, ErrorMsg "Found SubstObj"))
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaCtx (loc', cpsi)) ->
@@ -1617,7 +1605,7 @@ and synRefine loc caseT (cD, cD1) pattern1 mT mT1 =
         | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
     
   let t0   = drop t' n in  (* cD1' |- t0 <= cD *)
-  let cM = Whnf.cnormMetaObj (annMObj pattern1 mT1, Whnf.mcomp t1 t') in
+  let cM = Whnf.cnormMetaObj (pattern1, Whnf.mcomp t1 t') in
     (* cD1' ; cPsi1_new |- tR1 <= tP1' *)
   let _ = dprint (fun () -> "synRefine [Substitution] t': " ^ P.mctxToString cD1' ^
                     "\n|-\n" ^ P.msubToString cD1' t' ^ "\n <= " ^ P.mctxToString cD' ^ "\n") in

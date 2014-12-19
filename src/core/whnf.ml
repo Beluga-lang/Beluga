@@ -69,10 +69,6 @@ let etaContract tM = begin match tM with
 (* newCVar n sW = psi
  *
  *)
-let newCVar n (sW) = match n with
-  | None -> CInst ((Id.mk_name Id.NoName, ref None, Empty, CTyp sW, ref [], Maybe), MShift 0)
-  | Some name -> CInst ((name, ref None, Empty, CTyp sW, ref [], Maybe), MShift 0)
-
 (* newMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
  *
  * Invariant:
@@ -83,42 +79,22 @@ let newCVar n (sW) = match n with
  *)
 
 
-let newMVar n (cPsi, tA) = match n with
-  | None -> Inst (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, Empty, MTyp(tA,cPsi), ref [], Maybe)
-  | Some name -> Inst (name, ref None, Empty, MTyp(tA,cPsi), ref [], if name.Id.was_generated then Maybe else No)
+let newMTypName = function
+  | MTyp (tA,_) -> Id.MVarName (T.gen_var_name tA)
+  | PTyp (tA,_) -> Id.PVarName (T.gen_var_name tA)
+  | STyp (_,_) -> Id.SVarName None
+  | CTyp _ -> Id.NoName
 
-let newMVar' n (cPsi, tA) = match n with
-  | None -> (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, Empty, MTyp(tA,cPsi), ref [], Maybe)
-  | Some name -> (name, ref None, Empty, MTyp(tA,cPsi), ref [], if name.Id.was_generated then Maybe else No)
+let newMMVar' n (cD, mtyp) = match n with
+  | None -> (Id.mk_name (newMTypName mtyp), ref None, cD, mtyp, ref [], Maybe)
+  | Some name -> (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
 
-(* newMMVar n (cPsi, tA) = newMVarCnstr (cPsi, tA, [])
- *
- * Invariant:
- *
- *       tA =   Atom (a, S)
- *   or  tA =   Pi (x:tB, tB')
- *   but tA =/= TClo (_, _)
- *)
-let newMMVar n (cD, cPsi, tA) = match n with
-  (* flatten blocks in cPsi, and create appropriate indices in tA
-     together with an appropriate substitution which moves us between
-     the flattened cPsi_f and cPsi.
+let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, MTyp (tA,cPsi))
+let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, PTyp (tA, cPsi))
+let newMSVar n (cD, cPsi, cPhi)  = newMMVar' n (cD, STyp(cPhi, cPsi))
+let newCVar n (sW) = CInst (newMMVar' n (Empty, CTyp sW), MShift 0)
 
-     this will allow to later prune MMVars.
-     Tue Dec  1 09:49:06 2009 -bp
-   *)
-  | None -> (Id.mk_name (Id.MVarName (T.gen_var_name tA)), ref None, cD, MTyp(tA,cPsi), ref [], Maybe)
-  | Some name -> (name, ref None, cD, MTyp(tA,cPsi), ref [], if name.Id.was_generated then Maybe else No)
-
-let newMPVar n (cD, cPsi, tA) = match n with
-  | None -> (Id.mk_name (Id.PVarName (T.gen_var_name tA)), ref None, cD, PTyp(tA,cPsi), ref [], Maybe)
-  | Some name -> (name, ref None, cD, PTyp(tA,cPsi), ref [], if name.Id.was_generated then Maybe else No)
-
-
-let newMSVar n (cD, cPsi, cPhi)  = match n with
-  | None -> (Id.mk_name (Id.SVarName None), ref None, cD, STyp(cPhi, cPsi), ref [], Maybe)
-  | Some name -> (name, ref None, cD, STyp(cPhi, cPsi), ref [], if name.Id.was_generated then Maybe else No)
-  (* Note : cPsi | - s : cPhi *)
+let newMVar n (cPsi, tA) = Inst (newMMVar' n (Empty, MTyp (tA, cPsi)))
 
 (******************************)
 (* Lowering of Meta-Variables *)

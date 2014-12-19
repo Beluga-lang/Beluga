@@ -36,15 +36,13 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
+val newMMVar'    : Id.name option -> mctx * ctyp ->  mm_var
 val newMMVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMPVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
                   (* cD ; cPsi |- msvar : cPhi *)
 
 val newMVar     : Id.name option -> dctx * typ ->  cvar
-val newMVar'     : Id.name option -> dctx * typ -> mm_var
-(* val newSVar     : Id.name option -> dctx (\* cPsi *\) * dctx (\* cPhi *\) ->  cvar *)
-                  (* cPsi |- svar : cPhi *)
 val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ

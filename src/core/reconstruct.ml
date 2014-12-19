@@ -448,34 +448,26 @@ let metaObjToFt = function
   | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub s) -> Int.LF.SObj (Context.dctxToHat cPsi, s)
   | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
 
-let genMetaVar'' loc' cD (loc, n , ctyp) = match ctyp with
+let mmVarToMetaObj loc' mV = function
   | Int.LF.MTyp (tA, cPsi) ->
-      let psihat  = Context.dctxToHat cPsi in
-      let tM'   = Int.LF.Root(loc, Int.LF.MMVar (Whnf.newMMVar (Some n) (cD, cPsi, tA), (Whnf.m_id, LF.id)), Int.LF.Nil) in
-        Int.Comp.MetaObj (loc', psihat, Int.LF.INorm tM')
+    let psihat  = Context.dctxToHat cPsi in
+    let tM'   = Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil) in
+    Int.Comp.MetaObj (loc', psihat, Int.LF.INorm tM')
 
   | Int.LF.PTyp (tA, cPsi) ->
-      let psihat  = Context.dctxToHat cPsi in
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi, tA) in
-      let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
-        Int.Comp.MetaObj (loc', psihat, Int.LF.IHead h)
-
-  | Int.LF.CTyp schema_cid ->
-      let cPsi = Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD, Int.LF.CTyp schema_cid, ref [], Int.LF.Maybe), Whnf.m_id)) in
-        Int.Comp.MetaCtx (loc', cPsi)
+    let psihat  = Context.dctxToHat cPsi in
+    Int.Comp.MetaObj (loc', psihat, Int.LF.IHead (Int.LF.MPVar (mV, (Whnf.m_id, LF.id))))
 
   | Int.LF.STyp (cPhi, cPsi) ->
-      let psihat  = Context.dctxToHat cPsi in
-      let s = Whnf.newMSVar None (cD, cPsi, cPhi) in
-      let s' = Int.LF.MSVar (s, 0,
-                             (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
-      let s' = Whnf.normSub s' in
-        Int.Comp.MetaObj (loc', psihat, Int.LF.ISub s')
+    let psihat  = Context.dctxToHat cPsi in
+    Int.Comp.MetaObj (loc', psihat, Int.LF.ISub (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id))))
 
-let genMetaVar loc' cD (loc, n, ctyp, t) = genMetaVar'' loc' cD (loc, n, C.cnormMTyp (ctyp,t))
+  | Int.LF.CTyp schema_cid ->
+    Int.Comp.MetaCtx (loc', Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id)))
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
-  let mO = genMetaVar loc' cD (loc, n, ctyp, t) in
+  let ctyp' = C.cnormMTyp (ctyp, t) in
+  let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp')) ctyp' in
   (mO, Int.LF.MDot(metaObjToFt mO,t))
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)

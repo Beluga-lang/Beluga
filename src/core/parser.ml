@@ -1266,22 +1266,14 @@ GLOBAL: sgn;
 	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
 	end
 
-      | "["; cPsi = clf_dctx; "]" ->
-	 Comp.Box (_loc, Comp.MetaCtx (_loc, cPsi))
-
-(*        "["; phat_or_psi = clf_hat_or_dctx ; " . " ; tM = clf_term_app; "]" ->
-          begin match phat_or_psi with
-            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM))
-            | Hat phat  ->                 Comp.Box (_loc, phat, tM)
-      end
-*)
-(*      |
-          "["; phat_or_psi = clf_hat_or_dctx ; "]" ; sigma = clf_sub_new ->
-          begin match phat_or_psi with
-(*            | Dctx cPsi ->  Comp.Syn(_loc, Comp.SBoxVal (_loc, cPsi, tM))  *)
-            | Hat phat  ->                 Comp.SBox (_loc, phat, sigma)
-          end
-*)
+       | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
+        begin match phat_or_psi with
+          | Dctx cPsi     -> Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))
+          | Hat [psi]      -> Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))
+          | Hat []       -> Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))
+          | _                      ->
+            raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+        end
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1303,28 +1295,7 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  (* TODO: This should be redundant *)
-  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = term_or_sub; "]"   ->
-     begin match (phat_or_psi, tM) with
-       | (Dctx cPsi, Term tM)   -> (fun i -> Comp.Apply (_loc, i,
-                                                        Comp.Box(_loc, Comp.MetaObjAnn(_loc, cPsi,  tM))))
-       | (Hat phat, Term tM)    -> (fun i -> Comp.Apply (_loc, i,
-                                                        Comp.Box(_loc, Comp.MetaObj (_loc, phat, tM))))
-       | (Dctx cPsi, Sub s) ->  (fun i -> Comp.Apply (_loc, i, Comp.Box(_loc, Comp.MetaSObjAnn (_loc,cPsi, s))))
-       | (Hat phat, Sub s)  ->  (fun i -> Comp.Apply (_loc, i, Comp.Box(_loc, Comp.MetaSObj (_loc,phat, s))))
-     end
-
-  | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi     -> (fun i -> Comp.Apply(_loc, i, Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))))
-       | Hat [psi]      -> (fun i -> Comp.Apply(_loc, i,
-                                                       Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))))
-       | Hat []       -> (fun i -> Comp.Apply(_loc, i, Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))))
-       | _                      ->
-         raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
-     end
-
-   | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
+     "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
    |  m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
         let (modules, n) = split '.' m in
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))

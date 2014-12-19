@@ -566,40 +566,16 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
         Int.Comp.MetaCtx (loc, cPsi')
 
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.MTyp (tA, cPsi'))) ->
-      if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
-        let _   = begin try Unify.forceGlobalCnstr (!Unify.globalCnstrs)
-                        with _ -> raise (Error.Violation ("Unresolved constraints - MetaObj cannot be reconstructed"))
-                  end  in
-        let _   = dprint (fun () -> "[elMetaObj] tA = " ^ P.typToString cD cPsi' (tA, LF.id) ) in
-        let _   = dprint (fun () -> "[elMetaObj] tM = " ^ P.normalToString cD cPsi' (tM', LF.id) ) in
           Int.Comp.MetaObj (loc, phat, Int.LF.INorm tM')
-      else
-         raise (Error.Violation ("Contexts do not match - MetaObj not of the appropriate meta-type"
-                                ^ P.typToString cD cPsi' (tA, LF.id)))
   | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.STyp (cPhi', cPsi'))) ->
-      if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPhi' in
-        let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _        = Unify.resetGlobalCnstrs () in
-        let _        = dprint (fun () -> "[elMetaSObj] cPhi = " ^ P.dctxToString cD cPhi') in
-        let _        = dprint (fun () -> "[elMetaSObj] cPsi = " ^ P.dctxToString cD cPsi') in
-        let _        = dprint (fun () -> "[elMetaSObj] cPsi |- s : cPhi = " ^ P.subToString cD cPsi' s' ) in
           Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
-      else
-         raise (Error.Violation ("Contexts do not match - MetaSObj not of the appropriate meta-type" ))
 
   | (Apx.Comp.MetaParam (loc, phat, h), (Int.LF.PTyp (tA', cPsi'))) ->
-      if Lfrecon.unify_phat cD phat (Context.dctxToHat cPsi') then
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-        let _  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-        let _  = dprint (fun () -> "[elMetaObj] expected tA = " ^ P.typToString cD cPsi' (tA', LF.id) ) in
-        let _  = dprint (fun () -> "[elMetaObj] h = " ^ P.headToString cD cPsi' h) in
           Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
-      else
-        raise (Error.Violation ("MetaParameter not of the appropriate meta-type"
-                                ^ P.typToString cD cPsi' (tA', LF.id)))
 
   | Apx.Comp.MetaObjAnn (_loc', psi, m) , (Int.LF.STyp (tA, cPsi)) ->
       elMetaObj' cD (Apx.Comp.MetaSubAnn(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
@@ -633,11 +609,16 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
       let phat = Context.dctxToHat cPhi  in
       elMetaObj' cD (Apx.Comp.MetaParam (loc, phat, h)) cTt
 
-
   | (_ , _) -> raise (Error (getLoc cM,  MetaObjectClash (cD, cTt)))
-    (* The case for parameter types should be handled separately, for better error messages -bp *)
 
-and elMetaObj cD m cTt = elMetaObj' cD m (C.cnormMTyp cTt)
+and elMetaObj cD m cTt =
+  let ctyp = C.cnormMTyp cTt in
+  let r = elMetaObj' cD m ctyp in
+  let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+  let _   = dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp ) in
+  let _   = dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD r ) in
+  r
+
 
 and elMetaObjCTyp loc cD m theta ctyp =
   let cM = elMetaObj cD m (ctyp, theta) in

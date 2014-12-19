@@ -155,7 +155,6 @@ module Comp = struct
      | DataConst  of Loc.t * name               (*    | c                   *)
      | Const  of Loc.t * name                   (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
-     | MApp of Loc.t * exp_syn * meta_obj       (*    | i [C]               *)
      | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
@@ -214,7 +213,6 @@ module Comp = struct
      | Var    (_loc,  _) -> "Var"
      | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
 (*     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)" *)
-     | MApp   (_loc,  syn, _) -> "MApp(" ^ synToString syn ^ ", ...)"
      | BoxVal (_loc, _) -> "BoxVal(...)"
      | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
      | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"

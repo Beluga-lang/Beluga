@@ -1303,43 +1303,25 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
+  (* TODO: This should be redundant *)
   "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = term_or_sub; "]"   ->
      begin match (phat_or_psi, tM) with
-       | (Dctx cPsi, Term tM)   -> (fun i -> Comp.MApp (_loc, i,
-                                                        Comp.MetaObjAnn(_loc, cPsi,  tM)))
-       | (Hat phat, Term tM)    -> (fun i -> Comp.MApp (_loc, i,
-                                                        Comp.MetaObj (_loc, phat, tM)))
-       | (Dctx cPsi, Sub s) ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | (Hat phat, Sub s)  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
+       | (Dctx cPsi, Term tM)   -> (fun i -> Comp.Apply (_loc, i,
+                                                        Comp.Box(_loc, Comp.MetaObjAnn(_loc, cPsi,  tM))))
+       | (Hat phat, Term tM)    -> (fun i -> Comp.Apply (_loc, i,
+                                                        Comp.Box(_loc, Comp.MetaObj (_loc, phat, tM))))
+       | (Dctx cPsi, Sub s) ->  (fun i -> Comp.Apply (_loc, i, Comp.Box(_loc, Comp.MetaSObjAnn (_loc,cPsi, s))))
+       | (Hat phat, Sub s)  ->  (fun i -> Comp.Apply (_loc, i, Comp.Box(_loc, Comp.MetaSObj (_loc,phat, s))))
      end
-
-  (*|    "["; phat_or_psi = clf_hat_or_dctx ; turnstile; h = clf_head; ","; t = clf_head; "]" ->
-    let s = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)), LF.Head t) in
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
-     end*)
 
   | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
      begin match phat_or_psi with
-       | Dctx cPsi     -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx (_loc,cPsi)))
-       | Hat [psi]      -> (fun i -> Comp.MApp(_loc, i,
-                                                       Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))))
-       | Hat []       -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx(_loc, LF.Null)))
+       | Dctx cPsi     -> (fun i -> Comp.Apply(_loc, i, Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))))
+       | Hat [psi]      -> (fun i -> Comp.Apply(_loc, i,
+                                                       Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))))
+       | Hat []       -> (fun i -> Comp.Apply(_loc, i, Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))))
        | _                      ->
          raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
-     end
-
-   (*| "["; phat_or_psi = clf_hat_or_dctx ; turnstile; s = clf_sub_new; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
-     end*)
-
- | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObjAnn (_loc,cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObj (_loc,phat, tM)))
      end
 
    | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))

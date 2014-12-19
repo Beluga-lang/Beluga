@@ -1004,13 +1004,6 @@ module Ext = struct
           let (i', _ ) = strip_mapp_args' cD i in
             (Comp.Apply (loc, i', e), 0)
 
-      | Comp.MApp (loc, i1, mO ) ->
-          let (i', stripArg) = strip_mapp_args' cD i1 in
-            if stripArg = 0 then
-              (Comp.MApp (loc , i', mO), 0)
-            else
-              (i', stripArg - 1 )
-
       | Comp.Ann (loc, e, tau) -> (Comp.Ann (loc, e, tau), 0)
 
 
@@ -1036,14 +1029,6 @@ module Ext = struct
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, mO) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
 
       | Comp.BoxVal (_, m0) ->

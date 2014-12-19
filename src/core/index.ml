@@ -901,7 +901,7 @@ and index_exp' cvars vars fcvars = function
   | Ext.Comp.MApp (loc, i, mO) ->
       let i'      = index_exp' cvars vars fcvars i in
       let (mobj', _ )  = index_meta_obj cvars fcvars mO in
-        Apx.Comp.MApp (loc, i', mobj')
+        Apx.Comp.Apply (loc, i', Apx.Comp.Box (loc, mobj'))
 
   | Ext.Comp.BoxVal (loc, m0) ->
       let (mobj', _ )  = index_meta_obj cvars fcvars m0 in

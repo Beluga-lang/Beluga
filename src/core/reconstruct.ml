@@ -1009,8 +1009,8 @@ and elExp' cD cG i = match i with
       let _ = dprint (fun () -> "[elExp'] Apply") in
       let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
       let _ = dprint (fun () -> "[elExp'] Apply - generated implicit arguments") in
-        begin match tau_theta' with
-          | (Int.Comp.TypArr (tau2, tau), theta) ->
+        begin match e , tau_theta' with
+          | e , (Int.Comp.TypArr (tau2, tau), theta) ->
               let _ = dprint (fun () -> "[elExp'] Inferred type for i' = " ^
                                 P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id)) ^ "\n      " ^
                                 P.compTypToString cD (Whnf.cnormCTyp (Int.Comp.TypArr (tau2,tau), theta))
@@ -1037,32 +1037,12 @@ and elExp' cD cG i = match i with
       leads to subsequent whnf failure and the fact that indices for context in
       MetaObj are off *)
                 (i'', (tau', Whnf.m_id))
-
+          | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
+	        let cM = elMetaObj cD mC (ctyp, theta) in
+	        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
           | _ ->
               raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantArrow, tau_theta')))
                 (* TODO postpone to reconstruction *)
-        end
-
-  | Apx.Comp.MApp (loc, i, mC) ->
-      let _ = dprint (fun () -> "Elaborating MApp.\n") in
-      let (i0, tau_t) = (elExp' cD cG i) in
-      let _ = dprint (fun () -> "[elExp'] MApp : " ^
-                        P.expSynToString cD cG (Whnf.cnormExp' (i0, Whnf.m_id)) ^ " : " ^
-                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ) in
-      let (i', tau_theta') = genMApp loc cD (i0, tau_t) in
-        begin match tau_theta' with
-          | (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
-	        let cM = elMetaObj cD mC (ctyp, theta) in
-	        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
-          | (Int.Comp.TypArr (tau1, tau), theta) -> begin match tau1 with
-              | Int.Comp.TypBox(_, ctyp) ->
-                let cM = elMetaObj cD mC (ctyp, theta) in
-		(Int.Comp.Apply (loc, i', Int.Comp.Box (loc, cM)), (tau, theta))
-                | _ ->
-                    raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, (tau1, theta))))
-            end
-          | _ ->
-              raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantPiBox, tau_theta')))
         end
 
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObjAnn (loc', psi, r)) ->

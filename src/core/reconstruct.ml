@@ -448,19 +448,15 @@ let metaObjToFt = function
   | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub s) -> Int.LF.SObj (Context.dctxToHat cPsi, s)
   | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
 
-let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
+let genMetaVar'' loc' cD (loc, n , ctyp) = match ctyp with
   | Int.LF.MTyp (tA, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      let psihat  = Context.dctxToHat cPsi' in
-      let tA'   = C.cnormTyp (tA, t) in
-      let tM'   = Int.LF.Root(loc, Int.LF.MMVar (Whnf.newMMVar (Some n) (cD, cPsi', tA'), (Whnf.m_id, LF.id)), Int.LF.Nil) in
+      let psihat  = Context.dctxToHat cPsi in
+      let tM'   = Int.LF.Root(loc, Int.LF.MMVar (Whnf.newMMVar (Some n) (cD, cPsi, tA), (Whnf.m_id, LF.id)), Int.LF.Nil) in
         Int.Comp.MetaObj (loc', psihat, Int.LF.INorm tM')
 
   | Int.LF.PTyp (tA, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      let psihat  = Context.dctxToHat cPsi' in
-      let tA'   = C.cnormTyp (tA, t) in
-      let p     = Whnf.newMPVar (Some n) (cD, cPsi', tA') in
+      let psihat  = Context.dctxToHat cPsi in
+      let p     = Whnf.newMPVar (Some n) (cD, cPsi, tA) in
       let h     = Int.LF.MPVar (p, (Whnf.m_id, LF.id)) in
         Int.Comp.MetaObj (loc', psihat, Int.LF.IHead h)
 
@@ -469,14 +465,14 @@ let genMetaVar loc' cD (loc, n , ctyp, t) = match ctyp with
         Int.Comp.MetaCtx (loc', cPsi)
 
   | Int.LF.STyp (cPhi, cPsi) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      let psihat  = Context.dctxToHat cPsi' in
-      let cPhi'   = C.cnormDCtx (cPhi, t) in
-      let s = Whnf.newMSVar None (cD, cPsi', cPhi') in
+      let psihat  = Context.dctxToHat cPsi in
+      let s = Whnf.newMSVar None (cD, cPsi, cPhi) in
       let s' = Int.LF.MSVar (s, 0,
                              (Whnf.m_id, LF.id)) in (* Probably LF.id is  wrong *)
       let s' = Whnf.normSub s' in
         Int.Comp.MetaObj (loc', psihat, Int.LF.ISub s')
+
+let genMetaVar loc' cD (loc, n, ctyp, t) = genMetaVar'' loc' cD (loc, n, C.cnormMTyp (ctyp,t))
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let mO = genMetaVar loc' cD (loc, n, ctyp, t) in

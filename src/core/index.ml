@@ -190,7 +190,7 @@ and index_typ cvars bvars fvars = function
   | Ext.LF.AtomTerm(loc, n) ->
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
-            let Ext.LF.Root(_, Ext.LF.Name(_, a), s') as n = shunting_yard nl in
+            let Ext.LF.Root(_, Ext.LF.Name(_, a), s') = shunting_yard nl in
             index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s')) 
         | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) -> 
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, sp))
@@ -338,7 +338,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   | a, b ->
     failwith "Error in indexing"
 
-  and take : type a b. int -> (a * b) list -> ((a * b) list) * ((a * b) list) = fun i l ->
+  and take = fun i l ->
     let rec aux n l c = match l with
       | h::t when n > 0 -> aux (n-1) t (h::c)
       | _  -> (c, l)

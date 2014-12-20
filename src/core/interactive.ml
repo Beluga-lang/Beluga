@@ -397,7 +397,7 @@ let rec searchMctx i = function
           (if (nameString n) = e then
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((vPsi, vOff) as phat) = dctxToHat cPsi in
+             let ((vPsi, vOff) as _phat) = dctxToHat cPsi in
 	     let m0 = Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.INorm (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil))) in
              let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.MTyp (tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)

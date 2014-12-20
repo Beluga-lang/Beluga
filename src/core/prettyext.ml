@@ -174,6 +174,11 @@ module Ext = struct
     | ID Schema -> "<span class=\"schema\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | Link -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
     | LinkOption -> if Html.idExists s then "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>" else s
+    let iteri f =
+	    let rec iteri' i = function
+	      | [] -> ()
+	      | x::xs -> (f i x); iteri' (i+1) xs
+	    in iteri' 0
 
     type symbol =
     | Turnstile
@@ -309,7 +314,8 @@ module Ext = struct
         | LF.TList(_, l) ->
           let length = List.length l in 
           fprintf ppf "%s" (l_paren_if (lvl > 0));
-          List.iteri (fun i x -> 
+
+          iteri (fun i x ->
             if i = length - 1 then fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x
             else fprintf ppf "%a " (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x) l;
           fprintf ppf "%s" (r_paren_if (lvl > 0));

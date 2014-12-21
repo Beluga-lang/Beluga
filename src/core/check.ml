@@ -226,28 +226,15 @@ module Comp = struct
               "Expected type" Format.pp_print_string                "base type"
               "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
 
-          | AppMismatch (cD, (I.MTyp (tP, cPsi), theta)) ->
+          | AppMismatch (cD, (ctyp, theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, I.MTyp (tP, cPsi)), theta))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
-          | MAppMismatch (cD, (I.MTyp (tA, cPsi), theta)) ->
+          | MAppMismatch (cD, (ctyp, theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, I.MTyp (tA, cPsi)), theta))
-
-          | MAppMismatch (cD, (I.STyp (cPhi, cPsi), theta)) ->
-              let cPhi', cPsi'  = Whnf.cnormDCtx (cPhi, theta) , Whnf.cnormDCtx  (cPsi, theta) in
-              let cdec = I.Decl(Id.mk_name (Id.SVarName None), I.STyp (cPhi', cPsi'), I.Maybe) in
-            Format.fprintf ppf
-              "Expected contextual substitution object of type %a."
-              (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl)
-              cdec
-
-          | MAppMismatch (cD, (I.CTyp cid_schema, tau)) ->
-            Format.fprintf ppf
-              "Expected context of schema %s."
-              (R.render_cid_schema cid_schema)
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
           | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
               Error.report_mismatch ppf
@@ -362,13 +349,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         let cK = (CompCotyp.get c).CompCotyp.kind in
           checkMetaSpine loc cD mS (cK , C.m_id)
 
-    | TypBox (_ , I.MTyp (tA, cPsi)) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
-
-    | TypBox (_ , I.STyp(cPhi, cPsi)) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkDCtx cD cPhi
+    | TypBox (_ , ctyp) -> checkCLFTyp cD ctyp
 
     | TypArr (tau1, tau2) ->
         checkTyp cD tau1;
@@ -631,8 +612,8 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | PatMetaObj (loc, mO) ->
         (match ttau with
-          | (TypBox (_, I.MTyp(tA, cPsi)) , theta) ->
-              checkMetaObj loc cD mO (I.MTyp (tA, cPsi), theta)
+          | (TypBox (_, ctyp) , theta) ->
+              checkMetaObj loc cD mO (ctyp, theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->

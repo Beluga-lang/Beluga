@@ -319,34 +319,12 @@ let checkParamTypeValid cD cPsi tA =
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 ;
 
-    (* The case for parameter types should be handled separately, for better error messages -bp *)
-
-
 and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp,_), cK) , t)) ->
-      begin match ctyp with
-        | I.CTyp schema_cid ->
-            let MetaCtx (_, cPsi) = mO in
-            let theta' = I.MDot (I.CObj (cPsi), t) in
-              checkMetaObj loc cD mO (I.CTyp schema_cid , t);
-              checkMetaSpine loc cD mS (cK, theta')
-
-        | I.MTyp (tA, cPsi) ->
-            let MetaObj (loc, psihat, I.INorm tM) = mO in
-              checkMetaObj loc cD mO (I.MTyp (tA, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.ClObj(psihat, I.MObj tM), t))
-
-        | I.PTyp (tA, cPsi) ->
-            let MetaObj (loc, psihat, I.IHead tM) = mO in
-              checkMetaObj loc cD mO (I.PTyp (tA, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.ClObj(psihat, I.PObj tM), t))
-
-        | I.STyp (cPhi, cPsi) ->
-            let MetaObj (loc, psihat, I.ISub tM) = mO in
-              checkMetaObj loc cD mO (I.STyp (cPhi, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.ClObj(psihat, I.SObj tM), t))
-    end
+    let loc = getLoc mO in
+    checkMetaObj loc cD mO (ctyp, t);
+    checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
   let checkCLFTyp cD ctyp = match ctyp with
     | I.CTyp schema_cid ->

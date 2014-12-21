@@ -2891,18 +2891,17 @@ match sigma with
     let Decl (_u, cT,_) = cdecl in
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
-  and unifyClObj cD (mO, t) (mO', t') (cT, mt) = match (mO , mO', Whnf.cnormMetaTyp (cT, mt)) with
-     | (PObj h) , (PObj h') , PTyp (_tA, cPsi) ->
-          unifyHead Unification cD cPsi
-            (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
+  and unifyClObj' cD mO mO' mT = match (mO, mO', mT) with
+    | PObj h , PObj h' , PTyp (_tA, cPsi) ->
+          unifyHead Unification cD cPsi h h'
+    | MObj tR , MObj tR' , MTyp (_tA, cPsi) ->
+          unifyTerm Unification cD cPsi (tR, id) (tR', id);
+    | SObj s , SObj s' , STyp (_cPhi, cPsi1) ->
+       unifySub Unification cD cPsi1 (simplifySub cD cPsi1 s) (simplifySub cD cPsi1 s')
+    | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 
-    | (MObj tR) , (MObj tR') , MTyp (_tA, cPsi) ->
-          unifyTerm Unification cD cPsi
-            (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
-
-    | (SObj s) , (SObj s') , STyp (_cPhi, cPsi1) ->
-          unifySub Unification cD cPsi1
-            (simplifySub cD cPsi1 (Whnf.cnormSub (s, t))) (simplifySub cD cPsi1 (Whnf.cnormSub (s', t')))
+  and unifyClObj cD (mO, t) (mO', t') (cT, mt) =
+   unifyClObj' cD (Whnf.cnormClObj mO t) (Whnf.cnormClObj mO' t') (Whnf.cnormMetaTyp (cT, mt))
 
   and unifyMFront' cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
     | (CObj (cPsi), t) , (CObj (cPsi'), t') ->

@@ -2923,16 +2923,9 @@ match sigma with
 
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 
-  and itermToClObj = function
-    | INorm n -> MObj n
-    | IHead h -> PObj h
-    | ISub s -> SObj s
-  and metaObjToMFront = function
-    | Comp.MetaCtx (_, cPsi) -> CObj cPsi
-    | Comp.MetaObj (_, phat, t) -> ClObj (phat, itermToClObj t)
 
   and unifyMObj cD (mO, t) (mO', t') (cT, mt) = 
-    unifyMFront' cD (metaObjToMFront mO, t) (metaObjToMFront mO', t') (cT, mt)
+    unifyMFront' cD (Comp.metaObjToMFront mO, t) (Comp.metaObjToMFront mO', t') (cT, mt)
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()

@@ -364,6 +364,13 @@ module Comp = struct
 
   type tclo = typ * LF.msub
 
+  let itermToClObj = function
+    | LF.INorm n -> LF.MObj n
+    | LF.IHead h -> LF.PObj h
+    | LF.ISub s -> LF.SObj s
+  let metaObjToMFront = function
+    | MetaCtx (_, cPsi) -> LF.CObj cPsi
+    | MetaObj (_, phat, t) -> LF.ClObj (phat, itermToClObj t)
 end
 
 

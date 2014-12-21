@@ -367,52 +367,27 @@ let isVar h = match h with
         delayedCnstrs := cnstrL;
         Some cnstr
 
+  let instantiateMMVar' (u, t, cnstrL) =
+    u := Some t;
+    T.log globalTrail (InstI u);
+    delayedCnstrs := cnstrL @ !delayedCnstrs;
+    globalCnstrs := cnstrL @ !globalCnstrs
 
   let instantiateCtxVar (ctx_ref, cPsi) =
     ctx_ref := Some (ICtx cPsi);
     T.log globalTrail (InstI ctx_ref)
 
-
-  (* let instantiatePVar (q, head, cnstrL) = *)
-  (*   q := Some (IHead head); *)
-  (*   (\* screen screenUndefsHead head; *\) *)
-  (*   T.log globalTrail (InstI q); *)
-  (*   delayedCnstrs := cnstrL @ !delayedCnstrs; *)
-  (*   globalCnstrs := cnstrL @ !globalCnstrs *)
-
-
   let instantiateMVar (u, tM, cnstrL) =
-     u := Some (INorm (Whnf.norm (tM, id)));
-(*    screen screenUndefs tM;
-    u := Some tM; *)
-    T.log globalTrail (InstI u);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
-
-
-  (* let instantiateSVar (s, sigma, cnstrL) = *)
-  (*   s := Some sigma; *)
-  (*   T.log globalTrail (InstSub s); *)
-  (*   delayedCnstrs := cnstrL @ !delayedCnstrs; *)
-  (*   globalCnstrs := cnstrL @ !globalCnstrs *)
+    instantiateMMVar' (u, INorm (Whnf.norm (tM, id)), cnstrL)
 
   let instantiateMMVar (u, tM, cnstrL) =
-    u := Some (INorm tM);
-    T.log globalTrail (InstI u);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (u, INorm tM, cnstrL)
 
   let instantiateMSVar (s, sigma, cnstrL) =
-    s := Some (ISub sigma);
-    T.log globalTrail (InstI s);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (s, ISub sigma, cnstrL)
 
   let instantiateMPVar (p, head, cnstrL) =
-    p := Some (IHead head);
-    T.log globalTrail (InstI p);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (p, IHead head, cnstrL)
 
   (* ---------------------------------------------------------------------- *)
   (* Higher-order unification *)

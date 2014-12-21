@@ -90,7 +90,8 @@ module LF = struct
    | SObj of psi_hat * sub
    | CObj of dctx                            (*    | Psi                       *)
    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
-   | MUndef
+   | MUndef (* This shouldn't be here, we should use a different datastructure for
+               partial inverse substitutions *)
 
  and msub =                                  (* Contextual substitutions       *)
    | MShift of int                           (* theta ::= ^n                   *)

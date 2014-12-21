@@ -263,7 +263,6 @@ module Comp = struct
 
   let getLoc cM = match cM with 
     | MetaObj(loc, _, _ ) -> loc
-    | MetaObjAnn (loc, _, _ ) -> loc
     | MetaCtx (loc, _ ) -> loc
 
   let rec lookup cG k = match (cG, k) with
@@ -307,18 +306,12 @@ let checkParamTypeValid cD cPsi tA =
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
 
-  | (MetaObjAnn (loc, _cPhi, I.INorm tM), (I.MTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
-      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
-
   | (MetaObj (loc, phat, I.ISub tM), (I.STyp (tA, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
         LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
-
-  | (MetaObjAnn (loc, _cPhi, I.ISub tM), (I.STyp (tA, cPsi), t)) ->
-      LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
 
   | (MetaObj (loc, _phat, I.IHead h), (I.PTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
@@ -737,7 +730,6 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         let _ = checkMetaObj loc cD mO (I.MTyp (tA, cPsi), theta) in
           (match mO with
             | MetaObj (_, phat, I.INorm tM) ->  I.MDot(I.ClObj(phat, I.MObj tM), theta)
-            | MetaObjAnn (_, cPsi, I.INorm tM) -> I.MDot (I.ClObj(Context.dctxToHat cPsi, I.MObj tM), theta)
           )
     | I.Decl (_, I.PTyp (tA, cPsi), _) ->
         let _ = checkMetaObj loc cD mO (I.PTyp (tA, cPsi), theta) in
@@ -748,7 +740,6 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         let _ = checkMetaObj loc cD mO (I.STyp (cPhi, cPsi), theta) in
           (match mO with
             | MetaObj (_, phat, I.ISub s) ->  I.MDot(I.ClObj(phat, I.SObj s), theta)
-            | MetaObjAnn (_, cPsi, I.ISub s) -> I.MDot (I.ClObj(Context.dctxToHat cPsi, I.SObj s), theta)
           )
     | I.Decl (_, I.CTyp w, _) ->
         let _ = checkMetaObj loc cD mO (I.CTyp w, theta) in

@@ -2918,20 +2918,6 @@ match sigma with
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
           (* dprint (fun () -> "[unifyMetaObj'] SUCCESS") *)
 
-    | (Comp.MetaObjAnn (_, cPsi, INorm tR) , t) , (Comp.MetaObjAnn (_, cPsi', INorm tR') , t') ->
-        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
-        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
-          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
-          unifyTerm Unification cD cPsi1
-            (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
-
-    | (Comp.MetaObjAnn (_, cPsi, ISub s) , t) , (Comp.MetaObjAnn (_, cPsi', ISub s') , t') ->
-        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
-        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
-          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
-          unifySub Unification cD cPsi1
-           (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
-
     | (Comp.MetaObj (_, phat, ISub s) , t) , (Comp.MetaObj (_, phat', ISub s') , t') ->
         let STyp (_cPhi, cPsi) = cT in
         let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in

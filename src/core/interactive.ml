@@ -139,7 +139,7 @@ let branchCovGoals loc i cG0 tA cgs =
        let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
       Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
    Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-       let patt = PatMetaObj ( Loc.ghost, MetaObjAnn (Loc.ghost, cPsi, LF.INorm tR)) in
+       let patt = PatMetaObj ( Loc.ghost, MetaObj (Loc.ghost, Context.dctxToHat cPsi, LF.INorm tR)) in
        Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->

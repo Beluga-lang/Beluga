@@ -443,9 +443,6 @@ let metaObjToFt = function
   | Int.Comp.MetaObj (loc, psihat, Int.LF.INorm tM) -> Int.LF.ClObj (psihat, Int.LF.MObj tM)
   | Int.Comp.MetaObj (loc, psihat, Int.LF.IHead h) -> Int.LF.ClObj (psihat, Int.LF.PObj h)
   | Int.Comp.MetaObj (loc', psihat, Int.LF.ISub s') -> Int.LF.ClObj (psihat, Int.LF.SObj s')
-  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.INorm tM) -> Int.LF.ClObj (Context.dctxToHat cPsi, Int.LF.MObj tM)
-  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.IHead tH) -> Int.LF.ClObj (Context.dctxToHat cPsi, Int.LF.PObj tH)
-  | Int.Comp.MetaObjAnn (loc, cPsi, Int.LF.ISub s) -> Int.LF.ClObj (Context.dctxToHat cPsi, Int.LF.SObj s)
   | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
 
 let mmVarToMetaObj loc' mV = function

@@ -1412,12 +1412,8 @@ let mctxMVarPos cD u =
         Comp.MetaCtx (loc, normDCtx cPsi)
     | Comp.MetaObj (loc, phat, INorm tM) ->
         Comp.MetaObj (loc, cnorm_psihat phat m_id, INorm (norm (tM, LF.id)))
-    | Comp.MetaObjAnn (loc, cPsi, INorm tM) ->
-        Comp.MetaObjAnn (loc, normDCtx cPsi, INorm (norm (tM, LF.id)))
     | Comp.MetaObj (loc, phat, ISub tM) ->
         Comp.MetaObj (loc, cnorm_psihat phat m_id, ISub (normSub tM))
-    | Comp.MetaObjAnn (loc, cPsi, ISub tM) ->
-        Comp.MetaObjAnn (loc, normDCtx cPsi, ISub (normSub tM))
 
     | Comp.MetaObj (loc, phat, IHead _ ) ->    mO
 
@@ -1477,12 +1473,8 @@ let mctxMVarPos cD u =
         Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
     | Comp.MetaObj (loc, phat, INorm tM) ->
         Comp.MetaObj (loc, cnorm_psihat phat t, INorm (norm (cnorm (tM, t), LF.id)))
-    | Comp.MetaObjAnn (loc, cPsi, INorm tM) ->
-        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), INorm (norm (cnorm (tM, t), LF.id)))
     | Comp.MetaObj (loc, phat, ISub sigma) ->
         Comp.MetaObj (loc, cnorm_psihat phat t, ISub (normSub (cnormSub (sigma, t))))
-    | Comp.MetaObjAnn (loc, cPsi, ISub sigma) ->
-        Comp.MetaObjAnn (loc, cnormDCtx (cPsi, t), ISub (normSub (cnormSub (sigma, t))))
     | Comp.MetaObj (loc, phat, IHead h ) ->  Comp.MetaObj (loc, cnorm_psihat phat t, IHead (cnormHead (h, t)))
 
   and cnormMetaSpine (mS,t) = match mS with

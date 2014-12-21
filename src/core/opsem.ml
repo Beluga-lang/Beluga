@@ -276,14 +276,11 @@ and match_pattern  (v,eta) (pat, mt) =
   let eta = ref eta in
   let rec loop v pat =
     match v, pat with
-      | _, Comp.PatMetaObj (loc', (Comp.MetaObj (loc'', phat, LF.INorm tM))) ->
-        loop v
-          (Comp.PatMetaObj (loc', Comp.MetaObjAnn (loc'', Context.hatToDCtx phat, LF.INorm tM)))
-
       | _, Comp.PatAnn (_, pat', _) ->
         loop v pat'
 
-      | Comp.BoxValue (Comp.MetaObj(_,phat, LF.INorm tM)), Comp.PatMetaObj (_, Comp.MetaObjAnn (_, cPsi, LF.INorm tM')) ->
+      | Comp.BoxValue (Comp.MetaObj(_,phat, LF.INorm tM)), Comp.PatMetaObj (_, Comp.MetaObj (_, phat', LF.INorm tM')) ->
+	let cPsi = Context.hatToDCtx phat' in
         let tM' = Whnf.cnorm (tM', mt) in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
         dprint (fun () -> "[evBranch] unify_phat "
@@ -294,8 +291,6 @@ and match_pattern  (v,eta) (pat, mt) =
           ^ " == " ^ P.normalToString LF.Empty cPsi (tM', Substitution.LF.id));
         Unify.unify_phat phat (Context.dctxToHat cPsi);
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
-      | _, Comp.PatMetaObj (_, Comp.MetaObjAnn _) ->
-        raise (Error.Violation "Expected box value.")
 
       | Comp.BoxValue (Comp.MetaObj(_,phat, LF.IHead h)), Comp.PatMetaObj (_, Comp.MetaObj (_, phat', LF.IHead h')) ->
           let phat' = Whnf.cnorm_psihat phat' mt in

@@ -964,19 +964,11 @@ module Int = struct
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_normal cD cPsi 0) tM
-      | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) ->
-            fprintf ppf "[%a |- %a]"
-               (fmt_ppr_lf_dctx cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
       | Comp.MetaObj (_, phat, LF.ISub s) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_sub cD cPsi 0) s
-      | Comp.MetaObjAnn (_, cPsi, LF.ISub tM) ->
-            fprintf ppf "[%a |- %a]"
-               (fmt_ppr_lf_dctx cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) tM
       | Comp.MetaObj (_, phat, LF.IHead h) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"

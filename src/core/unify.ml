@@ -2891,19 +2891,16 @@ match sigma with
     let Decl (_u, cT,_) = cdecl in
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
-  and unifyClObj cD (mO, t) (mO', t') (cT, mt) = match (mO , mO', cT) with
+  and unifyClObj cD (mO, t) (mO', t') (cT, mt) = match (mO , mO', Whnf.cnormMetaTyp (cT, mt)) with
      | (PObj h) , (PObj h') , PTyp (_tA, cPsi) ->
-        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           unifyHead Unification cD cPsi
             (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
 
     | (MObj tR) , (MObj tR') , MTyp (_tA, cPsi) ->
-        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           unifyTerm Unification cD cPsi
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
 
-    | (SObj s) , (SObj s') , STyp (_cPhi, cPsi) ->
-        let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
+    | (SObj s) , (SObj s') , STyp (_cPhi, cPsi1) ->
           unifySub Unification cD cPsi1
             (simplifySub cD cPsi1 (Whnf.cnormSub (s, t))) (simplifySub cD cPsi1 (Whnf.cnormSub (s', t')))
 

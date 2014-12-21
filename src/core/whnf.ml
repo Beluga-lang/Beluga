@@ -1422,11 +1422,7 @@ let mctxMVarPos cD u =
     | STyp (cPhi,cPsi) -> STyp (normDCtx cPhi, normDCtx cPsi)
     | CTyp g -> CTyp g
 
-  let normMetaTyp = function
-    | MTyp (tA, cPsi) -> MTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | PTyp (tA, cPsi) -> PTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | STyp (cPhi,cPsi) -> STyp (normDCtx cPhi, normDCtx cPsi)
-    | CTyp (g) -> CTyp (g)
+  let normMetaTyp = normMTyp
 
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->

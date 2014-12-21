@@ -1663,11 +1663,6 @@ let mctxMVarPos cD u =
                   cnormMSub t, cnormExp (e, m_id))
 
 
-  let cnormMTyp (ctyp, mtt') = match ctyp with
-     | CTyp w -> CTyp w
-     | MTyp (tA, cPsi) -> MTyp (cnormTyp (tA, mtt'), cnormDCtx (cPsi, mtt'))
-     | PTyp (tA, cPsi) -> PTyp (cnormTyp (tA, mtt'), cnormDCtx (cPsi, mtt'))
-     | STyp (cPhi, cPsi) -> STyp (cnormDCtx (cPhi, mtt'), cnormDCtx (cPsi, mtt'))
 
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
@@ -1912,11 +1907,7 @@ let rec closedCTyp cT = match cT with
       closedCTyp cT && closedCDecl ctyp_decl
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
 
-and closedCDecl ctyp_decl = match ctyp_decl with
-  | Decl(_, MTyp (tA, cPsi), _) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | Decl(_, PTyp (tA, cPsi), _) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | Decl(_, STyp (cPhi, cPsi), _) -> closedDCtx cPhi && closedDCtx cPsi
-  | _ -> true
+and closedCDecl (Decl (_, ctyp, _)) = closedMetaTyp ctyp
 
 let rec closedGCtx cG = match cG with
   | Empty -> true

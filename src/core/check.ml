@@ -568,37 +568,11 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         end
 
     | MApp (loc, e, mC) ->
-        begin match (mC, C.cwhnfCTyp (syn cD cG e)) with
-          | (MetaCtx (loc, cPsi), (TypPiBox ((I.Decl (_ , I.CTyp w, _)), tau), t)) ->
-              let theta' = I.MDot (I.CObj (cPsi), t) in
-              LF.checkSchema loc cD cPsi (Schema.get_schema w);
-              (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
-               dprint (fun () -> "[check: syn] tau1 = " ^
-                          P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, theta')) ("MApp 1" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-                 (tau, theta')
-          | (MetaObj (loc, psihat, I.INorm tM) , (TypPiBox ((I.Decl (_u, I.MTyp (tA, cPsi), _ )), tau), t)) ->
-              checkMetaObj loc cD mC (I.MTyp (tA, cPsi), t) ;
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.ClObj (psihat, I.MObj tM), t))) ("MApp 2" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-              (tau, I.MDot(I.ClObj (psihat, I.MObj tM), t))
-          | (MetaObj(_, phat, I.IHead h), (TypPiBox ((I.Decl(_, I.PTyp (tA, cPsi), _)), tau), t)) ->
-              let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
-                                 P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
-              let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
-                if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
-                  begin
-                    Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.ClObj (phat, I.PObj h), t))) ("MApp 3" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-                    (tau, I.MDot(I.ClObj (phat, I.PObj h), t))
-                  end
-                else
-                  raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (MetaObj(loc, phat, I.ISub s), (TypPiBox ((I.Decl(_, I.STyp (tA, cPsi), _)), tau), t)) ->
-              LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.ClObj (phat, I.SObj s), t))) ("MApp 4" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-              (tau, I.MDot(I.ClObj (phat, I.SObj s), t))
-          | ( _ , ((TypPiBox (I.Decl _ , _ )) as tau, t) ) ->
-              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
-          | (_ , (tau, t)) ->
+        begin match (C.cwhnfCTyp (syn cD cG e)) with
+          | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
+	    checkMetaObj loc cD mC (ctyp, t);
+	    (tau, I.MDot(metaObjToMFront mC, t))
+          | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
 

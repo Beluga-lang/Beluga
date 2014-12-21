@@ -719,24 +719,18 @@ and cnormMTyp (mtyp, t) = match mtyp with
           STyp (cPhi', cPsi')
     | CTyp sW -> CTyp sW
 
+and cnormClObj = function
+  | MObj tM -> MObj (norm (cnorm (tM, m_id), LF.id))
+  | SObj s -> SObj (normSub (cnormSub (s, m_id)))
+  | PObj h -> PObj (cnormHead (h, m_id))
+and cnormMFt = function
+  | ClObj(phat, m) -> ClObj (cnorm_psihat phat m_id, cnormClObj m)
+  | CObj (cPsi) -> CObj (cnormDCtx (normDCtx cPsi, m_id))
+  | MV u -> MV u
+  | MUndef -> MUndef
 and cnormMSub t = match t with
   | MShift _n -> t
-  | MDot (ClObj(phat, MObj tM), t) ->
-      MDot (ClObj (cnorm_psihat phat m_id,
-                  MObj(norm (cnorm (tM, m_id), LF.id))) , cnormMSub t)
-  | MDot (ClObj(phat, SObj s), t) ->
-      MDot (ClObj(cnorm_psihat phat m_id,
-                SObj (normSub (cnormSub (s, m_id)))), cnormMSub t)
-  | MDot (CObj (cPsi), t) ->
-        let t' = cnormMSub t in
-        let cPsi' = cnormDCtx (normDCtx cPsi, m_id) in
-          MDot (CObj cPsi' , t')
-  | MDot (ClObj(phat, PObj h), t) ->
-    MDot (ClObj(cnorm_psihat phat m_id, PObj (cnormHead (h, m_id))), cnormMSub t)
-
-  | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
-
-  | MDot (MUndef, t) -> MDot (MUndef, cnormMSub t)
+  | MDot (mft, t) -> MDot (cnormMFt mft, cnormMSub t)
 
 (* ************************************************************** *)
 

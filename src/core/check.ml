@@ -677,27 +677,10 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           synPatSpine cD cG pat_spine (tau, theta')
       end
 
-  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
-    | I.Decl (_, I.MTyp (tA, cPsi), _) ->
-        let _ = checkMetaObj loc cD mO (I.MTyp (tA, cPsi), theta) in
-          (match mO with
-            | MetaObj (_, phat, I.INorm tM) ->  I.MDot(I.ClObj(phat, I.MObj tM), theta)
-          )
-    | I.Decl (_, I.PTyp (tA, cPsi), _) ->
-        let _ = checkMetaObj loc cD mO (I.PTyp (tA, cPsi), theta) in
-          (match mO with
-            | MetaObj (_, phat, I.IHead h) ->  I.MDot(I.ClObj(phat, I.PObj h), theta)
-          )
-    | I.Decl (_, I.STyp (cPhi, cPsi), _) ->
-        let _ = checkMetaObj loc cD mO (I.STyp (cPhi, cPsi), theta) in
-          (match mO with
-            | MetaObj (_, phat, I.ISub s) ->  I.MDot(I.ClObj(phat, I.SObj s), theta)
-          )
-    | I.Decl (_, I.CTyp w, _) ->
-        let _ = checkMetaObj loc cD mO (I.CTyp w, theta) in
-          (match mO with
-            | MetaCtx (_, cPsi) -> I.MDot (I.CObj (cPsi) , theta)
-          )
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+    checkMetaObj loc cD mO (ctyp, theta);
+    I.MDot(metaObjToMFront mO, theta)
+
   and checkBranches caseTyp cD cG branches tAbox ttau =
     List.iter (fun branch -> checkBranch caseTyp cD cG branch tAbox ttau) branches
 

@@ -543,19 +543,19 @@ module Int = struct
 
 
     and fmt_ppr_lf_mfront cD lvl ppf = function
-      | LF.MObj (psihat, m) ->
+      | LF.ClObj (psihat, LF.MObj m) ->
           let cPsi = phatToDCtx psihat in
           fprintf ppf "M (%a . %a)"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
-      | LF.SObj (psihat, s) ->
+      | LF.ClObj (psihat, LF.SObj s) ->
           let cPsi = phatToDCtx psihat in
           fprintf ppf "S (%a . %a)"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
-      | LF.PObj (psihat, h) ->
+      | LF.ClObj (psihat, LF.PObj h) ->
           let cPsi = phatToDCtx psihat in
           fprintf ppf "P (%a . %a)"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
@@ -1455,7 +1455,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (R.render_name psi)
 
-      | LF.MObj (psihat, m) ->
+      | LF.ClObj (psihat, LF.MObj m) ->
           let cPsi = phatToDCtx psihat in
           let u    =
             begin match decl with
@@ -1468,7 +1468,7 @@ module Int = struct
             (fmt_ppr_lf_normal cD cPsi lvl) m
             (R.render_name u)
 
-      | LF.PObj (psihat, h) ->
+      | LF.ClObj (psihat, LF.PObj h) ->
           let cPsi = phatToDCtx psihat in
           let p =
             begin match decl with
@@ -1480,7 +1480,7 @@ module Int = struct
             (fmt_ppr_lf_head cD cPsi lvl) h
             (R.render_name p)
 
-      | LF.SObj (phat, sigma) ->
+      | LF.ClObj (phat, LF.SObj sigma) ->
           let cPsi = phatToDCtx phat in
           fprintf ppf "%a |- %a = #SVAR"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi

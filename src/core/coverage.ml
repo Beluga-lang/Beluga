@@ -625,12 +625,12 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
       let tau1 = LF.MTyp (Whnf.cnormTyp (tA,t), Whnf.cnormDCtx (cPsi, t)) in
       let tau1' = LF.MTyp (Whnf.cnormTyp (tA',t), Whnf.cnormDCtx (cPsi', t')) in
       let t2 = (match mO with
-            | Comp.MetaObj (_, phat, LF.INorm tM) ->  LF.MDot(LF.MObj(phat, tM), t)
-            | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) -> LF.MDot (LF.MObj(Context.dctxToHat cPsi, tM), t)
+            | Comp.MetaObj (_, phat, LF.INorm tM) ->  LF.MDot(LF.ClObj(phat, LF.MObj tM), t)
+            | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) -> LF.MDot (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM), t)
               ) in
       let t2' = (match mO' with
-            | Comp.MetaObj (_, phat, LF.INorm tM) ->  LF.MDot(LF.MObj(phat, tM), t')
-            | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) -> LF.MDot (LF.MObj(Context.dctxToHat cPsi, tM), t')
+            | Comp.MetaObj (_, phat, LF.INorm tM) ->  LF.MDot(LF.ClObj(phat, LF.MObj tM), t')
+            | Comp.MetaObjAnn (_, cPsi, LF.INorm tM) -> LF.MDot (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM), t')
               ) in
       let (mC1, sC1) = match_metaobj cD cD_p (mO, tau1) (mO', tau1') mC sC in
 	match_spines (cD,cG) (cD_p, cG_p)
@@ -1412,7 +1412,7 @@ match (mv_list, cD) with
 	  let (cov_goals' , dep0) =  genCGoals cD' md  in
 	  let cov_goals0 = List.map (fun (cD', cg, ms) ->
 				       let CovGoal (cPsi', tR, sA') = cg in
-				       let ms' = LF.MDot (LF.MObj ( Context.dctxToHat cPsi' , tR),  ms) in
+				       let ms' = LF.MDot (LF.ClObj ( Context.dctxToHat cPsi' , LF.MObj tR),  ms) in
 				       let k = List.length cD_tail in
 				       let (cD'', ms0) = addToMCtx cD' (cD_tail, ms') in
 				       let cg' = CovGoal (Whnf.cnormDCtx (cPsi', LF.MShift k) ,
@@ -1475,7 +1475,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
       let tR    = etaExpandMVstr LF.Empty cPsi' (tP', S.LF.id) in
       let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
 				  Comp.MetaObjAnn (Syntax.Loc.ghost, cPsi', LF.INorm tR)) in
-      let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.MObj (Context.dctxToHat cPsi', tR), t)) in
+      let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t)) in
 	(cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
 
   | (Comp.TypBox _ , t ) ->

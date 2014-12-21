@@ -155,7 +155,7 @@ let rec eval_syn i (theta, eta) =
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
-          eval_chk e' (LF.MDot (LF.MObj (phat, tM'), theta1), eta1)
+          eval_chk e' (LF.MDot (LF.ClObj (phat, LF.MObj tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (Comp.MetaObj(l, phat, LF.INorm tM')), spine))
         | Comp.CodataValue (cid, spine) ->
@@ -169,7 +169,7 @@ let rec eval_syn i (theta, eta) =
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
-          eval_chk e' (LF.MDot (LF.PObj (phat, h'), theta1), eta1)
+          eval_chk e' (LF.MDot (LF.ClObj (phat, LF.PObj h'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (Comp.MetaObj(l, phat, LF.IHead h')), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")

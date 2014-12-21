@@ -84,18 +84,20 @@ module LF = struct
     | Undef                                   (*    | _                         *)
 
                                              (* Contextual substitutions       *)
- and mfront =                                (* Fronts:                        *)
-   | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
-   | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
-   | SObj of psi_hat * sub
-   | CObj of dctx                            (*    | Psi                       *)
-   | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
-   | MUndef (* This shouldn't be here, we should use a different datastructure for
+  and mfront =                                (* Fronts:                        *)
+    | ClObj of psi_hat * clobj
+    | CObj of dctx                            (*    | Psi                       *)
+    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
+    | MUndef (* This shouldn't be here, we should use a different datastructure for
                partial inverse substitutions *)
+  and clobj = (* ContextuaL objects *)
+    | MObj of normal                (* Mft::= Psihat.N                *)
+    | PObj of head                  (*    | Psihat.p[s] | Psihat.x    *)
+    | SObj of sub
 
- and msub =                                  (* Contextual substitutions       *)
-   | MShift of int                           (* theta ::= ^n                   *)
-   | MDot   of mfront * msub                 (*       | MFt . theta            *)
+  and msub =                                  (* Contextual substitutions       *)
+    | MShift of int                           (* theta ::= ^n                   *)
+    | MDot   of mfront * msub                 (*       | MFt . theta            *)
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)

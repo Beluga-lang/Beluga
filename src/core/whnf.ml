@@ -221,15 +221,15 @@ and mcomp t1 t2 = match (t1, t2) with
    and  D ; [|t|]Psi |- Ft' : [|t|]A
 *)
 and mfrontMSub ft t = match ft with
-  | MObj (phat, tM)     ->
+  | ClObj (phat, MObj tM)     ->
       let phat = cnorm_psihat phat t in
-        MObj (phat, cnorm(tM, t))
-  | SObj (phat, tM)     ->
+        ClObj (phat, MObj (cnorm(tM, t)))
+  | ClObj (phat, SObj tM)     ->
       let phat = cnorm_psihat phat t in
-        SObj (phat, cnormSub(tM, t))
-  | PObj (phat, h) ->
+        ClObj (phat, SObj (cnormSub(tM, t)))
+  | ClObj (phat, PObj h) ->
     let phat = cnorm_psihat phat t in
-    PObj (phat, cnormHead (h, t))
+    ClObj (phat, PObj (cnormHead (h, t)))
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
 
   | MV k -> LF.applyMSub k t
@@ -256,12 +256,12 @@ and m_invert s =
           Some n
         else lookup (n + 1) t' p
 
-    | MDot (MObj(_phat, Root(_, MVar (Offset k, Shift 0), Nil)), t') ->
+    | MDot (ClObj(_phat, MObj (Root(_, MVar (Offset k, Shift 0), Nil))), t') ->
         if k = p then
           Some n
         else lookup (n + 1) t' p
 
-    | MDot (PObj (_phat, PVar (k, Shift 0)), t') ->
+    | MDot (ClObj (_phat, PObj (PVar (k, Shift 0))), t') ->
         if k = p then
           Some n
         else lookup (n + 1) t' p
@@ -534,20 +534,20 @@ and cnormHead' (h, t) = match h with
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub k t with
       | MV k' -> Head (MVar(Offset k', s'))
-      | MObj (_,tM) -> Obj (norm (tM, s'))
+      | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
     end	
   | PVar (k, s) ->
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub k t with
       | MV k' -> Head (PVar(k', s'))
-      | PObj (_,h) -> normHead (h, s')
-      | MObj (_,tM) -> Obj (norm (tM, s'))
+      | ClObj (_,PObj h) -> normHead (h, s')
+      | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
     end
   | HClo (k,sv,s) ->
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub sv t with
       | MV sv' -> Head (HClo(k,sv',s'))
-      | SObj (_,r) -> normFt' (LF.bvarSub k r, s')
+      | ClObj (_,SObj r) -> normFt' (LF.bvarSub k r, s')
     end
   | MMVar (mm,(mt,s)) ->
     begin match normMMVar (mm,mt) with
@@ -618,7 +618,7 @@ and cnorm (tM, t) = match tM with
     | SVar (offset, n, s') ->
       begin match LF.applyMSub offset t with
         | MV offset' -> SVar (offset', n, cnormSub (s', t))
-        | SObj (_phat, r) ->
+        | ClObj (_phat, SObj r) ->
               LF.comp (LF.comp (Shift n) r) (cnormSub (s',t))
       end
 
@@ -721,18 +721,18 @@ and cnormMTyp (mtyp, t) = match mtyp with
 
 and cnormMSub t = match t with
   | MShift _n -> t
-  | MDot (MObj(phat, tM), t) ->
-      MDot (MObj (cnorm_psihat phat m_id,
-                  norm (cnorm (tM, m_id), LF.id)) , cnormMSub t)
-  | MDot (SObj(phat, s), t) ->
-      MDot (SObj(cnorm_psihat phat m_id,
-                normSub (cnormSub (s, m_id))), cnormMSub t)
+  | MDot (ClObj(phat, MObj tM), t) ->
+      MDot (ClObj (cnorm_psihat phat m_id,
+                  MObj(norm (cnorm (tM, m_id), LF.id))) , cnormMSub t)
+  | MDot (ClObj(phat, SObj s), t) ->
+      MDot (ClObj(cnorm_psihat phat m_id,
+                SObj (normSub (cnormSub (s, m_id)))), cnormMSub t)
   | MDot (CObj (cPsi), t) ->
         let t' = cnormMSub t in
         let cPsi' = cnormDCtx (normDCtx cPsi, m_id) in
           MDot (CObj cPsi' , t')
-  | MDot (PObj(phat, h), t) ->
-    MDot (PObj(cnorm_psihat phat m_id, cnormHead (h, m_id)), cnormMSub t)
+  | MDot (ClObj(phat, PObj h), t) ->
+    MDot (ClObj(cnorm_psihat phat m_id, PObj (cnormHead (h, m_id))), cnormMSub t)
 
   | MDot (MV u, t) -> MDot (MV u, cnormMSub t)
 
@@ -1202,11 +1202,11 @@ and convMSub subst1 subst2 = match (subst1, subst2) with
 and convMFront front1 front2 = match (front1, front2) with
   | (CObj cPsi, CObj cPhi) ->
       convDCtx cPsi cPhi
-  | (MObj (_phat, tM), MObj(_, tN)) ->
+  | (ClObj (_phat, MObj tM), ClObj(_, MObj tN)) ->
       conv (tM, LF.id) (tN, LF.id)
-  | (PObj (phat, BVar k), PObj (phat', BVar k')) ->
+  | (ClObj (phat, PObj (BVar k)), ClObj (phat', PObj (BVar k'))) ->
       phat = phat' && k = k'
-  | (PObj (phat, PVar(p,s)), PObj (phat', PVar(q, s'))) ->
+  | (ClObj (phat, PObj (PVar(p,s))), ClObj (phat', PObj (PVar(q, s')))) ->
       phat = phat' && p = q && convSub s s'
   | (_, _) ->
       false

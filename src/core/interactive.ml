@@ -136,7 +136,7 @@ let branchCovGoals loc i cG0 tA cgs =
   List.map (fun (cD,cg, ms) ->  match cg with
   | Cover.CovGoal(cPsi, tR, sA) ->
       let loc' = nextLoc loc in
-       let ms = (if i = 0 then ms else insertIMSub i (LF.MObj(Context.dctxToHat cPsi, tR)) ms) in
+       let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
       Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
    Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
        let patt = PatMetaObj ( Loc.ghost, MetaObjAnn (Loc.ghost, cPsi, LF.INorm tR)) in

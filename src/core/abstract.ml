@@ -758,22 +758,22 @@ and collectSub (p:int) cQ phat s = match s with
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
 and collectMObj p cQ1 = function 
-  | I.MObj(phat, tM) ->
+  | I.ClObj(phat, I.MObj tM) ->
       let (cQ1, phat') = collectHat p cQ1 phat in
       let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in
-        (cQ2 , I.MObj (phat', tM'))
-  | I.PObj(phat, h) ->
+        (cQ2 , I.ClObj (phat', I.MObj tM'))
+  | I.ClObj(phat, I.PObj h) ->
       let (cQ1, phat') = collectHat p cQ1 phat in
       let (cQ2, h') = collectHead p cQ1 phat' (Syntax.Loc.ghost) (h, LF.id) in
-        (cQ2, I.PObj (phat', h'))
+        (cQ2, I.ClObj (phat', I.PObj h'))
   | I.CObj (cPsi) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPsi in
         (cQ2, I.CObj (cPsi'))
-  | I.SObj (phat, s) ->
+  | I.ClObj (phat, I.SObj s) ->
     let (cQ1, phat') = collectHat p cQ1 phat in
     let (cQ2, s')    = collectSub p cQ1 phat' s in
-      (cQ2, I.SObj(phat', s'))
+      (cQ2, I.ClObj(phat', I.SObj s'))
 
 (* collectMSub p cQ theta = cQ' *)
 and collectMSub p cQ theta =  match theta with
@@ -1483,23 +1483,23 @@ and abstractMVarCtx cQ l =  match cQ with
 
 (* Cases for: FMV, FPV *)
 let abstrMObj cQ = function
-  | I.MObj(phat, tM) ->
+  | I.ClObj(phat, I.MObj tM) ->
      let phat' = abstractMVarHat cQ (0,0) phat in
      let tM' = abstractMVarTerm cQ (0,0) (tM, LF.id) in
-     I.MObj(phat', tM')
+     I.ClObj(phat', I.MObj tM')
 
-  | I.PObj(phat, h) ->
+  | I.ClObj(phat, I.PObj h) ->
      let phat' = abstractMVarHat cQ (0,0) phat in
      let h' = abstractMVarHead cQ (0,0) h in
-     I.PObj(phat', h')
+     I.ClObj(phat', I.PObj h')
 
   | I.CObj(cPsi) ->
      I.CObj(abstractMVarDctx cQ (0,0) cPsi)
 
-  | I.SObj (phat, s) ->
+  | I.ClObj (phat, I.SObj s) ->
      let phat' = abstractMVarHat cQ (0,0) phat in
      let s'    = abstractMVarSub cQ (0,0) s in
-     I.SObj (phat', s')
+     I.ClObj (phat', I.SObj s')
   | I.MV k -> I.MV k
 
 let rec abstrMSub cQ t =

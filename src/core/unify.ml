@@ -911,9 +911,9 @@ match sigma with
    *)
   and invMSub cD0 (mt, cD1) ms  rOccur = match (mt, cD1) with
     | (MShift  n, _) -> checkDefined (Whnf.mcomp (MShift  n) ms)
-    | (MDot (SObj (phat, sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi), _)))   ->
+    | (MDot (ClObj (phat, SObj sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi), _)))   ->
       let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
-      MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
+      MDot (ClObj (phat, SObj sigma'), invMSub cD0 (mt', cD') ms rOccur)
     | (MDot (mobj, mt'), Dec(cD',_)) ->
       MDot(invMObj cD0 mobj ms rOccur, invMSub cD0 (mt', cD') ms rOccur)
 
@@ -923,9 +923,9 @@ match sigma with
 	| MUndef -> raise NotInvertible
 	| ft -> ft
       end 
-    | MObj (phat, tM) -> MObj (phat, invNorm cD0 (phat, (tM, id), (ms, id), rOccur))
+    | ClObj (phat, MObj tM) -> ClObj (phat, MObj (invNorm cD0 (phat, (tM, id), (ms, id), rOccur)))
     | CObj cPsi -> raise (Error.Violation "Not implemented")
-    | PObj (phat, h) -> PObj (phat, invHead cD0 (phat, h, (ms, id), rOccur))
+    | ClObj (phat, PObj h) -> ClObj (phat, PObj (invHead cD0 (phat, h, (ms, id), rOccur)))
    (* | SObj (phat, sigma) -> SObj (phat, invSub cD0 phat (sigma, *)
 
   and checkDefined = function
@@ -2959,9 +2959,9 @@ match sigma with
                     P.metaObjToString cD mOt'); *)
           let mt' = begin match mOt with
                       | Comp.MetaCtx (loc, cPsi0) -> MDot (CObj(cPsi0), mt)
-                      | Comp.MetaObj (loc, psihat, INorm tM) -> MDot (MObj (psihat, tM), mt)
-                      | Comp.MetaObj (loc, psihat, IHead h) -> MDot (PObj (psihat,  h), mt)
-                      | Comp.MetaObj (loc, phat, ISub s) -> MDot (SObj (phat, s), mt)
+                      | Comp.MetaObj (loc, psihat, INorm tM) -> MDot (ClObj (psihat, MObj tM), mt)
+                      | Comp.MetaObj (loc, psihat, IHead h) -> MDot (ClObj (psihat,  PObj h), mt)
+                      | Comp.MetaObj (loc, phat, ISub s) -> MDot (ClObj (phat, SObj s), mt)
                     end in
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
           (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
@@ -3205,10 +3205,10 @@ match sigma with
           unifyMSub' ms (MShift (k-1))
       | (MShift k, MDot ( _ , ms)) ->
           unifyMSub' ms (MShift (k-1))
-      | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) ->
+      | (MDot (ClObj (phat, MObj tM), ms'), MDot (ClObj(_phat', MObj tM'), mt')) ->
           (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
            unifyMSub' ms' mt')
-      | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) ->
+      | (MDot (ClObj (phat, PObj h), ms'), MDot (ClObj(_phat', PObj h'), mt')) ->
           (dprint (fun () -> "[unifyMSub] PObj ");
           (unifyHead Unification Empty (Context.hatToDCtx phat) h h';
            unifyMSub' ms' mt'))

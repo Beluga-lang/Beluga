@@ -121,7 +121,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
           begin match Substitution.LF.applyMSub offset  t with
             | Int.LF.MV u ->
                 Apx.LF.MVar (Apx.LF.Offset u, cnormApxSub cD delta s (cD'', t))
-            | Int.LF.MObj (_phat, tM) ->
+            | Int.LF.ClObj (_phat, Int.LF.MObj tM) ->
                 let (_u, tP, cPhi) = Whnf.mctxMDec cD offset' in
                  (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
                     Given cD'' |- t : cD, l_delta
@@ -174,7 +174,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
         if offset > l_delta then
           begin match Substitution.LF.applyMSub offset t with
             | Int.LF.MV offset' ->  Apx.LF.PVar (Apx.LF.Offset offset', cnormApxSub cD delta s (cD'', t))
-            | Int.LF.PObj (_phat, h) ->
+            | Int.LF.ClObj (_phat, Int.LF.PObj h) ->
                 let _ = dprint (fun () -> "[cnormApxTerm] ApplyMSub done -- resulted in PObj") in
                 let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
                   (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
@@ -203,7 +203,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (q', s1')
-                     | Int.LF.PObj (_hat, Int.LF.PVar (q', s2)) ->
+                     | Int.LF.ClObj (_hat, Int.LF.PObj (Int.LF.PVar (q', s2))) ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (q', Substitution.LF.comp s1' s2)
                    end
@@ -230,7 +230,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                 Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset offset',
                                          cnormApxSub cD delta s (cD'', t)),
                             j)
-            | Int.LF.PObj (_phat, h) ->
+            | Int.LF.ClObj (_phat, Int.LF.PObj h) ->
                 let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done -- resulted in PObj  ") in
 
                 let _ = dprint (fun () -> "[cnormApxTerm] offset' = " ^ string_of_int offset' ^ "\n") in
@@ -250,7 +250,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                                            cnormApxSub cD delta s (cD'', t)),
                               j)
 
-            | Int.LF.MObj (phat, tM) ->
+            | Int.LF.ClObj (phat, Int.LF.MObj tM) ->
                 (dprint (fun () -> "[cnormApxTerm] MObj :" ^
                            P.normalToString cD (Context.hatToDCtx phat) (tM, Substitution.LF.id) ^ "\n") ;
                  raise (Error.Violation "MObj found -- expected PObj"))
@@ -268,7 +268,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (q', s1')
-                     | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) ->
+                     | Int.LF.ClObj (_phat, Int.LF.PObj (Int.LF.PVar (p,s'))) ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
                    end
@@ -289,7 +289,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                 Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.Offset offset',
                                          cnormApxSub cD delta s (cD'', t)),
                             j)
-            | Int.LF.PObj (_phat, h) ->
+            | Int.LF.ClObj (_phat, Int.LF.PObj h) ->
                 let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done -- resulted in PObj  ") in
 
                 let _ = dprint (fun () -> "[cnormApxTerm] offset' = " ^ string_of_int offset' ^ "\n") in
@@ -309,7 +309,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                                            cnormApxSub cD delta s (cD'', t)),
                               j)
 
-            | Int.LF.MObj (phat, tM) ->
+            | Int.LF.ClObj (phat, Int.LF.MObj tM) ->
                 (dprint (fun () -> "[cnormApxTerm] MObj :" ^
                            P.normalToString cD (Context.hatToDCtx phat) (tM, Substitution.LF.id) ^ "\n") ;
                  raise (Error.Violation "MObj found -- expected PObj"))
@@ -327,7 +327,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
                      | Int.LF.MV q' ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (q', s1')
-                     | Int.LF.PObj (_phat, Int.LF.PVar (p,s')) ->
+                     | Int.LF.ClObj (_phat, Int.LF.PObj (Int.LF.PVar (p,s'))) ->
                          let s1' = Whnf.cnormSub (s1, t) in
                            Int.LF.PVar (p, s1')
                    end
@@ -362,7 +362,7 @@ and cnormApxSub cD delta s (cD'', t) = match s with
           begin match Substitution.LF.applyMSub offset  t with
             | Int.LF.MV u ->
                 Apx.LF.SVar (Apx.LF.Offset u, sigma')
-            | Int.LF.SObj (_phat, s) ->
+            | Int.LF.ClObj (_phat, Int.LF.SObj s) ->
                 let (_s, cPsi, cPhi) = Whnf.mctxSDec cD offset' in
                 let rec drop t l_delta = match (l_delta, t) with
                   | (0, t) -> t

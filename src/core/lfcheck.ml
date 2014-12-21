@@ -753,7 +753,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (MObj(_ , tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi), _)) ->
+    | MDot (ClObj(_ , MObj tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
@@ -768,13 +768,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
       if Whnf.convMTyp mtyp1 mtyp2 then checkMSub loc cD ms cD1'
       else raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    | MDot (SObj (_, s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi), _)) ->
+    | MDot (ClObj (_, SObj s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (PObj (_, h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi), _)) ->
+    | MDot (ClObj (_, PObj h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with

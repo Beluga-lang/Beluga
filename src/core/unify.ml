@@ -2891,34 +2891,20 @@ match sigma with
     let Decl (_u, cT,_) = cdecl in
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
-  and unifyMObj cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
-    | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') ->
-        unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
-
-    | (Comp.MetaObj (_, phat, IHead h) , t) , (Comp.MetaObj (_, phat', IHead h') , t') ->
+  and unifyClObj cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
+     | (PObj h , t) , (PObj h' , t') ->
         let PTyp (_tA, cPsi) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
           unifyHead Unification cD cPsi
             (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
 
-    | (Comp.MetaObj (_, phat, INorm tR) , t) , (Comp.MetaObj (_, phat', INorm tR') , t') ->
+    | (MObj tR , t) , (MObj tR' , t') ->
         let MTyp (_tA, cPsi) = cT in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
-(*        let cPsi  = Context.hatToDCtx phat in
-        let cPsi' = Context.hatToDCtx phat' in
-          dprint (fun () -> "[unifyMetaObj] MetaObj  ... with context "
-                       ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi, t))
-                       ^ " == "  ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi', t'))
-                        ^ "\n");
-          unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx  (cPsi', t')); *)
-          (* dprint (fun () -> "[unifyMetaObj'] MetaObj ... actual obj ..." ^
-                 P.normalToString cD cPsi (Whnf.cnorm (tR , t), id)
-                 ^ " == " ^ P.normalToString cD cPsi (Whnf.cnorm (tR', t'),  id)); *)
           unifyTerm Unification cD cPsi
             (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
-          (* dprint (fun () -> "[unifyMetaObj'] SUCCESS") *)
 
-    | (Comp.MetaObj (_, phat, ISub s) , t) , (Comp.MetaObj (_, phat', ISub s') , t') ->
+    | (SObj s, t) , (SObj s' , t') ->
         let STyp (_cPhi, cPsi) = cT in
         let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
         let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
@@ -2928,7 +2914,25 @@ match sigma with
           unifySub Unification cD cPsi1
             (simplifySub cD cPsi1 (Whnf.cnormSub (s, t))) (simplifySub cD cPsi1 (Whnf.cnormSub (s', t')))
 
+  and unifyMFront' cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
+    | (CObj (cPsi), t) , (CObj (cPsi'), t') ->
+        unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
+
+    | (ClObj (phat, m1), t) , (ClObj (phat', m2) , t') ->
+      unifyClObj cD (m1, t) (m2, t') (cT, mt)
+
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
+
+  and itermToClObj = function
+    | INorm n -> MObj n
+    | IHead h -> PObj h
+    | ISub s -> SObj s
+  and metaObjToMFront = function
+    | Comp.MetaCtx (_, cPsi) -> CObj cPsi
+    | Comp.MetaObj (_, phat, t) -> ClObj (phat, itermToClObj t)
+
+  and unifyMObj cD (mO, t) (mO', t') (cT, mt) = 
+    unifyMFront' cD (metaObjToMFront mO, t) (metaObjToMFront mO', t') (cT, mt)
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
@@ -3181,31 +3185,6 @@ match sigma with
       unifyHead Unification cD (Context.hatToDCtx phat) h h'
    (* **************************************************************** *)
 
-    let rec unifyMSub' ms mt = match (ms, mt) with
-      (* the next three cases are questionable;
-         they are needed to allow for weakening, i.e. using a function
-         that makes sense in a stronger environment *)
-      | (MShift k, MShift k') ->  () (* if k = k' then ()
-        else raise (Failure "Contextual substitutions not of the same length")   *)
-      | (MDot ( _ , ms), MShift k) ->
-          unifyMSub' ms (MShift (k-1))
-      | (MShift k, MDot ( _ , ms)) ->
-          unifyMSub' ms (MShift (k-1))
-      | (MDot (ClObj (phat, MObj tM), ms'), MDot (ClObj(_phat', MObj tM'), mt')) ->
-          (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
-           unifyMSub' ms' mt')
-      | (MDot (ClObj (phat, PObj h), ms'), MDot (ClObj(_phat', PObj h'), mt')) ->
-          (dprint (fun () -> "[unifyMSub] PObj ");
-          (unifyHead Unification Empty (Context.hatToDCtx phat) h h';
-           unifyMSub' ms' mt'))
-      | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) ->
-          (let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
-           let cPhi' = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
-             unifyDCtx1 Unification Empty  cPsi' cPhi';
-           unifyMSub' ms mt)
-
-    let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
-
 
 let unify_phat psihat phihat =
   match phihat with
@@ -3254,6 +3233,28 @@ let unify_phat psihat phihat =
     | _ ->  (if psihat = phihat then () else raise (Failure "Hat context mismatch - 2"))
 
    (* **************************************************************** *)
+
+    let unifyClObj cPsi m1 m2 = match (m1,m2) with
+      | MObj tM1, MObj tM2 -> unify Empty cPsi (tM1, id) (tM2, id)
+      | PObj h, PObj h' -> unifyHead Unification Empty cPsi h h'
+    let unifyMFront m1 m2 = match (m1,m2) with
+      | CObj cPsi, CObj cPhi -> unifyDCtx1 Unification Empty 
+         (Whnf.cnormDCtx (cPsi, Whnf.m_id)) (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+      | ClObj (phat1, m1), ClObj (phat2, m2) ->
+	(* unify_phat phat1 phat2; *)
+	unifyClObj (Context.hatToDCtx phat1) m1 m2
+    let rec unifyMSub' ms mt = match (ms, mt) with
+      | (MShift k, MShift k') ->  if k = k' then ()
+        else raise (Failure "Contextual substitutions not of the same length")
+      | (MDot (mFt , ms), MShift k) 
+      | (MShift k , MDot (mFt, ms)) ->
+	  unifyMFront mFt (MV (k+1));
+          unifyMSub' ms (MShift (k+1))
+      | (MDot (mF1, ms'), MDot (mF2, mt')) ->
+          (unifyMFront mF1 mF2 ;
+           unifyMSub' ms' mt')
+
+    let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
 
     let unifyTypRec cD0 cPsi sArec sBrec =
         unifyTypRec' Unification cD0 cPsi sArec sBrec

@@ -377,6 +377,16 @@ and cnormITerm (tM,mt) = match tM with
   | IHead h -> IHead (cnormHead (h,mt))
   | ISub s -> ISub (cnormSub (s,mt))    
 
+and normITerm (tM, s) = match tM with
+  | INorm n -> INorm (norm (n,s))
+  | IHead h ->
+    begin match normHead (h,s) with
+      | Obj tM -> INorm tM
+      | Head h' -> IHead h'
+    end 
+  | ISub r -> ISub (normSub' (r,s))
+  | ICtx dctx -> ICtx (normDCtx dctx)
+
 and reduceTupleFt (ft, i) = match ft with
   | Head h -> Head (Proj (h, i))
   | Obj (Tuple (_loc,tM)) -> Obj (reduceTuple (tM, i))
@@ -1405,12 +1415,8 @@ let mctxMVarPos cD u =
   let rec normMetaObj mO = match mO with
     | Comp.MetaCtx (loc, cPsi) ->
         Comp.MetaCtx (loc, normDCtx cPsi)
-    | Comp.MetaObj (loc, phat, INorm tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat m_id, INorm (norm (tM, LF.id)))
-    | Comp.MetaObj (loc, phat, ISub tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat m_id, ISub (normSub tM))
-
-    | Comp.MetaObj (loc, phat, IHead _ ) ->    mO
+    | Comp.MetaObj (loc, phat, n) ->
+        Comp.MetaObj (loc, cnorm_psihat phat m_id, normITerm (n, LF.id))
 
   and normMetaSpine mS = match mS with
     | Comp.MetaNil -> mS
@@ -1691,18 +1697,16 @@ let mctxMVarPos cD u =
      computation-level types
   *)
 
-
+  let convITerm tM1 tM2 = match (tM1, tM2) with
+    | INorm n1, INorm n2 -> conv (n1, LF.id) (n2, LF.id)
+    | ISub s1, ISub s2 -> convSub s1 s2
+    | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
 
   let rec convMetaObj mO mO' = match (mO , mO) with
     | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  ->
         convDCtx  cPsi cPsi'
-    | (Comp.MetaObj (_, _phat, INorm tM) , Comp.MetaObj (_, _phat', INorm tM')) ->
-        conv (tM, LF.id) (tM', LF.id)
-    | (Comp.MetaObj (_, _phat, IHead tH) , Comp.MetaObj (_, _phat', IHead tH')) ->
-        convHead (tH, LF.id) (tH', LF.id)
-    | (Comp.MetaObj (_, _phat, ISub s) , Comp.MetaObj (_, _phat', ISub s')) ->
-        convSub s s'
-    | _ -> false
+    | (Comp.MetaObj (_, _phat, tM1) , Comp.MetaObj (_, _phat', tM2)) ->
+        convITerm tM1 tM2
 
   and convMetaSpine mS mS' = match (mS, mS') with
     | (Comp.MetaNil , Comp.MetaNil) -> true
@@ -1883,12 +1887,14 @@ let rec closedMetaSpine mS = match mS with
   | Comp.MetaApp (mO, mS) ->
       closedMetaObj mO && closedMetaSpine mS
 
+and closedITerm = function
+  | INorm tM -> closed (tM, LF.id)
+  | ISub s -> closedSub s
+
 and closedMetaObj mO = match mO with
   | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi
-  | Comp.MetaObj (_, phat, INorm tM) ->
-      closedDCtx (Context.hatToDCtx phat) && closed (tM, LF.id)
-  | Comp.MetaObj (_, phat, ISub sigma) ->
-      closedDCtx (Context.hatToDCtx phat) && closedSub sigma
+  | Comp.MetaObj (_, phat, t) ->
+      closedDCtx (Context.hatToDCtx phat) && closedITerm t
 
 let closedMetaTyp cT = match cT with 
   | MTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi

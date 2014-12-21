@@ -2929,12 +2929,7 @@ match sigma with
           unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt);
           (* dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt'); *)
-          let mt' = begin match mOt with
-                      | Comp.MetaCtx (loc, cPsi0) -> MDot (CObj(cPsi0), mt)
-                      | Comp.MetaObj (loc, psihat, INorm tM) -> MDot (ClObj (psihat, MObj tM), mt)
-                      | Comp.MetaObj (loc, psihat, IHead h) -> MDot (ClObj (psihat,  PObj h), mt)
-                      | Comp.MetaObj (loc, phat, ISub s) -> MDot (ClObj (phat, SObj s), mt)
-                    end in
+          let mt' = MDot (Comp.metaObjToMFront mOt, mt) in
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
           (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt') *))

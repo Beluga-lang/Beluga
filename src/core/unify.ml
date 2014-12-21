@@ -3260,18 +3260,12 @@ let unify_phat psihat phihat =
     let matchTyp cD0 cPsi sA sB =
       unifyTyp' Matching cD0 cPsi sA sB
 
-      let metaTypToCDecl mT = match mT with
-	| LF.MTyp (tP, cPsi) -> LF.MTyp (tP, cPsi)
-	| LF.PTyp (tP, cPsi) -> LF.PTyp (tP, cPsi)
-	| LF.STyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi)
-	| LF.CTyp w -> LF.CTyp w
-
     let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) = 
-      unifyMObj cD (cM, ms) (cM', ms) (metaTypToCDecl mT, mt)
+      unifyMObj cD (cM, ms) (cM', ms) (mT, mt)
 
     let unifyMetaTyp cD (mT, ms) (mT', ms') = 
-	unifyCLFTyp Unification cD (metaTypToCDecl (Whnf.cnormMetaTyp (mT, ms)))
- 	                           (metaTypToCDecl (Whnf.cnormMetaTyp (mT', ms')))
+	unifyCLFTyp Unification cD (Whnf.cnormMetaTyp (mT, ms))
+ 	                           (Whnf.cnormMetaTyp (mT', ms'))
 
 
     let unifyCompTyp cD ttau ttau' =

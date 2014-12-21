@@ -366,6 +366,7 @@ and normITyp = function
   | MTyp (tA,cPsi) -> MTyp(normTyp(tA, LF.id), cPsi)
   | PTyp (tA,cPsi) -> PTyp(normTyp(tA, LF.id),cPsi)
   | STyp (cPhi, cPsi) -> STyp(cPhi,cPsi)
+  | CTyp g -> CTyp g
 
 and normFt' (ft,s) = match ft with
   | Head h -> normHead (h,s)
@@ -1416,13 +1417,9 @@ let mctxMVarPos cD u =
     | Comp.MetaApp (mO, mS) ->
         Comp.MetaApp (normMetaObj mO, normMetaSpine mS)
  
-  let normMTyp = function
-    | MTyp (tA, cPsi) -> MTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | PTyp (tA, cPsi) -> PTyp (normTyp (tA, LF.id), normDCtx cPsi)
-    | STyp (cPhi,cPsi) -> STyp (normDCtx cPhi, normDCtx cPsi)
-    | CTyp g -> CTyp g
+  let normMTyp = normITyp
 
-  let normMetaTyp = normMTyp
+  let normMetaTyp = normITyp
 
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
@@ -1443,29 +1440,13 @@ let mctxMVarPos cD u =
 
     | Comp.TypBool -> Comp.TypBool
 
-  let cnormMetaTyp (mC, t) = match mC with
-    | MTyp (tA, cPsi) ->
-        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          MTyp (tA', cPsi')
-    | PTyp (tA, cPsi) ->
-        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          PTyp (tA', cPsi')
-    | STyp (cPhi, cPsi) ->
-        let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          STyp (cPhi', cPsi')
-    | mC -> mC
+  let cnormMetaTyp (mC, t) = cnormMTyp (mC, t)
 
   let rec cnormMetaObj (mO,t) = match mO with
     | Comp.MetaCtx (loc, cPsi) ->
         Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
-    | Comp.MetaObj (loc, phat, INorm tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat t, INorm (norm (cnorm (tM, t), LF.id)))
-    | Comp.MetaObj (loc, phat, ISub sigma) ->
-        Comp.MetaObj (loc, cnorm_psihat phat t, ISub (normSub (cnormSub (sigma, t))))
-    | Comp.MetaObj (loc, phat, IHead h ) ->  Comp.MetaObj (loc, cnorm_psihat phat t, IHead (cnormHead (h, t)))
+    | Comp.MetaObj (loc, phat, tM) ->
+        Comp.MetaObj (loc, cnorm_psihat phat t, cnormITerm (tM, t))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS

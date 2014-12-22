@@ -512,10 +512,8 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
   | Apx.Comp.MetaObj (_loc', psi, m) , (Int.LF.ClTyp (Int.LF.STyp tA, cPsi)) ->
     elMetaObj' cD (Apx.Comp.MetaSub(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
 
-  | (Apx.Comp.MetaSubAnn (_, cPhi, _), (Int.LF.ClTyp (Int.LF.STyp _, cPsi')))
-  | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.ClTyp (Int.LF.MTyp _, cPsi')))
-  | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.ClTyp (Int.LF.STyp _, cPsi')))
-  | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.ClTyp (Int.LF.PTyp _, cPsi'))) ->
+  | (Apx.Comp.MetaSubAnn (_, cPhi, _), (Int.LF.ClTyp (_, cPsi')))
+  | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.ClTyp (_, cPsi'))) ->
       let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
       let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
@@ -675,16 +673,14 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
       let tP' = mgAtomicTyp cD' cPsi' a (Typ.get a).Typ.kind  in
         Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP', cPsi'))
 
+and mgClTyp cD' cD_s cPsi' = function
+  | Int.LF.MTyp tA -> Int.LF.MTyp (mgTyp cD' cPsi' tA)
+  | Int.LF.PTyp tA -> Int.LF.PTyp (mgTyp cD' cPsi' tA)
+  | Int.LF.STyp cPhi -> Int.LF.STyp (mgCtx cD' (cD_s, cPhi))
 and mgCTyp cD' cD_s = function
-  | Int.LF.ClTyp (Int.LF.MTyp tA, cPsi) ->
+  | Int.LF.ClTyp (t, cPsi) ->
     let cPsi' = mgCtx cD' (cD_s, cPsi) in
-    Int.LF.ClTyp (Int.LF.MTyp (mgTyp cD' cPsi' tA), cPsi')
-  | Int.LF.ClTyp (Int.LF.PTyp tA, cPsi) ->
-    let cPsi' = mgCtx cD' (cD_s, cPsi) in
-    Int.LF.ClTyp (Int.LF.PTyp (mgTyp cD' cPsi' tA), cPsi')
-  | Int.LF.ClTyp (Int.LF.STyp cPhi, cPsi) ->
-    let cPsi' = mgCtx cD' (cD_s, cPsi) in
-    Int.LF.ClTyp (Int.LF.STyp (mgCtx cD' (cD_s, cPhi)), cPsi')
+    Int.LF.ClTyp (mgClTyp cD' cD_s cPsi' t, cPsi')
   | Int.LF.CTyp sW -> Int.LF.CTyp sW
 
 

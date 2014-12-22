@@ -227,6 +227,7 @@ and mfrontMSub ft t = match ft with
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
 
   | MV k -> LF.applyMSub k t
+  | MUndef -> MUndef
 
 (* m_invert t = t'
 
@@ -727,15 +728,7 @@ and cnormClObj m t = match m with
   | MObj tM -> MObj (norm (cnorm (tM, t), LF.id))
   | SObj s -> SObj (normSub (cnormSub (s, t)))
   | PObj h -> PObj (cnormHead (h, t))
-and cnormMObj (tM,mt) = match tM with
-  | MObj n -> MObj (cnorm (n,mt))
-  | PObj h -> PObj (cnormHead (h,mt))
-  | SObj s -> SObj (cnormSub (s,mt))    
-and cnormMFt mft t = match mft with
-  | ClObj(phat, m) -> ClObj (cnorm_psihat phat t, cnormClObj m t)
-  | CObj (cPsi) -> CObj (cnormDCtx (normDCtx cPsi, t))
-  | MV u -> MV u
-  | MUndef -> MUndef
+and cnormMFt mft = mfrontMSub mft
 and cnormMSub t = match t with
   | MShift _n -> t
   | MDot (mft, t) -> MDot (cnormMFt mft m_id, cnormMSub t)
@@ -1445,11 +1438,7 @@ let mctxMVarPos cD u =
 
   let cnormMetaTyp (mC, t) = cnormMTyp (mC, t)
 
-  let rec cnormMetaObj ((loc,mO),t) = loc , (match mO with
-    | CObj cPsi ->
-        CObj (cnormDCtx (cPsi,t))
-    | ClObj (phat, tM) ->
-        ClObj (cnorm_psihat phat t, cnormMObj (tM, t)))
+  let rec cnormMetaObj ((loc,mO),t) = loc , mfrontMSub mO t
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
@@ -1699,16 +1688,7 @@ let mctxMVarPos cD u =
     | ISub s1, ISub s2 -> convSub s1 s2
     | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
 
-  let convMObj tM1 tM2 = match (tM1, tM2) with
-    | MObj n1, MObj n2 -> conv (n1, LF.id) (n2, LF.id)
-    | SObj s1, SObj s2 -> convSub s1 s2
-    | PObj h1, PObj h2 -> convHead (h1, LF.id) (h2, LF.id)
-
-  let rec convMetaObj (loc,mO) (loc',mO') = match (mO , mO') with (* TODO: !!!!! *)
-    | (CObj cPsi) , (CObj cPsi')  ->
-        convDCtx  cPsi cPsi'
-    | (ClObj (_phat, tM1) , ClObj (_phat', tM2)) ->
-        convMObj tM1 tM2
+  let rec convMetaObj (loc,mO) (loc',mO') = convMFront mO mO'
 
   and convMetaSpine mS mS' = match (mS, mS') with
     | (Comp.MetaNil , Comp.MetaNil) -> true

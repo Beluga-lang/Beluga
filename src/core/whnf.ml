@@ -821,7 +821,7 @@ and whnf sM = match sM with
       let p' = (n, pref, cD, ClTyp (PTyp tA',cPsi'), cnstr, mDep) in
         (Root (loc, MPVar (p', (t, LF.comp r sigma)),  SClo(tS, sigma)), LF.id)
 
-  | (Root (_, MMVar ((_, {contents = Some (INorm tM)}, _cD, ClTyp (MTyp _tA,_cPsi), _, _), (t,r)), tS), sigma) ->
+  | (Root (_, MMVar ((_, {contents = Some (INorm tM)}, _cD, _, _, _), (t,r)), tS), sigma) ->
       (* constraints associated with u must be in solved form *)
       let tM' = cnorm (tM, t) in
       let tM'' = norm (tM', r) in
@@ -1049,11 +1049,8 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
   | (Const c1, Const c2) ->
       c1 = c2
 
-  | (MMVar ((_n, u, _cD, ClTyp (MTyp _tA,cPsi), _cnstr, _) , (_t', s')), MMVar ((_, w, _, ClTyp (MTyp _, _), _ , _), (_t'',s''))) ->
-      u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
-        (* && convMSub   -bp *)
-
-  | (MPVar ((_n, u, _cD, ClTyp (PTyp _tA,_cPsi), _cnstr, _) , (_t', s')), MPVar ((_, w, _, ClTyp (PTyp _, _), _, _ ), (_t'',s''))) ->
+  | (MMVar ((_n, u, _cD, _, _cnstr, _) , (_t', s')), MMVar ((_, w, _, _, _ , _), (_t'',s'')))
+  | (MPVar ((_n, u, _cD, _, _cnstr, _) , (_t', s')), MPVar ((_, w, _, _, _, _ ), (_t'',s''))) ->
       u == w && convSub (LF.comp s' s1) (LF.comp s'' s2)
         (* && convMSub   -bp *)
 

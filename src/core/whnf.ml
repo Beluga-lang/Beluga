@@ -221,15 +221,8 @@ and mcomp t1 t2 = match (t1, t2) with
    and  D ; [|t|]Psi |- Ft' : [|t|]A
 *)
 and mfrontMSub ft t = match ft with
-  | ClObj (phat, MObj tM)     ->
-      let phat = cnorm_psihat phat t in
-        ClObj (phat, MObj (cnorm(tM, t)))
-  | ClObj (phat, SObj tM)     ->
-      let phat = cnorm_psihat phat t in
-        ClObj (phat, SObj (cnormSub(tM, t)))
-  | ClObj (phat, PObj h) ->
-    let phat = cnorm_psihat phat t in
-    ClObj (phat, PObj (cnormHead (h, t)))
+  | ClObj (phat, tM)     ->
+    ClObj (cnorm_psihat phat t, cnormClObj tM t)
   | CObj (cPsi) -> CObj (cnormDCtx (cPsi, t))
 
   | MV k -> LF.applyMSub k t

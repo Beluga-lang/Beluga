@@ -1737,22 +1737,19 @@ let rec abstractMVarCompKind cQ (l,offset) cK = match cK with
       let cdecl' = abstractMVarCdecl cQ (l,offset) cdecl in
         Comp.PiKind (loc, cdecl', cK')
 
+let abstractMVarITerm cQ offset = function
+  | Int.LF.INorm tM -> Int.LF.INorm (abstractMVarTerm  cQ  offset (tM, LF.id))
+  | Int.LF.IHead h -> Int.LF.IHead (abstractMVarHead cQ offset h)
+  | Int.LF.ISub tM -> Int.LF.ISub (abstractMVarSub  cQ  offset tM)
+
 let rec abstractMVarMetaObj cQ offset cM = match cM with
   | Comp.MetaCtx (loc, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
         Comp.MetaCtx (loc, cPsi')
-  | Comp.MetaObj (loc, phat, Int.LF.INorm tM) ->
+  | Comp.MetaObj (loc, phat, tM) ->
       let phat' = abstractMVarHat cQ offset phat in
-      let tM' = abstractMVarTerm  cQ  offset (tM, LF.id) in
-        Comp.MetaObj (loc, phat', Int.LF.INorm tM')
-  | Comp.MetaObj (loc, phat, Int.LF.IHead h) ->
-      let phat' = abstractMVarHat cQ offset phat in
-      let h' = abstractMVarHead cQ offset h in
-        Comp.MetaObj (loc, phat', Int.LF.IHead h')
-  | Comp.MetaObj (loc, phat, Int.LF.ISub tM) ->
-      let phat' = abstractMVarHat cQ offset phat in
-      let tM' = abstractMVarSub  cQ  offset tM in
-        Comp.MetaObj (loc, phat', Int.LF.ISub tM')
+      let tM' = abstractMVarITerm  cQ  offset tM in
+        Comp.MetaObj (loc, phat', tM')
 
 and abstractMVarMetaSpine cQ offset cS = match cS with
   | Comp.MetaNil -> Comp.MetaNil

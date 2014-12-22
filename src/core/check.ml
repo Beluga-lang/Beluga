@@ -311,23 +311,23 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     checkMetaObj loc cD mO (ctyp, t);
     checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
+  let checkClTyp cD cPsi = function
+    | I.MTyp tA ->
+        LF.checkTyp  cD cPsi (tA, S.LF.id)
+    | I.PTyp tA ->
+        LF.checkTyp  cD cPsi (tA, S.LF.id);
+        checkParamTypeValid cD cPsi tA
+    | I.STyp cPhi ->
+    	LF.checkDCtx cD cPhi
   let checkCLFTyp cD ctyp = match ctyp with
     | I.CTyp schema_cid ->
         begin try
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
-    | I.ClTyp (I.MTyp tA, cPsi) ->
+    | I.ClTyp (tp, cPsi) ->
         LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
-    | I.ClTyp (I.PTyp tA, cPsi) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id);
-        checkParamTypeValid cD cPsi tA
-
-    | I.ClTyp (I.STyp cPhi, cPsi) ->
-    	LF.checkDCtx cD cPhi;
-    	LF.checkDCtx cD cPsi
+        checkClTyp cD cPsi tp
 
   let checkCDecl cD cdecl = match cdecl with
     | I.Decl (_, ctyp, _) -> checkCLFTyp cD ctyp

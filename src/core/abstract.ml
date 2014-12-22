@@ -1482,23 +1482,26 @@ let rec collectCompKind p cQ cK = match cK with
       let (cQ'', cK2)    = collectCompKind p cQ' cK1 in
         (cQ'', Comp.PiKind (loc, cdecl', cK2) )
 
+let collect_iterm p cQ loc phat = function
+  | Int.LF.INorm tM ->
+    let (cQ', tM') = collectTerm p cQ phat (tM, LF.id) in
+    (cQ', Int.LF.INorm tM')
+  | Int.LF.IHead h ->
+    let (cQ'', h') = collectHead p cQ phat loc (h, LF.id) in
+    (cQ'', Int.LF.IHead h')
+  | Int.LF.ISub tM ->
+    let (cQ', tM') = collectSub p cQ phat tM in
+    (cQ', Int.LF.ISub tM')
+
 let rec collect_meta_obj p cQ cM = match cM with
   | Comp.MetaCtx (loc, cPsi) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
         (cQ', Comp.MetaCtx (loc, cPsi'))
-  | Comp.MetaObj (loc, phat, Int.LF.INorm tM) ->
+  | Comp.MetaObj (loc, phat, tM) ->
       let (cQ', phat') = collectHat p cQ phat in
-      let (cQ', tM') = collectTerm p cQ' phat' (tM, LF.id) in
-        (cQ', Comp.MetaObj (loc, phat', Int.LF.INorm tM'))
-  | Comp.MetaObj (loc, phat, Int.LF.IHead h) ->
-      let (cQ', phat') = collectHat p cQ phat in
-      let (cQ'', h') = collectHead p cQ' phat loc (h, LF.id) in
-        (cQ'', Comp.MetaObj (loc, phat', Int.LF.IHead h'))
-  | Comp.MetaObj (loc, phat, Int.LF.ISub tM) ->
-      let (cQ', phat') = collectHat p cQ phat in
-      let (cQ', tM') = collectSub p cQ' phat' tM in
-        (cQ', Comp.MetaObj (loc, phat', Int.LF.ISub tM'))
+      let (cQ', tM') = collect_iterm p cQ' loc phat' tM in
+        (cQ', Comp.MetaObj (loc, phat', tM'))
 
 and collect_meta_spine p cQ cS = match cS with
   | Comp.MetaNil -> (cQ, Comp.MetaNil)

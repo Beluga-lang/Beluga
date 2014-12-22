@@ -117,7 +117,7 @@ let rec lowerMVar' cPsi sA' = match sA' with
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA = match (u, sA) with
-  | (Inst (_n, r, _, ClTyp (MTyp _,cPsi), _, _), (PiTyp _, _)) ->
+  | (Inst (_n, r, _, ClTyp (_,cPsi), _, _), (PiTyp _, _)) ->
       let (u', tM) = lowerMVar' cPsi sA in
         r := Some (INorm tM); (* [| tM / u |] *)
         u'            (* this is the new lowered meta-variable of atomic type *)
@@ -709,19 +709,13 @@ and cnorm (tM, t) = match tM with
 
     | DDec(cPsi, decl) ->
         DDec(cnormDCtx(cPsi, t), cnormDecl(decl, t))
+
+and cnormClTyp (mtyp, t) = match mtyp with
+    | MTyp tA -> MTyp (normTyp (cnormTyp(tA, t), LF.id))
+    | PTyp tA -> PTyp (normTyp (cnormTyp(tA, t), LF.id))
+    | STyp cPhi -> STyp (normDCtx (cnormDCtx(cPhi, t)))
 and cnormMTyp (mtyp, t) = match mtyp with
-    | ClTyp (MTyp tA, cPsi) ->
-        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          ClTyp (MTyp tA', cPsi')
-    | ClTyp (PTyp tA, cPsi) ->
-        let tA'   = normTyp (cnormTyp(tA, t), LF.id) in
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-          ClTyp (PTyp tA', cPsi')
-    | ClTyp (STyp cPhi, cPsi) ->
-        let cPsi' = normDCtx (cnormDCtx(cPsi, t)) in
-        let cPhi' = normDCtx (cnormDCtx(cPhi, t)) in
-          ClTyp (STyp cPhi', cPsi')
+    | ClTyp (tA, cPsi) -> ClTyp (cnormClTyp (tA, t), normDCtx (cnormDCtx(cPsi, t)))
     | CTyp sW -> CTyp sW
 
 and cnormClObj m t = match m with

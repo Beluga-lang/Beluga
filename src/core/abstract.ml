@@ -522,11 +522,6 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
 
   | I.Dec (cQ', FMV (Pure, u, Some mtyp)) ->
-(*       let mtyp' = begin match mtyp with
-        | I.MTyp(tA, cPsi, d) -> I.MTyp(tA, cPsi, d)
-        | I.PTyp(tA, cPsi, d) -> I.PTyp(tA, cPsi, d)
-        | I.STyp(cPhi, cPsi, d) -> I.STyp(cPhi, cPsi, d)
-      end in *)
       I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp, I.Maybe))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
@@ -752,17 +747,17 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get u in
 	      let mtyp = (Whnf.cnormMTyp (mtyp, Int.LF.MShift (k - Context.length cD_d))) in
               let cQ' = I.Dec(cQ0, FMV(Impure, u, None)) in
-              let (cQ1, I.MTyp (tA', cPhi'))  = collectMTyp k cQ' mtyp in
+              let (cQ1, mtyp)  = collectMTyp k cQ' mtyp in
                 (* tA must be closed with respect to cPhi *)
                 (* Since we only use abstraction on pure LF objects,
                    there are no context variables; different abstraction
                    is necessary for handling computation-level expressions,
                    and LF objects which occur in comp utations. *)
-                (I.Dec (cQ1, FMV (Pure, u, Some (I.MTyp (tA', cPhi')))), I.FMVar (u, sigma))
+                (I.Dec (cQ1, FMV (Pure, u, Some mtyp)), I.FMVar (u, sigma))
           | Cycle -> raise (Error (loc, CyclicDependency VariantFMV))
       end
 
-  | (I.MVar (I.Inst ((n, q, cD, I.MTyp(tA,cPsi),  ({contents = cnstr} as c), dep) as u) as r, s'), _s) ->
+  | (I.MVar (I.Inst ((n, q, cD, mtyp,  ({contents = cnstr} as c), dep) as u) as r, s'), _s) ->
       if constraints_solved cnstr then
           begin match checkOccurrence (eqMMVar u) cQ with
             | Yes ->
@@ -772,10 +767,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
                 (*  checkEmpty !cnstrs? -bp *)
                 let (cQ0, sigma) = collectSub k cQ phat s' in
                 let cQ' = I.Dec(cQ0, MMV(Impure, u)) in
-                let phihat = Context.dctxToHat cPsi in
-                let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
-                let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
-		let v' = (n, q, cD, I.MTyp(tA',cPsi'),  c, dep) in
+                let (cQ'', mtyp') = collectMTyp k cQ' mtyp in
+		let v' = (n, q, cD, mtyp',  c, dep) in
                 let v = I.MVar (I.Inst v', sigma) in
                   (I.Dec (cQ'', MMV (Pure, v')) , v)
             | Cycle -> raise (Error (loc, CyclicDependency VariantMV))
@@ -1760,15 +1753,8 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypCobase (loc, a, cS) ->
       let cS' = abstractMVarMetaSpine cQ offset cS in
         Comp.TypCobase (loc, a , cS')
-  | Comp.TypBox (loc, Int.LF.MTyp (tA, cPsi)) ->
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-      let tA'   = abstractMVarTyp cQ offset (tA, LF.id) in
-        Comp.TypBox (loc, Int.LF.MTyp (tA', cPsi'))
-
-  | Comp.TypBox (loc, Int.LF.STyp(cPhi, cPsi)) ->
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-      let cPhi' = abstractMVarDctx cQ offset cPhi in
-        Comp.TypBox (loc, Int.LF.STyp(cPhi', cPsi'))
+  | Comp.TypBox (loc, mtyp) ->
+        Comp.TypBox (loc, abstractMVarMTyp cQ mtyp offset)
 
   | Comp.TypArr (tau1, tau2) ->
       Comp.TypArr (abstractMVarCompTyp cQ offset tau1,

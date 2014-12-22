@@ -451,13 +451,13 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         end
 
     | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, I.INorm tR)),
-			     TypBox (_, I.MTyp(tA', cPsi'))),
-             branches), (tau, t)) ->				
+    			     TypBox (_, I.MTyp(tA', cPsi'))),
+             branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
-                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None);                       
+                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None);
                    | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
-                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k);                       
+                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k);
                    | _ ->
                        (TypBox (loc, I.MTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
         let tau_s = TypBox (loc, I.MTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in

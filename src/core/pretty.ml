@@ -145,6 +145,7 @@ module Int = struct
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.dctx -> LF.head     -> string
+    val itermToString     : LF.mctx -> LF.dctx -> LF.iterm    -> string
     val mmvarToString     : LF.mm_var -> string
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
@@ -955,25 +956,20 @@ module Int = struct
             (fmt_ppr_meta_obj  cD (lvl + 1)) mO
             (fmt_ppr_meta_spine   cD lvl) mS
 
+    and fmt_ppr_iterm cD cPsi _lvl ppf = function
+      | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi 0 ppf tM
+      | LF.IHead h -> fmt_ppr_lf_head cD cPsi 0 ppf h
+      | LF.ISub s -> fmt_ppr_lf_sub cD cPsi 0 ppf s
+
     and fmt_ppr_meta_obj cD _lvl ppf = function
       | Comp.MetaCtx (_, cPsi) ->
             fprintf ppf "[%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
-      | Comp.MetaObj (_, phat, LF.INorm tM) ->
+      | Comp.MetaObj (_, phat, tM) ->
           let cPsi = phatToDCtx phat in
             fprintf ppf "[%a |- %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_normal cD cPsi 0) tM
-      | Comp.MetaObj (_, phat, LF.ISub s) ->
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "[%a |- %a]"
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_sub cD cPsi 0) s
-      | Comp.MetaObj (_, phat, LF.IHead h) ->
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "[%a |- %a]"
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_head cD cPsi 0) h
+              (fmt_ppr_iterm cD cPsi 0) tM
 
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, c, mS)->
@@ -1636,6 +1632,9 @@ module Int = struct
       let tM = Whnf.norm sM in
         fmt_ppr_lf_normal cD cPsi std_lvl str_formatter tM
         ; flush_str_formatter ()
+    let itermToString cD cPsi tM =
+      fmt_ppr_iterm cD cPsi std_lvl str_formatter tM
+	; flush_str_formatter ()
     let mmvarToString m =
       fmt_ppr_lf_mmvar std_lvl str_formatter m
 	; flush_str_formatter ()

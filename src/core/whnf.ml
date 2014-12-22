@@ -1687,16 +1687,13 @@ let mctxMVarPos cD u =
         convMetaObj mO mO' && convMetaSpine mS mS'
 
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
-  
+  let convClTyp = function
+    | MTyp tA , MTyp tA'
+    | PTyp tA , PTyp tA' -> convTyp (tA, LF.id) (tA', LF.id)  
+    | STyp cPhi , STyp cPhi' -> convDCtx cPhi cPhi'
   let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
-    | (ClTyp (MTyp tA1, cPsi1)) , (ClTyp (MTyp tA2, cPsi2)) ->
-        convTyp (tA1, LF.id) (tA2, LF.id) && convDCtx cPsi1 cPsi2
-    | (ClTyp (STyp cPhi, cPsi)) , (ClTyp (STyp cPhi', cPsi')) ->
-        convDCtx cPhi cPhi' && convDCtx cPsi cPsi'
-    | (ClTyp (PTyp tA, cPsi)) , (ClTyp (PTyp tA', cPsi')) ->
-        convTyp (tA, LF.id) (tA', LF.id)  && convDCtx cPsi cPsi'
-    | (CTyp cid_schema) , (CTyp cid_schema') ->
-       cid_schema = cid_schema'
+    | (ClTyp (t1, cPsi1)) , (ClTyp (t2, cPsi2)) -> convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
+    | (CTyp cid_schema) , (CTyp cid_schema') -> cid_schema = cid_schema'
 
   let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
 

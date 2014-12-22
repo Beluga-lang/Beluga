@@ -691,23 +691,26 @@ and collectSub (p:int) cQ phat s = match s with
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 
-and collectMObj p cQ1 = function 
-  | I.ClObj(phat, I.MObj tM) ->
-      let (cQ1, phat') = collectHat p cQ1 phat in
+and collectClObj p cQ1 phat' = function
+  | I.MObj tM ->
       let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in
-        (cQ2 , I.ClObj (phat', I.MObj tM'))
-  | I.ClObj(phat, I.PObj h) ->
-      let (cQ1, phat') = collectHat p cQ1 phat in
+        (cQ2 , I.MObj tM')
+  | I.PObj h ->
       let (cQ2, h') = collectHead p cQ1 phat' (Syntax.Loc.ghost) (h, LF.id) in
-        (cQ2, I.ClObj (phat', I.PObj h'))
+        (cQ2, I.PObj h')
+  | I.SObj s ->
+    let (cQ2, s')    = collectSub p cQ1 phat' s in
+      (cQ2, I.SObj s')
+
+and collectMObj p cQ1 = function 
+  | I.ClObj(phat, tM) ->
+      let (cQ1, phat') = collectHat p cQ1 phat in
+      let (cQ2, tM') = collectClObj p cQ1 phat' tM in
+        (cQ2 , I.ClObj (phat', tM'))
   | I.CObj (cPsi) ->
       let phat = Context.dctxToHat cPsi in
       let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPsi in
         (cQ2, I.CObj (cPsi'))
-  | I.ClObj (phat, I.SObj s) ->
-    let (cQ1, phat') = collectHat p cQ1 phat in
-    let (cQ2, s')    = collectSub p cQ1 phat' s in
-      (cQ2, I.ClObj(phat', I.SObj s'))
 
 (* collectMSub p cQ theta = cQ' *)
 and collectMSub p cQ theta =  match theta with
@@ -1403,25 +1406,17 @@ and abstractMVarCtx cQ l =  match cQ with
       raise (Error (Syntax.Loc.ghost, UnknownIdentifier))
 
 
-(* Cases for: FMV, FPV *)
+(* Cases for: FMV *)
+
+let abstrClObj cQ = function
+  | I.MObj tM -> I.MObj (abstractMVarTerm cQ (0,0) (tM, LF.id))
+  | I.PObj h -> I.PObj (abstractMVarHead cQ (0,0) h)
+  | I.SObj s -> I.SObj (abstractMVarSub cQ (0,0) s)
+
 let abstrMObj cQ = function
-  | I.ClObj(phat, I.MObj tM) ->
-     let phat' = abstractMVarHat cQ (0,0) phat in
-     let tM' = abstractMVarTerm cQ (0,0) (tM, LF.id) in
-     I.ClObj(phat', I.MObj tM')
-
-  | I.ClObj(phat, I.PObj h) ->
-     let phat' = abstractMVarHat cQ (0,0) phat in
-     let h' = abstractMVarHead cQ (0,0) h in
-     I.ClObj(phat', I.PObj h')
-
-  | I.CObj(cPsi) ->
-     I.CObj(abstractMVarDctx cQ (0,0) cPsi)
-
-  | I.ClObj (phat, I.SObj s) ->
-     let phat' = abstractMVarHat cQ (0,0) phat in
-     let s'    = abstractMVarSub cQ (0,0) s in
-     I.ClObj (phat', I.SObj s')
+  | I.ClObj(phat, tM) ->
+    I.ClObj(abstractMVarHat cQ (0,0) phat, (abstrClObj cQ tM))
+  | I.CObj(cPsi) -> I.CObj(abstractMVarDctx cQ (0,0) cPsi)
   | I.MV k -> I.MV k
 
 let rec abstrMSub cQ t =

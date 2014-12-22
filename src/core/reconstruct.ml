@@ -1194,11 +1194,8 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
       let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
         (cG2, Int.Comp.PatPair (loc, pat1', pat2'))
 
-  | (Apx.Comp.PatMetaObj (loc, cM)
-    , (Int.Comp.TypBox (_loc, Int.LF.ClTyp (Int.LF.MTyp tA, cPsi)), theta)) ->
-      (* cM = MetaObj or MetaObjAnn *)
-      let cM' = elMetaObj cD cM (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi), theta) in
-        (cG, Int.Comp.PatMetaObj (loc, cM'))
+  | (Apx.Comp.PatMetaObj (loc, cM) , (Int.Comp.TypBox (_loc, ctyp), theta)) ->
+     (cG, Int.Comp.PatMetaObj (loc, elMetaObj cD cM (ctyp, theta)))
   (* Error handling cases *)
   | (Apx.Comp.PatTrue loc , tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.PatIllTyped (cD, Int.LF.Empty,

@@ -660,7 +660,7 @@ match sigma with
     | (Root (loc, MVar (Inst u, t), tS), s) ->
       invNorm' cD0 (phat, (Root(loc, MMVar(u, (MShift 0, t)), tS), s), ss, rOccur)
 
-   | (Root (loc, MMVar ((_n, r, cD, ClTyp (MTyp _tP,cPsi1), _cnstrs, _) as u, (mt,s')), _tS (* Nil *)), s) ->
+   | (Root (loc, MMVar ((_n, r, cD, ClTyp (_,cPsi1), _cnstrs, _) as u, (mt,s')), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         if eq_cvarRef (MMVarRef r) rOccur then
@@ -699,7 +699,7 @@ match sigma with
           end
 
     | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl(_, ClTyp (MTyp _tA, cPsi1), _)) = Store.FCVar.get u in
+        let (cD_d, Decl(_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	   Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -707,7 +707,7 @@ match sigma with
           Root (loc, FMVar (u, s'), Nil)
 
     | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl (_, ClTyp (PTyp _tA, cPsi1), _)) = Store.FCVar.get p in
+        let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get p in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	  Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -772,7 +772,7 @@ match sigma with
          Occurs check is necessary on tA Dec 15 2008 -bp  :(
        *)
 
-    | MVar (Inst (_n, r, _cD, ClTyp (MTyp _tP,cPsi1), _cnstrs, _) as u, t) ->
+    | MVar (Inst (_n, r, _cD, ClTyp (_,cPsi1), _cnstrs, _) as u, t) ->
         if eq_cvarRef (MMVarRef r) rOccur then
           raise NotInvertible
         else
@@ -1259,7 +1259,7 @@ match sigma with
                 end
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, ClTyp (MTyp _tA, cPsi1), _)) = Store.FCVar.get u in
+                let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1269,7 +1269,7 @@ match sigma with
                   returnNeutral (FMVar (u, s'))
 
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, ClTyp (PTyp _tA, cPsi1),_)) = Store.FCVar.get p in
+                let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1401,7 +1401,7 @@ match sigma with
 
             | Proj (FPVar(p,t), i)   (* tS = Nil,   s = id *) ->
                 begin try
-                  let (cD_d, Decl (_, ClTyp (PTyp _tA, cPsi1),_)) = Store.FCVar.get p in
+                  let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
                   let d = Context.length cD0 - Context.length cD_d in
 	          let cPsi1 = if d = 0 then cPsi1 else
 	                        Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -2014,8 +2014,8 @@ match sigma with
             end
 
     (* MVar-normal case *)
-    | ((Root (_, MVar (Inst (_n, r, _, ClTyp (MTyp _tP, cPsi1), cnstrs, _), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) 
-    | ((_tM2, _s2) as sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (MTyp _tP,cPsi1), cnstrs, _), t), _tS), s1) as sM1)) ->
+    | ((Root (_, MVar (Inst (_n, r, _, ClTyp (_, cPsi1), cnstrs, _), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) 
+    | ((_tM2, _s2) as sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (_,cPsi1), cnstrs, _), t), _tS), s1) as sM1)) ->
 (*        dprnt "(001) MVar-_";*)
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
           if isPatSub t' then
@@ -2892,11 +2892,11 @@ match sigma with
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
   and unifyClObj' cD mO mO' mT = match (mO, mO', mT) with
-    | PObj h , PObj h' , ClTyp (PTyp _, cPsi) ->
+    | PObj h , PObj h' , ClTyp (_, cPsi) ->
           unifyHead Unification cD cPsi h h'
-    | MObj tR , MObj tR' , ClTyp (MTyp _tA, cPsi) ->
+    | MObj tR , MObj tR' , ClTyp (_, cPsi) ->
           unifyTerm Unification cD cPsi (tR, id) (tR', id);
-    | SObj s , SObj s' , ClTyp (STyp _cPhi, cPsi) ->
+    | SObj s , SObj s' , ClTyp (_, cPsi) ->
        unifySub Unification cD cPsi (simplifySub cD cPsi s) (simplifySub cD cPsi s')
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 

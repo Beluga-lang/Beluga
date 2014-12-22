@@ -542,28 +542,20 @@ module Int = struct
             (fmt_ppr_lf_mfront cD 1) f
             (fmt_ppr_lf_msub cD lvl) s
 
+    and fmt_ppr_lf_clobj cD lvl cPsi ppf = function
+      | LF.MObj m -> fmt_ppr_lf_normal cD cPsi lvl ppf m
+      | LF.SObj s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
+      | LF.PObj h -> fmt_ppr_lf_head cD cPsi lvl ppf h
 
     and fmt_ppr_lf_mfront cD lvl ppf = function
-      | LF.ClObj (psihat, LF.MObj m) ->
+      | LF.ClObj (psihat, m) ->
           let cPsi = phatToDCtx psihat in
           fprintf ppf "M (%a . %a)"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_normal cD cPsi lvl) m
-
-      | LF.ClObj (psihat, LF.SObj s) ->
-          let cPsi = phatToDCtx psihat in
-          fprintf ppf "S (%a . %a)"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_sub cD cPsi lvl) s
-
-      | LF.ClObj (psihat, LF.PObj h) ->
-          let cPsi = phatToDCtx psihat in
-          fprintf ppf "P (%a . %a)"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_head cD cPsi lvl) h
+            (fmt_ppr_lf_clobj cD lvl cPsi) m
 
       | LF.CObj (cPsi) ->
-          fprintf ppf "M (%a )"
+          fprintf ppf "M (%a)"
             (fmt_ppr_lf_dctx cD lvl) cPsi
 
       | LF.MV k ->

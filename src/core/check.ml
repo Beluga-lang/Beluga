@@ -279,29 +279,29 @@ let checkParamTypeValid cD cPsi tA =
   checkParamTypeValid' (cPsi , 1)
 
 
+let checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
+  | I.MObj tM, (I.MTyp tA, t) ->
+     LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+
+  | I.SObj tM, (I.STyp tA, t) ->
+     LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
+
+  | I.PObj h, (I.PTyp tA, t) ->
+      let tA' = LF.inferHead loc cD cPsi' h in
+      let tA  = C.cnormTyp (tA, t) in
+        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
+	else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   let rec checkMetaObj _loc cD (loc,cM) cTt = match  (cM, cTt) with
   | (I.CObj cPsi, (I.CTyp w, _)) ->
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
 
-  | (I.ClObj(phat, I.MObj tM), (I.ClTyp (I.MTyp tA, cPsi), t)) ->
+  | (I.ClObj(phat, tM), (I.ClTyp (tp, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
-        LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
+        checkClObj cD loc cPsi' tM (tp, t)
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
-
-  | (I.ClObj (phat, I.SObj tM), (I.ClTyp (I.STyp tA, cPsi), t)) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      if phat = Context.dctxToHat cPsi' then
-        LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
-      else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
-
-  | (I.ClObj (_phat, I.PObj h), (I.ClTyp (I.PTyp tA, cPsi), t)) ->
-      let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
-      let tA  = C.cnormTyp (tA, t) in
-        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 ;
 
 and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with

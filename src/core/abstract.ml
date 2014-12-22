@@ -175,7 +175,6 @@ type free_var =
                                 (*     | (F, A)                  . |- F <= A *)
 
   | FMV of marker * Id.name * I.ctyp option
-  | FCV of Id.name * Id.cid_schema option (* TODO: Can this be merged with FMV? *)
 
   | CtxV of (Id.name * cid_schema * I.depend)
 
@@ -202,11 +201,6 @@ let rec raiseKind cPsi tK = match cPsi with
 
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
-
-  | I.Dec(cQ, FCV(psi, Some s_cid)) ->
-      collectionToString cQ ^ " " ^
-        R.render_name psi ^ ":" ^
-        R.render_cid_schema s_cid ^ "\n"
 
   | I.Dec(cQ, MMV (_ , ((_n, _r, cD, ityp, _c, _) as mm))) ->
        collectionToString cQ ^ " "
@@ -336,17 +330,6 @@ let eqFSVar n1 fV2 = match (n1, fV2) with
         No
   | _ -> No
 
-(* eqFCVar n fV' = B
-   where B iff n and fV' represent same variable
-*)
-let eqFCVar n1 fV2 = match (n1, fV2) with
-  | (n1 ,  FCV (n2, _)) ->
-      if n1 = n2 then
-         Yes
-      else
-        No
-  | _ -> No
-
 
 (* eqFPVar n fV' = B
    where B iff n and fV' represent same variable
@@ -466,13 +449,6 @@ let rec index_of cQ n =
         | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFV))
       end
 
-  | (I.Dec (cQ', FCV(psi1 , _ )), FCV (psi2, s_cid)) ->
-      begin match eqFCVar psi1 (FCV (psi2, s_cid)) with
-        | Yes -> 1
-        | No -> (index_of cQ' n) + 1
-        | Cycle -> raise (Error (Syntax.Loc.ghost, CyclicDependency VariantFCV))
-      end
-
   | (I.Dec (cQ', FMV (Pure, u1, _)), FMV (Pure, u2, mtyp)) ->
       begin match eqFMVar u1 (FMV (Pure, u2, mtyp)) with
         | Yes -> 1
@@ -544,9 +520,6 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
 
   | I.Dec (_cQ', MMV (Pure, (_, _, _cD, _, _, _))) ->
       raise (Error (Syntax.Loc.ghost, LeftoverVars VariantMMV))
-
-  | I.Dec (cQ', FCV (psi, Some (s_cid))) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (psi, I.CTyp s_cid, I.Maybe))
 
   | I.Dec (cQ', FMV (Pure, u, Some mtyp)) ->
 (*       let mtyp' = begin match mtyp with
@@ -961,11 +934,11 @@ and collectHat p cQ phat = match phat with
           | No ->  (I.Dec (cQ, MMV (Pure, psi)) , phat)
         end
   | (Some (I.CtxName psi) , _ ) ->
-      begin match checkOccurrence (eqFCVar psi) cQ with
+      begin match checkOccurrence (eqFMVar psi) cQ with
           | Yes -> (cQ, phat)
           | No ->
               let (_,I.Decl (_, I.CTyp s_cid,_))  = FCVar.get psi in
-                (I.Dec (cQ, FCV (psi, Some (s_cid))),
+                (I.Dec (cQ, FMV (Pure, psi, Some (I.CTyp s_cid))),
                  phat)
         end
 
@@ -976,12 +949,12 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
 
   | I.CtxVar (I.CtxName psi) ->
-        begin match checkOccurrence (eqFCVar psi) cQ with
+        begin match checkOccurrence (eqFMVar psi) cQ with
           | Yes ->   (cQ , cPsi)
           | No ->
 	      begin try
 		let (_,I.Decl (_, I.CTyp s_cid, _))  = FCVar.get psi in
-                  (I.Dec (cQ, FCV (psi, Some (s_cid))),
+                  (I.Dec (cQ, FMV (Pure, psi, Some (I.CTyp s_cid))),
                    I.CtxVar (I.CtxName psi))
 	      with
 		  Not_found -> raise (Error (loc, UnknownSchemaCtx psi))
@@ -1345,7 +1318,7 @@ and abstractMVarHat cQ (l,offset) phat = match phat with
       if x <= offset then phat
       else (Some (I.CtxOffset (x+l)), k)
   | (Some (I.CtxName psi), k) ->
-      let x = index_of cQ (FCV (psi, None)) + offset in
+      let x = index_of cQ (FMV (Pure, psi, None)) + offset in
         (Some (I.CtxOffset x), k)
   (* case where contents = Some cPsi cannot happen,
      since collect normalized phat *)
@@ -1363,7 +1336,7 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
       else
            I.CtxVar (I.CtxOffset (psi + l))
   | I.CtxVar (I.CtxName psi) ->
-      let x = index_of cQ (FCV (psi, None)) + offset in
+      let x = index_of cQ (FMV (Pure, psi, None)) + offset in
         I.CtxVar (I.CtxOffset x)
   | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)}, _, _, _, _), theta )) ->
       abstractMVarDctx cQ (l,offset) (Whnf.cnormDCtx (cPsi, theta))
@@ -1409,10 +1382,6 @@ and abstractMVarCtx cQ l =  match cQ with
   | I.Dec (cQ, CtxV cdecl) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       I.Dec(cQ', CtxV cdecl)
-
-  | I.Dec (cQ, FCV (psi, Some s_cid)) ->
-      let cQ'   = abstractMVarCtx  cQ (l-1) in
-      I.Dec(cQ', FCV (psi, Some s_cid))
 
   | I.Dec (cQ, FMV (Pure, u, Some mtyp)) ->
       let cQ'   = abstractMVarCtx cQ (l-1) in

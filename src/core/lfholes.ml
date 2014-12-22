@@ -59,8 +59,8 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   let (_, sub) = tA in
   let rec aux acc c = function
     | LF.Empty -> acc
-    | LF.Dec (cD', LF.Decl(n, LF.MTyp(tA', cPsi'), LF.No))
-    | LF.Dec (cD', LF.Decl(n, LF.PTyp(tA', cPsi'), LF.No))->
+    | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.MTyp tA', cPsi'), LF.No))
+    | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.PTyp tA', cPsi'), LF.No))->
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
         let tA' = Whnf.cnormTyp (tA', LF.MShift c) in

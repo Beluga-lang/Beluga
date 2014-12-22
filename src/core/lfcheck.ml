@@ -266,14 +266,14 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, _cD, MTyp(tA,cPsi'), _cnstr, _), s) ->
+  | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s) ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MMVar ((_n, {contents = None}, cD' , MTyp(tA,cPsi'), _cnstr, _) , (t', r)) ->
+  | MMVar ((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , (t', r)) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -753,7 +753,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
 	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
 	else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-    | MDot (ClObj(_ , MObj tM), ms), Dec(cD1', Decl (_u, MTyp (tA, cPsi), _)) ->
+    | MDot (ClObj(_ , MObj tM), ms), Dec(cD1', Decl (_u, ClTyp (MTyp tA, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
         (check cD cPsi' (tM, Substitution.LF.id) (tA', Substitution.LF.id) ;
@@ -768,13 +768,13 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
       if Whnf.convMTyp mtyp1 mtyp2 then checkMSub loc cD ms cD1'
       else raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    | MDot (ClObj (_, SObj s), ms), Dec(cD1', Decl (_u, STyp (cPhi, cPsi), _)) ->
+    | MDot (ClObj (_, SObj s), ms), Dec(cD1', Decl (_u, ClTyp (STyp cPhi, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let cPhi' = Whnf.cnormDCtx  (cPhi, ms) in
           (checkSub loc cD cPsi' s cPhi';
            checkMSub loc cD ms cD1' )
 
-    | MDot (ClObj (_, PObj h), ms), Dec(cD1', Decl (_u, PTyp (tA, cPsi), _)) ->
+    | MDot (ClObj (_, PObj h), ms), Dec(cD1', Decl (_u, ClTyp (PTyp tA, cPsi), _)) ->
         let cPsi' = Whnf.cnormDCtx  (cPsi, ms) in
         let tA'   = Whnf.cnormTyp (tA, ms) in
           (begin match h with

@@ -284,21 +284,21 @@ let checkParamTypeValid cD cPsi tA =
   | (I.CObj cPsi, (I.CTyp w, _)) ->
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
 
-  | (I.ClObj(phat, I.MObj tM), (I.MTyp (tA, cPsi), t)) ->
+  | (I.ClObj(phat, I.MObj tM), (I.ClTyp (I.MTyp tA, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
         LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
 
-  | (I.ClObj (phat, I.SObj tM), (I.STyp (tA, cPsi), t)) ->
+  | (I.ClObj (phat, I.SObj tM), (I.ClTyp (I.STyp tA, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
         LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
 
-  | (I.ClObj (_phat, I.PObj h), (I.PTyp (tA, cPsi), t)) ->
+  | (I.ClObj (_phat, I.PObj h), (I.ClTyp (I.PTyp tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
@@ -317,15 +317,15 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
-    | I.MTyp (tA, cPsi) ->
+    | I.ClTyp (I.MTyp tA, cPsi) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id)
-    | I.PTyp (tA, cPsi) ->
+    | I.ClTyp (I.PTyp tA, cPsi) ->
         LF.checkDCtx cD cPsi;
         LF.checkTyp  cD cPsi (tA, S.LF.id);
         checkParamTypeValid cD cPsi tA
 
-    | I.STyp (cPhi, cPsi) ->
+    | I.ClTyp (I.STyp cPhi, cPsi) ->
     	LF.checkDCtx cD cPhi;
     	LF.checkDCtx cD cPsi
 
@@ -449,16 +449,16 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         end
 
     | (Case (loc, prag, Ann (Box (_, (_, I.ClObj(phat, I.MObj tR))),
-    			     TypBox (_, I.MTyp(tA', cPsi'))),
+    			     TypBox (_, I.ClTyp (I.MTyp tA', cPsi'))),
              branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
-                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None);
+                       (TypBox (loc, I.ClTyp (I.PTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), None);
                    | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
-                       (TypBox (loc, I.PTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), Some k);
+                       (TypBox (loc, I.ClTyp (I.PTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), Some k);
                    | _ ->
-                       (TypBox (loc, I.MTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
-        let tau_s = TypBox (loc, I.MTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
+                       (TypBox (loc, I.ClTyp (I.MTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), None)) in
+        let tau_s = TypBox (loc, I.ClTyp (I.MTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')) in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
@@ -596,7 +596,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with
-          | (TypBox (_, I.MTyp (tA, cPhi)) , theta) ->
+          | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta) ->
               let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
                                 P.mctxToString cD ^
                                 "context of expected  type " ^

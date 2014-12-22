@@ -20,10 +20,12 @@ module LF = struct
     | TypDecl of name * typ                   (* D := x:A                       *)
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
+  and cltyp =
+    | MTyp of typ
+    | PTyp of typ
+    | STyp of dctx
   and ctyp =
-    | MTyp of typ * dctx
-    | PTyp of typ * dctx
-    | STyp of dctx * dctx 
+    | ClTyp of cltyp * dctx
     | CTyp of cid_schema
 
   and ctyp_decl =                             (* Contextual Declarations        *)

@@ -570,7 +570,7 @@ module Int = struct
       fmt_ppr_lf_mfront cD lvl ppf mO
 
     and fmt_ppr_lf_mmvar lvl ppf = function
-      | (_, ({ contents = None } as u), _, LF.PTyp(tA,_), _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.PTyp tA,_), _, mDep) ->
           begin
             try
               fprintf ppf "?#%s"
@@ -584,12 +584,12 @@ module Int = struct
                       PInstHashtbl.replace pinst_hashtbl u sym
                     ; fprintf ppf "?#%s" sym
           end
-      | (_, {contents = Some (LF.IHead h)}, cD, LF.PTyp(_,cPsi), _, mDep) ->
+      | (_, {contents = Some (LF.IHead h)}, cD, LF.ClTyp (LF.PTyp _,cPsi), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | (_, ({ contents = None } as u), _, LF.MTyp(tA,_), _, _) ->
+      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -608,12 +608,12 @@ module Int = struct
                     ; fprintf ppf "?%s" sym
           end
 
-      | (_, {contents = Some (LF.INorm m)}, cD, LF.MTyp (_,cPsi), _, _) ->
+      | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
-      | (_, ({ contents = None } as u), _, LF.STyp(cPsi,_), _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.STyp cPsi,_), _, mDep) ->
           begin
             try
               fprintf ppf "?%s"
@@ -630,14 +630,14 @@ module Int = struct
                     ; fprintf ppf "#?%s" sym
           end
 
-      | (_, {contents = Some (LF.ISub s)}, cD, LF.STyp(_,cPsi), _, mDep) ->
+      | (_, {contents = Some (LF.ISub s)}, cD, LF.ClTyp (LF.STyp _,cPsi), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " #%a"
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
     and typOfMCtx cD n = match (cD, n) with
-      | (LF.Dec (_cD, LF.Decl(_, LF.MTyp(tA, _), _)), 1)
-      | (LF.Dec (_cD, LF.Decl(_, LF.PTyp(tA, _), _)), 1) -> Some tA
+      | (LF.Dec (_cD, LF.Decl(_, LF.ClTyp (LF.MTyp tA, _), _)), 1)
+      | (LF.Dec (_cD, LF.Decl(_, LF.ClTyp (LF.PTyp tA, _), _)), 1) -> Some tA
       | (LF.Dec (_cD, LF.DeclOpt u), 1) -> None
       | (LF.Dec (cD, _ ) , k) -> typOfMCtx cD (k-1)
       | _ -> None
@@ -651,7 +651,7 @@ module Int = struct
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n -> fmt_ppr_lf_offset cD _lvl ppf n
 
-      | LF.Inst (_, ({ contents = None } as u), _, LF.MTyp(tA,_), _, _) ->
+      | LF.Inst (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, _) ->
           begin
             try
               fprintf ppf "?%s"
@@ -870,17 +870,17 @@ module Int = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_mtyp cD ppf = function
-      | LF.MTyp (tA, cPsi) ->
+      | LF.ClTyp (LF.MTyp tA, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
-      | LF.PTyp (tA, cPsi) ->
+      | LF.ClTyp (LF.PTyp tA, cPsi) ->
           fprintf ppf "#[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ cD cPsi 0) tA 
 
-      | LF.STyp (cPhi, cPsi) ->
+      | LF.ClTyp (LF.STyp cPhi, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_dctx cD 0) cPhi
@@ -905,8 +905,8 @@ module Int = struct
             (R.render_name name)
 
     and getTyp = function
-      | LF.MTyp (tA, _)
-      | LF.PTyp (tA, _) -> Some tA
+      | LF.ClTyp (LF.MTyp tA, _)
+      | LF.ClTyp (LF.PTyp tA, _) -> Some tA
       | _ -> None
 
     and isImplicit = function  
@@ -933,13 +933,13 @@ module Int = struct
           end
 
     let fmt_ppr_meta_typ cD lvl ppf = function
-      | LF.MTyp (tA, cPsi) ->
+      | LF.ClTyp (LF.MTyp tA, cPsi) ->
           fprintf ppf "[%a |- %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
-      | LF.CTyp (s_cid) ->
+      | LF.CTyp s_cid ->
           fprintf ppf "%s" (R.render_cid_schema s_cid)
-      | LF.STyp (cPhi, cPsi) ->
+      | LF.ClTyp (LF.STyp cPhi, cPsi) ->
            fprintf ppf "%a[%a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_dctx cD lvl) cPhi
@@ -1186,7 +1186,7 @@ module Int = struct
           (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
-      | Comp.TypPiBox ((LF.Decl (_, LF.MTyp (_,_), LF.Maybe)), tau) ->
+      | Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.MTyp _,_), LF.Maybe)), tau) ->
           (false)::(implicitCompArg tau)
       | Comp.TypPiBox (_ , tau) ->
           (true)::(implicitCompArg tau)

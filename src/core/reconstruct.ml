@@ -439,28 +439,24 @@ let rec mgTyp cD cPsi tA = begin match tA with
 	 Int.LF.SigmaElem (x, tA', trec')
  end
 
-let metaObjToFt = function
-  | Int.Comp.MetaObj (loc, psihat, Int.LF.INorm tM) -> Int.LF.ClObj (psihat, Int.LF.MObj tM)
-  | Int.Comp.MetaObj (loc, psihat, Int.LF.IHead h) -> Int.LF.ClObj (psihat, Int.LF.PObj h)
-  | Int.Comp.MetaObj (loc', psihat, Int.LF.ISub s') -> Int.LF.ClObj (psihat, Int.LF.SObj s')
-  | Int.Comp.MetaCtx (loc, cPsi) -> Int.LF.CObj cPsi
+let metaObjToFt (loc, m) = m
 
 let mmVarToMetaObj loc' mV = function
   | Int.LF.MTyp (tA, cPsi) ->
     let psihat  = Context.dctxToHat cPsi in
     let tM'   = Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil) in
-    Int.Comp.MetaObj (loc', psihat, Int.LF.INorm tM')
+    (loc', Int.LF.ClObj (psihat, Int.LF.MObj tM'))
 
   | Int.LF.PTyp (tA, cPsi) ->
     let psihat  = Context.dctxToHat cPsi in
-    Int.Comp.MetaObj (loc', psihat, Int.LF.IHead (Int.LF.MPVar (mV, (Whnf.m_id, LF.id))))
+    (loc', Int.LF.ClObj(psihat, Int.LF.PObj (Int.LF.MPVar (mV, (Whnf.m_id, LF.id)))))
 
   | Int.LF.STyp (cPhi, cPsi) ->
     let psihat  = Context.dctxToHat cPsi in
-    Int.Comp.MetaObj (loc', psihat, Int.LF.ISub (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id))))
+    (loc', Int.LF.ClObj(psihat, Int.LF.SObj (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id)))))
 
   | Int.LF.CTyp schema_cid ->
-    Int.Comp.MetaCtx (loc', Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id)))
+    (loc', Int.LF.CObj(Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id))))
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let ctyp' = C.cnormMTyp (ctyp, t) in
@@ -504,19 +500,19 @@ let flattenAnn psihat = function
 let rec elMetaObj' cD cM cTt = match cM , cTt with
   | (Apx.Comp.MetaCtx (loc, psi), (Int.LF.CTyp  w)) ->
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
-        Int.Comp.MetaCtx (loc, cPsi')
+        (loc, Int.LF.CObj cPsi')
 
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.MTyp (tA, cPsi'))) ->
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
-          Int.Comp.MetaObj (loc, phat, Int.LF.INorm tM')
+          (loc, Int.LF.ClObj (phat, Int.LF.MObj tM'))
   | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.STyp (cPhi', cPsi'))) ->
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPhi' in
-          Int.Comp.MetaObj (loc, phat, Int.LF.ISub s')
+          (loc, Int.LF.ClObj (phat, Int.LF.SObj s'))
 
   | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root (_,h,_)), (Int.LF.PTyp (tA', cPsi'))) ->
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-          Int.Comp.MetaObj (loc, phat, Int.LF.IHead h)
+          (loc, Int.LF.ClObj(phat, Int.LF.PObj h))
 
   (* This case fixes up annoying ambiguities *)
   | Apx.Comp.MetaObj (_loc', psi, m) , (Int.LF.STyp (tA, cPsi)) ->
@@ -986,7 +982,7 @@ and elExp' cD cG i = match i with
       (* let sP    = synTerm Lfrecon.Pibox cD cPsi (tR, LF.id) in *)
       let phat     = Context.dctxToHat cPsi in
       let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.MTyp(Int.LF.TClo sP, cPsi)) in
-      let cM       = Int.Comp.MetaObj (loc, phat, Int.LF.INorm tR) in
+      let cM       = (loc, Int.LF.ClObj(phat, Int.LF.MObj tR)) in
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
 
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObj (_loc', phat, _r)) ->
@@ -999,7 +995,7 @@ and elExp' cD cG i = match i with
        match cpsi with
        | Apx.LF.CtxVar (ctxvar) -> 
 	  let c_var = Lfrecon.elCtxVar ctxvar in  
-	  let cM = Int.Comp.MetaCtx (loc', Int.LF.CtxVar c_var) in 
+	  let cM = (loc', Int.LF.CObj (Int.LF.CtxVar c_var)) in 
 	  begin 
 	    match c_var with 
 	    | (Int.LF.CtxOffset offset) as phi -> 
@@ -1061,7 +1057,7 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
       let cPsi' = Lfrecon.checkDCtx loc Lfrecon.Pibox cD' psi w in
       let _    = Lfrecon.solve_constraints  cD' in
       let (cD1', cM', mT') =
-	Abstract.mobj cD' (Int.Comp.MetaCtx (loc, cPsi')) (Int.LF.CTyp w) in
+	Abstract.mobj cD' (loc, Int.LF.CObj cPsi') (Int.LF.CTyp w) in
 	begin try
 	  let l_cd1'    = Context.length cD1'  in
 	  let l_delta   = Context.length cD'  in
@@ -1093,7 +1089,7 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
 			   "\n has type " ^ P.typToString cD' cPsi' (tP', LF.id) ^ "\n") in
       let phat = Context.dctxToHat cPsi' in
       let (cD1', cM', mT') =
-	Abstract.mobj cD' (Int.Comp.MetaObj (loc, phat, Int.LF.INorm tR)) (Int.LF.MTyp (tP', cPsi')) in
+	Abstract.mobj cD' (loc, Int.LF.ClObj (phat, Int.LF.MObj tR)) (Int.LF.MTyp (tP', cPsi')) in
 	begin try
 	  let _   = dprint (fun () -> "recMObj: Reconstructed pattern (AFTER ABSTRACTION)...\n" ^
                               P.mctxToString cD1' ^ "  |-    " ^ P.metaObjToString cD1' cM' ^ " :  "  ^
@@ -1469,7 +1465,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
     let tau_p' = Whnf.cnormCTyp (tau_p, mt1) in
     let _  = begin match (caseT, pat) with
                | (DataObj, _) -> ()
-               | (IndexObj (Int.Comp.MetaObj (_, phat, Int.LF.INorm tR')), Int.Comp.PatMetaObj (_, Int.Comp.MetaObj (_, _, Int.LF.INorm tR1))) ->
+               | (IndexObj (_, Int.LF.ClObj (phat, Int.LF.MObj tR')), Int.Comp.PatMetaObj (_, (_,Int.LF.ClObj (__, Int.LF.MObj tR1)))) ->
                    begin try
                      (dprint (fun () -> "Pattern matching on index object...");
                       Unify.unify Int.LF.Empty (Context.hatToDCtx phat) (C.cnorm (tR',  t),  LF.id)
@@ -1616,8 +1612,8 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
     let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in
     (* ***************                            *************** *)
     let caseT'  = begin match caseTyp with
-                  | IndexObj (Int.Comp.MetaObj (l, phat, Int.LF.INorm tR')) ->
-                      IndexObj (Int.Comp.MetaObj (l, phat, Int.LF.INorm (Whnf.cnorm (tR', Int.LF.MShift l_cd1'))))
+                  | IndexObj (l, Int.LF.ClObj (phat, Int.LF.MObj tR')) ->
+                      IndexObj (l, Int.LF.ClObj(phat, Int.LF.MObj (Whnf.cnorm (tR', Int.LF.MShift l_cd1'))))
                   | DataObj -> DataObj
                   end in
     (* cD |- tau_s and cD, cD1 |- tau_s' *)

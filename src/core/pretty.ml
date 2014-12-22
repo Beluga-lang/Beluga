@@ -547,23 +547,27 @@ module Int = struct
       | LF.SObj s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
       | LF.PObj h -> fmt_ppr_lf_head cD cPsi lvl ppf h
 
-    and fmt_ppr_lf_mfront cD lvl ppf = function
-      | LF.ClObj (psihat, m) ->
-          let cPsi = phatToDCtx psihat in
-          fprintf ppf "M (%a . %a)"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_clobj cD lvl cPsi) m
 
-      | LF.CObj (cPsi) ->
-          fprintf ppf "M (%a)"
-            (fmt_ppr_lf_dctx cD lvl) cPsi
-
+   and fmt_ppr_mfront' cD _lvl ppf mO = match mO with
+      | LF.CObj cPsi ->
+            fprintf ppf "%a"
+              (fmt_ppr_lf_dctx cD 0) cPsi
+      | LF.ClObj (phat, tM) ->
+          let cPsi = phatToDCtx phat in
+            fprintf ppf "%a |- %a"
+               (fmt_ppr_lf_psi_hat cD 0) cPsi
+              (fmt_ppr_lf_clobj cD 0 cPsi) tM
       | LF.MV k ->
-          fprintf ppf "MV %s"
+          fprintf ppf "%s"
             (R.render_cvar cD k)
-
       | LF.MUndef ->
-          fprintf ppf "_ "
+          fprintf ppf "UNDEF"
+
+    and fmt_ppr_lf_mfront cD lvl ppf mO = 
+      fprintf ppf "[%a]" (fmt_ppr_mfront' cD 0) mO
+
+    and fmt_ppr_meta_obj cD lvl ppf (loc,mO) = 
+      fmt_ppr_lf_mfront cD lvl ppf mO
 
     and fmt_ppr_lf_mmvar lvl ppf = function
       | (_, ({ contents = None } as u), _, LF.PTyp(tA,_), _, mDep) ->
@@ -952,16 +956,6 @@ module Int = struct
       | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi 0 ppf tM
       | LF.IHead h -> fmt_ppr_lf_head cD cPsi 0 ppf h
       | LF.ISub s -> fmt_ppr_lf_sub cD cPsi 0 ppf s
-
-    and fmt_ppr_meta_obj cD _lvl ppf = function
-      | Comp.MetaCtx (_, cPsi) ->
-            fprintf ppf "[%a]"
-              (fmt_ppr_lf_dctx cD 0) cPsi
-      | Comp.MetaObj (_, phat, tM) ->
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "[%a |- %a]"
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_iterm cD cPsi 0) tM
 
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, c, mS)->
@@ -1428,18 +1422,9 @@ module Int = struct
 	| LF.Decl(name,_,_) -> name
 	| LF.DeclOpt name -> name
       end  in
-     match m with
-      | LF.CObj (cPsi) ->
-          fprintf ppf "%a = %s"
-            (fmt_ppr_lf_dctx cD lvl) cPsi
-            (R.render_name name)
-
-      | LF.ClObj (psihat, m) ->
-          let cPsi = phatToDCtx psihat in
-          fprintf ppf "%a |- %a = %s"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_clobj cD lvl cPsi) m
-            (R.render_name name)
+         fprintf ppf "%a = %s"
+	   (fmt_ppr_lf_mfront cD lvl) m
+	   (R.render_name name)
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

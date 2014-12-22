@@ -36,7 +36,8 @@ let rec raiseType cPsi tA = match cPsi with
 
 (* Eta-contract elements in substitutions *)
 let etaContract tM = begin match tM with
-  | Root (_, BVar k, Nil) -> Head (BVar k)
+  | Root (_, ((BVar _) as h), Nil)
+  | Root (_, ((Proj _) as h), Nil) -> Head h
   | Lam  _ as tMn ->
       let rec etaUnroll k tM = begin match tM with
         | Lam (_ , _, tN) ->
@@ -370,15 +371,14 @@ and cnormITerm (tM,mt) = match tM with
   | IHead h -> IHead (cnormHead (h,mt))
   | ISub s -> ISub (cnormSub (s,mt))    
 
-and normITerm (tM, s) = match tM with
-  | INorm n -> INorm (norm (n,s))
-  | IHead h ->
+and normMObj (tM, s) = match tM with
+  | MObj n -> MObj (norm (n,s))
+  | PObj h ->
     begin match normHead (h,s) with
-      | Obj tM -> INorm tM
-      | Head h' -> IHead h'
+      | Obj tM -> MObj tM
+      | Head h' -> PObj h'
     end 
-  | ISub r -> ISub (normSub' (r,s))
-  | ICtx dctx -> ICtx (normDCtx dctx)
+  | SObj r -> SObj (normSub' (r,s))
 
 and reduceTupleFt (ft, i) = match ft with
   | Head h -> Head (Proj (h, i))
@@ -727,6 +727,10 @@ and cnormClObj m t = match m with
   | MObj tM -> MObj (norm (cnorm (tM, t), LF.id))
   | SObj s -> SObj (normSub (cnormSub (s, t)))
   | PObj h -> PObj (cnormHead (h, t))
+and cnormMObj (tM,mt) = match tM with
+  | MObj n -> MObj (cnorm (n,mt))
+  | PObj h -> PObj (cnormHead (h,mt))
+  | SObj s -> SObj (cnormSub (s,mt))    
 and cnormMFt mft t = match mft with
   | ClObj(phat, m) -> ClObj (cnorm_psihat phat t, cnormClObj m t)
   | CObj (cPsi) -> CObj (cnormDCtx (normDCtx cPsi, t))
@@ -1108,7 +1112,8 @@ and convSpine spine1 spine2 = match (spine1, spine2) with
   | ((SClo (tS, s), s'), spine2) ->
       convSpine (tS, LF.comp s s') spine2
 
-and convSub subst1 subst2 = match (subst1, subst2) with
+and convSub subst1 subst2 =
+  match (subst1, subst2) with
   | (EmptySub, _) -> true (* this relies on the assumption that both are the same type... *)
   | (_,EmptySub) -> true
   | (Undefs,_) -> true (* hopefully Undefs only show up with empty domain? *)
@@ -1162,22 +1167,22 @@ and convFront front1 front2 = match (front1, front2) with
   | (Obj tM, Obj tN) ->
       conv (tM, LF.id) (tN, LF.id)
 
-  | (Head BVar i, Obj tN) ->
+  | (Head h, Obj tN) ->
       begin match etaContract (norm (tN, LF.id)) with
-        | Head (BVar k) -> i = k
+        | Head h' -> convFront (Head h) (Head h')
         | _ -> false
       end
 
-  | (Obj tN, Head (BVar i)) ->
+  | (Obj tN, Head h) ->
       begin match etaContract (norm (tN, LF.id)) with
-        | Head (BVar k) -> i = k
+        | Head h' -> convFront (Head h) (Head h')
         | _ -> false
       end
 
-  | (Undef, Undef) ->
+  | (Undef, Undef) -> 
       true
 
-  | (_, _) ->
+  | (_, _) -> dprint (fun () -> "Falls through");
       false
 
 
@@ -1404,11 +1409,11 @@ let mctxMVarPos cD u =
      Contextual weak head normal form for
      computation-level types
    ******************************************)
-  let rec normMetaObj mO = match mO with
-    | Comp.MetaCtx (loc, cPsi) ->
-        Comp.MetaCtx (loc, normDCtx cPsi)
-    | Comp.MetaObj (loc, phat, n) ->
-        Comp.MetaObj (loc, cnorm_psihat phat m_id, normITerm (n, LF.id))
+  let rec normMetaObj (loc,mO) = loc , (match mO with
+    | CObj cPsi ->
+        CObj (normDCtx cPsi)
+    | ClObj (phat, n) ->
+        ClObj (cnorm_psihat phat m_id, normMObj (n, LF.id)))
 
   and normMetaSpine mS = match mS with
     | Comp.MetaNil -> mS
@@ -1440,11 +1445,11 @@ let mctxMVarPos cD u =
 
   let cnormMetaTyp (mC, t) = cnormMTyp (mC, t)
 
-  let rec cnormMetaObj (mO,t) = match mO with
-    | Comp.MetaCtx (loc, cPsi) ->
-        Comp.MetaCtx (loc, cnormDCtx (cPsi,t))
-    | Comp.MetaObj (loc, phat, tM) ->
-        Comp.MetaObj (loc, cnorm_psihat phat t, cnormITerm (tM, t))
+  let rec cnormMetaObj ((loc,mO),t) = loc , (match mO with
+    | CObj cPsi ->
+        CObj (cnormDCtx (cPsi,t))
+    | ClObj (phat, tM) ->
+        ClObj (cnorm_psihat phat t, cnormMObj (tM, t)))
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
@@ -1694,11 +1699,16 @@ let mctxMVarPos cD u =
     | ISub s1, ISub s2 -> convSub s1 s2
     | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
 
-  let rec convMetaObj mO mO' = match (mO , mO) with
-    | (Comp.MetaCtx (_loc, cPsi) , Comp.MetaCtx (_ , cPsi'))  ->
+  let convMObj tM1 tM2 = match (tM1, tM2) with
+    | MObj n1, MObj n2 -> conv (n1, LF.id) (n2, LF.id)
+    | SObj s1, SObj s2 -> convSub s1 s2
+    | PObj h1, PObj h2 -> convHead (h1, LF.id) (h2, LF.id)
+
+  let rec convMetaObj (loc,mO) (loc',mO') = match (mO , mO') with (* TODO: !!!!! *)
+    | (CObj cPsi) , (CObj cPsi')  ->
         convDCtx  cPsi cPsi'
-    | (Comp.MetaObj (_, _phat, tM1) , Comp.MetaObj (_, _phat', tM2)) ->
-        convITerm tM1 tM2
+    | (ClObj (_phat, tM1) , ClObj (_phat', tM2)) ->
+        convMObj tM1 tM2
 
   and convMetaSpine mS mS' = match (mS, mS') with
     | (Comp.MetaNil , Comp.MetaNil) -> true
@@ -1879,14 +1889,14 @@ let rec closedMetaSpine mS = match mS with
   | Comp.MetaApp (mO, mS) ->
       closedMetaObj mO && closedMetaSpine mS
 
-and closedITerm = function
-  | INorm tM -> closed (tM, LF.id)
-  | ISub s -> closedSub s
+and closedMObj = function
+  | MObj tM -> closed (tM, LF.id)
+  | SObj s -> closedSub s
 
-and closedMetaObj mO = match mO with
-  | Comp.MetaCtx (_, cPsi) -> closedDCtx cPsi
-  | Comp.MetaObj (_, phat, t) ->
-      closedDCtx (Context.hatToDCtx phat) && closedITerm t
+and closedMetaObj (loc,mO) = match mO with
+  | CObj cPsi -> closedDCtx cPsi
+  | ClObj (phat, t) ->
+      closedDCtx (Context.hatToDCtx phat) && closedMObj t
 
 let closedMetaTyp cT = match cT with 
   | MTyp (tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi

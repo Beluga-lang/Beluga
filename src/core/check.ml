@@ -248,9 +248,7 @@ module Comp = struct
     | IndexObj of I.psi_hat * I.normal
     | DataObj
 
-  let getLoc cM = match cM with 
-    | MetaObj(loc, _, _ ) -> loc
-    | MetaCtx (loc, _ ) -> loc
+  let getLoc (loc,cM) = loc
 
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (_,  tau)), 1) -> tau
@@ -282,25 +280,25 @@ let checkParamTypeValid cD cPsi tA =
 
 
 
-  let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with
-  | (MetaCtx (loc, cPsi), (I.CTyp w, _)) ->
+  let rec checkMetaObj _loc cD (loc,cM) cTt = match  (cM, cTt) with
+  | (I.CObj cPsi, (I.CTyp w, _)) ->
       LF.checkSchema loc cD cPsi (Schema.get_schema w)
 
-  | (MetaObj (loc, phat, I.INorm tM), (I.MTyp (tA, cPsi), t)) ->
+  | (I.ClObj(phat, I.MObj tM), (I.MTyp (tA, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
         LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
       else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
 
-  | (MetaObj (loc, phat, I.ISub tM), (I.STyp (tA, cPsi), t)) ->
+  | (I.ClObj (phat, I.SObj tM), (I.STyp (tA, cPsi), t)) ->
       let cPsi' = C.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
         LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
       else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
 
-  | (MetaObj (loc, _phat, I.IHead h), (I.PTyp (tA, cPsi), t)) ->
+  | (I.ClObj (_phat, I.PObj h), (I.PTyp (tA, cPsi), t)) ->
       let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
       let tA  = C.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
@@ -450,7 +448,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
-    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, I.INorm tR)),
+    | (Case (loc, prag, Ann (Box (_, (_, I.ClObj(phat, I.MObj tR))),
     			     TypBox (_, I.MTyp(tA', cPsi'))),
              branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with

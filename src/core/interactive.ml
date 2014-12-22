@@ -139,7 +139,7 @@ let branchCovGoals loc i cG0 tA cgs =
        let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
       Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
    Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-       let patt = PatMetaObj ( Loc.ghost, MetaObj (Loc.ghost, Context.dctxToHat cPsi, LF.INorm tR)) in
+       let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
        Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
@@ -384,10 +384,10 @@ let rec searchMctx i = function
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
              let ((_ , vOff) as phat) = dctxToHat cPsi in
-	     let m0 = Comp.MetaObj(Loc.ghost, phat,
-				   LF.INorm (LF.Root (Loc.ghost,
+	     let m0 = (Loc.ghost, LF.ClObj (phat,
+				   LF.MObj (LF.Root (Loc.ghost,
 					    LF.MVar (LF.Offset i, LF.Shift vOff),
-					    LF.Nil))) in
+					    LF.Nil)))) in
              let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
 				    Comp.TypBox(Loc.ghost, LF.MTyp(tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
@@ -398,7 +398,7 @@ let rec searchMctx i = function
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in
              let ((vPsi, vOff) as _phat) = dctxToHat cPsi in
-	     let m0 = Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.INorm (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil))) in
+	     let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
              let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.MTyp (tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else

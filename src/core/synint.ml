@@ -256,9 +256,7 @@ module Comp = struct
 
   type meta_typ = LF.ctyp
 
-  type meta_obj =
-    | MetaCtx of Loc.t * LF.dctx
-    | MetaObj of Loc.t * LF.psi_hat * LF.iterm
+  type meta_obj = Loc.t * LF.mfront
 
   type meta_spine =
     | MetaNil
@@ -368,9 +366,7 @@ module Comp = struct
     | LF.INorm n -> LF.MObj n
     | LF.IHead h -> LF.PObj h
     | LF.ISub s -> LF.SObj s
-  let metaObjToMFront = function
-    | MetaCtx (_, cPsi) -> LF.CObj cPsi
-    | MetaObj (_, phat, t) -> LF.ClObj (phat, itermToClObj t)
+  let metaObjToMFront (loc,x) = x
 end
 
 

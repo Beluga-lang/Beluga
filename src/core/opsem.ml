@@ -150,32 +150,32 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
-    | Comp.MApp (_, i', Comp.MetaObj (l, phat, LF.INorm tM)) ->
+    | Comp.MApp (_, i', (l, LF.ClObj(phat, LF.MObj tM))) ->
       let tM' = Whnf.cnorm (tM, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.ClObj (phat, LF.MObj tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
-          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (Comp.MetaObj(l, phat, LF.INorm tM')), spine))
+          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
         | Comp.CodataValue (cid, spine) ->
             Comp.CodataValue (cid,
-			      Comp.CodataApp (Comp.BoxValue (Comp.MetaObj (l, phat, LF.INorm tM')), spine))
+			      Comp.CodataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
-    | Comp.MApp (_, i', Comp.MetaObj (l, phat, LF.IHead h)) ->
+    | Comp.MApp (_, i', (l, LF.ClObj (phat, LF.PObj h))) ->
         let h' = Whnf.cnormHead (h, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
         | Comp.MLamValue (_u, e', theta1, eta1) ->
           eval_chk e' (LF.MDot (LF.ClObj (phat, LF.PObj h'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
-          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (Comp.MetaObj(l, phat, LF.IHead h')), spine))
+          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.PObj h')), spine))
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-    | Comp.MApp (loc, i', Comp.MetaCtx (l, cPsi)) ->
+    | Comp.MApp (loc, i', (l, LF.CObj cPsi)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
       dprint (fun () -> "EVALUATE CtxApp ");
       dprint (fun () -> "[CtxApp] cPsi = " ^ P.dctxToString LF.Empty cPsi');
@@ -185,7 +185,7 @@ let rec eval_syn i (theta, eta) =
           dprint (fun () -> "[CtxApp] theta1' = " ^ P.msubToString LF.Empty  theta1');
           eval_chk e' (theta1', eta1)
         | Comp.DataValue (cid, spine) ->
-          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue(Comp.MetaCtx (l, cPsi')), spine))
+          Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue(l, LF.CObj cPsi'), spine))
         | _ ->
           print_endline (Syntax.Loc.to_string loc);
           raise (Error.Violation "Expected CtxValue")
@@ -198,8 +198,8 @@ let rec eval_syn i (theta, eta) =
       let v1 = eval_syn i1 (theta, eta) in
       let v2 = eval_syn i2 (theta, eta) in
       begin match (v1, v2)  with
-        | (Comp.BoxValue (Comp.MetaObj(_,psihat, LF.INorm tM)),
-	   Comp.BoxValue ( Comp.MetaObj(_ ,_ , LF.INorm tN))) ->
+        | (Comp.BoxValue (_,LF.ClObj(psihat, LF.MObj tM)),
+	   Comp.BoxValue (_, LF.ClObj(_ , LF.MObj tN))) ->
           if Whnf.conv (tM, Substitution.LF.id) (tN, Substitution.LF.id) then
             Comp.BoolValue true
           else
@@ -241,11 +241,11 @@ and eval_chk e (theta, eta) =
             eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, cM) ->
-	 let cM' = Whnf.cnormMetaObj (cM, theta) in 
+	 let (_,cM') = Whnf.cnormMetaObj (cM, theta) in 
           begin match cM' with
-            | Comp.MetaObj (_ , phat, LF.INorm tM) -> Comp.BoxValue (cM')
-            | Comp.MetaObj (_ , phat, LF.IHead h) -> Comp.BoxValue cM'
-            | Comp.MetaCtx (_,cPsi) -> Comp.BoxValue cM'
+            | LF.ClObj (phat, LF.MObj tM) -> Comp.BoxValue (loc,cM')
+            | LF.ClObj (phat, LF.PObj h) -> Comp.BoxValue (loc,cM')
+            | LF.CObj cPsi -> Comp.BoxValue (loc,cM')
           end
 
       | Comp.Case (loc, _prag, i, branches) ->
@@ -279,7 +279,7 @@ and match_pattern  (v,eta) (pat, mt) =
       | _, Comp.PatAnn (_, pat', _) ->
         loop v pat'
 
-      | Comp.BoxValue (Comp.MetaObj(_,phat, LF.INorm tM)), Comp.PatMetaObj (_, Comp.MetaObj (_, phat', LF.INorm tM')) ->
+      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
 	let cPsi = Context.hatToDCtx phat' in
         let tM' = Whnf.cnorm (tM', mt) in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
@@ -292,19 +292,19 @@ and match_pattern  (v,eta) (pat, mt) =
         Unify.unify_phat phat (Context.dctxToHat cPsi);
         Unify.unify LF.Empty cPsi (tM, Substitution.LF.id) (tM', Substitution.LF.id)
 
-      | Comp.BoxValue (Comp.MetaObj(_,phat, LF.IHead h)), Comp.PatMetaObj (_, Comp.MetaObj (_, phat', LF.IHead h')) ->
+      | Comp.BoxValue (_,LF.ClObj(phat, LF.PObj h)), Comp.PatMetaObj (_, (_,LF.ClObj (phat', LF.PObj h'))) ->
           let phat' = Whnf.cnorm_psihat phat' mt in
           let h'    = Whnf.cnormHead (h', mt) in
             Unify.unify_phat phat phat';
             Unify.unifyH LF.Empty phat h h'
-      | _, Comp.PatMetaObj (_, Comp.MetaObj (_, _, LF.IHead _) ) ->
+      | _, Comp.PatMetaObj (_, (_, LF.ClObj (_, LF.PObj _) )) ->
         raise (Error.Violation "Expected param value.")
 
-      | Comp.BoxValue (Comp.MetaCtx (_, cPsi)), Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
+      | Comp.BoxValue (_,LF.CObj cPsi), Comp.PatMetaObj (_, (_,LF.CObj cPsi')) ->
         let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
           dprint (fun () -> "[match_pattern] call unifyDCtx ");
           Unify.unifyDCtx LF.Empty cPsi cPsi'
-      | _, Comp.PatMetaObj (_, Comp.MetaCtx (_, cPsi')) ->
+      | _, Comp.PatMetaObj (_, (_,LF.CObj cPsi')) ->
         raise (Error.Violation "Expected context.")
 
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->

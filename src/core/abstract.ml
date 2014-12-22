@@ -1403,15 +1403,15 @@ and abstractMVarCtx cQ l =  match cQ with
 
 (* Cases for: FMV *)
 
-let abstrClObj cQ = function
-  | I.MObj tM -> I.MObj (abstractMVarTerm cQ (0,0) (tM, LF.id))
-  | I.PObj h -> I.PObj (abstractMVarHead cQ (0,0) h)
-  | I.SObj s -> I.SObj (abstractMVarSub cQ (0,0) s)
+let abstrClObj cQ off = function
+  | I.MObj tM -> I.MObj (abstractMVarTerm cQ off (tM, LF.id))
+  | I.PObj h -> I.PObj (abstractMVarHead cQ off h)
+  | I.SObj s -> I.SObj (abstractMVarSub cQ off s)
 
-let abstrMObj cQ = function
+let abstrMObj cQ off = function
   | I.ClObj(phat, tM) ->
-    I.ClObj(abstractMVarHat cQ (0,0) phat, (abstrClObj cQ tM))
-  | I.CObj(cPsi) -> I.CObj(abstractMVarDctx cQ (0,0) cPsi)
+    I.ClObj(abstractMVarHat cQ off phat, (abstrClObj cQ off tM))
+  | I.CObj(cPsi) -> I.CObj(abstractMVarDctx cQ off cPsi)
   | I.MV k -> I.MV k
 
 let rec abstrMSub cQ t =
@@ -1419,7 +1419,7 @@ let rec abstrMSub cQ t =
   let rec abstrMSub' t =
     match t with
       | I.MShift n -> I.MShift (n+l)
-      | I.MDot(mobj, t) -> I.MDot(abstrMObj cQ mobj, abstrMSub' t)
+      | I.MDot(mobj, t) -> I.MDot(abstrMObj cQ (0,0) mobj, abstrMSub' t)
   in
     abstrMSub' t
 
@@ -1472,26 +1472,8 @@ let rec collectCompKind p cQ cK = match cK with
       let (cQ'', cK2)    = collectCompKind p cQ' cK1 in
         (cQ'', Comp.PiKind (loc, cdecl', cK2) )
 
-let collect_iterm p cQ loc phat = function
-  | Int.LF.INorm tM ->
-    let (cQ', tM') = collectTerm p cQ phat (tM, LF.id) in
-    (cQ', Int.LF.INorm tM')
-  | Int.LF.IHead h ->
-    let (cQ'', h') = collectHead p cQ phat loc (h, LF.id) in
-    (cQ'', Int.LF.IHead h')
-  | Int.LF.ISub tM ->
-    let (cQ', tM') = collectSub p cQ phat tM in
-    (cQ', Int.LF.ISub tM')
-
-let rec collect_meta_obj p cQ cM = match cM with
-  | Comp.MetaCtx (loc, cPsi) ->
-      let phat = Context.dctxToHat cPsi in
-      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-        (cQ', Comp.MetaCtx (loc, cPsi'))
-  | Comp.MetaObj (loc, phat, tM) ->
-      let (cQ', phat') = collectHat p cQ phat in
-      let (cQ', tM') = collect_iterm p cQ' loc phat' tM in
-        (cQ', Comp.MetaObj (loc, phat', tM'))
+let rec collect_meta_obj p cQ (loc,cM) = 
+  let (cQ', cM') = collectMObj p cQ cM in (cQ', (loc, cM'))
 
 and collect_meta_spine p cQ cS = match cS with
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
@@ -1718,19 +1700,8 @@ let rec abstractMVarCompKind cQ (l,offset) cK = match cK with
       let cdecl' = abstractMVarCdecl cQ (l,offset) cdecl in
         Comp.PiKind (loc, cdecl', cK')
 
-let abstractMVarITerm cQ offset = function
-  | Int.LF.INorm tM -> Int.LF.INorm (abstractMVarTerm  cQ  offset (tM, LF.id))
-  | Int.LF.IHead h -> Int.LF.IHead (abstractMVarHead cQ offset h)
-  | Int.LF.ISub tM -> Int.LF.ISub (abstractMVarSub  cQ  offset tM)
-
-let rec abstractMVarMetaObj cQ offset cM = match cM with
-  | Comp.MetaCtx (loc, cPsi) ->
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-        Comp.MetaCtx (loc, cPsi')
-  | Comp.MetaObj (loc, phat, tM) ->
-      let phat' = abstractMVarHat cQ offset phat in
-      let tM' = abstractMVarITerm  cQ  offset tM in
-        Comp.MetaObj (loc, phat', tM')
+let rec abstractMVarMetaObj cQ offset (loc,cM) =
+  (loc, abstrMObj cQ offset cM)
 
 and abstractMVarMetaSpine cQ offset cS = match cS with
   | Comp.MetaNil -> Comp.MetaNil

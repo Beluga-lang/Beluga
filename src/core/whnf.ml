@@ -1197,15 +1197,21 @@ and convMSub subst1 subst2 = match (subst1, subst2) with
   | _ ->
       false
 
+and convClObj m1 m2 = match (m1,m2) with
+  | MObj tM,  MObj tN ->
+      conv (tM, LF.id) (tN, LF.id)
+  | PObj (BVar k), PObj (BVar k') ->
+      k = k'
+  | PObj (PVar(p,s)), PObj (PVar(q, s')) ->
+      p = q && convSub s s'
+  | (_, _) ->
+      false
+
 and convMFront front1 front2 = match (front1, front2) with
   | (CObj cPsi, CObj cPhi) ->
       convDCtx cPsi cPhi
-  | (ClObj (_phat, MObj tM), ClObj(_, MObj tN)) ->
-      conv (tM, LF.id) (tN, LF.id)
-  | (ClObj (phat, PObj (BVar k)), ClObj (phat', PObj (BVar k'))) ->
-      phat = phat' && k = k'
-  | (ClObj (phat, PObj (PVar(p,s))), ClObj (phat', PObj (PVar(q, s')))) ->
-      phat = phat' && p = q && convSub s s'
+  | (ClObj (phat, m1), ClObj (phat', m2)) ->
+      phat = phat' && convClObj m1 m2
   | (_, _) ->
       false
 

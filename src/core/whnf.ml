@@ -1796,7 +1796,7 @@ and closedW (tM,s) = match  tM with
       closedSpine (tS,s)
 
 and closedHead h = match h with
-  | MMVar ((_, {contents = None}, _, ClTyp (MTyp _, _), _, _), _) -> false
+  | MMVar ((_, {contents = None}, _, _, _, _), _) -> false
   | MVar (Inst (_, {contents = None}, _, _, _, _), _) -> false
   | PVar (_, r) ->
       closedSub r
@@ -1865,12 +1865,13 @@ and closedMetaObj (loc,mO) = match mO with
   | CObj cPsi -> closedDCtx cPsi
   | ClObj (phat, t) ->
       closedDCtx (Context.hatToDCtx phat) && closedMObj t
-
+let closedClTyp = function
+  | MTyp tA 
+  | PTyp tA -> closedTyp (tA, LF.id)
+  | STyp cPhi -> closedDCtx cPhi
 let closedMetaTyp cT = match cT with 
-  | ClTyp (MTyp tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
+  | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
   | CTyp _ -> true
-  | ClTyp (PTyp tA, cPsi) -> closedTyp (tA, LF.id) && closedDCtx cPsi
-  | ClTyp (STyp cPhi, cPsi) -> closedDCtx cPhi && closedDCtx cPsi
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBool -> true

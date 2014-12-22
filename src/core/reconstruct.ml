@@ -441,27 +441,21 @@ let rec mgTyp cD cPsi tA = begin match tA with
 
 let metaObjToFt (loc, m) = m
 
+let mmVarToCMetaObj loc' mV = function 
+  | Int.LF.MTyp tA   -> Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil))
+  | Int.LF.PTyp tA   -> Int.LF.PObj (Int.LF.MPVar (mV, (Whnf.m_id, LF.id)))
+  | Int.LF.STyp cPhi -> Int.LF.SObj (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id)))
+
 let mmVarToMetaObj loc' mV = function
-  | Int.LF.ClTyp (Int.LF.MTyp tA, cPsi) ->
-    let psihat  = Context.dctxToHat cPsi in
-    let tM'   = Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil) in
-    (loc', Int.LF.ClObj (psihat, Int.LF.MObj tM'))
-
-  | Int.LF.ClTyp (Int.LF.PTyp tA, cPsi) ->
-    let psihat  = Context.dctxToHat cPsi in
-    (loc', Int.LF.ClObj(psihat, Int.LF.PObj (Int.LF.MPVar (mV, (Whnf.m_id, LF.id)))))
-
-  | Int.LF.ClTyp (Int.LF.STyp cPhi, cPsi) ->
-    let psihat  = Context.dctxToHat cPsi in
-    (loc', Int.LF.ClObj(psihat, Int.LF.SObj (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id)))))
-
+  | Int.LF.ClTyp (mt, cPsi) ->
+    Int.LF.ClObj (Context.dctxToHat cPsi, mmVarToCMetaObj loc' mV mt)
   | Int.LF.CTyp schema_cid ->
-    (loc', Int.LF.CObj(Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id))))
+    Int.LF.CObj(Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id)))
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let ctyp' = C.cnormMTyp (ctyp, t) in
   let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp')) ctyp' in
-  (mO, Int.LF.MDot(metaObjToFt mO,t))
+  ((loc',mO), Int.LF.MDot(mO,t))
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 

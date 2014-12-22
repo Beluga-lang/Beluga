@@ -974,23 +974,25 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 
 
-and collectMTyp p cQ = function 
+and collectMTyp p cQ = collectMetaTyp Syntax.Loc.ghost p cQ
+
+and collectMetaTyp loc p cQ = function 
   | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
   | I.MTyp (tA, cPsi) -> 
     let phat = Context.dctxToHat cPsi in
-    let (cQ', cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
+    let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
     let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
     (cQ'', I.MTyp (tA', cPsi'))
   | I.PTyp (tA, cPsi) -> 
     let phat = Context.dctxToHat cPsi in
-    let (cQ', cPsi') = collectDctx (Syntax.Loc.ghost) p cQ phat cPsi in
+    let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
     let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
     (cQ'', I.PTyp (tA', cPsi'))
   | I.STyp (cPhi, cPsi) ->
      let psi_hat = Context.dctxToHat cPsi in
      let phi_hat = Context.dctxToHat cPhi in
-     let (cQ0, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ psi_hat cPsi in
-     let (cQ1, cPhi') = collectDctx (Syntax.Loc.ghost) p cQ0 phi_hat cPhi in
+     let (cQ0, cPsi') = collectDctx loc p cQ psi_hat cPsi in
+     let (cQ1, cPhi') = collectDctx loc p cQ0 phi_hat cPhi in
        (cQ1, I.STyp (cPhi', cPsi'))
 
 let collectCDecl p cQ cdecl = match cdecl with
@@ -1497,15 +1499,6 @@ and collect_meta_spine p cQ cS = match cS with
       let (cQ', cM') = collect_meta_obj p cQ cM in
       let (cQ'', cS') = collect_meta_spine p cQ' cS in
         (cQ'', Comp.MetaApp (cM', cS'))
-
-let collectMetaTyp loc p cQ mT = match mT with 
-  | Int.LF.MTyp (tA, cPsi) -> 
-      let phat = Context.dctxToHat cPsi in
-      let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-      let (cQ'', tA')  = collectTyp p cQ' phat (tA, LF.id) in
-	(cQ'', Int.LF.MTyp (tA', cPsi'))
-  | Int.LF.CTyp _w -> (cQ, mT)
-
 
 let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) ->

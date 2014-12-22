@@ -1423,48 +1423,23 @@ module Int = struct
     end
 
 
-    and fmt_ppr_refine_elem cD decl lvl ppf = function
+    and fmt_ppr_refine_elem cD decl lvl ppf m =
+      let name = begin match decl with
+	| LF.Decl(name,_,_) -> name
+	| LF.DeclOpt name -> name
+      end  in
+     match m with
       | LF.CObj (cPsi) ->
-          let psi    =
-            begin match decl with
-              | LF.Decl(psi, LF.CTyp _ , _) -> psi
-              | LF.DeclOpt psi -> psi 
-              | LF.Decl(psi, _,_) -> psi
-            end in
           fprintf ppf "%a = %s"
             (fmt_ppr_lf_dctx cD lvl) cPsi
-            (R.render_name psi)
+            (R.render_name name)
 
-      | LF.ClObj (psihat, LF.MObj m) ->
+      | LF.ClObj (psihat, m) ->
           let cPsi = phatToDCtx psihat in
-          let u    =
-            begin match decl with
-              | LF.Decl(u, LF.MTyp (_ , _), _ ) -> u
-              | LF.DeclOpt u -> u
-              | LF.Decl(u, _,_) -> u
-            end in
           fprintf ppf "%a |- %a = %s"
             (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_normal cD cPsi lvl) m
-            (R.render_name u)
-
-      | LF.ClObj (psihat, LF.PObj h) ->
-          let cPsi = phatToDCtx psihat in
-          let p =
-            begin match decl with
-              | LF.Decl(p, _, _) -> p
-              | LF.DeclOpt p -> p
-            end in
-          fprintf ppf "%a |- %a = #%s"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_head cD cPsi lvl) h
-            (R.render_name p)
-
-      | LF.ClObj (phat, LF.SObj sigma) ->
-          let cPsi = phatToDCtx phat in
-          fprintf ppf "%a |- %a = #SVAR"
-            (fmt_ppr_lf_psi_hat cD lvl) cPsi
-            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+            (fmt_ppr_lf_clobj cD lvl cPsi) m
+            (R.render_name name)
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

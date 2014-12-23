@@ -137,6 +137,7 @@ let _ = Error.register_printer
 (* marker will indicate whether the type of the variable is already clean,
    i.e. the meta-variables and free variables occurring the type had been
    collected *)
+type flag = LF | Comp
 type sort = LFTyp of I.typ | MetaTyp of I.ctyp
 type marker = Pure of sort | Impure
  
@@ -494,22 +495,23 @@ and collectMMVar' loc p cQ v tp = match checkOccurrence loc v cQ with
      let (cQ2, tp') = collectBothTyp loc p cQ' tp in 
      (I.Dec (cQ2, FDecl (v, Pure tp')), tp')
 
-and collectLFVar loc p cQ name =
-  begin try
-   let Int.LF.Type tA = FVar.get name in
-   let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (LFTyp tA) in
-   cQ2
+and getType loc p name f =
+  begin try match f with
+  | LF -> let Int.LF.Type tA = FVar.get name in (LFTyp tA)
+  | Comp ->
+    let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+    let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
+    MetaTyp mtyp'
    with Not_found -> raise (Error (loc, UnknownMTyp name))
   end 
 
-and collectFVar' loc p cQ0 name =
-  begin try
-   let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
-   let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
-   let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) (MetaTyp mtyp') in
+and collectLFVar loc p cQ name =
+   let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (getType loc p name LF) in
    cQ2
-   with Not_found -> raise (Error (loc, UnknownMTyp name))
-  end
+
+and collectFVar' loc p cQ0 name =
+   let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) (getType loc p name Comp) in
+   cQ2
 
 and collectFVar p cQ phat name s' = 
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in

@@ -505,13 +505,13 @@ and getType loc p name f =
    with Not_found -> raise (Error (loc, UnknownMTyp name))
   end 
 
-and collectLFVar loc p cQ name =
-   let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (getType loc p name LF) in
-   cQ2
+and collectFVar'' fl loc p cQ name =
+  let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (getType loc p name fl) in
+  cQ2
 
-and collectFVar' loc p cQ0 name =
-   let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) (getType loc p name Comp) in
-   cQ2
+and collectLFVar l = collectFVar'' LF l
+
+and collectFVar' l = collectFVar'' Comp l
 
 and collectFVar p cQ phat name s' = 
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in

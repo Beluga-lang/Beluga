@@ -304,12 +304,9 @@ and cnstr_spine sS = match sS with
 
 
 and cnstr_head h = match h with
-  | I.MMVar((_, _r, _, _ , cnstr, _), (_ms, s)) ->
-       (if constraints_solved (!cnstr) then
-          cnstr_sub s
-        else false)
-
+  | I.MMVar((_, _r, _, _ , cnstr, _), (_, s))
   | I.MVar(I.Inst (_, _r, _ , _ , cnstr, _), s) ->
+
        (if constraints_solved (!cnstr) then
           cnstr_sub s
         else false)
@@ -349,10 +346,8 @@ let rec index_of cQ n =
   | (I.Dec (cQ', FDecl (_, Impure)), _ ) ->
       index_of cQ' n
 
-  | (I.Dec (cQ', FDecl (MMV u1, Pure t1)), MMV u2) ->
-      if eqVar (MMV u1) (MMV u2) then 1 else ((index_of cQ' n) + 1)
-  | (I.Dec (cQ', FDecl (FV f1, Pure tA)), FV f2) ->
-      if eqVar (FV f1) (FV f2) then 1 else ((index_of cQ' n) + 1)
+  | (I.Dec (cQ', FDecl (k1, Pure t1)), k2) ->
+      if eqVar k1 k2 then 1 else ((index_of cQ' n) + 1)
 
   | (I.Dec (cQ', _), _) ->
       (index_of cQ' n) + 1

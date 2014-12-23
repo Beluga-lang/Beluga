@@ -6,7 +6,7 @@
 open Syntax.Int
 
 type varvariant =
-    VariantFV | VariantMMV | VariantFMV
+    VariantFV | VariantMMV
 
 type error =
   | LeftoverVars of varvariant

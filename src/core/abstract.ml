@@ -475,37 +475,41 @@ and collectSpine (p:int) cQ phat sS = match sS with
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
+and collectBothTyp loc p cQ = function
+  | MetaTyp tp ->
+    let (cQ', tp') = collectMetaTyp loc p cQ tp in
+    (cQ', MetaTyp tp')
+  | LFTyp tA -> (* tA must be closed *)
+       (* Since we only use abstraction on pure LF objects,
+          there are no context variables; different abstraction
+          is necessary for handling computation-level expressions,
+          and LF objects which occur in computations. *)
+    let (cQ', tA') = collectTyp p cQ (None, 0) (tA, LF.id) in
+    (cQ', LFTyp tA')
 
 and collectMMVar' loc p cQ v tp = match checkOccurrence loc v cQ with
    | Yes ->  (cQ, tp)
    | No  ->
      let cQ' = I.Dec(cQ, FDecl(v, Impure)) in
-     let (cQ2, tp') = collectMetaTyp loc p cQ' tp in 
-     (I.Dec (cQ2, FDecl (v, Pure (MetaTyp tp'))), tp')
+     let (cQ2, tp') = collectBothTyp loc p cQ' tp in 
+     (I.Dec (cQ2, FDecl (v, Pure tp')), tp')
 
-(* TODO: Can we combine these two functions into one?... *)
-and collectLFVar loc k cQ name = begin match checkOccurrence loc (FV name) cQ with
-   | Yes -> cQ
-   | No ->
-      let Int.LF.Type tA  = FVar.get name in
-      let (cQ', tA') = collectTyp k (I.Dec(cQ, FDecl (FV name, Impure))) (None, 0) (tA, LF.id) in
-       (* tA must be closed *)
-       (* Since we only use abstraction on pure LF objects,
-          there are no context variables; different abstraction
-          is necessary for handling computation-level expressions,
-          and LF objects which occur in computations. *)
-       (I.Dec (cQ', FDecl (FV name, Pure (LFTyp tA'))))
-      end
+and collectLFVar loc p cQ name =
+  begin try
+   let Int.LF.Type tA = FVar.get name in
+   let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (LFTyp tA) in
+   cQ2
+   with Not_found -> raise (Error (loc, UnknownMTyp name))
+  end 
 
 and collectFVar' loc p cQ0 name =
-   begin try
-     let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
-     let d = p - Context.length cD_d in
-     let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
-     let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) mtyp' in
-     cQ2
-      with Not_found -> raise (Error (loc, UnknownMTyp name))
-    end
+  begin try
+   let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+   let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
+   let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) (MetaTyp mtyp') in
+   cQ2
+   with Not_found -> raise (Error (loc, UnknownMTyp name))
+  end
 
 and collectFVar p cQ phat name s' = 
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
@@ -516,7 +520,7 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> let (cQ', tp') = collectMMVar' loc p cQ (MMV (n,q)) tp in
+	  | None -> let (cQ', MetaTyp tp') = collectMMVar' loc p cQ (MMV (n,q)) (MetaTyp tp) in
 		    (cQ', (n, q, cD, tp', c, dep))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else

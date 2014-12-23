@@ -475,21 +475,19 @@ and collectSpine (p:int) cQ phat sS = match sS with
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
+and collectFVar' p cQ0 phat name = match checkOccurrence Syntax.Loc.ghost (FV name) cQ0 with
+  | Yes -> cQ0
+  | No ->
+    let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+    let d = p - Context.length cD_d in
+    let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
+    let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
+    let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
+    I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp'')))
 
 and collectFVar p cQ phat name s' = 
-  let (cQ0, sigma) = collectSub p cQ phat s' in
-    begin match checkOccurrence Syntax.Loc.ghost (FV name) cQ with
-          | Yes ->
-                (cQ0, sigma)
-          | No ->
-              let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
-	      let d = p - Context.length cD_d in
-	      let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
-              let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
-              let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
-                (I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp''))),
-                 sigma)
-    end
+  let cQ0 = collectFVar' p cQ phat name in
+  collectSub p cQ0 phat s'
 
 (* collectSub p cQ phat s = cQ'
 
@@ -763,13 +761,7 @@ and collectHat p cQ phat = match phat with
           | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , phat)
         end
   | (Some (I.CtxName psi) , _ ) ->
-      begin match checkOccurrence Syntax.Loc.ghost (FV psi) cQ with
-          | Yes -> (cQ, phat)
-          | No ->
-              let (_,I.Decl (_, I.CTyp s_cid,_))  = FCVar.get psi in
-                (I.Dec (cQ, FDecl (FV psi, Pure (MetaTyp (I.CTyp s_cid)))),
-                 phat)
-        end
+    (collectFVar' p cQ phat psi, phat)
 
 and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
   collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)

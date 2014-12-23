@@ -513,11 +513,18 @@ and collectFVar p cQ phat name s' =
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
   collectSub p cQ0 phat s'
 
-and collectMVar p cQ phat (n,s) tp ms' s' = 
-  let (cQ, tp') = collectMVar' Syntax.Loc.ghost p cQ (n,s) tp in
+and collectMVar loc p cQ phat (n,s) tp ms' s' = 
+  let (cQ, tp') = collectMVar' loc p cQ (n,s) tp in
   let (cQ0, ms') = collectMSub p cQ ms' in
   let (cQ', s') = collectSub p cQ0 phat s' in
   (cQ', tp', (ms',s'))
+
+and collectMVar2 loc p cQ phat (n, q, cD, tp, c, dep) ms' s' = 
+  if constraints_solved !c then
+   let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
+   (cQ', (n, q, cD, tp', c, dep), (ms',s'))
+  else
+   raise (Error (loc, LeftoverConstraints))
   
 
 (* collectSub p cQ phat s = cQ'
@@ -562,7 +569,7 @@ and collectSub (p:int) cQ phat s = match s with
 
   | I.MSVar ((n, s, cD, tp, ({contents = cnstr} as c), dep), k, (ms',s')) ->
     if constraints_solved cnstr then
-      let (cQ', tp', (ms',s')) = collectMVar p cQ phat (n,s) tp ms' s' in
+      let (cQ', tp', (ms',s')) = collectMVar Syntax.Loc.ghost p cQ phat (n,s) tp ms' s' in
       (cQ', I.MSVar ((n, s, cD, tp', c, dep), k, (ms',s')))
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
@@ -610,12 +617,9 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     let (cQ0, sigma) = collectFVar k cQ phat u (LF.comp s' s) in
     (cQ0, I.FMVar (u, sigma))
 
-  | (I.MVar (I.Inst ((n, q, cD, tp,  ({contents = cnstr} as c), dep)), s'), _s) ->
-      if constraints_solved cnstr then
-	let (cQ', tp', (ms',s')) = collectMVar k cQ phat (n,q) tp Whnf.m_id s' in
-	(cQ', I.MVar (I.Inst (n, q, cD, tp', c, dep), s'))
-      else
-        raise (Error (loc, LeftoverConstraints))
+  | (I.MVar (I.Inst i, s'), _s) ->
+     let (cQ', i', (ms',s')) = collectMVar2 loc k cQ phat i Whnf.m_id s' in
+	 (cQ', I.MVar (I.Inst i', s'))
 
   | (I.MMVar ((n, ({contents = None} as q), I.Empty, (I.ClTyp (I.MTyp tA,cPsi)),  ({contents = cnstr} as c), dep) as r, (ms', s')), _s) ->
       if constraints_solved cnstr then

@@ -688,14 +688,22 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
         (cQ'', I.PiKind ((I.TypDecl (x, tA'), dep), tK'))
 
 
+and collectCVar loc p cQ phat = function
+  | (I.CtxOffset k) -> (cQ, I.CtxOffset k)
+  | (I.CInst (i, ms)) ->
+    let (n,r,cD,tp,_,_) = i in
+    begin match checkOccurrence loc (MMV (n,r)) cQ with
+      | Yes -> (cQ, I.CInst (i,ms))
+      | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , I.CInst (i,ms))
+    end
+  | (I.CtxName psi) ->
+    (collectFVar' loc p cQ psi, I.CtxName psi)
+
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
-  | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst (i, ms)), offset ) ->
-    let (cQ', i', (ms',s')) = collectMVar2 Syntax.Loc.ghost p cQ phat i ms LF.id in
-    (cQ', (Some (I.CInst (i', ms')) , offset))
-  | (Some (I.CtxName psi) , _ ) ->
-    (collectFVar' Syntax.Loc.ghost p cQ psi, phat)
+  | (Some cv, offset) ->
+    let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ phat cv 
+    in (cQ', (Some cv', offset))
 
 and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
   collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)

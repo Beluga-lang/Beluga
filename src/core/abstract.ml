@@ -387,15 +387,15 @@ let rec ctxToCtx cQ = match cQ with
   | I.Dec (cQ', FDecl (_, Impure)) ->
     ctxToCtx cQ'
 
+let getName = function
+  | MMV (n,_) | FV n -> n
+
 let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', FDecl (MMV (n,_), Pure (MetaTyp ityp))) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (n, ityp, I.Maybe))
-
-  | I.Dec (cQ', FDecl (FV u, Pure (MetaTyp mtyp))) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (u, mtyp, I.Maybe))
+  | I.Dec (cQ', FDecl (s, Pure (MetaTyp ityp))) ->
+      I.Dec (ctxToMCtx cQ', I.Decl (getName s, ityp, I.Maybe))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx cQ', I.Decl (x, I.CTyp w, dep))

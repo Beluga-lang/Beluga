@@ -502,9 +502,23 @@ and collectFVar' loc p cQ0 name = match checkOccurrence loc (FV name) cQ0 with
       with Not_found -> raise (Error (loc, UnknownMTyp name))
     end 
 
+and collectMVar' loc p cQ (n,s) tp = match checkOccurrence Syntax.Loc.ghost (MMV (n,s)) cQ with
+   | Yes ->  (cQ, tp)
+   | No  ->
+     let cQ' = I.Dec(cQ, FDecl(MMV (n,s), Impure)) in
+     let (cQ2, tp') = collectMetaTyp loc p cQ' tp in 
+     (I.Dec (cQ2, FDecl (MMV (n,s), Pure (MetaTyp tp'))), tp')
+
 and collectFVar p cQ phat name s' = 
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
   collectSub p cQ0 phat s'
+
+and collectMVar p cQ phat (n,s) tp ms' s' = 
+  let (cQ, tp') = collectMVar' Syntax.Loc.ghost p cQ (n,s) tp in
+  let (cQ0, ms') = collectMSub p cQ ms' in
+  let (cQ', s') = collectSub p cQ0 phat s' in
+  (cQ', tp', (ms',s'))
+  
 
 (* collectSub p cQ phat s = cQ'
 
@@ -546,26 +560,10 @@ and collectSub (p:int) cQ phat s = match s with
     let (cQ1,s') = collectSub p cQ phat s in
        (cQ1, I.SVar(offset, n, s'))
 
-  | I.MSVar ((n, s, cD, (I.ClTyp (I.STyp cPhi, cPsi)), ({contents = cnstr} as c), dep) as sv, k, (ms',s')) ->
+  | I.MSVar ((n, s, cD, tp, ({contents = cnstr} as c), dep), k, (ms',s')) ->
     if constraints_solved cnstr then
-      begin match checkOccurrence Syntax.Loc.ghost (MMV (n,s)) cQ with
-        | Yes ->
-            let (cQ0, ms') = collectMSub k cQ ms' in
-            let (cQ', s') = collectSub p cQ0 phat s' in
-              (cQ', I.MSVar(sv, k, (ms',s')))
-        | No  ->
-            let (cQ, ms') = collectMSub k cQ ms' in
-            let (cQ0, s') = collectSub p cQ phat s' in
-            let cQ' = I.Dec(cQ0, FDecl(MMV (n,s), Impure)) in
-            let psihat = Context.dctxToHat cPsi in
-            let (cQ1, cPsi')  = collectDctx (Syntax.Loc.ghost) k cQ' psihat cPsi in
-            let phihat = Context.dctxToHat cPhi in
-            let (cQ2, cPhi')  = collectDctx  (Syntax.Loc.ghost) k cQ1 phihat cPhi in
-	    let tp' = I.ClTyp (I.STyp cPhi', cPsi') in
-	    let sv' = (n,s, cD, tp', c, dep) in
-            let sigma' = I.MSVar (sv', k , (ms',s')) in
-              (I.Dec (cQ2, FDecl (MMV (n,s), Pure (MetaTyp tp'))), sigma')
-      end
+      let (cQ', tp', (ms',s')) = collectMVar k cQ phat (n,s) tp ms' s' in
+      (cQ', I.MSVar ((n, s, cD, tp', c, dep), k, (ms',s')))
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
 

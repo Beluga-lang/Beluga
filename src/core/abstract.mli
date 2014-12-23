@@ -14,7 +14,7 @@ type error =
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier
-  | UnknownSchemaCtx of Id.name
+  | UnknownMTyp of Id.name
 
 
 exception Error of Syntax.Loc.t * error

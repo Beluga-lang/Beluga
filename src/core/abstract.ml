@@ -27,7 +27,7 @@ type error =
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier
-  | UnknownSchemaCtx of name
+  | UnknownMTyp of name
 
 
 exception Error of Syntax.Loc.t * error
@@ -64,8 +64,8 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | UnknownSchemaCtx psi ->
-            Format.fprintf ppf "Unable to infer schema for context variable %s"
+        | UnknownMTyp psi ->
+            Format.fprintf ppf "Unable to infer type for variable %s"
               (R.render_name psi)
         | LeftoverVars (MMV _) ->
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
@@ -475,18 +475,21 @@ and collectSpine (p:int) cQ phat sS = match sS with
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
-and collectFVar' p cQ0 phat name = match checkOccurrence Syntax.Loc.ghost (FV name) cQ0 with
+and collectFVar' loc p cQ0 name = match checkOccurrence loc (FV name) cQ0 with
   | Yes -> cQ0
   | No ->
-    let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
-    let d = p - Context.length cD_d in
-    let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
-    let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
-    let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
-    I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp'')))
+    begin try
+     let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+     let d = p - Context.length cD_d in
+     let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
+     let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
+     let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
+     I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp'')))
+      with Not_found -> raise (Error (loc, UnknownMTyp name))
+    end 
 
 and collectFVar p cQ phat name s' = 
-  let cQ0 = collectFVar' p cQ phat name in
+  let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
   collectSub p cQ0 phat s'
 
 (* collectSub p cQ phat s = cQ'
@@ -761,7 +764,7 @@ and collectHat p cQ phat = match phat with
           | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , phat)
         end
   | (Some (I.CtxName psi) , _ ) ->
-    (collectFVar' p cQ phat psi, phat)
+    (collectFVar' Syntax.Loc.ghost p cQ psi, phat)
 
 and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
   collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)
@@ -770,17 +773,8 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
 
   | I.CtxVar (I.CtxName psi) ->
-        begin match checkOccurrence loc (FV psi) cQ with
-          | Yes ->   (cQ , cPsi)
-          | No ->
-	      begin try
-		let (_,I.Decl (_, I.CTyp s_cid, _))  = FCVar.get psi in
-                  (I.Dec (cQ, FDecl (FV psi, Pure (MetaTyp (I.CTyp s_cid)))),
-                   I.CtxVar (I.CtxName psi))
-	      with
-		  Not_found -> raise (Error (loc, UnknownSchemaCtx psi))
-	      end
-        end
+    (collectFVar' loc p cQ psi, cPsi)
+
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
   | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)} , _cD, _, _, _), theta)) ->

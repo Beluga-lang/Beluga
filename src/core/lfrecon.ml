@@ -1931,7 +1931,7 @@ and elSub' loc recT cD cPsi s cPhi =
         let sigma' = elSub loc recT cD cPsi sigma cPsi0' in
         begin try
                 Unify.unifyDCtx cD cPhi cPhi0';
-                Int.LF.FSVar(s_name, 0, sigma')
+                Int.LF.FSVar(0, (s_name, sigma'))
           with Unify.Failure msg ->
             raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
         end
@@ -1939,7 +1939,7 @@ and elSub' loc recT cD cPsi s cPhi =
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
               (FCVar.add s_name (cD, Int.LF.Decl (s_name, Int.LF.ClTyp (Int.LF.STyp cPhi, cPsi'), Int.LF.Maybe));
-               Int.LF.FSVar (s_name, 0, sigma'))
+               Int.LF.FSVar (0, (s_name, sigma')))
           else
             raise (Error (loc, NotPatSub))
       end

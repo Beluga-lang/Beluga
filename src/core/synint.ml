@@ -74,8 +74,11 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
-    | SVar  of offset * int * sub             (*   | s[sigma]                   *)
-    | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
+    | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
+                                     and in the opposite order compared to FSVar and MSVar.
+                                     This is a pain to fix *)
+                                               (*   | s[sigma]                   *)
+    | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
     | EmptySub

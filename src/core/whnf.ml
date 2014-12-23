@@ -431,7 +431,7 @@ and normSub s = match s with
   | Undefs -> Undefs
   | Shift _      -> s
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
-  | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
+  | FSVar (n, (s, sigma)) -> FSVar (n, (s, normSub sigma))
   | SVar (offset, n, s') -> SVar (offset, n, normSub s')
   | MSVar (n, ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, mDep),
     (mt, s'))) ->
@@ -627,8 +627,8 @@ and cnorm (tM, t) = match tM with
               LF.comp (LF.comp (Shift n) r) (cnormSub (s',t))
       end
 
-    | FSVar (s_name, n, s') ->
-        FSVar (s_name, n, cnormSub (s', t))
+    | FSVar (n, (s_name, s')) ->
+        FSVar (n, (s_name, cnormSub (s', t)))
 
     | MSVar (n, ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, _),
              (mt,s'))) ->

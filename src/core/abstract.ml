@@ -569,9 +569,9 @@ and collectSub (p:int) cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.FSVar (s_name, n, s') ->
+  | I.FSVar (n, (s_name, s')) ->
     let (cQ', (s_name,sigma)) = collectFVarSub p cQ phat (s_name, s') in
-    (cQ', I.FSVar (s_name, n, sigma))
+    (cQ', I.FSVar (n, (s_name, sigma)))
 
   | I.SVar (offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in
@@ -1049,7 +1049,7 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
-  | I.FSVar (s, n, sigma) ->
+  | I.FSVar (n, (s, sigma)) ->
       let x = index_of cQ (FV s) + d in
       I.SVar (x, n, abstractMVarSub cQ offset sigma)
 

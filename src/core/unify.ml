@@ -459,7 +459,7 @@ match sigma with
     | MSVar (_, ((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ), _)) ->
       instantiateMSVar (r, EmptySub, !cnstrs);
       EmptySub      
-    | FSVar (s_name , ( _ ), _s2 ) ->
+    | FSVar (_, (s_name , _s2) ) ->
       let (_, Decl (_, ClTyp (STyp cPsi1,  _cPhi), _)) = Store.FCVar.get s_name in
       begin match cPsi1  with
         | Null -> EmptySub
@@ -886,10 +886,10 @@ match sigma with
                 SVar(v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
-    | (FSVar (s_name, n , t), cPsi1) ->
+    | (FSVar (n, (s_name, t)), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
         let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'), _)) = Store.FCVar.get s_name in
-        FSVar (s_name, n, invSub cD0 phat (t, cPsi') ss rOccur))
+        FSVar (n , (s_name, invSub cD0 phat (t, cPsi') ss rOccur)))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
         free substitution variables -- not defined"))*)
@@ -1499,10 +1499,10 @@ match sigma with
       let cPsi' = (let (_, _cPhi, cPsi') = Whnf.mctxSDec cD sv in cPsi') in
         SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
-    | (FSVar (s_name, n , sigma), cPsi1) ->
+    | (FSVar (n, (s_name, sigma)), cPsi1) ->
       let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
       let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s_name in
-        FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+        FSVar (n, (s_name, pruneSubst cD cPsi (sigma, cPsi') ss rOccur))
 
     | (MSVar (n, (((_ ,( {contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
                   (mt, sigma)) ), _cPsi1) ->
@@ -1624,7 +1624,7 @@ match sigma with
       let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
           (s', cPsi1')
 
-    | (FSVar (s, cshift, sigma), cPsi1) ->
+    | (FSVar (cshift, (s, sigma)), cPsi1) ->
         (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
                D ;Psi |- sigma : Phi
                D;Psi'' |- ss <= Psi
@@ -2658,7 +2658,7 @@ match sigma with
             else
               raise (Error "Substitutions not well-typed")
 
-      | (FSVar (s1, n1, sigma1), FSVar (s2, n2, sigma2))
+      | (FSVar (n1, (s1, sigma1)), FSVar (n2, (s2, sigma2)))
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")

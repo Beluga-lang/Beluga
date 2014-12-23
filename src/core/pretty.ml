@@ -448,7 +448,7 @@ module Int = struct
         | LF.Undefs -> ()
         | LF.Shift _ when hasCtxVar -> fprintf ppf ".."
         | LF.Shift _ when not hasCtxVar -> ()
-        | LF.FSVar (s_name, _, s) ->
+        | LF.FSVar (_, (s_name, s)) ->
           fprintf ppf "|- FSV %s[%a]"
 
             (R.render_name s_name )
@@ -491,7 +491,7 @@ module Int = struct
             fprintf ppf "^%s"
               (R.render_offset n)
 
-        | LF.FSVar (s_name, n, s) ->
+        | LF.FSVar (n, (s_name, s)) ->
                 fprintf ppf
                   "#^%s FSV %s[%a]"
                   (R.render_offset n)

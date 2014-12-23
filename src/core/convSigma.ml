@@ -130,9 +130,9 @@ and strans_sub cD s conv_list = match s with
   | Int.LF.SVar (s, offset, sigma) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.SVar (s, offset, sigma')
-  | Int.LF.FSVar (s, n , sigma) ->
+  | Int.LF.FSVar (n, (s, sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.FSVar (s, n, sigma')
+        Int.LF.FSVar (n, (s, sigma'))
   | Int.LF.MSVar (offset, (rho, (mt, sigma))) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.MSVar (offset, (rho, (mt, sigma')))

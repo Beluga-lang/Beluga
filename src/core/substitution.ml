@@ -47,7 +47,7 @@ module LF = struct
     | (n,Undefs) -> Undefs
     | (n,SVar(s, k, r)) -> SVar (s, (k+n), r)
     | (n,MSVar(k, (s, (t,r)))) -> MSVar (k+n, (s, (t,r)))
-    | (n,FSVar (s, k, tau)) -> FSVar (s, (k+n), tau)
+    | (n,FSVar (k, (s, tau))) -> FSVar (k+n, (s, tau))
     | (n,Shift m) -> Shift (n + m)
     | (n,Dot (_ft, s)) -> shiftComp (n - 1) s
  
@@ -74,8 +74,8 @@ module LF = struct
     | (MSVar (n, (s, (theta, tau))), s2) ->
         MSVar (n , (s, (theta, comp tau s2)))
 
-    | (FSVar (s, n, tau), s2) ->
-        FSVar (s, n, comp tau s2)
+    | (FSVar (n, (s, tau)), s2) ->
+        FSVar (n, (s, comp tau s2))
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]

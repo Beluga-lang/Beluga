@@ -476,6 +476,21 @@ and collectSpine (p:int) cQ phat sS = match sS with
       (cQ'', I.App (tM', tS'))
 
 
+and collectFVar p cQ phat name s' = 
+  let (cQ0, sigma) = collectSub p cQ phat s' in
+    begin match checkOccurrence Syntax.Loc.ghost (FV name) cQ with
+          | Yes ->
+                (cQ0, sigma)
+          | No ->
+              let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+	      let d = p - Context.length cD_d in
+	      let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
+              let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
+              let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
+                (I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp''))),
+                 sigma)
+    end
+
 (* collectSub p cQ phat s = cQ'
 
    Invariant:
@@ -509,25 +524,8 @@ and collectSub (p:int) cQ phat s = match s with
        (cQ1, I.Dot (I.Undef, s)))
 
   | I.FSVar (s_name, n, s') ->
-        begin match checkOccurrence Syntax.Loc.ghost (FV s_name) cQ with
-          | Yes ->
-              let (cQ', sigma) = collectSub p cQ phat s' in
-                (cQ', I.FSVar (s_name, n, sigma))
-          | No ->
-              let (cQ0, sigma) = collectSub p cQ phat s' in
-              let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get s_name in
-	      let d = p - Context.length cD_d in
-	      let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
-              let cQ' = I.Dec(cQ0, FDecl (FV s_name, Impure)) in
-              let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
-                (* tA must be closed with respect to cPhi *)
-                (* Since we only use abstraction on pure LF objects,
-                   there are no context variables; different abstraction
-                   is necessary for handling computation-level expressions,
-                   and LF objects which occur in comp utations. *)
-                (I.Dec (cQ1, FDecl (FV s_name, Pure (MetaTyp mtyp''))),
-                 I.FSVar (s_name, n, sigma))
-        end
+    let (cQ', sigma) = collectFVar p cQ phat s_name s' in
+    (cQ', I.FSVar (s_name, n, sigma))
 
   | I.SVar (offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in
@@ -608,22 +606,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 
 
   | (I.FMVar (u, s'), s) ->
-        begin match checkOccurrence loc (FV u) cQ with
-          | Yes ->
-              let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s) in (cQ', I.FMVar (u, sigma))
-          | No ->
-              let (cQ0, sigma) = collectSub k cQ phat (LF.comp s' s) in
-              let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get u in
-	      let mtyp = (Whnf.cnormMTyp (mtyp, Int.LF.MShift (k - Context.length cD_d))) in
-              let cQ' = I.Dec(cQ0, FDecl (FV u, Impure)) in
-              let (cQ1, mtyp)  = collectMTyp k cQ' mtyp in
-                (* tA must be closed with respect to cPhi *)
-                (* Since we only use abstraction on pure LF objects,
-                   there are no context variables; different abstraction
-                   is necessary for handling computation-level expressions,
-                   and LF objects which occur in comp utations. *)
-                (I.Dec (cQ1, FDecl (FV u, Pure (MetaTyp mtyp))), I.FMVar (u, sigma))
-      end
+    let (cQ0, sigma) = collectFVar k cQ phat u (LF.comp s' s) in
+    (cQ0, I.FMVar (u, sigma))
 
   | (I.MVar (I.Inst ((n, q, cD, mtyp,  ({contents = cnstr} as c), dep)) as r, s'), _s) ->
       if constraints_solved cnstr then

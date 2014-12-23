@@ -696,14 +696,13 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in
         (cQ', I.MVar (I.Offset j, sigma))
 
-  | (I.FPVar (u, s'), _s) ->
-    let (cQ', sigma) = collectFVar k cQ phat u s' (* (LF.comp s' s) *) in
+  | (I.FPVar (u, s'), s) ->
+    let (cQ', sigma) = collectFVar k cQ phat u (LF.comp s' s) in
     (cQ', I.FPVar (u, sigma))
 
-  | (I.PVar (k', s'), _s) ->
-      let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in
+  | (I.PVar (k', s'), s) ->
+      let (cQ', sigma) =  collectSub k cQ phat (LF.comp s' s) in
         (cQ', I.PVar (k', sigma))
-
 
   | (I.Proj (head, j),  s) ->
       let (cQ', h') = collectHead k cQ phat loc (head, s)  in

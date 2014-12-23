@@ -519,6 +519,7 @@ and collectMVar loc p cQ phat (n,s) tp ms' s' =
   let (cQ', s') = collectSub p cQ0 phat s' in
   (cQ', tp', (ms',s'))
 
+(* TODO: Doing the substitutions in here too is kinda wrong *)
 and collectMVar2 loc p cQ phat (n, q, cD, tp, c, dep) ms' s' = 
   match cD with
     | I.Empty -> begin
@@ -690,11 +691,9 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst ((n, ({contents=None} as r), _, tp, _, _), _theta )), _ ) ->
-        begin match checkOccurrence Syntax.Loc.ghost (MMV (n,r)) cQ with
-          | Yes -> (cQ, phat)
-          | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , phat)
-        end
+  | (Some (I.CInst (i, ms)), offset ) ->
+    let (cQ', i', (ms',s')) = collectMVar2 Syntax.Loc.ghost p cQ phat i ms LF.id in
+    (cQ', (Some (I.CInst (i', ms')) , offset))
   | (Some (I.CtxName psi) , _ ) ->
     (collectFVar' Syntax.Loc.ghost p cQ psi, phat)
 
@@ -709,7 +708,7 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
 
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
 
-  | I.CtxVar (I.CInst ((n, ({contents = None} as r) , _cD, tp, _, _), _theta)) ->
+  | I.CtxVar (I.CInst ((n, ({contents = None} as r) , _cD, tp, _, _), ms)) ->
         (* this case should not happen *)
         begin match checkOccurrence loc (MMV (n,r)) cQ with
           | Yes -> (cQ, cPsi)

@@ -562,7 +562,7 @@ and collectSub (p:int) cQ phat s = match s with
 
   | I.MSVar ((n, s, cD, tp, ({contents = cnstr} as c), dep), k, (ms',s')) ->
     if constraints_solved cnstr then
-      let (cQ', tp', (ms',s')) = collectMVar k cQ phat (n,s) tp ms' s' in
+      let (cQ', tp', (ms',s')) = collectMVar p cQ phat (n,s) tp ms' s' in
       (cQ', I.MSVar ((n, s, cD, tp', c, dep), k, (ms',s')))
     else
         raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
@@ -610,21 +610,10 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     let (cQ0, sigma) = collectFVar k cQ phat u (LF.comp s' s) in
     (cQ0, I.FMVar (u, sigma))
 
-  | (I.MVar (I.Inst ((n, q, cD, mtyp,  ({contents = cnstr} as c), dep)) as r, s'), _s) ->
+  | (I.MVar (I.Inst ((n, q, cD, tp,  ({contents = cnstr} as c), dep)), s'), _s) ->
       if constraints_solved cnstr then
-          begin match checkOccurrence loc (MMV (n,q)) cQ with
-            | Yes ->
-                let (cQ', sigma) = collectSub k cQ phat s' in
-                  (cQ', I.MVar(r, sigma))
-            | No ->
-                (*  checkEmpty !cnstrs? -bp *)
-                let (cQ0, sigma) = collectSub k cQ phat s' in
-                let cQ' = I.Dec(cQ0, FDecl (MMV (n,q), Impure)) in
-                let (cQ'', mtyp') = collectMTyp k cQ' mtyp in
-		let v' = (n, q, cD, mtyp',  c, dep) in
-                let v = I.MVar (I.Inst v', sigma) in
-                  (I.Dec (cQ'', FDecl (MMV (n,q), Pure (MetaTyp mtyp'))) , v)
-          end
+	let (cQ', tp', (ms',s')) = collectMVar k cQ phat (n,q) tp Whnf.m_id s' in
+	(cQ', I.MVar (I.Inst (n, q, cD, tp', c, dep), s'))
       else
         raise (Error (loc, LeftoverConstraints))
 

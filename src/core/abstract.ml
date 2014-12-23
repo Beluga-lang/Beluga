@@ -162,9 +162,14 @@ let rec raiseType cPsi tA = match cPsi with
   | I.DDec (cPsi', decl) ->
       raiseType cPsi' (I.PiTyp ((decl, I.Maybe), tA))
 
+let rec raiseType' cPsi tA = match cPsi with
+  | I.Empty -> (None, tA)
+  | I.Dec (cPsi', decl) ->
+      raiseType' cPsi' (I.PiTyp ((decl, I.Maybe), tA))
+
 let rec raiseKind cPsi tK = match cPsi with
-  | I.Null -> tK
-  | I.DDec (cPsi', decl) ->
+  | I.Empty -> tK
+  | I.Dec (cPsi', decl) ->
       raiseKind cPsi' (I.PiKind ((decl, I.Maybe), tK))
 
 let rec collectionToString cQ = match cQ with
@@ -229,6 +234,10 @@ let rec checkOccurrence loc p = function
 let length cPsi =
   let (_, n) = Context.dctxToHat cPsi in
     n
+
+let rec length' = function
+  | I.Empty -> 0
+  | I.Dec (c, _) -> length' c + 1
 
 let rec lengthCollection cQ = match cQ with
   | I.Empty        -> 0
@@ -359,24 +368,6 @@ let rec index_of cQ n =
    If   cQ = cQ1 (FV (F, A)) cQ2
    then (ctxToDctx cQ) = (ctxToDctx cQ1) A (ctxToDctx cQ2)
 *)
-let rec ctxToDctx cQ = match cQ with
-  | I.Empty ->
-      I.Null
-
-  | I.Dec (cQ', FDecl (_, Impure)) ->
-      ctxToDctx cQ'
-
-  | I.Dec (cQ', FDecl (MMV (_,_), Pure (MetaTyp (I.ClTyp (I.MTyp tA,cPsi))))) ->
-      begin match raiseType cPsi tA with
-        | (None, tA') ->
-            let x = Id.mk_name (Id.MVarName (Typ.gen_var_name tA')) in
-            I.DDec (ctxToDctx cQ', I.TypDecl (x, tA'))
-        | (Some _, _ ) -> raise (Error.Violation "ctxToDctx generates LF-dctx with context variable.")
-      end
-  | I.Dec (cQ', FDecl (FV x, Pure (LFTyp tA))) ->
-      (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in  *)
-      I.DDec (ctxToDctx cQ', I.TypDecl (x, tA))
-
 
 let rec ctxToCtx cQ = match cQ with
   | I.Empty ->
@@ -1307,8 +1298,8 @@ let abstrKind tK =
       | _       ->
           let cQ'        = abstractCtx cQ in
           let tK''        = abstractKind cQ' 0 (tK', LF.id) in
-          let cPsi       = ctxToDctx cQ' in
-            (raiseKind cPsi tK'', length cPsi)
+          let cPsi       = ctxToCtx cQ' in
+            (raiseKind cPsi tK'', length' cPsi)
     end
 
 and abstrTyp tA =
@@ -1320,9 +1311,9 @@ and abstrTyp tA =
       | Int.LF.Dec(_,FDecl (s,_))        ->
           let cQ'        = abstractCtx cQ in
           let tA2        = abstractTyp cQ' 0 (tA', LF.id) in
-          let cPsi       = ctxToDctx cQ' in
-            begin match raiseType cPsi tA2 with
-              | (None, tA3) -> (tA3, length cPsi)
+          let cPsi       = ctxToCtx cQ' in
+            begin match raiseType' cPsi tA2 with
+              | (None, tA3) -> (tA3, length' cPsi)
               | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars s))
             end
     end

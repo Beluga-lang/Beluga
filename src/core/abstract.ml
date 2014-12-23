@@ -488,7 +488,7 @@ and collectBothTyp loc p cQ = function
     let (cQ', tA') = collectTyp p cQ (None, 0) (tA, LF.id) in
     (cQ', LFTyp tA')
 
-and collectMMVar' loc p cQ v tp = match checkOccurrence loc v cQ with
+and addVar loc p cQ v tp = match checkOccurrence loc v cQ with
    | Yes ->  (cQ, tp)
    | No  ->
      let cQ' = I.Dec(cQ, FDecl(v, Impure)) in
@@ -506,7 +506,7 @@ and getType loc p name f =
   end 
 
 and collectFVar fl loc p cQ name =
-  let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (getType loc p name fl) in
+  let (cQ2, _tp) = addVar loc p cQ (FV name) (getType loc p name fl) in
   cQ2
 
 and collectLFVar l = collectFVar LF l
@@ -522,7 +522,7 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> let (cQ', MetaTyp tp') = collectMMVar' loc p cQ (MMV (n,q)) (MetaTyp tp) in
+	  | None -> let (cQ', MetaTyp tp') = addVar loc p cQ (MMV (n,q)) (MetaTyp tp) in
 		    (cQ', (n, q, cD, tp', c, dep))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else

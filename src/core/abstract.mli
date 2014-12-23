@@ -10,7 +10,7 @@ type kind =
   | FV of Id.name
 
 type error =
-  | LeftoverVars of kind
+  | LeftoverVars
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier

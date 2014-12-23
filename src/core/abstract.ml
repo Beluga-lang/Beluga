@@ -23,7 +23,7 @@ type kind =
   | FV of Id.name
 
 type error =
-  | LeftoverVars of kind
+  | LeftoverVars
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier
@@ -67,7 +67,7 @@ let _ = Error.register_printer
         | UnknownMTyp psi ->
             Format.fprintf ppf "Unable to infer type for variable %s"
               (R.render_name psi)
-        | LeftoverVars (MMV _) ->
+        | LeftoverVars ->
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
         | LeftoverConstraints ->
           Format.fprintf ppf "Leftover constraints during abstraction."
@@ -520,11 +520,15 @@ and collectMVar loc p cQ phat (n,s) tp ms' s' =
   (cQ', tp', (ms',s'))
 
 and collectMVar2 loc p cQ phat (n, q, cD, tp, c, dep) ms' s' = 
-  if constraints_solved !c then
-   let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
-   (cQ', (n, q, cD, tp', c, dep), (ms',s'))
-  else
-   raise (Error (loc, LeftoverConstraints))
+  match cD with
+    | I.Empty -> begin
+      if constraints_solved !c then
+	let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
+	(cQ', (n, q, cD, tp', c, dep), (ms',s'))
+      else
+	raise (Error (loc, LeftoverConstraints))
+    end 
+    | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
   
 
 (* collectSub p cQ phat s = cQ'
@@ -618,39 +622,9 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
      let (cQ', i', (ms',s')) = collectMVar2 loc k cQ phat i Whnf.m_id s' in
 	 (cQ', I.MVar (I.Inst i', s'))
 
-  | (I.MMVar ((n, ({contents = None} as q), I.Empty, (I.ClTyp (I.MTyp tA,cPsi)),  ({contents = cnstr} as c), dep) as r, (ms', s')), _s) ->
-      if constraints_solved cnstr then
-          begin match checkOccurrence loc (MMV (n,q)) cQ with
-            | Yes ->
-                let (cQ0, ms1) = collectMSub k cQ ms' in
-                let (cQ', sigma) = collectSub k cQ0 phat s' in
-                  (cQ', I.MMVar(r, (ms1, sigma)))
-            | No  ->  (*  checkEmpty !cnstrs ? -bp *)
-                let (cQ0, ms1) = collectMSub k cQ ms' in
-                let (cQ2, sigma) = collectSub k cQ0 phat s' in
-
-                let cQ' = I.Dec(cQ2, FDecl (MMV (n,q), Impure)) in
-                let phihat = Context.dctxToHat cPsi in
-                (* let cPsi = Whnf.normDCtx cPsi in *)
-                let (cQ1, cPsi')  = collectDctx loc k cQ' phihat cPsi in
-                (* let (_ , offset) = phihat in
-                   let _ = dprint (fun () -> "[collect] (collect in cPsi and tA) for MMV : " ^ P.headToString I.Empty (Context.hatToDCtx phihat) head) in
-                   let _ = dprint (fun () -> "[collect] offset = " ^ string_of_int offset) in
-                   let _ = dprint (fun () -> "[collect] MMV before : cPsi = " ^ P.dctxToString I.Empty cPsi) in
-                   let _ = dprint (fun () -> "[collect] MMV after: cPsi' = " ^
-                   P.dctxToString I.Empty cPsi') in
-                *)
-                let (cQ'', tA') = collectTyp k cQ1  phihat (tA, LF.id) in
-		let tp' = I.ClTyp (I.MTyp tA',cPsi') in
-		let v' = (n, q, I.Empty, tp',  c, dep) in
-                let v = I.MMVar (v', (ms1, sigma)) in
-                  (I.Dec (cQ'', FDecl (MMV (n,q), Pure (MetaTyp tp'))) , v)
-          end
-      else
-        raise (Error (loc, LeftoverConstraints))
-
-  | (I.MMVar ((n, r, _cD, I.ClTyp (I.MTyp _tA,_cPsi),  _, _), _),  _s) ->
-      raise (Error (loc, LeftoverVars (MMV (n,r))))
+  | (I.MMVar (i, (ms', s')), _s) ->
+    let (cQ', i', (ms', s')) = collectMVar2 loc k cQ phat i ms' s'
+    in  (cQ', I.MMVar (i', (ms', s')))
 
   | (I.MPVar ((n, ({contents = None} as q), I.Empty, (I.ClTyp (I.PTyp tA,cPsi)),  ({contents = cnstr} as c), dep) as r, (ms', s')), _s) ->
       if constraints_solved cnstr then
@@ -681,7 +655,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
       collectHead k cQ phat loc (h', LF.comp s' s)
 
   | (I.MPVar ((n, r, _cD, I.ClTyp (I.PTyp _tA,_cPsi),  _, _), _),  _s) ->
-      raise (Error (loc, LeftoverVars (MMV (n,r))))
+      raise (Error (loc, LeftoverVars))
 
   | (I.MVar (I.Offset j, s'), s) ->
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in
@@ -1026,14 +1000,14 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
         I.MVar (I.Offset x, abstractMVarSub cQ offset s)
 
   | I.MMVar ((n, r, _cD, _, _cnstr, _), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverVars (MMV (n,r))))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars))
 
   | I.MPVar ((n, r, I.Empty, tp, _cnstr, _), (_ms, s)) ->
       let x = index_of cQ (MMV (n,r)) + d in
         I.PVar (x, abstractMVarSub cQ offset s)
 
   | I.MPVar ((n, r, _cD, _, _cnstr, _), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverVars (MMV (n,r))))
+      raise (Error (Syntax.Loc.ghost, LeftoverVars))
 
   | I.MVar (I.Inst ((n, r, cPsi, tP , _cnstr, _)), s) ->
       let x = index_of cQ (MMV (n,r)) + d in
@@ -1257,7 +1231,7 @@ and abstrTyp tA =
           let cPsi       = ctxToCtx cQ' in
             begin match raiseType' cPsi tA2 with
               | (None, tA3) -> (tA3, length' cPsi)
-              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars s))
+              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
             end
     end
 
@@ -1709,7 +1683,7 @@ let abstrExp e =
         I.Empty -> e'
       | I.Dec(_,FDecl (s,_))       ->
             let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (loc, LeftoverVars s))
+              raise (Error (loc, LeftoverVars))
     end
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)

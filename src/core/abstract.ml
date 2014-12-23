@@ -699,9 +699,9 @@ and collectCVar loc p cQ = function
   | (I.CtxName psi) ->
     (collectFVar' loc p cQ psi, I.CtxName psi)
 
-and collectHat p cQ phat = match phat with
-  | (None, _offset ) -> (cQ, phat)
-  | (Some cv, offset) ->
+and collectHat p cQ (cv,offset) = match cv with
+  | None -> (cQ, (None,offset))
+  | Some cv ->
     let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ cv 
     in (cQ', (Some cv', offset))
 

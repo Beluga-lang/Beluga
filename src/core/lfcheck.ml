@@ -24,6 +24,7 @@ type error =
   | SpineIllTyped    of int * int
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
+  | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
 
 exception Error of Syntax.Loc.t * error
 
@@ -100,7 +101,17 @@ let _ = Error.register_printer
 	  "Actual number of arguments"   Format.pp_print_int n_actual
 
       | LeftoverFV ->
-	  Format.fprintf ppf "Leftover free variable."))
+	  Format.fprintf ppf "Leftover free variable."
+      | CtxHatMismatch (cD, cPsi, phat, cM) ->
+          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
+            Error.report_mismatch ppf
+              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
+              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
+              "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
+              Format.fprintf ppf
+                "In expression: %a@."
+                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+  ))
 
 exception SpineMismatch
 
@@ -736,6 +747,32 @@ and checkSchemaWf (Schema elements ) =
           ; checkElems els
     in
       checkElems elements
+
+and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
+  | MObj tM, (MTyp tA, t) ->
+     check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
+
+  | SObj tM, (STyp tA, t) ->
+     checkSub loc cD cPsi' tM (Whnf.cnormDCtx (tA, t))
+
+  | PObj h, (PTyp tA, t) ->
+      let tA' = inferHead loc cD cPsi' h in
+      let tA  = Whnf.cnormTyp (tA, t) in
+        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
+	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+
+and checkMetaObj _loc cD (loc,cM) cTt = match  (cM, cTt) with
+  | (CObj cPsi, (CTyp w, _)) ->
+      checkSchema loc cD cPsi (Schema.get_schema w)
+
+  | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->
+      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      if phat = Context.dctxToHat cPsi' then
+        checkClObj cD loc cPsi' tM (tp, t)
+      else
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
+;
+
 
   (* checkMSub loc cD ms cD'  = ()
 

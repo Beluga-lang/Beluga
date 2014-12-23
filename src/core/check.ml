@@ -75,7 +75,6 @@ module Comp = struct
     | EqTyp           of I.mctx * tclo
     | MAppMismatch    of I.mctx * (meta_typ * I.msub)
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
-    | CtxHatMismatch  of I.mctx * I.dctx (* expected *) * I.psi_hat (* found *) * meta_obj
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string
@@ -103,15 +102,6 @@ module Comp = struct
             "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables.\
 \nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
               cnstrs (R.render_name f)
-          | CtxHatMismatch (cD, cPsi, phat, cM) ->
-          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
-            Error.report_mismatch ppf
-              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
-              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
-              Format.fprintf ppf
-                "In expression: %a@."
-                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
 
           | CtxMismatch (cD, cPsi, cPhi, cM) ->
             Error.report_mismatch ppf
@@ -255,7 +245,7 @@ module Comp = struct
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
-let checkParamTypeValid cD cPsi tA =
+let rec checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
   | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
   | Syntax.Int.LF.CtxVar psi ->
@@ -279,36 +269,12 @@ let checkParamTypeValid cD cPsi tA =
   checkParamTypeValid' (cPsi , 1)
 
 
-let checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
-  | I.MObj tM, (I.MTyp tA, t) ->
-     LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
-
-  | I.SObj tM, (I.STyp tA, t) ->
-     LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
-
-  | I.PObj h, (I.PTyp tA, t) ->
-      let tA' = LF.inferHead loc cD cPsi' h in
-      let tA  = C.cnormTyp (tA, t) in
-        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-	else failwith "Parameter object fails to check" (* TODO: Better error message *)
-
-  let rec checkMetaObj _loc cD (loc,cM) cTt = match  (cM, cTt) with
-  | (I.CObj cPsi, (I.CTyp w, _)) ->
-      LF.checkSchema loc cD cPsi (Schema.get_schema w)
-
-  | (I.ClObj(phat, tM), (I.ClTyp (tp, cPsi), t)) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      if phat = Context.dctxToHat cPsi' then
-        checkClObj cD loc cPsi' tM (tp, t)
-      else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
-;
 
 and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp,_), cK) , t)) ->
     let loc = getLoc mO in
-    checkMetaObj loc cD mO (ctyp, t);
+    LF.checkMetaObj loc cD mO (ctyp, t);
     checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
   let checkClTyp cD cPsi = function
@@ -440,7 +406,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)				
         begin try
-	  checkMetaObj loc cD cM (mT, t);
+	  LF.checkMetaObj loc cD cM (mT, t);
           Typeinfo.Comp.add (getLoc cM) (Typeinfo.Comp.mk_entry cD ttau) 
 	    ("Box" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
           dprint (fun () -> "loc <> metaLoc " ^ string_of_bool(loc <> (getLoc cM)))
@@ -549,7 +515,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
     | MApp (loc, e, mC) ->
         begin match (C.cwhnfCTyp (syn cD cG e)) with
           | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
-	    checkMetaObj loc cD mC (ctyp, t);
+	    LF.checkMetaObj loc cD mC (ctyp, t);
 	    (tau, I.MDot(metaObjToMFront mC, t))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
@@ -611,7 +577,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
     | PatMetaObj (loc, mO) ->
         (match ttau with
           | (TypBox (_, ctyp) , theta) ->
-              checkMetaObj loc cD mO (ctyp, theta)
+              LF.checkMetaObj loc cD mO (ctyp, theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->
@@ -657,7 +623,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
-    checkMetaObj loc cD mO (ctyp, theta);
+    LF.checkMetaObj loc cD mO (ctyp, theta);
     I.MDot(metaObjToMFront mO, theta)
 
   and checkBranches caseTyp cD cG branches tAbox ttau =
@@ -689,7 +655,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
                             ^ "\n   has type " ^  P.metaTypToString cD1'  mT1) in
-          let _ = checkMetaObj loc cD1' mO  (mT1, C.m_id) in
+          let _ = LF.checkMetaObj loc cD1' mO  (mT1, C.m_id) in
             check cD1' cG' e1 (tau', Whnf.m_id);
             (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau_s, C.m_id))           *)
 

@@ -1119,18 +1119,13 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty
 
-  | I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp ityp))) ->
+  | I.Dec (cQ, FDecl (v, Pure (MetaTyp ityp))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
-        I.Dec (cQ', FDecl (MMV (n,r), Pure (MetaTyp (abstractMVarMTyp cQ ityp (l,0)))))
+        I.Dec (cQ', FDecl (v, Pure (MetaTyp (abstractMVarMTyp cQ ityp (l,0)))))
 
   | I.Dec (cQ, CtxV cdecl) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
       I.Dec(cQ', CtxV cdecl)
-
-  | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp mtyp))) ->
-      let cQ'   = abstractMVarCtx cQ (l-1) in
-      let mtyp' = abstractMVarMTyp cQ mtyp (l, 0) in
-      I.Dec (cQ', FDecl (FV u, Pure (MetaTyp mtyp')))
 
   | I.Dec (cQ, FDecl (_, Impure)) ->
       abstractMVarCtx  cQ l

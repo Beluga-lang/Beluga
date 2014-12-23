@@ -688,10 +688,10 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
         (cQ'', I.PiKind ((I.TypDecl (x, tA'), dep), tK'))
 
 
-and collectCVar loc p cQ phat = function
+and collectCVar loc p cQ = function
   | (I.CtxOffset k) -> (cQ, I.CtxOffset k)
   | (I.CInst (i, ms)) ->
-    let (n,r,cD,tp,_,_) = i in
+    let (n,r,cD,tp,_,_) = i in (* TODO: This is weird, we should be able to use collectMVar *)
     begin match checkOccurrence loc (MMV (n,r)) cQ with
       | Yes -> (cQ, I.CInst (i,ms))
       | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , I.CInst (i,ms))
@@ -702,29 +702,20 @@ and collectCVar loc p cQ phat = function
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some cv, offset) ->
-    let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ phat cv 
+    let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ cv 
     in (cQ', (Some cv', offset))
 
 and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
   collectDctx' loc p cQ (cvar, offset) (Whnf.normDCtx cPsi)
 
-and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
+and collectDctx' loc p cQ ((cvar, offset)) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
+  | I.CtxVar cv ->
+    let (cQ', cv') = collectCVar loc p cQ cv 
+    in (cQ', I.CtxVar cv')
 
-  | I.CtxVar (I.CtxName psi) ->
-    (collectFVar' loc p cQ psi, cPsi)
-
-  | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
-
-  | I.CtxVar (I.CInst ((n, ({contents = None} as r) , _cD, tp, _, _), ms)) ->
-        (* this case should not happen *)
-        begin match checkOccurrence loc (MMV (n,r)) cQ with
-          | Yes -> (cQ, cPsi)
-          | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , cPsi)
-        end
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
       let (cQ', cPsi') =  collectDctx' loc p cQ (cvar, offset - 1) cPsi in
-
       let (cQ'', tA')  =  collectTyp p cQ' (cvar, offset - 1) (tA, LF.id) in
         (cQ'', I.DDec (cPsi', I.TypDecl(x, tA')))
 

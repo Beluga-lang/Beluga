@@ -697,24 +697,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
         (cQ', I.MVar (I.Offset j, sigma))
 
   | (I.FPVar (u, s'), _s) ->
-      begin match checkOccurrence loc (FV u) cQ with
-          | Yes ->
-              let (cQ', sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in
-                (cQ', I.FPVar (u, sigma))
-          | No  ->
-              let (cQ2, sigma) = collectSub k cQ phat s' (* (LF.comp s' s) *) in
-              let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get u in
-	      let mtyp = Whnf.cnormMTyp (mtyp, Int.LF.MShift (k - Context.length cD_d)) in
-                (* tA must be closed with respect to cPhi *)
-                (* Since we only use abstraction on pure LF objects,
-                   there are no context variables; different abstraction
-                   is necessary for handling computation-level expressions,
-                   and LF objects which occur in computations. *)
-
-              let cQ' = I.Dec(cQ2, FDecl (FV u, Impure)) in
-              let (cQ'', mtyp)   = collectMTyp k cQ' mtyp in
-                (I.Dec (cQ'', FDecl (FV u, Pure (MetaTyp mtyp))), I.FPVar (u, sigma))
-        end
+    let (cQ', sigma) = collectFVar k cQ phat u s' (* (LF.comp s' s) *) in
+    (cQ', I.FPVar (u, sigma))
 
   | (I.PVar (k', s'), _s) ->
       let (cQ', sigma) =  collectSub k cQ phat s' (* (LF.comp s' s) *) in

@@ -569,9 +569,9 @@ and collectSub (p:int) cQ phat s = match s with
      let (cQ1, s) = collectSub p cQ phat  s' in
        (cQ1, I.Dot (I.Undef, s)))
 
-  | I.FSVar (n, (s_name, s')) ->
-    let (cQ', (s_name,sigma)) = collectFVarSub p cQ phat (s_name, s') in
-    (cQ', I.FSVar (n, (s_name, sigma)))
+  | I.FSVar (n, ns) ->
+    let (cQ', ns) = collectFVarSub p cQ phat ns in
+    (cQ', I.FSVar (n, ns))
 
   | I.SVar (offset, n, s) ->
     let (cQ1,s') = collectSub p cQ phat s in

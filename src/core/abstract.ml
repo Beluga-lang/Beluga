@@ -523,8 +523,10 @@ and collectMVar2 loc p cQ phat (n, q, cD, tp, c, dep) ms' s' =
   match cD with
     | I.Empty -> begin
       if constraints_solved !c then
-	let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
-	(cQ', (n, q, cD, tp', c, dep), (ms',s'))
+	match !q with
+	  | None -> let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
+		    (cQ', (n, q, cD, tp', c, dep), (ms',s'))
+	  | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	raise (Error (loc, LeftoverConstraints))
     end 
@@ -688,13 +690,6 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 and collectHat p cQ phat = match phat with
   | (None, _offset ) -> (cQ, phat)
   | (Some (I.CtxOffset _) , _ ) -> (cQ, phat)
-  | (Some (I.CInst ((_, {contents=Some (I.ICtx cPsi)}, _, _, _, _), theta )), k ) ->
-       let phat' = begin match Context.dctxToHat (Whnf.cnormDCtx (cPsi, theta)) with
-                  | (None, i) -> (None, k+i)
-                  | (Some cvar', i) -> (Some cvar', i+k)
-                  end
-       in
-         collectHat p cQ phat'
   | (Some (I.CInst ((n, ({contents=None} as r), _, tp, _, _), _theta )), _ ) ->
         begin match checkOccurrence Syntax.Loc.ghost (MMV (n,r)) cQ with
           | Yes -> (cQ, phat)
@@ -713,9 +708,6 @@ and collectDctx' loc p cQ ((cvar, offset) as _phat) cPsi = match cPsi with
     (collectFVar' loc p cQ psi, cPsi)
 
   | I.CtxVar (I.CtxOffset _ ) -> (cQ , cPsi)
-
-  | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)} , _cD, _, _, _), theta)) ->
-      collectDctx' loc p cQ (cvar, offset) (Whnf.cnormDCtx (cPsi, theta))
 
   | I.CtxVar (I.CInst ((n, ({contents = None} as r) , _cD, tp, _, _), _theta)) ->
         (* this case should not happen *)

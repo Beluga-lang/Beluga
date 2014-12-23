@@ -444,7 +444,7 @@ let metaObjToFt (loc, m) = m
 let mmVarToCMetaObj loc' mV = function 
   | Int.LF.MTyp tA   -> Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil))
   | Int.LF.PTyp tA   -> Int.LF.PObj (Int.LF.MPVar (mV, (Whnf.m_id, LF.id)))
-  | Int.LF.STyp cPhi -> Int.LF.SObj (Int.LF.MSVar (mV, 0, (Whnf.m_id, LF.id)))
+  | Int.LF.STyp cPhi -> Int.LF.SObj (Int.LF.MSVar (0, (mV, (Whnf.m_id, LF.id))))
 
 let mmVarToMetaObj loc' mV = function
   | Int.LF.ClTyp (mt, cPsi) ->

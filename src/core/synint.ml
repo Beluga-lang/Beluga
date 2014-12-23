@@ -50,8 +50,8 @@ module LF = struct
   and head =
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
-    | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
-    | MPVar of mm_var * (msub * sub)          (*   | p[t ; s]                   *)
+    | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
+    | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
     | MVar  of cvar * sub                     (*   | u[s]                       *)
     | PVar  of offset * sub                   (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
@@ -64,7 +64,7 @@ module LF = struct
     | FPVar of name * sub                     (* free parameter variable for type
                                                  reconstruction                 *)
     | HClo  of offset * offset * sub            (*   | HClo(x, #S[sigma])         *)
-    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *)
+    | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
 
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
@@ -73,10 +73,10 @@ module LF = struct
 
   and sub =                                   (* Substitutions                  *)
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
-    | SVar  of offset * int * sub           (*   | s[sigma]                   *)
+    | SVar  of offset * int * sub             (*   | s[sigma]                   *)
     | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
-    | MSVar of mm_var * offset * (msub * sub) (*   | u[t ; s]                   *)
+    | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
     | EmptySub
     | Undefs
 
@@ -106,6 +106,7 @@ module LF = struct
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
+  and mm_var_inst = mm_var * (msub * sub)
 
   and iterm =
     | INorm of normal

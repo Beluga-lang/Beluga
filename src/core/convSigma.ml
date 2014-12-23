@@ -133,9 +133,9 @@ and strans_sub cD s conv_list = match s with
   | Int.LF.FSVar (s, n , sigma) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.FSVar (s, n, sigma')
-  | Int.LF.MSVar (rho, offset, (mt, sigma)) ->
+  | Int.LF.MSVar (offset, (rho, (mt, sigma))) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.MSVar (rho, offset, (mt, sigma'))
+        Int.LF.MSVar (offset, (rho, (mt, sigma')))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)

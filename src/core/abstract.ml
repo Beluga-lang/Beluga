@@ -572,9 +572,9 @@ and collectSub (p:int) cQ phat s = match s with
     let (cQ1,s') = collectSub p cQ phat s in
        (cQ1, I.SVar(offset, n, s'))
 
-  | I.MSVar (i, k, (ms',s')) ->
+  | I.MSVar (k, (i, (ms',s'))) ->
     let (cQ', (i', (ms',s'))) = collectMVarInst Syntax.Loc.ghost p cQ phat (i, (ms', s'))
-    in  (cQ', I.MSVar (i', k, (ms',s')))
+    in  (cQ', I.MSVar (k, (i', (ms',s'))))
 
 and collectClObj p cQ1 phat' = function
   | I.MObj tM ->
@@ -1048,7 +1048,7 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
       let x = index_of cQ (FV s) + d in
       I.SVar (x, n, abstractMVarSub cQ offset sigma)
 
-  | I.MSVar ((n, r, _cD, tp, _cnstr, _), k, (_mt, s')) ->
+  | I.MSVar (k, ((n, r, _cD, tp, _cnstr, _), (_mt, s'))) ->
     let s = index_of cQ (MMV (n,r)) + d  in
     I.SVar (s, k, abstractMVarSub' cQ offset s')
 

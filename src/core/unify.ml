@@ -456,7 +456,7 @@ match sigma with
         | Null -> EmptySub
         | _     -> sigma
       end
-    | MSVar ((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ), _ , _) ->
+    | MSVar (_, ((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ), _)) ->
       instantiateMSVar (r, EmptySub, !cnstrs);
       EmptySub      
     | FSVar (s_name , ( _ ), _s2 ) ->
@@ -854,8 +854,8 @@ match sigma with
         P.dctxToString cD0 cPsi') in
 
         SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
-    | (MSVar ((_,{contents=None},cD, ClTyp (STyp cPsi',cPhi), _, _) as s0, 0, (mt,sigma)), CtxVar psi) ->
-      MSVar(s0, 0, (invMSub cD0 (mt, cD) ms rOccur, invSub cD0 phat (sigma, cPsi') ss rOccur))
+    | (MSVar (0, ((_,{contents=None},cD, ClTyp (STyp cPsi',cPhi), _, _) as s0, (mt,sigma))), CtxVar psi) ->
+      MSVar(0, (s0, (invMSub cD0 (mt, cD) ms rOccur, invSub cD0 phat (sigma, cPsi') ss rOccur)))
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1504,8 +1504,8 @@ match sigma with
       let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s_name in
         FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
-    | (MSVar (((_ ,( {contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
-              n, (mt, sigma) ), _cPsi1) ->
+    | (MSVar (n, (((_ ,( {contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
+                  (mt, sigma)) ), _cPsi1) ->
         (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
          let (mt', _s') = ss in
         if eq_cvarRef (MMVarRef r) rOccur then
@@ -1513,7 +1513,7 @@ match sigma with
         else
           let sigma = Whnf.normSub sigma in
           let sigma' = pruneSubst cD cPsi (sigma, cPhi1) ss rOccur in
-          MSVar (rho, n, (Whnf.mcomp mt mt', sigma'))
+          MSVar (n, (rho, (Whnf.mcomp mt mt', sigma')))
         )
     (* Other heads to be added ??
 
@@ -1616,7 +1616,7 @@ match sigma with
 
           (s',cPsi1')
 
-    | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
+    | (MSVar (cshift, (s, (_theta,sigma))), cPsi1) ->
       let s' , cPsi1' = (id, cPsi1) in
 
       let (_ ,{contents=None}, _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) = s in
@@ -2684,8 +2684,8 @@ match sigma with
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
 
 
-      | (MSVar ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep) , _n, (mt, s)) as s1 ,  s2)
-      | (s2, (MSVar ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep) , _n, (mt, s)) as s1)) ->
+      | (MSVar (_n, ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep) , (mt, s))) as s1 ,  s2)
+      | (s2, (MSVar (_n, ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep), (mt, s))) as s1)) ->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)

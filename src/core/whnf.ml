@@ -329,9 +329,9 @@ and normHead (h, sigma) = match h with
   | FMVar (n,s) -> Head (FMVar (n, normSub' (s, sigma)))
   | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma)))
   | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma)))
-  | HMClo (k, mm, (mt,s)) -> (* TODO: This is kind of repetitive...*)
+  | HMClo (k, (mm, (mt,s))) -> (* TODO: This is kind of repetitive...*)
     begin match normMMVar (mm,mt) with
-      | ResMM (mm',mt') -> Head (HMClo(k,mm',(mt',normSub' (s,sigma))))
+      | ResMM (mm',mt') -> Head (HMClo(k,(mm',(mt',normSub' (s,sigma)))))
       | Result (ISub r) -> normFt' (normFt' (LF.bvarSub k r, s), sigma)
     end 
   | MMVar (mm, (mt,s)) ->
@@ -433,13 +433,13 @@ and normSub s = match s with
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | FSVar ( s , n, sigma) -> FSVar (s, n, normSub sigma)
   | SVar (offset, n, s') -> SVar (offset, n, normSub s')
-  | MSVar ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, mDep),
-    n, (mt, s')) ->
+  | MSVar (n, ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, mDep),
+    (mt, s'))) ->
       let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
       LF.comp (Shift n) s0
 
-  | MSVar (sigma, n, (mt,s')) ->
-      MSVar (sigma, n, (mt, normSub s'))
+  | MSVar (n, (sigma, (mt,s'))) ->
+      MSVar (n , (sigma, (mt, normSub s')))
 
 and normFt ft = match ft with
   | Obj tM -> etaContract(norm (tM, LF.id))
@@ -565,9 +565,9 @@ and cnormHead' (h, t) = match h with
       | Result (IHead h) -> cnormFt' (normHead(h,s), t)
       | Result (INorm n) -> Obj (cnorm (norm (n, s), t))
     end 
-  | HMClo (k,mm,(mt,s)) ->
+  | HMClo (k,(mm,(mt,s))) ->
     begin match normMMVar (mm,mt) with
-      | ResMM (mm',mt) -> Head (HMClo (k, mm', (cnormMSub' (mt,t), cnormSub (s,t))))
+      | ResMM (mm',mt) -> Head (HMClo (k, (mm', (cnormMSub' (mt,t), cnormSub (s,t)))))
       | Result (ISub r) -> cnormFt' (normFt' (LF.bvarSub k r, s), t)
     end 
   | MVar (Inst mm, s) -> 
@@ -630,17 +630,15 @@ and cnorm (tM, t) = match tM with
     | FSVar (s_name, n, s') ->
         FSVar (s_name, n, cnormSub (s', t))
 
-    | MSVar ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, _),
-             n, (mt,s')) ->
+    | MSVar (n, ((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, _),
+             (mt,s'))) ->
         let _ = dprint (fun () -> "[cnormSub] MSVar - MSInst") in
         let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
         let s0' = LF.comp (Shift n) s0 in
           cnormSub (s0', t)
 
-    | MSVar (s ,
-             (* s = MSInst (_n, {contents = None}, _cD0, _cPhi, _cPsi, _cnstrs) *)
-             n, (mt,s')) ->
-          MSVar (s, n, (cnormMSub (mcomp mt t), s'))
+    | MSVar (n, (s , (mt,s'))) ->
+          MSVar (n , (s, (cnormMSub (mcomp mt t), s')))
 
   and cnormFront = function
     | Head h , t -> cnormHead' (h, t) 

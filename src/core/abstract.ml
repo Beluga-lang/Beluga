@@ -513,9 +513,10 @@ and collectLFVar l = collectFVar LF l
 
 and collectCompFVar l = collectFVar Comp l
 
-and collectFVarSub p cQ phat name s' = 
-  let cQ0 = collectCompFVar Syntax.Loc.ghost p cQ name in
-  collectSub p cQ0 phat s'
+and collectFVarSub p cQ phat (name, s') = 
+  let cQ = collectCompFVar Syntax.Loc.ghost p cQ name in
+  let (cQ,s') = collectSub p cQ phat s' in
+  (cQ, (name,s'))
 
 and collectMMVar loc p cQ (n,q,cD,tp,c,dep) = 
   match cD with
@@ -569,7 +570,7 @@ and collectSub (p:int) cQ phat s = match s with
        (cQ1, I.Dot (I.Undef, s)))
 
   | I.FSVar (s_name, n, s') ->
-    let (cQ', sigma) = collectFVarSub p cQ phat s_name s' in
+    let (cQ', (s_name,sigma)) = collectFVarSub p cQ phat (s_name, s') in
     (cQ', I.FSVar (s_name, n, sigma))
 
   | I.SVar (offset, n, s) ->
@@ -622,8 +623,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     (collectLFVar loc k cQ name, I.FVar name)
 
   | (I.FMVar (u, s'), s) ->
-    let (cQ0, sigma) = collectFVarSub k cQ phat u (LF.comp s' s) in
-    (cQ0, I.FMVar (u, sigma))
+    let (cQ0, ns) = collectFVarSub k cQ phat (u, (LF.comp s' s)) in
+    (cQ0, I.FMVar ns)
 
   | (I.MVar (I.Inst i, s'), _s) ->
      let (cQ', (i', (ms',s'))) = collectMVarInst loc k cQ phat (i, (Whnf.m_id, s')) in
@@ -642,8 +643,8 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
         (cQ', I.MVar (I.Offset j, sigma))
 
   | (I.FPVar (u, s'), s) ->
-    let (cQ', sigma) = collectFVarSub k cQ phat u (LF.comp s' s) in
-    (cQ', I.FPVar (u, sigma))
+    let (cQ', ns) = collectFVarSub k cQ phat (u, (LF.comp s' s)) in
+    (cQ', I.FPVar ns)
 
   | (I.PVar (k', s'), s) ->
       let (cQ', sigma) =  collectSub k cQ phat (LF.comp s' s) in

@@ -572,9 +572,9 @@ and collectSub (p:int) cQ phat s = match s with
     let (cQ1,s') = collectSub p cQ phat s in
        (cQ1, I.SVar(offset, n, s'))
 
-  | I.MSVar (k, (i, (ms',s'))) ->
-    let (cQ', (i', (ms',s'))) = collectMVarInst Syntax.Loc.ghost p cQ phat (i, (ms', s'))
-    in  (cQ', I.MSVar (k, (i', (ms',s'))))
+  | I.MSVar (k, i) ->
+    let (cQ', i') = collectMVarInst Syntax.Loc.ghost p cQ phat i
+    in  (cQ', I.MSVar (k, i'))
 
 and collectClObj p cQ1 phat' = function
   | I.MObj tM ->
@@ -625,13 +625,13 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
      let (cQ', (i', (ms',s'))) = collectMVarInst loc k cQ phat (i, (Whnf.m_id, s')) in
 	 (cQ', I.MVar (I.Inst i', s'))
 
-  | (I.MMVar (i, (ms', s')), _s) ->
-    let (cQ', (i', (ms', s'))) = collectMVarInst loc k cQ phat (i, (ms', s'))
-    in  (cQ', I.MMVar (i', (ms', s')))
+  | (I.MMVar i, _s) ->
+    let (cQ', i') = collectMVarInst loc k cQ phat i
+    in  (cQ', I.MMVar i')
 
-  | (I.MPVar (i, (ms', s')), _s) ->
-    let (cQ', (i', (ms', s'))) = collectMVarInst loc k cQ phat (i, (ms', s'))
-    in  (cQ', I.MPVar (i', (ms', s')))
+  | (I.MPVar i, _s) ->
+    let (cQ', i') = collectMVarInst loc k cQ phat i
+    in  (cQ', I.MPVar i')
 
   | (I.MVar (I.Offset j, s'), s) ->
       let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in

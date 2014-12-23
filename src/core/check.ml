@@ -274,7 +274,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp,_), cK) , t)) ->
     let loc = getLoc mO in
-    LF.checkMetaObj loc cD mO (ctyp, t);
+    LF.checkMetaObj cD mO (ctyp, t);
     checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
   let checkClTyp cD cPsi = function
@@ -406,7 +406,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)				
         begin try
-	  LF.checkMetaObj loc cD cM (mT, t);
+	  LF.checkMetaObj cD cM (mT, t);
           Typeinfo.Comp.add (getLoc cM) (Typeinfo.Comp.mk_entry cD ttau) 
 	    ("Box" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
           dprint (fun () -> "loc <> metaLoc " ^ string_of_bool(loc <> (getLoc cM)))
@@ -515,7 +515,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
     | MApp (loc, e, mC) ->
         begin match (C.cwhnfCTyp (syn cD cG e)) with
           | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
-	    LF.checkMetaObj loc cD mC (ctyp, t);
+	    LF.checkMetaObj cD mC (ctyp, t);
 	    (tau, I.MDot(metaObjToMFront mC, t))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
@@ -577,7 +577,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
     | PatMetaObj (loc, mO) ->
         (match ttau with
           | (TypBox (_, ctyp) , theta) ->
-              LF.checkMetaObj loc cD mO (ctyp, theta)
+              LF.checkMetaObj cD mO (ctyp, theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->
@@ -623,7 +623,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
-    LF.checkMetaObj loc cD mO (ctyp, theta);
+    LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot(metaObjToMFront mO, theta)
 
   and checkBranches caseTyp cD cG branches tAbox ttau =
@@ -655,7 +655,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
                             ^ "\n   has type " ^  P.metaTypToString cD1'  mT1) in
-          let _ = LF.checkMetaObj loc cD1' mO  (mT1, C.m_id) in
+          let _ = LF.checkMetaObj cD1' mO  (mT1, C.m_id) in
             check cD1' cG' e1 (tau', Whnf.m_id);
             (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau_s, C.m_id))           *)
 

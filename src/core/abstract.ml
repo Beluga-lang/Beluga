@@ -567,12 +567,9 @@ and collectSub (p:int) cQ phat s = match s with
     let (cQ1,s') = collectSub p cQ phat s in
        (cQ1, I.SVar(offset, n, s'))
 
-  | I.MSVar ((n, s, cD, tp, ({contents = cnstr} as c), dep), k, (ms',s')) ->
-    if constraints_solved cnstr then
-      let (cQ', tp', (ms',s')) = collectMVar Syntax.Loc.ghost p cQ phat (n,s) tp ms' s' in
-      (cQ', I.MSVar ((n, s, cD, tp', c, dep), k, (ms',s')))
-    else
-        raise (Error (Syntax.Loc.ghost, LeftoverConstraints))
+  | I.MSVar (i, k, (ms',s')) ->
+    let (cQ', i', (ms',s')) = collectMVar2 Syntax.Loc.ghost p cQ phat i ms' s'
+    in  (cQ', I.MSVar (i', k, (ms',s')))
 
 and collectClObj p cQ1 phat' = function
   | I.MObj tM ->

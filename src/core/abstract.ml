@@ -475,6 +475,14 @@ and collectSpine (p:int) cQ phat sS = match sS with
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
+
+and collectMMVar' loc p cQ v tp = match checkOccurrence loc v cQ with
+   | Yes ->  (cQ, tp)
+   | No  ->
+     let cQ' = I.Dec(cQ, FDecl(v, Impure)) in
+     let (cQ2, tp') = collectMetaTyp loc p cQ' tp in 
+     (I.Dec (cQ2, FDecl (v, Pure (MetaTyp tp'))), tp')
+
 (* TODO: Can we combine these two functions into one?... *)
 and collectLFVar loc k cQ name = begin match checkOccurrence loc (FV name) cQ with
    | Yes -> cQ
@@ -489,25 +497,15 @@ and collectLFVar loc k cQ name = begin match checkOccurrence loc (FV name) cQ wi
        (I.Dec (cQ', FDecl (FV name, Pure (LFTyp tA'))))
       end
 
-and collectFVar' loc p cQ0 name = match checkOccurrence loc (FV name) cQ0 with
-  | Yes -> cQ0
-  | No ->
-    begin try
+and collectFVar' loc p cQ0 name =
+   begin try
      let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
      let d = p - Context.length cD_d in
      let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift d) in
-     let cQ' = I.Dec(cQ0, FDecl (FV name, Impure)) in
-     let (cQ1, mtyp'')  = collectMTyp p cQ' mtyp' in
-     I.Dec (cQ1, FDecl (FV name, Pure (MetaTyp mtyp'')))
+     let (cQ2, _tp) = collectMMVar' loc p cQ0 (FV name) mtyp' in
+     cQ2
       with Not_found -> raise (Error (loc, UnknownMTyp name))
-    end 
-
-and collectMMVar' loc p cQ (n,s) tp = match checkOccurrence loc (MMV (n,s)) cQ with
-   | Yes ->  (cQ, tp)
-   | No  ->
-     let cQ' = I.Dec(cQ, FDecl(MMV (n,s), Impure)) in
-     let (cQ2, tp') = collectMetaTyp loc p cQ' tp in 
-     (I.Dec (cQ2, FDecl (MMV (n,s), Pure (MetaTyp tp'))), tp')
+    end
 
 and collectFVar p cQ phat name s' = 
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
@@ -518,7 +516,7 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> let (cQ', tp') = collectMMVar' loc p cQ (n,q) tp in
+	  | None -> let (cQ', tp') = collectMMVar' loc p cQ (MMV (n,q)) tp in
 		    (cQ', (n, q, cD, tp', c, dep))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else

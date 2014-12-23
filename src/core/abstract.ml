@@ -505,16 +505,16 @@ and getType loc p name f =
    with Not_found -> raise (Error (loc, UnknownMTyp name))
   end 
 
-and collectFVar'' fl loc p cQ name =
+and collectFVar fl loc p cQ name =
   let (cQ2, _tp) = collectMMVar' loc p cQ (FV name) (getType loc p name fl) in
   cQ2
 
-and collectLFVar l = collectFVar'' LF l
+and collectLFVar l = collectFVar LF l
 
-and collectFVar' l = collectFVar'' Comp l
+and collectCompFVar l = collectFVar Comp l
 
-and collectFVar p cQ phat name s' = 
-  let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
+and collectFVarSub p cQ phat name s' = 
+  let cQ0 = collectCompFVar Syntax.Loc.ghost p cQ name in
   collectSub p cQ0 phat s'
 
 and collectMMVar loc p cQ (n,q,cD,tp,c,dep) = 
@@ -569,7 +569,7 @@ and collectSub (p:int) cQ phat s = match s with
        (cQ1, I.Dot (I.Undef, s)))
 
   | I.FSVar (s_name, n, s') ->
-    let (cQ', sigma) = collectFVar p cQ phat s_name s' in
+    let (cQ', sigma) = collectFVarSub p cQ phat s_name s' in
     (cQ', I.FSVar (s_name, n, sigma))
 
   | I.SVar (offset, n, s) ->
@@ -622,7 +622,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     (collectLFVar loc k cQ name, I.FVar name)
 
   | (I.FMVar (u, s'), s) ->
-    let (cQ0, sigma) = collectFVar k cQ phat u (LF.comp s' s) in
+    let (cQ0, sigma) = collectFVarSub k cQ phat u (LF.comp s' s) in
     (cQ0, I.FMVar (u, sigma))
 
   | (I.MVar (I.Inst i, s'), _s) ->
@@ -642,7 +642,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
         (cQ', I.MVar (I.Offset j, sigma))
 
   | (I.FPVar (u, s'), s) ->
-    let (cQ', sigma) = collectFVar k cQ phat u (LF.comp s' s) in
+    let (cQ', sigma) = collectFVarSub k cQ phat u (LF.comp s' s) in
     (cQ', I.FPVar (u, sigma))
 
   | (I.PVar (k', s'), s) ->
@@ -701,7 +701,7 @@ and collectCVar loc p cQ = function
       | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , I.CInst (i,ms))
     end
   | (I.CtxName psi) ->
-    (collectFVar' loc p cQ psi, I.CtxName psi)
+    (collectCompFVar loc p cQ psi, I.CtxName psi)
 
 and collectHat p cQ (cv,offset) = match cv with
   | None -> (cQ, (None,offset))

@@ -612,46 +612,46 @@ and collectMSub p cQ theta =  match theta with
     let (cQ2, mobj') = collectMObj p cQ1 mobj in
      (cQ2, I.MDot (mobj', t'))
 
-and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
-    match sH with
+and collectHead (k:int) cQ phat loc (head, _s) =
+    match head with
 
-  | (I.BVar _x, _s)  -> (cQ, head)
+  | (I.BVar _x)  -> (cQ, head)
 
-  | (I.Const _c, _s) -> (cQ, head)
+  | (I.Const _c) -> (cQ, head)
 
-  | (I.FVar name, _s) ->
+  | (I.FVar name) ->
     (collectLFVar loc k cQ name, I.FVar name)
 
-  | (I.FMVar (u, s'), s) ->
-    let (cQ0, ns) = collectFVarSub k cQ phat (u, (LF.comp s' s)) in
+  | (I.FMVar ns) ->
+    let (cQ0, ns) = collectFVarSub k cQ phat ns in
     (cQ0, I.FMVar ns)
 
-  | (I.MVar (I.Inst i, s'), _s) ->
+  | (I.MVar (I.Inst i, s')) ->
      let (cQ', (i', (ms',s'))) = collectMVarInst loc k cQ phat (i, (Whnf.m_id, s')) in
 	 (cQ', I.MVar (I.Inst i', s'))
 
-  | (I.MMVar i, _s) ->
+  | (I.MMVar i) ->
     let (cQ', i') = collectMVarInst loc k cQ phat i
     in  (cQ', I.MMVar i')
 
-  | (I.MPVar i, _s) ->
+  | (I.MPVar i) ->
     let (cQ', i') = collectMVarInst loc k cQ phat i
     in  (cQ', I.MPVar i')
 
-  | (I.MVar (I.Offset j, s'), s) ->
-      let (cQ', sigma) = collectSub k cQ phat (LF.comp s' s)  in
+  | (I.MVar (I.Offset j, s')) ->
+      let (cQ', sigma) = collectSub k cQ phat s' in
         (cQ', I.MVar (I.Offset j, sigma))
 
-  | (I.FPVar (u, s'), s) ->
-    let (cQ', ns) = collectFVarSub k cQ phat (u, (LF.comp s' s)) in
+  | (I.FPVar ns) ->
+    let (cQ', ns) = collectFVarSub k cQ phat ns in
     (cQ', I.FPVar ns)
 
-  | (I.PVar (k', s'), s) ->
-      let (cQ', sigma) =  collectSub k cQ phat (LF.comp s' s) in
+  | (I.PVar (k', s')) ->
+      let (cQ', sigma) =  collectSub k cQ phat s' in
         (cQ', I.PVar (k', sigma))
 
-  | (I.Proj (head, j),  s) ->
-      let (cQ', h') = collectHead k cQ phat loc (head, s)  in
+  | (I.Proj (head, j)) ->
+      let (cQ', h') = collectHead k cQ phat loc (head, _s)  in
         (cQ' , I.Proj (h', j))
 
 

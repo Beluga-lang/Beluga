@@ -727,24 +727,25 @@ and collectDctx' loc p cQ ((cvar, offset)) cPsi = match cPsi with
 
 and collectMTyp p cQ = collectMetaTyp Syntax.Loc.ghost p cQ
 
+and collectClTyp loc p cQ' phat = function
+  | I.MTyp tA -> 
+    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
+    (cQ'', I.MTyp tA')
+  | I.PTyp tA -> 
+    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
+    (cQ'', I.PTyp tA')
+  | I.STyp cPhi ->
+     let phi_hat = Context.dctxToHat cPhi in
+     let (cQ1, cPhi') = collectDctx loc p cQ' phi_hat cPhi in
+     (cQ1, I.STyp cPhi')
+
 and collectMetaTyp loc p cQ = function 
   | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
-  | I.ClTyp (I.MTyp tA, cPsi) -> 
+  | I.ClTyp (tp, cPsi) -> 
     let phat = Context.dctxToHat cPsi in
     let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
-    (cQ'', I.ClTyp (I.MTyp tA', cPsi'))
-  | I.ClTyp (I.PTyp tA, cPsi) -> 
-    let phat = Context.dctxToHat cPsi in
-    let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
-    let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
-    (cQ'', I.ClTyp (I.PTyp tA', cPsi'))
-  | I.ClTyp (I.STyp cPhi, cPsi) ->
-     let psi_hat = Context.dctxToHat cPsi in
-     let phi_hat = Context.dctxToHat cPhi in
-     let (cQ0, cPsi') = collectDctx loc p cQ psi_hat cPsi in
-     let (cQ1, cPhi') = collectDctx loc p cQ0 phi_hat cPhi in
-       (cQ1, I.ClTyp (I.STyp cPhi', cPsi'))
+    let (cQ'', tp') = collectClTyp loc p cQ' phat tp in
+    (cQ'', I.ClTyp (tp', cPsi'))
 
 let collectCDecl p cQ cdecl = match cdecl with
   | I.Decl (u, mtyp,dep) -> 

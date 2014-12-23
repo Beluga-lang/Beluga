@@ -1097,18 +1097,16 @@ and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
+and abstractMVarClTyp cQ loff = function
+  | I.MTyp tA -> I.MTyp (abstractMVarTyp cQ loff (tA, LF.id))
+  | I.PTyp tA -> I.PTyp (abstractMVarTyp cQ loff (tA, LF.id))
+  | I.STyp cPhi -> I.STyp (abstractMVarDctx cQ loff cPhi)
+
 and abstractMVarMTyp cQ mtyp loff = match mtyp with
-  | I.ClTyp (I.MTyp tA, cPsi) ->
-    I.ClTyp (I.MTyp (abstractMVarTyp cQ loff (tA, LF.id)), abstractMVarDctx cQ loff cPsi)
-  | I.ClTyp (I.PTyp tA, cPsi) ->
-    I.ClTyp (I.PTyp (abstractMVarTyp cQ loff (tA, LF.id)), abstractMVarDctx cQ loff cPsi)
-  | I.ClTyp (I.STyp cPhi, cPsi) ->
-    I.ClTyp (I.STyp (abstractMVarDctx cQ loff cPhi), abstractMVarDctx cQ loff cPsi)
+  | I.ClTyp (tp, cPsi) -> I.ClTyp (abstractMVarClTyp cQ loff tp, abstractMVarDctx cQ loff cPsi)
   | I.CTyp sW -> I.CTyp sW
 
-
 and abstractMVarMetaTyp cQ mtyp loff = abstractMVarMTyp cQ mtyp loff
-
 
 and abstractMVarCdecl cQ loff cdecl = match cdecl with
   | I.Decl (u, mtyp, dep) -> I.Decl (u, abstractMVarMTyp cQ mtyp loff, dep)

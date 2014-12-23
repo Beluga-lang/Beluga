@@ -18,9 +18,7 @@ module R = Store.Cid.DefaultRenderer
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [3])
 
 type varvariant =
-    VariantFV | VariantFCV | VariantMMV
-  | VariantMV | VariantFMV | VariantFPV 
-  | VariantFSV
+    VariantFV | VariantMMV | VariantFMV
 
 type error =
   | LeftoverVars of varvariant
@@ -58,12 +56,8 @@ let getLocation e = match e with
 
 let string_of_varvariant = function
   | VariantFV  -> "free variables"
-  | VariantFCV -> "free context variables"
   | VariantMMV -> "meta^2-variables and free variables"
-  | VariantMV  -> "meta-variables and free variables"
   | VariantFMV -> "free meta-variables"
-  | VariantFPV -> "free parameter-variables"
-  | VariantFSV -> "free substitution-variables"
 
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
@@ -72,24 +66,8 @@ let _ = Error.register_printer
         | UnknownSchemaCtx psi ->
             Format.fprintf ppf "Unable to infer schema for context variable %s"
               (R.render_name psi)
-        | LeftoverVars VariantFCV ->
-          Format.fprintf ppf "Abstraction not valid LF-type because of leftover context variable"
-        | LeftoverVars VariantMV ->
+        | LeftoverVars VariantMMV ->
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
-        | LeftoverVars (VariantMMV as varvariant) ->
-          Format.fprintf ppf
-            ("Encountered %s,@ which we cannot abstract over@ \
-            because they depend on meta-variables;@ \
-            the user needs to supply more information,@ \
-            since the type of a given expression@ \
-            is not uniquely determined.@ \
-            Meta^2-variables are introduced during type reconstruction;@ \
-            if you explicitely quantify over some meta-variables,@ \
-            these meta-variables will impose constraints on meta^2-variables@ \
-            and we may not be able to abstract over the meta^2-variables.@ \
-            The solution is either to not specify any meta-variables explicitly,@ \
-            or specify all of them.")
-            (string_of_varvariant varvariant)
         | LeftoverConstraints ->
           Format.fprintf ppf "Leftover constraints during abstraction."
         | CyclicDependency variant ->
@@ -171,11 +149,11 @@ type free_var =
                                       and    cD' ; Psi' |- u[ms, s] <= [ms ; s]P      *)
 
   (* Free named variables *)
-  | FV of marker * Id.name * I.typ option
+  | FV of marker * Id.name * I.typ option (* LF variables *)
                                 (*     | (F, A)                  . |- F <= A *)
+  | FMV of marker * Id.name * I.ctyp option (* Metavariables *)
 
-  | FMV of marker * Id.name * I.ctyp option
-
+  (* Bound variables. I think we could allow these to be more general than just contexts  *)
   | CtxV of (Id.name * cid_schema * I.depend)
 
 
@@ -655,7 +633,7 @@ and collectSub (p:int) cQ phat s = match s with
                 (I.Dec (cQ1, FMV (Pure, s_name, Some mtyp'')),
                  I.FSVar (s_name, n, sigma))
 
-          | Cycle -> raise (Error ((Syntax.Loc.ghost), CyclicDependency VariantFSV))
+          | Cycle -> raise (Error ((Syntax.Loc.ghost), CyclicDependency VariantFMV))
         end
 
   | I.SVar (offset, n, s) ->
@@ -771,7 +749,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
 		let v' = (n, q, cD, mtyp',  c, dep) in
                 let v = I.MVar (I.Inst v', sigma) in
                   (I.Dec (cQ'', MMV (Pure, v')) , v)
-            | Cycle -> raise (Error (loc, CyclicDependency VariantMV))
+            | Cycle -> raise (Error (loc, CyclicDependency VariantMMV))
           end
       else
         raise (Error (loc, LeftoverConstraints))
@@ -863,7 +841,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
               let cQ' = I.Dec(cQ2, FMV(Impure, u, None)) in
               let (cQ'', mtyp)   = collectMTyp k cQ' mtyp in
                 (I.Dec (cQ'', FMV (Pure, u, Some mtyp)), I.FPVar (u, sigma))
-          | Cycle -> raise (Error (loc, CyclicDependency VariantFPV))
+          | Cycle -> raise (Error (loc, CyclicDependency VariantFMV))
         end
 
   | (I.PVar (k', s'), _s) ->
@@ -1456,7 +1434,7 @@ and abstrTyp tA =
           let cPsi       = ctxToDctx cQ' in
             begin match raiseType cPsi tA2 with
               | (None, tA3) -> (tA3, length cPsi)
-              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars VariantFCV))
+              | _            -> raise (Error (Syntax.Loc.ghost, LeftoverVars VariantFMV))
             end
     end
 
@@ -1908,7 +1886,7 @@ let abstrExp e =
         I.Empty -> e'
       | _       ->
             let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (loc, LeftoverVars VariantMV))
+              raise (Error (loc, LeftoverVars VariantMMV))
     end
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)

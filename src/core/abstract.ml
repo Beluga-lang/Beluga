@@ -475,6 +475,20 @@ and collectSpine (p:int) cQ phat sS = match sS with
     let (cQ'', tS') = collectSpine p cQ' phat (tS, s) in
       (cQ'', I.App (tM', tS'))
 
+(* TODO: Can we combine these two functions into one?... *)
+and collectLFVar loc k cQ name = begin match checkOccurrence loc (FV name) cQ with
+   | Yes -> cQ
+   | No ->
+      let Int.LF.Type tA  = FVar.get name in
+      let (cQ', tA') = collectTyp k (I.Dec(cQ, FDecl (FV name, Impure))) (None, 0) (tA, LF.id) in
+       (* tA must be closed *)
+       (* Since we only use abstraction on pure LF objects,
+          there are no context variables; different abstraction
+          is necessary for handling computation-level expressions,
+          and LF objects which occur in computations. *)
+       (I.Dec (cQ', FDecl (FV name, Pure (LFTyp tA'))))
+      end
+
 and collectFVar' loc p cQ0 name = match checkOccurrence loc (FV name) cQ0 with
   | Yes -> cQ0
   | No ->
@@ -592,19 +606,7 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
   | (I.Const _c, _s) -> (cQ, head)
 
   | (I.FVar name, _s) ->
-      begin match checkOccurrence loc (FV name) cQ with
-        | Yes -> (cQ, I.FVar name)
-        | No ->
-            let Int.LF.Type tA  = FVar.get name in
-            let (cQ', tA') = collectTyp k (I.Dec(cQ, FDecl (FV name, Impure))) (None, 0) (tA, LF.id) in
-              (* tA must be closed *)
-              (* Since we only use abstraction on pure LF objects,
-                 there are no context variables; different abstraction
-                 is necessary for handling computation-level expressions,
-                 and LF objects which occur in computations. *)
-              (I.Dec (cQ', FDecl (FV name, Pure (LFTyp tA'))) , I.FVar name)
-      end
-
+    (collectLFVar loc k cQ name, I.FVar name)
 
   | (I.FMVar (u, s'), s) ->
     let (cQ0, sigma) = collectFVar k cQ phat u (LF.comp s' s) in

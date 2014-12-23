@@ -5,13 +5,14 @@
 
 open Syntax.Int
 
-type varvariant =
-    VariantFV | VariantMMV
+type kind =
+  | MMV of (Id.name * LF.iterm option ref)
+  | FV of Id.name
 
 type error =
-  | LeftoverVars of varvariant
+  | LeftoverVars of kind
   | LeftoverConstraints
-  | CyclicDependency of varvariant
+  | CyclicDependency of kind
   | UnknownIdentifier
   | UnknownSchemaCtx of Id.name
 

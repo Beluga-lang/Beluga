@@ -502,7 +502,7 @@ and collectFVar' loc p cQ0 name = match checkOccurrence loc (FV name) cQ0 with
       with Not_found -> raise (Error (loc, UnknownMTyp name))
     end 
 
-and collectMVar' loc p cQ (n,s) tp = match checkOccurrence Syntax.Loc.ghost (MMV (n,s)) cQ with
+and collectMMVar' loc p cQ (n,s) tp = match checkOccurrence loc (MMV (n,s)) cQ with
    | Yes ->  (cQ, tp)
    | No  ->
      let cQ' = I.Dec(cQ, FDecl(MMV (n,s), Impure)) in
@@ -513,26 +513,24 @@ and collectFVar p cQ phat name s' =
   let cQ0 = collectFVar' Syntax.Loc.ghost p cQ name in
   collectSub p cQ0 phat s'
 
-and collectMVar loc p cQ phat (n,s) tp ms' s' = 
-  let (cQ, tp') = collectMVar' loc p cQ (n,s) tp in
-  let (cQ0, ms') = collectMSub p cQ ms' in
-  let (cQ', s') = collectSub p cQ0 phat s' in
-  (cQ', tp', (ms',s'))
-
-(* TODO: Doing the substitutions in here too is kinda wrong *)
-and collectMVar2 loc p cQ phat (n, q, cD, tp, c, dep) ms' s' = 
+and collectMMVar loc p cQ (n,q,cD,tp,c,dep) = 
   match cD with
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> let (cQ', tp', (ms',s')) = collectMVar loc p cQ phat (n,q) tp ms' s' in
-		    (cQ', (n, q, cD, tp', c, dep), (ms',s'))
+	  | None -> let (cQ', tp') = collectMMVar' loc p cQ (n,q) tp in
+		    (cQ', (n, q, cD, tp', c, dep))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	raise (Error (loc, LeftoverConstraints))
     end 
     | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
-  
+
+and collectMVarInst loc p cQ phat (i, (ms', s')) = 
+  let (cQ0, ms') = collectMSub p cQ ms' in
+  let (cQ1, s') = collectSub p cQ0 phat s' in
+  let (cQ2, i') = collectMMVar loc p cQ1 i in
+  (cQ2, (i', (ms',s')))
 
 (* collectSub p cQ phat s = cQ'
 
@@ -575,7 +573,7 @@ and collectSub (p:int) cQ phat s = match s with
        (cQ1, I.SVar(offset, n, s'))
 
   | I.MSVar (i, k, (ms',s')) ->
-    let (cQ', i', (ms',s')) = collectMVar2 Syntax.Loc.ghost p cQ phat i ms' s'
+    let (cQ', (i', (ms',s'))) = collectMVarInst Syntax.Loc.ghost p cQ phat (i, (ms', s'))
     in  (cQ', I.MSVar (i', k, (ms',s')))
 
 and collectClObj p cQ1 phat' = function
@@ -598,6 +596,8 @@ and collectMObj p cQ1 = function
       let phat = Context.dctxToHat cPsi in
       let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) p cQ1 phat cPsi in
         (cQ2, I.CObj (cPsi'))
+  | I.MUndef -> raise (Error.Violation "Unexpected undef")
+  | I.MV k -> (cQ1, I.MV k)
 
 (* collectMSub p cQ theta = cQ' *)
 and collectMSub p cQ theta =  match theta with
@@ -622,15 +622,15 @@ and collectHead (k:int) cQ phat loc ((head, _subst) as sH) =
     (cQ0, I.FMVar (u, sigma))
 
   | (I.MVar (I.Inst i, s'), _s) ->
-     let (cQ', i', (ms',s')) = collectMVar2 loc k cQ phat i Whnf.m_id s' in
+     let (cQ', (i', (ms',s'))) = collectMVarInst loc k cQ phat (i, (Whnf.m_id, s')) in
 	 (cQ', I.MVar (I.Inst i', s'))
 
   | (I.MMVar (i, (ms', s')), _s) ->
-    let (cQ', i', (ms', s')) = collectMVar2 loc k cQ phat i ms' s'
+    let (cQ', (i', (ms', s'))) = collectMVarInst loc k cQ phat (i, (ms', s'))
     in  (cQ', I.MMVar (i', (ms', s')))
 
   | (I.MPVar (i, (ms', s')), _s) ->
-    let (cQ', i', (ms', s')) = collectMVar2 loc k cQ phat i ms' s'
+    let (cQ', (i', (ms', s'))) = collectMVarInst loc k cQ phat (i, (ms', s'))
     in  (cQ', I.MPVar (i', (ms', s')))
 
   | (I.MVar (I.Offset j, s'), s) ->

@@ -21,13 +21,13 @@ module LF = struct
     | TypDecl of name * typ
 
   and ctyp =
-    | MTyp of typ * dctx * depend
-    | PTyp of typ * dctx * depend
-    | STyp of dctx * dctx * depend
-    | CTyp of cid_schema * depend
+    | MTyp of typ * dctx
+    | PTyp of typ * dctx
+    | STyp of dctx * dctx
+    | CTyp of cid_schema
 
   and ctyp_decl =
-    | Decl of name * ctyp
+    | Decl of name * ctyp * depend
     | DeclOpt of name
 
   and typ =
@@ -121,7 +121,6 @@ module Comp = struct
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaParam of Loc.t * LF.psi_hat * LF.head
    | MetaSub of Loc.t * LF.psi_hat * LF.sub
    | MetaSubAnn of Loc.t * LF.dctx * LF.sub
 
@@ -163,7 +162,6 @@ module Comp = struct
      | Const  of Loc.t * cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
 
-     | MApp   of Loc.t * exp_syn * meta_obj                 (* i [Psi_hat. M] *)
      | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                              (* e : tau        *)

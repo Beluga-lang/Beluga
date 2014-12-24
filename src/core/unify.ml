@@ -39,9 +39,8 @@ module type UNIFY = sig
   val mark   : unit -> unit
   val unwind : unit -> unit
 
-  val instantiateMVar : normal option ref * normal * cnstr list -> unit
-  val instantiatePVar : head   option ref * head   * cnstr list -> unit
-  val instantiateCtxVar : dctx option ref * dctx -> unit
+  val instantiateMVar : iterm option ref * normal * cnstr list -> unit
+  val instantiateCtxVar : iterm option ref * dctx -> unit
 
   val resetDelayedCnstrs : unit -> unit
   val resetGlobalCnstrs : unit -> unit
@@ -86,12 +85,7 @@ module type UNIFY = sig
 
 
   type cvarRef =
-    | MMVarRef of normal option ref
-    | MSVarRef of sub option ref
-    | SVarRef of sub option ref
-    | MPVarRef of normal option ref
-    | MVarRef of normal option ref
-    | PVarRef of head option ref
+    | MMVarRef of iterm option ref
 
 
   val pruneTyp : mctx -> dctx -> psi_hat -> tclo  -> (msub * sub)  -> cvarRef -> typ
@@ -118,21 +112,11 @@ module Make (T : TRAIL) : UNIFY = struct
   (* Matching not fully implemented yet -bp *)
 
   type cvarRef =
-    | MMVarRef of normal option ref
-    | MSVarRef of sub option ref
-    | SVarRef of sub option ref
-    | MPVarRef of normal option ref
-    | MVarRef of normal option ref
-    | PVarRef of head option ref
+    | MMVarRef of iterm option ref
 
 
   let eq_cvarRef cv cv' = match (cv, cv') with
-    | (MVarRef r, MVarRef r') -> r == r'
     | (MMVarRef r, MMVarRef r') -> r == r'
-    | (PVarRef r, PVarRef r') -> r == r'
-    | (SVarRef r, SVarRef r') -> r == r'
-    | (MSVarRef r, MSVarRef r') -> r == r'
-    | (_, _)                  -> false
 
 
 
@@ -313,95 +297,11 @@ let isVar h = match h with
   | _ -> false
 
 
-
-  let simplifySub cD0 cPsi sigma =
-    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
-    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
-match sigma with
-    | SVar (s , ( _ ), _s2 ) ->
-      let (cPhi, cPsi1) = match s with
-    (* cPhi |- s : cPsi1 *)
-        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-        | SInst (_,  _ ,  cPhi, cPsi1, _, _ ) -> (cPhi, cPsi1)
-      in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift (k) in               (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
-        | _     -> sigma
-      end
-    | FSVar (s_name , ( _ ), _s2 ) ->
-      let (_, Decl (_, STyp (cPsi1,  _cPhi, _))) = Store.FCVar.get s_name in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> let s = Shift ( k) in
-              (dprint (fun () -> "\n[simplifySub] to  " ^ P.subToString cD0 cPsi s); s)
-        | Null , (Some cvar, k) -> EmptySub (* Shift (CtxShift cvar, k) *)
-        | _     -> sigma
-      end
-    | _ -> sigma
-
-(*
-  let simplifySub cD0 cPsi sigma = match sigma with
-    | SVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NoCtxShift , k)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    |SVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            Shift (NoCtxShift, k)
-          else
-            sigma
-      end
-    | SVar (s , (NoCtxShift , _ ), _s2 ) ->
-      let (cPhi, cPsi1) = match s with
-    (* cPhi |- s : cPsi1 *)
-        | Offset v -> let (_ , cPsi1, cPhi) = Whnf.mctxSDec cD0  v in (cPhi, cPsi1)
-        | SInst (_,  _ ,  cPhi, cPsi1, _ ) -> (cPhi, cPsi1)
-      in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> Shift (NoCtxShift, k)
-        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
-        | _     -> sigma
-      end
-
-    | FSVar (_s1 , (CtxShift _ , _ ), _s2 ) ->
-      (* cPsi' |- s1 : cPhi' and cPhi = g, x1:A1, ... xn:An *)
-      (* cPsi  |- s2 : cPsi' *)
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NoCtxShift , k)
-        | (Some cvar, k) -> Shift (CtxShift cvar, k)
-      end
-    | FSVar (_s1, (NegCtxShift cv , _ ), _s2 ) ->
-      begin match Context.dctxToHat (cPsi) with
-        | (None, k) -> Shift (NegCtxShift cv , k)
-        | (Some cv', k) ->
-          if cv = cv' then
-            Shift (NoCtxShift, k)
-          else
-            sigma
-      end
-    | FSVar (s_name , (NoCtxShift , _ ), _s2 ) ->
-      let (_, SDecl (_, cPsi1,  _cPhi)) = Store.FCVar.get s_name in
-      begin match cPsi1 , Context.dctxToHat (cPsi) with
-        | Null , (None, k) -> Shift (NoCtxShift, k)
-        | Null , (Some cvar, k) -> Shift (CtxShift cvar, k)
-        | _     -> sigma
-      end
-    | _ -> sigma
-*)
   (*-------------------------------------------------------------------------- *)
   (* Trailing and Backtracking infrastructure *)
 
   type action =
-    | InstNormal of normal option ref
-    | InstSub    of sub option ref
-    | InstHead   of head   option ref
-    | InstCtx    of dctx   option ref
+    | InstI      of iterm option ref
     | Add        of cnstr list ref
     | Solve      of cnstr * constrnt   (* FIXME: names *)
 
@@ -410,8 +310,7 @@ match sigma with
   let globalTrail : action T.t = T.trail()
 
   let undo action = (dprint (fun () -> "Call to UNDO\n") ; match action with
-    | InstNormal refM         -> refM   := None
-    | InstHead   refH         -> refH   := None
+    | InstI   refH            -> refH   := None
     | Add cnstrs              -> cnstrs := List.tl !cnstrs
     | Solve (cnstr, constrnt) -> cnstr  := constrnt)
 
@@ -453,7 +352,7 @@ match sigma with
 
   let addConstraint (cnstrs, cnstr) =
   (begin match cnstr with
-    | {contents= (Eqn (cD0, cPsi, tM, tN))} ->
+    | {contents= (Eqn (cD0, cPsi, INorm tM, INorm tN))} ->
         dprint (fun () -> "Add constraint: " ^ P.normalToString cD0 cPsi (tM, id)  ^
                    " = " ^ P.normalToString cD0 cPsi (tN, id))
     | _ -> () end ;
@@ -468,52 +367,27 @@ match sigma with
         delayedCnstrs := cnstrL;
         Some cnstr
 
+  let instantiateMMVar' (u, t, cnstrL) =
+    u := Some t;
+    T.log globalTrail (InstI u);
+    delayedCnstrs := cnstrL @ !delayedCnstrs;
+    globalCnstrs := cnstrL @ !globalCnstrs
 
   let instantiateCtxVar (ctx_ref, cPsi) =
-    ctx_ref := Some cPsi;
-    T.log globalTrail (InstCtx ctx_ref)
-
-
-  let instantiatePVar (q, head, cnstrL) =
-    q := Some head;
-    (* screen screenUndefsHead head; *)
-    T.log globalTrail (InstHead q);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
-
+    ctx_ref := Some (ICtx cPsi);
+    T.log globalTrail (InstI ctx_ref)
 
   let instantiateMVar (u, tM, cnstrL) =
-     u := Some (Whnf.norm (tM, id));
-(*    screen screenUndefs tM;
-    u := Some tM; *)
-    T.log globalTrail (InstNormal u);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
-
-
-  let instantiateSVar (s, sigma, cnstrL) =
-    s := Some sigma;
-    T.log globalTrail (InstSub s);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (u, INorm (Whnf.norm (tM, id)), cnstrL)
 
   let instantiateMMVar (u, tM, cnstrL) =
-    u := Some tM;
-    T.log globalTrail (InstNormal u);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (u, INorm tM, cnstrL)
 
   let instantiateMSVar (s, sigma, cnstrL) =
-    s := Some sigma;
-    T.log globalTrail (InstSub s);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (s, ISub sigma, cnstrL)
 
   let instantiateMPVar (p, head, cnstrL) =
-    p := Some head;
-    T.log globalTrail (InstHead p);
-    delayedCnstrs := cnstrL @ !delayedCnstrs;
-    globalCnstrs := cnstrL @ !globalCnstrs
+    instantiateMMVar' (p, IHead head, cnstrL)
 
   (* ---------------------------------------------------------------------- *)
   (* Higher-order unification *)
@@ -570,13 +444,36 @@ match sigma with
         and cD' |- t'' <= cD2
   *)
 
+  (* should perform a kind of eta expansion on the domain of a substitution.
+     This implementation is totally buggy and wrong, but works for the test cases so far... *)
+  let simplifySub cD0 cPsi sigma =
+    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
+    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
+match sigma with
+    | SVar (s , ( _ ), _s2 ) ->
+      let (_, cPsi1, cPhi) = Whnf.mctxSDec cD0 s in
+      begin match cPsi1 with
+        | Null -> EmptySub
+        | _     -> sigma
+      end
+    | MSVar (_, ((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ), _)) ->
+      instantiateMSVar (r, EmptySub, !cnstrs);
+      EmptySub      
+    | FSVar (_, (s_name , _s2) ) ->
+      let (_, Decl (_, ClTyp (STyp cPsi1,  _cPhi), _)) = Store.FCVar.get s_name in
+      begin match cPsi1  with
+        | Null -> EmptySub
+        | _     -> sigma
+      end
+    | _ -> sigma
+
   let rec pruneMCtx' cD (t, cD1) ms = match (t, cD1) with
     | (MShift _k, Empty) -> (Whnf.m_id, Empty)
 
    | (MShift k, Dec (_, _)) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
-   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp))) ->
+   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp,dep))) ->
        let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
          (* cD1 |- mt' <= cD2 *)
          begin match applyMSub k ms with
@@ -588,7 +485,7 @@ match sigma with
                (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
                   A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
                let mtt'  = Whnf.m_invert (Whnf.cnormMSub mt') in
-               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt')))))
+               (Whnf.mvar_dot1 mt', Dec(cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt'), dep))))
          end
 
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
@@ -694,14 +591,14 @@ match sigma with
      and  mt' patsub   s.t.  [mt1]mt'  = [mt2]mt'
   *)
   let rec m_intersection  subst1 subst2 cD' = begin match (subst1, subst2, cD') with
-    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp))) ->
+    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp,dep))) ->
         let (mt', cD'') = m_intersection  mt1 mt2 cD' in
           (* cD' |- mt' : cD'' where cD'' =< cD' *)
           if k1 = k2 then
             let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
               (* cD'' |- mtt' <= cD' *)
               (* NOTE: Can't create m-closures CtxMClo(cPsi, mtt') and TMClo(tA'', mtt') *)
-              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, (Whnf.cnormMTyp (ctyp, mtt')))))
+              (Whnf.mvar_dot1 mt', Dec (cD'', Decl(x, Whnf.cnormMTyp (ctyp, mtt'), dep)))
 
           else  (* k1 =/= k2 *)
             (Whnf.mcomp mt' (MShift 1), cD'')
@@ -760,32 +657,13 @@ match sigma with
     | (Lam (loc, x, tM), s) ->
         Lam (loc, x, invNorm cD0 ((cvar, offset + 1), (tM, dot1 s), (ms, dot1 ssubst), rOccur))
 
-    | (Root (loc, MVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t), _tS (* Nil *)), s) ->
-        (* by invariant tM is in whnf and meta-variables are lowered;
-           hence tS = Nil and s = id *)
-        let ( _ , ssubst) = ss in
-        if eq_cvarRef (MVarRef r) rOccur then
-          raise NotInvertible
-        else
-          let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s) (* t' = t, since s = Id *)) in
-            (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
-               t' =  t o s     and    D ; Psi  |-  t' <= Psi1 *)
-            if isPatSub t' then
-              let (s', _cPsi2) = pruneCtx phat (t', cPsi1) ss in
-                (* D ; Psi  |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then
-                  Root(loc, MVar(u, comp t' ssubst), Nil)
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              Root(loc, MVar(u, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
+    | (Root (loc, MVar (Inst u, t), tS), s) ->
+      invNorm' cD0 (phat, (Root(loc, MMVar(u, (MShift 0, t)), tS), s), ss, rOccur)
 
-   | (Root (loc, MMVar (MInst (_n, r, cD, cPsi1, _tP, _cnstrs, _) as u, (mt,s')), _tS (* Nil *)), s) ->
+   | (Root (loc, MMVar ((_n, r, cD, ClTyp (_,cPsi1), _cnstrs, _) as u, (mt,s')), _tS (* Nil *)), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
-        if eq_cvarRef (MVarRef r) rOccur then
+        if eq_cvarRef (MMVarRef r) rOccur then
           raise NotInvertible
         else
           let s0 = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp s' s) (* s0 = s', since s = Id *)) in
@@ -821,7 +699,7 @@ match sigma with
           end
 
     | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl(_, (MTyp (_tA, cPsi1, _)))) = Store.FCVar.get u in
+        let (cD_d, Decl(_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	   Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -829,67 +707,22 @@ match sigma with
           Root (loc, FMVar (u, s'), Nil)
 
     | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+        let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get p in
 	let d = Context.length cD0 - Context.length cD_d in
 	let cPsi1 = if d = 0 then cPsi1 else
 	  Whnf.cnormDCtx (cPsi1, MShift d) in
         let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
           Root (loc, FPVar (p, s'), Nil)
 
-    | (Root (loc, PVar (Offset p, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, PVar (p, t), _tS (* Nil *)), s (* id *)) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
         let t' = comp t s (* t' = t, since s = Id *) in
           begin match applyMSub p ms with
             | MV q ->
-                Root(loc, PVar(Offset q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
+                Root(loc, PVar(q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
             | MUndef -> raise NotInvertible
           end
 
-    | (Root (loc, PVar (PInst (_n, r, cPsi1, _tA, _cnstrs, _) as q, t), tS), s) ->
-        (* by invariant tM is in whnf and meta-variables are lowered and s = id *)
-        let ( _ , ssubst) = ss in
-        if eq_cvarRef (PVarRef r) rOccur then
-          raise NotInvertible
-        else
-          let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub(comp t s) (* t' = t, since s = Id *)) in
-            (* D ; Psi |- s <= Psi'   D ; Psi' |- t <= Psi1
-               t' =  t o s
-               D ; Psi |-  t' <= Psi1 *)
-            if isPatSub t' then
-              let (s', _cPsi2) = pruneCtx phat (t', cPsi1) ss in
-                (* D ; Psi' |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then (* cPsi1 = cPsi2 *)
-                  Root (loc, PVar (q, comp t' ssubst),
-                        invSpine cD0 (phat, (tS, s), ss, rOccur))
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              Root (loc, PVar (q, invSub cD0 phat (t', cPsi1) ss rOccur),
-                    invSpine cD0 (phat, (tS,s), ss, rOccur))
-
-    | (Root (loc, Proj (PVar (PInst (_n, r, cPsi1, _tA, _cnstrs, _) as q, t), i), tS), s) ->
-        let ( _ , ssubst) = ss in
-        if eq_cvarRef (PVarRef r) rOccur then
-          raise NotInvertible
-        else
-          let t' = Monitor.timer ("Normalisation", fun () -> Whnf.normSub (comp t s)   (* t' = t, since s = Id *)) in
-            if isPatSub t' then
-              let (s', _cPsi2) = pruneCtx phat (t', cPsi1) ss in
-                (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
-                   t' =  t o s r
-                   cD ; cPsi |-  t' <= cPsi1 and
-                   cD ; cPsi1 |- s' <= cPsi2 and
-                   cD ; cPsi  |- [t']s' <= cPsi2  *)
-                if isId s' then (* cPsi1 = cPsi2 *)
-                  Root (loc, Proj (PVar(q, comp t' ssubst), i),
-                        invSpine cD0 (phat, (tS,s), ss, rOccur))
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              Root (loc, Proj (PVar (q, invSub cD0 phat (t', cPsi1) ss rOccur), i),
-                    invSpine cD0 (phat, (tS,s), ss, rOccur))
 
     | (Root (loc, head, tS), s (* = id *)) ->
         Root (loc, invHead  cD0 (phat, head , ss, rOccur),
@@ -939,8 +772,8 @@ match sigma with
          Occurs check is necessary on tA Dec 15 2008 -bp  :(
        *)
 
-    | MVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t) ->
-        if eq_cvarRef (MVarRef r) rOccur then
+    | MVar (Inst (_n, r, _cD, ClTyp (_,cPsi1), _cnstrs, _) as u, t) ->
+        if eq_cvarRef (MMVarRef r) rOccur then
           raise NotInvertible
         else
           let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
@@ -966,62 +799,21 @@ match sigma with
           end
 
 
-    | PVar (Offset p, t) ->
+    | PVar (p, t) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
           begin match applyMSub p ms with
             | MV q ->
-                PVar(Offset q, invSub cD0 phat (t, cPsi1) ss rOccur)
+                PVar(q, invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
 
-
-    | PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t) ->
-        let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
-        if eq_cvarRef (MVarRef r) rOccur then
-          raise NotInvertible
-        else
-          if isPatSub t then
-            let (_ , ssubst) = ss in
-              let (s', _cPsi2) = pruneCtx phat (t, cPsi1) ss in
-                (* D ; Psi  |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then
-                  PVar(u, comp t ssubst)
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              PVar(u, invSub cD0 phat (t, cPsi1) ss rOccur)
-
-    | Proj(PVar (Offset p, t), i) ->
+    | Proj(PVar (p, t), i) ->
         let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
           begin match applyMSub p ms with
             | MV q ->
-                Proj(PVar(Offset q, invSub cD0 phat (t, cPsi1) ss rOccur), i)
+                Proj(PVar(q, invSub cD0 phat (t, cPsi1) ss rOccur), i)
             | MUndef -> raise NotInvertible
           end
-
-
-    | Proj(PVar (Inst (_n, r, cPsi1, _tP, _cnstrs, _) as u, t), i) ->
-        let t = Monitor.timer ("Normalisation", fun () -> Whnf.normSub t) in
-        if eq_cvarRef (MVarRef r) rOccur then
-          raise NotInvertible
-        else
-          if isPatSub t then
-            let (_ , ssubst) = ss in
-              let (s', _cPsi2) = pruneCtx phat (t, cPsi1) ss in
-                (* D ; Psi  |- t' <= Psi1 and
-                   D ; Psi1 |- s' <= Psi2 and
-                   D ; Psi  |- [t']s' <= Psi2  *)
-                if isId s' then
-                  Proj(PVar(u, comp t ssubst), i)
-                else
-                  raise NotInvertible
-            else (* t' not patsub *)
-              PVar(u, invSub cD0 phat (t, cPsi1) ss rOccur)
-
-
-
 
   (* invSub cD0 (phat, s, ss, rOccur) = s'
 
@@ -1051,20 +843,19 @@ match sigma with
 
     | (SVar (s, 0, sigma), CtxVar psi) ->
         (* other cases ? -bp *)
-        let (s,cPhi, cPsi') = (match s with
-                     | Offset offset -> (match applyMSub offset ms with
+        let (s,cPhi, cPsi') = (match applyMSub s ms with
                                            | MV v -> let (_, cPhi, cPsi') =
-                                               Whnf.mctxSDec cD0  v in (Offset v, cPhi, cPsi')
+                                               Whnf.mctxSDec cD0  v in (v, cPhi, cPsi')
                                            | MUndef -> raise NotInvertible
-                                        )
-                     | SInst (_ , {contents=None}, cPhi, _cPsi', _ , _) -> (s,cPhi, _cPsi')
-                    ) in
+                                        ) in
 
         let _ = dprint (fun () -> "[invSub]" ^ P.dctxToString cD0 (Context.hatToDCtx phat) ^ " |- "
         ^ P.subToString cD0 (Context.hatToDCtx phat) sigma ^ " : " ^
         P.dctxToString cD0 cPsi') in
 
-        SVar(s, ( 0), invSub cD0 phat (sigma, cPsi') ss rOccur)
+        SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
+    | (MSVar (0, ((_,{contents=None},cD, ClTyp (STyp cPsi',cPhi), _, _) as s0, (mt,sigma))), CtxVar psi) ->
+      MSVar(0, (s0, (invMSub cD0 (mt, cD) ms rOccur, invSub cD0 phat (sigma, cPsi') ss rOccur)))
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
         begin match bvarSub n ssubst with
@@ -1086,19 +877,19 @@ match sigma with
         let tM' = invNorm cD0 (phat, (tM, id), ss, rOccur) in
           Dot (Obj tM', invSub cD0 phat (s', cPsi') ss rOccur)
 
-    | (SVar (Offset s, (n), t), cPsi1) -> (* This is probably
+    | (SVar (s, (n), t), cPsi1) -> (* This is probably
       buggy. Need to deal with the n *)
           begin match applyMSub s ms with
             | MV v ->
                 let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
                   (* applyMSub to ctx_offset ? *)
-                SVar(Offset v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
+                SVar(v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
           end
-    | (FSVar (s_name, n , t), cPsi1) ->
+    | (FSVar (n, (s_name, t)), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
-        let (_, Decl (_, (STyp (_cPhi,  cPsi', _)))) = Store.FCVar.get s_name in
-        FSVar (s_name, n, invSub cD0 phat (t, cPsi') ss rOccur))
+        let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'), _)) = Store.FCVar.get s_name in
+        FSVar (n , (s_name, invSub cD0 phat (t, cPsi') ss rOccur)))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
         free substitution variables -- not defined"))*)
@@ -1119,50 +910,29 @@ match sigma with
         D'' |- [ms]mt <= cD'
    *)
   and invMSub cD0 (mt, cD1) ms  rOccur = match (mt, cD1) with
-    | (MShift n, Dec(_cD', _dec)) ->
-        invMSub cD0 (MDot (MV (n + 1), MShift (n + 1)), cD1) ms rOccur
+    | (MShift  n, _) -> checkDefined (Whnf.mcomp (MShift  n) ms)
+    | (MDot (ClObj (phat, SObj sigma), mt'), Dec(cD', Decl (_ , ClTyp (STyp cPhi, _cPsi), _)))   ->
+      let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
+      MDot (ClObj (phat, SObj sigma'), invMSub cD0 (mt', cD') ms rOccur)
+    | (MDot (mobj, mt'), Dec(cD',_)) ->
+      MDot(invMObj cD0 mobj ms rOccur, invMSub cD0 (mt', cD') ms rOccur)
 
-    | (MShift  n, Empty) -> Whnf.mcomp (MShift  n) ms
+  and invMObj cD0 mobj ms rOccur = match mobj with
+    | MV n ->
+      begin match applyMSub n ms with
+	| MUndef -> raise NotInvertible
+	| ft -> ft
+      end 
+    | ClObj (phat, MObj tM) -> ClObj (phat, MObj (invNorm cD0 (phat, (tM, id), (ms, id), rOccur)))
+    | CObj cPsi -> raise (Error.Violation "Not implemented")
+    | ClObj (phat, PObj h) -> ClObj (phat, PObj (invHead cD0 (phat, h, (ms, id), rOccur)))
+   (* | SObj (phat, sigma) -> SObj (phat, invSub cD0 phat (sigma, *)
 
-    | (MDot (MV n, mt'), Dec(cD', _dec)) ->
-        begin match applyMSub n ms with
-          | MUndef ->
-              let msi = invMSub cD0 (mt', cD') ms rOccur in
-                MDot(MUndef, msi)
-                (* Mon Feb  9 14:37:27 2009 -bp : previously raise NotInvertible) *)
-          | ft    -> MDot (ft, invMSub cD0 (mt', cD') ms rOccur)
-        end
+  and checkDefined = function
+    | MShift n -> MShift n
+    | MDot (MUndef, _) -> raise NotInvertible
+    | MDot (m,mt) -> MDot(m,checkDefined mt)
 
-    | (MDot (MObj (phat, tM), mt'), Dec(cD', Decl _))        ->
-        (* below may raise NotInvertible *)
-        let tM' = invNorm cD0 (phat, (tM, id), (ms, id), rOccur) in
-          MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
-
-    | (MDot (CObj cPsi, mt'), Dec(cD', Decl _))        ->
-        raise (Error.Violation "Not Implemented")
-(*        (* below may raise NotInvertible *)
-        let tM' = invDCtx cD0  cPsi (ms, id) rOccur in
-          MDot (MObj (phat, tM'), invMSub cD0 (mt', cD') ms rOccur)
-*)
-    | (MDot (PObj (phat, h), mt'), Dec(cD', Decl _))        ->
-        (* below may raise NotInvertible *)
-        let h' = invHead cD0 (phat, h, (ms, id), rOccur) in
-          MDot (PObj (phat, h'), invMSub cD0 (mt', cD') ms rOccur)
-
-    | (MDot (SObj (phat, sigma), mt'), Dec(cD', Decl (_ , STyp (cPhi, _cPsi, _))))   ->
-        (* Below may raise NotInvertible *)
-        let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
-          MDot (SObj (phat, sigma'), invMSub cD0 (mt', cD') ms rOccur)
-
-
-(*  and invDCtx cD cPsi ms rOccur = match cPsi with
-    | Null -> Null
-    | DDec (cPsi, dec) ->
-        let cPsi' = invDCtx cD cPsi ms rOccur in
-        let dec'  = invDec  cD dec ms rOccur in
-          DDec (cPsi', dec')
-    | CtxVar
-*)
   (* prune cD0 cPsi'' (phat, (tM, s), ss, rOccur) = tM'
 
      Given: cD ; cPsi  |- s <= cPsi'  and
@@ -1221,8 +991,8 @@ match sigma with
           let tS' = pruneSpine cD0 cPsi' phat (tS, s) ss rOccur in
             Root (loc, newHead, tS')
         in
-          match head with
-            | MMVar (MInst (_n, r, cD1, cPsi1, tP, cnstrs, mdep) as _u, (mt, t)) ->  (* s = id *)
+	let do_head = function
+            | MMVar ((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as _u, (mt, t)) ->  (* s = id *)
               (* cD |- t <= cD1
                  cD ; cPsi |- t <= [|mt|]Psi1
                  cD ; cPsi |- [t]([|mt|]tP)
@@ -1366,11 +1136,11 @@ match sigma with
 
 
 
-            | MVar (Inst (_n, r, cPsi1, tP, cnstrs, mdep) (*as u*), t) ->  (* s = id *)
+            | MVar (Inst (_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) (*as u*), t) ->  (* s = id *)
                 let tM = Root(loc, head, tS) in
                 let t  = simplifySub cD0 cPsi' (Whnf.normSub (comp t s)) in
                   (* by invariant: MVars are lowered since tM is in whnf *)
-                  if eq_cvarRef (MVarRef r) rOccur then
+                  if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "Variable occurrence")
                   else
                     if isPatSub t then
@@ -1489,7 +1259,7 @@ match sigma with
                 end
                 )
             | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, MTyp (_tA, cPsi1, _))) = Store.FCVar.get u in
+                let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1499,7 +1269,7 @@ match sigma with
                   returnNeutral (FMVar (u, s'))
 
             | FPVar (p, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+                let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
                 let d = Context.length cD0 - Context.length cD_d in
 	        let cPsi1 = if d = 0 then cPsi1 else
 	          Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1507,48 +1277,30 @@ match sigma with
                 let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
                   returnNeutral (FPVar (p, s'))
 
-            | PVar (Offset p, t)   (* tS = Nil,   s = id *) ->
+            | PVar (p, t)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
                       let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
                       let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (PVar (Offset q, s'))
+                        returnNeutral (PVar (q, s'))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency")
                 end
 
-            | Proj (PVar (Offset p, t), i)   (* tS = Nil,   s = id *) ->
+            | Proj (PVar (p, t), i)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with
                   | MV q ->
                       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
                       let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
                       let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (Proj (PVar (Offset q, s'), i))
+                        returnNeutral (Proj (PVar (q, s'), i))
                   | MUndef -> raise (Failure "[Prune] Bound PVar dependency in projection")
                 end
 
-            | PVar (PInst (_n, r, cPsi1, tA, cnstrs, mDep) as q, t) (* tS *)   (* s = id *) ->
+            | MPVar ((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, (mt, t)) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
                 let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                  if eq_cvarRef (PVarRef r) rOccur then
-                    raise (Failure "[Prune] Parameter variable occurrence")
-                  else
-                    if isPatSub t then
-                      let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
-                        (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                      let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1]tA)[cPsi2] *) in
-                      let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) in
-                        (* [|p[idsub] / q|] *)
-                        (* h = p[[ssubst] ([t] idsub)] *)
-                        returnNeutral (PVar(p, comp (comp t idsub) ssubst))
-                    else (* s not patsub *)
-                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-                        returnNeutral (PVar (q, s'))
-
-            | MPVar (MPInst (_n, r, cD1, cPsi1, tA, cnstrs, mDep) as q, (mt, t)) (* tS *)   (* s = id *) ->
-                let t = Whnf.normSub t in
-                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                  if eq_cvarRef (PVarRef r) rOccur then
+                  if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
                     if isPatSub t && isPatMSub mt then
@@ -1599,10 +1351,10 @@ match sigma with
                         returnNeutral (MPVar (q, (mt', s')))
 
 
-            | Proj(MPVar (MPInst (_n, r, cD1, cPsi1, tA, cnstrs, mDep) as q, (mt, t)), index) (* tS *)   (* s = id *) ->
+            | Proj(MPVar ((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, (mt, t)), index) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
                 let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                  if eq_cvarRef (PVarRef r) rOccur then
+                  if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
                     if isPatSub t && isPatMSub mt then
@@ -1647,27 +1399,9 @@ match sigma with
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
                         returnNeutral (Proj(MPVar (q, (mt', s')), index))
 
-            | Proj (PVar (PInst (_n, r, cPsi1, tA, cnstrs, mDep) as q, t), i)  (* s = id *) ->
-                let t = Whnf.normSub t in
-                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                if eq_cvarRef (PVarRef r) rOccur then
-                  raise (Failure "[Prune] Parameter variable occurrence")
-                else
-                  if isPatSub t then
-                    let (idsub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
-                      (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                    let p = Whnf.newPVar None (cPsi2, TClo(tA, invert idsub)) (* p::([(idsub)^-1] tA)[cPsi2] *) in
-                    let _ = instantiatePVar (r, PVar (p, idsub), !cnstrs) (* [|p[idsub] / q|] *) in
-                    let s_comp = comp (comp t idsub) ssubst in
-                      returnNeutral (Proj (PVar(p, s_comp), i))
-
-                  else (* s not patsub *)
-                    let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-                      returnNeutral (Proj (PVar (q, s'), i))
-
             | Proj (FPVar(p,t), i)   (* tS = Nil,   s = id *) ->
                 begin try
-                  let (cD_d, Decl (_, PTyp (_tA, cPsi1, _))) = Store.FCVar.get p in
+                  let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
                   let d = Context.length cD0 - Context.length cD_d in
 	          let cPsi1 = if d = 0 then cPsi1 else
 	                        Whnf.cnormDCtx (cPsi1, MShift d) in
@@ -1697,6 +1431,7 @@ match sigma with
                   | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
                   | _                     -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
                 end
+	in do_head head
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
     | (Last tM, s) ->
@@ -1761,31 +1496,24 @@ match sigma with
           ** because s must be in nf, sv = None **
       *)
       let _ = dprint (fun () -> "[pruneSubst] SVar case ") in
-      let cPsi' = (match sv with
-                     | Offset offset -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD  offset in cPsi'
-                     | SInst (_ , ({contents=None} as r), cPsi', _cPhi', _, _ ) ->
-                       if eq_cvarRef (SVarRef r) rOccur then
-                         raise (Failure "Variable occurrence")
-                       else
-                         cPsi'
-                    ) in
+      let cPsi' = (let (_, _cPhi, cPsi') = Whnf.mctxSDec cD sv in cPsi') in
         SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
 
-    | (FSVar (s_name, n , sigma), cPsi1) ->
+    | (FSVar (n, (s_name, sigma)), cPsi1) ->
       let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
-      let (_, Decl (_, STyp (_cPhi,  cPsi', _))) = Store.FCVar.get s_name in
-        FSVar (s_name, n, pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+      let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s_name in
+        FSVar (n, (s_name, pruneSubst cD cPsi (sigma, cPsi') ss rOccur))
 
-    | (MSVar ((MSInst (_ ,( {contents=None} as r), _cD, cPhi1, cPhi2, _cnstrs, _) as rho),
-              n, (mt, sigma) ), _cPsi1) ->
+    | (MSVar (n, (((_ ,( {contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
+                  (mt, sigma)) ), _cPsi1) ->
         (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
          let (mt', _s') = ss in
-        if eq_cvarRef (MSVarRef r) rOccur then
+        if eq_cvarRef (MMVarRef r) rOccur then
           raise (Failure "Variable occurrence")
         else
           let sigma = Whnf.normSub sigma in
           let sigma' = pruneSubst cD cPsi (sigma, cPhi1) ss rOccur in
-          MSVar (rho, n, (Whnf.mcomp mt mt', sigma'))
+          MSVar (n, (rho, (Whnf.mcomp mt mt', sigma')))
         )
     (* Other heads to be added ??
 
@@ -1877,13 +1605,9 @@ match sigma with
       let s' , cPsi1' = (id, cPsi1) in
 
 
-      let cPsi' = (match s with
-                     | Offset offset -> (match applyMSub offset mt with
+      let cPsi' = (match applyMSub s mt with
                                            | MV v -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
                                            | MUndef -> raise NotInvertible
-                                        )
-
-                     | SInst (_ , {contents=None}, cPsi', _cPhi', _, _ ) -> cPsi'
                     ) in
 
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
@@ -1892,15 +1616,15 @@ match sigma with
 
           (s',cPsi1')
 
-    | (MSVar (s, cshift, (_theta,sigma)), cPsi1) ->
+    | (MSVar (cshift, (s, (_theta,sigma))), cPsi1) ->
       let s' , cPsi1' = (id, cPsi1) in
 
-      let MSInst (_ ,{contents=None}, _cD, cPhi1, cPhi2, _cnstrs, _) = s in
+      let (_ ,{contents=None}, _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) = s in
       let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
       let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
           (s', cPsi1')
 
-    | (FSVar (s, cshift, sigma), cPsi1) ->
+    | (FSVar (cshift, (s, sigma)), cPsi1) ->
         (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
                D ;Psi |- sigma : Phi
                D;Psi'' |- ss <= Psi
@@ -1908,7 +1632,7 @@ match sigma with
         *)
       let s' , cPsi1' = (id, cPsi1) in
 
-        let (_, Decl (_, STyp (_cPhi,  cPsi', _))) = Store.FCVar.get s in
+        let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
         (s', cPsi1')
 
@@ -2106,8 +1830,8 @@ match sigma with
         unifyTerm  mflag cD0 (DDec(cPsi, TypDeclOpt x)) (tN, dot1 s1) (tM, dot1 s2)
 
     (* MVar-MVar case *)
-    | (((Root (_, MVar (Inst (_n1, r1,  cPsi1,  tP1, cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MVar (Inst (_n2, r2, cPsi2,  tP2, cnstrs2, mdep2), t2), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1,
+       (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2), s2) as sM2)) ->
          dprnt "(000) MVar-MVar";
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
@@ -2149,9 +1873,9 @@ match sigma with
                       instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
 
               | (true, false) ->
-                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
               | (false, true) ->
-                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
               | (false, false) ->
                   if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
@@ -2163,7 +1887,7 @@ match sigma with
                               P.normalToString cD0 cPsi sM2 ^  "\n with type: " ^
                               P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint\n"
                           );*)
-                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *))
+                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sN), INorm (Clo sM))))  (* XXX double-check *))
           else
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) ->
@@ -2175,7 +1899,7 @@ match sigma with
                     let _ = dprint (fun () -> "MVar-MVar : inverted ss1 : " ^
                                       P.subToString cD0 cPsi1 ss1) in
                     let _ = dprint (fun () -> "MVar-MVar case initiate pruning " ) in
-                    let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss1) (MVarRef r1)) in
+                    let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss1) (MMVarRef r1)) in
                     let _ = dprint (fun () ->
                                       "UNIFY: MVar =/= MVAR: Result of pruning : " ^
                                         "\n cPsi1  = " ^ P.dctxToString cD0 cPsi1 ^ "\n tMs' = " ^
@@ -2192,7 +1916,7 @@ match sigma with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n "; *)
 			  (dprint (fun () -> "Add constraint (0)");
-                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
                   end
               | (false, true) ->
                   begin try
@@ -2217,13 +1941,13 @@ match sigma with
 
 
                     let phat = Context.dctxToHat cPsi in
-                    let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (MShift 0, ss2) (MVarRef r2)) in
+                    let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (MShift 0, ss2) (MMVarRef r2)) in
                       instantiateMVar (r2, tM1', !cnstrs2)
                   with
                     | NotInvertible ->
                         ((* Printf.printf "Added constraints: NotInvertible: \n" ; *)
 			  (dprint (fun () -> "Add constraint (6)");
-                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1)))))
+                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM2), INorm (Clo sM1))))))
                   end
               | (false , false) ->
                   (* Check if t1' or t2' are proj-patt sub *)
@@ -2251,7 +1975,7 @@ match sigma with
                                             in
                           let _ = dprint (fun () -> "          t_flat) = " ^
                                             P.subToString cD0 flat_cPsi t_flat) in
-                          let tM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MVarRef r2)) in
+                          let tM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MMVarRef r2)) in
                           let _ = dprint (fun () -> "         sM1' = " ^
                                             P.normalToString cD0 cPsi2 (tM1', Substitution.LF.id)) in
 
@@ -2260,7 +1984,7 @@ match sigma with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 				(dprint (fun () -> "Add constraint (7)");
-                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
                         end
 
 
@@ -2272,25 +1996,26 @@ match sigma with
                           let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
                           let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
                           let ss = invert t_flat in
-                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MVarRef r1)) in
+                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MMVarRef r1)) in
                             instantiateMVar (r1, sM2', !cnstrs1)
                         with
                           | NotInvertible ->
                               ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 				(dprint (fun () -> "Add constraint (8)");
-                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
                         end
 
 
                     | ( false , false ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
+                        let cnstr = ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))) in
                           dprint (fun () -> "neither pat sub"); addConstraint (cnstrs1, cnstr)
                   end
             end
 
     (* MVar-normal case *)
-    | ((Root (_, MVar (Inst (_n, r, cPsi1, _tP, cnstrs, _), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (_, MVar (Inst (_n, r, _, ClTyp (_, cPsi1), cnstrs, _), t), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) 
+    | ((_tM2, _s2) as sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (_,cPsi1), cnstrs, _), t), _tS), s1) as sM1)) ->
 (*        dprnt "(001) MVar-_";*)
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
           if isPatSub t' then
@@ -2303,7 +2028,7 @@ match sigma with
                                             P.normalToString cD0 cPsi sM2) in              *)
               let phat = Context.dctxToHat cPsi in
 (*              let _ = dprint (fun () -> "Pruning substitution: " ^ P.dctxToString cD0 cPsi1 ^ " |- " ^ P.subToString cD0 cPsi1 ss ^ " <= " ^ P.dctxToString cD0 cPsi) in *)
-              let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MVarRef r)) in
+              let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MMVarRef r)) in
 (*              let _ = dprint (fun () ->
                                           "UNIFY(2) -- AFTER PRUNING: " ^
                                             P.mctxToString cD0 ^ "\n    " ^
@@ -2319,7 +2044,7 @@ match sigma with
               | NotInvertible ->
                   (* Printf.printf "Added constraints: NotInvertible: \n";*)
                   (dprint (fun () -> "Add constraint (9)");
-		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm (Clo sM2)))))
             else
               if isProjPatSub t' then
                 begin try
@@ -2328,81 +2053,23 @@ match sigma with
                   let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
                   let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
                   let ss = invert t_flat in
-                  let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MVarRef r)) in
+                  let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MMVarRef r)) in
                     instantiateMVar (r, sM2', !cnstrs)
                 with
                   | NotInvertible ->
                       ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
 			(dprint (fun () -> "Add constraint (10)");
-                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))))
+                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
               end
             else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi sM1
                               ^ " = " ^ P.normalToString cD0 cPsi sM2);
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-
-    (* normal-MVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (_, MVar (Inst (_n, r, cPsi1, tP1, cnstrs, _), t), _tS), s2) as sM2)) ->
-        (*        dprnt "(002) _-MVar"; *)
-
-        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
-          if isPatSub t' then
-            try
-(*              dprnt "isPatSub";
-              let _ = dprint (fun () ->
-                                "UNIFY (3): " ^
-                                  P.mctxToString cD0 ^ "\n        " ^
-                                  P.normalToString cD0 cPsi sM1 ^ "\n        " ^
-                                  P.normalToString cD0 cPsi sM2 ^
-                                  " : " ^ P.typToString cD0 cPsi (tP1, t')) in
-*)
-              let ss = Monitor.timer ("Normalisation", fun () -> invert (Whnf.normSub t')) in
-              let phat = Context.dctxToHat cPsi in
-              let tM1' = trail (fun () -> prune cD0 cPsi1 phat sM1 (MShift 0, ss) (MVarRef r)) in
-(*              let _ = dprint (fun () -> "UNIFY (3) : INSTANTIATE! \n" ^
-                                P.normalToString cD0 cPsi sM2 ^ "\n with " ^
-                                P.normalToString cD0 cPsi1 (tM1', id) ^ "\n in context cPsi1 = " ^
-                                P.dctxToString cD0 cPsi1
-                             ) in
-*)
-
-                instantiateMVar (r, tM1', !cnstrs)
-            with
-              | NotComposable _ -> raise (Failure "NotComposable")
-              | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-          else
-            if isProjPatSub t' then
-              begin try
-                dprnt "isProjPatSub";
-                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                let phat = Context.dctxToHat flat_cPsi in
-                let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
-                let tM1'   = ConvSigma.strans_norm cD0 sM1 conv_list in
-                let ss = invert t_flat in
-(*                dprint (fun () -> "! t'     = " ^ P.subToString cD0 cPsi t');
-                dprint (fun () -> "! t_flat = " ^ P.subToString cD0 flat_cPsi t_flat);
-                dprint (fun () -> "! tM1' = " ^ P.normalToString cD0 flat_cPsi (tM1', id));
-                dprint (fun () -> "! ss = " ^ P.subToString cD0 flat_cPsi ss);
-                dprnt "isProjPatSub - 5";*)
-                let sM1' = trail (fun () -> prune cD0 cPsi1 phat (tM1', id) (MShift 0, ss) (MVarRef r)) in
-                dprnt "isProjPatSub - 6";
-                  instantiateMVar (r, sM1', !cnstrs)
-              with
-              | NotInvertible ->
-                Printf.printf "Added constraints: NotInvertible: \n";
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
-              end
-            else
-            (dprint (fun () -> "Add constraint: Normal-MVar case");
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-
-
+             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
 
     (* MMVar-MMVar case *)
-    | (((Root (_, MMVar (MInst (_n1, r1,  cD1, cPsi1,  tP1, cnstrs1, mdep1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MMVar (MInst (_n2, r2, _cD2, cPsi2, tP2, cnstrs2, mdep2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MMVar ((_n1, r1,  cD1, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), (mt1, t1)), _tS1) as _tM1), s1) as sM1,
+       (((Root (_, MMVar ((_n2, r2, _cD2, ClTyp (MTyp tP2,cPsi2), cnstrs2, mdep2), (mt2, t2)), _tS2) as _tM2), s2) as sM2)) ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
@@ -2414,9 +2081,6 @@ match sigma with
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
             match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
               | (true, true, true, true) ->
-                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
-                    ()
-                  else
                     let phat = Context.dctxToHat cPsi in
                     let (s', cPsi') = intersection phat (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
@@ -2460,18 +2124,18 @@ match sigma with
 
               | (true, true, _, false) ->
                   (* t2' is not a pattern substitution *)
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM), INorm(Clo sN)))) (* XXX double-check *)
 
               | (true, true, false, _ ) ->
-                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM, Clo sN))) (* XXX double-check *)
+                  addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM), INorm(Clo sN)))) (* XXX double-check *)
 
               | (false, _, _, _) ->
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
+                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sN), INorm(Clo sM))))  (* XXX double-check *)
 
               | (_, false, _, _) ->
                   (* t1' is not a pattern substitution *)
 
-                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sN, Clo sM)))  (* XXX double-check *)
+                  addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sN), INorm(Clo sM))))  (* XXX double-check *)
 
           else
             begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
@@ -2498,29 +2162,20 @@ match sigma with
                                       ^ "\n") in
                     let phat = Context.dctxToHat cPsi in
                     let _    = dprint (fun () -> "ss1 = " ^ P.subToString cD0 cPsi1 ss1 ) in
-		      (* is this really necessary? Can't we just prune regardless?
-                         there seems to be one test that loops if we remove this... -ac *)
-                      if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' && Whnf.convMSub mt1 mt2 then
-                        let tM2 = Whnf.norm sM2 in
-                        let tM2' = Whnf.norm (Whnf.cnorm (tM2, mtt1), ss1) in
-                          (instantiateMMVar (r1, tM2', !cnstrs1);
-                          dprint (fun () -> "Instantiated with sM1 with pruned tM2' (convertible sub) " ^
-                                        P.normalToString cD0 cPsi sM1))
-                      else
-                        let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt1, ss1) (MVarRef r1)) in
+                        let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (mtt1, ss1) (MMVarRef r1)) in
                           dprint (fun () -> "Pruned tM2' " ^
                                     P.normalToString cD0 cPsi1 (tM2', Substitution.LF.id));
                           (* sM2 = [ss1][s2]tM2 *)
                           dprint (fun () -> "sM1 (prior to inst.) " ^
                                     P.normalToString cD0 cPsi sM1);
-                          instantiateMMVar (r1, tM2', !cnstrs1);
+                          instantiateMMVar (r1, Whnf.norm(tM2',id), !cnstrs1);
                           dprint (fun () -> "Instantiated with sM1 with pruned tM2' " ^
                                         P.normalToString cD0 cPsi sM1)
 
                   with
                     | NotInvertible ->
                       (dprint (fun () -> "Add constraint (1)");
-		      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+		      addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                   end
               | (_ , _, true, true) ->
                   begin try
@@ -2540,14 +2195,14 @@ match sigma with
                                       ^ "\n") in
 
 
-                    let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MVarRef r2)) in
+                    let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (mtt2, ss2) (MMVarRef r2)) in
                      ( instantiateMMVar (r2, tM1', !cnstrs2);
                       dprint (fun () -> "Instantiated with new meta^2-variable " ^
                                         P.normalToString cD0 cPsi sM2) )
                   with
                     | NotInvertible ->
 		      (dprint (fun () -> "Add constraint (2)");
-                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM2, Clo sM1))))
+                      addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM2), INorm(Clo sM1)))))
                   end
 (*              | ( _ , false , _ , _ ) ->
                   (* neither t1' is not pattern substitutions -- add projPat case *)
@@ -2580,12 +2235,12 @@ match sigma with
                                       ^ " : " ^ P.typToString cD0 cPsi (tP2, t2')
                                       ^ "\n") in
 *)
-                          let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt2, ss) (MVarRef r2)) in
+                          let sM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (mtt2, ss) (MMVarRef r2)) in
                             instantiateMMVar (r2, sM1', !cnstrs2)
                         with
                           | NotInvertible ->
 			    (dprint (fun () -> "Add constraint (3)");
-                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                         end
 
 
@@ -2597,19 +2252,19 @@ match sigma with
                           let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
                           let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
                           let ss = invert t_flat in
-                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt1, ss) (MVarRef r1)) in
+                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
                             instantiateMMVar (r1, sM2', !cnstrs1)
                         with
                           | NotInvertible ->
 			    (dprint (fun () -> "Add constraint (4)");
-                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                            addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
                         end
 
 
 
                     | ( _ , _ ) ->
                         (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
+                        let cnstr = ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2))) in
 			let _ = dprint (fun () -> "Add constraint (5)") in
                           addConstraint (cnstrs1, cnstr)
                   end
@@ -2617,7 +2272,8 @@ match sigma with
 
 
     (* MMVar-normal case *)
-    | ((Root (loc, MMVar (MInst (_n, r, cD,  cPsi1, tP, cnstrs, mdep), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2)) ->
+    | ((Root (loc, MMVar ((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep), (mt, t)), _tS), s1) as sM1, ((_tM2, _s2) as sM2))
+    | ((_tM2, _s2) as sM2, ((Root (loc, MMVar ((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep), (mt, t)), _tS), s1) as sM1)) ->
         dprnt "(011) MMVar-_";
         if blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) then
           (dprnt "(011) - blockinDCtx";
@@ -2652,7 +2308,7 @@ match sigma with
                               P.normalToString cD0 cPsi sM1)
             with
               | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)))
+                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2))))
             end
           else
             (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
@@ -2704,71 +2360,11 @@ match sigma with
                   instantiateMMVar (r, sM2', !cnstrs)
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
-                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+                  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
               end
           else
              (dprint (fun () -> "(011) Add constraints ");
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-
-
-    (* normal-MMVar case *)
-    | ((_tM1, _s1) as sM1, ((Root (loc, MMVar (MInst (_n, r, cD2, cPsi2, tP, cnstrs, mdep), (mt, t)), _tS), s2) as sM2)) ->
-        dprnt "(012) _-MMVar";
-        if blockdeclInDctx (Whnf.cnormDCtx (cPsi2, Whnf.m_id)) then
-          (dprnt "(012) - blockinDCtx";
-          let tN = genMMVarstr loc cD2 cPsi2 (tP, id) in
-            instantiateMMVar (r, tN,!cnstrs);
-            unifyTerm mflag cD0 cPsi sM1 sM2)
-        else
-        let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s2)) in
-          if isPatSub t' && isPatMSub mt then
-            try
-               let _ = dprint (fun () ->
-                                "UNIFY(3): normal-MMVar" ^
-                                  P.mctxToString cD0 ^ "\n" ^
-                                  P.normalToString cD0 cPsi sM1 ^ "\n    " ^
-                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
-
-              let ss   = invert t' in
-              let mtt  = Whnf.m_invert (Whnf.cnormMSub mt) in
-              let phat = Context.dctxToHat cPsi in
-              let _ = dprint (fun () -> "                sM1 (expected pruned result) =   " ^
-             P.normalToString cD2 cPsi2 (Whnf.cnorm (Whnf.norm sM1,mtt),  Substitution.LF.id)) in
-              let sM1' = trail (fun () -> prune cD2 cPsi2 phat sM1 (mtt, ss) (MMVarRef r)) in
-              let _ = dprint (fun () -> "   (012) - normal - MMVar cD2 = " ^
-              P.mctxToString cD0) in
-              let _ = dprint (fun () -> "   pruned sM1 = ") in
-              let _ = dprint (fun () -> "                  " ^
-                                P.normalToString cD2 cPsi2 (sM1', Substitution.LF.id)) in
-                instantiateMMVar (r, sM1', !cnstrs)
-            with
-              | NotInvertible ->
-                (dprint (fun () -> "(012) Add constraints ");
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-          else
-            (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
-            if isProjPatSub t' && isPatMSub mt then
-            try
-               let _ = dprint (fun () ->
-                                "UNIFY(3): normal-MMVar" ^
-                                  P.mctxToString cD0 ^ "\n" ^
-                                  P.normalToString cD0 cPsi sM1 ^ "\n    " ^
-                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
-              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-              let phat = Context.dctxToHat flat_cPsi in
-              let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
-              let tM1'   = ConvSigma.strans_norm cD0 sM1 conv_list in
-              let ss = invert t_flat in
-              let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
-              let sM1' = trail (fun () -> prune cD2 cPsi2 phat (tM1', id) (mtt, ss) (MMVarRef r)) in
-                instantiateMMVar (r, sM1', !cnstrs)
-            with
-              | NotInvertible ->
-                (dprint (fun () -> "(013) Add constraints ");
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
-            else
-              (dprint (fun () -> "(014) Add constraints ");
-              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))))
+             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
 
     | (((Root(_, h1,tS1), s1) as _sM1), ((Root(_, h2, tS2), s2) as _sM2)) ->
         dprnt "(020) Root-Root";
@@ -2818,53 +2414,14 @@ match sigma with
                 unifySub mflag cD0 cPsi s s'
               else raise (Failure "Front FPVar mismatch"))
 
-    | (PVar (Offset k, s) , PVar(Offset k', s')) ->
+    | (PVar (k, s) , PVar(k', s')) ->
         if k = k' then
            unifySub mflag cD0 cPsi s s'
         else raise (Failure "Parameter variable clash")
 
-
-    | (PVar (PInst (_n, q, _cPsi1, tA1, cnstr, _), s1) as h1, BVar k2) ->
-        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
-          if isPatSub s1' then
-           (begin try
-               let TypDecl(_ , tA2) = Context.ctxDec cPsi k2 in
-                 unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, id)
-            with Context.NoTypAvailable -> raise (Failure ("ERROR: Encountered undefined bound variable "))
-            end;
-(*            dprint (fun () -> "\n unifyHead bvar - pvar \n") ;*)
-            begin match bvarSub k2 (invert s1') with
-                  | Head (BVar k2') -> instantiatePVar (q, BVar k2', !cnstr)
-                  | _               -> raise (Failure "Parameter violation")
-            end)
-          else
-            (* example: q[q[x,y],y] = x  should succeed
-                        q[q[x,y],y] = y  should fail
-               This will be dealt with when solving constraints.
-            *)
-            (dprint (fun () -> "(015) Add constraints ");
-            addConstraint (cnstr, ref (Eqh (cD0, cPsi, h1, BVar k2))))
-
-    | (BVar k1, (PVar (PInst (_n, q, _cPsi2, tA2, cnstr, _), s2) as h1)) ->
-        let s2' = simplifySub cD0 cPsi (Whnf.normSub s2) in
-          if isPatSub s2' then
-            begin
-              begin try
-(*                let _ = dprint (fun () -> "\n unifyHead bvar -pvar \n") in*)
-                let TypDecl(_ , tA1) = Context.ctxDec cPsi k1 in
-                  unifyTyp mflag cD0 cPsi (tA1, id) (tA2, s2')
-              with Context.NoTypAvailable -> () end;
-(*              dprint (fun () -> "unifyHead bvar -pvar ");*)
-              match bvarSub k1 (invert s2') with
-                | Head (BVar k1') ->
-                    instantiatePVar (q, BVar k1', !cnstr)
-                | _ -> raise (Failure "Parameter violation")
-             end
-          else
-            addConstraint (cnstr, ref (Eqh (cD0, cPsi, BVar k1, h1)))
     (* MPVar - MPVar *)
-    | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep1) as q1', (mt1, s1)) ,
-       MPVar (MPInst (_n2, q2, cD2, cPsi2, tA2, cnstr2, mDep2) as q2', (mt2, s2)) ) ->
+    | (MPVar ((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep1) as q1', (mt1, s1)) ,
+       MPVar ((_n2, q2, cD2, ClTyp (PTyp tA2,cPsi2), cnstr2, mDep2) as q2', (mt2, s2)) ) ->
         let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
         let s2' = simplifySub cD0 cPsi (Whnf.normSub s2) in
         let mt1' = Whnf.cnormMSub mt1 in
@@ -2919,13 +2476,13 @@ match sigma with
                   instantiateMPVar (q2, MPVar(w, (mt', s')), !cnstr2)
 
             | (true, true, _, false) ->
-                addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
+                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
             | (true, true, false, _) ->
-                addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
+                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
             | (false, _, _, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *)
+                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
             | (_, false, _, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *)
+                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
            )
         else
           ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
@@ -2981,8 +2538,8 @@ match sigma with
                  let mtt1 = Whnf.m_invert mt1' in
 
                  let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s2', cPsi2) (mtt1 , ss1) (PVarRef q1) in
-                 let ms' = invMSub cD0 (mt2', cD2) mtt1 (PVarRef q1) in
+                 let s' = invSub cD0 phat (s2', cPsi2) (mtt1 , ss1) (MMVarRef q1) in
+                 let ms' = invMSub cD0 (mt2', cD2) mtt1 (MMVarRef q1) in
                    instantiateMPVar (q1, MPVar(q2', (ms', s')), !cnstr1)
 
             | (_, _, true , true ) ->
@@ -2994,16 +2551,16 @@ match sigma with
                  let mtt2 = Whnf.m_invert mt2' in
 
                  let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s1', cPsi1) (mtt2 , ss2) (PVarRef q2) in
-                 let ms' = invMSub cD0 (mt1', cD1) mtt2 (PVarRef q2) in
+                 let s' = invSub cD0 phat (s1', cPsi1) (mtt2 , ss2) (MMVarRef q2) in
+                 let ms' = invMSub cD0 (mt1', cD1) mtt2 (MMVarRef q2) in
                    instantiateMPVar (q2, MPVar(q1', (ms', s')), !cnstr2)
 
              | (false, _, _ , _ ) ->
                  (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
+                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
              | (_, false, _ , _ ) ->
                  (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
+                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
              (* | (_, _, false , _ ) -> *)
              (*     (\* neither s1' nor s2' are patsub *\) *)
              (*     addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head2, head1))) *)
@@ -3013,11 +2570,11 @@ match sigma with
           )
 
 
-    | (MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) , h) ->
+    | (MPVar ((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep), (mt1, s1)) , h) 
+    | (h, MPVar ((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep), (mt1, s1)) ) ->
         (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
         dprnt "(013) _-MPVar - head";
-      if isVar h then
-        if isPatSub s1 && isPatMSub mt1 then
+      if isVar h && isPatSub s1 && isPatMSub mt1 then
           let ss = invert (Whnf.normSub s1) in
           let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
            begin match h with
@@ -3035,242 +2592,10 @@ match sigma with
         else
           raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
 
-
-    | (h, MPVar (MPInst (_n1, q1, cD1, cPsi1, tA1, cnstr1, mDep), (mt1, s1)) ) ->
-        dprnt "(013) _-MPVar - head";
-      if isVar h then
-        if isPatSub s1 && isPatMSub mt1 then
-          let ss = invert (Whnf.normSub s1) in
-          let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
-           begin match h with
-             | BVar k -> begin match bvarSub k ss with
-                         | Head h -> instantiateMPVar (q1, h, !cnstr1)
-                         | _ -> raise (Failure ("Looking up " ^ string_of_int k ^ "\n"))
-                         end
-             | PVar (p,s) -> begin match Whnf.cnormHead (h, mtt) with
-                             | PVar(q, s') ->  instantiateMPVar (q1,PVar(q, comp s' s1), !cnstr1)
-                             | _ -> raise (Failure "Meta^2-parameter failure")
-                             end
-             | _ -> raise (Failure "Meta^2-Parameter failure")
-          end
-        else
-          raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
-
-    (* PVar - PVar *)
-
-    | (PVar (PInst (_n1, q1, cPsi1, tA1, cnstr1, mDep1) as q1', s1'),
-       PVar (PInst (_n2, q2, cPsi2, tA2, cnstr2, mDep2) as q2', s2')) ->
-        (* check s1' and s2' are pattern substitutions; possibly generate constraints;
-           check intersection (s1', s2'); possibly prune;
-           check q1 = q2 *)
-        let s1' = Whnf.normSub s1' in
-        let s2' = Whnf.normSub s2' in
-        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
-        if q1 == q2 then (* cPsi1 = _cPsi2 *)
-(*          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 = q2 " ) in*)
-          (match (isPatSub s1' ,  isPatSub s2') with
-            | (true, true) ->
-                let phat = Context.dctxToHat cPsi in
-                let (s', cPsi') = intersection phat s1' s2' cPsi1 in
-                  (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1
-                     then cD ; cPsi1 |- s' <= cPsi' *)
-                  (* cPsi' =/= Null ! otherwise no instantiation for
-                     parameter variables exists *)
-                let ss' = invert (Whnf.normSub s') in
-                  (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
-                let w = Whnf.newPVar None (cPsi', TClo(tA1, ss'))  in
-                  (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
-                  (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1)
-                     [|w[s']/u|](u[t]) = [t](w[s'])
-                  *)
-                  instantiatePVar (q2, PVar(w, s'), !cnstr2)
-            | (true, false) ->
-                addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head1, head2))) (*XXX double-check *)
-            | (false, _) ->
-                addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head2, head1)))  (*XXX double-check *))
-        else
-          (let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in
-            match (isPatSub s1' , isPatSub s2') with
-             | (true, true) ->
-                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^
-                                  " === " ^ P.headToString cD0 cPsi head2 ) in
-                let _ = dprint (fun () -> "q1 .  cPsi1: " ^ P.dctxToString cD0 cPsi1) in
-                let _ = dprint (fun () -> "q2 .  cPsi2: " ^ P.dctxToString cD0 cPsi2) in
-                let _ = dprint (fun () -> "q1 .  tA1  : " ^ P.typToString cD0 cPsi1 (tA1, id)) in
-                let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString cD0 cPsi2 (tA2, id)) in
-
-                 (* no occurs check necessary, because s1' and s2' are pattern subs. *)
-                 let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-                let _ = dprint (fun () -> "Unification of the types  done ... \n") in
-                 (* at this point: s1' = s2'    ! *)
-                 let ss = invert s1' in
-                  let _ = dprint (fun () -> "Inverted s1' " ^ P.subToString cD0 cPsi ss ) in
-                 let phat = Context.dctxToHat cPsi in
-                 let (s', cPsi') = pruneCtx phat (s2', Whnf.normDCtx cPsi2) (MShift 0, ss) in
-                 let _ = dprint (fun () -> "Pruned cPsi2 : " ^ P.dctxToString cD0 cPsi') in
-                 let _ = dprint (fun () -> "Pruning subst s' : " ^ P.subToString cD0 cPsi2 s') in
-                   (*
-                   (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
-                      then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
-                   (* cPsi' =/= Null ! otherwise no instantiation for
-                      parameter variables exists *)
-                 *)
-                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s')))  in
-                   (* p::([s'^-1]tA2)[cPsi'] and
-                      [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
-
-                      and   cPsi |- [s2'] s' : cPsi'
-                      and   cPsi |- p[[s2'] s'] : [s2'][s'][s'^-1] tA2
-                      and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
-                   (instantiatePVar (q2, PVar(p, s'), !cnstr2);
-                    (* instantiatePVar (q1, PVar(p, s'), !cnstr1);*)
-                    (*  cPsi1 |-  ss [s2']  s'  : cPsi'
-                        cPsi  |-   comp s' s2'   : cPsi'
-                        cPsi1 |-  (comp s1 s2') ss : cPsi'
-                     *)
-                    instantiatePVar (q1, PVar(p, comp (comp s' s2') ss), !cnstr1))
-
-             | (true, false) ->
-                 let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-
-                  (* only s1' is a pattern sub
-                     [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
-                  *)
-                 let ss1 = invert s1' in
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s2', cPsi2) (MShift 0 , ss1)  (PVarRef q1) in
-                   instantiatePVar (q1, PVar(q2',s'), !cnstr1)
-
-             | (false, true) ->
-                 let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-
-                 (* only s2' is a pattern sub *)
-                 let ss2 = invert s2' in
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s1', cPsi1) (MShift 0, ss2) (PVarRef q2) in
-                   instantiatePVar (q2, PVar(q1', s'), !cnstr2)
-
-             | (false, false) ->
-                 (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2))))
-
-(*
-    BP: One could allow unification to succeeds in this case.
-
-    | (PVar (PInst (_n1, q1, cPsi1, tA1, cnstr1) as q1', s1') ,
-       Proj (PVar (PInst (_n2, q2, cPsi2, tA2, cnstr2) as q2', s2'), k)) ->
-        let s1' = Whnf.normSub s1' in
-        let s2' = Whnf.normSub s2' in
-        let _ = dprint (fun () -> "[unifyHead] PVar (PInst) = PVar(PInst) " ) in
-        if q1 == q2 then (* cPsi1 = _cPsi2 *)
+    | (PVar _  , Proj (PVar _, _))
+    | (Proj (PVar _, _), PVar _) ->
         (print_string "[UnifyHead] Projection of a parameter variable\n";
          raise (Failure "PVar i =/= Proj PVar"))
-        else
-          (
-            match (isPatSub s1' , isPatSub s2') with
-             | (true, true) ->
-                let _ = dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi head1 ^
-                                  " === " ^ P.headToString cD0 cPsi head2 ) in
-                let _ = dprint (fun () -> "q1 .  cPsi1: " ^ P.dctxToString cD0 cPsi1) in
-                let _ = dprint (fun () -> "q2 .  cPsi2: " ^ P.dctxToString cD0 cPsi2) in
-                let _ = dprint (fun () -> "q1 .  tA1  : " ^ P.typToString cD0 cPsi1 (tA1, id)) in
-                let _ = dprint (fun () -> "q2 .  tA2  : " ^ P.typToString cD0 cPsi2 (tA2, id)) in
-
-                 (* no occurs check necessary, because s1' and s2' are pattern subs. *)
-                (* bp : we need to unify tA1 with the k-th element in tA2
-
-                   let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-                *)
-                let _ = dprint (fun () -> "Unification of the types  done ... \n") in
-                 (* at this point: s1' = s2'    ! *)
-                 let ss = invert s1' in
-                  let _ = dprint (fun () -> "Inverted s1' " ^ P.subToString cD0 cPsi ss ) in
-                 let phat = Context.dctxToHat cPsi in
-                 let (s', cPsi') = pruneCtx phat (s2', Whnf.normDCtx cPsi2) (MShift 0, ss) in
-                 let _ = dprint (fun () -> "Pruned cPsi2 : " ^ P.dctxToString cD0 cPsi') in
-                 let _ = dprint (fun () -> "Pruning subst s' : " ^ P.subToString cD0 cPsi2 s') in
-                   (*
-                   (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
-                      then cPsi2 |- s' <= cPsi' and [ss](s2' (s')) exists *)
-                   (* cPsi' =/= Null ! otherwise no instantiation for
-                      parameter variables exists *)
-                 *)
-                 let p = Whnf.newPVar None (cPsi', TClo(tA2, invert (Whnf.normSub s'))) in
-                   (* p::([s'^-1]tA2)[cPsi'] and
-                      [|cPsi2.p[s'] / q2 |](q2[s2']) = p[[s2'] s']
-
-                      and   cPsi |- [s2'] s' : cPsi'
-                      and   cPsi |- p[[s2'] s'] : [s2'][s'][s'^-1] tA2
-                      and [s2'][s'][s'^-1] tA2  = [s2']tA2 *)
-                   (instantiatePVar (q2, PVar(p, s'), !cnstr2);
-                    (* instantiatePVar (q1, PVar(p, s'), !cnstr1);*)
-                    (*  cPsi1 |-  ss [s2']  s'  : cPsi'
-                        cPsi  |-   comp s' s2'   : cPsi'
-                        cPsi1 |-  (comp s1 s2') ss : cPsi'
-                     *)
-                    instantiatePVar (q1, PVar(p, comp (comp s' s2') ss), !cnstr1))
-
-             | (true, false) ->
-                 let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-
-                  (* only s1' is a pattern sub
-                     [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
-                  *)
-                 let ss1 = invert s1' in
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s2', cPsi2) (MShift 0 , ss1)  (PVarRef q1) in
-                   instantiatePVar (q1, PVar(q2',s'), !cnstr1)
-
-             | (false, true) ->
-                 let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-
-                 (* only s2' is a pattern sub *)
-                 let ss2 = invert s2' in
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s1', cPsi1) (MShift 0, ss2) (PVarRef q2) in
-                   instantiatePVar (q2, PVar(q1', s'), !cnstr2)
-
-             | (false, false) ->
-                 (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
-          )
-
-*)
-
-    | (PVar _  , Proj (PVar _, _)) ->
-        (print_string "[UnifyHead] Projection of a parameter variable\n";
-         raise (Failure "PVar i =/= Proj PVar"))
-
-    | (Proj (PVar _, _), PVar _ ) ->
-        (print_string "[UnifyHead] Projection of a parameter variable\n";
-         raise (Failure " Proj PVar =/= PVar i"))
-
-
-    | (Proj(BVar k, i) , PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1, mDep), s1)) ->
-        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
-         if isPatSub s1' then
-           let ss' = invert (Whnf.normSub s1') in
-             begin match bvarSub k ss' with
-               | Head (BVar k') ->
-                   instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise (Failure "parameter variable =/= projection of bound variable ")
-             end
-         else
-           addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
-
-    | (PVar (PInst (_n1, q1, _cPsi1, _tA1, cnstr1, mDep), s1), Proj(BVar k, i)) ->
-        let _ = dprint (fun () -> "[unifyHead] PVar - Proj (BVar )") in
-        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
-         if isPatSub s1' then
-           let ss' = invert (Whnf.normSub s1') in
-             begin match bvarSub k ss' with
-               | Head (BVar k') ->
-                   instantiatePVar (q1, Proj(BVar k', i), !cnstr1)
-               | _ -> raise (Failure "parameter variable =/= projection of bound variable ")
-             end
-         else
-           addConstraint (cnstr1, ref (Eqh (cD0, cPsi, head1, head2)))
-
 
     | (Proj (h1, i1),  Proj (h2, i2)) ->
 (*        let _ = dprint (fun () -> "[unifyHead] Proj - Proj ") in *)
@@ -3280,73 +2605,9 @@ match sigma with
         else
           raise (Failure ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
 
-    | (Proj (PVar (PInst (_n, q, _, _, cnstr, mDep), s1), projIndex) as h1, BVar k2) ->
-        let _ = (q, cnstr, s1, projIndex, h1, k2) in
-          (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-           raise (Failure "Projection of parameter variable =/= bound variable"))
-
-    | (BVar k2, Proj (PVar (PInst (_n, q, cPsi2, tA2, cnstr, mDep), s1), projIndex) as h1) ->
-        let _ = (q, cnstr, s1, projIndex, h1, k2) in
-           (print_string "Unifying projection of parameter with bound variable currently disallowed\n";
-            raise (Failure "Projection of parameter variable =/= bound variable"))
-
     | (FVar _, Proj (PVar _, _)) ->
         (print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
          raise (Failure "Projection of parameter variable =/= free variable"))
-
-
-    | ((PVar (Offset k, s1)) as _sM1,   ((PVar (PInst (_n, r, cPsi1, tp1, cnstrs, mDep), t')) as _sM2)) ->
-        let t' = simplifySub cD0 cPsi (Whnf.normSub t') in
-          if isPatSub t' then
-            try
-(*              let _ = dprint (fun () ->
-                                "UNIFYHEAD(3): " ^
-                                  P.mctxToString cD0 ^ "\n        " ^
-                                  P.headToString cD0 cPsi sM1 ^ "\n        " ^
-                                  P.headToString cD0 cPsi sM2 ^
-                                  " : " ^ P.typToString cD0 cPsi (tP1,   t')) in
-*)
-              let ss = invert t' in
-              let sM1' = PVar (Offset k, comp s1 ss) in
-
-              let _phat = Context.dctxToHat cPsi in
-                instantiatePVar (r, sM1', !cnstrs)
-            with
-              | NotInvertible ->
-                  ( (* Printf.printf "Pruning failed -- NotInvertible\n" ; *)
-                    (* Printf.printf "Added constraints: NotInvertible:\n" ;
-                     addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    raise (Failure "PVar - BVar dependency")
-                  )
-          else
-            if isProjPatSub t' then
-              begin try
-                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                let _phat = Context.dctxToHat flat_cPsi in
-                let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
-(*                let _tM1'   = ConvSigma.strans_head sM1 conv_list in  *)
-                let ss = invert t_flat in
-(*                let sM1' = trail (fun () -> prune cD0 cPsi1 phat (tM1', id) (MShift 0, ss) (MVarRef r)) in*)
-                let sM1' = PVar (Offset k, comp s1 ss) in
-                  instantiatePVar (r, sM1', !cnstrs)
-              with
-              | NotInvertible ->
-                  ((* Printf.printf "Added constraints: NotInvertible: \n" ;
-                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2))) *)
-                    (* Printf.printf "Pruning failed -- NotInvertible\n";*)
-                     raise (Failure "PVar - BVar dependency")
-                  )
-              end
-            else
-             raise (Failure "PVar - Nonpattern substitution")
-(*        (print_string "[UnifyHead] PVar(Offset,_) - PVar (PInst,_)\n";
-         raise (Failure "PVar Offset - PVar PInst"))
-*)
-
-    | (PVar (PInst _, _s1),  PVar (Offset k, _s2)) ->
-        (print_string "[UnifyHead] PVar(PInst,_) - PVar (Offset,_)\n";
-         raise (Failure "PVar Inst - PVar Offset"))
-
 
     | (_h1 , _h2 ) ->
         (dprint (fun () -> "[unifyHead'] Head clash");
@@ -3397,52 +2658,18 @@ match sigma with
             else
               raise (Error "Substitutions not well-typed")
 
-      | (FSVar (s1, n1, sigma1), FSVar (s2, n2, sigma2))
+      | (FSVar (n1, (s1, sigma1)), FSVar (n2, (s2, sigma2)))
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")
 
-      | (SVar(Offset s1, n1, sigma1), Shift ( 0) ) -> ()
-      | (Shift ( 0), SVar(Offset s1, n1, sigma1) ) -> ()
+      | (SVar(s1, n1, sigma1), Shift ( 0) ) -> ()
+      | (Shift ( 0), SVar(s1, n1, sigma1) ) -> ()
 
-      | (SVar(Offset s1, n1, sigma1), SVar(Offset s2, n2, sigma2))
+      | (SVar(s1, n1, sigma1), SVar(s2, n2, sigma2))
         -> if s1 = s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "SVar mismatch")
-
-      | (SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs, mDep),  ( 0), s), s2) -> (* offset may not always be 0 ? -bp *)
-        let s = Whnf.normSub s in
-        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
-        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
-          begin match isPatSub s with
-            | true ->
-                begin try
-                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
-                    instantiateSVar (r, s2', !cnstrs)
-                with
-                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-                end
-            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-          end
-
-      | (s2, SVar(SInst (_, ({contents=None} as r), cPhi1, cPsi2, cnstrs, mDep), ( 0), s))  ->
-          (* other cases ? -bp *)
-        let s = Whnf.normSub s in
-        let _ = dprint (fun () -> "[unifySub]  s = " ^ P.subToString cD0 cPsi s1) in
-        let _ = dprint (fun () -> "            s' = " ^ P.subToString cD0 cPsi s2) in
-          begin match isPatSub s with
-            | true ->
-                begin try
-                  let _ = dprint (fun () -> "[unifySub] SVar - ispatsub ") in
-                  let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                  let s2' = pruneSubst cD0 cPsi ((Whnf.normSub s2), Whnf.cnormDCtx (cPsi2, Whnf.m_id)) (Whnf.m_id, s_i) (SVarRef r) in
-                    instantiateSVar (r, s2', !cnstrs)
-                with
-                  | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-                end
-            | false -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-          end
 
       | (Dot (f, s), Dot (f', s'))
         -> (unifyFront mflag cD0 cPsi f f' ;
@@ -3457,7 +2684,8 @@ match sigma with
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
 
 
-      | (MSVar (MSInst (_ ,({contents=None} as r), cD, cPhi1, cPhi2, cnstrs, mDep) , _n, (mt, s)) as s1 ,  s2)->
+      | (MSVar (_n, ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep) , (mt, s))) as s1 ,  s2)
+      | (s2, (MSVar (_n, ((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep), (mt, s))) as s1)) ->
         (* cD0 ; cPsi |- s <= cPhi_2
            cD0        |- mt <= cD
          *)
@@ -3479,38 +2707,13 @@ match sigma with
                 let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^
                                   P.msubToString cD mt_i) in
                 let s2 = Whnf.normSub (Whnf.cnormSub (s2, mt)) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
+                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MMVarRef r) in
                 let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD (Whnf.cnormDCtx (cPhi2, mt)) (Whnf.normSub s2')) in
                 instantiateMSVar (r, s2', !cnstrs)
               with
-                | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+                | NotInvertible -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
             end
-          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-        end
-
-      | (s2, (MSVar (MSInst (_ ,({contents=None} as r), _cD, cPhi1, cPhi2,
-                             cnstrs, mDep) , _n, (mt, s)) as s1))->
-        (* cD0 ; cPsi |- s <= cPhi_2
-           cD0        |- mt <= cD
-         *)
-        let s = Whnf.normSub s in
-        let mt = Whnf.cnormMSub mt in
-        let _ = dprint (fun () -> "[unifySub] s2 = " ^ P.subToString cD0 cPsi (Whnf.normSub s2)) in
-        let _ = dprint (fun () -> "[unifySub] s1 = " ^ P.subToString cD0 cPsi (Whnf.normSub s1)) in
-        let _ = dprint (fun () -> "[unifySub] s1 == s2 ?? " ) in
-        begin match (isPatSub s, isPatMSub mt) with
-          | (true, true) ->
-            begin
-              try
-                let s_i = invert (Whnf.normSub s) in
-                let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in
-                let s2 = Whnf.normSub (Whnf.cnormSub (s2, mt)) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MSVarRef r) in
-                instantiateMSVar (r, s2', !cnstrs)
-              with
-                | NotInvertible -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
-            end
-          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqs (cD0, cPsi, s1, s2)))
+          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
         end
       | (EmptySub, _) -> ()
       | (_,EmptySub) -> ()
@@ -3563,10 +2766,8 @@ match sigma with
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
 
       | (Head head, Obj tN)
-        -> unifyTerm mflag cD0 cPsi (Root (Syntax.Loc.ghost, head, Nil), id) (tN, id)
-
       | (Obj tN, Head head)
-        -> unifyTerm mflag cD0 cPsi (tN, id) (Root (Syntax.Loc.ghost, head, Nil), id)
+        -> unifyTerm mflag cD0 cPsi (Root (Syntax.Loc.ghost, head, Nil), id) (tN, id)
 
       | (Undef, Undef)
         -> ()
@@ -3633,13 +2834,13 @@ match sigma with
  and unifyDCtx1' mflag cD0 cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
       | (Null , Null) -> ()
 
-      | (CtxVar (CInst (n1, ({contents = None} as cvar_ref1), schema1, cD1, theta1)) ,
-         CtxVar (CInst (_n2, ({contents = None} as cvar_ref2), _schema2,  _cD2, theta2))) ->
+      | (CtxVar (CInst ((n1, ({contents = None} as cvar_ref1), cD1, CTyp schema1, _, _), theta1)) ,
+         CtxVar (CInst ((_n2, ({contents = None} as cvar_ref2), _cD2, CTyp _schema2,  _,_), theta2))) ->
           if cvar_ref1 == cvar_ref2 then
              begin match ( isPatMSub theta1 , isPatMSub theta2) with
                 | (true , true ) ->  (if  Whnf.convMSub theta1 theta2 then () else
                    let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
-                    let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                    let cPsi = CtxVar (CInst ((n1, {contents = None}, cD', CTyp schema1, ref [], Maybe), mt')) in
                       instantiateCtxVar (cvar_ref1, cPsi)
                                      )
                 | ( _ , _ ) ->
@@ -3654,13 +2855,8 @@ match sigma with
               | _ -> raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
             end
 
-      | (CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta)) , cPsi) ->
-          if isPatMSub theta then
-            let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
-              instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
-          else
-            raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
-      | (cPsi , CtxVar (CInst (_n, ({contents = None} as cvar_ref), s_cid, _cD, theta) )) ->
+      | (CtxVar (CInst ((_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _), theta)) , cPsi)
+      | (cPsi , CtxVar (CInst ((_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _), theta) )) ->
           if isPatMSub theta then
             let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
               instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
@@ -3692,61 +2888,33 @@ match sigma with
 
    (* **************************************************************** *)
   let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) = 
-    let Decl (_u, cT) = cdecl in
+    let Decl (_u, cT,_) = cdecl in
       unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
-  and unifyMObj cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
-    | (Comp.MetaCtx (_, cPsi), t) , (Comp.MetaCtx (_, cPsi'), t') ->
+  and unifyClObj' cD mO mO' mT = match (mO, mO', mT) with
+    | PObj h , PObj h' , ClTyp (_, cPsi) ->
+          unifyHead Unification cD cPsi h h'
+    | MObj tR , MObj tR' , ClTyp (_, cPsi) ->
+          unifyTerm Unification cD cPsi (tR, id) (tR', id);
+    | SObj s , SObj s' , ClTyp (_, cPsi) ->
+       unifySub Unification cD cPsi (simplifySub cD cPsi s) (simplifySub cD cPsi s')
+    | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
+
+  and unifyClObj cD (mO, t) (mO', t') (cT, mt) =
+   unifyClObj' cD (Whnf.cnormClObj mO t) (Whnf.cnormClObj mO' t') (Whnf.cnormMetaTyp (cT, mt))
+
+  and unifyMFront' cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
+    | (CObj (cPsi), t) , (CObj (cPsi'), t') ->
         unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx (cPsi', t'))
 
-    | (Comp.MetaParam (_, phat, h) , t) , (Comp.MetaParam (_, phat', h') , t') ->
-        let PTyp (_tA, cPsi,_) = cT in
-        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
-          unifyHead Unification cD cPsi
-            (Whnf.cnormHead (h , t)) (Whnf.cnormHead (h', t'))
-
-    | (Comp.MetaObj (_, phat, tR) , t) , (Comp.MetaObj (_, phat', tR') , t') ->
-        let MTyp (_tA, cPsi, _) = cT in
-        let cPsi = Whnf.cnormDCtx (cPsi, mt) in
-(*        let cPsi  = Context.hatToDCtx phat in
-        let cPsi' = Context.hatToDCtx phat' in
-          dprint (fun () -> "[unifyMetaObj] MetaObj  ... with context "
-                       ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi, t))
-                       ^ " == "  ^ P.dctxToString cD (Whnf.cnormDCtx (cPsi', t'))
-                        ^ "\n");
-          unifyDCtx1 Unification cD (Whnf.cnormDCtx (cPsi, t)) (Whnf.cnormDCtx  (cPsi', t')); *)
-          (* dprint (fun () -> "[unifyMetaObj'] MetaObj ... actual obj ..." ^
-                 P.normalToString cD cPsi (Whnf.cnorm (tR , t), id)
-                 ^ " == " ^ P.normalToString cD cPsi (Whnf.cnorm (tR', t'),  id)); *)
-          unifyTerm Unification cD cPsi
-            (Whnf.cnorm (tR , t), id) (Whnf.cnorm (tR', t'), id);
-          (* dprint (fun () -> "[unifyMetaObj'] SUCCESS") *)
-
-    | (Comp.MetaObjAnn (_, cPsi, tR) , t) , (Comp.MetaObjAnn (_, cPsi', tR') , t') ->
-        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
-        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
-          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
-          unifyTerm Unification cD cPsi1
-            (Whnf.cnorm (tR, t), id) (Whnf.cnorm (tR', t'), id)
-
-    | (Comp.MetaSObjAnn (_, cPsi, s) , t) , (Comp.MetaSObjAnn (_, cPsi', s') , t') ->
-        let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
-        let cPsi2 = Whnf.cnormDCtx (cPsi', t') in
-          unifyDCtx1 Unification cD  cPsi1 cPsi2 ;
-          unifySub Unification cD cPsi1
-           (Whnf.cnormSub (s, t)) (Whnf.cnormSub (s', t'))
-
-    | (Comp.MetaSObj (_, phat, s) , t) , (Comp.MetaSObj (_, phat', s') , t') ->
-        let STyp (_cPhi, cPsi, _) = cT in
-        let cPsi1 = Whnf.cnormDCtx (cPsi, mt) in
-        let _ = dprint (fun () -> "[unifyMetaObj] SObj ") in
-        let _ = dprint (fun () -> "      cPsi = " ^ P.dctxToString cD cPsi1) in
-        let _ = dprint (fun () -> "         s = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s,t)))) in
-        let _ = dprint (fun () -> "         s' = " ^ P.subToString cD cPsi1 (simplifySub cD cPsi1 (Whnf.cnormSub (s',t')))) in
-          unifySub Unification cD cPsi1
-            (simplifySub cD cPsi1 (Whnf.cnormSub (s, t))) (simplifySub cD cPsi1 (Whnf.cnormSub (s', t')))
+    | (ClObj (phat, m1), t) , (ClObj (phat', m2) , t') ->
+      unifyClObj cD (m1, t) (m2, t') (cT, mt)
 
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
+
+
+  and unifyMObj cD (mO, t) (mO', t') (cT, mt) = 
+    unifyMFront' cD (Comp.metaObjToMFront mO, t) (Comp.metaObjToMFront mO', t') (cT, mt)
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
@@ -3761,12 +2929,7 @@ match sigma with
           unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt);
           (* dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt'); *)
-          let mt' = begin match mOt with
-                      | Comp.MetaCtx (loc, cPsi0) -> MDot (CObj(cPsi0), mt)
-                      | Comp.MetaObj (loc, psihat, tM) -> MDot (MObj (psihat, tM), mt)
-                      | Comp.MetaParam (loc, psihat, h) -> MDot (PObj (psihat,  h), mt)
-                      | Comp.MetaSObj (loc, phat, s) -> MDot (SObj (phat, s), mt)
-                    end in
+          let mt' = MDot (Comp.metaObjToMFront mOt, mt) in
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
           (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt') *))
@@ -3775,16 +2938,16 @@ match sigma with
 
  
   let unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
-	  | MTyp (tA1, cPsi1, _) , MTyp (tA2, cPsi2, _) ->
+	  | ClTyp (MTyp tA1, cPsi1) , ClTyp (MTyp tA2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | PTyp (tA1, cPsi1, _) , PTyp (tA2, cPsi2, _) ->
+	  | ClTyp (PTyp tA1, cPsi1) , ClTyp (PTyp tA2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | STyp (cPhi1, cPsi1, _) , STyp (cPhi2, cPsi2, _) ->
+	  | ClTyp (STyp cPhi1, cPsi1) , ClTyp (STyp cPhi2, cPsi2) ->
 	    unifyDCtx1 Unification cD cPsi1 cPsi2;
 	    unifyDCtx1 Unification cD cPhi1 cPhi2
-	  | CTyp (schema1, _) , CTyp (schema2 , _) ->
+	  | CTyp (schema1) , CTyp (schema2) ->
 	    if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
 	  | _ , _ -> raise (Failure "Computation-level Type Clash")
 
@@ -3814,7 +2977,7 @@ match sigma with
 
           else
             raise (Failure "Type Constant Clash")
-      | ((Comp.TypBox (_, Comp.MetaTyp (tA, cPsi)), t) , (Comp.TypBox (_, Comp.MetaTyp(tA', cPsi')), t')) ->
+      | ((Comp.TypBox (_, ClTyp (MTyp tA, cPsi)), t) , (Comp.TypBox (_, ClTyp (MTyp tA', cPsi')), t')) ->
           let cPsi1 = Whnf.cnormDCtx (cPsi, t) in
           (unifyDCtx1 Unification cD cPsi1 (Whnf.cnormDCtx (cPsi', t'));
            (* dprint (fun () -> "[unifyCompTyp] Unifying contexts done");
@@ -3836,22 +2999,22 @@ match sigma with
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
-      | ((Comp.TypPiBox ( (Decl(psi, CTyp (schema , dep))), tau), t) ,
-         (Comp.TypPiBox ( (Decl(_,   CTyp (schema', dep'))), tau'), t')) ->
+      | ((Comp.TypPiBox ( (Decl(psi, CTyp schema, dep)), tau), t) ,
+         (Comp.TypPiBox ( (Decl(_,   CTyp schema', dep')), tau'), t')) ->
           if schema = schema' && dep = dep' then
             unifyCompTyp
-              (Dec(cD, Decl (psi, CTyp (schema, dep)))) (* TODO: Clean this up, merge with case below.
+              (Dec(cD, Decl (psi, CTyp schema, dep))) (* TODO: Clean this up, merge with case below.
 						      Add dep to all Decls? *)
               (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t')
           else
             raise (Failure "CtxPi schema clash")
 
-      | ((Comp.TypPiBox ((Decl(u, ctyp1)), tau), t),
-         (Comp.TypPiBox ((Decl(_, ctyp2)), tau'), t')) ->
+      | ((Comp.TypPiBox ((Decl(u, ctyp1,dep)), tau), t),
+         (Comp.TypPiBox ((Decl(_, ctyp2,_)), tau'), t')) ->
 	let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
 	let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
 	(unifyCLFTyp Unification cD ctyp1n ctyp2n;
-	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
+	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n,dep))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
 
       | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
       | _ -> raise (Failure "Computation-level Type Clash")
@@ -3874,7 +3037,7 @@ match sigma with
             | Queued (* in process elsewhere *) ->
                 (dprint (fun () -> "Constrait is queued\n") ;
                 forceCnstr mflag (nextCnstr ()))
-            | Eqn (cD, cPsi, tM1, tM2) ->
+            | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                 let _ = solveConstraint cnstr in
 (*                let tM1' = Whnf.norm (tM1, id) in
                 let tM2' = Whnf.norm (tM2, id) in  *)
@@ -3888,7 +3051,7 @@ match sigma with
                                 P.normalToString cD cPsi (tM1, id)  ^
                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n"))
                   )
-            | Eqh (cD, cPsi, h1, h2)   ->
+            | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
                 let _ = solveConstraint cnstr in
                   (dprint (fun () -> "Solve constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
@@ -3911,7 +3074,7 @@ match sigma with
       | c::cnstrs ->
           match !c with
             | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
-            |  Eqn (cD, cPsi, tM1, tM2) ->
+            |  Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                  let _ = solveConstraint c in
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
@@ -3929,7 +3092,7 @@ match sigma with
                         | Tuple (loc, _ ) -> loc  end in
                         raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
                     end)
-            | Eqh (cD, cPsi, h1, h2)   ->
+            | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
                 let _ = solveConstraint c in
                   (dprint (fun () -> "Solve global constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
@@ -3943,7 +3106,7 @@ match sigma with
                      let loc = Syntax.Loc.ghost in
                        raise (GlobalCnstrFailure (loc, cnstr_string))
                    end)
-            | Eqs (cD, cPsi, s1, s2) ->
+            | Eqn (cD, cPsi, ISub s1, ISub s2) ->
 	      let _ = solveConstraint c in
 	      begin try
 		      (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)
@@ -3999,44 +3162,19 @@ match sigma with
       unifyHead Unification cD (Context.hatToDCtx phat) h h'
    (* **************************************************************** *)
 
-    let rec unifyMSub' ms mt = match (ms, mt) with
-      (* the next three cases are questionable;
-         they are needed to allow for weakening, i.e. using a function
-         that makes sense in a stronger environment *)
-      | (MShift k, MShift k') ->  () (* if k = k' then ()
-        else raise (Failure "Contextual substitutions not of the same length")   *)
-      | (MDot ( _ , ms), MShift k) ->
-          unifyMSub' ms (MShift (k-1))
-      | (MShift k, MDot ( _ , ms)) ->
-          unifyMSub' ms (MShift (k-1))
-      | (MDot (MObj (phat, tM), ms'), MDot (MObj(_phat', tM'), mt')) ->
-          (unify Empty (Context.hatToDCtx phat) (tM, id) (tM', id) ;
-           unifyMSub' ms' mt')
-      | (MDot (PObj (phat, h), ms'), MDot (PObj(_phat', h'), mt')) ->
-          (dprint (fun () -> "[unifyMSub] PObj ");
-          (unifyHead Unification Empty (Context.hatToDCtx phat) h h';
-           unifyMSub' ms' mt'))
-      | (MDot (CObj (cPsi), ms), MDot (CObj(cPhi), mt)) ->
-          (let cPsi' = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
-           let cPhi' = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
-             unifyDCtx1 Unification Empty  cPsi' cPhi';
-           unifyMSub' ms mt)
-
-    let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
-
 
 let unify_phat psihat phihat =
   match phihat with
-    | (Some (CInst (n1, ({contents = None} as cref), schema1, cD1, theta1 )), d) ->
+    | (Some (CInst ((n1, ({contents = None} as cref), cD1, CTyp schema1, _, _), theta1 )), d) ->
         begin match psihat with
-          | (Some (CInst (n2, ({contents = None} as cref'), schema2, cD2, theta2)) , d') ->
+          | (Some (CInst ((n2, ({contents = None} as cref'), cD2, CTyp schema2, _, _), theta2)) , d') ->
 	      if cref == cref' then
                 (if  Whnf.convMSub theta1 theta2 then
 		   (if d = d' then () else raise (Failure "Hat context mismatch- 1"))
                  else
                    (if isPatMSub theta1 && isPatMSub theta2 then
                       let (mt', cD') = m_intersection (Whnf.cnormMSub theta1)  (Whnf.cnormMSub theta2) cD1 in
-                      let cPsi = CtxVar (CInst (n1, {contents = None}, schema1, cD', mt')) in
+                      let cPsi = CtxVar (CInst ((n1, {contents = None}, cD', CTyp schema1, ref [], Maybe), mt')) in
                         instantiateCtxVar (cref, cPsi)
                     else
                       raise (Error.Violation "Case where we need to unify the same context variables which are associated with different meta-stitutions which are non-patterns is not handled")
@@ -4044,34 +3182,56 @@ let unify_phat psihat phihat =
 	      else
                 (if isPatMSub theta1 && isPatMSub theta2 then
                    let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta1) in
-		     cref := Some (CtxVar (CInst (n2, cref', schema2, cD2,  Whnf.mcomp theta2 mtt1 )))
+		     cref := Some (ICtx (CtxVar (CInst ((n2, cref', cD2, CTyp schema2, ref [], Maybe),  Whnf.mcomp theta2 mtt1 ))))
                  else
                    raise (Error.Violation "Case where we need to unify the context variables which are associated with different meta-stitutions which are non-patterns is not handled"))
           | ((Some (c_var)) , d') ->
               if d = d' then
-                cref := Some (CtxVar (c_var))
+                cref := Some (ICtx (CtxVar (c_var)))
               else
                 (* (Some (cref), d) == (Some cpsi, d')   d' = d0+d  *)
                 (if d'< d then raise (Failure "Hat Context's do not unify")
                  else
                    let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in
-                     cref := Some (cPsi))
+                     cref := Some (ICtx cPsi))
 
           | (None , d') ->
               if d = d' then
-                cref := Some (Null)
+                cref := Some (ICtx Null)
               else
                 (* (Some (cref), d) == (None, d')   d' = d0+d  *)
                 (if d'< d then raise (Failure "Hat Context's do not unify")
                  else
                    let cPsi = Context.hatToDCtx (None, d'-d) in
-                     cref := Some (cPsi))
+                     cref := Some (ICtx cPsi))
 
         end
 
     | _ ->  (if psihat = phihat then () else raise (Failure "Hat context mismatch - 2"))
 
    (* **************************************************************** *)
+
+    let unifyClObj cPsi m1 m2 = match (m1,m2) with
+      | MObj tM1, MObj tM2 -> unify Empty cPsi (tM1, id) (tM2, id)
+      | PObj h, PObj h' -> unifyHead Unification Empty cPsi h h'
+    let unifyMFront m1 m2 = match (m1,m2) with
+      | CObj cPsi, CObj cPhi -> unifyDCtx1 Unification Empty 
+         (Whnf.cnormDCtx (cPsi, Whnf.m_id)) (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+      | ClObj (phat1, m1), ClObj (phat2, m2) ->
+	(* unify_phat phat1 phat2; *)
+	unifyClObj (Context.hatToDCtx phat1) m1 m2
+    let rec unifyMSub' ms mt = match (ms, mt) with
+      | (MShift k, MShift k') ->  if k = k' then ()
+        else raise (Failure "Contextual substitutions not of the same length")
+      | (MDot (mFt , ms), MShift k) 
+      | (MShift k , MDot (mFt, ms)) ->
+	  unifyMFront mFt (MV (k+1));
+          unifyMSub' ms (MShift (k+1))
+      | (MDot (mF1, ms'), MDot (mF2, mt')) ->
+          (unifyMFront mF1 mF2 ;
+           unifyMSub' ms' mt')
+
+    let unifyMSub ms mt = unifyMSub' (Whnf.cnormMSub ms) (Whnf.cnormMSub mt)
 
     let unifyTypRec cD0 cPsi sArec sBrec =
         unifyTypRec' Unification cD0 cPsi sArec sBrec
@@ -4095,18 +3255,12 @@ let unify_phat psihat phihat =
     let matchTyp cD0 cPsi sA sB =
       unifyTyp' Matching cD0 cPsi sA sB
 
-      let metaTypToCDecl mT = match mT with
-	| Comp.MetaTyp (tP, cPsi) -> LF.MTyp (tP, cPsi, LF.Maybe)
-	| Comp.MetaParamTyp (tP, cPsi) -> LF.PTyp (tP, cPsi, LF.Maybe)
-	| Comp.MetaSubTyp (cPsi, cPhi) -> LF.STyp (cPsi, cPhi, LF.Maybe)
-	| Comp.MetaSchema w -> LF.CTyp (w, LF.Maybe)
-
     let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) = 
-      unifyMObj cD (cM, ms) (cM', ms) (metaTypToCDecl mT, mt)
+      unifyMObj cD (cM, ms) (cM', ms) (mT, mt)
 
     let unifyMetaTyp cD (mT, ms) (mT', ms') = 
-	unifyCLFTyp Unification cD (metaTypToCDecl (Whnf.cnormMetaTyp (mT, ms)))
- 	                           (metaTypToCDecl (Whnf.cnormMetaTyp (mT', ms')))
+	unifyCLFTyp Unification cD (Whnf.cnormMetaTyp (mT, ms))
+ 	                           (Whnf.cnormMetaTyp (mT', ms'))
 
 
     let unifyCompTyp cD ttau ttau' =

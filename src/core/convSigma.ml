@@ -107,10 +107,10 @@ and strans_msub cD ms conv_list = match ms with
         Int.LF.MDot (mf',ms')
 
 and strans_mfront cD mf conv_list = match mf with
-  | Int.LF.MObj (phat, tM) ->
-      Int.LF.MObj (phat, strans_norm cD (tM, LF.id) conv_list )
-  | Int.LF.PObj (phat, h) ->
-      Int.LF.PObj (phat, strans_head Syntax.Loc.ghost cD h conv_list)
+  | Int.LF.ClObj (phat, Int.LF.MObj tM) ->
+      Int.LF.ClObj (phat, Int.LF.MObj (strans_norm cD (tM, LF.id) conv_list ))
+  | Int.LF.ClObj (phat, Int.LF.PObj h) ->
+      Int.LF.ClObj (phat, Int.LF.PObj (strans_head Syntax.Loc.ghost cD h conv_list))
   | Int.LF.MV u -> Int.LF.MV u
   | Int.LF.MUndef -> Int.LF.MUndef
 
@@ -130,12 +130,12 @@ and strans_sub cD s conv_list = match s with
   | Int.LF.SVar (s, offset, sigma) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.SVar (s, offset, sigma')
-  | Int.LF.FSVar (s, n , sigma) ->
+  | Int.LF.FSVar (n, (s, sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.FSVar (s, n, sigma')
-  | Int.LF.MSVar (rho, offset, (mt, sigma)) ->
+        Int.LF.FSVar (n, (s, sigma'))
+  | Int.LF.MSVar (offset, (rho, (mt, sigma))) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.MSVar (rho, offset, (mt, sigma'))
+        Int.LF.MSVar (offset, (rho, (mt, sigma')))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)

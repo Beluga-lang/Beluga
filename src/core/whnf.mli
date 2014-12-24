@@ -28,6 +28,7 @@ val convTypRec  : trec_clo     -> trec_clo     -> bool
 val convSchElem : sch_elem     -> sch_elem     -> bool
 val prefixSchElem : sch_elem     -> sch_elem     -> bool
 val convSub     : sub          -> sub          -> bool
+val convITerm   : iterm        -> iterm        -> bool
 val convMSub    : msub         -> msub         -> bool
 val convDCtx    : dctx         -> dctx         -> bool
 val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
@@ -36,15 +37,13 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
+val newMMVar'    : Id.name option -> mctx * ctyp ->  mm_var
 val newMMVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMPVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
                   (* cD ; cPsi |- msvar : cPhi *)
 
 val newMVar     : Id.name option -> dctx * typ ->  cvar
-val newPVar     : Id.name option -> dctx * typ ->  cvar
-val newSVar     : Id.name option -> dctx (* cPsi *) * dctx (* cPhi *) ->  cvar
-                  (* cPsi |- svar : cPhi *)
 val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
@@ -102,6 +101,7 @@ val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
+val cnormCDecl : ctyp_decl * msub -> ctyp_decl
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
@@ -110,8 +110,9 @@ val cnormPattern  : Comp.pattern * msub -> Comp.pattern
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
 val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 
+val cnormClObj : clobj -> msub -> clobj
+val cnormMFt : mfront  -> msub -> mfront
 val cnormMSub  : msub -> msub
-val cnormCSub  : (csub * msub) -> csub
 
 val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp  : Comp.typ * msub -> Comp.typ

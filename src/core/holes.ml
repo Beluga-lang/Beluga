@@ -26,10 +26,7 @@ let ctypDeclToString cD ctypDecl =
   Format.flush_str_formatter ()
 
 let isExplicit = function
-  | LF.Decl(_, LF.MTyp (_, _, dep))
-  | LF.Decl(_, LF.PTyp (_, _, dep))
-  | LF.Decl(_, LF.STyp (_, _, dep))
-  | LF.Decl(_, LF.CTyp (_, dep)) ->
+  | LF.Decl(_, _, dep) ->
       begin match dep with
         | LF.No -> true
         | LF.Maybe -> false

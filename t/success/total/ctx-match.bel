@@ -1,0 +1,20 @@
+%coverage 
+
+term: type.
+lam:(term -> term) -> term.
+
+datatype Nat: ctype = 
+| Z: Nat
+| S: Nat -> Nat;
+
+schema ctx = term;
+
+rec pos :{g:ctx}{#p:[g |- term]} Nat =
+/ total m (pos _ m) /
+mlam g,#p => case [g] of
+| [ ] => impossible [|- #p] in []
+| [g,y:term] => 
+  (case [g,y:term |- #p ..] of
+  | [g, y:term |- y ] => (S Z)
+  | [g,y:term |- #p..] => S (pos [g] [g |- #p ..]))
+;

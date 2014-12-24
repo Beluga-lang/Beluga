@@ -1,0 +1,11 @@
+
+######   COVERAGE FAILURE: Case expression doesn't cover: ######
+##   
+##   Empty Pattern ##
+ 
+##   Case expression of type : 
+##   constructorless
+##   is not empty.
+
+
+##

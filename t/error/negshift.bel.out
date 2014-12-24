@@ -1,10 +1,3 @@
-Encountered meta^2-variables and free variables,
-which we cannot abstract over because they depend on meta-variables;
-the user needs to supply more information,
-since the type of a given expression is not uniquely determined.
-Meta^2-variables are introduced during type reconstruction;
-if you explicitely quantify over some meta-variables,
-these meta-variables will impose constraints on meta^2-variables
-and we may not be able to abstract over the meta^2-variables.
-The solution is either to not specify any meta-variables explicitly,
-or specify all of them.
+Ill-typed expression.
+    Expected type: pred ?Z[^0] 
+    Actual type: pred (N ..)

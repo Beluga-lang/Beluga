@@ -1,4 +1,4 @@
-#DEBUG = true
+DEBUG = true
 #PROFILE = true
 #WARN_PATTERN = true
 #VERBOSE = 0

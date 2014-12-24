@@ -1118,7 +1118,13 @@ and elTerm' recT cD cPsi r sP = match r with
              let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
                 Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
              let t = createMSub d in
-               (Whnf.cnormTyp (tQ, t) , Whnf.cnormDCtx (cPhi, t)))
+	     let roccur = Unify.MVarRef (ref None) (* create dummy mmvar since pruning requires it *) in
+	     let cPhi' = Unify.pruneDCtx cD cPhi t roccur in
+	     let tQ'   = Unify.pruneTyp cD cPhi' (Context.dctxToHat cPhi') 
+	                       (tQ, Substitution.LF.id) (t, Substitution.LF.id)
+			       roccur
+	     in
+               (tQ' , cPhi'))
 
            in
           (* For type reconstruction to succeed, we must have
@@ -1359,6 +1365,9 @@ and elTerm' recT cD cPsi r sP = match r with
           begin match (isPatSub s, spine) with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
+                let _ = dprint (fun () -> "#p is used in context cPsi = " ^  P.dctxToString cD cPsi) in
+                let _ = dprint (fun () -> "           at type tP = " ^ P.typToString cD cPsi sP) in
+                let _ = dprint (fun () -> "Context of #p : cPhi = " ^ P.dctxToString cD cPhi) in
                 let si          = Substitution.LF.invert s'' in
                 let tP = pruningTyp loc cD cPsi
 		  (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
@@ -1482,7 +1491,10 @@ and elTerm' recT cD cPsi r sP = match r with
 	      Int.LF.Clo(tN, s'')
 	    with Error.Violation msg  ->
               (dprint (fun () -> "[elTerm] Violation: " ^ msg);
-               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+               dprint (fun () -> "[elTerm] Encountered term: " ^
+			 P.normalToString cD cPsi (tN,s''));
+		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
+		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
                raise (Error (loc, CompTypAnn)))
               |  Unify.Failure msg  ->
 		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;

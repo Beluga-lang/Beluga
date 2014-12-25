@@ -695,12 +695,10 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 
 and collectCVar loc p cQ = function
   | (I.CtxOffset k) -> (cQ, I.CtxOffset k)
-  | (I.CInst (i, ms)) ->
-    let (n,r,cD,tp,_,_) = i in (* TODO: This is weird, we should be able to use collectMVar *)
-    begin match checkOccurrence loc (MMV (n,r)) cQ with
-      | Yes -> (cQ, I.CInst (i,ms))
-      | No ->  (I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp tp))) , I.CInst (i,ms))
-    end
+  | (I.CInst (i, ms)) -> 
+    let (cQ', ms') = collectMSub p cQ ms in (* TODO: Factor this out of collectMVarInst *)
+    let (cQ'', i') = collectMMVar loc p cQ' i in
+    (cQ'', I.CInst (i',ms'))
   | (I.CtxName psi) ->
     (collectCompFVar loc p cQ psi, I.CtxName psi)
 
@@ -804,8 +802,8 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
       I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (loc, (I.MVar (I.Inst ((n, r, _, (I.ClTyp (I.MTyp _tP,cPsi)), _cnstr, _)), s)), _tS (* Nil *)), _s)
-  | (I.Root (loc, I.MMVar ((n,r,_,(I.ClTyp (I.MTyp _tP,cPsi)),_cnstr,_), (_,s)), _tS), _s) ->
+  | (I.Root (loc, (I.MVar (I.Inst ((n, r, _, (I.ClTyp (_,cPsi)), _cnstr, _)), s)), _tS (* Nil *)), _s)
+  | (I.Root (loc, I.MMVar ((n,r,_,(I.ClTyp (_,cPsi)),_cnstr,_), (_,s)), _tS), _s) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MMV (n,r)) + offset in
         I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
@@ -1057,8 +1055,8 @@ and abstractCtxVar cQ (l,offset) = function
         I.CtxOffset (psi + l)
   | I.CtxName psi ->
       I.CtxOffset (index_of cQ (FV psi) + offset)
-  | I.CInst ((n, ({contents = None} as r), _, tp, _, _), _theta) ->
-      I.CtxOffset (index_of cQ (MMV (n,r)) + offset)
+  | I.CInst (i, _theta) ->
+      I.CtxOffset (abstractMMVar cQ offset i)
 
 and abstractMVarHat cQ (l,offset) (cv,k) = match cv with
   | None -> (None, k)

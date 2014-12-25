@@ -93,7 +93,7 @@ let newMMVar' n (cD, mtyp) = match n with
 let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (MTyp tA,cPsi))
 let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (PTyp tA, cPsi))
 let newMSVar n (cD, cPsi, cPhi)  = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi))
-let newCVar n (sW) = CInst (newMMVar' n (Empty, CTyp sW), MShift 0)
+let newCVar n cD (sW) = CInst (newMMVar' n (cD, CTyp sW), MShift 0)
 
 let newMVar n (cPsi, tA) = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)))
 

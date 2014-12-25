@@ -159,7 +159,7 @@ let mdeclToMMVar cD0 n mtyp = match mtyp with
     let phat = dctxToHat cPsi in
     ClObj (phat, PObj (MPVar (p, (Whnf.m_id, Substitution.LF.id))))
   | CTyp sW ->
-    let cvar = Whnf.newCVar (Some n) sW in
+    let cvar = Whnf.newCVar (Some n) cD0 sW in
     CObj (CtxVar cvar)
 
 let rec mctxToMMSub cD0 cD = match cD with

@@ -637,7 +637,7 @@ let mgCompTyp cD (loc, c) =
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
       let (n , sW) = Whnf.mctxCDec cD psi_var in
-	Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD, Int.LF.CTyp sW,
+	Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD', Int.LF.CTyp sW,
                                       ref [], Int.LF.Maybe), Whnf.m_id))
   | Int.LF.Null -> Int.LF.Null
   | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->

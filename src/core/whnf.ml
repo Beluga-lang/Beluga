@@ -24,7 +24,7 @@ exception InvalidLFHole of Loc.t
 
 
 type mm_res =
-    | ResMM of mm_var * msub
+    | ResMM of (mm_var * msub)
     | Result of iterm
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [18])
@@ -329,20 +329,20 @@ and normHead (h, sigma) = match h with
   | FMVar (n,s) -> Head (FMVar (n, normSub' (s, sigma)))
   | FPVar (n,s) -> Head (FPVar (n, normSub' (s, sigma)))
   | HClo (k,sv,r) -> Head (HClo (k, sv, normSub' (r,sigma)))
-  | HMClo (k, ((mm, mt),s)) -> (* TODO: This is kind of repetitive...*)
-    begin match normMMVar (mm,mt) with
-      | ResMM (mm',mt') -> Head (HMClo(k,((mm',mt'),normSub' (s,sigma))))
+  | HMClo (k, (mmt,s)) -> (* TODO: This is kind of repetitive...*)
+    begin match normMMVar mmt with
+      | ResMM mmt' -> Head (HMClo(k,(mmt',normSub' (s,sigma))))
       | Result (ISub r) -> normFt' (normFt' (LF.bvarSub k r, s), sigma)
     end 
-  | MMVar ((mm, mt),s) ->
-    begin match normMMVar (mm,mt) with
+  | MMVar (mmt,s) ->
+    begin match normMMVar mmt with
     (* The order in which we normalize mm, n, s, and sigma seems to matter..*)
-      | ResMM (mm',mt') -> Head (MMVar ((mm', mt'),normSub' (s,sigma)))
+      | ResMM mmt' -> Head (MMVar (mmt',normSub' (s,sigma)))
       | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
     end 
-  | MPVar ((mm, mt),s) ->
-    begin match normMMVar (mm,mt) with
-      | ResMM (mm',mt') -> Head (MPVar ((mm', mt'),normSub' (s,sigma)))
+  | MPVar (mmt,s) ->
+    begin match normMMVar mmt with
+      | ResMM mmt' -> Head (MPVar (mmt',normSub' (s,sigma)))
       | Result (IHead h) -> normFt' (normHead (h,s),sigma)
       | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
     end 
@@ -554,19 +554,19 @@ and cnormHead' (h, t) = match h with
       | MV sv' -> Head (HClo(k,sv',s'))
       | ClObj (_,SObj r) -> normFt' (LF.bvarSub k r, s')
     end
-  | MMVar ((mm, mt),s) ->
-    begin match normMMVar (mm,mt) with
+  | MMVar (mmt,s) ->
+    begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (MMVar((mm', cnormMSub' (mt,t)), cnormSub (s, t)))
       | Result (INorm n) -> Obj (cnorm(norm(n,s),t))
     end 
-  | MPVar ((mm,mt),s) ->
-    begin match normMMVar (mm,mt) with
+  | MPVar (mmt,s) ->
+    begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (MPVar((mm', cnormMSub' (mt,t)), cnormSub (s,t)))
       | Result (IHead h) -> cnormFt' (normHead(h,s), t)
       | Result (INorm n) -> Obj (cnorm (norm (n, s), t))
     end 
-  | HMClo (k,((mm,mt),s)) ->
-    begin match normMMVar (mm,mt) with
+  | HMClo (k,(mmt,s)) ->
+    begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (HMClo (k, ((mm', cnormMSub' (mt,t)), cnormSub (s,t))))
       | Result (ISub r) -> cnormFt' (normFt' (LF.bvarSub k r, s), t)
     end 

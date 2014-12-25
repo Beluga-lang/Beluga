@@ -81,23 +81,23 @@ and strans_head loc cD h conv_list = match h with
   | Int.LF.Proj (Int.LF.FPVar (p, sigma), j) ->
       Int.LF.Proj (Int.LF.FPVar (p, strans_sub cD sigma conv_list), j)
 
-  | Int.LF.Proj (Int.LF.MPVar (p, (ms, sigma)), j) ->
+  | Int.LF.Proj (Int.LF.MPVar ((p, ms), sigma), j) ->
       let ms' = strans_msub cD ms conv_list in
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.Proj (Int.LF.MPVar (p, (ms', sigma')), j)
+        Int.LF.Proj (Int.LF.MPVar ((p, ms'), sigma'), j)
 
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub cD s conv_list)
   | Int.LF.FPVar (u,s) -> Int.LF.FPVar (u, strans_sub cD s conv_list)
-  | Int.LF.MMVar  (u, (ms, s)) ->
+  | Int.LF.MMVar  ((u, ms), s) ->
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
-        Int.LF.MMVar (u, (ms', s'))
-  | Int.LF.MPVar  (u, (ms, s)) ->
+        Int.LF.MMVar ((u, ms'), s')
+  | Int.LF.MPVar  ((u, ms), s) ->
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
-        Int.LF.MPVar (u, (ms', s'))
+        Int.LF.MPVar ((u, ms'), s')
 
 and strans_msub cD ms conv_list = match ms with
   | Int.LF.MShift k -> Int.LF.MShift k
@@ -133,9 +133,9 @@ and strans_sub cD s conv_list = match s with
   | Int.LF.FSVar (n, (s, sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.FSVar (n, (s, sigma'))
-  | Int.LF.MSVar (offset, (rho, (mt, sigma))) ->
+  | Int.LF.MSVar (offset, ((rho, mt), sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.MSVar (offset, (rho, (mt, sigma')))
+        Int.LF.MSVar (offset, ((rho, mt), sigma'))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)

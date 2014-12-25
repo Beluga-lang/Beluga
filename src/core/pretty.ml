@@ -337,7 +337,7 @@ module Int = struct
             (R.render_bvar cPsi h)
             (fmt_ppr_lf_offset cD lvl) s
             (fmt_ppr_lf_sub  cD cPsi lvl) sigma
-      | LF.HMClo (h, (s, (theta,sigma))) ->
+      | LF.HMClo (h, ((s, theta),sigma)) ->
           fprintf ppf "%s[#%a[%a ; %a]]"
             (R.render_bvar cPsi h)
             (fmt_ppr_lf_mmvar lvl) s
@@ -353,7 +353,7 @@ module Int = struct
             (R.render_cid_term c)
             proj
 
-      | LF.MMVar (c, (ms, s)) ->
+      | LF.MMVar ((c, ms), s) ->
           fprintf ppf "%s%a%s[%a]%a%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar lvl) c
@@ -362,7 +362,7 @@ module Int = struct
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
-      | LF.MPVar (c, (ms, s)) ->
+      | LF.MPVar ((c, ms), s) ->
           fprintf ppf "%s%a%s[%a]%a%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar lvl) c
@@ -458,7 +458,7 @@ module Int = struct
             fprintf ppf "#%a[%a]"
                (fmt_ppr_lf_offset cD lvl) c
                (self lvl) s
-        | LF.MSVar (_, (_sigma, (t,s))) ->
+        | LF.MSVar (_, ((_sigma, t),s)) ->
             fprintf ppf "#?S[%a ; %a]"
               (fmt_ppr_lf_msub cD lvl) t
               (self lvl) s          
@@ -505,7 +505,7 @@ module Int = struct
                   (fmt_ppr_lf_offset cD lvl) c
                   (self lvl) s
 
-        | LF.MSVar (n , (_sigma, (t,s))) ->
+        | LF.MSVar (n , ((_sigma, t),s)) ->
                 fprintf ppf
                   "#^%s #?S [%a][|%a|]"
                   (R.render_offset n)

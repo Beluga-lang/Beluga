@@ -232,7 +232,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
       let ss_proj = Substitution.LF.comp ss' s_proj in
-        Int.LF.Root (loc, Int.LF.MMVar (u, (Whnf.m_id, ss_proj)), Int.LF.Nil)
+        Int.LF.Root (loc, Int.LF.MMVar ((u, Whnf.m_id), ss_proj), Int.LF.Nil)
 
   | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Int.LF.Lam (loc, x,
@@ -1007,10 +1007,10 @@ and elTerm' recT cD cPsi r sP = match r with
                                      (* cPhi' |- ssi : cPhi *)
                                      (* cPhi' |- [ssi]tQ    *)
                                    let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi'))  in 
-                                     Int.LF.MMVar(u, (Whnf.m_id, Substitution.LF.comp ss'  s_proj))
+                                     Int.LF.MMVar((u, Whnf.m_id), Substitution.LF.comp ss'  s_proj)
                                  else
                                    let u = Whnf.newMMVar None (cD, cPhi, tA')  in
-                                     Int.LF.MMVar (u, (Whnf.m_id, s_proj))
+                                     Int.LF.MMVar ((u, Whnf.m_id), s_proj)
                     in
                       Int.LF.Root (loc, h, tS)
                 | _ -> raise (Error (loc, HolesFunction))

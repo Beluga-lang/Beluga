@@ -111,7 +111,7 @@ module LF = struct
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
-  and mm_var_inst = mm_var * (msub * sub)
+  and mm_var_inst = (mm_var * msub) * sub
 
   and iterm =
     | INorm of normal

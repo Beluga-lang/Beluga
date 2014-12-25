@@ -314,7 +314,7 @@ and cnstr_spine sS = match sS with
 
 
 and cnstr_head h = match h with
-  | I.MMVar((_, _r, _, _ , cnstr, _), (_, s))
+  | I.MMVar(((_, _r, _, _ , cnstr, _), _), s)
   | I.MVar(I.Inst (_, _r, _ , _ , cnstr, _), s) ->
 
        (if constraints_solved (!cnstr) then
@@ -531,11 +531,11 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     end 
     | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
 
-and collectMVarInst loc p cQ phat (i, (ms', s')) = 
+and collectMVarInst loc p cQ phat ((i, ms'), s') = 
   let (cQ0, ms') = collectMSub p cQ ms' in
   let (cQ1, s') = collectSub p cQ0 phat s' in
   let (cQ2, i') = collectMMVar loc p cQ1 i in
-  (cQ2, (i', (ms',s')))
+  (cQ2, ((i', ms'),s'))
 
 (* collectSub p cQ phat s = cQ'
 
@@ -560,14 +560,6 @@ and collectSub (p:int) cQ phat s = match s with
       let (cQ1, tM') = collectTerm p cQ phat (tM, LF.id) in
       let (cQ2,s') =  collectSub p cQ1 phat s in
         (cQ2, I.Dot (I.Obj tM', s'))
-
-  | I.Dot (I.Undef, s') ->
-    (let _ = Printf.printf "Collect Sub encountered undef\n" in
-       (* -bp Aug 24, 2009 BUG: If the substitution includes an undef
-          one would need to prune the type of the MVAR with which this
-          substitution is associated. *)
-     let (cQ1, s) = collectSub p cQ phat  s' in
-       (cQ1, I.Dot (I.Undef, s)))
 
   | I.FSVar (n, ns) ->
     let (cQ', ns) = collectFVarSub p cQ phat ns in
@@ -627,7 +619,7 @@ and collectHead (k:int) cQ phat loc (head, _s) =
     (cQ0, I.FMVar ns)
 
   | (I.MVar (I.Inst i, s')) ->
-     let (cQ', (i', (ms',s'))) = collectMVarInst loc k cQ phat (i, (Whnf.m_id, s')) in
+     let (cQ', ((i', ms'),s')) = collectMVarInst loc k cQ phat ((i, Whnf.m_id), s') in
 	 (cQ', I.MVar (I.Inst i', s'))
 
   | (I.MMVar i) ->
@@ -803,7 +795,7 @@ and abstractTermW cQ offset sM = match sM with
       I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
   | (I.Root (loc, (I.MVar (I.Inst ((n, r, _, (I.ClTyp (_,cPsi)), _cnstr, _)), s)), _tS (* Nil *)), _s)
-  | (I.Root (loc, I.MMVar ((n,r,_,(I.ClTyp (_,cPsi)),_cnstr,_), (_,s)), _tS), _s) ->
+  | (I.Root (loc, I.MMVar (((n,r,_,(I.ClTyp (_,cPsi)),_cnstr,_), _),s), _tS), _s) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MMV (n,r)) + offset in
         I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
@@ -958,7 +950,7 @@ and abstractMMVar cQ d = function
   | (n,r,I.Empty,_tp,_cnstr,_dep) -> index_of cQ (MMV (n,r)) + d
   | (n,r,_cD,_tp,_cnstr,_dep) -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
 
-and abstractMMVarInst cQ ((l,d) as offset) (i,(_ms,s)) =
+and abstractMMVarInst cQ ((l,d) as offset) ((i,_ms),s) =
   (abstractMMVar cQ d i, abstractMVarSub cQ offset s)  (* Shouldn't this apply ms? *)
 
 and abstractFVarSub cQ ((l,d) as offset) (name,s) =
@@ -968,33 +960,33 @@ and abstractOffset cQ (l,d) x =
   let k = lengthCollection cQ in
   if x > d then x + k else x
 
-and abstractOffsetSub cQ ((l,d) as offset) (x,s) =
-  (abstractOffset cQ offset x, abstractMVarSub cQ offset s)
+and abstractOffsetSub cQ loff (x,s) =
+  (abstractOffset cQ loff x, abstractMVarSub cQ loff s)
 
-and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
+and abstractMVarHead cQ loff tH = match tH with
   | I.BVar x -> I.BVar x
 
-  | I.FPVar ns -> I.PVar (abstractFVarSub cQ offset ns)
+  | I.FPVar ns -> I.PVar (abstractFVarSub cQ loff ns)
 
   | I.FMVar (u, s) ->
-    let (x,s') = abstractFVarSub cQ offset (u, s) in
+    let (x,s') = abstractFVarSub cQ loff (u, s) in
     I.MVar (I.Offset x, s')
 
   | I.MMVar mi ->
-    let (off,s') = abstractMMVarInst cQ offset mi in
+    let (off,s') = abstractMMVarInst cQ loff mi in
     I.MVar (I.Offset off, s')
 
   | I.MVar (I.Inst i, s) ->
-    let (off,s') = abstractMMVarInst cQ offset (i,(Whnf.m_id,s)) in
+    let (off,s') = abstractMMVarInst cQ loff ((i,Whnf.m_id),s) in
     I.MVar (I.Offset off, s')
 
-  | I.MPVar mi ->  I.PVar (abstractMMVarInst cQ offset mi)
+  | I.MPVar mi ->  I.PVar (abstractMMVarInst cQ loff mi)
 
   | I.MVar (I.Offset x , s) ->
-    let (x',s') = abstractOffsetSub cQ offset (x, s) in
+    let (x',s') = abstractOffsetSub cQ loff (x, s) in
     I.MVar (I.Offset x', s')
 
-  | I.PVar os -> I.PVar (abstractOffsetSub cQ offset os)
+  | I.PVar os -> I.PVar (abstractOffsetSub cQ loff os)
 
   | I.Const c ->
       I.Const c
@@ -1003,7 +995,7 @@ and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
       raise Error.NotImplemented
 
   | I.Proj (head, k) ->
-      let head = abstractMVarHead cQ offset head in   (* ??? -jd *)
+      let head = abstractMVarHead cQ loff head in   (* ??? -jd *)
         I.Proj (head, k)
 
 
@@ -1021,30 +1013,30 @@ and abstractMVarSpine cQ offset sS = match sS with
 and abstractMVarSub cQ offset s = abstractMVarSub'
   cQ offset (Whnf.cnormSub (s, Whnf.m_id))
 
-and abstractMVarSub' cQ ((l,d) as offset) s = match s with
+and abstractMVarSub' cQ loff s = match s with
   | I.EmptySub -> I.EmptySub
   | I.Undefs -> I.Undefs
   | I.Shift _ -> s
 
   | I.Dot (I.Head tH, s) ->
-      I.Dot (I.Head (abstractMVarHead cQ offset tH), abstractMVarSub' cQ offset s)
+      I.Dot (I.Head (abstractMVarHead cQ loff tH), abstractMVarSub' cQ loff s)
 
   | I.Dot (I.Obj tM, s) ->
-      I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
+      I.Dot (I.Obj (abstractMVarTerm cQ loff (tM, LF.id)), abstractMVarSub' cQ loff s)
 
   | I.SVar (s, n, sigma) ->
-    let (s',sigma') = abstractOffsetSub cQ offset (s,sigma) in
+    let (s',sigma') = abstractOffsetSub cQ loff (s,sigma) in
     I.SVar (s', n, sigma')
 
   | I.Dot (I.Undef, s) ->
-      I.Dot (I.Undef, abstractMVarSub' cQ offset s)
+      I.Dot (I.Undef, abstractMVarSub' cQ loff s)
 
   | I.FSVar (n, fs ) ->
-      let (x,s') = abstractFVarSub cQ offset fs in
+      let (x,s') = abstractFVarSub cQ loff fs in
       I.SVar (x, n, s')
 
   | I.MSVar (k, i) ->
-    let (sv,s) = abstractMMVarInst cQ offset i in
+    let (sv,s) = abstractMMVarInst cQ loff i in
     I.SVar (sv, k, s)
 
 and abstractCtxVar cQ (l,offset) = function
@@ -1058,16 +1050,16 @@ and abstractCtxVar cQ (l,offset) = function
   | I.CInst (i, _theta) ->
       I.CtxOffset (abstractMMVar cQ offset i)
 
-and abstractMVarHat cQ (l,offset) (cv,k) = match cv with
+and abstractMVarHat cQ loff (cv,k) = match cv with
   | None -> (None, k)
-  | Some cv -> (Some (abstractCtxVar cQ (l,offset) cv), k)
+  | Some cv -> (Some (abstractCtxVar cQ loff cv), k)
 
-and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
+and abstractMVarDctx cQ loff cPsi = match cPsi with
   | I.Null -> I.Null
-  | I.CtxVar cv -> I.CtxVar (abstractCtxVar cQ (l,offset) cv)
+  | I.CtxVar cv -> I.CtxVar (abstractCtxVar cQ loff cv)
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
-      let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
-      let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in
+      let cPsi' = abstractMVarDctx cQ loff cPsi in
+      let tA'   = abstractMVarTyp cQ loff (tA, LF.id) in
         I.DDec (cPsi', I.TypDecl (x, tA'))
 
 and abstractMVarClTyp cQ loff = function

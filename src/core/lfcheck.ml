@@ -284,7 +284,7 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MMVar ((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , (t', r)) ->
+  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in

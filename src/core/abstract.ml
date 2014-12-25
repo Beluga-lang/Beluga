@@ -1058,40 +1058,24 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
     let s = index_of cQ (MMV (n,r)) + d  in
     I.SVar (s, k, abstractMVarSub' cQ offset s')
 
+and abstractCtxVar cQ (l,offset) = function
+  | I.CtxOffset psi ->
+      if psi <= offset then
+        I.CtxOffset psi
+      else
+        I.CtxOffset (psi + l)
+  | I.CtxName psi ->
+      I.CtxOffset (index_of cQ (FV psi) + offset)
+  | I.CInst ((n, ({contents = None} as r), _, tp, _, _), _theta) ->
+      I.CtxOffset (index_of cQ (MMV (n,r)) + offset)
 
-and abstractMVarHat cQ (l,offset) phat = match phat with
-  | (None, _ ) -> phat
-  | (Some (I.CtxOffset x), k ) ->
-      if x <= offset then phat
-      else (Some (I.CtxOffset (x+l)), k)
-  | (Some (I.CtxName psi), k) ->
-      let x = index_of cQ (FV psi) + offset in
-        (Some (I.CtxOffset x), k)
-  (* case where contents = Some cPsi cannot happen,
-     since collect normalized phat *)
-  | (Some (I.CInst ((n, ({contents = None} as r), _, tp, _, _), _theta )), k) ->
-      let x = index_of cQ (MMV (n,r)) + offset in
-        (Some (I.CtxOffset x  ), k)
-  |  _ -> abstractMVarHat cQ (l,offset) (Whnf.cnorm_psihat phat Whnf.m_id)
+and abstractMVarHat cQ (l,offset) (cv,k) = match cv with
+  | None -> (None, k)
+  | Some cv -> (Some (abstractCtxVar cQ (l,offset) cv), k)
 
 and abstractMVarDctx cQ (l,offset) cPsi = match cPsi with
-  | I.Null ->
-      I.Null
-  | I.CtxVar (I.CtxOffset psi) ->
-      if psi <= offset then
-        cPsi
-      else
-           I.CtxVar (I.CtxOffset (psi + l))
-  | I.CtxVar (I.CtxName psi) ->
-      let x = index_of cQ (FV psi) + offset in
-        I.CtxVar (I.CtxOffset x)
-  | I.CtxVar (I.CInst ((_, {contents = Some (I.ICtx cPsi)}, _, _, _, _), theta )) ->
-      abstractMVarDctx cQ (l,offset) (Whnf.cnormDCtx (cPsi, theta))
-  | I.CtxVar (I.CInst ((n, ({contents = None} as r), _, tp, _, _), _theta)) ->
-      (* this case should not happen -bp *)
-      let x = index_of cQ (MMV (n,r)) + offset in
-        I.CtxVar (I.CtxOffset x)
-
+  | I.Null -> I.Null
+  | I.CtxVar cv -> I.CtxVar (abstractCtxVar cQ (l,offset) cv)
   | I.DDec (cPsi, I.TypDecl (x, tA)) ->
       let cPsi' = abstractMVarDctx cQ (l,offset) cPsi in
       let tA'   = abstractMVarTyp cQ (l,offset) (tA, LF.id) in

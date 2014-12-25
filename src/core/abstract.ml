@@ -531,11 +531,15 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     end 
     | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
 
-and collectMVarInst loc p cQ phat ((i, ms'), s') = 
+and collectMVarMSub loc p cQ (i,ms') =
   let (cQ0, ms') = collectMSub p cQ ms' in
+  let (cQ1, i') = collectMMVar loc p cQ0 i in
+  (cQ1, (i', ms'))
+
+and collectMVarInst loc p cQ phat (ims, s') = 
+  let (cQ0, ims') = collectMVarMSub loc p cQ ims in
   let (cQ1, s') = collectSub p cQ0 phat s' in
-  let (cQ2, i') = collectMMVar loc p cQ1 i in
-  (cQ2, ((i', ms'),s'))
+  (cQ1, (ims',s'))
 
 (* collectSub p cQ phat s = cQ'
 
@@ -686,11 +690,10 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 
 
 and collectCVar loc p cQ = function
-  | (I.CtxOffset k) -> (cQ, I.CtxOffset k)
-  | (I.CInst (i, ms)) -> 
-    let (cQ', ms') = collectMSub p cQ ms in (* TODO: Factor this out of collectMVarInst *)
-    let (cQ'', i') = collectMMVar loc p cQ' i in
-    (cQ'', I.CInst (i',ms'))
+  | I.CtxOffset k -> (cQ, I.CtxOffset k)
+  | I.CInst ims -> 
+    let (cQ', ims') = collectMVarMSub loc p cQ ims in
+    (cQ', I.CInst ims')
   | (I.CtxName psi) ->
     (collectCompFVar loc p cQ psi, I.CtxName psi)
 

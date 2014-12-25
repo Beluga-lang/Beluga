@@ -111,7 +111,8 @@ module LF = struct
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
-  and mm_var_inst = (mm_var * msub) * sub
+  and mm_var_inst' = mm_var * msub
+  and mm_var_inst = mm_var_inst' * sub
 
   and iterm =
     | INorm of normal
@@ -138,7 +139,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of mm_var * msub
+    | CInst  of mm_var_inst'
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)

@@ -950,8 +950,11 @@ and abstractMMVar cQ d = function
   | (n,r,I.Empty,_tp,_cnstr,_dep) -> index_of cQ (MMV (n,r)) + d
   | (n,r,_cD,_tp,_cnstr,_dep) -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
 
-and abstractMMVarInst cQ ((l,d) as offset) ((i,_ms),s) =
-  (abstractMMVar cQ d i, abstractMVarSub cQ offset s)  (* Shouldn't this apply ms? *)
+and abstractMMVarMSub cQ (l,d) (i,_ms) =
+  abstractMMVar cQ d i (* Shouldn't this apply ms? *)
+
+and abstractMMVarInst cQ loff (ims,s) =
+  (abstractMMVarMSub cQ loff ims, abstractMVarSub cQ loff s) 
 
 and abstractFVarSub cQ ((l,d) as offset) (name,s) =
   (index_of cQ (FV name) + d, abstractMVarSub cQ offset s)
@@ -1039,16 +1042,14 @@ and abstractMVarSub' cQ loff s = match s with
     let (sv,s) = abstractMMVarInst cQ loff i in
     I.SVar (sv, k, s)
 
-and abstractCtxVar cQ (l,offset) = function
+and abstractCtxVar cQ ((l,d) as loff) = function
   | I.CtxOffset psi ->
-      if psi <= offset then
+      if psi <= d then
         I.CtxOffset psi
       else
         I.CtxOffset (psi + l)
-  | I.CtxName psi ->
-      I.CtxOffset (index_of cQ (FV psi) + offset)
-  | I.CInst (i, _theta) ->
-      I.CtxOffset (abstractMMVar cQ offset i)
+  | I.CtxName psi -> I.CtxOffset (index_of cQ (FV psi) + d)
+  | I.CInst ims -> I.CtxOffset (abstractMMVarMSub cQ loff ims)
 
 and abstractMVarHat cQ loff (cv,k) = match cv with
   | None -> (None, k)

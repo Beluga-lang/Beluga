@@ -966,9 +966,12 @@ and abstractMMVarInst cQ ((l,d) as offset) (i,(_ms,s)) =
 and abstractFVarSub cQ ((l,d) as offset) (name,s) =
   (index_of cQ (FV name) + d, abstractMVarSub cQ offset s)
 
-and abstractOffsetSub cQ ((l,d) as offset) (x,s) =
+and abstractOffset cQ (l,d) x =
   let k = lengthCollection cQ in
-  ((if x > d then x + k else x), abstractMVarSub cQ offset s)
+  if x > d then x + k else x
+
+and abstractOffsetSub cQ ((l,d) as offset) (x,s) =
+  (abstractOffset cQ offset x, abstractMVarSub cQ offset s)
 
 and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
   | I.BVar x -> I.BVar x
@@ -1032,22 +1035,19 @@ and abstractMVarSub' cQ ((l,d) as offset) s = match s with
       I.Dot (I.Obj (abstractMVarTerm cQ offset (tM, LF.id)), abstractMVarSub' cQ offset s)
 
   | I.SVar (s, n, sigma) ->
-      let _ = dprint (fun () -> "[abstractMVarSub] d = " ^ string_of_int d) in
-(*      let k = lengthCollection cQ in
-      if s > d then I.SVar (I.Offset (s + k), (ctx_offset, n), abstractMVarSub' cQ offset sigma)
-      else*)
-        I.SVar (s, n, abstractMVarSub' cQ offset sigma)
+    let (s',sigma') = abstractOffsetSub cQ offset (s,sigma) in
+    I.SVar (s', n, sigma')
 
   | I.Dot (I.Undef, s) ->
       I.Dot (I.Undef, abstractMVarSub' cQ offset s)
 
-  | I.FSVar (n, (s, sigma)) ->
-      let x = index_of cQ (FV s) + d in
-      I.SVar (x, n, abstractMVarSub cQ offset sigma)
+  | I.FSVar (n, fs ) ->
+      let (x,s') = abstractFVarSub cQ offset fs in
+      I.SVar (x, n, s')
 
-  | I.MSVar (k, ((n, r, _cD, tp, _cnstr, _), (_mt, s'))) ->
-    let s = index_of cQ (MMV (n,r)) + d  in
-    I.SVar (s, k, abstractMVarSub' cQ offset s')
+  | I.MSVar (k, i) ->
+    let (sv,s) = abstractMMVarInst cQ offset i in
+    I.SVar (sv, k, s)
 
 and abstractCtxVar cQ (l,offset) = function
   | I.CtxOffset psi ->

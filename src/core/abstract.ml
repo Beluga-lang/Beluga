@@ -956,63 +956,54 @@ and abstractMVarTuple cQ offset = function
       let tuple' = abstractMVarTuple cQ offset (tuple, s) in
       I.Cons (tM', tuple')
 
+and abstractMMVar cQ d = function
+  | (n,r,I.Empty,_tp,_cnstr,_dep) -> index_of cQ (MMV (n,r)) + d
+  | (n,r,_cD,_tp,_cnstr,_dep) -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
+
+and abstractMMVarInst cQ ((l,d) as offset) (i,(_ms,s)) =
+  (abstractMMVar cQ d i, abstractMVarSub cQ offset s)  (* Shouldn't this apply ms? *)
+
+and abstractFVarSub cQ ((l,d) as offset) (name,s) =
+  (index_of cQ (FV name) + d, abstractMVarSub cQ offset s)
+
+and abstractOffsetSub cQ ((l,d) as offset) (x,s) =
+  let k = lengthCollection cQ in
+  ((if x > d then x + k else x), abstractMVarSub cQ offset s)
+
 and abstractMVarHead cQ ((l,d) as offset) tH = match tH with
-  | I.BVar x ->
-      I.BVar x
+  | I.BVar x -> I.BVar x
 
-  | I.FPVar (p, s) ->
-      let x = index_of cQ (FV p) + d in
-        I.PVar (x, abstractMVarSub cQ offset s)
+  | I.FPVar ns -> I.PVar (abstractFVarSub cQ offset ns)
 
-  | I.MMVar ((n, r, I.Empty, tp , _cnstr, _) , (_ms, s)) ->
-      let x = index_of cQ (MMV (n,r)) + d in
-        I.MVar (I.Offset x, abstractMVarSub cQ offset s)
+  | I.FMVar (u, s) ->
+    let (x,s') = abstractFVarSub cQ offset (u, s) in
+    I.MVar (I.Offset x, s')
 
-  | I.MMVar ((n, r, _cD, _, _cnstr, _), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverVars))
+  | I.MMVar mi ->
+    let (off,s') = abstractMMVarInst cQ offset mi in
+    I.MVar (I.Offset off, s')
 
-  | I.MPVar ((n, r, I.Empty, tp, _cnstr, _), (_ms, s)) ->
-      let x = index_of cQ (MMV (n,r)) + d in
-        I.PVar (x, abstractMVarSub cQ offset s)
+  | I.MVar (I.Inst i, s) ->
+    let (off,s') = abstractMMVarInst cQ offset (i,(Whnf.m_id,s)) in
+    I.MVar (I.Offset off, s')
 
-  | I.MPVar ((n, r, _cD, _, _cnstr, _), (_ms, _s)) ->
-      raise (Error (Syntax.Loc.ghost, LeftoverVars))
-
-  | I.MVar (I.Inst ((n, r, cPsi, tP , _cnstr, _)), s) ->
-      let x = index_of cQ (MMV (n,r)) + d in
-        I.MVar (I.Offset x, abstractMVarSub cQ offset s)
+  | I.MPVar mi ->  I.PVar (abstractMMVarInst cQ offset mi)
 
   | I.MVar (I.Offset x , s) ->
-      (* let k = Context.length cQ in  *)
-      let k = lengthCollection cQ in
-      if x > d then I.MVar(I.Offset ( x + k), abstractMVarSub cQ offset s)
-      else
-        I.MVar (I.Offset x, abstractMVarSub cQ offset s)
+    let (x',s') = abstractOffsetSub cQ offset (x, s) in
+    I.MVar (I.Offset x', s')
 
-  |  I.FMVar (u, s) ->
-      let x = index_of cQ (FV u) + d in
-        I.MVar (I.Offset x, abstractMVarSub cQ offset s)
+  | I.PVar os -> I.PVar (abstractOffsetSub cQ offset os)
 
   | I.Const c ->
       I.Const c
 
-(* Should never happen
-  | I.FVar n ->
-      I.BVar ((index_of cQ (FV (Pure, n, None))) + d)
-*)
   | I.AnnH (_tH, _tA) ->
       raise Error.NotImplemented
 
   | I.Proj (head, k) ->
       let head = abstractMVarHead cQ offset head in   (* ??? -jd *)
         I.Proj (head, k)
-
-  | I.PVar (p , s) ->
-      let k = lengthCollection cQ in
-      (* let k = Context.length cQ in *)
-      if p > d then  I.PVar ((p+k), abstractMVarSub cQ offset s)
-      else
-        I.PVar (p, abstractMVarSub cQ offset s)
 
 
   (* other cases impossible for object level *)

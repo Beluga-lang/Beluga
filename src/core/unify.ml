@@ -1950,63 +1950,7 @@ match sigma with
                            addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM2), INorm (Clo sM1))))))
                   end
               | (false , false) ->
-                  (* Check if t1' or t2' are proj-patt sub *)
-                  begin match  (isProjPatSub t1' , isProjPatSub t2') with
-                    | ( _ , true ) ->
-                        begin try
-                          let _ = dprint (fun () -> "- 1 - about to call flattenDCtx from unify.ml projpatsub case; \ncPsi = " ^
-                                            P.dctxToString cD0 cPsi) in
-                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                          let phat = Context.dctxToHat flat_cPsi in
-                          let t_flat = ConvSigma.strans_sub cD0 t2' conv_list in
-                          let tM1'   = ConvSigma.strans_norm cD0 sM1 conv_list in
-                          let ss = invert t_flat in
-                          let _ = dprint (fun () -> "          flat_cPsi = " ^ P.dctxToString cD0 flat_cPsi) in
-                          let _ = dprint (fun () -> "          cPsi2 = " ^ P.dctxToString cD0 cPsi2) in
-                            (*  cPsi  |- t2' : cPsi2
-                                flat_cPsi |- t_flat : cPsi2
-                                cPsi2     |- ss : flat_cPsi
-                                cPsi1      |- r
-                                cPsi1      | [ss] tM2'
-                            *)
-
-                          let _ = dprint (fun () -> "          ss (flat) = " ^
-                                            P.subToString cD0 cPsi2 ss)
-                                            in
-                          let _ = dprint (fun () -> "          t_flat) = " ^
-                                            P.subToString cD0 flat_cPsi t_flat) in
-                          let tM1' = trail (fun () -> prune cD0 cPsi2 phat (tM1', id) (MShift 0, ss) (MMVarRef r2)) in
-                          let _ = dprint (fun () -> "         sM1' = " ^
-                                            P.normalToString cD0 cPsi2 (tM1', Substitution.LF.id)) in
-
-                            instantiateMVar (r2, tM1', !cnstrs2)
-                        with
-                          | NotInvertible ->
-                              ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-				(dprint (fun () -> "Add constraint (7)");
-                               addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
-                        end
-
-
-                    | ( true , _ ) ->
-                        begin try
-                          let _ = dprint (fun () -> " - 2 - about to call flattenDCtx from unify.ml projpatsub case; cPsi = " ^ P.dctxToString cD0 cPsi) in
-                          let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                          let phat = Context.dctxToHat flat_cPsi in
-                          let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
-                          let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
-                          let ss = invert t_flat in
-                          let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MMVarRef r1)) in
-                            instantiateMVar (r1, sM2', !cnstrs1)
-                        with
-                          | NotInvertible ->
-                              ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-				(dprint (fun () -> "Add constraint (8)");
-                               addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
-                        end
-
-
-                    | ( false , false ) ->
+                  begin 
                         (* neither t1' nor t2' are pattern substitutions *)
                         let cnstr = ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))) in
                           dprint (fun () -> "neither pat sub"); addConstraint (cnstrs1, cnstr)
@@ -2046,22 +1990,6 @@ match sigma with
                   (dprint (fun () -> "Add constraint (9)");
 		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm (Clo sM2)))))
             else
-              if isProjPatSub t' then
-                begin try
-                  let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                  let phat = Context.dctxToHat flat_cPsi in
-                  let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
-                  let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
-                  let ss = invert t_flat in
-                  let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (MShift 0, ss) (MMVarRef r)) in
-                    instantiateMVar (r, sM2', !cnstrs)
-                with
-                  | NotInvertible ->
-                      ((* Printf.printf "Added constraints: NotInvertible: \n" ;*)
-			(dprint (fun () -> "Add constraint (10)");
-                       addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))))
-              end
-            else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi sM1
                               ^ " = " ^ P.normalToString cD0 cPsi sM2);
@@ -2079,7 +2007,7 @@ match sigma with
         and t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2))    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
           if r1 == r2 then (* by invariant:  cD1 = cD2, cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
+            match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
               | (true, true, true, true) ->
                     let phat = Context.dctxToHat cPsi in
                     let (s', cPsi') = intersection phat (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in

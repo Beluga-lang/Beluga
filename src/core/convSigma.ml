@@ -11,11 +11,11 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7])
+(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7]) *)
 
-let rec conv_listToString clist = match clist with
-  | [] -> " "
-  | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
+(* let rec conv_listToString clist = match clist with *)
+(*   | [] -> " " *)
+(*   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs *)
 
 (* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
 let rec _blockdeclInDctx cPsi = match cPsi with
@@ -114,17 +114,15 @@ and strans_mfront cD mf conv_list = match mf with
   | Int.LF.MV u -> Int.LF.MV u
   | Int.LF.MUndef -> Int.LF.MUndef
 
+and shift_conv_list n = function
+  | (0, xs) -> n
+  | (k, x::xs) -> shift_conv_list (n+x) (k-1, xs)
 
 and strans_sub cD s conv_list = match s with
-(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *)
+(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *) 
   | Int.LF.EmptySub -> Int.LF.EmptySub
   | Int.LF.Undefs -> Int.LF.Undefs
-  | Int.LF.Shift offset ->
-      let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in
-      let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in
-      let _ = dprint (fun () -> "Old offset " ^ string_of_int offset ) in
-      let _ = dprint (fun () -> "New offset " ^ string_of_int offset') in
-        Int.LF.Shift offset'
+  | Int.LF.Shift offset -> Int.LF.Shift (shift_conv_list 0 (offset, conv_list))
   | Int.LF.Dot (ft, s) ->
       Int.LF.Dot (strans_front cD ft conv_list, strans_sub cD s conv_list)
   | Int.LF.SVar (s, offset, sigma) ->

@@ -1851,7 +1851,7 @@ match sigma with
                                  ^ P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id)) in
 
           if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
-            match (isProjPatSub t1' , isProjPatSub t2') with
+            match (isPatSub t1' , isPatSub t2') with
               | (true, true) ->
                   if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
@@ -2132,16 +2132,6 @@ match sigma with
 		      (dprint (fun () -> "Add constraint (2)");
                       addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm(Clo sM2), INorm(Clo sM1)))))
                   end
-(*              | ( _ , false , _ , _ ) ->
-                  (* neither t1' is not pattern substitutions -- add projPat case *)
-                  let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
-                   addConstraint (cnstrs1, cnstr)
-
-              | ( _ , _ , _ , false ) ->
-                  (* neither t2' is not pattern substitutions -- add projPat case *)
-                  let cnstr = ref (Eqn (cD0, cPsi, Clo sM1, Clo sM2)) in
-                   addConstraint (cnstrs1, cnstr)
-*)
               | (_ , _ , _ , _) ->
                   begin match  (isProjPatSub t1' , isProjPatSub t2') with
                     | ( _ , true ) ->
@@ -2213,33 +2203,6 @@ match sigma with
         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD0 cPsi) in
         let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
-          if isPatSub t' && isPatMSub (Whnf.cnormMSub mt) then
-            begin try
-              let ss  = invert t' in
-              let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
-              let _ = dprint (fun () ->
-                                "UNIFY(2): MMVar-Normal\n" ^
-                                  P.mctxToString cD0 ^ "\n" ^
-                                  P.normalToString cD0 cPsi sM1 ^ "  ==  " ^
-                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
-              let phat = Context.dctxToHat cPsi in
-              let sM2' = trail (fun () -> prune cD cPsi1 phat sM2 (mtt, ss) (MMVarRef r)) in
-              let _ = dprint (fun () ->
-                                "UNIFY(2): MMVar-Normal Pruned sM2'\n" ^
-                                  P.mctxToString cD ^ ";\n" ^
-                                  P.dctxToString cD cPsi1 ^ "\n  |- " ^
-                                  P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in
-                dprint (fun () -> "Instantiate meta^2-variable  " ^
-                          P.normalToString cD0 cPsi sM1);
-                instantiateMMVar (r, sM2', !cnstrs) ;
-                dprint (fun () -> "   to : " ^
-                              P.normalToString cD0 cPsi sM1)
-            with
-              | NotInvertible ->
-                addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2))))
-            end
-          else
-            (* If we have Sigma types in the context cPsi and we have proj-pat-substitutions *)
             if isProjPatSub t' && isPatMSub mt then
               begin try
                 let _ = dprint (fun () -> "MMVar case - with projpat sub") in

@@ -1911,13 +1911,9 @@ match sigma with
     end 
     | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1)) as sM1,
        (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2)) as sM2)) ->
-            let t1' = Whnf.normSub t1
-                (* cD ; cPsi |- t1' <= cPsi1 *) in
-            let t2' = Whnf.normSub t2 in
-                (* cD ; cPsi |- t2' <= cPsi2 *)
-            begin match (isPatSub t1' , isPatSub t2') with
-              | (true, _) -> unifyMVarTerm cD0 cPsi sM1 t1' sM2
-              | (_, true) -> unifyMVarTerm cD0 cPsi sM2 t2' sM1
+            begin match (isPatSub t1 , isPatSub t2) with
+              | (true, _) -> unifyMVarTerm cD0 cPsi sM1 t1 sM2
+              | (_, true) -> unifyMVarTerm cD0 cPsi sM2 t2 sM1
               | (false , false) ->
 		addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
             end
@@ -1926,8 +1922,7 @@ match sigma with
     | ((Root (_, MVar (Inst (_n, r, _, ClTyp (_, cPsi1), cnstrs, _), t), _tS)) as sM1, sM2) 
     | (sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (_,cPsi1), cnstrs, _), t), _tS)) as sM1)) ->
 (*        dprnt "(001) MVar-_";*)
-        let t' = simplifySub cD0 cPsi (Whnf.normSub t) in
-          if isPatSub t' then unifyMVarTerm cD0 cPsi sM1 t' sM2
+          if isPatSub t then unifyMVarTerm cD0 cPsi sM1 t sM2
             else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi (sM1,id)

@@ -1872,27 +1872,17 @@ match sigma with
         unifyTerm  mflag cD0 (DDec(cPsi, TypDeclOpt x)) (tN, dot1 s1) (tM, dot1 s2)
 
     (* MVar-MVar case *)
-    | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1), s1),
+       (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2), s2))) when r1 == r2 -> begin
          dprnt "(000) MVar-MVar";
         (* by invariant of whnf:
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *) in
-        let t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2)) in (* cD ; cPsi |- t2' <= cPsi2 *)
-        let _ = dprint (fun () ->  "\n[Unify] MVar-MVar (0):"  ) in
-        let _ = dprint (fun () -> "          cPsi = " ^ P.dctxToString cD0 cPsi) in
-        let _ = dprint (fun () -> "          sM1 =   "^ P.normalToString cD0 cPsi  sM1 ) in
-        let _ = dprint (fun () ->  "with type: "  ) in
-        let _ = dprint (fun () ->  P.dctxToString cD0 cPsi1 ) in
-        let _ = dprint (fun () -> " |- " ^
-                          P.typToString cD0 cPsi1 (tP1 , id)) in
-        let _ = dprint (fun () -> "\n and sM2 = "
-                                 ^ P.normalToString cD0 cPsi sM2 ^  "\n with type: "
-                                 ^ P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id)) in
-
-          if r1 == r2 then (* by invariant:  cPsi1 = cPsi2, tP1 = tP2, cnstr1 = cnstr2 *)
+           let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))
+                (* cD ; cPsi |- t1' <= cPsi1 *) in
+           let t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2)) in
+                (* cD ; cPsi |- t2' <= cPsi2 *)
             match (isPatSub t1' , isPatSub t2') with
               | (true, true) ->
                   if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
@@ -1918,7 +1908,13 @@ match sigma with
                     ()
                   else
 		    addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sN), INorm (Clo sM))))
-          else
+    end 
+    | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1,
+       (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2), s2) as sM2)) ->
+            let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))
+                (* cD ; cPsi |- t1' <= cPsi1 *) in
+            let t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2)) in
+                (* cD ; cPsi |- t2' <= cPsi2 *)
             begin match (isPatSub t1' , isPatSub t2') with
               | (true, _) -> unifyMVarTerm cD0 cPsi sM1 t1' sM2
               | (_, true) -> unifyMVarTerm cD0 cPsi sM2 t2' sM1

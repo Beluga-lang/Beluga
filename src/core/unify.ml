@@ -1822,7 +1822,7 @@ match sigma with
       (unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2);
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
-  and unifyMVarTerm cD0 cPsi (_n1, r1,  _, ClTyp (_, cPsi1), cnstrs1, mdep1) t1' sM2 = 
+  and unifyMVarTerm cD0 cPsi (_n1, r1,  cD, ClTyp (_, cPsi1), cnstrs1, mdep1) t1' sM2 = 
     begin try
      let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
      let phat = Context.dctxToHat cPsi in
@@ -1831,20 +1831,20 @@ match sigma with
      with NotInvertible -> raise (Error.Violation "Pattern substitution  not invertible")
     end 
 
-  and unifyMMVarTerm cD0 cPsi (_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
+  and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin try
       let ss1  = invert t1' in
       let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)
       let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
       let phat = Context.dctxToHat cPsi in
-      let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (mtt1, ss1) (MMVarRef r1)) in
+      let tM2' = trail (fun () -> prune cD cPsi1 phat (sM2,id) (mtt1, ss1) (MMVarRef r1)) in
       instantiateMMVar (r1, Whnf.norm(tM2',id), !cnstrs1);
       with NotInvertible -> raise (Error.Violation "Pattern substitution not invertible")
     end
 
-  and unifyMMVarTermProj cD0 cPsi (((Root (_, MMVar (((_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _))) as sM1) t1' sM2 =
-     begin try 
+  and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 =
+     begin 
        let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
        let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
        let phat = Context.dctxToHat flat_cPsi in
@@ -1853,9 +1853,6 @@ match sigma with
        let ss = invert t_flat in
        let sM2' = trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
        instantiateMMVar (r1, sM2', !cnstrs1)
-       with | NotInvertible ->
-	(dprint (fun () -> "Add constraint (4)");
-         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
      end
 
 
@@ -1971,30 +1968,27 @@ match sigma with
         let t1' = simplifySub cD0 cPsi (Whnf.normSub t1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = simplifySub cD0 cPsi (Whnf.normSub t2)    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
+	begin try
             begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
               | (true, true, _, _) ->
 		unifyMMVarTerm cD0 cPsi i mt1 t1' sM2
               | (_ , _, true, true) ->
 		unifyMMVarTerm cD0 cPsi i' mt2 t2' sM1
               | (_ , _ , _ , _) ->
-                  begin match  (isProjPatSub t1' , isProjPatSub t2') with
-                    | ( _ , true ) ->
-		      unifyMMVarTermProj cD0 cPsi sM2 t2' sM1
-                    | ( true, _ ) ->
-		      unifyMMVarTermProj cD0 cPsi sM1 t1' sM2
-
-                    | ( _ , _ ) ->
-                        (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)) in
-			let _ = dprint (fun () -> "Add constraint (5)") in
-                          addConstraint (cnstrs1, cnstr)
+                  begin match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
+                    | ( _ , _, true, true ) ->
+		      unifyMMVarTermProj cD0 cPsi i' mt2 t2' sM1
+                    | ( true, true , _ , _ ) ->
+		      unifyMMVarTermProj cD0 cPsi i mt1 t1' sM2
+                    | _ -> addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
                   end
             end
-
+	with NotInvertible -> addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+	end 
 
     (* MMVar-normal case *)
-    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep), mt), t), _tS)) as sM1, sM2)
-    | (sM2, ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep), mt), t), _tS)) as sM1)) ->
+    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1, sM2)
+    | (sM2, ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1)) ->
         dprnt "(011) MMVar-_";
         if blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) then
           (dprnt "(011) - blockinDCtx";
@@ -2008,7 +2002,7 @@ match sigma with
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
             if isProjPatSub t' && isPatMSub mt then
               begin try
-		unifyMMVarTermProj cD0 cPsi sM1 t' sM2
+		unifyMMVarTermProj cD0 cPsi i mt t' sM2
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))

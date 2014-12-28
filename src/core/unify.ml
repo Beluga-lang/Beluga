@@ -1822,7 +1822,7 @@ match sigma with
       (unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2);
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
-  and unifyMVarTerm cD0 cPsi (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1)) as sM1) t1' sM2 = 
+  and unifyMVarTerm cD0 cPsi (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1)))) t1' sM2 = 
     (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
     begin try
      let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
@@ -1830,8 +1830,7 @@ match sigma with
      let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (MShift 0, ss1) (MMVarRef r1)) in
      instantiateMVar (r1, tM2', !cnstrs1)
      with | NotInvertible ->
-	(dprint (fun () -> "Add constraint (0)");
-         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
+       raise (Error.Violation "Pattern substitution was not invertible")
     end 
 
   and unifyMMVarTerm cD0 cPsi (((Root (_, MMVar (((_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _))) as sM1) t1' sM2 = 
@@ -1879,17 +1878,13 @@ match sigma with
            meta-variables are lowered during whnf, s1 = s2 = id or co-id
            r1 and r2 are uninstantiated  (None)
         *)
-           let t1' = simplifySub cD0 cPsi (Whnf.normSub t1)
-                (* cD ; cPsi |- t1' <= cPsi1 *) in
-           let t2' = simplifySub cD0 cPsi (Whnf.normSub t2) in
-                (* cD ; cPsi |- t2' <= cPsi2 *)
-            match (isPatSub t1' , isPatSub t2') with
+            match (isPatSub t1 , isPatSub t2) with
               | (true, true) ->
-                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
+                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2 then
                     ()
                   else
                     let phat = Context.dctxToHat cPsi in
-                    let (s', cPsi') = intersection phat t1' t2' cPsi1 in
+                    let (s', cPsi') = intersection phat t1 t2 cPsi1 in
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
                          then cD ; cPsi1 |- s' <= cPsi' *)
 
@@ -1904,27 +1899,22 @@ match sigma with
                       *)
                       instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
               | (_, _) ->
-                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
+                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2 then
                     ()
                   else
 		    addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
     end 
-    | (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1)) as sM1,
-       (((Root (_, MVar (Inst (_n2, r2, _, ClTyp (MTyp tP2, cPsi2), cnstrs2, mdep2), t2), _tS2) as _tM2)) as sM2)) ->
-            begin match (isPatSub t1 , isPatSub t2) with
-              | (true, _) -> unifyMVarTerm cD0 cPsi sM1 t1 sM2
-              | (_, true) -> unifyMVarTerm cD0 cPsi sM2 t2 sM1
-              | (false , false) ->
-		addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
-            end
 
     (* MVar-normal case *)
-    | ((Root (_, MVar (Inst (_n, r, _, ClTyp (_, cPsi1), cnstrs, _), t), _tS)) as sM1, sM2) 
-    | (sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (_,cPsi1), cnstrs, _), t), _tS)) as sM1)) ->
-(*        dprnt "(001) MVar-_";*)
-          if isPatSub t then unifyMVarTerm cD0 cPsi sM1 t sM2
-            else
-             (dprint (fun () -> "Add constraint: MVAR-Normal case"
+    | ((Root (_, MVar (Inst _, t), _tS)) as sM1, sM2) 
+      when isPatSub t -> unifyMVarTerm cD0 cPsi sM1 t sM2
+
+    | (sM2, ((Root (_, MVar (Inst _, t), _tS)) as sM1))
+      when isPatSub t -> unifyMVarTerm cD0 cPsi sM1 t sM2
+    
+    | ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1, sM2) 
+    | (sM2, ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1))
+      -> (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi (sM1,id)
                               ^ " = " ^ P.normalToString cD0 cPsi (sM2,id));
              addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))

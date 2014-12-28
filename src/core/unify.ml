@@ -2082,8 +2082,8 @@ match sigma with
               | (_, _, _, _) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sN), INorm(Clo sM))))
        end  
-    | (((Root (_, MMVar (((_n1, r1,  cD1, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), mt1), t1), _tS1) as _tM1), s1) as sM1,
-       (((Root (_, MMVar (((_n2, r2, _cD2, ClTyp (MTyp tP2,cPsi2), cnstrs2, mdep2), mt2), t2), _tS2) as _tM2), s2) as sM2)) ->
+    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_), mt1), t1), _tS1)), s1) as sM1,
+       (((Root (_, MMVar ((_, mt2), t2), _tS2)), s2) as sM2)) ->
         let t1' = simplifySub cD0 cPsi (Whnf.normSub (comp t1 s1))    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = simplifySub cD0 cPsi (Whnf.normSub (comp t2 s2))    (* cD ; cPsi |- t2' <= cPsi2 *)
         in

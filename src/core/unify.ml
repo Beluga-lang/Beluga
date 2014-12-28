@@ -1823,17 +1823,15 @@ match sigma with
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
   and unifyMVarTerm cD0 cPsi (_n1, r1,  _, ClTyp (_, cPsi1), cnstrs1, mdep1) t1' sM2 = 
-    (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
     begin try
      let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
      let phat = Context.dctxToHat cPsi in
      let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (MShift 0, ss1) (MMVarRef r1)) in
      instantiateMVar (r1, tM2', !cnstrs1)
-     with | NotInvertible ->
-       raise (Error.Violation "Pattern substitution was not invertible")
+     with NotInvertible -> raise (Error.Violation "Pattern substitution  not invertible")
     end 
 
-  and unifyMMVarTerm cD0 cPsi (((Root (_, MMVar (((_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _))) as sM1) t1' sM2 = 
+  and unifyMMVarTerm cD0 cPsi (_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin try
       let ss1  = invert t1' in
       let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
@@ -1842,9 +1840,7 @@ match sigma with
       let phat = Context.dctxToHat cPsi in
       let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (mtt1, ss1) (MMVarRef r1)) in
       instantiateMMVar (r1, Whnf.norm(tM2',id), !cnstrs1);
-      with | NotInvertible ->
-        (dprint (fun () -> "Add constraint (1)");
-	addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
+      with NotInvertible -> raise (Error.Violation "Pattern substitution not invertible")
     end
 
   and unifyMMVarTermProj cD0 cPsi (((Root (_, MMVar (((_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _))) as sM1) t1' sM2 =
@@ -1970,16 +1966,16 @@ match sigma with
               | (_, _, _, _) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
        end  
-    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_), mt1), t1), _tS1))) as sM1,
-       (((Root (_, MMVar ((_, mt2), t2), _tS2))) as sM2)) ->
+    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), _tS1))) as sM1,
+       (((Root (_, MMVar ((i', mt2), t2), _tS2))) as sM2)) ->
         let t1' = simplifySub cD0 cPsi (Whnf.normSub t1)    (* cD ; cPsi |- t1' <= cPsi1 *)
         and t2' = simplifySub cD0 cPsi (Whnf.normSub t2)    (* cD ; cPsi |- t2' <= cPsi2 *)
         in
             begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
               | (true, true, _, _) ->
-		unifyMMVarTerm cD0 cPsi sM1 t1' sM2
+		unifyMMVarTerm cD0 cPsi i mt1 t1' sM2
               | (_ , _, true, true) ->
-		unifyMMVarTerm cD0 cPsi sM2 t2' sM1
+		unifyMMVarTerm cD0 cPsi i' mt2 t2' sM1
               | (_ , _ , _ , _) ->
                   begin match  (isProjPatSub t1' , isProjPatSub t2') with
                     | ( _ , true ) ->

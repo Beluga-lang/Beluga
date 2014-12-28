@@ -1836,7 +1836,7 @@ match sigma with
 	addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))
     end
 
-  and unifyMMVarTermProj cD0 cPsi (((Root (_, MMVar (((_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _)), s1) as sM1) t1' sM2 =
+  and unifyMMVarTermProj cD0 cPsi (((Root (_, MMVar (((_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _)), s1) as sM1) t1' sM2 =
      begin try 
        let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
        let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
@@ -1844,7 +1844,7 @@ match sigma with
        let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
        let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
        let ss = invert t_flat in
-       let sM2' = trail (fun () -> prune cD0 cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
+       let sM2' = trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
        instantiateMMVar (r1, sM2', !cnstrs1)
        with | NotInvertible ->
 	(dprint (fun () -> "Add constraint (4)");
@@ -2124,50 +2124,7 @@ match sigma with
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
             if isProjPatSub t' && isPatMSub mt then
               begin try
-                let _ = dprint (fun () -> "MMVar case - with projpat sub") in
-                let _ = dprint (fun () ->
-                                "UNIFY(2): MMVar-Normal\n" ^
-                                  P.mctxToString cD0 ^ "\n" ^
-                                  P.normalToString cD0 cPsi sM1 ^ "  ==  " ^
-                                  P.normalToString cD0 cPsi sM2 ^ "\n") in
-                let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-                let phat = Context.dctxToHat flat_cPsi in
-                let t_flat = ConvSigma.strans_sub cD0 t' conv_list in
-                let tM2'   = ConvSigma.strans_norm cD0 sM2 conv_list in
-                let ss = invert t_flat in
-                let mtt = Whnf.m_invert (Whnf.cnormMSub mt) in
-                let _ = dprint (fun () ->
-                                "UNIFY(2): MMVar-Normal\n" ^
-                                  P.mctxToString cD0 ^ "\n" ^
-                                  P.dctxToString cD0 cPsi ^ "\n   " ^
-                                  "sM1 = " ^ P.normalToString cD0 cPsi sM1 ^ "\n    " ^
-                                  "sM2 = " ^ P.normalToString cD0 cPsi sM2 ^ "\n") in
-                (*  flat_cPsi |- tM2'
-                        cPsi  |- t' : cPsi1
-                        flat_cPsi |- t_flat : cPsi1
-                        cPsi1     |- ss : flat_cPsi
-                    cPsi1      |- r
-                    cPsi1      | [ss] tM2'
-                *)
-                let _ = dprint (fun () ->
-                                  "MMVAR (local contexts) : cD = " ^ P.mctxToString cD ^
-                                  "\n                        cPsi1 = " ^P.dctxToString cD cPsi1)
-    in
-                let _ = dprint (fun () ->
-                                  "General context cPsi = " ^P.dctxToString cD0 cPsi)  in
-                let _ = dprint (fun () ->
-                                  "General context flatten cPsi = "
-                                  ^P.dctxToString cD0 flat_cPsi)  in
-                let _ = dprint (fun () -> "t_flat = " ^ P.subToString cD flat_cPsi t_flat)    in
-                let _ = dprint (fun () -> " tM2  (in flat_cPsi) = " ^
-                                  P.normalToString cD flat_cPsi (tM2', id)) in
-                let _ = dprint (fun () -> "ss = " ^ P.subToString cD cPsi1 ss)    in
-                let sM2' = trail (fun () -> prune cD cPsi1 phat (tM2', id)  (mtt, ss) (MMVarRef r)) in
-              let _ = dprint (fun () ->
-                                "UNIFY(2): MMVar-Normal Pruned sM2' with in flattened cPsi\n" ^
-                                  P.mctxToString cD ^ "\n" ^
-                                  P.normalToString cD cPsi1 (sM2', id) ^ "\n" ) in
-                  instantiateMMVar (r, sM2', !cnstrs)
+		unifyMMVarTermProj cD0 cPsi sM1 t' sM2
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm(Clo sM2)))))

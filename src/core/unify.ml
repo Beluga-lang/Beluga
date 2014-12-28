@@ -1965,21 +1965,18 @@ match sigma with
        end  
     | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), _tS1))) as sM1,
        (((Root (_, MMVar ((i', mt2), t2), _tS2))) as sM2)) ->
-        let t1' = simplifySub cD0 cPsi (Whnf.normSub t1)    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = simplifySub cD0 cPsi (Whnf.normSub t2)    (* cD ; cPsi |- t2' <= cPsi2 *)
-        in
 	begin try
-            begin match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
+            begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
               | (true, true, _, _) ->
-		unifyMMVarTerm cD0 cPsi i mt1 t1' sM2
+		unifyMMVarTerm cD0 cPsi i mt1 t1 sM2
               | (_ , _, true, true) ->
-		unifyMMVarTerm cD0 cPsi i' mt2 t2' sM1
+		unifyMMVarTerm cD0 cPsi i' mt2 t2 sM1
               | (_ , _ , _ , _) ->
-                  begin match (isPatMSub mt1, isProjPatSub t1' , isPatMSub mt2, isProjPatSub t2') with
+                  begin match (isPatMSub mt1, isProjPatSub t1 , isPatMSub mt2, isProjPatSub t2) with
                     | ( _ , _, true, true ) ->
-		      unifyMMVarTermProj cD0 cPsi i' mt2 t2' sM1
+		      unifyMMVarTermProj cD0 cPsi i' mt2 t2 sM1
                     | ( true, true , _ , _ ) ->
-		      unifyMMVarTermProj cD0 cPsi i mt1 t1' sM2
+		      unifyMMVarTermProj cD0 cPsi i mt1 t1 sM2
                     | _ -> addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
                   end
             end
@@ -1996,13 +1993,12 @@ match sigma with
             instantiateMMVar (r, tN,!cnstrs);
             unifyTerm mflag cD0 cPsi (sM1,id) (sM2,id))
         else
-        let t' = simplifySub cD0 cPsi (Whnf.normSub t) in
         let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD0 cPsi) in
-        let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t') in
+        let _ = dprint (fun () -> "t' = " ^ P.subToString cD0 cPsi t) in
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
-            if isProjPatSub t' && isPatMSub mt then
+            if isProjPatSub t && isPatMSub mt then
               begin try
-		unifyMMVarTermProj cD0 cPsi i mt t' sM2
+		unifyMMVarTermProj cD0 cPsi i mt t sM2
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))

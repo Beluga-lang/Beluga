@@ -1822,6 +1822,18 @@ match sigma with
       (unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2);
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
+  and unifyMVarTerm cD0 cPsi (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1) as _tM1), s1) as sM1) t1' sM2 = 
+    (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
+    begin try
+     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
+     let phat = Context.dctxToHat cPsi in
+     let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss1) (MMVarRef r1)) in
+     instantiateMVar (r1, tM2', !cnstrs1)
+     with | NotInvertible ->
+	(dprint (fun () -> "Add constraint (0)");
+         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2)))))
+    end 
+
   and unifyMMVarTerm cD0 cPsi (((Root (_, MMVar (((_, r1, cD1, ClTyp (_, cPsi1), cnstrs1, mdep1), mt1), t1), _)), s1) as sM1) t1' sM2 = 
     begin try
       let ss1  = invert t1' in
@@ -1901,90 +1913,17 @@ match sigma with
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
                       instantiateMVar (r1, Root(Syntax.Loc.ghost, MVar(w, s'),Nil), !cnstrs1)
-
-              | (true, false) ->
-                    dprint (fun () -> "??? 0"); addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
-              | (false, true) ->
-                  dprint (fun () -> "??? 1"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM), INorm (Clo sN)))) (* XXX double-check *)
-              | (false, false) ->
+              | (_, _) ->
                   if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1' t2' then
                     ()
                   else
-                    ((* dprint (fun () ->  "\nAttempt to unify :"
-                            ^ P.normalToString cD0 cPsi sM1 ^ "\n with type: " ^
-                              P.dctxToString cD0 cPsi1 ^ " |- " ^ P.typToString cD0 cPsi1 (tP1 , id)
-                             ^ "\n and " ^
-                              P.normalToString cD0 cPsi sM2 ^  "\n with type: " ^
-                              P.dctxToString cD0 cPsi2 ^ " |- " ^ P.typToString cD0 cPsi2 (tP2 , id) ^ "\n Generate constraint\n"
-                          );*)
-                   dprint (fun () -> "??? 3"); addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sN), INorm (Clo sM))))  (* XXX double-check *))
+		    addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sN), INorm (Clo sM))))
           else
             begin match (isPatSub t1' , isPatSub t2') with
-              | (true, _) ->
-                  (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
-                  begin try
-                    let _ = dprint (fun () -> "MVar - MVar (different ) ... inverting substitution " ) in
-                    let ss1  = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t1')) (* cD ; cPsi1 |- ss1 <= cPsi *) in
-                    let phat = Context.dctxToHat cPsi in
-                    let _ = dprint (fun () -> "MVar-MVar : inverted ss1 : " ^
-                                      P.subToString cD0 cPsi1 ss1) in
-                    let _ = dprint (fun () -> "MVar-MVar case initiate pruning " ) in
-                    let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss1) (MMVarRef r1)) in
-                    let _ = dprint (fun () ->
-                                      "UNIFY: MVar =/= MVAR: Result of pruning : " ^
-                                        "\n cPsi1  = " ^ P.dctxToString cD0 cPsi1 ^ "\n tMs' = " ^
-                                      P.normalToString cD0 cPsi1 (tM2', id) ^ "\n") in
-
-                    (* sM2 = [ss1][s2]tM2 *)
-                    (instantiateMVar (r1, tM2', !cnstrs1)  ;
-                     dprint (fun () ->  "\n[Unify] MVar-MVar: Result "  );
-                     dprint (fun () -> "             sM1 =    "^ P.normalToString cD0 cPsi sM1 );
-                     dprint (fun () -> "             sM2 =    "^ P.normalToString cD0 cPsi sM2 )
-                    )
-
-                  with
-                    | NotInvertible ->
-                        ((* Printf.printf "Added constraints: NotInvertible: \n "; *)
-			  (dprint (fun () -> "Add constraint (0)");
-                         addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm (Clo sM2))))))
-                  end
-              | (false, true) ->
-                  begin try
-                    let ss2 = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub t2'))(* cD ; cPsi2 |- ss2 <= cPsi *) in
-                    (* let _ = dprint (fun () ->
-                                      "UNIFY(2): \n cPsi = " ^
-                                        P.dctxToString cD0 cPsi ^ "\n" ^
-                                        P.mctxToString cD0 ^ "\n" ^
-                                        P.normalToString cD0 cPsi sM1
-                                          ^ " : " ^ P.typToString cD0 cPsi (tP1, t1') ^
-                                        "\n    " ^
-                                              P.normalToString cD0 cPsi sM2
-                                          ^ " : " ^ P.typToString cD0 cPsi (tP2, t2') ^
-                                        "\n")
-                    in
-                  let _ = dprint (fun () ->
-                                        "t2' = " ^
-                                        P.subToString cD0 cPsi t2' ^
-                                        "prune  " ^ P.normalToString cD0 cPsi sM1 ^
-                                        " with respect to \n ssubst = " ^
-                                        P.subToString cD0 cPsi1 ss2 ^ "\n") in *)
-
-
-                    let phat = Context.dctxToHat cPsi in
-                    let tM1' = trail (fun () -> prune cD0 cPsi2 phat sM1 (MShift 0, ss2) (MMVarRef r2)) in
-                      instantiateMVar (r2, tM1', !cnstrs2)
-                  with
-                    | NotInvertible ->
-                        ((* Printf.printf "Added constraints: NotInvertible: \n" ; *)
-			  (dprint (fun () -> "Add constraint (6)");
-                           addConstraint (cnstrs2, ref (Eqn (cD0, cPsi, INorm (Clo sM2), INorm (Clo sM1))))))
-                  end
+              | (true, _) -> unifyMVarTerm cD0 cPsi sM1 t1' sM2
+              | (_, true) -> unifyMVarTerm cD0 cPsi sM2 t2' sM1
               | (false , false) ->
-                  begin 
-                        (* neither t1' nor t2' are pattern substitutions *)
-                        let cnstr = ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))) in
-                          dprint (fun () -> "neither pat sub"); addConstraint (cnstrs1, cnstr)
-                  end
+		addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm (Clo sM1), INorm(Clo sM2))))
             end
 
     (* MVar-normal case *)

@@ -1931,33 +1931,7 @@ match sigma with
     | ((_tM2, _s2) as sM2, ((Root (_, MVar (Inst (_n, r, _, ClTyp (_,cPsi1), cnstrs, _), t), _tS), s1) as sM1)) ->
 (*        dprnt "(001) MVar-_";*)
         let t' = simplifySub cD0 cPsi (Whnf.normSub (comp t s1)) in
-          if isPatSub t' then
-            try
-              let ss = invert t' in
-(*              let _ = dprint (fun () ->
-                                          "UNIFY(2): " ^
-                                            P.mctxToString cD0 ^ "\n    " ^
-                                            P.normalToString cD0 cPsi sM1 ^ "\n    " ^
-                                            P.normalToString cD0 cPsi sM2) in              *)
-              let phat = Context.dctxToHat cPsi in
-(*              let _ = dprint (fun () -> "Pruning substitution: " ^ P.dctxToString cD0 cPsi1 ^ " |- " ^ P.subToString cD0 cPsi1 ss ^ " <= " ^ P.dctxToString cD0 cPsi) in *)
-              let tM2' = trail (fun () -> prune cD0 cPsi1 phat sM2 (MShift 0, ss) (MMVarRef r)) in
-(*              let _ = dprint (fun () ->
-                                          "UNIFY(2) -- AFTER PRUNING: " ^
-                                            P.mctxToString cD0 ^ "\n    " ^
-                                            P.normalToString cD0 cPsi1 (tM2', id)) in              *)
-              let _ = instantiateMVar (r, tM2', !cnstrs) in
-(*              let _ = dprint (fun () ->
-                                          "UNIFY(2) [RESULT]: " ^
-                                            P.mctxToString cD0 ^ "\n    "  ^
-                                            P.normalToString cD0 cPsi sM1  ^ " ==   " ^
-                                            P.normalToString cD0 cPsi sM2) in              *)
-                ()
-            with
-              | NotInvertible ->
-                  (* Printf.printf "Added constraints: NotInvertible: \n";*)
-                  (dprint (fun () -> "Add constraint (9)");
-		  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm(Clo sM1), INorm (Clo sM2)))))
+          if isPatSub t' then unifyMVarTerm cD0 cPsi sM1 t' sM2
             else
              (dprint (fun () -> "Add constraint: MVAR-Normal case"
                               ^ P.normalToString cD0 cPsi sM1

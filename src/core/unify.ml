@@ -1822,7 +1822,7 @@ match sigma with
       (unifyTerm mflag cD0 cPsi (tM, s1) (tN, s2);
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
-  and unifyMVarTerm cD0 cPsi (((Root (_, MVar (Inst (_n1, r1,  _, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), t1), _tS1)))) t1' sM2 = 
+  and unifyMVarTerm cD0 cPsi (_n1, r1,  _, ClTyp (_, cPsi1), cnstrs1, mdep1) t1' sM2 = 
     (* cD ; cPsi' |- t1 <= cPsi1 and cD ; cPsi |- t1 o s1 <= cPsi1 *)
     begin try
      let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
@@ -1880,9 +1880,6 @@ match sigma with
         *)
             match (isPatSub t1 , isPatSub t2) with
               | (true, true) ->
-                  if Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2 then
-                    ()
-                  else
                     let phat = Context.dctxToHat cPsi in
                     let (s', cPsi') = intersection phat t1 t2 cPsi1 in
                       (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
@@ -1906,18 +1903,15 @@ match sigma with
     end 
 
     (* MVar-normal case *)
-    | ((Root (_, MVar (Inst _, t), _tS)) as sM1, sM2) 
-      when isPatSub t -> unifyMVarTerm cD0 cPsi sM1 t sM2
+    | (Root (_, MVar (Inst i, t), _tS), sM2) 
+      when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
 
-    | (sM2, ((Root (_, MVar (Inst _, t), _tS)) as sM1))
-      when isPatSub t -> unifyMVarTerm cD0 cPsi sM1 t sM2
+    | (sM2, (Root (_, MVar (Inst i, t), _tS)))
+      when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
     
     | ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1, sM2) 
     | (sM2, ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1))
-      -> (dprint (fun () -> "Add constraint: MVAR-Normal case"
-                              ^ P.normalToString cD0 cPsi (sM1,id)
-                              ^ " = " ^ P.normalToString cD0 cPsi (sM2,id));
-             addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
+      -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
     | (((Root (_, MMVar (((_n1, r1,  cD1, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), mt1), t1), _tS1))),

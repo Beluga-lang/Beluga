@@ -1054,25 +1054,18 @@ match sigma with
     | FMVar ut  ->
       FMVar (pruneFVar cD0 phat ut ss rOccur)
     | FPVar pt ->
-      FPVar (pruneFVar cD0 phat pt ss rOccur)
-    | PVar (p, t) ->
-      PVar (pruneBoundMVar cD0 phat p t ss rOccur)
-    | Proj (PVar (p, t), i) ->
-      Proj (PVar (pruneBoundMVar cD0 phat p t ss rOccur), i)
-
-    | MPVar ((i, mt), t) ->
-      MPVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur)
-
-    | Proj (MPVar ((i, mt), t), k) ->
-      Proj (MPVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur), k)
-
-    | Proj (FPVar pt, i) ->
       begin try
-       Proj (FPVar (pruneFVar cD0 phat pt ss rOccur), i)
+       FPVar (pruneFVar cD0 phat pt ss rOccur)
 	with  Not_found -> (* Huh? *)
          if isId ssubst && isMId ms  then head
          else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
       end
+    | PVar (p, t) ->
+      PVar (pruneBoundMVar cD0 phat p t ss rOccur)
+    | Proj (h, i) -> Proj (pruneHead cD0 cPsi' phat (loc, h) ss rOccur, i)
+
+    | MPVar ((i, mt), t) ->
+      MPVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur)
 
      | BVar k ->
        begin match bvarSub k ssubst with
@@ -1082,14 +1075,7 @@ match sigma with
        end
 
      | Const _ as h -> h
-
      | FVar _ as h ->  h
-
-     | Proj (BVar k, i) ->
-                begin match bvarSub k ssubst with
-                  | Head (BVar _k' as h') -> Proj (h', i)
-                  | _ -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
-                end
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
     | (Last tM, s) ->

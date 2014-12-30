@@ -986,12 +986,12 @@ match sigma with
           Tuple (loc, tuple')
 
     | (Root (loc, head, tS),   s) ->
-        let (ms , ssubst) = ss in
-        let returnNeutral newHead =
-          let tS' = pruneSpine cD0 cPsi' phat (tS, s) ss rOccur in
-            Root (loc, newHead, tS')
-        in
-	let do_head = function
+      pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur
+
+  and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
+   let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
+   let sM = (Root (loc, head, tS) , s) in
+   match head with
             | MMVar (((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as _u, mt), t) ->  (* s = id *)
               (* cD |- t <= cD1
                  cD ; cPsi |- t <= [|mt|]Psi1
@@ -1431,7 +1431,6 @@ match sigma with
                   | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
                   | _                     -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
                 end
-	in do_head head
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
     | (Last tM, s) ->

@@ -1060,42 +1060,26 @@ match sigma with
     | Proj (PVar (p, t), i) ->
       Proj (PVar (pruneBoundMVar cD0 phat p t ss rOccur), i)
 
-    | MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t) (* tS *)   (* s = id *) ->
-                let t = Whnf.normSub t in
-                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                  if eq_cvarRef (MMVarRef r) rOccur then
-                    raise (Failure "[Prune] Parameter variable occurrence")
-                  else
-                      let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
-                      let mt' = invMSub cD0 (mt, cD1) ms rOccur in
-                      MPVar ((q, mt'), s')
+    | MPVar ((i, mt), t) ->
+      MPVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur)
 
-
-    | Proj(MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t), index) (* tS *)   (* s = id *) ->
-                let t = Whnf.normSub t in
-                let t = simplifySub cD0 (Context.hatToDCtx phat) t in
-                  if eq_cvarRef (MMVarRef r) rOccur then
-                    raise (Failure "[Prune] Parameter variable occurrence")
-                  else
-                      let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
-                      let mt' = invMSub cD0 (mt, cD1) ms rOccur in
-                      Proj(MPVar ((q, mt'), s'), index)
+    | Proj (MPVar ((i, mt), t), k) ->
+      Proj (MPVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur), k)
 
     | Proj (FPVar pt, i) ->
-                begin try
-	        Proj (FPVar (pruneFVar cD0 phat pt ss rOccur), i)
-                with
-                  | Not_found -> (* Huh? *)
-                      if isId ssubst && isMId ms  then head
-                      else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
-                end
+      begin try
+       Proj (FPVar (pruneFVar cD0 phat pt ss rOccur), i)
+	with  Not_found -> (* Huh? *)
+         if isId ssubst && isMId ms  then head
+         else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
+      end
 
      | BVar k ->
-                begin match bvarSub k ssubst with
-                  | Undef -> raise (Failure ("[Prune] Bound variable dependency : " ^
+       begin match bvarSub k ssubst with
+        | Undef -> raise (Failure ("[Prune] Bound variable dependency : " ^
                                                       "head = " ^ P.headToString cD0 cPsi' head))
-                  | Head (BVar _k as h') -> h'
-                end
+        | Head (BVar _k as h') -> h'
+       end
 
      | Const _ as h -> h
 

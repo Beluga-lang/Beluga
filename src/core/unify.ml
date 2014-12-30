@@ -1000,11 +1000,9 @@ match sigma with
         let t'  = Whnf.cnormSub (Whnf.normSub ts, i_msub) in
         let cPsi'' = Whnf.cnormDCtx (cPsi', i_msub) in
         let (idsub, cPsi2) = pruneSub  cD2 cPsi'' phat (t', cPsi1') ss rOccur in
-        let idsub_i = invert idsub in
-
         let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
         let tP' = Whnf.cnormTyp (tP, i_id_msub) in
-        let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub_i))  in
+        let v = Whnf.newMMVar None (cD2, cPsi2', TClo(tP', invert idsub))  in
         let _  = instantiateMMVar (r, Root (loc, MMVar ((v, id_msub), idsub), Nil), !cnstrs) in
         let tM'= Whnf.cnorm (Whnf.norm (tM, ssubst), ms) in
         tM'
@@ -1018,6 +1016,14 @@ match sigma with
       let v = Whnf.newMVar None (cPsi2, TClo(tP, invert idsub))  in
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
       Whnf.norm (tM, ssubst)
+
+  and pruneFVar cD0 phat (u,t) s ((ms, ssubst) as ss) rOccur = 
+   let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
+   let d = Context.length cD0 - Context.length cD_d in
+   let cPsi1 = if d = 0 then cPsi1 else Whnf.cnormDCtx (cPsi1, MShift d) in
+   let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+   let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
+   (u, s')
 
   and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
    let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
@@ -1067,24 +1073,11 @@ match sigma with
                                raise (Failure "[Prune] MObj / PObj dependency"))
                 end
                 )
-            | FMVar (u, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
-                let d = Context.length cD0 - Context.length cD_d in
-	        let cPsi1 = if d = 0 then cPsi1 else
-	          Whnf.cnormDCtx (cPsi1, MShift d) in
-                let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-(*                let t' = comp t s in *)
-                let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                  returnNeutral (FMVar (u, s'))
+            | FMVar ut  ->
+	      returnNeutral (FMVar (pruneFVar cD0 phat ut s ss rOccur))
 
-            | FPVar (p, t)   (* tS = Nil,   s = id *) ->
-                let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
-                let d = Context.length cD0 - Context.length cD_d in
-	        let cPsi1 = if d = 0 then cPsi1 else
-	          Whnf.cnormDCtx (cPsi1, MShift d) in
-                let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-                let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                  returnNeutral (FPVar (p, s'))
+            | FPVar pt ->
+	      returnNeutral (FPVar (pruneFVar cD0 phat pt s ss rOccur))
 
             | PVar (p, t)   (* tS = Nil,   s = id *) ->
                 begin match applyMSub p ms with

@@ -1025,6 +1025,14 @@ match sigma with
    let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
    (u, s')
 
+  and pruneBoundMVar cD0 phat u t ms ss rOccur = match applyMSub u ms with
+   | MV v ->
+     let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 v in
+     let t' = simplifySub cD0 (Context.hatToDCtx phat) t in
+     let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
+     (v,s')
+   | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
+
   and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
    let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
    match head with
@@ -1032,47 +1040,9 @@ match sigma with
       pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur
     | MVar (Inst i, t) ->
       pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur
-    | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
-     ( dprint (fun () -> "Pruning bound meta-variable " ^ (R.render_cvar cD0 u)) ;
-                begin match applyMSub u ms with
-                  | MV v ->
-                      begin try
-                        let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 v in
-                        let _ = dprint (fun () -> "   cPsi1 (context of mvar)  " ^             (R.render_cvar cD0 v)
-                                          ^ " ) = " ^ P.dctxToString cD0 cPsi1) in
-                        let _ = dprint (fun () -> "   cPsi' " ^ P.dctxToString cD0 cPsi') in
-
-                        let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-(*                         let s0 = invSub cD0 phat (comp t s, cPsi1) ss rOccur
-                           in
-                        let s' = simplifySub  cD0 cPsi' s0 in *)
-                        let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
-                        let (_, ssSubst) = ss in
-                          dprint (fun () -> "##       s  = " ^ P.subToString cD0 cPsi' s);
-                          dprint (fun () -> "##       t  = " ^ P.subToString cD0 cPsi' t);
-                          dprint (fun () -> "##       ss = " ^ P.subToString cD0 cPsi' ssSubst);
-(*                          dprint (fun () -> "##       s0' = " ^ P.subToString cD0 cPsi' s0);*)
-                          dprint (fun () -> "##       s' = " ^ P.subToString   cD0 cPsi' s');
-                          dprint (fun () -> "## comp t s = " ^ P.subToString cD0 cPsi' (comp t s));
-                          returnNeutral (MVar (Offset v, s'))
-                      with
-                        | Error.Violation msg ->
-                            (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
-                              "\n Looking for " ^ R.render_cvar cD0 u ^
-                              "\n in context " ^ P.mctxToString cD0);
-                            raise (Failure ("Pruning")))
-                        | Error msg ->
-                          (dprint (fun () -> "Pruning bound meta-variable FAILS; " ^ msg ^
-                                          "\n Looking for " ^ R.render_cvar cD0 u ^
-                                          "\n in context " ^ P.mctxToString cD0) ;
-                           raise (Failure ("Pruning")))
-                      end
-                  | MUndef -> (dprint (fun () -> "pruning bound metavariable - MUndef failure ");
-                               raise (Failure "[Prune] Bound MVar dependency"))
-                  | _      -> (dprint (fun () -> "pruning bound meta-variable - FAIL");
-                               raise (Failure "[Prune] MObj / PObj dependency"))
-                end
-                )
+    | MVar (Offset u, t) ->
+      let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ms ss rOccur in
+      returnNeutral (MVar (Offset v, s'))
             | FMVar ut  ->
 	      returnNeutral (FMVar (pruneFVar cD0 phat ut s ss rOccur))
 

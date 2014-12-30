@@ -1058,118 +1058,31 @@ match sigma with
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                    if isPatSub t && isPatMSub mt then
-                      let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
-                        (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                      let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
-                        (* cD  |- mt <= cD1
-                         * cD1 |- id_msub <=  cD2
-                         * cD  |- [|mt|]id_msub <= cD2
-                         *
-                         * Note: cD |- cPsi2 ctx  and cD1 ; cPsi1 |- tP <= type
-                         *       cD ; [|mt|]cPsi1 |- [|mt|]tP <= type
-                         *)
-
-                      let i_id_sub  = invert id_sub in
-                        (* cD; cPsi2 |- i_id_sub : cPsi1 *)
-                      let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in
-                        (* cD2 |- i_msub <= cD
-                         * cD ; cPsi2 |- i_id_sub <= cPsi1
-                         * cD2 ; [|i_msub|]cPsi2 |- [|i_msub|]i_id_sub <= [|i_msub|]cPsi1
-                         *
-                         * and more importantly: cD2 |- [|i_msub|]cPsi2 ctx
-                         *)
-                      let i_id_msub = Whnf.m_invert id_msub in
-                        (* cD2 |- i_id_msub <= cD1
-                         * cD2 ; [|i_id_msub|]cPsi1 |- [|i_id_msub|]tA <= type
-                         * cD2 ; [|i_msub|]cPsi2 |- [i_sub][|i_id_msub|]tA <= type
-                        *)
-                      let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
-                      let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in
-                      let tA'    = Whnf.cnormTyp (tA, i_id_msub) in
-
-                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub))  in
-
-                      let _ = instantiateMPVar (r, MPVar ((v, id_msub), id_sub), !cnstrs) in
-                        (* [|p[id_msub, id_sub] / q|] *)
-                        (* h = p[[ssubst] ([t] idsub)] *)
-                        returnNeutral (MPVar((v, Whnf.mcomp (Whnf.mcomp mt id_msub) ms), comp (comp t id_sub) ssubst))
-                    else (* t and mt not patsub *)
-                      let (ms, ssubst) = ss in
-                      let _ = dprint (fun () -> "[prune] MPVar - compute invSub") in
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-                      let _ = dprint (fun () -> "[prune] MPVar - compute invMSub") in
-                      let _ = dprint (fun () -> "[prune] mt = " ^ P.msubToString cD0 mt) in
-                      let _ = dprint (fun () -> "[prune] cD1 = " ^ P.mctxToString cD1) in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
-                      let _ = dprint (fun () -> "[prune] MPVar - computing invMSub done") in
                         returnNeutral (MPVar ((q, mt'), s'))
 
 
-            | Proj(MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t), index) (* tS *)   (* s = id *) ->
+    | Proj(MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t), index) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
                 let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                    if isPatSub t && isPatMSub mt then
-                      let (id_sub, cPsi2) = pruneCtx phat (comp t s, cPsi1) ss in
-                        (* cD ; cPsi1 |- idsub <= cPsi2 *)
-                      let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
-                        (* cD  |- mt <= cD1
-                         * cD1 |- id_msub <=  cD2
-                         * cD  |- [|mt|]id_msub <= cD2
-                         *
-                         * Note: cD |- cPsi2 ctx  and cD1 ; cPsi1 |- tP <= type
-                         *       cD ; [|mt|]cPsi1 |- [|mt|]tP <= type
-                         *)
-
-                      let i_id_sub  = invert id_sub in
-                        (* cD; cPsi2 |- i_id_sub : cPsi1 *)
-                      let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in
-                        (* cD2 |- i_msub <= cD
-                         * cD ; cPsi2 |- i_id_sub <= cPsi1
-                         * cD2 ; [|i_msub|]cPsi2 |- [|i_msub|]i_id_sub <= [|i_msub|]cPsi1
-                         *
-                         * and more importantly: cD2 |- [|i_msub|]cPsi2 ctx
-                         *)
-                      let i_id_msub = Whnf.m_invert id_msub in
-                        (* cD2 |- i_id_msub <= cD1
-                         * cD2 ; [|i_id_msub|]cPsi1 |- [|i_id_msub|]tA <= type
-                         * cD2 ; [|i_msub|]cPsi2 |- [i_sub][|i_id_msub|]tA <= type
-                        *)
-                      let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
-                      let i_sub  = Whnf.cnormSub (i_id_sub, i_msub) in
-                      let tA'    = Whnf.cnormTyp (tA, i_id_msub) in
-
-                      let v = Whnf.newMPVar None (cD2, cPsi2', TClo(tA', i_sub))  in
-
-                      let _ = instantiateMPVar (r, MPVar ((v, id_msub), id_sub), !cnstrs) in
-                        (* [|p[id_msub, id_sub] / q|] *)
-                        (* h = p[[ssubst] ([t] idsub)] *)
-                        returnNeutral (Proj(MPVar((v, Whnf.mcomp (Whnf.mcomp mt id_msub) ms), comp (comp t id_sub) ssubst), index))
-                    else (* t and mt not patsub *)
-                      let (ms, ssubst) = ss in
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
                         returnNeutral (Proj(MPVar ((q, mt'), s'), index))
 
-            | Proj (FPVar(p,t), i)   (* tS = Nil,   s = id *) ->
+    | Proj (FPVar pt, i)   (* tS = Nil,   s = id *) ->
                 begin try
-                  let (cD_d, Decl (_, ClTyp (_, cPsi1),_)) = Store.FCVar.get p in
-                  let d = Context.length cD0 - Context.length cD_d in
-	          let cPsi1 = if d = 0 then cPsi1 else
-	                        Whnf.cnormDCtx (cPsi1, MShift d) in
-                  let t = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-                  let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
-                    returnNeutral (Proj (FPVar(p,s'), i))
+	         returnNeutral (Proj (FPVar (pruneFVar cD0 phat pt s ss rOccur), i))
                 with
-                  | Not_found ->
+                  | Not_found -> (* Huh? *)
                       if isId ssubst && isMId ms  then returnNeutral head
                       else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
                 end
 
-            | BVar k  (* s = id *) ->
+     | BVar k  (* s = id *) ->
                 begin match bvarSub k ssubst with
                   | Undef                -> raise (Failure ("[Prune] Bound variable dependency : " ^
                                                       "head = " ^ P.headToString cD0 cPsi' head))
@@ -1177,11 +1090,11 @@ match sigma with
                       returnNeutral h'
                 end
 
-            | Const _ as h  (* s = id *)  ->  returnNeutral h
+     | Const _ as h  (* s = id *)  ->  returnNeutral h
 
-            | FVar _ as h  (* s = id *)  ->  returnNeutral h
+     | FVar _ as h  (* s = id *)  ->  returnNeutral h
 
-            | Proj (BVar k, i)  (* s = id *) ->
+     | Proj (BVar k, i)  (* s = id *) ->
                 begin match bvarSub k ssubst with
                   | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
                   | _                     -> raise (Failure "[Prune] Bound variable dependency (Proj) ")

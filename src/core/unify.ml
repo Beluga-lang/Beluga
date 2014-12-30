@@ -994,7 +994,8 @@ match sigma with
           Tuple (loc, tuple')
 
     | (Root (loc, head, tS),   s) ->
-      pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur
+      let newHead = pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur in
+      Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur)
 
   and pruneMMVarInst cD0 cPsi' phat loc (n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep)  mt ts ((ms,ssubst) as ss) rOccur = 
     if eq_cvarRef (MMVarRef r) rOccur then
@@ -1041,23 +1042,22 @@ match sigma with
    | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
 
   and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
-   let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
    match head with
     | MMVar ((i, mt), t) ->
-      returnNeutral (MMVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur))
+      MMVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur)
     | MVar (Inst i, t) ->
-      returnNeutral (MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur))
+      MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur)
     | MVar (Offset u, t) ->
       let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ss rOccur in
-      returnNeutral (MVar (Offset v, s'))
+      MVar (Offset v, s')
     | FMVar ut  ->
-      returnNeutral (FMVar (pruneFVar cD0 phat ut s ss rOccur))
+      FMVar (pruneFVar cD0 phat ut s ss rOccur)
     | FPVar pt ->
-      returnNeutral (FPVar (pruneFVar cD0 phat pt s ss rOccur))
+      FPVar (pruneFVar cD0 phat pt s ss rOccur)
     | PVar (p, t) ->
-      returnNeutral (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur))
+      PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur)
     | Proj (PVar (p, t), i) ->
-      returnNeutral (Proj (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur), i))
+      Proj (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur), i)
 
     | MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
@@ -1067,7 +1067,7 @@ match sigma with
                   else
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
-                        returnNeutral (MPVar ((q, mt'), s'))
+                      MPVar ((q, mt'), s')
 
 
     | Proj(MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t), index) (* tS *)   (* s = id *) ->
@@ -1078,33 +1078,32 @@ match sigma with
                   else
                       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
-                        returnNeutral (Proj(MPVar ((q, mt'), s'), index))
+                      Proj(MPVar ((q, mt'), s'), index)
 
-    | Proj (FPVar pt, i)   (* tS = Nil,   s = id *) ->
+    | Proj (FPVar pt, i) ->
                 begin try
-	         returnNeutral (Proj (FPVar (pruneFVar cD0 phat pt s ss rOccur), i))
+	        Proj (FPVar (pruneFVar cD0 phat pt s ss rOccur), i)
                 with
                   | Not_found -> (* Huh? *)
-                      if isId ssubst && isMId ms  then returnNeutral head
+                      if isId ssubst && isMId ms  then head
                       else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
                 end
 
-     | BVar k  (* s = id *) ->
+     | BVar k ->
                 begin match bvarSub k ssubst with
-                  | Undef                -> raise (Failure ("[Prune] Bound variable dependency : " ^
+                  | Undef -> raise (Failure ("[Prune] Bound variable dependency : " ^
                                                       "head = " ^ P.headToString cD0 cPsi' head))
-                  | Head (BVar _k as h') ->
-                      returnNeutral h'
+                  | Head (BVar _k as h') -> h'
                 end
 
-     | Const _ as h  (* s = id *)  ->  returnNeutral h
+     | Const _ as h -> h
 
-     | FVar _ as h  (* s = id *)  ->  returnNeutral h
+     | FVar _ as h ->  h
 
-     | Proj (BVar k, i)  (* s = id *) ->
+     | Proj (BVar k, i) ->
                 begin match bvarSub k ssubst with
-                  | Head (BVar _k' as h') -> returnNeutral (Proj (h', i))
-                  | _                     -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
+                  | Head (BVar _k' as h') -> Proj (h', i)
+                  | _ -> raise (Failure "[Prune] Bound variable dependency (Proj) ")
                 end
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with

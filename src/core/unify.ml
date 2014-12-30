@@ -988,10 +988,8 @@ match sigma with
     | (Root (loc, head, tS),   s) ->
       pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur
 
-  and pruneMMVarInst cD0 cPsi' phat loc ((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i)  mt ts tS ((ms,ssubst) as ss) rOccur = 
-    let head = MMVar((i,mt),ts) in
-    let tM = Root(loc, head, tS) in
-    let ts  = Whnf.normSub ts in
+  and pruneMMVarInst cD0 cPsi' phat loc ((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i)  mt ts ((ms,ssubst) as ss) rOccur = 
+    let tM = Root(loc, MMVar((i,mt),ts), Nil) in
     if eq_cvarRef (MMVarRef r) rOccur then
        raise (Failure "Variable occurrence")
     else
@@ -1011,30 +1009,25 @@ match sigma with
         let tM'= Whnf.cnorm (Whnf.norm (tM, ssubst), ms) in
         tM'
 
-  and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) ts tS ((ms, ssubst) as ss) rOccur = 
-    let head = MVar (Inst i, ts) in
-    let tM = Root(loc, head, tS) in
-    let t  = Whnf.normSub ts in
+  and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) t ((ms, ssubst) as ss) rOccur = 
+    let tM = Root(loc, MVar (Inst i, t), Nil) in
     if eq_cvarRef (MMVarRef r) rOccur then
       raise (Failure "Variable occurrence")
     else
       let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
-      let idsub_i = invert idsub in
-      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
+      let v = Whnf.newMVar None (cPsi2, TClo(tP, invert idsub))  in
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
       Whnf.norm (tM, ssubst)
 
   and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
    let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
    match head with
-            | MMVar ((i, mt), t) ->
-	      pruneMMVarInst cD0 cPsi' phat loc i mt (comp t s) tS  ss rOccur
-
-            | MVar (Inst i, t) ->
-	      pruneMVarInst cD0 cPsi' phat loc i (comp t s) tS ss rOccur
-
-            | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
-                ( dprint (fun () -> "Pruning bound meta-variable " ^             (R.render_cvar cD0 u)) ;
+    | MMVar ((i, mt), t) ->
+      pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur
+    | MVar (Inst i, t) ->
+      pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur
+    | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
+     ( dprint (fun () -> "Pruning bound meta-variable " ^ (R.render_cvar cD0 u)) ;
                 begin match applyMSub u ms with
                   | MV v ->
                       begin try

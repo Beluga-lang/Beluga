@@ -52,7 +52,7 @@ module LF = struct
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
     | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
-    | MVar  of cvar * sub                     (*   | u[s]                       *)
+    | MVar  of (cvar * sub)                   (*   | u[s]                       *)
     | PVar  of offsetsub                      (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)

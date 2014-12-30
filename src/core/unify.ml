@@ -1013,17 +1013,16 @@ match sigma with
         let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2'))  in
         let _  = instantiateMMVarWithMMVar r loc ((v, id_msub), idsub) tP' !cnstrs in
 	let ts' = comp (Whnf.cnormSub (comp (Whnf.cnormSub (idsub, mt)) ts, ms)) ssubst in
-        Root (loc, MMVar ((v,Whnf.mcomp id_mt ms), ts'), Nil)
+        ((v,Whnf.mcomp id_mt ms), ts')
 
-  and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) t ((ms, ssubst) as ss) rOccur = 
-    let tM = Root(loc, MVar (Inst i, t), Nil) in
+  and pruneMVarInst cD0 cPsi' phat loc (n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) t ((ms, ssubst) as ss) rOccur = 
     if eq_cvarRef (MMVarRef r) rOccur then
       raise (Failure "Variable occurrence")
     else
       let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
-      let v = Whnf.newMVar None (cPsi2, TClo(tP, invert idsub))  in
+      let v = Whnf.newMVar (Some n) (cPsi2, TClo(tP, invert idsub))  in
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
-      Whnf.norm (tM, ssubst)
+      (v, comp (comp idsub t) ssubst)
 
   and pruneFVar cD0 phat (u,t) s ((ms, ssubst) as ss) rOccur = 
    let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
@@ -1045,9 +1044,9 @@ match sigma with
    let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
    match head with
     | MMVar ((i, mt), t) ->
-      pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur
+      returnNeutral (MMVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur))
     | MVar (Inst i, t) ->
-      pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur
+      returnNeutral (MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur))
     | MVar (Offset u, t) ->
       let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ss rOccur in
       returnNeutral (MVar (Offset v, s'))

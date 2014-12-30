@@ -1025,9 +1025,9 @@ match sigma with
    let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
    (u, s')
 
-  and pruneBoundMVar cD0 phat u t ms ss rOccur = match applyMSub u ms with
+  and pruneBoundMVar cD0 phat u t ((ms, ssubst) as ss) rOccur = match applyMSub u ms with
    | MV v ->
-     let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 v in
+     let (_, ClTyp (_, cPsi1)) = Whnf.mctxLookup cD0 v in
      let t' = simplifySub cD0 (Context.hatToDCtx phat) t in
      let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
      (v,s')
@@ -1041,35 +1041,18 @@ match sigma with
     | MVar (Inst i, t) ->
       pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur
     | MVar (Offset u, t) ->
-      let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ms ss rOccur in
+      let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ss rOccur in
       returnNeutral (MVar (Offset v, s'))
-            | FMVar ut  ->
-	      returnNeutral (FMVar (pruneFVar cD0 phat ut s ss rOccur))
+    | FMVar ut  ->
+      returnNeutral (FMVar (pruneFVar cD0 phat ut s ss rOccur))
+    | FPVar pt ->
+      returnNeutral (FPVar (pruneFVar cD0 phat pt s ss rOccur))
+    | PVar (p, t) ->
+      returnNeutral (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur))
+    | Proj (PVar (p, t), i) ->
+      returnNeutral (Proj (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur), i))
 
-            | FPVar pt ->
-	      returnNeutral (FPVar (pruneFVar cD0 phat pt s ss rOccur))
-
-            | PVar (p, t)   (* tS = Nil,   s = id *) ->
-                begin match applyMSub p ms with
-                  | MV q ->
-                      let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
-                      let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-                      let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (PVar (q, s'))
-                  | MUndef -> raise (Failure "[Prune] Bound PVar dependency")
-                end
-
-            | Proj (PVar (p, t), i)   (* tS = Nil,   s = id *) ->
-                begin match applyMSub p ms with
-                  | MV q ->
-                      let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
-                      let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
-                      let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
-                        returnNeutral (Proj (PVar (q, s'), i))
-                  | MUndef -> raise (Failure "[Prune] Bound PVar dependency in projection")
-                end
-
-            | MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t) (* tS *)   (* s = id *) ->
+    | MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
                 let t = simplifySub cD0 (Context.hatToDCtx phat) t in
                   if eq_cvarRef (MMVarRef r) rOccur then

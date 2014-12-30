@@ -1144,18 +1144,11 @@ match sigma with
       Whnf.cnormSub (Substitution.LF.comp s s', mt)
 
     | (SVar (sv, (n), sigma), cPsi1) ->
-      (*  cD ; cPsi |- sv[sigma] : cPsi1    where sv:cPsi1[cPhi1]
-          cD ; cPsi |- sigma : cPhi1
-          ** because s must be in nf, sv = None **
-      *)
-      let _ = dprint (fun () -> "[pruneSubst] SVar case ") in
-      let cPsi' = (let (_, _cPhi, cPsi') = Whnf.mctxSDec cD sv in cPsi') in
-        SVar(sv, ( n), pruneSubst cD cPsi (sigma, cPsi') ss rOccur)
+      let (sv', s') = pruneBoundMVar cD (Context.dctxToHat cPsi) sv sigma ss rOccur in
+      SVar (sv', n, s')
 
-    | (FSVar (n, (s_name, sigma)), cPsi1) ->
-      let _ = dprint (fun () -> "[pruneSubst] Free sv  " ^ R.render_name s_name)        in
-      let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s_name in
-        FSVar (n, (s_name, pruneSubst cD cPsi (sigma, cPsi') ss rOccur))
+    | (FSVar (n, ns), cPsi1) ->
+      FSVar (n, pruneFVar cD (Context.dctxToHat cPsi) ns ss rOccur)
 
     | (MSVar (n, ((((_ ,({contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
                   mt), sigma) ), _cPsi1) ->

@@ -373,6 +373,14 @@ let isVar h = match h with
     delayedCnstrs := cnstrL @ !delayedCnstrs;
     globalCnstrs := cnstrL @ !globalCnstrs
 
+  let expandMVarAtType loc mm = function
+    | MTyp _ -> INorm (Root (loc, MMVar mm, Nil))
+    | PTyp _ -> IHead (MPVar mm)
+    | STyp _ -> ISub (MSVar (0, mm))
+
+  let instantiateMMVarWithMMVar r loc mm tp cnstrL =
+    instantiateMMVar' (r, expandMVarAtType loc mm tp, cnstrL)
+
   let instantiateCtxVar (ctx_ref, cPsi) =
     ctx_ref := Some (ICtx cPsi);
     T.log globalTrail (InstI ctx_ref)
@@ -1003,8 +1011,8 @@ match sigma with
         let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
         let tP' = Whnf.normClTyp (Whnf.cnormClTyp (tp, i_id_msub), invert idsub) in
         let v = Whnf.newMMVar' None (cD2, ClTyp (tP', cPsi2'))  in
-        let _  = instantiateMMVar (r, Root (loc, MMVar ((v, id_msub), idsub), Nil), !cnstrs) in
-        let tM'= Whnf.cnorm (Whnf.norm (tM, ssubst), ms) in
+        let _  = instantiateMMVarWithMMVar r loc ((v, id_msub), idsub) tP' !cnstrs in
+        let tM'= Whnf.norm (Whnf.cnorm (tM, ms), ssubst) in
         tM'
 
   and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) t ((ms, ssubst) as ss) rOccur = 

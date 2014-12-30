@@ -988,11 +988,10 @@ match sigma with
     | (Root (loc, head, tS),   s) ->
       pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur
 
-  and pruneMMVarInst cD0 cPsi' phat returnNeutral loc ((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i)  mt ts tS ((ms,ssubst) as ss) rOccur = 
+  and pruneMMVarInst cD0 cPsi' phat loc ((_n, r, cD1, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i)  mt ts tS ((ms,ssubst) as ss) rOccur = 
     let head = MMVar((i,mt),ts) in
     let tM = Root(loc, head, tS) in
     let ts  = Whnf.normSub ts in
-    (* by invariant: MVars are lowered since tM is in whnf *)
     if eq_cvarRef (MMVarRef r) rOccur then
        raise (Failure "Variable occurrence")
     else
@@ -1012,91 +1011,27 @@ match sigma with
         let tM'= Whnf.cnorm (Whnf.norm (tM, ssubst), ms) in
         tM'
 
+  and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) ts tS ((ms, ssubst) as ss) rOccur = 
+    let head = MVar (Inst i, ts) in
+    let tM = Root(loc, head, tS) in
+    let t  = Whnf.normSub ts in
+    if eq_cvarRef (MMVarRef r) rOccur then
+      raise (Failure "Variable occurrence")
+    else
+      let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
+      let idsub_i = invert idsub in
+      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
+      let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
+      Whnf.norm (tM, ssubst)
+
   and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
    let returnNeutral newHead = Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur) in
    match head with
-            | MMVar ((i, mt), t) -> pruneMMVarInst cD0 cPsi' phat returnNeutral loc i mt (comp t s) tS  ss rOccur
+            | MMVar ((i, mt), t) ->
+	      pruneMMVarInst cD0 cPsi' phat loc i mt (comp t s) tS  ss rOccur
 
-            | MVar (Inst (_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) (*as u*), t) ->  (* s = id *)
-                let tM = Root(loc, head, tS) in
-                let t  = simplifySub cD0 cPsi' (Whnf.normSub (comp t s)) in
-                  (* by invariant: MVars are lowered since tM is in whnf *)
-                  if eq_cvarRef (MMVarRef r) rOccur then
-                    raise (Failure "Variable occurrence")
-                  else
-                    if isPatSub t then
-                      let (idsub, cPsi2) = pruneCtx phat (t, cPsi1) ss in
-(*                      let (_ , ssubst) = ss in
-                      let _ = dprint (fun () -> "[prune] ss = " ^
-                                        P.subToString cD0 cPsi' ssubst) in
-                      let _ = dprint (fun () -> "[prune] cPsi1 = " ^
-                                        P.dctxToString cD0 cPsi1) in
-                      let _ = dprint (fun () -> "[prune] idsub = " ^
-                                        P.subToString cD0 cPsi1 idsub) in
-                      let _ = dprint (fun () -> "[prune] cPsi2 = " ^
-                                        P.dctxToString cD0 cPsi2) in
-                      let _ = dprint (fun () -> "[prune] t = " ^
-                                        P.subToString cD0 cPsi' t) in *)
-                        (* cD ; cPsi |- s <= cPsi'   cD ; cPsi' |- t <= cPsi1
-                           cD ; cPsi |-  t o s <= cPsi1 and
-                           cD ; cPsi1 |- idsub <= cPsi2 and
-                           cD ; cPsi |- t o s o idsub <= cPsi2 *)
-                      let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
-
-                      let _  = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
-                       Clo(tM, comp s ssubst)
-                          (* [|v[idsub] / u|] *)
-                    else (* s not patsub *)
-                      (* cD ; cPsi' |- u[t] <= [t]tP, and u::tP[cPsi1]  and
-                         cD ; cPsi' |- t <= cPsi1
-                         cD ; cPsi  |- s <= cPsi'
-                         CD ; cPsi  |- comp t s <= cPsi1  and cD ; cPsi''|- ssubst <= cPsi
-                         s' = [ssubst]([s]t) and  cD ; cPsi'' |- s' <= cPsi1  *)
-                      (* Mon Feb  9 14:38:08 2009 -bp : instead of simply computing the inverted
-                         substitution, we now actually prune the substitution *)
-                      (*
-                        let s' = invSub cD0 phat (comp t s, cPsi1)  ss rOccur in
-                          Root (loc, MVar (u, s'), Nil)
-                      *)
-                      let (_ , ssubst) = ss in
-                      let _ = dprint (fun () -> "[prune] MVar - calling pruneSub ") in
-                      let _ = dprint (fun () -> "[prune] t = " ^
-                                        P.subToString cD0 (Context.hatToDCtx phat) t) in
-
-                      let _ = dprint (fun () -> "[prune] ss = " ^
-                                        P.subToString cD0 cPsi' ssubst) in
-                       let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
-		       let _ = dprint (fun () -> "[prune] idsub = " ^ P.subToString cD0 cPsi1 idsub) in
-                      (* Psi1 |- idsub   : Psi2
-                         Psi2 |- idsub_i : Psi1
-                       *)
-                        (* could maybe just prune tP and cPsi1 ?
-                           29 Jan, 2011  -bp  *)
-                         (* *)
-                      let idsub_i = invert idsub in
-                      let v = Whnf.newMVar None (cPsi2, TClo(tP, idsub_i))  in
-                      (* let _ = print_string ("prune non-pattern sub s  where u[s] \n") in *)
-                      let _ = dprint (fun () -> "[prune] BEFORE Inst. r = " ^
-                                     P.normalToString cD0 (Context.hatToDCtx phat) (tM,s) ) in
-                      let _ = instantiateMVar (r, Root (loc, MVar (v, idsub),
-                                        Nil), !cnstrs) in
-                      let _ = dprint (fun () -> "[prune] cPsi2 = " ^
-                                        P.dctxToString cD0 cPsi2) in
-                      let _ = dprint (fun () -> "[prune] cPsi1 = " ^
-                                        P.dctxToString cD0 cPsi1) in
-                      let _ = dprint (fun () -> "[prune] cPsi = " ^
-                                        P.dctxToString cD0 (Context.hatToDCtx phat)) in
-                      let _ = dprint (fun () -> "[prune] Inst. r = " ^
-                                     P.normalToString cD0 (Context.hatToDCtx phat) (tM,s) ) in
-                      let _ = dprint (fun () -> "[prune] ssubst = " ^
-                                        P.subToString cD0 cPsi' ssubst)
-                      in
-                      let _ = dprint (fun () -> "[prune] pruned tM = " ^
-                                     P.normalToString cD0 cPsi' (tM,comp s ssubst) ) in
-                        Clo(tM, comp s ssubst)
-                          (* may raise NotInvertible *)
-
+            | MVar (Inst i, t) ->
+	      pruneMVarInst cD0 cPsi' phat loc i (comp t s) tS ss rOccur
 
             | MVar (Offset u, t)   (* tS = Nil,   s = id *) ->
                 ( dprint (fun () -> "Pruning bound meta-variable " ^             (R.render_cvar cD0 u)) ;

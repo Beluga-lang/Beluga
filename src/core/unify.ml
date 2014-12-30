@@ -996,13 +996,13 @@ match sigma with
     | (Root (loc, head, tS),   s) ->
       pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur
 
-  and pruneMMVarInst cD0 cPsi' phat loc ((_n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep) as i)  mt ts ((ms,ssubst) as ss) rOccur = 
-    let tM = Root(loc, MMVar((i,mt),ts), Nil) in
+  and pruneMMVarInst cD0 cPsi' phat loc (n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep)  mt ts ((ms,ssubst) as ss) rOccur = 
     if eq_cvarRef (MMVarRef r) rOccur then
        raise (Failure "Variable occurrence")
     else
         let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
-        let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in
+	let id_mt = Whnf.mcomp id_msub mt in
+        let i_msub = Whnf.m_invert id_mt in
         let i_id_msub = Whnf.m_invert id_msub in
         let cPsi1' = Whnf.cnormDCtx (cPsi1, i_id_msub) in
         let t'  = Whnf.cnormSub (Whnf.normSub ts, i_msub) in
@@ -1010,10 +1010,10 @@ match sigma with
         let (idsub, cPsi2) = pruneSub  cD2 cPsi'' phat (t', cPsi1') ss rOccur in
         let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
         let tP' = Whnf.normClTyp (Whnf.cnormClTyp (tp, i_id_msub), invert idsub) in
-        let v = Whnf.newMMVar' None (cD2, ClTyp (tP', cPsi2'))  in
+        let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2'))  in
         let _  = instantiateMMVarWithMMVar r loc ((v, id_msub), idsub) tP' !cnstrs in
-        let tM'= Whnf.norm (Whnf.cnorm (tM, ms), ssubst) in
-        tM'
+	let ts' = comp (Whnf.cnormSub (comp (Whnf.cnormSub (idsub, mt)) ts, ms)) ssubst in
+        Root (loc, MMVar ((v,Whnf.mcomp id_mt ms), ts'), Nil)
 
   and pruneMVarInst cD0 cPsi' phat loc ((_n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i) t ((ms, ssubst) as ss) rOccur = 
     let tM = Root(loc, MVar (Inst i, t), Nil) in

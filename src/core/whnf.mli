@@ -12,6 +12,7 @@ val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
 val normKind   : (kind * sub) -> kind
 val normTyp    : tclo -> typ
+val normFt'    : front * sub -> front
 val normClTyp  : cltyp * sub -> cltyp
 val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub
@@ -96,6 +97,7 @@ val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)
 
 val cnorm      : normal * msub -> normal
 val cnormHead : head * msub -> head
+val cnormHead' : head * msub -> front
 val cnormSpine : spine * msub -> spine
 val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ

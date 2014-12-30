@@ -993,8 +993,9 @@ match sigma with
         let tuple' = pruneTuple cD0 cPsi' phat (tuple, s) ss rOccur in
           Tuple (loc, tuple')
 
-    | (Root (loc, head, tS),   s) ->
-      let newHead = pruneHead cD0 cPsi' phat (loc,head,tS) s ss rOccur in
+    | (Root (loc, head, tS), s) ->
+      let Shift 0 = s in (* Assert s is supposed to be the identity *)
+      let newHead = pruneHead cD0 cPsi' phat (loc,head) ss rOccur in
       Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur)
 
   and pruneMMVarInst cD0 cPsi' phat loc (n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep)  mt ts ((ms,ssubst) as ss) rOccur = 
@@ -1025,11 +1026,11 @@ match sigma with
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
       (v, comp (comp idsub t) ssubst)
 
-  and pruneFVar cD0 phat (u,t) s ((ms, ssubst) as ss) rOccur = 
+  and pruneFVar cD0 phat (u,t) ((ms, ssubst) as ss) rOccur = 
    let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
    let d = Context.length cD0 - Context.length cD_d in
    let cPsi1 = if d = 0 then cPsi1 else Whnf.cnormDCtx (cPsi1, MShift d) in
-   let t' = simplifySub cD0 (Context.hatToDCtx phat) (comp t s) in
+   let t' = simplifySub cD0 (Context.hatToDCtx phat) t in
    let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
    (u, s')
 
@@ -1041,23 +1042,23 @@ match sigma with
      (v,s')
    | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
 
-  and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head,tS) s ((ms, ssubst) as ss) rOccur =
+  and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head) ((ms, ssubst) as ss) rOccur =
    match head with
     | MMVar ((i, mt), t) ->
-      MMVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub (comp t s)) ss rOccur)
+      MMVar (pruneMMVarInst cD0 cPsi' phat loc i mt (Whnf.normSub t) ss rOccur)
     | MVar (Inst i, t) ->
-      MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub (comp t s)) ss rOccur)
+      MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub t) ss rOccur)
     | MVar (Offset u, t) ->
-      let (v,s') = pruneBoundMVar cD0 phat u (comp t s) ss rOccur in
+      let (v,s') = pruneBoundMVar cD0 phat u t ss rOccur in
       MVar (Offset v, s')
     | FMVar ut  ->
-      FMVar (pruneFVar cD0 phat ut s ss rOccur)
+      FMVar (pruneFVar cD0 phat ut ss rOccur)
     | FPVar pt ->
-      FPVar (pruneFVar cD0 phat pt s ss rOccur)
+      FPVar (pruneFVar cD0 phat pt ss rOccur)
     | PVar (p, t) ->
-      PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur)
+      PVar (pruneBoundMVar cD0 phat p t ss rOccur)
     | Proj (PVar (p, t), i) ->
-      Proj (PVar (pruneBoundMVar cD0 phat p (comp t s) ss rOccur), i)
+      Proj (PVar (pruneBoundMVar cD0 phat p t ss rOccur), i)
 
     | MPVar (((_n, r, cD1, ClTyp (PTyp tA,cPsi1), cnstrs, mDep) as q, mt), t) (* tS *)   (* s = id *) ->
                 let t = Whnf.normSub t in
@@ -1065,7 +1066,7 @@ match sigma with
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
                       MPVar ((q, mt'), s')
 
@@ -1076,13 +1077,13 @@ match sigma with
                   if eq_cvarRef (MMVarRef r) rOccur then
                     raise (Failure "[Prune] Parameter variable occurrence")
                   else
-                      let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+                      let s' = invSub cD0 phat (t, cPsi1) ss rOccur in
                       let mt' = invMSub cD0 (mt, cD1) ms rOccur in
                       Proj(MPVar ((q, mt'), s'), index)
 
     | Proj (FPVar pt, i) ->
                 begin try
-	        Proj (FPVar (pruneFVar cD0 phat pt s ss rOccur), i)
+	        Proj (FPVar (pruneFVar cD0 phat pt ss rOccur), i)
                 with
                   | Not_found -> (* Huh? *)
                       if isId ssubst && isMId ms  then head

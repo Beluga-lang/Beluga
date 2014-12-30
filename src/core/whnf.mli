@@ -12,6 +12,7 @@ val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
 val normKind   : (kind * sub) -> kind
 val normTyp    : tclo -> typ
+val normClTyp  : cltyp * sub -> cltyp
 val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub
 val normSpine  : sclo -> spine
@@ -101,6 +102,7 @@ val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
+val cnormClTyp  : cltyp * msub -> cltyp
 val cnormCDecl : ctyp_decl * msub -> ctyp_decl
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx

@@ -357,10 +357,13 @@ and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
   | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), t)
   | Some tM -> Result (cnormITerm (tM,t))
 
+and normClTyp (tp, s) = match tp with
+  | MTyp tA -> MTyp (normTyp(tA, s))
+  | PTyp tA -> PTyp (normTyp(tA, s))
+  | STyp cPhi -> STyp cPhi
+
 and normITyp = function
-  | ClTyp (MTyp tA,cPsi) -> ClTyp (MTyp (normTyp(tA, LF.id)), cPsi)
-  | ClTyp (PTyp tA,cPsi) -> ClTyp (PTyp (normTyp(tA, LF.id)),cPsi)
-  | ClTyp (STyp cPhi, cPsi) -> ClTyp (STyp cPhi,cPsi)
+  | ClTyp (tp, cPsi) -> ClTyp (normClTyp (tp, LF.id), cPsi)
   | CTyp g -> CTyp g
 
 and normFt' (ft,s) = match ft with

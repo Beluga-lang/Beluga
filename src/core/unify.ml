@@ -995,17 +995,17 @@ match sigma with
 
     | (Root (loc, head, tS), s) ->
       let Shift 0 = s in (* Assert s is supposed to be the identity *)
-      let newHead = pruneHead cD0 cPsi' phat (loc,head) ss rOccur in
+      let newHead = pruneHead cD0 cPsi' (loc,head) ss rOccur in
       Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur)
 
-  and pruneBoth cD0 cPsi' phat ((mt,ts), (cD1, cPsi1)) ((ms,_) as ss) rOccur =
+  and pruneBoth cD0 cPsi' ((mt,ts), (cD1, cPsi1)) ((ms,_) as ss) rOccur =
     let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
     let i_msub = Whnf.m_invert (Whnf.mcomp id_msub mt) in
     let i_id_msub = Whnf.m_invert id_msub in
     let cPsi1' = Whnf.cnormDCtx (cPsi1, i_id_msub) in
     let t'  = Whnf.cnormSub (Whnf.normSub ts, i_msub) in
     let cPsi'' = Whnf.cnormDCtx (cPsi', i_msub) in
-    let (idsub, cPsi2) = pruneSub  cD2 cPsi'' phat (t', cPsi1') ss rOccur in
+    let (idsub, cPsi2) = pruneSub  cD2 cPsi'' (Context.dctxToHat cPsi') (t', cPsi1') ss rOccur in
     let cPsi2' = Whnf.cnormDCtx (cPsi2, i_msub) in
     ((id_msub,idsub), (cD2, cPsi2'))
 
@@ -1014,77 +1014,71 @@ match sigma with
   and comp2 (mt,t) (ms,s) = (Whnf.mcomp mt ms, comp (Whnf.cnormSub (t,ms)) s)
 
   (* Note similarity between the following two functions *)
-  and pruneMMVarInst cD0 cPsi' phat loc (n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep) mtt ss rOccur = 
+  and pruneMMVarInst cD0 cPsi' loc (n, r, cD1, ClTyp (tp,cPsi1), cnstrs, mdep) mtt ss rOccur = 
     if eq_cvarRef (MMVarRef r) rOccur then
        raise (Failure "Variable occurrence")
     else
-      let (id2,(cD2,cPsi2')) = pruneBoth cD0 cPsi' phat (mtt,(cD1,cPsi1)) ss rOccur in
+      let (id2,(cD2,cPsi2')) = pruneBoth cD0 cPsi' (mtt,(cD1,cPsi1)) ss rOccur in
       let tP' = normClTyp2 (tp, invert2 id2) in
       let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2'))  in
       let _  = instantiateMMVarWithMMVar r loc (v, id2) tP' !cnstrs in
       let (mr,r) = comp2 (comp2 id2 mtt) ss in
       ((v, mr), r)
 
-  and pruneMVarInst cD0 cPsi' phat loc (n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) t ((ms, ssubst) as ss) rOccur = 
+  and pruneMVarInst cD0 cPsi' loc (n, r, _cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) t ((ms, ssubst) as ss) rOccur = 
     if eq_cvarRef (MMVarRef r) rOccur then
       raise (Failure "Variable occurrence")
     else
-      let (idsub, cPsi2) = pruneSub  cD0 cPsi' phat (t, cPsi1) ss rOccur in
+      let (idsub, cPsi2) = pruneSub  cD0 cPsi' (Context.dctxToHat cPsi') (t, cPsi1) ss rOccur in
       let tP' = Whnf.normTyp (tP, invert idsub) in
       let v = Whnf.newMVar (Some n) (cPsi2, tP')  in
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
       (v, comp (comp idsub t) ssubst)
 
-  and pruneFVar cD0 phat (u,t) ((ms, ssubst) as ss) rOccur = 
+  and pruneFVar cD0 cPsi (u,t) ((ms, ssubst) as ss) rOccur = 
    let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
    let d = Context.length cD0 - Context.length cD_d in
    let cPsi1 = if d = 0 then cPsi1 else Whnf.cnormDCtx (cPsi1, MShift d) in
-   let t' = simplifySub cD0 (Context.hatToDCtx phat) t in
-   let s' = invSub cD0 phat (t', cPsi1) ss rOccur in
+   let t' = simplifySub cD0 cPsi t in
+   let s' = invSub cD0 (Context.dctxToHat cPsi) (t', cPsi1) ss rOccur in
    (u, s')
 
-  and pruneBoundMVar cD0 phat u t ((ms, ssubst) as ss) rOccur = match applyMSub u ms with
+  and pruneBoundMVar cD0 cPsi u t ((ms, ssubst) as ss) rOccur = match applyMSub u ms with
    | MV v ->
      let (_, ClTyp (_, cPsi1)) = Whnf.mctxLookup cD0 v in
-     let t' = simplifySub cD0 (Context.hatToDCtx phat) t in
-     let s' = invSub cD0 phat (t' , cPsi1) ss rOccur in
+     let t' = simplifySub cD0 cPsi t in
+     let s' = invSub cD0 (Context.dctxToHat cPsi) (t' , cPsi1) ss rOccur in
      (v,s')
    | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
 
-  and pruneHead cD0 cPsi' ((cvar, offset) as phat) (loc,head) ((ms, ssubst) as ss) rOccur =
+  and pruneHead cD0 cPsi' (loc,head) ((ms, ssubst) as ss) rOccur =
    match head with
     | MMVar ((i, mt), t) ->
-      MMVar (pruneMMVarInst cD0 cPsi' phat loc i (mt,t) ss rOccur)
+      MMVar (pruneMMVarInst cD0 cPsi' loc i (mt,t) ss rOccur)
     | MVar (Inst i, t) ->
-      MVar (pruneMVarInst cD0 cPsi' phat loc i (Whnf.normSub t) ss rOccur)
+      MVar (pruneMVarInst cD0 cPsi' loc i (Whnf.normSub t) ss rOccur)
     | MVar (Offset u, t) ->
-      let (v,s') = pruneBoundMVar cD0 phat u t ss rOccur in
+      let (v,s') = pruneBoundMVar cD0 cPsi' u t ss rOccur in
       MVar (Offset v, s')
-    | FMVar ut  ->
-      FMVar (pruneFVar cD0 phat ut ss rOccur)
+    | FMVar ut  -> FMVar (pruneFVar cD0 cPsi' ut ss rOccur)
     | FPVar pt ->
       begin try
-       FPVar (pruneFVar cD0 phat pt ss rOccur)
+       FPVar (pruneFVar cD0 cPsi' pt ss rOccur)
 	with  Not_found -> (* Huh? *)
          if isId ssubst && isMId ms  then head
          else raise (Failure ("[Prune] Free parameter variable to be pruned with non-identity substitution"))
       end
-    | PVar (p, t) ->
-      PVar (pruneBoundMVar cD0 phat p t ss rOccur)
-    | Proj (h, i) -> Proj (pruneHead cD0 cPsi' phat (loc, h) ss rOccur, i)
-
-    | MPVar ((i, mt), t) ->
-      MPVar (pruneMMVarInst cD0 cPsi' phat loc i (mt,t) ss rOccur)
-
-     | BVar k ->
+    | PVar (p, t) -> PVar (pruneBoundMVar cD0 cPsi' p t ss rOccur)
+    | Proj (h, i) -> Proj (pruneHead cD0 cPsi' (loc, h) ss rOccur, i)
+    | MPVar ((i, mt), t) -> MPVar (pruneMMVarInst cD0 cPsi' loc i (mt,t) ss rOccur)
+    | BVar k ->
        begin match bvarSub k ssubst with
         | Undef -> raise (Failure ("[Prune] Bound variable dependency : " ^
                                                       "head = " ^ P.headToString cD0 cPsi' head))
         | Head (BVar _k as h') -> h'
        end
-
-     | Const _ as h -> h
-     | FVar _ as h ->  h
+    | Const _ as h -> h
+    | FVar _ as h ->  h
 
   and pruneTuple cD0 cPsi phat sTuple ss rOccur = match sTuple with
     | (Last tM, s) ->
@@ -1123,15 +1117,7 @@ match sigma with
     | (EmptySub, Null) -> EmptySub
     | (Shift (n), DDec(_cPsi', _dec)) ->
         pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
-    | (Shift (_n), Null) ->
-      let (mt, s') = ss in  (* **    cD' |- mt : cD
-                                     cD' ; cPsi' |- s' : [mt]Psi
-                                     cD  ; Psi   |- s  : .
-                                    ————————————————————————————–
-                                     cD' ; [mt]cPsi |- [mt]s : .
-                                and then
-                                     cD' ; cPsi'  |- [s'] ([mt]s) : [mt]cPsi1 *)
-      Whnf.cnormSub (Substitution.LF.comp s s', mt)
+    | (Shift (_n), Null) -> EmptySub
 
     | (Shift (_n), CtxVar psi) ->
       (*  cD ; cPsi |- s : psi
@@ -1144,14 +1130,13 @@ match sigma with
       Whnf.cnormSub (Substitution.LF.comp s s', mt)
 
     | (SVar (sv, (n), sigma), cPsi1) ->
-      let (sv', s') = pruneBoundMVar cD (Context.dctxToHat cPsi) sv sigma ss rOccur in
+      let (sv', s') = pruneBoundMVar cD cPsi sv sigma ss rOccur in
       SVar (sv', n, s')
 
-    | (FSVar (n, ns), cPsi1) ->
-      FSVar (n, pruneFVar cD (Context.dctxToHat cPsi) ns ss rOccur)
+    | (FSVar (n, ns), cPsi1) -> FSVar (n, pruneFVar cD cPsi ns ss rOccur)
 
     | (MSVar (n, ((i,mt),t)), cPsi1) ->
-       MSVar (n, pruneMMVarInst cD cPsi (Context.dctxToHat cPsi) Syntax.Loc.ghost i (mt,t) ss rOccur)
+       MSVar (n, pruneMMVarInst cD cPsi Syntax.Loc.ghost i (mt,t) ss rOccur)
 
     | (Dot (ft, s'), DDec(cPsi', _dec)) ->
        Dot (pruneFront cD cPsi ft ss rOccur, pruneSubst cD cPsi (s', cPsi') ss rOccur)
@@ -1162,7 +1147,7 @@ match sigma with
 
   and pruneFront cD cPsi ft ss rOccur = match ft with
     | Obj tM -> Obj (prune cD cPsi (Context.dctxToHat cPsi) (tM, id) ss rOccur)
-    | Head h -> Head (pruneHead cD cPsi (Context.dctxToHat cPsi) (Syntax.Loc.ghost, h) ss rOccur)
+    | Head h -> Head (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 

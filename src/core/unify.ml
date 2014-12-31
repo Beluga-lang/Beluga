@@ -1501,8 +1501,8 @@ match sigma with
       -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
-    | (((Root (_, MMVar (((_n1, r1,  cD1, ClTyp (MTyp tP1, cPsi1), cnstrs1, mdep1), mt1), t1), _tS1))),
-       (((Root (_, MMVar (((_n2, r2, _cD2, ClTyp (MTyp tP2,cPsi2), cnstrs2, mdep2), mt2), t2), _tS2))))) when r1 == r2 ->
+    | (((Root (loc1, MMVar (((n1, r1,  cD1, ClTyp (tp1, cPsi1), cnstrs1, mdep1), mt1), t1), _tS1))),
+       (((Root (loc2, MMVar (((n2, r2, _cD2, ClTyp (tp2,cPsi2), cnstrs2, mdep2), mt2), t2), _tS2))))) when r1 == r2 ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
@@ -1536,18 +1536,18 @@ match sigma with
                      *
                      * Since we can't create m-closures, we need to normalize here.
                      *)
-
+		    
                     let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
-                    let tP1_n  = Whnf.cnormTyp (TClo(tP1,ss'), mtt') in
+                    let tp1'  = normClTyp2 (tp1, (mtt',ss')) in
 
 
-                    let w = Whnf.newMMVar None (cD', cPsi_n, tP1_n)  in
+                    let w = Whnf.newMMVar' (Some n1) (cD', ClTyp (tp1', cPsi_n))  in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])
                          [|w[s']/u|](u[t2]) = [t2](w[s'])
                       *)
-                    let _ = instantiateMMVar (r1, Root(Syntax.Loc.ghost, MMVar((w, mt'), s'), Nil), !cnstrs1) in
+                    let _ = instantiateMMVarWithMMVar r1 loc1 (w, (mt', s')) tp1' !cnstrs1 in
 
 (*                     dprint (fun () -> "Instantiated with new meta^2-variable " ^
                                         P.normalToString cD0 cPsi sM1)*)

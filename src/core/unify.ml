@@ -1150,59 +1150,19 @@ match sigma with
     | (FSVar (n, ns), cPsi1) ->
       FSVar (n, pruneFVar cD (Context.dctxToHat cPsi) ns ss rOccur)
 
-    | (MSVar (n, ((((_ ,({contents=None} as r), _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) as rho),
-                  mt), sigma) ), _cPsi1) ->
-        (dprint (fun () -> "[pruneSubst] MSVar   " ^ P.subToString cD cPsi s);
-         let (mt', _s') = ss in
-        if eq_cvarRef (MMVarRef r) rOccur then
-          raise (Failure "Variable occurrence")
-        else
-          let sigma = Whnf.normSub sigma in
-          let sigma' = pruneSubst cD cPsi (sigma, cPhi1) ss rOccur in
-          MSVar (n, ((rho, Whnf.mcomp mt mt'), sigma'))
-        )
-    (* Other heads to be added ??
+    | (MSVar (n, ((i,mt),t)), cPsi1) ->
+       MSVar (n, pruneMMVarInst cD cPsi (Context.dctxToHat cPsi) Syntax.Loc.ghost i (mt,t) ss rOccur)
 
-    | (Dot (Head , s'), DDec(cPsi', _dec)) ->
-    *)
+    | (Dot (ft, s'), DDec(cPsi', _dec)) ->
+       Dot (pruneFront cD cPsi ft ss rOccur, pruneSubst cD cPsi (s', cPsi') ss rOccur)
 
-    | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
-      let (mt, ssubst) = ss in
-        begin match bvarSub n ssubst with
-          | Undef -> raise NotInvertible
-          | ft    -> Dot (ft , pruneSubst cD cPsi (s', cPsi1) ss rOccur)
-        end
+    | (Dot (_, _), _) | (Undefs , _) | (EmptySub, _)
+       -> raise (Error.Violation "Badly typed substitution")
 
-    | (Dot (Head (Proj (BVar n, k)), s'), DDec(cPsi', _dec)) ->
-      let (mt, ssubst) = ss in
-        begin match bvarSub n ssubst with
-          | Undef -> raise NotInvertible
-            (* let si = invSub cD0 phat (s', cPsi') ss rOccur in
-               Dot(Undef, si) *)
-          | Head(BVar m)  ->
-              Dot (Head (Proj (BVar m, k)) , pruneSubst cD cPsi (s', cPsi1) ss rOccur)
-          | _ -> raise NotInvertible
-        end
 
-    | (Dot (Head (h), s'), DDec(cPsi', _dec)) ->
-        (dprint (fun () -> "[pruneSubst] h = " ^ P.headToString cD cPsi h);
-         let Root(_,h',_) = prune cD cPsi (Context.dctxToHat cPsi) (Root(Syntax.Loc.ghost,h,Nil), Substitution.LF.id)  ss  rOccur in
-         Dot (Head h', pruneSubst cD cPsi (s', cPsi') ss rOccur))
-         (* -ac: verify that this is reasonable. *)
-
-    | (Dot (Obj tM, s'), DDec(cPsi', _dec))        ->
-        (* below may raise NotInvertible *)
-        (dprint (fun () -> "[pruneSubst] tM = " ^ P.normalToString cD cPsi (tM, Substitution.LF.id));
-        let tM' = prune cD cPsi  (Context.dctxToHat cPsi) (tM, Substitution.LF.id)  ss  rOccur in
-          dprint (fun () -> "[pruneSubst] tM' = " ^ P.normalToString cD cPsi (tM', Substitution.LF.id));
-          Dot (Obj tM', pruneSubst cD cPsi (s', cPsi') ss rOccur))
-
-    | (s, cPsi') ->(dprint (fun () -> "[pruneSubst] other cases not defined? " );
-           dprint (fun () -> "[pruneSubst] - substitution ill-typed ?" ) ;
-           dprint (fun () -> "             " ^ P.dctxToString cD cPsi ^ " |- "
-                     ^ P.subToString cD cPsi s
-                     ^ " : " ^ P.dctxToString cD cPsi');
-           raise NotInvertible)
+  and pruneFront cD cPsi ft ss rOccur = match ft with
+    | Obj tM -> Obj (prune cD cPsi (Context.dctxToHat cPsi) (tM, id) ss rOccur)
+    | Head h -> Head (pruneHead cD cPsi (Context.dctxToHat cPsi) (Syntax.Loc.ghost, h) ss rOccur)
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 

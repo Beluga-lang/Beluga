@@ -869,24 +869,26 @@ module Int = struct
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
 
-    and fmt_ppr_lf_mtyp cD ppf = function
+    and fmt_ppr_lf_mtyp' cD lvl ppf = function
       | LF.ClTyp (LF.MTyp tA, cPsi) ->
           fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 0) tA
+            (fmt_ppr_lf_dctx cD lvl) cPsi
+            (fmt_ppr_lf_typ cD cPsi lvl) tA
 
       | LF.ClTyp (LF.PTyp tA, cPsi) ->
           fprintf ppf "#[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_typ cD cPsi 0) tA 
+            (fmt_ppr_lf_dctx cD lvl) cPsi
+            (fmt_ppr_lf_typ cD cPsi lvl) tA 
 
       | LF.ClTyp (LF.STyp cPhi, cPsi) ->
           fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-            (fmt_ppr_lf_dctx cD 0) cPhi
+            (fmt_ppr_lf_dctx cD lvl) cPsi
+            (fmt_ppr_lf_dctx cD lvl) cPhi
       | LF.CTyp schemaName ->
           fprintf ppf "%a"
-            (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
+            (fmt_ppr_lf_schema lvl) (Store.Cid.Schema.get_schema schemaName)
+
+    and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD 0 ppf 
 
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp,dep) ->
@@ -932,17 +934,7 @@ module Int = struct
               (r_paren_if cond)
           end
 
-    let fmt_ppr_meta_typ cD lvl ppf = function
-      | LF.ClTyp (LF.MTyp tA, cPsi) ->
-          fprintf ppf "[%a |- %a]"
-            (fmt_ppr_lf_dctx cD lvl) cPsi
-            (fmt_ppr_lf_typ cD cPsi lvl) tA
-      | LF.CTyp s_cid ->
-          fprintf ppf "%s" (R.render_cid_schema s_cid)
-      | LF.ClTyp (LF.STyp cPhi, cPsi) ->
-           fprintf ppf "%a[%a]"
-            (fmt_ppr_lf_dctx cD lvl) cPsi
-            (fmt_ppr_lf_dctx cD lvl) cPhi
+    let fmt_ppr_meta_typ cD lvl ppf = fmt_ppr_lf_mtyp' cD lvl ppf
 
     let rec fmt_ppr_meta_spine cD lvl ppf = function
       | Comp.MetaNil ->

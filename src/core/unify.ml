@@ -1710,14 +1710,8 @@ match sigma with
 
                   instantiateMPVar (q2, MPVar((w, mt'), s'), !cnstr2)
 
-            | (true, true, _, false) ->
-                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
-            | (true, true, false, _) ->
-                addConstraint (cnstr2, ref (Eqn (cD0, cPsi, IHead head1, IHead head2))) (*XXX double-check *)
-            | (false, _, _, _) ->
-                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
-            | (_, false, _, _) ->
-                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))  (*XXX double-check *)
+            | (_, _, _, _) ->
+                addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))
            )
         else
           ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
@@ -1735,25 +1729,12 @@ match sigma with
           )
 
 
-    | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep), mt1), s1) , h) 
-    | (h, MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep), mt1), s1) ) ->
+    | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep) as i, mt1), s1) , h) 
+    | (h, MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep) as i, mt1), s1) ) ->
         (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
         dprnt "(013) _-MPVar - head";
       if isVar h && isPatSub s1 && isPatMSub mt1 then
-          let ss = invert s1 in
-          let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
-           begin match h with
-             | BVar k -> begin match bvarSub k ss with
-                         | Head h -> instantiateMPVar (q1, h, !cnstr1)
-                         | _ -> raise (Failure ("Looking up " ^ string_of_int k ^ "\n"))
-                         end
-             | PVar (p,s) -> begin match Whnf.cnormHead (h, mtt) with
-                             | PVar(q, s') ->  instantiateMPVar (q1,PVar(q, comp s' s1), !cnstr1)
-                             | _ -> raise (Failure "Meta^2-parameter failure")
-                             end
-
-             | _ -> raise (Failure "Meta^2-Parameter failure")
-           end
+	unifyMMVarTerm cD0 cPsi i mt1 s1 (IHead h)
         else
           raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
 
@@ -1763,10 +1744,8 @@ match sigma with
          raise (Failure "PVar i =/= Proj PVar"))
 
     | (Proj (h1, i1),  Proj (h2, i2)) ->
-(*        let _ = dprint (fun () -> "[unifyHead] Proj - Proj ") in *)
         if i1 = i2 then
-          ((* dprint (fun () -> "[unifyHead] " ^ P.headToString cD0 cPsi h1 ^ " === " ^ P.headToString cD0 cPsi h2 ) ;*)
-          unifyHead mflag cD0 cPsi h1 h2 )
+          unifyHead mflag cD0 cPsi h1 h2
         else
           raise (Failure ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
 

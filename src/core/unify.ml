@@ -1420,16 +1420,18 @@ match sigma with
     end 
 
   and pruneITerm cD cPsi tm ss rOccur = match tm with
-    | INorm n -> INorm (prune cD cPsi (Context.dctxToHat cPsi) (n,id) ss rOccur)
-    | IHead h -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | INorm n , _        -> INorm (prune cD cPsi (Context.dctxToHat cPsi) (n,id) ss rOccur)
+    | IHead h , _        -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | ISub s , STyp cPhi -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
 
-  and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
+  and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin try
       let ss1  = invert t1' in
       let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)
       let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
-      let tM2' = trail (fun () -> pruneITerm cD cPsi1 sM2 (mtt1, ss1) (MMVarRef r1)) in
+      let tp' = Whnf.cnormClTyp (tp, mt1) in
+      let tM2' = trail (fun () -> pruneITerm cD cPsi1 (sM2,tp') (mtt1, ss1) (MMVarRef r1)) in
       instantiateMMVar' (r1, tM2', !cnstrs1);
       with NotInvertible -> raise (Error.Violation "Pattern substitution not invertible")
     end
@@ -1658,15 +1660,15 @@ match sigma with
     | (MPVar (((_, q1, _, ClTyp (PTyp tA1,cPsi1), cnstr1, _) as q1', mt1), s1) ,
        MPVar (((_, q2, _, ClTyp (PTyp tA2,cPsi2), _     , _) as q2', mt2), s2) ) ->
       begin match (isPatMSub mt1, isPatSub s1, isPatMSub mt2, isPatSub s2) with
-             | (true, true, _, _) ->
-                 unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
-	         unifyMMVarTerm cD0 cPsi q1' mt1 s1 (IHead head2)
+            | (true, true, _, _) ->
+             unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
+	     unifyMMVarTerm cD0 cPsi q1' mt1 s1 (IHead head2)
 
             | (_, _, true , true ) ->
               unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
 	      unifyMMVarTerm cD0 cPsi q2' mt2 s2 (IHead head1)
 
-             | (_, _, _ , _ ) ->
+            | (_, _, _ , _ ) ->
                  addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
       end
 
@@ -1768,38 +1770,20 @@ match sigma with
           ->
             unifySub mflag cD0 cPsi s1 (Dot (Head (BVar (n+1)), Shift (n+1)))
 
+      | ( MSVar (_, ((((_, r1, _, _, _, _), mt1), t1) as q1))
+        , MSVar (_, ((((_, r2, _, _, _, _), mt2), t2) as q2)))
+	  when r1 == r2 && isPatMSub mt1 && isPatSub t1 && isPatMSub mt2 && isPatSub t2 ->
+	unifyMMVarMMVar cPsi Syntax.Loc.ghost q1 q2
 
-      | (MSVar (_n, (((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep) , mt), s)) as s1 ,  s2)
-      | (s2, (MSVar (_n, (((_ ,({contents=None} as r), cD, ClTyp (STyp cPhi2, cPhi1), cnstrs, mDep), mt), s)) as s1)) ->
-        (* cD0 ; cPsi |- s <= cPhi_2
-           cD0        |- mt <= cD
-         *)
-        let s = Whnf.normSub s in
-        let mt = Whnf.cnormMSub mt in
-        let _ = dprint (fun () -> "[unifySub - a] s2 = " ^ P.subToString cD0 cPsi (Whnf.normSub s2)) in
-        let _ = dprint (fun () -> "[unifySub - a] s1 = " ^ P.subToString cD0 cPsi (Whnf.normSub s1)) in
-        let _ = dprint (fun () -> "[unifySub - a] cPhi2 = " ^ P.dctxToString cD0 (Whnf.cnormDCtx (cPhi2, mt))) in
-        let _ = dprint (fun () -> "[unifySub - a] cPhi1 = " ^ P.dctxToString cD0 (Whnf.cnormDCtx (cPhi1, mt))) in
-        let _ = dprint (fun () -> "[unifySub - a] s1 == s2 ?? " ) in
-        begin match (isPatSub s, isPatMSub mt) with
-          | (true, true) ->
-            begin
-              try
-                let s_i = invert (Whnf.normSub s) in   (* cD0 ; cPhi2 |- s_i : cPsi *)
-                let mt_i = Whnf.m_invert (Whnf.cnormMSub mt) in  (*  cD |- mt_i : cD0 *)
-                let _ = dprint (fun () -> "[unifySub - a ]  pattern sub case ... calling pruneSubst" ) in
-                let _ = dprint (fun () -> "[unifySub - a ] s_i = " ^ P.subToString cD (Whnf.cnormDCtx (cPhi2, mt)) s_i) in
-                let _ = dprint (fun () -> "[unifySub - a ] mt_i = " ^
-                                  P.msubToString cD mt_i) in
-                let s2 = Whnf.normSub (Whnf.cnormSub (s2, mt)) in
-                let s2' = pruneSubst cD0 cPsi (s2, (Whnf.cnormDCtx (cPhi2, mt))) (mt_i, s_i) (MMVarRef r) in
-                let _ = dprint (fun () -> "[unifySub - a ] pruned s2 = s2' = " ^ P.subToString cD (Whnf.cnormDCtx (cPhi2, mt)) (Whnf.normSub s2')) in
-                instantiateMSVar (r, s2', !cnstrs)
-              with
-                | NotInvertible -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
-            end
-          | (_ , _ ) -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
-        end
+      | (MSVar (_n, ((q, mt), s)), s2)
+	  when isPatSub s && isPatMSub mt -> unifyMMVarTerm cD0 cPsi q mt s (ISub s2)
+      | (s2, MSVar (_n, ((q, mt), s)))
+          when isPatSub s && isPatMSub mt -> unifyMMVarTerm cD0 cPsi q mt s (ISub s2)
+       
+      | (MSVar (_, (((_,_,_,_,cnstrs,_),_),_)) , _ )
+      | ( _ , MSVar (_, (((_,_,_,_,cnstrs,_),_),_)))
+        -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
+
       | (EmptySub, _) -> ()
       | (_,EmptySub) -> ()
       | (_,Undefs) -> () (* hopefully only occurs at empty domain.. *)
@@ -2021,21 +2005,17 @@ match sigma with
 
     | _ -> raise (Failure "Meta-Spine mismatch")
 
- 
+  let unifyClTyp Unification cD cPsi = function
+    | MTyp tA1, MTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
+    | PTyp tA1 , PTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
+    | STyp cPhi1 , STyp cPhi2 -> unifyDCtx1 Unification cD cPhi1 cPhi2 
   let unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
-	  | ClTyp (MTyp tA1, cPsi1) , ClTyp (MTyp tA2, cPsi2) ->
-	    unifyDCtx1 Unification cD cPsi1 cPsi2;
-	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | ClTyp (PTyp tA1, cPsi1) , ClTyp (PTyp tA2, cPsi2) ->
-	    unifyDCtx1 Unification cD cPsi1 cPsi2;
-	    unifyTyp Unification cD cPsi1 (tA1, id) (tA2, id)
-	  | ClTyp (STyp cPhi1, cPsi1) , ClTyp (STyp cPhi2, cPsi2) ->
-	    unifyDCtx1 Unification cD cPsi1 cPsi2;
-	    unifyDCtx1 Unification cD cPhi1 cPhi2
-	  | CTyp (schema1) , CTyp (schema2) ->
-	    if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
-	  | _ , _ -> raise (Failure "Computation-level Type Clash")
-
+    | ClTyp (tp1, cPsi1) , ClTyp (tp2, cPsi2) ->
+       unifyDCtx1 Unification cD cPsi1 cPsi2;
+       unifyClTyp Unification cD cPsi1 (tp1,tp2)
+    | CTyp (schema1) , CTyp (schema2) ->
+       if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
+    | _ , _ -> raise (Failure "Computation-level Type Clash")
 
     let rec unifyCompTyp cD tau_t tau_t' =
       unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')

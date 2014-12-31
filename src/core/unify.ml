@@ -1449,6 +1449,40 @@ match sigma with
        instantiateMMVar (r1, sM2', !cnstrs1)
      end
 
+  and unifyMMVarMMVar cPsi loc (((n1, r1,  cD1, ClTyp (tp1, cPsi1), cnstrs1, _), mt1), t1') 
+                               ((_, mt2), t2') =
+    let (s', cPsi') = intersection (Context.dctxToHat cPsi) (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
+      (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
+         then cD ; cPsi1 |- s' <= cPsi' *)
+    let (mt', cD') = m_intersection (Whnf.cnormMSub mt1) (Whnf.cnormMSub mt2) cD1 in
+       (* if cD |- mt1 <= cD1 and cD |- mt2 <= cD1
+          then cD1 |- mt' <= cD' *)
+    let ss'  = invert (Whnf.normSub s') in
+       (* if cD ; cPsi1 |- s' <= cPsi'
+          then cD ; cPsi' |- ss' <= cPsi1 *)
+    let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
+     (* if cD1 |- mt' <= cD'
+       then cD' |- mtt' <= cD1 *)
+       (* by assumption: cD1 ; cPsi1 |- tP1 <= type
+        * by assumption: cD' |- mtt' <= cD1
+        *                cD' ; [mtt']cPsi1 |- [mtt']tP1 <= type
+        *
+        *                cD ; cPsi' |- ss' <= cPsi1
+
+        * We want         cD' ; [mtt']cPsi' |- [mss'][mtt']tP1 <= type
+        *
+        * Since we can't create m-closures, we need to normalize here. *)
+		    
+    let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
+    let tp1'  = normClTyp2 (tp1, (mtt',ss')) in
+
+    let w = Whnf.newMMVar' (Some n1) (cD', ClTyp (tp1', cPsi_n))  in
+                      (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
+                      (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
+                         [|w[s']/u|](u[t1]) = [t1](w[s'])
+                         [|w[s']/u|](u[t2]) = [t2](w[s'])
+                      *)
+     instantiateMMVarWithMMVar r1 loc (w, (mt', s')) tp1' !cnstrs1
 
   and unifyTerm'  mflag cD0 cPsi sN sM = match (sN, sM) with
     | ((Tuple(_ , tup1)) , (Tuple (_ , tup2))) ->
@@ -1501,59 +1535,17 @@ match sigma with
       -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
-    | (((Root (loc1, MMVar (((n1, r1,  cD1, ClTyp (tp1, cPsi1), cnstrs1, mdep1), mt1), t1), _tS1))),
-       (((Root (loc2, MMVar (((n2, r2, _cD2, ClTyp (tp2,cPsi2), cnstrs2, mdep2), mt2), t2), _tS2))))) when r1 == r2 ->
+    | (((Root (loc1, MMVar (((n1, r1,  cD1, ClTyp (tp1, cPsi1), cnstrs1, mdep1), mt1), t1 as q1), _tS1))),
+       (((Root (loc2, MMVar (((n2, r2, _cD2, ClTyp (tp2,cPsi2), cnstrs2, mdep2), mt2), t2 as q2), _tS2))))) when r1 == r2 ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
            r1 and r2 are uninstantiated  (None)
         *)
-        let t1' = simplifySub cD0 cPsi (Whnf.normSub t1)    (* cD ; cPsi |- t1' <= cPsi1 *)
-        and t2' = simplifySub cD0 cPsi (Whnf.normSub t2)    (* cD ; cPsi |- t2' <= cPsi2 *)
-        in begin
-            match (isPatMSub mt1, isPatSub t1' , isPatMSub mt2, isPatSub t2') with
+       begin
+            match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
               | (true, true, true, true) ->
-                    let phat = Context.dctxToHat cPsi in
-                    let (s', cPsi') = intersection phat (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
-                      (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
-                         then cD ; cPsi1 |- s' <= cPsi' *)
-                    let (mt', cD') = m_intersection (Whnf.cnormMSub mt1) (Whnf.cnormMSub mt2) cD1 in
-                      (* if cD |- mt1 <= cD1 and cD |- mt2 <= cD1
-                         then cD1 |- mt' <= cD' *)
-                    let ss'  = invert (Whnf.normSub s') in
-                      (* if cD ; cPsi1 |- s' <= cPsi'
-                         then cD ; cPsi' |- ss' <= cPsi1 *)
-                    let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
-                    (* if cD1 |- mt' <= cD'
-                       then cD' |- mtt' <= cD1 *)
-                    (* by assumption: cD1 ; cPsi1 |- tP1 <= type
-                     * by assumption: cD' |- mtt' <= cD1
-                     *                cD' ; [mtt']cPsi1 |- [mtt']tP1 <= type
-                     *
-                     *                cD ; cPsi' |- ss' <= cPsi1
-
-                     * We want         cD' ; [mtt']cPsi' |- [mss'][mtt']tP1 <= type
-                     *
-                     * Since we can't create m-closures, we need to normalize here.
-                     *)
-		    
-                    let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
-                    let tp1'  = normClTyp2 (tp1, (mtt',ss')) in
-
-
-                    let w = Whnf.newMMVar' (Some n1) (cD', ClTyp (tp1', cPsi_n))  in
-                      (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
-                      (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
-                         [|w[s']/u|](u[t1]) = [t1](w[s'])
-                         [|w[s']/u|](u[t2]) = [t2](w[s'])
-                      *)
-                    let _ = instantiateMMVarWithMMVar r1 loc1 (w, (mt', s')) tp1' !cnstrs1 in
-
-(*                     dprint (fun () -> "Instantiated with new meta^2-variable " ^
-                                        P.normalToString cD0 cPsi sM1)*)
-                      ()
-
-
+		unifyMMVarMMVar cPsi loc1 q1 q2
               | (_, _, _, _) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
        end  

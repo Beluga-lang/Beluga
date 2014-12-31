@@ -394,9 +394,6 @@ let isVar h = match h with
   let instantiateMSVar (s, sigma, cnstrL) =
     instantiateMMVar' (s, ISub sigma, cnstrL)
 
-  let instantiateMPVar (p, head, cnstrL) =
-    instantiateMMVar' (p, IHead head, cnstrL)
-
   (* ---------------------------------------------------------------------- *)
   (* Higher-order unification *)
 
@@ -1535,8 +1532,9 @@ match sigma with
       -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
-    | (((Root (loc1, MMVar (((n1, r1,  cD1, ClTyp (tp1, cPsi1), cnstrs1, mdep1), mt1), t1 as q1), _tS1))),
-       (((Root (loc2, MMVar (((n2, r2, _cD2, ClTyp (tp2,cPsi2), cnstrs2, mdep2), mt2), t2 as q2), _tS2))))) when r1 == r2 ->
+    | (((Root (loc1, MMVar (((_, r1, _, _, cnstrs1, _), mt1), t1 as q1), Nil))),
+       (((Root (_, MMVar (((_, r2, _, _, _, _), mt2), t2 as q2), Nil)))))
+       when r1 == r2 ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
            meta^2-variables are lowered during whnf, s1 = s2 = id
@@ -1549,8 +1547,8 @@ match sigma with
               | (_, _, _, _) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
        end  
-    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), _tS1))) as sM1,
-       (((Root (_, MMVar ((i', mt2), t2), _tS2))) as sM2)) ->
+    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
+       (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) ->
 	begin try
             begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
               | (true, true, _, _) ->
@@ -1647,74 +1645,26 @@ match sigma with
         else raise (Failure "Parameter variable clash")
 
     (* MPVar - MPVar *)
-    | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep1) as q1', mt1), s1) ,
-       MPVar (((_n2, q2, cD2, ClTyp (PTyp tA2,cPsi2), cnstr2, mDep2) as q2', mt2), s2) ) ->
-        let s1' = simplifySub cD0 cPsi (Whnf.normSub s1) in
-        let s2' = simplifySub cD0 cPsi (Whnf.normSub s2) in
-        let mt1' = Whnf.cnormMSub mt1 in
-        let mt2' = Whnf.cnormMSub mt2 in
+    | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep1) as q1', mt1), s1 as i1) ,
+       MPVar (((_n2, q2, cD2, ClTyp (PTyp tA2,cPsi2), cnstr2, mDep2) as q2', mt2), s2 as i2) ) ->
         (* check s1' and s2' are pattern substitutions; possibly generate constraints;
            check intersection (s1', s2'); possibly prune *)
         if q1 == q2 then (* cPsi1 = _cPsi2 *)
-          (match (isPatMSub mt1', isPatSub s1' ,  isPatMSub mt2', isPatSub s2') with
-            | ( true, true, true, true ) ->
-                (* if Whnf.convSub s1' s2' && Whnf.convMSub mt1' mt2' then *)
-                (*   () *)
-                (* else *)
-                let phat = Context.dctxToHat cPsi in
-                let (s', cPsi') = intersection phat s1' s2' cPsi1 in
-                  (* if cD ; cPsi |- s1' <= cPsi1 and cD ; cPsi |- s2' <= cPsi1
-                     then cD ; cPsi1 |- s' <= cPsi' *)
-                  (* cPsi' =/= Null ! otherwise no instantiation for
-                     parameter variables exists *)
-
-                let (mt', cD') = m_intersection (Whnf.cnormMSub mt1) (Whnf.cnormMSub mt2) cD1 in
-                      (* if cD |- mt1 <= cD1 and cD |- mt2 <= cD1
-                         then cD1 |- mt' <= cD' *)
-                let ss'  = invert (Whnf.normSub s') in
-                      (* if cD ; cPsi1 |- s' <= cPsi'
-                         then cD ; cPsi' |- ss' <= cPsi1 *)
-                      (* cD ; cPsi' |- [s']^-1(tA1) <= type *)
-                let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
-                    (* if cD1 |- mt' <= cD'
-                       then cD' |- mtt' <= cD1 *)
-                    (* by assumption: cD1 ; cPsi1 |- tP1 <= type
-                     * by assumption: cD' |- mtt' <= cD1
-                     *                cD' ; [mtt']cPsi1 |- [mtt']tP1 <= type
-                     *
-                     *                cD ; cPsi' |- ss' <= cPsi1
-
-                     * We want         cD' ; [mtt']cPsi' |- [mss'][mtt']tP1 <= type
-                     *
-                     * Since we can't create m-closures, we need to normalize here.
-                     *)
-
-                let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
-                let tA1_n  = Whnf.cnormTyp (TClo(tA1,ss'), mtt') in
-
-
-                let w = Whnf.newMPVar None (cD', cPsi_n, tA1_n)  in
-                      (* w::[s'^-1](tA1)[cPsi'] in cD'            *)
-                      (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tA1)
-                         [|w[s']/u|](u[t1]) = [t1](w[s'])
-                         [|w[s']/u|](u[t2]) = [t2](w[s'])
-                      *)
-
-                  instantiateMPVar (q2, MPVar((w, mt'), s'), !cnstr2)
-
+          (match (isPatMSub mt1, isPatSub s1,  isPatMSub mt2, isPatSub s2) with
+            | ( true, true, true, true ) -> unifyMMVarMMVar cPsi Syntax.Loc.ghost i1 i2
             | (_, _, _, _) ->
                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))
            )
         else
           ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
-            match (isPatMSub mt1', isPatSub s1' , isPatMSub mt2', isPatSub s2') with
+            match (isPatMSub mt1, isPatSub s1, isPatMSub mt2, isPatSub s2) with
              | (true, true, _, _) ->
-                 unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2');
-	         unifyMMVarTerm cD0 cPsi q1' mt1' s1' (IHead head2)
+                 unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
+	         unifyMMVarTerm cD0 cPsi q1' mt1 s1 (IHead head2)
 
             | (_, _, true , true ) ->
-              unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2');
-	      unifyMMVarTerm cD0 cPsi q2' mt2' s2' (IHead head1)
+              unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
+	      unifyMMVarTerm cD0 cPsi q2' mt2 s2 (IHead head1)
 
              | (_, _, _ , _ ) ->
                  addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))

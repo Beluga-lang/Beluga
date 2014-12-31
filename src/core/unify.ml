@@ -1645,19 +1645,19 @@ match sigma with
         else raise (Failure "Parameter variable clash")
 
     (* MPVar - MPVar *)
-    | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep1) as q1', mt1), s1 as i1) ,
-       MPVar (((_n2, q2, cD2, ClTyp (PTyp tA2,cPsi2), cnstr2, mDep2) as q2', mt2), s2 as i2) ) ->
+    | (MPVar (((_, q1, _, _, cnstr1, _), mt1), s1 as i1) ,
+       MPVar (((_, q2, _, _, _     , _), mt2), s2 as i2) )
+       when q1 == q2 ->
         (* check s1' and s2' are pattern substitutions; possibly generate constraints;
            check intersection (s1', s2'); possibly prune *)
-        if q1 == q2 then (* cPsi1 = _cPsi2 *)
           (match (isPatMSub mt1, isPatSub s1,  isPatMSub mt2, isPatSub s2) with
             | ( true, true, true, true ) -> unifyMMVarMMVar cPsi Syntax.Loc.ghost i1 i2
             | (_, _, _, _) ->
                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))
            )
-        else
-          ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
-            match (isPatMSub mt1, isPatSub s1, isPatMSub mt2, isPatSub s2) with
+    | (MPVar (((_, q1, _, ClTyp (PTyp tA1,cPsi1), cnstr1, _) as q1', mt1), s1) ,
+       MPVar (((_, q2, _, ClTyp (PTyp tA2,cPsi2), _     , _) as q2', mt2), s2) ) ->
+      begin match (isPatMSub mt1, isPatSub s1, isPatMSub mt2, isPatSub s2) with
              | (true, true, _, _) ->
                  unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
 	         unifyMMVarTerm cD0 cPsi q1' mt1 s1 (IHead head2)
@@ -1668,8 +1668,7 @@ match sigma with
 
              | (_, _, _ , _ ) ->
                  addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
-          )
-
+      end
 
     | (MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep) as i, mt1), s1) , h) 
     | (h, MPVar (((_n1, q1, cD1, ClTyp (PTyp tA1,cPsi1), cnstr1, mDep) as i, mt1), s1) ) ->

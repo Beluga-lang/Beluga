@@ -1422,15 +1422,18 @@ match sigma with
      with NotInvertible -> raise (Error.Violation "Pattern substitution  not invertible")
     end 
 
+  and pruneITerm cD cPsi tm ss rOccur = match tm with
+    | INorm n -> INorm (prune cD cPsi (Context.dctxToHat cPsi) (n,id) ss rOccur)
+    | IHead h -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin try
       let ss1  = invert t1' in
       let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)
       let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
-      let phat = Context.dctxToHat cPsi in
-      let tM2' = trail (fun () -> prune cD cPsi1 phat (sM2,id) (mtt1, ss1) (MMVarRef r1)) in
-      instantiateMMVar (r1, Whnf.norm(tM2',id), !cnstrs1);
+      let tM2' = trail (fun () -> pruneITerm cD cPsi1 sM2 (mtt1, ss1) (MMVarRef r1)) in
+      instantiateMMVar' (r1, tM2', !cnstrs1);
       with NotInvertible -> raise (Error.Violation "Pattern substitution not invertible")
     end
 
@@ -1559,9 +1562,9 @@ match sigma with
 	begin try
             begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
               | (true, true, _, _) ->
-		unifyMMVarTerm cD0 cPsi i mt1 t1 sM2
+		unifyMMVarTerm cD0 cPsi i mt1 t1 (INorm sM2)
               | (_ , _, true, true) ->
-		unifyMMVarTerm cD0 cPsi i' mt2 t2 sM1
+		unifyMMVarTerm cD0 cPsi i' mt2 t2 (INorm sM1)
               | (_ , _ , _ , _) ->
                   begin match (isPatMSub mt1, isProjPatSub t1 , isPatMSub mt2, isProjPatSub t2) with
                     | ( _ , _, true, true ) ->
@@ -1719,86 +1722,16 @@ match sigma with
         else
           ((*let _ = dprint (fun () -> "[unifyHead] PVar (PInst) q1 =/= q2 " ) in*)
             match (isPatMSub mt1', isPatSub s1' , isPatMSub mt2', isPatSub s2') with
-             | (true, true, true, true) ->
-                 (* no occurs check necessary, because s1' and s2' are pattern subs. *)
-                 let _ = unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
- (*                let _ = dprint (fun () -> "Unification of the types done ... \n") in *)
-                 (* at this point: [s1']tA1 = [s2']tA2  ! *)
-                 let ss = invert s1' in
-                      (* cD ; cPsi1 |- ss1 <= cPsi *)
-                 let mtt1 = Whnf.m_invert mt1' in
-                      (* cD1 |- mtt1 <= cD *)
-                 let phat = Context.dctxToHat cPsi in
-                 let (id_sub, cPsi2') = pruneCtx phat (s2', cPsi2) (mtt1, ss) in
-                 let (id_msub, cD2') = pruneMCtx cD0 (mt2', cD2) mtt1 in
-                   (* if   cPsi  |- s2' <= cPsi2  and cPsi1 |- ss <= cPsi
-                      then cPsi2 |- id_sub <= cPsi2' and [ss](s2' (id_sub)) exists *)
-                   (* if   cD  |- mt2' <= cD2  and cD1 |- mtt1 <= cD
-                      then cD2 |- id_msub <= cD2' and [mtt1](mt2' (id_msub)) exists *)
-                   (* cPsi' =/= Null ! otherwise no instantiation for
-                      parameter variables exists *)
-                 let i_id_sub  = invert id_sub in
-                        (* cD; cPsi2' |- i_id_sub : cPsi2 *)
-                 let i_msub = Whnf.m_invert id_msub in
-                        (* cD2' |- i_msub <= cD2
-                         * cD ; cPsi2' |- i_id_sub <= cPsi2
-                         * cD2 ; [|i_msub|]cPsi2' |- [|i_msub|]i_id_sub <= [|i_msub|]cPsi2
-                         *
-                         * and more importantly: cD2 |- [|i_msub|]cPsi2' ctx
-                         *
-                         * cD2' ; [|i_msub|]cPsi2 |- [|i_msub|]tA2 <= type
-                         * cD2' ; [|i_msub|]cPsi2' |- [|i_id_msub|][i_id_sub]tA2 <= type
-                        *)
-                 let cPsi2'' = Whnf.cnormDCtx (cPsi2', i_msub) in
-                 let tA2'    = Whnf.cnormTyp (Whnf.normTyp (tA2, i_id_sub), i_msub) in
-
-                 let v = Whnf.newMPVar None (cD2', cPsi2'', tA2')  in
-
-                   (instantiateMPVar (q2, MPVar((v, id_msub) , id_sub), !cnstr2);
-
-                    instantiateMPVar (q1, MPVar((v, Whnf.mcomp (Whnf.mcomp id_msub mt2') mtt1),
-                                                    comp (comp id_sub s2') ss),
-                                          !cnstr1))
-
-
-            | (true, true, _ , _ ) ->
-                 let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-                  (* only s1' is a pattern sub
-                     [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
-                  *)
-                 let ss1 = invert s1' in
-                 let mtt1 = Whnf.m_invert mt1' in
-
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s2', cPsi2) (mtt1 , ss1) (MMVarRef q1) in
-                 let ms' = invMSub cD0 (mt2', cD2) mtt1 (MMVarRef q1) in
-                   instantiateMPVar (q1, MPVar((q2', ms'), s'), !cnstr1)
+             | (true, true, _, _) ->
+                 unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2');
+	         unifyMMVarTerm cD0 cPsi q1' mt1' s1' (IHead head2)
 
             | (_, _, true , true ) ->
-                 let _ =  unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2') in
-                  (* only s1' is a pattern sub
-                     [(s1)^-1](q2[s2']) = q2[(s1)^-1 s2']
-                  *)
-                 let ss2 = invert s2' in
-                 let mtt2 = Whnf.m_invert mt2' in
+              unifyTyp mflag cD0 cPsi (tA1, s1') (tA2, s2');
+	      unifyMMVarTerm cD0 cPsi q2' mt2' s2' (IHead head1)
 
-                 let phat = Context.dctxToHat cPsi in
-                 let s' = invSub cD0 phat (s1', cPsi1) (mtt2 , ss2) (MMVarRef q2) in
-                 let ms' = invMSub cD0 (mt1', cD1) mtt2 (MMVarRef q2) in
-                   instantiateMPVar (q2, MPVar((q1', ms'), s'), !cnstr2)
-
-             | (false, _, _ , _ ) ->
-                 (* neither s1' nor s2' are patsub *)
+             | (_, _, _ , _ ) ->
                  addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
-             | (_, false, _ , _ ) ->
-                 (* neither s1' nor s2' are patsub *)
-                 addConstraint (cnstr1, ref (Eqn (cD0, cPsi, IHead head1, IHead head2)))
-             (* | (_, _, false , _ ) -> *)
-             (*     (\* neither s1' nor s2' are patsub *\) *)
-             (*     addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head2, head1))) *)
-             (* | (_, _, _ , false ) -> *)
-             (*     (\* neither s1' nor s2' are patsub *\) *)
-             (*     addConstraint (cnstr2, ref (Eqh (cD0, cPsi, head2, head1))) *)
           )
 
 
@@ -1807,7 +1740,7 @@ match sigma with
         (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
         dprnt "(013) _-MPVar - head";
       if isVar h && isPatSub s1 && isPatMSub mt1 then
-          let ss = invert (Whnf.normSub s1) in
+          let ss = invert s1 in
           let mtt = Whnf.m_invert (Whnf.cnormMSub mt1) in
            begin match h with
              | BVar k -> begin match bvarSub k ss with

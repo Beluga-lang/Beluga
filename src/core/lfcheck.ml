@@ -758,6 +758,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | PObj h, (PTyp tA, t) ->
       let tA' = inferHead loc cD cPsi' h in
       let tA  = Whnf.cnormTyp (tA, t) in
+      dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 	else failwith "Parameter object fails to check" (* TODO: Better error message *)
 

@@ -7,17 +7,12 @@
 }%
 
 % Small-step operational semantics
-step: term -> term -> type.
-
-e_switch_true:
-   step (switch true T2 T3)    T2.
-
-e_switch_false:
-   step (switch false T2 T3)   T3.
-
-e_switch:
-   step T1 T1'
--> step (switch T1 T2 T3)      (switch T1' T2 T3).
+datatype step: term -> term -> type = 
+| e_switch_true:   step (switch true T2 T3)    T2
+| e_switch_false:  step (switch false T2 T3)   T3
+| e_switch:        step T1 T1'
+    -> step (switch T1 T2 T3)      (switch T1' T2 T3)
+;
 
 
 % Example:
@@ -62,6 +57,7 @@ steps_to_terms: term -> term -> term -> type.
 andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 
+
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
 % / total s (det t t1 t2 s)/
 fn s => case s of
@@ -70,6 +66,28 @@ fn s => case s of
 | [ |- andalso (e_switch D)     (e_switch E)]     =>
   let [ |- ref]        = det [ |- andalso D E] in
     [ |- ref]
+;
+
+
+
+rec deterministic : [ |- step T T1] -> [|- step T T2] -> [ |- equal T1 T2] =
+/ total s1 (deterministic t t1 t2 s1)/
+fn s1 => fn s2 => case s1 of
+| [ |- e_switch_true] => (case s2 of 
+       | [ |- e_switch_true]  =>  [ |- ref]
+       | [|- e_switch D] => impossible [|- D] in []
+  )
+| [ |- e_switch_false] => (case s2 of 
+       | [ |- e_switch_false]  =>  [ |- ref]
+       | [|- e_switch D] => impossible [|- D] in []
+  )
+ | [ |- e_switch D] => (case s2 of 
+      | [|- e_switch E] =>
+          let [ |- ref] = deterministic [ |- D] [|- E] in  [ |- ref]
+      | [|- e_switch_true] => impossible [|- D] in []
+      | [|- e_switch_false] => impossible [|- D] in []
+  )
+}%
 ;
 
 

@@ -721,7 +721,7 @@ GLOBAL: sgn;
 (* ************************************************************************************** *)
 (* Parsing of computations and LF terms occurring in computations                         *)
 
-  clf_decl:
+(*  clf_decl:
   [
     [
       x = SYMBOL; ":"; tA = clf_typ -> LF.TypDecl (Id.mk_name (Id.SomeString x), tA)
@@ -729,7 +729,7 @@ GLOBAL: sgn;
 
   ]
 ;
-
+*)
   clf_ctyp_decl:
     [
       [

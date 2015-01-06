@@ -12,6 +12,8 @@ val whnfTyp    : tclo -> tclo
 val norm       : nclo -> normal
 val normKind   : (kind * sub) -> kind
 val normTyp    : tclo -> typ
+val normFt'    : front * sub -> front
+val normClTyp  : cltyp * sub -> cltyp
 val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub
 val normSpine  : sclo -> spine
@@ -44,7 +46,7 @@ val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cP
                   (* cD ; cPsi |- msvar : cPhi *)
 
 val newMVar     : Id.name option -> dctx * typ ->  cvar
-val newCVar     : Id.name option -> Id.cid_schema -> ctx_var
+val newCVar     : Id.name option -> mctx -> Id.cid_schema -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
 
@@ -95,12 +97,14 @@ val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)
 
 val cnorm      : normal * msub -> normal
 val cnormHead : head * msub -> head
+val cnormHead' : head * msub -> front
 val cnormSpine : spine * msub -> spine
 val cnormSub   : sub * msub -> sub
 val cnormTyp   : typ  * msub -> typ
 val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
+val cnormClTyp  : cltyp * msub -> cltyp
 val cnormCDecl : ctyp_decl * msub -> ctyp_decl
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx

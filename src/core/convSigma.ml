@@ -11,11 +11,11 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7])
+(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7]) *)
 
-let rec conv_listToString clist = match clist with
-  | [] -> " "
-  | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
+(* let rec conv_listToString clist = match clist with *)
+(*   | [] -> " " *)
+(*   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs *)
 
 (* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
 let rec _blockdeclInDctx cPsi = match cPsi with
@@ -81,23 +81,23 @@ and strans_head loc cD h conv_list = match h with
   | Int.LF.Proj (Int.LF.FPVar (p, sigma), j) ->
       Int.LF.Proj (Int.LF.FPVar (p, strans_sub cD sigma conv_list), j)
 
-  | Int.LF.Proj (Int.LF.MPVar (p, (ms, sigma)), j) ->
+  | Int.LF.Proj (Int.LF.MPVar ((p, ms), sigma), j) ->
       let ms' = strans_msub cD ms conv_list in
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.Proj (Int.LF.MPVar (p, (ms', sigma')), j)
+        Int.LF.Proj (Int.LF.MPVar ((p, ms'), sigma'), j)
 
   | Int.LF.Const c -> Int.LF.Const c
   | Int.LF.FVar x -> Int.LF.FVar x
   | Int.LF.FMVar (u,s) -> Int.LF.FMVar (u, strans_sub cD s conv_list)
   | Int.LF.FPVar (u,s) -> Int.LF.FPVar (u, strans_sub cD s conv_list)
-  | Int.LF.MMVar  (u, (ms, s)) ->
+  | Int.LF.MMVar  ((u, ms), s) ->
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
-        Int.LF.MMVar (u, (ms', s'))
-  | Int.LF.MPVar  (u, (ms, s)) ->
+        Int.LF.MMVar ((u, ms'), s')
+  | Int.LF.MPVar  ((u, ms), s) ->
       let ms' = strans_msub cD ms conv_list in
       let s'  = strans_sub cD s conv_list in
-        Int.LF.MPVar (u, (ms', s'))
+        Int.LF.MPVar ((u, ms'), s')
 
 and strans_msub cD ms conv_list = match ms with
   | Int.LF.MShift k -> Int.LF.MShift k
@@ -114,17 +114,15 @@ and strans_mfront cD mf conv_list = match mf with
   | Int.LF.MV u -> Int.LF.MV u
   | Int.LF.MUndef -> Int.LF.MUndef
 
+and shift_conv_list n = function
+  | (0, xs) -> n
+  | (k, x::xs) -> shift_conv_list (n+x) (k-1, xs)
 
 and strans_sub cD s conv_list = match s with
-(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *)
+(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *) 
   | Int.LF.EmptySub -> Int.LF.EmptySub
   | Int.LF.Undefs -> Int.LF.Undefs
-  | Int.LF.Shift offset ->
-      let offset' = List.fold_left (fun x -> fun y -> x + y) 0 conv_list in
-      let _ = dprint (fun () -> "conv_list = " ^ conv_listToString conv_list ) in
-      let _ = dprint (fun () -> "Old offset " ^ string_of_int offset ) in
-      let _ = dprint (fun () -> "New offset " ^ string_of_int offset') in
-        Int.LF.Shift offset'
+  | Int.LF.Shift offset -> Int.LF.Shift (shift_conv_list 0 (offset, conv_list))
   | Int.LF.Dot (ft, s) ->
       Int.LF.Dot (strans_front cD ft conv_list, strans_sub cD s conv_list)
   | Int.LF.SVar (s, offset, sigma) ->
@@ -133,9 +131,9 @@ and strans_sub cD s conv_list = match s with
   | Int.LF.FSVar (n, (s, sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
         Int.LF.FSVar (n, (s, sigma'))
-  | Int.LF.MSVar (offset, (rho, (mt, sigma))) ->
+  | Int.LF.MSVar (offset, ((rho, mt), sigma)) ->
       let sigma' = strans_sub cD sigma conv_list in
-        Int.LF.MSVar (offset, (rho, (mt, sigma')))
+        Int.LF.MSVar (offset, ((rho, mt), sigma'))
 
 and strans_front cD ft  conv_list = match ft with
   | Int.LF.Head h -> Int.LF.Head (strans_head Syntax.Loc.ghost cD h conv_list)

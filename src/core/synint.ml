@@ -52,8 +52,8 @@ module LF = struct
     | Const of cid_term                       (*   | c                          *)
     | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
     | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
-    | MVar  of cvar * sub                     (*   | u[s]                       *)
-    | PVar  of offset * sub                   (*   | p[s]                       *)
+    | MVar  of (cvar * sub)                   (*   | u[s]                       *)
+    | PVar  of offsetsub                      (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
@@ -67,6 +67,7 @@ module LF = struct
     | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
 
   and fvarsub = name * sub
+  and offsetsub = offset * sub
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
     | App  of normal * spine                  (*   | M . S                      *)
@@ -110,7 +111,8 @@ module LF = struct
     | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
-  and mm_var_inst = mm_var * (msub * sub)
+  and mm_var_inst' = mm_var * msub
+  and mm_var_inst = mm_var_inst' * sub
 
   and iterm =
     | INorm of normal
@@ -137,7 +139,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of mm_var * msub
+    | CInst  of mm_var_inst'
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)

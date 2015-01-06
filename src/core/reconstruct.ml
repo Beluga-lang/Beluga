@@ -392,10 +392,10 @@ let mgAtomicTyp cD cPsi a kK =
                        (* cPhi' |- [ssi]tQ    *)
                      let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi'))  in
                      let ss_proj = LF.comp ss' s_proj in
-                       Int.LF.MMVar (u, (Whnf.m_id, ss_proj)))
+                       Int.LF.MMVar ((u, Whnf.m_id), ss_proj))
                    else
                      let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1')  in 
-                     Int.LF.MMVar (u, (Whnf.m_id, s_proj))
+                     Int.LF.MMVar ((u, Whnf.m_id), s_proj)
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
 
@@ -442,9 +442,9 @@ let rec mgTyp cD cPsi tA = begin match tA with
 let metaObjToFt (loc, m) = m
 
 let mmVarToCMetaObj loc' mV = function 
-  | Int.LF.MTyp tA   -> Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar (mV, (Whnf.m_id, LF.id)), Int.LF.Nil))
-  | Int.LF.PTyp tA   -> Int.LF.PObj (Int.LF.MPVar (mV, (Whnf.m_id, LF.id)))
-  | Int.LF.STyp cPhi -> Int.LF.SObj (Int.LF.MSVar (0, (mV, (Whnf.m_id, LF.id))))
+  | Int.LF.MTyp tA   -> Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil))
+  | Int.LF.PTyp tA   -> Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id))
+  | Int.LF.STyp cPhi -> Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id)))
 
 let mmVarToMetaObj loc' mV = function
   | Int.LF.ClTyp (mt, cPsi) ->
@@ -637,7 +637,7 @@ let mgCompTyp cD (loc, c) =
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
       let (n , sW) = Whnf.mctxCDec cD psi_var in
-	Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD, Int.LF.CTyp sW,
+	Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD', Int.LF.CTyp sW,
                                       ref [], Int.LF.Maybe), Whnf.m_id))
   | Int.LF.Null -> Int.LF.Null
   | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->

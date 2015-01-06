@@ -284,7 +284,7 @@ and inferHead loc cD cPsi head = match head with
     checkSub loc cD cPsi s cPsi' ;
     TClo (tA, s)
 
-  | MMVar ((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , (t', r)) ->
+  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r) ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -758,6 +758,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | PObj h, (PTyp tA, t) ->
       let tA' = inferHead loc cD cPsi' h in
       let tA  = Whnf.cnormTyp (tA, t) in
+      dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 	else failwith "Parameter object fails to check" (* TODO: Better error message *)
 

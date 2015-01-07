@@ -274,12 +274,20 @@ lexer
     ; loc := Loc.move_line 1 !loc
 
 let skip_nested_comment loc = lexer
-  | '%' '{' [^'{']->
-      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+  | '%' '{' '\n' ->    
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc;
+      loc := Loc.move_line 1 !loc
     ; let depth = ref 1 in
       while !depth > 0 do
         skip_nestable depth loc lexbuf ;
       done
+
+  | '%' '{' [^'{'] ->    
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; let depth = ref 1 in
+      while !depth > 0 do
+        skip_nestable depth loc lexbuf ;
+      done      
 
   | [^'}'] '}' '%' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc

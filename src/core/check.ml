@@ -540,9 +540,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
           | Box (_,cM) -> 
-	      ( print_string "\nCheck whether compatible IH exists\n";
-		print_string ("cIH " ^ Total.ih_to_string cD cG cIH ^ "\n");
-		print_string ("Recursive call on " ^ P.metaObjToString cD cM ^ "\n");
+	      ( dprint (fun () -> "\nCheck whether compatible IH exists\n");
+		dprint (fun () -> "cIH " ^ Total.ih_to_string cD cG cIH ^ "\n");
+		dprint (fun () -> "Recursive call on " ^ P.metaObjToString cD cM ^ "\n");
 	      Total.filter cD cG cIH (loc, M cM))
 	  | Syn(_, i) -> (match extract_var i with 
 			    | Some x -> Total.filter cD cG cIH (loc, V x)

@@ -1449,7 +1449,9 @@ match sigma with
      let phat = Context.dctxToHat cPsi in
      let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (MShift 0, ss1) (MMVarRef r1)) in
      instantiateMVar (r1, tM2', !cnstrs1)
-     with NotInvertible -> raise (Error.Violation "Pattern substitution  not invertible")
+     with NotInvertible -> raise (Error.Violation "Unification violation")
+       (* This might actually need to add a constraint, in which case "NotInvertible" seems
+          the wrong kind of exception... *)
     end 
 
   and pruneITerm cD cPsi tm ss rOccur = match tm with
@@ -1466,7 +1468,9 @@ match sigma with
       let tp' = Whnf.cnormClTyp (tp, mt1) in
       let tM2' = trail (fun () -> pruneITerm cD cPsi1 (sM2,tp') (mtt1, ss1) (MMVarRef r1)) in
       instantiateMMVar' (r1, tM2', !cnstrs1);
-      with NotInvertible -> raise (Error.Violation "Pattern substitution not invertible")
+      with NotInvertible -> raise (Error.Violation "Unification violation")
+       (* This might actually need to add a constraint, in which case "NotInvertible" seems
+          the wrong kind of exception... *)
     end
 
   and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 =

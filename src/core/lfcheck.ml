@@ -804,12 +804,14 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | SObj tM, (STyp tA, t) ->
      checkSub loc cD cPsi' tM (Whnf.cnormDCtx (tA, t))
 
-  | PObj h, (PTyp tA, t) ->
+  | PObj h, (PTyp tA, t)
+  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
       let tA' = inferHead loc cD cPsi' h in
       let tA  = Whnf.cnormTyp (tA, t) in
       dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with

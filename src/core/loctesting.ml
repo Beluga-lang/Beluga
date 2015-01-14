@@ -46,10 +46,6 @@ and store_syns (e : Comp.exp_syn) = match e with
 	Locs.add loc (Locs.mk_entry ("Apply"));
 	store_syns e1;
 	store_chks e2
-| Comp.MApp (loc, e', mO) ->
-	Locs.add loc (Locs.mk_entry ("MApp"));
-	store_syns e';
-	store_metaObj mO
 | Comp.BoxVal (loc, m0) ->
 	Locs.add loc (Locs.mk_entry ("BoxVal"));
 	store_metaObj m0

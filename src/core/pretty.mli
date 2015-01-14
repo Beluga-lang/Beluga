@@ -99,6 +99,8 @@ module Int : sig
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
     val normalToString    : LF.mctx -> LF.dctx -> LF.nclo     -> string
     val headToString      : LF.mctx -> LF.dctx -> LF.head     -> string
+    val itermToString     : LF.mctx -> LF.dctx -> LF.iterm -> string
+    val mmvarToString     : LF.mm_var -> string
     val tupleToString     : LF.mctx -> LF.dctx -> LF.tuple    -> string
     val dctxToString      : LF.mctx -> LF.dctx -> string
     val mctxToString      : LF.mctx -> string

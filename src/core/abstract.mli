@@ -5,17 +5,16 @@
 
 open Syntax.Int
 
-type varvariant =
-    VariantFV | VariantFCV | VariantMMV | VariantMPV | VariantMSV
-  | VariantMV | VariantFMV | VariantPV | VariantFPV | VariantSV
-  | VariantFSV
+type kind =
+  | MMV of (Id.name * LF.iterm option ref)
+  | FV of Id.name
 
 type error =
-  | LeftoverVars of varvariant
+  | LeftoverVars
   | LeftoverConstraints
-  | CyclicDependency of varvariant
+  | CyclicDependency of kind
   | UnknownIdentifier
-  | UnknownSchemaCtx of Id.name
+  | UnknownMTyp of Id.name
 
 
 exception Error of Syntax.Loc.t * error

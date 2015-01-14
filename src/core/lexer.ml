@@ -34,7 +34,7 @@ Beluga lexical categories:
          ABCDEFGHIJKLMNOPQRSTUVWXYZ
          abcdefghijklmnopqrstuvwxyz
          !  $  &  '  *  +  -  /   : = ? @
-         ^ _ ` | ~
+         ^ _ ` ~
 
         (and any other UTF-8 character above 127)
 
@@ -44,8 +44,8 @@ Beluga lexical categories:
          ABCDEFGHIJKLMNOPQRSTUVWXYZ
          abcdefghijklmnopqrstuvwxyz
          !  $  &  '  *  +  -  /   : = ? @
-         ^ _ ` | ~
-         #
+         ^ _ ` ~
+         # |
 
         (and any other UTF-8 character above 127)
 
@@ -94,7 +94,7 @@ Beluga lexical categories:
 
 (* Matches any printable utf-8 character that isn't reserved or a digit *)
 let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\#" '"'    (* exclude reserved characters *)
+                          "%,.:;()[]{}\\#|" '"'    (* exclude reserved characters *)
                           '0'-'9'                 (* exclude digits *)
                           "<>"   '`'                 (* exclude < and >, which can only be used with certain other characters *)
                        ]
@@ -102,7 +102,6 @@ let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-
                           "<>" '|'     '`'               (* exclude < and > *)
 
                        ]
@@ -116,7 +115,7 @@ let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable
                        ]
 
 let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
+                          "%,.:;()[]{}\\|" '"'    (* exclude reserved characters *)
                           'a'-'z'  'A'-'Z'
                           '#' '\'' 
                           '`'
@@ -138,16 +137,13 @@ let regexp lower = ['a' - 'z']
 (* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
 let mk_tok tok loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*  ; print_string ("mk_tok ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; tok
 
 (* Make a {!Token.t} taking a {!string} argument for the current
    lexeme and advance the {!Loc.t ref}. *)
 let mk_tok_of_lexeme tok_cons loc lexbuf =
     loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*  ; print_string ("mk_tok_of_lexeme ADVANCED TO " ^ Loc.to_string !loc ^ "\n") *)
   ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
-(*  let _ = print_string ("TOKEN>> " ^ Token.to_string tok ^ "\n") in *)
       tok
 
 
@@ -166,8 +162,6 @@ let mk_dots s = Token.DOTS s
 
 let mk_module s = Token.MODULESYM s
 
-(* let mk_turnstile s = Token.TURNSTILE s *)
-
 (**********)
 (* Lexers *)
 (**********)
@@ -182,26 +176,23 @@ let lex_token loc = lexer
   | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
-(*   | "|-" -> mk_tok_of_lexeme mk_turnstile loc lexbuf *)
   | "->"
   | "<-"
   | "::"
   | "=>"
   | "=="
   | "FN"
-  | "and"   (* missing, added 2010-07-31 *)
+  | "and"
   | "block"
-(*  | "box"    unused as of 2009-02-18; removed 2010-07-31 *)
   | "Bool"
   | "case"
   | "fn"
   | "else"
-(*  | "id"   removed 2010-07-31 *)
   | "if"
   | "impossible"
   | "in"
   | "let"
-  | "mlam"  (* was missing -- added 2009-02-18 *)
+  | "mlam" 
   | "of"
   | "rec"
   | "schema"
@@ -229,43 +220,34 @@ let lex_token loc = lexer
   | "%abbrev"
   | "type"
   | "?"
-(*  | [ "!\\#%()*,.:;=[]{|}+<>" ]  -> mk_tok_of_lexeme mk_keyword loc lexbuf *)
-
-  | [ "%,.:;()[]{}" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
-(* print_string ("RSV [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
+  | "|-"
+  | [ "%,.:;()[]{}|" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 
   | eof                       -> mk_tok           Token.EOI  loc lexbuf
 
   | ">" (sym | "<" | ">")*  ->
-(* print_string (">IN [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | start_angle_compatible (sym | "<" | ">")*  ->
-(* print_string ("SAC [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
-     mk_tok_of_lexeme mk_symbol  loc lexbuf
+    mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | start_sym
      (sym
      | "<"
      | angle_compatible ">" (sym | "<" | ">")*
-     )*  ->
-(* print_string ("STS [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
-      mk_tok_of_lexeme mk_symbol  loc lexbuf
+     )*  ->  mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | "<" (angle_compatible | "<" | ">") (sym | "<" | ">")*  ->
-(* print_string ("< 1 [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | "<" (angle_compatible | "<" | ">")?  ->
-(* print_string ("< 2 [" ^ Ulexing.utf8_lexeme lexbuf ^ "]\n"); *)
       mk_tok_of_lexeme mk_symbol  loc lexbuf
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
 
 let skip_nestable depth loc =
-(*        print_string ("NEST " ^ Loc.to_string !loc ^ "\n")      ; *)
 lexer
   | '\n' ->
       loc := Loc.move_line 1 !loc
@@ -300,41 +282,40 @@ lexer
     ; loc := Loc.move_line 1 !loc
 
 let skip_nested_comment loc = lexer
-  | '%' '{' [^'{']->
+  | '%' '{' '\n' ->    
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc;
+      loc := Loc.move_line 1 !loc
+    ; let depth = ref 1 in
+      while !depth > 0 do
+        skip_nestable depth loc lexbuf ;
+      done
+
+  | '%' '{' [^'{'] ->    
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; let depth = ref 1 in
-(*      print_string ("nested comment\n") ; flush_all() ; *)
       while !depth > 0 do
-(*        print_string ("NC-BEF " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         skip_nestable depth loc lexbuf ;
-(*        print_string ("NC-AFT " ^ Loc.to_string !loc ^"   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
-      done
+      done      
 
   | [^'}'] '}' '%' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
     ; ( print_string ("Parse error: \"}%\" with no comment to close\n");
           raise Ulexing.Error )
+
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc = lexer
-(*   | '%' [^ '\n' ]* '\n'   ->   *)
-(*    | '%' ( [^ 'a'-'z' 'A'-'Z' ] [^ '\n']* )? '\n'  -> *)
   | '%' ( [^ '\n' '{' 'a'-'z'] [^ '\n' ]* ) '\n' ->
-(*      print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
-(*    ; print_string ("AFT " ^ Loc.to_string !loc ^ "\n") *)
 
   | '%' '\n' ->
-(*     print_string ("BEF " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
       loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
     ; loc := Loc.move_line 1 !loc
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer
   | [ ' ' '\t' ]+         ->
-(*     print_string ("bef " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n")      ; *)
         loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
-(*    ;   print_string ("aft " ^ Loc.to_string !loc ^ "   \"" ^ Ulexing.utf8_lexeme lexbuf ^ "\"\n") *)
 
 
 (* Skip newlines and advance the location reference. *)

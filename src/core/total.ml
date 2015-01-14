@@ -77,10 +77,7 @@ let rec shiftIH cIH k = match cIH with
 let shift cIH = shiftIH cIH 1
 
 let is_inductive cU =  match cU with 
-  | LF.MTyp (tA, cPsi, LF.Inductive ) -> true
-  | LF.PTyp (tA, cPsi, LF.Inductive ) -> true
-  | LF.STyp (cPhi, cPsi, LF.Inductive ) -> true
-  | LF.CTyp (cPsi, LF.Inductive ) -> true
+  | LF.Inductive -> true
   | _ -> false
 
 let sub_smaller phat s = match phat , s with 
@@ -89,8 +86,8 @@ let sub_smaller phat s = match phat , s with
   | _ -> false
 
 let rec smaller_meta_obj cM = match  cM with
-  | Comp.MetaCtx (_ , LF.DDec (_ , _ )) -> true
-  | Comp.MetaObj (l, phat, LF.Root (l', h, spine)) ->
+  | LF.CObj (LF.DDec (_ , _ )) -> true
+  | LF.ClObj (phat, LF.MObj (LF.Root (l', h, spine))) ->
       (match h with
         | LF.Const _ -> true
         | LF.BVar _ -> true
@@ -101,25 +98,10 @@ let rec smaller_meta_obj cM = match  cM with
 	       | _ -> true)
 	| LF.Proj (h, _ ) -> 
 	    ((* print_string "Checking whether proj is smaller (1)\n"; *)
-	    smaller_meta_obj (Comp.MetaObj (l, phat, LF.Root(l', h, spine))))
+	    smaller_meta_obj (LF.ClObj (phat, LF.MObj (LF.Root(l', h, spine)))))
 	| LF.MVar (_, s) -> sub_smaller phat  s
         | _ -> false)
-  | Comp.MetaObjAnn (l, cPsi, LF.Root (l', h, spine)) ->
-      (match h with
-        | LF.Const _ -> true
-        | LF.BVar _ -> true
-	| LF.PVar (_, s) -> 
-	    ((* print_string "Checking whether pvar is smaller (1)\n"; *)
-	     match spine with 
-	       | LF.Nil -> sub_smaller (Context.dctxToHat cPsi) s
-	       | _ -> true)
-	| LF.Proj (h, _ ) -> 
-	    ((* print_string "Checking whether proj is smaller (1)\n"; *)
-	    smaller_meta_obj (Comp.MetaObjAnn (l, cPsi, LF.Root(l', h, spine))))
-	| LF.MVar (_, s) -> sub_smaller (Context.dctxToHat cPsi) s
-	| _ -> false
-      )
-  | Comp.MetaParam (_, phat, h ) ->
+  | LF.ClObj (phat, LF.PObj h) ->
       (match h with 
 	| LF.PVar (_, s) -> 
 	    ((* print_string "Checking whether proj is smaller(1)\n";*)
@@ -132,7 +114,7 @@ let rec smaller_meta_obj cM = match  cM with
 
 
 let rec struct_smaller patt = match patt with
-  | Comp.PatMetaObj (loc', mO) -> 
+  | Comp.PatMetaObj (loc', (_,mO)) -> 
       smaller_meta_obj mO
   | Comp.PatConst (_, _, _ ) -> true
   | Comp.PatVar (_, _ ) -> false
@@ -252,14 +234,6 @@ let exists_total_decl f =
     exists (!mutual_decs)
 
 
-let mobjToFront cM = match cM with
-  | Comp.MetaCtx (_ , cPsi) -> LF.CObj cPsi
-  | Comp.MetaObj (_, phat, tM ) -> LF.MObj (phat, tM)
-  | Comp.MetaObjAnn (_, cPsi, tM ) -> LF.MObj (Context.dctxToHat cPsi, tM)
-  | Comp.MetaParam (_, phat, h ) -> LF.PObj (phat, h)
-  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
-  | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
-
 let rec args_to_string cD cG args = match args with
   | [] -> ""
   | (Comp.M cM)::args ->
@@ -324,32 +298,32 @@ let get_order_for f  =
 *)
 
 let gen_var' loc cD (x, cU) = match cU with
-  | LF.MTyp (tA, cPsi, _dep) ->
+  | LF.ClTyp (LF.MTyp tA, cPsi) ->
       let psihat  = Context.dctxToHat cPsi in
       let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x Substitution.LF.id in
-        ( Comp.MetaObj (loc, psihat, tM) ,
-          LF.MObj (psihat, tM) )
-  | LF.PTyp (tA, cPsi, dep) ->
+        ( (loc, LF.ClObj (psihat, LF.MObj tM)) ,
+          LF.ClObj (psihat, LF.MObj tM) )
+  | LF.ClTyp (LF.PTyp tA, cPsi) ->
       let psihat  = Context.dctxToHat cPsi in
       let p     = Whnf.newMPVar (Some x) (cD, cPsi, tA) in
-      let h     = LF.MPVar (p, (Whnf.m_id, Substitution.LF.id)) in
-        (Comp.MetaParam (loc, psihat, h) ,
-         LF.PObj (psihat, h) )
+      let h     = LF.MPVar ((p, Whnf.m_id), Substitution.LF.id) in
+        ( (loc, LF.ClObj (psihat, LF.PObj h))  ,
+         LF.ClObj (psihat, LF.PObj h) )
 
-  | LF.STyp (cPhi, cPsi, dep) ->
+  | LF.ClTyp (LF.STyp cPhi, cPsi) ->
       let psihat  = Context.dctxToHat cPsi in
       let s     =  Whnf.newMSVar (Some x) (cD, cPsi, cPhi) in
-      let sigma = LF.MSVar (s, 0, (Whnf.m_id, Substitution.LF.id)) in
-        (Comp.MetaSObj (loc, psihat, sigma) ,
-         LF.SObj (psihat, sigma) )
+      let sigma = LF.MSVar (0, ((s , Whnf.m_id), Substitution.LF.id)) in
+        ( (loc, LF.ClObj (psihat, LF.SObj sigma)) ,
+         LF.ClObj (psihat, LF.SObj sigma) )
 
-  | LF.CTyp (schema_cid, _) ->
-      let cPsi = LF.CtxVar (LF.CInst (x, ref None, schema_cid, cD, Whnf.m_id)) in
-        (Comp.MetaCtx (loc, cPsi) , LF.CObj (cPsi) )
+  | LF.CTyp (schema_cid) ->
+      let cPsi = LF.CtxVar (LF.CInst ((x, ref None, cD , LF.CTyp schema_cid, ref [], LF.Maybe), Whnf.m_id)) in
+        ( (loc, LF.CObj cPsi) , LF.CObj (cPsi) )
 
 
 let gen_var loc cD cdecl = match cdecl with 
-  | LF.Decl (x, cU) -> gen_var' loc cD (x, cU) 
+  | LF.Decl (x, cU, dep) -> gen_var' loc cD (x, cU) 
 
 (* Given i and tau, compute vector V
   s.t. for all k < i
@@ -377,22 +351,22 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) = match i, ttau with
         (Comp.DC :: spine, tau_r)
   else
 *)
-  | 1 , (Comp.TypPiBox ((LF.Decl (_, cU') as _cdecl), tau) , theta)  ->
+  | 1 , (Comp.TypPiBox ((LF.Decl (_, cU', _) as _cdecl), tau) , theta)  ->
       begin try
 	(*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^ 
 	  "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
-        Unify.unifyMTyp cD (Whnf.cnormMTyp (cU, Whnf.m_id)) (Whnf.cnormMTyp (cU', theta));
-        let ft = mobjToFront cM in
+        Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
+        let (_,ft) = cM in
         let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
           (Comp.M cM::spine, tau_r )
       with
           _ -> raise Not_compatible
       end
 
-  | 1, (Comp.TypArr (Comp.TypBox (loc, Comp.MetaTyp(tA, cPsi)), tau), theta) ->
-      let cU' = LF.MTyp (tA, cPsi, LF.No) in
+  | 1, (Comp.TypArr (Comp.TypBox (loc, LF.ClTyp(LF.MTyp tA, cPsi)), tau), theta) ->
+      let cU' = LF.ClTyp (LF.MTyp tA, cPsi) in
         begin try
-          Unify.unifyMTyp cD cU (Whnf.cnormMTyp (cU', theta));
+          Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
           let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1,(tau, theta)) in
 	    (Comp.M cM::spine, tau_r )
         with
@@ -444,46 +418,40 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 
 
  let gen_meta_obj (cdecl, theta) k = match cdecl with
-   | LF.CTyp (schema_cid, _ ) ->
-       Comp.MetaCtx (Syntax.Loc.ghost, LF.CtxVar (LF.CtxOffset k))
- (*  | LF.SDecl (s,cPhi, cPsi) -> todo *)
-   | LF.MTyp (tA, cPsi, _dep) ->
+   | LF.CTyp (schema_cid) ->
+       (Syntax.Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
+   | LF.ClTyp (LF.MTyp tA, cPsi) ->
        let phat  = Context.dctxToHat cPsi in
        let psihat' = Whnf.cnorm_psihat phat theta in
        let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
        let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-	 Comp.MetaObj (Syntax.Loc.ghost, psihat', tM)
+       (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
 
-   | LF.PTyp (tA, cPsi, _dep) ->
+   | LF.ClTyp (LF.PTyp tA, cPsi) ->
        let phat  = Context.dctxToHat cPsi in
        let psihat' = Whnf.cnorm_psihat phat theta in
-       let pv = LF.PVar (LF.Offset k, Substitution.LF.id) in
-	 Comp.MetaParam (Syntax.Loc.ghost, psihat', pv)
+       let pv = LF.PVar (k, Substitution.LF.id) in
+	(Syntax.Loc.ghost, LF.ClObj (psihat', LF.PObj pv))
 
-   | LF.STyp (cPsi, cPhi, _dep) ->  
-       let sv = LF.SVar (LF.Offset k, 0, Substitution.LF.id) in 
+   | LF.ClTyp (LF.STyp cPsi, cPhi) ->  
+       let sv = LF.SVar (k, 0, Substitution.LF.id) in 
        let phat  = Context.dctxToHat cPsi in
        let psihat' = Whnf.cnorm_psihat phat theta in
-	 Comp.MetaSObj (Syntax.Loc.ghost, psihat', sv)
+	(Syntax.Loc.ghost, LF.ClObj (psihat', LF.SObj sv))
 
  let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
-   | Comp.MetaCtx (_ , LF.CtxVar (LF.CInst _)) -> true
-   | Comp.MetaObj (_, phat, LF.Root (_, h, _spine)) ->
+   | _ , LF.CObj (LF.CtxVar (LF.CInst _)) -> true
+   | _ , LF.ClObj (phat, LF.MObj (LF.Root (_, h, _spine))) ->
        (match h with
 	 | LF.MMVar (_ , _ ) -> true
 	 | _ -> false)
-   | Comp.MetaObjAnn (_, _cPsi, LF.Root (_, h, _spine)) ->
-       (match h with
-	 | LF.MMVar (_ , _ ) -> true
-	 | _ -> false)
-   | Comp.MetaParam (_, (Some _ , n), h ) ->
+   | _ , LF.ClObj ((Some _, n), LF.PObj h) ->
        if n > 0 then
 	 match h with LF.MPVar (_, _) -> true
 	   | _ -> false
        else
 	 false
-   | Comp.MetaSObj (_, _phat, LF.MSVar (_, _ , _ )) -> true
-   | Comp.MetaSObjAnn (_, _cPsi, LF.MSVar (_, _ , _ )) -> true
+   | _ , LF.ClObj (_phat, LF.SObj (LF.MSVar (_, _))) -> true
    | _ -> false
 
  let rec generalize args = match args with
@@ -507,8 +475,8 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 
  let rec gen_rec_calls cD cIH (cD', j) = match cD' with
    | LF.Empty -> cIH
-   | LF.Dec (cD', LF.Decl (u, cU)) ->
-       if not (is_inductive cU) then
+   | LF.Dec (cD', LF.Decl (u, cU, dep)) ->
+       if not (is_inductive dep) then
 	 gen_rec_calls cD cIH (cD', j+1)
        else 
 	 let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
@@ -718,31 +686,31 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
   let phat  = Context.dctxToHat cPsi in 
   let phat0 = Context.dctxToHat cPsi in 
     match cM with 
-      | Comp.MetaCtx (l, cPhi) -> 
+      | l , LF.CObj cPhi -> 
 	  if Whnf.convDCtx cPsi cPhi then 
-	    Comp.MetaCtx (l, cPsi')
+	   (l, LF.CObj cPsi')
 	  else 
 	    cM
-      | Comp.MetaObj (l , phat', tM) -> 
+      | l , LF.ClObj (phat', LF.MObj tM) -> 
 	  (match prefix_hat (Whnf.cnorm_psihat phat Whnf.m_id) 
  	                    (Whnf.cnorm_psihat phat' Whnf.m_id)  with 
 	    | None -> cM 
 	    | Some k -> 
-		Comp.MetaObj (l, phat0, Whnf.norm (tM, dot_k s_proj k)))
+		(l, LF.ClObj (phat0, LF.MObj (Whnf.norm (tM, dot_k s_proj k)))))
 	  (* phat' >= phat, i.e.  phat is a prefix of phat' possibly *)
 (*	  if Whnf.conv_hat_ctx phat phat' then 
 	    Comp.MetaObj (l, phat0, Whnf.norm (tM, s_proj))
 	  else 
 	    cM *)
-      | Comp.MetaParam (l, phat', tH) -> 
+      | l , LF.ClObj (phat', LF.PObj tH) -> 
 	  if Whnf.conv_hat_ctx phat phat' then 
 	    let LF.Root (_, tH', _ ) = Whnf.norm (LF.Root (l, tH, LF.Nil), s_proj)  in 
-	      Comp.MetaParam (l, phat0, tH')
+	      (l, LF.ClObj (phat0, LF.PObj tH'))
 	  else 
 	    cM
-      | Comp.MetaSObj (l, phat', s) -> 
+      | l , LF.ClObj (phat', LF.SObj s) -> 
 	  if Whnf.conv_hat_ctx phat phat' then 
-	    Comp.MetaSObj (l, phat0, Substitution.LF.comp s s_proj) 
+	    (l, LF.ClObj (phat0, LF.SObj (Substitution.LF.comp s s_proj)))
 	  else 
 	    cM
 
@@ -774,8 +742,8 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   (* We are treating contexts in the list of arguments supplied to the IH
      special to allow for context transformations which preserve the size
     *)
-  | Comp.M (Comp.MetaCtx (_, cPsi)) , 
-    LF.Dec (cIH, Comp.WfRec (f , Comp.M (Comp.MetaCtx (_,cPhi)) :: args, tau )) ->
+  | Comp.M (_ , LF.CObj cPsi) , 
+    LF.Dec (cIH, Comp.WfRec (f , (Comp.M (_, LF.CObj cPhi)) :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in 
     let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in 
@@ -844,18 +812,10 @@ let filter cD cG cIH (loc, e) =
 
 *)
 
-(*  ------------------------------------------------------------------------ *) 
-let mark_inductive cU = match cU with 
-  | LF.MTyp (tA, cPsi, _ ) -> LF.MTyp (tA, cPsi, LF.Inductive)
-  | LF.PTyp (tA, cPsi, _ ) -> LF.PTyp (tA, cPsi, LF.Inductive)
-  | LF.STyp (cPhi, cPsi, _ ) -> LF.STyp (cPhi, cPsi, LF.Inductive)
-  | LF.CTyp (cPsi, _ ) -> LF.CTyp (cPsi, LF.Inductive)
-
-
 let annotate loc f tau = 
   let rec ann tau pos = match tau , pos with
-  | Comp.TypPiBox (LF.Decl (x, cU), tau) , 1 -> 
-      Comp.TypPiBox (LF.Decl (x, mark_inductive cU), 
+  | Comp.TypPiBox (LF.Decl (x, cU, _dep), tau) , 1 -> 
+      Comp.TypPiBox (LF.Decl (x, cU, LF.Inductive), 
 		     tau)
   | Comp.TypArr (tau1, tau2) , 1 -> Comp.TypArr (Comp.TypInd tau1, tau2)
   | Comp.TypArr (tau1, tau2) , n -> Comp.TypArr (tau1, ann tau2 (n-1))
@@ -961,15 +921,15 @@ let equal_meta_obj = Whnf.convMetaObj
 
 let rec less_meta_obj mC1 mC2 = 
   match mC1, mC2 with
-    | Comp.MetaCtx (_, cPsi1), Comp.MetaCtx(_, cPsi2) -> less_dctx cPsi1 cPsi2
+    | (_, LF.CObj cPsi1), (_, LF.CObj cPsi2) -> less_dctx cPsi1 cPsi2
 
-    | Comp.MetaObj (_, phat1, tM1), Comp.MetaObj (loc2, phat2, tM2) -> 
+    | (_, LF.ClObj (phat1, LF.MObj tM1)), (loc2, LF.ClObj (phat2, LF.MObj tM2)) -> 
       (match tM2 with
   	| LF.Root(_, h , tS)  ->
   	  let rec leq_some_hat = fun spine ->
   	    ( match spine with
   	      | LF.App (n', spine') ->
-  		leq_meta_obj mC1 (Comp.MetaObj (loc2, phat2 , n')) || leq_some_hat spine'
+  		leq_meta_obj mC1 (loc2, LF.ClObj (phat2 , LF.MObj n')) || leq_some_hat spine'
 	      | LF.Nil   ->  false
   	      | LF.SClo (spine', sub) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
   	    ) in  leq_some_hat tS
@@ -982,28 +942,8 @@ let rec less_meta_obj mC1 mC2 =
 	    | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id)
 	    | _ -> false
 	)
-	
-
-    | Comp.MetaObjAnn (_, cPsi1, tM1), Comp.MetaObjAnn ( loc2,  cPsi2, tM2) ->  
-      (match tM2 with
-  	| LF.Root(_, h , tS)  ->
-  	  let rec leq_some_dctx = fun spine ->
-  	    ( match spine with
-  	      | LF.App (n', spine') ->
-  		leq_meta_obj mC1 (Comp.MetaObjAnn (loc2,  cPsi2 , n')) || leq_some_dctx spine'
-	      | LF.Nil   -> false
-  	      | LF.SClo (spine', sub) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
-  	    ) in  leq_some_dctx tS
-  	| _  -> false
-      )
-      || 
-	(less_dctx  cPsi1  cPsi2)   && 
-	    (* (let k = (Context.dctxLength cPsi2) - (Context.dctxLength cPsi1) in *)
-	    (*  Whnf.conv (tM1, LF.Shift(LF.NoCtxShift, k)) (tM2, Substitution.LF.id))  *)
-	Whnf.conv (tM1, (wkSub cPsi2 cPsi1)) (tM2, Substitution.LF.id)
-
-   
-    | Comp.MetaParam (_, phat1, tH1) , Comp. MetaParam (_, phat2, tH2) -> 
+  
+    | (_, LF.ClObj (phat1, LF.PObj tH1)) , (_, LF.ClObj (phat2, LF.PObj tH2)) -> 
       (let p = prefix_hat phat1 phat2 in
        match p with
 	 | Some k -> Whnf.convHead (tH1, LF.Shift k) (tH2, Substitution.LF.id)
@@ -1012,9 +952,7 @@ let rec less_meta_obj mC1 mC2 =
      (*  (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id))  *)
      (*  is the first rule still applied in this case?  *)
 
-    | Comp.MetaSObj (loc1, _, _ ), Comp.MetaSObj (_, _ , _) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
-
-    | Comp.MetaSObjAnn (loc1, _, _ ), Comp.MetaSObjAnn (_, _ , _) ->  raise (Error (loc1, NotImplemented "Comp.MetaSObjAnn in Total.less_meta_obj"))
+    | (loc1, LF.ClObj (_, LF.SObj _) ), (_, LF.ClObj (_ , LF.SObj _)) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
 
     | _, _ -> false
 
@@ -1023,17 +961,13 @@ let rec less_meta_obj mC1 mC2 =
 and leq_meta_obj mC1 mC2 =
   equal_meta_obj mC1 mC2 || less_meta_obj mC1 mC2
   || (match mC2 with
-    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) ->
-      leq_meta_obj mC1 (Comp.MetaObj (loc,  (cv , offset + 1 ), n))
-    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
-      leq_meta_obj mC1 (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n))
+    | (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
+      leq_meta_obj mC1 (loc,  LF.ClObj ((cv , offset + 1 ), LF.MObj n))
     | _ ->  false
   )
   || (match mC1 with
-    | Comp.MetaObj    (loc , (cv , offset ), LF.Lam(_, x, n)) ->
-      leq_meta_obj (Comp.MetaObj (loc,  (cv , offset + 1 ), n)) mC2
-    | Comp.MetaObjAnn (loc , cPsi , LF.Lam(_, x, n)) ->
-      leq_meta_obj (Comp.MetaObjAnn(loc, LF.DDec (cPsi, LF.TypDeclOpt x ) , n)) mC2
+    | (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
+      leq_meta_obj (loc, LF.ClObj ((cv , offset + 1 ), LF.MObj n)) mC2
     | _ ->  false
   )
 

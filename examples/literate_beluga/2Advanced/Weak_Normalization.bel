@@ -1,4 +1,3 @@
-%coverage
 %{{
 
 # Weak head normalization for simply-typed lambda calculus

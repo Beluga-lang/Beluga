@@ -20,6 +20,7 @@ module LF : sig
     | SpineIllTyped    of int * int
     | LeftoverFV
     | ParamVarInst     of mctx * dctx * tclo
+    | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
 
   exception Error of Syntax.Loc.t * error
 
@@ -69,7 +70,6 @@ module Comp : sig
     | EqTyp           of LF.mctx * tclo
     | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
-    | CtxHatMismatch  of LF.mctx * LF.dctx (* expected *) * LF.psi_hat (* found *) * meta_obj
     | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
     | TypMismatch     of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string

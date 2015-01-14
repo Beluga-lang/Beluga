@@ -174,6 +174,11 @@ module Ext = struct
     | ID Schema -> "<span class=\"schema\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | Link -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
     | LinkOption -> if Html.idExists s then "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>" else s
+    let iteri f =
+	    let rec iteri' i = function
+	      | [] -> ()
+	      | x::xs -> (f i x); iteri' (i+1) xs
+	    in iteri' 0
 
     type symbol =
     | Turnstile
@@ -309,7 +314,8 @@ module Ext = struct
         | LF.TList(_, l) ->
           let length = List.length l in 
           fprintf ppf "%s" (l_paren_if (lvl > 0));
-          List.iteri (fun i x -> 
+
+          iteri (fun i x ->
             if i = length - 1 then fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x
             else fprintf ppf "%a " (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x) l;
           fprintf ppf "%s" (r_paren_if (lvl > 0));
@@ -594,7 +600,7 @@ module Ext = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.Decl (u, LF.MTyp(_, tA, cPsi, _)) ->
+      | LF.Decl (u, LF.MTyp(_, tA, cPsi), _) ->
           fprintf ppf "{%s : [%a %s %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -605,7 +611,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (p, LF.PTyp(_, tA, cPsi, _)) ->
+      | LF.Decl (p, LF.PTyp(_, tA, cPsi), _) ->
           fprintf ppf "{#%s : [%a %s %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -616,7 +622,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
-      | LF.Decl (u, LF.STyp(_, cPhi, cPsi, _)) ->
+      | LF.Decl (u, LF.STyp(_, cPhi, cPsi), _) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
@@ -626,7 +632,7 @@ module Ext = struct
             (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (name, LF.CTyp(_, schemaName, _)) ->
+      | LF.Decl (name, LF.CTyp(_, schemaName), _) ->
           fprintf ppf "{%s : %s}"
             (R.render_name name)
             (to_html (R.render_name schemaName) Link)
@@ -744,7 +750,7 @@ module Ext = struct
             (fmt_ppr_cmp_typ cD 0) tau1
             (fmt_ppr_cmp_typ cD 0) tau2
 
-      | Comp.TypPiBox (_loc, (LF.Decl(name, LF.CTyp(l, schema, LF.Maybe)) as cdecl), tau) ->
+      | Comp.TypPiBox (_loc, (LF.Decl(name, LF.CTyp(l, schema), LF.Maybe) as cdecl), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:%s) %a%s"
               (l_paren_if cond)
@@ -990,13 +996,6 @@ module Ext = struct
           let (i', _ ) = strip_mapp_args' cD i in
             (Comp.Apply (loc, i', e), 0)
 
-      | Comp.MApp (loc, i1, mO ) ->
-          let (i', stripArg) = strip_mapp_args' cD i1 in
-            if stripArg = 0 then
-              (Comp.MApp (loc , i', mO), 0)
-            else
-              (i', stripArg - 1 )
-
       | Comp.Ann (loc, e, tau) -> (Comp.Ann (loc, e, tau), 0)
 
 
@@ -1022,14 +1021,6 @@ module Ext = struct
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
-              (r_paren_if cond)
-
-      | Comp.MApp (_, i, mO) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD 1) i
-              (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
 
       | Comp.BoxVal (_, m0) ->

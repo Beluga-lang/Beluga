@@ -21,15 +21,16 @@ module LF = struct
     | TypDecl of name * typ                   (* D := x:A                       *)
     | TypDeclOpt of name                      (*   |  x:_                       *)
 
-  and ctyp =                                  (* Contextual Declarations        *)
-    | MTyp of typ * dctx * depend             (* D ::= u::A[Psi]                *)
-    | PTyp of typ * dctx * depend             (*   |   p::A[Psi]                *)
-    | STyp of dctx (* Phi*) * dctx (* Psi *) * depend
-                                              (*   |   s::Phi[Psi],i.e. Psi|-s:Phi  *)
-    | CTyp of cid_schema * depend
+  and cltyp =
+    | MTyp of typ
+    | PTyp of typ
+    | STyp of dctx
+  and ctyp =
+    | ClTyp of cltyp * dctx
+    | CTyp of cid_schema
 
   and ctyp_decl =                             (* Contextual Declarations        *)
-    | Decl of name * ctyp
+    | Decl of name * ctyp * depend
     | DeclOpt of name
 
   and typ =                                   (* LF level                       *)
@@ -49,34 +50,39 @@ module LF = struct
   and head =
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)
-    | MMVar of mm_var * (msub * sub)          (*   | u[t ; s]                   *)
-    | MPVar of mm_var * (msub * sub)          (*   | p[t ; s]                   *)
-    | MVar  of cvar * sub                     (*   | u[s]                       *)
-    | PVar  of cvar * sub                     (*   | p[s]                       *)
+    | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
+    | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
+    | MVar  of (cvar * sub)                   (*   | u[s]                       *)
+    | PVar  of offsetsub                      (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
     | FVar  of name                           (* free variable for type
                                                  reconstruction                 *)
-    | FMVar of name * sub                     (* free meta-variable for type
+    | FMVar of fvarsub                     (* free meta-variable for type
                                                  reconstruction                 *)
-    | FPVar of name * sub                     (* free parameter variable for type
+    | FPVar of fvarsub                     (* free parameter variable for type
                                                  reconstruction                 *)
-    | HClo  of offset * cvar * sub            (*   | HClo(x, #S[sigma])         *)
-    | HMClo of offset * mm_var * (msub * sub) (*   | HMClo(x, #S[theta;sigma])  *)
+    | HClo  of offset * offset * sub            (*   | HClo(x, #S[sigma])         *)
+    | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
 
+  and fvarsub = name * sub
+  and offsetsub = offset * sub
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
     | App  of normal * spine                  (*   | M . S                      *)
     | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
-  and sub =                                   (* Substitutions                  *)
-    | Shift of offset                         (* sigma ::= ^n                   *)
-    | SVar  of cvar *  offset * sub           (*   | s[sigma]                   *)
-    | FSVar of name *  offset * sub           (*   | s[sigma]                   *)
+  and sub =
+    | Shift of offset                         (* sigma ::= ^(psi,n)             *)
+    | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
+                                     and in the opposite order compared to FSVar and MSVar.
+                                     This is a pain to fix *)
+                                               (*   | s[sigma]                   *)
+    | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
-    | MSVar of mm_var * offset * (msub * sub) (*   | u[t ; s]                   *)
-    | EmptySub                                (*   | e                          *)
+    | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
+    | EmptySub
     | Undefs
 
   and front =                                 (* Fronts:                        *)
@@ -85,39 +91,34 @@ module LF = struct
     | Undef                                   (*    | _                         *)
 
                                              (* Contextual substitutions       *)
- and mfront =                                (* Fronts:                        *)
-   | MObj of psi_hat * normal                (* Mft::= Psihat.N                *)
-   | PObj of psi_hat * head                  (*    | Psihat.p[s] | Psihat.x    *)
-   | SObj of psi_hat * sub
-   | CObj of dctx                            (*    | Psi                       *)
-   | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
-   | MUndef
+  and mfront =                                (* Fronts:                        *)
+    | ClObj of psi_hat * clobj
+    | CObj of dctx                            (*    | Psi                       *)
+    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
+    | MUndef (* This shouldn't be here, we should use a different datastructure for
+               partial inverse substitutions *)
+  and clobj = (* ContextuaL objects *)
+    | MObj of normal                (* Mft::= Psihat.N                *)
+    | PObj of head                  (*    | Psihat.p[s] | Psihat.x    *)
+    | SObj of sub
 
- and msub =                                  (* Contextual substitutions       *)
-   | MShift of int                           (* theta ::= ^n                   *)
-   | MDot   of mfront * msub                 (*       | MFt . theta            *)
-
- and csub =                                  (* Context substitutions          *)
-   | CShift of int                           (* delta ::= ^n                   *)
-   | CDot   of dctx * csub                   (*       | cPsi .delta            *)
+  and msub =                                  (* Contextual substitutions       *)
+    | MShift of int                           (* theta ::= ^n                   *)
+    | MDot   of mfront * msub                 (*       | MFt . theta            *)
 
   and cvar =                                  (* Contextual Variables           *)
     | Offset of offset                        (* Bound Variables                *)
-    | Inst   of name * normal option ref * dctx * typ * cnstr list ref * depend
-        (* D ; Psi |- M <= A
-           provided constraint *)
-    | PInst  of name * head   option ref * dctx * typ * cnstr list ref * depend
-        (* D ; Psi |- H => A  provided constraint *)
-    | SInst  of name * sub    option ref * dctx (*cPsi*) * dctx (*cPhi *) * cnstr list ref  * depend
-        (* D ; Psi |- sigma <= cPhi  provided constraint *)
+    | Inst   of mm_var (* D ; Psi |- M <= A provided constraint *)
 
-  and mm_var  =                               (* Meta^2 Variables                *)
-    | MInst   of name * normal option ref * mctx * dctx * typ * cnstr list ref * depend
-        (* D ; Psi |- M <= A
-           provided constraint *)
-    | MPInst   of name * head option ref * mctx * dctx * typ * cnstr list ref * depend
-    | MSInst   of name * sub option ref * mctx * dctx (* cPsi *) * dctx (* cPhi *) * cnstr list ref * depend
-        (* cD ; cPsi |- s <= cPhi *)
+  and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
+  and mm_var_inst' = mm_var * msub
+  and mm_var_inst = mm_var_inst' * sub
+
+  and iterm =
+    | INorm of normal
+    | IHead of head
+    | ISub of sub
+    | ICtx of dctx
 
   and tvar =
     | TInst   of typ option ref * dctx * kind * cnstr list ref
@@ -126,9 +127,7 @@ module LF = struct
 
   and constrnt =                             (* Constraint                     *)
     | Queued                                 (* constraint ::= Queued          *)
-    | Eqn of mctx * dctx * normal * normal   (*            | Psi |-(M1 == M2)  *)
-    | Eqh of mctx * dctx * head * head       (*            | Psi |-(H1 == H2)  *)
-    | Eqs of mctx * dctx * sub * sub         (*            | Psi |-(s1 == s2)  *)
+    | Eqn of mctx * dctx * iterm * iterm     (*            | Psi |-(M1 == M2)  *)
 
   and cnstr = constrnt ref
 
@@ -140,7 +139,7 @@ module LF = struct
   and ctx_var =
     | CtxName   of name
     | CtxOffset of offset
-    | CInst  of name * dctx option ref * cid_schema * mctx * msub
+    | CInst  of mm_var_inst'
         (* D |- Psi : schema   *)
 
   and 'a ctx =                           (* Generic context declaration    *)
@@ -266,32 +265,19 @@ module Comp = struct
     | Ctype of Loc.t
     | PiKind  of Loc.t * LF.ctyp_decl * kind
 
-  type meta_typ =
-    | MetaTyp of LF.typ * LF.dctx
-    | MetaParamTyp of LF.typ * LF.dctx
-    | MetaSubTyp of LF.dctx * LF.dctx
-    | MetaSchema of cid_schema
+  type meta_typ = LF.ctyp
 
-  type meta_obj =
-    | MetaCtx of Loc.t * LF.dctx
-    | MetaObj of Loc.t * LF.psi_hat * LF.normal
-    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-    | MetaParam of Loc.t * LF.psi_hat * LF.head
-    | MetaSObj of Loc.t * LF.psi_hat * LF.sub
-    | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
+  type meta_obj = Loc.t * LF.mfront
 
   type meta_spine =
     | MetaNil
     | MetaApp of meta_obj * meta_spine
-  (* MetaSClo of meta_spine * msub *)
 
   type typ =
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
-    | TypBox    of Loc.t * meta_typ
-    | TypParam  of Loc.t * LF.typ  * LF.dctx
-    | TypSub    of Loc.t * LF.dctx * LF.dctx
+    | TypBox of Loc.t * meta_typ 
     | TypArr    of typ * typ
     | TypCross  of typ * typ
     | TypPiBox  of LF.ctyp_decl * typ
@@ -326,8 +312,6 @@ module Comp = struct
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
     | BoxValue   of meta_obj
-    | ParamValue of LF.psi_hat * LF.head
-    | PsiValue   of LF.dctx
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
     | BoolValue  of bool
@@ -394,11 +378,6 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
-    | BranchBox of LF.mctx * LF.mctx * (LF.dctx * branch_pattern * LF.msub * LF.csub)
-
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx *
-        (LF.dctx * LF.sub * LF.msub * LF.csub) * exp_chk
-
   and copattern_spine =
     | CopatNil of Loc.t
     | CopatApp of Loc.t * cid_comp_dest * copattern_spine
@@ -406,6 +385,11 @@ module Comp = struct
 
   type tclo = typ * LF.msub
 
+  let itermToClObj = function
+    | LF.INorm n -> LF.MObj n
+    | LF.IHead h -> LF.PObj h
+    | LF.ISub s -> LF.SObj s
+  let metaObjToMFront (loc,x) = x
 end
 
 

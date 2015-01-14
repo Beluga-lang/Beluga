@@ -482,19 +482,19 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 	 let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
 	 let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
 	 let mf_list = get_order () in
-	 (* let _ = print_string ("Generate rec. calls given variable " ^ P.cdeclToString cD (LF.Decl (u, cU))^ "\n") in*)
-	 (* let _ = print_string ("Considering a total of " ^ 
+	 let _ = print_string ("Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
+	 let _ = print_string ("Considering a total of " ^ 
 				 string_of_int (List.length mf_list)  ^ 
-				 " rec. functions\n") in *)
+				 " rec. functions\n") in
 	 let mk_wfrec (f,x,k,ttau) =
-          (* let _ = print_string ("mk_wf_rec ... for " ^ P.cdeclToString cD (LF.Decl (u,cU)) ^  " ") in 
+          let _ = print_string ("mk_wf_rec ... for " ^ P.cdeclToString cD (LF.Decl (u,cU, dep)) ^  " ") in 
 	  let _ = print_string ("for position " ^ string_of_int x ^ 			  "\n") in 
-	  let _ = print_string ("Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in *)
+	  let _ = print_string ("Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
 	  let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in 
 	  (* let _ = print_string ("Generated Arguments for rec. call " ^  args_to_string cD args ^ "\n") in *)
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
-	  (* let _ = print_string ("\nGenerated Recursive Call : " ^ calls_to_string cD (f, args, tau) "\n\n") in  *)
+	  (* let _ = print_string ("\nGenerated Recursive Call : " ^ calls_to_string cD (f, args, tau) "\n\n") in *)
 	    d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -527,7 +527,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
-	(* let _ = print_string ("[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in *)
+	let _ = print_string ("[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
 	let (_i, tau0') = get_return_type (Comp.Var (Syntax.Loc.ghost, y), tau0) in
 	let mk_wfrec (f,x,k, ttau) = 
 	  let (args, tau) = rec_spine' cD (y, tau0') (x,k,ttau) in  
@@ -563,7 +563,7 @@ let wf_rec_calls cD cG  =
 		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in 
-      (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");*)
+      print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
       cIH'
     ) 
   else
@@ -684,7 +684,7 @@ else dot_k (Substitution.LF.dot1 s) (k-1)
 
 let shiftMetaObj cM (cPsi', s_proj, cPsi) = 
   let phat  = Context.dctxToHat cPsi in 
-  let phat0 = Context.dctxToHat cPsi in 
+  let phat0 = Context.dctxToHat cPsi' in 
     match cM with 
       | l , LF.CObj cPhi -> 
 	  if Whnf.convDCtx cPsi cPhi then 
@@ -695,7 +695,7 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
 	  (match prefix_hat (Whnf.cnorm_psihat phat Whnf.m_id) 
  	                    (Whnf.cnorm_psihat phat' Whnf.m_id)  with 
 	    | None -> cM 
-	    | Some k -> 
+	    | Some k ->
 		(l, LF.ClObj (phat0, LF.MObj (Whnf.norm (tM, dot_k s_proj k)))))
 	  (* phat' >= phat, i.e.  phat is a prefix of phat' possibly *)
 (*	  if Whnf.conv_hat_ctx phat phat' then 

@@ -763,15 +763,15 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
     let cIH' = filter cD cG cIH (loc, e2) in
     if Whnf.convMetaObj cM' cM then
-      (  (* print_string  ("IH and recursive call agree on : "
+      (  print_string  ("IH and recursive call agree on : "
                       ^ P.metaObjToString cD cM' ^ " == " ^
-                      P.metaObjToString cD cM ^ "\n");*)
+                      P.metaObjToString cD cM ^ "\n");
       LF.Dec (cIH', Comp.WfRec (f, args, tau)))
       (* Note: tau' is understood as the approximate type *)
     else
-      ((* print_string ("IH and recursive call do NOT agree : "
+      (print_string ("IH and recursive call do NOT agree : "
         ^ P.metaObjToString cD cM' ^ " == " ^
-          P.metaObjToString cD cM  ^ "\n");*)
+          P.metaObjToString cD cM  ^ "\n");
       cIH')
 
   | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->

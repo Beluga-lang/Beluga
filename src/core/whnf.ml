@@ -1707,7 +1707,7 @@ let mctxMVarPos cD u =
     | ISub s1, ISub s2 -> convSub s1 s2
     | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
 
-  let rec convMetaObj (loc,mO) (loc',mO') = convMFront mO mO'
+  let rec convMetaObj (loc,mO) (loc',mO') = convMFront (mfrontMSub mO m_id) (mfrontMSub mO' m_id)
 
   and convMetaSpine mS mS' = match (mS, mS') with
     | (Comp.MetaNil , Comp.MetaNil) -> true

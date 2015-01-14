@@ -25,6 +25,7 @@ type error =
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
   | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+  | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
 
 exception Error of Syntax.Loc.t * error
 
@@ -102,6 +103,11 @@ let _ = Error.register_printer
 
       | LeftoverFV ->
 	  Format.fprintf ppf "Leftover free variable."
+      | IllTypedMetaObj (cD, cM, cPsi, mT) -> 
+            Format.fprintf ppf
+              "Meta object %a does not have type %a."
+              (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM))
+              (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
       | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
             Error.report_mismatch ppf
@@ -804,6 +810,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
       dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+  | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
   | (CObj cPsi, (CTyp w, _)) ->

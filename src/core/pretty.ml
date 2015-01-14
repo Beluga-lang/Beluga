@@ -108,6 +108,7 @@ module Int = struct
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
     val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_lf_mfront        : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
     val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 
     (* Regular Pretty Printers *)

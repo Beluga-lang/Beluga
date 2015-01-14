@@ -80,7 +80,7 @@ module Comp = struct
     | UnsolvableConstraints of Id.name * string
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
-    | IllTypedMetaObj of I.mctx * meta_obj * meta_typ 
+    (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
 (*  type rec_call = bool *)
 
@@ -114,11 +114,6 @@ module Comp = struct
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
         match err with
-	  | IllTypedMetaObj (cD, cM, mT) -> 
-            Format.fprintf ppf
-              "Meta object %a does not have type %a."
-              (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
-              (P.fmt_ppr_meta_typ cD Pretty.std_lvl) mT
           | MissingTotal prog ->
             Format.fprintf ppf "Function %s not known to be total."
               (R.render_cid_prog prog)
@@ -545,9 +540,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
           | Box (_,cM) -> 
-	      ( (* print_string "\nCheck whether compatible IH exists\n"; *)
-		(* print_string ("cIH " ^ Total.ih_to_string cD cG cIH ^ "\n"); *)
-		(* print_string ("Recursive call on " ^ P.metaObjToString cD cM ^ "\n");  *)
+	      ( print_string "\nCheck whether compatible IH exists\n";
+		print_string ("cIH " ^ Total.ih_to_string cD cG cIH ^ "\n");
+		print_string ("Recursive call on " ^ P.metaObjToString cD cM ^ "\n");
 	      Total.filter cD cG cIH (loc, M cM))
 	  | Syn(_, i) -> (match extract_var i with 
 			    | Some x -> Total.filter cD cG cIH (loc, V x)

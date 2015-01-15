@@ -189,12 +189,12 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) in             
+      let u = Whnf.newMMVar None (LF.Empty, cPhi', LF.TClo(tQ,ssi')) in             
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
       let ss_proj = S.LF.comp ss' s_proj in
-        LF.Root (Syntax.Loc.ghost, LF.MVar (u, ss_proj), LF.Nil)
+        LF.Root (Syntax.Loc.ghost, LF.MMVar ((u,Whnf.m_id), ss_proj), LF.Nil)
 
   | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       LF.Lam (Syntax.Loc.ghost, x, etaExpandMVstr cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )

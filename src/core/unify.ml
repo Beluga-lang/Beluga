@@ -1594,14 +1594,14 @@ let isVar h = match h with
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
        end  
     | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
-       (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) ->
+       (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) -> dprint (fun () -> "(case 0)");
 	begin try
             begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
-              | (true, true, _, _) ->
+              | (true, true, _, _) -> dprint (fun () -> "(case 1)");
 		unifyMMVarTerm cD0 cPsi i mt1 t1 (INorm sM2)
-              | (_ , _, true, true) ->
+              | (_ , _, true, true) -> dprint (fun () -> "(case 2)");
 		unifyMMVarTerm cD0 cPsi i' mt2 t2 (INorm sM1)
-              | (_ , _ , _ , _) ->
+              | (_ , _ , _ , _) -> dprint (fun () -> "(case 3)");
                   begin match (isPatMSub mt1, isProjPatSub t1 , isPatMSub mt2, isProjPatSub t2) with
                     | ( _ , _, true, true ) ->
 		      unifyMMVarTermProj cD0 cPsi i' mt2 t2 sM1
@@ -2253,15 +2253,15 @@ let isVar h = match h with
 
 
     let unifyTyp' mflag cD0 cPsi sA sB =
-       (dprint (fun () -> "\nUnifyTyp' " ^
-                         P.typToString cD0 cPsi sA ^ "\n          " ^
-                         P.typToString cD0 cPsi sB);
+       ((* dprint (fun () -> "\nUnifyTyp' " ^ *)
+        (*                  P.typToString cD0 cPsi sA ^ "\n          " ^ *)
+        (*                  P.typToString cD0 cPsi sB); *)
        resetDelayedCnstrs ();
        unifyTyp1 mflag cD0 cPsi sA sB;
-       dprint (fun () -> "After unifyTyp'");
-       dprint (fun () -> "cPsi = " ^ P.dctxToString cD0 cPsi ^ "\n") ;
-       dprint (fun () -> "sA = " ^ P.typToString cD0 cPsi sA ^ "\n     ");
-       dprint (fun () -> "sB = " ^ P.typToString cD0 cPsi sB))
+       (* dprint (fun () -> "After unifyTyp'"); *)
+       (* dprint (fun () -> "cPsi = " ^ P.dctxToString cD0 cPsi ^ "\n") ; *)
+       (* dprint (fun () -> "sA = " ^ P.typToString cD0 cPsi sA ^ "\n     "); *)
+       (* dprint (fun () -> "sB = " ^ P.typToString cD0 cPsi sB ) *) )
 
     let unifyTypRec1 mflag cD0 cPsi sArec sBrec =
       unifyTypRecW mflag cD0 cPsi sArec sBrec;

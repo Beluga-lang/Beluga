@@ -16,7 +16,7 @@ module Schema = Store.Cid.Schema
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.NamedRenderer
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28])
+(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28]) *)
 
 (*
  * OVERVIEW
@@ -110,7 +110,7 @@ let rec separate sep f xs = match xs with
   | [x] -> f x
   | h::t -> f h ^sep ^ separate sep f t
 
-let basisToString basis =
+let _basisToString basis =
   separate ", " (fun type_in_basis -> R.render_cid_typ type_in_basis) basis
 
 
@@ -136,15 +136,15 @@ let rec relevant tA basis = (match tA with
                         || a = type_in_basis) basis then
         (* there is some `b' in basis such that `a'-terms can appear in `b'-terms, that is,
            `a'-terms can appear in something we need *)
-        (dprint (fun () -> "Claiming that " ^ R.render_cid_typ a ^
-                    " can appear in any of the following: " ^ basisToString basis);
+        ( (* dprint (fun () -> "Claiming that " ^ R.render_cid_typ a ^ *)
+        (*             " can appear in any of the following: " ^ _basisToString basis); *)
 (*          dump_subord () ;
           dump_typesubord () ; *)
 	 [a])
       else
         (
-          dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^
-                    " can appear in any of the following: " ^ basisToString basis);
+          (* dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ *)
+          (*           " can appear in any of the following: " ^ _basisToString basis); *)
           [])
 
   | PiTyp((TypDecl(_x, tA1), _), tA2) ->

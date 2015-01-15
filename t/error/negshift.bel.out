@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-Ill-typed expression.
-    Expected type: pred ?Z[^0] 
-    Actual type: pred (N ..)
-=======
-Leftover meta-variables in computation-level expression; provide a type annotation
->>>>>>> master
+Ill-typed substitution.
+    Substitution:  
+    does not take context: g
+    to context: 

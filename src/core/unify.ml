@@ -243,6 +243,8 @@ let rec blockdeclInDctx cPsi = match cPsi with
           | Dot (Head (BVar n'), s) -> n <> n' && checkBVar s
           | Dot (Head (Proj(BVar n', index')), s) -> (n <> n' || index' <> index) && checkBVar s
           | Dot (Undef, s)          -> checkBVar s
+	  | EmptySub                -> true
+	  | Undefs                  -> true
           | _                       -> false
         in
           checkBVar s && isProjPatSub s
@@ -348,7 +350,7 @@ let isVar h = match h with
      msg);unwind (); raise (Error msg))
         | GlobalCnstrFailure (loc , msg) -> (dprint (fun () -> "Unwind trail - exception GlobalCnstrFailure " ^
      msg);unwind (); raise (GlobalCnstrFailure (loc, msg)))
-        | e -> (dprint (fun () -> "?? " ) ; unwind (); raise e)
+        | e -> (dprint (fun () -> "?? " ) ; unwind (); raise e )
 
   (* ---------------------------------------------------------------------- *)
 
@@ -399,8 +401,8 @@ let isVar h = match h with
   let instantiateMMVar (u, tM, cnstrL) =
     instantiateMMVar' (u, INorm tM, cnstrL)
 
-  let instantiateMSVar (s, sigma, cnstrL) =
-    instantiateMMVar' (s, ISub sigma, cnstrL)
+  (* let instantiateMSVar (s, sigma, cnstrL) = *)
+  (*   instantiateMMVar' (s, ISub sigma, cnstrL) *)
 
   (* ---------------------------------------------------------------------- *)
   (* Higher-order unification *)
@@ -459,26 +461,26 @@ let isVar h = match h with
 
   (* should perform a kind of eta expansion on the domain of a substitution.
      This implementation is totally buggy and wrong, but works for the test cases so far... *)
-  let simplifySub cD0 cPsi sigma =
-    let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in
-    let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in
-match sigma with
-    | SVar (s , ( _ ), _s2 ) ->
-      let (_, cPsi1, cPhi) = Whnf.mctxSDec cD0 s in
-      begin match cPsi1 with
-        | Null -> EmptySub
-        | _     -> sigma
-      end
-    | MSVar (_, (((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ) , _), _)) ->
-      instantiateMSVar (r, EmptySub, !cnstrs);
-      EmptySub      
-    | FSVar (_, (s_name , _s2) ) ->
-      let (_, Decl (_, ClTyp (STyp cPsi1,  _cPhi), _)) = Store.FCVar.get s_name in
-      begin match cPsi1  with
-        | Null -> EmptySub
-        | _     -> sigma
-      end
-    | _ -> sigma
+  let simplifySub cD0 cPsi sigma = sigma
+(*     let _ = dprint (fun () -> "\n[simplifySub] cPsi = " ^ P.dctxToString cD0 cPsi )  in *)
+(*     let _ = dprint (fun () -> "\n[simplifySub] sigma = " ^ P.subToString cD0 cPsi sigma)  in *)
+(* match sigma with *)
+(*     | SVar (s , ( _ ), _s2 ) -> *)
+(*       let (_, cPsi1, cPhi) = Whnf.mctxSDec cD0 s in *)
+(*       begin match cPsi1 with *)
+(*         | Null -> EmptySub *)
+(*         | _     -> sigma *)
+(*       end *)
+(*     | MSVar (_, (((_,  r , _, ClTyp (STyp Null, cPhi), cnstrs, _ ) , _), _)) -> *)
+(*       instantiateMSVar (r, EmptySub, !cnstrs); *)
+(*       EmptySub       *)
+(*     | FSVar (_, (s_name , _s2) ) -> *)
+(*       let (_, Decl (_, ClTyp (STyp cPsi1,  _cPhi), _)) = Store.FCVar.get s_name in *)
+(*       begin match cPsi1  with *)
+(*         | Null -> EmptySub *)
+(*         | _     -> sigma *)
+(*       end *)
+(*     | _ -> sigma *)
 
   let rec pruneMCtx' cD (t, cD1) ms = match (t, cD1) with
     | (MShift _k, Empty) -> (Whnf.m_id, Empty)
@@ -978,7 +980,9 @@ match sigma with
   *)
 
   and prune  cD0 cPsi' phat sM ss rOccur =
-    let _qq : (msub * sub) = ss in
+    let (ms,s) = ss in
+    dprint (fun () -> "Pruning term: " ^ P.normalToString cD0 cPsi' sM
+                    ^ " with inv. sub: " ^ P.subToString cD0 cPsi' s);
       prune' cD0 cPsi' phat (Whnf.whnf sM) ss rOccur
 
   and prune' cD0 cPsi' ((cvar, offset) as phat) sM ss rOccur = match sM with
@@ -1053,7 +1057,7 @@ match sigma with
    | MV v ->
      let (_, ClTyp (_, cPsi1)) = Whnf.mctxLookup cD0 v in
      let t' = simplifySub cD0 cPsi t in
-     let s' = invSub cD0 (Context.dctxToHat cPsi) (t' , cPsi1) ss rOccur in
+     let s' = pruneSubst cD0 cPsi (t' , cPsi1) ss rOccur in
      (v,s')
    | MUndef -> raise (Failure "[Prune] Bound MVar dependency")
 
@@ -1121,6 +1125,7 @@ match sigma with
   *)
   and pruneSubst cD cPsi (s, cPsi1) ss rOccur = match (s, cPsi1) with
     | (EmptySub, Null) -> EmptySub
+    | (Undefs , Null) -> EmptySub
     | (Shift (n), DDec(_cPsi', _dec)) ->
         pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
     | (Shift (_n), Null) -> EmptySub
@@ -1147,7 +1152,7 @@ match sigma with
     | (Dot (ft, s'), DDec(cPsi', _dec)) ->
        Dot (pruneFront cD cPsi ft ss rOccur, pruneSubst cD cPsi (s', cPsi') ss rOccur)
 
-    | (Dot (_, _), _) | (Undefs , _) | (EmptySub, _)
+    | (Dot (_, _), _) | (EmptySub, _)
        -> raise (Error.Violation "Badly typed substitution")
 
 
@@ -1434,7 +1439,9 @@ match sigma with
                       Constraints may be added for non-patterns.
   *)
 
-  let rec unifyTerm  mflag cD0 cPsi sN sM = unifyTerm'  mflag cD0 cPsi (Whnf.norm (Whnf.whnf sN)) (Whnf.norm (Whnf.whnf sM))
+  let rec unifyTerm  mflag cD0 cPsi sN sM =
+    dprint (fun () -> "Unifying terms: " ^ P.normalToString cD0 cPsi sN ^ " =?= " ^ P.normalToString cD0 cPsi sM);
+    unifyTerm'  mflag cD0 cPsi (Whnf.norm (Whnf.whnf sN)) (Whnf.norm (Whnf.whnf sM))
 
   and unifyTuple mflag cD0 cPsi sTup1 sTup2 = match (sTup1, sTup2) with
     | ((Last tM, s1) ,  (Last tN, s2)) ->
@@ -1460,7 +1467,7 @@ match sigma with
     | ISub s , STyp cPhi -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
 
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
-    begin try
+    begin (* try *)
       let ss1  = invert t1' in
       let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)
@@ -1468,7 +1475,7 @@ match sigma with
       let tp' = Whnf.cnormClTyp (tp, mt1) in
       let tM2' = trail (fun () -> pruneITerm cD cPsi1 (sM2,tp') (mtt1, ss1) (MMVarRef r1)) in
       instantiateMMVar' (r1, tM2', !cnstrs1);
-      with NotInvertible -> raise (Error.Violation "Unification violation")
+      (* with NotInvertible -> raise (Error.Violation "Unification violation") *)
        (* This might actually need to add a constraint, in which case "NotInvertible" seems
           the wrong kind of exception... *)
     end

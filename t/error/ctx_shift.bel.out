@@ -1,1 +1,4 @@
-Leftover meta-variables in computation-level expression; provide a type annotation
+Ill-typed substitution.
+    Substitution:  
+    does not take context: g
+    to context: 

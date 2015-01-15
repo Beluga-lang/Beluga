@@ -1367,17 +1367,19 @@ let genCGoals (cD':LF.mctx) mdec = match mdec with
       let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
 	(genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) , dep0)
   | LF.Decl (_u,  LF.ClTyp (LF.PTyp tA, cPsi), _) ->
-      let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^
-			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
-      let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
-      (* bp : This may potentially even loop! ;
-	 but this could initiate a potential split of PV including splitting the context
-	 g |- #A  should result in  g',x|- x   g',x|- #q
-         in this implementation, we assume that the context split has been done separetely,
-	 and hence we would only loop if we were to split #p (and initiate another context split)
-      *)
-	(genBCovGoals (cD', cPsi, tA), dep0)
-	(* raise Error.NotImplemented *)
+    raise Error.NotImplemented
+      (* Below is wrong somehow? *)
+      (* let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^ *)
+      (* 			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in *)
+      (* let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in *)
+      (* (\* bp : This may potentially even loop! ; *)
+      (* 	 but this could initiate a potential split of PV including splitting the context *)
+      (* 	 g |- #A  should result in  g',x|- x   g',x|- #q *)
+      (*    in this implementation, we assume that the context split has been done separetely, *)
+      (* 	 and hence we would only loop if we were to split #p (and initiate another context split) *)
+      (* *\) *)
+      (* 	(genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)), dep0) *)
+      (* 	(\* raise Error.NotImplemented *\) *)
 
 
 let rec best_ctx_cand (cD, cv_list) k cD_tail = match (cv_list, cD)  with

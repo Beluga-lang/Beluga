@@ -22,6 +22,7 @@ mlam g, #p => case [g |- #p ..] of
     [|- s N]
 ; 
 
+%{
 rec pos :(g:ctx)[g |- term] -> [ |- nat] =
 / total m (pos _ m) /
 fn l => case l of
@@ -35,3 +36,4 @@ mlam g,#p => case [g |- #p ..] of
 | [g,y:term |- y] => Z
 | [g,y:term |- #p..] => S (pos' [g] [g |- #p ..])
 ;
+}%

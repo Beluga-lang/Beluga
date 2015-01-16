@@ -352,6 +352,18 @@ let opengoalsToString ogoals = goalsToString ogoals 1
 
 type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No
 
+(* pre_match* (cPsi, tM) (cPsi', tM') = result
+
+- Yes (tA, tA') if tM is an instance of tM' and tM:tA and tM':tA'
+- No            if tM can never be an instance of tM'
+- Inst          if tM is claimed to be an instance of tM',
+                  i.e. tM's structure matches the structure of a
+                       subterm in tM', but there might be HO constraints
+- SplitCand     if tM can maybe be an instance of tM' after we split
+                tM further; this happens if tM is more general (i.e.
+                it is a meta-variable or a parameter variable) than tM'
+
+ *) 
 let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
   | (_         , LF.MVar  _ ) -> Inst
   | (LF.BVar k , LF.BVar k') ->
@@ -362,7 +374,18 @@ let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
       else No
   | (LF.PVar _ , LF.BVar k)  -> SplitCand
   | (LF.BVar k , LF.PVar _ ) -> Inst
-  | (LF.PVar _ , LF.PVar _ ) -> Inst
+  | (LF.PVar (k,s) , LF.PVar (n,s')) -> 
+     if k = n then 
+       (match s, s' with 
+	| LF.Shift l, LF.Shift l' -> 
+	   if l = l' then  
+	     Inst (* could return Yes *)
+	   else (if l < l' then SplitCand else No)
+	| LF.Shift l, LF.EmptySub -> No  
+          (* this would mean the written pattern is not inhabited *)
+	| _, _ -> Inst
+       )
+     else No
 
   | (LF.Const c, LF.Const c') ->
       if c = c' then
@@ -1367,19 +1390,19 @@ let genCGoals (cD':LF.mctx) mdec = match mdec with
       let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
 	(genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) , dep0)
   | LF.Decl (_u,  LF.ClTyp (LF.PTyp tA, cPsi), _) ->
-    raise Error.NotImplemented
+(*    raise Error.NotImplemented*)
       (* Below is wrong somehow? *)
-      (* let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^ *)
-      (* 			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in *)
-      (* let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in *)
-      (* (\* bp : This may potentially even loop! ; *)
-      (* 	 but this could initiate a potential split of PV including splitting the context *)
-      (* 	 g |- #A  should result in  g',x|- x   g',x|- #q *)
-      (*    in this implementation, we assume that the context split has been done separetely, *)
-      (* 	 and hence we would only loop if we were to split #p (and initiate another context split) *)
-      (* *\) *)
-      (* 	(genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)), dep0) *)
-      (* 	(\* raise Error.NotImplemented *\) *)
+      let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^ 
+       			P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in 
+      let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in 
+       (* bp : This may potentially even loop! ; 
+       	 but this could initiate a potential split of PV including splitting the context 
+       	 g |- #A  should result in  g',x|- x   g',x|- #q 
+          in this implementation, we assume that the context split has been done separetely, 
+       	 and hence we would only loop if we were to split #p (and initiate another context split) 
+        *)
+       	(genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)), dep0) 
+       	(* raise Error.NotImplemented *) 
 
 
 let rec best_ctx_cand (cD, cv_list) k cD_tail = match (cv_list, cD)  with

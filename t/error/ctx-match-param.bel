@@ -14,7 +14,8 @@ rec pos :{g:ctx}{#p:[g |- term]} Nat =
 mlam g,#p => case [g] of
 | [ ] => impossible [|- #p] in []
 | [g,y:term] => 
-  (case [g,y:term |- #p .. y] of 
+  (case [g,y:term |- #p .. ] of   % This passes and associates #p with Shift 0 == Shift 1, y/y
+                                 % This should not happen. It should have Shift 1 associated with it
   | [g, y:term |- y ] => (S Z)
   | [g,y:term |- #p..] => S (pos [g] [g |- #p ..]))
 ;

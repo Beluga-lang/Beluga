@@ -36,7 +36,7 @@ datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratify 1 =
     ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
   -> Reduce [ |- arr A B] [ |- M]
 ;
-%{
+
 rec haltsMstep : [ |- mstep M M'] -> [ |- halts M'] -> [ |- halts M] =
 / total (haltsMstep) /
 fn s => fn h => let [ |- MS] = s in let [ |- halts/m MS' V] = h in
@@ -65,7 +65,7 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
          closed [ |- B] [ |- app M N]  [ |- app M' N]
                 [ |- stepapp MS refl] (f [ |- N] rn))
 ;
-}%
+
 %  h |- #s : g
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
@@ -82,7 +82,7 @@ mlam g => mlam #p => case [g |- #p ..] of
  | [g',x:tm A |-  #q ..] => ? %{ fn rs => let Dot rs' rN = rs in
                       lookup [g'] [g' |-  #q ..] rs'}%
 ;
-%{
+
 rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M #S[^]] =
 / total m (eval g a s m) /
  mlam g => mlam M => fn rs => case [g |- M ..] of
@@ -102,4 +102,4 @@ rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
 / total (weakNorm) /
 mlam M => cr1 (eval [] [ |- M] Nil)
 ;
-}%
+

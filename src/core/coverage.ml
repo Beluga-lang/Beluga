@@ -1298,6 +1298,9 @@ let rec addToMCtx cD (cD_tail, ms) = match cD_tail with
   | LF.Decl (u,  LF.ClTyp (LF.PTyp tA, cPsi), dep) :: cD_tail ->
       let pdec = LF.Decl(u,  LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)), dep) in
         addToMCtx (LF.Dec (cD, pdec)) (cD_tail, Whnf.mvar_dot1 ms)
+  | LF.Decl (u,  LF.ClTyp (LF.STyp cPhi, cPsi), dep) :: cD_tail ->
+      let sdec = LF.Decl(u,  LF.ClTyp (LF.STyp (Whnf.cnormDCtx (cPhi, ms)), Whnf.cnormDCtx (cPsi, ms)), dep) in
+        addToMCtx (LF.Dec (cD, sdec)) (cD_tail, Whnf.mvar_dot1 ms)
   | cdecl :: cD_tail ->
       addToMCtx (LF.Dec (cD, cdecl)) (cD_tail, Whnf.mvar_dot1 ms)
 
@@ -1331,13 +1334,14 @@ let rec append cD cD_tail = match cD_tail with
 *)
 
 (* cD0, cD |- id(cD) : cD *)
+(*
 let rec gen_mid cD0 cD = match cD with
   | LF.Empty -> LF.MShift (Context.length cD0)
   | LF.Dec(cD, _mdec) ->
       let ms' = gen_mid cD0 cD (* cD0, cD |- ms' : cD *)
       in LF.MDot (LF.MV 1, Whnf.mcomp ms' (LF.MShift 1))
 
-
+*)
 (*
 (* extend_cs cs (cO, k) = cs'
 
@@ -1392,7 +1396,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
         cO ; cD_i |- ms_i   : cD
         cO ; cD_i |- cPsi_i : ctx
   *)
-  let rec genCtx  (LF.Dec (cD', LF.Decl _ ) as cD) cpsi elems  = begin match elems with
+  let rec genCtx  (LF.Dec (_cD', LF.Decl _ ) as cD) cpsi elems  = begin match elems with
     | [] -> []
     | LF.SchElem (decls, trec) :: elems ->
 	let cPsi_list = genCtx cD cpsi elems in
@@ -1404,8 +1408,9 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
 	let tA = match trec with LF.SigmaLast(_, tA) -> LF.TClo (tA, s) | _ -> LF.TClo(LF.Sigma trec, s) in
 	let _ = dprint (fun () -> "[genCtx] tA = " ^ P.typToString cD0 cpsi' (tA, S.LF.id)) in
 	  (* cD0 ; cpsi |- tA : type *)
-	let ms = gen_mid cD0 cD' in
-        (* cD0,cD |- ms : cD
+	(* let ms = gen_mid cD0 cD in *)
+	let ms = LF.MShift ((Context.length cD0) - (Context.length cD)) in
+        (* cD0 |- ms : cD
               cD' |- cPsi' ctx *)
 	let cPsi'      = LF.DDec (cpsi', LF.TypDecl (new_bvar_name "@x" , tA)) in
 
@@ -1470,9 +1475,11 @@ let rec best_ctx_cand (cD, cv_list) k cD_tail = match (cv_list, cD)  with
 				     (* cD' |- ms : cD *)
 				     let ms' = LF.MDot (LF.CObj (cPhi),  ms) in
 				     let k = List.length cD_tail in
+				     let _ = dprint (fun () -> "[ctx_goal] cD' = " ^ P.mctxToString cD') in
+				     let _ = dprint (fun () -> "[ctx_goal] ms' = " ^ P.msubToString cD' ms) in
 				     let (cD'', ms0) = addToMCtx cD' (cD_tail, ms') in
 				       (* cD', cD_tail |- ms0 : cD, cD_tail *)
-				     let _ = dprint (fun () -> "[ctx_goal] = " ^
+				     let _ = dprint (fun () -> "[ctx_goal] " ^
 						       P.mctxToString cD'' ^ " \n |- \n" ^
 						       P.msubToString cD'' ms0 ^
 						       " : " ^ P.mctxToString (append cD cD_tail)) in

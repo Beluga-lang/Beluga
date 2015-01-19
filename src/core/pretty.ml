@@ -301,7 +301,7 @@ module Int = struct
       in function
         | LF.Lam (_, x, m) ->
             let cond = lvl > 0 in
-              fprintf ppf "%s\\%s. %a%s"
+              fprintf ppf "%s\%s. %a%s"
                 (l_paren_if cond)
                 (R.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m

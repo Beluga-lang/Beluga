@@ -2365,7 +2365,6 @@ let unify_phat psihat phihat =
       let cPsi2' = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in
          unifyDCtx1 Unification cD0 cPsi1' cPsi2'
 
-
     let matchTerm cD0 cPsi sM sN =
       unify' Matching cD0 cPsi sM sN
 

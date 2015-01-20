@@ -22,7 +22,7 @@ ann   : tm -> tp -> tm.  % infix left 5 #.
 % Typing
 has : tm -> tp -> type. % infix left 5 is.
 
-is_z   :
+%{ is_z   :
        % ----------
          has z  nat.
 
@@ -30,13 +30,14 @@ is_s   : has E nat ->
          % -----------
          has (s E) nat.
 
-is_roll : has E (T (mu (\a. T a))) ->
+}%
+is_roll : has E (T (mu \a. T a)) ->
         % -----------------------------------------------
-          has (roll E (mu (\a. T a)))  (mu (\a. T a)).
+          has (roll E (mu \a. T a))  (mu \a. T a).
 
 is_unroll : has E  (mu (\a. T a)) ->
         % ----------------------------------------------------
-          has (unroll E (mu (\a. T a)))  (T (mu (\a. T a))).
+          has (unroll E (mu \a. T a))  (T (mu \a. T a)).
 
 is_@   : has E1  (arr T1 T2) ->
          has E2 T1 ->
@@ -77,7 +78,7 @@ value_tlam : value (tlam (\a. E a)).
 
 ~> : tm -> tm -> type. % infix left 5 ~>.
 
-~>_s : ~> E E' ->
+%{~>_s : ~> E E' ->
      % ---------------
        ~> (s E) (s E').
 
@@ -109,7 +110,7 @@ value_tlam : value (tlam (\a. E a)).
 ~>_unroll2 : value E ->
            % -----------------------------
             ~> (unroll (roll E T1) T2) E.
-
+}%
 ~>_roll : ~> E E' ->
         % -------------------------
           ~> (roll E T) (roll E' T).
@@ -119,9 +120,9 @@ value_tlam : value (tlam (\a. E a)).
 % Preservation
 
 rec pres : [ |- has E T] -> [ |- ~> E E'] -> [ |- has E' T] =
- / total ev (pres e t e' d ev)/
+/ total ev (pres e t e' d ev)/
 fn d => fn ev => case ev of
-| [ |- ~>_s EV] =>
+%{| [ |- ~>_s EV] =>
  (let [ |- is_s D] = d in
   let [ |- D']      = pres [ |- D] [ |- EV] in
     [ |- is_s D']
@@ -136,6 +137,7 @@ fn d => fn ev => case ev of
   let [ |- D2']       = pres [ |- D2] [ |- EV2] in
     [ |- is_@ D1 D2']
  )
+
 | [ |- ~>_@3 V] =>
   let [ |- is_@ (is_lam (\x. (\d. (D1' x d)))) D2] = d in  [ |- D1' _ D2]
 
@@ -156,11 +158,12 @@ fn d => fn ev => case ev of
   let [ |- D']            = pres [ |- D] [ |- EV] in
     [ |- is_unroll D']
   )
-
+}%
 | [ |- ~>_roll EV] =>
   let [ |- is_roll D] = d in
   let [ |- D']         = pres [ |- D] [ |- EV] in
     [ |- is_roll D']
+
 ;
 
 
@@ -178,7 +181,7 @@ step : (~> E E') -> step_or_val E.
 val : (value E) -> step_or_val E.
 
 
-
+%{
 
 rec progress : [ |- has E T] -> [ |- step_or_val E] =
  / total d (progress e t d)/
@@ -228,7 +231,7 @@ fn d => case d of
    | [ |- val value_lam]       => impossible [ |- D] in []
    | [ |- val value_tlam]      => impossible [ |- D] in [])
 ;
-
+}%
 %{
 
 % Corresponding proof in Twelf
@@ -333,3 +336,4 @@ prog_tlam :
 
 % QED
 }%
+

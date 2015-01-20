@@ -383,7 +383,6 @@ let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
                 
  *) 
 let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
->>>>>>> 8fddaaaef927333ef348b4253dc74530296834c4
   | (_         , LF.MVar  _ ) -> Inst
   | (LF.BVar k , LF.BVar k') ->
       if k = k' then
@@ -393,7 +392,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
       else No
   | (LF.PVar _ , LF.BVar k)  -> SplitCand
   | (LF.BVar k , LF.PVar _ ) -> Inst
-<<<<<<< HEAD
+(*
   | (LF.PVar (k,s) , LF.PVar (n,s')) -> 
      if k = n then 
        (match s, s' with 
@@ -406,9 +405,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
 	| _, _ -> Inst
        )
      else No
-=======
->>>>>>> 8fddaaaef927333ef348b4253dc74530296834c4
-
+ *)
   | (LF.PVar (p,s), LF.PVar (q,s')) -> 
     let ms = Ctxsub.mctxToMMSub cD cD' in
     let cPsi_p' = Whnf.cnormDCtx (cPsi', ms) in

@@ -356,21 +356,6 @@ type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No |
 
 (* pre_match_head (cPsi, tH) (cPsi', tH') = result
 
-<<<<<<< HEAD
-(* pre_match* (cPsi, tM) (cPsi', tM') = result
-
-- Yes (tA, tA') if tM is an instance of tM' and tM:tA and tM':tA'
-- No            if tM can never be an instance of tM'
-- Inst          if tM is claimed to be an instance of tM',
-                  i.e. tM's structure matches the structure of a
-                       subterm in tM', but there might be HO constraints
-- SplitCand     if tM can maybe be an instance of tM' after we split
-                tM further; this happens if tM is more general (i.e.
-                it is a meta-variable or a parameter variable) than tM'
-
- *) 
-let pre_match_head (cPsi, tH) (cPsi', tH') = match (tH , tH') with
-=======
 - Yes (tA, tA') if tH is an instance of tH' and tH:tA and tH':tA'
 - No            if tH can never be an instance of tH'
 - Inst          if tH is claimed to be an instance of tH',

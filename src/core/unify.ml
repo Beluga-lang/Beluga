@@ -2192,7 +2192,15 @@ let isVar h = match h with
 		 let l = List.length (!globalCnstrs) in 
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
-                        " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
+                        " = " ^ P.normalToString cD cPsi (tM2, id)
+			^ "\n");
+		    if Whnf.conv (tM1, id) (tM2, id) then 
+		      (* Note: we test whether tM1 and tM2 are 
+		         convertible because some terms which fall
+                         outside of the pattern fragment are convertible,
+                         but not unifiable *)        
+		      forceGlobalCnstr' cnstrs
+		    else 
                     begin try
                       (unify1 Unification cD cPsi (tM1, id) (tM2, id);
 		       if l = List.length (!globalCnstrs) then 

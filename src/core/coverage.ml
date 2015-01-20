@@ -75,6 +75,35 @@ type problem = {loc : Syntax.Loc.t;
                 branches : Comp.branch list;
                 ctype : Comp.typ}         (* type and context of scrutinee *)
 
+(*
+let is_id cD t = match t with 
+  | LF.MShift k ->  k = Context.length cD 
+  | LF.MDot (LF.MV _ , t) -> is_id cD t
+
+
+let rec trivial_meta_obj (_ , m0) mT = match m0, mT with
+  | LF.CObj (LF.CtxVar _ ) , _ -> true
+  | LF.ClObj (phat, LF.MObj tM ) ,  LF.ClTyp (LF.MTyp tA, cPsi) ->     
+  | LF.ClObj (phat, LF.PObj p )  ,  LF.ClTyp (LF.PTyp tA, cPsi) ->     
+   
+  | LF.ClObj (phat, LF.SObj s )  ,  LF.ClTyp (LF.STyp cPhi, cPsi) ->     
+
+let trivial_branch b tau_sc = match b, tau_sc  with 
+  | Comp.EmptyBranch (_loc, _cD, Comp.Var _ , t), _  -> 
+     is_id cD t
+  | Comp.Branch (_loc, _cD, Comp.Var _ , t), _  -> is_id cD t
+  | Comp.Branch (_loc, _cD, Comp.PatMetaObj (_ , m0) , t), Comp.TypBox (_, mT)  -> 
+     is_id cD t && trival_meta_obj m0 mT
+
+
+let rec trivial_coverage cD branches tau_sc = match tau_sc with 
+  | Comp.TypBox (_ , mT) ->  trivial_coverage' cD mT 
+  | _ -> List.exists (b -> trivial_branch b tau_sc) branches 
+
+
+and trivial_coverage' cD branches mT =  
+ *)
+
 (* Make a coverage problem *)
 let make loc prag cD branches typ =
       {loc= loc;
@@ -368,6 +397,20 @@ type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No |
                 
  *) 
 let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
+(*  | (LF.MVar (LF.Offset u,s), LF.MVar (LF.Offset v,s')) -> 
+     if Whnf.convHead (tH, idSub) (tH', idSub) then 
+       let (_, tA, _cPsi)   = Whnf.mctxMDec cD u in
+       Yes ((tA, s), (tA, s'))
+     else 
+      Inst 
+
+   ** How to check that two terms M and N with mvars that fall outside
+   the pattern fragment are identical? - 
+   **
+   - Convertibility doesn't quite apply because cD and cD' might be different
+   - Matching will fail due to unresolved constraints
+
+*) 
   | (_         , LF.MVar  _ ) -> Inst
   | (LF.BVar k , LF.BVar k') ->
       if k = k' then
@@ -513,19 +556,19 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
 	  pre_match cD cD_p covGoal' patt' matchCands splitCands
 
     | (LF.Root (_ , tH, tS), LF.Root (loc, tH', tS')) ->
-	begin match pre_match_head cD cD_p (cPsi, tH) (cPhi, tH') with
-	  | Yes (sA, sA') ->
+	 begin match pre_match_head cD cD_p (cPsi, tH) (cPhi, tH') with
+          | Yes (sA, sA') ->
 	      pre_match_spine  cD cD_p
-		               (cPsi , tS , sA)
-		               (cPhi , tS', sA')
-		               matchCands splitCands
-	  | No            -> raise (Error (loc,
-                                           MatchError ("Head mismatch " ^ P.headToString cD cPsi tH ^ " =/= " ^ P.headToString cD_p cPhi tH' ^ "\n")))
+			       (cPsi , tS , sA)
+			       (cPhi , tS', sA')
+			       matchCands splitCands
+          | No            -> raise (Error (loc,
+						MatchError ("Head mismatch " ^ P.headToString cD cPsi tH ^ " =/= " ^ P.headToString cD_p cPhi tH' ^ "\n")))
 	  | Inst          ->
 	      (Eqn (covGoal, patt) :: matchCands , splitCands)
 	  | SplitCand     -> (matchCands , Split (covGoal, patt)::splitCands)
 	  | CtxSplitCand (mC, sC) -> (mC @ matchCands , sC @ splitCands)
-	end
+	 end
   end
 
 and pre_match_spine cD cD_p (cPsi , tS , sA)

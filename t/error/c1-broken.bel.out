@@ -1,0 +1,10 @@
+######   COVERAGE FAILURE: Case expression doesn't cover: ######
+##       CASE(S) NOT COVERED :
+
+(1)   ., {g : termCtx}, {Y : [g |- term]}, {X : [g |- term]}
+ .
+  |-  [g |- app (Y ..) (X ..)]
+
+
+
+##

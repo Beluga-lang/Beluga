@@ -665,7 +665,6 @@ and cnorm (tM, t) = match tM with
       -> PiTyp ((cnormDecl (decl, t), dep), cnormTyp (tB, t))
 
     | TClo (tA, s) -> normTyp (cnormTyp (tA,t), cnormSub (s,t))
-(*       -> TClo(cnormTyp (tA,t), cnormSub (s,t))*)
 
     | Sigma recA
       -> Sigma(cnormTypRec (recA, t))

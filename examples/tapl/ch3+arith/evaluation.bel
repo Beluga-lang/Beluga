@@ -1,5 +1,4 @@
-%{
-  CH 3:  Untyped arithmetic expressions
+%{ CH 3:  Untyped arithmetic expressions
   Author: Brigitte Pientka
 
   EVALUATION RULES AND META-THEORY
@@ -9,9 +8,7 @@
   which is in fact a false statement!)
 
   CORRECT SOLUTION: see evaluation-corrected.bel
-
 }%
-
 % Values
 datatype num_value : term -> type = 
 | v_z    : num_value z
@@ -23,9 +20,6 @@ datatype value     : term -> type =
 | v_false: value false
 | v_num  : num_value V -> value V
 ;
-
-
-
 
 % Small-step operational semantics
 datatype step: term -> term -> type = 
@@ -284,6 +278,64 @@ fn ms =>  case ms of
 | [ |- ms_step S] =>
   [ |- m_step S m_ref]
 ;
+
+% -------------------------------------------------------- %
+%{
+Typing
+}%
+
+datatype tp : type =
+| nat : tp
+| bool : tp
+;
+
+datatype hastype: term -> tp -> type =
+| t_zero : hastype z nat
+| t_succ : hastype M nat 
+     -> hastype (succ M) nat
+| t_pred : hastype M nat
+      -> hastype (pred M) nat
+| t_true : hastype true bool
+| t_false: hastype false bool
+| t_iszero: hastype M nat
+          -> hastype (iszero M) bool
+| t_switch: hastype M bool -> hastype M1 T -> hastype M2 T
+          -> hastype (switch M M1 M2) T
+;
+
+rec tps: [|- hastype M T] -> [|- step M M'] -> [|- hastype M' T] = 
+/ total s (tps m t m' d s) /
+fn d => fn s => case s of
+| [|- e_switch_true] => 
+  let [|- t_switch D D1 D2] = d in [|- D1]
+| [|- e_switch_false] => 
+  let [|- t_switch D D1 D2] = d in [|- D2]
+| [|- e_switch S] => 
+  let [|- t_switch D D1 D2] = d in 
+  let [|- D'] = tps [|- D] [|- S] in
+  [|- t_switch D' D1 D2]
+| [|- e_pred_zero] => 
+  let [|- t_pred _ ] = d in [|- t_zero]
+| [|- e_pred_succ _ ] => 
+  let [|- t_pred (t_succ D) ] = d in [|- D]
+| [|- e_iszero_zero] => 
+  let [|- t_iszero _] = d in [|- t_true]
+| [|- e_iszero_succ _ ] => 
+  let [|- t_iszero _] = d in [|- t_false]
+| [|- e_pred S] => 
+  let [|- t_pred D] = d in 
+  let [|- D'] = tps [|- D] [|- S] in 
+  [|- t_pred D']
+| [|- e_succ S] => 
+  let [|- t_succ D] = d in 
+  let [|- D'] = tps [|- D] [|- S] in 
+  [|- t_succ D']
+| [|- e_iszero S] => 
+  let [|- t_iszero D] = d in 
+  let [|- D'] = tps [|- D] [|- S] in 
+  [|- t_iszero D']
+;
+
 
 
 % -------------------------------------------------------- %

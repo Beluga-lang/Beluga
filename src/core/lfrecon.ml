@@ -1502,7 +1502,7 @@ and elTerm' recT cD cPsi r sP = match r with
 		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
 		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
 		dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
-		raise (Error (loc, CompTypAnn))
+		raise (Error (loc, TypMismatchElab (cD, cPsi, sP, (tQ,s''))))
               | _ ->
 		begin
 		  dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));

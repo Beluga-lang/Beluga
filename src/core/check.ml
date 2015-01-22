@@ -984,7 +984,7 @@ module Sgn = struct
           LF.checkSchema (Syntax.Loc.ghost) cD cPsi schema;
           check_sgn_decls decls
 
-    | Syntax.Int.Sgn.Rec (l) :: decls ->
+    | Syntax.Int.Sgn.Rec (l) :: decls -> 
         let cD = Syntax.Int.LF.Empty in
         let cG = Syntax.Int.LF.Empty in
         List.iter (fun (f, tau, e)->

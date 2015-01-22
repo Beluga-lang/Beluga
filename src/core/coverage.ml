@@ -98,6 +98,7 @@ let trivial_meta_obj cD  (_loc, m0) mT = match m0, mT with
 	  | LF.SVar (0,0, s) -> Whnf.convSub s Substitution.LF.id
 	  | _ -> false
       )
+  | _ -> false
 
 
 let is_id cD t cD' = 
@@ -108,16 +109,22 @@ let is_id cD t cD' =
   | LF.MDot (LF.CObj (LF.CtxVar _ ), t), LF.Dec (cD0, _ ) -> id t cD0
   | LF.MDot ((LF.ClObj (_, _) as m0), t), LF.Dec (cD0, LF.Decl(_, tU, _ ))-> 
       let  m0' = (Syntax.Loc.ghost, m0) in
-	id t cD0 && trivial_meta_obj cD m0' tU
+      let b = trivial_meta_obj cD m0' (Whnf.cnormMetaTyp (tU,t)) in 
+	(* if b then () else print_string ("NON-Trivial Obj\n" ^ P.metaObjToString cD m0' ^ " \n");*)
+	id t cD0 && b
   | _ -> false
   in 
-    id t cD'
+   id t cD' 
+
 
 
 let trivial_branch cD b tau_sc = match b, tau_sc  with 
   | Comp.Branch (_loc, cD0, _cG, Comp.PatVar _ , t, _e), _  -> is_id cD0 t cD
   | Comp.Branch (_loc, cD0, _cG, Comp.PatMetaObj (_ , m0), t, _e), Comp.TypBox (_, mT) ->  
-     is_id cD0 t cD && trivial_meta_obj cD0 m0 (Whnf.cnormMetaTyp (mT, t))
+      let b = trivial_meta_obj cD0 m0 (Whnf.cnormMetaTyp (mT, t)) in 
+	((* print_string ("Trivial Branch " ^ P.metaObjToString cD0 m0 ^ " ?\n");
+	if b then print_string ("===> Yes\n") else print_string ("===> No\n");*)
+	is_id cD0 t cD && b)
   | Comp.Branch (_loc, cD0, _cG, patt , _t, _e), _ -> false
   | _ -> false
 

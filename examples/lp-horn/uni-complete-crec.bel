@@ -34,7 +34,7 @@ fn cn => case cn of
 }%
 
 and cmpai: (g:c_ctx)[g |- atomic_prfs (A ..)] ->
-b	       [g, q:p, u:focus (A ..) q |-  solve (atom q)] =
+	       [g, q:p, u:focus (A ..) q |-  solve (atom q)] =
 % / total at (cmpai g a at)/
 fn at => case at of
   | [g |- andalso (#p.2 .. ) (#p.3 ..)] => [g,q,u |-  s_atom u (#p.1 ..)]

@@ -90,11 +90,9 @@ let newMTypName = function
 let newMMVar' n (cD, mtyp) = match n with
   | None -> 
       let n = Id.mk_name (newMTypName mtyp) in 
-	(print_string ("[newMMVar'] Generated name " ^ R.render_name n ^ "\n");
-	 (n, ref None, cD, mtyp, ref [], Maybe))
+	 (n, ref None, cD, mtyp, ref [], Maybe)
   | Some name -> 
-      (print_string ("[newMMVar'] Has name " ^ R.render_name name ^ "\n");
-      (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No))
+      (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
 
 let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (MTyp tA,cPsi))
 let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (PTyp tA, cPsi))

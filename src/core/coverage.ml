@@ -895,6 +895,7 @@ let rec genAllObj cg tHtA_list  = match tHtA_list with
 	let cg' = genObj cg tH_tA in
 	   cg' :: genAllObj cg tHAlist
       with U.Failure _ -> (dprint (fun () -> "Unification failure - no Obj generated"); genAllObj cg tHAlist)
+	| U.GlobalCnstrFailure _ -> genAllObj cg tHAlist
 (*	| _ ->(dprint (fun () -> "Other failure - no Obj generated") ;genAllObj cg tHAlist)*)
       end
 
@@ -1111,9 +1112,8 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
                            NotSolvable
                           )
                         | U.GlobalCnstrFailure (_ , cnstr) ->
- 	                 let _ = print_string ("Unification of global constraint "
-                                                 ^ cnstr ^ " failed.\n")
-                         in
+ 	                 (* let _ = print_string ("Unification of global constraint " ^ cnstr ^ " failed.\n")
+                         in *)
                          NotSolvable
                       end
 	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands', sCands')))
@@ -2337,7 +2337,7 @@ let check_coverage_success problem  =
 let covers problem projObj =
 if !Total.enabled || !enableCoverage then 
  (if trivial_coverage problem.cD problem.branches problem.ctype then
-   (print_string "Trival Coverage\n";
+   ((* print_string "Trival Coverage\n";*)
     Success)
   else 
     (let _ = dprint (fun () -> "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = " ^
@@ -2362,10 +2362,10 @@ if !Total.enabled || !enableCoverage then
        let r'           = List.length (revisited_og) in
 	 
 	 if r  > r' then
-	   (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
+	   ((* print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
 	    print_endline ("CASES TRIVIALLY COVERED in line " ^
 			     Syntax.Loc.to_string  problem.loc
-			   ^ " : " ^ string_of_int (List.length (trivial_og)))
+			   ^ " : " ^ string_of_int (List.length (trivial_og)))*)
 	      (* opengoalsToString trivial_og *)
 	   )
 	 else () ;

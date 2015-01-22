@@ -55,7 +55,7 @@ fn e => case e of
    [g, k |-  (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))]
 ;
 
-
+%{
 let id_fun = [ |- lam o \x. ret x] ;
 
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
@@ -71,7 +71,7 @@ let r1 = cpse [b:block x:value o , _t:cvalue o |-  ret b.1] ;
 let r2 = cps [ |- lam o \x. ret x] ;
 
 let r3 = cps  [ |- (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x )))))] ;
-
+}%
 
 %{
 

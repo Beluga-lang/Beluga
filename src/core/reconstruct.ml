@@ -17,7 +17,7 @@ module C     = Whnf
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
-
+module T = Store.Cid.Typ
 
 let strengthen : bool ref =  Lfrecon.strengthen
 
@@ -382,7 +382,7 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
-    | (Int.LF.PiKind ((Int.LF.TypDecl (n, tA1), _ ), kK), s) ->
+    | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), _ ), kK), s) ->
         let tA1' = strans_typ cD (tA1, s) conv_list in
         let h    = if !strengthen then
                     (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
@@ -390,11 +390,11 @@ let mgAtomicTyp cD cPsi a kK =
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar (Some n) (cD, cPhi' , Int.LF.TClo (tA1', ssi'))  in
+                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi'))  in
                      let ss_proj = LF.comp ss' s_proj in
                        Int.LF.MMVar ((u, Whnf.m_id), ss_proj))
                    else
-                     let u  = Whnf.newMMVar (Some n) (cD, flat_cPsi , tA1')  in 
+                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  in 
                      Int.LF.MMVar ((u, Whnf.m_id), s_proj)
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)

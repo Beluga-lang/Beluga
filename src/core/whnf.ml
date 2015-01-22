@@ -82,14 +82,19 @@ let etaContract tM = begin match tM with
 
 
 let newMTypName = function
-  | ClTyp (MTyp tA,_) -> Id.MVarName (T.gen_var_name tA)
+  | ClTyp (MTyp tA,_) -> Id.MVarName (T.gen_mvar_name tA)
   | ClTyp (PTyp tA,_) -> Id.PVarName (T.gen_var_name tA)
   | ClTyp (STyp _,_) -> Id.SVarName None
   | CTyp _ -> Id.NoName
 
 let newMMVar' n (cD, mtyp) = match n with
-  | None -> (Id.mk_name (newMTypName mtyp), ref None, cD, mtyp, ref [], Maybe)
-  | Some name -> (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
+  | None -> 
+      let n = Id.mk_name (newMTypName mtyp) in 
+	(print_string ("[newMMVar'] Generated name " ^ R.render_name n ^ "\n");
+	 (n, ref None, cD, mtyp, ref [], Maybe))
+  | Some name -> 
+      (print_string ("[newMMVar'] Has name " ^ R.render_name name ^ "\n");
+      (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No))
 
 let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (MTyp tA,cPsi))
 let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (PTyp tA, cPsi))

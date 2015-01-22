@@ -523,8 +523,9 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> let (cQ', MetaTyp tp') = addVar loc p cQ (MMV (n,q)) (MetaTyp tp) in
-		    (cQ', (n, q, cD, tp', c, dep))
+	  | None -> 
+	      let (cQ', MetaTyp tp') = addVar loc p cQ (MMV (n,q)) (MetaTyp tp) in
+		(cQ', (n, q, cD, tp', c, dep))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	raise (Error (loc, LeftoverConstraints))

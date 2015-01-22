@@ -76,26 +76,16 @@ type problem = {loc : Syntax.Loc.t;
                 ctype : Comp.typ}         (* type and context of scrutinee *)
 
 
-let is_id cD t = 
-  let l = Context.length cD in 
-  let rec id t = match t with 
-  | LF.MShift n ->  n = l
-  | LF.MDot (LF.MV _ , t) -> id t
-  | _ -> false
-  in 
-    id t
-
-
-let trivial_meta_obj cD (_loc, m0) mT = match m0, mT with
+let trivial_meta_obj cD  (_loc, m0) mT = match m0, mT with
   | LF.CObj (LF.CtxVar _ ) , _ -> true 
-  | LF.ClObj (phat, LF.MObj tM ) ,  LF.ClTyp (LF.MTyp _tA, cPsi) ->     
+  | LF.ClObj (phat, LF.MObj tM ) ,  LF.ClTyp (LF.MTyp _tA, cPsi) ->      
       (match tM with 
 	 | LF.Root (_, LF.MVar (LF.Offset u, s), LF.Nil ) -> 
 	     let (_, _tA', cPsi') = Whnf.mctxMDec cD u in 
-	     Whnf.convSub s (Substitution.LF.id) && Whnf.convDCtx cPsi' cPsi
+		Whnf.convSub s (Substitution.LF.id) && Whnf.convDCtx cPsi' cPsi
 	 | _ -> false
       ) 
-  | LF.ClObj (phat, LF.PObj tH )  ,  LF.ClTyp (LF.PTyp tA, cPsi) ->     
+  | LF.ClObj (phat, LF.PObj tH )  ,  LF.ClTyp (LF.PTyp tA, cPsi) ->   
       (match tH with 
 	 | LF.PVar (p, s)  -> 
 	     let (_, _tA', cPsi') = Whnf.mctxPDec cD p in 
@@ -109,10 +99,26 @@ let trivial_meta_obj cD (_loc, m0) mT = match m0, mT with
 	  | _ -> false
       )
 
+
+let is_id cD t cD' = 
+  let l = Context.length cD in 
+  let rec id t cD0 = match t, cD0 with 
+  | LF.MShift n , _ ->  n = l
+  | LF.MDot (LF.MV _ , t), LF.Dec (cD0, _ ) -> id t cD0
+  | LF.MDot (LF.CObj (LF.CtxVar _ ), t), LF.Dec (cD0, _ ) -> id t cD0
+  | LF.MDot ((LF.ClObj (_, _) as m0), t), LF.Dec (cD0, LF.Decl(_, tU, _ ))-> 
+      let  m0' = (Syntax.Loc.ghost, m0) in
+	id t cD0 && trivial_meta_obj cD m0' tU
+  | _ -> false
+  in 
+    id t cD'
+
+
 let trivial_branch cD b tau_sc = match b, tau_sc  with 
-  | Comp.Branch (_loc, _cD, _cG, Comp.PatVar _ , t, _e), _  -> is_id cD t
-  | Comp.Branch (_loc, _cD, _cG, Comp.PatMetaObj (_ , m0) , t, _e), Comp.TypBox (_, mT) ->  
-     is_id cD t && trivial_meta_obj cD m0 mT 
+  | Comp.Branch (_loc, cD0, _cG, Comp.PatVar _ , t, _e), _  -> is_id cD0 t cD
+  | Comp.Branch (_loc, cD0, _cG, Comp.PatMetaObj (_ , m0), t, _e), Comp.TypBox (_, mT) ->  
+     is_id cD0 t cD && trivial_meta_obj cD0 m0 (Whnf.cnormMetaTyp (mT, t))
+  | Comp.Branch (_loc, cD0, _cG, patt , _t, _e), _ -> false
   | _ -> false
 
 

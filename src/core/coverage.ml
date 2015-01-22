@@ -75,34 +75,50 @@ type problem = {loc : Syntax.Loc.t;
                 branches : Comp.branch list;
                 ctype : Comp.typ}         (* type and context of scrutinee *)
 
-(*
-let is_id cD t = match t with 
-  | LF.MShift k ->  k = Context.length cD 
-  | LF.MDot (LF.MV _ , t) -> is_id cD t
+
+let is_id cD t = 
+  let l = Context.length cD in 
+  let rec id t = match t with 
+  | LF.MShift n ->  n = l
+  | LF.MDot (LF.MV _ , t) -> id t
+  | _ -> false
+  in 
+    id t
 
 
-let rec trivial_meta_obj (_ , m0) mT = match m0, mT with
-  | LF.CObj (LF.CtxVar _ ) , _ -> true
-  | LF.ClObj (phat, LF.MObj tM ) ,  LF.ClTyp (LF.MTyp tA, cPsi) ->     
-  | LF.ClObj (phat, LF.PObj p )  ,  LF.ClTyp (LF.PTyp tA, cPsi) ->     
+let trivial_meta_obj cD (_loc, m0) mT = match m0, mT with
+  | LF.CObj (LF.CtxVar _ ) , _ -> true 
+  | LF.ClObj (phat, LF.MObj tM ) ,  LF.ClTyp (LF.MTyp _tA, cPsi) ->     
+      (match tM with 
+	 | LF.Root (_, LF.MVar (LF.Offset u, s), LF.Nil ) -> 
+	     let (_, _tA', cPsi') = Whnf.mctxMDec cD u in 
+	     Whnf.convSub s (Substitution.LF.id) && Whnf.convDCtx cPsi' cPsi
+	 | _ -> false
+      ) 
+  | LF.ClObj (phat, LF.PObj tH )  ,  LF.ClTyp (LF.PTyp tA, cPsi) ->     
+      (match tH with 
+	 | LF.PVar (p, s)  -> 
+	     let (_, _tA', cPsi') = Whnf.mctxPDec cD p in 
+	     Whnf.convSub s (Substitution.LF.id) && Whnf.convDCtx cPsi' cPsi
+	 | _ -> false
+      ) 
    
-  | LF.ClObj (phat, LF.SObj s )  ,  LF.ClTyp (LF.STyp cPhi, cPsi) ->     
+  | LF.ClObj (phat, LF.SObj s )  ,  LF.ClTyp (LF.STyp cPhi, cPsi) ->      
+      ( match s with 
+	  | LF.SVar (0,0, s) -> Whnf.convSub s Substitution.LF.id
+	  | _ -> false
+      )
 
-let trivial_branch b tau_sc = match b, tau_sc  with 
-  | Comp.EmptyBranch (_loc, _cD, Comp.Var _ , t), _  -> 
-     is_id cD t
-  | Comp.Branch (_loc, _cD, Comp.Var _ , t), _  -> is_id cD t
-  | Comp.Branch (_loc, _cD, Comp.PatMetaObj (_ , m0) , t), Comp.TypBox (_, mT)  -> 
-     is_id cD t && trival_meta_obj m0 mT
-
-
-let rec trivial_coverage cD branches tau_sc = match tau_sc with 
-  | Comp.TypBox (_ , mT) ->  trivial_coverage' cD mT 
-  | _ -> List.exists (b -> trivial_branch b tau_sc) branches 
+let trivial_branch cD b tau_sc = match b, tau_sc  with 
+  | Comp.Branch (_loc, _cD, _cG, Comp.PatVar _ , t, _e), _  -> is_id cD t
+  | Comp.Branch (_loc, _cD, _cG, Comp.PatMetaObj (_ , m0) , t, _e), Comp.TypBox (_, mT) ->  
+     is_id cD t && trivial_meta_obj cD m0 mT 
+  | _ -> false
 
 
-and trivial_coverage' cD branches mT =  
- *)
+let trivial_coverage cD branches tau_sc =
+   List.exists (fun b -> trivial_branch cD b tau_sc) branches 
+
 
 (* Make a coverage problem *)
 let make loc prag cD branches typ =
@@ -2312,45 +2328,50 @@ let check_coverage_success problem  =
 *)
 let covers problem projObj =
 if !Total.enabled || !enableCoverage then 
-  (let _ = dprint (fun () -> "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = " ^
-		     P.compTypToString problem.cD problem.ctype) in
-   let _ = (Debug.pushIndentationLevel(); Debug.indent 2) in
-   let _ = U.resetGlobalCnstrs () in
-
-  let cov_problems : covproblems = initialize_coverage problem projObj in
-
-    dprint (fun () -> "Coverage checking a case with "
-              ^ string_of_int (List.length problem.branches)
-	      ^ " branch(es) at:\n"
-              ^ Syntax.Loc.to_string problem.loc);
-
-    dprint (fun () -> "\n ### Initial coverage problem: " );
-    dprint (fun () -> covproblemsToString cov_problems ) ;
-
-    check_coverage cov_problems ;  (* there exist all cov_problems are solved *)
-    let o_cg         = !open_cov_goals in
-    let r            = List.length  o_cg in
-    let (revisited_og, trivial_og) = revisit_opengoals o_cg in
-    let r'           = List.length (revisited_og) in
-
-    if r  > r' then
-      (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
-       print_endline ("CASES TRIVIALLY COVERED in line " ^
-			 Syntax.Loc.to_string  problem.loc
-		      ^ " : " ^ string_of_int (List.length (trivial_og)))
-(* opengoalsToString trivial_og *)
-)
-    else () ;
+ (if trivial_coverage problem.cD problem.branches problem.ctype then
+   (print_string "Trival Coverage\n";
+    Success)
+  else 
+    (let _ = dprint (fun () -> "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = " ^
+		       P.compTypToString problem.cD problem.ctype) in
+     let _ = (Debug.pushIndentationLevel(); Debug.indent 2) in
+     let _ = U.resetGlobalCnstrs () in
+       
+     let cov_problems : covproblems = initialize_coverage problem projObj in
+       
+       dprint (fun () -> "Coverage checking a case with "
+		 ^ string_of_int (List.length problem.branches)
+		 ^ " branch(es) at:\n"
+		 ^ Syntax.Loc.to_string problem.loc);
+       
+       dprint (fun () -> "\n ### Initial coverage problem: " );
+       dprint (fun () -> covproblemsToString cov_problems ) ;
+       
+       check_coverage cov_problems ;  (* there exist all cov_problems are solved *)
+       let o_cg         = !open_cov_goals in
+       let r            = List.length  o_cg in
+       let (revisited_og, trivial_og) = revisit_opengoals o_cg in
+       let r'           = List.length (revisited_og) in
+	 
+	 if r  > r' then
+	   (print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
+	    print_endline ("CASES TRIVIALLY COVERED in line " ^
+			     Syntax.Loc.to_string  problem.loc
+			   ^ " : " ^ string_of_int (List.length (trivial_og)))
+	      (* opengoalsToString trivial_og *)
+	   )
+	 else () ;
 
     open_cov_goals :=  revisited_og ;
     check_coverage_success problem
   )
+ )
 else
   Success
 
 
 
-let process problem projObj =
+let process problem projObj  =
   reset_cov_problem () ;
   match covers problem projObj with
   | Success -> reset_counter ()

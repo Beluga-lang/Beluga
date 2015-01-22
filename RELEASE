@@ -4,6 +4,16 @@ set -e
 
 bailout=NO
 
+git status --porcelain | grep "" && bailout=YES
+
+if [ $bailout = YES ]; then
+    echo
+    echo 'git status reports a working tree that is not pristine.'
+    echo 'Please run this release script in a clean directory, such as after'
+    echo
+    echo '$ git clone'
+    exit 1
+fi
 
 echo 'Version number is:'
 echo
@@ -41,8 +51,6 @@ mkdir $release
 echo 'Copying files in root ...'
 cp -a \
     INSTALL \
-    OMakefile \
-    OMakeroot \
     AUTHORS \
     COPYRIGHT \
     LICENSE \
@@ -55,7 +63,7 @@ cp -a \
 mkdir $release/bin
 
 # Set the RELEASE to true by default.
-sed -i 's/RELEASE *= *false/RELEASE = true/' $release/OMakeroot
+# sed -i 's/RELEASE *= *false/RELEASE = true/' $release
 
 echo 'Copying src ...'
 cp -a \

@@ -1186,7 +1186,7 @@ let isVar h = match h with
 
     | (Shift ( _n), Null) -> (id, Null)
     | (EmptySub, Null) -> (id, Null)
-    | (Undefs, Null) -> (id, Null)
+    | (Undefs, Null) -> (id, Null) 
 
     | (Shift n, CtxVar psi) ->
       let (_, ssubst) = ss in

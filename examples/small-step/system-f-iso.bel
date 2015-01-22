@@ -120,7 +120,7 @@ value_tlam : value (tlam (\a. E a)).
 % Preservation
 
 rec pres : [ |- has E T] -> [ |- ~> E E'] -> [ |- has E' T] =
-% / total ev (pres e t e' d ev)/
+ / total ev (pres e t e' d ev)/
 fn d => fn ev => case ev of
 %{| [ |- ~>_s EV] =>
  (let [ |- is_s D] = d in

@@ -1689,8 +1689,9 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
 	[ (cD, cg, Whnf.m_id) ]
 
-  | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
-      let (cgoals, _ ) = genCGoals cD (LF.Decl(Id.mk_name(Id.NoName), LF.ClTyp (LF.MTyp tA, cPsi), LF.Maybe)) in
+  | Comp.TypBox (loc, (LF.ClTyp (LF.MTyp tA, cPsi) as mT)) ->
+      let name = Id.mk_name (Whnf.newMTypName mT) in
+      let (cgoals, _ ) = genCGoals cD (LF.Decl(name, LF.ClTyp (LF.MTyp tA, cPsi), LF.Maybe)) in
 
 	List.map (fun (cD', cg, ms) ->
 		    let CovGoal (cPsi', tR, sA') = cg in
@@ -2174,7 +2175,7 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, LF.CTyp w) ->
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.CTyp w, LF.Maybe)) in
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let cPsi       = LF.CtxVar (LF.CtxOffset 1) in
       let covGoal    = CovCtx cPsi in 
@@ -2186,8 +2187,8 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
-
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName), LF.ClTyp (LF.MTyp tA', cPsi'), LF.Maybe)) in
+      let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in 
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName mT),mT, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, s) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
@@ -2207,7 +2208,8 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
   | Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName),  LF.ClTyp (LF.PTyp tA', cPsi'), LF.Maybe)) in
+      let mT         = LF.ClTyp (LF.PTyp tA', cPsi') in
+      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName mT),  mT, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (1, idSub) | Some k -> LF.Proj(LF.PVar (1, idSub), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in

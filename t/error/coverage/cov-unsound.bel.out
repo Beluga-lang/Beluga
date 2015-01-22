@@ -2,9 +2,9 @@
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED :
 
-(1)   ., {h : tctx}, {Y : [h, y : target |- target]}
+(1)   .
  .
-  |-  [h, y : target |- Y .. y]
+  |-  [h, z |- Y .. z]
 
 
 

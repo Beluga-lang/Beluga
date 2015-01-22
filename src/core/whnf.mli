@@ -65,6 +65,7 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Loc.t
 
+val newMTypName : ctyp -> Id.name_guide
 
 val m_id   : msub
 (* val mshift: msub -> int -> msub

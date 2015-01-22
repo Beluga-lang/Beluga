@@ -827,10 +827,20 @@ module Int = struct
           fprintf ppf "."
 
       | LF.Dec (cD, ctyp_decl) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_mctx 0) cD
-            (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
-
+	  (match ctyp_decl with
+	     | LF.Decl (_, _, dep) -> 
+		 if ((not !Control.printImplicit) && (isImplicit dep)||
+		       (!Control.printNormal)) then 
+		   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
+		 else 
+		   fprintf ppf "%a, %a"
+		     (fmt_ppr_lf_mctx 0) cD
+		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
+	     | _ -> 
+		 fprintf ppf "%a, %a"
+		     (fmt_ppr_lf_mctx 0) cD
+		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
+	  )
 (*    and frugal_lf_octx lvl ppf = function
       | LF.Empty -> ()
       | other -> fprintf ppf "@[%a@]@ " (fmt_ppr_lf_octx lvl) other

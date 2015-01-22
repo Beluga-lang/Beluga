@@ -2,9 +2,9 @@
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED :
 
-(1)   ., {g : ctx}, {Y1 : [g, y : term, x : term |- term]}, {Z : [g, y : term |- fvlist]}
+(1)   .
  .
-  |-  [g, y : term |- cons (elam (\x. Y1 .. y x)) (Z .. y)]
+  |-  [g, z3 : term |- cons (elam (\x. Y1 .. z3 x)) (Z .. z3)]
 
 
 

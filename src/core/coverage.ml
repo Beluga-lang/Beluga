@@ -170,12 +170,12 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMVar None (cPhi', LF.TClo(tQ,ssi')) in             
+      let u = Whnf.newMMVar None (LF.Empty, cPhi', LF.TClo(tQ,ssi')) in             
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
       let ss_proj = S.LF.comp ss' s_proj in
-        LF.Root (Syntax.Loc.ghost, LF.MVar (u, ss_proj), LF.Nil)
+        LF.Root (Syntax.Loc.ghost, LF.MMVar ((u,Whnf.m_id), ss_proj), LF.Nil)
 
   | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       LF.Lam (Syntax.Loc.ghost, x, etaExpandMVstr cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )
@@ -2011,7 +2011,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 
 
   | Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
-      let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in
+      (* let _ = print_endline ("Encountering parameter : " ^ P.typToString problem.cD cPsi (tA, S.LF.id) ^ " ") in *)
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Id.NoName),  LF.ClTyp (LF.PTyp tA, cPsi), LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (1, idSub) | Some k -> LF.Proj(LF.PVar (1, idSub), k) in

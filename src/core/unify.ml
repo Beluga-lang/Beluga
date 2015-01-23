@@ -830,6 +830,13 @@ let isVar h = match h with
             | MUndef -> raise NotInvertible
           end
 
+   (* finds the context variable part of a (inverse) substitution *)
+   and shiftInvSub n ss = match ss with
+	| Undefs -> raise (Failure "Variable dependency")
+	| Shift k -> Shift (n+k)
+        | Dot (ft, ss') -> shiftInvSub (n-1) ss'
+      
+
   (* invSub cD0 (phat, s, ss, rOccur) = s'
 
      if phat = hat(Psi)  and
@@ -846,15 +853,7 @@ let isVar h = match h with
 
     | (Shift n, Null) -> EmptySub
 
-    | (Shift n, CtxVar _psi) ->
-      (* can we pull this function out into something more generally useful?
-	 it finds the context variable part of a (inverse) substitution *)
-      let rec shiftInvSub n ss = match ss with
-	| Undefs -> raise NotInvertible
-	| Shift k -> Shift (n+k)
-        | Dot (ft, ss') -> shiftInvSub (n-1) ss'
-      in 
-      shiftInvSub n ssubst
+    | (Shift n, CtxVar _psi) -> shiftInvSub n ssubst
 
     | (SVar (s, 0, sigma), CtxVar psi) ->
         (* other cases ? -bp *)
@@ -1130,15 +1129,9 @@ let isVar h = match h with
         pruneSubst cD cPsi (Dot (Head (BVar (n + 1)), Shift ( n + 1)), cPsi1) ss rOccur
     | (Shift (_n), Null) -> EmptySub
 
-    | (Shift (_n), CtxVar psi) ->
-      (*  cD ; cPsi |- s : psi
-          cD' |- mt : cD
-          cD'; cPsi' |- s' : [mt]Psi
-         ——————————————————————————–
-          cD' ; cPsi' |- [s']([mt]s) : [mt] psi
-      *)
-      let (mt, s') = ss in
-      Whnf.cnormSub (Substitution.LF.comp s s', mt)
+    | (Shift (n), CtxVar psi) ->
+       let (mt, s') = ss in
+       shiftInvSub n s'
 
     | (SVar (sv, (n), sigma), cPsi1) ->
       let (sv', s') = pruneBoundMVar cD cPsi sv sigma ss rOccur in

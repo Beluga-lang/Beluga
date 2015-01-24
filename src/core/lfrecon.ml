@@ -2351,11 +2351,11 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- u[s'] => [s']A'  where cPsi |- s' : .
            *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)
            *)
-           let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
+          let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
 
-      | ((Int.LF.PiTyp ((Int.LF.TypDecl (n, tA), _), tB), s), Pibox) ->
+      | ((Int.LF.PiTyp ((Int.LF.TypDecl (_n, tA), _), tB), s), Pibox) ->
           (* cPsi' |- tA <= typ
            * cPsi  |- s  <= cPsi'      cPsi |- tN <= [s]A
            *
@@ -2364,8 +2364,9 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
            (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in *)
-           let tN     = if !strengthen then etaExpandMMVstr loc cD cPsi (tA, s) n
-                        else Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
+	  let name   = Id.mk_name (Whnf.newMTypName (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi))) in   
+           let tN     = if !strengthen then etaExpandMMVstr loc cD cPsi (tA, s) name
+                        else Whnf.etaExpandMMV loc cD cPsi (tA, s) name Substitution.LF.id in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)

@@ -1499,6 +1499,7 @@ and elTerm' recT cD cPsi r sP = match r with
               |  Unify.Failure msg  ->
 		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
 		dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+		dprint (fun () -> "[elTerm] in cD  = " ^ P.mctxToString cD );
 		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
 		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
 		dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);

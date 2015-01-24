@@ -2,7 +2,16 @@ type name     = {
   modules : string list;
   string_of_name : string ;
   was_generated : bool ;
+  counter : int;
 }
+
+let inc n = {
+  modules = n.modules;
+  string_of_name = n.string_of_name;
+  was_generated = n.was_generated;
+  counter = n.counter + 1;
+}
+
 
 type module_id = int
 
@@ -44,29 +53,29 @@ let mk_name ?(modules=[]) : name_guide -> name = function
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)  ->
-        { modules = modules; string_of_name = vGen() ; was_generated = true}
+        { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0}
 
   | MVarName None  ->      
-      { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true }
+      { modules = modules; string_of_name = Gensym.MVarData.gensym() ;was_generated = true; counter = 0 }
 
   | PVarName (Some vGen)  ->
-        { modules = modules; string_of_name = vGen() ; was_generated = true }
+        { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0 }
 
   | PVarName None  ->
-      { modules = modules; string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true }
+      { modules = modules; string_of_name = "#" ^ Gensym.VarData.gensym() ; was_generated = true; counter = 0 }
 
   | SVarName None ->
-      { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true}
+      { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true; counter = 0}
       
   | SVarName (Some vGen) ->
-        { modules = modules; string_of_name = vGen() ; was_generated = true }
+        { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0 }
 
   | BVarName (Some vGen)   ->
-        { modules = modules; string_of_name = vGen() ; was_generated = true}
+        { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0}
 
   | SomeName x  -> x
 
   | SomeString x -> 
-        { modules = modules; string_of_name = x ; was_generated = false }
+        { modules = modules; string_of_name = x ; was_generated = false; counter = 0 }
 
-  | _     -> { modules = modules; string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true }
+  | _     -> { modules = modules; string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true; counter = 0 }

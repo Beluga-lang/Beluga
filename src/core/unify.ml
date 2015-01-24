@@ -1667,11 +1667,13 @@ let isVar h = match h with
 
     | (MVar (Offset k, s) , MVar(Offset k', s')) ->
         if k = k' then unifySub mflag cD0 cPsi s s'
-        else raise (Failure "Bound MVar clash")
+        else 
+	  (dprint (fun () -> "[unifyHead] cD0 = " ^ P.mctxToString cD0 );
+	   raise (Failure "Bound MVar clash"))
 
     | (FMVar (u, s) , FMVar(u', s')) ->
         if u = u' then unifySub mflag cD0 cPsi s s'
-        else raise (Failure "Bound MVar clash'")
+        else raise (Failure "Bound FMVar clash'")
 
     | (FPVar (q, s), FPVar (p, s'))
         ->   (if p = q then

@@ -1166,7 +1166,8 @@ module Cid = struct
         match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
       else n in
       match name.modules with
-      | [] -> n.string_of_name
+      | [] -> let c = if n.counter = 0 then "" else (string_of_int n.counter) in
+	  n.string_of_name ^ c
       | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name

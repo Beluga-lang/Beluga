@@ -46,7 +46,7 @@ let mk_name ?(modules=[]) : name_guide -> name = function
   | MVarName (Some vGen)  ->
         { modules = modules; string_of_name = vGen() ; was_generated = true}
 
-  | MVarName None  ->
+  | MVarName None  ->      
       { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true }
 
   | PVarName (Some vGen)  ->

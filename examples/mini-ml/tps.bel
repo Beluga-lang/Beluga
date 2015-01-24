@@ -6,7 +6,7 @@ tp   : type.   %name tp T.
 nat  : tp.
 arrow  : tp -> tp -> tp.
 
-exp  : type.   %name exp E x.
+exp  : type.   %name exp E.
 z    : exp.
 suc  : exp -> exp.
 match: exp -> exp -> (exp -> exp) -> exp.   

@@ -145,10 +145,10 @@ module Cid = struct
       kind                 : Int.LF.kind;
       var_generator        : (unit -> string) option;
       mvar_generator       : (unit -> string) option;
-      frozen       : bool ref;
-      constructors : Id.cid_term list ref;
-      subordinates : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
-      typesubordinated : BitSet.t ref (* unused at the moment *)
+      frozen               : bool ref;
+      constructors         : Id.cid_term list ref;
+      subordinates         : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
+      typesubordinated     : BitSet.t ref (* unused at the moment *)
     }
 
     let entry_list : (Id.cid_typ list ref) DynArray.t = DynArray.create ()

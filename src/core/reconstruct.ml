@@ -916,7 +916,6 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         end
 
   | (Apx.Comp.Hole (loc), (tau, theta)) ->
-    let _ = print_string ("\nHole Goal = " ^ P.compTypToString cD (Whnf.cnormCTyp (tau,theta)) ^ "\n\n") in
     let () = Holes.collect (loc, cD, cG, (tau, theta)) in
     Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
 

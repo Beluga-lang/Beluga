@@ -159,12 +159,12 @@ let printOne i (loc, cD, cG, (tau, theta)) =
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   if List.length l > 0 then
     Format.printf 
-      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
         (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
         (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else
     Format.printf 
-      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n"
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n"
        (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
 let printAll () =

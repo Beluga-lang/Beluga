@@ -6,7 +6,7 @@ open Format
 (* the type of commands  *)
 type command = { name : string ;
                  run : Format.formatter -> string list -> unit ;
-                   help : string }
+                 help : string }
 
 
 

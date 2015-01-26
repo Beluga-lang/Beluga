@@ -137,9 +137,9 @@ let branchCovGoals loc i cG0 tA cgs =
   | Cover.CovGoal(cPsi, tR, sA) ->
       let loc' = nextLoc loc in
        let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
-      Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
-   Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-       let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
+     (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);*)
+      Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
+     let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
        Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
@@ -357,12 +357,11 @@ let split e i =
   let rec searchGctx i = function
   | LF.Empty -> None
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
-     (print_string ("\n Split on " ^ e ^ " of type " ^ P.compTypToString cD0 tau ^ "\n"); 
       if (nameString n) = e then
         (match tau with
         | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
-            let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
-            let bl = branchCovGoals loc 0 cG0 tH cgs in
+          let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
+          let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
         | Comp.TypBase (l, c, mS) ->  (* c: cid_comp_typ , mS: meta_spine *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
@@ -371,7 +370,7 @@ let split e i =
         | _ ->
             failwith ("Found variable in gCtx, cannot split on "^(nameString n)))
       else
-        searchGctx (i+1) cG')
+        searchGctx (i+1) cG'
   in
 let rec searchMctx i = function
   | LF.Empty ->

@@ -1,5 +1,5 @@
 
-nat :  type.     %name nat N x.
+nat :  type.     %name nat N.
 z : nat.
 s : nat -> nat.
 
@@ -11,11 +11,11 @@ fn x => fn y =>  (case x of
      ? 
  
  | 
-   [ |- s x9]  => 
+   [ |- s X]  => 
      ? 
  
-)
-%{ case x of
+) 
+%{case x of
 | [ |- z]  => y
 | [ |- s U]  =>
   let [ |- V] = plus [ |- U ] y in
@@ -24,7 +24,7 @@ fn x => fn y =>  (case x of
 ;
 
 
-
+%{
 rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] = 
 / total x (plus' x ) / 
 fn x => case x of
@@ -70,3 +70,4 @@ let y = fact [ |- s (s z)];
 let w = fact [ |- s (s (s z))];
 
 
+}%

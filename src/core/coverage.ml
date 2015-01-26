@@ -2201,7 +2201,8 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
       let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in 
-      let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName mT),mT, LF.Maybe)) in
+      let name       = Id.mk_name (Whnf.newMTypName mT) in
+      let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = LF.MVar (LF.Offset 1, s) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in

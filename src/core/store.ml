@@ -145,10 +145,10 @@ module Cid = struct
       kind                 : Int.LF.kind;
       var_generator        : (unit -> string) option;
       mvar_generator       : (unit -> string) option;
-      frozen       : bool ref;
-      constructors : Id.cid_term list ref;
-      subordinates : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
-      typesubordinated : BitSet.t ref (* unused at the moment *)
+      frozen               : bool ref;
+      constructors         : Id.cid_term list ref;
+      subordinates         : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
+      typesubordinated     : BitSet.t ref (* unused at the moment *)
     }
 
     let entry_list : (Id.cid_typ list ref) DynArray.t = DynArray.create ()
@@ -1166,7 +1166,8 @@ module Cid = struct
         match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
       else n in
       match name.modules with
-      | [] -> n.string_of_name
+      | [] -> let c = if n.counter = 0 then "" else (string_of_int n.counter) in
+	  n.string_of_name ^ c
       | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name

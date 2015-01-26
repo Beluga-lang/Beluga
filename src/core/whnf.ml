@@ -92,7 +92,7 @@ let newMMVar' n (cD, mtyp) = match n with
       let n = Id.mk_name (newMTypName mtyp) in 
 	 (n, ref None, cD, mtyp, ref [], Maybe)
   | Some name -> 
-      (name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
+      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
 
 let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (MTyp tA,cPsi))
 let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (PTyp tA, cPsi))
@@ -1795,8 +1795,7 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
 let rec etaExpandMV cPsi sA n s' =  etaExpandMV' cPsi (whnfTyp sA) n s'
 and etaExpandMV' cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-
-      let u = newMVar (Some n) (cPsi, TClo(tP,s)) in 
+      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) in 
         Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
@@ -1815,7 +1814,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA
 
 and etaExpandMMV' loc cD cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar None (cD , cPsi, TClo(tP,s))  in 
+      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s))  in 
         Root (loc, MMVar ((u, m_id), s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->

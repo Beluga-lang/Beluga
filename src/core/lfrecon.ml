@@ -227,7 +227,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (cD, cPhi', Int.LF.TClo(tQ,ssi')) in 
+      let u = Whnf.newMMVar (Some n) (cD, cPhi', Int.LF.TClo(tQ,ssi')) in 
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -1499,6 +1499,7 @@ and elTerm' recT cD cPsi r sP = match r with
               |  Unify.Failure msg  ->
 		dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
 		dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+		dprint (fun () -> "[elTerm] in cD  = " ^ P.mctxToString cD );
 		dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
 		dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
 		dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
@@ -2351,7 +2352,7 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- u[s'] => [s']A'  where cPsi |- s' : .
            *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)
            *)
-           let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
+          let tN     = Whnf.etaExpandMV cPsi (tA, s) n Substitution.LF.id      in
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
             (Int.LF.App (tN, spine'), sP)
 
@@ -2363,7 +2364,7 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            *
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
-           (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in *)
+           (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n   Substitution.LF.id in *)
            let tN     = if !strengthen then etaExpandMMVstr loc cD cPsi (tA, s) n
                         else Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
 

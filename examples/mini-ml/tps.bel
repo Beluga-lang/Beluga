@@ -6,7 +6,7 @@ tp   : type.   %name tp T.
 nat  : tp.
 arrow  : tp -> tp -> tp.
 
-exp  : type.   %name exp E x.
+exp  : type.   %name exp E.
 z    : exp.
 suc  : exp -> exp.
 match: exp -> exp -> (exp -> exp) -> exp.   
@@ -75,7 +75,8 @@ rec tps :  [ |- eval E V] -> [ |- oft E T]
 fn f => fn d => case f of
 | [ |- ev_z] => d
 
-| [ |- ev_s F1]  => let [ |- tp_s D1] = d in
+| [ |- ev_s F1]  =>  
+  let [ |- tp_s D1] = d in
   let [ |- C1]      = tps [ |- F1] [ |- D1] in
   [ |- tp_s C1]
 

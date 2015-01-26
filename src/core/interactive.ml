@@ -357,6 +357,7 @@ let split e i =
   let rec searchGctx i = function
   | LF.Empty -> None
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
+     (print_string ("\n Split on " ^ e ^ " of type " ^ P.compTypToString cD0 tau ^ "\n"); 
       if (nameString n) = e then
         (match tau with
         | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
@@ -370,7 +371,7 @@ let split e i =
         | _ ->
             failwith ("Found variable in gCtx, cannot split on "^(nameString n)))
       else
-        searchGctx (i+1) cG'
+        searchGctx (i+1) cG')
   in
 let rec searchMctx i = function
   | LF.Empty ->

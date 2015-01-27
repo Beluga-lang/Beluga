@@ -1347,7 +1347,7 @@ module Int = struct
               (fmt_ppr_cmp_branch_prefix  0) cD1
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
           else
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[[ %a : %a ] @]  @]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : %a  @]  @]@ "
               (fmt_ppr_cmp_branch_prefix  0) cD1
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
               (fmt_ppr_refinement cD1 cD 2) t
@@ -1355,7 +1355,7 @@ module Int = struct
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
         if !Control.printNormal then
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
@@ -1364,7 +1364,7 @@ module Int = struct
              *)
             (fmt_ppr_cmp_exp_chk cD1' cG 1) e
         else
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[[%a : %a ] @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* this point is where the " : " is in the string above *)

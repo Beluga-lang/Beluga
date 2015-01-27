@@ -756,7 +756,7 @@ and recSgnDecl ?(pauseHtml=false) d =
                 Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None
             | Some x ->
                 Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                  (Some (Gensym.VarData.name_gensym x))
+                                               (Some (Gensym.VarData.name_gensym x))
           end in Store.Cid.NamedHoles.addNameConvention cid m_name v_name; Int.Sgn.Pragma(Int.LF.NamePrag cid)
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end

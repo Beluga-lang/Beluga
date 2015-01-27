@@ -203,7 +203,7 @@ module Cid = struct
     let freeze a =
           (get a).frozen := true
 
-    let addNameConvention cid_name var_name_generator mvar_name_generator =
+    let addNameConvention cid_name mvar_name_generator var_name_generator=
       let cid_tp = index_of_name cid_name in
       let entry = get cid_tp in
       let new_entry = {name   = entry.name ;

@@ -833,9 +833,10 @@ module Int = struct
 		       (!Control.printNormal)) then 
 		   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
 		 else 
-		   fprintf ppf "%a, %a"
+		   fprintf ppf "%a, %a%s"
 		     (fmt_ppr_lf_mctx 0) cD
 		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
+		     (dependent_string dep) 
 	     | _ -> 
 		 fprintf ppf "%a, %a"
 		     (fmt_ppr_lf_mctx 0) cD
@@ -912,8 +913,9 @@ module Int = struct
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
-            (if printing_holes && !Control.printImplicit then dependent_string
-	       dep else inductive_string dep) end
+            (if printing_holes && !Control.printImplicit then 
+	       dependent_string dep 
+	     else inductive_string dep) end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"

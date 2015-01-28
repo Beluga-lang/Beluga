@@ -396,7 +396,7 @@ let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
       I.Empty
 
   | I.Dec (cQ', FDecl (s, Pure (MetaTyp ityp))) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (getName s, ityp, I.Maybe))
+      I.Dec (ctxToMCtx cQ', I.Decl (getName s, ityp, dep')) 
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx cQ', I.Decl (x, I.CTyp w, dep))

@@ -35,15 +35,15 @@ let rec insertIMSub i mfront ms = match (i, ms) with
 let nameString n = n.Id.string_of_name
 
 let nameOfLFcTypDecl = (function
-| LF.Decl(n, _) -> n
+| LF.Decl(n, _, _) -> n
 | LF.DeclOpt n -> n)
 
 let cvarOfLFcTypDecl td =
  match td with
-| LF.Decl(n, LF.MTyp _) -> Store.CVar.MV n
-| LF.Decl(n, LF.PTyp _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
-| LF.Decl(n, LF.STyp _) -> Store.CVar.SV n
-| LF.Decl(n, LF.CTyp _) -> Store.CVar.CV n
+| LF.Decl(n, LF.ClTyp (LF.MTyp _,_), _) -> Store.CVar.MV n
+| LF.Decl(n, LF.ClTyp (LF.PTyp _,_), _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
+| LF.Decl(n, LF.ClTyp(LF.STyp _,_), _) -> Store.CVar.SV n
+| LF.Decl(n, LF.CTyp _, _) -> Store.CVar.CV n
 | LF.DeclOpt(n) -> Store.CVar.MV n
 
 let nameOfCompcTypDecl = function
@@ -136,10 +136,10 @@ let branchCovGoals loc i cG0 tA cgs =
   List.map (fun (cD,cg, ms) ->  match cg with
   | Cover.CovGoal(cPsi, tR, sA) ->
       let loc' = nextLoc loc in
-       let ms = (if i = 0 then ms else insertIMSub i (LF.MObj(Context.dctxToHat cPsi, tR)) ms) in
+       let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
       Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
    Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-       let patt = PatMetaObj ( Loc.ghost, MetaObjAnn (Loc.ghost, cPsi, tR)) in
+       let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
        Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
@@ -290,16 +290,11 @@ let replaceHole i exp =
 
 (* intro: int -> Comp.exp_chk option *)
 let is_inferred = function 
-| LF.Decl(_, ctyp) -> begin match ctyp with
-  | LF.MTyp (_, _, dep)
-  | LF.PTyp (_, _, dep)
-  | LF.STyp (_, _, dep)
-  | LF.CTyp (_, dep) ->
+| LF.Decl(_, ctyp, dep) -> 
     begin match dep with
       | LF.No -> false
       | LF.Maybe -> true
     end
-  end 
 | _ -> false
 
 let  intro i =
@@ -308,12 +303,12 @@ let  intro i =
   let rec crawl cD cG  = (function
  | Comp.TypArr (t1,t2) ->
      ( match t1 with
-     | Comp.TypBox (l, Comp.MetaTyp(tA,psi)) ->
+     | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
          Some (Comp.Fun(l, nam, exp))
-     | Comp.TypParam (l,tA,psi) ->
+     | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
@@ -360,7 +355,7 @@ let split e i =
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
       if (nameString n) = e then
         (match tau with
-        | Comp.TypBox (l, Comp.MetaTyp (tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
+        | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
@@ -377,34 +372,34 @@ let rec searchMctx i = function
   | LF.Empty ->
       None
   | LF.Dec (cD', ctypDecl) ->
-      let LF.Decl(n, ctyp) = ctypDecl in
+      let LF.Decl(n, ctyp,_) = ctypDecl in
      (match ctyp with
-      | LF.CTyp(_, _) ->
+      | LF.CTyp(_) ->
           (if (nameString n) = e then
             failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
           else
               searchMctx (i+1) cD' )
-      | LF.MTyp (tA,cPsi, _) ->
+      | LF.ClTyp (LF.MTyp tA,cPsi) ->
           (if (nameString n) = e then
              let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
              let bl = branchCovGoals loc i cG0 tH cgs in
              let ((_ , vOff) as phat) = dctxToHat cPsi in
-	     let m0 = Comp.MetaObj(Loc.ghost, phat,
-				   LF.Root (Loc.ghost,
+	     let m0 = (Loc.ghost, LF.ClObj (phat,
+				   LF.MObj (LF.Root (Loc.ghost,
 					    LF.MVar (LF.Offset i, LF.Shift vOff),
-					    LF.Nil)) in
+					    LF.Nil)))) in
              let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
-				    Comp.TypBox(Loc.ghost, Comp.MetaTyp(tA,cPsi))) in
+				    Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')
-      | LF.PTyp (tA,cPsi, _ ) ->
+      | LF.ClTyp (LF.PTyp tA,cPsi) ->
           (if (nameString n) = e then
             let cgs = Cover.genCovGoals (cD',cPsi,tA) in
             let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((vPsi, vOff) as phat) = dctxToHat cPsi in
-	     let m0 = Comp.MetaObj(Loc.ghost, (vPsi,vOff) , LF.Root (Loc.ghost , LF.PVar (LF.Offset i, LF.Shift vOff), LF.Nil)) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, Comp.MetaTyp (tA,cPsi))) in
+             let ((vPsi, vOff) as _phat) = dctxToHat cPsi in
+	     let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
+             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
             Some (matchFromPatterns (Loc.ghost) entry bl)
           else
             searchMctx (i+1) cD')

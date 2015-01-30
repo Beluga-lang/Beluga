@@ -46,8 +46,8 @@ module LF = struct
     | (n,EmptySub) -> raise (NotComposable "Shift, EmptySub")
     | (n,Undefs) -> Undefs
     | (n,SVar(s, k, r)) -> SVar (s, (k+n), r)
-    | (n,MSVar(s, k, (t,r))) -> MSVar (s, (k+n), (t,r))
-    | (n,FSVar (s, k, tau)) -> FSVar (s, (k+n), tau)
+    | (n,MSVar(k, ((s, t),r))) -> MSVar (k+n, ((s, t),r))
+    | (n,FSVar (k, (s, tau))) -> FSVar (k+n, (s, tau))
     | (n,Shift m) -> Shift (n + m)
     | (n,Dot (_ft, s)) -> shiftComp (n - 1) s
  
@@ -71,11 +71,11 @@ module LF = struct
     | (SVar (s, n, tau), s2) ->
         SVar (s, n, comp tau s2)
 
-    | (MSVar (s, n, (theta, tau)), s2) ->
-        MSVar (s, n, (theta, comp tau s2))
+    | (MSVar (n, ((s, theta), tau)), s2) ->
+        MSVar (n , ((s, theta), comp tau s2))
 
-    | (FSVar (s, n, tau), s2) ->
-        FSVar (s, n, comp tau s2)
+    | (FSVar (n, (s, tau)), s2) ->
+        FSVar (n, (s, comp tau s2))
 
     | (Dot (ft, s), s') ->
         (* comp(s[tau], Shift(k)) = s[tau]
@@ -115,8 +115,8 @@ module LF = struct
         (* Should be fixed; we really need phat of n to avoid printing
            Free BVar (n+k) ... -bp *)
         Head (HClo(n+k, s, sigma))
-    | (n, MSVar (s, k, (t,sigma ))) ->
-      Head (HMClo (n+k, s, (t,sigma)))
+    | (n, MSVar (k, ((s, t),sigma ))) ->
+      Head (HMClo (n+k, ((s, t),sigma)))
 (*        (print_string "[bvarSub] n, MSVar - not implemented";
         raise (NotComposable "grr"))
 *)
@@ -131,7 +131,7 @@ module LF = struct
    *)
   and frontSub ft s = match ft with
     | Head (HClo(n, s', sigma)) -> Head (HClo (n, s', comp sigma s))
-    | Head (HMClo(n, s', (theta,sigma))) -> Head (HMClo (n, s', (theta, comp sigma s)))
+    | Head (HMClo(n, ((s', theta),sigma))) -> Head (HMClo (n, ((s', theta), comp sigma s)))
     | Head (BVar n)       ->  bvarSub n s
     | Head (FVar _)       -> ft
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))

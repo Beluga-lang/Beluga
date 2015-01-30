@@ -75,7 +75,6 @@ module Comp = struct
     | EqTyp           of I.mctx * tclo
     | MAppMismatch    of I.mctx * (meta_typ * I.msub)
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
-    | CtxHatMismatch  of I.mctx * I.dctx (* expected *) * I.psi_hat (* found *) * meta_obj
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string
@@ -103,15 +102,6 @@ module Comp = struct
             "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment, i.e. there are meta-variables which are not only applied to a distinct set of bound variables.\
 \nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is ill-typed. If you believe the program should type check, then consider making explicit the meta-variables occurring in the non-pattern positions."
               cnstrs (R.render_name f)
-          | CtxHatMismatch (cD, cPsi, phat, cM) ->
-          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
-            Error.report_mismatch ppf
-              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
-              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
-              Format.fprintf ppf
-                "In expression: %a@."
-                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
 
           | CtxMismatch (cD, cPsi, cPhi, cM) ->
             Error.report_mismatch ppf
@@ -226,28 +216,15 @@ module Comp = struct
               "Expected type" Format.pp_print_string                "base type"
               "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp ttau)
 
-          | AppMismatch (cD, (MetaTyp (tP, cPsi), theta)) ->
+          | AppMismatch (cD, (ctyp, theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, MetaTyp (tP, cPsi)), theta))
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
-          | MAppMismatch (cD, (MetaTyp (tA, cPsi), theta)) ->
+          | MAppMismatch (cD, (ctyp, theta)) ->
             Format.fprintf ppf
               "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, MetaTyp (tA, cPsi)), theta))
-
-          | MAppMismatch (cD, (MetaSubTyp (cPhi, cPsi), theta)) ->
-              let cPhi', cPsi'  = Whnf.cnormDCtx (cPhi, theta) , Whnf.cnormDCtx  (cPsi, theta) in
-              let cdec = I.Decl(Id.mk_name (Id.SVarName None), I.STyp (cPhi', cPsi', I.Maybe)) in
-            Format.fprintf ppf
-              "Expected contextual substitution object of type %a."
-              (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl)
-              cdec
-
-          | MAppMismatch (cD, (MetaSchema cid_schema, tau)) ->
-            Format.fprintf ppf
-              "Expected context of schema %s."
-              (R.render_cid_schema cid_schema)
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
           | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
               Error.report_mismatch ppf
@@ -261,20 +238,14 @@ module Comp = struct
     | IndexObj of I.psi_hat * I.normal
     | DataObj
 
-  let getLoc cM = match cM with 
-    | MetaObj(loc, _, _ ) -> loc
-    | MetaObjAnn (loc, _, _ ) -> loc
-    | MetaCtx (loc, _ ) -> loc
-    | MetaSObj (loc, _, _ ) -> loc
-    | MetaSObjAnn (loc, _, _ ) -> loc
-    | MetaParam (loc, _, _ ) -> loc
+  let getLoc (loc,cM) = loc
 
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (_,  tau)), 1) -> tau
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
 
-let checkParamTypeValid cD cPsi tA =
+let rec checkParamTypeValid cD cPsi tA =
   let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
   | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
   | Syntax.Int.LF.CtxVar psi ->
@@ -299,85 +270,33 @@ let checkParamTypeValid cD cPsi tA =
 
 
 
-  let rec checkMetaObj loc cD cM cTt = match  (cM, cTt) with
-  | (MetaCtx (loc, cPsi), (MetaSchema  w, _)) ->
-      LF.checkSchema loc cD cPsi (Schema.get_schema w)
-
-  | (MetaObj (loc, phat, tM), (MetaTyp (tA, cPsi), t)) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      if phat = Context.dctxToHat cPsi' then
-        LF.check cD cPsi' (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
-      else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
-
-  | (MetaObjAnn (loc, _cPhi, tM), (MetaTyp (tA, cPsi), t)) (* cPhi = cPsi *) ->
-      LF.check cD (C.cnormDCtx (cPsi, t)) (tM, S.LF.id) (C.cnormTyp (tA, t), S.LF.id)
-
-  | (MetaSObj (loc, phat, tM), (MetaSubTyp (tA, cPsi), t)) ->
-      let cPsi' = C.cnormDCtx (cPsi, t) in
-      if phat = Context.dctxToHat cPsi' then
-        LF.checkSub loc cD cPsi' tM (C.cnormDCtx (tA, t))
-      else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, cM)))
-
-  | (MetaSObjAnn (loc, _cPhi, tM), (MetaSubTyp (tA, cPsi), t)) ->
-      LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) tM (C.cnormDCtx (tA, t))
-
-  | (MetaParam (loc, _phat, h), (MetaParamTyp (tA, cPsi), t)) ->
-      let tA' = LF.inferHead loc cD (C.cnormDCtx (cPsi, t)) h in
-      let tA  = C.cnormTyp (tA, t) in
-        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-;
-
-    (* The case for parameter types should be handled separately, for better error messages -bp *)
-
-
 and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
-  | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp), cK) , t)) ->
-      begin match ctyp with
-        | I.CTyp (schema_cid, _ ) ->
-            let MetaCtx (_, cPsi) = mO in
-            let theta' = I.MDot (I.CObj (cPsi), t) in
-              checkMetaObj loc cD mO (MetaSchema schema_cid , t);
-              checkMetaSpine loc cD mS (cK, theta')
-
-        | I.MTyp (tA, cPsi, _) ->
-            let MetaObj (loc, psihat, tM) = mO in
-              checkMetaObj loc cD mO (MetaTyp (tA, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.MObj(psihat, tM), t))
-
-        | I.PTyp (tA, cPsi, _) ->
-            let MetaParam (loc, psihat, tM) = mO in
-              checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.PObj(psihat, tM), t))
-
-        | I.STyp (cPhi, cPsi, _) ->
-            let MetaSObj (loc, psihat, tM) = mO in
-              checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), t) ;
-              checkMetaSpine loc cD mS (cK, I.MDot (I.SObj(psihat, tM), t))
-    end
+  | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp,_), cK) , t)) ->
+    let loc = getLoc mO in
+    LF.checkMetaObj cD mO (ctyp, t);
+    checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
+  let checkClTyp cD cPsi = function
+    | I.MTyp tA ->
+        LF.checkTyp  cD cPsi (tA, S.LF.id)
+    | I.PTyp tA ->
+        LF.checkTyp  cD cPsi (tA, S.LF.id);
+        checkParamTypeValid cD cPsi tA
+    | I.STyp cPhi ->
+    	LF.checkDCtx cD cPhi
   let checkCLFTyp cD ctyp = match ctyp with
-    | I.CTyp (schema_cid, _ ) ->
+    | I.CTyp schema_cid ->
         begin try
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
-    | I.MTyp (tA, cPsi, _) ->
+    | I.ClTyp (tp, cPsi) ->
         LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
-    | I.PTyp (tA, cPsi, _) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id);
-        checkParamTypeValid cD cPsi tA
-
-    | I.STyp (cPhi, cPsi, _) ->
-    	LF.checkDCtx cD cPhi;
-    	LF.checkDCtx cD cPsi
+        checkClTyp cD cPsi tp
 
   let checkCDecl cD cdecl = match cdecl with
-    | I.Decl (_, ctyp) -> checkCLFTyp cD ctyp
+    | I.Decl (_, ctyp, _) -> checkCLFTyp cD ctyp
 
   let rec checkKind cD cK = match cK with
     | Ctype _ -> ()
@@ -394,13 +313,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         let cK = (CompCotyp.get c).CompCotyp.kind in
           checkMetaSpine loc cD mS (cK , C.m_id)
 
-    | TypBox (_ , MetaTyp (tA, cPsi)) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkTyp  cD cPsi (tA, S.LF.id)
-
-    | TypSub (_ , cPhi, cPsi) ->
-        LF.checkDCtx cD cPsi;
-        LF.checkDCtx cD cPhi
+    | TypBox (_ , ctyp) -> checkCLFTyp cD ctyp
 
     | TypArr (tau1, tau2) ->
         checkTyp cD tau1;
@@ -434,8 +347,8 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
 
  *)
 let extend_mctx cD (x, cdecl, t) = match cdecl with
-  | I.Decl (_u, cU) ->
-      I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t)))
+  | I.Decl (_u, cU, dep) ->
+      I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t), dep))
 
   (* check cD cG e (tau, theta) = ()
    *
@@ -493,7 +406,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)				
         begin try
-	  checkMetaObj loc cD cM (mT, t);
+	  LF.checkMetaObj cD cM (mT, t);
           Typeinfo.Comp.add (getLoc cM) (Typeinfo.Comp.mk_entry cD ttau) 
 	    ("Box" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
           dprint (fun () -> "loc <> metaLoc " ^ string_of_bool(loc <> (getLoc cM)))
@@ -501,17 +414,17 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
 
-    | (Case (loc, prag, Ann (Box (_, MetaObj(_, phat, tR)),
-			     TypBox (_, MetaTyp(tA', cPsi'))),
-             branches), (tau, t)) ->				
+    | (Case (loc, prag, Ann (Box (_, (_, I.ClObj(phat, I.MObj tR))),
+    			     TypBox (_, I.ClTyp (I.MTyp tA', cPsi'))),
+             branches), (tau, t)) ->
         let (tau_sc, projOpt) =  (match tR with
                    | I.Root (_, I.PVar _ , _ ) ->
-                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), None);                       
+                       (TypBox (loc, I.ClTyp (I.PTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), None);
                    | I.Root (_, I.Proj (I.PVar _, k ), _ ) ->
-                       (TypParam (loc, Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi'), Some k);                       
+                       (TypBox (loc, I.ClTyp (I.PTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), Some k);
                    | _ ->
-                       (TypBox (loc, MetaTyp (Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')), None)) in
-        let tau_s = TypBox (loc, MetaTyp(Whnf.normTyp (tA', S.LF.id), Whnf.normDCtx cPsi')) in
+                       (TypBox (loc, I.ClTyp (I.MTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')), None)) in
+        let tau_s = TypBox (loc, I.ClTyp (I.MTyp (Whnf.normTyp (tA', S.LF.id)), Whnf.normDCtx cPsi')) in
         let _  = LF.check cD  cPsi' (tR, S.LF.id) (tA', S.LF.id) in
         (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
@@ -600,37 +513,11 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
         end
 
     | MApp (loc, e, mC) ->
-        begin match (mC, C.cwhnfCTyp (syn cD cG e)) with
-          | (MetaCtx (loc, cPsi), (TypPiBox ((I.Decl (_ , I.CTyp (w, _) )), tau), t)) ->
-              let theta' = I.MDot (I.CObj (cPsi), t) in
-              LF.checkSchema loc cD cPsi (Schema.get_schema w);
-              (dprint (fun () -> "[check: syn] cPsi = " ^ P.dctxToString cD cPsi );
-               dprint (fun () -> "[check: syn] tau1 = " ^
-                          P.compTypToString cD (Whnf.cnormCTyp (tau, theta') ))) ;
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, theta')) ("MApp 1" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-                 (tau, theta')
-          | (MetaObj (loc, psihat, tM) , (TypPiBox ((I.Decl (_u, I.MTyp (tA, cPsi, _ ))), tau), t)) ->
-              checkMetaObj loc cD mC (MetaTyp (tA, cPsi), t) ;
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.MObj (psihat, tM), t))) ("MApp 2" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-              (tau, I.MDot(I.MObj (psihat, tM), t))
-          | (MetaParam(_, phat, h), (TypPiBox ((I.Decl(_, I.PTyp (tA, cPsi, _))), tau), t)) ->
-              let _ =  dprint (fun () -> "[check: inferHead] cPsi = " ^
-                                 P.dctxToString cD (C.cnormDCtx (cPsi,t) )) in
-              let tB = LF.inferHead loc cD (C.cnormDCtx (cPsi,t)) h in
-                if Whnf.convTyp (tB, S.LF.id) (C.cnormTyp (tA, t), S.LF.id) then
-                  begin
-                    Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.PObj (phat, h), t))) ("MApp 3" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-                    (tau, I.MDot(I.PObj (phat, h), t))
-                  end
-                else
-                  raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-          | (MetaSObj(loc, phat, s), (TypPiBox ((I.Decl(_, I.STyp (tA, cPsi, _))), tau), t)) ->
-              LF.checkSub loc cD (C.cnormDCtx (cPsi, t)) s (C.cnormDCtx (tA, t));
-	            Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, I.MDot(I.SObj (phat,s), t))) ("MApp 4" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-              (tau, I.MDot(I.SObj (phat, s), t))
-          | ( _ , ((TypPiBox (I.Decl _ , _ )) as tau, t) ) ->
-              raise (Error (loc, MismatchSyn (cD, cG, e, VariantCtxPi, (tau,t))))
-          | (_ , (tau, t)) ->
+        begin match (C.cwhnfCTyp (syn cD cG e)) with
+          | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
+	    LF.checkMetaObj cD mC (ctyp, t);
+	    (tau, I.MDot(metaObjToMFront mC, t))
+          | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
 
@@ -675,7 +562,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with
-          | (TypBox (_, MetaTyp (tA, cPhi)) , theta) ->
+          | (TypBox (_, I.ClTyp (_, cPhi)) , theta) ->
               let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
                                 P.mctxToString cD ^
                                 "context of expected  type " ^
@@ -689,8 +576,8 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
 
     | PatMetaObj (loc, mO) ->
         (match ttau with
-          | (TypBox (_, MetaTyp(tA, cPsi)) , theta) ->
-              checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta)
+          | (TypBox (_, ctyp) , theta) ->
+              LF.checkMetaObj cD mO (ctyp, theta)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->
@@ -735,29 +622,10 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           synPatSpine cD cG pat_spine (tau, theta')
       end
 
-  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (cdecl, theta) = match cdecl with
-    | I.Decl (_, I.MTyp (tA, cPsi, _)) ->
-        let _ = checkMetaObj loc cD mO (MetaTyp (tA, cPsi), theta) in
-          (match mO with
-            | MetaObj (_, phat, tM) ->  I.MDot(I.MObj(phat, tM), theta)
-            | MetaObjAnn (_, cPsi, tM) -> I.MDot (I.MObj(Context.dctxToHat cPsi, tM), theta)
-          )
-    | I.Decl (_, I.PTyp (tA, cPsi, _)) ->
-        let _ = checkMetaObj loc cD mO (MetaParamTyp (tA, cPsi), theta) in
-          (match mO with
-            | MetaParam (_, phat, h) ->  I.MDot(I.PObj(phat, h), theta)
-          )
-    | I.Decl (_, I.STyp (cPhi, cPsi, _)) ->
-        let _ = checkMetaObj loc cD mO (MetaSubTyp (cPhi, cPsi), theta) in
-          (match mO with
-            | MetaSObj (_, phat, s) ->  I.MDot(I.SObj(phat, s), theta)
-            | MetaSObjAnn (_, cPsi, s) -> I.MDot (I.SObj(Context.dctxToHat cPsi, s), theta)
-          )
-    | I.Decl (_, I.CTyp (w, _ )) ->
-        let _ = checkMetaObj loc cD mO (MetaSchema w, theta) in
-          (match mO with
-            | MetaCtx (_, cPsi) -> I.MDot (I.CObj (cPsi) , theta)
-          )
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+    LF.checkMetaObj cD mO (ctyp, theta);
+    I.MDot(metaObjToMFront mO, theta)
+
   and checkBranches caseTyp cD cG branches tAbox ttau =
     List.iter (fun branch -> checkBranch caseTyp cD cG branch tAbox ttau) branches
 
@@ -787,7 +655,7 @@ let extend_mctx cD (x, cdecl, t) = match cdecl with
           let _ = dprint (fun () -> "\nChecking refinement substitution :      DONE\n") in
           let _ = dprint (fun () -> "[check] MetaObj " ^ P.metaObjToString cD1'  mO
                             ^ "\n   has type " ^  P.metaTypToString cD1'  mT1) in
-          let _ = checkMetaObj loc cD1' mO  (mT1, C.m_id) in
+          let _ = LF.checkMetaObj cD1' mO  (mT1, C.m_id) in
             check cD1' cG' e1 (tau', Whnf.m_id);
             (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau_s, C.m_id))           *)
 

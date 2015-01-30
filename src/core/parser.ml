@@ -127,9 +127,9 @@ let rec unmix = function
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
                                       let (l, cdecl) = match c1 with
-                                          | Comp.TypBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.MTyp(l, tA, cPsi, LF.No)))
-                                          | Comp.TypPBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.PTyp(l, tA, cPsi, LF.No)))
-                                          | Comp.TypCtx (l, schema)    -> (l, LF.Decl(x, LF.CTyp(l, schema, LF.No))) in
+                                          | Comp.TypBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.MTyp(l, tA, cPsi), LF.No))
+                                          | Comp.TypPBox (l, tA, cPsi) -> (l, LF.Decl(x, LF.PTyp(l, tA, cPsi), LF.No))
+                                          | Comp.TypCtx (l, schema)    -> (l, LF.Decl(x, LF.CTyp(l, schema), LF.No)) in
                                       CompKindMix(Comp.PiKind(l, cdecl, c2))
                                   | (_, _) -> unmixfail (mixloc mt2)
                            end
@@ -664,21 +664,21 @@ GLOBAL: sgn;
       [
         "{"; hash = "#"; p = SYMBOL; ":";
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
-           LF.Decl(Id.mk_name (Id.SomeString p), LF.PTyp(_loc, tA, cPsi, LF.No))
+           LF.Decl(Id.mk_name (Id.SomeString p), LF.PTyp(_loc, tA, cPsi), LF.No)
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
          cPsi = clf_dctx; turnstile; cPhi = clf_dctx; "}" ->
-            LF.Decl(Id.mk_name (Id.SomeString s), LF.STyp(_loc, cPhi, cPsi, LF.No))
+            LF.Decl(Id.mk_name (Id.SomeString s), LF.STyp(_loc, cPhi, cPsi), LF.No)
 
       |
           "{";  u = UPSYMBOL; ":";
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}" ->
-           LF.Decl(Id.mk_name (Id.SomeString u), LF.MTyp(_loc, tA, cPsi, LF.No))
+           LF.Decl(Id.mk_name (Id.SomeString u), LF.MTyp(_loc, tA, cPsi), LF.No)
 
       |
           "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" ->
-            LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w), LF.No))
+            LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w)), LF.No)
 
       ]
     ]
@@ -1260,28 +1260,20 @@ GLOBAL: sgn;
 
         "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
         begin match phat_or_psi, tR with
-	      | Dctx cPsi , Term tM  -> Comp.Syn (_loc,  Comp.BoxVal (_loc, Comp.MetaObjAnn(_loc, cPsi, tM)))
+	      | Dctx cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
 	      | Hat phat  , Term tM  -> Comp.Box (_loc, Comp.MetaObj(_loc, phat, tM))
-	      | Dctx cPsi , Sub s    -> Comp.Syn (_loc, Comp.BoxVal (_loc, Comp.MetaSObjAnn (_loc,cPsi, s)))
+	      | Dctx cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
 	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
 	end
 
-      | "["; cPsi = clf_dctx; "]" ->
-	 Comp.Box (_loc, Comp.MetaCtx (_loc, cPsi))
-
-(*        "["; phat_or_psi = clf_hat_or_dctx ; " . " ; tM = clf_term_app; "]" ->
-          begin match phat_or_psi with
-            | Dctx cPsi ->  Comp.Syn(_loc, Comp.BoxVal (_loc, cPsi, tM))
-            | Hat phat  ->                 Comp.Box (_loc, phat, tM)
-      end
-*)
-(*      |
-          "["; phat_or_psi = clf_hat_or_dctx ; "]" ; sigma = clf_sub_new ->
-          begin match phat_or_psi with
-(*            | Dctx cPsi ->  Comp.Syn(_loc, Comp.SBoxVal (_loc, cPsi, tM))  *)
-            | Hat phat  ->                 Comp.SBox (_loc, phat, sigma)
-          end
-*)
+       | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
+        begin match phat_or_psi with
+          | Dctx cPsi     -> Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))
+          | Hat [psi]      -> Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))
+          | Hat []       -> Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))
+          | _                      ->
+            raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+        end
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1303,46 +1295,7 @@ GLOBAL: sgn;
 isuffix:
  [ LEFTA [
 
-  "["; phat_or_psi = clf_hat_or_dctx ; turnstile; tM = term_or_sub; "]"   ->
-     begin match (phat_or_psi, tM) with
-       | (Dctx cPsi, Term tM)   -> (fun i -> Comp.MApp (_loc, i,
-                                                        Comp.MetaObjAnn(_loc, cPsi,  tM)))
-       | (Hat phat, Term tM)    -> (fun i -> Comp.MApp (_loc, i,
-                                                        Comp.MetaObj (_loc, phat, tM)))
-       | (Dctx cPsi, Sub s) ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | (Hat phat, Sub s)  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
-     end
-
-  (*|    "["; phat_or_psi = clf_hat_or_dctx ; turnstile; h = clf_head; ","; t = clf_head; "]" ->
-    let s = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)), LF.Head t) in
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
-     end*)
-
-  | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi     -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx (_loc,cPsi)))
-       | Hat [psi]      -> (fun i -> Comp.MApp(_loc, i,
-                                                       Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))))
-       | Hat []       -> (fun i -> Comp.MApp(_loc, i, Comp.MetaCtx(_loc, LF.Null)))
-       | _                      ->
-         raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
-     end
-
-   (*| "["; phat_or_psi = clf_hat_or_dctx ; turnstile; s = clf_sub_new; "]"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObjAnn (_loc,cPsi, s)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaSObj (_loc,phat, s)))
-     end*)
-
- | "<"; phat_or_psi = clf_hat_or_dctx ; "."; tM = clf_term_app; ">"   ->
-     begin match phat_or_psi with
-       | Dctx cPsi ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObjAnn (_loc,cPsi, tM)))
-       | Hat phat  ->  (fun i -> Comp.MApp (_loc, i, Comp.MetaObj (_loc,phat, tM)))
-     end
-
-   | "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
+     "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
    |  m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
         let (modules, n) = split '.' m in
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
@@ -1529,13 +1482,13 @@ clf_pattern :
         "{"; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; "}"; mixtau = SELF ->
           let modules = match l with None -> [] | Some l -> l in
           let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
-            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.No))) in
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w)), LF.No)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
       | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
           let modules = match l with None -> [] | Some l -> l in
           let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
-            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w), LF.Maybe))) in
+            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w)), LF.Maybe)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->

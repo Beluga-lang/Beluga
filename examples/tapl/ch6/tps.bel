@@ -25,7 +25,7 @@ datatype step: term -> term -> type =
 | step_app_2    : step M2 M2' -> value M1              
               -> step (app M1 M2) (app M1 M2')
 | step_app_beta : value M2
-              -> step (app (lam M) M2) (M M2)
+              -> step (app (lam T M) M2) (M M2)
 ;
 
 % ---------------------------------------------------------- %

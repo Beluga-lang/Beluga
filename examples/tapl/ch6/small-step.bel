@@ -18,11 +18,11 @@ datatype value:  term -> type =
 % Small-step operational semantics
 
 datatype step: term -> term -> type = 
-| step_app_1    : step M1 M1'
+| e_app_1    : step M1 M1'
              -> step (app M1 M2) (app M1' M2)
-| step_app_2    : step M2 M2' -> value M1              
+| e_app_2    : step M2 M2' -> value M1              
               -> step (app M1 M2) (app M1 M2')
-| step_app_beta : value M2
+| e_app_abs : value M2
               -> step (app (lam M) M2) (M M2)
 ;
                  
@@ -42,33 +42,33 @@ fn s => fn v => case v of
 rec unique : [|- step M M1] -> [|- step M M2] -> [|- equal M1 M2 ] =
 / total s (unique m m1 m2 s)/
 fn s1 => fn s2 => case s1 of
-| [ |- step_app_1 DstepE1'] => 
+| [ |- e_app_1 DstepE1'] => 
    (case s2 of 
-    | [|- step_app_1 DstepE1''] =>
+    | [|- e_app_1 DstepE1''] =>
       let [ |- refl] = unique [ |- DstepE1'] [|- DstepE1''] in
          [ |- refl]
-    | [|- step_app_2 DstepE2'' V1] => 
+    | [|- e_app_2 DstepE2'' V1] => 
       impossible values_dont_step [|- DstepE1'] [|- V1] in []
-    | [|- step_app_beta V2] =>    
+    | [|- e_app_abs V2] =>    
       impossible values_dont_step [|- DstepE1'] [|- v_lam] in []
   )
-| [ |- step_app_2 DstepE2' V1 ] => 
+| [ |- e_app_2 DstepE2' V1 ] => 
    (case s2 of 
-    | [|- step_app_2 DstepE2'' _] =>
+    | [|- e_app_2 DstepE2'' _] =>
       let [ |- refl] = unique [ |- DstepE2'] [|- DstepE2''] in
         [ |- refl]
-    | [|- step_app_1 DstepE1''] => 
+    | [|- e_app_1 DstepE1''] => 
       impossible values_dont_step [|- DstepE1''] [|- V1] in []
-    | [|- step_app_beta V2] => 
+    | [|- e_app_abs V2] => 
       impossible values_dont_step [|- DstepE2'] [|- V2] in []
    )
 
-| [ |- step_app_beta V2] => 
+| [ |- e_app_abs V2] => 
   (case s2 of 
-   | [|- step_app_beta _ ] =>  [ |- refl]
-   | [|- step_app_1 DstepE1'] =>
+   | [|- e_app_abs _ ] =>  [ |- refl]
+   | [|- e_app_1 DstepE1'] =>
       impossible values_dont_step [|- DstepE1'] [|- v_lam] in []
-   | [|- step_app_2 DstepE2'' V1] => 
+   | [|- e_app_2 DstepE2'' V1] => 
       impossible values_dont_step [|- DstepE2''] [|- V2] in []
   )
 

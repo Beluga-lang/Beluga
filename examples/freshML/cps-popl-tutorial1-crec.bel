@@ -55,17 +55,25 @@ fn e => case e of
    [g, k |-  (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))]
 ;
 
-%{
-let id_fun = [ |- lam o \x. ret x] ;
+
+% let id_fun = [ |- lam o \x. ret x] ;
+
 
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
+rec test0 : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
+fn x => let [b:block (x:value o , _t:cvalue o) |-  V' b] = r0 in
+	   [b,k |- cthrow k (V' b)] ;
+
+let r1' = test0 ttrue ;
+%{
 rec test : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
 fn x => let [b:block (x:value o , _t:cvalue o) |-  V' b] = cps [b:block (x:value o , _t:cvalue o) |-  b.1] in
 	[b,k |- cthrow k (V' b)] ;
 
 let r1' = test ttrue ;
-
+}%
+%{
 let r1 = cpse [b:block x:value o , _t:cvalue o |-  ret b.1] ;
 
 let r2 = cps [ |- lam o \x. ret x] ;

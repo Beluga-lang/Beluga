@@ -147,7 +147,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 let mdeclToMMVar cD0 n mtyp = match mtyp with
   | ClTyp (MTyp tA, cPsi) ->
-    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA)  in
+    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA)   in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, MObj (Root (Syntax.Loc.ghost, MMVar ((u, Whnf.m_id), Substitution.LF.id), Nil)))
   | ClTyp (STyp cPhi, cPsi) ->
@@ -164,7 +164,7 @@ let mdeclToMMVar cD0 n mtyp = match mtyp with
 
 let rec mctxToMMSub cD0 cD = match cD with
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', Decl(n, mtyp, _)) ->
+  | Dec (cD', Decl(n, mtyp, _dep)) ->
       let t     = mctxToMMSub cD0 cD' in
       let mtyp' = Whnf.cnormMTyp (mtyp,t) in
       MDot (mdeclToMMVar cD0 n mtyp' , t)

@@ -16,6 +16,7 @@ datatype term  : type =
 | iszero: term -> term
 ;
 
+%name term M.
 % ----------------------------------------------------------------------------
 % Examples : Valid Terms
 
@@ -108,6 +109,7 @@ datatype tp : type =
 | nat : tp
 | bool : tp
 ;
+%name tp T.
 
 datatype hastype: term -> tp -> type =
 | t_zero : hastype z nat
@@ -131,7 +133,32 @@ rec tps: [|- hastype M T] -> [|- step M M'] -> [|- hastype M' T] =
 fn d => fn s => case s of
 | [|- e_switch_true] => let [|- t_switch D D1 D2] = d in [|- D1]
 | [|- e_switch_false] => 
-  let [|- t_switch D D1 D2] = d in [|- D2]
+  let [|- t_switch D D1 D2] = d in ? %[|- D2]
+  %{
+1) Infer the type of [|- t_switch D D1 D2]
+   ~~~>   [|- hastype (switch M0 M1 M2) S]
+2) Abstract:
+
+   {M0:[|- term]}^i{M1:[|- term]}^i{M2:[|- term]}^i{S:[|- tp]}^i
+   {D: [|- hastype M0 bool]}^e,    {D1: [|- hastype M1 S]}^e,   {D2: [|- hastype M2 S]}^e 
+   
+   |-  [|- t_switch M0 M1 M2 T D D1 D2] : [|- hastype (switch M0 M1 M2) S]
+
+3) Is the type of the patter I have inferred compatible with the type of 
+   the scrutinee, i.e. the expression I am case-analyzing.
+
+   What is the type of the scrutinee? -
+   {M:[|- term]}{T:[|- tp]} |- d : [|- hastype M T]
+
+
+   Let's see if unification can make the type [|- hastype M T] 
+   equal to [|- hastype (switch M0 M1 M2) S]. 
+
+
+
+
+
+}%
 | [|- e_switch S] => 
   let [|- t_switch D D1 D2] = d in 
   let [|- D'] = tps [|- D] [|- S] in

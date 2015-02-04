@@ -390,11 +390,11 @@ let mgAtomicTyp cD cPsi a kK =
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi'))  in
+                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi')) Int.LF.Maybe in
                      let ss_proj = LF.comp ss' s_proj in
                        Int.LF.MMVar ((u, Whnf.m_id), ss_proj))
                    else
-                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  in 
+                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  Int.LF.Maybe in 
                      Int.LF.MMVar ((u, Whnf.m_id), s_proj)
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
@@ -454,7 +454,7 @@ let mmVarToMetaObj loc' mV = function
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let ctyp' = C.cnormMTyp (ctyp, t) in
-  let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp')) ctyp' in
+  let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp') Int.LF.Maybe) ctyp' in
   ((loc',mO), Int.LF.MDot(mO,t))
 
 let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)

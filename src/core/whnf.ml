@@ -87,19 +87,20 @@ let newMTypName = function
   | ClTyp (STyp _,_) -> Id.SVarName None
   | CTyp _ -> Id.NoName
 
-let newMMVar' n (cD, mtyp) = match n with
+let newMMVar' n (cD, mtyp) dep = match n with
   | None -> 
       let n = Id.mk_name (newMTypName mtyp) in 
-	 (n, ref None, cD, mtyp, ref [], Maybe)
+	 (n, ref None, cD, mtyp, ref [], dep)
   | Some name -> 
       (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
 
-let newMMVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (MTyp tA,cPsi))
-let newMPVar n (cD, cPsi, tA) = newMMVar' n (cD, ClTyp (PTyp tA, cPsi))
-let newMSVar n (cD, cPsi, cPhi)  = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi))
-let newCVar n cD (sW) = CInst (newMMVar' n (cD, CTyp sW), MShift 0)
+let newMMVar n (cD, cPsi, tA) dep =
+  newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
+let newMPVar n (cD, cPsi, tA) =  newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) Maybe
+let newMSVar n (cD, cPsi, cPhi)  = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi)) Maybe
+let newCVar n cD (sW) = CInst (newMMVar' n (cD, CTyp sW)  Maybe, MShift 0)
 
-let newMVar n (cPsi, tA) = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)))
+let newMVar n (cPsi, tA) = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) Maybe)
 
 (******************************)
 (* Lowering of Meta-Variables *)
@@ -1814,7 +1815,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA
 
 and etaExpandMMV' loc cD cPsi sA n s' = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s))  in 
+      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) Maybe in 
         Root (loc, MMVar ((u, m_id), s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->

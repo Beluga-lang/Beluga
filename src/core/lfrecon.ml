@@ -212,9 +212,9 @@ let mkShift recT cPsi = match recT with
  *  cD ; cPsi   |- tN   <= [s]A
  *)
 let rec etaExpandMMVstr loc cD cPsi sA  n =
-  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n
+  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n 
 
-and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
+and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
   | (Int.LF.Atom (_, a, _tS) as tP, s) ->
       let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
@@ -227,7 +227,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
       let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar (Some n) (cD, cPhi', Int.LF.TClo(tQ,ssi')) in 
+      let u = Whnf.newMMVar (Some n) (cD, cPhi', Int.LF.TClo(tQ,ssi'))  Int.LF.Maybe in 
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -236,7 +236,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n = match sA with
 
   | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Int.LF.Lam (loc, x,
-                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) x )
+                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) x)
 
 
 (* ******************************************************************* *)
@@ -1086,10 +1086,10 @@ and elTerm' recT cD cPsi r sP = match r with
                                    let ssi' = Substitution.LF.invert ss' in
                                      (* cPhi' |- ssi : cPhi *)
                                      (* cPhi' |- [ssi]tQ    *)
-                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi'))  in 
+                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in 
                                      Int.LF.MMVar((u, Whnf.m_id), Substitution.LF.comp ss'  s_proj)
                                  else
-                                   let u = Whnf.newMMVar None (cD, cPhi, tA')  in
+                                   let u = Whnf.newMMVar None (cD, cPhi, tA')  Int.LF.Maybe in
                                      Int.LF.MMVar ((u, Whnf.m_id), s_proj)
                     in
                       Int.LF.Root (loc, h, tS)
@@ -1253,7 +1253,7 @@ and elTerm' recT cD cPsi r sP = match r with
                  | Apx.LF.SVar (_ , _ ) ->
                      raise (Error (loc, CompTypAnnSub ))
                  | _ ->
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) in
+              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP)  in
                 add_fcvarCnstr (m, v);
                 Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
 
@@ -2365,7 +2365,8 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            * s.t.  cPsi |- \x1...\xn. u[id] => [id]A  where cPsi |- id : cPsi
            *)
            (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n   Substitution.LF.id in *)
-           let tN     = if !strengthen then etaExpandMMVstr loc cD cPsi (tA, s) n
+           let tN     = if !strengthen
+			then etaExpandMMVstr loc cD cPsi (tA, s) n 
                         else Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in

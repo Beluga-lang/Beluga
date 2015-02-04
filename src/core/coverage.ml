@@ -247,7 +247,7 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar None (LF.Empty, cPhi', LF.TClo(tQ,ssi')) in             
+      let u = Whnf.newMMVar None (LF.Empty, cPhi', LF.TClo(tQ,ssi')) LF.Maybe in             
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)

@@ -138,7 +138,7 @@ let _ = Error.register_printer
    i.e. the meta-variables and free variables occurring the type had been
    collected *)
 type flag = LF | Comp
-type sort = LFTyp of I.typ | MetaTyp of I.ctyp
+type sort = LFTyp of I.typ | MetaTyp of I.ctyp 
 type marker = Pure of sort | Impure
  
 type free_var =

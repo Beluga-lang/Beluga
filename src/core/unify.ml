@@ -167,7 +167,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
     let ssi' = Substitution.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi'))  in
+    let u = Whnf.newMMVar None (cD, cPhi', TClo(tQ,ssi')) Maybe in
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -1029,7 +1029,7 @@ let isVar h = match h with
     else
       let (id2,(cD2,cPsi2')) = pruneBoth cD0 cPsi' (mtt,(cD1,cPsi1)) ss rOccur in
       let tP' = normClTyp2 (tp, invert2 id2) in
-      let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2'))  in
+      let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2')) Maybe  in
       let _  = instantiateMMVarWithMMVar r loc (v, id2) tP' !cnstrs in
       let (mr,r) = comp2 (comp2 id2 mtt) ss in
       ((v, mr), r)
@@ -1512,7 +1512,7 @@ let isVar h = match h with
     let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
     let tp1'  = normClTyp2 (tp1, (mtt',ss')) in
 
-    let w = Whnf.newMMVar' (Some n1) (cD', ClTyp (tp1', cPsi_n))  in
+    let w = Whnf.newMMVar' (Some n1) (cD', ClTyp (tp1', cPsi_n)) Maybe in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])

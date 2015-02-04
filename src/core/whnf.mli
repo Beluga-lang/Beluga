@@ -39,7 +39,7 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar'    : Id.name option -> mctx * ctyp ->  mm_var
+val newMMVar'   : Id.name option -> mctx * ctyp ->  mm_var
 val newMMVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMPVar    : Id.name option -> mctx * dctx * typ ->  mm_var
 val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var

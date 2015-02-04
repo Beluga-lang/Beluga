@@ -5,33 +5,30 @@
   SYNTAX
 }%
 
-term: type.
+datatype term: type = 
+| lam: (term -> term) -> term
+| app: term -> term -> term;
 
-lam: (term -> term) -> term.
-app: term -> term -> term.
 
-
-value:  term -> type.
-v_lam: value (lam M).
+datatype value:  term -> type = 
+| v_lam: value (lam M);
 
 
 % ---------------------------------------------------------- %
 % Small-step operational semantics
 
-step: term -> term -> type.
+datatype step: term -> term -> type = 
+| step_app_1    : step M1 M1'
+             -> step (app M1 M2) (app M1' M2)
+| step_app_2    : step M2 M2' -> value M1              
+              -> step (app M1 M2) (app M1 M2')
+| step_app_beta : value M2
+              -> step (app (lam M) M2) (M M2)
+;
+                 
 
-step_app_1    : step (app E1 E2) (app E1' E2)
-                 <- step E1 E1'.
-step_app_2    : step (app E1 E2) (app E1 E2')
-                 <- value E1
-                 <- step E2 E2'.
-
-step_app_beta : step (app (lam (\x. E x)) E2) (E E2)
-                 <- value E2.
-
-
-equal : term -> term -> type.
-refl: equal E E .
+datatype equal : term -> term -> type = 
+| refl: equal M M;
 
 not_possible : type.
 
@@ -41,40 +38,38 @@ fn s => fn v => case v of
 | [ |- v_lam] => impossible s in []
 ;
 
-steps_to_terms: term -> term -> term -> type.
-andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
-rec det : [ |- steps_to_terms T T1 T2 ] -> [ |- equal T1 T2 ] =
-% / total s (det t t1 t2 s)/
-fn s => case s of
-| [ |- andalso (step_app_1 DstepE1') (step_app_1 DstepE1'')] =>
-  let [ |- refl] = det [ |- andalso DstepE1' DstepE1''] in
-    [ |- refl]
+rec unique : [|- step M M1] -> [|- step M M2] -> [|- equal M1 M2 ] =
+/ total s (unique m m1 m2 s)/
+fn s1 => fn s2 => case s1 of
+| [ |- step_app_1 DstepE1'] => 
+   (case s2 of 
+    | [|- step_app_1 DstepE1''] =>
+      let [ |- refl] = unique [ |- DstepE1'] [|- DstepE1''] in
+         [ |- refl]
+    | [|- step_app_2 DstepE2'' V1] => 
+      impossible values_dont_step [|- DstepE1'] [|- V1] in []
+    | [|- step_app_beta V2] =>    
+      impossible values_dont_step [|- DstepE1'] [|- v_lam] in []
+  )
+| [ |- step_app_2 DstepE2' V1 ] => 
+   (case s2 of 
+    | [|- step_app_2 DstepE2'' _] =>
+      let [ |- refl] = unique [ |- DstepE2'] [|- DstepE2''] in
+        [ |- refl]
+    | [|- step_app_1 DstepE1''] => 
+      impossible values_dont_step [|- DstepE1''] [|- V1] in []
+    | [|- step_app_beta V2] => 
+      impossible values_dont_step [|- DstepE2'] [|- V2] in []
+   )
 
-| [ |- andalso (step_app_2 DstepE2' _ ) (step_app_2 DstepE2'' _)] =>
-  let [ |- refl] = det [ |- andalso DstepE2' DstepE2'' ] in
-  [ |- refl]
-
-| [ |- andalso (step_app_beta _ ) (step_app_beta _ )] =>  [ |- refl]
-
-%{ Note: impossible cases cannot be proven directly to be impossible, since we only look ahead one step to see whether a contextual type is empty. However, see file small-step-2.bel where we use computation-level pairs, we can circumvent this problem and omit these cases while still retaining coverage.
-}%
-| [ |- andalso (step_app_1 DstepE1') (step_app_2 DstepE2' V)] =>
-  impossible values_dont_step [ |- DstepE1'] [ |- V] in [ ]
-
-| [ |- andalso (step_app_2 DstepE2' V) (step_app_1 DstepE1')]  =>
-  impossible values_dont_step [ |- DstepE1'] [ |- V] in [ ]
-
-| [ |- andalso (step_app_1 DstepE1') (step_app_beta _ )] =>
-  impossible values_dont_step [ |- DstepE1'] [ |- v_lam ] in [ ]
-
-| [ |- andalso (step_app_beta _ ) (step_app_1 DstepE1')] =>
-  impossible values_dont_step [ |- DstepE1'] [ |- v_lam ] in [ ]
-
-| [ |- andalso (step_app_2 DstepE2' V) (step_app_beta V2 )] =>
-  impossible values_dont_step [ |- DstepE2'] [ |- V2] in [ ]
-
-| [ |- andalso (step_app_beta V2 ) (step_app_2 DstepE2' _)] =>
-  impossible values_dont_step [ |- DstepE2'] [ |- V2] in [ ]
+| [ |- step_app_beta V2] => 
+  (case s2 of 
+   | [|- step_app_beta _ ] =>  [ |- refl]
+   | [|- step_app_1 DstepE1'] =>
+      impossible values_dont_step [|- DstepE1'] [|- v_lam] in []
+   | [|- step_app_2 DstepE2'' V1] => 
+      impossible values_dont_step [|- DstepE2''] [|- V2] in []
+  )
 
 ;

@@ -391,22 +391,23 @@ let rec ctxToCtx cQ = match cQ with
 let getName = function
   | MMV (n,_) | FV n -> n
 
-let rec ctxToMCtx ?(dep'=I.Maybe) cQ = match cQ with
+(* dep' indicates whether FVars are treated implicit or explicit *)
+let rec ctxToMCtx dep' cQ = match cQ with
   | I.Empty ->
       I.Empty
 
   | I.Dec (cQ', FDecl (s, Pure (MetaTyp ityp))) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (getName s, ityp, I.No))
+      I.Dec (ctxToMCtx dep' cQ', I.Decl (getName s, ityp, dep'))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp w, dep))
 
   (* this case should not happen -bp *)
    | I.Dec (cQ', FDecl (FV _, Pure (LFTyp tA)))->
       raise (Error.Violation "Free variables in computation-level reconstruction.")
 
    | I.Dec (cQ', FDecl (_, Impure)) ->
-       ctxToMCtx cQ'
+       ctxToMCtx dep' cQ'
 
 
 (* collectTerm p cQ phat (tM,s) = cQ'
@@ -1134,7 +1135,7 @@ and abstractMSub t =
   let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
   let t'' = abstrMSub cQ' t' in
-  let cD' = ctxToMCtx cQ' in
+  let cD' = ctxToMCtx (I.Maybe) cQ' in
   (t'', cD')
 
 (* wrapper function *)
@@ -1518,7 +1519,7 @@ let abstrCompKind cK =
   let l           = (k - l') in
   let cQ'  = abstractMVarCtx cQ (l-1-p)  in
   let cK' = abstractMVarCompKind cQ' (l,0) cK1 in
-  let cD' = ctxToMCtx cQ' in
+  let cD' = ctxToMCtx (I.Maybe) cQ' in
   let cK2 = raiseCompKind cD' cK' in
     (cK2, Context.length cD')
 
@@ -1537,7 +1538,7 @@ let abstrCompTyp tau =
   let cQ'  = abstractMVarCtx cQ (l-1-p) in
   (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in
-  let cD' = ctxToMCtx cQ' in
+  let cD' = ctxToMCtx (I.Maybe) cQ' in
   let tau'' = raiseCompTyp cD' tau' in
     (tau'', Context.length cD' )
 
@@ -1554,7 +1555,7 @@ let abstrPatObj loc cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx cQ' in 
+  let cD'     = ctxToMCtx (I.No) cQ' in 
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
       (cD, cG', pat', tau')
@@ -1574,7 +1575,7 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
 (*  let cs1'    = abstractMVarCSub cQ' offset cs1 in
   let cs'     = abstractMVarCSub cQ' offset cs in *)
-  let cD'     = ctxToMCtx ~dep':I.No cQ' in
+  let cD'     = ctxToMCtx (I.No) cQ' in
   let cD      = Context.append cD' cD2 in
     (cD, cPsi2, (phat, tM2), tA2)
 
@@ -1588,7 +1589,7 @@ let abstrMObjPatt cD1 cM mT =
   let cM'     = abstractMVarMetaObj cQ' (0, offset) cM' in
   let mT'      = abstractMVarMetaTyp cQ' mT' (0, offset) in
   let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'     = ctxToMCtx ~dep':I.No cQ' in
+  let cD'     = ctxToMCtx (I.No) cQ' in
   let cD      = Context.append cD' cD2 in
     (cD, cM', mT')
 
@@ -1605,7 +1606,7 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let sigma2   = abstractMVarSub cQ' (0,offset) sigma' in
   let cPhi2    = abstractMVarDctx cQ' (0,offset) cPhi1' in
   let cD2      = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'      = ctxToMCtx cQ' in
+  let cD'      = ctxToMCtx (I.Maybe) cQ' in
   let cD       = Context.append cD' cD2 in
     (cD, cPsi2, sigma2, cPhi2)
 
@@ -1688,7 +1689,7 @@ let abstrCovGoal cPsi tM tA ms =
   let tM0     = abstractMVarTerm cQ' (0,0) (tM', LF.id) in
   let tA0     = abstractMVarTyp  cQ' (0,0) (tA', LF.id) in
 
-  let cD0     = ctxToMCtx cQ' in
+  let cD0     = ctxToMCtx (I.Maybe) cQ' in
 
     (cD0, cPsi0, tM0, tA0, ms0)
 
@@ -1702,7 +1703,7 @@ let abstrCovPatt cG pat tau ms =
   let cG'     = abstractMVarGctx cQ' (0,0) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,0) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in
-  let cD'     = ctxToMCtx cQ' in
+  let cD'     = ctxToMCtx (I.Maybe) cQ' in
     (cD', cG', pat', tau', ms0)
 
 (* Shorter names for export outside of this module. *)

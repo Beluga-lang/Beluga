@@ -3,56 +3,46 @@
 %
 
 % Expressions
-exp   :  type.        %name exp E.
-app   : exp -> exp -> exp.
-lam   : (exp -> exp) -> exp.
+datatype term   :  type =         
+| app   : term -> term -> term
+| lam   : (term -> term) -> term
+;
 
 % Translating to untyped deBruijn terms
 
-exp'   : type.
-one    : exp'.
-shift  : exp' -> exp'.  % ^
-lam'   : exp'  -> exp' .
-app'   : exp'  -> exp'  -> exp'.
-
-schema ctx = exp;
-
-%{rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
- / total p (vhoas2db g p ) /
-mlam g => mlam #p =>  case [g |- #p ..] of
-   % f [h] _
- | [h,x:exp |- x] => [ |- one ]
-
- | % f [h] _
-   [h,x:exp |- #p .. ] =>
-   let [ |- Db] = vhoas2db [h] [h |- #p ..] in
-     [ |- shift Db]
+datatype term'   : type = 
+| one    : term'
+| shift  : term' -> term'  % ^
+| lam'   : term'  -> term' 
+| app'   : term'  -> term'  -> term'
 ;
-}%
 
-rec vhoas2db : {g:ctx}{#p:[g |- exp]}  [ |- exp'] =    
- / total g (vhoas2db g  ) /
-mlam g => mlam #p =>  case [g] of 
+schema ctx = term;
+
+rec vhoas2db : {gamma:ctx}{#p:[gamma |- term]} [ |- term'] =    
+ / total gamma (vhoas2db gamma) /
+mlam gamma => mlam #p =>  case [gamma] of 
 | [] => impossible [ |- #p ] in []
-| [h, x:exp] => (case [h, x:exp |- #p ..] of 
- | [h,x:exp |- x] => [ |- one ]
- | [h,x:exp |- #p .. ] =>
-   let [ |- Db] = vhoas2db [h] [h |- #p ..] in
+| [gamma', x:term] => (case [gamma', x:term |- #p ..] of 
+ | [gamma',x:term |- x] => [ |- one ]
+ | [gamma',x:term |- #p .. ] =>
+   let [ |- Db] = vhoas2db [gamma'] [gamma' |- #p ..] in
      [ |- shift Db])
 ;
 
-rec hoas2db : (g:ctx) [g |- exp] ->  [ |- exp' ] = / total e ( hoas2db _  e) /
- fn e =>  case e of
-  | [g |- #p .. ] => vhoas2db [g] [g |- #p ..]
+rec hoas2db : (gamma:ctx) [gamma |- term] ->  [ |- term' ] = 
+/ total e ( hoas2db _  e) /
+fn e =>  case e of
+| [gamma |- #p .. ] => vhoas2db [gamma] [gamma |- #p ..]
 
- | [g |- lam  (\x. E .. x)] =>
-   let [ |- F] =  hoas2db  [g,x:exp |- E .. x ] in
-     [ |- lam' F ]
+| [gamma |- lam  (\x. E .. x)] =>
+  let [ |- F] =  hoas2db  [gamma,x:term |- E .. x ] in
+    [ |- lam' F ]
 
- | [g |- app (E1 .. ) (E2 .. )] =>
-   let [ |- F1] = hoas2db  [g |- E1 ..]  in
-   let [ |- F2] = hoas2db  [g |- E2 ..]  in
-     [ |- app' F1 F2]
+| [gamma |- app (E1 .. ) (E2 .. )] =>
+  let [ |- F1] = hoas2db  [gamma |- E1 ..]  in
+  let [ |- F2] = hoas2db  [gamma |- E2 ..]  in
+    [ |- app' F1 F2]
 ;
 
 

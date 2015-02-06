@@ -980,7 +980,8 @@ let isVar h = match h with
 
   and prune  cD0 cPsi' phat sM ss rOccur =
     let (ms,s) = ss in
-    dprint (fun () -> "Pruning term: " ^ P.normalToString cD0 cPsi' sM
+    dprint (fun () -> "Pruning term: "
+		      ^ P.normalToString cD0 (Context.hatToDCtx phat) sM
                     ^ " with inv. sub: " ^ P.subToString cD0 cPsi' s);
       prune' cD0 cPsi' phat (Whnf.whnf sM) ss rOccur
 
@@ -1621,6 +1622,7 @@ let isVar h = match h with
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
             if isProjPatSub t && isPatMSub mt then
               begin try
+	       (dprint (fun () -> "Callin unifyMMVarTermProj ...");
 		unifyMMVarTermProj cD0 cPsi i mt t sM2
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");

@@ -1477,11 +1477,15 @@ let isVar h = match h with
   and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 =
      begin 
        let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
+       (* cD' |- mtt1 : cD0 *) 
        let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
        let phat = Context.dctxToHat flat_cPsi in
        let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
+       (*   flat_cPsi |- t_flat : cPsi   *)
        let tM2'   = ConvSigma.strans_norm cD0 (sM2,id) conv_list in
+       (*   flat_cPsi |- tM2'    *)
        let ss = invert t_flat in
+       (*  cPsi   |- ss : flat_cPsi *) 
        let sM2' = trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
        instantiateMMVar (r1, sM2', !cnstrs1)
      end

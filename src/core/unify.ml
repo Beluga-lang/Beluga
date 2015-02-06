@@ -1455,8 +1455,8 @@ let isVar h = match h with
           the wrong kind of exception... *)
     end 
 
-  and pruneITerm cD cPsi tm ss rOccur = match tm with
-    | INorm n , _        -> INorm (prune cD cPsi (Context.dctxToHat cPsi) (n,id) ss rOccur)
+  and pruneITerm cD cPsi (hat, tm) ss rOccur = match tm with
+    | INorm n , _        -> INorm (prune cD cPsi hat (n,id) ss rOccur)
     | IHead h , _        -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
     | ISub s , STyp cPhi -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
 
@@ -1467,17 +1467,30 @@ let isVar h = match h with
       (* cD ; cPsi1 |- ss1 <= cPsi *)
       let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
       let tp' = Whnf.cnormClTyp (tp, mt1) in
-      let tM2' = trail (fun () -> pruneITerm cD cPsi1 (sM2,tp') (mtt1, ss1) (MMVarRef r1)) in
+      let hat = Context.dctxToHat cPsi in 
+      let tM2' = trail (fun () -> pruneITerm cD cPsi1 (hat, (sM2,tp')) (mtt1, ss1) (MMVarRef r1)) in
+
       instantiateMMVar' (r1, tM2', !cnstrs1);
       (* with NotInvertible -> raise (Error.Violation "Unification violation") *)
        (* This might actually need to add a constraint, in which case "NotInvertible" seems
           the wrong kind of exception... *)
     end
 
+
+  (* unifyMMVarTermProj cD0 cPsi  (_, r1, cD, ClTyp (_, cPsi1),  cnstrs1, mdep1) mt1 t1' sM2 = ()
+
+    Pre-conditions:
+        cD0 ; cPsi |- sM2  
+        cD0 |- mt : cD
+        cD0 ; cPsi |- t1' : cPsi1
+
+            ; cPsi1 |-     : cPsi
+
+   *)
   and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 =
      begin 
        let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
-       (* cD' |- mtt1 : cD0 *) 
+       (* cD |- mtt1 : cD0 *) 
        let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
        let phat = Context.dctxToHat flat_cPsi in
        let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
@@ -1486,7 +1499,13 @@ let isVar h = match h with
        (*   flat_cPsi |- tM2'    *)
        let ss = invert t_flat in
        (*  cPsi   |- ss : flat_cPsi *) 
-       let sM2' = trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in
+       (* let ss1  = invert t1' in
+       (*  cPsi1 |- ss1 : cPsi *)
+       let _ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in *)
+       let sM2' =
+	 trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in 
+      (* let sM2' =
+	 trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, comp ss ss1) (MMVarRef r1)) in *)
        instantiateMMVar (r1, sM2', !cnstrs1)
      end
 
@@ -1627,7 +1646,7 @@ let isVar h = match h with
             if isProjPatSub t && isPatMSub mt then
               begin try
 	       (dprint (fun () -> "Callin unifyMMVarTermProj ...");
-		unifyMMVarTermProj cD0 cPsi i mt t sM2
+		unifyMMVarTermProj cD0 cPsi i mt t sM2)
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
                   addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))

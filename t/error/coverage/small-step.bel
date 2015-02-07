@@ -184,8 +184,9 @@ fn v => fn s => case v of
   let [ |- m_ref] = s in
     [ |- ref]
 
-| [ |- v_s V]   => (case s of 
-               | [ |- m_ref] => [ |- ref])
+| [ |- v_s V]   => 
+(case s of 
+| [ |- m_ref] => [ |- ref])
 
 ;
 

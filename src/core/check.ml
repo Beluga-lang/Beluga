@@ -351,6 +351,7 @@ let mark_ind cD k =
     | PatVar (_ , _ ) | PatTrue _ | PatFalse _ -> cD
     | PatPair (_, pat1, pat2) ->  fmv (fmv cD pat1) pat2
     | PatMetaObj (_, cM) -> fmv_mobj cD cM
+    | PatAnn (_, pat, _) -> fmv cD pat
 
   and fmv_pat_spine cD pat_spine = match pat_spine with 
     | PatNil -> cD
@@ -626,7 +627,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
         end
-    | (Case (loc, prag, Ann (Box (_, (l,cM)), TypBox (_, mT)), branches), (tau, t)) ->
+    | (Case (loc, prag, Ann (Box (_, (l,cM)), (TypBox (_, mT) as tau0_sc)), branches), (tau, t)) ->
         let (total_pragma, tau_sc, projOpt) =  (match  cM with
                    | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
 		   | I.ClObj (_ , I.PObj (I.PVar (x,s)))  ->
@@ -651,7 +652,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
-          checkBranches total_pragma cD (cG,cIH) branches tau_sc (tau, t);
+          checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t);
           Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
@@ -664,8 +665,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                     checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
                     Coverage.process problem None
               | (tau',t') ->
+		  let tau_s = C.cnormCTyp (tau', t') in
 		  let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-		    checkBranches total_pragma cD (cG,cIH) branches (C.cnormCTyp (tau', t')) (tau,t);
+		    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
                     Coverage.process problem None
             end
 	in 
@@ -887,8 +889,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot(metaObjToMFront mO, theta)
 
-  and checkBranches caseTyp cD cG branches tAbox ttau =
-    List.iter (fun branch -> checkBranch caseTyp cD cG branch tAbox ttau) branches
+  and checkBranches caseTyp cD cG branches tau_s ttau =
+    List.iter (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
 
   and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
@@ -899,8 +901,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
-          (* let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
-				^ "\nwhere scrutinee has type" ^
+(*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
+				^ "\nwhere scrutinee has type " ^
 				P.compTypToString cD tau_s ^ "\n") in *)
           let TypBox (_, mT) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
@@ -927,7 +929,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in
-          (* let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in *)
+(*          let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in 
+         let _ = print_string ("\nwhere scrutinee has type" ^
+				P.compTypToString cD tau_s ^ "\n") in *)
 	  let k     = Context.length cG1 in 
 	  let cIH0  = Total.shiftIH cIH k in 
           let (cD1', cIH')  = if is_inductive caseTyp && Total.struct_smaller pat then

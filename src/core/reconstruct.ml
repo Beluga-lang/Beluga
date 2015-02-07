@@ -1546,13 +1546,13 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
   | Apx.Comp.Branch (loc, _omega, delta, Apx.Comp.PatMetaObj(loc',mO), e) ->
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
         begin match tau_s with
-          | Int.Comp.TypBox (_, mT) ->
-              let typAnn = (cD, mtypeSkelet mT) in
+          | Int.Comp.TypBox (_, mT0) ->
+              let typAnn = (cD, mtypeSkelet mT0) in
               let cD'    = elMCtx  Lfrecon.Pibox delta in
 		(* ***************  RECONSTRUCT PATTERN BEGIN *************** *)
               let ((l_cd1', l_delta), cD1', mO', mT1') = recMObj loc' cD' mO typAnn in
 		(* ***************  RECONSTRUCT PATTERN DONE  *************** *)
-              let mT =  Whnf.cnormMetaTyp (mT, Int.LF.MShift l_cd1') in 
+              let mT =  Whnf.cnormMetaTyp (mT0, Int.LF.MShift l_cd1') in 
 		(* NOW: cD , cD1 |- mO : mT   and  cD1 |- mO' : mT1'          *)
 		(* ***************                            *************** *)
               let caseT'  = normCaseType (caseTyp, Int.LF.MShift l_cd1') in 
@@ -1610,7 +1610,9 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
               let _ = dprint (fun () -> "[elBranch] Body : \n") in
               let _ = dprint (fun () -> "        " ^ P.expChkToString cD1'' cG' eE') in
 		Int.Comp.Branch (loc, cD1'', Int.LF.Empty,
-				 Int.Comp.PatMetaObj (loc', mO''), t', eE')
+				 Int.Comp.PatAnn (loc',
+				   Int.Comp.PatMetaObj (loc', mO''), 
+				   Int.Comp.TypBox (loc', Whnf.cnormMTyp (mT0,t') )), t', eE')
 		  
           | _ ->  raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, Whnf.m_id)))))
         end

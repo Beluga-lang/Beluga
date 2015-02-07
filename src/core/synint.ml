@@ -78,7 +78,7 @@ module LF = struct
     | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
                                      and in the opposite order compared to FSVar and MSVar.
                                      This is a pain to fix *)
-                                               (*   | s[sigma]                   *)
+                                              (*   | s[sigma]                   *)
     | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
@@ -90,16 +90,16 @@ module LF = struct
     | Obj  of normal                          (*    | N                         *)
     | Undef                                   (*    | _                         *)
 
-                                             (* Contextual substitutions       *)
+                                              (* Contextual substitutions       *)
   and mfront =                                (* Fronts:                        *)
     | ClObj of psi_hat * clobj
     | CObj of dctx                            (*    | Psi                       *)
     | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
     | MUndef (* This shouldn't be here, we should use a different datastructure for
                partial inverse substitutions *)
-  and clobj = (* ContextuaL objects *)
-    | MObj of normal                (* Mft::= Psihat.N                *)
-    | PObj of head                  (*    | Psihat.p[s] | Psihat.x    *)
+  and clobj =                                 (* ContextuaL objects *)
+    | MObj of normal                          (* Mft::= Psihat.N                *)
+    | PObj of head                            (*    | Psihat.p[s] | Psihat.x    *)
     | SObj of sub
 
   and msub =                                  (* Contextual substitutions       *)

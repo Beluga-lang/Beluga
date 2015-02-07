@@ -57,7 +57,7 @@ fn l => case l of
 rec fvar:(g:ctx) [g |- term] -> Fvs [g] =
 / total e (fvar g e)/
 fn e => case e of
-| [g |- (#p ..)] => Cons [g |- #p ..] Nil
+| [g |- #p ..] => Cons [g |- #p ..] Nil
 | [g |- elam \x.U .. x] =>
    remove (fvar [g,x:term |- U .. x])
 | [g |- eapp (U..) (V..)] =>

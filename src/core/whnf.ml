@@ -1641,6 +1641,14 @@ let mctxMVarPos cD u =
          (* THIS IS WRONG. -bp *)
          Comp.EmptyBranch (loc, cD, pat, cnormMSub t)
 
+    | (Comp.Branch (loc, cD, cG, Comp.PatAnn(loc'', Comp.PatMetaObj (loc', mO), tau), t, e), theta) ->
+	Comp.Branch (loc, cD, cG, 
+		     Comp.PatAnn(loc'', 
+				 Comp.PatMetaObj (loc', normMetaObj mO),
+				 cnormCTyp (tau, m_id)),
+		     cnormMSub t,
+                     cnormExp (e, m_id))
+
     | (Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', mO), t, e), theta) ->
     (* cD' |- t <= cD    and   FMV(e) = cD' while
        cD' |- theta' <= cD0
@@ -1722,6 +1730,8 @@ let mctxMVarPos cD u =
     | MTyp tA , MTyp tA'
     | PTyp tA , PTyp tA' -> convTyp (tA, LF.id) (tA', LF.id)  
     | STyp cPhi , STyp cPhi' -> convDCtx cPhi cPhi'
+    | _ , _ -> false
+
   let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | (ClTyp (t1, cPsi1)) , (ClTyp (t2, cPsi2)) -> convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
     | (CTyp cid_schema) , (CTyp cid_schema') -> cid_schema = cid_schema'

@@ -769,6 +769,8 @@ match (pat, ttau) , (pat_p, ttau_p) with
     (Comp.PatFalse _ , _ ) -> (mC, sC)
   | pat_ttau , (Comp.PatAnn (_, pat', tau' ), (_ ,t'))  ->
       match_pattern (cD,cG) (cD_p, cG_p) pat_ttau (pat', (tau',t')) mC sC
+  | (Comp.PatAnn (_, pat', tau' ), (_ ,t')), pat_ttau  ->
+      match_pattern (cD,cG) (cD_p, cG_p) (pat', (tau',t')) pat_ttau mC sC
   | _ -> raise (Error (Syntax.Loc.ghost, MatchError "Mismatch"))
 
 and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
@@ -2124,9 +2126,11 @@ let no_covers = ref 0           (* number of times coverage checking has yielded
 (* ****************************************************************************** *)
 (* Printing for debugging *)
 
-let extract_patterns tau branch_patt = match branch_patt with
+let rec extract_patterns tau branch_patt = match branch_patt with
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', (_, LF.CObj cPsi)), ms, _e) ->
 	(cD, MetaCtx (cPsi))
+  | Comp.Branch (loc, cD, _cG, Comp.PatAnn (loc', pat, _), ms, _e) -> 
+      extract_patterns tau (Comp.Branch (loc, cD, _cG, pat, ms, _e))
   | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', pat), ms, _e) ->
       let (tA, cPhi) = match tau with
         | Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPhi)) -> (tA, cPhi)

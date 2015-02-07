@@ -9,10 +9,8 @@ datatype term: type =
 | lam: (term -> term) -> term
 | app: term -> term -> term;
 
-
 datatype value:  term -> type = 
 | v_lam: value (lam M);
-
 
 % ---------------------------------------------------------- %
 % Small-step operational semantics
@@ -25,7 +23,7 @@ datatype step: term -> term -> type =
 | e_app_abs : value M2
               -> step (app (lam M) M2) (M M2)
 ;
-                 
+             
 
 datatype equal : term -> term -> type = 
 | refl: equal M M;

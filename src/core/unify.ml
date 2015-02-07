@@ -1487,15 +1487,23 @@ let isVar h = match h with
             ; cPsi1 |-     : cPsi
 
    *)
-  and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 =
+  and unifyMMVarTermProj cD0 cPsi (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) mt1 t1' tM2 =
      begin 
        let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
        (* cD |- mtt1 : cD0 *) 
+       let _ = dprint (fun () -> ("[unifyMMVarTermProj] cPsi = " ^ 
+				    P.dctxToString cD0 cPsi ^ "\n")) in
+       let _ = dprint (fun () -> ("[unifyMMVarTermProj] sM2 = " ^ 
+				    P.normalToString cD0 cPsi (tM2,id) ^ "\n")) in
        let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
+       let _ = dprint (fun () -> ("[unifyMMVarTermProj] flat_cPsi = " ^ 
+				    P.dctxToString cD0 flat_cPsi ^ "\n")) in
        let phat = Context.dctxToHat flat_cPsi in
        let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
        (*   flat_cPsi |- t_flat : cPsi   *)
-       let tM2'   = ConvSigma.strans_norm cD0 (sM2,id) conv_list in
+       let tM2'   = ConvSigma.strans_norm cD0 (tM2,id) conv_list in
+       let _ = dprint (fun () -> ("[unifyMMVarTermProj] sM2' = " ^ 
+				    P.normalToString cD0 flat_cPsi (tM2', id) ^ "\n")) in
        (*   flat_cPsi |- tM2'    *)
        let ss = invert t_flat in
        (*  cPsi   |- ss : flat_cPsi *) 

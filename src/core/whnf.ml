@@ -92,7 +92,8 @@ let newMMVar' n (cD, mtyp) dep = match n with
       let n = Id.mk_name (newMTypName mtyp) in 
 	 (n, ref None, cD, mtyp, ref [], dep)
   | Some name -> 
-      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then Maybe else No)
+(*      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then	Maybe else No)*)
+      (Id.inc name, ref None, cD, mtyp, ref [], dep)
 
 let newMMVar n (cD, cPsi, tA) dep =
   newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep

@@ -1170,7 +1170,8 @@ and elTerm' recT cD cPsi r sP = match r with
 	      let _ = dprint (fun () -> "Added FMVar " ^ R.render_name u ^
 				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
 				"[" ^ P.dctxToString cD cPhi ^ "]") in
-                FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));    (*The depend paramater here affects both mlam vars and case vars*)
+                FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));    
+		(*The depend paramater here affects both mlam vars and case vars*)
                 Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
 
           else

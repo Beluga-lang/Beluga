@@ -29,6 +29,7 @@ type error =
   | UnknownIdentifier
   | UnknownMTyp of name
 
+let pat_flag = ref false
 
 exception Error of Syntax.Loc.t * error
 
@@ -138,7 +139,7 @@ let _ = Error.register_printer
    i.e. the meta-variables and free variables occurring the type had been
    collected *)
 type flag = LF | Comp
-type sort = LFTyp of I.typ | MetaTyp of I.ctyp 
+type sort = LFTyp of I.typ | MetaTyp of I.ctyp * I.depend
 type marker = Pure of sort | Impure
  
 type free_var =
@@ -176,7 +177,7 @@ let rec raiseKind cPsi tK = match cPsi with
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
 
-  | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp mtyp))) ->
+  | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, _dep)))) ->
        collectionToString cQ ^ " MMV"
      ^ P.mtypToString I.Empty mtyp
      ^ "\n"
@@ -184,7 +185,7 @@ let rec collectionToString cQ = match cQ with
        collectionToString cQ ^ " MMV Impure"
      ^ "\n"
 
-  | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp mtyp))) ->
+  | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp,_ )))) ->
       let cD = I.Empty in
        collectionToString cQ
      ^ " " ^ R.render_name u ^ " : "
@@ -374,7 +375,7 @@ let rec ctxToCtx cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', FDecl (MMV (_,_), Pure (MetaTyp(I.ClTyp (I.MTyp tA,cPsi))))) ->
+  | I.Dec (cQ', FDecl (MMV (_,_), Pure (MetaTyp(I.ClTyp (I.MTyp tA,cPsi), _dep)))) ->
       begin match raiseType cPsi tA with
         | (None, tA') ->
             let x = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
@@ -396,7 +397,10 @@ let rec ctxToMCtx dep' cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', FDecl (s, Pure (MetaTyp ityp))) ->
+  | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _dep)))) ->
+      I.Dec (ctxToMCtx dep' cQ', I.Decl (n, ityp, dep'))
+
+  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, _dep)))) ->
       I.Dec (ctxToMCtx dep' cQ', I.Decl (getName s, ityp, dep'))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
@@ -408,6 +412,23 @@ let rec ctxToMCtx dep' cQ = match cQ with
 
    | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx dep' cQ'
+
+
+let rec ctxToMCtx_pattern cQ = match cQ with
+  | I.Empty ->
+      I.Empty
+
+  | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _dep)))) ->
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (n, ityp, I.No))
+
+  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, _dep)))) ->
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, I.Maybe))
+
+  | I.Dec (cQ', CtxV (x,w, dep)) ->
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp w, dep))
+  
+| I.Dec (cQ', FDecl (_, Impure)) ->
+       ctxToMCtx_pattern cQ'
 
 
 (* collectTerm p cQ phat (tM,s) = cQ'
@@ -478,9 +499,9 @@ and collectSpine (p:int) cQ phat sS = match sS with
       (cQ'', I.App (tM', tS'))
 
 and collectBothTyp loc p cQ = function
-  | MetaTyp tp ->
+  | MetaTyp (tp, dep) ->
     let (cQ', tp') = collectMetaTyp loc p cQ tp in
-    (cQ', MetaTyp tp')
+    (cQ', MetaTyp (tp', dep))
   | LFTyp tA -> (* tA must be closed *)
        (* Since we only use abstraction on pure LF objects,
           there are no context variables; different abstraction
@@ -500,9 +521,10 @@ and getType loc p name f =
   begin try match f with
   | LF -> let Int.LF.Type tA = FVar.get name in (LFTyp tA)
   | Comp ->
-    let (cD_d, I.Decl (_, mtyp,_))  = FCVar.get name in
+    let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get name in
     let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
-    MetaTyp mtyp'
+      if !pat_flag then MetaTyp (mtyp', I.No) else 
+	MetaTyp (mtyp', dep)
    with Not_found -> raise (Error (loc, UnknownMTyp name))
   end 
 
@@ -525,8 +547,8 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
       if constraints_solved !c then
 	match !q with
 	  | None -> 
-	      let (cQ', MetaTyp tp') = addVar loc p cQ (MMV (n,q)) (MetaTyp tp) in
-		(cQ', (n, q, cD, tp', c, dep))
+	      let (cQ', MetaTyp (tp',dep')) = addVar loc p cQ (MMV (n,q)) (MetaTyp (tp, dep)) in
+		(cQ', (n, q, cD, tp', c, dep'))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	raise (Error (loc, LeftoverConstraints))
@@ -859,13 +881,13 @@ and abstractCtx cQ =  match cQ with
   | I.Dec (cQ, FDecl (_, Impure)) ->
       abstractCtx cQ
 
-  | I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp (I.ClTyp (I.MTyp tA,cPsi))))) ->
+  | I.Dec (cQ, FDecl (MMV (n,r), Pure (MetaTyp (I.ClTyp (I.MTyp tA,cPsi),dep)))) ->
       let cQ'   = abstractCtx cQ  in
       let l     = length cPsi in
       let cPsi' = abstractDctx cQ cPsi l in
       let tA'   = abstractTyp cQ l (tA, LF.id) in
       let tp' = I.ClTyp (I.MTyp tA',cPsi') in
-        I.Dec (cQ', FDecl (MMV (n,r), Pure (MetaTyp tp')))
+        I.Dec (cQ', FDecl (MMV (n,r), Pure (MetaTyp (tp',dep))))
 
   | I.Dec (cQ, FDecl (FV f, Pure (LFTyp tA))) ->
       let cQ' = abstractCtx cQ in
@@ -1090,9 +1112,9 @@ and abstractMVarMctx cQ cD (l,offset) = match cD with
 and abstractMVarCtx cQ l =  match cQ with
   | I.Empty -> I.Empty
 
-  | I.Dec (cQ, FDecl (v, Pure (MetaTyp ityp))) ->
+  | I.Dec (cQ, FDecl (v, Pure (MetaTyp (ityp,dep)))) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
-        I.Dec (cQ', FDecl (v, Pure (MetaTyp (abstractMVarMTyp cQ ityp (l,0)))))
+        I.Dec (cQ', FDecl (v, Pure (MetaTyp (abstractMVarMTyp cQ ityp (l,0),dep))))
 
   | I.Dec (cQ, CtxV cdecl) ->
       let cQ'   = abstractMVarCtx  cQ (l-1) in
@@ -1132,10 +1154,21 @@ let rec abstrMSub cQ t =
     abstrMSub' t
 
 and abstractMSub t =
+  let rec ctxToMCtx' cQ = match cQ with
+  | I.Empty -> I.Empty
+  | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx' cQ', I.Decl (n, ityp, dep))
+  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx' cQ', I.Decl (getName s, ityp, dep))
+  | I.Dec (cQ', CtxV (x,w, dep)) ->
+      I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp w, dep))
+   | I.Dec (cQ', FDecl (_, Impure)) ->
+       ctxToMCtx' cQ'
+  in 
   let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
   let t'' = abstrMSub cQ' t' in
-  let cD' = ctxToMCtx (I.Maybe) cQ' in
+  let cD' = ctxToMCtx'  cQ' in
   (t'', cD')
 
 (* wrapper function *)
@@ -1544,6 +1577,7 @@ let abstrCompTyp tau =
 
 
 let abstrPatObj loc cD cG pat tau =
+  let _ = pat_flag := true in
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -1555,10 +1589,11 @@ let abstrPatObj loc cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx (I.No) cQ' in 
+  let cD'     = ctxToMCtx_pattern cQ' in 
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
-      (cD, cG', pat', tau')
+    (pat_flag := false;
+      (cD, cG', pat', tau'))
 
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
@@ -1566,6 +1601,7 @@ let abstrPatObj loc cD cG pat tau =
 
 *)
 let abstrPattern cD1 cPsi1  (phat, tM) tA =
+  let _ = pat_flag := true in 
   let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ 0 in
   let offset  = Context.length cD1' in
@@ -1575,23 +1611,24 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
 (*  let cs1'    = abstractMVarCSub cQ' offset cs1 in
   let cs'     = abstractMVarCSub cQ' offset cs in *)
-  let cD'     = ctxToMCtx (I.No) cQ' in
+  let cD'     = ctxToMCtx_pattern cQ' in
   let cD      = Context.append cD' cD2 in
-    (cD, cPsi2, (phat, tM2), tA2)
+    (pat_flag := false ; (cD, cPsi2, (phat, tM2), tA2))
 
 
 let abstrMObjPatt cD1 cM mT =
+  let _ = pat_flag := true in 
   let (cQ1, cD1') = collectMctx I.Empty cD1 in
-  let (cQ2, cM') = collect_meta_obj 0 cQ1 cM in
-  let (cQ3, mT') = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
-  let cQ'     = abstractMVarCtx cQ3 0 in
-  let offset  = Context.length cD1' in
-  let cM'     = abstractMVarMetaObj cQ' (0, offset) cM' in
-  let mT'      = abstractMVarMetaTyp cQ' mT' (0, offset) in
-  let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'     = ctxToMCtx (I.No) cQ' in
-  let cD      = Context.append cD' cD2 in
-    (cD, cM', mT')
+  let (cQ2, cM')  = collect_meta_obj 0 cQ1 cM in
+  let (cQ3, mT')  = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
+  let cQ'         = abstractMVarCtx cQ3 0 in
+  let offset      = Context.length cD1' in
+  let cM'         = abstractMVarMetaObj cQ' (0, offset) cM' in
+  let mT'         = abstractMVarMetaTyp cQ' mT' (0, offset) in
+  let cD2         = abstractMVarMctx cQ' cD1' (0, offset-1) in
+  let cD'         = ctxToMCtx_pattern cQ' in
+  let cD          = Context.append cD' cD2 in
+    (pat_flag := false ; (cD, cM', mT'))
 
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA

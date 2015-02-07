@@ -1410,8 +1410,9 @@ and recPatObj loc cD pat (cD_s, tau_s) =
 *)
 and synRefine loc caseT (cD, cD1) pattern1 mT mT1 =
   let cD'    = Context.append cD cD1 in  (*         cD'  = cD, cD1     *)
+  let _ = dprint (fun () -> "\n cD' = " ^ P.mctxToString cD' ) in
   let _ = dprint (fun () -> "\n Expected Pattern type : " ^ P.metaTypToString cD' mT ^ "\n") in
-  let _ = dprint (fun () -> "\n Inferred Pattern type : " ^ P.metaTypToString cD1 mT1 ^ "\n") in
+  let _ = dprint (fun () -> "\n Inferred Pattern type : " ^ P.metaTypToString cD1 mT1 ) in
   let t      = Ctxsub.mctxToMSub cD'  in                   (*         .  |- t   <= cD'   *)
   let n      = Context.length cD1 in
   let m      = Context.length cD in
@@ -1420,6 +1421,8 @@ and synRefine loc caseT (cD, cD1) pattern1 mT mT1 =
   let mt1    = Whnf.mcomp t1 t in        (*         .  |- mt1 <= cD1   *)
   let mT'    = Whnf.cnormMetaTyp (mT, t) in 
   let mT1'   = Whnf.cnormMetaTyp (mT1, mt1) in 
+  let _ = dprint (fun () -> "BEFORE Unify: \n" ^  "  Inferred pattern type: " ^  P.metaTypToString Int.LF.Empty mT1'
+              ^ "\n  Expected pattern type: " ^ P.metaTypToString Int.LF.Empty  mT') in
   let _ = begin try 
     Unify.unifyMetaTyp Int.LF.Empty (mT',C.m_id) (mT1', C.m_id) ;
     dprint (fun () -> "Unify successful: \n" ^  "  Inferred pattern type: " ^  P.metaTypToString Int.LF.Empty mT1'

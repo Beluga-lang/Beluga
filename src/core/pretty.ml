@@ -591,11 +591,12 @@ module Int = struct
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, _) ->
+      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, mDep) ->
+	  let s = (match mDep with LF.No -> "^e" | LF.Maybe -> "^i" | LF.Inductive -> "^*") in 
           begin
             try
-              fprintf ppf "?%s"
-                (MInstHashtbl.find minst_hashtbl u)
+              fprintf ppf "?%s%s"
+                (MInstHashtbl.find minst_hashtbl u) s
             with
               | Not_found ->
                   (* (* Should probably create a sep. generator for this -dwm *)

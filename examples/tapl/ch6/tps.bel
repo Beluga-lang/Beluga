@@ -41,7 +41,7 @@ rec tps: [ |- hastype M T] -> [ |- step M N] -> [ |- hastype N T] =
 / total s (tps m t n d s)/
 fn d => fn s => case s of
 | [ |- e_app_1 S1] => 
- let [ |- t_app D1 D2] = d in
+ let [ |- t_app D1 D2] = d in 
   let [ |- F1] = tps  [ |- D1] [ |- S1] in
     [ |- t_app F1 D2 ]
 

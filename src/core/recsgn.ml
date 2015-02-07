@@ -205,8 +205,6 @@ and recSgnDecl ?(pauseHtml=false) d =
         Int.Sgn.Pragma(Int.LF.FixPrag(name, fix', precedence, assoc'))
 
     | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
-        dprint (fun () -> "[RecSgn Checking] CompTypAbbrev at: \n" ^ Syntax.Loc.to_string loc);
-        let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
         (* index cT  in a context which contains arguments to cK *)
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
 
@@ -728,8 +726,7 @@ and recSgnDecl ?(pauseHtml=false) d =
       let cD       = Int.LF.Empty in
 
 
-      let _        = dprint (fun () -> "\nElaboration of query : " ^
-        P.typToString cD Int.LF.Null (tA, S.LF.id)) in
+      let _        = dprint (fun () -> "\nElaboration of query : " ^  P.typToString cD Int.LF.Null (tA, S.LF.id)) in
 
       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
 

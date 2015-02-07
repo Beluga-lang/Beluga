@@ -1073,6 +1073,7 @@ and elExp' cD cG i = match i with
 * recPattern becomes redundant when we adopt the new parser as default.
 
 *)
+
 and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
   | Apx.Comp.MetaCtx (loc, psi), CT w -> 
       let cPsi' = Lfrecon.checkDCtx loc Lfrecon.Pibox cD' psi w in
@@ -1543,7 +1544,8 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
             (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
         Int.Comp.EmptyBranch (loc, cD1'', pat1', t')
 
-  | Apx.Comp.Branch (loc, _omega, delta, Apx.Comp.PatMetaObj(loc',mO), e) ->
+
+   | Apx.Comp.Branch (loc, _omega, delta, Apx.Comp.PatMetaObj(loc',mO), e) ->
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
         begin match tau_s with
           | Int.Comp.TypBox (_, mT0) ->

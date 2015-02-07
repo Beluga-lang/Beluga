@@ -272,14 +272,30 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       dprint (fun () -> "[eval_branches] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta));
       eval_branches loc vscrut branches (theta, eta)
 
+
+and match_cobj (phat, cObj) (cPsi', cObj', mt) = 
+  let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
+  let cObj' = Whnf.cnormClObj cObj' mt in 
+
+    Unify.unify_phat phat (Context.dctxToHat cPsi');
+    (match cObj, cObj' with 
+       |  LF.MObj tM , LF.MObj tM' ->
+	    Unify.unify LF.Empty cPsi' (tM, Substitution.LF.id) (tM', Substitution.LF.id)
+       | LF.PObj h   , LF.PObj h' -> 
+           Unify.unifyH LF.Empty phat h h')
+
 and match_pattern  (v,eta) (pat, mt) =
   let eta = ref eta in
   let rec loop v pat =
     match v, pat with
-      | _, Comp.PatAnn (_, pat', _) ->
-        loop v pat'
+      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) , 
+	Comp.PatAnn (_, Comp.PatMetaObj (_, (_ , LF.ClObj (_, cObj'))), Comp.TypBox (_, LF.ClTyp (_ , cPsi'))) -> 
+	  match_cobj (phat, cObj) (cPsi', cObj', mt)
 
-      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
+      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) , 
+	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) -> 
+	  match_cobj (phat, cObj) (Context.hatToDCtx phat', cObj', mt)
+(*      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
 	let cPsi = Context.hatToDCtx phat' in
         let tM' = Whnf.cnorm (tM', mt) in
         let cPsi = Whnf.cnormDCtx (cPsi, mt) in
@@ -299,13 +315,17 @@ and match_pattern  (v,eta) (pat, mt) =
             Unify.unifyH LF.Empty phat h h'
       | _, Comp.PatMetaObj (_, (_, LF.ClObj (_, LF.PObj _) )) ->
         raise (Error.Violation "Expected param value.")
-
+*)
       | Comp.BoxValue (_,LF.CObj cPsi), Comp.PatMetaObj (_, (_,LF.CObj cPsi')) ->
         let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
           dprint (fun () -> "[match_pattern] call unifyDCtx ");
           Unify.unifyDCtx LF.Empty cPsi cPsi'
       | _, Comp.PatMetaObj (_, (_,LF.CObj cPsi')) ->
         raise (Error.Violation "Expected context.")
+
+
+      | _, Comp.PatAnn (_, pat', _) ->
+        loop v pat'
 
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->
         if cid <> pat_cid then

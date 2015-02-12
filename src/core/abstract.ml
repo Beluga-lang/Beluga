@@ -174,18 +174,23 @@ let rec raiseKind cPsi tK = match cPsi with
   | I.Dec (cPsi', decl) ->
       raiseKind cPsi' (I.PiKind ((decl, I.Maybe), tK))
 
+let depToString dep = match dep with 
+  | I.No -> "^e"
+  | I.Maybe -> "^i"
+  | _ -> "*"
+
 let rec collectionToString cQ = match cQ with
   | I.Empty -> ""
 
-  | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, _dep)))) ->
+  | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, dep)))) ->
        collectionToString cQ ^ " MMV"
-     ^ P.mtypToString I.Empty mtyp
+     ^ P.mtypToString I.Empty mtyp ^ depToString dep 
      ^ "\n"
   | I.Dec(cQ, FDecl (MMV (_n,_r), Impure)) ->
        collectionToString cQ ^ " MMV Impure"
      ^ "\n"
 
-  | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp,_ )))) ->
+  | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp, _ )))) ->
       let cD = I.Empty in
        collectionToString cQ
      ^ " " ^ R.render_name u ^ " : "
@@ -1168,6 +1173,8 @@ and abstractMSub t =
   let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
   let t'' = abstrMSub cQ' t' in
+  let _ = dprint (fun () -> "[abstractMSub] Collection cQ'  = " ^
+		    collectionToString cQ') in 
   let cD' = ctxToMCtx'  cQ' in
   (t'', cD')
 

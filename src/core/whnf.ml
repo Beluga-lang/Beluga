@@ -95,41 +95,41 @@ let newMMVar' n (cD, mtyp) dep = match n with
 (*      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then	Maybe else No)*)
       (Id.inc name, ref None, cD, mtyp, ref [], dep)
 
-let newMMVar n (cD, cPsi, tA) dep =
-  newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
-let newMPVar n (cD, cPsi, tA) =  newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) Maybe
-let newMSVar n (cD, cPsi, cPhi)  = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi)) Maybe
-let newCVar n cD (sW) = CInst (newMMVar' n (cD, CTyp sW)  Maybe, MShift 0)
+let newMMVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
+let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
+let newMSVar n (cD, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi)) dep
+let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
 
-let newMVar n (cPsi, tA) = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) Maybe)
+let newMVar n (cPsi, tA) dep = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) dep)
 
 (******************************)
 (* Lowering of Meta-Variables *)
 (******************************)
 
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
-let rec lowerMVar' cPsi sA' = match sA' with
+let rec lowerMVar' cPsi sA' dep = match sA' with
   | (PiTyp ((decl,_ ), tA'), s') ->
-      let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') in
+      let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1
+								    s') dep in
         (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
-      lowerMVar' cPsi (tA, LF.comp s s')
+      lowerMVar' cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  in 
+      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  dep in 
         (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
-and lowerMVar1 u sA = match (u, sA) with
-  | (Inst (_n, r, _, ClTyp (_,cPsi), _, _), (PiTyp _, _)) ->
-      let (u', tM) = lowerMVar' cPsi sA in
+and lowerMVar1 u sA  = match (u, sA) with
+  | (Inst (_n, r, _, ClTyp (_,cPsi), _, dep), (PiTyp _, _)) ->
+      let (u', tM) = lowerMVar' cPsi sA dep in
         r := Some (INorm tM); (* [| tM / u |] *)
         u'            (* this is the new lowered meta-variable of atomic type *)
 
   | (_, (TClo (tA, s), s')) ->
-      lowerMVar1 u (tA, LF.comp s s')
+      lowerMVar1 u (tA, LF.comp s s') 
 
   | (_, (Atom _, _s)) ->
       u
@@ -1804,14 +1804,14 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA n s' =  etaExpandMV' cPsi (whnfTyp sA) n s'
-and etaExpandMV' cPsi sA n s' = match sA with
+let rec etaExpandMV cPsi sA n s' dep =  etaExpandMV' cPsi (whnfTyp sA) n s' dep
+and etaExpandMV' cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) in 
+      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) dep in 
         Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
+      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
 
 (* Coverage.etaExpandMVstr s' cPsi sA *)
 
@@ -1822,15 +1822,16 @@ and etaExpandMV' cPsi sA n s' = match sA with
  *
  *  cD ; cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMMV loc cD cPsi sA n s' = etaExpandMMV' loc cD cPsi (whnfTyp sA) n s'
+let rec etaExpandMMV loc cD cPsi sA n s' dep = 
+  etaExpandMMV' loc cD cPsi (whnfTyp sA) n s' dep
 
-and etaExpandMMV' loc cD cPsi sA n s' = match sA with
+and etaExpandMMV' loc cD cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) Maybe in 
+      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) dep in 
         Root (loc, MMVar ((u, m_id), s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s'))
+      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
 
 
 

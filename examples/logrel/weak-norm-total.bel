@@ -22,10 +22,12 @@ datatype tp : type =
 ;
 %name tp T.        
 
-tm : tp -> type.          %name tm E.
-app : tm (arr T S) -> tm T -> tm S.
-lam : (tm T -> tm S) -> tm (arr T S).
-c : tm b.
+datatype tm : tp -> type = 
+| app : tm (arr T S) -> tm T -> tm S
+| lam : (tm T -> tm S) -> tm (arr T S)
+| c : tm b
+;
+%name tm E.
 
 %{{ The type `tm` defines our family of simply-typed lambda terms
 indexed by their type as an LF signature. In typical higher-order
@@ -37,9 +39,10 @@ We now encode the step relation of the operational semantics. In
 particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
-step : tm A → tm A → type.
-beta : step (app (lam M) N) (M N).
-stepapp : step M M' -> step (app M N) (app M' N).
+datatype step : tm A → tm A → type = 
+| beta : step (app (lam M) N) (M N)
+| stepapp : step M M' -> step (app M N) (app M' N)
+;
 
 %{{Notice how the `beta` rule re-uses the LF notion of substitution by
 computing the application of `M` to `N`. <br/>
@@ -50,16 +53,22 @@ Finally, we define:
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-mstep : tm A -> tm A -> type.  %name mstep S.
-refl : mstep M M.
-onestep : step M M' -> mstep M' M'' -> mstep M M''.
+datatype mstep : tm A -> tm A -> type = 
+| refl : mstep M M
+| onestep : step M M' -> mstep M' M'' -> mstep M M''
+;
+%name mstep S.
 
-val : tm A -> type. %name val V.
-val/c : val c.
-val/lam : val (lam M).
+datatype val : tm A -> type = 
+| val/c : val c
+| val/lam : val (lam M)
+;
+%name val V.
 
-halts : tm A -> type.  %name halts H.
-halts/m : mstep M M' -> val M' -> halts M.
+datatype halts : tm A -> type = 
+| halts/m : mstep M M' -> val M' -> halts M
+;
+%name halts H.
 
 %{{
 
@@ -72,10 +81,10 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
+datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype #stratify =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
+    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
   -> Reduce [ ⊢ arr A B ] [ |- M]
 ;
 
@@ -174,15 +183,16 @@ mlam g => mlam #p => fn rs => case [g |- #p ..] of
 
 rec main : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
  mlam g => mlam M => fn rs => case [g |- M ..] of
-| [g |- #p ..] => lookup [g] [g |- #p ..] rs
-| [g |- lam (\x. M1 .. x)] =>
- Arr [ |- halts/m refl val/lam]
+| [g |- #p ..] => ? % lookup [g] [g |- #p ..] rs
+| [g |- lam (\x. M1 .. x)] => ? 
+%{ Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
     bwd_closed [ |- beta] (main [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
- | [g |- app (M1 ..) (M2 ..)] =>
-  let Arr ha f = main [g] [g |- M1 ..] rs in
-  f [ |- _ ] (main [g] [g |- M2 ..] rs)
-| [g' |-  c] => I [ |- halts/m refl val/c]
+}%
+| [g |- app (M1 ..) (M2 ..)] => ?
+%{  let Arr ha f = main [g] [g |- M1 ..] rs in
+  f [ |- _ ] (main [g] [g |- M2 ..] rs)}%
+| [g |-  c] => ? % I [ |- halts/m refl val/c]
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =

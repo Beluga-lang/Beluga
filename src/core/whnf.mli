@@ -41,12 +41,12 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 
 val newMMVar'   : Id.name option -> mctx * ctyp -> depend ->  mm_var
 val newMMVar    : Id.name option -> mctx * dctx * typ -> depend ->  mm_var
-val newMPVar    : Id.name option -> mctx * dctx * typ ->  mm_var
-val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
+val newMPVar    : Id.name option -> mctx * dctx * typ ->  depend -> mm_var
+val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> depend -> mm_var 
                   (* cD ; cPsi |- msvar : cPhi *)
 
-val newMVar     : Id.name option -> dctx * typ ->  cvar
-val newCVar     : Id.name option -> mctx -> Id.cid_schema -> ctx_var
+val newMVar     : Id.name option -> dctx * typ -> depend -> cvar
+val newCVar     : Id.name option -> mctx -> Id.cid_schema -> depend -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
 
@@ -55,9 +55,9 @@ val raiseType   : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> normal
+val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> depend -> normal
 
-val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> normal
+val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> depend -> normal
 
 
 exception Fmvar_not_found

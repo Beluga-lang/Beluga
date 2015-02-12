@@ -1439,8 +1439,11 @@ and synRefine loc caseT (cD, cD1) pattern1 mT mT1 =
     | IndexObj cM ->
         begin try
           (dprint (fun () -> "Pattern matching on index object...unify scrutinee with pattern");
-           Unify.unifyMetaObj Int.LF.Empty (cM,  t)
-             (pattern1, mt1)	 (mT', C.m_id))
+           Unify.unifyMetaObj Int.LF.Empty (cM,  t)  (pattern1, mt1)	 (mT', C.m_id);
+	   dprint (fun () -> "Unification successful: \n" ^  "  Scrutinee: " ^
+		     P.metaObjToString Int.LF.Empty ( Whnf.cnormMetaObj(cM,t) )
+              ^ "\n  Pattern: " ^ P.metaObjToString Int.LF.Empty  (Whnf.cnormMetaObj (pattern1, mt1)))
+)
         with Unify.Failure msg ->
           (dprint (fun () -> "Unify ERROR: " ^ msg);
            raise (Error (loc, PatIndexMatch (cD, cM))))
@@ -1451,6 +1454,7 @@ and synRefine loc caseT (cD, cD1) pattern1 mT mT1 =
     | DataObj -> ()
   end
   in
+  let _ = dprint (fun () -> "t = " ^ P.msubToString Int.LF.Empty t) in
   let _ = dprnt "AbstractMSub..." in
     (* cD1' |- t' <= cD' *)
   let (t', cD1') = Abstract.msub (Whnf.cnormMSub t) in

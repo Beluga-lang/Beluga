@@ -1030,7 +1030,7 @@ let isVar h = match h with
     else
       let (id2,(cD2,cPsi2')) = pruneBoth cD0 cPsi' (mtt,(cD1,cPsi1)) ss rOccur in
       let tP' = normClTyp2 (tp, invert2 id2) in
-      let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2')) Maybe  in
+      let v = Whnf.newMMVar' (Some n) (cD2, ClTyp (tP', cPsi2')) mdep  in
       let _  = instantiateMMVarWithMMVar r loc (v, id2) tP' !cnstrs in
       let (mr,r) = comp2 (comp2 id2 mtt) ss in
       ((v, mr), r)
@@ -1041,7 +1041,7 @@ let isVar h = match h with
     else
       let (idsub, cPsi2) = pruneSub  cD0 cPsi' (Context.dctxToHat cPsi') (t, cPsi1) ss rOccur in
       let tP' = Whnf.normTyp (tP, invert idsub) in
-      let v = Whnf.newMVar (Some n) (cPsi2, tP')  in
+      let v = Whnf.newMVar (Some n) (cPsi2, tP')  mdep in
       let _ = instantiateMVar (r, Root (loc, MVar (v, idsub), Nil), !cnstrs) in
       (v, comp (comp idsub t) ssubst)
 
@@ -1577,7 +1577,7 @@ let isVar h = match h with
                     let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
                       (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
 
-                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss'))  in
+                    let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) mdep1 in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])

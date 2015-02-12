@@ -174,7 +174,7 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
   | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
   | DDec (cPsi', TypDecl (n, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
-    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id in
+    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id Maybe in
     Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()

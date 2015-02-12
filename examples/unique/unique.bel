@@ -2,23 +2,26 @@
 
 
 % Definition of types and expressions
-tp: type.  %name tp T.
-arr: tp -> tp -> tp.
-nat: tp.
+datatype tp: type =
+| arr: tp -> tp -> tp
+| nat: tp
+;
+%name tp T.
 
-exp: type. %name exp E.
-lam : tp -> (exp -> exp) -> exp.
-app : exp -> exp -> exp.
+datatype exp: type = 
+| lam : tp -> (exp -> exp) -> exp
+| app : exp -> exp -> exp
+;
+%name exp E.
 
 % Typing judgment
-type_of: exp -> tp -> type. %name type_of H.
-
-t_lam: ({x:exp}type_of x T1 -> type_of (E x) T2)
-        -> type_of (lam T1 E) (arr T1 T2).
-
-t_app: type_of E1 (arr T2 T) -> type_of E2 T2
-       -> type_of (app E1 E2) T.
-
+datatype type_of: exp -> tp -> type = 
+| t_lam: ({x:exp}type_of x T1 -> type_of (E x) T2)
+        -> type_of (lam T1 E) (arr T1 T2)
+| t_app: type_of E1 (arr T2 T) -> type_of E2 T2
+       -> type_of (app E1 E2) T
+;
+%name type_of H.
 
 % Equality predicate
 
@@ -132,10 +135,9 @@ fn d => fn f => case d of
   let [ |- e_ref]  = unique3  [g |- D1 ..] [g |- F1 ..] in
     [ |- e_ref]
 
-| {D: [g, b: block x:exp, _t:type_of x T |- type_of ( M .. b.1) S]}
-  [g |- t_lam (\x.\u. D .. <x, u>)] =>
-  let [g |- t_lam (\x.\u. F .. x u)] = f in
-  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D .. b] [g,b |- F .. b.1 b.2] in
+| [g |- t_lam \x.\u. D .. x  u] =>
+  let [g |- t_lam \x.\u. F .. x u] = f in
+  let [ |- e_ref] = unique3 [g,b:block x:exp, u:type_of x _ |-  D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
    [ |- e_ref]
 
 | [g |- #q.2 ..] =>           % d : type_of #q.1 T

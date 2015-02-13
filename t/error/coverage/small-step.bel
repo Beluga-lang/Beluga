@@ -184,10 +184,9 @@ fn v => fn s => case v of
   let [ |- m_ref] = s in
     [ |- ref]
 
-| [ |- v_s V]   => 
-(case s of 
+| [ |- v_s V]   =>  
+ (case s of 
 | [ |- m_ref] => [ |- ref])
-
 ;
 
 % -------------------------------------------------------- %
@@ -417,7 +416,7 @@ mlam M => case [ |- M] of %not
        [ |- result (ms_tr MS' (ms_step (e_pred_zero))) v_z]
    | [ |- result MS (v_s V)] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
-       [ |- result (ms_tr MS' (ms_step (e_pred_succ))) V]
+       [ |- result (ms_tr MS' (ms_step (e_pred_succ V))) V]
   %NOTE : this should not cover since M could evaluate to true
   %
   %       which is also a value; but then we are stuck.

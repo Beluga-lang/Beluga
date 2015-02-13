@@ -7,7 +7,7 @@ datatype Person :ctype  #positive = P : Person ;
 %   | Cons: Person -> List -> List
 % ;
 
-datatype Nat : ctype #stratify
+datatype Nat : ctype #stratified
   =
   | Z : Nat 
   | Succ : Nat   -> Nat 

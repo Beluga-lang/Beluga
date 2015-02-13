@@ -31,7 +31,7 @@ datatype halts : tm A -> type =
 halts/m : mstep M M' -> val M' -> halts M;
 %name halts H.
 
-datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratify 1 =
+datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratified =
 | I : [ |- halts M] -> Reduce [ |- i] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])

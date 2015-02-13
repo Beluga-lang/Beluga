@@ -7,7 +7,7 @@ datatype term: type =
 schema tctx = term;
 
 % Algorithmic Equality
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratify 2 =
+datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified =
 | Ae_v : Aeq [g |- #p ..] [g |- #p ..]
 | Ae_a : Aeq [g |- E1 ..] [g |- F1 .. ] -> Aeq [g |- E2 ..] [g |- F2 ..]
       -> Aeq [g |- app (E1..) (E2..)] [g |- app (F1 ..) (F2 ..)]

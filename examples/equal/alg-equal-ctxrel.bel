@@ -42,7 +42,7 @@ schema tdCtx =  block x:term,  _t:deq x x ;
 %----------------------------------------------------------
 % Context relations
 
-datatype Crel : {g:tCtx} {h:taCtx} ctype #stratify  =
+datatype Crel : {g:tCtx} {h:taCtx} ctype #stratified  =
 | Crel_e : Crel [ ] []
 | Crel_xa: Crel [g] [h] -> Crel [g, x:term] [h, b: block (x:term, u:aeq x x)]
 ;

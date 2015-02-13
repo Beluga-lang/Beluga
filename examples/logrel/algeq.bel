@@ -25,7 +25,7 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-datatype CtxRel : {g:tctx}{g':ctx} ctype  #stratify=
+datatype CtxRel : {g:tctx}{g':ctx} ctype  #stratified =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 

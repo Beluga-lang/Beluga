@@ -15,7 +15,7 @@ datatype nat: type =
 | succ : nat -> nat
 ;
 
-datatype NList : [ |- nat] -> ctype #stratify 1 =
+datatype NList : [ |- nat] -> ctype #stratified  =
 | NNil : NList [ |- zero]
 | NCons : {g:tctx} {N:[ |- nat]} [g |- tm] -> NList [ |- N] -> NList [ |- succ N]
 ;
@@ -29,7 +29,7 @@ datatype Clos : ctype #positive=
 Cl : (g:tctx)  [g,x:tm  |-  tm] -> ([g |- tm] -> Clos) -> Clos
 ;
 
-datatype CtxRel : {g:tctx} {h:tctx} ctype #stratify 1 =
+datatype CtxRel : {g:tctx} {h:tctx} ctype #stratified =
 | Rnil : CtxRel [ ] [ ]
 | Rsnoc : (g:tctx) (h:tctx) CtxRel [g] [h] -> CtxRel [g, x:tm] [h, x:tm]
 ;

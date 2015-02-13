@@ -31,7 +31,7 @@ datatype Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 ;
 
 % Algorithmic Equality in context tctx
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratify 2 =
+datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified  =
 | Ae_v : % {#p:[g |- term]}
              Aeq [g |- #p ..] [g |- #p..]
 | Ae_a : Aeq [g |- E1 ..] [g |- F1 .. ] -> Aeq [g |- E2 ..] [g |- F2 ..]

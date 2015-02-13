@@ -61,7 +61,7 @@ Beluga lexical categories:
          let  mlam  of
          rec  schema  some  type
          bool
-         %name %not #positive #stratify
+         %name %not #positive #stratified
         
           
 
@@ -205,7 +205,7 @@ let lex_token loc = lexer
   | "ffalse"
   | "%name"
   | "#positive"
-  | "#stratify"
+  | "#stratified"
   | "strust"
   | "total"
   | "#opts"

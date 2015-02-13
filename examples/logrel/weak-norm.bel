@@ -107,7 +107,7 @@ First, we prove that halts is closed under expansion in the `halts_step` lemma.
 rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
 mlam S ⇒ fn h => 
 let [ |- halts/m MS' V] = h in
-% [ |- halts/m (onestep S MS') V]
+ [ |- halts/m (onestep S MS') V]
 ;
 
 %{{ 

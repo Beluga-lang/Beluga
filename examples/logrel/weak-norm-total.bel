@@ -81,7 +81,8 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype #stratify =
+datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
+#stratified =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])

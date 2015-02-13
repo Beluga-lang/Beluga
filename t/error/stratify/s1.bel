@@ -6,7 +6,7 @@ neut : tp -> type.       %name neut R.
 schema ctx = neut T;
 
 
-datatype Extends : {g:ctx} {h:ctx} ctype #stratify =
+datatype Extends : {g:ctx} {h:ctx} ctype #stratified =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}
           Extends [g] [h] -> Extends [g] [h,x:neut A]

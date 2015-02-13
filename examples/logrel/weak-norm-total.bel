@@ -140,7 +140,7 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Redu
 ;
 
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] = 
-% / total
+/ total (bwd_closed) /
 mlam S => fn r => 
 let [|- S] : [|- step M M'] = [|- S] in 
 let [|- M] : [|- tm A]    = [|- M] in
@@ -152,6 +152,7 @@ trivial proof, analyzing the construction of the the proof of
 'Reduce[|- T] [|- M]'
 }}%
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
+/ total (reduce_halts) /
 fn r => case r of
 | I h => h
 | Arr h f => h
@@ -163,40 +164,46 @@ fn r => case r of
 
 schema ctx = tm T;
 
-datatype RedSub : {g:ctx}{#S: |- g} ctype =
+datatype RedSub : {gamma:ctx}{#S: |- gamma} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
-| Dot : RedSub  [g] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm A] [ |- #S[^] M ] 
+| Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
+     → RedSub [gamma, x:tm A] [ |- #S[^] M ] 
 ;
 
 
 
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
-mlam g => mlam #p => fn rs => case [g |- #p ..] of
- | [g',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
- | [g',x:tm A |-  #q ..] => let Dot rs' rN = rs in
-                      lookup [g'] [g' |-  #q ..] rs'
+rec lookup : {gamma:ctx}{#p:[gamma |- tm A]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p #S[^]] =
+/ total gamma (lookup gamma) / 
+mlam gamma => mlam #p => fn rs => case [gamma] of 
+| [] => impossible [ |- #p] 
+| [gamma', x:tm A] => (case [gamma', x:tm A |- #p ..] of
+ | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
+ | [gamma',x:tm A |-  #q ..] => let Dot rs' rN = rs in
+                      lookup [gamma'] [gamma' |- #q ..] rs')
 ;
 
 %{{
 # Main theorem
 }}%
 
-rec main : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
- mlam g => mlam M => fn rs => case [g |- M ..] of
-| [g |- #p ..] => ? % lookup [g] [g |- #p ..] rs
-| [g |- lam (\x. M1 .. x)] => ? 
+
+rec main : {gamma:ctx}{M:[gamma |- tm A]} RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
+/ total m (main gamma a s m) /
+ mlam gamma => mlam M => fn rs => case [gamma |- M ..] of
+| [gamma |- #p ..] =>  lookup [gamma] [gamma |- #p ..] rs
+| [gamma |- lam \x. M .. x] => ?
 %{ Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    bwd_closed [ |- beta] (main [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
+    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M1 .. x] (Dot rs rN)))
 }%
-| [g |- app (M1 ..) (M2 ..)] => ?
-%{  let Arr ha f = main [g] [g |- M1 ..] rs in
-  f [ |- _ ] (main [g] [g |- M2 ..] rs)}%
-| [g |-  c] => ? % I [ |- halts/m refl val/c]
+| [gamma |- app (M1 ..) (M2 ..)] => 
+  let Arr ha f = main [gamma] [gamma |- M1 ..] rs in
+  f [ |- _ ] (main [gamma] [gamma |- M2 ..] rs)
+| [gamma |-  c] =>  I [ |- halts/m refl val/c]
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
+/ total (weakNorm) /
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
 

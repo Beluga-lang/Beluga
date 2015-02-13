@@ -164,6 +164,9 @@ alignment and can thus lead to nasty surprises w.r.t layout."
     ("psi"   . ?ψ)
     ("phi"   . ?φ)
     ("gamma" . ?γ)
+    ("sigma" . ?σ)
+    ("#S"    . ?σ)
+    ("#S[^]" . ?σ)
     ("omega" . ?ω)
     ("Sigma" . ?Σ)
     ("->"    . ?→)
@@ -244,9 +247,9 @@ Regexp match data 0 points to the chars."
              (regexp-opt
               '("FN" "and" "block" "case" "datatype" "else" "ffalse" "fn" "if"
                 "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
-                "then" "type" "ttrue" "%name" "%not" "module" "struct" "end"
+                "then" "type" "ctype" "ttrue" "%name" "%not" "module" "struct" "end"
                 "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
-                 "%open"  "%abbrev"))
+                 "%open"  "%abbrev" "#stratified" "#positive" "total"))
              "\\_>\\|\\\\")
     (,(concat "^\\(" beluga-syntax-id-re
               "\\)[ \t\n]*:\\([^.]*\\_<type\\_>[ \t\n]*.\\)?")

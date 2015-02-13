@@ -1275,11 +1275,16 @@ GLOBAL: sgn;
              Comp.Case (_loc, Pragma.RegularCase, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.EmptyPattern, None))])
 *)
 
-     | "impossible"; i = cmp_exp_syn; "in";
-         ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->
-           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-             Comp.Case (_loc, Pragma.RegularCase, i,
-                        [Comp.EmptyBranch (_loc, ctyp_decls', Comp.PatEmpty (_loc, pHat))])
+     | "impossible"; i = cmp_exp_syn; cd = OPT ["in";
+         ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]" -> (ctyp_decls, pHat)]  ->
+           (match cd with 
+	      | Some (ctyp_decls, pHat) -> 
+		  let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+		    Comp.Case (_loc, Pragma.RegularCase, i,
+                               [Comp.EmptyBranch (_loc, ctyp_decls', Comp.PatEmpty (_loc, pHat))])
+	      | None -> 
+		    Comp.Case (_loc, Pragma.RegularCase, i,
+                               [Comp.EmptyBranch (_loc, LF.Empty, Comp.PatEmpty (_loc, LF.Null ))]))
       | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk ->
           Comp.If (_loc, i, e1, e2)
 

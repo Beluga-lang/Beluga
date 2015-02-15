@@ -33,7 +33,7 @@ let isExplicit = function
       end
   | _ -> true
 
-let mctxToString =
+ let mctxToString =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
@@ -129,7 +129,7 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list =
     | LF.Dec (cG', _) -> aux acc cG'
   in aux [] cG
 
-let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
+(* let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
   Store.Cid.NamedHoles.reset () ;
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
@@ -146,7 +146,7 @@ let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
     | None -> "No variable s found"
     | Some exp -> (P.expChkToString cD cG exp))
     with _ -> "Can't split on s") *)
-
+*)
 let printOne i (loc, cD, cG, (tau, theta)) =
   let _ = Store.Cid.NamedHoles.reset () in
   let cD = (Whnf.normMCtx cD) in

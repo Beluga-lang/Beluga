@@ -1245,14 +1245,20 @@ module Int = struct
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
-      | Comp.Ann (e, tau) ->
+      | Comp.Ann (e, _tau) ->
           let cond = lvl > 1 in
+(* When we are printing refined programs through the interactive mod
+   we should not print type annotations. 
             fprintf ppf "%s%a : %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD cG 1) e
               (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
               (r_paren_if cond)
-
+*)
+            fprintf ppf "%s%a%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_chk cD cG 1) e
+              (r_paren_if cond)
       | Comp.Equal (_, i1, i2) ->
             fprintf ppf "%a == %a"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
@@ -1321,7 +1327,7 @@ module Int = struct
                 fprintf ppf "%a"
                   (fmt_ppr_lf_ctyp_decl LF.Empty 1) decl
             | LF.Dec (cD, decl) ->
-                fprintf ppf "%a@ %a"
+                fprintf ppf "%a %a"
                   (fmt_ppr_ctyp_decls') cD
                   (fmt_ppr_lf_ctyp_decl cD 1) decl
           in
@@ -1357,14 +1363,21 @@ module Int = struct
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
         if !Control.printNormal then
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@]@ "
-            (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_meta_obj cD1' 0) mO
+	  (match e with 
+	     | Comp.Hole (loc, _ ) -> 
+		 fprintf ppf "\n | %a %a => %a"
+		   (fmt_ppr_cmp_branch_prefix  0) cD1'
+		   (fmt_ppr_meta_obj cD1' 0) mO
+		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+	     | _ -> 
+		 fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@]@ "
+		   (fmt_ppr_cmp_branch_prefix  0) cD1'
+		   (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
              * -bp
              *)
-            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+            (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
         else
           fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'

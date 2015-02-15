@@ -27,7 +27,7 @@ datatype tm : tp -> type =
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
 ;
-%name tm E.
+%name tm M.
 
 %{{ The type `tm` defines our family of simply-typed lambda terms
 indexed by their type as an LF signature. In typical higher-order
@@ -187,15 +187,16 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 }}%
 
 
-rec main : {gamma:ctx}{M:[gamma |- tm A]} RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
+rec main : {gamma:ctx}{M:[gamma |- tm A]} 
+          RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
 / total m (main gamma a s m) /
- mlam gamma => mlam M => fn rs => case [gamma |- M ..] of
+mlam gamma, M => fn rs => case [gamma |- M ..] of
 | [gamma |- #p ..] =>  lookup [gamma] [gamma |- #p ..] rs
-| [gamma |- lam \x. M .. x] => ?
-%{ Arr [ |- halts/m refl val/lam]
+| [gamma |- lam \x. M .. x] => 
+ Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M1 .. x] (Dot rs rN)))
-}%
+    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M .. x] (Dot rs rN)))
+
 | [gamma |- app (M1 ..) (M2 ..)] => 
   let Arr ha f = main [gamma] [gamma |- M1 ..] rs in
   f [ |- _ ] (main [gamma] [gamma |- M2 ..] rs)

@@ -372,49 +372,54 @@ let split e i =
       else
         searchGctx (i+1) cG'
   in
-let rec searchMctx i = function
-  | LF.Empty ->
-      None
-  | LF.Dec (cD', ctypDecl) ->
-      let LF.Decl(n, ctyp,_) = ctypDecl in
-     (match ctyp with
-      | LF.CTyp(_) ->
-          (if (nameString n) = e then
-            failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
-          else
-              searchMctx (i+1) cD' )
-      | LF.ClTyp (LF.MTyp tA,cPsi) ->
-          (if (nameString n) = e then
-             let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
-             let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((_ , vOff) as phat) = dctxToHat cPsi in
-	     let m0 = (Loc.ghost, LF.ClObj (phat,
-				   LF.MObj (LF.Root (Loc.ghost,
-					    LF.MVar (LF.Offset i, LF.Shift vOff),
-					    LF.Nil)))) in
-             let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
-				    Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
-            Some (matchFromPatterns (Loc.ghost) entry bl)
-          else
-            searchMctx (i+1) cD')
-      | LF.ClTyp (LF.PTyp tA,cPsi) ->
-          (if (nameString n) = e then
-            let cgs = Cover.genCovGoals (cD',cPsi,tA) in
-            let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((vPsi, vOff) as _phat) = dctxToHat cPsi in
-	     let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
-            Some (matchFromPatterns (Loc.ghost) entry bl)
-          else
-            searchMctx (i+1) cD')
-      | _ -> searchMctx (i+1) cD')
+  let rec searchMctx i = function
+    | LF.Empty ->
+	None
+    | LF.Dec (cD', ctypDecl) ->
+	let LF.Decl(n, ctyp,_) = ctypDecl in
+	  (match ctyp with
+	     | LF.CTyp(_) ->
+		 (if (nameString n) = e then
+		    failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
+		  else
+		    searchMctx (i+1) cD' )
+	     | LF.ClTyp (LF.MTyp tA,cPsi) ->
+		 (if (nameString n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		    let cgs   = Cover.genCovGoals ((dropIMCtx i cD0), cPsi,tA) in 
+		    (*let cgs   = Cover.genCovGoals (cD0,cPsi',tA') in*)
+		    let bl    = branchCovGoals loc i cG0 tH cgs in
+		    let ((_ , vOff) as phat) = dctxToHat cPsi' in
+		    let m0 = (Loc.ghost, 
+			      LF.ClObj (phat,LF.MObj (LF.Root (Loc.ghost,
+							       LF.MVar (LF.Offset i, LF.Shift vOff),
+							       LF.Nil)))) in
+		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0), 
+					  Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA', cPsi'))) in
+		      Some (matchFromPatterns (Loc.ghost) entry bl)
+		  else
+		    searchMctx (i+1) cD')
+	     | LF.ClTyp (LF.PTyp tA,cPsi) ->
+		 (if (nameString n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		    let cgs = Cover.genCovGoals (cD',cPsi,tA) in
+		    let bl = branchCovGoals loc i cG0 tH cgs in
+		    let ((vPsi, vOff) as _phat) = dctxToHat cPsi' in
+		    let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
+		    let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA',cPsi'))) in
+		      Some (matchFromPatterns (Loc.ghost) entry bl)
+		  else
+		    searchMctx (i+1) cD')
+	     | _ -> searchMctx (i+1) cD')
   in
-  match searchGctx 1 cG0 with
-  | None ->
-     (match searchMctx 1 cD0 with
-      | None -> None
-      | Some s -> Some s)
-  | Some s -> Some s
+    match searchGctx 1 cG0 with
+      | None ->
+	  (match searchMctx 1 cD0 with
+	     | None -> None
+	     | Some s -> Some s)
+      | Some s -> Some s
 
 let whale () = Format.printf
 ";,,,,,,,,,,,,,,,,,'+++++++++++:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,`@\n\

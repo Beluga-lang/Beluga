@@ -12,6 +12,7 @@ module LF = struct
   type depend =
     | No
     | Maybe
+    | Inductive
 
   type kind =
     | Typ
@@ -117,6 +118,12 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
+ type meta_typ =
+   | MetaSchema of Loc.t * name
+   | MetaTyp of Loc.t * LF.typ * LF.dctx 
+   | MetaParamTyp of Loc.t * LF.typ * LF.dctx 
+   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
+
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
    | MetaObj of Loc.t * LF.psi_hat * LF.normal
@@ -132,26 +139,24 @@ module Comp = struct
    | TypBase of Loc.t * cid_comp_typ * meta_spine
    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
    | TypDef of Loc.t * cid_comp_typ * meta_spine
-   | TypBox     of Loc.t * LF.typ  * LF.dctx
-   | TypSub     of Loc.t * LF.dctx  * LF.dctx
+   | TypBox of Loc.t * meta_typ
    | TypArr     of typ * typ
    | TypCross   of typ * typ
    | TypPiBox   of LF.ctyp_decl * typ
    | TypBool
+   | TypInd of typ 
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
-     | Fun    of Loc.t * name * exp_chk         (* fn   f => e         *)
-     | Cofun  of Loc.t * (copattern_spine * exp_chk) list         (* Cofun hd => e | tl => e' *)
-     | MLam   of Loc.t * name * exp_chk         (* mlam f => e         *)
-     | Pair   of Loc.t * exp_chk * exp_chk      (* (e1 , e2)           *)
-     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-                                                (* let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)
-                                                (* let x = i in e      *)
-     | Box    of Loc.t * meta_obj               (* box (Psi hat. M)    *)
+     | Fun    of Loc.t * name * exp_chk                         (* fn   f => e         *)
+     | Cofun  of Loc.t * (copattern_spine * exp_chk) list       (* Cofun hd => e | tl => e' *)
+     | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
+     | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)
+     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
+     | Let    of Loc.t * exp_syn * (name * exp_chk)             (* let x = i in e      *)
+     | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
-     | If      of Loc.t * exp_syn * exp_chk * exp_chk
+     | If     of Loc.t * exp_syn * exp_chk * exp_chk
      | Hole   of Loc.t
 
   and exp_syn =
@@ -161,10 +166,9 @@ module Comp = struct
      | DataDest of Loc.t * cid_comp_dest                            (* c              *)
      | Const  of Loc.t * cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
-
      | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of exp_chk * typ                              (* e : tau        *)
+     | Ann    of exp_chk * typ                                  (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 

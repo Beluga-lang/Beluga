@@ -16,7 +16,7 @@ module Schema = Store.Cid.Schema
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.NamedRenderer
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28])
+(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28]) *)
 
 (*
  * OVERVIEW
@@ -71,6 +71,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28])
 
  *)
 
+
 let dump_subord () =
   Printf.printf "## Dumping subordination relation (over %d types) ##\n"
                 (List.length !(DynArray.get Types.entry_list !Store.Modules.current));
@@ -109,7 +110,7 @@ let rec separate sep f xs = match xs with
   | [x] -> f x
   | h::t -> f h ^sep ^ separate sep f t
 
-let basisToString basis =
+let _basisToString basis =
   separate ", " (fun type_in_basis -> R.render_cid_typ type_in_basis) basis
 
 
@@ -131,20 +132,34 @@ let basisToString basis =
 let rec relevant tA basis = (match tA with
   | Atom(_, a, _spine) ->
       Types.freeze a;
-      if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a
+      if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a 
                         || a = type_in_basis) basis then
         (* there is some `b' in basis such that `a'-terms can appear in `b'-terms, that is,
            `a'-terms can appear in something we need *)
-        [a]
-      else
-        (
-          dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^
-                    " can appear in any of the following: " ^ basisToString basis);
+        ( (* dprint (fun () -> "Claiming that " ^ R.render_cid_typ a ^ *)
+        (*             " can appear in any of the following: " ^ _basisToString basis); *)
 (*          dump_subord () ;
           dump_typesubord () ; *)
+	 [a])
+      else
+        (
+          (* dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ *)
+          (*           " can appear in any of the following: " ^ _basisToString basis); *)
           [])
+
   | PiTyp((TypDecl(_x, tA1), _), tA2) ->
-      (relevant tA1 basis) @ (relevant tA2 basis)
+      (* extract_pos returns all types which are in a positive position *)
+      let rec extract_pos tA = match tA with 
+	| Atom(_, _a, _spine) -> [tA]
+	| PiTyp ((TypDecl(_x, tA1), _ ), tA2) -> (extract_neg tA1) @ (extract_pos tA2)
+      and extract_neg tA = match tA with 
+	| Atom(_, _a, _spine) -> []
+	| PiTyp ((TypDecl(_x, tA1), _ ) , tA2) -> (extract_pos tA1) @ (extract_neg tA2)
+      in
+      (* (relevant tA1 basis) @  
+	 If we keep this, then we might not strengthen enough... -bp*)
+	List.fold_left (fun l tA -> (relevant tA basis) @ l) [] (extract_neg tA1)
+	  @ (relevant tA2 basis)
   | Sigma typRec -> relevantTypRec typRec basis
                             )
 
@@ -258,11 +273,11 @@ let thin0 cD a cPsi =
               (Substitution.LF.comp thin_s (Shift 1),  cPsi')
               (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
           | nonempty_list ->
-            let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in
+              let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in
               (* cPsi |- thin_s <= cPsi' *)
               (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *)
-            let thin_s_inv      = Substitution.LF.invert thin_s in
-              (Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
+              let thin_s_inv      = Substitution.LF.invert thin_s in
+		(Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo (tA, thin_s_inv))))
         end
   in
     inner [a] cPsi

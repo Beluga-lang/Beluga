@@ -1,12 +1,12 @@
-tp:type. %name tp T a.
+tp:type. %name tp T.
 arr: tp -> tp -> tp. % infix right 10 => .
 
-exp: type. %name exp E x.
+exp: type. %name exp E.
 
 lam: tp -> (exp -> exp) -> exp.
 app: exp -> exp -> exp.
 
-type_of: exp -> tp -> type. %name type_of D u.
+type_of: exp -> tp -> type. %name type_of D.
 
 tof_lam: type_of (lam T E) (arr T T')
 	 <- ({x:exp}type_of x T -> type_of (E x) T').
@@ -39,6 +39,7 @@ schema tctx = tp + some [t:tp] block x:exp,u:type_of x t, v:step x x , _t:notLam
 % Prove: If G |- type_of M T  and  G |- step M M' then  G |- type_of M' T
 rec tps': {g:tctx}[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
          -> [g |- type_of (N ..) (T ..)] =
+/ total s (tps' _ _ _ _ d s)/
 mlam g => fn d => fn s => case s of
 | [g |- s_lam \x.\v. \n. S .. x v n] =>
   let [g |- tof_lam \x.\u. D .. x u] = d in
@@ -73,6 +74,7 @@ mlam g => fn d => fn s => case s of
 % Prove: If G |- type_of M (T ..)  and  G |- step M M' then  G |- type_of M' (T ..)
 rec tps: {g:tctx}[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
          -> [g |- type_of (N ..) (T ..)] =
+% / total d (tps _ _ _ _ d s)/
 mlam g => fn d => fn s => case d of
 | [g |- tof_lam \x.\u. D .. x u] =>
   let [g |- s_lam \x.\v. \n. S .. x v n] = s in

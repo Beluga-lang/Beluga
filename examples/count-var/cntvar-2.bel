@@ -23,15 +23,19 @@ schema expCtx = some [t:tp] exp t;
 
 
 rec plus : [ |- exp nat] -> [ |- exp nat] -> [ |- exp nat] =
+% / total x (plus x) /
 fn x => fn y =>
 case x of
-  [ |- z]    => y
+| [ |- z]    => y
 
 | [ |- s U]  =>
-  let [ |- V] = plus [ |- U] y in [ |- s V];
+  let [ |- V] = plus [ |- U] y in [ |- s V]
 
+% [ |- U] => y
+;
 
-rec cntV : {g:expCtx} [g, x:exp (T ..) |-  exp (S ..)] -> [ |- exp nat] =
+rec cntV : {g:expCtx} [g, x:exp (T ..) |-  exp (S ..)] -> [ |- exp nat] = 
+% / total e (cntV _ _ _ e) /
 mlam g =>
  fn e =>
   case e of

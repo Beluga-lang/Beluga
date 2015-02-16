@@ -29,8 +29,9 @@ ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
 
 
 rec vs :  [ |- eval E V] -> [ |- value V] =
-fn e =>
- case e of
+/ total e (vs _ _ e) /
+fn e => 
+case e of
    [ |- ev_z] =>  [ |- v_z]
 
  | [ |- ev_s  D]  =>
@@ -43,6 +44,4 @@ fn e =>
 | [ |- ev_lam]          => [ |- v_lam]
 
 | [ |- ev_app D1 D2 D3] =>  vs [ |- D3]
-
-
 ;

@@ -17,6 +17,7 @@ t_lam: ({x:exp} oft x T -> oft (M x) S)
 schema ctx = exp ;
 
 rec copy : (g:ctx) [g |- exp] -> [g |- exp] =
+% / total e (copy g e)/
 fn e => case e of
 | [h |- lam (\x. M .. x)] =>
   let [h,x:exp |- N .. x] = copy [h, x:exp |- M .. x] in

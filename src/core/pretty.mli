@@ -61,6 +61,7 @@ module Int : sig
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
     val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_lf_mfront        : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
     val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 
     (* Regular Pretty Printers *)
@@ -109,6 +110,7 @@ module Int : sig
 
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
+    val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string

@@ -25,6 +25,7 @@ type error =
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
   | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+  | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
 
 exception Error of Syntax.Loc.t * error
 
@@ -102,6 +103,11 @@ let _ = Error.register_printer
 
       | LeftoverFV ->
 	  Format.fprintf ppf "Leftover free variable."
+      | IllTypedMetaObj (cD, cM, cPsi, mT) -> 
+            Format.fprintf ppf
+              "Meta object %a does not have type %a."
+              (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM))
+              (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
       | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
             Error.report_mismatch ppf
@@ -115,6 +121,48 @@ let _ = Error.register_printer
 
 exception SpineMismatch
 
+let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
+  | (_ , Empty) ->
+      true
+
+  | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
+      Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) && convPrefixCtx cPsi1 cPsi2
+
+  | _ -> false
+
+(* let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
+  | (_ , Empty) -> true
+  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
+      if Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) then 
+	convSubsetCtx cPsi1 cPsi2 
+      else 
+	convSubsetCtx cPsi1 cPsi'
+*)
+
+let rec dot_k s k = if k = 0 then s
+else dot_k (Substitution.LF.dot1 s) (k-1)
+
+let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
+  | ((SigmaLast (_, lastA), s), (SigmaLast (_, lastB), s')) ->
+      Whnf.convTyp (lastA, s) (lastB, s')
+
+  | ((SigmaElem (_xA, tA, recA), s), (SigmaLast (x,tB), s')) ->
+      Whnf.convTyp (tA, s) (tB, s') ||
+	convPrefixTypRec (recA, Substitution.LF.dot1 s) 
+	                 (SigmaLast (x,tB), Substitution.LF.comp s' Substitution.LF.shift)
+
+  | ((SigmaElem (_xA, tA, recA), s), ((SigmaElem(xB, tB, recB) as rB), s')) ->
+      if Whnf.convTyp (tA, s) (tB, s') 
+      then convPrefixTypRec (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s') 
+      else convPrefixTypRec (recA, Substitution.LF.dot1 s) (rB, Substitution.LF.comp s' Substitution.LF.shift)  
+
+  | ((SigmaLast _ , _ ), _ ) -> false
+
+let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
+  convPrefixCtx cSome1 cSome2 && 
+    convPrefixTypRec (typRec1, Substitution.LF.id) (typRec2, Substitution.LF.id) 
+
+
 (* ctxToSub' cPhi cPsi = s
 
    if x1:A1, ... xn:An = cPsi
@@ -126,7 +174,7 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
   | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
   | DDec (cPsi', TypDecl (n, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
-    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id in
+    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id Maybe in
     Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
@@ -652,11 +700,12 @@ and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
  *
  * so checking a context element against a context element is just equality.
  *)
-and checkElementAgainstElement __cD elem1 elem2 =
+
+and checkElementAgainstElement _cD elem1 elem2 =
   let result =
     (*         Whnf.convSchElem elem1 elem2 (* (cSome1 = cSome2) && (block1 = block2)  *) in *)
-    Whnf.prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in
-  dprint (fun () -> "checkElementAgainstElement "
+    prefixSchElem elem2 elem1 (* (cSome1 = cSome2) && (block1 = block2)  *) in
+    dprint (fun () -> "checkElementAgainstElement "
     ^ P.schemaToString (Schema[elem1])
     ^ " <== "
     ^ P.schemaToString (Schema[elem2])
@@ -754,13 +803,15 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
 
   | SObj tM, (STyp tA, t) ->
      checkSub loc cD cPsi' tM (Whnf.cnormDCtx (tA, t))
-
-  | PObj h, (PTyp tA, t) ->
+  | PObj h, (PTyp tA, t)
+  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
       let tA' = inferHead loc cD cPsi' h in
       let tA  = Whnf.cnormTyp (tA, t) in
       dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
 	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+
+  | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
   | (CObj cPsi, (CTyp w, _)) ->

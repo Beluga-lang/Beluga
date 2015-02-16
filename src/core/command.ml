@@ -6,7 +6,7 @@ open Format
 (* the type of commands  *)
 type command = { name : string ;
                  run : Format.formatter -> string list -> unit ;
-                   help : string }
+                 help : string }
 
 
 
@@ -190,7 +190,7 @@ let fill = { name = "fill" ;
                  let input = "rec t : [ |- t] = "^str^";" in
                  if eq = "with" then (
                    let sgn = Parser.parse_string ~name:"<fill>" ~input:input Parser.sgn in
-                   let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,outexp))::[])::[] = sgn in
+                   let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,_, _, outexp))::[])::[] = sgn in
                    (try
                      let (loc, cD, cG, tclo) = Holes.getOneHole i in
                      (if !Debug.chatter != 0 then fprintf ppf "- Fill: EXT done\n");
@@ -292,7 +292,7 @@ let compconst = {name = "constructors-comp";
                         let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
                         let entry = List.find (fun x -> arg = x.CompTyp.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
-                        let termlist = List.rev_map (CompConst.get ~fixName:true) !(entry.CompTyp.constructors) in
+                        let termlist = List.rev_map (CompConst.get ~fixName:true) (entry.CompTyp.constructors) in
                         List.iter (fun x -> fprintf ppf "- %s: [%d] " x.CompConst.name.Id.string_of_name x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist;
                         fprintf ppf ";\n"
                       with

@@ -27,6 +27,7 @@ econs:  term -> env -> env.
 schema tctx =  term  ;
 
 rec genTVar :(g:tctx){#p:[g |- term]} [g |- env] -> [arg':target, xve:target |-  target] =
+/ total env (genTVar g p env) /
 mlam #p => fn env => case env  of
 | [g |- enil] => [arg', xve |-  tfst xve]
 | [g |- econs (H ..) (T ..)]  =>
@@ -38,7 +39,8 @@ mlam #p => fn env => case env  of
 ;
 
 
-rec build: (g:tctx)[g |- env] -> [g |- env] -> [arg':target, xve:target |-  target] =
+rec build: (g:tctx)[g |- env] -> [g |- env] -> [arg':target, xve:target |-  target] = 
+% / total l (build g lorig l) /
 fn lorig => fn l => case l of
 | [g |- enil] => [arg', xve |-  tunit]
 | [g |- econs (#p .. ) (Xs .. )] =>
@@ -74,7 +76,6 @@ fn env => fn t => case t of
         convert [g |- L .. ] [g,x |- E1 .. x] in
   let [arg':target, xve:target |-  T2 arg' xve] =
         convert [g |- L .. ] [g,x |- E2 .. x] in
-
    [arg',xve |-  tlet  (T1 arg' xve)
                 \closure .  tapp (tfst closure) (tsnd closure)  (T2 arg' xve)]
 
@@ -86,11 +87,11 @@ fn env => fn t => case t of
 fn e =>
  let [ |- E] = e in
  let [arg':target, xve:target |-  T] =
-     convert [ |- enil] [x |- E] in
+     convert [ |- enil] [x:target |- E] in
    [ |- T]
 ;
-
-
+}%
+%{
 
 let t1 = cc [ |- lam (\x. (lam (\y. app x y)))] ;
 let t2 = cc [ |- lam (\x. (lam (\y. app y x)))] ;
@@ -120,39 +121,3 @@ let v = cc ([ ] app (lam \a. (app (lam \b. (app  (lam \f. app (app f (s z)) (s s
 
 }%
 
-%{
-pos: nat -> type.
-p_z: pos z.
-p_s : pos N -> pos (s N).
-
-schema ctx = some [n:nat] block x:term .  pos n ;
-
-rec genTVar : nat[] -> target[arg':target, xve:target] =
-fn n => case n of
-| [ ] z => [arg', xve] tfst xve
-| [ ] s N =>
-   let [arg':target, xve:target] U xve = genTVar ([ ] N )   in
-     [arg', xve] U (tsnd xve)
-;
-
-% rec str : {env:(ctx)*}
-
-rec convert : {env:(ctx)*} term[env,arg:term]
-	      -> target[arg':target, xve:target] =
-FN env => fn t => case t of
-| [env, arg:term] arg => [arg', xve] arg'
-
-| {#p::(block x:term. pos N)[env]}
-  [env, arg:term] #p.1 ..  =>  genTVar ([ ] N)
-
-| [env, arg:term] lam \x. Body .. x =>
-  % should strengthen env to env' to only capture
-  % the free variables in \x. Body .. x
-
-
-
-
-
-
-;
-}%

@@ -28,10 +28,11 @@ vl+ : cval -> cexp.
 %%% adapted from Twelf implementation
 %%% rewriting cps conversion into functional style
 
-schema ctx = block x:exp, x':cval , _t:(cval -> cexp) ;
+schema ctx = block x:exp, x':cval , _t:(cval -> cexp) + cval;
 %
 
 rec cmp : (g:ctx) [g |- exp] -> [g,x:cval |-  cexp] -> [g |- cexp] =
+/ total e (cmp g e k)/
 fn e => fn k => let [g,x:cval |-  K .. x] = k in
 case e of
 | [g |- #p.1 ..] => [g |- ((#p.3 .. ) (#p.2 ..))]
@@ -47,9 +48,9 @@ case e of
    [g |- K .. (lam+ (\v.\k. E' .. v k))]
 
 | [g |- app (E1 ..) (E2 .. )] =>
-    let [g,b:block x1:exp,x1':cval , _t:(cval -> cexp) |-  E2' .. b.2] =
-        cmp [g,b:block x1:exp,x1':cval ,_t:(cval -> cexp) |-  E1 .. ]
-	    [g,b,x2 |-  app+ b.2 x2 (\v. K .. v)] in
+    let [g,x :cval |-  E2' .. x] =
+        cmp [g, x1:cval |-  E1 .. ]
+	    [g,x1,x2 |-  app+ x1 x2 (\v. K .. v)] in
      cmp [g |- E1 .. ] [g,x1' |-  E2' .. x1' ]
 
 ;

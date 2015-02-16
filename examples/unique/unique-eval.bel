@@ -19,13 +19,10 @@ eq: exp -> exp -> type.
 eq_ref: eq E E.
 
 % Uniqueness of evaluation
-%{Theorem:
-  If  eval E V  and eval E V'
-  then  equal V V'.
-}%
-
+% Theorem:  If  eval E V  and eval E V'  then  equal V V'.
 
 rec unique_eval : [ |- eval E V] -> [ |- eval E V'] ->  [ |- eq V V'] =
+/ total e (unique_eval _ _ _ e) / 
 fn d => fn f => case d of
 | [ |- ev_app D1 D2 D3] =>
   let [ |- ev_app F1 F2 F3] = f in

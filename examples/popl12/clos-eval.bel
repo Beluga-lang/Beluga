@@ -68,21 +68,3 @@ fn e => fn env => case e of
          )
 
 ;
-
-%{
-datatype env : (psi : tctx) ctype =
-Empty :  env [ ]
-Extend: (psi : tctx) Clos -> env [psi] -> env [psi, x:tm]
-
-and Clos : ctype =
-Cl : (g:tctx)  [g,x:tm  |-  tm] -> env [g] -> Clos
-;
-
-rec lookup : env [g] -> #[g |- tm] -> Clos =
-fn env => mlam p => case [g |- #p ..] of
-| [g, x:tm  |-  x] =>
-  let Extend cl env' = env in cl
-| [g, x:tm  |-  #p ..] =>
-  let Extend _ env' = env in lookup env' [g |- #p ..]
-
-}%

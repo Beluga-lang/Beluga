@@ -1,0 +1,12 @@
+datatype A: ctype #positive
+=
+ | A2: A * A -> A
+;
+
+datatype B: ctype #positive
+=
+ | B1: ((A -> B) -> B) -> B % fail
+
+;
+
+

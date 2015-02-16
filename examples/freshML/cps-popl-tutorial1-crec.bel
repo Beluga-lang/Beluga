@@ -31,6 +31,7 @@ cthrow : ccont A -> cvalue A -> contra.
 schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 
 rec cps : (g:ctx) [g |- value A] -> [g |- cvalue A] =
+/ total v (cps g a v) /
 fn v =>  case v of
 | [g |- #p.1 ..] =>  [g |- #p.2 ..]
 
@@ -42,6 +43,7 @@ fn v =>  case v of
 
 
 and cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
+/ total e (cpse g a e) /
 fn e => case e of
 | [g |- ret (V .. )] =>
   let [g |- V' ..] = cps [g |- V .. ] in
@@ -54,22 +56,30 @@ fn e => case e of
 ;
 
 
-let id_fun = [ |- lam o \x. ret x] ;
+% let id_fun = [ |- lam o \x. ret x] ;
+
 
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
+rec test0 : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
+fn x => let [b:block (x:value o , _t:cvalue o) |-  V' b.1 b.2] = r0 in
+	   [b,k |- cthrow k (V' b.1 b.2)] ;
+
+let r1' = test0 ttrue ;
+%{
 rec test : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
 fn x => let [b:block (x:value o , _t:cvalue o) |-  V' b] = cps [b:block (x:value o , _t:cvalue o) |-  b.1] in
 	[b,k |- cthrow k (V' b)] ;
 
 let r1' = test ttrue ;
-
+}%
+%{
 let r1 = cpse [b:block x:value o , _t:cvalue o |-  ret b.1] ;
 
 let r2 = cps [ |- lam o \x. ret x] ;
 
 let r3 = cps  [ |- (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x )))))] ;
-
+}%
 
 %{
 

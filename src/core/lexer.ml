@@ -61,7 +61,9 @@ Beluga lexical categories:
          let  mlam  of
          rec  schema  some  type
          bool
-         %name %not
+         %name %not #positive #stratified
+        
+          
 
      presently reserved but unused:           box
 
@@ -100,7 +102,7 @@ let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII 
 (* Matches any printable utf-8 character that isn't reserved *)
 let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
                           "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>"  '`'               (* exclude < and > *)
+                          "<>" '|'     '`'               (* exclude < and > *)
                        ]
 (* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
 
@@ -201,6 +203,11 @@ let lex_token loc = lexer
   | "ttrue"
   | "ffalse"
   | "%name"
+  | "#positive"
+  | "#stratified"
+  | "strust"
+  | "total"
+  | "#opts"
   | "%coverage"
   | "%nostrengthen"
   | "%not"

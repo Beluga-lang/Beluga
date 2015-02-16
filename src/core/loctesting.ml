@@ -17,7 +17,7 @@ let rec store_locs (d : Sgn.decl) = match d with
 
 and store_recs (recs : Comp.rec_fun list) = match recs with
 | [] -> ()
-| Comp.RecFun(_, _, e)::t -> store_chks e;
+| Comp.RecFun(_, _, _, _, e)::t -> store_chks e;
 	store_recs t
 
 and store_chks (e : Comp.exp_chk) = match e with

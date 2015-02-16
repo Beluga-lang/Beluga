@@ -91,6 +91,7 @@ value_lAM : value (lAM (\a. E a)).
 
 
 rec pres : [ |- has E T] -> [ |- ~> E E'] -> [ |- has E' T] =
+/ total ev (pres e t e' d ev)/
 fn d => fn ev => case ev of
 | [ |- ~>_s EV] =>
  (let [ |- is_s D] = d in
@@ -130,6 +131,7 @@ step : (~> E E') -> step_or_val E.
 val : (value E) -> step_or_val E.
 
 rec progress : [ |- has E T] -> [ |- step_or_val E] =
+/ total d (progress e t d)/
 fn d => case d of
  | [ |- is_z] => [ |- val value_z]
  | [ |- is_s D] =>

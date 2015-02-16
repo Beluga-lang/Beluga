@@ -1,0 +1,43 @@
+%coverage 
+
+term: type.
+c : term.
+lam: (term -> term) -> term.
+
+nat: type.
+z: nat.
+s: nat -> nat.
+
+
+schema ctx = term;
+schema nctx = nat;
+
+rec test' :(g:nctx)[g |- term] -> [g |- term] =
+fn x => case x of
+| [g |- c] => [g |- c]
+| [g |- M ..] => [g |- M ..]
+;
+
+
+rec test0 :(g:nctx)[g |- term] -> [g |- term] =
+fn x => case x of
+| [g |- c] => [g |- c]
+| [g |- lam \x. M x ] => x
+;
+
+
+rec test'' :(g:nctx)[g |- term] -> [g |- term] =
+fn x => case x of
+| [g |- c] => [g |- c]
+% Should actually succeed due to subordination
+| [g |- _ ] => x
+;
+
+rec test :(g:nctx)[g |- term] -> [g |- term] =
+fn x => case x of
+| [g |- c] => [g |- c]
+% Should actually succeed due to subordination
+| [g |- M] => [g |- M]
+;
+
+

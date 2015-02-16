@@ -1,0 +1,66 @@
+datatype Person :ctype  #positive = P : Person ; 
+
+% datatype Man : ctype  = M : Man;
+
+% datatype List :  ctype  = 
+%   | Nil : List
+%   | Cons: Person -> List -> List
+% ;
+
+datatype Nat : ctype #stratified
+  =
+  | Z : Nat 
+  | Succ : Nat   -> Nat 
+; 
+
+
+
+datatype Foo : ctype  #positive
+  =
+  | F1 : Person -> Foo
+  | F2 :  (Person -> Foo) -> Foo
+;
+
+datatype TestA : ctype  #positive
+  =
+  | Ta1 : TestA 
+  | Ta2 : (Nat -> Nat)-> (Nat -> Nat) -> TestA
+;
+
+
+datatype TestB : ctype #positive
+ =
+  | Tb1 : (Person -> Person -> TestB ) -> ( Person  -> TestB) -> TestB
+  | Tb2 : (Person -> Person -> TestB ) * (Person -> TestB) -> TestB
+  | Tb3 : ((TestA -> Person) -> TestB) -> TestB
+  % | Tb4 : ((((TestB -> Person) -> TestB) -> Person -> Person) -> TestB) -> TestB
+  % | Tb5 : ((((TestB -> Person) -> (TestB -> Person) -> TestB) -> Person -> Person) -> TestB) -> TestB
+  % | Tb6 : ((((TestB -> Person) -> (TestB -> Person) -> TestB) -> TestB -> Person) -> TestB) -> TestB
+ 
+;
+
+
+
+
+datatype nat  : type =
+| z: nat
+| s: nat -> nat
+;
+
+datatype plus: nat -> nat -> nat -> type =
+| pz: plus z Y Y
+| ps: plus X Y Z -> plus (s X) Y (s Z)
+;
+
+datatype list: nat -> type =
+| nil: list z
+| cons: nat -> list I -> list (s I)
+;
+
+datatype IsList : [|- list N] -> ctype #positive
+=
+IL: {L:[|- list N]} IsList [|- L] 
+;
+
+
+

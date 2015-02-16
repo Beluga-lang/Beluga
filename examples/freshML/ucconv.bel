@@ -1,14 +1,6 @@
 % Untyped closure conversion.
 % Author: Olivier Savary B.
 %
-% current state
-%--------------------
-% Reconstructing
-% Need to compare test results with previous cconv.
-% Fatal error: exception Whnf.Fmvar_not_found
-% (add to tracker with example; problem was a free variable)
-%
-
 
 % term is the source language
 term: type.
@@ -41,6 +33,7 @@ schema ctx = term;
 schema tctx = target;
 
 rec append:(g:ctx)[g |- fvlist] -> [g |- fvlist] -> [g |- fvlist] =
+/ total a (append g a b) / 
 fn a => fn b => case a of
 | [g |- nil] => b
 | [g |- cons (E..) (Ta..)] =>
@@ -51,36 +44,41 @@ fn a => fn b => case a of
 % makeproj return the nth project of pair y
 % makeproj n = tfst( ... (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
+/ total n (makeproj' n ) / 
 fn n => case n of
 | [ |- z] => [xenv:target |-  (tfst xenv)]
 | [ |- suc M] =>
-  let [xenv:target |-  N] = makeproj'[ |- M] in
-      [xenv:target |-  tsnd N]
+  let [xenv:target |- N xenv] = makeproj' [ |- M] in
+      [xenv:target |- tsnd (N xenv)]
 ;
 
-rec makeproj: [ |- nat] -> [xenv:target |-  target] =
+rec makeproj: [ |- nat] -> [xenv:target |- target] =
+/ total n (makeproj n) /
 fn n =>
-   let [xenv:target |-  T, xenv] = makeproj' n in
-       [xenv:target |-  tfst (T, xenv)]
+   let [xenv:target |-  T xenv] = makeproj' n in
+       [xenv:target |-  tfst (T xenv)]
 ;
 
 
-
+%{
+remove is not covering, because it only considers
+variables in the fvlist, but as fvlist is specified
+it can also contain other terms.
+}%
 rec remove:(g:ctx)[g,x:term |-  fvlist] -> [g |- fvlist] =
 fn l => case l of
-| [g,x:term |-  nil] => [g |- nil]
-| [g,x:term |-  cons x (L..x)] => remove[g,x:term |-  L..x]
+| [g,x:term |- nil] => [g |- nil]
+| [g,x:term |- cons x (L .. x)] => remove [g,x:term |- L .. x]
 | [g,x:term |-  cons (#p..) (L..x)] =>
-  let [g |- (L'..)] = remove [g,x:term |-  L..x] in
-				   [g |- cons (#p..) (L'..)]
+  let [g |- L' ..] = remove [g,x:term |- L .. x] in
+			   [g |- cons (#p ..) (L' ..)]
 ;
 
 % Extend the mapping with id function, used for the local variable in lam and let.
 rec e_map : (g:ctx){h:tctx} ([g |- term] -> [h |- target])  ->  [g,x:term |-  term] -> [h,x:target |-  target] =
-mlam h => fn map =>
-   fn e' => case e' of
+mlam h => fn map => fn e' => case e' of
    | [g,x:term |-  x] => [h,x:target |-  x]
-   | [g,x:term |-  (#p..)] =>
+   | [g,x:term |-  #p..] =>
      let [h |- (F..)] = map[g |- #p..] in
     	 [h,x:target |-  (F..)]
 ;
@@ -109,6 +107,7 @@ fn map => fn l => fn n => case l of
 
 % Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
 rec b_env:(g:ctx){h:tctx}( [g |- term] -> [h |- target]) -> [g |- fvlist] -> [h |- target] =
+/ total fvar (b_env g h map fvar)/
 mlam h => fn map => fn fvar => case fvar of
 | [g |- nil] => [h |- tunit]
 | [g |- cons (E..) (Ta..)] =>

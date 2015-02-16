@@ -5,12 +5,14 @@ z    : term.
 schema termCtx = some [] term;
 
 rec copyBad : {g:termCtx} [g |- term] -> [g |- term] =
+/ total e (copyBad g e)/
 mlam g => fn e =>
  (case e of %not
   | [g |- z]     => [g |- z]
 );
 
 rec copyGood : {g:termCtx} [g |- term] -> [g |- term] =
+/ total e (copyGood g e)/
 mlam g => fn e =>
  (case e of
   | [g |- z]     => [g |- z]
@@ -18,6 +20,7 @@ mlam g => fn e =>
 );
 
 rec copyXBad1 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
+/ total e (copyXBad1 g e)/
 mlam g => fn e =>
  (case e of %not
   | [g,x:term |-  z]     => [g,x:term |-  z]
@@ -25,6 +28,7 @@ mlam g => fn e =>
 );
 
 rec copyXBad2 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
+/ total e (copyXBad2 g e)/
 mlam g => fn e =>
  case e of %not
  | [g,x:term |-  z]     => [g,x:term |-  z]
@@ -33,6 +37,7 @@ mlam g => fn e =>
 
 
 rec copyXGood : {g:termCtx} [g |- term] -> [g |- term] =
+/ total e (copyXGood g e)/
 mlam g => fn e =>
   case e of
   | [g,x:term |-  z]     => [g,x:term |-  z]
@@ -41,6 +46,7 @@ mlam g => fn e =>
 ;
 
 rec copyXGood2 : {g:termCtx} [g |- term] -> [g |- term] =
+/ total e (copyXGood2 g e)/
 mlam g => fn e =>
  (case e of
   | [g,x:term |-  z]     => [g,x:term |-  z]

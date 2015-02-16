@@ -41,8 +41,9 @@ schema ctx = some [t:tp] block x:exp t, _t:neutral t; % Q: why small T?
 
 
 rec normal2exp : (g: ctx) [g |- normal T] -> [g |- exp T] =
+/ total e (normal2exp g t e) /
 fn e => case e of
-| [g |- neut (M..)] => neutral2exp[g |- M..]
+| [g |- neut (M..)] => neutral2exp [g |- M..]
 
 | {S : [g,x:neutral T2 |-  normal T1]} % we specify the type of S to help the type-checker
   [g |- lam' \x.S..x] => let {M : [g,x:exp T |- exp T1]}
@@ -52,6 +53,7 @@ fn e => case e of
                        [g |- lam \y.M..y]
 
 and neutral2exp : (g: ctx) [g |- neutral T] -> [g |- exp T] =
+/ total e (neutral2exp g t e) /
 fn e => case e of
 |[g |- app' (R..) (S..)] => let [g |- M..] = neutral2exp [g |- R..] in
                        let [g |- N..] = normal2exp [g |- S..] in
@@ -64,6 +66,7 @@ fn e => case e of
 
 % Normalization
 rec norm : (g: ctx) [g |- exp T] -> [g |- normal T] =
+% / total e (norm g t e)/
 fn e => case e of
 | [g |- app (M..) (N..)] =>
   (case norm [g |- M..] of

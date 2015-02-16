@@ -31,6 +31,7 @@ assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
 % (assum A D (\h. E h))
 %  {A:o} conc A -> (hyp A -> conc C) -> conc C.
 rec ca : (g:ctx) [g |- ass (A ..) (C ..)]  -> [g |- conc (C ..)] =
+% / total e (ca _ _ _ e ) /
 fn e => case e of
 | [g |- assume (A ..)             (axiom (H ..))      (\h.E .. h)]                            => [g |- (E .. (H ..))]
 | [g |- assume (A ..)             (D ..)              (\h. axiom h)]                         => [g |- D ..]
@@ -51,8 +52,8 @@ fn e => case e of
          ca [g, h2:hyp _ |-  assume (forall (\x. A1 .. x)) (forallr \a. D1 .. a) (\h. E1 .. h h2)] in
     ca [g |- assume (A1 .. (T ..)) (D1 .. (T .. )) (\h2. E1' .. h2)]
 
-| [g |- assume (A .. ) (impl (D1 ..) (\h2. D2 .. h2) (H .. )) (\h. E .. h)] =>
-  let [g, h2: hyp _  |-  D2' .. h2] = ca [g, h2: hyp _ |-  assume  (A ..)
+| [g |- assume (A0 .. ) (impl (D1 ..) (\h2. D2 .. h2) (H .. )) (\h. E .. h)] =>
+  let [g, h2: hyp _  |-  D2' .. h2] = ca [g, h2: hyp _ |-  assume  (A0 ..)
                                                            (D2 .. h2) (\h  .   E .. h)] in
     [g |- impl (D1 ..) (\h2. D2' .. h2) (H ..)]
 

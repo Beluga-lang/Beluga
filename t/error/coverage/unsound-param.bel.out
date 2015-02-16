@@ -1,8 +1,11 @@
-Coverage checking failed: 
-######   COVERAGE FAILURE: Case expression doesn't cover: ######
-##   File "./t/error/coverage/unsound-param.bel", line 8, characters 21-89 (end at line 9, character 47)
-##   CASE(S) NOT COVERED :
 
-(1)   ., {g : ctx}, {p : #[g, @x1 : term |- term]}, 
+######   COVERAGE FAILURE: Case expression doesn't cover: ######
+##       CASE(S) NOT COVERED :
+
+(1)   .
  .
-  |-  [g, z |- #x ..]
+  |-  [g, x1 |- x1]
+
+
+
+##

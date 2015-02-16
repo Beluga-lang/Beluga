@@ -9,6 +9,7 @@ schema termCtx = some [] term;
 
 
 rec copy : (g:termCtx) [g |- term] -> [g |- term] =
+/ total e (copy g e) /
 fn e => case e of
 | [h |- z]     => [h |- z]
 | [g |- suc (U ..)] => let [g |- V ..] = copy [g |- U ..] in [g |- suc (V .. )]

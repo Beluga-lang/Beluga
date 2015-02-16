@@ -23,6 +23,7 @@ schema sctx = term ;
    is the code and followed by other arguments representing the environment.
 }%
 rec cconv : (g:sctx)(g':tctx) [g |- term] -> [g' |-  target] -> [g' |-  target] =
+% / total t (cconv g g' t)/
 fn t => fn e => case t of
 | [h,y:term |-  y]    => let [g' |-  E ..] = e in [g' |-  tfst (E .. )]
 | [h,y:term |-  #p ..] =>

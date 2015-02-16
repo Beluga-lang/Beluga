@@ -14,6 +14,7 @@ letv: exp -> (exp  -> exp) -> exp.
 schema expCtx = exp;
 
 rec plus : [ |- exp] -> [ |- exp] -> [ |- exp] =
+% / total x (plus x) /
 fn x => fn y =>
 case x of
   [ |- z]    => y

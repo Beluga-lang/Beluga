@@ -21,6 +21,7 @@ module LF : sig
     | LeftoverFV
     | ParamVarInst     of mctx * dctx * tclo
     | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+    | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
 
   exception Error of Syntax.Loc.t * error
 
@@ -73,6 +74,8 @@ module Comp : sig
     | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
     | TypMismatch     of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name * string
+    | InvalidRecCall
+    | MissingTotal    of Id.cid_prog
 
   exception Error of Syntax.Loc.t * error
 

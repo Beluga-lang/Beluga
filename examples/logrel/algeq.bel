@@ -25,7 +25,7 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-datatype CtxRel : {g:tctx}{g':ctx} ctype =
+datatype CtxRel : {g:tctx}{g':ctx} ctype  #stratified =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
@@ -37,6 +37,7 @@ datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
 % Generalize Pop to all terms for convenience
 rec pop' : Lookup [g] [g' |-  M ..] [ |- T]
          -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm |-  M ..] [ |- T] =
+/ total r (pop' g g' m t s r)/
 fn r => case r of
 | Top => Pop Top
 | Pop v => Pop (Pop v);
@@ -64,8 +65,9 @@ datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' |- #S[..] (M ..)];
 
+
 % Logical equivalence. _|-_~~_:_ in the paper
-datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =
+datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  =
 | LogBase : AlgEqN [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
           -> LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
 | LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}
@@ -80,6 +82,7 @@ datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctyp
 % Half a dozen straightforward constructions on renaming substitutions:
 rec wknVar : Lookup [g] [g' |-  M ..] [ |- A] -> IsVarSub [g] [g'] [h] [h' |- #W[..]]
  -> Lookup [h] [h' |-  M #W[..]] [ |- A]=
+% / total iv (wknVar _ _ _ _ _ _ _ iv _ )/
 fn iv => fn ivs => case iv of
 | Top =>    let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
@@ -93,8 +96,10 @@ fn r1 => fn r2 => case r1 of
 | Cons ivs' iv => Cons (renCompose ivs' r2) (wknVar iv r2);
 
 % Weakening a renaming is still a renaming
+
 rec wknVarSub : IsVarSub [g] [g'] [h] [h' |- #S[..]]
  -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm |- #S[..] ] =
+% / total r (wknVarSub _ _ _ _ _ _ r )/
 fn r => case r of
 | Nil => Nil
 | Cons r' v => Cons (wknVarSub r') (pop' v);
@@ -116,6 +121,7 @@ fn r => wknVarSub (idIsVarSub r);
 
 % Generalizing AlgVar to terms
 rec algVar : Lookup [g] [g' |-  M ..] [ |- T] -> AlgEqR [g] [g' |-  M ..] [g' |-  M ..] [ |- T] =
+/ total iv (algVar _ _ _ _ iv) /
 fn iv => case iv of
 | Top => AlgVar Top
 | Pop iv' => let AlgVar v = algVar iv' in AlgVar (Pop v);
@@ -157,7 +163,7 @@ mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r i
    (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
     reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
-and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
+and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = 
 fn r => fn e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
 | LogBase a => a
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
@@ -198,6 +204,7 @@ rec wknLogEqSub :
   IsVarSub [h] [h'] [h0] [h0' |- #W[..]]
 -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
 -> LogEqSub [g] [g'] [h0] [h0' |- #S1[#W[..]]] [h0' |- #S2[#W[..]]] =
+% / total es (wknLogEqSub _ _ _ _ _ _ _ _ _ iv es )/
 fn iv => fn es => case es of
 | Nil => Nil
 | Dot rs' rN => Dot (wknLogEqSub iv rs') (logEq_Monotone iv rN)
@@ -205,6 +212,7 @@ fn iv => fn es => case es of
 
 % Transitivity of mstep
 rec mstep_trans : (g':ctx) [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (N ..) (P ..)] -> [g' |-  mstep (M ..) (P ..)] =
+/ total s1 (mstep_trans g' m n p s1 s2) /
 fn s1 => fn s2 => case s1 of
 | [g' |-  refl] => let [g' |-  S2 ..] = s2 in [g' |-  S2 ..]
 | [g' |-  trans1 (S1 ..) (MS1 ..)] => let [g' |-  MSR ..] = mstep_trans [g' |-  MS1 ..] s2 in
@@ -222,6 +230,8 @@ rec mstep_app : (g':ctx) [g' |-  mstep (M ..) (N ..)] -> [g' |-  mstep (app (M .
 fn s1 => case s1 of
 | [g' |-  refl] => [g' |-  refl]
 | [g' |-  trans1 (S ..) (MS ..)] => trans1' [g' |-  stepapp (S ..)] (mstep_app [g' |-  MS ..]);
+
+
 
 % Logical equality is backward closed under weak head reduction
 rec closed : [g' |-  mstep (N1 ..) (M1 ..)] -> [g' |-  mstep (N2 ..) (M2 ..)]
@@ -242,6 +252,7 @@ fn s1 => fn s2 => fn e => case e of
 rec lookup : Lookup [g] [g' |-  M1 ..] [ |- T]
  -> LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]]
  -> LogEq [h] [h' |-  M1 #S1[..]] [h' |-  M1 #S2[..]] [ |- T] =
+% / total v (lookup _ _ _ _ _ _ _ _ v)/
 fn v => fn s => case v of
 | Top =>    let Dot s' e = s in e
 | Pop v' => let Dot s' e = s in lookup v' s'
@@ -251,12 +262,14 @@ fn v => fn s => case v of
 rec algEqRSym :
   AlgEqR [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
 -> AlgEqR [g] [g' |-  N2 ..] [g' |-  N1 ..] [ |- T] =
+/ total a (algEqRSym g g' n1 n2 t a) /
 fn a => case a of
 | AlgVar v => AlgVar v
 | AlgApp a1 a2 => AlgApp (algEqRSym a1) (algEqNSym a2)
 and algEqNSym :
   AlgEqN [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T]
 -> AlgEqN [g] [g' |-  N2 ..] [g' |-  N1 ..] [ |- T] =
+/ total a (algEqNSym g g' n1 n2 t a) /
 fn a => case a of
 | AlgBase s1 s2 a' => AlgBase s2 s1 (algEqRSym a')
 | AlgArr a' => AlgArr (algEqNSym a')
@@ -266,6 +279,7 @@ fn a => case a of
 rec logEqSym :
    LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
  -> LogEq [g] [g' |-  M2 ..] [g' |-  M1 ..] [ |- T] =
+%/ total e (logEqSym g g' m1 m2 t e) /
 fn e => case e of
 | LogBase a => LogBase (algEqNSym a)
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
@@ -291,7 +305,7 @@ datatype EqTp : [ |- tp] -> [ |- tp] -> ctype =
 rec varEqUnique :
   Lookup [g] [g' |-  M ..] [ |- T]
 -> Lookup [g] [g' |-  M ..] [ |- S]
--> EqTp [ |- T] [ |- S] =
+-> EqTp [ |- T] [ |- S] = %/ total e1 (varEqUnique g g' m t s e1 e2)/
 fn e1 => fn e2 => case (e1,e2) of
 | (Top,Top) => ReflTp
 | (Pop e1', Pop e2') => varEqUnique e1' e2'
@@ -314,7 +328,7 @@ datatype EqTm : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
 | ReflTm : EqTm [g' |-  M ..] [g' |-  M ..];
 
 % Determinacy of weak head reduction
-rec determinacy : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  step (M ..) (P ..)] -> EqTm [g' |-  N ..] [g' |-  P ..] =
+rec determinacy : (g':ctx) [g' |-  step (M ..) (N ..)] -> [g' |-  step (M ..) (P ..)] -> EqTm [g' |-  N ..] [g' |-  P ..] = 
 fn s1 => fn s2 => case (s1,s2) of
 | ([g' |-  beta],[g' |-  beta]) => ReflTm
 | ([g' |-  stepapp (S1 ..)],[g' |-  stepapp (S2 ..)]) =>

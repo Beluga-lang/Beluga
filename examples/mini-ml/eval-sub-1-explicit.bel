@@ -16,6 +16,7 @@ z  : nat.
 suc: nat -> nat.
 
 rec add : [|- nat] -> [|- nat] -> [|- nat] =
+/ total a (add a b) /
 fn a => fn b =>
    (case a of
          [|- z] : [|- nat] => b
@@ -26,6 +27,7 @@ fn a => fn b =>
 ;
 
 rec eval : [|- exp] -> [|- nat] =
+% / total e (eval e)/
 fn e =>
 (case e of
    {U:[|- nat]} [|- num U] : [|- exp] => [|- U]

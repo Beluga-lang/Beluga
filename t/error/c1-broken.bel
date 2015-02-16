@@ -1,0 +1,16 @@
+term :  type.
+% z    : term.
+% suc  : term -> term.
+app  : term -> term -> term.
+
+schema termCtx = some [] term;
+
+rec copyBroken : {g:termCtx} [g |- term] -> [g |- term] = 
+/ total e (copyBroken g e)/
+mlam g => fn e =>
+ (case e of
+%  | [g |- z]     => [g |- z]
+%  | [g |- suc (U ..)] => let [g |- V ..] = copy [g] [g |- U ..] in [g |- suc (V .. )]
+  | [g |- #p ..] => [g |- #p ..]
+  | [g |- app (U ..) (U ..)]  =>  [g |-  U ..]   % Doesn't cover because only matches app U U, not app U V
+);

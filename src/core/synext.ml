@@ -10,6 +10,7 @@ module LF = struct
   type depend =
     | Maybe
     | No
+    | Inductive
 
   type kind =
     | Typ     of Loc.t
@@ -118,22 +119,20 @@ module Comp = struct
 
  type meta_typ =
    | MetaSchema of Loc.t * name
-   | MetaTyp of Loc.t * LF.dctx * LF.typ
-   | MetaParamTyp of Loc.t * LF.dctx * LF.typ
+   | MetaTyp of Loc.t * LF.typ * LF.dctx
+   | MetaParamTyp of Loc.t  * LF.typ * LF.dctx
+   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
 
  type mabstr = CObj | MObj | PObj | SObj
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
-   | TypBox   of Loc.t * LF.typ  * LF.dctx      (* tau ::= A[Psi]          *)
-   | TypPBox  of Loc.t * LF.typ  * LF.dctx      (* tau ::= #A[Psi]         *)
-   | TypCtx   of Loc.t * name                   (*    | W    (ctx schema)  *)
-   | TypSub   of Loc.t * LF.dctx * LF.dctx      (*    | Phi[Psi]           *)
+   | TypBox  of Loc.t * meta_typ
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
-   | TypPiBox of Loc.t * LF.ctyp_decl * typ
-                                                (*     | Pi u::U.tau       *)
+   | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::U.tau       *)
    | TypBool                                    (*     | Bool              *)
+   | TypInd of typ 
 
   and exp_chk =                            (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
@@ -200,7 +199,15 @@ module Comp = struct
     | CopatApp of Loc.t * name * copattern_spine
     | CopatMeta of Loc.t * meta_obj * copattern_spine
 
- type rec_fun = RecFun of name * typ * exp_chk
+ type order =
+      Arg of name			(* O ::= x                    *)
+    | Lex of order list                 (*     | {O1 .. On}           *)
+    | Simul of order list               (*     | [O1 .. On]           *)
+
+ type total_dec = Total of Loc.t * order option * name * (name option) list
+		  | Trust of Loc.t
+
+ type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 
  type  kind =
    | Ctype of Loc.t
@@ -235,6 +242,10 @@ end
 
 (** External Signature Syntax *)
 module Sgn = struct
+  type positivity_flag = 
+    | Positivity
+    | Stratify of Loc.t * (string  option)
+    (* | Stratify of Loc.t * Comp.order * name * (name option) list  *)
 
   type assoc = Left | Right | None
   type precedence = int
@@ -257,7 +268,7 @@ module Sgn = struct
   type decl =
     | Const         of Loc.t * name * LF.typ
     | Typ           of Loc.t * name * LF.kind
-    | CompTyp       of Loc.t * name * Comp.kind
+    | CompTyp       of Loc.t * name * Comp.kind  * positivity_flag option
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

@@ -51,8 +51,6 @@ mkdir $release
 echo 'Copying files in root ...'
 cp -a \
     INSTALL \
-    OMakefile \
-    OMakeroot \
     AUTHORS \
     COPYRIGHT \
     LICENSE \
@@ -65,7 +63,7 @@ cp -a \
 mkdir $release/bin
 
 # Set the RELEASE to true by default.
-sed -i 's/RELEASE *= *false/RELEASE = true/' $release/OMakeroot
+# sed -i 's/RELEASE *= *false/RELEASE = true/' $release
 
 echo 'Copying src ...'
 cp -a \

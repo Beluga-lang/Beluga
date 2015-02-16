@@ -19,6 +19,7 @@ yes: yes_or_no.
 no : yes_or_no.
 
 rec is_num_value? : [ |- term] -> [ |- yes_or_no] =
+/ total m (is_num_value? m)/
 fn m => case m of
 | [ |- z]      => [ |- yes]
 | [ |- succ V] => is_num_value? [ |- V]
@@ -27,6 +28,7 @@ fn m => case m of
 
 
 rec step : [ |- term] -> [ |- term_or_undef] =
+/ total m (step m)/
 fn m => case m of
 | [ |- switch true  T2 T3] => [ |- next_term T2]
 | [ |- switch false T2 T3] => [ |- next_term T3]
@@ -87,13 +89,17 @@ error : val_or_error.
 
 
 rec is_value? : [ |- term] -> [ |- yes_or_no] =
+/ total (is_value?)/
 fn m => case m of
 | [ |- true]      => [ |- yes]
 | [ |- false]     => [ |- yes]
 | [ |- M]         => is_num_value? [ |- M]
 ;
 
-
+% The function below is not known to terminate.
+% it could in principle diverge - the fact that it
+% will not diverge has to do with the fact that 
+% step m will return a term which is in fact smaller.
 rec mstep : [ |- term] -> [ |- val_or_error] =
 fn m => case is_value? m of
 | [ |- yes] => let [ |- M] = m in [ |- val M]

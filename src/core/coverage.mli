@@ -42,6 +42,8 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
 (* val etaExpandMVstr     : sub -> dctx -> tclo -> normal *)
 val genPatCGoals : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
 val genCtxGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * LF.dctx * LF.msub) list
-val genCovGoals : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
+val genContextGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) list
+val genCovGoals : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
+val genBCovGoals : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
 val covGoalToString : LF.mctx -> cov_goal -> string
 val covGoalsToString : (LF.mctx * cov_goal * LF.msub) list -> string

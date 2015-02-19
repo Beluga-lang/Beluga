@@ -1484,7 +1484,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
         cO ; cD_i |- cPsi_i : ctx
   *)
   let rec genCtx  (LF.Dec (_cD', LF.Decl _ ) as cD) cpsi elems  = begin match elems with
-    | [] -> []
+    | [] -> [(cD, LF.Null, LF.MShift 0)]
     | LF.SchElem (decls, trec) :: elems ->
 	let cPsi_list = genCtx cD cpsi elems in
 	let d = Context.length decls in
@@ -1499,7 +1499,7 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
 	let ms = LF.MShift ((Context.length cD0) - (Context.length cD)) in
         (* cD0 |- ms : cD
               cD' |- cPsi' ctx *)
-	let cPsi'      = LF.DDec (cpsi', LF.TypDecl (new_bvar_name "@x" , tA)) in
+	let cPsi'      = LF.DDec (cpsi', LF.TypDecl (new_bvar_name "x" , tA)) in
 
 	let _ = dprint (fun () -> "[genCtx] cPsi' = " ^  P.dctxToString cD0 cPsi' ^ "\n") in
 	let _ = dprint (fun () -> "         ms = " ^ P.msubToString cD0 ms ^ "\n") in
@@ -1523,6 +1523,9 @@ let genCtxGoals cD (LF.Decl(x, LF.CTyp schema_cid, dep)) =
   let cD'  = LF.Dec(cD, LF.Decl(x, LF.CTyp schema_cid, dep)) in
     genCtx cD' (LF.CtxVar (LF.CtxOffset 1)) elems
 
+let genContextGoals cD ctx_schema =
+  let cgs = genCtxGoals cD ctx_schema in 
+    List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms)) cgs
 
 (* Find mvar to split on *)
 

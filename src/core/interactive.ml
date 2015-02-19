@@ -30,7 +30,9 @@ let rec insertIMSub i mfront ms = match (i, ms) with
 | (i, LF.MDot (mf, ms')) ->
    let ms' = insertIMSub (i-1) mfront ms' in
    LF.MDot(mf, ms')
-| _ -> failwith "insertIMSub removed more than the sub could take"
+| (i, LF.MShift k ) -> 
+    insertIMSub i mfront (LF.MDot (LF.MV(k+1), LF.MShift(k+1)))
+
 
 let nameString n = n.Id.string_of_name
 
@@ -134,6 +136,13 @@ let nextLoc loc =
 *)
 let branchCovGoals loc i cG0 tA cgs =
   List.map (fun (cD,cg, ms) ->  match cg with
+  | Cover.CovCtx cPsi -> 
+      let loc' = nextLoc loc in
+      (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n"  (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
+      let ms = (if i = 0 then ms else insertIMSub i (LF.CObj cPsi) ms) in
+      Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
+     let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.CObj cPsi)) in
+       Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
   | Cover.CovGoal(cPsi, tR, sA) ->
       let loc' = nextLoc loc in
        let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
@@ -380,7 +389,12 @@ let split e i =
 	  (match ctyp with
 	     | LF.CTyp(_) ->
 		 (if (nameString n) = e then
-		    failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
+		    let cgs   = Cover.genContextGoals (dropIMCtx i cD0) ctypDecl in 
+		    let bl    = branchCovGoals loc i cG0 tH cgs in
+		    let m0 = (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))  in
+		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0), 
+					  Comp.TypBox(Loc.ghost, ctyp)) in
+		      Some (matchFromPatterns (Loc.ghost) entry bl)
 		  else
 		    searchMctx (i+1) cD' )
 	     | LF.ClTyp (LF.MTyp tA,cPsi) ->
@@ -404,7 +418,7 @@ let split e i =
 		 (if (nameString n) = e then
 		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
 		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		    let cgs = Cover.genCovGoals (cD',cPsi,tA) in
+		    let cgs = Cover.genBCovGoals (cD',cPsi,tA) in
 		    let bl = branchCovGoals loc i cG0 tH cgs in
 		    let ((vPsi, vOff) as _phat) = dctxToHat cPsi' in
 		    let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in

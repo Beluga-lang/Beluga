@@ -1141,6 +1141,20 @@ module Int = struct
               (fmt_ppr_meta_obj cD 0) cM
               (r_paren_if cond)
 
+      | Comp.Case (_, prag, i, ([] as bs)) ->
+          let cond = lvl > 0 in
+          if !Control.printNormal then
+            fprintf ppf "impossible %a"
+              (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+          else
+            fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
+              (l_paren_if cond)
+              (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
+              (fmt_ppr_cmp_branches cD cG 0) bs
+              (r_paren_if cond)
+
+
 
       | Comp.Case (_, prag, i, bs) ->
           let cond = lvl > 0 in

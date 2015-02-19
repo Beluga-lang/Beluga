@@ -97,6 +97,7 @@ fn d => case d of
 
 % ---------------------------------------------------------------------------
 % Promotion lemmas (explicit)
+
 datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
 | Cnil : CtxRel [] [] [ |- ^ ] 
 | Ccons: {g:daG}{h:xaG}{#W:g |- h}

@@ -19,39 +19,50 @@ embed : neut (atomic P) -> norm (atomic P).
 
 schema ctx = neut T;
 
-datatype NeutVar : {g:ctx} [ |- tp] -> ctype =
+nat : type.
+
+
+datatype NeutVar : {g:ctx} [ |- tp] -> ctype  =
 | NeutVar : {#p:[g |- neut T]} NeutVar [g] [ |- T]
 ;
 
-datatype TmVar : {g:tctx} [ |- tp] -> ctype =
+datatype TmVar : {g:tctx} [ |- tp] -> ctype  =
 | TmVar : {#p:[g |- tm T]} TmVar [g] [ |- T]
 ;
 
-datatype Extends : {g:ctx} {h:ctx} ctype =
+
+
+
+
+datatype Extends : {g:ctx} {h:ctx} ctype #stratified =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}
           Extends [g] [h] -> Extends [g] [h,x:neut A]
 ;
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype =
+datatype Sem : {g:ctx} [ |- tp] -> ctype  #stratified  = 
 | Syn :  [g |- neut (atomic P)] -> Sem [g] [ |- atomic P]
 | Slam : ({h:ctx} Extends [g] [h] -> Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
 rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g |- neut A] -> [h |- neut A] =
+/ total e (weak_neut g h a e r) /
 fn e => fn r => case e of
 | Zero => r
 | Succ [h] e' => let [h |- R ..] = weak_neut e' r in [h,x:neut _ |-  R ..]
 ;
 
+
 rec extendsTrans : Extends [g] [h] -> Extends [h] [h'] -> Extends [g] [h'] =
+/ total f (extendsTrans g h h' e f) /
 fn e => fn f => case f of
 | Zero => e
 | Succ [h'] f' => Succ [h'] (extendsTrans e f')
 ;
 
 rec weaken : (g:ctx)(h:ctx) Extends [g] [h] -> Sem [g] [ |- A] -> Sem [h] [ |- A] =
+/ total x (weaken g h a e x) /
 fn e => fn x => case x of
 | Syn r => Syn (weak_neut e r)
 | Slam f => Slam (mlam h' => fn e' => fn x => f [h'] (extendsTrans e e') x)
@@ -60,33 +71,36 @@ fn e => fn x => case x of
 rec extend : (g:tctx)(h:ctx)
   ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |- S]
 -> ({T:[ |- tp]} TmVar [g, x:tm S] [ |- T] ->  Sem [h] [ |- T]) =
+/ total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
 | TmVar [g,x:tm S |-  x] => e
 | TmVar [g,x:tm S |-  #q .. ] => s [ |- T ] (TmVar [g |- #q ..])
 ;
 
 rec eval : (g:tctx)(h:ctx)
+           [g |- tm S] ->
            ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
-           -> [g |- tm S] -> Sem [h] [ |- S]  =
-fn s => fn t =>
-let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
+           -> Sem [h] [ |- S]  =
+/ total t (eval g h s t _) / 
+fn t => fn s =>
 case t of
-| [g |- #p .. ]           : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
+| [g |- #p .. ]            : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
 | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>
   Slam  (mlam h' => fn s' => fn e =>
-         eval (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e)
-              [g,x:tm A |-  E .. x])
+         eval [g,x:tm A |-  E .. x]
+              (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e))
 
 | [g |- app (E1 ..) (E2 ..) ] =>
-  let (Slam f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1 ..] in
-    f [h] Zero (eval s [g |- E2 ..])
+  let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1 ..] s in
+    f [h] Zero (eval [g |- E2 ..] s)
 ;
 
 
-rec reflect : (g:ctx) [g |- neut A] ->  Sem [g] [ |- A] =
-fn r => let [g |- R .. ] : [g |- neut A] = r in
+rec reflect : (g:ctx) {A:[|- tp]}[g |- neut A] ->  Sem [g] [ |- A] =
+/ total a (reflect g a) /
+mlam A => fn r => 
 case [ |- A] of
-| [ |- atomic P ] => Syn [g |- R ..]
+| [ |- atomic P ] => Syn r
 | [ |- arr T S ] =>  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
@@ -94,27 +108,31 @@ and extendSem : [g |- neut (arr A B)] ->
                 ({h:ctx} Extends [g] [h] ->
                  Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
+/ total  (extendSem) /
 fn r => mlam h => fn s => fn e =>
 let [h |- N .. ] = reify e in
 let [h |- R' .. ] = weak_neut s r in
-  reflect [h |- rapp (R' ..) (N ..)]
+  reflect [ |- _ ] [h |- rapp (R' ..) (N ..)]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A] =
+/ total a (reify g a) /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R ..] => [g |- embed (R ..)])
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>
-     let s = (f [g,x:neut T ] (Succ [g] Zero) (reflect [g ,x:neut T |-  x])) in
+     let s = (f [g,x:neut T ] (Succ [g] Zero) (reflect [ |- _ ] [g ,x:neut T |-  x])) in
      let [g,x:neut T |-  E .. x] = reify s
      in [g |- nlam (\x. E .. x)])
 ;
 
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
+/ total (initialMap) /
 mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
-fn t => reify  (eval initialMap t)
+/ total (nbe) /
+fn t => reify  (eval t initialMap)
 ;
 

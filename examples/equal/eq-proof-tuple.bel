@@ -30,6 +30,7 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 schema w = block x:exp, _t:eq x x;
 
 rec eqfun : {g:w} {U:[g |- exp]} [g |- eq (U ..) (U ..)] =
+/ total u (eqfun g u) /
  mlam g => mlam U =>
    case [g |- (U ..)] of
   | [g |- #p.1 ..] => [g |- #p.2 ..]
@@ -70,6 +71,7 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
 -> [g |- eq (RR ..) (SS ..)]  % e2 : eq R S
 -> [g |- eq (TT ..) (SS ..)]  % result : eq T S
 =
+/ total e1 (trans g t r s e1)/
   mlam g =>
     fn e1 => fn e2 =>
       case e1 of

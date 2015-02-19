@@ -145,10 +145,10 @@ module Cid = struct
       kind                 : Int.LF.kind;
       var_generator        : (unit -> string) option;
       mvar_generator       : (unit -> string) option;
-      frozen       : bool ref;
-      constructors : Id.cid_term list ref;
-      subordinates : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
-      typesubordinated : BitSet.t ref (* unused at the moment *)
+      frozen               : bool ref;
+      constructors         : Id.cid_term list ref;
+      subordinates         : BitSet.t ref;    (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
+      typesubordinated     : BitSet.t ref (* unused at the moment *)
     }
 
     let entry_list : (Id.cid_typ list ref) DynArray.t = DynArray.create ()
@@ -203,7 +203,7 @@ module Cid = struct
     let freeze a =
           (get a).frozen := true
 
-    let addNameConvention cid_name var_name_generator mvar_name_generator =
+    let addNameConvention cid_name mvar_name_generator var_name_generator=
       let cid_tp = index_of_name cid_name in
       let entry = get cid_tp in
       let new_entry = {name   = entry.name ;
@@ -577,23 +577,41 @@ module Cid = struct
       implicit_arguments  : int; (* bp : this is misgleding with the current design where explicitly declared context variables
                                     are factored into implicit arguments *)
       kind                : Int.Comp.kind;
-      frozen       : bool ref;
-      constructors: Id.cid_comp_const list ref
+      positivity          : Int.Sgn.positivity_flag;  (* flag for positivity and stratification checking *)
+      mutable frozen      : bool;
+      mutable constructors: Id.cid_comp_const list
     }
 
-    let mk_entry name kind implicit_arguments  =  {
+    let mk_entry name kind implicit_arguments positivity =  {
       name               = name;
       implicit_arguments = implicit_arguments;
       kind               = kind;
-      frozen             = ref false;
-      constructors       = ref []
+      positivity         = positivity;
+      frozen             = false;
+      constructors       = []
     }
 
+(*    (*  store : entry DynArray.t *)
+    let store = DynArray.create ()
+
+    (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+    let directory = Hashtbl.create 0
+
+    let index_of_name n = Hashtbl.find directory n
+
+    let add e =
+      let cid_comp_typ = DynArray.length store in
+        DynArray.add store e;
+        Hashtbl.replace directory e.name cid_comp_typ;
+        cid_comp_typ
+	
+
+    let get = DynArray.get store
+*)
     let entry_list : (Id.cid_comp_typ list ref) DynArray.t = DynArray.create ()
 
     (*  store : (entry DynArray.t) DynArray.t *)
-    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
-
+    let store : (entry DynArray.t) DynArray.t = DynArray.create () 
 
     (*  directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t ) DynArray.t *)
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
@@ -650,11 +668,11 @@ module Cid = struct
     let get_implicit_arguments c = (get c).implicit_arguments
 
     let freeze a =
-          (get a).frozen := true
+          (get a).frozen <- true
 
     let addConstructor c typ =
       let entry = get typ in
-        entry.constructors := c :: !(entry.constructors)
+        entry.constructors <- (c :: entry.constructors)
 
     let clear () =
       (DynArray.get entry_list !Modules.current) := [];
@@ -742,20 +760,20 @@ module Cid = struct
     type entry = {
       name                : Id.name;
       implicit_arguments  : int;
-      typ                : Int.Comp.typ
+      typ                 : Int.Comp.typ
     }
 
     let mk_entry name tau implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ               = tau
+      typ                = tau
     }
 
     (*  store : entry DynArray.t *)
     let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
-
     (*  directory : (Id.name, Id.cid_type) Hashtbl.t *)
+
     let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
@@ -786,6 +804,7 @@ module Cid = struct
             DynArray.add directory x;
             x
           end in
+
         Hashtbl.replace directory entry.name cid_comp_const;
         CompTyp.addConstructor cid_comp_const cid_ctyp;
         cid_comp_const end
@@ -954,15 +973,17 @@ module Cid = struct
       implicit_arguments : int;
       typ                : Int.Comp.typ;
       prog               : Int.Comp.value;
-      mut_rec            : Id.name list
+      mut_rec            : Id.name list;
+      total              : bool
     }
 
-    let mk_entry name typ implicit_arguments v name_list = {
+    let mk_entry name typ n total v name_list = {
       name               = name;
-      implicit_arguments = implicit_arguments;
+      implicit_arguments = n;
       typ                = typ;
       prog               = v;
-      mut_rec            = name_list  (* names of functions with which n is mutually recursive *)
+      mut_rec            = name_list;  (* names of functions with which n is mutually recursive *)
+      total              = total
     }
 
     let entry_list : ((Id.cid_prog * Loc.t) list ref) DynArray.t = DynArray.create ()
@@ -1145,7 +1166,8 @@ module Cid = struct
         match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
       else n in
       match name.modules with
-      | [] -> n.string_of_name
+      | [] -> let c = if n.counter = 0 then "" else (string_of_int n.counter) in
+	  n.string_of_name ^ c
       | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name

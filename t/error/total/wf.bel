@@ -1,0 +1,29 @@
+% coverage
+
+datatype nat : type = 
+| z : nat
+| s : nat -> nat
+;
+%name nat N.
+% The sub-term relation on naturals
+
+datatype le : nat -> nat -> type =
+  | le-base : le N (s N)
+  | le-step : le M N -> le M (s N)
+;
+
+datatype Acc-le : [|- nat] -> ctype =
+  | Acc : ({Y : [|- nat]} [|- le Y X] -> Acc-le [|- Y]) -> Acc-le [|- X]
+;
+
+rec half-wf' : {M : [|- nat]} Acc-le [|- M] -> [|- nat] =
+/ total p (half-wf' _ p) /
+mlam M => fn p => case [|- M] of
+| [|- z] => [|- z]
+| [|- s z] => [|- z]
+| [|- s (s N)] => 
+  let Acc x = p in
+  let [|- R] = half-wf' [|- s (s N)] p in %% Should fail here
+  [|- s R]
+;
+

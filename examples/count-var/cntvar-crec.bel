@@ -17,6 +17,7 @@ letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
 schema expCtx = some [t:tp] exp t;
 
 rec plus : [ |- exp nat] -> [ |- exp nat] -> [ |- exp nat] =
+/ total x (plus x y) /
 fn x => fn y => case x of
 | [ |- z]    => y
 | [ |- s U]  =>
@@ -34,7 +35,8 @@ fn x => fn y => case x of
 % if  G, x: exp T |-  U .. x ==> n1
 % if  G, y:exp _ , x: exp T |-  V .. x  y ==> n2
 
-rec cntV : (g:expCtx)  [g, x:exp (T ..) |-  exp (S .. x)] -> [ |- exp nat] =
+rec cntV : (g:expCtx)  [g, x:exp (T ..) |-  exp (S .. x)] -> [ |- exp nat] = 
+% / total e (cntV _ _ _ e) /
 fn e => case e of
  | [g,x : exp _  |-  tt]        => [ |- z]
   | [g,x : exp _  |-  (#p .. )]    => [ |- z]
@@ -43,7 +45,7 @@ fn e => case e of
 %  | [g,x : exp _  |-  U .. ]     => [ |- z]
  | [g,x : exp _  |-  s (W .. x)]  => cntV [g,x |- W .. x]
 
- | [g,x : exp _  |-  letv (T1 ..)  (U1 .. x) (\y . (U2 .. x y))] =>
+ | [g,x : exp _  |-  letv T1  (U1 .. x) (\y . (U2 .. x y))] =>
    plus  (cntV [g,x |- U1 .. x])
          (cntV [g,y:exp _ ,x:exp _ |-  U2 .. x y])
 

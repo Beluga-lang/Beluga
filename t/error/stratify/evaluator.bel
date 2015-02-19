@@ -1,0 +1,29 @@
+%{
+  CH 6:  Lambda-terms
+  Author: Brigitte Pientka
+
+  SYNTAX
+}%
+
+term: type.
+
+lam: (term -> term) -> term.
+app: term -> term -> term.
+
+result: type.
+no_result : result.
+value     : term -> result.
+
+
+rec eval : [ |- term] -> [ |- result] =
+ / total t (eval t)/
+fn t => case t of
+| [ |- app M N] =>
+  (case eval [ |- M] of
+     | [ |- value (lam \x. M' x)] => (case eval [ |- N] of
+				     | [ |- value V]   => eval [ |- M' V]
+				     | [ |- no_result] => [ |- no_result]
+				  )
+     | [ |- no_result] => [ |- no_result] )
+| [ |- lam \x. M x] => [ |- value (lam \x. M x)]
+;

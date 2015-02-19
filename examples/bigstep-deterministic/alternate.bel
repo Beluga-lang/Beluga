@@ -21,7 +21,7 @@ eval_app2 : eval M M' -> notLam M' -> eval N N' -> eval (app M N) (app M' N').
 schema evctx = block x:exp, u:eval x x, _t:notLam x;
 
 rec deterministic : (g:evctx) [g |- eval (M ..) (R ..)] -> [g |- eval (M ..) (R' ..)]
--> [g |- eq (R ..) (R' ..)] =
+-> [g |- eq (R ..) (R' ..)] = / total d (deterministic g m r r' d) /
 fn d => fn f =>
 case d of
 | [g |- eval_app2 (D1 ..) (NL ..) (D2 ..)] =>

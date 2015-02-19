@@ -8,6 +8,7 @@ schema ctx = block x:term, _t:pred x x;
 % For all terms M, pred M M.
 
 rec identity :{g:ctx}{M:[g |- term]} [g |- pred (M ..) (M ..)] =
+/ total m (identity g m) / 
 mlam g => mlam M => case [g |- M ..] of
 | [g |- lam \x. M1 .. x] =>
   let [g, b:block x:term, _t:pred x x |-  R1 .. b] =
@@ -25,12 +26,13 @@ mlam g => mlam M => case [g |- M ..] of
 
 %  Parallel multi-step reduction is transitive.
 
-rec append : {g:ctx} [g |- pred* (M ..) (M' ..)]  ->  [g |- pred* (M' ..) (M'' ..)]
+rec append : (g:ctx) [g |- pred* (M ..) (M' ..)]  ->  [g |- pred* (M' ..) (M'' ..)]
 	     ->  [g |- pred* (M ..) (M'' ..)] =
-mlam g => fn d1 => fn d2 => case d1 of
+/ total d1 (append g m m' m'' d1 d2) / 
+fn d1 => fn d2 => case d1 of
 | [g |- id*] => d2
 | [g |- next (R1 ..) (R2* ..)] =>
-    let [g |- S2*' ..] = append [g] [g |- R2* ..] d2 in
+    let [g |- S2*' ..] = append [g |- R2* ..] d2 in
       [g |- next (R1 ..) (S2*' ..)]
 ;
 

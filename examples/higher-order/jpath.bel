@@ -49,6 +49,7 @@ schema jctx = block x:tm, p:path, _t:is_path p x, _u:jpath p x
  + some [n:tm] block x:tm, _t: ({q:path} is_path q n -> is_path q x), _u:jump n x;
 
 rec fwd : (g:jctx) [g |- is_path (P ..) (M ..)] -> [g |- jpath (P ..) (M ..)] =
+% / total p (fwd g _ _ p) /
 fn p => case p of
 | [g |- p_lam (\x.\q.\d. P .. x q d)] =>
   let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P' .. b.1 b.2 b.4]
@@ -70,6 +71,7 @@ fn p => case p of
 ;
 
 rec bwd : (g:jctx) [g |- jpath (P ..) (M ..)] -> [g |- is_path (P ..) (M ..)] =
+/ total p (bwd g _ _ p) /
 fn p => case p of
 | [g |- j_lam (\x.\q.\d. P .. x q d)] =>
   let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P' .. b.1 b.2 b.3]

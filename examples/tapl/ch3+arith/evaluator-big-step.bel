@@ -16,6 +16,7 @@ error : val_or_error.
 
 
 rec eval : [ |- term] -> [ |- val_or_error] =
+/ total m (eval m)/
 fn m => case m of
 | [ |- true]   => [ |- val true]
 | [ |- false]  => [ |- val false]

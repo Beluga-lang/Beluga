@@ -95,7 +95,7 @@ module Cid : sig
     type entry = private {
       name               : name;
       implicit_arguments : int;
-      typ                : LF.typ
+      typ                : LF.typ;
     }
 
     val mk_entry      : name -> LF.typ -> int -> entry
@@ -110,19 +110,20 @@ module Cid : sig
   module CompTyp : sig
 
     type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      kind               : Comp.kind;
-      frozen             : bool ref;
-      constructors : cid_comp_const list ref
+      name                 : name;
+      implicit_arguments   : int;
+      kind                 : Comp.kind;
+      positivity           : Sgn.positivity_flag;
+      mutable frozen       : bool;
+      mutable constructors : cid_comp_const list
     }
 
     val entry_list : (Id.cid_comp_typ list ref) DynArray.t
-    val mk_entry  : name -> Comp.kind -> int -> entry
+    val mk_entry  : name -> Comp.kind -> int ->  Sgn.positivity_flag -> entry
 
     val add           : entry -> cid_comp_typ
     val get           : ?fixName:bool -> cid_comp_typ -> entry
-    val freeze : cid_comp_typ -> unit
+    val freeze        : cid_comp_typ -> unit
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
@@ -155,8 +156,7 @@ module Cid : sig
     type entry = private {
       name               : name;
       implicit_arguments : int;
-      typ                : Comp.typ
-    }
+      typ                : Comp.typ    }
 
     val mk_entry      : name -> Comp.typ -> int -> entry
     val add           : cid_comp_typ -> entry -> cid_comp_const
@@ -209,11 +209,13 @@ module Cid : sig
       implicit_arguments : int;
       typ                : Comp.typ;
       prog               : Comp.value;
-      mut_rec            : name list
+      mut_rec            : name list;
+      total              : bool
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> Comp.value -> name list -> entry
-    
+    val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value -> name list -> entry
+   
+
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this

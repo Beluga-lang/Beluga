@@ -1,4 +1,6 @@
 rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp T] -> [g |- opt] =
+% / total e (free_var g t e) /
+
 mlam g => mlam T => fn e =>
  (case e of
     [g |- z]            : [g |- (exp nat)]   => [g |- nothing]

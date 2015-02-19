@@ -6,14 +6,15 @@
 }%
 
 
-term  : type.
-true  : term.
-false : term.
-switch: term -> term -> term -> term.
-z     : term.
-succ  : term -> term.
-pred  : term -> term.
-iszero: term -> term.
+datatype term  : type = 
+| true  : term
+| false : term
+| switch: term -> term -> term -> term
+| z     : term
+| succ  : term -> term
+| pred  : term -> term
+| iszero: term -> term
+;
 
 
 % Examples : Valid Terms

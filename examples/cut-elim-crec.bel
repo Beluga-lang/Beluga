@@ -28,6 +28,7 @@ foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
 schema ctx = some [a: o] hyp a + i + o;
 
 rec lemma: (g:ctx)[g, u:hyp true |-  conc (C ..)] -> [g |- conc (C .. )] =
+%/  total d (lemma _ _ d)/ 
 fn d => case d of
 | [g,h:hyp true |-  truer]  => [g |- truer]
 | [g,h:hyp true |-  axiom (H ..)] => [g |- axiom (H ..)]
@@ -70,6 +71,7 @@ fn d => case d of
 
 rec ca : (g:ctx){A:[g |- o]} [g |- conc (A ..)] -> [g, u: hyp (A .. ) |-  conc (C ..)]
        -> [g |- conc (C ..)] =
+% / total e (ca _ _ _ _ e) /
 mlam A' => fn d => fn e => case e of
  | [g, h:hyp (B ..) |-  axiom (H1 ..)] =>  [g |- axiom (H1 ..)]
 

@@ -24,8 +24,9 @@ bin/beluga: src/beluga/main.$(EXT)
 	cp _build/$< $@
 
 # bin/beli: src/beli/main.$(EXT)
-# 	mkdir -p bin
-# 	cp _build/$< $@
+
+#	mkdir -p bin
+#	cp _build/$< $@
 
 clean:
 	$(OCAMLBUILD) -clean

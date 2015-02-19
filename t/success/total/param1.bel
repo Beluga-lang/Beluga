@@ -1,0 +1,16 @@
+term: type.
+lam:(term -> term) -> term.
+
+bool: type.
+tt:bool.
+ff: bool.
+
+schema ctx = term;
+
+rec occurs :(g:ctx)[g,y:term |- term] -> [ |- bool] =
+/ total m (occurs _ m) /
+fn l => case l of
+| [g,y:term |- y] => [ |- tt]
+| [g,y:term |- #p..] => [|- ff]
+| [g, y:term |- lam \x. M .. x y] => occurs [g, x:term, y:term |- M .. x y]
+;

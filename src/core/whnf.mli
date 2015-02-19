@@ -39,14 +39,14 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar'    : Id.name option -> mctx * ctyp ->  mm_var
-val newMMVar    : Id.name option -> mctx * dctx * typ ->  mm_var
-val newMPVar    : Id.name option -> mctx * dctx * typ ->  mm_var
-val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> mm_var
+val newMMVar'   : Id.name option -> mctx * ctyp -> depend ->  mm_var
+val newMMVar    : Id.name option -> mctx * dctx * typ -> depend ->  mm_var
+val newMPVar    : Id.name option -> mctx * dctx * typ ->  depend -> mm_var
+val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> depend -> mm_var 
                   (* cD ; cPsi |- msvar : cPhi *)
 
-val newMVar     : Id.name option -> dctx * typ ->  cvar
-val newCVar     : Id.name option -> mctx -> Id.cid_schema -> ctx_var
+val newMVar     : Id.name option -> dctx * typ -> depend -> cvar
+val newCVar     : Id.name option -> mctx -> Id.cid_schema -> depend -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
 
@@ -55,9 +55,9 @@ val raiseType   : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> normal
+val etaExpandMV     : dctx -> tclo -> Id.name -> sub -> depend -> normal
 
-val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> normal
+val etaExpandMMV    : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> depend -> normal
 
 
 exception Fmvar_not_found
@@ -65,6 +65,7 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Loc.t
 
+val newMTypName : ctyp -> Id.name_guide
 
 val m_id   : msub
 (* val mshift: msub -> int -> msub
@@ -86,14 +87,13 @@ val m_invert     : msub -> msub
 val invTerm    : normal    * msub -> int -> normal
 *)
 val mctxLookup : mctx -> int -> Id.name * ctyp
+val mctxLookupDep : mctx -> int -> Id.name * ctyp * depend
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
 val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
 val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 
-
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)
-
 
 val cnorm      : normal * msub -> normal
 val cnormHead : head * msub -> head
@@ -105,7 +105,6 @@ val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
 val cnormClTyp  : cltyp * msub -> cltyp
-val cnormCDecl : ctyp_decl * msub -> ctyp_decl
 val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
@@ -120,6 +119,7 @@ val cnormMSub  : msub -> msub
 
 val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp  : Comp.typ * msub -> Comp.typ
+val cnormCDecl : LF.ctyp_decl * msub -> LF.ctyp_decl
 val cwhnfCTyp  : Comp.typ * msub -> Comp.typ * msub
 val cwhnfCtx   : Comp.gctx * msub -> Comp.gctx
 
@@ -131,6 +131,8 @@ val normCTyp   : Comp.typ  -> Comp.typ
 
 val convMTyp   : ctyp -> ctyp -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
+val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
+val conv_hat_ctx: psi_hat -> psi_hat -> bool
 
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool

@@ -4,8 +4,8 @@
 % ---------------------------------------------------------------------------
 %{{
 # Type Preservation for Parallel Reduction for the Simply-typed Lambda-calculus 
-We discuss the notion of parallel reduiction, a standard relation relevant to many other important case studies, like the Church-Rosser Theorem
-This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
+We discuss the notion of parallel reduction, a standard relation relevant to many other important case studies, like the Church-Rosser Theorem.
+This case study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, the Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 <br>
 The mechanization highlights several aspects:
 

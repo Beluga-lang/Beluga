@@ -137,9 +137,9 @@ let branchCovGoals loc i cG0 tA cgs =
   | Cover.CovGoal(cPsi, tR, sA) ->
       let loc' = nextLoc loc in
        let ms = (if i = 0 then ms else insertIMSub i (LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR)) ms) in
-      Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);
-   Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
-       let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
+     (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms);*)
+      Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , Whnf.cwhnfCTyp (Whnf.cnormCTyp tA, ms));
+     let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
        Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 (*      Comp.BranchBox (LF.Empty,cD, (cPsi , Comp.NormalPattern (tR, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))), ms, LF.CShift 0)) (* random csub... *)  BranchBox is deprecated*)
   | Cover.CovPatt (cG, patt, (_tA',ms')) ->
@@ -271,7 +271,11 @@ let replaceHole i exp =
       let ec' = (mapHoleChk (ithHoler lh exp) ec) in
       let _l = Store.Cid.Comp.add loc
           (fun cid ->
-            Store.Cid.Comp.mk_entry entry.Store.Cid.Comp.name entry.Store.Cid.Comp.typ entry.Store.Cid.Comp.implicit_arguments
+            Store.Cid.Comp.mk_entry 
+	      entry.Store.Cid.Comp.name 
+	      entry.Store.Cid.Comp.typ 
+	      entry.Store.Cid.Comp.implicit_arguments
+	      entry.Store.Cid.Comp.total
               (Synint.Comp.RecValue (cid, ec', ms, env))
               entry.Store.Cid.Comp.mut_rec) in
       P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
@@ -356,8 +360,8 @@ let split e i =
       if (nameString n) = e then
         (match tau with
         | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
-            let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
-            let bl = branchCovGoals loc 0 cG0 tH cgs in
+          let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
+          let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
         | Comp.TypBase (l, c, mS) ->  (* c: cid_comp_typ , mS: meta_spine *)
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
@@ -368,49 +372,54 @@ let split e i =
       else
         searchGctx (i+1) cG'
   in
-let rec searchMctx i = function
-  | LF.Empty ->
-      None
-  | LF.Dec (cD', ctypDecl) ->
-      let LF.Decl(n, ctyp,_) = ctypDecl in
-     (match ctyp with
-      | LF.CTyp(_) ->
-          (if (nameString n) = e then
-            failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
-          else
-              searchMctx (i+1) cD' )
-      | LF.ClTyp (LF.MTyp tA,cPsi) ->
-          (if (nameString n) = e then
-             let cgs = Cover.genCovGoals ((dropIMCtx i cD0),cPsi,tA) in
-             let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((_ , vOff) as phat) = dctxToHat cPsi in
-	     let m0 = (Loc.ghost, LF.ClObj (phat,
-				   LF.MObj (LF.Root (Loc.ghost,
-					    LF.MVar (LF.Offset i, LF.Shift vOff),
-					    LF.Nil)))) in
-             let entry = Comp.Ann ( Comp.Box (Loc.ghost, m0), 
-				    Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
-            Some (matchFromPatterns (Loc.ghost) entry bl)
-          else
-            searchMctx (i+1) cD')
-      | LF.ClTyp (LF.PTyp tA,cPsi) ->
-          (if (nameString n) = e then
-            let cgs = Cover.genCovGoals (cD',cPsi,tA) in
-            let bl = branchCovGoals loc i cG0 tH cgs in
-             let ((vPsi, vOff) as _phat) = dctxToHat cPsi in
-	     let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
-             let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA,cPsi))) in
-            Some (matchFromPatterns (Loc.ghost) entry bl)
-          else
-            searchMctx (i+1) cD')
-      | _ -> searchMctx (i+1) cD')
+  let rec searchMctx i = function
+    | LF.Empty ->
+	None
+    | LF.Dec (cD', ctypDecl) ->
+	let LF.Decl(n, ctyp,_) = ctypDecl in
+	  (match ctyp with
+	     | LF.CTyp(_) ->
+		 (if (nameString n) = e then
+		    failwith ("Found variable in mCtx, cannot split on "^(nameString n)) (* could create a ctype wrapper, and split on it *)
+		  else
+		    searchMctx (i+1) cD' )
+	     | LF.ClTyp (LF.MTyp tA,cPsi) ->
+		 (if (nameString n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		    let cgs   = Cover.genCovGoals ((dropIMCtx i cD0), cPsi,tA) in 
+		    (*let cgs   = Cover.genCovGoals (cD0,cPsi',tA') in*)
+		    let bl    = branchCovGoals loc i cG0 tH cgs in
+		    let ((_ , vOff) as phat) = dctxToHat cPsi' in
+		    let m0 = (Loc.ghost, 
+			      LF.ClObj (phat,LF.MObj (LF.Root (Loc.ghost,
+							       LF.MVar (LF.Offset i, LF.Shift vOff),
+							       LF.Nil)))) in
+		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0), 
+					  Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA', cPsi'))) in
+		      Some (matchFromPatterns (Loc.ghost) entry bl)
+		  else
+		    searchMctx (i+1) cD')
+	     | LF.ClTyp (LF.PTyp tA,cPsi) ->
+		 (if (nameString n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		    let cgs = Cover.genCovGoals (cD',cPsi,tA) in
+		    let bl = branchCovGoals loc i cG0 tH cgs in
+		    let ((vPsi, vOff) as _phat) = dctxToHat cPsi' in
+		    let m0 = (Loc.ghost, LF.ClObj ((vPsi,vOff) , LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift vOff), LF.Nil)))) in
+		    let entry = Comp.Ann ( Comp.Box(Loc.ghost, m0), Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA',cPsi'))) in
+		      Some (matchFromPatterns (Loc.ghost) entry bl)
+		  else
+		    searchMctx (i+1) cD')
+	     | _ -> searchMctx (i+1) cD')
   in
-  match searchGctx 1 cG0 with
-  | None ->
-     (match searchMctx 1 cD0 with
-      | None -> None
-      | Some s -> Some s)
-  | Some s -> Some s
+    match searchGctx 1 cG0 with
+      | None ->
+	  (match searchMctx 1 cD0 with
+	     | None -> None
+	     | Some s -> Some s)
+      | Some s -> Some s
 
 let whale () = Format.printf
 ";,,,,,,,,,,,,,,,,,'+++++++++++:,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,`@\n\

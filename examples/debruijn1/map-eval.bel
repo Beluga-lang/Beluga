@@ -16,6 +16,7 @@ ev_vtrans: fev_vtr K F V
 
 rec map_eval : [ |- eval E V] -> [ |- trans K F E]
  	      -> [ |- fev_vtr K F V] =
+% / total c (map_eval e v k f d c)/
 fn d => fn c => case c of
 | [ |- tr_1 C]  =>
   (case [ |- C] of
@@ -67,6 +68,7 @@ ev_vtrans: ev_vtr E W
 	    <- eval E V.
 
 rec map_eval' : [ |- trans K F E] -> [ |- feval K F W] -> [ |- ev_vtr E W] =
+% / total c (map_eval' k f e w c) /
 fn c => fn d => case c of
 | [ |- tr_1 C'] =>
   (case [ |- C'] of

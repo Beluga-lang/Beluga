@@ -5,8 +5,11 @@
 type name     = private {
   modules : string list;
   string_of_name : string ;
-  was_generated : bool
+  was_generated : bool;
+  counter : int;
 }
+
+val inc : name -> name 
 
 type module_id = int
 

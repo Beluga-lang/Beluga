@@ -38,9 +38,11 @@ cert_illtyped: ill_tp -> cert E.
 schema tpCtx = some [t:tp] block x:term, _t:oft x t;
 
 rec equal : [ |- tp] -> [ |- tp] -> Bool =
+/ total (equal)/
 fn t => fn s => s == t ;
 
 rec infer' : {g:tpCtx} {U:[g |- term]} [g |- cert (U ..)] =
+/ total u (infer' g u )/
 mlam g => mlam U =>
    case [g |- U ..] of
  | [g |- z]     => [g |- certify nat o_z]

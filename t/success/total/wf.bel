@@ -1,0 +1,46 @@
+% coverage
+
+datatype nat : type = 
+| z : nat
+| s : nat -> nat
+;
+%name nat N.
+
+% The sub-term relation on naturals
+
+datatype le : nat -> nat -> type =
+  | le-base : le N (s N)
+  | le-step : le M N -> le M (s N)
+;
+
+datatype Acc-le : [|- nat] -> ctype =
+  | Acc : ({W : [|- nat]} [|- le W X] -> Acc-le [|- W]) -> Acc-le [|- X]
+;
+
+rec wf-rel' : {N : [|- nat]} {M : [|- nat]}[|- le M N] -> Acc-le [|- M] =
+/ total x (wf-rel' x) /
+ mlam X => mlam Y => fn p => case [ |- X ] of
+| [|- z] => impossible p in []
+| [|- s X'] => let ih = wf-rel' [|- X'] in (case p of 
+%    | [|- le-base] => Acc (wf-rel' [|- X'])
+   | [|- le-base] => Acc ih
+   | [|- le-step P] => ih [|- Y] [|- P])
+;
+
+rec wf-rel : {X : [|- nat]} Acc-le [|- X] =
+/ total x (wf-rel x) /
+mlam X => Acc (wf-rel' [|- X])
+;
+
+rec half-wf : {M : [|- nat]} Acc-le [|- M] -> [|- nat] =
+/ total p (half-wf _ p) /
+mlam M => fn p => case [|- M] of
+| [|- z] => [|- z]
+| [|- s z] => [|- z]
+| [|- s (s N)] => 
+  let Acc x = p in
+  let [|- R] = half-wf [|- N] (x [|- N] [|- le-step le-base]) in 
+  [|- s R]
+;
+
+    

@@ -124,6 +124,7 @@ datatype step_or_err/val : term -> type =
 | err     :  error E  -> step_or_err/val E;
 
 rec prog : [ |- oft E T] -> [ |- step_or_err/val E] =
+/ total d (prog e t d)/
 fn d =>
  case d of
   [ |- t_app D1 D2]  =>

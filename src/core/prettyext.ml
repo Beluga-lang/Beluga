@@ -714,28 +714,23 @@ module Ext = struct
               (fmt_ppr_meta_spine cD 0) mS
               (r_paren_if cond)
 
-      | Comp.TypBox (_, tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaTyp (_, tA, cPsi)) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 1) tA
 
-(*       | Comp.TypPBox (_, tA, (LF.Null as cPsi)) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_typ cD cPsi 2) tA *)
-
-      | Comp.TypPBox (_, tA, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaParamTyp (_, tA, cPsi)) ->
           fprintf ppf "#[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
-
-      | Comp.TypCtx (_, x) ->
+      | Comp.TypBox (_, Comp.MetaSchema(_, x)) ->
             fprintf ppf "%s"
               (to_html (R.render_name x) Link)
 
-      | Comp.TypSub (_, cPhi, cPsi) ->
+      | Comp.TypBox (_, Comp.MetaSubTyp (_, cPhi, cPsi)) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
@@ -754,16 +749,6 @@ module Ext = struct
           fprintf ppf "(%a * %a)"
             (fmt_ppr_cmp_typ cD 0) tau1
             (fmt_ppr_cmp_typ cD 0) tau2
-
-(*      | Comp.TypCtxPi (l, (psi, w, dep), tau) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s{%s:(%s)*}@ %a%s"
-              (l_paren_if cond)
-              (R.render_name psi)
-              (R.render_name w)
-              (fmt_ppr_cmp_typ (LF.Dec(cD, LF.CDecl(l, psi, w))) 0) tau
-              (r_paren_if cond)
-*)    
       | Comp.TypPiBox (_loc, (LF.Decl(name, LF.CTyp(l, schema), LF.Maybe) as cdecl), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:%s) %a%s"
@@ -1183,12 +1168,30 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
+    let total_to_string tdec = match tdec with
+      | None -> ""
+      | Some (Comp.Total (_ , order, f, args)) ->
+      let rec args_to_string args = match args with
+        | [] -> ""
+        | Some n :: args' -> R.render_name n ^ " " ^ args_to_string args'
+        | None :: args' -> " _ " ^ args_to_string args'
+      in
+	(match order with 
+	  | Some (Comp.Arg n) -> 
+	      "/ total " ^ R.render_name n ^ " ( " ^
+		R.render_name f ^ " " ^ args_to_string args ^ ") /"
+	  | None -> 
+	      "/ total " ^ " ( " ^
+		R.render_name f ^ " " ^ args_to_string args ^ ") /"
+	)
+
     let fmt_ppr_cmp_rec prefix lvl ppf = function
-      | Comp.RecFun (x, a, e) ->
-          fprintf ppf "@[<h>%s %s : %a@] =@[<v2>%a@]"
+      | Comp.RecFun (_, x, total, a, e) ->
+          fprintf ppf "@[<h>%s %s : %a %s@] =@[<v2>%a@]"
             (to_html prefix Keyword)
             (to_html (R.render_name x) (ID Fun))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
+            (total_to_string total)
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e
 
     let fmt_ppr_rec lvl ppf = function
@@ -1207,7 +1210,7 @@ module Ext = struct
           fprintf ppf "@\n| %s : %a"
             (to_html (R.render_name n) (ID Constructor))
             (fmt_ppr_lf_typ LF.Empty LF.Null 1)  tA
-      | Sgn.CompTyp(_, n, kA)
+      | Sgn.CompTyp(_, n, kA, _)
       | Sgn.CompCotyp(_, n, kA) ->
           fprintf ppf "%s %s : %a = "
             (to_html prefix Keyword)
@@ -1249,8 +1252,7 @@ module Ext = struct
             (fmt_ppr_cmp_kind LF.Empty 0) k
             (fmt_ppr_cmp_typ LF.Empty 0)  a
 
-      | Sgn.CompCotyp(_, x, k)
-      | Sgn.CompTyp (_, x, k) ->
+      | Sgn.CompTyp (_, x, k, _) ->
           fprintf ppf "@[<v>%s %s : %a = @]@\n"
             (to_html "datatype" Keyword)
             (to_html (R.render_name x) (ID Typ))

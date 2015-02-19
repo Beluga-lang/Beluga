@@ -7,7 +7,7 @@ lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
 schema termCtx = some [t:tp] term t;
 
 rec copy : {g:termCtx} {T:[ |- tp]} [g |- term T] -> [g |- term T] =
-
+/ total e (copy g t e) /
 mlam g => mlam T => fn e =>
 (case e of
 

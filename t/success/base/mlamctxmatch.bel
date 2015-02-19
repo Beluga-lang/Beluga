@@ -7,6 +7,7 @@ s : nat -> nat.
 schema ctx = nat;
 
 rec f : {g:ctx} [ |- nat] =
+/ total g (f g) /
 mlam g => case [g] of
 | [ ] => [ |- z]
 | [g, x:nat] => let [|- N] = f [g] in [|- s N]

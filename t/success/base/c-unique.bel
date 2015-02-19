@@ -29,6 +29,7 @@ e_nat: eq nat nat.
 % Reflexivity is admissible:
 % Theorem: For all types T:tp, eq T T.
 rec refl : {T:[ |- tp]}[ |- eq T T] =
+/ total t (refl t)/
 mlam T => case [ |- T] of
  | [ |- nat] => [ |- e_nat]
  | [ |- arr T1 T2] =>
@@ -64,6 +65,7 @@ e_ref: equal T T.
 
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of (E ..) T] -> [g |- type_of (E ..) T']
              ->  [ |- equal T T'] =
+
 mlam g => mlam E => fn d => fn f => case [g |- E .. ] of
 %{
 | [g] app (E1 .. ) (E2 .. ) =>

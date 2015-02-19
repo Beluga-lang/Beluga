@@ -13,6 +13,7 @@ no_result: final_value.
 result: term -> final_value.
 
 rec eval : [ |- term] -> [ |- final_value] =
+/ total m (eval m)/
 fn m => case m of
 | [ |- true]  => [ |- result true]
 | [ |- false] => [ |- result false]

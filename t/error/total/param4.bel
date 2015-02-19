@@ -1,0 +1,23 @@
+%coverage 
+
+term: type.
+lam:(term -> term) -> term.
+
+nat: type.
+z:nat.
+s: nat -> nat.
+
+schema ctx = term;
+
+% the order used is more complex - 
+% in particular, either the context is smaller
+% you need to write two functions one for recursing on variables
+% and one for recursing on terms
+rec pos :(g:ctx)[g |- term] -> [ |- nat] =
+/ total m (pos _ m) /
+fn l => case l of
+| [g,y:term |- y] => [ |- s z]
+| [g,y:term |- #p..] => pos [g |- #p ..]
+| [g, y:term |- lam \x. M .. x y] => pos [g, x:term, y:term |- M .. x y]
+;
+

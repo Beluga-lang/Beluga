@@ -1,4 +1,4 @@
-datatype nat: type =
+datatype nat  : type =
 | z: nat
 | s: nat -> nat
 ;
@@ -16,6 +16,5 @@ datatype list: nat -> type =
 datatype IsList : [|- list N] -> ctype =
 IL: {L:[|- list N]} IsList [|- L]
 ;
-
 
 

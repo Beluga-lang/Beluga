@@ -132,7 +132,7 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
       dprint (fun () -> "composition = " ^ subToString composition);
       let u     = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in
 *)
-      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n Substitution.LF.id in
+      let u     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n  Substitution.LF.id Maybe in
       let front = (Obj ((* Root(MVar(u, S.LF.id), Nil) *) u) : front) in
       (* cD ; cPhi |- s : cPsi' *)
       (* cD ; cPhi |- u[id] : [s]tA *)
@@ -145,29 +145,29 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 
 
-let mdeclToMMVar cD0 n mtyp = match mtyp with
+let mdeclToMMVar cD0 n mtyp dep = match mtyp with
   | ClTyp (MTyp tA, cPsi) ->
-    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA)  in
+    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep  in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, MObj (Root (Syntax.Loc.ghost, MMVar ((u, Whnf.m_id), Substitution.LF.id), Nil)))
   | ClTyp (STyp cPhi, cPsi) ->
-    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi)  in
+    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) dep in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, SObj (MSVar (0, ((u, Whnf.m_id), Substitution.LF.id))))
   | ClTyp (PTyp tA, cPsi) ->
-    let p    = Whnf.newMPVar (Some n) (cD0, cPsi, tA)  in
+    let p    = Whnf.newMPVar (Some n) (cD0, cPsi, tA) dep  in
     let phat = dctxToHat cPsi in
     ClObj (phat, PObj (MPVar ((p, Whnf.m_id), Substitution.LF.id)))
   | CTyp sW ->
-    let cvar = Whnf.newCVar (Some n) cD0 sW in
+    let cvar = Whnf.newCVar (Some n) cD0 sW dep in
     CObj (CtxVar cvar)
 
 let rec mctxToMMSub cD0 cD = match cD with
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', Decl(n, mtyp, _)) ->
+  | Dec (cD', Decl(n, mtyp, dep)) ->
       let t     = mctxToMMSub cD0 cD' in
       let mtyp' = Whnf.cnormMTyp (mtyp,t) in
-      MDot (mdeclToMMVar cD0 n mtyp' , t)
+      MDot (mdeclToMMVar cD0 n mtyp' dep, t)
 
 let mctxToMSub cD = mctxToMMSub Empty cD
 ;; (* ocaml is unhappy without the ;; *)

@@ -11,6 +11,7 @@ module LF = struct
   type depend =
     | No      (* Explicit *)
     | Maybe   (* Implicit *)
+    | Inductive
 
   type kind =
     | Typ
@@ -31,7 +32,6 @@ module LF = struct
   and ctyp_decl =                             (* Contextual Declarations        *)
     | Decl of name * ctyp * depend
     | DeclOpt of name
-                                              (* Potentially, A is Sigma type? *)
 
   and typ =                                   (* LF level                       *)
     | Atom  of Loc.t * cid_typ * spine        (* A ::= a M1 ... Mn              *)
@@ -59,11 +59,11 @@ module LF = struct
 
     | FVar  of name                           (* free variable for type
                                                  reconstruction                 *)
-    | FMVar of fvarsub                     (* free meta-variable for type
+    | FMVar of fvarsub                        (* free meta-variable for type
                                                  reconstruction                 *)
-    | FPVar of fvarsub                     (* free parameter variable for type
+    | FPVar of fvarsub                        (* free parameter variable for type
                                                  reconstruction                 *)
-    | HClo  of offset * offset * sub            (*   | HClo(x, #S[sigma])         *)
+    | HClo  of offset * offset * sub          (*   | HClo(x, #S[sigma])         *)
     | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
 
   and fvarsub = name * sub
@@ -73,12 +73,11 @@ module LF = struct
     | App  of normal * spine                  (*   | M . S                      *)
     | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
 
-  and sub =                                   (* Substitutions                  *)
+  and sub =
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
     | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
                                      and in the opposite order compared to FSVar and MSVar.
                                      This is a pain to fix *)
-                                               (*   | s[sigma]                   *)
     | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
     | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
@@ -90,16 +89,17 @@ module LF = struct
     | Obj  of normal                          (*    | N                         *)
     | Undef                                   (*    | _                         *)
 
-                                             (* Contextual substitutions       *)
+                                              (* Contextual substitutions       *)
   and mfront =                                (* Fronts:                        *)
     | ClObj of psi_hat * clobj
     | CObj of dctx                            (*    | Psi                       *)
     | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
     | MUndef (* This shouldn't be here, we should use a different datastructure for
                partial inverse substitutions *)
-  and clobj = (* ContextuaL objects *)
-    | MObj of normal                (* Mft::= Psihat.N                *)
-    | PObj of head                  (*    | Psihat.p[s] | Psihat.x    *)
+
+  and clobj =                                 (* ContextuaL objects *)
+    | MObj of normal                          (* Mft::= Psihat.N                *)
+    | PObj of head                            (*    | Psihat.p[s] | Psihat.x    *)
     | SObj of sub
 
   and msub =                                  (* Contextual substitutions       *)
@@ -162,8 +162,8 @@ module LF = struct
 
 
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of name option * typ                             (* ... . B *)
-    |  SigmaElem of name * typ * typ_rec            (* xk : Ak, ... *)
+    |  SigmaLast of name option * typ                        (* ... . B *)
+    |  SigmaElem of name * typ * typ_rec                (* xk : Ak, ... *)
 
   and tuple =
     | Last of normal
@@ -253,12 +253,14 @@ let getIndex head s_recA target acc =
       else let tPj = Proj (head, acc) in
       getIndex head (recA, Dot (Head tPj, s)) (target) (acc + 1) *)
 
+
 end
 
 
 
 (** Internal Computation Syntax *)
 module Comp = struct
+
   type  kind =
     | Ctype of Loc.t
     | PiKind  of Loc.t * LF.ctyp_decl * kind
@@ -280,11 +282,23 @@ module Comp = struct
     | TypCross  of typ * typ
     | TypPiBox  of LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
-    | TypBool
+    | TypBool 
+    | TypInd of typ 
+
+
+  (* For ih *)
+  type args =
+    | M  of meta_obj
+    | V  of offset
+    | E  
+    | DC (* don't care *)
+
 
   type ctyp_decl =
+    | WfRec of name * args list * typ
     | CTypDecl    of name * typ
     | CTypDeclOpt of name
+
 
   type gctx = ctyp_decl LF.ctx
 
@@ -382,10 +396,24 @@ end
 (** Internal Signature Syntax *)
 module Sgn = struct
 
+  (* type positivity_flag =  *)
+  (*   | Noflag *)
+  (*   | Positivity *)
+  (*   | Stratify of Loc.t * Comp.order * name * (name option) list  *)
+
+
+  type positivity_flag =
+    | Nocheck
+    | Positivity
+    | Stratify of  Loc.t * int
+    | StratifyAll of Loc.t
+
+
+
   type decl =
     | Typ           of Loc.t * cid_typ  * LF.kind
     | Const         of Loc.t * cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind
+    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag 
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

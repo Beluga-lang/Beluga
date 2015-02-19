@@ -75,7 +75,7 @@ do_testing() {
 
 	result=$($EXE +test $* $i 2>&1)
 	exit_code=$?
-	diff_result=$(echo "$result" | diff -u $i.out - 2>/dev/null)
+	diff_result=$(printf "%s" $result | diff -b -u $i.out - 2>/dev/null)
 	# diff responds 0 if same, 1 if different, 2 if couldn't compare.
 	diff_code=$?
 

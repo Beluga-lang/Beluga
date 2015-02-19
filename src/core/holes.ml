@@ -33,7 +33,7 @@ let isExplicit = function
       end
   | _ -> true
 
-let mctxToString =
+ let mctxToString =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
@@ -129,7 +129,7 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list =
     | LF.Dec (cG', _) -> aux acc cG'
   in aux [] cG
 
-let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
+(* let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
   Store.Cid.NamedHoles.reset () ;
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
@@ -146,7 +146,7 @@ let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
     | None -> "No variable s found"
     | Some exp -> (P.expChkToString cD cG exp))
     with _ -> "Can't split on s") *)
-
+*)
 let printOne i (loc, cD, cG, (tau, theta)) =
   let _ = Store.Cid.NamedHoles.reset () in
   let cD = (Whnf.normMCtx cD) in
@@ -159,12 +159,12 @@ let printOne i (loc, cD, cG, (tau, theta)) =
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   if List.length l > 0 then
     Format.printf 
-      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
         (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
         (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else
     Format.printf 
-      "@\nHole Number %d@\n%s@\n%s@\n    - Meta-Context: %s@\n%s@\n    - Context: %s@\n@\n%s\n    - Goal Type: %s@\n"
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n"
        (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
 let printAll () =

@@ -98,6 +98,7 @@ schema ss_ctx =  some [u:tp]  block a:tp, tr:{U':tp}{T':tp} sub U' T' -> sub a U
 % Admissibility of reflexivity
 
 rec refl : {g:s_ctx} {T:[g |- tp]} [g |- sub (T ..) (T ..)] =
+/ total t (refl g t)/
 mlam g => mlam T => case [g |- T ..] of
 | [g |- top] => [g |- sa_top]
 | [g |- arr (T1 ..) (T2 ..)] =>
@@ -120,6 +121,7 @@ mlam g => mlam T => case [g |- T ..] of
 % -------------------------------------------------------------
 rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S ..) (Q ..)] -> [g |- sub (Q..) (T ..)]
 	    -> [g |- sub (S ..) (T ..)] =
+% / total d1 (trans g q s t d1 d2 )/
 mlam Q => fn d1 => fn d2 => case d1 of
  | [g |- #p.3 ..] =>  % w: sub a Q
      let [g |- D2 ..] = d2 in
@@ -165,6 +167,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
 ;
 
 rec sound : (g:ss_ctx) [g |- sub (T ..) (S ..)] -> [g |- subtype (T ..) (S ..)] =
+% / total d (sound g t s d) /
 fn d => case d of
 % Assumption w : sub a Q
 | [g |- #p.3 ..] =>  [g |- #p.5 ..]
@@ -198,6 +201,7 @@ fn d => case d of
 ;
 
 rec complete :(g:ss_ctx) [g |- subtype (T ..) (S ..)] -> [g |- sub (T ..) (S ..)] =
+% / total d (complete g t s d)/
 fn d => case d of
 | [g |- #p.5 ..] => [g |- #p.3 ..]
 | [g |- subtype_refl] => refl [g] [g |- _ ]

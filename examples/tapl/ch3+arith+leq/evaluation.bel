@@ -150,16 +150,21 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 impos : type.
 
-rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- impos]=
-fn s => fn v => case v of
-| [ |- v_true]    => (case s of [ |- {}] )
-| [ |- v_false]   => (case s of [ |- {}] )
-| [ |- v_num v_z] => (case s of [ |- {}] )
-| [ |- v_num (v_s V)] =>
-    (case s of [ |- e_succ D] =>
-		values_dont_step [ |- D] [ |- v_num V])
+rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- impos] = 
+/ total v (natval_dont_step m m' s v) /
+fn s => fn v => case v of 
+| [ |- v_z ] => impossible s in []
+| [ |- v_s V] => 
+  let [ |- e_succ D] = s in natval_dont_step [ |- D] [ |- V]
 ;
 
+rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- impos]=
+/ total v (values_dont_step m m' s v) /
+fn s => fn v => case v of
+| [ |- v_true]    => impossible s in []
+| [ |- v_false]   => impossible s in []
+| [ |- v_num V] => natval_dont_step s [ |- V]
+;
 
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
 fn s => case s of
@@ -340,6 +345,7 @@ Admissibility of transitivity for mstep:
 }%
 
 rec m_trans : [ |- mstep M N'] -> [ |- mstep N' N] -> [ |- mstep M N] =
+/ total ms1 (m_trans m n' n ms1 ms2)/
 fn ms1 => fn ms2 => case ms1 of
 | [ |- m_ref]  => ms2
 | [ |- m_step  S1 MS1] =>
@@ -349,6 +355,7 @@ fn ms1 => fn ms2 => case ms1 of
 
 
 rec sound : [ |- mstep M N] -> [ |- multi_step M N] =
+/ total ms (sound m n ms)/
 fn ms => case ms of
 | [ |- m_ref] => [ |- ms_ref]
 | [ |- m_step S MS] =>
@@ -358,6 +365,7 @@ fn ms => case ms of
 
 
 rec complete : [ |- multi_step M N] -> [ |- mstep M N] =
+/ total ms (complete m n ms)/
 fn ms =>  case ms of
 | [ |- ms_ref] =>
     [ |- m_ref]
@@ -414,6 +422,7 @@ rec mstep_switch :
   {T2:[ |- term]}{T3:[ |- term]}
   [ |- multi_step T T'] ->
   [ |- multi_step (switch T T2 T3) (switch T' T2 T3)] =
+/ total ms (mstep_switch _ _ _ _ ms)/
 mlam T2 => mlam T3 =>
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
@@ -435,6 +444,7 @@ Lemma: IF multi-step T T'
 
 rec mstep_succ :
  [ |- multi_step M M'] -> [ |- multi_step (succ M) (succ M') ] =
+/ total ms (mstep_succ m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
 | [ |- ms_step S] =>
@@ -455,6 +465,7 @@ Lemma: IF multi-step T T'
 
 rec mstep_pred :
   [ |- multi_step M M'] -> [ |- multi_step (pred M) (pred M')] =
+/ total ms (mstep_pred m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
 | [ |- ms_step S] =>
@@ -474,6 +485,7 @@ Lemma: IF multi-step T T'
 
 rec mstep_iszero :
  [ |- multi_step M M'] -> [ |- multi_step (iszero M) (iszero M') ] =
+/ total ms (mstep_iszero m m' ms)/
 fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
 | [ |- ms_step S] =>
@@ -495,6 +507,7 @@ Lemma: IF multi-step M M'   and multi-step N N'
 rec mstep_leq_1 : {N : [ |- term]}
  [ |- multi_step M M']
 -> [ |- multi_step (leq M N) (leq M' N) ] =
+/ total ms (mstep_leq_1 m m' n ms)/
 mlam N => fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
 | [ |- ms_step S] =>
@@ -508,6 +521,7 @@ mlam N => fn ms => case ms of
 rec mstep_leq_2 :
  [ |- nat_value M]  -> [ |- multi_step N N']
 -> [ |- multi_step (leq M N) (leq M N') ] =
+/ total ms (mstep_leq_2 m n n' mv ms)/
 fn mv => fn ms => case ms of
 | [ |- ms_ref] => [ |- ms_ref]
 | [ |- ms_step S] => let [ |- MV] = mv in
@@ -524,6 +538,7 @@ leq_msteps_to_false: multi_step (leq M N) false  -> leq_msteps_to_true_or_false 
 
 rec mstep_leq_v : [ |- nat_value M] -> [ |- nat_value N]
 		  -> [ |- leq_msteps_to_true_or_false M N] =
+/ total mv (mstep_leq_v m n mv)/
 fn mv => fn nv => case mv of
 | [ |- v_z] => let [ |- NV] = nv in [ |- leq_msteps_to_true (ms_step (e_leq_zero NV))]
 | [ |- v_s MV'] =>
@@ -551,6 +566,7 @@ fn mv => fn nv => case mv of
 }%
 
 rec terminate : {M:[ |- term]} [ |- steps_to_result M] =
+/ total m (terminate m)/
 mlam M => case [ |- M] of
 | [ |- true] =>
    [ |- answer ms_ref (good_result v_true)]

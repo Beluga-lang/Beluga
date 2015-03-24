@@ -1567,7 +1567,8 @@ let abstrCompTyp tau =
         roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
     | tau -> (cQ, tau)
   in
-  let (cQ, tau')  = roll tau I.Empty in
+  let tau0        = Whnf.cnormCTyp (tau, Whnf.m_id) in
+  let (cQ, tau')  = roll tau0 I.Empty in
   let l'           = lengthCollection cQ in
   let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
   let (cQ, tau1)  = collectCompTyp (l'+p) cQ tau' in

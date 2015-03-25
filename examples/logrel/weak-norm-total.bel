@@ -39,6 +39,7 @@ We now encode the step relation of the operational semantics. In
 particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
+
 datatype step : tm A → tm A → type = 
 | beta : step (app (lam M) N) (M N)
 | stepapp : step M M' -> step (app M N) (app M' N)
@@ -80,6 +81,9 @@ computation layer of Beluga, and employ an indexed recursive
 type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
+
+
+
 
 datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
 #stratified =
@@ -151,6 +155,7 @@ The trivial fact that reducible terms halt has a corresponding
 trivial proof, analyzing the construction of the the proof of 
 'Reduce[|- T] [|- M]'
 }}%
+
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
 / total (reduce_halts) /
 fn r => case r of
@@ -158,9 +163,11 @@ fn r => case r of
 | Arr h f => h
 ;
 
+
 %{{
 # Reducibility of substitutions
 }}%
+
 
 schema ctx = tm T;
 
@@ -186,7 +193,6 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 # Main theorem
 }}%
 
-
 rec main : {gamma:ctx}{M:[gamma |- tm A]} 
           RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
 / total m (main gamma a s m) /
@@ -205,6 +211,4 @@ mlam gamma, M => fn rs => case [gamma |- M ..] of
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
 / total (weakNorm) /
-mlam M => reduce_halts (main [] [ |- M] Nil)
-;
-
+mlam M => reduce_halts (main [] [ |- M] Nil);

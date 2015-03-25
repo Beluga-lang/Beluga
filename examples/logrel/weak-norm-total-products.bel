@@ -215,13 +215,33 @@ mlam gamma => mlam #p => fn rs => (case [gamma] of
 # Main theorem
 }}%
 
-rec pair_msteps: {M1:[|- tm A]}{M2:[|- tm B]}
-[|- mstep M1 V1] -> [|- mstep M2 V2] -> 
-               [|- mstep (pair M1 M2) (pair V1 V2)] = ? ;
+rec pair_mstep1 : {M2:[|- tm B]}[|- mstep M1 V1] ->  
+                 [|- mstep (pair M1 M2) (pair V1 M2)] = 
+/ total ms (pair_mstep1 b a m2 ms) /
+mlam B,M2 => fn ms1 => case ms1 of
+| [|- refl] => [|- refl]
+| [|- onestep S MS] => 
+  let [|- MS'] = pair_mstep1 [|- M2] [|- MS] in 
+     [ |- onestep S MS']
+;
+
+rec pair_mstep2 : {V:[|- tm A]}[|- mstep M2 V2] ->  
+                 [|- mstep (pair V V2) (pair V V2)] = 
+/ total ms (pair_mstep2 b a m2 ms) /
+mlam V => fn ms2 => case ms2 of
+| [|- refl] => [|- refl]
+| [|- onestep S MS] => 
+  let [|- MS'] = pair_mstep2 [|- V] [|- MS] in 
+     [ |- onestep S MS']
+;
+rec pair_halts: {M1: [|- tm A]}{M2:[|- tm B]}
+               [|- halts M1] -> [|- halts M2] -> 
+               [|- halts (pair M1 M2)] = 
+/ total  (pair_halts) /  ? ;
 
 rec main : {gamma:ctx}{M:[gamma |- tm A]} 
           RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
-/ total m (main gamma a s m) /
+ / total m (main gamma a s m) /
 mlam gamma, M => fn rs => case [gamma |- M ..] of
 | [gamma |- #p ..] =>  lookup [gamma] [gamma |- #p ..] rs
 | [gamma |- lam \x. M .. x] => 
@@ -235,12 +255,11 @@ mlam gamma, M => fn rs => case [gamma |- M ..] of
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 
 | [gamma |- pair (M1 ..) (M2 ..)] => 
- let r1 = main [gamma] [gamma |- M1 ..] rs in
+  let r1 = main [gamma] [gamma |- M1 ..] rs in
   let r2 = main [gamma] [gamma |- M2 ..] rs in
-  let [|- halts/m MS1 V1] = reduce_halts r1 in 
-  let [|- halts/m MS2 V2] = reduce_halts r2 in 
-  let [|- MS] = pair_msteps [|- _ ] [|- _ ] [|- MS1] [|- MS2] in 
-  Cross [|- halts/m MS (val/pair V1 V2)]
+  let h1 = reduce_halts r1 in 
+  let h2 = reduce_halts r2 in 
+  Cross (pair_halts [|- _] [|- _] h1 h2)
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 
@@ -250,7 +269,7 @@ mlam gamma, M => fn rs => case [gamma |- M ..] of
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
-/ total (weakNorm) /
+% / total (weakNorm) /
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
 

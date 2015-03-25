@@ -196,48 +196,54 @@ datatype RedSub : {gamma:ctx}{#S: |- gamma} ctype =
 
 rec lookup : {gamma:ctx}{#p:[gamma |- tm A]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p #S[^]] =
 / total gamma (lookup gamma) / 
-mlam gamma => mlam #p => fn rs => (case [gamma] of 
- |     
-  [gamma, x1 : tm T] =>  ? 
- |    
-  [] =>  (impossible [ |- #p]) 
-)
-%{ case [gamma] of 
+mlam gamma => mlam #p => fn rs => case [gamma] of 
 | [] => impossible [ |- #p]
 | [gamma', x:tm A] => (case [gamma', x:tm A |- #p ..] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
  | [gamma',x:tm A |-  #q ..] => let Dot rs' rN = rs in
                       lookup [gamma'] [gamma' |- #q ..] rs')
-}%
 ;
 
 %{{
 # Main theorem
 }}%
 
-rec pair_mstep1 : {M2:[|- tm B]}[|- mstep M1 V1] ->  
+rec pair_mstep1 : {M1:[|- tm A]}{M2:[|- tm B]}[|- mstep M1 V1] ->  
                  [|- mstep (pair M1 M2) (pair V1 M2)] = 
-/ total ms (pair_mstep1 b a m2 ms) /
-mlam B,M2 => fn ms1 => case ms1 of
+/ total ms (pair_mstep1 b a v1 m1 m2 ms) /
+mlam M1, M2 => fn ms1 => case ms1 of
 | [|- refl] => [|- refl]
 | [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep1 [|- M2] [|- MS] in 
-     [ |- onestep S MS']
+  let [|- MS'] = pair_mstep1 [|- _ ] [|- M2] [|- MS] in 
+     [ |- onestep (step_pairl S) MS']
 ;
 
-rec pair_mstep2 : {V:[|- tm A]}[|- mstep M2 V2] ->  
-                 [|- mstep (pair V V2) (pair V V2)] = 
-/ total ms (pair_mstep2 b a m2 ms) /
-mlam V => fn ms2 => case ms2 of
+rec pair_mstep2 : {V:[|- tm A]}{M2:[|- tm B]}[|- mstep M2 V2] ->  
+                 [|- mstep (pair V M2) (pair V V2)] = 
+/ total ms (pair_mstep2 b a v2 v m2 ms) /
+mlam V, M2 => fn ms2 => case ms2 of
 | [|- refl] => [|- refl]
 | [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep2 [|- V] [|- MS] in 
-     [ |- onestep S MS']
+  let [|- MS'] = pair_mstep2 [|- V ] [|- _ ] [|- MS] in 
+     [ |- onestep (step_pairr S) MS']
 ;
+
+
+rec trans : [|- mstep M N] -> [|- mstep N R] -> [|- mstep M R] = 
+?;
+
 rec pair_halts: {M1: [|- tm A]}{M2:[|- tm B]}
                [|- halts M1] -> [|- halts M2] -> 
                [|- halts (pair M1 M2)] = 
-/ total  (pair_halts) /  ? ;
+/ total  (pair_halts) /  
+mlam M1, M2 => fn h1 => fn h2 => 
+let [|- halts/m MS1 V1] = h1 in 
+let [|- halts/m MS2 V2] = h2 in 
+let (s1 : [|- mstep (pair M1 M2) (pair W1 M2)]) = pair_mstep1 [|- M1] [|- M2] [|- MS1] in
+let (s2 : [|- mstep (pair W1 M2) (pair W1 V2)]) = pair_mstep1 [|- W1 ] [|- M2] [|- MS2] in
+let [|- MS] = trans s1 s2 in 
+[|- halts/m MS (val/pair V1 V2)]
+;
 
 rec main : {gamma:ctx}{M:[gamma |- tm A]} 
           RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
@@ -263,8 +269,12 @@ mlam gamma, M => fn rs => case [gamma |- M ..] of
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 
-| [gamma |- fst (M ..) ] => ?
-| [gamma |- snd (M ..) ] => ?
+| [gamma |- fst (M ..) ] => 
+  let Cross ha r1 r2 = main [gamma] [gamma |- M ..] rs in  r1
+  
+
+| [gamma |- snd (M ..) ] => 
+  let Cross ha r1 r2 = main [gamma] [gamma |- M ..] rs in  r2
 
 ;
 

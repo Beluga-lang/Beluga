@@ -565,7 +565,8 @@ let isVar h = match h with
     | (Shift ( _k), Shift ( _k'), cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
 
-    | (EmptySub, EmptySub , cPsi) -> (id , cPsi)
+    | (EmptySub, EmptySub , Null) -> (EmptySub, Null)
+    | (Undefs, _ , _) | (_ , Undefs, _) -> (EmptySub, Null)
     (* all other cases impossible for pattern substitutions *)
 
     | (_s1, _s2, _cPsi )  ->

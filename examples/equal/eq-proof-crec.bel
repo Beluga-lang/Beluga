@@ -35,7 +35,7 @@ mlam g => mlam U => case [g |- U ..] of
  | [g |- #p.1 .. ] => [g |- #p.2 .. ]
  | [g |- lam \x. L .. x ] =>
   let [g,e:block (y:exp, u:eq y y)  |-  V .. e] = ref [g, e:block q:exp,u:eq q q]  [g,e  |-   L .. e.1]  in
-   [g |- eq_lam \x. \w. V .. <x, w> ]
+   [g |- eq_lam \x. \w. V .. <x ; w> ]
 
 | [g |- app (A1 ..) (A2 ..)] =>
   let [g |- EQ1 ..] = ref  [g] [g |- A1 .. ] in

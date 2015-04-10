@@ -27,7 +27,7 @@ rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq (M ..) (M ..)] =
 | [g |- lam \x. M1 .. x] =>
   let [g,e:block y:exp, _t:eq y y |-  EQ .. e] =
       ref [g, e:block q:exp, _t:eq q q] [g, e |-  M1 .. e.1] in
-    [g |- eq_lam \x. \w. (EQ .. <x, w>)]
+    [g |- eq_lam \x. \w. (EQ .. <x ; w>)]
 | [g |- app (M1 ..) (M2 ..)] =>
   let [g |- EQ1 ..] = ref [g] [g |- M1 ..] in
   let [g |- EQ2 ..] = ref [g] [g |- M2 ..] in
@@ -49,7 +49,7 @@ fn e1 => fn e2 => case e1 of
     trans [g, b:block x':exp, _t:eq x' x' |-  D1 .. b.1 b.2]
           [g, b |-  D2 .. b.1 b.2]
   in
-    [g |- eq_lam \x. \u. E .. <x, u>]
+    [g |- eq_lam \x. \u. E .. <x ; u>]
 
 | [g |- eq_app (D1 ..) (D2 ..)] =>
   let [g |- eq_app (F1 ..) (F2 ..)] = e2 in

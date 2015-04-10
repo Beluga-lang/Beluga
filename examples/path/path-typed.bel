@@ -92,7 +92,7 @@ mlam g => mlam M => mlam N => fn f => case [g |- M ..] of
 	        [g, b:block x:exp, q:path,u:type_of x T', _t:is_path q x |-  Q .. b] in  % strengthening
          let [g, b:block x:exp, q:path, u:type_of x T', _t:is_path q x |-  D .. b] = ip in
          let [g |- p_lam (\x.\q.\u.\iq. D' .. x q u iq)] : [g |- is_path (bind T' (\q. Q' .. q)) (lam _ (\x. N' .. x))] =
-           f [g |- bind _ (\q. Qs .. q) ]  [g |- p_lam (\x.\q.\u.\iq. D .. <x,q,u,iq> )  ] in
+           f [g |- bind _ (\q. Qs .. q) ]  [g |- p_lam (\x.\q.\u.\iq. D .. <x ; q ; u ; iq> )  ] in
              [g,b |- D' .. b.1 b.2 b.3 b.4]
        )
   in

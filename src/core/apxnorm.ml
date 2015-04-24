@@ -564,11 +564,11 @@ and collectApxHead fMVs h = match h with
   | Apx.LF.PVar (Apx.LF.Offset _offset, s) ->
       collectApxSub fMVs s
 
-  | Apx.LF.Proj(Apx.LF.FPVar (p, s), _k) ->
-      collectApxSub (p::fMVs) s
+  | Apx.LF.Proj(h, _k) ->
+      collectApxHead fMVs h
 
-  | Apx.LF.NamedProj(Apx.LF.FPVar (p, s), _k) ->
-      collectApxSub (p::fMVs) s
+  | Apx.LF.NamedProj(h, _k) ->
+      collectApxHead fMVs h
 
   | _ -> fMVs
 

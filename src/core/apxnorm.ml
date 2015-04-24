@@ -784,13 +784,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
         let (offset, _) = Whnf.mctxMVarPos cD u  in
           Apx.LF.MVar (Apx.LF.Offset (offset+k), s')
 
-  | Apx.LF.Proj (Apx.LF.FPVar (p,s), j) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
-        if List.mem p fMVs then
-          Apx.LF.Proj (Apx.LF.FPVar (p, s'), j)
-        else
-          let (offset, _) = Whnf.mctxMVarPos cD p  in
-            Apx.LF.Proj(Apx.LF.PVar (Apx.LF.Offset (offset + k), s'), j)
+  | Apx.LF.Proj (pv, j) -> Apx.LF.Proj(fmvApxHead fMVs cD d_param pv, j)
 
   | Apx.LF.NamedProj (Apx.LF.FPVar (p,s), j) ->
       let s' = fmvApxSub fMVs cD d_param  s in
@@ -814,13 +808,6 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
           Apx.LF.PVar (Apx.LF.Offset (offset + l_cd1), s')
         else
           Apx.LF.PVar (Apx.LF.Offset offset, s')
-
-  | Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset offset,s), j) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
-        if offset > (l_delta+k) then
-          Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset (offset + l_cd1), s'), j)
-        else
-          Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset offset, s'), j)
 
   | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset,s), j) ->
       let s' = fmvApxSub fMVs cD d_param  s in
@@ -877,30 +864,6 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
                          end
                    end in
         Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s')
-
-  | Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) ->
-      (* let _ = Printf.printf "fmvApx PVar MInst ?\n" in  *)
-      let s' = fmvApxSub fMVs cD d_param  s in
-      let rec mvar_dot t l_delta = match l_delta with
-        | 0 -> t
-        | l_delta' ->
-            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in
-      (* cD',cD0 ; cPhi |- h => tA   where cD',cD0 = cD
-             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0
-         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
-       *)
-      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
-      let h'     = begin match h with
-                   | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (k ,s1) ->
-                       let s1' =  Whnf.cnormSub (s1, r) in
-                         begin match Substitution.LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (k' ,s1')
-                               (* other cases are impossible *)
-                         end
-                   end in
-        Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r)), s'), j)
 
   | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) ->
       (* let _ = Printf.printf "fmvApx PVar MInst ?\n" in  *)

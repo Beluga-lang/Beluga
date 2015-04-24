@@ -107,13 +107,12 @@ and cnormApxTuple cD delta tuple (cD'', t) = match tuple with
       Apx.LF.Cons (cnormApxTerm cD delta m (cD'' , t),
                    cnormApxTuple cD delta tuple (cD'', t))
 
-(*
-   cD, delta ; cPsi |- h
-   cD'' |- t <= cD, delta
-
-*)
+(* TODO: Refactor this function *)
 and cnormApxObj cD delta offset (cD'', t) =
   let l_delta = lengthApxMCtx delta in
+  let rec drop t l_delta = match (l_delta, t) with
+                  | (0, t) -> t
+                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
   if offset > l_delta then
     begin
       let offset' = (offset - l_delta)  in
@@ -121,21 +120,19 @@ and cnormApxObj cD delta offset (cD'', t) =
 	| Int.LF.MV u -> Apx.LF.Offset u
 	| Int.LF.ClObj (_phat, Int.LF.MObj tM) ->
                let (_u, tP, cPhi) = Whnf.mctxMDec cD offset' in
-                let rec drop t l_delta = match (l_delta, t) with
-                  | (0, t) -> t
-                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
-
                 let t' = drop t l_delta in
                 let (tP', cPhi')  = (Whnf.cnormTyp (tP, t'), Whnf.cnormDCtx  (cPhi, t')) in
                 Apx.LF.MInst (tM, tP', cPhi')
 	| Int.LF.ClObj (_phat, Int.LF.PObj h) ->
                 let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
-                let rec drop t l_delta = match (l_delta, t) with
-                  | (0, t) -> t
-                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
-
                 let t' = drop t l_delta in
-                Apx.LF.PInst (h, Whnf.cnormTyp (tP,t'), Whnf.cnormDCtx (cPhi,t'))
+                let (tP', cPhi')  = (Whnf.cnormTyp (tP, t'), Whnf.cnormDCtx  (cPhi, t')) in
+                Apx.LF.PInst (h, tP', cPhi')
+        | Int.LF.ClObj (_phat, Int.LF.SObj s) ->
+                let (_s, cPsi, cPhi) = Whnf.mctxSDec cD offset' in
+                let t' = drop t l_delta in
+                let (cPsi', cPhi')  = (Whnf.cnormDCtx (cPsi, t'), Whnf.cnormDCtx (cPhi, t')) in
+                Apx.LF.SInst (s, cPsi', cPhi')
     end
   else Apx.LF.Offset offset
 
@@ -162,8 +159,6 @@ and cnormApxHead cD delta h (cD'', t) = match h with
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
   | Apx.LF.NamedProj (pv, j) ->
     Apx.LF.NamedProj (cnormApxHead cD delta pv (cD'', t), j)
-
-
 
   | Apx.LF.FMVar(u, s) ->
       Apx.LF.FMVar(u, cnormApxSub cD delta s (cD'', t))
@@ -192,36 +187,7 @@ and cnormApxSub cD delta s (cD'', t) = match s with
 
   | Apx.LF.SVar (Apx.LF.Offset offset , sigma) ->
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
-      let l_delta = lengthApxMCtx delta in
-      let offset' = (offset - l_delta)  in
-        if offset > l_delta then
-          begin match Substitution.LF.applyMSub offset  t with
-            | Int.LF.MV u ->
-                Apx.LF.SVar (Apx.LF.Offset u, sigma')
-            | Int.LF.ClObj (_phat, Int.LF.SObj s) ->
-                let (_s, cPsi, cPhi) = Whnf.mctxSDec cD offset' in
-                let rec drop t l_delta = match (l_delta, t) with
-                  | (0, t) -> t
-                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
-
-                let t' = drop t l_delta in
-		let _  = dprint (fun () -> "[cnormApxSub] cPsi = " ^
-                                   P.dctxToString cD cPsi) in
-		let _  = dprint (fun () -> "[cnormApxSub] cPhi = " ^
-                                   P.dctxToString cD cPhi) in
-                let (cPsi', cPhi')  = (Whnf.cnormDCtx (cPsi, t'), Whnf.cnormDCtx
-		(cPhi, t')) in
-		let _  = dprint (fun () -> "[cnormApxSub] cPsi' = " ^
-                                   P.dctxToString cD'' cPsi') in
-		let _  = dprint (fun () -> "[cnormApxSub] cPhi' = " ^
-                                   P.dctxToString cD'' cPhi') in
-		let _ = dprint (fun () -> "[cnormApxSub - SVar] done") in
-                  Apx.LF.SVar (Apx.LF.SInst (s, cPsi', cPhi'), sigma')
-          end
-        else
-	  let _ = dprint (fun () -> "[cnormApxSub] SVar offset = " ^
-                  R.render_offset offset ) in
-          Apx.LF.SVar (Apx.LF.Offset offset, sigma')
+      Apx.LF.SVar (cnormApxObj cD delta offset (cD'', t), sigma')
 
   | Apx.LF.SVar (Apx.LF.SInst (s, cPsi, cPhi), sigma) ->
       let s' = Whnf.cnormSub (s, t) in

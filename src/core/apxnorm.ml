@@ -773,17 +773,18 @@ and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i =
         | 0 -> t
         | l_delta' ->
             mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in
+     in
+     let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
   match i with
   | Apx.LF.Offset offset -> 
       if offset > (l_delta+k) then Apx.LF.Offset (offset+ l_cd1)
       else Apx.LF.Offset offset
   | Apx.LF.MInst (tM, tP, cPhi) -> 
-      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta+k) in
       Apx.LF.MInst (Whnf.cnorm (tM, r), Whnf.cnormTyp(tP, r), Whnf.cnormDCtx (cPhi, r))
   | Apx.LF.PInst (h, tA, cPhi) ->
-      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
       Apx.LF.PInst (Whnf.cnormHead (h, r), Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r))
+  | Apx.LF.SInst (s, cPsi, cPhi) ->
+      Apx.LF.SInst (Whnf.cnormSub (s, r), Whnf.cnormDCtx(cPsi, r), Whnf.cnormDCtx (cPhi, r))
 
 (* TODO: Refactor this function *)
 and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
@@ -843,34 +844,9 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
           (*  cPsi |- s : cPhi  *)
           Apx.LF.SVar (Apx.LF.Offset (offset+k), sigma')
 
-  | Apx.LF.SVar (Apx.LF.SInst (s, cPsi, cPhi), sigma) ->
+  | Apx.LF.SVar (i, sigma) ->
       let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        (* mvar_dot t cD = t'
-
-           if cD1 |- t <= .
-           then cD1, cD |- t' <=  cD
-        *)
-      let rec mvar_dot t l_delta = match l_delta with
-        | 0 -> t
-        | l_delta' ->
-            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in
-      (* cD',cD0 ; cPhi |- s <= tPsi   where cD',cD0 = cD
-             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0
-         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
-       *)
-      let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta+k) in
-      let (s',cPsi',cPhi') = (Whnf.cnormSub (s, r), Whnf.cnormDCtx(cPsi, r), Whnf.cnormDCtx (cPhi, r)) in
-        Apx.LF.SVar (Apx.LF.SInst (s',cPsi',cPhi') , sigma')
-
-
-  | Apx.LF.SVar (Apx.LF.Offset offset, sigma) ->
-    let sigma' = fmvApxSub fMVs cD d_param  sigma in
-    let (l_cd1, l_delta, k) = d_param in
-    if offset > (l_delta+k) then
-      Apx.LF.SVar (Apx.LF.Offset (offset + l_cd1), sigma')
-    else
-      Apx.LF.SVar (Apx.LF.Offset offset, sigma')
+        Apx.LF.SVar (fmvApxCvar fMVs cD d_param i, sigma')
 
 
 and fmvApxSpine fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with

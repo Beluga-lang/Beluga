@@ -766,45 +766,24 @@ and fmvApxTuple fMVs cD ((l_cd1, l_delta, k) as d_param)   tuple = match tuple w
       Apx.LF.Cons (fmvApxTerm fMVs cD d_param   m,
                    fmvApxTuple fMVs cD d_param  tuple)
 
+
 (* TODO: Refactor this *)
-and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i = match i with
+and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i =
+     let rec mvar_dot t l_delta = match l_delta with
+        | 0 -> t
+        | l_delta' ->
+            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
+      in
+  match i with
   | Apx.LF.Offset offset -> 
       if offset > (l_delta+k) then Apx.LF.Offset (offset+ l_cd1)
       else Apx.LF.Offset offset
   | Apx.LF.MInst (tM, tP, cPhi) -> 
-      let rec mvar_dot t l_delta = match l_delta with
-        | 0 -> t
-        | l_delta' ->
-            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in
-      (* cD',cD0 ; cPhi |- tM <= tP   where cD',cD0 = cD
-             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0
-         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
-       *)
       let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta+k) in
-      let (tM',tP',cPhi') = (Whnf.cnorm (tM, r), Whnf.cnormTyp(tP, r), Whnf.cnormDCtx (cPhi, r)) in
-        Apx.LF.MInst (tM',tP',cPhi')
+      Apx.LF.MInst (Whnf.cnorm (tM, r), Whnf.cnormTyp(tP, r), Whnf.cnormDCtx (cPhi, r))
   | Apx.LF.PInst (h, tA, cPhi) ->
-      let rec mvar_dot t l_delta = match l_delta with
-        | 0 -> t
-        | l_delta' ->
-            mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
-      in
-      (* cD',cD0 ; cPhi |- h => tA   where cD',cD0 = cD
-             cD1, cD0   |- mvar_dot (MShift l_cd1) cD0 <= cD0
-         cD',cD1,cD0    |- mvar_dot (MShift l_cd1) cD0 <= cD', cD0
-       *)
       let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
-      let h'     = begin match h with
-                   | Int.LF.BVar _k -> h
-                   | Int.LF.PVar (k ,s1) ->
-                       let s1' =  Whnf.cnormSub (s1, r) in
-                         begin match Substitution.LF.applyMSub k r with
-                           | Int.LF.MV k' -> Int.LF.PVar (k' ,s1')
-                               (* other cases are impossible *)
-                         end
-                   end in
-        Apx.LF.PInst (h', Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r))
+      Apx.LF.PInst (Whnf.cnormHead (h, r), Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r))
 
 (* TODO: Refactor this function *)
 and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with

@@ -170,6 +170,8 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 
   | Apx.LF.Proj (pv, j) ->
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
+  | Apx.LF.NamedProj (pv, j) ->
+    Apx.LF.NamedProj (cnormApxHead cD delta pv (cD'', t), j)
 
   | Apx.LF.PVar (Apx.LF.Offset offset, s) ->
       let l_delta = lengthApxMCtx delta in
@@ -218,66 +220,6 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 
   | Apx.LF.FPVar(u, s) ->
       Apx.LF.FPVar(u, cnormApxSub cD delta s (cD'', t))
-
-    | Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset, s), j) ->
-      let l_delta = lengthApxMCtx delta in
-      let offset' = (offset - l_delta)  in
-      let _ = dprint (fun () -> "[cnormApxTerm] Proj (PVar _ ) . " ^ j.Id.string_of_name ^ " : offset = " ^ string_of_int offset ) in
-      let _ = dprint (fun () -> "[cnormApxTerm] Proj (PVar _ ) . " ^ j.Id.string_of_name ^ " : offset' = " ^ string_of_int offset' ) in
-      let _ = dprint (fun () -> "[cnormApxTerm] l_delta = " ^ string_of_int l_delta ) in
-      let _ = dprint (fun () -> "[cnormApxTerm] t = " ^ P.msubToString cD'' t ^ "\n") in
-      let _ = dprint (fun () -> "[cnormApxTerm] (original) cD = " ^ P.mctxToString cD ^ "\n") in
-        if offset > l_delta then
-          begin match Substitution.LF.applyMSub offset t with
-            | Int.LF.MV offset' ->
-                Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.Offset offset',
-                                         cnormApxSub cD delta s (cD'', t)),
-                            j)
-            | Int.LF.ClObj (_phat, Int.LF.PObj h) ->
-                let _ = dprint (fun () -> "[cnormApxTerm] Proj - case: ApplyMSub done -- resulted in PObj  ") in
-
-                let _ = dprint (fun () -> "[cnormApxTerm] offset' = " ^ string_of_int offset' ^ "\n") in
-                let _ = dprint (fun () -> "[cnormApxTerm] offset = " ^ string_of_int offset ^ "\n") in
-                let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
-                let _ = dprint (fun () -> "[cnormApxTerm] tP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ "\n") in
-                  (* Bug fix -- drop elements l_delta elements from t -bp, Aug 24, 2009
-                     Given cD'' |- t : cD, l_delta
-                     produce t' s.t. cD'' |- t' : cD   and t',t_delta = t
-                  *)
-                let rec drop t l_delta = match (l_delta, t) with
-                  | (0, t) -> t
-                  | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
-
-                let t' = drop t l_delta in
-                  Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, Whnf.cnormTyp (tP,t'), Whnf.cnormDCtx (cPhi,t')),
-                                           cnormApxSub cD delta s (cD'', t)),
-                              j)
-
-            | Int.LF.ClObj (phat, Int.LF.MObj tM) ->
-                (dprint (fun () -> "[cnormApxTerm] MObj :" ^
-                           P.normalToString cD (Context.hatToDCtx phat) (tM, Substitution.LF.id) ^ "\n") ;
-                 raise (Error.Violation "MObj found -- expected PObj"))
-          end
-        else
-          Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset offset, cnormApxSub cD delta s (cD'', t)), j)
-
-  | Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s), j) ->
-      let (tA', cPhi')  = (Whnf.cnormTyp (tA, t), Whnf.cnormDCtx (cPhi, t)) in
-      let s' = cnormApxSub cD delta s (cD'', t) in
-      let h' = begin match h with
-               | Int.LF.BVar _ -> h
-               | Int.LF.PVar (q, s1) ->
-                   begin match Substitution.LF.applyMSub q t with
-                     | Int.LF.MV q' ->
-                         let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (q', s1')
-                     | Int.LF.ClObj (_phat, Int.LF.PObj (Int.LF.PVar (p,s'))) ->
-                         let s1' = Whnf.cnormSub (s1, t) in
-                           Int.LF.PVar (p, s1')
-                   end
-               end in
-        Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s'), j)
-
   | _ -> h
 
 and cnormApxSub cD delta s (cD'', t) = match s with

@@ -648,21 +648,6 @@ and collectApxPatSpine fMVd pat_spine = match pat_spine with
 let rec fmvApxTerm fMVs cD ((l_cd1, l_delta, k) as d_param) m =   match m with
   | Apx.LF.Lam (loc, x, m') -> Apx.LF.Lam (loc, x, fmvApxTerm fMVs cD d_param  m')
 
-   (* We only allow free meta-variables of atomic type *)
-  | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
-      if List.mem u fMVs then
-          Apx.LF.Root (loc, Apx.LF.FMVar (u, s'), Apx.LF.Nil)
-      else
-        begin try
-          let (offset, _) = Whnf.mctxMVarPos cD u in
-(*	  let _ = dprint (fun () -> "[fmvApxTerm] " ^ R.render_name u
-                               ^ " has  position " ^ R.render_offset (offset+k))  in*)
-            Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset (offset+k), s'), Apx.LF.Nil)
-        with Whnf.Fmvar_not_found -> (dprint (fun () -> "[fmvApxTerm]  Error.UnboundName") ;
-                                      raise (Index.Error (loc, Index.UnboundName u)))
-        end
-
   | Apx.LF.Root (loc, h, s) ->
       let h' = fmvApxHead fMVs cD d_param  h in
       let s' = fmvApxSpine fMVs cD d_param  s in

@@ -142,7 +142,8 @@ implicit argument. In the base case we appeal to `halts_step`, while
 in the `Arr` case we must also appeal to the induction hypothesis at
 the range type, going inside the function position of applications.
 }}%
-rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
+rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}
+                  {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total a (bwd_closed' a) /
  mlam A, M, M' => mlam MS => fn r => case [|- A] of 
 | [|- b] => let I ha = r in I (halts_step [ |- MS] ha)
@@ -152,12 +153,12 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Redu
 	(mlam N => fn rn =>
 	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
 
-| [|- cross A B] => ?
-%{  let Cross ha r1 r2 = r in 
+| [|- cross A B] => 
+   let Cross ha r1 r2 = r in 
    Cross (halts_step [|- MS] ha) 
 	 (bwd_closed' [|- A] [|- _ ] [|- _ ] [|- stepfst MS] r1)
 	 (bwd_closed' [|- B] [|- _ ] [|- _ ] [|- stepsnd MS] r2)
-}%
+
 ;
 
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] = 
@@ -230,7 +231,13 @@ mlam V, M2 => fn ms2 => case ms2 of
 
 
 rec trans : [|- mstep M N] -> [|- mstep N R] -> [|- mstep M R] = 
-?;
+/ total ms (trans a m n r ms) / 
+fn ms1 => fn ms2 => (case ms1 of 
+ | [ |- refl ] =>  ms2
+ | [ |- onestep S MS] =>  
+   let [|- MS'] = trans [|- MS] ms2 in 
+   [|- onestep S MS']
+);
 
 rec pair_halts: {M1: [|- tm A]}{M2:[|- tm B]}
                [|- halts M1] -> [|- halts M2] -> 
@@ -240,7 +247,7 @@ mlam M1, M2 => fn h1 => fn h2 =>
 let [|- halts/m MS1 V1] = h1 in 
 let [|- halts/m MS2 V2] = h2 in 
 let (s1 : [|- mstep (pair M1 M2) (pair W1 M2)]) = pair_mstep1 [|- M1] [|- M2] [|- MS1] in
-let (s2 : [|- mstep (pair W1 M2) (pair W1 V2)]) = pair_mstep1 [|- W1 ] [|- M2] [|- MS2] in
+let (s2 : [|- mstep (pair W1 M2) (pair W1 W2)]) = pair_mstep2 [|- W1 ] [|- M2] [|- MS2] in
 let [|- MS] = trans s1 s2 in 
 [|- halts/m MS (val/pair V1 V2)]
 ;
@@ -279,7 +286,7 @@ mlam gamma, M => fn rs => case [gamma |- M ..] of
 ;
 
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
-% / total (weakNorm) /
+/ total (weakNorm) /
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
 

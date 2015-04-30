@@ -25,11 +25,11 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-datatype CtxRel : {g:tctx}{g':ctx} ctype  #stratified =
+datatype CtxRel : {g:tctx}{g':ctx} ctype  #positive =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T] [g',x:tm];
 
-datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
+datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype #positive =
 | Top : Lookup [g,b:block x:tm,y:oft x T] [g',x:tm |-  x] [ |- T]
 | Pop : Lookup [g] [g' |-  #p ..] [ |- T]
       -> Lookup [g,b:block x:tm,y:oft x S] [g',x:tm |-  #p ..] [ |- T];
@@ -43,7 +43,7 @@ fn r => case r of
 | Pop v => Pop (Pop v);
 
 % Algorithmic equality of terms. _|-_<=>_:_ in the paper
-datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype #positive =
 | AlgBase : [g' |-  mstep (M ..) (P ..)]
           -> [g' |-  mstep (N ..) (Q ..)]
           -> AlgEqR [g] [g' |-  P ..] [g' |-  Q ..] [ |- i]
@@ -51,7 +51,7 @@ datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 | AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T] [g',x:tm |-  app (M ..) x] [g',x |-  app (N ..) x] [ |- S]
           -> AlgEqN [g] [g' |-  (M ..)] [g' |-  (N ..)] [ |- arr T S]
 % Algorithmic equality of paths. _|-_<->_:_ in the paper
-and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype #positive =
 | AlgVar : Lookup [g] [g' |-  #p ..] [ |- T]
          -> AlgEqR [g] [g' |-  #p ..] [g' |-  #p ..] [ |- T]
 | AlgApp : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- arr T S]
@@ -60,14 +60,14 @@ and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 ;
 
 % Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
-datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
+datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype #positive =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M ..] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h] [h' |- #S[..] (M ..)];
 
 
 % Logical equivalence. _|-_~~_:_ in the paper
-datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  =
+datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype  #stratified =
 | LogBase : AlgEqN [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
           -> LogEq [g] [g' |-  M ..] [g' |-  N ..] [ |- i]
 | LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}
@@ -82,7 +82,7 @@ datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctyp
 % Half a dozen straightforward constructions on renaming substitutions:
 rec wknVar : Lookup [g] [g' |-  M ..] [ |- A] -> IsVarSub [g] [g'] [h] [h' |- #W[..]]
  -> Lookup [h] [h' |-  M #W[..]] [ |- A]=
-% / total iv (wknVar _ _ _ _ _ _ _ iv _ )/
+ / total v (wknVar g g0 h h0 w m a v ) /
 fn iv => fn ivs => case iv of
 | Top =>    let Cons ivs' iv = ivs in iv
 | Pop iv' => let Cons ivs' iv = ivs in wknVar iv' ivs';
@@ -91,6 +91,7 @@ fn iv => fn ivs => case iv of
 rec renCompose : IsVarSub [g] [g'] [h] [h' |- #W[..]]
                    -> IsVarSub [h] [h'] [h0] [h0' |- #W2[..]]
                    -> IsVarSub [g] [g'] [h0] [h0' |- #W[#W2[..]]] =
+/ total r1 (renCompose g g' h h' w h0 h0' w2 r1) /
 fn r1 => fn r2 => case r1 of
 | Nil => Nil
 | Cons ivs' iv => Cons (renCompose ivs' r2) (wknVar iv r2);
@@ -99,7 +100,7 @@ fn r1 => fn r2 => case r1 of
 
 rec wknVarSub : IsVarSub [g] [g'] [h] [h' |- #S[..]]
  -> IsVarSub [g] [g'] [h,b:block x:tm,y:oft x T] [h',x:tm |- #S[..] ] =
-% / total r (wknVarSub _ _ _ _ _ _ r )/
+/ total r (wknVarSub _ _ _ _ _ _ r )/
 fn r => case r of
 | Nil => Nil
 | Cons r' v => Cons (wknVarSub r') (pop' v);
@@ -107,16 +108,19 @@ fn r => case r of
 % Extending a renaming with a fresh variable is still a renaming
 rec extVarSub : IsVarSub [g] [g'] [h] [h' |- #S[..]]
  -> IsVarSub [g,b:block x:tm,y:oft x A] [g',x:tm] [h,b:block x:tm,y:oft x A] [h',x:tm |- #S[..] x ] =
+/ total (extVarSub)/
 fn r => let r : IsVarSub [g] [g'] [h] [h' |- #S[..]] = r in Cons (wknVarSub r) Top;
 
 % The identity substitution is a renaming
 rec idIsVarSub : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g] [g' |- .. ] =
+/ total r (idIsVarSub g g' r) /
 fn r => case r of
 | RNil => Nil
 | RCons r' => extVarSub (idIsVarSub r');
 
 % The shift substitution (weakening substitution) is a renaming
 rec shiftIsRen : CtxRel [g] [g'] -> IsVarSub [g] [g'] [g,b:block x:tm,y:oft x A] [g',x:tm |- .. ] =
+/ total (shiftIsRen) /
 fn r => wknVarSub (idIsVarSub r);
 
 % Generalizing AlgVar to terms
@@ -130,12 +134,14 @@ fn iv => case iv of
 rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' |- #W[..]]
                       -> AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
                       -> AlgEqR [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+/ total r (algEqR_Monotone g g' h h' w m1 m2 a iv r) / 
 fn iv => fn r => case r of
 | AlgVar v => algVar (wknVar v iv)
 | AlgApp r' n' => AlgApp (algEqR_Monotone iv r') (algEqN_Monotone iv n')
 and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' |- #W[..]]
                     -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
                     -> AlgEqN [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+/ total r (algEqN_Monotone g g' h h' w m1 m2 a iv r) / 
 fn iv => let iv : IsVarSub [h] [g'] [h] [h' |- #W[..]] = iv in fn r => case r of
 | AlgBase [g' |-  S1 ..] [g' |-  S2 ..] r' => AlgBase [h' |-  S1 #W[..]] [h' |-  S2 #W[..]] (algEqR_Monotone iv r')
 | AlgArr r'' => AlgArr (algEqN_Monotone (extVarSub iv) r'')
@@ -145,6 +151,7 @@ fn iv => let iv : IsVarSub [h] [g'] [h] [h' |- #W[..]] = iv in fn r => case r of
 rec logEq_Monotone : IsVarSub [g] [g'] [h] [h' |- #W[..]]
                    -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A]
                    -> LogEq [h] [h' |-  M1 #W[..]] [h' |-  M2 #W[..]] [ |- A] =
+/ total e (logEq_Monotone g g' h h' w m1 m2 a iv e) /
 fn iv => let iv : IsVarSub [g] [g'] [h] [h' |- #W[..]] = iv in fn e => case e of
 | LogBase v => LogBase (algEqN_Monotone iv v)
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
@@ -156,6 +163,7 @@ fn iv => let iv : IsVarSub [g] [g'] [h] [h' |- #W[..]] = iv in fn e => case e of
 
 % Main lemma to escape logical relation
 rec reflect : {A:[ |- tp]} AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
+% / total a (reflect a) /
 mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r in case [ |- A] of
 | [ |- i] => LogBase (AlgBase [g' |-  refl] [g' |-  refl] r)
 | [ |- arr A B] =>
@@ -164,6 +172,7 @@ mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r i
     reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
 and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = 
+% / total e (reify g g' m1 m2 a r e) /
 fn r => fn e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
 | LogBase a => a
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>

@@ -163,16 +163,19 @@ fn iv => let iv : IsVarSub [g] [g'] [h] [h' |- #W[..]] = iv in fn e => case e of
 
 % Main lemma to escape logical relation
 rec reflect : {A:[ |- tp]} AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] =
-% / total a (reflect a) /
-mlam A => fn r => let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r in case [ |- A] of
-| [ |- i] => LogBase (AlgBase [g' |-  refl] [g' |-  refl] r)
+/ total a (reflect g g' m1 m2 a) /
+mlam A => fn r => case [ |- A] of
+| [ |- i] => 
+  let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r in
+    LogBase (AlgBase [g' |-  refl] [g' |-  refl] r)
 | [ |- arr A B] =>
+  let r : AlgEqR [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = r in
   LogArr [g' |-  M1 ..] [g' |-  M2 ..]
    (mlam h => mlam h' => mlam #W => mlam N1 => mlam N2 => fn rh => fn iv => fn rn =>
     reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
 and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] -> AlgEqN [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = 
-% / total e (reify g g' m1 m2 a r e) /
+ / total e (reify g g' m1 m2 a r e) /
 fn r => fn e => let e : LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- A] = e in case e of
 | LogBase a => a
 | LogArr [g' |-  M1 ..] [g' |-  M2 ..] f =>
@@ -250,7 +253,8 @@ fn s1 => case s1 of
 rec closed : [g' |-  mstep (N1 ..) (M1 ..)] -> [g' |-  mstep (N2 ..) (M2 ..)]
   -> LogEq [g] [g' |-  M1 ..] [g' |-  M2 ..] [ |- T]
   -> LogEq [g] [g' |-  N1 ..] [g' |-  N2 ..] [ |- T] =
-% / total e (closed g' g n1 m1 n2 m2 t s1 s2 e) / 
+%  / total e (closed g' g n1 m1 n2 m2 t s1 s2 e) / 
+% Induction is on T. Make T explicit
 fn s1 => fn s2 => fn e => case e of
 | LogBase (AlgBase [g' |-  S1' ..] [g' |-  S2' ..] a) =>
   LogBase (AlgBase (mstep_trans s1 [g' |-  S1' ..]) (mstep_trans s2 [g' |-  S2' ..]) a)

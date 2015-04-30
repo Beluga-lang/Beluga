@@ -63,7 +63,7 @@ mlam g => mlam U =>
     | [g, b:block x:term, _t:oft x T1 |-  cert_illtyped bot]  => [g |- cert_illtyped bot]
 
     | [g, b: block x:term, _t:oft x T1 |-  certify T2 (D .. b)]  =>
-   	[g |- certify (arr T1 T2) (o_lam \x.\u. D .. <x, u>)]
+   	[g |- certify (arr T1 T2) (o_lam \x.\u. D .. <x ; u>)]
     )
 
  | [g |- app (E1 ..) (E2 ..)] =>
@@ -85,7 +85,7 @@ mlam g => mlam U =>
     |[g |- certify T1 (D1 ..)]  =>
       (case infer' [g, b: block x:term, _t:oft x T1] [ g,b  |-  E2 .. b.1] of
        | [g, b: block x:term, _t:oft x (S1 ..) |-  certify T2 (D2 .. b)]  =>
-           [g |- certify T2 (o_let (D1 ..) (\x.\u. D2 .. <x, u>))]
+           [g |- certify T2 (o_let (D1 ..) (\x.\u. D2 .. <x ; u>))]
        | [g, b: block x:term, _t:oft x (S1 ..) |-  cert_illtyped bot] =>
 	   [g |- cert_illtyped bot]
       )

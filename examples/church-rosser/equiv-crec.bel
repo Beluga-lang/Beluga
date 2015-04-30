@@ -55,12 +55,12 @@ fn r => case r of
   let [g,b:block x:term,_t:pred x x |-  I1 .. b] =
     identity [g,b:block x:term, _t:pred x x ] [ g,b |-  M1 .. b.1 ] in
   let [g |- I2 ..] = identity [g] [g |- M2 .. ] in
-    [g |- beta (\x.\u. I1 .. <x,u>) (I2 ..)]
+    [g |- beta (\x.\u. I1 .. <x ; u>) (I2 ..)]
 
 | [g |- lm1 \x. R1 .. x] =>
   let [g,b:block x:term , _t:pred x x |-  S1 .. b] =
     eq2 [g,b:block x:term,_t:pred x x |-  R1 .. b.1] in
-    [g |- lm \x.\u. S1 .. <x,u>]
+    [g |- lm \x.\u. S1 .. <x ; u>]
 
 
 | [g |- apl1 (R1 .. )] : [g |- (--> (app (M1 ..) (M2 ..)) (app (M1' ..) (M2 ..)))]  =>

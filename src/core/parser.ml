@@ -886,7 +886,7 @@ GLOBAL: sgn;
            | Some a -> LF.Ann (_loc, m, a)
            end
         |
-           "<"; ms = LIST1 clf_term_app SEP ","; ">"  ->
+           "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
                                     | m :: rest -> LF.Cons(m, fold rest)
              in

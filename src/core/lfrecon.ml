@@ -697,6 +697,30 @@ let reset_fcvarCnstr () = (fcvar_cnstr := [])
  *
  *     cPsi |- s' <= cPhi
  *)
+
+let rec synHead cD loc cPsi h = match h with
+   | Apx.LF.BVar k -> Context.ctxDec cPsi k, Int.LF.BVar k
+
+   | Apx.LF.Proj(h,j) ->
+     begin match synHead cD loc cPsi h with
+       | (Int.LF.TypDecl (x, Int.LF.Sigma typRec) , h') -> 
+	 begin (* try *)
+	   let sQ = Int.LF.getType h' (typRec, Substitution.LF.id) j 1 in
+	   Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
+    (* with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, y, (Int.LF.Sigma typRec, Substitution.LF.id)))) *)
+	 end
+     end
+   | Apx.LF.NamedProj(h,nj) ->
+     begin match synHead cD loc cPsi h with
+       | (Int.LF.TypDecl (x, Int.LF.Sigma typRec) , h') -> 
+	 begin (* try *)
+	   let j = Int.LF.getIndex h' (typRec, Substitution.LF.id) nj 1 in
+	   let sQ = Int.LF.getType h' (typRec, Substitution.LF.id) j 1 in
+	   Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
+    (* with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, y, (Int.LF.Sigma typRec, Substitution.LF.id)))) *)
+	 end
+     end
+
 let rec synDom cD loc cPsi s = begin match s with
   | Apx.LF.Id _ ->
       begin match Context.dctxToHat cPsi with
@@ -710,91 +734,16 @@ let rec synDom cD loc cPsi s = begin match s with
       end
 
   | Apx.LF.EmptySub -> (Int.LF.Null, Int.LF.EmptySub)
-      (* begin match Context.dctxToHat cPsi with *)
-      (*   | (Some psi, d) -> *)
-      (*       (Int.LF.Null, Int.LF.Shift (Int.LF.CtxShift psi, d)) *)
-
-      (*   | (None, d) -> *)
-      (*       (Int.LF.Null, Int.LF.Shift (Int.LF.NoCtxShift, d)) *)
-      (* end *)
-
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
-      begin match Context.ctxDec cPsi k with
-        | Int.LF.TypDecl (x, tA) ->
-            let (cPhi, s') = synDom cD loc cPsi s in
-              (*  cPsi |- s <= cPhi
-               *  cPsi |- tA <= type
-               *  tA' = [s]^-1(tA)
-               *
-               * Note: We may need to check that [s]^-1(tA) actually exists.
-               *
-               *  Wed Jan 14 13:51:11 2009 -bp
-               *)
-            let ss = Substitution.LF.invert s' in
-            let tA' = pruningTyp loc cD cPsi
-	      (Context.dctxToHat cPsi) (tA, Substitution.LF.id)  (Int.LF.MShift 0, ss)  in
-              (Int.LF.DDec (cPhi,
-                            Int.LF.TypDecl (x, tA')),
-               Int.LF.Dot (Int.LF.Head(Int.LF.BVar k), s'))
-(*       | _ -> raise (Error.Violation "Undefined bound variable") *)
-      end
-
-   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k,j)), s) ->
-      begin match Context.ctxDec cPsi k with
-        | Int.LF.TypDecl (x, tB) -> (* tB = block x1:A1. ... xn:An *)
-           let (cPhi, s') = synDom cD loc cPsi s in
-              (*  cPsi |- s <= cPhi
-               *  cPsi |- tA <= type
-               *  tA' = [s]^-1(tA)
-               *
-               * Note: We may need to check that [s]^-1(tA) actually exists;
-               * Wed Jan 14 13:51:11 2009 -bp
-               *)
-            let ss = Substitution.LF.invert s' in
-
-            let Int.LF.Sigma typRec =
-              pruningTyp loc cD cPsi (Context.dctxToHat cPsi) (tB, Substitution.LF.id) (Int.LF.MShift 0, ss)  in
-              begin try
-                let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, Substitution.LF.id) k 1 in
-
-                  (Int.LF.DDec (cPhi,
-                                Int.LF.TypDecl (x, Int.LF.TClo sQ)),
-                   Int.LF.Dot (Int.LF.Head(Int.LF.Proj(Int.LF.BVar k, j)), s'))
-              with _ ->
-                  raise (Error (loc, ProjNotValid (cD, cPsi, k, (Int.LF.Sigma typRec, Substitution.LF.id))))
-              end
-         | _ -> raise (Error.Violation "Undefined bound variable")
-      end
-
-   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.NamedProj(Apx.LF.BVar k,j)), s) ->
-      begin match Context.ctxDec cPsi k with
-        | Int.LF.TypDecl (x, tB) -> (* tB = block x1:A1. ... xn:An *)
-           let (cPhi, s') = synDom cD loc cPsi s in
-              (*  cPsi |- s <= cPhi
-               *  cPsi |- tA <= type
-               *  tA' = [s]^-1(tA)
-               *
-               * Note: We may need to check that [s]^-1(tA) actually exists;
-               * Wed Jan 14 13:51:11 2009 -bp
-               *)
-            let ss = Substitution.LF.invert s' in
-
-            let Int.LF.Sigma typRec =
-              pruningTyp loc cD cPsi (*?*) (Context.dctxToHat cPsi) (tB, Substitution.LF.id) (Int.LF.MShift 0, ss)  in
-              begin try
-                let sQ = Int.LF.getType  (Int.LF.BVar k) (typRec, Substitution.LF.id) k 1 in
-                let indk = Int.LF.getIndex  (Int.LF.BVar k) (typRec, Substitution.LF.id) j 1 in
-
-                  (Int.LF.DDec (cPhi,
-                                Int.LF.TypDecl (x, Int.LF.TClo sQ)),
-                   Int.LF.Dot (Int.LF.Head(Int.LF.Proj(Int.LF.BVar k, indk)), s'))
-              with Not_found ->
-                  raise (Error (loc, ProjNotValid (cD, cPsi, k, (Int.LF.Sigma typRec, Substitution.LF.id))))
-                  | _ -> raise (Error (loc, ProjNotFound (cD, cPsi, j, (Int.LF.Sigma typRec, Substitution.LF.id))))
-              end
-         | _ -> raise (Error.Violation "Undefined bound variable")
-      end
-
+  | Apx.LF.Dot (Apx.LF.Head h, s) ->
+    let (cPhi, s') = synDom cD loc cPsi s in
+    let ss = Substitution.LF.invert s' in
+    begin match synHead cD loc cPsi h with
+      | Int.LF.TypDecl (x, tA) , h' -> 
+	let tA' = pruningTyp loc cD cPsi (Context.dctxToHat cPsi)
+	  (tA, Substitution.LF.id) (Int.LF.MShift 0, ss) in
+	(Int.LF.DDec (cPhi, Int.LF.TypDecl (x, tA')),
+        Int.LF.Dot (Int.LF.Head h', s'))
+    end 
 
   | _ -> raise (Error.Violation "Encountered non-pattern substitution")
 

@@ -336,24 +336,16 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
                         P.typToString cD cPsi (tA, LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
+let elClTyp recT cD cPsi = function
+  | Apx.LF.MTyp a -> Int.LF.MTyp (Lfrecon.elTyp recT cD cPsi a)
+  | Apx.LF.STyp phi -> Int.LF.STyp (Lfrecon.elDCtx recT cD phi)
+  | Apx.LF.PTyp a -> Int.LF.PTyp (Lfrecon.elTyp recT cD cPsi a)
+
 let elCTyp recT cD = function
-  | Apx.LF.MTyp (a, psi) ->
+  | Apx.LF.ClTyp (cl, psi) ->
     let cPsi = Lfrecon.elDCtx recT cD psi in
-    let tA   = Lfrecon.elTyp recT cD cPsi a in
-    Int.LF.ClTyp (Int.LF.MTyp tA, cPsi)  
-
-  | Apx.LF.PTyp (a, psi) ->
-    let cPsi = Lfrecon.elDCtx recT cD psi in
-    let tA   = Lfrecon.elTyp recT cD cPsi a in
-    Int.LF.ClTyp (Int.LF.PTyp tA, cPsi)
-
-  | Apx.LF.STyp ( phi, psi) ->
-    let cPsi = Lfrecon.elDCtx recT cD psi in
-    let cPhi = Lfrecon.elDCtx recT cD phi in
-    Int.LF.ClTyp (Int.LF.STyp cPhi, cPsi)
-
-  | Apx.LF.CTyp schema_cid ->
-    Int.LF.CTyp schema_cid
+    Int.LF.ClTyp (elClTyp recT cD cPsi cl, cPsi)  
+  | Apx.LF.CTyp schema_cid -> Int.LF.CTyp schema_cid
 
 let elCDecl recT cD (Apx.LF.Decl(u, ctyp,dep)) = 
     let dep = match dep with | Apx.LF.No -> Int.LF.No | Apx.LF.Maybe -> Int.LF.Maybe in

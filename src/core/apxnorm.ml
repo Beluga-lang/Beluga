@@ -547,11 +547,11 @@ and collectApxMCtx fMVs c_mctx = match c_mctx with
         collectApxCTypDecl fMVs' ct_decl
 
 and collectApxCTypDecl fMVs ct_decl = match ct_decl with
-  | Apx.LF.Decl(_, Apx.LF.MTyp(a, c_psi), _)
-  | Apx.LF.Decl(_, Apx.LF.PTyp(a, c_psi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.MTyp a, c_psi), _)
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp a, c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
-  | Apx.LF.Decl(_, Apx.LF.STyp(c_phi, c_psi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp c_phi, c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
@@ -594,8 +594,8 @@ and collectApxTypRec fMVd trec = match trec with
 	collectApxTypRec fMVd1 trec
 
 let collectApxCDecl fMVd cdecl = match cdecl with
-  | Apx.LF.Decl(_, Apx.LF.MTyp(tA, cPsi), _)
-  | Apx.LF.Decl(_, Apx.LF.PTyp(tA, cPsi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.MTyp tA, cPsi), _)
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp tA, cPsi), _) ->
     let fMVd1 = collectApxDCtx fMVd cPsi in
 	    collectApxTyp fMVd1 tA
   | Apx.LF.Decl (_,Apx.LF.CTyp _,_) -> fMVd

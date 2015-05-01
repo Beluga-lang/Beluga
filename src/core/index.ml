@@ -622,14 +622,14 @@ let index_cdecl cvars fvars = function
       let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
       let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.MV u)) in
       let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-        (Apx.LF.Decl (u, Apx.LF.MTyp(a', psi'), dep), cvars', fvars'')
+        (Apx.LF.Decl (u, Apx.LF.ClTyp (Apx.LF.MTyp a', psi'), dep), cvars', fvars'')
 
   | Ext.LF.Decl(p, Ext.LF.PTyp(loc, a, psi), dep) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (a', fvars')           = index_typ  cvars bvars' fvars' a in
       let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.PV p)) in
       let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-      (Apx.LF.Decl (p, Apx.LF.PTyp(a', psi'), dep), cvars', fvars')
+      (Apx.LF.Decl (p, Apx.LF.ClTyp (Apx.LF.PTyp a', psi'), dep), cvars', fvars')
 
   | Ext.LF.Decl(s, Ext.LF.STyp(loc, phi, psi), dep) ->
       let (psi', _bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
@@ -637,7 +637,7 @@ let index_cdecl cvars fvars = function
       let _              = dprint (fun () -> "Extend cvars with " ^ R.render_name s) in
       let cvars'         = CVar.extend cvars (CVar.mk_entry (CVar.SV s)) in
       let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-        (Apx.LF.Decl (s, Apx.LF.STyp(phi', psi'), dep), cvars', fvars'')
+        (Apx.LF.Decl (s, Apx.LF.ClTyp (Apx.LF.STyp phi', psi'), dep), cvars', fvars'')
 
   | Ext.LF.Decl(ctx_name, Ext.LF.CTyp(loc, schema_name), dep) ->
     begin try
@@ -1202,10 +1202,10 @@ let comptypdef (cT, cK) =
     | Apx.Comp.Ctype _ -> cvars
     | Apx.Comp.PiKind (loc, Apx.LF.Decl(u, ctyp,dep), cK) ->
         let cvars' = match ctyp with
-                       | Apx.LF.MTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
-                       | Apx.LF.PTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.PV u))
+                       | Apx.LF.ClTyp (Apx.LF.MTyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
+                       | Apx.LF.ClTyp (Apx.LF.PTyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.PV u))
                        | Apx.LF.CTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.CV u))
-                       | Apx.LF.STyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.SV u))
+                       | Apx.LF.ClTyp (Apx.LF.STyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.SV u))
                       in
             unroll cK cvars'
    end in

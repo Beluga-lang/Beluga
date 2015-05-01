@@ -19,11 +19,14 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+ 
+  and cltyp =
+    | MTyp of typ
+    | PTyp of typ
+    | STyp of dctx
 
   and ctyp =
-    | MTyp of Loc.t * typ * dctx
-    | PTyp of Loc.t * typ * dctx 
-    | STyp of Loc.t * dctx * dctx 
+    | ClTyp of Loc.t * cltyp * dctx
     | CTyp of Loc.t * name 
 
   and ctyp_decl =

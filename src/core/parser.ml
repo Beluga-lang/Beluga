@@ -132,12 +132,12 @@ let rec unmix = function
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
                                       let (l, cdecl) = match c1 with
-					| Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.MTyp(l, tA, cPsi), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.PTyp(l, tA, cPsi), LF.Inductive))
+					| Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.ClTyp (l, LF.MTyp tA, cPsi), LF.Inductive))
+                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.ClTyp (l, LF.PTyp tA, cPsi), LF.Inductive))
                                         | Comp.TypInd (Comp.TypBox (l, Comp.MetaSchema (_,schema)))    -> (l, LF.Decl(x, LF.CTyp(l, schema), LF.Inductive))
-                                        | Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi)) -> (l, LF.Decl(x, LF.MTyp(l, tA, cPsi), LF.No))
+                                        | Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi)) -> (l, LF.Decl(x, LF.ClTyp (l, LF.MTyp tA, cPsi), LF.No))
                                         | Comp.TypBox (l, Comp.MetaParamTyp
-							 (_, tA, cPsi)) -> (l, LF.Decl(x, LF.PTyp(l, tA, cPsi), LF.No))
+							 (_, tA, cPsi)) -> (l, LF.Decl(x, LF.ClTyp (l, LF.PTyp tA, cPsi), LF.No))
                                         | Comp.TypBox (l, Comp.MetaSchema (_,schema))    -> (l, LF.Decl(x, LF.CTyp(l, schema), LF.No)) 
 					| _ -> unmixfail (mixloc mt1)
 				      in
@@ -737,19 +737,19 @@ GLOBAL: sgn;
 
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}"; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString p), LF.PTyp(_loc, tA, cPsi), dep)
+           LF.Decl(Id.mk_name (Id.SomeString p), LF.ClTyp (_loc, LF.PTyp tA, cPsi), dep)
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
          cPsi = clf_dctx; turnstile; cPhi = clf_dctx; "}" ; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-            LF.Decl(Id.mk_name (Id.SomeString s), LF.STyp(_loc, cPhi, cPsi), dep)
+            LF.Decl(Id.mk_name (Id.SomeString s), LF.ClTyp (_loc, LF.STyp cPhi, cPsi), dep)
 
       |
           "{";  u = UPSYMBOL; ":";
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}" ; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString u), LF.MTyp(_loc, tA, cPsi), dep)
+           LF.Decl(Id.mk_name (Id.SomeString u), LF.ClTyp (_loc, LF.MTyp tA, cPsi), dep)
 
       |
           "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" ; ind = OPT ["*"] ->

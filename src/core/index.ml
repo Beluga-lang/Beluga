@@ -616,39 +616,36 @@ let rec index_ctx cvars bvars fvars = function
       let (dec', bvars'', fvars'') = index_decl cvars bvars' fvars' dec in
         (Apx.LF.Dec (psi', dec'), bvars'', fvars'')
 
-let index_cdecl cvars fvars = function
-  | Ext.LF.Decl(u, Ext.LF.MTyp(loc, a, psi), dep) ->
+let index_cltyp cvars fvars = function
+  | Ext.LF.ClTyp (loc, Ext.LF.MTyp a, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
-      let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.MV u)) in
-      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-        (Apx.LF.Decl (u, Apx.LF.ClTyp (Apx.LF.MTyp a', psi'), dep), cvars', fvars'')
-
-  | Ext.LF.Decl(p, Ext.LF.PTyp(loc, a, psi), dep) ->
+        (Apx.LF.ClTyp (Apx.LF.MTyp a', psi'), cvars, fvars'')
+  | Ext.LF.ClTyp (loc, Ext.LF.PTyp a, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
-      let (a', fvars')           = index_typ  cvars bvars' fvars' a in
-      let cvars'                 = CVar.extend cvars (CVar.mk_entry (CVar.PV p)) in
-      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-      (Apx.LF.Decl (p, Apx.LF.ClTyp (Apx.LF.PTyp a', psi'), dep), cvars', fvars')
-
-  | Ext.LF.Decl(s, Ext.LF.STyp(loc, phi, psi), dep) ->
+      let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
+        (Apx.LF.ClTyp (Apx.LF.PTyp a', psi'), cvars, fvars'')
+  | Ext.LF.ClTyp (loc, Ext.LF.STyp phi, psi) ->
       let (psi', _bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (phi', _bvars', fvars'') = index_dctx cvars (BVar.create ()) fvars' phi in
-      let _              = dprint (fun () -> "Extend cvars with " ^ R.render_name s) in
-      let cvars'         = CVar.extend cvars (CVar.mk_entry (CVar.SV s)) in
-      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-        (Apx.LF.Decl (s, Apx.LF.ClTyp (Apx.LF.STyp phi', psi'), dep), cvars', fvars'')
-
-  | Ext.LF.Decl(ctx_name, Ext.LF.CTyp(loc, schema_name), dep) ->
-    begin try
-      let cvars'        = CVar.extend cvars (CVar.mk_entry (CVar.CV ctx_name)) in
+         (Apx.LF.ClTyp (Apx.LF.STyp phi', psi'), cvars, fvars'')
+  | Ext.LF.CTyp (loc, schema_name) ->
       let schema_cid    = Schema.index_of_name schema_name in
-      let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-        (Apx.LF.Decl (ctx_name, Apx.LF.CTyp schema_cid, dep), cvars', fvars)
-    with
-        Not_found -> raise (Error (loc, UnboundCtxSchemaName schema_name))
-    end
+      (Apx.LF.CTyp schema_cid, cvars, fvars)
 
+
+let cltyp_to_cvar n = function
+  | Ext.LF.ClTyp (_,Ext.LF.MTyp _,_) -> CVar.MV n
+  | Ext.LF.ClTyp (_,Ext.LF.PTyp _,_) -> CVar.PV n
+  | Ext.LF.ClTyp (_,Ext.LF.STyp _,_) -> CVar.SV n
+  | Ext.LF.CTyp (_,_) -> CVar.CV n
+
+let index_cdecl cvars fvars = function
+  | Ext.LF.Decl(u, cl, dep) ->
+    let (cl', cvars, fvars') = index_cltyp cvars fvars cl in
+    let cvars'               = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
+    let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+    (Apx.LF.Decl(u, cl', dep), cvars', fvars')
 
 let rec index_mctx cvars fvars = function
   | Ext.LF.Empty ->

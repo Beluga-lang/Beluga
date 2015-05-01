@@ -600,7 +600,7 @@ module Ext = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.Decl (u, LF.MTyp(_, tA, cPsi), _) ->
+      | LF.Decl (u, LF.ClTyp (_, LF.MTyp tA, cPsi), _) ->
           fprintf ppf "{%s : [%a %s %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -611,7 +611,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (p, LF.PTyp(_, tA, cPsi), _) ->
+      | LF.Decl (p, LF.ClTyp (_, LF.PTyp tA, cPsi), _) ->
           fprintf ppf "{#%s : [%a %s %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -622,7 +622,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
-      | LF.Decl (u, LF.STyp(_, cPhi, cPsi), _) ->
+      | LF.Decl (u, LF.ClTyp (_, LF.STyp cPhi, cPsi), _) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)

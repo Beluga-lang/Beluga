@@ -616,23 +616,25 @@ let rec index_ctx cvars bvars fvars = function
       let (dec', bvars'', fvars'') = index_decl cvars bvars' fvars' dec in
         (Apx.LF.Dec (psi', dec'), bvars'', fvars'')
 
+let index_cltyp' cvars bvars fvars = function
+  | Ext.LF.MTyp a -> 
+    let (a, fvars) = index_typ  cvars bvars fvars a in
+    (Apx.LF.MTyp a, fvars)
+  | Ext.LF.PTyp a ->
+    let (a, fvars) = index_typ cvars bvars fvars a in
+    (Apx.LF.PTyp a, fvars)
+  | Ext.LF.STyp phi ->
+    let (phi', _bvars', fvars) = index_dctx cvars (BVar.create ()) fvars phi in
+    (Apx.LF.STyp phi', fvars)
+
 let index_cltyp cvars fvars = function
-  | Ext.LF.ClTyp (loc, Ext.LF.MTyp a, psi) ->
+  | Ext.LF.ClTyp (loc, cl, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
-      let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
-        (Apx.LF.ClTyp (Apx.LF.MTyp a', psi'), cvars, fvars'')
-  | Ext.LF.ClTyp (loc, Ext.LF.PTyp a, psi) ->
-      let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
-      let (a', fvars'')          = index_typ  cvars bvars' fvars' a in
-        (Apx.LF.ClTyp (Apx.LF.PTyp a', psi'), cvars, fvars'')
-  | Ext.LF.ClTyp (loc, Ext.LF.STyp phi, psi) ->
-      let (psi', _bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
-      let (phi', _bvars', fvars'') = index_dctx cvars (BVar.create ()) fvars' phi in
-         (Apx.LF.ClTyp (Apx.LF.STyp phi', psi'), cvars, fvars'')
+      let (cl', fvars'')          = index_cltyp'  cvars bvars' fvars' cl in
+        (Apx.LF.ClTyp (cl', psi'), cvars, fvars'')
   | Ext.LF.CTyp (loc, schema_name) ->
       let schema_cid    = Schema.index_of_name schema_name in
       (Apx.LF.CTyp schema_cid, cvars, fvars)
-
 
 let cltyp_to_cvar n = function
   | Ext.LF.ClTyp (_,Ext.LF.MTyp _,_) -> CVar.MV n
@@ -654,11 +656,7 @@ let rec index_mctx cvars fvars = function
   | Ext.LF.Dec (delta, cdec) ->
       let (omega', delta', cvars', fvars') = index_mctx cvars fvars delta in
       let (cdec', cvars'', fvars'') = index_cdecl cvars' fvars' cdec in
-        begin match cdec' with
-          | Apx.LF.Decl (_, Apx.LF.CTyp _, _) -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
-              (* (Apx.LF.Dec(omega', cdec'), delta', cvars'', fvars'') *)
-          | _       -> (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
-        end
+      (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
 
 
 (* Records are not handled in a general manner

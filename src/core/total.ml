@@ -494,7 +494,9 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 	  (* let _ = print_string ("Generated Arguments for rec. call " ^  args_to_string cD args ^ "\n") in *)
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
-	  (* let _ = print_string ("\nGenerated Recursive Call : " ^ calls_to_string cD (f, args, tau) "\n\n") in *)
+	  (* let _ = print_string ("\nGenerated Recursive Call : " ^
+				  calls_to_string cD (LF.Empty) (f, args, tau) ^
+				  "\n\n") in *)
 	    d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -563,8 +565,9 @@ let wf_rec_calls cD cG  =
 		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in 
-      dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
-      cIH'
+       dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); 
+      (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+      cIH' 
     ) 
   else
     LF.Empty

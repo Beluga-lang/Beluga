@@ -8,14 +8,12 @@ rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
  / total x (plus x y) /
 fn x => fn y =>  case x of
 | [ |- z]  => y
-| [ |- s U]  => ? 
-%{  let [ |- V] = plus [ |- U ] y in
+| [ |- s U]  => 
+ let [ |- V] = plus [ |- U ] y in
     [ |- s V]
-}%
 ;
 
 
-%{
 rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] = 
 / total x (plus' x ) / 
 fn x => case x of
@@ -62,4 +60,4 @@ let w = fact [ |- s (s (s z))];
 
 
 
-}%
+

@@ -19,11 +19,14 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+ 
+  and cltyp =
+    | MTyp of typ
+    | PTyp of typ
+    | STyp of dctx
 
   and ctyp =
-    | MTyp of Loc.t * typ * dctx
-    | PTyp of Loc.t * typ * dctx 
-    | STyp of Loc.t * dctx * dctx 
+    | ClTyp of Loc.t * cltyp * dctx
     | CTyp of Loc.t * name 
 
   and ctyp_decl =
@@ -177,16 +180,6 @@ module Comp = struct
   and branch =
     | EmptyBranch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern
     | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
-    (* The following two are from the old implementation and will be removed eventually;
-       and replaced by the more general notion of patterns and branches above;
-       it remains currently so we can still use the old parser without modifications
-       -bp *)
-    | BranchBox of Loc.t *  LF.ctyp_decl LF.ctx
-        * (LF.dctx * branch_pattern * (LF.typ * LF.dctx) option)
-
-    | BranchSBox of Loc.t * LF.ctyp_decl LF.ctx
-        * (LF.dctx * LF.sub * LF.dctx option)
-        * exp_chk
 
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
      it remains currently so we can still use the old parser without modifications -bp *)

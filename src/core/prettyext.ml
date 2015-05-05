@@ -600,7 +600,7 @@ module Ext = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.Decl (u, LF.MTyp(_, tA, cPsi), _) ->
+      | LF.Decl (u, LF.ClTyp (_, LF.MTyp tA, cPsi), _) ->
           fprintf ppf "{%s : [%a %s %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -611,7 +611,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (p, LF.PTyp(_, tA, cPsi), _) ->
+      | LF.Decl (p, LF.ClTyp (_, LF.PTyp tA, cPsi), _) ->
           fprintf ppf "{#%s : [%a %s %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -622,7 +622,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
-      | LF.Decl (u, LF.STyp(_, cPhi, cPsi), _) ->
+      | LF.Decl (u, LF.ClTyp (_, LF.STyp cPhi, cPsi), _) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
@@ -907,19 +907,7 @@ module Ext = struct
               (fmt_ppr_meta_obj  cD 0) m
               (r_paren_if cond)
 
-      | Comp.Case (_, Pragma.RegularCase, i, [b]) -> 
-        let rec ppr_ctyp_decls' ppf = function
-          | LF.Dec (LF.Empty, decl) ->
-              fprintf ppf "%a"
-                (fmt_ppr_lf_ctyp_decl cD 1) decl
-          | LF.Dec (cD, decl) ->
-              fprintf ppf "%a %a"
-                (ppr_ctyp_decls' ) cD
-              (fmt_ppr_lf_ctyp_decl cD 1) decl
-        and ppr_ctyp_decls ppf = function
-          | LF.Empty -> ()
-          | other -> fprintf ppf "%a" (ppr_ctyp_decls') other
-        in
+      | Comp.Case (_, Pragma.RegularCase, i, [b]) ->
         begin match b with
           | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
               fprintf ppf "@[<0>%s %a %a =@ %a %s@ @]%a"
@@ -937,16 +925,6 @@ module Ext = struct
                 (fmt_ppr_cmp_exp_syn cD' 0) (strip_mapp_args cD i)
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
-
-          | Comp.BranchSBox (_, cD1', (cPsi, s, _cs), e) -> 
-              fprintf ppf "@[%s %a([%a] %a)= %a %s@ @]%a"
-                (to_html "let" Keyword)
-                (ppr_ctyp_decls ) cD1'
-                (fmt_ppr_lf_dctx cD1' 0) cPsi
-                (fmt_ppr_lf_sub  cD cPsi 0) s             
-                (fmt_ppr_cmp_exp_syn cD1' 0) (strip_mapp_args cD i)
-                (to_html "in" Keyword)
-                (fmt_ppr_cmp_exp_chk cD1' 0) e
           | _ ->
             fprintf ppf "%s %a %s%a"
               (to_html "case" Keyword)
@@ -1083,10 +1061,6 @@ module Ext = struct
             (fmt_ppr_cmp_branch cD 0) b
             (fmt_ppr_cmp_branches cD lvl) bs
 
-    and fmt_ppr_pattern cD1' cPsi ppf = function
-      | Comp.NormalPattern (tM, _) -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
-      | Comp.EmptyPattern ->fprintf ppf "@[{}@]"
-
     and fmt_ppr_patternOpt cD1' cPsi ppf = function
       | Some tM -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM
       | None ->fprintf ppf "@[{}@]"
@@ -1114,49 +1088,6 @@ module Ext = struct
              (fmt_ppr_pat_obj cD1' 0) pat
              (symbol_to_html DblRArr)
              (fmt_ppr_cmp_exp_chk cD1' 0) e
-
-      | Comp.BranchBox (_, cD1', (cPsi, pattern, _cs)) ->
-          let rec ppr_ctyp_decls' ppf = function
-            | LF.Dec (LF.Empty, decl) ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-            | LF.Dec (cD, decl) ->
-                fprintf ppf "%a %a"
-                  (ppr_ctyp_decls' ) cD
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-          and ppr_ctyp_decls ppf = function
-            | LF.Empty -> ()
-            | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
-          in
-
-            fprintf ppf "@\n@[<hov2>| %a@[([%a] %a)@ %s @]@]"
-              (ppr_ctyp_decls ) cD1'
-
-              (fmt_ppr_lf_dctx cD1' 0) cPsi
-              (fmt_ppr_pattern cD1' cPsi) pattern
-              (symbol_to_html DblRArr)
-
-      | Comp.BranchSBox (_, cD1', (cPsi, s, _cs), e) ->
-          let rec ppr_ctyp_decls' ppf = function
-            | LF.Dec (LF.Empty, decl) ->
-                fprintf ppf "%a"
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-            | LF.Dec (cD, decl) ->
-                fprintf ppf "%a@ %a"
-                  (ppr_ctyp_decls' ) cD
-                  (fmt_ppr_lf_ctyp_decl cD 1) decl
-          and ppr_ctyp_decls ppf = function
-            | LF.Empty -> ()
-            | other -> fprintf ppf "@[%a@]@ " (ppr_ctyp_decls') other
-          in
-
-            fprintf ppf "@\n@[<v2>| %a ([%a] %a) %s@ @[<v>%a@]@]"
-              (ppr_ctyp_decls ) cD1'
-              (fmt_ppr_lf_dctx cD1' 0) cPsi
-              (fmt_ppr_lf_sub  cD cPsi 0) s
-              (symbol_to_html DblRArr)
-              (fmt_ppr_cmp_exp_chk cD1' 1) e
-
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

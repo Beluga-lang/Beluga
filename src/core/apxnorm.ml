@@ -419,31 +419,6 @@ and cnormApxBranch cD delta b (cD'', t) =
 
       | Apx.Comp.EmptyBranch (loc, delta', Apx.Comp.PatEmpty _ ) -> b
 
-      | Apx.Comp.BranchBox (loc, omega, delta', (psi1, Apx.Comp.NormalPattern (m, e), Some (a, psi))) ->
-          (* |omega| = k  --> shift cs by k ERROR bp *)
-(*   16/12/11 -bp
-          let cs' = match apxget_ctxvar psi1 with None -> cs
-                                                | Some _ -> Ctxsub.cdot1 cs in
-*)
-          let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
-                                                              mvar_dot_apx t delta')
-          in
-            Apx.Comp.BranchBox (loc, omega, delta', (psi1, Apx.Comp.NormalPattern (m, e'), Some (a, psi)))
-
-      | Apx.Comp.BranchBox (loc, omega, delta', (psi, Apx.Comp.NormalPattern (r, e), None)) ->
-          (* |omega| = k  --> shift cs by k ERROR bp *)
-(*            16/12/11 -bp
-           let cs' = match apxget_ctxvar psi with None -> cs
-                                               | Some _ -> Ctxsub.cdot1 cs in *)
-          let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
-                                                              mvar_dot_apx t delta')
-          in
-            Apx.Comp.BranchBox (loc, omega, delta', (psi, Apx.Comp.NormalPattern (r, e'), None))
-
-      | Apx.Comp.BranchBox (loc, omega, delta', (psi1, Apx.Comp.EmptyPattern, typ)) ->
-          (* |omega| = k  --> shift cs by k ERROR bp *)
-            Apx.Comp.BranchBox (loc, omega, delta', (psi1, Apx.Comp.EmptyPattern, typ))
-
 
 (* ******************************************************************* *)
 (* Collect FMVars and FPVars in a given LF object                      *)
@@ -547,11 +522,11 @@ and collectApxMCtx fMVs c_mctx = match c_mctx with
         collectApxCTypDecl fMVs' ct_decl
 
 and collectApxCTypDecl fMVs ct_decl = match ct_decl with
-  | Apx.LF.Decl(_, Apx.LF.MTyp(a, c_psi), _)
-  | Apx.LF.Decl(_, Apx.LF.PTyp(a, c_psi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.MTyp a, c_psi), _)
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp a, c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
-  | Apx.LF.Decl(_, Apx.LF.STyp(c_phi, c_psi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp c_phi, c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
@@ -594,8 +569,8 @@ and collectApxTypRec fMVd trec = match trec with
 	collectApxTypRec fMVd1 trec
 
 let collectApxCDecl fMVd cdecl = match cdecl with
-  | Apx.LF.Decl(_, Apx.LF.MTyp(tA, cPsi), _)
-  | Apx.LF.Decl(_, Apx.LF.PTyp(tA, cPsi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.MTyp tA, cPsi), _)
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp tA, cPsi), _) ->
     let fMVd1 = collectApxDCtx fMVd cPsi in
 	    collectApxTyp fMVd1 tA
   | Apx.LF.Decl (_,Apx.LF.CTyp _,_) -> fMVd
@@ -952,33 +927,3 @@ and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
           let l    = lengthApxMCtx delta in
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
             Apx.Comp.Branch (loc, omega, delta, pat, e')
-
-     | Apx.Comp.BranchBox (loc, omega, delta, (psi1, Apx.Comp.EmptyPattern, Some (a, psi))) ->
-          let fMVd  = collectApxMCtx [] delta in
-          let fMVb' = fMVd in
-          let fMVb1  = collectApxDCtx fMVb' psi in
-          let _fMVb  = collectApxTyp fMVb1 a in
-            Apx.Comp.BranchBox (loc, omega, delta, (psi1, Apx.Comp.EmptyPattern, Some (a, psi)))
-
-      | Apx.Comp.BranchBox (loc, omega, delta, (psi, Apx.Comp.EmptyPattern, None))  ->
-          let fMVd  = collectApxMCtx [] delta in
-          let fMVb' = fMVd in
-          let _fMVb  = collectApxDCtx fMVb' psi in
-            Apx.Comp.BranchBox (loc, omega, delta, (psi, Apx.Comp.EmptyPattern, None))
-
-      | Apx.Comp.BranchBox (loc, omega, delta, (psi1, Apx.Comp.NormalPattern (m, e), Some (a, psi))) ->
-          let fMVd  = collectApxMCtx [] delta in
-          let fMVb' = collectApxTerm fMVd m in
-          let fMVb1  = collectApxDCtx fMVb' psi in
-          let fMVb  = collectApxTyp fMVb1 a in
-          let l    = lengthApxMCtx delta in
-          let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l)) e in
-            Apx.Comp.BranchBox (loc, omega, delta, (psi1, Apx.Comp.NormalPattern (m, e'), Some (a, psi)))
-
-      | Apx.Comp.BranchBox (loc, omega, delta, (psi, Apx.Comp.NormalPattern (r, e), None))  ->
-          let fMVd  = collectApxMCtx [] delta in
-          let fMVb' = collectApxTerm fMVd r in
-          let fMVb  = collectApxDCtx fMVb' psi in
-          let l    = lengthApxMCtx delta in
-          let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l)) e in
-            Apx.Comp.BranchBox (loc, omega, delta, (psi, Apx.Comp.NormalPattern (r, e'), None))

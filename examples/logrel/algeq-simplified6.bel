@@ -27,20 +27,25 @@ algapp : algeqr M1 M2 (arr T S) -> algeqn N1 N2 T -> algeqr (app M1 N1) (app M2 
 schema tctx = some [t:tp] block x:tm, y:algeqr x x t;
 
 % Logical equivalence. _|-_~~_:_ in the paper
-datatype LogEq : (g:tctx) [g |- tm] -> [g |-  tm] -> [ |- tp] -> ctype  #stratified =
+
+tmpair : type.
+~ : tm -> tm -> tmpair.
+%infix ~ 5 right.
+
+datatype Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype  #stratified =
 | LogBase : [g |- algeqn (M ..) (N ..) i]
-          -> LogEq [g |- M ..] [g |- N ..] [|- i]
+          -> Log [g |- (M ..) ~ (N ..) ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
              ({h:tctx} {#R:h |- g} {N1:[h |- tm]}{N2:[h |- tm]}
-                LogEq [h |- N1 ..] [h |-  N2 ..] [ |- T]
-              -> LogEq [h |- app (M1 #R[..]) (N1 ..)] [h |-  app (M2 #R[..]) (N2 ..)] [ |- S])
-            -> LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- arr T S]
+                Log [h |- (N1 ..) ~ (N2 ..)] [ |- T]
+              -> Log [h |- (app (M1 #R[..]) (N1 ..)) ~ (app (M2 #R[..]) (N2 ..))] [|- S])
+            -> Log [g |- (M1 ..) ~ (M2 ..)] [ |- arr T S]
 ;
 
 
 % Monotonicity of logical equivalence
-rec logEq_Monotone : {h:tctx}{#W:h |- g} LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- A]
-                   -> LogEq [h |-  M1 #W[..]] [h |- M2 #W[..]] [ |- A] =
+rec logEq_Monotone : {h:tctx}{#W:h |- g} Log [g |- (M1 ..) ~ (M2 ..)] [ |- A]
+                   -> Log [h |- (M1 #W[..]) ~ (M2 #W[..])] [ |- A] =
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,#W => fn e => case e of
 | LogBase [g |- P ..] => LogBase [h |- P #W[..]]
@@ -52,7 +57,7 @@ mlam h,#W => fn e => case e of
 ;
 
 % Main lemma to escape logical relation
-rec reflect : {A:[ |- tp]} [g |- algeqr (M1 ..) (M2 ..) A] -> LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- A] =
+rec reflect : {A:[ |- tp]} [g |- algeqr (M1 ..) (M2 ..) A] -> Log [g |- (M1 ..) ~ (M2 ..)] [ |- A] =
 / total a (reflect g m1 m2 a) /
 mlam A => fn r => case [ |- A] of
 | [ |- i] => 
@@ -65,7 +70,7 @@ mlam A => fn r => case [ |- A] of
     let [h |- S ..] = reify [|- A] rn in
     reflect [ |- B] [h |- algapp (R #W[..]) (S ..)]
    )
-and reify : {A:[|- tp]}LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- A] -> [g |- algeqn (M1 ..) (M2 ..) A] = 
+and reify : {A:[|- tp]}Log [g |- (M1 ..) ~ (M2 ..)] [ |- A] -> [g |- algeqn (M1 ..) (M2 ..) A] = 
  / total a (reify g m1 m2 a) / 
 mlam A => fn e => case [ |- A] of
 | [ |- i ] =>
@@ -106,8 +111,8 @@ fn s1 => case s1 of
 % Logical equality is backward closed under weak head reduction
 % Induction is on T. Make T explicit
 rec closed : {T:[|- tp]} [g |-  mstep (N1 ..) (M1 ..)] -> [g |-  mstep (N2 ..) (M2 ..)]
-  -> LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- T]
-  -> LogEq [g |-  N1 ..] [g |-  N2 ..] [ |- T] =
+  -> Log [g |- (M1 ..) ~ (M2 ..)] [ |- T]
+  -> Log [g |- (N1 ..) ~ (N2 ..)] [ |- T] =
  / total t (closed g n1 m1 n2 m2 t) / 
 mlam T => fn s1,s2,e => case [|- T] of 
 | [|- i] => 
@@ -150,8 +155,8 @@ fn a => case a of
 
 % Symmetry of logical equivalence
 rec logEqSym :
-   {T:[|- tp]}LogEq [g |-  M1 ..] [g |-  M2 ..] [ |- T]
- -> LogEq [g |-  M2 ..] [g |-  M1 ..] [ |- T] =
+   {T:[|- tp]}Log [g |- (M1 ..) ~ (M2 ..)] [ |- T]
+ -> Log [g |- (M2 ..) ~ (M1 ..)] [ |- T] =
 / total t (logEqSym g m1 m2 t) /
 mlam T => fn e => case [|- T] of 
 | [|- i] => 
@@ -284,9 +289,9 @@ fn a1 => fn a2 => case a1 of
 
 % Transitivity of logical equivalence
 rec logEqTrans : {T:[|- tp]}
-   LogEq [g |-  M ..] [g |-  N ..] [ |- T]
- -> LogEq [g |-  N ..] [g |-  P ..] [ |- T]
- -> LogEq [g |-  M ..] [g |-  P ..] [ |- T] =
+   Log [g |- (M ..) ~ (N ..)] [ |- T]
+ -> Log [g |- (N ..) ~ (P ..)] [ |- T]
+ -> Log [g |- (M ..) ~ (P ..)] [ |- T] =
 / total t (logEqTrans g m  n p t) /
 mlam T => fn e1 => fn e2 => case [|- T] of 
 | [|- i] => 
@@ -313,40 +318,40 @@ datatype Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype #positive =
 | Pop : Lookup [|- G] [g |- #p ..] [ |- T]
       -> Lookup [|- G & S] [g,x:tm |- #p ..] [ |- T];
 
-datatype DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> ctype
+datatype Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 #positive =
-| DecBeta : DecEq [|- G & T] [g,x:tm |-  M2 .. x] [g,x |-  N2 .. x] [ |- S]
-          -> DecEq [|-G] [g |-  M1 ..] [g |-  N1 ..] [ |- T]
-          -> DecEq [|-G] [g |-  (app (lam (\x. M2 .. x)) (M1 ..))] [g |-  N2 .. (N1 ..)] [ |- S]
-| DecLam :  DecEq [|- G & T] [g,x:tm |-  M .. x] [g,x |-  N .. x] [ |- S]
-          -> DecEq [|-G] [g |-  lam (\x. M .. x)] [g |-  lam (\x. N .. x)] [ |- arr T S]
-| DecExt :  DecEq [|- G & T] [g,x:tm |-  app (M ..) x] [g,x |-  app (N ..) x] [ |- S]
-          -> DecEq [|-G] [g |-  (M ..)] [g |-  (N ..)] [ |- arr T S]
-| DecVar : Lookup [|-G] [g |-  #p ..] [ |- T]
-         -> DecEq [|-G] [g |-  #p ..] [g |-  #p ..] [ |- T]
-| DecApp : DecEq [|-G] [g |-  M1 ..] [g |-  M2 ..] [ |- arr T S]
-         -> DecEq [|-G] [g |-  N1 ..] [g |-  N2 ..] [ |- T]
-         -> DecEq [|-G] [g |-  app (M1 ..) (N1 ..)] [g |-  app (M2 ..) (N2 ..)] [ |- S]
-| DecSym : DecEq [|-G] [g |-  M ..] [g |-  N ..] [ |- T]
-         -> DecEq [|-G] [g |-  N ..] [g |-  M ..] [ |- T]
-| DecTrans : DecEq [|-G] [g |-  M ..] [g |-  N ..] [ |- T]
-           -> DecEq [|-G] [g |-  N ..] [g |-  O ..] [ |- T]
-           -> DecEq [|-G] [g |-  M ..] [g |-  O ..] [ |- T]
+| DecBeta : Decl [|- G & T] [g,x:tm |- (M2 .. x) ~ (N2 .. x)] [ |- S]
+          -> Decl [|-G] [g |- (M1 ..) ~ (N1 ..)] [ |- T]
+          -> Decl [|-G] [g |- (app (lam (\x. M2 .. x)) (M1 ..)) ~ (N2 .. (N1 ..))] [ |- S]
+| DecLam :  Decl [|- G & T] [g,x:tm |- (M .. x) ~ (N .. x)] [ |- S]
+          -> Decl [|-G] [g |- (lam (\x. M .. x)) ~ (lam (\x. N .. x))] [ |- arr T S]
+| DecExt :  Decl [|- G & T] [g,x:tm |- (app (M ..) x) ~ (app (N ..) x)] [ |- S]
+          -> Decl [|-G] [g |- (M ..) ~ (N ..)] [ |- arr T S]
+| DecVar : Lookup [|-G] [g |- #p ..] [ |- T]
+         -> Decl [|-G] [g |- (#p ..) ~ (#p ..)] [ |- T]
+| DecApp : Decl [|-G] [g |- (M1 ..) ~ (M2 ..)] [ |- arr T S]
+         -> Decl [|-G] [g |- (N1 ..) ~ (N2 ..)] [ |- T]
+         -> Decl [|-G] [g |- (app (M1 ..) (N1 ..)) ~ (app (M2 ..) (N2 ..))] [ |- S]
+| DecSym : Decl [|-G] [g |- (M ..) ~ (N ..)] [ |- T]
+         -> Decl [|-G] [g |- (N ..) ~ (M ..)] [ |- T]
+| DecTrans : Decl [|-G] [g |- (M ..) ~ (N ..)] [ |- T]
+           -> Decl [|-G] [g |- (N ..) ~ (O ..)] [ |- T]
+           -> Decl [|-G] [g |- (M ..) ~ (O ..)] [ |- T]
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-datatype LogEqSub : {G:[|-dctx]}{g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0}
+datatype LogSub : {g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0} {G:[|-dctx]}
 ctype #positive =
-| Nil : LogEqSub [|- nil ] [] [h |- ^] [h |- ^]
-| Dot : LogEqSub [|- G] [g0] [h |- #S1[..]] [h |- #S2[..]]
-       -> LogEq [h |-  M1 ..] [h |-  M2 ..] [ |- T]
-       -> LogEqSub [|- G & T ] [g0,x:tm] [h |- #S1[..], (M1 ..)] [h |- #S2[..], (M2 ..)]
+| Nil : LogSub [] [h |- ^] [h |- ^] [|-nil]
+| Dot : LogSub [g0] [h |- #S1[..]] [h |- #S2[..]] [|- G]
+       -> Log [h |- (M1 ..) ~ (M2 ..)] [ |- T]
+       -> LogSub [g0,x:tm] [h |- #S1[..], (M1 ..)] [h |- #S2[..], (M2 ..)] [|- G & T]
 ;
 
 % Looking up a variable in logically equivalence substitutions gives a logical equivalence
-rec lookup : Lookup [|-G] [g |-  M1 ..] [ |- T]
- -> LogEqSub [|-G] [g] [h |- #S1[..]] [h |- #S2[..]]
- -> LogEq [h |-  M1 #S1[..]] [h |-  M1 #S2[..]] [ |- T] =
+rec lookup : Lookup [|-G] [g |- X ..] [ |- T]
+ -> LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|- G]
+ -> Log [h |- (X #S1[..]) ~ (X #S2[..])] [ |- T] =
 / total v (lookup _ _ _ _ _ _ _ _ v) /
 fn v => fn s => case v of
 | Top =>    let Dot s' e = s in e
@@ -354,20 +359,20 @@ fn v => fn s => case v of
 ;
 
 % Monotonicity of logical equivalence on substitutions
-rec wknLogEqSub :
+rec wknLogSub :
     {h0:tctx}{h:tctx}{#W:h0 |- h}
-    LogEqSub [|- G] [g0] [h |- #S1[..]] [h |- #S2[..]]
-  -> LogEqSub [|- G] [g0] [h0 |- #S1[#W[..]]] [h0 |- #S2[#W[..]]] =
- / total es (wknLogEqSub _ _ _ _ _ _ iv es )/
+    LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|- G]
+  -> LogSub [g] [h0 |- #S1[#W[..]]] [h0 |- #S2[#W[..]]] [|- G]=
+ / total es (wknLogSub _ _ _ _ _ _ iv es )/
 mlam h0,h,#W => fn es => case es of
 | Nil => Nil
-| Dot rs' rN  => Dot (wknLogEqSub [h0] [h] [h0 |- #W[..]] rs') (logEq_Monotone [h0] [h0 |- #W[..]] rN)
+| Dot rs' rN  => Dot (wknLogSub [h0] [h] [h0 |- #W[..]] rs') (logEq_Monotone [h0] [h0 |- #W[..]] rN)
 ;
 
 % % Symmetry of logical equivalence on substitutions
 rec logEqSubSym :
-   LogEqSub [|-G] [g] [h |- #S1[..]] [h |- #S2[..]]
- -> LogEqSub [|-G] [g] [h |- #S2[..]] [h |- #S1[..]] =
+   LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|-G]
+ -> LogSub [g] [h |- #S2[..]] [h |- #S1[..]] [|-G] =
  / total e (logEqSubSym g g h sigma sigma' e) /
 fn e => case e of
 | Nil => Nil
@@ -375,9 +380,9 @@ fn e => case e of
 
 % % Transitivity of logical equivalence on substitutions
 rec logEqSubTrans :
-   LogEqSub [|-G] [g] [h |- #S1[..]] [h |- #S2[..]]
- -> LogEqSub [|-G] [g] [h |- #S2[..]] [h |- #S3[..]]
- -> LogEqSub [|-G] [g] [h |- #S1[..]] [h |- #S3[..]] =
+   LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|-G]
+ -> LogSub [g] [h |- #S2[..]] [h |- #S3[..]] [|-G]
+ -> LogSub [g] [h |- #S1[..]] [h |- #S3[..]] [|-G] =
 / total e1 (logEqSubTrans g g h s1 s2 s3 e1) /
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
@@ -385,25 +390,25 @@ fn e1 => fn e2 => case e1 of
 
 
 % Fundamental theorem
-rec thm :  DecEq [|-G] [g |- M1 ..] [g |- M2 ..] [|- T ]
-        -> LogEqSub [|- G] [g] [h |- #S1[..]] [h |- #S2[..]]
-        -> LogEq [h |-  M1 #S1[..]] [h |- M2 #S2[..]] [ |- T] =
+rec thm :  Decl [|-G] [g |- (M1 ..) ~ (M2 ..)] [|- T ]
+        -> LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|-G]
+        -> Log [h |- (M1 #S1[..]) ~ (M2 #S2[..])] [|- T] =
 / total d (thm g g h m1 m2 t sigma sigma' d) /
 fn d , s => 
-let s : LogEqSub [|- G] [g] [h |- #S1[..]] [h |- #S2[..]] = s in
+let s : LogSub [g] [h |- #S1[..]] [h |- #S2[..]] [|-G] = s in
 case d of
 | DecVar v => lookup v s
 | DecApp d1 d2 => let LogArr [h |-  M1 ..] [h |-  M2 ..] f = thm d1 s in
     f [h] [h |- ..] [h |-  _] [h |-  _] (thm d2 s)
-| (DecLam d1) : DecEq [|-G] [g |-  lam (\x. M1 .. x)] [g |-  lam (\x. M2 .. x)] [ |- arr T S] =>
+| (DecLam d1) : Decl [|-G] [g |- (lam (\x. M1 .. x)) ~ (lam (\x. M2 .. x))] [ |- arr T S] =>
    LogArr [h |-  lam (\x. M1 #S1[..] x)] [h |-  lam (\x. M2 #S2[..] x)]
      (mlam h0, #W, N1, N2 => fn rn =>
-     let q2 = thm d1 (Dot (wknLogEqSub [h0] [h] [h0 |- #W[..]] s) rn) in
+     let q2 = thm d1 (Dot (wknLogSub [h0] [h] [h0 |- #W[..]] s) rn) in
      closed [ |- _ ] [h0 |-  trans1 beta refl] [h0 |-  trans1 beta refl] q2
    )
 | DecExt d1 =>
   LogArr [h |-  _] [h |-  _] (mlam h0,#W,N1,N2 => fn rn =>
-   thm d1 (Dot (wknLogEqSub [h0] [h] [h0 |- #W[..]] s) rn)
+   thm d1 (Dot (wknLogSub [h0] [h] [h0 |- #W[..]] s) rn)
   )
 | DecBeta d1 d2 =>
    closed [|- _ ] [h |-  trans1 beta refl] [h |-  refl] (thm d1 (Dot s (thm d2 s)))
@@ -418,19 +423,19 @@ datatype IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:g' |- g} ctype =
 ;
 
 % % The identity substitution is logically related to itself
-rec idLogEqSub : IdSub [|-G] [g] [g' |- #Id[..]]
--> LogEqSub [|-G] [g] [g' |- #Id[..]] [g' |- #Id[..]] =
- / total r (idLogEqSub g g g s r) /
+rec idLogSub : IdSub [|-G] [g] [g' |- #Id[..]]
+-> LogSub [g] [g' |- #Id[..]] [g' |- #Id[..]] [|-G] =
+ / total r (idLogSub g g g s r) /
    fn r => case r of
 | INil => Nil
 | ISnoc (r' : IdSub [|- G] [g] [g' |- #Id[..]]) => 
-  let q = idLogEqSub r' in
-  Dot (wknLogEqSub [g',b:block x:tm,a:algeqr x x _] [g'] [g',b |- ..] (idLogEqSub r'))
+  let q = idLogSub r' in
+  Dot (wknLogSub [g',b:block x:tm,a:algeqr x x _] [g'] [g',b |- ..] (idLogSub r'))
       (reflect [ |- _] [g',b:block x:tm,y:algeqr x x _ |- b.2])
 ;
 
 rec completeness : IdSub [|-G] [g] [g' |- #Id[..]]
--> DecEq [|-G] [g |-  M1 ..] [g |-  M2 ..] [ |- T]
+-> Decl [|-G] [g |- (M1 ..) ~ (M2 ..)] [ |- T]
 -> [g' |- algeqn (M1 #Id[..]) (M2 #Id[..]) T] =
  / total (completeness) /
-   fn r => fn e => reify [|-_] (thm e (idLogEqSub r));
+   fn r => fn e => reify [|-_] (thm e (idLogSub r));

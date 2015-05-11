@@ -923,11 +923,9 @@ GLOBAL: sgn;
   clf_term_app:
     [
       [
-        u = UPSYMBOL; s = OPT[clf_sub_new] -> 
+        u = UPSYMBOL; s = clf_sub_new -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
           begin match s with
-            | None -> LF.Root(_loc, m, LF.Nil)
-            | Some s -> match s with
               (* Infix operator case *)
               | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
                 let op' = LF.Root(l, op, LF.Nil) in 
@@ -954,33 +952,20 @@ GLOBAL: sgn;
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
 
-      |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
-          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
-          
-      |  
-          "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
-          LF.Proj (_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+      |  "("; "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ; ")" ->
+          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+
       |
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
         x = SYMBOL; "."; k = clf_proj ->
           LF.Proj(_loc, k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
- 
-      |
-        "#"; p = SYMBOL; "."; k = clf_proj ->
-          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
 
-      |
-        "#"; p = SYMBOL ->
-            LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
       |
         m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
           let (l, x) = split '.' m in
           LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))
-      
- (*     | "#"; s = UPSYMBOL;  "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma) *)
 
       ]
     ]
@@ -1012,7 +997,9 @@ GLOBAL: sgn;
 
   clf_sub_new:
     [
-      [ 
+      [
+	-> LF.EmptySub _loc
+      |
           s = clf_sub_term -> s
 
       |
@@ -1462,21 +1449,6 @@ clf_pattern :
     | s  = clf_sub_new -> Sub s
     ]
   ];
-(*
-    app_or_sub:
-  [
-    [
-     h = SYMBOL; ","; t = SYMBOL ->
-            let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
-            Sub su
-(*        (* h = SELF; ",";  *)subs = LIST1 (clf_sub_new LEVEL "atomic") SEP "," -> 
-         let su = List.fold_left (fun acc s -> match s with 
-           |LF.Dot(l, LF.EmptySub _, front) -> LF.Dot(_loc, acc, front)) (LF.EmptySub(_loc)) (List.rev subs)
-       in Sub su *)
-    | tM = clf_term_app -> Term tM
-    | s  = clf_sub_new -> Sub s
-    ]
-  ];*)
 
   cmp_branch_pattern:
     [

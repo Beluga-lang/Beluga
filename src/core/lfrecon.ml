@@ -2017,36 +2017,17 @@ and elHead loc recT cD cPsi = function
       let s' = elSub loc recT cD cPsi s cPhi in
         (Int.LF.PVar (offset, s') , (tA, s'))
 
-  | Apx.LF.Proj (head, Apx.LF.ByPos i) ->
+  | Apx.LF.Proj (head, proj) ->
       let (head', sA) = elHead loc recT cD cPsi head in
-      let sAi = begin match Whnf.whnfTyp sA with
+      let (sAi, i) = begin match Whnf.whnfTyp sA with
                  | (Int.LF.Sigma tA'rec, s') ->
-                     Int.LF.getType head' (tA'rec, s') i 1
+		   let i  = getProjIndex loc cD cPsi tA'rec proj in
+                   (Int.LF.getType head' (tA'rec, s') i 1, i)
                  | (tA',s') -> raise (Error.Violation ("[elHead] expected Sigma type  "
                                                  ^ "found type " ^ P.typToString cD cPsi (tA', s')))
                 end
       in
         (Int.LF.Proj (head', i) , sAi )
-  (*the name of the projection is replaced by its index for the internal AST*)
-  | Apx.LF.Proj(head, Apx.LF.ByName n) ->
-
-    let (head', sA) = elHead loc recT cD cPsi head in
-    let (sAi, i) = begin match Whnf.whnfTyp sA with
-           | (Int.LF.Sigma tA'rec, s') ->
-              begin try
-                    let j = Int.LF.getIndex tA'rec n in 
-                    (Int.LF.getType head' (tA'rec, s') j 1, j)   
-              with
-              | _ -> raise (Error (loc, ProjNotFound (cD, cPsi, n,
-                                                         (Int.LF.Sigma tA'rec, s'))))
-              end 
-
-           | (tA',s') -> raise (Error.Violation ("[elHead] expected Sigma type  "
-                                           ^ "found type " ^ P.typToString cD cPsi (tA', s')))
-          end
-      in
-        (Int.LF.Proj (head', i) , sAi )
-
   | h -> raise (Error.Violation ("thisone" ^ what_head h))
 
 (* elSpineI  recT cD cPsi spine i sA  = (S : sP)

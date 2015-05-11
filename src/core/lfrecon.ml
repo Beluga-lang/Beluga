@@ -182,8 +182,7 @@ let rec what_head = function
   | Apx.LF.MVar _ -> "MVar"
   | Apx.LF.PVar (Apx.LF.Offset _ , _ ) -> "PVar Offset "
   | Apx.LF.PVar (Apx.LF.PInst _ , _ ) -> "PVar PInst "
-  | Apx.LF.Proj (head, Apx.LF.ByPos k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
-  | Apx.LF.Proj (head, Apx.LF.ByName name) -> "Proj " ^ what_head head ^ "." ^ name.string_of_name
+  | Apx.LF.Proj (head, _) -> "Proj " ^ what_head head 
   | Apx.LF.FVar _ -> "FVar"
   | Apx.LF.FMVar _ -> "FMVar"
   | Apx.LF.FPVar _ -> "FPVar"
@@ -506,33 +505,32 @@ let rec isProjPatSub s = match s with
   | Apx.LF.SVar _ -> false
   | Apx.LF.FSVar _ -> false
 
-let rec flattenProjPat loc cD s conv_list cPsi = match s with
-  | Apx.LF.Id cpsi -> Apx.LF.Id cpsi
-  | Apx.LF.EmptySub -> Apx.LF.EmptySub
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
-      let s' = flattenProjPat loc cD s conv_list cPsi in
-        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar (ConvSigma.new_index k conv_list )), s')
-
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, Apx.LF.ByPos j)), s) ->
-      let s' = flattenProjPat loc cD s conv_list cPsi in
-      let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
-      let k' = (ConvSigma.new_index k conv_list) - j + 1  in
-        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')  
-
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, Apx.LF.ByName j)), s) ->
-      let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
+let getProjPos loc cD cPsi k = function
+  | Apx.LF.ByPos j -> j
+  | Apx.LF.ByName j -> let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi k with
           _ -> raise Not_found
         end in
-      let indk = begin try Int.LF.getIndex (Int.LF.BVar k) (recA, Substitution.LF.id) j 1
+       try Int.LF.getIndex (Int.LF.BVar k) (recA, Substitution.LF.id) j 1
                      with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, j,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
-      end
-       in
+
+let flattenProjPatHead loc cD h conv_list cPsi = match h with
+  | Apx.LF.BVar k -> Apx.LF.BVar (ConvSigma.new_index k conv_list)
+
+  | Apx.LF.Proj(Apx.LF.BVar k, p) ->
+      let j = getProjPos loc cD cPsi k p in
+      let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
+      let k' = (ConvSigma.new_index k conv_list) - j + 1  in
+      (Apx.LF.BVar k')
+
+let rec flattenProjPat loc cD s conv_list cPsi = match s with
+  | Apx.LF.Id cpsi -> Apx.LF.Id cpsi
+  | Apx.LF.EmptySub -> Apx.LF.EmptySub
+  | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let s' = flattenProjPat loc cD s conv_list cPsi in
-      let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ j.string_of_name ^ "\n") in
-      let k' = (ConvSigma.new_index k conv_list) - indk + 1  in
-        Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')
+      let h' = flattenProjPatHead loc cD h conv_list cPsi in
+        Apx.LF.Dot (Apx.LF.Head h', s')
 
  (* these are the only cases which can happen *)
 

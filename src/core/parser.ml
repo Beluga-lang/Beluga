@@ -946,7 +946,7 @@ GLOBAL: sgn;
     [
       [
         "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ->
-          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma), k)
 
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
@@ -954,7 +954,7 @@ GLOBAL: sgn;
 
       |
         x = SYMBOL; "."; k = clf_proj ->
-          LF.Proj(_loc, k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
+          LF.Proj(_loc, LF.Name (_loc, Id.mk_name (Id.SomeString x)), k)
 
       | (* Namespaces supported for non-projection case only? *)
         m = [a = MODULESYM -> a | a = SYMBOL -> a] ->

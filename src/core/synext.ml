@@ -55,7 +55,7 @@ module LF = struct
     | MVar  of Loc.t * name * sub
     | Hole  of Loc.t
     | PVar  of Loc.t * name * sub
-    | Proj  of Loc.t * proj * head
+    | Proj  of Loc.t * head * proj
 
   and proj = 
     | ByPos of int

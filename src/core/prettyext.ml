@@ -352,7 +352,7 @@ module Ext = struct
       | LF.Hole (_) ->
           fprintf ppf "_"
 	    
-      | LF.Proj (_, p, h) ->
+      | LF.Proj (_, h, p) ->
 	fprintf ppf "%a.%a"
 	(fmt_ppr_lf_head cD cPsi lvl) h
 	(fmt_ppr_lf_proj lvl) p

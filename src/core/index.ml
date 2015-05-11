@@ -409,11 +409,11 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         (Apx.LF.FVar n , fvs)
       end
 
-  | Ext.LF.Proj(loc, k, Ext.LF.Name (_, n)) ->
+  | Ext.LF.Proj(loc, Ext.LF.ByPos k, Ext.LF.Name (_, n)) ->
       let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
         (Apx.LF.Proj(bvar, k), fvs')
 
-  | Ext.LF.NamedProj (loc, k, Ext.LF.Name (_, n)) ->
+  | Ext.LF.Proj (loc, Ext.LF.ByName k, Ext.LF.Name (_, n)) ->
       let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
         (Apx.LF.NamedProj(bvar, k), fvs')
 
@@ -439,11 +439,11 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
               (Apx.LF.FPVar (p, s') , (FPV p :: fvars' , closed_flag))
         end
 
-  | Ext.LF.Proj(loc, k, Ext.LF.PVar (_, p, s)) ->
+  | Ext.LF.Proj(loc, Ext.LF.ByPos k, Ext.LF.PVar (_, p, s)) ->
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
         (Apx.LF.Proj (pvar, k), fvs')
 
-  | Ext.LF.NamedProj (loc, k, Ext.LF.PVar (_, p, s)) ->
+  | Ext.LF.Proj (loc, Ext.LF.ByName k, Ext.LF.PVar (_, p, s)) ->
       let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
         (Apx.LF.NamedProj (pvar, k), fvs')
 

@@ -948,37 +948,37 @@ GLOBAL: sgn;
     [
       [
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
-          LF.Proj(_loc, int_of_string k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
       | 
         "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
-          LF.NamedProj (_loc, Id.mk_name (Id.SomeString k), LF.PVar(_loc, Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj (_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar(_loc, Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
 
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
-          LF.Proj(_loc, int_of_string k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
           
       |  
           "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
-          LF.NamedProj (_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj (_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
       |
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
         x = SYMBOL; "."; k = INTLIT ->
-          LF.Proj(_loc, int_of_string k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
+          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
       |
         x = SYMBOL; "."; k = SYMBOL ->
-          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
+          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
       
       |
         "#"; p = SYMBOL; "."; k = SYMBOL ->
-          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
 
       |
         "#"; p = SYMBOL; "."; k = UPSYMBOL ->
-          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
       |
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)

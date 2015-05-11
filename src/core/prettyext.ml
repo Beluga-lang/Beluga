@@ -352,23 +352,23 @@ module Ext = struct
       | LF.Hole (_) ->
           fprintf ppf "_"
 
-      | LF.Proj (_, k, LF.PVar (_, x, sigma)) ->
+      | LF.Proj (_, LF.ByPos k, LF.PVar (_, x, sigma)) ->
           fprintf ppf "#%s%s%a"
           (R.render_name x)
           ("." ^ string_of_int k)
           (fmt_ppr_lf_sub cD cPsi 0) sigma
 
-      | LF.Proj(_, k, LF.Name (_, x)) ->
+      | LF.Proj(_, LF.ByPos k, LF.Name (_, x)) ->
           fprintf ppf "%s%s"
           (R.render_name x)
           ("." ^ string_of_int k)
 
-      | LF.NamedProj(_, n, LF.Name (_, n')) ->
+      | LF.Proj(_, LF.ByName n, LF.Name (_, n')) ->
           fprintf ppf "%s.%s"
             (R.render_name n)
             (R.render_name n')
 
-      | LF.NamedProj(_, n, LF.PVar(_, n', sigma)) ->
+      | LF.Proj(_, LF.ByName n, LF.PVar(_, n', sigma)) ->
           fprintf ppf "#%s.%s%a"
             (R.render_name n)
             (R.render_name n')

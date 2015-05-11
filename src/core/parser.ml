@@ -951,7 +951,7 @@ GLOBAL: sgn;
           LF.Proj(_loc, int_of_string k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
       | 
         "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
-          LF.NamedProjPVar(_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))
+          LF.NamedProj (_loc, Id.mk_name (Id.SomeString k), LF.PVar(_loc, Id.mk_name (Id.SomeString p), sigma))
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
@@ -961,7 +961,7 @@ GLOBAL: sgn;
           
       |  
           "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
-          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))
+          LF.NamedProj (_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
       |
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
@@ -970,15 +970,15 @@ GLOBAL: sgn;
           LF.Proj(_loc, int_of_string k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
       |
         x = SYMBOL; "."; k = SYMBOL ->
-          LF.NamedProjName (_loc, Id.mk_name (Id.SomeString k), Id.mk_name (Id.SomeString x))
+          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
       
       |
         "#"; p = SYMBOL; "."; k = SYMBOL ->
-          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
 
       |
         "#"; p = SYMBOL; "."; k = UPSYMBOL ->
-          LF.NamedProjPVar (_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+          LF.NamedProj(_loc, Id.mk_name (Id.SomeString k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
       |
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)

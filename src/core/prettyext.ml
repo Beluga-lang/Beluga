@@ -363,12 +363,12 @@ module Ext = struct
           (R.render_name x)
           ("." ^ string_of_int k)
 
-      | LF.NamedProjName (_, n, n') ->
+      | LF.NamedProj(_, n, LF.Name (_, n')) ->
           fprintf ppf "%s.%s"
             (R.render_name n)
             (R.render_name n')
 
-      | LF.NamedProjPVar(_, n, (n', sigma)) ->
+      | LF.NamedProj(_, n, LF.PVar(_, n', sigma)) ->
           fprintf ppf "#%s.%s%a"
             (R.render_name n)
             (R.render_name n')

@@ -21,7 +21,7 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type error =
-  | ProjBVarImpossible of Int.LF.mctx * Int.LF.dctx * Int.LF.head
+  | ProjBVarImpossible of Int.LF.mctx * Int.LF.dctx * Id.offset * Apx.LF.proj
   | BVarTypMissing  of Int.LF.mctx * Int.LF.dctx * Int.LF.head
   | IdCtxsub
   | SubstTyp
@@ -54,14 +54,19 @@ let string_of_typeVariant = function
   | VariantPi -> "Pi type"
   | VariantSigma -> "Sigma type"
 
+let string_of_proj = function
+  | Apx.LF.ByPos k -> string_of_int k
+  | Apx.LF.ByName n -> RR.render_name n
+
 let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-        | ProjBVarImpossible (cD, cPsi, h) ->
+        | ProjBVarImpossible (cD, cPsi, x, proj) ->
             Format.fprintf ppf
-              "%a is illegal; there is no block declaration in %a."
-              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h
+              "%a.%s is illegal; there is no block declaration in %a."
+              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) (Int.LF.BVar x)
+	      (string_of_proj proj)
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
         | BVarTypMissing (cD, cPsi, _h) ->
             Format.fprintf ppf
@@ -175,10 +180,6 @@ let _ = Error.register_printer
 let rec conv_listToString clist = match clist with
   | [] -> " "
   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
-
-let string_of_proj = function
-  | Apx.LF.ByPos k -> string_of_int k
-  | Apx.LF.ByName n -> RR.render_name n
 
 let rec what_head = function
   | Apx.LF.BVar _ -> "BVar"
@@ -1453,11 +1454,12 @@ and elTerm' recT cD cPsi r sP = match r with
     end
 
   (* Reconstruction for projections *)
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , proj),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi x with
-          _ -> raise (Error (loc, ProjBVarImpossible (cD, cPsi, Int.LF.Proj(Int.LF.BVar x, k))))
+          _ -> raise (Error (loc, ProjBVarImpossible (cD, cPsi, x, proj)))
         end in
+      let k       = getProjIndex loc cD cPsi recA proj in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
@@ -1538,17 +1540,6 @@ and elTerm' recT cD cPsi r sP = match r with
         raise (Error (loc, CompTypAnn ))
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
- (*projections specified by name are converted to indecies denoting their relative position*)
- | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByName k),  spine) ->
-      let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
-        begin try Context.ctxSigmaDec cPsi x with
-          _ -> raise Not_found
-        end in
-      let indk       = begin try Int.LF.getIndex recA k
-                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
-                     end
-       in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos indk),  spine)) sP
 
    | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByName k),  spine) ->
     begin

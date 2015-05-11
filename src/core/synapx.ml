@@ -58,13 +58,16 @@ module LF = struct
     | BVar  of offset
     | Const of cid_term
     | MVar  of cvar * sub
-    | Proj  of head * int
-    | NamedProj  of head * name
+    | Proj  of head * proj
     | Hole
     | PVar  of cvar * sub
     | FVar  of name
     | FMVar of name   * sub
     | FPVar of name   * sub
+
+  and proj = 
+    | ByPos of int
+    | ByName of name
 
   and spine =
     | Nil

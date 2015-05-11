@@ -182,8 +182,8 @@ let rec what_head = function
   | Apx.LF.MVar _ -> "MVar"
   | Apx.LF.PVar (Apx.LF.Offset _ , _ ) -> "PVar Offset "
   | Apx.LF.PVar (Apx.LF.PInst _ , _ ) -> "PVar PInst "
-  | Apx.LF.Proj (head, k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
-  | Apx.LF.NamedProj (head, name) -> "Proj " ^ what_head head ^ "." ^ name.string_of_name
+  | Apx.LF.Proj (head, Apx.LF.ByPos k) -> "Proj " ^ what_head head ^ "." ^ string_of_int k
+  | Apx.LF.Proj (head, Apx.LF.ByName name) -> "Proj " ^ what_head head ^ "." ^ name.string_of_name
   | Apx.LF.FVar _ -> "FVar"
   | Apx.LF.FMVar _ -> "FMVar"
   | Apx.LF.FPVar _ -> "FPVar"
@@ -500,9 +500,6 @@ let rec isProjPatSub s = match s with
   | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar _k,_j)), s) ->
      isProjPatSub s
 
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.NamedProj(Apx.LF.BVar _k,_j)), s) ->
-     isProjPatSub s
-
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
 
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
@@ -516,13 +513,13 @@ let rec flattenProjPat loc cD s conv_list cPsi = match s with
       let s' = flattenProjPat loc cD s conv_list cPsi in
         Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar (ConvSigma.new_index k conv_list )), s')
 
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, j)), s) ->
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, Apx.LF.ByPos j)), s) ->
       let s' = flattenProjPat loc cD s conv_list cPsi in
       let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
       let k' = (ConvSigma.new_index k conv_list) - j + 1  in
         Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s')  
 
-  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.NamedProj(Apx.LF.BVar k, j)), s) ->
+  | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar k, Apx.LF.ByName j)), s) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi k with
           _ -> raise Not_found
@@ -701,7 +698,7 @@ let reset_fcvarCnstr () = (fcvar_cnstr := [])
 let rec synHead cD loc cPsi h = match h with
    | Apx.LF.BVar k -> Context.ctxDec cPsi k, Int.LF.BVar k
 
-   | Apx.LF.Proj(h,j) ->
+   | Apx.LF.Proj(h,Apx.LF.ByPos j) ->
      begin match synHead cD loc cPsi h with
        | (Int.LF.TypDecl (x, Int.LF.Sigma typRec) , h') -> 
 	 begin (* try *)
@@ -710,7 +707,7 @@ let rec synHead cD loc cPsi h = match h with
     (* with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, y, (Int.LF.Sigma typRec, Substitution.LF.id)))) *)
 	 end
      end
-   | Apx.LF.NamedProj(h,nj) ->
+   | Apx.LF.Proj(h, Apx.LF.ByName nj) ->
      begin match synHead cD loc cPsi h with
        | (Int.LF.TypDecl (x, Int.LF.Sigma typRec) , h') -> 
 	 begin (* try *)
@@ -1279,7 +1276,7 @@ and elTerm' recT cD cPsi r sP = match r with
       end
 
   (* Reconstruct: Projection *)
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), k), spine) as _m ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByPos k), spine) as _m ->
       (* Other case where spine is not empty is not implemented -bp *)
         begin try
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
@@ -1353,7 +1350,7 @@ and elTerm' recT cD cPsi r sP = match r with
 	  )
         end
 
-  | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.FPVar (p, s), k), spine)->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByName k), spine)->
       begin try 
       (* Other case where spine is not empty is not implemented -bp *)
           let _ = dprint (fun () -> "[Reconstruct Named Projection Parameter] #" ^
@@ -1372,7 +1369,7 @@ and elTerm' recT cD cPsi r sP = match r with
                     with _ -> raise (Error (loc, ProjNotFound (cD, cPhi, k,
                                                          (tA, Substitution.LF.id))))
                     end
-              in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), indk), spine)) sP
+              in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByPos indk), spine)) sP
        with Not_found ->
     (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
           p.string_of_name ^ "." ^ k.string_of_name ^ " NOT FOUND") ;
@@ -1526,7 +1523,7 @@ and elTerm' recT cD cPsi r sP = match r with
     end
 
   (* Reconstruction for projections *)
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi x with
           _ -> raise (Error (loc, ProjBVarImpossible (cD, cPsi, Int.LF.Proj(Int.LF.BVar x, k))))
@@ -1546,7 +1543,7 @@ and elTerm' recT cD cPsi r sP = match r with
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
       end
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos k),  spine) ->
     begin
       match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
@@ -1575,7 +1572,7 @@ and elTerm' recT cD cPsi r sP = match r with
     end
 
 
-  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), k), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByPos k), spine) ->
       begin try
         let recA =
               match tA with
@@ -1612,7 +1609,7 @@ and elTerm' recT cD cPsi r sP = match r with
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
  (*projections specified by name are converted to indecies denoting their relative position*)
- | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
+ | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByName k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
         begin try Context.ctxSigmaDec cPsi x with
           _ -> raise Not_found
@@ -1621,9 +1618,9 @@ and elTerm' recT cD cPsi r sP = match r with
                      with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
                      end
-       in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , indk),  spine)) sP
+       in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos indk),  spine)) sP
 
-   | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
+   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByName k),  spine) ->
     begin
       match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
@@ -1633,10 +1630,10 @@ and elTerm' recT cD cPsi r sP = match r with
                    with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
                     end
-          in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), indk),  spine)) sP
+          in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos indk),  spine)) sP
     end
 
-    | Apx.LF.Root (loc, Apx.LF.NamedProj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), k), spine) ->
+    | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByName k), spine) ->
       begin try
         let recA =
               match tA with
@@ -1653,7 +1650,7 @@ and elTerm' recT cD cPsi r sP = match r with
                         with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
                         end
-        in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), indk), spine)) sP
+        in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByPos indk), spine)) sP
        with _ -> raise Not_found
       end
 
@@ -1844,7 +1841,7 @@ and elClosedTerm' recT cD cPsi r = match r with
          raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
@@ -1854,7 +1851,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
         (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS) , sQ)
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos k),  spine) ->
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
             let t' = elSub loc recT cD  cPsi t cPsi' in
@@ -1871,7 +1868,7 @@ and elClosedTerm' recT cD cPsi r = match r with
 	    raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), k ) , spine ) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), Apx.LF.ByPos k ) , spine ) ->
       begin match (h, tA) with
 	| (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
 	    let t' = elSub loc recT cD  cPsi s cPsi' in
@@ -1890,7 +1887,7 @@ and elClosedTerm' recT cD cPsi r = match r with
     		  raise (Error (loc, CompTypAnn))
           end
 
-  | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.BVar x , k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByName k),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
       let index = Int.LF.getIndex (Int.LF.BVar x) (recA, Substitution.LF.id) k 1 in
       let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) index 1
@@ -1901,7 +1898,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
         (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, index), tS) , sQ)
 
-  | Apx.LF.Root (loc,  Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.Offset p,t), k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByName k),  spine) ->
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
             let t' = elSub loc recT cD  cPsi t cPsi' in
@@ -1919,7 +1916,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), k ) , spine ) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), Apx.LF.ByName k ) , spine ) ->
     begin match (h, tA) with
     | (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
         let t' = elSub loc recT cD  cPsi s cPsi' in
@@ -1942,7 +1939,7 @@ and elClosedTerm' recT cD cPsi r = match r with
         dprint (fun () -> "[elClosedTerm'] Looking for p " ^ P.headToString cD cPsi' h);
         raise (Error (loc, CompTypAnn))
         end
-  | Apx.LF.Root (loc, Apx.LF.NamedProj (Apx.LF.FPVar(_,_), k ) , spine ) -> failwith "NamedProj case"
+  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.FPVar(_,_), Apx.LF.ByName k ) , spine ) -> failwith "NamedProj case"
   | Apx.LF.Root (loc, h , _ ) ->
       (dprint (fun () -> "[elClosedTerm'] Head not covered? - " ^ (what_head h));
       raise (Error (loc, CompTypAnn )))
@@ -2223,7 +2220,7 @@ and elHead loc recT cD cPsi = function
       let s' = elSub loc recT cD cPsi s cPhi in
         (Int.LF.PVar (offset, s') , (tA, s'))
 
-  | Apx.LF.Proj (head, i) ->
+  | Apx.LF.Proj (head, Apx.LF.ByPos i) ->
       let (head', sA) = elHead loc recT cD cPsi head in
       let sAi = begin match Whnf.whnfTyp sA with
                  | (Int.LF.Sigma tA'rec, s') ->
@@ -2234,7 +2231,7 @@ and elHead loc recT cD cPsi = function
       in
         (Int.LF.Proj (head', i) , sAi )
   (*the name of the projection is replaced by its index for the internal AST*)
-  | Apx.LF.NamedProj(head, n) ->
+  | Apx.LF.Proj(head, Apx.LF.ByName n) ->
 
     let (head', sA) = elHead loc recT cD cPsi head in
     let (sAi, i) = begin match Whnf.whnfTyp sA with

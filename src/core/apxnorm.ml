@@ -157,8 +157,6 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 
   | Apx.LF.Proj (pv, j) ->
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
-  | Apx.LF.NamedProj (pv, j) ->
-    Apx.LF.NamedProj (cnormApxHead cD delta pv (cD'', t), j)
 
   | Apx.LF.FMVar(u, s) ->
       Apx.LF.FMVar(u, cnormApxSub cD delta s (cD'', t))
@@ -458,9 +456,6 @@ and collectApxHead fMVs h = match h with
   | Apx.LF.Proj(h, _k) ->
       collectApxHead fMVs h
 
-  | Apx.LF.NamedProj(h, _k) ->
-      collectApxHead fMVs h
-
   | _ -> fMVs
 
 and collectApxSub fMVs s = match s with
@@ -682,7 +677,6 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
           Apx.LF.MVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.Proj (pv, j) -> Apx.LF.Proj(fmvApxHead fMVs cD d_param pv, j)
-  | Apx.LF.NamedProj (pv, j) -> Apx.LF.NamedProj(fmvApxHead fMVs cD d_param pv, j)
 
   (* bound meta-variables / parameters *)
   | Apx.LF.MVar (i, s) ->

@@ -947,11 +947,9 @@ GLOBAL: sgn;
   clf_head:
     [
       [
-        "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
-          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
-      | 
-        "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
-          LF.Proj (_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar(_loc, Id.mk_name (Id.SomeString p), sigma))
+        "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ->
+          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
+
       |
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
@@ -966,19 +964,13 @@ GLOBAL: sgn;
          "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
-        x = SYMBOL; "."; k = INTLIT ->
-          LF.Proj(_loc, LF.ByPos (int_of_string k), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
+        x = SYMBOL; "."; k = clf_proj ->
+          LF.Proj(_loc, k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
+ 
       |
-        x = SYMBOL; "."; k = SYMBOL ->
-          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.Name (_loc, Id.mk_name (Id.SomeString x)))
-      
-      |
-        "#"; p = SYMBOL; "."; k = SYMBOL ->
-          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
+        "#"; p = SYMBOL; "."; k = clf_proj ->
+          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
 
-      |
-        "#"; p = SYMBOL; "."; k = UPSYMBOL ->
-          LF.Proj(_loc, LF.ByName (Id.mk_name (Id.SomeString k)), LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub _loc ))
       |
         "#"; p = SYMBOL ->
             LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.EmptySub  _loc)
@@ -993,6 +985,14 @@ GLOBAL: sgn;
       ]
     ]
   ;
+
+  clf_proj:
+    [
+      [
+	k = INTLIT -> LF.ByPos (int_of_string k)
+      | n = SYMBOL -> LF.ByName (Id.mk_name (Id.SomeString n))
+      ]
+    ];
 
   clf_sub_term:
     [

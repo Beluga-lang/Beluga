@@ -1688,21 +1688,23 @@ and elClosedTerm' recT cD cPsi r = match r with
          raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByPos k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , proj),  spine) ->
       let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
-      let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
+      let k  = getProjIndex loc cD cPsi recA proj in
+      let sA = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) k 1
                      with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
-                     end
+               end
        in
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
         (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS) , sQ)
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), proj),  spine) ->
       begin match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
             let t' = elSub loc recT cD  cPsi t cPsi' in
-            let  sA = begin try Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k 1
+	    let k  = getProjIndex loc cD cPsi recA proj in
+            let sA = begin try Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k 1
                       with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, t'))))
                       end
@@ -1715,13 +1717,14 @@ and elClosedTerm' recT cD cPsi r = match r with
 	    raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), Apx.LF.ByPos k ) , spine ) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), proj) , spine ) ->
       begin match (h, tA) with
 	| (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
 	    let t' = elSub loc recT cD  cPsi s cPsi' in
 	    let s = Substitution.LF.comp s' t' in
+	    let k  = getProjIndex loc cD cPsi recA proj in
               begin try
-	        let  sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
+	        let sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
 	        let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
             (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), k), tS) , sQ)
               with
@@ -1734,59 +1737,6 @@ and elClosedTerm' recT cD cPsi r = match r with
     		  raise (Error (loc, CompTypAnn))
           end
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.BVar x , Apx.LF.ByName k),  spine) ->
-      let Int.LF.TypDecl (_, Int.LF.Sigma recA) = Context.ctxSigmaDec cPsi x in
-      let index = Int.LF.getIndex recA k in
-      let sA       = begin try Int.LF.getType (Int.LF.BVar x) (recA, Substitution.LF.id) index 1
-                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
-                     end
-       in
-      let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-        (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, index), tS) , sQ)
-
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByName k),  spine) ->
-      begin match Whnf.mctxPDec cD p with
-        | (_, Int.LF.Sigma recA, cPsi') ->
-            let t' = elSub loc recT cD  cPsi t cPsi' in
-            let index = Int.LF.getIndex recA k in
-            let  sA = begin try Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') index 1
-                      with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma recA, t'))))
-                      end
-            in
-            let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), index), tS) , sQ)
-        | _  ->
-      dprint (fun () -> "[elClosedTerm'] Looking for p with offset " ^ R.render_offset p);
-      dprint (fun () -> "in context cD = " ^ P.mctxToString cD);
-      raise (Error (loc, CompTypAnn))
-      end
-
-  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.PInst (h, tA, cPsi' ) , s ), Apx.LF.ByName k ) , spine ) ->
-    begin match (h, tA) with
-    | (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
-        let t' = elSub loc recT cD  cPsi s cPsi' in
-        let s = Substitution.LF.comp s' t' in
-        begin try
-              let index = Int.LF.getIndex recA k in
-              begin try
-                let  sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') index 1 in
-                let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-                  (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), index), tS) , sQ)
-              with
-               Not_found ->
-                  raise (Error (loc, ProjNotValid (cD, cPsi, index, (Int.LF.Sigma recA, t'))))
-              end
-            with
-             _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k, (Int.LF.Sigma recA, t'))))
-                end
-
-          | _  ->
-        dprint (fun () -> "[elClosedTerm'] Looking for p " ^ P.headToString cD cPsi' h);
-        raise (Error (loc, CompTypAnn))
-        end
-  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.FPVar(_,_), Apx.LF.ByName k ) , spine ) -> failwith "NamedProj case"
   | Apx.LF.Root (loc, h , _ ) ->
       (dprint (fun () -> "[elClosedTerm'] Head not covered? - " ^ (what_head h));
       raise (Error (loc, CompTypAnn )))

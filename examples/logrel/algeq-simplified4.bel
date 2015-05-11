@@ -31,7 +31,7 @@ datatype IsVarSub : {g:tctx}(h:tctx) {#S: h |- g} ctype #positive =
 | Nil : IsVarSub [] [h |- ^ ]
 | Cons :  IsVarSub [g] [h |- #S[..]] ->
  {#p : [h |- block x:tm, y:algeqr x x A]}
- IsVarSub [g,b:block x:tm,y:algeqr x x A] [h |- #S[..], (#p ..) ];
+ IsVarSub [g,b:block x:tm,y:algeqr x x A] [h |- #S[..], #p .. ];
 
 prop : type.
 eq : tm -> tm -> tp -> prop.

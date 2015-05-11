@@ -952,17 +952,11 @@ GLOBAL: sgn;
         "#"; p = SYMBOL;  sigma = clf_sub_new ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
 
-      |  "("; "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ; ")" ->
-          LF.Proj(_loc, k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
-
-      |
-         "("; "#"; p = SYMBOL;  sigma = clf_sub_new ; ")" ->
-          LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
         x = SYMBOL; "."; k = clf_proj ->
           LF.Proj(_loc, k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
 
-      |
+      | (* Namespaces supported for non-projection case only? *)
         m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
           let (l, x) = split '.' m in
           LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))

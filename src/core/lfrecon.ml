@@ -1475,11 +1475,12 @@ and elTerm' recT cD cPsi r sP = match r with
            raise (Error (loc, TypMismatchElab (cD, cPsi, sP, sQ)))
       end
 
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos k),  spine) ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), proj),  spine) ->
     begin
       match Whnf.mctxPDec cD p with
         | (_, Int.LF.Sigma recA, cPsi') ->
           let t' = elSub loc recT cD  cPsi t cPsi' in
+	  let k       = getProjIndex loc cD cPsi recA proj in
           let sA = begin try
                       Int.LF.getType (Int.LF.PVar (p, t')) (recA,  t') k 1
                    with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
@@ -1540,18 +1541,6 @@ and elTerm' recT cD cPsi r sP = match r with
         raise (Error (loc, CompTypAnn ))
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
       end
-
-   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByName k),  spine) ->
-    begin
-      match Whnf.mctxPDec cD p with
-        | (_, Int.LF.Sigma recA, cPsi') ->
-          let indk = begin try
-                      Int.LF.getIndex recA k
-                   with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
-                    end
-          in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), Apx.LF.ByPos indk),  spine)) sP
-    end
 
     | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByName k), spine) ->
       begin try

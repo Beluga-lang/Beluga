@@ -505,12 +505,9 @@ let rec isProjPatSub s = match s with
   | Apx.LF.SVar _ -> false
   | Apx.LF.FSVar _ -> false
 
-let getProjPos loc cD cPsi k = function
+let getProjPos loc cD cPsi tp = function
   | Apx.LF.ByPos j -> j
-  | Apx.LF.ByName j -> let Int.LF.TypDecl (_, Int.LF.Sigma recA) =
-        begin try Context.ctxSigmaDec cPsi k with
-          _ -> raise Not_found
-        end in
+  | Apx.LF.ByName j -> let Int.LF.TypDecl (_, Int.LF.Sigma recA) = tp in
        try Int.LF.getIndex recA j
                      with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, j,
                                                          (Int.LF.Sigma recA, Substitution.LF.id))))
@@ -519,7 +516,8 @@ let flattenProjPatHead loc cD h conv_list cPsi = match h with
   | Apx.LF.BVar k -> Apx.LF.BVar (ConvSigma.new_index k conv_list)
 
   | Apx.LF.Proj(Apx.LF.BVar k, p) ->
-      let j = getProjPos loc cD cPsi k p in
+      let tp = begin try Context.ctxSigmaDec cPsi k with _ -> raise Not_found end in
+      let j = getProjPos loc cD cPsi tp p in
       let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
       let k' = (ConvSigma.new_index k conv_list) - j + 1  in
       (Apx.LF.BVar k')
@@ -693,22 +691,14 @@ let reset_fcvarCnstr () = (fcvar_cnstr := [])
  *     cPsi |- s' <= cPhi
  *)
 
-let getProjIndex typRec h' = function
-  | Apx.LF.ByPos j -> j
-  | Apx.LF.ByName nj -> Int.LF.getIndex typRec nj
-
 let rec synHead cD loc cPsi h = match h with
    | Apx.LF.BVar k -> Context.ctxDec cPsi k, Int.LF.BVar k
    | Apx.LF.Proj(h, nj) ->
-     begin match synHead cD loc cPsi h with
-       | (Int.LF.TypDecl (x, Int.LF.Sigma typRec) , h') -> 
-	 begin (* try *)
-	   let j = getProjIndex typRec h' nj in
-	   let sQ = Int.LF.getType h' (typRec, Substitution.LF.id) j 1 in
-	   Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
-    (* with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, y, (Int.LF.Sigma typRec, Substitution.LF.id)))) *)
-	 end
-     end
+     let (tp, h') = synHead cD loc cPsi h in
+     let j = getProjPos loc cD cPsi tp nj in
+     let Int.LF.TypDecl (x, Int.LF.Sigma typRec) = tp in
+     let sQ = Int.LF.getType h' (typRec, Substitution.LF.id) j 1 in
+     Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
 
 let rec synDom cD loc cPsi s = begin match s with
   | Apx.LF.Id _ ->

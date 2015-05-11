@@ -275,8 +275,7 @@ module Ext = struct
         | LF.PVar _
         | LF.Name _
         | LF.Hole _
-        | LF.ProjName _
-        | LF.ProjPVar _ -> ms
+        | LF.Proj _ -> ms
 
       in function
         | LF.Lam (_, x, m) ->
@@ -353,13 +352,13 @@ module Ext = struct
       | LF.Hole (_) ->
           fprintf ppf "_"
 
-      | LF.ProjPVar (_, k, (x, sigma)) ->
+      | LF.Proj (_, k, LF.PVar (_, x, sigma)) ->
           fprintf ppf "#%s%s%a"
           (R.render_name x)
           ("." ^ string_of_int k)
           (fmt_ppr_lf_sub cD cPsi 0) sigma
 
-      | LF.ProjName (_, k, x) ->
+      | LF.Proj(_, k, LF.Name (_, x)) ->
           fprintf ppf "%s%s"
           (R.render_name x)
           ("." ^ string_of_int k)

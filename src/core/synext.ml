@@ -55,9 +55,8 @@ module LF = struct
     | MVar  of Loc.t * name * sub
     | Hole  of Loc.t
     | PVar  of Loc.t * name * sub
-    | ProjName  of Loc.t * int * name
+    | Proj  of Loc.t * int * head
     | NamedProjName  of Loc.t * name * name
-    | ProjPVar  of Loc.t * int * (name * sub)
     | NamedProjPVar  of Loc.t * name * (name * sub)
 
   and spine =

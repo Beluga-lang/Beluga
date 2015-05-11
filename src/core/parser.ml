@@ -948,7 +948,7 @@ GLOBAL: sgn;
     [
       [
         "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ->
-          LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj(_loc, int_of_string k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
       | 
         "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ->
           LF.NamedProjPVar(_loc, Id.mk_name (Id.SomeString k), (Id.mk_name (Id.SomeString p), sigma))
@@ -957,7 +957,7 @@ GLOBAL: sgn;
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
 
       |  "("; "#"; p = SYMBOL; "."; k = INTLIT; sigma = clf_sub_new ; ")" ->
-          LF.ProjPVar (_loc, int_of_string k, (Id.mk_name (Id.SomeString p), sigma))
+          LF.Proj(_loc, int_of_string k, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma))
           
       |  
           "("; "#"; p = SYMBOL; "."; k = SYMBOL; sigma = clf_sub_new ; ")" ->
@@ -967,7 +967,7 @@ GLOBAL: sgn;
           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
       |
         x = SYMBOL; "."; k = INTLIT ->
-          LF.ProjName (_loc, int_of_string k, Id.mk_name (Id.SomeString x))
+          LF.Proj(_loc, int_of_string k, LF.Name (_loc, Id.mk_name (Id.SomeString x)))
       |
         x = SYMBOL; "."; k = SYMBOL ->
           LF.NamedProjName (_loc, Id.mk_name (Id.SomeString k), Id.mk_name (Id.SomeString x))

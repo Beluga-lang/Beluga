@@ -176,6 +176,10 @@ let rec conv_listToString clist = match clist with
   | [] -> " "
   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
 
+let string_of_proj = function
+  | Apx.LF.ByPos k -> string_of_int k
+  | Apx.LF.ByName n -> RR.render_name n
+
 let rec what_head = function
   | Apx.LF.BVar _ -> "BVar"
   | Apx.LF.Const _ -> "Const"
@@ -1258,11 +1262,11 @@ and elTerm' recT cD cPsi r sP = match r with
       end
 
   (* Reconstruct: Projection *)
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByPos k), spine) as _m ->
+  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), proj), spine) as _m ->
       (* Other case where spine is not empty is not implemented -bp *)
         begin try
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
-			    p.string_of_name ^ "." ^ string_of_int k) in
+			    p.string_of_name ^ "." ^ string_of_proj proj) in
           let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _)) = FCVar.get  p in
 	  let d = Context.length cD - Context.length cD_d in
 	  let (tA, cPhi) = if d = 0 then (tA, cPhi) else
@@ -1271,6 +1275,11 @@ and elTerm' recT cD cPsi r sP = match r with
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] Found its type ") in
           let _ = dprint (fun () -> "      with type " ^
 			    P.typToString cD cPhi (tA, Substitution.LF.id) ^ "[" ^ P.dctxToString cD cPhi ^ "]") in
+	  let k = begin match proj with
+	    | Apx.LF.ByPos k -> k
+	    | Apx.LF.ByName k -> try Int.LF.getIndex typRec k
+	      with _ -> raise (Error (loc, ProjNotFound (cD, cPhi, k, (tA, Substitution.LF.id))))
+	  end in
           let s'' = elSub loc recT cD cPsi s cPhi in
           let sA =  begin try
                          Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1
@@ -1290,7 +1299,7 @@ and elTerm' recT cD cPsi r sP = match r with
             end
         with Not_found ->
 	  (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
-			    p.string_of_name ^ "." ^ string_of_int k ^ " NOT FOUND") ;
+			    p.string_of_name ^ "." ^ string_of_proj proj ^ " NOT FOUND") ;
           begin match (isPatSub s, spine) with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in
@@ -1305,71 +1314,11 @@ and elTerm' recT cD cPsi r sP = match r with
                 let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx  (cPsi, Whnf.m_id))) loc in
 		let _ = dprint (fun () -> "[ctxVar] done") in
                 let h = Int.LF.FPVar (p, Substitution.LF.id) in
-                let (typRec, s_inst) =
-                  begin match synSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, k) schema with
-                  | None -> raise (Error.Violation ("type sP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ " not in schema " ^
+                let (typRec, s_inst,  kIndex) =
+                  begin match synSchemaElem' loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
+                  | None , _ -> raise (Error.Violation ("type sP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ " not in schema " ^
                                              P.schemaToString schema))
-                  | Some (typrec, subst) -> (typrec, subst)
-                  end in
-                let tB  =
-                  begin match typRec with
-                  | Int.LF.SigmaLast(n, tA) ->
-                      (dprint (fun () -> "synType for PVar: [SigmaLast]" ^ P.typToString cD cPhi (tA, s_inst) ^ "\n"); tA)
-                  | typRec' ->
-                      (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cD cPhi (typRec', s_inst) ^ "\n") ;
-                       Int.LF.Sigma typRec' )
-                  end in
-                  FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Int.LF.Maybe));
-                  Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k),  Int.LF.Nil)
-
-            | (false, Apx.LF.Nil) -> failwith "Not implemented"
-                (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in *)
-                (*   add_fcvarCnstr (m, q); *)
-                (*   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil) *)
-
-            | ( _ , _ ) -> raise (Error (loc, ParamFun))
-          end
-	  )
-        end
-
-  | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByName k), spine)->
-      begin try 
-      (* Other case where spine is not empty is not implemented -bp *)
-          let _ = dprint (fun () -> "[Reconstruct Named Projection Parameter] #" ^
-          p.string_of_name ^ "." ^ k.string_of_name) in
-          let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _)) = FCVar.get  p in
-    let d = Context.length cD - Context.length cD_d in
-    let (tA, cPhi) = if d = 0 then (tA, cPhi) else
-      (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
-
-          let _ = dprint (fun () -> "[Reconstruct Named Projection Parameter] Found its type ") in
-          let _ = dprint (fun () -> "      with type " ^
-          P.typToString cD cPhi (tA, Substitution.LF.id) ^ "[" ^ P.dctxToString cD cPhi ^ "]") in
-          let indk =  begin try
-                         Int.LF.getIndex typRec k
-                    with _ -> raise (Error (loc, ProjNotFound (cD, cPhi, k,
-                                                         (tA, Substitution.LF.id))))
-                    end
-              in elTerm' recT cD cPsi (Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.FPVar (p, s), Apx.LF.ByPos indk), spine)) sP
-       with Not_found ->
-    (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
-          p.string_of_name ^ "." ^ k.string_of_name ^ " NOT FOUND") ;
-          begin match (isPatSub s, spine) with
-            | (true, Apx.LF.Nil) ->
-                let (cPhi, s'') = synDom cD loc cPsi s in
-                let si          = Substitution.LF.invert s'' in
-                let tP = pruningTyp loc cD cPsi (*?*)
-      (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
-                let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
-                let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi) in
-                let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx  (cPsi, Whnf.m_id))) loc in
-    let _ = dprint (fun () -> "[ctxVar] done") in
-                let h = Int.LF.FPVar (p, Substitution.LF.id) in
-                let (typRec, s_inst, kIndex) =
-                  begin match synNamedSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, k) schema with
-                  | (None, _)-> raise (Error.Violation ("type sP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ " not in schema " ^
-                                             P.schemaToString schema))
-                  | (Some (typrec, subst), index) -> (typrec, subst, index)
+                  | Some (typrec, subst) , index -> (typrec, subst, index)
                   end in
                 let tB  =
                   begin match typRec with
@@ -1382,15 +1331,16 @@ and elTerm' recT cD cPsi r sP = match r with
                   FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Int.LF.Maybe));
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
 
-             | (false, Apx.LF.Nil) -> failwith "ERROR"
-(*                let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in
-                  add_fcvarCnstr (m, q);
-                  Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil)
- *)
+            | (false, Apx.LF.Nil) -> failwith "Not implemented"
+                (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in *)
+                (*   add_fcvarCnstr (m, q); *)
+                (*   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.PVar (q, Substitution.LF.id), k),  Int.LF.Nil) *)
+
             | ( _ , _ ) -> raise (Error (loc, ParamFun))
           end
-    ) end
-            
+	  )
+        end
+
 
   (* Reconstruction for meta-variables  *)
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (tN, tQ, cPhi), s'), Apx.LF.Nil)  ->
@@ -1758,7 +1708,11 @@ and synNamedSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schem
           with Unify.Failure _  -> self (Int.LF.Schema rest)
             | Not_found -> self (Int.LF.Schema rest)
 
-
+and synSchemaElem' loc recT cD cPsi sP (head, proj) schema =
+  match proj with
+  | Apx.LF.ByName n -> synNamedSchemaElem loc recT cD cPsi sP (head, n) schema
+  | Apx.LF.ByPos k -> (synSchemaElem loc recT cD cPsi sP (head, k) schema, k)
+  
 
 
 and elClosedTerm' recT cD cPsi r = match r with

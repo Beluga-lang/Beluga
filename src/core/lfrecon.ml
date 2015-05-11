@@ -1505,7 +1505,7 @@ and elTerm' recT cD cPsi r sP = match r with
     end
 
 
-  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByPos k), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), proj), spine) ->
       begin try
         let recA =
               match tA with
@@ -1517,6 +1517,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
         in
         let s''       = elSub loc recT cD cPsi s' cPhi in
+	let k       = getProjIndex loc cD cPsi recA proj in
         let sA        = begin try
                            Int.LF.getType h (recA, s'') k 1
                         with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
@@ -1540,26 +1541,6 @@ and elTerm' recT cD cPsi r sP = match r with
       with _   ->
         raise (Error (loc, CompTypAnn ))
         (* raise (Error.Error (loc, Error.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), sQ, sP)))*)
-      end
-
-    | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByName k), spine) ->
-      begin try
-        let recA =
-              match tA with
-              | Int.LF.Sigma recA -> recA
-              | _ ->
-                  dprint (fun () -> "Type of Parameter variable " ^ P.headToString cD cPhi h
-                                  ^ "not a Sigma-Type, yet used with Projection; found "
-                                  ^ P.typToString cD cPhi (tA, Substitution.LF.id) ^ "\n ill-typed") ;
-                  raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
-        in
-        let indk        = begin try
-                           Int.LF.getIndex recA k
-                        with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
-                        end
-        in elTerm' recT cD cPsi (Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s'), Apx.LF.ByPos indk), spine)) sP
-       with _ -> raise Not_found
       end
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst _ , _), _ ), _) ->

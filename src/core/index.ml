@@ -397,6 +397,10 @@ and index_term cvars bvars fvars = function
   | Ext.LF.TList (loc, nl)->
     index_term cvars bvars fvars (shunting_yard nl )
 
+and index_proj = function
+  | Ext.LF.ByPos k -> Apx.LF.ByPos k
+  | Ext.LF.ByName n -> Apx.LF.ByName n
+
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
       let _ = dprint (fun () -> "Indexing name " ^ n.string_of_name) in
@@ -409,13 +413,9 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         (Apx.LF.FVar n , fvs)
       end
 
-  | Ext.LF.Proj(loc, Ext.LF.Name (_, n), Ext.LF.ByPos k) ->
-      let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
-        (Apx.LF.Proj(bvar, Apx.LF.ByPos k), fvs')
-
-  | Ext.LF.Proj (loc, Ext.LF.Name (_, n), Ext.LF.ByName k) ->
-      let (bvar, fvs') = index_head cvars bvars fvs (Ext.LF.Name (loc, n)) in
-        (Apx.LF.Proj(bvar, Apx.LF.ByName k), fvs')
+  | Ext.LF.Proj(loc, h, k) ->
+      let (h', fvs') = index_head cvars bvars fvs h in
+        (Apx.LF.Proj(h', index_proj k), fvs')
 
   | Ext.LF.PVar (loc, p, s) ->
       if lookup_fv fvars (FPV p) then
@@ -438,15 +438,6 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
             let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
               (Apx.LF.FPVar (p, s') , (FPV p :: fvars' , closed_flag))
         end
-
-  | Ext.LF.Proj(loc, Ext.LF.PVar (_, p, s), Ext.LF.ByPos k) ->
-      let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
-        (Apx.LF.Proj (pvar, Apx.LF.ByPos k), fvs')
-
-  | Ext.LF.Proj (loc, Ext.LF.PVar (_, p, s), Ext.LF.ByName k) ->
-      let (pvar, fvs') = index_head cvars bvars fvs (Ext.LF.PVar (loc, p, s)) in
-        (Apx.LF.Proj (pvar, Apx.LF.ByName k), fvs')
-
 
   | Ext.LF.Hole _loc ->
       (Apx.LF.Hole , fvs)

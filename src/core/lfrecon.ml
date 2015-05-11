@@ -1278,11 +1278,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] Found its type ") in
           let _ = dprint (fun () -> "      with type " ^
 			    P.typToString cD cPhi (tA, Substitution.LF.id) ^ "[" ^ P.dctxToString cD cPhi ^ "]") in
-	  let k = begin match proj with
-	    | Apx.LF.ByPos k -> k
-	    | Apx.LF.ByName k -> try Int.LF.getIndex typRec k
-	      with _ -> raise (Error (loc, ProjNotFound (cD, cPhi, k, (tA, Substitution.LF.id))))
-	  end in
+	  let k = getProjIndex loc cD cPsi typRec proj in
           let s'' = elSub loc recT cD cPsi s cPhi in
           let sA =  begin try
                          Int.LF.getType  (Int.LF.FPVar (p, s'')) (typRec, s'') k 1

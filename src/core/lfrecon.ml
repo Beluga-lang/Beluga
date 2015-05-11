@@ -509,19 +509,22 @@ let rec isProjPatSub s = match s with
   | Apx.LF.SVar _ -> false
   | Apx.LF.FSVar _ -> false
 
-let getProjPos loc cD cPsi tp = function
+let getProjIndex loc cD cPsi recA = function
   | Apx.LF.ByPos j -> j
-  | Apx.LF.ByName j -> let Int.LF.TypDecl (_, Int.LF.Sigma recA) = tp in
-       try Int.LF.getIndex recA j
-                     with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, j,
-                                                         (Int.LF.Sigma recA, Substitution.LF.id))))
+  | Apx.LF.ByName j ->
+    try Int.LF.getIndex recA j
+    with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, j, (Int.LF.Sigma recA, Substitution.LF.id))))
+
+let getProjIndexFromType loc cD cPsi tp k =
+  let Int.LF.TypDecl (_, Int.LF.Sigma recA) = tp in
+  getProjIndex loc cD cPsi recA k
 
 let flattenProjPatHead loc cD h conv_list cPsi = match h with
   | Apx.LF.BVar k -> Apx.LF.BVar (ConvSigma.new_index k conv_list)
 
   | Apx.LF.Proj(Apx.LF.BVar k, p) ->
       let tp = begin try Context.ctxSigmaDec cPsi k with _ -> raise Not_found end in
-      let j = getProjPos loc cD cPsi tp p in
+      let j = getProjIndexFromType loc cD cPsi tp p in
       let _ = dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = "  ^ string_of_int j ^ "\n") in
       let k' = (ConvSigma.new_index k conv_list) - j + 1  in
       (Apx.LF.BVar k')
@@ -699,7 +702,7 @@ let rec synHead cD loc cPsi h = match h with
    | Apx.LF.BVar k -> Context.ctxDec cPsi k, Int.LF.BVar k
    | Apx.LF.Proj(h, nj) ->
      let (tp, h') = synHead cD loc cPsi h in
-     let j = getProjPos loc cD cPsi tp nj in
+     let j = getProjIndexFromType loc cD cPsi tp nj in
      let Int.LF.TypDecl (x, Int.LF.Sigma typRec) = tp in
      let sQ = Int.LF.getType h' (typRec, Substitution.LF.id) j 1 in
      Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
@@ -1315,7 +1318,7 @@ and elTerm' recT cD cPsi r sP = match r with
 		let _ = dprint (fun () -> "[ctxVar] done") in
                 let h = Int.LF.FPVar (p, Substitution.LF.id) in
                 let (typRec, s_inst,  kIndex) =
-                  begin match synSchemaElem' loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
+                  begin match synSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
                   | None , _ -> raise (Error.Violation ("type sP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ " not in schema " ^
                                              P.schemaToString schema))
                   | Some (typrec, subst) , index -> (typrec, subst, index)
@@ -1634,86 +1637,40 @@ and elTerm' recT cD cPsi r sP = match r with
               (dprint (fun () -> "[instanceOfSchElem] Non-Unify ERROR -2- "); raise exn)
       end
 
-  and instanceOfSchElemProj loc cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) =
-    let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_int k ^ ". argument\n") in
+  and instanceOfSchElemProj loc cD cPsi (tA, s) (var, proj) (Int.LF.SchElem (cPhi, trec)) =
+    let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_proj proj ^ ". argument\n") in
     let cPhi'  = Context.projectCtxIntoDctx cPhi in
     let _ = dprint (fun () -> " of " ^ P.typRecToString cD cPhi' (trec, Substitution.LF.id)) in
     let _ = dprint (fun () -> " var = " ^ P.headToString cD cPsi var) in
+    let k = getProjIndex loc cD cPsi trec proj in
     let sA_k (* : tclo *) = Int.LF.getType var (trec, Substitution.LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
     let _ = dprint (fun () -> "[instanceOfSchElemProj] retrieved the type  " ^ P.typToString cD cPhi' sA_k) in
     let (_tA'_k, subst) =
       instanceOfSchElem loc cD cPsi (tA, s) (cPhi, sA_k)
       (* tA'_k = [subst] (sA_k) = [s]tA *)
     in
-      (trec, subst)
+      (trec, subst, k)
 
 (* Synthesize the type for a free parameter variable *)
 and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
   let self = synSchemaElem loc recT cD cPsi sP (head, k) in
   let _ = dprint (fun () -> "synSchemaElem ... head = " ^
                     P.headToString cD cPsi head ^ " Projection " ^
-                    string_of_int k  ^ "\n") in
+                    string_of_proj k  ^ "\n") in
   let _ = dprint (fun () -> "[synSchemaElem]  " ^ P.typToString cD cPsi sP
                     ^ "  schema= " ^ P.schemaToString schema) in
     match elements with
-      | [] -> None
+      | [] -> None, -1
       | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
           try
             let _ = dprint (fun () -> "[instanceOfSchElemProj ] ... ") in
-            let (typRec, subst) = instanceOfSchElemProj loc cD cPsi sP (head, k) elem in
+            let (typRec, subst, k) = instanceOfSchElemProj loc cD cPsi sP (head, k) elem in
               (* Check.LF.instanceOfSchElemProj loc cO cD cPsi sP (head, k) elem in *)
             dprint (fun () -> "synSchemaElem RESULT = "
                             ^ P.typRecToString cD cPsi (typRec, subst))
-          ; Some (typRec, subst) (* sP *)
+          ; (Some (typRec, subst), k) (* sP *)
           with Unify.Failure _  -> self (Int.LF.Schema rest)
             | Not_found -> self (Int.LF.Schema rest)
-
-and instanceOfSchElemNamedProj loc cD cPsi (tA, s) (var, k) (Int.LF.SchElem (cPhi, trec)) =
-  begin try 
-    let _ = dprint (fun () -> "[instanceOfSchElemNamedProj] getType of " ^ k.string_of_name ^ ". argument\n") in
-    let cPhi'  = Context.projectCtxIntoDctx cPhi in
-    let _ = dprint (fun () -> " of " ^ P.typRecToString cD cPhi' (trec, Substitution.LF.id)) in
-    let _ = dprint (fun () -> " var = " ^ P.headToString cD cPsi var) in
-    let kIndex = Int.LF.getIndex trec k in
-    let sA_k (* : tclo *) = Int.LF.getType var (trec, Substitution.LF.id) kIndex 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
-    let _ = dprint (fun () -> "[instanceOfSchElemNamedProj] retrieved the type  " ^ P.typToString cD cPhi' sA_k) in
-    let (_tA'_k, subst) =
-      instanceOfSchElem loc cD cPsi (tA, s) (cPhi, sA_k)
-      (* tA'_k = [subst] (sA_k) = [s]tA *)
-    in
-      (trec, subst, kIndex)
-  with _ -> raise (Error (loc, ProjNotFound (cD, cPsi, k,
-                                                         (Int.LF.Sigma trec, Substitution.LF.id))))
-  end
-
-
-(* Synthesize the type for a free parameter variable *)
-and synNamedSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
-  let self = synNamedSchemaElem loc recT cD cPsi sP (head, k) in
-  let _ = dprint (fun () -> "synSchemaElem ... head = " ^
-                    P.headToString cD cPsi head ^ " Projection " ^
-                    k.string_of_name  ^ "\n") in
-  let _ = dprint (fun () -> "[synSchemaElem]  " ^ P.typToString cD cPsi sP
-                    ^ "  schema= " ^ P.schemaToString schema) in
-    match elements with
-      | [] -> (None, -1)
-      | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
-          try
-            let _ = dprint (fun () -> "[instanceOfSchElemNamedProj ] ... ") in
-            let (typRec, subst, index) = instanceOfSchElemNamedProj loc cD cPsi sP (head, k) elem in
-              (* Check.LF.instanceOfSchElemProj loc cO cD cPsi sP (head, k) elem in *)
-            dprint (fun () -> "synSchemaElem RESULT = "
-                            ^ P.typRecToString cD cPsi (typRec, subst))
-          ; (Some (typRec, subst),index) (* sP *)
-          with Unify.Failure _  -> self (Int.LF.Schema rest)
-            | Not_found -> self (Int.LF.Schema rest)
-
-and synSchemaElem' loc recT cD cPsi sP (head, proj) schema =
-  match proj with
-  | Apx.LF.ByName n -> synNamedSchemaElem loc recT cD cPsi sP (head, n) schema
-  | Apx.LF.ByPos k -> (synSchemaElem loc recT cD cPsi sP (head, k) schema, k)
-  
-
 
 and elClosedTerm' recT cD cPsi r = match r with
   | Apx.LF.LFHole loc -> 

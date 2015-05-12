@@ -758,19 +758,7 @@ let rec index_exp cvars vars fcvars = function
       in
         Apx.Comp.Cofun (loc, copatterns')
 
-  | Ext.Comp.MLam (loc, (psi_name, Ext.Comp.CObj), e) ->
-        let cvars' = CVar.extend cvars (CVar.mk_entry psi_name) in
-        Apx.Comp.MLam (loc, psi_name, index_exp cvars' vars fcvars e)
-
-  | Ext.Comp.MLam (loc, (u, Ext.Comp.MObj), e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry u) in
-        Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
-
-  | Ext.Comp.MLam (loc, (u, Ext.Comp.PObj), e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry  u) in
-        Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
-
-  | Ext.Comp.MLam (loc, (u, Ext.Comp.SObj), e) ->
+  | Ext.Comp.MLam (loc, u, e) ->
       let cvars' = CVar.extend cvars (CVar.mk_entry u) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 

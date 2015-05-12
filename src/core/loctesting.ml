@@ -27,7 +27,7 @@ and store_chks (e : Comp.exp_chk) = match e with
 | Comp.Fun (loc, n, e') -> 
 	Locs.add loc (Locs.mk_entry ("Fun " ^ R.render_name n)); 
 	store_chks e'
-| Comp.MLam  (loc, (n, _), e') -> 
+| Comp.MLam  (loc, n, e') -> 
 	Locs.add loc (Locs.mk_entry ("MLam " ^ R.render_name n)); 
 	store_chks e'
 | Comp.Box (loc, mO) -> 

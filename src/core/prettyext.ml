@@ -816,37 +816,7 @@ module Ext = struct
       | Comp.Cofun (_, l) -> 
           fprintf ppf "Some Cofun"
 
-      | Comp.MLam (_, (x, Comp.MObj), e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s%s %s %s %a%s"
-              (l_paren_if cond)
-              (to_html "mlam" Keyword)
-              (R.render_name x)
-              (symbol_to_html DblRArr)
-              (fmt_ppr_cmp_exp_chk cD 0) e
-              (r_paren_if cond);
-
-      | Comp.MLam (_, (x, Comp.PObj), e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s%s #%s %s %a%s"
-              (l_paren_if cond)
-              (to_html "mlam" Keyword)
-              (R.render_name x)
-              (symbol_to_html DblRArr)
-              (fmt_ppr_cmp_exp_chk cD 0) e
-              (r_paren_if cond);
-
-     | Comp.MLam (_, (x, Comp.SObj), e) ->
-          let cond = lvl > 0 in
-            fprintf ppf "%s%s #%s %s %a%s"
-              (l_paren_if cond)
-              (to_html "mlam" Keyword)
-              (R.render_name x)
-              (symbol_to_html RArr)
-              (fmt_ppr_cmp_exp_chk cD 0) e
-              (r_paren_if cond);
-
-      | Comp.MLam(_, (x, Comp.CObj), e) -> 
+      | Comp.MLam (_, x, e) ->
           let cond = lvl > 0 in
             fprintf ppf "%s%s %s %s %a%s"
               (l_paren_if cond)

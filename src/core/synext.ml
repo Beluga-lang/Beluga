@@ -127,8 +127,6 @@ module Comp = struct
    | MetaParamTyp of Loc.t  * LF.typ * LF.dctx
    | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
 
- type mabstr = CObj | MObj | PObj | SObj
-
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
    | TypBox  of Loc.t * meta_typ
@@ -142,7 +140,7 @@ module Comp = struct
      | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
      | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
-     | MLam   of Loc.t * (name * mabstr) * exp_chk  (*| mlam f => e         *)
+     | MLam   of Loc.t * name * exp_chk  (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
                                                 (*    | let (x,y) = i in e  *)

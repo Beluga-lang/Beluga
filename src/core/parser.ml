@@ -258,12 +258,6 @@ GLOBAL: sgn;
   rArr:  [[ "=>" -> ()
          | "⇒" -> () ]];  (* Unicode double right arrow (HTML &rArr;) *)
 
-(*   dots: [[ "."; "." -> ()
-         | "…" -> () ]];  (* Unicode ellipsis (HTML &hellip;) *) *)
-
-  gLambda: [[ "FN" -> ()
-         | "Λ" -> () ]];  (* Unicode capital Lambda (HTML &Lambda;) *)
-
   turnstile: [[ "|-" -> ()
 	 | "⊢" -> () ]];
 
@@ -1195,13 +1189,13 @@ GLOBAL: sgn;
   mlam_exp:
   [
     [
-      f = SYMBOL -> (f, Comp.CObj)
+      f = SYMBOL -> f
     |
-      f = UPSYMBOL -> (f, Comp.MObj)
+      f = UPSYMBOL -> f
     |
-      "#"; f = SYMBOL -> (f, Comp.PObj)
+      "#"; f = SYMBOL -> f
     |
-      "#"; f = UPSYMBOL -> (f, Comp.SObj)
+      "#"; f = UPSYMBOL -> f
     ]
   ]
   ;
@@ -1216,30 +1210,11 @@ GLOBAL: sgn;
 
   cmp_exp_chkX:
     [ LEFTA
-      [  (*"fn"; f = SYMBOL; rArr; e = cmp_exp_chk ->
-           Comp.Fun (_loc, Id.mk_name (Id.SomeString f), e)
-
-      |*)  "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
+      [ "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
         List.fold_left (fun acc f -> Comp.Fun (_loc, (Id.mk_name (Id.SomeString f)), acc)) e (List.rev fs)
 
-      | gLambda; f = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
-
       | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
-        List.fold_left (fun acc (s, t) -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s), t), acc)) e (List.rev args)
-
-
-    (*   | "mlam"; f = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.CObj), e)
-
-      | "mlam"; f = UPSYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString f), Comp.MObj), e)
-
-      | "mlam"; "#"; s = UPSYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString s), Comp.SObj), e)
-
-      | "mlam"; hash = "#"; p = SYMBOL; rArr; e = cmp_exp_chk ->
-          Comp.MLam (_loc, (Id.mk_name (Id.SomeString p), Comp.PObj), e) *)
+        List.fold_left (fun acc s -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s)), acc)) e (List.rev args)
 
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
@@ -1250,12 +1225,6 @@ GLOBAL: sgn;
             | (Comp.CopatMeta (loc, a, csp'), csp'') -> Comp.CopatMeta (loc, a, csp'') in
           let g = fun (csp1, e) -> (List.fold_right f csp1 (Comp.CopatNil _loc), e) in
           Comp.Cofun (_loc, List.map g csp)
-
-(*      | "impossible"; i = cmp_exp_syn; "in";
-         ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]"  ->
-           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-             Comp.Case (_loc, Pragma.RegularCase, i, [Comp.BranchBox (_loc, ctyp_decls', (pHat, Comp.EmptyPattern, None))])
-*)
 
      | "impossible"; i = cmp_exp_syn; cd = OPT ["in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]" -> (ctyp_decls, pHat)]  ->
@@ -1273,10 +1242,6 @@ GLOBAL: sgn;
       | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
-(*      | "let"; x = SYMBOL; ":"; tau = cmp_typ; "="; e1 = cmp_exp_chk; "in"; e2 = cmp_exp_chk ->
-	  let i =  Comp.Ann (_loc, e1, tau) in
-          Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e2))   
-*)
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;turnstile; mobj = clf_pattern; "]";

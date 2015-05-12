@@ -83,12 +83,6 @@ type free_cvars =
 
 type fcvars = free_cvars list * bool
 
-let rec nearestFCVar fvars = begin match fvars with
-  | [] -> None
-  | FCV psi :: fvs -> Some (Apx.LF.CtxName psi)
-  | _ :: fvs -> nearestFCVar fvs
-end
-
 let rec fcvarsToString fcvars = match fcvars with
   | [] -> ""
   | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
@@ -482,24 +476,7 @@ and index_spine cvars bvars fvars = function
           (Apx.LF.App (m', s') , fvars'')
 
 and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
-  | Ext.LF.Id loc ->
-      let psi =
-	begin try Apx.LF.CtxOffset (CVar.nearest_cvar cvars)
-	with Not_found ->  (match nearestFCVar fvs with
-			      | None -> raise (Error (loc ,
-							    UnboundIdSub))
-			      | Some psi -> psi
-			   )
-	end
-      in
-	(dprint (fun () ->
-		   match psi with
-		     | Apx.LF.CtxOffset offset ->
-			 "[index_sub] id : domain has index " ^ R.render_offset offset
-		     | Apx.LF.CtxName psi ->
-			 "[index_sub] id : domain has index " ^ R.render_name psi)
-	;
-	(Apx.LF.Id psi, fvars))
+  | Ext.LF.Id loc -> (Apx.LF.Id, fvars)
 
   | Ext.LF.Dot (_, s, Ext.LF.Head h) ->
       let (s', fvars')  = index_sub cvars bvars fvars s  in

@@ -463,7 +463,7 @@ let rec patSpine spine =
 
 (* isPatSub s = bool *)
 let rec isPatSub s = match s with
-  | Apx.LF.Id _ ->
+  | Apx.LF.Id ->
       true
 
   | Apx.LF.EmptySub ->
@@ -494,7 +494,7 @@ let rec isPatSub s = match s with
 (* ******************************************************************* *)
 (* isProjPatSub s = true *)
 let rec isProjPatSub s = match s with
-  | Apx.LF.Id _ -> true
+  | Apx.LF.Id -> true
 
   | Apx.LF.EmptySub -> true
 
@@ -531,7 +531,7 @@ let flattenProjPatHead loc cD h conv_list cPsi = match h with
       (Apx.LF.BVar k')
 
 let rec flattenProjPat loc cD s conv_list cPsi = match s with
-  | Apx.LF.Id cpsi -> Apx.LF.Id cpsi
+  | Apx.LF.Id  -> Apx.LF.Id 
   | Apx.LF.EmptySub -> Apx.LF.EmptySub
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let s' = flattenProjPat loc cD s conv_list cPsi in
@@ -542,7 +542,7 @@ let rec flattenProjPat loc cD s conv_list cPsi = match s with
 
 (* isTuplePatSub s = true *)
 let rec isTuplePatSub s = match s with
-  | Apx.LF.Id _ -> true
+  | Apx.LF.Id -> true
 
   | Apx.LF.EmptySub -> true
 
@@ -567,7 +567,7 @@ let rec isTuplePatSub s = match s with
        isVar tM && isVarTuple t
 
 let rec flattenSub s = match s with 
-  | Apx.LF.Id _ -> s
+  | Apx.LF.Id -> s
 
   | Apx.LF.EmptySub -> s
 
@@ -709,7 +709,7 @@ let rec synHead cD loc cPsi h = match h with
      Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
 
 let rec synDom cD loc cPsi s = begin match s with
-  | Apx.LF.Id _ ->
+  | Apx.LF.Id ->
       begin match Context.dctxToHat cPsi with
         | (Some psi, d) ->
             let _ = dprint (fun () -> "[synDom] cPsi = " ^ P.dctxToString cD cPsi) in
@@ -1839,10 +1839,10 @@ and elSub' loc recT cD cPsi s cPhi =
        raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
       end
 
-  | (Apx.LF.Id _ , Int.LF.DDec (_cPhi', _decl)) ->
+  | (Apx.LF.Id , Int.LF.DDec (_cPhi', _decl)) ->
     elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
 
-  | (Apx.LF.Id _ , Int.LF.CtxVar phi) ->
+  | (Apx.LF.Id , Int.LF.CtxVar phi) ->
       begin match Context.dctxToHat (C.cnormDCtx (cPsi, C.m_id)) with
         | (Some psi, d)  ->
 (*            if psi = phi then  *)
@@ -1944,7 +1944,7 @@ and elSub' loc recT cD cPsi s cPhi =
       let s = match s with
         | Apx.LF.Dot _ -> "Dot _ "
         | Apx.LF.EmptySub -> " . "
-        | Apx.LF.Id _ -> " .. "
+        | Apx.LF.Id -> " .. "
         | Apx.LF.SVar(u,s) -> "SVAR"
         | Apx.LF.FSVar(u,s) -> "FSVAR" in
       "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : "  ^ P.dctxToString cD cPhi);

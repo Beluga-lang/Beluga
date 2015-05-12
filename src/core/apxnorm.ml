@@ -60,7 +60,7 @@ end
 
 and shiftApxSub k s = begin match s with
   | Apx.LF.EmptySub -> s
-  | Apx.LF.Id _ -> s
+  | Apx.LF.Id -> s
   | Apx.LF.Dot(Apx.LF.Head h, s) ->
       let h' = shiftApxHead k h in
       let s' = shiftApxSub k s in
@@ -167,12 +167,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 
 and cnormApxSub cD delta s (cD'', t) = match s with
   | Apx.LF.EmptySub -> s
-  | Apx.LF.Id ctx   ->
-      begin match (ctx, t) with
-          (* to be fixed -bp *)
-        | Apx.LF.CtxOffset 1 , Int.LF.MDot (Int.LF.CObj(Int.LF.Null), _ ) -> Apx.LF.EmptySub
-        | _ -> s
-      end
+  | Apx.LF.Id -> s
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = cnormApxHead cD delta h (cD'', t) in
@@ -460,8 +455,7 @@ and collectApxHead fMVs h = match h with
 
 and collectApxSub fMVs s = match s with
   | Apx.LF.EmptySub -> fMVs
-  | Apx.LF.Id (Apx.LF.CtxName psi)  -> psi :: fMVs
-  | Apx.LF.Id _ -> fMVs
+  | Apx.LF.Id -> fMVs
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let fMVs' = collectApxHead fMVs h in
         collectApxSub fMVs' s
@@ -690,11 +684,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
 
 and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
   | Apx.LF.EmptySub -> s
-  | Apx.LF.Id (Apx.LF.CtxOffset offset) ->
-      if offset > (l_delta + k) then
-        Apx.LF.Id(Apx.LF.CtxOffset (offset + l_cd1))
-      else s
-  | Apx.LF.Id ctx_var -> s
+  | Apx.LF.Id -> Apx.LF.Id
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = fmvApxHead fMVs cD d_param  h in

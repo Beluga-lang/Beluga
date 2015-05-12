@@ -75,7 +75,7 @@ module LF = struct
 
   and sub =
     | EmptySub
-    | Id    of ctx_var
+    | Id    
     | Dot   of front * sub
     | SVar  of cvar * sub
     | FSVar of name * sub

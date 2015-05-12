@@ -42,11 +42,8 @@ let nameOfLFcTypDecl = (function
 
 let cvarOfLFcTypDecl td =
  match td with
-| LF.Decl(n, LF.ClTyp (LF.MTyp _,_), _) -> Store.CVar.MV n
-| LF.Decl(n, LF.ClTyp (LF.PTyp _,_), _) -> Store.CVar.PV ( Id.mk_name (Id.PVarName (Some (fun () -> (nameString n)))))
-| LF.Decl(n, LF.ClTyp(LF.STyp _,_), _) -> Store.CVar.SV n
-| LF.Decl(n, LF.CTyp _, _) -> Store.CVar.CV n
-| LF.DeclOpt(n) -> Store.CVar.MV n
+| LF.Decl(n, _, _) -> n
+| LF.DeclOpt(n) -> n
 
 let nameOfCompcTypDecl = function
   | CTypDecl (n, _) -> n

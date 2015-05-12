@@ -1397,7 +1397,7 @@ end
 (* Contextual variables *)
 module CVar = struct
 
-  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+  type cvar = Id.name
 
   type entry = { name : cvar }
 
@@ -1415,17 +1415,6 @@ module CVar = struct
             loop (i + 1) es
     in
       loop 1 store
-
-
-  let nearest_cvar store =
-    let rec ncvar store k = match store with
-      | [] -> raise Not_found
-      | e::store' ->
-          match e.name with CV _  ->  k
-            | _ -> ncvar store' (k+1)
-    in
-      ncvar store 1
-
 
   let create ()     = []
   let extend cvars e = e :: cvars

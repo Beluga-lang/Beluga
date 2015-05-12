@@ -371,7 +371,7 @@ end
 
 module CVar : sig
 
-  type cvar = MV of Id.name | PV of Id.name | CV of Id.name | SV of Id.name
+  type cvar = Id.name
 
   type entry = {
     name : cvar
@@ -381,7 +381,6 @@ module CVar : sig
 
   type t  (* NOTE: t is an ordered data structure *)
 
-  val nearest_cvar  : t -> offset
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry

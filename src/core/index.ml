@@ -417,7 +417,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
           (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))
       else
         begin try
-          let offset = CVar.index_of_name cvars (CVar.PV p) in
+          let offset = CVar.index_of_name cvars p in
           let (s' , fvs') = index_sub cvars bvars fvs s in
             (Apx.LF.PVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
@@ -442,7 +442,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
           (Apx.LF.FMVar (u, s') , fvs')
       else
         begin try
-          let offset = CVar.index_of_name cvars (CVar.MV u) in
+          let offset = CVar.index_of_name cvars u in
           let (s', fvs')     = index_sub cvars bvars fvs s in
             (Apx.LF.MVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
@@ -497,7 +497,7 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
           (Apx.LF.FSVar (u, s') , fvs')
       else
         begin try
-          let offset = CVar.index_of_name cvars (CVar.SV u) in
+          let offset = CVar.index_of_name cvars u in
           let (s', fvs') = index_sub cvars bvars fvars s in
           let _ = dprint (fun () -> "[index_sub] s = " ^ string_of_int offset) in
             (Apx.LF.SVar (Apx.LF.Offset offset, s') , fvs')
@@ -527,7 +527,7 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
 	(Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, (fvs, closed))
       else
 	begin try
-          let offset = CVar.index_of_name cvars (CVar.CV psi_name) in
+          let offset = CVar.index_of_name cvars psi_name in
             (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars, fvars)
 	with Not_found ->
 	if closed then
@@ -564,7 +564,7 @@ let index_psihat cvars fcvars extphat =
 		 ((Some (Int.LF.CtxName x), d) , bvars)
 	     else
                begin try
-		 let ctx_var = CVar.index_of_name cvars (CVar.CV x) in
+		 let ctx_var = CVar.index_of_name cvars x in
 		 let (d, bvars) = index_hat bv psihat in
 		 let _ = dprint (fun () -> "[index_psihat] offset = " ^
 				   R.render_offset ctx_var ) in
@@ -604,11 +604,7 @@ let index_cltyp cvars fvars = function
       let schema_cid    = Schema.index_of_name schema_name in
       (Apx.LF.CTyp schema_cid, cvars, fvars)
 
-let cltyp_to_cvar n = function
-  | Ext.LF.ClTyp (_,Ext.LF.MTyp _,_) -> CVar.MV n
-  | Ext.LF.ClTyp (_,Ext.LF.PTyp _,_) -> CVar.PV n
-  | Ext.LF.ClTyp (_,Ext.LF.STyp _,_) -> CVar.SV n
-  | Ext.LF.CTyp (_,_) -> CVar.CV n
+let cltyp_to_cvar n _ = n
 
 let index_cdecl cvars fvars = function
   | Ext.LF.Decl(u, cl, dep) ->
@@ -699,8 +695,8 @@ let index_meta_typ cvars fcvars = function
   | Ext.Comp.MetaTyp (loc, a, psi) ->
     begin match a with
       | Ext.LF.Atom (_ , name, Ext.LF.Nil)
-          when (try ignore (CVar.index_of_name cvars (CVar.CV name)); true with Not_found -> false) ->
-        let offset = CVar.index_of_name cvars (CVar.CV name) in
+          when (try ignore (CVar.index_of_name cvars name); true with Not_found -> false) ->
+        let offset = CVar.index_of_name cvars name in
         let (psi', _ , fcvars1) = index_dctx cvars (BVar.create ()) fcvars psi in
         let _ = dprint (fun () -> "Indexing TypSub -- turning TypBox into TypSub") in
           (Apx.Comp.MetaSubTyp (loc, Apx.LF.CtxVar (Apx.LF.CtxOffset offset), psi'), fcvars1)
@@ -789,19 +785,19 @@ let rec index_exp cvars vars fcvars = function
         Apx.Comp.Cofun (loc, copatterns')
 
   | Ext.Comp.MLam (loc, (psi_name, Ext.Comp.CObj), e) ->
-        let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.CV psi_name)) in
+        let cvars' = CVar.extend cvars (CVar.mk_entry psi_name) in
         Apx.Comp.MLam (loc, psi_name, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.MLam (loc, (u, Ext.Comp.MObj), e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.MV u)) in
+      let cvars' = CVar.extend cvars (CVar.mk_entry u) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.MLam (loc, (u, Ext.Comp.PObj), e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.PV u)) in
+      let cvars' = CVar.extend cvars (CVar.mk_entry  u) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.MLam (loc, (u, Ext.Comp.SObj), e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry (CVar.SV u)) in
+      let cvars' = CVar.extend cvars (CVar.mk_entry u) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.Pair (loc, e1, e2) ->
@@ -1063,12 +1059,7 @@ let comptypdef (cT, cK) =
   let rec unroll cK cvars = begin match cK with
     | Apx.Comp.Ctype _ -> cvars
     | Apx.Comp.PiKind (loc, Apx.LF.Decl(u, ctyp,dep), cK) ->
-        let cvars' = match ctyp with
-                       | Apx.LF.ClTyp (Apx.LF.MTyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.MV u))
-                       | Apx.LF.ClTyp (Apx.LF.PTyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.PV u))
-                       | Apx.LF.CTyp _ -> CVar.extend cvars (CVar.mk_entry (CVar.CV u))
-                       | Apx.LF.ClTyp (Apx.LF.STyp _, _) -> CVar.extend cvars (CVar.mk_entry (CVar.SV u))
-                      in
+        let cvars' = CVar.extend cvars (CVar.mk_entry u) in
             unroll cK cvars'
    end in
    let (tau,_ ) = index_comptyp (unroll cK' (CVar.create ())) ([], term_closed) cT in

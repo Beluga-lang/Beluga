@@ -78,45 +78,19 @@ let _ = Error.register_printer
         Format.fprintf ppf "Unable to parse operators into valid structure"))
 
 
-type free_cvars =
-    FMV of Id.name | FPV of Id.name | FSV of Id.name | FCV of Id.name
+type free_cvars = Id.name
 
 type fcvars = free_cvars list * bool
 
 let rec fcvarsToString fcvars = match fcvars with
   | [] -> ""
-  | FMV m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
-  | FPV m :: fcvars -> ", FPV " ^ R.render_name m ^ fcvarsToString fcvars
-  | FCV m :: fcvars -> ", FCV " ^ R.render_name m ^ fcvarsToString fcvars
-  | FSV m :: fcvars -> ", FSV " ^ R.render_name m ^ fcvarsToString fcvars
+  | m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with
      ([], _ ) -> false
-  | (FMV n :: fvars' , FMV m) ->
+  | (n :: fvars' , m) ->
       if n = m then true
-      else lookup_fv fvars' (FMV m)
-  | (FPV p :: fvars' , FPV q) ->
-      if p = q then true
-      else lookup_fv fvars' m
-  | (FCV n :: fvars' , FCV m) ->
-      if n = m then true
-      else lookup_fv fvars' (FCV m)
-  | (FSV n :: fvars' , FSV m) ->
-      if n = m then true
-      else lookup_fv fvars' (FSV m)
-
-  | (FPV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
-  | (FCV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
-  | (FSV _ :: fvars' , FMV _ ) -> lookup_fv fvars' m
-  | (FMV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
-  | (FCV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
-  | (FSV _ :: fvars' , FPV _ ) -> lookup_fv fvars' m
-  | (FMV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
-  | (FPV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
-  | (FSV _ :: fvars' , FCV _ ) -> lookup_fv fvars' m
-  | (FMV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
-  | (FPV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
-  | (FCV _ :: fvars' , FSV _ ) -> lookup_fv fvars' m
+      else lookup_fv fvars' (m)
 end
 
 let rec get_ctxvar psi = match psi with
@@ -412,7 +386,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         (Apx.LF.Proj(h', index_proj k), fvs')
 
   | Ext.LF.PVar (loc, p, s) ->
-      if lookup_fv fvars (FPV p) then
+      if lookup_fv fvars p then
         let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
           (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))
       else
@@ -430,14 +404,14 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
 	    )
 	  else
             let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
-              (Apx.LF.FPVar (p, s') , (FPV p :: fvars' , closed_flag))
+              (Apx.LF.FPVar (p, s') , (p :: fvars' , closed_flag))
         end
 
   | Ext.LF.Hole _loc ->
       (Apx.LF.Hole , fvs)
 
   | Ext.LF.MVar (loc, u, s) ->
-      if lookup_fv fvars (FMV u) then
+      if lookup_fv fvars (u) then
         let (s', fvs')     = index_sub cvars bvars fvs s in
           (Apx.LF.FMVar (u, s') , fvs')
       else
@@ -454,7 +428,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
 	       raise (Error (loc, UnboundName u))
 	  else
             let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-              (Apx.LF.FMVar (u, s') , (FMV u :: fvars' , closed_flag))
+              (Apx.LF.FMVar (u, s') , (u :: fvars' , closed_flag))
         end
 
   (* | Ext.LF.SVar (loc, n, _sigma) -> *)
@@ -492,7 +466,7 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
       (Apx.LF.EmptySub, fvars)
 
   | Ext.LF.SVar (loc, u, s) ->
-      if lookup_fv fvs (FSV u) then
+      if lookup_fv fvs (u) then
         let (s', fvs')     = index_sub cvars bvars fvars s in
           (Apx.LF.FSVar (u, s') , fvs')
       else
@@ -510,7 +484,7 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
 	       raise (Error (loc, UnboundName u))
 	  else
             let (s', (fvars', closed_flag))     = index_sub cvars bvars fvars s in
-              (Apx.LF.FSVar (u, s') , (FSV u :: fvars' , closed_flag))
+              (Apx.LF.FSVar (u, s') , (u :: fvars' , closed_flag))
         end
 
 
@@ -523,7 +497,7 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
   | Ext.LF.Null        -> (Apx.LF.Null , bvars, fvars)
 
   | Ext.LF.CtxVar (loc, psi_name)  ->
-      if lookup_fv fvs (FCV psi_name) then
+      if lookup_fv fvs (psi_name) then
 	(Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, (fvs, closed))
       else
 	begin try
@@ -533,7 +507,7 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
 	if closed then
 	     raise (Error (loc, UnboundName psi_name))
 	else
-	  (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((FCV psi_name :: fvs),  closed))
+	  (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((psi_name :: fvs),  closed))
 	end
   | Ext.LF.DDec (psi, decl) ->
       let (psi', bvars', fvars')    = index_dctx cvars bvars fvars psi in
@@ -559,7 +533,7 @@ let index_psihat cvars fcvars extphat =
       | [] -> ((None, 0), bv)
       |  x :: psihat ->
 	   let (fvs, _ ) = fcvars in
-	     if lookup_fv fvs (FCV x) then
+	     if lookup_fv fvs (x) then
                let (d, bvars) = index_hat bv psihat in
 		 ((Some (Int.LF.CtxName x), d) , bvars)
 	     else
@@ -992,7 +966,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let fcvars' = begin match get_ctxvar cpsi with
                      | None -> empty_fcvars
                      | Some psi_name ->
-                          FCV psi_name :: empty_fcvars
+                          psi_name :: empty_fcvars
                     end in
     let (omega, cD', cvars1, fcvars1)  =
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
@@ -1005,7 +979,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let fcvars' = begin match get_ctxvar cpsi with
                      | None -> empty_fcvars
                      | Some psi_name ->
-                          FCV psi_name :: empty_fcvars
+                          psi_name :: empty_fcvars
                     end in
     let (omega, cD', cvars1, fcvars1)  =
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
@@ -1024,7 +998,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let fcvars' = begin match get_ctxvar_mobj mO with
                      | None -> empty_fcvars
                      | Some psi_name ->
-                          FCV psi_name :: empty_fcvars
+                          psi_name :: empty_fcvars
                     end in
 
     let (omega, cD', cvars1, fcvars1)  =

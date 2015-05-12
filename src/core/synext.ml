@@ -26,7 +26,7 @@ module LF = struct
     | STyp of svar_class * dctx
 
   and svar_class = 
-    | Renaming
+    | Ren
     | Subst
 
   and ctyp =

@@ -565,7 +565,7 @@ let index_cltyp' cvars bvars fvars = function
   | Ext.LF.PTyp a ->
     let (a, fvars) = index_typ cvars bvars fvars a in
     (Apx.LF.PTyp a, fvars)
-  | Ext.LF.STyp phi ->
+  | Ext.LF.STyp (_, phi) ->
     let (phi', _bvars', fvars) = index_dctx cvars (BVar.create ()) fvars phi in
     (Apx.LF.STyp phi', fvars)
 

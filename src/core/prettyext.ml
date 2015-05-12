@@ -607,7 +607,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
-      | LF.Decl (u, LF.ClTyp (_, LF.STyp cPhi, cPsi), _) ->
+      | LF.Decl (u, LF.ClTyp (_, LF.STyp (_, cPhi), cPsi), _) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)

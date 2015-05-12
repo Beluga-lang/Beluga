@@ -23,7 +23,11 @@ module LF = struct
   and cltyp =
     | MTyp of typ
     | PTyp of typ
-    | STyp of dctx
+    | STyp of svar_class * dctx
+
+  and svar_class = 
+    | Renaming
+    | Subst
 
   and ctyp =
     | ClTyp of Loc.t * cltyp * dctx

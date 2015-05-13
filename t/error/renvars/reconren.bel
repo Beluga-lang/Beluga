@@ -1,0 +1,14 @@
+tm : type.
+c : tm.
+
+schema ctx = tm;
+
+datatype Foo : (g:ctx) {#W: g |- g}  ctype =
+;
+
+datatype Bar : (g:ctx) {#p:[g |- tm]} ctype =
+;
+
+rec f : Foo [g |- #W[..]] -> Bar [g |- #p ..] -> Bar [g |- #p #W[..]] =
+?
+;

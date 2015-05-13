@@ -26,7 +26,7 @@ type error =
   | ParamVarInst     of mctx * dctx * tclo
   | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
   | IllTypedMetaObj  of mctx * clobj * dctx * cltyp 
-  | TermWhenVar      of mctx * dctx * head
+  | TermWhenVar      of mctx * dctx * normal
   | SubWhenRen       of mctx * dctx * sub
 
 exception Error of Syntax.Loc.t * error
@@ -119,10 +119,10 @@ let _ = Error.register_printer
               Format.fprintf ppf
                 "In expression: %a@."
                 (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
-      | TermWhenVar (cD, cPsi, head) ->
+      | TermWhenVar (cD, cPsi, tM) ->
 	Format.fprintf ppf "A term was found when expecting a variable.@." ;
 	Format.fprintf ppf "Offending term: %a @." 
-	  (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) head
+	  (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
       | SubWhenRen (cD, cPsi, sub) -> 
 	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
 	Format.fprintf ppf "Offending substitution: %a @." 
@@ -354,7 +354,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
 
   | Const _, Ren
   | MVar _, Ren
-  | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, head)))
+  | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil)))))
 
   | PVar (p, s), _ ->
     (* cD ; cPsi' |- tA <= type *)
@@ -454,20 +454,22 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       else
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    (* Add other cases for different heads -bp Fri Jan  9 22:53:45 2009 -bp *)
-
-    | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2)) ->
+    | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2))
+    (* | cPsi', Dot (Obj (Root(_,h,Nil)), s'), DDec (cPsi, TypDecl (_, tA2)) *) ->
       let _ = checkSub loc cD cPsi' s' cPsi
       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
       and tA1 = inferHead loc cD cPsi' h cl in
       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) ->
+    | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) when cl = Subst ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
       let _ = checkSub loc cD cPsi' s' cPsi in
       (* ensures that s' is well-typed and [s']tA2 is well-defined *)
       check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
+
+    | _, Dot (Obj tM, _), DDec (_,_) when cl = Ren ->
+      raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
 
     | cPsi1, s, cPsi2 ->
       raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))

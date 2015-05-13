@@ -365,7 +365,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
       ^ "check:  cPsi (context in pattern) = " ^ P.dctxToString cD cPsi ^ "\n"
       ^ "check: synthesizing " ^ P.typToString cD cPsi (tA, s) ^ " for PVar" ^ "\n"
       ^ "check: cD = " ^ P.mctxToString cD);
-    checkSub loc cD cPsi s Subst cPsi';
+    checkSub loc cD cPsi s cl cPsi';
     (* Check that something of type tA could possibly appear in cPsi *)
 (*    if not (canAppear cD cPsi head (tA, s) loc) then
       raise (Error (loc, ParamVarInst (cD, cPsi, (tA, s)))); *)

@@ -1818,7 +1818,7 @@ and elSub loc recT cD cPsi s cl cPhi =
               (FCVar.add s_name 
 		 (cD, Int.LF.Decl 
 		   (s_name, Int.LF.ClTyp 
-		     (Int.LF.STyp (Int.LF.Subst, cPhi), cPsi'), Int.LF.Maybe));
+		     (Int.LF.STyp (cl, cPhi), cPsi'), Int.LF.Maybe));
                Int.LF.FSVar (0, (s_name, sigma')))
             else
               raise (Error (loc, NotPatSub))

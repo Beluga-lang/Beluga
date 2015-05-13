@@ -248,8 +248,6 @@ let rec getIndex' trec target acc = match trec with
 let getIndex trec target = getIndex' trec target 1
 end
 
-
-
 (** Internal Computation Syntax *)
 module Comp = struct
 

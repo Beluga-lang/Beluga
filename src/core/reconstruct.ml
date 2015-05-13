@@ -496,8 +496,8 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi'))) ->
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
           (loc, Int.LF.ClObj (phat, Int.LF.MObj tM'))
-  | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.ClTyp (Int.LF.STyp (_, cPhi'), cPsi'))) ->
-        let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cPhi' in
+  | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.ClTyp (Int.LF.STyp (cl, cPhi'), cPsi'))) ->
+        let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cl cPhi' in
           (loc, Int.LF.ClObj (phat, Int.LF.SObj s'))
 
   | (Apx.Comp.MetaObj (loc, phat, Apx.LF.Root (_,h,_)), (Int.LF.ClTyp (Int.LF.PTyp tA', cPsi'))) ->

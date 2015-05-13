@@ -834,7 +834,7 @@ let isVar h = match h with
     | (SVar (s, 0, sigma), CtxVar psi) ->
         (* other cases ? -bp *)
         let (s,cPhi, cPsi') = (match applyMSub s ms with
-                                           | MV v -> let (_, cPhi, cPsi') =
+                                           | MV v -> let (_, cPhi, _, cPsi') =
                                                Whnf.mctxSDec cD0  v in (v, cPhi, cPsi')
                                            | MUndef -> raise NotInvertible
                                         ) in
@@ -871,7 +871,7 @@ let isVar h = match h with
       buggy. Need to deal with the n *)
           begin match applyMSub s ms with
             | MV v ->
-                let (_, cPhi, cPsi1) = Whnf.mctxSDec cD0  v  in
+                let (_, cPhi, _, cPsi1) = Whnf.mctxSDec cD0  v  in
                   (* applyMSub to ctx_offset ? *)
                 SVar(v, ( n), invSub cD0 phat (t, cPsi1) ss rOccur)
             | MUndef -> raise NotInvertible
@@ -1177,15 +1177,15 @@ let isVar h = match h with
 
 
       let cPsi' = (match applyMSub s mt with
-                                           | MV v -> let (_, _cPhi, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
-                                           | MUndef -> raise NotInvertible
-                    ) in
+        | MV v -> let (_, _cPhi, _, cPsi') = Whnf.mctxSDec cD0  v in cPsi'
+        | MUndef -> raise NotInvertible
+      ) in
 
-        let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
-        let _ = dprint (fun () -> "[pruneSub] result = " ^
+      let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
+      let _ = dprint (fun () -> "[pruneSub] result = " ^
                        P.subToString cD0 cPsi (comp s' (SVar (s, cshift, sigma)))) in
 
-          (s',cPsi1')
+      (s',cPsi1')
 
     | (MSVar (cshift, ((s, _theta),sigma)), cPsi1) ->
       let s' , cPsi1' = (id, cPsi1) in

@@ -1811,7 +1811,7 @@ and elSub' loc recT cD cPsi s cPhi =
       end
 
   | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
-    let (_, cPhi1, cPhi2) = Whnf.mctxSDec cD offset in
+    let (_, cPhi1, _, cPhi2) = Whnf.mctxSDec cD offset in
     let _ = dprint (fun () -> "[elSub] Encountered #S : "
                       ^ P.dctxToString cD cPhi1 ^
                       "[ " ^ P.dctxToString cD cPhi2 ^ "]") in

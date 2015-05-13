@@ -90,7 +90,7 @@ val mctxLookup : mctx -> int -> Id.name * ctyp
 val mctxLookupDep : mctx -> int -> Id.name * ctyp * depend
 val mctxMDec   : mctx -> int -> Id.name * typ * dctx
 val mctxPDec   : mctx -> int -> Id.name * typ * dctx
-val mctxSDec   : mctx -> int -> Id.name * dctx * dctx
+val mctxSDec   : mctx -> int -> Id.name * dctx * svar_class * dctx
 val mctxCDec   : mctx -> int -> Id.name * Id.cid_schema
 
 val mctxMVarPos : mctx -> Id.name -> (Id.offset * ctyp)

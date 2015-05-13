@@ -27,6 +27,7 @@ type error =
   | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
   | IllTypedMetaObj  of mctx * clobj * dctx * cltyp 
   | TermWhenVar      of mctx * dctx * head
+  | SubWhenRen       of mctx * dctx * sub
 
 exception Error of Syntax.Loc.t * error
 
@@ -122,8 +123,10 @@ let _ = Error.register_printer
 	Format.fprintf ppf "A term was found when expecting a variable.@." ;
 	Format.fprintf ppf "Offending term: %a @." 
 	  (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) head
-	  
-	  
+      | SubWhenRen (cD, cPsi, sub) -> 
+	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
+	Format.fprintf ppf "Offending substitution: %a @." 
+	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub
   ))
 
 exception SpineMismatch
@@ -402,6 +405,13 @@ and canAppear cD cPsi head sA loc=
  * succeeds iff cD ; cPsi |- s : cPsi'
  *)
 and checkSub loc cD cPsi1 s1 cl cPsi1' =
+  let svar_le = function 
+    | Ren, Ren 
+    | Subst, Subst
+    | Ren, Subst -> ()
+    | Subst, Ren ->
+      raise (Error (loc, SubWhenRen(cD, cPsi1, s1)))
+  in
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | cPsi, EmptySub, Null -> ()
     | cPsi, Undefs, Null -> ()
@@ -413,7 +423,8 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
                           Psi'  |- shift (cs , k) : Psi
                           Phi   |- s'             : Phi'
       *)
-      let (_, cPsi', cPhi') = Whnf.mctxSDec cD offset in
+      let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
+      svar_le (cl', cl) ;
       checkSub loc cD cPsi' (Shift k) cPsi;
       checkSub loc cD cPhi  s'            cPhi'
 

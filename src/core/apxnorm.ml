@@ -129,7 +129,7 @@ and cnormApxObj cD delta offset (cD'', t) =
                 let (tP', cPhi')  = (Whnf.cnormTyp (tP, t'), Whnf.cnormDCtx  (cPhi, t')) in
                 Apx.LF.PInst (h, tP', cPhi')
         | Int.LF.ClObj (_phat, Int.LF.SObj s) ->
-                let (_s, cPsi, cPhi) = Whnf.mctxSDec cD offset' in
+                let (_s, cPsi, _, cPhi) = Whnf.mctxSDec cD offset' in
                 let t' = drop t l_delta in
                 let (cPsi', cPhi')  = (Whnf.cnormDCtx (cPsi, t'), Whnf.cnormDCtx (cPhi, t')) in
                 Apx.LF.SInst (s, cPsi', cPhi')

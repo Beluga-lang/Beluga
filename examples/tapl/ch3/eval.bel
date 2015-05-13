@@ -8,35 +8,35 @@
 % Small-step operational semantics
 step: term -> term -> type.
 
-e_switch_true:
-   step (switch true T2 T3)    T2.
+e_if_true:
+   step (if_then_else true T2 T3)    T2.
 
-e_switch_false:
-   step (switch false T2 T3)   T3.
+e_if_false:
+   step (if_then_else false T2 T3)   T3.
 
-e_switch:
+e_if_then_else:
    step T1 T1'
--> step (switch T1 T2 T3)      (switch T1' T2 T3).
+-> step (if_then_else T1 T2 T3)      (if_then_else T1' T2 T3).
 
 
 % Example:
 
-let t : [ |- step (switch (switch true false false)
+let t : [ |- step (if_then_else (if_then_else true false false)
                       true
                       true)
-              (switch false true true)]
-= [ |- e_switch e_switch_true] ;
+              (if_then_else false true true)]
+= [ |- e_if_then_else e_if_true] ;
 
-let d : [ |- step (switch (switch (switch true false false)
+let d : [ |- step (if_then_else (if_then_else (if_then_else true false false)
                                true
                                true)
                        false
                        false)
 
-              (switch (switch false true true)
+              (if_then_else (if_then_else false true true)
 	              false
                       false)]
-= [ |- e_switch (e_switch e_switch_true)] ;
+= [ |- e_if (e_if e_if_true)] ;
 
 
 % Values
@@ -63,9 +63,9 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
 / total s (det t t1 t2 s)/
 fn s => case s of
-% | [ ] andalso (e_switch_true)  (e_switch_true)  =>  [ ] ref
- | [ |- andalso (e_switch_false) (e_switch_false)] =>  [ |- ref]
- | [ |- andalso (e_switch D)     (e_switch E)]     =>
+% | [ ] andalso (e_if_true)  (e_if_true)  =>  [ ] ref
+ | [ |- andalso (e_if_false) (e_if_false)] =>  [ |- ref]
+ | [ |- andalso (e_if D)     (e_if E)]     =>
          let [ |- ref] = det [ |- andalso D E] in
            [ |- ref]
 ;

@@ -9,15 +9,15 @@
 datatype term  : type = 
 | true  : term
 | false : term
-| switch: term -> term -> term -> term
+| if_then_else : term -> term -> term -> term
 ;
 
 % Examples : Valid Terms
 
-let v1 = [ |- switch false true (switch true false true)] ;
+let v1 = [ |- if_then_else false true (if_then_else true false true)] ;
 
 
 %not
-let w2 = [ |- switch true false] ;
+let w2 = [ |- if_then_else true false] ;
 
 

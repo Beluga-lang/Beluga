@@ -17,7 +17,7 @@ rec eval : [ |- term] -> [ |- final_value] =
 fn m => case m of
 | [ |- true]  => [ |- result true]
 | [ |- false] => [ |- result false]
-| [ |- switch T1 T2 T3] =>
+| [ |- if_then_else T1 T2 T3] =>
   (case eval [ |- T1] of
     | [ |- result true]  => eval [ |- T2]
     | [ |- result false] => eval [ |- T3]
@@ -27,7 +27,7 @@ fn m => case m of
 
 
 
-let r = eval [ |- (switch (switch (switch true false false)
+let r = eval [ |- (if_then_else (if_then_else (if_then_else true false false)
                                true
                                true)
                        false

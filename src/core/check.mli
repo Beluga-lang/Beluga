@@ -22,6 +22,7 @@ module LF : sig
     | ParamVarInst     of mctx * dctx * tclo
     | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
+    | TermWhenVar      of mctx * dctx * head
 
   exception Error of Syntax.Loc.t * error
 

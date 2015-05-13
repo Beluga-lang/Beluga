@@ -24,8 +24,9 @@ type error =
   | SpineIllTyped    of int * int
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
-  | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
-  | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
+  | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+  | IllTypedMetaObj  of mctx * clobj * dctx * cltyp 
+  | TermWhenVar      of mctx * dctx * head
 
 exception Error of Syntax.Loc.t * error
 
@@ -117,6 +118,12 @@ let _ = Error.register_printer
               Format.fprintf ppf
                 "In expression: %a@."
                 (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+      | TermWhenVar (cD, cPsi, head) ->
+	Format.fprintf ppf "A term was found when expecting a variable.@." ;
+	Format.fprintf ppf "Offending term: %a @." 
+	  (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) head
+	  
+	  
   ))
 
 exception SpineMismatch
@@ -270,7 +277,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
       let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
       syn (tS, s1) tB2 in
 
-  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h, Substitution.LF.id) in
+  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS then
     raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
@@ -287,13 +294,13 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
  * where cD ; cPsi |- tA <= type
  * else exception Error is raised.
  *)
-and inferHead loc cD cPsi head = match head with
-  | BVar k' ->
+and inferHead loc cD cPsi head cl = match head, cl with
+  | BVar k', _ ->
     let (_, _l) = dctxToHat cPsi in
     let TypDecl (_, tA) = ctxDec cPsi k' in
     tA
 
-  | Proj (tuple_head, target) ->
+  | Proj (tuple_head, target), _ ->
     let srecA = match tuple_head with
       | BVar k' ->
         let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
@@ -304,7 +311,7 @@ and inferHead loc cD cPsi head = match head with
         (recA, Substitution.LF.id)
       | PVar (p, s) ->
         let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
-        checkSub loc cD cPsi s cPsi';
+        checkSub loc cD cPsi s Subst cPsi';
         (recA, s)
     in
     let (_tA, s) as sA = getType tuple_head srecA target 1 in
@@ -313,37 +320,40 @@ and inferHead loc cD cPsi head = match head with
     TClo sA
 
 
-  | Const c ->
+  | Const c, Subst ->
     (Term.get c).Term.typ
 
-  | MVar (Offset u, s) ->
+  | MVar (Offset u, s), Subst ->
     (* cD ; cPsi' |- tA <= type *)
     let (_, tA, cPsi') = Whnf.mctxMDec cD u in
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
-    checkSub loc cD cPsi s cPsi' ;
+    checkSub loc cD cPsi s Subst cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s) ->
+  | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
-    checkSub loc cD cPsi s cPsi' ;
+    checkSub loc cD cPsi s Subst cPsi' ;
     TClo (tA, s)
 
-  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r) ->
+  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
     let _ = dprint (fun () -> " cD' = " ^ P.mctxToString cD') in
     let _ = checkMSub loc cD t' cD' in
     let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in
-    checkSub loc cD cPsi r (Whnf.cnormDCtx (cPsi', t')) ;
+    checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ;
     TClo(Whnf.cnormTyp (tA, t'), r)
 
+  | Const _, Ren
+  | MVar _, Ren
+  | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, head)))
 
-  | PVar (p, s) ->
+  | PVar (p, s), _ ->
     (* cD ; cPsi' |- tA <= type *)
     let (_, tA, cPsi') = Whnf.mctxPDec cD p in
     dprnt "[inferHead] PVar case";
@@ -352,14 +362,14 @@ and inferHead loc cD cPsi head = match head with
       ^ "check:  cPsi (context in pattern) = " ^ P.dctxToString cD cPsi ^ "\n"
       ^ "check: synthesizing " ^ P.typToString cD cPsi (tA, s) ^ " for PVar" ^ "\n"
       ^ "check: cD = " ^ P.mctxToString cD);
-    checkSub loc cD cPsi s cPsi';
+    checkSub loc cD cPsi s Subst cPsi';
     (* Check that something of type tA could possibly appear in cPsi *)
 (*    if not (canAppear cD cPsi head (tA, s) loc) then
       raise (Error (loc, ParamVarInst (cD, cPsi, (tA, s)))); *)
     (* Return p's type from cD *)
     TClo (tA, s)
 
-  | FVar _ ->
+  | FVar _, _ ->
     raise (Error (loc, LeftoverFV))
 
 
@@ -391,7 +401,7 @@ and canAppear cD cPsi head sA loc=
  *
  * succeeds iff cD ; cPsi |- s : cPsi'
  *)
-and checkSub loc cD cPsi1 s1 cPsi1' =
+and checkSub loc cD cPsi1 s1 cl cPsi1' =
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | cPsi, EmptySub, Null -> ()
     | cPsi, Undefs, Null -> ()
@@ -438,7 +448,7 @@ and checkSub loc cD cPsi1 s1 cPsi1' =
     | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2)) ->
       let _ = checkSub loc cD cPsi' s' cPsi
       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-      and tA1 = inferHead loc cD cPsi' h in
+      and tA1 = inferHead loc cD cPsi' h cl in
       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
 	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
@@ -801,11 +811,11 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
      check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
 
-  | SObj tM, (STyp (_, tA), t) ->
-     checkSub loc cD cPsi' tM (Whnf.cnormDCtx (tA, t))
+  | SObj tM, (STyp (cl, tA), t) ->
+     checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t))
   | PObj h, (PTyp tA, t)
   | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
-      let tA' = inferHead loc cD cPsi' h in
+      let tA' = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
       dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()

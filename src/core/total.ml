@@ -310,7 +310,7 @@ let gen_var' loc cD (x, cU) = match cU with
         ( (loc, LF.ClObj (psihat, LF.PObj h))  ,
          LF.ClObj (psihat, LF.PObj h) )
 
-  | LF.ClTyp (LF.STyp cPhi, cPsi) ->
+  | LF.ClTyp (LF.STyp (_, cPhi), cPsi) ->
       let psihat  = Context.dctxToHat cPsi in
       let s     =  Whnf.newMSVar (Some x) (cD, cPsi, cPhi) LF.Maybe in
       let sigma = LF.MSVar (0, ((s , Whnf.m_id), Substitution.LF.id)) in
@@ -433,7 +433,7 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
        let pv = LF.PVar (k, Substitution.LF.id) in
 	(Syntax.Loc.ghost, LF.ClObj (psihat', LF.PObj pv))
 
-   | LF.ClTyp (LF.STyp cPsi, cPhi) ->  
+   | LF.ClTyp (LF.STyp (_, cPsi), cPhi) ->  
        let sv = LF.SVar (k, 0, Substitution.LF.id) in 
        let phat  = Context.dctxToHat cPsi in
        let psihat' = Whnf.cnorm_psihat phat theta in

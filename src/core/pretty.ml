@@ -616,7 +616,7 @@ module Int = struct
           fprintf ppf " %a"
             (fmt_ppr_lf_normal cD cPsi lvl) m
 
-      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.STyp cPsi,_), _, mDep) ->
+      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.STyp (_, cPsi),_), _, mDep) ->
           begin
             try
               fprintf ppf "?%s"
@@ -893,9 +893,10 @@ module Int = struct
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA 
 
-      | LF.ClTyp (LF.STyp cPhi, cPsi) ->
-          fprintf ppf "[%a |- %a]"
+      | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
+          fprintf ppf "[%a |- %s  %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
+	    (match cl with LF.Ren -> "#" | LF.Subst -> "")
             (fmt_ppr_lf_dctx cD lvl) cPhi
       | LF.CTyp schemaName ->
           fprintf ppf "%a"

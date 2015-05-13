@@ -97,7 +97,7 @@ let newMMVar' n (cD, mtyp) dep = match n with
 
 let newMMVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
 let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
-let newMSVar n (cD, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp cPhi, cPsi)) dep
+let newMSVar n (cD, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (Subst, cPhi), cPsi)) dep
 let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
 
 let newMVar n (cPsi, tA) dep = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) dep)
@@ -365,7 +365,7 @@ and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
 and normClTyp (tp, s) = match tp with
   | MTyp tA -> MTyp (normTyp(tA, s))
   | PTyp tA -> PTyp (normTyp(tA, s))
-  | STyp cPhi -> STyp cPhi
+  | STyp (cl, cPhi) -> STyp (cl, cPhi)
 
 and normITyp = function
   | ClTyp (tp, cPsi) -> ClTyp (normClTyp (tp, LF.id), cPsi)
@@ -441,7 +441,7 @@ and normSub s = match s with
   | Dot (ft, s') -> Dot(normFt ft, normSub s')
   | FSVar (n, (s, sigma)) -> FSVar (n, (s, normSub sigma))
   | SVar (offset, n, s') -> SVar (offset, n, normSub s')
-  | MSVar (n, (((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, mDep),
+  | MSVar (n, (((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp (_, _cPsi), _cPhi), _cnstrs, mDep),
     mt), s')) ->
       let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
       LF.comp (Shift n) s0
@@ -638,7 +638,7 @@ and cnorm (tM, t) = match tM with
     | FSVar (n, (s_name, s')) ->
         FSVar (n, (s_name, cnormSub (s', t)))
 
-    | MSVar (n, (((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp _cPsi, _cPhi), _cnstrs, _),
+    | MSVar (n, (((_n, {contents = Some (ISub s)}, _cD0, ClTyp (STyp (_,_cPsi), _cPhi), _cnstrs, _),
              mt),s')) ->
         let _ = dprint (fun () -> "[cnormSub] MSVar - MSInst") in
         let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
@@ -718,7 +718,7 @@ and cnorm (tM, t) = match tM with
 and cnormClTyp (mtyp, t) = match mtyp with
     | MTyp tA -> MTyp (normTyp (cnormTyp(tA, t), LF.id))
     | PTyp tA -> PTyp (normTyp (cnormTyp(tA, t), LF.id))
-    | STyp cPhi -> STyp (normDCtx (cnormDCtx(cPhi, t)))
+    | STyp (cl, cPhi) -> STyp (cl, normDCtx (cnormDCtx(cPhi, t)))
 and cnormMTyp (mtyp, t) = match mtyp with
     | ClTyp (tA, cPsi) -> ClTyp (cnormClTyp (tA, t), normDCtx (cnormDCtx(cPsi, t)))
     | CTyp sW -> CTyp sW
@@ -1379,7 +1379,7 @@ let mctxPDec cD k =
 
 let mctxSDec cD' k =
   match (mctxLookup cD' k) with
-    | (u, ClTyp (STyp cPhi, cPsi)) -> (u, cPhi, cPsi)
+    | (u, ClTyp (STyp (_, cPhi), cPsi)) -> (u, cPhi, cPsi)
     | _ -> raise (Error.Violation "Expected substitution variable")
 
 let mctxCDec cD k =
@@ -1728,7 +1728,7 @@ let mctxMVarPos cD u =
   let convClTyp = function
     | MTyp tA , MTyp tA'
     | PTyp tA , PTyp tA' -> convTyp (tA, LF.id) (tA', LF.id)  
-    | STyp cPhi , STyp cPhi' -> convDCtx cPhi cPhi'
+    | STyp (_, cPhi) , STyp (_, cPhi') -> convDCtx cPhi cPhi'
     | _ , _ -> false
 
   let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
@@ -1914,7 +1914,7 @@ and closedMetaObj (loc,mO) = match mO with
 let closedClTyp = function
   | MTyp tA 
   | PTyp tA -> closedTyp (tA, LF.id)
-  | STyp cPhi -> closedDCtx cPhi
+  | STyp (_, cPhi) -> closedDCtx cPhi
 let closedMetaTyp cT = match cT with 
   | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
   | CTyp _ -> true

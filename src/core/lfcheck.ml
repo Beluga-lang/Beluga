@@ -801,7 +801,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
      check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
 
-  | SObj tM, (STyp tA, t) ->
+  | SObj tM, (STyp (_, tA), t) ->
      checkSub loc cD cPsi' tM (Whnf.cnormDCtx (tA, t))
   | PObj h, (PTyp tA, t)
   | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 

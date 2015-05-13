@@ -93,7 +93,7 @@ let trivial_meta_obj cD  (_loc, m0) mT = match m0, mT with
 	 | _ -> false
       ) 
    
-  | LF.ClObj (phat, LF.SObj s )  ,  LF.ClTyp (LF.STyp cPhi, cPsi) ->      
+  | LF.ClObj (phat, LF.SObj s )  ,  LF.ClTyp (LF.STyp (_, cPhi), cPsi) ->      
       ( match s with 
 	  | LF.SVar (0,0, s) -> Whnf.convSub s Substitution.LF.id
 	  | _ -> false
@@ -1385,8 +1385,8 @@ let rec addToMCtx cD (cD_tail, ms) = match cD_tail with
   | LF.Decl (u,  LF.ClTyp (LF.PTyp tA, cPsi), dep) :: cD_tail ->
       let pdec = LF.Decl(u,  LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA, ms)), Whnf.cnormDCtx (cPsi, ms)), dep) in
         addToMCtx (LF.Dec (cD, pdec)) (cD_tail, Whnf.mvar_dot1 ms)
-  | LF.Decl (u,  LF.ClTyp (LF.STyp cPhi, cPsi), dep) :: cD_tail ->
-      let sdec = LF.Decl(u,  LF.ClTyp (LF.STyp (Whnf.cnormDCtx (cPhi, ms)), Whnf.cnormDCtx (cPsi, ms)), dep) in
+  | LF.Decl (u,  LF.ClTyp (LF.STyp (cl, cPhi), cPsi), dep) :: cD_tail ->
+      let sdec = LF.Decl(u,  LF.ClTyp (LF.STyp (cl, Whnf.cnormDCtx (cPhi, ms)), Whnf.cnormDCtx (cPsi, ms)), dep) in
         addToMCtx (LF.Dec (cD, sdec)) (cD_tail, Whnf.mvar_dot1 ms)
   | cdecl :: cD_tail ->
       addToMCtx (LF.Dec (cD, cdecl)) (cD_tail, Whnf.mvar_dot1 ms)

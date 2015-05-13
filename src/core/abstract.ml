@@ -297,7 +297,7 @@ let rec constraints_solved cnstr = match cnstr with
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
   | Comp.TypBox (_, I.ClTyp (I.MTyp tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
-  | Comp.TypBox (_, I.ClTyp (I.STyp cPhi, cPsi)) -> cnstr_dctx cPhi && cnstr_dctx cPsi
+  | Comp.TypBox (_, I.ClTyp (I.STyp (_,cPhi), cPsi)) -> cnstr_dctx cPhi && cnstr_dctx cPsi
 
 and cnstr_typ sA = match sA with
   | (I.Atom  (_, _a, spine),  s)  -> cnstr_spine (spine , s)
@@ -756,10 +756,10 @@ and collectClTyp loc p cQ' phat = function
   | I.PTyp tA -> 
     let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
     (cQ'', I.PTyp tA')
-  | I.STyp cPhi ->
+  | I.STyp (cl, cPhi) ->
      let phi_hat = Context.dctxToHat cPhi in
      let (cQ1, cPhi') = collectDctx loc p cQ' phi_hat cPhi in
-     (cQ1, I.STyp cPhi')
+     (cQ1, I.STyp (cl, cPhi'))
 
 and collectMetaTyp loc p cQ = function 
   | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
@@ -1098,7 +1098,7 @@ and abstractMVarDctx cQ loff cPsi = match cPsi with
 and abstractMVarClTyp cQ loff = function
   | I.MTyp tA -> I.MTyp (abstractMVarTyp cQ loff (tA, LF.id))
   | I.PTyp tA -> I.PTyp (abstractMVarTyp cQ loff (tA, LF.id))
-  | I.STyp cPhi -> I.STyp (abstractMVarDctx cQ loff cPhi)
+  | I.STyp (cl, cPhi) -> I.STyp (cl, abstractMVarDctx cQ loff cPhi)
 
 and abstractMVarMTyp cQ mtyp loff = match mtyp with
   | I.ClTyp (tp, cPsi) -> I.ClTyp (abstractMVarClTyp cQ loff tp, abstractMVarDctx cQ loff cPsi)

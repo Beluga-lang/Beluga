@@ -1775,7 +1775,7 @@ and elSub' loc recT cD cPsi s cPhi =
 
    *)
       begin try
-        let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.STyp cPhi0 , cPsi0), dep)) = FCVar.get s_name in
+        let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.STyp (_, cPhi0) , cPsi0), dep)) = FCVar.get s_name in
 	let d = Context.length cD - Context.length cD_d in
 	let (cPhi0', cPsi0') = if d = 0 then (cPhi0, cPsi0) else
           (if d > 0 then
@@ -1801,7 +1801,10 @@ and elSub' loc recT cD cPsi s cPhi =
         with Not_found ->
           if isPatSub sigma then
             let (cPsi', sigma') = synDom cD loc cPsi sigma in
-              (FCVar.add s_name (cD, Int.LF.Decl (s_name, Int.LF.ClTyp (Int.LF.STyp cPhi, cPsi'), Int.LF.Maybe));
+              (FCVar.add s_name 
+		 (cD, Int.LF.Decl 
+		   (s_name, Int.LF.ClTyp 
+		     (Int.LF.STyp (Int.LF.Subst, cPhi), cPsi'), Int.LF.Maybe));
                Int.LF.FSVar (0, (s_name, sigma')))
           else
             raise (Error (loc, NotPatSub))

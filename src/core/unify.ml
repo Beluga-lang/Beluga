@@ -844,7 +844,7 @@ let isVar h = match h with
         P.dctxToString cD0 cPsi') in
 
         SVar(s, 0, invSub cD0 phat (sigma, cPsi') ss rOccur)
-    | (MSVar (0, (((_,{contents=None},cD, ClTyp (STyp cPsi',cPhi), _, _) as s0, mt),sigma)), CtxVar psi) ->
+    | (MSVar (0, (((_,{contents=None},cD, ClTyp (STyp (_, cPsi'),cPhi), _, _) as s0, mt),sigma)), CtxVar psi) ->
       MSVar(0, ((s0, invMSub cD0 (mt, cD) ms rOccur), invSub cD0 phat (sigma, cPsi') ss rOccur))
 
     | (Dot (Head (BVar n), s'), DDec(cPsi', _dec)) ->
@@ -878,7 +878,7 @@ let isVar h = match h with
           end
     | (FSVar (n, (s_name, t)), cPsi1) ->
         (dprint (fun () -> "invSub FSVar");
-        let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'), _)) = Store.FCVar.get s_name in
+        let (_, Decl (_, ClTyp (STyp (LF.Subst , _cPhi),  cPsi'), _)) = Store.FCVar.get s_name in
         FSVar (n , (s_name, invSub cD0 phat (t, cPsi') ss rOccur)))
 (*        if ssubst = id then s else
         (dprint (fun () -> "invSub FSVar -- undefined") ; raise (Error "invSub for
@@ -901,7 +901,7 @@ let isVar h = match h with
    *)
   and invMSub cD0 (mt, cD1) ms  rOccur = match (mt, cD1) with
     | (MShift  n, _) -> checkDefined (Whnf.mcomp (MShift  n) ms)
-    | (MDot (ClObj (phat, SObj sigma), mt'), Dec(cD', Decl (_ , ClTyp (STyp cPhi, _cPsi), _)))   ->
+    | (MDot (ClObj (phat, SObj sigma), mt'), Dec(cD', Decl (_ , ClTyp (STyp (_, cPhi), _cPsi), _)))   ->
       let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
       MDot (ClObj (phat, SObj sigma'), invMSub cD0 (mt', cD') ms rOccur)
     | (MDot (mobj, mt'), Dec(cD',_)) ->
@@ -1190,7 +1190,7 @@ let isVar h = match h with
     | (MSVar (cshift, ((s, _theta),sigma)), cPsi1) ->
       let s' , cPsi1' = (id, cPsi1) in
 
-      let (_ ,{contents=None}, _cD, ClTyp (STyp cPhi2, cPhi1), _cnstrs, _) = s in
+      let (_ ,{contents=None}, _cD, ClTyp (STyp (_, cPhi2), cPhi1), _cnstrs, _) = s in
       let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
       let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
           (s', cPsi1')
@@ -1203,7 +1203,7 @@ let isVar h = match h with
         *)
       let s' , cPsi1' = (id, cPsi1) in
 
-        let (_, Decl (_, ClTyp (STyp _cPhi,  cPsi'),_)) = Store.FCVar.get s in
+        let (_, Decl (_, ClTyp (STyp (_, _cPhi),  cPsi'),_)) = Store.FCVar.get s in
         let _ = invSub cD0 phat (sigma, cPsi') ss rOccur  in
         (s', cPsi1')
 
@@ -1433,7 +1433,7 @@ let isVar h = match h with
   and pruneITerm cD cPsi (hat, tm) ss rOccur = match tm with
     | INorm n , _        -> INorm (prune cD cPsi hat (n,id) ss rOccur)
     | IHead h , _        -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
-    | ISub s , STyp cPhi -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
+    | ISub s , STyp (_, cPhi) -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
 
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin (* try *)
@@ -2058,7 +2058,7 @@ let isVar h = match h with
   let unifyClTyp Unification cD cPsi = function
     | MTyp tA1, MTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
     | PTyp tA1 , PTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
-    | STyp cPhi1 , STyp cPhi2 -> unifyDCtx1 Unification cD cPhi1 cPhi2 
+    | STyp (_, cPhi1) , STyp (_, cPhi2) -> unifyDCtx1 Unification cD cPhi1 cPhi2 
   let unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
     | ClTyp (tp1, cPsi1) , ClTyp (tp2, cPsi2) ->
        unifyDCtx1 Unification cD cPsi1 cPsi2;

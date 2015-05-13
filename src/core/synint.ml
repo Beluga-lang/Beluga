@@ -24,7 +24,12 @@ module LF = struct
   and cltyp =
     | MTyp of typ
     | PTyp of typ
-    | STyp of dctx
+    | STyp of svar_class * dctx
+
+  and svar_class = 
+    | Ren
+    | Subst
+
   and ctyp =
     | ClTyp of cltyp * dctx
     | CTyp of cid_schema

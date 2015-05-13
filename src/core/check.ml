@@ -459,7 +459,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | I.PTyp tA ->
         LF.checkTyp  cD cPsi (tA, S.LF.id);
         checkParamTypeValid cD cPsi tA
-    | I.STyp cPhi ->
+    | I.STyp (_, cPhi) ->
     	LF.checkDCtx cD cPhi
   let checkCLFTyp cD ctyp = match ctyp with
     | I.CTyp schema_cid ->

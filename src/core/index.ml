@@ -549,6 +549,10 @@ let index_psihat cvars fcvars extphat =
                end
     end
 
+let index_svar_class = function
+  | Ext.LF.Ren -> Apx.LF.Ren
+  | Ext.LF.Subst -> Apx.LF.Subst
+
 let rec index_ctx cvars bvars fvars = function
   | Ext.LF.Empty ->
       (Apx.LF.Empty , bvars, fvars)
@@ -565,9 +569,9 @@ let index_cltyp' cvars bvars fvars = function
   | Ext.LF.PTyp a ->
     let (a, fvars) = index_typ cvars bvars fvars a in
     (Apx.LF.PTyp a, fvars)
-  | Ext.LF.STyp (_, phi) ->
+  | Ext.LF.STyp (cl, phi) ->
     let (phi', _bvars', fvars) = index_dctx cvars (BVar.create ()) fvars phi in
-    (Apx.LF.STyp phi', fvars)
+    (Apx.LF.STyp (index_svar_class cl, phi'), fvars)
 
 let index_cltyp cvars fvars = function
   | Ext.LF.ClTyp (loc, cl, psi) ->

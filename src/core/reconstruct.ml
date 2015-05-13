@@ -338,7 +338,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
 
 let elClTyp recT cD cPsi = function
   | Apx.LF.MTyp a -> Int.LF.MTyp (Lfrecon.elTyp recT cD cPsi a)
-  | Apx.LF.STyp phi -> Int.LF.STyp (Lfrecon.elDCtx recT cD phi)
+  | Apx.LF.STyp (_, phi) -> Int.LF.STyp (Lfrecon.elDCtx recT cD phi)
   | Apx.LF.PTyp a -> Int.LF.PTyp (Lfrecon.elTyp recT cD cPsi a)
 
 let elCTyp recT cD = function

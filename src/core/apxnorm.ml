@@ -515,7 +515,7 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
   | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp a, c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
         collectApxTyp fMVs' a
-  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp c_phi, c_psi), _) ->
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp (_, c_phi), c_psi), _) ->
     let fMVs' = collectApxDCtx fMVs c_psi in
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs

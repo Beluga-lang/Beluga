@@ -2209,7 +2209,9 @@ let isVar h = match h with
 			 (dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
 				    " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
 			  forceGlobalCnstr' cnstrs)
-		       else raise (Failure "Constraints generated"))
+		       else
+			 dprint (fun () -> "New constraints generated?" ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
+			 raise (Failure "Constraints generated"))
                     with Failure _ ->
                       let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
                       let getLoc tM1 = begin match tM1 with

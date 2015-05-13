@@ -680,7 +680,7 @@ let add_fvarCnstr  c = fvar_cnstr := c :: !fvar_cnstr
 let reset_fvarCnstr () = (fvar_cnstr := [])
 
 (* Constraints for free metavariables and parameter variables  *)
-let fcvar_cnstr : ((Apx.LF.normal * Int.LF.cvar)  list) ref = ref []
+let fcvar_cnstr : ((Apx.LF.normal * Int.LF.mm_var)  list) ref = ref []
 
 let add_fcvarCnstr  c = fcvar_cnstr := c :: !fcvar_cnstr
 let reset_fcvarCnstr () = (fcvar_cnstr := [])
@@ -1186,13 +1186,9 @@ and elTerm' recT cD cPsi r sP = match r with
 	     else 
  *)
              ( (* if s = substvar whose type is known *)
-               match s with
-                 | Apx.LF.SVar (_ , _ ) ->
-                     raise (Error (loc, CompTypAnnSub ))
-                 | _ ->
-              let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+              let v = Whnf.newMMVar None (cD, cPsi, Int.LF.TClo sP) Int.LF.Maybe in
                 add_fcvarCnstr (m, v);
-                Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil)
+                Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), Substitution.LF.id), Int.LF.Nil)
 
              )
         | Error.Violation msg  ->
@@ -1816,8 +1812,8 @@ and elSub' loc recT cD cPsi s cPhi =
     let _ = dprint (fun () -> "[elSub] Encountered #S : "
                       ^ P.dctxToString cD cPhi1 ^
                       "[ " ^ P.dctxToString cD cPhi2 ^ "]") in
-    if  Whnf.convDCtx (Whnf.cnormDCtx (cPhi, Whnf.m_id))
-                      (Whnf.cnormDCtx (cPhi1, Whnf.m_id)) then
+    begin try Unify.unifyDCtx cD (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+		                 (Whnf.cnormDCtx (cPhi1, Whnf.m_id));
       let s' = elSub' loc recT cD cPsi s cPhi2 in
       let sigma = Int.LF.SVar (offset, 0, s') in
       let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
@@ -1826,8 +1822,9 @@ and elSub' loc recT cD cPsi s cPhi =
       let _ = dprint (fun () -> "[elSub] range : " ^ P.dctxToString cD cPsi) in
         sigma
 
-    else
+      with Unify.Failure msg -> 
        raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
+    end 
 
   | (Apx.LF.SVar (Apx.LF.SInst (s0, cPhi', cPhi2), s), (Int.LF.CtxVar phi as cPhi)) ->
 (*     if Whnf.convDCtx cPhi cPhi' then *)
@@ -2366,9 +2363,9 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
     with _ -> raise (Index.Error (loc, Index.UnboundName x))
     end
 
-let rec solve_fcvarCnstr cD cnstr = match cnstr with
+let rec solve_fcvarCnstr cnstr = match cnstr with
   | [] -> ()
-  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), Int.LF.Inst (_, r, _, Int.LF.ClTyp (Int.LF.MTyp _,cPsi), _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), (_, r, cD, Int.LF.ClTyp (Int.LF.MTyp _,cPsi), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp _tP, cPhi), _)) = FCVar.get u in
 	let d = Context.length cD - Context.length cD_d in
@@ -2376,12 +2373,12 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
                       Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
         let s'' = elSub loc Pibox cD cPsi s cPhi in
           r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)));
-          solve_fcvarCnstr cD cnstrs
+          solve_fcvarCnstr cnstrs
       with Not_found ->
         raise (Error (loc, LeftoverConstraints u))
       end
 
-  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), Int.LF.Inst (_, r, _, Int.LF.ClTyp (Int.LF.MTyp _,cPsi), _, _)) :: cnstrs) ->
+  | ((Apx.LF.Root (loc, Apx.LF.FPVar (x,s), spine), (_, r, cD, Int.LF.ClTyp (Int.LF.MTyp _,cPsi), _, _)) :: cnstrs) ->
       begin try
         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _)) = FCVar.get x in
 	let d = Context.length cD - Context.length cD_d in
@@ -2393,13 +2390,13 @@ let rec solve_fcvarCnstr cD cnstr = match cnstr with
         (* let tS = elSpine cPsi spine (tA, LF.id) (tP,s) in *)
         let (tS, _ ) = elSpine loc Pibox cD cPsi spine (tA, s'') in
           r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FPVar (x,s''), tS)));
-          solve_fcvarCnstr cD cnstrs
+          solve_fcvarCnstr cnstrs
       with Not_found ->
         raise (Error (loc, LeftoverConstraints x))
       end
 
 let solve_constraints cD' =
-  (solve_fcvarCnstr cD' !fcvar_cnstr ;
+  (solve_fcvarCnstr !fcvar_cnstr ;
   reset_fcvarCnstr ();
   Unify.forceGlobalCnstr (!Unify.globalCnstrs);
   Unify.resetGlobalCnstrs () )

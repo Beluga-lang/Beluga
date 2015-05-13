@@ -1676,6 +1676,7 @@ let compkind = elCompKind Int.LF.Empty
 
 let comptyp tau =
   let tau' = elCompTyp Int.LF.Empty tau in
+  let _ = Lfrecon.solve_constraints Int.LF.Empty in
   let _ = dprint (fun () -> "[elCompTyp] " ^ P.compTypToString Int.LF.Empty tau' ^ " done \n") in
   tau'
 

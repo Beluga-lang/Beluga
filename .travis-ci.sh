@@ -1,5 +1,5 @@
 # Edit this for your own project dependencies
-OPAM_DEPENDS="ocamlfind menhir"
+OPAM_DEPENDS="ocamlfind extlib ulex"
 
 case "$OCAML_VERSION" in
 4.00.1) ppa=avsm/ocaml40+opam12 ;;

@@ -80,6 +80,7 @@ module LF = struct
   and sub =
     | EmptySub
     | Id    
+    | RealId
     | Dot   of front * sub
     | SVar  of cvar * sub
     | FSVar of name * sub

@@ -856,7 +856,7 @@ GLOBAL: sgn;
     | "atomic"
         [
           u = UPSYMBOL ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
            begin match ann with
@@ -918,7 +918,7 @@ GLOBAL: sgn;
   clf_term_app:
     [
       [
-        u = UPSYMBOL; s = clf_sub_new -> 
+        u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
           begin match s with
               (* Infix operator case *)
@@ -928,8 +928,8 @@ GLOBAL: sgn;
               | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
             end
       |
-        u = UPSYMBOL ; ","; sigma' = clf_sub_new ->
-          LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
+        u = UPSYMBOL ->
+          LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
       |
         ms = LIST1 clf_normal -> LF.TList(_loc, ms)
       |
@@ -940,12 +940,14 @@ GLOBAL: sgn;
   clf_head:
     [
       [
-        "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "."; k = clf_proj; "["; sigma = clf_sub_new; "]" ->
           LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma), k)
 
       |
-        "#"; p = SYMBOL;  sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "["; sigma = clf_sub_new; "]" ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
+      | "#"; p = SYMBOL -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId)
 
       |
         x = SYMBOL; "."; k = clf_proj ->
@@ -980,6 +982,7 @@ GLOBAL: sgn;
       |
          "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+      | "#"; s = UPSYMBOL -> LF.SVar(_loc, Id.mk_name (Id.SomeString s), LF.RealId)
      ]
     ]
 ;

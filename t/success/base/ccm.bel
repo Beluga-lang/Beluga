@@ -17,7 +17,7 @@ schema nat-ctx = nat;
 
 rec gratlength : (g:nat-ctx) [g |- nat]  -> [ |- nat] =
 fn v => case v of
- | [h,x:nat |-  U] => let [ |- N] = gratlength [h |- U[..] z] in [ |- s N]
+ | [h,x:nat |-  U] => let [ |- N] = gratlength [h |- U[.. z]] in [ |- s N]
  | [hhh |-  V[..]] => [ |- z]
 ;
 
@@ -63,7 +63,7 @@ fn v => case v of %not
  | [h,x:tp |-  x] => [ |- z]
  | [h1,y:tp,x:tp |-  y]  =>  [ |- z]
  | [h,y:tp,x:tp |-  #p[..]]  =>  [ |- z]
- | [h,y:tp,x:tp |-  card (N[..] y x)]  =>  [ |- z]
+ | [h,y:tp,x:tp |-  card N]  =>  [ |- z]
  | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
@@ -73,7 +73,7 @@ fn v => case v of  %not
  | [h,x:tp |-  x] => [ |- z]
  | [h,x:tp |-  #p[..]]  =>  [ |- z]
  | [h,n:nat |-  #p[..]]  =>  [ |- z]
- | [h,n:nat |-  card (N[..] n)]  =>  [ |- z]
+ | [h,n:nat |-  card N]  =>  [ |- z]
  | [h,x:tp |-  card (N[..])]  =>  [ |- z]
  | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
@@ -83,7 +83,7 @@ fn v => case v of
  | [h,x:tp |-  x] => [ |- z]
  | [h,x:tp |-  #p[..]]  =>  [ |- z]
  | [h,n:nat |-  #p[..]]  =>  [ |- z]
- | [h,n:nat |-  card (N[..] n)]  =>  [ |- z]
+ | [h,n:nat |-  card N]  =>  [ |- z]
  | [h,x:tp |-  card (N[..])]  =>  [ |- z]
  | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
  | [g |- card (N[..])]  =>  [ |- z]

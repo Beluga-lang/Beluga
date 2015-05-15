@@ -57,7 +57,7 @@ Proof by induction on E.
 schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 
 
-rec unique : {g:tctx}{E:[g |- exp]} [g |- type_of (E[..]) T] -> [g |- type_of (E[..]) T']
+rec unique : {g:tctx}{E:[g |- exp]} [g |- type_of (E[..]) T[]] -> [g |- type_of (E[..]) T'[]]
              ->  [ |- eq T T'] =  / total e (unique _ _ _ e) / 
 mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
  | [g |- app (E1[..] ) (E2[..] )] =>
@@ -66,11 +66,11 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
   let [ |- e_arr C1 C2] = unique [g] [g |- E1[..] ] [g |- D1[..]] [g |- F1[..]] in
     [ |- C2]
 
-| [g |- lam T1 (\x. E)] =>
-  let [g |- t_lam (\x.(\u. D u))] = d in
-  let [g |- t_lam (\x.(\u. F u))] = f in
-  let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1]
-                      [g,b |- (E[..] b.1) ] [g,b |- D[..] b.1 b.2] [g,b |- F[..] b.1 b.2] in
+| [g |- lam T1[] (\x. E)] =>
+  let [g |- t_lam (\x.(\u. D))] = d in
+  let [g |- t_lam (\x.(\u. F))] = f in
+  let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1[]]
+                      [g,b |- E[.. b.1] ] [g,b |- D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
  let [ |- C1] = refl [ |- T1 ] in
    [ |- e_arr C1 C2]
 
@@ -99,7 +99,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
 equal: tp -> tp -> type.
 e_ref: equal T T.
 
-rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of (E[..]) T] -> [g |- type_of (E[..]) T']
+rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of (E[..]) T[]] -> [g |- type_of (E[..]) T'[]]
              ->  [ |- equal T T'] = / total e (unique2 _ _ _ e) / 
 mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
 | [g |- app (E1[..] ) (E2[..] )] =>
@@ -108,11 +108,11 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
   let [ |- e_ref]  = unique2 [g] [g |- E1[..] ] [g |- D1[..]] [g |- F1[..]] in
     [ |- e_ref]
 
-| [g |- lam T1 (\x. E)] =>
-  let [g |- t_lam (\x.(\u. D u))] = d in
-  let [g |- t_lam (\x.(\u. F u))] = f in
-  let [ |- e_ref] = unique2 [g,b: block x:exp, _t:type_of x T1]
-                      [g,b |- (E[..] b.1) ] [g,b |- D[..] b.1 b.2] [g,b |- F[..] b.1 b.2] in
+| [g |- lam T1[] (\x. E)] =>
+  let [g |- t_lam (\x.(\u. D))] = d in
+  let [g |- t_lam (\x.(\u. F))] = f in
+  let [ |- e_ref] = unique2 [g,b: block x:exp, _t:type_of x T1[]]
+                      [g,b |- E[.. b.1] ] [g,b |- D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
    [ |- e_ref]
 
 | [g |- #p.1[..]] =>
@@ -126,7 +126,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
 equal: tp -> tp -> type.
 e_ref: equal T T.
 
-rec unique3 : (g:tctx)[g |- type_of (E[..]) T] -> [g |- type_of (E[..]) T']
+rec unique3 : (g:tctx)[g |- type_of (E[..]) T[]] -> [g |- type_of (E[..]) T'[]]
              ->  [ |- equal T T'] =  
 / total d (unique3 _ _ _ _ d) /
 fn d => fn f => case d of
@@ -135,9 +135,9 @@ fn d => fn f => case d of
   let [ |- e_ref]  = unique3  [g |- D1[..]] [g |- F1[..]] in
     [ |- e_ref]
 
-| [g |- t_lam \x.\u. D  u] =>
-  let [g |- t_lam \x.\u. F u] = f in
-  let [ |- e_ref] = unique3 [g,b:block x:exp, u:type_of x _ |-  D[..] b.1 b.2] [g,b |- F[..] b.1 b.2] in
+| [g |- t_lam \x.\u. D] =>
+  let [g |- t_lam \x.\u. F] = f in
+  let [ |- e_ref] = unique3 [g,b:block x:exp, u:type_of x _ |-  D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
    [ |- e_ref]
 
 | [g |- #q.2[..]] =>           % d : type_of #q.1 T

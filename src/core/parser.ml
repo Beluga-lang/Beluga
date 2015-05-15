@@ -859,12 +859,12 @@ GLOBAL: sgn;
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
 
 	| u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
-          let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
+          (* let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in *)
           begin match s with
               (* Infix operator case *)
-              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
-                let op' = LF.Root(l, op, LF.Nil) in 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
+              (* | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  ->  *)
+              (*   let op' = LF.Root(l, op, LF.Nil) in  *)
+              (*   LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2]) *)
               | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
             end 
         |
@@ -929,12 +929,12 @@ GLOBAL: sgn;
     [
       [ (* TODO: This is duplicated *)
         u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
-          let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
+          (* let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in *)
           begin match s with
               (* Infix operator case *)
-              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
-                let op' = LF.Root(l, op, LF.Nil) in 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
+              (* | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  ->  *)
+              (*   let op' = LF.Root(l, op, LF.Nil) in  *)
+              (*   LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2]) *)
               | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
             end
       |

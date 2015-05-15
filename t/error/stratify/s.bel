@@ -22,11 +22,11 @@ nat : type.
 
 
 datatype NeutVar : {g:ctx} [ |- tp] -> ctype  =
-| NeutVar : {#p:[g |- neut T]} NeutVar [g] [ |- T]
+| NeutVar : {#p:[g |- neut T[]]} NeutVar [g] [ |- T]
 ;
 
 datatype TmVar : {g:tctx} [ |- tp] -> ctype  =
-| TmVar : {#p:[g |- tm T]} TmVar [g] [ |- T]
+| TmVar : {#p:[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 
 
@@ -39,7 +39,7 @@ datatype Extends : {g:ctx} {h:ctx} ctype =
 ;
 
 datatype Sem : {g:ctx} [ |- tp] -> ctype   = 
-| Syn :  [g |- neut (atomic P)] -> Sem [g] [ |- atomic P]
+| Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : ({h:ctx}{m:ctx} Extends [g] [h] ->({s1:ctx}{s2:ctx} Sem [h] [ |- A]) ->{n:ctx} Sem [h] [ |- B])
            -> {t:ctx}{s:ctx}Sem [g] [ |- arr A B]
 ;

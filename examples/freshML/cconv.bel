@@ -30,12 +30,12 @@ rec genTVar :(g:tctx){#p:[g |- term]} [g |- env] -> [arg':target, xve:target |- 
 / total env (genTVar g p env) /
 mlam #p => fn env => case env  of
 | [g |- enil] => [arg', xve |-  tfst xve]
-| [g |- econs (H[..]) (T[..])]  =>
-  if [g |- H[..]] == [g |- #p[..]] then
+| [g |- econs H T]  =>
+  if [g |- H] == [g |- #p] then
      [arg', xve |-  arg']
   else
-     (let [arg':target, xve:target |-  U arg' xve] = genTVar [g |- #p[..] ] [g |- T[..] ]  in
-     [arg', xve |-  U, arg' (tsnd xve)])
+     (let [arg':target, xve:target |- U] = genTVar [g |- #p ] [g |- T ]  in
+     [x:target, xve:target |- U[x (tsnd xve)] ])
 ;
 
 
@@ -44,9 +44,9 @@ rec build: (g:tctx)[g |- env] -> [g |- env] -> [arg':target, xve:target |-  targ
 fn lorig => fn l => case l of
 | [g |- enil] => [arg', xve |-  tunit]
 | [g |- econs (#p[..] ) (Xs[..] )] =>
-  let [arg':target, xve:target |-  U arg' xve] = genTVar [g |- #p[..] ] lorig in
-  let [arg':target, xve:target |-  V arg' xve] = build lorig [g |- Xs[..] ] in
-    [arg',xve |-  tpair (U arg' xve) (V arg' xve)]
+  let [arg':target, xve:target |-  U] = genTVar [g |- #p[..] ] lorig in
+  let [arg':target, xve:target |-  V] = build lorig [g |- Xs[..] ] in
+    [arg',xve |-  tpair U V]
 ;
 
 
@@ -58,26 +58,26 @@ fn env => fn t => case t of
     let [g |- L[..]] = env in
     genTVar [g |- #p[..] ] [g |- L[..] ]
 
-| [g,y:term |-  lam \x. E[..] y x] =>
+| [g,y:term |-  lam \x. E] =>
   let [g |- L[..]] = env in
-  let [arg':target, xve:target |-  Ve arg' xve] =
+  let [arg':target, xve:target |- Ve] =
     build [g |- L[..]] [g |- L[..]] in
 
-  let [arg':target, xve:target |-  T arg' xve] =
-    convert [g,y:term |-  econs y (L[..] )] [g,y,x |-  E[..] y x] in
+  let [arg':target, xve:target |-  T] =
+    convert [g,y:term |-  econs y (L[..] )] [g,y,x |-  E[.. x]] in
 % or should this be[..].
 %     convert [g,x:term] ([g,x] econs x (L[..] )) ([g,x,y] E[..] y x) in
 
-   [arg',xve |-  tpair (tabs \arg'. \xve. T arg' xve ) (Ve arg' xve)]
+   [arg',xve |-  tpair (tabs \arg'. \xve. T[arg' xve]) Ve]
 
 | [g, x:term |-  app (E1) (E2)] =>
   let [g |- L[..]] = env in
-  let [arg':target,xve:target |-  T1 arg' xve] =
+  let [arg':target,xve:target |-  T1] =
         convert [g |- L[..] ] [g,x |- E1] in
-  let [arg':target, xve:target |-  T2 arg' xve] =
+  let [arg':target, xve:target |-  T2] =
         convert [g |- L[..] ] [g,x |- E2] in
-   [arg',xve |-  tlet  (T1 arg' xve)
-                \closure .  tapp (tfst closure) (tsnd closure)  (T2 arg' xve)]
+   [arg',xve |-  tlet T1
+                \closure .  tapp (tfst closure) (tsnd closure) (T2[arg' xve])]
 
 
 ;

@@ -64,8 +64,8 @@ fn r => let r : Reduce [g] [g |- A[..]] [g |- M[..]] = r in case r of
 %  h |- #s : g
 datatype RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
-| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm (A #S[..])]} % !!!!
-        RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A #S[..] ] [h |- M[..]]
+| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm A[#S]]} 
+        RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A[#S] ] [h |- M[..]]
          -> RedSub [g,x:tm (A[..])] [h] [h |- #S[..], (M[..]) ]
 ;
 %{

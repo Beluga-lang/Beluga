@@ -42,7 +42,7 @@ type has an empty context (so return values of this function must be closed if
 they are to be well-typed).}}%
 
 rec close-only1 : [x:tm |- tm] -> [ |- tm] =
-  fn t => let [x:tm |- T x] = t in [ |- lam \u. T u]
+  fn t => let [x:tm |- T] = t in [ |- lam \u. T]
 ;
 
 %{{The idea of the function body is simply to make the term's free variable a
@@ -68,7 +68,7 @@ from the output context.}}%
 
 rec close1 : {g:ctx} [g, x:tm |- tm] -> [g |- tm] =
   mlam g => fn t =>
-    let [g, x:tm |- T] = t in [g |- lam \u. T[..] u]
+    let [g, x:tm |- T] = t in [g |- lam \u. T]
 ;
 
 %{{In this function we must use "mlam", which is the equivalent of "fn" for
@@ -108,7 +108,7 @@ rec close' : {g:ctx} [g |- tm] -> [ |- tm] =
   mlam g => fn t => case t of
     | [ |- _] => t
     | [g', x:tm |- T] =>
-      close' [g'] [g' |- lam \u. T[..] u]
+      close' [g'] [g' |- lam \u. T]
 ;
 
 %{{Notice how Beluga allows us to perform pattern matching on both the context

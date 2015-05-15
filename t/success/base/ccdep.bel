@@ -52,101 +52,101 @@ fn d => case d of  %not
 
 rec depsplitWrong1asdfasdfadsf : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of %not
- | [g, xx:dep ff |-  UUx] => [ |- ff]
+ | [g, xx:dep ff |-  UU] => [ |- ff]
 ;
 
 
 
 rec depsplitWrong1 : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of %not
- | [g, xx:dep ff |-  UUx] => [ |- ff]
+ | [g, xx:dep ff |-  UU] => [ |- ff]
 % | [g, xx:dep tt] VVx => [] tt
 %   msub': has the `ff' in `xx:dep ff'
 ;
 
 rec depsplitOK1 : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep ff |-  UUx] => [ |- ff]
- | [g, xx:dep tt |-  VVx] => [ |- tt]
+ | [g, xx:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt |-  VV] => [ |- tt]
 ;
 
 rec depsplitTwoOK1 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep ff, yy:dep YY |-  UUx yy] => [ |- ff]
- | [g, xx:dep tt, yy:dep YY |-  VVx yy] => [ |- tt]
+ | [g, xx:dep ff, yy:dep YY |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep YY |-  VV] => [ |- tt]
 ;
 
 rec depsplitTwoOK2 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep XX1, yy:dep ff |-  UUx yy] => [ |- ff]
- | [g, xx:dep XX2, yy:dep tt |-  VVx yy] => [ |- tt]
+ | [g, xx:dep XX1, yy:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep XX2, yy:dep tt |-  VV] => [ |- tt]
 ;
 
 rec depsplitTwoOK3 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep ff, yy:dep ff |-  UUx yy] => [ |- ff]
- | [g, xx:dep ff, yy:dep tt |-  VVx yy] => [ |- tt]
- | [g, xx:dep tt, yy:dep ff |-  WWx yy] => [ |- ff]
- | [g, xx:dep tt, yy:dep tt |-  ZZx yy] => [ |- tt]
+ | [g, xx:dep ff, yy:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt |-  VV] => [ |- tt]
+ | [g, xx:dep tt, yy:dep ff |-  WW] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt |-  ZZ] => [ |- tt]
 ;
 
 % 3 variables
 rec depsplitManyOK : {g:dep-ctx} [g, x : dep TX, y : dep TY, a : dep TA |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep ff, yy:dep ff, aa:dep ff |-  UUx yy aa] => [ |- ff]
- | [g, xx:dep ff, yy:dep ff, aa:dep tt |-  UUx yy aa] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep ff, yy:dep tt, aa:dep ff |-  UUx yy aa] => [ |- ff]
- | [g, xx:dep ff, yy:dep tt, aa:dep tt |-  UUx yy aa] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep tt, yy:dep ff, aa:dep ff |-  UUx yy aa] => [ |- ff]
- | [g, xx:dep tt, yy:dep ff, aa:dep tt |-  UUx yy aa] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep tt, yy:dep tt, aa:dep ff |-  UUx yy aa] => [ |- ff]
- | [g, xx:dep tt, yy:dep tt, aa:dep tt |-  UUx yy aa] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep tt |-  UU] => [ |- ff]
 ;
 
 
 % 4 variables, to test splitting bounds
 rec depsplitManyOK : {g:dep-ctx} [g, x : dep TX, y : dep TY, a : dep TA, b : dep TB |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep ff, yy:dep ff, aa:dep ff, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep ff, aa:dep ff, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep ff, aa:dep tt, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep ff, aa:dep tt, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep ff, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep ff, bb:dep tt |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep tt, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep ff, aa:dep tt, bb:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep ff, yy:dep tt, aa:dep ff, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep tt, aa:dep ff, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
-       | [g, xx:dep tt, yy:dep tt, aa:dep ff, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep tt, aa:dep tt, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep ff, yy:dep tt, aa:dep tt, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep ff, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep ff, bb:dep tt |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep ff, bb:dep tt |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep tt, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep ff, yy:dep tt, aa:dep tt, bb:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep tt, yy:dep ff, aa:dep ff, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep tt, yy:dep ff, aa:dep ff, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep tt, yy:dep ff, aa:dep tt, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep tt, yy:dep ff, aa:dep tt, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep ff, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep ff, bb:dep tt |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep tt, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep ff, aa:dep tt, bb:dep tt |-  UU] => [ |- ff]
 
- | [g, xx:dep tt, yy:dep tt, aa:dep ff, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep tt, yy:dep tt, aa:dep tt, bb:dep ff |-  UUx yy aa bb] => [ |- ff]
- | [g, xx:dep tt, yy:dep tt, aa:dep tt, bb:dep tt |-  UUx yy aa bb] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep ff, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep tt, bb:dep ff |-  UU] => [ |- ff]
+ | [g, xx:dep tt, yy:dep tt, aa:dep tt, bb:dep tt |-  UU] => [ |- ff]
 ;
 
 
 rec depsplitTwoWrong1 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of %not
- | [g, xx:dep XX1, yy:dep ff |-  UUx yy] => [ |- ff]
+ | [g, xx:dep XX1, yy:dep ff |-  UU] => [ |- ff]
 ;
 
 rec depsplitTwoWrong2 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of %not
- | [g, xx:dep tt, yy:dep YY2 |-  UUx yy] => [ |- ff]
+ | [g, xx:dep tt, yy:dep YY2 |-  UU] => [ |- ff]
 ;
 
 
 
 rec depsplitOK2 : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
 mlam g => fn d => case d of
- | [g, xx:dep WHATEVS |-  Ux] => [ |- tt]
+ | [g, xx:dep WHATEVS |-  U] => [ |- tt]
 ;
 
 

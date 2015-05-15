@@ -55,9 +55,9 @@ mlam g => fn v =>  case v of
    let [g,x:value (T[..]) |-  F[..]] =  hoas2db [g,x:value (T[..]) ] [g,x |- E ] in
      [g |- lam' (T[..]) (F[..])]
 
- | [g |- tlam \a. E[..] a] =>
-   let [g,a:tp |-  F[..] a] = hoas2db [g,a:tp] [g,a |- E[..] a] in
-     [g |- tlam' \a. F[..] a]
+ | [g |- tlam \a. E] =>
+   let [g,a:tp |-  F] = hoas2db [g,a:tp] [g,a |- E] in
+     [g |- tlam' \a. F]
 
 
 and hoas2db : {g:ctx} [g |- exp (T[..])] ->  [g |- exp' (T[..]) ] =

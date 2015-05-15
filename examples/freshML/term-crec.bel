@@ -178,7 +178,7 @@ rec memb: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
 / total l (memb e l)/
 fn e => fn l => case l of
 | [g |- empty] => [ |- nothing]
-| [g |- push (E'[..] ) T (L[..] )] =>
+| [g |- push (E'[..] ) T[] (L[..] )] =>
   if e == [g |- E'[..] ] then
     [ |- just T]
   else
@@ -191,9 +191,9 @@ rec typing: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
 fn e => fn l => case e of
 | [g |- #p[..]]  =>  memb [g |- #p[..] ] l
 
-| [g |- lamt T (\x. M)] =>
+| [g |- lamt T[] (\x. M)] =>
   let [g |- L[..]] = l in
-    typing [g,x:tm |-  M] [g,x |- push x T (L[..] )]
+    typing [g,x:tm |-  M] [g,x |- push x T[] (L[..] )]
 
 | [g |- apply (M1[..] ) (M2[..] )] =>
   (case typing [g |- M1[..] ] l of

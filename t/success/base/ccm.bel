@@ -17,23 +17,23 @@ schema nat-ctx = nat;
 
 rec gratlength : (g:nat-ctx) [g |- nat]  -> [ |- nat] =
 fn v => case v of
- | [h,x:nat |-  U .. x] => let [ |- N] = gratlength [h |- U .. z] in [ |- s N]
- | [hhh |-  V ..] => [ |- z]
+ | [h,x:nat |-  U] => let [ |- N] = gratlength [h |- U[..] z] in [ |- s N]
+ | [hhh |-  V[..]] => [ |- z]
 ;
 
 %{
 rec gratlengthWrong : {g:nat-ctx} nat[g]  -> nat[ ] =
 fn v => case v of
- | [h,x:nat] U .. x => let [] N = gratlength ([h] U .. z) in [] s N
- | [hhh] V  %{ shouldn't need the .. here, but coverage rejects it otherwise }%  => [ |- z]
+ | [h,x:nat] U => let [] N = gratlength ([h] U[..] z) in [] s N
+ | [hhh] V  %{ shouldn't need the[..] here, but coverage rejects it otherwise }%  => [ |- z]
 % | [ ] V  => [] z        crashes Match_failure("ctxsub.ml", 670, 4)   2010-07-31
 ;
 }%
 
 rec length' : {g:nat-ctx} [g |- nat]  -> [ |- nat] =
 mlam g => fn v => case v of
- | [h,x:nat |-  U .. x] => let [ |- N] = length' [h] [h |- z] in [ |- s N]
- | [hhh |-  V ..] => [ |- z]
+ | [h,x:nat |-  U] => let [ |- N] = length' [h] [h |- z] in [ |- s N]
+ | [hhh |-  V[..]] => [ |- z]
 ;
 
 rec length : {g:nat-ctx} [ |- nat] = mlam g => length' [g] [g |- z]
@@ -42,7 +42,7 @@ rec length : {g:nat-ctx} [ |- nat] = mlam g => length' [g] [g |- z]
 
 rec length'2 : {g:nat-ctx} [g |- nat]  -> [ |- nat] =
 mlam g => fn v => case v of %not
- | [h,x:nat |-  U .. x] => let [ |- N] = length'2 [h] [h |- z] in [ |- s N]
+ | [h,x:nat |-  U] => let [ |- N] = length'2 [h] [h |- z] in [ |- s N]
 ;
 
 
@@ -52,9 +52,9 @@ rec fff1 : (g:tp-ctx) [g |- tp]  -> [ |- nat] =
 fn v => case v of
  | [hh,x:tp |-  x] => [ |- z]
  | [h,y:tp,x:tp |-  y]  =>  [ |- z]
- | [h,y:tp,x:tp |-  #p ..]  =>  [ |- z]
- | [g |- card (N ..)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
+ | [h,y:tp,x:tp |-  #p[..]]  =>  [ |- z]
+ | [g |- card (N[..])]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
 
@@ -62,31 +62,31 @@ rec aaa1Wrong : (g:natORtp-ctx) [g |- tp]  -> [ |- nat] =
 fn v => case v of %not
  | [h,x:tp |-  x] => [ |- z]
  | [h1,y:tp,x:tp |-  y]  =>  [ |- z]
- | [h,y:tp,x:tp |-  #p ..]  =>  [ |- z]
- | [h,y:tp,x:tp |-  card (N .. y x)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
+ | [h,y:tp,x:tp |-  #p[..]]  =>  [ |- z]
+ | [h,y:tp,x:tp |-  card (N[..] y x)]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
 
 rec aaa1Wrong2 : (g:natORtp-ctx) [g |- tp]  -> [ |- nat] =
 fn v => case v of  %not
  | [h,x:tp |-  x] => [ |- z]
- | [h,x:tp |-  #p ..]  =>  [ |- z]
- | [h,n:nat |-  #p ..]  =>  [ |- z]
- | [h,n:nat |-  card (N .. n)]  =>  [ |- z]
- | [h,x:tp |-  card (N ..)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
+ | [h,x:tp |-  #p[..]]  =>  [ |- z]
+ | [h,n:nat |-  #p[..]]  =>  [ |- z]
+ | [h,n:nat |-  card (N[..] n)]  =>  [ |- z]
+ | [h,x:tp |-  card (N[..])]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
 rec aaa1 : (g:natORtp-ctx) [g |- tp]  -> [ |- nat] =
 fn v => case v of
  | [h,x:tp |-  x] => [ |- z]
- | [h,x:tp |-  #p ..]  =>  [ |- z]
- | [h,n:nat |-  #p ..]  =>  [ |- z]
- | [h,n:nat |-  card (N .. n)]  =>  [ |- z]
- | [h,x:tp |-  card (N ..)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
- | [g |- card (N ..)]  =>  [ |- z]
+ | [h,x:tp |-  #p[..]]  =>  [ |- z]
+ | [h,n:nat |-  #p[..]]  =>  [ |- z]
+ | [h,n:nat |-  card (N[..] n)]  =>  [ |- z]
+ | [h,x:tp |-  card (N[..])]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
+ | [g |- card (N[..])]  =>  [ |- z]
 ;
 
 
@@ -94,9 +94,9 @@ rec fff2Wrong : (g:tp-ctx) [g |- tp]  -> [ |- nat] =
 fn v => case v of %not
  | [h,x:tp |-  x] => [ |- z]
  | [h,y:tp,x:tp |-  y]  =>  [ |- z]
- | [h,q1:tp,y:tp,x:tp |-  #p ..]  =>  [ |- z]  % misses q1
- | [g |- card (N ..)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
+ | [h,q1:tp,y:tp,x:tp |-  #p[..]]  =>  [ |- z]  % misses q1
+ | [g |- card (N[..])]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
 
@@ -105,9 +105,9 @@ fn v => case v of
  | [h,x:tp |-  x] => [ |- z]
  | [h,y:tp,x:tp |-  y]  =>  [ |- z]
  | [h,q1:tp,y:tp,x:tp |-  q1]  =>  [ |- z]
- | [h,q1:tp,y:tp,x:tp |-  #p ..]  =>  [ |- z]
- | [g |- card (N ..)]  =>  [ |- z]
- | [g |- arr (T1 ..) (T2 ..)]  =>  [ |- z]
+ | [h,q1:tp,y:tp,x:tp |-  #p[..]]  =>  [ |- z]
+ | [g |- card (N[..])]  =>  [ |- z]
+ | [g |- arr (T1[..]) (T2[..])]  =>  [ |- z]
 ;
 
 
@@ -119,12 +119,12 @@ fn e => case e of
 
 | {E::(exp' S)[ ]}
    [h,x:value T] shift E =>
-  let [h] F .. = db2vhoas ([h] E)  in
-    [h,x:value T] F ..
+  let [h] F[..] = db2vhoas ([h] E)  in
+    [h,x:value T] F[..]
 
 | [h] lam' T E =>
-    let [g,x:value T] F .. x = db2hoas  ([h, x:value T] E) in
-      [g] lam T (\x. F .. x)
+    let [g,x:value T] F = db2hoas  ([h, x:value T] E) in
+      [g] lam T (\x. F)
 ;
 }%
 
@@ -132,4 +132,4 @@ let n0 = length [];
 % let n1 = length [x1:nat];
 % let n2 = length [x1:nat, x2:nat];
 let n6 = length [x1:nat, x2:nat, x3:nat, x4:nat, x5:nat, x6:nat];
-% let [ ] N0 .. = length [] ;
+% let [ ] N0[..] = length [] ;

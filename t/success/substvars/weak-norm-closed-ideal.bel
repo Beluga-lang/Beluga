@@ -77,24 +77,24 @@ datatype RedSub : {g:ctx}{#S: |- g} ctype =
 
 rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
  / total p (lookup g a s p) /
-mlam g => mlam #p => case [g |- #p ..] of
+mlam g => mlam #p => case [g |- #p[..]] of
  | [g',x:tm A |-  x] =>   ? % fn rs => let (Dot rs' rN) = rs in rN
- | [g',x:tm A |-  #q ..] => ? %{ fn rs => let Dot rs' rN = rs in
-                      lookup [g'] [g' |-  #q ..] rs'}%
+ | [g',x:tm A |-  #q[..]] => ? %{ fn rs => let Dot rs' rN = rs in
+                      lookup [g'] [g' |-  #q[..]] rs'}%
 ;
 
 rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M #S[^]] =
 / total m (eval g a s m) /
- mlam g => mlam M => fn rs => case [g |- M ..] of
-| [g |- #p ..] => lookup [g] [g |- #p ..] rs
-| [g |- lam (\x. M1 .. x)] =>
+ mlam g => mlam M => fn rs => case [g |- M[..]] of
+| [g |- #p[..]] => lookup [g] [g |- #p[..]] rs
+| [g |- lam (\x. M1)] =>
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
     closed [|- _ ] [ |- _ ] [ |- _ ] 
-           [ |- beta] (eval [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
- | [g |- app (M1 ..) (M2 ..)] =>
-  let Arr ha f = eval [g] [g |- M1 ..] rs in
-  f [ |- _ ] (eval [g] [g |- M2 ..] rs)
+           [ |- beta] (eval [g,x:tm _] [g,x |- M1] (Dot rs rN)))
+ | [g |- app (M1[..]) (M2[..])] =>
+  let Arr ha f = eval [g] [g |- M1[..]] rs in
+  f [ |- _ ] (eval [g] [g |- M2[..]] rs)
 | [g' |-  c] => I [ |- halts/m refl val/c]
 ;
 

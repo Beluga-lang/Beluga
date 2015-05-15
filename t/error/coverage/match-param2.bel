@@ -12,6 +12,6 @@ schema ctx = term;
 rec occurs :(g:ctx)[g,y:term |- term] -> [ |- bool] =
 fn l => case l of
 | [g,y:term |- y] => [ |- tt]
-| [g,y:term |- #p..] => [|- ff]
-| [g, y:term |- lam \x. M .. y x] => occurs [g, x:term, y:term |- M .. y x]
+| [g,y:term |- #p[..]] => [|- ff]
+| [g, y:term |- lam \x. M[.. y x]] => occurs [g, x:term, y:term |- M[.. y x]]
 ;

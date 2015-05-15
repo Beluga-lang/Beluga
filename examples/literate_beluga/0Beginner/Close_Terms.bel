@@ -68,7 +68,7 @@ from the output context.}}%
 
 rec close1 : {g:ctx} [g, x:tm |- tm] -> [g |- tm] =
   mlam g => fn t =>
-    let [g, x:tm |- T .. x] = t in [g |- lam \u. T .. u]
+    let [g, x:tm |- T] = t in [g |- lam \u. T[..] u]
 ;
 
 %{{In this function we must use "mlam", which is the equivalent of "fn" for
@@ -88,7 +88,7 @@ type has the empty context, implying that the output term is closed.}}%
 rec close : {g:ctx} [g |- tm] -> [ |- tm] =
   mlam g => fn t => case t of
     | [ |- _] => t
-    | [g', x:tm |- T .. x] =>
+    | [g', x:tm |- T] =>
       close [g'] (close1 [g'] t)
 ;
 
@@ -107,8 +107,8 @@ solution.}}%
 rec close' : {g:ctx} [g |- tm] -> [ |- tm] =
   mlam g => fn t => case t of
     | [ |- _] => t
-    | [g', x:tm |- T .. x] =>
-      close' [g'] [g' |- lam \u. T .. u]
+    | [g', x:tm |- T] =>
+      close' [g'] [g' |- lam \u. T[..] u]
 ;
 
 %{{Notice how Beluga allows us to perform pattern matching on both the context

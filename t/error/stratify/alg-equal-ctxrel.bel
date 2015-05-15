@@ -48,23 +48,23 @@ datatype Crel : {g:tCtx} {h:taCtx} ctype =
 ;
 
 % Relation of terms in tCtx context to terms in taCtx context
-% TRel [g |- M ..] [h |- N ..]
+% TRel [g |- M[..]] [h |- N[..]]
 % This relation allows for a dual reading:
-% 1) When given [g |- M ..] then we can always weaken it to obtain [h |- N ..]
-% 2) When given [h |- N ..] we can always strengthen it to obtain [g |- M ..]
+% 1) When given [g |- M[..]] then we can always weaken it to obtain [h |- N[..]]
+% 2) When given [h |- N[..]] we can always strengthen it to obtain [g |- M[..]]
 
 datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratified =
 | TRvar0 : {h: taCtx} Crel [g] [h] ->
             TRel [g, x:term |-  x]
  		 [h, b:block (x:term, u:aeq x x) |- b.1]
-| TRvar  : TRel  [g |- #p ..] [h |- #q.1 ..]
-         -> TRel [g, x:term |-  #p ..]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1 ..]
+| TRvar  : TRel  [g |- #p[..]] [h |- #q.1[..]]
+         -> TRel [g, x:term |-  #p[..]]
+                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
-| TRapp  : TRel [g |- M ..] [h |- M'..] -> TRel [g |- N ..] [h |- N' ..]
-        -> TRel [g |- app (M ..) (N ..)] [h |- app (M'..) (N'..)]
+| TRapp  : TRel [g |- M[..]] [h |- M'] -> TRel [g |- N[..]] [h |- N'[..]]
+        -> TRel [g |- app (M[..]) (N[..])] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M .. x] [h, b:block (x:term, _u:aeq x x) |-  N .. b.1]
-	   -> TRel [g |- lam \x. M .. x] [h |- lam \x. N .. x]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[.. b.1]]
+	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
  

@@ -1857,7 +1857,12 @@ and elSub loc recT cD cPsi s cl cPhi =
 	    raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 	end
 
-      | (Apx.LF.RealId , cPhi) -> Int.LF.Shift 0
+      | (Apx.LF.RealId , cPhi) ->
+	begin try Unify.unifyDCtx cD (Whnf.cnormDCtx (cPhi, Whnf.m_id)) (Whnf.cnormDCtx (cPsi, Whnf.m_id));
+		  Int.LF.Shift 0
+	  with Unify.Failure msg ->
+	    raise (Error (loc, IllTypedSub (cD, cPsi, s, cPhi)))
+	end 
       | (Apx.LF.Id , Int.LF.DDec (_cPhi', _decl)) ->
 	elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
 

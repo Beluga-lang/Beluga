@@ -8,7 +8,7 @@ rec identity'' :  (!^ (imp (atom P ) (atom P)))[ ] =
    [ ] impI^ (\u. close u) ;
 
 
-rec identity' : {g:(ctx)*}{P:: atm [g]}  (!^ (imp (atom (P ..)) (atom (P ..))))[g] =
+rec identity' : {g:(ctx)*}{P:: atm [g]}  (!^ (imp (atom (P[..])) (atom (P[..]))))[g] =
 FN g =>  mlam Q =>
    [g] impI^ (\u. close u) ;
 

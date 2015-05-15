@@ -16,9 +16,9 @@ rec absv : {g:(ctx)*} (env P)[g, x:term A] -> (term B)[g, x:term A] -> (mor P B)
     FN g => fn e => fn t => case t of
         [g, x:term A] x => [] snd
 
-      | [g, x:term A] (#p ..) =>
-            let [g] G .. = pop [g] e in
-            let [] M = absv [g] ([g] G ..) t in
+      | [g, x:term A] (#p[..]) =>
+            let [g] G[..] = pop [g] e in
+            let [] M = absv [g] ([g] G[..]) t in
                 [] (@ M fst);
 
 rec abse : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
@@ -26,7 +26,7 @@ rec abse : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
         [g] lunit =>
           [] drop
 
-      | [g] #p .. =>
+      | [g] #p[..] =>
           absv [g] e t
 
       | [g] (lpair E1 E2) : (term (cross B C))[g] =>
@@ -43,8 +43,8 @@ rec abse : {g:(ctx)*} (env A)[g] -> (term B)[g] -> (mor A B)[] =
               [] (@ snd F)
 
       | [g] (llam \x . E x) : (term (arrow B C))[g] =>
-          let [g] G .. = e in
-          let [] F = abse [g, x: term B] ([g, x] (addv (G ..) x)) ([g, x] (E x)) in
+          let [g] G[..] = e in
+          let [] F = abse [g, x: term B] ([g, x] (addv (G[..]) x)) ([g, x] (E x)) in
               [] (cur F)
 
       | [g] (lapp E1 E2) : (term B)[g] =>

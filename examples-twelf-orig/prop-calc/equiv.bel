@@ -21,18 +21,18 @@ aMP	  : abs (\x. mp (P x) (Q x)) (mp (mp s P') Q')
 
 schema |-ctx =  |- A.
 
-rec abs: {g:(|-ctx)*}(|- (B .. ))[g, u: |- A] -> (|- imp (A ..) (B ..))[g] =
+rec abs: {g:(|-ctx)*}(|- (B[..] ))[g, u: |- A] -> (|- imp (A[..]) (B[..]))[g] =
  FN g => fn d => case d of
-  | [g,x: |- (A ..)] x       => [g] mp (mp s k) k
-  | [g,x: |- (A ..)] #p ..   => [g] mp k (#p ..)
+  | [g,x: |- (A[..])] x       => [g] mp (mp s k) k
+  | [g,x: |- (A[..])] #p[..]   => [g] mp k (#p[..])
   | [g,x: |- _     ] pair    => [g] mp k pair
   | [g,x: |- _     ] left    => [g] mp k left
   | [g,x: |- _     ] right   => [g] mp k right
   | [g,x: |- _     ] k       => [g] mp k k
-  | [g,x: |- _     ]  mp (P .. x) (Q .. x) =>
-    let [g] P' .. = abs [g] ([g,x] P .. x) in
-    let [g] Q' .. = abs [g] ([g,x] Q .. x) in
-     [g] mp (mp s (P' ..)) (Q' ..)
+  | [g,x: |- _     ]  mp (P) (Q) =>
+    let [g] P'[..] = abs [g] ([g,x] P) in
+    let [g] Q'[..] = abs [g] ([g,x] Q) in
+     [g] mp (mp s (P'[..])) (Q'[..])
 
 ;
 
@@ -65,33 +65,33 @@ schema !ctx = some [a:o] ! a;
 coercion !to|- : !ctx -> |-ctx =
             [a:o] ! a => |- a;
 
-rec comb: {g:!ctx} (! (A ..))[g] -> (|- (A ..))[!to|-(g)] =
+rec comb: {g:!ctx} (! (A[..]))[g] -> (|- (A[..]))[!to|-(g)] =
 FN g => fn d => case d of
 
-  [g] #p .. => [!to|-(g)] !to|-(#p ..)
+  [g] #p[..] => [!to|-(g)] !to|-(#p[..])
 
 | [g] trueI => [!to|-(g)] one
 
-|[g] andI (P ..) (Q ..) =>
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
- let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in
-   [!to|-(g)] mp (mp pair (P' ..)) (Q' ..)
+|[g] andI (P[..]) (Q[..]) =>
+ let [!to|-(g)] P'[..] = comb [g] ([g] P[..] ) in
+ let [!to|-(g)] Q'[..] = comb [g] ([g] Q[..] ) in
+   [!to|-(g)] mp (mp pair (P'[..])) (Q'[..])
 
-|[g] andEL (P ..)  =>
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
-  [!to|-(g)] mp left (P' ..)
-|[g] andER (P ..)  =>
- let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
-  [!to|-(g)] mp right (P' ..)
+|[g] andEL (P[..])  =>
+ let [!to|-(g)] P'[..] = comb [g] ([g] P[..] ) in
+  [!to|-(g)] mp left (P'[..])
+|[g] andER (P[..])  =>
+ let [!to|-(g)] P'[..] = comb [g] ([g] P[..] ) in
+  [!to|-(g)] mp right (P'[..])
 
-|[g] impliesI (PP ..) =>
- let [!to|-(g), y:|- _ ] PP' .. y = comb [g, x:! _ ] ([g, x] PP .. x) in
-    abs [!to|-(g)] ([!to|-(g), y] PP' .. y)
+|[g] impliesI (PP[..]) =>
+ let [!to|-(g), y:|- _ ] PP'[..] y = comb [g, x:! _ ] ([g, x] PP) in
+    abs [!to|-(g)] ([!to|-(g), y] PP'[..] y)
 
-|[g] impliesE (P ..) (Q ..) =>
-  let [!to|-(g)] P' .. = comb [g] ([g] P .. ) in
- let [!to|-(g)] Q' .. = comb [g] ([g] Q .. ) in
-   [!to|-(g)] mp (P' ..) (Q' ..)
+|[g] impliesE (P[..]) (Q[..]) =>
+  let [!to|-(g)] P'[..] = comb [g] ([g] P[..] ) in
+ let [!to|-(g)] Q'[..] = comb [g] ([g] Q[..] ) in
+   [!to|-(g)] mp (P'[..]) (Q'[..])
 
 ;
 
@@ -119,10 +119,10 @@ cdMP    : combdefn (mp P Q) (impliesE P' Q')
 
 }%
 
-rec combdefn : {g:(|-ctx)*} (|- (A ..))[g] -> (! (A .. ))[|-to!(g)] =
+rec combdefn : {g:(|-ctx)*} (|- (A[..]))[g] -> (! (A[..] ))[|-to!(g)] =
 FN g => fn d => case d of
 
- | [g] #p .. => [|-to!(g)] |-to!(#p ..)
+ | [g] #p[..] => [|-to!(g)] |-to!(#p[..])
 
  | [g] k =>  [|-to!(g)] impliesI (\p. impliesI (\q. p))
  | [g] s => [|-to!(g)] impliesI (\p. impliesI (\q. impliesI (\r.
@@ -134,10 +134,10 @@ FN g => fn d => case d of
  | [g] left =>  [|-to!(g)] impliesI (\p. andEL p)
  | [g] right =>  [|-to!(g)] impliesI (\p. andER p)
 
- | [g] mp (P ..) (Q ..) =>
-   let [|-to!(g)] P' .. = combdefn [g] ([g] P .. ) in
-   let [|-to!(g)] Q' .. = combdefn [g] ([g] Q .. ) in
-     [|-to!(g)] impliesE (P' ..) (Q' ..)
+ | [g] mp (P[..]) (Q[..]) =>
+   let [|-to!(g)] P'[..] = combdefn [g] ([g] P[..] ) in
+   let [|-to!(g)] Q'[..] = combdefn [g] ([g] Q[..] ) in
+     [|-to!(g)] impliesE (P'[..]) (Q'[..])
 
 ;
 

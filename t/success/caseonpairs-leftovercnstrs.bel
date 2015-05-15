@@ -28,21 +28,21 @@ datatype biDer : exp -> tp -> type =
 %name check C.
 %name biDer B.
 
-rec completenessGood : (g:ctx) [g |- oft (M..) T] -> [g |- biDer (M..) T] =
+rec completenessGood : (g:ctx) [g |- oft M T] -> [g |- biDer M T] =
 fn e => case e of
-| [g |- oft_pair (D1..) (D2..)] =>
-  (case completenessGood [g |- D1..] of
-   | [g |- chk (C'..)] =>
-     (case completenessGood [g |- D2..] of
-      | [g |- chk (C''..)] => [g |- chk (chk_pair (C'..) (C''..))]
+| [g |- oft_pair D1 D2] =>
+  (case completenessGood [g |- D1] of
+   | [g |- chk C'] =>
+     (case completenessGood [g |- D2] of
+      | [g |- chk C''] => [g |- chk (chk_pair C' C'')]
      )
   )
 ;
 
-rec completenessFaulty : (g:ctx) [g |- oft (M..) T] -> [g |- biDer (M..) T] =
+rec completenessFaulty : (g:ctx) [g |- oft M T] -> [g |- biDer M T] =
 fn e => case e of
-| [g |- oft_pair (D1..) (D2..)] =>
-  (case (completenessFaulty [g |- D1..], completenessFaulty [g |- D2..]) of  % [g |- biDer (M ..) T] * [g |- biDer (N ..) S]
-   | ([g |- chk (C'..)], [g |- chk (C''..)]) => [g |- chk (chk_pair (C'..) (C''..))]
+| [g |- oft_pair D1 D2] =>
+  (case (completenessFaulty [g |- D1], completenessFaulty [g |- D2]) of  % [g |- biDer (M[..]) T] * [g |- biDer (N[..]) S]
+   | ([g |- chk C'], [g |- chk C'']) => [g |- chk (chk_pair C' C'')]
   )
 ;

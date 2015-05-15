@@ -71,13 +71,13 @@ mlam T => fn e =>
            | [ |- ff] : [ |- (exp bool)] => eval [ |- T ] [ |- W]
 	   )
 
-   | {T1:[ |- tp]} {T2:[ |- tp]} {U:[ |- exp T1]} {W:[x:exp T1 |-  exp T2]}
-         [ |- letv T1 T2 U (\x . (W x))] : [ |- (exp T2)] =>
+   | {T1:[ |- tp]} {T2:[ |- tp]} {U:[ |- exp T1]} {W:[x:exp T1 |-  exp (T2[])]}
+         [ |- letv T1 T2 U (\x . W)] : [ |- (exp T2)] =>
 
          (case eval [ |- T1 ] [ |- U] of
 
              {T1':[ |- tp]} {V:[ |- exp T1']}
              [ |- V] : [ |- (exp T1')]
-             => eval [ |- T2 ] [ |- (W V)]
+             => eval [ |- T2 ] [ |- W[V]]
 	     )
 ;

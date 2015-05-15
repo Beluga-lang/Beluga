@@ -781,7 +781,7 @@ GLOBAL: sgn;
                 LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
           |
              a = UPSYMBOL; ms = LIST0 clf_normal ->
-                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
 
 
 
@@ -819,7 +819,7 @@ GLOBAL: sgn;
               
            |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
-              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
               (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
 
         ]
@@ -857,6 +857,16 @@ GLOBAL: sgn;
         [
           u = UPSYMBOL ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
+
+	| u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
+          let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
+          begin match s with
+              (* Infix operator case *)
+              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
+                let op' = LF.Root(l, op, LF.Nil) in 
+                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
+              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
+            end 
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
            begin match ann with
@@ -917,7 +927,7 @@ GLOBAL: sgn;
 
   clf_term_app:
     [
-      [
+      [ (* TODO: This is duplicated *)
         u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
           let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
           begin match s with
@@ -942,6 +952,9 @@ GLOBAL: sgn;
       [
         "#"; p = SYMBOL; "."; k = clf_proj; "["; sigma = clf_sub_new; "]" ->
           LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma), k)
+
+      | "#"; p = SYMBOL; "."; k = clf_proj ->
+          LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId), k)
 
       |
         "#"; p = SYMBOL; "["; sigma = clf_sub_new; "]" ->

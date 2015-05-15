@@ -31,59 +31,59 @@ app'   : exp' (arr A B) -> exp' A -> exp' B.
 schema ctx = value T ;
 
 
- rec var : {g:ctx}{#p:[g |- value S]}  [ |- exp' S] = 
+ rec var : {g:ctx}{#p:[g |- value (S[])]}  [ |- exp' S] = 
 / total p (var g s p) /
-mlam g => mlam #p => case [g |- #p ..] of
+mlam g => mlam #p => case [g |- #p[..]] of
 | [g,x:value S |- x] =>  [ |- one]
-| [g,x:value S |- #q ..] => 
-  let [ |- Db] = var [g] [g |- #q ..] in
+| [g,x:value S |- #q[..]] => 
+  let [ |- Db] = var [g] [g |- #q[..]] in
   [ |- shift Db]
 ; 
 
 
-rec vhoas2db : (g:ctx) [g |- value S]  -> [ |- exp' S] =
+rec vhoas2db : (g:ctx) [g |- value (S[])]  -> [ |- exp' S] =
  / total v (vhoas2db g s v) /
 fn v =>  case v of
- | [g |-  #p ..] => var [g] [g |- #p ..]
+ | [g |-  #p[..]] => var [g] [g |- #p[..]]
 			
- | [g |- lam T (\x. E .. x)] =>
-   let [ |- F]  =  hoas2db [g,x:value T |-  E .. x] in
-     [ |- lam' T F]
+ | [g |- lam (T[]) (\x. E)] =>
+   let [ |- F]  =  hoas2db [g,x:value (T[]) |-  E] in
+     [ |- lam' (T[]) F]
 
 
-and hoas2db : (g:ctx) [g |- exp T] ->  [ |- exp' T] =
+and hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
  / total e (hoas2db _ _ e ) /
   fn e =>  case e of
-  | [g |- app (E1 .. ) (E2 .. )] =>
-   let [ |- F1] = hoas2db [g |- E1 ..]  in
-   let [ |- F2] = hoas2db [g |- E2 ..]  in
+  | [g |- app (E1[..] ) (E2[..] )] =>
+   let [ |- F1] = hoas2db [g |- E1[..]]  in
+   let [ |- F2] = hoas2db [g |- E2[..]]  in
    [ |- app' F1 F2]
- | [g |- ret (V ..)] =>
-     vhoas2db [g |- V ..]
+ | [g |- ret (V[..])] =>
+     vhoas2db [g |- V[..]]
 ;
 
 
-rec db2vhoas : (g:ctx) [g |- exp' T] -> [g |- value T] =
+rec db2vhoas : (g:ctx) [g |- exp' (T[])] -> [g |- value (T[])] =
 % / total e (db2vhoas _ _ e)/
   fn e => case e of
-  | [h,x:value T |-  one] : [h,x:value T |-  (exp' T)] =>
-      [h,x:value T |-  x]
+  | [h,x:value (T[]) |-  one] : [h,x:value (T[]) |-  (exp' (T[]))] =>
+      [h,x:value (T[]) |-  x]
 
-  | [h,x:value T |-  shift E] =>
-    let [h |- F ..] = db2vhoas [h |- E]  in
-      [h,x:value T |-  F ..]
+  | [h,x:value (T[]) |-  shift (E[..])] =>
+    let [h |- F[..]] = db2vhoas [h |- E]  in
+      [h,x:value (T[]) |-  F[..]]
 
-  | [h |- lam' T E] =>
-      let [g,x:value T |-  F .. x] = db2hoas  [h, x:value T |-  E] in
-        [g |- lam T (\x. F .. x)]
+  | [h |- lam' (T[]) E] =>
+      let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |- E[..]] in
+        [g |- lam (T[]) (\x. F)]
 
 and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
 % / total e (db2hoas _ _ e)/
   fn e => case e of
   | [g |- app' E1 E2] =>
-    let [g |- F1 ..] = db2hoas [g |- E1] in
-    let [g |- F2 ..] = db2hoas [g |- E2] in
-      [g |- app (F1 ..) (F2 ..)]
+    let [g |- F1] = db2hoas [g |- E1] in
+    let [g |- F2] = db2hoas [g |- E2] in
+      [g |- app F1 F2]
 ;
 
 rec tohoas : [ |- exp' T] -> [ |- exp T] =

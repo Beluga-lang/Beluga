@@ -12,18 +12,18 @@ rec copy : (g:termCtx) [g |- term] -> [g |- term] =
 / total e (copy g e) /
 fn e => case e of
 | [h |- z]     => [h |- z]
-| [g |- suc (U ..)] => let [g |- V ..] = copy [g |- U ..] in [g |- suc (V .. )]
+| [g |- suc (U[..])] => let [g |- V[..]] = copy [g |- U[..]] in [g |- suc (V[..] )]
 
-| [g |- #p ..] => [g |- #p ..]
+| [g |- #p[..]] => [g |- #p[..]]
 
-| [g |- lam (\ x. ( U .. x))] =>
-  let [g,x : term  |-  V .. x] = copy [g,x:term  |-  U .. x]  in
-    [g |- lam (\x. (V ..  x))]
+| [g |- lam (\ x. ( U))] =>
+  let [g,x : term  |-  V] = copy [g,x:term  |-  U]  in
+    [g |- lam (\x. V)]
 
-| [g |- app (U ..) (V ..)]  =>
-    let [g |- U' ..]  = copy [g |- U ..] in
-    let [g |- V' ..]  = copy [g |- V ..] in
-      [g |- app (U' ..) (V' ..)]
+| [g |- app (U[..]) (V[..])]  =>
+    let [g |- U'[..]]  = copy [g |- U[..]] in
+    let [g |- V'[..]]  = copy [g |- V[..]] in
+      [g |- app (U'[..]) (V'[..])]
 
 ;
 

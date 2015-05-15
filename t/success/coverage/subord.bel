@@ -15,14 +15,14 @@ schema nctx = nat;
 rec test' :(g:nctx)[g |- term] -> [g |- term] =
 fn x => case x of
 | [g |- c] => [g |- c]
-| [g |- M ..] => [g |- M ..]
+| [g |- M[..]] => [g |- M[..]]
 ;
 
 
 rec test0 :(g:nctx)[g |- term] -> [g |- term] =
 fn x => case x of
 | [g |- c] => [g |- c]
-| [g |- lam \x. M x ] => x
+| [g |- lam \x. M] => x
 ;
 
 

@@ -183,10 +183,10 @@ rec lookup : {gamma:ctx}{#p:[gamma |- tm A]}RedSub [gamma] [ |- #S[^]] -> Reduce
 / total gamma (lookup gamma) / 
 mlam gamma => mlam #p => fn rs => case [gamma] of 
 | [] => impossible [ |- #p]
-| [gamma', x:tm A] => (case [gamma', x:tm A |- #p ..] of
+| [gamma', x:tm A] => (case [gamma', x:tm A |- #p[..]] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
- | [gamma',x:tm A |-  #q ..] => let Dot rs' rN = rs in
-                      lookup [gamma'] [gamma' |- #q ..] rs')
+ | [gamma',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
+                      lookup [gamma'] [gamma' |- #q[..]] rs')
 ;
 
 %{{
@@ -196,16 +196,16 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 rec main : {gamma:ctx}{M:[gamma |- tm A]} 
           RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
 / total m (main gamma a s m) /
-mlam gamma, M => fn rs => case [gamma |- M ..] of
-| [gamma |- #p ..] =>  lookup [gamma] [gamma |- #p ..] rs
-| [gamma |- lam \x. M .. x] => 
+mlam gamma, M => fn rs => case [gamma |- M[..]] of
+| [gamma |- #p[..]] =>  lookup [gamma] [gamma |- #p[..]] rs
+| [gamma |- lam \x. M] => 
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M .. x] (Dot rs rN)))
+    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
 
-| [gamma |- app (M1 ..) (M2 ..)] => 
-  let Arr ha f = main [gamma] [gamma |- M1 ..] rs in
-  f [ |- _ ] (main [gamma] [gamma |- M2 ..] rs)
+| [gamma |- app (M1[..]) (M2[..])] => 
+  let Arr ha f = main [gamma] [gamma |- M1[..]] rs in
+  f [ |- _ ] (main [gamma] [gamma |- M2[..]] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 ;
 

@@ -73,16 +73,16 @@ snoc : tctx -> tp -> tctx.
 % Typing
 datatype Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype =
 | Top : Lookup [|- snoc G A] [gamma,x:tm |- x] [|- A]
-| Pop : Lookup [|- G] [gamma |- #p ..] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p ..] [|- A]
+| Pop : Lookup [|- G] [gamma |- #p[..]] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p[..]] [|- A]
 ;
 
 datatype Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
-| Lam : Oft [|- snoc G A] [gamma,x:tm |- M .. x] [ |- B ] -> Oft [|- G ] [gamma |- lam (\x. M .. x)] [|- arr A B]
-| App : Oft [|- G ] [gamma |- M .. ] [|- arr A B] -> Oft [|- G ] [gamma |- N ..] [|- A] -> Oft [|- G] [gamma |- app (M ..) (N ..)] [|- B]
-| Var : Lookup [|- G ] [gamma |- #p ..] [|- A] -> Oft [|- G] [gamma |- #p ..] [|- A]
-| Fst : Oft [|- G] [gamma |- M ..] [|- prod A B] -> Oft [|- G] [gamma |- fst (M ..)] [|- A]
-| Snd : Oft [|- G] [gamma |- M ..] [|- prod A B] -> Oft [|- G] [gamma |- snd (M ..)] [|- B]
-| Pair : Oft [|- G] [gamma |- M ..] [|- A] -> Oft [|- G] [gamma |- N ..] [|- B] -> Oft [|- G] [gamma |- pair (M ..) (N ..)] [|- prod A B]
+| Lam : Oft [|- snoc G A] [gamma,x:tm |- M] [ |- B ] -> Oft [|- G ] [gamma |- lam (\x. M)] [|- arr A B]
+| App : Oft [|- G ] [gamma |- M[..] ] [|- arr A B] -> Oft [|- G ] [gamma |- N[..]] [|- A] -> Oft [|- G] [gamma |- app (M[..]) (N[..])] [|- B]
+| Var : Lookup [|- G ] [gamma |- #p[..]] [|- A] -> Oft [|- G] [gamma |- #p[..]] [|- A]
+| Fst : Oft [|- G] [gamma |- M[..]] [|- prod A B] -> Oft [|- G] [gamma |- fst (M[..])] [|- A]
+| Snd : Oft [|- G] [gamma |- M[..]] [|- prod A B] -> Oft [|- G] [gamma |- snd (M[..])] [|- B]
+| Pair : Oft [|- G] [gamma |- M[..]] [|- A] -> Oft [|- G] [gamma |- N[..]] [|- B] -> Oft [|- G] [gamma |- pair (M[..]) (N[..])] [|- prod A B]
 | C : Oft [|- G] [gamma |- c] [|- b]
 ;
 
@@ -92,7 +92,7 @@ datatype RedSub : {g:ctx}{G:[|-tctx]}{#S: |- g} ctype =
      → RedSub [g, x:tm] [|- snoc G A] [ |- #S[^] , M ] 
 ;
 
-rec lookup : Lookup [|- G] [gamma |- M ..] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
+rec lookup : Lookup [|- G] [gamma |- M[..]] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
 fn v => fn rs => case v of
  | Top =>   let (Dot rs' rN) = rs in rN
  | Pop x => let Dot rs' rN = rs in lookup x rs'
@@ -131,7 +131,7 @@ fn d1, d2 =>
   [|- halts/m MS' (val/pair V1 V2)]
 ;
 
-rec main : {g:ctx} Oft [|- G] [gamma |- M ..] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
+rec main : {g:ctx} Oft [|- G] [gamma |- M[..]] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
 mlam g => fn d => fn s => case d of
 | Var v => lookup v s
 | Lam d1 =>

@@ -8,17 +8,17 @@ mlam g => mlam T => fn e =>
   | [g |- ff]           : [g |- (exp bool)]  => [g |- nothing]
 
   | {T':[ |- tp]} {#p:[g |- exp T']}
-     [g |- (#p ..)]     : [g |- (exp T')] => [g |- something T' (#p ..)]
+     [g |- (#p[..])]     : [g |- (exp T')] => [g |- something T' (#p[..])]
 
   | {U:[g |- exp nat]}
-    [g |- suc (U ..)] : [g |- (exp nat)]   => free_var [g] [ |- nat ]  [g |- (U ..)]
+    [g |- suc (U[..])] : [g |- (exp nat)]   => free_var [g] [ |- nat ]  [g |- (U[..])]
 
   | {U:[g |- exp bool]} {V:[g |- exp bool]}
-     [g |- land (U ..) (V ..)] : [g |- (exp bool)]  =>
+     [g |- land (U[..]) (V[..])] : [g |- (exp bool)]  =>
 
-       (case free_var [g] [ |- bool ] [g |- (U ..)] of
-          [g |- nothing]                : [g |- opt] => free_var [g] [ |- bool ] [g |- (V ..)]
+       (case free_var [g] [ |- bool ] [g |- (U[..])] of
+          [g |- nothing]                : [g |- opt] => free_var [g] [ |- bool ] [g |- (V[..])]
 
        | {T':[ |- tp]} {#p:[g |- exp T']}
-          [g |- something T' (#p ..)] : [g |- opt] => [g |- something T' (#p ..)])
+          [g |- something T' (#p[..])] : [g |- opt] => [g |- something T' (#p[..])])
 );

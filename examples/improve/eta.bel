@@ -8,7 +8,7 @@ rec test : (g:ctx) [g |- exp] -> [g |- exp] =
 % / total e (test e) /
 fn e => case e of
 % we must write meta-variables in eta-expanded form.
-| [g |- lam \x. M .. x] => e
+| [g |- lam \x. M] => e
 
 ;
 

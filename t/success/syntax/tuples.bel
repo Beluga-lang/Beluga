@@ -15,7 +15,7 @@ schema ctx = block x: tm , y: tm;
 
 rec subst :  [b:block(x: tm, y: tm) |- tm] -> [|- tm] -> [|- tm] =
 fn m => fn n => 
-let [b:block(x: tm, y: tm)  |- M b] = m in
+let [b:block(x: tm, y: tm)  |- M] = m in
 let [|- N] = n in
-[|- M <N ; N>]
+[|- M[<N ; N>]]
 ;

@@ -4,7 +4,7 @@ c : tm.
 schema ctx = tm;
 
 rec foo : {g:ctx} {#p:[g |- tm]} [g |- tm] =
-mlam g,#p => [g |- #p ..];
+mlam g,#p => [g |- #p[..]];
 
 rec bar : {h:ctx}{g:ctx} {#p:[h |- tm]} {#W : g |- # h} [g |- tm] =
-mlam h,g,#p,#W => foo [g] [g |- #p #W[..]];
+mlam h,g,#p,#W => foo [g] [g |- #p[#W[..]]];

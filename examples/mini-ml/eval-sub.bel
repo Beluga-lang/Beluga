@@ -25,20 +25,20 @@ fn e =>  case e of
     [ |- suc E']
 
 | [ |- app E1 E2] =>
-  let [ |- lam (\x. E x)]  =  eval [ |- E1] in
-    eval [ |- (E E2)]
+  let [ |- lam (\x. E)]  =  eval [ |- E1] in
+    eval [ |- E[E2]]
 
-| [ |- lam (\x. (E x))] =>  e
+| [ |- lam (\x. E)] =>  e
 
-| [ |- letv E1 (\x. E2 x )] =>
+| [ |- letv E1 (\x. E2)] =>
   let [ |- V1] = eval [ |- E1] in
-    eval [ |- E2 V1]
+    eval [ |- E2[V1]]
 
-| [ |- letn E1 (\x. E2 x)]  =>
-   eval [ |- (E2 E1)]
+| [ |- letn E1 (\x. E2)]  =>
+   eval [ |- E2[E1]]
 
-| [ |- fix (\x. E x)]  =>
-   eval [ |- E (fix (\ x. E x))]
+| [ |- fix (\x. E)]  =>
+   eval [ |- E[(fix (\x. E))]]
 ;
 
 

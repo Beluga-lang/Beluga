@@ -37,44 +37,44 @@ tlam'   : ({a:tp}exp' (A a)) -> exp' (all A).
 schema ctx = value T + tp;
 schema tctx = tp;
 
-rec vhoas2db : {g:ctx}[g |- value (S ..)] ->  [g |- exp' (S ..)] =
+rec vhoas2db : {g:ctx}[g |- value (S[..])] ->  [g |- exp' (S[..])] =
 % / total v (vhoas2db g s v) /
 mlam g => fn v =>  case v of
- | [h,x:value (T ..)  |-  x] => [h, x:value (T ..) |-  one (T ..)]
+ | [h,x:value (T[..])  |-  x] => [h, x:value (T[..]) |-  one (T[..])]
 
- |  {#p:[h |- value (S' ..)]}
-   [h,x:value (T ..)  |-  #p ..] =>
-   let [g |- Db ..] = vhoas2db [h] [h |- #p ..] in
-     [g,x:value (T ..)  |-  shift (S' ..)  (Db ..)]
+ |  {#p:[h |- value (S'[..])]}
+   [h,x:value (T[..])  |-  #p[..]] =>
+   let [g |- Db[..]] = vhoas2db [h] [h |- #p[..]] in
+     [g,x:value (T[..])  |-  shift (S'[..])  (Db[..])]
 
-| [h,a:tp |-  #p ..] =>
-   let [g |- Db ..] = vhoas2db [h] [h |- #p ..] in
-     [g,a:tp |-  Db ..]
+| [h,a:tp |-  #p[..]] =>
+   let [g |- Db[..]] = vhoas2db [h] [h |- #p[..]] in
+     [g,a:tp |-  Db[..]]
 
- | [g |- lam (T ..) (\x. E .. x)] =>
-   let [g,x:value (T ..) |-  F ..] =  hoas2db [g,x:value (T ..) ] [g,x |- E .. x ] in
-     [g |- lam' (T ..) (F ..)]
+ | [g |- lam (T[..]) (\x. E)] =>
+   let [g,x:value (T[..]) |-  F[..]] =  hoas2db [g,x:value (T[..]) ] [g,x |- E ] in
+     [g |- lam' (T[..]) (F[..])]
 
- | [g |- tlam \a. E .. a] =>
-   let [g,a:tp |-  F .. a] = hoas2db [g,a:tp] [g,a |- E .. a] in
-     [g |- tlam' \a. F .. a]
+ | [g |- tlam \a. E[..] a] =>
+   let [g,a:tp |-  F[..] a] = hoas2db [g,a:tp] [g,a |- E[..] a] in
+     [g |- tlam' \a. F[..] a]
 
 
-and hoas2db : {g:ctx} [g |- exp (T ..)] ->  [g |- exp' (T ..) ] =
+and hoas2db : {g:ctx} [g |- exp (T[..])] ->  [g |- exp' (T[..]) ] =
 % / total e (hoas2db _ _ e ) /
 mlam g => fn e =>  case e of
- | [g |- app (E1 .. ) (E2 .. )] =>
-   let [g |- F1 ..] = hoas2db [g] [g |- E1 ..]  in
-   let [g |- F2 ..] = hoas2db [g] [g |- E2 ..]  in
-     [g |- app' (F1 ..) (F2 ..)]
- | [g |- ret (V ..)] =>
-   vhoas2db [g] [g |- V .. ]
- | [g |- tapp (E .. ) (T ..)] =>
-     let [g |- F ..] = hoas2db [g] [g |- E .. ] in
-     [g |- tapp' (F .. ) (T .. )]
+ | [g |- app (E1[..] ) (E2[..] )] =>
+   let [g |- F1[..]] = hoas2db [g] [g |- E1[..]]  in
+   let [g |- F2[..]] = hoas2db [g] [g |- E2[..]]  in
+     [g |- app' (F1[..]) (F2[..])]
+ | [g |- ret (V[..])] =>
+   vhoas2db [g] [g |- V[..] ]
+ | [g |- tapp (E[..] ) (T[..])] =>
+     let [g |- F[..]] = hoas2db [g] [g |- E[..] ] in
+     [g |- tapp' (F[..] ) (T[..] )]
 ;
 
-rec todbruijn : {g':tctx}[g' |-  exp (S .. )] -> [g' |-  exp' (S ..)] =
+rec todbruijn : {g':tctx}[g' |-  exp (S[..] )] -> [g' |-  exp' (S[..])] =
 mlam g' => fn e =>  hoas2db [g'] e ;
 
 
@@ -89,40 +89,40 @@ mlam g' => fn e =>  hoas2db [g'] e ;
 % but without subordination reasoning it is a pain to program with...
 %{
 rec vhoas2db : {g:(ctx)*}{g':(tctx)*}{S::tp[g']}
-                 (value (S ..))[g] ->  (exp' (S ..))[g'] =
+                 (value (S[..]))[g] ->  (exp' (S[..]))[g'] =
 FN g => FN g' => mlam S => fn v =>  case v of
  | {g':(tctx)*}{h:(ctx)*}{T::tp[g']}
-   [h,x:value (T ..) ] x => [g'] one (T ..)
+   [h,x:value (T[..]) ] x => [g'] one (T[..])
 
-%{ |  {#p::(value (S' ..))[h]}
-   [h,x:value (T ..) ] #p .. =>
-   let [g] Db = vhoas2db [h] <g' . S .. >  ([h] #p ..) in
-     [g,x:value (T ..) ] shift (S' ..)  Db
+%{ |  {#p::(value (S'[..]))[h]}
+   [h,x:value (T[..]) ] #p[..] =>
+   let [g] Db = vhoas2db [h] <g' . S[..] >  ([h] #p[..]) in
+     [g,x:value (T[..]) ] shift (S'[..])  Db
 
- | [g] lam (T ..) (\x. E .. x) =>
-   let [g,x:value (T ..)] F =  hoas2db [g,x:value (T ..) ] ([g,x] E .. x ) in
-     [g] lam' (T ..) F
+ | [g] lam (T[..]) (\x. E) =>
+   let [g,x:value (T[..])] F =  hoas2db [g,x:value (T[..]) ] ([g,x] E ) in
+     [g] lam' (T[..]) F
 
- | [g] tlam \a. E .. a =>
-   let [g,a:tp] F .. a = hoas2db [g,a:tp] ([g,a] E .. a) in
-     [g] tlam' \a. F .. a
+ | [g] tlam \a. E[..] a =>
+   let [g,a:tp] F[..] a = hoas2db [g,a:tp] ([g,a] E[..] a) in
+     [g] tlam' \a. F[..] a
 
 
 and hoas2db : {g:(ctx)*}{g':(tctx)*}{T::tp[g']}
-			(exp (T ..))[g] ->  (exp' (T ..) )[g'] =
+			(exp (T[..]))[g] ->  (exp' (T[..]) )[g'] =
 FN g => FN g' => mlam T => fn e =>  case e of
  | {g:(ctx)*}{g':(tctx)*}
-   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr (T1 ..) (T2 ..)))[g]}
-    [g] app (E1 .. ) (E2 .. ) =>
-   let [g'] F1 = hoas2db [g] [g'] <g' . arr (T1 ..) (T2 ..) > ([g] E1 ..)  in
-   let [g'] F2 = hoas2db [g] [g'] <g' . T1 .. > ([g] E2 ..)  in
+   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr (T1[..]) (T2[..])))[g]}
+    [g] app (E1[..] ) (E2[..] ) =>
+   let [g'] F1 = hoas2db [g] [g'] <g' . arr (T1[..]) (T2[..]) > ([g] E1[..])  in
+   let [g'] F2 = hoas2db [g] [g'] <g' . T1[..] > ([g] E2[..])  in
      [g'] app' F1 F2
- | [g] ret (V ..) =>
-   vhoas2db [g] [g'] <g' . T .. > ([g] V .. )
+ | [g] ret (V[..]) =>
+   vhoas2db [g] [g'] <g' . T[..] > ([g] V[..] )
 }%
-%{ | [g] tapp (E .. ) (T ..) =>
-     let [g] F .. = hoas2db [g] ([g] E .. ) in
-     [g] tapp' (F .. ) (T .. )
+%{ | [g] tapp (E[..] ) (T[..]) =>
+     let [g] F[..] = hoas2db [g] ([g] E[..] ) in
+     [g] tapp' (F[..] ) (T[..] )
 }%
 ;
 }%

@@ -61,7 +61,7 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype   =
 % / total e (weak_neut g h a e) /
 % fn e => fn r => case e of
 % | Zero => r
-% | Succ [h] e' => let [h |- R ..] = weak_neut e' r in [h,x:neut _ |-  R ..]
+% | Succ [h] e' => let [h |- R[..]] = weak_neut e' r in [h,x:neut _ |-  R[..]]
 % ;
 
 
@@ -85,7 +85,7 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype   =
 % / total x (extend g h s e t x) /
 % fn s => fn e => mlam T => fn x => case x of
 % | TmVar [g,x:tm S |-  x] => e
-% | TmVar [g,x:tm S |-  #q .. ] => s [ |- T ] (TmVar [g |- #q ..])
+% | TmVar [g,x:tm S |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q[..]])
 % ;
 
 % rec eval : (g:tctx)(h:ctx)
@@ -96,23 +96,23 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype   =
 % fn t => fn s =>
 % let (s : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])) = s in
 % case t of
-% | [g |- #p .. ]            : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p .. ])
-% | [g |- lam (\x. E .. x) ] : [g |- tm (arr A B)] =>
+% | [g |- #p[..] ]            : [g |- tm S] =>  s [ |- S] (TmVar [g |- #p[..] ])
+% | [g |- lam (\x. E) ] : [g |- tm (arr A B)] =>
 %   Slam  (mlam h' => fn s' => fn e =>
-%          eval [g,x:tm A |-  E .. x]
+%          eval [g,x:tm A |-  E]
 %               (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e))
 
-% | [g |- app (E1 ..) (E2 ..) ] =>
-%   let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1 ..] s in
-%     f [h] Zero (eval [g |- E2 ..] s)
+% | [g |- app (E1[..]) (E2[..]) ] =>
+%   let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1[..]] s in
+%     f [h] Zero (eval [g |- E2[..]] s)
 % ;
 
 
 % rec reflect : (g:ctx) [g |- neut A] ->  Sem [g] [ |- A] =
 % / total a (reflect g a) /
-% fn r => let [g |- R .. ] : [g |- neut A] = r in
+% fn r => let [g |- R[..] ] : [g |- neut A] = r in
 % case [ |- A] of
-% | [ |- atomic P ] => Syn [g |- R ..]
+% | [ |- atomic P ] => Syn [g |- R[..]]
 % | [ |- arr T S ] =>  Slam (extendSem r)
 
 % % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
@@ -122,20 +122,20 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype   =
 % =
 % / total  (extendSem) /
 % fn r => mlam h => fn s => fn e =>
-% let [h |- N .. ] = reify e in
-% let [h |- R' .. ] = weak_neut s r in
-%   reflect [h |- rapp (R' ..) (N ..)]
+% let [h |- N[..] ] = reify e in
+% let [h |- R'[..] ] = weak_neut s r in
+%   reflect [h |- rapp (R'[..]) (N[..])]
 
 % and reify : Sem [g] [ |- A] -> [g |- norm A] =
 % / total a (reify g a) /
 % fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
-% | [ |- atomic P ] =>  (case e of Syn [g |- R ..] => [g |- embed (R ..)])
+% | [ |- atomic P ] =>  (case e of Syn [g |- R[..]] => [g |- embed (R[..])])
 % | [ |- arr T S ] =>
 %   (case e of
 %    | (Slam f)  =>
 %      let s = (f [g,x:neut T ] (Succ [g] Zero) (reflect [g ,x:neut T |-  x])) in
-%      let [g,x:neut T |-  E .. x] = reify s
-%      in [g |- nlam (\x. E .. x)])
+%      let [g,x:neut T |-  E] = reify s
+%      in [g |- nlam (\x. E)])
 % ;
 
 

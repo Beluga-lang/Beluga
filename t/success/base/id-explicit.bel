@@ -18,21 +18,21 @@ rec identity : [ |- exp nat] -> [ |- exp nat] =
 schema w = some [t:tp] exp t;
 
 
-rec identity' : {g:w}{T: [g |- tp]} [g |- exp (T ..)] -> [g |- exp (T ..)] =
+rec identity' : {g:w}{T: [g |- tp]} [g |- exp (T[..])] -> [g |- exp (T[..])] =
 mlam g =>  mlam T =>
     fn x =>
       case x of
           [g |- z]   : [g |- (exp nat)] => [g |- z]
         | {U:[g |- exp nat]}
-          [g |- s (U ..)] : [g |- (exp nat)] => [g |- s (U ..)]
+          [g |- s (U[..])] : [g |- (exp nat)] => [g |- s (U[..])]
 
-	| {T:[g |- tp]}{#p: [g |- exp (T ..)]}
-          [g |- (#p ..)] : [g |- (exp (T ..))] =>
-	    [g |- (#p ..)]
+	| {T:[g |- tp]}{#p: [g |- exp (T[..])]}
+          [g |- (#p[..])] : [g |- (exp (T[..]))] =>
+	    [g |- (#p[..])]
 ;
 
 
-rec copy : {g:w}{T: [g |- tp]} [g |- exp (T ..)] -> [g |- exp (T ..)] =
+rec copy : {g:w}{T: [g |- tp]} [g |- exp (T[..])] -> [g |- exp (T[..])] =
 mlam g =>  mlam T =>
     fn x =>
       case x of
@@ -40,22 +40,22 @@ mlam g =>  mlam T =>
           [g |- z]   : [g |- (exp nat)] => [g |- z]
 
         | {U:[g |- exp nat]}
-           [g |- s (U ..)] : [g |- (exp nat)] =>
-	   (case (copy [g] [g |- nat ] [g |- (U ..)]) of
+           [g |- s (U[..])] : [g |- (exp nat)] =>
+	   (case (copy [g] [g |- nat ] [g |- (U[..])]) of
 	      {V:[g |- exp nat]}
-              [g |- (V ..)] : [g |- (exp nat)]=> [g |- s (V ..)])
+              [g |- (V[..])] : [g |- (exp nat)]=> [g |- s (V[..])])
 
-        | {T1:[g |- tp]}{T2:[g |- tp]}{E:[g, x:exp (T1 ..) |-  exp (T2 ..)]}
+        | {T1:[g |- tp]}{T2:[g |- tp]}{E:[g, x:exp (T1[..]) |-  exp (T2[..])]}
 
-           [g |- lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g |- (exp (arr (T1 ..) (T2 ..)))] =>
-             [g |- lam (T1 ..)  (T2 ..)  (\x. (E .. x))]
+           [g |- lam (T1[..])  (T2[..])  (\x. (E))] : [g |- (exp (arr (T1[..]) (T2[..])))] =>
+             [g |- lam (T1[..])  (T2[..])  (\x. (E))]
 
-        | {T1:[g |- tp]}{T2:[g |- tp]}{E:[g, x:exp (T1 ..) |-  exp (T2 ..)]}
+        | {T1:[g |- tp]}{T2:[g |- tp]}{E:[g, x:exp (T1[..]) |-  exp (T2[..])]}
 
-           [g |- lam (T1 ..)  (T2 ..)  (\x. (E .. x))] : [g |- (exp (arr (T1..) (T2 ..)))] =>
+           [g |- lam (T1[..])  (T2[..])  (\x. (E))] : [g |- (exp (arr (T1[..]) (T2[..])))] =>
 
 	   x
 
- 	| {T:[g |- tp]}{#p:[g |- exp (T ..)]}
-            [g |- (#p ..)] : [g |- (exp (T ..))] => [g |- (#p ..)]
+ 	| {T:[g |- tp]}{#p:[g |- exp (T[..])]}
+            [g |- (#p[..])] : [g |- (exp (T[..]))] => [g |- (#p[..])]
 ;

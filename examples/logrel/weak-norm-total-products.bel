@@ -190,12 +190,12 @@ schema ctx = tm T;
 datatype RedSub : {gamma:ctx}{#S: |- gamma} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A] [ |- #S[^] M ] 
+     → RedSub [gamma, x:tm A[]] [ |- #S[^], M ] 
 ;
 
 
 
-rec lookup : {gamma:ctx}{#p:[gamma |- tm A]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p #S[^]] =
+rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p[#S]] =
 / total gamma (lookup gamma) / 
 mlam gamma => mlam #p => fn rs => case [gamma] of 
 | [] => impossible [ |- #p]
@@ -252,8 +252,8 @@ let [|- MS] = trans s1 s2 in
 [|- halts/m MS (val/pair V1 V2)]
 ;
 
-rec main : {gamma:ctx}{M:[gamma |- tm A]} 
-          RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]} 
+          RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M[#S]] =
  / total m (main gamma a s m) /
 mlam gamma, M => fn rs => case [gamma |- M[..]] of
 | [gamma |- #p[..]] =>  lookup [gamma] [gamma |- #p[..]] rs

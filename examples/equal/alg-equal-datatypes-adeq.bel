@@ -24,18 +24,18 @@ datatype Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 | Ae_v' : % {#p:[g |- block (x:term, u:aeq x x)]}
              Aeq' [g |- #p.1[..]] [g |- #p.1[..]]
 | Ae_a' : Aeq' [g |- E1[..]] [g |- F1[..] ] -> Aeq' [g |- E2[..]] [g |- F2[..]]
-    -> Aeq' [g |- app (E1..) (E2..)] [g |- app (F1[..]) (F2[..])]
-| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x) |-  E[..] b.1]
-              [h,b:block (x:term, u:aeq x x) |-  F[..] b.1]
+    -> Aeq' [g |- app E1 E2] [g |- app F1 F2]
+| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x) |-  E[.. b.1]]
+              [h,b:block (x:term, u:aeq x x) |-  F[.. b.1]]
         -> Aeq' [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
 
 % Algorithmic Equality in context tctx
 datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified  =
 | Ae_v : % {#p:[g |- term]}
-             Aeq [g |- #p[..]] [g |- #p..]
+             Aeq [g |- #p] [g |- #p]
 | Ae_a : Aeq [g |- E1[..]] [g |- F1[..] ] -> Aeq [g |- E2[..]] [g |- F2[..]]
-    -> Aeq [g |- app (E1..) (E2..)] [g |- app (F1[..]) (F2[..])]
+    -> Aeq [g |- app E1 E2] [g |- app F1 F2]
 | Ae_l :  Aeq [h,x:term |-  E] [h,x:term |-  F]
         -> Aeq [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
@@ -43,14 +43,14 @@ datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified  =
 % Declarative Equality
 
 datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype  =
-| De_v : Deq [g |- #p[..]] [g |- #p..]
-| De_l : Deq [g,x:term |-  T[..]x] [g,x:term |-  T'..x]
+| De_v : Deq [g |- #p] [g |- #p]
+| De_l : Deq [g,x:term |- T] [g,x:term |-  T']
      -> Deq [g |- lam (\x. T)] [g |- lam (\x. T')]
-| De_a : Deq [g |- T1[..]] [g |- S1[..]] -> Deq [g |- T2[..]] [g |- S2[..]]
-     -> Deq [g |- app (T1[..]) (T2[..])] [g |- app (S1[..]) (S2..)]
-| De_r : {T: [g |- term]}Deq [g |- T..] [g |- T..]
-| De_t : Deq [g |- T[..]] [g |- R[..]] -> Deq [g |- R..] [g |- S..]
-     -> Deq [g |- T..] [g |- S..]
+| De_a : Deq [g |- T1] [g |- S1] -> Deq [g |- T2] [g |- S2]
+     -> Deq [g |- app T1 T2] [g |- app S1 S2]
+| De_r : {T: [g |- term]}Deq [g |- T] [g |- T]
+| De_t : Deq [g |- T] [g |- R] -> Deq [g |- R] [g |- S]
+     -> Deq [g |- T] [g |- S]
 ;
 
 % Declarative Equality
@@ -74,11 +74,11 @@ de_t: deq T R -> deq R S
 rec atrans_c :(g:aCtx) [g |- aeq (M[..]) (N[..])] -> Aeq' [g |- M[..]] [g |- N[..]] =
 / total ae (atrans_c g m n ae) /
 fn ae => case ae of
-| [g |- #p.2[..]] => Ae_v' % [g |- #p[..]]
-| [g |- ae_a (D1[..]) (D2[..])] =>
-  Ae_a' (atrans_c [g |- D1..]) (atrans_c [g |- D2[..]])
-| [g |- ae_l \x.\u.D u] =>
-  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[..] b.1 b.2])
+| [g |- #p.2 ] => Ae_v' % [g |- #p[..]]
+| [g |- ae_a D1 D2] =>
+  Ae_a' (atrans_c [g |- D1]) (atrans_c [g |- D2])
+| [g |- ae_l \x.\u.D] =>
+  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[.. b.1 b.2]])
 ;
 
 rec atrans_s :(g:aCtx)  Aeq' [g |- M[..]] [g |- N[..]] -> [g |- aeq (M[..]) (N[..])] =
@@ -92,8 +92,8 @@ fn ae => case ae of
      [g |- ae_a (D1[..]) (D2[..])]
 
 | Ae_l' d =>
-  let [g, b:block (x:term, _u:aeq x x)  |-  D[..] b.1 b.2] = atrans_s d in
-  [g |- ae_l \x.\u.D u]
+  let [g, b:block (x:term, _u:aeq x x)  |-  D[.. b.1 b.2]] = atrans_s d in
+  [g |- ae_l \x.\u.D]
 ;
 
 
@@ -107,10 +107,10 @@ datatype TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
          -> TRel [g, x:term |-  #p[..]]
                 [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
-| TRapp  : TRel [g |- M[..]] [h |- M'..] -> TRel [g |- N[..]] [h |- N'[..]]
-        -> TRel [g |- app (M[..]) (N[..])] [h |- app (M'..) (N'..)]
+| TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
+        -> TRel [g |- app M N] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..] b.1]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[.. b.1]]
 	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -142,16 +142,16 @@ fn ae' => fn tr1 => fn tr2 => case tr1  of
 ;
 
 % Completeness
-rec caeq : (h:aCtx)(g:tctx) [h |- aeq (M[..]) (N[..])] ->
-           TRel [g |- M'[..]] [h |- M[..]] -> TRel  [g |- N'[..]] [h |- N[..]] ->
-           Aeq [g |- M'[..]] [g |- N'[..]] =
+rec caeq : (h:aCtx)(g:tctx) [h |- aeq M N] ->
+           TRel [g |- M'] [h |- M] -> TRel  [g |- N'] [h |- N] ->
+           Aeq [g |- M'] [g |- N'] =
 fn ae => fn tr1 => fn tr2 => aeq_str (atrans_c ae ) tr1 tr2
 ;
 
 % weaken  Aeq to Aeq'.
-rec aeq_wk: (h:aCtx)(g:tctx)  Aeq [g |- M'[..]] [g |- N'[..]] ->
-            TRel [g |- M'[..]] [h |- M[..]] -> TRel  [g |- N'[..]] [h |- N[..]] ->
-            Aeq' [h |- M[..]] [h |- N[..]]
+rec aeq_wk: (h:aCtx)(g:tctx)  Aeq [g |- M'] [g |- N'] ->
+            TRel [g |- M'] [h |- M] -> TRel  [g |- N'] [h |- N] ->
+            Aeq' [h |- M] [h |- N]
             =
 % / total tr1 (aeq_wk h g m' n' m n ae tr1) /
 fn ae => fn tr1 => fn tr2 => case tr1  of
@@ -179,9 +179,9 @@ fn ae => fn tr1 => fn tr2 => case tr1  of
 ;
 
 % Soundness
-rec saeq : (h:aCtx)(g:tctx) Aeq [g |- M'[..]] [g |- N'[..]] ->
-           TRel [g |- M'[..]] [h |- M[..]] -> TRel  [g |- N'[..]] [h |- N[..]] ->
-           [h |- aeq (M[..]) (N[..])] =
+rec saeq : (h:aCtx)(g:tctx) Aeq [g |- M'] [g |- N'] ->
+           TRel [g |- M'] [h |- M] -> TRel  [g |- N'] [h |- N] ->
+           [h |- aeq M N] =
 fn ae => fn tr1 => fn tr2 => atrans_s (aeq_wk ae tr1 tr2)
 ;
 

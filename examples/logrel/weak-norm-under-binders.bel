@@ -128,7 +128,7 @@ datatype RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
 | Nil : RedSub [] [h |- ^ ]
 | Dot : RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M[..]] -> RedSub [g,x:tm A[]] [h |- #S, M ];
 
-rec wknRedSub : RedSub [g] [h |- #S[..]] -> IsVarSub [h] [h' |- #W[..]] -> RedSub [g] [h' |- #S[#W[..]]] =
+rec wknRedSub : RedSub [g] [h |- #S[..]] -> IsVarSub [h] [h' |- #W] -> RedSub [g] [h' |- #S[#W]] =
 fn rs => fn iv => case rs of
 | Nil => Nil
 | Dot rs' rN => Dot (wknRedSub rs' iv) (wknRed rN iv);

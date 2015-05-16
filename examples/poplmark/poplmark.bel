@@ -23,17 +23,17 @@ schema as_ctx =  some [u:tp]  block a:tp, w: assm a U;
 %%%%%  Declarative subtyping  %%%%%
 
 datatype Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
-| Subtype_top    : Subtype [g |- T[..]] [g |- top]
-| Subtype_refl   : Subtype [g |- T..] [g |- T[..]]
-| Subtype_trans  : Subtype [g |- T1[..]] [g |- T2[..]] -> Subtype [g |- T2..] [g |- T3..]
-                   -> Subtype [g |- T1[..]] [g |- T3..]
-| Subtype_arrow  : Subtype [g |- T1[..]] [g |- S1..] -> Subtype [g |- S2[..]] [g |- T2..]
-                   -> Subtype [g |-  arr (S1[..]) (S2[..])] [g |- arr (T1[..]) (T2..)]
+| Subtype_top    : Subtype [g |- T] [g |- top]
+| Subtype_refl   : Subtype [g |- T] [g |- T]
+| Subtype_trans  : Subtype [g |- T1] [g |- T2] -> Subtype [g |- T2] [g |- T3]
+                   -> Subtype [g |- T1] [g |- T3]
+| Subtype_arrow  : Subtype [g |- T1] [g |- S1] -> Subtype [g |- S2] [g |- T2]
+                   -> Subtype [g |-  arr S1 S2] [g |- arr T1 T2]
 
-| Subtype_forall : Subtype [g |- T1[..]] [g |- S1[..]]
-		 -> Subtype [g, b:block (x:tp, u:assm x (T1[..])) |- S2.. b.1]
-                           [g,b |- T2[..] b.1]
-                 -> Subtype [g |-  forall (S1[..]) (\x.S2)] [g |- forall (T1[..]) (\x.T2)]
+| Subtype_forall : Subtype [g |- T1] [g |- S1]
+		 -> Subtype [g, b:block (x:tp, u:assm x (T1[..])) |- S2[.. b.1]]
+                           [g,b |- T2[.. b.1]]
+                 -> Subtype [g |-  forall S1 (\x.S2)] [g |- forall T1 (\x.T2)]
 ;
 
 
@@ -60,17 +60,17 @@ datatype Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 %   G |- (forall a < S1. S2)  < (forall a < T1. T2)
 
 datatype Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
-| Sa_top    : Sub [g |- S..] [g |- top]
+| Sa_top    : Sub [g |- S] [g |- top]
 | Sa_refl   : {#p:[g |- block (a:tp, u: assm a (U[..]))]}Sub [g |- #p.1[..]] [g |- #p.1[..]]
 | Sa_trans  : {#p:[g |- block (a:tp, u: assm a (U[..]))]}
                 Sub [g |- U[..]] [g |- T[..]]
-              -> Sub [g |- #p.1[..]] [g |- T..]
-| Sa_arrow  : Sub [g |- T1[..]] [g |- S1..] -> Sub [g |- S2[..]] [g |- T2..]
-              -> Sub [g |-  arr (S1[..]) (S2[..])] [g |- arr (T1[..]) (T2..)]
+              -> Sub [g |- #p.1[..]] [g |- T]
+| Sa_arrow  : Sub [g |- T1[..]] [g |- S1] -> Sub [g |- S2[..]] [g |- T2]
+              -> Sub [g |-  arr (S1[..]) (S2[..])] [g |- arr (T1[..]) (T2)]
 
 | Sa_forall : Sub [g |- T1[..]] [g |- S1[..]]
-	      -> Sub [g, b:block (x:tp, u:assm x (T1[..])) |- S2.. b.1]
-                        [g,b |- T2[..] b.1 ]
+	      -> Sub [g, b:block (x:tp, u:assm x (T1[..])) |- S2[.. b.1]]
+                        [g,b |- T2[.. b.1]]
               -> Sub [g |-  forall (S1[..]) (\x.S2)] [g |- forall (T1[..]) (\x.T2)]
 ;
 
@@ -78,17 +78,17 @@ datatype Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 % -----------------------------------------------------------------
 % Admissibility of reflexivity
 
-rec refl : {g:as_ctx} {T:[g |-  tp]} Sub [g |- T[..]] [g |- T[..]] =
-mlam g => mlam T => case [g |-  T[..]] of
+rec refl : {g:as_ctx} {T:[g |-  tp]} Sub [g |- T] [g |- T] =
+mlam g => mlam T => case [g |- T] of
 | [g |-  top] => Sa_top
-| [g |-  arr (T1[..]) (T2[..])] =>
-  let s1 = refl [g] [g |- T1[..]] in
-  let s2 = refl [g] [g |- T2[..]] in
+| [g |-  arr T1 T2] =>
+  let s1 = refl [g] [g |- T1] in
+  let s2 = refl [g] [g |- T2] in
     Sa_arrow s1 s2
-| [g |-  #p.1..] => Sa_refl [g |- #p[..]]
-| [g |-  forall (U[..]) (\a.T[..] a)] =>
-  let r' = refl [g] [g |-  U[..]] in
-  let r  = refl [g, b: block a:tp, w: assm a (U[..])] [g, b |- T[..] b.1] in
+| [g |-  #p.1] => Sa_refl [g |- #p]
+| [g |-  forall U (\a.T)] =>
+  let r' = refl [g] [g |-  U] in
+  let r  = refl [g, b: block a:tp, w: assm a U[..]] [g, b |- T[.. b.1]] in
     Sa_forall r' r
 
 ;

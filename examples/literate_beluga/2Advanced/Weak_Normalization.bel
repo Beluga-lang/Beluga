@@ -138,12 +138,12 @@ schema ctx = tm T;
 datatype RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [g] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm A] [ |- #S[^] M ] 
+     → RedSub [g, x:tm A[]] [ |- #S[^] M ] 
 ;
 
 
 
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
+rec lookup : {g:ctx}{#p:[g |- tm A[]]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p[#S]] =
 mlam g => mlam #p => fn rs => case [g |- #p[..]] of
  | [g',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
  | [g',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
@@ -154,7 +154,7 @@ mlam g => mlam #p => fn rs => case [g |- #p[..]] of
 # Main theorem
 }}%
 
-rec main : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- M #S[^]] =
+rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- M[#S]] =
  mlam g => mlam M => fn rs => case [g |- M[..]] of
 | [g |- #p[..]] => lookup [g] [g |- #p[..]] rs
 | [g |- lam (\x. M1)] =>

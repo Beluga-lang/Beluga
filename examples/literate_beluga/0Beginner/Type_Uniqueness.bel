@@ -50,7 +50,7 @@ schema xtG = some [t:tp] block x:term, _t:hastype x t;
 Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype (M[..]) T]</code>.}}%
 
 % induction on [g |-  hastype (M[..]) T]
-rec unique : (g:xtG)[g |-  hastype (M[..]) T] -> [g |-  hastype (M[..]) T']
+rec unique : (g:xtG)[g |-  hastype M T[]] -> [g |-  hastype M T'[]]
 -> [ |-  equal T T'] =
 fn d => fn f => case d of
 | [g |-  h_app (D1[..]) (D2[..])] =>
@@ -58,9 +58,9 @@ fn d => fn f => case d of
   let [ |-  e_ref] = unique [g |-  D1[..]] [g |-  F1[..]] in
     [ |-  e_ref]
  
-| [g |-  h_lam (\x.\u. D u)] =>
-  let [g |-  h_lam (\x.\u. F u)] = f in
-  let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[..] b.x b.u] [g,b |-  F[..] b.x b.u] in
+| [g |-  h_lam (\x.\u. D)] =>
+  let [g |-  h_lam (\x.\u. F)] = f in
+  let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[.. b.x b.u]] [g,b |-  F[.. b.x b.u]] in
    [ |-  e_ref]
 
 | [g |-  #q.2[..]] =>           % d : hastype #p.1 T

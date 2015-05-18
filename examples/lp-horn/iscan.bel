@@ -40,7 +40,7 @@ fn ta => case ta of
 | [g |- #p.2[..]] => [g |- #p.3[..]]
 | [g |- ta_andel (TA1[..])] =>
  let [g |- AT1[..]] = isatm [g |- TA1[..]] in
-   [g |- atm_andel (AT1..)]
+   [g |- atm_andel (AT1)]
 
 |[g |- ta_ander (TA1[..])] =>
  let [g |- AT1[..]] = isatm [g |- TA1[..]] in

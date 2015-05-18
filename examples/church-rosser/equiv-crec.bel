@@ -9,10 +9,10 @@ rec eq1: (g:ctx) [g |- pred (M[..]) (N[..])] -> [g |- -->* (M[..]) (N[..])] =
 % / total r (eq1 g m n r) /
  fn r => case r of
 | [g |- #p.2[..]] => [g |- id1]
-| [g |- beta (\x.\u. R1 u) (R2[..])] =>
+| [g |- beta (\x.\u. R1) (R2[..])] =>
   let {M1':[g,x:term |-  term]}{S1*:[g,x:term |-  -->* (M1) (M1')]}
-      [g,b:block x:term,_t:pred x x |-  S1*[..] b.1] =
-         eq1 [g,b:block x:term , _t:pred x x |-  R1[..] b.1 b.2] in
+      [g,b:block x:term,_t:pred x x |-  S1*[.. b.1]] =
+         eq1 [g,b:block x:term , _t:pred x x |-  R1[.. b.1 b.2]] in
   % S1*: -->* (M1 x) (M1' x)
   let {M2:[g |- term]}{S2*:[g |- -->* (M2[..]) (M2'[..])]}
       [g |- S2*[..]]   = eq1 [g |- R2[..]] in
@@ -40,10 +40,10 @@ rec eq1: (g:ctx) [g |- pred (M[..]) (N[..])] -> [g |- -->* (M[..]) (N[..])] =
        [g |- S*''[..]] = apr1* [g |- N1[..] ] [g |- S2*[..]] in
    appd [g |- S*'[..]] [g |- S*''[..] ]
 
- | [g |- lm (\x.\u. R1 u)] =>
+ | [g |- lm (\x.\u. R1)] =>
   let % {S1* :: (-->* (M) (N))[g,x:term]}
-       [g,b:block x:term , _t:pred x x |-  S1*[..] b.1] =
-   eq1 [g,b:block x:term , _t:pred x x |-  R1[..] b.1 b.2] in
+       [g,b:block x:term , _t:pred x x |-  S1*[.. b.1]] =
+   eq1 [g,b:block x:term , _t:pred x x |-  R1[.. b.1 b.2]] in
   lm1* [g,x |- S1*]
 ;
 
@@ -51,16 +51,16 @@ rec eq1: (g:ctx) [g |- pred (M[..]) (N[..])] -> [g |- -->* (M[..]) (N[..])] =
 rec eq2 : (g:ctx) [g |- --> (M[..]) (N[..])] -> [g |- pred (M[..]) (N[..])] =
 % / total r (eq2 g m n r) /
 fn r => case r of
- | [g |- beta1] : [g |- (--> (app (lam \x. M1) (M2[..])) (M1[..] (M2[..])))]  =>
-  let [g,b:block x:term,_t:pred x x |-  I1[..] b] =
-    identity [g,b:block x:term, _t:pred x x ] [ g,b |-  M1[..] b.1 ] in
+ | [g |- beta1] : [g |- (--> (app (lam \x. M1) (M2[..])) M1[.. M2])]  =>
+  let [g,b:block x:term,_t:pred x x |-  I1] =
+    identity [g,b:block x:term, _t:pred x x ] [ g,b |-  M1[.. b.1] ] in
   let [g |- I2[..]] = identity [g] [g |- M2[..] ] in
-    [g |- beta (\x.\u. I1[..] <x ; u>) (I2[..])]
+    [g |- beta (\x.\u. I1[.. <x ; u>]) (I2[..])]
 
 | [g |- lm1 \x. R1] =>
-  let [g,b:block x:term , _t:pred x x |-  S1[..] b] =
-    eq2 [g,b:block x:term,_t:pred x x |-  R1[..] b.1] in
-    [g |- lm \x.\u. S1[..] <x ; u>]
+  let [g,b:block x:term , _t:pred x x |-  S1] =
+    eq2 [g,b:block x:term,_t:pred x x |-  R1[.. b.1]] in
+    [g |- lm \x.\u. S1[.. <x ; u>]]
 
 
 | [g |- apl1 (R1[..] )] : [g |- (--> (app (M1[..]) (M2[..])) (app (M1'[..]) (M2[..])))]  =>

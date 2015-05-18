@@ -420,10 +420,6 @@ and cnormApxBranch cD delta b (cD'', t) =
 let rec collectApxTerm fMVs  m = match m with
   | Apx.LF.Lam (_loc, _x, m') ->  collectApxTerm fMVs  m'
 
-   (* We only allow free meta-variables of atomic type *)
-  | Apx.LF.Root (_loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
-       collectApxSub (u::fMVs)  s
-
   | Apx.LF.Root (_loc, h, s) ->
       let fMVs' = collectApxHead fMVs  h in
         collectApxSpine fMVs'  s
@@ -442,6 +438,9 @@ and collectApxTuple fMVs tuple = match tuple with
 and collectApxHead fMVs h = match h with
   | Apx.LF.FPVar (p, s) ->
       collectApxSub (p::fMVs) s
+
+  | Apx.LF.FMVar (u, s) ->
+      collectApxSub (u::fMVs) s
 
   | Apx.LF.MVar (Apx.LF.Offset _offset, s) ->
       collectApxSub fMVs s

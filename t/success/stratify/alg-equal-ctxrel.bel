@@ -61,10 +61,10 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
          -> TRel [g, x:term |-  #p[..]]
                 [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
-| TRapp  : TRel [g |- M[..]] [h |- M'..] -> TRel [g |- N[..]] [h |- N'[..]]
-        -> TRel [g |- app (M[..]) (N[..])] [h |- app (M'..) (N'..)]
+| TRapp  : TRel [g |- M[..]] [h |- M'] -> TRel [g |- N[..]] [h |- N'[..]]
+        -> TRel [g |- app (M[..]) (N[..])] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..] b.1]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[.. b.1]]
 	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
  

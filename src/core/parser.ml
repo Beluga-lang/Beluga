@@ -771,11 +771,6 @@ GLOBAL: sgn;
         [
           "("; a = SELF; ")" ->
             a
-
-     (*    |
-           a = SYMBOL; ms = LIST0 clf_normal ->
-             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
           |
              a = SYMBOL; ms = LIST0 clf_normal ->
                 LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
@@ -859,14 +854,7 @@ GLOBAL: sgn;
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
 
 	| u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
-          (* let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in *)
-          begin match s with
-              (* Infix operator case *)
-              (* | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  ->  *)
-              (*   let op' = LF.Root(l, op, LF.Nil) in  *)
-              (*   LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2]) *)
-              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-            end 
+           LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
            begin match ann with
@@ -884,12 +872,6 @@ GLOBAL: sgn;
             "?" ->
             LF.LFHole _loc
 
-        |
-           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
-           begin match ann with
-           | None -> m
-           | Some a -> LF.Ann (_loc, m, a)
-           end
         |
            "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
@@ -927,20 +909,7 @@ GLOBAL: sgn;
 
   clf_term_app:
     [
-      [ (* TODO: This is duplicated *)
-        u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
-          (* let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in *)
-          begin match s with
-              (* Infix operator case *)
-              (* | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  ->  *)
-              (*   let op' = LF.Root(l, op, LF.Nil) in  *)
-              (*   LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2]) *)
-              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-            end
-      |
-        u = UPSYMBOL ->
-          LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
-      |
+      [ 
         ms = LIST1 clf_normal -> LF.TList(_loc, ms)
       |
         a = clf_typ -> LF.NTyp(_loc, a)

@@ -59,7 +59,7 @@ datatype Eq : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> cty
 
 | Eq_l :
     Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x x) |- M'[..] b.1]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x x) |- M'[.. b.1]]
     -> Eq [phi] [psi] [psi |- #S[..] ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
 ;
@@ -71,7 +71,7 @@ The recursive function <code>refl</code> of type <code>{phi:xG}{M: [phi |-  tm]}
 rec ctx_membership :
           {#p: [phi |-  tm] }
           Ctx_xaR [phi] [psi] [ psi |- #S[..] ] ->
-          [psi |-  aeq (#p #S[..]) (#p #S[..])] =
+          [psi |-  aeq #p[#S] #p[#S]] =
 mlam #p => fn cr => let (cr : Ctx_xaR [phi] [psi] [ psi |- #S[..] ]) = cr in
 case [phi |-  #p[..]] of
  | [phi, x:tm |- x] =>
@@ -81,7 +81,7 @@ case [phi |-  #p[..]] of
 
 | [phi, x:tm |- #p[..]] =>
   let Cons_xa cr' = cr in
-  let [psi |-  E[..]] = ctx_membership [phi |- #p..] cr' in
+  let [psi |-  E[..]] = ctx_membership [phi |- #p] cr' in
       [psi, b: block (x:tm,u:aeq x x) |- E[..] ]
 ;
 
@@ -89,9 +89,9 @@ case [phi |-  #p[..]] of
 % Compact version
 rec refl : {phi:xG}{M: [phi |-  tm]}
           Ctx_xaR [phi] [psi] [ psi |- #S[..] ] ->
-          [psi |-  aeq (M #S[..]) (M #S[..])] =
+          [psi |-  aeq M[#S] M[#S]] =
 mlam phi => mlam M => fn cr => case [phi |-  M[..]] of
-| [phi |-  #p[..]] => ctx_membership [phi |-  #p..] cr
+| [phi |-  #p[..]] => ctx_membership [phi |-  #p] cr
 
 | [phi |-  app (M[..] ) (N[..])] =>
   let [psi |-  D1[..] ] = refl [phi] [phi |- M[..]] cr in
@@ -100,9 +100,9 @@ mlam phi => mlam M => fn cr => case [phi |-  M[..]] of
 
 
  | [phi |-  lam \x.M] =>
-  let [psi, b:block (x:tm, u:aeq x x) |- D[..] b.1 b.2] =
+  let [psi, b:block (x:tm, u:aeq x x) |- D[.. b.1 b.2]] =
       refl [phi, x:tm] [phi,x:tm |- M] (Cons_xa cr) in
-  [psi |-  ae_l \x.\u. D u]
+  [psi |-  ae_l \x.\u. D]
 
 ;
 %{{In the application case, we appeal to the induction hypothesis on <code>[phi |- M1[..]]</code> and <code>[ |- M2 ::]</code> through a recursive call. Since the context <code>phi</code> and the context <code>psi</code> do not change, we can simply make the recursive all on <code>[phi |- M1 ::]</code> and <code>[phi |- M2 ::]</code> respectively using the relation <code>cr</code>.
@@ -132,7 +132,7 @@ case [phi |-  #p[..]] of
 | [phi, x:tm |- #p[..]] =>
   let Cons_xa cr' = cr in
   let EqV_p m' = m in
-  let [psi |-  E[..]] = ctx_member [phi |- #p..] cr' m' in
+  let [psi |-  E[..]] = ctx_member [phi |- #p] cr' m' in
       [psi, b: block (x:tm,u:aeq x x) |- E[..] ]
 
 ;
@@ -153,9 +153,9 @@ Eq [phi] [psi] [ psi |- #S[..] ] [phi |-  M[..]] [psi |-  M'[..]] ->
 
  | [phi |-  lam \x.M] =>
    let Eq_l m' = m in
-  let [psi, b:block (x:tm, u:aeq x x) |-  D[..] b.1 b.2] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  D[.. b.1 b.2]] =
       reflR [phi, x:tm] [phi,x:tm |-  M] (Cons_xa cr) m' in
-  [psi |-  ae_l \x.\u. D u]
+  [psi |-  ae_l \x.\u. D]
  ;
 
 rec transV : Ctx_xaR [phi] [psi] [ psi |- #S[..] ] ->
@@ -191,7 +191,7 @@ Eq [phi] [psi] [ psi |- #S[..] ] [phi |-  L[..]] [psi |-  L'[..]] ->
   let Eq_v m' = m in
   let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..]]
                 [phi |-  #r[..]] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]] ) = m' in
-  ctx_member [phi |-  #r.. ] cr m'
+  ctx_member [phi |-  #r] cr m'
 
 | [psi |-  ae_a (D1[..]) (D2[..])] =>
   let [psi |-  ae_a (F1[..]) (F2[..])] = d2 in
@@ -205,16 +205,16 @@ Eq [phi] [psi] [ psi |- #S[..] ] [phi |-  L[..]] [psi |-  L'[..]] ->
 
   [psi |-  ae_a (E1[..]) (E2[..])]
 
-| [psi |-  ae_l \x.\u. D1 u] =>
-  let [psi |-  ae_l \x.\u. D2 u] = d2 in
+| [psi |-  ae_l \x.\u. D1] =>
+  let [psi |-  ae_l \x.\u. D2] = d2 in
   let Eq_l m' = m in
   let Eq_l n' = n in
   let Eq_l l' = l in
-  let [psi, b:block (x:tm, u:aeq x x) |-  F[..] b.1 b.2] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  F[.. b.1 b.2]] =
       transR (Cons_xa cr) m' n' l'
-             [psi, b:block (x:tm, u:aeq x x) |-  D1[..] b.1 b.2]
-             [psi, b:block (x:tm, u:aeq x x) |-  D2[..] b.1 b.2] in
-  [psi |-  ae_l \x.\u.F u]
+             [psi, b:block (x:tm, u:aeq x x) |-  D1[.. b.1 b.2]]
+             [psi, b:block (x:tm, u:aeq x x) |-  D2[.. b.1 b.2]] in
+  [psi |-  ae_l \x.\u.F]
 ;
 
 
@@ -265,11 +265,11 @@ datatype Eq' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ct
 | Eq'_a:
     Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  M[..]] [psi |-  M'[..]] ->
     Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  N[..]] [psi |-  N'[..]] ->
-    Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  app (M[..]) (N[..])] [psi |-  app (M'[..]) (N'..)]
+    Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  app (M[..]) (N[..])] [psi |-  app (M'[..]) N']
 
 | Eq'_l :
     Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..] b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x x) |- M'[..] b.1]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x x) |- M'[.. b.1]]
     -> Eq' [phi] [psi] [psi |- #S[..] ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
 ;
@@ -308,7 +308,7 @@ case [phi |-  #p.1[..]] of
  ;
 
 rec existsEq' : Ctx_xdR [gamma] [phi] [phi |- #T[..]] -> {Ld: [phi |- tm]}
-                 ExistsEq' [gamma] [phi] [phi |- #T[..]] [phi |-  Ld..] =
+                 ExistsEq' [gamma] [phi] [phi |- #T[..]] [phi |-  Ld] =
 fn cr_xd => mlam Ld => let (cr_xd : Ctx_xdR [gamma] [phi] [phi |- #T[..] ] ) = cr_xd in
 case [phi |-  Ld[..]] of
 | [phi |-  #p.1[..]] => existsEqV' cr_xd [phi |-  #p[..]]
@@ -320,7 +320,7 @@ case [phi |-  Ld[..]] of
 
 | [phi |-  lam \x. M] =>
   let ExistsEq' [gamma, x:tm |- L] eq =
-      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[..] b.1] in
+      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[.. b.1]] in
   ExistsEq' [gamma |-  lam \x. L] (Eq'_l eq)
 ;
 
@@ -330,11 +330,11 @@ case [phi |-  Ld[..]] of
 
 datatype ExistsEq : {gamma:xG}{psi: xaG}{#S : psi |- gamma} {L: [gamma |- tm]} ctype =
 | ExistsEqV :
-    {La:[psi |- tm]} EqV [gamma] [psi] [psi |- #S[..]] [gamma |-  #p..] [psi |-  #q.1[..]]
+    {La:[psi |- tm]} EqV [gamma] [psi] [psi |- #S[..]] [gamma |-  #p] [psi |-  #q.1]
     -> ExistsEq [gamma] [psi] [psi |- #S[..] ] [gamma |-  #p[..]]
 
 | ExistsEq :
-    {La:[psi |- tm]} Eq [gamma] [psi] [psi |- #S[..]] [gamma |-  L..] [psi |-  La[..]]
+    {La:[psi |- tm]} Eq [gamma] [psi] [psi |- #S[..]] [gamma |-  L] [psi |-  La[..]]
 -> ExistsEq [gamma] [psi] [psi |- #S[..] ] [gamma |-  L[..]]
 ;
 
@@ -351,7 +351,7 @@ case [gamma |-  #p[..]] of
   let Cons_xa cr'_xa = cr_xa in
   let ExistsEqV [psi |-  #q.1[..]] eq = existsEqV cr'_xa [gamma |- #p[..]] in
   let (eq : EqV [gamma] [psi] [psi |- #S[..] ] [gamma |-  #p[..]][psi |-  #q.1[..]]) = eq in
- ExistsEqV [psi,b:block (x:tm,u:aeq x x) |- #q.1.. ] (EqV_p eq)
+ ExistsEqV [psi,b:block (x:tm,u:aeq x x) |- #q.1[..]] (EqV_p eq)
 
 ;
 
@@ -368,7 +368,7 @@ case [gamma |-  L[..]] of
   ExistsEq [psi |-  app (La1[..]) (La2[..])] (Eq_a eq1 eq2)
 
 | [gamma |-  lam \x. M] =>
-  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[..] b.1] eq =
+  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[.. b.1]] eq =
       existsEq (Cons_xa cr_xa) [gamma, x:tm |- M] in
   ExistsEq [psi |-  lam \x. La] (Eq_l eq)
  ;
@@ -474,14 +474,14 @@ case d of
   let [psi |- E2[..]] = ceq cr_a cr_d cr_da ma2 na2 md2 nd2 [phi |-  D2[..]] in
   [psi |- ae_a (E1[..]) (E2[..])]
 
-| [phi |-  de_l \x.\u. D u] =>
+| [phi |-  de_l \x.\u. D] =>
   let Eq_l ma1 = ma in
   let Eq'_l md1 = md in
   let Eq_l na1 = na in
   let Eq'_l nd1 = nd in
-  let [psi, b:block (x:tm, u:aeq x x) |- E[..] b.1 b.2] =
+  let [psi, b:block (x:tm, u:aeq x x) |- E[.. b.1 b.2]] =
         ceq (Cons_xa cr_a) (Cons_xd cr_d) (Cons_ad cr_da)
-          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |- D[..] b.1 b.2] in
-  [psi |-  ae_l \x.\u. E u]
+          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |- D[.. b.1 b.2]] in
+  [psi |-  ae_l \x.\u. E]
 
 ;

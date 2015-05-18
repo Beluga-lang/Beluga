@@ -19,24 +19,24 @@ refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
 datatype IsVar : (g:ctx){M:[g |- tm A]} ctype =
-| IsVar : {#p:[g |- tm A]} IsVar [g |- #p[..]];
+| IsVar : {#p:[g |- tm A[]]} IsVar [g |- #p[..]];
 
 datatype IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
 | Nil : IsVarSub [] [h |- ^ ]
-| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:h |- g}{M:[h |- tm A]}
+| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:h |- g}{M:[h |- tm A[]]}
       IsVarSub [g] [h |- #S[..] ]
          -> IsVar [h |- M[..]] % I would like to directly quantify over #p, but bugs
-         -> IsVarSub [g,x:tm A] [h |- #S[..] (M[..])  ]
+         -> IsVarSub [g,x:tm A[]] [h |- #S, M ]
 ;
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
 % Could enforce also eta longness easily, but meh
 datatype IsNormal : (g:ctx) {M:[g |- tm A]} ctype =
 | Neut : IsNeutral [g |- M[..]] -> IsNormal [g |- M[..]]
-| Lam : IsNormal [g,x:tm A |-  M]
+| Lam : IsNormal [g,x:tm A[] |-  M]
      -> IsNormal [g |- lam (\x. M)]
 and IsNeutral : (g:ctx) {M:[g |- tm A]} ctype =
-| Var : {#p:[g |- tm A]} IsNeutral [g |- #p[..]]
+| Var : {#p:[g |- tm A[]]} IsNeutral [g |- #p[..]]
 | App : IsNeutral [g |- M[..]]
      -> IsNormal  [g |- N[..]]
      -> IsNeutral [g |- app (M[..]) (N[..])]
@@ -58,18 +58,18 @@ datatype Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A]} ctype =
          -> Reduce [ |- arr A B] [h0 |-  M[..]]
 ;
 }%
-rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A]}{#W:h |- g}
+rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A[]]}{#W:h |- g}
 % {g:ctx}{#p:[g |- tm A]}
-     IsVarSub [g] [h |- #W[..]]
-   -> IsVar [h |- #p #W[..]] =
+     IsVarSub [g] [h |- #W]
+   -> IsVar [h |- #p[#W]] =
  mlam g => mlam A => mlam #p => mlam #W => fn ivs =>
 % mlam g => mlam #p => fn ivs =>
 case [g |- #p[..]] of
-| [g',x:tm B |-  x] =>
+| [g',x:tm B[] |-  x] =>
   let  {#R:h |- g'} Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M[..]] ivs' iv = ivs in
 %       Cons ivs' iv = ivs in
   iv
-| {#q : [g' |-  tm T]} [g',x:tm B |-  #q[..]] =>
+| {#q : [g' |-  tm T[]]} [g',x:tm B[] |-  #q[..]] =>
    let  Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M[..]] ivs' iv = ivs in
    wknVar [g'] [ |- T] [g' |-  #q[..]] [h |- #R[..]] ivs'
 % let  Cons  ivs' iv = ivs in

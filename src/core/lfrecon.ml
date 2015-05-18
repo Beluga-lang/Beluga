@@ -155,7 +155,7 @@ let _ = Error.register_printer
                    meta-variables whose type cannot be inferred."
 
         | CompTypAnn ->
-          Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
+          Format.fprintf ppf "Type synthesis of term failed."
         | InvalidLFHole ->
           Format.fprintf ppf
             "Invalid LF Hole at %s"

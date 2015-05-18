@@ -98,10 +98,10 @@ mlam g => mlam T => case [g |- (T[..])] of
 | [g |- #p.1[..]] => [g |- #p.2[..]]
 
 | [g |- all \x. T] =>
-  let [g,b:block a:tp , _t:atp a a |- D[..] b.1 b.2] =
-         reftp [g, b:block a:tp , _t:atp a a] [g, b |- T[..] b.1]
+  let [g,b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         reftp [g, b:block a:tp , _t:atp a a] [g, b |- T[.. b.1]]
   in
-   [g |- at_al \x. \w. D w]
+   [g |- at_al \x. \w. D]
 
 | [g |- arr (T[..]) (S[..])] =>
   let [g |- D1[..]] = reftp [g] [g |- T[..] ] in
@@ -122,21 +122,21 @@ mlam g => mlam M => case [g |- (M[..])] of
 | [g |- #p.1[..]] => [g |- #p.2[..]]
 
 | [g |- lam \x. M] =>
-  let [g,b:block y:term , _t:aeq y y |- D[..] b.1 b.2] =
-         ref [g, b:block y:term , _t:aeq y y] [g, b |- M[..] b.1]
+  let [g,b:block y:term , _t:aeq y y |- D[.. b.1 b.2]] =
+         ref [g, b:block y:term , _t:aeq y y] [g, b |- M[.. b.1]]
   in
-   [g |- ae_l \x. \w. (D w)]
+   [g |- ae_l \x. \w. D]
 
 | [g |- app (M1[..]) (M2[..])] =>
   let [g |- D1[..]] = ref [g] [g |- M1[..] ] in
   let [g |- D2[..]] = ref [g] [g |- M2[..] ] in
     [g |- ae_a (D1[..]) (D2[..])]
 
-| [g |- tlam \a. M[..] a] =>
-  let [g,b:block a:tp , _t:atp a a |- D[..] b.1 b.2] =
-         ref [g, b:block a:tp , _t:atp a a] [g, b |- M[..] b.1]
+| [g |- tlam \a. M] =>
+  let [g,b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         ref [g, b:block a:tp , _t:atp a a] [g, b |- M[.. b.1]]
   in
-   [g |- ae_tl \x. \w. (D w)]
+   [g |- ae_tl \x. \w. D]
 
 | [g |- tapp (M[..]) (T[..])] =>
   let [g |- D1[..]] = ref [g] [g |- M[..] ] in
@@ -161,13 +161,13 @@ rec transtp: (g:atpCtx)
 fn ae1 => fn ae2 => case ae1 of
 | [g |- #p.2[..]] => ae2
 
-| [g |- at_al \a.\u. D1[..] a u] =>
-  let [g |- at_al \a.\u. D2[..] a u] = ae2 in
-  let [g, b:block a:tp , _t:atp a a |- D[..] b.1 b.2] =
-         transtp [g, b:block a:tp , _t:atp a a |- D1[..] b.1 b.2]
-               [g, b |- D2[..] b.1 b.2]
+| [g |- at_al \a.\u. D1[.. a u]] =>
+  let [g |- at_al \a.\u. D2[.. a u]] = ae2 in
+  let [g, b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         transtp [g, b:block a:tp , _t:atp a a |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- at_al \a. \u. D[..] a u]
+    [g |- at_al \a. \u. D[.. a u]]
        
 | [g |- at_arr (D1[..]) (D2[..])] =>
   let [g |- at_arr (D3[..]) (D4[..])] = ae2 in
@@ -183,13 +183,13 @@ rec trans: (g:aeqCtx)
 fn ae1 => fn ae2 => case ae1 of
 | [g |- #p.2[..]] => ae2
 
-| [g |- ae_l \x.\u. D1 u] =>
-  let [g |- ae_l \x.\u. D2 u] = ae2 in
-  let [g, b:block x:term , _t:aeq x x |- D[..] b.1 b.2] =
-         trans [g, b:block x':term , _t:aeq x' x' |- D1[..] b.1 b.2]
-               [g, b |- D2[..] b.1 b.2]
+| [g |- ae_l \x.\u. D1] =>
+  let [g |- ae_l \x.\u. D2] = ae2 in
+  let [g, b:block x:term , _t:aeq x x |- D[.. b.1 b.2]] =
+         trans [g, b:block x':term , _t:aeq x' x' |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- ae_l \x. \u. D u]
+    [g |- ae_l \x. \u. D]
        
 | [g |- ae_a (D1[..]) (D2[..])] =>
   let [g |- ae_a (D3[..]) (D4[..])] = ae2 in
@@ -197,13 +197,13 @@ fn ae1 => fn ae2 => case ae1 of
   let [g |- D'[..]] = trans [g |- D2[..]] [g |- D4[..]] in
     [g |- ae_a (D[..]) (D'[..])]
 
-| [g |- ae_tl \a.\u. D1[..] a u] =>
-  let [g |- ae_tl \a.\u. D2[..] a u] = ae2 in
-  let [g, b:block a:tp , _t:atp a a |- D[..] b.1 b.2] =
-         trans [g, b:block a:tp , _t:atp a a |- D1[..] b.1 b.2]
-               [g, b |- D2[..] b.1 b.2]
+| [g |- ae_tl \a.\u. D1[.. a u]] =>
+  let [g |- ae_tl \a.\u. D2[.. a u]] = ae2 in
+  let [g, b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         trans [g, b:block a:tp , _t:atp a a |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- ae_tl \x. \u. D u]
+    [g |- ae_tl \x. \u. D]
        
 | [g |- ae_ta (D1[..]) (Q1[..])] =>
   let [g |- ae_ta (D2[..]) (Q2[..])] = ae2 in
@@ -219,10 +219,10 @@ rec symtp: (g:atpCtx)
  [g |- atp (T[..]) (R[..])] -> [g |- atp (R[..]) (T[..])] =
 fn ae => case ae of
 | [g |- #p.2[..]] => ae
-| [g |- at_al \x.\u. D u] =>
-  let [g, b:block a:tp , _t:atp a a |- D'[..] b.1 b.2] =
-      symtp [g, b:block a:tp, _t:atp a a |- D[..] b.1 b.2] in
-  [g |- at_al \x.\u. D' u]
+| [g |- at_al \x.\u. D] =>
+  let [g, b:block a:tp , _t:atp a a |- D'[.. b.1 b.2]] =
+      symtp [g, b:block a:tp, _t:atp a a |- D[.. b.1 b.2]] in
+  [g |- at_al \x.\u. D']
 | [g |- at_arr (D1[..]) (D2[..])] =>
   let [g |- D1'[..]] = symtp [g |- D1[..]] in
   let [g |- D2'[..]] = symtp [g |- D2[..]] in
@@ -234,18 +234,18 @@ rec sym: (g:aeqCtx)
  [g |- aeq (T[..]) (R[..])] -> [g |- aeq (R[..]) (T[..])] =
 fn ae => case ae of
 | [g |- #p.2[..]] => ae
-| [g |- ae_l \x.\u. D u] =>
-  let [g, b:block x:term , _t:aeq x x |- D'[..] b.1 b.2] =
-      sym [g, b:block x:term, _t:aeq x x |- D[..] b.1 b.2] in
-  [g |- ae_l \x.\u. D' u]
+| [g |- ae_l \x.\u. D] =>
+  let [g, b:block x:term , _t:aeq x x |- D'[.. b.1 b.2]] =
+      sym [g, b:block x:term, _t:aeq x x |- D[.. b.1 b.2]] in
+  [g |- ae_l \x.\u. D']
 | [g |- ae_a (D1[..]) (D2[..])] =>
   let [g |- D1'[..]] = sym [g |- D1[..]] in
   let [g |- D2'[..]] = sym [g |- D2[..]] in
     [g |- ae_a (D1'[..]) (D2'[..])]
-| [g |- ae_tl \x.\u. D u] =>
-  let [g, b:block a:tp , _t:atp a a |- D'[..] b.1 b.2] =
-      sym [g, b:block a:tp, _t:atp a a |- D[..] b.1 b.2] in
-  [g |- ae_tl \x.\u. D' u]
+| [g |- ae_tl \x.\u. D] =>
+  let [g, b:block a:tp , _t:atp a a |- D'[.. b.1 b.2]] =
+      sym [g, b:block a:tp, _t:atp a a |- D[.. b.1 b.2]] in
+  [g |- ae_tl \x.\u. D']
 | [g |- ae_ta (D[..]) (Q[..])] =>
   let [g |- D'[..]] = sym [g |- D[..]] in
   let [g |- Q'[..]] = symtp [g |- Q[..]] in
@@ -265,11 +265,11 @@ fn e => case e of
   let [g |- D2[..]] = ctp [g |- F2[..]] in
     [g |- at_arr (D1[..]) (D2[..])]
 
-| [g |- dt_al (\x.\u. F u)] =>
-  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[..] b.1 b.2] =
-        ctp [g, b:block a:tp, u:atp a a , _t:dtp a a |- F[..] b.1 b.3]
+| [g |- dt_al (\x.\u. F)] =>
+  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[.. b.1 b.2]] =
+        ctp [g, b:block a:tp, u:atp a a , _t:dtp a a |- F[.. b.1 b.3]]
   in
-     [g |- at_al (\x.\v. D v)]
+     [g |- at_al (\x.\v. D)]
 
  | [g |- dt_t (F1[..]) (F2[..])] =>
   let [g |- D2[..]] = ctp [g |- F2[..]] in
@@ -291,11 +291,11 @@ fn e => case e of
   let [g |-  D2[..]] = ceq [g |- F2[..]] in
     [g |-  ae_a (D1[..]) (D2[..])]
 
-| [g |- de_l (\x.\u. F u)] =>
-  let [g,b:block x:term,u:aeq x x , _t:deq x x |- D[..] b.1 b.2] =
-        ceq [g, b:block x:term, u:aeq x x , _t:deq x x |- F[..] b.1 b.3]
+| [g |- de_l (\x.\u. F)] =>
+  let [g,b:block x:term,u:aeq x x , _t:deq x x |- D[.. b.1 b.2]] =
+        ceq [g, b:block x:term, u:aeq x x , _t:deq x x |- F[.. b.1 b.3]]
   in
-     [g |- ae_l (\x.\v. D v)]
+     [g |- ae_l (\x.\v. D)]
 
  | [g |- de_t (F1[..]) (F2[..])] =>
   let [g |- D2[..]] = ceq [g |- F2[..]] in
@@ -303,14 +303,14 @@ fn e => case e of
     trans [g |- D1[..]] [g |- D2[..]]
 
 | [g |-  de_s (F[..])] =>
-   let [g |-  D[..]] = ceq [g |-  F..] in
+   let [g |-  D[..]] = ceq [g |-  F] in
    sym [g |-  D[..]]
 
-| [g |- de_tl (\a.\u. F[..] a u)] =>
-  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[..] b.1 b.2] =
-        ceq [g, b:block a:tp, u: atp a a , _t:dtp a a |- F[..] b.1 b.3]
+| [g |- de_tl (\a.\u. F[.. a u])] =>
+  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[.. b.1 b.2]] =
+        ceq [g, b:block a:tp, u: atp a a , _t:dtp a a |- F[.. b.1 b.3]]
   in
-     [g |- ae_tl (\x.\v. D v)]
+     [g |- ae_tl (\x.\v. D)]
 
  | [g |- de_ta (F1[..]) (P2[..])] =>
   let [g |- Q2[..]] = ctp [g |- P2[..]] in

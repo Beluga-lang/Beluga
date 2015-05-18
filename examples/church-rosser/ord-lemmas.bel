@@ -9,7 +9,7 @@
 schema tctx = term;
 
 % Transitivity of multi-step reduction
-rec appd: (g:tctx) [g |- -->* (M[..]) (M'..)]  ->  [g |- -->*  (M'[..]) (M''[..])]
+rec appd: (g:tctx) [g |- -->* (M[..]) M']  ->  [g |- -->*  (M'[..]) (M''[..])]
         ->  [g |- -->* (M[..]) (M''[..])] =
 / total r (appd g m m' m'' r s) /
 fn r => fn s => case r of

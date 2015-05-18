@@ -1,4 +1,4 @@
-rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp T] -> [g |- opt] =
+rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp T[]] -> [g |- opt] =
 % / total e (free_var g t e) /
 
 mlam g => mlam T => fn e =>
@@ -7,8 +7,8 @@ mlam g => mlam T => fn e =>
   | [g |- tt]           : [g |- (exp bool)]  => [g |- nothing]
   | [g |- ff]           : [g |- (exp bool)]  => [g |- nothing]
 
-  | {T':[ |- tp]} {#p:[g |- exp T']}
-     [g |- (#p[..])]     : [g |- (exp T')] => [g |- something T' (#p[..])]
+  | {T':[ |- tp]} {#p:[g |- exp T'[]]}
+     [g |- (#p[..])]     : [g |- (exp T'[])] => [g |- something T'[] (#p[..])]
 
   | {U:[g |- exp nat]}
     [g |- suc (U[..])] : [g |- (exp nat)]   => free_var [g] [ |- nat ]  [g |- (U[..])]
@@ -19,6 +19,6 @@ mlam g => mlam T => fn e =>
        (case free_var [g] [ |- bool ] [g |- (U[..])] of
           [g |- nothing]                : [g |- opt] => free_var [g] [ |- bool ] [g |- (V[..])]
 
-       | {T':[ |- tp]} {#p:[g |- exp T']}
-          [g |- something T' (#p[..])] : [g |- opt] => [g |- something T' (#p[..])])
+       | {T':[ |- tp]} {#p:[g |- exp T'[]]}
+          [g |- something T'[] (#p[..])] : [g |- opt] => [g |- something T'[] (#p[..])])
 );

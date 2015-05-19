@@ -22,5 +22,4 @@ opam --git-version
 opam init 
 opam install ${OPAM_DEPENDS}
 eval `opam config env`
-make
-./TEST
+make && ./TEST && ./HTML_TEST

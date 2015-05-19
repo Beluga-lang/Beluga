@@ -394,6 +394,7 @@ module Ext = struct
 
         | LF.Id _ ->
             fprintf ppf "%s" (symbol_to_html Dots)
+        | LF.RealId -> ()
 
         | LF.EmptySub _ ->
             fprintf ppf ""

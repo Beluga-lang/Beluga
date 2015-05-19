@@ -1,5 +1,5 @@
 % Completeness of algorithmic equality for declarative equality for simply typed lambda calculus
-% Accompanies Mechanizing Logical Relations using Contextual Type Theory
+% Accompanies Mechanizing Logical Relations using Contextual Type Theory 
 % by Andrew Cave and Brigitte Pientka
 
 tp : type.         %name tp T.

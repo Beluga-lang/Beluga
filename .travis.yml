@@ -5,4 +5,7 @@
       - OCAML_VERSION=4.02.1    
       - OCAML_VERSION=4.01.0
       - OCAML_VERSION=4.00.1
-
+    notifications:
+      email:
+        - beluga-commit@cs.mcgill.ca
+      irc: "chat.freenode.net#beluga"       

@@ -27,34 +27,34 @@ cthrow : ccont A -> cvalue A -> contra.
 
 
 % Translating values to cvalues
-% and expressions to ...
+% and expressions to[..].
 
 schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 
 rec cps : {g:ctx} [g |- value A] -> [g |- cvalue A] =
 / total v (cps g a v) /
 mlam g => fn v =>  case v of
-| [g |- #p.1 ..] =>  [g |- #p.2 ..]
+| [g |- #p.1[..]] =>  [g |- #p.2[..]]
 
-| [g |- lam A2 \x. E .. x] =>
-  let  [g, b:block (x:value A , _t:cvalue A), k:ccont B |-  E' .. b.2 k] =
-    cpse [g, b:block x:value A2 , _t:cvalue A2 ]
-         [g,b |- E .. b.1]
+| [g |- lam A2[] \x. E] =>
+  let  [g, b:block (x:value A[] , _t:cvalue A[]), k:ccont B[] |-  E'[.. b.2 k]] =
+    cpse [g, b:block x:value A2[] , _t:cvalue A2[] ]
+         [g,b |- E[.. b.1]]
    in
-     [g |- clam \v.\c. E' .. v c]
+     [g |- clam \v.\c. E']
 
 
 and cpse : {g:ctx}[g |- exp A] -> [g,k:ccont A |-  contra] =
 / total e (cpse g a e)/ 
 mlam g => fn e => case e of
-| [g |- ret (V .. )] =>
-  let [g |- V' ..] = cps [g] [g |- V .. ] in
-    [g,k |- cthrow k (V' .. )]
+| [g |- ret (V[..] )] =>
+  let [g |- V'[..]] = cps [g] [g |- V[..] ] in
+    [g,k |- cthrow k (V'[..] )]
 
-| [g |- app (E1 .. ) (E2 .. )] =>
-  let [g,k:ccont (arr B A) |-  E1' .. k] = cpse [g] [g |- E1 .. ] in
-  let [g,k:ccont B' |-  E2' .. k] = cpse [g] [g |- E2 .. ] in
-   [g, k |-  (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))]
+| [g |- app (E1[..] ) (E2[..] )] =>
+  let [g,k:ccont (arr B A) |-  E1'[.. k]] = cpse [g] [g |- E1[..] ] in
+  let [g,k:ccont B' |-  E2'[.. k]] = cpse [g] [g |- E2[..] ] in
+   [g, k |- E1'[.. (cconti (\f. E2'[.. (cconti (\x. capp f x k))]))]]
 
 ;
 

@@ -73,6 +73,7 @@ module LF = struct
     | EmptySub of Loc.t
     | Dot      of Loc.t * sub * front
     | Id       of Loc.t
+    | RealId
     | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and front =

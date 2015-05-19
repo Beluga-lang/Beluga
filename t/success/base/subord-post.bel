@@ -16,9 +16,9 @@ rec fff : {g:boolCtx} [g, xx : bool |-  bool] -> [ |- term] =
 mlam g => fn e =>
   case e of %not        % Shouldn't cover, due to "after" term constructor declared later
   | [g, xx : bool |-  eq U V]     => [ |- z]
-%  | [g, xx : bool]  eq (U ..) V     => [] z
-%  | [g, xx : bool]  eq (U ..) (V .. xx)     => [] z
-  | [g, xx : bool |-  #p .. xx]   => [ |- z]
+%  | [g, xx : bool]  eq (U[..]) V     => [] z
+%  | [g, xx : bool]  eq (U[..]) (Vx)     => [] z
+  | [g, xx : bool |-  #px]   => [ |- z]
 ;
 
 after : term -> bool -> bool.
@@ -26,6 +26,6 @@ after : term -> bool -> bool.
 rec fff2 : {g:boolCtx} [g, xx : bool |-  bool] -> [ |- term] =
 mlam g => fn e =>
   case e of
-  | [g, xx : bool |-  eq (U .. xx) (V .. xx)]     => [ |- z]
-  | [g, xx : bool |-  #p .. xx]   => [ |- z]
+  | [g, xx : bool |-  eq (Ux) (Vx)]     => [ |- z]
+  | [g, xx : bool |-  #px]   => [ |- z]
 ;

@@ -16,6 +16,6 @@ rec copy : {g:(termCtx)*} term[g] -> term[g] =
 FN g => fn e =>
  (case e of
   | [g]  z     => [g] z
-  | [g] suc (U ..) => let [g] V .. = copy [g] ([g] U ..) in [g] suc (V .. )
+  | [g] suc (U[..]) => let [g] V[..] = copy [g] ([g] U[..]) in [g] suc (V[..] )
 );
 }%

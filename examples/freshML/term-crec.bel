@@ -29,18 +29,18 @@ fn m => fn n => case m of
 rec size : (g:ctx) [g |- term] -> [ |- nat] =
 / total t (size g t) /
 fn t => case t of
-| [g |- #p ..] => [ |- suc z]
-| [g |- lam \x. T .. x] =>
-  let [ |- K] = size [g,x:term |-  T .. x ] in
+| [g |- #p[..]] => [ |- suc z]
+| [g |- lam \x. T] =>
+  let [ |- K] = size [g,x:term |-  T ] in
    [ |- suc K]
 
-| [g |- app (T ..) (U ..)] =>
-  let [ |- N] = add (size [g |- T ..]) (size [g |- U ..]) in
+| [g |- app (T[..]) (U[..])] =>
+  let [ |- N] = add (size [g |- T[..]]) (size [g |- U[..]]) in
    [ |- suc N]
 
 
-| [g |- letv (T ..) (\x. U .. x)] =>
-  let [ |- N] =   add (size [g |- T ..]) (size [g,x:term |-  U .. x]) in
+| [g |- letv (T[..]) (\x. U)] =>
+  let [ |- N] =   add (size [g |- T[..]]) (size [g,x:term |-  U]) in
    [ |- suc N]
 
 | [g |- const I] => [ |- suc z]
@@ -87,9 +87,9 @@ rec append: (g:ctx) [g |- list] -> [g |- list] -> [g |- list] =
 / total l1 (append g l1 l2) /
 fn l1 => fn l2 => case l1 of
 | [g |- nil] => l2
-| [g |- cons (X ..) (L ..)] =>
-  let [g |- L' ..] = append [g |- L ..] l2 in
-    [g |- cons (X ..) (L' ..)]
+| [g |- cons (X[..]) (L[..])] =>
+  let [g |- L'[..]] = append [g |- L[..]] l2 in
+    [g |- cons (X[..]) (L'[..])]
 ;
 
 
@@ -104,18 +104,18 @@ rec rm : (g:ctx) [g,x:term |-  list] -> [g |- list] =
 % / total l (rm g l) /
 fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
-| [g,x:term |-  cons x (L .. x)]  =>
-    rm [g,x |- L .. x]
+| [g,x:term |-  cons x (L)]  =>
+    rm [g,x |- L]
 
- | [g,x:term |-  cons (#p .. ) (L .. x)] =>
-  let [g |- L' ..] = rm [g,x |- L .. x] in
-   [g |- cons (#p ..) (L' ..)]
+ | [g,x:term |-  cons (#p[..] ) (L)] =>
+  let [g |- L'[..]] = rm [g,x |- L] in
+   [g |- cons (#p[..]) (L'[..])]
 
 
 ;
 
 
-% OR more generally ...
+% OR more generally[..].
 
 rec rm' : (g:ctx) [g,x:term |-  list] -> [g |- list] =
 / total l (rm' g l) /
@@ -123,13 +123,13 @@ fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 
 % the next case succeeds if x does not occur in U
-| [g,x:term |-  cons (U .. ) (L .. x)] =>
-  let [g |- L' ..] = rm' [g,x |- L .. x] in
-   [g |- cons (U ..) (L' ..)]
+| [g,x:term |-  cons (U[..] ) (L)] =>
+  let [g |- L'[..]] = rm' [g,x |- L] in
+   [g |- cons (U[..]) (L'[..])]
 
 % this case hence succeeds if x does occur in U
-| [g,x:term |-  cons (U .. x) (L .. x)]  =>
-    rm' [g,x |- L .. x]
+| [g,x:term |-  cons (U) (L)]  =>
+    rm' [g,x |- L]
 ;
 
 
@@ -137,18 +137,18 @@ rec fv : (g:ctx) [g |- term] -> [g |- list] =
 / total t (fv g t)/
 fn t => case t of
 | [g |- const I] => [g |- nil]
-| [g |- #p ..]    => [g |- cons (#p ..) nil]
-| [g |- app (T1 ..) (T2 ..)] =>
-  append  (fv [g |- T1 ..]) (fv [g |- T2 ..])
+| [g |- #p[..]]    => [g |- cons (#p[..]) nil]
+| [g |- app (T1[..]) (T2[..])] =>
+  append  (fv [g |- T1[..]]) (fv [g |- T2[..]])
 
-| [g |- lam \x. T .. x] =>
-  let [g,x:term |-  L .. x] = fv [g,x:term |-  T .. x] in
-    rm' [g,x |- L .. x]
+| [g |- lam \x. T] =>
+  let [g,x:term |-  L] = fv [g,x:term |-  T] in
+    rm' [g,x |- L]
 
-| [g |- letv (T1 ..) (\x. T2 .. x)] =>
-  let [g |- L1 ..] = fv [g |- T1 .. ] in
-  let [g,x:term |-  L2 .. x] = fv [g,x:term |-  T2 .. x] in
-  append [g |- L1 .. ] (rm' [g,x |- L2 .. x])
+| [g |- letv (T1[..]) (\x. T2)] =>
+  let [g |- L1[..]] = fv [g |- T1[..] ] in
+  let [g,x:term |-  L2] = fv [g,x:term |-  T2] in
+  append [g |- L1[..] ] (rm' [g,x |- L2])
 ;
 
 
@@ -178,27 +178,27 @@ rec memb: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
 / total l (memb e l)/
 fn e => fn l => case l of
 | [g |- empty] => [ |- nothing]
-| [g |- push (E' .. ) T (L .. )] =>
-  if e == [g |- E' .. ] then
+| [g |- push (E'[..] ) T[] (L[..] )] =>
+  if e == [g |- E'[..] ] then
     [ |- just T]
   else
-    memb e [g |- L .. ]
+    memb e [g |- L[..] ]
 ;
 
 
 rec typing: (g:tms) [g |- tm] -> [g |- env] -> [ |- opt] =
 % / total e (typing g e)/ 
 fn e => fn l => case e of
-| [g |- #p ..]  =>  memb [g |- #p .. ] l
+| [g |- #p[..]]  =>  memb [g |- #p[..] ] l
 
-| [g |- lamt T (\x. M .. x)] =>
-  let [g |- L ..] = l in
-    typing [g,x:tm |-  M .. x] [g,x |- push x T (L .. )]
+| [g |- lamt T[] (\x. M)] =>
+  let [g |- L[..]] = l in
+    typing [g,x:tm |-  M] [g,x |- push x T[] (L[..] )]
 
-| [g |- apply (M1 .. ) (M2 .. )] =>
-  (case typing [g |- M1 .. ] l of
+| [g |- apply (M1[..] ) (M2[..] )] =>
+  (case typing [g |- M1[..] ] l of
      | [ |- just (arr T2 T)] =>
-       (case typing [g |- M2 .. ] l of
+       (case typing [g |- M2[..] ] l of
          | [ |- just T2'] =>
            if [ |- T2] == [ |- T2'] then
              [ |- just T]

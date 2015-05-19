@@ -155,7 +155,7 @@ let _ = Error.register_printer
                    meta-variables whose type cannot be inferred."
 
         | CompTypAnn ->
-          Format.fprintf ppf "Type synthesis of term failed (use typing annotation)."
+          Format.fprintf ppf "Type synthesis of term failed."
         | InvalidLFHole ->
           Format.fprintf ppf
             "Invalid LF Hole at %s"
@@ -470,7 +470,7 @@ let rec patSpine spine =
 
 (* isPatSub s = bool *)
 let rec isPatSub s = match s with
-  | Apx.LF.Id ->
+  | Apx.LF.Id | Apx.LF.RealId ->
       true
 
   | Apx.LF.EmptySub ->
@@ -501,7 +501,7 @@ let rec isPatSub s = match s with
 (* ******************************************************************* *)
 (* isProjPatSub s = true *)
 let rec isProjPatSub s = match s with
-  | Apx.LF.Id -> true
+  | Apx.LF.Id | Apx.LF.RealId -> true
 
   | Apx.LF.EmptySub -> true
 
@@ -539,6 +539,7 @@ let flattenProjPatHead loc cD h conv_list cPsi = match h with
 
 let rec flattenProjPat loc cD s conv_list cPsi = match s with
   | Apx.LF.Id  -> Apx.LF.Id 
+  | Apx.LF.RealId -> Apx.LF.RealId
   | Apx.LF.EmptySub -> Apx.LF.EmptySub
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let s' = flattenProjPat loc cD s conv_list cPsi in
@@ -549,7 +550,7 @@ let rec flattenProjPat loc cD s conv_list cPsi = match s with
 
 (* isTuplePatSub s = true *)
 let rec isTuplePatSub s = match s with
-  | Apx.LF.Id -> true
+  | Apx.LF.Id | Apx.LF.RealId -> true
 
   | Apx.LF.EmptySub -> true
 
@@ -575,6 +576,7 @@ let rec isTuplePatSub s = match s with
 
 let rec flattenSub s = match s with 
   | Apx.LF.Id -> s
+  | Apx.LF.RealId -> s
 
   | Apx.LF.EmptySub -> s
 
@@ -716,6 +718,7 @@ let rec synHead cD loc cPsi h = match h with
      Int.LF.TypDecl (x, Int.LF.TClo sQ) , Int.LF.Proj(h', j)
 
 let rec synDom cD loc cPsi s = begin match s with
+  | Apx.LF.RealId -> (cPsi, Int.LF.Shift 0)
   | Apx.LF.Id ->
       begin match Context.dctxToHat cPsi with
         | (Some psi, d) ->
@@ -1854,6 +1857,12 @@ and elSub loc recT cD cPsi s cl cPhi =
 	    raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 	end
 
+      | (Apx.LF.RealId , cPhi) ->
+	begin try Unify.unifyDCtx cD (Whnf.cnormDCtx (cPhi, Whnf.m_id)) (Whnf.cnormDCtx (cPsi, Whnf.m_id));
+		  Int.LF.Shift 0
+	  with Unify.Failure msg ->
+	    raise (Error (loc, IllTypedSub (cD, cPsi, s, cPhi)))
+	end 
       | (Apx.LF.Id , Int.LF.DDec (_cPhi', _decl)) ->
 	elSub' loc recT cD cPsi (Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar 1), s)) cPhi
 
@@ -1932,6 +1941,7 @@ and elSub loc recT cD cPsi s cl cPhi =
             | Apx.LF.Dot _ -> "Dot _ "
             | Apx.LF.EmptySub -> " . "
             | Apx.LF.Id -> " .. "
+            | Apx.LF.RealId -> ""
             | Apx.LF.SVar(u,s) -> "SVAR"
             | Apx.LF.FSVar(u,s) -> "FSVAR" in
 	  "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : "  ^ P.dctxToString cD cPhi);

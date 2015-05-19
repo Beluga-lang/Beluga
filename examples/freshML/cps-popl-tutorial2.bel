@@ -30,26 +30,26 @@ schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 rec cps : {g:ctx}[g |- value A] -> [g |- cvalue A] =
 / total v (cps g a v)/
 mlam g => fn v => case v of
-| [g |- #p.1 ..] => [g |- #p.2 ..]
-| {E:[g, x:value A |-  exp B]} % Explicit type annotation for E is necessary
-  [g |- lam \x. E .. x] =>        % because we need the type A in the recursive call
+| [g |- #p.1[..]] => [g |- #p.2[..]]
+| {E:[g, x:value (A[]) |-  exp (B[])]} % Explicit type annotation for E is necessary
+  [g |- lam \x. E] =>        % because we need the type A in the recursive call
 
-  let [g, b:block (x:value A , _t:cvalue A), c:cvalue B -> contra |-  E' .. b.2 c] =
-      cpse [g,b:block x:value A , _t:cvalue A] [g, b |-  E .. b.1 ] in
-    [g |- clam \v.\c. E' .. v c]
+  let [g, b:block (x:value (A[]) , _t:cvalue (A[])), c:cvalue (B[]) -> contra |-  E'[.. b.2 c]] =
+      cpse [g,b:block x:value (A[]) , _t:cvalue (A[])] [g, b |-  E[.. b.1] ] in
+    [g |- clam \v.\c. E'[.. v c]]
 
 
 and cpse : {g:ctx}[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
 / total e (cpse g a e) /
 mlam g => fn e => case e of
-| [g |- ret (V .. )] =>
-  let [g |- V' ..] = cps [g] [g |- V .. ] in
-    [g,c |- c (V' .. )]
+| [g |- ret (V[..] )] =>
+  let [g |- V'[..]] = cps [g] [g |- V[..] ] in
+    [g,c |- c (V'[..] )]
 
-| [g |- app (E1 .. ) (E2 .. )] =>
-  let [g, c:cvalue (arr B A) -> contra |-  E1' .. c] = cpse [g] [g |- E1 .. ] in
-  let [g, c:cvalue B         -> contra |-  E2' .. c] = cpse [g] [g |- E2 .. ] in
-    [g,c |- E1' .. (\f. E2' .. (\x. capp f x c))]
+| [g |- app (E1[..] ) (E2[..] )] =>
+  let [g, c:cvalue (arr B A) -> contra |-  E1'] = cpse [g] [g |- E1] in
+  let [g, c:cvalue B         -> contra |-  E2'] = cpse [g] [g |- E2] in
+    [g,c |- E1'[.. (\f. E2'[.. (\x. capp f x c)])]]
 
 ;
 %{

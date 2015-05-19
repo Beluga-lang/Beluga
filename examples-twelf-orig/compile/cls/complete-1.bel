@@ -67,9 +67,9 @@ fn d => case d of
 %
 %     % Again the problem that we learn later something about the program.
 %     % from the pattern we know that
-%     % C1 :  st .... (prog (ev X124[^0]) P30[^0]) ...
+%     % C1 :  st[..].. (prog (ev X124[^0]) P30[^0])[..].
 %     % but we need to use it in the append function below with
-%     % st ... (prog (ev X124[^0]) P30[^0]) ...
+%     % st[..]. (prog (ev X124[^0]) P30[^0])[..].
 %
 %     let [ ] S  =  append ([ ] to c_s C1) ([ ] to c_add1 id_step) in
 %       [ ] exSubComp S

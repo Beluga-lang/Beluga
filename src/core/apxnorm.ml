@@ -168,6 +168,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 and cnormApxSub cD delta s (cD'', t) = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> s
+  | Apx.LF.RealId -> s
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = cnormApxHead cD delta h (cD'', t) in
@@ -419,10 +420,6 @@ and cnormApxBranch cD delta b (cD'', t) =
 let rec collectApxTerm fMVs  m = match m with
   | Apx.LF.Lam (_loc, _x, m') ->  collectApxTerm fMVs  m'
 
-   (* We only allow free meta-variables of atomic type *)
-  | Apx.LF.Root (_loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
-       collectApxSub (u::fMVs)  s
-
   | Apx.LF.Root (_loc, h, s) ->
       let fMVs' = collectApxHead fMVs  h in
         collectApxSpine fMVs'  s
@@ -442,6 +439,9 @@ and collectApxHead fMVs h = match h with
   | Apx.LF.FPVar (p, s) ->
       collectApxSub (p::fMVs) s
 
+  | Apx.LF.FMVar (u, s) ->
+      collectApxSub (u::fMVs) s
+
   | Apx.LF.MVar (Apx.LF.Offset _offset, s) ->
       collectApxSub fMVs s
 
@@ -456,6 +456,7 @@ and collectApxHead fMVs h = match h with
 and collectApxSub fMVs s = match s with
   | Apx.LF.EmptySub -> fMVs
   | Apx.LF.Id -> fMVs
+  | Apx.LF.RealId -> fMVs
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let fMVs' = collectApxHead fMVs h in
         collectApxSub fMVs' s
@@ -685,6 +686,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
 and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> Apx.LF.Id
+  | Apx.LF.RealId -> Apx.LF.RealId
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = fmvApxHead fMVs cD d_param  h in

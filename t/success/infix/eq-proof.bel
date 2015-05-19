@@ -28,55 +28,55 @@ eq_lam :  ({x : exp} x eq x -> (E x) eq (F x))
 schema eqCtx = block x:exp, _t:x eq x;
 
 
-rec ref : {g:eqCtx} {U:[g |- exp]} [g |- (U ..) eq (U ..)] =
+rec ref : {g:eqCtx} {U:[g |- exp]} [g |- (U[..]) eq (U[..])] =
  mlam g => mlam U =>
-   case [g |- U ..] of
-  | [g |- #p.1 ..] => [g |- #p.2 ..]
+   case [g |- U[..]] of
+  | [g |- #p.1[..]] => [g |- #p.2[..]]
 
-  | [g |- lam \x. L .. x] =>
+  | [g |- lam \x. L] =>
       let
-          [g,e:block yyy:exp, _t:yyy eq yyy |-  V .. e] = ref [g, e:block q:exp, _t:q eq q] [g, e |-  L .. e.1]
+          [g,e:block yyy:exp, _t:yyy eq yyy |-  V] = ref [g, e:block q:exp, _t:q eq q] [g, e |-  L[.. e.1]]
       in
-        [g |- eq_lam \x. \w. (V .. <x ; w>)]  % : eq (L .. x) (L .. x)
+        [g |- eq_lam \x. \w. (V[.. <x ; w>])]  % : eq (L) (L)
 
-   | [g |- (A1 ..) app (A2 ..)] : [g |- exp] =>
-       let [g |- EQ1 ..] = ref [g] [g |- A1 .. ] in
-       let [g |- EQ2 ..] = ref [g] [g |- A2 .. ] in
-          [g |- (EQ1 ..) eq_app (EQ2 ..)]
+   | [g |- (A1[..]) app (A2[..])] : [g |- exp] =>
+       let [g |- EQ1[..]] = ref [g] [g |- A1[..] ] in
+       let [g |- EQ2[..]] = ref [g] [g |- A2[..] ] in
+          [g |- (EQ1[..]) eq_app (EQ2[..])]
 ;
 
 
 
 % General transitivity is admissible
 rec trans: {g:eqCtx}
-   [g |- (TT ..) eq (RR ..)]     % e1 : eq T R
--> [g |- (RR ..) eq (SS ..)]     % e2 : eq R S
--> [g |- (TT ..) eq (SS ..)]     % result : eq T S
+   [g |- (TT[..]) eq (RR[..])]     % e1 : eq T R
+-> [g |- (RR[..]) eq (SS[..])]     % e2 : eq R S
+-> [g |- (TT[..]) eq (SS[..])]     % result : eq T S
 =
   mlam g =>
     fn e1 => fn e2 =>
       case e1 of
 
 |{#p : [g |- block yy:exp, _t:yy eq yy]}
-       [g |- #p.2 ..] => e2
+       [g |- #p.2[..]] => e2
 
-| [g |- eq_lam \x.\u. D1 .. x u] =>
-   let [g |- eq_lam \xx.\uu. D2 .. xx uu] =  e2  in
-   let [g, b:block x:exp, _t:x eq x |-  E .. b] =
+| [g |- eq_lam \x.\u. D1] =>
+   let [g |- eq_lam \xx.\uu. D2] =  e2  in
+   let [g, b:block x:exp, _t:x eq x |-  E[.. b]] =
      trans [g, b:block x':exp, _t:x' eq x']
-         [g, b |-  D1 .. b.1 b.2]
-         [g, b |-  D2 .. b.1 b.2]
+         [g, b |-  D1[.. b.1 b.2]]
+         [g, b |-  D2[.. b.1 b.2]]
     in
-      [g |- eq_lam \x. \u. E .. <x ; u>]
+      [g |- eq_lam \x. \u. E[.. <x ; u>]]
 
-| [g |- (D1 ..) eq_app (D2 ..)] =>
+| [g |- (D1[..]) eq_app (D2[..])] =>
        (case e2 of
-         [g |- (F1 ..) eq_app  (F2 ..)] =>
-         let [g |- E1 ..] = trans [g]  [g |- D1 ..]  [g |- F1 ..]
+         [g |- (F1[..]) eq_app  (F2[..])] =>
+         let [g |- E1[..]] = trans [g]  [g |- D1[..]]  [g |- F1[..]]
          in
-         let [g |- E2 ..] = trans [g]  [g |- D2 ..]  [g |- F2 ..]
+         let [g |- E2[..]] = trans [g]  [g |- D2[..]]  [g |- F2[..]]
          in
-             [g |- (E1 ..) eq_app  (E2 ..)]
+             [g |- (E1[..]) eq_app  (E2[..])]
        )
 ;
 

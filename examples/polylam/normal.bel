@@ -43,22 +43,22 @@ schema ctx = some [t:tp] block x:exp t, _t:neutral t; % Q: why small T?
 rec normal2exp : (g: ctx) [g |- normal T] -> [g |- exp T] =
 / total e (normal2exp g t e) /
 fn e => case e of
-| [g |- neut (M..)] => neutral2exp [g |- M..]
+| [g |- neut M] => neutral2exp [g |- M]
 
-| {S : [g,x:neutral T2 |-  normal T1]} % we specify the type of S to help the type-checker
-  [g |- lam' \x.S..x] => let {M : [g,x:exp T |- exp T1]}
-                        [g,b: block x:exp T, _t:neutral T |-  M..b.1] =
-                       normal2exp[g,b: block x:exp T2, _t:neutral T2 |-  S..b.2]
+| {S : [g,x:neutral (T2[]) |-  normal (T1[])]} % we specify the type of S to help the type-checker
+  [g |- lam' \x. S] => let {M : [g,x:exp (T[]) |- exp (T1[])]}
+                        [g,b: block x:exp (T[]), _t:neutral (T[]) |-  M[..b.1]] =
+                       normal2exp[g,b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..b.2]]
                      in
-                       [g |- lam \y.M..y]
+                       [g |- lam \y.M[..y]]
 
 and neutral2exp : (g: ctx) [g |- neutral T] -> [g |- exp T] =
 / total e (neutral2exp g t e) /
 fn e => case e of
-|[g |- app' (R..) (S..)] => let [g |- M..] = neutral2exp [g |- R..] in
-                       let [g |- N..] = normal2exp [g |- S..] in
-                         [g |- app (M..)(N..)]
-|[g |- #p.2..] => [g |- #p.1..]
+|[g |- app' R S] => let [g |- M] = neutral2exp [g |- R] in
+                       let [g |- N] = normal2exp [g |- S] in
+                         [g |- app M N]
+|[g |- #p.2] => [g |- #p.1]
 
 ;
 
@@ -68,22 +68,22 @@ fn e => case e of
 rec norm : (g: ctx) [g |- exp T] -> [g |- normal T] =
 % / total e (norm g t e)/
 fn e => case e of
-| [g |- app (M..) (N..)] =>
-  (case norm [g |- M..] of
-  |  {S : [h, x:neutral T2 |-  normal T1]}
-    [h |- lam' \x.S..x] =>
-    let {M': [h,x:exp T |- exp T1]}
-        [h,b: block x: exp T, _t:neutral T |-  M'..b.1] =
-      normal2exp [h, b: block x:exp T2, _t:neutral T2 |-  S..b.2]
+| [g |- app M N] =>
+  (case norm [g |- M] of
+  |  {S : [h, x:neutral (T2[]) |-  normal (T1[])]}
+    [h |- lam' \x. S] =>
+    let {M': [h,x:exp (T[]) |- exp (T1[])]}
+        [h,b: block x: exp (T[]), _t:neutral (T[]) |-  M'[..b.1]] =
+      normal2exp [h, b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..b.2]]
 %     normal2exp [g, b: block (x:exp _, _t:neutral _) |-  S..b.2]
     in
-      norm [h |- M'..(N..)]
+      norm [h |- M'[.. N]]
 )
 %{  | [g |- neut(R..)] =>
    (let [g |- S..] = norm [g |- N..] in [g |- neut (app' (R..) (S..))]))
 }%
 %{
-| [g |- #p.1 ..] => [g |- neut(#p.2 ..)] % #p means variable p from the context
+| [g |- #p.1[..]] => [g |- neut(#p.2[..])] % #p means variable p from the context
 
 | {M : [g, x:exp T2 |-  exp T1]}
   [g |- lam \x.M..x] =>

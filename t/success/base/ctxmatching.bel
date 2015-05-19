@@ -6,7 +6,7 @@ schema nctx = nat;
 rec cmatch_correct1 : (g:nctx) [g |- nat] -> [g |- nat] =
 fn n  => case n of
  | [g |- z] => [g |- z]
- | [g |- #p ..] => [g |- #p ..]
+ | [g |- #p[..]] => [g |- #p[..]]
 
 ;
 
@@ -15,7 +15,7 @@ rec cmatch_correct2 : (g:nctx) [g |- nat] -> [g |- nat] =
 fn n  => case n of
  | [g |- z] => [g |- z]
  | [h,x:nat |-  x] => [h,x:nat |-  x]
- | [g,x:nat |-  #p ..] => [g,x:nat |-  #p ..]
+ | [g,x:nat |-  #p[..]] => [g,x:nat |-  #p[..]]
 
 ;
 
@@ -24,7 +24,7 @@ rec cmatch_incorrect1 : (g:nctx) [g |- nat] -> [g |- nat] =
 fn n  => case n of  %not
  | [g |- z] => [g |- z]
 % | [h,x:nat] x => [h,x:nat] x
- | [g,x:nat |-  #p ..] => [g,x:nat |-  #p ..]
+ | [g,x:nat |-  #p[..]] => [g,x:nat |-  #p[..]]
 
 ;
 
@@ -32,7 +32,7 @@ rec cmatch_incorrect2 : (g:nctx) [g |- nat] -> [g |- nat] =
 fn n  => case n of %not
 % | [g] z => [g] z
  | [h,x:nat |-  x] => [h,x:nat |-  x]
- | [g,x:nat |-  #p ..] => [g,x:nat |-  #p ..]
+ | [g,x:nat |-  #p[..]] => [g,x:nat |-  #p[..]]
 
 ;
 
@@ -43,6 +43,6 @@ rec cmatch_incorrect3 : {g:nctx} [g |- nat] -> [g |- nat] =
 mlam g => fn n  => case n of %not
  | [g |- z] => [g |- z]
  | [h,x:nat  |-  x] => [h,x:nat |-  x]
-% | [g,x:nat] #p .. => [g,x:nat] #p ..
+% | [g,x:nat] #p[..] => [g,x:nat] #p[..]
 ;
 

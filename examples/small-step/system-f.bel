@@ -109,7 +109,7 @@ fn d => fn ev => case ev of
     [ |- is_@ D1 D2']
  )
 | [ |- ~>_@3 V] =>
-  let  [ |- is_@ (is_lam (\x. (\d. (D1' x d)))) D2] = d in  [ |- D1' _ D2]
+  let  [ |- is_@ (is_lam (\x. (\d. (D1')))) D2] = d in  [ |- D1'[_ D2]]
 
 | [ |- (~>_#1 EV)] =>
  (let [ |- is_# D]  = d in
@@ -117,8 +117,8 @@ fn d => fn ev => case ev of
     [ |- is_# D']
  )
 | [ |- ~>_#2] =>
-  let {D':[a:tp |-  has (E a) (T a)] }
-     [ |- is_# (is_lAM (\a. D' a))]  : [ |- has (ann _ T2) (T T2)] = d in [ |- D' T2]
+  let {D':[a:tp |-  has E T] }
+     [ |- is_# (is_lAM (\a. D'))]  : [ |- has (ann _ T2) T[T2]] = d in [ |- D'[T2]]
 ;
 
 % Progress
@@ -150,9 +150,9 @@ fn d => case d of
     | [ |- val value_z]      => impossible [ |- D1] in []
     | [ |- val (value_s _ )] => impossible [ |- D1] in []
     | [ |- val (value_lAM )] => impossible [ |- D1] in [])
- | [ |- is_lam (\x.\d. D1 x d)] => [ |- val value_lam]
+ | [ |- is_lam (\x.\d. D1)] => [ |- val value_lam]
 
-| [ |- is_lAM (\a. D a)]       => [ |- val value_lAM]
+| [ |- is_lAM (\a. D)]       => [ |- val value_lAM]
 
 | [ |- is_# D] =>
   (case   progress [ |- D]   of

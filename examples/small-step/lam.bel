@@ -61,8 +61,8 @@ case s of
       [ |- is_app D1 D2']
 
  | [ |- s_app3 V] =>
-   let [ |- is_app (is_lam (\x. (\d. (D1 x d)))) D2] = d in
-     [ |- (D1 _ D2)]
+   let [ |- is_app (is_lam (\x. (\d. D1))) D2] = d in
+     [ |- D1[_ D2]]
 
 ;
 
@@ -98,7 +98,7 @@ fn d =>
 	    [ |- step_to (s_app3 VL2)]
 	 )
        )
-| [ |- is_lam (\x. (\d. (D1 x d)))]  =>  [ |- val value_lam]
+| [ |- is_lam (\x. (\d. D1))]  =>  [ |- val value_lam]
 ;
 
 
@@ -116,7 +116,7 @@ fn d =>  case d of
 	    )
 %      | [ ] {}  % Prove explicitely that the other cases are impossible
        )
-| [ |- is_lam (\x. (\d. (D1 x d)))]  =>  [ |- val value_lam]
+| [ |- is_lam (\x. (\d. D1))]  =>  [ |- val value_lam]
 ;
 
 

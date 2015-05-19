@@ -92,230 +92,230 @@ schema deqCtx = block x: term, u:aeq x x , _t:deq x x
 % ----------------------------------------------------------------- %
 % Admissibility of Reflexivity
 %{{## Proof of Reflexivity for Types
-The reflexivity for types is implemented as a recursive function called <code>reftp</code> of type: <code>{g:atpCtx}{T:[g |- tp ]}[g |- atp (T ..)(T ..)]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g |- atp (T ..)(T ..)]</code>. Quantification over contexts and contextual objects in computation-level types is denoted between braces <code>{}</code>; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.}}%
-rec reftp : {g:atpCtx} {T:[g |- tp]} [g |- atp (T ..) (T ..)] =
-mlam g => mlam T => case [g |- (T ..)] of
-| [g |- #p.1 ..] => [g |- #p.2 ..]
+The reflexivity for types is implemented as a recursive function called <code>reftp</code> of type: <code>{g:atpCtx}{T:[g |- tp ]}[g |- atp (T[..])(T[..])]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g |- atp (T[..])(T[..])]</code>. Quantification over contexts and contextual objects in computation-level types is denoted between braces <code>{}</code>; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.}}%
+rec reftp : {g:atpCtx} {T:[g |- tp]} [g |- atp (T[..]) (T[..])] =
+mlam g => mlam T => case [g |- (T[..])] of
+| [g |- #p.1[..]] => [g |- #p.2[..]]
 
-| [g |- all \x. T .. x] =>
-  let [g,b:block a:tp , _t:atp a a |- D .. b.1 b.2] =
-         reftp [g, b:block a:tp , _t:atp a a] [g, b |- T .. b.1]
+| [g |- all \x. T] =>
+  let [g,b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         reftp [g, b:block a:tp , _t:atp a a] [g, b |- T[.. b.1]]
   in
-   [g |- at_al \x. \w. D .. x w]
+   [g |- at_al \x. \w. D]
 
-| [g |- arr (T ..) (S ..)] =>
-  let [g |- D1 ..] = reftp [g] [g |- T .. ] in
-  let [g |- D2 ..] = reftp [g] [g |- S .. ] in
-    [g |- at_arr (D1 ..) (D2 ..)]
+| [g |- arr (T[..]) (S[..])] =>
+  let [g |- D1[..]] = reftp [g] [g |- T[..] ] in
+  let [g |- D2[..]] = reftp [g] [g |- S[..] ] in
+    [g |- at_arr (D1[..]) (D2[..])]
 ;
-%{{In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[g |- T ..]</code> using pattern matching. There are three possible cases for <code>T</code>:
+%{{In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[g |- T[..]]</code> using pattern matching. There are three possible cases for <code>T</code>:
 <ul>
--<b>Variable case.</b> If <code>T</code> is a variable from <code>g</code>, we write <code>[g |- #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>atpCtx</code>, it contains blocks <code>a:tp , _t:atp a a;</code>. The first projection allows us to extract the type component, while the second projection denotes the proof of <code>_t:atp a a;</code>.
--<b>Existential case.</b> If <code>T</code> is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening which allows us to use <code>T</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
--<b>Arrow case.</b> If <code>T</code> is an arrow type, we appeal twice to the induction hypothesis and build a proof for <code>[g |- atp (arr (T ..) (S ..)) (arr (T ..) (S ..))]</code>.
+-<b>Variable case.</b> If <code>T</code> is a variable from <code>g</code>, we write <code>[g |- #p.1[..]]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>atpCtx</code>, it contains blocks <code>a:tp , _t:atp a a;</code>. The first projection allows us to extract the type component, while the second projection denotes the proof of <code>_t:atp a a;</code>.
+-<b>Existential case.</b> If <code>T</code> is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening which allows us to use <code>T</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D[..] b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
+-<b>Arrow case.</b> If <code>T</code> is an arrow type, we appeal twice to the induction hypothesis and build a proof for <code>[g |- atp (arr (T[..]) (S[..])) (arr (T[..]) (S[..]))]</code>.
 </ul>}}%
 
 %{{## Proof of Reflexivity for Terms
-The recursive function <code>ref</code> encodes the proof reflexivity for terms. The type signature reads: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g |- aeq (M ..)(M ..)]</code>.}}%
-rec ref : {g:aeqCtx} {M:[g |- term]} [g |- aeq (M ..) (M ..)] =
-mlam g => mlam M => case [g |- (M ..)] of
-| [g |- #p.1 ..] => [g |- #p.2 ..]
+The recursive function <code>ref</code> encodes the proof reflexivity for terms. The type signature reads: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g |- aeq (M[..])(M[..])]</code>.}}%
+rec ref : {g:aeqCtx} {M:[g |- term]} [g |- aeq (M[..]) (M[..])] =
+mlam g => mlam M => case [g |- (M[..])] of
+| [g |- #p.1[..]] => [g |- #p.2[..]]
 
-| [g |- lam \x. M .. x] =>
-  let [g,b:block y:term , _t:aeq y y |- D .. b.1 b.2] =
-         ref [g, b:block y:term , _t:aeq y y] [g, b |- M .. b.1]
+| [g |- lam \x. M] =>
+  let [g,b:block y:term , _t:aeq y y |- D[.. b.1 b.2]] =
+         ref [g, b:block y:term , _t:aeq y y] [g, b |- M[.. b.1]]
   in
-   [g |- ae_l \x. \w. (D .. x w)]
+   [g |- ae_l \x. \w. D]
 
-| [g |- app (M1 ..) (M2 ..)] =>
-  let [g |- D1 ..] = ref [g] [g |- M1 .. ] in
-  let [g |- D2 ..] = ref [g] [g |- M2 .. ] in
-    [g |- ae_a (D1 ..) (D2 ..)]
+| [g |- app (M1[..]) (M2[..])] =>
+  let [g |- D1[..]] = ref [g] [g |- M1[..] ] in
+  let [g |- D2[..]] = ref [g] [g |- M2[..] ] in
+    [g |- ae_a (D1[..]) (D2[..])]
 
-| [g |- tlam \a. M .. a] =>
-  let [g,b:block a:tp , _t:atp a a |- D .. b.1 b.2] =
-         ref [g, b:block a:tp , _t:atp a a] [g, b |- M .. b.1]
+| [g |- tlam \a. M] =>
+  let [g,b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         ref [g, b:block a:tp , _t:atp a a] [g, b |- M[.. b.1]]
   in
-   [g |- ae_tl \x. \w. (D .. x w)]
+   [g |- ae_tl \x. \w. D]
 
-| [g |- tapp (M ..) (T ..)] =>
-  let [g |- D1 ..] = ref [g] [g |- M .. ] in
-  let [g |- D2 ..] = reftp [g] [g |- T .. ] in
-    [g |- ae_ta (D1 ..) (D2 ..)]
+| [g |- tapp (M[..]) (T[..])] =>
+  let [g |- D1[..]] = ref [g] [g |- M[..] ] in
+  let [g |- D2[..]] = reftp [g] [g |- T[..] ] in
+    [g |- ae_ta (D1[..]) (D2[..])]
 ;
 %{{This time, there are five possible cases for our meta-variable <code>M</code>:
 <ul>
--<b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[g |- #p.1 ..]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>aeqCtx</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.
--<b>Lambda-abstraction case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Automatic context subsumption comes into play again, allowing us to use M that has type <code>[g, x:tm |- tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y |- D .. b.1 b.2]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.
--<b>Term application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeq (app (M1 ..) (M2 ..)) (app (M1 ..) (M2 ..))]</code>.
--<b>Type abstraction case.</b> If <code>M</code> is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call. We use <code>M</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code> and construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D .. b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
--<b>Type application case.</b> If <code>M</code> is a type application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeqCtx (tapp (M ..) (T ..)) (tapp (M ..) (T ..))]</code>.
+-<b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[g |- #p.1[..]]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>aeqCtx</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.
+-<b>Lambda-abstraction case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Automatic context subsumption comes into play again, allowing us to use M that has type <code>[g, x:tm |- tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y |- D[..] b.1 b.2]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.
+-<b>Term application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeq (app (M1[..]) (M2[..])) (app (M1[..]) (M2[..]))]</code>.
+-<b>Type abstraction case.</b> If <code>M</code> is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call. We use <code>M</code> that has type <code>[g, a:tp |- tp ]</code> in the extended context <code>[g, b:block a:tp , _t: atp a a]</code> and construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[g,b:block a:tp , _t:atp a a |- D[..] b.1 b.2]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
+-<b>Type application case.</b> If <code>M</code> is a type application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeqCtx (tapp (M[..]) (T[..])) (tapp (M[..]) (T[..]))]</code>.
 </ul>}}%
 
 % ----------------------------------------------------------------- %
 % General transitivity is admissible
 %{{## Proof of Transitivity for Types}}%
 rec transtp: (g:atpCtx)
-   [g |- atp (T ..) (R ..)] -> [g |- atp (R ..) (S ..)]
- -> [g |- atp (T ..) (S ..)] =
+   [g |- atp (T[..]) (R[..])] -> [g |- atp (R[..]) (S[..])]
+ -> [g |- atp (T[..]) (S[..])] =
 fn ae1 => fn ae2 => case ae1 of
-| [g |- #p.2 ..] => ae2
+| [g |- #p.2[..]] => ae2
 
-| [g |- at_al \a.\u. D1 .. a u] =>
-  let [g |- at_al \a.\u. D2 .. a u] = ae2 in
-  let [g, b:block a:tp , _t:atp a a |- D .. b.1 b.2] =
-         transtp [g, b:block a:tp , _t:atp a a |- D1 .. b.1 b.2]
-               [g, b |- D2 .. b.1 b.2]
+| [g |- at_al \a.\u. D1[.. a u]] =>
+  let [g |- at_al \a.\u. D2[.. a u]] = ae2 in
+  let [g, b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         transtp [g, b:block a:tp , _t:atp a a |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- at_al \a. \u. D .. a u]
+    [g |- at_al \a. \u. D[.. a u]]
        
-| [g |- at_arr (D1 ..) (D2 ..)] =>
-  let [g |- at_arr (D3 ..) (D4 ..)] = ae2 in
-  let [g |- D ..] = transtp [g |- D1 ..] [g |- D3 ..] in
-  let [g |- D' ..] = transtp [g |- D2 ..] [g |- D4 ..] in
-    [g |- at_arr (D ..) (D' ..)]
+| [g |- at_arr (D1[..]) (D2[..])] =>
+  let [g |- at_arr (D3[..]) (D4[..])] = ae2 in
+  let [g |- D[..]] = transtp [g |- D1[..]] [g |- D3[..]] in
+  let [g |- D'[..]] = transtp [g |- D2[..]] [g |- D4[..]] in
+    [g |- at_arr (D[..]) (D'[..])]
 ;
 
 %{{## Proof of Transitivity for Terms}}%
 rec trans: (g:aeqCtx)
-   [g |- aeq (T ..) (R ..)] -> [g |- aeq (R ..) (S ..)]
- -> [g |- aeq (T ..) (S ..)] =
+   [g |- aeq (T[..]) (R[..])] -> [g |- aeq (R[..]) (S[..])]
+ -> [g |- aeq (T[..]) (S[..])] =
 fn ae1 => fn ae2 => case ae1 of
-| [g |- #p.2 ..] => ae2
+| [g |- #p.2[..]] => ae2
 
-| [g |- ae_l \x.\u. D1 .. x u] =>
-  let [g |- ae_l \x.\u. D2 .. x u] = ae2 in
-  let [g, b:block x:term , _t:aeq x x |- D .. b.1 b.2] =
-         trans [g, b:block x':term , _t:aeq x' x' |- D1 .. b.1 b.2]
-               [g, b |- D2 .. b.1 b.2]
+| [g |- ae_l \x.\u. D1] =>
+  let [g |- ae_l \x.\u. D2] = ae2 in
+  let [g, b:block x:term , _t:aeq x x |- D[.. b.1 b.2]] =
+         trans [g, b:block x':term , _t:aeq x' x' |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- ae_l \x. \u. D .. x u]
+    [g |- ae_l \x. \u. D]
        
-| [g |- ae_a (D1 ..) (D2 ..)] =>
-  let [g |- ae_a (D3 ..) (D4 ..)] = ae2 in
-  let [g |- D ..] = trans [g |- D1 ..] [g |- D3 ..] in
-  let [g |- D' ..] = trans [g |- D2 ..] [g |- D4 ..] in
-    [g |- ae_a (D ..) (D' ..)]
+| [g |- ae_a (D1[..]) (D2[..])] =>
+  let [g |- ae_a (D3[..]) (D4[..])] = ae2 in
+  let [g |- D[..]] = trans [g |- D1[..]] [g |- D3[..]] in
+  let [g |- D'[..]] = trans [g |- D2[..]] [g |- D4[..]] in
+    [g |- ae_a (D[..]) (D'[..])]
 
-| [g |- ae_tl \a.\u. D1 .. a u] =>
-  let [g |- ae_tl \a.\u. D2 .. a u] = ae2 in
-  let [g, b:block a:tp , _t:atp a a |- D .. b.1 b.2] =
-         trans [g, b:block a:tp , _t:atp a a |- D1 .. b.1 b.2]
-               [g, b |- D2 .. b.1 b.2]
+| [g |- ae_tl \a.\u. D1[.. a u]] =>
+  let [g |- ae_tl \a.\u. D2[.. a u]] = ae2 in
+  let [g, b:block a:tp , _t:atp a a |- D[.. b.1 b.2]] =
+         trans [g, b:block a:tp , _t:atp a a |- D1[.. b.1 b.2]]
+               [g, b |- D2[.. b.1 b.2]]
   in
-    [g |- ae_tl \x. \u. D .. x u]
+    [g |- ae_tl \x. \u. D]
        
-| [g |- ae_ta (D1 ..) (Q1 ..)] =>
-  let [g |- ae_ta (D2 ..) (Q2 ..)] = ae2 in
-  let [g |- D ..] = trans [g |- D1 ..] [g |- D2 ..] in
-  let [g |- Q ..] = transtp [g |- Q1 ..] [g |- Q2 ..] in
-    [g |- ae_ta (D ..) (Q ..)]
+| [g |- ae_ta (D1[..]) (Q1[..])] =>
+  let [g |- ae_ta (D2[..]) (Q2[..])] = ae2 in
+  let [g |- D[..]] = trans [g |- D1[..]] [g |- D2[..]] in
+  let [g |- Q[..]] = transtp [g |- Q1[..]] [g |- Q2[..]] in
+    [g |- ae_ta (D[..]) (Q[..])]
 ;
 
 % ----------------------------------------------------------------- %
 % General symmetry is admissible
 %{{## Proof of Symmetry for Types}}%
 rec symtp: (g:atpCtx)
- [g |- atp (T ..) (R ..)] -> [g |- atp (R ..) (T ..)] =
+ [g |- atp (T[..]) (R[..])] -> [g |- atp (R[..]) (T[..])] =
 fn ae => case ae of
-| [g |- #p.2 ..] => ae
-| [g |- at_al \x.\u. D .. x u] =>
-  let [g, b:block a:tp , _t:atp a a |- D' .. b.1 b.2] =
-      symtp [g, b:block a:tp, _t:atp a a |- D .. b.1 b.2] in
-  [g |- at_al \x.\u. D' .. x u]
-| [g |- at_arr (D1 ..) (D2 ..)] =>
-  let [g |- D1' ..] = symtp [g |- D1 ..] in
-  let [g |- D2' ..] = symtp [g |- D2 ..] in
-    [g |- at_arr (D1' ..) (D2' ..)]
+| [g |- #p.2[..]] => ae
+| [g |- at_al \x.\u. D] =>
+  let [g, b:block a:tp , _t:atp a a |- D'[.. b.1 b.2]] =
+      symtp [g, b:block a:tp, _t:atp a a |- D[.. b.1 b.2]] in
+  [g |- at_al \x.\u. D']
+| [g |- at_arr (D1[..]) (D2[..])] =>
+  let [g |- D1'[..]] = symtp [g |- D1[..]] in
+  let [g |- D2'[..]] = symtp [g |- D2[..]] in
+    [g |- at_arr (D1'[..]) (D2'[..])]
  ;
 
 %{{## Proof of Symmetry for Terms}}%
 rec sym: (g:aeqCtx)
- [g |- aeq (T ..) (R ..)] -> [g |- aeq (R ..) (T ..)] =
+ [g |- aeq (T[..]) (R[..])] -> [g |- aeq (R[..]) (T[..])] =
 fn ae => case ae of
-| [g |- #p.2 ..] => ae
-| [g |- ae_l \x.\u. D .. x u] =>
-  let [g, b:block x:term , _t:aeq x x |- D' .. b.1 b.2] =
-      sym [g, b:block x:term, _t:aeq x x |- D .. b.1 b.2] in
-  [g |- ae_l \x.\u. D' .. x u]
-| [g |- ae_a (D1 ..) (D2 ..)] =>
-  let [g |- D1' ..] = sym [g |- D1 ..] in
-  let [g |- D2' ..] = sym [g |- D2 ..] in
-    [g |- ae_a (D1' ..) (D2' ..)]
-| [g |- ae_tl \x.\u. D .. x u] =>
-  let [g, b:block a:tp , _t:atp a a |- D' .. b.1 b.2] =
-      sym [g, b:block a:tp, _t:atp a a |- D .. b.1 b.2] in
-  [g |- ae_tl \x.\u. D' .. x u]
-| [g |- ae_ta (D ..) (Q ..)] =>
-  let [g |- D' ..] = sym [g |- D ..] in
-  let [g |- Q' ..] = symtp [g |- Q ..] in
-    [g |- ae_ta (D' ..) (Q' ..)]
+| [g |- #p.2[..]] => ae
+| [g |- ae_l \x.\u. D] =>
+  let [g, b:block x:term , _t:aeq x x |- D'[.. b.1 b.2]] =
+      sym [g, b:block x:term, _t:aeq x x |- D[.. b.1 b.2]] in
+  [g |- ae_l \x.\u. D']
+| [g |- ae_a (D1[..]) (D2[..])] =>
+  let [g |- D1'[..]] = sym [g |- D1[..]] in
+  let [g |- D2'[..]] = sym [g |- D2[..]] in
+    [g |- ae_a (D1'[..]) (D2'[..])]
+| [g |- ae_tl \x.\u. D] =>
+  let [g, b:block a:tp , _t:atp a a |- D'[.. b.1 b.2]] =
+      sym [g, b:block a:tp, _t:atp a a |- D[.. b.1 b.2]] in
+  [g |- ae_tl \x.\u. D']
+| [g |- ae_ta (D[..]) (Q[..])] =>
+  let [g |- D'[..]] = sym [g |- D[..]] in
+  let [g |- Q'[..]] = symtp [g |- Q[..]] in
+    [g |- ae_ta (D'[..]) (Q'[..])]
 ;
 
 % ----------------------------------------------------------------- %
 % Completeness
 %{{## Proof of Completeness for Types}}%
 rec ctp: (g:dtpCtx)
-         [g |- dtp (T ..) (S ..)] -> [g |- atp (T ..) (S ..)] =
+         [g |- dtp (T[..]) (S[..])] -> [g |- atp (T[..]) (S[..])] =
 fn e => case e of
-| [g |- #p.3 ..] => [g |- #p.2 ..]
+| [g |- #p.3[..]] => [g |- #p.2[..]]
 | [g |- dt_r] => reftp [g] [g |- _ ]
-| [g |- dt_arr (F1 ..) (F2 ..)] =>
-  let [g |- D1 ..] = ctp [g |- F1 ..] in
-  let [g |- D2 ..] = ctp [g |- F2 ..] in
-    [g |- at_arr (D1 ..) (D2 ..)]
+| [g |- dt_arr (F1[..]) (F2[..])] =>
+  let [g |- D1[..]] = ctp [g |- F1[..]] in
+  let [g |- D2[..]] = ctp [g |- F2[..]] in
+    [g |- at_arr (D1[..]) (D2[..])]
 
-| [g |- dt_al (\x.\u. F .. x u)] =>
-  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D .. b.1 b.2] =
-        ctp [g, b:block a:tp, u:atp a a , _t:dtp a a |- F .. b.1 b.3]
+| [g |- dt_al (\x.\u. F)] =>
+  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[.. b.1 b.2]] =
+        ctp [g, b:block a:tp, u:atp a a , _t:dtp a a |- F[.. b.1 b.3]]
   in
-     [g |- at_al (\x.\v. D .. x v)]
+     [g |- at_al (\x.\v. D)]
 
- | [g |- dt_t (F1 ..) (F2 ..)] =>
-  let [g |- D2 ..] = ctp [g |- F2 ..] in
-  let [g |- D1 ..] = ctp [g |- F1 ..] in
-    transtp [g |- D1 ..] [g |- D2 ..]
-| [g |-  dt_s (F ..)] =>
-  let [g |-  D ..] = ctp [g |-  F ..] in
-     symtp [g |-  D ..]
+ | [g |- dt_t (F1[..]) (F2[..])] =>
+  let [g |- D2[..]] = ctp [g |- F2[..]] in
+  let [g |- D1[..]] = ctp [g |- F1[..]] in
+    transtp [g |- D1[..]] [g |- D2[..]]
+| [g |-  dt_s (F[..])] =>
+  let [g |-  D[..]] = ctp [g |-  F[..]] in
+     symtp [g |-  D[..]]
 ;
 
 %{{## Proof of Completeness for Terms}}%
 rec ceq: (g:deqCtx)
-         [g |-  deq (T ..) (S ..)] -> [g |- aeq (T ..) (S ..)] =
+         [g |-  deq (T[..]) (S[..])] -> [g |- aeq (T[..]) (S[..])] =
 fn e => case e of
-| [g |- #p.3 ..] => [g |- #p.2 ..]
+| [g |- #p.3[..]] => [g |- #p.2[..]]
 | [g |- de_r] => ref [g] [g |- _ ]
-| [g |- de_a (F1 ..) (F2 ..)] =>
-  let [g |-  D1 ..] = ceq [g |- F1 ..] in
-  let [g |-  D2 ..] = ceq [g |- F2 ..] in
-    [g |-  ae_a (D1 ..) (D2 ..)]
+| [g |- de_a (F1[..]) (F2[..])] =>
+  let [g |-  D1[..]] = ceq [g |- F1[..]] in
+  let [g |-  D2[..]] = ceq [g |- F2[..]] in
+    [g |-  ae_a (D1[..]) (D2[..])]
 
-| [g |- de_l (\x.\u. F .. x u)] =>
-  let [g,b:block x:term,u:aeq x x , _t:deq x x |- D .. b.1 b.2] =
-        ceq [g, b:block x:term, u:aeq x x , _t:deq x x |- F .. b.1 b.3]
+| [g |- de_l (\x.\u. F)] =>
+  let [g,b:block x:term,u:aeq x x , _t:deq x x |- D[.. b.1 b.2]] =
+        ceq [g, b:block x:term, u:aeq x x , _t:deq x x |- F[.. b.1 b.3]]
   in
-     [g |- ae_l (\x.\v. D .. x v)]
+     [g |- ae_l (\x.\v. D)]
 
- | [g |- de_t (F1 ..) (F2 ..)] =>
-  let [g |- D2 ..] = ceq [g |- F2 ..] in
-  let [g |- D1 ..] = ceq [g |- F1 ..] in
-    trans [g |- D1 ..] [g |- D2 ..]
+ | [g |- de_t (F1[..]) (F2[..])] =>
+  let [g |- D2[..]] = ceq [g |- F2[..]] in
+  let [g |- D1[..]] = ceq [g |- F1[..]] in
+    trans [g |- D1[..]] [g |- D2[..]]
 
-| [g |-  de_s (F ..)] =>
-   let [g |-  D ..] = ceq [g |-  F..] in
-   sym [g |-  D ..]
+| [g |-  de_s (F[..])] =>
+   let [g |-  D[..]] = ceq [g |-  F] in
+   sym [g |-  D[..]]
 
-| [g |- de_tl (\a.\u. F .. a u)] =>
-  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D .. b.1 b.2] =
-        ceq [g, b:block a:tp, u: atp a a , _t:dtp a a |- F .. b.1 b.3]
+| [g |- de_tl (\a.\u. F[.. a u])] =>
+  let [g,b:block a:tp,u:atp a a , _t:dtp a a |- D[.. b.1 b.2]] =
+        ceq [g, b:block a:tp, u: atp a a , _t:dtp a a |- F[.. b.1 b.3]]
   in
-     [g |- ae_tl (\x.\v. D .. x v)]
+     [g |- ae_tl (\x.\v. D)]
 
- | [g |- de_ta (F1 ..) (P2 ..)] =>
-  let [g |- Q2 ..] = ctp [g |- P2 ..] in
-  let [g |- D1 ..] = ceq [g |- F1 ..] in
-  [g |- ae_ta (D1 ..) (Q2 ..)]
+ | [g |- de_ta (F1[..]) (P2[..])] =>
+  let [g |- Q2[..]] = ctp [g |- P2[..]] in
+  let [g |- D1[..]] = ceq [g |- F1[..]] in
+  [g |- ae_ta (D1[..]) (Q2[..])]
 
 
 ;

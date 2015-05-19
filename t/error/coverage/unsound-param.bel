@@ -5,6 +5,6 @@ foo : term.
 schema ctx = term;
 
 rec foo : {g:ctx} {#p : [g |- term ]} [ g |- term ] =
-mlam g => mlam #p => case [ g |- #p ..] of
-| [ h,x:term |- #q ..] => [ h,x:term |- #q .. ]
+mlam g => mlam #p => case [ g |- #p[..]] of
+| [ h,x:term |- #q[..]] => [ h,x:term |- #q[..] ]
 ;

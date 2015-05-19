@@ -20,11 +20,11 @@ eLS: list R -> elist.
 
 schema ctx = term T;
 
-rec remove : (g:ctx) [g,x:term T |-  list R] -> [g |- elist] =
+rec remove : (g:ctx) [g,x:term (T[]) |-  list (R[])] -> [g |- elist] =
     fn l => case l of
-      | [g,x:term T |-  nil] ⇒ [g |- eLS nil]
-      | [g,x:term T |-  cons x (L..x)] ⇒ remove[g,x:term T |-  L..x]
-      | [g,x:term T |-  cons (#p..) (L..x)] =>
-	let [g |- (eLS (L'..))] = remove [g,x:term T |-  L..x] in
-	[g |- eLS (cons (#p..) (L'..))]
+      | [g,x:term (T[]) |-  nil] ⇒ [g |- eLS nil]
+      | [g,x:term (T[]) |-  cons x L] ⇒ remove[g,x:term (T[]) |-  L]
+      | [g,x:term (T[]) |-  cons (#p[..]) L] =>
+	let [g |- (eLS (L'))] = remove [g,x:term (T[]) |-  L] in
+	[g |- eLS (cons (#p[..]) (L'))]
 ;

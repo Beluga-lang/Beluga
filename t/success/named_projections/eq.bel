@@ -11,53 +11,53 @@ eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
 
 schema eqctx = block x:exp, _t:eq x x;
 
-rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq (M ..) (M ..)] =
+rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq (M[..]) (M[..])] =
 mlam g => mlam M =>
-case [g |- M ..] of
- | [g |- app (M1 ..) (M2 ..)] =>
-   let [g |- D1 ..] = eq_refl [g] [g |- M1 .. ] in
-   let [g |- D2 ..] = eq_refl [g] [g |- M2 .. ] in
-    [g |- eq_app (D1 ..) (D2 ..)]
+case [g |- M[..]] of
+ | [g |- app (M1[..]) (M2[..])] =>
+   let [g |- D1[..]] = eq_refl [g] [g |- M1[..] ] in
+   let [g |- D2[..]] = eq_refl [g] [g |- M2[..] ] in
+    [g |- eq_app (D1[..]) (D2[..])]
 
- | [g |- lam (\x. N .. x)] =>
-   let [g,b:block x:exp, _t:eq x x |-  D1 .. b.x b._t] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N .. b.x ] in
-    [g |- eq_lam (\x.\u. D1 .. x u)]
+ | [g |- lam (\x. N)] =>
+   let [g,b:block x:exp, _t:eq x x |-  D1[.. b.x b._t]] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N[.. b.x] ] in
+    [g |- eq_lam (\x.\u. D1)]
 
- | [g |- #p.x ..] => [g |- #p._t ..]
+ | [g |- #p.x[..]] => [g |- #p._t[..]]
 ;
 
-rec eq_sym : (g:eqctx) [g |- eq (M ..) (N ..)] -> [g |- eq (N ..) (M ..)] =
+rec eq_sym : (g:eqctx) [g |- eq (M[..]) (N[..])] -> [g |- eq (N[..]) (M[..])] =
 fn d =>
 case d of
- | [g |- eq_app (D1 ..) (D2 ..)] =>
-   let [g |- F1 ..] = eq_sym [g |- D1 ..] in
-   let [g |- F2 ..] = eq_sym [g |- D2 ..] in
-   [g |- eq_app (F1 ..) (F2 ..)]
+ | [g |- eq_app (D1[..]) (D2[..])] =>
+   let [g |- F1[..]] = eq_sym [g |- D1[..]] in
+   let [g |- F2[..]] = eq_sym [g |- D2[..]] in
+   [g |- eq_app (F1[..]) (F2[..])]
 
- | [g |- eq_lam (\x.\u. D .. x u)] =>
-   let [g,b:block x:exp, _t:eq x x |-  F .. b.x b._t] = eq_sym [g,b:block x:exp, _t:eq x x |-  D .. b.x b._t] in
-   [g |- eq_lam (\x.\u. F .. x u)]
+ | [g |- eq_lam (\x.\u. D)] =>
+   let [g,b:block x:exp, _t:eq x x |-  F[.. b.x b._t]] = eq_sym [g,b:block x:exp, _t:eq x x |-  D[.. b.x b._t]] in
+   [g |- eq_lam (\x.\u. F)]
 
- | [g |- #p._t ..] => [g |- #p._t ..]
+ | [g |- #p._t[..]] => [g |- #p._t[..]]
 ;
 
 rec subst_respects_eq : {g:eqctx}{M:[g,x:exp |-  exp]}
-[g |- eq (N ..) (N' ..)] -> [g |- eq (M .. (N ..)) (M .. (N' ..))] =
+[g |- eq (N[..]) (N'[..])] -> [g |- eq M[.., N] M[.. N']] =
 mlam g => mlam M => fn d =>
-case [g,x:exp |-  M .. x] of
- | [g,x:exp |-  app (T1 .. x) (T2 .. x)] =>
-   let [g |- D1 ..] = subst_respects_eq [g] [ g,x  |-  T1 .. x ] d in
-   let [g |- D2 ..] = subst_respects_eq [g] [ g,x  |-  T2 .. x ] d in
-   [g |- eq_app (D1 ..) (D2 ..)]
+case [g,x:exp |-  M] of
+ | [g,x:exp |-  app (T1) (T2)] =>
+   let [g |- D1[..]] = subst_respects_eq [g] [ g,x  |-  T1 ] d in
+   let [g |- D2[..]] = subst_respects_eq [g] [ g,x  |-  T2 ] d in
+   [g |- eq_app (D1[..]) (D2[..])]
 
- | [g,x:exp |-  lam (\y. M1 .. y x)] =>
-   let [g |- D3 ..] = d in
-   let [g,b:block z:exp, _t:eq z z |-  D1 .. b.z b._t]
-     = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x  |-  M1 .. b.z x ] [g,b |- D3 ..] in
-   [g |- eq_lam (\x.\u. D1 .. x u)]
+ | [g,x:exp |-  lam (\y. M1[.. y x])] =>
+   let [g |- D3[..]] = d in
+   let [g,b:block z:exp, _t:eq z z |-  D1[.. b.z b._t]]
+     = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x  |-  M1[.. b.z x] ] [g,b |- D3[..]] in
+   [g |- eq_lam (\x.\u. D1)]
 
  | [g,x:exp |-  x] => d
- | [g,x:exp |-  #p.x ..] => [g |- #p._t ..]
+ | [g,x:exp |-  #p.x[..]] => [g |- #p._t[..]]
 
 ;
 

@@ -37,10 +37,10 @@ schema ctx = term T;
 schema tctx = target T;
 
 rec b_env:(g:ctx){h:tctx}
-          ({T:[ |- tp]} [g |- term T] -> [h |- target T])
-	  -> [g |- fvlist R]
-	  -> [h |- target R] =
+          ({T:[ |- tp]} [g |- term (T[])] -> [h |- target (T[])])
+	  -> [g |- fvlist (R[])]
+	  -> [h |- target (R[])] =
 mlam h => fn map => fn fvar => case fvar of
-| {T:[ |- tp]}{E:[g |- term T]}{Ta:[g |- fvlist S]}
-  [g |- cons (E..) (Ta..)] => b_env [h] map [g |- Ta.. ]
+| {T:[ |- tp]}{E:[g |- term (T[])]}{Ta:[g |- fvlist (S[])]}
+  [g |- cons E Ta] => b_env [h] map [g |- Ta]
 ;

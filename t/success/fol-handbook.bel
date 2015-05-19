@@ -12,7 +12,7 @@ imp : o -> o -> o.
 all : (i -> o) -> o.
 not  : o -> o.
 
-%{
+%{  
 even: i -> o.
 all (\x. impl (even x)  (even x))
 
@@ -48,95 +48,97 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 schema hilCtx =  i + some [ a:o ] hil a ;
 
 
-rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp (A ..) (imp (A ..) (A ..)))] =
+rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp (A[..]) (imp (A[..]) (A[..])))] =
+/ total a (trivial_imp g a) /
  mlam g => mlam A => [g |- k] ;
 
-rec ded: {g:hilCtx} [g, u:hil (A ..) |-  hil (B ..)] -> [g |- hil (imp (A ..) (B ..))] =
- mlam g => fn h =>  case h of
-| [g, u: hil _  |-  #p ..] =>  [g |- mp k (#p ..)]  % SPECIAL!
+rec ded: (g:hilCtx) [g, u:hil (A[..]) |-  hil (B[..])] 
+        -> [g |- hil (imp (A[..]) (B[..]))] = 
+/ total h (ded g _ _ h) / 
+fn h =>  case h of
+| [g, u: hil _  |-  #p[..]] =>  [g |- mp k (#p[..])]  % SPECIAL!
 
 % Can only be done by giving type annotation to k or s in
 % the output; this is also done in the Twelf implementation
 %
 % ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
 % we define a little lemma trivial_imp which generates proofs of the right form.
- | [g, u: hil (A ..) |-  u]    =>
-   let [g |- D ..] = trivial_imp [g] [g |- A .. ] in [g |- (mp (mp s k) (D ..))]
+ | [g, u: hil (A[..]) |-  u]    =>
+   let [g |- D[..]] = trivial_imp [g] [g |- A[..] ] in [g |- (mp (mp s k) (D[..]))]
+
  | [g, u: hil _  |-  k]  => [g |- mp k k]
+ | [g, h: hil _  |-  s]  => [g |- mp k s]
  | [g, u: hil _  |-  n1] => [g |- mp k n1]
  | [g, u: hil _  |-  n2] => [g |- mp k n2]
- | [g, u: hil _  |-  f1 (T ..)] => [g |- mp k (f1 (T ..))]
+ | [g, u: hil _  |-  f1 (T[..])] => [g |- mp k (f1 (T[..]))]
  | [g, u: hil _  |-  f2] => [g |- mp k f2]
 
- | [g, u: hil (A ..) |-  ug (\x. (H .. x u))] =>
+ | [g, u: hil A |-  ug (\x. H[.. x u])] =>
   let
-    [g,x:i |-  (H' .. x)] =
-      ded [g, x:i]  [g, x, u |-  (H .. x u)]
+    [g,x:i |- H'] =
+      ded [g, x:i, u: hil A[..] |-  H[.. x u]]
   in
-     [g |- mp f2 (ug  \x. (H' .. x))]
+     [g |- mp f2 (ug  \x. (H'))]
 
-| % {H1 : [g, u : hil (A ..) |-  hil (imp (B1 ..) (B2 ..))]}
-  % {H2 : [g, u : hil (A ..) |-  hil (B1 ..)]}
-  [g, u: hil (A ..)  |-  (mp (H1 .. u) (H2 .. u))] =>
-  let [g |- H2' ..] = ded [g] [g,u |- H2 .. u] in
-  let [g |- H1' ..] = ded [g] [g,u |- H1 .. u] in
-       [g |- mp (mp s (H1' ..)) (H2' ..)]
+| % {H1 : [g, u : hil (A[..]) |-  hil (imp (B1[..]) (B2[..]))]}
+  % {H2 : [g, u : hil (A[..]) |-  hil (B1[..])]}
+  [g, u: hil (A[..])  |- mp H1 H2] =>
+  let [g |- H2'[..]] = ded [g,u: hil (A[..]) |- H2] in
+  let [g |- H1'[..]] = ded [g,u: hil (A[..]) |- H1] in
+       [g |- mp (mp s (H1'[..])) (H2'[..])]
 
 ;
 
-% % Theorem: If G |- nd A  where G = nd B1 .... nd Bn
-% %          then G* |- hil A   where G' = hil B1 ... hil Bn
+% Theorem: If G |- nd A  where G = nd B1[..].. nd Bn
+%          then G* |- hil A   where G' = hil B1[..]. hil Bn
 
-% schema l = i + o + some [a:o] block u:nd A . hil A ; % where l < w
-% DOES NOT RAISE AN ERROR!!! -- THERE IS NO CHECK THAT A GIVEN SCHEMA
-% IS WELL-FORMED.
+schema ndhilCtx = some [a:o] block _t:nd a, u:hil a  + i + o ;
 
-schema ndhilCtx = i + o + some [a:o] block u:hil a , _t:nd a;
+rec ndhil : (g:ndhilCtx) [g |- nd (A[..])] -> [g |- hil (A[..])] =
+ / total d (ndhil g a d) /
+fn d =>  case d of
+| [g |- (#p.1[..])] => [g |- (#p.2[..])]
 
-rec ndhil : {g:ndhilCtx} [g |- nd (A ..)] -> [g |- hil (A ..)] =
- mlam g => fn d =>
- case d of
-| [g |- (#p.2 ..)] => [g |- (#p.1 ..)]
-
-| {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd (B1 ..) |-  nd (B2 ..)]}
-  [g |- impi \u. D .. u] =>
-  let {H:[g, u:hil (A1 ..) |-  hil (A2 ..)]}
-      [g,b: block u: hil (A1 ..) , _t:nd (A1 ..)  |-  H .. b.1] =
-    ndhil [g, b:block u:hil (B1 ..) , _t:nd (B1 ..) ] [g,b |- D .. b.2]
+| {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd (B1[..]) |-  nd (B2[..])]}
+  [g |- impi \u. D] =>
+  let {H:[g, u:hil (A1[..]) |-  hil (A2[..])]}
+      [g,b: block  _t:nd (A1[..]), u: hil (A1[..])   |-  H[.. b.2]] =
+    ndhil [g, b:block _t:nd (B1[..]), u:hil (B1[..]) |- D[.. b.1]]
   in
-    ded [g] [g,u |- H .. ?]
+    ded [g,u |- H[.. u]]
 
-| [g |- note (D1 ..) (C ..) (D2 ..)] =>
-  let [g |- H1 ..]   = ndhil [g]  [g |- D1 ..] in
-  let [g |- H2 ..]   = ndhil [g]  [g |- D2 ..] in
-    [g |- mp (mp n2 (H1 ..)) (H2 ..)]
+| [g |- note (D1[..]) (C[..]) (D2[..])] =>
+  let [g |- H1[..]]   = ndhil [g |- D1[..]] in
+  let [g |- H2[..]]   = ndhil [g |- D2[..]] in
+    [g |- mp (mp n2 (H1[..])) (H2[..])]
 
-| [g |- alle  (D1 ..) (T ..)] =>
-  let [g |- H1 ..] =  ndhil [g] [g |- D1 ..] in
-    [g |- mp (f1 (T ..)) (H1 ..)]
+| [g |- alle  (D1[..]) (T[..])] =>
+  let [g |- H1[..]] =  ndhil [g |- D1[..]] in
+    [g |- mp (f1 (T[..])) (H1[..])]
 
-| [g |- alli \x. D .. x] =>
-  let [g,x:i |-  H .. x] =  ndhil [g, x:i] [g, x |-  D .. x] in
-    [g |- ug \x. (H .. x)]
+| [g |- alli \x. D] =>
+  let [g,x:i |-  H] =  ndhil [g, x:i |-  D] in
+    [g |- ug \x. (H)]
 
 
-| [g |- impe (D1 ..) (D2 ..)] =>
-  let [g |- H1 ..] = ndhil [g] [g |- D1 ..] in
-  let [g |- H2 ..] = ndhil [g] [g |- D2 ..] in
-    [g |- mp (H1 ..) (H2 ..)]
+| [g |- impe (D1[..]) (D2[..])] =>
+  let [g |- H1[..]] = ndhil [g |- D1[..]] in
+  let [g |- H2[..]] = ndhil [g |- D2[..]] in
+    [g |- mp (H1[..]) (H2[..])]
 
-|  {B1:[g |- o]}{D: [g, u:nd (B1 ..), p:o |-  nd p]}
-  [g |- noti (\p.(\u.(D .. u p)))] =>
-  let {H:[g, u: hil (A ..), p:o |-  hil p]}
-      [g,w:block (u:hil (A ..), _t:nd (A ..)),p:o |-  H .. w.1 p] =
-      ndhil [g, w : block (u:hil (B1 ..) , _t:nd (B1 ..)), p:o]   [g,w,p |-  D .. w.2 p] in
-  let [g |- H1' ..]  = ded [g] [g,u |- H .. u (not (A ..))] in
-  let [g |- H1'' ..] = ded [g] [g,u |- H .. u (A ..)] in
-    [g |- mp (mp n1 (H1' ..)) ?]
+|  {B1:[g |- o]}{D: [g, u:nd (B1[..]), p:o |-  nd p]}
+  [g |- noti (\p.(\u.D[.. u p]))] =>
+  let {H:[g, u: hil (A[..]), p:o |-  hil p]}
+      [g,w:block (_t:nd (A[..]),u:hil (A[..])),p:o |-  H[.. w.2 p]] =
+      ndhil [g, w : block (_t:nd (B1[..]), u:hil (B1[..]) ), p:o |-  D[.. w.1 p]] in
+  let [g |- H1'[..]]  = ded [g,u |- H[.. u (not (A[..]))]] in
+  let [g |- H1''[..]] = ded [g,u |- H[.. u (A[..])]] in
+    [g |- mp (mp n1 (H1'[..])) (H1''[..])]
 
 ;
 
 
 rec ndhil_main : [ |- nd A] -> [ |- hil A] =
- fn d => ndhil [ ] d ;
+/ total d (ndhil_main d) /
+ fn d => ndhil d ;
 

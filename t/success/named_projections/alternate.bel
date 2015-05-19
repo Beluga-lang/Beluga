@@ -20,40 +20,40 @@ eval_app2 : eval M M' -> notLam M' -> eval N N' -> eval (app M N) (app M' N').
 
 schema evctx = block x:exp, u:eval x x, _t:notLam x;
 
-rec deterministic : (g:evctx) [g |- eval (M ..) (R ..)] -> [g |- eval (M ..) (R' ..)]
--> [g |- eq (R ..) (R' ..)] =
+rec deterministic : (g:evctx) [g |- eval (M[..]) (R[..])] -> [g |- eval (M[..]) (R'[..])]
+-> [g |- eq (R[..]) (R'[..])] =
 fn d => fn f =>
 case d of
-| [g |- eval_app2 (D1 ..) (NL ..) (D2 ..)] =>
+| [g |- eval_app2 (D1[..]) (NL[..]) (D2[..])] =>
   (case f of
-    | [g |- eval_app2 (F1 ..) (NL' ..) (F2 ..)] =>
-      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
-      let [g |- refl] = deterministic [g |- D2 ..] [g |- F2 ..] in
+    | [g |- eval_app2 (F1[..]) (NL'[..]) (F2[..])] =>
+      let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
+      let [g |- refl] = deterministic [g |- D2[..]] [g |- F2[..]] in
       [g |- refl]
 
-    | [g |- eval_app1 (F1 ..) (F2 ..)] =>
-      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
-       impossible [g |- NL ..] in [g])
+    | [g |- eval_app1 (F1[..]) (F2[..])] =>
+      let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
+       impossible [g |- NL[..]] in [g])
 
- | [g |- eval_lam (\x.\u.\v. D1 .. x u v)] =>
-  let [g |- eval_lam (\x.\u.\v. F1 .. x u v)] = f in
+ | [g |- eval_lam (\x.\u.\v. D1 u v)] =>
+  let [g |- eval_lam (\x.\u.\v. F1 u v)] = f in
   let [g,b:block x:exp, v:eval x x, _t:notLam x |-  refl] =
     deterministic
-     [g,b:block x:exp, v:eval x x, _t:notLam x |-  D1 .. b.x b.v b._t]
-     [g,b |- F1 .. b.x b.v b._t] in
+     [g,b:block x:exp, v:eval x x, _t:notLam x |-  D1[..] b.x b.v b._t]
+     [g,b |- F1[..] b.x b.v b._t] in
   [g |- refl]
 
-| [g |- eval_app1 (D1 ..) (D2 ..)] : [g |- (eval (app (M ..) (N ..)) (R ..))] =>
+| [g |- eval_app1 (D1[..]) (D2[..])] : [g |- (eval (app (M[..]) (N[..])) (R[..]))] =>
   (case f of
-    | [g |- eval_app1 (F1 ..) (F2 ..)] =>
-      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
-      deterministic [g |- D2 ..] [g |- F2 ..]
+    | [g |- eval_app1 (F1[..]) (F2[..])] =>
+      let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
+      deterministic [g |- D2[..]] [g |- F2[..]]
 
-    | [g |- eval_app2 (F1 ..) (NL ..) (F2 ..)] =>
-      let [g |- refl] = deterministic [g |- D1 ..] [g |- F1 ..] in
-      impossible [g |- NL ..] in [g])
+    | [g |- eval_app2 (F1[..]) (NL[..]) (F2[..])] =>
+      let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
+      impossible [g |- NL[..]] in [g])
 
-| [g |- #p.u ..] => let [g |- #q.u ..] = f in [g |- refl]
+| [g |- #p.u[..]] => let [g |- #q.u[..]] = f in [g |- refl]
 ;
 
 

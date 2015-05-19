@@ -34,7 +34,7 @@ fn e => case e of
 |[ |- snoc U V] =>
      let [ |- N] = envrSize [ |- U] in
      case [ |- V] of
-       |[ |- clam (\x.W x)] => [ |- N]
+       |[ |- clam (\x.W)] => [ |- N]
        |[ |- _] => [ |- s N]
 ;
 

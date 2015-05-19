@@ -8,16 +8,16 @@ eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
 
 schema eqctx = block x:exp, _t:eq x x;
 
-rec copy : (g : eqctx) [g |- eq (M ..) (N ..)] -> [g |- eq (M ..) (N ..)] = 
+rec copy : (g : eqctx) [g |- eq (M[..]) (N[..])] -> [g |- eq (M[..]) (N[..])] = 
  / total d (copy _ _ _ d) / 
 fn d => case d of 
-| [g |- #p.2 ..] => d
-| [g |- eq_app (D ..) (E ..)] => 
-  let [g |- D' ..] = copy [g |- D ..] in 
-    [g |- eq_app (D' ..) (E ..)] 
-| [g |- eq_lam \x.\u. D .. x u] => 
-  let [g, b:block x:exp, t:eq x x |- D' .. b.1 b.2] =  
-    copy [g, b:block x:exp, t:eq x x |- D .. b.1 b.2] in 
-  [g |- eq_lam \x.\u. D' .. x u]
+| [g |- #p.2[..]] => d
+| [g |- eq_app (D[..]) (E[..])] => 
+  let [g |- D'[..]] = copy [g |- D[..]] in 
+    [g |- eq_app (D'[..]) (E[..])] 
+| [g |- eq_lam \x.\u. D] => 
+  let [g, b:block x:exp, t:eq x x |- D'[.. b.1 b.2]] =  
+    copy [g, b:block x:exp, t:eq x x |- D[.. b.1 b.2]] in 
+  [g |- eq_lam \x.\u. D']
 ;
 

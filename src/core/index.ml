@@ -450,6 +450,7 @@ and index_spine cvars bvars fvars = function
           (Apx.LF.App (m', s') , fvars'')
 
 and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
+  | Ext.LF.RealId -> (Apx.LF.RealId, fvars)
   | Ext.LF.Id loc -> (Apx.LF.Id, fvars)
 
   | Ext.LF.Dot (_, s, Ext.LF.Head h) ->

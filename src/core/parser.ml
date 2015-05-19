@@ -771,17 +771,12 @@ GLOBAL: sgn;
         [
           "("; a = SELF; ")" ->
             a
-
-     (*    |
-           a = SYMBOL; ms = LIST0 clf_normal ->
-             let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-               LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
           |
              a = SYMBOL; ms = LIST0 clf_normal ->
                 LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
           |
              a = UPSYMBOL; ms = LIST0 clf_normal ->
-                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
 
 
 
@@ -819,7 +814,7 @@ GLOBAL: sgn;
               
            |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
-              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.EmptySub _loc), LF.Nil))::ms))
+              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
               (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
 
         ]
@@ -856,7 +851,10 @@ GLOBAL: sgn;
     | "atomic"
         [
           u = UPSYMBOL ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc), LF.Nil)
+            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
+
+	| u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
+           LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
            begin match ann with
@@ -874,12 +872,6 @@ GLOBAL: sgn;
             "?" ->
             LF.LFHole _loc
 
-        |
-           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
-           begin match ann with
-           | None -> m
-           | Some a -> LF.Ann (_loc, m, a)
-           end
         |
            "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
@@ -917,20 +909,7 @@ GLOBAL: sgn;
 
   clf_term_app:
     [
-      [
-        u = UPSYMBOL; s = clf_sub_new -> 
-          let m = LF.MVar(_loc, Id.mk_name (Id.SomeString u), LF.EmptySub _loc) in
-          begin match s with
-              (* Infix operator case *)
-              | LF.Dot(_, LF.Dot(l, LF.EmptySub _, LF.Head op), LF.Normal t2)  -> 
-                let op' = LF.Root(l, op, LF.Nil) in 
-                LF.TList(_loc, (LF.Root(_loc,m, LF.Nil))::op'::[t2])
-              | _ -> LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-            end
-      |
-        u = UPSYMBOL ; ","; sigma' = clf_sub_new ->
-          LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), sigma'), LF.Nil)
-      |
+      [ 
         ms = LIST1 clf_normal -> LF.TList(_loc, ms)
       |
         a = clf_typ -> LF.NTyp(_loc, a)
@@ -940,12 +919,17 @@ GLOBAL: sgn;
   clf_head:
     [
       [
-        "#"; p = SYMBOL; "."; k = clf_proj; sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "."; k = clf_proj; "["; sigma = clf_sub_new; "]" ->
           LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma), k)
 
+      | "#"; p = SYMBOL; "."; k = clf_proj ->
+          LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId), k)
+
       |
-        "#"; p = SYMBOL;  sigma = clf_sub_new ->
+        "#"; p = SYMBOL; "["; sigma = clf_sub_new; "]" ->
            LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
+
+      | "#"; p = SYMBOL -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId)
 
       |
         x = SYMBOL; "."; k = clf_proj ->
@@ -980,6 +964,7 @@ GLOBAL: sgn;
       |
          "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
           LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
+      | "#"; s = UPSYMBOL -> LF.SVar(_loc, Id.mk_name (Id.SomeString s), LF.RealId)
      ]
     ]
 ;

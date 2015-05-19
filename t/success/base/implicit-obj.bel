@@ -37,5 +37,5 @@ mlam T => fn e => case [ |- T] of
                )
 
  | [ |- arr S' S] =>
-   let [ |- lam (\x. E x)] = e  in [ |- lam (\x. E x)]
+   let [ |- lam (\x. E)] = e  in [ |- lam (\x. E)]
 ;

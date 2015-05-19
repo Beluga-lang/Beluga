@@ -17,9 +17,9 @@ rec fff : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat |-  ter
 mlam g => fn e =>
   case e of
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  z]     => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc (U .. b)]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1 ..]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3 ..]    => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc U]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1[..]]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3[..]]    => [ |- z]
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  b.1]    => [ |- z]
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  b.3]    => [ |- z]
 ;
@@ -30,9 +30,9 @@ rec fff2 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat |-  te
 mlam g => fn e =>
   case e of %not
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  z]     => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc (U .. b)]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1 ..]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3 ..]    => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc U]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1[..]]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3[..]]    => [ |- z]
 %  | [g, b:block yyy:term nat, www:irrel |-  term nat]  b.1    => [] z
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  b.3]    => [ |- z]
 ;
@@ -42,9 +42,9 @@ rec fff3 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat |-  te
 mlam g => fn e =>
   case e of %not
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  z]     => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc (U .. b)]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1 ..]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3 ..]    => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc U]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1[..]]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3[..]]    => [ |- z]
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  b.1]    => [ |- z]
 %  | [g, b:block yyy:term nat, www:irrel |-  term nat]  b.3    => [] z
 ;
@@ -53,9 +53,9 @@ rec fff4 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat |-  te
 mlam g => fn e =>
   case e of
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  z]     => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc (U .. b)]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1 .. b]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3 ..]    => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc U]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3[..]]    => [ |- z]
 %  | [g, b:block yyy:term nat, www:irrel |-  term nat]  b.1    => [] z
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  b.3]    => [ |- z]
 ;
@@ -65,7 +65,7 @@ rec fff5 : {g:termCtx} [g, b : block yyy:term nat, www:irrel, _t:term nat |-  te
 mlam g => fn e =>
   case e of
   | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  z]     => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc (U .. b)]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1 .. b]   => [ |- z]
-  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3 .. b]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  suc U]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.1]   => [ |- z]
+  | [g, b:block yyy:term nat, www:irrel, _t:term nat |-  #p.3]   => [ |- z]
 ;

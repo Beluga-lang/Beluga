@@ -151,7 +151,7 @@ module Ext = struct
      * We assume types, terms, etc are all in normal form.
      *)
 
-    let rec has_ctx_var psi = match psi with LF.CtxVar _ -> true | LF.Null -> false |  LF.DDec(cPsi, _x) -> has_ctx_var cPsi
+    let rec has_ctx_var psi = match psi with LF.CtxVar _ -> true | LF.Null -> false |  LF.DDec(cPsi, _x) -> has_ctx_var cPsi | LF.CtxHole -> true
 
     type id_type =
     | Constructor 
@@ -532,6 +532,7 @@ module Ext = struct
             (fmt_ppr_lf_psi_hat cD 0) cPsi
 
     and fmt_ppr_lf_dctx cD _lvl ppf = function
+      | LF.CtxHole -> fprintf ppf "_"
       | LF.Null ->
           fprintf ppf ""
 

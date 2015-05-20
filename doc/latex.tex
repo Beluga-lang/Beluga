@@ -1,0 +1,75 @@
+\documentclass[11pt]{article} 
+
+\usepackage[utf8]{inputenc}
+
+%%% Examples of Article customizations
+% These packages are optional, depending whether you want the features they provide.
+% See the LaTeX Companion or other references for full information.
+
+%%% PAGE DIMENSIONS
+\usepackage{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+\geometry{margin=1in} % for example, change the margins to 2 inches all round
+% \geometry{landscape} % set up the page for landscape
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+\usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
+
+%%% HEADERS & FOOTERS
+%\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+%\pagestyle{fancy} % options: empty , plain , fancy
+%\renewcommand{\headrulewidth}{0pt} % customise the layout...
+%\lhead{}\chead{}\rhead{}
+%\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+%\allsectionsfont{\sffamily\mdseries\upshape} % (See the fntguide.pdf for font help)
+% (This matches ConTeXt defaults)
+
+%%% ToC (table of contents) APPEARANCE
+%\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+%\usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
+%\renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
+%\renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+
+%%% END Article customizations
+
+%%% The "real" document content comes below...
+
+\title{Beluga: \LaTeX\ Mode Documentation}
+\author{Steven Thephsourinthone}
+%\date{} % Activate to display a given date or no date (if empty),
+         % otherwise the current date is printed 
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\section{Datatypes}
+\subsection{type latex}
+We begin by defining a datatype to contain the \LaTeX proof. The type \verb+latex+ has constructors \verb+Command+ for new commands, \verb+Rule+ for inference rules, and \verb+Proof+ for proofs.
+\begin{itemize}
+\item A new command has the following format:\\
+\verb+\newcommand{\name}[arg count]{format #arg1 #arg2 ... #argN}+\\
+So, in order to properly define a new command, we need, at least, parameters for names and the number of arguments. We will also take an optional string that can be used as the formatting string which we will allow the user to define. So the \verb+Command+ constructor takes a \verb+string+ (or \verb+Id.name+) representing name, an \verb+integer+ representing the number of arguments, and a \verb+string option+ representing a formatting string:\\ \verb+Command of Id.name * int * string option+
+\item To declare an inference rule, we use the \verb+infer+ environment provided by \verb+proof.sty+, which has the following format:\\
+\verb+\infer[\name]{conclusion}{premises}+
+Here, we see that we need parameters for names, premises, and a conclusion. In the internal abstract syntax, both the premises and conclusion of the inference rule are grouped together in a single list, where the final element is the conclusion and the other elements constitute the premises. We choose here to pass the entire list to the constructor rather than explicitly differentiating, leaving that for a later step:\\ \verb+Rule of Id.name * Syntax.Ext.LF.typ list+
+\end{itemize}
+...
+\subsection{type goal}
+The goal of the proof takes the form:\\
+Theorem \textbf{name} : If \textbf{premise1} and ... and \textbf{premiseN} then \textbf{conclusion}\\
+Each premise should have the form \verb+x : some type+, where it's labeled with some x, and the conclusion just has the form \verb+some type+, which lacks a label. We can group the two together as a \verb+GoalTerm+, which takes an \verb+Id.name option+ and an \verb+Syntax.Int.Comp.typ * Syntax.Int.LF.msub+, and just have a list of these terms. Because of the way we construct a \verb+GoalTerm+, the conclusion should be the only term with no name.
+
+There exists the possibility where a user may explicitly declare an \verb+mlam+, in which case we need a case for quantifiers. The \verb+GoalForall+ constructor takes an \verb+Id.name+ and an \verb+Int.LF.ctyp_decl+.
+
+Finally, the goal of the proof is simply a pair consisting of an \verb+Id.name+ and a \verb+goal_term list+
+
+\end{document}

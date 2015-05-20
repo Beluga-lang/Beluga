@@ -426,7 +426,9 @@ and recSgnDecl ?(pauseHtml=false) d =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
+
         let _ = Latex.proof_rule Ext.LF.Empty Ext.LF.Null c extT in
+        
         let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in

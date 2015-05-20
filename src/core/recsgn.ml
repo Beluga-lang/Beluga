@@ -638,6 +638,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
              (e_r' , tau')
+             
         in
 
         let rec reconRecFun recFuns = match recFuns with

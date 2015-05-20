@@ -1,6 +1,11 @@
 open Syntax
 open Id
 
+module C = Whnf
+module PE = Pretty.Ext.DefaultPrinter
+module PI = Pretty.Int.DefaultPrinter
+module R = Store.Cid.DefaultRenderer
+
 exception LatexException of string
 
 type latex =
@@ -28,6 +33,8 @@ and proof_step =
 | RuleApp (* of ... *)
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)
+
+let proof_name = ref ""
 
 (* Only called from Sgn.Typ *)
 let proof_command cD cG n extK = 

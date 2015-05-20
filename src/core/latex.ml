@@ -85,7 +85,7 @@ let rec proof cD cG n e ttau =
 		) in		
 		Proof (n, g, ScrutDummy, [])
 
-and proof_goal cD (cG, cIH) e ttau : goal_term list = match e, ttau with
+and proof_goal cD (cG, cIH) e ttau = match e, ttau with
 (* This case is for implicit MLams, which are ignored, so just skip over them *)
 | Int.Comp.MLam (_, u, e'), (Int.Comp.TypPiBox ((Int.LF.Decl(_, cU, Int.LF.Maybe)), tau), theta) ->	
 	proof_goal 
@@ -123,12 +123,12 @@ and proof_goal cD (cG, cIH) e ttau : goal_term list = match e, ttau with
 (* Error case *)
 | _ -> raise (LatexException "Non Fun/MLam argument passed to proof_goal")
 
-and proof_case cD (cG, cIH) e ttau : proof_case list = match e, ttau with
+(* and proof_case cD (cG, cIH) e ttau = match e, ttau with
 | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) ->
 
 | Int.Comp.Case (loc, prag, i, branches), (tau, t)) ->
 | _ -> raise (LatexException "Non Case argument passed to proof_case")
-
+ *)
 (* Sort into modules, less confusing later on? *)
 module LF = struct
 

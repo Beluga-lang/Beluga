@@ -22,7 +22,9 @@ and goal_term =
 | GoalTerm of name option * (Int.Comp.typ * Int.LF.msub)
 | GoalForall of name * Int.LF.ctyp_decl
 
-and proof_case = name * proof_step list (* name of the rule being analyzed *)
+and proof_case = 
+| CaseDummy
+| ProofCase of name * proof_step list (* name of the rule being analyzed *)
 
 and proof_step =
 | StepDummy

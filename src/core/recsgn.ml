@@ -389,6 +389,9 @@ and recSgnDecl ?(pauseHtml=false) d =
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^a.string_of_name ^
 				  " successful!")) in
+
+        let _ = Latex.proof_command a extK in
+
         let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
         let _a = Typ.add (Typ.mk_entry a tK' i) in
         let sgn = Int.Sgn.Typ(loc, _a, tK') in
@@ -423,6 +426,7 @@ and recSgnDecl ?(pauseHtml=false) d =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
+        let _ = Latex.proof_rule c tA' in
         let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in
@@ -635,8 +639,12 @@ and recSgnDecl ?(pauseHtml=false) d =
  	                else tau' in 
           let _       = Monitor.timer ("Function Check", fun () ->
 					    Check.Comp.check
-					      cD cG e_r' (tau_ann, C.m_id)
+					      cD cG e_r' (tau_ann, C.m_id)                
                                       ) in
+
+
+      let _ = Latex.proof cD cG f e_r' (tau_ann, C.m_id) in
+
              (e_r' , tau')
              
         in

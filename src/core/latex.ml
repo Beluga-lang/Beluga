@@ -1,5 +1,6 @@
 open Syntax
 open Id
+open Printf
 
 module C = Whnf
 module PE = Pretty.Ext.DefaultPrinter
@@ -12,13 +13,13 @@ type latex =
 | LatexDummy
 | Command of name * int * string option
 | Rule of name * Ext.LF.typ list
-| Proof name * goal * scrutinee * proof_case list (* we perform induction on the exp_syn *)
+| Proof of name * goal * scrutinee * proof_case list (* we perform induction on the exp_syn *)
 
 and scrutinee = 
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and goal = name * goal_term list
+and goal = goal_term list
 
 and goal_term = 
 | GoalTerm of name option * (Int.Comp.typ * Int.LF.msub)
@@ -37,7 +38,7 @@ and proof_step =
 let proof_name = ref ""
 
 (* Only called from Sgn.Typ *)
-let proof_command cD cG n extK = 
+let proof_command n extK = 
 	let rec depth k = match k with
 	| Ext.LF.Typ _ -> 0
 	| Ext.LF.ArrKind (_, _, k') -> 1 + depth k'

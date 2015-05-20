@@ -1384,7 +1384,7 @@ let mctxSDec cD' k =
 
 let mctxCDec cD k =
   match (mctxLookup cD k) with
-    | (u, CTyp sW) -> (u, sW)
+    | (u, CTyp (Some sW)) -> (u, sW)
     | _ -> raise (Error.Violation ("Expected context variable"))
 
 let mctxMVarPos cD u =

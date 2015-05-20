@@ -97,6 +97,7 @@ let rec get_ctxvar psi = match psi with
   | Ext.LF.Null -> None
   | Ext.LF.CtxVar (_loc, psi_name) -> Some psi_name
   | Ext.LF.DDec (psi, _ ) -> get_ctxvar psi
+  | Ext.LF.CtxHole -> None
 
 
 let get_ctxvar_mobj mO = match mO with
@@ -495,6 +496,7 @@ let index_decl cvars bvars fvars (Ext.LF.TypDecl(x, a)) =
     (Apx.LF.TypDecl (x,a'), bvars', fvars')
 
 let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
+  | Ext.LF.CtxHole     -> (Apx.LF.CtxHole, bvars, fvars)
   | Ext.LF.Null        -> (Apx.LF.Null , bvars, fvars)
 
   | Ext.LF.CtxVar (loc, psi_name)  ->

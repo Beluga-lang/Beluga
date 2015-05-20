@@ -898,9 +898,10 @@ module Int = struct
             (fmt_ppr_lf_dctx cD lvl) cPsi
 	    (match cl with LF.Ren -> "#" | LF.Subst -> "")
             (fmt_ppr_lf_dctx cD lvl) cPhi
-      | LF.CTyp schemaName ->
+      | LF.CTyp (Some schemaName) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_schema lvl) (Store.Cid.Schema.get_schema schemaName)
+      | LF.CTyp None -> fprintf ppf "CTX"
 
     and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD 0 ppf 
 

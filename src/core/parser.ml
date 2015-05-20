@@ -1011,6 +1011,7 @@ GLOBAL: sgn;
        (* turnstile  *)
         ->
           LF.Null
+      | "_" -> LF.CtxHole
 
       |
         psi = SYMBOL ->
@@ -1033,6 +1034,7 @@ GLOBAL: sgn;
       [
          -> (* Hat [ ] *)
            Dctx (LF.Null)
+      | "_" -> Dctx (LF.CtxHole)
 
       |    x = SYMBOL ->
              Dctx (LF.CtxVar (_loc, Id.mk_name (Id.SomeString x)))

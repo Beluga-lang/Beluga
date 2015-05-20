@@ -92,6 +92,7 @@ module LF = struct
     | Null
     | CtxVar   of Loc.t * name
     | DDec     of dctx * typ_decl
+    | CtxHole
 
   and 'a ctx =
     | Empty

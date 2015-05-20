@@ -296,7 +296,7 @@ let getSchema cD ctxvar loc = match ctxvar with
       Schema.get_schema (Context.lookupCtxVarSchema cD  phi)
   | Some (Int.LF.CtxName n) ->
       begin try
-        let (_ , Int.LF.Decl (_, Int.LF.CTyp s_cid, _dep)) = FCVar.get n in
+        let (_ , Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _dep)) = FCVar.get n in
 	  Schema.get_schema s_cid
       with _ ->  raise (Error (loc,CtxVarSchema n))
       end
@@ -2258,6 +2258,9 @@ let elCtxVar c_var = match c_var with
   | Apx.LF.CtxName psi       -> Int.LF.CtxName psi
 
 let rec elDCtx recT cD psi = match psi with
+  | Apx.LF.CtxHole -> 
+    dprint (fun () -> "Encountered _ (underscore) for context...");
+    Int.LF.CtxVar (Whnf.newCVar None cD None Int.LF.Maybe)
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar (c_var) ->
@@ -2281,7 +2284,7 @@ let checkCtxVar loc cD c_var w = match c_var with
 	raise (Error (loc, IncompatibleSchemaForCtxVar (cD, Int.LF.CtxOffset offset, w,
 							Context.lookupSchema cD offset)))
   | Apx.LF.CtxName psi       -> 
-      (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp w, Int.LF.Maybe));
+      (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
        Int.LF.CtxName psi)
 
 let rec checkDCtx loc recT cD psi w = match psi with

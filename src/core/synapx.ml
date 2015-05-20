@@ -99,6 +99,7 @@ module LF = struct
     | Null
     | CtxVar   of ctx_var
     | DDec     of dctx * typ_decl
+    | CtxHole
 
   and ctx_var =
     | CtxName   of name

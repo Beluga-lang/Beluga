@@ -1,25 +1,25 @@
 
-datatype tm: type =
+inductive tm: type =
 | abs: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 | beta: (tm -> tm) -> tm -> tm
 ;
 %name tm M.
 
-datatype nf: type =
+inductive nf: type =
 | nabs: (nf -> nf) -> nf
 | napp: nf -> nf -> nf
 ;
 %name nf U.
 
-datatype p : type =
+inductive p : type =
 | left : p -> p
 | right: p -> p
 | bnd  : (p -> p) -> p
 ;
 %name p P.
 
-datatype bred : tm -> nf -> type =
+inductive bred : tm -> nf -> type =
 | r_abs : ({x:tm}{y:nf}  bred x y -> bred (M x) (N y))
        -> bred (abs M) (nabs N)
 | r_app : bred M M' -> bred N N'
@@ -29,7 +29,7 @@ datatype bred : tm -> nf -> type =
 ;
 %name bred R.
 
-datatype path : tm -> p -> type =
+inductive path : tm -> p -> type =
 | p_abs   : ({x:tm}{p:p} path x p -> path (M x) (P p))
                -> path (abs M) (bnd P)
 | p_app_l : path M P
@@ -42,7 +42,7 @@ datatype path : tm -> p -> type =
 
 %name path Pf.
 
-datatype npath : nf -> p -> type =
+inductive npath : nf -> p -> type =
 | np_abs   : ({x:nf}{p:p} npath x p -> npath (M x) (P p))
                -> npath (nabs M) (bnd P)
 | np_app_l : npath M P
@@ -157,13 +157,13 @@ fn br => fn pt => case br of
   in [g |- (#p._q[..]) (P[..]) (Qt[..])]
  ;
 
-datatype eq : tm -> tm -> type =
+inductive eq : tm -> tm -> type =
 | ref : eq M M;
 
-datatype nf_eq : nf -> nf -> type =
+inductive nf_eq : nf -> nf -> type =
 | nref : nf_eq M M;
 
-datatype ExNPath : (g:jctx) [g |- nf] -> ctype =
+inductive ExNPath : (g:jctx) [g |- nf] -> ctype =
 | ExPath : [g |- npath (U[..]) (P[..])] -> ExNPath [g |- U[..]] ;
 
 rec path_exists : {g:jctx} {U:[g |- nf] }  ExNPath [g |- U[..]] =

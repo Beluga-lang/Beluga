@@ -19,7 +19,7 @@ embed : neut (atomic P) -> norm (atomic P).
 
 schema ctx = neut T;
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype #stratified =
+stratified Sem : {g:ctx} [ |- tp] -> ctype  =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}
           ({h:ctx} {#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
@@ -35,7 +35,7 @@ case e of
     )
 ;
 
-datatype SemSubst : {g:tctx}{h:ctx} ctype =
+inductive SemSubst : {g:tctx}{h:ctx} ctype =
 | Nil : SemSubst [] [h]
 | Dot : SemSubst [g] [h] -> Sem [h] [ |- A] -> SemSubst [g,x:tm A[]] [h];
 

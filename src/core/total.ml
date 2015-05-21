@@ -878,7 +878,7 @@ let rec check_positive a tau =
       (* (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
       (* || let n =  R.render_cid_comp_typ c in *)
       (*    raise (Error (loc, (NoPositiveCheck n))) *)
-    | Comp.TypCobase _  ->  raise Unimplemented
+    | Comp.TypCobase _  ->  true (* TODO *)
     | Comp.TypDef  _  -> raise Unimplemented
     | Comp.TypBox  _ -> true 
     | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (check_positive a tau2) 

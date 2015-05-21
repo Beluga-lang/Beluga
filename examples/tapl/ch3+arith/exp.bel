@@ -6,7 +6,7 @@
 }%
 
 
-datatype term  : type = 
+LF term  : type = 
 | true  : term
 | false : term
 | switch: term -> term -> term -> term

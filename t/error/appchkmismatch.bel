@@ -1,22 +1,22 @@
-datatype tp: type =
+LF tp: type =
 | unit: tp
 | cross: tp -> tp -> tp
 ;
 %name tp T.
 
-datatype term: tp -> type =
+LF term: tp -> type =
 ;
 %name term M.
 
 % Target language
-datatype target: tp -> type =
+LF target: tp -> type =
 | tunit: target unit
 | tpair: target T -> target S -> target (cross T S)
 ;
 %name target Q.
 
 % Natural Numbers
-datatype nat: type =
+LF nat: type =
 | z: nat
 | suc: nat -> nat
 ;
@@ -24,7 +24,7 @@ datatype nat: type =
 
 
 % List of free variables occurring in a term
-datatype fvlist: tp -> type =
+LF fvlist: tp -> type =
 | nil: fvlist unit
 | cons: term T -> fvlist S -> fvlist (cross T S)
 ;

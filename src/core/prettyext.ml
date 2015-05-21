@@ -1091,11 +1091,20 @@ module Ext = struct
           (fmt_ppr_cmp_typ LF.Empty 1)  tA
       | _ -> ()
 
-    let fmt_ppr_mrecs lvl ppf = function
-      | [] -> ()
-      | h::t -> fmt_ppr_mrec "datatype" lvl ppf h;
-                List.iter (fun x -> fmt_ppr_mrec "and" lvl ppf x) t;
-                fprintf ppf ";@\n"
+    (* TODO: Refactor this *)
+    let fl_to_prefix = function
+      | Sgn.CompTyp (_,_,_,_) -> "inductive"
+      | Sgn.CompCotyp (_,_,_) -> "coinductive"
+      | Sgn.Typ (_,_,_) -> "LF"
+    let fmt_ppr_mrec' lvl ppf (k,body) =
+      fmt_ppr_mrec (fl_to_prefix k) lvl ppf k;
+      List.iter (fun d -> fmt_ppr_mrec "" lvl ppf d) body
+
+    let rec fmt_ppr_mrecs lvl ppf = function
+      | [h] -> fmt_ppr_mrec' lvl ppf h; fprintf ppf ";@\n"
+      | h::t -> fmt_ppr_mrec' lvl ppf h;
+	        fprintf ppf "and";
+	        fmt_ppr_mrecs lvl ppf t
 
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
@@ -1162,7 +1171,7 @@ module Ext = struct
           fprintf ppf "@[%s %s = %s@ @[<v2>%a@]@ %s;@]@\n"
                     (to_html "module" Keyword) (name) (to_html "struct" Keyword) (aux) decls (to_html "end" Keyword)
       | Sgn.MRecTyp(l, decls) ->
-          fmt_ppr_mrecs 0 ppf (List.flatten decls)
+          fmt_ppr_mrecs 0 ppf decls
       | _ -> ()
 
 

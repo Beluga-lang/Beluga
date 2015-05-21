@@ -1,17 +1,17 @@
-datatype nat : type =
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
 
-datatype MuColist : ctype =
+inductive MuColist : ctype =
 | Nil : MuColist
 | Cons : [ |- nat] -> NuColist -> MuColist
 
-and codatatype NuColist : ctype =
+and coinductive NuColist : ctype =
 | Out : NuColist -> MuColist
 ;
 
-datatype List : ctype =
+inductive List : ctype =
 | Lnil : List
 | Lcons : [ |- nat] -> List -> List
 ;

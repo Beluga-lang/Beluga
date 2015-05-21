@@ -6,7 +6,7 @@ s: exp -> exp.
 
 schema ctx = exp;
 
-datatype IsExp : {g:ctx} [g |- exp] -> ctype #positive 
+inductive IsExp : {g:ctx} [g |- exp] -> ctype  
 =
 | IsZero : (g:ctx) IsExp [g] [g |- z]
 | IsSuc : (g:ctx) IsExp [g] [g |- M[..]] -> IsExp [g] [g |- s (M[..])]

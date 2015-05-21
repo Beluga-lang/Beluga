@@ -19,10 +19,10 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype IsVar : (g:ctx){M:[g |- tm A[]]} ctype =
+inductive IsVar : (g:ctx){M:[g |- tm A[]]} ctype =
 | IsVar : {#p:[g |- tm A[]]} IsVar [g |- #p];
 
-datatype IsVarSub : {g:ctx} (h:ctx) {#S : h |- g} ctype =
+inductive IsVarSub : {g:ctx} (h:ctx) {#S : h |- g} ctype =
 | Nil : IsVarSub [] [h |- ^ ]
 | Cons :  IsVarSub [g] [h |- #S[..]] -> IsVar [h |- M]
          -> IsVarSub [g,x:tm A[]] [h |- #S, M];
@@ -30,20 +30,20 @@ datatype IsVarSub : {g:ctx} (h:ctx) {#S : h |- g} ctype =
 % This could be defined at the LF layer, but then it would require a bigger schema,
 % and I don't want to deal with that
 % Could enforce also eta longness easily, but meh
-datatype IsNormal : (g:ctx) {M:[g |- tm A[]]} ctype =
+inductive IsNormal : (g:ctx) {M:[g |- tm A[]]} ctype =
 | Neut : IsNeutral [g |- M[..]] -> IsNormal [g |- M[..]]
 | Lam : IsNormal [g,x:tm A[] |-  M] -> IsNormal [g |- lam (\x. M)]
-and IsNeutral : (g:ctx) {M:[g |- tm A[]]} ctype =
+and inductive IsNeutral : (g:ctx) {M:[g |- tm A[]]} ctype =
 | Var : IsVar [g |- M[..]] -> IsNeutral [g |- M[..]]
 | App : IsNeutral [g |- M[..]] -> IsNormal  [g |- N[..]]
      -> IsNeutral [g |- app (M[..]) (N[..])];
 
-datatype Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
+inductive Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 | Halts : [g |- mstep (M[..]) (V[..])] -> IsNormal [g |- V[..] ] -> Halts [ |- A] [g |- M[..]];
 
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
-datatype Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
+stratified Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 | Base : Halts [ |- i] [g |- M[..]] -> Reduce [ |- i] [g |- M[..]]
 | Arr :  {M:[h0 |- tm (arr A[] B[])]}
          ({h:ctx} {#R:h |- h0} {N:[h |- tm A[]]}
@@ -124,7 +124,7 @@ case r of
    (mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
     f [h'] [h' |- #W[#W2[..]]] [h' |-  N[..]] (varSubCompose' iv iv2) rn);
 
-datatype RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
+inductive RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
 | Nil : RedSub [] [h |- ^ ]
 | Dot : RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M[..]] -> RedSub [g,x:tm A[]] [h |- #S, M ];
 

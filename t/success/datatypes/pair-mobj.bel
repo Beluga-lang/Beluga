@@ -1,4 +1,4 @@
-datatype bool : type =
+LF bool : type =
 | true : bool
 | false : bool
 ;

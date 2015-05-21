@@ -4,20 +4,20 @@
 
 
 % Definition of types and expressions
-datatype tp: type =
+LF tp: type =
 | arr: tp -> tp -> tp
 | nat: tp
 ;
 %name tp T.
 
-datatype term: type = 
+LF term: type = 
 | lam : tp -> (term -> term) -> term
 | app : term -> term -> term
 ;
 %name term E.
 
 % Typing judgment
-datatype hastype: term -> tp -> type = 
+LF hastype: term -> tp -> type = 
 | t_lam: ({x:term}hastype x T1 -> hastype (E x) T2)
         -> hastype (lam T1 E) (arr T1 T2)
 | t_app: hastype E1 (arr T2 T) -> hastype E2 T2
@@ -26,7 +26,7 @@ datatype hastype: term -> tp -> type =
 %name hastype H.
 
 % Equality predicate
-datatype eq: tp -> tp -> type = 
+LF eq: tp -> tp -> type = 
 | refl: eq T T;
 
 

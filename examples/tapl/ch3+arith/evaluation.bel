@@ -6,7 +6,7 @@
 }%
 
 
-datatype term  : type = 
+LF term  : type = 
 | true  : term
 | false : term
 | switch: term -> term -> term -> term
@@ -41,19 +41,19 @@ let w2 = [ |- switch z z] ;
 
 % ----------------------------------------------------------------------------
 % Values
-datatype num_value : term -> type = 
+LF num_value : term -> type = 
 | v_z    : num_value z
 | v_s    : num_value N -> num_value (succ N)
 ;
 
-datatype value     : term -> type = 
+LF value     : term -> type = 
 | v_true : value true
 | v_false: value false
 | v_num  : num_value V -> value V
 ;
 
 % Small-step operational semantics
-datatype step: term -> term -> type = 
+LF step: term -> term -> type = 
 | e_switch_true:  step (switch true T2 T3)    T2
 | e_switch_false: step (switch false T2 T3)   T3
 | e_pred_zero:    step (pred z) z
@@ -105,13 +105,13 @@ let e2 : [ |- step (pred (succ z)) z]
 Typing
 }%
 
-datatype tp : type =
+LF tp : type =
 | nat : tp
 | bool : tp
 ;
 %name tp T.
 
-datatype hastype: term -> tp -> type =
+LF hastype: term -> tp -> type =
 | t_zero : hastype z nat
 | t_succ : hastype M nat 
      -> hastype (succ M) nat
@@ -166,7 +166,7 @@ Multi-step relation is the reflexive transitive closure over the
 single step relation.
 }%
 
-datatype multi_step: term -> term -> type = 
+LF multi_step: term -> term -> type = 
 | ms_tr: multi_step M N' -> multi_step N' N
        -> multi_step M N
 | ms_ref: multi_step M M
@@ -273,7 +273,7 @@ fn ms => case ms of
 
 }%
 
-datatype steps_to_val: term -> type = 
+LF steps_to_val: term -> type = 
 | result: multi_step T T' -> value T'
        -> steps_to_val T;
 

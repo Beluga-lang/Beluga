@@ -1,9 +1,9 @@
-datatype nat : type =
+LF nat : type =
 | z : nat
 | suc : nat -> nat
 ;
 
-datatype Vector : [ |- nat] -> ctype =
+inductive Vector : [ |- nat] -> ctype =
 | Nil : Vector [ |- z]
 | Cons : Bool -> Vector [ |- N] -> Vector [ |- suc N]
 ;

@@ -1,20 +1,19 @@
 % Untyped closure conversion from POPL12 paper
 
-datatype tm:type  =
+LF tm:type  =
 | lam: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 ;
 %name tm M.
 
-datatype nat:type =
+LF nat:type =
 | z : nat
 | s : nat -> nat
 ;
 
 schema ctx = tm;
 
-% mutual definition of datatypes is not working.
-datatype envr: type =
+LF envr: type =
 | nil: envr
 | snoc : envr -> ctm -> envr
 
@@ -39,12 +38,12 @@ fn n => fn m => case m of
 ;
 
 
-datatype Ctx_rel : {g:ctx}{h:cctx} ctype =
+inductive Ctx_rel : {g:ctx}{h:cctx} ctype =
 | Rnil : Ctx_rel [] []
 | Rsnoc: Ctx_rel [g] [h] -> Ctx_rel [g, x:tm] [h,x:ctm]
 ;
 
-datatype CtxObj : {h:cctx} ctype =
+inductive CtxObj : {h:cctx} ctype =
 | Ctx : {h:cctx} CtxObj [h] ;
 
 

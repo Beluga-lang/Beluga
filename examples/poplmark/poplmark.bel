@@ -22,7 +22,7 @@ schema as_ctx =  some [u:tp]  block a:tp, w: assm a U;
 % --------------------------------------------------------------------------
 %%%%%  Declarative subtyping  %%%%%
 
-datatype Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
+inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 | Subtype_top    : Subtype [g |- T] [g |- top]
 | Subtype_refl   : Subtype [g |- T] [g |- T]
 | Subtype_trans  : Subtype [g |- T1] [g |- T2] -> Subtype [g |- T2] [g |- T3]
@@ -59,7 +59,7 @@ datatype Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 % ------------------------------------------------------------------
 %   G |- (forall a < S1. S2)  < (forall a < T1. T2)
 
-datatype Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
+inductive Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 | Sa_top    : Sub [g |- S] [g |- top]
 | Sa_refl   : {#p:[g |- block (a:tp, u: assm a (U[..]))]}Sub [g |- #p.1[..]] [g |- #p.1[..]]
 | Sa_trans  : {#p:[g |- block (a:tp, u: assm a (U[..]))]}
@@ -95,7 +95,7 @@ mlam g => mlam T => case [g |- T] of
 
 % -------------------------------------------------------------
 %{
-datatype Concat : {g0:as_ctx}{g1:as_ctx}{g:as_ctx}  ctype =
+inductive Concat : {g0:as_ctx}{g1:as_ctx}{g:as_ctx}  ctype =
 | Nil : Concat [g0] [ ] [g0]
 | Cons: Concat [g0] [g'] [g]
       -> Concat [g0] [g', b:block (a:tp, w:assm a (U[..]))]  [g, b:block (a:tp, w:assm a (U[..]))]

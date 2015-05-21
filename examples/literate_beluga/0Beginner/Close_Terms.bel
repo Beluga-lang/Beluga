@@ -8,7 +8,7 @@
 
 We'll first defining what terms are in the untyped lambda calculus.}}%
 
-datatype tm : type =
+LF tm : type =
   | lam : (tm -> tm) -> tm
   | app : tm -> tm -> tm
 ;

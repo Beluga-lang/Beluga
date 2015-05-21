@@ -40,7 +40,7 @@ mlam g => fn e => case e of
 
 ;
 
-datatype Term : [|- term T] -> ctype = 
+inductive Term : [|- term T] -> ctype = 
 | Tm : {M:[|- term T]} Term [ |- M];
 
 

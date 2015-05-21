@@ -10,7 +10,7 @@ ae_a: aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
 schema xG = tm;
 schema xaG = block x:tm, u:aeq x x;
 
-datatype Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
+inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa   : Ctx_xaR [phi] [psi] [psi |- #S[..] ]
            -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..], b.1 ]
@@ -55,7 +55,7 @@ mlam phi => mlam M => fn cr => case [phi  |-  M[..]] of
 % M #S[..]  =  app (M1[..]) (M2[..]); we hence encode such equalities
 % explicitly.
 
-datatype Eq : {phi:xG}{psi:xaG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive Eq : {phi:xG}{psi:xaG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
 | Eq_v: Eq [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..], b.1 ]
          [phi, x:tm  |-  x]
          [psi, b:block (x:tm, u:aeq x x)  |-  b.1 ]
@@ -185,13 +185,13 @@ schema xdG =  block x: tm,  de_v:deq x x ;
 schema daG =  block x: tm, ae_v:aeq x x, de_v:deq x x ;
 
 % ---------------------------------------------------------------------------
-datatype Ctx_xdR : {phi:xG} {psi: xdG} {#S: psi |- phi} ctype =
+inductive Ctx_xdR : {phi:xG} {psi: xdG} {#S: psi |- phi} ctype =
 | Nil_xd : Ctx_xdR [] [] [ |- ^ ]
 | Cons_xd   : Ctx_xdR [phi] [psi] [psi |- #S[..] ]
            -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..], b.1 ]
 ;
 
-datatype Ctx_adR : {phi:xaG} {psi: xdG} ctype =
+inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 | Nil_ad : Ctx_adR [] []
 | Cons_ad   : Ctx_adR [phi] [psi]
            -> Ctx_adR [phi, b: block (x:tm,u:aeq x x)] [psi, b: block (x:tm,u:deq x x)]
@@ -204,7 +204,7 @@ datatype Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 % If we were to support functions in computation-level types, these proofs
 % and some of these relations would go away.
 
-datatype Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
 | Eq'_v: Eq' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..], b.1 ]
          [phi, x:tm  |-  x]
          [psi, b:block (x:tm, u:deq x x)  |-  b.1 ]
@@ -226,15 +226,15 @@ datatype Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> c
          [phi  |-  lam \x. M] [psi  |-  lam \x. M']
 ;
 
-datatype Equal_xaG : (psi:xaG) [psi |-  tm] -> [psi |- tm] -> ctype =
+inductive Equal_xaG : (psi:xaG) [psi |-  tm] -> [psi |- tm] -> ctype =
 | Refl_xaG : Equal_xaG [psi |-  M[..]] [psi |-  M[..]] ;
 
-datatype Equal_xG : (psi:xG) [psi |-  tm] -> [psi |- tm] -> ctype =
+inductive Equal_xG : (psi:xG) [psi |-  tm] -> [psi |- tm] -> ctype =
 | Refl_xG : Equal_xG [psi |-  M[..]] [psi |-  M[..]] ;
 
 % for all Ld given  Ctx_xdR [gamma] [phi] [phi |- #T..[]],
 % there exists an L s.t. Eq' [gamma] [phi] [phi |- #T[..] [gamma |-  L] [phi |-  Ld[..]]
-datatype ExistsEq' : {gamma:xG}{phi: xdG}{#S :phi |- gamma} {L: [phi |- tm]} ctype  =
+inductive ExistsEq' : {gamma:xG}{phi: xdG}{#S :phi |- gamma} {L: [phi |- tm]} ctype  =
 ExistsEq' :
     {L:[gamma |- tm]} Eq' [gamma] [phi] [phi |- #T[..]] [gamma |-  L[..]] [phi |-  Ld[..]]
 -> ExistsEq' [gamma] [phi] [phi |- #T[..] ] [phi |-  Ld[..]]
@@ -270,7 +270,7 @@ case [phi |-  Ld[..]] of
 % forall L given  Ctx_xaR [gamma] [psi] [psi |- #S..[]],
 % there exists an La s.t. Eq [gamma] [psi] [psi |- #S..[]] [gamma |-  L[..]] [psi |-  La[..]]
 
-datatype ExistsEq : {gamma:xG}{psi: xaG}{#S :psi |- gamma} {L: [gamma |- tm]} ctype  =
+inductive ExistsEq : {gamma:xG}{psi: xaG}{#S :psi |- gamma} {L: [gamma |- tm]} ctype  =
 ExistsEq :
     {La:[psi |- tm]} Eq [gamma] [psi] [psi |- #S[..]] [gamma |-  L] [psi |-  La[..]]
 -> ExistsEq [gamma] [psi] [psi |- #S[..] ] [gamma |-  L[..]]

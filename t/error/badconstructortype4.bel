@@ -1,8 +1,8 @@
-datatype Car : ctype =
+inductive Car : ctype =
 | Beatle : Car
 ;
 
-datatype Colour : ctype =
+inductive Colour : ctype =
 | Blue : Car
 ;
 

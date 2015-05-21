@@ -16,7 +16,7 @@ embed : neut b -> norm b.
 
 schema ctx = neut T;
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype =
+stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Base :  [g |- norm b] -> Sem [g] [ |- b]
 | Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]

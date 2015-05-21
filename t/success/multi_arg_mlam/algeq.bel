@@ -25,11 +25,11 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-datatype CtxRel : {g:tctx}{g':ctx} ctype =
+inductive CtxRel : {g:tctx}{g':ctx} ctype =
 | RNil : CtxRel [] []
 | RCons : CtxRel [g] [g'] -> CtxRel [g,b:block x:tm,d:oft x T[]] [g',x:tm];
 
-datatype Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
+inductive Lookup : {g:tctx}(g':ctx) [g' |-  tm] -> [ |- tp] -> ctype =
 | Top : Lookup [g,b:block x:tm,y:oft x T[]] [g',x:tm |-  x] [ |- T]
 | Pop : Lookup [g] [g' |-  #p[..]] [ |- T]
       -> Lookup [g,b:block x:tm,y:oft x S[]] [g',x:tm |-  #p[..]] [ |- T];
@@ -42,7 +42,7 @@ fn r => case r of
 | Pop v => Pop (Pop v);
 
 % Algorithmic equality of terms. _|-_<=>_:_ in the paper
-datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+inductive AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
 | AlgBase : [g' |-  mstep (M[..]) (P[..])]
           -> [g' |-  mstep (N[..]) (Q[..])]
           -> AlgEqR [g] [g' |-  P[..]] [g' |-  Q[..]] [ |- i]
@@ -50,7 +50,7 @@ datatype AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 | AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T[]] [g',x:tm |-  app (M[..]) x] [g',x |-  app (N[..]) x] [ |- S]
           -> AlgEqN [g] [g' |-  (M[..])] [g' |-  (N[..])] [ |- arr T S]
 % Algorithmic equality of paths. _|-_<->_:_ in the paper
-and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+and inductive AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
 | AlgVar : Lookup [g] [g' |-  #p[..]] [ |- T]
          -> AlgEqR [g] [g' |-  #p[..]] [g' |-  #p[..]] [ |- T]
 | AlgApp : AlgEqR [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- arr T S]
@@ -59,13 +59,13 @@ and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 ;
 
 % Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
-datatype IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
+inductive IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M[..]] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S[..] (M[..])];
 
 % Logical equivalence. _|-_~~_:_ in the paper
-datatype LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =
+stratified LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =
 | LogBase : AlgEqN [g] [g' |-  M[..]] [g' |-  N[..]] [ |- i]
           -> LogEq [g] [g' |-  M[..]] [g' |-  N[..]] [ |- i]
 | LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}
@@ -166,7 +166,7 @@ fn r, e => let e : LogEq [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] = e in case
 ;
 
 % Declarative equality. Written _|-_=_:_ in the paper
-datatype DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+inductive DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
 | DecBeta : DecEq [g,b:block x:tm,d:oft x T[]] [g',x:tm |-  M2] [g',x |-  N2] [ |- S]
           -> DecEq [g] [g' |-  M1[..]] [g' |-  N1[..]] [ |- T]
           -> DecEq [g] [g' |-  (app (lam (\x. M2)) (M1[..]))] [g' |-  N2[..,N1]] [ |- S]
@@ -187,7 +187,7 @@ datatype DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-datatype LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1: h' |- g'}{#S2: h' |- g'} ctype =
+inductive LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1: h' |- g'}{#S2: h' |- g'} ctype =
 | Nil : LogEqSub [] [] [h] [h' |- ^] [h' |- ^]
 | Dot : LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]] -> LogEq [h] [h' |-  M1[..]] [h' |-  M2[..]] [ |- T]
       -> LogEqSub [g,b:block x:tm,d:oft x T[]] [g',x:tm] [h] [h' |- #S1[..] (M1[..])] [h' |- #S2[..] (M2[..])]
@@ -284,7 +284,7 @@ fn e => case e of
 % Several of the following lemmas are to establish transitivity of algorithmic equivalenc
 
 % Equality on types
-datatype EqTp : [ |- tp] -> [ |- tp] -> ctype =
+inductive EqTp : [ |- tp] -> [ |- tp] -> ctype =
 | ReflTp : EqTp [ |- T] [ |- T];
 
 % Lookup produces unique types
@@ -310,7 +310,7 @@ fn e1, e2 => case (e1,e2) of
 ;
 
 % Equality of terms
-datatype EqTm : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
+inductive EqTm : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
 | ReflTm : EqTm [g' |-  M[..]] [g' |-  M[..]];
 
 % Determinacy of weak head reduction
@@ -321,7 +321,7 @@ fn s1, s2 => case (s1,s2) of
   let ReflTm = determinacy [g' |-  S1[..]] [g' |-  S2[..]] in ReflTm
 ;
 
-datatype HasCommonReduct : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
+inductive HasCommonReduct : (g':ctx) [g' |-  tm] -> [g' |-  tm] -> ctype =
 | Common : [g' |-  mstep (M1[..]) (N[..])] -> [g' |-  mstep (M2[..]) (N[..])] -> HasCommonReduct [g' |-  M1[..]] [g' |-  M2[..]];
 
 % Confluence is trivial because it's deterministic. This is just a convenient
@@ -335,7 +335,7 @@ fn s1, s2 => case (s1,s2) of
   confluence [g' |-  MS1[..]] [g' |-  MS2[..]]
 ;
 
-datatype empty : type =;
+LF empty : type =;
 
 % Terms in algorithmic path equivalence cannot step
 rec neutral_doesnt_step :

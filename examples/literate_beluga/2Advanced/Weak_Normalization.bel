@@ -8,7 +8,7 @@ Cave and Pientka[2013]</a>.
 
 First, let's define a simply typed &lambda;-calculus with one type:
 }}%
-datatype tp : type =
+LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
@@ -64,7 +64,7 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
@@ -135,7 +135,7 @@ fn r => case r of
 
 schema ctx = tm T;
 
-datatype RedSub : {g:ctx}{#S: |- g} ctype =
+inductive RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [g] [ |- #S[^] ] → Reduce [|- A] [ |- M]
      → RedSub [g, x:tm A[]] [ |- #S[^] M ] 

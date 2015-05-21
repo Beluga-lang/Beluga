@@ -36,7 +36,7 @@ inductive TmVar : {g:tctx} [ |- tp] -> ctype =
 typedef Sub : {g:ctx} {h:ctx} ctype =
 {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T];
 
-inductive Sem : {g:ctx} [ |- tp] -> ctype =
+stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : ({h:ctx}  Sub [g] [h] -> Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]

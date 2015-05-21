@@ -1,4 +1,4 @@
-inductive Person :ctype  #positive = P : Person ; 
+inductive Person :ctype   = P : Person ; 
 
 % inductive Man : ctype  = M : Man;
 
@@ -7,7 +7,7 @@ inductive Person :ctype  #positive = P : Person ;
 %   | Cons: Person -> List -> List
 % ;
 
-inductive Nat : ctype #stratified
+inductive Nat : ctype 
   =
   | Z : Nat 
   | Succ : Nat   -> Nat 
@@ -15,20 +15,20 @@ inductive Nat : ctype #stratified
 
 
 
-inductive Foo : ctype  #positive
+inductive Foo : ctype  
   =
   | F1 : Person -> Foo
   | F2 :  (Person -> Foo) -> Foo
 ;
 
-inductive TestA : ctype  #positive
+inductive TestA : ctype  
   =
   | Ta1 : TestA 
   | Ta2 : (Nat -> Nat)-> (Nat -> Nat) -> TestA
 ;
 
 
-inductive TestB : ctype #positive
+inductive TestB : ctype 
  =
   | Tb1 : (Person -> Person -> TestB ) -> ( Person  -> TestB) -> TestB
   | Tb2 : (Person -> Person -> TestB ) * (Person -> TestB) -> TestB
@@ -57,7 +57,7 @@ LF list: nat -> type =
 | cons: nat -> list I -> list (s I)
 ;
 
-inductive IsList : [|- list N] -> ctype #positive
+inductive IsList : [|- list N] -> ctype 
 =
 IL: {L:[|- list N]} IsList [|- L] 
 ;

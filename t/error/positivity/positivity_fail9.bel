@@ -1,9 +1,9 @@
-inductive A: ctype #positive
+inductive A: ctype 
 =
  | A2: A * A -> A
 ;
 
-inductive B: ctype #positive
+inductive B: ctype 
 =
  | B1: ((A -> B) -> B) -> B % fail
 

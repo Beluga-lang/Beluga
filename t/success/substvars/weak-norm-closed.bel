@@ -30,7 +30,7 @@ inductive Halts : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
           Halts [g] [g |- A[..]] [g |- M[..]]
 ;
 
-inductive Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+stratified Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 | Base : Halts [g] [g |- i] [g |- M[..] ] -> Reduce [g] [g |- i] [g |- M[..]]
 | Arr :  {g:ctx}{A:[g |- tp]}{B:[g |- tp]}{M:[g |- tm (arr (A[..]) (B[..]))]}
          Halts [g] [g |- arr (A[..]) (B[..])] [g |- M[..]] ->

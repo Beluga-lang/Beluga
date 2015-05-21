@@ -1,5 +1,5 @@
-inductive Person : ctype #positive = P : Person;
+inductive Person : ctype  = P : Person;
 
-inductive Test : ctype #positive  =
+inductive Test : ctype   =
  | T1 : ((Person -> (Person -> Test) ) -> ((Test -> Person) -> Test)) -> Test
 ;

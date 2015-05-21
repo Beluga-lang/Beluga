@@ -1,1 +1,1 @@
-Datatype Person has not been checked for positivity or stratification.
+Positivity checking of constructor Tc1 fails.

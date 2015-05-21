@@ -35,7 +35,7 @@ val/pair : val M -> val N -> val (pair M N).
 halts : tm -> type.  %name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
-inductive Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])

@@ -15,21 +15,21 @@ LF nat: type =
 | succ : nat -> nat
 ;
 
-inductive NList : [ |- nat] -> ctype #stratified  =
+inductive NList : [ |- nat] -> ctype   =
 | NNil : NList [ |- zero]
 | NCons : {g:tctx} {N:[ |- nat]} [g |- tm] -> NList [ |- N] -> NList [ |- succ N]
 ;
 
-inductive List : ctype #positive =
+inductive List : ctype  =
 | Nil : List
 | Cons : {g:tctx} [g |- tm] -> List -> List
 ;
 
-inductive Clos : ctype #positive=
+inductive Clos : ctype =
 Cl : (g:tctx)  [g,x:tm  |-  tm] -> ([g |- tm] -> Clos) -> Clos
 ;
 
-inductive CtxRel : {g:tctx} {h:tctx} ctype #stratified =
+inductive CtxRel : {g:tctx} {h:tctx} ctype  =
 | Rnil : CtxRel [ ] [ ]
 | Rsnoc : (g:tctx) (h:tctx) CtxRel [g] [h] -> CtxRel [g, x:tm] [h, x:tm]
 ;

@@ -1,11 +1,11 @@
-inductive A: ctype #positive
+inductive A: ctype 
 =
 % | A1: ((A -> A) -> A) -> A % fail
  | A2: A * A -> A
 % | A3: (A -> (A * A)) -> A % fail
 ;
 
-inductive B: ctype #positive
+inductive B: ctype 
 =
 % | B1: ((A -> B) -> B) -> B % fail
  | B2: ((A -> A) -> B) -> B
@@ -14,7 +14,7 @@ inductive B: ctype #positive
  | B5: (A -> B) -> (B * B) -> B
 ;
 
-inductive C: ctype #positive
+inductive C: ctype 
 =
  | C1: (A -> B) * (A -> C) -> C
  | C2: (B -> A) -> (C * (A -> C)) -> C

@@ -32,7 +32,7 @@ tmpair : type.
 ~ : tm -> tm -> tmpair.
 %infix ~ 5 right.
 
-inductive Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype  #stratified =
+stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn M N i]
           -> Log [g |- M ~ N ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
@@ -313,13 +313,13 @@ nil : dctx.
 
 %infix & 5 right.
 
-inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype #positive =
+inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype  =
 | Top : Lookup [|- G & T] [g,x:tm |-  x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p] [ |- T]
       -> Lookup [|- G & S] [g,x:tm |- #p[..]] [ |- T];
 
 inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
-#positive =
+ =
 | DecBeta : Decl [|- G & T] [g,x:tm |- M2 ~ N2] [ |- S]
           -> Decl [|-G] [g |- M1 ~ N1] [ |- T]
           -> Decl [|-G] [g |- (app (lam (\x. M2)) M1) ~ N2[.., N1]] [ |- S]
@@ -341,7 +341,7 @@ inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
 inductive LogSub : {g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0} {G:[|-dctx]}
-ctype #positive =
+ctype  =
 | Nil : LogSub [] [h |- ^] [h |- ^] [|-nil]
 | Dot : LogSub [g] [h |- #S1] [h |- #S2] [|- G]
        -> Log [h |- M1 ~ M2] [ |- T]

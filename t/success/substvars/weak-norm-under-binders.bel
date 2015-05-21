@@ -43,7 +43,7 @@ inductive Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
-inductive Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
+stratified Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 | Base : Halts [ |- i] [g |- M[..]] -> Reduce [ |- i] [g |- M[..]]
 | Arr :  {M:[h0 |- tm (arr A[] B[])]}
          ({h:ctx} {#R:h |- h0} {N:[h |- tm A[]]}

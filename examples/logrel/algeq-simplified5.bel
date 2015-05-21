@@ -27,7 +27,7 @@ algapp : algeqr M1 M2 (arr T S) -> algeqn N1 N2 T -> algeqr (app M1 N1) (app M2 
 schema tctx = some [t:tp] block x:tm, y:algeqr x x t;
 
 % Logical equivalence. _|-_~~_:_ in the paper
-inductive LogEq : (g:tctx) [g |- tm] -> [g |-  tm] -> [ |- tp] -> ctype  #stratified =
+stratified LogEq : (g:tctx) [g |- tm] -> [g |-  tm] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn (M[..]) (N[..]) i]
           -> LogEq [g |- M[..]] [g |- N[..]] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
@@ -308,13 +308,13 @@ nil : dctx.
 
 %infix & 5 right.
 
-inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype #positive =
+inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype  =
 | Top : Lookup [|- G & T] [g,x:tm |-  x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p[..]] [ |- T]
       -> Lookup [|- G & S] [g,x:tm |- #p[..]] [ |- T];
 
 inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> ctype
-#positive =
+ =
 | DecBeta : DecEq [|- G & T] [g,x:tm |-  M2] [g,x |-  N2] [ |- S]
           -> DecEq [|-G] [g |-  M1[..]] [g |-  N1[..]] [ |- T]
           -> DecEq [|-G] [g |-  (app (lam (\x. M2)) (M1[..]))] [g |- N2[.., N1]] [ |- S]
@@ -336,7 +336,7 @@ inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> cty
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
 inductive LogEqSub : {G:[|-dctx]}{g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0}
-ctype #positive =
+ctype  =
 | Nil : LogEqSub [|- nil ] [] [h |- ^] [h |- ^]
 | Dot : LogEqSub [|- G] [g0] [h |- #S1[..]] [h |- #S2[..]]
        -> LogEq [h |-  M1[..]] [h |-  M2[..]] [ |- T]

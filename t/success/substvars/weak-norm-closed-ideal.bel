@@ -30,7 +30,7 @@ LF halts : tm A -> type =
 halts/m : mstep M M' -> val M' -> halts M;
 %name halts H.
 
-inductive Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratified =
+stratified Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype  =
 | I : [ |- halts M] -> Reduce [ |- i] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])

@@ -8,4 +8,10 @@
     notifications:
       email:
         - beluga-commit@cs.mcgill.ca
-      irc: "chat.freenode.net#beluga"       
+      #irc: # reenable this when n mode is removed from #beluga channel
+      #  channels: 
+      #    - "chat.freenode.net#beluga"       
+      #  on_success: change
+      #  on_failure: change
+      #  skip_join: true 
+    

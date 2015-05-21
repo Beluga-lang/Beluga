@@ -1088,6 +1088,7 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
     cPsi' is the context of the pattern
     return elaborated cPsi'
     or raise exception
+   TODO: This is very similar to unifyDCtxWithFCVar
 *)
 and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
       | (Int.LF.Null , Apx.LF.Null) -> Int.LF.Null

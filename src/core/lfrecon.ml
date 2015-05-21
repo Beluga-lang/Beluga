@@ -2260,7 +2260,7 @@ let elCtxVar c_var = match c_var with
 let rec elDCtx recT cD psi = match psi with
   | Apx.LF.CtxHole -> 
     dprint (fun () -> "Encountered _ (underscore) for context...");
-    Int.LF.CtxVar (Whnf.newCVar None cD None Int.LF.Maybe)
+    Int.LF.CtxVar (Whnf.newCVar (Some (Id.mk_name (Id.SomeString "j"))) cD None Int.LF.Maybe)
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar (c_var) ->

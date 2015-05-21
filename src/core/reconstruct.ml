@@ -204,52 +204,73 @@ let mtypeSkelet mT = match mT with
   | Int.LF.ClTyp (Int.LF.MTyp Int.LF.Atom(_, a, _), cPsi) -> MT (a, cPsi)
   | Int.LF.CTyp (Some w) -> CT w
 
-(** This function does the same thing as unifyDCtx in unify.ml, but in
-    addition records new names for variables left free by the user
-    when they are instantiated. *)
-let unifyDCtxWithFCVar cD cPsi1 cPsi2 =
+let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
+  | Apx.LF.Null -> Int.LF.Null
+  | Apx.LF.CtxHole -> 
+    Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Int.LF.Maybe)
+
+  | Apx.LF.CtxVar ((Apx.LF.CtxOffset _ ) as c_var) ->
+      let schema = Schema.get_schema s_cid in
+      let c_var = Lfrecon.elCtxVar c_var in
+      let cPsi' = Int.LF.CtxVar (c_var) in
+        begin try
+          Check.LF.checkSchema loc cD cPsi' schema ;
+          cPsi'
+        with _ -> raise (Check.LF.Error (loc, Check.LF.CtxVarMismatch (cD, c_var, schema)))
+        end
+  | Apx.LF.CtxVar (Apx.LF.CtxName psi ) ->
+      (* This case should only be executed when c_var occurs in a pattern *)
+      begin try
+        let (_ , Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _)) = FCVar.get psi in
+          if s_cid = s_cid' then Int.LF.CtxVar (Int.LF.CtxName psi)
+          else
+            (let schema = Schema.get_schema s_cid in
+             let c_var' = Int.LF.CtxName psi in
+               raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var', schema))))
+      with Not_found ->
+        (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe));
+         Int.LF.CtxVar (Int.LF.CtxName psi))
+      end
+  | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
+      let cPsi = elDCtxAgainstSchema loc recT cD psi' s_cid in
+      let tA   = Lfrecon.elTyp recT cD cPsi a in
+      (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
+      let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ R.render_name x ^ ":" ^
+                        P.typToString cD cPsi (tA, LF.id)) in
+        Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+
+(* performs reconstruction of cPsi2 while comparing it with cPsi1 
+   this is (apparently) necessary to get the right schema for context holes? *)
+let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
   let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
-    | (Int.LF.Null , Int.LF.Null) -> ()
+    | (Int.LF.Null , Apx.LF.Null) -> ()
 
-    | (Int.LF.CtxVar (Int.LF.CInst ((_n1, ({contents = None} as cvar_ref1), _cO1, _schema1, _, _), _cD1)),
-       Int.LF.CtxVar (Int.LF.CInst ((_n2, ({contents = None} as cvar_ref2), _cO2, _schema2, _, _), _cD2))) ->
-      if cvar_ref1 != cvar_ref2 then
-        Unify.instantiateCtxVar (cvar_ref1, cPsi2)
-
-    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp s_cid, _, _), _cD)) , cPsi) ->
+    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, _), _cD)) , cPsi) ->
       begin
+	let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
         Unify.instantiateCtxVar (cvar_ref, cPsi);
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp s_cid, Int.LF.Maybe))
+            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe))
           | _ -> ()
       end
 
-    | (cPsi, Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp s_cid, _, _), _cD))) ->
-      begin
-        Unify.instantiateCtxVar (cvar_ref, cPsi);
-        match Context.ctxVar cPsi with
-          | None -> ()
-          | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp s_cid, Int.LF.Maybe))
-          | _ -> ()
-      end
-
-    | (Int.LF.CtxVar  psi1_var , Int.LF.CtxVar psi2_var) when psi1_var = psi2_var -> ()
+    | (cPsi, Apx.LF.CtxHole) -> ()
+    | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var) , Apx.LF.CtxVar (Apx.LF.CtxOffset psi2_var)) when psi1_var = psi2_var -> ()
+    | (Int.LF.CtxVar (Int.LF.CtxName g) , Apx.LF.CtxVar (Apx.LF.CtxName h)) when g = h -> ()
 
     | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) ,
-       Int.LF.DDec (cPsi2, Int.LF.TypDecl(_ , tA2))) ->
+       Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(_ , tA2))) ->
       loop cD cPsi1 cPsi2;
+      let tA2 = Lfrecon.elTyp Lfrecon.Pibox cD cPsi1 tA2 in
       Unify.unifyTyp cD cPsi1 (tA1, LF.id) (tA2, LF.id)
 
-    | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _),
-       Int.LF.DDec (cPsi2, Int.LF.TypDeclOpt _ )) ->
-      loop cD cPsi1 cPsi2
+    | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _), _) -> failwith "Unexpected case"
 
     | _ -> raise (Unify.Failure "context clash")
 
-  in loop cD (Whnf.normDCtx cPsi1)  (Whnf.normDCtx cPsi2)
+  in loop cD (Whnf.normDCtx cPsi1)  cPsi2
 
 (* -------------------------------------------------------------*)
 
@@ -297,41 +318,6 @@ let elSchElem (Apx.LF.SchElem (ctx, typRec)) =
 
 let elSchema (Apx.LF.Schema el_list) =
    Int.LF.Schema (List.map elSchElem el_list)
-
-let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
-  | Apx.LF.Null -> Int.LF.Null
-  | Apx.LF.CtxHole -> 
-    Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Int.LF.Maybe)
-
-  | Apx.LF.CtxVar ((Apx.LF.CtxOffset _ ) as c_var) ->
-      let schema = Schema.get_schema s_cid in
-      let c_var = Lfrecon.elCtxVar c_var in
-      let cPsi' = Int.LF.CtxVar (c_var) in
-        begin try
-          Check.LF.checkSchema loc cD cPsi' schema ;
-          cPsi'
-        with _ -> raise (Check.LF.Error (loc, Check.LF.CtxVarMismatch (cD, c_var, schema)))
-        end
-  | Apx.LF.CtxVar (Apx.LF.CtxName psi ) ->
-      (* This case should only be executed when c_var occurs in a pattern *)
-      begin try
-        let (_ , Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _)) = FCVar.get psi in
-          if s_cid = s_cid' then Int.LF.CtxVar (Int.LF.CtxName psi)
-          else
-            (let schema = Schema.get_schema s_cid in
-             let c_var' = Int.LF.CtxName psi in
-               raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var', schema))))
-      with Not_found ->
-        (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe));
-         Int.LF.CtxVar (Int.LF.CtxName psi))
-      end
-  | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
-      let cPsi = elDCtxAgainstSchema loc recT cD psi' s_cid in
-      let tA   = Lfrecon.elTyp recT cD cPsi a in
-      (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
-      let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ R.render_name x ^ ":" ^
-                        P.typToString cD cPsi (tA, LF.id)) in
-        Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
 let elSvar_class = function 
   | Apx.LF.Ren -> Int.LF.Ren
@@ -512,14 +498,13 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
   | Apx.Comp.MetaObj (_loc', psi, m) , (Int.LF.ClTyp (Int.LF.STyp (_, tA), cPsi)) ->
     elMetaObj' cD (Apx.Comp.MetaSub(_loc', psi, Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub))) cTt
 
-  | (Apx.Comp.MetaSubAnn (_, cPhi, _), (Int.LF.ClTyp (_, cPsi')))
-  | (Apx.Comp.MetaObjAnn (_, cPhi, _), (Int.LF.ClTyp (_, cPsi'))) ->
-      let cPhi = Lfrecon.elDCtx (Lfrecon.Pibox) cD cPhi in
-      let _ = dprint (fun () -> "[elMetaObjAnn] cPsi = " ^ P.dctxToString cD  cPsi') in
-      let _ = dprint (fun () -> "[elMetaObjAnn] cPhi = " ^ P.dctxToString cD  cPhi) in
+  | (Apx.Comp.MetaSubAnn (loc, cPhi, _), (Int.LF.ClTyp (_, cPsi')))
+  | (Apx.Comp.MetaObjAnn (loc, cPhi, _), (Int.LF.ClTyp (_, cPsi'))) ->
       let _ =
-        try unifyDCtxWithFCVar cD cPsi' cPhi
-        with Unify.Failure _ -> raise (Error (getLoc cM, MetaObjContextClash (cD, cPsi', cPhi))) in
+        try unifyDCtxWithFCVar loc cD cPsi' cPhi
+        with Unify.Failure _ ->
+	  let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD cPhi in
+	  raise (Error (getLoc cM, MetaObjContextClash (cD, cPsi', cPhi))) in
       elMetaObj' cD (flattenAnn (Context.dctxToHat cPsi') cM) cTt
 
   | (_ , _) -> raise (Error (getLoc cM,  MetaObjectClash (cD, cTt)))

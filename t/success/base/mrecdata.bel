@@ -1,19 +1,19 @@
 % test case for mutually recursive datatypes.
 % adapted from untyped closure conversion from POPL12 paper
 
-datatype tm:type  =
+LF tm:type  =
 | lam: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 ;
 
-datatype nat:type =
+LF nat:type =
 | z : nat
 | s : nat -> nat
 ;
 
 schema ctx = tm;
 
-datatype envr: type =
+LF envr: type =
 | nil: envr
 | snoc : envr -> ctm -> envr
 

@@ -22,11 +22,11 @@ schema ctx = neut T;
 nat : type.
 
 
-datatype NeutVar : {g:ctx} [ |- tp] -> ctype  =
+inductive NeutVar : {g:ctx} [ |- tp] -> ctype  =
 | NeutVar : {#p:[g |- neut T[]]} NeutVar [g] [ |- T]
 ;
 
-datatype TmVar : {g:tctx} [ |- tp] -> ctype  =
+inductive TmVar : {g:tctx} [ |- tp] -> ctype  =
 | TmVar : {#p:[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 
@@ -34,13 +34,13 @@ datatype TmVar : {g:tctx} [ |- tp] -> ctype  =
 
 
 
-datatype Extends : {g:ctx} {h:ctx} ctype #stratified =
+inductive Extends : {g:ctx} {h:ctx} ctype #stratified =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}
           Extends [g] [h] -> Extends [g] [h,x:neut A[]]
 ;
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype  #stratified  = 
+inductive Sem : {g:ctx} [ |- tp] -> ctype  #stratified  = 
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : ({h:ctx} Extends [g] [h] -> Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]

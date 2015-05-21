@@ -113,6 +113,10 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
+ type datatype_flavour =
+     InductiveDatatype
+   | CoinductiveDatatype
+
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal

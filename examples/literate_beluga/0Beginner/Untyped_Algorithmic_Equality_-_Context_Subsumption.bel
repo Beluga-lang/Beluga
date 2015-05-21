@@ -17,7 +17,7 @@ The mechanization highlights several aspects:
 %{{
 ## Syntax
 We first define lambda-terms in the logical framework LF using Beluga-style syntax. }}%
-datatype tm: type = 
+LF tm: type = 
 | app: tm -> tm -> tm
 | lam: (tm -> tm) -> tm
 ;
@@ -31,7 +31,7 @@ We describe algorithmic and declarative equality for the untyped lambda-calculus
 ### Algorithmic Equality
 For algorithmic equality, we have the predicate <code>aeq</code> of type <code>tm -> tm -> type</code>, and inference rules for term applications <code>ae_a</code> and lambda-abstractions <code>ae_l</code>}}%
 
-datatype aeq: tm -> tm -> type = 
+LF aeq: tm -> tm -> type = 
 | ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2)
 
 | ae_l : ({x : tm} aeq x x -> aeq (M x) (N x))
@@ -43,7 +43,7 @@ datatype aeq: tm -> tm -> type =
 ### Declarative Equality
 Next we define declarative equality in order to establish its equivalence with algorithmic equality and prove completeness. Note that the only difference between the two judgements is that declarative equality explicitly includes inference rules for reflexivity <code>de_r</code>, transitivity <code>de_t</code>, and symmetry <code>de_s</code>: properties which we will prove to be intrinsic to algorithmic equality in the untyped lambda-calculus.}}%
 
-datatype deq: tm -> tm -> type = 
+LF deq: tm -> tm -> type = 
 | de_l: ({x:tm} deq x x -> deq (M x) (M' x))
      -> deq (lam (\x. M x)) (lam (\x. M' x))
 | de_a: deq M1 N1 -> deq M2 N2

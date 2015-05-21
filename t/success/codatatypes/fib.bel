@@ -1,9 +1,9 @@
-datatype nat : type =
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
 
-codatatype Stream : ctype =
+coinductive Stream : ctype =
 | Hd : Stream -> [ |- nat]
 | Tl : Stream -> Stream
 ;

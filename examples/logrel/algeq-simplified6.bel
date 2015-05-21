@@ -32,7 +32,7 @@ tmpair : type.
 ~ : tm -> tm -> tmpair.
 %infix ~ 5 right.
 
-datatype Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype  #stratified =
+inductive Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype  #stratified =
 | LogBase : [g |- algeqn M N i]
           -> Log [g |- M ~ N ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
@@ -199,7 +199,7 @@ fn s1 => fn s2 => case s1 of
   let [g |- refltm] = determinacy [g |-  S1] [g |-  S2] in [g |- refltm]
 ;
 
-datatype HasCommonReduct : (g:tctx) [g |-  tm] -> [g |-  tm] -> ctype =
+inductive HasCommonReduct : (g:tctx) [g |-  tm] -> [g |-  tm] -> ctype =
 | Common : [g |-  mstep M1 N] -> [g |-  mstep M2 N] -> HasCommonReduct [g |-  M1] [g |-  M2];
 
 % Confluence is trivial because it's deterministic. This is just a convenient
@@ -217,7 +217,7 @@ fn s1 => fn s2 => case s1 of
     confluence [g |-  MS1] [g |-  MS2]
 ;
 
-datatype empty : type =;
+LF empty : type = ;
 
 % Terms in algorithmic path equivalence cannot step
 rec neutral_doesnt_step : (g:tctx)
@@ -313,12 +313,12 @@ nil : dctx.
 
 %infix & 5 right.
 
-datatype Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype #positive =
+inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype #positive =
 | Top : Lookup [|- G & T] [g,x:tm |-  x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p] [ |- T]
       -> Lookup [|- G & S] [g,x:tm |- #p[..]] [ |- T];
 
-datatype Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
+inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 #positive =
 | DecBeta : Decl [|- G & T] [g,x:tm |- M2 ~ N2] [ |- S]
           -> Decl [|-G] [g |- M1 ~ N1] [ |- T]
@@ -340,7 +340,7 @@ datatype Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-datatype LogSub : {g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0} {G:[|-dctx]}
+inductive LogSub : {g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0} {G:[|-dctx]}
 ctype #positive =
 | Nil : LogSub [] [h |- ^] [h |- ^] [|-nil]
 | Dot : LogSub [g0] [h |- #S1] [h |- #S2] [|- G]
@@ -416,7 +416,7 @@ case d of
 | DecTrans d1 d2 => logEqTrans [|- _ ] (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
 ;
 
-datatype IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:g' |- g} ctype =
+inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:g' |- g} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id]
        -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]

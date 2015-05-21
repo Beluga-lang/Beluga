@@ -41,7 +41,7 @@ Below we describe the domain of semantic values, which we can think of as being 
 In the course of this development, `#W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g,x1:neut T1,...,xn:neut Tn`, but the extra generality does no harm here.
 }}%
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype =
+inductive Sem : {g:ctx} [ |- tp] -> ctype =
 | Base :  [g |- norm b] -> Sem [g] [ |- b]
 | Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]

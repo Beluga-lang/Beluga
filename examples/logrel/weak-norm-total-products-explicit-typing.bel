@@ -1,4 +1,4 @@
-datatype tp : type =
+LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 | prod : tp -> tp -> tp
@@ -35,7 +35,7 @@ val/pair : val M -> val N -> val (pair M N).
 halts : tm -> type.  %name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
+inductive Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
@@ -71,12 +71,12 @@ nil : tctx.
 snoc : tctx -> tp -> tctx.
 
 % Typing
-datatype Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype =
+inductive Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype =
 | Top : Lookup [|- snoc G A] [gamma,x:tm |- x] [|- A]
 | Pop : Lookup [|- G] [gamma |- #p[..]] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p[..]] [|- A]
 ;
 
-datatype Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
+inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 | Lam : Oft [|- snoc G A] [gamma,x:tm |- M] [ |- B ] -> Oft [|- G ] [gamma |- lam (\x. M)] [|- arr A B]
 | App : Oft [|- G ] [gamma |- M[..] ] [|- arr A B] -> Oft [|- G ] [gamma |- N[..]] [|- A] -> Oft [|- G] [gamma |- app (M[..]) (N[..])] [|- B]
 | Var : Lookup [|- G ] [gamma |- #p[..]] [|- A] -> Oft [|- G] [gamma |- #p[..]] [|- A]
@@ -86,7 +86,7 @@ datatype Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 | C : Oft [|- G] [gamma |- c] [|- b]
 ;
 
-datatype RedSub : {g:ctx}{G:[|-tctx]}{#S: |- g} ctype =
+inductive RedSub : {g:ctx}{G:[|-tctx]}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [|- nil] [ |- ^ ]
 | Dot : RedSub  [g] [|- G] [ |- #S[^] ] → Reduce [|- A] [ |- M]
      → RedSub [g, x:tm] [|- snoc G A] [ |- #S[^] , M ] 

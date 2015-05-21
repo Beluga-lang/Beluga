@@ -1,6 +1,6 @@
 % coverage
 
-datatype nat : type = 
+LF nat : type = 
 | z : nat
 | s : nat -> nat
 ;
@@ -8,7 +8,7 @@ datatype nat : type =
 
 % The sub-term relation on naturals
 
-datatype le : nat -> nat -> type =
+LF le : nat -> nat -> type =
   | le-base : le N (s N)
   | le-step : le M N -> le M (s N)
   | le-foo: le M N -> le N M

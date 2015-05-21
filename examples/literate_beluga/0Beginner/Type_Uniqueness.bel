@@ -10,7 +10,7 @@ The LF type tp has two constructors, <code>nat</code> and <code>arr</code>, corr
 }}%
 
 % Definition of types and expressions
-datatype tp: type =  
+LF tp: type =  
 | arr: tp -> tp -> tp
 | nat: tp
 ;
@@ -19,7 +19,7 @@ datatype tp: type =
 The LF type <code>tm</code> also has two constructors. The constructor <code>app</code> takes as input two objects of type <code>tm</code> and allows us to construct an object of type <code>tm</code>. The constructor for lambda-terms also takes two arguments as input; it first takes an object of type <code>tp</code> for the type annotation and the body of the abstraction is second. We use higher-order abstract syntax to represent the object-level binding of the variable <code>x</code> in the body <code>M</code>. Accordingly, the body of the abstraction is represented by the type <code>(tm -> tm)</code>. For example, <code>lam x:(arr nat nat) . lam y:nat . app x y</code> is represented by </code> lam (arr nat nat) \x.lam nat \y.app x y</code> . This encoding has several well-known advantages: First, the encoding naturally supports alpha-renaming of bound variables, which is inherited from the logical framework. Second, the encoding elegantly supports substitution for bound variables which reduces to beta-reduction in the logical framework LF.
 }}%
 
-datatype term: type = 
+LF term: type = 
 | lam : tp -> (term -> term) -> term
 | app : term -> term -> term
 ;
@@ -27,7 +27,7 @@ datatype term: type =
 %{{##  Typing Rules
 We describe typing judgment using the type family <code>has_type</code> which relates terms <code>tm</code> and types <code>tp</code>. The inference rules for lambda-abstraction and application are encoded as <code>h_lam</code> and <code>h_app</code>, respectively.}}%
 
-datatype hastype: term -> tp -> type = 
+LF hastype: term -> tp -> type = 
 | h_lam: ({x:term}hastype x T1 -> hastype (M x) T2)
         -> hastype (lam T1 M) (arr T1 T2)
 | h_app: hastype M1 (arr T2 T) -> hastype M2 T2

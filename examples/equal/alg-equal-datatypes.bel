@@ -1,4 +1,4 @@
-datatype term: type =
+LF term: type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 ;
@@ -7,7 +7,7 @@ datatype term: type =
 schema tctx = term;
 
 % Algorithmic Equality
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified =
+inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified =
 | Ae_v : Aeq [g |- #p[..]] [g |- #p[..]]
 | Ae_a : Aeq [g |- E1[..]] [g |- F1[..] ] -> Aeq [g |- E2[..]] [g |- F2[..]]
       -> Aeq [g |- app E1 E2] [g |- app (F1[..]) (F2[..])]
@@ -16,7 +16,7 @@ datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified =
 ;
 
 % Declarative Equality
-datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype =
+inductive Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype =
 | De_v : Deq [g |- #p[..]] [g |- #p[..]]
 | De_l : Deq [g,x:term |-  T] [g,x:term |-  T']
        -> Deq [g |- lam (\x. T)] [g |- lam (\x. T')]

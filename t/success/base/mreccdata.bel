@@ -1,13 +1,13 @@
-datatype atomic_tp: type =
+LF atomic_tp: type =
 ;
 
-datatype nat: type =
+LF nat: type =
 | z: nat
 | s: nat -> nat
 ;
 
 
-datatype Even: ctype =
+inductive Even: ctype =
 | Ze : Even
 | Ev : Odd -> Even
 and
@@ -16,7 +16,7 @@ Odd: ctype =
 ;
 
 
-datatype Nat: ctype =
+inductive Nat: ctype =
 | No : Odd -> Nat
 | Ne : Even -> Nat
 ;

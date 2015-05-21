@@ -68,7 +68,7 @@ do_testing() {
     # Limit runtime of each test case, in seconds.
     ulimit -t $TIMEOUT
 
-    for i in $(test_cases | sort_cases)
+    for i in $(test_cases | sort -n)
     do
 	n=$((n+1))
 	echo -ne "$C[start]**$CEND TEST $n: $i ... "

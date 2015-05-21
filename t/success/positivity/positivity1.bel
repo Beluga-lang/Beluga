@@ -1,13 +1,13 @@
-datatype Person :ctype  #positive = P : Person ; 
+inductive Person :ctype  #positive = P : Person ; 
 
-% datatype Man : ctype  = M : Man;
+% inductive Man : ctype  = M : Man;
 
-% datatype List :  ctype  = 
+% inductive List :  ctype  = 
 %   | Nil : List
 %   | Cons: Person -> List -> List
 % ;
 
-datatype Nat : ctype #stratified
+inductive Nat : ctype #stratified
   =
   | Z : Nat 
   | Succ : Nat   -> Nat 
@@ -15,20 +15,20 @@ datatype Nat : ctype #stratified
 
 
 
-datatype Foo : ctype  #positive
+inductive Foo : ctype  #positive
   =
   | F1 : Person -> Foo
   | F2 :  (Person -> Foo) -> Foo
 ;
 
-datatype TestA : ctype  #positive
+inductive TestA : ctype  #positive
   =
   | Ta1 : TestA 
   | Ta2 : (Nat -> Nat)-> (Nat -> Nat) -> TestA
 ;
 
 
-datatype TestB : ctype #positive
+inductive TestB : ctype #positive
  =
   | Tb1 : (Person -> Person -> TestB ) -> ( Person  -> TestB) -> TestB
   | Tb2 : (Person -> Person -> TestB ) * (Person -> TestB) -> TestB
@@ -42,22 +42,22 @@ datatype TestB : ctype #positive
 
 
 
-datatype nat  : type =
+LF nat  : type =
 | z: nat
 | s: nat -> nat
 ;
 
-datatype plus: nat -> nat -> nat -> type =
+LF plus: nat -> nat -> nat -> type =
 | pz: plus z Y Y
 | ps: plus X Y Z -> plus (s X) Y (s Z)
 ;
 
-datatype list: nat -> type =
+LF list: nat -> type =
 | nil: list z
 | cons: nat -> list I -> list (s I)
 ;
 
-datatype IsList : [|- list N] -> ctype #positive
+inductive IsList : [|- list N] -> ctype #positive
 =
 IL: {L:[|- list N]} IsList [|- L] 
 ;

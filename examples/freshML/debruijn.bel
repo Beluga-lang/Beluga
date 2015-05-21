@@ -3,14 +3,14 @@
 %
 
 % Expressions
-datatype term   :  type =         
+LF term   :  type =         
 | app   : term -> term -> term
 | lam   : (term -> term) -> term
 ;
 
 % Translating to untyped deBruijn terms
 
-datatype term'   : type = 
+LF term'   : type = 
 | one    : term'
 | shift  : term' -> term'  % ^
 | lam'   : term'  -> term' 

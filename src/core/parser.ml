@@ -333,34 +333,25 @@ GLOBAL: sgn;
                | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
              end
 
-  (*      |
-          "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
-          const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
-            Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-  *)
-        | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
-             [Sgn.MRecTyp(_loc, f)]
-  (*
-        | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
-            check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
-  *)
-
-        | "datatype"; f = cmp_cdat;
+        | datatype_flavour; f = cmp_cdat;
           g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
                   | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
             begin match g with
               | None -> [Sgn.MRecTyp(_loc, [f])]
               | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
             end
-
-        | "codatatype"; f = cocmp_cdat;
+ 
+       (* TODO: Refactor this. Pretty sure there's something wrong here *)
+        | "coinductive"; f = cocmp_cdat;
           g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
                   | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
             begin match g with
               | None -> [Sgn.MRecTyp(_loc, [f])]
               | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
             end
+
+        | "LF"; f = LIST1 cmp_dat SEP "and"; ";" ->
+             [Sgn.MRecTyp(_loc, f)]
 
         | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
             [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
@@ -1125,9 +1116,15 @@ GLOBAL: sgn;
 
  mutual_cmp_cdat:
     [[
-        "datatype"; f = cmp_cdat -> f
+        "inductive"; f = cmp_cdat -> f
+      | "coinductive"; f = cocmp_cdat -> f
+   ]]
+;
 
-      | "codatatype"; f = cocmp_cdat -> f
+ datatype_flavour:
+   [[
+     "inductive" -> Comp.InductiveDatatype
+   | "coinductive" -> Comp.CoinductiveDatatype
    ]]
 ;
 

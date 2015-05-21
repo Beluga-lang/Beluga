@@ -20,17 +20,17 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype IsValue : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+inductive IsValue : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 | C : IsValue [g] [g |- i]  [g |- c]
 | Lam : IsValue [g] [g |- arr (A[..]) (B[..])] [g |- lam (\x. M)]
 ;
 
-datatype Halts : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+inductive Halts : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 | Halts : {S:[g |- mstep (M[..]) (V[..])]} IsValue [g] [g |- A[..]] [g |- V[..] ] ->
           Halts [g] [g |- A[..]] [g |- M[..]]
 ;
 
-datatype Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+inductive Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 | Base : Halts [g] [g |- i] [g |- M[..] ] -> Reduce [g] [g |- i] [g |- M[..]]
 | Arr :  {g:ctx}{A:[g |- tp]}{B:[g |- tp]}{M:[g |- tm (arr (A[..]) (B[..]))]}
          Halts [g] [g |- arr (A[..]) (B[..])] [g |- M[..]] ->
@@ -62,7 +62,7 @@ fn r => let r : Reduce [g] [g |- A[..]] [g |- M[..]] = r in case r of
 ;
 
 %  h |- #s : g
-datatype RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
+inductive RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
 | Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm A[#S]]} 
         RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A[#S] ] [h |- M[..]]

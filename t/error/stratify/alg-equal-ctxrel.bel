@@ -42,7 +42,7 @@ schema tdCtx =  block x:term,  _t:deq x x ;
 %----------------------------------------------------------
 % Context relations
 
-datatype Crel : {g:tCtx} {h:taCtx} ctype =
+inductive Crel : {g:tCtx} {h:taCtx} ctype =
 | Crel_e : Crel [ ] []
 | Crel_xa: Crel [g] [h] -> Crel [g, x:term] [h, b: block (x:term, u:aeq x x)]
 ;
@@ -53,7 +53,7 @@ datatype Crel : {g:tCtx} {h:taCtx} ctype =
 % 1) When given [g |- M[..]] then we can always weaken it to obtain [h |- N[..]]
 % 2) When given [h |- N[..]] we can always strengthen it to obtain [g |- M[..]]
 
-datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratified =
+inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratified =
 | TRvar0 : {h: taCtx} Crel [g] [h] ->
             TRel [g, x:term |-  x]
  		 [h, b:block (x:term, u:aeq x x) |- b.1]

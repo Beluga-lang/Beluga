@@ -18,10 +18,10 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype IsVar : (g:ctx){M:[g |- tm A]} ctype =
+inductive IsVar : (g:ctx){M:[g |- tm A]} ctype =
 | IsVar : {#p:[g |- tm A[]]} IsVar [g |- #p[..]];
 
-datatype IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
+inductive IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
 | Nil : IsVarSub [] [h |- ^ ]
 | Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:h |- g}{M:[h |- tm A[]]}
       IsVarSub [g] [h |- #S[..] ]
@@ -31,7 +31,7 @@ datatype IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
 
 % This could be defined at the LF layer, but then it would require a bigger schema, and I don't want to deal with that
 % Could enforce also eta longness easily, but meh
-datatype IsNormal : (g:ctx) {M:[g |- tm A]} ctype =
+inductive IsNormal : (g:ctx) {M:[g |- tm A]} ctype =
 | Neut : IsNeutral [g |- M[..]] -> IsNormal [g |- M[..]]
 | Lam : IsNormal [g,x:tm A[] |-  M]
      -> IsNormal [g |- lam (\x. M)]
@@ -42,14 +42,14 @@ and IsNeutral : (g:ctx) {M:[g |- tm A]} ctype =
      -> IsNeutral [g |- app (M[..]) (N[..])]
 ;
 
-datatype Halts : (g:ctx) {M:[g |- tm A]} ctype =
+inductive Halts : (g:ctx) {M:[g |- tm A]} ctype =
 | Halts : [g |- mstep (M[..]) (V[..])] -> IsNormal [g |- V[..] ] ->
           Halts [g |- M[..]]
 ;
 %{
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
-datatype Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A]} ctype =
+inductive Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A]} ctype =
 | Base : Halts [g |- M[..]] -> Reduce [ |- i] [g |- M[..]]
 | Arr :  {M:[h0 |- tm (arr A B)]}
          ({h:ctx} {#R:h0[h]} {N:[h |- tm A]}
@@ -221,7 +221,7 @@ case r of
    )
 ;
 
-datatype RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
+inductive RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
 | Nil : RedSub [] [h |- ^ ]
 | Dot : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[h |- tm A]}{#S:h |- g}
         RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M[..]]

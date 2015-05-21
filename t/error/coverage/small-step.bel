@@ -20,7 +20,7 @@
 }%
 
 
-datatype term  : type = 
+LF term  : type = 
 | true  : term
 | false : term
 | switch: term -> term -> term -> term
@@ -38,7 +38,7 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 
 
 % Values
-datatype value     : term -> type = 
+LF value     : term -> type = 
 | v_true : value true
 | v_false: value false
 | v_z    : value z
@@ -46,7 +46,7 @@ datatype value     : term -> type =
 ;
 
 % Small-step operational semantics
-datatype step: term -> term -> type = 
+LF step: term -> term -> type = 
 | e_switch_true:  step (switch true T2 T3)    T2
 | e_switch_false: step (switch false T2 T3)   T3
 | e_pred_zero:    step (pred z) z

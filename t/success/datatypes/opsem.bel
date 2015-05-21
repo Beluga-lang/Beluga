@@ -1,4 +1,4 @@
-datatype Colour : ctype =
+inductive Colour : ctype =
 | Blue : Colour
 | Red  : Colour
 ;

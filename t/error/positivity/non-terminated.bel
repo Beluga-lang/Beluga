@@ -1,8 +1,8 @@
-datatype Empty : ctype    #positive =
+inductive Empty : ctype    #positive =
  ;
 
 
-datatype D : ctype    #positive
+inductive D : ctype    #positive
  = 
  | Con :  (D -> Empty) -> D
 ;

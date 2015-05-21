@@ -76,9 +76,9 @@ mlam A => fn e => case [ |- A] of
 | [ |- i ] =>
   let LogBase a = e in a
 | [ |- arr A B] =>
-  let LogArr [g |-  M1] [_ |-  M2] f = e in % TODO
+  let LogArr [_ |-  M1] [_ |-  M2] f = e in
   let [_,b:block x:tm,y:algeqr x x A[] |- R]
-      = reify [ |- B ] (f [_,b:block x:tm,y:algeqr x x A[]] [g,b |- ..] [g,b |- b.1] [g,b |- b.1] % TODO
+      = reify [ |- B ] (f [_,b:block x:tm,y:algeqr x x A[]] [_ |- ..] [_,b |- b.1] [_,b |- b.1]
         (reflect [ |- A ] [_,b:block x:tm,y:algeqr x x A[] |- b.2]))
   in [_ |- algarr (\x. \y. R[.., <x;y>])]
 ;

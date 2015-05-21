@@ -50,7 +50,7 @@ inductive AlgEqN : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> cty
 | AlgArr :  AlgEqN [g,b:block x:tm,d:oft x T[]] [g',x:tm |-  app (M[..]) x] [g',x |-  app (N[..]) x] [ |- S]
           -> AlgEqN [g] [g' |-  (M[..])] [g' |-  (N[..])] [ |- arr T S]
 % Algorithmic equality of paths. _|-_<->_:_ in the paper
-and      AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
+and inductive AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctype =
 | AlgVar : Lookup [g] [g' |-  #p[..]] [ |- T]
          -> AlgEqR [g] [g' |-  #p[..]] [g' |-  #p[..]] [ |- T]
 | AlgApp : AlgEqR [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- arr T S]

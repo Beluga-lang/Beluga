@@ -35,7 +35,7 @@ inductive IsNormal : (g:ctx) {M:[g |- tm A]} ctype =
 | Neut : IsNeutral [g |- M[..]] -> IsNormal [g |- M[..]]
 | Lam : IsNormal [g,x:tm A[] |-  M]
      -> IsNormal [g |- lam (\x. M)]
-and IsNeutral : (g:ctx) {M:[g |- tm A]} ctype =
+and inductive IsNeutral : (g:ctx) {M:[g |- tm A]} ctype =
 | Var : {#p:[g |- tm A[]]} IsNeutral [g |- #p[..]]
 | App : IsNeutral [g |- M[..]]
      -> IsNormal  [g |- N[..]]

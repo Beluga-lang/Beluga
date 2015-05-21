@@ -249,13 +249,8 @@ and recSgnDecl ?(pauseHtml=false) d =
 	(*   | Some _ -> Int.Sgn.Positivity *)
  
 	let p = (match pflag with 
-	          | None -> Int.Sgn.Nocheck 
-		  | Some (Ext.Sgn.Stratify (loc_s, n)) -> 
-		    (match n with 
-		      |Some s -> Int.Sgn.Stratify (loc_s, int_of_string s)
-		      |None   -> Int.Sgn.StratifyAll loc_s
-		    )
-		  | Some (Ext.Sgn.Positivity) -> Int.Sgn.Positivity
+		  | Ext.Sgn.StratifiedDatatype -> Int.Sgn.StratifyAll loc
+		  | Ext.Sgn.InductiveDatatype -> Int.Sgn.Positivity
                 ) in
 	Total.stratNum := -1 ;
         let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
@@ -517,9 +512,9 @@ and recSgnDecl ?(pauseHtml=false) d =
 	    sgn
 
     | Ext.Sgn.MRecTyp (loc, recDats) ->
-        let recTyps   = List.map List.hd recDats in
+        let recTyps   = List.map (fun (k,_) -> k) recDats in
         let recTyps'  = List.map (recSgnDecl ~pauseHtml:true) recTyps in
-        let recConts  = List.map List.tl recDats in
+        let recConts  = List.map (fun (_,cs) -> cs) recDats in
         let recConts' = List.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
         let  _  = List.map freeze_from_name recTyps in
         Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x::y) recTyps' recConts')

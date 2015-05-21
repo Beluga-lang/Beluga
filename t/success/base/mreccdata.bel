@@ -10,8 +10,7 @@ LF nat: type =
 inductive Even: ctype =
 | Ze : Even
 | Ev : Odd -> Even
-and
-Odd: ctype =
+and inductive Odd : ctype =
 | Od : Even -> Odd
 ;
 

@@ -333,22 +333,12 @@ GLOBAL: sgn;
                | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
              end
 
-        | datatype_flavour; f = cmp_cdat;
-          g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
-                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+        | f = mutual_cmp_cdat;
+          g = OPT [ "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
             begin match g with
               | None -> [Sgn.MRecTyp(_loc, [f])]
               | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end
- 
-       (* TODO: Refactor this. Pretty sure there's something wrong here *)
-        | "coinductive"; f = cocmp_cdat;
-          g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
-                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-            begin match g with
-              | None -> [Sgn.MRecTyp(_loc, [f])]
-              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end
+            end 
 
         | "LF"; f = LIST1 cmp_dat SEP "and"; ";" ->
              [Sgn.MRecTyp(_loc, f)]
@@ -442,27 +432,6 @@ GLOBAL: sgn;
       ]
     ]
 ;
-
-  positive_flag:
-    [
-      [
-	"#positive" -> Sgn.Positivity
-      | "#stratified" ; k = OPT stratify_arg ->  (Sgn.Stratify (_loc, k))
-      (* | "#stratify" ; x = num stratify_order ; "(";  r = UPSYMBOL; args = LIST0 call_args ;  ")"    ->  *)
-      (*        Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args) *)
-      ]
-    ]
-;
-
-  stratify_arg:
-    [
-      [
-	k = INTLIT -> k	
-      ]
-    ]
-
-;
-
 
   total_order:
     [
@@ -1095,36 +1064,36 @@ GLOBAL: sgn;
   cmp_dat:
     [[
      a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
-       Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+      (Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) , const_decls)
     ]]
   ;
 
   cmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; p = OPT [f = positive_flag ->  f]  ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+     p = datatype_flavour; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
       check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) :: c_decls
+      (Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) , c_decls)
     ]]
 ;
  cocmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
+    "coinductive"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      (Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) , c_decls)
     ]]
 ;
 
  mutual_cmp_cdat:
     [[
-        "inductive"; f = cmp_cdat -> f
-      | "coinductive"; f = cocmp_cdat -> f
+        f = cmp_cdat -> f
+      | f = cocmp_cdat -> f
    ]]
 ;
 
  datatype_flavour:
    [[
-     "inductive" -> Comp.InductiveDatatype
-   | "coinductive" -> Comp.CoinductiveDatatype
+     "inductive" -> Sgn.InductiveDatatype
+   | "stratified" -> Sgn.StratifiedDatatype
    ]]
 ;
 

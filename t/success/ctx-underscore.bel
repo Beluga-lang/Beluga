@@ -135,7 +135,7 @@ rec algEqRSym : (g:tctx)
 -> [g |- algeqr N2 N1 T] =
 / total a (algEqRSym g n1 n2 t a) /
 fn a => case a of
-| [g |- #p.2] => [_ |- #p.2]
+| [_ |- #p.2] => [_ |- #p.2]
 | [_ |- algapp (R) N] => 
   let [_ |- R'] = algEqRSym [_ |- R] in
   let [_ |- N'] = algEqNSym [_ |- N] in
@@ -180,7 +180,7 @@ rec algEqRUnique : (g:tctx)
 -> [|- eqtp T S] =
 / total e1 (algEqRUnique g n1 n2 n3 t s e1) / 
 fn e1 => fn e2 => case e1 of 
-| [g |- #p.2] => let [g |- #q.2] = e2 in [|- refltp]
+| [_ |- #p.2] => let [_ |- #q.2] = e2 in [|- refltp]
 | [_ |- algapp R N] =>
   let [_ |- algapp R' N'] = e2 in 
   let [|- refltp] = algEqRUnique [_ |- R] [_ |- R'] in [|- refltp]
@@ -261,7 +261,7 @@ rec algEqRTrans : (g:tctx)
 -> [g |- algeqr N1 N3 T] =
 / total a1 (algEqRTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- #p.2] => let [g |- #q.2] = a2 in [_ |- #q.2]
+| [_ |- #p.2] => let [_ |- #q.2] = a2 in [_ |- #q.2]
 | [_ |- algapp A1' B1] =>
   let [_ |- algapp A2' B2] = a2 in 
   let [|- refltp] = algEqRUnique [_ |- A1'] [_ |- A2'] in
@@ -328,7 +328,7 @@ datatype Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 | DecExt :  Decl [|- G & T] [g,x:tm |- (app M[..] x) ~ (app N[..] x)] [ |- S]
           -> Decl [|-G] [g |- M ~ N] [ |- arr T S]
 | DecVar : Lookup [|-G] [g |- #p] [ |- T]
-         -> Decl [|-G] [g |- (#p) ~ (#p)] [ |- T]
+         -> Decl [|-G] [g |- #p ~ #p] [ |- T]
 | DecApp : Decl [|-G] [g |- M1 ~ M2] [ |- arr T S]
          -> Decl [|-G] [g |- N1 ~ N2] [ |- T]
          -> Decl [|-G] [g |- (app M1 N1) ~ (app M2 N2)] [ |- S]

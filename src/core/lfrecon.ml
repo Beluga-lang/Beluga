@@ -301,7 +301,8 @@ let getSchema cD ctxvar loc = match ctxvar with
       with _ ->  raise (Error (loc,CtxVarSchema n))
       end
 
-
+  | Some (Int.LF.CInst ((_,_,_,Int.LF.CTyp (Some s_cid),_,_),_)) ->
+     Schema.get_schema s_cid
   | None -> raise (Error.Violation "No context variable for which we could retrieve a schema")
 
 (* ******************************************************************* *)

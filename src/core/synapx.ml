@@ -20,6 +20,7 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+    | TypDeclOpt of name
 
   and cltyp =
     | MTyp of typ

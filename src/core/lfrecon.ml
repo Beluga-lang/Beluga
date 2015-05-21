@@ -2276,6 +2276,9 @@ let rec elDCtx recT cD psi = match psi with
       let _ = dprint (fun () -> "[elDCtx] " ^ R.render_name x ^ ":" ^
                         P.typToString cD cPsi (tA, Substitution.LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+  | Apx.LF.DDec (psi', Apx.LF.TypDeclOpt x) ->
+      let cPsi = elDCtx recT cD psi' in
+      Int.LF.DDec (cPsi, Int.LF.TypDeclOpt x)
 
 
 let checkCtxVar loc cD c_var w = match c_var with

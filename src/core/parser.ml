@@ -57,10 +57,6 @@ type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ
 
-type dctx_or_hat =
-  | Dctx of LF.dctx
-  | Hat of LF.psi_hat
-
 type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
@@ -1033,27 +1029,21 @@ GLOBAL: sgn;
     [
       [
          -> (* Hat [ ] *)
-           Dctx (LF.Null)
-      | "_" -> Dctx (LF.CtxHole)
+           LF.Null
+      | "_" -> LF.CtxHole
 
       |    x = SYMBOL ->
-             Dctx (LF.CtxVar (_loc, Id.mk_name (Id.SomeString x)))
+             LF.CtxVar (_loc, Id.mk_name (Id.SomeString x))
             (* Hat ([Id.mk_name (Id.SomeString x)]) *)
 
       |   x = SYMBOL; ":"; tA = clf_typ ->
-          Dctx (LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+          LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
       |
         cPsi = clf_hat_or_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
-          begin match cPsi with
-            | Dctx cPsi' -> Dctx (LF.DDec (cPsi', LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
-          end
+          LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
 
-      | phat = clf_hat_or_dctx; "," ; y = SYMBOL  ->
-          begin match phat with
-            | Dctx (LF.Null) -> Hat [Id.mk_name (Id.SomeString y)]
-            | Dctx (LF.CtxVar (_, g)) -> Hat ([g] @ [Id.mk_name (Id.SomeString y)])
-            | Hat phat -> Hat (phat @ [Id.mk_name (Id.SomeString y)])
-          end
+      | cPsi = clf_hat_or_dctx; "," ; x = SYMBOL  ->
+          LF.DDec (cPsi, LF.TypDeclOpt  (Id.mk_name (Id.SomeString x)))
 
       ]
     ]
@@ -1284,20 +1274,12 @@ GLOBAL: sgn;
 
         "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
         begin match phat_or_psi, tR with
-	      | Dctx cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
-	      | Hat phat  , Term tM  -> Comp.Box (_loc, Comp.MetaObj(_loc, phat, tM))
-	      | Dctx cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
-	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
+	      | cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
+	      | cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
 	end
 
-       | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
-        begin match phat_or_psi with
-          | Dctx cPsi     -> Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))
-          | Hat [psi]      -> Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))
-          | Hat []       -> Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))
-          | _                      ->
-            raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
-        end
+       | "["; psi = clf_hat_or_dctx; "]"   ->
+          Comp.Box(_loc, Comp.MetaCtx (_loc,psi))
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1468,15 +1450,9 @@ clf_pattern :
 
         "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
-            | (Dctx cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
-            | (Hat phat, Some(Term tM))    -> Comp.MetaObj (_loc, phat, tM)
-            | (Dctx cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
-            | (Hat phat, Some(Sub s))    -> Comp.MetaSObj (_loc, phat, s)
-            | (Dctx cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
-            | (Hat [psi], None)      -> Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))
-            | (Hat [], None)         -> Comp.MetaCtx (_loc, LF.Null)
-            | (_, _)                 ->
-              raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+            | (cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
+            | (cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
+            | (cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
           end
 
 

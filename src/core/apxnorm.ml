@@ -216,6 +216,7 @@ let rec cnormApxTyp cD delta a (cD'', t) = match a with
 and cnormApxTypDecl cD delta t_decl cDt = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, cnormApxTyp cD delta a cDt)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
   | Apx.LF.SigmaLast(n, a) -> Apx.LF.SigmaLast (n, cnormApxTyp cD delta a (cD'', t))
@@ -735,6 +736,7 @@ let rec fmvApxTyp fMVs cD ((l_cd1, l_delta, k) as d_param)  a = match a with
 and fmvApxTypDecl fMVs cD ((l_cd1, l_delta, k) as d_param)  t_decl = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, fmvApxTyp fMVs cD d_param  a)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec with
   | Apx.LF.SigmaLast (n, a) -> Apx.LF.SigmaLast (n, fmvApxTyp fMVs cD d_param  a)

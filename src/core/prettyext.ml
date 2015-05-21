@@ -140,10 +140,7 @@ module Ext = struct
 
     module PInstHashtbl = Hashtbl.Make (PInstHashedType)
 
-    let rec phatToDCtx phat = match phat with
-      | [] -> LF.Null
-      | h::[] -> LF.CtxVar (Loc.mk("null"),h)
-      | h::t ->  LF.DDec (phatToDCtx t, LF.TypDecl ( h, LF.Atom(Loc.mk("null"),(Id.mk_name Id.NoName),LF.Nil)  ))
+    let phatToDCtx phat = phat
 
 
     (* Contextual Format Based Pretty Printers
@@ -531,7 +528,13 @@ module Ext = struct
             (R.render_name x)
             (fmt_ppr_lf_psi_hat cD 0) cPsi
 
-    and fmt_ppr_lf_dctx cD _lvl ppf = function
+    and fmt_ppr_lf_typ_decl cD cPsi lvl ppf = function
+      | LF.TypDecl (x,tA) ->
+	fprintf ppf "%s : %a"
+	  (R.render_name x)
+	  (fmt_ppr_lf_typ cD cPsi lvl) tA
+      | LF.TypDeclOpt x -> fprintf ppf "%s" (R.render_name x)
+    and fmt_ppr_lf_dctx cD lvl ppf = function
       | LF.CtxHole -> fprintf ppf "_"
       | LF.Null ->
           fprintf ppf ""
@@ -540,16 +543,13 @@ module Ext = struct
           fprintf ppf "%s"
             (R.render_name x)
 
-      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-          fprintf ppf "%s : %a"
-            (R.render_name x)
-            (fmt_ppr_lf_typ cD LF.Null 0) tA
+      | LF.DDec (LF.Null, d) ->
+	fmt_ppr_lf_typ_decl cD LF.Null lvl ppf d
 
-      | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
-          fprintf ppf "%a, %s : %a"
+      | LF.DDec (cPsi, d) ->
+          fprintf ppf "%a, %a"
             (fmt_ppr_lf_dctx cD 0) cPsi
-            (R.render_name x)
-            (fmt_ppr_lf_typ cD cPsi 0) tA
+            (fmt_ppr_lf_typ_decl cD cPsi lvl) d
 
     and fmt_ppr_lf_mctx lvl ppf = function
       | LF.Empty ->
@@ -648,15 +648,6 @@ module Ext = struct
       | Comp.MetaCtx (_, cPsi) ->
             fprintf ppf "[%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
-      | Comp.MetaObj (_, phat, tM) ->
-          let cond = lvl > 1 in
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "%s[%a %s %a]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (symbol_to_html Turnstile)
-              (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)
       | Comp.MetaObjAnn (_, cPsi, tM) ->
           let cond = lvl > 1 in
             fprintf ppf "%s[%a %s %a]%s"
@@ -664,18 +655,7 @@ module Ext = struct
               (fmt_ppr_lf_dctx cD 0) cPsi
               (symbol_to_html Turnstile)
               (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)
-      | Comp.MetaSObj (_, phat, LF.EmptySub _) ->
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "[%a %s ^]"
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
-               (symbol_to_html Turnstile)           
-      | Comp.MetaSObj (_, phat, s) ->
-          let cPsi = phatToDCtx phat in
-            fprintf ppf "[%a %s %a]"
-               (fmt_ppr_lf_psi_hat cD 0) cPsi
-               (symbol_to_html Turnstile)
-              (fmt_ppr_lf_sub cD cPsi 0) s
+              (r_paren_if cond)          
       | Comp.MetaSObjAnn (_, cPsi, LF.EmptySub _) ->
             fprintf ppf "[%a %s ^]"
                (fmt_ppr_lf_dctx cD 0) cPsi

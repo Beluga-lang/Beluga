@@ -264,6 +264,10 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
       loop cD cPsi1 cPsi2;
       let tA2 = Lfrecon.elTyp Lfrecon.Pibox cD cPsi1 tA2 in
       Unify.unifyTyp cD cPsi1 (tA1, LF.id) (tA2, LF.id)
+    
+    | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) ,
+       Apx.LF.DDec (cPsi2, Apx.LF.TypDeclOpt _)) ->
+      loop cD cPsi1 cPsi2
 
     | (Int.LF.DDec (cPsi1, Int.LF.TypDeclOpt _), _) -> failwith "Unexpected case"
 

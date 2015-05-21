@@ -19,6 +19,7 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+    | TypDeclOpt of name
  
   and cltyp =
     | MTyp of typ
@@ -104,8 +105,6 @@ module LF = struct
   and schema =
     | Schema of sch_elem list
 
-  and psi_hat  = name list
-
   and mctx = ctyp_decl ctx
 
 end
@@ -116,10 +115,8 @@ module Comp = struct
 
  type meta_obj =
    | MetaCtx of Loc.t * LF.dctx
-   | MetaObj of Loc.t * LF.psi_hat * LF.normal
    | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaParam of Loc.t * LF.psi_hat * LF.head
-   | MetaSObj of Loc.t * LF.psi_hat * LF.sub
+   | MetaParam of Loc.t * LF.dctx * LF.head
    | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
 
  type meta_spine =

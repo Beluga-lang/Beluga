@@ -490,10 +490,14 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
         end
 
 
-let index_decl cvars bvars fvars (Ext.LF.TypDecl(x, a)) =
-  let (a', fvars') = index_typ cvars bvars fvars a in
-  let bvars'       = BVar.extend bvars (BVar.mk_entry x) in
+let index_decl cvars bvars fvars = function
+  | (Ext.LF.TypDecl(x, a)) ->
+    let (a', fvars') = index_typ cvars bvars fvars a in
+    let bvars'       = BVar.extend bvars (BVar.mk_entry x) in
     (Apx.LF.TypDecl (x,a'), bvars', fvars')
+  | (Ext.LF.TypDeclOpt x) ->
+    let bvars'       = BVar.extend bvars (BVar.mk_entry x) in
+    (Apx.LF.TypDeclOpt x, bvars', fvars)
 
 let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
   | Ext.LF.CtxHole     -> (Apx.LF.CtxHole, bvars, fvars)
@@ -516,41 +520,6 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
       let (psi', bvars', fvars')    = index_dctx cvars bvars fvars psi in
       let (decl', bvars'', fvars'') = index_decl cvars bvars' fvars' decl in
         (Apx.LF.DDec (psi', decl'), bvars'', fvars'')
-
-(* Order of psihat? -bp
-   It's not clear how to know that the last name is a bound variable
-   or if it is a name of a context variable...
-*)
-let index_psihat cvars fcvars extphat =
-  let bv = BVar.create () in
-
-  let rec index_hat bvars = function
-    | [] -> (0, bvars)
-    | x :: psihat ->
-        let bvars' = BVar.extend bvars (BVar.mk_entry x) in
-        let (l, bvars'') = index_hat bvars' psihat in
-          (l + 1, bvars'')
-
-  in
-    begin match extphat with
-      | [] -> ((None, 0), bv)
-      |  x :: psihat ->
-	   let (fvs, _ ) = fcvars in
-	     if lookup_fv fvs (x) then
-               let (d, bvars) = index_hat bv psihat in
-		 ((Some (Int.LF.CtxName x), d) , bvars)
-	     else
-               begin try
-		 let ctx_var = CVar.index_of_name cvars x in
-		 let (d, bvars) = index_hat bv psihat in
-		 let _ = dprint (fun () -> "[index_psihat] offset = " ^
-				   R.render_offset ctx_var ) in
-		   ((Some (Int.LF.CtxOffset ctx_var), d) , bvars)
-               with Not_found ->
-		 let (d, bvars ) = index_hat bv extphat in
-		   ((None, d) , bvars)
-               end
-    end
 
 let index_svar_class = function
   | Ext.LF.Ren -> Apx.LF.Ren
@@ -643,20 +612,10 @@ let rec index_meta_obj cvars fcvars = function
       let (cPsi, _bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
         (Apx.Comp.MetaCtx (l, cPsi), fcvars')
 
-  | Ext.Comp.MetaObj (l, phat, m) ->
-      let (psihat' , bvars) = index_psihat cvars fcvars phat in
-      let (m', fcvars') = index_term cvars bvars fcvars m in
-        (Apx.Comp.MetaObj (l, psihat', m'), fcvars)
-
   | Ext.Comp.MetaObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
         (Apx.Comp.MetaObjAnn (l, cPsi, m'), fcvars'')
-
-  | Ext.Comp.MetaSObj (l, phat, m) ->
-      let (psihat' , bvars) = index_psihat cvars fcvars phat in
-      let (m', fcvars') = index_sub cvars bvars fcvars m in
-        (Apx.Comp.MetaSub (l, psihat', m'), fcvars)
 
   | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
@@ -856,14 +815,10 @@ and index_pattern_mobj cvars fcvars  mO = match mO with
   | Ext.Comp.MetaCtx (loc, cPsi) ->
     let (cPsi', _bvars, fcvars')  = index_dctx cvars (BVar.create ()) fcvars cPsi in
       (Apx.Comp.MetaCtx (loc, cPsi') , fcvars')
-
-  | Ext.Comp.MetaObj (loc, phat, tM) ->
-      raise (Error (loc, PatCtxRequired))
   | Ext.Comp.MetaObjAnn (loc, cPsi, tM) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
       (Apx.Comp.MetaObjAnn (loc, cPsi', tM') , fcvars2)
-  | Ext.Comp.MetaSObj (loc, phat, s) ->  raise (Error (loc, PatCtxRequired))
   | Ext.Comp.MetaSObjAnn (loc, cPsi, s) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (s', fcvars2)           = index_sub cvars bvars fcvars1 s in

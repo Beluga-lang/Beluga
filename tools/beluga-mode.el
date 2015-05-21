@@ -245,7 +245,7 @@ Regexp match data 0 points to the chars."
 (defvar beluga-font-lock-keywords
   `(,(concat "\\_<"
              (regexp-opt
-              '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "else" "ffalse" "fn" "if"
+              '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "stratified" "else" "ffalse" "fn" "if"
                 "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
                 "then" "type" "ctype" "ttrue" "%name" "%not" "module" "struct" "end"
                 "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
@@ -258,7 +258,7 @@ Regexp match data 0 points to the chars."
      (0 (if (match-end 2) '(face nil font-lock-multiline t)))
      (1 (if (match-end 2)
             font-lock-type-face font-lock-variable-name-face)))
-    (,(concat "^\\(?:schema\\|inductive\\|coinductive\\|LF\\)[ \t\n]+\\("
+    (,(concat "^\\(?:schema\\|inductive\\|coinductive\\|LF\\|stratified\\)[ \t\n]+\\("
               beluga-syntax-id-re "\\)")
      (1 font-lock-type-face))
     (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
@@ -512,7 +512,7 @@ If a previous beli process already exists, kill it first."
   (set (make-local-variable 'imenu-generic-expression)
        beluga-imenu-generic-expression)
   (set (make-local-variable 'outline-regexp)
-       (concat beluga-syntax-fundec-re "\\|^(inductive|coinductive|LF)\\_>"))
+       (concat beluga-syntax-fundec-re "\\|^(inductive|coinductive|LF|stratified)\\_>"))
   (set (make-local-variable 'require-final-newline) t)
   (when buffer-file-name
     (set (make-local-variable 'compile-command)
@@ -1884,6 +1884,7 @@ to which that point should be aligned, if we were to reindent it.")
            ("inductive" datatype-def)
 	   ("coinductive" datatype-def)
 	   ("LF" datatype-def)
+	   ("stratified" datatype-def)
            ("schema" sdef)
            ("let" def)
            (recs))

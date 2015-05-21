@@ -35,7 +35,7 @@ type error =
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
   | TypeAbbrev         of Id.name
-  | CtxMismatch        of Int.LF.mctx * Int.Comp.typ * Int.LF.dctx
+  | CtxHatMismatch        of Int.LF.mctx * Int.LF.ctyp * Int.LF.psi_hat
   | PatternMobj
   | PatAnn
   | PatIndexMatch  of Int.LF.mctx * Int.Comp.meta_obj 
@@ -64,13 +64,13 @@ let _ = Error.register_printer
         | PatternMobj ->
             Format.fprintf ppf
               "Expected a meta-object; Found a computation-level pattern"
-        | CtxMismatch (cD, tau, cPsi) ->
+        | CtxHatMismatch (cD, tau, phat) ->
             Format.fprintf ppf
               "Context mismatch@.\
                @ @ expected: %a@.\
                @ @ found object in context %a"
-            (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+            (P.fmt_ppr_lf_mtyp cD) tau
+            (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
         | TypeAbbrev a ->
           Format.fprintf ppf
             "Type definition %s cannot contain any free meta-variables in its type."
@@ -495,7 +495,13 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
 
   | (Apx.Comp.MetaObj (loc, phat, tM), (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi'))) ->
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
+	begin try (* TODO: We should do this in the other cases. That will be easier
+		     if we refactor this MetaObj/MetaSub/MetaCtx datatype. *)
+	  Unify.unify_phat phat (Context.dctxToHat cPsi');
           (loc, Int.LF.ClObj (phat, Int.LF.MObj tM'))
+	with Unify.Failure _ ->
+	  raise (Error (loc, CtxHatMismatch (cD, cTt, phat)))
+	end 
   | (Apx.Comp.MetaSub (loc, phat, s), (Int.LF.ClTyp (Int.LF.STyp (cl, cPhi'), cPsi'))) ->
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cl cPhi' in
           (loc, Int.LF.ClObj (phat, Int.LF.SObj s'))

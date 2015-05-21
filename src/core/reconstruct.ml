@@ -67,10 +67,9 @@ let _ = Error.register_printer
         | CtxHatMismatch (cD, tau, phat) ->
             Format.fprintf ppf
               "Context mismatch@.\
-               @ @ expected: %a@.\
-               @ @ found object in context %a"
+               @ @ expected: %a@."
             (P.fmt_ppr_lf_mtyp cD) tau
-            (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
+            (* (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat) *)
         | TypeAbbrev a ->
           Format.fprintf ppf
             "Type definition %s cannot contain any free meta-variables in its type."

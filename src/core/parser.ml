@@ -1463,6 +1463,8 @@ clf_pattern :
         tA = "Bool" -> MTBool _loc
 
       | tK = "ctype" -> MTCompKind _loc
+      (* allowing prop instead of ctype for ORBI files *)
+      | tK = "prop" -> MTCompKind _loc 
 
       | a = UPSYMBOL; ms = LIST0 meta_obj  ->
           let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in

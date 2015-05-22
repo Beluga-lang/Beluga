@@ -2,12 +2,12 @@
    Exceptions carrying values of type int
 
 }%
-datatype tp: type =
+LF tp: type =
 | nat: tp
 | arr: tp -> tp -> tp;
 %name tp  T.
 
-datatype term: type =
+LF term: type =
 | app: term -> term -> term
 | lam: tp -> (term ->  term) -> term
 | raise : term -> term   % (raise e)
@@ -15,18 +15,18 @@ datatype term: type =
 ;
 %name term M.
 
-datatype value:  term -> type =
+LF value:  term -> type =
 | v_lam: value (lam T M);
 %name value V.
 
-datatype error : term -> type =
+LF error : term -> type =
 | er_raise : value V -> error (raise V)
 ;
 %name error E.
 % ---------------------------------------------------------- %
 % Small-step operational semantics
 
-datatype step: term -> term -> type =
+LF step: term -> term -> type =
 | step_app_1    : step (app E1 E2) (app E1' E2)
                  <- step E1 E1'
 | step_app_2    : step (app E1 E2) (app E1 E2')
@@ -57,7 +57,7 @@ datatype step: term -> term -> type =
 ;
 %name step S.
 % ---------------------------------------------------------- %
-datatype oft: term -> tp -> type =
+LF oft: term -> tp -> type =
 | t_lam : ({x:term} oft x T -> oft (E x) S)
 	-> oft (lam T E) (arr T S)
 | t_app:  oft E1 (arr T S) -> oft E2 T
@@ -118,7 +118,7 @@ fn d => fn s => case s of
 % Introduce a new type family to distinguish between the case where a term can
 % take a step and it is a value.
 
-datatype step_or_err/val : term -> type =
+LF step_or_err/val : term -> type =
 | step_to : step E E' -> step_or_err/val E
 | val     :  value E  -> step_or_err/val E
 | err     :  error E  -> step_or_err/val E;

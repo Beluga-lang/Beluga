@@ -6,7 +6,7 @@
 }%
 
 
-datatype term  : type = 
+LF term  : type = 
 | true  : term
 | false : term
 | if_then_else : term -> term -> term -> term

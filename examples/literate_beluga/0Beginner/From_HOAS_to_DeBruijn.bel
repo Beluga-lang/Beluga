@@ -7,7 +7,7 @@ binder, is isomorphic to the first-order De Bruijn representation,
 where variables are represented by naturals.
 }}%
 
-datatype tp : type =
+LF tp : type =
   | o : tp
   | arr : tp -> tp -> tp;
 
@@ -17,7 +17,7 @@ datatype tp : type =
 They are represented as customary, as an LF-level `type`.
 }}%
 
-datatype hoas : tp -> type =
+LF hoas : tp -> type =
   | lam : (hoas A -> hoas B) -> hoas (arr A B)
   | app : hoas (arr A B) -> hoas A -> hoas B;
 
@@ -46,7 +46,7 @@ of defining a data type of list of types, we reuse Beluga's built-in
 data structure of context, classified by the schema above.
 }}%
 
-datatype DB : {g:ctx} [|- tp] -> ctype =
+inductive DB : {g:ctx} [|- tp] -> ctype =
   | Lam : DB [g, x:hoas A[]] [|- B] -> DB [g] [|- arr A B]
   | App : DB [g] [|- arr A B] -> DB [g] [|- A] -> DB [g] [|- B]
   | O : DB [g, x:hoas A[]] [|- A]

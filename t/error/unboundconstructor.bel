@@ -1,14 +1,14 @@
-datatype nat: type =
+LF nat: type =
 | zero   : nat
 | succ : nat → nat
 ;
 
-datatype plus: nat -> nat -> nat -> type =
+LF plus: nat -> nat -> nat -> type =
 | pzn: plus zero N N
 | psn: plus N M Q -> plus (succ N) M (succ Q)
 ;
 
-datatype Addup: [ |- nat] -> ctype =
+inductive Addup: [ |- nat] -> ctype =
 | AddNil: Addup [ |- zero]
 | AddSuc: Addup [ |- plus N Y Q]
 ;

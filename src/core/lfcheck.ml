@@ -597,7 +597,7 @@ and checkDCtx cD cPsi = match cPsi with
   | CtxVar (CtxOffset k) ->
     (dprint (fun () -> "[chkDCtx] lookup CtxVar where k = " ^ R.render_offset k
       ^ " in \n cD = " ^ P.mctxToString cD ^ "\n");
-     let _ = Context.lookupSchema cD k in ())
+     let (_,CTyp _)  = Whnf.mctxLookup cD k in ())
 
 (* other cases should be impossible -bp *)
 
@@ -837,7 +837,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
-  | (CObj cPsi, (CTyp w, _)) ->
+  | (CObj cPsi, (CTyp (Some w), _)) ->
       checkSchema loc cD cPsi (Schema.get_schema w)
 
   | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->

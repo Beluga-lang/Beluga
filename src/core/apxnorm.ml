@@ -216,6 +216,7 @@ let rec cnormApxTyp cD delta a (cD'', t) = match a with
 and cnormApxTypDecl cD delta t_decl cDt = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, cnormApxTyp cD delta a cDt)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
   | Apx.LF.SigmaLast(n, a) -> Apx.LF.SigmaLast (n, cnormApxTyp cD delta a (cD'', t))
@@ -224,8 +225,8 @@ and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
       let t_rec' = cnormApxTypRec cD delta t_rec (cD'', t) in
         Apx.LF.SigmaElem (x, a', t_rec')
 
-(* NOTE THERE IS A BUG IN OCAML: we are allowed to name _ cD !*)
 let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) = match psi with
+  | Apx.LF.CtxHole -> Apx.LF.CtxHole
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
       let l_delta = lengthApxMCtx delta in
@@ -492,6 +493,7 @@ and collectApxTypDecl fMVs (Apx.LF.TypDecl (_ , a))=
   collectApxTyp fMVs a
 
 and collectApxDCtx fMVs c_psi = match c_psi with
+  | Apx.LF.CtxHole -> fMVs
   | Apx.LF.Null -> fMVs
   | Apx.LF.CtxVar (Apx.LF.CtxName psi) -> (psi :: fMVs)
   | Apx.LF.CtxVar (Apx.LF.CtxOffset _) -> fMVs
@@ -734,6 +736,7 @@ let rec fmvApxTyp fMVs cD ((l_cd1, l_delta, k) as d_param)  a = match a with
 and fmvApxTypDecl fMVs cD ((l_cd1, l_delta, k) as d_param)  t_decl = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, fmvApxTyp fMVs cD d_param  a)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec with
   | Apx.LF.SigmaLast (n, a) -> Apx.LF.SigmaLast (n, fmvApxTyp fMVs cD d_param  a)
@@ -743,6 +746,7 @@ and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec w
         Apx.LF.SigmaElem (x, a', t_rec')
 
 let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
+  | Apx.LF.CtxHole -> Apx.LF.CtxHole
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
       if offset > (l_delta + k) then

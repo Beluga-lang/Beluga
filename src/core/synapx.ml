@@ -20,6 +20,7 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+    | TypDeclOpt of name
 
   and cltyp =
     | MTyp of typ
@@ -99,6 +100,7 @@ module LF = struct
     | Null
     | CtxVar   of ctx_var
     | DDec     of dctx * typ_decl
+    | CtxHole
 
   and ctx_var =
     | CtxName   of name

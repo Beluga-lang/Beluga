@@ -57,10 +57,6 @@ type kind_or_typ =
   | Kind of LF.kind
   | Typ  of LF.typ
 
-type dctx_or_hat =
-  | Dctx of LF.dctx
-  | Hat of LF.psi_hat
-
 type pair_or_atom =
   | Pair of Comp.exp_chk
   | Atom
@@ -337,34 +333,15 @@ GLOBAL: sgn;
                | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
              end
 
-  (*      |
-          "datatype"; a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ;
-          const_decls = LIST0 sgn_lf_typ SEP "|" ; ";" ->
-            Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
-  *)
-        | "datatype"; f = LIST1 cmp_dat SEP "and"; ";" ->
+        | f = mutual_cmp_cdat;
+          g = OPT [ "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
+            begin match g with
+              | None -> [Sgn.MRecTyp(_loc, [f])]
+              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
+            end 
+
+        | "LF"; f = LIST1 cmp_dat SEP "and"; ";" ->
              [Sgn.MRecTyp(_loc, f)]
-  (*
-        | "datatype"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|"; ";" ->
-            check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-            Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
-  *)
-
-        | "datatype"; f = cmp_cdat;
-          g = OPT [ "and"; f = LIST1 cmp_cdat SEP "and" -> f
-                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-            begin match g with
-              | None -> [Sgn.MRecTyp(_loc, [f])]
-              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end
-
-        | "codatatype"; f = cocmp_cdat;
-          g = OPT [ "and"; f = LIST1 cocmp_cdat SEP "and" -> f
-                  | "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-            begin match g with
-              | None -> [Sgn.MRecTyp(_loc, [f])]
-              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end
 
         | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
             [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
@@ -455,27 +432,6 @@ GLOBAL: sgn;
       ]
     ]
 ;
-
-  positive_flag:
-    [
-      [
-	"#positive" -> Sgn.Positivity
-      | "#stratified" ; k = OPT stratify_arg ->  (Sgn.Stratify (_loc, k))
-      (* | "#stratify" ; x = num stratify_order ; "(";  r = UPSYMBOL; args = LIST0 call_args ;  ")"    ->  *)
-      (*        Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args) *)
-      ]
-    ]
-;
-
-  stratify_arg:
-    [
-      [
-	k = INTLIT -> k	
-      ]
-    ]
-
-;
-
 
   total_order:
     [
@@ -970,14 +926,14 @@ GLOBAL: sgn;
 ;
 
   clf_sub_new:
-    [
+    [ (* TODO: Refactor this *)
       [
 	-> LF.EmptySub _loc
       |
           s = clf_sub_term -> s
 
       |
-        sigma = SELF;  h = clf_head ->
+        sigma = SELF; h = clf_head ->
           LF.Dot (_loc, sigma, LF.Head h)
 
       |
@@ -985,11 +941,11 @@ GLOBAL: sgn;
           LF.Dot (_loc, sigma, LF.Normal tM)
 
       |      
-        sigma = clf_sub_term; ","; h = clf_head ->
+        sigma = SELF; ","; h = clf_head ->
           LF.Dot (_loc, sigma, LF.Head h)
 
       |      
-        sigma = clf_sub_term; ","; tM = clf_normal ->
+        sigma = SELF; ","; tM = clf_normal ->
           LF.Dot (_loc, sigma, LF.Normal tM)
 
       |
@@ -1011,6 +967,7 @@ GLOBAL: sgn;
        (* turnstile  *)
         ->
           LF.Null
+      | "_" -> LF.CtxHole
 
       |
         psi = SYMBOL ->
@@ -1032,26 +989,21 @@ GLOBAL: sgn;
     [
       [
          -> (* Hat [ ] *)
-           Dctx (LF.Null)
+           LF.Null
+      | "_" -> LF.CtxHole
 
       |    x = SYMBOL ->
-             Dctx (LF.CtxVar (_loc, Id.mk_name (Id.SomeString x)))
+             LF.CtxVar (_loc, Id.mk_name (Id.SomeString x))
             (* Hat ([Id.mk_name (Id.SomeString x)]) *)
 
       |   x = SYMBOL; ":"; tA = clf_typ ->
-          Dctx (LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
+          LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
       |
         cPsi = clf_hat_or_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
-          begin match cPsi with
-            | Dctx cPsi' -> Dctx (LF.DDec (cPsi', LF.TypDecl (Id.mk_name (Id.SomeString x), tA)))
-          end
+          LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
 
-      | phat = clf_hat_or_dctx; "," ; y = SYMBOL  ->
-          begin match phat with
-            | Dctx (LF.Null) -> Hat [Id.mk_name (Id.SomeString y)]
-            | Dctx (LF.CtxVar (_, g)) -> Hat ([g] @ [Id.mk_name (Id.SomeString y)])
-            | Hat phat -> Hat (phat @ [Id.mk_name (Id.SomeString y)])
-          end
+      | cPsi = clf_hat_or_dctx; "," ; x = SYMBOL  ->
+          LF.DDec (cPsi, LF.TypDeclOpt  (Id.mk_name (Id.SomeString x)))
 
       ]
     ]
@@ -1112,30 +1064,36 @@ GLOBAL: sgn;
   cmp_dat:
     [[
      a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
-       Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) :: const_decls
+      (Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) , const_decls)
     ]]
   ;
 
   cmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; p = OPT [f = positive_flag ->  f]  ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
+     p = datatype_flavour; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
       check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) :: c_decls
+      (Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) , c_decls)
     ]]
 ;
  cocmp_cdat:
     [[
-    a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
+    "coinductive"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
       check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) :: c_decls
+      (Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) , c_decls)
     ]]
 ;
 
  mutual_cmp_cdat:
     [[
-        "datatype"; f = cmp_cdat -> f
+        f = cmp_cdat -> f
+      | f = cocmp_cdat -> f
+   ]]
+;
 
-      | "codatatype"; f = cocmp_cdat -> f
+ datatype_flavour:
+   [[
+     "inductive" -> Sgn.InductiveDatatype
+   | "stratified" -> Sgn.StratifiedDatatype
    ]]
 ;
 
@@ -1282,20 +1240,12 @@ GLOBAL: sgn;
 
         "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
         begin match phat_or_psi, tR with
-	      | Dctx cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
-	      | Hat phat  , Term tM  -> Comp.Box (_loc, Comp.MetaObj(_loc, phat, tM))
-	      | Dctx cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
-	      | Hat phat  , Sub s -> Comp.Box (_loc, Comp.MetaSObj (_loc,phat, s))
+	      | cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
+	      | cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
 	end
 
-       | "["; phat_or_psi = clf_hat_or_dctx; "]"   ->
-        begin match phat_or_psi with
-          | Dctx cPsi     -> Comp.Box(_loc, Comp.MetaCtx (_loc,cPsi))
-          | Hat [psi]      -> Comp.Box(_loc, Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi)))
-          | Hat []       -> Comp.Box(_loc, Comp.MetaCtx(_loc, LF.Null))
-          | _                      ->
-            raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
-        end
+       | "["; psi = clf_hat_or_dctx; "]"   ->
+          Comp.Box(_loc, Comp.MetaCtx (_loc,psi))
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1466,15 +1416,9 @@ clf_pattern :
 
         "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
-            | (Dctx cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
-            | (Hat phat, Some(Term tM))    -> Comp.MetaObj (_loc, phat, tM)
-            | (Dctx cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
-            | (Hat phat, Some(Sub s))    -> Comp.MetaSObj (_loc, phat, s)
-            | (Dctx cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
-            | (Hat [psi], None)      -> Comp.MetaCtx (_loc, LF.CtxVar (_loc, psi))
-            | (Hat [], None)         -> Comp.MetaCtx (_loc, LF.Null)
-            | (_, _)                 ->
-              raise (MixError (fun ppf -> Format.fprintf ppf "Syntax error: meta object expected."))
+            | (cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
+            | (cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
+            | (cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
           end
 
 
@@ -1519,6 +1463,8 @@ clf_pattern :
         tA = "Bool" -> MTBool _loc
 
       | tK = "ctype" -> MTCompKind _loc
+      (* allowing prop instead of ctype for ORBI files *)
+      | tK = "prop" -> MTCompKind _loc 
 
       | a = UPSYMBOL; ms = LIST0 meta_obj  ->
           let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in

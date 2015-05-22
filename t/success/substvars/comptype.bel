@@ -7,7 +7,7 @@ tm : tp -> type.          %name tm E.
 
 schema ctx = tm T;
 
-datatype Reduce : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+inductive Reduce : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 ;
 
 rec eval : {g:ctx}{h:ctx}{M:[g |- tm (A[..])]}{#S:h |- g} Reduce [h] [h |- A[#S[..]] ] [h |- M[#S[..]] ] =

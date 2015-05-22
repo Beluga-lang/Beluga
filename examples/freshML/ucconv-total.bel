@@ -32,7 +32,7 @@ cons: term -> fvlist -> fvlist.
 schema ctx = term;
 schema tctx = target;
 
-datatype Fvs: {g:ctx} ctype = 
+inductive Fvs: {g:ctx} ctype = 
 | Nil : Fvs [g]
 | Cons: {#p:[g |- term]} Fvs [g] -> Fvs [g];
 

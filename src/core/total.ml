@@ -878,7 +878,7 @@ let rec check_positive a tau =
       (* (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
       (* || let n =  R.render_cid_comp_typ c in *)
       (*    raise (Error (loc, (NoPositiveCheck n))) *)
-    | Comp.TypCobase _  ->  raise Unimplemented
+    | Comp.TypCobase _  ->  true (* TODO *)
     | Comp.TypDef  _  -> raise Unimplemented
     | Comp.TypBox  _ -> true 
     | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (check_positive a tau2) 
@@ -920,29 +920,32 @@ let rec less_dctx cPsi1 cPsi2 =
 (*     | (None, offset1)    , (None, offset2)     -> offset1 < offset2 *)
 (*     | _ , _  -> false *)
 
-let equal_meta_obj = Whnf.convMetaObj  
+let equal_meta_obj _cD mC1 mC2 = 
+   Whnf.convMetaObj mC1 mC2  
+  
 
-let rec less_meta_obj mC1 mC2 = 
+let rec less_meta_obj cD mC1 mC2 = 
   match mC1, mC2 with
     | (_, LF.CObj cPsi1), (_, LF.CObj cPsi2) -> less_dctx cPsi1 cPsi2
 
     | (_, LF.ClObj (phat1, LF.MObj tM1)), (loc2, LF.ClObj (phat2, LF.MObj tM2)) -> 
       (match tM2 with
   	| LF.Root(_, h , tS)  ->
-  	  let rec leq_some_hat = fun spine ->
+  	  let rec leq_some spine =
   	    ( match spine with
-  	      | LF.App (n', spine') ->
-  		leq_meta_obj mC1 (loc2, LF.ClObj (phat2 , LF.MObj n')) || leq_some_hat spine'
+  	      | LF.App (tM', tS') ->
+		  (leq_meta_obj cD mC1 (loc2, LF.ClObj (phat2 , LF.MObj tM')) || leq_some tS')
 	      | LF.Nil   ->  false
-  	      | LF.SClo (spine', sub) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
-  	    ) in  leq_some_hat tS
+  	      | LF.SClo (_, _) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
+  	    ) in  leq_some tS
   	| _  ->   false
       )
       ||
 	(  
 	  let p = prefix_hat phat1 phat2 in
 	  match p with
-	    | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id)
+	    | Some 0 -> false
+	    | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id) (* this is suspicious -bp *)
 	    | _ -> false
 	)
   
@@ -952,28 +955,25 @@ let rec less_meta_obj mC1 mC2 =
 	 | Some k -> Whnf.convHead (tH1, LF.Shift k) (tH2, Substitution.LF.id)
 	 | _ -> false
       )
-     (*  (less_phat  phat1 phat2)   && (Whnf.convHead (tH1, Substitution.LF.id) (tH2, Substitution.LF.id))  *)
-     (*  is the first rule still applied in this case?  *)
+      (*  is the first rule still applied in this case?  *)
 
     | (loc1, LF.ClObj (_, LF.SObj _) ), (_, LF.ClObj (_ , LF.SObj _)) -> raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
 
     | _, _ -> false
-
   
 
-and leq_meta_obj mC1 mC2 =
-  equal_meta_obj mC1 mC2 || less_meta_obj mC1 mC2
+and leq_meta_obj cD mC1 mC2 =
+  equal_meta_obj cD mC1 mC2 || less_meta_obj cD mC1 mC2
   || (match mC2 with
-    | (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
-      leq_meta_obj mC1 (loc,  LF.ClObj ((cv , offset + 1 ), LF.MObj n))
-    | _ ->  false
-  )
+	| (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
+	    leq_meta_obj cD mC1 (loc,  LF.ClObj ((cv , offset + 1 ), LF.MObj n))
+	| _ ->  false
+     )
   || (match mC1 with
-    | (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
-      leq_meta_obj (loc, LF.ClObj ((cv , offset + 1 ), LF.MObj n)) mC2
-    | _ ->  false
-  )
-
+	| (loc , LF.ClObj ((cv , offset ), LF.MObj (LF.Lam(_, x, n)))) ->
+	    leq_meta_obj cD (loc, LF.ClObj ((cv , offset + 1 ), LF.MObj n)) mC2
+	| _ ->  false
+     ) 
 
 (*find the meta obj needs to be compared*)
 let rec find_meta_obj mS n =
@@ -1025,11 +1025,12 @@ let rec compare a cD tau1  mC2 n =
     | Comp.TypBase  (loc, c, mS1) ->
       if a = c then
 	let  mC1 =  find_meta_obj mS1 n in	
-	let _ = dprint (fun () ->  ("mC1: " ^  (P.metaObjToString cD  mC1)^"\n"  ^
-				      "mC2: " ^  (P.metaObjToString cD  mC2)^"\n" ) ) in
-	let _ = dprint (fun () ->  ("meta mC1: " ^  (P.metaObjToString LF.Empty  mC1)^"\n" ^
-				      "meta mC2: " ^  (P.metaObjToString LF.Empty  mC2)^"\n" ))in	
-	less_meta_obj mC1 mC2
+	let b = less_meta_obj cD mC1 mC2 in 
+	  ((if b then dprint (fun () -> ("COMPARE mC1: " ^  (P.metaObjToString cD  mC1)^"\n"
+				    ^ "       mC2: " ^  (P.metaObjToString cD  mC2)^" LESS\n")) 
+	   else dprint (fun () -> ("COMPARE mC1: " ^  (P.metaObjToString cD  mC1)^"\n"
+				    ^ "       mC2: " ^  (P.metaObjToString cD  mC2) ^ " NOT LESS!!!\n"))) ; b)
+
       else
 	(match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with 
 	  | Sgn.Positivity -> true

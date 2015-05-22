@@ -98,7 +98,7 @@ fn d => case d of
 % ---------------------------------------------------------------------------
 % Promotion lemmas (explicit)
 
-datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
+inductive CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
 | Cnil : CtxRel [] [] [ |- ^ ] 
 | Ccons: {g:daG}{h:xaG}{#W:g |- h}
          CtxRel [g] [h] [g |- #W[..] ] 
@@ -107,18 +107,18 @@ datatype CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype =
 		   [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1 ; b.2>]
 ;
 
-datatype StrTm : (g:daG)[g |- tm] ->  ctype = 
+inductive StrTm : (g:daG)[g |- tm] ->  ctype = 
 | StrTm :  {g:daG}{h:xaG}{#W:g |- h} 
 	  CtxRel [g] [h] [g |- #W[..] ] 
       -> {M: [h |- tm]} StrTm [g |- M[#W] ];
 
-datatype Ctx_daG : {g:daG} ctype = Ctx_daG : {g:daG} Ctx_daG [g] ;
-datatype Ctx_xaG : {g:xaG} ctype = Ctx_xaG : {g:xaG} Ctx_xaG [g] ;
+inductive Ctx_daG : {g:daG} ctype = Ctx_daG : {g:daG} Ctx_daG [g] ;
+inductive Ctx_xaG : {g:xaG} ctype = Ctx_xaG : {g:xaG} Ctx_xaG [g] ;
 
-datatype EqCtx : {h:xaG} {h':xaG} ctype = 
+inductive EqCtx : {h:xaG} {h':xaG} ctype = 
 | RefCtx : EqCtx [h] [h] ;
 
-datatype EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g |- h'} ctype = 
+inductive EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g |- h'} ctype = 
 | RefSub : {g:daG}{h:xaG}  {#W:g |- h} 
 		  EqSub [g] [h] [h] [g |- #W[..] ] [g |- #W[..] ] ;
 
@@ -134,10 +134,10 @@ fn cr1 => fn cr2 => case (cr1 , cr2) of
 		    [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1 ; b.2>])
    ;
 
-datatype Exists_xaG : {g:daG} ctype = 
+inductive Exists_xaG : {g:daG} ctype = 
 | Exists_xaG : {h:xaG} CtxRel [g] [h] [g |- #W[..] ] -> Exists_xaG [g];
 
-datatype Context_daG : {g:daG} ctype = 
+inductive Context_daG : {g:daG} ctype = 
 | Context_daG : {g:daG} Context_daG [g];
 
 rec exists_CtxRel : Context_daG [g] -> Exists_xaG [g] = 
@@ -193,7 +193,7 @@ let [h |- D[..] ] = reflG [h] [h |- N[..]] in
   [g |- D[#W] ] 
 ;
 
-datatype StrAeq : (g:daG){M:[g |- tm]}{N:[g |- tm]}[g |- aeq (M[..]) (N[..])] ->  ctype = 
+inductive StrAeq : (g:daG){M:[g |- tm]}{N:[g |- tm]}[g |- aeq (M[..]) (N[..])] ->  ctype = 
 | StrAeq :  {g:daG}{h:xaG}{#W:g |- h} {M:[h |- tm]}{N:[h |- tm]}
   	    CtxRel [g] [h] [g |- #W[..] ] -> 
 	    {D: [h |- aeq (M[..]) (N[..])]}
@@ -265,7 +265,7 @@ let [h |- F[..]] = symG [h |- D'[..]] in
   [g |- F[#W] ]
 ;
 
-datatype AndStrAeq :  (g:daG){M:[g |- tm]}{L:[g |- tm]}{N:[g |- tm]}
+inductive AndStrAeq :  (g:daG){M:[g |- tm]}{L:[g |- tm]}{N:[g |- tm]}
 {D1:[g |- aeq (M[..]) (L[..])]}{D2: [g |- aeq (L[..]) (N[..])]} ctype = 
 AndStrAeq : StrAeq [g |- M[..]] [g |- L[..]] [g |- D1[..]] -> 
 	    StrAeq [g |- L[..]] [g |- N[..]] [g |- D2[..]]

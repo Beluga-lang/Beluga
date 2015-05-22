@@ -1,0 +1,7 @@
+tp : type.
+i : tp.
+arr : tp -> tp -> tp.
+
+stratified Foo : [|- tp] -> ctype =
+| Base : Foo [ |- i]
+| Arr : (Foo [ |- arr A B] -> Foo [|- B]) -> Foo [|- arr A B];

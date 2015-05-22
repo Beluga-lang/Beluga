@@ -1,18 +1,18 @@
 % coverage
 
-datatype nat : type = 
+LF nat : type = 
 | z : nat
 | s : nat -> nat
 ;
 %name nat N.
 % The sub-term relation on naturals
 
-datatype le : nat -> nat -> type =
+LF le : nat -> nat -> type =
   | le-base : le N (s N)
   | le-step : le M N -> le M (s N)
 ;
 
-datatype Acc-le : [|- nat] -> ctype =
+inductive Acc-le : [|- nat] -> ctype =
   | Acc : ({Y : [|- nat]} [|- le Y X] -> Acc-le [|- Y]) -> Acc-le [|- X]
 ;
 

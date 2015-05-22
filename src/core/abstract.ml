@@ -409,7 +409,7 @@ let rec ctxToMCtx dep' cQ = match cQ with
       I.Dec (ctxToMCtx dep' cQ', I.Decl (getName s, ityp, dep'))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp (Some w), dep))
 
   (* this case should not happen -bp *)
    | I.Dec (cQ', FDecl (FV _, Pure (LFTyp tA)))->
@@ -430,7 +430,7 @@ let rec ctxToMCtx_pattern cQ = match cQ with
       I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, I.Maybe))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp (Some w), dep))
   
 | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx_pattern cQ'
@@ -762,7 +762,7 @@ and collectClTyp loc p cQ' phat = function
      (cQ1, I.STyp (cl, cPhi'))
 
 and collectMetaTyp loc p cQ = function 
-  | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
+  | I.CTyp sW -> (cQ, I.CTyp sW)
   | I.ClTyp (tp, cPsi) -> 
     let phat = Context.dctxToHat cPsi in
     let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
@@ -1164,7 +1164,7 @@ and abstractMSub t =
   | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
       I.Dec (ctxToMCtx' cQ', I.Decl (getName s, ityp, dep))
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp (Some w), dep))
    | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx' cQ'
   in 
@@ -1545,7 +1545,7 @@ let raiseCompKind cD cK =
 
 let abstrCompKind cK =
   let rec roll cK cQ = match cK with
-    | Comp.PiKind (_, I.Decl(psi, I.CTyp w, dep), cK) ->
+    | Comp.PiKind (_, I.Decl(psi, I.CTyp (Some w), dep), cK) ->
         roll cK (I.Dec(cQ, CtxV (psi,w, dep)))
     | cK -> (cQ, cK)
   in
@@ -1563,7 +1563,7 @@ let abstrCompKind cK =
 
 let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
-    | Comp.TypPiBox (I.Decl(psi, I.CTyp w, dep), tau) ->
+    | Comp.TypPiBox (I.Decl(psi, I.CTyp (Some w), dep), tau) ->
         roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
     | tau -> (cQ, tau)
   in

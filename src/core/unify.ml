@@ -2296,6 +2296,8 @@ let isVar h = match h with
 
 
 let unify_phat psihat phihat =
+  let psihat = Whnf.cnorm_psihat psihat (MShift 0) in
+  let phihat = Whnf.cnorm_psihat phihat (MShift 0) in
   match phihat with
     | (Some (CInst ((n1, ({contents = None} as cref), cD1, CTyp schema1, _, _), theta1 )), d) ->
         begin match psihat with

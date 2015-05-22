@@ -1,7 +1,7 @@
 % Adequacy: Converting between HOAS representation of aeq in LF
 % and its representation on the computation-level using data-types.
 
-datatype term: type =
+LF term: type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 ;
@@ -20,7 +20,7 @@ ae_l :  ({x:term} aeq x x -> aeq (E x) (F x))
 schema aCtx  = block x:term, _t:aeq x x;
 
 % Algorithmic Equality weakened contexts aCtx
-datatype Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
+inductive Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 | Ae_v' : % {#p:[g |- block (x:term, u:aeq x x)]}
              Aeq' [g |- #p.1[..]] [g |- #p.1[..]]
 | Ae_a' : Aeq' [g |- E1[..]] [g |- F1[..] ] -> Aeq' [g |- E2[..]] [g |- F2[..]]
@@ -31,7 +31,7 @@ datatype Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 ;
 
 % Algorithmic Equality in context tctx
-datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified  =
+inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype   =
 | Ae_v : % {#p:[g |- term]}
              Aeq [g |- #p] [g |- #p]
 | Ae_a : Aeq [g |- E1[..]] [g |- F1[..] ] -> Aeq [g |- E2[..]] [g |- F2[..]]
@@ -42,7 +42,7 @@ datatype Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype #stratified  =
 
 % Declarative Equality
 
-datatype Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype  =
+inductive Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype  =
 | De_v : Deq [g |- #p] [g |- #p]
 | De_l : Deq [g,x:term |- T] [g,x:term |-  T']
      -> Deq [g |- lam (\x. T)] [g |- lam (\x. T')]
@@ -99,7 +99,7 @@ fn ae => case ae of
 
 % To weaken/strengthen the Aeq' relation, we define how
 % terms in the context tctx are related to terms in the context aCtx
-datatype TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
+inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
 | TRvar0 : {h: aCtx} TRel [g, x:term |-  x]
  		         [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  :   % {#p:[g |- term]}{#q:[h |- block x:term, u:aeq x x]}

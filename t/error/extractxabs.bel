@@ -1,9 +1,9 @@
-datatype nat: type =
+LF nat: type =
 | zero   : nat
 | succ : nat → nat
 ;
 
-datatype tm : type =
+LF tm : type =
 | z    : tm
 | suc  : (tm) → tm
 | app  : tm → tm → tm
@@ -12,7 +12,7 @@ datatype tm : type =
 
 schema tctx = tm ;
 
-datatype Nlist: {g:tctx} [ |- nat] -> ctype =
+inductive Nlist: {g:tctx} [ |- nat] -> ctype =
 | Nnil : Nlist [g] [ |- zero]
 | Ncons: [g |- tm] -> Nlist [g] [ |- N] -> Nlist [g] [ |- (succ N)]
 ;

@@ -1,24 +1,24 @@
-datatype tp : type =
+LF tp : type =
 | nat : tp
 | prod : tp -> tp -> tp
 ;
 
-datatype exp : type =
+LF exp : type =
 | pair : exp -> exp -> exp
 ;
 
-datatype oft : exp -> tp -> type =
+LF oft : exp -> tp -> type =
 | oft_pair : oft M1 A -> oft M2 B -> oft (pair M1 M2) (prod A B)
 ;
 
 
-datatype check : exp -> tp -> type =
+LF check : exp -> tp -> type =
 | chk_pair : check M1 A -> check M2 B -> check (pair M1 M2) (prod A B)
 ;
 
 schema ctx = some [t:tp] block x:exp, v:oft x t;
 
-datatype biDer : exp -> tp -> type =
+LF biDer : exp -> tp -> type =
 | chk : check M T -> biDer M T
 ;
 

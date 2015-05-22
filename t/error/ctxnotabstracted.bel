@@ -1,4 +1,4 @@
-datatype tm : type =
+LF tm : type =
 | app  : tm → tm → tm
 | lam  : (tm → tm) → tm
 ;

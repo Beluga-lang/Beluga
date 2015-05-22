@@ -7,7 +7,7 @@
 }%
 
 % Small-step operational semantics
-datatype step: term -> term -> type = 
+LF step: term -> term -> type = 
 | e_if_true:   step (if_then_else true T2 T3)    T2
 | e_if_false:  step (if_then_else false T2 T3)   T3
 | e_if:        step T1 T1'

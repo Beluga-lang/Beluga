@@ -4,13 +4,13 @@
 %
 % This example only uses higher-order abstract syntax.
 
-datatype tp  : type =
+LF tp  : type =
 | nat : tp
 | bool: tp
 ;
 %name tp T.
 
-datatype Int : ctype =
+inductive Int : ctype =
 | Zero : Int
 | Suc : Int -> Int
 ;

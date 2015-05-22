@@ -1,9 +1,9 @@
-datatype A: ctype #positive
+inductive A: ctype 
 =
  | A2: A * A -> A
 ;
 
-datatype B: ctype #positive
+inductive B: ctype 
 =
  | B2: ((A -> A) -> B) -> B
  | B3: A -> (A * B) -> B 

@@ -1,12 +1,12 @@
-datatype bool : type =
+LF bool : type =
 | f : bool
 | t : bool;
 
-datatype nat : type =
+LF nat : type =
 | z : nat
 | s : nat -> nat;
 
-datatype list : nat -> type =
+LF list : nat -> type =
 | nil : list z
 | @ : bool -> list N -> list (s N);
 

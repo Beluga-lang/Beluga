@@ -1,4 +1,4 @@
-datatype tm : type =
+LF tm : type =
 | z    : tm
 | suc  : (tm) → tm
 | app  : tm → tm → tm
@@ -7,12 +7,12 @@ datatype tm : type =
 
 schema tctx = tm ;
 
-datatype nat: type =
+LF nat: type =
 | zero   : nat
 | succ : nat → nat
 ;
 
-datatype list:type =
+LF list:type =
 | nil: list
 | cons: tm -> list -> list
 ;
@@ -20,7 +20,7 @@ datatype list:type =
 
 
 %Implicit type/context args e.g.(g:tctx) doesn't work on ctype
-datatype LSiz:(g:tctx) [g |- list] -> [ |- nat] -> ctype =
+inductive LSiz:(g:tctx) [g |- list] -> [ |- nat] -> ctype =
 | EmpSiz: LSiz [g |- nil] [ |- zero]
 | SucSiz: LSiz [g |- L] [ |- N] -> LSiz [g |- cons X L] [ |- succ N]
 ;

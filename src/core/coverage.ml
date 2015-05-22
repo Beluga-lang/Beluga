@@ -1518,9 +1518,9 @@ let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
     cD                  |- .
    ]
 *)
-let genCtxGoals cD (LF.Decl(x, LF.CTyp schema_cid, dep)) =
+let genCtxGoals cD (LF.Decl(x, LF.CTyp (Some schema_cid), dep)) =
   let LF.Schema elems = Store.Cid.Schema.get_schema schema_cid in
-  let cD'  = LF.Dec(cD, LF.Decl(x, LF.CTyp schema_cid, dep)) in
+  let cD'  = LF.Dec(cD, LF.Decl(x, LF.CTyp (Some schema_cid), dep)) in
     genCtx cD' (LF.CtxVar (LF.CtxOffset 1)) elems
 
 let genContextGoals cD ctx_schema =

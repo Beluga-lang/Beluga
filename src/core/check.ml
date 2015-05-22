@@ -462,11 +462,12 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | I.STyp (_, cPhi) ->
     	LF.checkDCtx cD cPhi
   let checkCLFTyp cD ctyp = match ctyp with
-    | I.CTyp schema_cid ->
+    | I.CTyp (Some schema_cid) ->
         begin try
           let _ = Schema.get_schema schema_cid in ()
         with _ -> raise (Error.Violation "Schema undefined")
         end
+    | I.CTyp None -> ()
     | I.ClTyp (tp, cPsi) ->
         LF.checkDCtx cD cPsi;
         checkClTyp cD cPsi tp

@@ -17,7 +17,7 @@ This implementation not only uses higher-order abstract syntax in specifying the
 First, we define or type `tp` with higher-order abstract syntax in LF as follows:
 }}%
 
-datatype tp : type = 
+LF tp : type = 
   | top   : tp
   | arr   : tp -> tp -> tp	        % Functions: A1 => A2
   | forall: tp -> (tp -> tp) -> tp       % Universal Type: forall x>:A1. A2    forall A1 ([x] A2 x)
@@ -40,7 +40,7 @@ We use (<:) to denote algorithmic subtyping.
 }}%
 
 
-datatype sub : tp -> tp -> type =
+LF sub : tp -> tp -> type =
   | sa_top : sub S top
   | sa_arr : sub T1 S1 
              -> sub S2 T2 
@@ -169,7 +169,7 @@ We can also define declarative subtyping in Beluga and prove the equivalence bet
 }}%
 
 
-datatype  subtype : tp -> tp -> type = 
+LF  subtype : tp -> tp -> type = 
   | subtype_top    : subtype T top
   | subtype_refl   : subtype T T
   | subtype_trans  : subtype T1 T2 

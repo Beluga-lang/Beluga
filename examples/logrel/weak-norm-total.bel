@@ -16,13 +16,13 @@ Cave and Pientka[2013]</a>.
 
 First, let's define a simply typed &lambda;-calculus with one type:
 }}%
-datatype tp : type =
+LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
 %name tp T.        
 
-datatype tm : tp -> type = 
+LF tm : tp -> type = 
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
@@ -40,7 +40,7 @@ particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
 
-datatype step : tm A → tm A → type = 
+LF step : tm A → tm A → type = 
 | beta : step (app (lam M) N) (M N)
 | stepapp : step M M' -> step (app M N) (app M' N)
 ;
@@ -54,19 +54,19 @@ Finally, we define:
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-datatype mstep : tm A -> tm A -> type = 
+LF mstep : tm A -> tm A -> type = 
 | refl : mstep M M
 | onestep : step M M' -> mstep M' M'' -> mstep M M''
 ;
 %name mstep S.
 
-datatype val : tm A -> type = 
+LF val : tm A -> type = 
 | val/c : val c
 | val/lam : val (lam M)
 ;
 %name val V.
 
-datatype halts : tm A -> type = 
+LF halts : tm A -> type = 
 | halts/m : mstep M M' -> val M' -> halts M
 ;
 %name halts H.
@@ -85,8 +85,8 @@ computation-level types and programs are written inside `[ ]`.
 
 
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
-#stratified =
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
+ =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
@@ -171,7 +171,7 @@ fn r => case r of
 
 schema ctx = tm T;
 
-datatype RedSub : {gamma:ctx}{#S: |- gamma} ctype =
+inductive RedSub : {gamma:ctx}{#S: |- gamma} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
      → RedSub [gamma, x:tm A[]] [ |- #S[^], M ] 

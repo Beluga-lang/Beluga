@@ -206,7 +206,7 @@ let thin cD (tP, cPsi) =
     | CtxVar psi ->
         let schema = begin match psi with
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
-          | CInst ((_, _ , _, CTyp cid_schema, _, _), _ ) -> cid_schema
+          | CInst ((_, _ , _, CTyp (Some cid_schema), _, _), _ ) -> cid_schema
         end
         in
         if relevantSchema (Schema.get_schema schema) basis then
@@ -235,6 +235,7 @@ let thin cD (tP, cPsi) =
 
 
 
+exception NoSchema
 let thin0 cD a cPsi =
   (*inner basis cPsi = (s, cPsi')
 
@@ -247,15 +248,17 @@ let thin0 cD a cPsi =
 
      Initially, basis is `b' where tP = Atom(_, b, _).
   *)
-  let rec inner (basis : Id.cid_typ list) cPsi = match cPsi with
+  let rec inner (basis : Id.cid_typ list) cPsi = match Whnf.cnormDCtx (cPsi,MShift 0) with
     | Null -> (Shift 0,  Null) (* . |- shift(noCtx, 0) : . *)
 
     | CtxVar (psi) ->
+      begin try
         let schema = begin match psi with
           | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
-          | CInst ((_, _, _, CTyp cid_schema, _ , _), _ ) -> cid_schema
+          | CInst ((_, _, _, CTyp (Some cid_schema), _ , _), _ ) -> cid_schema
           | CtxName psi ->
-              let (_,Decl (_, CTyp s_cid, _))  = Store.FCVar.get psi in s_cid
+              let (_,Decl (_, CTyp (Some s_cid), _))  = Store.FCVar.get psi in s_cid
+	  | _ -> raise NoSchema
         end
         in
         if relevantSchema (Schema.get_schema schema) basis then
@@ -265,6 +268,7 @@ let thin0 cD a cPsi =
           ( (* print_string ("Denying that the context variable is relevant to anything in " ^
                basisToString basis ^ "\n"); *)
             ( EmptySub (* Shift(CtxShift psi, 0) *) ,  Null) )  (* psi |- shift(noCtx, 0) : . *)
+      with NoSchema -> (Shift 0, CtxVar psi) end
     | DDec(cPsi, TypDecl(name, tA)) ->
         begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
           | [] ->

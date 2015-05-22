@@ -2,16 +2,13 @@ Type-preserving compiler in Beluga,
 as described in "Programming with higher-order abstract syntax"
 
 cps.bel     : Continuation-passing style
+sfcps.bel   : Continuation-passing style for System F
 cc.bel      : Closure conversion
 cchoist.bel : Closure conversion and hoisting.
 
 Beluga is available online at http://complogic.cs.mcgill.ca/beluga/
 
 To run, execute
-|> beluga +coverage [filename]
-
-We recommend to run examples with
-|> beluga +coverage -implicit [filename]
-to avoid implicit type arguments to term constructors to be printed.
+|> beluga [filename]
 
 

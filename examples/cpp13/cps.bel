@@ -7,7 +7,7 @@
 %
 % Types T
 %
-datatype tp: type =
+LF tp: type =
 | nat   : tp
 | arr   : tp -> tp -> tp
 | code  : tp -> tp -> tp
@@ -16,7 +16,7 @@ datatype tp: type =
 ;
 %name tp T.
 
-datatype source   : tp -> type =
+LF source   : tp -> type =
 | app   : source (arr S T) -> source S -> source T
 | fst   : source (cross S T) -> source S
 | rst   : source (cross S T) -> source T
@@ -28,7 +28,7 @@ datatype source   : tp -> type =
 | suc : source nat -> source nat
 ;
 
-datatype exp : type =
+LF exp : type =
 | kapp   : value (arr S T) -> value S -> (value T -> exp) -> exp
 | klet :   value S -> (value S -> exp) ->  exp
 | klet-fst   : value (cross S T) -> (value S -> exp) -> exp
@@ -46,36 +46,36 @@ and value : tp -> type =
 schema ctx = some [s:tp] block x:source s, _t:value s ;
 
 
-rec cpse : (g:ctx)[g |- source S] -> [g, c: value S -> exp |- exp] =
+rec cpse : (g:ctx)[g |- source S[]] -> [g, c: value S[] -> exp |- exp] =
 / total e (cpse g s e) /
 fn e => case e of
-| [g |- #p.1 ..] => [g,c:value _ -> exp |- c (#p.2..)]
+| [g |- #p.1] => [g,c:value _ -> exp |- c (#p.2[..])]
 | [g |- z] => [g,c:value nat -> exp |- c (kz)]
 | [g |- nilv] => [g,c:value unit -> exp |- c knil]
-| [g |- suc (N..)] =>
-  let [g,c:value nat -> exp |- P..c] = cpse [g |- N..] in
-  [g,k:value nat -> exp |-  P..(\p. k (ksuc p))]
-| [g |- cons (M..) (N..)] =>
-   let [g,k1:value S -> exp |- P..k1] = cpse [g |- M..] in
-   let [g,k2:value T -> exp |- Q..k2] = cpse [g |- N..] in
-    [g,k:value (cross S T) -> exp |- P..(\p. Q..(\q. k (kcons p q)))]
-| [g |- lam (\x. M..x)] => 
-   let [g, x:source S |- M .. x] = [g, x:source _ |- M .. x] in 
-   let [g, b:block (x:source S, y:value S), c:value T -> exp |- P..b.2 c] =
-       cpse [g,b:block (x:source S, y:value S) |- M .. b.1 ] in  
-     [g, k:value (arr S T) -> exp |- k (klam (\x.\c. P..x c))]
-| [g |- letv (M..) (\x. N .. x)] =>
-   let [g,k1:value S -> exp |- P..k1] = cpse [g |- M..] in
-   let [g,b:block (x:source S, y:value S), c:value T -> exp |- Q..b.2 c] = cpse [g,b:block (x:source S , y:value S) |- N .. b.1 ] in
-    [g,k:value T -> exp |- P..(\p. klet p (\x. Q..x k))]
-| [g |- app (E1 .. ) (E2 .. )] =>
-  let [g, c:value (arr S T) -> exp |- E1' .. c] = cpse [g |- E1 .. ] in
-  let [g, c:value S         -> exp |- E2' .. c] = cpse [g |- E2 .. ] in
-    [g,c:value T -> exp |- E1' .. (\f. E2' .. (\x. kapp f x c))]
-| [g |- fst (E..)] =>
-      let [g, c:value (cross S T) -> exp |- E'..c] = cpse [g |- E..] in
-       [g,c:value S -> exp |- E'..(\x. klet-fst x c)]
-| [g |- rst (E..)] =>
-      let [g, c:value (cross S T) -> exp |- E'..c] = cpse [g |- E..] in
-       [g,c:value T -> exp |- E' .. (\x. klet-rst x c)]
+| [g |- suc N] =>
+  let [g,c:value nat -> exp |- P] = cpse [g |- N] in
+  [g,k:value nat -> exp |-  P[.., (\p. k (ksuc p))]]
+| [g |- cons M N] =>
+   let [g,k1:value S[] -> exp |- P] = cpse [g |- M] in
+   let [g,k2:value T[] -> exp |- Q] = cpse [g |- N] in
+    [g,k:value (cross S[] T[]) -> exp |- P[.., (\p. Q[.., (\q. k (kcons p q))])] ]
+| [g |- lam \x. M] => 
+   let [g, x:source S[] |- M[.. x] ] = [g, x:source _ |- M[.. x]] in 
+   let [g, b:block (x:source S[], y:value S[]), c:value T[] -> exp |- P[.. b.2 c] ] =
+       cpse [g,b:block (x:source S[], y:value S[]) |- M[.. b.1 ]] in  
+     [g, k:value (arr S[] T[]) -> exp |- k (klam (\x.\c. P[.. x c]))]
+| [g |- letv M (\x. N)] =>
+   let [g,k1:value S[] -> exp |- P] = cpse [g |- M] in
+   let [g,b:block (x:source S[], y:value S[]), c:value T[] -> exp |- Q[.. b.2 c]] = cpse [g,b:block (x:source S[] , y:value S[]) |- N[.. b.1] ] in
+    [g,k:value T[] -> exp |- P[.., (\p. klet p (\x. Q[..x k]))] ]
+| [g |- app E1 E2] =>
+  let [g, c:value (arr S[] T[]) -> exp |- E1'] = cpse [g |- E1] in
+  let [g, c:value S[]           -> exp |- E2'] = cpse [g |- E2] in
+    [g,c:value T[] -> exp |- E1'[ .., (\f. E2'[ .. ,(\x. kapp f x c)])]]
+| [g |- fst E] =>
+      let [g, c:value (cross S[] T[]) -> exp |- E'] = cpse [g |- E] in
+       [g,c:value S[] -> exp |- E'[.., (\x. klet-fst x c)] ]
+| [g |- rst E] =>
+      let [g, c:value (cross S[] T[]) -> exp |- E'] = cpse [g |- E] in
+       [g,c:value T[] -> exp |- E'[ .. , (\x. klet-rst x c)]]
 ;

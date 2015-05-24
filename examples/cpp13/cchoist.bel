@@ -199,22 +199,19 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
 % / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M] => ?
-% TO BE FIXED -bp
-%    M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
+| M_dot sigma' [x:target S |- M] => 
+    M_dot (extendEnv sigma') [x:target _  |- M[(crst x)] ]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] = 
 % / total g (reify  g) /
 mlam g => case [g] of
 | [ ] =>  EnvClo Emp (M_id [x:target unit])
-| [g,x:source S] =>
-  let EnvClo vt sigma = reify [g] in ?
-%  let  rho' = extendEnv sigma in 
-% TO BE FIXED -bp
-%  let rho = M_dot rho' [xenv:target (cross S _) |- cfst xenv] in
-%   EnvClo (Nex  vt) rho
-
+| [g,x:source S[]] =>
+  let EnvClo vt sigma = reify [g] in
+  let  rho' = extendEnv sigma in 
+  let rho = M_dot rho' [xenv:target (cross S[] _) |- cfst xenv] in
+   EnvClo (Nex  vt) rho
 ;
 
 % ----------------------------------------------------------       
@@ -272,9 +269,8 @@ rec weakenEnv1:(g:tctx)
 mlam Env1, Env2, Env3 => fn prf => fn m => case prf of
 | App_nil =>  m
 | App_cons p =>  
-  let [g,l: target _ |- M'] = weakenEnv1 [|- _ ] [|- _ ] [|- _] p m in ?
-% TO BE FIXED -bp
-%    [g,l:target _  |- M' [.. , crst l] ]
+  let [g,l: target _ |- M'] = weakenEnv1 [|- _ ] [|- _ ] [|- _] p m in
+    [g,l:target _  |- M' [.. , (crst l)] ]
 ;
 
 
@@ -289,11 +285,10 @@ mlam Env1, Env2, Env3 => fn prf => fn n => case prf of
   let [ |- refl] = append_nil a in
     weakenEnv1 [|- _ ] [|- _ ] [ |- _ ] a n
 | App_cons p =>
-  let [g,l:target (cross S[] L1'[]) |- N]  = n in ? 
-% TO BE FIXED -bp
-%  let [g,x:target S, l:target L3'[] |- N'[.. x l]] = 
-%     weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , (ccons x l)]] in
-%    [g,l:target (cross S[] L3'[]) |- N'[ .. , (cfst l) , (crst l)] ]
+  let [g,l:target (cross S[] L1'[]) |- N]  = n in 
+  let [g,x:target S[], l:target L3'[] |- N'[.. x l]] = 
+     weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , (ccons x l)]] in
+    [g,l:target (cross S[] L3'[]) |- N'[ .. , (cfst l) , (crst l)] ]
 
 ;
 

@@ -347,33 +347,22 @@ and cnormApxExp' cD delta i cDt = match i with
     let i2' = cnormApxExp' cD delta i2 cDt in
       Apx.Comp.Equal (loc, i1', i2')
 
-and cnormApxMetaObj cD delta mobj cDt = let (_cD', t) = cDt in
-  match mobj with
-    | loc', Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.MObj m) ->
-        let phat'     = Whnf.cnorm_psihat phat t in
-        let m'        = cnormApxTerm cD delta m cDt in
-          loc', Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.MObj m')
+and cnormApxHatOrDCtx loc cD delta psi ((_cD',t) as cDt) = match psi with
+  | Apx.Comp.Hat phat -> Apx.Comp.Hat (Whnf.cnorm_psihat phat t)
+  | Apx.Comp.DCtx cPsi -> Apx.Comp.DCtx (cnormApxDCtx loc cD delta cPsi cDt)
 
-    | loc', Apx.Comp.CObj (psi) ->
-        let psi' = cnormApxDCtx loc' cD delta psi cDt in
-          loc', Apx.Comp.CObj (psi')
+and cnormApxClObj cD delta clobj cDt = match clobj with
+  | Apx.Comp.MObj m -> Apx.Comp.MObj (cnormApxTerm cD delta m cDt)
+  | Apx.Comp.SObj s -> Apx.Comp.SObj (cnormApxSub cD delta s cDt)
 
-    | loc', Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.MObj m) ->
-        let psi' = cnormApxDCtx loc' cD delta psi cDt in
-        let m'   = cnormApxTerm cD delta m cDt in
-          loc', Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.MObj m')
+and cnormApxMetaObj cD delta (loc,mobj) cDt =
+  loc, match mobj with
+    | Apx.Comp.ClObj (psi, clobj) ->
+      let psi'   = cnormApxHatOrDCtx loc cD delta psi cDt in
+      let clobj' = cnormApxClObj cD delta clobj cDt in
+      Apx.Comp.ClObj (psi', clobj')
 
-    | loc , Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj sigma) ->
-      let phat'  = Whnf.cnorm_psihat phat t in
-      let sigma' = cnormApxSub cD delta sigma cDt in
-        loc, Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.SObj sigma')
-
-    | loc , Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.SObj sigma) ->
-      let psi'   = cnormApxDCtx loc cD delta psi cDt in
-      let sigma' = cnormApxSub cD delta sigma cDt in
-        loc, Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.SObj sigma')
-
-
+    | Apx.Comp.CObj (psi) -> Apx.Comp.CObj (cnormApxDCtx loc cD delta psi cDt)
 
 and cnormApxBranches cD delta branches cDt = match branches with
   | [] -> []

@@ -127,13 +127,9 @@ let rec unmix = function
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
-                                      let (l, cdecl) = match c1 with (* TODO: Refactor *)
-					| Comp.TypInd (Comp.TypBox (l, (_,LF.ClTyp (LF.MTyp tA, cPsi)))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, (_,LF.ClTyp (LF.PTyp tA, cPsi)))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, (_,LF.CTyp schema)))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.Inductive))
-                                        | Comp.TypBox (l, (_,LF.ClTyp(LF.MTyp tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.No))
-                                        | Comp.TypBox (l, (_,LF.ClTyp(LF.PTyp tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.No))
-                                        | Comp.TypBox (l, (_,LF.CTyp schema))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.No)) 
+                                      let (l, cdecl) = match c1 with
+					| Comp.TypInd (Comp.TypBox (l, mtyp)) -> (l, LF.Decl(x, mtyp, LF.Inductive))
+                                        | Comp.TypBox (l, mtyp) -> (l, LF.Decl(x, mtyp, LF.No))
 					| _ -> unmixfail (mixloc mt1)
 				      in
                                       CompKindMix(Comp.PiKind(l, cdecl, c2))

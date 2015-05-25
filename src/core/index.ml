@@ -450,7 +450,14 @@ and index_spine cvars bvars fvars = function
         let (s', fvars'') = index_spine cvars bvars fvars' s in
           (Apx.LF.App (m', s') , fvars'')
 
-and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
+and index_sub cvars bvars ((fvs, closed_flag )  as fvars) =
+  let to_head_or_obj tM = match tM with
+    | Apx.LF.Root (_,(Apx.LF.BVar _ as h), Apx.LF.Nil)
+    | Apx.LF.Root (_,(Apx.LF.PVar _ as h), Apx.LF.Nil)
+    | Apx.LF.Root (_,(Apx.LF.Proj _ as h), Apx.LF.Nil) -> Apx.LF.Head h
+    | _ -> Apx.LF.Obj tM
+  in 
+  function
   | Ext.LF.RealId -> (Apx.LF.RealId, fvars)
   | Ext.LF.Id loc -> (Apx.LF.Id, fvars)
 
@@ -462,7 +469,7 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) = function
   | Ext.LF.Dot (_, s, Ext.LF.Normal m) ->
       let (s', fvars')  = index_sub cvars bvars fvars s  in
       let (m', fvars'') = index_term cvars bvars fvars' m in
-        (Apx.LF.Dot (Apx.LF.Obj  m', s') , fvars'')
+        (Apx.LF.Dot (to_head_or_obj m', s') , fvars'')
 
   | Ext.LF.EmptySub _ ->
       (Apx.LF.EmptySub, fvars)

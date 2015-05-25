@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
  / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[(crst x)] ]
+| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] =

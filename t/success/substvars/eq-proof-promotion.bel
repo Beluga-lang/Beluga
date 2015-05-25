@@ -104,7 +104,7 @@ inductive CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype =
          CtxRel [g] [h] [g |- #W[..] ] 
 	 -> CtxRel [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		   [h, b:block (x:tm, u:aeq x x)]
-		   [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1 ; b.2>]
+		   [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..], <b.1 ; b.2>]
 ;
 
 inductive StrTm : (g:daG)[g |- tm] ->  ctype = 
@@ -131,7 +131,7 @@ fn cr1 => fn cr2 => case (cr1 , cr2) of
   let (RefCtx , RefSub [g] [h] [g |- #W[..] ] ) = deterministic_CtxRel cr1 cr2 in 
    (RefCtx , RefSub [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		    [h, b:block (x:tm, u:aeq x x)]
-		    [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] <b.1 ; b.2>])
+		    [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..], <b.1 ; b.2>])
    ;
 
 inductive Exists_xaG : {g:daG} ctype = 
@@ -156,7 +156,7 @@ mlam g => mlam M => case [g |- M[..]] of
   let (cr : CtxRel [g] [h] [g |- #W[..] ] ) = cr in 
    StrTm [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1 ; b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..], < b.1 ; b.2 > ]
 	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
 
@@ -165,7 +165,7 @@ mlam g => mlam M => case [g |- M[..]] of
       = str_tm [g] [g |- N[..]] in 
      StrTm [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1 ; b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..], < b.1 ; b.2 > ]
 	 (Ccons [g] [h] [g |- #W[..] ] cr)
 	 [h, b:block (x:tm, u:aeq x x) |-  N'[..]]
 
@@ -174,7 +174,7 @@ mlam g => mlam M => case [g |- M[..]] of
  let {#W:g |- h}
      StrTm [g,b:block (x:tm, u:aeq x x,v:deq x x)]
            [h,b:block (x:tm, u:aeq x x)]
-	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..] <b.1 ; b.2>]
+	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..], <b.1 ; b.2>]
            (Ccons [g] [h] [g |- #W[..] ] cr) [h, b:block (x:tm, u:aeq x x) |- M'[..,b.1]] = 
        str_tm [g, b:block (x:tm, u:aeq x x,v:deq x x)] [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[..,b.1]] in 
  StrTm [g] [h] [g |- #W[..] ] cr [h |- lam \y. M'[..,y]] 
@@ -207,7 +207,7 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
   let (cr : CtxRel [g] [h] [g |- #W[..] ] ) = cr in 
   StrAeq [g, b:block (x:tm, u:aeq x x, v:deq x x)] 
 	 [h, b:block (x:tm, u:aeq x x)] 
-	 [g, b:block (x:tm, u:aeq x x, v:deq x x) |- #W[..] < b.1 ; b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v:deq x x) |- #W[..], < b.1 ; b.2 > ]
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
 	 [h, b:block (x:tm, u:aeq x x) |-  b.1]
 	 (Ccons [g] [h] [g |- #W[..] ] cr)
@@ -248,7 +248,7 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
   in 
      StrAeq [g, b:block (x:tm, u:aeq x x, v: deq x x)]
          [h, b:block (x:tm, u:aeq x x)]
-	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..] < b.1 ; b.2 > ]
+	 [g, b:block (x:tm, u:aeq x x, v: deq x x) |- #W[..],< b.1 ; b.2 > ]
 	 [h, b:block (x:tm, u:aeq x x) |-  M'[..]]
 	 [h, b:block (x:tm, u:aeq x x) |-  N'[..]]
 	 (Ccons [g] [h] [g |- #W[..] ] cr)

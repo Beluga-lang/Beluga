@@ -62,7 +62,7 @@ and inductive AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] ->
 inductive IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M[..]] [ |- A]
-         -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S[..] (M[..])];
+         -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S, M];
 
 % Logical equivalence. _|-_~~_:_ in the paper
 stratified LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =

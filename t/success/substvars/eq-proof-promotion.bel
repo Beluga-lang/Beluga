@@ -42,7 +42,7 @@ mlam g => mlam M => case [g |- (M[..])] of
 | [g |- #p.1[..]] => [g |- #p.2[..]]
 
 | [g |- lam \x. M] =>
-  let [g,b:block y:tm, ae_v:aeq y y |-  D[.. b.1 b.2]] = 
+  let [g,b:block y:tm, ae_v:aeq y y |-  D[..,b.1,b.2]] = 
          reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |-  M[.. b.1]]
   in
    [g |- ae_l \x. \w. D]  % : eq (L) (L)
@@ -62,9 +62,9 @@ fn d1 => fn d2 => case d1 of
 
 | [g |- ae_l \x.\u. D1] =>
   let [g |- ae_l \x.\u. D2] =  d2  in	
-  let [g, b:block x:tm, ae_v:aeq x x |-  E[.. b.1 b.2]] = 
-         transG [g, b:block x':tm, ae_v:aeq x' x'  |-  D1[.. b.1 b.2]]
-               [g, b |-  D2[.. b.1 b.2]]
+  let [g, b:block x:tm, ae_v:aeq x x |-  E[..,b.1,b.2]] = 
+         transG [g, b:block x':tm, ae_v:aeq x' x'  |-  D1[..,b.1,b.2]]
+               [g, b |-  D2[..,b.1,b.2]]
   in
    [g |- ae_l \x. \u. E]
        
@@ -84,8 +84,8 @@ fn d => case d of
 | [g |- #p.2[..]] => d
 
 | [g |- ae_l \x.\u. D1] =>
-  let [g, b:block x:tm, ae_v:aeq x x |-  E[.. b.1 b.2]] = 
-         symG [g, b:block x':tm, ae_v:aeq x' x'  |-  D1[.. b.1 b.2]]
+  let [g, b:block x:tm, ae_v:aeq x x |-  E[..,b.1,b.2]] = 
+         symG [g, b:block x':tm, ae_v:aeq x' x'  |-  D1[..,b.1,b.2]]
   in
     [g |- ae_l \x. \u. E]
        
@@ -231,11 +231,11 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
 	    [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..], <b.1 ; b.2>]
             [h,b:block (x:tm, u:aeq x x)  |-  M'[.. b.1] ]  [h,b:block (x:tm, u:aeq x x)  |-  N'[.. b.1] ] 
            (Ccons [g] [h] [g |- #W[..] ] cr) 
-            [h, b:block (x:tm, u:aeq x x) |- D'[.. b.1 b.2]] = 
+            [h, b:block (x:tm, u:aeq x x) |- D'[..,b.1,b.2]] = 
        str_aeq [g, b:block (x:tm, u:aeq x x,v:deq x x)] 
 	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[.. b.1]] 
 	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- N[.. b.1]] 
-               [g,b:block (x:tm, u:aeq x x,v:deq x x) |- D[.. b.1 b.2]]
+               [g,b:block (x:tm, u:aeq x x,v:deq x x) |- D[..,b.1,b.2]]
 
  in
  StrAeq [g] [h] [g |- #W[..] ] 
@@ -302,7 +302,7 @@ fn e => case e of
     [g |- ae_a (F1[..]) (F2[..])]
 					
 | [g |- de_l (\x.(\u. D))] => 
-  let [g,b:block x:tm, _t:aeq x x, u:deq x x |-  F[.. b.1 b.2]] = 
+  let [g,b:block x:tm, _t:aeq x x, u:deq x x |-  F[..,b.1,b.2]] = 
         ceq [g, b:block x:tm, _t:aeq x x, u:deq x x  |-  D[.. b.1 b.3]]
   in
      [g |- ae_l (\x.\v. F)]

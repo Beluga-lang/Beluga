@@ -98,7 +98,7 @@ fn e => case e of
 | [g |- e_l (\x.(\u. D))] =>
   let % {F:: (eq (R) (Q))[g, x:exp, u: eq x x]}
      [g,b:block x:exp,u:equal x x , _t:eq x x |-  F[.. b.1 b.3]] =
-        ceq [g, b:block x:exp, u:equal x x , _t:eq x x |-  D[.. b.1 b.2]]
+        ceq [g, b:block x:exp, u:equal x x , _t:eq x x |-  D[..,b.1,b.2]]
   in
      [g |- eq_lam (\x.\v. F)]
 

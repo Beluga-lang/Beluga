@@ -144,7 +144,7 @@ fn a => case a of
   let [g |- R'[..]] = algEqRSym [g |- R[..]] in
   [g |- algbase (S2[..]) (S1[..]) (R'[..])]
 | [g |- algarr (N[..])] =>
-  let [g,b:block x:tm,y:algeqr x x _ |- N'[.. b.1 b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[.. b.1 b.2]] in
+  let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
   [g |- algarr (N'[..])]
 ;
 
@@ -276,9 +276,9 @@ fn a1 => fn a2 => case a1 of
   [g |- algbase (S1[..]) (S3[..]) (R[..])]
 | [g |- algarr (A1'[..])] => 
   let [g |- algarr (A2'[..])] = a2 in
-  let [g,b:block x:tm,y:algeqr x x T |- R[.. b.1 b.2]]
-      = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[.. b.1 b.2]]
-		    [g,b:block x:tm,y:algeqr x x _ |- A2'[.. b.1 b.2]] in
+  let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
+      = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[..,b.1,b.2]]
+		    [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
   [g |- algarr (R[..])]
 ;
 

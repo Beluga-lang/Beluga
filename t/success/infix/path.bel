@@ -73,7 +73,7 @@ mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
          let [g,b:block x:tm, q:path, _t:q is_path x |-  D[.. b]] = ip in
          let [g |- p_lam (\x.\q.\iq. D')] : [g |- (bind (\q. Q')) is_path (lam (\x. N'))] =
            f [g |- bind (\q. Qs) ]  [g |- p_lam (\x.\q.\iq. D[.. <x ; q ; iq>])  ] in
-             [g,b |- D'[.. b.1 b.2 b.3]]
+             [g,b |- D'[..,b.1,b.2 b.3]]
        )
 
   in

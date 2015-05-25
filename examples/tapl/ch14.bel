@@ -85,7 +85,7 @@ fn d => fn s => case s of
 
 | [ |- step_app_beta V] =>
   let [ |- t_app (t_lam (\x.\u. D)) D2] = d in
-    [ |- D[_ D2]]
+    [ |- D[_,D2]]
 | [ |- step_app_err1 _]   =>
   let [ |- t_app (t_error D) _ ] = d in [ |- t_error D ]
 
@@ -108,7 +108,7 @@ fn d => fn s => case s of
   let [ |- t_trywith D1 D2] = d in [ |- D1]
 
 | [ |- step_try_error V] =>
-    let [ |- t_trywith (t_error D1) (\x.\u.D2)] = d in [ |- D2[_ D1]]
+    let [ |- t_trywith (t_error D1) (\x.\u.D2)] = d in [ |- D2[_,D1]]
 
 ;
 

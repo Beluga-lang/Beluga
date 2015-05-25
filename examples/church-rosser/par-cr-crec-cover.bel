@@ -22,7 +22,7 @@ fn d => fn e => case d of
 | [g, x:term, u:pred x x |-  lm \y.\v. R1[.. y v x u]] =>
   let [g |- S[..]] = e in
   let [g,b:block y:term, _t:pred y y |-  R1'] =
-    subst [g, b:block (y:term, _t:pred y y), x:term, u:pred x x |-  R1[.. b.1 b.2 x u]]
+    subst [g, b:block (y:term, _t:pred y y), x:term, u:pred x x |-  R1[..,b.1,b.2 x u]]
           [g, b |-  S[..] ]
   in
    [g |- lm \y.\v. R1'[.. <y ; v>]]
@@ -31,7 +31,7 @@ fn d => fn e => case d of
   let [g |- R2'[..]] = subst [g, x, u |-  R2] e in
   let [g |- S[..]] = e in
   let [g, b:block y:term,_t:pred y y |-  R1'] =
-      subst [g, b:block (y:term,_t:pred y y), x:term, u:pred x x |-  R1[.. b.1 b.2 x u]] [g, b |-  S[..]] in
+      subst [g, b:block (y:term,_t:pred y y), x:term, u:pred x x |-  R1[..,b.1,b.2 x u]] [g, b |-  S[..]] in
   [g |- beta (\y.\v. R1'[.. <y ; v>]) (R2'[..])]
 
 ;
@@ -52,7 +52,7 @@ fn d => case d of
   let [g |- dia_result (H2[..]) (S2[..]) (S2'[..])] = dia [g |- assume (R2[..]) (R2'[..])] in
 
   let  [g, b:block y:term, _t:pred y y |-  dia_result (H1[.. b.1]) (S1) (S1')] =
-      dia [g, b:block y:term, _t:pred y y |-  assume (R1a[.. b.1 b.2]) (R1'[.. b.1 b.2])] in
+      dia [g, b:block y:term, _t:pred y y |-  assume (R1a[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
 
     let [g |- S''[..]] = subst [g, y, v |-  S1'[.. <y ; v>]] [g |- S2'[..]] in
       [g |- (dia_result H1[.. H2] (beta (\y.\v. S1[.. <y ; v>]) (S2[..])) (S''[..]))]
@@ -66,7 +66,7 @@ fn d => case d of
 | [g |- assume (beta (\y.\v. R1) (R2[..]))   (beta (\y.\v. R1') (R2'[..]))] =>
      let  [g |- dia_result (H2[..]) (S2[..]) (S2'[..])] = dia [g |- assume (R2[..]) (R2'[..])] in
      let [g, b:block y:term, _t:pred y y |-  dia_result (H1[.. b.1]) (S1) (S1')] =
-      dia [g, b:block y:term, _t:pred y y |-  assume (R1[.. b.1 b.2]) (R1'[.. b.1 b.2])] in
+      dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
 
      let [g |- S[..]] = subst [g,y,v |-  S1[.. <y ; v>]] [g |- S2[..]] in
      let [g |- S'[..]] = subst [g,y,v |-  S1'[.. <y ; v>]] [g |- S2'[..]] in
@@ -75,14 +75,14 @@ fn d => case d of
 | [g |- assume (beta (\y.\v. R1) (R2[..])) (ap (lm (\y.\v. R1')) (R2'[..]))] =>
     let [g |- dia_result (H2[..]) (S2[..]) (S2'[..])] = dia [g |- assume (R2[..]) (R2'[..])] in
     let [g, b:block y:term, _t:pred y y |-  dia_result (H1[.. b.1]) (S1) (S1')] =
-      dia [g, b:block y:term, _t:pred y y |-  assume (R1[.. b.1 b.2]) (R1'[.. b.1 b.2])] in
+      dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
     let [g |- S[..]] = subst [g,y,v |-  S1[.. <y ; v>]] [g |- S2[..]] in
      [g |- dia_result _ (S[..]) (beta (\y.\v. S1'[.. <y ; v>]) (S2'[..]))]
 
 
 | [g |- assume (lm (\y.\v. R1[.. y v])) (lm (\y.\v. R1'[.. y v]))] =>
   let [g, b:block y:term, _t:pred y y |-  dia_result (H1[.. b.1]) (S1) (S1')] =
-     dia [g, b:block y:term, _t:pred y y |-  assume (R1[.. b.1 b.2]) (R1'[.. b.1 b.2])] in
+     dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
   [g |- dia_result _ (lm (\y.\v. S1[.. <y ; v>])) (lm (\y.\v. S1'[.. <y ; v>]))]
 
 | [g |- assume (#q.2[..]) (#q.2[..])] => [g |- dia_result _ (#q.2[..]) (#q.2[..])]

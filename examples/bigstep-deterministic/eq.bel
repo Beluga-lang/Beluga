@@ -21,7 +21,7 @@ case [g |- M[..]] of
     [g |- eq_app (D1[..]) (D2[..])]
 
  | [g |- lam (\x. N)] =>
-   let [g,b:block x:exp, _t:eq x x |-  D1[.. b.1 b.2]] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N[.. b.1] ] in
+   let [g,b:block x:exp, _t:eq x x |-  D1[..,b.1,b.2]] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N[.. b.1] ] in
     [g |- eq_lam (\x.\u. D1)]
 
  | [g |- #p.1[..]] => [g |- #p.2[..]]
@@ -36,7 +36,7 @@ fn d => case d of
    [g |- eq_app (F1[..]) (F2[..])]
 
  | [g |- eq_lam (\x.\u. D)] =>
-   let [g,b:block x:exp, _t:eq x x |-  F[.. b.1 b.2]] = eq_sym [g,b:block x:exp, _t:eq x x |-  D[.. b.1 b.2]] in
+   let [g,b:block x:exp, _t:eq x x |-  F[..,b.1,b.2]] = eq_sym [g,b:block x:exp, _t:eq x x |-  D[..,b.1,b.2]] in
    [g |- eq_lam (\x.\u. F)]
 
  | [g |- #p.2[..]] => [g |- #p.2[..]]
@@ -52,9 +52,9 @@ mlam g => mlam M => fn d => case [g,x:exp |-  M] of
    let [g |- D2[..]] = subst_respects_eq [g] [ g,x  |-  T2 ] d in
    [g |- eq_app (D1[..]) (D2[..])]
 
- | [g,x:exp |-  lam (\y. M1[.. y x])] =>
+ | [g,x:exp |-  lam (\y. M1[..,y,x])] =>
    let [g |- D3[..]] = d in
-   let [g,b:block z:exp, _t:eq z z |-  D1[.. b.1 b.2]]
+   let [g,b:block z:exp, _t:eq z z |-  D1[..,b.1,b.2]]
      = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x  |-  M1[.. b.1 x] ] [g,b |- D3[..]] in
    [g |- eq_lam (\x.\u. D1)]
 

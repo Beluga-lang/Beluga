@@ -78,7 +78,7 @@ fn ae => case ae of
 | [g |- ae_a D1 D2] =>
   Ae_a' (atrans_c [g |- D1]) (atrans_c [g |- D2])
 | [g |- ae_l \x.\u.D] =>
-  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[.. b.1 b.2]])
+  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]])
 ;
 
 rec atrans_s :(g:aCtx)  Aeq' [g |- M[..]] [g |- N[..]] -> [g |- aeq (M[..]) (N[..])] =
@@ -92,7 +92,7 @@ fn ae => case ae of
      [g |- ae_a (D1[..]) (D2[..])]
 
 | Ae_l' d =>
-  let [g, b:block (x:term, _u:aeq x x)  |-  D[.. b.1 b.2]] = atrans_s d in
+  let [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]] = atrans_s d in
   [g |- ae_l \x.\u.D]
 ;
 

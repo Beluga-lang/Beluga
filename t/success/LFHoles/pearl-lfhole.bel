@@ -109,7 +109,7 @@ mlam g => mlam T => case [g |- T[..]] of
   let [g |- R'[..]] = refl [g] [g |- U[..]] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
                    w: sub a (U[..]), ref: sub a a) |-
-       R[.. b.1 b.2 b.3 b.4]] =
+       R[..,b.1,b.2 b.3 b.4]] =
        refl [g, b: block a:tp, tr:{u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t',
                    w: sub a (U[..]), ref: sub a a ]
             [g, b  |-  T[.. b.1]] in
@@ -154,11 +154,11 @@ mlam Q => fn d1 => fn d2 => case d1 of
 	let [g |- F1[..]] = trans [g |- Q1[..]] [g |- E1[..]] [g |- D1[..]] in
 	let [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 			 w: sub a _, ref: sub a a) |-
-	       F2[.. b.1 b.2 b.3 b.4]] =
+	       F2[..,b.1,b.2 b.3 b.4]] =
 	      trans [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a _, ref: sub a a)  |-  Q2[.. b.1]]
-		    [g, b |-  D2[.. b.1 b.2 (b.2 _ (Q1[..]) (E1[..]) b.3) b.4] ]
-		    [g, b |-  E2[.. b.1 b.2 b.3 b.4]] in
+		    [g, b |-  D2[..,b.1,b.2 (b.2 _ (Q1[..]) (E1[..]) b.3) b.4] ]
+		    [g, b |-  E2[..,b.1,b.2 b.3 b.4]] in
 	  [g |- sa_all (F2[..]) (F1[..])]
     | [g |- sa_top] => [g |- sa_top]
 
@@ -192,7 +192,7 @@ fn d => case d of
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  F2[.. b.1 b.5]] =
       sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  D2[.. b.1 b.2 b.3 b.4] ] in
+				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  D2[..,b.1,b.2 b.3 b.4] ] in
   [g |- subtype_forall (F2[..]) (F1[..])]
 
 ;
@@ -215,7 +215,7 @@ fn d => case d of
 | [g |- subtype_forall (F2[..]) (F1[..])] : [g |- subtype (forall (S1[..]) (S2[..])) (forall (T1[..]) (T2[..]))] =>
   let [g |- D1[..]] = complete [g |- F1[..]] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  D2[.. b.1 b.2 b.3 b.4]] =
+				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  D2[..,b.1,b.2 b.3 b.4]] =
       complete [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a (T1[..]), ref: sub a a, w': subtype a (T1[..]))  |-  F2[.. b.1 b.5] ]
   in

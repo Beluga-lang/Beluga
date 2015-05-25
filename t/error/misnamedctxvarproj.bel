@@ -50,7 +50,7 @@ case [g,x:exp |-  M] of
    let [g |- D2[..]] = subst_respects_eq [g] [ g,x  |-  T2 ] d in
    [g |- eq_app (D1[..]) (D2[..])]
 
- | [g,x:exp |-  lam (\y. M1[.. y x])] =>
+ | [g,x:exp |-  lam (\y. M1[..,y,x])] =>
    let [g |- D3[..]] = d in
    let [g,b:block z:exp, _t:eq z z |-  D1[.. b.z b._t]]
      = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x  |-  M1[.. b.z x] ] [g,b |- D3[..]] in

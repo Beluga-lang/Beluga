@@ -42,8 +42,8 @@ rec tps': (g:tctx)[g |- type_of (M[..]) (T[..])] -> [g |- step (M[..]) (N[..])]
 fn d => fn s => case s of
 | [g |- s_lam \x.\v. \n. S] =>
   let [g |- tof_lam \x.\u. D] = d in
-  let [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[.. b.1 b.2]] =
-      tps' [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x |-  (D[.. b.1 b.2])]
+  let [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
+      tps' [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x |-  (D[..,b.1,b.2])]
 	   [g,b |- S[.. b.1 b.3 b.4]] in
   [g |- tof_lam \x.\u. F]
 
@@ -75,8 +75,8 @@ rec tps: (g:tctx)[g |- type_of (M[..]) (T[..])] -> [g |- step (M[..]) (N[..])]
 fn d => fn s => case d of
 | [g |- tof_lam \x.\u. D] =>
   let [g |- s_lam \x.\v. \n. S] = s in
-  let [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[.. b.1 b.2]] =
-      tps [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x |-  (D[.. b.1 b.2])]
+  let [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
+      tps [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x |-  (D[..,b.1,b.2])]
 	  [g,b |- S[.. b.1 b.3 b.4]] in
   [g |- tof_lam \x.\u. F]
 

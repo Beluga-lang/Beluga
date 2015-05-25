@@ -44,7 +44,7 @@ fn e => case e of
 
  | [g,x:exp |-  letv U1 (\y. U2)] =>
       plus  (cntV  [g,x |- U1])
-            (cntV  [g,y:exp,x:exp |- U2[.. x y]])
+            (cntV  [g,y:exp,x:exp |- U2[..,x,y]])
 
  | [g,x:exp |-  add U W]  =>
      plus (cntV [g,x |- U])

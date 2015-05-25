@@ -18,6 +18,6 @@ rec pos :(g:ctx)[g |- term] -> [ |- nat] =
 fn l => case l of
 | [g,y:term |- y] => [ |- s z]
 | [g,y:term |- #p[..]] => pos [g |- #p]
-| [g, y:term |- lam \x. M[.. x y]] => pos [g, x:term, y:term |- M[.. x y]]
+| [g, y:term |- lam \x. M[..,x,y]] => pos [g, x:term, y:term |- M[..,x,y]]
 ;
 

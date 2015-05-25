@@ -12,7 +12,7 @@ rec eq1: (g:ctx) [g |- pred (M[..]) (N[..])] -> [g |- -->* (M[..]) (N[..])] =
 | [g |- beta (\x.\u. R1) (R2[..])] =>
   let {M1':[g,x:term |-  term]}{S1*:[g,x:term |-  -->* (M1) (M1')]}
       [g,b:block x:term,_t:pred x x |-  S1*[.. b.1]] =
-         eq1 [g,b:block x:term , _t:pred x x |-  R1[.. b.1 b.2]] in
+         eq1 [g,b:block x:term , _t:pred x x |-  R1[..,b.1,b.2]] in
   % S1*: -->* (M1 x) (M1' x)
   let {M2:[g |- term]}{S2*:[g |- -->* (M2[..]) (M2'[..])]}
       [g |- S2*[..]]   = eq1 [g |- R2[..]] in
@@ -43,7 +43,7 @@ rec eq1: (g:ctx) [g |- pred (M[..]) (N[..])] -> [g |- -->* (M[..]) (N[..])] =
  | [g |- lm (\x.\u. R1)] =>
   let % {S1* :: (-->* (M) (N))[g,x:term]}
        [g,b:block x:term , _t:pred x x |-  S1*[.. b.1]] =
-   eq1 [g,b:block x:term , _t:pred x x |-  R1[.. b.1 b.2]] in
+   eq1 [g,b:block x:term , _t:pred x x |-  R1[..,b.1,b.2]] in
   lm1* [g,x |- S1*]
 ;
 

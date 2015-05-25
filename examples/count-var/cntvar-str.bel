@@ -43,7 +43,7 @@ fn e => case e of
  | [g,x : exp _  |-  s (W)]  => cntV [g,x |- W]
  | [g,x : exp _  |-  letv (T1[])  (U1) (\y . U2)] =>
    plus  (cntV [g,x |- U1])
-         (cntV [g,y:exp _ ,x:exp _ |-  U2[.. x y]])
+         (cntV [g,y:exp _ ,x:exp _ |-  U2[..,x,y]])
 
 | [g,x: exp _  |-  add (U) (W)]  =>
    plus (cntV [g,x |- U])

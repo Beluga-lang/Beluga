@@ -546,11 +546,11 @@ let index_cltyp' cvars bvars fvars = function
     (Apx.LF.STyp (index_svar_class cl, phi'), fvars)
 
 let index_cltyp cvars fvars = function
-  | Ext.LF.ClTyp (loc, cl, psi) ->
+  | loc , Ext.LF.ClTyp (cl, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (cl', fvars'')          = index_cltyp'  cvars bvars' fvars' cl in
         (Apx.LF.ClTyp (cl', psi'), cvars, fvars'')
-  | Ext.LF.CTyp (loc, schema_name) ->
+  | loc , Ext.LF.CTyp (schema_name) ->
       let schema_cid    = Schema.index_of_name schema_name in
       (Apx.LF.CTyp schema_cid, cvars, fvars)
 

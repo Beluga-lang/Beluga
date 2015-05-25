@@ -587,7 +587,7 @@ module Ext = struct
               (r_paren_if cond)
 
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
-      | LF.Decl (u, LF.ClTyp (_, LF.MTyp tA, cPsi), _) ->
+      | LF.Decl (u, (_,LF.ClTyp (LF.MTyp tA, cPsi)), _) ->
           fprintf ppf "{%s : [%a %s %a]}"
             (R.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -598,7 +598,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (p, LF.ClTyp (_, LF.PTyp tA, cPsi), _) ->
+      | LF.Decl (p, (_,LF.ClTyp (LF.PTyp tA, cPsi)), _) ->
           fprintf ppf "{#%s : [%a %s %a]}"
             (R.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
@@ -609,7 +609,7 @@ module Ext = struct
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
-      | LF.Decl (u, LF.ClTyp (_, LF.STyp (_, cPhi), cPsi), _) ->
+      | LF.Decl (u, (_,LF.ClTyp (LF.STyp (_, cPhi), cPsi)), _) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
@@ -619,7 +619,7 @@ module Ext = struct
             (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
-      | LF.Decl (name, LF.CTyp(_, schemaName), _) ->
+      | LF.Decl (name, (_,LF.CTyp schemaName), _) ->
           fprintf ppf "{%s : %s}"
             (R.render_name name)
             (to_html (R.render_name schemaName) Link)
@@ -716,7 +716,7 @@ module Ext = struct
           fprintf ppf "(%a * %a)"
             (fmt_ppr_cmp_typ cD 0) tau1
             (fmt_ppr_cmp_typ cD 0) tau2
-      | Comp.TypPiBox (_loc, (LF.Decl(name, LF.CTyp(l, schema), LF.Maybe) as cdecl), tau) ->
+      | Comp.TypPiBox (_loc, (LF.Decl(name, (l,LF.CTyp schema), LF.Maybe) as cdecl), tau) ->
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:%s) %a%s"
               (l_paren_if cond)

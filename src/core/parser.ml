@@ -128,13 +128,13 @@ let rec unmix = function
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
                                       let (l, cdecl) = match c1 with
-					| Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.ClTyp (l, LF.MTyp tA, cPsi), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp (_, tA, cPsi))) -> (l, LF.Decl(x, LF.ClTyp (l, LF.PTyp tA, cPsi), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaSchema (_,schema)))    -> (l, LF.Decl(x, LF.CTyp(l, schema), LF.Inductive))
-                                        | Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi)) -> (l, LF.Decl(x, LF.ClTyp (l, LF.MTyp tA, cPsi), LF.No))
+					| Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.Inductive))
+                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp (_, tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.Inductive))
+                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaSchema (_,schema)))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.Inductive))
+                                        | Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi)) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.No))
                                         | Comp.TypBox (l, Comp.MetaParamTyp
-							 (_, tA, cPsi)) -> (l, LF.Decl(x, LF.ClTyp (l, LF.PTyp tA, cPsi), LF.No))
-                                        | Comp.TypBox (l, Comp.MetaSchema (_,schema))    -> (l, LF.Decl(x, LF.CTyp(l, schema), LF.No)) 
+							 (_, tA, cPsi)) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.No))
+                                        | Comp.TypBox (l, Comp.MetaSchema (_,schema))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.No)) 
 					| _ -> unmixfail (mixloc mt1)
 				      in
                                       CompKindMix(Comp.PiKind(l, cdecl, c2))
@@ -681,31 +681,31 @@ GLOBAL: sgn;
 ;
 *)
   clf_ctyp_decl:
-    [
+    [ (* TODO: Refactor this *)
       [
         "{"; hash = "#"; p = SYMBOL; ":";
 
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}"; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString p), LF.ClTyp (_loc, LF.PTyp tA, cPsi), dep)
+           LF.Decl(Id.mk_name (Id.SomeString p), (_loc,LF.ClTyp (LF.PTyp tA, cPsi)), dep)
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
          cPsi = clf_dctx; turnstile; ren = OPT["#"] ; cPhi = clf_dctx; "}" ; ind = OPT ["*"] ->
 	   let cl = match ren with None -> LF.Subst | Some _ -> LF.Ren in
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-            LF.Decl(Id.mk_name (Id.SomeString s), LF.ClTyp (_loc, LF.STyp (cl, cPhi), cPsi), dep)
+            LF.Decl(Id.mk_name (Id.SomeString s), (_loc,LF.ClTyp (LF.STyp (cl, cPhi), cPsi)), dep)
 
       |
           "{";  u = UPSYMBOL; ":";
          "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}" ; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString u), LF.ClTyp (_loc, LF.MTyp tA, cPsi), dep)
+           LF.Decl(Id.mk_name (Id.SomeString u), (_loc,LF.ClTyp (LF.MTyp tA, cPsi)), dep)
 
       |
           "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" ; ind = OPT ["*"] ->
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-            LF.Decl(Id.mk_name (Id.SomeString psi), LF.CTyp(_loc, Id.mk_name (Id.SomeString w)), dep)
+            LF.Decl(Id.mk_name (Id.SomeString psi), (_loc,LF.CTyp(Id.mk_name (Id.SomeString w))), dep)
 
       ]
     ]
@@ -1432,13 +1432,13 @@ clf_pattern :
           let modules = match l with None -> [] | Some l -> l in
 	  let dep = match ind with None -> LF.No | Some _ -> LF.Inductive in
           let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
-            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w)), dep)) in
+            (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), dep)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
       | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
           let modules = match l with None -> [] | Some l -> l in
           let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
-            LF.CTyp(_loc, Id.mk_name ~modules:modules (Id.SomeString w)), LF.Maybe)) in
+            (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), LF.Maybe)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
         ctyp_decl = clf_ctyp_decl; mixtau = SELF ->

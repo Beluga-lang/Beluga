@@ -31,11 +31,13 @@ module LF = struct
     | Subst
 
   and ctyp =
-    | ClTyp of Loc.t * cltyp * dctx
-    | CTyp of Loc.t * name 
+    | ClTyp of cltyp * dctx
+    | CTyp of name 
+
+  and loc_ctyp = Loc.t * ctyp
 
   and ctyp_decl =
-    | Decl of name * ctyp * depend
+    | Decl of name * loc_ctyp * depend
     | DeclOpt of name
 
   and typ =

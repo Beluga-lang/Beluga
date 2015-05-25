@@ -131,14 +131,9 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
- type cltyp =
-   | PTyp of LF.typ
-   | MTyp of LF.typ
-   | STyp of LF.dctx
-
  type meta_typ =
    | MetaSchema of Loc.t * name
-   | ClTyp of Loc.t * cltyp * LF.dctx 
+   | ClTyp of Loc.t * LF.cltyp * LF.dctx 
 
  type mfront = 
    | MObj of LF.normal

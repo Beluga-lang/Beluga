@@ -92,9 +92,7 @@ module LF = struct
 
   and cvar =
     | Offset of offset
-    | MInst  of Int.LF.normal * Int.LF.typ * Int.LF.dctx
-    | PInst  of Int.LF.head * Int.LF.typ * Int.LF.dctx
-    | SInst  of Int.LF.sub * Int.LF.dctx * Int.LF.dctx
+    | MInst  of Int.LF.clobj * (Int.LF.cltyp * Int.LF.dctx)
 
   and dctx =
     | Null

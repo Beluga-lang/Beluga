@@ -632,15 +632,15 @@ and index_meta_spine cvars fcvars = function
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
 let index_meta_typ cvars fcvars = function
-  | Ext.Comp.MetaTyp (loc, a, psi) ->
+  | loc, Ext.LF.ClTyp (Ext.LF.MTyp a, psi) ->
         let (psi', bvars', fcvars') = index_dctx cvars (BVar.create ()) fcvars psi in
         let (a', fcvars'' )         = index_typ cvars bvars' fcvars' a   in
         ((loc,Apx.LF.ClTyp (Apx.LF.MTyp a', psi')), fcvars'')
 
- | Ext.Comp.MetaSubTyp (loc, phi, psi)    ->
+ | loc, Ext.LF.ClTyp (Ext.LF.STyp (cl,phi), psi)    ->
       let (psi', _ , fcvars1 ) = index_dctx cvars (BVar.create ()) fcvars psi in
       let (phi', _ , fcvars2 ) = index_dctx cvars (BVar.create ()) fcvars1 phi in
-        ((loc,Apx.LF.ClTyp (Apx.LF.STyp (Apx.LF.Subst,phi'), psi')), fcvars2)
+        ((loc,Apx.LF.ClTyp (Apx.LF.STyp (index_svar_class cl,phi'), psi')), fcvars2)
 
 
 

@@ -125,12 +125,7 @@ module Comp = struct
    | MetaNil
    | MetaApp of meta_obj * meta_spine
 
-
- type meta_typ =
-   | MetaSchema of Loc.t * name
-   | MetaTyp of Loc.t * LF.typ * LF.dctx
-   | MetaParamTyp of Loc.t  * LF.typ * LF.dctx
-   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
+ type meta_typ = LF.loc_ctyp
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine

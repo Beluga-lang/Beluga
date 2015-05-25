@@ -681,23 +681,23 @@ module Ext = struct
               (fmt_ppr_meta_spine cD 0) mS
               (r_paren_if cond)
 
-      | Comp.TypBox (_, Comp.MetaTyp (_, tA, cPsi)) ->
+      | Comp.TypBox (_, (_,LF.ClTyp (LF.MTyp tA, cPsi))) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 1) tA
 
-      | Comp.TypBox (_, Comp.MetaParamTyp (_, tA, cPsi)) ->
+      | Comp.TypBox (_, (_,LF.ClTyp (LF.PTyp tA, cPsi))) ->
           fprintf ppf "#[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
-      | Comp.TypBox (_, Comp.MetaSchema(_, x)) ->
+      | Comp.TypBox (_, (_,LF.CTyp x)) ->
             fprintf ppf "%s"
               (to_html (R.render_name x) Link)
 
-      | Comp.TypBox (_, Comp.MetaSubTyp (_, cPhi, cPsi)) ->
+      | Comp.TypBox (_, (_,LF.ClTyp (LF.STyp (_,cPhi), cPsi))) ->
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)

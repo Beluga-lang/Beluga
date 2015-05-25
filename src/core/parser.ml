@@ -127,14 +127,13 @@ let rec unmix = function
                                   | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
                                   | (CompMix c1, CompKindMix c2) ->
                                       let x = Id.mk_name (Id.NoName) in
-                                      let (l, cdecl) = match c1 with
-					| Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp (_, tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.Inductive))
-                                        | Comp.TypInd (Comp.TypBox (l, Comp.MetaSchema (_,schema)))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.Inductive))
-                                        | Comp.TypBox (l, Comp.MetaTyp (_, tA, cPsi)) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.No))
-                                        | Comp.TypBox (l, Comp.MetaParamTyp
-							 (_, tA, cPsi)) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.No))
-                                        | Comp.TypBox (l, Comp.MetaSchema (_,schema))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.No)) 
+                                      let (l, cdecl) = match c1 with (* TODO: Refactor *)
+					| Comp.TypInd (Comp.TypBox (l, (_,LF.ClTyp (LF.MTyp tA, cPsi)))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.Inductive))
+                                        | Comp.TypInd (Comp.TypBox (l, (_,LF.ClTyp (LF.PTyp tA, cPsi)))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.Inductive))
+                                        | Comp.TypInd (Comp.TypBox (l, (_,LF.CTyp schema)))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.Inductive))
+                                        | Comp.TypBox (l, (_,LF.ClTyp(LF.MTyp tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.MTyp tA, cPsi)), LF.No))
+                                        | Comp.TypBox (l, (_,LF.ClTyp(LF.PTyp tA, cPsi))) -> (l, LF.Decl(x, (l,LF.ClTyp (LF.PTyp tA, cPsi)), LF.No))
+                                        | Comp.TypBox (l, (_,LF.CTyp schema))    -> (l, LF.Decl(x, (l,LF.CTyp schema), LF.No)) 
 					| _ -> unmixfail (mixloc mt1)
 				      in
                                       CompKindMix(Comp.PiKind(l, cdecl, c2))
@@ -142,14 +141,14 @@ let rec unmix = function
                            end
   | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
   | MTBool l -> CompMix(Comp.TypBool)
-  | MTBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, Comp.MetaTyp (l, toLF mt0, dctx)))
-  | MTBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, Comp.MetaTyp (l, toLF mt0, dctx))))
-  | MTCtx  (l, schema, LF.No) -> CompMix (Comp.TypBox (l, Comp.MetaSchema (l, schema)))
-  | MTCtx  (l, schema, LF.Inductive) -> CompMix (Comp.TypInd(Comp.TypBox (l, Comp.MetaSchema (l, schema))))
-  | MTPBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, Comp.MetaParamTyp(l, toLF mt0, dctx)))
-  | MTPBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, Comp.MetaParamTyp(l, toLF mt0, dctx))))
-  | MTSub(l, dctx1, dctx, LF.No) -> CompMix (Comp.TypBox (l, Comp.MetaSubTyp (l, dctx1, dctx)))
-  | MTSub(l, dctx1, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, Comp.MetaSubTyp (l, dctx1, dctx))))
+  | MTBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx))))
+  | MTBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx)))))
+  | MTCtx  (l, schema, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.CTyp schema)))
+  | MTCtx  (l, schema, LF.Inductive) -> CompMix (Comp.TypInd(Comp.TypBox (l, (l, LF.CTyp schema))))
+  | MTPBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.PTyp (toLF mt0), dctx))))
+  | MTPBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l, LF.ClTyp (LF.PTyp (toLF mt0), dctx)))))
+  | MTSub(l, dctx1, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.STyp (LF.Subst,dctx1), dctx))))
+  | MTSub(l, dctx1, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l,LF.ClTyp (LF.STyp (LF.Subst,dctx1), dctx)))))
   | MTPiBox(l, cdecl, mt0) ->
        begin match unmix mt0 with
          | CompKindMix mk -> CompKindMix (Comp.PiKind(l, cdecl, mk))
@@ -1190,7 +1189,7 @@ GLOBAL: sgn;
        (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;turnstile; mobj = clf_pattern; "]";
        tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]" ->
-                     Comp.TypBox(_loc, Comp.MetaTyp (_loc, tA, cPsi)) ];
+                     Comp.TypBox(_loc, (_loc, LF.ClTyp (LF.MTyp tA, cPsi))) ];
 
        "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
        ->
@@ -1350,7 +1349,7 @@ clf_pattern :
       [
         "["; cPsi = clf_dctx ; turnstile; tM = clf_pattern; "]" ;
          tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> 
-		       Comp.TypBox(_loc,Comp.MetaTyp (_loc, tA, cPsi))]
+		       Comp.TypBox(_loc,(_loc,LF.ClTyp (LF.MTyp tA, cPsi)))]
           ->
               begin match tM with
             | PatEmpty _loc'   ->

@@ -465,18 +465,17 @@ let rec elCompKind cD k = match k with
 
 let getLoc = function
   | Apx.Comp.MetaCtx (loc,_)
-  | Apx.Comp.MetaObj (loc,_,_)
-  | Apx.Comp.MetaObjAnn (loc,_,_) -> loc
+  | Apx.Comp.MetaObj (loc,_,_) -> loc
 
 let flattenAnn psihat = function
-  | Apx.Comp.MetaObjAnn (loc, cPsi, n) -> Apx.Comp.MetaObj (loc, psihat, n)
+  | Apx.Comp.MetaObj (loc, cPsi, n) -> Apx.Comp.MetaObj (loc, Apx.Comp.Hat psihat, n)
 
 let rec elMetaObj' cD cM cTt = match cM , cTt with
   | (Apx.Comp.MetaCtx (loc, psi), (Int.LF.CTyp (Some w))) ->
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
         (loc, Int.LF.CObj cPsi')
 
-  | (Apx.Comp.MetaObj (loc, phat, Apx.Comp.MObj tM), (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi'))) ->
+  | (Apx.Comp.MetaObj (loc, Apx.Comp.Hat phat, Apx.Comp.MObj tM), (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi'))) ->
         let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
 	begin try (* TODO: We should do this in the other cases. That will be easier
 		     if we refactor this MetaObj/MetaSub/MetaCtx datatype. *)
@@ -485,11 +484,11 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
 	with Unify.Failure _ ->
 	  raise (Error (loc, CtxHatMismatch (cD, cTt, phat)))
 	end 
-  | (Apx.Comp.MetaObj (loc, phat, Apx.Comp.SObj s), (Int.LF.ClTyp (Int.LF.STyp (cl, cPhi'), cPsi'))) ->
+  | (Apx.Comp.MetaObj (loc, Apx.Comp.Hat phat, Apx.Comp.SObj s), (Int.LF.ClTyp (Int.LF.STyp (cl, cPhi'), cPsi'))) ->
         let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cl cPhi' in
           (loc, Int.LF.ClObj (phat, Int.LF.SObj s'))
 
-  | (Apx.Comp.MetaObj (loc, phat, Apx.Comp.MObj (Apx.LF.Root (_,h,_))), (Int.LF.ClTyp (Int.LF.PTyp tA', cPsi'))) ->
+  | (Apx.Comp.MetaObj (loc, Apx.Comp.Hat phat, Apx.Comp.MObj (Apx.LF.Root (_,h,_))), (Int.LF.ClTyp (Int.LF.PTyp tA', cPsi'))) ->
         let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
         let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
           (loc, Int.LF.ClObj(phat, Int.LF.PObj h))
@@ -498,7 +497,7 @@ let rec elMetaObj' cD cM cTt = match cM , cTt with
   | Apx.Comp.MetaObj (_loc', psi, Apx.Comp.MObj m) , (Int.LF.ClTyp (Int.LF.STyp (_, tA), cPsi)) ->
     elMetaObj' cD (Apx.Comp.MetaObj(_loc', psi, Apx.Comp.SObj (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)))) cTt
 
-  | (Apx.Comp.MetaObjAnn (loc, cPhi, _), (Int.LF.ClTyp (_, cPsi'))) ->
+  | (Apx.Comp.MetaObj (loc, Apx.Comp.DCtx cPhi, _), (Int.LF.ClTyp (_, cPsi'))) ->
       let _ =
         try unifyDCtxWithFCVar loc cD cPsi' cPhi
         with Unify.Failure _ ->
@@ -948,7 +947,7 @@ and elExp' cD cG i = match i with
                 (* TODO postpone to reconstruction *)
         end
 
-  | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObjAnn (loc', psi, Apx.Comp.MObj r)) ->
+  | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObj (loc', Apx.Comp.DCtx psi, Apx.Comp.MObj r)) ->
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx ") in
       let cPsi     = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx done: " ^ P.dctxToString cD cPsi ) in
@@ -961,8 +960,6 @@ and elExp' cD cG i = match i with
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
 
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObj (_loc', phat, _r)) ->
-     raise (Error (loc, ErrorMsg "Found MetaObj"))
-  | Apx.Comp.BoxVal (loc, Apx.Comp.MetaObjAnn (_loc', _phat, _r)) ->
      raise (Error (loc, ErrorMsg "Found MetaObj"))
   | Apx.Comp.BoxVal (loc, Apx.Comp.MetaCtx (loc', cpsi)) ->
 (*     raise (Error (loc, ErrorMsg "Found CtxObj")) *)
@@ -1043,7 +1040,7 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
           |  _ -> raise (Error (loc,MCtxIllformed cD1'))
 	end
 	  
-  | Apx.Comp.MetaObjAnn (loc, psi, Apx.Comp.MObj m), MT (a, cPsi) ->
+  | Apx.Comp.MetaObj (loc, Apx.Comp.DCtx psi, Apx.Comp.MObj m), MT (a, cPsi) ->
       let cPsi' = inferCtxSchema loc (cD, cPsi) (cD', psi) in
       let _     = dprint (fun () -> "[recMObj] inferCtxSchema ... ") in
       let _     = dprint (fun () ->  "Scrutinee's context " ^ P.mctxToString cD ^ " |- " ^

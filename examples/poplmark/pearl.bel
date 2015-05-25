@@ -159,7 +159,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
 	       F2[..,b.1,b.2,b.3,b.4]   ] =
 	      trans [g, b:block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 				 w: sub a _, ref: sub a a)  |-  Q2[..,b.1]]
-		    [g, b |-  D2[..,b.1,b.2,(b.2 _ (Q1[..]) (E1[..]) b.3) b.4] ]
+		    [g, b |-  D2[..,b.1,b.2,(b.2 _ (Q1[..]) (E1[..]) b.3),b.4] ]
 		    [g, b |-  E2[..,b.1,b.2,b.3,b.4]] in
 	  [g |- sa_all (F2[..]) (F1[..])]
     | [g |- sa_top] => [g |- sa_top]

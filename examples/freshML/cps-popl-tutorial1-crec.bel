@@ -62,8 +62,8 @@ fn e => case e of
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
 rec test0 : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
-fn x => let [b:block (x:value o , _t:cvalue o) |-  V'[b.1 b.2]] = r0 in
-	   [b:block (x:value o , _t:cvalue o),k |- cthrow k (V'[b.1 b.2])] ;
+fn x => let [b:block (x:value o , _t:cvalue o) |-  V'[b.1,b.2]] = r0 in
+	   [b:block (x:value o , _t:cvalue o),k |- cthrow k (V'[b.1,b.2])] ;
 
 let r1' = test0 ttrue ;
 %{

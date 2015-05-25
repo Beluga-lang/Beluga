@@ -60,38 +60,38 @@ fn e => case e of
 | [g |- nilv] => [g,c:value unit -> exp |- c knil]
 | [g |- suc N] =>
   let [g,c:value nat -> exp |- P] = cpse [g |- N] in
-  [g,k:value nat -> exp |- P [..,,\p.,k,(ksuc p)] ]
+  [g,k:value nat -> exp |- P [..,\p. k (ksuc p)] ]
 | [g |- cons M N] =>
    let [g,k1:value S -> exp |- P] = cpse [g |- M] in
    let [g,k2:value T -> exp |- Q] = cpse [g |- N] in
-    [g,k:value (cross S T) -> exp |- P[ .., \p. Q[..,,\q.,k,(kcons p q)]] ]
+    [g,k:value (cross S T) -> exp |- P[ .., \p. Q[..,\q. k (kcons p q)]] ]
 
 | {M:[g, x:source S|- source T[..]]}
       [g |- lam \x. M] =>
    let [g, b:block (x:source S, _t:value S[..]), c:value T[..] -> exp |- P[..,b.2,c] ] =
-    cpse [g,b:block (x:source S , _t:value S[..]) |- M[ .. b.1 ] ] in
+    cpse [g,b:block (x:source S , _t:value S[..]) |- M[..,b.1 ] ] in
      [g, k:value (arr S T) -> exp |- k (klam \x.\c. P[..,x,c]) ]
 
 | {N:[g, x:source S |- source T[..]]}
   [g |- letv M \x. N] =>
    let [g,k1:value S -> exp |- P] = cpse [g |- M] in
-   let [g,b:block (x:source S, _t:value S[..]), c:value T[..] -> exp |- Q[..,b.2,c]]  = cpse [g,b:block (x:source S , _t:value S[..]) |- N[..,,b.1] ] in
+   let [g,b:block (x:source S, _t:value S[..]), c:value T[..] -> exp |- Q[..,b.2,c]]  = cpse [g,b:block (x:source S , _t:value S[..]) |- N[..,b.1] ] in
     [g,k:value T -> exp |- P[..,(\p. klet p (\x. Q[..,x,k]))] ]
 | [g |- app E1 E2] =>
   let [g, c:value (arr S T) -> exp |- E1' ] = cpse [g |- E1 ] in
   let [g, c:value S         -> exp |- E2' ] = cpse [g |- E2 ] in
-    [g,c:value T -> exp |- E1' [..,,,\f.,E2'[ .. , \x. kapp f x c]] ]
+    [g,c:value T -> exp |- E1' [..,\f. E2'[ .. , \x. kapp f x c]] ]
 | [g |- fst E] =>
       let [g, c:value (cross S T) -> exp |- E'] = cpse [g |- E] in
-       [g,c:value S -> exp |- E' [..,,\x.,kfst,x,c] ]
+       [g,c:value S -> exp |- E' [..,\x. kfst x c] ]
 | [g |- rst E] =>
       let [g, c:value (cross S T) -> exp |- E'] = cpse [g |- E] in
-       [g,c:value T -> exp |- E' [..,,,\x.,krst,x,c]]
+       [g,c:value T -> exp |- E' [..,\x. krst x c]]
  | [g |- tlam \t.E] =>
    let [g,t:tp, c:value T -> exp |- E'] = cpse [g,t:tp |- E] in
     [g, k:value (all \t.T) -> exp |- k (ktlam \t.\c. E'[..,t,c]) ]
 | [g |- tapp A E] =>
   let [g, c:value (all \t. T) -> exp |- E'] = cpse [g |- E] in
-  [g,k:value (T [..,,A]) -> exp |- E'[..,,,(\y. ktapp A[..] y k)] ]
+  [g,k:value (T [..,A]) -> exp |- E'[..,(\y. ktapp A[..] y k)] ]
 
 ;

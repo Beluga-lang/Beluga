@@ -4,7 +4,7 @@
 % If M => N then M -->* N.
 schema ctx = block x:term, _t:pred x x;
 
-rec best_step: {g:ctx}[g |- -->* (app (lam \x. M1') (M2'[..])) M1'[..,,M2']] =
+rec best_step: {g:ctx}[g |- -->* (app (lam \x. M1') (M2'[..])) M1'[..,M2']] =
 mlam g => [g |- step1 beta1 id1]
 ;
 

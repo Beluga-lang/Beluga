@@ -17,7 +17,7 @@ fn cn => case cn of
 | [g |- can_atm (AT1[..])] => 
   let ([g |- AT1[..]] : [g |- atm (D[..])]) = [g |- AT1[..]] in
   let [g,q:p,u:focus (A[..]) q |-  I1] = cmpai [g] [g |- D[..]] [g |- AT1[..] ] in
-    [g |- I1[..,_ (i_atom)]]
+    [g |- I1[..,_,(i_atom)]]
 
 and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm (E[..])] ->
 	       [g, q:p, u:focus B[] q  |-  solve (atom q)] =

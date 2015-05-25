@@ -60,7 +60,7 @@ rec eval : [ |- contra] -> [ |- cval] =
 % / total e (eval e) /
 fn e => case e of
  | [ |- capp (clam \v.\k. E)  Cv2  (\x. K)] =>
-     eval [ |- E[Cv2 (\x. K)]]
+     eval [ |- E[Cv2,(\x. K)]]
 ;
 
 

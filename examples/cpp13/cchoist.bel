@@ -270,7 +270,7 @@ mlam Env1, Env2, Env3 => fn prf => fn m => case prf of
 | App_nil =>  m
 | App_cons p =>  
   let [g,l: target _ |- M'] = weakenEnv1 [|- _ ] [|- _ ] [|- _] p m in
-    [g,l:target _  |- M' [..,,,(crst l)] ]
+    [g,l:target _  |- M' [..,(crst l)] ]
 ;
 
 
@@ -305,7 +305,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
 
 | [g |- #p] => 
   let [h |- M] = lookup sigma [g |-  #p] in
-    Result [h,l:target unit |- M [..,] ] [ |- env_nil]
+    Result [h,l:target unit |- M [..] ] [ |- env_nil]
 
 | [g |- app M N] =>  
   let Result r1 [|- Env1]  = hcc [g |- M ] sigma in

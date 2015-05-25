@@ -57,7 +57,7 @@ cv: cvalue T -> cval.
 rec eval : [ |- contra] -> [ |- cval] =
 fn e => case e of
  | [ |- capp (clam \v.\k. E)  Cv2  (\x. K)] =>
-     eval [ |- E [Cv2 (\x. K)]]
+     eval [ |- E [Cv2, (\x. K)]]
 ;
 
 

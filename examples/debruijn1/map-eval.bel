@@ -40,7 +40,7 @@ fn d => fn c => case c of
    (case [ |- C'] of
       | [ |- vtr_lam (tr_lam (\w. \x. \v. (C3)))] =>
 	let [ |- ev_vtrans D2' U2] = (map_eval [ |- D2]) [ |- C2] in
-	let [ |- ev_vtrans D3' U3] = (map_eval [ |- D3]) [ |- (C3[_ _ U2])] in
+	let [ |- ev_vtrans D3' U3] = (map_eval [ |- D3]) [ |- (C3[_,_,U2])] in
 	[ |- ev_vtrans (fev_app D3' D2' D1') U3]
 %    | [ ] {}
    )
@@ -91,7 +91,7 @@ fn c => fn d => case c of
     (case [ |- C'] of
      | [ |- vtr_lam (tr_lam (\w. \x. \v. (C3)))] =>
        let [ |- ev_vtrans D2 U2]  = map_eval' [ |- C2] [ |- D2']  in
-       let [ |- ev_vtrans D3 U3]  = map_eval' [ |- (C3[_ _ U2])] [ |- D3'] in
+       let [ |- ev_vtrans D3 U3]  = map_eval' [ |- (C3[_,_,U2])] [ |- D3'] in
        [ |- ev_vtrans (ev_app D3 D2 D1) U3]
 %     | [ ] {}
     )

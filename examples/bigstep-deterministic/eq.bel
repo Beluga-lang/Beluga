@@ -44,7 +44,7 @@ fn d => case d of
 
 rec subst_respects_eq : 
 {g:eqctx}{M:[g,x:exp |-  exp]}
-[g |- eq (N[..]) (N'[..])] -> [g |- eq M[..,,N] M[..,,N']] =
+[g |- eq (N[..]) (N'[..])] -> [g |- eq M[..,N] M[..,N']] =
 %  / total m (subst_respects_eq _ _ _ m) /
 mlam g => mlam M => fn d => case [g,x:exp |-  M] of
  | [g,x:exp |-  app (T1) (T2)] =>

@@ -317,7 +317,7 @@ inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> cty
  =
 | DecBeta : DecEq [|- G & T] [g,x:tm |-  M2] [g,x |-  N2] [ |- S]
           -> DecEq [|-G] [g |-  M1[..]] [g |-  N1[..]] [ |- T]
-          -> DecEq [|-G] [g |-  (app (lam (\x. M2)) (M1[..]))] [g |- N2[..,,N1]] [ |- S]
+          -> DecEq [|-G] [g |-  (app (lam (\x. M2)) (M1[..]))] [g |- N2[..,N1]] [ |- S]
 | DecLam :  DecEq [|- G & T] [g,x:tm |-  M] [g,x |-  N] [ |- S]
           -> DecEq [|-G] [g |-  lam (\x. M)] [g |-  lam (\x. N)] [ |- arr T S]
 | DecExt :  DecEq [|- G & T] [g,x:tm |-  app (M[..]) x] [g,x |-  app (N[..]) x] [ |- S]

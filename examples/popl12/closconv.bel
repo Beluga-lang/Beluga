@@ -34,7 +34,7 @@ fn n => fn m => case m of
 | [ e:envr  |-  M] => [e:envr  |-  M]
 | [ g,x:ctm, e:envr  |-  M] =>
   let [ |- N] = n in
-   addProjs [ |- s N] [g, e:envr  |-  M[..,(proj e (N[])) e]]
+   addProjs [ |- s N] [g, e:envr  |-  M[..,(proj e (N[])),e]]
 ;
 
 

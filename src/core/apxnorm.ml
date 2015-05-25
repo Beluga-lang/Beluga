@@ -512,21 +512,20 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
 
-and collectApxMetaObj fMVs mO = match mO with
-  | _loc, Apx.Comp.CObj (cPsi) ->
+and collectApxHatOrDCtx fMVs = function
+  | Apx.Comp.Hat phat -> collectApxHat fMVs phat
+  | Apx.Comp.DCtx cPsi -> collectApxDCtx fMVs cPsi
+
+and collectApxClObj fMVs = function
+  | Apx.Comp.MObj tR -> collectApxTerm fMVs tR
+  | Apx.Comp.SObj s -> collectApxSub fMVs s
+
+and collectApxMetaObj fMVs (_loc,mO) = match mO with
+  | Apx.Comp.CObj (cPsi) ->
       collectApxDCtx fMVs cPsi
-  | _loc, Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.MObj tR) ->
-      let fMVh = collectApxHat fMVs phat  in
-      collectApxTerm fMVh tR
-  | _loc, Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.MObj tR) ->
-      let fMVd = collectApxDCtx fMVs cPsi in
-        collectApxTerm fMVd tR
-  | _loc, Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj s) ->
-      let fMVh = collectApxHat fMVs phat  in
-      collectApxSub fMVh s
-  | _loc, Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.SObj s) ->
-      let fMVd = collectApxDCtx fMVs cPsi in
-        collectApxSub fMVd s
+  | Apx.Comp.ClObj (psi, clobj) ->
+      let fMVh = collectApxHatOrDCtx fMVs psi  in
+      collectApxClObj fMVh clobj
 
 and collectApxMetaSpine fMVs mS = match mS with
   | Apx.Comp.MetaNil -> fMVs

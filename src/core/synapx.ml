@@ -133,7 +133,7 @@ module Comp = struct
 
  type meta_typ = Loc.t * LF.ctyp
 
- type mfront = 
+ type clobj = 
    | MObj of LF.normal
    | SObj of LF.sub
 
@@ -141,9 +141,11 @@ module Comp = struct
    | Hat of LF.psi_hat
    | DCtx of LF.dctx
 
- type meta_obj =
-   | MetaCtx of Loc.t * LF.dctx
-   | MetaObj of Loc.t * hat_or_dctx * mfront
+ type mfront =
+   | ClObj of hat_or_dctx * clobj
+   | CObj of LF.dctx
+
+ type meta_obj = Loc.t * mfront
 
  type meta_spine =
    | MetaNil

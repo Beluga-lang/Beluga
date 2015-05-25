@@ -610,17 +610,17 @@ let index_schema (Ext.LF.Schema el_list) =
 let rec index_meta_obj cvars fcvars = function
   | Ext.Comp.MetaCtx (l, cpsi) ->
       let (cPsi, _bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
-        (Apx.Comp.MetaCtx (l, cPsi), fcvars')
+        ((l, Apx.Comp.CObj (cPsi)), fcvars')
 
   | Ext.Comp.MetaObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
-        (Apx.Comp.MetaObj (l, Apx.Comp.DCtx cPsi, Apx.Comp.MObj m'), fcvars'')
+        ((l,Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.MObj m')), fcvars'')
 
   | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_sub cvars  bvars fcvars' m in
-        (Apx.Comp.MetaObj (l, Apx.Comp.DCtx cPsi, Apx.Comp.SObj m'), fcvars'')
+        ((l,Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.SObj m')), fcvars'')
 
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->

@@ -566,7 +566,7 @@ let rec elCompTyp cD tau = match tau with
         Whnf.cnormCTyp (tau, ms)
         (* Int.Comp.TypDef (loc, a, cS') *)
 
-  | Apx.Comp.TypBox (loc, Apx.Comp.ClTyp (_, Apx.LF.MTyp a, psi)) ->
+  | Apx.Comp.TypBox (loc, (_,Apx.LF.ClTyp (Apx.LF.MTyp a, psi))) ->
       let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in
       let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
       let _ = dprint (fun () -> "[elCompTyp] TypBox - cPsi = " ^ P.dctxToString cD cPsi) in
@@ -575,7 +575,7 @@ let rec elCompTyp cD tau = match tau with
         (dprint (fun () -> "[elCompTyp] " ^ P.compTypToString cD tT);
          tT)
 
-  | Apx.Comp.TypBox (loc, Apx.Comp.ClTyp (_,Apx.LF.STyp (c,psi), phi)) ->
+  | Apx.Comp.TypBox (loc, (_,Apx.LF.ClTyp (Apx.LF.STyp (c,psi), phi))) ->
       let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
         Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.STyp (elSvar_class c,cPsi), cPhi))
@@ -1261,7 +1261,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
       )
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
-  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', Apx.Comp.ClTyp(_,Apx.LF.MTyp a, psi) )) ->
+  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
       begin try
           let Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp _tQ, cPsi_s)) = tau_s  in

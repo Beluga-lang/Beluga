@@ -121,8 +121,8 @@ and cnormApxObj cD delta offset (cD'', t) =
 	| Int.LF.ClObj (_phat, clobj) ->
                let (_u, mtyp) = Whnf.mctxLookup cD offset' in
                 let t' = drop t l_delta in
-                let (Int.LF.ClTyp (tp, cPhi'))  = Whnf.cnormMTyp (mtyp, t')in
-                Apx.LF.MInst (clobj, (tp, cPhi'))
+                let mtyp'  = Whnf.cnormMTyp (mtyp, t')in
+                Apx.LF.MInst (clobj, mtyp')
     end
   else Apx.LF.Offset offset
 
@@ -133,17 +133,17 @@ and cnormApxHead cD delta h (cD'', t) = match h with
   | Apx.LF.PVar (Apx.LF.Offset offset, s) ->
     Apx.LF.PVar (cnormApxObj cD delta offset (cD'', t), cnormApxSub cD delta s (cD'', t))
 
-  | Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM, (Int.LF.MTyp tP, cPhi)), s) ->
+  | Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi)), s) ->
       let tM' = Whnf.cnorm (tM,t) in
       let (tP', cPhi')  = (Whnf.cnormTyp (tP, t), Whnf.cnormDCtx (cPhi, t)) in
       let s' = cnormApxSub cD delta s (cD'', t) in
-        Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM', (Int.LF.MTyp tP', cPhi')), s')
+        Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM', Int.LF.ClTyp (Int.LF.MTyp tP', cPhi')), s')
 
-  | Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, (Int.LF.PTyp tA, cPhi)), s) ->
+  | Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s) ->
       let h' = Whnf.cnormHead (h, t) in
       let (tA', cPhi')  = (Whnf.cnormTyp (tA, t), Whnf.cnormDCtx (cPhi, t)) in
       let s' = cnormApxSub cD delta s (cD'', t) in
-      Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h', (Int.LF.PTyp tA', cPhi')), s')
+      Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h', Int.LF.ClTyp (Int.LF.PTyp tA', cPhi')), s')
 
   | Apx.LF.Proj (pv, j) ->
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
@@ -173,11 +173,11 @@ and cnormApxSub cD delta s (cD'', t) = match s with
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
       Apx.LF.SVar (cnormApxObj cD delta offset (cD'', t), sigma')
 
-  | Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s, (Int.LF.STyp (cl,cPsi), cPhi)), sigma) ->
+  | Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s, Int.LF.ClTyp (Int.LF.STyp (cl,cPsi), cPhi)), sigma) ->
       let s' = Whnf.cnormSub (s, t) in
       let (cPsi', cPhi') = (Whnf.cnormDCtx (cPsi, t) , Whnf.cnormDCtx (cPhi, t)) in
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
-        Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s', (Int.LF.STyp (cl,cPsi'), cPhi')), sigma')
+        Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s', Int.LF.ClTyp (Int.LF.STyp (cl,cPsi'), cPhi')), sigma')
 
   | Apx.LF.FSVar (s, sigma) ->
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
@@ -625,8 +625,8 @@ and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i =
   | Apx.LF.Offset offset -> 
       if offset > (l_delta+k) then Apx.LF.Offset (offset+ l_cd1)
       else Apx.LF.Offset offset
-  | Apx.LF.MInst (clobj, (ctyp, cPhi)) -> 
-      Apx.LF.MInst (Whnf.cnormClObj clobj r, (Whnf.cnormClTyp (ctyp, r), Whnf.cnormDCtx (cPhi, r)))
+  | Apx.LF.MInst (clobj, Int.LF.ClTyp (ctyp, cPhi)) -> 
+      Apx.LF.MInst (Whnf.cnormClObj clobj r, Int.LF.ClTyp (Whnf.cnormClTyp (ctyp, r), Whnf.cnormDCtx (cPhi, r)))
 
 (* TODO: Refactor this function *)
 and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with

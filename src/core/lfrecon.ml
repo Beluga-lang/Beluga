@@ -1350,7 +1350,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
 
   (* Reconstruction for meta-variables  *)
-  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tN, (Int.LF.MTyp tQ, cPhi)), s'), Apx.LF.Nil)  ->
+  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tN, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi)), s'), Apx.LF.Nil)  ->
           let _ = dprint (fun () -> "[elTerm] Projected type of already reconstructed object " ^
 			    " which is embedded into an approximate object:\n                  " ^
 			    P.dctxToString cD cPhi ^ " |- " ^
@@ -1419,7 +1419,7 @@ and elTerm' recT cD cPsi r sP = match r with
       end
 
   (* Reconstruction for parameter variables *)
-  | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, (Int.LF.PTyp tA, cPhi)), s'), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s'), spine) ->
       begin (* try *)
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
@@ -1512,7 +1512,7 @@ and elTerm' recT cD cPsi r sP = match r with
     end
 
 
-  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, (Int.LF.PTyp tA, cPhi)), s'), proj), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj(Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s'), proj), spine) ->
       begin try
         let recA =
               match tA with
@@ -1674,7 +1674,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       end
 
 
-  | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p0,s0)), (Int.LF.PTyp tA, cPhi)), s'), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p0,s0)), Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s'), spine) ->
       begin try
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
@@ -1685,7 +1685,7 @@ and elClosedTerm' recT cD cPsi r = match r with
       end
 
 
-  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM', (Int.LF.MTyp tA, cPhi)), s'), spine) ->
+  | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tM', Int.LF.ClTyp (Int.LF.MTyp tA, cPhi)), s'), spine) ->
       begin try
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
@@ -1724,7 +1724,7 @@ and elClosedTerm' recT cD cPsi r = match r with
 	    raise (Error (loc, CompTypAnn))
       end
 
-  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, (Int.LF.PTyp tA, cPsi')) , s ), proj) , spine ) ->
+  | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, Int.LF.ClTyp (Int.LF.PTyp tA, cPsi')) , s ), proj) , spine ) ->
       begin match (h, tA) with
 	| (Int.LF.PVar (p, s') , Int.LF.Sigma recA) ->
 	    let t' = elSub loc recT cD  cPsi s Int.LF.Subst cPsi' in
@@ -1848,7 +1848,7 @@ and elSub loc recT cD cPsi s cl cPhi =
 	    raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
 	end 
 
-      | (Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s0, (Int.LF.STyp (cl,cPhi'), cPhi2)), s), (Int.LF.CtxVar phi as cPhi)) ->
+      | (Apx.LF.SVar (Apx.LF.MInst (Int.LF.SObj s0, Int.LF.ClTyp (Int.LF.STyp (cl,cPhi'), cPhi2)), s), (Int.LF.CtxVar phi as cPhi)) ->
       (*     if Whnf.convDCtx cPhi cPhi' then *)
 	begin try
 		Unify.unifyDCtx cD cPhi cPhi';
@@ -1984,7 +1984,7 @@ and elHead loc recT cD cPsi head cl = match head, cl with
         raise (Error (loc, CompTypAnn ))
       end
 
-  | Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p,r)), (Int.LF.PTyp tA, cPhi)), s), _ ->
+  | Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p,r)), Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s), _ ->
       begin try
         let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in
         let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in

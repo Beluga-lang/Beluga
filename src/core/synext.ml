@@ -115,11 +115,16 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
- type meta_obj =
-   | MetaCtx of Loc.t * LF.dctx
-   | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaParam of Loc.t * LF.dctx * LF.head
-   | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
+ type clobj = 
+   | MObj of LF.normal
+   | SObj of LF.sub
+   | PObj of LF.head
+
+ type mfront =
+   | ClObj of LF.dctx * clobj
+   | CObj of LF.dctx
+
+ type meta_obj = Loc.t * mfront
 
  type meta_spine =
    | MetaNil

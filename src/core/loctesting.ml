@@ -52,7 +52,7 @@ and store_syns (e : Comp.exp_syn) = match e with
 | _ -> ()
 
 and store_metaObj (mO : Comp.meta_obj) = match mO with
-| Comp.MetaObjAnn (loc, _, norm) -> 
+| loc, Comp.ClObj (_, Comp.MObj norm) -> 
 	Locs.add loc (Locs.mk_entry ("MetaObjAnn"));
 	store_normal norm
 | _ -> ()

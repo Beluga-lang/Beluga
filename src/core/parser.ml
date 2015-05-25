@@ -1202,9 +1202,9 @@ GLOBAL: sgn;
                 )
            | PatCLFTerm (loc', tM) ->
                (let pat = (match tau with
-                               None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (loc',  pHat,  tM))
+                               None -> Comp.PatMetaObj (_loc, (loc',Comp.ClObj (pHat, Comp.MObj tM)))
                              | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(loc',
-                                                    Comp.MetaObjAnn (loc', pHat, tM)), tau))
+                                                    (loc',Comp.ClObj (pHat, Comp.MObj tM))), tau))
                 in
                   Comp.Branch (loc', ctyp_decls', pat, e')
                )
@@ -1235,12 +1235,12 @@ GLOBAL: sgn;
 
         "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
         begin match phat_or_psi, tR with
-	      | cPsi , Term tM  -> Comp.Box (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
-	      | cPsi , Sub s    -> Comp.Box (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
+	      | cPsi , Term tM  -> Comp.Box (_loc, (_loc,Comp.ClObj(cPsi, Comp.MObj tM)))
+	      | cPsi , Sub s    -> Comp.Box (_loc, (_loc, Comp.ClObj(cPsi, Comp.SObj s)))
 	end
 
        | "["; psi = clf_hat_or_dctx; "]"   ->
-          Comp.Box(_loc, Comp.MetaCtx (_loc,psi))
+          Comp.Box(_loc, (_loc,Comp.CObj psi))
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1292,12 +1292,12 @@ cmp_exp_syn:
  *)
   "["; cPsi = clf_dctx; turnstile; tR = term_or_sub ; "]" ->
      begin match tR with
-       | Term tM   -> Comp.BoxVal (_loc, Comp.MetaObjAnn(_loc, cPsi, tM))
-       | Sub s ->  Comp.BoxVal (_loc, Comp.MetaSObjAnn (_loc,cPsi, s))
+       | Term tM   -> Comp.BoxVal (_loc, (_loc,Comp.ClObj(cPsi, Comp.MObj tM)))
+       | Sub s ->  Comp.BoxVal (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
      end
 
    | "["; cPsi = clf_dctx; "]" ->
-      Comp.BoxVal (_loc, Comp.MetaCtx (_loc, cPsi))
+      Comp.BoxVal (_loc, (_loc,Comp.CObj cPsi))
 
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
@@ -1353,21 +1353,20 @@ clf_pattern :
                    | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', cPsi), tau)
                 )
             | PatCLFTerm (_loc', tM)  ->
-                (match tau with None -> Comp.PatMetaObj (_loc, Comp.MetaObjAnn (_loc',  cPsi,  tM))
-                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, Comp.MetaObjAnn (_loc, cPsi,    tM)), tau))
+                (match tau with None -> Comp.PatMetaObj (_loc, (_loc',Comp.ClObj (cPsi, Comp.MObj tM)))
+                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, (_loc,Comp.ClObj (cPsi, Comp.MObj tM))), tau))
 
               end
 
       |"["; cPsi = clf_dctx ; "]" 
 	->
-	  Comp.PatMetaObj (_loc, Comp.MetaCtx (_loc,  cPsi))
+	  Comp.PatMetaObj (_loc, (_loc,Comp.CObj cPsi))
 
       | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->
-          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
-
+          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
 
      | "<"; cPsi = clf_dctx ; turnstile; s = clf_sub_new; ">"   ->
-          Comp.PatMetaObj (_loc, Comp.MetaSObjAnn (_loc, cPsi, s))
+          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
 
      | "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
@@ -1411,9 +1410,9 @@ clf_pattern :
 
         "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
-            | (cPsi, Some(Term tM))   -> Comp.MetaObjAnn (_loc, cPsi,  tM)
-            | (cPsi, Some(Sub s))   -> Comp.MetaSObjAnn (_loc, cPsi,  s)
-            | (cPsi, None)      -> Comp.MetaCtx (_loc, cPsi)
+            | (cPsi, Some(Term tM))   -> _loc, Comp.ClObj (cPsi, Comp.MObj tM)
+            | (cPsi, Some(Sub s))   -> _loc, Comp.ClObj (cPsi, Comp.SObj s)
+            | (cPsi, None)      -> _loc, Comp.CObj cPsi
           end
 
 

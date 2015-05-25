@@ -100,9 +100,9 @@ let rec get_ctxvar psi = match psi with
   | Ext.LF.CtxHole -> None
 
 
-let get_ctxvar_mobj mO = match mO with
-  | Ext.Comp.MetaCtx (_, cPsi) -> get_ctxvar cPsi
-  | Ext.Comp.MetaObjAnn (_, cPsi, _tM) -> get_ctxvar cPsi
+let get_ctxvar_mobj (_loc,mO) = match mO with
+  | Ext.Comp.CObj cPsi -> get_ctxvar cPsi
+  | Ext.Comp.ClObj (cPsi, Ext.Comp.MObj _tM) -> get_ctxvar cPsi
   | _ -> None
 
 let rec length_typ_rec t_rec = match t_rec with
@@ -607,20 +607,21 @@ let index_schema (Ext.LF.Schema el_list) =
 
 (* Translation of external computations into approximate computations *)
 
-let rec index_meta_obj cvars fcvars = function
-  | Ext.Comp.MetaCtx (l, cpsi) ->
+(* TODO: Refactor *)
+let rec index_meta_obj cvars fcvars (l,cM) = match cM with
+  | Ext.Comp.CObj cpsi ->
       let (cPsi, _bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
         ((l, Apx.Comp.CObj (cPsi)), fcvars')
 
-  | Ext.Comp.MetaObjAnn (l, cpsi, m) ->
+  | Ext.Comp.ClObj (cpsi, Ext.Comp.MObj m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
         ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.MObj m')), fcvars'')
 
-  | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
+  | Ext.Comp.ClObj (cpsi, Ext.Comp.SObj s) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
-      let (m', fcvars'') = index_sub cvars  bvars fcvars' m in
-        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.SObj m')), fcvars'')
+      let (s', fcvars'') = index_sub cvars  bvars fcvars' s in
+        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.SObj s')), fcvars'')
 
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->

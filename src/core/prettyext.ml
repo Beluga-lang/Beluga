@@ -140,9 +140,6 @@ module Ext = struct
 
     module PInstHashtbl = Hashtbl.Make (PInstHashedType)
 
-    let phatToDCtx phat = phat
-
-
     (* Contextual Format Based Pretty Printers
      *
      * We assume types, terms, etc are all in normal form.
@@ -644,11 +641,12 @@ module Ext = struct
             (fmt_ppr_meta_obj  cD (lvl + 1)) mO
             (fmt_ppr_meta_spine   cD lvl) mS
 
-    and fmt_ppr_meta_obj cD lvl ppf = function
-      | Comp.MetaCtx (_, cPsi) ->
+    (* TODO: Refactor *)
+    and fmt_ppr_meta_obj cD lvl ppf (_loc,cM) = match cM with
+      | Comp.CObj cPsi ->
             fprintf ppf "[%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
-      | Comp.MetaObjAnn (_, cPsi, tM) ->
+      | Comp.ClObj (cPsi, Comp.MObj tM) ->
           let cond = lvl > 1 in
             fprintf ppf "%s[%a %s %a]%s"
               (l_paren_if cond)
@@ -656,17 +654,16 @@ module Ext = struct
               (symbol_to_html Turnstile)
               (fmt_ppr_lf_normal cD cPsi 0) tM
               (r_paren_if cond)          
-      | Comp.MetaSObjAnn (_, cPsi, LF.EmptySub _) ->
+      | Comp.ClObj (cPsi, Comp.SObj (LF.EmptySub _)) ->
             fprintf ppf "[%a %s ^]"
                (fmt_ppr_lf_dctx cD 0) cPsi
                (symbol_to_html Turnstile)
-      | Comp.MetaSObjAnn (_, cPsi, tM) ->
+      | Comp.ClObj (cPsi, Comp.SObj sigma) ->
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
                (symbol_to_html Turnstile)
-              (fmt_ppr_lf_sub cD cPsi 0) tM
-      | Comp.MetaParam (_, phat, h) ->
-          let cPsi = phatToDCtx phat in
+              (fmt_ppr_lf_sub cD cPsi 0) sigma
+      | Comp.ClObj (cPsi, Comp.PObj h) ->
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
                (symbol_to_html Turnstile)

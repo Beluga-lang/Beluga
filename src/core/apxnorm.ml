@@ -872,28 +872,17 @@ and fmvApxHatOrDCtx loc fMVs cD d_param = function
   | Apx.Comp.Hat phat -> Apx.Comp.Hat (fmvApxHat loc fMVs cD d_param phat)
   | Apx.Comp.DCtx psi -> Apx.Comp.DCtx (fmvApxDCtx loc fMVs cD d_param psi)
 
-and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) (loc,mobj) = loc , match mobj with
-  | Apx.Comp.ClObj (psi, Apx.Comp.MObj m) ->
+and fmvApxClObj fMVs cD d_param = function
+  | Apx.Comp.MObj m -> Apx.Comp.MObj (fmvApxTerm fMVs cD d_param m)
+  | Apx.Comp.SObj s -> Apx.Comp.SObj (fmvApxSub fMVs cD d_param s)
+
+and fmvApxMetaObj fMVs cD d_param (loc,mobj) = loc , match mobj with
+  | Apx.Comp.ClObj (psi, clobj) ->
       let psi' = fmvApxHatOrDCtx loc fMVs cD d_param psi in
-      let m'    = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.ClObj (psi', Apx.Comp.MObj m')
+      let clobj'    = fmvApxClObj fMVs cD d_param  clobj in
+        Apx.Comp.ClObj (psi', clobj')
 
-  | Apx.Comp.CObj (psi) ->
-      let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
-        Apx.Comp.CObj (psi')
-
-  | Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj sigma) ->
-      let phat' = fmvApxHat loc fMVs cD d_param phat in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.SObj sigma')
-
-  | Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.SObj sigma) ->
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.SObj sigma')
-
-
-
+  | Apx.Comp.CObj psi -> Apx.Comp.CObj (fmvApxDCtx loc fMVs cD d_param psi)
 
 and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match branches with
   | [] -> []

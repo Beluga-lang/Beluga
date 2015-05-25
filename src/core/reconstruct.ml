@@ -463,32 +463,31 @@ let rec elCompKind cD k = match k with
       let tK     = elCompKind  (Int.LF.Dec (cD, cdecl')) k' in
         Int.Comp.PiKind (loc, cdecl', tK)
 
-let rec elMetaObj'' cD loc cM cTt = match cM , cTt with
+let elClObj cD loc cPsi' clobj mtyp = match clobj, mtyp with
+  | Apx.Comp.MObj tM, Int.LF.MTyp tA ->
+    Int.LF.MObj (Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id))
+  | Apx.Comp.SObj s, Int.LF.STyp (cl, cPhi') ->
+    Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' s cl cPhi')
+  | Apx.Comp.MObj m, Int.LF.STyp (cl, cPhi') -> (* This fixes up an ambiguity *)
+    Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)) cl cPhi')
+  | Apx.Comp.MObj (Apx.LF.Root (_,h,_)), Int.LF.PTyp tA' ->
+    let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
+    let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
+    Int.LF.PObj h
+
+let rec elMetaObj' cD loc cM cTt = match cM , cTt with
   | (Apx.Comp.CObj (psi), (Int.LF.CTyp (Some w))) ->
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
         Int.LF.CObj cPsi'
 
-  | (Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.MObj tM), (Int.LF.ClTyp (Int.LF.MTyp tA, cPsi'))) ->
-        let tM' = Lfrecon.elTerm (Lfrecon.Pibox) cD cPsi' tM (tA, LF.id) in
-	begin try (* TODO: We should do this in the other cases. That will be easier
-		     if we refactor this MetaObj/MetaSub/MetaCtx datatype. *)
+  | (Apx.Comp.ClObj (Apx.Comp.Hat phat, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
+	begin try
 	  Unify.unify_phat phat (Context.dctxToHat cPsi');
-          Int.LF.ClObj (phat, Int.LF.MObj tM')
+          let clobj' = elClObj cD loc cPsi' clobj mtyp in
+          Int.LF.ClObj (phat, clobj')
 	with Unify.Failure _ ->
 	  raise (Error (loc, CtxHatMismatch (cD, cTt, phat)))
 	end 
-  | (Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj s), (Int.LF.ClTyp (Int.LF.STyp (cl, cPhi'), cPsi'))) ->
-        let s' = Lfrecon.elSub loc (Lfrecon.Pibox) cD cPsi' s cl cPhi' in
-         Int.LF.ClObj (phat, Int.LF.SObj s')
-
-  | (Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.MObj (Apx.LF.Root (_,h,_))), (Int.LF.ClTyp (Int.LF.PTyp tA', cPsi'))) ->
-        let tM = Apx.LF.Root (loc, h, Apx.LF.Nil) in
-        let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  (Lfrecon.Pibox) cD cPsi' tM (tA', LF.id) in
-          Int.LF.ClObj(phat, Int.LF.PObj h)
-
-  (* This case fixes up annoying ambiguities *)
-  | (Apx.Comp.ClObj (psi, Apx.Comp.MObj m), (Int.LF.ClTyp (Int.LF.STyp (_, tA), cPsi))) ->
-    elMetaObj'' cD loc (Apx.Comp.ClObj(psi, Apx.Comp.SObj (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)))) cTt
 
   | (Apx.Comp.ClObj (Apx.Comp.DCtx cPhi, tM), (Int.LF.ClTyp (_, cPsi'))) ->
       let _ =
@@ -496,19 +495,17 @@ let rec elMetaObj'' cD loc cM cTt = match cM , cTt with
         with Unify.Failure _ ->
 	  let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD cPhi in
 	  raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
-      elMetaObj'' cD loc (Apx.Comp.ClObj(Apx.Comp.Hat (Context.dctxToHat cPsi'), tM)) cTt
+      elMetaObj' cD loc (Apx.Comp.ClObj(Apx.Comp.Hat (Context.dctxToHat cPsi'), tM)) cTt
 
   | (_ , _) -> raise (Error (loc,  MetaObjectClash (cD, cTt)))
 
-and elMetaObj' cD (loc,cM) cTt = loc, elMetaObj'' cD loc cM cTt
-
-and elMetaObj cD m cTt =
+and elMetaObj cD (loc,cM) cTt =
   let ctyp = C.cnormMTyp cTt in
-  let r = elMetaObj' cD m ctyp in
+  let r = elMetaObj' cD loc cM ctyp in
   let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
   let _   = dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp ) in
-  let _   = dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD r ) in
-  r
+  let _   = dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) ) in
+  loc, r
 
 and elMetaObjCTyp loc cD m theta ctyp =
   let cM = elMetaObj cD m (ctyp, theta) in

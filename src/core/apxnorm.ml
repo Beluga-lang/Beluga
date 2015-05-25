@@ -349,29 +349,29 @@ and cnormApxExp' cD delta i cDt = match i with
 
 and cnormApxMetaObj cD delta mobj cDt = let (_cD', t) = cDt in
   match mobj with
-    | Apx.Comp.MetaObj (loc', phat, m) ->
+    | Apx.Comp.MetaObj (loc', phat, Apx.Comp.MObj m) ->
         let phat'     = Whnf.cnorm_psihat phat t in
         let m'        = cnormApxTerm cD delta m cDt in
-          Apx.Comp.MetaObj (loc', phat', m')
+          Apx.Comp.MetaObj (loc', phat', Apx.Comp.MObj m')
 
     | Apx.Comp.MetaCtx (loc', psi) ->
         let psi' = cnormApxDCtx loc' cD delta psi cDt in
           Apx.Comp.MetaCtx (loc', psi')
 
-    | Apx.Comp.MetaObjAnn (loc', psi, m) ->
+    | Apx.Comp.MetaObjAnn (loc', psi, Apx.Comp.MObj m) ->
         let psi' = cnormApxDCtx loc' cD delta psi cDt in
         let m'   = cnormApxTerm cD delta m cDt in
-          Apx.Comp.MetaObjAnn (loc', psi', m')
+          Apx.Comp.MetaObjAnn (loc', psi', Apx.Comp.MObj m')
 
-    | Apx.Comp.MetaSub (loc, phat, sigma) ->
+    | Apx.Comp.MetaObj (loc, phat, Apx.Comp.SObj sigma) ->
       let phat'  = Whnf.cnorm_psihat phat t in
       let sigma' = cnormApxSub cD delta sigma cDt in
-        Apx.Comp.MetaSub (loc, phat', sigma')
+        Apx.Comp.MetaObj (loc, phat', Apx.Comp.SObj sigma')
 
-    | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
+    | Apx.Comp.MetaObjAnn (loc, psi, Apx.Comp.SObj sigma) ->
       let psi'   = cnormApxDCtx loc cD delta psi cDt in
       let sigma' = cnormApxSub cD delta sigma cDt in
-        Apx.Comp.MetaSubAnn (loc, psi', sigma')
+        Apx.Comp.MetaObjAnn (loc, psi', Apx.Comp.SObj sigma')
 
 
 
@@ -526,16 +526,16 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
 and collectApxMetaObj fMVs mO = match mO with
   | Apx.Comp.MetaCtx (_loc, cPsi) ->
       collectApxDCtx fMVs cPsi
-  | Apx.Comp.MetaObj (_loc, phat, tR) ->
+  | Apx.Comp.MetaObj (_loc, phat, Apx.Comp.MObj tR) ->
       let fMVh = collectApxHat fMVs phat  in
       collectApxTerm fMVh tR
-  | Apx.Comp.MetaObjAnn (_loc, cPsi, tR) ->
+  | Apx.Comp.MetaObjAnn (_loc, cPsi, Apx.Comp.MObj tR) ->
       let fMVd = collectApxDCtx fMVs cPsi in
         collectApxTerm fMVd tR
-  | Apx.Comp.MetaSub (_loc, phat, s) ->
+  | Apx.Comp.MetaObj (_loc, phat, Apx.Comp.SObj s) ->
       let fMVh = collectApxHat fMVs phat  in
       collectApxSub fMVh s
-  | Apx.Comp.MetaSubAnn (_loc, cPsi, s) ->
+  | Apx.Comp.MetaObjAnn (_loc, cPsi, Apx.Comp.SObj s) ->
       let fMVd = collectApxDCtx fMVs cPsi in
         collectApxSub fMVd s
 
@@ -869,29 +869,29 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
         Apx.Comp.Equal (loc, i1', i2')
 
 and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) mobj = match mobj with
-  | Apx.Comp.MetaObj (loc', phat, m) ->
+  | Apx.Comp.MetaObj (loc', phat, Apx.Comp.MObj m) ->
       let phat' = fmvApxHat loc' fMVs cD d_param phat in
       let m'    = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MetaObj (loc', phat', m')
+        Apx.Comp.MetaObj (loc', phat', Apx.Comp.MObj m')
 
   | Apx.Comp.MetaCtx (loc, psi) ->
       let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
         Apx.Comp.MetaCtx (loc, psi')
 
-  | Apx.Comp.MetaObjAnn (loc, psi, m) ->
+  | Apx.Comp.MetaObjAnn (loc, psi, Apx.Comp.MObj m) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
       let m' = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MetaObjAnn (loc, psi', m')
+        Apx.Comp.MetaObjAnn (loc, psi', Apx.Comp.MObj m')
 
-  | Apx.Comp.MetaSub (loc, phat, sigma) ->
+  | Apx.Comp.MetaObj (loc, phat, Apx.Comp.SObj sigma) ->
       let phat' = fmvApxHat loc fMVs cD d_param phat in
       let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MetaSub (loc, phat', sigma')
+        Apx.Comp.MetaObj (loc, phat', Apx.Comp.SObj sigma')
 
-  | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
+  | Apx.Comp.MetaObjAnn (loc, psi, Apx.Comp.SObj sigma) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
       let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MetaSubAnn (loc, psi', sigma')
+        Apx.Comp.MetaObjAnn (loc, psi', Apx.Comp.SObj sigma')
 
 
 

@@ -615,12 +615,12 @@ let rec index_meta_obj cvars fcvars = function
   | Ext.Comp.MetaObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
-        (Apx.Comp.MetaObjAnn (l, cPsi, m'), fcvars'')
+        (Apx.Comp.MetaObjAnn (l, cPsi, Apx.Comp.MObj m'), fcvars'')
 
   | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_sub cvars  bvars fcvars' m in
-        (Apx.Comp.MetaSubAnn (l, cPsi, m'), fcvars'')
+        (Apx.Comp.MetaObjAnn (l, cPsi, Apx.Comp.SObj m'), fcvars'')
 
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->
@@ -818,11 +818,11 @@ and index_pattern_mobj cvars fcvars  mO = match mO with
   | Ext.Comp.MetaObjAnn (loc, cPsi, tM) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
-      (Apx.Comp.MetaObjAnn (loc, cPsi', tM') , fcvars2)
+      (Apx.Comp.MetaObjAnn (loc, cPsi', Apx.Comp.MObj tM') , fcvars2)
   | Ext.Comp.MetaSObjAnn (loc, cPsi, s) ->
     let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
     let (s', fcvars2)           = index_sub cvars bvars fcvars1 s in
-      (Apx.Comp.MetaSubAnn (loc, cPsi', s') , fcvars2)
+      (Apx.Comp.MetaObjAnn (loc, cPsi', Apx.Comp.SObj s') , fcvars2)
 
 and index_copat_spine cvars vars fcvars sp = match sp with
   | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)

@@ -471,6 +471,7 @@ let elClObj cD loc cPsi' clobj mtyp = match clobj, mtyp with
   | Apx.Comp.MObj m, Int.LF.STyp (cl, cPhi') -> (* This fixes up an ambiguity *)
     Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)) cl cPhi')
   | Apx.Comp.MObj (Apx.LF.Root (_,h,Apx.LF.Nil) as tM), Int.LF.PTyp tA' ->
+    (* TODO: Something a little more gentle.. *)
     let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
     Int.LF.PObj h
   | _ , _ -> raise (Error (loc,  MetaObjectClash (cD, Int.LF.ClTyp (mtyp, cPsi'))))
@@ -480,7 +481,7 @@ let rec elMetaObj' cD loc cM cTt = match cM , cTt with
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
         Int.LF.CObj cPsi'
 
-  | (Apx.Comp.ClObj (Apx.Comp.DCtx cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
+  | (Apx.Comp.ClObj (cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
       let _ =
         try unifyDCtxWithFCVar loc cD cPsi' cPhi
         with Unify.Failure _ ->
@@ -930,7 +931,7 @@ and elExp' cD cG i = match i with
                 (* TODO postpone to reconstruction *)
         end
 
-  | Apx.Comp.BoxVal (loc, (loc',Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.MObj r))) ->
+  | Apx.Comp.BoxVal (loc, (loc',Apx.Comp.ClObj (psi, Apx.Comp.MObj r))) ->
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx ") in
       let cPsi     = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
       let _ = dprint (fun () -> "[elExp'] BoxVal dctx done: " ^ P.dctxToString cD cPsi ) in
@@ -1023,7 +1024,7 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
           |  _ -> raise (Error (loc,MCtxIllformed cD1'))
 	end
 	  
-  | (loc,Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.MObj m)), MT (a, cPsi) ->
+  | (loc,Apx.Comp.ClObj (psi, Apx.Comp.MObj m)), MT (a, cPsi) ->
       let cPsi' = inferCtxSchema loc (cD, cPsi) (cD', psi) in
       let _     = dprint (fun () -> "[recMObj] inferCtxSchema ... ") in
       let _     = dprint (fun () ->  "Scrutinee's context " ^ P.mctxToString cD ^ " |- " ^

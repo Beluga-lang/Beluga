@@ -323,10 +323,6 @@ and cnormApxExp' cD delta i cDt = match i with
     let i2' = cnormApxExp' cD delta i2 cDt in
       Apx.Comp.Equal (loc, i1', i2')
 
-and cnormApxHatOrDCtx loc cD delta psi ((_cD',t) as cDt) = match psi with
-  | Apx.Comp.Hat phat -> Apx.Comp.Hat (Whnf.cnorm_psihat phat t)
-  | Apx.Comp.DCtx cPsi -> Apx.Comp.DCtx (cnormApxDCtx loc cD delta cPsi cDt)
-
 and cnormApxClObj cD delta clobj cDt = match clobj with
   | Apx.Comp.MObj m -> Apx.Comp.MObj (cnormApxTerm cD delta m cDt)
   | Apx.Comp.SObj s -> Apx.Comp.SObj (cnormApxSub cD delta s cDt)
@@ -334,7 +330,7 @@ and cnormApxClObj cD delta clobj cDt = match clobj with
 and cnormApxMetaObj cD delta (loc,mobj) cDt =
   loc, match mobj with
     | Apx.Comp.ClObj (psi, clobj) ->
-      let psi'   = cnormApxHatOrDCtx loc cD delta psi cDt in
+      let psi'   = cnormApxDCtx loc cD delta psi cDt in
       let clobj' = cnormApxClObj cD delta clobj cDt in
       Apx.Comp.ClObj (psi', clobj')
 
@@ -488,10 +484,6 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
 
-and collectApxHatOrDCtx fMVs = function
-  | Apx.Comp.Hat phat -> collectApxHat fMVs phat
-  | Apx.Comp.DCtx cPsi -> collectApxDCtx fMVs cPsi
-
 and collectApxClObj fMVs = function
   | Apx.Comp.MObj tR -> collectApxTerm fMVs tR
   | Apx.Comp.SObj s -> collectApxSub fMVs s
@@ -500,7 +492,7 @@ and collectApxMetaObj fMVs (_loc,mO) = match mO with
   | Apx.Comp.CObj (cPsi) ->
       collectApxDCtx fMVs cPsi
   | Apx.Comp.ClObj (psi, clobj) ->
-      let fMVh = collectApxHatOrDCtx fMVs psi  in
+      let fMVh = collectApxDCtx fMVs psi  in
       collectApxClObj fMVh clobj
 
 and collectApxMetaSpine fMVs mS = match mS with
@@ -824,17 +816,13 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let i2' = fmvApxExp' fMVs cD d_param  i2 in
         Apx.Comp.Equal (loc, i1', i2')
 
-and fmvApxHatOrDCtx loc fMVs cD d_param = function
-  | Apx.Comp.Hat phat -> Apx.Comp.Hat (fmvApxHat loc fMVs cD d_param phat)
-  | Apx.Comp.DCtx psi -> Apx.Comp.DCtx (fmvApxDCtx loc fMVs cD d_param psi)
-
 and fmvApxClObj fMVs cD d_param = function
   | Apx.Comp.MObj m -> Apx.Comp.MObj (fmvApxTerm fMVs cD d_param m)
   | Apx.Comp.SObj s -> Apx.Comp.SObj (fmvApxSub fMVs cD d_param s)
 
 and fmvApxMetaObj fMVs cD d_param (loc,mobj) = loc , match mobj with
   | Apx.Comp.ClObj (psi, clobj) ->
-      let psi' = fmvApxHatOrDCtx loc fMVs cD d_param psi in
+      let psi' = fmvApxDCtx loc fMVs cD d_param psi in
       let clobj'    = fmvApxClObj fMVs cD d_param  clobj in
         Apx.Comp.ClObj (psi', clobj')
 

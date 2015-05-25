@@ -135,12 +135,8 @@ module Comp = struct
    | MObj of LF.normal
    | SObj of LF.sub
 
- type hat_or_dctx =
-   | Hat of LF.psi_hat
-   | DCtx of LF.dctx
-
  type mfront =
-   | ClObj of hat_or_dctx * clobj
+   | ClObj of LF.dctx * clobj
    | CObj of LF.dctx
 
  type meta_obj = Loc.t * mfront

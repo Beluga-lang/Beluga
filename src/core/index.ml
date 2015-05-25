@@ -615,12 +615,12 @@ let rec index_meta_obj cvars fcvars = function
   | Ext.Comp.MetaObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_term cvars  bvars fcvars' m in
-        ((l,Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.MObj m')), fcvars'')
+        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.MObj m')), fcvars'')
 
   | Ext.Comp.MetaSObjAnn (l, cpsi, m) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
       let (m', fcvars'') = index_sub cvars  bvars fcvars' m in
-        ((l,Apx.Comp.ClObj (Apx.Comp.DCtx cPsi, Apx.Comp.SObj m')), fcvars'')
+        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.SObj m')), fcvars'')
 
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->

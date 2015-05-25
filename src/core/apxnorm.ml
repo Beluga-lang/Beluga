@@ -868,30 +868,29 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let i2' = fmvApxExp' fMVs cD d_param  i2 in
         Apx.Comp.Equal (loc, i1', i2')
 
-and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) mobj = match mobj with
-  | loc', Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.MObj m) ->
-      let phat' = fmvApxHat loc' fMVs cD d_param phat in
+and fmvApxHatOrDCtx loc fMVs cD d_param = function
+  | Apx.Comp.Hat phat -> Apx.Comp.Hat (fmvApxHat loc fMVs cD d_param phat)
+  | Apx.Comp.DCtx psi -> Apx.Comp.DCtx (fmvApxDCtx loc fMVs cD d_param psi)
+
+and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) (loc,mobj) = loc , match mobj with
+  | Apx.Comp.ClObj (psi, Apx.Comp.MObj m) ->
+      let psi' = fmvApxHatOrDCtx loc fMVs cD d_param psi in
       let m'    = fmvApxTerm fMVs cD d_param  m in
-        loc', Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.MObj m')
+        Apx.Comp.ClObj (psi', Apx.Comp.MObj m')
 
-  | loc, Apx.Comp.CObj (psi) ->
+  | Apx.Comp.CObj (psi) ->
       let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
-        loc, Apx.Comp.CObj (psi')
+        Apx.Comp.CObj (psi')
 
-  | loc, Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.MObj m) ->
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let m' = fmvApxTerm fMVs cD d_param  m in
-       loc, Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.MObj m')
-
-  | loc, Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj sigma) ->
+  | Apx.Comp.ClObj (Apx.Comp.Hat phat, Apx.Comp.SObj sigma) ->
       let phat' = fmvApxHat loc fMVs cD d_param phat in
       let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        loc, Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.SObj sigma')
+        Apx.Comp.ClObj (Apx.Comp.Hat phat', Apx.Comp.SObj sigma')
 
-  | loc, Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.SObj sigma) ->
+  | Apx.Comp.ClObj (Apx.Comp.DCtx psi, Apx.Comp.SObj sigma) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
       let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        loc, Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.SObj sigma')
+        Apx.Comp.ClObj (Apx.Comp.DCtx psi', Apx.Comp.SObj sigma')
 
 
 

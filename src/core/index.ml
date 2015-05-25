@@ -810,20 +810,6 @@ and index_exp' cvars vars fcvars = function
 
   | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
 
-
-and index_pattern_mobj cvars fcvars  mO = match mO with
-  | Ext.Comp.MetaCtx (loc, cPsi) ->
-    let (cPsi', _bvars, fcvars')  = index_dctx cvars (BVar.create ()) fcvars cPsi in
-      (Apx.Comp.MetaCtx (loc, cPsi') , fcvars')
-  | Ext.Comp.MetaObjAnn (loc, cPsi, tM) ->
-    let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
-    let (tM', fcvars2)           = index_term cvars bvars fcvars1 tM in
-      (Apx.Comp.MetaObjAnn (loc, cPsi', Apx.Comp.MObj tM') , fcvars2)
-  | Ext.Comp.MetaSObjAnn (loc, cPsi, s) ->
-    let (cPsi', bvars, fcvars1)  = index_dctx cvars (BVar.create ()) fcvars cPsi in
-    let (s', fcvars2)           = index_sub cvars bvars fcvars1 s in
-      (Apx.Comp.MetaObjAnn (loc, cPsi', Apx.Comp.SObj s') , fcvars2)
-
 and index_copat_spine cvars vars fcvars sp = match sp with
   | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)
   | Ext.Comp.CopatApp (loc, name, sp') ->
@@ -859,7 +845,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
 	(Apx.Comp.PatConst (loc, cid, pat_spine'), fcvars', fvars')
 
   | Ext.Comp.PatMetaObj (loc, mO) ->
-    let (mO', fcvars1) = index_pattern_mobj cvars fcvars mO in
+    let (mO', fcvars1) = index_meta_obj cvars fcvars mO in
       (Apx.Comp.PatMetaObj (loc, mO') , fcvars1, fvars)
   | Ext.Comp.PatEmpty (loc, cpsi) ->
       let (cPsi, _bvars, fcvars ) = index_dctx cvars (BVar.create ()) fcvars cpsi in
@@ -953,7 +939,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
 
     let (omega, cD', cvars1, fcvars1)  =
       index_mctx (CVar.create()) (fcvars', not term_closed) cD in
-    let (mO', (fcvars2, _)) = index_pattern_mobj cvars1 fcvars1 mO in
+    let (mO', (fcvars2, _)) = index_meta_obj cvars1 fcvars1 mO in
     let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcvars2) in
     let cvars_all  = CVar.append cvars1 cvars in
     let fcvars3    = List.append fcvars2 fcvars in

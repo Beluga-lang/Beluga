@@ -92,9 +92,7 @@ module LF = struct
 
   and cvar =
     | Offset of offset
-    | MInst  of Int.LF.normal * Int.LF.typ * Int.LF.dctx
-    | PInst  of Int.LF.head * Int.LF.typ * Int.LF.dctx
-    | SInst  of Int.LF.sub * Int.LF.dctx * Int.LF.dctx
+    | MInst  of Int.LF.clobj * Int.LF.ctyp
 
   and dctx =
     | Null
@@ -131,18 +129,17 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
- type meta_typ =
-   | MetaSchema of Loc.t * name
-   | MetaTyp of Loc.t * LF.typ * LF.dctx 
-   | MetaParamTyp of Loc.t * LF.typ * LF.dctx 
-   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
+ type meta_typ = Loc.t * LF.ctyp
 
- type meta_obj =
-   | MetaCtx of Loc.t * LF.dctx
-   | MetaObj of Loc.t * LF.psi_hat * LF.normal
-   | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaSub of Loc.t * LF.psi_hat * LF.sub
-   | MetaSubAnn of Loc.t * LF.dctx * LF.sub
+ type clobj = 
+   | MObj of LF.normal
+   | SObj of LF.sub
+
+ type mfront =
+   | ClObj of LF.dctx * clobj
+   | CObj of LF.dctx
+
+ type meta_obj = Loc.t * mfront
 
  type meta_spine =
    | MetaNil

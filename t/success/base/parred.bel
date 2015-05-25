@@ -44,13 +44,13 @@ schema tCtx = some [t:tp] block x:tm, of_v: oft x t;
 % ---------------------------------------------------------------------------
 % Substitution lemma - for free, direct
 rec subst : (g:tCtx)
-            [g,b: block x:tm, of_v: oft x T[] |- oft M[.. b.1] S[]]
+            [g,b: block x:tm, of_v: oft x T[] |- oft M[..,b.1] S[]]
 -> [g |-  oft N T[]]
--> [g |-  oft M[.. N] S[]] =
+-> [g |-  oft M[..,N] S[]] =
 fn d1 => fn d2 =>
 let [g, b: block x:tm, of_v: oft x T |- D1[..,b.1,b.2]] = d1 in
 let [g |-  D2[..]] = d2 in
-  [g |-  D1[.. _ D2]]
+  [g |-  D1[..,_ D2]]
 ;
 
 % ---------------------------------------------------------------------------
@@ -70,15 +70,15 @@ fn r => fn d => case r of
 | [g |-  pr_b (\x.\pr_v. R1) R2 ] =>
     let [g |-  of_app (of_lam (\x.\of_v. D1)) (D2[..]) ] = d in
     let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F1[..,b.1,b.2]] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1[.. b.1 b.3]]
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1[..,b.1,b.3]]
 [g, b |- D1[..,b.1,b.2]] in
     let [g |-  F2[..] ] = tps [g |-  R2[..]] [g |-  D2[..]] in
-    [g |-  F1[.. _ F2]] % use substitution lemma directly
+    [g |-  F1[..,_ F2]] % use substitution lemma directly
 
 | [g |-  pr_l \x.\pr_v. R] =>
     let [g |-  of_lam \x.\of_v. D] = d in
     let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F[..,b.1,b.2]] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R[.. b.1 b.3]]
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R[..,b.1,b.3]]
 [g, b |- D[..,b.1,b.2]] in
     [g |-  of_lam \x.\of_v. F]
 

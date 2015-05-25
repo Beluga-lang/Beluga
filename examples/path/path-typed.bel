@@ -85,15 +85,15 @@ mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
 
   let [g,b:block x:exp, q:path,u:type_of x T'' , _t:is_path q x |-  e_ref] =
        eqPath [g, b:block x:exp, q:path, u:type_of x T'[] , _t:is_path q x]
-	      [g,b |- M'[.. b.1] ] [g,b |- N'[.. b.1] ]
+	      [g,b |- M'[..,b.1] ] [g,b |- N'[..,b.1] ]
 (mlam Q => fn ip =>
          let {Qs: [g,p:path |-  path]}
-             [g, b:block x:exp, q:path, u:type_of x T'[], _t:is_path q x |-  Qs[.. b.2]] =
+             [g, b:block x:exp, q:path, u:type_of x T'[], _t:is_path q x |-  Qs[..,b.2]] =
 	        [g, b:block x:exp, q:path,u:type_of x T'[], _t:is_path q x |-  Q] in  % strengthening
          let [g, b:block x:exp, q:path, u:type_of x T'[], _t:is_path q x |-  D] = ip in
          let [g |- p_lam (\x.\q.\u.\iq. D')] : [g |- is_path (bind T'[] (\q. Q')) (lam _ (\x. N'))] =
-           f [g |- bind _ (\q. Qs) ]  [g |- p_lam (\x.\q.\u.\iq. D[.. <x ; q ; u ; iq>])  ] in
-             [g,b |- D'[..,b.1,b.2 b.3 b.4]]
+           f [g |- bind _ (\q. Qs) ]  [g |- p_lam (\x.\q.\u.\iq. D[..,<x ; q ; u ; iq>])  ] in
+             [g,b |- D'[..,b.1,b.2,b.3,b.4]]
        )
   in
       [g |- e_ref]

@@ -37,9 +37,9 @@ mlam g => fn v =>  case v of
 | [g |- #p.1[..]] =>  [g |- #p.2[..]]
 
 | [g |- lam A2[] \x. E] =>
-  let  [g, b:block (x:value A[] , _t:cvalue A[]), k:ccont B[] |-  E'[.. b.2 k]] =
+  let  [g, b:block (x:value A[] , _t:cvalue A[]), k:ccont B[] |-  E'[..,b.2,k]] =
     cpse [g, b:block x:value A2[] , _t:cvalue A2[] ]
-         [g,b |- E[.. b.1]]
+         [g,b |- E[..,b.1]]
    in
      [g |- clam \v.\c. E']
 
@@ -52,9 +52,9 @@ mlam g => fn e => case e of
     [g,k |- cthrow k (V'[..] )]
 
 | [g |- app (E1[..] ) (E2[..] )] =>
-  let [g,k:ccont (arr B A) |-  E1'[.. k]] = cpse [g] [g |- E1[..] ] in
-  let [g,k:ccont B' |-  E2'[.. k]] = cpse [g] [g |- E2[..] ] in
-   [g, k |- E1'[.. (cconti (\f. E2'[.. (cconti (\x. capp f x k))]))]]
+  let [g,k:ccont (arr B A) |-  E1'[..,k]] = cpse [g] [g |- E1[..] ] in
+  let [g,k:ccont B' |-  E2'[..,k]] = cpse [g] [g |- E2[..] ] in
+   [g, k |- E1'[..,(cconti (\f. E2'[..,(cconti (\x. capp f x k))]))]]
 
 ;
 

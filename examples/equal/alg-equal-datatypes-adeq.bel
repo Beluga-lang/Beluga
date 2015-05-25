@@ -25,8 +25,8 @@ inductive Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
              Aeq' [g |- #p.1[..]] [g |- #p.1[..]]
 | Ae_a' : Aeq' [g |- E1[..]] [g |- F1[..] ] -> Aeq' [g |- E2[..]] [g |- F2[..]]
     -> Aeq' [g |- app E1 E2] [g |- app F1 F2]
-| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x) |-  E[.. b.1]]
-              [h,b:block (x:term, u:aeq x x) |-  F[.. b.1]]
+| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x) |-  E[..,b.1]]
+              [h,b:block (x:term, u:aeq x x) |-  F[..,b.1]]
         -> Aeq' [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
 
@@ -110,7 +110,7 @@ inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
         -> TRel [g |- app M N] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[.. b.1]]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
 	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 

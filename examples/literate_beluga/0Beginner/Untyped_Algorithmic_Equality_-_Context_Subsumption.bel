@@ -67,7 +67,7 @@ mlam g => mlam M => case [g |- (M[..])] of
 | [g |- #p.1[..]] => [g |- #p.2[..]]
 | [g |- lam \x. M] =>
   let [g,b:block y:tm, ae_v:aeq y y |- D[..,b.1,b.2]] =
-         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M[.. b.1]]
+         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M[..,b.1]]
   in
    [g |- ae_l \x. \w. D] % : eq (L) (L)
 | [g |- app (M1[..]) (M2[..])] =>
@@ -142,7 +142,7 @@ fn e => case e of
     [g |- ae_a (F1[..]) (F2[..])]
 | [g |- de_l (\x.(\u. D))] =>
   let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F[..,b.1,b.2]] =
-        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D[.. b.1 b.3]]
+        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D[..,b.1,b.3]]
   in
      [g |- ae_l (\x.\v. F)]
 | [g |- de_t (D1[..]) (D2[..])] =>

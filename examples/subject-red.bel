@@ -46,13 +46,13 @@ mlam g => fn d => fn s => case s of
   let % {F::(type_of (M) (T[..]))[g, x:exp, u:type_of x (T[..])]}
       [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
       tps' [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x]
-	  [g,b |- D[..,b.1,b.2]] [g,b |- S[.. b.1 b.3 b.4]] in
+	  [g,b |- D[..,b.1,b.2]] [g,b |- S[..,b.1,b.3,b.4]] in
   [g |- tof_lam \x.\u. F]
 
 | [g |- s_app1 (S2[..]) (S1[..])] =>
   let [g |- tof_app (D2[..]) (D1[..])] = d in
   let [g |- tof_lam \x.\u. F] = tps' [g] [g |- D1[..]] [g |- S1[..]] in
-     tps' [g] [g |- F[.. _ D2]] [g |- S2[..]]
+     tps' [g] [g |- F[..,_ D2]] [g |- S2[..]]
 
 | [g |- s_app2 (S2[..]) _ (S1[..])] =>
   let [g |- tof_app (D2[..]) (D1[..])] = d in
@@ -81,14 +81,14 @@ mlam g => fn d => fn s => case d of
   let % {F::(type_of (M) (T[..]))[g, x:exp, u:type_of x (T[..])]}
       [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
       tps [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x]
-	  [g,b |- (D[..,b.1,b.2])] [g,b |- S[.. b.1 b.3 b.4]] in
+	  [g,b |- (D[..,b.1,b.2])] [g,b |- S[..,b.1,b.3,b.4]] in
   [g |- tof_lam \x.\u. F]
 
  | [g |- tof_app (D2[..]) (D1[..])] =>
   (case s of
      | [g |- s_app1 (S2[..]) (S1[..])] =>
        let [g |- tof_lam \x.\u. F] = tps [g] [g |- D1[..]] [g |- S1[..]] in
-       tps [g] [g |- F[.. _ D2]] [g |- S2[..]]
+       tps [g] [g |- F[..,_ D2]] [g |- S2[..]]
      | [g |- s_app2 (S2[..]) _ (S1[..])] =>
        let [g |- F1[..]] = tps [g] [g |- D1[..]] [g |- S1[..]] in
        let [g |- F2[..]] = tps [g] [g |- D2[..]] [g |- S2[..]] in

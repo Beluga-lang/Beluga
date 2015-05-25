@@ -52,14 +52,14 @@ rec fwd : (g:jctx) [g |- is_path (P[..]) (M[..])] -> [g |- jpath (P[..]) (M[..])
 % / total p (fwd g _ _ p) /
 fn p => case p of
 | [g |- p_lam (\x.\q.\d. P)] =>
-  let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P'[..,b.1,b.2 b.4]]
-     = fwd [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P[..,b.1,b.2 b.3]] in
+  let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P'[..,b.1,b.2,b.4]]
+     = fwd [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P[..,b.1,b.2,b.3]] in
   [g |- j_lam (\x.\q.\d. P')]
 | [g |- p_left (P[..])] => let [g |- P'[..]] = fwd [g |- P[..]] in [g |- j_left (P'[..])]
 | [g |- p_right (P[..])] => let [g |- P'[..]] = fwd [g |- P[..]] in [g |- j_right (P'[..])]
 | [g |- p_done] => [g |- j_done]
 | [g |- p_rdx (\x. \f. P)] : [g |- is_path (Q[..]) (rdx (F[..]) (M[..]))] =>
-  let [g,b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[.. b.1 b.3]]
+  let [g,b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[..,b.1,b.3]]
       = fwd [g,b:block x:tm, _t: ({q:path} is_path q (M[..]) -> is_path q x), _u:jump (M[..]) x |-  P[..,b.1,b.2]]
   in
     [g |- j_rdx (\x. \j. E)]
@@ -74,15 +74,15 @@ rec bwd : (g:jctx) [g |- jpath (P[..]) (M[..])] -> [g |- is_path (P[..]) (M[..])
 / total p (bwd g _ _ p) /
 fn p => case p of
 | [g |- j_lam (\x.\q.\d. P)] =>
-  let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P'[..,b.1,b.2 b.3]]
-     = bwd [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P[..,b.1,b.2 b.4]] in
+  let [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P'[..,b.1,b.2,b.3]]
+     = bwd [g,b:block x:tm, p:path, _t:is_path p x, _u:jpath p x |-  P[..,b.1,b.2,b.4]] in
   [g |- p_lam (\x.\q.\d. P')]
 | [g |- j_left (P[..])] => let [g |- P'[..]] = bwd [g |- P[..]] in [g |- p_left (P'[..])]
 | [g |- j_right (P[..])] => let [g |- P'[..]] = bwd [g |- P[..]] in [g |- p_right (P'[..])]
 | [g |- j_done] => [g |- p_done]
 | [g |- j_rdx (\x. \f. E)] : [g |- jpath (Q[..]) (rdx (F[..]) (N[..]))] =>
    let [g, b:block (x:tm, _t: ({q:path} is_path q (N1[..]) -> is_path q x), _u:jump (N1[..]) x) |-  F1[..,b.1,b.2]]
-       = bwd [g, b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[.. b.1 b.3]] in
+       = bwd [g, b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[..,b.1,b.3]] in
    [g |- p_rdx (\x. \f. F1)]
 | [g |- #p.4[..]] => [g |- #p.3[..]]
 | {#q : [g |- block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x]}

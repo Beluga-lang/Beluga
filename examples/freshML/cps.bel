@@ -38,21 +38,21 @@ mlam g => fn e => fn k => let [g,x:cval |-  K] = k in
 case e of
 | [g |- #p.1[..]] => [g |- ((#p.3[..] ) (#p.2[..]))]
 
-| [g |- z] => [g |- K[.. z+]]
+| [g |- z] => [g |- K[..,z+]]
 
 | [g |- s (E[..] )] =>
-  cmp [g] [g |- E[..] ] [g,x |- K[.. (s+ x)]]
+  cmp [g] [g |- E[..] ] [g,x |- K[..,(s+ x)]]
 
 | [g |- lam \x. E] =>
-  let [g,b:block x:exp,x':cval , _t:(cval -> cexp) |-  E'[.. b.2 b.3]] =
+  let [g,b:block x:exp,x':cval , _t:(cval -> cexp) |-  E'[..,b.2,b.3]] =
       cmp [g,b:block x:exp,x':cval , _t:(cval -> cexp)]
-         [g,b |- E[.. b.1]] [g,b,x1 |-  b.3 x1] in
-   [g |- K[.. (lam+ (\v.\k. E'))]]
+         [g,b |- E[..,b.1]] [g,b,x1 |-  b.3 x1] in
+   [g |- K[..,(lam+ (\v.\k. E'))]]
 
 | [g |- app (E1[..]) (E2[..] )] =>
     let [g,x:cval |-  E2'] =
         cmp [g, x:cval]
-            [g, x |- E1[..] ] [g,x1,x2 |-  app+ x1 x2 (\v. K[.. v])] in
+            [g, x |- E1[..] ] [g,x1,x2 |-  app+ x1 x2 (\v. K[..,v])] in
      cmp [g] [g |- E1[..] ] [g,x1' |-  E2']
 
 ;

@@ -43,7 +43,7 @@ mlam g => mlam M => case [g |- (M[..])] of
 
 | [g |- lam \x. M] =>
   let [g,b:block y:tm, ae_v:aeq y y |-  D[..,b.1,b.2]] = 
-         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |-  M[.. b.1]]
+         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |-  M[..,b.1]]
   in
    [g |- ae_l \x. \w. D]  % : eq (L) (L)
 | [g |- app (M1[..]) (M2[..])] =>
@@ -175,9 +175,9 @@ mlam g => mlam M => case [g |- M[..]] of
      StrTm [g,b:block (x:tm, u:aeq x x,v:deq x x)]
            [h,b:block (x:tm, u:aeq x x)]
 	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..] <b.1 ; b.2>]
-           (Ccons [g] [h] [g |- #W[..] ] cr) [h, b:block (x:tm, u:aeq x x) |- M'[.. b.1]] = 
-       str_tm [g, b:block (x:tm, u:aeq x x,v:deq x x)] [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[.. b.1]] in 
- StrTm [g] [h] [g |- #W[..] ] cr [h |- lam \y. M'[.. y]] 
+           (Ccons [g] [h] [g |- #W[..] ] cr) [h, b:block (x:tm, u:aeq x x) |- M'[..,b.1]] = 
+       str_tm [g, b:block (x:tm, u:aeq x x,v:deq x x)] [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[..,b.1]] in 
+ StrTm [g] [h] [g |- #W[..] ] cr [h |- lam \y. M'[..,y]] 
 
 | [g |- app (M[..]) (N[..]) ] => 
  let StrTm [g] [h] [g |- #W[..] ] cr [h |- M'[..]] = str_tm [g] [g |- M[..]] in 
@@ -223,23 +223,23 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
   StrAeq [g] [h] [g |- #W[..] ] [h |- _ ] [h |- _ ] cr [h |- ae_a (D1'[..]) (D2'[..])]
 
  
-| {D:[g,x:tm, u:aeq x x |-  aeq M[.. x] N[.. x]]}
+| {D:[g,x:tm, u:aeq x x |-  aeq M[..,x] N[..,x]]}
   [g |- ae_l (\x.\u. D) ] =>  
  let {#W:g |- h}
      StrAeq [g,b:block (x:tm, u:aeq x x,v:deq x x)]
             [h,b:block (x:tm, u:aeq x x)]
 	    [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..], <b.1 ; b.2>]
-            [h,b:block (x:tm, u:aeq x x)  |-  M'[.. b.1] ]  [h,b:block (x:tm, u:aeq x x)  |-  N'[.. b.1] ] 
+            [h,b:block (x:tm, u:aeq x x)  |-  M'[..,b.1] ]  [h,b:block (x:tm, u:aeq x x)  |-  N'[..,b.1] ] 
            (Ccons [g] [h] [g |- #W[..] ] cr) 
             [h, b:block (x:tm, u:aeq x x) |- D'[..,b.1,b.2]] = 
        str_aeq [g, b:block (x:tm, u:aeq x x,v:deq x x)] 
-	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[.. b.1]] 
-	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- N[.. b.1]] 
+	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- M[..,b.1]] 
+	       [g,b:block (x:tm, u:aeq x x,v:deq x x) |- N[..,b.1]] 
                [g,b:block (x:tm, u:aeq x x,v:deq x x) |- D[..,b.1,b.2]]
 
  in
  StrAeq [g] [h] [g |- #W[..] ] 
-   [h |- lam \x.M' ] [h |- lam \x.N' ] cr [h |- ae_l \y.\u. D'[.. y u]] 
+   [h |- lam \x.M' ] [h |- lam \x.N' ] cr [h |- ae_l \y.\u. D'[..,y,u]] 
 
 | {D:[g |- aeq (M[..]) (N[..])]}
   [g, b:block (x:tm, u:aeq x x, v:deq x x) |-  D[..]] => 
@@ -303,7 +303,7 @@ fn e => case e of
 					
 | [g |- de_l (\x.(\u. D))] => 
   let [g,b:block x:tm, _t:aeq x x, u:deq x x |-  F[..,b.1,b.2]] = 
-        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x  |-  D[.. b.1 b.3]]
+        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x  |-  D[..,b.1,b.3]]
   in
      [g |- ae_l (\x.\v. F)]
 

@@ -77,7 +77,7 @@ fn e => case e of
       normal2exp [h, b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..b.2]]
 %     normal2exp [g, b: block (x:exp _, _t:neutral _) |-  S..b.2]
     in
-      norm [h |- M'[.. N]]
+      norm [h |- M'[..,N]]
 )
 %{  | [g |- neut(R..)] =>
    (let [g |- S..] = norm [g |- N..] in [g |- neut (app' (R..) (S..))]))

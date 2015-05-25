@@ -17,7 +17,7 @@ fn cn => case cn of
 | [g |- can_atm (AT1[..])] => 
   let ([g |- AT1[..]] : [g |- atm (D[..])]) = [g |- AT1[..]] in
   let [g,q:p,u:focus (A[..]) q |-  I1] = cmpai [g] [g |- D[..]] [g |- AT1[..] ] in
-    [g |- I1[.. _ (i_atom)]]
+    [g |- I1[..,_ (i_atom)]]
 
 and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm (E[..])] ->
 	       [g, q:p, u:focus B[] q  |-  solve (atom q)] =
@@ -28,23 +28,23 @@ mlam g, E => fn at => case [g |- E[..] ] of
   | [g |- andel (D1[..] )] =>
    let [g |- atm_andel (CN1[..] )] = at in
    let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- CN1[..]] in
-      [g,q,i |-  I1[.. q (i_andl i)]]
+      [g,q,i |-  I1[..,q,(i_andl i)]]
 
   | [g |- ander (D1[..] )] =>
     let [g |- atm_ander (CN1[..] )] = at in
     let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- CN1[..]] in
-      [g,q,i |-  I1[.. q (i_andr i)]]
+      [g,q,i |-  I1[..,q,(i_andr i)]]
 
   | [g |- impe (D1[..]) (D2[..])] =>
     let [g |- atm_impe (CN2[..]) (AT1[..])] = at in
     let [g,q:p, u:focus A q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- AT1[..]] in
     let [g |- S2[..]] = cmpcs [g |- CN2[..]] in
-      [g,q,i |-  I1[.. q (i_imp (S2[..]) i )]]
+      [g,q,i |-  I1[..,q,(i_imp (S2[..]) i )]]
 
   | [g |- foralle (D1[..]) T[]] =>
    let [g |- atm_foralle (AT1[..])] = at in
    let [g,q:p, i: focus A q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- AT1[..]] in
-      [g,q,i |-  I1[.. q (i_forall T[] i)]]
+      [g,q,i |-  I1[..,q,(i_forall T[] i)]]
 
 ;
 

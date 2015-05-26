@@ -69,11 +69,6 @@ type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
   | Atom_pat of Comp.typ option
 
-type clf_pattern =
-  | PatEmpty of Loc.t
-  | PatCLFTerm of Loc.t * LF.normal
-
-
 type mixtyp =
   | MTCompKind of Loc.t
   | MTBase of Loc.t * Id.name * Comp.meta_spine
@@ -1182,15 +1177,7 @@ GLOBAL: sgn;
                                           LF.Empty ctyp_decls in
          let branch =
            begin match mobj with
-            | PatEmpty loc'   ->
-	      let emptyPat = mkEmptyPat (loc', pHat) in
-                (let pat = (match tau with
-                                None -> emptyPat
-                              | Some tau -> Comp.PatAnn (loc', emptyPat, tau))
-                 in
-                  Comp.EmptyBranch (loc', ctyp_decls', pat)
-                )
-           | PatCLFTerm (loc', tM) ->
+            (loc', tM) ->
                (let pat = (match tau with
                                None -> Comp.PatMetaObj (_loc, (loc',Comp.ClObj (pHat, Comp.MObj tM)))
                              | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(loc',
@@ -1295,7 +1282,7 @@ cmp_exp_syn:
 clf_pattern :
     [
       [
-        tM = clf_term_app -> PatCLFTerm (_loc, tM)
+        tM = clf_term_app -> (_loc, tM)
       ]
     ]
   ;
@@ -1330,11 +1317,7 @@ clf_pattern :
 		       Comp.TypBox(_loc,(_loc,LF.ClTyp (LF.MTyp tA, cPsi)))]
           ->
               begin match tM with
-            | PatEmpty _loc'   ->
-                (match tau with None -> mkEmptyPat (_loc', cPsi)
-                   | Some tau -> Comp.PatAnn (_loc', mkEmptyPat (_loc', cPsi), tau)
-                )
-            | PatCLFTerm (_loc', tM)  ->
+            | (_loc', tM)  ->
                 (match tau with None -> Comp.PatMetaObj (_loc, (_loc',Comp.ClObj (cPsi, Comp.MObj tM)))
                   | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, (_loc,Comp.ClObj (cPsi, Comp.MObj tM))), tau))
 

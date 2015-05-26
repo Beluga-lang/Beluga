@@ -1046,7 +1046,7 @@ GLOBAL: sgn;
   cmp_pair_atom_pat :
     [
       [
-        ","; e2 = cmp_branch_pattern ; ")" -> Pair_pat e2
+        ","; e2 = cmp_pattern ; ")" -> Pair_pat e2
 
       | ")"; tauOpt = OPT [":" ; tau = cmp_typ -> tau]  -> Atom_pat tauOpt
 
@@ -1213,7 +1213,7 @@ GLOBAL: sgn;
          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-           pat = cmp_branch_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
+           pat = cmp_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in
 
@@ -1340,7 +1340,18 @@ clf_pattern :
     ]
   ];
 
-  cmp_branch_pattern:
+  cmp_pattern:
+    [
+      [
+        p = box_pattern ->
+          p
+
+      | p = cmp_branch_pattern -> 
+        p
+      ]
+    ];
+
+  box_pattern:
     [
       [
         "["; cPsi = clf_dctx ; turnstile; tM = clf_pattern; "]" ;
@@ -1365,20 +1376,28 @@ clf_pattern :
       | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->
           Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
 
-     | "<"; cPsi = clf_dctx ; turnstile; s = clf_sub_new; ">"   ->
-          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
 
-     | "ttrue" -> Comp.PatTrue (_loc)
+      | "<"; cPsi = clf_dctx ; turnstile; s = clf_sub_new; ">"   ->
+          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
+      ]
+    ];
+
+
+  cmp_branch_pattern:
+    [
+      [
+        
+       "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
      | x = SYMBOL; tauOpt = OPT [":" ; tau = cmp_typ -> tau] ->
          (match tauOpt with
            | None -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
            | Some tau -> Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
          )
-     | x = UPSYMBOL; s = LIST0 (cmp_branch_pattern) ->
+     | x = UPSYMBOL; s = LIST0 (cmp_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
-     | "("; p = SELF; p_or_a = cmp_pair_atom_pat   ->
+     | "("; p = cmp_pattern; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
             | Atom_pat None -> p
@@ -1391,13 +1410,20 @@ clf_pattern :
     [
       [
         ctyp_decls = LIST0 clf_ctyp_decl;
-        pattern = cmp_branch_pattern;
+        pattern = box_pattern;
          rest = OPT [rArr; e = cmp_exp_chk -> e] ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
            (match rest with
               | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
               | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
            )
+      |
+        ctyp_decls = LIST0 clf_ctyp_decl;
+        pattern = cmp_branch_pattern;
+         rArr; e = cmp_exp_chk ->
+          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+          Comp.Branch (_loc, ctyp_decls', pattern, e)
+      
       ]
     ]
   ;

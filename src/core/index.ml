@@ -607,21 +607,23 @@ let index_schema (Ext.LF.Schema el_list) =
 
 (* Translation of external computations into approximate computations *)
 
-(* TODO: Refactor *)
+let index_clobj cvars bvars fcvars = function
+  | Ext.Comp.MObj m -> 
+    let (m', fcvars') = index_term cvars bvars fcvars m in
+    (Apx.Comp.MObj m', fcvars')
+  | Ext.Comp.SObj s ->
+    let (s', fcvars') = index_sub cvars  bvars fcvars s in
+    (Apx.Comp.SObj s', fcvars')
+
 let rec index_meta_obj cvars fcvars (l,cM) = match cM with
   | Ext.Comp.CObj cpsi ->
       let (cPsi, _bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
         ((l, Apx.Comp.CObj (cPsi)), fcvars')
 
-  | Ext.Comp.ClObj (cpsi, Ext.Comp.MObj m) ->
+  | Ext.Comp.ClObj (cpsi, clobj) ->
       let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
-      let (m', fcvars'') = index_term cvars  bvars fcvars' m in
-        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.MObj m')), fcvars'')
-
-  | Ext.Comp.ClObj (cpsi, Ext.Comp.SObj s) ->
-      let (cPsi, bvars, fcvars') = index_dctx cvars (BVar.create ()) fcvars cpsi in
-      let (s', fcvars'') = index_sub cvars  bvars fcvars' s in
-        ((l,Apx.Comp.ClObj (cPsi, Apx.Comp.SObj s')), fcvars'')
+      let (clobj', fcvars'') = index_clobj cvars bvars fcvars' clobj in
+        ((l,Apx.Comp.ClObj (cPsi, clobj')), fcvars'')
 
 and index_meta_spine cvars fcvars = function
   | Ext.Comp.MetaNil ->

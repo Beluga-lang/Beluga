@@ -1289,20 +1289,14 @@ clf_pattern :
   box_pattern:
     [
       [
-        "["; cPsi = clf_dctx ; turnstile; tM = clf_pattern; "]" ;
+         mobj = meta_obj ;
          tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> 
 		       Comp.TypBox(_loc,(_loc,LF.ClTyp (LF.MTyp tA, cPsi)))]
-          -> let pat0 = Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.MObj tM))) in
+          -> let pat0 = Comp.PatMetaObj (_loc, mobj) in
 	     (match tau with
 		 None -> pat0
                | Some tau -> Comp.PatAnn (_loc, pat0, tau))
 
-      |"["; cPsi = clf_dctx ; "]" 
-	->
-	  Comp.PatMetaObj (_loc, (_loc,Comp.CObj cPsi))
-
-      | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->
-          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
       ]
     ];
 

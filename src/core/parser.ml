@@ -1167,21 +1167,6 @@ GLOBAL: sgn;
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-       "["; pHat = clf_dctx ;turnstile; mobj = clf_pattern; "]";
-       tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]" ->
-                     Comp.TypBox(_loc, (_loc, LF.ClTyp (LF.MTyp tA, cPsi))) ];
-
-       "="; i = cmp_exp_syn; "in"; e' = cmp_exp_chk
-       ->
-         let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
-                                          LF.Empty ctyp_decls in
-	 let pat0 = Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (pHat, Comp.MObj mobj))) in
-         let pat = (match tau with
-                               None -> pat0
-                             | Some tau -> Comp.PatAnn (_loc, pat0, tau))
-	 in Comp.Case (_loc, Pragma.RegularCase, i, [Comp.Branch (_loc, ctyp_decls', pat, e')])
-
-      | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
            pat = cmp_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                            LF.Empty ctyp_decls in

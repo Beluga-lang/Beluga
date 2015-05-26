@@ -1228,11 +1228,7 @@ GLOBAL: sgn;
     | "atomic"
       [
 
-        "["; cPsi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
-        Comp.Box (_loc, (_loc,Comp.ClObj(cPsi, tR)))
-
-       | "["; psi = clf_hat_or_dctx; "]"   ->
-          Comp.Box(_loc, (_loc,Comp.CObj psi))
+        "["; tR = clobj; "]"  -> Comp.Box (_loc, tR)
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1240,14 +1236,14 @@ GLOBAL: sgn;
             | Pair e2 ->   Comp.Pair (_loc, e1, e2)
             | Atom    ->   e1
           end
-(*      |
-        "("; e = SELF; ")" ->
-          e
-*)
       ]
  ];
 
-
+clobj:
+  [[
+       cPsi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub -> (_loc,Comp.ClObj(cPsi, tR))
+     | psi = clf_hat_or_dctx   ->  (_loc,Comp.CObj psi)
+  ]];
 
 (* isuffix: something that can follow an i; returns a function that takes the i it follows,
   and returns the appropriate synthesizing expression *)
@@ -1279,14 +1275,7 @@ cmp_exp_syn:
   |
 
  LEFTA [
-(*   "["; cPsi = clf_dctx; turnstile; tR = clf_term_app ; "]" ->
-        Comp.BoxVal (_loc, Comp.MetaObjAnn (_loc, cPsi, tR))
- *)
-  "["; cPsi = clf_dctx; turnstile; tR = term_or_sub ; "]" ->
-     Comp.BoxVal (_loc, (_loc,Comp.ClObj(cPsi, tR)))
-
-   | "["; cPsi = clf_dctx; "]" ->
-      Comp.BoxVal (_loc, (_loc,Comp.CObj cPsi))
+     "["; tR = clobj; "]" -> Comp.BoxVal (_loc, tR)
 
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
@@ -1320,7 +1309,7 @@ clf_pattern :
 
   term_or_sub:
   [
-    [
+    [ (* TODO: Refactor this once head and sub are merged *)
      h = SYMBOL; ","; t = SYMBOL ->
             let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
             Comp.SObj su
@@ -1393,14 +1382,7 @@ clf_pattern :
   meta_obj:
     [
       [
-
-        "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
-          begin match (phat_or_psi , mobj) with
-            | (cPsi, Some tR)   -> _loc, Comp.ClObj (cPsi, tR)
-            | (cPsi, None)      -> _loc, Comp.CObj cPsi
-          end
-
-
+        "["; tR = clobj; "]"   -> tR
       ]
     ];
 

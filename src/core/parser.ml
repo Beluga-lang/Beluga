@@ -67,7 +67,7 @@ type pair_or_atom_syn =
 
 type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
-  | Atom_pat of Comp.typ option
+  | Atom_pat
 
 type mixtyp =
   | MTCompKind of Loc.t
@@ -1033,7 +1033,7 @@ GLOBAL: sgn;
       [
         ","; e2 = cmp_pattern ; ")" -> Pair_pat e2
 
-      | ")"; tauOpt = OPT [":" ; tau = cmp_typ -> tau]  -> Atom_pat tauOpt
+      | ")"  -> Atom_pat
 
       ]
     ]
@@ -1270,28 +1270,18 @@ cmp_exp_syn:
   cmp_pattern:
     [
       [
-      mobj = meta_obj ;
-      tau = OPT [ ":"; tau = cmp_typ -> tau ]
-          -> let pat0 = Comp.PatMetaObj (_loc, mobj) in
-	     (match tau with
-		 None -> pat0
-               | Some tau -> Comp.PatAnn (_loc, pat0, tau))
-        
+      mobj = meta_obj -> Comp.PatMetaObj (_loc, mobj)        
      |  "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
-     | x = SYMBOL; tauOpt = OPT [":" ; tau = cmp_typ -> tau] ->
-         (match tauOpt with
-           | None -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
-           | Some tau -> Comp.PatAnn (_loc, Comp.PatVar (_loc, Id.mk_name (Id.SomeString x)), tau)
-         )
+     | x = SYMBOL -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
      | x = UPSYMBOL; s = LIST0 (cmp_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
            Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
      | "("; p = cmp_pattern; p_or_a = cmp_pair_atom_pat   ->
          (match p_or_a with
             | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
-            | Atom_pat None -> p
-            | Atom_pat (Some tau) -> Comp.PatAnn (_loc, p, tau))
+            | Atom_pat -> p)
+     | pat = cmp_pattern; ":"; tau = cmp_typ -> Comp.PatAnn (_loc, pat, tau)
       ]
     ]
   ;

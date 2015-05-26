@@ -24,11 +24,11 @@ inductive TmVar : {g:tctx} [ |- tp] -> ctype =
 ;
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
-| Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}({h:ctx} {#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}({h:ctx} {#W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
-rec sem_wkn : {g:ctx} {h:ctx}{#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+rec sem_wkn : {g:ctx} {h:ctx}{#W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g => mlam h => mlam #W => fn e =>
 case e of
 | Syn [g |- R[..]] => Syn ([h |- R[#W[..]]])

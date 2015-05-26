@@ -98,9 +98,9 @@ fn d => case d of
 % ---------------------------------------------------------------------------
 % Promotion lemmas (explicit)
 
-inductive CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype = 
+inductive CtxRel : {g:daG} {h:xaG} {#W:[g |- h]} ctype = 
 | Cnil : CtxRel [] [] [ |- ^ ] 
-| Ccons: {g:daG}{h:xaG}{#W:g |- h}
+| Ccons: {g:daG}{h:xaG}{#W:[g |- h]}
          CtxRel [g] [h] [g |- #W[..] ] 
 	 -> CtxRel [g, b:block (x:tm, u:aeq x x, v: deq x x)]
 		   [h, b:block (x:tm, u:aeq x x)]
@@ -108,7 +108,7 @@ inductive CtxRel : {g:daG} {h:xaG} {#W:g |- h} ctype =
 ;
 
 inductive StrTm : (g:daG)[g |- tm] ->  ctype = 
-| StrTm :  {g:daG}{h:xaG}{#W:g |- h} 
+| StrTm :  {g:daG}{h:xaG}{#W:[g |- h]} 
 	  CtxRel [g] [h] [g |- #W[..] ] 
       -> {M: [h |- tm]} StrTm [g |- M[#W] ];
 
@@ -118,8 +118,8 @@ inductive Ctx_xaG : {g:xaG} ctype = Ctx_xaG : {g:xaG} Ctx_xaG [g] ;
 inductive EqCtx : {h:xaG} {h':xaG} ctype = 
 | RefCtx : EqCtx [h] [h] ;
 
-inductive EqSub : {g:daG}{h:xaG}{h':xaG} {#W:g |- h}{#W':g |- h'} ctype = 
-| RefSub : {g:daG}{h:xaG}  {#W:g |- h} 
+inductive EqSub : {g:daG}{h:xaG}{h':xaG} {#W:[g |- h]}{#W':[g |- h']} ctype = 
+| RefSub : {g:daG}{h:xaG}  {#W:[g |- h]} 
 		  EqSub [g] [h] [h] [g |- #W[..] ] [g |- #W[..] ] ;
 
 rec deterministic_CtxRel : CtxRel [g] [h] [g |- #W[..] ] 
@@ -171,7 +171,7 @@ mlam g => mlam M => case [g |- M[..]] of
 
 
 | [g |- lam \x. M ] => 
- let {#W:g |- h}
+ let {#W:[g |- h]}
      StrTm [g,b:block (x:tm, u:aeq x x,v:deq x x)]
            [h,b:block (x:tm, u:aeq x x)]
 	   [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..], <b.1 ; b.2>]
@@ -194,7 +194,7 @@ let [h |- D[..] ] = reflG [h] [h |- N[..]] in
 ;
 
 inductive StrAeq : (g:daG){M:[g |- tm]}{N:[g |- tm]}[g |- aeq (M[..]) (N[..])] ->  ctype = 
-| StrAeq :  {g:daG}{h:xaG}{#W:g |- h} {M:[h |- tm]}{N:[h |- tm]}
+| StrAeq :  {g:daG}{h:xaG}{#W:[g |- h]} {M:[h |- tm]}{N:[h |- tm]}
   	    CtxRel [g] [h] [g |- #W[..] ] -> 
 	    {D: [h |- aeq (M[..]) (N[..])]}
 	    StrAeq [g |- M[#W]] [g |- N[#W]] [g |- D[#W]];
@@ -225,7 +225,7 @@ mlam g => mlam M => mlam N => mlam D => case [g |- D[..]] of
  
 | {D:[g,x:tm, u:aeq x x |-  aeq M[..,x] N[..,x]]}
   [g |- ae_l (\x.\u. D) ] =>  
- let {#W:g |- h}
+ let {#W:[g |- h]}
      StrAeq [g,b:block (x:tm, u:aeq x x,v:deq x x)]
             [h,b:block (x:tm, u:aeq x x)]
 	    [g,b:block (x:tm, u:aeq x x,v:deq x x) |- #W[..], <b.1 ; b.2>]

@@ -3,11 +3,11 @@ i : tm.
 
 schema ctx = tm;
 
-rec f : {g:ctx}{h:ctx} {#S : h |- # g} { M : [g |- tm]} [h |- tm] =
+rec f : {g:ctx}{h:ctx} {#S :[h |- # g]} { M : [g |- tm]} [h |- tm] =
 mlam g => mlam h => mlam #S => mlam M => [h |- M[#S[..]] ]
 ;
 
-rec ff : {g:ctx}{h:ctx} {#W: h |- # g} {#S : h |- h} { M : [g |- tm]} [h |- tm] =
+rec ff : {g:ctx}{h:ctx} {#W:[h |- # g]} {#S :[h |- h]} { M : [g |- tm]} [h |- tm] =
 mlam g,h,#W,#S,M => f [g][h][h |- #W[#S[..]]] [g |- M]
 ;
 

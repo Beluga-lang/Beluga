@@ -31,7 +31,7 @@ stratified LogEq : (g:tctx) [g |- tm] -> [g |-  tm] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn (M[..]) (N[..]) i]
           -> LogEq [g |- M[..]] [g |- N[..]] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
-             ({h:tctx} {#R:h |- g} {N1:[h |- tm]}{N2:[h |- tm]}
+             ({h:tctx} {#R:[h |- g]} {N1:[h |- tm]}{N2:[h |- tm]}
                 LogEq [h |- N1[..]] [h |-  N2[..]] [ |- T]
               -> LogEq [h |- app M1[#R] N1] [h |-  app M2[#R] N2] [ |- S])
             -> LogEq [g |-  M1[..]] [g |-  M2[..]] [ |- arr T S]
@@ -39,7 +39,7 @@ stratified LogEq : (g:tctx) [g |- tm] -> [g |-  tm] -> [ |- tp] -> ctype   =
 
 
 % Monotonicity of logical equivalence
-rec logEq_Monotone : {h:tctx}{#W:h |- g} LogEq [g |-  M1[..]] [g |-  M2[..]] [ |- A]
+rec logEq_Monotone : {h:tctx}{#W:[h |- g]} LogEq [g |-  M1[..]] [g |-  M2[..]] [ |- A]
                    -> LogEq [h |-  M1[#W]] [h |- M2[#W]] [ |- A] =
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,#W => fn e => case e of
@@ -335,7 +335,7 @@ inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> cty
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-inductive LogEqSub : {G:[|-dctx]}{g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0}
+inductive LogEqSub : {G:[|-dctx]}{g0:ctx}(h:tctx){#S1: [h |- g0]}{#S2: [h |- g0]}
 ctype  =
 | Nil : LogEqSub [|- nil ] [] [h |- ^] [h |- ^]
 | Dot : LogEqSub [|- G] [g0] [h |- #S1[..]] [h |- #S2[..]]
@@ -355,7 +355,7 @@ fn v => fn s => case v of
 
 % Monotonicity of logical equivalence on substitutions
 rec wknLogEqSub :
-    {h0:tctx}{h:tctx}{#W:h0 |- h}
+    {h0:tctx}{h:tctx}{#W:[h0 |- h]}
     LogEqSub [|- G] [g0] [h |- #S1[..]] [h |- #S2[..]]
   -> LogEqSub [|- G] [g0] [h0 |- #S1[#W[..]]] [h0 |- #S2[#W[..]]] =
  / total es (wknLogEqSub _ _ _ _ _ _ iv es )/
@@ -411,7 +411,7 @@ case d of
 | DecTrans d1 d2 => logEqTrans [|- _ ] (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
 ;
 
-inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:g' |- g} ctype =
+inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id[..]]
        -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]

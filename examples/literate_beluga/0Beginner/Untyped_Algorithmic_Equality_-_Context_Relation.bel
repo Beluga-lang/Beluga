@@ -31,15 +31,15 @@ schema xaG = block x:tm, u:aeq x x;
 %{{
 ## Context Relationships via Inductive Datatypes
 
-The key to express context weakening and strengthening is the ability to relate two contexts via a substitution. In Beluga, we can describe context relations using <i>inductive inductives</i> as a relation between context <code>phi</code>, context <code>psi</code>, and a substitution <code>#S</code> that maps variables from <code>phi</code> to the context <code>psi</code>, formally <code>#S:psi |- phi</code> as follows:}}%
-inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
+The key to express context weakening and strengthening is the ability to relate two contexts via a substitution. In Beluga, we can describe context relations using <i>inductive inductives</i> as a relation between context <code>phi</code>, context <code>psi</code>, and a substitution <code>#S</code> that maps variables from <code>phi</code> to the context <code>psi</code>, formally <code>#S:[psi |- phi]</code> as follows:}}%
+inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:[psi |- phi]} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa : Ctx_xaR [phi] [psi] [psi |- #S[..] ]
            -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..],b.1 ]
 ;
 %{{The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.}}%
 
-inductive EqV : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive EqV : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
 | EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..],b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:aeq x x) |- b.1 ]
@@ -49,7 +49,7 @@ inductive EqV : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> c
                 [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:aeq x x) |- #q.1[..] ]
 ;
 
-inductive Eq : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive Eq : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
 | Eq_v: EqV [phi] [psi] [psi |- #S[..]] [phi |-  #p[..] ] [psi |-  #q.1[..]]
         -> Eq [phi] [psi] [psi |- #S[..]] [phi |-  #p[..] ] [psi |-  #q.1[..]]
 | Eq_a:
@@ -66,7 +66,7 @@ inductive Eq : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ct
 
 %{{
 <h3>Proof of Reflexivity, Compact version</h3>
-The recursive function <code>refl</code> of type <code>{phi:xG}{M: [phi |-  tm]} Ctx_xaR [phi] [psi] [ psi |- #S[..] ] -> [psi |-  aeq (M #S[..]) (M #S[..])]</code>:  for all contexts <code>phi</code> and <code>psi</code> that have schema <code>xG</code> and <code>xaG</code>, respectively, if we have a substitution <code>#S</code> s.t. <code>#S:psi |- phi</code> then for all terms <code>M</code> depending on <code>phi</code>, we have a proof that <code>[ psi |- aeq (#p #S[..]) (#p #S[..])]</code>." Since the term <code>M</code> depends only on the context <code>phi</code>, it is explicitly weakened through applying <code>#S</code> to move it to the context <code>psi</code>.}}%
+The recursive function <code>refl</code> of type <code>{phi:xG}{M: [phi |-  tm]} Ctx_xaR [phi] [psi] [ psi |- #S[..] ] -> [psi |-  aeq (M #S[..]) (M #S[..])]</code>:  for all contexts <code>phi</code> and <code>psi</code> that have schema <code>xG</code> and <code>xaG</code>, respectively, if we have a substitution <code>#S</code> s.t. <code>#S:[psi |- phi]</code> then for all terms <code>M</code> depending on <code>phi</code>, we have a proof that <code>[ psi |- aeq (#p #S[..]) (#p #S[..])]</code>." Since the term <code>M</code> depends only on the context <code>phi</code>, it is explicitly weakened through applying <code>#S</code> to move it to the context <code>psi</code>.}}%
 
 rec ctx_membership :
           {#p: [phi |-  tm] }
@@ -235,7 +235,7 @@ schema xdG = block x: tm, de_v:deq x x ;
 schema daG = block x: tm, ae_v:aeq x x, de_v:deq x x ;
 
 % ---------------------------------------------------------------------------
-inductive Ctx_xdR : {phi:xG} {psi: xdG} {#S:psi |- phi} ctype =
+inductive Ctx_xdR : {phi:xG} {psi: xdG} {#S:[psi |- phi]} ctype =
 | Nil_xd : Ctx_xdR [] [] [ |- ^ ]
 | Cons_xd : Ctx_xdR [phi] [psi] [psi |- #S[..] ]
            -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
@@ -250,7 +250,7 @@ inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 % ---------------------------------------------------------------------------
 %{{ Equality in addition to properties about equality, such as deterministic and existence. These properties are all encoded relationally, because we do not support functions in computation-level types. If we were to support functions in computation-level types, these proofs and some of these relations would go away.}}%
 
-inductive EqV' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive EqV' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
 | EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..],b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:deq x x) |- b.1 ]
@@ -259,7 +259,7 @@ inductive EqV' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> 
    -> EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
                 [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:deq x x) |- #q.1[..] ]
 ;
-inductive Eq' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
+inductive Eq' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
 | Eq'_v : EqV' [phi] [psi] [psi |- #S[..] ] [phi |-  #p[..]][psi |-  #q.1[..]]
           -> Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  #p[..]][psi |-  #q.1[..]]
 | Eq'_a:
@@ -282,7 +282,7 @@ inductive Equal_xG : (psi:xG) [psi |-  tm] -> [psi |- tm] -> ctype =
 
 % for all Ld given Ctx_xdR [gamma] [phi] [phi |- #T..[]],
 % there exists an L s.t. Eq' [gamma] [phi] [phi |- #T[..] [gamma |-  L] [phi |-  Ld[..]]
-inductive ExistsEq' : {gamma:xG}{phi: xdG}{#S : phi |- gamma} {L: [phi |- tm]} ctype =
+inductive ExistsEq' : {gamma:xG}{phi: xdG}{#S : [phi |- gamma]} {L: [phi |- tm]} ctype =
 | ExistsEq' :
     {L:[gamma |- tm]} Eq' [gamma] [phi] [phi |- #T[..]] [gamma |- L[..]] [phi |-  Ld[..]]
 -> ExistsEq' [gamma] [phi] [phi |- #T[..] ] [phi |-  Ld[..]]
@@ -328,7 +328,7 @@ case [phi |-  Ld[..]] of
 % forall L given Ctx_xaR [gamma] [psi] [psi |- #S..[]],
 % there exists an La s.t. Eq [gamma] [psi] [psi |- #S..[]] [gamma |-  L[..]] [psi |-  La[..]]
 
-inductive ExistsEq : {gamma:xG}{psi: xaG}{#S : psi |- gamma} {L: [gamma |- tm]} ctype =
+inductive ExistsEq : {gamma:xG}{psi: xaG}{#S : [psi |- gamma]} {L: [gamma |- tm]} ctype =
 | ExistsEqV :
     {La:[psi |- tm]} EqV [gamma] [psi] [psi |- #S[..]] [gamma |-  #p] [psi |-  #q.1]
     -> ExistsEq [gamma] [psi] [psi |- #S[..] ] [gamma |-  #p[..]]

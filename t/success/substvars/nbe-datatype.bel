@@ -22,11 +22,11 @@ schema ctx = neut T;
 stratified Sem : {g:ctx} [ |- tp] -> ctype  =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : {g:ctx}{A:[ |- tp]}{B:[ |- tp]}
-          ({h:ctx} {#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+          ({h:ctx} {#W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
-rec sem_wkn : {g:ctx}{h:ctx}{#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+rec sem_wkn : {g:ctx}{h:ctx}{#W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g => mlam h => mlam #W => fn e =>
 case e of
 | Syn [g |- R[..]] => Syn ([h |- R[#W[..]]])
@@ -45,7 +45,7 @@ mlam #p => fn s => let s : SemSubst [g] [h] = s in case [g |- #p[..]] of
 | [g',x:tm T |-  #q[..]] => let Dot s' e = s in lookup [g' |-  #q[..]] s'
 ;
 
-rec subst_wkn : {h:ctx}{h':ctx}{#W:h' |- h} SemSubst [g] [h] -> SemSubst [g] [h'] =
+rec subst_wkn : {h:ctx}{h':ctx}{#W:[h' |- h]} SemSubst [g] [h] -> SemSubst [g] [h'] =
 mlam h => mlam h' => mlam #W => fn s => case s of
 | Nil => Nil
 | Dot s' e => Dot (subst_wkn [h] [h'] [h' |- #W[..]] s') (sem_wkn [h] [h'] [h' |- #W[..]] e)

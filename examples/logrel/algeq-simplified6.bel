@@ -36,7 +36,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn M N i]
           -> Log [g |- M ~ N ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
-             ({h:tctx} {#R:h |- g} {N1:[h |- tm]}{N2:[h |- tm]}
+             ({h:tctx} {#R:[h |- g]} {N1:[h |- tm]}{N2:[h |- tm]}
                 Log [h |- N1 ~ N2] [ |- T]
               -> Log [h |- (app M1[#R] N1) ~ (app M2[#R] N2)] [|- S])
             -> Log [g |- M1 ~ M2] [ |- arr T S]
@@ -44,7 +44,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 
 
 % Monotonicity of logical equivalence
-rec logEq_Monotone : {h:tctx}{#W:h |- g} Log [g |- M1 ~ M2] [ |- A]
+rec logEq_Monotone : {h:tctx}{#W:[h |- g]} Log [g |- M1 ~ M2] [ |- A]
                    -> Log [h |- M1[#W] ~ M2[#W]] [ |- A] =
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,#W => fn e => case e of
@@ -340,7 +340,7 @@ inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-inductive LogSub : {g0:ctx}(h:tctx){#S1: h |- g0}{#S2: h |- g0} {G:[|-dctx]}
+inductive LogSub : {g0:ctx}(h:tctx){#S1: [h |- g0]}{#S2: [h |- g0]} {G:[|-dctx]}
 ctype  =
 | Nil : LogSub [] [h |- ^] [h |- ^] [|-nil]
 | Dot : LogSub [g0] [h |- #S1] [h |- #S2] [|- G]
@@ -360,7 +360,7 @@ fn v => fn s => case v of
 
 % Monotonicity of logical equivalence on substitutions
 rec wknLogSub :
-    {h0:tctx}{h:tctx}{#W:h0 |- h}
+    {h0:tctx}{h:tctx}{#W:[h0 |- h]}
     LogSub [g] [h |- #S1] [h |- #S2] [|- G]
   -> LogSub [g] [h0 |- #S1[#W]] [h0 |- #S2[#W]] [|- G]=
  / total es (wknLogSub _ _ _ _ _ _ iv es )/
@@ -416,7 +416,7 @@ case d of
 | DecTrans d1 d2 => logEqTrans [|- _ ] (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
 ;
 
-inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:g' |- g} ctype =
+inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id]
        -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]

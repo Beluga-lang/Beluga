@@ -677,7 +677,7 @@ GLOBAL: sgn;
 
       |
         "{"; hash = "#"; s = UPSYMBOL; ":";
-         cPsi = clf_dctx; turnstile; ren = OPT["#"] ; cPhi = clf_dctx; "}" ; ind = OPT ["*"] ->
+         "["; cPsi = clf_dctx; turnstile; ren = OPT["#"] ; cPhi = clf_dctx; "]"; "}" ; ind = OPT ["*"] ->
 	   let cl = match ren with None -> LF.Subst | Some _ -> LF.Ren in
 	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
             LF.Decl(Id.mk_name (Id.SomeString s), (_loc,LF.ClTyp (LF.STyp (cl, cPhi), cPsi)), dep)

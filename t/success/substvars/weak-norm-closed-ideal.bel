@@ -67,7 +67,7 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
 ;
 
 %  h |- #s : g
-inductive RedSub : {g:ctx}{#S: |- g} ctype =
+inductive RedSub : {g:ctx}{#S:[ |- g]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
           -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]

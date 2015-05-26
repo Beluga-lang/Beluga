@@ -62,14 +62,14 @@ fn r => let r : Reduce [g] [g |- A[..]] [g |- M[..]] = r in case r of
 ;
 
 %  h |- #s : g
-inductive RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
+inductive RedSub : {g:ctx}{h:ctx}{#S:[h |- g]} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
-| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm A[#S]]} 
+| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:[h |- g]}{M:[h |- tm A[#S]]} 
         RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A[#S] ] [h |- M[..]]
          -> RedSub [g,x:tm (A[..])] [h] [h |- #S[..], (M[..]) ]
 ;
 %{
-rec redVar : {g:ctx}{h:ctx}{T:[g |- tp]}{#S:h |- g}{#p:[g |- tm (T[..])]} RedSub [g] [h] [h |- #S[..] ]
+rec redVar : {g:ctx}{h:ctx}{T:[g |- tp]}{#S:[h |- g]}{#p:[g |- tm (T[..])]} RedSub [g] [h] [h |- #S[..] ]
               ->  Reduce [h] [h |- T #S[..]] [h |- #p #S[..] ] =
 mlam g => mlam h => mlam T => mlam #S => mlam #p => fn rs =>
 case [g |- #p[..]] of
@@ -84,7 +84,7 @@ case [g |- #p[..]] of
 ;
 
 
-rec eval : {g:ctx}{h:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]}{#S:h |- g} RedSub [g] [h] [h |- #S[..] ]
+rec eval : {g:ctx}{h:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]}{#S:[h |- g]} RedSub [g] [h] [h |- #S[..] ]
            -> Reduce [h] [h |- A #S[..]] [h |- M #S[..] ] =
 mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g |- M[..]] of
 | {T:[g' |- tp]}{#p:[g' |-  tm (T[..])]}

@@ -21,9 +21,9 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 inductive IsVar : (g:ctx){M:[g |- tm A]} ctype =
 | IsVar : {#p:[g |- tm A[]]} IsVar [g |- #p[..]];
 
-inductive IsVarSub : {g:ctx} (h:ctx) {#S:h |- g}ctype =
+inductive IsVarSub : {g:ctx} (h:ctx) {#S:[h |- g]}ctype =
 | Nil : IsVarSub [] [h |- ^ ]
-| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:h |- g}{M:[h |- tm A[]]}
+| Cons :  {g:ctx}{h:ctx}{A:[ |- tp]}{#S:[h |- g]}{M:[h |- tm A[]]}
       IsVarSub [g] [h |- #S[..] ]
          -> IsVar [h |- M[..]] % I would like to directly quantify over #p, but bugs
          -> IsVarSub [g,x:tm A[]] [h |- #S, M ]
@@ -58,7 +58,7 @@ inductive Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A]} ctype =
          -> Reduce [ |- arr A B] [h0 |-  M[..]]
 ;
 }%
-rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A[]]}{#W:h |- g}
+rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A[]]}{#W:[h |- g]}
 % {g:ctx}{#p:[g |- tm A]}
      IsVarSub [g] [h |- #W]
    -> IsVar [h |- #p[#W]] =
@@ -66,7 +66,7 @@ rec wknVar :  {g:ctx}(h:ctx){A:[ |- tp]}{#p:[g |- tm A[]]}{#W:h |- g}
 % mlam g => mlam #p => fn ivs =>
 case [g |- #p[..]] of
 | [g',x:tm B[] |-  x] =>
-  let  {#R:h |- g'} Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M[..]] ivs' iv = ivs in
+  let  {#R:[h |- g']} Cons [g'] [h] [ |- B] [h |- #R[..]] [h |- M[..]] ivs' iv = ivs in
 %       Cons ivs' iv = ivs in
   iv
 | {#q : [g' |-  tm T[]]} [g',x:tm B[] |-  #q[..]] =>
@@ -77,7 +77,7 @@ case [g |- #p[..]] of
 ;
 
 
-rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{#W:h |- g}{#W2:h' |- h}
+rec varSubCompose' : {g:ctx}{h:ctx}{h':ctx}{#W:[h |- g]}{#W2:[h' |- h]}
     IsVarSub [g] [h  |- #W[..]]
  -> IsVarSub [h] [h' |- #W2[..]]
  -> IsVarSub [g] [h' |- #W[#W2[..]]] =
@@ -119,7 +119,7 @@ mlam S => fn r => let (r : Reduce [ |- A] [g |- M'[..]]) = r in  case r of
 
 ;
 
-rec wknVarSub : {g:ctx}{h:ctx}{#S:h |- g}{A:[ |- tp]} IsVarSub [g] [h |- #S[..] ]
+rec wknVarSub : {g:ctx}{h:ctx}{#S:[h |- g]}{A:[ |- tp]} IsVarSub [g] [h |- #S[..] ]
  -> IsVarSub [g] <h,x:tm A |- #S[..] > =
 mlam g => mlam h => mlam #S => mlam A => fn r =>
 case [g |- i] of % Would prefer to pattern match on r, but can't
@@ -133,7 +133,7 @@ case [g |- i] of % Would prefer to pattern match on r, but can't
 
 
 
-rec extVarSub : {g:ctx} {h:ctx}{A:[ |- tp]} {#S:h |- g} IsVarSub [g] [h |- #S[..]]
+rec extVarSub : {g:ctx} {h:ctx}{A:[ |- tp]} {#S:[h |- g]} IsVarSub [g] [h |- #S[..]]
  -> IsVarSub [g,x:tm A] [h,x:tm A |- #S[..] x ] =
 mlam g => mlam h => mlam A => mlam #S => fn r =>
 Cons [g] [h,x:tm A] [ |- A] [h,x:tm A |- #S[..]] [h,x:tm A |-  x] (wknVarSub [g] [h] [h |- #S[..]] [ |- A] r) (IsVar [h,x:tm A |-  x])
@@ -155,7 +155,7 @@ mlam g => mlam M => fn r =>
 let IsVar [g |- #p[..]] = r in Var [g |- #p[..]]
 ;
 
-rec rwkn : {g:ctx}{h:ctx}{R:[g |- tm A]}{#W:h |- g}
+rec rwkn : {g:ctx}{h:ctx}{R:[g |- tm A]}{#W:[h |- g]}
      IsNeutral [g |- R[..]]
   -> IsVarSub [g]  [h |- #W[..]]
   -> IsNeutral [h |- R #W[..]] =
@@ -167,7 +167,7 @@ case r of
   App (rwkn [g] [h] [g |- _] [h |- #W[..]] r' iv)
       (nwkn [g] [h] [g |- _] [h |- #W[..]] n iv)
 
-and nwkn : {g:ctx}{h:ctx}{N:[g |- tm A]}{#W:h |- g}
+and nwkn : {g:ctx}{h:ctx}{N:[g |- tm A]}{#W:[h |- g]}
      IsNormal [g |- N[..]]
   -> IsVarSub [g] [h |- #W[..]]
   -> IsNormal [h |- N #W[..]] =
@@ -205,7 +205,7 @@ and reify : (g:ctx) Reduce [ |- A] [g |- M[..]] -> Halts [g |- M[..]] =
   Halts [g |- trans (eta _) (steplam (\x. MS))] (Lam q2)
 ;
 
-rec wknRed : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[g |- tm A]}{#W:h |- g}
+rec wknRed : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[g |- tm A]}{#W:[h |- g]}
     Reduce  [ |- A] [g |- M[..]]
  -> IsVarSub [g] [h |- #W[..] ]
  -> Reduce [ |- A] [h |- M #W[..]] =
@@ -221,14 +221,14 @@ case r of
    )
 ;
 
-inductive RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
+inductive RedSub : {g:ctx}(h:ctx){#S:[h |- g]} ctype =
 | Nil : RedSub [] [h |- ^ ]
-| Dot : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[h |- tm A]}{#S:h |- g}
+| Dot : {g:ctx}{h:ctx}{A:[ |- tp]}{M:[h |- tm A]}{#S:[h |- g]}
         RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M[..]]
          -> RedSub [g,x:tm A] [h |- #S[..] (M[..]) ]
 ;
 
-rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:h |- g}{#W:h[h']}
+rec wknRedSub : {g:ctx}{h:ctx}{h':ctx}{#S:[h |- g]}{#W:h[h']}
     RedSub [g] [h |- #S[..] ]
  -> IsVarSub [h] [h' |- #W[..] ]
  -> RedSub [g] [h' |- #S[#W[..]] ] =
@@ -247,7 +247,7 @@ case [g |- i] of % Pattern match on g because pattern matching on rs is giving m
 % % Will need to use wknRed in this case
 ;
 
-rec redVar : {g:ctx}(h:ctx){#S:h |- g}{#p:[g |- tm T]} RedSub [g] [h |- #S[..]]
+rec redVar : {g:ctx}(h:ctx){#S:[h |- g]}{#p:[g |- tm T]} RedSub [g] [h |- #S[..]]
               ->  Reduce [ |- T] [h |- #p #S[..] ] =
 mlam g =>  mlam #S => mlam #p => fn rs =>
 case [g |- #p[..]] of
@@ -258,7 +258,7 @@ case [g |- #p[..]] of
      redVar [g'] [h |- #R[..] ] [g' |-  #q[..]] rs'
 ;
 
-rec eval : {g:ctx}{h:ctx}{M:[g |- tm A]}{#S:h |- g}
+rec eval : {g:ctx}{h:ctx}{M:[g |- tm A]}{#S:[h |- g]}
     RedSub [g] <h |- #S[..] >
  -> Reduce [ |- A] [h |- M #S[..] ] =
 mlam g => mlam h =>  mlam M => mlam #S => fn rs =>

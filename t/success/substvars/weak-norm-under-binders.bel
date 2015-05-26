@@ -22,7 +22,7 @@ trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 inductive IsVar : (g:ctx){M:[g |- tm A[]]} ctype =
 | IsVar : {#p:[g |- tm A[]]} IsVar [g |- #p];
 
-inductive IsVarSub : {g:ctx} (h:ctx) {#S : h |- g} ctype =
+inductive IsVarSub : {g:ctx} (h:ctx) {#S : [h |- g]} ctype =
 | Nil : IsVarSub [] [h |- ^ ]
 | Cons :  IsVarSub [g] [h |- #S[..]] -> IsVar [h |- M]
          -> IsVarSub [g,x:tm A[]] [h |- #S, M];
@@ -46,7 +46,7 @@ inductive Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 stratified Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 | Base : Halts [ |- i] [g |- M[..]] -> Reduce [ |- i] [g |- M[..]]
 | Arr :  {M:[h0 |- tm (arr A[] B[])]}
-         ({h:ctx} {#R:h |- h0} {N:[h |- tm A[]]}
+         ({h:ctx} {#R:[h |- h0]} {N:[h |- tm A[]]}
           IsVarSub [h0] [h |- #R] -> Reduce [ |- A] [h |- N]
           -> Reduce [ |- B ] [h |- app M[#R] N])
          -> Reduce [ |- arr A B] [h0 |-  M];
@@ -124,7 +124,7 @@ case r of
    (mlam h' => mlam #W2 => mlam N => fn iv2 => fn rn =>
     f [h'] [h' |- #W[#W2[..]]] [h' |-  N[..]] (varSubCompose' iv iv2) rn);
 
-inductive RedSub : {g:ctx}(h:ctx){#S:h |- g} ctype =
+inductive RedSub : {g:ctx}(h:ctx){#S:[h |- g]} ctype =
 | Nil : RedSub [] [h |- ^ ]
 | Dot : RedSub [g] [h |- #S[..] ] -> Reduce [ |- A] [h |- M[..]] -> RedSub [g,x:tm A[]] [h |- #S, M ];
 

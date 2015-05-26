@@ -59,7 +59,7 @@ and inductive AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] ->
 ;
 
 % Well-typed variable-for-variable substitutions (renaming substitutions). _|-v_:_ in the paper
-inductive IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
+inductive IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S:[h' |- g']}ctype =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M[..]] [ |- A]
          -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S, M];
@@ -69,7 +69,7 @@ stratified LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ct
 | LogBase : AlgEqN [g] [g' |-  M[..]] [g' |-  N[..]] [ |- i]
           -> LogEq [g] [g' |-  M[..]] [g' |-  N[..]] [ |- i]
 | LogArr  : {M1:[g' |- tm]}{M2:[g' |- tm]}
-             ({h:tctx}{h':ctx} {#R:h' |- g'} {N1:[h' |- tm]}{N2:[h' |- tm]}
+             ({h:tctx}{h':ctx} {#R:[h' |- g']} {N1:[h' |- tm]}{N2:[h' |- tm]}
                 CtxRel [h] [h'] ->
                 IsVarSub [g] [g'] [h] [h' |- #R[..]] ->
                 LogEq [h] [h' |-  N1[..]] [h' |-  N2[..]] [ |- T]
@@ -187,7 +187,7 @@ inductive DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 ;
 
 % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-inductive LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1: h' |- g'}{#S2: h' |- g'} ctype =
+inductive LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1:[h' |- g']}{#S2:[h' |- g']} ctype =
 | Nil : LogEqSub [] [] [h] [h' |- ^] [h' |- ^]
 | Dot : LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]] -> LogEq [h] [h' |-  M1[..]] [h' |-  M2[..]] [ |- T]
       -> LogEqSub [g,b:block x:tm,d:oft x T[]] [g',x:tm] [h] [h' |- #S1,M1] [h' |- #S2,M2]

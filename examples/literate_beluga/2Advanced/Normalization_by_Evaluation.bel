@@ -43,7 +43,7 @@ In the course of this development, `#W` will only ever be instantiated with a we
 
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Base :  [g |- norm b] -> Sem [g] [ |- b]
-| Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Arr : {g:ctx}({h:ctx}{#W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
@@ -51,7 +51,7 @@ stratified Sem : {g:ctx} [ |- tp] -> ctype =
 We can weaken semantic values:
 }}%
 
-rec sem_wkn : {h:ctx} {#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+rec sem_wkn : {h:ctx} {#W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam h => mlam #W => fn e =>
 case e of
 | Base [g |- R[..]] => Base [h |- R[#W]]
@@ -64,14 +64,14 @@ Environments:
 }}%
 
 typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T[]]} Sem [h] [ |- T]);
-
+ 
 rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S[]] [h] =
 fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p[..]] of
 | [g,x:tm S |-  x] => e
 | [g,x:tm S |-  #q[..] ] => s [ |- T ] [g |- #q[..]]
 ;
 
-rec env_wkn : {h':ctx}{h:ctx}{#W:h' |- h} Env [g] [h] -> Env [g] [h'] =
+rec env_wkn : {h':ctx}{h:ctx}{#W:[h' |- h]} Env [g] [h] -> Env [g] [h'] =
 mlam h' => mlam h => mlam #W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
 sem_wkn [h'] [h' |- #W[..]] (s [ |- T] [g |- #p[..]])
 ;

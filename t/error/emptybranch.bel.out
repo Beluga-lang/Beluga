@@ -1,1 +1,1 @@
-[rArr] expected after [cmp_branch_pattern] (in [cmp_branch])
+Body of branch missing; this is only permitted for absurd patterns

@@ -13,6 +13,7 @@ type error =
   | IllFormedCompTyp
   | MispacedOperator of Id.name
   | ParseError
+  | NoRHS
 
 exception Error of Syntax.Loc.t * error
 

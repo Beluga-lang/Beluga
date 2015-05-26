@@ -1256,14 +1256,6 @@ cmp_exp_syn:
    that takes the constructor it follows, and returns the appropriate
    synthesizing expression. *)
 
-clf_pattern :
-    [
-      [
-        tM = clf_term_app -> tM
-      ]
-    ]
-  ;
-
   term_or_sub:
   [
     [ (* TODO: Refactor this once head and sub are merged *)
@@ -1278,33 +1270,14 @@ clf_pattern :
   cmp_pattern:
     [
       [
-        p = box_pattern ->
-          p
-
-      | p = cmp_branch_pattern -> 
-        p
-      ]
-    ];
-
-  box_pattern:
-    [
-      [
-         mobj = meta_obj ;
-         tau = OPT [ ":"; tau = cmp_typ -> tau ]
+      mobj = meta_obj ;
+      tau = OPT [ ":"; tau = cmp_typ -> tau ]
           -> let pat0 = Comp.PatMetaObj (_loc, mobj) in
 	     (match tau with
 		 None -> pat0
                | Some tau -> Comp.PatAnn (_loc, pat0, tau))
-
-      ]
-    ];
-
-
-  cmp_branch_pattern:
-    [
-      [
         
-       "ttrue" -> Comp.PatTrue (_loc)
+     |  "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
      | x = SYMBOL; tauOpt = OPT [":" ; tau = cmp_typ -> tau] ->
          (match tauOpt with
@@ -1327,20 +1300,13 @@ clf_pattern :
     [
       [
         ctyp_decls = LIST0 clf_ctyp_decl;
-        pattern = box_pattern;
+        pattern = cmp_pattern;
          rest = OPT [rArr; e = cmp_exp_chk -> e] ->
           let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
            (match rest with
               | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
               | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
-           )
-      |
-        ctyp_decls = LIST0 clf_ctyp_decl;
-        pattern = cmp_branch_pattern;
-         rArr; e = cmp_exp_chk ->
-          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-          Comp.Branch (_loc, ctyp_decls', pattern, e)
-      
+           )      
       ]
     ]
   ;

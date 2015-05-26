@@ -41,6 +41,7 @@ type error =
   | IllFormedCompTyp
   | MispacedOperator of Id.name
   | ParseError
+  | NoRHS
 
 exception Error of Syntax.Loc.t * error
 
@@ -75,7 +76,10 @@ let _ = Error.register_printer
       | IllFormedCompTyp ->
 	       Format.fprintf ppf "Ill-formed computation-level type."
       | ParseError ->
-        Format.fprintf ppf "Unable to parse operators into valid structure"))
+        Format.fprintf ppf "Unable to parse operators into valid structure"
+      | NoRHS ->
+	Format.fprintf ppf "Body of branch missing; this is only permitted for absurd patterns"
+    ))
 
 
 type free_cvars = Id.name
@@ -903,6 +907,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       Apx.Comp.EmptyBranch(loc, cD',
 			   Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau'))
 
+  | Ext.Comp.EmptyBranch (loc,_,_) -> raise (Error (loc, NoRHS))
   | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cspi,Ext.Comp.MObj (Ext.LF.PatEmpty _)))) , _e) ->
       (dprint (fun () -> "[index_branch] PatEmpty " ) ;
       raise (Error (loc, CompEmptyPattBranch)))

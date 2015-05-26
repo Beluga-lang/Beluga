@@ -808,19 +808,13 @@ GLOBAL: sgn;
            | None -> m
            | Some a -> LF.Ann (_loc, m, a)
            end
-        |
-            h = clf_head ->
-             LF.Root (_loc, h, LF.Nil)
-        |
-            "_" ->
-            LF.Root (_loc, LF.Hole _loc , LF.Nil)
+        | h = clf_head -> LF.Root (_loc, h, LF.Nil)
 
-        |
-            "?" ->
-            LF.LFHole _loc
+        | "_" -> LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
-        |
-           "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
+        | "?" -> LF.LFHole _loc 
+
+        | "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
                                     | m :: rest -> LF.Cons(m, fold rest)
              in
@@ -858,8 +852,8 @@ GLOBAL: sgn;
     [
       [ 
         ms = LIST1 clf_normal -> LF.TList(_loc, ms)
-      |
-        a = clf_typ -> LF.NTyp(_loc, a)
+      | a = clf_typ -> LF.NTyp(_loc, a)
+      | "{"; "}" -> LF.PatEmpty _loc
       ]
   ];
 
@@ -1302,8 +1296,6 @@ clf_pattern :
     [
       [
         tM = clf_term_app -> PatCLFTerm (_loc, tM)
-     |
-        "{"; "}" -> PatEmpty _loc
       ]
     ]
   ;

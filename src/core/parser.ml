@@ -69,11 +69,6 @@ type pair_or_atom_pat =
   | Pair_pat of Comp.pattern
   | Atom_pat of Comp.typ option
 
-
-type term_or_sub =
-  | Sub of LF.sub
-  | Term of LF.normal
-
 type clf_pattern =
   | PatEmpty of Loc.t
   | PatCLFTerm of Loc.t * LF.normal
@@ -1233,11 +1228,8 @@ GLOBAL: sgn;
     | "atomic"
       [
 
-        "["; phat_or_psi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
-        begin match phat_or_psi, tR with
-	      | cPsi , Term tM  -> Comp.Box (_loc, (_loc,Comp.ClObj(cPsi, Comp.MObj tM)))
-	      | cPsi , Sub s    -> Comp.Box (_loc, (_loc, Comp.ClObj(cPsi, Comp.SObj s)))
-	end
+        "["; cPsi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub;  "]"  ->
+        Comp.Box (_loc, (_loc,Comp.ClObj(cPsi, tR)))
 
        | "["; psi = clf_hat_or_dctx; "]"   ->
           Comp.Box(_loc, (_loc,Comp.CObj psi))
@@ -1291,10 +1283,7 @@ cmp_exp_syn:
         Comp.BoxVal (_loc, Comp.MetaObjAnn (_loc, cPsi, tR))
  *)
   "["; cPsi = clf_dctx; turnstile; tR = term_or_sub ; "]" ->
-     begin match tR with
-       | Term tM   -> Comp.BoxVal (_loc, (_loc,Comp.ClObj(cPsi, Comp.MObj tM)))
-       | Sub s ->  Comp.BoxVal (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
-     end
+     Comp.BoxVal (_loc, (_loc,Comp.ClObj(cPsi, tR)))
 
    | "["; cPsi = clf_dctx; "]" ->
       Comp.BoxVal (_loc, (_loc,Comp.CObj cPsi))
@@ -1334,9 +1323,9 @@ clf_pattern :
     [
      h = SYMBOL; ","; t = SYMBOL ->
             let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
-            Sub su
-    | tM = clf_term_app -> Term tM
-    | s  = clf_sub_new -> Sub s
+            Comp.SObj su
+    | tM = clf_term_app -> Comp.MObj tM
+    | s  = clf_sub_new -> Comp.SObj s
     ]
   ];
 
@@ -1363,9 +1352,6 @@ clf_pattern :
 	  Comp.PatMetaObj (_loc, (_loc,Comp.CObj cPsi))
 
       | "["; cPsi = clf_dctx ; turnstile; s = clf_sub_new; "]"   ->
-          Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
-
-     | "<"; cPsi = clf_dctx ; turnstile; s = clf_sub_new; ">"   ->
           Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.SObj s)))
 
      | "ttrue" -> Comp.PatTrue (_loc)
@@ -1410,8 +1396,7 @@ clf_pattern :
 
         "["; phat_or_psi = clf_hat_or_dctx ; mobj = OPT [turnstile; tM = term_or_sub -> tM ]; "]"   ->
           begin match (phat_or_psi , mobj) with
-            | (cPsi, Some(Term tM))   -> _loc, Comp.ClObj (cPsi, Comp.MObj tM)
-            | (cPsi, Some(Sub s))   -> _loc, Comp.ClObj (cPsi, Comp.SObj s)
+            | (cPsi, Some tR)   -> _loc, Comp.ClObj (cPsi, tR)
             | (cPsi, None)      -> _loc, Comp.CObj cPsi
           end
 

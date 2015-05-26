@@ -312,6 +312,7 @@ module Ext = struct
             if i = length - 1 then fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x
             else fprintf ppf "%a " (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x) l;
           fprintf ppf "%s" (r_paren_if (lvl > 0));
+	| LF.PatEmpty _ -> fprintf ppf "{}"
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && true
@@ -741,13 +742,6 @@ module Ext = struct
 
                                           )
     and fmt_ppr_pat_obj cD lvl ppf = function
-      | Comp.PatEmpty (_, cPsi) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s[%a %s {}]%s"
-              (l_paren_if cond)
-              (fmt_ppr_lf_dctx cD 0) cPsi
-              (symbol_to_html Turnstile)
-              (r_paren_if cond)
       | Comp.PatMetaObj (_, mO) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a%s"

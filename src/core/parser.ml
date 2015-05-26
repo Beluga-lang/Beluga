@@ -207,6 +207,7 @@ let rec split (c : char) (m : string) : (string list * string) =
   with
   | Not_found -> ([], m)
 
+let mkEmptyPat (loc, pHat) = Comp.PatMetaObj (loc, (loc,Comp.ClObj (pHat,Comp.MObj (LF.PatEmpty loc))))
 
 (*******************************)
 (* Global Grammar Entry Points *)
@@ -1166,10 +1167,10 @@ GLOBAL: sgn;
 	      | Some (ctyp_decls, pHat) -> 
 		  let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
 		    Comp.Case (_loc, Pragma.RegularCase, i,
-                               [Comp.EmptyBranch (_loc, ctyp_decls', Comp.PatEmpty (_loc, pHat))])
+                               [Comp.EmptyBranch (_loc, ctyp_decls', mkEmptyPat (_loc, pHat))])
 	      | None -> 
 		    Comp.Case (_loc, Pragma.RegularCase, i,
-                               [Comp.EmptyBranch (_loc, LF.Empty, Comp.PatEmpty (_loc, LF.Null ))]))
+                               [Comp.EmptyBranch (_loc, LF.Empty, mkEmptyPat (_loc, LF.Null ))]))
       | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk ->
           Comp.If (_loc, i, e1, e2)
 
@@ -1188,9 +1189,10 @@ GLOBAL: sgn;
          let branch =
            begin match mobj with
             | PatEmpty loc'   ->
+	      let emptyPat = mkEmptyPat (loc', pHat) in
                 (let pat = (match tau with
-                                None -> Comp.PatEmpty (loc', pHat)
-                              | Some tau -> Comp.PatAnn (loc', Comp.PatEmpty (loc', pHat), tau))
+                                None -> emptyPat
+                              | Some tau -> Comp.PatAnn (loc', emptyPat, tau))
                  in
                   Comp.EmptyBranch (loc', ctyp_decls', pat)
                 )
@@ -1337,8 +1339,8 @@ clf_pattern :
           ->
               begin match tM with
             | PatEmpty _loc'   ->
-                (match tau with None -> Comp.PatEmpty (_loc', cPsi)
-                   | Some tau -> Comp.PatAnn (_loc', Comp.PatEmpty (_loc', cPsi), tau)
+                (match tau with None -> mkEmptyPat (_loc', cPsi)
+                   | Some tau -> Comp.PatAnn (_loc', mkEmptyPat (_loc', cPsi), tau)
                 )
             | PatCLFTerm (_loc', tM)  ->
                 (match tau with None -> Comp.PatMetaObj (_loc, (_loc',Comp.ClObj (cPsi, Comp.MObj tM)))

@@ -56,6 +56,7 @@ module LF = struct
     | Ann of Loc.t * normal * typ
     | TList of Loc.t * normal list
     | NTyp of Loc.t * typ
+    | PatEmpty  of Loc.t
 
   and head =
     | Name  of Loc.t * name
@@ -168,7 +169,6 @@ module Comp = struct
      | Boolean of Loc.t * bool
 
  and pattern =
-   | PatEmpty  of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * name * pattern_spine
    | PatVar   of Loc.t * name

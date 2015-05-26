@@ -828,9 +828,6 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatMetaObj (loc, mO) ->
     let (mO', fcvars1) = index_meta_obj cvars fcvars mO in
       (Apx.Comp.PatMetaObj (loc, mO') , fcvars1, fvars)
-  | Ext.Comp.PatEmpty (loc, cpsi) ->
-      let (cPsi, _bvars, fcvars ) = index_dctx cvars (BVar.create ()) fcvars cpsi in
-	(Apx.Comp.PatEmpty (loc, cPsi), fcvars, fvars)
 
   | Ext.Comp.PatAnn (loc, pat, tau) ->
       let (pat', fcvars', fvars') = index_pattern cvars fcvars fvars pat in
@@ -877,8 +874,9 @@ and reindex_pat_spine fvars pat_spine = match pat_spine with
       let pat_spine' = reindex_pat_spine fvars pat_spine in
 	Apx.Comp.PatApp (loc, pat', pat_spine')
 
+(* TODO: Refactor this *)
 and index_branch cvars vars (fcvars, _ ) branch = match branch with
-  | Ext.Comp.EmptyBranch (loc, cD, Ext.Comp.PatEmpty (loc', cpsi)) ->
+  | Ext.Comp.EmptyBranch (loc, cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty _))))) ->
     let empty_fcvars = [] in
     let fcvars' = begin match get_ctxvar cpsi with
                      | None -> empty_fcvars
@@ -891,7 +889,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       Apx.Comp.EmptyBranch (loc, cD', Apx.Comp.PatEmpty (loc', cPsi'))
 
   | Ext.Comp.EmptyBranch (loc, cD,
-			  Ext.Comp.PatAnn (loc1, Ext.Comp.PatEmpty (loc2, cpsi), tau)) ->
+			  Ext.Comp.PatAnn (loc1, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty loc2)))), tau)) ->
     let empty_fcvars = [] in
     let fcvars' = begin match get_ctxvar cpsi with
                      | None -> empty_fcvars
@@ -905,7 +903,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       Apx.Comp.EmptyBranch(loc, cD',
 			   Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau'))
 
-  | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatEmpty _ , _e) ->
+  | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cspi,Ext.Comp.MObj (Ext.LF.PatEmpty _)))) , _e) ->
       (dprint (fun () -> "[index_branch] PatEmpty " ) ;
       raise (Error (loc, CompEmptyPattBranch)))
   | Ext.Comp.Branch (loc, cD, Ext.Comp.PatMetaObj (loc', mO), e) ->

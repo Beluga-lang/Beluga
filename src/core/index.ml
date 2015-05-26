@@ -546,20 +546,20 @@ let index_cltyp' cvars bvars fvars = function
     (Apx.LF.STyp (index_svar_class cl, phi'), fvars)
 
 let index_cltyp cvars fvars = function
-  | loc , Ext.LF.ClTyp (cl, psi) ->
+  | Ext.LF.ClTyp (cl, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (cl', fvars'')          = index_cltyp'  cvars bvars' fvars' cl in
-        (Apx.LF.ClTyp (cl', psi'), cvars, fvars'')
-  | loc , Ext.LF.CTyp (schema_name) ->
+        (Apx.LF.ClTyp (cl', psi'), fvars'')
+  | Ext.LF.CTyp (schema_name) ->
       let schema_cid    = Schema.index_of_name schema_name in
-      (Apx.LF.CTyp schema_cid, cvars, fvars)
+      (Apx.LF.CTyp schema_cid, fvars)
 
 let cltyp_to_cvar n _ = n
 
 let index_cdecl cvars fvars = function
-  | Ext.LF.Decl(u, cl, dep) ->
-    let (cl', cvars, fvars') = index_cltyp cvars fvars cl in
-    let cvars'               = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
+  | Ext.LF.Decl(u, (loc,cl), dep) ->
+    let (cl', fvars') = index_cltyp cvars fvars cl in
+    let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
     let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
     (Apx.LF.Decl(u, cl', dep), cvars', fvars')
 
@@ -632,19 +632,6 @@ and index_meta_spine cvars fcvars = function
       let (s', fcvars'') = index_meta_spine cvars fcvars' s in
         (Apx.Comp.MetaApp (m', s') , fcvars'')
 
-let index_meta_typ cvars fcvars = function
-  | loc, Ext.LF.ClTyp (Ext.LF.MTyp a, psi) ->
-        let (psi', bvars', fcvars') = index_dctx cvars (BVar.create ()) fcvars psi in
-        let (a', fcvars'' )         = index_typ cvars bvars' fcvars' a   in
-        ((loc,Apx.LF.ClTyp (Apx.LF.MTyp a', psi')), fcvars'')
-
- | loc, Ext.LF.ClTyp (Ext.LF.STyp (cl,phi), psi)    ->
-      let (psi', _ , fcvars1 ) = index_dctx cvars (BVar.create ()) fcvars psi in
-      let (phi', _ , fcvars2 ) = index_dctx cvars (BVar.create ()) fcvars1 phi in
-        ((loc,Apx.LF.ClTyp (Apx.LF.STyp (index_svar_class cl,phi'), psi')), fcvars2)
-
-
-
 let rec index_compkind cvars fcvars = function
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
 
@@ -674,9 +661,9 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
           raise (Error (loc, UnboundName a))
         end
       end
-  | Ext.Comp.TypBox (loc, mU) ->
-      let (mU', fcvars') = index_meta_typ cvars fcvars mU in
-        (Apx.Comp.TypBox (loc, mU'), fcvars')
+  | Ext.Comp.TypBox (loc, (loc',mU)) ->
+      let (mU', fcvars') = index_cltyp cvars fcvars mU in
+        (Apx.Comp.TypBox (loc, (loc',mU')), fcvars')
 
   | Ext.Comp.TypArr (_loc, tau, tau') ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in

@@ -1177,7 +1177,6 @@ GLOBAL: sgn;
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-       (* "box"; "("; pHat = clf_dctx ;"."; tM = clf_term; ")";  *)
        "["; pHat = clf_dctx ;turnstile; mobj = clf_pattern; "]";
        tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]" ->
                      Comp.TypBox(_loc, (_loc, LF.ClTyp (LF.MTyp tA, cPsi))) ];
@@ -1228,7 +1227,7 @@ GLOBAL: sgn;
     | "atomic"
       [
 
-        "["; tR = clobj; "]"  -> Comp.Box (_loc, tR)
+        tR = meta_obj  -> Comp.Box (_loc, tR)
 
        |
         "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
@@ -1275,7 +1274,7 @@ cmp_exp_syn:
   |
 
  LEFTA [
-     "["; tR = clobj; "]" -> Comp.BoxVal (_loc, tR)
+     tR = meta_obj -> Comp.BoxVal (_loc, tR)
 
    | h = SELF; s = isuffix  ->  s(h)
    | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
@@ -1447,31 +1446,7 @@ clf_pattern :
 
       | "["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]" ->
               MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No )
- 
-(*      | "("; ".";  ")"; "["; cPsi = clf_dctx; "]" ->
-          let cPhi0 = LF.Null in
-            MTSub (_loc, cPhi0, cPsi, LF.No)
-
-
-      | "("; x = SYMBOL; ":"; tA = clf_typ;  ")"; "["; cPsi = clf_dctx; "]" ->
-          let cPhi0 = LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)) in
-            MTSub (_loc, cPhi0, cPsi, LF.No)
-
-
-      | "("; x = SYMBOL; ":"; tA = clf_typ; ","; decls = LIST1 clf_decl SEP ",";
-          ")"; "["; cPsi = clf_dctx; "]" ->
-          let cPhi0 = LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA)) in
-          let cPhi = List.fold_left (fun d ds -> LF.DDec(d, ds)) cPhi0 decls in
-            MTSub (_loc, cPhi, cPsi, LF.No)
-
-
-      | "("; psi = SYMBOL; ","; decls = LIST1 clf_decl SEP ",";
-          ")"; "["; cPsi = clf_dctx; "]" ->
-          let cPhi0 = LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi)) in
-          let cPhi = List.fold_left (fun d ds -> LF.DDec(d, ds)) cPhi0 decls in
-            MTSub (_loc, cPhi, cPsi, LF.No)
-*)
-    ]
+     ]
   ] ;
 
 

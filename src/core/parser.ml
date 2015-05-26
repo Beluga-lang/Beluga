@@ -1290,8 +1290,7 @@ clf_pattern :
     [
       [
          mobj = meta_obj ;
-         tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> 
-		       Comp.TypBox(_loc,(_loc,LF.ClTyp (LF.MTyp tA, cPsi)))]
+         tau = OPT [ ":"; tau = cmp_typ -> tau ]
           -> let pat0 = Comp.PatMetaObj (_loc, mobj) in
 	     (match tau with
 		 None -> pat0

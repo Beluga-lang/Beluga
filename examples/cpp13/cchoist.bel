@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
 | M_dot sigma' [x:target S |- M] => 
-    M_dot (extendEnv sigma') [x:target _  |- M[(crst x)] ]
+    M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] = 
@@ -270,7 +270,7 @@ mlam Env1, Env2, Env3 => fn prf => fn m => case prf of
 | App_nil =>  m
 | App_cons p =>  
   let [g,l: target _ |- M'] = weakenEnv1 [|- _ ] [|- _ ] [|- _] p m in
-    [g,l:target _  |- M' [.. , (crst l)] ]
+    [g,l:target _  |- M' [.., crst l] ]
 ;
 
 
@@ -286,9 +286,9 @@ mlam Env1, Env2, Env3 => fn prf => fn n => case prf of
     weakenEnv1 [|- _ ] [|- _ ] [ |- _ ] a n
 | App_cons p =>
   let [g,l:target (cross S[] L1'[]) |- N]  = n in 
-  let [g,x:target S[], l:target L3'[] |- N'[.. x l]] = 
+  let [g,x:target S[], l:target L3'[] |- N'[..,x,l]] = 
      weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , (ccons x l)]] in
-    [g,l:target (cross S[] L3'[]) |- N'[ .. , (cfst l) , (crst l)] ]
+    [g,l:target (cross S[] L3'[]) |- N'[ .. , cfst l , crst l] ]
 
 ;
 
@@ -305,7 +305,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
 
 | [g |- #p] => 
   let [h |- M] = lookup sigma [g |-  #p] in
-    Result [h,l:target unit |- M [.. ] ] [ |- env_nil]
+    Result [h,l:target unit |- M [..] ] [ |- env_nil]
 
 | [g |- app M N] =>  
   let Result r1 [|- Env1]  = hcc [g |- M ] sigma in
@@ -313,7 +313,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let ExEnv (a12 : Append [|- _ ] [|- _ ] [|- Env3])  = append [|- Env1] [|- Env2] in
   let [h, l:target L |- P] = weakenEnv2 [|- _ ] [|- _ ] [|- _ ] a12 r1  in
   let [h, l:target L |- Q] = weakenEnv1 [|- _ ] [|- _ ] [|- _ ] a12 r2 in
-    Result [h, l:target L |- copen P \e.\xf.\xenv. capp xf (ccons  Q [.. l] xenv)] [|- Env3]
+    Result [h, l:target L |- copen P \e.\xf.\xenv. capp xf (ccons  Q [..,l] xenv)] [|- Env3]
 
 | [g |- letv M \x. N] => 
   let Result r1 [|- Env1] = hcc [g |- M] sigma in
@@ -321,7 +321,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let ExEnv (a12 : Append [|- _] [|- _] [|- Env3]) = append [|- Env1] [|- Env2] in
   let [h, l:target L[] |- P]                      = weakenEnv2 [|- _ ] [|- _ ] [|- _ ] a12 r1  in
   let [h,x:target T1[], l:target L[] |- Q]        = weakenEnv1 [|- _ ] [|- _ ] [|- _ ] a12 r2 in
-    Result [h, l:target L[] |- clet P (\x. Q[.. x l])] [|- Env3]
+    Result [h, l:target L[] |- clet P (\x. Q[..,x,l])] [|- Env3]
  
 | [g |- lam \x.M] =>
   let STm [g',x:source S[] |- M' ] wk = strengthen [g, x:source _ |- M ] in

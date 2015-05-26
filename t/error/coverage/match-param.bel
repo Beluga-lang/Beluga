@@ -13,6 +13,6 @@ schema ctx = term;
 rec remove:(g:ctx)[g,y:term |-  fvlist] -> [g |- fvlist] =
 fn l => case l of
 | [g,y:term |- nil] => [g |- nil]
-| [g,y:term |- cons y (L[.. y])] => remove [g,y:term |- L[.. y]]
-| [g,y:term |- cons (#p[..]) (L[.. y])] => remove [g, y:term |- L[.. y]]
+| [g,y:term |- cons y (L[..,y])] => remove [g,y:term |- L[..,y]]
+| [g,y:term |- cons (#p[..]) (L[..,y])] => remove [g, y:term |- L[..,y]]
 ;

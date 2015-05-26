@@ -62,7 +62,7 @@ and inductive AlgEqR : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] ->
 inductive IsVarSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx) {#S: h' |- g'}ctype =
 | Nil : IsVarSub [] [] [h] [h' |- ^ ]
 | Cons :  IsVarSub [g] [g'] [h] [h' |- #S[..]] -> Lookup [h] [h' |-  M[..]] [ |- A]
-         -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S[..] (M[..])];
+         -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h] [h' |- #S, M];
 
 % Logical equivalence. _|-_~~_:_ in the paper
 stratified LogEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |-  tm] -> [ |- tp] -> ctype =
@@ -101,7 +101,7 @@ fn r => case r of
 
 % Extending a renaming with a fresh variable is still a renaming
 rec extVarSub : IsVarSub [g] [g'] [h] [h' |- #S[..]]
- -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h,b:block x:tm,y:oft x A[]] [h',x:tm |- #S[..] x ] =
+ -> IsVarSub [g,b:block x:tm,y:oft x A[]] [g',x:tm] [h,b:block x:tm,y:oft x A[]] [h',x:tm |- #S[..],x ] =
 fn r => let r : IsVarSub [g] [g'] [h] [h' |- #S[..]] = r in Cons (wknVarSub r) Top;
 
 % The identity substitution is a renaming
@@ -190,7 +190,7 @@ inductive DecEq : {g:tctx}(g':ctx) [g' |-  tm] -> [g' |- tm] -> [ |- tp] -> ctyp
 inductive LogEqSub : {g:tctx}{g':ctx}{h:tctx}(h':ctx){#S1: h' |- g'}{#S2: h' |- g'} ctype =
 | Nil : LogEqSub [] [] [h] [h' |- ^] [h' |- ^]
 | Dot : LogEqSub [g] [g'] [h] [h' |- #S1[..]] [h' |- #S2[..]] -> LogEq [h] [h' |-  M1[..]] [h' |-  M2[..]] [ |- T]
-      -> LogEqSub [g,b:block x:tm,d:oft x T[]] [g',x:tm] [h] [h' |- #S1[..] (M1[..])] [h' |- #S2[..] (M2[..])]
+      -> LogEqSub [g,b:block x:tm,d:oft x T[]] [g',x:tm] [h] [h' |- #S1,M1] [h' |- #S2,M2]
 ;
 
 % Monotonicity of logical equivalence on substitutions

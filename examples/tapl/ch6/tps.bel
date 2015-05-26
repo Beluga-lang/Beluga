@@ -52,5 +52,5 @@ fn d => fn s => case s of
 
 | [ |- e_app_abs V] =>
   let [ |- t_app (t_lam \x.\u. D) D2] = d in
-    [ |- D[ _ D2]]
+    [ |- D[_,D2]]
 ;

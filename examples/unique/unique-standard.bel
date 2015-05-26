@@ -50,7 +50,7 @@ fn d => fn f => case d of
 
 | [g |- t_lam \x.\u. D] =>
   let [g |- t_lam \x.\u. F] = f in
-  let [ |- refl] = unique [g,b:block x:term, u:hastype x _ |-  D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
+  let [ |- refl] = unique [g,b:block x:term, u:hastype x _ |-  D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
    [ |- refl]
 
 | [g |- #q.2[..]] =>           % d : hastype #q.1 T

@@ -44,7 +44,7 @@ fn e => case e of
 | [g |- neut (M..)] => neutral2exp[g |- M..]
 
 | {S : [g,x:neutral T2 |-  normal T1]} % we specify the type of S to help the type-checker
-  [g |- lam' \x.S..x] => let [g,b: block x:exp T, _t:neutral T |-  M..b.x] =
+  [g |- lam' \x.S..,x] => let [g,b: block x:exp T, _t:neutral T |-  M..b.x] =
                        normal2exp[g,b: block x:exp T2, _t:neutral T2 |-  S..b._t]
                      in
                        [g |- lam \y.M..y]
@@ -66,7 +66,7 @@ fn e => case e of
 | [g |- app (M..) (N..)] =>
   (case norm [g |- M..] of
   |  {S : [h, x:neutral T2 |-  normal T1]}
-    [h |- lam' \x.S..x] =>
+    [h |- lam' \x.S..,x] =>
     let [h,b: block x: exp T, _t:neutral T |-  M'..b.x] =
       normal2exp [h, b: block x:exp T2, _t:neutral T2 |-  S..b._t]
     in

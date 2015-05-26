@@ -62,7 +62,7 @@ case s of
 
  | [ |- s_app3 V] =>
    let [ |- is_app (is_lam (\x. (\d. D1))) D2] = d in
-     [ |- D1[_ D2]]
+     [ |- D1[_,D2]]
 
 ;
 

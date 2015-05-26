@@ -81,9 +81,9 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T[..]) (T[..])] =
       [g |- sa_arr (S1[..]) (S2[..])]
     | [g |- forall (T1[..])  (\a. T2) ] => 
       let [g |- S1[..] ] =  refl [g] [g |- T1[..]] in
-      let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a ) |- S2[.. b.1 b.2 b.3 b.4]]
+      let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a ) |- S2[..,b.1,b.2,b.3,b.4]]
           = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )] 
-                  [g, b |- T2[.. b.1]]
+                  [g, b |- T2[..,b.1]]
       in [g |- sa_all (S1[..]) (S2[..])] 
 
 ;
@@ -124,10 +124,10 @@ rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S[..]) (Q[..])] -> [g |- sub Q T]
        | [g |- sa_all (E1[..]) (E2[..])] : [g |- sub (forall (Q1[..]) (Q2[..])) (forall (T1[..]) (T2[..]))] => 
          let [g |- F1[..]] = trans [g |- Q1[..]] [g |- E1[..]][g |- D1[..]] 
  in
-         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- F2[.. b.1 b.2 b.3 b.4]]  = 
-             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- Q2[.. b.1]]  
-                   [g, b |- D2[.. b.1 b.2 (b.2 (T1[..]) (Q1[..])  b.3 (E1[..]) ) b.4] ]
-                   [g, b |- E2[.. b.1 b.2 b.3 b.4] ] in
+         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- F2[..,b.1,b.2,b.3,b.4]]  = 
+             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- Q2[..,b.1]]  
+                   [g, b |- D2[..,b.1,b.2,(b.2 (T1[..]) (Q1[..]) b.3 (E1[..])), b.4] ]
+                   [g, b |- E2[..,b.1,b.2,b.3,b.4] ] in
          [g |- sa_all (F1[..]) (F2[..])]
       )
 
@@ -202,8 +202,8 @@ rec sound : (g:ss_ctx) [g |- sub (T[..]) (S[..])] -> [g |- subtype (T[..]) (S[..
       [g |- subtype_arrow (E1[..]) (E2[..])]
     | [g |- sa_all (D1[..]) (D2[..]) ] : [g |- sub (forall (S1[..]) ( S2[..] )) ( forall (T1[..]) (T2[..] ))] =>
       let [g |- E1[..]] = sound [g |- D1[..]] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[.. b.1 b.5] ] = 
-	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[.. b.1 b.2 b.3 b.4]] in 
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[..,b.1,b.5] ] = 
+	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[..,b.1,b.2,b.3,b.4]] in 
       [g |- subtype_forall (E1[..]) (E2[..])]
     % Assumption w : sub a Q
     | [g |- #p.3[..]] => [g |- #p.5[..]]
@@ -239,9 +239,9 @@ rec complete : (g:ss_ctx) [g |- subtype (T[..]) (S[..])] -> [g |- sub (T[..]) (S
       [g |- sa_arr (D1[..]) (D2[..])] 
     | [g |- subtype_forall (E1[..]) (E2[..])] : [g |- subtype (forall (S1[..]) ( S2[..] )) ( forall (T1[..]) (T2[..] ))] =>
       let [g |- D1[..] ] = complete [g |- E1[..]] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[.. b.1 b.2 b.3 b.4] ] = 
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[..,b.1,b.2,b.3,b.4] ] = 
 
-          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[.. b.1 b.5] ] in 
+          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[..,b.1,b.5] ] in 
       [g |- sa_all (D1[..]) (D2[..])]
 ;
 

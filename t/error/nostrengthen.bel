@@ -38,8 +38,8 @@ mlam g, E => fn at => case [g |- E[..] ] of
     let [g |- atm_andel (CN1[..] )] = at in
     % Since nostrengthen means that the type of D1 will be reconstructed in g,
     % We cannot pass it in for B, which requires it to be closed!
-   let [g,q:p, i: focus _  q |-  I1[.. q i]] = cmpai [g] [g |- D1] [g |- CN1[..]] in
-      [g,q,i |-  I1[.. q (i_andl i)]]
+   let [g,q:p, i: focus _  q |-  I1[..,q,i]] = cmpai [g] [g |- D1] [g |- CN1[..]] in
+      [g,q,i |-  I1[..,q,(i_andl i)]]
 
 
 ;

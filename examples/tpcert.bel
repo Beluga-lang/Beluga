@@ -59,11 +59,11 @@ mlam g => mlam U =>
  | [g |- #p.1[..]]  => [g |- certify _   (#p.2[..])]
 
  | [g |- lam T[] \x. E] =>
-   (case    infer' [g, b: block x:term, _t:oft x T[]] [ g,b  |-  E[.. b.1]]    of
+   (case    infer' [g, b: block x:term, _t:oft x T[]] [ g,b  |-  E[..,b.1]]    of
     | [g, b:block x:term, _t:oft x T1 |-  cert_illtyped bot]  => [g |- cert_illtyped bot]
 
     | [g, b: block x:term, _t:oft x T1[] |-  certify T2[] D]  =>
-   	[g |- certify (arr T1[] T2[]) (o_lam \x.\u. D[.. <x ; u>])]
+   	[g |- certify (arr T1[] T2[]) (o_lam \x.\u. D[..,<x ; u>])]
     )
 
  | [g |- app (E1[..]) (E2[..])] =>
@@ -71,9 +71,9 @@ mlam g => mlam U =>
     | [g |- certify (arr T2[] T[]) (D1[..])] =>
       (case infer'  [g] [g |- E2[..] ]   of
        | {D2: [g, t:tp |-  oft (E2[..]) t]}
-	 [g |- certify (T2'[]) (D2[.. T2'[]])] =>
+	 [g |- certify (T2'[]) (D2[..,T2'[]])] =>
 	 if equal [ |- T2] [ |- T2']
-	  then [g |- certify T[] (o_app (D1[..]) (D2[.. T2[]]))]
+	  then [g |- certify T[] (o_app (D1[..]) (D2[..,T2[]]))]
 	 else [g |- cert_illtyped bot]
        | [g |- _] => [g |- cert_illtyped bot]
        )
@@ -83,9 +83,9 @@ mlam g => mlam U =>
  | [g |- letv (E1[..]) (\x. (E2))] =>
    (case infer'  [g] [g |- E1[..]] of
     |[g |- certify T1[] (D1[..])]  =>
-      (case infer' [g, b: block x:term, _t:oft x T1[]] [ g,b  |-  E2[.. b.1]] of
+      (case infer' [g, b: block x:term, _t:oft x T1[]] [ g,b  |-  E2[..,b.1]] of
        | [g, b: block x:term, _t:oft x (S1[..]) |-  certify T2[] D2]  =>
-           [g |- certify T2[] (o_let (D1[..]) (\x.\u. D2[.. <x ; u>]))]
+           [g |- certify T2[] (o_let (D1[..]) (\x.\u. D2[..,<x ; u>]))]
        | [g, b: block x:term, _t:oft x (S1[..]) |-  cert_illtyped bot] =>
 	   [g |- cert_illtyped bot]
       )

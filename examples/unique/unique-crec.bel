@@ -66,7 +66,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
    let [g |- t_lam (\x.(\u. D))] = d in
    let [g |- t_lam (\x.(\u. F))] = f in
    let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1[]]
-                       [g,b |- (E[.. b.1]) ] [g,b |- D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
+                       [g,b |- (E[..,b.1]) ] [g,b |- D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
    let [ |- C1] = refl [ |- T1 ] in
      [ |- e_arr C1 C2]
 
@@ -108,7 +108,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E[..] ] of
   let [g |- t_lam (\x.(\u. D))] = d in
   let [g |- t_lam (\x.(\u. F))] = f in
   let [ |- e_ref] = unique2 [g,b: block x:exp, _t:type_of x T1[]]
-                      [g,b |- (E[.. b.1]) ] [g,b |- D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
+                      [g,b |- (E[..,b.1]) ] [g,b |- D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
    [ |- e_ref]
 
 | [g |- #p.1[..]] =>
@@ -132,7 +132,7 @@ fn d => fn f => case d of
 
 | [g |- t_lam (\x.(\u. D))] =>
   let [g |- t_lam \x.\u. F] = f in
-  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D[.. b.1 b.2]] [g,b |- F[.. b.1 b.2]] in
+  let [ |- e_ref] = unique3 [g,b: block x:exp, _t:type_of x _ |-  D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
    [ |- e_ref]
 
 | [g |- #q.2[..]] =>           % d : type_of #q.1 T

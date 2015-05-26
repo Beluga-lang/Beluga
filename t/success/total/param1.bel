@@ -12,5 +12,5 @@ rec occurs :(g:ctx)[g,y:term |- term] -> [ |- bool] =
 fn l => case l of
 | [g,y:term |- y] => [ |- tt]
 | [g,y:term |- #p[..]] => [|- ff]
-| [g, y:term |- lam \x. M[.. x y]] => occurs [g, x:term, y:term |- M[.. x y]]
+| [g, y:term |- lam \x. M[..,x,y]] => occurs [g, x:term, y:term |- M[..,x,y]]
 ;

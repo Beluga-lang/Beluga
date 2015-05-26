@@ -35,7 +35,7 @@ mlam #p => fn env => case env  of
      [arg':target, xve |-  arg']
   else
      (let [arg':target, xve:target |- U] = genTVar [g |- #p ] [g |- T ]  in
-     [x:target, xve:target |- U[x (tsnd xve)] ])
+     [x:target, xve:target |- U[x, (tsnd xve)] ])
 ;
 
 
@@ -64,11 +64,11 @@ fn env => fn t => case t of
     build [g |- L[..]] [g |- L[..]] in
 
   let [arg':target, xve:target |-  T] =
-    convert [g,y:term |-  econs y (L[..] )] [g,y,x |-  E[.. x]] in
+    convert [g,y:term |-  econs y (L[..] )] [g,y,x |-  E[..,x]] in
 % or should this be[..].
 %     convert [g,x:term] ([g,x] econs x (L[..] )) ([g,x,y] E[..] y x) in
 
-   [arg':target,xve |-  tpair (tabs \arg'. \xve. T[arg' xve]) Ve]
+   [arg':target,xve |-  tpair (tabs \arg'. \xve. T[arg',xve]) Ve]
 
 | [g, x:term |-  app (E1) (E2)] =>
   let [g |- L[..]] = env in
@@ -77,7 +77,7 @@ fn env => fn t => case t of
   let [arg':target, xve:target |-  T2] =
         convert [g |- L[..] ] [g,x |- E2] in
    [arg':target,xve |-  tlet T1
-                \closure .  tapp (tfst closure) (tsnd closure) (T2[arg' xve])]
+                \closure .  tapp (tfst closure) (tsnd closure) (T2[arg',xve])]
 
 
 ;

@@ -139,7 +139,7 @@ fn d => fn ev => case ev of
  )
 
 | [ |- ~>_@3 V] =>
-  let [ |- is_@ (is_lam (\x. (\d. D1'))) D2] = d in  [ |- D1'[_ D2]]
+  let [ |- is_@ (is_lam (\x. (\d. D1'))) D2] = d in  [ |- D1'[_,D2]]
 
 | [ |- (~>_#1 EV)] =>
  (let [ |- is_# D]  = d in

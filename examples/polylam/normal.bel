@@ -47,10 +47,10 @@ fn e => case e of
 
 | {S : [g,x:neutral (T2[]) |-  normal (T1[])]} % we specify the type of S to help the type-checker
   [g |- lam' \x. S] => let {M : [g,x:exp (T[]) |- exp (T1[])]}
-                        [g,b: block x:exp (T[]), _t:neutral (T[]) |-  M[..b.1]] =
-                       normal2exp[g,b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..b.2]]
+                        [g,b: block x:exp (T[]), _t:neutral (T[]) |-  M[..,b.1]] =
+                       normal2exp[g,b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..,b.2]]
                      in
-                       [g |- lam \y.M[..y]]
+                       [g |- lam \y.M[..,y]]
 
 and neutral2exp : (g: ctx) [g |- neutral T] -> [g |- exp T] =
 / total e (neutral2exp g t e) /
@@ -73,11 +73,11 @@ fn e => case e of
   |  {S : [h, x:neutral (T2[]) |-  normal (T1[])]}
     [h |- lam' \x. S] =>
     let {M': [h,x:exp (T[]) |- exp (T1[])]}
-        [h,b: block x: exp (T[]), _t:neutral (T[]) |-  M'[..b.1]] =
-      normal2exp [h, b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..b.2]]
+        [h,b: block x: exp (T[]), _t:neutral (T[]) |-  M'[..,b.1]] =
+      normal2exp [h, b: block x:exp (T2[]), _t:neutral (T2[]) |-  S[..,b.2]]
 %     normal2exp [g, b: block (x:exp _, _t:neutral _) |-  S..b.2]
     in
-      norm [h |- M'[.. N]]
+      norm [h |- M'[..,N]]
 )
 %{  | [g |- neut(R..)] =>
    (let [g |- S..] = norm [g |- N..] in [g |- neut (app' (R..) (S..))]))
@@ -86,11 +86,11 @@ fn e => case e of
 | [g |- #p.1[..]] => [g |- neut(#p.2[..])] % #p means variable p from the context
 
 | {M : [g, x:exp T2 |-  exp T1]}
-  [g |- lam \x.M..x] =>
+  [g |- lam \x.M..,x] =>
   let [g, b: block x:exp T, _t:neutral T |-  S..b.2]
     = norm [g,b: block x:exp T2, _t:neutral T2 |-  M..b.1]
   in
-    [g |- lam' \x.S..x]
+    [g |- lam' \x.S..,x]
 }%
 ;
 

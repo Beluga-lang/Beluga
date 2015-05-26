@@ -31,8 +31,8 @@ inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
                    -> Subtype [g |-  arr S1 S2] [g |- arr T1 T2]
 
 | Subtype_forall : Subtype [g |- T1] [g |- S1]
-		 -> Subtype [g, b:block (x:tp, u:assm x (T1[..])) |- S2[.. b.1]]
-                           [g,b |- T2[.. b.1]]
+		 -> Subtype [g, b:block (x:tp, u:assm x (T1[..])) |- S2[..,b.1]]
+                           [g,b |- T2[..,b.1]]
                  -> Subtype [g |-  forall S1 (\x.S2)] [g |- forall T1 (\x.T2)]
 ;
 
@@ -69,8 +69,8 @@ inductive Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
               -> Sub [g |-  arr (S1[..]) (S2[..])] [g |- arr (T1[..]) (T2)]
 
 | Sa_forall : Sub [g |- T1[..]] [g |- S1[..]]
-	      -> Sub [g, b:block (x:tp, u:assm x (T1[..])) |- S2[.. b.1]]
-                        [g,b |- T2[.. b.1]]
+	      -> Sub [g, b:block (x:tp, u:assm x (T1[..])) |- S2[..,b.1]]
+                        [g,b |- T2[..,b.1]]
               -> Sub [g |-  forall (S1[..]) (\x.S2)] [g |- forall (T1[..]) (\x.T2)]
 ;
 
@@ -88,7 +88,7 @@ mlam g => mlam T => case [g |- T] of
 | [g |-  #p.1] => Sa_refl [g |- #p]
 | [g |-  forall U (\a.T)] =>
   let r' = refl [g] [g |-  U] in
-  let r  = refl [g, b: block a:tp, w: assm a U[..]] [g, b |- T[.. b.1]] in
+  let r  = refl [g, b: block a:tp, w: assm a U[..]] [g, b |- T[..,b.1]] in
     Sa_forall r' r
 
 ;

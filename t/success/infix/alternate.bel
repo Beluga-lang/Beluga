@@ -39,8 +39,8 @@ case d of
   let [g |- eval_lam (\x.\u.\v. F1)] = f in
   let [g,b:block x:exp, v:x eval x, _t:notLam x |-  refl] =
     deterministic
-     [g,b:block x:exp, v:x eval x, _t:notLam x |-  D1[.. b.1 b.2 b.3]]
-     [g,b |- F1[.. b.1 b.2 b.3]] in
+     [g,b:block x:exp, v:x eval x, _t:notLam x |-  D1[..,b.1,b.2,b.3]]
+     [g,b |- F1[..,b.1,b.2,b.3]] in
   [g |- refl]
 
 | [g |- (D1[..]) eval_app1 (D2[..])] : [g |- (((M[..]) app (N[..])) eval (R[..]))] =>

@@ -17,7 +17,7 @@ schema nat-ctx = nat;
 
 rec gratlength : (g:nat-ctx) [g |- nat]  -> [ |- nat] =
 fn v => case v of
- | [h,x:nat |-  U] => let [ |- N] = gratlength [h |- U[.. z]] in [ |- s N]
+ | [h,x:nat |-  U] => let [ |- N] = gratlength [h |- U[..,z]] in [ |- s N]
  | [hhh |-  V[..]] => [ |- z]
 ;
 

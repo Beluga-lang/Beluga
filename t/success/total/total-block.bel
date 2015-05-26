@@ -16,8 +16,8 @@ fn d => case d of
   let [g |- D'[..]] = copy [g |- D[..]] in 
     [g |- eq_app (D'[..]) (E[..])] 
 | [g |- eq_lam \x.\u. D] => 
-  let [g, b:block x:exp, t:eq x x |- D'[.. b.1 b.2]] =  
-    copy [g, b:block x:exp, t:eq x x |- D[.. b.1 b.2]] in 
+  let [g, b:block x:exp, t:eq x x |- D'[..,b.1,b.2]] =  
+    copy [g, b:block x:exp, t:eq x x |- D[..,b.1,b.2]] in 
   [g |- eq_lam \x.\u. D']
 ;
 

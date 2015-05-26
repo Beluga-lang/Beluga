@@ -146,7 +146,7 @@ schema ctx = tm T;
 inductive RedSub : {g:ctx}{#S: |- g} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [g] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm A[]] [ |- #S[^] M ] 
+     → RedSub [g, x:tm A[]] [ |- #S,M ] 
 ;
 
 

@@ -67,13 +67,13 @@ mlam g => mlam M => mlam N => fn f => case [g |- M[..]] of
        f [g |- bind (\p.done)] [g |- p_lam (\x.\p.\u. p_done)] in
 
   let [g,b:block x:tm, q:path , _t:q is_path x |-  e_ref] =
-       eqPath [g, b:block x:tm, q:path, _t:q is_path x] [g,b |- M'[.. b.1] ] [g,b |- N'[.. b.1] ]
+       eqPath [g, b:block x:tm, q:path, _t:q is_path x] [g,b |- M'[..,b.1] ] [g,b |- N'[..,b.1] ]
        (mlam Q => fn ip =>
-         let [g,b:block x:tm, q:path, _t:q is_path x |-  Qs[.. b.2]] = [g,b:block x:tm, q:path, _t:q is_path x |-  Q[.. b]] in  % strengthening
-         let [g,b:block x:tm, q:path, _t:q is_path x |-  D[.. b]] = ip in
+         let [g,b:block x:tm, q:path, _t:q is_path x |-  Qs[..,b.2]] = [g,b:block x:tm, q:path, _t:q is_path x |-  Q[..,b]] in  % strengthening
+         let [g,b:block x:tm, q:path, _t:q is_path x |-  D[..,b]] = ip in
          let [g |- p_lam (\x.\q.\iq. D')] : [g |- (bind (\q. Q')) is_path (lam (\x. N'))] =
-           f [g |- bind (\q. Qs) ]  [g |- p_lam (\x.\q.\iq. D[.. <x ; q ; iq>])  ] in
-             [g,b |- D'[.. b.1 b.2 b.3]]
+           f [g |- bind (\q. Qs) ]  [g |- p_lam (\x.\q.\iq. D[..,<x ; q ; iq>])  ] in
+             [g,b |- D'[..,b.1,b.2,b.3]]
        )
 
   in

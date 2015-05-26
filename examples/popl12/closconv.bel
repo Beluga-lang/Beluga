@@ -34,7 +34,7 @@ fn n => fn m => case m of
 | [ e:envr  |-  M] => [e:envr  |-  M]
 | [ g,x:ctm, e:envr  |-  M] =>
   let [ |- N] = n in
-   addProjs [ |- s N] [g, e:envr  |-  M[.. (proj e (N[])) e]]
+   addProjs [ |- s N] [g, e:envr  |-  M[..,(proj e (N[])),e]]
 ;
 
 
@@ -68,7 +68,7 @@ fn cr => fn m => case m of
 
 | [g |- lam \x. M ] =>
   let [h,x:ctm  |-  M'] = conv (Rsnoc cr) [g,x:tm  |-  M] in
-  let [e:envr  |-  N] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M'[.. x]] in
+  let [e:envr  |-  N] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M'[..,x]] in
   let [h |- Env]  = ctxToEnv (Ctx [h]) in
     [h |- close (clam \e. N[e]) Env]
 

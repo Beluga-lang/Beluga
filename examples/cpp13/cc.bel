@@ -123,7 +123,7 @@ rec strengthen: [g,x:source S[] |- source T[] ] -> StrTerm [g, x:source S[]] [|-
  / total  (strengthen) /
 fn m => 
   let [g,x:source _ |- M] = m in 
-  let STm' [g' |- abs \x. init (M'[ .. x])] wk = str [g] [g |- abs \x. init M[ .. ,x]] in 
+  let STm' [g' |- abs \x. init M'] wk = str [g] [g |- abs \x. init M] in 
     STm [g',x:source _ |- M'] wk
 ;
 % ----------------------------------------------------------       
@@ -200,7 +200,7 @@ rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
  / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[(crst x)] ]
+| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
 ;
 
 rec reify : {g:sctx} CtxAsTup [g] =
@@ -244,8 +244,8 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let STm [g',x:source _ |- M'] wk = strengthen [g, x:source _ |- M] in
   let EnvClo env rho = reify [g'] in
   let [h |- E] = lookupVars wk env sigma in
-  let [xenv:target _ , x:target _ |- P[xenv x] ] = cc' [g',x:source _ |- M'] (extend rho) in
-    [h |- cpack  (clam \clo. clet (cfst clo) (\x. clet (crst clo) (\xenv. P[xenv x])))   E]
+  let [xenv:target _ , x:target _ |- P[xenv,x] ] = cc' [g',x:source _ |- M'] (extend rho) in
+    [h |- cpack  (clam \clo. clet (cfst clo) (\x. clet (crst clo) (\xenv. P[xenv,x])))   E]
 
 | [g |- cons M N] =>
   let [h |- P ] = cc' [g |- M ] sigma  in

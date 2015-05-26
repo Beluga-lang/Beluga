@@ -906,37 +906,13 @@ GLOBAL: sgn;
 ;
 
   clf_sub_new:
-    [ (* TODO: Refactor this *)
-      [
-	-> LF.EmptySub _loc
-      |
-          s = clf_sub_term -> s
-
-      |
-        sigma = SELF; h = clf_head ->
-          LF.Dot (_loc, sigma, LF.Head h)
-
-      |
-        sigma = SELF; tM = clf_normal ->
+    [ 
+      [   -> LF.EmptySub _loc
+      | s = clf_sub_term -> s
+      | sigma = SELF; ","; tM = clf_term_app ->
           LF.Dot (_loc, sigma, LF.Normal tM)
-
-      |      
-        sigma = SELF; ","; h = clf_head ->
-          LF.Dot (_loc, sigma, LF.Head h)
-
-      |      
-        sigma = SELF; ","; tM = clf_normal ->
-          LF.Dot (_loc, sigma, LF.Normal tM)
-
-      |
-        h = clf_head ->
-          LF.Dot (_loc, LF.EmptySub _loc, LF.Head h)
-
-
-      |
-         tM = clf_normal ->
-          LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
-          
+      | tM = clf_term_app ->
+          LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)          
       ]
     ]
   ;

@@ -34,8 +34,8 @@ fn v => case v of
 | {E:[g, x:value A[] |-  exp B[]]} % Explicit type annotation for E is necessary
   [g |- lam \x. E] =>        % because we need the type A in the recursive call
 
-  let [g, b:block (x:value A[] , _t:cvalue A[]), c:cvalue B[] -> contra |-  E'[.. b.2 c]] =
-      cpse [g,b:block (x:value A[] , _t:cvalue A[]) |-  E[.. b.1] ] in
+  let [g, b:block (x:value A[] , _t:cvalue A[]), c:cvalue B[] -> contra |-  E'[..,b.2,c]] =
+      cpse [g,b:block (x:value A[] , _t:cvalue A[]) |-  E[..,b.1] ] in
     [g |- clam \v.\c. E']
 
 
@@ -49,7 +49,7 @@ fn e => case e of
 | [g |- app (E1[..] ) (E2[..] )] =>
   let [g, c:cvalue (arr B A) -> contra |-  E1'] = cpse [g |- E1] in
   let [g, c:cvalue B         -> contra |-  E2'] = cpse [g |- E2] in
-    [g,c |- E1'[.. (\f. E2'[.. (\x. capp f x c)])]]
+    [g,c |- E1'[..,(\f. E2'[..,(\x. capp f x c)])]]
 
 ;
 
@@ -60,7 +60,7 @@ rec eval : [ |- contra] -> [ |- cval] =
 % / total e (eval e) /
 fn e => case e of
  | [ |- capp (clam \v.\k. E)  Cv2  (\x. K)] =>
-     eval [ |- E[Cv2 (\x. K)]]
+     eval [ |- E[Cv2,(\x. K)]]
 ;
 
 

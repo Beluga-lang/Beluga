@@ -66,8 +66,8 @@ rec reflG: {g:xaG} {M:[g |- tm]} [g |- aeq (M[..]) (M[..])] =
 mlam g => mlam M => case [g |- (M[..])] of
 | [g |- #p.1[..]] => [g |- #p.2[..]]
 | [g |- lam \x. M] =>
-  let [g,b:block y:tm, ae_v:aeq y y |- D[.. b.1 b.2]] =
-         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M[.. b.1]]
+  let [g,b:block y:tm, ae_v:aeq y y |- D[..,b.1,b.2]] =
+         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M[..,b.1]]
   in
    [g |- ae_l \x. \w. D] % : eq (L) (L)
 | [g |- app (M1[..]) (M2[..])] =>
@@ -93,9 +93,9 @@ fn d1 => fn d2 => case d1 of
 | [g |- #p.2[..]] => d2
 | [g |- ae_l \x.\u. D1] =>
   let [g |- ae_l \x.\u. D2] = d2 in
-  let [g, b:block x:tm, ae_v:aeq x x |- E[.. b.1 b.2]] =
-         transG [g, b:block x':tm, ae_v:aeq x' x' |- D1[.. b.1 b.2]]
-               [g, b |- D2[.. b.1 b.2]]
+  let [g, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
+         transG [g, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
+               [g, b |- D2[..,b.1,b.2]]
   in
     [g |- ae_l \x. \u. E]
 | [g |- ae_a (D1[..]) (D2[..])] =>
@@ -117,8 +117,8 @@ rec symG: (g:xaG)
 fn d => case d of
 | [g |- #p.2[..]] => d
 | [g |- ae_l \x.\u. D1] =>
-  let [g, b:block x:tm, ae_v:aeq x x |- E[.. b.1 b.2]] =
-         symG [g, b:block x':tm, ae_v:aeq x' x' |- D1[.. b.1 b.2]]
+  let [g, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
+         symG [g, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
   in
     [g |- ae_l \x. \u. E]
 | [g |- ae_a (D1[..]) (D2[..])] =>
@@ -141,8 +141,8 @@ fn e => case e of
   let [g |- F2[..]] = ceq [g |- D2[..]] in
     [g |- ae_a (F1[..]) (F2[..])]
 | [g |- de_l (\x.(\u. D))] =>
-  let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F[.. b.1 b.2]] =
-        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D[.. b.1 b.3]]
+  let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F[..,b.1,b.2]] =
+        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D[..,b.1,b.3]]
   in
      [g |- ae_l (\x.\v. F)]
 | [g |- de_t (D1[..]) (D2[..])] =>

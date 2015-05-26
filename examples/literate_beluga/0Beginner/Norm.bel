@@ -37,7 +37,7 @@ fn e ⇒ case e of
     [g |- lam \x. M']
 | [g |- app (M[..]) (N[..])] ⇒
   (case norm [g |- M[..]] of
-  | [g |- lam \x.M'] => norm [g |- M'[.., N]] 
+  | [g |- lam \x.M'] => norm [g |- M'[..,N]] 
   | [g |- M'[..]] ⇒ 
     let [g |- N'[..]] = norm [g |- N[..]] in 
      [g |- app (M'[..]) (N'[..]) ]

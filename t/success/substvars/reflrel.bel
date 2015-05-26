@@ -39,7 +39,7 @@ mlam phi => mlam M => fn cr => case [phi  |-  M[..]] of
 
 
  | [phi  |-  lam \x.M] =>
-  let [psi, b:block (x:tm, u:aeq x x) |-  D[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  D[..,b.1,b.2]] =
       refl [phi, x:tm] [phi,x:tm |-  M]  (Cons_xa  cr) in
   [psi |-  ae_l \x.\u. D]
 ;
@@ -71,7 +71,7 @@ inductive Eq : {phi:xG}{psi:xaG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> c
 
 | Eq_l :
     Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..], b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x  x) |-  M'[.. b.1]]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x  x) |-  M'[..,b.1]]
     -> Eq [phi] [psi] [psi |- #S[..] ]
          [phi  |-  lam \x. M] [psi  |-  lam \x. M']
 ;
@@ -112,7 +112,7 @@ rec reflR : {phi:xG}{M: [phi  |-  tm]}
 
  | [phi  |-  lam \x.M] =>
    let Eq_l m' = m in
-  let [psi, b:block (x:tm, u:aeq x x) |-  D[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  D[..,b.1,b.2]] =
       reflR [phi, x:tm] [phi,x:tm |-  M]  (Cons_xa  cr) m' in
   [psi |-  ae_l \x.\u. D]
  ;
@@ -159,10 +159,10 @@ fn cr => fn m => fn n => fn l => fn d1 => fn d2 => case  d1 of
   let Eq_l m' = m in
   let Eq_l n' = n in
   let Eq_l l' = l in
-  let [psi, b:block (x:tm, u:aeq x x) |-  F[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  F[..,b.1,b.2]] =
       transR (Cons_xa cr) m' n' l'
-             [psi, b:block (x:tm, u:aeq x x) |-  D1[.. b.1 b.2]]
-             [psi, b:block (x:tm, u:aeq x x) |-  D2[.. b.1 b.2]] in
+             [psi, b:block (x:tm, u:aeq x x) |-  D1[..,b.1,b.2]]
+             [psi, b:block (x:tm, u:aeq x x) |-  D2[..,b.1,b.2]] in
   [psi |-  ae_l \x.\u. F]
 
 ;
@@ -221,7 +221,7 @@ inductive Eq' : {phi:xG}{psi:xdG}{#S: psi |- phi} [phi |- tm] -> [psi |- tm] -> 
 
 | Eq'_l :
     Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..], b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x  x) |-  M'[.. b.1]]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x  x) |-  M'[..,b.1]]
     -> Eq' [phi] [psi] [psi |- #S[..] ]
          [phi  |-  lam \x. M] [psi  |-  lam \x. M']
 ;
@@ -262,7 +262,7 @@ case [phi |-  Ld[..]] of
 
 | [phi |-  lam \x. M] =>
   let ExistsEq' [gamma, x:tm |-  L] eq =
-      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[.. b.1]] in
+      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[..,b.1]] in
   ExistsEq' [gamma |-  lam \x. L] (Eq'_l eq)
  ;
 
@@ -299,7 +299,7 @@ case [gamma |-  L[..]] of
   ExistsEq [psi |-  app (La1[..]) (La2[..])]  (Eq_a eq1 eq2)
 
 | [gamma |-  lam \x. M] =>
-  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[.. b.1]] eq =
+  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[..,b.1]] eq =
       existsEq (Cons_xa cr_xa) [gamma, x:tm |- M] in
   ExistsEq [psi |-  lam \x. La] (Eq_l eq)
 
@@ -395,9 +395,9 @@ case d of
   let Eq'_l md1 = md in
   let Eq_l na1 = na in
   let Eq'_l nd1 = nd in
-  let [psi, b:block (x:tm, u:aeq x x) |- E[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |- E[..,b.1,b.2]] =
         ceq (Cons_xa cr_a) (Cons_xd cr_d) (Cons_ad cr_da)
-          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |-  D[.. b.1 b.2]] in
+          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |-  D[..,b.1,b.2]] in
   [psi |-  ae_l \x.\u. E]
 
  | [phi, b: block (x:tm, u: deq x x)  |-  b.2] =>

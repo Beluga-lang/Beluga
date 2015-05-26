@@ -64,7 +64,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 | TRapp  : TRel [g |- M[..]] [h |- M'] -> TRel [g |- N[..]] [h |- N'[..]]
         -> TRel [g |- app (M[..]) (N[..])] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[.. b.1]]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
 	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -87,7 +87,7 @@ case [g |- (M[..])] of
 
 | [g |- lam \x. M] =>
   let TRlam  tr1 = r in
-  let [h,b:block (y:term , _t:aeq y y) |-  AE[.. b.1 b.2]] =
+  let [h,b:block (y:term , _t:aeq y y) |-  AE[..,b.1,b.2]] =
          ref'  tr1
   in
    [h |- ae_l \x. \w. AE]
@@ -112,10 +112,10 @@ fn ae1 => fn ae2 => case ae1 of
   let TRlam t = tr in
   let TRlam s = sr in
   let TRlam r = rr in
-  let [h, b:block x:term , _t:aeq x x |-  AE[.. b.1 b.2]] =
+  let [h, b:block x:term , _t:aeq x x |-  AE[..,b.1,b.2]] =
          trans t s r
-               [h, b:block x':term , _t:aeq x' x' |-  AE1[.. b.1 b.2]]
-               [h, b |-  AE2[.. b.1 b.2]]
+               [h, b:block x':term , _t:aeq x' x' |-  AE1[..,b.1,b.2]]
+               [h, b |-  AE2[..,b.1,b.2]]
   in
     [h |- ae_l \x. \u. AE]
 
@@ -217,7 +217,7 @@ mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- M[..]] of
   let ExWkV tr = exTRelV [l |- #p[..]] cr in ExWk [h |- _ ] tr
 
 | [l |- lam \x. M] =>
-  let ExWk [h,b:block (x:term, _u: aeq x x) |-  M'[.. b.1]] tr' = exTRel [l, x:term |-  M] (Crel_xa cr) in
+  let ExWk [h,b:block (x:term, _u: aeq x x) |-  M'[..,b.1]] tr' = exTRel [l, x:term |-  M] (Crel_xa cr) in
     ExWk [h |- lam \x. M'] (TRlam tr')
 
 | [l |- app (M[..]) (N[..])] =>
@@ -269,7 +269,7 @@ inductive TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
 | TRapp'  : TRel' [g |- M[..]] [h |- M'] -> TRel' [g |- N[..]] [h |- N'[..]]
         -> TRel' [g |- app (M[..]) (N[..])] [h |- app M' N']
 
-| TRlam'  : TRel' [g, x:term |-  M] [h, b:block (x:term, _u:deq x x) |-  N[.. b.1]]
+| TRlam'  : TRel' [g, x:term |-  M] [h, b:block (x:term, _u:deq x x) |-  N[..,b.1]]
 	   -> TRel' [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -319,7 +319,7 @@ mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- M[..]] of
   let ExWkV' tr = exTRelV' [h |- #p[..]] cr in ExWk' tr
 
 | [h |- lam \x. M] =>
-  let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M[.. b.1]] (Tdcons cr) in
+  let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M[..,b.1]] (Tdcons cr) in
     ExWk' (TRlam' tr')
 
 | [h |- app (M[..]) (N[..])] =>
@@ -390,9 +390,9 @@ fn de => case de of
   let TRlam' sr1' = sr in
   let TRlam tr1 = tr' in
   let TRlam sr1 = sr' in
-  let [g,b:block x:term,u:aeq x x  |-  AE[.. b.1 b.2]] =
+  let [g,b:block x:term,u:aeq x x  |-  AE[..,b.1,b.2]] =
         ceq tr1' sr1' tr1 sr1 (ADcons cr)
-            [h, b:block x:term, _t:deq x x |-  DE[.. b.1 b.2]]
+            [h, b:block x:term, _t:deq x x |-  DE[..,b.1,b.2]]
   in
      [g |- ae_l (\x.\v. AE)]
 

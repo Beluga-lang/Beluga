@@ -35,17 +35,17 @@ The key to express context weakening and strengthening is the ability to relate 
 inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:psi |- phi} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa : Ctx_xaR [phi] [psi] [psi |- #S[..] ]
-           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] b.1 ]
+           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..],b.1 ]
 ;
 %{{The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.}}%
 
 inductive EqV : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
-| EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1 ]
+| EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..],b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:aeq x x) |- b.1 ]
 
 | EqV_p : EqV [phi] [psi] [psi |- #S[..] ] [phi |-  #p[..]][psi |-  #q.1[..]]
-   -> EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] b.1 ]
+   -> EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..],b.1 ]
                 [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:aeq x x) |- #q.1[..] ]
 ;
 
@@ -58,8 +58,8 @@ inductive Eq : {phi:xG}{psi:xaG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ct
     Eq [phi] [psi] [psi |- #S[..] ] [phi |-  app (M[..]) (N[..])] [psi |-  app (M'[..]) (N'[..])]
 
 | Eq_l :
-    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..] b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x x) |- M'[.. b.1]]
+    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..],b.1]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x x) |- M'[..,b.1]]
     -> Eq [phi] [psi] [psi |- #S[..] ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
 ;
@@ -100,7 +100,7 @@ mlam phi => mlam M => fn cr => case [phi |-  M[..]] of
 
 
  | [phi |-  lam \x.M] =>
-  let [psi, b:block (x:tm, u:aeq x x) |- D[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |- D[..,b.1,b.2]] =
       refl [phi, x:tm] [phi,x:tm |- M] (Cons_xa cr) in
   [psi |-  ae_l \x.\u. D]
 
@@ -153,7 +153,7 @@ Eq [phi] [psi] [ psi |- #S[..] ] [phi |-  M[..]] [psi |-  M'[..]] ->
 
  | [phi |-  lam \x.M] =>
    let Eq_l m' = m in
-  let [psi, b:block (x:tm, u:aeq x x) |-  D[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  D[..,b.1,b.2]] =
       reflR [phi, x:tm] [phi,x:tm |-  M] (Cons_xa cr) m' in
   [psi |-  ae_l \x.\u. D]
  ;
@@ -210,10 +210,10 @@ Eq [phi] [psi] [ psi |- #S[..] ] [phi |-  L[..]] [psi |-  L'[..]] ->
   let Eq_l m' = m in
   let Eq_l n' = n in
   let Eq_l l' = l in
-  let [psi, b:block (x:tm, u:aeq x x) |-  F[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |-  F[..,b.1,b.2]] =
       transR (Cons_xa cr) m' n' l'
-             [psi, b:block (x:tm, u:aeq x x) |-  D1[.. b.1 b.2]]
-             [psi, b:block (x:tm, u:aeq x x) |-  D2[.. b.1 b.2]] in
+             [psi, b:block (x:tm, u:aeq x x) |-  D1[..,b.1,b.2]]
+             [psi, b:block (x:tm, u:aeq x x) |-  D2[..,b.1,b.2]] in
   [psi |-  ae_l \x.\u.F]
 ;
 
@@ -238,7 +238,7 @@ schema daG = block x: tm, ae_v:aeq x x, de_v:deq x x ;
 inductive Ctx_xdR : {phi:xG} {psi: xdG} {#S:psi |- phi} ctype =
 | Nil_xd : Ctx_xdR [] [] [ |- ^ ]
 | Cons_xd : Ctx_xdR [phi] [psi] [psi |- #S[..] ]
-           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..] b.1 ]
+           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
 ;
 
 inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
@@ -251,12 +251,12 @@ inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 %{{ Equality in addition to properties about equality, such as deterministic and existence. These properties are all encoded relationally, because we do not support functions in computation-level types. If we were to support functions in computation-level types, these proofs and some of these relations would go away.}}%
 
 inductive EqV' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
-| EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..] b.1 ]
+| EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..],b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:deq x x) |- b.1 ]
 
 | EqV'_p : EqV' [phi] [psi] [psi |- #S[..] ] [phi |-  #p[..]][psi |-  #q.1[..]]
-   -> EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..] b.1 ]
+   -> EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
                 [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:deq x x) |- #q.1[..] ]
 ;
 inductive Eq' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> ctype =
@@ -268,8 +268,8 @@ inductive Eq' : {phi:xG}{psi:xdG}{#S:psi |- phi} [phi |- tm] -> [psi |- tm] -> c
     Eq' [phi] [psi] [psi |- #S[..] ] [phi |-  app (M[..]) (N[..])] [psi |-  app (M'[..]) N']
 
 | Eq'_l :
-    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..] b.1]
-       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x x) |- M'[.. b.1]]
+    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..],b.1]
+       [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x x) |- M'[..,b.1]]
     -> Eq' [phi] [psi] [psi |- #S[..] ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
 ;
@@ -320,7 +320,7 @@ case [phi |-  Ld[..]] of
 
 | [phi |-  lam \x. M] =>
   let ExistsEq' [gamma, x:tm |- L] eq =
-      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[.. b.1]] in
+      existsEq' (Cons_xd cr_xd) [phi, b:block (x:tm, u:deq x x) |- M[..,b.1]] in
   ExistsEq' [gamma |-  lam \x. L] (Eq'_l eq)
 ;
 
@@ -368,7 +368,7 @@ case [gamma |-  L[..]] of
   ExistsEq [psi |-  app (La1[..]) (La2[..])] (Eq_a eq1 eq2)
 
 | [gamma |-  lam \x. M] =>
-  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[.. b.1]] eq =
+  let ExistsEq [psi, b:block (x:tm, u:aeq x x) |-  La[..,b.1]] eq =
       existsEq (Cons_xa cr_xa) [gamma, x:tm |- M] in
   ExistsEq [psi |-  lam \x. La] (Eq_l eq)
  ;
@@ -479,9 +479,9 @@ case d of
   let Eq'_l md1 = md in
   let Eq_l na1 = na in
   let Eq'_l nd1 = nd in
-  let [psi, b:block (x:tm, u:aeq x x) |- E[.. b.1 b.2]] =
+  let [psi, b:block (x:tm, u:aeq x x) |- E[..,b.1,b.2]] =
         ceq (Cons_xa cr_a) (Cons_xd cr_d) (Cons_ad cr_da)
-          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |- D[.. b.1 b.2]] in
+          ma1 na1 md1 nd1 [phi, b:block (x:tm, u:deq x x) |- D[..,b.1,b.2]] in
   [psi |-  ae_l \x.\u. E]
 
 ;

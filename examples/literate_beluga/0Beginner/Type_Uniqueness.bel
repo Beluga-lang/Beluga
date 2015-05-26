@@ -60,7 +60,7 @@ fn d => fn f => case d of
  
 | [g |-  h_lam (\x.\u. D)] =>
   let [g |-  h_lam (\x.\u. F)] = f in
-  let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[.. b.x b.u]] [g,b |-  F[.. b.x b.u]] in
+  let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[..,b.x,b.u]] [g,b |-  F[..,b.x,b.u]] in
    [ |-  e_ref]
 
 | [g |-  #q.2[..]] =>           % d : hastype #p.1 T

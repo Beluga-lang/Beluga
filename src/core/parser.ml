@@ -1175,19 +1175,11 @@ GLOBAL: sgn;
        ->
          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
                                           LF.Empty ctyp_decls in
-         let branch =
-           begin match mobj with
-            (loc', tM) ->
-               (let pat = (match tau with
-                               None -> Comp.PatMetaObj (_loc, (loc',Comp.ClObj (pHat, Comp.MObj tM)))
-                             | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(loc',
-                                                    (loc',Comp.ClObj (pHat, Comp.MObj tM))), tau))
-                in
-                  Comp.Branch (loc', ctyp_decls', pat, e')
-               )
-           end in
-
-         Comp.Case (_loc, Pragma.RegularCase, i, [branch])
+	 let pat0 = Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (pHat, Comp.MObj mobj))) in
+         let pat = (match tau with
+                               None -> pat0
+                             | Some tau -> Comp.PatAnn (_loc, pat0, tau))
+	 in Comp.Case (_loc, Pragma.RegularCase, i, [Comp.Branch (_loc, ctyp_decls', pat, e')])
 
       | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
            pat = cmp_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
@@ -1282,7 +1274,7 @@ cmp_exp_syn:
 clf_pattern :
     [
       [
-        tM = clf_term_app -> (_loc, tM)
+        tM = clf_term_app -> tM
       ]
     ]
   ;
@@ -1315,13 +1307,10 @@ clf_pattern :
         "["; cPsi = clf_dctx ; turnstile; tM = clf_pattern; "]" ;
          tau = OPT [ ":"; "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic"; "]" -> 
 		       Comp.TypBox(_loc,(_loc,LF.ClTyp (LF.MTyp tA, cPsi)))]
-          ->
-              begin match tM with
-            | (_loc', tM)  ->
-                (match tau with None -> Comp.PatMetaObj (_loc, (_loc',Comp.ClObj (cPsi, Comp.MObj tM)))
-                  | Some tau -> Comp.PatAnn (_loc, Comp.PatMetaObj(_loc, (_loc,Comp.ClObj (cPsi, Comp.MObj tM))), tau))
-
-              end
+          -> let pat0 = Comp.PatMetaObj (_loc, (_loc,Comp.ClObj (cPsi, Comp.MObj tM))) in
+	     (match tau with
+		 None -> pat0
+               | Some tau -> Comp.PatAnn (_loc, pat0, tau))
 
       |"["; cPsi = clf_dctx ; "]" 
 	->

@@ -1,0 +1,15 @@
+nat : type.
+z : nat.
+
+vec : nat -> type.
+nil : vec z.
+
+inductive Foo : ctype =
+| C : [|- vec M] -> Foo
+;
+
+rec f : [|- nat] -> Foo = 
+fn n => C ?
+;
+
+let v = f [|- z];

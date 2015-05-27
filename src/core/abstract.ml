@@ -33,30 +33,6 @@ let pat_flag = ref false
 
 exception Error of Syntax.Loc.t * error
 
-let getLocation' (loc, i) = match i with
-  | Comp.MApp (loc, _, _ ) -> loc
-  | Comp.Apply (loc, _, _ ) -> loc
-  | Comp.Equal (loc, _, _ ) -> loc
-  | Comp.PairVal (loc, _ , _) -> loc
-  | _ -> loc
-
-let getLocation e = match e with
-  | Comp.Syn (loc , i ) ->
-    getLocation' (loc, i)
-  | Comp.Rec (loc, _ , _ ) -> loc
-  | Comp.Fun (loc, _, _ ) -> loc
-  | Comp.Cofun (loc, _ ) -> loc
-  | Comp.MLam (loc, _, _) -> loc
-  | Comp.Pair (loc, _, _ ) -> loc
-  | Comp.LetPair (loc, _, _ ) -> loc
-  | Comp.Box (loc, _)    -> loc
-  | Comp.Case (loc, _, _, _ ) -> loc
-  | Comp.If (loc, _, _, _ ) -> loc
-  | Comp.Hole (loc, _) -> loc
-
-
-
-
 let string_of_varvariant = function
   | FV _  -> "free variables"
   | MMV _ -> "meta^2-variables and free variables"
@@ -1653,17 +1629,8 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let cD       = Context.append cD' cD2 in
     (cD, cPsi2, sigma2, cPhi2)
 
-
-
-let abstrExp e =
-  let (cQ, e')    = collectExp I.Empty e in
-  let loc = getLocation e' in
-    begin match cQ with
-        I.Empty -> e'
-      | I.Dec(_,FDecl (s,_))       ->
-            let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (loc, LeftoverVars))
-    end
+let abstrExp e = 
+  collectExp I.Empty e
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
 let rec appDCtx cPsi1 cPsi2 = match cPsi2 with

@@ -42,7 +42,12 @@ let rec loop ppf =
             Command.do_command ppf cmd
           | `Input input ->
               let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
-              let sgn' = Recsgn.recSgnDecls sgn in
+              let sgn'= begin match Recsgn.recSgnDecls sgn with
+		| sgn', None -> sgn'
+		| _, Some _ ->
+		  raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+	      end
+	      in
               if !Debug.chatter <> 0 then
                 List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
     with
@@ -91,7 +96,12 @@ let run args =
     try
       let arg = List.hd files in
       let sgn = Parser.parse_file ~name:arg Parser.sgn in
-      let sgn' = Recsgn.recSgnDecls sgn in
+      let sgn' = begin match Recsgn.recSgnDecls sgn with
+	| sgn', None -> sgn'
+	| _, Some _ ->
+	  raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+      end 
+      in
         if !Debug.chatter <> 0 then
           List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
       fprintf ppf "The file has been successfully loaded.\n"

@@ -556,20 +556,23 @@ let index_cltyp' cvars bvars fvars = function
     let (phi', _bvars', fvars) = index_dctx cvars (BVar.create ()) fvars phi in
     (Apx.LF.STyp (index_svar_class cl, phi'), fvars)
 
-let index_cltyp cvars fvars = function
+let index_cltyp loc cvars fvars = function
   | Ext.LF.ClTyp (cl, psi) ->
       let (psi', bvars', fvars') = index_dctx cvars (BVar.create ()) fvars psi in
       let (cl', fvars'')          = index_cltyp'  cvars bvars' fvars' cl in
         (Apx.LF.ClTyp (cl', psi'), fvars'')
   | Ext.LF.CTyp (schema_name) ->
-      let schema_cid    = Schema.index_of_name schema_name in
-      (Apx.LF.CTyp schema_cid, fvars)
+      begin try 
+	let schema_cid    = Schema.index_of_name schema_name in
+	  (Apx.LF.CTyp schema_cid, fvars)
+      with Not_found ->           raise (Error (loc, UnboundCtxSchemaName schema_name))
+      end 
 
 let cltyp_to_cvar n _ = n
 
 let index_cdecl cvars fvars = function
   | Ext.LF.Decl(u, (loc,cl), dep) ->
-    let (cl', fvars') = index_cltyp cvars fvars cl in
+    let (cl', fvars') = index_cltyp loc cvars fvars cl in
     let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
     let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
     (Apx.LF.Decl(u, cl', dep), cvars', fvars')
@@ -675,7 +678,7 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
         end
       end
   | Ext.Comp.TypBox (loc, (loc',mU)) ->
-      let (mU', fcvars') = index_cltyp cvars fcvars mU in
+      let (mU', fcvars') = index_cltyp loc cvars fcvars mU in
         (Apx.Comp.TypBox (loc, (loc',mU')), fcvars')
 
   | Ext.Comp.TypArr (_loc, tau, tau') ->

@@ -791,7 +791,7 @@ and abstractTypRec cQ offset = function
   | (I.SigmaLast(n, tA), s) -> I.SigmaLast(n, (abstractTyp cQ offset (tA, s)))
   | (I.SigmaElem(x, tA, typRec), s) ->
       let tA = abstractTyp cQ offset (tA, s) in
-      let typRec = abstractTypRec cQ offset (typRec, LF.dot1 s) in
+      let typRec = abstractTypRec cQ (offset+1) (typRec, LF.dot1 s) in
         I.SigmaElem(x, tA, typRec)
 
 
@@ -1653,7 +1653,6 @@ let abstrSchema (I.Schema elements) =
         let trec' = abstractTypRec cQ' l (trec', LF.id) in
         let cPsi1 = ctxToCtx cQ' in
         let cPsi1' = appDCtx cPsi1 cPsi' in
-
         let els'  = abstrElems els in
           Int.LF.SchElem (cPsi1', trec') :: els'
   in

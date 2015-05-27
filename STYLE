@@ -23,7 +23,7 @@ Naming conventions
 - Beluga expressions and types 
   Beluga expressions e,i
   Beluga types	     tau
-  Beluga context     cG
+  Beluga context     cD
 
 - Beluga types under a meta-substitution are prefixed with a t: ttau
   

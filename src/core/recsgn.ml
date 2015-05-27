@@ -430,13 +430,14 @@ and recSgnDecl ?(pauseHtml=false) d =
         let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
         let _        = FVar.clear () in
         let sW       = Reconstruct.schema apx_schema in
-        let _        = (dprint (fun () -> "\nElaborating schema " ^ g.string_of_name );
+        let _        = (dprint (fun () -> "\nElaborated schema " ^ g.string_of_name ^ " : " ^ P.schemaToString sW);
 			Reconstruct.solve_fvarCnstr Lfrecon.Pi;
 			Unify.forceGlobalCnstr (!Unify.globalCnstrs);
 			Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ()) in
 
         let sW'      = Abstract.schema sW in
+	let _        = dprint (fun () -> "\nSchema " ^  g.string_of_name ^ " : " ^ P.schemaToString sW' ^ " after abstraction " ) in
         let _ = Check.LF.checkSchemaWf sW' in
       	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
          let _s = Schema.add (Schema.mk_entry g sW') in 

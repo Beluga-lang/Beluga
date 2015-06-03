@@ -22,6 +22,7 @@ let usage () =
         ^ "    +tfile                Print timing information to file \"time.txt\"\n"
         ^ "    +printSubord          Print subordination relations (experimental)\n"
         ^ "    -print                Turn printing off\n"
+        ^ "    +print                Turn printing on\n"
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
         ^ "    +test                 Make output suitable for test harness. Implies -print\n"
@@ -57,6 +58,7 @@ let process_option arg rest = match arg with
   | "+tfile" -> Monitor.onf := true; rest
   | "+printSubord" -> Subord.dump := true; rest
   | "-print" -> Debug.chatter := 0; rest
+  | "+print" -> Debug.chatter := 2; rest
   | "-width" ->
     begin match rest with
       | [] -> bailout "-width needs an argument"

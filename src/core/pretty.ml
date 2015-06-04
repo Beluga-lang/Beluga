@@ -295,7 +295,8 @@ module Int = struct
         | LF.FPVar _
         | LF.Proj _
         | LF.FVar _
-        | LF.AnnH _ ->
+        | LF.AnnH _ 
+	| LF.MMVar _ ->
             ms
 
       in function

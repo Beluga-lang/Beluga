@@ -834,27 +834,8 @@ and whnf sM = match sM with
 
 (*      let sR =  whnfRedex ((tM', LF.comp r sigma), (tS, sigma)) in *)
         sR
-
-  | (Root (loc, MMVar (((n, ({contents = None} as uref), cD, ClTyp (MTyp tA,cPsi), cnstr, mdep), t), r), tS), sigma) ->
-      (* note: we could split this case based on tA;
-       *      this would avoid possibly building closures with id
-       *)
-      begin match whnfTyp (tA, LF.id) with
-        | (Atom (loc', a, tS'), _s (* id *)) ->
-            (* meta-variable is of atomic type; tS = Nil  *)
-            let u' = (n, uref, cD, ClTyp (MTyp (Atom (loc', a, tS')),cPsi), cnstr, mdep) in
-              (Root (loc, MMVar ((u', t), LF.comp r sigma), SClo (tS, sigma)), LF.id)
-        | (PiTyp _, _s)->
-            (* Meta-variable is not atomic and tA = Pi x:B1.B2:
-             * lower u, and normalize the lowered meta-variable.
-             * Note: we may expose and compose substitutions twice.
-             *
-             * Should be possible to extend it to m^2-variables; D remains unchanged
-             * because we never arbitrarily mix pi and pibox.
-             *)
-            raise (Error.Violation "Meta^2-variable needs to be of atomic type")
-
-      end
+  | (Root (loc, MMVar ((i, t), r), tS), sigma) ->
+     (Root (loc, MMVar ((i, t), LF.comp r sigma), SClo (tS, sigma)), LF.id)
 
   (* Meta-variable *)
   | (Root (loc, MVar (Offset _k as u, r), tS), sigma) ->

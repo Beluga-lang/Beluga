@@ -84,7 +84,7 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T[..]) (T[..])] =
       let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a ) |- S2[..,b.1,b.2,b.3,b.4]]
           = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )] 
                   [g, b |- T2[..,b.1]]
-      in [g |- sa_all (S1[..]) (S2[..])] 
+      in [g |- sa_all (S1[..]) (\a.\tr.\w.\ref.S2[..,a,tr,w,ref])] 
 
 ;
 

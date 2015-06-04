@@ -16,6 +16,7 @@ val normFt'    : front * sub -> front
 val normClTyp  : cltyp * sub -> cltyp
 val normTypRec : trec_clo -> typ_rec
 val normSub    : sub  -> sub
+val normHead   : head * sub -> front
 val normSpine  : sclo -> spine
 val normDCtx   : dctx -> dctx
 val normMCtx   : mctx -> mctx

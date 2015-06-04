@@ -1614,9 +1614,10 @@ let isVar h = match h with
 	end 
 
     (* MMVar-normal case *)
-    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1, sM2)
-    | (sM2, ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1)) ->
-        dprnt "(011) MMVar-_";
+    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), tS)) as sM1, sM2)
+    | (sM2, ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), tS)) as sM1)) ->
+      dprnt "(011) MMVar-_";
+        let Nil = tS in (* We don't handle the non-nil case correctly yet; so crash and burn *)
         if blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) then
           (dprnt "(011) - blockinDCtx";
           let tN = genMMVarstr loc cD cPsi1 (tP, id) in

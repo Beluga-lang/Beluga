@@ -383,38 +383,26 @@ let etaExpandApxHead loc h tA =
     etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS'), tA)
 *)
 
-let etaExpandApxTerm  loc h tS tA =
-  let rec etaExpApxSpine k tS tA = begin match  tA with
+let etaExpandTerm  loc tM tA =
+  let rec etaExpSpine k tS tA = begin match  tA with
     | Int.LF.Atom _  -> (k, tS)
 
     | Int.LF.PiTyp (_ , tA') ->
-        let tN = Apx.LF.Root(loc, Apx.LF.BVar k, Apx.LF.Nil) in
-          etaExpApxSpine (k+1)  (Apx.LF.App(tN, tS)) tA'
+        let tN = Int.LF.Root(loc, Int.LF.BVar k, Int.LF.Nil) in
+          etaExpSpine (k+1)  (Int.LF.App(tN, tS)) tA'
   end in
 
-  let rec etaExpApxPrefix loc (tM, tA) = begin match tA with
+  let rec etaExpPrefix loc (tM, tA) = begin match tA with
     | Int.LF.Atom _ -> tM
     | Int.LF.PiTyp ((Int.LF.TypDecl (x, _ ), _ ) , tA') ->
         let _ = dprint (fun () -> "eta - add Lam ") in
-        Apx.LF.Lam (loc, x, etaExpApxPrefix loc (tM, tA'))
+        Int.LF.Lam (loc, x, etaExpPrefix loc (tM, tA'))
   end in
 
-  let rec appendSpine tS1 tS2 = begin match tS1 with
-    | Apx.LF.Nil -> tS2
-    | Apx.LF.App (tM, tS) ->
-        Apx.LF.App (tM, appendSpine tS tS2)
-  end in
-
-  let (k, tS') = etaExpApxSpine 1 (Apx.LF.Nil) tA in
-  let _ = dprint (fun () -> "etaExpApxSpine k = " ^ string_of_int k )in
-  let tS''     = appendSpine (Apxnorm.shiftApxSpine (k-1) tS) tS' in
-  (* let tS''     = appendSpine tS tS' in  *)
-
-  let h'       =  begin match h with
-                    | Apx.LF.BVar x -> Apx.LF.BVar (x+k-1)
-                    |  _ -> h
-                  end  in
-    etaExpApxPrefix loc (Apx.LF.Root(loc, h' , tS''), tA)
+  let (k, tS') = etaExpSpine 1 (Int.LF.Nil) tA in
+  let _ = dprint (fun () -> "etaExpApxSpine k = " ^ string_of_int k ) in
+ 
+  etaExpPrefix loc (Whnf.reduce (tM, Int.LF.Shift (k-1)) tS', tA)
 
 
 (* ******************************************************************* *)
@@ -876,17 +864,9 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
   | (Apx.LF.Tuple (loc, _), (Int.LF.Atom _, _s)) ->
       raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantAtom)))
 
-  | (Apx.LF.Root (loc, Apx.LF.FMVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandFMV loc (Apx.LF.FMVar (x,s)) tA in
-        elTerm recT cD cPsi n sA
-
-  | (Apx.LF.Root (loc, Apx.LF.MVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandMV loc (Apx.LF.MVar (x,s)) tA in
-        elTerm recT cD cPsi n sA
-
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandApxTerm loc h spine tA in
-        elTerm recT cD cPsi n sA
+    let tM = elTerm' recT cD cPsi m sA in
+    etaExpandTerm loc tM tA
 
   | (Apx.LF.Ann (loc, m, a), tA) ->
     let tB = elTyp recT cD cPsi a in

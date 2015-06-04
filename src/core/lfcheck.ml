@@ -219,7 +219,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->    
+  | (Root (loc, _h, _tS), _s (* id *)), (_, _s') ->    
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
     begin
       try
@@ -243,9 +243,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       with SpineMismatch ->
         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
-
-  | (Root (loc, _, _), _), _ ->
-    raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
 and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 

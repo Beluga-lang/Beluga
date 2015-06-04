@@ -36,4 +36,4 @@ let v3 = [ |- switch (succ z) (succ z) false ] ;
 let w1 = [ |- iszero] ;
 
 %not
-let w2 = [ |- switch z z] ;
+let w2 : [|- term] = [ |- switch z z] ;

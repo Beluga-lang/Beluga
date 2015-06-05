@@ -37,69 +37,69 @@ schema tctx = tp + some [t:tp] block x:exp,u:type_of x t, v:step x x , _t:notLam
 
 
 % Prove: If G |- type_of M T  and  G |- step M M' then  G |- type_of M' T
-rec tps': {g:tctx}[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
-         -> [g |- type_of (N ..) (T ..)] =
+rec tps': {g:tctx}[g |- type_of (M[..]) (T[..])] -> [g |- step (M[..]) (N[..])]
+         -> [g |- type_of (N[..]) (T[..])] =
 / total s (tps' _ _ _ _ d s)/
 mlam g => fn d => fn s => case s of
-| [g |- s_lam \x.\v. \n. S .. x v n] =>
-  let [g |- tof_lam \x.\u. D .. x u] = d in
-  let % {F::(type_of (M .. x) (T ..))[g, x:exp, u:type_of x (T ..)]}
-      [g, b: block x:exp, u:type_of x (T ..), v:step x x, _t:notLam x |-  F .. b.1 b.2] =
+| [g |- s_lam \x.\v. \n. S] =>
+  let [g |- tof_lam \x.\u. D] = d in
+  let % {F::(type_of (M) (T[..]))[g, x:exp, u:type_of x (T[..])]}
+      [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
       tps' [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x]
-	  [g,b |- (D .. b.1 b.2)] [g,b |- S .. b.1 b.3 b.4] in
-  [g |- tof_lam \x.\u. F .. x u]
+	  [g,b |- D[..,b.1,b.2]] [g,b |- S[..,b.1,b.3,b.4]] in
+  [g |- tof_lam \x.\u. F]
 
-| [g |- s_app1 (S2 ..) (S1 ..)] =>
-  let [g |- tof_app (D2 ..) (D1 ..)] = d in
-  let [g |- tof_lam \x.\u. F .. x u] = tps' [g] [g |- D1 ..] [g |- S1 ..] in
-     tps' [g] [g |- F .. _ (D2 ..)] [g |- S2 ..]
+| [g |- s_app1 (S2[..]) (S1[..])] =>
+  let [g |- tof_app (D2[..]) (D1[..])] = d in
+  let [g |- tof_lam \x.\u. F] = tps' [g] [g |- D1[..]] [g |- S1[..]] in
+     tps' [g] [g |- F[..,_,D2]] [g |- S2[..]]
 
-| [g |- s_app2 (S2 ..) _ (S1 ..)] =>
-  let [g |- tof_app (D2 ..) (D1 ..)] = d in
-  let [g |- F1 ..] = tps' [g] [g |- D1 ..] [g |- S1 ..] in
-  let [g |- F2 ..] = tps' [g] [g |- D2 ..] [g |- S2 ..] in
-    [g |- tof_app (F2 ..) (F1 ..)]
+| [g |- s_app2 (S2[..]) _ (S1[..])] =>
+  let [g |- tof_app (D2[..]) (D1[..])] = d in
+  let [g |- F1[..]] = tps' [g] [g |- D1[..]] [g |- S1[..]] in
+  let [g |- F2[..]] = tps' [g] [g |- D2[..]] [g |- S2[..]] in
+    [g |- tof_app (F2[..]) (F1[..])]
 
-| [g |- #p.3 ..] =>
-  let [g |- #q.2 ..] = d in % s : step (#p.1 ..)  (N ..)
+| [g |- #p.3[..]] =>
+  let [g |- #q.2[..]] = d in % s : step (#p.1[..])  (N[..])
                         % q : block x:exp,u:type_of x t, v:step x x . notLam x
-                        % since step #q.1 #q.1 = step #p.1 (N ..)
+                        % since step #q.1 #q.1 = step #p.1 (N[..])
                         % N = #q.1  and #q = #p
-  [g |- #q.2 ..]
+  [g |- #q.2[..]]
 
 ;
 
 
 
-% Prove: If G |- type_of M (T ..)  and  G |- step M M' then  G |- type_of M' (T ..)
-rec tps: {g:tctx}[g |- type_of (M ..) (T ..)] -> [g |- step (M ..) (N ..)]
-         -> [g |- type_of (N ..) (T ..)] =
+% Prove: If G |- type_of M (T[..])  and  G |- step M M' then  G |- type_of M' (T[..])
+rec tps: {g:tctx}[g |- type_of (M[..]) (T[..])] -> [g |- step (M[..]) (N[..])]
+         -> [g |- type_of (N[..]) (T[..])] =
 % / total d (tps _ _ _ _ d s)/
 mlam g => fn d => fn s => case d of
-| [g |- tof_lam \x.\u. D .. x u] =>
-  let [g |- s_lam \x.\v. \n. S .. x v n] = s in
-  let % {F::(type_of (M .. x) (T ..))[g, x:exp, u:type_of x (T ..)]}
-      [g, b: block x:exp, u:type_of x (T ..), v:step x x, _t:notLam x |-  F .. b.1 b.2] =
+| [g |- tof_lam \x.\u. D] =>
+  let [g |- s_lam \x.\v. \n. S] = s in
+  let % {F::(type_of (M) (T[..]))[g, x:exp, u:type_of x (T[..])]}
+      [g, b: block x:exp, u:type_of x (T[..]), v:step x x, _t:notLam x |-  F[..,b.1,b.2]] =
       tps [g,b:block x:exp,u:type_of x _ ,v:step x x, _t:notLam x]
-	  [g,b |- (D .. b.1 b.2)] [g,b |- S .. b.1 b.3 b.4] in
-  [g |- tof_lam \x.\u. F .. x u]
+	  [g,b |- (D[..,b.1,b.2])] [g,b |- S[..,b.1,b.3,b.4]] in
+  [g |- tof_lam \x.\u. F]
 
- | [g |- tof_app (D2 ..) (D1 ..)] =>
+ | [g |- tof_app (D2[..]) (D1[..])] =>
   (case s of
-     | [g |- s_app1 (S2 ..) (S1 ..)] =>
-       let [g |- tof_lam \x.\u. F .. x u] = tps [g] [g |- D1 ..] [g |- S1 ..] in
-       tps [g] [g |- F .. _ (D2 ..)] [g |- S2 ..]
-     | [g |- s_app2 (S2 ..) _ (S1 ..)] =>
-       let [g |- F1 ..] = tps [g] [g |- D1 ..] [g |- S1 ..] in
-       let [g |- F2 ..] = tps [g] [g |- D2 ..] [g |- S2 ..] in
-         [g |- tof_app (F2 ..) (F1 ..)]
+     | [g |- s_app1 (S2[..]) (S1[..])] =>
+       let [g |- tof_lam \x.\u. F] = tps [g] [g |- D1[..]] [g |- S1[..]] in
+       tps [g] [g |- F[..,_,D2]] [g |- S2[..]]
+     | [g |- s_app2 (S2[..]) _ (S1[..])] =>
+       let [g |- F1[..]] = tps [g] [g |- D1[..]] [g |- S1[..]] in
+       let [g |- F2[..]] = tps [g] [g |- D2[..]] [g |- S2[..]] in
+         [g |- tof_app (F2[..]) (F1[..])]
    )
 
-| [g |- #p.2 ..] =>
-  let [g |- #q.3 ..] = s in % s : step (#p.1 ..)  (N ..)
+| [g |- #p.2[..]] =>
+  let [g |- #q.3[..]] = s in % s : step (#p.1[..])  (N[..])
                         % q : block x:exp,u:type_of x t, v:step x x . notLam x
-                        % since step #q.1 #q.1 = step #p.1 (N ..)
+                        % since step #q.1 #q.1 = step #p.1 (N[..])
                         % N = #q.1  and #q = #p
-  [g |- #q.2 ..]
+  [g |- #q.2[..]]
 
 ;

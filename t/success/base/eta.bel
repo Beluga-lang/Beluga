@@ -20,7 +20,7 @@ t_lam: teste (\x. lam (\y. E x y)).
 
 rec foo : [ |- term] -> [ |- term] =
 fn t => case t of
- | [ |- lam \x. E x] => t
+ | [ |- lam \x. E] => t
 ;
 
 %{
@@ -37,14 +37,14 @@ schema termCtx = term ;
 %{
 rec foo : {g:(termCtx)*} term [g, x:term] -> term [g, x:term] =
 FN g => fn t => case t of
- | [g] lam \x. E .. x => t
+ | [g] lam \x. E => t
 ;
 }%
 
 %{
 rec foo : {g:(termCtx)*} term [g, x:term] -> term [g, x:term] =
 FN g => fn t => case t of
- | [g, x:term] lam \x. (E .. x V) => t
+ | [g, x:term] lam \x. (E V) => t
 ;
 
 }%

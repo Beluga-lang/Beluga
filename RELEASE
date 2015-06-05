@@ -101,11 +101,11 @@ cp -a $release $release-sandbox
 cd $release-sandbox
 
 echo 'Building (bytecode) in release directory ...'
-make BYTE=1 || ( echo 'omake failed; aborting release.' ; exit 1 )
+make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
 
 echo 'Building (native) in release directory ...'
 make clean
-make || ( echo 'native omake failed; aborting release.' ; exit 1 )
+make || ( echo 'native make failed; aborting release.' ; exit 1 )
 
 cd ..
 echo 'Leaving '$release-sandbox' around if you want to test further.'

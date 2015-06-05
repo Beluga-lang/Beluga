@@ -11,9 +11,9 @@ mlam g => fn e =>
   case e of
   | [g |- z]     => [g |- z]
 
-  | [g |- suc (U ..)]   => [g |- z]
+  | [g |- suc (U[..])]   => [g |- z]
 
-  | [g |- #p ..]   => [g |- z]
+  | [g |- #p[..]]   => [g |- z]
 ;
 
 
@@ -23,7 +23,7 @@ mlam g => fn e =>
   case e of %not
   | [g |- z]     => [g |- z]
 
-  | [g |- suc (U ..)]   => [g |- z]
+  | [g |- suc (U[..])]   => [g |- z]
 
-%%%  | [g]  #p ..   => [g] z
+%%%  | [g]  #p[..]   => [g] z
 ;

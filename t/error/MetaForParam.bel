@@ -4,10 +4,10 @@ i : tm.
 schema ctx = tm;
 
 rec f : {g:ctx} { #p : [g |- tm]} [g |- tm] =
-mlam g => mlam #p =>  [g |- #p..]
+mlam g => mlam #p =>  [g |- #p]
 ;
 
 rec ff : {g:ctx} { M : [g |- tm]} [g |- tm] =
-mlam g => mlam M =>  f [g] [g |- M..]
+mlam g => mlam M =>  f [g] [g |- M]
 
 ;

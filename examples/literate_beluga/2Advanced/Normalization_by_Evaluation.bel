@@ -41,9 +41,9 @@ Below we describe the domain of semantic values, which we can think of as being 
 In the course of this development, `#W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g,x1:neut T1,...,xn:neut Tn`, but the extra generality does no harm here.
 }}%
 
-datatype Sem : {g:ctx} [ |- tp] -> ctype =
+stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Base :  [g |- norm b] -> Sem [g] [ |- b]
-| Arr : {g:ctx}({h:ctx}{#W: h |- g} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Arr : {g:ctx}({h:ctx}{#W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
@@ -51,10 +51,10 @@ datatype Sem : {g:ctx} [ |- tp] -> ctype =
 We can weaken semantic values:
 }}%
 
-rec sem_wkn : {h:ctx} {#W: h |- g} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+rec sem_wkn : {h:ctx} {#W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam h => mlam #W => fn e =>
 case e of
-| Base [g |- R ..] => Base [h |- R #W[..]]
+| Base [g |- R[..]] => Base [h |- R[#W]]
 | Arr [g] f =>
   Arr [h] (mlam h' => mlam #W2 => f [h'] [h' |- #W[#W2[..]]])
 ;
@@ -63,55 +63,55 @@ case e of
 Environments:
 }}%
 
-typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T]} Sem [h] [ |- T]);
-
-rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S] [h] =
-fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p ..] of
+typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T[]]} Sem [h] [ |- T]);
+ 
+rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S[]] [h] =
+fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p[..]] of
 | [g,x:tm S |-  x] => e
-| [g,x:tm S |-  #q .. ] => s [ |- T ] [g |- #q ..]
+| [g,x:tm S |-  #q[..] ] => s [ |- T ] [g |- #q[..]]
 ;
 
-rec env_wkn : {h':ctx}{h:ctx}{#W:h' |- h} Env [g] [h] -> Env [g] [h'] =
+rec env_wkn : {h':ctx}{h:ctx}{#W:[h' |- h]} Env [g] [h] -> Env [g] [h'] =
 mlam h' => mlam h => mlam #W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
-sem_wkn [h'] [h' |- #W[..]] (s [ |- T] [g |- #p ..])
+sem_wkn [h'] [h' |- #W[..]] (s [ |- T] [g |- #p[..]])
 ;
 
 %{{
 We evaluate a term in an environment providing semantic values for each free variable:
 }}%
 
-rec eval : [g |- tm S] -> Env [g] [h] -> Sem [h] [ |- S]  =
+rec eval : [g |- tm S[]] -> Env [g] [h] -> Sem [h] [ |- S]  =
 fn t => fn s => let s : Env [g] [h] = s in
 case t of
-| [g |- #p .. ] =>  s [ |- _] [g |- #p .. ]
-| [g |- lam (\x. E .. x) ] =>
+| [g |- #p[..] ] =>  s [ |- _] [g |- #p[..] ]
+| [g |- lam (\x. E) ] =>
   Arr [h] (mlam h' => mlam #W => fn e =>
-     eval [g,x:tm _ |- E .. x] (env_ext (env_wkn [h'] [h] [h' |- #W[..]] s) e))
-| [g |- app (E1 ..) (E2 ..) ] =>
-  let Arr [h] f = eval [g |- E1 ..] s in
-   f [h] [h |- ..] (eval [g |- E2 ..] s)
+     eval [g,x:tm _ |- E] (env_ext (env_wkn [h'] [h] [h' |- #W[..]] s) e))
+| [g |- app (E1[..]) (E2[..]) ] =>
+  let Arr [h] f = eval [g |- E1[..]] s in
+   f [h] [h |- ..] (eval [g |- E2[..]] s)
 ;
 
 %{{
 Reflect and reify
 }}%
 
-rec app' : (g:ctx) {R:[g |- neut (arr T S)]} [g |- norm T] -> [g |- neut S] =
-mlam R => fn n => let [g |- N ..] = n in [g |- rapp (R ..) (N ..)];
+rec app' : (g:ctx) {R:[g |- neut (arr T[] S[])]} [g |- norm T[]] -> [g |- neut S[]] =
+mlam R => fn n => let [g |- N[..]] = n in [g |- rapp R N];
 
-rec reflect : [g |- neut A] ->  Sem [g] [ |- A] =
-fn r => let [g |- R .. ] : [g |- neut A] = r in
+rec reflect : [g |- neut A[]] ->  Sem [g] [ |- A] =
+fn r => let [g |- R[..] ] : [g |- neut A[]] = r in
 case [ |- A] of
-| [ |- b ] => Base [g |- embed (R ..)]
+| [ |- b ] => Base [g |- embed (R[..])]
 | [ |- arr T S ] =>
- Arr [g] (mlam h => mlam #W => fn e => reflect (app' [h |- R #W[..]] (reify e)))
+ Arr [g] (mlam h => mlam #W => fn e => reflect (app' [h |- R[#W]] (reify e)))
 
-and reify : Sem [g] [ |- A] -> [g |- norm A] =
+and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => case e of
-| Base [g |- R ..] => [g |- R ..]
+| Base [g |- R[..]] => [g |- R[..]]
 | Arr [g] f =>
- let [g,x:neut _ |- E .. x] = reify (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x]))
- in [g |- nlam (\x. E .. x)]
+ let [g,x:neut _ |- E] = reify (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x]))
+ in [g |- nlam (\x. E)]
 ;
 
 %{{

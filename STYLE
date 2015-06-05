@@ -3,11 +3,30 @@ Coding style for Beluga
 
 Naming conventions
 ------------------
-- objects are prefixed with a t: tA, tK, tM, ...
+- LF objects are prefixed with a t: tA, tK, tM, ...
 
-- objects under a substitution are prefixed with a s: sA, sK, sM, ...
+  LF Terms	      tM, tN
+  LF Types	      tA, tB
+  LF Spines           tS
+  LF Heads	      tH  
 
-- contexts are prefixed with a c: cPsi, cPhi, ...
+- LF objects under a substitution are prefixed with a s: sA, sK, sM, ...
+
+- LF contexts are prefixed with a c: cPsi, cPhi, ...
+
+- Contextual objects are prefixed with a c: cM, cT, cD
+  Contextual Object  cM
+  Contextual Type    cT
+  Meta-Context	     cD
+  Meta-subst.	     theta or t
+
+- Beluga expressions and types 
+  Beluga expressions e,i
+  Beluga types	     tau
+  Beluga context     cD
+
+- Beluga types under a meta-substitution are prefixed with a t: ttau
+  
 
 - function names follow the CamelCase convention
 

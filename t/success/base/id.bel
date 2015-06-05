@@ -25,25 +25,25 @@ rec identity' : {g:w}
     fn x =>
       case x of
          [g |- z]          => [g |- z]
-       | [g |- s (U .. )]  => [g |- s (U .. )]
-	| [g |- (#p ..)] 	 => [g |- (#p ..)]
+       | [g |- s (U[..] )]  => [g |- s (U[..] )]
+	| [g |- (#p[..])] 	 => [g |- (#p[..])]
 ;
 
 %{
-rec copy : {g:w} [g |- exp (T ..)] -> [g |- exp (T ..)] =
+rec copy : {g:w} [g |- exp (T[..])] -> [g |- exp (T[..])] =
 mlam g =>
  fn x =>
    case x of
      [g |- z]   => [g |- z]
 
-   | [g |- s (U .. )]  =>
+   | [g |- s (U[..] )]  =>
 
-      let [g |- (V ..)] =  copy [g] [g |- (U ..)] in
-        [g |- s (V ..)]
+      let [g |- (V[..])] =  copy [g] [g |- (U[..])] in
+        [g |- s (V[..])]
 
-   | [g |- lam (\x. (E ..  x))]  => [g |- lam  (\x. (E .. x))]
-   | [g |- lam (\ x. (E .. x))]  => x
+   | [g |- lam (\x. (E[..]  x))]  => [g |- lam  (\x. (E))]
+   | [g |- lam (\ x. (E))]  => x
 
-   | [g |- (#p ..)]              => [g |- (#p ..)]
+   | [g |- (#p[..])]              => [g |- (#p[..])]
 ;
 }%

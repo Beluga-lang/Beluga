@@ -1,20 +1,19 @@
 % Untyped closure conversion from POPL12 paper
 
-datatype tm:type  =
+LF tm:type  =
 | lam: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 ;
 %name tm M.
 
-datatype nat:type =
+LF nat:type =
 | z : nat
 | s : nat -> nat
 ;
 
 schema ctx = tm;
 
-% mutual definition of datatypes is not working.
-datatype envr: type =
+LF envr: type =
 | nil: envr
 | snoc : envr -> ctm -> envr
 
@@ -32,19 +31,19 @@ schema cctx = ctm;
 
 rec addProjs : (g:cctx) [ |- nat] -> [g, e:envr  |-  ctm] ->  [e:envr  |-  ctm] =
 fn n => fn m => case m of
-| [ e:envr  |-  M, e ] => [e:envr  |-  M, e]
-| [ g,x:ctm, e:envr  |-  M .. x e] =>
+| [ e:envr  |-  M] => [e:envr  |-  M]
+| [ g,x:ctm, e:envr  |-  M] =>
   let [ |- N] = n in
-   addProjs [ |- s N] [g, e:envr  |-  M .. (proj e N) e]
+   addProjs [ |- s N] [g, e:envr  |-  M[..,(proj e (N[])),e]]
 ;
 
 
-datatype Ctx_rel : {g:ctx}{h:cctx} ctype =
+inductive Ctx_rel : {g:ctx}{h:cctx} ctype =
 | Rnil : Ctx_rel [] []
 | Rsnoc: Ctx_rel [g] [h] -> Ctx_rel [g, x:tm] [h,x:ctm]
 ;
 
-datatype CtxObj : {h:cctx} ctype =
+inductive CtxObj : {h:cctx} ctype =
 | Ctx : {h:cctx} CtxObj [h] ;
 
 
@@ -52,8 +51,8 @@ rec ctxToEnv : CtxObj [h] -> [h |- envr] =
 fn ctx => case ctx of
 | Ctx [] => [ |- nil]
 | Ctx [h,x:ctm] =>
-  let [h'  |-  Env .. ] = ctxToEnv (Ctx [h]) in
-    [h', x:ctm  |-  snoc (Env ..) x]
+  let [h'  |-  Env[..] ] = ctxToEnv (Ctx [h]) in
+    [h', x:ctm  |-  snoc (Env[..]) x]
 ;
 
 rec conv :  Ctx_rel [g] [h] -> [g |- tm] -> [h |- ctm] =
@@ -62,20 +61,20 @@ fn cr => fn m => case m of
   let Rsnoc (cr': Ctx_rel [g] [h]) = cr in
     [h, x:ctm  |-  x]
 
-| [g', x:tm  |-  #p ..] =>
+| [g', x:tm  |-  #p[..]] =>
   let Rsnoc cr' = cr in
-  let [h' |-  M .. ] = conv cr' [g' |-  #p ..] in
-  [h', x:ctm  |-  M .. ]
+  let [h' |-  M[..] ] = conv cr' [g' |-  #p[..]] in
+  [h', x:ctm  |-  M[..] ]
 
-| [g |- lam \x. M .. x ] =>
-  let [h,x:ctm  |-  M' .. x] = conv (Rsnoc cr) [g,x:tm  |-  M .. x] in
-  let [e:envr  |-  N, e] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M' .. x] in
-  let [h |- Env .. ]  = ctxToEnv (Ctx [h]) in
-    [h |- close (clam \e. N, e) (Env .. )]
+| [g |- lam \x. M ] =>
+  let [h,x:ctm  |-  M'] = conv (Rsnoc cr) [g,x:tm  |-  M] in
+  let [e:envr  |-  N] = addProjs [ |- z] [h,x:ctm, e:envr  |-  M'[..,x]] in
+  let [h |- Env]  = ctxToEnv (Ctx [h]) in
+    [h |- close (clam \e. N[e]) Env]
 
-| [g |- app (M ..) (N ..) ] =>
-  let [h |- M' .. ] = conv cr [g |- M .. ] in
-  let [h |- N' ..] = conv cr [g |- N .. ] in
-    [h |- open (M' ..) (\env. \f. capp f (create (snoc env (N' ..) )))]
+| [g |- app (M[..]) (N[..]) ] =>
+  let [h |- M'[..] ] = conv cr [g |- M[..] ] in
+  let [h |- N'[..]] = conv cr [g |- N[..] ] in
+    [h |- open (M'[..]) (\env. \f. capp f (create (snoc env (N'[..]) )))]
 ;
 

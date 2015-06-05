@@ -63,12 +63,12 @@ sort_cases() {
 }
 
 do_testing() {
-    local n=0 success=0 fail=0 timeout=0
+    local n=0 success=0 fail=0 timeout=0 admissible=0
 
     # Limit runtime of each test case, in seconds.
     ulimit -t $TIMEOUT
 
-    for i in $(test_cases | sort_cases)
+    for i in $(test_cases | sort -n)
     do
 	n=$((n+1))
 	echo -ne "$C[start]**$CEND TEST $n: $i ... "
@@ -88,9 +88,17 @@ do_testing() {
 	    echo -e "$C[done]DONE$CEND"
 	    success=$((success+1))
 	else
-	    echo -e "$C[fail]FAIL$CEND"
+	    grep --quiet "$i" .admissible-fail
+	    is_adm=$?
+	    if [[ $is_adm -eq 0  ]] 
+	    then
+		echo -e "$C[admissible]ADMISSIBLE$CEND"
+		admissible=$((admissible+1))
+	    else
+		echo -e "$C[fail]FAIL$CEND"
+		fail=$((fail+1))
+	    fi
 	    [[ -z "$diff_result" ]] && echo "$result" || (echo "$diff_result" | colorize_diff)
-	    fail=$((fail+1))
 	fi
 
 	[[ -n $RESET && -f $i.out ]] && echo "$result" > $i.out
@@ -99,14 +107,16 @@ do_testing() {
     echo
     echo Successes: $success
     echo Failures: $fail
+    echo Admissible failures: $admissible
     echo Timeouts: $timeout
     echo Total: $n
 
     echo
     times
 
+    f=$((fail + timeout))
     # If not all tests succeeded then exit with non-zero status.
-    [[ $success -eq $n ]] || exit 1
+    [[ $f -eq 0 ]] || exit 1
     exit 0
 }
 
@@ -121,7 +131,7 @@ colorize_diff() {
 set_colors() {
     autoload colors
     colors
-    C=(start ${fg[blue]} done ${fg_bold[green]} timeout ${fg_bold[magenta]} fail ${fg_bold[red]})
+    C=(start ${fg[blue]} admissible ${fg_bold[yellow]} done ${fg_bold[green]} timeout ${fg_bold[magenta]} fail ${fg_bold[red]})
     CEND=$reset_color
 }
 

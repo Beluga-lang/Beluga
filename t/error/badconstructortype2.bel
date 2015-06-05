@@ -1,6 +1,6 @@
 nat : type.
 
-datatype Colour : ctype =
+inductive Colour : ctype =
 | Blue : Colour [ |- nat]
 | Red : Colour [ |- nat]
 ;

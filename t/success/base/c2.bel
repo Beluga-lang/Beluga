@@ -16,7 +16,7 @@ rec copyGood : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
  (case e of
   | [g |- z]     => [g |- z]
-  | [g |- #p ..] => [g |- #p ..]
+  | [g |- #p[..]] => [g |- #p[..]]
 );
 
 rec copyXBad1 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
@@ -32,7 +32,7 @@ rec copyXBad2 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
 mlam g => fn e =>
  case e of %not
  | [g,x:term |-  z]     => [g,x:term |-  z]
- | [g,x:term |-  #p ..] => [g,x:term |-  #p ..]
+ | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
 ;
 
 
@@ -41,7 +41,7 @@ rec copyXGood : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
   case e of
   | [g,x:term |-  z]     => [g,x:term |-  z]
-  | [g,x:term |-  #p .. x] => [g,x:term |-  #p .. x]
+  | [g,x:term |-  #p] => [g,x:term |-  #p]
   | [g |- z] => [g |- z]
 ;
 
@@ -51,6 +51,6 @@ mlam g => fn e =>
  (case e of
   | [g,x:term |-  z]     => [g,x:term |-  z]
   | [g,x:term |-  x]     => [g,x:term |-  x]
-  | [g,x:term |-  #p ..] => [g,x:term |-  #p ..]
+  | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
   | [g |- z] => [g |- z]
 );

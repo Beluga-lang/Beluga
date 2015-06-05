@@ -1,0 +1,14 @@
+Type-preserving compiler in Beluga,
+as described in "Programming with higher-order abstract syntax"
+
+cps.bel     : Continuation-passing style with totality declaration
+sfcps.bel   : Continuation-passing style for System F with totality declaration
+cc.bel      : Closure conversion with totality declarations (partial)
+cchoist.bel : Closure conversion and hoisting with totality declarations (partial)
+
+Beluga is available online at http://complogic.cs.mcgill.ca/beluga/
+
+To run, execute
+|> beluga [filename]
+
+

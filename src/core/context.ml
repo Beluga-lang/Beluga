@@ -209,14 +209,14 @@ let rec lookup cG k = match (cG, k) with
 
 
 let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
-  | (Dec (_cD, Decl (_, CTyp cid_schema, _)), 1) -> cid_schema
+  | (Dec (_cD, Decl (_, CTyp (Some cid_schema), _)), 1) -> cid_schema
   | (Dec (cD, _) , i) ->
       lookupSchema cD (i-1)
 
 and lookupCtxVar cD cvar =
   let rec lookup cD offset = match cD with
       | Empty -> raise (Error.Violation "Context variable not found")
-      | Dec (cD, Decl (psi, CTyp schemaName, _)) ->
+      | Dec (cD, Decl (psi, CTyp (Some schemaName), _)) ->
           begin match cvar with
             | CtxName phi when psi = phi ->  (psi, schemaName)
             | (CtxName _phi)             -> lookup cD (offset+1)

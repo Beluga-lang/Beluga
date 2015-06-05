@@ -58,9 +58,9 @@ rec eval : [ |- exp T] -> [ |- exp T] =
      | [ |- ff] => eval [ |- E2]
      )
 }%
-   | [ |- letv  E (\x . (E1 x))]  =>
+   | [ |- letv  E (\x . E1)]  =>
    let [ |- V] = eval [ |- E] in 
-  eval [ |- (E1 V)]
+  eval [ |- E1[V]]
 ;
 
 %{ let y1 = eval [ |- suc z] ;

@@ -1,0 +1,10 @@
+
+tm: type.
+tp: type. 
+oft: tm -> tp -> type.
+
+
+schema xG = block u: oft M T;
+
+schema xtG = some [t:tp] block (x:tm, u:oft x t);
+schema xtG = block (x:tm, u:oft x T);

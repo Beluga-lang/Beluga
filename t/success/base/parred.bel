@@ -44,13 +44,13 @@ schema tCtx = some [t:tp] block x:tm, of_v: oft x t;
 % ---------------------------------------------------------------------------
 % Substitution lemma - for free, direct
 rec subst : (g:tCtx)
-            [g,b: block x:tm, of_v: oft x T |- oft (M .. b.1) S]
--> [g |-  oft (N ..) T]
--> [g |-  oft (M .. (N ..)) S] =
+            [g,b: block x:tm, of_v: oft x T[] |- oft M[..,b.1] S[]]
+-> [g |-  oft N T[]]
+-> [g |-  oft M[..,N] S[]] =
 fn d1 => fn d2 =>
-let [g, b: block x:tm, of_v: oft x T |- D1 .. b.1 b.2] = d1 in
-let [g |-  D2 ..] = d2 in
-  [g |-  D1 .. _ (D2 ..)]
+let [g, b: block x:tm, of_v: oft x T |- D1[..,b.1,b.2]] = d1 in
+let [g |-  D2[..]] = d2 in
+  [g |-  D1[..,_,D2]]
 ;
 
 % ---------------------------------------------------------------------------
@@ -63,29 +63,29 @@ schema trCtx = some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
 Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free. Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context <code>g</code>}% 
 
 rec tps : (g:trCtx)
-            [g |-  pr (M ..) (N ..)] -> [g |-  oft (M ..) A]
-          -> [g |-  oft (N ..) A] =
+            [g |-  pr (M[..]) (N[..])] -> [g |-  oft (M[..]) A]
+          -> [g |-  oft (N[..]) A] =
 fn r => fn d => case r of
-| [g |-  #p.3 .. ] => d
-| [g |-  pr_b (\x.\pr_v. R1 .. x pr_v) (R2 .. ) ] =>
-    let [g |-  of_app (of_lam (\x.\of_v. D1 .. x of_v)) (D2 ..) ] = d in
-    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F1 .. b.1 b.2] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1 .. b.1 b.3]
-[g, b |- D1 .. b.1 b.2] in
-    let [g |-  F2 .. ] = tps [g |-  R2 ..] [g |-  D2 ..] in
-    [g |-  F1 .. _ (F2 ..)] % use substitution lemma directly
+| [g |-  #p.3[..] ] => d
+| [g |-  pr_b (\x.\pr_v. R1) R2 ] =>
+    let [g |-  of_app (of_lam (\x.\of_v. D1)) (D2[..]) ] = d in
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F1[..,b.1,b.2]] =
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1[..,b.1,b.3]]
+[g, b |- D1[..,b.1,b.2]] in
+    let [g |-  F2[..] ] = tps [g |-  R2[..]] [g |-  D2[..]] in
+    [g |-  F1[..,_,F2]] % use substitution lemma directly
 
-| [g |-  pr_l \x.\pr_v. R .. x pr_v] =>
-    let [g |-  of_lam \x.\of_v. D .. x of_v] = d in
-    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F .. b.1 b.2] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R .. b.1 b.3]
-[g, b |- D .. b.1 b.2] in
-    [g |-  of_lam \x.\of_v. F .. x of_v]
+| [g |-  pr_l \x.\pr_v. R] =>
+    let [g |-  of_lam \x.\of_v. D] = d in
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F[..,b.1,b.2]] =
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R[..,b.1,b.3]]
+[g, b |- D[..,b.1,b.2]] in
+    [g |-  of_lam \x.\of_v. F]
 
-| [g |-  pr_a (R1 ..) (R2 ..) ] =>
-    let [g |-  of_app (D1 ..) (D2 ..)] = d in
-    let [g |-  F1 .. ] = tps [g |-  R1 ..] [g |- D1 ..] in
-    let [g |-  F2 .. ] = tps [g |-  R2 ..] [g |- D2 ..] in
-    [g |-  of_app (F1 ..) (F2 ..)]
+| [g |-  pr_a (R1[..]) (R2[..]) ] =>
+    let [g |-  of_app (D1[..]) (D2[..])] = d in
+    let [g |-  F1[..] ] = tps [g |-  R1[..]] [g |- D1[..]] in
+    let [g |-  F2[..] ] = tps [g |-  R2[..]] [g |- D2[..]] in
+    [g |-  of_app (F1[..]) (F2[..])]
 ;
-%{Consider the clause <code>pr_b: pr (app (lam \x.M ..x) (N ..)) (M .. (N ..))</code>. Then we have as assumption <code>d:[g |- oft (app (lam A (\x. M ..x))(N ..)) (arr A B)<\code>. By inversion, we know that <code>d:[g |- of_a (of_l \x. \u. D1 ..x u)(D2 ..) ]</code> where <code>D1</code> stands for <code>oft (M ..x) B</code> in the extended context <code>g, x:tm , u:oft x A</code>. We also know that <code>D2</code> describes a derivation <code>oft (N ..)A</code>. By the i.h. (recursive call) on <code>D2</code>, we therefore know <code>F2:oft (N' ..)A</code>. By the i.h. (recursive call) on <code>D1</code>, we obtain a derivation <code/>F1:oft (M' ..x) B</code> in <code>g, b:block (x:tm , of_x:oft x A)</code>. We now want to substitute for <code>x</code> the term <code>N'</code>, and for the derivation <code>oft x A</code> the derivation <code>F2</code>. This is achieved by applying to <code>F1</code> the substitution <code>.. _ (F2 ..)</code>. Since in the program above we do not have the name <code>N</code> available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.}%
+%{Consider the clause <code>pr_b: pr (app (lam \x.M[..]x) (N[..])) (M[..] (N[..]))</code>. Then we have as assumption <code>d:[g |- oft (app (lam A (\x. M[..]x))(N[..])) (arr A B)<\code>. By inversion, we know that <code>d:[g |- of_a (of_l \x. \u. D1[..]x u)(D2[..]) ]</code> where <code>D1</code> stands for <code>oft (M[..]x) B</code> in the extended context <code>g, x:tm , u:oft x A</code>. We also know that <code>D2</code> describes a derivation <code>oft (N[..])A</code>. By the i.h. (recursive call) on <code>D2</code>, we therefore know <code>F2:oft (N'[..])A</code>. By the i.h. (recursive call) on <code>D1</code>, we obtain a derivation <code/>F1:oft (M'[..]x) B</code> in <code>g, b:block (x:tm , of_x:oft x A)</code>. We now want to substitute for <code>x</code> the term <code>N'</code>, and for the derivation <code>oft x A</code> the derivation <code>F2</code>. This is achieved by applying to <code>F1</code> the substitution <code>.. _ (F2[..])</code>. Since in the program above we do not have the name <code>N</code> available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.}%

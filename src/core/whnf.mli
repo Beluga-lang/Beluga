@@ -46,7 +46,7 @@ val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cP
                   (* cD ; cPsi |- msvar : cPhi *)
 
 val newMVar     : Id.name option -> dctx * typ -> depend -> cvar
-val newCVar     : Id.name option -> mctx -> Id.cid_schema -> depend -> ctx_var
+val newCVar     : Id.name option -> mctx -> Id.cid_schema option -> depend -> ctx_var
 
 val raiseType   : dctx -> typ -> typ
 

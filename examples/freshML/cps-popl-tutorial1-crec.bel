@@ -26,33 +26,33 @@ cthrow : ccont A -> cvalue A -> contra.
 
 
 % Translating values to cvalues
-% and expressions to ...
+% and expressions to[..].
 
 schema ctx = some [a:tp] block x:value a, _t:cvalue a ;
 
 rec cps : (g:ctx) [g |- value A] -> [g |- cvalue A] =
 / total v (cps g a v) /
 fn v =>  case v of
-| [g |- #p.1 ..] =>  [g |- #p.2 ..]
+| [g |- #p.1[..]] =>  [g |- #p.2[..]]
 
-| [g |- lam A2 \x. E .. x] =>
-  let  [g, b:block (x:value A , _t:cvalue A), k:ccont B |-  E' .. b.2 k] =
-    cpse [g, b:block x:value A2 , _t:cvalue A2 |-  E .. b.1]
+| [g |- lam A2[] \x. E] =>
+  let  [g, b:block (x:value A[] , _t:cvalue A[]), k:ccont B[] |-  E'[..,b.2,k]] =
+    cpse [g, b:block x:value A2[] , _t:cvalue A2[] |-  E[..,b.1]]
    in
-     [g |- clam \v.\c. E' .. v c]
+     [g |- clam \v.\c. E']
 
 
 and cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
 / total e (cpse g a e) /
 fn e => case e of
-| [g |- ret (V .. )] =>
-  let [g |- V' ..] = cps [g |- V .. ] in
-    [g,k |- cthrow k (V' .. )]
+| [g |- ret (V[..] )] =>
+  let [g |- V'[..]] = cps [g |- V[..] ] in
+    [g,k |- cthrow k (V'[..] )]
 
-| [g |- app (E1 .. ) (E2 .. )] =>
-  let [g,k:ccont (arr B A) |-  E1' .. k] = cpse [g |- E1 .. ] in
-  let [g,k:ccont B' |-  E2' .. k] = cpse [g |- E2 .. ] in
-   [g, k |-  (E1' .. (cconti (\f. E2' .. (cconti (\x. capp f x k)))))]
+| [g |- app (E1[..] ) (E2[..] )] =>
+  let [g,k:ccont (arr B A) |-  E1'] = cpse [g |- E1[..] ] in
+  let [g,k:ccont B' |-  E2'] = cpse [g |- E2[..] ] in
+   [g, k |- E1'[..,(cconti (\f. E2'[..,(cconti (\x. capp f x k))]))]]
 ;
 
 
@@ -62,8 +62,8 @@ fn e => case e of
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
 rec test0 : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
-fn x => let [b:block (x:value o , _t:cvalue o) |-  V' b.1 b.2] = r0 in
-	   [b,k |- cthrow k (V' b.1 b.2)] ;
+fn x => let [b:block (x:value o , _t:cvalue o) |-  V'[b.1,b.2]] = r0 in
+	   [b:block (x:value o , _t:cvalue o),k |- cthrow k (V'[b.1,b.2])] ;
 
 let r1' = test0 ttrue ;
 %{

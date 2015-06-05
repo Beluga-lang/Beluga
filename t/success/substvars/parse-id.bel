@@ -3,14 +3,14 @@ i : tm.
 
 schema ctx = tm;
 
-rec f : {g:ctx}{h:ctx} {#S : h |- g} { M : [g |- tm]} [h |- tm] =
-mlam g => mlam h => mlam #S => mlam M => [h |- M #S[..] ]
+rec f : {g:ctx}{h:ctx} {#S : [h |- g]} { M : [g |- tm]} [h |- tm] =
+mlam g => mlam h => mlam #S => mlam M => [h |- M[#S[..]] ]
 ;
 
 rec f2 : {g:ctx} {M:[g |- tm]} [g |- tm] =
-mlam g => mlam M => f [g] [g] [g |- .. ] [g |- M ..]
+mlam g => mlam M => f [g] [g] [g |- ..] [g |- M[..]]
 ;
 
-datatype IsWeakening : {g:ctx} {h:ctx} {#S: h |- g}ctype =
+inductive IsWeakening : {g:ctx} {h:ctx} {#S: [h |- g]}ctype =
 | Con : IsWeakening [g] [g] [g |- .. ]
 ;

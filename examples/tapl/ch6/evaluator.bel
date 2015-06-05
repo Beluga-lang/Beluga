@@ -20,10 +20,10 @@ rec eval : [ |- term] -> [ |- result] =
 fn t => case t of
 | [ |- app M N] =>
   (case eval [ |- M] of
-     | [ |- value (lam \x. M' x)] => (case eval [ |- N] of
-				     | [ |- value V]   => eval [ |- M' V]
+     | [ |- value (lam \x. M')] => (case eval [ |- N] of
+				     | [ |- value V]   => eval [ |- M'[V]]
 				     | [ |- no_result] => [ |- no_result]
 				  )
      | [ |- no_result] => [ |- no_result] )
-| [ |- lam \x. M x] => [ |- value (lam \x. M x)]
+| [ |- lam \x. M] => [ |- value (lam \x. M)]
 ;

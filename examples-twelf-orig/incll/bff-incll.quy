@@ -1,7 +1,0 @@
-t1 : trm tree = t z (t z e (t z e e)) (t z (t z e e) e).
-
-% It works now!!
-
-%query 1 * (sqnt rnil rnil rnil rnil (^ (bf e T))).
-%query 1 * (sqnt rnil rnil rnil rnil (^ (bf (t z e e) T))).
-%query 1 * (sqnt rnil rnil rnil rnil (^ (bf t1 T))).

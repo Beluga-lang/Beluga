@@ -30,16 +30,16 @@ i_andl : focus (& A1 A2) P
 
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 
-rec cmpai:  {g:c_ctx}{E:[g |- pf B]}[g |- atm (E ..)] ->
-	       [g, q:p, u:focus B q  |-  solve (atom q)] =
+rec cmpai:  {g:c_ctx}{E:[g |- pf (B[])]}[g |- atm (E[..])] ->
+	       [g, q:p, u:focus (B[]) q  |-  solve (atom q)] =
 % / total at (cmpai g a at)/
-mlam g, E => fn at => case [g |- E .. ] of
-  | [g |- andel (D1 .. )] =>
-    let [g |- atm_andel (CN1 .. )] = at in
+mlam g, E => fn at => case [g |- E[..] ] of
+  | [g |- andel (D1[..] )] =>
+    let [g |- atm_andel (CN1[..] )] = at in
     % Since nostrengthen means that the type of D1 will be reconstructed in g,
     % We cannot pass it in for B, which requires it to be closed!
-   let [g,q:p, i: focus _  q |-  I1 .. q i] = cmpai [g] [g |- D1 .. ] [g |- CN1 ..] in
-      [g,q,i |-  I1 .. q (i_andl i)]
+   let [g,q:p, i: focus _  q |-  I1[..,q,i]] = cmpai [g] [g |- D1] [g |- CN1[..]] in
+      [g,q,i |-  I1[..,q,(i_andl i)]]
 
 
 ;

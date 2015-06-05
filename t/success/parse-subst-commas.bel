@@ -1,0 +1,10 @@
+tp : type.
+tm : type.
+oft : tm -> tp -> type.
+
+schema tctx = some [t:tp] block x:tm,dx:oft x t;
+
+rec foo : (g:tctx) [g |- oft M T[]] -> [g |- oft M T[]] =
+fn d => case d of
+| [g,b:block x:tm,dx:oft x T[] |- M[..,b.1,b.2]] => [g,b:block x:tm,dx:oft x T[] |- M[..,b.1,b.2]]
+;

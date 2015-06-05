@@ -20,7 +20,7 @@ let l1 = [ |- t @ t @ t @ nil];
 rec copy : [ |- list N ] -> [ |- list N] =
 fn l => case l of
 | [ |- nil ] => [ |- nil ]
-| [ |- X @ T ] =>
-	let [ |- T' ] = copy [ |- T ] in [ |- X @ T' ];
+| [ |- (X[]) @ T ] =>
+	let [ |- T' ] = copy [ |- T ] in [ |- (X[]) @ T' ];
 
 

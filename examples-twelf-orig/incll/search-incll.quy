@@ -1,8 +1,0 @@
-%query 1 1 (sqnt rnil rnil rnil rnil (^ (bfs_main g2 1 R))).
-%query 1 1 (sqnt rnil rnil rnil rnil (^ (dfs_main g2 1 R))).
-% %query 1 * (sqnt rnil rnil rnil rnil (^ (bfs_main g2 1 R))).
-% %query 1 * (sqnt rnil rnil rnil rnil (^ (dfs_main g2 1 R))).
-
-%% next two queries take a while to confirm no more than 1 answer.
-%%query 1 * (sqnt rnil rnil rnil rnil (^ (bfs_main g1 1 R))).
-%%query 1 * (sqnt rnil rnil rnil rnil (^ (dfs_main g1 1 R))).

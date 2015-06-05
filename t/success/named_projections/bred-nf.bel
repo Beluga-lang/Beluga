@@ -1,25 +1,25 @@
 
-datatype tm: type =
+inductive tm: type =
 | abs: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 | beta: (tm -> tm) -> tm -> tm
 ;
 %name tm M.
 
-datatype nf: type =
+inductive nf: type =
 | nabs: (nf -> nf) -> nf
 | napp: nf -> nf -> nf
 ;
 %name nf U.
 
-datatype p : type =
+inductive p : type =
 | left : p -> p
 | right: p -> p
 | bnd  : (p -> p) -> p
 ;
 %name p P.
 
-datatype bred : tm -> nf -> type =
+inductive bred : tm -> nf -> type =
 | r_abs : ({x:tm}{y:nf}  bred x y -> bred (M x) (N y))
        -> bred (abs M) (nabs N)
 | r_app : bred M M' -> bred N N'
@@ -29,7 +29,7 @@ datatype bred : tm -> nf -> type =
 ;
 %name bred R.
 
-datatype path : tm -> p -> type =
+inductive path : tm -> p -> type =
 | p_abs   : ({x:tm}{p:p} path x p -> path (M x) (P p))
                -> path (abs M) (bnd P)
 | p_app_l : path M P
@@ -42,7 +42,7 @@ datatype path : tm -> p -> type =
 
 %name path Pf.
 
-datatype npath : nf -> p -> type =
+inductive npath : nf -> p -> type =
 | np_abs   : ({x:nf}{p:p} npath x p -> npath (M x) (P p))
                -> npath (nabs M) (bnd P)
 | np_app_l : npath M P
@@ -66,188 +66,188 @@ schema jctx = block x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _npt: npath y 
                           _d: ({q:p} path n q -> path x q) ;
 
 
-rec bred_ltr :  (g:jctx) [g |- bred (N ..) (V  ..)]
-             -> [g |- path (N ..) (P ..)] -> [g |- npath (V ..) (P ..)]
+rec bred_ltr :  (g:jctx) [g |- bred (N[..]) (V [..])]
+             -> [g |- path (N[..]) (P[..])] -> [g |- npath (V[..]) (P[..])]
     =
 fn br => fn pt => case br of
-| [g |- #p._r ..] => let [g |- #p._pt ..] = pt in [g |- #p._npt ..]
-| [g |- r_app (R1 ..) (R2 ..)] =>
+| [g |- #p._r[..]] => let [g |- #p._pt[..]] = pt in [g |- #p._npt[..]]
+| [g |- r_app (R1[..]) (R2[..])] =>
     (case pt of
-       | [g |- p_app_l (Q1 ..)] =>
-           let [g |- Q1' .. ] = bred_ltr [g |- R1 ..] [g |- Q1 ..] in
-           [g |- np_app_l (Q1' ..)]
-       | [g |- p_app_r (Q2 ..)] =>
-           let [g |- Q2' .. ] = bred_ltr [g |- R2 ..] [g |- Q2 ..] in
-           [g |- np_app_r (Q2' ..)]
+       | [g |- p_app_l (Q1[..])] =>
+           let [g |- Q1'[..] ] = bred_ltr [g |- R1[..]] [g |- Q1[..]] in
+           [g |- np_app_l (Q1'[..])]
+       | [g |- p_app_r (Q2[..])] =>
+           let [g |- Q2'[..] ] = bred_ltr [g |- R2[..]] [g |- Q2[..]] in
+           [g |- np_app_r (Q2'[..])]
     )
 
-| [g |- r_abs (\x.\y.\u. R .. x y u)] =>
-   let [g |- p_abs (\x.\q.\qt. Q .. x q qt)] = pt in
-   let [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q)  |-  Q' .. b.y b.q b.nq] =
-       bred_ltr [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q )  |-  R .. b.x b.y b.r]
-                [g,b  |-  Q .. b.x b.q b.qt]
+| [g |- r_abs (\x.\y.\u. R y u)] =>
+   let [g |- p_abs (\x.\q.\qt. Q q qt)] = pt in
+   let [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q)  |-  Q'[..] b.y b.q b.nq] =
+       bred_ltr [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q )  |-  R[..] b.x b.y b.r]
+                [g,b  |-  Q[..] b.x b.q b.qt]
    in
-       [g |- np_abs (\y.\q.\qt. Q' .. y q qt)]
+       [g |- np_abs (\y.\q.\qt. Q'[..] y q qt)]
 
 
 
-| [g |- r_beta (\x.\bf. R .. x bf)] =>
-   let [g |- p_beta (\x. \qf. Q .. x qf)] = pt in
+| [g |- r_beta (\x.\bf. R bf)] =>
+   let [g |- p_beta (\x. \qf. Q qf)] = pt in
    let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
-                           _d: ({q:p} path _ q -> path x q))  |-  Q' .. ] =
+                           _d: ({q:p} path _ q -> path x q))  |-  Q'[..] ] =
        bred_ltr [g,b: block (x:tm,  _b: ({u:nf} bred _ u -> bred x u),
-                           _d: ({q:p} path _ q -> path x q))  |-  R .. b.x b._b]
-                [g,b  |-  Q .. b.x b._d]
+                           _d: ({q:p} path _ q -> path x q))  |-  R[..] b.x b._b]
+                [g,b  |-  Q[..] b.x b._d]
    in
-       [g |- Q' ..]
+       [g |- Q'[..]]
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N ..) u -> bred x u), _q: ({q : p} path  (N ..) q -> path x q))]}
-  [g |- (#p._b ..) (U ..) (R ..)] => % [g |- bred x (U ..)]
-   % R : bred (N ..) (U ..)
-   % pt: path x (P ..)
+| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+  [g |- (#p._b[..]) (U[..]) (R[..])] => % [g |- bred x (U[..])]
+   % R : bred (N[..]) (U[..])
+   % pt: path x (P[..])
   case pt of
-    |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N ..) u -> bred x u), _q: ({q : p} path  (N ..) q -> path x q))]}
-       [g |- (#p._q ..) (Q ..) (Qp ..)] => % [g |- path x (Q ..)]
-        % Qp : path (N ..) (Q ..)
-          bred_ltr [g |- R ..] [g |- Qp ..] % path (U ..) (Q ..)
+    |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+       [g |- (#p._q[..]) (Q[..]) (Qp[..])] => % [g |- path x (Q[..])]
+        % Qp : path (N[..]) (Q[..])
+          bred_ltr [g |- R[..]] [g |- Qp[..]] % path (U[..]) (Q[..])
 
  ;
 
-rec bred_rtl : (g:jctx)[g |- bred (M ..) (U ..)] ->
-               [g |- npath (U ..) (P ..)] -> [g |- path (M ..) (P ..)]
+rec bred_rtl : (g:jctx)[g |- bred (M[..]) (U[..])] ->
+               [g |- npath (U[..]) (P[..])] -> [g |- path (M[..]) (P[..])]
    =
 fn br => fn pt => case br of
-| [g |- #p._r ..] => let [g |- #p._npt ..] = pt in [g |- #p._pt ..]
-| [g |- r_app (R1 ..) (R2 ..)] =>
+| [g |- #p._r[..]] => let [g |- #p._npt[..]] = pt in [g |- #p._pt[..]]
+| [g |- r_app (R1[..]) (R2[..])] =>
     (case pt of
-       | [g |- np_app_l (Q1 ..)] =>
-           let [g |- Q1' .. ] = bred_rtl [g |- R1 ..] [g |- Q1 ..] in
-           [g |- p_app_l (Q1' ..)]
-       | [g |- np_app_r (Q2 ..)] =>
-           let [g |- Q2' .. ] = bred_rtl [g |- R2 ..] [g |- Q2 ..] in
-           [g |- p_app_r (Q2' ..)]
+       | [g |- np_app_l (Q1[..])] =>
+           let [g |- Q1'[..] ] = bred_rtl [g |- R1[..]] [g |- Q1[..]] in
+           [g |- p_app_l (Q1'[..])]
+       | [g |- np_app_r (Q2[..])] =>
+           let [g |- Q2'[..] ] = bred_rtl [g |- R2[..]] [g |- Q2[..]] in
+           [g |- p_app_r (Q2'[..])]
     )
 
-| [g |- r_abs (\x.\y.\u. R .. x y u)] =>
-   let [g |- np_abs (\x.\q.\qt. Q .. x q qt)] = pt in
-   let [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q)  |-  Q' .. b.x b.q b.qt] =
-       bred_rtl [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q )  |-  R .. b.x b.y b.r]
-                [g,b  |-  Q .. b.y b.q b.nq]
+| [g |- r_abs (\x.\y.\u. R y u)] =>
+   let [g |- np_abs (\x.\q.\qt. Q q qt)] = pt in
+   let [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q)  |-  Q'[..] b.x b.q b.qt] =
+       bred_rtl [g, b:block (x:tm, q:p, y:nf, r: bred x y, qt: path x q, nq: npath y q )  |-  R[..] b.x b.y b.r]
+                [g,b  |-  Q[..] b.y b.q b.nq]
    in
-       [g |- p_abs (\y.\q.\qt. Q' .. y q qt)]
+       [g |- p_abs (\y.\q.\qt. Q'[..] y q qt)]
 
 
 
-| [g |- r_beta (\x.\bf. R .. x bf)] : [g |- bred (beta (M ..) (N ..)) (U ..)] =>
-  let [g |- Qt ..] = pt in          % [g |- npath (U ..) (P ..)]
+| [g |- r_beta (\x.\bf. R bf)] : [g |- bred (beta (M[..]) (N[..])) (U[..])] =>
+  let [g |- Qt[..]] = pt in          % [g |- npath (U[..]) (P[..])]
   let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
-                           _d: ({q:p} path _ q -> path x q))  |-  Q' .. b.x b._d] =
-       bred_rtl [g,b: block (x:tm,  _b: ({u:nf} bred (N ..) u -> bred x u),
-                           _d: ({q:p} path (N ..) q -> path x q))  |-  R .. b.x b._b]
-                [g,b  |-  Qt .. ]
+                           _d: ({q:p} path _ q -> path x q))  |-  Q'[..] b.x b._d] =
+       bred_rtl [g,b: block (x:tm,  _b: ({u:nf} bred (N[..]) u -> bred x u),
+                           _d: ({q:p} path (N[..]) q -> path x q))  |-  R[..] b.x b._b]
+                [g,b  |-  Qt[..] ]
    in
-       [g |- p_beta (\x. \qf. Q' .. x qf)]
+       [g |- p_beta (\x. \qf. Q' qf)]
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N ..) u -> bred x u), _q: ({q : p} path  (N ..) q -> path x q))]}
-  [g |- (#p._b ..) (U ..) (R ..)] => % [g |- bred x (U ..)]
-  let ([g |- Pt ..] : [g |- npath (U ..) (P ..)]) = pt in
-  let [g |- Qt ..] = bred_rtl [g |- R ..] pt % path (N ..) (P ..)
-  in [g |- (#p._q ..) (P ..) (Qt ..)]
+| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+  [g |- (#p._b[..]) (U[..]) (R[..])] => % [g |- bred x (U[..])]
+  let ([g |- Pt[..]] : [g |- npath (U[..]) (P[..])]) = pt in
+  let [g |- Qt[..]] = bred_rtl [g |- R[..]] pt % path (N[..]) (P[..])
+  in [g |- (#p._q[..]) (P[..]) (Qt[..])]
  ;
 
-datatype eq : tm -> tm -> type =
+inductive eq : tm -> tm -> type =
 | ref : eq M M;
 
-datatype nf_eq : nf -> nf -> type =
+inductive nf_eq : nf -> nf -> type =
 | nref : nf_eq M M;
 
-datatype ExNPath : (g:jctx) [g |- nf] -> ctype =
-| ExPath : [g |- npath (U ..) (P ..)] -> ExNPath [g |- U ..] ;
+inductive ExNPath : (g:jctx) [g |- nf] -> ctype =
+| ExPath : [g |- npath (U[..]) (P[..])] -> ExNPath [g |- U[..]] ;
 
-rec path_exists : {g:jctx} {U:[g |- nf] }  ExNPath [g |- U ..] =
-mlam g => mlam U => case [g |- U ..] of
-| [g |- nabs \x. U .. x] =>
-let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath (U .. x) (P .. p)]}
-    ExPath [g, b:block (x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _np: npath y p)  |-  Ql .. b.y b.p b._np] =
+rec path_exists : {g:jctx} {U:[g |- nf] }  ExNPath [g |- U[..]] =
+mlam g => mlam U => case [g |- U[..]] of
+| [g |- nabs \x. U] =>
+let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath (U) (P[..] p)]}
+    ExPath [g, b:block (x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _np: npath y p)  |-  Ql[..] b.y b.p b._np] =
     path_exists [g, b:block (x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _np:
                              npath y p) ]
-               [g,b |- U .. b.y]
+               [g,b |- U[..] b.y]
 in
-    ExPath [g |- np_abs \x.\p.\pt. Ql .. x p pt]
+    ExPath [g |- np_abs \x.\p.\pt. Ql p pt]
 
-| [g |- napp (U ..) (V ..)] =>
-    let ExPath [g |- Ql .. ] = path_exists [g] [g |- U ..] in
-    ExPath [g |- np_app_l (Ql ..)]  % ???
+| [g |- napp (U[..]) (V[..])] =>
+    let ExPath [g |- Ql[..] ] = path_exists [g] [g |- U[..]] in
+    ExPath [g |- np_app_l (Ql[..])]  % ???
 
 
 | {#p: [g |- block x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _np: npath y p]}
-  [g |- #p.y ..] => ExPath [g |- #p._np ..]
+  [g |- #p.y[..]] => ExPath [g |- #p._np[..]]
 ;
 
 
 rec tm_same: {g:jctx} {U:[g |- nf ]} {V: [g |- nf ]}
-    ({P:[g |- p]} [g |- npath (U ..)(P ..)] -> [g |- npath (V ..) (P ..)]) ->
-     [g |- nf_eq (U ..) (V ..)]
+    ({P:[g |- p]} [g |- npath (U[..])(P[..])] -> [g |- npath (V[..]) (P[..])]) ->
+     [g |- nf_eq (U[..]) (V[..])]
   =
-mlam g => mlam U => mlam V => fn pf => case [g |- U ..] of
+mlam g => mlam U => mlam V => fn pf => case [g |- U[..]] of
 | {#p: [g |- block x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _np: npath y p]}
-  [g |- #p.y ..] =>
-  let [g |- #q._npt ..] = pf [g |- #p.p ..] [g |- #p._np ..] in
+  [g |- #p.y[..]] =>
+  let [g |- #q._npt[..]] = pf [g |- #p.p[..]] [g |- #p._np[..]] in
   [g |- nref ]
 
-| [g |- napp (U1 ..) (U2 ..)] =>
-  let ExPath np = path_exists [g] [g |- napp (U1 ..) (U2 ..)] in
-  (case np of  % [g |- npath (napp (U1 ..) (U2 ..)) (P ..)]
-  | [g |- np_app_l (Pf1 ..)] =>   %   [g |- npath (napp (U1 ..) (U2 ..)) (left (P1 ..))]
-    let ([g |- np_app_l (Qt1 ..)]  : [g |- npath (napp (V1 ..) (V2 ..)) (left (P1 ..))])
-          = pf [g |- left _ ] [g |- np_app_l (Pf1 ..)] in
-    let [g |- nref] = tm_same  [g] [g |- U1 ..] [g |- V1 ..]
+| [g |- napp (U1[..]) (U2[..])] =>
+  let ExPath np = path_exists [g] [g |- napp (U1[..]) (U2[..])] in
+  (case np of  % [g |- npath (napp (U1[..]) (U2[..])) (P[..])]
+  | [g |- np_app_l (Pf1[..])] =>   %   [g |- npath (napp (U1[..]) (U2[..])) (left (P1[..]))]
+    let ([g |- np_app_l (Qt1[..])]  : [g |- npath (napp (V1[..]) (V2[..])) (left (P1[..]))])
+          = pf [g |- left _ ] [g |- np_app_l (Pf1[..])] in
+    let [g |- nref] = tm_same  [g] [g |- U1[..]] [g |- V1[..]]
                    (mlam Q1 => fn qt1 =>
-                    let [g |- Pt1 ..] = qt1 in
-                    let [g |- np_app_l (Qt1 ..)]  = pf [g |- left (Q1 ..) ] [g |- np_app_l (Pt1 ..)] % [g |- npath (V ..) (left (P1 ..))]
-                    in [g |- Qt1 ..]) in
-    let [g |- nref] = tm_same  [g] [g |- U2 ..] [g |- V2 ..]
+                    let [g |- Pt1[..]] = qt1 in
+                    let [g |- np_app_l (Qt1[..])]  = pf [g |- left (Q1[..]) ] [g |- np_app_l (Pt1[..])] % [g |- npath (V[..]) (left (P1[..]))]
+                    in [g |- Qt1[..]]) in
+    let [g |- nref] = tm_same  [g] [g |- U2[..]] [g |- V2[..]]
                    (mlam Q1 => fn qt1 =>
-                    let [g |- Pt1 ..] = qt1 in
-                    let [g |- np_app_r (Qt1 ..)]  = pf [g |- right (Q1 ..) ] [g |- np_app_r (Pt1 ..)] % [g |- npath (V ..) (left (P1 ..))]
-                    in [g |- Qt1 ..])
+                    let [g |- Pt1[..]] = qt1 in
+                    let [g |- np_app_r (Qt1[..])]  = pf [g |- right (Q1[..]) ] [g |- np_app_r (Pt1[..])] % [g |- npath (V[..]) (left (P1[..]))]
+                    in [g |- Qt1[..]])
     in [g |- nref]
 
- | [g |- np_app_r (Pt2 ..)] => % [g |- npath (napp (U1 ..) (U2 ..)) (right (P2 ..))]
-    let ([g |- np_app_r (Qt2 ..)] : [g |- npath (napp (V1 ..) (V2 ..)) (right (P1 ..))])
-            =  pf [g |- right _ ] [g |- np_app_r (Pt2 ..)] in
+ | [g |- np_app_r (Pt2[..])] => % [g |- npath (napp (U1[..]) (U2[..])) (right (P2[..]))]
+    let ([g |- np_app_r (Qt2[..])] : [g |- npath (napp (V1[..]) (V2[..])) (right (P1[..]))])
+            =  pf [g |- right _ ] [g |- np_app_r (Pt2[..])] in
 
-    let [g |- nref] = tm_same  [g] [g |- U1 ..] [g |- V1 ..]
+    let [g |- nref] = tm_same  [g] [g |- U1[..]] [g |- V1[..]]
                    (mlam Q1 => fn qt1 =>
-                    let [g |- Pt1 ..] = qt1 in
-                    let [g |- np_app_l (Qt1 ..)]  = pf [g |- left (Q1 ..) ] [g |- np_app_l (Pt1 ..)] % [g |- npath (V ..) (left (P1 ..))]
-                    in [g |- Qt1 ..]) in
-    let [g |- nref] = tm_same  [g] [g |- U2 ..] [g |- V2 ..]
+                    let [g |- Pt1[..]] = qt1 in
+                    let [g |- np_app_l (Qt1[..])]  = pf [g |- left (Q1[..]) ] [g |- np_app_l (Pt1[..])] % [g |- npath (V[..]) (left (P1[..]))]
+                    in [g |- Qt1[..]]) in
+    let [g |- nref] = tm_same  [g] [g |- U2[..]] [g |- V2[..]]
                    (mlam Q1 => fn qt1 =>
-                    let [g |- Pt1 ..] = qt1 in
-                    let [g |- np_app_r (Qt1 ..)]  = pf [g |- right (Q1 ..) ] [g |- np_app_r (Pt1 ..)] % [g |- npath (V ..) (left (P1 ..))]
-                    in [g |- Qt1 ..])
+                    let [g |- Pt1[..]] = qt1 in
+                    let [g |- np_app_r (Qt1[..])]  = pf [g |- right (Q1[..]) ] [g |- np_app_r (Pt1[..])] % [g |- npath (V[..]) (left (P1[..]))]
+                    in [g |- Qt1[..]])
     in [g |- nref]
 
    )
 
-| [g |- nabs \x. U .. x] =>
-  let ExPath np = path_exists [g] [g |- nabs \x.U .. x] in
-  let  [g |- np_abs (\x.\p.\pf. Pf .. x p pf)]  : [g |- npath (nabs \x. U .. x) (bnd \p.P .. p)] = np in
-  let ([g |- np_abs (\x.\p.\pf.Qt1 .. x p pf)]  : [g |- npath (nabs \y. V .. y) (bnd \p. P ..p)])
-          = pf [g |- bnd \p. P .. p] [g |- np_abs (\x.\p.\pf. Pf .. x p pf)] in
+| [g |- nabs \x. U] =>
+  let ExPath np = path_exists [g] [g |- nabs \x.U] in
+  let  [g |- np_abs (\x.\p.\pf. Pf p pf)]  : [g |- npath (nabs \x. U) (bnd \p.P[..] p)] = np in
+  let ([g |- np_abs (\x.\p.\pf.Qt1 p pf)]  : [g |- npath (nabs \y. V[..] y) (bnd \p. P[..]p)])
+          = pf [g |- bnd \p. P[..] p] [g |- np_abs (\x.\p.\pf. Pf p pf)] in
   let [g,b:block (x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _npt: npath y p)  |-  nref] =
                  tm_same [g,b:block (x:tm, p:p, y:nf, _r: bred x y, _pt: path x p, _npt: npath y p)]
-                    [g,b |- U .. b.y] [g,b |- V .. b.y]
+                    [g,b |- U[..] b.y] [g,b |- V[..] b.y]
                     (mlam Q => fn qt =>
-                      let [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Q' .. b.p ] =
-                             [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Q .. b] in
+                      let [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Q'[..] b.p ] =
+                             [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Q[..] b] in
                       % strengthen Q
-                      let [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Pt .. b.y b.p b._npt] = qt in
-                      let [g |- np_abs  \y.\p.\pt. Qt .. y p pt ] = pf [g |- bnd \b. Q' .. b] [g |- np_abs \x.\p.\pt. Pt .. x p pt] in
-                      [g,b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Qt .. b.y b.p b._npt]
+                      let [g, b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Pt[..] b.y b.p b._npt] = qt in
+                      let [g |- np_abs  \y.\p.\pt. Qt[..] y p pt ] = pf [g |- bnd \b. Q'[..] b] [g |- np_abs \x.\p.\pt. Pt p pt] in
+                      [g,b: block (x:tm, p:p, y:nf, _r:  bred x y, _pt: path x p, _npt: npath y p)  |-  Qt[..] b.y b.p b._npt]
                     )
   in
       [g |- nref]
@@ -265,13 +265,13 @@ mlam U => mlam V => fn r1 => fn r2 => fn pf =>
 
 
 rec same_paths_join : {g:jctx}{U:[g |- nf]}{V:[g |- nf]}
-                      [g |- bred (M ..) (U ..)] -> [g |- bred (N ..) (V ..)] ->
-                       ({P:[g |- p]} [g |- path (M ..) (P ..)] -> [g |- path (N ..) (P ..)])
-                      -> [g |- nf_eq (U ..) (V ..)]
+                      [g |- bred (M[..]) (U[..])] -> [g |- bred (N[..]) (V[..])] ->
+                       ({P:[g |- p]} [g |- path (M[..]) (P[..])] -> [g |- path (N[..]) (P[..])])
+                      -> [g |- nf_eq (U[..]) (V[..])]
 =
 mlam g => mlam U => mlam V => fn r1 => fn r2 => fn pf =>
- tm_same  [g] [g |- U ..] [g |- V ..]
-      (mlam P => fn l => bred_ltr r2 (pf [g |- P ..] (bred_rtl r1 l)))
+ tm_same  [g] [g |- U[..]] [g |- V[..]]
+      (mlam P => fn l => bred_ltr r2 (pf [g |- P[..]] (bred_rtl r1 l)))
  ;
 
 

@@ -4,20 +4,20 @@
 
 
 % Definition of types and expressions
-datatype tp: type =
+LF tp: type =
 | arr: tp -> tp -> tp
 | nat: tp
 ;
 %name tp T.
 
-datatype term: type = 
+LF term: type = 
 | lam : tp -> (term -> term) -> term
 | app : term -> term -> term
 ;
 %name term E.
 
 % Typing judgment
-datatype hastype: term -> tp -> type = 
+LF hastype: term -> tp -> type = 
 | t_lam: ({x:term}hastype x T1 -> hastype (E x) T2)
         -> hastype (lam T1 E) (arr T1 T2)
 | t_app: hastype E1 (arr T2 T) -> hastype E2 T2
@@ -26,7 +26,7 @@ datatype hastype: term -> tp -> type =
 %name hastype H.
 
 % Equality predicate
-datatype eq: tp -> tp -> type = 
+LF eq: tp -> tp -> type = 
 | refl: eq T T;
 
 
@@ -39,22 +39,22 @@ Proof by induction on E.
 
 schema tctx = some [t:tp] block (x:term, _t:hastype x t);
 
-rec unique : (g:tctx)[g |- hastype (E ..) T] -> [g |- hastype (E ..) T']
+rec unique : (g:tctx)[g |- hastype (E[..]) (T[])] -> [g |- hastype (E[..]) (T'[])]
              ->  [ |- eq T T'] =  
 / total d (unique _ _ _ _ d) /
 fn d => fn f => case d of
-| [g |- t_app (D1 ..) (D2 ..)] =>
-  let [g |- t_app (F1 ..) (F2 ..)] = f in
-  let [ |- refl]  = unique  [g |- D1 ..] [g |- F1 ..] in
+| [g |- t_app (D1[..]) (D2[..])] =>
+  let [g |- t_app (F1[..]) (F2[..])] = f in
+  let [ |- refl]  = unique  [g |- D1[..]] [g |- F1[..]] in
     [ |- refl]
 
-| [g |- t_lam \x.\u. D .. x  u] =>
-  let [g |- t_lam \x.\u. F .. x u] = f in
-  let [ |- refl] = unique [g,b:block x:term, u:hastype x _ |-  D .. b.1 b.2] [g,b |- F .. b.1 b.2] in
+| [g |- t_lam \x.\u. D] =>
+  let [g |- t_lam \x.\u. F] = f in
+  let [ |- refl] = unique [g,b:block x:term, u:hastype x _ |-  D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
    [ |- refl]
 
-| [g |- #q.2 ..] =>           % d : hastype #q.1 T
-  let [g |- #r.2 ..] = f  in  % f : hastype #q.1 T'
+| [g |- #q.2[..]] =>           % d : hastype #q.1 T
+  let [g |- #r.2[..]] = f  in  % f : hastype #q.1 T'
     [ |- refl]
 ;
 

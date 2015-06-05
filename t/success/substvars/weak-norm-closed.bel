@@ -20,92 +20,92 @@ stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
 refl : mstep M M.
 trans : mstep M M' -> mstep M' M'' -> mstep M M''.
 
-datatype IsValue : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A ..)]} ctype =
+inductive IsValue : {g:ctx} {A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
 | C : IsValue [g] [g |- i]  [g |- c]
-| Lam : IsValue [g] [g |- arr (A ..) (B ..)] [g |- lam (\x. M .. x)]
+| Lam : IsValue [g] [g |- arr (A[..]) (B[..])] [g |- lam (\x. M)]
 ;
 
-datatype Halts : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A ..)]} ctype =
-| Halts : {S:[g |- mstep (M ..) (V ..)]} IsValue [g] [g |- A ..] [g |- V .. ] ->
-          Halts [g] [g |- A ..] [g |- M ..]
+inductive Halts : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+| Halts : {S:[g |- mstep (M[..]) (V[..])]} IsValue [g] [g |- A[..]] [g |- V[..] ] ->
+          Halts [g] [g |- A[..]] [g |- M[..]]
 ;
 
-datatype Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A ..)]} ctype =
-| Base : Halts [g] [g |- i] [g |- M .. ] -> Reduce [g] [g |- i] [g |- M ..]
-| Arr :  {g:ctx}{A:[g |- tp]}{B:[g |- tp]}{M:[g |- tm (arr (A ..) (B ..))]}
-         Halts [g] [g |- arr (A ..) (B ..)] [g |- M ..] ->
-         ({N:[g |- tm (A ..)]}
-          Reduce [g] [g |- A ..] [g |- N ..] -> Reduce [g] [g |- B ..] [g |- app (M ..) (N ..)])
-           -> Reduce [g] [g |- arr (A ..) (B ..)] [g |- M ..]
+stratified Reduce : {g:ctx}{A:[g |- tp]} {M:[g |- tm (A[..])]} ctype =
+| Base : Halts [g] [g |- i] [g |- M[..] ] -> Reduce [g] [g |- i] [g |- M[..]]
+| Arr :  {g:ctx}{A:[g |- tp]}{B:[g |- tp]}{M:[g |- tm (arr (A[..]) (B[..]))]}
+         Halts [g] [g |- arr (A[..]) (B[..])] [g |- M[..]] ->
+         ({N:[g |- tm (A[..])]}
+          Reduce [g] [g |- A[..]] [g |- N[..]] -> Reduce [g] [g |- B[..]] [g |- app (M[..]) (N[..])])
+           -> Reduce [g] [g |- arr (A[..]) (B[..])] [g |- M[..]]
 ;
 
-rec haltsMstep : (g:ctx) {S:[g |- mstep (M ..) (M' ..)]} Halts [g] [g |- A ..] [g |- M' ..] -> Halts [g] [g |- A ..] [g |- M ..] =
-mlam MS => fn h => let (h : Halts [g] [g |- A ..] [g |- M' ..]) = h in
-let Halts [g |- MS' ..] v = h in Halts [g |- trans (MS ..) (MS' ..)] v
+rec haltsMstep : (g:ctx) {S:[g |- mstep (M[..]) (M'[..])]} Halts [g] [g |- A[..]] [g |- M'[..]] -> Halts [g] [g |- A[..]] [g |- M[..]] =
+mlam MS => fn h => let (h : Halts [g] [g |- A[..]] [g |- M'[..]]) = h in
+let Halts [g |- MS'[..]] v = h in Halts [g |- trans (MS[..]) (MS'[..])] v
 ;
 
 % CR2
-rec closed : Reduce [g] [g |- A ..] [g |- M' ..] -> {S:[g |- mstep (M ..) (M' ..)]} Reduce [g] [g |- A ..] [g |- M ..] =
-fn r => mlam S => let (r : Reduce [g] [g |- A ..] [g |- M' ..]) = r in  case r of
-| Base ha => Base (haltsMstep [g |- S ..] ha)
-| Arr [g] [g |- A ..] [g |- B ..] [g |- M ..] ha f => Arr [g] [g |- A ..] [g |- B ..] [g |- _]
-  (haltsMstep [g |- S ..] ha)
-  (mlam N => fn rn => closed (f [g |- N ..] rn) [g |- stepapp (S ..) refl])
+rec closed : Reduce [g] [g |- A[..]] [g |- M'[..]] -> {S:[g |- mstep (M[..]) (M'[..])]} Reduce [g] [g |- A[..]] [g |- M[..]] =
+fn r => mlam S => let (r : Reduce [g] [g |- A[..]] [g |- M'[..]]) = r in  case r of
+| Base ha => Base (haltsMstep [g |- S[..]] ha)
+| Arr [g] [g |- A[..]] [g |- B[..]] [g |- M[..]] ha f => Arr [g] [g |- A[..]] [g |- B[..]] [g |- _]
+  (haltsMstep [g |- S[..]] ha)
+  (mlam N => fn rn => closed (f [g |- N[..]] rn) [g |- stepapp (S[..]) refl])
 
 ;
 
 % CR1
-rec reify : Reduce [g] [g |- A ..] [g |- M ..] -> Halts [g] [g |- A ..] [g |- M ..] =
-fn r => let r : Reduce [g] [g |- A ..] [g |- M ..] = r in case r of
+rec reify : Reduce [g] [g |- A[..]] [g |- M[..]] -> Halts [g] [g |- A[..]] [g |- M[..]] =
+fn r => let r : Reduce [g] [g |- A[..]] [g |- M[..]] = r in case r of
 | Base h => h
-| Arr [g] [g |- A ..] [g |- B ..] [g |- M ..] ha f => ha
+| Arr [g] [g |- A[..]] [g |- B[..]] [g |- M[..]] ha f => ha
 ;
 
 %  h |- #s : g
-datatype RedSub : {g:ctx}{h:ctx}{#S:h |- g} ctype =
+inductive RedSub : {g:ctx}{h:ctx}{#S:[h |- g]} ctype =
 | Nil : {h:ctx} RedSub [] [h] [h |- ^ ]
-| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:h |- g}{M:[h |- tm (A #S[..])]} % !!!!
-        RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A #S[..] ] [h |- M ..]
-         -> RedSub [g,x:tm (A ..)] [h] [h |- #S[..], (M ..) ]
+| Dot : {g:ctx}{h:ctx}{A:[g |- tp]}{#S:[h |- g]}{M:[h |- tm A[#S]]} 
+        RedSub [g] [h] [h |- #S[..] ] -> Reduce [h] [h |- A[#S] ] [h |- M[..]]
+         -> RedSub [g,x:tm (A[..])] [h] [h |- #S[..], (M[..]) ]
 ;
 %{
-rec redVar : {g:ctx}{h:ctx}{T:[g |- tp]}{#S:h |- g}{#p:[g |- tm (T ..)]} RedSub [g] [h] [h |- #S[..] ]
+rec redVar : {g:ctx}{h:ctx}{T:[g |- tp]}{#S:[h |- g]}{#p:[g |- tm (T[..])]} RedSub [g] [h] [h |- #S[..] ]
               ->  Reduce [h] [h |- T #S[..]] [h |- #p #S[..] ] =
 mlam g => mlam h => mlam T => mlam #S => mlam #p => fn rs =>
-case [g |- #p ..] of
- | {A:[g' |-  tp]} [g',x:tm (A ..) |-  x] =>
+case [g |- #p[..]] of
+ | {A:[g' |-  tp]} [g',x:tm (A[..]) |-  x] =>
     (case rs of
      | {#R:g'[h]}{A:[g' |- tp]}{N:[h |- tm (A #R[..])]}
-       Dot [g'] [h] [g' |-  A ..] [h |- #R[..] ] [h |- N .. ] rs' rN => rN)
- | {#q : [g' |-  tm (T ..)]} [g',x:tm (A ..) |-  #q ..] =>
+       Dot [g'] [h] [g' |-  A[..]] [h |- #R[..] ] [h |- N[..] ] rs' rN => rN)
+ | {#q : [g' |-  tm (T[..])]} [g',x:tm (A[..]) |-  #q[..]] =>
     let  {#R:g'[h]}{A:[g' |- tp]}{N:[h |- tm (A #R[..])]}
-        Dot [g'] [h] [g' |-  A ..] [h |- #R[..] ] [h |- N .. ] rs' rN = rs in
-     redVar [g'] [h] [g' |-  T ..] [h |- #R[..] ] [g' |-  #q ..] rs'
+        Dot [g'] [h] [g' |-  A[..]] [h |- #R[..] ] [h |- N[..] ] rs' rN = rs in
+     redVar [g'] [h] [g' |-  T[..]] [h |- #R[..] ] [g' |-  #q[..]] rs'
 ;
 
 
-rec eval : {g:ctx}{h:ctx}{A:[g |- tp]}{M:[g |- tm (A ..)]}{#S:h |- g} RedSub [g] [h] [h |- #S[..] ]
+rec eval : {g:ctx}{h:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]}{#S:[h |- g]} RedSub [g] [h] [h |- #S[..] ]
            -> Reduce [h] [h |- A #S[..]] [h |- M #S[..] ] =
-mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g |- M ..] of
-| {T:[g' |- tp]}{#p:[g' |-  tm (T ..)]}
-  [g' |-  #p ..] => redVar [g'] [h] [g' |- T ..] [h |- #S[..] ] [g' |-  #p ..] rs
+mlam g => mlam h => mlam A => mlam M => mlam #S => fn rs => case [g |- M[..]] of
+| {T:[g' |- tp]}{#p:[g' |-  tm (T[..])]}
+  [g' |-  #p[..]] => redVar [g'] [h] [g' |- T[..]] [h |- #S[..] ] [g' |-  #p[..]] rs
 % The above should work, I think...
-| {T2:[g' |- tp]}{T:[g' |- tp]}{M1:[g', y:tm (T2 ..) |-  tm (T ..)]}
-  [g' |-  lam (\x. M1 .. x)] =>
+| {T2:[g' |- tp]}{T:[g' |- tp]}{M1:[g', y:tm (T2[..]) |-  tm (T[..])]}
+  [g' |-  lam (\x. M1)] =>
   Arr [h] [h |- T2 #S[..]] [h |- T #S[..]] [h |- lam (\x. M1 #S[..] x)]
     (Halts [h |- refl] Lam)
     (mlam N => fn rN => closed
-       (eval [g',x:tm (T2 ..)] [h] [g',x |-  T ..] [g',x |-  M1 .. x] [h |- #S[..] (N ..)]
-            (Dot [g'] [h] [g' |-  T2 ..]  [h |-  #S[..]]
-                  [h |- (N ..)] rs rN
+       (eval [g',x:tm (T2[..])] [h] [g',x |-  T[..]] [g',x |-  M1] [h |- #S[..] (N[..])]
+            (Dot [g'] [h] [g' |-  T2[..]]  [h |-  #S[..]]
+                  [h |- (N[..])] rs rN
                  ))
       [h |- beta])
- | {T:[g' |- tp]}{T2:[g' |- tp]}{M1:[g' |-  tm (arr (T2 ..) (T ..))]}{M2:[g' |-  tm (T2 ..)]}
-  [g' |-  app (M1 ..) (M2 ..)] =>
-  let rM2 : Reduce [h] [h |- A' ..] [h |- N2 ..] = eval [g'] [h] [g' |-  T2 ..] [g' |-  M2 ..] [h |- #S[..] ] rs in
-  let Arr [h0] [h0 |-  S2 ..] [h0 |-  S1 ..] [h0 |-  N1 ..] ha f =
-       eval [g'] [h] [g' |-  arr (T2 ..) (T ..)] [g' |-  M1 ..] [h |- #S[..] ] rs in
-  f [h |- N2 ..] rM2
+ | {T:[g' |- tp]}{T2:[g' |- tp]}{M1:[g' |-  tm (arr (T2[..]) (T[..]))]}{M2:[g' |-  tm (T2[..])]}
+  [g' |-  app (M1[..]) (M2[..])] =>
+  let rM2 : Reduce [h] [h |- A'[..]] [h |- N2[..]] = eval [g'] [h] [g' |-  T2[..]] [g' |-  M2[..]] [h |- #S[..] ] rs in
+  let Arr [h0] [h0 |-  S2[..]] [h0 |-  S1[..]] [h0 |-  N1[..]] ha f =
+       eval [g'] [h] [g' |-  arr (T2[..]) (T[..])] [g' |-  M1[..]] [h |- #S[..] ] rs in
+  f [h |- N2[..]] rM2
 | [g' |-  c] => Base (Halts [h |- refl] C)
 ;
 
@@ -115,9 +115,9 @@ mlam A => mlam M =>
 reify (eval [] [] [ |- A] [ |- M] [ |- ^ ] (Nil []))
 ;
 
-%rec weakNorm : {g:ctx}{A:[g |- tp]}{M:[g |- tm (A ..)]} Halts [g] [g |- A ..] [g |- M ..] =
+%rec weakNorm : {g:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]} Halts [g] [g |- A[..]] [g |- M[..]] =
 %mlam g => mlam A => mlam M =>
-%reify (eval [g] [g] [g |- A ..] [g |- M ..] [g |- ..] ?)
+%reify (eval [g] [g] [g |- A[..]] [g |- M[..]] [g |-[..]] ?)
 % For this I need a lemma which says that RedSub holds of the identity substitution
 %;
 

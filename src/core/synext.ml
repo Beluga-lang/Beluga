@@ -19,6 +19,7 @@ module LF = struct
 
   and typ_decl =
     | TypDecl of name * typ
+    | TypDeclOpt of name
  
   and cltyp =
     | MTyp of typ
@@ -30,11 +31,13 @@ module LF = struct
     | Subst
 
   and ctyp =
-    | ClTyp of Loc.t * cltyp * dctx
-    | CTyp of Loc.t * name 
+    | ClTyp of cltyp * dctx
+    | CTyp of name 
+
+  and loc_ctyp = Loc.t * ctyp
 
   and ctyp_decl =
-    | Decl of name * ctyp * depend
+    | Decl of name * loc_ctyp * depend
     | DeclOpt of name
 
   and typ =
@@ -53,6 +56,7 @@ module LF = struct
     | Ann of Loc.t * normal * typ
     | TList of Loc.t * normal list
     | NTyp of Loc.t * typ
+    | PatEmpty  of Loc.t
 
   and head =
     | Name  of Loc.t * name
@@ -73,6 +77,7 @@ module LF = struct
     | EmptySub of Loc.t
     | Dot      of Loc.t * sub * front
     | Id       of Loc.t
+    | RealId
     | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
 
   and front =
@@ -91,6 +96,7 @@ module LF = struct
     | Null
     | CtxVar   of Loc.t * name
     | DDec     of dctx * typ_decl
+    | CtxHole
 
   and 'a ctx =
     | Empty
@@ -102,8 +108,6 @@ module LF = struct
   and schema =
     | Schema of sch_elem list
 
-  and psi_hat  = name list
-
   and mctx = ctyp_decl ctx
 
 end
@@ -112,24 +116,22 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
- type meta_obj =
-   | MetaCtx of Loc.t * LF.dctx
-   | MetaObj of Loc.t * LF.psi_hat * LF.normal
-   | MetaObjAnn of Loc.t * LF.dctx * LF.normal
-   | MetaParam of Loc.t * LF.psi_hat * LF.head
-   | MetaSObj of Loc.t * LF.psi_hat * LF.sub
-   | MetaSObjAnn of Loc.t * LF.dctx * LF.sub
+ type clobj = 
+   | MObj of LF.normal
+   | SObj of LF.sub
+   | PObj of LF.head
+
+ type mfront =
+   | ClObj of LF.dctx * clobj
+   | CObj of LF.dctx
+
+ type meta_obj = Loc.t * mfront
 
  type meta_spine =
    | MetaNil
    | MetaApp of meta_obj * meta_spine
 
-
- type meta_typ =
-   | MetaSchema of Loc.t * name
-   | MetaTyp of Loc.t * LF.typ * LF.dctx
-   | MetaParamTyp of Loc.t  * LF.typ * LF.dctx
-   | MetaSubTyp  of Loc.t * LF.dctx * LF.dctx
+ type meta_typ = LF.loc_ctyp
 
  type typ =                                     (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine
@@ -167,7 +169,6 @@ module Comp = struct
      | Boolean of Loc.t * bool
 
  and pattern =
-   | PatEmpty  of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * name * pattern_spine
    | PatVar   of Loc.t * name
@@ -238,10 +239,10 @@ end
 
 (** External Signature Syntax *)
 module Sgn = struct
-  type positivity_flag = 
-    | Positivity
-    | Stratify of Loc.t * (string  option)
-    (* | Stratify of Loc.t * Comp.order * name * (name option) list  *)
+
+  type datatype_flavour =
+      InductiveDatatype
+    | StratifiedDatatype
 
   type assoc = Left | Right | None
   type precedence = int
@@ -264,7 +265,7 @@ module Sgn = struct
   type decl =
     | Const         of Loc.t * name * LF.typ
     | Typ           of Loc.t * name * LF.kind
-    | CompTyp       of Loc.t * name * Comp.kind  * positivity_flag option
+    | CompTyp       of Loc.t * name * Comp.kind  * datatype_flavour
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ
@@ -272,7 +273,7 @@ module Sgn = struct
     | Schema        of Loc.t * name * LF.schema
     | Pragma        of Loc.t * pragma
     | GlobalPragma  of Loc.t * global_pragma
-    | MRecTyp       of Loc.t * decl list list
+    | MRecTyp       of Loc.t * (decl * decl list) list
     | Rec           of Loc.t * Comp.rec_fun list
     | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query         of Loc.t * name option * LF.typ * int option * int option

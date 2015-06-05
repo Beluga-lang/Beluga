@@ -10,5 +10,5 @@ schema ctx = some [t:tp] exp t;
 
 rec f : {g:ctx} [ |- exp i] -> [g |- exp i] =
     mlam g => fn x => case x of
-      | [g |- #p..] => [g |- expi]
+      | [g |- #p] => [g |- expi]
 ;

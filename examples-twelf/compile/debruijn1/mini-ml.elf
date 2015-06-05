@@ -1,8 +1,0 @@
-%%% The Mini-ML Language
-%%% Version restricted to pure lambda-calculus
-%%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
-
-exp  : type.  %name exp E.
-
-lam   : (exp -> exp) -> exp.
-app   : exp -> exp -> exp.

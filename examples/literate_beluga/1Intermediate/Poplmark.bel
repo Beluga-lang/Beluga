@@ -17,7 +17,7 @@ This implementation not only uses higher-order abstract syntax in specifying the
 First, we define or type `tp` with higher-order abstract syntax in LF as follows:
 }}%
 
-datatype tp : type = 
+LF tp : type = 
   | top   : tp
   | arr   : tp -> tp -> tp	        % Functions: A1 => A2
   | forall: tp -> (tp -> tp) -> tp       % Universal Type: forall x>:A1. A2    forall A1 ([x] A2 x)
@@ -40,7 +40,7 @@ We use (<:) to denote algorithmic subtyping.
 }}%
 
 
-datatype sub : tp -> tp -> type =
+LF sub : tp -> tp -> type =
   | sa_top : sub S top
   | sa_arr : sub T1 S1 
              -> sub S2 T2 
@@ -68,23 +68,23 @@ schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 ### Reflexivity
 <b>Theorem</b> :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$. <br>
 
-The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub (T ..) (T ..)]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T ..]`. 
+The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub (T[..]) (T[..])]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T[..]]`. 
 }}%
 
-rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T ..) (T ..)] = 
-    mlam g => mlam T => case [g |- T ..] of 
-    | [g |- #p.1 ..] => [g |- #p.4 ..]
+rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T[..]) (T[..])] = 
+    mlam g => mlam T => case [g |- T[..]] of 
+    | [g |- #p.1[..]] => [g |- #p.4[..]]
     | [g |- top ] => [g |- sa_top]
-    | [g |- arr (T1 ..) (T2 ..)] => 
-      let  [g |- S1 ..] = refl [g] [g |- T1 ..] in
-      let  [g |- S2 ..] = refl [g] [g |- T2 ..] in
-      [g |- sa_arr (S1 ..) (S2 ..)]
-    | [g |- forall (T1 ..)  (\a. T2 .. a) ] => 
-      let [g |- S1 .. ] =  refl [g] [g |- T1 ..] in
-      let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a ) |- S2 .. b.1 b.2 b.3 b.4]
-          = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a )] 
-                  [g, b |- T2 .. b.1]
-      in [g |- sa_all (S1 ..) (S2 ..)] 
+    | [g |- arr (T1[..]) (T2[..])] => 
+      let  [g |- S1[..]] = refl [g] [g |- T1[..]] in
+      let  [g |- S2[..]] = refl [g] [g |- T2[..]] in
+      [g |- sa_arr (S1[..]) (S2[..])]
+    | [g |- forall (T1[..])  (\a. T2) ] => 
+      let [g |- S1[..] ] =  refl [g] [g |- T1[..]] in
+      let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a ) |- S2[..,b.1,b.2,b.3,b.4]]
+          = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )] 
+                  [g, b |- T2[..,b.1]]
+      in [g |- sa_all (S1[..]) (S2[..])] 
 
 ;
 
@@ -93,42 +93,42 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T ..) (T ..)] =
 ### Transitivity
 <b>Theorem</b> :  For every $\Gamma$, $S$, $Q$ and $T$,  if $\Gamma\vdash S <: Q$ and  $\Gamma\vdash Q <: T$, then  $\Gamma\vdash S <: T$. <br>
 
-The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub (S ..) (Q ..)] -> [g |- sub (Q..) (T ..)] -> [g |- sub (S ..) (T ..)]`. The context variable is written implicitly in round bracket as `(g:s_ctx)`.  We do case analysis on the derivation of type `[g |- sub (S ..) (Q ..)]`. In some cases we need to provide extral type annotation for the branch. For example, in the case `[g |- sa_arr (D1 ..) (D2 ..) ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr (S1 ..) (S2 ..)) (arr (Q1 ..) (Q2 ..)) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments. We use the same technique in the branch of `sa_all`.  We also need to specify the type of some variables when we don't have enough information on them. For example, in the case `[g |- (#p.2 ..) (U' ..) (T' ..) (D1 ..) (D2 ..)]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
+The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub (S[..]) (Q[..])] -> [g |- sub (Q..) (T[..])] -> [g |- sub (S[..]) (T[..])]`. The context variable is written implicitly in round bracket as `(g:s_ctx)`.  We do case analysis on the derivation of type `[g |- sub (S[..]) (Q[..])]`. In some cases we need to provide extral type annotation for the branch. For example, in the case `[g |- sa_arr (D1[..]) (D2[..]) ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr (S1[..]) (S2[..])) (arr (Q1[..]) (Q2[..])) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments. We use the same technique in the branch of `sa_all`.  We also need to specify the type of some variables when we don't have enough information on them. For example, in the case `[g |- (#p.2[..]) (U'[..]) (T'[..]) (D1[..]) (D2[..])]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
 }}%
 
-rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S ..) (Q ..)] -> [g |- sub (Q..) (T ..)]
- 	    -> [g |- sub (S ..) (T ..)] = 
+rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S[..]) (Q[..])] -> [g |- sub Q T]
+ 	    -> [g |- sub (S[..]) (T[..])] = 
     mlam Q => fn d1 => fn d2 => 
     case d1 of 
-    | [g |- #p.3 .. ] => 
-      let [g |- D2 ..] = d2 in
-      [g |- (#p.2 ..) (Q ..)  _ (#p.3 ..) (D2 ..)] 
-    | [g |- #p.4 .. ] => d2 
-    | {#p :  [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (U' ..), ref: sub a a )] }
-	  {D1 : [g |- sub (#p.1 .. ) (U' ..)]}
-	  [g |- (#p.2 ..) (U' ..) (T' ..) (D1 ..) (D2 ..)] =>
-      let [g |- F1 ..] = trans [ g |- T' .. ] [g |- D2 ..] d2 in
-      trans [ g |- U' .. ] [g |- D1 ..]  [g |- F1 ..]
+    | [g |- #p.3[..] ] => 
+      let [g |- D2[..]] = d2 in
+      [g |- (#p.2[..]) (Q[..])  _ (#p.3[..]) (D2[..])] 
+    | [g |- #p.4[..] ] => d2 
+    | {#p :  [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (U'[..]), ref: sub a a )] }
+	  {D1 : [g |- sub (#p.1[..] ) (U'[..])]}
+	  [g |- (#p.2[..]) (U'[..]) (T'[..]) (D1[..]) (D2[..])] =>
+      let [g |- F1[..]] = trans [ g |- T'[..] ] [g |- D2[..]] d2 in
+      trans [ g |- U'[..] ] [g |- D1[..]]  [g |- F1[..]]
     | [g |- sa_top] => let [g |- sa_top] = d2 in [g |- sa_top]
-    | [g |- sa_arr (D1 ..) (D2 ..) ] : [g |- sub (arr (S1 ..) (S2 ..)) (arr (Q1 ..) (Q2 ..)) ] =>
+    | [g |- sa_arr (D1[..]) (D2[..]) ] : [g |- sub (arr (S1[..]) (S2[..])) (arr (Q1[..]) (Q2[..])) ] =>
       (case d2 of 
-       | [g |- sa_arr (E1 ..) (E2 ..)] => 
-         let [g |- F1 ..] = trans [g |- Q1 ..] [g |- E1 ..] [g |- D1 ..] in
-         let [g |- F2 ..] = trans [g |- Q2 ..] [g |- D2 ..] [g |- E2 ..] in
-         [g |- sa_arr (F1 ..) (F2 ..)]
+       | [g |- sa_arr (E1[..]) (E2[..])] => 
+         let [g |- F1[..]] = trans [g |- Q1[..]] [g |- E1[..]] [g |- D1[..]] in
+         let [g |- F2[..]] = trans [g |- Q2[..]] [g |- D2[..]] [g |- E2[..]] in
+         [g |- sa_arr (F1[..]) (F2[..])]
        | [g |- sa_top] => [g |- sa_top] 
       )
-    | [g |- sa_all (D1 ..) (D2 ..)]  : [g |- sub (forall (S1 ..) (S2 ..)) (forall (Q1 ..) (Q2 ..))] => 
+    | [g |- sa_all (D1[..]) (D2[..])]  : [g |- sub (forall (S1[..]) (S2[..])) (forall (Q1[..]) (Q2[..]))] => 
       (case d2 of 
        | [g |- sa_top] => [g |- sa_top]
-       | [g |- sa_all (E1 ..) (E2 ..)] : [g |- sub (forall (Q1 ..) (Q2 ..)) (forall (T1 ..) (T2 ..))] => 
-         let [g |- F1 ..] = trans [g |- Q1 ..] [g |- E1 ..][g |- D1 ..] 
+       | [g |- sa_all (E1[..]) (E2[..])] : [g |- sub (forall (Q1[..]) (Q2[..])) (forall (T1[..]) (T2[..]))] => 
+         let [g |- F1[..]] = trans [g |- Q1[..]] [g |- E1[..]][g |- D1[..]] 
  in
-         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a )  |- F2 .. b.1 b.2 b.3 b.4]  = 
-             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a )  |- Q2 .. b.1]  
-                   [g, b |- D2 .. b.1 b.2 (b.2 (T1 ..) (Q1 ..)  b.3 (E1 ..) ) b.4 ]
-                   [g, b |- E2 .. b.1 b.2 b.3 b.4 ] in
-         [g |- sa_all (F1 ..) (F2 ..)]
+         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- F2[..,b.1,b.2,b.3,b.4]]  = 
+             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- Q2[..,b.1]]  
+                   [g, b |- D2[..,b.1,b.2,(b.2 (T1[..]) (Q1[..]) b.3 (E1[..])), b.4] ]
+                   [g, b |- E2[..,b.1,b.2,b.3,b.4] ] in
+         [g |- sa_all (F1[..]) (F2[..])]
       )
 
 ;
@@ -141,19 +141,19 @@ and &emsp;`d2 : [g |- sub (forall (Q1..) (Q2..)) (forall (T1..) (T2..))]`<br>
  then  `f  : [g |- sub (forall (S1..) (S2..)) (forall (T1..) (T2..))]`.
 
 By inversion on `d1`, we have: <br>
-`D1 : [g |- sub (Q1 ..) (S1 ..)]` <br>
-`D2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (Q1 ..), ref: sub a a )  |- sub (S2 .. b.1) (Q2 .. b.1)]`
+`D1 : [g |- sub (Q1[..]) (S1[..])]` <br>
+`D2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (Q1[..]), ref: sub a a )  |- sub (S2[..] b.1) (Q2[..] b.1)]`
 
 By inversion on E: <br>
-`E1 : [g |- sub (T1 ..) (Q1 ..)]` <br>
-`E2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a )  |- sub (Q2 .. b.1) (T2 .. b.1)]`
+`E1 : [g |- sub (T1[..]) (Q1[..])]` <br>
+`E2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a )  |- sub (Q2[..] b.1) (T2[..] b.1)]`
 
-By i.h. on E1 and D1 we can obtain a derivation `F1 : [g |- sub (T1 ..) (S1..)]`.
+By i.h. on E1 and D1 we can obtain a derivation `F1 : [g |- sub (T1[..]) (S1..)]`.
 
 We would like to obtain another derivation `F2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 …), ref: sub a a )  ⊢ sub (S2 … b.1) (T2 … b.1)]`. However, applying the induction hypothesis on `D2` and `E2` will not work
-because `D2` depends on the assumption `w: sub a (Q1 ..)` while `E2` depends
-on the assumption `w: sub a (T1 ..)`. We need to first create a derivation D2'
-which depends on `w: sub a (T1..)`. Recall `D2` is a parametric and hypothetical derivation which can be viewed as a function which expects as inputs `tr: sub a u' -> sub u' t' -> sub a t', ref: sub a a`, and an object of type `sub a (Q1..)`. In other words, we need to turn a function which expects `sub a (Q1 ..)` into a function which expects an object of type `sub a (T1 ..)`. We use `b.2 (T1 ..) (Q1 ..)  b.3 (E1 ..)` to achieve this transformation.
+because `D2` depends on the assumption `w: sub a (Q1[..])` while `E2` depends
+on the assumption `w: sub a (T1[..])`. We need to first create a derivation D2'
+which depends on `w: sub a (T1..)`. Recall `D2` is a parametric and hypothetical derivation which can be viewed as a function which expects as inputs `tr: sub a u' -> sub u' t' -> sub a t', ref: sub a a`, and an object of type `sub a (Q1..)`. In other words, we need to turn a function which expects `sub a (Q1[..])` into a function which expects an object of type `sub a (T1[..])`. We use `b.2 (T1[..]) (Q1[..])  b.3 (E1[..])` to achieve this transformation.
 
 }}%
 
@@ -169,7 +169,7 @@ We can also define declarative subtyping in Beluga and prove the equivalence bet
 }}%
 
 
-datatype  subtype : tp -> tp -> type = 
+LF  subtype : tp -> tp -> type = 
   | subtype_top    : subtype T top
   | subtype_refl   : subtype T T
   | subtype_trans  : subtype T1 T2 
@@ -193,29 +193,29 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 ### Soundness
 <b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
 }}%
-rec sound : (g:ss_ctx) [g |- sub (T ..) (S ..)] -> [g |- subtype (T ..) (S ..)] =
+rec sound : (g:ss_ctx) [g |- sub (T[..]) (S[..])] -> [g |- subtype (T[..]) (S[..])] =
     fn d => case d of 
     | [g |- sa_top] => [g |- subtype_top]
-    | [g |- sa_arr (D1 ..) (D2 ..)] => 
-      let [g |- E1 ..] = sound [g |- D1 ..] in
-      let [g |- E2 ..] = sound [g |- D2 ..] in
-      [g |- subtype_arrow (E1 ..) (E2 ..)]
-    | [g |- sa_all (D1 ..) (D2 ..) ] : [g |- sub (forall (S1 ..) ( S2 .. )) ( forall (T1 ..) (T2 .. ))] =>
-      let [g |- E1 ..] = sound [g |- D1 ..] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a , w' : subtype a (T1 ..))  |- E2 .. b.1 b.5 ] = 
-	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a , w' : subtype a (T1 ..))  |- D2 .. b.1 b.2 b.3 b.4] in 
-      [g |- subtype_forall (E1 ..) (E2 ..)]
+    | [g |- sa_arr (D1[..]) (D2[..])] => 
+      let [g |- E1[..]] = sound [g |- D1[..]] in
+      let [g |- E2[..]] = sound [g |- D2[..]] in
+      [g |- subtype_arrow (E1[..]) (E2[..])]
+    | [g |- sa_all (D1[..]) (D2[..]) ] : [g |- sub (forall (S1[..]) ( S2[..] )) ( forall (T1[..]) (T2[..] ))] =>
+      let [g |- E1[..]] = sound [g |- D1[..]] in
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[..,b.1,b.5] ] = 
+	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[..,b.1,b.2,b.3,b.4]] in 
+      [g |- subtype_forall (E1[..]) (E2[..])]
     % Assumption w : sub a Q
-    | [g |- #p.3 ..] => [g |- #p.5 ..]
+    | [g |- #p.3[..]] => [g |- #p.5[..]]
     % reflexivity: sub a a
-    | [g |- #p.4 ..] => [g |- subtype_refl]
+    | [g |- #p.4[..]] => [g |- subtype_refl]
     % transitivity
-    | {#p :  [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (U' ..), ref: sub a a , w' : subtype a (U' ..))] }
-	  {D1 : [g |- sub (#p.1 .. ) (U' ..)]}
-	  [g |- (#p.2 ..) (U' ..) (T' ..) (D1 ..) (D2 ..)] =>
-      let [g |- E1 ..] = sound [g |- D1 ..] in
-      let [g |- E2 ..] = sound [g |- D2 ..] in
-      [g |- subtype_trans (E1 ..) (E2 ..)]   
+    | {#p :  [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (U'[..]), ref: sub a a , w' : subtype a (U'[..]))] }
+	  {D1 : [g |- sub (#p.1[..] ) (U'[..])]}
+	  [g |- (#p.2[..]) (U'[..]) (T'[..]) (D1[..]) (D2[..])] =>
+      let [g |- E1[..]] = sound [g |- D1[..]] in
+      let [g |- E2[..]] = sound [g |- D2[..]] in
+      [g |- subtype_trans (E1[..]) (E2[..])]   
 ;						    
 
 
@@ -224,25 +224,25 @@ rec sound : (g:ss_ctx) [g |- sub (T ..) (S ..)] -> [g |- subtype (T ..) (S ..)] 
 <b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .  
 }}%
 
-rec complete : (g:ss_ctx) [g |- subtype (T ..) (S ..)] -> [g |- sub (T ..) (S ..)] = 
+rec complete : (g:ss_ctx) [g |- subtype (T[..]) (S[..])] -> [g |- sub (T[..]) (S[..])] = 
     fn d => case d of 
-    | [g |- #p.5 ..] => [g |- #p.3 ..]
+    | [g |- #p.5[..]] => [g |- #p.3[..]]
     | [g |- subtype_top] => [g |- sa_top]
     | [g |- subtype_refl] => refl [g] [g |- _] 
-    | [g |- subtype_trans (E1 ..) (E2 ..)] =>
-      let [g |- D1 ..] = complete [g |- E1 ..] in
-      let [g |- D2 ..] = complete [g |- E2 ..] in 
-      trans [g |- _] [g |- D1 ..] [g |- D2 ..]
-    | [g |- subtype_arrow (E1 ..) (E2 ..)] =>
-      let [g |- D1 ..] = complete [g |- E1 ..] in
-      let [g |- D2 ..] = complete [g |- E2 ..] in 
-      [g |- sa_arr (D1 ..) (D2 ..)] 
-    | [g |- subtype_forall (E1 ..) (E2 ..)] : [g |- subtype (forall (S1 ..) ( S2 .. )) ( forall (T1 ..) (T2 .. ))] =>
-      let [g |- D1 .. ] = complete [g |- E1 ..] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a , w' : subtype a (T1 ..))  |- D2 .. b.1 b.2 b.3 b.4 ] = 
+    | [g |- subtype_trans (E1[..]) (E2[..])] =>
+      let [g |- D1[..]] = complete [g |- E1[..]] in
+      let [g |- D2[..]] = complete [g |- E2[..]] in 
+      trans [g |- _] [g |- D1[..]] [g |- D2[..]]
+    | [g |- subtype_arrow (E1[..]) (E2[..])] =>
+      let [g |- D1[..]] = complete [g |- E1[..]] in
+      let [g |- D2[..]] = complete [g |- E2[..]] in 
+      [g |- sa_arr (D1[..]) (D2[..])] 
+    | [g |- subtype_forall (E1[..]) (E2[..])] : [g |- subtype (forall (S1[..]) ( S2[..] )) ( forall (T1[..]) (T2[..] ))] =>
+      let [g |- D1[..] ] = complete [g |- E1[..]] in
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- D2[..,b.1,b.2,b.3,b.4] ] = 
 
-          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1 ..), ref: sub a a , w' : subtype a (T1 ..))  |- E2 .. b.1 b.5 ] in 
-      [g |- sa_all (D1 ..) (D2 ..)]
+          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (T1[..]), ref: sub a a , w' : subtype a (T1[..]))  |- E2[..,b.1,b.5] ] in 
+      [g |- sa_all (D1[..]) (D2[..])]
 ;
 
 

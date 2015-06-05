@@ -441,15 +441,24 @@ module Int = struct
     and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s=
       let print_front = fmt_ppr_lf_front cD cPsi 1 in
       let hasCtxVar = match Context.ctxVar cPsi with Some _ -> true | None -> false in
+      let rec fmt_ppr_lf_sub_id ppf cPsi = match cPsi with
+	| LF.Null -> ()
+	| LF.DDec (cPsi', LF.TypDecl (x, _))
+	| LF.DDec (cPsi', LF.TypDeclOpt x) ->
+	   fprintf ppf "%a %s"
+		   fmt_ppr_lf_sub_id cPsi'
+		   (R.render_name x)
+	| LF.CtxVar _ -> fprintf ppf ".."
+      in 
+      let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
+	| _,0 -> fmt_ppr_lf_sub_id ppf cPsi
+	| LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
+      in 
       let rec self lvl ppf =
         function
-       (* Print ".." for a Shift when there is a context variable present,
-          and nothing otherwise *)
-       (* above is WRONG *)
         | LF.EmptySub -> ()
         | LF.Undefs -> ()
-        | LF.Shift _ when hasCtxVar -> fprintf ppf ".."
-        | LF.Shift _ when not hasCtxVar -> ()
+        | LF.Shift n -> fmt_ppr_lf_sub_shift ppf (cPsi, n)
         | LF.FSVar (_, (s_name, s)) ->
           fprintf ppf "|- FSV %s[%a]"
 
@@ -464,16 +473,7 @@ module Int = struct
             fprintf ppf "#?S[%a ; %a]"
               (fmt_ppr_lf_msub cD lvl) t
               (self lvl) s          
-        | LF.Dot (f, s) when hasCtxVar ->
-            fprintf ppf "%a %a"
-              (self lvl) s
-              print_front f
-
-        | LF.Dot (f, LF.Shift _) when not hasCtxVar ->       (* No context variable, so just print the front *)
-            fprintf ppf "%a"
-              print_front f
-
-        | LF.Dot (f, s) when not hasCtxVar ->
+        | LF.Dot (f, s) ->
             fprintf ppf "%a %a"
               (self lvl) s
               print_front f
@@ -898,9 +898,10 @@ module Int = struct
             (fmt_ppr_lf_dctx cD lvl) cPsi
 	    (match cl with LF.Ren -> "#" | LF.Subst -> "")
             (fmt_ppr_lf_dctx cD lvl) cPhi
-      | LF.CTyp schemaName ->
+      | LF.CTyp (Some schemaName) ->
           fprintf ppf "%a"
             (fmt_ppr_lf_schema lvl) (Store.Cid.Schema.get_schema schemaName)
+      | LF.CTyp None -> fprintf ppf "CTX"
 
     and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD 0 ppf 
 

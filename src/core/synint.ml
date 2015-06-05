@@ -32,7 +32,7 @@ module LF = struct
 
   and ctyp =
     | ClTyp of cltyp * dctx
-    | CTyp of cid_schema
+    | CTyp of cid_schema option
 
   and ctyp_decl =                             (* Contextual Declarations        *)
     | Decl of name * ctyp * depend

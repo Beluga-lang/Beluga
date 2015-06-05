@@ -3,14 +3,14 @@
 %
 
 % Expressions
-datatype term   :  type =         
+LF term   :  type =         
 | app   : term -> term -> term
 | lam   : (term -> term) -> term
 ;
 
 % Translating to untyped deBruijn terms
 
-datatype term'   : type = 
+LF term'   : type = 
 | one    : term'
 | shift  : term' -> term'  % ^
 | lam'   : term'  -> term' 
@@ -23,25 +23,25 @@ rec vhoas2db : {gamma:ctx}{#p:[gamma |- term]} [ |- term'] =
  / total gamma (vhoas2db gamma) /
 mlam gamma => mlam #p =>  case [gamma] of 
 | [] => impossible [ |- #p ] in []
-| [gamma', x:term] => (case [gamma', x:term |- #p ..] of 
+| [gamma', x:term] => (case [gamma', x:term |- #p[..]] of 
  | [gamma',x:term |- x] => [ |- one ]
- | [gamma',x:term |- #p .. ] =>
-   let [ |- Db] = vhoas2db [gamma'] [gamma' |- #p ..] in
+ | [gamma',x:term |- #p[..] ] =>
+   let [ |- Db] = vhoas2db [gamma'] [gamma' |- #p[..]] in
      [ |- shift Db])
 ;
 
 rec hoas2db : (gamma:ctx) [gamma |- term] ->  [ |- term' ] = 
 / total e ( hoas2db _  e) /
 fn e =>  case e of
-| [gamma |- #p .. ] => vhoas2db [gamma] [gamma |- #p ..]
+| [gamma |- #p[..] ] => vhoas2db [gamma] [gamma |- #p[..]]
 
-| [gamma |- lam  (\x. E .. x)] =>
-  let [ |- F] =  hoas2db  [gamma,x:term |- E .. x ] in
+| [gamma |- lam  (\x. E)] =>
+  let [ |- F] =  hoas2db  [gamma,x:term |- E ] in
     [ |- lam' F ]
 
-| [gamma |- app (E1 .. ) (E2 .. )] =>
-  let [ |- F1] = hoas2db  [gamma |- E1 ..]  in
-  let [ |- F2] = hoas2db  [gamma |- E2 ..]  in
+| [gamma |- app (E1[..] ) (E2[..] )] =>
+  let [ |- F1] = hoas2db  [gamma |- E1[..]]  in
+  let [ |- F2] = hoas2db  [gamma |- E2[..]]  in
     [ |- app' F1 F2]
 ;
 

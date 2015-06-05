@@ -218,6 +218,7 @@ let lex_token loc = lexer
   | "%open"
   | "%abbrev"
   | "type"
+  | "prop"
   | "?"
   | "|-"
   | [ "%,.:;()[]{}|" '\\' '#' "$" "^" '\"']  -> (* reserved character *)

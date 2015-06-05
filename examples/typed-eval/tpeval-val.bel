@@ -68,8 +68,8 @@ rec eval : [ |- exp T] -> [ |- val T] =
      | [ |- v_ff] => eval [ |- E2]
      )
 
-   | [ |- letv  E (\x . (E1 x))]  =>
-   let [ |- V] = eval [ |- E] in eval [ |- (E1 V)]
+   | [ |- letv  E (\x . E1)]  =>
+   let [ |- V] = eval [ |- E] in eval [ |- E1[V]]
 
    | [ |- value V] => [ |- V]
 ;

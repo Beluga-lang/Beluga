@@ -2,7 +2,7 @@ nat:type.
 z: nat.
 s: nat -> nat.
 
-datatype NatPair: ctype =
+inductive NatPair: ctype =
 | Pair: [ |- nat] -> [ |- nat] -> NatPair
 ;
 

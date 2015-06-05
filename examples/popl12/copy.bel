@@ -6,18 +6,18 @@ s: exp -> exp.
 
 schema ctx = exp;
 
-datatype IsExp : {g:ctx} [g |- exp] -> ctype #positive 
+inductive IsExp : {g:ctx} [g |- exp] -> ctype  
 =
 | IsZero : (g:ctx) IsExp [g] [g |- z]
-| IsSuc : (g:ctx) IsExp [g] [g |- M ..] -> IsExp [g] [g |- s (M ..)]
-| IsVar : (g:ctx) IsExp [g] [g |- #p..]
-| IsApp: (g:ctx) IsExp [g] [g |- M..] -> IsExp [g] [g |- N ..]
-         -> IsExp [g] [g |- app (M ..) (N ..)]
-| IsLam: (g:ctx) IsExp [g,x:exp] [g,x |- M .. x] -> IsExp [g] [g |- lam \x. M .. x ]
+| IsSuc : (g:ctx) IsExp [g] [g |- M[..]] -> IsExp [g] [g |- s (M[..])]
+| IsVar : (g:ctx) IsExp [g] [g |- #p]
+| IsApp: (g:ctx) IsExp [g] [g |- M] -> IsExp [g] [g |- N[..]]
+         -> IsExp [g] [g |- app (M[..]) (N[..])]
+| IsLam: (g:ctx) IsExp [g,x:exp] [g,x |- M] -> IsExp [g] [g |- lam \x. M ]
 ;
 
 
-rec copy : (g:ctx)IsExp [g] [g |- M..] -> IsExp [g] [g |- M ..] =
+rec copy : (g:ctx)IsExp [g] [g |- M] -> IsExp [g] [g |- M[..]] =
 / total e (copy g m e) /
 fn e => case e of
 | IsZero => IsZero

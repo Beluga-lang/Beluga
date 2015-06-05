@@ -28,7 +28,7 @@ rec noneedformlam: (g:expCtx) [g |- exp T] -> [g |- exp T] =
 ;
 
 % uh oh, we need a mlam for the explicit context variable g
-rec forgetmlam: {g:expCtx} [g |- exp T] -> [g |- exp T] =
+rec forgetmlam: {g:expCtx} [g |- exp (T[])] -> [g |- exp (T[])] =
  fn e => e
 ;
 

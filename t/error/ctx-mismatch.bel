@@ -1,0 +1,7 @@
+tm : type.
+i : tm.
+
+schema ctx = tm;
+
+rec foo : {g:ctx}{h:ctx}{M:[g |- tm]} [g |- tm] =
+mlam g,h,M => [h |- M];

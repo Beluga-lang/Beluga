@@ -33,30 +33,6 @@ let pat_flag = ref false
 
 exception Error of Syntax.Loc.t * error
 
-let getLocation' (loc, i) = match i with
-  | Comp.MApp (loc, _, _ ) -> loc
-  | Comp.Apply (loc, _, _ ) -> loc
-  | Comp.Equal (loc, _, _ ) -> loc
-  | Comp.PairVal (loc, _ , _) -> loc
-  | _ -> loc
-
-let getLocation e = match e with
-  | Comp.Syn (loc , i ) ->
-    getLocation' (loc, i)
-  | Comp.Rec (loc, _ , _ ) -> loc
-  | Comp.Fun (loc, _, _ ) -> loc
-  | Comp.Cofun (loc, _ ) -> loc
-  | Comp.MLam (loc, _, _) -> loc
-  | Comp.Pair (loc, _, _ ) -> loc
-  | Comp.LetPair (loc, _, _ ) -> loc
-  | Comp.Box (loc, _)    -> loc
-  | Comp.Case (loc, _, _, _ ) -> loc
-  | Comp.If (loc, _, _, _ ) -> loc
-  | Comp.Hole (loc, _) -> loc
-
-
-
-
 let string_of_varvariant = function
   | FV _  -> "free variables"
   | MMV _ -> "meta^2-variables and free variables"
@@ -409,7 +385,7 @@ let rec ctxToMCtx dep' cQ = match cQ with
       I.Dec (ctxToMCtx dep' cQ', I.Decl (getName s, ityp, dep'))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp (Some w), dep))
 
   (* this case should not happen -bp *)
    | I.Dec (cQ', FDecl (FV _, Pure (LFTyp tA)))->
@@ -430,7 +406,7 @@ let rec ctxToMCtx_pattern cQ = match cQ with
       I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, I.Maybe))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp (Some w), dep))
   
 | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx_pattern cQ'
@@ -762,7 +738,7 @@ and collectClTyp loc p cQ' phat = function
      (cQ1, I.STyp (cl, cPhi'))
 
 and collectMetaTyp loc p cQ = function 
-  | I.CTyp (sW, dep) -> (cQ, I.CTyp (sW, dep))
+  | I.CTyp sW -> (cQ, I.CTyp sW)
   | I.ClTyp (tp, cPsi) -> 
     let phat = Context.dctxToHat cPsi in
     let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
@@ -815,7 +791,7 @@ and abstractTypRec cQ offset = function
   | (I.SigmaLast(n, tA), s) -> I.SigmaLast(n, (abstractTyp cQ offset (tA, s)))
   | (I.SigmaElem(x, tA, typRec), s) ->
       let tA = abstractTyp cQ offset (tA, s) in
-      let typRec = abstractTypRec cQ offset (typRec, LF.dot1 s) in
+      let typRec = abstractTypRec cQ (offset+1) (typRec, LF.dot1 s) in
         I.SigmaElem(x, tA, typRec)
 
 
@@ -1164,7 +1140,7 @@ and abstractMSub t =
   | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
       I.Dec (ctxToMCtx' cQ', I.Decl (getName s, ityp, dep))
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp w, dep))
+      I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp (Some w), dep))
    | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx' cQ'
   in 
@@ -1545,7 +1521,7 @@ let raiseCompKind cD cK =
 
 let abstrCompKind cK =
   let rec roll cK cQ = match cK with
-    | Comp.PiKind (_, I.Decl(psi, I.CTyp w, dep), cK) ->
+    | Comp.PiKind (_, I.Decl(psi, I.CTyp (Some w), dep), cK) ->
         roll cK (I.Dec(cQ, CtxV (psi,w, dep)))
     | cK -> (cQ, cK)
   in
@@ -1563,7 +1539,7 @@ let abstrCompKind cK =
 
 let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
-    | Comp.TypPiBox (I.Decl(psi, I.CTyp w, dep), tau) ->
+    | Comp.TypPiBox (I.Decl(psi, I.CTyp (Some w), dep), tau) ->
         roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
     | tau -> (cQ, tau)
   in
@@ -1653,17 +1629,8 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let cD       = Context.append cD' cD2 in
     (cD, cPsi2, sigma2, cPhi2)
 
-
-
-let abstrExp e =
-  let (cQ, e')    = collectExp I.Empty e in
-  let loc = getLocation e' in
-    begin match cQ with
-        I.Empty -> e'
-      | I.Dec(_,FDecl (s,_))       ->
-            let _ = dprint (fun () -> "Collection of MVars\n" ^ collectionToString cQ )in
-              raise (Error (loc, LeftoverVars))
-    end
+let abstrExp e = 
+  collectExp I.Empty e
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)
 let rec appDCtx cPsi1 cPsi2 = match cPsi2 with
@@ -1686,7 +1653,6 @@ let abstrSchema (I.Schema elements) =
         let trec' = abstractTypRec cQ' l (trec', LF.id) in
         let cPsi1 = ctxToCtx cQ' in
         let cPsi1' = appDCtx cPsi1 cPsi' in
-
         let els'  = abstrElems els in
           Int.LF.SchElem (cPsi1', trec') :: els'
   in

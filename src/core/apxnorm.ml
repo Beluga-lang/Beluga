@@ -107,9 +107,7 @@ and cnormApxTuple cD delta tuple (cD'', t) = match tuple with
       Apx.LF.Cons (cnormApxTerm cD delta m (cD'' , t),
                    cnormApxTuple cD delta tuple (cD'', t))
 
-(* TODO: Refactor this function *)
-and cnormApxObj cD delta offset (cD'', t) =
-  let l_delta = lengthApxMCtx delta in
+and cnormApxObj cD l_delta offset t =
   let rec drop t l_delta = match (l_delta, t) with
                   | (0, t) -> t
                   | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
@@ -118,42 +116,26 @@ and cnormApxObj cD delta offset (cD'', t) =
       let offset' = (offset - l_delta)  in
       match Substitution.LF.applyMSub offset t with
 	| Int.LF.MV u -> Apx.LF.Offset u
-	| Int.LF.ClObj (_phat, Int.LF.MObj tM) ->
-               let (_u, tP, cPhi) = Whnf.mctxMDec cD offset' in
+	| Int.LF.ClObj (_phat, clobj) ->
+               let (_u, mtyp) = Whnf.mctxLookup cD offset' in
                 let t' = drop t l_delta in
-                let (tP', cPhi')  = (Whnf.cnormTyp (tP, t'), Whnf.cnormDCtx  (cPhi, t')) in
-                Apx.LF.MInst (tM, tP', cPhi')
-	| Int.LF.ClObj (_phat, Int.LF.PObj h) ->
-                let (_ , tP, cPhi) = Whnf.mctxPDec cD offset' in
-                let t' = drop t l_delta in
-                let (tP', cPhi')  = (Whnf.cnormTyp (tP, t'), Whnf.cnormDCtx  (cPhi, t')) in
-                Apx.LF.PInst (h, tP', cPhi')
-        | Int.LF.ClObj (_phat, Int.LF.SObj s) ->
-                let (_s, cPsi, _, cPhi) = Whnf.mctxSDec cD offset' in
-                let t' = drop t l_delta in
-                let (cPsi', cPhi')  = (Whnf.cnormDCtx (cPsi, t'), Whnf.cnormDCtx (cPhi, t')) in
-                Apx.LF.SInst (s, cPsi', cPhi')
+                let mtyp'  = Whnf.cnormMTyp (mtyp, t')in
+                Apx.LF.MInst (clobj, mtyp')
     end
   else Apx.LF.Offset offset
 
+and cnormApxCVar' cD l_delta cv t = match cv with
+  | Apx.LF.Offset offset -> cnormApxObj cD l_delta offset t
+  | Apx.LF.MInst (clobj, mtyp) -> Apx.LF.MInst (Whnf.cnormClObj clobj t, Whnf.cnormMTyp (mtyp, t))
+
+and cnormApxCVar cD delta cv (cD'', t) = cnormApxCVar' cD (lengthApxMCtx delta) cv t
+
 and cnormApxHead cD delta h (cD'', t) = match h with
-  | Apx.LF.MVar (Apx.LF.Offset offset, s) ->
-    Apx.LF.MVar (cnormApxObj cD delta offset (cD'', t), cnormApxSub cD delta s (cD'', t))
+  | Apx.LF.MVar (cv, s) ->
+    Apx.LF.MVar (cnormApxCVar cD delta cv (cD'', t), cnormApxSub cD delta s (cD'', t))
 
-  | Apx.LF.PVar (Apx.LF.Offset offset, s) ->
-    Apx.LF.PVar (cnormApxObj cD delta offset (cD'', t), cnormApxSub cD delta s (cD'', t))
-
-  | Apx.LF.MVar (Apx.LF.MInst (tM, tP, cPhi), s) ->
-      let tM' = Whnf.cnorm (tM,t) in
-      let (tP', cPhi')  = (Whnf.cnormTyp (tP, t), Whnf.cnormDCtx (cPhi, t)) in
-      let s' = cnormApxSub cD delta s (cD'', t) in
-        Apx.LF.MVar (Apx.LF.MInst (tM', tP', cPhi'), s')
-
-  | Apx.LF.PVar (Apx.LF.PInst (h, tA, cPhi), s) ->
-      let h' = Whnf.cnormHead (h, t) in
-      let (tA', cPhi')  = (Whnf.cnormTyp (tA, t), Whnf.cnormDCtx (cPhi, t)) in
-      let s' = cnormApxSub cD delta s (cD'', t) in
-      Apx.LF.PVar (Apx.LF.PInst (h', tA', cPhi'), s')
+  | Apx.LF.PVar (cv, s) ->
+    Apx.LF.PVar (cnormApxCVar cD delta cv (cD'', t), cnormApxSub cD delta s (cD'', t))
 
   | Apx.LF.Proj (pv, j) ->
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
@@ -168,6 +150,7 @@ and cnormApxHead cD delta h (cD'', t) = match h with
 and cnormApxSub cD delta s (cD'', t) = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> s
+  | Apx.LF.RealId -> s
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = cnormApxHead cD delta h (cD'', t) in
@@ -178,15 +161,9 @@ and cnormApxSub cD delta s (cD'', t) = match s with
       let s' = cnormApxSub cD delta s (cD'', t) in
         Apx.LF.Dot (Apx.LF.Obj m', s')
 
-  | Apx.LF.SVar (Apx.LF.Offset offset , sigma) ->
+  | Apx.LF.SVar (cv, sigma) ->
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
-      Apx.LF.SVar (cnormApxObj cD delta offset (cD'', t), sigma')
-
-  | Apx.LF.SVar (Apx.LF.SInst (s, cPsi, cPhi), sigma) ->
-      let s' = Whnf.cnormSub (s, t) in
-      let (cPsi', cPhi') = (Whnf.cnormDCtx (cPsi, t) , Whnf.cnormDCtx (cPhi, t)) in
-      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
-        Apx.LF.SVar (Apx.LF.SInst (s', cPsi', cPhi'), sigma')
+      Apx.LF.SVar (cnormApxCVar cD delta cv (cD'', t), sigma')
 
   | Apx.LF.FSVar (s, sigma) ->
       let sigma' = cnormApxSub cD delta sigma (cD'', t) in
@@ -215,6 +192,7 @@ let rec cnormApxTyp cD delta a (cD'', t) = match a with
 and cnormApxTypDecl cD delta t_decl cDt = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, cnormApxTyp cD delta a cDt)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
   | Apx.LF.SigmaLast(n, a) -> Apx.LF.SigmaLast (n, cnormApxTyp cD delta a (cD'', t))
@@ -223,8 +201,8 @@ and cnormApxTypRec cD delta t_rec (cD'', t) = match t_rec with
       let t_rec' = cnormApxTypRec cD delta t_rec (cD'', t) in
         Apx.LF.SigmaElem (x, a', t_rec')
 
-(* NOTE THERE IS A BUG IN OCAML: we are allowed to name _ cD !*)
 let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) = match psi with
+  | Apx.LF.CtxHole -> Apx.LF.CtxHole
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
       let l_delta = lengthApxMCtx delta in
@@ -345,33 +323,18 @@ and cnormApxExp' cD delta i cDt = match i with
     let i2' = cnormApxExp' cD delta i2 cDt in
       Apx.Comp.Equal (loc, i1', i2')
 
-and cnormApxMetaObj cD delta mobj cDt = let (_cD', t) = cDt in
-  match mobj with
-    | Apx.Comp.MetaObj (loc', phat, m) ->
-        let phat'     = Whnf.cnorm_psihat phat t in
-        let m'        = cnormApxTerm cD delta m cDt in
-          Apx.Comp.MetaObj (loc', phat', m')
+and cnormApxClObj cD delta clobj cDt = match clobj with
+  | Apx.Comp.MObj m -> Apx.Comp.MObj (cnormApxTerm cD delta m cDt)
+  | Apx.Comp.SObj s -> Apx.Comp.SObj (cnormApxSub cD delta s cDt)
 
-    | Apx.Comp.MetaCtx (loc', psi) ->
-        let psi' = cnormApxDCtx loc' cD delta psi cDt in
-          Apx.Comp.MetaCtx (loc', psi')
-
-    | Apx.Comp.MetaObjAnn (loc', psi, m) ->
-        let psi' = cnormApxDCtx loc' cD delta psi cDt in
-        let m'   = cnormApxTerm cD delta m cDt in
-          Apx.Comp.MetaObjAnn (loc', psi', m')
-
-    | Apx.Comp.MetaSub (loc, phat, sigma) ->
-      let phat'  = Whnf.cnorm_psihat phat t in
-      let sigma' = cnormApxSub cD delta sigma cDt in
-        Apx.Comp.MetaSub (loc, phat', sigma')
-
-    | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
+and cnormApxMetaObj cD delta (loc,mobj) cDt =
+  loc, match mobj with
+    | Apx.Comp.ClObj (psi, clobj) ->
       let psi'   = cnormApxDCtx loc cD delta psi cDt in
-      let sigma' = cnormApxSub cD delta sigma cDt in
-        Apx.Comp.MetaSubAnn (loc, psi', sigma')
+      let clobj' = cnormApxClObj cD delta clobj cDt in
+      Apx.Comp.ClObj (psi', clobj')
 
-
+    | Apx.Comp.CObj (psi) -> Apx.Comp.CObj (cnormApxDCtx loc cD delta psi cDt)
 
 and cnormApxBranches cD delta branches cDt = match branches with
   | [] -> []
@@ -419,10 +382,6 @@ and cnormApxBranch cD delta b (cD'', t) =
 let rec collectApxTerm fMVs  m = match m with
   | Apx.LF.Lam (_loc, _x, m') ->  collectApxTerm fMVs  m'
 
-   (* We only allow free meta-variables of atomic type *)
-  | Apx.LF.Root (_loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
-       collectApxSub (u::fMVs)  s
-
   | Apx.LF.Root (_loc, h, s) ->
       let fMVs' = collectApxHead fMVs  h in
         collectApxSpine fMVs'  s
@@ -442,6 +401,9 @@ and collectApxHead fMVs h = match h with
   | Apx.LF.FPVar (p, s) ->
       collectApxSub (p::fMVs) s
 
+  | Apx.LF.FMVar (u, s) ->
+      collectApxSub (u::fMVs) s
+
   | Apx.LF.MVar (Apx.LF.Offset _offset, s) ->
       collectApxSub fMVs s
 
@@ -456,6 +418,7 @@ and collectApxHead fMVs h = match h with
 and collectApxSub fMVs s = match s with
   | Apx.LF.EmptySub -> fMVs
   | Apx.LF.Id -> fMVs
+  | Apx.LF.RealId -> fMVs
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let fMVs' = collectApxHead fMVs h in
         collectApxSub fMVs' s
@@ -491,6 +454,7 @@ and collectApxTypDecl fMVs (Apx.LF.TypDecl (_ , a))=
   collectApxTyp fMVs a
 
 and collectApxDCtx fMVs c_psi = match c_psi with
+  | Apx.LF.CtxHole -> fMVs
   | Apx.LF.Null -> fMVs
   | Apx.LF.CtxVar (Apx.LF.CtxName psi) -> (psi :: fMVs)
   | Apx.LF.CtxVar (Apx.LF.CtxOffset _) -> fMVs
@@ -520,21 +484,16 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
 
-and collectApxMetaObj fMVs mO = match mO with
-  | Apx.Comp.MetaCtx (_loc, cPsi) ->
+and collectApxClObj fMVs = function
+  | Apx.Comp.MObj tR -> collectApxTerm fMVs tR
+  | Apx.Comp.SObj s -> collectApxSub fMVs s
+
+and collectApxMetaObj fMVs (_loc,mO) = match mO with
+  | Apx.Comp.CObj (cPsi) ->
       collectApxDCtx fMVs cPsi
-  | Apx.Comp.MetaObj (_loc, phat, tR) ->
-      let fMVh = collectApxHat fMVs phat  in
-      collectApxTerm fMVh tR
-  | Apx.Comp.MetaObjAnn (_loc, cPsi, tR) ->
-      let fMVd = collectApxDCtx fMVs cPsi in
-        collectApxTerm fMVd tR
-  | Apx.Comp.MetaSub (_loc, phat, s) ->
-      let fMVh = collectApxHat fMVs phat  in
-      collectApxSub fMVh s
-  | Apx.Comp.MetaSubAnn (_loc, cPsi, s) ->
-      let fMVd = collectApxDCtx fMVs cPsi in
-        collectApxSub fMVd s
+  | Apx.Comp.ClObj (psi, clobj) ->
+      let fMVh = collectApxDCtx fMVs psi  in
+      collectApxClObj fMVh clobj
 
 and collectApxMetaSpine fMVs mS = match mS with
   | Apx.Comp.MetaNil -> fMVs
@@ -574,7 +533,7 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypPiBox (cdecl, tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
-  | Apx.Comp.TypBox (loc, Apx.Comp.MetaTyp(loc', tA, cPsi)) ->
+  | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi))) ->
       (let fMVd1 = collectApxTyp fMVd tA in
 	 collectApxDCtx fMVd1 cPsi )
   | Apx.Comp.TypBool -> fMVd
@@ -632,24 +591,16 @@ and fmvApxTuple fMVs cD ((l_cd1, l_delta, k) as d_param)   tuple = match tuple w
                    fmvApxTuple fMVs cD d_param  tuple)
 
 
-(* TODO: Refactor this *)
-and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i =
+and fmvApxCvar' cD (l_cd1, l_deltak) i =
      let rec mvar_dot t l_delta = match l_delta with
         | 0 -> t
         | l_delta' ->
             mvar_dot (Whnf.mvar_dot1 t) (l_delta' - 1)
      in
-     let r      = mvar_dot (Int.LF.MShift l_cd1) (l_delta + k) in
-  match i with
-  | Apx.LF.Offset offset -> 
-      if offset > (l_delta+k) then Apx.LF.Offset (offset+ l_cd1)
-      else Apx.LF.Offset offset
-  | Apx.LF.MInst (tM, tP, cPhi) -> 
-      Apx.LF.MInst (Whnf.cnorm (tM, r), Whnf.cnormTyp(tP, r), Whnf.cnormDCtx (cPhi, r))
-  | Apx.LF.PInst (h, tA, cPhi) ->
-      Apx.LF.PInst (Whnf.cnormHead (h, r), Whnf.cnormTyp (tA,r), Whnf.cnormDCtx (cPhi,r))
-  | Apx.LF.SInst (s, cPsi, cPhi) ->
-      Apx.LF.SInst (Whnf.cnormSub (s, r), Whnf.cnormDCtx(cPsi, r), Whnf.cnormDCtx (cPhi, r))
+     let r      = mvar_dot (Int.LF.MShift l_cd1) (l_deltak) in
+     cnormApxCVar' cD l_deltak i r
+
+and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i = fmvApxCvar' cD (l_cd1, l_delta + k) i
 
 (* TODO: Refactor this function *)
 and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
@@ -685,6 +636,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
 and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> Apx.LF.Id
+  | Apx.LF.RealId -> Apx.LF.RealId
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = fmvApxHead fMVs cD d_param  h in
@@ -732,6 +684,7 @@ let rec fmvApxTyp fMVs cD ((l_cd1, l_delta, k) as d_param)  a = match a with
 and fmvApxTypDecl fMVs cD ((l_cd1, l_delta, k) as d_param)  t_decl = match t_decl with
   | Apx.LF.TypDecl (x, a) ->
       Apx.LF.TypDecl(x, fmvApxTyp fMVs cD d_param  a)
+  | Apx.LF.TypDeclOpt x -> Apx.LF.TypDeclOpt x
 
 and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec with
   | Apx.LF.SigmaLast (n, a) -> Apx.LF.SigmaLast (n, fmvApxTyp fMVs cD d_param  a)
@@ -741,6 +694,7 @@ and fmvApxTypRec fMVs cD ((l_cd1, l_delta, k) as d_param)  t_rec = match t_rec w
         Apx.LF.SigmaElem (x, a', t_rec')
 
 let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi with
+  | Apx.LF.CtxHole -> Apx.LF.CtxHole
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
       if offset > (l_delta + k) then
@@ -862,33 +816,17 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
       let i2' = fmvApxExp' fMVs cD d_param  i2 in
         Apx.Comp.Equal (loc, i1', i2')
 
-and fmvApxMetaObj fMVs cD ((l_cd1, l_delta, k) as d_param) mobj = match mobj with
-  | Apx.Comp.MetaObj (loc', phat, m) ->
-      let phat' = fmvApxHat loc' fMVs cD d_param phat in
-      let m'    = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MetaObj (loc', phat', m')
+and fmvApxClObj fMVs cD d_param = function
+  | Apx.Comp.MObj m -> Apx.Comp.MObj (fmvApxTerm fMVs cD d_param m)
+  | Apx.Comp.SObj s -> Apx.Comp.SObj (fmvApxSub fMVs cD d_param s)
 
-  | Apx.Comp.MetaCtx (loc, psi) ->
-      let psi' = fmvApxDCtx loc fMVs cD  d_param  psi  in
-        Apx.Comp.MetaCtx (loc, psi')
+and fmvApxMetaObj fMVs cD d_param (loc,mobj) = loc , match mobj with
+  | Apx.Comp.ClObj (psi, clobj) ->
+      let psi' = fmvApxDCtx loc fMVs cD d_param psi in
+      let clobj'    = fmvApxClObj fMVs cD d_param  clobj in
+        Apx.Comp.ClObj (psi', clobj')
 
-  | Apx.Comp.MetaObjAnn (loc, psi, m) ->
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let m' = fmvApxTerm fMVs cD d_param  m in
-        Apx.Comp.MetaObjAnn (loc, psi', m')
-
-  | Apx.Comp.MetaSub (loc, phat, sigma) ->
-      let phat' = fmvApxHat loc fMVs cD d_param phat in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MetaSub (loc, phat', sigma')
-
-  | Apx.Comp.MetaSubAnn (loc, psi, sigma) ->
-      let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
-        Apx.Comp.MetaSubAnn (loc, psi', sigma')
-
-
-
+  | Apx.Comp.CObj psi -> Apx.Comp.CObj (fmvApxDCtx loc fMVs cD d_param psi)
 
 and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match branches with
   | [] -> []

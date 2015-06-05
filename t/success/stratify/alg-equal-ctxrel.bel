@@ -42,30 +42,30 @@ schema tdCtx =  block x:term,  _t:deq x x ;
 %----------------------------------------------------------
 % Context relations
 
-datatype Crel : {g:tCtx} {h:taCtx} ctype #stratified  =
+inductive Crel : {g:tCtx} {h:taCtx} ctype   =
 | Crel_e : Crel [ ] []
 | Crel_xa: Crel [g] [h] -> Crel [g, x:term] [h, b: block (x:term, u:aeq x x)]
 ;
 
 % Relation of terms in tCtx context to terms in taCtx context
-% TRel [g |- M ..] [h |- N ..]
+% TRel [g |- M[..]] [h |- N[..]]
 % This relation allows for a dual reading:
-% 1) When given [g |- M ..] then we can always weaken it to obtain [h |- N ..]
-% 2) When given [h |- N ..] we can always strengthen it to obtain [g |- M ..]
+% 1) When given [g |- M[..]] then we can always weaken it to obtain [h |- N[..]]
+% 2) When given [h |- N[..]] we can always strengthen it to obtain [g |- M[..]]
 
-datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratified =
+inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 | TRvar0 : {h: taCtx} Crel [g] [h] ->
             TRel [g, x:term |-  x]
  		 [h, b:block (x:term, u:aeq x x) |- b.1]
-| TRvar  : TRel  [g |- #p ..] [h |- #q.1 ..]
-         -> TRel [g, x:term |-  #p ..]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1 ..]
+| TRvar  : TRel  [g |- #p[..]] [h |- #q.1[..]]
+         -> TRel [g, x:term |-  #p[..]]
+                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
-| TRapp  : TRel [g |- M ..] [h |- M'..] -> TRel [g |- N ..] [h |- N' ..]
-        -> TRel [g |- app (M ..) (N ..)] [h |- app (M'..) (N'..)]
+| TRapp  : TRel [g |- M[..]] [h |- M'] -> TRel [g |- N[..]] [h |- N'[..]]
+        -> TRel [g |- app (M[..]) (N[..])] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M .. x] [h, b:block (x:term, _u:aeq x x) |-  N .. b.1]
-	   -> TRel [g |- lam \x. M .. x] [h |- lam \x. N .. x]
+| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
+	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
  
 % ----------------------------------------------------------------------
@@ -73,60 +73,60 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 %  pattern match on M and recurse on TRel.
 
 % rec ref' : (h:taCtx)(g:tCtx) TRel [g |- M..] [h |- N..] ->
-%           [h |- aeq (N ..) (N ..)] =
+%           [h |- aeq (N[..]) (N[..])] =
 % fn r => 
-% let (r:TRel [g |- M ..] [h |- N ..]) = r in 
-% case [g |- (M ..)] of
+% let (r:TRel [g |- M[..]] [h |- N[..]]) = r in 
+% case [g |- (M[..])] of
 % | [g,x:term |-  x] =>
 %   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |-  b.2]
 			       
-% | [g, x:term |-  #p .. ] =>
+% | [g, x:term |-  #p[..] ] =>
 %   let TRvar r' = r in
-%   let [h |- E ..] = ref' r' in
-%     [h, b:block(x:term, _u:aeq x x) |-  E ..]
+%   let [h |- E[..]] = ref' r' in
+%     [h, b:block(x:term, _u:aeq x x) |-  E[..]]
 
-% | [g |- lam \x. M .. x] =>
+% | [g |- lam \x. M] =>
 %   let TRlam  tr1 = r in
-%   let [h,b:block (y:term , _t:aeq y y) |-  AE .. b.1 b.2] =
+%   let [h,b:block (y:term , _t:aeq y y) |-  AE[..] b.1 b.2] =
 %          ref'  tr1
 %   in
-%    [h |- ae_l \x. \w. (AE .. x w)]
+%    [h |- ae_l \x. \w. (AE w)]
 
-% | [g |- app (M1 ..) (M2 ..)] =>
+% | [g |- app (M1[..]) (M2[..])] =>
 %   let TRapp tr1 tr2 = r in
-%   let [h |- AE1 ..] = ref'  tr1 in
-%   let [h |- AE2 ..] = ref' tr2 in
-%     [h |- ae_a (AE1 ..) (AE2 ..)]
+%   let [h |- AE1[..]] = ref'  tr1 in
+%   let [h |- AE2[..]] = ref' tr2 in
+%     [h |- ae_a (AE1[..]) (AE2[..])]
 % ;
 
 % rec trans: (h:taCtx)(g:tCtx)
 % TRel [g |- T..] [h |- T'..] -> TRel [g |- S..] [h |- S'..] -> TRel [g |- R..] [h |- R'..] ->
-%    [h |- aeq (T' ..) (R' ..)] -> [h |- aeq (R' ..) (S' ..)]
-%  -> [h |- aeq (T' ..) (S' ..)] =
+%    [h |- aeq (T'[..]) (R'[..])] -> [h |- aeq (R'[..]) (S'[..])]
+%  -> [h |- aeq (T'[..]) (S'[..])] =
 % fn tr => fn sr => fn rr =>
 % fn ae1 => fn ae2 => case ae1 of
-% | [h |- #p.2 ..] => ae2
+% | [h |- #p.2[..]] => ae2
 
-% | [h |- ae_l \x.\u. AE1 .. x u] =>
-%   let [h |- ae_l \x.\u. AE2 .. x u] =  ae2  in
+% | [h |- ae_l \x.\u. AE1 u] =>
+%   let [h |- ae_l \x.\u. AE2 u] =  ae2  in
 %   let TRlam t = tr in
 %   let TRlam s = sr in
 %   let TRlam r = rr in
-%   let [h, b:block x:term , _t:aeq x x |-  AE .. b.1 b.2] =
+%   let [h, b:block x:term , _t:aeq x x |-  AE[..] b.1 b.2] =
 %          trans t s r
-%                [h, b:block x':term , _t:aeq x' x' |-  AE1 .. b.1 b.2]
-%                [h, b |-  AE2 .. b.1 b.2]
+%                [h, b:block x':term , _t:aeq x' x' |-  AE1[..] b.1 b.2]
+%                [h, b |-  AE2[..] b.1 b.2]
 %   in
-%     [h |- ae_l \x. \u. AE .. x u]
+%     [h |- ae_l \x. \u. AE u]
 
-% | [h |- ae_a (AE1 ..) (AE2 ..)] =>
-%   let [h |- ae_a (AE3 ..) (AE4 ..)] = ae2 in
+% | [h |- ae_a (AE1[..]) (AE2[..])] =>
+%   let [h |- ae_a (AE3[..]) (AE4[..])] = ae2 in
 %   let TRapp t1 t2 = tr in
 %   let TRapp s1 s2 = sr in
 %   let TRapp r1 r2 = rr in
-%   let [h |- AE ..] = trans t1 s1 r1 [h |- AE1 ..]  [h |- AE3 ..] in
-%   let [h |- AE' ..] = trans t2 s2 r2 [h |- AE2 ..]  [h |- AE4 ..] in
-%     [h |- ae_a  (AE ..)  (AE' ..)]
+%   let [h |- AE[..]] = trans t1 s1 r1 [h |- AE1[..]]  [h |- AE3[..]] in
+%   let [h |- AE'[..]] = trans t2 s2 r2 [h |- AE2[..]]  [h |- AE4[..]] in
+%     [h |- ae_a  (AE[..])  (AE'[..])]
 % ;
 
 % %----------------------------------------------------------
@@ -166,28 +166,28 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 % }%
 
 
-% % Given [g |- M ..] and a context h, we can weaken [g |- M ..] to
-% % obtain [h |- N ..] where N is the weakening of M.
-% datatype ExWk : (g: tCtx){h:taCtx}[g |- term] -> ctype =
-% | ExWk : {M: [h |- term]}TRel [g |- M' ..] [h |- M ..] -> ExWk [h] [g |- M' ..]
+% % Given [g |- M[..]] and a context h, we can weaken [g |- M[..]] to
+% % obtain [h |- N[..]] where N is the weakening of M.
+% inductive ExWk : (g: tCtx){h:taCtx}[g |- term] -> ctype =
+% | ExWk : {M: [h |- term]}TRel [g |- M'[..]] [h |- M[..]] -> ExWk [h] [g |- M'[..]]
 % ;
 
-% % Given a variable [g |- #p ..] and a context h, we can weaken [g |- #p ..] to
-% % obtain [h |- #q ..] where #q is the weakening of #p.
+% % Given a variable [g |- #p[..]] and a context h, we can weaken [g |- #p[..]] to
+% % obtain [h |- #q[..]] where #q is the weakening of #p.
 % % Here #q and #p denote the same variable but because variables essentially
 % % stand for positions, their position may be different.
-% datatype ExWkV : (g: tCtx){h:taCtx}[g |- term] -> ctype =
-% | ExWkV :  TRel [g |- #q ..] [h |- #p.1 ..] -> ExWkV [h] [g |- #q ..]
+% inductive ExWkV : (g: tCtx){h:taCtx}[g |- term] -> ctype =
+% | ExWkV :  TRel [g |- #q[..]] [h |- #p.1[..]] -> ExWkV [h] [g |- #q[..]]
 % ;
 
 % % ---------------------------------------------------------------
 % % We prove that
-% % if wk-str relation between [g |- M ..] and [h |- N ..] holds then
+% % if wk-str relation between [g |- M[..]] and [h |- N[..]] holds then
 % % [g] and [h] wk-str of each other, i.e. they are related.
 
 
-% % If TRel [g |- M ..] [h |- N ..] then Crel [g] [h]
-% rec exCRel :TRel [l |- T ..] [h |- T' ..] -> Crel [l] [h] =
+% % If TRel [g |- M[..]] [h |- N[..]] then Crel [g] [h]
+% rec exCRel :TRel [l |- T[..]] [h |- T'[..]] -> Crel [l] [h] =
 % fn tr => case tr of
 % | TRvar0 [h] cr => Crel_xa cr
 % | TRvar tr      => Crel_xa (exCRel tr)
@@ -196,43 +196,43 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 % ;
 
 % % Other direction:
-% % For all [g |- M ..] if [g] and [h] wk-str of each other,
-% % then there we can weaken M to [h |- N ..]
+% % For all [g |- M[..]] if [g] and [h] wk-str of each other,
+% % then there we can weaken M to [h |- N[..]]
 
 % % Guarantee that for every variable in h there is a corresponding variable in l
-% rec exTRelV : {#p: [l |- term]} Crel [l] [h] -> ExWkV [h] [l |- #p ..] =
-% mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- #p ..] of
+% rec exTRelV : {#p: [l |- term]} Crel [l] [h] -> ExWkV [h] [l |- #p[..]] =
+% mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- #p[..]] of
 % | [l, x:term |-  x ] =>
 %   let Crel_xa (cr' : Crel [l0] [h0]) = cr in ExWkV (TRvar0 [h0] cr')
-% | [l, x:term |- #p ..] =>
+% | [l, x:term |- #p[..]] =>
 %   let Crel_xa cr' = cr in
-%   let ExWkV tr = exTRelV [l |- #p ..] cr' in
+%   let ExWkV tr = exTRelV [l |- #p[..]] cr' in
 %     ExWkV (TRvar tr )
 % ;
 
 % % Guarantee that for every term M in l there is a term M' in h
-% rec exTRel : {M : [l |- term]} Crel [l] [h] -> ExWk [h] [l |- M ..] =
-% mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- M ..] of
-% | [l |- #p ..] =>
-%   let ExWkV tr = exTRelV [l |- #p ..] cr in ExWk [h |- _ ] tr
+% rec exTRel : {M : [l |- term]} Crel [l] [h] -> ExWk [h] [l |- M[..]] =
+% mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- M[..]] of
+% | [l |- #p[..]] =>
+%   let ExWkV tr = exTRelV [l |- #p[..]] cr in ExWk [h |- _ ] tr
 
-% | [l |- lam \x. M .. x] =>
-%   let ExWk [h,b:block (x:term, _u: aeq x x) |-  M' .. b.1] tr' = exTRel [l, x:term |-  M .. x] (Crel_xa cr) in
-%     ExWk [h |- lam \x. M' .. x] (TRlam tr')
+% | [l |- lam \x. M] =>
+%   let ExWk [h,b:block (x:term, _u: aeq x x) |-  M'[..] b.1] tr' = exTRel [l, x:term |-  M] (Crel_xa cr) in
+%     ExWk [h |- lam \x. M'] (TRlam tr')
 
-% | [l |- app (M ..) (N ..)] =>
-%   let ExWk [h |- M' ..] tr1 = exTRel [l |- M ..] cr in
-%   let ExWk [h |- N' ..] tr2 = exTRel [l |- N ..] cr in
-%     ExWk [h |- app (M' ..) (N'..)] (TRapp tr1 tr2)
+% | [l |- app (M[..]) (N[..])] =>
+%   let ExWk [h |- M'[..]] tr1 = exTRel [l |- M[..]] cr in
+%   let ExWk [h |- N'[..]] tr2 = exTRel [l |- N[..]] cr in
+%     ExWk [h |- app (M'[..]) (N'..)] (TRapp tr1 tr2)
 
 % ;
 
-% datatype Equal : (h:taCtx) [h |- term] -> [h |- term] -> ctype =
-% | EqRef : Equal [h |- M ..] [h |- M ..]
+% inductive Equal : (h:taCtx) [h |- term] -> [h |- term] -> ctype =
+% | EqRef : Equal [h |- M[..]] [h |- M[..]]
 % ;
 
-% rec unique : TRel [l |- T ..] [h |- T1 ..] -> TRel [l |- T ..] [h |- T2 ..]
-%       -> Equal [h |- T1 ..] [h |- T2..]  =
+% rec unique : TRel [l |- T[..]] [h |- T1[..]] -> TRel [l |- T[..]] [h |- T2[..]]
+%       -> Equal [h |- T1[..]] [h |- T2..]  =
 % fn tr => fn sr => case (tr , sr) of
 % | (TRvar0 [h] cr,  TRvar0 [h] cr') => EqRef
 % | (TRvar tr', TRvar sr') => let EqRef = unique tr' sr' in EqRef
@@ -247,50 +247,50 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 
 
 % %----------------------------------------------------------
-% datatype TadCxt : {g:taCtx} {h:tdCtx} ctype =
+% inductive TadCxt : {g:taCtx} {h:tdCtx} ctype =
 % | ADnil : TadCxt [ ] []
 % | ADcons: TadCxt [g] [h] -> TadCxt [g, b:block (x:term, u:aeq x x)]
 % 				   [h, b: block (x:term, u:deq x x)]
 % ;
 
-% datatype TdCxt : {g:tCtx} {h:tdCtx} ctype =
+% inductive TdCxt : {g:tCtx} {h:tdCtx} ctype =
 % | Tdnil : TdCxt [ ] []
 % | Tdcons: TdCxt [g] [h] -> TdCxt [g, x:term] [h, b: block (x:term, u:deq x x)]
 % ;
 
-% datatype TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
+% inductive TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
 % | TRvar0' : {h: tdCtx} % should it include a proof that g and h are related
 %             TdCxt [g] [h] ->
 %             TRel' [g, x:term |-  x] [h, b:block (x:term, u:deq x x) |- b.1]
-% | TRvar'  : TRel'  [g |- #p ..] [h |- #q.1 ..]
-%          -> TRel' [g, x:term |-  #p ..]
-%                 [h, b:block (x:term, u:deq x x) |-  #q.1 ..]
+% | TRvar'  : TRel'  [g |- #p[..]] [h |- #q.1[..]]
+%          -> TRel' [g, x:term |-  #p[..]]
+%                 [h, b:block (x:term, u:deq x x) |-  #q.1[..]]
 
-% | TRapp'  : TRel' [g |- M ..] [h |- M'..] -> TRel' [g |- N ..] [h |- N' ..]
-%         -> TRel' [g |- app (M ..) (N ..)] [h |- app (M'..) (N'..)]
+% | TRapp'  : TRel' [g |- M[..]] [h |- M'..] -> TRel' [g |- N[..]] [h |- N'[..]]
+%         -> TRel' [g |- app (M[..]) (N[..])] [h |- app (M'..) (N'..)]
 
-% | TRlam'  : TRel' [g, x:term |-  M .. x] [h, b:block (x:term, _u:deq x x) |-  N .. b.1]
-% 	   -> TRel' [g |- lam \x. M .. x] [h |- lam \x. N .. x]
+% | TRlam'  : TRel' [g, x:term |-  M] [h, b:block (x:term, _u:deq x x) |-  N[..] b.1]
+% 	   -> TRel' [g |- lam \x. M] [h |- lam \x. N]
 % ;
 
 
-% datatype ExWk' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
-% | ExWk' :  TRel' [l |- M' ..] [h |- M ..] -> ExWk' [l] [h |- M ..]
+% inductive ExWk' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
+% | ExWk' :  TRel' [l |- M'[..]] [h |- M[..]] -> ExWk' [l] [h |- M[..]]
 % ;
 
-% datatype ExWkV' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
-% | ExWkV' :  TRel' [l |- #q ..] [h |- #p.1 ..] -> ExWkV' [l] [h |- #p.1 ..]
+% inductive ExWkV' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
+% | ExWkV' :  TRel' [l |- #q[..]] [h |- #p.1[..]] -> ExWkV' [l] [h |- #p.1[..]]
 % ;
 
-% datatype Var : (h: tdCtx) [h |- term] -> ctype = 
+% inductive Var : (h: tdCtx) [h |- term] -> ctype = 
 % | BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |-  b.1 ]
-% | PV : Var [h |- #p.1 ..] -> Var [h, b: block x:term, _u:deq x x |-  #p.1 .. ];
+% | PV : Var [h |- #p.1[..]] -> Var [h, b: block x:term, _u:deq x x |-  #p.1[..] ];
 
 % % Various Lemmas needed in the transitivity case of the ceq proof
 % % They establish properties about the weakening relation TRel' and TRel
 % % as well as about context relations.
 
-% rec trelImpliesTdCxt :TRel' [l |- T ..] [h |- T' ..] -> TdCxt [l] [h] =
+% rec trelImpliesTdCxt :TRel' [l |- T[..]] [h |- T'[..]] -> TdCxt [l] [h] =
 % fn tr => case tr of
 % | TRvar0' [h] cr => Tdcons cr
 % | TRvar' tr => Tdcons (trelImpliesTdCxt tr)
@@ -302,41 +302,41 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 
 % % Guarantee that for every variable in h there is a corresponding variable in l
 % rec exTRelV' :  {#p: [h |- block x:term, _u:deq x x]} 
-% 		    TdCxt [l] [h] -> ExWkV' [l] [h |- #p.1 ..] =
-% mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- #p.1 ..] of
+% 		    TdCxt [l] [h] -> ExWkV' [l] [h |- #p.1[..]] =
+% mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- #p.1[..]] of
 % | [h,b: block x:term, _u:deq x x |-  b.1 ] =>
 %   let Tdcons cr' = cr in ExWkV' (TRvar0' [h] cr')
-% | [h',b: block x:term, _u:deq x x |- #q.1 ..] =>
+% | [h',b: block x:term, _u:deq x x |- #q.1[..]] =>
 %   let Tdcons cr' = cr in
-%   let ExWkV' tr = exTRelV' [h' |-  #q ..] cr' in
+%   let ExWkV' tr = exTRelV' [h' |-  #q[..]] cr' in
 %     ExWkV' (TRvar' tr )
 % ;
 
 % % Guarantee that for every term M in h there is a term M' in l
-% rec exTRel' : {M : [h |- term]} TdCxt [l] [h] -> ExWk' [l] [h |- M ..] =
-% mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- M ..] of
-% | [h |- #p.1 ..] =>
-%   let ExWkV' tr = exTRelV' [h |- #p ..] cr in ExWk' tr
+% rec exTRel' : {M : [h |- term]} TdCxt [l] [h] -> ExWk' [l] [h |- M[..]] =
+% mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- M[..]] of
+% | [h |- #p.1[..]] =>
+%   let ExWkV' tr = exTRelV' [h |- #p[..]] cr in ExWk' tr
 
-% | [h |- lam \x. M .. x] =>
-%   let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M .. b.1] (Tdcons cr) in
+% | [h |- lam \x. M] =>
+%   let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M[..] b.1] (Tdcons cr) in
 %     ExWk' (TRlam' tr')
 
-% | [h |- app (M ..) (N ..)] =>
-%   let ExWk' tr1 = exTRel' [h |- M ..] cr in
-%   let ExWk' tr2 = exTRel' [h |- N ..] cr in
+% | [h |- app (M[..]) (N[..])] =>
+%   let ExWk' tr1 = exTRel' [h |- M[..]] cr in
+%   let ExWk' tr2 = exTRel' [h |- N[..]] cr in
 %     ExWk' (TRapp' tr1 tr2)
 % ;
 
 
 
-% datatype EqT : (l:tCtx) [l |- term] -> [l |- term] -> ctype =
-% | EqTRef : EqT [l |- M ..] [l |- M ..]
+% inductive EqT : (l:tCtx) [l |- term] -> [l |- term] -> ctype =
+% | EqTRef : EqT [l |- M[..]] [l |- M[..]]
 % ;
 
 
-% rec unique' : TRel' [l |- T ..] [h |- T1 ..] -> TRel' [l |- S ..] [h |- T1 ..]
-%       -> EqT [l |- T ..] [l |- S..]  =
+% rec unique' : TRel' [l |- T[..]] [h |- T1[..]] -> TRel' [l |- S[..]] [h |- T1[..]]
+%       -> EqT [l |- T[..]] [l |- S..]  =
 %  fn tr => fn sr => case tr of
 % | TRvar0' [h] cr => 
 %   let TRvar0' [h] cr' = sr in EqTRef
@@ -363,10 +363,10 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 %          TRel' [l |- T..] [h |- T1'..]  -> TRel' [l |- S..] [h |- S1'..] ->
 %          TRel [l |- T..] [g |- T2'..]  -> TRel [l |- S..] [g |- S2'..] ->
 %          TadCxt [g] [h]
-%          -> [h |- deq (T1' ..) (S1' ..)] -> [g |- aeq (T2' ..) (S2' ..)]  =
+%          -> [h |- deq (T1'[..]) (S1'[..])] -> [g |- aeq (T2'[..]) (S2'[..])]  =
 % fn tr => fn sr => fn tr' => fn sr' => fn cr =>
 % fn de => case de of
-% | [h |- #p.2 ..] =>
+% | [h |- #p.2[..]] =>
 %   let EqTRef = unique' tr sr in
 %   let EqRef = unique tr' sr' in
 %    ref' tr'
@@ -376,65 +376,65 @@ datatype TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype #stratifi
 %   let EqRef = unique tr' sr' in
 %    ref' tr'
 
-%  | [h |- de_a (DE1 ..) (DE2 ..)] =>
+%  | [h |- de_a (DE1[..]) (DE2[..])] =>
 %    let TRapp' tr1' tr2' = tr in
 %    let TRapp' sr1' sr2' = sr in
 %    let TRapp tr1 tr2 = tr' in
 %    let TRapp sr1 sr2 = sr' in
-%   let [g |- AE1 ..] = ceq tr1' sr1' tr1 sr1 cr [h |- DE1 ..] in
-%   let [g |- AE2 ..] = ceq tr2' sr2' tr2 sr2 cr [h |- DE2 ..] in
-%     [g |- ae_a (AE1 ..) (AE2 ..)]
+%   let [g |- AE1[..]] = ceq tr1' sr1' tr1 sr1 cr [h |- DE1[..]] in
+%   let [g |- AE2[..]] = ceq tr2' sr2' tr2 sr2 cr [h |- DE2[..]] in
+%     [g |- ae_a (AE1[..]) (AE2[..])]
 
-%  | [h |- de_l (\x.\u. DE .. x u)] =>
+%  | [h |- de_l (\x.\u. DE u)] =>
 %   let TRlam' tr1' = tr in
 %   let TRlam' sr1' = sr in
 %   let TRlam tr1 = tr' in
 %   let TRlam sr1 = sr' in
-%   let [g,b:block x:term,u:aeq x x  |-  AE .. b.1 b.2] =
+%   let [g,b:block x:term,u:aeq x x  |-  AE[..] b.1 b.2] =
 %         ceq tr1' sr1' tr1 sr1 (ADcons cr)
-%             [h, b:block x:term, _t:deq x x |-  DE .. b.1 b.2]
+%             [h, b:block x:term, _t:deq x x |-  DE[..] b.1 b.2]
 %   in
-%      [g |- ae_l (\x.\v. AE .. x v)]
+%      [g |- ae_l (\x.\v. AE v)]
 
-%  | [h |- de_t (DE1 ..) (DE2 ..)] =>
-%    let [h |- DE1 ..] : [h |- deq (T1' ..) (R1' ..)] = [h |- DE1 ..] in
+%  | [h |- de_t (DE1[..]) (DE2[..])] =>
+%    let [h |- DE1[..]] : [h |- deq (T1'[..]) (R1'[..])] = [h |- DE1[..]] in
 %    let tdcxt = trelImpliesTdCxt tr in  % tdcxt:TdCxt [l] [h]
-%    let ExWk' (rr : TRel' [l |- R ..] [h |- R1' ..]) = exTRel' [h |- R1' ..] tdcxt in
+%    let ExWk' (rr : TRel' [l |- R[..]] [h |- R1'[..]]) = exTRel' [h |- R1'[..]] tdcxt in
 %    let tacxt = exCRel tr' in
-%    let ExWk  [g |- R2' ..] (rr' : TRel [l |- R ..]  [g |- R2' ..]) = exTRel [l |- R ..] tacxt in
-%    let [g |- AE2 ..] = ceq  rr sr rr' sr' cr [h |- DE2 ..] in
-%    let [g |- AE1 ..] = ceq tr rr tr' rr' cr [h |- DE1 ..] in
-%        trans tr' sr' rr' [g |- AE1 ..] [g |- AE2 ..]
+%    let ExWk  [g |- R2'[..]] (rr' : TRel [l |- R[..]]  [g |- R2'[..]]) = exTRel [l |- R[..]] tacxt in
+%    let [g |- AE2[..]] = ceq  rr sr rr' sr' cr [h |- DE2[..]] in
+%    let [g |- AE1[..]] = ceq tr rr tr' rr' cr [h |- DE1[..]] in
+%        trans tr' sr' rr' [g |- AE1[..]] [g |- AE2[..]]
 
 % %{ Explanation of the previous case:
 %   % Assumptions:
-%   % {DE1 :: [h |- (deq (T1' ..) (R1' ..))]}
-%   % {DE2 :: [h |- (deq (R1' ..) (S1' ..))]}
-%   % tr : TRel' [l |- T ..] [h |- T1' ..]
-%   % sr : TRel' [l |- S ..] [h |- S1' ..]
-%   % tr': TRel [l] [g] ([l |- T ..]) ([g |- T2' ..])
-%   % sr': TRel [l] [g] ([l |- S ..]) ([g |- S2' ..])
+%   % {DE1 :: [h |- (deq (T1'[..]) (R1'[..]))]}
+%   % {DE2 :: [h |- (deq (R1'[..]) (S1'[..]))]}
+%   % tr : TRel' [l |- T[..]] [h |- T1'[..]]
+%   % sr : TRel' [l |- S[..]] [h |- S1'[..]]
+%   % tr': TRel [l] [g] ([l |- T[..]]) ([g |- T2'[..]])
+%   % sr': TRel [l] [g] ([l |- S[..]]) ([g |- S2'[..]])
 %   % cr: TadCxt [g] [h]
-%   % If {R1' : [h |- term]} then there exists {R : [l |- term]} and rr : TRel' [l |- R ..] [h |- R1' ..]
-%   % If {R : [l |- term]} then there exists {R2': [g |- term]}  and rr' : TRel [l |- R ..] [g |- R2' ..]
+%   % If {R1' : [h |- term]} then there exists {R : [l |- term]} and rr : TRel' [l |- R[..]] [h |- R1'[..]]
+%   % If {R : [l |- term]} then there exists {R2': [g |- term]}  and rr' : TRel [l |- R[..]] [g |- R2'[..]]
 % }%
-% %{ i.h. given DE2 :[h |- (deq (R1' ..) (S1' ..))]
-%               rr  : TRel' [l |- R ..][h |- R1'..]
-%               sr  : TRel' [l |- S ..] [h |- S1' ..]
-%               rr' : TRel [l |- R ..][g |- R2'..]
-%               sr' : TRel [l] [g] ([l |- S ..]) ([g |- S2' ..])
-%         we obtain [g |- aeq (R2' ..) (S2'..))]
+% %{ i.h. given DE2 :[h |- (deq (R1'[..]) (S1'[..]))]
+%               rr  : TRel' [l |- R[..]][h |- R1'..]
+%               sr  : TRel' [l |- S[..]] [h |- S1'[..]]
+%               rr' : TRel [l |- R[..]][g |- R2'..]
+%               sr' : TRel [l] [g] ([l |- S[..]]) ([g |- S2'[..]])
+%         we obtain [g |- aeq (R2'[..]) (S2'..))]
 
-%    let [g |- AE2 ..] = ceq rr sr rr' sr' cr [h |- DE2 ..] in
+%    let [g |- AE2[..]] = ceq rr sr rr' sr' cr [h |- DE2[..]] in
 
-%    i |- h.  given DE1 : [h |- deq (T1' ..) (R1' ..)]
-%                tr  : TRel' [l |- T ..][h |- T1'..]
-%                rr  : TRel' [l |- R ..][h |- R1'..]
-%                tr' : TRel [l |- T ..][g |- T2'..]
-%                rr' : TRel [l |- R ..][g |- R2'..]
-%          we obtain[g |- aeq (T2' ..) (R2' ..)]
-%   let [g |- AE1 ..] = ceq tr rr tr' rr' cr [g |- DE1 ..] in
-%     trans tr' sr' srr [g |- AE1 ..]  [g |- AE2 ..]
+%    i |- h.  given DE1 : [h |- deq (T1'[..]) (R1'[..])]
+%                tr  : TRel' [l |- T[..]][h |- T1'..]
+%                rr  : TRel' [l |- R[..]][h |- R1'..]
+%                tr' : TRel [l |- T[..]][g |- T2'..]
+%                rr' : TRel [l |- R[..]][g |- R2'..]
+%          we obtain[g |- aeq (T2'[..]) (R2'[..])]
+%   let [g |- AE1[..]] = ceq tr rr tr' rr' cr [g |- DE1[..]] in
+%     trans tr' sr' srr [g |- AE1[..]]  [g |- AE2[..]]
 % }%
 % ;
 

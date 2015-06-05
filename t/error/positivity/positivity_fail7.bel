@@ -1,4 +1,4 @@
-datatype A: ctype #positive
+inductive A: ctype 
 =
  | A1: ((A -> A) -> A) -> A % fail
 ;

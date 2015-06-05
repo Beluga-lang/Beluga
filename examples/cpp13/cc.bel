@@ -1,0 +1,275 @@
+% -*- mode: beluga; indent-tabs-mode: nil -*-
+% Type-preserving closure conversion
+% author: Olivier Savary Belanger
+% date: 2012-2014
+
+
+% PRAGMA FOR CHECKING COVERAGE
+%coverage
+
+% ----------------------------------------------------------
+% Types 
+LF tp: type =
+| nat   : tp
+| arr   : tp -> tp -> tp
+| code  : tp -> tp -> tp
+| cross : tp -> tp -> tp
+| unit  : tp
+;
+%name tp T.
+
+% ----------------------------------------------------------
+% Source language M,N
+LF source: tp -> type =
+| lam  : (source T -> source S) -> source (arr T S)
+| app  : source (arr T S) -> source T -> source S
+| letv : source T -> (source T -> source S) -> source S
+| z    : source nat
+| suc  : source nat -> source nat
+| nil : source unit
+| fst  : source (cross T S) -> source T
+| rst  : source (cross T S) -> source S
+| cons : source T -> source S -> source (cross T S)
+;
+%name source M.
+
+% ----------------------------------------------------------
+% Target language P,Q
+LF target: tp -> type =
+| cnil : target unit
+| ccons : target T -> target S -> target (cross T S)
+| cfst  : target (cross T S) -> target T
+| crst  : target (cross T S) -> target S
+| capp  : target (code T S) -> target T -> target S
+| clam  : (target T -> target S) -> target (code T S)
+| clet  : target T -> (target T -> target S) -> target S
+| cpack : target  (code (cross T E) S) -> target E
+       -> target (arr T S) % We write E for the type of the environment
+| cletpack : target (arr T S)
+       -> ({e:tp} target (code (cross T e) S) -> target e -> target S)
+       -> target S
+| cz    : target nat
+| csuc  : target nat -> target nat
+;
+%name target P.
+
+% ----------------------------------------------------------       
+% Context schema declarations for source and target context
+schema sctx = source T;
+schema tctx = target T;
+
+% ----------------------------------------------------------       
+% SubCtx Γ' Γ ⇔ Γ' ⊆ Γ
+% This is in fact a weakening substitution between 
+% Γ and Γ'. We can in fact use substitution variables in
+% Beluga to give a witness for this relationship.
+% However, since substitution variables are more general,
+% i.e. they do not guarantee that variables are mapped to
+% variables, one would need to carry a proof that the 
+% strengthening substitution is indeed just a variable
+% to variable substitution.
+inductive SubCtx: {g':sctx} {g:sctx} ctype =
+| WInit: SubCtx [] []
+| WDrop: SubCtx [g'] [g] -> SubCtx [g'] [g,x:source T[] ]
+| WKeep: SubCtx [g'] [g] -> SubCtx [g',x:source T[] ] [g,x:source T[] ]
+;
+
+% ----------------------------------------------------------       
+% Term Strengthening: 
+% 
+% Given a source term M in a context Γ, 
+% we compute a strengthened version of M which only depends on
+% the free variables occurring in M.
+% To accomplish this efficiently, we use an auxiliary datatype
+% wrap T N which describes a source term with N free variables.
+% If M has type S and has N free variables x1:T1, ... xn:Tn, 
+% then wrap T N intuitively denotes a term  of type 
+% T1 -> T2 -> ... -> Tn -> S .
+%
+LF nat: type =
+| nz : nat
+| nsuc : nat -> nat
+;
+
+LF wrap: tp -> nat -> type =
+| init: (source T) -> wrap T nz
+| abs: (source S -> wrap T N) -> wrap (arr S T) (nsuc N)
+;
+
+% StrTerm [Γ] [  |- T] ⇔ ∃ Γ' M, Γ' ⊆ Γ ∧ and Γ' ⊢ M : T
+inductive StrTerm': {g:sctx} [ |- tp] -> [|- nat] -> ctype =
+| STm': [g' |- wrap T[] N[]] -> SubCtx [g'] [g] -> StrTerm' [g] [ |- T] [|- N]
+;
+
+rec str: {g:sctx}[g |-  wrap T[] N[]] ->  StrTerm' [g] [ |- T] [|- N] =
+ / total g (str g) /
+mlam g => fn e => case [g] of 
+| [] => let [|- M] = e  in STm' [|- M] WInit
+| [g, x:source T[] ] => 
+  case e of
+  | [g,x:source _ |- M[..] ] =>
+    let STm' [h |-  M'] rel = str [g] [g |-  M] in
+      STm' [h |- M'] (WDrop rel)
+  | [g,x:source _ |- M] =>
+  let  STm' [h |- abs \x.M'] rel = str [g] [g |- abs \x. M] in
+    STm' [h,x:source _ |- M'] (WKeep rel)
+;
+
+inductive StrTerm: {g:sctx} [ |- tp] -> ctype =
+| STm: [g',x:source S[] |- source T[]] -> SubCtx [g'] [g] -> StrTerm [g,x:source S[]] [ |- T] 
+;
+
+rec strengthen: [g,x:source S[] |- source T[] ] -> StrTerm [g, x:source S[]] [|- T] = 
+ / total  (strengthen) /
+fn m => 
+  let [g,x:source _ |- M] = m in 
+  let STm' [g' |- abs \x. init M'] wk = str [g] [g |- abs \x. init M] in 
+    STm [g',x:source _ |- M'] wk
+;
+% ----------------------------------------------------------       
+
+% Map [Δ] [Γ] ⇔ Δ ⊢ ρ : Γ
+inductive Map:{h:tctx}{g:sctx} ctype =
+| M_id:{h:tctx} Map [h] []
+| M_dot: Map [h] [g] -> [h |-  target S[]] -> Map [h] [g,x:source S[]]
+;
+
+rec weaken: Map [h] [g] -> Map [h,x:target S[]] [g] =
+ / total m (weaken _ _ _ m) /
+fn sigma => case sigma of
+| M_id [h] => M_id [h,x:target _]
+| M_dot sigma' [h |-  M] =>
+    M_dot (weaken sigma') [h,x:target _ |- M[..]]
+;
+
+rec extend: Map [h] [g] -> Map [h,x:target S[]] [g,x:source S[]] =
+ / total m (extend _ _ _ m) /
+fn sigma => 
+  let (sigma : Map [h] [g]) = sigma in
+    M_dot (weaken sigma) [h,x:target _ |- x]
+;
+
+% ----------------------------------------------------------       
+% Variable lookups
+
+rec lookup: Map [h] [g] -> {#q:[g |- source T[]]}[h |-  target T[]] =
+ / total m (lookup _ _ _ m) /
+fn sigma => mlam #q => case sigma of
+| M_dot sigma' [h |-  M] => 
+ let (sigma : Map [h] [g',x:source S]) = sigma in
+ (case [g', x:source S |- #q] of
+ | [g', x:source T |- x   ] =>  [h |-  M]
+ | [g', x:source S |- #p[..] ] => lookup sigma' [g' |- #p]
+ )
+| M_id [h] => impossible [ |- #q] in []
+;
+
+% This definition may be thought of a tuple of type T which is known to consist only
+% of variables
+inductive VarTup: (g:sctx) {T:[ |- tp]} [g |- source T[]] -> ctype =
+| Emp : VarTup [|- unit] [|- nil] 
+| Nex : VarTup [|-  L] [g |- R] -> VarTup [|- cross T L] [g,x:source T[] |- cons x R[..]]
+;
+
+% lookuVars replaces each variable contained in the VarTup by their respective target term from Map.
+rec lookupVars: SubCtx [g'] [g] -> VarTup [|- G] [g' |- M] -> Map [h] [g] -> [h |-  target G[] ] =
+/ total s (lookupVars _ _ _ _ _ s ) /
+fn r => fn vt => fn sigma =>  let (sigma : Map [h] [g]) = sigma in case r of
+| WInit =>
+  let Emp = vt in % g' = g = .
+   [h |-  cnil]
+| WDrop r' =>
+  let M_dot sigma' [h |-  P] = sigma in
+    lookupVars r' vt sigma'
+| WKeep r' =>
+  let (Nex vt')  = vt in
+  let (M_dot sigma' [h |-  P]) = sigma in
+  let [h |-  M] = lookupVars r' vt' sigma' in
+    [h |-  ccons P M]
+;
+
+% ----------------------------------------------------------       
+% Context reification 
+
+% CtxAsTup Γ ⇔ ∃ ρ, (x1,...,xn):(t1 × ... × tn) ⊢ ρ : Γ where Γ = x1:t1,...,xn:tn
+inductive CtxAsTup: {g:sctx} ctype =
+| EnvClo: VarTup [|- G] [g |- M] -> Map [x:target G] [g] -> CtxAsTup [g]
+;
+
+rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
+ / total m (extendEnv _ _ _ m) /
+fn sigma => case sigma of
+| M_id [x:target S] => M_id [x:target _]
+| M_dot sigma' [x:target S |- M[x] ] => M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
+;
+
+rec reify : {g:sctx} CtxAsTup [g] =
+ / total g (reify  g) /
+mlam g => case [g] of
+| [ ] =>  EnvClo Emp (M_id [x:target unit])
+| [g,x:source S[]] =>
+  let EnvClo vt sigma = reify [g] in
+   let  rho' = extendEnv sigma in
+  let rho = M_dot rho' [xenv:target (cross S[] _) |- cfst xenv] in
+    EnvClo (Nex  vt) rho
+;
+
+
+% ----------------------------------------------------------       
+% Closure conversion algorithm
+
+rec cc': [g |- source S[]] -> Map [h] [g] -> [h |- target S[]] =
+% / total m (cc' _ _ _ m) /
+fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
+| [g |- z] => [h |- cz]
+
+| [g |- suc M] =>
+  let [h |- P'] = cc' [g |- M] sigma in
+  [h |- csuc P']
+
+| [g |- #p] => lookup sigma [g |- #p] 
+
+| [g |- app M N] =>
+  let [h |- P] = cc' [g |- M] sigma  in
+  let [h |- Q] = cc' [g |- N] sigma  in
+      [h |- cletpack P
+	 \e.\xf.\xenv. capp xf (ccons  Q[..] xenv)]
+
+| [g |- letv M (\x. N)] =>
+  let [h |- P]              = cc' [g |- M]  sigma in
+  let [h,x:target S |- Q] = cc' [g,x: source _ |- N]  (extend sigma) in
+    [h |- clet P (\x.Q)]
+
+| [g |- lam \x.M] =>
+  let STm [g',x:source _ |- M'] wk = strengthen [g, x:source _ |- M] in
+  let EnvClo env rho = reify [g'] in
+  let [h |- E] = lookupVars wk env sigma in
+  let [xenv:target _ , x:target _ |- P[xenv,x] ] = cc' [g',x:source _ |- M'] (extend rho) in
+    [h |- cpack  (clam \clo. clet (cfst clo) (\x. clet (crst clo) (\xenv. P[xenv,x])))   E]
+
+| [g |- cons M N] =>
+  let [h |- P ] = cc' [g |- M ] sigma  in
+  let [h |- Q ] = cc' [g |- N ] sigma in
+    [h |- ccons P Q]
+
+| [g |- fst M] =>
+  let [h |- P] =  cc' [g |- M] sigma in
+   [h |- cfst P]
+
+| [g |- rst M] =>
+  let [h |- P] =  cc' [g |- M] sigma  in
+    [h |- crst P]
+
+| [g |- nil] =>  [h |- cnil]
+;
+
+rec cc: [ |- source T] -> [ |- target T] =
+fn t => cc' t (M_id [])
+;
+
+% ----------------------------------------------------------       
+% Examples
+
+% let t0 = cc [ |- app (lam (\x.x)) z ];
+% let t1 = cc [ |- app (lam (\x.(app (lam (\y.y)) x))) z];
+% et t2 = cc [ |- app (app (app (lam \x. (lam \y. (lam \w . x))) z) z) z];

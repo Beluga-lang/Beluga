@@ -1,12 +1,12 @@
 % Weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
-datatype tp : type =
+LF tp : type =
 | i :  tp
 | arr: tp -> tp -> tp;
  %name tp T.
 
-datatype tm : tp -> type =
+LF tm : tp -> type =
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm i;
@@ -14,23 +14,23 @@ datatype tm : tp -> type =
 
 schema ctx = tm T;
 
-datatype mstep : tm A -> tm A -> type =
+LF mstep : tm A -> tm A -> type =
 | beta  : mstep (app (lam M) N) (M N)
 | stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N')
 | refl : mstep M M
 | trans : mstep M M' -> mstep M' M'' -> mstep M M'';
 %name mstep S.
 
-datatype val : tm A -> type =
+LF val : tm A -> type =
 | val/c : val c
 | val/lam : val (lam M);
 %name val V.
 
-datatype halts : tm A -> type =
+LF halts : tm A -> type =
 halts/m : mstep M M' -> val M' -> halts M;
 %name halts H.
 
-datatype Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype #stratified =
+stratified Reduce : {A:[ |- tp]} {M:[ |- tm A]} ctype  =
 | I : [ |- halts M] -> Reduce [ |- i] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N])
@@ -67,34 +67,34 @@ mlam A => mlam M => mlam M' => fn s => fn r => case [ |- A] of
 ;
 
 %  h |- #s : g
-datatype RedSub : {g:ctx}{#S: |- g} ctype =
+inductive RedSub : {g:ctx}{#S:[ |- g]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot :     RedSub  [g] [ |- #S[^] ]  % #S : g[]
           -> Reduce [|- A] [ |- M]              % A:[ |- tp], M:[ |- tm A]
-          -> RedSub [g, x:tm A] [ |- #S[^], M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
+          -> RedSub [g, x:tm A[]] [ |- #S[^], M ]   %  M : [ |- tm (A ^ [^CtxShift g #S[ |- .] ]
 ;
 
 
-rec lookup : {g:ctx}{#p:[g |- tm A]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p #S[^]] =
+rec lookup : {g:ctx}{#p:[g |- tm A[]]}RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |- #p[#S[^]]] =
  / total p (lookup g a s p) /
-mlam g => mlam #p => case [g |- #p ..] of
+mlam g => mlam #p => case [g |- #p[..]] of
  | [g',x:tm A |-  x] =>   ? % fn rs => let (Dot rs' rN) = rs in rN
- | [g',x:tm A |-  #q ..] => ? %{ fn rs => let Dot rs' rN = rs in
-                      lookup [g'] [g' |-  #q ..] rs'}%
+ | [g',x:tm A |-  #q[..]] => ? %{ fn rs => let Dot rs' rN = rs in
+                      lookup [g'] [g' |-  #q[..]] rs'}%
 ;
 
-rec eval : {g:ctx}{M:[g |- tm A]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M #S[^]] =
+rec eval : {g:ctx}{M:[g |- tm A[]]} RedSub [g] [ |- #S[^]] -> Reduce [|- A]  [ |- M[#S[^]]] =
 / total m (eval g a s m) /
- mlam g => mlam M => fn rs => case [g |- M ..] of
-| [g |- #p ..] => lookup [g] [g |- #p ..] rs
-| [g |- lam (\x. M1 .. x)] =>
+ mlam g => mlam M => fn rs => case [g |- M[..]] of
+| [g |- #p[..]] => lookup [g] [g |- #p[..]] rs
+| [g |- lam (\x. M1)] =>
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
     closed [|- _ ] [ |- _ ] [ |- _ ] 
-           [ |- beta] (eval [g,x:tm _] [g,x |- M1 .. x] (Dot rs rN)))
- | [g |- app (M1 ..) (M2 ..)] =>
-  let Arr ha f = eval [g] [g |- M1 ..] rs in
-  f [ |- _ ] (eval [g] [g |- M2 ..] rs)
+           [ |- beta] (eval [g,x:tm _] [g,x |- M1] (Dot rs rN)))
+ | [g |- app (M1[..]) (M2[..])] =>
+  let Arr ha f = eval [g] [g |- M1[..]] rs in
+  f [ |- _ ] (eval [g] [g |- M2[..]] rs)
 | [g' |-  c] => I [ |- halts/m refl val/c]
 ;
 

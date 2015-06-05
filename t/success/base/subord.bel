@@ -18,14 +18,14 @@ FN g => fn e =>
   case e of
 %{
   | [g, xx : bool]  U     => [] z         % Shift(CtxShift _, 1)
-  | [g, xx : bool]  U ..     => [] z      % Shift(NoCtxShift, 1)
-  | [g, xx : bool]  U .. xx     => [] z  % Dot(xx,  Shift(NoCtxShift _, 1))
+  | [g, xx : bool]  U[..]     => [] z      % Shift(NoCtxShift, 1)
+  | [g, xx : bool]  Ux     => [] z  % Dot(xx,  Shift(NoCtxShift _, 1))
   | [g, xx : bool]  U xx     => [] z     % Dot(xx,  Shift(CtxShift _, 1))
 }%
   | [g, xx : bool |-  eq U V]     => [ |- z]
-%  | [g, xx : bool]  eq (U ..) V     => [] z
-%  | [g, xx : bool]  eq (U ..) (V .. xx)     => [] z
-  | [g, xx : bool |-  #p .. xx]   => [ |- z]
+%  | [g, xx : bool]  eq (U[..]) V     => [] z
+%  | [g, xx : bool]  eq (U[..]) (Vx)     => [] z
+  | [g, xx : bool |-  #px]   => [ |- z]
 ;
 
 
@@ -33,8 +33,8 @@ rec fff2 : {g:termCtx} [g, xx : bool |-  term] -> [ |- term] =
 mlam g => fn e =>
   case e of
   | [g, xx : bool |-  z]     => [ |- z]
-  | [g, xx : bool |-  suc (U ..)]   => [ |- z]
-  | [g, xx : bool |-  #p ..]   => [ |- z]
+  | [g, xx : bool |-  suc (U[..])]   => [ |- z]
+  | [g, xx : bool |-  #p[..]]   => [ |- z]
 ;
 }%
 
@@ -43,7 +43,7 @@ mlam g => fn e =>
   case e of %not
   | [g, xx : bool |-  z]      => [ |- z]
   | [g, xx : bool |-  suc U]  => [ |- z]
-  | [g, xx : bool |-  #p ..]  => [ |- z]
+  | [g, xx : bool |-  #p[..]]  => [ |- z]
 ;
 
 % let crash = fff2Wrong [y:term] ([y:term, xx:bool] suc (suc y))

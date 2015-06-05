@@ -6,11 +6,11 @@ yep : {N:exp} pred N.
 
 schema ctx = exp;
 
-rec foo : (g:ctx) [ g |- pred M ] -> [ |- exp ] =
+rec foo : (g:ctx) [ g |- pred (M[]) ] -> [ |- exp ] =
 fn p => [ |- z ];
 
 rec bar : {g:ctx} {N : [ g |- exp ]} [ |- exp ] =
-mlam g => mlam N => foo [ g |- yep (N ..) ];
+mlam g => mlam N => foo [ g |- yep (N[..]) ];
 
 % Probably we should give a better error message than what is in negshift.bel.out.
 % i.e. it should probably fail even earlier, during reconstruction

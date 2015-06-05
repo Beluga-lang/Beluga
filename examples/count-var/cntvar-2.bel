@@ -34,7 +34,7 @@ case x of
 % [ |- U] => y
 ;
 
-rec cntV : {g:expCtx} [g, x:exp (T ..) |-  exp (S ..)] -> [ |- exp nat] = 
+rec cntV : {g:expCtx} [g, x:exp (T[..]) |-  exp (S[..])] -> [ |- exp nat] = 
 % / total e (cntV _ _ _ e) /
 mlam g =>
  fn e =>
@@ -42,22 +42,22 @@ mlam g =>
 
     [g,x : exp _  |-  tt]          => [ |- z]
 
-  | [g,x : exp _  |-  (#p .. )]    => [ |- z]
+  | [g,x : exp _  |-  (#p[..] )]    => [ |- z]
 
   | [g,x : exp _  |-  x]           => [ |- s z]
 
 
   | [g,x : exp _  |-  z]           => [ |- z]
 
-  | [g,x : exp _  |-  s (W .. x)]  => cntV [g] [g,x |- (W .. x)]
+  | [g,x : exp _  |-  s (W)]  => cntV [g] [g,x |- (W)]
 %%
 %%
-%%  NOT WORKING IF WE OMIT T1 ..  since from the pattern we simply infer
+%%  NOT WORKING IF WE OMIT T1[..]  since from the pattern we simply infer
 %%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
 %%
-%%   | [g,x : exp _ ] letv  (U1 .. x) (\y . (U2 ..  x y)) =>
-%%             plus (cntV [g]  ([g,x] (U1 .. x)))
-%%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 .. x y)))
+%%   | [g,x : exp _ ] letv  (U1) (\y . (U2[..]  x y)) =>
+%%             plus (cntV [g]  ([g,x] (U1)))
+%%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 y)))
 %%
 %% CURRENTLY, THIS PROBLEM ARISES IN THE FORM OF FAILURE TO INVERT THE
 %% RECONSTRUCTED BRANCH: MVAR 3[_  |-  ^0] occurs in the branch, but this is
@@ -66,13 +66,13 @@ mlam g =>
 %% The solution is that the original meta-variable 3 needs to be in fact of a different type,
 %% namely exp [ |- ] and not exp[ |- , x:A].
 %%
-   | [g,x : exp _  |-  letv (T1 ..) (U1 .. x) (\y . (U2 .. x y))] =>
-      plus  (cntV [g]          [g,x |- (U1 .. x)])
-            (cntV [g, y:exp _]  [g,y,x |-  (U2 .. x y)])
+   | [g,x : exp _  |-  letv (T1[..]) (U1) (\y . U2)] =>
+      plus  (cntV [g]          [g,x |- (U1)])
+            (cntV [g, y:exp _]  [g,y,x |-  (U2[..,x,y])])
 
 
-   | [g,x: exp _  |-  add (U .. x) (W .. x)]  =>
-     plus (cntV [g] [g,x |- (U .. x)])
-          (cntV [g] [g,x |- (W .. x)])
+   | [g,x: exp _  |-  add (U) (W)]  =>
+     plus (cntV [g] [g,x |- (U)])
+          (cntV [g] [g,x |- (W)])
 
 ;

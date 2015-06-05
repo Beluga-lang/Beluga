@@ -81,13 +81,13 @@ fn f => fn d => case f of
   [ |- tp_s C1]
 
 | [ |- ev_m_z F1 F] =>
-  let [ |- tp_match (\x.\u. (D2 x u)) D1 D] = d   in
+  let [ |- tp_match (\x.\u. D2) D1 D] = d   in
   tps [ |- F1] [ |- D1]
 
 | [ |- ev_m_s F2 F] =>
-  let [ |- tp_match (\x.\u. (D2 x u)) D1 D] = d   in
+  let [ |- tp_match (\x.\u. D2) D1 D] = d   in
   let [ |- tp_s C]    =   tps [ |- F] [ |- D] in
-  tps [ |- F2] [ |- (D2 _ C)]
+  tps [ |- F2] [ |- (D2[_,C])]
 
 | [ |- ev_lam] =>  d
   %    let [ ] tp_lam (\x. \u. (D x u)) = d in d
@@ -95,13 +95,13 @@ fn f => fn d => case f of
 
 | [ |- ev_app F1 F2 F3] =>
   let [ |- tp_app D2 D1]            = d in
-  let [ |- tp_lam \x. \u. D x u]    = tps [ |- F1] [ |- D1]  in
+  let [ |- tp_lam \x. \u. D]    = tps [ |- F1] [ |- D1]  in
   let [ |- C2]                      = tps [ |- F2] [ |- D2]  in
-  tps [ |- F3] [ |- (D  _  C2)]
+  tps [ |- F3] [ |- (D[ _,  C2])]
 
 | [ |- ev_l F2 F1] =>
-  let [ |- tp_letv (\x.\u. D2 x u) D1]     = d in
+  let [ |- tp_letv (\x.\u. D2) D1]     = d in
   let [ |- C1]                = tps [ |- F1] [ |- D1] in
-    tps [ |- F2] [ |- D2 _ C1]
+    tps [ |- F2] [ |- D2[ _, C1]]
 ;
 

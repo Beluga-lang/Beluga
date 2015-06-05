@@ -22,6 +22,7 @@ let usage () =
         ^ "    +tfile                Print timing information to file \"time.txt\"\n"
         ^ "    +printSubord          Print subordination relations (experimental)\n"
         ^ "    -print                Turn printing off\n"
+        ^ "    +print                Turn printing on\n"
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
         ^ "    +test                 Make output suitable for test harness. Implies -print\n"
@@ -57,6 +58,7 @@ let process_option arg rest = match arg with
   | "+tfile" -> Monitor.onf := true; rest
   | "+printSubord" -> Subord.dump := true; rest
   | "-print" -> Debug.chatter := 0; rest
+  | "+print" -> Debug.chatter := 2; rest
   | "-width" ->
     begin match rest with
       | [] -> bailout "-width needs an argument"
@@ -160,7 +162,7 @@ let main () =
         end;
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction: %s ##\n" file_name;
-        let sgn' = Recsgn.recSgnDecls sgn in
+        let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
         let _ = Store.Modules.reset () in
         if !Debug.chatter > 1 then begin 
           List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn' end
@@ -185,7 +187,7 @@ let main () =
             Subord.dump_subord();
             (* Subord.dump_typesubord() *)
           end;
-          print_newline ();
+          print_newline () ;
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
             printf "\n## Holes: %s  ##" file_name;
@@ -195,6 +197,15 @@ let main () =
             printf "\n\n## LF Holes: %s  ##" file_name;
             Lfholes.printAll ()
           end;
+          begin match leftoverVars with
+            | None -> ()
+            | Some vars -> 
+              if !Debug.chatter != 0 then begin
+                printf "\n## Left over variables ##" ;
+                Recsgn.print_leftoverVars vars 
+              end ;
+              raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+          end ;
           if !Typeinfo.generate_annotations then
             Typeinfo.print_annot file_name;
           if !Locs.gen_loc_info then begin

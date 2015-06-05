@@ -16,6 +16,13 @@ type error =
   | UnknownIdentifier
   | UnknownMTyp of Id.name
 
+type sort = LFTyp of LF.typ | MetaTyp of LF.ctyp * LF.depend
+type marker = Pure of sort | Impure
+
+type free_var =
+  | FDecl of kind * marker
+  | CtxV of (Id.name * Id.cid_schema * LF.depend)
+
 
 exception Error of Syntax.Loc.t * error
 
@@ -34,7 +41,7 @@ val msub   : LF.msub -> LF.msub * LF.mctx
 
 val compkind : Comp.kind -> Comp.kind * Id.offset
 val comptyp  : Comp.typ -> Comp.typ * Id.offset
-val exp      : Comp.exp_chk -> Comp.exp_chk
+val exp      : Comp.exp_chk -> free_var LF.ctx * Comp.exp_chk
 
 val pattern    : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
                  LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ

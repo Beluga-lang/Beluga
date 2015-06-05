@@ -16,14 +16,14 @@ Cave and Pientka[2013]</a>.
 
 First, let's define a simply typed &lambda;-calculus with one type:
 }}%
-datatype tp : type =
+LF tp : type =
 | b    :  tp
 | arr  : tp -> tp -> tp
 | cross: tp -> tp -> tp
 ;
 %name tp T.        
 
-datatype tm : tp -> type = 
+LF tm : tp -> type = 
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
@@ -43,7 +43,7 @@ We now encode the step relation of the operational semantics. In
 particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
-datatype step : tm A → tm A → type = 
+LF step : tm A → tm A → type = 
 | beta : step (app (lam M) N) (M N)
 | stepapp : step M M' -> step (app M N) (app M' N)
 
@@ -64,20 +64,20 @@ Finally, we define:
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-datatype mstep : tm A -> tm A -> type = 
+LF mstep : tm A -> tm A -> type = 
 | refl : mstep M M
 | onestep : step M M' -> mstep M' M'' -> mstep M M''
 ;
 %name mstep S.
 
-datatype val : tm A -> type = 
+LF val : tm A -> type = 
 | val/c : val c
 | val/lam : val (lam M)
 | val/pair: val M -> val N -> val (pair M N)
 ;
 %name val V.
 
-datatype halts : tm A -> type = 
+LF halts : tm A -> type = 
 | halts/m : mstep M M' -> val M' -> halts M
 ;
 %name halts H.
@@ -93,8 +93,8 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-datatype Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
-#stratified =
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
+ =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
     ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
@@ -187,22 +187,22 @@ fn r => case r of
 
 schema ctx = tm T;
 
-datatype RedSub : {gamma:ctx}{#S: |- gamma} ctype =
+inductive RedSub : {gamma:ctx}{#S:[ |- gamma]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A] [ |- #S[^] M ] 
+     → RedSub [gamma, x:tm A[]] [ |- #S[^], M ] 
 ;
 
 
 
-rec lookup : {gamma:ctx}{#p:[gamma |- tm A]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p #S[^]] =
+rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- #p[#S]] =
 / total gamma (lookup gamma) / 
 mlam gamma => mlam #p => fn rs => case [gamma] of 
 | [] => impossible [ |- #p]
-| [gamma', x:tm A] => (case [gamma', x:tm A |- #p ..] of
+| [gamma', x:tm A] => (case [gamma', x:tm A |- #p[..]] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
- | [gamma',x:tm A |-  #q ..] => let Dot rs' rN = rs in
-                      lookup [gamma'] [gamma' |- #q ..] rs')
+ | [gamma',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
+                      lookup [gamma'] [gamma' |- #q[..]] rs')
 ;
 
 %{{
@@ -252,36 +252,36 @@ let [|- MS] = trans s1 s2 in
 [|- halts/m MS (val/pair V1 V2)]
 ;
 
-rec main : {gamma:ctx}{M:[gamma |- tm A]} 
-          RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M #S[^]] =
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]} 
+          RedSub [gamma] [ |- #S[^]] -> Reduce [|- A] [|- M[#S]] =
  / total m (main gamma a s m) /
-mlam gamma, M => fn rs => case [gamma |- M ..] of
-| [gamma |- #p ..] =>  lookup [gamma] [gamma |- #p ..] rs
-| [gamma |- lam \x. M .. x] => 
+mlam gamma, M => fn rs => case [gamma |- M[..]] of
+| [gamma |- #p[..]] =>  lookup [gamma] [gamma |- #p[..]] rs
+| [gamma |- lam \x. M] => 
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M .. x] (Dot rs rN)))
+    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
 
-| [gamma |- app (M1 ..) (M2 ..)] => 
-  let Arr ha f = main [gamma] [gamma |- M1 ..] rs in
-  f [ |- _ ] (main [gamma] [gamma |- M2 ..] rs)
+| [gamma |- app (M1[..]) (M2[..])] => 
+  let Arr ha f = main [gamma] [gamma |- M1[..]] rs in
+  f [ |- _ ] (main [gamma] [gamma |- M2[..]] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 
-| [gamma |- pair (M1 ..) (M2 ..)] => 
-  let r1 = main [gamma] [gamma |- M1 ..] rs in
-  let r2 = main [gamma] [gamma |- M2 ..] rs in
+| [gamma |- pair (M1[..]) (M2[..])] => 
+  let r1 = main [gamma] [gamma |- M1[..]] rs in
+  let r2 = main [gamma] [gamma |- M2[..]] rs in
   let h1 = reduce_halts r1 in 
   let h2 = reduce_halts r2 in 
   Cross (pair_halts [|- _] [|- _] h1 h2)
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 
-| [gamma |- fst (M ..) ] => 
-  let Cross ha r1 r2 = main [gamma] [gamma |- M ..] rs in  r1
+| [gamma |- fst (M[..]) ] => 
+  let Cross ha r1 r2 = main [gamma] [gamma |- M[..]] rs in  r1
   
 
-| [gamma |- snd (M ..) ] => 
-  let Cross ha r1 r2 = main [gamma] [gamma |- M ..] rs in  r2
+| [gamma |- snd (M[..]) ] => 
+  let Cross ha r1 r2 = main [gamma] [gamma |- M[..]] rs in  r2
 
 ;
 

@@ -1,0 +1,10 @@
+LF foo : type =
+  | bar : foo
+;
+
+rec fail : [|- foo] -> [|- foo] =
+/ total f (fail f) /
+fn f => case f of
+| [|- bar] => [|- bar]
+| v % right hand side missing.
+;

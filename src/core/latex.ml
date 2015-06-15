@@ -121,7 +121,7 @@ and proof_goal cD (cG, cIH) e ttau = match e, ttau with
 					((GoalTerm(Some n, (t1, theta))::goals), cD', (cG'', cIH''), e'', t')
 	end
 (* Error case *)
-| _ -> raise (LatexException "Non Fun/MLam argument passed to proof_goal")
+| _ -> raise (LatexException ("Non Fun/MLam argument passed to proof_goal: " ^ PI.expChkToString cD cG e))
 
 (* and proof_case cD (cG, cIH) e ttau = match e, ttau with
 | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) ->

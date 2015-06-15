@@ -30,4 +30,3 @@ clean:
 
 %:
 	$(OCAMLBUILD) $@
-

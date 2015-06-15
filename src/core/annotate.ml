@@ -1,5 +1,10 @@
 (* Like check.ml, but produces annotated syntax nodes rather than returning unit *)
 
+module P = Pretty.Int.DefaultPrinter
+module R = Store.Cid.DefaultRenderer
+
+let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5])
+
 module LF = struct
 
 end
@@ -940,7 +945,5 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       check cD (cG,cIH) e ttau
 
 
-
-end
 
 end

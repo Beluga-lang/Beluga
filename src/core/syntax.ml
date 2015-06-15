@@ -16,4 +16,3 @@ end
 module Int = Synint
 module Apx = Synapx
 module Ext = Synext
-module Ann = Synann

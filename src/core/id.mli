@@ -9,7 +9,8 @@ type name     = private {
   counter : int;
 }
 
-val inc : name -> name 
+val inc : name -> name
+val gen_fresh_name : name list -> name -> name
 
 type module_id = int
 

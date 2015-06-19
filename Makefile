@@ -18,7 +18,7 @@ OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
 
 .PHONY: all clean
 
-all: bin/beluga 
+all: bin/beluga
 
 bin/beluga: src/beluga/main.$(EXT)
 	mkdir -p bin
@@ -30,4 +30,3 @@ clean:
 
 %:
 	$(OCAMLBUILD) $@
-

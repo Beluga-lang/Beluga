@@ -15,16 +15,16 @@ module OpPragmas = struct
   }
 
   let default = ref Syntax.Ext.Sgn.None
-  
+
   let pragmaCount = ref 0
 
   let pragmas = ref []
-  
+
   let clear () = pragmas := []
-  
+
   let default_precedence = -1
 
-  let addPragma n f p_option a = 
+  let addPragma n f p_option a =
   let p = match p_option with Some x -> x | None -> default_precedence in
     if (List.exists (fun x -> x.name = n) !pragmas) then
       pragmas := List.map
@@ -34,7 +34,7 @@ module OpPragmas = struct
       let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
       pragmas := new_entry :: !pragmas ; incr pragmaCount
 
-  let getPragma name = 
+  let getPragma name =
     begin
       try
         Some(List.find ((fun p -> name = p.name)) (!pragmas))
@@ -61,18 +61,18 @@ module Modules = struct
 
   let setState (a, b, c, d) = current := a; currentName := b; opened := c; abbrevs := d
 
-  let directory : (string list, Id.module_id) Hashtbl.t = 
+  let directory : (string list, Id.module_id) Hashtbl.t =
     let x = Hashtbl.create 1 in Hashtbl.add x [] 0; x
 
   let rev_directory : (string list) DynArray.t =
     let x = DynArray.create () in DynArray.add x []; x
 
-  let modules : (Int.Sgn.decl list ref) DynArray.t = 
+  let modules : (Int.Sgn.decl list ref) DynArray.t =
     let x = DynArray.create () in DynArray.add x (ref []); x
 
   let id_of_name (n : string list) : Id.module_id = Hashtbl.find directory n
 
-  let name_of_id (id : Id.module_id) : string list = 
+  let name_of_id (id : Id.module_id) : string list =
     let x = DynArray.get rev_directory id in
     match List.fold_left (fun acc (ab,o) -> if o=x then Some(ab) else acc) None !abbrevs with
     | Some s -> [s]
@@ -82,10 +82,10 @@ module Modules = struct
     let x = let m = match m with
       | [m'] when List.mem_assoc m' !abbrevs -> List.assoc m' !abbrevs
       | _ -> m in
-      try Hashtbl.find directory m 
-      with _ -> Hashtbl.find directory (!currentName @ m) in 
+      try Hashtbl.find directory m
+      with _ -> Hashtbl.find directory (!currentName @ m) in
     let l = x::
-      (List.map (fun (Int.Sgn.Pragma(Int.LF.OpenPrag x)) -> x) 
+      (List.map (fun (Int.Sgn.Pragma(Int.LF.OpenPrag x)) -> x)
         (List.filter (function (Int.Sgn.Pragma(Int.LF.OpenPrag _)) -> true | _ -> false) !(DynArray.get modules x))) in
     opened := l@ !opened; x
 
@@ -108,24 +108,24 @@ module Modules = struct
             with | _ -> try f (DynArray.get x (id_of_name (!currentName @ l)))
             with | _ -> iter_find (List.map (fun h -> (id_of_name ((name_of_id h)@m))) !opened) end end
 
-  let addSgnToCurrent (decl : Int.Sgn.decl) : unit = 
-    let l = (DynArray.get modules !current) in l := decl :: !l 
-  
+  let addSgnToCurrent (decl : Int.Sgn.decl) : unit =
+    let l = (DynArray.get modules !current) in l := decl :: !l
+
   let instantiateModule (name : string) : Id.module_id =
     let l = !currentName@[name] in
     let module_id = DynArray.length modules in
-    current := module_id; currentName := l; 
-    DynArray.insert modules module_id (ref []); 
-    Hashtbl.replace directory l module_id; 
+    current := module_id; currentName := l;
+    DynArray.insert modules module_id (ref []);
+    Hashtbl.replace directory l module_id;
     DynArray.insert rev_directory module_id l;
     module_id
 
-  let reset () : unit = 
+  let reset () : unit =
     current := 0;
     opened := [];
     currentName := []
 
-  let correct (l : string list) : string list = 
+  let correct (l : string list) : string list =
     let rec aux m l = match (m, l) with
       | _ when m = l -> m
       | ([], _) -> l
@@ -177,9 +177,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -196,7 +196,7 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
-    let args_of_name n = 
+    let args_of_name n =
       let entry = get (index_of_name n) in
       (args (entry.kind)) - entry.implicit_arguments
 
@@ -216,12 +216,12 @@ module Cid = struct
                        subordinates     = entry.subordinates;
                        typesubordinated = entry.typesubordinated
                       } in
-        let store =   
+        let store =
           try DynArray.get store (!Modules.current)
-          with _ -> begin 
+          with _ -> begin
             let x = DynArray.create () in
             DynArray.add store x;
-            x 
+            x
           end in
         let (_, n) = cid_tp in
         (DynArray.set store n new_entry;
@@ -237,7 +237,7 @@ module Cid = struct
     and cid_of_typRec = function
     | Int.LF.SigmaLast (n, tA) -> cid_of_typ tA
     | Int.LF.SigmaElem(_, _, rest) -> cid_of_typRec rest
-    
+
     let var_gen cid_tp =  (get cid_tp).var_generator
     let mvar_gen cid_tp =  (get cid_tp).mvar_generator
 
@@ -357,10 +357,10 @@ module Cid = struct
 
     let add entry = begin
       OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
-      let cid_tp = 
-        let store =   
+      let cid_tp =
+        let store =
           try DynArray.get store (!Modules.current)
-          with _ -> begin 
+          with _ -> begin
             let x = DynArray.create () in
             while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
             DynArray.add store x;
@@ -369,19 +369,19 @@ module Cid = struct
         DynArray.add store entry;
         (!Modules.current, (DynArray.length store) - 1) in
 
-        let directory =   
+        let directory =
           try DynArray.get directory (!Modules.current)
-          with _ -> begin 
+          with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
-            DynArray.add directory x; 
+            DynArray.add directory x;
             x
           end in
         Hashtbl.replace directory entry.name cid_tp;
 
-        let entry_list =   
+        let entry_list =
           try DynArray.get entry_list (!Modules.current)
-          with _ -> begin 
+          with _ -> begin
             let x = ref [] in
             while DynArray.length entry_list < (!Modules.current ) do DynArray.add entry_list (ref []) done;
             DynArray.add entry_list x;
@@ -430,7 +430,7 @@ module Cid = struct
       typ                : Int.LF.typ
     }
 
-    let mk_entry n t i = 
+    let mk_entry n t i =
       {
       name               = n;
       implicit_arguments = i;
@@ -442,9 +442,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_term) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -452,10 +452,10 @@ module Cid = struct
     | Int.LF.PiTyp(_, tA) -> 1 + args tA
     | _ -> 0
 
-    let add loc e_typ entry = begin 
+    let add loc e_typ entry = begin
       OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
-      let cid_tm = 
-        let store = 
+      let cid_tm =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -465,9 +465,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -486,7 +486,7 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
 
-    let args_of_name n = 
+    let args_of_name n =
       let e = (get (index_of_name n)) in
       (args e.typ) - e.implicit_arguments
 
@@ -503,7 +503,7 @@ module Cid = struct
 
     type entry = {
       name   : Id.name;
-      schema : Int.LF.schema 
+      schema : Int.LF.schema
     }
 
     let mk_entry name schema = {
@@ -519,15 +519,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_schema) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add entry = begin
-      let cid_schema = 
-        let store = 
+      let cid_schema =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -537,9 +537,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -604,28 +604,28 @@ module Cid = struct
         DynArray.add store e;
         Hashtbl.replace directory e.name cid_comp_typ;
         cid_comp_typ
-	
+
 
     let get = DynArray.get store
 *)
     let entry_list : (Id.cid_comp_typ list ref) DynArray.t = DynArray.create ()
 
     (*  store : (entry DynArray.t) DynArray.t *)
-    let store : (entry DynArray.t) DynArray.t = DynArray.create () 
+    let store : (entry DynArray.t) DynArray.t = DynArray.create ()
 
     (*  directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t ) DynArray.t *)
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_comp_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add entry = begin
-      let cid_comp_typ = 
-        let store = 
+      let cid_comp_typ =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -635,9 +635,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -646,13 +646,13 @@ module Cid = struct
           end in
         Hashtbl.replace directory entry.name cid_comp_typ;
 
-        let entry_list = 
+        let entry_list =
           try DynArray.get entry_list (!Modules.current)
         with _ -> begin
           let x = ref [] in
           while DynArray.length entry_list < (!Modules.current) do DynArray.add entry_list (ref []) done;
           DynArray.add entry_list x;
-          x  
+          x
         end in
         entry_list := cid_comp_typ :: !entry_list;
         cid_comp_typ end
@@ -704,15 +704,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add entry = begin
-      let cid_comp_const = 
-        let store = 
+      let cid_comp_const =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -722,9 +722,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -777,15 +777,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add cid_ctyp entry = begin
-      let cid_comp_const = 
-        let store = 
+      let cid_comp_const =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -795,9 +795,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -845,15 +845,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_dest) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add cid_ctyp entry = begin
-      let cid_comp_dest = 
-        let store = 
+      let cid_comp_dest =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -863,9 +863,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -919,15 +919,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add entry = begin
-      let cid_typdef = 
-        let store = 
+      let cid_typdef =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -937,9 +937,9 @@ module Cid = struct
           end in
           DynArray.add store entry;
           (!Modules.current, (DynArray.length store) - 1) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current ) do DynArray.add directory (Hashtbl.create 0) done;
@@ -994,15 +994,15 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_prog = fun (n : Id.name) ->
-      let n' = match n.Id.modules with 
-        | [] -> n 
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in 
+      let n' = match n.Id.modules with
+        | [] -> n
+        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
     let add loc f = begin
-      let (cid_prog, e) = 
-        let store = 
+      let (cid_prog, e) =
+        let store =
           try DynArray.get store (!Modules.current)
           with _ -> begin
             let x = DynArray.create () in
@@ -1015,9 +1015,9 @@ module Cid = struct
           let e = f cid in
           DynArray.add store e;
           (cid, e) in
-      
-        let directory = 
-          try DynArray.get directory (!Modules.current) 
+
+        let directory =
+          try DynArray.get directory (!Modules.current)
           with _ -> begin
             let x = Hashtbl.create 0 in
             while DynArray.length directory < (!Modules.current) do DynArray.add directory (Hashtbl.create 0) done;
@@ -1073,13 +1073,13 @@ module Cid = struct
 
     let explicitNames = ref []
 
-    let addExplicitName s = explicitNames := (s :: !explicitNames) 
+    let addExplicitName s = explicitNames := (s :: !explicitNames)
 
     let addNameConvention cid mvar var =
       let vgen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
       conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen))::!conventions
 
-    let rec first_unique gen = 
+    let rec first_unique gen =
       let s = Stream.next gen in
       if List.exists (fun (_, new_name) -> new_name = s) !newNames then first_unique gen else s
 
@@ -1088,8 +1088,8 @@ module Cid = struct
     with
     | _ -> None
 
-    let getName ?(tA=None) n = 
-      let is_uppercase (n : Id.name) : bool = 
+    let getName ?(tA=None) n =
+      let is_uppercase (n : Id.name) : bool =
         let c = n.Id.string_of_name.[0] in
         0 = (Char.compare c (Char.uppercase c)) in
 
@@ -1098,35 +1098,35 @@ module Cid = struct
         try
           List.assoc s !newNames
         with
-        | Not_found -> 
+        | Not_found ->
           let newName = match tA with
-          | None -> 
-            if (is_uppercase n) then 
-              Gensym.MVarData.gensym () 
+          | None ->
+            if (is_uppercase n) then
+              Gensym.MVarData.gensym ()
             else Gensym.VarData.gensym ()
-          | Some(tA) -> 
-            let cid = Typ.cid_of_typ tA in 
-            try 
+          | Some(tA) ->
+            let cid = Typ.cid_of_typ tA in
+            try
               let (_, mvar_gen, _, var_gen) = List.assoc cid !conventions in
               if is_uppercase n then
-                first_unique mvar_gen 
+                first_unique mvar_gen
               else match var_gen with
               | None -> Gensym.VarData.gensym ()
               | Some x -> first_unique x
-            with _ -> 
-              if (is_uppercase n) then 
-                Gensym.MVarData.gensym () 
+            with _ ->
+              if (is_uppercase n) then
+                Gensym.MVarData.gensym ()
               else Gensym.VarData.gensym ()
           in
-            (newNames := (s,newName) :: (!newNames)) ; newName        
-      else 
+            (newNames := (s,newName) :: (!newNames)) ; newName
+      else
         let s = n.Id.string_of_name in (newNames := (s,s) :: (!newNames)); s
-        
-      let reset () = 
-        Gensym.MVarData.reset () ; 
-        Gensym.VarData.reset (); 
-        newNames := []; 
-        conventions := List.map (fun (cid, (mvar, _, var, _)) -> 
+
+      let reset () =
+        Gensym.MVarData.reset () ;
+        Gensym.VarData.reset ();
+        newNames := [];
+        conventions := List.map (fun (cid, (mvar, _, var, _)) ->
                         let vargen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
                         (cid, (mvar, Gensym.create_symbols [|mvar|], var, vargen)))
                        !conventions
@@ -1161,14 +1161,15 @@ module Cid = struct
 
     open Id
 
-    let render_name n = 
-      let name = if !NamedHoles.printingHoles then 
+    (* Move to Id; what are the "NamedHoles" anyway? *)
+    let render_name n =
+      let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
+      let name = if !NamedHoles.printingHoles then
         match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
       else n in
       match name.modules with
-      | [] -> let c = if n.counter = 0 then "" else (string_of_int n.counter) in
-	  n.string_of_name ^ c
-      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
+      | [] -> n.string_of_name ^ suf
+      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
@@ -1187,18 +1188,20 @@ module Cid = struct
   end (* Int.DefaultRenderer *)
 
 
-  (* RENDERER for Internal Syntax using names *) 
+  (* RENDERER for Internal Syntax using names *)
   module NamedRenderer : RENDERER = struct
 
     open Id
 
-    let render_name n = 
-      let name = if !NamedHoles.printingHoles then 
+    (* Duplicate; move to Id *)
+    let render_name n =
+      let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
+      let name = if !NamedHoles.printingHoles then
         match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
       else n in
       match name.modules with
-      | [] -> n.string_of_name
-      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name)
+      | [] -> n.string_of_name ^ suf
+      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name

@@ -5,6 +5,16 @@ type name     = {
   counter : int;
 }
 
+let gen_fresh_name (ns : name list) (n : name) : name =
+  (* Extract all the numbers from the back *)
+  (* let split_name (s : string) : string * int = s, -1 in *)
+  (* let s, cnt = split_name n.Id.string_of_name in *)
+  let cnt' = List.fold_left
+    (fun cnt n' -> if n'.string_of_name == n.string_of_name
+      then max n'.counter cnt
+      else cnt)
+    n.counter ns in
+  {n with counter = cnt'+1}
 let inc n = {
   modules = n.modules;
   string_of_name = n.string_of_name;
@@ -55,7 +65,7 @@ let mk_name ?(modules=[]) : name_guide -> name = function
   | MVarName (Some vGen)  ->
         { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0}
 
-  | MVarName None  ->      
+  | MVarName None  ->
       { modules = modules; string_of_name = Gensym.MVarData.gensym() ;was_generated = true; counter = 0 }
 
   | PVarName (Some vGen)  ->
@@ -66,7 +76,7 @@ let mk_name ?(modules=[]) : name_guide -> name = function
 
   | SVarName None ->
       { modules = modules; string_of_name = Gensym.MVarData.gensym() ; was_generated = true; counter = 0}
-      
+
   | SVarName (Some vGen) ->
         { modules = modules; string_of_name = vGen() ; was_generated = true; counter = 0 }
 
@@ -75,7 +85,7 @@ let mk_name ?(modules=[]) : name_guide -> name = function
 
   | SomeName x  -> x
 
-  | SomeString x -> 
+  | SomeString x ->
         { modules = modules; string_of_name = x ; was_generated = false; counter = 0 }
 
   | _     -> { modules = modules; string_of_name = (Gensym.VarData.gensym ())  ; was_generated = true; counter = 0 }

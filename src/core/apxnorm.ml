@@ -707,7 +707,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
       else
 	begin try
 	  let (offset, _w) = Whnf.mctxMVarPos cD x  in
-(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^
+(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ Id.render_name x ^
 			    " with CtxOffset " ^ R.render_offset offset) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] l_cd1 " ^ string_of_int l_cd1) in

@@ -57,7 +57,7 @@ let types = {name = "types";
              run = (fun ppf _ ->
                let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
                let dctx = Synint.LF.Null in
-               List.iter (fun x -> fprintf ppf "- %s:" x.Typ.name.Id.string_of_name; ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
+               List.iter (fun x -> fprintf ppf "- %s:" (Id.string_of_name x.Typ.name); ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
              help = "Print out all types currently defined"}
 
 let reset = {name= "reset";
@@ -83,7 +83,7 @@ let load = {name = "load";
                 let sgn = Parser.parse_file ~name:arg Parser.sgn in
                 let sgn'= begin match Recsgn.recSgnDecls sgn with
 		  | sgn', None -> sgn'
-		  | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars)) 
+		  | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
 		end
 		in
                 if !Debug.chatter <> 0 then
@@ -165,12 +165,12 @@ let constructors = {name = "constructors";
                       try
                         let arg = List.hd arglist in
                         let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
-                        let entry = List.find (fun x -> 
-                            arg = x.Typ.name.Id.string_of_name) entrylist in
+                        let entry = List.find (fun x ->
+                            arg = (Id.string_of_name x.Typ.name)) entrylist in
                         let mctx = Synint.LF.Empty in
                         let dctx = Synint.LF.Null in
                         let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
-                        List.iter (fun x -> fprintf ppf "- %s: [%d] " x.Term.name.Id.string_of_name x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist;
+                        List.iter (fun x -> fprintf ppf "- %s: [%d] " (Id.string_of_name x.Term.name) x.Term.implicit_arguments; ppr_lf_typ mctx dctx x.Term.typ; fprintf ppf "\n") termlist;
                         fprintf ppf ";\n"
                       with
                       | Not_found -> fprintf ppf "- Such type does not exist!!\n"
@@ -228,10 +228,10 @@ let split = { name = "split" ;
                   let e = (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with
                   | None -> fprintf ppf "- No variable %s found;\n" e
-                  | Some exp -> 
+                  | Some exp ->
                       let (_, cD, cG, _) = Holes.getOneHole i in
                       Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
                       Pretty.Control.printNormal := false;
                       (* Interactive.replaceHole i exp  *)))
                 end with
@@ -244,10 +244,10 @@ let intro = {name = "intro";
                   let i = to_int (List.hd args) in
                   (match (Interactive.intro i) with
                   | None -> fprintf ppf "- Nothing to introduce in hole %d;\n" i
-                  | Some exp -> 
+                  | Some exp ->
                       let (_, cD, cG, _) = Holes.getOneHole i in
                       Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
                       Pretty.Control.printNormal := false)
                 with
                 | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
@@ -260,10 +260,10 @@ let compconst = {name = "constructors-comp";
                       try
                         let arg = List.hd arglist in
                         let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
-                        let entry = List.find (fun x -> arg = x.CompTyp.name.Id.string_of_name) entrylist in
+                        let entry = List.find (fun x -> arg = (Id.string_of_name x.CompTyp.name)) entrylist in
                         let mctx = Synint.LF.Empty in
                         let termlist = List.rev_map (CompConst.get ~fixName:true) (entry.CompTyp.constructors) in
-                        List.iter (fun x -> fprintf ppf "- %s: [%d] " x.CompConst.name.Id.string_of_name x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist;
+                        List.iter (fun x -> fprintf ppf "- %s: [%d] " (Id.string_of_name x.CompConst.name) x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist;
                         fprintf ppf ";\n"
                       with
                       | Not_found -> fprintf ppf "- Such type does not exist;\n"
@@ -277,10 +277,10 @@ let signature = {name = "fsig";
                         let arg = List.hd arglist in
                         let (cidlist,_) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
                         let entrylist = List.rev_map Comp.get cidlist in
-                        let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
+                        let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
 
                         let mctx = Synint.LF.Empty in
-                        fprintf ppf "- %s:  " entry.Comp.name.Id.string_of_name; ppr_cmp_typ mctx entry.Comp.typ; fprintf ppf "\n";
+                        fprintf ppf "- %s:  " (Id.string_of_name entry.Comp.name); ppr_cmp_typ mctx entry.Comp.typ; fprintf ppf "\n";
                         fprintf ppf ";\n"
                       with
                       | Not_found -> fprintf ppf "- Such function does not exist!;\n"
@@ -294,7 +294,7 @@ let printfun = {name = "fdef";
                         let arg = List.hd arglist in
                         let (cidlist,_) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
                         let entrylist = List.rev_map Comp.get cidlist in
-                        let entry = List.find (fun x -> arg = x.Comp.name.Id.string_of_name) entrylist in
+                        let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
                         (match entry.Comp.prog with
                         | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
                             ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)]);
@@ -349,7 +349,7 @@ let query = {name = "query";
 let get_type = {name = "get-type";
                 run =
                   (fun ppf args ->
-                    try 
+                    try
                       let line = int_of_string (List.hd args) in
                       let col = int_of_string (List.hd (List.tl args)) in
                       let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
@@ -409,6 +409,6 @@ let do_command ppf cmd =
   | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
   | _ -> helpme.run ppf []
 
-let print_usage ppf = 
+let print_usage ppf =
   let _ = fprintf ppf "Usage: \n" in
   helpme.run ppf []

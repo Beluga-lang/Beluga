@@ -112,7 +112,7 @@ let _ = Error.register_printer
         | ProjNotFound (cD, cPsi, k, sA) ->
             Format.fprintf ppf
               "There is no projection named %s in type %a."
-              (k.string_of_name)
+              (string_of_name k)
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
         | TypMismatchElab (cD, cPsi, sA1, sA2) ->
@@ -1102,7 +1102,7 @@ and elTerm' recT cD cPsi r sP = match r with
           (* 1) given cPsi and s synthesize the domain cPhi
            * 2) [s]^-1 ([s']tP) is the type of u
            *)
-          let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name
+          let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u)
                          ^ " in context " ^ P.dctxToString cD cPsi) in
           let (cPhi, s'') = synDom cD loc cPsi s in
           let ss =  Substitution.LF.invert s'' in
@@ -1123,7 +1123,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
           else
            if isProjPatSub s then
-             let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ u.string_of_name ) in
+             let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u) ) in
              let _ = dprint (fun () -> "isProjPatSub ... " ) in
              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n") in
@@ -1159,7 +1159,7 @@ and elTerm' recT cD cPsi r sP = match r with
              * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
              * This will be enforced during abstraction.
              *)
-             let _ = dprint (fun () -> "[synDom] Type of mvar " ^ u.string_of_name ^ ":" ^
+             let _ = dprint (fun () -> "[synDom] Type of mvar " ^ (string_of_name u) ^ ":" ^
                                P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^
                                P.dctxToString cD cPhi ^ " ] ") in
 
@@ -1277,7 +1277,7 @@ and elTerm' recT cD cPsi r sP = match r with
       (* Other case where spine is not empty is not implemented -bp *)
         begin try
           let _ = dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
-			    p.string_of_name ^ "." ^ string_of_proj proj) in
+			    (string_of_name p) ^ "." ^ string_of_proj proj) in
           let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _)) = FCVar.get  p in
 	  let d = Context.length cD - Context.length cD_d in
 	  let (tA, cPhi) = if d = 0 then (tA, cPhi) else
@@ -1306,7 +1306,7 @@ and elTerm' recT cD cPsi r sP = match r with
             end
         with Not_found ->
 	  (dprint (fun () -> "[Reconstruct Projection Parameter] #" ^
-			    p.string_of_name ^ "." ^ string_of_proj proj ^ " NOT FOUND") ;
+			    (string_of_name p) ^ "." ^ string_of_proj proj ^ " NOT FOUND") ;
           begin match (isPatSub s, spine) with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDom cD loc cPsi s in

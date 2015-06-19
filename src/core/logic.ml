@@ -226,7 +226,7 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in 
+        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
         LF.Lam (Syntax.Loc.ghost, x, etaExpand
@@ -369,7 +369,7 @@ module Index = struct
      Store all type constants in the `types' table.
   *)
   let robStore () =
-    try 
+    try
       List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
     with _ -> ()
 
@@ -417,8 +417,6 @@ module Printer = struct
   module P = Pretty.Int.DefaultPrinter
   open Index
 
-  let nameToString x = x.Id.string_of_name
-
   let dctxToString cPsi =
     P.dctxToString LF.Empty cPsi
 
@@ -430,9 +428,9 @@ module Printer = struct
 
   let declToString cPsi (tD, s) = match tD with
     | LF.TypDeclOpt x ->
-      nameToString x ^ ":_"
+      Id.string_of_name x ^ ":_"
     | LF.TypDecl (x, tM) ->
-      nameToString x ^ ":" ^ typToString cPsi (tM, s)
+      Id.string_of_name x ^ ":" ^ typToString cPsi (tM, s)
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -483,7 +481,7 @@ module Printer = struct
   *)
   and sgnClauseToString (cidTerm, sCl) =
     sprintf "%s: %s\n%s"
-      (nameToString (termName cidTerm))
+      (Id.string_of_name (termName cidTerm))
       (typToString sCl.eVars (sCl.tHead, S.id))
       (subGoalsToString sCl.eVars (sCl.subGoals, S.id))
 
@@ -503,10 +501,10 @@ module Printer = struct
   *)
   let rec instToString xs = match xs with
     | ((x, tM) :: []) -> sprintf "%s = %s."
-      (nameToString x)
+      (Id.string_of_name x)
       (normalToString LF.Null (tM, S.id))
     | ((x, tM) :: ys) -> sprintf "%s = %s;\n%s"
-      (nameToString x)
+      (Id.string_of_name x)
       (normalToString LF.Null (tM, S.id))
       (instToString ys)
     | [] -> "Empty substitution."
@@ -796,7 +794,7 @@ module Frontend = struct
           P.printQuery sgnQuery
         else () ;
         try
-          
+
           Solver.solve sgnQuery.query scInit ;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions

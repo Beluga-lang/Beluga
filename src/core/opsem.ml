@@ -62,9 +62,9 @@ let convolve_spines f spine pat_spine =
 let rec add_mrecs n_list (theta, eta) m = match n_list with
   | [] ->  eta
   | n'::n_list' ->
-      let n' = Id.mk_name ~modules:m (Id.SomeString n'.Id.string_of_name) in
-      dprint (fun () -> n'.Id.string_of_name);
-      dprint (fun () -> "Modules: " ^ (String.concat "." n'.Id.modules));
+      let n' = Id.mk_name ~modules:m (Id.SomeString (Id.string_of_name n')) in
+      dprint (fun () -> Id.string_of_name n');
+      dprint (fun () -> "Modules: " ^ (String.concat "." (Id.get_module n')));
       let cid' = Store.Cid.Comp.index_of_name n' in
       let v = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
       let eta' = add_mrecs n_list' (theta, eta) m in
@@ -82,7 +82,7 @@ let rec eval_syn i (theta, eta) =
   let _ = dprint (fun () -> "[eval_syn] with  theta = " ^ P.msubToString LF.Empty (Whnf.cnormMSub theta)) in
   match i with
     | Comp.Const (_, cid) ->
-      let (l, _) = cid in 
+      let (l, _) = cid in
       let m = Store.Modules.name_of_id l in
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
@@ -241,7 +241,7 @@ and eval_chk e (theta, eta) =
             eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, cM) ->
-	 let (_,cM') = Whnf.cnormMetaObj (cM, theta) in 
+	 let (_,cM') = Whnf.cnormMetaObj (cM, theta) in
           begin match cM' with
             | LF.ClObj (phat, LF.MObj tM) -> Comp.BoxValue (loc,cM')
             | LF.ClObj (phat, LF.PObj h) -> Comp.BoxValue (loc,cM')
@@ -273,15 +273,15 @@ and eval_branches loc vscrut branches (theta, eta) = match branches with
       eval_branches loc vscrut branches (theta, eta)
 
 
-and match_cobj (phat, cObj) (cPsi', cObj', mt) = 
+and match_cobj (phat, cObj) (cPsi', cObj', mt) =
   let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
-  let cObj' = Whnf.cnormClObj cObj' mt in 
+  let cObj' = Whnf.cnormClObj cObj' mt in
 
     Unify.unify_phat phat (Context.dctxToHat cPsi');
-    (match cObj, cObj' with 
+    (match cObj, cObj' with
        |  LF.MObj tM , LF.MObj tM' ->
 	    Unify.unify LF.Empty cPsi' (tM, Substitution.LF.id) (tM', Substitution.LF.id)
-       | LF.PObj h   , LF.PObj h' -> 
+       | LF.PObj h   , LF.PObj h' ->
            Unify.unifyH LF.Empty phat h h')
 
 and match_pattern  (v,eta) (pat, mt) =
@@ -289,12 +289,12 @@ and match_pattern  (v,eta) (pat, mt) =
   let rec loop v pat =
     match v, pat with
 
-      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) , 
-	Comp.PatAnn (_, Comp.PatMetaObj (_, (_ , LF.ClObj (_, cObj'))), Comp.TypBox (_, LF.ClTyp (_ , cPsi'))) -> 
+      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
+	Comp.PatAnn (_, Comp.PatMetaObj (_, (_ , LF.ClObj (_, cObj'))), Comp.TypBox (_, LF.ClTyp (_ , cPsi'))) ->
 	  match_cobj (phat, cObj) (cPsi', cObj', mt)
 
-      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) , 
-	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) -> 
+      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
+	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->
 	  match_cobj (phat, cObj) (Context.hatToDCtx phat', cObj', mt)
 (*      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
 	let cPsi = Context.hatToDCtx phat' in

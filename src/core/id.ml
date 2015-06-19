@@ -1,23 +1,25 @@
 type name     = {
   modules : string list;
-  string_of_name : string ;
+  name_hint : string ;
   was_generated : bool ;
   counter : int;
 }
 
+let get_module (n : name) : string list = n.modules
+
 let gen_fresh_name (ns : name list) (n : name) : name =
   (* Extract all the numbers from the back *)
   (* let split_name (s : string) : string * int = s, -1 in *)
-  (* let s, cnt = split_name n.Id.string_of_name in *)
+  (* let s, cnt = split_name n.Id.name_hint in *)
   let cnt' = List.fold_left
-    (fun cnt n' -> if n'.string_of_name == n.string_of_name
+    (fun cnt n' -> if n'.name_hint == n.name_hint
       then max n'.counter cnt
       else cnt)
     n.counter ns in
   {n with counter = cnt'+1}
 let inc n = {
   modules = n.modules;
-  string_of_name = n.string_of_name;
+  name_hint = n.name_hint;
   was_generated = n.was_generated;
   counter = n.counter + 1;
 }
@@ -60,7 +62,7 @@ let mk_name ?(modules=[]) : name_guide -> name =
 
   let mk_name_helper (nm: string) : name =
     { modules = modules;
-      string_of_name = nm;
+      name_hint = nm;
       was_generated = true;
       counter = 0} in
   function
@@ -82,8 +84,12 @@ let mk_name ?(modules=[]) : name_guide -> name =
   | SomeString x -> mk_name_helper x
 
 
+let string_of_name n =
+  let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
+   n.name_hint ^ suf
+
 let render_name n =
   let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
   match n.modules with
-    | [] -> n.string_of_name ^ suf
-    | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf
+    | [] -> n.name_hint ^ suf
+    | l -> (String.concat "." l) ^ "." ^ (n.name_hint) ^ suf

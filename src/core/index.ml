@@ -239,7 +239,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
           let args_expected =
             try Typ.args_of_name o.Store.OpPragmas.name with _ ->
             try Term.args_of_name o.Store.OpPragmas.name with _ ->
-              failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
+              failwith ("Unknown operator " ^ (Id.string_of_name o.Store.OpPragmas.name)) in
           let (ops, es) = take args_expected exps in
           let loc =
             if args_expected > 0 then
@@ -275,7 +275,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     let args_expected =
       try Typ.args_of_name o.Store.OpPragmas.name with _ ->
       try Term.args_of_name o.Store.OpPragmas.name with _ ->
-        failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
+        failwith ("Unknown operator " ^ (Id.string_of_name o.Store.OpPragmas.name)) in
     let (ops, es) = take args_expected exps in
     let loc =
       if args_expected > 0 then
@@ -376,13 +376,13 @@ and index_proj = function
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
-      let _ = dprint (fun () -> "Indexing name " ^ n.string_of_name) in
+      let _ = dprint (fun () -> "Indexing name " ^ (string_of_name n)) in
       begin try
         (Apx.LF.BVar (BVar.index_of_name bvars n) , fvs)
       with Not_found -> try
         (Apx.LF.Const (Term.index_of_name n) , fvs)
       with Not_found ->
-        dprint (fun () -> "FVar " ^ n.string_of_name );
+        dprint (fun () -> "FVar " ^ (string_of_name n) );
         (Apx.LF.FVar n , fvs)
       end
 
@@ -437,7 +437,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         end
 
   (* | Ext.LF.SVar (loc, n, _sigma) -> *)
-  (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ n.string_of_name) in *)
+  (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ (string_of_name n)) in *)
   (*       raise (Error (loc, UnboundName n)) *)
 
 and index_spine cvars bvars fvars = function

@@ -41,9 +41,9 @@ let _ = Error.register_printer
   (fun (WrongConsType (c, a, a')) ->
     Error.print (fun ppf ->
       Error.report_mismatch ppf
-        ("Parse Error: Wrong datatype for constructor " ^ c.string_of_name ^ ".")
-        "Expected datatype" Format.pp_print_string a.string_of_name
-        "Actual datatype"   Format.pp_print_string a'.string_of_name))
+        ("Parse Error: Wrong datatype for constructor " ^ (string_of_name c) ^ ".")
+        "Expected datatype" Format.pp_print_string (string_of_name a)
+        "Actual datatype"   Format.pp_print_string (string_of_name a')))
 
 let _ = Error.register_printer
   (fun (InvalidAssociativity s) -> Error.print (fun ppf ->
@@ -193,7 +193,7 @@ let check_codatatype_decl a cs =
     let a' = retname tau in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
-let rec split (c : char) (m : string) : (string list * string) = 
+let rec split (c : char) (m : string) : (string list * string) =
   try
     let i = String.index m c in
     let l = String.length m in
@@ -265,7 +265,7 @@ GLOBAL: sgn;
         "%coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
       |
         "%warncoverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Warn))
-    ]  
+    ]
   ];
 
   sgn_lf_typ :
@@ -294,7 +294,7 @@ GLOBAL: sgn;
 
 
   sgn_decl:
-    [ 
+    [
       [
           "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
             [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
@@ -312,7 +312,7 @@ GLOBAL: sgn;
         | "module"; n = UPSYMBOL; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
               let decls = List.map (fun [x] -> x) decls in
               [Sgn.Module(_loc, n, decls)]
-      
+
         | a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
              begin match k_or_a with
                | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
@@ -324,7 +324,7 @@ GLOBAL: sgn;
             begin match g with
               | None -> [Sgn.MRecTyp(_loc, [f])]
               | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end 
+            end
 
         | "LF"; f = LIST1 cmp_dat SEP "and"; ";" ->
              [Sgn.MRecTyp(_loc, f)]
@@ -340,7 +340,7 @@ GLOBAL: sgn;
 
       | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
         [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-    
+
       |
           "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
           "="; i = cmp_exp_syn;  ";" ->
@@ -376,24 +376,24 @@ GLOBAL: sgn;
         | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
         | "none" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.None)]
         | s -> raise (InvalidAssociativity s)
-          
+
         end
 
       (* A naked expression, in REPL. *)
       | i = cmp_exp_syn ->
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
-      | 
-        "%open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] -> 
+      |
+        "%open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.OpenPrag(l@[last]))]
-      | 
-      
+      |
+
         "%abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
       |
-	    x = COMMENT -> [Sgn.Comment(_loc, x)]     
+	    x = COMMENT -> [Sgn.Comment(_loc, x)]
 
     ]
   ]
@@ -421,7 +421,7 @@ GLOBAL: sgn;
 
   total_order:
     [
-      [  
+      [
         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
 (*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
       ]
@@ -536,11 +536,11 @@ GLOBAL: sgn;
   ;
 
   lf_term:
-    [ 
+    [
     "list" [
-      l = LIST1 (lf_term LEVEL "lam") -> 
+      l = LIST1 (lf_term LEVEL "lam") ->
             (LF.TList(_loc, l))
-      ]    
+      ]
     | "lam" RIGHTA
         [
           "\\"; x = SYMBOL; "."; ms = LIST1 (lf_term LEVEL "lam")->
@@ -567,7 +567,7 @@ GLOBAL: sgn;
   ;
 
   lf_head:
-    [ 
+    [
       [
         x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split '.' x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
     |
@@ -728,7 +728,7 @@ GLOBAL: sgn;
 
 
   clf_typ:
-    [ 
+    [
       "modules"
       [
           l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
@@ -753,7 +753,7 @@ GLOBAL: sgn;
               | [LF.NTyp(_, a)] -> a
               | _ -> LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
             end
-              
+
            |
            a = UPSYMBOL; ms = LIST0 clf_normal ->
               LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
@@ -772,12 +772,12 @@ GLOBAL: sgn;
   ;
 
   clf_normal:
-     [ 
+     [
       RIGHTA
        [
           "\\"; x = SYMBOL; "."; m = clf_term_app ->
             let m = begin match m with
-              | LF.TList(l, (LF.Root(_, LF.MVar (l2, u, LF.EmptySub _), LF.Nil)) :: [LF.Root(_, (LF.Name _ as h), LF.Nil)]) -> 
+              | LF.TList(l, (LF.Root(_, LF.MVar (l2, u, LF.EmptySub _), LF.Nil)) :: [LF.Root(_, (LF.Name _ as h), LF.Nil)]) ->
                   LF.Root(l, LF.MVar(l2, u, LF.Dot(l2, LF.EmptySub l2, LF.Head h)), LF.Nil)
               | _ -> m
             end in
@@ -795,7 +795,7 @@ GLOBAL: sgn;
           u = UPSYMBOL ->
             LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
 
-	| u = UPSYMBOL; "["; s = clf_sub_new; "]" -> 
+	| u = UPSYMBOL; "["; s = clf_sub_new; "]" ->
            LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
         |
            "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
@@ -807,7 +807,7 @@ GLOBAL: sgn;
 
         | "_" -> LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
-        | "?" -> LF.LFHole _loc 
+        | "?" -> LF.LFHole _loc
 
         | "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
@@ -845,7 +845,7 @@ GLOBAL: sgn;
 
   clf_term_app:
     [
-      [ 
+      [
         ms = LIST1 clf_normal -> LF.TList(_loc, ms)
       | a = clf_typ -> LF.NTyp(_loc, a)
       | "{"; "}" -> LF.PatEmpty _loc
@@ -906,13 +906,13 @@ GLOBAL: sgn;
 ;
 
   clf_sub_new:
-    [ 
+    [
       [   -> LF.EmptySub _loc
       | s = clf_sub_term -> s
       | sigma = SELF; ","; tM = clf_term_app ->
           LF.Dot (_loc, sigma, LF.Normal tM)
       | tM = clf_term_app ->
-          LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)          
+          LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
       ]
     ]
   ;
@@ -1099,10 +1099,10 @@ GLOBAL: sgn;
     ]
   ]
   ;
-  
+
   fn_exp:
   [
-    [ 
+    [
       f = SYMBOL -> f
     ]
   ]
@@ -1128,12 +1128,12 @@ GLOBAL: sgn;
 
      | "impossible"; i = cmp_exp_syn; cd = OPT ["in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]" -> (ctyp_decls, pHat)]  ->
-           (match cd with 
-	      | Some (ctyp_decls, pHat) -> 
+           (match cd with
+	      | Some (ctyp_decls, pHat) ->
 		  let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
 		    Comp.Case (_loc, Pragma.RegularCase, i,
                                [Comp.EmptyBranch (_loc, ctyp_decls', mkEmptyPat (_loc, pHat))])
-	      | None -> 
+	      | None ->
 		    Comp.Case (_loc, Pragma.RegularCase, i,
                                [Comp.EmptyBranch (_loc, LF.Empty, mkEmptyPat (_loc, LF.Null ))]))
       | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk ->
@@ -1200,7 +1200,7 @@ isuffix:
  ]];
 
 cmp_exp_syn:
- [ 
+ [
   "modules"[
      m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
      let (modules, n) = split '.' m in
@@ -1246,7 +1246,7 @@ cmp_exp_syn:
   cmp_pattern:
     [
       [
-      mobj = meta_obj -> Comp.PatMetaObj (_loc, mobj)        
+      mobj = meta_obj -> Comp.PatMetaObj (_loc, mobj)
      |  "ttrue" -> Comp.PatTrue (_loc)
      | "ffalse" -> Comp.PatFalse (_loc)
      | x = SYMBOL -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
@@ -1272,7 +1272,7 @@ cmp_exp_syn:
            (match rest with
               | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
               | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
-           )      
+           )
       ]
     ]
   ;
@@ -1292,13 +1292,13 @@ cmp_exp_syn:
         "{"; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; "}"; ind = OPT ["*"]; mixtau = SELF ->
           let modules = match l with None -> [] | Some l -> l in
 	  let dep = match ind with None -> LF.No | Some _ -> LF.Inductive in
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi),
             (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), dep)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
 
       | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
           let modules = match l with None -> [] | Some l -> l in
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi), 
+          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi),
             (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), LF.Maybe)) in
           MTPiBox (_loc, ctyp_decl, mixtau)
       |
@@ -1325,7 +1325,7 @@ cmp_exp_syn:
 
       | tK = "ctype" -> MTCompKind _loc
       (* allowing prop instead of ctype for ORBI files *)
-      | tK = "prop" -> MTCompKind _loc 
+      | tK = "prop" -> MTCompKind _loc
 
       | a = UPSYMBOL; ms = LIST0 meta_obj  ->
           let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
@@ -1333,7 +1333,7 @@ cmp_exp_syn:
 
 (*      | "("; a = UPSYMBOL; ms = LIST0 meta_obj; ")"; "*"  ->
           let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-              MTIndBase (_loc, Id.mk_name (Id.SomeString a), sp) 
+              MTIndBase (_loc, Id.mk_name (Id.SomeString a), sp)
 *)
       | x = [a = MODULESYM -> a | a = SYMBOL -> a] ->
           let (modules, a) = split '.' x in

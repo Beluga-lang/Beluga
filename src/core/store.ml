@@ -94,7 +94,7 @@ module Modules = struct
 
   (* Precondition: the name check in f is using a name with Id.modules = [] *)
   let find (n : Id.name) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
-    let m = n.Id.modules in
+    let m = Id.get_module n in
     let m = match m with [m'] -> begin try List.assoc m' !abbrevs with _ -> m end | _ -> m in
     let rec iter_find : Id.module_id list -> 'b = function
       | [] -> raise Not_found
@@ -177,9 +177,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -194,7 +194,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let args_of_name n =
       let entry = get (index_of_name n) in
@@ -311,7 +311,7 @@ module Cid = struct
      and addTypesubord a b =
       let a_e = get a in
       let b_e = get b in
-(*      let _ = print_string ("addTypesubord " ^ a_e.name.Id.string_of_name ^ " " ^ b_e.name.Id.string_of_name ^ "\n") in *)
+(*      let _ = print_string ("addTypesubord " ^ a_(Id.string_of_name e.name) ^ " " ^ b_(Id.string_of_name e.name) ^ "\n") in *)
         if BitSet.is_set a_e.typesubordinated b then
           ()
         else
@@ -442,9 +442,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_term) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -484,7 +484,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let args_of_name n =
       let e = (get (index_of_name n)) in
@@ -519,9 +519,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_schema) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -555,7 +555,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let get_schema name = (get name).schema
 
@@ -617,9 +617,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_comp_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -663,7 +663,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -704,9 +704,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -740,7 +740,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let freeze a =
           (get a).frozen := true
@@ -777,9 +777,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_const) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -815,7 +815,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -845,9 +845,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_dest) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -882,7 +882,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -919,9 +919,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_comp_typ) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_typ = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -955,7 +955,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
@@ -994,9 +994,9 @@ module Cid = struct
     let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
 
     let index_of_name : Id.name -> Id.cid_prog = fun (n : Id.name) ->
-      let n' = match n.Id.modules with
+      let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString n.Id.string_of_name) in
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
        cid
 
@@ -1052,7 +1052,7 @@ module Cid = struct
                    not (List.exists (fun x -> x = l) !Modules.opened)
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString e.name.Id.string_of_name))}
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));
@@ -1079,48 +1079,49 @@ module Cid = struct
       let vgen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
       conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen))::!conventions
 
-    let rec first_unique gen =
+    let rec _first_unique gen =
       let s = Stream.next gen in
-      if List.exists (fun (_, new_name) -> new_name = s) !newNames then first_unique gen else s
+      if List.exists (fun (_, new_name) -> new_name = s) !newNames then _first_unique gen else s
 
     let haveNameFor n = try
-      Some(List.assoc n.Id.string_of_name !newNames)
+      Some(List.assoc (Id.string_of_name n) !newNames)
     with
     | _ -> None
 
-    let getName ?(tA=None) n =
-      let is_uppercase (n : Id.name) : bool =
-        let c = n.Id.string_of_name.[0] in
-        0 = (Char.compare c (Char.uppercase c)) in
+    (* This gave us nice names when printing holes, should be superceded by now *)
+    let getName ?(tA=None) n = Id.string_of_name n
+      (* let is_uppercase (n : Id.name) : bool = *)
+      (*   let c = (Id.string_of_name n).[0] in *)
+      (*   0 = (Char.compare c (Char.uppercase c)) in *)
 
-      if n.Id.was_generated && (not !usingRealNames) then
-        let s = n.Id.string_of_name in
-        try
-          List.assoc s !newNames
-        with
-        | Not_found ->
-          let newName = match tA with
-          | None ->
-            if (is_uppercase n) then
-              Gensym.MVarData.gensym ()
-            else Gensym.VarData.gensym ()
-          | Some(tA) ->
-            let cid = Typ.cid_of_typ tA in
-            try
-              let (_, mvar_gen, _, var_gen) = List.assoc cid !conventions in
-              if is_uppercase n then
-                first_unique mvar_gen
-              else match var_gen with
-              | None -> Gensym.VarData.gensym ()
-              | Some x -> first_unique x
-            with _ ->
-              if (is_uppercase n) then
-                Gensym.MVarData.gensym ()
-              else Gensym.VarData.gensym ()
-          in
-            (newNames := (s,newName) :: (!newNames)) ; newName
-      else
-        let s = n.Id.string_of_name in (newNames := (s,s) :: (!newNames)); s
+      (* if n.Id.was_generated && (not !usingRealNames) then *)
+      (*   let s = (Id.string_of_name n) in *)
+      (*   try *)
+      (*     List.assoc s !newNames *)
+      (*   with *)
+      (*   | Not_found -> *)
+      (*     let newName = match tA with *)
+      (*     | None -> *)
+      (*       if (is_uppercase n) then *)
+      (*         Gensym.MVarData.gensym () *)
+      (*       else Gensym.VarData.gensym () *)
+      (*     | Some(tA) -> *)
+      (*       let cid = Typ.cid_of_typ tA in *)
+      (*       try *)
+      (*         let (_, mvar_gen, _, var_gen) = List.assoc cid !conventions in *)
+      (*         if is_uppercase n then *)
+      (*           first_unique mvar_gen *)
+      (*         else match var_gen with *)
+      (*         | None -> Gensym.VarData.gensym () *)
+      (*         | Some x -> first_unique x *)
+      (*       with _ -> *)
+      (*         if (is_uppercase n) then *)
+      (*           Gensym.MVarData.gensym () *)
+      (*         else Gensym.VarData.gensym () *)
+      (*     in *)
+      (*       (newNames := (s,newName) :: (!newNames)) ; newName *)
+      (* else *)
+      (*   let s = (Id.string_of_name n) in (newNames := (s,s) :: (!newNames)); s *)
 
       let reset () =
         Gensym.MVarData.reset () ;

@@ -176,7 +176,7 @@ let rec collectionToString cQ = match cQ with
 
   | I.Dec(cQ, FDecl (FV n, Pure (LFTyp tA))) ->
       let cD = I.Empty in
-        collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
+        collectionToString cQ ^ ",  FV " ^ (string_of_name n) ^ " : "
       ^ "(" ^ P.typToString cD I.Null (tA, LF.id) ^ ")"
       ^ "\n"
   | I.Dec(_cQ, _ ) -> " ?? "

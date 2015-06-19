@@ -38,7 +38,7 @@ let _ = Error.register_printer
       match err with
 	| TotalDeclError (f, f') ->
 	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n"
-	    (Id.render_name f) (Id.render_name f')
+	    (Id.render_name f) (Id.string_of_name f')
 	| MutualTotalDecl f ->
 	  Format.fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (Id.render_name f)
 	| MutualTotalDeclAfter f ->
@@ -226,7 +226,7 @@ let recSgnDecls decls =
         let (apx_tau, apxK) = Index.comptypdef  (cT, cK) in
 
         let ((cD,tau), i, cK) = Reconstruct.comptypdef loc a (apx_tau, apxK) in
-	let _         = dprint (fun () ->  "typedef " ^ a.string_of_name ^ " : " ^
+	let _         = dprint (fun () ->  "typedef " ^ (string_of_name a) ^ " : " ^
           (P.compKindToString Int.LF.Empty cK) ^ " = " ^
 	  (P.compTypToString cD tau)) in
 	let _         = (Monitor.timer ("Type abbrev. : Kind Check",
@@ -239,10 +239,10 @@ let recSgnDecls decls =
         sgn
 
       | Ext.Sgn.CompTyp (loc , a, extK, pflag) ->
-        let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
+        let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ (string_of_name a)) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
-        let _ = dprint (fun () -> "\nElaborating data-type declaration " ^ a.string_of_name) in
+        let _ = dprint (fun () -> "\nElaborating data-type declaration " ^ (string_of_name a)) in
         let cK = Monitor.timer ("CType Elaboration" ,
 				(fun () -> let cK = Reconstruct.compkind apxK in
 					   Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK
@@ -253,11 +253,11 @@ let recSgnDecls decls =
 
         let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
-			dprint (fun () ->  a.string_of_name ^
+			dprint (fun () ->  (string_of_name a) ^
 			  " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
 	Monitor.timer ("Type Check",
 		       fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
-	dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^a.string_of_name ^
+	dprint (fun () ->  "\nDOUBLE CHECK for data type constant " ^(string_of_name a) ^
           " successful!");
 	(* let p = match pflag with  *)
 	(*   | None -> Int.Sgn. Noflag  *)
@@ -277,10 +277,10 @@ let recSgnDecls decls =
 
       | Ext.Sgn.CompCotyp (loc , a, extK) ->
         dprint (fun () -> "[RecSgn Checking] CompCotyp at: \n" ^ Syntax.Loc.to_string loc);
-        let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ a.string_of_name) in
+        let _ = dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ (string_of_name a)) in
         let apxK = Index.compkind extK in
         let _ = FVar.clear () in
-        let _ = dprint (fun () -> "\nElaborating codata-type declaration " ^ a.string_of_name) in
+        let _ = dprint (fun () -> "\nElaborating codata-type declaration " ^ (string_of_name a)) in
         let cK = Monitor.timer ("CType Elaboration" ,
 				(fun () -> let cK = Reconstruct.compkind apxK in
 					   Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK
@@ -291,11 +291,11 @@ let recSgnDecls decls =
 
         let _        = (Reconstruct.reset_fvarCnstr ();
                         Unify.resetGlobalCnstrs ();
-                        dprint (fun () ->  a.string_of_name ^
+                        dprint (fun () ->  (string_of_name a) ^
                           " : " ^  (P.compKindToString Int.LF.Empty cK'))) in
         Monitor.timer ("Type Check",
 		       fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
-        dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^a.string_of_name ^
+        dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^(string_of_name a) ^
           " successful!");
         let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in
         let sgn = Int.Sgn.CompCotyp(loc, a, cK') in
@@ -305,10 +305,10 @@ let recSgnDecls decls =
 
       | Ext.Sgn.CompConst (loc , c, tau) ->
         dprint (fun () -> "[RecSgn Checking] CompConst at: \n" ^ Syntax.Loc.to_string loc);
-        let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ c.string_of_name) in
+        let _         = dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ (string_of_name c)) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
-        let _         = dprint (fun () -> "\nElaborating data-type constructor " ^ c.string_of_name) in
+        let _         = dprint (fun () -> "\nElaborating data-type constructor " ^ (string_of_name c)) in
         let tau'      = Monitor.timer ("Data-type Constant: Type Elaboration",
 				       fun () -> Reconstruct.comptyp apx_tau)  in
         let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
@@ -316,7 +316,7 @@ let recSgnDecls decls =
         let (tau', i) = Monitor.timer ("Data-type Constant: Type Abstraction",
 				       fun () -> Abstract.comptyp tau') in
 	let _         = dprint (fun () -> "Abstracting over comp. type: done") in
-	let _         = dprint (fun () ->  c.string_of_name ^ " : " ^
+	let _         = dprint (fun () ->  (string_of_name c) ^ " : " ^
 	  (P.compTypToString cD tau')) in
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
 					fun () -> Check.Comp.checkTyp cD tau'))
@@ -327,9 +327,9 @@ let recSgnDecls decls =
 		(match flag with
 		  | Int.Sgn.Nocheck    -> ()
 		  | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then ()
-	            else raise (Error (loc, (NoPositive c.string_of_name)))
+	            else raise (Error (loc, (NoPositive (string_of_name c))))
 		  | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
-	            else raise (Error (loc, (NoStratify c.string_of_name)))
+	            else raise (Error (loc, (NoStratify (string_of_name c))))
 		  | Int.Sgn.StratifyAll loc_s   ->
 		    let t =  Total.stratifyAll cid_ctypfamily tau' in
 		    let t' = (t land (!Total.stratNum)) in
@@ -337,14 +337,14 @@ let recSgnDecls decls =
 		    else raise (Error (loc_s, (NoStratifyOrPositive  (R.render_cid_comp_typ cid_ctypfamily) )))
 
 	(* if true (\* Total.stratifyAll cid_ctypfamily tau'  *\)then () *)
-	(* else raise (Error (loc, (NoStratify c.string_of_name))) *)
+	(* else raise (Error (loc, (NoStratify (string_of_name c)))) *)
 
 	);
 
 
 
 	(* (if flag then if Total.positive cid_ctypfamily tau' then ()  *)
-        (*                        else raise (Error (loc, (NoPositive c.string_of_name))) *)
+        (*                        else raise (Error (loc, (NoPositive (string_of_name c)))) *)
 	(* else () ); *)
 
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
@@ -356,10 +356,10 @@ let recSgnDecls decls =
 
    | Ext.Sgn.CompDest (loc , c, tau) ->
         dprint (fun () -> "[RecSgn Checking] CompDest at: \n" ^ Syntax.Loc.to_string loc);
-        let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ c.string_of_name) in
+        let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ (string_of_name c)) in
         let apx_tau   = Index.comptyp tau in
         let cD        = Int.LF.Empty in
-        let _         = dprint (fun () -> "\nElaborating codata-type destructor " ^ c.string_of_name) in
+        let _         = dprint (fun () -> "\nElaborating codata-type destructor " ^ (string_of_name c)) in
         let tau'      = Monitor.timer ("Codata-type Constant: Type Elaboration",
                                        fun () -> Reconstruct.comptyp apx_tau)  in
         let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
@@ -367,7 +367,7 @@ let recSgnDecls decls =
         let (tau', i) = Monitor.timer ("Codata-type Constant: Type Abstraction",
                                        fun () -> Abstract.comptyp tau') in
         let _         = dprint (fun () -> "Abstracting over comp. type: done") in
-        let _         = dprint (fun () ->  c.string_of_name ^ " : " ^
+        let _         = dprint (fun () ->  (string_of_name c) ^ " : " ^
                                    (P.compTypToString cD tau')) in
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
                                         fun () -> Check.Comp.checkTyp cD tau'))
@@ -380,11 +380,11 @@ let recSgnDecls decls =
 
     | Ext.Sgn.Typ (loc, a, extK)   ->
         dprint (fun () -> "[RecSgn Checking] Typ at: \n" ^ Syntax.Loc.to_string loc);
-        let _        = dprint (fun () -> "\nIndexing type constant " ^ a.string_of_name) in
+        let _        = dprint (fun () -> "\nIndexing type constant " ^ (string_of_name a)) in
         let (apxK, _ ) = Index.kind extK in
         let _        = FVar.clear () in
 
-        let _        = dprint (fun () -> "\nElaborating type constant " ^ a.string_of_name) in
+        let _        = dprint (fun () -> "\nElaborating type constant " ^ (string_of_name a)) in
 
         let tK       = Monitor.timer ("Type Elaboration",
                                       fun () -> (let tK = Reconstruct.kind apxK in
@@ -396,10 +396,10 @@ let recSgnDecls decls =
                                       fun () -> Abstract.kind tK) in
         let _        = (Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ();
-			dprint (fun () ->  a.string_of_name ^ " : " ^  (P.kindToString Int.LF.Null (tK', S.LF.id)));
+			dprint (fun () ->  (string_of_name a) ^ " : " ^  (P.kindToString Int.LF.Null (tK', S.LF.id)));
 			Monitor.timer ("Type Check",
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
-			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^a.string_of_name ^
+			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^(string_of_name a) ^
 				  " successful!")) in
         let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
         let _a = Typ.add (Typ.mk_entry a tK' i) in
@@ -414,7 +414,7 @@ let recSgnDecls decls =
                            | Apx.LF.Atom(_loc, a, _spine) -> a
                            | Apx.LF.PiTyp ((_, _), t) -> get_type_family t in
         let constructedType = get_type_family apxT in
-        let _          = dprint (fun () -> "Reconstructing term constant " ^ c.string_of_name) in
+        let _          = dprint (fun () -> "Reconstructing term constant " ^ (string_of_name c)) in
 
         let _        = FVar.clear () in
         let tA       = Monitor.timer ("Constant Elaboration",
@@ -422,7 +422,7 @@ let recSgnDecls decls =
                                                    Reconstruct.solve_fvarCnstr Lfrecon.Pi; tA)) in
         let cD       = Int.LF.Empty in
 
-        let _        = dprint (fun () -> "\nElaboration of constant " ^ c.string_of_name ^ " : " ^
+        let _        = dprint (fun () -> "\nElaboration of constant " ^ (string_of_name c) ^ " : " ^
                                          P.typToString cD Int.LF.Null (tA, S.LF.id)) in
 
         let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
@@ -431,7 +431,7 @@ let recSgnDecls decls =
 	let _        = ( Reconstruct.reset_fvarCnstr ();
 			 Unify.resetGlobalCnstrs ();
         		 dprint (fun () -> "\nReconstruction (with abstraction) of constant: " ^
-				   c.string_of_name ^ " : " ^
+				   (string_of_name c) ^ " : " ^
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
@@ -444,19 +444,19 @@ let recSgnDecls decls =
     | Ext.Sgn.Schema (loc, g, schema) ->
         dprint (fun () -> "[RecSgn Checking] Schema at: \n" ^ Syntax.Loc.to_string loc);
         let apx_schema = Index.schema schema in
-        let _        = dprint (fun () -> "\nReconstructing schema " ^ g.string_of_name ^ "\n") in
+        let _        = dprint (fun () -> "\nReconstructing schema " ^ (string_of_name g) ^ "\n") in
         let _        = FVar.clear () in
         let sW       = Reconstruct.schema apx_schema in
-        let _        = (dprint (fun () -> "\nElaborated schema " ^ g.string_of_name ^ " : " ^ P.schemaToString sW);
+        let _        = (dprint (fun () -> "\nElaborated schema " ^ (string_of_name g) ^ " : " ^ P.schemaToString sW);
 			Reconstruct.solve_fvarCnstr Lfrecon.Pi;
 			Unify.forceGlobalCnstr (!Unify.globalCnstrs);
 			Reconstruct.reset_fvarCnstr ();
 			Unify.resetGlobalCnstrs ()) in
 
         let sW'      = Abstract.schema sW in
-	let _        = dprint (fun () -> "\nSchema " ^  g.string_of_name ^ " : " ^ P.schemaToString sW' ^ " after abstraction " ) in
+	let _        = dprint (fun () -> "\nSchema " ^  (string_of_name g) ^ " : " ^ P.schemaToString sW' ^ " after abstraction " ) in
         let _ = Check.LF.checkSchemaWf sW' in
-      	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
+      	 dprint (fun () -> "\nTYPE CHECK for schema " ^ (string_of_name g) ^ " successful" );
          let _s = Schema.add (Schema.mk_entry g sW') in
          let sgn = Int.Sgn.Schema(_s, sW') in
          Store.Modules.addSgnToCurrent sgn;
@@ -473,7 +473,7 @@ let recSgnDecls decls =
           let tau'               = Whnf.cnormCTyp (tau, theta) in
           let i'                 = Whnf.cnormExp' (i', Whnf.m_id) in
 
-          let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ x.string_of_name ^
+          let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ (string_of_name x) ^
 					     "\n   : " ^ P.compTypToString cD tau' ^
 					     "\n  =  " ^
                                 P.expSynToString cD cG i' ^ "\n") in
@@ -514,7 +514,7 @@ let recSgnDecls decls =
           let i'      = Whnf.cnormExp (i', Whnf.m_id) in
           let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           let tau'    = Whnf.cnormCTyp (tau', C.m_id) in
-          let _       = dprint (fun () ->  "\n [AFTER Reconstruction Val - 2] let " ^ x.string_of_name ^
+          let _       = dprint (fun () ->  "\n [AFTER Reconstruction Val - 2] let " ^ (string_of_name x) ^
                                "\n   : " ^ P.compTypToString cD tau' ^
                                 "\n  =  " ^
                                 P.expChkToString cD cG i' ^ "\n") in
@@ -566,20 +566,20 @@ let recSgnDecls decls =
           | [] -> (Int.LF.Empty, Var.create (), [])
           | Ext.Comp.RecFun (loc, f, total, tau, _e) :: lf ->
               let apx_tau = Index.comptyp  tau in
-	      (* print_string ("Reconstructing function " ^  f.string_of_name ^ " \n"); *)
-              let _       = dprint (fun () ->  "Reconstructing function " ^  f.string_of_name ^ " \n") in
+	      (* print_string ("Reconstructing function " ^  (string_of_name f) ^ " \n"); *)
+              let _       = dprint (fun () ->  "Reconstructing function " ^  (string_of_name f) ^ " \n") in
               let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
               let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
                 (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
-              let _        = dprint (fun () ->  "Elaboration of function type " ^ f.string_of_name ^
+              let _        = dprint (fun () ->  "Elaboration of function type " ^ (string_of_name f) ^
                                        " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
 
               let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
-              let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ f.string_of_name ^
+              let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ (string_of_name f) ^
                             " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
 
 
-              (* print_string ( "Abstracted elaborated function type " ^ f.string_of_name ^ *)
+              (* print_string ( "Abstracted elaborated function type " ^ (string_of_name f) ^ *)
               (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
 
               let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
@@ -621,7 +621,7 @@ let recSgnDecls decls =
           let e'      = Monitor.timer ("Function Elaboration", fun () ->
 					 Reconstruct.exp cG apx_e (stripInd tau', C.m_id)) in
 
-          let _       = dprint (fun () ->  "\n Elaboration of function " ^ f.string_of_name ^
+          let _       = dprint (fun () ->  "\n Elaboration of function " ^ (string_of_name f) ^
                                   "\n   type: " ^ P.compTypToString cD tau' ^
                                   "\n   result:  " ^
                                   P.expChkToString cD cG e' ^ "\n") in
@@ -636,7 +636,7 @@ let recSgnDecls decls =
 
           (* let e_r     = Monitor.timer ("Function Reconstruction", fun () -> check  cO cD cG e' (tau', C.m_id)) in  *)
 
-          let _       = dprint (fun () ->  "\n [AFTER reconstruction] Function " ^ f.string_of_name ^
+          let _       = dprint (fun () ->  "\n [AFTER reconstruction] Function " ^ (string_of_name f) ^
                                "\n   type: " ^ P.compTypToString cD tau' ^
                                 "\n   result:  " ^
                                 P.expChkToString cD cG e' ^ "\n") in
@@ -671,13 +671,13 @@ let recSgnDecls decls =
 		  (match x with
 		    | Some x ->
 		      Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-			(Id.render_name f) (Id.render_name x)
+			(Id.render_name f) (Id.string_of_name x)
 		    | None ->
 		      Printf.printf "\n## Totality checking: %s terminates. ##\n"
 			(Id.render_name f) )
 
               end ;*)
-              dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
+              dprint (fun () -> "DOUBLE CHECK of function " ^ (string_of_name f) ^ " successful!\n\n");
               let (loc_opt, cid) = Comp.add loc
 		(fun cid ->
                   Comp.mk_entry f tau' 0 (is_total total)
@@ -704,12 +704,12 @@ let recSgnDecls decls =
 			(match x with
 			   | Some x ->
 			       Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-				 (Id.render_name f) (Id.render_name x)
+				 (Id.render_name f) (Id.string_of_name x)
 			   | None ->
 			       Printf.printf "\n## Totality checking: %s terminates ##\n"
 				 (Id.render_name f))
 		  end ;*)
-		  dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
+		  dprint (fun () -> "DOUBLE CHECK of function " ^ (string_of_name f) ^ " successful!\n");
 		  let (loc_opt, cid) = Comp.add loc
 		    (fun cid ->
                        Comp.mk_entry  f tau' 0 (is_total total)

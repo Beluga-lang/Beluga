@@ -737,7 +737,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
             let (offset, _) = Whnf.mctxMVarPos cD psi in
               (Some (Int.LF.CtxOffset (offset + k)), d)
 	  with Whnf.Fmvar_not_found ->
-	    (Printf.printf "Unbound context variable %s"  (R.render_name psi);
+	    (Printf.printf "Unbound context variable %s"  (Id.render_name psi);
 	    raise (Index.Error (loc, Index.UnboundCtxName psi)))
 	  end
 

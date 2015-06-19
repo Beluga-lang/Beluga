@@ -63,3 +63,4 @@ type name_guide =
 (** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
 val mk_name : ?modules:string list -> name_guide -> name
+val render_name : name -> string

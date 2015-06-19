@@ -272,7 +272,7 @@ module Int = struct
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s{%s : %a} @ %a%s@]"
               (l_paren_if cond)
-              (R.render_name x)
+              (Id.render_name x)
               (fmt_ppr_lf_typ cD cPsi 0) a
               (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
               (r_paren_if cond)
@@ -334,7 +334,7 @@ module Int = struct
             let cond = lvl > 0 in
               fprintf ppf "%s\\%s. %a%s"
                 (l_paren_if cond)
-                (R.render_name x)
+                (Id.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
         | LF.LFHole _ ->
@@ -428,13 +428,13 @@ module Int = struct
 
       | LF.FVar x ->
           fprintf ppf "%s%s"
-            (R.render_name x)
+            (Id.render_name x)
             proj
 
       | LF.FMVar (u, s) ->
           fprintf ppf "FMV %s%s%s%a%s"
             (l_paren_if (paren s))
-            (R.render_name u)
+            (Id.render_name u)
             proj
             (fmt_ppr_lf_sub cD cPsi lvl) s
             (r_paren_if (paren s))
@@ -442,7 +442,7 @@ module Int = struct
       | LF.FPVar (p, s) ->
           fprintf ppf "%sFPV #%s%s%a%s"
             (l_paren_if (paren s))
-            (R.render_name p)
+            (Id.render_name p)
             proj
             (fmt_ppr_lf_sub cD cPsi lvl) s
             (r_paren_if (paren s))
@@ -478,7 +478,7 @@ module Int = struct
 	| LF.DDec (cPsi', LF.TypDeclOpt x) ->
 	   fprintf ppf "%a %s"
 		   fmt_ppr_lf_sub_id cPsi'
-		   (R.render_name x)
+		   (Id.render_name x)
 	| LF.CtxVar _ -> fprintf ppf ".."
       in
       let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
@@ -494,7 +494,7 @@ module Int = struct
         | LF.FSVar (_, (s_name, s)) ->
           fprintf ppf "|- FSV %s[%a]"
 
-            (R.render_name s_name )
+            (Id.render_name s_name )
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
         | LF.SVar (c, _, s) ->
@@ -529,7 +529,7 @@ module Int = struct
                 fprintf ppf
                   "#^%s FSV %s[%a]"
                   (R.render_offset n)
-                  (R.render_name s_name)
+                  (Id.render_name s_name)
                   (self lvl) s
 
         | LF.SVar (c, n, s) ->
@@ -705,7 +705,7 @@ module Int = struct
     and fmt_ppr_lf_ctx_var cD ppf = function
       | LF.CInst ((n, {contents = None}, _cD, _schema, _cnstr,_dep), theta) ->
           fprintf ppf "?%s[%a]"
-            (R.render_name n)
+            (Id.render_name n)
             (fmt_ppr_lf_msub cD 0) theta
 
       | LF.CInst ((_n, {contents = Some (LF.ICtx cPsi)}, cD', _schema, _cnstr, _dep), theta) ->
@@ -717,14 +717,14 @@ module Int = struct
             (R.render_ctx_var cD psi)
       | LF.CtxName psi ->
           fprintf ppf "%s"
-            (R.render_name psi)
+            (Id.render_name psi)
 
 
     and fmt_ppr_lf_typ_rec cD cPsi _lvl ppf typrec =
        let ppr_element cD cPsi ppf suffix = function
        | (x, tA) ->
               fprintf ppf "%s:%a%s"
-                (R.render_name x)
+                (Id.render_name x)
                 (fmt_ppr_lf_typ cD cPsi 0) tA
                suffix
        in
@@ -769,7 +769,7 @@ module Int = struct
       in
       if useName then
         try
-          fprintf ppf "%s" (R.render_name (Store.Cid.Schema.get_name_from_schema s))
+          fprintf ppf "%s" (Id.render_name (Store.Cid.Schema.get_name_from_schema s))
         with | _ -> print_without_name s
       else print_without_name s
 
@@ -795,13 +795,13 @@ module Int = struct
 
       | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
           fprintf ppf "%s : %a"    (* formerly "., %s : %a"    -jd 2010-06-03 *)
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD LF.Null 0) tA
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (ppr_typ_decl_dctx cD) cPsi
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
 
@@ -813,21 +813,21 @@ module Int = struct
 
       | LF.DDec (LF.Null, LF.TypDeclOpt x) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (cPsi, LF.TypDeclOpt x) ->
           fprintf ppf "%a, %s"
             (fmt_ppr_lf_psi_hat cD 0) cPsi
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (LF.Null, LF.TypDecl(x, _ )) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
           fprintf ppf "%a, %s"
             (fmt_ppr_lf_psi_hat cD 0) cPsi
-            (R.render_name x)
+            (Id.render_name x)
 
     and fmt_ppr_lf_dctx cD _lvl ppf = function
       | LF.Null ->
@@ -838,23 +838,23 @@ module Int = struct
 
       | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
           fprintf ppf "%s : %a"
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD LF.Null 0) tA
 
       | LF.DDec (LF.Null, LF.TypDeclOpt x) ->
           fprintf ppf "%s : _"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (fmt_ppr_lf_dctx cD 0) cPsi
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
       | LF.DDec (cPsi, LF.TypDeclOpt x) ->
           fprintf ppf "%a, %s : _"
             (fmt_ppr_lf_dctx cD 0) cPsi
-            (R.render_name x)
+            (Id.render_name x)
 
     and fmt_ppr_lf_mctx lvl ppf = function
       | LF.Empty ->
@@ -903,7 +903,7 @@ module Int = struct
           let cond = lvl > 0 in
             fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
               (l_paren_if cond)
-              (R.render_name   x)
+              (Id.render_name   x)
               (fmt_ppr_lf_typ LF.Empty cPsi  0) a
               (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
               (r_paren_if cond)
@@ -948,7 +948,7 @@ module Int = struct
 
           if ((not !Control.printImplicit) && (isImplicit dep)|| (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
-            (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else R.render_name u)
+            (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else Id.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
             (if !Control.printImplicit then
 	       dependent_string dep
@@ -956,7 +956,7 @@ module Int = struct
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
-            (R.render_name name)
+            (Id.render_name name)
 
     and getTyp = function
       | LF.ClTyp (LF.MTyp tA, _)
@@ -1111,7 +1111,7 @@ module Int = struct
 
       | Comp.PatFVar (_, name ) ->
           fprintf ppf "%s"
-            (R.render_name name)
+            (Id.render_name name)
 
 
     let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
@@ -1123,7 +1123,7 @@ module Int = struct
 (*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
             fprintf ppf "%sfn %s =>@ "
               (l_paren_if cond)
-              (R.render_name x);
+              (Id.render_name x);
 
             fprintf ppf "%a%s"
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
@@ -1140,7 +1140,7 @@ module Int = struct
           let cond = lvl > 0 in
             fprintf ppf "%smlam %s =>@ "
               (l_paren_if cond)
-              (R.render_name x);
+              (Id.render_name x);
             fprintf ppf "%a%s"
               (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1)) 0) e
               (r_paren_if cond);
@@ -1155,8 +1155,8 @@ module Int = struct
           let cond = lvl > 1 in
             fprintf ppf "@[<2>%slet <%s,%s> = %a@ in %a%s@]"
               (l_paren_if cond)
-              (R.render_name x)
-              (R.render_name y)
+              (Id.render_name x)
+              (Id.render_name y)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y)) 0) e
               (r_paren_if cond)
@@ -1166,7 +1166,7 @@ module Int = struct
           let cond = lvl > 1 in
             fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
               (l_paren_if cond)
-              (R.render_name x)
+              (Id.render_name x)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
               (r_paren_if cond)
@@ -1504,7 +1504,7 @@ module Int = struct
       end  in
          fprintf ppf "%a = %s"
 	   (fmt_ppr_lf_mfront cD lvl) m
-	   (R.render_name name)
+	   (Id.render_name name)
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
@@ -1513,7 +1513,7 @@ module Int = struct
       | LF.Dec (cG, Comp.CTypDecl (x, tau)) ->
           fprintf ppf "%a, %s: %a"
             (fmt_ppr_cmp_gctx cD 0) cG
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_cmp_typ cD lvl) tau
 
     let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
@@ -1538,31 +1538,31 @@ module Int = struct
 
       | Sgn.CompTyp (_, a, cK, _) ->
           fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
-             (R.render_name a)
+             (Id.render_name a)
              (fmt_ppr_cmp_kind LF.Empty lvl) cK
 
       | Sgn.CompCotyp (_, a, cK) ->
           fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
-             (R.render_name a)
+             (Id.render_name a)
              (fmt_ppr_cmp_kind LF.Empty lvl) cK
 
       | Sgn.CompDest (_, c, tau)
       | Sgn.CompConst (_, c, tau) ->
           fprintf ppf "@ | %s : @[%a@]@\n"
-            (R.render_name c)
+            (Id.render_name c)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
 
       | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl lvl ppf) (List.flatten l)
 
       | Sgn.Val (_, x, tau, i, None) ->
           fprintf ppf "@\nlet %s : %a = %a@\n"
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
 
       | Sgn.Val (_, x, tau, i, Some v) ->
           fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_cmp_typ LF.Empty lvl) tau
             (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty lvl) i
             (fmt_ppr_cmp_value lvl) v

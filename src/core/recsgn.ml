@@ -18,7 +18,7 @@ type leftoverVars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 
 type error =
   | UnexpectedSucess
-  | TotalDeclError of name * name 
+  | TotalDeclError of name * name
   | MutualTotalDecl of name
   | MutualTotalDeclAfter of name
   | NoPositive of string
@@ -36,33 +36,33 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-	| TotalDeclError (f, f') -> 
-	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n" 
-	    (R.render_name f) (R.render_name f')
-	| MutualTotalDecl f -> 
-	  Format.fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (R.render_name f)
-	| MutualTotalDeclAfter f -> 
-	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (R.render_name f)
-   	| NoPositive n -> 
+	| TotalDeclError (f, f') ->
+	  Format.fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n"
+	    (Id.render_name f) (Id.render_name f')
+	| MutualTotalDecl f ->
+	  Format.fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (Id.render_name f)
+	| MutualTotalDeclAfter f ->
+	  Format.fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (Id.render_name f)
+   	| NoPositive n ->
 	  Format.fprintf ppf "Positivity checking of constructor %s fails.\n" n
-	| NoStratify n -> 
+	| NoStratify n ->
 	  Format.fprintf ppf "Stratification checking of constructor %s fails.\n" n
 
 	| NoStratifyOrPositive n ->
 	  Format.fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
 	| TotalArgsError f ->
-	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (R.render_name f)
+	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Id.render_name f)
 
       	| UnexpectedSucess ->
       	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
         | IllegalOptsPrag s ->
           Format.fprintf ppf "\"%s\" pragma must appear before any declarations." s
-        | IllegalOperatorPrag(n, f, actual) -> begin 
+        | IllegalOperatorPrag(n, f, actual) -> begin
           let (fix, expected) = match f with Ext.Sgn.Infix -> ("infix", 2) | Ext.Sgn.Postfix -> ("postfix", 1) in
-          Format.fprintf ppf 
-            "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted" 
+          Format.fprintf ppf
+            "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted"
             (fix)
-            (R.render_name n)
+            (Id.render_name n)
             (actual)
             (expected) end
       | InvalidOpenPrag s ->
@@ -73,20 +73,20 @@ let _ = Error.register_printer
 				  )
   )
 
-let print_leftoverVars = function 
+let print_leftoverVars = function
   | [] -> ()
   | (_cQ, loc):: rest ->
     Format.fprintf Format.std_formatter "\n%s@." (Syntax.Loc.to_string loc) ;
     ()
 
-let rec stripInd tau = match tau with 
-  | Int.Comp.TypArr (tau1, tau2) -> 
+let rec stripInd tau = match tau with
+  | Int.Comp.TypArr (tau1, tau2) ->
       Int.Comp.TypArr (stripInd tau1, stripInd tau2)
-  | Int.Comp.TypCross (tau1, tau2) -> 
+  | Int.Comp.TypCross (tau1, tau2) ->
       Int.Comp.TypCross (stripInd tau1, stripInd tau2)
-  | Int.Comp.TypInd tau -> 
+  | Int.Comp.TypInd tau ->
       stripInd tau
-  | Int.Comp.TypPiBox (cdec, tau) -> 
+  | Int.Comp.TypPiBox (cdec, tau) ->
       Int.Comp.TypPiBox (cdec, stripInd tau)
   | tau -> tau
 
@@ -118,7 +118,7 @@ let freeze_from_name tau = match tau with
 
 let sgnDeclToHtml = function
   | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
-  | d -> 
+  | d ->
     let margin = Format.pp_get_margin Format.str_formatter () in
     let _ = Html.printingHtml := true in
     (* let _ = Format.set_margin 150 in *)
@@ -128,13 +128,13 @@ let sgnDeclToHtml = function
     let _ = Format.pp_set_margin (Format.str_formatter) margin in
     Html.printingHtml := false
 
-let recSgnDecls decls = 
+let recSgnDecls decls =
   let leftoverVars : leftoverVars ref = ref [] in
   let is_empty = function
     | Int.LF.Empty -> true
     | _ -> false
   in
-  let storeLeftoverVars (cQ : Abstract.free_var Int.LF.ctx) (loc : Syntax.Loc.t) : unit = 
+  let storeLeftoverVars (cQ : Abstract.free_var Int.LF.ctx) (loc : Syntax.Loc.t) : unit =
     match cQ with
       | Int.LF.Empty -> ();
       | _ -> leftoverVars := (cQ, loc) :: !leftoverVars ; ()
@@ -176,39 +176,39 @@ let recSgnDecls decls =
     if !Html.genHtml && not pauseHtml then sgnDeclToHtml d;
     match d with
       | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment(l, s)
-        
+
       | Ext.Sgn.Pragma(loc, Ext.Sgn.AbbrevPrag(orig, abbrev)) ->
-	begin try Store.Modules.addAbbrev orig abbrev 
+	begin try Store.Modules.addAbbrev orig abbrev
 	  with Not_found -> raise (Error(loc, InvalidAbbrev(orig, abbrev))) end;
 	Int.Sgn.Pragma(Int.LF.AbbrevPrag(orig, abbrev))
-      | Ext.Sgn.Pragma(loc, Ext.Sgn.DefaultAssocPrag a) -> OpPragmas.default := a; 
+      | Ext.Sgn.Pragma(loc, Ext.Sgn.DefaultAssocPrag a) -> OpPragmas.default := a;
         let a' = match a with
           | Ext.Sgn.Left -> Int.LF.Left
           | Ext.Sgn.Right -> Int.LF.Right
           | Ext.Sgn.None -> Int.LF.NoAssoc in
         Int.Sgn.Pragma(Int.LF.DefaultAssocPrag a')
-      | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) -> 
-        let _ = dprint(fun () -> "Pragma found for " ^ (R.render_name name)) in
-        
-        if fix = Ext.Sgn.Prefix then 
+      | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) ->
+        let _ = dprint(fun () -> "Pragma found for " ^ (Id.render_name name)) in
+
+        if fix = Ext.Sgn.Prefix then
           OpPragmas.addPragma name fix (Some precedence) assoc
         else begin
           let args_expected = match fix with
             | Ext.Sgn.Postfix -> 1
             | Ext.Sgn.Infix   -> 2 in
-          
-          let actual = 
+
+          let actual =
             try Some (Typ.args_of_name name)
-            with _ -> 
+            with _ ->
               try Some (Term.args_of_name name)
               with _ -> None in
           match actual with
             | None -> ()
-            | Some actual -> 
-              if args_expected = actual then 
+            | Some actual ->
+              if args_expected = actual then
 		OpPragmas.addPragma name fix (Some precedence) assoc
               else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
-        end; 
+        end;
         let assoc' = match assoc with
           | None -> None
           | Some x -> Some(match x with
@@ -233,10 +233,10 @@ let recSgnDecls decls =
 					fun () -> Check.Comp.checkKind Int.LF.Empty cK)) in
 	let _         = (Monitor.timer ("Type abbrev. : Type Check",
 					fun () -> Check.Comp.checkTyp cD tau)) in
-        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in 
+        let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in
         let sgn = Int.Sgn.CompTypAbbrev(loc, a, cK, tau) in
         Store.Modules.addSgnToCurrent sgn;
-        sgn        
+        sgn
 
       | Ext.Sgn.CompTyp (loc , a, extK, pflag) ->
         let _ = dprint (fun () -> "\nIndexing computation-level data-type constant " ^ a.string_of_name) in
@@ -264,8 +264,8 @@ let recSgnDecls decls =
 	(*   | Some Ext. Sgn.Stratify  (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
 	(*         -> Int.Sgn.Stratify   (_loc, x, Id.mk_name (Id.SomeString r), args)  *)
 	(*   | Some _ -> Int.Sgn.Positivity *)
-	
-	let p = (match pflag with 
+
+	let p = (match pflag with
 	  | Ext.Sgn.StratifiedDatatype -> Int.Sgn.StratifyAll loc
 	  | Ext.Sgn.InductiveDatatype -> Int.Sgn.Positivity
         ) in
@@ -330,17 +330,17 @@ let recSgnDecls decls =
 	            else raise (Error (loc, (NoPositive c.string_of_name)))
 		  | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
 	            else raise (Error (loc, (NoStratify c.string_of_name)))
-		  | Int.Sgn.StratifyAll loc_s   -> 
+		  | Int.Sgn.StratifyAll loc_s   ->
 		    let t =  Total.stratifyAll cid_ctypfamily tau' in
-		    let t' = (t land (!Total.stratNum)) in	    
+		    let t' = (t land (!Total.stratNum)) in
 		    if t'<>0 then Total.stratNum := t'
 		    else raise (Error (loc_s, (NoStratifyOrPositive  (R.render_cid_comp_typ cid_ctypfamily) )))
-		      
+
 	(* if true (\* Total.stratifyAll cid_ctypfamily tau'  *\)then () *)
 	(* else raise (Error (loc, (NoStratify c.string_of_name))) *)
 
 	);
-	
+
 
 
 	(* (if flag then if Total.positive cid_ctypfamily tau' then ()  *)
@@ -372,7 +372,7 @@ let recSgnDecls decls =
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
                                         fun () -> Check.Comp.checkTyp cD tau'))
         in      let cid_ctypfamily = get_target_cid_compcotyp tau' in
-        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in 
+        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in
         let sgn = Int.Sgn.CompDest(loc, c, tau') in
         Store.Modules.addSgnToCurrent sgn;
         sgn
@@ -457,7 +457,7 @@ let recSgnDecls decls =
 	let _        = dprint (fun () -> "\nSchema " ^  g.string_of_name ^ " : " ^ P.schemaToString sW' ^ " after abstraction " ) in
         let _ = Check.LF.checkSchemaWf sW' in
       	 dprint (fun () -> "\nTYPE CHECK for schema " ^ g.string_of_name ^ " successful" );
-         let _s = Schema.add (Schema.mk_entry g sW') in 
+         let _s = Schema.add (Schema.mk_entry g sW') in
          let sgn = Int.Sgn.Schema(_s, sW') in
          Store.Modules.addSgnToCurrent sgn;
          sgn
@@ -483,10 +483,10 @@ let recSgnDecls decls =
           let _                  = Monitor.timer ("Function Check", fun () ->
 						    Check.Comp.check cD  cG i'' (tau', C.m_id)) in
 
-	  let v = if Holes.none () && is_empty cQ then 
+	  let v = if Holes.none () && is_empty cQ then
 	    begin
               let v = Opsem.eval i'' in
-              let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in	      
+              let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
 		Some v
 	  end
 	  else None in
@@ -550,14 +550,14 @@ let recSgnDecls decls =
         in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
 	  (* print_string ("args length: "^string_of_int (List.length args) ^"\n" ); *)
-	  if f = f' then 
+	  if f = f' then
             match order with
               | Some (Ext.Comp.Arg x) ->
                 let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
 	      | None -> (None, [])
-	  else 
+	  else
 	    raise (Error (loc, TotalDeclError (f, f')))
-	    
+
         in
         let is_total total =
           match total with None -> false | Some _ -> true in
@@ -580,30 +580,30 @@ let recSgnDecls decls =
 
 
               (* print_string ( "Abstracted elaborated function type " ^ f.string_of_name ^ *)
-              (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)    
+              (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
 
               let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
               let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
               let _       = FCVar.clear () in
                 (* check that names are unique ? *)
                 (begin match total with
-                  | None -> 
-		    if !Total.enabled then 
+                  | None ->
+		    if !Total.enabled then
 		      raise (Error (loc, MutualTotalDecl f))
-		    else 
-		      () 
+		    else
+		      ()
 		  | Some (Ext.Comp.Trust _) -> ()
                   | Some t ->
-		    if !Total.enabled then 
-		      ((*print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+		    if !Total.enabled then
+		      ((*print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
 	   	      Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
-		    else 
-		      (if m = 1 then 
+		    else
+		      (if m = 1 then
 			  ( (*Coverage.enableCoverage := true; *)
 			   Total.enabled := true;
-			   (* print_string ("Encountered total declaration for " ^ R.render_name f ^ "\n"); *)
+			   (* print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
 			   Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
-		       else			  
+		       else
 			  raise (Error (loc, MutualTotalDeclAfter f))
 		      )
                 end ;
@@ -646,8 +646,8 @@ let recSgnDecls decls =
 	  let _       = storeLeftoverVars cQ loc in
           let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
 
-	  let tau_ann = if !Total.enabled then Total.annotate loc f tau' 
- 	                else tau' in 
+	  let tau_ann = if !Total.enabled then Total.annotate loc f tau'
+ 	                else tau' in
           let _       = Monitor.timer ("Function Check", fun () ->
 					    Check.Comp.check
 					      cD cG e_r' (tau_ann, C.m_id)
@@ -663,19 +663,19 @@ let recSgnDecls decls =
             let (e_r' , tau') = reconFun loc f  e in
               (* begin match total with
                 | None -> ()
-		| Some (Ext.Comp.Trust _) ->   
+		| Some (Ext.Comp.Trust _) ->
 		      Printf.printf "\n## Totality checking: %s is trusted. ##\n"
-			    (R.render_name f) 
+			    (Id.render_name f)
 		| Some t ->
 	          let x = get_rec_arg t in
-		  (match x with 
-		    | Some x -> 
+		  (match x with
+		    | Some x ->
 		      Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-			(R.render_name f) (R.render_name x)
-		    | None -> 
+			(Id.render_name f) (Id.render_name x)
+		    | None ->
 		      Printf.printf "\n## Totality checking: %s terminates. ##\n"
-			(R.render_name f) )
-		    
+			(Id.render_name f) )
+
               end ;*)
               dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n\n");
               let (loc_opt, cid) = Comp.add loc
@@ -696,18 +696,18 @@ let recSgnDecls decls =
 		let (e_r' , tau') = reconFun loc f e in
 		  (* begin match total with
 		    | None -> ()
-		    | Some (Ext.Comp.Trust _ ) -> 
+		    | Some (Ext.Comp.Trust _ ) ->
 			Printf.printf "\n## Totality checking: %s is trusted. ##\n"
-			  (R.render_name f) 
+			  (Id.render_name f)
 		    | Some t -> let x = get_rec_arg t in
 			Total.clear () ;
-			(match x with 
-			   | Some x -> 
+			(match x with
+			   | Some x ->
 			       Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-				 (R.render_name f) (R.render_name x)
-			   | None -> 
+				 (Id.render_name f) (Id.render_name x)
+			   | None ->
 			       Printf.printf "\n## Totality checking: %s terminates ##\n"
-				 (R.render_name f))
+				 (Id.render_name f))
 		  end ;*)
 		  dprint (fun () -> "DOUBLE CHECK of function " ^ f.string_of_name ^ " successful!\n");
 		  let (loc_opt, cid) = Comp.add loc
@@ -729,7 +729,7 @@ let recSgnDecls decls =
 
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
-      dprint (fun () -> "[RecSgn Checking] Query at: \n" ^ Syntax.Loc.to_string loc); 
+      dprint (fun () -> "[RecSgn Checking] Query at: \n" ^ Syntax.Loc.to_string loc);
       let (apxT, _ ) = Index.typ extT in
       let _          = dprint (fun () -> "Reconstructing query.") in
 
@@ -760,7 +760,7 @@ let recSgnDecls decls =
 
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
-        dprint (fun () -> "[RecSgn Checking] Pragma at: \n" ^ Syntax.Loc.to_string loc); 
+        dprint (fun () -> "[RecSgn Checking] Pragma at: \n" ^ Syntax.Loc.to_string loc);
         begin try
           let cid =
           begin match v_name with
@@ -773,7 +773,7 @@ let recSgnDecls decls =
         with _ -> raise (Index.Error (loc, Index.UnboundName typ_name))
         end
 
-    | Ext.Sgn.Module(loc, name, decls) -> 
+    | Ext.Sgn.Module(loc, name, decls) ->
 
       let state = Store.Modules.getState () in
       let _ = Store.Modules.instantiateModule name in
@@ -785,7 +785,7 @@ let recSgnDecls decls =
       sgn
 
     | Ext.Sgn.Pragma(loc, Ext.Sgn.OpenPrag(n)) ->
-      try 
+      try
         let x = Modules.open_module n in
         let sgn = Int.Sgn.Pragma(Int.LF.OpenPrag x) in
         Store.Modules.addSgnToCurrent sgn;

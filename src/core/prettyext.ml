@@ -148,12 +148,12 @@ module Ext = struct
     let rec has_ctx_var psi = match psi with LF.CtxVar _ -> true | LF.Null -> false |  LF.DDec(cPsi, _x) -> has_ctx_var cPsi | LF.CtxHole -> true
 
     type id_type =
-    | Constructor 
+    | Constructor
     | Typ
     | Fun
     | Schema
 
-    type html = 
+    type html =
     | Keyword
     | ID of id_type
     | Link
@@ -187,16 +187,16 @@ module Ext = struct
     | DblRArr -> if !Html.printingHtml then "&#x21D2" else "=>"
     | Dots -> if !Html.printingHtml then "&hellip;" else ".."
     | Lam -> if !Html.printingHtml then "&lambda;" else "\\"
-    
+
     let rec fmt_ppr_lf_typ  cD cPsi lvl ppf = function
       | LF.AtomTerm(_, n) -> fmt_ppr_lf_normal cD cPsi lvl ppf n
 
       | LF.Atom (_, a, LF.Nil) ->
-          let name = (R.render_name a) in
+          let name = (Id.render_name a) in
           fprintf ppf "%s" (to_html name Link)
 
       | LF.Atom (_, a, ms) ->
-          let name = (R.render_name a) in
+          let name = (Id.render_name a) in
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
@@ -205,7 +205,7 @@ module Ext = struct
               (r_paren_if cond)
       | LF.PiTyp (_,LF.TypDecl (x, a), (LF.ArrTyp _ as b)) ->
           let cond = lvl > 1 in
-            let name = to_html (R.render_name x) LinkOption in
+            let name = to_html (Id.render_name x) LinkOption in
             fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
               (name)
@@ -214,7 +214,7 @@ module Ext = struct
               (r_paren_if cond)
       | LF.PiTyp (_,LF.TypDecl (x, a), b) ->
           let cond = lvl > 1 in
-            let name = R.render_name x in
+            let name = Id.render_name x in
             fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
               (name)
@@ -277,7 +277,7 @@ module Ext = struct
               fprintf ppf "%s%s%s. %a%s"
                 (l_paren_if cond)
                 (symbol_to_html Lam)
-                (R.render_name x)
+                (Id.render_name x)
                 (fmt_ppr_lf_normal cD cPsi 0   ) m
                 (r_paren_if cond)
 
@@ -298,14 +298,14 @@ module Ext = struct
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
                 (r_paren_if cond)
 
-        | LF.LFHole _ -> 
+        | LF.LFHole _ ->
           fprintf ppf "?"
 
         | LF.NTyp (u, tA)-> fmt_ppr_lf_typ cD cPsi lvl ppf tA
 
         | LF.TList(_, [x]) -> fmt_ppr_lf_normal cD cPsi lvl ppf x
         | LF.TList(_, l) ->
-          let length = List.length l in 
+          let length = List.length l in
           fprintf ppf "%s" (l_paren_if (lvl > 0));
 
           iteri (fun i x ->
@@ -318,42 +318,42 @@ module Ext = struct
       let paren s = not (Control.db()) && lvl > 0 && true
       in begin match head with
       | LF.MVar (_, x, LF.EmptySub _) ->
-          fprintf ppf "%s" (R.render_name x)
+          fprintf ppf "%s" (Id.render_name x)
       | LF.MVar (_, x, s) ->
           fprintf ppf "%s%s%a%s"
             (l_paren_if (paren s))
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
       (* | LF.SVar (_, x, s) -> *)
       (*     fprintf ppf "%s%s%a%s" *)
       (*       (l_paren_if (paren s)) *)
-      (*       (R.render_name x) *)
+      (*       (Id.render_name x) *)
       (*       (fmt_ppr_lf_sub  cD cPsi lvl) s *)
       (*       (r_paren_if (paren s)) *)
 
       | LF.PVar (_,  x, s) ->
           fprintf ppf "%s#%s%a%s"
             (l_paren_if (paren s))
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_sub  cD cPsi lvl) s
             (r_paren_if (paren s))
 
       | LF.Name(_, x) ->
           fprintf ppf "%s"
-            (to_html (R.render_name x) LinkOption)
+            (to_html (Id.render_name x) LinkOption)
 
       | LF.Hole (_) ->
           fprintf ppf "_"
-	    
+
       | LF.Proj (_, h, p) ->
 	fprintf ppf "%a.%a"
 	(fmt_ppr_lf_head cD cPsi lvl) h
 	(fmt_ppr_lf_proj lvl) p
       end
     and fmt_ppr_lf_proj lvl ppf = function
-      | LF.ByName n -> fprintf ppf "%s" (R.render_name n)
+      | LF.ByName n -> fprintf ppf "%s" (Id.render_name n)
       | LF.ByPos k -> fprintf ppf "%d" k
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
@@ -393,12 +393,12 @@ module Ext = struct
 
         | LF.EmptySub _ ->
             fprintf ppf ""
-        | LF.SVar(_, s, LF.EmptySub _) -> 
+        | LF.SVar(_, s, LF.EmptySub _) ->
             fprintf ppf "#%s[^]"
-            (R.render_name s)
+            (Id.render_name s)
         | LF.SVar (_, s, f) ->
             fprintf ppf "#%s[%a]"
-              (R.render_name s)
+              (Id.render_name s)
               (self lvl) f
       in
               fprintf ppf " %a"
@@ -435,7 +435,7 @@ module Ext = struct
        let ppr_element cD cPsi ppf suffix = function
        | (x, tA) ->
               fprintf ppf "%s:%a%s"
-                (R.render_name x)
+                (Id.render_name x)
                 (fmt_ppr_lf_typ cD cPsi 0) tA
                suffix
        in
@@ -473,7 +473,7 @@ module Ext = struct
 
     and frugal_block cD cPsi lvl ppf = function
       | LF.SigmaLast (_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-      | other -> fprintf ppf "%s (%a)" 
+      | other -> fprintf ppf "%s (%a)"
 				(to_html "block" Keyword)
 				(fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
@@ -496,18 +496,18 @@ module Ext = struct
 
       | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
           fprintf ppf "%s : %a"    (* formerly "., %s : %a"    -jd 2010-06-03 *)
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD LF.Null 0) tA
 
       | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
           fprintf ppf "%a, %s : %a"
             (ppr_typ_decl_dctx cD) cPsi
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 
       | LF.CtxVar (_, x) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
 
     and fmt_ppr_lf_psi_hat cD _lvl ppf = function
@@ -515,23 +515,23 @@ module Ext = struct
 
       | LF.CtxVar (_, x) -> (***)
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (LF.Null, LF.TypDecl(x, _ )) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
           fprintf ppf "%s, %a"
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_psi_hat cD 0) cPsi
 
     and fmt_ppr_lf_typ_decl cD cPsi lvl ppf = function
       | LF.TypDecl (x,tA) ->
 	fprintf ppf "%s : %a"
-	  (R.render_name x)
+	  (Id.render_name x)
 	  (fmt_ppr_lf_typ cD cPsi lvl) tA
-      | LF.TypDeclOpt x -> fprintf ppf "%s" (R.render_name x)
+      | LF.TypDeclOpt x -> fprintf ppf "%s" (Id.render_name x)
     and fmt_ppr_lf_dctx cD lvl ppf = function
       | LF.CtxHole -> fprintf ppf "_"
       | LF.Null ->
@@ -539,7 +539,7 @@ module Ext = struct
 
       | LF.CtxVar (_, x) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
       | LF.DDec (LF.Null, d) ->
 	fmt_ppr_lf_typ_decl cD LF.Null lvl ppf d
@@ -565,7 +565,7 @@ module Ext = struct
           (to_html "type" Keyword)
 
       | LF.PiKind (_,LF.TypDecl (x, a), k) ->
-          let name = R.render_name x in
+          let name = Id.render_name x in
 
           let cond = lvl > 0 in
             fprintf ppf "%s{%s : %a} %a%s"
@@ -587,23 +587,23 @@ module Ext = struct
     and fmt_ppr_lf_ctyp_decl cD _lvl ppf = function
       | LF.Decl (u, (_,LF.ClTyp (LF.MTyp tA, cPsi)), _) ->
           fprintf ppf "{%s : [%a %s %a]}"
-            (R.render_name u)
+            (Id.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 0) tA
 (*           fprintf ppf "{%s :: %a[%a]}"
-            (R.render_name u)
+            (Id.render_name u)
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
       | LF.Decl (p, (_,LF.ClTyp (LF.PTyp tA, cPsi)), _) ->
           fprintf ppf "{#%s : [%a %s %a]}"
-            (R.render_name p)
+            (Id.render_name p)
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_typ cD cPsi 0) tA
           (* fprintf ppf "{#%s :: %a[%a]}"
-            (R.render_name p)
+            (Id.render_name p)
             (fmt_ppr_lf_typ cD cPsi 2) tA
             (fmt_ppr_lf_dctx cD 0) cPsi *)
 
@@ -613,14 +613,14 @@ module Ext = struct
             (symbol_to_html Turnstile)
             (fmt_ppr_lf_dctx cD 0) cPhi
           (* fprintf ppf "{%s :: %a[%a]}"
-            (R.render_name u)
+            (Id.render_name u)
             (fmt_ppr_lf_dctx cD 0) cPhi
             (fmt_ppr_lf_dctx cD 0) cPsi
  *)
       | LF.Decl (name, (_,LF.CTyp schemaName), _) ->
           fprintf ppf "{%s : %s}"
-            (R.render_name name)
-            (to_html (R.render_name schemaName) Link)
+            (Id.render_name name)
+            (to_html (Id.render_name schemaName) Link)
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
@@ -654,7 +654,7 @@ module Ext = struct
               (fmt_ppr_lf_dctx cD 0) cPsi
               (symbol_to_html Turnstile)
               (fmt_ppr_lf_normal cD cPsi 0) tM
-              (r_paren_if cond)          
+              (r_paren_if cond)
       | Comp.ClObj (cPsi, Comp.SObj (LF.EmptySub _)) ->
             fprintf ppf "[%a %s ^]"
                (fmt_ppr_lf_dctx cD 0) cPsi
@@ -675,7 +675,7 @@ module Ext = struct
           let cond = lvl > 1 in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
-              (to_html (R.render_name x) Link)
+              (to_html (Id.render_name x) Link)
               (fmt_ppr_meta_spine cD 0) mS
               (r_paren_if cond)
 
@@ -693,7 +693,7 @@ module Ext = struct
 
       | Comp.TypBox (_, (_,LF.CTyp x)) ->
             fprintf ppf "%s"
-              (to_html (R.render_name x) Link)
+              (to_html (Id.render_name x) Link)
 
       | Comp.TypBox (_, (_,LF.ClTyp (LF.STyp (_,cPhi), cPsi))) ->
           fprintf ppf "[%a %s %a]"
@@ -718,8 +718,8 @@ module Ext = struct
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:%s) %a%s"
               (l_paren_if cond)
-              (R.render_name name)
-              (to_html (R.render_name schema) Link)
+              (Id.render_name name)
+              (to_html (Id.render_name schema) Link)
               (fmt_ppr_cmp_typ (LF.Dec(cD, cdecl)) 0) tau
               (r_paren_if cond)
 
@@ -752,7 +752,7 @@ module Ext = struct
           let cond = lvl > 1 in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
-              (to_html (R.render_name x) Link)
+              (to_html (Id.render_name x) Link)
               (fmt_ppr_pat_spine cD 2) pat_spine
               (r_paren_if cond)
 
@@ -769,7 +769,7 @@ module Ext = struct
 
       | Comp.PatVar (_, x) ->
           fprintf ppf "%s"
-            (R.render_name x)
+            (Id.render_name x)
 
 
     let rec fmt_ppr_cmp_exp_chk cD lvl ppf = function
@@ -781,12 +781,12 @@ module Ext = struct
             fprintf ppf "%s%s %s %s %a%s"
               (l_paren_if cond)
               (to_html "fn" Keyword)
-              (R.render_name x)
+              (Id.render_name x)
               (symbol_to_html DblRArr)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-      | Comp.Cofun (_, l) -> 
+      | Comp.Cofun (_, l) ->
           fprintf ppf "Some Cofun"
 
       | Comp.MLam (_, x, e) ->
@@ -794,7 +794,7 @@ module Ext = struct
             fprintf ppf "%s%s %s %s %a%s"
               (l_paren_if cond)
               (to_html "mlam" Keyword)
-              (R.render_name x)
+              (Id.render_name x)
               (symbol_to_html DblRArr)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
@@ -810,8 +810,8 @@ module Ext = struct
             fprintf ppf "@[%s%s <%s,%s> =@ %a %s %a%s@]"
               (l_paren_if cond)
               (to_html "let" Keyword)
-              (R.render_name x)
-              (R.render_name y)
+              (Id.render_name x)
+              (Id.render_name y)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (to_html "in" Keyword)
               (fmt_ppr_cmp_exp_chk cD 0) e
@@ -822,7 +822,7 @@ module Ext = struct
             fprintf ppf "@[%s%s %s =@ %a %s@ %a%s@]"
               (l_paren_if cond)
               (to_html "let" Keyword)
-              (R.render_name x)
+              (Id.render_name x)
               (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
               (to_html "in" Keyword)
               (fmt_ppr_cmp_exp_chk cD 0) e
@@ -891,11 +891,11 @@ module Ext = struct
 
     and strip_mapp_args' cD i = match i with
       | Comp.Const (_, x) ->
-          (i,  implicitCompArg  (R.render_name x))
+          (i,  implicitCompArg  (Id.render_name x))
       | Comp.DataConst (_, x) ->
-          (i,  implicitCompArg  (R.render_name x))
+          (i,  implicitCompArg  (Id.render_name x))
       | Comp.Var (_, x) ->
-          (i,  implicitCompArg  (R.render_name x))
+          (i,  implicitCompArg  (Id.render_name x))
 
       | Comp.Apply (loc, i, e) ->
           let (i', _ ) = strip_mapp_args' cD i in
@@ -910,15 +910,15 @@ module Ext = struct
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->
           fprintf ppf "%s"
-            (to_html (R.render_name x) LinkOption)
+            (to_html (Id.render_name x) LinkOption)
 
       | Comp.Const (_, x) ->
           fprintf ppf "%s"
-            (to_html (R.render_name x) LinkOption)
+            (to_html (Id.render_name x) LinkOption)
 
       | Comp.DataConst (_, x) ->
           fprintf ppf "%s"
-            (to_html (R.render_name x) LinkOption)
+            (to_html (Id.render_name x) LinkOption)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
@@ -1024,7 +1024,7 @@ module Ext = struct
       | LF.Dec (cG, LF.TypDecl (x, tau)) ->
           fprintf ppf "%a, %s: %a"
             (fmt_ppr_cmp_gctx cD 0) cG
-            (R.render_name x)
+            (Id.render_name x)
             (fmt_ppr_lf_typ cD LF.Null lvl) tau
 
     let total_to_string tdec = match tdec with
@@ -1032,23 +1032,23 @@ module Ext = struct
       | Some (Comp.Total (_ , order, f, args)) ->
       let rec args_to_string args = match args with
         | [] -> ""
-        | Some n :: args' -> R.render_name n ^ " " ^ args_to_string args'
+        | Some n :: args' -> Id.render_name n ^ " " ^ args_to_string args'
         | None :: args' -> " _ " ^ args_to_string args'
       in
-	(match order with 
-	  | Some (Comp.Arg n) -> 
-	      "/ total " ^ R.render_name n ^ " ( " ^
-		R.render_name f ^ " " ^ args_to_string args ^ ") /"
-	  | None -> 
+	(match order with
+	  | Some (Comp.Arg n) ->
+	      "/ total " ^ Id.render_name n ^ " ( " ^
+		Id.render_name f ^ " " ^ args_to_string args ^ ") /"
+	  | None ->
 	      "/ total " ^ " ( " ^
-		R.render_name f ^ " " ^ args_to_string args ^ ") /"
+		Id.render_name f ^ " " ^ args_to_string args ^ ") /"
 	)
 
     let fmt_ppr_cmp_rec prefix lvl ppf = function
       | Comp.RecFun (_, x, total, a, e) ->
           fprintf ppf "@[<h>%s %s : %a %s@] =@[<v2>%a@]"
             (to_html prefix Keyword)
-            (to_html (R.render_name x) (ID Fun))
+            (to_html (Id.render_name x) (ID Fun))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
             (total_to_string total)
             (fmt_ppr_cmp_exp_chk LF.Empty lvl)  e
@@ -1063,22 +1063,22 @@ module Ext = struct
       | Sgn.Typ(_, n, kA) ->
         fprintf ppf "%s %s : %a = "
           (to_html prefix Keyword)
-          (to_html (R.render_name n) (ID Typ))
+          (to_html (Id.render_name n) (ID Typ))
           (fmt_ppr_lf_kind LF.Null 1) kA
-      | Sgn.Const(_, n, tA) -> 
+      | Sgn.Const(_, n, tA) ->
           fprintf ppf "@\n| %s : %a"
-            (to_html (R.render_name n) (ID Constructor))
+            (to_html (Id.render_name n) (ID Constructor))
             (fmt_ppr_lf_typ LF.Empty LF.Null 1)  tA
       | Sgn.CompTyp(_, n, kA, _)
       | Sgn.CompCotyp(_, n, kA) ->
           fprintf ppf "%s %s : %a = "
             (to_html prefix Keyword)
-            (to_html (R.render_name n) (ID Typ))
+            (to_html (Id.render_name n) (ID Typ))
             (fmt_ppr_cmp_kind LF.Empty 1) kA
       | Sgn.CompConst(_, n, tA)
       | Sgn.CompDest(_, n, tA) ->
         fprintf ppf "@\n| %s : %a"
-          (to_html (R.render_name n) (ID Constructor))
+          (to_html (Id.render_name n) (ID Constructor))
           (fmt_ppr_cmp_typ LF.Empty 1)  tA
       | _ -> ()
 
@@ -1100,56 +1100,56 @@ module Ext = struct
     let rec fmt_ppr_sgn_decl lvl ppf = function
       | Sgn.Const (_, x, a) ->
           fprintf ppf "@[<h>%s : %a.@]@\n"
-            (to_html (R.render_name x) (ID Constructor))
+            (to_html (Id.render_name x) (ID Constructor))
             (fmt_ppr_lf_typ LF.Empty LF.Null lvl)  a
 
       | Sgn.Typ (_, x, k) ->
           fprintf ppf "@[<h>%s : %a.@]@\n"
-            (to_html (R.render_name x) (ID Typ))
+            (to_html (Id.render_name x) (ID Typ))
             (fmt_ppr_lf_kind LF.Null lvl) k
 
       | Sgn.CompConst (_, x, a) ->
           fprintf ppf "@[<h>| %s : %a@]@\n"
-            (to_html (R.render_name x) (ID Constructor))
+            (to_html (Id.render_name x) (ID Constructor))
             (fmt_ppr_cmp_typ LF.Empty lvl)  a
 
       | Sgn.CompTypAbbrev (_, x, k, a) ->
           fprintf ppf "@[<v>%s %s : %a =@ %a;@]@\n"
             (to_html "datatype" Keyword)
-            (R.render_name  x)
+            (Id.render_name  x)
             (fmt_ppr_cmp_kind LF.Empty 0) k
             (fmt_ppr_cmp_typ LF.Empty 0)  a
 
       | Sgn.CompTyp (_, x, k, _) ->
           fprintf ppf "@[<v>%s %s : %a = @]@\n"
             (to_html "datatype" Keyword)
-            (to_html (R.render_name x) (ID Typ))
+            (to_html (Id.render_name x) (ID Typ))
             (fmt_ppr_cmp_kind LF.Empty 0) k
 
       | Sgn.Schema (_, x, schema) ->
           fprintf ppf "@[<h>%s %s = %a;@]@\n"
             (to_html "schema" Keyword)
-            (to_html (R.render_name  x) (ID Schema))
+            (to_html (Id.render_name  x) (ID Schema))
             (fmt_ppr_lf_schema 0) schema
 
      | Sgn.Rec (_, lrec) ->
            (fmt_ppr_rec lvl ppf) lrec
 
-      | Sgn.Pragma (_, Sgn.NamePrag(name, s, s_opt)) -> 
+      | Sgn.Pragma (_, Sgn.NamePrag(name, s, s_opt)) ->
          fprintf ppf "@[<h>%s %s %s %s@]@\n"
-          (to_html "%name" Keyword) (R.render_name name)
+          (to_html "%name" Keyword) (Id.render_name name)
           s (match s_opt with None -> "" | Some x -> x)
 
       | Sgn.Val (_, x, None, i) ->
           fprintf ppf "@[%s %s = %a;@]@\n"
             (to_html "let" Keyword)
-            (R.render_name  x)
+            (Id.render_name  x)
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
 
       | Sgn.Val (_, x, Some(tA), i) ->
           fprintf ppf "@[%s %s : %a =@ %a;@]@\n"
             (to_html "let" Keyword)
-            (R.render_name  x)
+            (Id.render_name  x)
             (fmt_ppr_cmp_typ LF.Empty 0) tA
             (fmt_ppr_cmp_exp_syn LF.Empty lvl) i
 

@@ -1138,7 +1138,6 @@ module Cid = struct
     open Id
     open Syntax.Int
 
-    val render_name         : name         -> string
     val render_cid_comp_typ : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
@@ -1161,16 +1160,6 @@ module Cid = struct
 
     open Id
 
-    (* Move to Id; what are the "NamedHoles" anyway? *)
-    let render_name n =
-      let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
-      let name = if !NamedHoles.printingHoles then
-        match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
-      else n in
-      match name.modules with
-      | [] -> n.string_of_name ^ suf
-      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf
-
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
@@ -1192,16 +1181,6 @@ module Cid = struct
   module NamedRenderer : RENDERER = struct
 
     open Id
-
-    (* Duplicate; move to Id *)
-    let render_name n =
-      let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
-      let name = if !NamedHoles.printingHoles then
-        match NamedHoles.haveNameFor n with Some x -> (Id.mk_name (Id.SomeString x)) | _ ->  n
-      else n in
-      match name.modules with
-      | [] -> n.string_of_name ^ suf
-      | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name

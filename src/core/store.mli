@@ -40,13 +40,13 @@ module Modules : sig
 
   val directory : (string list, module_id) Hashtbl.t
   val modules : Sgn.decl list ref DynArray.t
-  
+
   val id_of_name : string list -> module_id
   val name_of_id : module_id -> string list
-  
+
   val instantiateModule : string -> module_id
   val open_module : string list -> module_id
-  
+
   val reset : unit -> unit
 
 end
@@ -192,7 +192,7 @@ module Cid : sig
       mctx               : LF.mctx;
       typ                : Comp.typ
     }
-    
+
     val mk_entry      : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
     val add           : entry -> cid_comp_typ
     val get           : ?fixName:bool -> cid_comp_typ -> entry
@@ -214,7 +214,7 @@ module Cid : sig
     }
 
     val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value -> name list -> entry
-   
+
 
 
     (** If the value we store in the entry is a recursive value, it
@@ -239,7 +239,7 @@ module Cid : sig
       schema : LF.schema
     }
 
-    
+
     val mk_entry        : name -> LF.schema -> entry
     val add             : entry -> cid_schema
     val get             : ?fixName:bool -> cid_schema -> entry
@@ -264,7 +264,6 @@ module Cid : sig
 
     open Id
     open Syntax.Int
-    val render_name           : name         -> string
     val render_cid_comp_typ   : cid_comp_typ -> string
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string

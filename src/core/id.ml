@@ -80,3 +80,10 @@ let mk_name ?(modules=[]) : name_guide -> name =
   | NoName     -> mk_name_helper (Gensym.VarData.gensym ())
   | SomeName x  -> x
   | SomeString x -> mk_name_helper x
+
+
+let render_name n =
+  let suf = if n.counter == 0 then "" else string_of_int (n.counter) in
+  match n.modules with
+    | [] -> n.string_of_name ^ suf
+    | l -> (String.concat "." l) ^ "." ^ (n.string_of_name) ^ suf

@@ -6,8 +6,8 @@ type name
 
 val get_module : name -> string list
 
-val inc : name -> name
 val gen_fresh_name : name list -> name -> name
+val inc : name -> name
 
 type module_id = int
 

@@ -26,11 +26,6 @@ module Int : sig
 
     open Syntax.Int
 
-    (* Fresh Name Generation *)
-    (* val fresh_name_dctx : LF.mctx -> Id.name -> Id.name *)
-    (* val fresh_name_mctx : LF.mctx -> Id.name -> Id.name *)
-    (* val fresh_name_gctx : LF.mctx -> Id.name -> Id.name *)
-
     (* Contextual Format Based Pretty Printers *)
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
     val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit

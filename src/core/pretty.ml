@@ -44,8 +44,6 @@ include Format
      - Function whose names start with "frugal" try to produce output similar to human input.
 *)
 
-let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
-
 type lvl    = int
 
 let std_lvl = 0
@@ -75,10 +73,6 @@ module Int = struct
 
   (* Internal Syntax Printer Signature *)
   module type PRINTER = sig
-    (* Fresh Name Generation *)
-    (* val fresh_name_dctx : LF.mctx -> Id.name -> Id.name *)
-    (* val fresh_name_mctx : LF.mctx -> Id.name -> Id.name *)
-    (* val fresh_name_gctx : LF.mctx -> Id.name -> Id.name *)
 
     (* Contextual Format Based Pretty Printers *)
     val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
@@ -245,9 +239,18 @@ module Int = struct
       | LF.Dec (cG', Comp.CTypDecl (n, _))
       | LF.Dec (cG', Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
 
-    let fresh_name_dctx cPsi n = Id.gen_fresh_name (get_names_dctx cPsi) n
-    let _fresh_name_mctx cD n = Id.gen_fresh_name (get_names_mctx cD) n
-    let _fresh_name_gctx cG n = Id.gen_fresh_name (get_names_gctx cG) n
+    let fresh_name_dctx (cPsi : LF.dctx) (n : Id.name) : Id.name =
+      Id.gen_fresh_name (get_names_dctx cPsi) n
+    let fresh_name_mctx (cD : LF.mctx) (n : Id.name) : Id.name =
+      Id.gen_fresh_name (get_names_mctx cD) n
+    let fresh_name_gctx (cG : Comp.gctx) (n : Id.name) : Id.name  =
+      Id.gen_fresh_name (get_names_gctx cG) n
+
+    let fresh_name_ctyp_decl (cD: LF.mctx) (ct : LF.ctyp_decl) : LF.ctyp_decl = match ct with
+      | LF.Decl (n, ct, dep) ->
+         let n' = fresh_name_mctx cD n in LF.Decl (n', ct, dep)
+      | LF.DeclOpt n ->
+         let n' = fresh_name_mctx cD n in LF.DeclOpt n'
 
     (* Contextual Format Based Pretty Printers
      *
@@ -484,7 +487,6 @@ module Int = struct
       let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
 	| _,0 -> fmt_ppr_lf_sub_id ppf cPsi
 	| LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
-    | _ -> begin dprint (fun () -> "FUUUUUUUUUU:" ^ (string_of_int n)) ; assert false end
       in
       let rec self lvl ppf =
         function
@@ -983,8 +985,9 @@ module Int = struct
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
       | Comp.Ctype _ -> fprintf ppf "ctype"
       | Comp.PiKind (_, ctyp_decl, cK) ->
-          let cond = lvl > 0 in
-          begin
+         let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
+         let cond = lvl > 0 in
+         begin
             fprintf ppf "@[<1>%s%a@ %a%s@]"
               (l_paren_if cond)
               (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
@@ -1043,6 +1046,7 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.TypPiBox (ctyp_decl, tau) ->
+        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
         let cond = lvl > 1 in
         fprintf ppf "%s%a %a%s"
           (l_paren_if cond)
@@ -1119,6 +1123,7 @@ module Int = struct
           fmt_ppr_cmp_exp_syn cD cG lvl ppf (strip_mapp_args cD cG i )
 
       | Comp.Fun (_, x, e) ->
+          let x = fresh_name_gctx cG x in
           let cond = lvl > 0 in
 (*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
             fprintf ppf "%sfn %s =>@ "
@@ -1137,6 +1142,7 @@ module Int = struct
               (r_paren_if cond)
 
       | Comp.MLam (_, x, e) ->
+          let x = fresh_name_mctx cD x in
           let cond = lvl > 0 in
             fprintf ppf "%smlam %s =>@ "
               (l_paren_if cond)
@@ -1152,6 +1158,8 @@ module Int = struct
 
 
       | Comp.LetPair(_, i, (x, y, e)) ->
+          let x = fresh_name_gctx cG x in
+          let y = fresh_name_gctx cG y in
           let cond = lvl > 1 in
             fprintf ppf "@[<2>%slet <%s,%s> = %a@ in %a%s@]"
               (l_paren_if cond)
@@ -1163,6 +1171,7 @@ module Int = struct
 
 
       | Comp.Let(_, i, (x, e)) ->
+          let x = fresh_name_gctx cG x in
           let cond = lvl > 1 in
             fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
               (l_paren_if cond)

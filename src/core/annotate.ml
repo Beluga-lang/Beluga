@@ -3,14 +3,9 @@
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5])
-
-module LF = struct
-module P = Pretty.Int.DefaultPrinter
-module R = Store.Cid.DefaultRenderer
-
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [5])
 
+module LF = struct
 open Context
 open Store.Cid
 open Syntax.Int.LF
@@ -65,33 +60,33 @@ let _ = Error.register_printer
 
       | CheckError (cD, cPsi, sM, sA) ->
           Format.fprintf ppf
-	    "Expression %a does not check against %a."
-	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
-	    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+      "Expression %a does not check against %a."
+      (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+      (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
       | SigmaMismatch (cD, cPsi, sArec, sBrec) ->
         Error.report_mismatch ppf
-	  "Sigma type mismatch."
-	  "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sArec)
-	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec)
+    "Sigma type mismatch."
+    "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sArec)
+    "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec)
 
       | TupleArity (cD, cPsi, sM, sA) ->
-	Error.report_mismatch ppf
-	  "Arity of tuple doesn't match type."
-	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
-	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
+  Error.report_mismatch ppf
+    "Arity of tuple doesn't match type."
+    "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
+    "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
 
       | KindMismatch (cD, cPsi, sS, sK) ->
-	Error.report_mismatch ppf
+  Error.report_mismatch ppf
           "Ill-kinded type."
-	  "Expected kind:" Format.pp_print_string                      (P.kindToString cPsi sK)
-	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
+    "Expected kind:" Format.pp_print_string                      (P.kindToString cPsi sK)
+    "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS)
 
       | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
         Error.report_mismatch ppf
           "Ill-typed term."
-	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
-	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
+    "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
+    "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
         Format.fprintf ppf
           "In expression: %a@."
           (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
@@ -106,13 +101,13 @@ let _ = Error.register_printer
           (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
       | SpineIllTyped (n_expected, n_actual) ->
-	Error.report_mismatch ppf
-	  "Ill-typed spine."
-	  "Expected number of arguments" Format.pp_print_int n_expected
-	  "Actual number of arguments"   Format.pp_print_int n_actual
+  Error.report_mismatch ppf
+    "Ill-typed spine."
+    "Expected number of arguments" Format.pp_print_int n_expected
+    "Actual number of arguments"   Format.pp_print_int n_actual
 
       | LeftoverFV ->
-	  Format.fprintf ppf "Leftover free variable."
+    Format.fprintf ppf "Leftover free variable."
       | IllTypedMetaObj (cD, cM, cPsi, mT) -> 
             Format.fprintf ppf
               "Meta object %a does not have type %a."
@@ -128,13 +123,13 @@ let _ = Error.register_printer
                 "In expression: %a@."
                 (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
       | TermWhenVar (cD, cPsi, tM) ->
-	Format.fprintf ppf "A term was found when expecting a variable.@." ;
-	Format.fprintf ppf "Offending term: %a @." 
-	  (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
+  Format.fprintf ppf "A term was found when expecting a variable.@." ;
+  Format.fprintf ppf "Offending term: %a @." 
+    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
       | SubWhenRen (cD, cPsi, sub) -> 
-	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
-	Format.fprintf ppf "Offending substitution: %a @." 
-	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub
+  Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
+  Format.fprintf ppf "Offending substitution: %a @." 
+    (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub
   ))
 
 exception SpineMismatch
@@ -152,9 +147,9 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (_ , Empty) -> true
   | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
       if Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) then 
-	convSubsetCtx cPsi1 cPsi2 
+  convSubsetCtx cPsi1 cPsi2 
       else 
-	convSubsetCtx cPsi1 cPsi'
+  convSubsetCtx cPsi1 cPsi'
 *)
 
 let rec dot_k s k = if k = 0 then s
@@ -166,8 +161,8 @@ let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast (x,tB), s')) ->
       Whnf.convTyp (tA, s) (tB, s') ||
-	convPrefixTypRec (recA, Substitution.LF.dot1 s) 
-	                 (SigmaLast (x,tB), Substitution.LF.comp s' Substitution.LF.shift)
+  convPrefixTypRec (recA, Substitution.LF.dot1 s) 
+                   (SigmaLast (x,tB), Substitution.LF.comp s' Substitution.LF.shift)
 
   | ((SigmaElem (_xA, tA, recA), s), ((SigmaElem(xB, tB, recB) as rB), s')) ->
       if Whnf.convTyp (tA, s) (tB, s') 
@@ -232,19 +227,19 @@ let rec checkW cD cPsi sM sA = match sM, sA with
     begin
       try
         let _ = dprint (fun () -> "[ROOT check] " ^
-	  P.mctxToString cD ^ " ; " ^
-	  P.dctxToString cD cPsi ^ " |- " ^
-	  P.normalToString cD cPsi sM ^
+    P.mctxToString cD ^ " ; " ^
+    P.dctxToString cD cPsi ^ " |- " ^
+    P.normalToString cD cPsi sM ^
           " <= " ^ P.typToString cD cPsi sA ) in
         let sP = syn cD cPsi sM in
         let _ = dprint (fun () -> "[ROOT check] synthesized " ^
-	  P.mctxToString cD ^ " ; " ^
-	  P.dctxToString cD cPsi ^ " |- " ^
-	  P.normalToString cD cPsi sM ^
+    P.mctxToString cD ^ " ; " ^
+    P.dctxToString cD cPsi ^ " |- " ^
+    P.normalToString cD cPsi sM ^
           " => " ^ P.typToString cD cPsi sP ) in
   Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
-	let _ = dprint (fun () -> "       against " ^
-	  P.typToString cD cPsi sA) in
+  let _ = dprint (fun () -> "       against " ^
+    P.typToString cD cPsi sA) in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
           raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
@@ -318,7 +313,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
         let _ = dprint (fun () -> "[InferHead] " ^ P.dctxToString cD cPsi) in
         let _ = dprint (fun () -> "|-  " ^  P.headToString cD cPsi head ^ "\n" ^
           " where " ^ P.headToString cD cPsi tuple_head ^
-	  " has type " ^ P.typRecToString cD cPsi (recA, Substitution.LF.id)) in
+    " has type " ^ P.typRecToString cD cPsi (recA, Substitution.LF.id)) in
         (recA, Substitution.LF.id)
       | PVar (p, s) ->
         let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
@@ -440,27 +435,27 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       (* if psi = psi' then *)
       if not (psi = psi') then
 (*      if not (subsumes cD psi' psi) then *)
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+  raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     (* SVar case to be added - bp *)
 
     | DDec (cPsi, _tX),  Shift k,  Null ->
       if k > 0 then
-	checkSub loc cD cPsi (Shift (k - 1)) Null
+  checkSub loc cD cPsi (Shift (k - 1)) Null
       else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+  raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | DDec (cPsi, _tX),  Shift k,  CtxVar psi ->
       if k > 0 then
-	checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
+  checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
       else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+  raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi',  Shift k,  cPsi ->
       if k >= 0 then
-	checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
+  checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
       else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+  raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2))
     (* | cPsi', Dot (Obj (Root(_,h,Nil)), s'), DDec (cPsi, TypDecl (_, tA2)) *) ->
@@ -468,7 +463,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
       and tA1 = inferHead loc cD cPsi' h cl in
       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+  raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) when cl = Subst ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -526,11 +521,11 @@ and checkTyp' cD cPsi (tA, s) =
     | Atom (loc, a, tS) ->
       let tK = (Typ.get a).Typ.kind in
       begin try
-	      let (tK', _s) = synKSpine cD cPsi (tS, s) (tK, Substitution.LF.id) in
-	      if tK' = Typ then
-		()
-	      else
-		raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, Substitution.LF.id)))))
+        let (tK', _s) = synKSpine cD cPsi (tS, s) (tK, Substitution.LF.id) in
+        if tK' = Typ then
+    ()
+        else
+    raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, Substitution.LF.id)))))
         with SpineMismatch ->
           raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, Substitution.LF.id)))))
       end
@@ -762,7 +757,7 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
       checkSchema loc cD cPhi schema
     | CtxVar ((CtxOffset _ ) as phi) ->
       let Schema phiSchemaElements =
-	Schema.get_schema (lookupCtxVarSchema cD phi) in
+  Schema.get_schema (lookupCtxVarSchema cD phi) in
       (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cD phiElem elements) phiSchemaElements) then *)
       (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
       if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements then ()
@@ -840,7 +835,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
       let tA  = Whnf.cnormTyp (tA, t) in
       dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+  else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
@@ -874,9 +869,9 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
           raise (Error.Violation ("Contextual substitution ill-typed - 1"))
 
     | MShift k, cD' ->
-	if k >= 0 then
-	  checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
-	else raise (Error.Violation ("Contextual substitution ill-formed"))
+  if k >= 0 then
+    checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
+  else raise (Error.Violation ("Contextual substitution ill-formed"))
     | MDot (mft, ms) , Dec (cD1, Decl(_, mtyp, _)) ->
       checkMetaObj cD (loc, mft) (mtyp, ms);
       checkMSub loc cD ms cD1
@@ -891,70 +886,101 @@ end
 
 module Comp = struct
 
-	module Unify = Unify.EmptyTrail
+  module Unify = Unify.EmptyTrail
+    (* NOTES on handling context variables: -bp
+     *
+     *  - We should maybe put context variables into a context Omega (not Delta)
+     *    It makes it difficult to deal with branches.
+     *
+     *  Recall: Case(e, branches)  where branch 1 = Pi Delta1. box(psihat. tM1) : A1[Psi1] -> e1
+     *
+     *  Note that any context variable occurring in Delta, psihat, A and Psi is bound OUTSIDE.
+     *  So if
+     *
+     *  D ; G |- Case (e, branches)  and ctxvar psi in D the branch 1 is actually well formed iff
+     *
+     *  D, D1 ; Psi1 |- tM1 <= tA1  (where only psi declared in D is relevant to the rest.)
+     *
+     *  Also, ctx variables are not subject to instantiations during unification / matching
+     *  which is used in type checking and type reconstruction.
+     *
+     *  This has wider implications;
+     *
+     * - revise indexing structure; the offset of ctxvar is with respect to
+     *   a context Omega
+     *
+     * - Applying substitution for context variables; does it make sense to
+     *   deal with it lazily?   It seems complicated to handle lazy context substitutions
+     *   AND lazy msubs.
+     *
+     *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
+     *)
 
-	open Store.Cid
- 	open Syntax.Int.Comp
+  open Store.Cid
+  open Syntax.Int.Comp
 
- 	module S = Substitution
- 	module I = Syntax.Int.LF
- 	module C = Whnf
+  module S = Substitution
+  module I = Syntax.Int.LF
+  module C = Whnf
 
- 	type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
+  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
-	type error =
-		| IllegalParamTyp of I.mctx * I.dctx * I.typ
-		| MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
-		| MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
-		| PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
-		| CtxFunMismatch  of I.mctx * gctx  * tclo
-		| FunMismatch     of I.mctx * gctx  * tclo
-		| MLamMismatch    of I.mctx * gctx  * tclo
-		| PairMismatch    of I.mctx * gctx  * tclo
-		| BoxMismatch     of I.mctx * gctx  * tclo
-		| SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
-		| SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
-		| BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
-		| PattMismatch    of (I.mctx * meta_obj * meta_typ) * (I.mctx * meta_typ)
-		(* | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) * (I.mctx * I.dctx * I.tclo) *)
-		| IfMismatch      of I.mctx * gctx  * tclo
-		| EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
-		| EqTyp           of I.mctx * tclo
-		| MAppMismatch    of I.mctx * (meta_typ * I.msub)
-		| AppMismatch     of I.mctx * (meta_typ * I.msub)
-		| CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
-		| TypMismatch     of I.mctx * tclo * tclo
-		| UnsolvableConstraints of Id.name * string
-		| InvalidRecCall
-		| MissingTotal of Id.cid_prog
-		(* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
+  type error =
+    | IllegalParamTyp of I.mctx * I.dctx * I.typ
+    | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
+    | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
+    | CtxFunMismatch  of I.mctx * gctx  * tclo
+    | FunMismatch     of I.mctx * gctx  * tclo
+    | MLamMismatch    of I.mctx * gctx  * tclo
+    | PairMismatch    of I.mctx * gctx  * tclo
+    | BoxMismatch     of I.mctx * gctx  * tclo
+    | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
+    | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
+    | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
+    | PattMismatch    of (I.mctx * meta_obj * meta_typ) * 
+                   (I.mctx * meta_typ)
+(*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
+                         (I.mctx * I.dctx * I.tclo) *)
+    | IfMismatch      of I.mctx * gctx  * tclo
+    | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
+    | EqTyp           of I.mctx * tclo
+    | MAppMismatch    of I.mctx * (meta_typ * I.msub)
+    | AppMismatch     of I.mctx * (meta_typ * I.msub)
+    | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
+    | TypMismatch     of I.mctx * tclo * tclo
+    | UnsolvableConstraints of Id.name * string
+    | InvalidRecCall
+    | MissingTotal of Id.cid_prog
+    (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
 (*  type rec_call = bool *)
 
-	exception Error of Syntax.Loc.t * error
+  exception Error of Syntax.Loc.t * error
 
-	let convToParamTyp mT = match mT with
-   		| I.ClTyp (I.MTyp tA, cPsi) -> I.ClTyp (I.PTyp tA, cPsi)
-   		| mT -> mT
-		(*  let matchMetaV mC = match mC with 
-   		| MetaCtx (_, I.CtxVar _ ) -> true
-   		| MetaObj (_, phat, I.Root (_ , I.MVar (_ , s), _ )) -> 
-		s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-   		| MetaObjAnn (_, cPsi, I.Root (_ , I.MVar (_ , s), _ )) -> 
-		s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
-   		| MetaParam (_, phat, I.Root (_ , I.PVar (_ , s ), _ )) -> 
-		s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-   		| MetaSubObj (_, phat, I.SVar (_, 0, s)) -> 
-		s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-   		| MetaSubObjAnn (_, cPsi, I.SVar (_, 0, s)) -> 
-		s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
-   		| _ -> false *)
-	let string_of_typeVariant = function
-		| VariantCross -> "product type"
-		| VariantArrow -> "function type"
-		| VariantCtxPi -> "context abstraction"
-		| VariantPiBox -> "dependent function type"
-		| VariantBox   -> "contextual type"
+  let convToParamTyp mT = match mT with
+    | I.ClTyp (I.MTyp tA, cPsi) -> I.ClTyp (I.PTyp tA, cPsi)
+    | mT -> mT
+(*  let matchMetaV mC = match mC with 
+    | MetaCtx (_, I.CtxVar _ ) -> true
+    | MetaObj (_, phat, I.Root (_ , I.MVar (_ , s), _ )) -> 
+  s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaObjAnn (_, cPsi, I.Root (_ , I.MVar (_ , s), _ )) -> 
+  s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
+    | MetaParam (_, phat, I.Root (_ , I.PVar (_ , s ), _ )) -> 
+  s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaSubObj (_, phat, I.SVar (_, 0, s)) -> 
+  s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
+    | MetaSubObjAnn (_, cPsi, I.SVar (_, 0, s)) -> 
+  s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
+    | _ -> false
+*)
+  let string_of_typeVariant = function
+    | VariantCross -> "product type"
+    | VariantArrow -> "function type"
+    | VariantCtxPi -> "context abstraction"
+    | VariantPiBox -> "dependent function type"
+    | VariantBox   -> "contextual type"
 
   let _ = Error.register_printer
     (fun (Error (loc, err)) ->
@@ -1062,8 +1088,8 @@ module Comp = struct
           | IfMismatch (cD, _cG, theta_tau) ->
             Error.report_mismatch ppf
               "Type error in guard of if expression."
-	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) TypBool
-	      "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+        "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) TypBool
+        "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | PairMismatch (cD, _cG, theta_tau) ->
             Format.fprintf ppf "Found tuple, but expected type %a"
@@ -1125,9 +1151,9 @@ module Comp = struct
 let mark_ind cD k = 
   let rec lookup cD k' =  match cD, k' with
     | I.Dec (cD, I.Decl (u, cdec,dep)), 1 -> 
-	 I.Dec (cD, I.Decl (u, cdec, I.Inductive))
+   I.Dec (cD, I.Decl (u, cdec, I.Inductive))
      | I.Dec (_cD, I.DeclOpt u), 1 -> 
-	 raise (Error.Violation "Expected declaration to have type")
+   raise (Error.Violation "Expected declaration to have type")
     | I.Dec (cD, dec), k' -> I.Dec (lookup cD (k' - 1), dec)
     | I.Empty , _  -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
  in
@@ -1142,7 +1168,7 @@ let mark_ind cD k =
 
   and fmv_head (cD:I.mctx) h = match h with
     | I.MVar (I.Offset k, s) | I.PVar (k, s) -> 
-	fmv_subst  (mark_ind cD k) s
+  fmv_subst  (mark_ind cD k) s
     | I.Proj (h, _ ) -> fmv_head cD h
     | _ -> cD
 
@@ -1202,38 +1228,38 @@ let mark_ind cD k =
   and fmv_pat_spine cD pat_spine = match pat_spine with 
     | PatNil -> cD
     | PatApp (_, pat, pat_spine) -> 
-	fmv_pat_spine  (fmv cD pat) pat_spine
-	      
+  fmv_pat_spine  (fmv cD pat) pat_spine
+        
   let mvarsInPatt cD pat = 
     fmv cD pat 
 
   let rec id_map_ind cD1' t cD = match t, cD with
     | I.MShift k, I.Empty -> cD1'
     | I.MShift k, cD ->
-	if k >= 0 then
-	  id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
-	else raise (Error.Violation ("Contextual substitution ill-formed"))
+  if k >= 0 then
+    id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
+  else raise (Error.Violation ("Contextual substitution ill-formed"))
 
     | I.MDot (I.MV u, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
-	if Total.is_inductive dep then 
-	  let cD1' = mark_ind cD1' u in 
-	    id_map_ind cD1' ms cD
-	else 
-	  id_map_ind cD1' ms cD
+  if Total.is_inductive dep then 
+    let cD1' = mark_ind cD1' u in 
+      id_map_ind cD1' ms cD
+  else 
+    id_map_ind cD1' ms cD
 
     | I.MDot (mf, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
-	(match mf with 
-	   | I.ClObj (_, I.MObj(I.Root (_, I.MVar (I.Offset u, I.Shift 0), I.Nil)))
-	   | I.ClObj (_, I.MObj(I.Root (_, I.PVar (u, I.Shift 0), I.Nil)))
-	   | I.ClObj (_, I.PObj(I.PVar (u, I.Shift 0)))
-	   | I.CObj(I.CtxVar (I.CtxOffset u))
-	   | I.ClObj (_ , I.SObj (I.SVar (u, 0, I.Shift 0))) ->
-	       if Total.is_inductive dep then 
-		 let cD1' = mark_ind cD1' u in 
-		   id_map_ind cD1' ms cD
-	       else 
-		 id_map_ind cD1' ms cD
-	   | _ -> id_map_ind cD1' ms cD)
+  (match mf with 
+     | I.ClObj (_, I.MObj(I.Root (_, I.MVar (I.Offset u, I.Shift 0), I.Nil)))
+     | I.ClObj (_, I.MObj(I.Root (_, I.PVar (u, I.Shift 0), I.Nil)))
+     | I.ClObj (_, I.PObj(I.PVar (u, I.Shift 0)))
+     | I.CObj(I.CtxVar (I.CtxOffset u))
+     | I.ClObj (_ , I.SObj (I.SVar (u, 0, I.Shift 0))) ->
+         if Total.is_inductive dep then 
+     let cD1' = mark_ind cD1' u in 
+       id_map_ind cD1' ms cD
+         else 
+     id_map_ind cD1' ms cD
+     | _ -> id_map_ind cD1' ms cD)
 
 
 
@@ -1247,7 +1273,7 @@ let mark_ind cD k =
 (*  let is_ind _cD _x  = true 
  match x with
     | I.Offset x, sigma -> 
-	let (_, tA, cPsi', dp) = Whnf.mctxMDec cD u in
+  let (_, tA, cPsi', dp) = Whnf.mctxMDec cD u in
         let d = match dep with
          | I.Inductive -> true
          | _ -> false in 
@@ -1275,7 +1301,7 @@ let rec checkParamTypeValid cD cPsi tA =
   | Syntax.Int.LF.CtxVar psi ->
      (* tA is an instance of a schema block *)
       let Syntax.Int.LF.Schema s_elems =
-	Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
+  Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
       begin try
         let _ = LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems in ()
         with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
@@ -1306,7 +1332,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
         LF.checkTyp  cD cPsi (tA, S.LF.id);
         checkParamTypeValid cD cPsi tA
     | I.STyp (_, cPhi) ->
-    	LF.checkDCtx cD cPhi
+      LF.checkDCtx cD cPhi
   let checkCLFTyp cD ctyp = match ctyp with
     | I.CTyp (Some schema_cid) ->
         begin try
@@ -1388,13 +1414,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       | I.Empty -> raise (Error (loc, InvalidRecCall))
       | cIH  -> match e2 with
           | Box (_,cM) -> 
-	      ( dprint (fun () -> "\nCheck whether compatible IH exists\n");
-		dprint (fun () -> "cIH " ^ Total.ih_to_string cD cG cIH ^ "\n");
-		dprint (fun () -> "Recursive call on " ^ P.metaObjToString cD cM ^ "\n");
-	      Total.filter cD cG cIH (loc, M cM))
-	  | Syn(_, i) -> (match extract_var i with 
-			    | Some x -> Total.filter cD cG cIH (loc, V x)
-			    | None ->  Total.filter cD cG cIH (loc, E))
+        ( dprint (fun () -> "\nCheck whether compatible IH exists\n");
+    dprint (fun () -> "cIH " ^ Total.ih_to_string cD cG cIH ^ "\n");
+    dprint (fun () -> "Recursive call on " ^ P.metaObjToString cD cM ^ "\n");
+        Total.filter cD cG cIH (loc, M cM))
+    | Syn(_, i) -> (match extract_var i with 
+          | Some x -> Total.filter cD cG cIH (loc, V x)
+          | None ->  Total.filter cD cG cIH (loc, E))
           (* | _      -> raise (Error (loc, InvalidRecCall)) *)
     in
     let _ = dprint (fun () -> "[useIH] Partially used IH: " ^ Total.ih_to_string cD cG cIH) in
@@ -1421,57 +1447,56 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
    *)
 
   let rec checkW cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) e ttau = match (e, ttau) with
-    | (Rec (loc, f, e), (tau, t)) ->
-    	Synann.Comp.Rec (
-    		loc, 
-    		f, 
-    		(check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), (Total.shift cIH)) e ttau), 
-    		(tau, t)
-    	)        
+    | (Rec (loc, f, e), (tau, t)) ->        
+        Synann.Comp.Rec(
+          loc,
+          f,
+          (check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), (Total.shift cIH)) e ttau),
+          (tau, t)
+        )        
 
-    | (Fun (loc, x, e), (TypArr (tau1, tau2), t)) ->				
-        Synann.Comp.Fun (
-        	loc, 
-        	x, 
-        	(check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t)), 
-        	(TypArr (tau1, tau2), t)
-        )
-(* TODO Cofun *)
-(*     | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->				
+    | (Fun (loc, x, e), (TypArr (tau1, tau2), t)) ->        
+        Synann.Comp.Fun(
+          loc,
+          x,
+          (check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t)),
+          (TypArr (tau1, tau2), t)
+        )        
+
+    | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->       
          let f = fun (CopatApp (loc, dest, csp), e') ->
            let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
-           in check cD (cG,cIH) e' ttau'
+           in
+           (Synann.Comp.CopatApp (loc, dest, csp), (check cD (cG,cIH) e' ttau'))
          in 
-	 let _ = List.map f bs in 
-           Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Cofun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
- *)
-    | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->				
-		Synann.Comp.MLam (
-			loc, 
-			u, 
-			(check (extend_mctx cD (u, cdec, t)) (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1)) e (tau, C.mvar_dot1 t)), 
-			(TypPiBox (cdec, tau), t)
-		)
+         Synann.Comp.Cofun(loc, List.map f bs, (TypCobase (l, cid, sp), t))
 
+    | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
+        Synann.Comp.MLam(
+          loc,
+          u,
+          (check (extend_mctx cD (u, cdec, t)) (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))   e (tau, C.mvar_dot1 t)),
+          (TypPiBox (cdec, tau), t)
+        )
+  
     | (Pair (loc, e1, e2), (TypCross (tau1, tau2), t)) ->
-    	Synann.Comp.Pair (
-    		loc,
-    		(check cD (cG,cIH) e1 (tau1, t)),
-    		(check cD (cG,cIH) e2 (tau2, t)),
-    		(TypCross (tau1, tau2), t)
-    	)                        
+        Synann.Comp.Pair(
+          loc,
+          (check cD (cG,cIH) e1 (tau1, t)),          
+          (check cD (cG,cIH) e2 (tau2, t)),
+          (TypCross (tau1, tau2), t)
+        )
 
     | (Let (loc, i, (x, e)), (tau, t)) ->
         let (_ , tau', t', i_ann) = syn cD (cG,cIH) i in
         let (tau', t') =  C.cwhnfCTyp (tau',t') in
         let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
-          Synann.Comp.Let (
-          	loc,
-          	i_ann,
-          	(x, (check cD (cG', Total.shift cIH) e (tau,t))),
-          	(tau, t)
-          )          	
-          
+          Synann.Comp.Let(
+            loc,
+            i_ann,
+            (x, (check cD (cG', Total.shift cIH) e (tau,t))),
+            (tau, t)
+          )
 
     | (LetPair (loc, i, (x, y, e)), (tau, t)) ->
         let (_ , tau', t', i_ann) = syn cD (cG,cIH) i in
@@ -1479,201 +1504,248 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         begin match (tau',t') with
           | (TypCross (tau1, tau2), t') ->
               let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'))), CTypDecl (y, TypClo(tau2, t'))) in
-                Synann.Comp.LetPair (
-                	loc,
-                	i_ann,
-                	(x, y, (check cD (cG', (Total.shift (Total.shift cIH))) e (tau,t))),
-                	(tau, t)
-                )
+                Synann.Comp.LetPair(
+                  loc,
+                  i_ann,
+                  (x, y, (check cD (cG', (Total.shift (Total.shift cIH))) e (tau,t))),
+                  (tau, t)
+                )                
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
         end
 
-(* TODO Box - checkMetaObj *)
-(*     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)				
+    | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)       
         begin try
-	  		LF.checkMetaObj cD cM (mT, t);          
+           Synann.Comp.Box(
+              loc,
+              (LF.checkMetaObj cD cM (mT, t)),
+              (TypBox (l, mT), t)
+           )                      
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
           raise (Error.Violation ("Free meta-variable " ^ (R.render_name u)))
-        end *)
+        end
 
-(* TODO Case - LFcheck stuff *)        
-(*     | (Case (loc, prag, Ann (Box (_, (l,cM)), (TypBox (_, mT) as tau0_sc)), branches), (tau, t)) ->
+    | (Case (loc, prag, Ann (Box (loc2, (l,cM)), (TypBox (loc3, mT) as tau0_sc)), branches), (tau, t)) ->
         let (total_pragma, tau_sc, projOpt) =  (match  cM with
-                   | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
-		   | I.ClObj (_ , I.PObj (I.PVar (x,s)))  ->
-		       let order = if !Total.enabled && is_indMObj cD x then IndIndexObj (l,cM)  else IndexObj (l,cM) in
-                       (order, TypBox(loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), None)
-                   | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k ), _ )))
-		   | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,s), k))) ->
-		       let order = if  !Total.enabled && is_indMObj cD x then IndIndexObj (l,cM) else IndexObj (l,cM) in
-                       (order, TypBox (loc, convToParamTyp(Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
-		   | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,s), _ ))) -> 
-		       let order = if  !Total.enabled && is_indMObj cD x then 
-			 ((* print_string ("\n inductive in " ^ P.metaObjToString cD cM ^ "\n");*) IndIndexObj (l,cM)) else 
-			   ((* print_string ("\n NOT inductive " ^ P.metaObjToString cD cM ^ "\n in cD = " ^ P.mctxToString cD ^  "\n");*) IndexObj (l,cM)) in
-                       (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
-		   | I.CObj (I.CtxVar (I.CtxOffset k)) -> 
-		       let order = if  !Total.enabled && is_indMObj cD k then IndIndexObj (l,cM) else IndexObj (l,cM) in
-                       (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
-		   | _ -> 
-		       (IndexObj (l,cM), TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)		       ) in
-        let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
-
-        (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
+          | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
+          | I.ClObj (_ , I.PObj (I.PVar (x,s)))  ->
+            let order = 
+              if !Total.enabled && is_indMObj cD x 
+              then IndIndexObj (l,cM)  
+              else IndexObj (l,cM) 
+            in
+              (order, TypBox(loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), None)
+          | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k ), _ )))
+          | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,s), k))) ->
+            let order = 
+              if  !Total.enabled && is_indMObj cD x 
+              then IndIndexObj (l,cM) 
+              else IndexObj (l,cM) 
+            in
+              (order, TypBox (loc, convToParamTyp(Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
+          | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,s), _ ))) -> 
+            let order = 
+              if  !Total.enabled && is_indMObj cD x 
+              then ((* print_string ("\n inductive in " ^ P.metaObjToString cD cM ^ "\n");*) IndIndexObj (l,cM)) 
+              else ((* print_string ("\n NOT inductive " ^ P.metaObjToString cD cM ^ "\n in cD = " ^ P.mctxToString cD ^  "\n");*) IndexObj (l,cM)) 
+            in
+              (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+          | I.CObj (I.CtxVar (I.CtxOffset k)) -> 
+            let order = 
+              if  !Total.enabled && is_indMObj cD k 
+              then IndIndexObj (l,cM) else IndexObj (l,cM) 
+            in
+              (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+          | _ -> 
+            (IndexObj (l,cM), TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+        ) 
+        in
+        let cM_ann  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in        
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
-          checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t);
-          Coverage.process problem projOpt
+          let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in          
+          let _ = Coverage.process problem projOpt in
+        Synann.Comp.Case
+        (
+          loc,
+          prag,
+          Ann (Box (loc2, (l, cM_ann)), (TypBox (loc3, mT))),
+          branches_ann,
+          (tau, t)
+        )
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
-	let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) = 
-          let (_ , tau', t') = syn cD (cG,cIH) i in
-            begin match C.cwhnfCTyp (tau',t') with
-              | (TypBox (loc', mT),  t') ->
-		  let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
-		  let problem = Coverage.make loc prag cD branches tau_s in
-                    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
-                    Coverage.process problem None
-              | (tau',t') ->
-		  let tau_s = C.cnormCTyp (tau', t') in
-		  let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-		    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
-                    Coverage.process problem None
-            end
-	in 
-	  if !Total.enabled then
-	    (match i with 
-	       | Var (_, x)  ->  
-		   let (f,tau') = lookup cG x in
-		    (* let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^ 
-			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
-		   let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
-		     | TypInd _tau -> ( (* print_string ("Encountered Var " ^ 
-					 P.expSynToString cD cG i ^ " -	INDUCTIVE\n"); *) true)
-		     | _ -> ( (* print_string ("Encountered Var " ^ 
-					      P.expSynToString cD cG i ^ " -	NON-INDUCTIVE\n");*) false) in 
-		   if ind then
-		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
-		   else 
-		     chkBranch DataObj cD (cG,cIH) i branches (tau,t)
-	       | _ -> chkBranch DataObj cD (cG,cIH) i branches (tau,t)
-	    )
-	  else
-	    chkBranch DataObj cD (cG,cIH) i branches (tau,t) *)
+      let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) = 
+        let (_ , tau', t', i_ann) = syn cD (cG,cIH) i in
+          begin match C.cwhnfCTyp (tau',t') with
+            | (TypBox (loc', mT),  t') ->
+              let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
+              let problem = Coverage.make loc prag cD branches tau_s in
+                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let _ = Coverage.process problem None in 
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
+            | (tau',t') ->
+              let tau_s = C.cnormCTyp (tau', t') in
+              let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
+                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let _ = Coverage.process problem None in
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
 
-    | (Syn (loc, i), (tau, t)) ->
-	let _ = dprint (fun () -> "check --> syn") in 
-        let (_, tau',t', i_ann) = syn cD (cG,cIH) i in
-        let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
-        if C.convCTyp (tau,t)  (tau',t') then          
-          Synann.Comp.Syn (
-          	loc,
-          	i_ann,
-          	(tau, t)          
-          )
-        else
-          raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
+          end
+      in 
+      if !Total.enabled 
+      then
+      (match i with 
+      | Var (_, x)  ->  
+        let (f,tau') = lookup cG x in
+         (* let _ = print_string 
+          ("\nTotality checking enabled - encountered " 
+          ^ P.expSynToString cD cG i ^ " with type " 
+          ^ P.compTypToString cD tau' ^ "\n") 
+         in*)
+          let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
+          | TypInd _tau -> 
+            (
+              (* print_string 
+                ("Encountered Var " ^ P.expSynToString cD cG i 
+                ^ " - INDUCTIVE\n"); *)
+            true)
+          | _ -> 
+            ( 
+              (* print_string 
+                ("Encountered Var " ^ P.expSynToString cD cG i 
+                ^ " - NON-INDUCTIVE\n");*) 
+            false) 
+          in 
+          if ind then
+            chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
+          else 
+            chkBranch DataObj cD (cG,cIH) i branches (tau,t)
+      | _ -> chkBranch DataObj cD (cG,cIH) i branches (tau,t)
+      )
+     else chkBranch DataObj cD (cG,cIH) i branches (tau,t)
+
+    | (Syn (loc, i), (tau, t)) -> 
+      let (_, tau',t', i_ann) = syn cD (cG,cIH) i in
+      let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
+      if C.convCTyp (tau,t)  (tau',t') then
+        Synann.Comp.Syn (
+          loc,
+          i_ann,
+          (tau, t)
+        )
+      else
+        raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
 
     | (If (loc, i, e1, e2), (tau,t)) ->
         let (_flag, tau', t', i_ann) = syn cD (cG,cIH) i in
         let (tau',t') = C.cwhnfCTyp (tau',t') in
           begin match  (tau',t') with
           | (TypBool , _ ) ->
-          		Synann.Comp.If(
-          			loc,
-          			i_ann,
-          			(check cD (cG,cIH) e1 (tau,t)),
-          			(check cD (cG,cIH) e2 (tau,t)),
-          			(tau, t)
-          		)                                     
+              Synann.Comp.If (
+                loc,
+                i_ann, 
+                (check cD (cG,cIH) e1 (tau,t)),
+                (check cD (cG,cIH) e2 (tau,t)), (* Both branches check e1 in check, error? *)
+                (tau, t)
+              )                             
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
-    | (Hole (loc, f), (tau, t)) ->       
-      	Synann.Comp.Hole (loc, f, (tau, t))
+    | (Hole (loc, f), (tau, t)) -> Synann.Comp.Hole (loc, f, (tau, t))
 
   and check cD (cG, cIH) e (tau, t) =
-    let _ =  dprint (fun () -> "[check]  " ^
-                       P.expChkToString cD cG e ^
-                        " against \n    " ^
-                  P.mctxToString cD ^ " |- " ^
-                  P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
-    checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t));
+    let _ =  
+      dprint (fun () -> "[check]  " ^ P.expChkToString cD cG e 
+        ^ " against \n" ^ P.mctxToString cD ^ " |- " 
+        ^ P.compTypToString cD (Whnf.cnormCTyp (tau, t))
+      ) in
+    checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t))
 
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub * Synann.Comp.exp_syn) = match e with
     | Var (loc, x)   ->
-      let (f,tau') = lookup cG x in
-      (* let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^ 
-			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
-      let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with 
-	| TypInd tau -> tau 
-	| _ -> tau' in 
-      if Total.exists_total_decl f then
+      let (f,tau') = lookup cG x in      
+      let tau = 
+      match Whnf.cnormCTyp (tau', Whnf.m_id) with 
+       | TypInd tau -> tau 
+       | _ -> tau'
+      in 
+      if Total.exists_total_decl f 
+      then
         (Some cIH, tau, C.m_id, Synann.Comp.Var (loc, x, (tau, C.m_id)))
       else
-          (None, tau, C.m_id, Synann.Comp.Var (loc, x, (tau, C.m_id)))
+        (None, tau, C.m_id, Synann.Comp.Var (loc, x, (tau, C.m_id)))
 
-    | DataConst (loc, c) ->        
+    | DataConst (loc, c) ->
         (None,(CompConst.get c).CompConst.typ, C.m_id, Synann.Comp.DataConst (loc, c, ((CompConst.get c).CompConst.typ, C.m_id)))
 
-    | DataDest (loc, c) ->	
+    | DataDest (loc, c) ->  
         (None,(CompDest.get c).CompDest.typ, C.m_id, Synann.Comp.DataDest (loc, c, ((CompDest.get c).CompDest.typ, C.m_id)))
 
-    | Const (loc,prog) ->
+    | Const (loc,prog) -> 
         if !Total.enabled then
           if (Comp.get prog).Comp.total then
-            (None, (Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
+            (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
           else
             raise (Error (loc, MissingTotal prog))
         else
-          (None, (Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
+          (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
 
     | Apply (loc , e1, e2) ->
         let (cIH_opt , tau1, t1, e1_ann) = syn cD (cG,cIH) e1 in
         let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
         begin match (tau1, t1) with
-          | (TypArr (tau2, tau), t) ->              
-              (useIH loc cD cG cIH_opt e2, tau, t, Synann.Comp.Apply (loc, e1_ann, (check cD (cG,cIH) e2 (tau2, t)), (tau, t)))
+          | (TypArr (tau2, tau), t) ->
+              let e2_ann = check cD (cG,cIH) e2 (tau2, t) in              
+              (useIH loc cD cG cIH_opt e2, tau, t, Synann.Comp.Apply (loc, e1_ann, e2_ann, (tau, t)))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
 
-(* TODO LFcheck stuff *)
-(*     | MApp (loc, e, mC) ->
+    | MApp (loc, e, mC) ->
       let (cIH_opt, tau1, t1, e_ann) = syn cD (cG, cIH) e in
         begin match (C.cwhnfCTyp (tau1,t1)) with
           | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
-	    LF.checkMetaObj cD mC (ctyp, t);
-	    (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(metaObjToMFront mC, t))
+             let mC_ann = LF.checkMetaObj cD mC (ctyp, t) in
+             (useIH loc cD cG cIH_opt (Box (loc, mC)), 
+              tau, I.MDot(metaObjToMFront mC, t), 
+              Synann.Comp.MApp (loc, e_ann, mC_ann, (tau, I.MDot(metaObjToMFront mC, t))))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
-        end *)
+        end
 
     | PairVal (loc, i1, i2) ->
         let (_, tau1,t1, i1_ann) =  syn cD (cG,cIH) i1 in
         let (_, tau2,t2, i2_ann) =  syn cD (cG,cIH) i2 in
         let (tau1,t1)    = C.cwhnfCTyp (tau1, t1) in
         let (tau2,t2)    = C.cwhnfCTyp (tau2, t2) in
-          (None, TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id, Synann.Comp.PairVal (loc, i1_ann, i2_ann, (TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id)))
+          (None, 
+          TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), 
+          C.m_id,
+            Synann.Comp.PairVal (
+              loc, 
+              i1_ann, 
+              i2_ann, 
+              (TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id)
+            )
+          )
 
-
-    | Ann (e, tau) ->       
+    | Ann (e, tau) ->
         (None, tau, C.m_id, Synann.Comp.Ann ((check cD (cG, cIH) e (tau, C.m_id)), tau, (tau, C.m_id)))
 
-    | Equal (loc, i1, i2) ->
+    | Equal(loc, i1, i2) ->
          let (_, tau1, t1, i1_ann) = syn cD (cG,cIH) i1 in
          let (_, tau2, t2, i2_ann) = syn cD (cG,cIH) i2 in
            if Whnf.convCTyp (tau1,t1) (tau2,t2) then
              begin match Whnf.cwhnfCTyp (tau1,t1) with
-               | (TypBox _ , _ ) ->  (None, TypBool, C.m_id, Synann.Comp.Equal (loc, i1_ann, i2_ann, (TypBool, C.m_id)))
-               | (TypBool, _ )   ->  (None, TypBool, C.m_id, Synann.Comp.Equal (loc, i1_ann, i2_ann, (TypBool, C.m_id)))
+               | (TypBox _ , _ ) ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, (TypBool, C.m_id)))
+               | (TypBool, _ )   ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, (TypBool, C.m_id)))
                | (tau1,t1)       ->  raise (Error (loc, EqTyp (cD, (tau1,t1))))
              end
 
            else
              raise (Error(loc, EqMismatch (cD, (tau1,t1), (tau2,t2))))
 
-    | Boolean b -> (None, TypBool, C.m_id, Synann.Comp.Boolean (b, (TypBool, C.m_id)))
+    | Boolean b  -> (None, TypBool, C.m_id, Synann.Comp.Boolean (b, (TypBool, C.m_id)))
 
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
     | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
@@ -1767,26 +1839,26 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
 (*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
-				^ "\nwhere scrutinee has type " ^
-				P.compTypToString cD tau_s ^ "\n") in *)
+        ^ "\nwhere scrutinee has type " ^
+        P.compTypToString cD tau_s ^ "\n") in *)
           let TypBox (_, mT) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
-	  let mT1   = Whnf.cnormMetaTyp (mT, t1) in
+    let mT1   = Whnf.cnormMetaTyp (mT, t1) in
           let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
           let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in          
           let (cD1',cIH')  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
-         	               let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
-				 (* print_string "Inductive and Structurally smaller\n"; *)
-				 (cD1', Total.wf_rec_calls cD1' (I.Empty))
-			     else (cD1', I.Empty) in 
-	  let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
-     	             else cD1' in  
-	  (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
+                         let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
+         (* print_string "Inductive and Structurally smaller\n"; *)
+         (cD1', Total.wf_rec_calls cD1' (I.Empty))
+           else (cD1', I.Empty) in 
+    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
+                   else cD1' in  
+    (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
             (LF.checkMSub loc cD1' t1 cD;
-	     LF.checkMetaObj cD1' mO (mT1, C.m_id);
-             ignore (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)))
+       LF.checkMetaObj cD1' mO (mT1, C.m_id);
+             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id))
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -1796,18 +1868,18 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let tau'  = Whnf.cnormCTyp (tau, t'') in
 (*          let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in 
          let _ = print_string ("\nwhere scrutinee has type" ^
-				P.compTypToString cD tau_s ^ "\n") in *)
-	  let k     = Context.length cG1 in 
-	  let cIH0  = Total.shiftIH cIH k in 
+        P.compTypToString cD tau_s ^ "\n") in *)
+    let k     = Context.length cG1 in 
+    let cIH0  = Total.shiftIH cIH k in 
           let (cD1', cIH')  = if is_inductive caseTyp && Total.struct_smaller pat then
                        let cD1' = mvarsInPatt cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
                      else (cD1', I.Empty) in
-	  let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
-     	             else cD1' in  
-	  (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
+    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
+                   else cD1' in  
+    (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
           (LF.checkMSub loc  cD1' t1 cD;
            checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
-           ignore (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id)))
+           check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
 
   let rec wf_mctx cD = match cD with
     | I.Empty -> ()
@@ -1817,13 +1889,11 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
   let syn cD cG e =
     let cIH = Syntax.Int.LF.Empty in
-    let (_ , tau, t, e_ann) = syn cD (cG,cIH) e in
-      ((tau, t), e_ann)
+    let (_ , tau, t) = syn cD (cG,cIH) e in
+      (tau,t)
 
   let check cD cG e ttau =
     let cIH = Syntax.Int.LF.Empty in      
       check cD (cG,cIH) e ttau
-
-
 
 end

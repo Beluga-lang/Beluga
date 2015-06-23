@@ -204,20 +204,24 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
  * otherwise exception Error is raised
  *)
 let rec checkW cD cPsi sM sA = match sM, sA with
-  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)    
-    check cD
-      (DDec (cPsi, Substitution.LF.decSub tX s2))
-      (tM, Substitution.LF.dot1 s1)
-      (tB, Substitution.LF.dot1 s2);
-      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Lam" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
+  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (x, tA), t), tB), s2) -> (* Offset by 1 *)    
+    (Synann.LF.Lam (
+      loc, 
+      name, 
+      (check cD
+        (DDec (cPsi, Substitution.LF.decSub tX s2))
+        (tM, Substitution.LF.dot1 s1)
+        (tB, Substitution.LF.dot1 s2)),
+        (PiTyp ((TypDecl (x, tA), t), tB), s2)
+    ), s1)      
 
-  | (LFHole _, _), _ -> ()
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
+  | (LFHole loc, s1), s -> (Synann.LF.LFHole (loc, s), s1)
+
   | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
-    checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
-    Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Tuple" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
+    (Synann.LF.Tuple (loc, (checkTuple loc cD cPsi (tuple, s1) (typRec, s2)), (Sigma typRec, s2)), s1)    
 
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -227,22 +231,25 @@ let rec checkW cD cPsi sM sA = match sM, sA with
     begin
       try
         let _ = dprint (fun () -> "[ROOT check] " ^
-    P.mctxToString cD ^ " ; " ^
-    P.dctxToString cD cPsi ^ " |- " ^
-    P.normalToString cD cPsi sM ^
-          " <= " ^ P.typToString cD cPsi sA ) in
-        let sP = syn cD cPsi sM in
+          P.mctxToString cD ^ " ; " ^
+          P.dctxToString cD cPsi ^ " |- " ^
+          P.normalToString cD cPsi sM ^
+          " <= " ^ P.typToString cD cPsi sA ) 
+        in
+        let sP = syn cD cPsi sM 
+        in
         let _ = dprint (fun () -> "[ROOT check] synthesized " ^
-    P.mctxToString cD ^ " ; " ^
-    P.dctxToString cD cPsi ^ " |- " ^
-    P.normalToString cD cPsi sM ^
-          " => " ^ P.typToString cD cPsi sP ) in
-  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
-  let _ = dprint (fun () -> "       against " ^
-    P.typToString cD cPsi sA) in
+          P.mctxToString cD ^ " ; " ^
+          P.dctxToString cD cPsi ^ " |- " ^
+          P.normalToString cD cPsi sM ^
+          " => " ^ P.typToString cD cPsi sP ) 
+        in  
+        let _ = dprint (fun () -> "       against " ^ P.typToString cD cPsi sA) 
+        in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
-        if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-          raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
+        (if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) 
+        then raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)));
+        Synann.LF.Root (loc, ))
       with SpineMismatch ->
         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
@@ -285,8 +292,8 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
 
   let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
-  if typLength sA' < spineLength tS then
-    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
+  if typLength sA' < spineLength tS 
+  then raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
   syn (tS, s) (sA', s')
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
@@ -324,7 +331,6 @@ and inferHead loc cD cPsi head cl = match head, cl with
     dprint (fun () -> "getType (" ^ P.headToString cD cPsi head ^ ") = " ^ P.typToString cD cPsi sA);
     dprint (fun () -> "s = " ^ P.subToString cD cPsi s);
     TClo sA
-
 
   | Const c, Subst ->
     (Term.get c).Term.typ
@@ -841,18 +847,20 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
   | (CObj cPsi, (CTyp (Some w), _)) ->
-      checkSchema loc cD cPsi (Schema.get_schema w)
+      checkSchema loc cD cPsi (Schema.get_schema w);
+      Synann.LF.CObj cPsi
 
   | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
-        checkClObj cD loc cPsi' tM (tp, t)
+        Synann.LF.ClObj (phat, (checkClObj cD loc cPsi' tM (tp, t)))
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
   | MV u , (mtyp1 , t) -> 
-    let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
+      let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
     let (_, mtyp2) = Whnf.mctxLookup cD u in
-    if Whnf.convMTyp mtyp1 mtyp2 then ()
+    if Whnf.convMTyp mtyp1 mtyp2 
+    then Synann.LF.MV u
     else raise (Error.Violation ("Contextual substitution ill-typed"))
 ;
 
@@ -1465,9 +1473,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->       
          let f = fun (CopatApp (loc, dest, csp), e') ->
-           let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
+           let (ttau', csp') = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
            in
-           (Synann.Comp.CopatApp (loc, dest, csp), (check cD (cG,cIH) e' ttau'))
+           (Synann.Comp.CopatApp (loc, dest, csp'), (check cD (cG,cIH) e' ttau'))
          in 
          Synann.Comp.Cofun(loc, List.map f bs, (TypCobase (l, cid, sp), t))
 
@@ -1750,12 +1758,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
     | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
         if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
+          ((tau2, theta), Synann.Comp.CopatNil loc)
         else
           raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
     | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
         if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+          let (ttau', csp'') = synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta) in
+          (ttau', Synann.Comp.CopatApp (loc, dest, csp''))
         else
           raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 

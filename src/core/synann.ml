@@ -89,8 +89,8 @@ module LF = struct
 	    | Cons of normal * tuple	    
 					  						  
 	and mfront =    	                          
-	  	| ClObj of psi_hat * clobj
-	  	| CObj of dctx                            
+	  	| ClObj of Syntax.Int.LF.psi_hat * clobj
+	  	| CObj of Syntax.Int.LF.dctx                            
 	  	| MV   of offset                          
 	  	| MUndef 
 

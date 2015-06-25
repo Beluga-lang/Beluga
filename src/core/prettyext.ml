@@ -140,6 +140,30 @@ module Ext = struct
 
     module PInstHashtbl = Hashtbl.Make (PInstHashedType)
 
+    (* Fresh name generation *)
+    let rec get_names_dctx (cPsi : LF.dctx) : Id.name list = match cPsi with
+      | LF.Null
+      | LF.CtxHole -> []
+      | LF.CtxVar (loc, n) -> [n]
+      | LF.DDec (cPsi', LF.TypDecl (n, _))
+      | LF.DDec (cPsi', LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
+
+    let rec get_names_mctx (cD : LF.mctx) : Id.name list = match cD with
+      | LF.Empty -> []
+      | LF.Dec (cD', LF.Decl (n, _, _))
+      | LF.Dec (cD', LF.DeclOpt n) -> n :: get_names_mctx cD'
+
+    let fresh_name_dctx (cPsi : LF.dctx) (n : Id.name) : Id.name =
+      Id.gen_fresh_name (get_names_dctx cPsi) n
+    let fresh_name_mctx (cD : LF.mctx) (n : Id.name) : Id.name =
+      Id.gen_fresh_name (get_names_mctx cD) n
+
+    let fresh_name_ctyp_decl (cD: LF.mctx) (ct : LF.ctyp_decl) : LF.ctyp_decl = match ct with
+      | LF.Decl (n, ct, dep) ->
+         let n' = fresh_name_mctx cD n in LF.Decl (n', ct, dep)
+      | LF.DeclOpt n ->
+         let n' = fresh_name_mctx cD n in LF.DeclOpt n'
+
     (* Contextual Format Based Pretty Printers
      *
      * We assume types, terms, etc are all in normal form.
@@ -192,32 +216,34 @@ module Ext = struct
       | LF.AtomTerm(_, n) -> fmt_ppr_lf_normal cD cPsi lvl ppf n
 
       | LF.Atom (_, a, LF.Nil) ->
-          let name = (Id.render_name a) in
-          fprintf ppf "%s" (to_html name Link)
+          let name = to_html (Id.render_name a) Link in
+          fprintf ppf "%s" name
 
       | LF.Atom (_, a, ms) ->
-          let name = (Id.render_name a) in
           let cond = lvl > 1 in
+          let name = to_html (Id.render_name a) Link in
             fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
-              (to_html name Link)
+              name
               (fmt_ppr_lf_spine cD cPsi 2) ms
               (r_paren_if cond)
       | LF.PiTyp (_,LF.TypDecl (x, a), (LF.ArrTyp _ as b)) ->
-          let cond = lvl > 1 in
+            let cond = lvl > 1 in
+            let x = fresh_name_dctx cPsi x in
             let name = to_html (Id.render_name x) LinkOption in
             fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
-              (name)
+              name
               (fmt_ppr_lf_typ cD cPsi 0) a
               (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 2) b
               (r_paren_if cond)
       | LF.PiTyp (_,LF.TypDecl (x, a), b) ->
-          let cond = lvl > 1 in
-            let name = Id.render_name x in
+            let cond = lvl > 1 in
+            let x = fresh_name_dctx cPsi x in
+            let name = to_html (Id.render_name x) LinkOption in
             fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
-              (name)
+              name
               (fmt_ppr_lf_typ cD cPsi 0) a
               (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a))) lvl) b
               (r_paren_if cond)
@@ -443,6 +469,7 @@ module Ext = struct
          | LF.SigmaLast (Some x, tA) -> ppr_element cD cPsi  ppf "" (x, tA)
          | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
          | LF.SigmaElem (x, tA, tAs)  ->
+             let x = fresh_name_dctx cPsi x in
              begin
                ppr_element cD cPsi ppf ", " (x, tA);
                ppr_elements cD (LF.DDec(cPsi, LF.TypDecl (x, tA))) ppf  tAs
@@ -542,7 +569,7 @@ module Ext = struct
             (Id.render_name x)
 
       | LF.DDec (LF.Null, d) ->
-	fmt_ppr_lf_typ_decl cD LF.Null lvl ppf d
+     	  fmt_ppr_lf_typ_decl cD LF.Null lvl ppf d
 
       | LF.DDec (cPsi, d) ->
           fprintf ppf "%a, %a"
@@ -565,9 +592,9 @@ module Ext = struct
           (to_html "type" Keyword)
 
       | LF.PiKind (_,LF.TypDecl (x, a), k) ->
-          let name = Id.render_name x in
-
           let cond = lvl > 0 in
+          let x = fresh_name_dctx cPsi x in
+          let name = Id.render_name x in
             fprintf ppf "%s{%s : %a} %a%s"
               (l_paren_if cond)
               (name)
@@ -626,6 +653,7 @@ module Ext = struct
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
       | Comp.Ctype _ -> fprintf ppf "%s" (to_html "ctype" Keyword)
       | Comp.PiKind (_, ctyp_decl, cK) ->
+          let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
           let cond = lvl > 1 in
             fprintf ppf "%s%a %s %a%s"
               (l_paren_if cond)
@@ -715,6 +743,7 @@ module Ext = struct
             (fmt_ppr_cmp_typ cD 0) tau1
             (fmt_ppr_cmp_typ cD 0) tau2
       | Comp.TypPiBox (_loc, (LF.Decl(name, (l,LF.CTyp schema), LF.Maybe) as cdecl), tau) ->
+          let cdecl = fresh_name_ctyp_decl cD cdecl in
           let cond = lvl > 1 in
             fprintf ppf "%s(%s:%s) %a%s"
               (l_paren_if cond)
@@ -724,6 +753,7 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.TypPiBox (_, ctyp_decl, tau) ->
+          let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
           let cond = lvl > 1 in
             fprintf ppf "%s%a %a%s"
               (l_paren_if cond)

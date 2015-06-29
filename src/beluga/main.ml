@@ -220,7 +220,14 @@ let main () =
             Html.generatePage file_name
           end;
           (* If requested, dump the elaborated program as S-expressions *)
-          if !Sexp.enabled then Sexp.Printer.sexp_sgn_decls Format.std_formatter sgn'
+          if !Sexp.enabled then
+            begin
+              let sexp_file_name = file_name ^ ".sexp" in
+              let oc = open_out sexp_file_name in
+              Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
+              flush oc ; close_out oc ;
+              printf "\n## Dumped AST to: %s ##\n" sexp_file_name
+            end
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
         output_string stderr (Printexc.to_string e);

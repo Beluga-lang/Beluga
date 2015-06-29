@@ -19,7 +19,7 @@ echo OPAM versions
 opam --version
 opam --git-version
 
-opam init 
+opam init
 opam install ${OPAM_DEPENDS}
 eval `opam config env`
-make && ./TEST && (./TEST -- +htmltest)
+make && ./TEST && (./TEST -- +htmltest) && (./TEST -- +sexp)

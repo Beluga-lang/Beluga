@@ -72,7 +72,7 @@ let process_option arg rest = match arg with
           bailout "-width needs a numeric argument"
     end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
+  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | _ when (String.lowercase arg = "+htmltest") -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html" | "+HTML" -> Html.genHtml := true; rest
@@ -226,7 +226,8 @@ let main () =
               let oc = open_out sexp_file_name in
               Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
               flush oc ; close_out oc ;
-              printf "\n## Dumped AST to: %s ##\n" sexp_file_name
+              if !Sexp.testing == false then
+                printf "\n## Dumped AST to: %s ##\n" sexp_file_name
             end
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");

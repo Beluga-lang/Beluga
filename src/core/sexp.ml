@@ -1,6 +1,7 @@
 include Format
 
 let enabled = ref false
+let testing = ref false
 
 module Printer =
 struct

@@ -493,7 +493,7 @@ struct
           (sexp_lf_mtyp cD) mtyp
 
     | LF.DeclOpt name ->
-      fprintf ppf "(Decl %s  _ )"
+      fprintf ppf "(Decl %s  _)"
         (R.render_name name)
 
   (* Computation-level *)
@@ -504,7 +504,6 @@ struct
         fprintf ppf "(Pi %a %a)"
           (sexp_lf_ctyp_decl cD) ctyp_decl
           (sexp_cmp_kind (LF.Dec(cD, ctyp_decl))) cK
-
 
   let sexp_meta_typ cD ppf = sexp_lf_mtyp cD ppf
 
@@ -606,7 +605,6 @@ struct
         fprintf ppf "(PatFVar %s)"
           (R.render_name name)
 
-
   let rec sexp_cmp_exp_chk cD cG ppf =
     function
     | Comp.Syn (_, i) ->
@@ -637,7 +635,6 @@ struct
         (sexp_cmp_exp_syn cD cG) i
         (sexp_cmp_exp_chk cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y))) e
 
-
     | Comp.Let(_, i, (x, e)) ->
       fprintf ppf "(let %s %a %a)"
         (R.render_name x)
@@ -648,25 +645,11 @@ struct
       fprintf ppf "(Box %a)"
         (sexp_meta_obj cD) cM
 
-  (*   | Comp.Case (_, prag, i, ([] as bs)) -> *)
-  (*     let cond = lvl > 0 in *)
-  (*     if !Control.printNormal then *)
-  (*       fprintf ppf "impossible %a" *)
-  (*         (sexp_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i) *)
-  (*     else *)
-  (*       fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s" *)
-  (*         (l_paren_if cond) *)
-  (*         (sexp_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i) *)
-  (*         (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ") *)
-  (*         (sexp_cmp_branches cD cG 0) bs *)
-  (*         (r_paren_if cond) *)
-
     | Comp.Case (_, prag, i, bs) ->
       fprintf ppf "(Case %a%s%a)"
         (sexp_cmp_exp_syn cD cG) i
         (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " PragmaNot ")
         (sexp_cmp_branches cD cG) bs
-
 
     | Comp.If (_, i, e1, e2) ->
       fprintf ppf "(If %a %a %a)"
@@ -798,36 +781,6 @@ struct
           sexp_cmp_branch_prefix cD1
           (sexp_pat_obj cD1 LF.Empty) pat
           (sexp_refinement cD1 cD) t
-
-
-    (* | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) -> *)
-    (*   if !Control.printNormal then *)
-    (* 	(match e with *)
-    (* 	  | Comp.Hole (loc, _ ) -> *)
-    (* 	    fprintf ppf "\n | %a %a => %a" *)
-    (* 	      (sexp_cmp_branch_prefix  0) cD1' *)
-    (* 	      (sexp_meta_obj cD1' 0) mO *)
-    (* 	      (sexp_cmp_exp_chk cD1' cG 1) e *)
-    (* 	  | _ -> *)
-    (* 	    fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@]@ " *)
-    (* 	      (sexp_cmp_branch_prefix  0) cD1' *)
-    (* 	      (sexp_meta_obj cD1' 0) mO *)
-    (*         (\* NOTE: Technically: cD |- cG ctx and *)
-    (*          *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1| *)
-    (*          * -bp *)
-    (*          *\) *)
-    (*           (sexp_cmp_exp_chk cD1' cG 1) e) *)
-    (*   else *)
-    (*     fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ " *)
-    (*       (sexp_cmp_branch_prefix  0) cD1' *)
-    (*       (sexp_meta_obj cD1' 0) mO *)
-    (*         (\* this point is where the " : " is in the string above *\) *)
-    (*       (sexp_refinement cD1' cD 2) t *)
-    (*         (\* NOTE: Technically: cD |- cG ctx and *)
-    (*          *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1| *)
-    (*          * -bp *)
-    (*          *\) *)
-    (*       (sexp_cmp_exp_chk cD1' cG 1) e *)
 
     | Comp.Branch (_, cD1', cG', pat, t, e) ->
       let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in

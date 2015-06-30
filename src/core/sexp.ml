@@ -56,9 +56,9 @@ struct
       LF.DDec (phatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName))
 
   let string_of_depend = function
-    | No -> "No"
-    | Maybe -> "Maybe"
-    | Inductive -> "Inductive"
+    | LF.No -> "No"
+    | LF.Maybe -> "Maybe"
+    | LF.Inductive -> "Inductive"
 
   let rec sexp_lf_typ cD cPsi ppf = function
     | LF.Atom (_, a, LF.Nil) ->

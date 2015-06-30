@@ -55,6 +55,11 @@ struct
     | (ctx_v    , k) ->
       LF.DDec (phatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName))
 
+  let string_of_depend = function
+    | No -> "No"
+    | Maybe -> "Maybe"
+    | Inductive -> "Inductive"
+
   let rec sexp_lf_typ cD cPsi ppf = function
     | LF.Atom (_, a, LF.Nil) ->
       fprintf ppf "(Atom %s)"
@@ -65,10 +70,11 @@ struct
         (R.render_cid_typ a)
         (sexp_lf_spine cD cPsi) ms
 
-    | LF.PiTyp ((LF.TypDecl (x, a), _), b) ->
-      fprintf ppf "(Pi (%s . %a) %a)"
+    | LF.PiTyp ((LF.TypDecl (x, a), dep), b) ->
+      fprintf ppf "(Pi (%s . %a) %s %a)"
         (R.render_name x)
         (sexp_lf_typ cD cPsi) a
+	(string_of_depend dep)
         (sexp_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a)))) b
 
     | LF.Sigma typRec ->
@@ -458,10 +464,11 @@ struct
     | LF.Typ ->
       fprintf ppf "Type"
 
-    | LF.PiKind ((LF.TypDecl (x, a), _), k) ->
-      fprintf ppf "(Pi (%s . %a) %a)"
+    | LF.PiKind ((LF.TypDecl (x, a), dep), k) ->
+      fprintf ppf "(Pi (%s . %a) %s %a)"
         (R.render_name   x)
         (sexp_lf_typ LF.Empty cPsi) a
+	(string_of_depend dep)
         (sexp_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x))) k
 
   and sexp_lf_mtyp cD ppf =

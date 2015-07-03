@@ -672,18 +672,8 @@ module Int = struct
           fprintf ppf " #%a"
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
-    and typOfMCtx cD n = match (cD, n) with
-      | (LF.Dec (_cD, LF.Decl(_, LF.ClTyp (LF.MTyp tA, _), _)), 1)
-      | (LF.Dec (_cD, LF.Decl(_, LF.ClTyp (LF.PTyp tA, _), _)), 1) -> Some tA
-      | (LF.Dec (_cD, LF.DeclOpt u), 1) -> None
-      | (LF.Dec (cD, _ ) , k) -> typOfMCtx cD (k-1)
-      | _ -> None
-
     and fmt_ppr_lf_offset cD _lvl ppf n =
-          fprintf ppf "%s"
-            (if !Store.Cid.NamedHoles.printingHoles && false then
-              Store.Cid.NamedHoles.getName ~tA:(typOfMCtx cD n) (Context.getNameMCtx cD n)
-             else (R.render_cvar cD n))
+          fprintf ppf "%s" (R.render_cvar cD n)
 
     and fmt_ppr_lf_cvar cD _lvl ppf = function
       | LF.Offset n -> fmt_ppr_lf_offset cD _lvl ppf n

@@ -1700,7 +1700,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                 loc,
                 i_ann, 
                 (check cD (cG,cIH) e1 (tau,t)),
-                (check cD (cG,cIH) e2 (tau,t)),
+                (check cD (cG,cIH) e1 (tau,t)),
                 (tau, t)
               )                             
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))

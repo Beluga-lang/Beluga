@@ -707,7 +707,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           begin match  (tau',t') with
           | (TypBool , _ ) ->
               (check cD (cG,cIH) e1 (tau,t) ;
-               check cD (cG,cIH) e1 (tau,t) ;
+               check cD (cG,cIH) e2 (tau,t) ;
               Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("If" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e))
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end

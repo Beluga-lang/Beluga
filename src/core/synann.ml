@@ -194,7 +194,7 @@ module Comp = struct
 		| LetPair of Loc.t * exp_syn * (name * name * exp_chk) * tclo
 		| Let    of Loc.t * exp_syn * (name * exp_chk) * tclo
 		| Box    of Loc.t * Syntax.Int.Comp.meta_obj * tclo
-		| Case   of Loc.t * case_pragma * exp_syn * branch list * tclo
+		| Case   of Loc.t * case_pragma * exp_syn * Syntax.Int.Comp.branch list * tclo
 		| If     of Loc.t * exp_syn * exp_chk * exp_chk * tclo
 		| Hole   of Loc.t * (unit -> int) * tclo
 

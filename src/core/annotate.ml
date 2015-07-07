@@ -1616,7 +1616,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         (* let cM_ann  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in    *)     
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
-          let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in          
+          let _ = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in
           let _ = Coverage.process problem projOpt in
         Synann.Comp.Case
         (
@@ -1624,7 +1624,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           prag,
           (* Ann (Box (loc2, (l, cM_ann)), (TypBox (loc3, mT))), *)          
           Synann.Comp.Ann (Synann.Comp.Box (loc2, (l, cM), ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
-          branches_ann,
+          branches,
           (tau, t)
         )
 
@@ -1635,15 +1635,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             | (TypBox (loc', mT),  t') ->
               let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
               let problem = Coverage.make loc prag cD branches tau_s in
-                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let _ = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in 
-                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches, (tau, t))
             | (tau',t') ->
               let tau_s = C.cnormCTyp (tau', t') in
               let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let _ = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in
-                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches, (tau, t))
 
           end
       in 
@@ -1700,7 +1700,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                 loc,
                 i_ann, 
                 (check cD (cG,cIH) e1 (tau,t)),
-                (check cD (cG,cIH) e2 (tau,t)), (* Both branches check e1 in check, error? *)
+                (check cD (cG,cIH) e2 (tau,t)),
                 (tau, t)
               )                             
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
@@ -1885,7 +1885,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     I.MDot(metaObjToMFront mO, theta)
 
   and checkBranches caseTyp cD cG branches tau_s ttau =
-    List.map (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
+    List.iter (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
 
   and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
@@ -1893,8 +1893,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
             (LF.checkMSub  loc cD1' t1 cD;
-            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id));
-          Synann.Comp.EmptyBranch (loc, cD1', pat, t1)
+            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
+          (* Synann.Comp.EmptyBranch (loc, cD1', pat, t1) *)
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
 (*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
@@ -1902,22 +1902,23 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         P.compTypToString cD tau_s ^ "\n") in *)
           let TypBox (_, mT) = tau_s in
           (* By invariant: cD1' |- t1 <= cD *)
-    let mT1   = Whnf.cnormMetaTyp (mT, t1) in
+          let mT1   = Whnf.cnormMetaTyp (mT, t1) in
           let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
           let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in          
           let (cD1',cIH')  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
-                         let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
+          let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
          (* print_string "Inductive and Structurally smaller\n"; *)
-         (cD1', Total.wf_rec_calls cD1' (I.Empty))
+              (cD1', Total.wf_rec_calls cD1' (I.Empty))
            else (cD1', I.Empty) in 
     let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
                    else cD1' in  
     (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
             (LF.checkMSub loc cD1' t1 cD;
        LF.checkMetaObj cD1' mO (mT1, C.m_id);
-            Synann.Comp.Branch (loc, cD1', cG, PatMetaObj (loc', mO), t1, (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id))))
+       ignore (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)))
+            (* Synann.Comp.Branch (loc, cD1', cG, PatMetaObj (loc', mO), t1, (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)))) *)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -1938,8 +1939,62 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
           (LF.checkMSub loc  cD1' t1 cD;
            checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
-           Synann.Comp.Branch (loc, cD1', cG1, pat, t1, (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))))
+           ignore (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
+           (* Synann.Comp.Branch (loc, cD1', cG1, pat, t1, (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))) *))
 
+(* 
+  and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
+    match branch with
+      | EmptyBranch (loc, cD1', pat, t1) ->
+          let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
+          let tau_p = Whnf.cnormCTyp (tau_s, t1) in
+            (LF.checkMSub  loc cD1' t1 cD;
+            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
+
+      | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
+(*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
+        ^ "\nwhere scrutinee has type " ^
+        P.compTypToString cD tau_s ^ "\n") in *)
+          let TypBox (_, mT) = tau_s in
+          (* By invariant: cD1' |- t1 <= cD *)
+    let mT1   = Whnf.cnormMetaTyp (mT, t1) in
+          let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
+          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+          let t''   = Whnf.mcomp t t1 in
+          let tau'  = Whnf.cnormCTyp (tau, t'') in          
+          let (cD1',cIH')  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
+                         let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
+         (* print_string "Inductive and Structurally smaller\n"; *)
+         (cD1', Total.wf_rec_calls cD1' (I.Empty))
+           else (cD1', I.Empty) in 
+    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
+                   else cD1' in  
+    let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in
+            (LF.checkMSub loc cD1' t1 cD;
+       LF.checkMetaObj cD1' mO (mT1, C.m_id);
+             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id))
+
+      | Branch (loc, cD1', cG1, pat, t1, e1) ->
+          let tau_p = Whnf.cnormCTyp (tau_s, t1) in
+          let cG'   = Whnf.cnormCtx (cG, t1) in
+          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+          let t''   = Whnf.mcomp t t1 in
+          let tau'  = Whnf.cnormCTyp (tau, t'') in
+(*          let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in 
+         let _ = print_string ("\nwhere scrutinee has type" ^
+        P.compTypToString cD tau_s ^ "\n") in *)
+    let k     = Context.length cG1 in 
+    let cIH0  = Total.shiftIH cIH k in 
+          let (cD1', cIH')  = if is_inductive caseTyp && Total.struct_smaller pat then
+                       let cD1' = mvarsInPatt cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
+                     else (cD1', I.Empty) in
+    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
+                   else cD1' in  
+    (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
+          (LF.checkMSub loc  cD1' t1 cD;
+           checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
+           check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
+ *)          
   let rec wf_mctx cD = match cD with
     | I.Empty -> ()
     | I.Dec (cD, cdecl) ->

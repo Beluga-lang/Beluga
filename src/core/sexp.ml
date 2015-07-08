@@ -72,7 +72,7 @@ struct
 
     | LF.PiTyp ((LF.TypDecl (x, a), dep), b) ->
       fprintf ppf "(Pi (%s . %a) %s %a)"
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_lf_typ cD cPsi) a
 	(string_of_depend dep)
         (sexp_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, a)))) b
@@ -99,7 +99,7 @@ struct
   and sexp_lf_normal cD cPsi ppf = function
       | LF.Lam (_, x, m) ->
         fprintf ppf "(Lam %s %a)"
-          (R.render_name x)
+          (Id.render_name x)
           (sexp_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x))) m
       | LF.LFHole _ ->
         fprintf ppf "?"
@@ -162,16 +162,16 @@ struct
 
       | LF.FVar x ->
         fprintf ppf "%s"
-          (R.render_name x)
+          (Id.render_name x)
 
       | LF.FMVar (u, s) ->
         fprintf ppf "(FMVar %s %a)"
-          (R.render_name u)
+          (Id.render_name u)
           (sexp_lf_sub cD cPsi) s
 
       | LF.FPVar (p, s) ->
         fprintf ppf "(FPVar %s %a)"
-          (R.render_name p)
+          (Id.render_name p)
           (sexp_lf_sub cD cPsi) s
 
       | LF.Proj (head, k) ->
@@ -202,7 +202,7 @@ struct
         fprintf ppf
           "(FSVar #^%s %s %a)"
           (R.render_offset n)
-          (R.render_name s_name)
+          (Id.render_name s_name)
           (sexp_lf_sub cD cPsi) s
 
       | LF.SVar (c, n, s) ->
@@ -357,7 +357,7 @@ struct
   and sexp_lf_ctx_var cD ppf = function
     | LF.CInst ((n, {contents = None}, _cD, _schema, _cnstr,_dep), theta) ->
       fprintf ppf "(CInst %s %a)"
-        (R.render_name n)
+        (Id.render_name n)
         (sexp_lf_msub cD) theta
 
     | LF.CInst ((_n, {contents = Some (LF.ICtx cPsi)}, cD', _schema, _cnstr, _dep), theta) ->
@@ -369,16 +369,16 @@ struct
         (R.render_ctx_var cD psi)
     | LF.CtxName psi ->
       fprintf ppf "%s"
-        (R.render_name psi)
+        (Id.render_name psi)
 
   and sexp_lf_typ_rec cD cPsi ppf = function
       | LF.SigmaLast (x, tA) ->
 	fprintf ppf "(Last %s %a)"
-	  (match x with None -> "_" | Some x -> (R.render_name x))
+	  (match x with None -> "_" | Some x -> (Id.render_name x))
 	  (sexp_lf_typ cD cPsi) tA
       | LF.SigmaElem (x, tA, tAs)  ->
 	fprintf ppf "(Elem %s %a %a)"
-	  (R.render_name x)
+	  (Id.render_name x)
 	  (sexp_lf_typ cD cPsi) tA
           (sexp_lf_typ_rec cD (LF.DDec(cPsi, LF.TypDecl (x, tA))))  tAs
 
@@ -411,7 +411,7 @@ struct
     | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
       fprintf ppf "(DDec %a (%s . %a))"
         (ppr_typ_decl_dctx cD) cPsi
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_lf_typ cD cPsi) tA
 
 
@@ -424,12 +424,12 @@ struct
     | LF.DDec (cPsi, LF.TypDeclOpt x) ->
       fprintf ppf "(DDec %a (Opt %s))"
         (sexp_lf_psi_hat cD) cPsi
-        (R.render_name x)
+        (Id.render_name x)
 
     | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
       fprintf ppf "(DDec %a %s)"
         (sexp_lf_psi_hat cD) cPsi
-        (R.render_name x)
+        (Id.render_name x)
 
   and sexp_lf_dctx cD ppf =
     function
@@ -442,13 +442,13 @@ struct
     | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
       fprintf ppf "(DDec %a (%s . %a))"
         (sexp_lf_dctx cD) cPsi
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_lf_typ cD cPsi) tA
 
     | LF.DDec (cPsi, LF.TypDeclOpt x) ->
       fprintf ppf "(DDec %a (Opt %s))"
         (sexp_lf_dctx cD) cPsi
-        (R.render_name x)
+        (Id.render_name x)
 
   and sexp_lf_mctx ppf =
     function
@@ -466,7 +466,7 @@ struct
 
     | LF.PiKind ((LF.TypDecl (x, a), dep), k) ->
       fprintf ppf "(Pi (%s . %a) %s %a)"
-        (R.render_name   x)
+        (Id.render_name   x)
         (sexp_lf_typ LF.Empty cPsi) a
 	(string_of_depend dep)
         (sexp_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x))) k
@@ -497,12 +497,12 @@ struct
     function
     | LF.Decl (u, mtyp,dep) ->
         fprintf ppf "(Decl %s  %a)"
-          (R.render_name u)
+          (Id.render_name u)
           (sexp_lf_mtyp cD) mtyp
 
     | LF.DeclOpt name ->
       fprintf ppf "(Decl %s  _)"
-        (R.render_name name)
+        (Id.render_name name)
 
   (* Computation-level *)
   let rec sexp_cmp_kind cD ppf =
@@ -611,7 +611,7 @@ struct
 
       | Comp.PatFVar (_, name ) ->
         fprintf ppf "(PatFVar %s)"
-          (R.render_name name)
+          (Id.render_name name)
 
   let rec sexp_cmp_exp_chk cD cG ppf =
     function
@@ -620,7 +620,7 @@ struct
 
     | Comp.Fun (_, x, e) ->
       fprintf ppf "(Fun %s %a)"
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
     | Comp.Cofun (_, _) ->
@@ -628,7 +628,7 @@ struct
 
     | Comp.MLam (_, x, e) ->
       fprintf ppf "(MLam %s %a) "
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1))) e
 
     | Comp.Pair (_, e1, e2) ->
@@ -638,14 +638,14 @@ struct
 
     | Comp.LetPair(_, i, (x, y, e)) ->
       fprintf ppf "(Let (%s . %s) %a %a)"
-        (R.render_name x)
-        (R.render_name y)
+        (Id.render_name x)
+        (Id.render_name y)
         (sexp_cmp_exp_syn cD cG) i
         (sexp_cmp_exp_chk cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y))) e
 
     | Comp.Let(_, i, (x, e)) ->
       fprintf ppf "(let %s %a %a)"
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_exp_syn cD cG) i
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
@@ -820,7 +820,7 @@ struct
     end in
     fprintf ppf "(%a . %s)"
       (sexp_lf_mfront cD) m
-      (R.render_name name)
+      (Id.render_name name)
 
   and sexp_cmp_gctx cD ppf =
     function
@@ -830,7 +830,7 @@ struct
     | LF.Dec (cG, Comp.CTypDecl (x, tau)) ->
       fprintf ppf "(Dec %a (%s . %a))"
         (sexp_cmp_gctx cD) cG
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_typ cD) tau
 
   let sexp_rec ppf total (f, tau, e) =
@@ -858,18 +858,18 @@ struct
 
     | Sgn.CompTyp (_, a, cK, _) ->
       fprintf ppf "(CompTyp %s %a)"
-        (R.render_name a)
+        (Id.render_name a)
         (sexp_cmp_kind LF.Empty) cK
 
     | Sgn.CompCotyp (_, a, cK) ->
       fprintf ppf "(CompCotyp %s %a)"
-        (R.render_name a)
+        (Id.render_name a)
         (sexp_cmp_kind LF.Empty) cK
 
     | Sgn.CompDest (_, c, tau)
     | Sgn.CompConst (_, c, tau) ->
       fprintf ppf "(CompConstDest %s %a)"
-        (R.render_name c)
+        (Id.render_name c)
         (sexp_cmp_typ LF.Empty) tau
 
     | Sgn.MRecTyp(_, l) ->
@@ -877,13 +877,13 @@ struct
 
     | Sgn.Val (_, x, tau, i, None) ->
       fprintf ppf "(Val %s %a %a None)"
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_typ LF.Empty) tau
         (sexp_cmp_exp_chk LF.Empty LF.Empty) i
 
     | Sgn.Val (_, x, tau, i, Some v) ->
       fprintf ppf "(Val %s %a %a (Some %a))"
-        (R.render_name x)
+        (Id.render_name x)
         (sexp_cmp_typ LF.Empty) tau
         (sexp_cmp_exp_chk LF.Empty LF.Empty) i
         sexp_cmp_value v

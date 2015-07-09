@@ -660,7 +660,7 @@ let recSgnDecls decls =
 
 
       (* let _ = Latex.proof cD cG f e_r' (tau_ann, C.m_id) in *)      
-      (* let _ann = Annotate.Comp.check cD cG e_r' (tau_ann, C.m_id) in *)
+      let _ann = Annotate.Comp.check cD cG e_r' (tau_ann, C.m_id) in
 
              (e_r' , tau')      
              

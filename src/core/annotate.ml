@@ -878,35 +878,46 @@ and checkSchemaWf (Schema elements ) =
 
 and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
-     check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
+     (* let tM_ann = check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id) in *)
+     Synann.LF.MObj (tM, (MTyp tA, t))        
 
   | SObj tM, (STyp (cl, tA), t) ->
-     checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t))
-  | PObj h, (PTyp tA, t)
-  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
+     checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t));
+     Synann.LF.SObj (tM, (STyp (cl, tA), t))
+
+  | PObj h, (PTyp tA, t) ->
+    let tA' = inferHead loc cD cPsi' h Ren in
+      let tA  = Whnf.cnormTyp (tA, t) in
+        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
+          Synann.LF.PObj (h, (PTyp tA, t))
+        else failwith "Parameter object fails to check" (* TODO: Better error message *)
+
+  | MObj (Root(loc,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
       let tA' = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
-      dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
-        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-  else failwith "Parameter object fails to check" (* TODO: Better error message *)
+        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then 
+          Synann.LF.MObj (Syntax.Int.LF.Root (loc, h, Nil), (PTyp tA, t))
+      else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
-and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
-  | (CObj cPsi, (CTyp (Some w), _)) ->
-      checkSchema loc cD cPsi (Schema.get_schema w)      
+and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with (* takes loc * mfront, return loc * mfront * ctyp * msub *)
+  | (CObj cPsi, (CTyp (Some w), sub)) ->
+      checkSchema loc cD cPsi (Schema.get_schema w);
+      (loc, (Synann.LF.CObj (cPsi, (CTyp (Some w), sub))))      
 
   | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in
       if phat = Context.dctxToHat cPsi' then
-        checkClObj cD loc cPsi' tM (tp, t)
+        let tM_ann = checkClObj cD loc cPsi' tM (tp, t) in
+        (loc, (Synann.LF.ClObj (phat, tM_ann, (ClTyp (tp, cPsi), t))))
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
   | MV u , (mtyp1 , t) -> 
       let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
     let (_, mtyp2) = Whnf.mctxLookup cD u in
     if Whnf.convMTyp mtyp1 mtyp2 
-    then ()
+    then (loc, (Synann.LF.MV (u, (mtyp1 , t))))
     else raise (Error.Violation ("Contextual substitution ill-typed"))
 ;
 
@@ -927,7 +938,7 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
     checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
   else raise (Error.Violation ("Contextual substitution ill-formed"))
     | MDot (mft, ms) , Dec (cD1, Decl(_, mtyp, _)) ->
-      checkMetaObj cD (loc, mft) (mtyp, ms);
+      let _ = checkMetaObj cD (loc, mft) (mtyp, ms) in
       checkMSub loc cD ms cD1
 
     | _ , _ ->
@@ -1376,7 +1387,7 @@ and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
   | (MetaNil , (Ctype _ , _ )) -> ()
   | (MetaApp (mO, mS), (PiKind (_, I.Decl (_u, ctyp,_), cK) , t)) ->
     let loc = getLoc mO in
-    LF.checkMetaObj cD mO (ctyp, t);
+    let _ = LF.checkMetaObj cD mO (ctyp, t) in
     checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
   
   let checkClTyp cD cPsi = function
@@ -1569,9 +1580,10 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)       
         begin try
+          let cM_ann = LF.checkMetaObj cD cM (mT, t) in
            Synann.Comp.Box(
               loc,
-              (* (LF.checkMetaObj cD cM (mT, t)), *) cM,
+              cM_ann,
               (TypBox (l, mT), t)
            )                      
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
@@ -1613,18 +1625,18 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             (IndexObj (l,cM), TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
         ) 
         in
-        (* let cM_ann  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in    *)     
+        let cM_ann  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in        
         let problem = Coverage.make loc prag cD branches tau_sc in
           (* Coverage.stage problem; *)
-          let _ = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in
+          let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in
           let _ = Coverage.process problem projOpt in
         Synann.Comp.Case
         (
           loc,
           prag,
           (* Ann (Box (loc2, (l, cM_ann)), (TypBox (loc3, mT))), *)          
-          Synann.Comp.Ann (Synann.Comp.Box (loc2, (l, cM), ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
-          branches,
+          Synann.Comp.Ann (Synann.Comp.Box (loc2, (cM_ann), ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
+          branches_ann,
           (tau, t)
         )
 
@@ -1635,15 +1647,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             | (TypBox (loc', mT),  t') ->
               let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
               let problem = Coverage.make loc prag cD branches tau_s in
-                let _ = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in 
-                Synann.Comp.Case (loc, prag, i_ann, branches, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
             | (tau',t') ->
               let tau_s = C.cnormCTyp (tau', t') in
               let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-                let _ = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
+                let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in
-                Synann.Comp.Case (loc, prag, i_ann, branches, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
 
           end
       in 
@@ -1760,12 +1772,12 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       let (cIH_opt, tau1, t1, e_ann) = syn cD (cG, cIH) e in
         begin match (C.cwhnfCTyp (tau1,t1)) with
           | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
-             (* let mC_ann = LF.checkMetaObj cD mC (ctyp, t) in *)
-             LF.checkMetaObj cD mC (ctyp, t);
+             let mC_ann = LF.checkMetaObj cD mC (ctyp, t) in
+             (* LF.checkMetaObj cD mC (ctyp, t); *)
              (useIH loc cD cG cIH_opt (Box (loc, mC)), 
               tau, I.MDot(metaObjToMFront mC, t), 
               (* Synann.Comp.MApp (loc, e_ann, mC_ann, (tau, I.MDot(metaObjToMFront mC, t)))) *)
-              Synann.Comp.MApp (loc, e_ann, mC, (tau, I.MDot(metaObjToMFront mC, t))))
+              Synann.Comp.MApp (loc, e_ann, mC_ann, (tau, I.MDot(metaObjToMFront mC, t))))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
@@ -1835,7 +1847,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | PatMetaObj (loc, mO) ->
         (match ttau with
           | (TypBox (_, ctyp) , theta) ->
-              LF.checkMetaObj cD mO (ctyp, theta)
+              ignore (LF.checkMetaObj cD mO (ctyp, theta))
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->
@@ -1881,20 +1893,21 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
-    LF.checkMetaObj cD mO (ctyp, theta);
+    let _ = LF.checkMetaObj cD mO (ctyp, theta) in
     I.MDot(metaObjToMFront mO, theta)
 
   and checkBranches caseTyp cD cG branches tau_s ttau =
-    List.iter (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
+    List.map (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
 
   and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
       | EmptyBranch (loc, cD1', pat, t1) ->
           let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-            (LF.checkMSub  loc cD1' t1 cD;
-            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
-          (* Synann.Comp.EmptyBranch (loc, cD1', pat, t1) *)
+            LF.checkMSub  loc cD1' t1 cD;
+            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id);
+            Synann.Comp.EmptyBranch (loc, cD1', pat, t1)
+          
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
 (*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
@@ -1916,9 +1929,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                    else cD1' in  
     (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
             (LF.checkMSub loc cD1' t1 cD;
-       LF.checkMetaObj cD1' mO (mT1, C.m_id);
-       ignore (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)))
-            (* Synann.Comp.Branch (loc, cD1', cG, PatMetaObj (loc', mO), t1, (check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id)))) *)
+       let _ = LF.checkMetaObj cD1' mO (mT1, C.m_id) in
+       let e1_ann = check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id) in
+      Synann.Comp.Branch (loc, cD1', _cG, Syntax.Int.Comp.PatMetaObj (loc', mO), t1, e1_ann))
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -1939,8 +1952,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
           (LF.checkMSub loc  cD1' t1 cD;
            checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
-           ignore (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
-           (* Synann.Comp.Branch (loc, cD1', cG1, pat, t1, (check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))) *))
+           let e1_ann = check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id) in
+           Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1_ann))
 
 (* 
   and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =

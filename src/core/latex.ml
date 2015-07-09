@@ -58,12 +58,14 @@ let proof_rule cD cG n typ =
 	let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in
 	Rule (n, list_of_typ typ)
 
+let rec proof
+
 (* 	
 	n is the name of the proof from Rec
 	e, t = Fun, TypArr or MLam, TypPiBox 
 	e', t' = Case, t'
 *)
-let rec proof cD cG n e ttau =
+(* let rec proof cD cG n e ttau =
 	let _ = proof_name := (R.render_name n) in
 	let cIH = Int.LF.Empty in
 	let (g, cD', (cG', cIH'), e', ttau') = proof_goal cD (cG, cIH) e ttau in
@@ -140,4 +142,4 @@ end
 
 module Sgn = struct
 
-end
+end *)

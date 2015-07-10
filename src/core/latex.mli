@@ -16,11 +16,11 @@ and scrutinee =
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and goal = goal_term list
+and theorem = t_term list
 
-and goal_term = 
-| GoalTerm of name option * (Int.Comp.typ * Int.LF.msub)
-| GoalForall of name * Int.LF.ctyp_decl
+and t_term = 
+| TheoremTerm of name option * (Int.Comp.typ * Int.LF.msub)
+| TheoremForall of name * Int.LF.ctyp_decl
 
 and proof_case = 
 | CaseDummy
@@ -36,4 +36,4 @@ and proof_step =
 
 val proof_command : Id.name -> Ext.LF.kind -> latex
 val proof_rule : Ext.LF.mctx -> Ext.LF.dctx -> Id.name -> Ext.LF.typ -> latex
-val proof : Int.LF.mctx -> Int.Comp.gctx -> Id.name -> Int.Comp.exp_chk -> Int.Comp.typ * Int.LF.msub -> latex
+val proof : Synann.Comp.exp_chk -> unit

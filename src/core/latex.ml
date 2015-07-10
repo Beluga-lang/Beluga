@@ -13,17 +13,17 @@ type latex =
 | LatexDummy
 | Command of name * int * string option
 | Rule of name * Ext.LF.typ list
-| Proof of name * goal * scrutinee * proof_case list (* we perform induction on the exp_syn *)
+| Proof of name * theorem * scrutinee * proof_case list (* we perform induction on the exp_syn *)
 
 and scrutinee = 
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and goal = goal_term list
+and theorem = t_term list
 
-and goal_term = 
-| GoalTerm of name option * (Int.Comp.typ * Int.LF.msub)
-| GoalForall of name * Int.LF.ctyp_decl
+and t_term = 
+| TheoremTerm of name option * (Int.Comp.typ * Int.LF.msub)
+| TheoremForall of name * Int.LF.ctyp_decl
 
 and proof_case = 
 | CaseDummy
@@ -58,7 +58,54 @@ let proof_rule cD cG n typ =
 	let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in
 	Rule (n, list_of_typ typ)
 
-let rec proof
+let rec chop_end l = match l with
+| [] -> raise (LatexException "[Latex] Unable to empty list.")
+| [x] -> ([], x)
+| hd::tl -> 
+	let (l', x) = chop_end tl in (hd::l', x)
+
+let rec proof n e_ann = 
+	let (theorem, e') = proof_theorem e_ann in
+	(* let (t_premises, t_conclusion) = chop_end theorem in *)
+	let _ = 
+	List.iter 
+	(fun x -> match x with 
+		|TheoremForall (_, Syntax.Int.LF.Decl (n', mtyp, _)) -> print_string (sprintf "TFA(%s : %s)" (R.render_name n') (PI.mtypToString Syntax.Int.LF.Null mtyp)) 
+		|TheoremTerm (n', ttau) ->
+			begin
+				match n' with
+				| None -> print_string (sprintf "TTConc(%s)" (PI.subCompTypToString Syntax.Int.LF.Null ttau))
+				| Some n'' -> print_string (sprintf "TTPrem(%s : %s)" (R.render_name n'') (PI.subCompTypToString Syntax.Int.LF.ttau))
+			end
+	)
+	theorem in
+	(* let cases = proof_cases e' in	 *)
+	()
+
+and proof_theorem e = match e with
+| Synann.Comp.MLam (_, u, e', (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.Maybe)), tau), theta)) ->
+	begin
+		match e' with
+		| Synann.Comp.Case (_, _, _, _, ttau) ->  ([], e')
+		| _ -> let (tlist, e'') = proof_goal e' in (tlist, e'')	
+	end
+| Synann.Comp.MLam (_, u, e', (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.No)) as cdec, tau), theta)) ->
+	begin
+		match e' with
+		| Synann.Comp.Case (_, _, _, _, ttau) -> 
+			((TheoremForall (u, cdec))::(TheoremTerm (None, ttau))::[], e'')			
+		| _ -> 
+			let (tlist, e'') = proof_goal e' in ((TheoremForall (u, cdec))::tlist, e'')
+	end	
+| Synann.Comp.Fun (_, n, e', (Int.Comp.TypArr (t1, t2), theta)) ->
+	begin
+		match e' with
+		| Synann.Comp.Case (_, _, _, _, ttau) -> 
+			((TheoremTerm (Some n, (t1, theta)))::(TheoremTerm (None, (t2, theta)))::[], e'')			
+		| _ -> 
+			let (tlist, e'') = proof_goal e' in ((TheoremTerm (Some n, (t1, theta)))::tlist, e'')
+	end	
+	
 
 (* 	
 	n is the name of the proof from Rec

@@ -108,16 +108,41 @@ and proof_theorem e = match e with
 | _ -> raise (LatexException "Non MLam/Fun expression passed to proof_theorem")
 
 
-and proof_case e = 
+and proof_case e = (* return scrut + case list *)
 (* | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) -> *)
-| Int.Comp.Case (loc, prag, i, branches, cD, (tau, t)) ->
+| Synann.Comp.Case (loc, prag, i, branches, _, _) -> (i, proof_branches branches)
+
 
 | _ -> raise (LatexException "Non Case argument passed to proof_case")
 
 and proof_branches b = List.map proof_branch b
 
 and proof_branch b = match b with
-| 
+| Synann.Comp.EmptyBranch (loc, cD1', pat, t1) ->
+| Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) ->
+| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) ->
+
+and proof_pattern pat = match pat with
+| Synann.Comp.PatEmpty (loc, cPsi, ttau) ->
+| Synann.Comp.PatMetaObj (loc, mO, ttau) ->
+| Synann.Comp.PatConst (loc, c, pat_spine, ttau) ->
+| Synann.Comp.PatVar (loc, k, ttau) ->
+| Synann.Comp.PatPair (loc, pat1, pat2, ttau) ->
+| Synann.Comp.PatTrue (loc, ttau) ->
+| Synann.Comp.PatFalse (loc, ttau) ->
+| Synann.Comp.PatAnn (loc, pat, tau, ttau) ->
+
+and proof_metaobj (loc, mO) = match mO with
+| Synann.LF.ClObj (phat, tM, ttau) ->
+	begin
+		match tM with
+		| MObj (tM, ttau') ->
+		(* | SObj (tM, ttau') -> *)
+		(* | PObj (h, ttau') -> *)
+	end		
+| Synann.LF.CObj (cPsi, ttau) ->
+
+| Synann.LF.MV (u, ttau) ->
 
 (* 	
 	n is the name of the proof from Rec

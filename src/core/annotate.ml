@@ -1517,6 +1517,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           loc,
           f,
           (check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), (Total.shift cIH)) e ttau),
+          cD,
           (tau, t)
         )        
 
@@ -1525,6 +1526,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           loc,
           x,
           (check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t)),
+          cD,
           (TypArr (tau1, tau2), t)
         )        
 
@@ -1534,13 +1536,14 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
            in
            (Synann.Comp.CopatApp (loc, dest, csp'), (check cD (cG,cIH) e' ttau'))
          in 
-         Synann.Comp.Cofun(loc, List.map f bs, (TypCobase (l, cid, sp), t))
+         Synann.Comp.Cofun(loc, List.map f bs, cD, (TypCobase (l, cid, sp), t))
 
     | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
         Synann.Comp.MLam(
           loc,
           u,
           (check (extend_mctx cD (u, cdec, t)) (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))   e (tau, C.mvar_dot1 t)),
+          cD,
           (TypPiBox (cdec, tau), t)
         )
   
@@ -1549,6 +1552,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           loc,
           (check cD (cG,cIH) e1 (tau1, t)),          
           (check cD (cG,cIH) e2 (tau2, t)),
+          cD,
           (TypCross (tau1, tau2), t)
         )
 
@@ -1560,6 +1564,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             loc,
             i_ann,
             (x, (check cD (cG', Total.shift cIH) e (tau,t))),
+            cD,
             (tau, t)
           )
 
@@ -1573,6 +1578,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                   loc,
                   i_ann,
                   (x, y, (check cD (cG', (Total.shift (Total.shift cIH))) e (tau,t))),
+                  cD,
                   (tau, t)
                 )                
           | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
@@ -1584,6 +1590,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
            Synann.Comp.Box(
               loc,
               cM_ann,
+              cD,
               (TypBox (l, mT), t)
            )                      
         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
@@ -1635,8 +1642,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           loc,
           prag,
           (* Ann (Box (loc2, (l, cM_ann)), (TypBox (loc3, mT))), *)          
-          Synann.Comp.Ann (Synann.Comp.Box (loc2, (cM_ann), ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
+          Synann.Comp.Ann (Synann.Comp.Box (loc2, (cM_ann), cD, ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
           branches_ann,
+          cD,
           (tau, t)
         )
 
@@ -1649,13 +1657,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
               let problem = Coverage.make loc prag cD branches tau_s in
                 let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in 
-                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, cD, (tau, t))
             | (tau',t') ->
               let tau_s = C.cnormCTyp (tau', t') in
               let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
                 let branches_ann = checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t) in
                 let _ = Coverage.process problem None in
-                Synann.Comp.Case (loc, prag, i_ann, branches_ann, (tau, t))
+                Synann.Comp.Case (loc, prag, i_ann, branches_ann, cD, (tau, t))
 
           end
       in 
@@ -1698,6 +1706,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         Synann.Comp.Syn (
           loc,
           i_ann,
+          cD,
           (tau, t)
         )
       else
@@ -1713,12 +1722,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                 i_ann, 
                 (check cD (cG,cIH) e1 (tau,t)),
                 (check cD (cG,cIH) e1 (tau,t)),
+                cD,
                 (tau, t)
               )                             
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
-    | (Hole (loc, f), (tau, t)) -> Synann.Comp.Hole (loc, f, (tau, t))
+    | (Hole (loc, f), (tau, t)) -> Synann.Comp.Hole (loc, f, cD, (tau, t))
 
   and check cD (cG, cIH) e (tau, t) =
     let _ =  
@@ -1832,69 +1842,74 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with
-          | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta) | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->
-              let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
-                                P.mctxToString cD ^
-                                "context of expected  type " ^
-                                P.dctxToString cD (Whnf.cnormDCtx (cPhi, theta))
-                                ^ "\n context given " ^ P.dctxToString cD cPsi) in
-              if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
+          | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta)               
+          | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->              
+              if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then Synann.Comp.PatEmpty (loc, cPsi, ttau)
               else
-                raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+              raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
 
     | PatMetaObj (loc, mO) ->
         (match ttau with
           | (TypBox (_, ctyp) , theta) ->
-              ignore (LF.checkMetaObj cD mO (ctyp, theta))
+              let mO_ann = LF.checkMetaObj cD mO (ctyp, theta) in
+              Synann.Comp.PatMetaObj (loc, mO_ann, ttau)
           | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
     | PatPair (loc, pat1, pat2) ->
         (match ttau with
            | (TypCross (tau1, tau2), theta) ->
-               checkPattern cD cG pat1 (tau1, theta);
-               checkPattern cD cG pat2 (tau2, theta)
+               let pat1_ann = checkPattern cD cG pat1 (tau1, theta) in
+               let pat2_ann = checkPattern cD cG pat2 (tau2, theta) in
+               Synann.Comp.PatPair (loc, pat1_ann, pat2_ann, ttau)
            | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau))))
 
     | pat ->
-        let (loc, ttau') = synPattern cD cG pat in
+        let (loc, ttau', pat_ann) = synPattern cD cG pat in
         let tau' = Whnf.cnormCTyp ttau' in
         let tau = Whnf.cnormCTyp ttau in
         let ttau' = (tau', Whnf.m_id) in
         let ttau = (tau, Whnf.m_id) in
         let _ = dprint (fun () -> "\n Checking conv: " ^ P.compTypToString cD tau
         ^ "\n == " ^ P.compTypToString cD tau' ^ "\n") in
-          if C.convCTyp ttau  ttau' then ()
+          if C.convCTyp ttau  ttau' then
+            pat_ann
           else
             raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
 
   and synPattern cD cG pat = match pat with
     | PatConst (loc, c, pat_spine) ->
         let tau = (CompConst.get c).CompConst.typ in
-          (loc, synPatSpine cD cG pat_spine (tau , C.m_id))
-    | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
-    | PatTrue loc -> (loc, (TypBool, C.m_id))
-    | PatFalse loc -> (loc, (TypBool, C.m_id))
+        let (tau', theta, pat_spine_ann) = synPatSpine cD cG pat_spine (tau , C.m_id) in
+          (loc, (tau', theta), Synann.Comp.PatConst (loc, c, pat_spine_ann, (tau, C.m_id)))
+    | PatVar (loc, k) -> 
+      let tau = lookup' cG k in
+      (loc, (tau, C.m_id), Synann.Comp.PatVar (loc, k, (tau, C.m_id)))
+    | PatTrue loc -> (loc, (TypBool, C.m_id), Synann.Comp.PatTrue (loc, (TypBool, C.m_id)))
+    | PatFalse loc -> (loc, (TypBool, C.m_id), Synann.Comp.PatFalse (loc, (TypBool, C.m_id)))
     | PatAnn (loc, pat, tau) ->
-        checkPattern cD cG pat (tau, C.m_id);
-        (loc, (tau, C.m_id))
+        let pat_ann = checkPattern cD cG pat (tau, C.m_id) in
+        (loc, (tau, C.m_id), Synann.Comp.PatAnn (loc, pat_ann, tau, (tau, C.m_id)))
 
   and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
-    | PatNil  -> (tau, theta)
-    | PatApp (_loc, pat, pat_spine)  ->
+    | PatNil  -> (tau, theta, Synann.Comp.PatNil (tau, theta))
+    | PatApp (loc, pat, pat_spine)  ->
       begin match (tau, theta) with
         | (TypArr (tau1, tau2), theta) ->
-          checkPattern cD cG pat (tau1, theta);
-          synPatSpine cD cG pat_spine (tau2, theta)
+          let pat_ann = checkPattern cD cG pat (tau1, theta) in
+          let (_, _, pat_spine_ann) = synPatSpine cD cG pat_spine (tau2, theta) in
+          (tau, theta, Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau, theta)))
         | (TypPiBox (cdecl, tau), theta) ->
-          let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
-          synPatSpine cD cG pat_spine (tau, theta')
+          let (theta', mO_ann) = checkPatAgainstCDecl cD pat (cdecl, theta) in
+          let (_, _, pat_spine_ann) = synPatSpine cD cG pat_spine (tau, theta') in          
+          let pat_ann = Synann.Comp.PatMetaObj (loc, mO_ann, (tau, theta')) in
+          (tau, theta, Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau,theta')))
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
-    let _ = LF.checkMetaObj cD mO (ctyp, theta) in
-    I.MDot(metaObjToMFront mO, theta)
+    let mO_ann = LF.checkMetaObj cD mO (ctyp, theta) in
+    (I.MDot(metaObjToMFront mO, theta), mO_ann)
 
   and checkBranches caseTyp cD cG branches tau_s ttau =
     List.map (fun branch -> checkBranch caseTyp cD cG branch tau_s ttau) branches
@@ -1905,8 +1920,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
             LF.checkMSub  loc cD1' t1 cD;
-            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id);
-            Synann.Comp.EmptyBranch (loc, cD1', pat, t1)
+            let pat_ann = checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id) in
+            Synann.Comp.EmptyBranch (loc, cD1', pat_ann, t1)
           
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
@@ -1914,6 +1929,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         ^ "\nwhere scrutinee has type " ^
         P.compTypToString cD tau_s ^ "\n") in *)
           let TypBox (_, mT) = tau_s in
+          let tau_p = Whnf.cnormCTyp (tau_s, t1) in
           (* By invariant: cD1' |- t1 <= cD *)
           let mT1   = Whnf.cnormMetaTyp (mT, t1) in
           let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
@@ -1929,9 +1945,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                    else cD1' in  
     (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
             (LF.checkMSub loc cD1' t1 cD;
-       let _ = LF.checkMetaObj cD1' mO (mT1, C.m_id) in
+       let mO_ann = LF.checkMetaObj cD1' mO (mT1, C.m_id) in
        let e1_ann = check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id) in
-      Synann.Comp.Branch (loc, cD1', _cG, Syntax.Int.Comp.PatMetaObj (loc', mO), t1, e1_ann))
+      Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO_ann, (tau_p, Whnf.m_id)), t1, e1_ann))
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -1951,9 +1967,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                    else cD1' in  
     (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
           (LF.checkMSub loc  cD1' t1 cD;
-           checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
+           let pat_ann = checkPattern cD1' cG1 pat (tau_p, Whnf.m_id) in
            let e1_ann = check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id) in
-           Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1_ann))
+           Synann.Comp.Branch (loc, cD1', cG1, pat_ann, t1, e1_ann))
 
 (* 
   and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =

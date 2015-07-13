@@ -10,7 +10,7 @@ type latex =
 | LatexDummy
 | Command of name * int * string option
 | Rule of name * Ext.LF.typ list
-| Proof of name * goal * scrutinee * proof_case list (* we perform induction on the exp_syn *)
+| Proof of name * theorem * scrutinee * proof_case list (* we perform induction on the exp_syn *)
 
 and scrutinee = 
 | ScrutDummy
@@ -19,8 +19,8 @@ and scrutinee =
 and theorem = t_term list
 
 and t_term = 
-| TheoremTerm of name option * (Int.Comp.typ * Int.LF.msub)
-| TheoremForall of name * Int.LF.ctyp_decl
+| TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)
+| TheoremForall of name * Int.LF.mctx * Int.LF.ctyp_decl
 
 and proof_case = 
 | CaseDummy

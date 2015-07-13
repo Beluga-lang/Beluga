@@ -22,8 +22,8 @@ and scrutinee =
 and theorem = t_term list
 
 and t_term = 
-| TheoremTerm of name option * (Int.Comp.typ * Int.LF.msub)
-| TheoremForall of name * Int.LF.ctyp_decl
+| TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)
+| TheoremForall of name * Int.LF.mctx * Int.LF.ctyp_decl
 
 and proof_case = 
 | CaseDummy
@@ -58,24 +58,24 @@ let proof_rule cD cG n typ =
 	let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in
 	Rule (n, list_of_typ typ)
 
-let rec chop_end l = match l with
+let rec _chop_end l = match l with
 | [] -> raise (LatexException "[Latex] Unable to empty list.")
 | [x] -> ([], x)
 | hd::tl -> 
-	let (l', x) = chop_end tl in (hd::l', x)
+	let (l', x) = _chop_end tl in (hd::l', x)
 
-let rec proof n e_ann = 
+let rec proof e_ann = 
 	let (theorem, e') = proof_theorem e_ann in
 	(* let (t_premises, t_conclusion) = chop_end theorem in *)
 	let _ = 
 	List.iter 
 	(fun x -> match x with 
-		|TheoremForall (_, Syntax.Int.LF.Decl (n', mtyp, _)) -> print_string (sprintf "TFA(%s : %s)" (R.render_name n') (PI.mtypToString Syntax.Int.LF.Null mtyp)) 
-		|TheoremTerm (n', ttau) ->
+		|TheoremForall (_, cD, Syntax.Int.LF.Decl (n', mtyp, _)) -> print_string (sprintf "TFA(%s : %s)\n" (R.render_name n') (PI.mtypToString cD mtyp)) 
+		|TheoremTerm (n', cD, ttau) ->
 			begin
 				match n' with
-				| None -> print_string (sprintf "TTConc(%s)" (PI.subCompTypToString Syntax.Int.LF.Null ttau))
-				| Some n'' -> print_string (sprintf "TTPrem(%s : %s)" (R.render_name n'') (PI.subCompTypToString Syntax.Int.LF.ttau))
+				| None -> print_string (sprintf "TTConc(%s)\n" (PI.subCompTypToString cD ttau))
+				| Some n'' -> print_string (sprintf "TTPrem(%s : %s)\n" (R.render_name n'') (PI.subCompTypToString cD ttau))
 			end
 	)
 	theorem in
@@ -83,29 +83,41 @@ let rec proof n e_ann =
 	()
 
 and proof_theorem e = match e with
-| Synann.Comp.MLam (_, u, e', (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.Maybe)), tau), theta)) ->
+| Synann.Comp.MLam (_, u, e', _, (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.Maybe)), tau), theta)) ->
 	begin
 		match e' with
-		| Synann.Comp.Case (_, _, _, _, ttau) ->  ([], e')
-		| _ -> let (tlist, e'') = proof_goal e' in (tlist, e'')	
+		| Synann.Comp.Case (_, _, _, _, _, ttau) ->  ([], e')
+		| _ -> let (tlist, e'') = proof_theorem e' in (tlist, e'')	
 	end
-| Synann.Comp.MLam (_, u, e', (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.No)) as cdec, tau), theta)) ->
+| Synann.Comp.MLam (_, u, e', cD, (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.No)) as cdec, tau), theta)) ->
 	begin
 		match e' with
-		| Synann.Comp.Case (_, _, _, _, ttau) -> 
-			((TheoremForall (u, cdec))::(TheoremTerm (None, ttau))::[], e'')			
+		| Synann.Comp.Case (_, _, _, _, cD', ttau) -> 
+			((TheoremForall (u, cD, cdec))::(TheoremTerm (None, cD', ttau))::[], e)			
 		| _ -> 
-			let (tlist, e'') = proof_goal e' in ((TheoremForall (u, cdec))::tlist, e'')
+			let (tlist, e'') = proof_theorem e' in ((TheoremForall (u, cD, cdec))::tlist, e'')
 	end	
-| Synann.Comp.Fun (_, n, e', (Int.Comp.TypArr (t1, t2), theta)) ->
+| Synann.Comp.Fun (_, n, e', cD, (Int.Comp.TypArr (t1, t2), theta)) ->
 	begin
 		match e' with
-		| Synann.Comp.Case (_, _, _, _, ttau) -> 
-			((TheoremTerm (Some n, (t1, theta)))::(TheoremTerm (None, (t2, theta)))::[], e'')			
+		| Synann.Comp.Case (_, _, _, _, cD', ttau) -> 
+			((TheoremTerm (Some n, cD, (t1, theta)))::(TheoremTerm (None, cD', (t2, theta)))::[], e')			
 		| _ -> 
-			let (tlist, e'') = proof_goal e' in ((TheoremTerm (Some n, (t1, theta)))::tlist, e'')
-	end	
-	
+			let (tlist, e'') = proof_theorem e' in ((TheoremTerm (Some n, cD, (t1, theta)))::tlist, e'')
+	end
+| _ -> raise (LatexException "Non MLam/Fun expression passed to proof_theorem")
+
+
+and proof_case e = 
+(* | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) -> *)
+| Int.Comp.Case (loc, prag, i, branches, cD, (tau, t)) ->
+
+| _ -> raise (LatexException "Non Case argument passed to proof_case")
+
+and proof_branches b = List.map proof_branch b
+
+and proof_branch b = match b with
+| 
 
 (* 	
 	n is the name of the proof from Rec

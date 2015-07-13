@@ -185,18 +185,18 @@ module Comp = struct
 	type gctx = ctyp_decl LF.ctx
 
 	type exp_chk =
-		| Syn    of Loc.t * exp_syn * tclo
-		| Rec    of Loc.t * name * exp_chk * tclo
-		| Fun    of Loc.t * name * exp_chk * tclo
-		| Cofun  of Loc.t * (copattern_spine * exp_chk) list * tclo
-		| MLam   of Loc.t * name * exp_chk * tclo
-		| Pair   of Loc.t * exp_chk * exp_chk * tclo
-		| LetPair of Loc.t * exp_syn * (name * name * exp_chk) * tclo
-		| Let    of Loc.t * exp_syn * (name * exp_chk) * tclo
-		| Box    of Loc.t * meta_obj * tclo
-		| Case   of Loc.t * case_pragma * exp_syn * branch list * tclo
-		| If     of Loc.t * exp_syn * exp_chk * exp_chk * tclo
-		| Hole   of Loc.t * (unit -> int) * tclo
+		| Syn    of Loc.t * exp_syn * Syntax.Int.LF.mctx * tclo
+		| Rec    of Loc.t * name * exp_chk * Syntax.Int.LF.mctx * tclo
+		| Fun    of Loc.t * name * exp_chk * Syntax.Int.LF.mctx * tclo
+		| Cofun  of Loc.t * (copattern_spine * exp_chk) list * Syntax.Int.LF.mctx * tclo
+		| MLam   of Loc.t * name * exp_chk * Syntax.Int.LF.mctx * tclo
+		| Pair   of Loc.t * exp_chk * exp_chk * Syntax.Int.LF.mctx * tclo
+		| LetPair of Loc.t * exp_syn * (name * name * exp_chk) * Syntax.Int.LF.mctx * tclo
+		| Let    of Loc.t * exp_syn * (name * exp_chk) * Syntax.Int.LF.mctx * tclo
+		| Box    of Loc.t * meta_obj * Syntax.Int.LF.mctx * tclo
+		| Case   of Loc.t * case_pragma * exp_syn * branch list * Syntax.Int.LF.mctx * tclo
+		| If     of Loc.t * exp_syn * exp_chk * exp_chk * Syntax.Int.LF.mctx * tclo
+		| Hole   of Loc.t * (unit -> int) * Syntax.Int.LF.mctx * tclo
 
 	and exp_syn =
  		| Var    of Loc.t * offset * tclo
@@ -211,8 +211,23 @@ module Comp = struct
  		| Boolean of bool * tclo
 
 	and branch =
-	    | EmptyBranch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx * Syntax.Int.Comp.pattern * Syntax.Int.LF.msub
-	    | Branch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx  * Syntax.Int.Comp.gctx * Syntax.Int.Comp.pattern * Syntax.Int.LF.msub * exp_chk
+	    | EmptyBranch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx * pattern * Syntax.Int.LF.msub
+	    | Branch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx  * Syntax.Int.Comp.gctx * pattern * Syntax.Int.LF.msub * exp_chk
+
+	and pattern =
+	    | PatEmpty   of Loc.t * Syntax.Int.LF.dctx * tclo
+	    | PatMetaObj of Loc.t * meta_obj * tclo
+	    | PatConst of Loc.t * cid_comp_const * pattern_spine * tclo
+	    | PatFVar   of Loc.t * name * tclo
+	    | PatVar   of Loc.t * offset * tclo
+	    | PatPair  of Loc.t * pattern * pattern * tclo
+	    | PatTrue  of Loc.t * tclo
+	    | PatFalse of Loc.t * tclo
+	    | PatAnn   of Loc.t * pattern * Syntax.Int.Comp.typ * tclo
+
+ 	and pattern_spine =
+	    | PatNil of tclo
+	    | PatApp of Loc.t * pattern * pattern_spine * tclo
 
  	and copattern_spine =
 	    | CopatNil of Loc.t

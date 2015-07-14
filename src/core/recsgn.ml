@@ -661,7 +661,7 @@ let recSgnDecls decls =
 
             let _ = ann in 
             
-            (* let _ = Latex.proof ann in       *)
+            let _ = Latex.proof ann in      
 
              (e_r' , tau')      
              

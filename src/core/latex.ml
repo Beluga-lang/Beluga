@@ -154,10 +154,8 @@ and proof_normal tM = match tM with
 (* | Synann.LF.Tuple (_, tup) *) 
 
 and proof_head h = match h with
-| Synann.LF.Const (c, cD, cPsi, sA) -> print_string ("TestConst: \n" ^ "\tConst: " ^ R.render_cid_term c ^ "\n")
-| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 
-	let Syntax.Int.LF.Offset u = c in
-	print_string ("TestMVar\n" ^ "\tMVar: " ^ R.render_cvar cD u ^ "\n")
+| Synann.LF.Const (c, cD, cPsi, sA) -> print_string ("\tConst: " ^ R.render_cid_term c ^ "\n" ^ "\tImp Args: " ^ string_of_int (Store.Cid.Term.get_implicit_arguments c) ^ "\n")
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 	print_string ("\tMVar: " ^ PI.headToString cD cPsi (Syntax.Int.LF.MVar (c, s)) ^ "\n")
 (* | Syntax.Int.LF.BVar _ -> print_string "TestBVar\n"
 | Syntax.Int.LF.MMVar _ -> print_string "TestMMVar\n"
 | Syntax.Int.LF.MPVar _ -> print_string "TestMPVar\n"
@@ -171,8 +169,8 @@ and proof_head h = match h with
 | Syntax.Int.LF.HMClo _ -> print_string "TestHMClo\n" *)
 
 and proof_spine tS = match tS with
-| Synann.LF.Nil -> print_string "TestNil\n"
-| Synann.LF.App (tM, tS, sA) -> print_string "TestApp\n"; proof_normal tM; proof_spine tS
+| Synann.LF.Nil -> print_string ""
+| Synann.LF.App (tM, tS, sA) -> proof_normal tM; proof_spine tS
 | Synann.LF.SClo ((tS, theta), sA) -> proof_spine tS
 
 

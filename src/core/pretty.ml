@@ -107,9 +107,10 @@ module Int = struct
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
-    val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit    
     val fmt_ppr_lf_mfront        : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
     val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
+    val fmt_ppr_lf_cvar       : LF.mctx -> lvl -> formatter -> LF.cvar -> unit
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -168,6 +169,7 @@ module Int = struct
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
     val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
+    val cvarToString       : LF.mctx -> LF.cvar -> string
 
   end (* Int.PRINTER *)
 
@@ -1720,6 +1722,10 @@ module Int = struct
 
     let sgnDeclToString   : Sgn.decl -> string = fun d ->
       fmt_ppr_sgn_decl std_lvl str_formatter d; flush_str_formatter ()
+
+    let cvarToString cD cvar =
+      fmt_ppr_lf_cvar cD std_lvl std_formatter cvar; flush_str_formatter ()
+
   end (* Int.Make *)
 
   (* Default Error Pretty Printer Functor Instantiation *)

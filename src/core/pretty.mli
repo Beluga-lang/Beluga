@@ -63,6 +63,7 @@ module Int : sig
     val fmt_ppr_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
     val fmt_ppr_lf_mfront        : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
     val fmt_ppr_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
+    val fmt_ppr_lf_cvar       : LF.mctx -> lvl -> formatter -> LF.cvar -> unit
 
     (* Regular Pretty Printers *)
     val ppr_sgn_decl      : Sgn.decl         -> unit
@@ -121,7 +122,7 @@ module Int : sig
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
     val subCompTypToString   : LF.mctx              -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
-
+    val cvarToString       : LF.mctx -> LF.cvar -> string
 
   end
 

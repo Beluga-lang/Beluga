@@ -349,6 +349,14 @@ and inferHead loc cD cPsi head cl = match head, cl with
 
   | MVar (Inst (n, {contents = None}, cD', ClTyp (MTyp tA,cPsi'), cnstr, dep), s), Subst ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD' cPsi head ) in
+    let _ = print_string ("[inferHead] " ^ P.headToString cD' cPsi head ^ 
+        (begin
+          match dep with
+          | Maybe -> "\t dep: maybe\n"
+          | No -> "\t dep: no\n"
+          | Inductive -> "\t dep: ind\n"
+        end)
+    ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD' cPsi ^ "   |-   " ^
       P.subToString cD' cPsi s ^ " <= " ^ P.dctxToString cD' cPsi') in
     checkSub loc cD' cPsi s Subst cPsi' ;

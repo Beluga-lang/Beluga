@@ -16,7 +16,6 @@ module LF = struct
 	    | Tuple of Loc.t * tuple * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 	
 	and head =
-
 	    | BVar  of offset * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * Syntax.Int.LF.typ
 	    | Const of cid_term * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * Syntax.Int.LF.typ
 	    | MMVar of Syntax.Int.LF.mm_var_inst * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * Syntax.Int.LF.typ

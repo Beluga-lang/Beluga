@@ -278,7 +278,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
     | PiTyp (_, tB2) -> 1 + typLength tB2 in
 
   let rec syn tS sA = match tS, sA with
-    | (Nil, _), sP -> (sP, Synann.LF.Nil sA)
+    | (Nil, _), sP -> (sP, Synann.LF.Nil)
 
     | (SClo (tS, s'), s), sA ->    
       let (sA', tS_ann) = syn (tS, Substitution.LF.comp s' s) sA in
@@ -834,25 +834,25 @@ and checkSchemaWf (Schema elements ) =
 
 and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
-     (* let tM_ann = check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id) in *)
-     Synann.LF.MObj (tM, (MTyp tA, t))        
+     let tM_ann = check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id) in
+     Synann.LF.MObj (tM_ann, (MTyp tA, t))        
 
   | SObj tM, (STyp (cl, tA), t) ->
      checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t));
      Synann.LF.SObj (tM, (STyp (cl, tA), t))
 
   | PObj h, (PTyp tA, t) ->
-    let (tA', _head_ann) = inferHead loc cD cPsi' h Ren in
+    let (tA', head_ann) = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
-          Synann.LF.PObj (h, (PTyp tA, t))
+          Synann.LF.PObj (head_ann, (PTyp tA, t))
         else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | MObj (Root(loc,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
-      let (tA', _head_ann) = inferHead loc cD cPsi' h Ren in
+      let (tA', head_ann) = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then 
-          Synann.LF.MObj (Syntax.Int.LF.Root (loc, h, Nil), (PTyp tA, t))
+          Synann.LF.MObj (Synann.LF.Root (loc, head_ann, Synann.LF.Nil, (tA, Substitution.LF.id)), (PTyp tA, t))
       else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))

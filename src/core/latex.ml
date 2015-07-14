@@ -148,14 +148,14 @@ and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 (* | Synann.LF.MV (u, ttau) -> *)
 
 and proof_normal tM = match tM with
-| Syntax.Int.LF.Root (_, h, tS) -> proof_head h; proof_spine tS
-| Syntax.Int.LF.Lam (_, name, tM'') -> print_string "TestLam\n"
+| Synann.LF.Root (_, h, tS, sA) -> proof_head h; proof_spine tS
+| Synann.LF.Lam (_, name, tM'', sA) -> print_string "TestLam\n"
 (* | Synann.LF.Clo (tM'', tS) *)
 (* | Synann.LF.Tuple (_, tup) *) 
 
 and proof_head h = match h with
-| Syntax.Int.LF.Const c -> print_string ("TestConst: \n" ^ "\tConst: " ^ R.render_cid_term c ^ "\n")
-| Syntax.Int.LF.MVar (c, s) -> print_string ("TestMVar\n" ^ "\tMVar: ")
+| Synann.LF.Const (c, sA) -> print_string ("TestConst: \n" ^ "\tConst: " ^ R.render_cid_term c ^ "\n")
+| Synann.LF.MVar ((c, s), sA) -> print_string ("TestMVar\n" ^ "\tMVar: ")
 (* | Syntax.Int.LF.BVar _ -> print_string "TestBVar\n"
 | Syntax.Int.LF.MMVar _ -> print_string "TestMMVar\n"
 | Syntax.Int.LF.MPVar _ -> print_string "TestMPVar\n"
@@ -169,8 +169,8 @@ and proof_head h = match h with
 | Syntax.Int.LF.HMClo _ -> print_string "TestHMClo\n" *)
 
 and proof_spine tS = match tS with
-| Syntax.Int.LF.Nil -> print_string "TestNil\n"
-| Syntax.Int.LF.App (tM, tS) -> print_string "TestApp\n"; proof_normal tM; proof_spine tS
+| Synann.LF.Nil -> print_string "TestNil\n"
+| Synann.LF.App (tM, tS, sA) -> print_string "TestApp\n"; proof_normal tM; proof_spine tS
 (* | Syntax.Int.LF.SClo (tS, theta) ->  *)
 
 

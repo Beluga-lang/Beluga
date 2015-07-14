@@ -66,7 +66,7 @@ module LF = struct
 	and offsetsub = offset * sub
 
 	and spine =
-	    | Nil of (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Nil
 	    | App  of normal * spine * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 	    | SClo of (spine * Syntax.Int.LF.sub) * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 
@@ -95,8 +95,8 @@ module LF = struct
 	  	| MUndef 
 
 	and clobj =
-    	| MObj of Syntax.Int.LF.normal * (Syntax.Int.LF.cltyp * Syntax.Int.LF.msub)
-    	| PObj of Syntax.Int.LF.head * (Syntax.Int.LF.cltyp * Syntax.Int.LF.msub)
+    	| MObj of normal * (Syntax.Int.LF.cltyp * Syntax.Int.LF.msub)
+    	| PObj of head * (Syntax.Int.LF.cltyp * Syntax.Int.LF.msub)
     	| SObj of Syntax.Int.LF.sub * (Syntax.Int.LF.cltyp * Syntax.Int.LF.msub)
 
 	and msub =

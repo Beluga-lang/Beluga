@@ -203,60 +203,6 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
  * and  ; cD ; cPsi  |- tM [s1] <= tA'[s1]
  * otherwise exception Error is raised
  *)
-(* let rec checkW cD cPsi sM sA = match sM, sA with
-  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (x, tA), t), tB), s2) -> (* Offset by 1 *)    
-    (Synann.LF.Lam (
-      loc, 
-      name, 
-      (check cD
-        (DDec (cPsi, Substitution.LF.decSub tX s2))
-        (tM, Substitution.LF.dot1 s1)
-        (tB, Substitution.LF.dot1 s2)),
-        (PiTyp ((TypDecl (x, tA), t), tB), s2)
-    ), s1)      
-
-  | (Lam (loc, _, _), _), _ ->
-    raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
-
-  | (LFHole loc, s1), s -> (Synann.LF.LFHole (loc, s), s1)
-
-  | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
-    (Synann.LF.Tuple (loc, (checkTuple loc cD cPsi (tuple, s1) (typRec, s2)), (Sigma typRec, s2)), s1)    
-
-  | (Tuple (loc, _), _), _ ->
-    raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
-
-  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->    
-    (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-    begin
-      try
-        let _ = dprint (fun () -> "[ROOT check] " ^
-          P.mctxToString cD ^ " ; " ^
-          P.dctxToString cD cPsi ^ " |- " ^
-          P.normalToString cD cPsi sM ^
-          " <= " ^ P.typToString cD cPsi sA ) 
-        in
-        let sP = syn cD cPsi sM 
-        in
-        let _ = dprint (fun () -> "[ROOT check] synthesized " ^
-          P.mctxToString cD ^ " ; " ^
-          P.dctxToString cD cPsi ^ " |- " ^
-          P.normalToString cD cPsi sM ^
-          " => " ^ P.typToString cD cPsi sP ) 
-        in  
-        let _ = dprint (fun () -> "       against " ^ P.typToString cD cPsi sA) 
-        in
-        let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
-        (if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) 
-        then raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)));
-        Synann.LF.Root (loc, ))
-      with SpineMismatch ->
-        raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
-    end
-
-  | (Root (loc, _, _), _), _ ->
-    raise (Error (loc, CheckError (cD, cPsi, sM, sA))) *)
-
 let rec checkW cD cPsi sM sA = match sM, sA with
   | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)    
     check cD
@@ -337,7 +283,8 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
       let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
       syn (tS, s1) tB2 in
 
-  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
+  let (typ, _head_ann) = inferHead loc cD cPsi h Subst in
+  let (sA', s') = Whnf.whnfTyp (typ, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS 
   then raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
@@ -358,7 +305,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
   | BVar k', _ ->
     let (_, _l) = dctxToHat cPsi in
     let TypDecl (_, tA) = ctxDec cPsi k' in
-    tA
+    (tA, Synann.LF.BVar (k', tA))
 
   | Proj (tuple_head, target), _ ->
     let srecA = match tuple_head with
@@ -377,10 +324,10 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let (_tA, s) as sA = getType tuple_head srecA target 1 in
     dprint (fun () -> "getType (" ^ P.headToString cD cPsi head ^ ") = " ^ P.typToString cD cPsi sA);
     dprint (fun () -> "s = " ^ P.subToString cD cPsi s);
-    TClo sA
+    (TClo sA, Synann.LF.Proj (tuple_head, target, TClo sA))
 
   | Const c, Subst ->
-    (Term.get c).Term.typ
+    ((Term.get c).Term.typ, Synann.LF.Const (c, (Term.get c).Term.typ))
 
   | MVar (Offset u, s), Subst ->
     (* cD ; cPsi' |- tA <= type *)
@@ -389,16 +336,16 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s Subst cPsi' ;
-    TClo (tA, s)
+    (TClo (tA, s), Synann.LF.MVar ((Offset u, s), TClo (tA, s)))
 
-  | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
+  | MVar (Inst (n, {contents = None}, cD, ClTyp (MTyp tA,cPsi'), cnstr, dep), s), Subst ->
     let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s Subst cPsi' ;
-    TClo (tA, s)
+    (TClo (tA, s), Synann.LF.MVar ((Inst (n, {contents = None}, cD, ClTyp (MTyp tA,cPsi'), cnstr, dep), s), TClo (tA, s)))
 
-  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
+  | MMVar (((n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), cnstr, dep) , t'), r), Subst ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
     let _ = dprint (fun () -> " cD = " ^ P.mctxToString cD) in
     let _ = dprint (fun () -> " t' = " ^ P.msubToString cD t' ) in
@@ -406,7 +353,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let _ = checkMSub loc cD t' cD' in
     let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in
     checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ;
-    TClo(Whnf.cnormTyp (tA, t'), r)
+    (TClo(Whnf.cnormTyp (tA, t'), r), Synann.LF.MMVar ((((n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), cnstr, dep) , t'), r), TClo(Whnf.cnormTyp (tA, t'), r)))
 
   | Const _, Ren
   | MVar _, Ren
@@ -426,7 +373,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
 (*    if not (canAppear cD cPsi head (tA, s) loc) then
       raise (Error (loc, ParamVarInst (cD, cPsi, (tA, s)))); *)
     (* Return p's type from cD *)
-    TClo (tA, s)
+    (TClo (tA, s), Synann.LF.PVar ((p, s), TClo (tA, s)))
 
   | FVar _, _ ->
     raise (Error (loc, LeftoverFV))
@@ -514,7 +461,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
     (* | cPsi', Dot (Obj (Root(_,h,Nil)), s'), DDec (cPsi, TypDecl (_, tA2)) *) ->
       let _ = checkSub loc cD cPsi' s' cPsi
       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-      and tA1 = inferHead loc cD cPsi' h cl in
+      and (tA1, _head_ann) = inferHead loc cD cPsi' h cl in
       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
   raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
@@ -886,14 +833,14 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
      Synann.LF.SObj (tM, (STyp (cl, tA), t))
 
   | PObj h, (PTyp tA, t) ->
-    let tA' = inferHead loc cD cPsi' h Ren in
+    let (tA', _head_ann) = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
           Synann.LF.PObj (h, (PTyp tA, t))
         else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | MObj (Root(loc,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
-      let tA' = inferHead loc cD cPsi' h Ren in
+      let (tA', _head_ann) = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then 
           Synann.LF.MObj (Syntax.Int.LF.Root (loc, h, Nil), (PTyp tA, t))
@@ -1970,60 +1917,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
            let pat_ann = checkPattern cD1' cG1 pat (tau_p, Whnf.m_id) in
            let e1_ann = check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id) in
            Synann.Comp.Branch (loc, cD1', cG1, pat_ann, t1, e1_ann))
-
-(* 
-  and checkBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
-    match branch with
-      | EmptyBranch (loc, cD1', pat, t1) ->
-          let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
-          let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-            (LF.checkMSub  loc cD1' t1 cD;
-            checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
-
-      | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
-(*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO 
-        ^ "\nwhere scrutinee has type " ^
-        P.compTypToString cD tau_s ^ "\n") in *)
-          let TypBox (_, mT) = tau_s in
-          (* By invariant: cD1' |- t1 <= cD *)
-    let mT1   = Whnf.cnormMetaTyp (mT, t1) in
-          let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
-          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
-          let t''   = Whnf.mcomp t t1 in
-          let tau'  = Whnf.cnormCTyp (tau, t'') in          
-          let (cD1',cIH')  = if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
-                         let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in 
-         (* print_string "Inductive and Structurally smaller\n"; *)
-         (cD1', Total.wf_rec_calls cD1' (I.Empty))
-           else (cD1', I.Empty) in 
-    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
-                   else cD1' in  
-    let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in
-            (LF.checkMSub loc cD1' t1 cD;
-       LF.checkMetaObj cD1' mO (mT1, C.m_id);
-             check cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id))
-
-      | Branch (loc, cD1', cG1, pat, t1, e1) ->
-          let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-          let cG'   = Whnf.cnormCtx (cG, t1) in
-          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
-          let t''   = Whnf.mcomp t t1 in
-          let tau'  = Whnf.cnormCTyp (tau, t'') in
-(*          let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in 
-         let _ = print_string ("\nwhere scrutinee has type" ^
-        P.compTypToString cD tau_s ^ "\n") in *)
-    let k     = Context.length cG1 in 
-    let cIH0  = Total.shiftIH cIH k in 
-          let (cD1', cIH')  = if is_inductive caseTyp && Total.struct_smaller pat then
-                       let cD1' = mvarsInPatt cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
-                     else (cD1', I.Empty) in
-    let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
-                   else cD1' in  
-    (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
-          (LF.checkMSub loc  cD1' t1 cD;
-           checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
-           check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
- *)          
+   
   let rec wf_mctx cD = match cD with
     | I.Empty -> ()
     | I.Dec (cD, cdecl) ->

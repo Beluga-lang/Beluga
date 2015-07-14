@@ -48,19 +48,19 @@ module LF = struct
 	    | Tuple of Loc.t * tuple
 	
 	and head =
-	    | BVar  of offset
-	    | Const of cid_term
-	    | MMVar of mm_var_inst
-	    | MPVar of mm_var_inst
-	    | MVar  of (cvar * sub)
-	    | PVar  of offsetsub
-	    | AnnH  of head * typ
-	    | Proj  of head * int
-	    | FVar  of name
-	    | FMVar of fvarsub
-	    | FPVar of fvarsub
-	    | HClo  of offset * offset * sub
-	    | HMClo of offset * mm_var_inst
+	    | BVar  of offset * Syntax.Int.LF.typ
+	    | Const of cid_term * Syntax.Int.LF.typ
+	    | MMVar of mm_var_inst * Syntax.Int.LF.typ
+	    | MPVar of mm_var_inst * Syntax.Int.LF.typ
+	    | MVar  of (Syntax.Int.LF.cvar * Syntax.Int.LF.sub) * Syntax.Int.LF.typ
+	    | PVar  of Syntax.Int.LF.offsetsub * Syntax.Int.LF.typ
+	    | AnnH  of head * Syntax.Int.LF.typ * Syntax.Int.LF.typ
+	    | Proj  of Syntax.Int.LF.head * int * Syntax.Int.LF.typ
+	    | FVar  of name * Syntax.Int.LF.typ
+	    | FMVar of Syntax.Int.LF.fvarsub * Syntax.Int.LF.typ
+	    | FPVar of Syntax.Int.LF.fvarsub * Syntax.Int.LF.typ
+	    | HClo  of offset * offset * Syntax.Int.LF.sub * Syntax.Int.LF.typ
+	    | HMClo of offset * mm_var_inst * Syntax.Int.LF.typ
 
   	and fvarsub = name * sub
 	and offsetsub = offset * sub
@@ -107,9 +107,9 @@ module LF = struct
     	| Offset of offset
     	| Inst   of mm_var	
 
-	and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
-	and mm_var_inst' = mm_var * msub
-	and mm_var_inst = mm_var_inst' * sub
+	and mm_var = name * Syntax.Int.LF.iterm option ref * Syntax.Int.LF.mctx * Syntax.Int.LF.ctyp * Syntax.Int.LF.cnstr list ref * Syntax.Int.LF.depend
+	and mm_var_inst' = mm_var * Syntax.Int.LF.msub
+	and mm_var_inst = mm_var_inst' * Syntax.Int.LF.sub
 
 	and iterm =
 	    | INorm of normal

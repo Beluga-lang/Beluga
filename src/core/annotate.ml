@@ -314,7 +314,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
   | BVar k', _ ->
     let (_, _l) = dctxToHat cPsi in
     let TypDecl (_, tA) = ctxDec cPsi k' in
-    (tA, Synann.LF.BVar (k', tA))
+    (tA, Synann.LF.BVar (k', cD, cPsi, tA))
 
   | Proj (tuple_head, target), _ ->
     let srecA = match tuple_head with
@@ -333,10 +333,10 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let (_tA, s) as sA = getType tuple_head srecA target 1 in
     dprint (fun () -> "getType (" ^ P.headToString cD cPsi head ^ ") = " ^ P.typToString cD cPsi sA);
     dprint (fun () -> "s = " ^ P.subToString cD cPsi s);
-    (TClo sA, Synann.LF.Proj (tuple_head, target, TClo sA))
+    (TClo sA, Synann.LF.Proj (tuple_head, target, cD, cPsi, TClo sA))
 
   | Const c, Subst ->
-    ((Term.get c).Term.typ, Synann.LF.Const (c, (Term.get c).Term.typ))
+    ((Term.get c).Term.typ, Synann.LF.Const (c, cD, cPsi, (Term.get c).Term.typ))
 
   | MVar (Offset u, s), Subst ->
     (* cD ; cPsi' |- tA <= type *)
@@ -345,14 +345,14 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
       P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
     checkSub loc cD cPsi s Subst cPsi' ;
-    (TClo (tA, s), Synann.LF.MVar ((Offset u, s), TClo (tA, s)))
+    (TClo (tA, s), Synann.LF.MVar ((Offset u, s), cD, cPsi, TClo (tA, s)))
 
-  | MVar (Inst (n, {contents = None}, cD, ClTyp (MTyp tA,cPsi'), cnstr, dep), s), Subst ->
-    let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD cPsi head ) in
-    let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD cPsi ^ "   |-   " ^
-      P.subToString cD cPsi s ^ " <= " ^ P.dctxToString cD cPsi') in
-    checkSub loc cD cPsi s Subst cPsi' ;
-    (TClo (tA, s), Synann.LF.MVar ((Inst (n, {contents = None}, cD, ClTyp (MTyp tA,cPsi'), cnstr, dep), s), TClo (tA, s)))
+  | MVar (Inst (n, {contents = None}, cD', ClTyp (MTyp tA,cPsi'), cnstr, dep), s), Subst ->
+    let _ = dprint (fun () -> "[inferHead] " ^ P.headToString cD' cPsi head ) in
+    let _ = dprint (fun () -> "[inferHead] " ^ P.dctxToString cD' cPsi ^ "   |-   " ^
+      P.subToString cD' cPsi s ^ " <= " ^ P.dctxToString cD' cPsi') in
+    checkSub loc cD' cPsi s Subst cPsi' ;
+    (TClo (tA, s), Synann.LF.MVar ((Inst (n, {contents = None}, cD', ClTyp (MTyp tA,cPsi'), cnstr, dep), s), cD, cPsi, TClo (tA, s)))
 
   | MMVar (((n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), cnstr, dep) , t'), r), Subst ->
     let _ = dprint (fun () -> "[inferHead] MMVar " ^ P.headToString cD cPsi head ) in
@@ -362,7 +362,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let _ = checkMSub loc cD t' cD' in
     let _ = dprint (fun () -> "[inferHead] MMVar - msub done \n") in
     checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ;
-    (TClo(Whnf.cnormTyp (tA, t'), r), Synann.LF.MMVar ((((n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), cnstr, dep) , t'), r), TClo(Whnf.cnormTyp (tA, t'), r)))
+    (TClo(Whnf.cnormTyp (tA, t'), r), Synann.LF.MMVar ((((n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), cnstr, dep) , t'), r), cD, cPsi, TClo(Whnf.cnormTyp (tA, t'), r)))
 
   | Const _, Ren
   | MVar _, Ren
@@ -382,7 +382,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
 (*    if not (canAppear cD cPsi head (tA, s) loc) then
       raise (Error (loc, ParamVarInst (cD, cPsi, (tA, s)))); *)
     (* Return p's type from cD *)
-    (TClo (tA, s), Synann.LF.PVar ((p, s), TClo (tA, s)))
+    (TClo (tA, s), Synann.LF.PVar ((p, s), cD, cPsi, TClo (tA, s)))
 
   | FVar _, _ ->
     raise (Error (loc, LeftoverFV))

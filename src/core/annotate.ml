@@ -1898,13 +1898,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       begin match (tau, theta) with
         | (TypArr (tau1, tau2), theta) ->
           let pat_ann = checkPattern cD cG pat (tau1, theta) in
-          let (_, _, pat_spine_ann) = synPatSpine cD cG pat_spine (tau2, theta) in
-          (tau, theta, Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau, theta)))
+          let (tau2', theta', pat_spine_ann) = synPatSpine cD cG pat_spine (tau2, theta) in
+          (tau2', theta', Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau, theta)))
         | (TypPiBox (cdecl, tau), theta) ->
           let (theta', mO_ann) = checkPatAgainstCDecl cD pat (cdecl, theta) in
-          let (_, _, pat_spine_ann) = synPatSpine cD cG pat_spine (tau, theta') in          
+          let (tau', theta'', pat_spine_ann) = synPatSpine cD cG pat_spine (tau, theta') in          
           let pat_ann = Synann.Comp.PatMetaObj (loc, mO_ann, (tau, theta')) in
-          (tau, theta, Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau,theta')))
+          (tau', theta'', Synann.Comp.PatApp (loc, pat_ann, pat_spine_ann, (tau,theta')))
       end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =

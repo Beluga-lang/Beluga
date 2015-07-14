@@ -27,9 +27,9 @@ module LF : sig
 
   exception Error of Syntax.Loc.t * error
 
-  val check       : mctx -> dctx -> nclo -> tclo -> unit
+  val check       : mctx -> dctx -> nclo -> tclo -> Synann.LF.normal
 
-  val syn         : mctx -> dctx -> nclo -> tclo
+  val syn         : mctx -> dctx -> nclo -> (Syntax.Int.LF.tclo * Synann.LF.spine) * Synann.LF.head
   val checkTyp    : mctx -> dctx -> tclo         -> unit
   val checkKind   : mctx -> dctx -> kind         -> unit
   val checkDCtx   : mctx -> dctx                 -> unit

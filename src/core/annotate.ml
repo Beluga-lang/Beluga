@@ -205,19 +205,19 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
  *)
 let rec checkW cD cPsi sM sA = match sM, sA with
   | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)    
-    check cD
+    let tM_ann = check cD
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
-      (tB, Substitution.LF.dot1 s2);
-      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Lam" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
+      (tB, Substitution.LF.dot1 s2)
+    in Synann.LF.Lam (loc, name, tM_ann, sA)
 
-  | (LFHole _, _), _ -> ()
+  | (LFHole loc, _), _ -> Synann.LF.LFHole(loc, sA)
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
   | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
-    checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
-    Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Tuple" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
+    let tuple_ann = checkTuple loc cD cPsi (tuple, s1) (typRec, s2) in
+    Synann.LF.Tuple (loc, tuple_ann, sA)
 
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -226,23 +226,24 @@ let rec checkW cD cPsi sM sA = match sM, sA with
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
     begin
       try
-        let _ = dprint (fun () -> "[ROOT check] " ^
+(*         let _ = dprint (fun () -> "[ROOT check] " ^
     P.mctxToString cD ^ " ; " ^
     P.dctxToString cD cPsi ^ " |- " ^
     P.normalToString cD cPsi sM ^
-          " <= " ^ P.typToString cD cPsi sA ) in
-        let sP = syn cD cPsi sM in
-        let _ = dprint (fun () -> "[ROOT check] synthesized " ^
+          " <= " ^ P.typToString cD cPsi sA ) in *)
+        let ((sP, tS_ann), head_ann) = syn cD cPsi sM in
+(*         let _ = dprint (fun () -> "[ROOT check] synthesized " ^
     P.mctxToString cD ^ " ; " ^
     P.dctxToString cD cPsi ^ " |- " ^
     P.normalToString cD cPsi sM ^
-          " => " ^ P.typToString cD cPsi sP ) in
-  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
-  let _ = dprint (fun () -> "       against " ^
-    P.typToString cD cPsi sA) in
+          " => " ^ P.typToString cD cPsi sP ) in *)  
+ (*  let _ = dprint (fun () -> "       against " ^
+    P.typToString cD cPsi sA) in *)
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
           raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
+        else
+          Synann.LF.Root (loc, head_ann, tS_ann, sA)
       with SpineMismatch ->
         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
@@ -254,10 +255,14 @@ and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
   let loop (tuple, s1) (typRec, s2) = match tuple, typRec with
-    | Last tM,   SigmaLast (n, tA) -> checkW cD cPsi (tM, s1) (tA, s2)
+    | Last tM,   SigmaLast (n, tA) -> 
+      let tM_ann = checkW cD cPsi (tM, s1) (tA, s2) in
+      Synann.LF.Last (tM_ann)
     | Cons (tM, tuple),   SigmaElem (_x, tA, typRec) ->
-      checkW cD cPsi (tM, s1) (tA, s2);
-      checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2))
+      let tM_ann = checkW cD cPsi (tM, s1) (tA, s2) in
+      let tuple_ann = checkTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2)) in
+      Synann.LF.Cons(tM_ann, tuple_ann)
+
     | _, _ -> raise (Error (loc, TupleArity (cD, cPsi, (Tuple (loc, tuple), s1), (trec, s2)))) in
   loop (tuple, s1) (trec, s2)
 
@@ -273,22 +278,26 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
     | PiTyp (_, tB2) -> 1 + typLength tB2 in
 
   let rec syn tS sA = match tS, sA with
-    | (Nil, _), sP -> sP
+    | (Nil, _), sP -> (sP, Synann.LF.Nil sA)
 
     | (SClo (tS, s'), s), sA ->    
-      syn (tS, Substitution.LF.comp s' s) sA
+      let (sA', tS_ann) = syn (tS, Substitution.LF.comp s' s) sA in
+      (sA', Synann.LF.SClo ((tS_ann, s'), sA))
 
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
-      check cD cPsi (tM, s1) (tA1, s2);
+      let tM_ann = check cD cPsi (tM, s1) (tA1, s2) in
       let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-      syn (tS, s1) tB2 in
+      let (sA', tS_ann) = syn (tS, s1) tB2 in
+      (sA', Synann.LF.App (tM_ann, tS_ann, sA))
 
-  let (typ, _head_ann) = inferHead loc cD cPsi h Subst in
+  in
+
+  let (typ, head_ann) = inferHead loc cD cPsi h Subst in
   let (sA', s') = Whnf.whnfTyp (typ, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS 
   then raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
-  syn (tS, s) (sA', s')
+  (syn (tS, s) (sA', s'), head_ann)
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
 
@@ -469,7 +478,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
       let _ = checkSub loc cD cPsi' s' cPsi in
       (* ensures that s' is well-typed and [s']tA2 is well-defined *)
-      check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
+      let _ = check cD cPsi' (tM, Substitution.LF.id) (tA2, s') in ()
 
     | _, Dot (Obj tM, _), DDec (_,_) when cl = Ren ->
       raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
@@ -503,7 +512,7 @@ and synKSpine cD cPsi sS1 sK = match sS1, sK with
     synKSpine cD cPsi (tS, Substitution.LF.comp s' s) sK
 
   | (App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _), kK), s2) ->
-    check cD cPsi (tM, s1) (tA1, s2);
+    let _ = check cD cPsi (tM, s1) (tA1, s2) in
     synKSpine cD cPsi (tS, s1) (kK, Dot (Obj (Clo (tM, s1)), s2))
 
   | (App _, _), (Typ, _) ->

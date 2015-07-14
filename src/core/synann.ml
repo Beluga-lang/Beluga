@@ -41,11 +41,11 @@ module LF = struct
 	    | TClo  of (typ * sub)
 
 	and normal =
-	    | Lam  of Loc.t * name * normal
-	    | Root of Loc.t * head * spine
-	    | LFHole of Loc.t
-	   	| Clo  of (normal * sub)
-	    | Tuple of Loc.t * tuple
+	    | Lam  of Loc.t * name * normal * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Root of Loc.t * head * spine * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | LFHole of Loc.t * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	   	| Clo  of (normal * sub) * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Tuple of Loc.t * tuple * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 	
 	and head =
 	    | BVar  of offset * Syntax.Int.LF.typ
@@ -66,9 +66,9 @@ module LF = struct
 	and offsetsub = offset * sub
 
 	and spine =
-	    | Nil
-	    | App  of normal * spine
-	    | SClo of (spine * sub)
+	    | Nil of (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | App  of normal * spine * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | SClo of (spine * Syntax.Int.LF.sub) * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 
 	and sub =
 	    | Shift of offset

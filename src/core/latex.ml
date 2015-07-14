@@ -79,6 +79,7 @@ let rec proof e_ann =
 			end
 	)
 	theorem in
+	let _ = proof_case e' in
 	(* let cases = proof_cases e' in	 *)
 	()
 
@@ -108,9 +109,9 @@ and proof_theorem e = match e with
 | _ -> raise (LatexException "Non MLam/Fun expression passed to proof_theorem")
 
 
-and proof_case e = (* return scrut + case list *)
+and proof_case e = match e with(* return scrut + case list *)
+| Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
 (* | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) -> *)
-| Synann.Comp.Case (loc, prag, i, branches, _, _) -> (i, proof_branches branches)
 
 
 | _ -> raise (LatexException "Non Case argument passed to proof_case")
@@ -118,31 +119,60 @@ and proof_case e = (* return scrut + case list *)
 and proof_branches b = List.map proof_branch b
 
 and proof_branch b = match b with
-| Synann.Comp.EmptyBranch (loc, cD1', pat, t1) ->
-| Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) ->
-| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) ->
+| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> proof_pattern pat
+(* | Synann.Comp.EmptyBranch (loc, cD1', pat, t1) -> *)
+(* | Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) -> *)
 
-and proof_pattern pat = match pat with
-| Synann.Comp.PatEmpty (loc, cPsi, ttau) ->
+and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatMetaObj (loc, mO, ttau) ->
-| Synann.Comp.PatConst (loc, c, pat_spine, ttau) ->
-| Synann.Comp.PatVar (loc, k, ttau) ->
-| Synann.Comp.PatPair (loc, pat1, pat2, ttau) ->
-| Synann.Comp.PatTrue (loc, ttau) ->
-| Synann.Comp.PatFalse (loc, ttau) ->
-| Synann.Comp.PatAnn (loc, pat, tau, ttau) ->
+	proof_metaobj mO
+(* | Synann.Comp.PatEmpty (loc, cPsi, ttau) -> *)
+(* | Synann.Comp.PatConst (loc, c, pat_spine, ttau) -> *)
+(* | Synann.Comp.PatVar (loc, k, ttau) -> *)
+(* | Synann.Comp.PatPair (loc, pat1, pat2, ttau) -> *)
+(* | Synann.Comp.PatTrue (loc, ttau) -> *)
+(* | Synann.Comp.PatFalse (loc, ttau) -> *)
+| Synann.Comp.PatAnn (loc, pat, tau, ttau) -> 
+	proof_pattern pat
 
-and proof_metaobj (loc, mO) = match mO with
+and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 | Synann.LF.ClObj (phat, tM, ttau) ->
 	begin
 		match tM with
-		| MObj (tM, ttau') ->
+		| Synann.LF.MObj (tM', ttau') -> proof_normal tM'
 		(* | SObj (tM, ttau') -> *)
 		(* | PObj (h, ttau') -> *)
 	end		
-| Synann.LF.CObj (cPsi, ttau) ->
+(* | Synann.LF.CObj (cPsi, ttau) -> *)
 
-| Synann.LF.MV (u, ttau) ->
+(* | Synann.LF.MV (u, ttau) -> *)
+
+and proof_normal tM = match tM with
+| Syntax.Int.LF.Root (_, h, tS) -> proof_head h; proof_spine tS
+| Syntax.Int.LF.Lam (_, name, tM'') -> print_string "TestLam\n"
+(* | Synann.LF.Clo (tM'', tS) *)
+(* | Synann.LF.Tuple (_, tup) *) 
+
+and proof_head h = match h with
+| Syntax.Int.LF.Const c -> print_string ("TestConst: \n" ^ "\tConst: " ^ R.render_cid_term c ^ "\n")
+| Syntax.Int.LF.MVar (c, s) -> print_string ("TestMVar\n" ^ "\tMVar: ")
+(* | Syntax.Int.LF.BVar _ -> print_string "TestBVar\n"
+| Syntax.Int.LF.MMVar _ -> print_string "TestMMVar\n"
+| Syntax.Int.LF.MPVar _ -> print_string "TestMPVar\n"
+| Syntax.Int.LF.PVar _ -> print_string "TestPVar\n"
+| Syntax.Int.LF.AnnH _ -> print_string "TestAnnH\n"
+| Syntax.Int.LF.Proj _ -> print_string "TestProj\n"
+| Syntax.Int.LF.FVar _ -> print_string "TestFVar\n"
+| Syntax.Int.LF.FMVar _ -> print_string "TestFMVar\n"
+| Syntax.Int.LF.FPVar _ -> print_string "TestFPVar\n"
+| Syntax.Int.LF.HClo _ -> print_string "TestHClo\n"
+| Syntax.Int.LF.HMClo _ -> print_string "TestHMClo\n" *)
+
+and proof_spine tS = match tS with
+| Syntax.Int.LF.Nil -> print_string "TestNil\n"
+| Syntax.Int.LF.App (tM, tS) -> print_string "TestApp\n"; proof_normal tM; proof_spine tS
+(* | Syntax.Int.LF.SClo (tS, theta) ->  *)
+
 
 (* 	
 	n is the name of the proof from Rec

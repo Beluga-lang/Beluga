@@ -19,7 +19,7 @@ and scrutinee =
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and theorem = t_term list
+and theorem = Theorem of t_term list * t_term
 
 and t_term = 
 | TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)
@@ -58,27 +58,16 @@ let proof_rule cD cG n typ =
 	let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in
 	Rule (n, list_of_typ typ)
 
-let rec _chop_end l = match l with
-| [] -> raise (LatexException "[Latex] Unable to empty list.")
+let rec chop_end l = match l with
+| [] -> raise (LatexException "[Latex] Unable to split empty list.")
 | [x] -> ([], x)
 | hd::tl -> 
-	let (l', x) = _chop_end tl in (hd::l', x)
+	let (l', x) = chop_end tl in (hd::l', x)
 
 let rec proof e_ann = 
 	let (theorem, e') = proof_theorem e_ann in
-	(* let (t_premises, t_conclusion) = chop_end theorem in *)
-	let _ = 
-	List.iter 
-	(fun x -> match x with 
-		|TheoremForall (_, cD, Syntax.Int.LF.Decl (n', mtyp, _)) -> print_string (sprintf "TFA(%s : %s)\n" (R.render_name n') (PI.mtypToString cD mtyp)) 
-		|TheoremTerm (n', cD, ttau) ->
-			begin
-				match n' with
-				| None -> print_string (sprintf "TTConc(%s)\n" (PI.subCompTypToString cD ttau))
-				| Some n'' -> print_string (sprintf "TTPrem(%s : %s)\n" (R.render_name n'') (PI.subCompTypToString cD ttau))
-			end
-	)
-	theorem in
+	let (t_premises, t_conclusion) = chop_end theorem in		
+	let _ = print_string (string_of_theorem t_premises t_conclusion) in
 	let _ = proof_case e' in
 	(* let cases = proof_cases e' in	 *)
 	()
@@ -120,6 +109,12 @@ and proof_theorem e = match e with
 | Synann.Comp.If _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestIf\n")
 | Synann.Comp.Hole _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestHole\n")
 
+and string_of_theorem premises conclusion = 
+	sprintf "%s then %s" (String.concat " " (List.map string_of_tterm premises)) (string_of_tterm conclusion)
+
+and string_of_tterm tterm = match tterm with
+| TheoremTerm (n, cD, ttau) ->  (match n with | None -> sprintf "%s" (PI.subCompTypToString cD ttau) | Some n' -> sprintf "%s : %s" (R.render_name n') (PI.subCompTypToString cD ttau) ) 
+| TheoremForall (n, cD, Syntax.Int.LF.Decl (n', mtyp, _)) -> sprintf "\\forall %s : %s." (R.render_name n') (PI.mtypToString cD mtyp)
 
 and proof_case e = match e with(* return scrut + case list *)
 | Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
@@ -150,13 +145,13 @@ and proof_branch b = match b with
  *)
 and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatMetaObj (loc, mO, ttau) -> (* print_string "TestPatMetaObj\n"; *) proof_metaobj mO
+| Synann.Comp.PatAnn (loc, pat, tau, ttau) -> (* print_string "TestPatAnn\n"; *) proof_pattern pat
 | Synann.Comp.PatEmpty (loc, cPsi, ttau) -> print_string "TestPatEmpty\n"
 | Synann.Comp.PatConst (loc, c, pat_spine, ttau) -> print_string "TestPatConst\n"
 | Synann.Comp.PatVar (loc, k, ttau) -> print_string "TestPatVar\n"
 | Synann.Comp.PatPair (loc, pat1, pat2, ttau) -> print_string "\nTestPatPair\n"
 | Synann.Comp.PatTrue (loc, ttau) -> print_string "TestPatTrue\n"
 | Synann.Comp.PatFalse (loc, ttau) -> print_string "TestPatFalse\n"
-| Synann.Comp.PatAnn (loc, pat, tau, ttau) -> (* print_string "TestPatAnn\n"; *) proof_pattern pat
 
 (* Rewrite the following to build proof objects instead of printing strings *)
 and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
@@ -167,8 +162,8 @@ and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 			let (rule_name, imp_args) = extract_rule h in			
 			let args = extract_args (skip_imp_args imp_args tS) in
 			let test = List.map (fun s -> Inversion (rule_name, s)) args in
-			let rec print_inv_list l = match l with | [] -> "" | Inversion(rule, arg)::tl -> (sprintf "%s by inversion on %s\n" arg rule)^(print_inv_list tl) in
-			print_string (print_inv_list test)
+			let rec inv_list_str l = match l with | [] -> "" | Inversion(rule, arg)::tl -> (sprintf "%s by inversion on %s\n" arg rule)^(inv_list_str tl) in
+			print_string (inv_list_str test)
 			(* print_string (sprintf "%s %s\n" rule_name args) *)
 		| Synann.LF.SObj (tM, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: SObj\n")
 		| Synann.LF.PObj (h, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: PObj\n")
@@ -197,7 +192,7 @@ and skip_imp_args imp_args tS = match imp_args, tS with
 | 0, tS -> tS
 | n, Synann.LF.App (tM, tS', _) -> skip_imp_args (n - 1) tS'
 | n, Synann.LF.SClo ((tS', _), _) -> skip_imp_args n tS'
-| n, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
+| _, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
 
 and extract_args tS = match tS with
 | Synann.LF.Nil -> (* "" *) 

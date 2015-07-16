@@ -16,7 +16,7 @@ and scrutinee =
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and theorem = t_term list
+and theorem = Theorem of t_term list * t_term
 
 and t_term = 
 | TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)

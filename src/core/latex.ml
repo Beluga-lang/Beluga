@@ -149,22 +149,22 @@ and proof_branch b = match b with
 	The pattern should some kind of rule
  *)
 and proof_pattern pat = match pat with (* this returns steps *)
-| Synann.Comp.PatMetaObj (loc, mO, ttau) -> print_string "TestPatMetaObj\n"; proof_metaobj mO
+| Synann.Comp.PatMetaObj (loc, mO, ttau) -> (* print_string "TestPatMetaObj\n"; *) proof_metaobj mO
 | Synann.Comp.PatEmpty (loc, cPsi, ttau) -> print_string "TestPatEmpty\n"
 | Synann.Comp.PatConst (loc, c, pat_spine, ttau) -> print_string "TestPatConst\n"
 | Synann.Comp.PatVar (loc, k, ttau) -> print_string "TestPatVar\n"
 | Synann.Comp.PatPair (loc, pat1, pat2, ttau) -> print_string "\nTestPatPair\n"
 | Synann.Comp.PatTrue (loc, ttau) -> print_string "TestPatTrue\n"
 | Synann.Comp.PatFalse (loc, ttau) -> print_string "TestPatFalse\n"
-| Synann.Comp.PatAnn (loc, pat, tau, ttau) -> print_string "TestPatAnn\n"; proof_pattern pat
+| Synann.Comp.PatAnn (loc, pat, tau, ttau) -> (* print_string "TestPatAnn\n"; *) proof_pattern pat
 
 and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
-| Synann.LF.ClObj (phat, tM, ttau) -> print_string "TestClObj\n";
+| Synann.LF.ClObj (phat, tM, ttau) -> (* print_string "TestClObj\n"; *)
 	begin
 		match tM with
-		| Synann.LF.MObj (Synann.LF.Root(_, h, tS, cD, cPsi, sA), ttau') -> print_string "TestMObj\n";
+		| Synann.LF.MObj (Synann.LF.Root(_, h, tS, cD, cPsi, sA), ttau') -> (* print_string "TestMObj\n"; *)
 			let (rule_name, imp_args) = extract_rule h in
-			let _ = print_string ("Rule " ^ R.render_cid_term rule_name ^ " has " ^ string_of_int imp_args ^ " implict arguments.\n") in
+			(* let _ = print_string ("Rule " ^ R.render_cid_term rule_name ^ " has " ^ string_of_int imp_args ^ " implict arguments.\n") in *)
 			let _ = extract_args (skip_imp_args imp_args tS) in
 			()
 		| Synann.LF.SObj (tM, ttau') -> print_string "TestSObj\n"
@@ -174,36 +174,10 @@ and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 | Synann.LF.CObj (cPsi, ttau) -> print_string "TestCObj\n" 
 | Synann.LF.MV (u, ttau) -> print_string "TestMV\n"
 
-(* and proof_normal tM = match tM with
-| Synann.LF.Root (_, h, tS, sA) -> proof_head h; proof_spine tS
-| Synann.LF.Lam (_, name, tM'', sA) -> print_string (sprintf "\\%s. %s" (R.render_name name) "NORM\n")
-(* | Synann.LF.Clo (tM'', tS) *)
-(* | Synann.LF.Tuple (_, tup) *)  *)
-
-and proof_head h = match h with
-| Synann.LF.Const (c, cD, cPsi, sA) -> print_string ("\tConst: " ^ R.render_cid_term c ^ "\n" ^ "\tImp Args: " ^ string_of_int (Store.Cid.Term.get_implicit_arguments c) ^ "\n")
-| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 	print_string ("\tMVar: " ^ PI.headToString cD cPsi (Syntax.Int.LF.MVar (c, s)) ^ "\n")
-| Synann.LF.BVar _ -> print_string "TestBVar\n"
-| Synann.LF.MMVar _ -> print_string "TestMMVar\n"
-| Synann.LF.MPVar _ -> print_string "TestMPVar\n"
-| Synann.LF.PVar _ -> print_string "TestPVar\n"
-| Synann.LF.AnnH _ -> print_string "TestAnnH\n"
-| Synann.LF.Proj _ -> print_string "TestProj\n"
-| Synann.LF.FVar _ -> print_string "TestFVar\n"
-| Synann.LF.FMVar _ -> print_string "TestFMVar\n"
-| Synann.LF.FPVar _ -> print_string "TestFPVar\n"
-| Synann.LF.HClo _ -> print_string "TestHClo\n"
-| Synann.LF.HMClo _ -> print_string "TestHMClo\n"
-
-(* and proof_spine tS = match tS with
-| Synann.LF.Nil -> print_string ""
-| Synann.LF.App (tM, tS, sA) -> proof_normal tM; proof_spine tS
-| Synann.LF.SClo ((tS, theta), sA) -> proof_spine tS *)
-
 (* name this better *)
 and extract_rule h = match h with 
 | Synann.LF.Const (c, cD, cPsi, sA) -> 
-	print_string ("Const" ^ (R.render_cid_term c) ^ "\n");
+	print_string ("Const " ^ (R.render_cid_term c) ^ "\n");
 	(c, Store.Cid.Term.get_implicit_arguments c)
 | Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 	raise (LatexException "Unsupported head passed to extract_rule: MVar\n")
 | Synann.LF.BVar _ -> raise (LatexException "Unsupported head passed to extract_rule: BVar\n")
@@ -222,8 +196,8 @@ and skip_imp_args imp_args tS = match imp_args, tS with
 | 0, tS -> tS
 | n, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
 | n, Synann.LF.App (tM, tS', _) -> 
-	let Synann.LF.Root (_, h, _, _, _, _) = tM in
-	print_string ("Skipping imp_arg: " ^  string_of_head h ^ "\tNumber of imp args left: " ^ string_of_int n ^ "\n");
+	(* let Synann.LF.Root (_, , _, _, _, _) = tM in *)
+	(* print_string ("Skipping imp_arg: " ^  string_of_head h ^ "\tNumber of imp args left: " ^ string_of_int n ^ "\n"); *)
 	skip_imp_args (n - 1) tS'
 | n, Synann.LF.SClo ((tS', _), _) -> skip_imp_args n tS'
 
@@ -235,14 +209,53 @@ and extract_args tS =
 			begin
 				match tM with
 				| Synann.LF.Root (_, h, tS3, cD, cPsi, tA) -> print_string (string_of_head h ^ "\n"); print_string (string_of_spine tS3 ^ "\n")
-				| _ -> raise (LatexException "Unsupported normal in extract_args\n")
+				| Synann.LF.Lam (_, n, tM', cD, cPsi, tA) -> print_string (sprintf "(\\%s.%s)" (R.render_name n) (proof_normal tM'))
+				| Synann.LF.LFHole _ -> raise (LatexException "Unhandled normal: LFHole\n")
+				| Synann.LF.Clo _ -> raise (LatexException "Unhandled normal: Clo\n")
+				| Synann.LF.Tuple _ -> raise (LatexException "Unhandled normal: Tuple\n")
 			end;
 			extract_args tS''
-		| Synann.LF.SClo _ -> raise (LatexException "Unsupported spine\n")
+		| Synann.LF.SClo ((tS', _), _) -> extract_args tS'
 	end
 
+and proof_normal tM = match tM with
+| Synann.LF.Root (_, h, tS, cD, cPsi, tA) -> 
+	begin
+		match tS with
+		| Synann.LF.Nil -> sprintf "%s" (proof_head h)
+		| _ -> sprintf "%s %s" (proof_head h) (proof_spine tS)
+	end	
+| Synann.LF.Lam (_, n, tM', cD, cPsi, tA) -> print_string "print lambda\n"; sprintf "\\%s.%s" (R.render_name n) (proof_normal tM')
+| Synann.LF.LFHole (_, cD, cPsi, tA) -> "_"
+| Synann.LF.Clo _ -> raise (LatexException "Unsupported normal passed to proof_normal: Tuple\n")
+| Synann.LF.Tuple (_, tup, cD, cPsi, tA) -> sprintf "<%s>" (proof_tuple tup)
+
+and proof_head h = match h with
+| Synann.LF.BVar _ -> raise (LatexException "Unhandled head passed to proof_head: BVar\n")
+| Synann.LF.Const (c, cD, cPsi, sA) -> sprintf "%s : %s" (R.render_cid_term c) (PI.typToString cD cPsi (sA, Syntax.Int.LF.EmptySub))
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> sprintf "%s : %s" (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s))) (PI.typToString cD cPsi (sA, Syntax.Int.LF.EmptySub))
+| Synann.LF.MMVar _ -> raise (LatexException "Unhandled head passed to proof_head: MMVar\n")
+| Synann.LF.MPVar _ -> raise (LatexException "Unhandled head passed to proof_head: MPVar\n")
+| Synann.LF.PVar _ -> raise (LatexException "Unhandled head passed to proof_head: PVar\n")
+| Synann.LF.AnnH _ -> raise (LatexException "Unhandled head passed to proof_head: AnnH\n")
+| Synann.LF.Proj _ -> raise (LatexException "Unhandled head passed to proof_head: Proj\n")
+| Synann.LF.FVar _ -> raise (LatexException "Unhandled head passed to proof_head: FVar\n")
+| Synann.LF.FMVar _ -> raise (LatexException "Unhandled head passed to proof_head: FMVar\n")
+| Synann.LF.FPVar _ -> raise (LatexException "Unhandled head passed to proof_head: FPVar\n")
+| Synann.LF.HClo _ -> raise (LatexException "Unhandled head passed to proof_head: HClo\n")
+| Synann.LF.HMClo _ -> raise (LatexException "Unhandled head passed to proof_head: HMClo\n")
+
+and proof_spine tS = match tS with
+| Synann.LF.Nil -> ""
+| Synann.LF.App (tM, tS, sA) -> sprintf "%s %s" (proof_normal tM) (proof_spine tS)
+| Synann.LF.SClo ((tS, theta), sA) -> proof_spine tS
+
+and proof_tuple tup = match tup with
+| Synann.LF.Last (tM) -> sprintf "%s" (proof_normal tM)
+| Synann.LF.Cons (tM, tup') -> sprintf "%s, %s" (proof_normal tM) (proof_tuple tup')
+
 and string_of_head h = match h with
-| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> "MVar " ^ (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s)))
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s))) ^ " : " ^ (PI.typToString cD cPsi (sA, Syntax.Int.LF.EmptySub))
 (* | Synann.LF.BVar _ -> "BVar head\n"
 | Synann.LF.Const _ -> "Const head\n"
 | Synann.LF.MMVar _ -> "MMVar head\n"

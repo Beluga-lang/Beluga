@@ -9,11 +9,11 @@ module Loc = Camlp4.PreCast.Loc
 module LF = struct
 
 	type normal =
-	    | Lam  of Loc.t * name * normal * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
-	    | Root of Loc.t * head * spine * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
-	    | LFHole of Loc.t * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
-	   	| Clo  of (normal * Syntax.Int.LF.sub) * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
-	    | Tuple of Loc.t * tuple * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Lam  of Loc.t * name * normal * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Root of Loc.t * head * spine * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | LFHole of Loc.t * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	   	| Clo  of (normal * Syntax.Int.LF.sub) * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
+	    | Tuple of Loc.t * tuple * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * (Syntax.Int.LF.typ * Syntax.Int.LF.sub)
 	
 	and head =
 	    | BVar  of offset * Syntax.Int.LF.mctx * Syntax.Int.LF.dctx * Syntax.Int.LF.typ

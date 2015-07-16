@@ -209,15 +209,15 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
       (tB, Substitution.LF.dot1 s2)
-    in Synann.LF.Lam (loc, name, tM_ann, sA)
+    in Synann.LF.Lam (loc, name, tM_ann, cD, cPsi, sA)
 
-  | (LFHole loc, _), _ -> Synann.LF.LFHole(loc, sA)
+  | (LFHole loc, _), _ -> Synann.LF.LFHole(loc, cD, cPsi, sA)
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
   | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
     let tuple_ann = checkTuple loc cD cPsi (tuple, s1) (typRec, s2) in
-    Synann.LF.Tuple (loc, tuple_ann, sA)
+    Synann.LF.Tuple (loc, tuple_ann, cD, cPsi, sA)
 
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -243,7 +243,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
           raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
         else
-          Synann.LF.Root (loc, head_ann, tS_ann, sA)
+          Synann.LF.Root (loc, head_ann, tS_ann, cD, cPsi, sA)
       with SpineMismatch ->
         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
@@ -860,7 +860,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
       let (tA', head_ann) = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then 
-          Synann.LF.MObj (Synann.LF.Root (loc, head_ann, Synann.LF.Nil, (tA, Substitution.LF.id)), (PTyp tA, t))
+          Synann.LF.MObj (Synann.LF.Root (loc, head_ann, Synann.LF.Nil, cD, cPsi', (tA, Substitution.LF.id)), (PTyp tA, t))
       else failwith "Parameter object fails to check" (* TODO: Better error message *)
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))

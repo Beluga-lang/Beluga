@@ -79,24 +79,11 @@ let rec proof e_ann =
 			end
 	)
 	theorem in
-	let _ = (match e' with
-		| Synann.Comp.Syn _ -> print_string "After proof_theorem: Returned Syn\n"
-		| Synann.Comp.Rec _ -> print_string "After proof_theorem: Returned Rec\n"
-		| Synann.Comp.Fun _ -> print_string "After proof_theorem: Returned Fun\n"
-		| Synann.Comp.Cofun _ -> print_string "After proof_theorem: Returned Cofun\n"
-		| Synann.Comp.MLam _ -> print_string "After proof_theorem: Returned MLam\n"
-		| Synann.Comp.Pair _ -> print_string "After proof_theorem: Returned Pair\n"
-		| Synann.Comp.LetPair _ -> print_string "After proof_theorem: Returned LetPair\n"
-		| Synann.Comp.Let _ -> print_string "After proof_theorem: Returned Let\n"
-		| Synann.Comp.Box _ -> print_string "After proof_theorem: Returned Box\n"
-		| Synann.Comp.Case _ -> print_string "After proof_theorem: Returned Case\n"
-		| Synann.Comp.If _ -> print_string "After proof_theorem: Returned If\n"
-		| Synann.Comp.Hole _ -> print_string "After proof_theorem: Returned Hole\n"
-	) in
 	let _ = proof_case e' in
 	(* let cases = proof_cases e' in	 *)
 	()
 
+(* Need to write cases for Syn + Box *)
 and proof_theorem e = match e with
 | Synann.Comp.MLam (_, u, e', _, (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, Int.LF.Maybe)), tau), theta)) ->
 	begin
@@ -120,33 +107,35 @@ and proof_theorem e = match e with
 		| _ -> 
 			let (tlist, e'') = proof_theorem e' in ((TheoremTerm (Some n, cD, (t1, theta)))::tlist, e'')
 	end
-| Synann.Comp.Syn _ -> raise (LatexException "TestSyn\n")
-| Synann.Comp.Rec _ -> raise (LatexException "TestRec\n")
-| Synann.Comp.Cofun _ -> raise (LatexException "TestCofun\n")
-| Synann.Comp.Pair _ -> raise (LatexException "TestPair\n")
-| Synann.Comp.LetPair _ -> raise (LatexException "TestLetPair\n")
-| Synann.Comp.Let _ -> raise (LatexException "TestLet\n")
-| Synann.Comp.Box _ -> raise (LatexException "TestBox\n")
-| Synann.Comp.Case _ -> raise (LatexException "TestCase\n")
-| Synann.Comp.If _ -> raise (LatexException "TestIf\n")
-| Synann.Comp.Hole _ -> raise (LatexException "TestHole\n")
-| _ -> raise (LatexException "Non MLam/Fun expression passed to proof_theorem")
+(* These cases should never be reached, but this is more useful than a general exception *)
+| Synann.Comp.Syn _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestSyn\n")
+| Synann.Comp.MLam _ -> raise (LatexException "Unsupported MLam in proof_theorem\n")
+| Synann.Comp.Rec _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestRec\n")
+| Synann.Comp.Cofun _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestCofun\n")
+| Synann.Comp.Pair _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestPair\n")
+| Synann.Comp.LetPair _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestLetPair\n")
+| Synann.Comp.Let _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestLet\n")
+| Synann.Comp.Box _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestBox\n")
+| Synann.Comp.Case _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestCase\n")
+| Synann.Comp.If _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestIf\n")
+| Synann.Comp.Hole _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestHole\n")
 
 
 and proof_case e = match e with(* return scrut + case list *)
 | Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
-| Synann.Comp.Syn _ -> raise (LatexException "Non-case passed to proof_case: Syn\n")
-| Synann.Comp.Fun _ -> raise (LatexException "Non-case passed to proof_case: Fun\n")
-| Synann.Comp.MLam _ -> raise (LatexException "Non-case passed to proof_case: MLam\n")
-| Synann.Comp.Rec _ -> raise (LatexException "Non-case passed to proof_case: Rec\n")
-| Synann.Comp.Cofun _ -> raise (LatexException "Non-case passed to proof_case: Cofun\n")
-| Synann.Comp.Pair _ -> raise (LatexException "Non-case passed to proof_case: Pair\n")
-| Synann.Comp.LetPair _ -> raise (LatexException "Non-case passed to proof_case: LetPair\n")
-| Synann.Comp.Let _ -> raise (LatexException "Non-case passed to proof_case: Let\n")
-| Synann.Comp.Box _ -> raise (LatexException "Non-case passed to proof_case: Box\n")
-| Synann.Comp.If _ -> raise (LatexException "Non-case passed to proof_case: If\n")
-| Synann.Comp.Hole _ -> raise (LatexException "Non-case passed to proof_case: Hole\n")
-(* | Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) -> *)
+(* These cases should never be reached, but this is more useful than a general exception *)
+| Synann.Comp.Syn _ -> raise (LatexException "Non Case passed to proof_case: Syn\n")
+| Synann.Comp.Fun _ -> raise (LatexException "Non Case passed to proof_case: Fun\n")
+| Synann.Comp.MLam _ -> raise (LatexException "Non Case passed to proof_case: MLam\n")
+| Synann.Comp.Rec _ -> raise (LatexException "Non Case passed to proof_case: Rec\n")
+| Synann.Comp.Cofun _ -> raise (LatexException "Non Case passed to proof_case: Cofun\n")
+| Synann.Comp.Pair _ -> raise (LatexException "Non Case passed to proof_case: Pair\n")
+| Synann.Comp.LetPair _ -> raise (LatexException "Non Case passed to proof_case: LetPair\n")
+| Synann.Comp.Let _ -> raise (LatexException "Non Case passed to proof_case: Let\n")
+| Synann.Comp.Box _ -> raise (LatexException "Non Case passed to proof_case: Box\n")
+(* | Synann.Comp.Case _ -> raise (LatexException "Unsupported case passed to proof_case.\n") *)
+| Synann.Comp.If _ -> raise (LatexException "Non Case passed to proof_case: If\n")
+| Synann.Comp.Hole _ -> raise (LatexException "Non Case passed to proof_case: Hole\n")
 
 and proof_branches b = List.map proof_branch b
 
@@ -155,6 +144,10 @@ and proof_branch b = match b with
 | Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) -> print_string "TestBranch\n"
 | Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> proof_pattern pat
 
+(* How do we deal with patterns?
+	Annotated patterns are easy, shed the typing and recurse on the pattern itself
+	The pattern should some kind of rule
+ *)
 and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatMetaObj (loc, mO, ttau) -> print_string "TestPatMetaObj\n"; proof_metaobj mO
 | Synann.Comp.PatEmpty (loc, cPsi, ttau) -> print_string "TestPatEmpty\n"
@@ -169,40 +162,114 @@ and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 | Synann.LF.ClObj (phat, tM, ttau) -> print_string "TestClObj\n";
 	begin
 		match tM with
-		| Synann.LF.MObj (tM', ttau') -> print_string "TestMObj\n"; proof_normal tM'
+		| Synann.LF.MObj (Synann.LF.Root(_, h, tS, cD, cPsi, sA), ttau') -> print_string "TestMObj\n";
+			let (rule_name, imp_args) = extract_rule h in
+			let _ = print_string ("Rule " ^ R.render_cid_term rule_name ^ " has " ^ string_of_int imp_args ^ " implict arguments.\n") in
+			let _ = extract_args (skip_imp_args imp_args tS) in
+			()
 		| Synann.LF.SObj (tM, ttau') -> print_string "TestSObj\n"
 		| Synann.LF.PObj (h, ttau') -> print_string "TestPObj\n"
+		| Synann.LF.MObj _ -> print_string "Unsupported MObj\n"
 	end		
 | Synann.LF.CObj (cPsi, ttau) -> print_string "TestCObj\n" 
 | Synann.LF.MV (u, ttau) -> print_string "TestMV\n"
 
-and proof_normal tM = match tM with
+(* and proof_normal tM = match tM with
 | Synann.LF.Root (_, h, tS, sA) -> proof_head h; proof_spine tS
 | Synann.LF.Lam (_, name, tM'', sA) -> print_string (sprintf "\\%s. %s" (R.render_name name) "NORM\n")
 (* | Synann.LF.Clo (tM'', tS) *)
-(* | Synann.LF.Tuple (_, tup) *) 
+(* | Synann.LF.Tuple (_, tup) *)  *)
 
 and proof_head h = match h with
 | Synann.LF.Const (c, cD, cPsi, sA) -> print_string ("\tConst: " ^ R.render_cid_term c ^ "\n" ^ "\tImp Args: " ^ string_of_int (Store.Cid.Term.get_implicit_arguments c) ^ "\n")
 | Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 	print_string ("\tMVar: " ^ PI.headToString cD cPsi (Syntax.Int.LF.MVar (c, s)) ^ "\n")
-(* | Syntax.Int.LF.BVar _ -> print_string "TestBVar\n"
-| Syntax.Int.LF.MMVar _ -> print_string "TestMMVar\n"
-| Syntax.Int.LF.MPVar _ -> print_string "TestMPVar\n"
-| Syntax.Int.LF.PVar _ -> print_string "TestPVar\n"
-| Syntax.Int.LF.AnnH _ -> print_string "TestAnnH\n"
-| Syntax.Int.LF.Proj _ -> print_string "TestProj\n"
-| Syntax.Int.LF.FVar _ -> print_string "TestFVar\n"
-| Syntax.Int.LF.FMVar _ -> print_string "TestFMVar\n"
-| Syntax.Int.LF.FPVar _ -> print_string "TestFPVar\n"
-| Syntax.Int.LF.HClo _ -> print_string "TestHClo\n"
-| Syntax.Int.LF.HMClo _ -> print_string "TestHMClo\n" *)
+| Synann.LF.BVar _ -> print_string "TestBVar\n"
+| Synann.LF.MMVar _ -> print_string "TestMMVar\n"
+| Synann.LF.MPVar _ -> print_string "TestMPVar\n"
+| Synann.LF.PVar _ -> print_string "TestPVar\n"
+| Synann.LF.AnnH _ -> print_string "TestAnnH\n"
+| Synann.LF.Proj _ -> print_string "TestProj\n"
+| Synann.LF.FVar _ -> print_string "TestFVar\n"
+| Synann.LF.FMVar _ -> print_string "TestFMVar\n"
+| Synann.LF.FPVar _ -> print_string "TestFPVar\n"
+| Synann.LF.HClo _ -> print_string "TestHClo\n"
+| Synann.LF.HMClo _ -> print_string "TestHMClo\n"
 
-and proof_spine tS = match tS with
+(* and proof_spine tS = match tS with
 | Synann.LF.Nil -> print_string ""
 | Synann.LF.App (tM, tS, sA) -> proof_normal tM; proof_spine tS
-| Synann.LF.SClo ((tS, theta), sA) -> proof_spine tS
+| Synann.LF.SClo ((tS, theta), sA) -> proof_spine tS *)
 
+(* name this better *)
+and extract_rule h = match h with 
+| Synann.LF.Const (c, cD, cPsi, sA) -> 
+	print_string ("Const" ^ (R.render_cid_term c) ^ "\n");
+	(c, Store.Cid.Term.get_implicit_arguments c)
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> 	raise (LatexException "Unsupported head passed to extract_rule: MVar\n")
+| Synann.LF.BVar _ -> raise (LatexException "Unsupported head passed to extract_rule: BVar\n")
+| Synann.LF.MMVar _ -> raise (LatexException "Unsupported head passed to extract_rule: MMVar\n")
+| Synann.LF.MPVar _ -> raise (LatexException "Unsupported head passed to extract_rule: MPVar\n")
+| Synann.LF.PVar _ -> raise (LatexException "Unsupported head passed to extract_rule: PVar\n")
+| Synann.LF.AnnH _ -> raise (LatexException "Unsupported head passed to extract_rule: AnnH\n")
+| Synann.LF.Proj _ -> raise (LatexException "Unsupported head passed to extract_rule: Proj\n")
+| Synann.LF.FVar _ -> raise (LatexException "Unsupported head passed to extract_rule: FVar\n")
+| Synann.LF.FMVar _ -> raise (LatexException "Unsupported head passed to extract_rule: FMVar\n")
+| Synann.LF.FPVar _ -> raise (LatexException "Unsupported head passed to extract_rule: FPVar\n")
+| Synann.LF.HClo _ -> raise (LatexException "Unsupported head passed to extract_rule: HClo\n")
+| Synann.LF.HMClo _ -> raise (LatexException "Unsupported head passed to extract_rule: HMClo\n")
 
+and skip_imp_args imp_args tS = match imp_args, tS with
+| 0, tS -> tS
+| n, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
+| n, Synann.LF.App (tM, tS', _) -> 
+	let Synann.LF.Root (_, h, _, _, _, _) = tM in
+	print_string ("Skipping imp_arg: " ^  string_of_head h ^ "\tNumber of imp args left: " ^ string_of_int n ^ "\n");
+	skip_imp_args (n - 1) tS'
+| n, Synann.LF.SClo ((tS', _), _) -> skip_imp_args n tS'
+
+and extract_args tS = 	
+	begin
+		match tS with
+		| Synann.LF.Nil -> []
+		| Synann.LF.App (tM, tS'', _) -> 
+			begin
+				match tM with
+				| Synann.LF.Root (_, h, tS3, cD, cPsi, tA) -> print_string (string_of_head h ^ "\n"); print_string (string_of_spine tS3 ^ "\n")
+				| _ -> raise (LatexException "Unsupported normal in extract_args\n")
+			end;
+			extract_args tS''
+		| Synann.LF.SClo _ -> raise (LatexException "Unsupported spine\n")
+	end
+
+and string_of_head h = match h with
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> "MVar " ^ (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s)))
+(* | Synann.LF.BVar _ -> "BVar head\n"
+| Synann.LF.Const _ -> "Const head\n"
+| Synann.LF.MMVar _ -> "MMVar head\n"
+| Synann.LF.MPVar _ -> "MPVar head\n"
+| Synann.LF.PVar _ -> "PVar head\n"
+| Synann.LF.AnnH _ -> "AnnH head\n"
+| Synann.LF.Proj _ -> "Proj head\n"
+| Synann.LF.FVar _ -> "FVar head\n"
+| Synann.LF.FMVar _ -> "FMVar head\n"
+| Synann.LF.FPVar _ -> "FPVar head\n"
+| Synann.LF.HClo _ -> "HClo head\n"
+| Synann.LF.HMClo _ -> "HMClo head\n" *)
+
+and string_of_spine tS = match tS with
+| Synann.LF.Nil -> "Nil spine"
+| Synann.LF.App _ -> "App spine"
+| Synann.LF.SClo _ -> "SClo spine"
+
+(* and annNormToInt tM = match tM with
+| Synann.LF.Lam (loc, n, tM', cD, cPsi, ttau) -> 
+	let (_, _, tM'') = annNormToInt tM in
+	(cD, cPsi, Syntax.Int.LF.Lam (loc, n, tM''))
+| Synann.LF.Root (loc, h, tS, cD, cPsi, ttau) -> (cD, cPsi, Syntax.Int.LF.Root (loc, h, tS))
+| Synann.LF.LFHole (loc, cD, cPsi, ttau) -> (cD, cPsi, Syntax.Int.LF.LFHole (loc))
+| Synann.LF.Clo ((n, s), cD, cPsi, ttau) -> (cD, cPsi, Syntax.Int.LF.Clo ((n, s)))
+| Synann.LF.Tuple (loc, tuple, cD, cPsi, ttau) -> (cD, cPsi, Syntax.Int.LF.Tuple (loc, tuple))
+ *)
 (* 	
 	n is the name of the proof from Rec
 	e, t = Fun, TypArr or MLam, TypPiBox 

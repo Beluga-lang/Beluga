@@ -29,7 +29,7 @@ and proof_case =
 and proof_step =
 | StepDummy
 | Assumption (* of ... *)
-| Inversion (* of ... *)
+| Inversion of string * string
 | RuleApp (* of ... *)
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)

@@ -32,7 +32,7 @@ and proof_case =
 and proof_step =
 | StepDummy
 | Assumption (* of ... *)
-| Inversion (* of ... *)
+| Inversion of string * string (* rule * argument *)
 | RuleApp (* of ... *)
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)
@@ -158,21 +158,24 @@ and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatFalse (loc, ttau) -> print_string "TestPatFalse\n"
 | Synann.Comp.PatAnn (loc, pat, tau, ttau) -> (* print_string "TestPatAnn\n"; *) proof_pattern pat
 
+(* Rewrite the following to build proof objects instead of printing strings *)
 and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 | Synann.LF.ClObj (phat, tM, ttau) -> (* print_string "TestClObj\n"; *)
 	begin
 		match tM with
 		| Synann.LF.MObj (Synann.LF.Root(_, h, tS, cD, cPsi, sA), ttau') -> (* print_string "TestMObj\n"; *)
-			let (rule_name, imp_args) = extract_rule h in
-			(* let _ = print_string ("Rule " ^ R.render_cid_term rule_name ^ " has " ^ string_of_int imp_args ^ " implict arguments.\n") in *)
+			let (rule_name, imp_args) = extract_rule h in			
 			let args = extract_args (skip_imp_args imp_args tS) in
-			print_string (sprintf "%s %s\n" rule_name args)
-		| Synann.LF.SObj (tM, ttau') -> print_string "TestSObj\n"
-		| Synann.LF.PObj (h, ttau') -> print_string "TestPObj\n"
-		| Synann.LF.MObj _ -> print_string "Unsupported MObj\n"
+			let test = List.map (fun s -> Inversion (rule_name, s)) args in
+			let rec print_inv_list l = match l with | [] -> "" | Inversion(rule, arg)::tl -> (sprintf "%s by inversion on %s\n" arg rule)^(print_inv_list tl) in
+			print_string (print_inv_list test)
+			(* print_string (sprintf "%s %s\n" rule_name args) *)
+		| Synann.LF.SObj (tM, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: SObj\n")
+		| Synann.LF.PObj (h, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: PObj\n")
+		| Synann.LF.MObj _ -> raise (LatexException "Unsupported MObj passed to proof_metaobj\n")
 	end		
-| Synann.LF.CObj (cPsi, ttau) -> print_string "TestCObj\n" 
-| Synann.LF.MV (u, ttau) -> print_string "TestMV\n"
+| Synann.LF.CObj (cPsi, ttau) -> raise (LatexException "Unsupported mfront passed to proof_metaobj: CObj\n")
+| Synann.LF.MV (u, ttau) -> raise (LatexException "Unsupported mfront passed to proof_metaobj: MV\n")
 
 (* name this better *)
 and extract_rule h = match h with 
@@ -192,27 +195,19 @@ and extract_rule h = match h with
 
 and skip_imp_args imp_args tS = match imp_args, tS with
 | 0, tS -> tS
-| n, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
 | n, Synann.LF.App (tM, tS', _) -> skip_imp_args (n - 1) tS'
 | n, Synann.LF.SClo ((tS', _), _) -> skip_imp_args n tS'
+| n, Synann.LF.Nil -> raise (LatexException "Too many implict arguments to skip\n")
 
-and extract_args tS = 	
-	begin
-		match tS with
-		| Synann.LF.Nil -> ""
-		| Synann.LF.App (tM, tS'', _) -> 
-			(* begin
-				match tM with
-				| Synann.LF.Root (_, h, tS3, cD, cPsi, tA) -> proof
-				| Synann.LF.Lam (_, n, tM', cD, cPsi, tA) -> print_string (sprintf "(\\%s.%s)" (R.render_name n) (proof_normal tM'))
-				| Synann.LF.LFHole _ -> raise (LatexException "Unhandled normal: LFHole\n")
-				| Synann.LF.Clo _ -> raise (LatexException "Unhandled normal: Clo\n")
-				| Synann.LF.Tuple _ -> raise (LatexException "Unhandled normal: Tuple\n")
-			end; *)
-			sprintf "%s %s" (proof_normal tM) (extract_args tS'')
-		| Synann.LF.SClo ((tS', _), _) -> extract_args tS'
-	end
+and extract_args tS = match tS with
+| Synann.LF.Nil -> (* "" *) 
+	[]
+| Synann.LF.App (tM, tS'', _) -> (* sprintf "%s %s" (proof_normal tM) (extract_args tS'') *)
+	(proof_normal tM)::(extract_args tS'')
+| Synann.LF.SClo ((tS', _), _) -> 
+	extract_args tS'	
 
+(* Handle typing for lambdas *)
 and proof_normal tM = match tM with
 | Synann.LF.Root (_, h, tS, cD, cPsi, tA) -> 
 	begin
@@ -227,8 +222,8 @@ and proof_normal tM = match tM with
 
 and proof_head h = match h with
 | Synann.LF.BVar _ -> raise (LatexException "Unhandled head passed to proof_head: BVar\n")
-| Synann.LF.Const (c, cD, cPsi, sA) -> sprintf "(%s : %s)" (R.render_cid_term c) (PI.typToString cD cPsi (sA, Syntax.Int.LF.Shift 0))
-| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> sprintf "(%s : %s)" (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s))) (PI.typToString cD cPsi (sA, Syntax.Int.LF.Shift 0))
+| Synann.LF.Const (c, cD, cPsi, sA) -> sprintf "%s" (R.render_cid_term c)
+| Synann.LF.MVar ((c, s), cD, cPsi, sA) -> sprintf "%s : %s" (PI.headToString cD cPsi (Syntax.Int.LF.MVar (c,s))) (PI.typToString cD cPsi (sA, Syntax.Int.LF.Shift 0))
 | Synann.LF.MMVar _ -> raise (LatexException "Unhandled head passed to proof_head: MMVar\n")
 | Synann.LF.MPVar _ -> raise (LatexException "Unhandled head passed to proof_head: MPVar\n")
 | Synann.LF.PVar _ -> raise (LatexException "Unhandled head passed to proof_head: PVar\n")
@@ -248,87 +243,3 @@ and proof_spine tS = match tS with
 and proof_tuple tup = match tup with
 | Synann.LF.Last (tM) -> sprintf "%s" (proof_normal tM)
 | Synann.LF.Cons (tM, tup') -> sprintf "%s, %s" (proof_normal tM) (proof_tuple tup')
-
-(* 	
-	n is the name of the proof from Rec
-	e, t = Fun, TypArr or MLam, TypPiBox 
-	e', t' = Case, t'
-*)
-(* let rec proof cD cG n e ttau =
-	let _ = proof_name := (R.render_name n) in
-	let cIH = Int.LF.Empty in
-	let (g, cD', (cG', cIH'), e', ttau') = proof_goal cD (cG, cIH) e ttau in
-		let _ = fprintf stdout "Proof (%s, %s)\n" !proof_name 
-		("[" ^ (String.concat "; " 
-				(List.map 
-					(fun x -> match x with 						
-						| GoalTerm (n', ttau) -> 
-							begin
-								match n' with
-								| None -> sprintf "%s" (PI.subCompTypToString cD' ttau)
-								| Some n'' -> sprintf "%s : %s" (R.render_name n'') (PI.subCompTypToString cD' ttau)	
-							end				
-						| GoalForall (_, Int.LF.Decl(n', mtyp, _)) -> sprintf "%s : %s" (R.render_name n') (PI.mtypToString cD' mtyp) 			
-					)
-				g
-				)
-			) ^ "]"
-		) in		
-		Proof (n, g, ScrutDummy, [])
-
-and proof_goal cD (cG, cIH) e ttau = match e, ttau with
-(* This case is for implicit MLams, which are ignored, so just skip over them *)
-| Int.Comp.MLam (_, u, e'), (Int.Comp.TypPiBox ((Int.LF.Decl(_, cU, Int.LF.Maybe)), tau), theta) ->	
-	proof_goal 
-	(Int.LF.Dec (cD, Int.LF.Decl (u, C.cnormMTyp (cU, theta), Int.LF.Maybe))) (* cD *)
-	(C.cnormCtx (cG, Int.LF.MShift 1), C.cnormCtx (cIH, Int.LF.MShift 1))  (* cG, cIH *)
-	e' (* e *)
-	(tau, C.mvar_dot1 theta) (* ttau *)
-(* MLams quantify over stuff *)
-| Int.Comp.MLam (_, u, e'), (Int.Comp.TypPiBox ((Int.LF.Decl(n, cU, Int.LF.No)) as cdec, tau), theta) ->	
-	begin		
-		match (e', (tau, theta)) with
-		| Int.Comp.Case _, _ ->
-			let cD' = Int.LF.Dec (cD, Int.LF.Decl (u, C.cnormMTyp(cU, theta), Int.LF.No)) in
-				let (cG', cIH') = (C.cnormCtx (cG, Int.LF.MShift 1), C.cnormCtx (cIH, Int.LF.MShift 1)) in
-				([GoalForall(n, cdec); GoalTerm(None, (tau, theta))], cD', (cG', cIH'), e', (tau, theta))
-		| _ ->			
-			let cD' = Int.LF.Dec (cD, Int.LF.Decl (u, C.cnormMTyp(cU, theta), Int.LF.No)) in
-				let (cG', cIH') = (C.cnormCtx (cG, Int.LF.MShift 1), C.cnormCtx (cIH, Int.LF.MShift 1)) in
-					let (goals, cD'', (cG'', cIH''), e'', t') = proof_goal cD' (cG', cIH') e' (tau, theta) in
-						((GoalForall(n, cdec))::goals, cD'', (cG'', cIH''), e'', t') 
-		
-	end
-(* Functions label premises *)
-| Int.Comp.Fun (_, n, e'), (Int.Comp.TypArr (t1, t2), theta) -> 	
-	begin 
-		match e', (t2, theta) with		
-		| Int.Comp.Case _, _ ->
-			let (cG', cIH') = (Int.LF.Dec (cG, Int.Comp.CTypDecl (n, Int.Comp.TypClo (t1, theta))), (Total.shift cIH)) in
-				([GoalTerm(Some n, (t1, theta)); GoalTerm(None, (t2, theta))], cD, (cG', cIH'), e', (t2, theta))
-		|  _ -> 			
-			let (cG', cIH') = (Int.LF.Dec (cG, Int.Comp.CTypDecl (n, Int.Comp.TypClo (t1, theta))), (Total.shift cIH)) in
-				let (goals, cD', (cG'', cIH''), e'', t') = proof_goal cD (cG', cIH') e' (t2, theta) in	
-					((GoalTerm(Some n, (t1, theta))::goals), cD', (cG'', cIH''), e'', t')
-	end
-(* Error case *)
-| _ -> raise (LatexException ("Non Fun/MLam argument passed to proof_goal: " ^ PI.expChkToString cD cG e))
-
-(* and proof_case cD (cG, cIH) e ttau = match e, ttau with
-| Int.Comp.Case (loc, prag, Int.Comp.Ann (Int.Comp.Box (_, (l,cM)), (Int.Comp.TypBox (_, mT) as tau0_sc)), branches), (tau, t)) ->
-
-| Int.Comp.Case (loc, prag, i, branches), (tau, t)) ->
-| _ -> raise (LatexException "Non Case argument passed to proof_case")
- *)
-(* Sort into modules, less confusing later on? *)
-module LF = struct
-
-end
-
-module Comp = struct
-
-end
-
-module Sgn = struct
-
-end *)

@@ -19,9 +19,9 @@ and scrutinee =
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and theorem = Theorem of t_term list * t_term
+and theorem = Theorem of tterm list * tterm list * tterm
 
-and t_term = 
+and tterm = 
 | TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)
 | TheoremForall of name * Int.LF.mctx * Int.LF.ctyp_decl
 
@@ -37,7 +37,33 @@ and proof_step =
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)
 
-let proof_name = ref ""
+let rec latex_of_theorem t_faprems t_termprems t_conc = match t_faprems with
+| [] -> sprintf "If %s then %s\n" (string_of_tterm_list t_termprems) (string_of_tterm t_conc)
+| _ -> 
+	begin
+		match t_termprems with
+		| [] -> sprintf "%s.%s\n" (string_of_tterm_list t_faprems) (string_of_tterm t_conc)
+		| _ -> sprintf "%s.If %s then %s\n" (string_of_tterm_list t_faprems) (string_of_tterm_list t_termprems) (string_of_tterm t_conc)
+	end
+
+and string_of_tterm tterm = match tterm with
+| TheoremTerm (n, cD, ttau) -> 
+	begin
+		match n with
+		| None -> sprintf "%s" (PI.subCompTypToString cD ttau)
+		| Some n' -> sprintf "%s : %s" (R.render_name n') (PI.subCompTypToString cD ttau)
+	end
+| TheoremForall (n, cD, cdec) -> sprintf "\\forall %s : %s" (R.render_name n) (PI.cdeclToString cD cdec)
+
+and string_of_tterm_list tterm_list = match tterm_list with
+| [] -> ""
+| [tterm] -> string_of_tterm tterm
+| hd::tl ->
+	begin
+		match hd with
+		| TheoremTerm _ -> sprintf "%s and %s" (string_of_tterm hd) (string_of_tterm_list tl)
+		| TheoremForall _ -> sprintf "%s.%s" (string_of_tterm hd) (string_of_tterm_list tl)
+	end
 
 (* Only called from Sgn.Typ *)
 let proof_command n extK = 
@@ -64,11 +90,21 @@ let rec chop_end l = match l with
 | hd::tl -> 
 	let (l', x) = chop_end tl in (hd::l', x)
 
+let rec split_prems premises = match premises with
+| [] -> ([], [])
+| (TheoremTerm _ as hd)::tl -> 
+	let (fas, terms) = split_prems tl in
+		(fas,hd::terms)
+| (TheoremForall _ as hd)::tl -> 
+	let (fas, terms) = split_prems tl in
+		(hd::fas,terms)
+
 let rec proof e_ann = 
 	let (theorem, e') = proof_theorem e_ann in
-	let (t_premises, t_conclusion) = chop_end theorem in		
-	let _ = print_string (string_of_theorem t_premises t_conclusion) in
-	let _ = proof_case e' in
+	let (t_premises, t_conclusion) = chop_end theorem in	
+	let (t_faprems, t_termprems) = split_prems t_premises in	
+	let _ = print_string (latex_of_theorem t_faprems t_termprems t_conclusion) in
+	(* let _ = proof_case e' in *)
 	(* let cases = proof_cases e' in	 *)
 	()
 
@@ -109,13 +145,6 @@ and proof_theorem e = match e with
 | Synann.Comp.If _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestIf\n")
 | Synann.Comp.Hole _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestHole\n")
 
-and string_of_theorem premises conclusion = 
-	sprintf "%s then %s" (String.concat " " (List.map string_of_tterm premises)) (string_of_tterm conclusion)
-
-and string_of_tterm tterm = match tterm with
-| TheoremTerm (n, cD, ttau) ->  (match n with | None -> sprintf "%s" (PI.subCompTypToString cD ttau) | Some n' -> sprintf "%s : %s" (R.render_name n') (PI.subCompTypToString cD ttau) ) 
-| TheoremForall (n, cD, Syntax.Int.LF.Decl (n', mtyp, _)) -> sprintf "\\forall %s : %s." (R.render_name n') (PI.mtypToString cD mtyp)
-
 and proof_case e = match e with(* return scrut + case list *)
 | Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
 (* These cases should never be reached, but this is more useful than a general exception *)
@@ -132,12 +161,12 @@ and proof_case e = match e with(* return scrut + case list *)
 | Synann.Comp.If _ -> raise (LatexException "Non Case passed to proof_case: If\n")
 | Synann.Comp.Hole _ -> raise (LatexException "Non Case passed to proof_case: Hole\n")
 
-and proof_branches b = List.map proof_branch b
+and proof_branches b = String.concat "\n" (List.map proof_branch b)
 
 and proof_branch b = match b with
-| Synann.Comp.EmptyBranch (loc, cD1', pat, t1) -> print_string "TestEmptyBranch\n"
-| Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) -> print_string "TestBranch\n"
-| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> print_string (proof_pattern pat); print_string (proof_exp_chk e1)
+| Synann.Comp.EmptyBranch (loc, cD1', pat, t1) -> "TestEmptyBranch\n"
+| Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) -> "TestBranch\n"
+| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> (proof_pattern pat) ^ (proof_exp_chk e1)
 
 (* How do we deal with patterns?
 	Annotated patterns are easy, shed the typing and recurse on the pattern itself
@@ -254,7 +283,13 @@ and proof_exp_chk e = match e with
 	(proof_exp_syn i)^(proof_exp_chk e')
 | Synann.Comp.Box (_, mO, _, _) ->
 	proof_metaobj mO
-| Synann.Comp.Case (_, _, i, branches, _, _) -> raise (LatexException "Unhandled exp_chk: Case\n")
+| Synann.Comp.Case (_, _, i, branches, _, _) ->
+	begin
+		match branches with
+		| [] -> raise (LatexException "No branches in subcase\n")
+		| [b] -> proof_branch b (* Let *)
+		| hd::tl -> proof_branches branches
+	end
 	(* proof_subcase branches *)
 (* | Synann.Comp.If -> *)
 (* | Synann.Comp.Hole -> *)
@@ -280,4 +315,3 @@ and proof_exp_syn e = match e with
 	sprintf "(%s, %s) : %s" (proof_exp_syn i1) (proof_exp_syn i2) (PI.subCompTypToString cD ttau)
 | Synann.Comp.Boolean (b, cD, ttau) ->
 	sprintf "Boolean : %s" (PI.subCompTypToString cD ttau)
-

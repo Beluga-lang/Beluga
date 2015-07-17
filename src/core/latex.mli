@@ -3,9 +3,6 @@ open Id
 
 exception LatexException of string
 
-(* The current case depth *)
-val proof_name : string ref
-
 type latex =
 | LatexDummy
 | Command of name * int * string option
@@ -16,9 +13,9 @@ and scrutinee =
 | ScrutDummy
 | Scrut of Int.Comp.exp_syn
 
-and theorem = Theorem of t_term list * t_term
+and theorem = Theorem of tterm list * tterm list * tterm
 
-and t_term = 
+and tterm = 
 | TheoremTerm of name option * Int.LF.mctx * (Int.Comp.typ * Int.LF.msub)
 | TheoremForall of name * Int.LF.mctx * Int.LF.ctyp_decl
 

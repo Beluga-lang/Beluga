@@ -6,7 +6,7 @@ exception LatexException of string
 type latex =
 | LatexDummy
 | Command of name * int * string option
-| Rule of name * Ext.LF.typ list
+| Rule of name * Ext.LF.ctyp_decl Ext.LF.ctx * Ext.LF.dctx * Ext.LF.typ list * Ext.LF.typ
 | Proof of name * theorem * scrutinee * proof_case list (* we perform induction on the exp_syn *)
 
 and scrutinee = 
@@ -31,6 +31,6 @@ and proof_step =
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)
 
-val proof_command : Id.name -> Ext.LF.kind -> latex
-val proof_rule : Ext.LF.mctx -> Ext.LF.dctx -> Id.name -> Ext.LF.typ -> latex
+val proof_command : Id.name -> Ext.LF.kind -> unit
+val proof_rule : Ext.LF.mctx -> Ext.LF.dctx -> Id.name -> Ext.LF.typ -> unit
 val proof : Synann.Comp.exp_chk -> unit

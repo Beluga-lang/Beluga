@@ -12,7 +12,7 @@ exception LatexException of string
 type latex =
 | LatexDummy
 | Command of name * int * string option
-| Rule of name * Ext.LF.typ list
+| Rule of name * Ext.LF.ctyp_decl Ext.LF.ctx * Ext.LF.dctx * Ext.LF.typ list * Ext.LF.typ
 | Proof of name * theorem * scrutinee * proof_case list (* we perform induction on the exp_syn *)
 
 and scrutinee = 
@@ -36,6 +36,74 @@ and proof_step =
 | RuleApp (* of ... *)
 | IH (* of ... *) (* Special case of RuleApp? *)
 | Subcase (* of ... *)
+
+(* Utilities *)
+let rec chop_end l = match l with
+| [] -> raise (LatexException "[Latex] Unable to split empty list.")
+| [x] -> ([], x)
+| hd::tl -> 
+	let (l', x) = chop_end tl in (hd::l', x)
+
+(* 
+let string_explode s =
+	let rec exp = 
+let rec string_implode ss = match ss with
+| [] -> ""
+| hd::tl -> (Char.escaped hd)^(string_implode tl)
+ *)
+
+let explode s =
+  let rec exp i l =
+    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
+  exp (String.length s - 1) []
+
+let implode l =
+  let res = String.create (List.length l) in
+  let rec imp i = function
+  | [] -> res
+  | c :: l -> res.[i] <- c; imp (i + 1) l in
+  imp 0 l
+
+let strip_underscore s = implode (List.filter (fun c -> c <> '_') (explode s))
+
+let escape_underscore s =
+	let rec esc_us l = 
+		begin
+			match l with
+			| [] -> []
+			| '_'::tl -> '\\'::'_'::(esc_us tl)
+			| hd::tl -> hd::(esc_us tl)
+		end
+in implode (esc_us (explode s))
+
+(* Latex printing functions *)
+let rec latex_of_command (Command(n, x, fmt)) = 
+	let no_us_name = (strip_underscore (R.render_name n)) in
+	let esc_us_name = (escape_underscore (R.render_name n)) in	
+	let new_name = sprintf "bel%s" no_us_name in
+	begin
+		match fmt with
+		| None -> 
+			begin
+				match x with
+				| 0 -> sprintf "\\newcommand{%s}[%d]{%s}\n" new_name x esc_us_name
+				| _ -> sprintf "\\newcommand{%s}[%d]{%s %s}\n" new_name x esc_us_name (gen_arg_list x)
+			end			
+		| Some fmt' -> sprintf "\\newcommand{%s}[%d]{%s}\n" new_name x (escape_underscore fmt')
+	end
+
+and gen_arg_list n = match n with
+| 0 -> ""
+| m -> sprintf "%s %s" (gen_arg_list (n - 1)) (sprintf "#%d" m)
+
+let rec latex_of_rule (Rule(n, cD, cG, prems, conc)) =
+	sprintf "\\infer[%s]{%s}{%s}\n" 
+	(escape_underscore (R.render_name n)) 
+	(escape_underscore (PE.typToString cD cG conc)) 
+	(string_of_prems cD cG prems)
+
+and string_of_prems cD cG prems = 
+	String.concat " && " (List.map escape_underscore (List.map (PE.typToString cD cG) prems))
 
 let rec latex_of_theorem t_faprems t_termprems t_conc = match t_faprems with
 | [] -> sprintf "If %s then %s\n" (string_of_tterm_list t_termprems) (string_of_tterm t_conc)
@@ -65,15 +133,15 @@ and string_of_tterm_list tterm_list = match tterm_list with
 		| TheoremForall _ -> sprintf "%s.%s" (string_of_tterm hd) (string_of_tterm_list tl)
 	end
 
-(* Only called from Sgn.Typ *)
+(* Proof generating functions *)
 let proof_command n extK = 
 	let rec depth k = match k with
 	| Ext.LF.Typ _ -> 0
 	| Ext.LF.ArrKind (_, _, k') -> 1 + depth k'
 	| Ext.LF.PiKind (_, _, k') -> 1 + depth k'
 	in
-	let _ = fprintf stdout "Command (%s, %d, None)\n" (R.render_name n) (depth extK) in
-	Command (n, depth extK, None)
+	(* let _ = fprintf stdout "Command (%s, %d, None)\n" (R.render_name n) (depth extK) in *)
+	print_string (latex_of_command (Command (n, depth extK, None)))
 
 (* Only called from Sgn.Const *)
 let proof_rule cD cG n typ = 
@@ -81,14 +149,9 @@ let proof_rule cD cG n typ =
 	| Ext.LF.ArrTyp (_, t1, t2) -> t1::(list_of_typ t2)
 	| _ -> [t]	
 	in 
-	let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in
-	Rule (n, list_of_typ typ)
-
-let rec chop_end l = match l with
-| [] -> raise (LatexException "[Latex] Unable to split empty list.")
-| [x] -> ([], x)
-| hd::tl -> 
-	let (l', x) = chop_end tl in (hd::l', x)
+	(* let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in *)
+	let (prems, conc) = chop_end (list_of_typ typ) in
+	print_string (latex_of_rule (Rule (n, cD, cG, prems, conc)))
 
 let rec split_prems premises = match premises with
 | [] -> ([], [])

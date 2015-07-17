@@ -73,16 +73,16 @@ module Comp = struct
 		| Hole   of Loc.t * (unit -> int) * Syntax.Int.LF.mctx * tclo
 
 	and exp_syn =
- 		| Var    of Loc.t * offset * tclo
- 		| DataConst of Loc.t * cid_comp_const * tclo
- 		| DataDest of Loc.t * cid_comp_dest * tclo
- 		| Const  of Loc.t * cid_prog * tclo
- 		| Apply  of Loc.t * exp_syn * exp_chk * tclo
- 		| MApp   of Loc.t * exp_syn * meta_obj * tclo
- 		| Ann    of exp_chk * Syntax.Int.Comp.typ * tclo
- 		| Equal  of Loc.t * exp_syn * exp_syn * tclo
- 		| PairVal of Loc.t * exp_syn * exp_syn * tclo
- 		| Boolean of bool * tclo
+ 		| Var    of Loc.t * offset * Syntax.Int.LF.mctx * Syntax.Int.Comp.gctx * tclo
+ 		| DataConst of Loc.t * cid_comp_const * Syntax.Int.LF.mctx * tclo
+ 		| DataDest of Loc.t * cid_comp_dest * Syntax.Int.LF.mctx * tclo
+ 		| Const  of Loc.t * cid_prog * Syntax.Int.LF.mctx * tclo
+ 		| Apply  of Loc.t * exp_syn * exp_chk * Syntax.Int.LF.mctx * tclo
+ 		| MApp   of Loc.t * exp_syn * meta_obj * Syntax.Int.LF.mctx * tclo
+ 		| Ann    of exp_chk * Syntax.Int.Comp.typ * Syntax.Int.LF.mctx * tclo
+ 		| Equal  of Loc.t * exp_syn * exp_syn * Syntax.Int.LF.mctx * tclo
+ 		| PairVal of Loc.t * exp_syn * exp_syn * Syntax.Int.LF.mctx * tclo
+ 		| Boolean of bool * Syntax.Int.LF.mctx * tclo
 
 	and branch =
 	    | EmptyBranch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx * pattern * Syntax.Int.LF.msub

@@ -83,7 +83,7 @@ and proof_theorem e = match e with
 | Synann.Comp.MLam (_, u, e', cD, (Syntax.Int.Comp.TypPiBox ((Syntax.Int.LF.Decl (_, cU, _)) as cdec, tau), theta)) ->
 	begin
 		match e' with
-		| Synann.Comp.Case (_, _, _, _, cD', ttau) -> print_string "Case statement\n";
+		| Synann.Comp.Case (_, _, _, _, cD', ttau) ->
 			((TheoremForall (u, cD, cdec))::(TheoremTerm (None, cD', ttau))::[], e')			
 		| _ ->
 			let (tlist, e'') = proof_theorem e' in ((TheoremForall (u, cD, cdec))::tlist, e'')
@@ -137,7 +137,7 @@ and proof_branches b = List.map proof_branch b
 and proof_branch b = match b with
 | Synann.Comp.EmptyBranch (loc, cD1', pat, t1) -> print_string "TestEmptyBranch\n"
 | Synann.Comp.Branch (loc, cD1', _cG, Synann.Comp.PatMetaObj (loc', mO, ttau'), t1, e1) -> print_string "TestBranch\n"
-| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> proof_pattern pat
+| Synann.Comp.Branch (loc, cD1', cG1, pat, t1, e1) -> print_string (proof_pattern pat); print_string (proof_exp_chk e1)
 
 (* How do we deal with patterns?
 	Annotated patterns are easy, shed the typing and recurse on the pattern itself
@@ -146,12 +146,12 @@ and proof_branch b = match b with
 and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatMetaObj (loc, mO, ttau) -> (* print_string "TestPatMetaObj\n"; *) proof_metaobj mO
 | Synann.Comp.PatAnn (loc, pat, tau, ttau) -> (* print_string "TestPatAnn\n"; *) proof_pattern pat
-| Synann.Comp.PatEmpty (loc, cPsi, ttau) -> print_string "TestPatEmpty\n"
-| Synann.Comp.PatConst (loc, c, pat_spine, ttau) -> print_string "TestPatConst\n"
-| Synann.Comp.PatVar (loc, k, ttau) -> print_string "TestPatVar\n"
-| Synann.Comp.PatPair (loc, pat1, pat2, ttau) -> print_string "\nTestPatPair\n"
-| Synann.Comp.PatTrue (loc, ttau) -> print_string "TestPatTrue\n"
-| Synann.Comp.PatFalse (loc, ttau) -> print_string "TestPatFalse\n"
+| Synann.Comp.PatEmpty (loc, cPsi, ttau) -> "TestPatEmpty\n"
+| Synann.Comp.PatConst (loc, c, pat_spine, ttau) -> "TestPatConst\n"
+| Synann.Comp.PatVar (loc, k, ttau) -> "TestPatVar\n"
+| Synann.Comp.PatPair (loc, pat1, pat2, ttau) -> "\nTestPatPair\n"
+| Synann.Comp.PatTrue (loc, ttau) -> "TestPatTrue\n"
+| Synann.Comp.PatFalse (loc, ttau) -> "TestPatFalse\n"
 
 (* Rewrite the following to build proof objects instead of printing strings *)
 and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
@@ -163,7 +163,8 @@ and proof_metaobj (loc, mO) = match mO with (* this returns steps *)
 			let args = extract_args (skip_imp_args imp_args tS) in
 			let test = List.map (fun s -> Inversion (rule_name, s)) args in
 			let rec inv_list_str l = match l with | [] -> "" | Inversion(rule, arg)::tl -> (sprintf "%s by inversion on %s\n" arg rule)^(inv_list_str tl) in
-			print_string (inv_list_str test)
+			print_string (inv_list_str test);
+			inv_list_str test			
 			(* print_string (sprintf "%s %s\n" rule_name args) *)
 		| Synann.LF.SObj (tM, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: SObj\n")
 		| Synann.LF.PObj (h, ttau') -> raise (LatexException "Unsupported normal passed to proof_metaobj: PObj\n")
@@ -238,3 +239,45 @@ and proof_spine tS = match tS with
 and proof_tuple tup = match tup with
 | Synann.LF.Last (tM) -> sprintf "%s" (proof_normal tM)
 | Synann.LF.Cons (tM, tup') -> sprintf "%s, %s" (proof_normal tM) (proof_tuple tup')
+
+and proof_exp_chk e = match e with
+| Synann.Comp.Syn (_, i, _, _) -> proof_exp_syn i
+| Synann.Comp.Rec _ -> raise (LatexException "Unhandled exp_chk: Rec\n")
+| Synann.Comp.Fun _ -> raise (LatexException "Unhandled exp_chk: Fun\n")
+| Synann.Comp.Cofun _ -> raise (LatexException "Unhandled exp_chk: Cofun\n")
+| Synann.Comp.MLam _ -> raise (LatexException "Unhandled exp_chk: MLam\n")
+| Synann.Comp.Pair (_, e1, e2, cD, ttau) -> 
+	(proof_exp_chk e1)^(proof_exp_chk e2)
+| Synann.Comp.LetPair (_, i, (_, _, e'), _, _)->
+	(proof_exp_syn i)^(proof_exp_chk e')
+| Synann.Comp.Let (_, i, (_, e'), _, _) ->
+	(proof_exp_syn i)^(proof_exp_chk e')
+| Synann.Comp.Box (_, mO, _, _) ->
+	proof_metaobj mO
+| Synann.Comp.Case (_, _, i, branches, _, _) -> raise (LatexException "Unhandled exp_chk: Case\n")
+	(* proof_subcase branches *)
+(* | Synann.Comp.If -> *)
+(* | Synann.Comp.Hole -> *)
+
+and proof_exp_syn e = match e with
+| Synann.Comp.Var (_, x, cD, cG, ttau) -> 
+	sprintf "%s : %s" (R.render_var cG x) (PI.subCompTypToString cD ttau)
+| Synann.Comp.DataConst (_, c, cD, ttau) -> 
+	sprintf "%s : %s" (R.render_cid_comp_const c) (PI.subCompTypToString cD ttau)
+| Synann.Comp.DataDest (_, c, cD, ttau) ->
+	sprintf "%s : %s" (R.render_cid_comp_dest c) (PI.subCompTypToString cD ttau)
+| Synann.Comp.Const (_, prog, cD, ttau) ->
+	sprintf "%s : %s" (R.render_cid_prog prog) (PI.subCompTypToString cD ttau)
+| Synann.Comp.Apply (_, i, e, cD, ttau) ->
+	sprintf "%s %s : %s" (proof_exp_syn i) (proof_exp_chk e) (PI.subCompTypToString cD ttau)
+| Synann.Comp.MApp (_, i, mC, cD, ttau) ->
+	sprintf "%s %s : %s" (proof_exp_syn i) (proof_metaobj mC) (PI.subCompTypToString cD ttau)
+| Synann.Comp.Ann (e, _, cD, ttau) ->
+	proof_exp_chk e
+| Synann.Comp.Equal (_, i1, i2, cD, ttau) ->
+	sprintf "%s == %s : %s" (proof_exp_syn i1) (proof_exp_syn i2) (PI.subCompTypToString cD ttau)
+| Synann.Comp.PairVal (_, i1, i2, cD, ttau) ->
+	sprintf "(%s, %s) : %s" (proof_exp_syn i1) (proof_exp_syn i2) (PI.subCompTypToString cD ttau)
+| Synann.Comp.Boolean (b, cD, ttau) ->
+	sprintf "Boolean : %s" (PI.subCompTypToString cD ttau)
+

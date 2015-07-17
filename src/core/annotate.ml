@@ -1606,7 +1606,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           loc,
           prag,
           (* Ann (Box (loc2, (l, cM_ann)), (TypBox (loc3, mT))), *)          
-          Synann.Comp.Ann (Synann.Comp.Box (loc2, (cM_ann), cD, ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), ((TypBox (loc3, mT)), C.m_id)),
+          Synann.Comp.Ann (Synann.Comp.Box (loc2, (cM_ann), cD, ((TypBox (loc3, mT)), C.m_id)), (TypBox (loc3, mT)), cD, ((TypBox (loc3, mT)), C.m_id)),
           branches_ann,
           cD,
           (tau, t)
@@ -1712,24 +1712,24 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       in 
       if Total.exists_total_decl f 
       then
-        (Some cIH, tau, C.m_id, Synann.Comp.Var (loc, x, (tau, C.m_id)))
+        (Some cIH, tau, C.m_id, Synann.Comp.Var (loc, x, cD, cG, (tau, C.m_id)))
       else
-        (None, tau, C.m_id, Synann.Comp.Var (loc, x, (tau, C.m_id)))
+        (None, tau, C.m_id, Synann.Comp.Var (loc, x, cD, cG, (tau, C.m_id)))
 
     | DataConst (loc, c) ->
-        (None,(CompConst.get c).CompConst.typ, C.m_id, Synann.Comp.DataConst (loc, c, ((CompConst.get c).CompConst.typ, C.m_id)))
+        (None,(CompConst.get c).CompConst.typ, C.m_id, Synann.Comp.DataConst (loc, c, cD, ((CompConst.get c).CompConst.typ, C.m_id)))
 
     | DataDest (loc, c) ->  
-        (None,(CompDest.get c).CompDest.typ, C.m_id, Synann.Comp.DataDest (loc, c, ((CompDest.get c).CompDest.typ, C.m_id)))
+        (None,(CompDest.get c).CompDest.typ, C.m_id, Synann.Comp.DataDest (loc, c, cD, ((CompDest.get c).CompDest.typ, C.m_id)))
 
     | Const (loc,prog) -> 
         if !Total.enabled then
           if (Comp.get prog).Comp.total then
-            (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
+            (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, cD, ((Comp.get prog).Comp.typ, C.m_id)))
           else
             raise (Error (loc, MissingTotal prog))
         else
-          (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, ((Comp.get prog).Comp.typ, C.m_id)))
+          (None,(Comp.get prog).Comp.typ, C.m_id, Synann.Comp.Const (loc, prog, cD, ((Comp.get prog).Comp.typ, C.m_id)))
 
     | Apply (loc , e1, e2) ->
         let (cIH_opt , tau1, t1, e1_ann) = syn cD (cG,cIH) e1 in
@@ -1737,7 +1737,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         begin match (tau1, t1) with
           | (TypArr (tau2, tau), t) ->
               let e2_ann = check cD (cG,cIH) e2 (tau2, t) in              
-              (useIH loc cD cG cIH_opt e2, tau, t, Synann.Comp.Apply (loc, e1_ann, e2_ann, (tau, t)))
+              (useIH loc cD cG cIH_opt e2, tau, t, Synann.Comp.Apply (loc, e1_ann, e2_ann, cD, (tau, t)))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
         end
@@ -1751,7 +1751,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
              (useIH loc cD cG cIH_opt (Box (loc, mC)), 
               tau, I.MDot(metaObjToMFront mC, t), 
               (* Synann.Comp.MApp (loc, e_ann, mC_ann, (tau, I.MDot(metaObjToMFront mC, t)))) *)
-              Synann.Comp.MApp (loc, e_ann, mC_ann, (tau, I.MDot(metaObjToMFront mC, t))))
+              Synann.Comp.MApp (loc, e_ann, mC_ann, cD, (tau, I.MDot(metaObjToMFront mC, t))))
           | (tau, t) ->
               raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
         end
@@ -1768,27 +1768,28 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
               loc, 
               i1_ann, 
               i2_ann, 
+              cD, 
               (TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id)
             )
           )
 
     | Ann (e, tau) ->
-        (None, tau, C.m_id, Synann.Comp.Ann ((check cD (cG, cIH) e (tau, C.m_id)), tau, (tau, C.m_id)))
+        (None, tau, C.m_id, Synann.Comp.Ann ((check cD (cG, cIH) e (tau, C.m_id)), tau, cD, (tau, C.m_id)))
 
     | Equal(loc, i1, i2) ->
          let (_, tau1, t1, i1_ann) = syn cD (cG,cIH) i1 in
          let (_, tau2, t2, i2_ann) = syn cD (cG,cIH) i2 in
            if Whnf.convCTyp (tau1,t1) (tau2,t2) then
              begin match Whnf.cwhnfCTyp (tau1,t1) with
-               | (TypBox _ , _ ) ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, (TypBool, C.m_id)))
-               | (TypBool, _ )   ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, (TypBool, C.m_id)))
+               | (TypBox _ , _ ) ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, cD, (TypBool, C.m_id)))
+               | (TypBool, _ )   ->  (None, TypBool, C.m_id, Synann.Comp.Equal(loc, i1_ann, i2_ann, cD, (TypBool, C.m_id)))
                | (tau1,t1)       ->  raise (Error (loc, EqTyp (cD, (tau1,t1))))
              end
 
            else
              raise (Error(loc, EqMismatch (cD, (tau1,t1), (tau2,t2))))
 
-    | Boolean b  -> (None, TypBool, C.m_id, Synann.Comp.Boolean (b, (TypBool, C.m_id)))
+    | Boolean b  -> (None, TypBool, C.m_id, Synann.Comp.Boolean (b, cD, (TypBool, C.m_id)))
 
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
     | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->

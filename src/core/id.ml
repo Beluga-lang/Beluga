@@ -1,7 +1,7 @@
 type name     = {
   modules : string list;
   hint_name : string ;
-  hint_cnt : int;
+  hint_cnt : int option;
   was_generated : bool ;
   counter : int;
 }
@@ -9,8 +9,7 @@ type name     = {
 let get_module (n : name) : string list = n.modules
 
 let inc (n : name) : name  =
-  (* n (\* this breaks, because equality testing *\) *)
-  {n with counter = n.counter + 359988} (* random number *)
+  {n with counter = n.counter + 1}
 
 let split_name (s : string) : string * int option =
   try
@@ -22,23 +21,25 @@ let split_name (s : string) : string * int option =
 
 let sanitize_name (n : name) : name =
   let s, cnt = split_name n.hint_name in
-  if (n.hint_cnt = -1)
-  then {n with hint_name = s;
-               hint_cnt = match cnt with
-                         | None -> -1
-                         | Some cnt' -> cnt'}
-  else
-    {n with hint_name = s;
-               hint_cnt = match cnt with
-                         | None -> n.hint_cnt
-                         | Some cnt' ->
-                            int_of_string ((string_of_int cnt') ^ (string_of_int n.hint_cnt))}
+  {n with hint_name = s;
+          hint_cnt =
+            match n.hint_cnt with
+            | None -> cnt
+            | Some old_cnt  ->
+               match cnt with
+               | None -> n.hint_cnt
+               | Some name_cnt ->
+                  Some (int_of_string ((string_of_int name_cnt) ^ (string_of_int old_cnt)))}
 
 
 let gen_fresh_name (ns : name list) (n : name) : name =
+  let inc_iopt (i : int option) : int option =
+    match i with
+    | None -> Some 0
+    | Some j -> Some (j+1) in
   let rec next_unused y xs =
     if List.mem y xs
-    then next_unused (y+1) xs
+    then next_unused (inc_iopt y) xs
     else y in
   let cnts = List.fold_left
      (fun acc n' -> if n'.hint_name = n.hint_name
@@ -81,19 +82,11 @@ type name_guide =
 let mk_name ?(modules=[]) : name_guide -> name =
   let mk_name_helper (nm: string) : name =
     let nm', cnt = split_name nm in
-    match cnt with
-    | None ->
-        { modules = modules;
-          hint_name = nm';
-          was_generated = true;
-          counter = 0;
-          hint_cnt = -1 }
-      | Some cnt' ->
-        { modules = modules;
-          hint_name = nm';
-          was_generated = true;
-          counter = 0;
-          hint_cnt = cnt'} in
+    { modules = modules;
+      hint_name = nm';
+      was_generated = true;
+      counter = 0;
+      hint_cnt = cnt } in
   function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is
@@ -114,7 +107,9 @@ let mk_name ?(modules=[]) : name_guide -> name =
 
 
 let string_of_name (n : name) : string =
-  let suf = if n.hint_cnt = -1 then "" else (string_of_int n.hint_cnt) in
+  let suf = match n.hint_cnt with
+      | None -> ""
+      | Some cnt -> (string_of_int cnt) in
   n.hint_name ^ suf
 
 let render_name n = match n.modules with

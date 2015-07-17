@@ -19,7 +19,7 @@ let collect ((loc, cD, cPsi, typ) : lfhole) : unit =
 let ( ++ ) f g = function x -> f (g x)
 
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
+  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ;
   Format.flush_str_formatter ()
 
 let isExplicit = function
@@ -29,7 +29,7 @@ let isExplicit = function
         | LF.Maybe -> false
       end
   | _ -> true
-  
+
 let mctxToString =
   let shift = "\t" in
   let rec toString = function
@@ -55,7 +55,7 @@ let getHolePos i =
 
 let getOneHole i = DynArray.get holes i
 
-let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
+let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   let (_, sub) = tA in
   let rec aux acc c = function
     | LF.Empty -> acc
@@ -70,19 +70,18 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
     | LF.Dec (cD', _) -> aux acc (c + 1) cD'
   in aux [] 1 cD
 
-let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list = 
-  let rec aux acc c = function
+let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
+  let rec aux acc = function
     | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
-      begin try 
+      begin try
         Unify.StdTrail.resetGlobalCnstrs ();
-        (* let tA' = Whnf.cnormTyp (tA', LF.MShift c) in *)
         Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
-        aux (n::acc) (c+1) cPsi'
-      with | _ -> aux acc (c+1) cPsi' end
-    | LF.DDec(cPsi', _) -> aux acc (c+1) cPsi'
+        aux (n::acc) cPsi'
+      with | _ -> aux acc cPsi' end
+    | LF.DDec(cPsi', _) -> aux acc cPsi'
     | _ -> acc
   in
-    aux [] 1 cPsi
+    aux [] cPsi
 
 let printOne (loc, cD, cPsi, typ) =
   let _ = Store.Cid.NamedHoles.reset () in
@@ -108,7 +107,7 @@ let printOneHole i =
     try
       printOne (DynArray.get holes i)
     with
-      | DynArray.Invalid_arg (_, _, _) -> 
+      | DynArray.Invalid_arg (_, _, _) ->
           if !Debug.chatter != 0 then
             Printf.printf " - There is no lf hole # %d.\n" i
 

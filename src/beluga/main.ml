@@ -29,6 +29,7 @@ let usage () =
         ^ "    +realNames         Print holes using real names\n"
         ^ "    +html              Generate an html page of the source code using default CSS\n"
         ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
+        ^ "    +sexp              Dump the elaborated code using S-expressions\n"
         ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
         ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
@@ -71,12 +72,13 @@ let process_option arg rest = match arg with
           bailout "-width needs a numeric argument"
     end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; rest
+  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | _ when (String.lowercase arg = "+htmltest") -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html" | "+HTML" -> Html.genHtml := true; rest
+  | "+sexp" -> Sexp.enabled := true ; rest
   | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
-  | _ when (String.lowercase arg = "+cssfile") -> 
+  | _ when (String.lowercase arg = "+cssfile") ->
       begin match rest with
       | arg::rest when arg.[0] <> '-' && arg.[0] <> '+' ->
           Html.css := Html.File arg; rest
@@ -149,7 +151,7 @@ let main () =
         (* If the file starts with a global pragma then process it now. *)
         let rec extract_global_pragmas = function
           | Synext.Sgn.GlobalPragma(_, Synext.Sgn.NoStrengthen) :: t -> begin Lfrecon.strengthen := false; extract_global_pragmas t end
-          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.Coverage(opt))::t -> begin 
+          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.Coverage(opt))::t -> begin
             Coverage.enableCoverage := true;
             begin match opt with | `Warn -> Coverage.warningOnly := true | `Error -> () end;
             extract_global_pragmas t end
@@ -164,9 +166,9 @@ let main () =
           printf "\n## Type Reconstruction: %s ##\n" file_name;
         let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
         let _ = Store.Modules.reset () in
-        if !Debug.chatter > 1 then begin 
+        if !Debug.chatter > 1 then begin
           List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn' end
-        else 
+        else
           ();
 
         if !Debug.chatter <> 0 then
@@ -199,10 +201,10 @@ let main () =
           end;
           begin match leftoverVars with
             | None -> ()
-            | Some vars -> 
+            | Some vars ->
               if !Debug.chatter != 0 then begin
                 printf "\n## Left over variables ##" ;
-                Recsgn.print_leftoverVars vars 
+                Recsgn.print_leftoverVars vars
               end ;
               raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
           end ;
@@ -217,6 +219,16 @@ let main () =
           if !Html.genHtml then begin
             Html.generatePage file_name
           end;
+          (* If requested, dump the elaborated program as S-expressions *)
+          if !Sexp.enabled then
+            begin
+              let sexp_file_name = file_name ^ ".sexp" in
+              let oc = open_out sexp_file_name in
+              Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
+              flush oc ; close_out oc ;
+              if !Sexp.testing == false then
+                printf "\n## Dumped AST to: %s ##\n" sexp_file_name
+            end
       with e ->
         Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
         output_string stderr (Printexc.to_string e);

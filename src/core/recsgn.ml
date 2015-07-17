@@ -661,7 +661,12 @@ let recSgnDecls decls =
 
             let _ = ann in 
             
-            let _ = Latex.proof ann in      
+            let _ = 
+            try
+              Latex.proof ann
+            with 
+              Latex.LatexException s -> print_string s 
+            in
 
              (e_r' , tau')      
              

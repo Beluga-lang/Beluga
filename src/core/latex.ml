@@ -45,13 +45,9 @@ let rec chop_end l = match l with
 	let (l', x) = chop_end tl in (hd::l', x)
 
 (* 
-let string_explode s =
-	let rec exp = 
-let rec string_implode ss = match ss with
-| [] -> ""
-| hd::tl -> (Char.escaped hd)^(string_implode tl)
+	As described at 
+	http://caml.inria.fr/pub/old_caml_site/FAQ/FAQ_EXPERT-eng.html#strings
  *)
-
 let explode s =
   let rec exp i l =
     if i < 0 then l else exp (i - 1) (s.[i] :: l) in
@@ -140,7 +136,6 @@ let proof_command n extK =
 	| Ext.LF.ArrKind (_, _, k') -> 1 + depth k'
 	| Ext.LF.PiKind (_, _, k') -> 1 + depth k'
 	in
-	(* let _ = fprintf stdout "Command (%s, %d, None)\n" (R.render_name n) (depth extK) in *)
 	print_string (latex_of_command (Command (n, depth extK, None)))
 
 (* Only called from Sgn.Const *)
@@ -149,7 +144,6 @@ let proof_rule cD cG n typ =
 	| Ext.LF.ArrTyp (_, t1, t2) -> t1::(list_of_typ t2)
 	| _ -> [t]	
 	in 
-	(* let _ = fprintf stdout "Rule (%s, %s)\n" (R.render_name n) ("[" ^ (String.concat "; " (List.map (PE.typToString cD cG) (list_of_typ typ))) ^ "]") in *)
 	let (prems, conc) = chop_end (list_of_typ typ) in
 	print_string (latex_of_rule (Rule (n, cD, cG, prems, conc)))
 
@@ -195,7 +189,6 @@ and proof_theorem e = match e with
 		| _ -> 
 			let (tlist, e'') = proof_theorem e' in ((TheoremTerm (Some n, cD, (t1, theta)))::tlist, e'')
 	end
-(* These cases should never be reached, but this is more useful than a general exception *)
 | Synann.Comp.Syn _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestSyn\n")
 | Synann.Comp.MLam _ -> raise (LatexException "Unsupported MLam in proof_theorem\n")
 | Synann.Comp.Rec _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestRec\n")
@@ -208,9 +201,8 @@ and proof_theorem e = match e with
 | Synann.Comp.If _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestIf\n")
 | Synann.Comp.Hole _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestHole\n")
 
-and proof_case e = match e with(* return scrut + case list *)
+and proof_case e = match e with (* return scrut + case list *)
 | Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
-(* These cases should never be reached, but this is more useful than a general exception *)
 | Synann.Comp.Syn _ -> raise (LatexException "Non Case passed to proof_case: Syn\n")
 | Synann.Comp.Fun _ -> raise (LatexException "Non Case passed to proof_case: Fun\n")
 | Synann.Comp.MLam _ -> raise (LatexException "Non Case passed to proof_case: MLam\n")
@@ -233,7 +225,7 @@ and proof_branch b = match b with
 
 (* How do we deal with patterns?
 	Annotated patterns are easy, shed the typing and recurse on the pattern itself
-	The pattern should some kind of rule
+	The pattern should some be kind of rule
  *)
 and proof_pattern pat = match pat with (* this returns steps *)
 | Synann.Comp.PatMetaObj (loc, mO, ttau) -> (* print_string "TestPatMetaObj\n"; *) proof_metaobj mO

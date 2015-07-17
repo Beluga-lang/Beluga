@@ -33,8 +33,7 @@ let sanitize_name (n : name) : name =
 
 
 let gen_fresh_name (ns : name list) (n : name) : name =
-  let inc_iopt (i : int option) : int option =
-    match i with
+  let inc_iopt : int option -> int option = function
     | None -> Some 0
     | Some j -> Some (j+1) in
   let rec next_unused y xs =

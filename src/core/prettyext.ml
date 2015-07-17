@@ -141,24 +141,24 @@ module Ext = struct
     module PInstHashtbl = Hashtbl.Make (PInstHashedType)
 
     (* Fresh name generation *)
-    let rec get_names_dctx (cPsi : LF.dctx) : Id.name list = match cPsi with
+    let rec get_names_dctx : LF.dctx -> Id.name list = function
       | LF.Null
       | LF.CtxHole -> []
       | LF.CtxVar (loc, n) -> [n]
       | LF.DDec (cPsi', LF.TypDecl (n, _))
       | LF.DDec (cPsi', LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
 
-    let rec get_names_mctx (cD : LF.mctx) : Id.name list = match cD with
+    let rec get_names_mctx : LF.mctx -> Id.name list = function
       | LF.Empty -> []
       | LF.Dec (cD', LF.Decl (n, _, _))
       | LF.Dec (cD', LF.DeclOpt n) -> n :: get_names_mctx cD'
 
-    let fresh_name_dctx (cPsi : LF.dctx) (n : Id.name) : Id.name =
-      Id.gen_fresh_name (get_names_dctx cPsi) n
-    let fresh_name_mctx (cD : LF.mctx) (n : Id.name) : Id.name =
-      Id.gen_fresh_name (get_names_mctx cD) n
+    let fresh_name_dctx (cPsi : LF.dctx) : Id.name -> Id.name =
+      Id.gen_fresh_name (get_names_dctx cPsi)
+    let fresh_name_mctx (cD : LF.mctx) : Id.name -> Id.name =
+      Id.gen_fresh_name (get_names_mctx cD)
 
-    let fresh_name_ctyp_decl (cD: LF.mctx) (ct : LF.ctyp_decl) : LF.ctyp_decl = match ct with
+    let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl = function
       | LF.Decl (n, ct, dep) ->
          let n' = fresh_name_mctx cD n in LF.Decl (n', ct, dep)
       | LF.DeclOpt n ->
@@ -169,7 +169,11 @@ module Ext = struct
      * We assume types, terms, etc are all in normal form.
      *)
 
-    let rec has_ctx_var psi = match psi with LF.CtxVar _ -> true | LF.Null -> false |  LF.DDec(cPsi, _x) -> has_ctx_var cPsi | LF.CtxHole -> true
+    let rec has_ctx_var = function
+      | LF.CtxVar _
+      | LF.CtxHole -> true
+      | LF.Null -> false
+      | LF.DDec(cPsi, _x) -> has_ctx_var cPsi
 
     type id_type =
     | Constructor
@@ -920,22 +924,16 @@ module Ext = struct
         let (i', _ ) = strip_mapp_args' cD i in i'
 
     and strip_mapp_args' cD i = match i with
-      | Comp.Const (_, x) ->
-          (i,  implicitCompArg  (Id.render_name x))
-      | Comp.DataConst (_, x) ->
-          (i,  implicitCompArg  (Id.render_name x))
+      | Comp.Const (_, x)
+      | Comp.DataConst (_, x)
       | Comp.Var (_, x) ->
           (i,  implicitCompArg  (Id.render_name x))
-
       | Comp.Apply (loc, i, e) ->
           let (i', _ ) = strip_mapp_args' cD i in
             (Comp.Apply (loc, i', e), 0)
-
       | Comp.Ann (loc, e, tau) -> (Comp.Ann (loc, e, tau), 0)
 
-
     and implicitCompArg tau = 0
-
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->

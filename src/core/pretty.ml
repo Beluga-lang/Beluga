@@ -222,31 +222,31 @@ module Int = struct
 
     (* Fresh name generation *)
 
-    let rec get_names_dctx (cPsi : LF.dctx) : Id.name list = match cPsi with
+    let rec get_names_dctx : LF.dctx -> Id.name list = function
       | LF.Null -> []
       | LF.CtxVar psi -> []
       | LF.DDec (cPsi', LF.TypDecl (n, _))
       | LF.DDec (cPsi', LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
 
-    let rec get_names_mctx (cD : LF.mctx) : Id.name list = match cD with
+    let rec get_names_mctx : LF.mctx -> Id.name list = function
       | LF.Empty -> []
       | LF.Dec (cD', LF.Decl (n, _, _))
       | LF.Dec (cD', LF.DeclOpt n) -> n :: get_names_mctx cD'
 
-    let rec get_names_gctx (cG : Comp.gctx) : Id.name list = match cG with
+    let rec get_names_gctx : Comp.gctx -> Id.name list = function
       | LF.Empty -> []
       | LF.Dec (cG', Comp.WfRec (n, _, _))
       | LF.Dec (cG', Comp.CTypDecl (n, _))
       | LF.Dec (cG', Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
 
-    let fresh_name_dctx (cPsi : LF.dctx) (n : Id.name) : Id.name =
-      Id.gen_fresh_name (get_names_dctx cPsi) n
-    let fresh_name_mctx (cD : LF.mctx) (n : Id.name) : Id.name =
-      Id.gen_fresh_name (get_names_mctx cD) n
-    let fresh_name_gctx (cG : Comp.gctx) (n : Id.name) : Id.name  =
-      Id.gen_fresh_name (get_names_gctx cG) n
+    let fresh_name_dctx (cPsi : LF.dctx) : Id.name -> Id.name =
+      Id.gen_fresh_name (get_names_dctx cPsi)
+    let fresh_name_mctx (cD : LF.mctx) : Id.name -> Id.name =
+      Id.gen_fresh_name (get_names_mctx cD)
+    let fresh_name_gctx (cG : Comp.gctx) : Id.name -> Id.name  =
+      Id.gen_fresh_name (get_names_gctx cG)
 
-    let fresh_name_ctyp_decl (cD: LF.mctx) (ct : LF.ctyp_decl) : LF.ctyp_decl = match ct with
+    let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl = function
       | LF.Decl (n, ct, dep) ->
          let n' = fresh_name_mctx cD n in LF.Decl (n', ct, dep)
       | LF.DeclOpt n ->
@@ -363,7 +363,8 @@ module Int = struct
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && (match s with
-        | LF.EmptySub | LF.Undefs -> false
+        | LF.EmptySub
+        | LF.Undefs -> false
         | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
         | _ -> true)
       in
@@ -474,7 +475,6 @@ module Int = struct
 
     and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s=
       let print_front = fmt_ppr_lf_front cD cPsi 1 in
-      let hasCtxVar = match Context.ctxVar cPsi with Some _ -> true | None -> false in
       let rec fmt_ppr_lf_sub_id ppf cPsi = match cPsi with
 	| LF.Null -> ()
 	| LF.DDec (cPsi', LF.TypDecl (x, _))
@@ -513,7 +513,7 @@ module Int = struct
               print_front f
       in
         match s with
-          | LF.Shift _ when not hasCtxVar ->  (* Print nothing at all, because the user would have written nothing at all *)
+          | LF.Shift _ when not (Context.hasCtxVar cPsi) ->  (* Print nothing at all, because the user would have written nothing at all *)
               ()
           | _ ->  (* For anything else, print a space first *)
               fprintf ppf " %a"

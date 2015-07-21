@@ -74,25 +74,29 @@ let clearholes = {name = "clearholes";
                           Holes.clear(); Lfholes.clear ());
                   help= "Clear all computation level holes"}
 
-let load = {name = "load";
-            run = (fun ppf arglist ->
+let load = { name = "load"
+           ; run = (fun ppf arglist ->
+	     let per_file f =
+               let sgn = Parser.parse_file ~name:f Parser.sgn in
+               let sgn'= begin match Recsgn.recSgnDecls sgn with
+	       	 | sgn', None -> sgn'
+	       	 | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+	       end in
+                 if !Debug.chatter <> 0 then
+                   List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
+	      in
               try
                 let _ = Holes.clear() in
                 let _ = Lfholes.clear () in
-                let arg = List.hd arglist in
-                let sgn = Parser.parse_file ~name:arg Parser.sgn in
-                let sgn'= begin match Recsgn.recSgnDecls sgn with
-		  | sgn', None -> sgn'
-		  | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars)) 
-		end
-		in
-                if !Debug.chatter <> 0 then
-                  List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
-                fprintf ppf "- The file has been successfully loaded;\n"
+                let file_name = List.hd arglist in (* .bel or .cfg *)
+		let files = Cfg.process_file_argument file_name in
+		List.iter per_file files ;
+                fprintf ppf "- The file %s has been successfully loaded;\n" (Filename.basename file_name)
+
               with
               |Failure _ -> fprintf ppf "- Please provide the file name;\n"
-              | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e));
-            help = "Load the file \"filename\" into the interpreter"}
+              | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e))
+           ; help = "Load the file \"filename\" into the interpreter"}
 
 let printhole = {name = "printhole";
                  run = (fun ppf arglist ->
@@ -165,7 +169,7 @@ let constructors = {name = "constructors";
                       try
                         let arg = List.hd arglist in
                         let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
-                        let entry = List.find (fun x -> 
+                        let entry = List.find (fun x ->
                             arg = x.Typ.name.Id.string_of_name) entrylist in
                         let mctx = Synint.LF.Empty in
                         let dctx = Synint.LF.Null in
@@ -228,10 +232,10 @@ let split = { name = "split" ;
                   let e = (List.hd (List.tl args)) in
                   (match (Interactive.split e i) with
                   | None -> fprintf ppf "- No variable %s found;\n" e
-                  | Some exp -> 
+                  | Some exp ->
                       let (_, cD, cG, _) = Holes.getOneHole i in
                       Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
                       Pretty.Control.printNormal := false;
                       (* Interactive.replaceHole i exp  *)))
                 end with
@@ -244,10 +248,10 @@ let intro = {name = "intro";
                   let i = to_int (List.hd args) in
                   (match (Interactive.intro i) with
                   | None -> fprintf ppf "- Nothing to introduce in hole %d;\n" i
-                  | Some exp -> 
+                  | Some exp ->
                       let (_, cD, cG, _) = Holes.getOneHole i in
                       Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp); 
+                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
                       Pretty.Control.printNormal := false)
                 with
                 | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
@@ -349,7 +353,7 @@ let query = {name = "query";
 let get_type = {name = "get-type";
                 run =
                   (fun ppf args ->
-                    try 
+                    try
                       let line = int_of_string (List.hd args) in
                       let col = int_of_string (List.hd (List.tl args)) in
                       let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
@@ -409,6 +413,6 @@ let do_command ppf cmd =
   | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
   | _ -> helpme.run ppf []
 
-let print_usage ppf = 
+let print_usage ppf =
   let _ = fprintf ppf "Usage: \n" in
   helpme.run ppf []

@@ -380,7 +380,9 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (beluga--start)
   (maybe-save)
-  (message "%s" (beluga--rpc (concat "load " (buffer-file-name)))))
+  (let ((file-name
+	 (expand-file-name (read-file-name "Load file:" buffer-file-name))))
+    (message "%s" (beluga--rpc (concat "load " file-name)))))
 
 (defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")

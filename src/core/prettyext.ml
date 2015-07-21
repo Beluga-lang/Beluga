@@ -808,7 +808,7 @@ module Ext = struct
 
     let rec fmt_ppr_cmp_exp_chk cD lvl ppf = function
       | Comp.Syn (_, i) ->
-          fmt_ppr_cmp_exp_syn cD lvl ppf (strip_mapp_args cD i)
+          fmt_ppr_cmp_exp_syn cD lvl ppf i
 
       | Comp.Fun (_, x, e) ->
           let cond = lvl > 0 in
@@ -846,7 +846,7 @@ module Ext = struct
               (to_html "let" Keyword)
               (Id.render_name x)
               (Id.render_name y)
-              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (fmt_ppr_cmp_exp_syn cD 0) i
               (to_html "in" Keyword)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
@@ -857,7 +857,7 @@ module Ext = struct
               (l_paren_if cond)
               (to_html "let" Keyword)
               (Id.render_name x)
-              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (fmt_ppr_cmp_exp_syn cD 0) i
               (to_html "in" Keyword)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond)
@@ -876,7 +876,7 @@ module Ext = struct
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix 0) cD'
                 (fmt_ppr_meta_obj cD' 0) m0
-                (fmt_ppr_cmp_exp_syn cD' 0) (strip_mapp_args cD i)
+                (fmt_ppr_cmp_exp_syn cD' 0) i
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
           | Comp.Branch(_, cD', pat, e) ->
@@ -884,13 +884,13 @@ module Ext = struct
                 (to_html "let" Keyword)
                 (fmt_ppr_cmp_branch_prefix  0) cD'
                 (fmt_ppr_pat_obj cD' 0) pat
-                (fmt_ppr_cmp_exp_syn cD' 0) (strip_mapp_args cD i)
+                (fmt_ppr_cmp_exp_syn cD' 0) i
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
           | _ ->
             fprintf ppf "%s %a %s%a"
               (to_html "case" Keyword)
-              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (fmt_ppr_cmp_exp_syn cD 0) i
               (to_html "of" Keyword)
               (fmt_ppr_cmp_branches cD 0) [b]
         end
@@ -898,7 +898,7 @@ module Ext = struct
       | Comp.Case (_, prag, i, bs) ->
             fprintf ppf "%s %a %s %s%a"
               (to_html "case" Keyword)
-              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (fmt_ppr_cmp_exp_syn cD 0) i
               (to_html "of" Keyword)
               (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> (to_html " %not " Keyword))
               (fmt_ppr_cmp_branches cD 0) bs
@@ -908,7 +908,7 @@ module Ext = struct
             fprintf ppf "@[<2>%s%s %a @[<-1>%s %a @]%s %a%s@]"
               (l_paren_if cond)
               (to_html "if" Keyword)
-              (fmt_ppr_cmp_exp_syn cD 0) (strip_mapp_args cD i)
+              (fmt_ppr_cmp_exp_syn cD 0) i
               (to_html "then" Keyword)
               (fmt_ppr_cmp_exp_chk cD 0) e1
               (to_html "else" Keyword)
@@ -916,24 +916,6 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.Hole (_) -> fprintf ppf " ? "
-
-    and strip_mapp_args cD i =
-      if !Control.printImplicit then
-        i
-      else
-        let (i', _ ) = strip_mapp_args' cD i in i'
-
-    and strip_mapp_args' cD i = match i with
-      | Comp.Const (_, x)
-      | Comp.DataConst (_, x)
-      | Comp.Var (_, x) ->
-          (i,  implicitCompArg  (Id.render_name x))
-      | Comp.Apply (loc, i, e) ->
-          let (i', _ ) = strip_mapp_args' cD i in
-            (Comp.Apply (loc, i', e), 0)
-      | Comp.Ann (loc, e, tau) -> (Comp.Ann (loc, e, tau), 0)
-
-    and implicitCompArg tau = 0
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->

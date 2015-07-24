@@ -293,6 +293,7 @@ exp    ::= "[" ctx_hat "|-" term "]"      (* Contextual object *)
 \begin{verbatim}
 case_anl ::= case exp of branch {branch}     (* Case analysis *)
             | case exp of "{" "}"            (* Case analysis at uninhabited type *)
+            | impossible exp                 (* Case analysis at uninhabited type *)
 
 branch ::= {quantif} patt "=>" exp
 
@@ -305,7 +306,7 @@ patt ::= "[" ctx_hat "|-" term "]"        (* Contextual object *)
 \end{verbatim}
 
 \begin{verbatim}
-term, lf_type ::= cvar sigma           (* contextual variable *)
+term, lf_type ::= cvar                 (* contextual variable *)
                 | id "." int           (* k-th projection of a bound variable x *)
                 | id "." id            (* projection with specified name of x *)
                 | block                (* Sigma x:A.B *)
@@ -313,26 +314,34 @@ term, lf_type ::= cvar sigma           (* contextual variable *)
 
 block ::= block id ":" lf_type {"," id ":" lf_type}
 
-cvar ::= id                      (* context variable *)
-       | ID                      (* meta-variable *)
-       | "#" id                  (* parameter variable *)
-       | "#" id "." int          (* k-th projection *)
-       | "#" id "." id           (* projection with specified name *)   
+cvar ::= id                     (* context variable *)
+       | ID subst               (* meta-variable *)
+       | "#" id subst           (* parameter variable *)
+       | "#" id "." int subst   (* k-th projection *)
+       | "#" id "." id subst    (* projection with specified name *)   
 
+subst ::=                       (* nothing *)
+       | "[" sigma "]"          (* explicit substitution *)
 
-sigma ::= ^                    (* empty substitution *)
-        | ..                  (* Identity substitution *)
-        | sigma term          (* substitution sigma , M *)
+sigma ::= ^                     (* empty substitution *)
+        | ..                    (* Identity substitution *)
+        | sigma, term           (* substitution sigma , M *)
 
 \end{verbatim}
-Note that Beluga restricts context variables to always occur on their own (i.e. sigma is always empty).
+
+Note that Beluga restricts context variables to always occur on their
+own (i.e. sigma is always empty). Moreover, if \verb+sigma+ is the
+identity substitution, then it may be omitted and reconstruction will
+infer it, i.e. writing \verb+[g |- X[..] ]+ is
+equivalent to writing \verb+[g |- X]+.
 
 In order of precedence, Beluga disambiguates the syntax and imposes restrictions as follows.
 \begin{itemize}
 \item Juxtaposition (application) is left associative and has highest precedence
 \item Bound variables and constants must be written with lower-case letters
 \item Free meta-variables must be written with upper-case letters
-\item All LF terms need to be written in $\beta$-normal form, i.e. no redeces can occur in terms. LF terms occurring as part of a contextual object must be written in eta-expanded form. For example, one must write \texttt{[g |- lam x.E .. x]} whereas \texttt{[g |- lam E]} is currently rejected.
+\item All LF terms need to be written in $\beta$-normal form, i.e. no redeces can occur in terms. \textit{LF terms occurring as part of a contextual object must be written in eta-expanded form.} For example, one must write} \verb+[g |- lam \x.E]+ which is equivalent to 
+  \verb+[g |- lam \x.E[..,x] ]+ whereas \texttt{[g |- lam E]} is currently rejected.
 \end{itemize}
 
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -358,7 +367,7 @@ s : term -> term.
 
 The new Beluga style stresses that constructors inhabit a primitive type.
 \begin{verbatim}
-datatype term : type =
+LF term : type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 | z : term
@@ -377,9 +386,9 @@ The operator is treated as non-associative by default if no associativity is sta
 \begin{verbatim}
 %assoc right
 
-app: exp -> exp -> exp. %infix app 1 none.
-lam: (exp -> exp) -> exp. %infix lam 1.
-red: exp -> exp %prefix red 2. 
+app: term -> term -> term. %infix app 1 none.
+lam: (term -> term) -> term. %infix lam 1.
+red: term -> term %prefix red 2. 
 \end{verbatim}
 
 \subsection{Schemas and Context Variables}
@@ -388,9 +397,9 @@ A schema, declared with the \texttt{schema} keyword, consists of \textbf{\textit
 Schemas classify terms as types classify terms. A context \texttt{g} has the schema \texttt{sCtx} if every declaration in \texttt{g} is an instance of schema \texttt{sCtx}. Schemas may quantify over a particular bound variable, written right after the declaration as \texttt{[id : id]} where the first identifier represents the bound variable and the second provides its type. Contexts can be passed as \textit{\textbf{context variables}} annotated with their associated schema. 
 
 \begin{verbatim}
-schema natCtx = block (x:tm, _t: eq_tm x x);
-schema zeroCtx = some [t:tp] block (x:tm, _t: x has_type t);
-schema altCtx = block (x:tp, eq_tp x x) + block (x:tm, eq_tm x x) 
+schema natCtx = block (x:tm, u: eq_tm x x);
+schema zeroCtx = some [t:tp] block (x:tm, u: x has_type t);
+schema altCtx = block (x:tp, u:eq_tp x x) + block (x:tm, u:eq_tm x x) 
 \end{verbatim}
 
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -413,56 +422,150 @@ A \textit{\textbf{meta-variable}} \texttt{M} stands for an LF term. Note that me
 \texttt{id} & a bound variable\\
 \texttt{id.[id,int]} & a projection of a block declaration\\
 \texttt{\#id.[id,int]} & a projection of a schema parameter\\
-\texttt{\#ID[sub]} & a substitution variable\\
+\verb+\#ID subst} & a substitution variable\\
 \end{tabular}\\
 \\
 
-\textbf{Example:} Given a schema \texttt{eCtx = block x : exp, e:eq x x}, a context variable \texttt{g:eCtx}, and a block \texttt{b:block x':tp, e':eqt x' x'}, a substitution may be defined as:
+\textbf{Example:} Given a schema \texttt{eCtx = block x : term, e:eq x x}, a context variable \texttt{g:eCtx}, and a block \texttt{b:block x':tp, e':eqt x' x'}, a substitution may be defined as:
 
-\begin{tabular}{ | l l}
-\texttt{[g |- M ..]} & \texttt{M} is bound by assumptions in \texttt{g}\\
-\texttt{[g |- \#p.e .. ]} & \texttt{e:eq x x} is bound by assumptions in \texttt{g}\\
-\texttt{[g, x:tp |- M .. x]} & \texttt{M} is bound by \texttt{x:tp} or assumptions in \texttt{g} \\
-\texttt{[g, b |- M .. b.1 ]} & \texttt{M} is bound by \texttt{x':tp} or assumptions in \texttt{g} \\
-\texttt{[g, b |- M b.1 b.2 ]} & \texttt{M} is bound by assumptions in \texttt{b} \\
-\end{tabular}
-
+\begin{center}
+\begin{tabular}{ l l}
+\multicolumn{2}{l}{Writing identity substitutions explicit}\\[0.5em]
+\texttt{[g |- M[..] ]} & \texttt{M} is bound by assumptions in \texttt{g}\\
+\texttt{[g |- \#p.e[..] ]} & \texttt{e:eq x x} is bound by assumptions in \texttt{g}\\
+\texttt{[g, x:tp |- M[.., x]]} & \texttt{M} is bound by \texttt{x:tp} or assumptions in \texttt{g} \\[1em]
+\multicolumn{2}{l}{Identity substitutions may be omitted}\\[0.5em]
+\texttt{[g |- M]} & \texttt{M} is bound by assumptions in \texttt{g}\\
+\texttt{[g |- \#p.e]} & \texttt{e:eq x x} is bound by assumptions in \texttt{g}\\
+\texttt{[g, x:tp |- M]} & \texttt{M} is bound by \texttt{x:tp} or assumptions in \texttt{g} \\[1em]
+\multicolumn{2}{l}{Weakening substitutions}\\[0.5em]
+\texttt{[g, b |- M[.., b.1] ]} & \texttt{M} is bound by \texttt{x':tp} or assumptions in \texttt{g} \\
+\texttt{[g, b |- M[b.1, b.2] ]} & \texttt{M} is bound by assumptions in \texttt{b} \\
+\end{tabular}  
+\end{center}
 
 
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \subsection{Substitution Variables}
-Substitutions can be represented as \textit{\textbf{substitution variables}}, denoted with the tag \texttt{\#} and an upper-case identifier. They are indexed as \texttt{\#S: g |- h}, where \texttt{\#S} is a substitution variable which stands from mapping with domain \texttt{g} and range \texttt{h}. Substitution variables are associated with a substitution closure just as contextual variables are associated with a delayed substitution. A substitution closure specifies the substitution to be applied to the substitution variable itself, written with brackets \texttt{[ ]} after the substitution variable as \texttt{\#S[}$\sigma${]} where $\sigma$ is the closure substitution. Closure substitutions are encoded with the same tokens as delayed substitutions for meta-variables. 
+Substitutions can be represented as \textit{\textbf{substitution variables}}, denoted with the tag \texttt{\#} and an upper-case identifier. They are indexed as \texttt{\#S: [g |- h]}, where \texttt{\#S} is a substitution variable which stands from mapping with domain \texttt{g} and range \texttt{h}. Substitution variables are associated with a substitution closure just as contextual variables are associated with a delayed substitution. A substitution closure specifies the substitution to be applied to the substitution variable itself, written with brackets \texttt{[ ]} after the substitution variable as \texttt{\#S[}$\sigma${]} where $\sigma$ is the closure substitution. Closure substitutions are encoded with the same tokens as delayed substitutions for meta-variables. 
 
 Note that the parameter variable \texttt{\#id}, the meta-variable \texttt{Id}, and the substitution variable \texttt{\#Id} are all unrelated. The case of the identifier and the presence of the tag \texttt{\#} are merely syntactic devices to distinguish variable types.
 
-\subsection{Inductive Datatypes}
-\textbf{\textit{Inductive datatypes}} are indexed by contextual objects to express relationships between contextual objects and contexts. They are declared in a similar fashion to Beluga-style LF type families, using the \texttt{ctype} keyword instead of \texttt{type} to invoke the computation level. Inductive datatypes may be formed of other inductive datatypes, of contexts and of contextual objects, guarded by a constructor. Inductive datatypes take upper-case identifiers. \\
+\subsection{Inductive and Stratified Datatypes}
+\textbf{\textit{Inductive datatypes}} are indexed by contextual
+objects to express relationships between contextual objects and
+contexts. They are declared in a similar fashion to Beluga-style LF
+type families, using the \texttt{ctype} keyword instead of
+\texttt{type} to invoke the computation level. Inductive datatypes may
+be formed of other inductive datatypes, of contexts and of contextual
+objects, guarded by a constructor. Inductive datatypes take upper-case
+identifiers. We distinguish between \textit{inductive types} and
+\textit{stratified types}. Inductive types correspond to fix-point
+definitions in logic and must be strictly positive, i.e. the type
+family we are defining cannot occur in a negative
+occurrence. Stratified types define a recursive type by induction on
+an index argument. As a consequence, the type family we are defining
+may occur in a negative position, but the index is decreasing.
 
-\textbf{Example:} The inductive datatype \texttt{Opt}, for example, encodes an option type which is built in to many ML-style languages. A value of type \texttt{Opt} is either empty (\texttt{None}) or contains a term of type \texttt{T}.
+
+\textbf{Example 1:} The inductive datatype \texttt{Opt}, for example, encodes an option type which is built in to many ML-style languages. A value of type \texttt{Opt} is either empty (\texttt{None}) or contains a term of type \texttt{T}.
 \begin{verbatim}
-datatype Opt : ctype =
+inductive Opt : ctype =
 | None : Opt
 | Some : {T : tp}Tm [T] -> Opt;
 \end{verbatim}
+
+\textbf{Example 2:} The following datatype \texttt{Tm} is not inductive.
+\begin{verbatim}
+inductive Tm : ctype =
+| Lam : (Tm -> Tm) -> Tm;
+\end{verbatim}
+
+This clearly illustrates the difference between LF definitions and
+inductive data types. Note that the function space \verb+Tm -> Tm+
+is a strong function space; we cannot match and inspect the structure
+of this function, but can only observe its behavior. Moreover, this
+function may be an arbitary function that is defined by recursion,
+pattern matching or by referring to other inductive definitions. 
+
+The problem can be best illustrated by  the following problematic definitions.
+
+\begin{verbatim}
+inductive D : ctype = 
+| Inj : (D -> D) -> D;
+
+rec out : D -> (D -> D) = 
+fn x => case x of Inj f =>  f;
+
+let omega  : D = Inj (fn x -> (out x) x);
+let omega' : D = (out omega) omega ; 
+\end{verbatim}
+
+The definition of \verb+D+ seems sensible at first; but we can
+cleverly create a non-terminating computation \verb+omega'+ that
+will keep on reproducing itself. The problem is the negative occurrence
+in the definition \verb+D+.
+
+
+\textbf{Example 3:} The following type family \texttt{Tm} is stratified.
+\begin{verbatim}
+stratified Tm : tp -> ctype =
+| Lam : (Tm A -> Tm B) -> Tm (arr A B);
+\end{verbatim}
+
+Here the constructor \verb+Lam+ takes a function of type
+\verb+(Tm A -> Tm B)+ as an argument. However, we can never
+pattern match on this function to inspect its shape and we can never
+recurse on it; we can recurse on the index \lstinline!A! instead.
+
 
 \subsection{Functions}
 Functions analyze contextual objects, contexts, and indexed datatypes. They are declared with the \texttt{let} keyword or the \texttt{rec} keyword for recursive functions. A function signature defines the function type using higher-order abstract syntax, where the arrow \texttt{->} is taken as the simply-typed function space, overloading the notation for the LF function space. Universal quantification is denoted between braces \texttt{\{\}} by an indexed variable. Context variables are indexed by schemas, meta-variables by a contextual object, and substitutions by domain and range.
 
 Explicit arguments from the function signature correspond to computation variables in the function body. An object comprising the left-hand side of an arrow function is introduced as \texttt{fn id} whereas quantifiers are constructed as \texttt{mlam id}. Multiple variables may be introduced at once by writing \texttt{fn id, id, ... } or \texttt{mlam id, id, ...} though the two keywords must be separated by the double arrow \texttt{=>}. If a term from the signature does not require a variable representation in the body, it is surrounded by parentheses \texttt{( )} to indicate it is implicit. \\
 
-\textbf{Example:} The type signature below reads: "for all contexts \texttt{g} with schema \texttt{xaG}, for terms \texttt{M} which are expression in the context of \texttt{g}, there is a proof that \texttt{M} is equal to itself. The computation-level variables are identified as \texttt{h} and \texttt{N}.
+\textbf{Example:} The type signature below reads: "for all contexts
+\texttt{g} with schema \texttt{xaG}, for terms \texttt{M} which are
+expression in the context of \texttt{g}, there is a proof that
+\texttt{M} is equal to itself. The computation-level variables are
+identified as \texttt{h} and \texttt{N}. 
+
 \begin{verbatim}
-rec refl : {g : xaG} {M : [g |- exp]} [g |- eq (M ..) (M ..)] =
+rec refl : {g : xaG} {M : [g |- term]} [g |- eq M M] =
 FN h => mlam N => ...
 \end{verbatim}
 
-\textbf{Example:} In this type signature, the context \texttt{g} is implicit, not used anywhere within the function body. Variables need only be introduced for the input types \texttt{[g |- oft (M ..) T]} and \texttt{[g |- oft (M ..) T1]}, where \texttt{oft} stands for "of type". The meta-variables \texttt{T} and \texttt{T1} are implicitly bound and thus do not require an associated substitutions. 
+Recall that by default
+the meta-variable \verb+M+ is associated with the identity
+substitution which may be omitted. Hence the definition is equivalent to writing.
+
+
 \begin{verbatim}
-rec trans : (g:xaG) [g |- type_of (M ..) T] -> [g |-  (M ..) T1] -> 
-[g |- eq T T1] = fn d1, d2 => ...
+rec refl : {g : xaG} {M : [g |- term]} [g |- eq M[..] M[..] ] =
+FN h => mlam N => ...
 \end{verbatim}
 
+
+
+\textbf{Example:} In this type signature, the context \texttt{g} is
+implicit, not used anywhere within the function body. Variables need
+only be introduced for the input types \verb+[g |- oft M T[^]]+ and
+\verb+[g |- oft M T1[^]]+, where \texttt{oft} stands for "of
+type". The meta-variables \texttt{M}, \texttt{T}, and \texttt{T1} are implicitly
+bound at the outside. By default \verb+M+ is associated with the
+identity substitution; its type is hence \verb+[g |- term]+. The
+meta-variables \verb+T+ and \verb+T'+ are associated with a weakening
+substitution, written as \verb+[^]+. Their type is hence
+ \verb+[ |- tp]+ and the weakening substitution \verb+^+ transports an
+ object of type \verb+tp+ that is closed to an object in the context \verb+g+.
+
+\begin{verbatim}
+rec trans : (g:xaG) [g |- type_of M T[^] ] -> [g |-  M T1[^] ] -> 
+[g |- eq T T1] = fn d1, d2 => ?;
+\end{verbatim}
+
+we use question mark to denote an incomplete program.
 
 \subsection{Pattern-matching}
 Beluga provides powerful ML-style pattern-matching to analyze contextual object language, supporting matching on:
@@ -501,10 +604,10 @@ Beluga automatically detects weakening relationships. A contextual object in the
 
 \textbf{Example:} Consider the following code segment.
 \begin{verbatim}
-schema eqCtx = block x:exp, eq x x;
-schema eCtx = block x:exp, u:eq x x, equal x x;
+schema eqCtx = block x:term, eq x x;
+schema eCtx = block x:term, u:eq x x, equal x x;
 
-rec ref : {h : eqCtx} {M : [g |- exp]} [g |- eq (M ..) (M ..)] = ...
+rec ref : {h : eqCtx} {M : [g |- term]} [g |- eq M M] = ? ;
 \end{verbatim}
 The recursive function \texttt{ref} expects a context \texttt{h} satisfying the schema \texttt{eqCtx}. Beluga would allow passing some context \texttt{g:eCtx} to \texttt{ref} since \texttt{g:eqCtx} can be obtained by adding \texttt{equal x x} from \texttt{h}.
 
@@ -528,7 +631,7 @@ name_prg ::=  lf_decl %name id ID "."
 \end{verbatim}
 The first identifier must match the name of the constructor to which it is being applied. The second identifier is the preferred name itself. Note that name preference declarations have no affect on parsing. 
 
-\subsection{Type errors}
+% \subsection{Type errors}
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -546,7 +649,7 @@ Beluga's logic programming engine is active by default. It can be disabled with 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
 
-\section{Operational Semantics}
+% \section{Operational Semantics}
 
 
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -605,22 +708,27 @@ The user can query the type of the term represented by a hole. This feature is n
 \subsection{Variable Introduction}
 Beluga can generate variable introductions based on the type of a function. The user enters the hole directly after the equal sign. 
 \begin{verbatim}
-rec fun : {g : sCtx} {M : [g |- exp]} [g |- oft (M ..) T] -> 
-[g |- oft (M ..) T'] -> [ |- eq T T'] = ?
+rec fun : {g : sCtx} {M : [g |- term]} [g |- oft M T[^] ] -> 
+[g |- oft M T'[^] ] -> [ |- eq T T'] = ?;
 \end{verbatim}
 
 Enter \texttt{C-c C-i 0} and Interactive Mode introduces variables:
 \begin{verbatim}
-rec fun : {g : sCtx} {M : [g |- exp]} [g |- oft (M ..) T] -> 
-[g |- oft (M ..) T'] -> [ |- eq T T'] =
-FN g => mlam M => fn d => fn f
+rec fun : {g : sCtx} {M : [g |- term]} [g |- oft M T[^]] -> 
+[g |- oft M T'[^]] -> [ |- eq T T'] =
+FN g => mlam M => fn d => fn f => ? ;
 \end{verbatim}
 
 
 \subsection{Variable Splitting}
-Interactive mode supports variable splitting to fill computation-level holes with pattern matching. Use the split command with the hole number and variable name, and Beluga will elaborate the hole with case analysis, generating cases to cover all possible instances of the particular variable. 
+Interactive mode supports variable splitting to fill computation-level
+holes with pattern matching. Use the split command with the hole
+number and variable name, and Beluga will elaborate the hole with case
+analysis, generating cases to cover all possible instances of the
+particular variable. After splitting one must recompile and reload the
+program, to continue splitting.
 
-\section{VIM mode}
+% \section{VIM mode}
 
 \section{HTML mode}
 Beluga source code can be outputted to HTML complete with linking, highlighting, and unicode turnstiles. From the command line, compile the program with the \texttt{+HTML} option.

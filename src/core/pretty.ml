@@ -192,7 +192,7 @@ module Int = struct
 
     module MInstHashtbl = Hashtbl.Make (MInstHashedType)
 
-    let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0
+    let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0 
 
     module SInstHashedType = struct
       type t    = LF.iterm option ref
@@ -620,12 +620,14 @@ module Int = struct
                       PInstHashtbl.replace pinst_hashtbl u sym
                     ; fprintf ppf "?#%s" sym
           end
+
       | (_, {contents = Some (LF.IHead h)}, cD, LF.ClTyp (LF.PTyp _,cPsi), _, mDep) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, mDep) ->
+      | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,	 mDep) ->
+         (* Note, pretty-printing does not use the name provided n which may not be unique but generates a new one *)
 	  let s = (match mDep with LF.No -> "^e" | LF.Maybe -> "^i" | LF.Inductive -> "^*") in
           begin
             try
@@ -642,9 +644,9 @@ module Int = struct
                               | None -> Gensym.MVarData.gensym ()
                   in
                       MInstHashtbl.replace minst_hashtbl u sym
-                    ; fprintf ppf "?%s" sym
+                    ; fprintf ppf "?%s" sym 
           end
-
+           
       | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"

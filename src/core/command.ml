@@ -74,25 +74,28 @@ let clearholes = {name = "clearholes";
                           Holes.clear(); Lfholes.clear ());
                   help= "Clear all computation level holes"}
 
-let load = {name = "load";
-            run = (fun ppf arglist ->
+let load = { name = "load"
+           ; run = (fun ppf arglist ->
+	     let per_file f =
+               let sgn = Parser.parse_file ~name:f Parser.sgn in
+               let sgn'= begin match Recsgn.recSgnDecls sgn with
+	       	 | sgn', None -> sgn'
+	       	 | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+	       end in
+                 if !Debug.chatter <> 0 then
+                   List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
+	      in
               try
                 let _ = Holes.clear() in
                 let _ = Lfholes.clear () in
-                let arg = List.hd arglist in
-                let sgn = Parser.parse_file ~name:arg Parser.sgn in
-                let sgn'= begin match Recsgn.recSgnDecls sgn with
-		  | sgn', None -> sgn'
-		  | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-		end
-		in
-                if !Debug.chatter <> 0 then
-                  List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
-                fprintf ppf "- The file has been successfully loaded;\n"
+                let file_name = List.hd arglist in (* .bel or .cfg *)
+		let files = Cfg.process_file_argument file_name in
+		List.iter per_file files ;
+                fprintf ppf "- The file %s has been successfully loaded;\n" (Filename.basename file_name)
               with
               |Failure _ -> fprintf ppf "- Please provide the file name;\n"
-              | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e));
-            help = "Load the file \"filename\" into the interpreter"}
+              | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e))
+           ; help = "Load the file \"filename\" into the interpreter"}
 
 let printhole = {name = "printhole";
                  run = (fun ppf arglist ->

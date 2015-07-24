@@ -14,7 +14,7 @@ OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
 	$(if $(DEBUG),-tag debug,) \
 	$(if $(VERBOSE),-verbose $(VERBOSE),) \
 	$(if $(WARN_PATTERN),-tag warn\(P\) -tag warn-error\(p\),)\
-	$(if $(WARN_ERROR),-tag warn\(Azep-44\) -tag warn-error\(A-37-48\),)
+	$(if $(WARN_ERROR),-tag warn\(Azep-44\) -tag warn-error\(A-37-48-50\),)
 
 .PHONY: all clean
 

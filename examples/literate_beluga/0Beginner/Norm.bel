@@ -26,21 +26,23 @@ Next, we define the context schema expressing the fact that all declarations mus
 schema ctx = exp T;
 
 %{{
-Finally, we write a function which traverses a lambda-term and normalizes it. In the type of the function <code>norm</code> we leave context variables implicit by writing <code>(g:ctx)</code>. As a consequence, we can omit passing a concrete context for it when calling <code>norm</code>. In the program, we distinguish between three different cases: the variable case <code>[ |- #p[..] ]</code>, the abstraction case <code>[g |- lam \x. M]</code>, and the application case <code>[g |- app (M[..]) (N[..])]</code>. In the variable case, we simply return the variable. In the abstraction case, we recursively normalize <code>[g, x:exp _ |- M]</code> extending the context with the additional declaration <code>x:exp _</code>. Since we do not have a concrete name for the type of <code>x</code>, we simply write an underscore and let Beluga's reconstruction algorithm infer the argument. In the application case, we first normalize recursively <code>[g |- M[..]]</code>. If this results in an abstraction <code>[g |- lam \x. M']</code>, then we continue to normalize <code>[g |- M'[..] (N[..])]</code> substituting for <code>x</code> the term <code>N</code>. Otherwise, we normalize recursively <code>[g |- N]</code> and rebuild the application.
+Finally, we write a function which traverses a lambda-term and normalizes it. In the type of the function <code>norm</code> we leave context variables implicit by writing <code>(g:ctx)</code>. As a consequence, we can omit passing a concrete context for it when calling <code>norm</code>. In the program, we distinguish between three different cases: the variable case <code>[ |- #p ]</code>, the abstraction case <code>[g |- lam \x. M]</code>, and the application case <code>[g |- app M N]</code>. In the variable case, we simply return the variable. In the abstraction case, we recursively normalize <code>[g, x:exp _ |- M]</code> extending the context with the additional declaration <code>x:exp _</code>. Since we do not have a concrete name for the type of <code>x</code>, we simply write an underscore and let Beluga's reconstruction algorithm infer the argument. In the application case, we first normalize recursively <code>[g |- M]</code>. If this results in an abstraction <code>[g |- lam \x. M']</code>, then we continue to normalize <code>[g |- M'[ ,N] ]</code> substituting for <code>x</code> the term <code>N</code>. Otherwise, we normalize recursively <code>[g |- N]</code> and rebuild the application.
+
+Recall that all meta-variables are associated with the identity substitution [..] by default which may be omitted.
 }}%
 
 rec norm : (g: ctx) [g |- exp T] -> [g |- exp T] = 
 fn e ⇒ case e of 
-| [g |- #p[..] ] ⇒  [g |- #p[..]]
+| [g |- #p ] ⇒  [g |- #p]
 | [g |- lam \x. M] ⇒
   let [g, x:exp _ |- M'] = norm [g, x:exp _ |- M] in 
     [g |- lam \x. M']
-| [g |- app (M[..]) (N[..])] ⇒
-  (case norm [g |- M[..]] of
+| [g |- app M N] ⇒
+  (case norm [g |- M] of
   | [g |- lam \x.M'] => norm [g |- M'[..,N]] 
-  | [g |- M'[..]] ⇒ 
-    let [g |- N'[..]] = norm [g |- N[..]] in 
-     [g |- app (M'[..]) (N'[..]) ]
+  | [g |- M'] ⇒ 
+    let [g |- N'] = norm [g |- N] in 
+     [g |- app M' N' ]
   )
 ;
 

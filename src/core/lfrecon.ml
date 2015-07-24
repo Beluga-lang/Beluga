@@ -247,7 +247,7 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
 
   | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Int.LF.Lam (loc, x,
-                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) x)
+                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) n)
 
 
 (* ******************************************************************* *)

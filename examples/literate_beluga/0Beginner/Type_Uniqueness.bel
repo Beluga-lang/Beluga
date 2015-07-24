@@ -38,8 +38,8 @@ LF hastype: term -> tp -> type =
 ## Equality 
 Since Beluga does not support equality types, we implement equality by reflexivity using the type family <code>equal</code>.}}%
 
-equal: tp -> tp -> type.
-e_ref: equal T T.
+LF equal: tp -> tp -> type = 
+| e_ref: equal T T;
 
 %{{## Schema
 The schema <code>txG</code> describes a context containing assumptions <code>x:tm</code>, each associated with a typing assumption <code>hastype x t</code> for some type <code>t</code>. Formally, we are using a dependent product &Eta (used only in contexts) to tie <code>x</code> to <code>hastype x t</code>. We thus do not need to establish separately that for every variable there is a unique typing assumption: this is inherent in the definition of <code>txG</code>. The schema classifies well-formed contexts and checking whether a context satisfies a schema will be part of type checking. As a consequence, type checking will ensure that we are manipulating only well-formed contexts, that later declarations overshadow previous declarations, and that all declarations are of the specified form.}}%
@@ -47,15 +47,15 @@ The schema <code>txG</code> describes a context containing assumptions <code>x:t
 schema xtG = some [t:tp] block x:term, _t:hastype x t;
 
 %{{## Typing uniqueness proof 
-Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype (M[..]) T]</code>.}}%
+Our final proof of type uniqueness <code>rec unique</code> proceeds by case analysis on the first derivation. Accordingly, the recursive function pattern-matches on the first derivation <code>d</code> which has type <code>[g |-  hastype M T]</code>.}}%
 
-% induction on [g |-  hastype (M[..]) T]
+% induction on [g |-  hastype M T]
 rec unique : (g:xtG)[g |-  hastype M T[]] -> [g |-  hastype M T'[]]
 -> [ |-  equal T T'] =
 fn d => fn f => case d of
-| [g |-  h_app (D1[..]) (D2[..])] =>
-  let [g |-  h_app (F1[..]) (F2[..])] = f in
-  let [ |-  e_ref] = unique [g |-  D1[..]] [g |-  F1[..]] in
+| [g |-  h_app D1 D2] =>
+  let [g |-  h_app F1 F2] = f in
+  let [ |-  e_ref] = unique [g |-  D1] [g |-  F1] in
     [ |-  e_ref]
  
 | [g |-  h_lam (\x.\u. D)] =>
@@ -63,18 +63,18 @@ fn d => fn f => case d of
   let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[..,b.x,b.u]] [g,b |-  F[..,b.x,b.u]] in
    [ |-  e_ref]
 
-| [g |-  #q.2[..]] =>           % d : hastype #p.1 T
-  let [g |-  #r.2[..]] = f in   % f : hastype #p.1 T'
+| [g |-  #q.2] =>           % d : hastype #p.1 T
+  let [g |-  #r.2] = f in   % f : hastype #p.1 T'
     [ |-  e_ref]
 ;
 %{{
 Consider each case individually.
 <ul>
 <li><b>Application case.</b> 
-If the first derivation d concludes with <code>h_app</code>, it matches the pattern <code>[g |-  h_app (D1[..]) (D2[..])]</code>, and forms a contextual object in the context <code>g</code> of type <code>[g |-  hastype (M[..]) T']</code>. <code>D1</code> corresponds to the first premise of the typing rule for applications with contextual type <code>[g |- hastype (M1[..]) (arr T' T)]</code>. Using a let-binding, we invert the second argument, the derivation <code>f</code> which must have type <code>[g |- hastype (app (M1[..]) (M2[..])) T]</code>. <code>F1</code> corresponds to the first premise of the typing rule for applications and has the contextual type <code>[g |- hastype (M1[..]) (arr S' S)]</code>. The appeal to the induction hypothesis using <code>D1</code> and <code>F1</code> in the on-paper proof corresponds to the recursive call <code>unique [g |-  D1[..]] [g |-  F1[..]]</code>. Note that while <code>unique</code>’s type says it takes a context variable <code>(g:xtG)</code>, we do not pass it explicitly; Beluga infers it from the context in the first argument passed. The result of the recursive call is a contextual object of type <code>[ |- eq (arr T1 T2) (arr S1 S2)]</code>. The only rule that could derive such an object is <code>e_ref</code>, and pattern matching establishes that <code>arr T T' = arr S S’</code> and hence <code>T = S and T' = S’</code>.</li>
-<li><p><b>Lambda case.</b> If the first derivation <code>d</code> concludes with <code>h_lam</code>, it matches the pattern <code>[g |-  h_lam (\x.\u. D u)]</code>, and is a contextual object in the context <code>g</code> of type <code>hastype (lam T M) (arr T T')</code>. Pattern matching—through a let-binding—serves to invert the second derivation <code>f</code>, which must have been by <code>h_lam</code> with a subderivation <code>F u</code> to reach <code>hastype (M) S</code> that can use <code>x, _t:hastype x T</code>, and assumptions from <code>g</code>.</p>
+If the first derivation d concludes with <code>h_app</code>, it matches the pattern <code>[g |-  h_app D1 D2]</code>, and forms a contextual object in the context <code>g</code> of type <code>[g |-  hastype M T']</code>. <code>D1</code> corresponds to the first premise of the typing rule for applications with contextual type <code>[g |- hastype M1 (arr T' T)]</code>. Using a let-binding, we invert the second argument, the derivation <code>f</code> which must have type <code>[g |- hastype (app M1 M2) T]</code>. <code>F1</code> corresponds to the first premise of the typing rule for applications and has the contextual type <code>[g |- hastype M1 (arr S' S)]</code>. The appeal to the induction hypothesis using <code>D1</code> and <code>F1</code> in the on-paper proof corresponds to the recursive call <code>unique [g |-  D1] [g |-  F1]</code>. Note that while <code>unique</code>’s type says it takes a context variable <code>(g:xtG)</code>, we do not pass it explicitly; Beluga infers it from the context in the first argument passed. The result of the recursive call is a contextual object of type <code>[ |- eq (arr T1 T2) (arr S1 S2)]</code>. The only rule that could derive such an object is <code>e_ref</code>, and pattern matching establishes that <code>arr T T' = arr S S’</code> and hence <code>T = S and T' = S’</code>.</li>
+<li><p><b>Lambda case.</b> If the first derivation <code>d</code> concludes with <code>h_lam</code>, it matches the pattern <code>[g |-  h_lam (\x.\u. D u)]</code>, and is a contextual object in the context <code>g</code> of type <code>hastype (lam T M) (arr T T')</code>. Pattern matching—through a let-binding—serves to invert the second derivation <code>f</code>, which must have been by <code>h_lam</code> with a subderivation <code>F</code> to reach <code>hastype M S</code> that can use <code>x, _t:hastype x T</code>, and assumptions from <code>g</code>.</p>
 <p>The use of the induction hypothesis on <code>D</code> and <code>F</code> in a paper proof corresponds to the recursive call to <code>unique</code>. To appeal to the induction hypothesis, we need to extend the context by pairing up <code>x</code> and the typing assumption <code>hastype x T</code>. This is accomplished by creating the declaration <code>b: block x:term, u:hastype x T</code>. In the code, we wrote an underscore <code>_</code> instead of <code>T</code>, which tells Beluga to reconstruct it since we cannot write <code>T</code> there without binding it by explicitly giving the type of <code>D</code>. To retrieve <code>x</code> we take the first projection <code>b.x</code>, and to retrieve <code>x</code>’s typing assumption we take the second projection <code>b.u</code>.</p>
-<p>Now we can appeal to the induction hypothesis using <code>D1[..] b.x b.u</code> and <code>F1[..] b.x b.u</code> in the context <code>g,b: block x:term, u:hastype x S</code>. From the i.h. we get a contextual object, a closed derivation of <code>(eq (arr T T') (arr S S’))[ ]</code>. The only rule that could derive this is ref, and pattern matching establishes that <code>S</code> must equal <code>S’</code>, since we must have arr T S = arr T1 S’. Therefore, there is a proof of <code>[ |- equal S S’]</code>, and we can finish with the reflexivity rule <code>e_ref</code>.</p></li>
-<li><b>Variable case.</b> Since our context consists of blocks containing variables of type <code>tm</code> and assumptions <code>hastype x T</code>, we pattern match on <code>[g |- #p.2[..]]</code>, i.e., we project out the second argument of the block. By the given assumptions, we know that <code>[g |- #p.2[..]]</code> has type <code>[g |- hastype (#p.1[..]) T]</code>, because <code>#p</code> has type <code>[g |-  block x:tm , u:hastype x T]</code>. We also know that the second input, called <code>f</code>, to the function unique has type <code>[g |-  hastype (#p.1[..]) T']</code>. By inversion on <code>f</code>, we know that the only possible object that can inhabit this type is <code>[g |- #p.2[..]]</code> and therefore <code>T'</code> must be identical to <code>T</code>. Moreover, <code>#r</code> denotes the same block as <code>#p</code>.</li>
+<p>Now we can appeal to the induction hypothesis using <code>D1[.., b.x, b.u]</code> and <code>F1[.., b.x, b.u]</code> in the context <code>g,b: block x:term, u:hastype x S</code>. From the i.h. we get a contextual object, a closed derivation of <code>(eq (arr T T') (arr S S’))[ ]</code>. The only rule that could derive this is ref, and pattern matching establishes that <code>S</code> must equal <code>S’</code>, since we must have arr T S = arr T1 S’. Therefore, there is a proof of <code>[ |- equal S S’]</code>, and we can finish with the reflexivity rule <code>e_ref</code>.</p></li>
+<li><b>Variable case.</b> Since our context consists of blocks containing variables of type <code>tm</code> and assumptions <code>hastype x T</code>, we pattern match on <code>[g |- #p.2]</code>, i.e., we project out the second argument of the block. By the given assumptions, we know that <code>[g |- #p.2]</code> has type <code>[g |- hastype (#p.1) T]</code>, because <code>#p</code> has type <code>[g |-  block x:tm , u:hastype x T]</code>. We also know that the second input, called <code>f</code>, to the function unique has type <code>[g |-  hastype (#p.1) T']</code>. By inversion on <code>f</code>, we know that the only possible object that can inhabit this type is <code>[g |- #p.2]</code> and therefore <code>T'</code> must be identical to <code>T</code>. Moreover, <code>#r</code> denotes the same block as <code>#p</code>.</li>
 </ul>
 }}%

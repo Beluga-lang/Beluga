@@ -224,13 +224,11 @@ module Ext = struct
           fprintf ppf "%s" name
 
       | LF.Atom (_, a, ms) ->
-          let cond = lvl > 1 in
           let name = to_html (Id.render_name a) Link in
-            fprintf ppf "%s%s%a%s"
-              (l_paren_if cond)
+            fprintf ppf "%s%a"
               name
               (fmt_ppr_lf_spine cD cPsi 2) ms
-              (r_paren_if cond)
+
       | LF.PiTyp (_,LF.TypDecl (x, a), (LF.ArrTyp _ as b)) ->
             let cond = lvl > 1 in
             let x = fresh_name_dctx cPsi x in
@@ -348,13 +346,11 @@ module Ext = struct
       let paren s = not (Control.db()) && lvl > 0 && true
       in begin match head with
       | LF.MVar (_, x, LF.EmptySub _) ->
-          fprintf ppf "%s" (Id.render_name x)
+          fprintf ppf "%s[^]" (Id.render_name x)
       | LF.MVar (_, x, s) ->
-          fprintf ppf "%s%s%a%s"
-            (l_paren_if (paren s))
+          fprintf ppf "%s%a"
             (Id.render_name x)
             (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
 
       (* | LF.SVar (_, x, s) -> *)
       (*     fprintf ppf "%s%s%a%s" *)
@@ -400,39 +396,40 @@ module Ext = struct
         | Control.Natural -> fmt_ppr_lf_sub_natural cD cPsi lvl ppf s
         | Control.DeBruijn -> fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s
 
-    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s=
-      let print_front = fmt_ppr_lf_front cD cPsi 1 in
-      let hasCtxVar = has_ctx_var cPsi in
-      let rec self lvl ppf = function
-       (* Print ".." for a Shift when there is a context variable present,
+    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s = 
+	 let print_front = fmt_ppr_lf_front cD cPsi 1 in
+	 let hasCtxVar = has_ctx_var cPsi in
+	 let rec self lvl ppf = (function
+				  (* Print ".." for a Shift when there is a context variable present,
           and nothing otherwise *)
-       (* above is WRONG *)
-        | LF.Dot (_, f, s) when hasCtxVar ->
-            fprintf ppf "%a %a"
+				  (* above is WRONG *)
+	  | LF.Dot (_, f, s) when hasCtxVar ->
+	     fprintf ppf "%a, %a" (self lvl) f
+		     print_front s
+					     
+          | LF.Dot (_, f, s) when not hasCtxVar ->
+            fprintf ppf "%a, %a"
               (self lvl) f
               print_front s
 
-        | LF.Dot (_, f, s) when not hasCtxVar ->
-            fprintf ppf "%a %a"
-              (self lvl) f
-              print_front s
-
-        | LF.Id _ ->
+          | LF.Id _ ->
             fprintf ppf "%s" (symbol_to_html Dots)
-        | LF.RealId -> ()
 
-        | LF.EmptySub _ ->
+          | LF.RealId -> ()
+
+          | LF.EmptySub _ ->
             fprintf ppf ""
-        | LF.SVar(_, s, LF.EmptySub _) ->
+          | LF.SVar(_, s, LF.EmptySub _) ->
             fprintf ppf "#%s[^]"
             (Id.render_name s)
-        | LF.SVar (_, s, f) ->
+          | LF.SVar (_, s, f) ->
             fprintf ppf "#%s[%a]"
               (Id.render_name s)
-              (self lvl) f
+              (self lvl) f)
       in
-              fprintf ppf " %a"
-                (self lvl) s
+      (match s with 
+       | LF.RealId -> fprintf ppf "" 
+       | _       ->  fprintf ppf "[%a]" (self lvl) s)
 
     and fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s =
       let rec self lvl ppf = function
@@ -715,7 +712,7 @@ module Ext = struct
           fprintf ppf "[%a %s %a]"
             (fmt_ppr_lf_dctx cD 0) cPsi
             (symbol_to_html Turnstile)
-            (fmt_ppr_lf_typ cD cPsi 1) tA
+            (fmt_ppr_lf_typ cD cPsi 0) tA
 
       | Comp.TypBox (_, (_,LF.ClTyp (LF.PTyp tA, cPsi))) ->
           fprintf ppf "#[%a %s %a]"
@@ -863,11 +860,9 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.Box (_ , m) ->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
-              (l_paren_if cond)
+            fprintf ppf "%a"
               (fmt_ppr_meta_obj  cD 0) m
-              (r_paren_if cond)
+
 
       | Comp.Case (_, Pragma.RegularCase, i, [b]) ->
         begin match b with
@@ -1074,11 +1069,11 @@ module Ext = struct
         fprintf ppf "%s %s : %a = "
           (to_html prefix Keyword)
           (to_html (Id.render_name n) (ID Typ))
-          (fmt_ppr_lf_kind LF.Null 1) kA
+          (fmt_ppr_lf_kind LF.Null 0) kA
       | Sgn.Const(_, n, tA) ->
           fprintf ppf "@\n| %s : %a"
             (to_html (Id.render_name n) (ID Constructor))
-            (fmt_ppr_lf_typ LF.Empty LF.Null 1)  tA
+            (fmt_ppr_lf_typ LF.Empty LF.Null 0)  tA
       | Sgn.CompTyp(_, n, kA, _)
       | Sgn.CompCotyp(_, n, kA) ->
           fprintf ppf "%s %s : %a = "

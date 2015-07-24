@@ -255,6 +255,15 @@ module Ext = struct
             (to_html "block" Keyword)
             (fmt_ppr_lf_typ_rec cD cPsi lvl) typRec
 
+      | LF.ArrTyp (_, (LF.PiTyp _ as t1), t2) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%a %s %a%s"
+              (l_paren_if cond)
+              (fmt_ppr_lf_typ cD cPsi 2) t1
+              (symbol_to_html RArr)
+              (fmt_ppr_lf_typ cD cPsi 0) t2
+              (r_paren_if cond)
+
       | LF.ArrTyp (_, (LF.ArrTyp _ as t1), t2) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%a %s %a%s"
@@ -346,7 +355,7 @@ module Ext = struct
       let paren s = not (Control.db()) && lvl > 0 && true
       in begin match head with
       | LF.MVar (_, x, LF.EmptySub _) ->
-          fprintf ppf "%s[^]" (Id.render_name x)
+          fprintf ppf "%s[]" (Id.render_name x)
       | LF.MVar (_, x, s) ->
           fprintf ppf "%s%a"
             (Id.render_name x)
@@ -373,10 +382,16 @@ module Ext = struct
       | LF.Hole (_) ->
           fprintf ppf "_"
 
-      | LF.Proj (_, h, p) ->
+      | LF.Proj (_, (LF.Name _ as h), p) ->
 	fprintf ppf "%a.%a"
 	(fmt_ppr_lf_head cD cPsi lvl) h
 	(fmt_ppr_lf_proj lvl) p
+
+      | LF.Proj (_, LF.PVar (_,  x, s), p) ->
+	fprintf ppf "#%s.%a%a"
+            (Id.render_name x)
+	    (fmt_ppr_lf_proj lvl) p
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
       end
     and fmt_ppr_lf_proj lvl ppf = function
       | LF.ByName n -> fprintf ppf "%s" (Id.render_name n)
@@ -396,13 +411,15 @@ module Ext = struct
         | Control.Natural -> fmt_ppr_lf_sub_natural cD cPsi lvl ppf s
         | Control.DeBruijn -> fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s
 
-    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s = 
+    and fmt_ppr_lf_sub_bare cD cPsi lvl ppf s = 
+      match !Control.substitutionStyle with
+        | Control.Natural -> fmt_ppr_lf_sub_natural_bare cD cPsi lvl ppf s
+        | Control.DeBruijn -> fmt_ppr_lf_sub_deBruijn_bare cD cPsi lvl ppf s
+
+    and fmt_ppr_lf_sub_natural_bare cD cPsi lvl ppf s = 
 	 let print_front = fmt_ppr_lf_front cD cPsi 1 in
-	 let hasCtxVar = has_ctx_var cPsi in
-	 let rec self lvl ppf = (function
-				  (* Print ".." for a Shift when there is a context variable present,
-          and nothing otherwise *)
-				  (* above is WRONG *)
+	 let hasCtxVar = has_ctx_var cPsi in 
+	 let rec self lvl ppf s =  match s with 
 	  | LF.Dot (_, f, s) when hasCtxVar ->
 	     fprintf ppf "%a, %a" (self lvl) f
 		     print_front s
@@ -415,25 +432,34 @@ module Ext = struct
           | LF.Id _ ->
             fprintf ppf "%s" (symbol_to_html Dots)
 
-          | LF.RealId -> ()
+          | LF.RealId -> () (* fprintf ppf "%s" (symbol_to_html Dots) *)
 
           | LF.EmptySub _ ->
             fprintf ppf ""
           | LF.SVar(_, s, LF.EmptySub _) ->
             fprintf ppf "#%s[^]"
             (Id.render_name s)
+          | LF.SVar(_, s, LF.RealId) ->
+            fprintf ppf "#%s"
+            (Id.render_name s)
           | LF.SVar (_, s, f) ->
             fprintf ppf "#%s[%a]"
               (Id.render_name s)
-              (self lvl) f)
-      in
+              (self lvl) f
+       in 
+         self lvl ppf s
+
+    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s = 
       (match s with 
        | LF.RealId -> fprintf ppf "" 
-       | _       ->  fprintf ppf "[%a]" (self lvl) s)
+       | _       ->  fprintf ppf "[%a]" (fmt_ppr_lf_sub_natural_bare cD cPsi lvl) s)
 
     and fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s =
-      let rec self lvl ppf = function
+        fprintf ppf "[%a]"
+          (fmt_ppr_lf_sub_deBruijn_bare cD cPsi lvl) s
 
+    and fmt_ppr_lf_sub_deBruijn_bare cD cPsi lvl ppf s = 
+        let rec self lvl ppf = function
         | LF.Id _  ->
             fprintf ppf "%s" (symbol_to_html Dots)
 
@@ -445,8 +471,7 @@ module Ext = struct
               (fmt_ppr_lf_front cD cPsi 1) f
               (self lvl) s
       in
-        fprintf ppf "[%a]"
-          (self lvl) s
+       self lvl ppf s
 
 
     and fmt_ppr_lf_front cD cPsi lvl ppf = function
@@ -692,7 +717,7 @@ module Ext = struct
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_dctx cD 0) cPsi
                (symbol_to_html Turnstile)
-              (fmt_ppr_lf_sub cD cPsi 0) sigma
+              (fmt_ppr_lf_sub_bare cD cPsi 0) sigma
       | Comp.ClObj (cPsi, Comp.PObj h) ->
             fprintf ppf "[%a %s %a]"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
@@ -701,12 +726,10 @@ module Ext = struct
 
     let rec fmt_ppr_cmp_typ cD lvl ppf = function
       | Comp.TypBase (_, x, mS)->
-          let cond = lvl > 1 in
-            fprintf ppf "%s%s%a%s"
-              (l_paren_if cond)
+            fprintf ppf "%s%a"
               (to_html (Id.render_name x) Link)
               (fmt_ppr_meta_spine cD 0) mS
-              (r_paren_if cond)
+
 
       | Comp.TypBox (_, (_,LF.ClTyp (LF.MTyp tA, cPsi))) ->
           fprintf ppf "[%a %s %a]"
@@ -935,7 +958,7 @@ module Ext = struct
 
       | Comp.BoxVal (_, m0) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s[%a]%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) m0
               (r_paren_if cond)

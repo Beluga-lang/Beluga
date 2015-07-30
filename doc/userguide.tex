@@ -322,7 +322,7 @@ cvar ::= id                      (* context variable *)
 
 sigma ::= ^                    (* empty substitution *)
         | ..                  (* Identity substitution *)
-        | sigma term          (* substitution sigma , M *)
+        | sigma, term          (* substitution sigma , M *)
 
 \end{verbatim}
 Note that Beluga restricts context variables to always occur on their own (i.e. sigma is always empty).

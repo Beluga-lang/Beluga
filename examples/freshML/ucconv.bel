@@ -42,7 +42,7 @@ fn a => fn b => case a of
 ;
 
 % makeproj return the nth project of pair y
-% makeproj n = tfst([..]. (tfst y))
+% makeproj n = tfst(. (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
 / total n (makeproj' n ) / 
 fn n => case n of
@@ -69,18 +69,18 @@ rec remove:(g:ctx)[g,x:term |-  fvlist] -> [g |- fvlist] =
 fn l => case l of
 | [g,x:term |- nil] => [g |- nil]
 | [g,x:term |- cons x (L)] => remove [g,x:term |- L]
-| [g,x:term |-  cons #p[..] L] =>
-  let [g |- L'[..]] = remove [g,x:term |- L] in
-			   [g |- cons (#p[..]) (L'[..])]
+| [g,x:term |-  cons #p L] =>
+  let [g |- L'] = remove [g,x:term |- L] in
+			   [g |- cons (#p) (L')]
 ;
 
 % Extend the mapping with id function, used for the local variable in lam and let.
 rec e_map : (g:ctx){h:tctx} ([g |- term] -> [h |- target])  ->  [g,x:term |-  term] -> [h,x:target |-  target] =
 mlam h => fn map => fn e' => case e' of
    | [g,x:term |-  x] => [h,x:target |-  x]
-   | [g,x:term |-  #p[..]] =>
+   | [g,x:term |-  #p] =>
      let [h |- F] = map [g |- #p] in
-    	 [h,x:target |- F[..]]
+    	 [h,x:target |- F]
 ;
 
  % Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
@@ -91,12 +91,12 @@ rec b_map:(g:ctx)([g,x:term |-  term] -> [xenv:target |-  target]) -> [g |- fvli
 fn map => fn l => fn n => case l of
 | [g |- nil] => (fn e => case e of
 	       |[g,x:term |-  x] => [xenv:target |-  (tsnd xenv)]
-	       |[g,x:term |- #p[..]] => map [g,x:term |-  #p[..]]
+	       |[g,x:term |- #p] => map [g,x:term |-  #p]
 	    )
 |[g |- cons X L] =>
  let [ |- N] = n in
  (% fn e => if (([g]X..) == ([g] #p..)) then
-   fn e => if ([g,x:term |-  X[..]] == e) then
+   fn e => if ([g,x:term |-  X] == e) then
 	 makeproj [ |- N]
 	 else
 	 b_map map [g |- L] [ |- suc N] e
@@ -120,7 +120,7 @@ mlam h => fn map => fn fvar => case fvar of
 
 rec fvar:(g:ctx) [g |- term] -> [g |- fvlist] =
 fn e => case e of
-| [g |- (#p[..])] => [g |- cons (#p[..]) nil]
+| [g |- (#p)] => [g |- cons (#p) nil]
 | [g |- elam (\x.U)] =>
   let [g,x:term |-  L] = fvar [g,x:term |- U] in
   let [g |- L'] = remove[g,x:term |- L] in
@@ -148,7 +148,7 @@ mlam h => fn map => fn e => case e of
   let [h |- U'] = convert [h] map [g |- U] in
   let [h |- V'] = convert [h] map [g |- V] in
   [h |- topen U'
-      \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) (V'[..]))]
+      \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) (V'))]
 
 |[g |- elam (\x. U)] =>
  let [g |- FV] = fvar e in

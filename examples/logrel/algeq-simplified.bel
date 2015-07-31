@@ -316,7 +316,7 @@ nil : dctx.
 inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype  =
 | Top : Lookup [|- G & T] [g,x:tm |-  x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p] [ |- T]
-      -> Lookup [|- G & S] [g,x:tm |- #p[..]] [ |- T];
+      -> Lookup [|- G & S] [g,x:tm |- #p] [ |- T];
 
 inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
  =
@@ -325,7 +325,7 @@ inductive Decl : {G:[|-dctx]}(g:ctx) [g |- tmpair ] -> [ |- tp] -> ctype
           -> Decl [|-G] [g |- (app (lam (\x. M2)) M1) ~ N2[..,N1]] [ |- S]
 | DecLam :  Decl [|- G & T] [g,x:tm |- M ~ N] [ |- S]
           -> Decl [|-G] [g |- (lam (\x. M)) ~ (lam (\x. N))] [ |- arr T S]
-| DecExt :  Decl [|- G & T] [g,x:tm |- (app M[..] x) ~ (app N[..] x)] [ |- S]
+| DecExt :  Decl [|- G & T] [g,x:tm |- (app M x) ~ (app N x)] [ |- S]
           -> Decl [|-G] [g |- M ~ N] [ |- arr T S]
 | DecVar : Lookup [|-G] [g |- #p] [ |- T]
          -> Decl [|-G] [g |- (#p) ~ (#p)] [ |- T]
@@ -401,7 +401,7 @@ case d of
 | DecApp d1 d2 => let LogArr [h |-  M1] [h |-  M2] f = thm d1 s in
     f [h] [h |- ..] [h |-  _] [h |-  _] (thm d2 s)
 | (DecLam d1) : Decl [|-G] [g |- (lam (\x. M1)) ~ (lam (\x. M2))] [ |- arr T S] =>
-   LogArr [h |-  lam (\x. M1[#S1[..], x])] [h |-  lam (\x. M2[#S2[..], x])]
+   LogArr [h |-  lam (\x. M1[#S1, x])] [h |-  lam (\x. M2[#S2, x])]
      (mlam h0, #W, N1, N2 => fn rn =>
      let q2 = thm d1 (Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn) in
      closed [ |- _ ] [h0 |-  trans1 beta refl] [h0 |-  trans1 beta refl] q2
@@ -419,7 +419,7 @@ case d of
 inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id]
-       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]
+       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id, b.1]
 ;
 
 % % The identity substitution is logically related to itself

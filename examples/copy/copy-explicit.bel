@@ -12,7 +12,7 @@ mlam g => mlam T => fn e =>
 (case e of
 
   {T':[ |- tp]} {#p:[g |- term (T'[])]}
-  [g |- (#p[..])] : [g |- (term (T'[]))]        => [g |- (#p[..])]
+  [g |- (#p)] : [g |- (term (T'[]))]        => [g |- (#p)]
 
 | {T1:[ |- tp]} {T2:[ |- tp]} {U:[g, x :term (T1[]) |-  term (T2[])]}
 

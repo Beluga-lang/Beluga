@@ -41,7 +41,7 @@ rec cntV : {g:expCtx} {T:[ |- tp]} {S:[ |- tp]} [g, x:(exp (T[])) |-  exp (S[])]
 mlam g => mlam T => mlam TT => fn e =>
  case e of
      {T1:[ |- tp]} {T2:[ |- tp]} {#p:[g |- exp (T1[])]}
-     [g,x: exp (T2[]) |-  (#p[..])]      : [g,x: exp (T2[]) |-  (exp (T1[]))]   => [ |- z]
+     [g,x: exp (T2[]) |-  (#p)]      : [g,x: exp (T2[]) |-  (exp (T1[]))]   => [ |- z]
 
    | {T':[ |- tp]}
      [g,x: exp (T'[]) |-  x]            : [g,x: exp (T'[]) |-  (exp (T'[]))]   => [ |- s z]

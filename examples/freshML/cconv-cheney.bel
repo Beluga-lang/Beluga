@@ -25,21 +25,21 @@ schema sctx = term ;
 rec cconv : (g:sctx)(g':tctx) [g |- term] -> [g' |-  target] -> [g' |-  target] =
 % / total t (cconv g g' t)/
 fn t => fn e => case t of
-| [h,y:term |-  y]    => let [g' |-  E[..]] = e in [g' |-  tfst (E[..] )]
-| [h,y:term |-  #p[..]] =>
-    (let [g' |-  E[..]] = e in
-     cconv [h |- #p[..] ]  [g' |-  tsnd (E[..] )] )
+| [h,y:term |-  y]    => let [g' |-  E] = e in [g' |-  tfst (E )]
+| [h,y:term |-  #p] =>
+    (let [g' |-  E] = e in
+     cconv [h |- #p ]  [g' |-  tsnd (E )] )
 
- | [h |- app (E1[..]) (E2[..] )] =>
-  let [g' |-  E[..]] = e in
-  let [g' |-  T1[..]] = cconv [h |- E1[..]] [g' |-  E[..] ] in
-  let [g' |-  T2[..]] = cconv [h |- E2[..]] [g' |-  E[..] ] in
-    [g' |-  tlet (T1[..] ) (\c. (tapp (tfst c) (tpair (T2[..] ) (tsnd c))))]
+ | [h |- app (E1) (E2 )] =>
+  let [g' |-  E] = e in
+  let [g' |-  T1] = cconv [h |- E1] [g' |-  E ] in
+  let [g' |-  T2] = cconv [h |- E2] [g' |-  E ] in
+    [g' |-  tlet (T1 ) (\c. (tapp (tfst c) (tpair (T2 ) (tsnd c))))]
 
 | [g |- lam \x. F] =>
   let [y:target |-  T] = cconv [g,x:term |-  F] [y:target |-  y] in
-  let [g' |-  E[..]] = e in
-    [g' |-  tpair (tabs \y. T[y]) (E[..] )]
+  let [g' |-  E] = e in
+    [g' |-  tpair (tabs \y. T[y]) (E )]
 ;
 
 

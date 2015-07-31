@@ -35,10 +35,10 @@ case x of
 rec cntV : (g:expCtx)  [g, x:exp |-  exp] -> [ |- exp] =
 fn e => case e of
  | [g,x:exp  |-  tt]      => [ |- z]
- | [g,x:exp |-  #p[..]]     => [ |- z]
+ | [g,x:exp |-  #p]     => [ |- z]
  | [g,x:exp |-  x]        => [ |- s z]
  | [g,x:exp  |-  z]       => [ |- z]
- | [g,x:exp |-  U[..]]   => [ |- z]
+ | [g,x:exp |-  U]   => [ |- z]
 
  | [g,x:exp |-  s W]  => cntV [g,x |- W]
 

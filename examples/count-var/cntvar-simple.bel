@@ -41,10 +41,10 @@ rec cntV : {g:expCtx}  [g, x:exp |-  exp] -> [ |- nat] =
 mlam g => fn e => case e of
 % | [g,x:exp  |-  tt]    => [ |- z]
 
-% | [g,x:exp |-  #p[..]]    => [ |- z]
+% | [g,x:exp |-  #p]    => [ |- z]
 | [g,x:exp |-  x]       => [ |- s z]
 % | [g,x:exp  |-  z]      => [ |- z]
- | [g,x:exp |-  (U[..] )]  => [ |- z]
+ | [g,x:exp |-  (U )]  => [ |- z]
 %   | [g,x:exp |-  s (W)]  => cntV [g]  [g,x |- (W)]
 
   | [g,x:exp |-  letv (U1) (\y . U2)] =>

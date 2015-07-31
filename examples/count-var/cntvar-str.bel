@@ -36,10 +36,10 @@ fn x => fn y => case x of
 rec cntV : (g:expCtx)  [g, x:exp (T[]) |-  exp (S[])] -> [ |- exp nat] =
 fn e => case e of
  | [g,x : exp _  |-  tt]        => [ |- z]
-  | [g,x : exp _  |-  (#p[..] )]    => [ |- z]
+  | [g,x : exp _  |-  (#p )]    => [ |- z]
   | [g,x : exp _  |-  x]         => [ |- s z]
   | [g,x : exp _  |-  z]         => [ |- z]
-%  | [g,x : exp _  |-  U[..] ]     => [ |- z]
+%  | [g,x : exp _  |-  U ]     => [ |- z]
  | [g,x : exp _  |-  s (W)]  => cntV [g,x |- W]
  | [g,x : exp _  |-  letv (T1[])  (U1) (\y . U2)] =>
    plus  (cntV [g,x |- U1])

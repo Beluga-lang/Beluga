@@ -34,11 +34,11 @@ rec add : Int -> Int -> Int = ? ;
 
 rec count : (g:expCtx) [g |- exp T] -> Int =
 fn e => case e of
-| [g |- #p[..]] => Zero  % variable
+| [g |- #p] => Zero  % variable
 | [g |- z] => Zero
-| [g |- s (E[..]) ] => count [g |- E[..]]
-| [g |- letv T1 (E1[..]) (\x.E2) ] =>
-  let x = count [g |- E1[..]] in
+| [g |- s (E) ] => count [g |- E]
+| [g |- letv T1 (E1) (\x.E2) ] =>
+  let x = count [g |- E1] in
   let y = count [g, x:exp _ |- E2] in
   Suc (add x y)
 ;
@@ -70,27 +70,27 @@ case x of
 % if  G, x: exp T |-  U ==> n1
 % if  G, y:exp _ , x: exp T |-  V  y ==> n2
 
-rec cntV : {g:expCtx}  [g, x:exp (T[..]) |-  exp (S)] -> [ |- exp nat] =
+rec cntV : {g:expCtx}  [g, x:exp (T) |-  exp (S)] -> [ |- exp nat] =
 mlam g =>
  fn e =>
-  case e of  % e : exp (S) [g, x:exp (T[..])]
+  case e of  % e : exp (S) [g, x:exp (T)]
 
    | % {T':[g |- tp]}
-     [g,x : exp (T'[..])  |-  tt]
+     [g,x : exp (T')  |-  tt]
      => [ |- z]
 
-  | [g,x : exp _  |-  (#p[..] )]    => [ |- z]
+  | [g,x : exp _  |-  (#p )]    => [ |- z]
 
   | [g,x : exp _  |-  x]           => [ |- s z]
 
 
   | [g,x : exp _  |-  z]           => [ |- z]
 
-  | [g,x : exp _  |-  (U[..] )]  => [ |- z]
+  | [g,x : exp _  |-  (U )]  => [ |- z]
 
   | [g,x : exp _  |-  s (W)]  => cntV [g] [g,x |- (W)]
 
-  | [g,x : exp _  |- letv (T1[..]) (U1) (\y . (U2[..]  x y))] =>
+  | [g,x : exp _  |- letv (T1) (U1) (\y . (U2  x y))] =>
              plus (cntV [g]  [g,x |- U1])
                   (cntV [g, y:exp _ ]  [g,y,x |- U2 y])
 

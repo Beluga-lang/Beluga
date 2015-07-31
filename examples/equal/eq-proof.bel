@@ -26,34 +26,34 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 
 schema eqCtx = block x:exp, _t:eq x x;
 
-rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U[..]) (U[..])] =
+rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U) (U)] =
 / total u (ref g u) /
- mlam g => mlam U => case [g |- U[..]] of
-| [g |- #p.1[..]] => [g |- #p.2[..]]
+ mlam g => mlam U => case [g |- U] of
+| [g |- #p.1] => [g |- #p.2]
 
 | [g |- lam \x. L] =>
   let [g,e:block yyy:exp, _t:eq yyy yyy |-  V] = 
          ref [g, e:block q:exp, _t:eq q q] [g, e |-  L[..,e.1]]  in
      [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq (L) (L)
 
-| [g |- app (A1[..]) (A2[..])] : [g |- exp] =>
-  let [g |- EQ1[..]] = ref [g] [g |- A1[..] ] in
-  let [g |- EQ2[..]] = ref [g] [g |- A2[..] ] in
-    [g |- eq_app (EQ1[..]) (EQ2[..])]
+| [g |- app (A1) (A2)] : [g |- exp] =>
+  let [g |- EQ1] = ref [g] [g |- A1 ] in
+  let [g |- EQ2] = ref [g] [g |- A2 ] in
+    [g |- eq_app (EQ1) (EQ2)]
 ;
 
 
 
 % General transitivity is admissible
 rec trans: (g:eqCtx)
-   [g |- eq (TT[..]) (RR[..])]     % e1 : eq T R
--> [g |- eq (RR[..]) (SS[..])]     % e2 : eq R S
--> [g |- eq (TT[..]) (SS[..])]     % result : eq T S
+   [g |- eq (TT) (RR)]     % e1 : eq T R
+-> [g |- eq (RR) (SS)]     % e2 : eq R S
+-> [g |- eq (TT) (SS)]     % result : eq T S
 =
 / total e1 (trans g t r s e1) /
 fn e1 => fn e2 => case e1 of
 
-| [g |- #p.2[..]] => e2
+| [g |- #p.2] => e2
 
 | [g |- eq_lam \x.\u. D1] =>
    let [g |- eq_lam \xx.\uu. D2] =  e2  in
@@ -63,12 +63,12 @@ fn e1 => fn e2 => case e1 of
     in
       [g |- eq_lam \x. \u. E[..,<x ; u>]]
 
-| [g |- eq_app (D1[..]) (D2[..])] =>
+| [g |- eq_app (D1) (D2)] =>
        (case e2 of
-         [g |- eq_app (F1[..]) (F2[..])] =>
-         let [g |- E1[..]] = trans [g |- D1[..]]  [g |- F1[..]] in
-         let [g |- E2[..]] = trans [g |- D2[..]]  [g |- F2[..]] in
-             [g |- eq_app  (E1[..])  (E2[..])]
+         [g |- eq_app (F1) (F2)] =>
+         let [g |- E1] = trans [g |- D1]  [g |- F1] in
+         let [g |- E2] = trans [g |- D2]  [g |- F2] in
+             [g |- eq_app  (E1)  (E2)]
        )
 ;
 

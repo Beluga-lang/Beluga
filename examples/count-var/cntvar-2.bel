@@ -34,7 +34,7 @@ case x of
 % [ |- U] => y
 ;
 
-rec cntV : {g:expCtx} [g, x:exp (T[..]) |-  exp (S[..])] -> [ |- exp nat] = 
+rec cntV : {g:expCtx} [g, x:exp (T) |-  exp (S)] -> [ |- exp nat] = 
 % / total e (cntV _ _ _ e) /
 mlam g =>
  fn e =>
@@ -42,7 +42,7 @@ mlam g =>
 
     [g,x : exp _  |-  tt]          => [ |- z]
 
-  | [g,x : exp _  |-  (#p[..] )]    => [ |- z]
+  | [g,x : exp _  |-  (#p )]    => [ |- z]
 
   | [g,x : exp _  |-  x]           => [ |- s z]
 
@@ -52,10 +52,10 @@ mlam g =>
   | [g,x : exp _  |-  s (W)]  => cntV [g] [g,x |- (W)]
 %%
 %%
-%%  NOT WORKING IF WE OMIT T1[..]  since from the pattern we simply infer
+%%  NOT WORKING IF WE OMIT T1  since from the pattern we simply infer
 %%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
 %%
-%%   | [g,x : exp _ ] letv  (U1) (\y . (U2[..]  x y)) =>
+%%   | [g,x : exp _ ] letv  (U1) (\y . (U2  x y)) =>
 %%             plus (cntV [g]  ([g,x] (U1)))
 %%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 y)))
 %%
@@ -66,7 +66,7 @@ mlam g =>
 %% The solution is that the original meta-variable 3 needs to be in fact of a different type,
 %% namely exp [ |- ] and not exp[ |- , x:A].
 %%
-   | [g,x : exp _  |-  letv (T1[..]) (U1) (\y . U2)] =>
+   | [g,x : exp _  |-  letv (T1) (U1) (\y . U2)] =>
       plus  (cntV [g]          [g,x |- (U1)])
             (cntV [g, y:exp _]  [g,y,x |-  (U2[..,x,y])])
 

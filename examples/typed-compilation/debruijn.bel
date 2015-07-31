@@ -35,8 +35,8 @@ fn v =>  case v of
  | [h,x:value T |-  x] => [ |- one]
 
  | {#p:[h |- value S']} % This is necessary in the absence of subordination, since we need S' to be closed.
-   [h,x:value T |-  #p[..]]  =>
-     let [ |- Db] = vhoas2db [h |- #p[..]] in
+   [h,x:value T |-  #p]  =>
+     let [ |- Db] = vhoas2db [h |- #p] in
        [ |- shift Db]
 
  | [g |- lam (T[]) (\x. E)] =>
@@ -45,12 +45,12 @@ fn v =>  case v of
 
 and hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
   fn e =>  case e of
-   | [g |- app (E1[..] ) (E2[..] )] =>
-     let [ |- F1] = hoas2db [g |- E1[..]]  in
-     let [ |- F2] = hoas2db [g |- E2[..]]  in
+   | [g |- app (E1 ) (E2 )] =>
+     let [ |- F1] = hoas2db [g |- E1]  in
+     let [ |- F2] = hoas2db [g |- E2]  in
        [ |- app' F1 F2]
-   | [g |- ret (V[..])] =>
-     vhoas2db [g |- V[..]]
+   | [g |- ret (V)] =>
+     vhoas2db [g |- V]
 ;
 
 
@@ -61,19 +61,19 @@ rec db2vhoas : (g:ctx) [g |- exp' (T[])] -> [g |- value (T[])] =
 
   | {E:[ |- exp' (S[])]}
      [h,x:value T |-  shift (E[])] =>
-    let [h |- F[..]] = db2vhoas [h |- E[]]  in
-      [h,x:value T |-  F[..]]
+    let [h |- F] = db2vhoas [h |- E[]]  in
+      [h,x:value T |-  F]
 
   | [h |- lam' (T[]) E] =>
-      let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |-  E[..]] in
+      let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |-  E] in
         [g |- lam (T[]) (\x. F)]
 
 and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
   fn e => case e of
   | [g |- app' E1 E2] =>
-    let [g |- F1[..]] = db2hoas [g |- E1] in
-    let [g |- F2[..]] = db2hoas [g |- E2] in
-      [g |- app (F1[..]) (F2[..])]
+    let [g |- F1] = db2hoas [g |- E1] in
+    let [g |- F2] = db2hoas [g |- E2] in
+      [g |- app (F1) (F2)]
 ;
 
 

@@ -68,11 +68,11 @@ object of type `hoas A` to construct the equivalent De Bruijn term.
 
 rec db : (g:ctx) [g |- hoas A[]] -> DB [g] [|- A] =
     fn m => case m of
-    | [g |- app (M[..]) (N[..])] => App (db [g |- M[..]]) (db [g |- N[..]])
+    | [g |- app (M) (N)] => App (db [g |- M]) (db [g |- N])
     | [g |- lam \x. M] : [ g |- hoas (arr A[] B[])] =>
       Lam (db [g, x:hoas A[] |- M])
     | [g, x:hoas A[] |- x ] => O
-    | [g, x:hoas B[] |-  #p[..]] => S (db [g |- #p[..] ]);
+    | [g, x:hoas B[] |-  #p] => S (db [g |- #p ]);
 
 %{{
 
@@ -104,15 +104,15 @@ rec hoas : (g:ctx) DB [g] [|- A] -> [g |- hoas A[]] =
       let [g, x: hoas _ |- M] = hoas m in
       [g |- lam \x. M]
     | App m n =>
-      let [g |- M[..]] = hoas m in
-      let [g |- N[..]] = hoas n in
-      [g |- app (M[..]) (N[..])]
+      let [g |- M] = hoas m in
+      let [g |- N] = hoas n in
+      [g |- app (M) (N)]
     | O =>
        let (m : DB [g, x:hoas _] [|- B]) = m in
       [g, x:hoas _ |- x]
     | S m =>
-      let [g |- M[..]] = hoas m in
-      [g, x |- M[..]];
+      let [g |- M] = hoas m in
+      [g, x |- M];
 %{{
 
 Note that, contrarily to the previous function, the recursive calls'

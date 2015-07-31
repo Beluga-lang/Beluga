@@ -107,7 +107,7 @@ mlam g => fn e => case [g] of
 | [] => let [|- M] = e  in STm' [|- M] WInit
 | [g, x:source T[] ] => 
   case e of
-  | [g,x:source _ |- M[..] ] =>
+  | [g,x:source _ |- M ] =>
     let STm' [h |-  M'] rel = str [g] [g |-  M] in
       STm' [h |- M'] (WDrop rel)
   | [g,x:source _ |- M] =>
@@ -139,7 +139,7 @@ rec weaken: Map [h] [g] -> Map [h,x:target S[]] [g] =
 fn sigma => case sigma of
 | M_id [h] => M_id [h,x:target _]
 | M_dot sigma' [h |-  M] =>
-    M_dot (weaken sigma') [h,x:target _ |- M[..]]
+    M_dot (weaken sigma') [h,x:target _ |- M]
 ;
 
 rec extend: Map [h] [g] -> Map [h,x:target S[]] [g,x:source S[]] =
@@ -159,7 +159,7 @@ fn sigma => mlam #q => case sigma of
  let (sigma : Map [h] [g',x:source S]) = sigma in
  (case [g', x:source S |- #q] of
  | [g', x:source T |- x   ] =>  [h |-  M]
- | [g', x:source S |- #p[..] ] => lookup sigma' [g' |- #p]
+ | [g', x:source S |- #p ] => lookup sigma' [g' |- #p]
  )
 | M_id [h] => impossible [ |- #q] in []
 ;
@@ -168,7 +168,7 @@ fn sigma => mlam #q => case sigma of
 % of variables
 inductive VarTup: (g:sctx) {T:[ |- tp]} [g |- source T[]] -> ctype =
 | Emp : VarTup [|- unit] [|- nil] 
-| Nex : VarTup [|-  L] [g |- R] -> VarTup [|- cross T L] [g,x:source T[] |- cons x R[..]]
+| Nex : VarTup [|-  L] [g |- R] -> VarTup [|- cross T L] [g,x:source T[] |- cons x R]
 ;
 
 % lookuVars replaces each variable contained in the VarTup by their respective target term from Map.
@@ -233,7 +233,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let [h |- P] = cc' [g |- M] sigma  in
   let [h |- Q] = cc' [g |- N] sigma  in
       [h |- cletpack P
-	 \e.\xf.\xenv. capp xf (ccons  Q[..] xenv)]
+	 \e.\xf.\xenv. capp xf (ccons  Q xenv)]
 
 | [g |- letv M (\x. N)] =>
   let [h |- P]              = cc' [g |- M]  sigma in

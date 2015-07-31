@@ -15,7 +15,7 @@ rec copy : {g:tctx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
  (case e of
     {#p:[g |- term]}
-     [g |- (#p[..])] : [g |- term] => [g |- (#p[..])]
+     [g |- (#p)] : [g |- term] => [g |- (#p)]
 
   | {U:[g, x : term |-  term]}
     [g |- lam (\x. (U))] : [g |- term] =>

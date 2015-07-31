@@ -50,20 +50,20 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
       | MispacedOperator n ->
-        Format.fprintf ppf ("Illegal use of operator %s.") (R.render_name n)
+        Format.fprintf ppf ("Illegal use of operator %s.") (Id.render_name n)
 
       | UnboundName n ->
           Format.fprintf ppf
 	    "Unbound data-level variable (ordinary or meta-variable) or constructor: %s."
-	    (R.render_name n)
+	    (Id.render_name n)
       | UnboundCtxName n ->
-          Format.fprintf ppf "Unbound context variable: %s." (R.render_name n)
+          Format.fprintf ppf "Unbound context variable: %s." (Id.render_name n)
       | UnboundCtxSchemaName n ->
-          Format.fprintf ppf "Unbound context schema: %s." (R.render_name n)
+          Format.fprintf ppf "Unbound context schema: %s." (Id.render_name n)
       | UnboundCompName n ->
-          Format.fprintf ppf "Unbound computation-level variable: %s." (R.render_name n)
+          Format.fprintf ppf "Unbound computation-level variable: %s." (Id.render_name n)
       | UnboundCompConstName n ->
-          Format.fprintf ppf "Unbound computation-level constructor: %s." (R.render_name n)
+          Format.fprintf ppf "Unbound computation-level constructor: %s." (Id.render_name n)
       | PatCtxRequired ->
           Format.fprintf ppf
 	    "The context in a pattern must be a proper context, where a variable declaration must carry its type."
@@ -88,7 +88,7 @@ type fcvars = free_cvars list * bool
 
 let rec fcvarsToString fcvars = match fcvars with
   | [] -> ""
-  | m :: fcvars -> ", FMV " ^ R.render_name m ^ fcvarsToString fcvars
+  | m :: fcvars -> ", FMV " ^ Id.render_name m ^ fcvarsToString fcvars
 
 let rec lookup_fv fvars m = begin  match (fvars, m) with
      ([], _ ) -> false
@@ -112,7 +112,7 @@ let get_ctxvar_mobj (_loc,mO) = match mO with
 let rec length_typ_rec t_rec = match t_rec with
   | Ext.LF.SigmaLast _ -> 1
   | Ext.LF.SigmaElem (x, _ , rest ) ->
-      (print_string (R.render_name x ^ "  ");
+      (print_string (Id.render_name x ^ "  ");
       1 + length_typ_rec rest )
 
 let rec index_kind cvars bvars fvars = function
@@ -164,8 +164,8 @@ and index_typ cvars bvars fvars = function
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
             let Ext.LF.Root(_, Ext.LF.Name(_, a), s') = shunting_yard nl in
-            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s')) 
-        | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) -> 
+            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, s'))
+        | Ext.LF.Root(loc2, Ext.LF.Name(_,name), sp) ->
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, sp))
       end
 
@@ -182,31 +182,31 @@ and locOfNormal = function
  *
  * Preconditions:
  *    - All operators (constructors and typs) are contained in the store
- * 
- * Post: List of normals is converted to a Root with a head and a spine 
+ *
+ * Post: List of normals is converted to a Root with a head and a spine
  *        - Head contains the name of the atom term that is to be indexed
- * 
+ *
 *)
 and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
-  
+
   let get_pragma = function
-    | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) 
+    | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil)
     | Ext.LF.Root(_, Ext.LF.PVar(_, name, _), Ext.LF.Nil)
-    | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) -> 
+    | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) ->
       let Some x = Store.OpPragmas.getPragma name in x
   in
   let pragmaExists = function
-    | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil) 
+    | Ext.LF.Root(_, Ext.LF.Name(_, name), Ext.LF.Nil)
     | Ext.LF.Root(_, Ext.LF.PVar(_, name, _), Ext.LF.Nil)
-    | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) -> 
-      let args_expected = 
-        try Typ.args_of_name name with _ -> 
-        try Term.args_of_name name with _ -> 
+    | Ext.LF.Root(_, Ext.LF.MVar(_, name, _), Ext.LF.Nil) ->
+      let args_expected =
+        try Typ.args_of_name name with _ ->
+        try Term.args_of_name name with _ ->
           -1 in
         (Store.OpPragmas.pragmaExists name) && (args_expected > 0)
     | _ -> false
   in
-  let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool = 
+  let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool =
     let p_p = p.Store.OpPragmas.precedence in
     let o_p = o.Store.OpPragmas.precedence in
     let p_a = match p.Store.OpPragmas.assoc with
@@ -215,7 +215,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     p_p < o_p ||
     (p_p = o_p && p_a = Ext.Sgn.Left)
 (*      p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
-    (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence && 
+    (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence &&
       ((o.Store.OpPragmas.assoc = None && !Store.OpPragmas.default = Ext.Sgn.Left) ||
        o.Store.OpPragmas.assoc = Some Ext.Sgn.Left))
  *)  in
@@ -225,60 +225,60 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   in
   let rec parse : int * Ext.LF.normal list * (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma) list -> Ext.LF.normal = function
   | i, Ext.LF.TList(_, nl) :: t, y, z -> let h = parse (0,nl, [], []) in parse(i+1, t,(i,h)::y,z)
-  | i, Ext.LF.Lam (loc, name, Ext.LF.TList(_, nl)) :: t, y, z -> 
-    let h = parse (0, nl, [], []) in 
+  | i, Ext.LF.Lam (loc, name, Ext.LF.TList(_, nl)) :: t, y, z ->
+    let h = parse (0, nl, [], []) in
     parse(i+1, t, (i, Ext.LF.Lam(loc, name, h))::y, z)
-  | i, h::t, exps, [] when pragmaExists h -> 
+  | i, h::t, exps, [] when pragmaExists h ->
     let p = get_pragma h in
     parse(i+1, t, exps, [(i, p)])
-  | i, h::t, exps, (x, o)::os when pragmaExists h -> 
+  | i, h::t, exps, (x, o)::os when pragmaExists h ->
     begin
-      let p = get_pragma h in 
+      let p = get_pragma h in
       if lte p o then begin match o.Store.OpPragmas.fix with
         | Ext.Sgn.Prefix ->
-          let args_expected = 
-            try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
-            try Term.args_of_name o.Store.OpPragmas.name with _ -> 
-              failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
+          let args_expected =
+            try Typ.args_of_name o.Store.OpPragmas.name with _ ->
+            try Term.args_of_name o.Store.OpPragmas.name with _ ->
+              failwith ("Unknown operator " ^ (Id.string_of_name o.Store.OpPragmas.name)) in
           let (ops, es) = take args_expected exps in
-          let loc = 
-            if args_expected > 0 then 
-              try let (_,x) = List.hd ops in locOfNormal x 
+          let loc =
+            if args_expected > 0 then
+              try let (_,x) = List.hd ops in locOfNormal x
               with _ -> raise (Error(locOfNormal h, MispacedOperator o.Store.OpPragmas.name))
             else Syntax.Loc.ghost in
           let ops = List.map (fun (_,x) ->x) ops in
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine ops) in
           parse(i+1, h::t, (i, e')::es, os)
 
-        | Ext.Sgn.Postfix -> 
+        | Ext.Sgn.Postfix ->
           let (_, e)::es = exps in
           let loc = locOfNormal e in
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), Ext.LF.App(loc, e, Ext.LF.Nil)) in
           parse(i+1, h::t, (i, e')::es, os)
 
-        | Ext.Sgn.Infix -> 
+        | Ext.Sgn.Infix ->
           let (_, e2)::(_, e1)::es = exps in
           let loc = locOfNormal e1 in
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), normalListToSpine [e1; e2]) in
-          parse(i+1, h::t, (i, e')::es, os) 
+          parse(i+1, h::t, (i, e')::es, os)
 
       end else
         parse(i+1, t, exps, (i, p)::(x, o)::os)
     end
   | i, h ::t, y, z -> parse(i+1, t, (i, h)::y, z)
-  | _, [], y, z -> 
+  | _, [], y, z ->
     reconstruct (y, z)
 
   and reconstruct : (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma) list -> Ext.LF.normal = function
   | [(_, e)], [] -> e
   | exps, (i, o)::os when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
-    let args_expected = 
-      try Typ.args_of_name o.Store.OpPragmas.name with _ -> 
-      try Term.args_of_name o.Store.OpPragmas.name with _ -> 
-        failwith ("Unknown operator " ^ (o.Store.OpPragmas.name.Id.string_of_name)) in
+    let args_expected =
+      try Typ.args_of_name o.Store.OpPragmas.name with _ ->
+      try Term.args_of_name o.Store.OpPragmas.name with _ ->
+        failwith ("Unknown operator " ^ (Id.string_of_name o.Store.OpPragmas.name)) in
     let (ops, es) = take args_expected exps in
-    let loc = 
-      if args_expected > 0 then 
+    let loc =
+      if args_expected > 0 then
         try let (_,x) = List.hd ops in locOfNormal x
         with _ -> raise (Error(Syntax.Loc.ghost, MispacedOperator o.Store.OpPragmas.name))
       else Syntax.Loc.ghost in
@@ -295,16 +295,16 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       reconstruct((i, e')::es, os) end
     else raise (Error(loc, MispacedOperator o.Store.OpPragmas.name))
 
-  | (i1, e)::es, (i, o)::os when o.Store.OpPragmas.fix = Ext.Sgn.Postfix -> 
+  | (i1, e)::es, (i, o)::os when o.Store.OpPragmas.fix = Ext.Sgn.Postfix ->
     let loc = locOfNormal e in
     if i > i1 then begin
       let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name), Ext.LF.App(loc, e, Ext.LF.Nil)) in
       reconstruct((i, e')::es, os) end
     else raise (Error(loc, MispacedOperator o.Store.OpPragmas.name))
 
-  | l, [] ->     
+  | l, [] ->
     let l' = List.rev l in
-    let (_, Ext.LF.Root(loc, h, Ext.LF.Nil)) :: t = l' in 
+    let (_, Ext.LF.Root(loc, h, Ext.LF.Nil)) :: t = l' in
     let t = List.map (fun (_,x) -> x) t in
     Ext.LF.Root(loc, h, normalListToSpine t)
 
@@ -316,11 +316,11 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       | h::t when n > 0 -> aux (n-1) t (h::c)
       | _  -> (c, l)
   in aux i l []
-in try parse (0, l, [], []) 
-  with 
+in try parse (0, l, [], [])
+  with
   | (Error _) as e -> raise e
-  | _ -> begin 
-    let l = match List.hd l with 
+  | _ -> begin
+    let l = match List.hd l with
       | Ext.LF.Lam(l, _, _) | Ext.LF.Root(l, _, _) | Ext.LF.Tuple(l, _)
       | Ext.LF.Ann(l, _, _) | Ext.LF.TList(l, _)   | Ext.LF.NTyp(l, _) | Ext.LF.LFHole l-> l
     in raise (Error(l, ParseError)) end
@@ -376,13 +376,13 @@ and index_proj = function
 
 and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
   | Ext.LF.Name (_, n) ->
-      let _ = dprint (fun () -> "Indexing name " ^ n.string_of_name) in
+      let _ = dprint (fun () -> "Indexing name " ^ (string_of_name n)) in
       begin try
         (Apx.LF.BVar (BVar.index_of_name bvars n) , fvs)
       with Not_found -> try
         (Apx.LF.Const (Term.index_of_name n) , fvs)
       with Not_found ->
-        dprint (fun () -> "FVar " ^ n.string_of_name );
+        dprint (fun () -> "FVar " ^ (string_of_name n) );
         (Apx.LF.FVar n , fvs)
       end
 
@@ -437,7 +437,7 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
         end
 
   (* | Ext.LF.SVar (loc, n, _sigma) -> *)
-  (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ n.string_of_name) in *)
+  (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ (string_of_name n)) in *)
   (*       raise (Error (loc, UnboundName n)) *)
 
 and index_spine cvars bvars fvars = function
@@ -446,7 +446,7 @@ and index_spine cvars bvars fvars = function
 
   | Ext.LF.App (_, m, s) ->
     match m with
-      | Ext.LF.TList(loc, nl) -> 
+      | Ext.LF.TList(loc, nl) ->
         let n = shunting_yard nl in
         index_spine cvars bvars fvars (Ext.LF.App (loc, n, s))
       | _ ->
@@ -460,7 +460,7 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) =
     | Apx.LF.Root (_,(Apx.LF.PVar _ as h), Apx.LF.Nil)
     | Apx.LF.Root (_,(Apx.LF.Proj _ as h), Apx.LF.Nil) -> Apx.LF.Head h
     | _ -> Apx.LF.Obj tM
-  in 
+  in
   function
   | Ext.LF.RealId -> (Apx.LF.RealId, fvars)
   | Ext.LF.Id loc -> (Apx.LF.Id, fvars)
@@ -546,7 +546,7 @@ let rec index_ctx cvars bvars fvars = function
         (Apx.LF.Dec (psi', dec'), bvars'', fvars'')
 
 let index_cltyp' cvars bvars fvars = function
-  | Ext.LF.MTyp a -> 
+  | Ext.LF.MTyp a ->
     let (a, fvars) = index_typ  cvars bvars fvars a in
     (Apx.LF.MTyp a, fvars)
   | Ext.LF.PTyp a ->
@@ -562,11 +562,11 @@ let index_cltyp loc cvars fvars = function
       let (cl', fvars'')          = index_cltyp'  cvars bvars' fvars' cl in
         (Apx.LF.ClTyp (cl', psi'), fvars'')
   | Ext.LF.CTyp (schema_name) ->
-      begin try 
+      begin try
 	let schema_cid    = Schema.index_of_name schema_name in
 	  (Apx.LF.CTyp schema_cid, fvars)
       with Not_found ->           raise (Error (loc, UnboundCtxSchemaName schema_name))
-      end 
+      end
 
 let cltyp_to_cvar n _ = n
 
@@ -622,7 +622,7 @@ let index_schema (Ext.LF.Schema el_list) =
 (* Translation of external computations into approximate computations *)
 
 let index_clobj cvars bvars fcvars = function
-  | Ext.Comp.MObj m -> 
+  | Ext.Comp.MObj m ->
     let (m', fcvars') = index_term cvars bvars fcvars m in
     (Apx.Comp.MObj m', fcvars')
   | Ext.Comp.SObj s ->

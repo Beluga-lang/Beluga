@@ -18,3 +18,4 @@ _build
 *.d.native
 *.p.byte
 beluga
+*.sexp

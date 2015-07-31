@@ -2,11 +2,8 @@
 
 set -e
 
-bailout=NO
-
-git status --porcelain | grep "" && bailout=YES
-
-if [ $bailout = YES ]; then
+# tests that the output of git status --porcelain is non-empty
+if [ -n "$(git status --porcelain)" ]; then
     echo
     echo 'git status reports a working tree that is not pristine.'
     echo 'Please run this release script in a clean directory, such as after'

@@ -19,10 +19,8 @@ let collect (loc, cD, cG, (tau, theta)) =
 
 let ( ++ ) f g = function x -> f (g x)
 
-let nameString n = n.Id.string_of_name
-
 let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ; 
+  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ;
   Format.flush_str_formatter ()
 
 let isExplicit = function
@@ -45,16 +43,16 @@ let isExplicit = function
       s ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
     | LF.Dec (cD, _ ) -> toString cD
   in toString ++ Whnf.normMCtx
- 
+
 let gctxToString cD =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
     | LF.Dec (LF.Empty, Comp.CTypDecl (n, tau)) ->
-      "\n" ^ shift ^ (nameString n) ^ ": " ^ P.compTypToString cD tau
+      "\n" ^ shift ^ (Id.string_of_name n) ^ ": " ^ P.compTypToString cD tau
     | LF.Dec (cG, Comp.CTypDecl (n, tau)) ->
-      toString cG ^ "\n" ^ shift ^ (nameString n) ^ ": " ^ P.compTypToString cD tau
+      toString cG ^ "\n" ^ shift ^ (Id.string_of_name n) ^ ": " ^ P.compTypToString cD tau
   in toString ++ Whnf.normCtx
 
 (** More holes **)
@@ -117,7 +115,7 @@ let getStagedHoleNum loc =
 let setStagedHolePos i l =
       let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
       DynArray.set stagedholes i (l, cD, cG, tclo)
-let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list = 
+let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list =
   let rec aux acc = function
     | LF.Empty -> acc
     | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
@@ -133,7 +131,7 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list =
   Store.Cid.NamedHoles.reset () ;
   let b1 = "____________________________________________________________________________" in
   let b2 = "============================================================================" in
-  Printf.printf 
+  Printf.printf
     "\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s\n"
     (Loc.to_string loc)
     (mctxToString cD)
@@ -158,12 +156,12 @@ let printOne i (loc, cD, cG, (tau, theta)) =
   let gctx = (gctxToString cD cG) in
   let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
   if List.length l > 0 then
-    Format.printf 
+    Format.printf
       "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
         (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal) (if List.length l = 1 then "" else "s")
         (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
   else
-    Format.printf 
+    Format.printf
       "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n"
        (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
@@ -178,7 +176,7 @@ let printOneHole i =
     try
       printOne i (DynArray.get holes i)
     with
-      | DynArray.Invalid_arg (_, _, _) -> 
+      | DynArray.Invalid_arg (_, _, _) ->
           if !Debug.chatter != 0 then
             Printf.printf " - There is no hole # %d.\n" i
 

@@ -14,12 +14,12 @@ module P = Pretty.Int.DefaultPrinter
 let rec subToString = function
   | Shift n -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
   | SVar _ -> "SVar(_,_)"
-  | FSVar (i, (n, _)) -> "FSVar(" ^ n.Id.string_of_name ^ ", " ^ string_of_int i ^ ")"
+  | FSVar (i, (n, _)) -> "FSVar(" ^ (Id.string_of_name n) ^ ", " ^ string_of_int i ^ ")"
   | Dot(front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"
   | MSVar _ -> "MSVar_"
   | EmptySub -> "EmptySub"
   | Undefs -> "Undefs"
-  
+
 and frontToString = function
   | Head h -> "Head _"
   | Obj tM -> "Obj _"

@@ -42,7 +42,7 @@
  t ;; guidance
  "Beluga unicode input method: actually replaces keyword strings with a single unicode character instead of merely representing the keywords in unicode using Font Lock mode."
   nil nil nil nil nil nil nil nil nil nil t)
-  
+
 
 (quail-define-rules
  ;; Greek letters
@@ -102,12 +102,12 @@
  ("->" ["→"])
  ("<-" ["←"])
  ("=>" ["⇒"])
- 
+
  ;;LF
  ("|-" ["⊢"])
  ("not" ["¬"])
  ("::" ["∷"])
- (".." ["…"]) 
+ (".." ["…"])
  ("FN" ["Λ"])
 )
 
@@ -185,12 +185,12 @@ PREDICATE if present is a function of one argument (the start position
 of the symbol) which should return non-nil if this mapping should be disabled
 at that position.")
 
-(defun proc-live (process) 
-  "Returns non-nil if PROCESS is alive. 
-    A process is considered alive if its status is `run', `open', 
-    `listen', `connect' or `stop'." 
-  (memq (process-status process) 
-        '(run open listen connect stop))) 
+(defun proc-live (process)
+  "Returns non-nil if PROCESS is alive.
+    A process is considered alive if its status is `run', `open',
+    `listen', `connect' or `stop'."
+  (memq (process-status process)
+        '(run open listen connect stop)))
 
 (defun beluga-font-lock-compose-symbol (alist)
   "Compose a sequence of ascii chars into a symbol.
@@ -306,7 +306,7 @@ If a previous beli process already exists, kill it first."
   (setq beluga--proc
         (get-buffer-process
          (make-comint "beluga"
-                      "beluga"
+		      beluga-interpreter-name
                       nil "-I" "-emacs" ))))
 
 (defun beluga--stop ()
@@ -380,7 +380,9 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (beluga--start)
   (maybe-save)
-  (message "%s" (beluga--rpc (concat "load " (buffer-file-name)))))
+  (let ((file-name
+	 (expand-file-name (read-file-name "Load file:" buffer-file-name))))
+    (message "%s" (beluga--rpc (concat "load " file-name)))))
 
 (defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
@@ -529,9 +531,9 @@ If a previous beli process already exists, kill it first."
                          electric-indent-chars
                        '(?\n))))
   ;;QUAIL
-  ; (add-hook 'beluga-mode-hook 
+  ; (add-hook 'beluga-mode-hook
     ; (lambda () (set-input-method "beluga-unicode")))
-   
+
   ;;Turn off hilighting
 ;;(setq input-method-highlight-flag nil)
 

@@ -30,11 +30,9 @@ let rec insertIMSub i mfront ms = match (i, ms) with
 | (i, LF.MDot (mf, ms')) ->
    let ms' = insertIMSub (i-1) mfront ms' in
    LF.MDot(mf, ms')
-| (i, LF.MShift k ) -> 
+| (i, LF.MShift k ) ->
     insertIMSub i mfront (LF.MDot (LF.MV(k+1), LF.MShift(k+1)))
 
-
-let nameString n = n.Id.string_of_name
 
 let nameOfLFcTypDecl = (function
 | LF.Decl(n, _, _) -> n
@@ -70,12 +68,12 @@ let rec mctxToCVars cD = match cD with
 
 (*   and dctx =                                 (* LF Context                     *)
     | Null                                   (* Psi ::= .                      *)
-    | CtxVar   of ctx_var                    | psi                         
+    | CtxVar   of ctx_var                    | psi
     | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
 
 let rec psiToM = function
 | LF.Null -> failwith "IDK"
-| LF.DDec(psi', LF.TypDecl(n, tA)) -> 
+| LF.DDec(psi', LF.TypDecl(n, tA)) ->
 | LF.DDec(psi', LF.TypDeclOpt(n)) ->
  *)
 let printCtxGoal (cD,cPsi,mS) =
@@ -133,7 +131,7 @@ let nextLoc loc =
 *)
 let branchCovGoals loc i cG0 tA cgs =
   List.map (fun (cD,cg, ms) ->  match cg with
-  | Cover.CovCtx cPsi -> 
+  | Cover.CovCtx cPsi ->
       let loc' = nextLoc loc in
       (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n"  (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
       let ms = (if i = 0 then ms else insertIMSub i (LF.CObj cPsi) ms) in
@@ -258,11 +256,11 @@ let replaceHole i exp =
   let funOfHole i =
     let (loc, _cD, _cG, (_tau, _mS)) = Holes.getOneHole i in
     let entries = DynArray.to_list Store.Cid.Comp.entry_list in
-    let opt =  
-      List.fold_left (fun found_opt entries' -> 
+    let opt =
+      List.fold_left (fun found_opt entries' ->
         match found_opt with
-        | None -> 
-          begin try 
+        | None ->
+          begin try
             Some(List.find (fun (_,loc') -> Holes.locWithin loc' loc) !entries')
           with _ -> None end
         | Some _ -> found_opt) None entries in
@@ -277,15 +275,15 @@ let replaceHole i exp =
       let ec' = (mapHoleChk (ithHoler lh exp) ec) in
       let _l = Store.Cid.Comp.add loc
           (fun cid ->
-            Store.Cid.Comp.mk_entry 
-	      entry.Store.Cid.Comp.name 
-	      entry.Store.Cid.Comp.typ 
+            Store.Cid.Comp.mk_entry
+	      entry.Store.Cid.Comp.name
+	      entry.Store.Cid.Comp.typ
 	      entry.Store.Cid.Comp.implicit_arguments
 	      entry.Store.Cid.Comp.total
               (Synint.Comp.RecValue (cid, ec', ms, env))
               entry.Store.Cid.Comp.mut_rec) in
       P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
-  | _ -> Holes.stashHoles (); failwith ("Error in replaceHole: "^(entry.Store.Cid.Comp.name.Id.string_of_name)^" is not a function\n")  )
+  | _ -> Holes.stashHoles (); failwith ("Error in replaceHole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")  )
 
 
 
@@ -299,8 +297,8 @@ let replaceHole i exp =
 
 
 (* intro: int -> Comp.exp_chk option *)
-let is_inferred = function 
-| LF.Decl(_, ctyp, dep) -> 
+let is_inferred = function
+| LF.Decl(_, ctyp, dep) ->
     begin match dep with
       | LF.No -> false
       | LF.Maybe -> true
@@ -363,7 +361,7 @@ let split e i =
   let rec searchGctx i = function
   | LF.Empty -> None
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
-      if (nameString n) = e then
+      if (Id.string_of_name n) = e then
         (match tau with
         | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
           let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
@@ -374,7 +372,7 @@ let split e i =
             let bl = branchCovGoals loc 0 cG0 tH cgs in
             Some (matchFromPatterns l (Comp.Var(l, i)) bl)
         | _ ->
-            failwith ("Found variable in gCtx, cannot split on "^(nameString n)))
+            failwith ("Found variable in gCtx, cannot split on "^(Id.string_of_name n)))
       else
         searchGctx (i+1) cG'
   in
@@ -385,35 +383,35 @@ let split e i =
 	let LF.Decl(n, ctyp,_) = ctypDecl in
 	  (match ctyp with
 	     | LF.CTyp(_) ->
-		 (if (nameString n) = e then
-		    let cgs   = Cover.genContextGoals (dropIMCtx i cD0) ctypDecl in 
+		 (if (Id.string_of_name n) = e then
+		    let cgs   = Cover.genContextGoals (dropIMCtx i cD0) ctypDecl in
 		    let bl    = branchCovGoals loc i cG0 tH cgs in
 		    let m0 = (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))  in
-		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0), 
+		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0),
 					  Comp.TypBox(Loc.ghost, ctyp)) in
 		      Some (matchFromPatterns (Loc.ghost) entry bl)
 		  else
 		    searchMctx (i+1) cD' )
 	     | LF.ClTyp (LF.MTyp tA,cPsi) ->
-		 (if (nameString n) = e then
-		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		 (if (Id.string_of_name n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in
 		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		    let cgs   = Cover.genCovGoals ((dropIMCtx i cD0), cPsi,tA) in 
+		    let cgs   = Cover.genCovGoals ((dropIMCtx i cD0), cPsi,tA) in
 		    (*let cgs   = Cover.genCovGoals (cD0,cPsi',tA') in*)
 		    let bl    = branchCovGoals loc i cG0 tH cgs in
 		    let ((_ , vOff) as phat) = dctxToHat cPsi' in
-		    let m0 = (Loc.ghost, 
+		    let m0 = (Loc.ghost,
 			      LF.ClObj (phat,LF.MObj (LF.Root (Loc.ghost,
 							       LF.MVar (LF.Offset i, LF.Shift vOff),
 							       LF.Nil)))) in
-		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0), 
+		    let entry = Comp.Ann (Comp.Box (Loc.ghost, m0),
 					  Comp.TypBox(Loc.ghost, LF.ClTyp (LF.MTyp tA', cPsi'))) in
 		      Some (matchFromPatterns (Loc.ghost) entry bl)
 		  else
 		    searchMctx (i+1) cD')
 	     | LF.ClTyp (LF.PTyp tA,cPsi) ->
-		 (if (nameString n) = e then
-		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in 
+		 (if (Id.string_of_name n) = e then
+		    let tA'   = Whnf.cnormTyp (tA, LF.MShift i) in
 		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
 		    let cgs = Cover.genBCovGoals (cD',cPsi,tA) in
 		    let bl = branchCovGoals loc i cG0 tH cgs in
@@ -467,6 +465,6 @@ let whale () = Format.printf
 ``````````````;;;.;;;`:;;``.:``;;``;;,;;;``;;;;;;.`;;`.;;.``````````````@\n\
 ``````````````;;;;;;```;;;;;;``;;``:;;;;;``.;;;;;.`;;;;;;.``````````````@\n\
 %s`;;@\n\
-%s;;;;;,@\n" 
+%s;;;;;,@\n"
 ("                                              ")
 ("                                           ")

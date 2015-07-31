@@ -26,7 +26,7 @@ module LF = struct
     | PTyp of typ
     | STyp of svar_class * dctx
 
-  and svar_class = 
+  and svar_class =
     | Ren
     | Subst
 
@@ -180,7 +180,7 @@ module LF = struct
   (**********************)
   (* Type Abbreviations *)
   (**********************)
-  
+
   type nclo     = normal  * sub          (* Ns = [s]N                      *)
   type sclo     = spine   * sub          (* Ss = [s]S                      *)
   type tclo     = typ     * sub          (* As = [s]A                      *)
@@ -228,7 +228,7 @@ module LF = struct
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
     | _ -> raise Not_found
- 
+
   (* getIndex traverses the typ_rec from left to right;
      target is the name of the projection we're looking for
 
@@ -239,10 +239,10 @@ module LF = struct
 let rec getIndex' trec target acc = match trec with
   | SigmaLast(None, _) -> raise Not_found
   | SigmaLast(Some name, _) ->
-    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    if String.compare (string_of_name name) (string_of_name target) == 0 then acc
     else failwith "Projection Not found"
   | SigmaElem(name, _, trec') ->
-    if String.compare (name.string_of_name) (target.string_of_name) == 0 then acc
+    if String.compare (string_of_name name) (string_of_name target) == 0 then acc
   else getIndex' trec' target (acc + 1)
 
 let getIndex trec target = getIndex' trec target 1
@@ -267,20 +267,20 @@ module Comp = struct
     | TypBase   of Loc.t * cid_comp_typ * meta_spine
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
-    | TypBox of Loc.t * meta_typ 
+    | TypBox of Loc.t * meta_typ
     | TypArr    of typ * typ
     | TypCross  of typ * typ
     | TypPiBox  of LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
-    | TypBool 
-    | TypInd of typ 
+    | TypBool
+    | TypInd of typ
 
 
   (* For ih *)
   type args =
     | M  of meta_obj
     | V  of offset
-    | E  
+    | E
     | DC (* don't care *)
 
 
@@ -403,7 +403,7 @@ module Sgn = struct
   type decl =
     | Typ           of Loc.t * cid_typ  * LF.kind
     | Const         of Loc.t * cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag 
+    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
     | CompDest      of Loc.t * name * Comp.typ

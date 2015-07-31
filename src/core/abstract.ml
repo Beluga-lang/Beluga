@@ -43,7 +43,7 @@ let _ = Error.register_printer
       match err with
         | UnknownMTyp psi ->
             Format.fprintf ppf "Unable to infer type for variable %s"
-              (R.render_name psi)
+              (Id.render_name psi)
         | LeftoverVars ->
           Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
         | LeftoverConstraints ->
@@ -117,7 +117,7 @@ let _ = Error.register_printer
 type flag = LF | Comp
 type sort = LFTyp of I.typ | MetaTyp of I.ctyp * I.depend
 type marker = Pure of sort | Impure
- 
+
 type free_var =
   | FDecl of kind * marker
   (* Bound variables. I think we could allow these to be more general than just contexts  *)
@@ -150,7 +150,7 @@ let rec raiseKind cPsi tK = match cPsi with
   | I.Dec (cPsi', decl) ->
       raiseKind cPsi' (I.PiKind ((decl, I.Maybe), tK))
 
-let depToString dep = match dep with 
+let depToString dep = match dep with
   | I.No -> "^e"
   | I.Maybe -> "^i"
   | _ -> "*"
@@ -160,7 +160,7 @@ let rec collectionToString cQ = match cQ with
 
   | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, dep)))) ->
        collectionToString cQ ^ " MMV"
-     ^ P.mtypToString I.Empty mtyp ^ depToString dep 
+     ^ P.mtypToString I.Empty mtyp ^ depToString dep
      ^ "\n"
   | I.Dec(cQ, FDecl (MMV (_n,_r), Impure)) ->
        collectionToString cQ ^ " MMV Impure"
@@ -169,14 +169,14 @@ let rec collectionToString cQ = match cQ with
   | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp, _ )))) ->
       let cD = I.Empty in
        collectionToString cQ
-     ^ " " ^ R.render_name u ^ " : "
+     ^ " " ^ Id.render_name u ^ " : "
      ^ P.mtypToString cD mtyp ^"\n"
 
   | I.Dec(cQ, FDecl (FV _n, Impure)) ->  collectionToString cQ ^ ",  FV _ .\n"
 
   | I.Dec(cQ, FDecl (FV n, Pure (LFTyp tA))) ->
       let cD = I.Empty in
-        collectionToString cQ ^ ",  FV " ^ n.string_of_name ^ " : "
+        collectionToString cQ ^ ",  FV " ^ (string_of_name n) ^ " : "
       ^ "(" ^ P.typToString cD I.Null (tA, LF.id) ^ ")"
       ^ "\n"
   | I.Dec(_cQ, _ ) -> " ?? "
@@ -208,7 +208,7 @@ let rec checkOccurrence loc p = function
   | I.Dec (cQ', FDecl (y,m))  ->
     if eqVar p y then
       (match m with
-	| Pure _ -> Yes 
+	| Pure _ -> Yes
 	| Impure -> raise (Error (loc, CyclicDependency p)))
     else checkOccurrence loc p cQ'
   | I.Dec (cQ', CtxV _) -> No
@@ -407,7 +407,7 @@ let rec ctxToMCtx_pattern cQ = match cQ with
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp (Some w), dep))
-  
+
 | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx_pattern cQ'
 
@@ -495,7 +495,7 @@ and addVar loc p cQ v tp = match checkOccurrence loc v cQ with
    | Yes ->  (cQ, tp)
    | No  ->
      let cQ' = I.Dec(cQ, FDecl(v, Impure)) in
-     let (cQ2, tp') = collectBothTyp loc p cQ' tp in 
+     let (cQ2, tp') = collectBothTyp loc p cQ' tp in
      (I.Dec (cQ2, FDecl (v, Pure tp')), tp')
 
 and getType loc p name f =
@@ -504,10 +504,10 @@ and getType loc p name f =
   | Comp ->
     let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get name in
     let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
-      if !pat_flag then MetaTyp (mtyp', I.No) else 
+      if !pat_flag then MetaTyp (mtyp', I.No) else
 	MetaTyp (mtyp', dep)
    with Not_found -> raise (Error (loc, UnknownMTyp name))
-  end 
+  end
 
 and collectFVar fl loc p cQ name =
   let (cQ2, _tp) = addVar loc p cQ (FV name) (getType loc p name fl) in
@@ -517,23 +517,23 @@ and collectLFVar l = collectFVar LF l
 
 and collectCompFVar l = collectFVar Comp l
 
-and collectFVarSub p cQ phat (name, s') = 
+and collectFVarSub p cQ phat (name, s') =
   let cQ = collectCompFVar Syntax.Loc.ghost p cQ name in
   let (cQ,s') = collectSub p cQ phat s' in
   (cQ, (name,s'))
 
-and collectMMVar loc p cQ (n,q,cD,tp,c,dep) = 
+and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
   match cD with
     | I.Empty -> begin
       if constraints_solved !c then
 	match !q with
-	  | None -> 
+	  | None ->
 	      let (cQ', MetaTyp (tp',dep')) = addVar loc p cQ (MMV (n,q)) (MetaTyp (tp, dep)) in
 		(cQ', (n, q, cD, tp', c, dep'))
 	  | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	raise (Error (loc, LeftoverConstraints))
-    end 
+    end
     | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
 
 and collectMVarMSub loc p cQ (i,ms') =
@@ -541,7 +541,7 @@ and collectMVarMSub loc p cQ (i,ms') =
   let (cQ1, i') = collectMMVar loc p cQ0 i in
   (cQ1, (i', ms'))
 
-and collectMVarInst loc p cQ phat (ims, s') = 
+and collectMVarInst loc p cQ phat (ims, s') =
   let (cQ0, ims') = collectMVarMSub loc p cQ ims in
   let (cQ1, s') = collectSub p cQ0 phat s' in
   (cQ1, (ims',s'))
@@ -593,7 +593,7 @@ and collectClObj p cQ1 phat' = function
     let (cQ2, s')    = collectSub p cQ1 phat' s in
       (cQ2, I.SObj s')
 
-and collectMObj p cQ1 = function 
+and collectMObj p cQ1 = function
   | I.ClObj(phat, tM) ->
       let (cQ1, phat') = collectHat p cQ1 phat in
       let (cQ2, tM') = collectClObj p cQ1 phat' tM in
@@ -696,7 +696,7 @@ and collectKind p cQ ((cvar, offset) as phat) sK = match sK with
 
 and collectCVar loc p cQ = function
   | I.CtxOffset k -> (cQ, I.CtxOffset k)
-  | I.CInst ims -> 
+  | I.CInst ims ->
     let (cQ', ims') = collectMVarMSub loc p cQ ims in
     (cQ', I.CInst ims')
   | (I.CtxName psi) ->
@@ -705,7 +705,7 @@ and collectCVar loc p cQ = function
 and collectHat p cQ (cv,offset) = match cv with
   | None -> (cQ, (None,offset))
   | Some cv ->
-    let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ cv 
+    let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ cv
     in (cQ', (Some cv', offset))
 
 and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
@@ -714,7 +714,7 @@ and collectDctx loc (p:int) cQ (cvar, offset) cPsi =
 and collectDctx' loc p cQ ((cvar, offset)) cPsi = match cPsi with
   | I.Null ->  (cQ, I.Null)
   | I.CtxVar cv ->
-    let (cQ', cv') = collectCVar loc p cQ cv 
+    let (cQ', cv') = collectCVar loc p cQ cv
     in (cQ', I.CtxVar cv')
 
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
@@ -726,10 +726,10 @@ and collectDctx' loc p cQ ((cvar, offset)) cPsi = match cPsi with
 and collectMTyp p cQ = collectMetaTyp Syntax.Loc.ghost p cQ
 
 and collectClTyp loc p cQ' phat = function
-  | I.MTyp tA -> 
+  | I.MTyp tA ->
     let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
     (cQ'', I.MTyp tA')
-  | I.PTyp tA -> 
+  | I.PTyp tA ->
     let (cQ'', tA')    =  collectTyp p cQ' phat  (tA, LF.id) in
     (cQ'', I.PTyp tA')
   | I.STyp (cl, cPhi) ->
@@ -737,16 +737,16 @@ and collectClTyp loc p cQ' phat = function
      let (cQ1, cPhi') = collectDctx loc p cQ' phi_hat cPhi in
      (cQ1, I.STyp (cl, cPhi'))
 
-and collectMetaTyp loc p cQ = function 
+and collectMetaTyp loc p cQ = function
   | I.CTyp sW -> (cQ, I.CTyp sW)
-  | I.ClTyp (tp, cPsi) -> 
+  | I.ClTyp (tp, cPsi) ->
     let phat = Context.dctxToHat cPsi in
     let (cQ', cPsi') = collectDctx loc p cQ phat cPsi in
     let (cQ'', tp') = collectClTyp loc p cQ' phat tp in
     (cQ'', I.ClTyp (tp', cPsi'))
 
 let collectCDecl p cQ cdecl = match cdecl with
-  | I.Decl (u, mtyp,dep) -> 
+  | I.Decl (u, mtyp,dep) ->
     let (cQ', mtyp') = collectMTyp p cQ mtyp in
     (cQ', I.Decl(u, mtyp',dep))
 
@@ -942,7 +942,7 @@ and abstractMVarTermW cQ offset sM = match sM with
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
-  | (I.LFHole _loc, s) -> 
+  | (I.LFHole _loc, s) ->
       I.LFHole _loc
 
 and abstractMVarTuple cQ offset = function
@@ -962,7 +962,7 @@ and abstractMMVarMSub cQ (l,d) (i,_ms) =
   abstractMMVar cQ d i (* Shouldn't this apply ms? *)
 
 and abstractMMVarInst cQ loff (ims,s) =
-  (abstractMMVarMSub cQ loff ims, abstractMVarSub cQ loff s) 
+  (abstractMMVarMSub cQ loff ims, abstractMVarSub cQ loff s)
 
 and abstractFVarSub cQ ((l,d) as offset) (name,s) =
   (index_of cQ (FV name) + d, abstractMVarSub cQ offset s)
@@ -1143,12 +1143,12 @@ and abstractMSub t =
       I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp (Some w), dep))
    | I.Dec (cQ', FDecl (_, Impure)) ->
        ctxToMCtx' cQ'
-  in 
+  in
   let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
   let t'' = abstrMSub cQ' t' in
   let _ = dprint (fun () -> "[abstractMSub] Collection cQ'  = " ^
-		    collectionToString cQ') in 
+		    collectionToString cQ') in
   let cD' = ctxToMCtx'  cQ' in
   (t'', cD')
 
@@ -1194,7 +1194,7 @@ let rec collectCompKind p cQ cK = match cK with
       let (cQ'', cK2)    = collectCompKind p cQ' cK1 in
         (cQ'', Comp.PiKind (loc, cdecl', cK2) )
 
-let rec collect_meta_obj p cQ (loc,cM) = 
+let rec collect_meta_obj p cQ (loc,cM) =
   let (cQ', cM') = collectMObj p cQ cM in (cQ', (loc, cM'))
 
 and collect_meta_spine p cQ cS = match cS with
@@ -1234,8 +1234,8 @@ let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBool  -> (cQ, tau)
   | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
                       raise Error.NotImplemented)
-  | Comp.TypInd tau -> 
-      let (cQ', tau') = collectCompTyp p cQ tau in 
+  | Comp.TypInd tau ->
+      let (cQ', tau') = collectCompTyp p cQ tau in
 	(cQ', Comp.TypInd tau')
 
 
@@ -1571,7 +1571,7 @@ let abstrPatObj loc cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx_pattern cQ' in 
+  let cD'     = ctxToMCtx_pattern cQ' in
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
     (pat_flag := false;
@@ -1583,7 +1583,7 @@ let abstrPatObj loc cD cG pat tau =
 
 *)
 let abstrPattern cD1 cPsi1  (phat, tM) tA =
-  let _ = pat_flag := true in 
+  let _ = pat_flag := true in
   let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ 0 in
   let offset  = Context.length cD1' in
@@ -1599,7 +1599,7 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
 
 
 let abstrMObjPatt cD1 cM mT =
-  let _ = pat_flag := true in 
+  let _ = pat_flag := true in
   let (cQ1, cD1') = collectMctx I.Empty cD1 in
   let (cQ2, cM')  = collect_meta_obj 0 cQ1 cM in
   let (cQ3, mT')  = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
@@ -1629,7 +1629,7 @@ let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
   let cD       = Context.append cD' cD2 in
     (cD, cPsi2, sigma2, cPhi2)
 
-let abstrExp e = 
+let abstrExp e =
   collectExp I.Empty e
 
 (* appDCtx cPsi1 cPsi2 = cPsi1, cPsi2 *)

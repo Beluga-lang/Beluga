@@ -707,7 +707,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
       else
 	begin try
 	  let (offset, _w) = Whnf.mctxMVarPos cD x  in
-(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ R.render_name x ^
+(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ Id.render_name x ^
 			    " with CtxOffset " ^ R.render_offset offset) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
 	  let _ = dprint (fun () -> "[fmvApxDCtx] l_cd1 " ^ string_of_int l_cd1) in
@@ -737,7 +737,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
             let (offset, _) = Whnf.mctxMVarPos cD psi in
               (Some (Int.LF.CtxOffset (offset + k)), d)
 	  with Whnf.Fmvar_not_found ->
-	    (Printf.printf "Unbound context variable %s"  (R.render_name psi);
+	    (Printf.printf "Unbound context variable %s"  (Id.render_name psi);
 	    raise (Index.Error (loc, Index.UnboundCtxName psi)))
 	  end
 

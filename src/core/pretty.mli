@@ -91,7 +91,7 @@ module Int : sig
 
     (* Conversion to string *)
     val sgnDeclToString   : Sgn.decl -> string
-    
+
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string

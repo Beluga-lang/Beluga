@@ -61,48 +61,48 @@ schema xaG = block x:tm, ae_v:aeq x x;
 schema daG = block (x: tm, ae_v:aeq x x, de_v:deq x x) ;
 %{{
 ## Proof of Reflexivity
-We first prove admissibility of reflexivity. The proof is implemented as a recursive function called <code>reflG</code> of type <code>{g:xaG}{M:[g |- tm ]}[g |- aeq (M[..])(M[..])]</code>: for all contexts <code>g</code> that have schema <code>xaG</code>, for all terms <code>M</code>, we have a proof that <code>[g |- aeq (M[..])(M[..])]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam M => e</code>.}}%
-rec reflG: {g:xaG} {M:[g |- tm]} [g |- aeq (M[..]) (M[..])] =
-mlam g => mlam M => case [g |- (M[..])] of
-| [g |- #p.1[..]] => [g |- #p.2[..]]
-| [g |- lam \x. M] =>
-  let [g,b:block y:tm, ae_v:aeq y y |- D[..,b.1,b.2]] =
-         reflG [g, b:block y:tm, ae_v:aeq y y] [g, b |- M[..,b.1]]
+We first prove admissibility of reflexivity. The proof is implemented as a recursive function called <code>reflG</code> of type <code>{g:xaG}{M:[gamma |- tm ]}[gamma |- aeq M M]</code>: for all contexts <code>g</code> that have schema <code>xaG</code>, for all terms <code>M</code>, we have a proof that <code>[gamma |- aeq M M]</code>. Quantification over contexts and contextual objects in computation-level types is denoted by curly braces; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam M => e</code>.}}%
+rec reflG: {gamma:xaG} {M:[gamma |- tm]} [gamma |- aeq M M] =
+mlam gamma => mlam M => case [gamma |- M] of
+| [gamma |- #p.1] => [gamma |- #p.2]
+| [gamma |- lam \x. M] =>
+  let [gamma,b:block y:tm, ae_v:aeq y y |- D[..,b.1,b.2]] =
+         reflG [gamma, b:block y:tm, ae_v:aeq y y] [gamma, b |- M[..,b.1]]
   in
-   [g |- ae_l \x. \w. D] % : eq (L) (L)
-| [g |- app (M1[..]) (M2[..])] =>
-  let [g |- D1[..]] = reflG [g] [g |-  M1[..] ] in
-  let [g |- D2[..]] = reflG [g] [g |-  M2[..] ] in
-    [g |- ae_a (D1[..]) (D2[..])]
+   [gamma |- ae_l \x. \w. D] % : eq L L
+| [gamma |- app M1 M2] =>
+  let [gamma |- D1] = reflG [gamma] [gamma |-  M1 ] in
+  let [gamma |- D2] = reflG [gamma] [gamma |-  M2 ] in
+    [gamma |- ae_a D1 D2]
 ;
-%{{In the proof for <code>reflG</code> we begin by introducing and <code>M</code> followed by a case analysis on <code>[g |- M[..]]</code> using pattern matching. There are three possible cases for <code>M</code>:
+%{{In the proof for <code>reflG</code> we begin by introducing and <code>M</code> followed by a case analysis on <code>[gamma |- M]</code> using pattern matching. There are three possible cases for <code>M</code>:
 <ul>
-<li><b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[g |- #p.1[..]]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>xaG</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.</li>
-<li><b>Lambda case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports weakening  which allows us to use M that has type <code>[g, x:tm |- tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y |- D[..] b.1 b.2]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.</li>
-<li><b>Application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[g |- aeq (app (M1[..]) (M2[..])) (app (M1[..]) (M2[..]))]</code>.</li>
+<li><b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[gamma |- #p.1]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>xaG</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.</li>
+<li><b>Lambda case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports weakening  which allows us to use M that has type <code>[g, x:tm |- tm ]</code> in the extended context <code>[g, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[g,b:block y:tm ,ae_v:aeq y y |- D[.., b.1, b.2]]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.</li>
+<li><b>Application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[gamma |- aeq (app M1 M2) (app M1 M2)]</code>.</li>
 </ul>}}%
 
 % ---------------------------------------------------------------------------
 % General transitivity is admissible
 %{{## Proof of Transitivity
-Next, we prove admissibility of transitivity. We encode the proof of transitivity by pattern-matching on the first derivation <code>[g |- aeq (M[..]) (L[..])]</code> to arrive at the second <code>[g |- aeq (L[..]) (N[..])]</code>. The recursive function <code>transG</code> handles the three cases for variables, lambda-terms, and applications in a similar fashion to <code>reflG</code>}. The context <code>g:xaG</code> is surrounded by parentheses <code>( )</code> to indicate that it is implicit in the actual proof and need to be reconstructed. }}%
-rec transG: (g:xaG)
-   [g |- aeq (M[..]) (L[..])] -> [g |- aeq (L[..]) (N[..])]
- -> [g |- aeq (M[..]) (N[..])] =
+Next, we prove admissibility of transitivity. We encode the proof of transitivity by pattern-matching on the first derivation <code>[gamma |- aeq M L]</code> to arrive at the second <code>[gamma |- aeq L N]</code>. The recursive function <code>transG</code> handles the three cases for variables, lambda-terms, and applications in a similar fashion to <code>reflG</code>}. The context <code>g:xaG</code> is surrounded by parentheses <code>( )</code> to indicate that it is implicit in the actual proof and need to be reconstructed. }}%
+rec transG: (gamma:xaG)
+   [gamma |- aeq M L] -> [gamma |- aeq L N]
+ -> [gamma |- aeq M N] =
 fn d1 => fn d2 => case d1 of
-| [g |- #p.2[..]] => d2
-| [g |- ae_l \x.\u. D1] =>
-  let [g |- ae_l \x.\u. D2] = d2 in
-  let [g, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
-         transG [g, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
-               [g, b |- D2[..,b.1,b.2]]
+| [gamma |- #p.2] => d2
+| [gamma |- ae_l \x.\u. D1] =>
+  let [gamma |- ae_l \x.\u. D2] = d2 in
+  let [gamma, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
+         transG [gamma, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
+               [gamma, b |- D2[..,b.1,b.2]]
   in
-    [g |- ae_l \x. \u. E]
-| [g |- ae_a (D1[..]) (D2[..])] =>
-  let [g |- ae_a (F1[..]) (F2[..])] = d2 in
-  let [g |- E1[..]] = transG [g |- D1[..]] [g |- F1[..]] in
-  let [g |- E2[..]] = transG [g |- D2[..]] [g |- F2[..]] in
-    [g |- ae_a (E1[..]) (E2[..])]
+    [gamma |- ae_l \x. \u. E]
+| [gamma |- ae_a D1 D2] =>
+  let [gamma |- ae_a F1 F2] = d2 in
+  let [gamma |- E1] = transG [gamma |- D1] [gamma |- F1] in
+  let [gamma |- E2] = transG [gamma |- D2] [gamma |- F2] in
+    [gamma |- ae_a E1 E2]
 ;
 %{{Here, the variable case exploits that if <code>aeq M N</code> is an element of the context <code>g</code>, then <code>M = N</code>. Note that the recursive calls do not take the context <code>g</code> as an explicit argument.}}%
 
@@ -112,19 +112,19 @@ fn d1 => fn d2 => case d1 of
 ## Proof of Symmetry
 Again, we encode the proof of symmetry as a recursive function <code>symG</code>. As in <code>transG</code>, the context <code>g</code> is implicit. Furthermore, we handle the variable case using the same property in both functions.
 }}%
-rec symG: (g:xaG)
-   [g |- aeq (M[..]) (L[..])] -> [g |- aeq (L[..]) (M[..])] =
+rec symG: (gamma:xaG)
+   [gamma |- aeq M L] -> [gamma |- aeq L M] =
 fn d => case d of
-| [g |- #p.2[..]] => d
-| [g |- ae_l \x.\u. D1] =>
-  let [g, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
-         symG [g, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
+| [gamma |- #p.2] => d
+| [gamma |- ae_l \x.\u. D1] =>
+  let [gamma, b:block x:tm, ae_v:aeq x x |- E[..,b.1,b.2]] =
+         symG [gamma, b:block x':tm, ae_v:aeq x' x' |- D1[..,b.1,b.2]]
   in
-    [g |- ae_l \x. \u. E]
-| [g |- ae_a (D1[..]) (D2[..])] =>
-  let [g |- E1[..]] = symG [g |- D1[..]] in
-  let [g |- E2[..]] = symG [g |- D2[..]] in
-    [g |- ae_a (E1[..]) (E2[..])]
+    [gamma |- ae_l \x. \u. E]
+| [gamma |- ae_a D1 D2] =>
+  let [gamma |- E1] = symG [gamma |- D1] in
+  let [gamma |- E2] = symG [gamma |- D2] in
+    [gamma |- ae_a E1 E2]
 ;
 
 % ---------------------------------------------------------------------------
@@ -132,31 +132,31 @@ fn d => case d of
 ## Proof of Completeness
 Finally, we implement the completeness proof as as a recursive function <code>ceqG</code>.
 }}%
-rec ceq: (g:daG) [g |- deq (M[..]) (N[..])] -> [g |- aeq (M[..]) (N[..])] =
+rec ceq: (gamma:daG) [gamma |- deq M N] -> [gamma |- aeq M N] =
 fn e => case e of
-| [g |- #p.3[..]] => [g |- #p.2[..]]
-| [g |- de_r] => reflG [g] [g |-  _ ]
-| [g |- de_a (D1[..]) (D2[..])] =>
-  let [g |- F1[..]] = ceq [g |- D1[..]] in
-  let [g |- F2[..]] = ceq [g |- D2[..]] in
-    [g |- ae_a (F1[..]) (F2[..])]
-| [g |- de_l (\x.(\u. D))] =>
-  let [g,b:block x:tm, _t:aeq x x, u:deq x x |- F[..,b.1,b.2]] =
-        ceq [g, b:block x:tm, _t:aeq x x, u:deq x x |- D[..,b.1,b.3]]
+| [gamma |- #p.3] => [gamma |- #p.2]
+| [gamma |- de_r] => reflG [gamma] [gamma |-  _ ]
+| [gamma |- de_a D1 D2] =>
+  let [gamma |- F1] = ceq [gamma |- D1] in
+  let [gamma |- F2] = ceq [gamma |- D2] in
+    [gamma |- ae_a F1 F2]
+| [gamma |- de_l (\x.\u. D)] =>
+  let [gamma,b:block x:tm, _t:aeq x x, u:deq x x |- F[..,b.1,b.2]] =
+        ceq [gamma, b:block x:tm, _t:aeq x x, u:deq x x |- D[..,b.1,b.3]]
   in
-     [g |- ae_l (\x.\v. F)]
-| [g |- de_t (D1[..]) (D2[..])] =>
-  let [g |- F2[..]] = ceq [g |- D2[..]] in
-  let [g |- F1[..]] = ceq [g |- D1[..]] in
-    transG [g |- F1[..]] [g |- F2[..]]
-| [g |- de_s (D[..])] =>
-  let [g |- F[..]] = ceq [g |- D[..]] in
-  symG [g |- F[..]]
+     [gamma |- ae_l (\x.\v. F)]
+| [gamma |- de_t D1 D2] =>
+  let [gamma |- F2] = ceq [gamma |- D2] in
+  let [gamma |- F1] = ceq [gamma |- D1] in
+    transG [gamma |- F1] [gamma |- F2]
+| [gamma |- de_s D] =>
+  let [gamma |- F] = ceq [gamma |- D] in
+  symG [gamma |- F]
 ;
 %{{
-<p>We explain here the three cases shown in the informal proof in the companion paper (Felty et al, 2014). First, let us consider the case where we used an assumption from the context. Since the context <code>g</code> consists of blocks with the following structure: <code>block x:tm , ae_v:aeq x x,de_v: deq x x</code>, we in fact want to match on the third element of such a block. This is written as <code>#p.3[..]</code>. The type of <code>#p.3</code> is <code>deq (#p.1[..]) (#p.1[..])</code>. Since our context always contains a block and the parameter variable <code>#p[..]</code> describes such a block, we know that there exists a proof for <code>aeq (#p.1[..]) (#p.1[..])</code>, which can be described by <code>#p.2[..]</code>.</p>
+<p>We explain here the three cases shown in the informal proof in the companion paper (Felty et al, 2014). First, let us consider the case where we used an assumption from the context. Since the context <code>g</code> consists of blocks with the following structure: <code>block x:tm , ae_v:aeq x x,de_v: deq x x</code>, we in fact want to match on the third element of such a block. This is written as <code>#p.3</code>. The type of <code>#p.3</code> is <code>deq #p.1 #p.1</code>. Since our context always contains a block and the parameter variable <code>#p</code> describes such a block, we know that there exists a proof for <code>aeq #p.1 #p.1</code>, which can be described by <code>#p.2</code>.</p>
 <br><br><p>Second, we consider the case where we applied the reflexivity rule <code>de_r</code> as a last step. In this case, we need to refer to the reflexivity lemma we proved about algorithmic equality. To use the function <code>reflG</code>, which implements the reflexivity lemma for algorithmic equality, we need a context of schema <code>xaG</code>; however, the context used in the proof for <code>ceqG</code> is of schema <code>daG</code> and we rely on context subsumption to justify passing a context <code>daG</code> in place of a context <code>xaG</code>. The cases for transitivity and symmetry are similar.</p>
-<br><br><p>Third, we consider the case for <code>de_l</code>, the case for lambda-abstractions. In this case, we extend the context with the new declarations about variables and pass to the recursive call <code>ceqG</code> the derivation <code>[g, b:block (x:tm ,ae_v:aeq x x, de_v: deq x x) |- D[..] b.1 b.3]</code>. Declaration weakening (in the informal proof d-wk (Felty et al, 2014)) is built-in. In the pattern, the derivation <code>D</code> has type <code>[g, x:tm , ae_v:aeq x x |- deq (M[..]x)(N)]</code>. We hence construct a weakening substitution <code>.. b.1 b.3</code> that allows us to move <code>D</code> to the context <code>g, b:block (x:tm,ae_v:aeq x x, de_v:deq x x)</code>. The result of recursive call is a derivation <code>F</code>, where <code>F</code> only depends on <code>x:tm</code> and <code>u:aeq x x</code>. In the on-paper proof we refer to declaration strengthening (d-str) to justify that <code>F</code> cannot depend on <code>de_v</code> assumptions. In Beluga, the programmer uses strengthening by stating which assumptions <code>F</code> can depend on. The coverage checker will then subsequently rely on subordination to verify that the restricted case is sufficient and no other cases have been forgotten. Subordination allows us to verify that indeed assumptions of type <code>de_v: deq x x</code> cannot be used in proofs for <code>aeq (M[..] b.1) (N[..] b.1)</code>. Finally, we use <code>F</code> to assemble the final result <code>ae_l (\x.\v. F v)</code>.</p>
+<br><br><p>Third, we consider the case for <code>de_l</code>, the case for lambda-abstractions. In this case, we extend the context with the new declarations about variables and pass to the recursive call <code>ceqG</code> the derivation <code>[gamma, b:block (x:tm ,ae_v:aeq x x, de_v: deq x x) |- D[..,b.1, b.3]]</code>. Declaration weakening (in the informal proof d-wk (Felty et al, 2014)) is built-in. In the pattern, the derivation <code>D</code> has type <code>[gamma, x:tm , ae_v:aeq x x |- deq M[..,x] N]</code>. We hence construct a weakening substitution <code>.. b.1 b.3</code> that allows us to move <code>D</code> to the context <code>gamma, b:block (x:tm,ae_v:aeq x x, de_v:deq x x)</code>. The result of recursive call is a derivation <code>F</code>, where <code>F</code> only depends on <code>x:tm</code> and <code>u:aeq x x</code>. In the on-paper proof we refer to declaration strengthening (d-str) to justify that <code>F</code> cannot depend on <code>de_v</code> assumptions. In Beluga, the programmer uses strengthening by stating which assumptions <code>F</code> can depend on. The coverage checker will then subsequently rely on subordination to verify that the restricted case is sufficient and no other cases have been forgotten. Subordination allows us to verify that indeed assumptions of type <code>de_v: deq x x</code> cannot be used in proofs for <code>aeq M[.., b.1] N[.., b.1]</code>. Finally, we use <code>F</code> to assemble the final result <code>ae_l (\x.\v. F)</code>.</p>
 <br><br><p>We conclude this example with a few observations: The statement of the theorem is directly and succinctly represented in Beluga using contextual types and contextual objects. Every case in the on-paper proof corresponds directly to a case in the implementation of the recursive function. Type reconstruction is used to reconstruct implicit type arguments and infer the type of free contextual variables that occur in patterns. This is crucial to achieve a palatable source language. Weakening and strengthening are supported in Beluga through the typing rules and on the level of context variables and context schemas using context subsumption. If schema <code>W</code> is a prefix of a schema <code>W'</code>, then we can always use a context of schema <code>W'</code> in place of a context of schema <code>W</code>.</p>
 }}%
 

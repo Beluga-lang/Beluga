@@ -50,7 +50,7 @@ rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g |- neut A[]] -> [h |- neut 
 / total e (weak_neut g h a e r) /
 fn e => fn r => case e of
 | Zero => r
-| Succ [h] e' => let [h |- R] = weak_neut e' r in [h,x:neut _ |-  R]
+| Succ [h] e' => let [h |- R] = weak_neut e' r in [h,x:neut _ |-  R[..]]
 ;
 
 
@@ -74,7 +74,7 @@ rec extend : (g:tctx)(h:ctx)
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
 | TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q ] => s [ |- T ] (TmVar [g |- #q])
+| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)

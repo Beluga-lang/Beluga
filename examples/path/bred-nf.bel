@@ -104,7 +104,7 @@ fn br => fn pt => case br of
 | [g |- r_beta (\x.\bf. R[..,x,bf])] =>
    let [g |- p_beta (\x. \qf. Q[..,x,qf])] = pt in
    let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
-                           _d: ({q:p} path _ q -> path x q))  |-  Q' ] =
+                           _d: ({q:p} path _ q -> path x q))  |-  Q'[..] ] =
        bred_ltr [g,b: block (x:tm,  _b: ({u:nf} bred _ u -> bred x u),
                            _d: ({q:p} path _ q -> path x q))  |-  R[..,b.1,b.2]]
                 [g,b  |-  Q[..,b.1,b.3]]
@@ -112,12 +112,12 @@ fn br => fn pt => case br of
        [g |- Q']
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N) u -> bred x u), _q: ({q : p} path  (N) q -> path x q))]}
+| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
   [g |- (#p.2) (U) (R)] => % [g |- bred x (U)]
    % R : bred (N) (U)
    % pt: path x (P)
   case pt of
-    |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N) u -> bred x u), _q: ({q : p} path  (N) q -> path x q))]}
+    |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
        [g |- (#p.3) (Q) (Qp)] => % [g |- path x (Q)]
         % Qp : path (N) (Q)
           bred_ltr [g |- R] [g |- Qp] % path (U) (Q)
@@ -152,14 +152,14 @@ fn br => fn pt => case br of
   let [g |- Qt] = pt in          % [g |- npath (U) (P)]
   let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
                            _d: ({q:p} path _ q -> path x q))  |-  Q'[..,b.1,b.3]] =
-       bred_rtl [g,b: block (x:tm,  _b: ({u:nf} bred (N) u -> bred x u),
-                           _d: ({q:p} path (N) q -> path x q))  |-  R[..,b.1,b.2]]
-                [g,b  |-  Qt ]
+       bred_rtl [g,b: block (x:tm,  _b: ({u:nf} bred (N[..]) u -> bred x u),
+                           _d: ({q:p} path (N[..]) q -> path x q))  |-  R[..,b.1,b.2]]
+                [g,b  |-  Qt[..] ]
    in
        [g |- p_beta (\x. \qf. Q'[..,x,qf])]
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N) u -> bred x u), _q: ({q : p} path  (N) q -> path x q))]}
+| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
   [g |- (#p.2) (U) (R)] => % [g |- bred x (U)]
   let ([g |- Pt] : [g |- npath (U) (P)]) = pt in
   let [g |- Qt] = bred_rtl [g |- R] pt % path (N) (P)

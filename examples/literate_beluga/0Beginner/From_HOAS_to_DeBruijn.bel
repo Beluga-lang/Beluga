@@ -72,7 +72,7 @@ rec db : (g:ctx) [g |- hoas A[]] -> DB [g] [|- A] =
     | [g |- lam \x. M] : [ g |- hoas (arr A[] B[])] =>
       Lam (db [g, x:hoas A[] |- M])
     | [g, x:hoas A[] |- x ] => O
-    | [g, x:hoas B[] |-  #p] => S (db [g |- #p ]);
+    | [g, x:hoas B[] |-  #p[..]] => S (db [g |- #p ]);
 
 %{{
 
@@ -112,7 +112,7 @@ rec hoas : (g:ctx) DB [g] [|- A] -> [g |- hoas A[]] =
       [g, x:hoas _ |- x]
     | S m =>
       let [g |- M] = hoas m in
-      [g, x |- M];
+      [g, x |- M[..]];
 %{{
 
 Note that, contrarily to the previous function, the recursive calls'

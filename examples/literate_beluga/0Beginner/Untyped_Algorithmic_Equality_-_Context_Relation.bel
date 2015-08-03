@@ -37,7 +37,7 @@ The key to express context weakening and strengthening is the ability to relate 
 inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:[psi |- phi]} ctype =
 | Nil_xa : Ctx_xaR [] [] [ |- ^ ]
 | Cons_xa : Ctx_xaR [phi] [psi] [psi |- #S ]
-           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S ,b.1 ]
+           -> Ctx_xaR [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..] ,b.1 ]
 ;
 %{{The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S, b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.}}%
 
@@ -47,8 +47,8 @@ inductive EqV : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] ->
          [psi, b:block (x:tm, u:aeq x x) |- b.1 ]
 
 | EqV_p : EqV [phi] [psi] [psi |- #S ] [phi |-  #p][psi |-  #q.1]
-   -> EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S,b.1 ]
-                [phi, x:tm |- #p] [psi, b:block (x:tm, u:aeq x x) |- #q.1 ]
+   -> EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b |- #S[..],b.1 ]
+                [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:aeq x x) |- #q.1[..] ]
 ;
 
 inductive Eq : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
@@ -60,7 +60,7 @@ inductive Eq : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> 
     Eq [phi] [psi] [psi |- #S ] [phi |-  app M N] [psi |-  app M' N']
 
 | Eq_l :
-    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S,b.1]
+    Eq [phi,x:tm] [psi,b:block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..],b.1]
        [phi,x:tm |-  M] [psi, b:block (x:tm, u:aeq x x) |- M'[..,b.1]]
     -> Eq [phi] [psi] [psi |- #S ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
@@ -81,10 +81,10 @@ case [phi |-  #p] of
    let (cr' : Ctx_xaR [phi] [psi] [ psi |- #S ]) = cr' in
      [psi, b: block (x:tm, u:aeq x x) |- b.2]
 
-| [phi, x:tm |- #p] =>
+| [phi, x:tm |- #p[..]] =>
   let Cons_xa cr' = cr in
   let [psi |-  E] = ctx_membership [phi |- #p] cr' in
-      [psi, b: block (x:tm,u:aeq x x) |- E ]
+      [psi, b: block (x:tm,u:aeq x x) |- E[..] ]
 ;
 
 
@@ -131,11 +131,11 @@ case [phi |-  #p] of
    let (cr' : Ctx_xaR [phi] [psi] [ psi |- #S ]) = cr' in
      [psi, b: block (x:tm, u:aeq x x) |- b.2]
 
-| [phi, x:tm |- #p] =>
+| [phi, x:tm |- #p[..]] =>
   let Cons_xa cr' = cr in
   let EqV_p m' = m in
   let [psi |-  E] = ctx_member [phi |- #p] cr' m' in
-      [psi, b: block (x:tm,u:aeq x x) |- E]
+      [psi, b: block (x:tm,u:aeq x x) |- E[..]]
 
 ;
 
@@ -177,7 +177,7 @@ fn cr => fn m => fn n => fn l => case m of
   let EqV_p l' = l in
   let (Cons_xa cr') = cr in
   let [psi |-  E ] = transV cr' m' n' l' in
-  [psi, b:block (x:tm, u:aeq x x) |-  E]
+  [psi, b:block (x:tm, u:aeq x x) |-  E[..]]
 ;
 
 rec transR:
@@ -192,7 +192,7 @@ Eq [phi] [psi] [ psi |- #S ] [phi |-  L] [psi |-  L'] ->
   let [psi |-  #q.2 ] = d2 in
   let Eq_v m' = m in
   let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S]
-                [phi |-  #r] [psi, b: block (x:tm, u:aeq x x) |- #q.1] ) = m' in
+                [phi |-  #r] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]] ) = m' in
   ctx_member [phi |-  #r] cr m'
 
 | [psi |-  ae_a D1 D2] =>
@@ -240,7 +240,7 @@ schema daG = block x: tm, ae_v:aeq x x, de_v:deq x x ;
 inductive Ctx_xdR : {phi:xG} {psi: xdG} {#S:[psi |- phi]} ctype =
 | Nil_xd : Ctx_xdR [] [] [ |- ^ ]
 | Cons_xd : Ctx_xdR [phi] [psi] [psi |- #S ]
-           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S,b.1 ]
+           -> Ctx_xdR [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
 ;
 
 inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
@@ -258,8 +258,8 @@ inductive EqV' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -
          [psi, b:block (x:tm, u:deq x x) |- b.1 ]
 
 | EqV'_p : EqV' [phi] [psi] [psi |- #S ] [phi |-  #p][psi |-  #q.1]
-   -> EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S,b.1 ]
-                [phi, x:tm |- #p] [psi, b:block (x:tm, u:deq x x) |- #q.1 ]
+   -> EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b |- #S[..],b.1 ]
+                [phi, x:tm |- #p[..]] [psi, b:block (x:tm, u:deq x x) |- #q.1[..] ]
 ;
 inductive Eq' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
 | Eq'_v : EqV' [phi] [psi] [psi |- #S ] [phi |-  #p][psi |-  #q.1]
@@ -270,7 +270,7 @@ inductive Eq' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] ->
     Eq' [phi] [psi] [psi |- #S ] [phi |-  app M N] [psi |-  app (M') N']
 
 | Eq'_l :
-    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S,b.1]
+    Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] [psi, b:block (x:tm, u:deq x x) |- #S[..],b.1]
        [phi,x:tm |-  M] [psi, b:block (x:tm, u:deq x x) |- M'[..,b.1]]
     -> Eq' [phi] [psi] [psi |- #S ]
          [phi |-  lam \x. M] [psi |-  lam \x. M']
@@ -303,10 +303,10 @@ case [phi |-  #p.1] of
   let (cr'_xd : Ctx_xdR [gamma] [phi] [phi |- #T ]) = cr'_xd in
   ExistsEqV' [gamma,x:tm |- x ] EqV'_v
 
-| [phi, b:block (x:tm, u:deq x x) |- #p.1] =>
+| [phi, b:block (x:tm, u:deq x x) |- #p.1[..]] =>
   let Cons_xd cr'_xd = cr_xd in
   let ExistsEqV' [gamma |-  #r] eq = existsEqV' cr'_xd [phi |- #p] in
-  ExistsEqV' [gamma,x:tm |- #r] (EqV'_p eq)
+  ExistsEqV' [gamma,x:tm |- #r[..]] (EqV'_p eq)
  ;
 
 rec existsEq' : Ctx_xdR [gamma] [phi] [phi |- #T] -> {Ld: [phi |- tm]}
@@ -349,11 +349,11 @@ case [gamma |-  #p] of
   let (cr'_xa : Ctx_xaR [gamma] [psi] [psi |- #S ]) = cr'_xa in
   ExistsEqV [psi,b:block (x:tm,u:aeq x x) |- b.1 ] EqV_v
 
-| [gamma, x:tm |- #p] =>
+| [gamma, x:tm |- #p[..]] =>
   let Cons_xa cr'_xa = cr_xa in
   let ExistsEqV [psi |-  #q.1] eq = existsEqV cr'_xa [gamma |- #p] in
   let (eq : EqV [gamma] [psi] [psi |- #S ] [gamma |-  #p][psi |-  #q.1]) = eq in
- ExistsEqV [psi,b:block (x:tm,u:aeq x x) |- #q.1] (EqV_p eq)
+ ExistsEqV [psi,b:block (x:tm,u:aeq x x) |- #q.1[..]] (EqV_p eq)
 
 ;
 

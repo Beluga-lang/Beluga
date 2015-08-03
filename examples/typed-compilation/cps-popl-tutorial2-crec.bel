@@ -42,7 +42,7 @@ and cpse : (g:ctx)[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
 fn e => case e of
 | [g |- ret (V )] =>
   let [g |- V'] = cps [g |- V ] in
-    [g,c |- c (V' )]
+    [g,c |- c (V'[..] )]
 
 | [g |- app (E1 ) (E2 )] =>
   let [g, c:cvalue (arr B A) -> contra |-  E1'[..,c]] = cpse [g |- E1 ] in

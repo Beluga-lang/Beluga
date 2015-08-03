@@ -49,7 +49,7 @@ case e of
 
 | [g |- app E1 E2] =>
     let [g,x :cval |- E2'] =
-        cmp [g, x1:cval |-  E1 ]
+        cmp [g, x1:cval |-  E1[..] ]
 	    [g,x1,x2 |-  app+ x1 x2 (\v. K[..,v])] in
      cmp [g |- E1 ] [g,x1' |-  E2']
 

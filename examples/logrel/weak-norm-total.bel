@@ -185,7 +185,7 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 | [] => impossible [ |- #p]
 | [gamma', x:tm A] => (case [gamma', x:tm A |- #p] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
- | [gamma',x:tm A |-  #q] => let Dot rs' rN = rs in
+ | [gamma',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
                       lookup [gamma'] [gamma' |- #q] rs')
 ;
 

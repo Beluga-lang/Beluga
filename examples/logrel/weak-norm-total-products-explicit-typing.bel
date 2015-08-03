@@ -73,7 +73,7 @@ snoc : tctx -> tp -> tctx.
 % Typing
 inductive Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype =
 | Top : Lookup [|- snoc G A] [gamma,x:tm |- x] [|- A]
-| Pop : Lookup [|- G] [gamma |- #p] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p] [|- A]
+| Pop : Lookup [|- G] [gamma |- #p] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p[..]] [|- A]
 ;
 
 inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =

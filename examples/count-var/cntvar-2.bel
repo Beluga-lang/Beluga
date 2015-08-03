@@ -66,7 +66,7 @@ mlam g =>
 %% The solution is that the original meta-variable 3 needs to be in fact of a different type,
 %% namely exp [ |- ] and not exp[ |- , x:A].
 %%
-   | [g,x : exp _  |-  letv (T1) (U1) (\y . U2)] =>
+   | [g,x : exp _  |-  letv (T1[..]) (U1) (\y . U2)] =>
       plus  (cntV [g]          [g,x |- (U1)])
             (cntV [g, y:exp _]  [g,y,x |-  (U2[..,x,y])])
 

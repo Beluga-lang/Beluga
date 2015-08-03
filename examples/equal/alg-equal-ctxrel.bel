@@ -58,8 +58,8 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
             TRel [g, x:term |-  x]
  		 [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  : TRel  [g |- #p] [h |- #q.1]
-         -> TRel [g, x:term |-  #p]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1]
+         -> TRel [g, x:term |-  #p[..]]
+                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
         -> TRel [g |- app (M) (N)] [h |- app M' N']
@@ -83,7 +83,7 @@ case [g |- (M)] of
 | [g, x:term |-  #p ] =>
   let TRvar r' = r in
   let [h |- E] = ref' r' in
-    [h, b:block(x:term, _u:aeq x x) |-  E]
+    [h, b:block(x:term, _u:aeq x x) |-  E[..]]
 
 | [g |- lam \x. M] =>
   let TRlam  tr1 = r in
@@ -204,7 +204,7 @@ rec exTRelV : {#p: [l |- term]} Crel [l] [h] -> ExWkV [h] [l |- #p] =
 mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- #p] of
 | [l, x:term |-  x ] =>
   let Crel_xa (cr' : Crel [l0] [h0]) = cr in ExWkV (TRvar0 [h0] cr')
-| [l, x:term |- #p] =>
+| [l, x:term |- #p[..]] =>
   let Crel_xa cr' = cr in
   let ExWkV tr = exTRelV [l |- #p] cr' in
     ExWkV (TRvar tr )
@@ -263,8 +263,8 @@ inductive TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
             TdCxt [g] [h] ->
             TRel' [g, x:term |-  x] [h, b:block (x:term, u:deq x x) |- b.1]
 | TRvar'  : TRel'  [g |- #p] [h |- #q.1]
-         -> TRel' [g, x:term |-  #p]
-                [h, b:block (x:term, u:deq x x) |-  #q.1]
+         -> TRel' [g, x:term |-  #p[..]]
+                [h, b:block (x:term, u:deq x x) |-  #q.1[..]]
 
 | TRapp'  : TRel' [g |- M] [h |- M'] -> TRel' [g |- N] [h |- N']
         -> TRel' [g |- app (M) (N)] [h |- app M' N']
@@ -284,7 +284,7 @@ inductive ExWkV' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
 
 inductive Var : (h: tdCtx) [h |- term] -> ctype = 
 | BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |-  b.1 ]
-| PV : Var [h |- #p.1] -> Var [h, b: block x:term, _u:deq x x |-  #p.1 ];
+| PV : Var [h |- #p.1] -> Var [h, b: block x:term, _u:deq x x |-  #p.1[..] ];
 
 % Various Lemmas needed in the transitivity case of the ceq proof
 % They establish properties about the weakening relation TRel' and TRel
@@ -306,7 +306,7 @@ rec exTRelV' :  {#p: [h |- block x:term, _u:deq x x]}
 mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- #p.1] of
 | [h,b: block x:term, _u:deq x x |-  b.1 ] =>
   let Tdcons cr' = cr in ExWkV' (TRvar0' [h] cr')
-| [h',b: block x:term, _u:deq x x |- #q.1] =>
+| [h',b: block x:term, _u:deq x x |- #q.1[..]] =>
   let Tdcons cr' = cr in
   let ExWkV' tr = exTRelV' [h' |-  #q] cr' in
     ExWkV' (TRvar' tr )

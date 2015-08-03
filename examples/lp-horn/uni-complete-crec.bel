@@ -34,10 +34,10 @@ fn cn => case cn of
 }%
 
 and cmpai: (g:c_ctx)[g |- atomic_prfs (A)] ->
-	       [g, q:p, u:focus (A) q |-  solve (atom q)] =
+	       [g, q:p, u:focus (A[..]) q |-  solve (atom q)] =
 % / total at (cmpai g a at)/
 fn at => case at of
-  | [g |- andalso (#p.2 ) (#p.3)] => [g,q,u |-  s_atom u (#p.1)]
+  | [g |- andalso (#p.2 ) (#p.3)] => [g,q,u |-  s_atom u (#p.1[..])]
 
   | [g |- andalso (andel (D1 )) (atm_andel (CN1 ))] =>
     let [g,q:p, i: focus (& (B1) (B2))  q |-  I1] = cmpai  [g |- andalso (D1) (CN1)] in
@@ -50,7 +50,7 @@ fn at => case at of
   | [g |- andalso (impe (D1) (D2)) (atm_impe (CN2) (AT1))] =>
     let [g,q:p, u:focus (A) q |-  I1] = cmpai [g |- andalso (D1 ) (AT1)] in
     let [g |- S2] = cmpcs [g |- CN2] in
-      [g,q,i |-  I1[..,q,(i_imp (S2) i )]]
+      [g,q,i |-  I1[..,q,(i_imp (S2[..]) i )]]
 
   | [g |- andalso ( foralle (D1) T[]) (atm_foralle (AT1))] =>
     let [g,q:p, i: focus (A) q |-  I1] = cmpai [g |- andalso (D1 ) (AT1)] in

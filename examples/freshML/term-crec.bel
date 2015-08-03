@@ -107,7 +107,7 @@ fn l => case l of
 | [g,x:term |-  cons x (L)]  =>
     rm [g,x |- L]
 
- | [g,x:term |-  cons (#p ) (L)] =>
+ | [g,x:term |-  cons (#p[..] ) (L)] =>
   let [g |- L'] = rm [g,x |- L] in
    [g |- cons (#p) (L')]
 
@@ -123,7 +123,7 @@ fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 
 % the next case succeeds if x does not occur in U
-| [g,x:term |-  cons (U ) (L)] =>
+| [g,x:term |-  cons (U[..] ) (L)] =>
   let [g |- L'] = rm' [g,x |- L] in
    [g |- cons (U) (L')]
 
@@ -193,7 +193,7 @@ fn e => fn l => case e of
 
 | [g |- lamt T[] (\x. M)] =>
   let [g |- L] = l in
-    typing [g,x:tm |-  M] [g,x |- push x T[] (L )]
+    typing [g,x:tm |-  M] [g,x |- push x T[] (L[..] )]
 
 | [g |- apply (M1 ) (M2 )] =>
   (case typing [g |- M1 ] l of

@@ -18,7 +18,7 @@ mlam g => fn s => case s of
      let [g,u:pf _  |-  D] = i_sound [g] [g |- S] in
      [g |- D[..,(#p.2)]]
 
-and i_sound : {g:ctx}[g |- focus (A) (P)] -> [g, u:pf (A) |-  pf (atom (P))] =
+and i_sound : {g:ctx}[g |- focus (A) (P)] -> [g, u:pf (A) |-  pf (atom (P[..]))] =
 / total f (i_sound g a p f)/
 mlam g => fn f => case f of
 | [g |- i_andl (I1)] =>
@@ -33,11 +33,11 @@ mlam g => fn f => case f of
 | [g |- i_imp (S2) (I1)] =>
     let [g,u:pf _  |-  D1] = i_sound [g] [g |- I1] in
     let [g |- D2] = s_sound [g] [g |- S2] in
-     [g,u |- D1[..,(impe u (D2))]]
+     [g,u |- D1[..,(impe u (D2[..]))]]
 
 | [g |- i_forall (T) (I1)] =>
     let [g,u: pf _  |-  D1] = i_sound [g] [g |- I1] in
-      [g,u |- D1[..,(foralle u (T))]]
+      [g,u |- D1[..,(foralle u (T[..]))]]
 ;
 
 %

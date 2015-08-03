@@ -31,7 +31,7 @@ inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
                    -> Subtype [g |-  arr S1 S2] [g |- arr T1 T2]
 
 | Subtype_forall : Subtype [g |- T1] [g |- S1]
-		 -> Subtype [g, b:block (x:tp, u:assm x (T1)) |- S2[..,b.1]]
+		 -> Subtype [g, b:block (x:tp, u:assm x (T1[..])) |- S2[..,b.1]]
                            [g,b |- T2[..,b.1]]
                  -> Subtype [g |-  forall S1 (\x.S2)] [g |- forall T1 (\x.T2)]
 ;

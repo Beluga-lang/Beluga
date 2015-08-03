@@ -25,7 +25,7 @@ mlam gamma => mlam #p =>  case [gamma] of
 | [] => impossible [ |- #p ] in []
 | [gamma', x:term] => (case [gamma', x:term |- #p] of 
  | [gamma',x:term |- x] => [ |- one ]
- | [gamma',x:term |- #p ] =>
+ | [gamma',x:term |- #p[..] ] =>
    let [ |- Db] = vhoas2db [gamma'] [gamma' |- #p] in
      [ |- shift Db])
 ;

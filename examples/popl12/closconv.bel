@@ -52,7 +52,7 @@ fn ctx => case ctx of
 | Ctx [] => [ |- nil]
 | Ctx [h,x:ctm] =>
   let [h'  |-  Env ] = ctxToEnv (Ctx [h]) in
-    [h', x:ctm  |-  snoc (Env) x]
+    [h', x:ctm  |-  snoc (Env[..]) x]
 ;
 
 rec conv :  Ctx_rel [g] [h] -> [g |- tm] -> [h |- ctm] =
@@ -61,10 +61,10 @@ fn cr => fn m => case m of
   let Rsnoc (cr': Ctx_rel [g] [h]) = cr in
     [h, x:ctm  |-  x]
 
-| [g', x:tm  |-  #p] =>
+| [g', x:tm  |-  #p[..]] =>
   let Rsnoc cr' = cr in
   let [h' |-  M ] = conv cr' [g' |-  #p] in
-  [h', x:ctm  |-  M ]
+  [h', x:ctm  |-  M[..] ]
 
 | [g |- lam \x. M ] =>
   let [h,x:ctm  |-  M'] = conv (Rsnoc cr) [g,x:tm  |-  M] in
@@ -75,6 +75,6 @@ fn cr => fn m => case m of
 | [g |- app (M) (N) ] =>
   let [h |- M' ] = conv cr [g |- M ] in
   let [h |- N'] = conv cr [g |- N ] in
-    [h |- open (M') (\env. \f. capp f (create (snoc env (N') )))]
+    [h |- open (M') (\env. \f. capp f (create (snoc env (N'[..]) )))]
 ;
 

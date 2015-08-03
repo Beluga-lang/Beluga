@@ -50,7 +50,7 @@ fn e =>  case e of
     | [g, x: exp _  |-  something x]   => [g |- nothing]
            % technically we need to initiate backtracking
 %    | [g, x: exp _ ] something (#p) => [g] something (#p)
-    | [g, x: exp _  |-  something (U )]  => [g |- something (U)]
+    | [g, x: exp _  |-  something (U[..] )]  => [g |- something (U)]
     | [g, x: exp _  |-  something (U)]  => [g |- nothing]
 
    )

@@ -143,9 +143,9 @@ fn a => case a of
 | [g |- algbase (S1) (S2) (R)] =>
   let [g |- R'] = algEqRSym [g |- R] in
   [g |- algbase (S2) (S1) (R')]
-| [g |- algarr (N)] =>
+| [g |- algarr (N[..])] =>
   let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
-  [g |- algarr (N')]
+  [g |- algarr (N'[..])]
 ;
 
 % Symmetry of logical equivalence
@@ -274,12 +274,12 @@ fn a1 => fn a2 => case a1 of
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
   let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
   [g |- algbase (S1) (S3) (R)]
-| [g |- algarr (A1')] => 
-  let [g |- algarr (A2')] = a2 in
+| [g |- algarr (A1'[..])] => 
+  let [g |- algarr (A2'[..])] = a2 in
   let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
       = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[..,b.1,b.2]]
 		    [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
-  [g |- algarr (R)]
+  [g |- algarr (R[..])]
 ;
 
 % Transitivity of logical equivalence
@@ -311,7 +311,7 @@ nil : dctx.
 inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype  =
 | Top : Lookup [|- G & T] [g,x:tm |-  x] [ |- T]
 | Pop : Lookup [|- G] [g |- #p] [ |- T]
-      -> Lookup [|- G & S] [g,x:tm |- #p] [ |- T];
+      -> Lookup [|- G & S] [g,x:tm |- #p[..]] [ |- T];
 
 inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> ctype
  =
@@ -320,7 +320,7 @@ inductive DecEq : {G:[|-dctx]}(g:ctx) [g |-  tm] -> [g |- tm] -> [ |- tp] -> cty
           -> DecEq [|-G] [g |-  (app (lam (\x. M2)) (M1))] [g |- N2[..,N1]] [ |- S]
 | DecLam :  DecEq [|- G & T] [g,x:tm |-  M] [g,x |-  N] [ |- S]
           -> DecEq [|-G] [g |-  lam (\x. M)] [g |-  lam (\x. N)] [ |- arr T S]
-| DecExt :  DecEq [|- G & T] [g,x:tm |-  app (M) x] [g,x |-  app (N) x] [ |- S]
+| DecExt :  DecEq [|- G & T] [g,x:tm |-  app (M[..]) x] [g,x |-  app (N[..]) x] [ |- S]
           -> DecEq [|-G] [g |-  (M)] [g |-  (N)] [ |- arr T S]
 | DecVar : Lookup [|-G] [g |-  #p] [ |- T]
          -> DecEq [|-G] [g |-  #p] [g |-  #p] [ |- T]
@@ -396,7 +396,7 @@ case d of
 | DecApp d1 d2 => let LogArr [h |-  M1] [h |-  M2] f = thm d1 s in
     f [h] [h |- ..] [h |-  _] [h |-  _] (thm d2 s)
 | (DecLam d1) : DecEq [|-G] [g |-  lam (\x. M1)] [g |-  lam (\x. M2)] [ |- arr T S] =>
-   LogArr [h |-  lam (\x. M1[#S1, x])] [h |-  lam (\x. M2[#S2, x])]
+   LogArr [h |-  lam (\x. M1[#S1[..], x])] [h |-  lam (\x. M2[#S2[..], x])]
      (mlam h0, #W, N1, N2 => fn rn =>
      let q2 = thm d1 (Dot (wknLogEqSub [h0] [h] [h0 |- #W] s) rn) in
      closed [ |- _ ] [h0 |-  trans1 beta refl] [h0 |-  trans1 beta refl] q2
@@ -414,7 +414,7 @@ case d of
 inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id]
-       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id, b.1]
+       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]
 ;
 
 % % The identity substitution is logically related to itself

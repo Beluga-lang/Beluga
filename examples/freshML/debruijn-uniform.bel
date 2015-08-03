@@ -49,7 +49,7 @@ mlam g => mlam #p => case [g |- #p] of
 | [h,x:obj S |-  x] => [ |- one]
 
 | % {#p:[h |- obj S]}
-  [h,x:obj T |-  #p]  =>
+  [h,x:obj T |-  #p[..]]  =>
   let [ |- Db] = vhoas2db [h] [h |- #p] in [ |- shift Db]
 ;
 

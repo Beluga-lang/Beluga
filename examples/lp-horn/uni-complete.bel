@@ -24,7 +24,7 @@ and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm (E)] ->
 % / total at (cmpai g a at)/
 mlam g, E => fn at => case [g |- E ] of
   | [g |- #p.2] =>
-     [g,q,u |-  s_atom u (#p.1)]
+     [g,q,u |-  s_atom u (#p.1[..])]
   | [g |- andel (D1 )] =>
    let [g |- atm_andel (CN1 )] = at in
    let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1 ] [g |- CN1] in
@@ -39,7 +39,7 @@ mlam g, E => fn at => case [g |- E ] of
     let [g |- atm_impe (CN2) (AT1)] = at in
     let [g,q:p, u:focus A q |-  I1] = cmpai [g] [g |- D1 ] [g |- AT1] in
     let [g |- S2] = cmpcs [g |- CN2] in
-      [g,q,i |-  I1[..,q,(i_imp (S2) i )]]
+      [g,q,i |-  I1[..,q,(i_imp (S2[..]) i )]]
 
   | [g |- foralle (D1) T[]] =>
    let [g |- atm_foralle (AT1)] = at in

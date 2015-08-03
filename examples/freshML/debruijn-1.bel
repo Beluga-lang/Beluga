@@ -35,7 +35,7 @@ schema ctx = value T ;
 / total p (var g s p) /
 mlam g => mlam #p => case [g |- #p] of
 | [g,x:value S |- x] =>  [ |- one]
-| [g,x:value S |- #q] => 
+| [g,x:value S |- #q[..]] => 
   let [ |- Db] = var [g] [g |- #q] in
   [ |- shift Db]
 ; 
@@ -69,12 +69,12 @@ rec db2vhoas : (g:ctx) [g |- exp' (T[])] -> [g |- value (T[])] =
   | [h,x:value (T[]) |-  one] : [h,x:value (T[]) |-  (exp' (T[]))] =>
       [h,x:value (T[]) |-  x]
 
-  | [h,x:value (T[]) |-  shift (E)] =>
+  | [h,x:value (T[]) |-  shift (E[..])] =>
     let [h |- F] = db2vhoas [h |- E]  in
-      [h,x:value (T[]) |-  F]
+      [h,x:value (T[]) |-  F[..]]
 
   | [h |- lam' (T[]) E] =>
-      let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |- E] in
+      let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |- E[..]] in
         [g |- lam (T[]) (\x. F)]
 
 and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =

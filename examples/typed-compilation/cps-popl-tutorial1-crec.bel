@@ -45,7 +45,7 @@ and cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
 fn e => case e of
 | [g |- ret (V )] =>
   let [g |- V'] = cps [g |- V ] in
-    [g,k |- cthrow k (V' )]
+    [g,k |- cthrow k (V'[..] )]
 
 | [g |- app (E1 ) (E2 )] =>
   let [g,k:ccont (arr B A) |-  E1'] = cpse [g |- E1 ] in

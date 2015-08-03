@@ -40,19 +40,19 @@ schema tctx = tp;
 rec vhoas2db : {g:ctx}[g |- value (S)] ->  [g |- exp' (S)] =
 % / total v (vhoas2db g s v) /
 mlam g => fn v =>  case v of
- | [h,x:value (T)  |-  x] => [h, x:value (T) |-  one (T)]
+ | [h,x:value (T)  |-  x] => [h, x:value (T) |-  one (T[..])]
 
  |  {#p:[h |- value (S')]}
-   [h,x:value (T)  |-  #p] =>
+   [h,x:value (T)  |-  #p[..]] =>
    let [g |- Db] = vhoas2db [h] [h |- #p] in
-     [g,x:value (T)  |-  shift (S')  (Db)]
+     [g,x:value (T)  |-  shift (S'[..])  (Db[..])]
 
-| [h,a:tp |-  #p] =>
+| [h,a:tp |-  #p[..]] =>
    let [g |- Db] = vhoas2db [h] [h |- #p] in
-     [g,a:tp |-  Db]
+     [g,a:tp |-  Db[..]]
 
  | [g |- lam (T) (\x. E)] =>
-   let [g,x:value (T) |-  F] =  hoas2db [g,x:value (T) ] [g,x |- E ] in
+   let [g,x:value (T) |-  F[..]] =  hoas2db [g,x:value (T) ] [g,x |- E ] in
      [g |- lam' (T) (F)]
 
  | [g |- tlam \a. E] =>

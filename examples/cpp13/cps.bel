@@ -49,7 +49,7 @@ schema ctx = some [s:tp] block x:source s, _t:value s ;
 rec cpse : (g:ctx)[g |- source S[]] -> [g, c: value S[] -> exp |- exp] =
 / total e (cpse g s e) /
 fn e => case e of
-| [g |- #p.1] => [g,c:value _ -> exp |- c (#p.2)]
+| [g |- #p.1] => [g,c:value _ -> exp |- c (#p.2[..])]
 | [g |- z] => [g,c:value nat -> exp |- c (kz)]
 | [g |- nilv] => [g,c:value unit -> exp |- c knil]
 | [g |- suc N] =>

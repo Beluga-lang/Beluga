@@ -64,7 +64,7 @@ fn e => fn env => case e of
     eval [h,x:tm  |-  E]
          (fn var => case var of
                | [h, x:tm  |-  x] => v
-               | [h, x:tm  |-  #p ] => env' [h |- #p]
+               | [h, x:tm  |-  #p[..] ] => env' [h |- #p]
          )
 
 ;

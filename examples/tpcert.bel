@@ -70,7 +70,7 @@ mlam g => mlam U =>
    (case infer'  [g] [g |- E1 ] of
     | [g |- certify (arr T2[] T[]) (D1)] =>
       (case infer'  [g] [g |- E2 ]   of
-       | {D2: [g, t:tp |-  oft (E2) t]}
+       | {D2: [g, t:tp |-  oft (E2[..]) t]}
 	 [g |- certify (T2'[]) (D2[..,T2'[]])] =>
 	 if equal [ |- T2] [ |- T2']
 	  then [g |- certify T[] (o_app (D1) (D2[..,T2[]]))]

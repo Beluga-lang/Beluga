@@ -29,17 +29,17 @@ eq_lam : % {E : exp -> exp} {F : exp -> exp}
 
 schema w = block x:exp, _t:eq x x;
 
-rec eqfun : {g:w} {U:[g |- exp]} [g |- eq (U) (U)] =
+rec eqfun : {g:w} {U:[g |- exp]} [g |- eq U U] =
 / total u (eqfun g u) /
  mlam g => mlam U =>
-   case [g |- (U)] of
+   case [g |- U] of
   | [g |- #p.1] => [g |- #p.2]
 
   | [g |- lam \x. L] =>
       let
           [g,e:block yyy:exp, _t:eq yyy yyy |-  V] = eqfun [g, e:block q:exp, _t:eq q q] [g, e |-  L[..,e.1]]
       in
-        [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq (L) (L)
+        [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
 
    | [g |- app (A1) (A2)]  : [g |- exp]=>
        let [g |- EQ1] = eqfun [g] [g |- A1] in

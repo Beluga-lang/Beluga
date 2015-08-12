@@ -5,7 +5,7 @@
 
 schema i_ctx = some [a:o] block u:pf a , ta:toatm a u u , _t:atm u + i;
 
-rec iscan : (g:i_ctx) [g |- tocan (A) (D) (D')] -> [g |- can (A) (D')] =
+rec iscan : (g:i_ctx) [g |- tocan A D (D')] -> [g |- can A (D')] =
 fn tc => case tc of
 |[g |- tc_and (TC2) (TC1)] =>
  let [g |- CN1] = iscan [g |- TC1] in
@@ -16,8 +16,8 @@ fn tc => case tc of
 
 %{
 |[g] tc_imp (\u.\ta. TC1 u ta) =>
- let % {CN1:: (can (B) (D1 u v))[g,u:pf (A), v: atm u]}
-     [g, b:block u:pf (A), v:toatm u u  |-  atm u] CN1 b.1 b.3 =
+ let % {CN1:: (can B (D1 u v))[g,u:pf A, v: atm u]}
+     [g, b:block u:pf A, v:toatm u u  |-  atm u] CN1 b.1 b.3 =
      iscan [g, b:block u:pf _ , v:toatm u u  |-  atm u] ([g,b] TC1 b.1 b.2) in
   [g |- can_impi (\u.\at. CN1 u at)]
 
@@ -35,7 +35,7 @@ fn tc => case tc of
  let [g |- AT1] = isatm [g |- TA1 ] in
    [g |- can_atm (AT1 )]
 
-and isatm : (g:i_ctx) [g |- toatm (A) (D) (D')]   -> [g |- atm (D')] =
+and isatm : (g:i_ctx) [g |- toatm A D (D')]   -> [g |- atm (D')] =
 fn ta => case ta of
 | [g |- #p.2] => [g |- #p.3]
 | [g |- ta_andel (TA1)] =>

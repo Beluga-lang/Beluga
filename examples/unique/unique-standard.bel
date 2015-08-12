@@ -39,7 +39,7 @@ Proof by induction on E.
 
 schema tctx = some [t:tp] block (x:term, _t:hastype x t);
 
-rec unique : (g:tctx)[g |- hastype (E) (T[])] -> [g |- hastype (E) (T'[])]
+rec unique : (g:tctx)[g |- hastype E (T[])] -> [g |- hastype E (T'[])]
              ->  [ |- eq T T'] =  
 / total d (unique _ _ _ _ d) /
 fn d => fn f => case d of

@@ -276,11 +276,11 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 
-| [gamma |- fst (M) ] => 
+| [gamma |- fst M ] => 
   let Cross ha r1 r2 = main [gamma] [gamma |- M] rs in  r1
   
 
-| [gamma |- snd (M) ] => 
+| [gamma |- snd M ] => 
   let Cross ha r1 r2 = main [gamma] [gamma |- M] rs in  r2
 
 ;

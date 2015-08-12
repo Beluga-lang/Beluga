@@ -22,7 +22,7 @@ mlam g => mlam T => fn e =>
 
           {T1':[ |- tp]} {T2':[ |- tp]} {V:[g, x:term (T1'[]) |-  term (T2'[])]}
 
-           [g,x:term (T1'[]) |-  (V)] : [g,x:term (T1'[]) |-  (term (T2'[]))]
+           [g,x:term (T1'[]) |-  V] : [g,x:term (T1'[]) |-  (term (T2'[]))]
 
                  => [g |- lam (T1'[]) (T2'[])  (\x. V)])
 

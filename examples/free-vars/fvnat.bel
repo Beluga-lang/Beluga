@@ -22,7 +22,7 @@ something: exp T -> opt.
 
 schema w = some [t:tp] exp t;
 
-rec free_var : {g:w} [g |- exp (T)] -> [g |- opt] =
+rec free_var : {g:w} [g |- exp T] -> [g |- opt] =
 / total e (free_var g t e)/
 mlam g  => % mlam T  =>
  fn e =>
@@ -33,30 +33,30 @@ mlam g  => % mlam T  =>
 
 | [g |- (#p)]    => [g |- something  (#p)]
 
-| [g |- suc (U)] => free_var [g] [g |- (U)]
+| [g |- suc U] => free_var [g] [g |- U]
 
-| [g |- andalso (U) (V)]  =>
-  (case free_var [g] [g |- (U)] of
+| [g |- andalso U V]  =>
+  (case free_var [g] [g |- U] of
      [g |- nothing]   => free_var [g] [g |- V]
 %   | [g] something  (#p)  => [g] something  (#p)
-    | [g |- something (U)]     => [g |- something (U )]
+    | [g |- something U]     => [g |- something (U )]
   )
 
-| [g |- app (U) (V)]  =>
-    (case free_var [g] [g |- (U)] of
-       [g |- nothing]   => free_var [g] [g |- (V)]
+| [g |- app U V]  =>
+    (case free_var [g] [g |- U] of
+       [g |- nothing]   => free_var [g] [g |- V]
 %     | [g] something  (#p)  => [g] something  (#p)
-     | [g |- something (U)]     => [g |- something (U )])
+     | [g |- something U]     => [g |- something (U )])
 
-| [g |- lam (\x . (U))] =>
+| [g |- lam (\x . U)] =>
 
-   (case (free_var [g, x:exp _ ] [g, x |-  (U)]) of
+   (case (free_var [g, x:exp _ ] [g, x |-  U]) of
       [g, x: exp _  |-  nothing]       => [g |- nothing]
     | [g, x: exp _  |-  something x]   => [g |- nothing]
            % technically we need to initiate backtracking
  %   | [g, x: exp _ ] something (#p) => [g] something (#p)
-    | [g, x: exp _  |-  something (U[..] )]  => [g |- something (U)]
-    | [g, x: exp _  |-  something (U)]  => [g |- nothing]
+    | [g, x: exp _  |-  something (U[..] )]  => [g |- something U]
+    | [g, x: exp _  |-  something U]  => [g |- nothing]
    )
 ;
 

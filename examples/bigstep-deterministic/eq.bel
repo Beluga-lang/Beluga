@@ -11,7 +11,7 @@ eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
 
 schema eqctx = block x:exp, _t:eq x x;
 
-rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq (M) (M)] =
+rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq M M] =
 / total m (eq_refl _ m) / 
 mlam g => mlam M =>
 case [g |- M] of
@@ -27,7 +27,7 @@ case [g |- M] of
  | [g |- #p.1] => [g |- #p.2]
 ;
 
-rec eq_sym : (g:eqctx) [g |- eq (M) (N)] -> [g |- eq (N) (M)] =
+rec eq_sym : (g:eqctx) [g |- eq M N] -> [g |- eq N M] =
 / total e (eq_sym _ _ _ e) /
 fn d => case d of
  | [g |- eq_app (D1) (D2)] =>
@@ -44,7 +44,7 @@ fn d => case d of
 
 rec subst_respects_eq : 
 {g:eqctx}{M:[g,x:exp |-  exp]}
-[g |- eq (N) (N')] -> [g |- eq M[..,N] M[..,N']] =
+[g |- eq N (N')] -> [g |- eq M[..,N] M[..,N']] =
 %  / total m (subst_respects_eq _ _ _ m) /
 mlam g => mlam M => fn d => case [g,x:exp |-  M] of
  | [g,x:exp |-  app (T1) (T2)] =>

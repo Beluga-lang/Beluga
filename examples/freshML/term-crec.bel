@@ -34,12 +34,12 @@ fn t => case t of
   let [ |- K] = size [g,x:term |-  T ] in
    [ |- suc K]
 
-| [g |- app (T) (U)] =>
+| [g |- app T U] =>
   let [ |- N] = add (size [g |- T]) (size [g |- U]) in
    [ |- suc N]
 
 
-| [g |- letv (T) (\x. U)] =>
+| [g |- letv T (\x. U)] =>
   let [ |- N] =   add (size [g |- T]) (size [g,x:term |-  U]) in
    [ |- suc N]
 
@@ -87,9 +87,9 @@ rec append: (g:ctx) [g |- list] -> [g |- list] -> [g |- list] =
 / total l1 (append g l1 l2) /
 fn l1 => fn l2 => case l1 of
 | [g |- nil] => l2
-| [g |- cons (X) (L)] =>
+| [g |- cons X L] =>
   let [g |- L'] = append [g |- L] l2 in
-    [g |- cons (X) (L')]
+    [g |- cons X (L')]
 ;
 
 
@@ -104,10 +104,10 @@ rec rm : (g:ctx) [g,x:term |-  list] -> [g |- list] =
 % / total l (rm g l) /
 fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
-| [g,x:term |-  cons x (L)]  =>
+| [g,x:term |-  cons x L]  =>
     rm [g,x |- L]
 
- | [g,x:term |-  cons (#p[..] ) (L)] =>
+ | [g,x:term |-  cons (#p[..] ) L] =>
   let [g |- L'] = rm [g,x |- L] in
    [g |- cons (#p) (L')]
 
@@ -123,12 +123,12 @@ fn l => case l of
 | [g,x:term |-  nil] => [g |- nil]
 
 % the next case succeeds if x does not occur in U
-| [g,x:term |-  cons (U[..] ) (L)] =>
+| [g,x:term |-  cons (U[..] ) L] =>
   let [g |- L'] = rm' [g,x |- L] in
-   [g |- cons (U) (L')]
+   [g |- cons U (L')]
 
 % this case hence succeeds if x does occur in U
-| [g,x:term |-  cons (U) (L)]  =>
+| [g,x:term |-  cons U L]  =>
     rm' [g,x |- L]
 ;
 

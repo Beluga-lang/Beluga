@@ -63,7 +63,7 @@ mlam g => mlam A' => fn d => fn e => case e of
    let [g |- E1'] = (ca [g] [g |- A] d) [g, h |- E1] in
      [g |- notl E1' H]
 
-% | [g,h: hyp (A)] truer => [g] truer
+% | [g,h: hyp A] truer => [g] truer
 
  | [g,h:hyp A |-  forallr (\a. E1)] =>
    let [g |- D] = d in

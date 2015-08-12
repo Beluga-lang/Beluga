@@ -5,7 +5,7 @@
 schema ctx = block x:term, _t:pred x x;
 
 
-rec eq1: (g:ctx) [g |- pred (M) (N)] -> [g |- -->* (M) (N)] =
+rec eq1: (g:ctx) [g |- pred M N] -> [g |- -->* M N] =
 % / total r (eq1 g m n r) /
  fn r => case r of
 | [g |- #p.2] => [g |- id1]
@@ -41,14 +41,14 @@ rec eq1: (g:ctx) [g |- pred (M) (N)] -> [g |- -->* (M) (N)] =
    appd [g |- S*'] [g |- S*'' ]
 
  | [g |- lm (\x.\u. R1)] =>
-  let % {S1* :: (-->* (M) (N))[g,x:term]}
+  let % {S1* :: (-->* M N)[g,x:term]}
        [g,b:block x:term , _t:pred x x |-  S1*[..,b.1]] =
    eq1 [g,b:block x:term , _t:pred x x |-  R1[..,b.1,b.2]] in
   lm1* [g,x |- S1*]
 ;
 
 
-rec eq2 : (g:ctx) [g |- --> (M) (N)] -> [g |- pred (M) (N)] =
+rec eq2 : (g:ctx) [g |- --> M N] -> [g |- pred M N] =
 % / total r (eq2 g m n r) /
 fn r => case r of
  | [g |- beta1] : [g |- (--> (app (lam \x. M1) (M2)) M1[..,M2])]  =>
@@ -79,7 +79,7 @@ fn r => case r of
 % If M -->* N then M =>* N.
 
 
-rec eq3:(g:ctx) [g |- -->* (M) (N)] -> [g |- pred* (M) (N)] =
+rec eq3:(g:ctx) [g |- -->* M N] -> [g |- pred* M N] =
 % / total r (eq3 g m n r) /
 fn r => case r of
 | [g |- id1] => [g |- id*]
@@ -92,7 +92,7 @@ fn r => case r of
 
 % If M =>* N then M -->* N.
 
-rec eq4 : (g:ctx) [g |- pred* (M) (N)] -> [g |- -->* (M) (N)] =
+rec eq4 : (g:ctx) [g |- pred* M N] -> [g |- -->* M N] =
 % / total r (eq4 g m n r) /
 fn r => case r of
 | [g |- id*] => [g |- id1]

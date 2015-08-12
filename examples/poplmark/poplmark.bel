@@ -61,8 +61,8 @@ inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 
 inductive Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 | Sa_top    : Sub [g |- S] [g |- top]
-| Sa_refl   : {#p:[g |- block (a:tp, u: assm a (U))]}Sub [g |- #p.1] [g |- #p.1]
-| Sa_trans  : {#p:[g |- block (a:tp, u: assm a (U))]}
+| Sa_refl   : {#p:[g |- block (a:tp, u: assm a U)]}Sub [g |- #p.1] [g |- #p.1]
+| Sa_trans  : {#p:[g |- block (a:tp, u: assm a U)]}
                 Sub [g |- U] [g |- T]
               -> Sub [g |- #p.1] [g |- T]
 | Sa_arrow  : Sub [g |- T1] [g |- S1] -> Sub [g |- S2] [g |- T2]
@@ -98,7 +98,7 @@ mlam g => mlam T => case [g |- T] of
 inductive Concat : {g0:as_ctx}{g1:as_ctx}{g:as_ctx}  ctype =
 | Nil : Concat [g0] [ ] [g0]
 | Cons: Concat [g0] [g'] [g]
-      -> Concat [g0] [g', b:block (a:tp, w:assm a (U))]  [g, b:block (a:tp, w:assm a (U))]
+      -> Concat [g0] [g', b:block (a:tp, w:assm a U)]  [g, b:block (a:tp, w:assm a U)]
 ;
 }%
 %{
@@ -132,15 +132,15 @@ rec trans : (g:as_ctx)% {Q:[g |- tp]}
     | Sa_top => Sa_top
 
 and narrow :
-                 Concat [g0, b: block (x:tp, u:assm x (Q))] [g1] [g] ->
-                 Concat [g0, b: block (x:tp, u:assm x (P))] [g1] [g']
+                 Concat [g0, b: block (x:tp, u:assm x Q)] [g1] [g] ->
+                 Concat [g0, b: block (x:tp, u:assm x P)] [g1] [g']
                  -> Sub [g . M ] [g |-  N]
                  -> Sub [g0 . P ] [g0. Q ]
                  -> Sub [g' . M ] [g'. N ] = ?
 ;
 }%
 %{
-rec sound : (g:ss_ctx) [g |-  sub (T) (S)] -> [g |-  subtype (T) (S)] =
+rec sound : (g:ss_ctx) [g |-  sub T S] -> [g |-  subtype T S] =
 fn d => case d of
 % Assumption w : sub a Q
 | [g |-  #p.3] =>  [g |- #p.5]
@@ -149,9 +149,9 @@ fn d => case d of
   [g |-  subtype_refl]
 % transitivity
 | {#p: [g |-  block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
- 	          w: sub a (U), ref: sub a a, w': subtype a (U))]}
-   {D1:[g |-  sub (#p.1) (U)]}
-  [g |-  (#p.2) (U) (Q) (D2) (D1)] =>
+ 	          w: sub a U, ref: sub a a, w': subtype a U)]}
+   {D1:[g |-  sub (#p.1) U]}
+  [g |-  (#p.2) U Q (D2) (D1)] =>
   let [g |-  F2] = sound [g |-  D2] in
   let [g |-  F1] = sound [g |-  D1] in
   [g |-  subtype_trans (F2) (F1)]
@@ -173,7 +173,7 @@ fn d => case d of
 
 ;
 
-rec complete :(g:ss_ctx) [g |- subtype (T) (S)] -> [g |-  sub (T) (S)] =
+rec complete :(g:ss_ctx) [g |- subtype T S] -> [g |-  sub T S] =
 fn d => case d of
 | [g |-  #p.5] => [g |-  #p.3]
 | [g |-  subtype_refl] => refl [g] [g |-  _ ]

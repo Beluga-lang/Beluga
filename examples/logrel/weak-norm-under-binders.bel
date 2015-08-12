@@ -36,10 +36,10 @@ inductive IsNormal : (g:ctx) {M:[g |- tm A[]]} ctype =
 and inductive IsNeutral : (g:ctx) {M:[g |- tm A[]]} ctype =
 | Var : IsVar [g |- M] -> IsNeutral [g |- M]
 | App : IsNeutral [g |- M] -> IsNormal  [g |- N]
-     -> IsNeutral [g |- app (M) (N)];
+     -> IsNeutral [g |- app M N];
 
 inductive Halts : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
-| Halts : [g |- mstep (M) (V)] -> IsNormal [g |- V ] -> Halts [ |- A] [g |- M];
+| Halts : [g |- mstep M V] -> IsNormal [g |- V ] -> Halts [ |- A] [g |- M];
 
 % The type is explicit because I need to be explicit that
 % Base only applies to base type, not arrow type! (important for coverage later)
@@ -48,7 +48,7 @@ stratified Reduce : (g:ctx) {A:[ |- tp]}{M:[g |- tm A[]]} ctype =
 | Arr :  {M:[h0 |- tm (arr A[] B[])]}
          ({h:ctx} {#R:[h |- h0]} {N:[h |- tm A[]]}
           IsVarSub [h0] [h |- #R ] -> Reduce [ |- A] [h |- N]
-          -> Reduce [ |- B ] [h |- app M[#R] (N)])
+          -> Reduce [ |- B ] [h |- app M[#R] N])
          -> Reduce [ |- arr A B] [h0 |-  M];
 
 rec wknVar' : IsVar [g |- M] -> IsVarSub [g] [h |- #W] -> IsVar [h |- M[#W]] =
@@ -61,11 +61,11 @@ fn r1 => fn r2 => case r1 of
 | Nil => Nil
 | Cons ivs' iv => Cons (varSubCompose' ivs' r2) (wknVar' iv r2);
 
-rec haltsMstep2 : {S:[g |- mstep (M) (M')]} Halts [ |- A] [g |- M'] -> Halts [ |- A] [g |- M] =
+rec haltsMstep2 : {S:[g |- mstep M (M')]} Halts [ |- A] [g |- M'] -> Halts [ |- A] [g |- M] =
  mlam S => fn h => let (h : Halts [ |- A] [g |- M']) = h in
-let Halts [g |- R] v = h in Halts [g |- trans (S) (R)] v;
+let Halts [g |- R] v = h in Halts [g |- trans S R] v;
 
-rec closed2 : {S:[g |- mstep (M) (M')]} Reduce [ |- A] [g |- M'] -> Reduce [ |- A] [g |- M] =
+rec closed2 : {S:[g |- mstep M (M')]} Reduce [ |- A] [g |- M'] -> Reduce [ |- A] [g |- M] =
 mlam S => fn r => let (r : Reduce [ |- A] [g |- M']) = r in  case r of
 | Base ha => Base (haltsMstep2  [g |- S] ha)
 | Arr [g |- M] f => Arr [g |- _]

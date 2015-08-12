@@ -41,7 +41,7 @@ rec equal : [ |- tp] -> [ |- tp] -> Bool =
 / total (equal)/
 fn t => fn s => s == t ;
 
-rec infer' : {g:tpCtx} {U:[g |- term]} [g |- cert (U)] =
+rec infer' : {g:tpCtx} {U:[g |- term]} [g |- cert U] =
 / total u (infer' g u )/
 mlam g => mlam U =>
    case [g |- U] of
@@ -50,9 +50,9 @@ mlam g => mlam U =>
  | [g |- tt]    => [g |- certify bool o_tt]
  | [g |- ff]    => [g |- certify bool o_ff]
 
- | [g |- suc (E)] =>
+ | [g |- suc E] =>
    (case infer' [g] [g |- E ]  of
-    | [g |- certify nat (D)] => [g |- certify nat (o_s (D))]
+    | [g |- certify nat D] => [g |- certify nat (o_s D)]
     | [g |- _]                 => [g |- cert_illtyped bot]
   )
 

@@ -34,7 +34,7 @@ case x of
 % [ |- U] => y
 ;
 
-rec cntV : {g:expCtx} [g, x:exp (T) |-  exp (S)] -> [ |- exp nat] = 
+rec cntV : {g:expCtx} [g, x:exp T |-  exp S] -> [ |- exp nat] = 
 % / total e (cntV _ _ _ e) /
 mlam g =>
  fn e =>
@@ -49,7 +49,7 @@ mlam g =>
 
   | [g,x : exp _  |-  z]           => [ |- z]
 
-  | [g,x : exp _  |-  s (W)]  => cntV [g] [g,x |- (W)]
+  | [g,x : exp _  |-  s W]  => cntV [g] [g,x |- W]
 %%
 %%
 %%  NOT WORKING IF WE OMIT T1  since from the pattern we simply infer
@@ -71,8 +71,8 @@ mlam g =>
             (cntV [g, y:exp _]  [g,y,x |-  (U2[..,x,y])])
 
 
-   | [g,x: exp _  |-  add (U) (W)]  =>
-     plus (cntV [g] [g,x |- (U)])
-          (cntV [g] [g,x |- (W)])
+   | [g,x: exp _  |-  add U W]  =>
+     plus (cntV [g] [g,x |- U])
+          (cntV [g] [g,x |- W])
 
 ;

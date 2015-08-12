@@ -70,8 +70,8 @@ de_t: deq T R -> deq R S
 
 % Translating aeq to Aeq
 % To keep the translation simple, we first translate contextual objects
-% [g |- aeq (M) (N) to Aeq' objects within the same context g.
-rec atrans_c :(g:aCtx) [g |- aeq (M) (N)] -> Aeq' [g |- M] [g |- N] =
+% [g |- aeq M N to Aeq' objects within the same context g.
+rec atrans_c :(g:aCtx) [g |- aeq M N] -> Aeq' [g |- M] [g |- N] =
 / total ae (atrans_c g m n ae) /
 fn ae => case ae of
 | [g |- #p.2 ] => Ae_v' % [g |- #p]
@@ -81,7 +81,7 @@ fn ae => case ae of
   Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]])
 ;
 
-rec atrans_s :(g:aCtx)  Aeq' [g |- M] [g |- N] -> [g |- aeq (M) (N)] =
+rec atrans_s :(g:aCtx)  Aeq' [g |- M] [g |- N] -> [g |- aeq M N] =
 / total ae (atrans_s g m n ae ) /
 fn ae => case ae of
 | Ae_v' =>

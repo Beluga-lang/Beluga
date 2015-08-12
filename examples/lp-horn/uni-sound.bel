@@ -4,7 +4,7 @@
 
 schema ctx = some [a:o] block u: assume a , _t:pf a + i ;
 
-rec s_sound : {g:ctx}[g |- solve (A)] -> [g |- pf (A)] =
+rec s_sound : {g:ctx}[g |- solve A] -> [g |- pf A] =
 / total s (s_sound g a s)/
 mlam g => fn s => case s of
 | [g |- s_and (S2) (S1)] =>
@@ -14,11 +14,11 @@ mlam g => fn s => case s of
 
 | [g |- s_true] => [g |- truei]
 
-| [g |- s_atom (S) (#p.1)] =>
+| [g |- s_atom S (#p.1)] =>
      let [g,u:pf _  |-  D] = i_sound [g] [g |- S] in
      [g |- D[..,(#p.2)]]
 
-and i_sound : {g:ctx}[g |- focus (A) (P)] -> [g, u:pf (A) |-  pf (atom (P[..]))] =
+and i_sound : {g:ctx}[g |- focus A P] -> [g, u:pf A |-  pf (atom (P[..]))] =
 / total f (i_sound g a p f)/
 mlam g => fn f => case f of
 | [g |- i_andl (I1)] =>
@@ -35,7 +35,7 @@ mlam g => fn f => case f of
     let [g |- D2] = s_sound [g] [g |- S2] in
      [g,u |- D1[..,(impe u (D2[..]))]]
 
-| [g |- i_forall (T) (I1)] =>
+| [g |- i_forall T (I1)] =>
     let [g,u: pf _  |-  D1] = i_sound [g] [g |- I1] in
       [g,u |- D1[..,(foralle u (T[..]))]]
 ;

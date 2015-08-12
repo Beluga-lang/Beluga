@@ -3,23 +3,23 @@
 
 schema ctx = some [a: o] hyp a + i + o;
 
-rec ca : {g:ctx}{A:[g |- o]} [g |- conc (A)] -> [g, u: hyp (A ) |-  conc (C[..])]
-       -> [g |- conc (C)] =
+rec ca : {g:ctx}{A:[g |- o]} [g |- conc A] -> [g, u: hyp (A ) |-  conc (C[..])]
+       -> [g |- conc C] =
 % / total e (ca _ _ _ _ e) /
 mlam g => mlam A => fn d => fn e => case e of
  %%
  %% Right Commutative Conversions
 
- | [g, h:hyp (A) |-  axiom (H1[..])] =>  [g |- axiom (H1)]
+ | [g, h:hyp A |-  axiom (H1[..])] =>  [g |- axiom (H1)]
 
- | [g, h:hyp (A) |-  axiom h]  => d
+ | [g, h:hyp A |-  axiom h]  => d
 
- | [g, h:hyp (A) |-  andr E1 E2] =>
+ | [g, h:hyp A |-  andr E1 E2] =>
    let [g |- E1'] = (ca [g] [g |- A ] d) [g,h |- E1] in
    let [g |- E2'] = (ca [g] [g |- A ] d) [g,h |- E2] in
      [g |- andr (E1' ) (E2' )]
 
- | [g, h: hyp (A) |-  andl1 (\h1. E1) (H[..])] =>
+ | [g, h: hyp A |-  andl1 (\h1. E1) (H[..])] =>
    let [g |- D] = d in
    let [g,h1: hyp (B1) |-  E1'] =
      ca [g, h1: hyp _ ] [g, h1 |-  A[..] ]
@@ -28,16 +28,16 @@ mlam g => mlam A => fn d => fn e => case e of
     [g |- andl1 (\h1. E1') (H[..])]
 
 
- | [g, h: hyp (A) |-  andl2 (\h2. E2[..,h,h2]) (H[..])] =>
+ | [g, h: hyp A |-  andl2 (\h2. E2[..,h,h2]) (H[..])] =>
    let [g |- D] = d in
    let [g,h2: hyp (B2) |-  E2'] =
      ca [g, h2: hyp _ ] [g, h2 |-  A[..] ]
         [g,h2 |- D[..] ] [g,h2, h |-  E2[..,h,h2]]
    in
-    [g |- andl2 (\h2. E2') (H)]
+    [g |- andl2 (\h2. E2') H]
 
 
- |[g, h:hyp (A) |-  impr (\h1. E2[..,h1,h])] =>
+ |[g, h:hyp A |-  impr (\h1. E2[..,h1,h])] =>
    let [g |- D]  = d in
    let [g, h1: hyp (B1) |-  E2'[..,h1]] =
      ca [g, h1: hyp _ ] [g,h1 |- A[..] ]
@@ -46,24 +46,24 @@ mlam g => mlam A => fn d => fn e => case e of
    in
     [g |- impr (\h1. E2')]
 
- | [g, h:hyp (A) |-  impl E1 (\h2. E2[..,h2,h]) (H[..])] =>
+ | [g, h:hyp A |-  impl E1 (\h2. E2[..,h2,h]) (H[..])] =>
    let [g |- D] = d in
    let [g |- E1'] = (ca [g] [g |- A ] d) [g, h |-  E1] in
    let [g,h2: hyp (B2) |-  E2'] =
        ca [g, h2: hyp _  ] [g,h2  |-  A[..] ] [g,h2 |- D[..]] [g, h2, h |-  E2]
    in
-    [g |- impl (E1') (\h2. E2') (H)]
+    [g |- impl (E1') (\h2. E2') H]
 
 
- | [g, h: hyp (A)  |-  orr1 E1] =>
+ | [g, h: hyp A  |-  orr1 E1] =>
    let [g |- E1'] = (ca [g] [g |- A ] d) [g,h |- E1] in
      [g |- orr1 (E1')]
 
- | [g, h: hyp (A)  |-  orr2 E2] =>
+ | [g, h: hyp A  |-  orr2 E2] =>
    let [g |- E2'] = (ca [g] [g |- A ] d) [g,h |- E2] in
      [g |- orr2 (E2')]
 
- | [g, h: hyp (A)  |-  orl (\h1. E1) (\h2. E2) (H[..])] =>
+ | [g, h: hyp A  |-  orl (\h1. E1) (\h2. E2) (H[..])] =>
    let [g |- D] = d in
    let [g, h1: hyp (B1) |-  E1'] =
      ca [g, h1: hyp _ ] [g, h1 |-  A[..] ]
@@ -71,10 +71,10 @@ mlam g => mlam A => fn d => fn e => case e of
    let [g, h2: hyp (B2) |-  E2'] =
      ca [g, h2: hyp _ ] [g, h2 |-  A[..] ]
        [g, h2 |-  D[..] ] [g, h2, h |-  E2[..,h,h2]] in
-   [g |- orl (\h1. E1') (\h2. E2') (H)]
+   [g |- orl (\h1. E1') (\h2. E2') H]
 
 
- | [g, h:hyp (A) |-  notr (\p.\h1. E1)] =>
+ | [g, h:hyp A |-  notr (\p.\h1. E1)] =>
    let [g |- D] = d in
    let [g, p:o, h1: hyp (B1) |-  E1'] =
      ca [g, p:o, h1:hyp _ ] [g,p,h1  |-  A[..]]
@@ -82,31 +82,31 @@ mlam g => mlam A => fn d => fn e => case e of
    in
      [g |- notr (\p.\h1. E1')]
 
- | [g, h:hyp (A) |-  notl E1 (H[..])] =>
+ | [g, h:hyp A |-  notl E1 (H[..])] =>
    let [g |- E1'] = (ca [g] [g |- A ] d) [g, h |-  E1] in
-     [g |- notl (E1') (H)]
+     [g |- notl (E1') H]
 
- | [g,h: hyp (A) |-  truer] => [g |- truer]
+ | [g,h: hyp A |-  truer] => [g |- truer]
 
- | [g, h: hyp (A) |-  falsel (H[..] )] => [g |- falsel (H)]
+ | [g, h: hyp A |-  falsel (H[..] )] => [g |- falsel H]
 
- | [g,h:hyp (A) |-  forallr (\a. E1[..,a,h])] =>
+ | [g,h:hyp A |-  forallr (\a. E1[..,a,h])] =>
    let [g |- D] = d in
    let [g,a:i |-  E1'] =
      ca [g, a:i] [g,a  |-  A[..] ]  [g,a |- D[..]] [g,a, h |-  E1]
    in
     [g |- forallr \a. E1']
 
- | [g, h:hyp (A) |-  foralll (T[..]) (\h1.E1) (H[..])] =>
+ | [g, h:hyp A |-  foralll (T[..]) (\h1.E1) (H[..])] =>
    let [g |- D] = d in
    let [g,h1: hyp _  |-  E1'] =
      ca [g,h1: hyp _ ] [g,h1 |- A[..]] [g,h1 |- D[..] ] [g,h1,h |-  E1[..,h,h1]]
    in
-     [g |- foralll (T) (\h1. E1') (H)]
+     [g |- foralll T (\h1. E1') H]
 
  | [g, h:hyp (A ) |-  existsr (T[..]) (E1)] =>
    let [g |- E1'] = (ca [g] [g |- A[..] ] d) [g,h |- E1] in
-     [g |- existsr (T) (E1' )]
+     [g |- existsr T (E1' )]
 
 
  | [g, h:hyp (A ) |-  existsl (\a.\h1. E1) (H[..])] =>
@@ -116,7 +116,7 @@ mlam g => mlam A => fn d => fn e => case e of
        [g,a,h1 |-  D[..] ]
        [g,a,h1,h |-  E1[..,h,a,h1]]
    in
-     [g |- existsl (\a. \h1. E1') (H)]
+     [g |- existsl (\a. \h1. E1') H]
 
  %%%%
  | [g, h: hyp (& (A1) (A2))  |-  andl1 (\h1. E1)  h] =>
@@ -182,7 +182,7 @@ mlam g => mlam A => fn d => fn e => case e of
     ca [g] [g |- A1[..,T]] [g |- D1[..,T]] [g,h2 |- E1']
 
  | [g, h: hyp (exists (\x . (A1[..,x]))) |- existsl (\a.\h1. E1) h] =>
-   let [g |- existsr (T) (D1)] = d in
+   let [g |- existsr T (D1)] = d in
    let [g, a:i, h1:hyp (A1[..,a]) |-  E1'] =
      ca [g, a:i, h1: hyp _ ]  [g, a, h1 |-  exists (\x. A1[..,x]) ]
        [g,a,h1 |-  existsr (T[..]) (D1[..]) ]
@@ -194,28 +194,28 @@ mlam g => mlam A => fn d => fn e => case e of
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% Left Commutative Conversions
 
- | [g, h:hyp (A) |-  E] =>
+ | [g, h:hyp A |-  E] =>
    case d of
-    | [g |- axiom (H)] =>   [g |- E[..,H]]
-    | [g |- andl1 (\h1. D1) (H)] =>
+    | [g |- axiom H] =>   [g |- E[..,H]]
+    | [g |- andl1 (\h1. D1) H] =>
       let [g, h1: hyp (B1) |-  D1'] =
         ca [g, h1: hyp _ ] [g, h1  |-  A[..] ]
            [g, h1 |-  D1] [g, h1, h |-  E[..,h]]
       in
         [g |- andl1 (\h1. D1') (H )]
 
-    | [g |- andl2 (\h2. D2) (H)] =>
+    | [g |- andl2 (\h2. D2) H] =>
       let [g, h2: hyp (B2) |-  D2'] =
         ca [g, h2: hyp _ ] [g, h2  |-  A[..] ]
            [g, h2 |-  D2] [g, h2, h |-  E[..,h]]
       in
         [g |- andl2 (\h2. D2') (H )]
 
-    | [g |- impl (D1 ) (\h2. D2) (H)] =>
+    | [g |- impl (D1 ) (\h2. D2) H] =>
       let [g,h2: hyp (B2) |-  D2'] =
           ca [g,h2: hyp _ ] [g,h2  |-  A[..] ] [g,h2 |- D2] [g,h2,h |-  E[..,h]]
       in
-       [g |- impl (D1) (\h2. D2') (H)]
+       [g |- impl (D1) (\h2. D2') H]
 
 
     | [g |- orl (\h1. D1) (\h2. D2) (H )] =>
@@ -223,22 +223,22 @@ mlam g => mlam A => fn d => fn e => case e of
         ca [g, h1: hyp _ ] [g, h1 |-  A[..]] [g,h1 |- D1] [g,h1,h |-  E[..,h]] in
       let [g, h2: hyp (B2) |-  D2'] =
         ca [g, h2: hyp _ ] [g, h2 |-  A[..]] [g,h2 |- D2] [g,h2,h |-  E[..,h]] in
-      [g |- orl (\h1. D1') (\h2. D2') (H)]
+      [g |- orl (\h1. D1') (\h2. D2') H]
 
 
-    | [g |- notl (D1) (H)] => [g |- notl (D1 ) (H)]
+    | [g |- notl (D1) H] => [g |- notl (D1 ) H]
 
-    | [g |- falsel (H)] => [g |- falsel (H)]
+    | [g |- falsel H] => [g |- falsel H]
 
-    | [g |- foralll (T) (\h1. D1) (H)] =>
+    | [g |- foralll T (\h1. D1) H] =>
       let [g,h1: hyp _  |-  D1'] = ca [g, h1:hyp _ ] [g,h1 |- A[..]] [g,h1 |- D1] [g,h1,h |-  E[..,h]] in
-        [g |- foralll (T ) (\h1. D1') (H)]
+        [g |- foralll (T ) (\h1. D1') H]
 
-    | [g |- existsl (\a.\h. D1) (H)] =>
+    | [g |- existsl (\a.\h. D1) H] =>
       let [g,a:i, h: hyp B1[..,a] |-  D1'] =
          ca [g, a:i, h1: hyp _ ] [g, a, h1 |-  A[..] ]
             [g,a,h1 |-  D1] [g, a, h1, h |-  E[..,h]]
-      in [g |- existsl (\a.\h. D1') (H)]
+      in [g |- existsl (\a.\h. D1') H]
 
 ;
 

@@ -78,11 +78,11 @@ inductive Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype 
 
 inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 | Lam : Oft [|- snoc G A] [gamma,x:tm |- M] [ |- B ] -> Oft [|- G ] [gamma |- lam (\x. M)] [|- arr A B]
-| App : Oft [|- G ] [gamma |- M ] [|- arr A B] -> Oft [|- G ] [gamma |- N] [|- A] -> Oft [|- G] [gamma |- app (M) (N)] [|- B]
+| App : Oft [|- G ] [gamma |- M ] [|- arr A B] -> Oft [|- G ] [gamma |- N] [|- A] -> Oft [|- G] [gamma |- app M N] [|- B]
 | Var : Lookup [|- G ] [gamma |- #p] [|- A] -> Oft [|- G] [gamma |- #p] [|- A]
-| Fst : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- fst (M)] [|- A]
-| Snd : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- snd (M)] [|- B]
-| Pair : Oft [|- G] [gamma |- M] [|- A] -> Oft [|- G] [gamma |- N] [|- B] -> Oft [|- G] [gamma |- pair (M) (N)] [|- prod A B]
+| Fst : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- fst M] [|- A]
+| Snd : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- snd M] [|- B]
+| Pair : Oft [|- G] [gamma |- M] [|- A] -> Oft [|- G] [gamma |- N] [|- B] -> Oft [|- G] [gamma |- pair M N] [|- prod A B]
 | C : Oft [|- G] [gamma |- c] [|- b]
 ;
 

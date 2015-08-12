@@ -6,7 +6,7 @@
 
 rec subst : (g:ctx)
              [g, x:term, u:pred x x |-  pred M[..,x] M'[..,x]]
-          -> [g |- pred (N) (N')]
+          -> [g |- pred N (N')]
           -> [g |- pred M[..,N] M'[..,N']] =
 % / total d (subst g m m' n n' d) /
 fn d => fn e => case d of
@@ -37,7 +37,7 @@ dia_prop: term -> term  -> type.
 dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''.
 
 
-rec dia : (g:ctx) [g |- pred (M) (M1)] -> [g |- pred (M) (M2)]
+rec dia : (g:ctx) [g |- pred M (M1)] -> [g |- pred M (M2)]
           -> [g |- dia_prop (M1) (M2)] =
 % / total e (dia g m m1 m2 d e) /
 fn d => fn e => case d of
@@ -70,7 +70,7 @@ fn d => fn e => case d of
 
      let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
      let [g |- S'] = subst [g,y,v |-  S1'[..,<y ; v>]] [g |- S2'] in
-       [g |- dia_result _  (S) (S')]
+       [g |- dia_result _  S (S')]
 	   )
   | [g |- ap (R1') (R2')] =>
     (case [g |- R1']  of
@@ -81,7 +81,7 @@ fn d => fn e => case d of
       dia [g, b:block y:term, _t:pred y y |-  R1[..,b.1,b.2]] [g,b |- R1''[..,b.1,b.2]] in
 
 	 let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
-	 [g |- dia_result _ (S) (beta (\y.\v. S1'[..,<y ; v>]) (S2'))]
+	 [g |- dia_result _ S (beta (\y.\v. S1'[..,<y ; v>]) (S2'))]
 %     | [g] {}  % prove explicitely that other cases is impossible
     )
   )
@@ -102,11 +102,11 @@ strip_prop: term -> term -> type.
 strip_result: pred* M' N -> pred M'' N
 	      -> strip_prop M' M''.
 
-rec strip_lemma: (g:ctx)[g |- pred (M) (M')] -> [g |- pred* (M) (M'')]
+rec strip_lemma: (g:ctx)[g |- pred M (M')] -> [g |- pred* M (M'')]
                 -> [g |- strip_prop (M') (M'')] =
 % / total s (strip_lemma g m m' m'' r s) /
 fn r => fn s => let [g |- R] = r in case s of
- | [g |- id*] => [g |- strip_result id* (R)]
+ | [g |- id*] => [g |- strip_result id* R]
 
  | [g |- next (R1) (R2*)] =>
    let [g |- dia_result _ (S1) (S1')] = dia [g |- R] [g |- R1] in
@@ -120,7 +120,7 @@ conf_prop: term -> term -> type.
 conf_result: pred* M' N -> pred* M'' N
           -> conf_prop M' M''.
 
-rec conf : (g:ctx) [g |- pred* (M) (M')] -> [g |- pred* (M) (M'')]
+rec conf : (g:ctx) [g |- pred* M (M')] -> [g |- pred* M (M'')]
          -> [g |- conf_prop (M') (M'' )] =
 % / total r (conf g m m' m'' r s) /
 fn r => fn s => case r of
@@ -140,7 +140,7 @@ cr_result: pred* M N  ->  pred* M'  N
        -> cr_prop M M'.
 
 
-rec cr: (g:ctx) [g |- pred= (M)  (M')]  ->  [g |- cr_prop (M) (M')] =
+rec cr: (g:ctx) [g |- pred= M  (M')]  ->  [g |- cr_prop M (M')] =
 % / total e (cr g m m' e) /
 fn e => case e of
 |[g |- reduce (R*)] => [g |- cr_result (R*) id*]

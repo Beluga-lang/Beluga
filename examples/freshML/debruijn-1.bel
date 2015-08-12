@@ -58,7 +58,7 @@ and hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
    let [ |- F1] = hoas2db [g |- E1]  in
    let [ |- F2] = hoas2db [g |- E2]  in
    [ |- app' F1 F2]
- | [g |- ret (V)] =>
+ | [g |- ret V] =>
      vhoas2db [g |- V]
 ;
 

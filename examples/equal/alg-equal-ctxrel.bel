@@ -62,7 +62,7 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
                 [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
-        -> TRel [g |- app (M) (N)] [h |- app M' N']
+        -> TRel [g |- app M N] [h |- app M' N']
 
 | TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
 	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
@@ -73,10 +73,10 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 %  pattern match on M and recurse on TRel.
 
 rec ref' : (h:taCtx)(g:tCtx) TRel [g |- M] [h |- N] ->
-          [h |- aeq (N) (N)] =
+          [h |- aeq N N] =
 fn r => 
 let (r:TRel [g |- M] [h |- N]) = r in 
-case [g |- (M)] of
+case [g |- M] of
 | [g,x:term |-  x] =>
   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |-  b.2]
 			       
@@ -220,7 +220,7 @@ mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- M] of
   let ExWk [h,b:block (x:term, _u: aeq x x) |-  M'[..,b.1]] tr' = exTRel [l, x:term |-  M] (Crel_xa cr) in
     ExWk [h |- lam \x. M'] (TRlam tr')
 
-| [l |- app (M) (N)] =>
+| [l |- app M N] =>
   let ExWk [h |- M'] tr1 = exTRel [l |- M] cr in
   let ExWk [h |- N'] tr2 = exTRel [l |- N] cr in
     ExWk [h |- app M' N'] (TRapp tr1 tr2)
@@ -267,7 +267,7 @@ inductive TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
                 [h, b:block (x:term, u:deq x x) |-  #q.1[..]]
 
 | TRapp'  : TRel' [g |- M] [h |- M'] -> TRel' [g |- N] [h |- N']
-        -> TRel' [g |- app (M) (N)] [h |- app M' N']
+        -> TRel' [g |- app M N] [h |- app M' N']
 
 | TRlam'  : TRel' [g, x:term |-  M] [h, b:block (x:term, _u:deq x x) |-  N[..,b.1]]
 	   -> TRel' [g |- lam \x. M] [h |- lam \x. N]
@@ -322,7 +322,7 @@ mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- M] of
   let ExWk' tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M[..,b.1]] (Tdcons cr) in
     ExWk' (TRlam' tr')
 
-| [h |- app (M) (N)] =>
+| [h |- app M N] =>
   let ExWk' tr1 = exTRel' [h |- M] cr in
   let ExWk' tr2 = exTRel' [h |- N] cr in
     ExWk' (TRapp' tr1 tr2)

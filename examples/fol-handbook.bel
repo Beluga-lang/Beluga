@@ -48,12 +48,12 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 schema hilCtx =  i + some [ a:o ] hil a ;
 
 
-rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp (A) (imp (A) (A)))] =
+rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp A (imp A A))] =
 / total a (trivial_imp g a) /
  mlam g => mlam A => [g |- k] ;
 
-rec ded: (g:hilCtx) [g, u:hil (A) |-  hil (B[..])] 
-        -> [g |- hil (imp (A) (B))] = 
+rec ded: (g:hilCtx) [g, u:hil A |-  hil (B[..])] 
+        -> [g |- hil (imp A B)] = 
 / total h (ded g _ _ h) / 
 fn h =>  case h of
 | [g, u: hil _  |-  #p[..]] =>  [g |- mp k (#p)]  % SPECIAL!
@@ -63,8 +63,8 @@ fn h =>  case h of
 %
 % ded_id : ded ([u:hil A] u) (mp (mp s k) (k : hil (A imp (A imp A)))).
 % we define a little lemma trivial_imp which generates proofs of the right form.
- | [g, u: hil (A) |-  u]    =>
-   let [g |- D] = trivial_imp [g] [g |- A ] in [g |- (mp (mp s k) (D))]
+ | [g, u: hil A |-  u]    =>
+   let [g |- D] = trivial_imp [g] [g |- A ] in [g |- (mp (mp s k) D)]
 
  | [g, u: hil _  |-  k]  => [g |- mp k k]
  | [g, h: hil _  |-  s]  => [g |- mp k s]
@@ -80,11 +80,11 @@ fn h =>  case h of
   in
      [g |- mp f2 (ug  \x. (H'))]
 
-| % {H1 : [g, u : hil (A) |-  hil (imp (B1) (B2))]}
-  % {H2 : [g, u : hil (A) |-  hil (B1)]}
-  [g, u: hil (A)  |- mp H1 H2] =>
-  let [g |- H2'] = ded [g,u: hil (A) |- H2] in
-  let [g |- H1'] = ded [g,u: hil (A) |- H1] in
+| % {H1 : [g, u : hil A |-  hil (imp (B1) (B2))]}
+  % {H2 : [g, u : hil A |-  hil (B1)]}
+  [g, u: hil A  |- mp H1 H2] =>
+  let [g |- H2'] = ded [g,u: hil A |- H2] in
+  let [g |- H1'] = ded [g,u: hil A |- H1] in
        [g |- mp (mp s (H1')) (H2')]
 
 ;
@@ -94,7 +94,7 @@ fn h =>  case h of
 
 schema ndhilCtx = some [a:o] block _t:nd a, u:hil a  + i + o ;
 
-rec ndhil : (g:ndhilCtx) [g |- nd (A)] -> [g |- hil (A)] =
+rec ndhil : (g:ndhilCtx) [g |- nd A] -> [g |- hil A] =
  / total d (ndhil g a d) /
 fn d =>  case d of
 | [g |- (#p.1)] => [g |- (#p.2)]
@@ -107,18 +107,18 @@ fn d =>  case d of
   in
     ded [g,u |- H[..,u]]
 
-| [g |- note (D1) (C) (D2)] =>
+| [g |- note (D1) C (D2)] =>
   let [g |- H1]   = ndhil [g |- D1] in
   let [g |- H2]   = ndhil [g |- D2] in
     [g |- mp (mp n2 (H1)) (H2)]
 
-| [g |- alle  (D1) (T)] =>
+| [g |- alle  (D1) T] =>
   let [g |- H1] =  ndhil [g |- D1] in
-    [g |- mp (f1 (T)) (H1)]
+    [g |- mp (f1 T) (H1)]
 
 | [g |- alli \x. D] =>
   let [g,x:i |-  H] =  ndhil [g, x:i |-  D] in
-    [g |- ug \x. (H)]
+    [g |- ug \x. H]
 
 
 | [g |- impe (D1) (D2)] =>
@@ -128,8 +128,8 @@ fn d =>  case d of
 
 |  {B1:[g |- o]}{D: [g, u:nd (B1), p:o |-  nd p]}
   [g |- noti (\p.(\u.D[..,u,p]))] =>
-  let {H:[g, u: hil (A), p:o |-  hil p]}
-      [g,w:block (_t:nd (A),u:hil (A[..])),p:o |-  H[..,w.2,p]] =
+  let {H:[g, u: hil A, p:o |-  hil p]}
+      [g,w:block (_t:nd A,u:hil (A[..])),p:o |-  H[..,w.2,p]] =
       ndhil [g, w : block (_t:nd (B1), u:hil (B1[..]) ), p:o |-  D[..,w.1,p]] in
   let [g |- H1']  = ded [g,u |- H[..,u,(not (A[..]))]] in
   let [g |- H1''] = ded [g,u |- H[..,u,(A[..])]] in

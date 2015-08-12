@@ -68,10 +68,10 @@ schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 ### Reflexivity
 <b>Theorem</b> :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$. <br>
 
-The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub (T) (T)]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`. 
+The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`. 
 }}%
 
-rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T) (T)] = 
+rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] = 
     mlam g => mlam T => case [g |- T] of 
     | [g |- #p.1] => [g |- #p.4]
     | [g |- top ] => [g |- sa_top]
@@ -93,16 +93,16 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub (T) (T)] =
 ### Transitivity
 <b>Theorem</b> :  For every $\Gamma$, $S$, $Q$ and $T$,  if $\Gamma\vdash S <: Q$ and  $\Gamma\vdash Q <: T$, then  $\Gamma\vdash S <: T$. <br>
 
-The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub (S) (Q)] -> [g |- sub (Q..) (T)] -> [g |- sub (S) (T)]`. The context variable is written implicitly in round bracket as `(g:s_ctx)`.  We do case analysis on the derivation of type `[g |- sub (S) (Q)]`. In some cases we need to provide extral type annotation for the branch. For example, in the case `[g |- sa_arr (D1) (D2) ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr (S1) (S2)) (arr (Q1) (Q2)) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments. We use the same technique in the branch of `sa_all`.  We also need to specify the type of some variables when we don't have enough information on them. For example, in the case `[g |- (#p.2) (U') (T') (D1) (D2)]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
+The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub (Q..) T] -> [g |- sub S T]`. The context variable is written implicitly in round bracket as `(g:s_ctx)`.  We do case analysis on the derivation of type `[g |- sub S Q]`. In some cases we need to provide extral type annotation for the branch. For example, in the case `[g |- sa_arr (D1) (D2) ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr (S1) (S2)) (arr (Q1) (Q2)) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments. We use the same technique in the branch of `sa_all`.  We also need to specify the type of some variables when we don't have enough information on them. For example, in the case `[g |- (#p.2) (U') (T') (D1) (D2)]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
 }}%
 
-rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S) (Q)] -> [g |- sub Q T]
- 	    -> [g |- sub (S) (T)] = 
+rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
+ 	    -> [g |- sub S T] = 
     mlam Q => fn d1 => fn d2 => 
     case d1 of 
     | [g |- #p.3 ] => 
       let [g |- D2] = d2 in
-      [g |- (#p.2) (Q)  _ (#p.3) (D2)] 
+      [g |- (#p.2) Q  _ (#p.3) (D2)] 
     | [g |- #p.4 ] => d2 
     | {#p :  [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a (U'[..]), ref: sub a a )] }
 	  {D1 : [g |- sub (#p.1 ) (U')]}
@@ -193,7 +193,7 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 ### Soundness
 <b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
 }}%
-rec sound : (g:ss_ctx) [g |- sub (T) (S)] -> [g |- subtype (T) (S)] =
+rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
     fn d => case d of 
     | [g |- sa_top] => [g |- subtype_top]
     | [g |- sa_arr (D1) (D2)] => 
@@ -224,7 +224,7 @@ rec sound : (g:ss_ctx) [g |- sub (T) (S)] -> [g |- subtype (T) (S)] =
 <b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .  
 }}%
 
-rec complete : (g:ss_ctx) [g |- subtype (T) (S)] -> [g |- sub (T) (S)] = 
+rec complete : (g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] = 
     fn d => case d of 
     | [g |- #p.5] => [g |- #p.3]
     | [g |- subtype_top] => [g |- sa_top]

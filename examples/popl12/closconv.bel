@@ -72,7 +72,7 @@ fn cr => fn m => case m of
   let [h |- Env]  = ctxToEnv (Ctx [h]) in
     [h |- close (clam \e. N[e]) Env]
 
-| [g |- app (M) (N) ] =>
+| [g |- app M N ] =>
   let [h |- M' ] = conv cr [g |- M ] in
   let [h |- N'] = conv cr [g |- N ] in
     [h |- open (M') (\env. \f. capp f (create (snoc env (N'[..]) )))]

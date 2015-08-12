@@ -133,13 +133,13 @@ mlam g, A => fn r => case [ |- A] of
     (mlam h => fn s => fn e =>
       let [h |- N ] = reify [h] [|- T] e in  
       let [h |- R' ] = nsubst [h] [g] [|- arr T S] s r in
-       reflect [h] [|- S] [h |- rapp (R') (N)] 
+       reflect [h] [|- S] [h |- rapp (R') N] 
 )
 
 and reify : {g:ctx}{A:[|- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =
  / total a (reify g a) /
 mlam g, A => fn e => case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed (R)])
+| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>
   (case e of
    | (Slam [g] [|- T] [|- S] f)  =>

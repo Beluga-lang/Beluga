@@ -9,8 +9,8 @@
 schema tctx = term;
 
 % Transitivity of multi-step reduction
-rec appd: (g:tctx) [g |- -->* (M) (M')]  ->  [g |- -->*  (M') (M'')]
-        ->  [g |- -->* (M) (M'')] =
+rec appd: (g:tctx) [g |- -->* M (M')]  ->  [g |- -->*  (M') (M'')]
+        ->  [g |- -->* M (M'')] =
 % / total r (appd g m m' m'' r) /
 fn r => fn s => case r of
 | [g |- id1] => s
@@ -21,7 +21,7 @@ fn r => fn s => case r of
 ;
 
 % Multi-step reduction is a congruence
-rec lm1* : (g:tctx) [g,x:term |-  -->* (M) (M')]
+rec lm1* : (g:tctx) [g,x:term |-  -->* M (M')]
       ->  [g |- -->* (lam (\x. M)) (lam (\x. M'))] =
 % / total r (lm1* g m m' r) /
 fn r => case r of

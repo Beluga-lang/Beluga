@@ -75,8 +75,8 @@ schema jctx' = block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _npt: npath y
                           _d: ({q:p} path n q -> path x q) ;
 
 
-rec bred_ltr :  (g:jctx') [g |- bred (N) (V )]
-             -> [g |- path (N) (P)] -> [g |- npath (V) (P)]
+rec bred_ltr :  (g:jctx') [g |- bred N (V )]
+             -> [g |- path N P] -> [g |- npath V P]
     =
  / total br (bred_ltr g n v p br pt) /
 fn br => fn pt => case br of
@@ -113,19 +113,19 @@ fn br => fn pt => case br of
 
 
 | {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
-  [g |- (#p.2) (U) (R)] => % [g |- bred x (U)]
-   % R : bred (N) (U)
-   % pt: path x (P)
+  [g |- (#p.2) U R] => % [g |- bred x U]
+   % R : bred N U
+   % pt: path x P
   case pt of
     |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
-       [g |- (#p.3) (Q) (Qp)] => % [g |- path x (Q)]
-        % Qp : path (N) (Q)
-          bred_ltr [g |- R] [g |- Qp] % path (U) (Q)
+       [g |- (#p.3) Q (Qp)] => % [g |- path x Q]
+        % Qp : path N Q
+          bred_ltr [g |- R] [g |- Qp] % path U Q
 
  ;
 
-rec bred_rtl : (g:jctx')[g |- bred (M) (U)] ->
-               [g |- npath (U) (P)] -> [g |- path (M) (P)]
+rec bred_rtl : (g:jctx')[g |- bred M U] ->
+               [g |- npath U P] -> [g |- path M P]
    =
 / total br (bred_rtl g m u p br pt) /
 fn br => fn pt => case br of
@@ -148,8 +148,8 @@ fn br => fn pt => case br of
    in
        [g |- p_abs (\y.\q.\qt. Q'[..,y,q,qt])]
 
-| [g |- r_beta (\x.\bf. R[..,x,bf])] : [g |- bred (beta (M) (N)) (U)] =>
-  let [g |- Qt] = pt in          % [g |- npath (U) (P)]
+| [g |- r_beta (\x.\bf. R[..,x,bf])] : [g |- bred (beta M N) U] =>
+  let [g |- Qt] = pt in          % [g |- npath U P]
   let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
                            _d: ({q:p} path _ q -> path x q))  |-  Q'[..,b.1,b.3]] =
        bred_rtl [g,b: block (x:tm,  _b: ({u:nf} bred (N[..]) u -> bred x u),
@@ -160,10 +160,10 @@ fn br => fn pt => case br of
 
 
 | {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
-  [g |- (#p.2) (U) (R)] => % [g |- bred x (U)]
-  let ([g |- Pt] : [g |- npath (U) (P)]) = pt in
-  let [g |- Qt] = bred_rtl [g |- R] pt % path (N) (P)
-  in [g |- (#p.3) (P) (Qt)]
+  [g |- (#p.2) U R] => % [g |- bred x U]
+  let ([g |- Pt] : [g |- npath U P]) = pt in
+  let [g |- Qt] = bred_rtl [g |- R] pt % path N P
+  in [g |- (#p.3) P (Qt)]
  ;
 
 LF eq : tm -> tm -> type =
@@ -173,7 +173,7 @@ LF nf_eq : nf -> nf -> type =
 | nref : nf_eq M M;
 
 inductive ExNPath : (g:jctx') [g |- nf] -> ctype =
-| ExPath : [g |- npath (U) (P)] -> ExNPath [g |- U] ;
+| ExPath : [g |- npath U P] -> ExNPath [g |- U] ;
 
 rec path_exists : {g:jctx'} {U:[g |- nf] }  ExNPath [g |- U] =
 / total u (path_exists g u) /
@@ -186,7 +186,7 @@ let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath (U[..,x]) (P[..,p])]}
 in
     ExPath [g |- np_abs \x.\p.\pt. Ql[..,x,p,pt]]
 
-| [g |- napp (U) (V)] =>
+| [g |- napp U V] =>
     let ExPath [g |- Ql ] = path_exists [g] [g |- U] in
     ExPath [g |- np_app_l (Ql)]  
 
@@ -197,8 +197,8 @@ in
 
 
 rec tm_same: {g:jctx'} {U:[g |- nf ]} {V: [g |- nf ]}
-    ({P:[g |- p]} [g |- npath (U)(P)] -> [g |- npath (V) (P)]) ->
-     [g |- nf_eq (U) (V)]
+    ({P:[g |- p]} [g |- npath UP] -> [g |- npath V P]) ->
+     [g |- nf_eq U V]
   =
 / total u (tm_same g u) /
 mlam g => mlam U => mlam V => fn pf => case [g |- U] of
@@ -209,19 +209,19 @@ mlam g => mlam U => mlam V => fn pf => case [g |- U] of
 
 | [g |- napp (U1) (U2)] =>
   let ExPath np = path_exists [g] [g |- napp (U1) (U2)] in
-  (case np of  % [g |- npath (napp (U1) (U2)) (P)]
+  (case np of  % [g |- npath (napp (U1) (U2)) P]
   | [g |- np_app_l (Pf1)] =>   %   [g |- npath (napp (U1) (U2)) (left (P1))]
     let ([g |- np_app_l (Qt1)]  : [g |- npath (napp (V1) (V2)) (left (P1))])
           = pf [g |- left _ ] [g |- np_app_l (Pf1)] in
     let [g |- nref] = tm_same  [g] [g |- U1] [g |- V1]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath (V) (left (P1))]
+                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath V (left (P1))]
                     in [g |- Qt1]) in
     let [g |- nref] = tm_same  [g] [g |- U2] [g |- V2]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath (V) (left (P1))]
+                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath V (left (P1))]
                     in [g |- Qt1])
     in [g |- nref]
 
@@ -232,12 +232,12 @@ mlam g => mlam U => mlam V => fn pf => case [g |- U] of
     let [g |- nref] = tm_same  [g] [g |- U1] [g |- V1]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath (V) (left (P1))]
+                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath V (left (P1))]
                     in [g |- Qt1]) in
     let [g |- nref] = tm_same  [g] [g |- U2] [g |- V2]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath (V) (left (P1))]
+                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath V (left (P1))]
                     in [g |- Qt1])
     in [g |- nref]
 
@@ -276,9 +276,9 @@ mlam U => mlam V => fn r1 => fn r2 => fn pf =>
 
 
 rec same_paths_join : {g:jctx}{U:[g |- nf]}{V:[g |- nf]}
-                      [g |- bred (M) (U)] -> [g |- bred (N) (V)] ->
-                       ({P:[g |- p]} [g |- path (M) (P)] -> [g |- path (N) (P)])
-                      -> [g |- nf_eq (U) (V)]
+                      [g |- bred M U] -> [g |- bred N V] ->
+                       ({P:[g |- p]} [g |- path M P] -> [g |- path N P])
+                      -> [g |- nf_eq U V]
 =
  / total (same_paths_join) /
 mlam g => mlam U => mlam V => fn r1 => fn r2 => fn pf =>

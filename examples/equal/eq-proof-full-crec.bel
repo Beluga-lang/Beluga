@@ -19,9 +19,9 @@ eq_lam :  ({x : exp} eq x x -> eq (M x) (N x))
 
 schema eCtx = block x:exp, _t:eq x x;
 
-rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq (M) (M)] =
+rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq M M] =
 / total m (ref g m ) /
- mlam g => mlam M => case [g |- (M)] of
+ mlam g => mlam M => case [g |- M] of
 | [g |- #p.1] => [g |- #p.2]
 
 | [g |- lam \x. M1] =>
@@ -37,8 +37,8 @@ rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq (M) (M)] =
 
 % ------------------------------------------------------------------------------
 % General transitivity is admissible
-rec trans: (g:eCtx) [g |- eq (M) (M0)]  -> [g |- eq (M0) (N)]
-           -> [g |- eq (M) (N)]  =
+rec trans: (g:eCtx) [g |- eq M (M0)]  -> [g |- eq (M0) N]
+           -> [g |- eq M N]  =
 / total e1 (trans _ _ _ _ e1) /
 fn e1 => fn e2 => case e1 of
 | [g |- #p.2] => e2
@@ -70,7 +70,7 @@ e_t: equal T' S -> equal T T' -> equal T S.
 
 schema eqCtx = block x: exp, _t:equal x x, u:eq x x ;
 
-rec ceq: (g:eqCtx) [g |- equal (T) (S)] -> [g |- eq (T) (S)]  =
+rec ceq: (g:eqCtx) [g |- equal T S] -> [g |- eq T S]  =
 / total e (ceq g t s e) /
 fn e => case e of
 | [g |- #p.2] => [g |- #p.3]

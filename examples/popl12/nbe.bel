@@ -112,12 +112,12 @@ and extendSem : [g |- neut (arr A[] B[])] ->
 fn r => mlam h => fn s => fn e =>
 let [h |- N ] = reify e in
 let [h |- R' ] = weak_neut s r in
-  reflect [ |- _ ] [h |- rapp (R') (N)]
+  reflect [ |- _ ] [h |- rapp (R') N]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 / total a (reify g a) /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed (R)])
+| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>

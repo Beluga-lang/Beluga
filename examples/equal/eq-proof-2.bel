@@ -26,15 +26,15 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 
 schema eqCtx = block x:exp, _t:eq x x;
 
-rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq (U) (U)] =
+rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
 / total m (ref g m) /
- mlam g => mlam U => case [g |- (U)] of
+ mlam g => mlam U => case [g |- U] of
 | [g |- #p.1] => [g |- #p.2]
 
 | [g |- lam \x. L] =>
   let [g,e:block y:exp, _t:eq y y |-  V] =
       ref [g, e:block q:exp, _t:eq q q] [g, e |-  L[..,e.1]] in
-    [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq (L) (L)
+    [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
 | [g |- app (A1) (A2)]  : [g |- exp]=>
   let [g |- EQ1] = ref [g] [g |- A1] in
   let [g |- EQ2] = ref [g] [g |- A2] in
@@ -79,7 +79,7 @@ e_t: equal T' S -> equal T T' -> equal T S.
 
 schema equalCtx = some [] block x: exp, _t:equal x x, u:eq x x  ;
 
-rec ceq: (g:equalCtx) [g |- equal (T) (S)] -> [g |- eq (T) (S)]  =
+rec ceq: (g:equalCtx) [g |- equal T S] -> [g |- eq T S]  =
 / total e (ceq g t s e) /
 fn e => case e of
 | [g |- #p.2] => [g |- #p.3]
@@ -92,7 +92,7 @@ fn e => case e of
     trans [g |- F1]  [g |- F2]
 
 | [g |- e_l (\x.(\u. D))] =>
-  let {F: [g, x:exp, u: eq x x |-  eq (R) (Q)]}
+  let {F: [g, x:exp, u: eq x x |-  eq R Q]}
      [g,b:block x:exp, _t:equal x x,u:eq x x  |-  F[..,b.1,b.3]] =
         ceq [g, b:block x:exp, _t:equal x x, u:eq x x |-  D[..,b.1,b.2]]
   in

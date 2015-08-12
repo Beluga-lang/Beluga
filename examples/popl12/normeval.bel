@@ -51,7 +51,7 @@ rec nsubst :  ({T:[ |- tp]} NeutVar [g] [ |- T]  -> NeutVar [h] [ |- T])
 fn s => fn e => case e of
 | {#p: [g |- neut T[]]}
   [g |- #p ] => let NeutVar [h |- #q] = s [ |- T] (NeutVar [g |- #p ]) in [h |- #q]
-| [g |- rapp (R) (N)] =>
+| [g |- rapp R N] =>
   let [h |- R' ] = nsubst s [g |- R ] in
   let [h |- N' ] = nosubst s [g |- N ] in
     [h |- rapp (R') (N' ) ]
@@ -137,12 +137,12 @@ and extendSem : [g |- neut (arr A[] B[])] ->
  fn r => mlam h => fn s => fn e =>
     let [h |- N ] = reify e in
     let [h |- R' ] = nsubst s r in
-       reflect [|- _ ] [h |- rapp (R') (N)] 
+       reflect [|- _ ] [h |- rapp (R') N] 
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 % / total e (reify g a e) /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed (R)])
+| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>

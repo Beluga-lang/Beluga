@@ -68,7 +68,7 @@ it can also contain other terms.
 rec remove:(g:ctx)[g,x:term |-  fvlist] -> [g |- fvlist] =
 fn l => case l of
 | [g,x:term |- nil] => [g |- nil]
-| [g,x:term |- cons x (L)] => remove [g,x:term |- L]
+| [g,x:term |- cons x L] => remove [g,x:term |- L]
 | [g,x:term |-  cons #p[..] L] =>
   let [g |- L'] = remove [g,x:term |- L] in
 			   [g |- cons (#p) (L')]

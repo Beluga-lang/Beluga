@@ -26,9 +26,9 @@ case x of
 % G, x:exp T |-  tt  ==>  0
 % G, x:exp T |-  x  ==>  1
 % G, x:exp T |-  y  ==>  0   y =/= x
-% G, x:exp T |-  s (U) ==> n   if G, x:exp T |- U  ==> n
+% G, x:exp T |-  s U ==> n   if G, x:exp T |- U  ==> n
 % G, x:exp T |-  s U  ==> n   if G, x:exp T |- U  ==> n
-% G, x:exp T |-  letv (U) (\y. V y) ===> n1 + n2
+% G, x:exp T |-  letv U (\y. V y) ===> n1 + n2
 % if  G, x: exp T |-  U ==> n1
 % if  G, y:exp _ , x: exp T |-  V  y ==> n2
 

@@ -102,7 +102,7 @@ mlam R => fn n => let [g |- N] = n in [g |- rapp R N];
 rec reflect : [g |- neut A[]] ->  Sem [g] [ |- A] =
 fn r => let [g |- R ] : [g |- neut A[]] = r in
 case [ |- A] of
-| [ |- b ] => Base [g |- embed (R)]
+| [ |- b ] => Base [g |- embed R]
 | [ |- arr T S ] =>
  Arr [g] (mlam h => mlam #W => fn e => reflect (app' [h |- R[#W]] (reify e)))
 

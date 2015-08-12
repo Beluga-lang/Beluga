@@ -53,8 +53,8 @@ mlam g => mlam T => mlam TT => fn e =>
      [g,x: exp (T'[]) |-  z]            : [g,x: exp (T'[]) |-  (exp nat)] => [ |- z]
 
    | {T':[ |- tp]} {U:[g, x:exp (T'[]) |-  exp nat]}
-      [g,x: exp (T'[]) |-  s (U)]  : [g,x: exp (T'[]) |-  (exp nat)] =>
-          cntV [g] [ |- T' ]  [ |- nat ]   [g,x |- (U)]
+      [g,x: exp (T'[]) |-  s U]  : [g,x: exp (T'[]) |-  (exp nat)] =>
+          cntV [g] [ |- T' ]  [ |- nat ]   [g,x |- U]
 %{
    | {T'::tp[ ]} {T1::tp[ ]} {T2::tp[ ]}
      {U1::(exp T1)[g, x:exp T']} {U2::(exp T2)[g, x:exp T', y:exp T1]}
@@ -65,9 +65,9 @@ mlam g => mlam T => mlam TT => fn e =>
                (cntV [g, y:exp T1] [ . T' ]    [ . T2 ]    ([g,y,x] (U2 y)))
 
    | {T'::tp[ ]} {U::(exp nat)[g, x:exp T']} {W::(exp nat)[g, x:exp T']}
-     [g,x : exp T'] add (U) (W)                   : (exp nat)[g, x: exp T'] =>
-          plus (cntV [g] [ . T' ] [ . nat] ([g,x] (U)))
-               (cntV [g] [ . T' ] [ . nat] ([g,x] (W)))
+     [g,x : exp T'] add U W                   : (exp nat)[g, x: exp T'] =>
+          plus (cntV [g] [ . T' ] [ . nat] ([g,x] U))
+               (cntV [g] [ . T' ] [ . nat] ([g,x] W))
 }%
 ;
 

@@ -97,7 +97,7 @@ schema ss_ctx =  some [u:tp]  block a:tp, tr:{U':tp}{T':tp} sub U' T' -> sub a U
 % -----------------------------------------------------------------
 % Admissibility of reflexivity
 
-rec refl : {g:s_ctx} {T:[g |- tp]} [g |- sub (T) (T)] =
+rec refl : {g:s_ctx} {T:[g |- tp]} [g |- sub T T] =
 / total t (refl g t)/
 mlam g => mlam T => case [g |- T] of
 | [g |- top] => [g |- sa_top]
@@ -106,7 +106,7 @@ mlam g => mlam T => case [g |- T] of
     let [g |- S2] = refl [g] [g |- T2] in
       [g |- sa_arr (S2) (S1)]
 | [g |- #p.1] => [g |- #p.4]
-| [g |- forall (U) (\a.T)] =>
+| [g |- forall U (\a.T)] =>
   let [g |- R'] = refl [g] [g |- U] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
                    w: sub a (U[..]), ref: sub a a) |-
@@ -119,23 +119,23 @@ mlam g => mlam T => case [g |- T] of
 ;
 
 % -------------------------------------------------------------
-rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub (S) (Q)] -> [g |- sub Q (T)]
-	    -> [g |- sub (S) (T)] =
+rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
+	    -> [g |- sub S T] =
 % / total d1 (trans g q s t d1 d2 )/
 mlam Q => fn d1 => fn d2 => case d1 of
  | [g |- #p.3] =>  % w: sub a Q
      let [g |- D2] = d2 in
-     [g |- (#p.2) (Q) _ (D2) (#p.3)]
+     [g |- (#p.2) Q _ (D2) (#p.3)]
  | [g |- #p.4] => % refl : sub a a
 		 d2
 
 |
    {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 			   w: sub a (U[..]), ref: sub a a)]}
-   {D1:[g |- sub (#p.1) (U)]}
-  [g |- (#p.2) (U) (Q) (D2) (D1)] =>
+   {D1:[g |- sub (#p.1) U]}
+  [g |- (#p.2) U Q (D2) (D1)] =>
   let [g |- F'] = trans [g |- Q] [g |- D2] d2 in
-    [g |- (#p.2)  (U) _  (F') (D1)]
+    [g |- (#p.2)  U _  (F') (D1)]
 
 | [g |- sa_top] => let  [g |- sa_top] = d2 in [g |- sa_top]
 
@@ -166,7 +166,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
 
 ;
 
-rec sound : (g:ss_ctx) [g |- sub (T) (S)] -> [g |- subtype (T) (S)] =
+rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
 % / total d (sound g t s d) /
 fn d => case d of
 % Assumption w : sub a Q
@@ -177,8 +177,8 @@ fn d => case d of
 % transitivity
 | {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
  	          w: sub a (U[..]), ref: sub a a, w': subtype a (U[..]))]}
-   {D1:[g |- sub (#p.1) (U)]}
-  [g |- (#p.2) (U) (Q) (D2) (D1)] =>
+   {D1:[g |- sub (#p.1) U]}
+  [g |- (#p.2) U Q (D2) (D1)] =>
   let [g |- F2] = sound [g |- D2] in
   let [g |- F1] = sound [g |- D1] in
   [g |- subtype_trans (F2) (F1)]
@@ -200,7 +200,7 @@ fn d => case d of
 
 ;
 
-rec complete :(g:ss_ctx) [g |- subtype (T) (S)] -> [g |- sub (T) (S)] =
+rec complete :(g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] =
 % / total d (complete g t s d)/
 fn d => case d of
 | [g |- #p.5] => [g |- #p.3]

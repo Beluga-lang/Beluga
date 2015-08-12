@@ -140,7 +140,7 @@ mlam h => fn map => fn fvar => case fvar of
 rec convert:(g:ctx){h:tctx} ({#p:[g |- term]} [h |- target]) -> [g |- term] -> [h |- target] =
 mlam h => fn map => fn e => case e of
 | [g |- #p] => map [g |- #p]
-| [g |- eapp (U) (V)] =>
+| [g |- eapp U V] =>
   let [h |- U'] = convert [h] map [g |- U] in
   let [h |- V'] = convert [h] map [g |- V] in
   [h |- topen (U')

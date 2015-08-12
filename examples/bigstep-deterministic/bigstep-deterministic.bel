@@ -14,7 +14,7 @@ schema evctx = block x:exp, u:eval x x, t:notLam x, _v:eq x x;
 
 rec eval_respects_eq : 
 (g:evctx) [g |- eq M N] -> [g |- eval M R]
--> [g |- eval (N) (R)] =
+-> [g |- eval N R] =
 % / total f (eval_respects_eq g m n r e f ) /
 fn d => fn f => case f of
  | [g |- eval_app2 (D1) (NL) (D2)] =>
@@ -25,7 +25,7 @@ fn d => fn f => case f of
 
  | [g |- eval_lam (\x.\u.\v. M')] =>
    let [g |- eq_lam (\x.\u. F1)] = d in
-   % [g, x:exp, u:eq x x |- eq (M) (N)]
+   % [g, x:exp, u:eq x x |- eq M N]
    let
      [g,b:block x:exp, v:eval x x, _t:notLam x,u:eq x x |-  D1[..,b.1,b.2,b.3]] =
      eval_respects_eq [g,b:block (x:exp, v:eval x x, _t:notLam x, u:eq x x) |-  F1[..,b.1,b.4]]
@@ -46,8 +46,8 @@ fn d => fn f => case f of
 
 ;
 
-rec deterministic : (g:evctx) [g |- eval (M) (R)] -> [g |- eval (M) (R')]
--> [g |- eq (R) (R')] =  
+rec deterministic : (g:evctx) [g |- eval M R] -> [g |- eval M (R')]
+-> [g |- eq R (R')] =  
 % / total d (deterministic g m r r' d)/
 fn d => fn f =>
 case d of
@@ -71,7 +71,7 @@ case d of
      [g,b |- F1[..,b.1,b.2,b.3]] in
   [g |- eq_lam (\x.\u. E1)]
 
-| [g |- eval_app1 (D1) (D2)] : [g |- (eval (app (M) (N)) (R))] =>
+| [g |- eval_app1 (D1) (D2)] : [g |- (eval (app M N) R)] =>
   (case f of
     | [g |- eval_app1 (F1) (F2)] =>
       let [g |- eq_lam (\x.\u. E1)] = deterministic [g |- D1] [g |- F1] in

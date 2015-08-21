@@ -43,14 +43,15 @@
 
 \title{Beluga: \LaTeX\ Mode Documentation}
 \author{Steven Thephsourinthone}
-%\date{} % Activate to display a given date or no date (if empty),
+\date{} % Activate to display a given date or no date (if empty),
          % otherwise the current date is printed 
 
 \begin{document}
 \maketitle
 
 \section{Introduction}
-
+\subsection{Invocation}
+The \LaTeX translation is invoked with the command line flag ``+latex''.
 \section{Datatypes}
 \subsection{type latex}
 We begin by defining a datatype to contain the \LaTeX proof. The type \verb+latex+ has constructors \verb+Command+ for new commands, \verb+Rule+ for inference rules, and \verb+Proof+ for proofs.
@@ -63,14 +64,14 @@ So, in order to properly define a new command, we need, at least, parameters for
 Here, we see that we need parameters for names, premises, and a conclusion. In the internal abstract syntax, both the premises and conclusion of the inference rule are grouped together in a single list, where the final element is the conclusion and the other elements constitute the premises. We choose here to pass the entire list to the constructor rather than explicitly differentiating, leaving that for a later step:\\ \verb+Rule of Id.name * Syntax.Ext.LF.typ list+
 \end{itemize}
 ...
-\subsection{type goal}
+\subsection{type theorem}
 The goal of the proof takes the form:\\
 Theorem \textbf{name} : If \textbf{premise1} and ... and \textbf{premiseN} then \textbf{conclusion}\\
-Each premise should have the form \verb+x : some type+, where it's labeled with some x, and the conclusion just has the form \verb+some type+, which lacks a label. We can group the two together as a \verb+GoalTerm+, which takes an \verb+Id.name option+ and an \verb+Syntax.Int.Comp.typ * Syntax.Int.LF.msub+, and just have a list of these terms. Because of the way we construct a \verb+GoalTerm+, the conclusion should be the only term with no name.
+Each premise should have the form \verb+x : some type+, where it's labeled with some x, and the conclusion just has the form \verb+some type+, which lacks a label. We can group the two together as a \verb+TheoremTerm+, which takes an \verb+Id.name option+ and an \verb+Syntax.Int.Comp.typ * Syntax.Int.LF.msub+, and just have a list of these terms. Because of the way we construct a \verb+TheoremTerm+, the conclusion should be the only term with no name.
 
-There exists the possibility where a user may explicitly declare an \verb+mlam+, in which case we need a case for quantifiers. The \verb+GoalForall+ constructor takes an \verb+Id.name+ and an \verb+Int.LF.ctyp_decl+.
+There exists the possibility where a user may explicitly declare an \verb+mlam+, in which case we need a case for quantifiers. The \verb+TheoremForall+ constructor takes an \verb+Id.name+ and an \verb+Int.LF.ctyp_decl+.
 
-Finally, the goal of the proof is simply a pair consisting of an \verb+Id.name+ and a \verb+goal_term list+
+The goal is internally represented as a tuple of \verb+tterm list+ (the \verb+TheoremForall+ premises), \verb+tterm list+ (the \verb+TheoremTerm+ premises), and a \verb+tterm+ (the conclusion).
 
 \section{Type Annotated Abstract Syntax Tree}
 

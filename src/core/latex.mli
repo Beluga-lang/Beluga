@@ -3,6 +3,8 @@ open Id
 
 exception LatexException of string
 
+val gen_latex : bool ref
+
 type latex =
 | LatexDummy
 | Command of name * int * string option

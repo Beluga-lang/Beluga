@@ -34,7 +34,8 @@ let usage () =
         ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
         ^ "    +locs                 Output location information (for testing)\n"
-        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
+        ^ "    +latex                Translate Beluga code into a LaTeX typset proof\n"
+        ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"        
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
         ^ "                              -readLine     disabe readline support using rlwrap \n"
@@ -86,6 +87,7 @@ let process_option arg rest = match arg with
       end
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
   | "+locs"       -> Locs.gen_loc_info := true; rest
+  | "+latex"      -> Latex.gen_latex := true; rest  
   | "-I" -> begin
       try Beli.run rest
       with Beli.Invalid_Arg -> usage () end

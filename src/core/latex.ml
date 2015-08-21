@@ -9,6 +9,8 @@ module R = Store.Cid.DefaultRenderer
 
 exception LatexException of string
 
+let gen_latex = ref false
+
 type latex =
 | LatexDummy
 | Command of name * int * string option
@@ -161,7 +163,7 @@ let rec proof e_ann =
 	let (t_premises, t_conclusion) = chop_end theorem in	
 	let (t_faprems, t_termprems) = split_prems t_premises in	
 	let _ = print_string (latex_of_theorem t_faprems t_termprems t_conclusion) in
-	(* let _ = proof_case e' in *)
+	let _ = proof_case e' in
 	(* let cases = proof_cases e' in	 *)
 	()
 
@@ -201,6 +203,8 @@ and proof_theorem e = match e with
 | Synann.Comp.If _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestIf\n")
 | Synann.Comp.Hole _ -> raise (LatexException "Non MLam/Fun passed to proof_theorem: TestHole\n")
 
+
+(* :: Everything beyond this point isn't concrete :: *)
 and proof_case e = match e with (* return scrut + case list *)
 | Synann.Comp.Case (loc, prag, i, branches, cD, ttau) -> proof_branches branches
 | Synann.Comp.Syn _ -> raise (LatexException "Non Case passed to proof_case: Syn\n")
@@ -297,7 +301,7 @@ and proof_normal tM = match tM with
 	end	
 | Synann.LF.Lam (_, n, tM', cD, cPsi, tA) -> sprintf "\\%s.(%s)" (R.render_name n) (proof_normal tM')
 | Synann.LF.LFHole (_, cD, cPsi, tA) -> "_"
-| Synann.LF.Clo _ -> raise (LatexException "Unsupported normal passed to proof_normal: Tuple\n")
+| Synann.LF.Clo _ -> raise (LatexException "Unsupported normal passed to proof_normal: Clo\n")
 | Synann.LF.Tuple (_, tup, cD, cPsi, tA) -> sprintf "<%s>" (proof_tuple tup)
 
 and proof_head h = match h with
@@ -369,4 +373,4 @@ and proof_exp_syn e = match e with
 | Synann.Comp.PairVal (_, i1, i2, cD, ttau) ->
 	sprintf "(%s, %s) : %s" (proof_exp_syn i1) (proof_exp_syn i2) (PI.subCompTypToString cD ttau)
 | Synann.Comp.Boolean (b, cD, ttau) ->
-	sprintf "Boolean : %s" (PI.subCompTypToString cD ttau)
+	sprintf "%s : %s" ((fun x -> if true then "True" else "False") b) (PI.subCompTypToString cD ttau)

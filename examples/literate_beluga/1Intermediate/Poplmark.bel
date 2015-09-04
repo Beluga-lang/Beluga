@@ -200,10 +200,10 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
       let [g |- E1] = sound [g |- D1] in
       let [g |- E2] = sound [g |- D2] in
       [g |- subtype_arrow E1 E2]
-    | [g |- sa_all D1 D2 ] : [g |- sub (forall S1 ( S2 )) ( forall T1 (T2 ))] =>
+    | [g |- sa_all D1 D2 ] : [g |- sub (forall S1 S2) (forall T1 T2)] =>
       let [g |- E1] = sound [g |- D1] in
       let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1, ref: sub a a , w' : subtype a T1)  |- E2[..,b.1,b.5] ] = 
-	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1, ref: sub a a , w' : subtype a T1)  |- D2[..,b.1,b.2,b.3,b.4]] in 
+	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4]] in 
       [g |- subtype_forall E1 E2]
     % Assumption w : sub a Q
     | [g |- #p.3] => [g |- #p.5]

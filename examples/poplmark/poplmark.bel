@@ -61,19 +61,18 @@ inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 
 inductive Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 | Sa_top    : Sub [g |- S] [g |- top]
-| Sa_refl   : {#p:[g |- block (a:tp, u: assm a U)]}Sub [g |- #p.1] [g |- #p.1]
-| Sa_trans  : {#p:[g |- block (a:tp, u: assm a U)]}
+| Sa_refl   : {#p:[g |- block (a:tp, u: assm a U[..])]}Sub [g |- #p.1] [g |- #p.1]
+| Sa_trans  : {#p:[g |- block (a:tp, u: assm a U[..])]}
                 Sub [g |- U] [g |- T]
               -> Sub [g |- #p.1] [g |- T]
 | Sa_arrow  : Sub [g |- T1] [g |- S1] -> Sub [g |- S2] [g |- T2]
               -> Sub [g |-  arr S1 S2] [g |- arr T1 T2]
 
 | Sa_forall : Sub [g |- T1] [g |- S1]
-	      -> Sub [g, b:block (x:tp, u:assm x T1) |- S2[..,b.1]]
+	      -> Sub [g, b:block (x:tp, u:assm x T1[..]) |- S2[..,b.1]]
                         [g,b |- T2[..,b.1]]
               -> Sub [g |-  forall S1 (\x.S2)] [g |- forall T1 (\x.T2)]
 ;
-
 
 % -----------------------------------------------------------------
 % Admissibility of reflexivity
@@ -88,7 +87,7 @@ mlam g => mlam T => case [g |- T] of
 | [g |-  #p.1] => Sa_refl [g |- #p]
 | [g |-  forall U (\a.T)] =>
   let r' = refl [g] [g |-  U] in
-  let r  = refl [g, b: block a:tp, w: assm a U] [g, b |- T[..,b.1]] in
+  let r  = refl [g, b: block a:tp, w: assm a U[..]] [g, b |- T[..,b.1]] in
     Sa_forall r' r
 
 ;

@@ -104,8 +104,8 @@ inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
  		         [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  :   % {#p:[g |- term]}{#q:[h |- block x:term, u:aeq x x]}
                           TRel  [g |- #p] [h |- #q.1]
-         -> TRel [g, x:term |-  #p]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1]
+         -> TRel [g, x:term |-  #p[..]]
+                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
 
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
         -> TRel [g |- app M N] [h |- app M' N']

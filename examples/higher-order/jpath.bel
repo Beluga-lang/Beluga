@@ -80,7 +80,7 @@ fn p => case p of
 | [g |- j_left P] => let [g |- P'] = bwd [g |- P] in [g |- p_left (P')]
 | [g |- j_right P] => let [g |- P'] = bwd [g |- P] in [g |- p_right (P')]
 | [g |- j_done] => [g |- p_done]
-| [g |- j_rdx (\x. \f. E)] : [g |- jpath Q (rdx F N)] =>
+| [g |- j_rdx (\x. \f. E)] : [g |- jpath Q (rdx (\x.F) N)] =>
    let [g, b:block (x:tm, _t: ({q:path} is_path q (N1[..]) -> is_path q x), _u:jump (N1[..]) x) |-  F1[..,b.1,b.2]]
        = bwd [g, b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[..,b.1,b.3]] in
    [g |- p_rdx (\x. \f. F1)]
@@ -90,5 +90,4 @@ fn p => case p of
   [g |- j_jump (#q.3) J] =>
    let [g |- H] = bwd [g |- J] in
    [g |- (#q.2) _ H]
-| [g |- j_rdx (\x. \x. A B C)] => ?
 ;

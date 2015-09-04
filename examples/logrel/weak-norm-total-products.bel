@@ -262,12 +262,12 @@ mlam gamma, M => fn rs => case [gamma |- M] of
    (mlam N => fn rN =>
     bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
 
-| [gamma |- app (M1) (M2)] => 
+| [gamma |- app M1 M2] => 
   let Arr ha f = main [gamma] [gamma |- M1] rs in
   f [ |- _ ] (main [gamma] [gamma |- M2] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 
-| [gamma |- pair (M1) (M2)] => 
+| [gamma |- pair M1 M2] => 
   let r1 = main [gamma] [gamma |- M1] rs in
   let r2 = main [gamma] [gamma |- M2] rs in
   let h1 = reduce_halts r1 in 

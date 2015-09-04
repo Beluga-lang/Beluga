@@ -66,12 +66,12 @@ inductive Sub : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
                 Sub [g |- U] [g |- T]
               -> Sub [g |- #p.1] [g |- T]
 | Sa_arrow  : Sub [g |- T1] [g |- S1] -> Sub [g |- S2] [g |- T2]
-              -> Sub [g |-  arr (S1) (S2)] [g |- arr (T1) (T2)]
+              -> Sub [g |-  arr S1 S2] [g |- arr T1 T2]
 
 | Sa_forall : Sub [g |- T1] [g |- S1]
-	      -> Sub [g, b:block (x:tp, u:assm x (T1)) |- S2[..,b.1]]
+	      -> Sub [g, b:block (x:tp, u:assm x T1) |- S2[..,b.1]]
                         [g,b |- T2[..,b.1]]
-              -> Sub [g |-  forall (S1) (\x.S2)] [g |- forall (T1) (\x.T2)]
+              -> Sub [g |-  forall S1 (\x.S2)] [g |- forall T1 (\x.T2)]
 ;
 
 
@@ -151,25 +151,25 @@ fn d => case d of
 | {#p: [g |-  block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
  	          w: sub a U, ref: sub a a, w': subtype a U)]}
    {D1:[g |-  sub (#p.1) U]}
-  [g |-  (#p.2) U Q (D2) (D1)] =>
+  [g |-  (#p.2) U Q D2 D1] =>
   let [g |-  F2] = sound [g |-  D2] in
   let [g |-  F1] = sound [g |-  D1] in
-  [g |-  subtype_trans (F2) (F1)]
+  [g |-  subtype_trans F2 F1]
 
 | [g |-  sa_top] => [g |-  subtype_top]
 
-| [g |-  sa_arr (D2) (D1)] =>
+| [g |-  sa_arr D2 D1] =>
   let [g |-  F1] = sound [g |-  D1] in
   let [g |-  F2] = sound [g |-  D2] in
-    [g |-  subtype_arrow (F2) (F1)]
+    [g |-  subtype_arrow F2 F1]
 
-| [g . sa_all (D2) (D1)] : [g |-  sub (forall (S1) (S2)) (forall (T1) (T2))] =>
+| [g . sa_all D2 D1] : [g |-  sub (forall S1 S2) (forall T1 T2)] =>
   let [g |-  F1] = sound [g |-  D1] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1), ref: sub a a, w': subtype a (T1)) . F2 b.1 b.5] =
+				 w: sub a T1, ref: sub a a, w': subtype a T1) . F2 b.1 b.5] =
       sound [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1), ref: sub a a, w': subtype a (T1)) . D2 b.1 b.2 b.3 b.4 ] in
-  [g |-  subtype_forall (F2) (F1)]
+				 w: sub a T1, ref: sub a a, w': subtype a T1) . D2 b.1 b.2 b.3 b.4 ] in
+  [g |-  subtype_forall F2 F1]
 
 ;
 
@@ -178,24 +178,24 @@ fn d => case d of
 | [g |-  #p.5] => [g |-  #p.3]
 | [g |-  subtype_refl] => refl [g] [g |-  _ ]
 | [g |-  subtype_top ] => [g |-  sa_top]
-| [g |-  subtype_trans (F2) (F1)] =>
+| [g |-  subtype_trans F2 F1] =>
   let [g |-  D2] = complete [g |-  F2] in
   let [g |-  D1] = complete [g |-  F1] in
   trans [g |-  _ ] [g |- D1] [g |-  D2]
 
-| [g |- subtype_arrow (F2) (F1) ] =>
+| [g |- subtype_arrow F2 F1 ] =>
   let [g |-  D2] = complete [g |-  F2] in
   let [g |-  D1] = complete [g |-  F1] in
-  [g |-  sa_arr (D2) (D1)]
+  [g |-  sa_arr D2 D1]
 
-| [g |- subtype_forall (F2) (F1)] : [g |-  subtype (forall (S1) (S2)) (forall (T1) (T2))] =>
+| [g |- subtype_forall F2 F1] : [g |-  subtype (forall S1 S2) (forall T1 T2)] =>
   let [g |-  D1] = complete [g |-  F1] in
   let [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1), ref: sub a a, w': subtype a (T1)) . D2 b.1 b.2 b.3 b.4] =
+				 w: sub a T1, ref: sub a a, w': subtype a T1) . D2 b.1 b.2 b.3 b.4] =
       complete [g, b: block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
-				 w: sub a (T1), ref: sub a a, w': subtype a (T1)) . F2 b.1 b.5 ]
+				 w: sub a T1, ref: sub a a, w': subtype a T1) . F2 b.1 b.5 ]
   in
-      [g |-  sa_all (D2) (D1)]
+      [g |-  sa_all D2 D1]
 
 
 ;

@@ -138,14 +138,14 @@ rec fv : (g:ctx) [g |- term] -> [g |- list] =
 fn t => case t of
 | [g |- const I] => [g |- nil]
 | [g |- #p]    => [g |- cons (#p) nil]
-| [g |- app (T1) (T2)] =>
+| [g |- app T1 T2] =>
   append  (fv [g |- T1]) (fv [g |- T2])
 
 | [g |- lam \x. T] =>
   let [g,x:term |-  L] = fv [g,x:term |-  T] in
     rm' [g,x |- L]
 
-| [g |- letv (T1) (\x. T2)] =>
+| [g |- letv T1 (\x. T2)] =>
   let [g |- L1] = fv [g |- T1 ] in
   let [g,x:term |-  L2] = fv [g,x:term |-  T2] in
   append [g |- L1 ] (rm' [g,x |- L2])

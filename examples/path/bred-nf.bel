@@ -81,12 +81,12 @@ rec bred_ltr :  (g:jctx') [g |- bred N (V )]
  / total br (bred_ltr g n v p br pt) /
 fn br => fn pt => case br of
 | [g |- #p.3] => let [g |- #p.5] = pt in [g |- #p.6]
-| [g |- r_app (R1) (R2)] =>
+| [g |- r_app R1 R2] =>
     (case pt of
-       | [g |- p_app_l (Q1)] =>
+       | [g |- p_app_l Q1] =>
            let [g |- Q1' ] = bred_ltr [g |- R1] [g |- Q1] in
            [g |- np_app_l (Q1')]
-       | [g |- p_app_r (Q2)] =>
+       | [g |- p_app_r Q2] =>
            let [g |- Q2' ] = bred_ltr [g |- R2] [g |- Q2] in
            [g |- np_app_r (Q2')]
     )
@@ -130,12 +130,12 @@ rec bred_rtl : (g:jctx')[g |- bred M U] ->
 / total br (bred_rtl g m u p br pt) /
 fn br => fn pt => case br of
 | [g |- #p.3] => let [g |- #p.6] = pt in [g |- #p.5]
-| [g |- r_app (R1) (R2)] =>
+| [g |- r_app R1 R2] =>
     (case pt of
-       | [g |- np_app_l (Q1)] =>
+       | [g |- np_app_l Q1] =>
            let [g |- Q1' ] = bred_rtl [g |- R1] [g |- Q1] in
            [g |- p_app_l (Q1')]
-       | [g |- np_app_r (Q2)] =>
+       | [g |- np_app_r Q2] =>
            let [g |- Q2' ] = bred_rtl [g |- R2] [g |- Q2] in
            [g |- p_app_r (Q2')]
     )
@@ -207,37 +207,37 @@ mlam g => mlam U => mlam V => fn pf => case [g |- U] of
   let [g |- #q.6] = pf [g |- #p.4] [g |- #p.6] in
   [g |- nref ]
 
-| [g |- napp (U1) (U2)] =>
-  let ExPath np = path_exists [g] [g |- napp (U1) (U2)] in
-  (case np of  % [g |- npath (napp (U1) (U2)) P]
-  | [g |- np_app_l (Pf1)] =>   %   [g |- npath (napp (U1) (U2)) (left (P1))]
-    let ([g |- np_app_l (Qt1)]  : [g |- npath (napp (V1) (V2)) (left (P1))])
+| [g |- napp U1 U2] =>
+  let ExPath np = path_exists [g] [g |- napp U1 U2] in
+  (case np of  % [g |- npath (napp U1 U2) P]
+  | [g |- np_app_l (Pf1)] =>   %   [g |- npath (napp U1 U2) (left P1)]
+    let ([g |- np_app_l (Qt1)]  : [g |- npath (napp V1 V2) (left P1)])
           = pf [g |- left _ ] [g |- np_app_l (Pf1)] in
     let [g |- nref] = tm_same  [g] [g |- U1] [g |- V1]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath V (left (P1))]
+                    let [g |- np_app_l (Qt1)]  = pf [g |- left Q1 ] [g |- np_app_l (Pt1)] % [g |- npath V (left P1)]
                     in [g |- Qt1]) in
     let [g |- nref] = tm_same  [g] [g |- U2] [g |- V2]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath V (left (P1))]
+                    let [g |- np_app_r (Qt1)]  = pf [g |- right Q1 ] [g |- np_app_r (Pt1)] % [g |- npath V (left P1)]
                     in [g |- Qt1])
     in [g |- nref]
 
- | [g |- np_app_r (Pt2)] => % [g |- npath (napp (U1) (U2)) (right (P2))]
-    let ([g |- np_app_r (Qt2)] : [g |- npath (napp (V1) (V2)) (right (P1))])
+ | [g |- np_app_r (Pt2)] => % [g |- npath (napp U1 U2) (right P2)]
+    let ([g |- np_app_r (Qt2)] : [g |- npath (napp V1 V2) (right P1)])
             =  pf [g |- right _ ] [g |- np_app_r (Pt2)] in
 
     let [g |- nref] = tm_same  [g] [g |- U1] [g |- V1]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_l (Qt1)]  = pf [g |- left (Q1) ] [g |- np_app_l (Pt1)] % [g |- npath V (left (P1))]
+                    let [g |- np_app_l (Qt1)]  = pf [g |- left Q1 ] [g |- np_app_l (Pt1)] % [g |- npath V (left P1)]
                     in [g |- Qt1]) in
     let [g |- nref] = tm_same  [g] [g |- U2] [g |- V2]
                    (mlam Q1 => fn qt1 =>
                     let [g |- Pt1] = qt1 in
-                    let [g |- np_app_r (Qt1)]  = pf [g |- right (Q1) ] [g |- np_app_r (Pt1)] % [g |- npath V (left (P1))]
+                    let [g |- np_app_r (Qt1)]  = pf [g |- right Q1 ] [g |- np_app_r (Pt1)] % [g |- npath V (left P1)]
                     in [g |- Qt1])
     in [g |- nref]
 

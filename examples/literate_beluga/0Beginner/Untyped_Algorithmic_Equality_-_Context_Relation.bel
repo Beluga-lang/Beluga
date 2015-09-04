@@ -196,7 +196,7 @@ Eq [phi] [psi] [ psi |- #S ] [phi |-  L] [psi |-  L'] ->
   ctx_member [phi |-  #r] cr m'
 
 | [psi |-  ae_a D1 D2] =>
-  let [psi |-  ae_a (F1) (F2)] = d2 in
+  let [psi |-  ae_a F1 F2] = d2 in
   let Eq_a m1 m2 = m in
   let Eq_a n1 n2 = n in
   let Eq_a l1 l2 = l in
@@ -318,7 +318,7 @@ case [phi |-  Ld] of
 | [phi |-  app M N ] =>
   let ExistsEq' [gamma |- L1] eq1 = existsEq' cr_xd [phi |- M] in
   let ExistsEq' [gamma |- L2] eq2 = existsEq' cr_xd [phi |- N] in
-  ExistsEq' [gamma |-  app (L1) (L2)] (Eq'_a eq1 eq2)
+  ExistsEq' [gamma |-  app L1 L2] (Eq'_a eq1 eq2)
 
 | [phi |-  lam \x. M] =>
   let ExistsEq' [gamma, x:tm |- L] eq =

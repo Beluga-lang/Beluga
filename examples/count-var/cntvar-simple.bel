@@ -47,8 +47,8 @@ mlam g => fn e => case e of
  | [g,x:exp |-  (U )]  => [ |- z]
 %   | [g,x:exp |-  s W]  => cntV [g]  [g,x |- W]
 
-  | [g,x:exp |-  letv (U1) (\y . U2)] =>
-      plus  (cntV [g]         [g,x |- (U1)])
+  | [g,x:exp |-  letv U1 (\y . U2)] =>
+      plus  (cntV [g]         [g,x |- U1])
             (cntV [g, y:exp]  [g,y,x |- U2[..,x,y]])
 
 %{  | [g,x:exp |-  add U W]  =>

@@ -29,7 +29,7 @@ fn t => fn e => case t of
     (let [g' |-  E] = e in
      cconv [h |- #p ]  [g' |-  tsnd (E )] )
 
- | [h |- app (E1) (E2 )] =>
+ | [h |- app E1 (E2 )] =>
   let [g' |-  E] = e in
   let [g' |-  T1] = cconv [h |- E1] [g' |-  E ] in
   let [g' |-  T2] = cconv [h |- E2] [g' |-  E ] in

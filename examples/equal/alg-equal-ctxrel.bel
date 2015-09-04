@@ -92,7 +92,7 @@ case [g |- M] of
   in
    [h |- ae_l \x. \w. AE]
 
-| [g |- app (M1) (M2)] =>
+| [g |- app M1 M2] =>
   let TRapp tr1 tr2 = r in
   let [h |- AE1] = ref'  tr1 in
   let [h |- AE2] = ref' tr2 in

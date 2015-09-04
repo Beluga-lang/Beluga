@@ -87,7 +87,7 @@ case t of
 | [g |- lam (\x. E) ] =>
   Arr [h] (mlam h' => mlam #W => fn e =>
      eval [g,x:tm _ |- E] (env_ext (env_wkn [h'] [h] [h' |- #W] s) e))
-| [g |- app (E1) (E2) ] =>
+| [g |- app E1 E2 ] =>
   let Arr [h] f = eval [g |- E1] s in
    f [h] [h |- ..] (eval [g |- E2] s)
 ;

@@ -128,7 +128,7 @@ case t of
          eval (extend (mlam T => fn x => subst s' (s [ |- T] x))  e)
               [g,x:tm A[] |-  E])
 
-| [g |- app (E1) (E2) ] =>
+| [g |- app E1 E2 ] =>
   let (Slam f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1] in
     f [h] id (eval s [g |- E2])
 ;

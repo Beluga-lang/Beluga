@@ -88,8 +88,8 @@ rec mstep_trans : (g:tctx) [g |-  mstep M N] -> [g |-  mstep N P] -> [g |-  mste
 / total s1 (mstep_trans g m n p s1 s2) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl] => let [g |-  S2] = s2 in [g |-  S2]
-| [g |-  trans1 (S1) (MS1)] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
-  [g |-  trans1 (S1) (MSR)]
+| [g |-  trans1 S1 (MS1)] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
+  [g |-  trans1 S1 (MSR)]
 ;
 
 % Boxed form of trans1 for convenience
@@ -145,9 +145,9 @@ and algEqNSym : (g:tctx)
 -> [g |- algeqn N2 N1 T] =
 / total a (algEqNSym g n1 n2 t a) /
 fn a => case a of
-| [g |- algbase (S1) (S2) R] =>
+| [g |- algbase S1 S2 R] =>
   let [g |- R'] = algEqRSym [g |- R] in
-  [g |- algbase (S2) (S1) (R')]
+  [g |- algbase S2 S1 (R')]
 | [g |- algarr (\x.\u.N)] =>
   let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
   [g |- algarr (\x.\u.N')]
@@ -194,8 +194,8 @@ rec determinacy : (g:tctx) [g |- step M N] -> [g |-  step M P] -> [g |- eqtm N P
 / total s1 (determinacy g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [g |-  beta] => let [g |-  beta] = s2 in [g |- refltm ]
-| [g |-  stepapp (S1)] => 
-  let [g |-  stepapp (S2)] = s2 in 
+| [g |-  stepapp S1] => 
+  let [g |-  stepapp S2] = s2 in 
   let [g |- refltm] = determinacy [g |-  S1] [g |-  S2] in [g |- refltm]
 ;
 
@@ -209,10 +209,10 @@ rec confluence : [g |-  mstep M N] -> [g |-  mstep M P] ->
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl ] => Common s2 [g |-  refl]
-| [g |-  trans1 (S1) (MS1)] =>
+| [g |-  trans1 S1 (MS1)] =>
   case s2 of 
   | [g |-  refl] => Common [g |-  refl] s1
-  | [g |-  trans1 (S2) (MS2)] => 
+  | [g |-  trans1 S2 (MS2)] => 
     let [g|- refltm] = determinacy [g |-  S1] [g |-  S2] in
     confluence [g |-  MS1] [g |-  MS2]
 ;
@@ -238,7 +238,7 @@ rec neutral_mstep : (g:tctx)
 / total  (neutral_mstep) /
 fn s => fn e => case s of
 | [g |-  refl] => [g |- refltm]
-| [g |-  trans1 (S1) (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) in [];
+| [g |-  trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) in [];
 
 % Corollary of determinacy
 rec determinacy' : (g:tctx)
@@ -262,23 +262,23 @@ rec algEqRTrans : (g:tctx)
 / total a1 (algEqRTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
 | [g |- #p.2] => let [g |- #q.2] = a2 in [g |- #q.2]
-| [g |- algapp (A1') (B1)] =>
-  let [g |- algapp (A2') (B2)] = a2 in 
+| [g |- algapp (A1') B1] =>
+  let [g |- algapp (A2') B2] = a2 in 
   let [|- refltp] = algEqRUnique [g |- A1'] [g |- A2'] in
   let [g |- R1] = algEqRTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algEqNTrans [g |- B1] [g |- B2] in
-  [g |- algapp (R1) (R2)]
+  [g |- algapp R1 R2]
 and algEqNTrans : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N3 T]
 -> [g |- algeqn N1 N3 T] =
 / total a1 (algEqNTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- algbase (S1) (S2) (A1')] =>
-  let [g |- algbase (S2') (S3) (A2')] = a2 in 
+| [g |- algbase S1 S2 (A1')] =>
+  let [g |- algbase (S2') S3 (A2')] = a2 in 
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
   let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
-  [g |- algbase (S1) (S3) R]
+  [g |- algbase S1 S3 R]
 | [g |- algarr (\x.\u.A1')] => 
   let [g |- algarr (\x.\u.A2')] = a2 in
   let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]

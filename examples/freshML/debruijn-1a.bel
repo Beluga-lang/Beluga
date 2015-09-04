@@ -66,7 +66,7 @@ mlam g => fn e =>  case e of
  | [g |- app (E1 ) (E2 )] =>
    let [g |- F1] = hoas2db [g] [g |- E1]  in
    let [g |- F2] = hoas2db [g] [g |- E2]  in
-     [g |- app' (F1) (F2)]
+     [g |- app' F1 F2]
  | [g |- ret V] =>
    vhoas2db [g] [g |- V ]
  | [g |- tapp (E ) T] =>
@@ -112,9 +112,9 @@ and hoas2db : {g:(ctx)*}{g':(tctx)*}{T::tp[g']}
 			(exp T)[g] ->  (exp' T )[g'] =
 FN g => FN g' => mlam T => fn e =>  case e of
  | {g:(ctx)*}{g':(tctx)*}
-   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr (T1) (T2)))[g]}
+   {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr T1 T2))[g]}
     [g] app (E1 ) (E2 ) =>
-   let [g'] F1 = hoas2db [g] [g'] <g' . arr (T1) (T2) > ([g] E1)  in
+   let [g'] F1 = hoas2db [g] [g'] <g' . arr T1 T2 > ([g] E1)  in
    let [g'] F2 = hoas2db [g] [g'] <g' . T1 > ([g] E2)  in
      [g'] app' F1 F2
  | [g] ret V =>

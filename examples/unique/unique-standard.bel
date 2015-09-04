@@ -43,8 +43,8 @@ rec unique : (g:tctx)[g |- hastype E (T[])] -> [g |- hastype E (T'[])]
              ->  [ |- eq T T'] =  
 / total d (unique _ _ _ _ d) /
 fn d => fn f => case d of
-| [g |- t_app (D1) (D2)] =>
-  let [g |- t_app (F1) (F2)] = f in
+| [g |- t_app D1 D2] =>
+  let [g |- t_app F1 F2] = f in
   let [ |- refl]  = unique  [g |- D1] [g |- F1] in
     [ |- refl]
 

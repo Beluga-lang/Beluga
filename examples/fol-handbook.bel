@@ -80,8 +80,8 @@ fn h =>  case h of
   in
      [g |- mp f2 (ug  \x. (H'))]
 
-| % {H1 : [g, u : hil A |-  hil (imp (B1) (B2))]}
-  % {H2 : [g, u : hil A |-  hil (B1)]}
+| % {H1 : [g, u : hil A |-  hil (imp B1 B2)]}
+  % {H2 : [g, u : hil A |-  hil B1]}
   [g, u: hil A  |- mp H1 H2] =>
   let [g |- H2'] = ded [g,u: hil A |- H2] in
   let [g |- H1'] = ded [g,u: hil A |- H1] in
@@ -99,38 +99,38 @@ rec ndhil : (g:ndhilCtx) [g |- nd A] -> [g |- hil A] =
 fn d =>  case d of
 | [g |- (#p.1)] => [g |- (#p.2)]
 
-| {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd (B1) |-  nd (B2[..])]}
+| {B1:[g |- o]}{B2:[g |- o]}{D:[g, u: nd B1 |-  nd (B2[..])]}
   [g |- impi \u. D] =>
-  let {H:[g, u:hil (A1) |-  hil (A2)]}
-      [g,b: block  _t:nd (A1), u: hil (A1[..])   |-  H[..,b.2]] =
-    ndhil [g, b:block _t:nd (B1), u:hil (B1[..]) |- D[..,b.1]]
+  let {H:[g, u:hil A1 |-  hil A2]}
+      [g,b: block  _t:nd A1, u: hil (A1[..])   |-  H[..,b.2]] =
+    ndhil [g, b:block _t:nd B1, u:hil (B1[..]) |- D[..,b.1]]
   in
     ded [g,u |- H[..,u]]
 
-| [g |- note (D1) C (D2)] =>
+| [g |- note D1 C D2] =>
   let [g |- H1]   = ndhil [g |- D1] in
   let [g |- H2]   = ndhil [g |- D2] in
-    [g |- mp (mp n2 (H1)) (H2)]
+    [g |- mp (mp n2 H1) H2]
 
-| [g |- alle  (D1) T] =>
+| [g |- alle  D1 T] =>
   let [g |- H1] =  ndhil [g |- D1] in
-    [g |- mp (f1 T) (H1)]
+    [g |- mp (f1 T) H1]
 
 | [g |- alli \x. D] =>
   let [g,x:i |-  H] =  ndhil [g, x:i |-  D] in
     [g |- ug \x. H]
 
 
-| [g |- impe (D1) (D2)] =>
+| [g |- impe D1 D2] =>
   let [g |- H1] = ndhil [g |- D1] in
   let [g |- H2] = ndhil [g |- D2] in
-    [g |- mp (H1) (H2)]
+    [g |- mp H1 H2]
 
-|  {B1:[g |- o]}{D: [g, u:nd (B1), p:o |-  nd p]}
+|  {B1:[g |- o]}{D: [g, u:nd B1, p:o |-  nd p]}
   [g |- noti (\p.(\u.D[..,u,p]))] =>
   let {H:[g, u: hil A, p:o |-  hil p]}
       [g,w:block (_t:nd A,u:hil (A[..])),p:o |-  H[..,w.2,p]] =
-      ndhil [g, w : block (_t:nd (B1), u:hil (B1[..]) ), p:o |-  D[..,w.1,p]] in
+      ndhil [g, w : block (_t:nd B1, u:hil (B1[..]) ), p:o |-  D[..,w.1,p]] in
   let [g |- H1']  = ded [g,u |- H[..,u,(not (A[..]))]] in
   let [g |- H1''] = ded [g,u |- H[..,u,(A[..])]] in
     [g |- mp (mp n1 (H1')) (H1'')]

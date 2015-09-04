@@ -89,7 +89,7 @@ fn ae => case ae of
 | Ae_a' d1 d2 =>
   let [g |- D1] = atrans_s d1 in
   let [g |- D2] = atrans_s d2 in
-     [g |- ae_a (D1) (D2)]
+     [g |- ae_a D1 D2]
 
 | Ae_l' d =>
   let [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]] = atrans_s d in

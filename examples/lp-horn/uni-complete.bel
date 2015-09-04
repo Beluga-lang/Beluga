@@ -10,7 +10,7 @@ fn cn => case cn of
 |[g |- can_andi (CN2) (CN1)] =>
   let [g |- S1] = cmpcs [g |- CN1] in
   let [g |- S2] = cmpcs [g |- CN2] in
-     [g |- s_and (S2) (S1)]
+     [g |- s_and S2 S1]
 
 |[g |- can_truei] =>  [g |- s_true]
 
@@ -35,13 +35,13 @@ mlam g, E => fn at => case [g |- E ] of
     let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1 ] [g |- CN1] in
       [g,q,i |-  I1[..,q,(i_andr i)]]
 
-  | [g |- impe (D1) (D2)] =>
+  | [g |- impe D1 D2] =>
     let [g |- atm_impe (CN2) (AT1)] = at in
     let [g,q:p, u:focus A q |-  I1] = cmpai [g] [g |- D1 ] [g |- AT1] in
     let [g |- S2] = cmpcs [g |- CN2] in
       [g,q,i |-  I1[..,q,(i_imp (S2[..]) i )]]
 
-  | [g |- foralle (D1) T[]] =>
+  | [g |- foralle D1 T[]] =>
    let [g |- atm_foralle (AT1)] = at in
    let [g,q:p, i: focus A q |-  I1] = cmpai [g] [g |- D1 ] [g |- AT1] in
       [g,q,i |-  I1[..,q,(i_forall T[] i)]]

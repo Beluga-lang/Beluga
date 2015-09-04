@@ -37,7 +37,7 @@ mlam g => mlam U => case [g |- U] of
   let [g,e:block (y:exp, u:eq y y)  |-  V] = ref [g, e:block q:exp,u:eq q q]  [g,e  |-   L[..,e.1]]  in
    [g |- eq_lam \x. \w. V[..,<x ; w>] ]
 
-| [g |- app (A1) (A2)] =>
+| [g |- app A1 A2] =>
   let [g |- EQ1] = ref  [g] [g |- A1 ] in
   let [g |- EQ2] = ref  [g] [g |- A2 ] in
     [g |- eq_app (EQ1) (EQ2)]
@@ -56,12 +56,12 @@ fn e1 => fn e2 => case e1 of
 
  | [g |- #p.2 ] => e2
 
-| [g |- eq_app (D1) (D2)] =>
+| [g |- eq_app D1 D2] =>
    (case e2 of
-   | [g |- eq_app (F1) (F2)] =>
+   | [g |- eq_app F1 F2] =>
      let [g |- E1] = trans [g |- D1]  [g |- F1] in
      let [g |- E2] = trans [g |- D2]  [g |- F2] in
-       [g |- eq_app  (E1)  (E2)]
+       [g |- eq_app  E1  E2]
 )
 
 | [g |- eq_lam \x.\u. D1[..,x,u]] =>
@@ -91,7 +91,7 @@ fn e => case e of
 
  | [g |- e_r (T )] => ref [g] [g |- T ]
 
- | [g |- e_t (D2) (D1)] =>
+ | [g |- e_t D2 D1] =>
   let [g |- F2] = ceq [g |- D2] in
   let [g |- F1] = ceq [g |- D1] in
     trans [g |- F1]  [g |- F2]
@@ -103,10 +103,10 @@ fn e => case e of
   in
      [g |- eq_lam \x.\v. F]
 
-| [g |- e_a (D2) (D1)] =>
+| [g |- e_a D2 D1] =>
     let [g |- F1] = ceq [g |- D1] in
     let [g |- F2 ]= ceq [g |- D2] in
-      [g |- eq_app (F1) (F2)]
+      [g |- eq_app F1 F2]
 
 ;
 

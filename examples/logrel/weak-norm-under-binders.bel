@@ -142,7 +142,7 @@ rec eval : {M:[g |- tm A[]]} RedSub [g] [h |- #S ] -> Reduce [ |- A] [h |- M[#S]
 mlam M => fn rs => let (rs : RedSub [g] [h |- #S] ) = rs in
  case [g |- M] of
 | [g' |-  #p] => redVar [g'] [g' |-  #p] rs
-| [g' |-  app (M1) (M2)]  =>
+| [g' |-  app M1 M2]  =>
   let Arr [h0 |- N1] f = eval [g' |-  M1]  rs in
    f [h] [h |- ..] [h |- _] (idIsVarSub [h]) (eval [g' |-  M2] rs)
 | [g' |-  lam (\x. M1)] =>

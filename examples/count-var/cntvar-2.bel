@@ -55,8 +55,8 @@ mlam g =>
 %%  NOT WORKING IF WE OMIT T1  since from the pattern we simply infer
 %%  T1:tp[g, x:exp _]    and only later in the branch we learn that T1:tp[g].
 %%
-%%   | [g,x : exp _ ] letv  (U1) (\y . (U2  x y)) =>
-%%             plus (cntV [g]  ([g,x] (U1)))
+%%   | [g,x : exp _ ] letv  U1 (\y . (U2  x y)) =>
+%%             plus (cntV [g]  ([g,x] U1))
 %%                  (cntV [g, y:exp _ ]  ([g,y,x] (U2 y)))
 %%
 %% CURRENTLY, THIS PROBLEM ARISES IN THE FORM OF FAILURE TO INVERT THE
@@ -66,8 +66,8 @@ mlam g =>
 %% The solution is that the original meta-variable 3 needs to be in fact of a different type,
 %% namely exp [ |- ] and not exp[ |- , x:A].
 %%
-   | [g,x : exp _  |-  letv (T1[..]) (U1) (\y . U2)] =>
-      plus  (cntV [g]          [g,x |- (U1)])
+   | [g,x : exp _  |-  letv (T1[..]) U1 (\y . U2)] =>
+      plus  (cntV [g]          [g,x |- U1])
             (cntV [g, y:exp _]  [g,y,x |-  (U2[..,x,y])])
 
 

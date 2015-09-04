@@ -15,10 +15,10 @@ rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq M M] =
 / total m (eq_refl _ m) / 
 mlam g => mlam M =>
 case [g |- M] of
- | [g |- app (M1) (M2)] =>
+ | [g |- app M1 M2] =>
    let [g |- D1] = eq_refl [g] [g |- M1 ] in
    let [g |- D2] = eq_refl [g] [g |- M2 ] in
-    [g |- eq_app (D1) (D2)]
+    [g |- eq_app D1 D2]
 
  | [g |- lam (\x. N)] =>
    let [g,b:block x:exp, _t:eq x x |-  D1[..,b.1,b.2]] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N[..,b.1] ] in
@@ -30,10 +30,10 @@ case [g |- M] of
 rec eq_sym : (g:eqctx) [g |- eq M N] -> [g |- eq N M] =
 / total e (eq_sym _ _ _ e) /
 fn d => case d of
- | [g |- eq_app (D1) (D2)] =>
+ | [g |- eq_app D1 D2] =>
    let [g |- F1] = eq_sym [g |- D1] in
    let [g |- F2] = eq_sym [g |- D2] in
-   [g |- eq_app (F1) (F2)]
+   [g |- eq_app F1 F2]
 
  | [g |- eq_lam (\x.\u. D)] =>
    let [g,b:block x:exp, _t:eq x x |-  F[..,b.1,b.2]] = eq_sym [g,b:block x:exp, _t:eq x x |-  D[..,b.1,b.2]] in
@@ -47,10 +47,10 @@ rec subst_respects_eq :
 [g |- eq N (N')] -> [g |- eq M[..,N] M[..,N']] =
 %  / total m (subst_respects_eq _ _ _ m) /
 mlam g => mlam M => fn d => case [g,x:exp |-  M] of
- | [g,x:exp |-  app (T1) (T2)] =>
+ | [g,x:exp |-  app T1 T2] =>
    let [g |- D1] = subst_respects_eq [g] [ g,x  |-  T1 ] d in
    let [g |- D2] = subst_respects_eq [g] [ g,x  |-  T2 ] d in
-   [g |- eq_app (D1) (D2)]
+   [g |- eq_app D1 D2]
 
  | [g,x:exp |-  lam (\y. M1[..,y,x])] =>
    let [g |- D3] = d in

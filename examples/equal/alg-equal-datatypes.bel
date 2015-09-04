@@ -10,7 +10,7 @@ schema tctx = term;
 inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype  =
 | Ae_v : Aeq [g |- #p] [g |- #p]
 | Ae_a : Aeq [g |- E1] [g |- F1 ] -> Aeq [g |- E2] [g |- F2]
-      -> Aeq [g |- app E1 E2] [g |- app (F1) (F2)]
+      -> Aeq [g |- app E1 E2] [g |- app F1 F2]
 | Ae_l : Aeq [h,x:term |-  E] [h,x:term |-  F]
       -> Aeq [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
@@ -21,7 +21,7 @@ inductive Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype =
 | De_l : Deq [g,x:term |-  T] [g,x:term |-  T']
        -> Deq [g |- lam (\x. T)] [g |- lam (\x. T')]
 | De_a : Deq [g |- T1] [g |- S1] -> Deq [g |- T2] [g |- S2]
-       -> Deq [g |- app (T1) (T2)] [g |- app S1 S2]
+       -> Deq [g |- app T1 T2] [g |- app S1 S2]
 | De_r : {T: [g |- term]}Deq [g |- T] [g |- T]
 | De_t : Deq [g |- T] [g |- R] -> Deq [g |- R] [g |- S]
        -> Deq [g |- T] [g |- S]
@@ -32,7 +32,7 @@ rec ref : {g:tctx} {E : [g |- term]} Aeq [g |- E] [g |- E] =
 / total e (ref g e) /
 mlam g => mlam E => case [g |- E] of
 | [g |- #p] => Ae_v 
-| [g |- app (E1) (E2)] =>
+| [g |- app E1 E2] =>
   let f1 = ref [g] [g |- E1] in
   let f2 = ref [g] [g |- E2] in
     Ae_a f1 f2

@@ -178,7 +178,7 @@ rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] [ |- #S[^]] -> Reduce [|- A] [ |-
  Rarr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
     bwd_closed [ |- beta] (main [g,x:tm _] [g,x |- M1] (Dot rs rN)))
- | [g |- app (M1) (M2)] =>
+ | [g |- app M1 M2] =>
   let Rarr ha f = main [g] [g |- M1] rs in
   f [ |- _ ] (main [g] [g |- M2] rs)
 | [g' |-  c] => Rb [ |- halts/m refl val/c]

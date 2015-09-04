@@ -73,7 +73,7 @@ and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
   | [g |- app' E1 E2] =>
     let [g |- F1] = db2hoas [g |- E1] in
     let [g |- F2] = db2hoas [g |- E2] in
-      [g |- app (F1) (F2)]
+      [g |- app F1 F2]
 ;
 
 

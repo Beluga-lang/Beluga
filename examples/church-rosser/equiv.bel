@@ -33,8 +33,8 @@ fn r => case r of
   let [g |- S*']  = appd [g |- S1*''] [g |- S2*'] in
     appd [g |- S*'] [g |- step1 beta1 id1 ]
 
-| {R1: [g |- pred (M1) (N1)]}{R2: [g |- pred (M2) (N2)]}
-  [g |- ap (R1) (R2)] =>
+| {R1: [g |- pred M1 N1]}{R2: [g |- pred M2 N2]}
+  [g |- ap R1 R2] =>
   let % {S1*::(-->* M1 N1)[g]}
       [g |- S1*]  = eq1 [g |- R1] in
   let % {S*'::(-->* (app M1 M2) (app N1 M2))[g]}
@@ -74,13 +74,13 @@ fn r => case r of
 | [g |- apl1 R1 ] : [g |- (--> (app M1 M2) (app M1' M2))]  =>
   let [g |- S1] = eq2 [g |- R1 ] in
   let [g |- I2] = identity [g] [g |- M2 ]  in
-    [g |- ap (S1) (I2)]
+    [g |- ap S1 I2]
 
 
 | [g |- apr1 R2] : [g |- (--> (app M1 M2) (app M1 M2'))]  =>
   let [g |- S2] = eq2 [g |- R2 ] in
   let [g |- I1] = identity [g] [g |- M1 ]  in
-    [g |- ap (I1) (S2)]
+    [g |- ap I1 S2]
 
 ;
 
@@ -91,7 +91,7 @@ rec eq3:(g:ctx) [g |- -->* M N] -> [g |- pred* M N] =
 / total r (eq3 g m n r) /
 fn r => case r of
 | [g |- id1] => [g |- id*]
-| [g |- step1 (R1) (R2*)] =>
+| [g |- step1 R1 (R2*)] =>
   let [g |- S1]  = eq2 [g |- R1]  in
   let [g |- S2*] = eq3 [g |- R2*] in
     [g |- next S1 S2*]

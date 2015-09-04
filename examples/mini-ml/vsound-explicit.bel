@@ -38,7 +38,7 @@ mlam E => mlam V => fn e =>
    | {E1:[ |- exp]} {E2:[x:exp |-  exp]} {V1:[ |- exp]} {V2:[ |- exp]}
      {D1:[ |- eval E1 V1]} {D2:[ |- eval (E2[V1]) V2]}
 
-      [ |- ev_l E1 (\x . (E2)) V1 V2 D2 D1] :
+      [ |- ev_l E1 (\x . E2) V1 V2 D2 D1] :
         [ |- (eval (letv E1 (\x . E2)) V2)]
 
       =>

@@ -18,7 +18,7 @@ mlam g => mlam M => case [g |- M] of
 | [g |- app M1 M2] =>
   let [g |- R1] = identity [g] [g |- M1 ] in
   let [g |- R2] = identity [g] [g |- M2 ] in
-    [g |- (ap (R1) (R2))]
+    [g |- (ap R1 R2)]
 
 | [g |- #p.1] => [g |- #p.2]
 

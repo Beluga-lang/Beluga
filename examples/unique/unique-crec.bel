@@ -57,8 +57,8 @@ rec unique : {g:tctx} {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[
 / total e (unique g t t' e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
  | [g |- app (E1 ) (E2 )] =>
-   let [g |- t_app (D1) (D2)] = d in
-   let [g |- t_app (F1) (F2)] = f in
+   let [g |- t_app D1 D2] = d in
+   let [g |- t_app F1 F2] = f in
    let [ |- e_arr C1 C2] = unique [g] [g |- E1 ] [g |- D1] [g |- F1] in
      [ |- C2]
 
@@ -99,8 +99,8 @@ rec unique2 : {g:tctx} {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'
 / total e (unique2 g t t' e) / 
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
 | [g |- app (E1 ) (E2 )] =>
-  let [g |- t_app (D1) (D2)] = d in
-  let [g |- t_app (F1) (F2)] = f in
+  let [g |- t_app D1 D2] = d in
+  let [g |- t_app F1 F2] = f in
   let [ |- e_ref]  = unique2 [g] [g |- E1 ] [g |- D1] [g |- F1] in
     [ |- e_ref]
 
@@ -125,8 +125,8 @@ rec unique3 : (g:tctx) [g |- type_of E T[]] -> [g |- type_of E T'[]]
              ->  [ |- equal T T'] =
 / total d (unique3 _ _ _ _ d ) /
 fn d => fn f => case d of
-| [g |- t_app (D1) (D2)] =>
-  let [g |- t_app (F1) (F2)] = f in
+| [g |- t_app D1 D2] =>
+  let [g |- t_app F1 F2] = f in
   let [ |- e_ref] = unique3 [g |- D1] [g |- F1] in
     [ |- e_ref]
 

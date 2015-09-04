@@ -37,7 +37,7 @@ fn e => case e of
 | [g |- #p] => Zero  % variable
 | [g |- z] => Zero
 | [g |- s E ] => count [g |- E]
-| [g |- letv T1 (E1) (\x.E2) ] =>
+| [g |- letv T1 E1 (\x.E2) ] =>
   let x = count [g |- E1] in
   let y = count [g, x:exp _ |- E2] in
   Suc (add x y)
@@ -90,7 +90,7 @@ mlam g =>
 
   | [g,x : exp _  |-  s W]  => cntV [g] [g,x |- W]
 
-  | [g,x : exp _  |- letv (T1) (U1) (\y . (U2  x y))] =>
+  | [g,x : exp _  |- letv T1 U1 (\y . (U2  x y))] =>
              plus (cntV [g]  [g,x |- U1])
                   (cntV [g, y:exp _ ]  [g,y,x |- U2 y])
 

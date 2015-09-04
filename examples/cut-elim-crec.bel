@@ -73,13 +73,13 @@ rec ca : (g:ctx){A:[g |- o]} [g |- conc A] -> [g, u: hyp A |-  conc C[..]]
        -> [g |- conc C] =
 % / total e (ca _ _ _ _ e) /
 mlam A' => fn d => fn e => case e of
- | [g, h:hyp B |-  axiom (H1[..])] =>  [g |- axiom (H1)]
+ | [g, h:hyp B |-  axiom (H1[..])] =>  [g |- axiom H1]
 
  | [g, h:hyp A |-  axiom h]  => d
 
  |[g, h:hyp A |-  impr (\h1. E2[..,h1,h])] =>
    let [g |- D]  = d in
-   let [g, h1: hyp (B1) |-  E2'] =
+   let [g, h1: hyp B1 |-  E2'] =
      ca  [g,h1: hyp _  |-  A[..] ]
         [g, h1 |-  D[..] ]
         [g, h1, h |-  E2]
@@ -89,14 +89,14 @@ mlam A' => fn d => fn e => case e of
  | [g, h:hyp A |-  impl E1 (\h2. E2[..,h2,h]) (H[..])] =>
    let [g |- D] = d in
    let [g |- E1'] = ca  [g |- A ] d [g, h |-  E1] in
-   let [g,h2: hyp (B2) |-  E2'] =
+   let [g,h2: hyp B2 |-  E2'] =
        ca  [g,h2: hyp _   |-  A[..] ] [g,h2 |- D[..]] [g, h2, h |-  E2]
    in
     [g |- impl E1' (\h2. E2') H]
 
  | [g, h:hyp A |-  notr (\p.\h1. E1[..,h,p,h1])] =>
    let [g |- D] = d in
-   let [g, p:o, h1: hyp (B1) |-  E1'] =
+   let [g, p:o, h1: hyp B1 |-  E1'] =
      ca  [g,p:o, h1:hyp _   |-  A[..]]
         [g,p,h1 |-  D[..]] [g,p,h1,h |-  E1[..,h,p,h1]]
    in
@@ -122,7 +122,7 @@ mlam A' => fn d => fn e => case e of
    in
      [g |- foralll T (\h1. E1') H]
 
- | [g, h:hyp (not (A1)) |-  notl E1 h] =>
+ | [g, h:hyp (not A1) |-  notl E1 h] =>
    let [g |- notr \p.\h2. (D1[..,p,h2])]  = d in
    let [g |- F1] = ca  [g |- A' ] d  [g,h |- E1] in
    let [g,p:o |-  F2] = ca  [g, p:o |-  A1[..] ] [g,p |- F1[..]] [g,p,h1 |-  D1] in
@@ -136,11 +136,11 @@ mlam A' => fn d => fn e => case e of
     ca [g |- A1[..,T]] [g |- D1[..,T]] [g,h2 |- E1']
 
 
- | [g, h:hyp (imp (A1) (A2)) |-  impl E1 (\h2. E2) h]  =>
+ | [g, h:hyp (imp A1 A2) |-  impl E1 (\h2. E2) h]  =>
    let [g |- impr \h1. D2]  = d in
    let [g |- E1'] = ca  [g |- A'] d [g,h |- E1] in
    let [g,h2: hyp A2 |-  E2'] =
-     ca [g,h2 : hyp (A2) |-  A'[..] ]
+     ca [g,h2 : hyp A2 |-  A'[..] ]
        [g,h2 |- impr \h1. D2[..,h1]] [g,h2,h |-  E2[..,h,h2]] in
    let [g |- D2'] = ca  [g |- A1] [g |- E1'] [g,h1 |- D2] in
      ca  [g |- A2] [g |- D2'] [g,h2 |- E2']
@@ -150,11 +150,11 @@ mlam A' => fn d => fn e => case e of
     | [g |- axiom H] =>   [g |- E[..,H]]
 
     | [g |- impl D1 (\h2. D2) H] =>
-      let [g,h2: hyp (B2) |-  D2'] = ca [g,h2: hyp _  |-  A[..] ] [g,h2 |- D2] [g,h2,h |-  E[..,h]] in
+      let [g,h2: hyp B2 |-  D2'] = ca [g,h2: hyp _  |-  A[..] ] [g,h2 |- D2] [g,h2,h |-  E[..,h]] in
        [g |- impl D1 (\h2. D2') H]
 
-    | [g |- notl (D1) H] => [g |- notl (D1 ) H]
-%   | [g] notl (D1) H => d  % is not working -bp
+    | [g |- notl D1 H] => [g |- notl (D1 ) H]
+%   | [g] notl D1 H => d  % is not working -bp
 
     | [g |- foralll T (\h1. D1) H] =>
       let [g,h1: hyp _  |-  D1'] = ca [g,h1:hyp _  |-  A[..]] [g,h1 |- D1] [g,h1,h |-  E[..,h]] in

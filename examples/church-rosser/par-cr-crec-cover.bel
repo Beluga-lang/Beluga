@@ -43,45 +43,45 @@ split_red: {M1:term}{M2:term}type.
 
 assume: pred M M1 -> pred M M2 -> split_red M1 M2.
 
-rec dia : (g:ctx) [g |- split_red (M1) (M2)]
-               -> [g |- dia_prop (M1) (M2)] =
+rec dia : (g:ctx) [g |- split_red M1 M2]
+               -> [g |- dia_prop M1 M2] =
 % / total d (dia g m1 m2 d) /
 fn d => case d of
-| [g |- assume (ap (lm \y.\v. R1a) (R2))
+| [g |- assume (ap (lm \y.\v. R1a) R2)
              (beta (\y . \v. R1') (R2'))] =>
-  let [g |- dia_result (H2) (S2) (S2')] = dia [g |- assume (R2) (R2')] in
+  let [g |- dia_result H2 S2 (S2')] = dia [g |- assume R2 (R2')] in
 
-  let  [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) (S1) (S1')] =
+  let  [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) S1 (S1')] =
       dia [g, b:block y:term, _t:pred y y |-  assume (R1a[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
 
     let [g |- S''] = subst [g, y, v |-  S1'[..,<y ; v>]] [g |- S2'] in
-      [g |- (dia_result H1[..,H2] (beta (\y.\v. S1[..,<y ; v>]) (S2)) (S''))]
+      [g |- (dia_result H1[..,H2] (beta (\y.\v. S1[..,<y ; v>]) S2) (S''))]
 
- | [g |- assume (ap (R1) (R2)) (ap (R1') (R2'))] =>
-  let [g |- dia_result (N1 ) (S1) (S1')] = dia  [g |- assume (R1) (R1')] in
-  let [g |- dia_result (N2) (S2) (S2')] = dia  [g |- assume (R2) (R2')] in
-    [g |- dia_result (app (N1) (N2)) (ap (S1) (S2)) (ap (S1') (S2'))]
+ | [g |- assume (ap R1 R2) (ap (R1') (R2'))] =>
+  let [g |- dia_result (N1 ) S1 (S1')] = dia  [g |- assume R1 (R1')] in
+  let [g |- dia_result N2 S2 (S2')] = dia  [g |- assume R2 (R2')] in
+    [g |- dia_result (app N1 N2) (ap S1 S2) (ap (S1') (S2'))]
 
 
-| [g |- assume (beta (\y.\v. R1) (R2))   (beta (\y.\v. R1') (R2'))] =>
-     let  [g |- dia_result (H2) (S2) (S2')] = dia [g |- assume (R2) (R2')] in
-     let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) (S1) (S1')] =
+| [g |- assume (beta (\y.\v. R1) R2)   (beta (\y.\v. R1') (R2'))] =>
+     let  [g |- dia_result H2 S2 (S2')] = dia [g |- assume R2 (R2')] in
+     let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) S1 (S1')] =
       dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
 
      let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
      let [g |- S'] = subst [g,y,v |-  S1'[..,<y ; v>]] [g |- S2'] in
        [g |- dia_result _  S (S')]
 
-| [g |- assume (beta (\y.\v. R1) (R2)) (ap (lm (\y.\v. R1')) (R2'))] =>
-    let [g |- dia_result (H2) (S2) (S2')] = dia [g |- assume (R2) (R2')] in
-    let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) (S1) (S1')] =
+| [g |- assume (beta (\y.\v. R1) R2) (ap (lm (\y.\v. R1')) (R2'))] =>
+    let [g |- dia_result H2 S2 (S2')] = dia [g |- assume R2 (R2')] in
+    let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) S1 (S1')] =
       dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
     let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
      [g |- dia_result _ S (beta (\y.\v. S1'[..,<y ; v>]) (S2'))]
 
 
 | [g |- assume (lm (\y.\v. R1[..,y,v])) (lm (\y.\v. R1'[..,y,v]))] =>
-  let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) (S1) (S1')] =
+  let [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) S1 (S1')] =
      dia [g, b:block y:term, _t:pred y y |-  assume (R1[..,b.1,b.2]) (R1'[..,b.1,b.2])] in
   [g |- dia_result _ (lm (\y.\v. S1[..,<y ; v>])) (lm (\y.\v. S1'[..,<y ; v>]))]
 
@@ -99,10 +99,10 @@ rec strip_lemma: (g:ctx)[g |- pred M (M')] -> [g |- pred* M (M'')]
 fn r => fn s =>      let [g |- R] = r in case s of
  | [g |- id*] => [g |- strip_result id* R]
 
- | [g |- next (R1) (R2*)] =>
-   let [g |- dia_result _ (S1) (S1')] = dia [g |- assume R (R1)] in
+ | [g |- next R1 (R2*)] =>
+   let [g |- dia_result _ S1 (S1')] = dia [g |- assume R R1] in
    let [g |- strip_result (S2*) (S')] = strip_lemma [g |- S1'] [g |- R2*] in
-     [g |- strip_result (next (S1) (S2*)) (S')]
+     [g |- strip_result (next S1 (S2*)) (S')]
 ;
 
 
@@ -116,11 +116,11 @@ rec conf : (g:ctx) [g |- pred* M (M')] -> [g |- pred* M (M'')]
 % / total r (conf g m m' m'' r) /
 fn r => fn s => case r of
 | [g |- id*] => let [g |- R*] = s in [g |- conf_result (R*) id*]
-| [g |- next (R1) (R2*)] =>
-  let [g |- strip_result (S1*) (S1)] = strip_lemma [g |- R1] s in
+| [g |- next R1 (R2*)] =>
+  let [g |- strip_result (S1*) S1] = strip_lemma [g |- R1] s in
 
   let [g |- conf_result (S*) (S2*)]  = conf [g |- R2*] [g |- S1*] in
-    [g |- conf_result (S*) (next (S1) (S2*))]
+    [g |- conf_result (S*) (next S1 (S2*))]
 
 ;
 
@@ -136,7 +136,7 @@ rec cr: (g:ctx) [g |- pred= M  (M')]  ->  [g |- cr_prop M (M')] =
 fn e => case e of
 |[g |- reduce (R*)] => [g |- cr_result (R*) id*]
 |[g |- expand (R*)] => [g |- cr_result id* (R*)]
-|[g |- next= (C1) (C2)] =>
+|[g |- next= C1 C2] =>
  % C1:pred= M M'
  % C2: pred M' M''   TO SHOW: pred* M N   and pred* M'' N
  let [g |- cr_result (S1*) (R1*)] = cr [g |- C1] in

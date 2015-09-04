@@ -41,7 +41,7 @@ rec eqfun : {g:w} {U:[g |- exp]} [g |- eq U U] =
       in
         [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
 
-   | [g |- app (A1) (A2)]  : [g |- exp]=>
+   | [g |- app A1 A2]  : [g |- exp]=>
        let [g |- EQ1] = eqfun [g] [g |- A1] in
        let [g |- EQ2] = eqfun [g] [g |- A2] in
           [g |- eq_app (EQ1) (EQ2)]
@@ -90,18 +90,18 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                   [g |- eq_lam \x. \u. E[..,<x ; u>]]
            )
 
-     | [g |- eq_app (T1) (R1) (T2) (R2) (D1) (D2)] =>
+     | [g |- eq_app T1 R1 T2 R2 D1 D2] =>
            (case e2 of
-             [g |- eq_app (R1) (S1) (R2) (S2)
-                    (F1) (F2)] =>
+             [g |- eq_app R1 S1 R2 S2
+                    F1 F2] =>
              let [g |- E1] = trans [g]   % <g. T1> <g. R1> <g. S1>
                                [g |- D1]  [g |- F1]
              in
              let [g |- E2] = trans [g]   % <g. T2> <g. R2> <g. S2>
                                [g |- D2]  [g |- F2]
              in
-                 [g |- eq_app  (T1) (S1) (T2) (S2)
-                        (E1)  (E2)]
+                 [g |- eq_app  T1 S1 T2 S2
+                        E1  E2]
            )
 ;
 

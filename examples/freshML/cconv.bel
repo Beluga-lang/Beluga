@@ -70,7 +70,7 @@ fn env => fn t => case t of
 
    [arg':target,xve |-  tpair (tabs \arg'. \xve. T[arg',xve]) Ve]
 
-| [g, x:term |-  app (E1) (E2)] =>
+| [g, x:term |-  app E1 E2] =>
   let [g |- L] = env in
   let [arg':target,xve:target |-  T1] =
         convert [g |- L ] [g,x |- E1] in

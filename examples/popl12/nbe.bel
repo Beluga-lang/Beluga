@@ -90,7 +90,7 @@ case t of
          eval [g,x:tm A[] |-  E]
               (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e))
 
-| [g |- app (E1) (E2) ] =>
+| [g |- app E1 E2 ] =>
   let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1] s in
     f [h] Zero (eval [g |- E2] s)
 ;

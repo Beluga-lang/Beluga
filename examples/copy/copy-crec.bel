@@ -31,10 +31,10 @@ fn e => case e of
     [g |- lam  (\x. V)]
 
 
-| [g |- app (E1) (E2)] =>
-  let [g |- (F1 )] = copy [g |- (E1)] in
-  let [g |- (F2 )] = copy [g |- (E2)] in
-    [g |- app (F1) (F2)]
+| [g |- app E1 E2] =>
+  let [g |- (F1 )] = copy [g |- E1] in
+  let [g |- (F2 )] = copy [g |- E2] in
+    [g |- app F1 F2]
 
 ;
 

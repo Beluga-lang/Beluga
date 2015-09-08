@@ -58,7 +58,7 @@ fn p => case p of
 | [g |- p_left P] => let [g |- P'] = fwd [g |- P] in [g |- j_left (P')]
 | [g |- p_right P] => let [g |- P'] = fwd [g |- P] in [g |- j_right (P')]
 | [g |- p_done] => [g |- j_done]
-| [g |- p_rdx (\x. \f. P)] : [g |- is_path Q (rdx F M)] =>
+| [g |- p_rdx (\x. \f. P)] : [g |- is_path Q (rdx (\x. F) M)] =>
   let [g,b:block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x |-  E[..,b.1,b.3]]
       = fwd [g,b:block x:tm, _t: ({q:path} is_path q (M[..]) -> is_path q x), _u:jump (M[..]) x |-  P[..,b.1,b.2]]
   in

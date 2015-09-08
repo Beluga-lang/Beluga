@@ -48,6 +48,7 @@ type error =
   | IncompatibleSchemaForCtxVar of Int.LF.mctx * Int.LF.ctx_var * Id.cid_schema * Id.cid_schema
   | TermWhenVar of Int.LF.mctx * Int.LF.dctx * Apx.LF.normal
   | SubWhenRen of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub
+  | HOMVarNotSupported
 
 exception Error of Syntax.Loc.t * error
 
@@ -182,6 +183,8 @@ let _ = Error.register_printer
 
  	| SubWhenRen (_, _, _) ->
 	  Format.fprintf ppf "A substitution was found when expecting a renaming.@."
+	| HOMVarNotSupported ->
+	  Format.fprintf ppf "Higher-order meta-variables not (currently) supported"
   ))
 
 let rec conv_listToString clist = match clist with
@@ -323,9 +326,7 @@ let getSchema cD ctxvar loc = match ctxvar with
        (k'-1, Apx.LF.Dot(Apx.LF.Head(Apx.LF.BVar(k')),s'))
   end
 
-  let etaExpandFMV  loc (Apx.LF.FMVar (x, s)) tA =
-    let ( _ , s') = etaExpSub 0 s tA  in
-      addPrefix loc (Apx.LF.Root(loc, Apx.LF.FMVar(x, s'), Apx.LF.Nil)) tA
+  let etaExpandFMV  loc m tA = m
 
   let etaExpandMV loc (Apx.LF.MVar (x,s)) tA =
     let ( _ , s') = etaExpSub 0 s tA  in
@@ -876,13 +877,13 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
   | (Apx.LF.Tuple (loc, _), (Int.LF.Atom _, _s)) ->
       raise (Error (loc, IllTypedElab (cD, cPsi, sA, VariantAtom)))
 
-  | (Apx.LF.Root (loc, Apx.LF.FMVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandFMV loc (Apx.LF.FMVar (x,s)) tA in
-        elTerm recT cD cPsi n sA
+  (* | (Apx.LF.Root (loc, Apx.LF.FMVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) -> *)
+  (*     let n = etaExpandFMV loc (Apx.LF.FMVar (x,s)) tA in *)
+  (*       elTerm recT cD cPsi n sA *)
 
-  | (Apx.LF.Root (loc, Apx.LF.MVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) ->
-      let n = etaExpandMV loc (Apx.LF.MVar (x,s)) tA in
-        elTerm recT cD cPsi n sA
+  (* | (Apx.LF.Root (loc, Apx.LF.MVar (x, s),  _spine),  (Int.LF.PiTyp _ as tA, _s)) -> *)
+  (*     let n = etaExpandMV loc (Apx.LF.MVar (x,s)) tA in *)
+  (*       elTerm recT cD cPsi n sA *)
 
   | (Apx.LF.Root (loc, h, spine ), (Int.LF.PiTyp _ as tA, _s)) ->
       let n = etaExpandApxTerm loc h spine tA in
@@ -1559,6 +1560,8 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Root (loc, Apx.LF.PVar _, _) ->
       raise (Error.Violation "[elTerm'] PVar ")
 
+  | Apx.LF.Root (loc, Apx.LF.FMVar (_,_), _s) -> 
+    raise (Error (loc, HOMVarNotSupported))
   | Apx.LF.Root (loc, h, _s) ->
       (dprint (fun () -> "[elTerm' **] h = " ^ what_head h ^ "\n") ;
             raise (Error (loc, CompTypAnn )))

@@ -827,33 +827,14 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | MetaNil, (TypArr (tau1, tau2), theta) -> 
 	if Whnf.convCTyp (tau1,theta) ttau0 then (tau2, theta)
 	else 
-	  raise (Error (loc, TypMismatch (cD, (tau1, theta), ttau0)))
-
-    | MetaApp(mO,mS), (TypPiBox (cdecl, tau), t) ->
-	let I.Decl (_, cU, _dep) = cdecl in 
-	begin match cU with
-        | I.CTyp (Some schema_cid) ->
-            let (loc, I.CObj cPsi as mf) = mO in
-            let theta' = I.MDot (I.CObj (cPsi), t) in
-              LF.checkMetaObj cD mf (I.CTyp (Some schema_cid) , t);
-              syn_copat_meta_spine loc cD mS (tau, theta') ttau0
-
-        | I.ClTyp (I.MTyp tA, cPsi) ->
-            let (loc, (I.ClObj (psihat, I.MObj tM) as clO)) = mO in
-              LF.checkClObj cD loc cPsi (I.MObj tM) (I.MTyp tA, t) ;
-              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
-
-        | I.ClTyp (I.PTyp tA, cPsi) ->
-            let (loc, (I.ClObj (psihat, I.PObj tP) as clO)) = mO in
-              LF.checkClObj cD loc cPsi (I.PObj tP) (I.PTyp tA, t) ;
-              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
-
-        | I.ClTyp (I.STyp (_, cPhi), cPsi) ->
-            let (loc, (I.ClObj (psihat, I.SObj tS) as clO)) = mO in
-              LF.checkClObj cD loc cPsi (I.SObj tS) (I.STyp (I.Subst, cPhi), t) ;
-              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
-        end
-
+	  (raise (Error (loc, TypMismatch (cD, (tau1, theta), ttau0))))
+      
+    | MetaApp (mO, mS), (TypPiBox (cdecl, tau), t) ->
+        let I.Decl (_, ctyp, _) = cdecl in
+        let _ = LF.checkMetaObj cD mO (ctyp, t) in
+        let t' = I.MDot (metaObjToMFront mO, t) in
+        syn_copat_meta_spine loc cD mS (tau, t') ttau0
+        
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
         (match ttau with

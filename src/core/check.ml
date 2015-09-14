@@ -583,13 +583,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t);
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
-         let f = fun (CopatApp (loc, dest, csp), e') ->
-           let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
-           in check cD (cG,cIH) e' ttau'
-         in
-	 let _ = List.map f bs in
-           Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Cofun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
+    | (Observe (loc, bs), ((TypCobase (_, cid, sp) as tau0), t)) ->
+      let f = function CoBranch (cD0, cps, theta, e') ->
+	let ttau' = syn_copat_spine cD0 cps (tau0, Whnf.mcomp t theta) in
+        let cG' = Whnf.cnormCtx (Whnf.normCtx cG, theta) in
+        let cIH' = Whnf.cnormCtx (Whnf.normCtx cIH, theta) in
+	check cD0 (cG', cIH') e' ttau'
+      in 
+      let _ = List.map f bs in 
+           Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Observe" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
     | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
 	(check (extend_mctx cD (u, cdec, t))
@@ -810,17 +812,47 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | Boolean _  -> (None, TypBool, C.m_id)
 
-  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
-    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
-    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+  and syn_copat cD (cp: copattern) ttau = match cp with
+    | Copattern (loc, dest, ms) -> 
+	syn_copat_meta_spine loc cD ms ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
+
+  and syn_copat_spine cD csp ttau = match csp with
+    | CopatNil loc -> ttau
+
+    | CopatApp (loc, cp, csp') ->
+	let ttau' = syn_copat cD cp ttau in 
+          syn_copat_spine cD csp' ttau'
+
+  and syn_copat_meta_spine loc cD ms ttau ttau0 = match ms, ttau with 
+    | MetaNil, (TypArr (tau1, tau2), theta) -> 
+	if Whnf.convCTyp (tau1,theta) ttau0 then (tau2, theta)
+	else 
+	  raise (Error (loc, TypMismatch (cD, (tau1, theta), ttau0)))
+
+    | MetaApp(mO,mS), (TypPiBox (cdecl, tau), t) ->
+	let I.Decl (_, cU, _dep) = cdecl in 
+	begin match cU with
+        | I.CTyp (Some schema_cid) ->
+            let (loc, I.CObj cPsi as mf) = mO in
+            let theta' = I.MDot (I.CObj (cPsi), t) in
+              LF.checkMetaObj cD mf (I.CTyp (Some schema_cid) , t);
+              syn_copat_meta_spine loc cD mS (tau, theta') ttau0
+
+        | I.ClTyp (I.MTyp tA, cPsi) ->
+            let (loc, (I.ClObj (psihat, I.MObj tM) as clO)) = mO in
+              LF.checkClObj cD loc cPsi (I.MObj tM) (I.MTyp tA, t) ;
+              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
+
+        | I.ClTyp (I.PTyp tA, cPsi) ->
+            let (loc, (I.ClObj (psihat, I.PObj tP) as clO)) = mO in
+              LF.checkClObj cD loc cPsi (I.PObj tP) (I.PTyp tA, t) ;
+              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
+
+        | I.ClTyp (I.STyp (_, cPhi), cPsi) ->
+            let (loc, (I.ClObj (psihat, I.SObj tS) as clO)) = mO in
+              LF.checkClObj cD loc cPsi (I.SObj tS) (I.STyp (I.Subst, cPhi), t) ;
+              syn_copat_meta_spine loc cD mS (tau, I.MDot (clO, t)) ttau0
+        end
 
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->

@@ -1072,17 +1072,30 @@ GLOBAL: sgn;
     | -> Pragma.RegularCase
     ]];
 
-  copat_lst:
+  copatt:
     [[
-       f = UPSYMBOL -> Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)
-     | g = meta_obj -> Comp.CopatMeta (_loc, g, Comp.CopatNil _loc)
+      f = UPSYMBOL; msp = LIST0 meta_obj  -> 
+	 let f = Id.mk_name (Id.SomeString f) in
+         let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) msp Comp.MetaNil in
+	   Comp.Copattern (_loc, f, sp)
     ]];
 
-  cofun_lst:
-    [[
-      f = UPSYMBOL; csp = LIST0 copat_lst; rArr; e = cmp_exp_chk ->
-        ((Comp.CopatApp (_loc, Id.mk_name (Id.SomeString f), Comp.CopatNil _loc)) :: csp, e)
-    ]];
+  copattern_branch:
+    [
+      [ ctyp_decls = LIST0 clf_ctyp_decl;
+	f = UPSYMBOL; msp = LIST0 meta_obj; 
+	csp = LIST0 copatt ;  rArr; e = cmp_exp_chk ->  
+	  let f = Id.mk_name (Id.SomeString f) in
+          let cD = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
+          let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) msp Comp.MetaNil in
+	  let cp = Comp.Copattern (_loc, f, sp) in 
+	  let csp' = cp::csp in 
+          let sp = List.fold_right 
+	    (fun p s ->  Comp.CopatApp (_loc, p, s)) csp' (Comp.CopatNil _loc) 
+	  in
+           Comp.CoBranch (cD, sp, e)
+      ]
+    ];
 
   (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
 
@@ -1119,12 +1132,8 @@ GLOBAL: sgn;
       | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
           Comp.Case (_loc, prag, i, bs)
 
-      | "cofun"; csp = LIST1 cofun_lst SEP "|" ->
-          let f head left = match (head, left) with
-            | (Comp.CopatApp (loc, a, csp'), csp'') -> Comp.CopatApp (loc, a, csp'')
-            | (Comp.CopatMeta (loc, a, csp'), csp'') -> Comp.CopatMeta (loc, a, csp'') in
-          let g = fun (csp1, e) -> (List.fold_right f csp1 (Comp.CopatNil _loc), e) in
-          Comp.Cofun (_loc, List.map g csp)
+      | "observe"; OPT ["|"]; c_branches = LIST1 copattern_branch SEP "|" ->
+        Comp.Observe (_loc, c_branches)
 
      | "impossible"; i = cmp_exp_syn; cd = OPT ["in";
          ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]" -> (ctyp_decls, pHat)]  ->

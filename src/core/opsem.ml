@@ -16,6 +16,7 @@ let (dprint, _) = Debug.makeFunctions (Debug.toFlags [9])
 
 type error =
   | MissingBranch
+  | NotImplemented
 
 exception Error of Syntax.Loc.t * error
 
@@ -119,7 +120,7 @@ let rec eval_syn i (theta, eta) =
         | v -> v
       end
 
-    | Comp.Apply (_ , i', e') ->
+    | Comp.Apply (loc , i', e') ->
       let w2 = eval_chk e' (theta, eta) in
       dprint (fun () -> "[eval_syn] Apply argument evaluated\n"
         ^ "[eval_syn] Extended environment: |env| =  "
@@ -140,11 +141,11 @@ let rec eval_syn i (theta, eta) =
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (w2, spine))
 
-        | Comp.CodataValue (cid, spine) ->
+        | Comp.CodataValue (dest, spine) ->
             begin match w2 with
-              | Comp.CofunValue (bs, theta1, eta1) ->
-                  eval_cofun (cid, spine) bs [] (theta1, eta1)
-              | _ -> raise (Error.Violation "Expected CofnValue")
+              | Comp.ObserveValue (bs, theta, eta) ->
+                  eval_observe loc (dest, spine) bs [] (theta, eta)
+              | _ -> raise (Error.Violation "Expected ObserveValue")
             end
 
         | _ -> raise (Error.Violation "Expected FunValue")
@@ -228,8 +229,8 @@ and eval_chk e (theta, eta) =
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue (n, e', Whnf.cnormMSub theta, eta)
 
-      | Comp.Cofun (loc, bs) ->
-          Comp.CofunValue (bs, Whnf.cnormMSub theta, eta)
+      | Comp.Observe (loc, bs) ->
+          Comp.ObserveValue (bs, Whnf.cnormMSub theta, eta)
 
       | Comp.Pair (_, e1, e2) ->
         let v1 = eval_chk e1 (theta, eta) in
@@ -378,8 +379,9 @@ and eval_branch vscrut branch (theta, eta) =
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
       end
 
-and eval_cofun codataval branches acc (theta, eta) =
-  match (codataval, branches, acc) with
+and eval_observe loc _codataval _branches _acc (_theta, _eta) =
+  raise (Error (loc, NotImplemented))
+(*  match (codataval, branches, acc) with
     | (_, [], []) ->
         raise (Error.Violation "Observation did not match any branch of the Cofun.")
     | (_, [], acc) -> Comp.CofunValue (acc, Whnf.cnormMSub theta, eta)
@@ -393,6 +395,7 @@ and eval_cofun codataval branches acc (theta, eta) =
           (if cid = dest then (Comp.CopatApp (loc, cid', sp), e) :: acc else acc)
           (theta, eta)
     (*Create another case to match meta objects with the spine. *)
+*)
 
 
 let eval e =

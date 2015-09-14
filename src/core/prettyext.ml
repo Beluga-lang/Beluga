@@ -840,8 +840,8 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-      | Comp.Cofun (_, l) ->
-          fprintf ppf "Some Cofun"
+      | Comp.Observe (_, l) ->
+          fprintf ppf "Some Observe"
 
       | Comp.MLam (_, x, e) ->
           let cond = lvl > 0 in

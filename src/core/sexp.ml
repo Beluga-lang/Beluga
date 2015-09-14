@@ -623,7 +623,7 @@ struct
         (Id.render_name x)
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
-    | Comp.Cofun (_, _) ->
+    | Comp.Observe (_, _) ->
       fprintf ppf "CofunNoPP"
 
     | Comp.MLam (_, x, e) ->
@@ -752,8 +752,8 @@ struct
 	fprintf ppf "(CodataValue %s)"
 	  (R.render_cid_comp_dest cid)
 
-      | Comp.CofunValue _ ->
-	fprintf ppf "CofunValue"
+      | Comp.ObserveValue _ ->
+	fprintf ppf "ObserveValue"
 
   and sexp_cmp_branch_prefix ppf =
     function

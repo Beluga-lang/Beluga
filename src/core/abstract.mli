@@ -52,6 +52,9 @@ val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.ty
 val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
                  LF.mctx * LF.dctx * LF.sub * LF.dctx
 
+val copattern_spine: LF.mctx -> Comp.copattern_spine -> Comp.typ -> LF.msub -> 
+                         LF.mctx * Comp.copattern_spine * Comp.typ * LF.msub
+
 val closedTyp : (LF.dctx * LF.typ) -> bool
 
 val printFreeMVars : LF.psi_hat -> LF.normal -> unit

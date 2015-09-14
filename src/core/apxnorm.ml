@@ -285,11 +285,11 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
-  | Apx.Comp.Cofun (loc, bs) ->
-      (dprint (fun () -> "[cnormApxExp] Cofun ");
-       let f = function (csp, e) -> (csp, cnormApxExp cD delta e (cD'', t)) in
-         Apx.Comp.Cofun (loc, List.map f bs))
-
+  | Apx.Comp.Observe (loc, bs) ->
+      (dprint (fun () -> "[cnormApxExp] Observe ");
+       let f = function (Apx.Comp.CoBranch (cD0, csp, e)) -> 
+			   Apx.Comp.CoBranch (cD0, csp, cnormApxExp cD delta e (cD'', t)) in
+         Apx.Comp.Observe (loc, List.map f bs))
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var (_, _x) -> i
@@ -563,6 +563,15 @@ and collectApxPatSpine fMVd pat_spine = match pat_spine with
       let fMVs1 = collectApxPattern fMVd pat in
 	collectApxPatSpine fMVs1 pat_spine
 
+and collectApxCoPatSpine fMVd copat_spine = match copat_spine with
+  | Apx.Comp.CopatNil _ -> fMVd
+  | Apx.Comp.CopatApp (_, cp, cps) -> 
+      let fMVd' = collectApxCoPat fMVd cp in 
+	collectApxCoPatSpine fMVd' cps
+
+and collectApxCoPat fMVd (Apx.Comp.Copattern (_, _dest, mS)) = 
+  collectApxMetaSpine fMVd mS
+
 (* Replace FMVars with appropriate de Bruijn index
  * If a FMVar (of FPVar) occurs in fMVs do not replace it
  * since it is bound in some inner branch of a case-expression
@@ -778,11 +787,15 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
-  | Apx.Comp.Cofun (loc, bs) ->
-      let f = function (csp, e) -> (csp, fmvApxExp fMVs cD d_param e) in
-        Apx.Comp.Cofun (loc, List.map f bs)
+  | Apx.Comp.Observe (loc, bs) ->
+      let f = function Apx.Comp.CoBranch (delta, csp, e) -> 
+          let fMVd  = collectApxMCtx [] delta in
+          let fMVb  = collectApxCoPatSpine fMVd csp in
+          let l    = lengthApxMCtx delta in
+          let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
+	    Apx.Comp.CoBranch (delta, csp, e') in
+        Apx.Comp.Observe (loc, List.map f bs)
           (*Might be needed to get metaobjs from csp before call fmvApxExp on e *)
-
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var (_, _x) -> i

@@ -1259,9 +1259,9 @@ let rec collectExp cQ e = match e with
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Fun (loc, x, e'))
 
-  | Comp.Cofun (loc, bs) ->
-      let (cQ', bs') = collectCofuns cQ bs in
-        (cQ', Comp.Cofun (loc, bs'))
+  | Comp.Observe (loc, bs) ->
+      let (cQ', bs') = collectCoPatBranches cQ bs in
+        (cQ', Comp.Observe (loc, bs'))
 
   | Comp.MLam (loc, u, e) ->
       let (cQ', e') = collectExp cQ e in
@@ -1332,23 +1332,25 @@ and collectExp' cQ i = match i with
 
   | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
-and collectCofun cQ csp = match csp with
+ and collect_copat_spine cQ csp = match csp with
   | Comp.CopatNil loc -> (cQ, Comp.CopatNil loc)
-  | Comp.CopatApp (loc, dest, csp') ->
-      let (cQ, csp') = collectCofun cQ csp' in
-        (cQ, Comp.CopatApp (loc, dest, csp'))
-  | Comp.CopatMeta (loc, cM, csp') ->
-      let (cQ, cM') = collect_meta_obj 0 cQ cM in
-      let (cQ, csp') = collectCofun cQ csp' in
-        (cQ, Comp.CopatMeta (loc, cM', csp'))
+  | Comp.CopatApp (loc, cp, csp') ->
+      let (cQ', cp') = collect_copattern cQ cp in
+      let (cQ'', csp') = collect_copat_spine cQ' csp' in
+        (cQ'', Comp.CopatApp (loc, cp', csp'))
 
-and collectCofuns cQ csps = match csps with
+and collect_copattern cQ cp = match cp with 
+  | Comp.Copattern (l, dest, csp) -> 
+      let (cQ', csp') = collect_meta_spine 0 cQ csp in 
+	(cQ', Comp.Copattern (l, dest, csp'))
+
+and collectCoPatBranches cQ csps = match csps with
   | [] -> (cQ, [])
-  | (c, e)::csps' ->
-      let (cQ', c') = collectCofun cQ c in
-      let (cQ2, e') = collectExp cQ' e in
-      let (cQ2', csps'') =  collectCofuns cQ' csps' in
-        (cQ2', (c', e')::csps'')
+  | Comp.CoBranch (cD0, csp0, theta0, e)::csps' ->
+    let (cQ', csp0') = collect_copat_spine cQ csp0 in
+    let (cQ1', e') = collectExp cQ' e in
+    let (cQ2', csps'') =  collectCoPatBranches cQ' csps' in
+    (cQ2', Comp.CoBranch (cD0, csp0, theta0, e')::csps'')
 
 and collectPatObj cQ pat = match pat with
   | Comp.PatEmpty (loc, cPsi) ->
@@ -1496,6 +1498,18 @@ and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
       let pat' = abstractMVarPatObj cQ cG offset pat in
       let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in
         Comp.PatApp (loc, pat', pat_spine')
+
+and abstractMVarCopatSpine cQ offset copat_spine = match copat_spine with
+  | Comp.CopatNil _ -> copat_spine
+  | Comp.CopatApp (loc, copat, cps) -> 
+      let copat = abstractMVarCopat cQ offset copat in 
+      let cps   = abstractMVarCopatSpine cQ offset cps in 
+	Comp.CopatApp (loc, copat, cps)
+
+and abstractMVarCopat cQ offset copat = match copat with 
+  | Comp.Copattern (loc, dest, mS) -> 
+      let mS' = abstractMVarMetaSpine cQ offset mS in 
+	Comp.Copattern (loc, dest, mS')
 
 
 let rec raiseCompTyp cD tau =  match cD with
@@ -1715,6 +1729,21 @@ let abstrCovPatt cG pat tau ms =
   let cD'     = ctxToMCtx (I.Maybe) cQ' in
     (cD', cG', pat', tau', ms0)
 
+let abstrCopatSpine cD cps tau ms = 
+  let cQ0, ms = collectMSub 0 I.Empty ms in 
+  let cQ1, cD = collectMctx cQ0 cD in 
+  let cQ2, cps = collect_copat_spine cQ1 cps in 
+  let cQ3, tau = collectCompTyp 0 cQ2 tau in
+  let cQ'     = abstractMVarCtx cQ3 0 in
+  let offset   = Context.length cD in
+  let cD0     = abstractMVarMctx cQ' cD (0, offset-1) in 
+  let cps     = abstractMVarCopatSpine cQ' (0, offset) cps in 
+  let tau'    = abstractMVarCompTyp cQ' (0,offset) tau in
+  let cD1     = ctxToMCtx (I.Maybe) cQ' in 
+  let cD'     = Context.append cD1 cD0 in
+  let ms0     = abstrMSub cQ' ms in
+    ( cD', cps, tau', ms0)
+
 (* Shorter names for export outside of this module. *)
 let kind = abstrKind
 let typ = abstrTyp
@@ -1729,3 +1758,4 @@ let pattern = abstrPattern
 let patobj = abstrPatObj
 let subpattern = abstrSubPattern
 let mobj = abstrMObjPatt
+let copattern_spine = abstrCopatSpine

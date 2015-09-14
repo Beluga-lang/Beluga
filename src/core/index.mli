@@ -6,6 +6,7 @@ type error =
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
   | UnboundCompConstName of Id.name
+  | UnboundCompDestName  of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub

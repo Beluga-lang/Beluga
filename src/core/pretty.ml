@@ -160,6 +160,7 @@ module Int = struct
 
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
+    val copatSpineToString: LF.mctx -> Comp.copattern_spine -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
     val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
     val valueToString     :                         Comp.value   -> string
@@ -1126,11 +1127,11 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
               (r_paren_if cond);
 
-      | Comp.Cofun (_, bs) ->
+      | Comp.Observe (_, bs) ->
           let cond = lvl > 0 in
-(*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
-            fprintf ppf "%sSome cofun%s"
+            fprintf ppf "@ %s@[<v>observe %a@]%s"
               (l_paren_if cond)
+              (fmt_ppr_cmp_cobranches cD cG 0) bs
               (r_paren_if cond)
 
       | Comp.MLam (_, x, e) ->
@@ -1368,7 +1369,7 @@ module Int = struct
  		 (r_paren_if cond)
 
       | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
-      | Comp.CofunValue _ -> fprintf ppf " cofun "
+      | Comp.ObserveValue _ -> fprintf ppf " observation "
 
 
 
@@ -1472,6 +1473,31 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
     (* cD |- t : cD'  *)
+
+    and fmt_ppr_cmp_cobranches cD cG lvl ppf = function
+      | [] -> ()
+      | Comp.CoBranch (_cD, sp, _ms, e) :: [] ->
+          fprintf ppf "@ @[<v2>| @[<v0>%a  => @]@ @[<2>@ %a@]@]@ "
+            (fmt_ppr_copat_spine cD 0) sp
+            (fmt_ppr_cmp_exp_chk cD cG 1) e
+      | Comp.CoBranch (_cD, sp, _ms, e) :: bs ->
+          fprintf ppf "@ @[<v2>| @[<v0>%a  => @]@ @[<2>@ %a@]@]@ %a"
+            (fmt_ppr_copat_spine cD 0) sp
+            (fmt_ppr_cmp_exp_chk cD cG 1) e
+            (fmt_ppr_cmp_cobranches cD cG lvl) bs
+
+    and fmt_ppr_copat_spine cD _lvl ppf = function
+        | Comp.CopatNil _ -> ()
+        | Comp.CopatApp (_, cp, sp) ->
+	    fprintf ppf "%a (%a)"
+	      (fmt_ppr_cmp_copattern cD 0) cp
+              (fmt_ppr_copat_spine cD 0) sp
+
+    and fmt_ppr_cmp_copattern cD _lvl ppf = function
+      | Comp.Copattern (_, cid, ms) -> 
+            fprintf ppf "%s %a"
+              (R.render_cid_comp_dest cid)
+              (fmt_ppr_meta_spine cD 2) ms
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
       | (LF.MShift k, _ ) ->
@@ -1715,6 +1741,10 @@ module Int = struct
       let pat' = Whnf.cnormPattern (pat , Whnf.m_id) in
        fmt_ppr_pat_obj cD cG std_lvl str_formatter pat'
       ; flush_str_formatter ()
+
+   let copatSpineToString cD csp = 
+      fmt_ppr_copat_spine cD std_lvl str_formatter csp
+	; flush_str_formatter ()
 
     let expChkToString cD cG e    =
       let e' = Whnf.cnormExp (e , Whnf.m_id) in

@@ -306,14 +306,14 @@ module Comp = struct
     | DataValue  of cid_comp_const * data_spine
     | BoolValue  of bool
     | PairValue  of value * value
-    | CofunValue of (copattern_spine * exp_chk) list * LF.msub * env
+    | ObserveValue of cobranch list * LF.msub * env
     | CodataValue of cid_comp_dest * codata_spine
 
   and exp_chk =
     | Syn    of Loc.t * exp_syn
     | Rec    of Loc.t * name * exp_chk
     | Fun    of Loc.t * name * exp_chk
-    | Cofun  of Loc.t * (copattern_spine * exp_chk) list
+    | Observe of Loc.t * cobranch list
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
@@ -368,10 +368,15 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
+  and cobranch = 
+    | CoBranch of LF.ctyp_decl LF.ctx * copattern_spine * LF.msub * exp_chk 
+
   and copattern_spine =
     | CopatNil of Loc.t
-    | CopatApp of Loc.t * cid_comp_dest * copattern_spine
-    | CopatMeta of Loc.t * meta_obj * copattern_spine
+    | CopatApp of Loc.t * copattern * copattern_spine
+
+  and copattern = 
+      Copattern of Loc.t * cid_comp_dest * meta_spine
 
   type tclo = typ * LF.msub
 

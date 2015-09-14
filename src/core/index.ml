@@ -34,6 +34,7 @@ type error =
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
   | UnboundCompConstName of Id.name
+  | UnboundCompDestName  of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub
@@ -710,14 +711,23 @@ let rec index_exp cvars vars fcvars = function
       let vars' = Var.extend vars (Var.mk_entry x) in
         Apx.Comp.Fun (loc, x, index_exp cvars vars' fcvars e)
 
-  | Ext.Comp.Cofun (loc, copatterns) ->
-      let copatterns' =
-        List.map (function (sp, e) ->
-                    let (sp', fcvars') = index_copat_spine cvars vars fcvars sp in
-                      (sp', index_exp cvars vars fcvars' e))
-          copatterns
+  | Ext.Comp.Observe (loc, cobranches) ->
+      let cobranches' =
+        List.map (function Ext.Comp.CoBranch (cD, csp, e) ->
+		    let (fcv, _ ) = fcvars in 
+		    let empty_fcvars = [] in
+		    let (_omega, cD', cvars1, fcvars1)  =
+		      index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
+
+                    let (csp', fcvars2) = index_copat_spine cvars1 fcvars1 csp in
+		    let cvars_all       = CVar.append cvars1 cvars in
+		    let (fcv2, _ )      = fcvars2 in
+		    let fcv3            = List.append fcv2 fcv in
+		    let e'              = index_exp cvars_all vars (fcv3, term_closed) e in
+                      Apx.Comp.CoBranch (cD', csp', e'))
+          cobranches
       in
-        Apx.Comp.Cofun (loc, copatterns')
+        Apx.Comp.Observe (loc, cobranches')
 
   | Ext.Comp.MLam (loc, u, e) ->
       let cvars' = CVar.extend cvars (CVar.mk_entry u) in
@@ -805,15 +815,20 @@ and index_exp' cvars vars fcvars = function
 
   | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
 
-and index_copat_spine cvars vars fcvars sp = match sp with
+and index_copat cvars fcvars cpat = match cpat with 
+  | Ext.Comp.Copattern (loc, name, msp) -> 
+      begin try
+	let (msp', fcvars') = index_meta_spine cvars fcvars msp in
+	  (Apx.Comp.Copattern (loc, CompDest.index_of_name name, msp'), fcvars')
+      with 
+          Not_found -> raise (Error (loc, UnboundCompDestName name))
+      end	  
+and index_copat_spine cvars fcvars sp = match sp with
   | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)
-  | Ext.Comp.CopatApp (loc, name, sp') ->
-      let (sp'', fcvars') = index_copat_spine cvars vars fcvars sp' in
-        (Apx.Comp.CopatApp (loc, CompDest.index_of_name name, sp''), fcvars')
-  | Ext.Comp.CopatMeta (loc, metaobj, sp') ->
-      let (metaobj', fcvars') = index_meta_obj cvars fcvars metaobj in
-      let (sp'', fcvars'') = index_copat_spine cvars vars fcvars' sp' in
-        (Apx.Comp.CopatMeta (loc, metaobj', sp''), fcvars'')
+  | Ext.Comp.CopatApp (loc, cpat, sp) ->
+      let (cpat', fcvars') = index_copat cvars fcvars cpat in 
+      let (sp', fcvars'') = index_copat_spine cvars fcvars' sp in
+          (Apx.Comp.CopatApp (loc, cpat', sp'), fcvars'')
 
 and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatTrue loc -> (Apx.Comp.PatTrue loc, fcvars, fvars)

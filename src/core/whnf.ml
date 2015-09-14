@@ -1535,8 +1535,9 @@ let mctxMVarPos cD u =
 
     | (Comp.Fun (loc, x, e), t) -> Comp.Fun (loc, x, cnormExp (e,t))
 
-    | (Comp.Cofun (loc, bs), t) ->
-        Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)
+    | (Comp.Observe (loc, bs), t) ->
+        Comp.Observe (loc, List.map (function Comp.CoBranch (cD, cps, theta, e) -> 
+	  Comp.CoBranch(cD, cps, theta, cnormExp (e, t))) bs)
 
     | (Comp.MLam (loc, u, e), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t))
 

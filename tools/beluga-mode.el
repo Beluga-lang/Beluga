@@ -246,7 +246,7 @@ Regexp match data 0 points to the chars."
   `(,(concat "\\_<"
              (regexp-opt
               '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "stratified" "else" "ffalse" "fn" "if"
-                "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
+                "in" "impossible" "let" "mlam" "of" "rec" "schema" "some" "observe"
                 "then" "type" "ctype" "ttrue" "%name" "%not" "module" "struct" "end"
                 "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
                  "%open"  "%abbrev" "#stratified" "#positive" "total"))

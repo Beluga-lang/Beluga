@@ -1,0 +1,75 @@
+LF exp : type =
+| c : exp % some constant
+| app : exp -> exp -> exp
+| lam : (exp -> exp) -> exp
+;
+
+LF eval : exp -> exp -> type =
+| ev_lam : eval (lam (\x.M x)) (lam (\x.M x))
+| ev_app : eval M (lam M') -> eval N V' -> eval (M' V') V
+            -> eval (app M N) V
+| ev_c : eval c c
+;
+
+LF empty : type =
+;
+
+coinductive Div : [ |- exp] -> ctype =
+| Div_lam : {M:[ x:exp |- exp]} Div [ |- lam (\x.M)] -> [ |- empty]
+| Div_app : {M:[ |- exp]}{N:[ |- exp]} Div [ |- app M N] -> App_Div [ |- M] [ |- N]
+| Div_c   : Div [ |- c] -> [ |- empty]
+
+and inductive App_Div : [ |- exp] -> [ |- exp] -> ctype =
+| Eval_div : [ |- eval M (lam (\x.M'))] ->
+             [ |- eval N V] -> Div [ |- M'[V]] -> App_Div [ |- M] [ |- N]
+| Div_fst : {M:[|- exp]} Div [ |- M] -> App_Div [ |- M] [ |- N]
+| Div_snd : [ |- eval M (lam \x.M')] -> Div [ |- N] -> App_Div [ |- M] [ |- N]
+;
+
+rec omegaDiverges : Div [ |- app (lam (\x.app x x)) (lam (\x.app x x))] =
+observe Div_app [ |- _] [ |- _] => Eval_div [ |- ev_lam] [ |- ev_lam] omegaDiverges
+;
+
+% let a = Div_app omegaDiverges;
+
+LF eq : exp -> exp -> type =
+| refl : eq M M
+;
+
+LF tp : type =
+| nat : tp
+| arr : tp -> tp -> tp;
+
+LF oft : exp -> tp -> type =
+| t_con : oft c nat
+| t_lam : ({x:exp} oft x T -> oft (M x) S)
+          -> oft (lam M) (arr T S)
+| t_app : oft M (arr T S) -> oft N T
+          -> oft (app M N) S
+;
+
+LF fail : exp -> type =
+| fail_capp : fail (app c M)
+| fail_app1 : fail M -> fail (app M N)
+| fail_app2 : eval M (lam M') -> fail N -> fail (app M N)
+| fail_eval : eval M (lam (\x.M' x)) -> eval N V -> fail (M' V) -> fail (app M N)
+;
+
+inductive EvalWith : [ |- exp] -> ctype =
+| EvW : {V:[ |- exp]}[ |- eval M V] -> EvalWith [ |- M]
+;
+
+%Sum type of failing and diverging derivations
+inductive WentWrong : [ |- exp] -> ctype =
+| Failed : [ |- fail M] -> WentWrong [ |- M]
+| Diverged : Div [ |- M] -> WentWrong [ |- M]
+;
+
+rec wentWrongAppFst : (WentWrong [ |- app M N] -> [ |- empty]) 
+                      -> WentWrong [ |- M] -> [ |- empty] =
+fn f => fn d => case d of
+| Failed [ |- F] => f (Failed [ |- fail_app1 F])
+| Diverged d' => % d' : Div [ |- M]
+f (Diverged (observe Div_app [|- M'] [|- N'] % M'/M, N'/N     
+             => Div_fst [|- M'] [|- N'] d'))
+;

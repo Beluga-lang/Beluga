@@ -1,0 +1,119 @@
+LF nat : type =
+| z : nat
+| s : nat -> nat
+;
+
+LF char : type =
+| c : char %Dummy character
+| newline : char
+;
+
+LF word : type =
+| nil : word
+| cons : char -> word -> word
+;
+
+rec concat : [|- word] -> [|- word] -> [|- word] = 
+fn s => fn t => case s of
+| [|- nil] => t
+| [|- cons C W] => let [|- W'] = concat [|- W] t in
+		 [|- cons C W']
+;
+
+coinductive Stream : [|- nat] -> ctype =
+| GetChar : Stream [|- s N] -> [|- char]
+| RemChars : Stream [|- s N] -> Stream [|- N]
+| NewWord : Stream [|- z] -> NewStream
+
+and inductive NewStream : ctype =
+| Stream : {N : [|- nat]} Stream [|- N] -> NewStream
+;
+
+rec buildWord : {N: [|- nat]} Stream [|- N] -> [|- word] * Stream [|- z] =
+mlam N => fn s => case [|- N] of
+| [|- z] => ([|- nil], s)
+| [|- s N] => let ([|- W], s') = buildWord [|- N] (RemChars s) in
+	    let [|- C] = GetChar s in
+	    ([|- cons C W], s')
+;
+
+coinductive OutStream : ctype =
+| Word : OutStream -> [|- word]
+| Rest : OutStream -> OutStream
+;
+
+inductive Unit : ctype =
+| Unit : Unit;
+
+% Some call to I/O device
+rec getNext : Unit -> [|- char] =
+fn u => ?;
+
+coinductive InStream : ctype =
+| Head : InStream -> [|- char]
+| Tail : InStream -> InStream
+;
+
+% Note: This function terminates only if there is a newline character in 
+% a finite number of reads|- When it reaches a new word, the new word
+% will not be read before the query is actually made|- But it will
+% want to read the entire word before being able to return|- This is
+% the only way to guarantee the actual size of the stream|-
+rec countInStream : InStream -> NewStream =
+fn s => case Head s of 
+| [|- newline] => Stream [|- z] (observe NewWord => 
+                        countInStream (Tail s))
+                       
+| [|- c] => let Stream [|- N] s' = countInStream (Tail s) in 
+          Stream [|- s N ] (observe GetChar => [ |- c] | RemChars => s')
+;
+
+rec outStream : {N : [|- nat]} Stream [|- N] -> OutStream =
+mlam N => fn s =>
+let (w, s') = buildWord [|- N] s in
+observe Word => w
+      | Rest => let Stream [|- N] s'' = NewWord s' in
+               outStream [|- _] s''
+;
+
+LF length : word -> nat -> type =
+| l_z : length nil z
+| l_s : length W N -> length (cons C W) (s N)
+; 
+
+inductive WordCert : [|- nat] -> ctype =
+| Word : {W:[|- word]} [|- length W N] -> WordCert [|- N]
+;
+
+coinductive OutCert : [|- nat] -> ctype =
+| WCert : OutCert [|- N] -> WordCert [|- N]
+| RCert : OutCert [|- N] -> SomeOutCert
+
+and inductive SomeOutCert : ctype =
+| SomeCert : OutCert [|- N] -> SomeOutCert
+;
+
+rec certifiedBuildWord : {N:[|- nat]} Stream [|- N] -> (WordCert [|- N] * Stream [|- z]) =
+mlam N => fn s => case [|- N] of
+| [|- z] => (Word [|- nil] [|- l_z], s)
+| [|- s N] => let (Word [|- W] [|- P], s') = certifiedBuildWord [|- N] (RemChars s) in
+	    let [|- C] = GetChar s in (Word [|- cons C W] [|- l_s P], s')
+;
+
+rec outCertStream : {N:[|- nat]} Stream [|- N] -> OutCert [|- N] =
+mlam N => fn s => let (w, s) = certifiedBuildWord [|- N] s in
+		observe WCert => w
+	              | RCert => let Stream [|- N] s' = NewWord s in
+                        SomeCert (outCertStream [|- _] s')
+;
+
+rec test : NewStream -> OutStream =
+fn e => let Stream [|- N] s = e in
+outStream [|- N] s;
+
+rec test2 : NewStream -> SomeOutCert =
+fn e => let Stream [|- N] s = e in
+SomeCert (outCertStream [|- N] s);
+
+rec inToOut : InStream -> SomeOutCert =
+fn s => test2 (countInStream s);

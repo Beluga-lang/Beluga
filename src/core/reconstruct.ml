@@ -608,6 +608,21 @@ let mgCompTyp cD (loc, c) =
   let mS = genMetaSpine (cK, Whnf.m_id) in
     Int.Comp.TypBase (loc, c, mS)
 
+let mgCompCoTyp cD (loc, c) =
+  let cK = (CompCotyp.get c).CompCotyp.kind in
+  let _ = dprint (fun () -> "[mgCompCoTyp] kind of constant " ^
+              (R.render_cid_comp_typ c)) in
+  let _ = dprint (fun () -> "               " ^
+                    P.compKindToString Int.LF.Empty cK) in
+  let rec genMetaSpine (cK, t) = match (cK, t) with
+    | (Int.Comp.Ctype _, _t) -> Int.Comp.MetaNil
+    | (Int.Comp.PiKind (loc', Int.LF.Decl(n,ctyp,_), cK), t) ->
+        let (mO, t') = genMetaVar' loc cD (loc', n , ctyp, t) in
+        let mS = genMetaSpine (cK, t') in
+          Int.Comp.MetaApp (mO, mS) in
+  let mS = genMetaSpine (cK, Whnf.m_id) in
+    Int.Comp.TypCobase (loc, c, mS)
+
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
   | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
       let (n , sW) = Whnf.mctxCDec cD psi_var in
@@ -629,7 +644,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
 
   | Int.Comp.TypBase (loc, c, _ )  -> mgCompTyp cD' (loc, c)
 
- | Int.Comp.TypCobase (loc, c, _ )  -> mgCompTyp cD' (loc, c)
+  | Int.Comp.TypCobase (loc, c, _ )  -> mgCompCoTyp cD' (loc, c)
 
   | Int.Comp.TypArr (tau1, tau2)  ->
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
@@ -1242,7 +1257,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
           let ttau' = (tau, t') in
           let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
               (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-          | _ ->   (cG, Int.Comp.PatNil, ttau))
+        | _ ->   (cG, Int.Comp.PatNil, ttau))
 
   | Apx.Comp.PatApp (loc, pat', pat_spine')  ->
       (match ttau with
@@ -1408,6 +1423,7 @@ and elCopatMetaSpine loc cD msp ttau ((tau0, theta0) as ttau0) = match msp, ttau
 		dprint (fun () -> "[elCopatMetaSpine] FAILS\n");
 		raise (Error (loc, TypMismatch (cD, (tau1, theta), ttau0 ))))
       end 
+
   | Apx.Comp.MetaApp (m, s), (Int.Comp.TypPiBox (Int.LF.Decl (_, cT, Int.LF.No), tau), theta)  -> 
     let (mO, t') = elMetaObjCTyp loc cD m theta cT in
     let (msp', t'') = elCopatMetaSpine loc cD s (tau, t') ttau0 in
@@ -1418,6 +1434,25 @@ and elCopatMetaSpine loc cD msp ttau ((tau0, theta0) as ttau0) = match msp, ttau
     let (msp', t'') = elCopatMetaSpine loc cD s (tau, t') ttau0 in
     (Int.Comp.MetaApp (mO, msp'), t'')
 
+
+  | s , (Int.Comp.TypPiBox (Int.LF.Decl (n, ctyp, Int.LF.No), tau), theta)  -> 
+    let _ = dprint (fun () -> 
+      "[elCopatMetaSpine] Explicit meta variables in coinductive" 
+      ^ " datatype are left implicit in observe statement \nttau = " 
+      ^ (P.compTypToString cD (Whnf.cnormCTyp ttau)) ^ "\n") 
+    in
+    let (mO, t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+    let (msp', t'') = elCopatMetaSpine loc cD s (tau, t') ttau0 in
+    (Int.Comp.MetaApp (mO, msp'), t'')
+
+  | Apx.Comp.MetaNil, _ -> 
+    Format.fprintf Format.std_formatter "%s:@.\n" (Syntax.Loc.to_string loc);
+    raise (Error.Violation ("wrong type (MetaNil): ttau = " ^ (P.compTypToString cD (Whnf.cnormCTyp ttau)) ^ "\n"))
+   
+  | Apx.Comp.MetaApp (m, s), _ -> 
+    Format.fprintf Format.std_formatter "%s:@.\n" (Syntax.Loc.to_string loc);
+    raise (Error.Violation ("wrong type (MetaApp): ttau = " ^ (P.compTypToString cD (Whnf.cnormCTyp ttau)) ^ "\n"))
+      
 (* synRefine caseT (cD, cD1) (Some tR1) (cPsi, tP) (cPsi1, tP1) = (t, cD1')
 
    if  cD, cD1 ; cPsi  |- tP  <= type

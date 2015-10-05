@@ -250,14 +250,14 @@ module Comp = struct
             Format.fprintf ppf
               "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
-          (* | Typmismatch (cD, (tau1, theta1), (tau2, theta2)) -> *)
-          (*     Error.report_mismatch ppf *)
-          (*       "Type of destructor did not match the type it was expected to have." *)
-          (*       "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau1, theta1)) *)
-          (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau2, theta2))) *)
-      ))
+
+          | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+              Error.report_mismatch ppf
+                "Type of destructor did not match the type it was expected to have."
+                "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau1, theta1))
+                "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau2, theta2))))
 
   type caseType =
     | IndexObj of meta_obj

@@ -1,0 +1,218 @@
+LF exp : type =
+| c : exp % some constant
+| app : exp -> exp -> exp
+| lam : (exp -> exp) -> exp
+;
+
+LF eval : exp -> exp -> type =
+| ev_lam : eval (lam (\x.M x)) (lam (\x.M x))
+| ev_app : eval M (lam M') -> eval N V' -> eval (M' V') V
+            -> eval (app M N) V
+| ev_c : eval c c
+;
+
+LF empty : type =
+;
+
+coinductive Div : [ |- exp] -> ctype =
+| Div_lam : Div [ |- lam (\x.M)] -> [ |- empty]
+| Div_app : Div [ |- app M N] -> App_Div [ |- M] [ |- N]
+| Div_c   : Div [ |- c] -> [ |- empty]
+
+and inductive App_Div : [ |- exp] -> [ |- exp] -> ctype =
+| Eval_div : [ |- eval M (lam (\x.M'))] ->
+             [ |- eval N V] -> Div [ |- M'[V]] -> App_Div [ |- M] [ |- N]
+| Div_fst : Div [ |- M] -> App_Div [ |- M] [ |- N]
+| Div_snd : [ |- eval M (lam \x.M')] -> Div [ |- N] -> App_Div [ |- M] [ |- N]
+;
+
+rec omegaDiverges : Div [ |- app (lam (\x.app x x)) (lam (\x.app x x))] =
+observe Div_app => Eval_div [ |- ev_lam] [ |- ev_lam] omegaDiverges
+;
+
+% let a = Div_app omegaDiverges;
+
+LF eq : exp -> exp -> type =
+| refl : eq M M
+;
+
+%Type uniqueness. Required for cannotEvalAndDiv
+%{
+rec evalUnique : [ |- eval M V] -> [ |- eval M V'] -> [ |- eq V V'] =
+fn e1 => fn e2 => case e1 of
+| [ |- ev_lam] => let [ |- ev_lam] = e2 in [ |- refl]
+| [ |- ev_app D E F] => let [ |- ev_app D' E' F'] = e2 in
+                     let [ |- refl] = evalUnique [ |- D] [ |- D'] in
+                     let [ |- refl] = evalUnique [ |- E] [ |- E'] in
+                     let [ |- refl] = evalUnique [ |- F] [ |- F'] in
+                     [ |- refl]
+| [ |- ev_c] => let [ |- ev_c] = e2 in [ |- refl]
+;
+
+% Lemma 6 from Leroy and Grall
+rec cannotEvalAndDiv : [ |- eval M V] -> Div [ |- M] -> [ |- empty] =
+fn e => fn d => case e of
+| [ |- ev_lam] => Div_lam d
+| [ |- ev_app D E F] => (case Div_app d of
+                      | Eval_div e1 e2 d' =>
+                        let [ |- refl] = evalUnique [ |- D] e1 in
+                        let [ |- refl] = evalUnique [ |- E] e2 in
+                        cannotEvalAndDiv [ |- F] d'
+                      | Div_fst d' => cannotEvalAndDiv [ |- D] d'
+                      | Div_snd e' d' =>
+                        let [ |- refl] = evalUnique [ |- D] e' in
+                        cannotEvalAndDiv [ |- E] d'
+                     )
+| [ |- ev_c] => Div_c d
+;
+}%
+LF tp : type =
+| nat : tp
+| arr : tp -> tp -> tp;
+
+LF oft : exp -> tp -> type =
+| t_con : oft c nat
+| t_lam : ({x:exp} oft x T -> oft (M x) S)
+          -> oft (lam M) (arr T S)
+| t_app : oft M (arr T S) -> oft N T
+          -> oft (app M N) S
+;
+
+%A term will fail to evaluate if a constant is applied to a term.
+%A failure will propagate in from a term to its application with another term.
+LF fail : exp -> type =
+| fail_capp : fail (app c M)
+| fail_app1 : fail M -> fail (app M N)
+| fail_app2 : eval M (lam M') -> fail N -> fail (app M N)
+| fail_eval : eval M (lam (\x.M' x)) -> eval N V -> fail (M' V) -> fail (app M N)
+;
+
+%Type preservation is necessary for tp_soundness theorems
+%{ rec tps : [ |- oft M T] -> [ |- eval M V] -> [ |- oft V T] =
+fn t => fn s => case s of
+| [ |- ev_lam] => t
+| [ |- ev_app D E F] => let [ |- t_app T S] = t in
+                     let [ |- t_lam (\x.\u.P x u)] = tps [ |- T] [ |- D] in
+                     let [ |- E'] = tps [ |- S] [ |- E] in
+                     tps [ |- P _ E'] [ |- F]
+| [ |- ev_c] => t
+;
+}%
+%{
+rec tp_soundness_fail : [ |- oft M T] -> [ |- fail M] -> [ |- empty] =
+fn t => fn s => case s of
+| [ |- fail_capp] => let [ |- t_app T S] = t in impossible [ |- T] in []
+| [ |- fail_app1 D] => let [ |- t_app T S] = t in
+                    tp_soundness_fail [ |- T] [ |- D]
+| [ |- fail_app2 E D] => let [ |- t_app T S] = t in
+                      tp_soundness_fail [ |- S] [ |- D]
+| [ |- fail_eval E F D] => let [ |- t_app T S] = t in
+                        let [ |- t_lam (\x.\u.E' x u)] = tps [ |- T] [ |- E] in
+                        let [ |- F'] = tps [ |- S] [ |- F] in
+                        tp_soundness_fail [ |- E' _ F'] [ |- D]
+;
+
+rec tp_soundness_div : [ |- oft M T] -> Div [ |- M] -> [ |- empty] =
+fn t => fn s => case t of
+| [ |- t_con] => Div_c s
+| [ |- t_lam (\x.\u.T x u)] => Div_lam s
+| [ |- t_app T S] => (case Div_app s of
+                   | Eval_div e1 e2 d =>
+                     let [ |- t_lam \x.\u.T' x u] = tps [ |- T] e1 in
+                     let [ |- S'] = tps [ |- S] e2 in
+                     tp_soundness_div [ |- T' _ S'] d
+                   | Div_fst d => tp_soundness_div [ |- T] d
+                   | Div_snd e d =>
+                     tp_soundness_div [ |- S] d
+                  )
+;
+}%
+%Sum type of failing and diverging derivations
+inductive WentWrong : [ |- exp] -> ctype =
+| Failed : [ |- fail M] -> WentWrong [ |- M]
+| Diverged : Div [ |- M] -> WentWrong [ |- M]
+;
+%{
+rec doesnt_go_wrong : [ |- oft M T] -> WentWrong [ |- M] -> [ |- empty] =
+fn t => fn s => case s of
+| Failed f => tp_soundness_fail t f
+| Diverged d => tp_soundness_div t d
+;
+}%
+
+inductive EvalWith : [ |- exp] -> ctype =
+| EvW : {V:[ |- exp]}[ |- eval M V] -> EvalWith [ |- M]
+;
+
+rec first : Div [ |- M] -> Div [ |- app M N] = 
+fn m => observe Div_app => ? % Div_fst m
+;
+
+rec lemma : {M : [|- exp]} {N : [|-exp]} Div [ |- M] -> WentWrong [ |- app M N] =
+mlam M => mlam N => fn d => Diverged (observe Div_app => ?)
+;
+
+rec wentWrongAppFst : (WentWrong [ |- app M N] -> [ |- empty]) 
+                      -> WentWrong [ |- M] -> [ |- empty] =
+fn f => fn d => case d of
+| Failed [ |- F] => f (Failed [ |- fail_app1 F])
+| Diverged d' => % d' : Div [ |- M]
+f (Diverged (observe Div_app => Div_fst d'))
+% first d'))
+% (observe Div_app %[|- M] [|- N'] % M'/M, N'/N     
+%    => ?)) % Div_fst [|- _] [|- _] d'))
+;
+
+
+%{
+rec wentWrongAppSnd : {M:[|- exp]}{M':[x:exp |- exp]}{N:[|- exp]}[ |- eval M (lam \x.M' x)] -> (WentWrong [ |- app M N] -> [ |- empty]) ->
+                      WentWrong [ |- N] -> [ |- empty] =
+mlam M => mlam M' => mlam N => fn e => fn f => fn d => let [ |- E] = e in case d of
+| Failed [ |- F] => f (Failed [ |- fail_app2 E F])
+| Diverged [ |- N] d' => f (Diverged [ |- app M N] (observe Div_app [|- L] [|- L'] =>
+                      Div_snd [|- L] [x:exp |- M' x] [|- L'] [ |- E] d'))
+;
+}%
+%{
+f (Diverged [ |- ] 
+ (observe Div_app [|- M'] [|- N']  % 
+    => Div_fst d'))
+}%
+%{
+rec wentWrongAppSnd : [ |- eval M (lam M')] -> (WentWrong [ |- app M N] -> [ |- empty]) ->
+                      WentWrong [ |- N] -> [ |- empty] =
+fn e => fn f => fn d => let [ |- E] = e in case d of
+| Failed [ |- F] => f (Failed [ |- fail_app2 E F])
+| Diverged d' => f (Diverged (observe Div_app => Div_snd [ |- E] d'))
+;
+
+rec wentWrongAppEval : [ |- eval M (lam (\x.M' x))] -> [ |- eval N V] ->
+                       (WentWrong [ |- app M N] -> [ |- empty]) -> WentWrong [ |- M' V] -> [ |- empty] =
+fn e => fn e' => fn f => fn d => case d of
+| Diverged d' => f (Diverged (observe Div_app => Eval_div e e' d'))
+| Failed [ |- F] => let ([ |- E], [ |- E']) = (e, e') in f (Failed [ |- fail_eval E E' F])
+;
+
+% Most likely cannot be proven
+rec noWrongEval : {M : [ |- exp]}(WentWrong [ |- M] -> [ |- empty]) -> EvalWith [ |- M] =
+mlam M => fn f => case [ |- M] of
+| [ |- c] => EvW [ |- c] [ |- ev_c]
+| [ |- lam N] => EvW [ |- lam N] [ |- ev_lam]
+| [ |- app c N] => impossible f (Failed [ |- fail_capp]) in []
+| [ |- app (lam (\x.M' x)) N] =>
+  let EvW [ |- P] [ |- F] = noWrongEval [ |- N] (wentWrongAppSnd [ |- ev_lam] f) in
+  % Not smaller recursive call!
+  let EvW [ |- Q] [ |- G] = noWrongEval [ |- M' P] (wentWrongAppEval [ |- ev_lam] [ |- F] f) in
+  EvW [ |- Q] [ |- ev_app ev_lam F G]
+| [ |- app (app M1 M2) N] =>
+  let EvW [ |- lam (\x.M' x)] [ |- E] = noWrongEval [ |- app M1 M2] (wentWrongAppFst f) in
+  let EvW [ |- Q] [ |- F] = noWrongEval [ |- N] (wentWrongAppSnd [ |- E] f) in
+  % Not smaller recursive call!
+  let EvW [ |- R] [ |- G] = noWrongEval [ |- M' Q] (wentWrongAppEval [ |- E] [ |- F] f) in
+  EvW [ |- R] [ |- ev_app E F G]
+;
+
+rec typedExpEval : [ |- oft M T] -> EvalWith [ |- M] =
+fn t => noWrongEval [ |- _] (doesnt_go_wrong t)
+;
+}%

@@ -1,0 +1,33 @@
+% http://abella-prover.org/examples/process-calculi/pi-calculus/finite-pic-cong.html
+
+rec sim_cong_null : Sim [ |- null] [ |- null] =
+observe Simf => mlam A => mlam P => fn t => MakeTransSimf t (sim_refl [])
+    | SimDn => mlam X => mlam M => fn t => MakeTransSimDn [x:n |-  M x] t (mlam W => sim_refl [])
+    | SimUp => mlam X => mlam M => fn t => MakeTransSimUp [x:n |-  M x] t (mlam W => sim_refl [])
+;
+
+rec sim_cong_taup : {g:ctx} Sim [g |- P..] [g |- Q..] -> Sim [g |- taup (P..)] [g |- taup (Q..)] =
+mlam g => fn s =>
+observe Simf => mlam A => mlam P => fn t =>
+      let [g |- taua] = t in MakeTransSimf [g |- taua] s
+;
+
+%{rec sim_cong_plus : (g:ctx) Sim [g |- P..] [g |- Q..] -> Sim [g |- R..] [g |- S..] ->
+                    Sim [g |- plus (P..) (R..)] [g |- plus (Q..) (S..)] =
+fn s1 => fn s2 =>
+observe Simf => mlam A => mlam P => fn t =>
+        (case t of
+         | [g |- slf (T..)] =>
+           let MakeTransSimf [g |- T'..] s = Simf s1 [ |- A] [g |- P..] [g |- T..] in
+           MakeTransSimf [g |- slf (T'..)] s
+         | [g |- srf (T..)] =>
+           let MakeTransSimf [g |- T'..] s = Simf s2 [ |- A] [g |- P..] [g |- T..] in
+           MakeTransSimf [g |- srf (T'..)] s
+        )
+    | Simb => mlam X => mlam M => fn t =>
+         (case t of
+          | [g |- slb (T..)] => ?
+          | [g |- srb (T..)] => ?
+         )
+;
+%}

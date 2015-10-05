@@ -11,13 +11,11 @@ coinductive Stream : ctype =
 let a = [ |- s (s z)];
 
 rec cycleNats : [ |- nat] -> Stream =
-fn e => cofun Hd => e
+fn e => observe Hd => e
            | Tl => (case e of
                    | [ |- z] => cycleNats a
                    | [ |- s N] => cycleNats [ |- N])
 ;
 
-
 let b = cycleNats [ |- s z];
-let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));
-
+% let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));

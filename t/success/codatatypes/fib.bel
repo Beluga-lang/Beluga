@@ -15,21 +15,20 @@ fn e => fn f => case e of
 ;
 
 rec zipwith : Stream -> Stream -> Stream =
-fn e => fn f => cofun Hd => plus (Hd e) (Hd f)
+fn e => fn f => observe Hd => plus (Hd e) (Hd f)
                   | Tl => zipwith (Tl e) (Tl f)
 ;
 
 rec fib : Stream =
-cofun Hd => [ |- z]
+observe Hd => [ |- z]
     | Tl Hd => [ |- s z]
     | Tl Tl => zipwith fib (Tl fib)
 ;
 
-
-let a = Hd fib;
+%{ let a = Hd fib;
 let b = Tl fib;
 let c = Tl b;
 let d = Hd b;
 let e = Tl c;
 let f = Hd e;
-
+}%

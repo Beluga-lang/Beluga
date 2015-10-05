@@ -1,0 +1,165 @@
+% Version of bisimulation based on the Abella implementation
+% http://abella-prover.org/examples/process-calculi/pi-calculus/pic.html
+
+% Definition of simulation and bisimulation relations and proofs that
+% they are a preorder and an equivalence relation, respectively.
+
+schema ctx = n;
+
+coinductive Sim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| Simf : Sim [g |- P] [g |- Q]
+	 -> ({A : [ |- a]} {P' : [g |- p]} [g |- one P A[] P']
+            -> ExistsTransSim [g |- P'] [g |- Q] [ |- A])
+| SimDn : Sim [g |- P] [g |- Q]
+	 -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb P (dn X[]) (\x. M)]
+          -> ExistsTransSimDn [g,x:n |-  M] [g,x:n |-  Q[..]] [ |- X])
+| SimUp : Sim [g |- P] [g |- Q]
+         -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb P (up X[]) (\x. M)]
+          -> ExistsTransSimUp [g,x:n |-  M] [g,x:n |-  Q[..]] [ |- X])
+
+
+and inductive ExistsTransSim : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
+| MakeTransSimf  : [g |- one Q A[] Q'] -> Sim [g |- P'] [g |- Q']
+                  -> ExistsTransSim [g |- P'] [g |- Q] [ |- A]
+
+and inductive ExistsTransSimDn : (g:ctx) [g |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransSimDn : {M : [g,x:n |-  p]}[g |- oneb Q (dn X[]) (\x.N)] ->
+		  ({W : [ |- n]} Sim [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransSimDn [g,x:n |-  M] [g,x:n |-  Q[..]] [ |- X]
+
+and inductive ExistsTransSimUp : (g:ctx) [g |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransSimUp : {M : [g,x:n |-  p]}[g |- oneb Q (up X[]) (\x.N)] ->
+		  ({W : [ |- n]} (Sim [g |- M[..,W[]] ] [g |- N[..,W[]] ]))
+                  -> ExistsTransSimUp [g,x:n |-  M] [g,x:n |-  Q[..]] [ |- X]
+;
+
+rec sim_refl : {g:ctx} Sim [g |- P] [g |- P] =
+mlam g => observe Simf => mlam A => mlam P' => fn t => MakeTransSimf t (sim_refl [g])
+             | SimDn => mlam X => mlam M  => fn t =>
+	       MakeTransSimDn [g,x:n |-  M] t (mlam W => sim_refl [g])
+             | SimUp => mlam X => mlam M  => fn t =>
+	       MakeTransSimUp [g,x:n |-  M] t (mlam W => sim_refl [g])
+;
+
+rec sim_trans : {g:ctx} Sim [g |- P] [g |- Q] -> Sim [g |- Q] [g |- R] ->
+		Sim [g |- P] [g |- R] =
+mlam g => fn s1 => fn s2 =>
+observe Simf => mlam A => mlam P' => fn t =>
+        let MakeTransSimf [g |- T1] s3 = Simf s1 [ |- A] [g |- P'] t in
+        let MakeTransSimf [g |- T2] s4 = Simf s2 [ |- A] [g |- _] [g |- T1] in
+        MakeTransSimf [g |- T2] (sim_trans [g] s3 s4)
+    | SimDn => mlam X => mlam M => fn t =>
+        let MakeTransSimDn [g,x:n |-  M] [g |- T1] s3
+	    = SimDn s1 [ |- X] [g,x:n |-  M] t in
+        let MakeTransSimDn [g,x:n |-  _] [g |- T2] s4
+	    = SimDn s2 [ |- X] [g,x:n |-  _] [g |- T1] in
+        MakeTransSimDn [g,x:n |-  _] [g |- T2]
+		      (mlam W => sim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+    | SimUp => mlam X => mlam M => fn t =>
+        let MakeTransSimUp [g,x:n |-  M] [g |- T1] s3
+	    = SimUp s1 [ |- X] [g,x:n |-  M] t in
+        let MakeTransSimUp [g,x:n |-  _] [g |- T2] s4
+	    = SimUp s2 [ |- X] [g,x:n |-  _] [g |- T1] in
+        MakeTransSimUp [g,x:n |-  _] [g |- T2]
+		      (mlam W => sim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+;
+
+% Coinductive definition of bisimulation
+coinductive Bisim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| Leftf  : Bisim [g |- P] [g |- Q]
+	   -> ({A : [ |- a]} {P' : [g |- p]} [g |- one P A[] P']
+              -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A])
+| LeftDn  : Bisim [g |- P] [g |- Q]
+	   -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb P (dn X[]) (\x. M)]
+              -> ExistsTransBisimDn [g,x:n |-  M] [g,x:n |-  Q] [ |- X])
+| LeftUp  : Bisim [g |- P] [g |- Q]
+	   -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb P (up X[]) (\x. M)]
+              -> ExistsTransBisimUp [g,x:n |-  M] [g,x:n |-  Q] [ |- X])
+| Rightf : Bisim [g |- P] [g |- Q]
+	   -> ({A : [ |- a]} {Q' : [g |- p]} [g |- one Q A[] Q']
+              -> ExistsTransBisimf [g |- Q'] [g |- P] [ |- A])
+| RightDn : Bisim [g |- P] [g |- Q]
+	   -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb Q (dn X[]) (\x. M)]
+              -> ExistsTransBisimDn [g,x:n |-  M] [g,x:n |-  P] [ |- X])
+| RightUp : Bisim [g |- P] [g |- Q]
+	   -> ({X : [ |- n]} {M : [g, x:n |-  p]} [g |- oneb Q (up X) (\x. M)]
+              -> ExistsTransBisimUp [g,x:n |-  M] [g,x:n |-  P] [ |- X])
+
+and inductive ExistsTransBisimf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
+| MakeTransOne  : [g |- one Q A[] Q'] -> Bisim [g |- P'] [g |- Q']
+                  -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A]
+
+and inductive ExistsTransBisimDn : (g : ctx) [g |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransOneDn : {M : [g,x:n |-  p]}[g |- oneb Q (dn X[]) \x.N] ->
+		  ({W : [ |- n]} Bisim [g |- M[..,W]] [g |- N[..,W]])
+                  -> ExistsTransBisimDn [g,x:n |-  M] [g,x:n |-  Q] [ |- X]
+
+and inductive ExistsTransBisimUp : (g : ctx) [g |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransOneUp : {M : [g,x:n |-  p]}[g |- oneb Q (up X[]) \x.N] ->
+		  ({W : [ |- n]} Bisim [g |- M[..,W]] [g |- N[..,W]])
+                  -> ExistsTransBisimUp [g,x:n |-  M] [g,x:n |-  Q] [ |- X]
+;
+
+rec bisim_refl : {g:ctx} Bisim [g |- P] [g |- P] =
+mlam g => observe Leftf   => mlam A => mlam P' => fn t => MakeTransOne t (bisim_refl [g])
+             | LeftDn  => mlam X => mlam M  => fn t =>
+	       MakeTransOneDn [g,x:n |-  M] t (mlam W => bisim_refl [g])
+             | LeftUp  => mlam X => mlam M  => fn t =>
+	       MakeTransOneUp [g,x:n |-  M] t (mlam W => bisim_refl [g])
+             | Rightf  => mlam A => mlam P' => fn t => MakeTransOne t (bisim_refl [g])
+             | RightDn => mlam X => mlam M  => fn t =>
+	       MakeTransOneDn [g,x:n |-  M] t (mlam W => bisim_refl [g])
+             | RightUp => mlam X => mlam M  => fn t =>
+	       MakeTransOneUp [g,x:n |-  M] t (mlam W => bisim_refl [g])
+;
+
+rec bisim_trans : {g:ctx} Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- R] ->
+		Bisim [g |- P] [g |- R] =
+mlam g => fn s1 => fn s2 =>
+observe Leftf => mlam A => mlam P' => fn t =>
+      let MakeTransOne [g |- T1] s3 = Leftf s1 [ |- A] [g |- P'] t in
+      let MakeTransOne [g |- T2] s4 = Leftf s2 [ |- A] [g |- _] [g |- T1] in
+      MakeTransOne [g |- T2] (bisim_trans [g] s3 s4)
+    | LeftDn => mlam X => mlam M => fn t =>
+      let MakeTransOneDn [g,x:n |-  M] [g |- T1] s3
+          = LeftDn s1 [ |- X] [g,x:n |-  M] t in
+      let MakeTransOneDn [g,x:n |-  _] [g |- T2] s4
+	  = LeftDn s2 [ |- X] [g,x:n |-  _] [g |- T1] in
+      MakeTransOneDn [g,x:n |-  _] [g |- T2]
+		     (mlam W => bisim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+    | LeftUp => mlam X => mlam M => fn t =>
+      let MakeTransOneUp [g,x:n |-  M] [g |- T1] s3
+	  = LeftUp s1 [ |- X] [g,x:n |-  M] t in
+      let MakeTransOneUp [g,x:n |-  _] [g |- T2] s4
+	  = LeftUp s2 [ |- X] [g,x:n |-  _] [g |- T1] in
+      MakeTransOneUp [g,x:n |-  _] [g |- T2]
+		     (mlam W => bisim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+    | Rightf => mlam A => mlam P' => fn t =>
+      let MakeTransOne [g |- T1] s3 = Rightf s2 [ |- A] [g |- P'] t in
+      let MakeTransOne [g |- T2] s4 = Rightf s1 [ |- A] [g |- _] [g |- T1] in
+      MakeTransOne [g |- T2] (bisim_trans [g] s3 s4)
+    | RightDn => mlam X => mlam M => fn t =>
+      let MakeTransOneDn [g,x:n |-  M] [g |- T1] s3
+          = RightDn s2 [ |- X] [g,x:n |-  M] t in
+      let MakeTransOneDn [g,x:n |-  _] [g |- T2] s4
+	  = RightDn s1 [ |- X] [g,x:n |-  _] [g |- T1] in
+      MakeTransOneDn [g,x:n |-  _] [g |- T2]
+		    (mlam W => bisim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+    | RightUp => mlam X => mlam M => fn t =>
+      let MakeTransOneUp [g,x:n |-  M] [g |- T1] s3
+          = RightUp s2 [ |- X] [g,x:n |-  M] t in
+      let MakeTransOneUp [g,x:n |-  _] [g |- T2] s4
+	  = RightUp s1 [ |- X] [g,x:n |-  _] [g |- T1] in
+      MakeTransOneUp [g,x:n |-  _] [g |- T2]
+		    (mlam W => bisim_trans [g] (s3 [ |- W]) (s4 [ |- W]))
+;
+
+rec bisim_sym : {g:ctx} Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- P] =
+mlam g => fn s =>
+observe Leftf   => mlam A => mlam R => fn t => Rightf  s [ |- A] [g |- R] t
+    | LeftDn  => mlam X => mlam M => fn t => RightDn s [ |- X] [g,x:n |-  M] t
+    | LeftUp  => mlam X => mlam M => fn t => RightUp s [ |- X] [g,x:n |-  M] t
+    | Rightf  => mlam A => mlam R => fn t => Leftf   s [ |- A] [g |- R] t
+    | RightDn => mlam X => mlam M => fn t => LeftDn  s [ |- X] [g,x:n |-  M] t
+    | RightUp => mlam X => mlam M => fn t => LeftUp  s [ |- X] [g,x:n |-  M] t
+;

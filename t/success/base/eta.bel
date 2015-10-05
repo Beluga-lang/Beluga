@@ -49,7 +49,8 @@ FN g => fn t => case t of
 
 }%
 
-rec foo : [ |- term] -> [ |- term] =
-fn t => case t of
- | [ |- lam E] => t
-;
+% Higher order meta variables not supported
+% rec foo : [ |- term] -> [ |- term] =
+% fn t => case t of
+%  | [ |- lam E] => t
+% ;

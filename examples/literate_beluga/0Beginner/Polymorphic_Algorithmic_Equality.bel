@@ -106,7 +106,7 @@ mlam gamma => mlam T => case [gamma |- T] of
 | [gamma |- arr T S] =>
   let [gamma |- D1] = reftp [gamma] [gamma |- T ] in
   let [gamma |- D2] = reftp [gamma] [gamma |- S ] in
-    [gamma |- at_arr (D1) D2]
+    [gamma |- at_arr D1 D2]
 ;
 %{{In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[gamma |- T]</code> using pattern matching. There are three possible cases for <code>T</code>:
 <ul>

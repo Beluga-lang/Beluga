@@ -18,21 +18,21 @@ rec copy : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
  (case e of
   | [g |- z]     => [g |- z]
-  | [g |- suc (U[..])] => let [g |- V[..]] = copy [g] [g |- U[..]] in [g |- suc (V[..] )]
-  | [g |- (#p[..])] => [g |- (#p[..])]
+  | [g |- suc U] => let [g |- V] = copy [g] [g |- U] in [g |- suc (V )]
+  | [g |- (#p)] => [g |- (#p)]
 
   | [g |- lam (\ x. ( U))] =>
 
-    let [g,x : term |-  (V)] = copy [g, x:term]  [g,x |- (U)]  in
+    let [g,x : term |-  V] = copy [g, x:term]  [g,x |- U]  in
 
       [g |- lam (\x. V)]
 
-  | [g |- app (U[..]) (V[..])]  =>
+  | [g |- app U V]  =>
 
-    let [g |- (U'[..])]  = copy [g] [g |- (U[..])] in
-    let [g |- (V'[..])]  = copy [g] [g |- (V[..])] in
+    let [g |- (U')]  = copy [g] [g |- U] in
+    let [g |- (V')]  = copy [g] [g |- V] in
 
-       [g |- app (U'[..]) (V'[..])]
+       [g |- app (U') (V')]
 
 );
 

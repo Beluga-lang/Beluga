@@ -4,46 +4,46 @@
 
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 
-rec cmpcs: (g:c_ctx)[g |- can A (D[..]) ] -> [g |- solve A ] =
+rec cmpcs: (g:c_ctx)[g |- can A D ] -> [g |- solve A ] =
 % / total cn (cmpcs g a d cn)/
 fn cn => case cn of
-|[g |- can_andi (CN2[..]) (CN1[..])] =>
-  let [g |- S1] = cmpcs [g |- CN1[..]] in
-  let [g |- S2] = cmpcs [g |- CN2[..]] in
-     [g |- s_and (S2[..]) (S1[..])]
+|[g |- can_andi (CN2) (CN1)] =>
+  let [g |- S1] = cmpcs [g |- CN1] in
+  let [g |- S2] = cmpcs [g |- CN2] in
+     [g |- s_and S2 S1]
 
 |[g |- can_truei] =>  [g |- s_true]
 
-| [g |- can_atm (AT1[..])] => 
-  let ([g |- AT1[..]] : [g |- atm (D[..])]) = [g |- AT1[..]] in
-  let [g,q:p,u:focus (A[..]) q |-  I1] = cmpai [g] [g |- D[..]] [g |- AT1[..] ] in
+| [g |- can_atm (AT1)] => 
+  let ([g |- AT1] : [g |- atm D]) = [g |- AT1] in
+  let [g,q:p,u:focus A q |-  I1] = cmpai [g] [g |- D] [g |- AT1 ] in
     [g |- I1[..,_,(i_atom)]]
 
-and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm (E[..])] ->
+and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm E] ->
 	       [g, q:p, u:focus B[] q  |-  solve (atom q)] =
 % / total at (cmpai g a at)/
-mlam g, E => fn at => case [g |- E[..] ] of
-  | [g |- #p.2[..]] =>
+mlam g, E => fn at => case [g |- E ] of
+  | [g |- #p.2] =>
      [g,q,u |-  s_atom u (#p.1[..])]
-  | [g |- andel (D1[..] )] =>
-   let [g |- atm_andel (CN1[..] )] = at in
-   let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- CN1[..]] in
+  | [g |- andel (D1 )] =>
+   let [g |- atm_andel (CN1 )] = at in
+   let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1 ] [g |- CN1] in
       [g,q,i |-  I1[..,q,(i_andl i)]]
 
-  | [g |- ander (D1[..] )] =>
-    let [g |- atm_ander (CN1[..] )] = at in
-    let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- CN1[..]] in
+  | [g |- ander (D1 )] =>
+    let [g |- atm_ander (CN1 )] = at in
+    let [g,q:p, i: focus (& B1 B2)  q |-  I1] = cmpai [g] [g |- D1 ] [g |- CN1] in
       [g,q,i |-  I1[..,q,(i_andr i)]]
 
-  | [g |- impe (D1[..]) (D2[..])] =>
-    let [g |- atm_impe (CN2[..]) (AT1[..])] = at in
-    let [g,q:p, u:focus A q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- AT1[..]] in
-    let [g |- S2[..]] = cmpcs [g |- CN2[..]] in
+  | [g |- impe D1 D2] =>
+    let [g |- atm_impe (CN2) (AT1)] = at in
+    let [g,q:p, u:focus A q |-  I1] = cmpai [g] [g |- D1 ] [g |- AT1] in
+    let [g |- S2] = cmpcs [g |- CN2] in
       [g,q,i |-  I1[..,q,(i_imp (S2[..]) i )]]
 
-  | [g |- foralle (D1[..]) T[]] =>
-   let [g |- atm_foralle (AT1[..])] = at in
-   let [g,q:p, i: focus A q |-  I1] = cmpai [g] [g |- D1[..] ] [g |- AT1[..]] in
+  | [g |- foralle D1 T[]] =>
+   let [g |- atm_foralle (AT1)] = at in
+   let [g,q:p, i: focus A q |-  I1] = cmpai [g] [g |- D1 ] [g |- AT1] in
       [g,q,i |-  I1[..,q,(i_forall T[] i)]]
 
 ;

@@ -9,7 +9,7 @@ rec identity'' :  [ |- !^ (imp (atom P ) (atom P))] =
    [ |- impI^ (\u. close u)] ;
 
 
-rec identity' : {g:ctx}{P: [g |- atm]}  [g |- !^ (imp (atom (P[..])) (atom (P[..])))] =
+rec identity' : {g:ctx}{P: [g |- atm]}  [g |- !^ (imp (atom P) (atom P))] =
 mlam g =>  mlam Q =>
    [g |- impI^ (\u. close u)] ;
 

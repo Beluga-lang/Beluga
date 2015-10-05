@@ -42,7 +42,7 @@ inductive Ctx_xaR : {phi:xG} {psi: xaG} {#S:[psi |- phi]} ctype =
 %{{The first-class substitution variable <code>#S</code> has domain <code>phi</code> and range <code>psi</code>. If <code>#S</code> relates contexts <code>phi</code> and <code>psi</code>, then the substitution <code>#S, b.1</code> relates <code>phi, x:tm</code> to <code>psi, b:block (x:tm,u:aeq x x)</code> via constructor <code>Cons_xaR</code>.}}%
 
 inductive EqV : {phi:xG}{psi:xaG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
-| EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S[..],b.1 ]
+| EqV_v: EqV [phi, x:tm] [psi, b: block (x:tm,u:aeq x x)] [ psi, b:block (x:tm, u:aeq x x) |- #S,b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:aeq x x) |- b.1 ]
 
@@ -191,12 +191,12 @@ Eq [phi] [psi] [ psi |- #S ] [phi |-  L] [psi |-  L'] ->
 | [psi |-  #p.2] =>
   let [psi |-  #q.2 ] = d2 in
   let Eq_v m' = m in
-  let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S[..]]
+  let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- #S]
                 [phi |-  #r] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]] ) = m' in
   ctx_member [phi |-  #r] cr m'
 
 | [psi |-  ae_a D1 D2] =>
-  let [psi |-  ae_a (F1) (F2)] = d2 in
+  let [psi |-  ae_a F1 F2] = d2 in
   let Eq_a m1 m2 = m in
   let Eq_a n1 n2 = n in
   let Eq_a l1 l2 = l in
@@ -253,7 +253,7 @@ inductive Ctx_adR : {phi:xaG} {psi: xdG} ctype =
 %{{ Equality in addition to properties about equality, such as deterministic and existence. These properties are all encoded relationally, because we do not support functions in computation-level types. If we were to support functions in computation-level types, these proofs and some of these relations would go away.}}%
 
 inductive EqV' : {phi:xG}{psi:xdG}{#S:[psi |- phi]} [phi |- tm] -> [psi |- tm] -> ctype =
-| EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S[..],b.1 ]
+| EqV'_v: EqV' [phi, x:tm] [psi, b: block (x:tm,u:deq x x)] [ psi, b:block (x:tm, u:deq x x) |- #S,b.1 ]
          [phi, x:tm |- x]
          [psi, b:block (x:tm, u:deq x x) |- b.1 ]
 
@@ -318,7 +318,7 @@ case [phi |-  Ld] of
 | [phi |-  app M N ] =>
   let ExistsEq' [gamma |- L1] eq1 = existsEq' cr_xd [phi |- M] in
   let ExistsEq' [gamma |- L2] eq2 = existsEq' cr_xd [phi |- N] in
-  ExistsEq' [gamma |-  app (L1) (L2)] (Eq'_a eq1 eq2)
+  ExistsEq' [gamma |-  app L1 L2] (Eq'_a eq1 eq2)
 
 | [phi |-  lam \x. M] =>
   let ExistsEq' [gamma, x:tm |- L] eq =

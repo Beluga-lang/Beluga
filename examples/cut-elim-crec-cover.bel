@@ -30,16 +30,16 @@ assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
 
 % (assum A D (\h. E h))
 %  {A:o} conc A -> (hyp A -> conc C) -> conc C.
-rec ca : (g:ctx) [g |- ass (A[..]) (C[..])]  -> [g |- conc (C[..])] =
+rec ca : (g:ctx) [g |- ass A C]  -> [g |- conc C] =
 % / total e (ca _ _ _ e ) /
 fn e => case e of
 | [g |- assume A             (axiom H)      (\h.E)]                            => [g |- E[..,H]]
-| [g |- assume A              D             (\h. axiom h)]                     => [g |- D[..]]
+| [g |- assume A              D             (\h. axiom h)]                     => [g |- D]
 | [g |- assume (imp A B) (impr \h.D)  (\h. impl E1 (\h2.E2[..,h,h2]) h)] =>
   let [g |- E1'] = ca [g |- assume (imp A B) (impr (\h.D )) (\h.E1)]    in
   let [g |- D2'] = ca [g |- assume A              E1'          (\h.D)]    in
-  let [g, h2: hyp (B[..]) |-  E2'] =
-                  ca [g,h2: hyp (B[..]) |-  assume (imp A[..] B[..]) (impr (\h.D[..,h])) (\h.E2[..,h,h2])] in
+  let [g, h2: hyp B |-  E2'] =
+                  ca [g,h2: hyp B |-  assume (imp A[..] B[..]) (impr (\h.D[..,h])) (\h.E2[..,h,h2])] in
     ca [g |- assume B  D2' (\h2. E2')]
 
 | [g |- assume (not A) (notr (\p.\h2. D[..,p,h2])) (\h. notl E1 h)]  =>
@@ -64,13 +64,13 @@ fn e => case e of
     [g |- foralll T (\h1. D1') H]
 
 %%%%
-| [g |- assume A D (\h. axiom (H[..]))] => [g |- axiom (H[..])]
+| [g |- assume A D (\h. axiom (H[..]))] => [g |- axiom H]
 | [g |- assume A D (\h. impr (\h1. E2[..,h1,h]))] =>
   let [g, h1:hyp _ |-  E2'] = ca [g,h1:hyp _ |-  assume A[..] D[..] (\h. E2[..,h1,h])] in
     [g |- impr \h1. E2']
 
 | [g |- assume A D (\h. impl E1 (\h2. E2) H[..])] =>
-  let [g |- E1'[..]] = ca [g |- assume A D (\h. E1)] in
+  let [g |- E1'] = ca [g |- assume A D (\h. E1)] in
   let [g, h2: hyp _  |-  E2'] = ca [g, h2: hyp _ |-  assume A[..] D[..] (\h. E2[..,h,h2])] in
     [g |- impl E1' (\h2. E2') H]
 
@@ -79,7 +79,7 @@ fn e => case e of
     [g |- notr \p.\h1. E1'[..,p,h1]]
 
 | [g |- assume A D (\h.notl E1 (H[..]))] =>
-  let [g |- E1'[..]] = ca [g |- assume A D (\h.E1)] in
+  let [g |- E1'] = ca [g |- assume A D (\h.E1)] in
     [g |- notl E1' H]
 
 | [g |- assume A D (\h. truer)] => [g |- truer]

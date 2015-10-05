@@ -83,7 +83,7 @@ fn e => case e of
    (let [g |- S..] = norm [g |- N..] in [g |- neut (app' (R..) (S..))]))
 }%
 %{
-| [g |- #p.1[..]] => [g |- neut(#p.2[..])] % #p means variable p from the context
+| [g |- #p.1] => [g |- neut(#p.2)] % #p means variable p from the context
 
 | {M : [g, x:exp T2 |-  exp T1]}
   [g |- lam \x.M..,x] =>

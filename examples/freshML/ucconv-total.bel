@@ -50,14 +50,14 @@ fn l => case l of
 | Nil  => Nil
 | Cons [g,x:term |- x] l => remove l
 | Cons [g,x:term |- #p[..]] l =>
-    Cons [g |- #p[..]] (remove l)
+    Cons [g |- #p] (remove l)
 ;
 
 
 rec fvar:(g:ctx) [g |- term] -> Fvs [g] =
 / total e (fvar g e)/
 fn e => case e of
-| [g |- #p[..]] => Cons [g |- #p[..]] Nil
+| [g |- #p] => Cons [g |- #p] Nil
 | [g |- elam \x.U] =>
    remove (fvar [g,x:term |- U])
 | [g |- eapp U V] =>
@@ -70,7 +70,7 @@ fn e => case e of
 
 
 % makeproj return the nth project of pair y
-% makeproj n = tfst([..]. (tfst y))
+% makeproj n = tfst(. (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
 / total n (makeproj' n ) / 
 fn n => case n of
@@ -97,11 +97,11 @@ rec b_map:(g:ctx)Fvs [g] ->({#p:[g,x:term |- term]} [xenv:target |-  target]) ->
 fn l => fn map => fn n => case l of
 | Nil => 
   let ( l : Fvs [g]) = l in
-    (mlam #p => case [g,x:term |- #p[..]]  of
+    (mlam #p => case [g,x:term |- #p]  of
 	       |[g,x:term |- x]     => [xenv:target |- tsnd xenv]
 	       |[g,x:term |- #p] => map [g,x:term |-  #p]
 	    )
-| Cons [g |- #p[..]] l =>
+| Cons [g |- #p] l =>
 let [ |- N] = n in
  (mlam #q => case ([g,x:term |- #q], [g,x:term |- #p[..]]) of 
                 | ([g,x:term |- #v], [g,x:term |- #v]) => makeproj [ |- N]
@@ -114,10 +114,10 @@ let [ |- N] = n in
 % Extend the mapping with id function, used for the local variable in lam and let.
 rec e_map : {g:ctx}{h:tctx} ({#p:[g |- term]} [h |- target])  ->  {#q:[g,x:term |-  term]} [h,x:target |-  target] =
 / total e' (e_map g h map e') /
-mlam g, h => fn map => mlam #q => case [g,x:term |- #q[..]] of
+mlam g, h => fn map => mlam #q => case [g,x:term |- #q] of
    | [g,x:term |-  x] => [h,x:target |-  x]
    | [g,x:term |-  #q[..]] =>
-     let [h |- F[..]] = map [g |- #q] in
+     let [h |- F] = map [g |- #q] in
     	 [h,x:target |- F[..]]
 ;
 
@@ -127,10 +127,10 @@ rec b_env:(g:ctx){h:tctx}({#p:[g |- term]} [h |- target]) -> Fvs [g] -> [h |- ta
 / total fvar (b_env g h map fvar)/
 mlam h => fn map => fn fvar => case fvar of
 | Nil => [h |- tunit]
-| Cons [g |- #p[..]] l =>
-  let [h |- Ta'[..]] = b_env [h] map l in
-  let [h |- E' [..]] = map [g |- #p[..]] in
-  [h |- tpair (E'[..]) (Ta'[..])]
+| Cons [g |- #p] l =>
+  let [h |- Ta'] = b_env [h] map l in
+  let [h |- E' ] = map [g |- #p] in
+  [h |- tpair (E') (Ta')]
 ;
 
 
@@ -140,10 +140,10 @@ mlam h => fn map => fn fvar => case fvar of
 rec convert:(g:ctx){h:tctx} ({#p:[g |- term]} [h |- target]) -> [g |- term] -> [h |- target] =
 mlam h => fn map => fn e => case e of
 | [g |- #p] => map [g |- #p]
-| [g |- eapp (U[..]) (V[..])] =>
-  let [h |- U'[..]] = convert [h] map [g |- U[..]] in
-  let [h |- V'[..]] = convert [h] map [g |- V[..]] in
-  [h |- topen (U'[..])
+| [g |- eapp U V] =>
+  let [h |- U'] = convert [h] map [g |- U] in
+  let [h |- V'] = convert [h] map [g |- V] in
+  [h |- topen (U')
       \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) (V'[..]))]
 
 |[g |- elam \x.U] =>
@@ -152,13 +152,13 @@ mlam h => fn map => fn e => case e of
      convert [xenv:target]
 	     (b_map fvs (mlam #p => [xenv:target |- tunit]) [ |- z])
 	     [g,x:term |-  U] in
-let [h |- T2[..]] = b_env [h] map fvs in
+let [h |- T2] = b_env [h] map fvs in
   [h |- tpack (tpair (tlam \xenv. U'[xenv]) T2)]
 
 |[g |- elet U (\x. V)] =>
- let [h |- U'[..]] = convert [h] map [g |- U[..]] in
+ let [h |- U'] = convert [h] map [g |- U] in
  let [h,x:target |- V'] = convert [h,x:target] (e_map [g] [h] map) [g,x:term |- V] in
- [h |- tlet (U'[..]) (\x.V')]
+ [h |- tlet (U') (\x.V')]
 ;
 
 

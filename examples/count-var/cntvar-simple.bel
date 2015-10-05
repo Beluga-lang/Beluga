@@ -30,9 +30,9 @@ case x of
 % G, x:exp T |-  tt  ==>  0
 % G, x:exp T |-  x  ==>  1
 % G, x:exp T |-  y  ==>  0   y =/= x
-% G, x:exp T |-  s (U) ==> n   if G, x:exp T |- U  ==> n
+% G, x:exp T |-  s U ==> n   if G, x:exp T |- U  ==> n
 % G, x:exp T |-  s U  ==> n   if G, x:exp T |- U  ==> n
-% G, x:exp T |-  letv (U) (\y. V y) ===> n1 + n2
+% G, x:exp T |-  letv U (\y. V y) ===> n1 + n2
 % if  G, x: exp T |-  U ==> n1
 % if  G, y:exp _ , x: exp T |-  V  y ==> n2
 
@@ -41,18 +41,18 @@ rec cntV : {g:expCtx}  [g, x:exp |-  exp] -> [ |- nat] =
 mlam g => fn e => case e of
 % | [g,x:exp  |-  tt]    => [ |- z]
 
-% | [g,x:exp |-  #p[..]]    => [ |- z]
+% | [g,x:exp |-  #p]    => [ |- z]
 | [g,x:exp |-  x]       => [ |- s z]
 % | [g,x:exp  |-  z]      => [ |- z]
- | [g,x:exp |-  (U[..] )]  => [ |- z]
-%   | [g,x:exp |-  s (W)]  => cntV [g]  [g,x |- (W)]
+ | [g,x:exp |-  (U )]  => [ |- z]
+%   | [g,x:exp |-  s W]  => cntV [g]  [g,x |- W]
 
-  | [g,x:exp |-  letv (U1) (\y . U2)] =>
-      plus  (cntV [g]         [g,x |- (U1)])
+  | [g,x:exp |-  letv U1 (\y . U2)] =>
+      plus  (cntV [g]         [g,x |- U1])
             (cntV [g, y:exp]  [g,y,x |- U2[..,x,y]])
 
-%{  | [g,x:exp |-  add (U) (W)]  =>
-     plus (cntV [g] [g,x |- (U)])
-          (cntV [g] [g,x |- (W)])
+%{  | [g,x:exp |-  add U W]  =>
+     plus (cntV [g] [g,x |- U])
+          (cntV [g] [g,x |- W])
 }%
 ;

@@ -148,9 +148,9 @@ let make_dec loc f tau (order,args) =
     | Comp.TypArr   (_ , tau), n -> valid_args tau (n-1)
     | _ -> false
   in
-((* print_string ("Total declaration for " ^
+(print_string ("Total declaration for " ^
 Id.render_name f ^ " : " ^ "total in position " ^ order_to_string order ^
-" in total number of args " ^ string_of_int (List.length args) ^ "\n");*)
+" in total number of args " ^ string_of_int (List.length args) ^ "\n"); 
   if n = 0 || valid_args tau n then
       { name = f;
 	args = args;
@@ -560,13 +560,13 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ((* print_string ("Generate recursive calls from \n"
+    ( print_string ("Generate recursive calls from \n"
 		   ^ "cD = " ^ P.mctxToString cD
-		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); *)
+		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); 
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
        dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
-      (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+       (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
       cIH'
     )
   else
@@ -827,8 +827,8 @@ let annotate loc f tau =
   in
     match get_order_for f with
       Some x -> (let tau' = ann tau x in
-		   (* print_string ("Annotated " ^ P.compTypToString LF.Empty tau' ^
-				 " in pos = " ^ string_of_int x ^ "\n"); *)
+		   print_string ("Annotated " ^ P.compTypToString LF.Empty tau' ^
+				 " in pos = " ^ string_of_int x ^ "\n"); 
 		   tau')
 
       | None -> tau

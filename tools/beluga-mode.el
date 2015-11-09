@@ -167,6 +167,8 @@ alignment and can thus lead to nasty surprises w.r.t layout."
     ("sigma" . ?σ)
     ("#S"    . ?σ)
     ("#S[^]" . ?σ)
+    ("#R"    . ?ρ)
+    ("#R[^]" . ?ρ)
     ("omega" . ?ω)
     ("Sigma" . ?Σ)
     ("->"    . ?→)

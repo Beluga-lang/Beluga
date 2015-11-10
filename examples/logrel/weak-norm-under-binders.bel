@@ -78,6 +78,7 @@ stratified Reduce : (gamma:ctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 % Auxiliary lemmas about using variable substitutions
 
 % Weakening of a variable by a variable substitution results in a variable
+% Variables remain well-typed in the extended context
 rec wknVar : Var [g |- M] -> IsVarSub [g] [h |- #W] -> Var [h |- M[#W]] =
 / total ivs (wknVar _ _ _  _ _ _ ivs) /
 fn iv => fn ivs => case ivs of 
@@ -87,6 +88,7 @@ fn iv => fn ivs => case ivs of
   | IsVar [g',x:tm B[] |-  #q[..]] => wknVar (IsVar [g' |-  #q]) ivs');
 
 % Composing variable substitutions yields a variable substitution
+% Context extensions can be composed.
 rec compose : IsVarSub [g] [h  |- #W] -> IsVarSub [h] [h' |- #W2] -> IsVarSub [g] [h' |- #W[#W2]] =
 / total r1 (compose _ _ _ _ _ r1) /
 fn r1 => fn r2 => case r1 of
@@ -94,6 +96,7 @@ fn r1 => fn r2 => case r1 of
 | Cons ivs' iv => Cons (compose ivs' r2) (wknVar iv r2);
 
 % Variable substitutions can be weakened, and they remain variable substitutions
+% 
 rec wknVarSub : IsVarSub [g] [h |- #S] -> IsVarSub [g] [h,x:tm A[] |- #S[..] ] =
 / total r (wknVarSub _ _ _ _ r) /
 fn r => case r of

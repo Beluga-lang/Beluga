@@ -678,9 +678,9 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 		    (* let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^
 			      " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
 		   let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with
-		     | TypInd _tau -> ( (* print_string ("Encountered Var " ^
-					 P.expSynToString cD cG i ^ " -	INDUCTIVE\n"); *) true)
-		     | _ -> ( (* print_string ("Encountered Var " ^
+		     | TypInd _tau -> ( (*print_string ("Encountered Var " ^
+					 P.expSynToString cD cG i ^ " -	INDUCTIVE\n");*)  true)
+		     | _ -> ((* print_string ("Encountered Var " ^
 					      P.expSynToString cD cG i ^ " -	NON-INDUCTIVE\n");*) false) in
 		   if ind then
 		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)

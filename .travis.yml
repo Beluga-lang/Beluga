@@ -1,6 +1,5 @@
     language: c
     script: bash -ex .travis-ci.sh\
-    sudo: required
     env:
       - OCAML_VERSION=4.02.1    
       - OCAML_VERSION=4.01.0
@@ -14,4 +13,13 @@
       #  on_success: change
       #  on_failure: change
       #  skip_join: true 
-    
+    addons:
+      apt:
+        sources:
+          - avsm
+        packages:
+          - ocaml
+          - ocaml-native-compilers
+          - camlp4-extra
+          - opam
+          - zsh

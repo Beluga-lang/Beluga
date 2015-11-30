@@ -1247,16 +1247,12 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
   | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ P.compTypToString cD_s  tau_s) in
-      begin try
           let Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp _tQ, cPsi_s)) = tau_s  in
 	  let cPsi = inferCtxSchema loc (cD_s, cPsi_s) (cD, psi) in
 	  let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
           let ttau' = (Int.Comp.TypBox(loc', Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
           let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
             (cG', pat', ttau')
-        with
-            _ -> raise (Error (loc, PatternMobj))
-        end
 
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       begin match tau_s with

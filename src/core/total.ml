@@ -150,7 +150,7 @@ let make_dec loc f tau (order,args) =
   in
 ((* print_string ("Total declaration for " ^
 Id.render_name f ^ " : " ^ "total in position " ^ order_to_string order ^
-" in total number of args " ^ string_of_int (List.length args) ^ "\n");*)
+" in total number of args " ^ string_of_int (List.length args) ^ "\n"); *)
   if n = 0 || valid_args tau n then
       { name = f;
 	args = args;
@@ -194,7 +194,7 @@ let satisfies_order cD cG i =
 	   ( (* print_string ("Considering inductive case for " ^
 	      P.expSynToString cD cG i ^  " - comparing to position " ^
 	      string_of_int y ^
-	      " - comparing to relative position " ^ string_of_int (y-k-l) ^ " - Yes\n");*)true)
+	      " - comgparing to relative position " ^ string_of_int (y-k-l) ^ " - Yes\n");*)true)
 	 else
 	   ( (* print_string ("Considering inductive case for " ^
 			   P.expSynToString cD cG i ^ 	 " - comparing to arg. "
@@ -560,13 +560,13 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ((* print_string ("Generate recursive calls from \n"
+    ( (* print_string ("Generate recursive calls from \n"
 		   ^ "cD = " ^ P.mctxToString cD
 		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
        dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
-      (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+       (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
       cIH'
     )
   else

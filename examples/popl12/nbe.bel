@@ -50,7 +50,7 @@ rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g |- neut A[]] -> [h |- neut 
 / total e (weak_neut g h a e r) /
 fn e => fn r => case e of
 | Zero => r
-| Succ [h] e' => let [h |- R[..]] = weak_neut e' r in [h,x:neut _ |-  R[..]]
+| Succ [h] e' => let [h |- R] = weak_neut e' r in [h,x:neut _ |-  R[..]]
 ;
 
 
@@ -74,7 +74,7 @@ rec extend : (g:tctx)(h:ctx)
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
 | TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q[..]])
+| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -84,15 +84,15 @@ rec eval : (g:tctx)(h:ctx)
 / total t (eval g h s t _) / 
 fn t => fn s =>
 case t of
-| [g |- #p[..] ]            : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p[..] ])
+| [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam  (mlam h' => fn s' => fn e =>
          eval [g,x:tm A[] |-  E]
               (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e))
 
-| [g |- app (E1[..]) (E2[..]) ] =>
-  let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1[..]] s in
-    f [h] Zero (eval [g |- E2[..]] s)
+| [g |- app E1 E2 ] =>
+  let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1] s in
+    f [h] Zero (eval [g |- E2] s)
 ;
 
 
@@ -110,14 +110,14 @@ and extendSem : [g |- neut (arr A[] B[])] ->
 =
 / total  (extendSem) /
 fn r => mlam h => fn s => fn e =>
-let [h |- N[..] ] = reify e in
-let [h |- R'[..] ] = weak_neut s r in
-  reflect [ |- _ ] [h |- rapp (R'[..]) (N[..])]
+let [h |- N ] = reify e in
+let [h |- R' ] = weak_neut s r in
+  reflect [ |- _ ] [h |- rapp (R') N]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 / total a (reify g a) /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R[..]] => [g |- embed (R[..])])
+| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>

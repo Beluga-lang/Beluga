@@ -148,9 +148,9 @@ fn a => case a of
 | [g |- algbase (S1[..]) (S2[..]) (R[..])] =>
   let [g |- R'[..]] = algEqRSym [g |- R[..]] in
   [g |- algbase (S2[..]) (S1[..]) (R'[..])]
-| [g |- algarr (N[..])] =>
+| [g |- algarr (\x.\y. N)] =>
   let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
-  [g |- algarr (N'[..])]
+  [g |- algarr (\x.\y. N')]
 ;
 
 % Symmetry of logical equivalence
@@ -279,12 +279,12 @@ fn a1 => fn a2 => case a1 of
   let [g |- refltm] = determinacy' [g |- S2[..]] [g |- S2'[..]] [g |- A1'[..]] [g |- A2'[..]] in
   let [g |- R[..]] = algEqRTrans [g |- A1'[..]] [g |- A2'[..]] in
   [g |- algbase (S1[..]) (S3[..]) (R[..])]
-| [g |- algarr (A1'[..])] => 
-  let [g |- algarr (A2'[..])] = a2 in
+| [g |- algarr (\x.\y. A1')] => 
+  let [g |- algarr (\x.\y. A2')] = a2 in
   let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
       = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[..,b.1,b.2]]
 		    [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
-  [g |- algarr (R[..])]
+  [g |- algarr (\x.\y. R)]
 ;
 
 % Transitivity of logical equivalence

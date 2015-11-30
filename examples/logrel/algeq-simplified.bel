@@ -120,6 +120,7 @@ mlam T => fn s1,s2,e => case [|- T] of
   let [g |- S1''] = mstep_trans s1 [g |- S1'] in
   let [g |- S2''] = mstep_trans s2 [g |- S2'] in
   LogBase [g |- alg_base S1'' S2'' A]
+
 | [|- arr T1 T2] => 
   let LogArr [g |-  M1] [g |-  M2] f = e in 
   let [g |-  S1] = s1 in
@@ -136,6 +137,7 @@ rec algeqNeuSym : (g:tctx)
 / total a (algeqNeuSym g n1 n2 t a) /
 fn a => case a of
 | [g |- #p.2] => [g |- #p.2]
+
 | [g |- alg_app (R) N] => 
   let [g |- R'] = algeqNeuSym [g |- R] in
   let [g |- N'] = algeqSym [g |- N] in
@@ -209,7 +211,7 @@ rec confluence : [g |-  mstep M N] -> [g |-  mstep M P] ->
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl ] => Common s2 [g |-  refl]
-| [g |-  trans1 (S1) (MS1)] =>
+| [g |-  trans1 S1 (MS1)] =>
   case s2 of 
   | [g |-  refl] => Common [g |-  refl] s1
   | [g |-  trans1 S2 MS2] => 
@@ -238,7 +240,7 @@ rec neutral_mstep : (g:tctx)
 / total  (neutral_mstep) /
 fn s => fn e => case s of
 | [g |-  refl] => [g |- refltm]
-| [g |-  trans1 (S1) (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) in [];
+| [g |-  trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) in [];
 
 % Corollary of determinacy
 rec determinacy' : (g:tctx)

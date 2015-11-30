@@ -148,7 +148,7 @@ fn br => fn pt => case br of
    in
        [g |- p_abs (\y.\q.\qt. Q'[..,y,q,qt])]
 
-| [g |- r_beta (\x.\bf. R[..,x,bf])] : [g |- bred (beta (M[..]) (N[..])) (U[..])] =>
+| [g |- r_beta (\x.\bf. R[..,x,bf])] : [g |- bred (beta (\x. M) (N[..])) (U[..])] =>
   let [g |- Qt[..]] = pt in          % [g |- npath (U[..]) (P[..])]
   let [g, b:block (x:tm,  _b: ({u:nf} bred _ u -> bred x u), %% covers
                            _d: ({q:p} path _ q -> path x q))  |-  Q'[..,b.1,b.3]] =

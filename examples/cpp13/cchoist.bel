@@ -287,7 +287,7 @@ mlam Env1, Env2, Env3 => fn prf => fn n => case prf of
 | App_cons p =>
   let [g,l:target (cross S[] L1'[]) |- N]  = n in 
   let [g,x:target S[], l:target L3'[] |- N'[..,x,l]] = 
-     weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , (ccons x l)]] in
+     weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , ccons x l]] in
     [g,l:target (cross S[] L3'[]) |- N'[ .. , cfst l , crst l] ]
 
 ;
@@ -305,7 +305,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
 
 | [g |- #p] => 
   let [h |- M] = lookup sigma [g |-  #p] in
-    Result [h,l:target unit |- M [..] ] [ |- env_nil]
+    Result [h,l:target unit |- M[..]  ] [ |- env_nil]
 
 | [g |- app M N] =>  
   let Result r1 [|- Env1]  = hcc [g |- M ] sigma in

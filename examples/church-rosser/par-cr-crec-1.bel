@@ -5,7 +5,7 @@
 % Substitution lemma for parallel reduction
 
 rec subst : (g:ctx)
-             [g, x:term, u:pred x x |-  pred (M) (M')]
+             [g, x:term, u:pred x x |-  pred M (M')]
           -> [g |- pred (N[..]) (N'[..])]
           -> [g |- pred (M[..] (N[..])) (M'[..] (N'[..]))] =
 fn d => fn e => case d of

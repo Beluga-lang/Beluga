@@ -66,7 +66,7 @@ fn e => case e of
    let [g,k2:value T -> exp |- Q] = cpse [g |- N] in
     [g,k:value (cross S T) -> exp |- P[ .., \p. Q[..,\q. k (kcons p q)]] ]
 
-| {M:[g, x:source S|- source T[..]]}
+| {M:[g, x:source S |- source T[..]]}
       [g |- lam \x. M] =>
    let [g, b:block (x:source S, _t:value S[..]), c:value T[..] -> exp |- P[..,b.2,c] ] =
     cpse [g,b:block (x:source S , _t:value S[..]) |- M[..,b.1 ] ] in

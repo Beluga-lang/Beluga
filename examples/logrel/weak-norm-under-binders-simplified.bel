@@ -19,15 +19,19 @@ LF tm : tp -> type =
 
 schema ctx = tm T;
 % ----------------------------------------------------------------------------
-% Multi-step parallel reduction
 LF step : tm A -> tm A -> type = 
 | s_beta : step (app (lam M) N) (M N)
 | s_eta : {M:tm (arr A B)} step M (lam (\x. app M x))
 | s_lam : ({x:tm A} step (M x) (M' x)) -> step (lam M) (lam M')
-| s_app : step M M' -> step N N' -> step (app M N) (app M' N')
-| s_refl : step M M
-| s_trans : step M M' -> step M' M'' -> step M M''
+| s_app1 : step M M' -> step (app M N) (app M' N)
+| s_app2 : step N N' -> step (app M N) (app M N')
 ;
+
+LF mstep : tm A -> tm A -> type =
+| s_refl : mstep M M
+| s_trans : step M M' -> mstep M' M'' -> mstep M M''
+;
+
 %name step S.
 % -----------------------------------------------------------------------------
 % Defining Normal and Neutral Terms
@@ -46,7 +50,7 @@ and neutral : tm A -> type =
 schema nctx = some [t:tp] block x:tm t, y:neutral x;
 
 inductive Halts : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
-| Halts : {V:[gamma |- tm A[]]} [gamma |- step M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
+| Halts : {V:[gamma |- tm A[]]} [gamma |- mstep M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
 
 % -----------------------------------------------------------------------------
 % Reducibility Definition 
@@ -90,7 +94,34 @@ mlam A,M,M',S => fn r => case [|- A] of
   let Arr [g |- M] f = r in 
   Arr [g |- _]
   (mlam h => mlam #W => mlam N => fn rn =>
-    closed [ |- B] [h |- _ ] [h |- _ ] [h |- s_app S[#W] s_refl] (f [h] [h |- #W] [h |- N] rn))
+    closed [ |- B] [h |- _ ] [h |- _ ] [h |- s_app1 S[#W]] (f [h] [h |- #W] [h |- N] rn))
+;
+
+rec m_closed : (g:nctx) [g |- mstep M M'] -> Reduce [ |- A] [g |- M'] -> Reduce [ |- A] [g |- M] =
+/ total s (m_closed a m m' g s) /
+fn s,r => case s of
+| [g |- s_refl] => r
+| [g |- s_trans S MS] => 
+  let r' = m_closed [g |- MS] r in
+  closed [|- _] [_ |- _] [_ |- _] [_ |- S] r'
+;
+
+rec m_app2 : (g:nctx) {M:[g |- tm (arr A[] B[])]} [g |- mstep N N'] -> [g |- mstep (app M N) (app M N')] =
+/ total s (m_app2 a b g m n n' s) /
+mlam M => fn s => case s of
+| [g |- s_refl] => [g |- s_refl]
+| [g |- s_trans S MS] =>
+  let [g |- MS'] = m_app2 [g |- M] [g |- MS] in
+  [g |- s_trans (s_app2 S) MS']
+;
+
+rec m_lam : (g:nctx) {M:[g,x:tm A[] |- tm B[]]} [g,x:tm A[] |- mstep M M'] -> [g |- mstep (lam (\x. M)) (lam (\x. M'))] =
+/ total s (m_lam a b g m m' s) /
+mlam M => fn s => case s of
+| [g,x:tm A[] |- s_refl] => [g |- s_refl]
+| [g,x:tm A[] |- s_trans S MS] =>
+  let [g |- MS'] = m_lam [_ |- _] [g,x:tm A[] |- MS] in
+  [g |- s_trans (s_lam (\x. S)) MS']
 ;
 
 % -----------------------------------------------------------------------------
@@ -104,9 +135,9 @@ mlam g, A,R,NR => case [ |- A] of
 | [ |- arr A B] =>
   Arr [g |- R]
   (mlam h => mlam #W => mlam M2 => fn rm2 =>
-    let Halts [_ |- _] [h |- MS] [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
-    closed [|- _ ] [h |- _ ]  [h |- _ ] [h |- s_app s_refl (MS)] 
-           (reflect [h] [|- B] [h |- _ ] [_ |- n_app NR[#W] N]))
+    let Halts [_ |- _] ms [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
+    m_closed (m_app2 [_ |- _] ms)
+             (reflect [h] [|- B] [h |- _ ] [_ |- n_app NR[#W] N]))
 
 and reify : {g:nctx}{A:[|- tp]}{M:[g |- tm A[]]}
             Reduce [ |- A] [g |- M] -> Halts [ |- A] [g |- M] =
@@ -122,7 +153,8 @@ mlam g,A,M => fn r => case [|- A] of
             [g,b:block x:tm A[],y:neutral x |- N]
           = reify [g,b:block x:tm A[],y:neutral x ] [|- B] [g,b:block x:tm A[],y:neutral x |- app M[..] b.1] q1 in
   let [g,b:block x:tm A[],y:neutral x |- MS'[..,b.1]] = [g,b:block x:tm A[],y:neutral x |- MS] in % I am not sure why I have to do this separately
-  Halts [_ |- _] [g |- s_trans (s_eta _) (s_lam (\x. MS'))] [g |- n_lam (\x. \y. N[..,<x;y>])]
+  let [g |- MS''] = m_lam [_ |- _] [g,x:tm A[] |- MS'] in
+  Halts [_ |- _] [g |- s_trans (s_eta _) MS''] [g |- n_lam (\x. \y. N[..,<x;y>])]
 ;
 
 % -----------------------------------------------------------------------------

@@ -29,4 +29,11 @@ module Comp = struct
      | Equal of Loc.t * exp_syn * exp_syn * Syntax.Int.Comp.tclo
      | Boolean of bool * Syntax.Int.Comp.tclo
 
+   and branch =
+     | EmptyBranch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
+		      * pattern * Syntax.Int.LF.msub * Syntax.Int.Comp.tclo
+     | Branch of Loc.t * Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
+		 * Syntax.Int.Comp.gctx * pattern * Syntax.Int.LF.msub
+		 * exp_chk * Syntax.Int.Comp.tclo
+
 end

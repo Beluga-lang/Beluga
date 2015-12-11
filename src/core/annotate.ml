@@ -251,7 +251,7 @@ module Comp = struct
 
     | PairVal (loc, i1, i2) ->
        let (_,tau1,t1,i1') = syn cD (cG,cIH) i1 in
-       let (_,tau2,t2.i2') = syn cD (cG,cIH) i2 in
+       let (_,tau2,t2,i2') = syn cD (cG,cIH) i2 in
        let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
        let (tau2,t2) = C.cwhnfCTyp (tau2,t2) in
        let ttau = (TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id) in
@@ -294,7 +294,7 @@ module Comp = struct
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
        (LF.checkMSub loc cD1' t1 cD;
        checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id);
-       Annotate.Comp.EmptyBranch (loc, cD1', pat, t1, (tau, t)))
+       Annotated.Comp.EmptyBranch (loc, cD1', pat, t1, (tau, t)))
 
     | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
        let TypBox (_, mT) = tau_s in
@@ -318,7 +318,7 @@ module Comp = struct
        (LF.checkMSub loc cD1' t1 cD;
        LF.checkMetaObj cD1' mO (mT1, C.m_id);
        let e1' = annotate cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id) in
-       Annotate.Comp.Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1', (tau, t)))
+       Annotated.Comp.Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1', (tau, t)))
 
     | Branch (loc, cD1', cG1, pat, t1, e1) ->
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -345,7 +345,7 @@ module Comp = struct
        let e1' =
 	 check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id)
        in
-       Annotate.Comp.Branch (loc, cD1', cG1, pat, t1, e1', (tau, t)))
+       Annotated.Comp.Branch (loc, cD1', cG1, pat, t1, e1', (tau, t)))
 
   and annotatePattern cD cG pat ttau =
     match pat with
@@ -355,7 +355,7 @@ module Comp = struct
 	 | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)), theta)
 	 | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->
 	    if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then
-	      Annotate.Comp.PatEmpty (loc, cPsi, ttau)
+	      Annotated.Comp.PatEmpty (loc, cPsi, ttau)
 	    else
 	      raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
 	 | _ ->
@@ -368,7 +368,7 @@ module Comp = struct
 	 | (TypBox (_, ctyp), theta) ->
 	    (* Should produce mO' *)
 	    LF.checkMetaObj cD mO (ctyp, theta);
-	    Annotate.Comp.PatMetaObj (loc, mO, ttau)
+	    Annotated.Comp.PatMetaObj (loc, mO, ttau)
 	 | _ ->
 	    raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
        end
@@ -379,7 +379,7 @@ module Comp = struct
 	 | (TypCross (tau1, tau2), theta) ->
 	    let pat1' = annotatePattern cD cG pat1 (tau1, theta) in
 	    let pat2' = annotatePattern cD cG pat2 (tau2, theta) in
-	    Annotate.Comp.PatPair (loc, pat1', pat2', ttau)
+	    Annotated.Comp.PatPair (loc, pat1', pat2', ttau)
 	 | _ ->
 	    raise (Error (loc, PairMismatch (cD, cG, ttau)))
        end
@@ -400,38 +400,38 @@ module Comp = struct
     | PatConst (loc, c, pat_spine) ->
        let ttau = ((CompConst.get c).CompConst.typ, C.m_id) in
        let (ttau', pat_spine') = synPatSpine cD cG pat_spine ttau in
-       (loc, ttau', Annotate.Comp.PatConst (loc, c, pat_spine', ttau'))
+       (loc, ttau', Annotated.Comp.PatConst (loc, c, pat_spine', ttau'))
     | PatVar (loc, k) ->
        let ttau = (lookup' cG k, C.m_id) in
-       (loc, ttau, Annotate.Comp.PatVar (loc, k, ttau))
+       (loc, ttau, Annotated.Comp.PatVar (loc, k, ttau))
     | PatTrue loc ->
        let ttau = (TypBool, C.m_id) in
-       (loc, ttau, Annotate.Comp.PatTrue (loc, ttau))
+       (loc, ttau, Annotated.Comp.PatTrue (loc, ttau))
     | PatFalse loc ->
-       let ttau (TypBool, C.m_id) in
-       (loc, ttau, Annotate.Comp.PatFalse (loc, ttau))
+       let ttau = (TypBool, C.m_id) in
+       (loc, ttau, Annotated.Comp.PatFalse (loc, ttau))
     | PatAnn (loc, pat, tau) ->
        let ttau = (tau, C.m_id) in
        let pat' = annotatePattern cD cG pat ttau in
-       (loc, ttau, Annotate.Comp.PatAnn (loc, pat', tau, ttau))
+       (loc, ttau, Annotated.Comp.PatAnn (loc, pat', tau, ttau))
 
   and synPatSpine cD cG pat_spine (tau, theta) =
     match pat_spine with
-    | PatNil -> ((tau, theta), Annotate.Comp.PatNil (tau, theta))
+    | PatNil -> ((tau, theta), Annotated.Comp.PatNil (tau, theta))
     | PatApp (loc, pat, pat_spine) ->
        begin
 	 match (tau, theta) with
 	 | (TypArr (tau1, tau2), theta) ->
 	    let pat' = annotatePattern cD cG pat (tau1, theta) in
 	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau2, theta) in
-	    (ttau, Annotate.Comp.PatAnn (loc, pat', pat_spine', ttau))
+	    (ttau, Annotated.Comp.PatAnn (loc, pat', pat_spine', ttau))
 	 | (TypPiBox (cdecl, tau), theta) ->
 	    let (theta', pat') = checkPatAgainstDecl cD pat (cdecl, tau1, theta) in
 	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau, theta') in
-	    (ttau, Annotate.Comp.PatAnn (loc, pat', pat_spine', ttau))
+	    (ttau, Annotated.Comp.PatAnn (loc, pat', pat_spine', ttau))
        end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl (_,ctyp,_), tau, theta) =
     LF.checkMetaObj cD mO (ctyp, theta);
-    (I.MDot(metaObjToMFront mO, theta), Annotate.Comp.PatMetaObj (loc, mO, (tau, theta)))
+    (I.MDot(metaObjToMFront mO, theta), Annotated.Comp.PatMetaObj (loc, mO, (tau, theta)))
 end

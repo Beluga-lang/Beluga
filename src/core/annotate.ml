@@ -795,12 +795,13 @@ module Print = struct
        (* fprintf ppf "(%a |- %a :: %a : %s)" *)
        fprintf ppf "(%a : %s)"
 	       (* (pprint_ann_branch_prefix 0) cD1 *)
-	       (pprint_ann_pat cD1 LF.Empty 0) pat
+	       (pprint_ann_pat cD1 Syntax.Int.LF.Empty 0) pat
 	       (* (pprint_ann_refinement cD1 cD 2) t *)
+	       (P.subCompTypToString cD ttau)
     | Branch (_, cD1', _cG, PatMetaObj (_, mO, ttau'), t, e, ttau) ->
        (* fprintf ppf "(%a |- %a :: %a => %a : %s)" *)
        fprintf ppf "(%s => %a : %s)"
-	       (P.metaObjToString cD1' 0) mO
+	       (P.metaObjToString cD1' mO)
 	       (pprint_ann_chk cD1' cG 1) e
 	       (P.subCompTypToString cD ttau)
     | Branch (_, cD1', cG', pat, t, e, ttau) ->
@@ -811,4 +812,49 @@ module Print = struct
 	       (pprint_ann_pat cD1' cG' 0) pat
 	       (pprint_ann_chk cD1' cG_ext 1) e
 	       (P.subCompTypToString cD ttau)
+
+  and pprint_ann_pat cD cG lvl ppf = function
+    | PatEmpty (loc, cPsi, ttau) ->
+       fprintf ppf "([%s |- {}] : %s)"
+	       (P.dctxToString cD cPsi)
+	       (P.subCompTypToString cD ttau)
+    | PatMetaObj (loc, mO, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (P.metaObjToString cD mO)
+	       (P.subCompTypToString cD ttau)
+    | PatConst (loc, c, pat_spine, ttau) ->
+       fprintf ppf "(%s %a : %s)"
+	       (R.render_cid_comp_const c)
+	       (pprint_ann_pat_spine cD cG 2) pat_spine
+	       (P.subCompTypToString cD ttau)
+    | PatPair (loc, pat1, pat2, ttau) ->
+       fprintf ppf "((%a, %a) : %s)"
+	       (pprint_ann_pat cD cG 0) pat1
+	       (pprint_ann_pat cD cG 0) pat2
+	       (P.subCompTypToString cD ttau)
+    | PatTrue (loc, ttau) ->
+       fprintf ppf "(ttrue : %s)"
+	       (P.subCompTypToString cD ttau)
+    | PatFalse (loc, ttau) ->
+       fprintf ppf "(ffalse : %s)"
+	       (P.subCompTypToString cD ttau)
+    | PatAnn (loc, pat, tau, ttau) ->
+       fprintf ppf "(%a : %s)"
+	       (pprint_ann_pat cD cG 0) pat
+	       (P.subCompTypToString cD ttau)
+    | PatVar (_, offset, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (R.render_var cG offset)
+	       (P.subCompTypToString cD ttau)
+
+  and pprint_ann_pat_spine cD cG lvl ppf = function
+    | PatNil ttau ->
+       fprintf ppf "(Nil : %s)"
+	       (P.subCompTypToString cD ttau)
+    | PatApp (loc, pat, pat_spine, ttau) ->
+       fprintf ppf "(%a %a : %s)"
+	       (pprint_ann_pat cD cG (lvl + 1)) pat
+	       (pprint_ann_pat_spine cD cG lvl) pat_spine
+	       (P.subCompTypToString cD ttau)
+
 end

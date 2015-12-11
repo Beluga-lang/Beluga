@@ -36,4 +36,18 @@ module Comp = struct
 		 * Syntax.Int.Comp.gctx * pattern * Syntax.Int.LF.msub
 		 * exp_chk * Syntax.Int.Comp.tclo
 
+   and pattern =
+     | PatEmpty of Loc.t * Syntax.Int.LF.dctx * Syntax.Int.Comp.tclo
+     | PatMetaObj of Loc.t * Syntax.Int.Comp.meta_obj * Syntax.Int.Comp.tclo
+     | PatPair of Loc.t * pattern * pattern * Syntax.Int.Comp.tclo
+     | PatConst of Loc.t * cid_comp_const * pattern_spine * Syntax.Int.Comp.tclo
+     | PatVar of Loc.t * offset * Syntax.Int.Comp.tclo
+     | PatTrue of Loc.t * Syntax.Int.Comp.tclo
+     | PatFalse of Loc.t * Syntax.Int.Comp.tclo
+     | PatAnn of Loc.t * pattern * Syntax.Int.Comp.typ * Syntax.Int.Comp.tclo
+
+   and pattern_spine =
+     | PatNil of Syntax.Int.Comp.tclo
+     | PatApp of Loc.t * pattern * pattern_spine * Syntax.Int.Comp.tclo
+
 end

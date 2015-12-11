@@ -652,6 +652,7 @@ let recSgnDecls decls =
 					    Check.Comp.check
 					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
+	  let (e_ann) = Annotate.annotate cD (cG, Syntax.Int.LF.Empty) e_r' (tau_ann, C.m_id) in
              (e_r' , tau')
         in
 

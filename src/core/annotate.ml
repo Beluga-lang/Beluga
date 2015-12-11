@@ -227,13 +227,13 @@ well-formedness of rec. call. *)
        let e' =
 	 annotate cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), (Total.shift cIH)) e ttau
        in
-       Annotated.Comp.Rec (loc, f, e', (cD, ttau))
+       Annotated.Comp.Rec (loc, f, e', ttau)
 
     | (Fun (loc, x, e), (TypArr (tau1, tau2), t)) ->
        let e' =
 	 annotate cD (I.Dec (cG, CTypDecl (x, TypClo (tau1, t))), (Total.shift cIH)) e (tau2, t)
        in
-       Annotated.Comp.Fun (loc, x, e', (cD, ttau))
+       Annotated.Comp.Fun (loc, x, e', ttau)
 
     | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
        let e' =
@@ -241,12 +241,12 @@ well-formedness of rec. call. *)
 		  (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 		  e (tau, C.mvar_dot1 t)
        in
-       Annotated.Comp.MLam (loc, u, e', (cD, ttau))
+       Annotated.Comp.MLam (loc, u, e', ttau)
 
     | (Pair (loc, e1, e2), (TypCross (tau1, tau2), t)) ->
        let e1' = annotate cD (cG,cIH) e1 (tau1, t) in
        let e2' = annotate cD (cG,cIH) e2 (tau2, t) in
-       Annotated.Comp.Pair (loc, e1', e2', (cD, ttau))
+       Annotated.Comp.Pair (loc, e1', e2', ttau)
 
     | (Let (loc, i, (x, e)), (tau, t)) ->
        let (_, tau', t', i') = syn cD (cG,cIH) i in
@@ -255,7 +255,7 @@ well-formedness of rec. call. *)
        let e' =
 	 annotate cD (cG', Total.shift cIH) e (tau, t)
        in
-       Annotated.Comp.Let (loc, i', (x, e'), (cD, ttau))
+       Annotated.Comp.Let (loc, i', (x, e'), ttau)
 
     | (LetPair (loc, i, (x, y, e)), (tau, t)) ->
        let (_, tau', t', i') = syn cD (cG,cIH) i in
@@ -269,7 +269,7 @@ well-formedness of rec. call. *)
 	    let e' =
 	      annotate cD (cG', (Total.shift (Total.shift cIH))) e (tau,t)
 	    in
-	    Annotated.Comp.LetPair (loc, i', (x, y, e'), (cD, ttau))
+	    Annotated.Comp.LetPair (loc, i', (x, y, e'), ttau)
 	 | _ -> raise (Error.Violation "Case scrutinee ot of boxed type")
        end
 
@@ -278,7 +278,7 @@ well-formedness of rec. call. *)
 	 try
 	   (* Should produce cM' *)
 	   LF.checkMetaObj cD cM (mT, t);
-	   Annotated.Comp.Box (loc, cM, (cD, ttau))
+	   Annotated.Comp.Box (loc, cM, ttau)
 	 with Whnf.FreeMVar (I.FMVar (u, _)) ->
 	   raise (Error.Violation ("Free meta-variable " ^ (Id.render_name u)))
        end
@@ -324,11 +324,11 @@ well-formedness of rec. call. *)
        Coverage.process problem projOpt;
        Annotated.Comp.Case (loc, prag,
 			    Annotated.Comp.Ann (
-				Annotated.Comp.Box (l1,(l,cM), (cD, (TypBox (l2, mT), C.m_id))),
+				Annotated.Comp.Box (l1,(l,cM), ((TypBox (l2, mT), C.m_id))),
 				(TypBox (l2,mT)),
-				(cD, (TypBox (l2, mT), C.m_id))
+				((TypBox (l2, mT), C.m_id))
 			      )
-			    , branches', (cD, ttau))
+			    , branches', ttau)
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
        let annBranch total_pragma cD (cG, cIH) i branches (tau, t) =
@@ -363,23 +363,23 @@ well-formedness of rec. call. *)
 	      in
 	      if ind then
 		let (i', branches') = annBranch IndDataObj cD (cG,cIH) i branches (tau,t) in
-		Annotated.Comp.Case (loc, prag, i', branches', (cD, ttau))
+		Annotated.Comp.Case (loc, prag, i', branches', ttau)
 	      else
 		let (i', branches') = annBranch DataObj cD (cG,cIH) i branches (tau, t) in
-		Annotated.Comp.Case (loc, prag, i', branches', (cD, ttau))
+		Annotated.Comp.Case (loc, prag, i', branches', ttau)
 	   | _ ->
 	      let (i', branches') = annBranch DataObj cD (cG,cIH) i branches (tau, t) in
-	      Annotated.Comp.Case (loc, prag, i', branches', (cD, ttau))
+	      Annotated.Comp.Case (loc, prag, i', branches', ttau)
 	 end
        else
 	 let (i', branches') = annBranch DataObj cD (cG,cIH) i branches (tau,t) in
-	 Annotated.Comp.Case (loc, prag, i', branches', (cD, ttau))
+	 Annotated.Comp.Case (loc, prag, i', branches', ttau)
 
     | (Syn (loc, i), (tau, t)) ->
        let (_, tau', t', i') = syn cD (cG,cIH) i in
        let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
        if C.convCTyp (tau,t) (tau',t') then
-	 Annotated.Comp.Syn (loc, i', (cD, ttau))
+	 Annotated.Comp.Syn (loc, i', ttau)
        else
 	 raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
 
@@ -391,13 +391,13 @@ well-formedness of rec. call. *)
 	 | (TypBool, _) ->
 	    let e1' = annotate cD (cG,cIH) e1 (tau,t) in
 	    let e2' = annotate cD (cG,cIH) e2 (tau,t) in
-	    Annotated.Comp.If (loc, i', e1', e2', (cD, ttau))
+	    Annotated.Comp.If (loc, i', e1', e2', ttau)
 	 | tau_theta' ->
 	    raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
        end
 
     | (Hole (loc, f), (tau, t)) ->
-       Annotated.Comp.Hole (loc, f, (cD, ttau))
+       Annotated.Comp.Hole (loc, f, ttau)
 
   and syn cD (cG,cIH) e : (gctx option * typ * I.msub * Annotated.Comp.exp_syn) =
     match e with
@@ -412,32 +412,32 @@ well-formedness of rec. call. *)
        in
        let ttau = (tau, C.m_id) in
        if Total.exists_total_decl f then
-	 (Some cIH, tau, C.m_id, Annotated.Comp.Var (loc, x, (cD, ttau)))
+	 (Some cIH, tau, C.m_id, Annotated.Comp.Var (loc, x, ttau))
        else
-	 (None, tau, C.m_id, Annotated.Comp.Var (loc, x, (cD, ttau)))
+	 (None, tau, C.m_id, Annotated.Comp.Var (loc, x, ttau))
 
     | DataConst (loc, c) ->
        let ttau = ((CompConst.get c).CompConst.typ, C.m_id) in
        (None, (CompConst.get c).CompConst.typ, C.m_id,
-	Annotated.Comp.DataConst (loc, c, (cD, ttau)))
+	Annotated.Comp.DataConst (loc, c, ttau))
 
     | DataDest (loc, c) ->
        let ttau = ((CompDest.get c).CompDest.typ, C.m_id) in
        (None, (CompDest.get c).CompDest.typ, C.m_id,
-	Annotated.Comp.DataDest (loc, c, (cD, ttau)))
+	Annotated.Comp.DataDest (loc, c, ttau))
 
     | Const (loc, prog) ->
        if !Total.enabled then
 	 if (Comp.get prog).Comp.total then
 	   let ttau = ((Comp.get prog).Comp.typ, C.m_id) in
 	   (None, (Comp.get prog).Comp.typ, C.m_id,
-	    Annotated.Comp.Const (loc, prog, (cD, ttau)))
+	    Annotated.Comp.Const (loc, prog, ttau))
 	 else
 	   raise (Error (loc, MissingTotal prog))
        else
 	 let ttau = ((Comp.get prog).Comp.typ, C.m_id) in
 	 (None, (Comp.get prog).Comp.typ, C.m_id,
-	  Annotated.Comp.Const (loc, prog, (cD, ttau)))
+	  Annotated.Comp.Const (loc, prog, ttau))
 
     | Apply (loc, e1, e2) ->
        let (cIH_opt, tau1, t1, e1') = syn cD (cG,cIH) e1 in
@@ -448,7 +448,7 @@ well-formedness of rec. call. *)
 	    let e2' = annotate cD (cG, cIH) e2 (tau2, t) in
 	    let (cIH_opt') = useIH loc cD cG cIH_opt e2 in
 	    let ttau = (tau, t) in
-	    (cIH_opt', tau, t, Annotated.Comp.Apply (loc, e1', e2', (cD, ttau)))
+	    (cIH_opt', tau, t, Annotated.Comp.Apply (loc, e1', e2', ttau))
 	 | (tau, t) ->
 	    raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau, t))))
        end
@@ -463,7 +463,7 @@ well-formedness of rec. call. *)
 	    let ttau = (tau, I.MDot (metaObjToMFront mC, t)) in
 	    let cIH_opt' = useIH loc cD cG cIH_opt (Box (loc, mC)) in
 	    (cIH_opt', tau, I.MDot (metaObjToMFront mC, t),
-	     Annotated.Comp.MApp (loc, e', mC, (cD, ttau)))
+	     Annotated.Comp.MApp (loc, e', mC, ttau))
 	 | (tau, t) ->
 	    raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
        end
@@ -475,12 +475,12 @@ well-formedness of rec. call. *)
        let (tau2,t2) = C.cwhnfCTyp (tau2,t2) in
        let ttau = (TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id) in
        (None, TypCross (TypClo (tau1,t1), TypClo (tau2,t2)), C.m_id,
-	Annotated.Comp.PairVal (loc, i1', i2', (cD, ttau)))
+	Annotated.Comp.PairVal (loc, i1', i2', ttau))
 
     | Ann (e, tau) ->
        let e' = annotate cD (cG, cIH) e (tau, C.m_id) in
        let ttau = (tau, C.m_id) in
-       (None, tau, C.m_id, Annotated.Comp.Ann (e', tau, (cD, ttau)))
+       (None, tau, C.m_id, Annotated.Comp.Ann (e', tau, ttau))
 
     | Equal (loc, i1, i2) ->
        let (_, tau1, t1, i1') = syn cD (cG,cIH) i1 in
@@ -490,10 +490,10 @@ well-formedness of rec. call. *)
 	   match Whnf.cwhnfCTyp (tau1, t1) with
 	   | (TypBox _, _) ->
 	      let ttau = (TypBool, C.m_id) in
-	      (None,TypBool, C.m_id, Annotated.Comp.Equal (loc, i1', i2', (cD, ttau)))
+	      (None,TypBool, C.m_id, Annotated.Comp.Equal (loc, i1', i2', ttau))
 	   | (TypBool, _) ->
 	      let ttau = (TypBool, C.m_id) in
-	      (None, TypBool, C.m_id, Annotated.Comp.Equal (loc, i1', i2', (cD, ttau)))
+	      (None, TypBool, C.m_id, Annotated.Comp.Equal (loc, i1', i2', ttau))
 	   | (tau1,t1) ->
 	      raise (Error (loc, EqTyp (cD, (tau1,t1))))
 	 end
@@ -502,7 +502,7 @@ well-formedness of rec. call. *)
 
     | Boolean b ->
        let ttau = (TypBool, C.m_id) in
-       (None, TypBool, C.m_id, Annotated.Comp.Boolean (b, (cD, ttau)))
+       (None, TypBool, C.m_id, Annotated.Comp.Boolean (b, ttau))
 
   and annotateBranches caseTyp cD cG branches tau_s ttau =
     List.map (fun branch -> annotateBranch caseTyp cD cG branch tau_s ttau) branches
@@ -513,7 +513,7 @@ well-formedness of rec. call. *)
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
        (LF.checkMSub loc cD1' t1 cD;
 	let pat' = annotatePattern cD1' I.Empty pat (tau_p, Whnf.m_id) in
-       Annotated.Comp.EmptyBranch (loc, cD1', pat', t1, (cD, (tau, t))))
+       Annotated.Comp.EmptyBranch (loc, cD1', pat', t1, (tau, t)))
 
     | Branch (loc, cD1', cG, PatMetaObj (loc', mO), t1, e1) ->
        let TypBox (_, mT) = tau_s in
@@ -538,8 +538,8 @@ well-formedness of rec. call. *)
        LF.checkMetaObj cD1' mO (mT1, C.m_id);
        let e1' = annotate cD1' (cG', Context.append cIH cIH') e1 (tau', Whnf.m_id) in
        Annotated.Comp.Branch (loc, cD1', cG,
-			      Annotated.Comp.PatMetaObj (loc', mO, (cD, (tau_s, Whnf.m_id))),
-			      t1, e1', (cD, (tau, t))))
+			      Annotated.Comp.PatMetaObj (loc', mO, (tau_s, Whnf.m_id)),
+			      t1, e1', (tau, t)))
 
     | Branch (loc, cD1', cG1, pat, t1, e1) ->
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
@@ -566,7 +566,7 @@ well-formedness of rec. call. *)
        let e1' =
 	 annotate cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id)
        in
-       Annotated.Comp.Branch (loc, cD1', cG1, pat', t1, e1', (cD, (tau, t))))
+       Annotated.Comp.Branch (loc, cD1', cG1, pat', t1, e1', (tau, t)))
 
   and annotatePattern cD cG pat ttau =
     match pat with
@@ -576,7 +576,7 @@ well-formedness of rec. call. *)
 	 | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)), theta)
 	 | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->
 	    if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then
-	      Annotated.Comp.PatEmpty (loc, cPsi, (cD, ttau))
+	      Annotated.Comp.PatEmpty (loc, cPsi, ttau)
 	    else
 	      raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
 	 | _ ->
@@ -589,7 +589,7 @@ well-formedness of rec. call. *)
 	 | (TypBox (_, ctyp), theta) ->
 	    (* Should produce mO' *)
 	    LF.checkMetaObj cD mO (ctyp, theta);
-	    Annotated.Comp.PatMetaObj (loc, mO, (cD, ttau))
+	    Annotated.Comp.PatMetaObj (loc, mO, ttau)
 	 | _ ->
 	    raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
        end
@@ -600,7 +600,7 @@ well-formedness of rec. call. *)
 	 | (TypCross (tau1, tau2), theta) ->
 	    let pat1' = annotatePattern cD cG pat1 (tau1, theta) in
 	    let pat2' = annotatePattern cD cG pat2 (tau2, theta) in
-	    Annotated.Comp.PatPair (loc, pat1', pat2', (cD, ttau))
+	    Annotated.Comp.PatPair (loc, pat1', pat2', ttau)
 	 | _ ->
 	    raise (Error (loc, PairMismatch (cD, cG, ttau)))
        end
@@ -621,68 +621,114 @@ well-formedness of rec. call. *)
     | PatConst (loc, c, pat_spine) ->
        let ttau = ((CompConst.get c).CompConst.typ, C.m_id) in
        let (ttau', pat_spine') = synPatSpine cD cG pat_spine ttau in
-       (loc, ttau', Annotated.Comp.PatConst (loc, c, pat_spine', (cD, ttau')))
+       (loc, ttau', Annotated.Comp.PatConst (loc, c, pat_spine', ttau'))
     | PatVar (loc, k) ->
        let ttau = (lookup' cG k, C.m_id) in
-       (loc, ttau, Annotated.Comp.PatVar (loc, k, (cD, ttau)))
+       (loc, ttau, Annotated.Comp.PatVar (loc, k, ttau))
     | PatTrue loc ->
        let ttau = (TypBool, C.m_id) in
-       (loc, ttau, Annotated.Comp.PatTrue (loc, (cD, ttau)))
+       (loc, ttau, Annotated.Comp.PatTrue (loc, ttau))
     | PatFalse loc ->
        let ttau = (TypBool, C.m_id) in
-       (loc, ttau, Annotated.Comp.PatFalse (loc, (cD, ttau)))
+       (loc, ttau, Annotated.Comp.PatFalse (loc, ttau))
     | PatAnn (loc, pat, tau) ->
        let ttau = (tau, C.m_id) in
        let pat' = annotatePattern cD cG pat ttau in
-       (loc, ttau, Annotated.Comp.PatAnn (loc, pat', tau, (cD, ttau)))
+       (loc, ttau, Annotated.Comp.PatAnn (loc, pat', tau, ttau))
 
   and synPatSpine cD cG pat_spine (tau, theta) =
     match pat_spine with
-    | PatNil -> ((tau, theta), Annotated.Comp.PatNil (cD, (tau, theta)))
+    | PatNil -> ((tau, theta), Annotated.Comp.PatNil (tau, theta))
     | PatApp (loc, pat, pat_spine) ->
        begin
 	 match (tau, theta) with
 	 | (TypArr (tau1, tau2), theta) ->
 	    let pat' = annotatePattern cD cG pat (tau1, theta) in
 	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau2, theta) in
-	    (ttau, Annotated.Comp.PatApp (loc, pat', pat_spine', (cD, ttau)))
+	    (ttau, Annotated.Comp.PatApp (loc, pat', pat_spine', ttau))
 	 | (TypPiBox (cdecl, tau), theta) ->
 	    let (theta', pat') = checkPatAgainstCDecl cD pat (cdecl, tau, theta) in
 	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau, theta') in
-	    (ttau, Annotated.Comp.PatApp (loc, pat', pat_spine', (cD, ttau)))
+	    (ttau, Annotated.Comp.PatApp (loc, pat', pat_spine', ttau))
        end
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl (_,ctyp,_), tau, theta) =
     LF.checkMetaObj cD mO (ctyp, theta);
-    (I.MDot(metaObjToMFront mO, theta), Annotated.Comp.PatMetaObj (loc, mO, (cD, (tau, theta))))
+    (I.MDot(metaObjToMFront mO, theta), Annotated.Comp.PatMetaObj (loc, mO, (tau, theta)))
 
 end
-
 (*
 module Print = struct
 
   open Comp
 
-  let pprint_ann e = pprint_ann_chk e
+  let pprint_ann cD cG e = pprint_ann_chk cD cG e
 
-  and pprint_ann_chk e =
+  and pprint_ann_chk cD cG e =
     match e with
     | Rec (loc, f, e', ttau) ->
-       fprintf ppf "rec %s : %s = %s"
-	       (Id.render_name x)
-	       (subCompTypToString cD sA)
+       fprintf ppf "(rec %s : %s) = %s"
+	       (Id.render_name f)
+	       (P.subCompTypToString cD ttau)
+	       (pprint_ann_chk cD cG e)
     | Fun (loc, x, e', ttau) ->
+       fprintf ppf "(fn %s : %s) => %s"
+	       (Id.render_name x)
+	       (P.subCompTypToString cD ttau)
+	       (pprint_ann_chk cD (Sytnax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl.Opt x)) e)
     | MLam (loc, u, e', ttau) ->
+       fprintf ppf "(mlam %s : %s) => %s"
+	       (Id.render_name u)
+	       (P.subCompTypToString cD ttau)
+	       (pprint_ann_chk
+		  (Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt x))
+		  (Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1))
+		  e)
     | Pair (loc, e1, e2, ttau) ->
+       fprintf ppf "(<%s,%s> : %s)"
+	       (pprint_ann_chk cD cG e1)
+	       (pprint_ann_chk cD cG e2)
+	       (P.subCompTypToString cD ttau)
     | Let (loc, i, (x, e), ttau) ->
+       fprintf ppf "(let %s = %s in %s : %s)"
+	       (Id.render_name x)
+	       (pprint_ann_syn cD cG i)
+	       (pprint_ann_chk cD cG e)
+	       (P.subCompTypToString cD ttau)
     | LetPair (loc, i, (x, y, e), ttau) ->
+       fprintf ppf "(let <%s,%s> = %s in %s : %s)"
+	       (Id.render_name x)
+	       (Id.render_name y)
+	       (pprint_ann_syn cD cG i)
+	       (pprint_ann_chk cD cG e)
+	       (P.subCompTypToString cD ttau)
     | Box (loc, cM, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (P.metaObjToString cD cM)
+	       (P.subCompTypToString cD ttau)
     | Case (loc, prag, i, branches, ttau) ->
+       fprintf ppf "(case %s of %s : %s)"
+	       (pprint_ann_syn cD cG i)
+	       (pprint_ann_branches cD cG branches)
+	       (P.subCompTypToString cD ttau)
     | Syn (loc, i, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (pprint_ann_syn cD cG i)
+	       (P.subCompTypToString cD ttau)
     | If (loc, i, e1, e2, ttau) ->
+       fprintf ppf "(if %s then %s else %s : %s)"
+	       (pprint_ann_syn cD cG i)
+	       (pprint_ann_chk cD cG e1)
+	       (pprint_ann_chk cD cG e2)
+	       (P.subCompTypToString cD ttau)
     | Hole (loc, f, ttau) ->
+       try
+	 let x = f () in
+	 fprintf ppf "(? %%{ %d }%% : %s)"
+		 x
+		 (P.subCompTypToString cD ttau)
 
-  and pprint_ann_syn e =
+  and pprint_ann_syn cD cG e =
     | Var (loc, x, ttau) ->
     | DataConst (loc, c, ttau) ->
     | DataDest (loc, c, ttau) ->
@@ -695,4 +741,4 @@ module Print = struct
     | Boolean (b, ttau) ->
 
 end
- *)
+*)

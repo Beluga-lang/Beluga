@@ -657,69 +657,71 @@ well-formedness of rec. call. *)
     (I.MDot(metaObjToMFront mO, theta), Annotated.Comp.PatMetaObj (loc, mO, (tau, theta)))
 
 end
-(*
+
 module Print = struct
 
-  open Comp
+  open Format
+  open Annotated.Comp
 
-  let pprint_ann cD cG e = pprint_ann_chk cD cG e
+  let std_lvl = 0
 
-  and pprint_ann_chk cD cG e =
-    match e with
-    | Rec (loc, f, e', ttau) ->
-       fprintf ppf "(rec %s : %s) = %s"
+  let rec pprint_ann cD cG e = pprint_ann_chk cD cG std_lvl std_formatter e
+
+  and pprint_ann_chk cD cG lvl ppf = function
+    | Rec (loc, f, e, ttau) ->
+       fprintf ppf "(rec %s : %s) = %a"
 	       (Id.render_name f)
 	       (P.subCompTypToString cD ttau)
-	       (pprint_ann_chk cD cG e)
-    | Fun (loc, x, e', ttau) ->
-       fprintf ppf "(fn %s : %s) => %s"
+	       (pprint_ann_chk cD cG 0) e
+    | Fun (loc, x, e, ttau) ->
+       fprintf ppf "(fn %s : %s) => %a"
 	       (Id.render_name x)
 	       (P.subCompTypToString cD ttau)
-	       (pprint_ann_chk cD (Sytnax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl.Opt x)) e)
-    | MLam (loc, u, e', ttau) ->
-       fprintf ppf "(mlam %s : %s) => %s"
+	       (pprint_ann_chk cD (Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x)) 0) e
+    | MLam (loc, u, e, ttau) ->
+       fprintf ppf "(mlam %s : %s) => %a"
 	       (Id.render_name u)
 	       (P.subCompTypToString cD ttau)
 	       (pprint_ann_chk
-		  (Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt x))
+		  (Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt u))
 		  (Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1))
-		  e)
+		  0) e
     | Pair (loc, e1, e2, ttau) ->
-       fprintf ppf "(<%s,%s> : %s)"
-	       (pprint_ann_chk cD cG e1)
-	       (pprint_ann_chk cD cG e2)
+       fprintf ppf "(<%a,%a> : %s)"
+	       (pprint_ann_chk cD cG 0) e1
+	       (pprint_ann_chk cD cG 0) e2
 	       (P.subCompTypToString cD ttau)
     | Let (loc, i, (x, e), ttau) ->
-       fprintf ppf "(let %s = %s in %s : %s)"
+       fprintf ppf "(let %s = %a in %a : %s)"
 	       (Id.render_name x)
-	       (pprint_ann_syn cD cG i)
-	       (pprint_ann_chk cD cG e)
+	       (pprint_ann_syn cD cG 0) i
+	       (pprint_ann_chk cD cG 0) e
 	       (P.subCompTypToString cD ttau)
     | LetPair (loc, i, (x, y, e), ttau) ->
-       fprintf ppf "(let <%s,%s> = %s in %s : %s)"
+       fprintf ppf "(let <%s,%s> = %a in %a : %s)"
 	       (Id.render_name x)
 	       (Id.render_name y)
-	       (pprint_ann_syn cD cG i)
-	       (pprint_ann_chk cD cG e)
+	       (pprint_ann_syn cD cG 0) i
+	       (pprint_ann_chk cD cG 0) e
 	       (P.subCompTypToString cD ttau)
     | Box (loc, cM, ttau) ->
        fprintf ppf "(%s : %s)"
 	       (P.metaObjToString cD cM)
 	       (P.subCompTypToString cD ttau)
     | Case (loc, prag, i, branches, ttau) ->
-       fprintf ppf "(case %s of %s : %s)"
-	       (pprint_ann_syn cD cG i)
-	       (pprint_ann_branches cD cG branches)
+       fprintf ppf "(case %a of %a : %s)"
+	       (pprint_ann_syn cD cG 0) i
+	       (pprint_ann_branches cD cG 0) branches
 	       (P.subCompTypToString cD ttau)
     | Syn (loc, i, ttau) ->
-       fprintf ppf "(%s : %s)"
-	       (pprint_ann_syn cD cG i)
+       fprintf ppf "(%a : %s)"
+	       (pprint_ann_syn cD cG 0) i
 	       (P.subCompTypToString cD ttau)
     | If (loc, i, e1, e2, ttau) ->
-       fprintf ppf "(if %s then %s else %s : %s)"
-	       (pprint_ann_syn cD cG i)
-	       (pprint_ann_chk cD cG e1)
-	       (pprint_ann_chk cD cG e2)
+       fprintf ppf "(if %a then %a else %a : %s)"
+	       (pprint_ann_syn cD cG 0) i
+	       (pprint_ann_chk cD cG 0) e1
+	       (pprint_ann_chk cD cG 0) e2
 	       (P.subCompTypToString cD ttau)
     | Hole (loc, f, ttau) ->
        try
@@ -727,18 +729,86 @@ module Print = struct
 	 fprintf ppf "(? %%{ %d }%% : %s)"
 		 x
 		 (P.subCompTypToString cD ttau)
+       with
+	 _ -> fprintf ppf " ? "
 
-  and pprint_ann_syn cD cG e =
+  and pprint_ann_syn cD cG lvl ppf = function
     | Var (loc, x, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (R.render_var cG x)
+	       (P.subCompTypToString cD ttau)
     | DataConst (loc, c, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (R.render_cid_comp_const c)
+	       (P.subCompTypToString cD ttau)
     | DataDest (loc, c, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (R.render_cid_comp_dest c)
+	       (P.subCompTypToString cD ttau)
     | Const (loc, prog, ttau) ->
+       fprintf ppf "(%s : %s)"
+	       (R.render_cid_prog prog)
+	       (P.subCompTypToString cD ttau)
     | Apply (loc, e1, e2, ttau) ->
-    | MApp (loc, e, mC, ttau) ->
+       fprintf ppf "(%a %a : %s)"
+	      (pprint_ann_syn cD cG 0) e1
+	      (pprint_ann_chk cD cG 0) e2
+	      (P.subCompTypToString cD ttau)
+    | MApp (loc, i, mC, ttau) ->
+       fprintf ppf "(%a %s : %s)"
+	       (pprint_ann_syn cD cG 0) i
+	       (P.metaObjToString cD mC)
+	       (P.subCompTypToString cD ttau)
     | PairVal (loc, i1, i2, ttau) ->
+       fprintf ppf "((%a, %a) : %s)"
+	       (pprint_ann_syn cD cG 0) i1
+	       (pprint_ann_syn cD cG 0) i2
+	       (P.subCompTypToString cD ttau)
     | Ann (e, tau, ttau) ->
+       fprintf ppf "(%a : %s)"
+	       (pprint_ann_chk cD cG 0) e
+	       (P.subCompTypToString cD ttau)
     | Equal (loc, i1, i2, ttau) ->
-    | Boolean (b, ttau) ->
+       fprintf ppf "(%a == %a : %s)"
+	       (pprint_ann_syn cD cG 0) i1
+	       (pprint_ann_syn cD cG 0) i2
+	       (P.subCompTypToString cD ttau)
+    | Boolean (true, ttau) ->
+       fprintf ppf "(ttrue : %s)"
+	       (P.subCompTypToString cD ttau)
+    | Boolean (false, ttau) ->
+	 fprintf ppf "(ffalse : %s)"
+		 (P.subCompTypToString cD ttau)
 
+  and pprint_ann_branches cD cG lvl ppf = function
+    | [] -> ()
+    | b :: [] ->
+       fprintf ppf "%a"
+	       (pprint_ann_branch cD cG 0) b
+    | b :: bs ->
+       fprintf ppf "%a%a"
+	       (pprint_ann_branch cD cG 0) b
+	       (pprint_ann_branches cD cG 0) bs
+
+  and pprint_ann_branch cD cG lvl ppf = function
+    | EmptyBranch (loc, cD1, pat, t, ttau) ->
+       (* fprintf ppf "(%a |- %a :: %a : %s)" *)
+       fprintf ppf "(%a : %s)"
+	       (* (pprint_ann_branch_prefix 0) cD1 *)
+	       (pprint_ann_pat cD1 LF.Empty 0) pat
+	       (* (pprint_ann_refinement cD1 cD 2) t *)
+    | Branch (_, cD1', _cG, PatMetaObj (_, mO, ttau'), t, e, ttau) ->
+       (* fprintf ppf "(%a |- %a :: %a => %a : %s)" *)
+       fprintf ppf "(%s => %a : %s)"
+	       (P.metaObjToString cD1' 0) mO
+	       (pprint_ann_chk cD1' cG 1) e
+	       (P.subCompTypToString cD ttau)
+    | Branch (_, cD1', cG', pat, t, e, ttau) ->
+       let cG_t = cG in
+       let cG_ext = Context.append cG_t cG' in
+
+       fprintf ppf "(%a => %a : %s)"
+	       (pprint_ann_pat cD1' cG' 0) pat
+	       (pprint_ann_chk cD1' cG_ext 1) e
+	       (P.subCompTypToString cD ttau)
 end
-*)

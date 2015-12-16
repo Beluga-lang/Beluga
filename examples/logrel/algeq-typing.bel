@@ -285,12 +285,12 @@ fn a1 => fn a2 => case a1 of
   let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
   [g |- algbase S1 S3 R]
 | [g |- algarr (\x.\u.A1')] => 
-  let [g |- algarr (\x.\u.A2')] = a2 in
-  ?
-  % let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
-  %     = algEqNTrans [g,b:block x:tm,y:oft x _,z:algeqr x x _ |- A1'[..,b.1,b.3]]
-  % 		    [g,b:block x:tm,y:oft x _,z:algeqr x x _ |- A2'[..,b.1,b.3]] in
-  % [g |- algarr (\x.\u.R)]
+  let [g |- algarr \x.\u.A2'] = a2 in
+  let (a2 : [g |- algeqn _ _ (arr T[] S[])]) = a2 in 
+   let [g,b:block x:tm, u:oft x _, y:algeqr x x _ |- R[..,b.1,b.3]]
+       = algEqNTrans [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- A1'[..,b.1,b.3]]
+   		     [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- A2'[..,b.1,b.3]] in
+   [g |- algarr (\x.\u.R)]
 ;
 
 % % Transitivity of logical equivalence

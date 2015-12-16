@@ -152,9 +152,10 @@ fn a => case a of
 | [g |- algbase S1 S2 R] =>
   let [g |- R'] = algEqRSym [g |- R] in
   [g |- algbase S2 S1 (R')]
-| [g |- algarr (\x.\u.N)] => ?
-  % let [g,b:block x:tm,y:oft x _,z:algeqr x x _ |- N'[..,b.1,b.3]] = algEqNSym [g,b:block x:tm,y:oft x _,z:algeqr x x _ |- N[..,b.1,b.3]] in
-  % [g |- algarr (\x.\u.N')]
+| [g |- algarr \x.\u.N] => 
+  let (a : [g |- algeqn _ _ (arr T[] S[])]) = a in 
+  let [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- N'[..,b.1,b.3]] = algEqNSym [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- N[..,b.1,b.3]] in
+   [g |- algarr (\x.\u.N')]
 ;
 
 % % Symmetry of logical equivalence

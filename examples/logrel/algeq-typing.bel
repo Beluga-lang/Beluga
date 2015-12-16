@@ -327,9 +327,9 @@ inductive LogSub : {g0:ctx}(h:tctx){#S1: [h |- g0]}{#S2: [h |- g0]}
 ctype  =
 | Nil : LogSub [] [h |- ^] [h |- ^] 
 | Dot : LogSub [g0] [h |- #S1] [h |- #S2]
-       -> Log [h |- M1 ~ M2] [ |- T] 
-       -> {D1:[h |- oft M1 T[]]} {D2:[h |- oft M2 T[]]}
-         LogSub [g0,b:block x:tm,y:oft x T[]] [h |- #S1, <M1;D1>] [h |- #S2, <M2;D2>]
+       -> Log [h |- M1 ~ M2] [ |- R] 
+       -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
+         LogSub [g0,b:block x:tm,y:oft x R[]] [h |- #S1, <M1;D1>] [h |- #S2, <M2;D2>]
 ;
 
 % % Looking up a variable in logically equivalence substitutions gives a logical equivalence
@@ -372,20 +372,27 @@ fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
 | Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2) [h |- D1] [h |- D4];
 
-% rec lookup : {#p:[g |- block x:tm,y:oft x T[]]} LogSub [g] [h |- #S1] [h |- #S2]
-%  -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- T] =
-% mlam #p => fn s => case [_ |- #p] of
-% | [g,b:block x:tm,y:oft x T[] |- b.2] => ?
-% | [g,b:block x:tm,y:oft x T[] |- #q[..]] => ?
-% ;
+rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
+   -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = 
+% / total g (lookup g) /
+ mlam g, #p => fn s => case [g] of 
+	 | [] => impossible [ |- #p.1] 
+	 | [g',b:block x:tm,y:oft x S[]] => 
+	   let Dot rs rm [h |- D1] [h |- D2] = s in   
+	   (case [g', b:block x:tm, y:oft x S[] |- #p.2] of 
+	      |  {#q:[g0 |- block (x:tm, u: oft x Q[])]}
+                 [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g'] [g' |- #q] rs
+	      | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
+)
+ ;
 
 % Tiny fundamental theorem
 rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#S1] ~ M[#S2]] [|- T] =
-/ total d (thm' g h m t s1 s2 d) /
+ / total d (thm' g h m t s1 s2 d) /
 fn d, s =>
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
-| [g |- #p.2] => ?
+| [g |- #p.2] => lookup [g] [g |- #p] s 
 | [g |- oft/app D1 D2] =>
   let LogArr [h |- M1] [h |- M2] f = thm' [g |- D1] s in
   f [h] [h |- ..] [h |- _] [h |- D2[#S1]] [h |- _] [h |- D2[#S2]] (thm' [g |- D2] s)

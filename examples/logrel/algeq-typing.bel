@@ -46,7 +46,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
             -> Log [g |- M1 ~ M2] [ |- arr T S]
 ;
 
-
+%{
 % Monotonicity of logical equivalence
 rec logEq_Monotone : {h:tctx}{#W:[h |- g]} Log [g |- M1 ~ M2] [ |- A]
                    -> Log [h |- M1[#W] ~ M2[#W]] [ |- A] =
@@ -311,7 +311,6 @@ mlam T => fn e1 => fn e2 => case [|- T] of
                       (f2 [h] [h |- #W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
                       (logEqTrans [|- T1] (logEqSym [|- _ ] v) v)));
 
-schema ctx = some [t:tp] block x:tm,y:oft x t;
 
 deq : tm -> tm -> tp -> type.
 d/beta : ({x:tm} oft x T -> deq (M2 x) (N2 x) S) -> deq M1 N1 T -> deq (app (lam (\x. M2 x)) M1) (N2 N1) S.
@@ -321,6 +320,9 @@ d/app : deq M1 M2 (arr T S) -> deq N1 N2 T -> deq (app M1 N1) (app M2 N2) S.
 d/refl : oft M T -> deq M M T.
 d/sym : deq M N T -> deq N M T.
 d/trans : deq M N T -> deq N O T -> deq M O T.
+}%
+
+schema ctx = some [t:tp] block x:tm,y:oft x t;
 
 % % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
 inductive LogSub : {g0:ctx}(h:tctx){#S1: [h |- g0]}{#S2: [h |- g0]}
@@ -331,7 +333,7 @@ ctype  =
        -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
          LogSub [g0,b:block x:tm,y:oft x R[]] [h |- #S1, <M1;D1>] [h |- #S2, <M2;D2>]
 ;
-
+ 
 % % Looking up a variable in logically equivalence substitutions gives a logical equivalence
 % rec lookup : Lookup [|-G] [g |- X] [ |- T]
 %  -> LogSub [g] [h |- #S1] [h |- #S2] [|- G]
@@ -341,7 +343,7 @@ ctype  =
 % | Top =>    let Dot s' e = s in e
 % | Pop v' => let Dot s' e = s in lookup v' s'
 % ;
-
+%{
 % Monotonicity of logical equivalence on substitutions
 rec wknLogSub :
     {h0:tctx}{h:tctx}{#W:[h0 |- h]}
@@ -371,7 +373,7 @@ rec logEqSubTrans :
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
 | Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2) [h |- D1] [h |- D4];
-
+}%
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
    -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = 
  / total g (lookup g) /
@@ -379,13 +381,13 @@ rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1]
 	 | [] => impossible [ |- #p.1] 
 	 | [g',b:block x:tm,y:oft x S[]] => 
 	   let Dot rs rm [h |- D1] [h |- D2] = s in   
-	   (case [g', b:block x:tm, y:oft x S[] |- #p.2] of 
-	      |  {#q:[g0 |- block (x:tm, u: oft x Q[])]}
+	   (case [g', b:block (x:tm, y:oft x S[]) |- #p.2] of 
+	      |  {#q:[g0 |- block (x:tm, u: oft x P[])]}
                  [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g'] [g' |- #q] rs
 	      | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
 )
  ;
-
+%{
 % Tiny fundamental theorem
 rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#S1] ~ M[#S2]] [|- T] =
  / total d (thm' g h m t s1 s2 d) /
@@ -504,3 +506,4 @@ case d of
 % -> [g' |- algeqn M1[#Id] M2[#Id] T[]] =
 %  / total (completeness) /
 %    fn r => fn e => reify [|-_] (thm e (idLogSub r));
+}%

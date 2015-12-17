@@ -153,6 +153,16 @@ module LF = struct
               in
 (*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
+	  | Obj _ -> failwith "Found Obj which is not a tuple"
+	  | Head (HClo (_, _, _) as h)  -> Head (Proj (h, k))
+	  | Head (HMClo (_, _) as h)  -> Head (Proj (h, k))
+	  | Head (Proj (h, _ ))  -> failwith "Found head that is a Proj?? - nested Proj not allowed"
+	  | Head (MPVar _ )  -> failwith "Found head that is MPVar"
+	  | Head (FPVar _ )  -> failwith "Found head that is FPVar"
+	  | Head (MVar _ )  -> failwith "Found head that is MVar"
+	  | Head (AnnH _ )  -> failwith "Found head that is AnnH"
+	  | Head (MMVar _ )  -> failwith "Found head that is MMVar"
+	  | Head _  -> failwith "Found head that is not a BVar or PVar"
         end
 
     | Head (Proj (h, k))  ->

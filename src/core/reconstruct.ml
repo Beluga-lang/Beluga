@@ -206,7 +206,7 @@ type mTypSkelet = MT of cid_typ * Int.LF.dctx | CT of Id.cid_schema
 let mtypeSkelet loc mT = match mT with
   | Int.LF.ClTyp (Int.LF.MTyp Int.LF.Atom(_, a, _), cPsi) -> MT (a, cPsi)
   | Int.LF.CTyp (Some w) -> CT w
-  | _ -> raise (Error (loc, SrutineeBlock))
+  | _ -> raise (Error (loc, ScrutineeBlock))
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null -> Int.LF.Null

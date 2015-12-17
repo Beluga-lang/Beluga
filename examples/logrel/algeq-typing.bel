@@ -374,7 +374,7 @@ fn e1 => fn e2 => case e1 of
 
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
    -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = 
-% / total g (lookup g) /
+ / total g (lookup g) /
  mlam g, #p => fn s => case [g] of 
 	 | [] => impossible [ |- #p.1] 
 	 | [g',b:block x:tm,y:oft x S[]] => 

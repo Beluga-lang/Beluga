@@ -840,3 +840,10 @@ let runLogic () =
 
 let runLogicOn n (tA,i) e t  =
   Index.singleQuery (n,(tA,i),e,t) Frontend.solve
+
+(* 
+
+
+let runLogicOn n (cD, cPsi, tA, i) e t  =
+  Index.singleQuery (n,(tA,i),e,t) Frontend.solve
+ *)

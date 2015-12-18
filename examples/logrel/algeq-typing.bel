@@ -114,7 +114,8 @@ fn s1 => case s1 of
 
 % Logical equality is backward closed under weak head reduction
 % Induction is on T. Make T explicit
-rec closed : {T:[|- tp]} [g |-  mstep N1 M1] -> [g |-  mstep N2 M2]
+rec closed : {T:[|- tp]}
+     [g |-  mstep N1 M1] -> [g |-  mstep N2 M2]
   -> Log [g |- M1 ~ M2] [ |- T]
   -> Log [g |- N1 ~ N2] [ |- T] =
  / total t (closed g n1 m1 n2 m2 t) / 
@@ -314,7 +315,7 @@ mlam T => fn e1 => fn e2 => case [|- T] of
                       (f2 [h] [h |- #W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
                       (logEqTrans [|- T1] (logEqSym [|- _ ] v) v)));
 
-
+}%
 deq : tm -> tm -> tp -> type.
 d/beta : ({x:tm} oft x T -> deq (M2 x) (N2 x) S) -> deq M1 N1 T -> deq (app (lam (\x. M2 x)) M1) (N2 N1) S.
 d/lam : ({x:tm} oft x T -> deq (M x) (N x) S) -> deq (lam (\x. M x)) (lam (\x. N x)) (arr T S).
@@ -323,7 +324,7 @@ d/app : deq M1 M2 (arr T S) -> deq N1 N2 T -> deq (app M1 N1) (app M2 N2) S.
 d/refl : oft M T -> deq M M T.
 d/sym : deq M N T -> deq N M T.
 d/trans : deq M N T -> deq N O T -> deq M O T.
-}%
+
 
 schema ctx = some [t:tp] block x:tm,y:oft x t;
 
@@ -400,19 +401,22 @@ rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#
 fn d, s =>
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
-%{ | [g |- #p.2] =>  lookup [g] [g |- #p] s 
+% | [g |- #p.2] =>  lookup [g] [g |- #p] s 
 | [g |- oft/app D1 D2] =>
   let LogArr [h |- M1] [h |- M2] f = thm' [g |- D1] s in
   f [h] [h |- ..] [h |- _] [h |- D2[#S1]] [h |- _] [h |- D2[#S2]] (thm' [g |- D2] s)
-}%
+
 | [g |- oft/lam (\x.\y. D0)] =>
   let (d : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in 
   LogArr [h |- lam \x._] [h |- lam \x._]
    (mlam h0,#W,N1,D1,N2,D2 => fn rn => 
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
     let q2 = thm' [g,b:block x:tm,y:oft x P[] |- D0[..,b.1,b.2]] q0 in    
-%    closed [|- _] [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
-%	    (thm' [g,b:block x:tm,y:oft x P[] |- D0[..,b.1,b.2]] q0)
+  %{ closed [|- Q]
+         ? % [h0 |- trans1 beta refl] 
+         ? % [h0 |- trans1 beta refl] 
+         ? % q2
+   }%
 ?
    )
 ;
@@ -459,20 +463,21 @@ fn d => case d of
 | [g |- d/sym D1] => dtp1 [g |- D1]
 | [g |- d/trans D1 D2] => dtp2 [g |- D2]
 ;
-
+}%
 % % Fundamental theorem
 rec thm : [g |- deq M1 M2 T[]]
         -> LogSub [g] [h |- #S1] [h |- #S2]
         -> Log [h |- M1[#S1] ~ M2[#S2]] [|- T] =
-/ total d (thm g h m1 m2 t sigma sigma' d) /
+% / total d (thm g h m1 m2 t sigma sigma' d) /
 fn d , s => 
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
-| [g |- d/app D1 D2] =>
+%{| [g |- d/app D1 D2] =>
   let LogArr [h |- M1] [h |- M2] f = thm [g |- D1] s in
   let [g |- E1] = dtp1 [g |- D2] in
   let [g |- E2] = dtp2 [g |- D2] in 
   f [h] [h |- ..] [h |- _] [h |- E1[#S1]] [h |- _] [h |- E2[#S2]] (thm [g |- D2] s)
+}%
 | [g |- d/beta (\x.\y. D1) D2] =>
   % let q0 = thm [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s) ? ?) in 
   ? % closed [|- _] [h |- trans1 beta refl] [h |- refl] ?
@@ -480,7 +485,8 @@ case d of
   LogArr [h |- lam (\x. _)] [h |- lam (\x. _)]
    (mlam h0,#W,N1,D1,N2,D2 => fn rn =>
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
-    ? % let q2 = thm [g,b:block x:tm,y:oft x _ |- E1[..,b.1,b.2]] q0 in
+    let q2 = thm [g,b:block x:tm,y:oft x _ |- E1[..,b.1,b.2]] q0 in
+    ?
     % closed [|- _] [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
    ) 
 | [g |- d/ext (\x.\y. D0)] =>
@@ -488,11 +494,12 @@ case d of
    % let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn ? ? in
    ? % thm [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] ? 
   )
-| [g |- d/refl D1] => thm' [g |- D1] s
-| [g |- d/sym D1] => logEqSym [|- _] (thm [g |- D1] (logEqSubSym s))
-| [g |- d/trans D1 D2] => logEqTrans [|- _] (thm [g |- D1] s) (thm [g |- D2] (logEqSubTrans (logEqSubSym s) s))
+%  | [g |- d/refl D1] => thm' [g |- D1] s
+% | [g |- d/sym D1] => logEqSym [|- _] (thm [g |- D1] (logEqSubSym s))
+% | [g |- d/trans D1 D2] => logEqTrans [|- _] (thm [g |- D1] s) (thm [g |- D2] (logEqSubTrans (logEqSubSym s) s))
 ;
 
+%{
 % inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 % | INil : IdSub [|-nil] [] [|- ^]
 % | ISnoc : IdSub [|-G] [g] [g' |- #Id]

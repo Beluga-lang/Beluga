@@ -381,7 +381,7 @@ fn e1 => fn e2 => case e1 of
 
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
    -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = 
-% / total g (lookup g) /
+ / total g (lookup g) /
  mlam g, #p => fn s => case [g] of 
 	 | [] => impossible [ |- #p.1] 
 	 | [g',b:block x:tm,y:oft x S[]] => 
@@ -395,7 +395,7 @@ rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1]
 
 % Tiny fundamental theorem
 rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#S1] ~ M[#S2]] [|- T] =
-% / total d (thm' g h m t s1 s2 d) /
+/ total d (thm' g h m t s1 s2 d) /
 fn d, s =>
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
@@ -405,7 +405,7 @@ case d of
   f [h] [h |- ..] [h |- _] [h |- D2[#S1]] [h |- _] [h |- D2[#S2]] (thm' [g |- D2] s)
 
 | [g |- oft/lam (\x.\y. D0)] =>
-  let (d : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in 
+  let ([g |- _ ] : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in 
   LogArr [h |- lam \x.M[#S1[..],x]] [h |- lam \x.M[#S2[..],x]]
    (mlam h0,#W,N1,D1,N2,D2 => fn rn => 
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
@@ -464,7 +464,7 @@ fn d => case d of
 rec thm : [g |- deq M1 M2 T[]]
         -> LogSub [g] [h |- #S1] [h |- #S2]
         -> Log [h |- M1[#S1] ~ M2[#S2]] [|- T] =
-% / total d (thm g h m1 m2 t sigma sigma' d) /
+ / total d (thm g h m1 m2 t sigma sigma' d) /
 fn d , s => 
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
@@ -480,7 +480,7 @@ case d of
    let q0 = thm [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s)  [h |- E1] [h |- E2]) in 
    closed [|- _] [h |- trans1 beta refl] [h |- refl] q0
 | [g |- d/lam (\x.\y. E1)] =>
-  let (d : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in 
+  let ([g |- _ ] : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in 
   LogArr [h |- lam (\x. M1[#S1[..],x])] [h |- lam (\x. M2[#S2[..],x])]
    (mlam h0,#W,N1,D1,N2,D2 => fn rn =>
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
@@ -488,7 +488,7 @@ case d of
     closed [|- Q] [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
    ) 
 | [g |- d/ext (\x.\y. D0)] =>
-  let (d : [g |- deq M1 M2 (arr P[] Q[])]) = d in 
+  let ([g |- _ ] : [g |- deq M1 M2 (arr P[] Q[])]) = d in 
   LogArr [h |- M1[#S1]] [h |- M2[#S2]] (mlam h0,#W,N1,D1,N2,D2 => fn rn => 
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
     thm [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] q0

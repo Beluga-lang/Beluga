@@ -363,16 +363,15 @@ let rec elMCtx recT delta = match delta with
 
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-    let s_proj   = gen_conv_sub conv_list in
-
+  let s_proj   = gen_conv_sub conv_list in
   let rec genSpine sK = match sK with
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
     | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), _ ), kK), s) ->
-        let tA1' = strans_typ cD (tA1, s) conv_list in
+        let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let h    = if !strengthen then
-                    (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
+              	   (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
                        (* cPhi |- ss' : cPhi' *)
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)

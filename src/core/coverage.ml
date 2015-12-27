@@ -208,9 +208,16 @@ let rec lower cPsi sA = match sA with
 let gen_str cD cPsi (LF.Atom (_, a, _tS) as tP) =
   let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
   let s_proj            = ConvSigma.gen_conv_sub conv_list in
-  let tQ                = ConvSigma.strans_typ cD (tP, S.LF.id) conv_list in
+  let s_tup            = ConvSigma.gen_conv_sub' conv_list in
+  let _ = dprint (fun () -> "[gen_str] cPhi : " ^ P.dctxToString cD cPhi) in
+  let _ = dprint (fun () -> "[gen_str] s_tup : " ^ P.subToString cD cPhi s_tup) in
+  let _ = dprint (fun () -> "[gen_str] s_proj : " ^ P.subToString cD cPsi s_proj) in
+  (* let tQ                = ConvSigma.strans_typ cD cPsi (tP, S.LF.id) conv_list in *)
     (*  cPsi |- s_proj : cPhi
-        cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+        cPhi |- s_tup : cPsi       
+        cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
+  let _ = dprint (fun () -> "[gen_str] Type : " ^ P.dctxToString cD cPhi ^ " |- " ^  P.typToString cD cPhi (tP, s_tup)) in
+  let tQ = Whnf.normTyp (tP, s_tup) in 
   let (ss', cPhi') = Subord.thin' cD a cPhi in
     (* cPhi |- ss' : cPhi' *)
   let ssi' = S.LF.invert ss' in
@@ -220,6 +227,10 @@ let gen_str cD cPsi (LF.Atom (_, a, _tS) as tP) =
        cPsi |- s_proj : cPhi
        cPsi |- comp  ss' s_proj   : cPhi' *)
   let ss_proj = S.LF.comp ss' s_proj in
+  let _ = dprint (fun () -> "[gen_str] (after strengthening) ss_proj : " ^ P.subToString cD cPsi ss_proj) in
+  let _ = dprint (fun () -> "[gen_str] (after strengthening) ss'  : " ^ P.subToString cD cPhi ss') in
+  let _ = dprint (fun () -> "[gen_str] (after strengthening) ssi' : " ^ P.subToString cD cPhi' ssi') in
+  let _ = dprint (fun () -> "[gen_str] tQ[ssi'] : " ^ P.typToString cD cPhi' (tQ, ssi')) in
      (ss_proj , (cPhi', LF.TClo(tQ,ssi')))
 
 
@@ -238,9 +249,12 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
   | (LF.Atom (_, a, _tS) as tP, s) ->
       let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
-      (*  cPsi |- s_proj : cPhi
-          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+      let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+	(* let tQ    = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in*)
+      let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in 
+	(*  cPsi |- s_proj : cPhi
+            cPhi |- s_tup : cPsi       
+            cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
 
       let (ss', cPhi') = Subord.thin' cD a cPhi in
       (* cPhi |- ss' : cPhi' *)
@@ -381,8 +395,9 @@ let rec candidatesToString' (cD, cG) candidates k = match candidates with
 
 let candidatesToString (cD,cG, candidates, patt ) =
   let cG' = gctxToCompgctx cG in
-"\n##### COVERAGE GOAL : " ^
-P.gctxToString cD cG' ^ " |- " ^
+"\n##### COVERAGE GOAL : \n" ^
+  "##### cD = " ^ P.mctxToString cD ^ 
+"\n##### " ^ P.gctxToString cD cG' ^ " |- " ^
 P.patternToString cD cG' patt
 ^ "\n##### is possibly covered by \n" ^
 candidatesToString' (cD, cG') candidates 1
@@ -2205,7 +2220,8 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
 	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, (loc,LF.CObj cPsi)) ) ]
 
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
-      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
+      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
+	(*  cPsi |- s  : cPsi' *)
       let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in
       let name       = Id.mk_name (Whnf.newMTypName mT) in
       let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
@@ -2231,7 +2247,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let mT         = LF.ClTyp (LF.PTyp tA', cPsi') in
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName mT),  mT, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = match projOpt with None -> LF.PVar (1, idSub) | Some k -> LF.Proj(LF.PVar (1, idSub), k) in
+      let mv         = match projOpt with None -> LF.PVar (1, s) | Some k -> LF.Proj(LF.PVar (1, s), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
       let cPsi      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
       let tA        = Whnf.cnormTyp (tA, LF.MShift 1) in

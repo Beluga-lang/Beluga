@@ -232,9 +232,11 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
   | (Int.LF.Atom (_, a, _tS) as tP, s) ->
       let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
       let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
-      (*  cPsi |- s_proj : cPhi
-          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+      let s_tup  = ConvSigma.gen_conv_sub' conv_list in
+      let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in 
+	(*  cPsi |- s_proj : cPhi
+            cPhi |- s_tup : cPsi       
+            cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
 
       let (ss', cPhi') = Subord.thin' cD a cPhi in
       (* cPhi |- ss' : cPhi' *)
@@ -1027,7 +1029,12 @@ and elTerm' recT cD cPsi r sP = match r with
                 | Int.LF.Atom (_, a, _ ) ->
                     let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
                     let s_proj = ConvSigma.gen_conv_sub conv_list in
-                    let tA'    = ConvSigma.strans_typ cD (tA, Substitution.LF.id) conv_list  in
+		    let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+		    let tA' = Whnf.normTyp (tA, s_tup) in 
+		      (*  cPsi |- s_proj : cPhi
+			  cPhi |- s_tup : cPsi       
+			  cPhi |- tQ   where  cPsi |- tA  !! tQ = [s_tup]tA !!  *)
+                    (* let tA'    = ConvSigma.strans_typ cD cPsi (tA, Substitution.LF.id) conv_list  in*)
                     let h      = if !strengthen then
                                    let (ss', cPhi') = Subord.thin' cD a cPhi in
                                      (* cPhi |- ss' : cPhi' *)
@@ -1144,7 +1151,10 @@ and elTerm' recT cD cPsi r sP = match r with
              let ss =  Substitution.LF.invert s'' in
 
              let _ = dprint (fun () -> "[synDom] (after flattening) cPhi = " ^ P.dctxToString cD cPhi ^ "\n") in
-             let tP' = ConvSigma.strans_typ cD sP conv_list in
+	     let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+	     let (tP, s_p) = sP in 
+	     let tP' = Whnf.normTyp (tP, Substitution.LF.comp s_p s_tup) in 
+             (* let tP' = ConvSigma.strans_typ cD cPsi sP conv_list in *)
              let _ = dprint (fun () -> "[synDom] Prune type sP = " ^ P.typToString cD cPsi sP ) in
       (*             let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in *)
              let _ = dprint (fun () -> "[synDom] Prune flattened type (1 with resp. flat_cPsi) " ^ P.typToString cD flat_cPsi (tP', Substitution.LF.id) ) in

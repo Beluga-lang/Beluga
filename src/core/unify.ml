@@ -154,9 +154,12 @@ let rec blockdeclInDctx cPsi = match cPsi with
     let _ = dprint (fun () -> "     in context cPsi = " ^ P.dctxToString cD cPsi) in
     let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
     let s_proj = ConvSigma.gen_conv_sub conv_list in
-    let tQ    = ConvSigma.strans_typ cD (tP, s) conv_list in
-      (*  cPsi |- s_proj : cPhi
-          cPhi |- tQ   where  cPsi |- tP   and [s_proj]^-1([s]tP) = tQ  *)
+    let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+    (* let tQ    = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in*)
+    let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in 
+    (*  cPsi |- s_proj : cPhi
+        cPhi |- s_tup : cPsi       
+        cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
 
     let _ = dprint (fun () -> "[genMMVarstr] flattened type " ^ P.typToString cD cPhi (tQ,Substitution.LF.id)) in 
     let _ = dprint (fun () -> "     in context cPhi = " ^ P.dctxToString cD cPhi) in
@@ -1474,9 +1477,9 @@ let isVar h = match h with
        let _ = dprint (fun () -> ("[unifyMMVarTermProj] flat_cPsi = " ^ 
 				    P.dctxToString cD0 flat_cPsi ^ "\n")) in
        let phat = Context.dctxToHat flat_cPsi in
-       let t_flat = ConvSigma.strans_sub cD0 t1' conv_list in
+       let t_flat = ConvSigma.strans_sub cD0 cPsi t1' conv_list in
        (*   flat_cPsi |- t_flat : cPsi   *)
-       let tM2'   = ConvSigma.strans_norm cD0 (tM2,id) conv_list in
+       let tM2'   = ConvSigma.strans_norm cD0 cPsi (tM2,id) conv_list in
        let _ = dprint (fun () -> ("[unifyMMVarTermProj] sM2' = " ^ 
 				    P.normalToString cD0 flat_cPsi (tM2', id) ^ "\n")) in
        (*   flat_cPsi |- tM2'    *)

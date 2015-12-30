@@ -154,14 +154,14 @@ mlam g,A,M => fn r => case [|- A] of
 % -----------------------------------------------------------------------------
 % Defining reducibility of simultaneous substitutions.
 
-inductive RedSub : {g:ctx}(h:nctx){#S:[h |- g]} ctype =
-| Nil : RedSub [] [h |- ^ ]
-| Dot : RedSub [g] [h |- #S ] -> Reduce [ |- A] [h |- M] -> RedSub [g,x:tm A[]] [h |- #S, M ];
+inductive LogSub : {g:ctx}(h:nctx){#S:[h |- g]} ctype =
+| Nil : LogSub [] [h |- ^ ]
+| Dot : LogSub [g] [h |- #S ] -> Reduce [ |- A] [h |- M] -> LogSub [g,x:tm A[]] [h |- #S, M ];
 
 % Lemmas about reducible simultaneous substitutions.
 % Weakening a term M that is reducible at type A
-rec wknRed : (h:nctx) {#W:[h |- g]} Reduce  [ |- A] [g |- M] -> Reduce [ |- A] [h |- M[#W]] =
-/ total (wknRed) /
+rec monotone : (h:nctx) {#W:[h |- g]} Reduce  [ |- A] [g |- M] -> Reduce [ |- A] [h |- M[#W]] =
+/ total (monotone) /
 mlam #W => fn r =>
 case r of
 | Base (Halts [_ |- _] [g |- S] [g |- NR]) => Base (Halts [_ |- _] [_ |- S[#W]] [_ |- NR[#W]])
@@ -173,15 +173,15 @@ case r of
 
 % Composing a reducible substitution with a variable substitution yields a 
 % reducible substitution
-rec wknRedSub : {#W:[h' |- h]} RedSub [g] [h |- #S] -> RedSub [g] [h' |- #S[#W]] =
-/ total rs (wknRedSub _ _ _ _ _ rs) /
+rec monotoneSub : {#W:[h' |- h]} LogSub [g] [h |- #S] -> LogSub [g] [h' |- #S[#W]] =
+/ total rs (monotoneSub _ _ _ _ _ rs) /
 mlam #W => fn rs => case rs of
 | Nil => Nil
-| Dot rs' rN => Dot (wknRedSub [_ |- #W] rs') (wknRed [_ |- #W] rN);
+| Dot rs' rN => Dot (monotoneSub [_ |- #W] rs') (monotone [_ |- #W] rN);
 
 % If sigma is a reducible substitution then applying sigma to a variable yields a term 
 % that is reducible
-rec redVar : {g:ctx}{#p:[g |- tm A[]]} RedSub [g] [h |- #S] ->  Reduce [ |- A] [h |- #p[#S] ] =
+rec redVar : {g:ctx}{#p:[g |- tm A[]]} LogSub [g] [h |- #S] ->  Reduce [ |- A] [h |- #p[#S] ] =
 / total g (redVar g) / 
 mlam g, #p => fn rs => case [g] of 
 | [] => impossible [ |- #p] 
@@ -190,12 +190,12 @@ mlam g, #p => fn rs => case [g] of
    | [g',x:tm A[] |-  #q[..]] => let Dot rs' rN = rs in redVar [g'] [g' |-  #q] rs');
 
 % % The identity substitution is reducible
-% rec idRedSub : {g:ctx} RedSub [g] [g |- ..] =
-% / total g (idRedSub g) /
+% rec idLogSub : {g:ctx} LogSub [g] [g |- ..] =
+% / total g (idLogSub g) /
 % mlam g => case [g] of 
 % | [ ] => Nil
 % | [g',x:tm A[]] =>
-%   Dot (wknRedSub (idRedSub [g']) (shiftIsVarSub [g']))
+%   Dot (monotoneSub (idLogSub [g']) (shiftIsVarSub [g']))
 %       (reflect [g', x:tm A[]] [|- _ ] [g', x:tm A[] |- x ] (Var (IsVar [g',x:tm A[] |-  x])));
 
 % -----------------------------------------------------------------------------
@@ -203,9 +203,9 @@ mlam g, #p => fn rs => case [g] of
 % If g |- M : A   and  h |- sigma : g   and sigma is reducible 
 % then M[sigma] is reducible at type A in the context h.
 
-rec eval : {M:[gamma |- tm A[]]} RedSub [gamma] [phi |- #S ] -> Reduce [ |- A] [phi |- M[#S] ] =
+rec eval : {M:[gamma |- tm A[]]} LogSub [gamma] [phi |- #S ] -> Reduce [ |- A] [phi |- M[#S] ] =
 / total m (eval gamma phi a sigma m) /
-mlam M => fn rs => let (rs : RedSub [gamma] [phi |- #S] ) = rs in
+mlam M => fn rs => let (rs : LogSub [gamma] [phi |- #S] ) = rs in
  case [gamma |- M] of
 | [gamma |-  #p] => redVar [gamma] [gamma |-  #p] rs
 | [gamma |-  app M1 M2]  =>
@@ -215,7 +215,7 @@ mlam M => fn rs => let (rs : RedSub [gamma] [phi |- #S] ) = rs in
    Arr [phi |- lam (\x. M1[#S[..], x])]
    (mlam psi,#W,N => fn rN =>
      closed [|- _ ] [psi |- app (lam \x.M1[#S[#W[..]],x]) N ] [psi |- M1[#S[#W[..]], N] ] 
-            [psi |-  s_beta] (eval [gamma,x:tm _ |-  M1] (Dot (wknRedSub [psi |- #W] rs) rN)));
+            [psi |-  s_beta] (eval [gamma,x:tm _ |-  M1] (Dot (monotoneSub [psi |- #W] rs) rN)));
 
 % -----------------------------------------------------------------------------
 % THEOREM: Well-typed terms halt. 
@@ -225,12 +225,12 @@ inductive IdSub : (g':nctx){g:ctx}{#Id:[g' |- g]} ctype =
 | INil : IdSub [] [|- ^]
 | ISnoc : IdSub [g] [g' |- #Id] -> IdSub [g,x:tm A[]] [g',b:block x:tm A[],y:neutral x |- #Id[..], b.1];
 
-rec idLogSub : IdSub [g] [g' |- #Id] -> RedSub [g] [g' |- #Id] =
+rec idLogSub : IdSub [g] [g' |- #Id] -> LogSub [g] [g' |- #Id] =
 / total r (idLogSub g g s r) /
 fn r => case r of
 | INil => Nil
 | ISnoc r' =>
-  Dot (wknRedSub [_,b:block x:tm _,y:neutral x |- ..] (idLogSub r'))
+  Dot (monotoneSub [_,b:block x:tm _,y:neutral x |- ..] (idLogSub r'))
       (reflect [_] [|- _] [_ |- _] [_,b:block x:tm _,y:neutral x |- b.2])
 ;  
 

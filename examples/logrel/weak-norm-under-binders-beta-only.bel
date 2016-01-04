@@ -109,12 +109,12 @@ mlam M => fn s => case s of
   [g |- s_trans (s_app2 S) MS']
 ;
 
-rec m_lam : (g:nctx) {M:[g,x:tm A[] |- tm B[]]} [g,x:tm A[] |- mstep M M'] -> [g |- mstep (lam (\x. M)) (lam (\x. M'))] =
+rec m_lam : (g:nctx) {M:[g, x:tm A[] |- tm B[]]} [g, b:block (x:tm A[], u:neutral x) |- mstep M[..,b.1] M'[..,b.1]] -> [g |- mstep (lam (\x. M)) (lam (\x. M'))] =
 / total s (m_lam a b g m m' s) /
 mlam M => fn s => case s of
-| [g,x:tm A[] |- s_refl] => [g |- s_refl]
-| [g,x:tm A[] |- s_trans S MS] =>
-  let [g |- MS'] = m_lam [_ |- _] [g,x:tm A[] |- MS] in
+| [g, b:block (x:tm A[], u:neutral x) |- s_refl] => [g |- s_refl]
+| [g, b:block (x:tm A[], u:neutral x) |- s_trans S[..,b.1] MS] =>
+  let [g |- MS'] = m_lam [_ |- _] [g,b:block (x:tm A[], u:neutral x) |- MS] in
   [g |- s_trans (s_lam (\x. S)) MS']
 
 ;
@@ -205,15 +205,14 @@ mlam M => fn rs => let (rs : LogSub [gamma] [phi |- #S] ) = rs in
 | [gamma |-  lam (\x. M1)] =>
    let q0 = eval [gamma,x:tm _ |- M1] (Dot (monotoneSub [phi,b:block x:tm _,y:neutral x |- ..] rs)
      (reflect [phi,b:block x:tm _,y:neutral x] [|- _] [phi,b |- b.1] [phi,b:block x:tm _,y:neutral x |- b.2])) in
-   let Halts [phi,b:block x:tm A[],y:neutral x |- _]
-              [phi,b:block x:tm A[],y:neutral x |- MS]
-              [phi,b:block x:tm A[],y:neutral x |- NV]
+   let 
+        Halts [phi,b:block x:tm A1[],y:neutral x |- _]
+              [phi,b:block x:tm A1[],y:neutral x |- MS[..,b.1,b.2]]
+              [phi,b:block x:tm A1[],y:neutral x |- NV]
      = reify [phi,b:block x:tm _,y:neutral x] [|- _] [phi,b |- _] q0 in
-   % let [phi,b:block x:tm A[],y:neutral x |- MS'[..,b.1]] = [phi,b:block x:tm A[],y:neutral x |- MS] in % I am not sure why I have to do this separately
-   % let [phi |- MS''] = m_lam [_ |- _] [phi,x:tm A[] |- MS'] in	
-   
    Arr [phi |- lam (\x. M1[#S[..], x])]
-   (Halts [_ |- _] ? % Should be [phi |- MS'']
+   (Halts [_ |- _] 
+     (m_lam [phi, x:tm A1[]  |- M1[#S[..],x]]  [phi, b:block (x:tm A1[], y:neutral x) |- MS[..,b.1,b.2] ])
      [phi |- n_lam (\x.\y. NV[..,<x;y>])])
    (mlam psi,#W,N => fn rN =>
      closed [|- _ ] [psi |- app (lam \x.M1[#S[#W[..]],x]) N ] [psi |- M1[#S[#W[..]], N] ] 

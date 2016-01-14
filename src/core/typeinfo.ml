@@ -108,108 +108,44 @@ module Comp = struct
        List.iter2 f bs1 bs2;
        Annot.add loc (P.subCompTypToString cD ttau)
 
-    |
-
-module Comp = struct
-  open Syntax.Int
-  module SynE = Syntax.Ext
-
-  (* e : Syntax.Int.Comp.exp_chk, e' : Syntax.Ext.Comp.exp_chk *)
-  (* Syntax.Int is open *)
-  let annotate_comp_exp_chk cD (cG, cIH) e1 e2 ttau = match (e1, e2, ttau) with
-    | (Comp.Rec (_, f, e1'), e2', (tau, t)) ->
+    (* Implicit MLam, does not have a node in the external syntax tree *)
+    | (MLam (_, u, eInt'), eExt', (TypPiBox (I.Decl (_, cU, I.Maybe) as cdec, tau), t)) ->
        annotate_comp_exp_chk
-	 cD (LF.Dec (cG, Comp.CTypDecl (f, Comp.TypClo (tau, t))), (Total.shift cIH))
-	 e1' e2' ttau
-
-    | (Comp.Fun (_, x, e1'), SynE.Comp.Fun (loc, _, e2'), (TypArr (tau1, tau2), t)) ->
-       annotate_comp_exp_chk
-	 cD (LF.Dec (cG, Comp.CTypDecl (x, Comp.TypClo (tau1, t))), (Total.shift cIH))
-	 e1' e2' (tau2, t);
-       Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
-
-    | (Comp.Cofun (_, bs1), SynE.Comp.Cofun (loc, bs2), (Comp.TypCobase (_, cid, sp), t)) ->
-       let f = fun (Comp.CopatApp (_, dest1, csp1, e1')
-		   , SynE.Comp.CopatApp (_, dest2, csp1, e2')) ->
-	 let ttau' = synObs cD csp1 ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
-	 in annotate_comp_exp_chk cD (cG, cIH) e1' e2' ttau'
-       in
-       List.iter f bs;
-       Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
-
-    | (Comp.MLam (_, u1, e1'), e2', (Comp.TypPiBox(LF.Decl (_,cU,Int.LF.Maybe) as cdec,tau),t)) ->
-       annotate_comp_exp_chk
-	 (extend_mctx cD (u1, cdec, t))
+	 (extend_mctx cD (u, cdec, t))
 	 (C.cnormCtx (cG, LF.MShift 1), C.cnormCtx (cIH, LF.MShift 1))
-	 e1' e2' (tau, C.mvar_dot1 t)
+	 eInt' eExt' (tau, C.mvar_dot1 t)
 
-    | (Comp.MLam (_, u1, e1'), SynE.Comp.MLam (loc, u2, e2'), (Comp.TypPiBox(cdec,tau),t)) ->
+    | (MLam (_, u, eInt'), SEComp.MLam (loc, _, eExt'), (TypPiBox (cdec, tau), t)) ->
        annotate_comp_exp_chk
-	 (extend_mctx cD (u1, cdec, t))
+	 (extend_mctx cD (u, cdec, t))
 	 (C.cnormCtx (cG, LF.MShift 1), C.cnormCtx (cIH, LF.MShift 1))
-	 e1' e2' (tau, C.mvar_dot1 t);
-       Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
+	 eInt' eExt' (tau, C.mvar_dot1 t);
+       Annot.add loc (P.subCompTypToString cD ttau)
 
-    | (Comp.Pair(_,e1a,e1b), SynE.Comp.Pair(loc,e2a,e2b), (Comp.TypCross (tau1, tau2), t)) ->
-       annotate_comp_exp_chk cD (cG, cIH) e1a e2a (tau1, t);
-       annotate_comp_exp_chk cD (cG, cIH) e1b e2b (tau2, t);
-       Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
+    | (Pair (_, eInt1, eInt2), SEComp.Pair (loc, eExt1, eExt2), (TypCross (tau1, tau2), t)) ->
+       annotate_comp_exp_chk cD (cG, cIH) eInt1 eExt1 tau1;
+       annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 tau2;
+       Annot.add loc (P.subCompTypToString cD ttau)
 
-    | (Comp.Let (_, i1, (x1, e1')), SynE.Comp.Let (loc, i2, (x2, e2')), (tau, t)) ->
-       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i1 in
-       let (tau', t') = C.whnfCTyp (tau', t') in
-       let cG' = LF.Dec (cG, Comp.CTypDecl (x1, Comp.TypClo (tau', t'))) in
-       annotate_comp_exp_chk cD (cG', Total.shift cIH) e1' e2' (tau, t);
-       Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
+    | (Let (_, i, (x, eInt')), SEComp.Let (loc, _, (_, eExt')), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+       let (tau', t') = C.cwhnfCTyp (tau', t') in
+       let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
+       annotate_comp_exp_chk cD (cG', Total.shift cIH) eInt' eExt' (tau, t);
+       Annot.add loc (P.subCompTypToString cD ttau)
 
-    | (Comp.LetPair (_,i1,(x1,y1,e1')), SynE.Comp.LetPair (loc,i2,(x2,y2,e2')), (tau, t)) ->
-       let (_, tau', t') = syn cD (cG, cIH) i1 in
+    | (LetPair (_, i, (x, y, eInt')), SEComp.LetPair (loc, _, (_, _, eExt')), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin
 	 match (tau', t') with
-	 | (Comp.TypCross (tau1, tau2), t') ->
-	    let cG' = LF.Dec (LF.Dec (cG, Comp.CTypDecl (x1, Comp.TypClo (tau1, t'))),
-			      Comp.CTypDecl (y1, Comp.TypClo (tau2, t')))
+	 | (TypCross (tau1, tau2), t') ->
+	    let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t')))
+			    , CTypDecl (y, TypClo (tau2, t')))
 	    in
-	    annotate_comp_exp_chk cD (cG', (Total.shift (Total.shift cIH))) e1' e2' (tau, t);
-	    Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
-	 | _ -> raise (Error.Violation "Case scrutinee not of boxed type.")
+	    annotate_comp_exp_chk cD (cG', (Total.shift (Total.shift cIH))) eInt' eExt' (tau,t)
+	 | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
        end
-
-    | (Comp.Box (_, cM1), SynE.Comp.Box (loc, cM2), (Comp.TypBox (l, mT), t)) ->
-       begin
-	 try
-	   (* LF.annotateMetaObj cD cM1 (mT, t); *)
-	   Annot.add loc (mk_entry (P.subCompTypToString cD ttau))
-	 with Whnf.FreeMVar (LF.FMVar (u, _)) ->
-	   raise (Error.Violation ("Free meta-variable " ^ (Id.render_name u)))
-       end
-
-    | (Comp.Case (_, prag1,
-		  Comp.Ann (Comp.Box (_, (l1,cM1)), (Comp.TypBox (_, mT1) as tau0_sc)), branches1),
-       SynE.Comp.Case (loc, prag2, SynE.Comp.Ann (SynE.Comp.Box (_, (l2, cM2)),
-			    (Syntax.Ext.Comp.TypBox (_, mT2) as tau0_sc)), branches2),
-       (tau, t)) ->
-       let (total_pragma, tau_sc, projOpt) =
-	 begin
-	   match cM1 with
-	   | Comp.ClObj (_, Comp.MObj (Comp.Root (_, Comp.PVar (x,s), _)))
-	   | Comp.ClObj (_, Comp.PObj (Comp.PVar (x,s))) ->
-	      let order =
-		if !Total.enabled && is_ind_MObj cD x then
-		  Ind
-
-  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
-    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
-    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
 end
 

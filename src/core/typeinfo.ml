@@ -147,6 +147,126 @@ module Comp = struct
 	 | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
        end
 
+    | (Box (_, cMInt), SEComp.Box (loc, cMExt), (TypBox (l, mT), t)) ->
+       begin
+	 try
+	   (* LF.annotate_meta_obj cD cMInt (mT, t); *)
+	   Annot.add loc (P.subCompTypToString cD ttau)
+	 with Whnf.FreeMVar (I.FMVar (u, _)) ->
+	   raise (Error.Violation "Free meta-variable " ^ Id.render_name u)
+       end
+
+    | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as tau0_sc)), branchesInt),
+       SEComp.Case (loc, _, SEComp.Ann (SEComp.Box (_, _)), (SEComp.TypBox _), branches Ext),
+       (tau, t)) ->
+       let (total_pragma, tau_sc, projOpt) =
+	 begin
+	   match cM with
+	   | I.ClObj (_, I.MObj (I.Root (_, I.PVar (x, s), _)))
+	   | I.ClObj (_, I.PObj (I.PVar (x, s))) ->
+	      let order = if !Total.enabled && is_indMObj cD x then
+			    IndIndexObj (l,cM)
+			  else
+			    IndexObj (l,cM)
+	      in
+	      (order, TypBox (l', convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), None)
+	   | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k), _)))
+	   | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,s), k))) ->
+	      let order = if !Total.enabled && is_indMObj cD x then
+			    IndIndexObj (l,cM)
+			  else
+			    IndexObj (l,cM)
+	      in
+	      (order, TypBox (l', convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
+	   | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x, s) _))) ->
+	      let order = if !Total.enabled && is_indMObj cD x then
+			    IndIndexObj (l,cM)
+			  else
+			    IndexObj (l,cM)
+	      in
+	      (order, TypBox (l', Whnf.cnormMetaTyp (mT, C.m_id)), None)
+	   | I.CObj (I.CtxVar (I.CtxOffset k)) ->
+	      let order = if !Total.enabled && is_indMObj cD k then
+			    IndIndexObj (l,cM)
+			  else
+			    IndexObj (l,cM)
+	      in
+	      (order, TypBox (l', Whnf.cnormMetaTyp (mT, C.m_id)), None)
+	 end
+       in
+       (* LF.annotate_meta_obj cD (loc, cM), (mT, C.m_id); *)
+       let problem = Coverage.make loc prag cD branchesInt tau_sc in
+       (* annotate_branches total_pragma cD (cG, cIH) branchesInt branchesExt tau0_sc (tau, t); *)
+       Annot.add loc (P.subCompTypToString cD ttau);
+       Coverage.process problem projOpt
+
+    | (Case (_, prag, i, branchesInt), SEComp.Case (loc, _, _, branchesExt), (tau, t)) ->
+       let annBranch total_pragma cD (cG, cIH) i branchesInt branchesExt (tau, t) =
+	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+	 begin
+	   match C.cwhnfCTyp (tau', t') with
+	   | (TypBox (loc', mT), t') ->
+	      let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
+	      let problem = Coverage.make loc prag cD branches tau_s in
+	      (* annotate_branches total_pragma cD (cG, cIH)
+                 branchesInt branchesExt tau_s (tau,t); *)
+	      Annot.add loc (P.subCompTypToString cD ttau);
+	      Coverage.process problem None
+	   | (tau', t') ->
+	      let tau_s = C.cnormCTyp (tau', t') in
+	      let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau', t')) in
+	      (* annotate_branches total_pragma cD (cG, cIH)
+	         branchesInt branchesExt tau_s (tau,t); *)
+	      Annot.add loc (P.subCompTypToString cD ttau);
+	      Coverage.process problem None
+	 end
+       in
+       if !Total.enabled then
+	 begin
+	   match i with
+	   | Var (_, x) ->
+	      let (f, tau') = lookup cG x in
+	      let ind =
+		begin
+		  match Whnf.cnormCTyp (tau', Whnf.m_id) with
+		  | TypInd _tau -> true
+		  | _ -> false
+		end
+	      in
+	      if ind then
+		annBranch IndDataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+	      else
+		annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+	   | _ ->
+	      annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+	 end
+       else
+	 annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau, t)
+
+    | (Syn (_, i), SEComp.Syn (loc, _), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+       let (tau', t') = C.cwhnfCTyp (tau', t') in
+       if C.convCTyp (tau, t) (tau', t') then
+	 Annot.add loc (P.subCompTypToString cD ttau)
+       else
+	 raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau', t'))))
+
+    | (If (_, i, eInt1, eInt2), SEComp.If (loc, _, eExt1, eExt2), (tau, t)) ->
+       let (_flag, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+       let (tau', t') = C.cwhnfCTyp (tau', t') in
+       begin
+	 match (tau', t') with
+	 | (TypBool, _) ->
+	    begin
+	      annotate_comp_exp_chk cD (cG, cIH) eInt1 eExt1 (tau, t);
+	      annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau, t);
+	      Annot.add loc (P.subCompTypToString cD ttau)
+	    end
+	 | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
+       end
+
+    | (Hole (_, f), SEComp.Hole (loc, _), (tau, t)) ->
+       Annot.add loc (P.subCompTypToString cD ttau)
 end
 
 module Sgn = struct

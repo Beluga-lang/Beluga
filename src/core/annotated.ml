@@ -3,7 +3,33 @@ open Pragma
 
 module Loc = Camlp4.PreCast.Loc
 
+module LF = struct
+
+  type normal =
+    | Lam of Loc.t * name * normal * Syntax.Int.LF.tclo
+    | Root of Loc.t * head * spine * Syntax.Int.LF.tclo
+    | Tuple of Loc.t * tuple * Syntax.Int.LF.tclo
+    | LFHole of Loc.t * Syntax.LF.tclo
+
+   and head = Syntax.Int.LF.head * Syntax.Int.LF.typ
+
+   and spine =
+     | Nil
+     | App of normal * spine
+     | SClo of (spine * sub)
+
+   and mfront =
+    | ClObj of Syntax.Int.LF.psi_hat * Syntax.Int.LF.clobj
+	       * (Syntax.Int.LF.ctyp * Syntax.Int.LF.msub)
+    | CObj of Syntax.Int.LF.dctx
+	       * (Syntax.Int.LF.ctyp * Syntax.Int.LF.msub)
+    | MV of offset
+	       * (Syntax.Int.LF.ctyp * Syntax.Int.LF.msub)
+
+end
+
 module Comp = struct
+
   type exp_chk =
     | Rec of Loc.t * name * exp_chk
 	     * Syntax.Int.Comp.tclo

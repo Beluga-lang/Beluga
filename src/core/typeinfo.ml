@@ -4,7 +4,7 @@ open Lexing
 
 let generate_annotations = ref false;
 
-
+exception AnnotError of string
 
 module Annot = struct
   open Syntax.Int
@@ -127,15 +127,15 @@ module Comp = struct
        annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 tau2;
        Annot.add loc (P.subCompTypToString cD ttau)
 
-    | (Let (_, i, (x, eInt')), SEComp.Let (loc, _, (_, eExt')), (tau, t)) ->
-       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+    | (Let (_, iInt, (x, eInt')), SEComp.Let (loc, iExt, (_, eExt')), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'))) in
        annotate_comp_exp_chk cD (cG', Total.shift cIH) eInt' eExt' (tau, t);
        Annot.add loc (P.subCompTypToString cD ttau)
 
-    | (LetPair (_, i, (x, y, eInt')), SEComp.LetPair (loc, _, (_, _, eExt')), (tau, t)) ->
-       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+    | (LetPair (_, iInt, (x, y, eInt')), SEComp.LetPair (loc, iExt, (_, _, eExt')), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin
 	 match (tau', t') with
@@ -200,9 +200,9 @@ module Comp = struct
        Annot.add loc (P.subCompTypToString cD ttau);
        Coverage.process problem projOpt
 
-    | (Case (_, prag, i, branchesInt), SEComp.Case (loc, _, _, branchesExt), (tau, t)) ->
+    | (Case (_, prag, iInt, branchesInt), SEComp.Case (loc, _, iExt, branchesExt), (tau, t)) ->
        let annBranch total_pragma cD (cG, cIH) i branchesInt branchesExt (tau, t) =
-	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
 	 begin
 	   match C.cwhnfCTyp (tau', t') with
 	   | (TypBox (loc', mT), t') ->
@@ -243,16 +243,16 @@ module Comp = struct
        else
 	 annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau, t)
 
-    | (Syn (_, i), SEComp.Syn (loc, _), (tau, t)) ->
-       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+    | (Syn (_, iInt), SEComp.Syn (loc, iExt), (tau, t)) ->
+       let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        if C.convCTyp (tau, t) (tau', t') then
 	 Annot.add loc (P.subCompTypToString cD ttau)
        else
 	 raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau', t'))))
 
-    | (If (_, i, eInt1, eInt2), SEComp.If (loc, _, eExt1, eExt2), (tau, t)) ->
-       let (_flag, tau', t') = annotate_comp_exp_syn cD (cG, cIH) i in
+    | (If (_, iInt, eInt1, eInt2), SEComp.If (loc, iExt, eExt1, eExt2), (tau, t)) ->
+       let (_flag, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin
 	 match (tau', t') with
@@ -267,6 +267,89 @@ module Comp = struct
 
     | (Hole (_, f), SEComp.Hole (loc, _), (tau, t)) ->
        Annot.add loc (P.subCompTypToString cD ttau)
+
+    | eInt', eExt', _ ->
+       raise (AnnotError
+		("Unable to pair: " ^ render_int_exp_chk eInt'
+		 ^ " and " ^ render_ext_exp_chk eExt'))
+
+  and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
+    | (Var (_, x), SEComp.Var (loc, _)) ->
+       let (f, tau') = lookup cG x in
+       let tau =
+	 match C.cnormCTyp (tau', C.m_id) with
+	 | TypInd tau -> tau
+	 | _ -> tau'
+       in
+       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+       if Total.exists_total_decl f then
+	 (Some cIH, tau, C.m_id)
+       else
+	 (None, tau, C.m_id)
+
+
+  let rec render_ext_exp_chk e = match e with
+    | SEComp.Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Fun (loc, x, _) ->
+       "(Fun " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Cofun (loc, _) -> "(Cofun at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.MLam (loc, u, _) ->
+       "(MLam " ^ Id.render_name u ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Pair (loc, _, _) -> "(Pair at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.LetPair (loc, _, _) -> "(LetPair at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Let (loc, _, _) -> "(Let at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Box (loc, _) -> "(Box at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Case (loc, _, _, _) -> "(Case at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.If (loc, _, _, _) -> "(If at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Hole loc -> "(Hole at " ^ Syntax.Loc.to_string loc ^ ")"
+    | _ -> "(Unknown external exp_chk)"
+
+  and render_ext_exp_syn e = match e with
+    | SEComp.Var (loc, n) -> "(Var " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.DataConst (loc, n) ->
+       "(DataConst " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Const (loc, n) ->
+       "(Const " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Apply (loc, _, _) -> "(Apply at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.BoxVal (loc, _) -> "(BoxVal at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.PairVal (loc, _, _) -> "(PairVal at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Ann (loc, _, _) -> "(Ann at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
+    | _ -> "(Unknown external exp_syn)"
+
+  let rec render_int_exp_chk e = match e with
+    | Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Rec (loc, x, _) ->
+       "(Rec " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Fun (loc, x, _) ->
+       "(Fun " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Cofun (loc, _) -> "(Cofun at " ^ Syntax.Loc.to_string loc ^ ")"
+    | MLam (loc, u, _) ->
+       "(MLam " ^ Id.render_name u ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Pair (loc, _, _) -> "(Pair at " ^ Syntax.Loc.to_string loc ^ ")"
+    | LetPair (loc, _, _) -> "(LetPair at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Let (loc, _, _) -> "(Let at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Box (loc, _) -> "(Box at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Case (loc, _, _, _) -> "(Case at " ^ Syntax.Loc.to_string loc ^ ")"
+    | If (loc, _, _, _) -> "(If at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Hole (loc, _) -> "(Hole at " ^ Syntax.Loc.to_string loc ^ ")"
+    | _ -> "(Unknown internal exp_chk)"
+
+  and render_int_exp_syn e = match e with
+    | Var (loc, _) -> "(Var at " ^ Syntax.Loc.to_string loc ^ ")"
+    | DataConst (loc, _) -> "(DataConst at " ^ Syntax.Loc.to_string loc ^ ")"
+    | DataDest (loc, _) -> "(DataDest at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Const (loc, _) -> "(Const at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Apply (loc, _, _) -> "(Apply at " ^ Syntax.Loc.to_string loc ^ ")"
+    | MApp (loc, _, _) -> "(MApp at " ^ Syntax.Loc.to_string loc ^ ")"
+    | PairVal (loc, _, _) -> "(PairVal at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Ann (loc, _, _) -> "(Ann at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
+    | _ -> "(Unknown internal exp_syn)"
+
+
 end
 
 module Sgn = struct

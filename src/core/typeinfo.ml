@@ -326,7 +326,7 @@ module Comp = struct
 
     | eInt', eExt', _ ->
        raise (AnnotError
-		("Unable to pair:\n\t" ^ render_int_exp_chk eInt'
+		("Unable to pair chk:\n\t" ^ render_int_exp_chk eInt'
 		 ^ "\n\t\tand\n\t" ^ render_ext_exp_chk eExt'))
 
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
@@ -356,7 +356,7 @@ module Comp = struct
 	 (None, tau, C.m_id)
     | eInt', eExt' ->
        raise (AnnotError
-		("Unable to pair:\n\t" ^ render_int_exp_syn eInt'
+		("Unable to pair syn:\n\t" ^ render_int_exp_syn eInt'
 		 ^ "\n\t\tand\n\t" ^ render_ext_exp_syn eExt'))
 
   and render_ext_exp_chk e = match e with

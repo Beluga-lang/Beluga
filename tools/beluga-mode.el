@@ -387,13 +387,7 @@ If a previous beli process already exists, kill it first."
 	     (with-current-buffer btypes-buffer
 	       (erase-buffer)
 	       (insert typeinfo)
-	       (message (format "type: %s" typeinfo))
-	       )
-	     )
-	   )
-	  )
-	 )
-    )
+	       (message (format "type: %s" typeinfo))))))))
   (unwind-protect
       (sit-for 60)
       (delete-overlay btypes-ovl)

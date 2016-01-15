@@ -401,7 +401,10 @@ let recSgnDecls decls =
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^(string_of_name a) ^
 				  " successful!")) in
-        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
+        let _ =
+	  if !Typeinfo.generate_annotations then
+	  Typeinfo.Sgn.annotate_sgn_typ loc tK'
+	in
         let _a = Typ.add (Typ.mk_entry a tK' i) in
         let sgn = Int.Sgn.Typ(loc, _a, tK') in
         Store.Modules.addSgnToCurrent sgn;
@@ -435,7 +438,10 @@ let recSgnDecls decls =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
-        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
+        let _ =
+	  if !Typeinfo.generate_annotations then
+	    Typeinfo.Sgn.annotate_sgn_const loc tA'
+	in
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in
         Store.Modules.addSgnToCurrent sgn;
@@ -652,9 +658,16 @@ let recSgnDecls decls =
 					    Check.Comp.check
 					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
+
+	  let _ = if !Typeinfo.generate_annotations then
+	    Typeinfo.Comp.annotate_comp_exp_chk
+	  in
+	      cD (cG, Syntax.Int.LF.Empty) e_r' e (tau_ann, C.m_id)
+(*
 	  let e_ann = Annotate.Comp.annotate cD (cG, Syntax.Int.LF.Empty) e_r' (tau_ann, C.m_id) in
 	  dprint (fun () -> "[Annotated Print]");
 	  Annotate.Print.pprint_ann cD cG e_ann;
+*)
              (e_r' , tau')
         in
 

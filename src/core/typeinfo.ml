@@ -75,11 +75,11 @@ module Annot = struct
 end
 
 module LF = struct
-  open Syntax.Int
 
 end
 
 module Comp = struct
+  open Store.Cid
   open Syntax.Int.Comp
 
   module S = Substitution
@@ -89,19 +89,75 @@ module Comp = struct
   module SELF = Syntax.Ext.LF
   module SEComp = Syntax.Ext.Comp
 
-  let annotate_comp_exp_chk cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
+  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
+
+  type error =
+    | IllegalParamTyp of I.mctx * I.dctx * I.typ
+    | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
+    | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
+    | CtxFunMismatch  of I.mctx * gctx  * tclo
+    | FunMismatch     of I.mctx * gctx  * tclo
+    | MLamMismatch    of I.mctx * gctx  * tclo
+    | PairMismatch    of I.mctx * gctx  * tclo
+    | BoxMismatch     of I.mctx * gctx  * tclo
+    | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
+    | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
+    | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
+    | PattMismatch    of (I.mctx * meta_obj * meta_typ) *
+	                 (I.mctx * meta_typ)
+(*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
+                         (I.mctx * I.dctx * I.tclo) *)
+    | IfMismatch      of I.mctx * gctx  * tclo
+    | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
+    | EqTyp           of I.mctx * tclo
+    | MAppMismatch    of I.mctx * (meta_typ * I.msub)
+    | AppMismatch     of I.mctx * (meta_typ * I.msub)
+    | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
+    | TypMismatch     of I.mctx * tclo * tclo
+    | UnsolvableConstraints of Id.name * string
+    | InvalidRecCall
+    | MissingTotal of Id.cid_prog
+    (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
+
+  exception Error of Syntax.Loc.t * error
+
+  let convToParamTyp mT = match mT with
+    | I.ClTyp (I.MTyp tA, cPsi) -> I.ClTyp (I.PTyp tA, cPsi)
+    | mT -> mT
+
+  type caseType =
+    | IndexObj of meta_obj
+    | DataObj
+    | IndDataObj
+    | IndIndexObj of meta_obj
+
+  let is_indMObj cD x = match Whnf.mctxLookupDep cD x with
+    | (_, _ , I.Inductive) -> true
+    | (_, _ , _) -> false
+
+  let rec lookup cG k = match (cG, k) with
+    | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
+    | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
+        lookup cG' (k - 1)
+
+  let extend_mctx cD (x, cdecl, t) = match cdecl with
+    | I.Decl (_u, cU, dep) ->
+       I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t), dep))
+
+  let rec annotate_comp_exp_chk cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
     | (Rec (_, f, eInt'), eExt', (tau, t)) ->
        annotate_comp_exp_chk
-	 cD (I.Dec (cG, CTypDecl (f, TypClo (tau, t))), (Total.shift cIH)) eExt' eInt' ttau
+	 cD (I.Dec (cG, CTypDecl (f, TypClo (tau, t))), (Total.shift cIH)) eInt' eExt' ttau
 
     | (Fun (_, x, eInt'), SEComp.Fun (loc, _, eExt'), (TypArr (tau1, tau2), t)) ->
        annotate_comp_exp_chk
-	 cD (I.Dec (cG, CTypDecl (x, TypClo (tau1, t))), (Total.shift cIH)) eExt' eInt' (tau2, t);
+	 cD (I.Dec (cG, CTypDecl (x, TypClo (tau1, t))), (Total.shift cIH)) eInt' eExt' (tau2, t);
        Annot.add loc (P.subCompTypToString cD ttau)
 
     | (Cofun (_, bs1), SEComp.Cofun (loc, bs2), (TypCobase (l, cid, sp), t)) ->
        let f = fun (CopatApp (_, dest1, csp1), eInt') (SEComp.CopatApp (loc', _, _), eExt') ->
-	 (let ttau' = synObs cD csp1 ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau in
+	 (let ttau' = synObs cD csp1 ((CompDest.get dest1).CompDest.typ, Whnf.m_id) ttau in
 	 annotate_comp_exp_chk cD (cG, cIH) eInt' eExt' ttau';
 	 Annot.add loc' (P.subCompTypToString cD ttau'))
        in
@@ -112,19 +168,19 @@ module Comp = struct
     | (MLam (_, u, eInt'), eExt', (TypPiBox (I.Decl (_, cU, I.Maybe) as cdec, tau), t)) ->
        annotate_comp_exp_chk
 	 (extend_mctx cD (u, cdec, t))
-	 (C.cnormCtx (cG, LF.MShift 1), C.cnormCtx (cIH, LF.MShift 1))
+	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 	 eInt' eExt' (tau, C.mvar_dot1 t)
 
     | (MLam (_, u, eInt'), SEComp.MLam (loc, _, eExt'), (TypPiBox (cdec, tau), t)) ->
        annotate_comp_exp_chk
 	 (extend_mctx cD (u, cdec, t))
-	 (C.cnormCtx (cG, LF.MShift 1), C.cnormCtx (cIH, LF.MShift 1))
+	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 	 eInt' eExt' (tau, C.mvar_dot1 t);
        Annot.add loc (P.subCompTypToString cD ttau)
 
     | (Pair (_, eInt1, eInt2), SEComp.Pair (loc, eExt1, eExt2), (TypCross (tau1, tau2), t)) ->
-       annotate_comp_exp_chk cD (cG, cIH) eInt1 eExt1 tau1;
-       annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 tau2;
+       annotate_comp_exp_chk cD (cG, cIH) eInt1 eExt1 (tau1, t);
+       annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau2, t);
        Annot.add loc (P.subCompTypToString cD ttau)
 
     | (Let (_, iInt, (x, eInt')), SEComp.Let (loc, iExt, (_, eExt')), (tau, t)) ->
@@ -149,15 +205,15 @@ module Comp = struct
 
     | (Box (_, cMInt), SEComp.Box (loc, cMExt), (TypBox (l, mT), t)) ->
        begin
-	 try
+	 (* try *)
 	   (* LF.annotate_meta_obj cD cMInt (mT, t); *)
 	   Annot.add loc (P.subCompTypToString cD ttau)
-	 with Whnf.FreeMVar (I.FMVar (u, _)) ->
-	   raise (Error.Violation "Free meta-variable " ^ Id.render_name u)
+	 (* with Whnf.FreeMVar (I.FMVar (u, _)) -> *)
+	 (* raise (Error.Violation "(Free meta-variable " ^ Id.render_name u)) *)
        end
 
     | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as tau0_sc)), branchesInt),
-       SEComp.Case (loc, _, SEComp.Ann (SEComp.Box (_, _)), (SEComp.TypBox _), branches Ext),
+       SEComp.Case (loc, _, SEComp.Ann (_, SEComp.Box (_, _), (SEComp.TypBox _)), branchesExt),
        (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =
 	 begin
@@ -178,7 +234,7 @@ module Comp = struct
 			    IndexObj (l,cM)
 	      in
 	      (order, TypBox (l', convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
-	   | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x, s) _))) ->
+	   | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x, s), _))) ->
 	      let order = if !Total.enabled && is_indMObj cD x then
 			    IndIndexObj (l,cM)
 			  else
@@ -201,20 +257,20 @@ module Comp = struct
        Coverage.process problem projOpt
 
     | (Case (_, prag, iInt, branchesInt), SEComp.Case (loc, _, iExt, branchesExt), (tau, t)) ->
-       let annBranch total_pragma cD (cG, cIH) i branchesInt branchesExt (tau, t) =
+       let annBranch total_pragma cD (cG, cIH) iInt iExt branchesInt branchesExt (tau, t) =
 	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
 	 begin
 	   match C.cwhnfCTyp (tau', t') with
 	   | (TypBox (loc', mT), t') ->
 	      let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
-	      let problem = Coverage.make loc prag cD branches tau_s in
+	      let problem = Coverage.make loc prag cD branchesInt tau_s in
 	      (* annotate_branches total_pragma cD (cG, cIH)
                  branchesInt branchesExt tau_s (tau,t); *)
 	      Annot.add loc (P.subCompTypToString cD ttau);
 	      Coverage.process problem None
 	   | (tau', t') ->
 	      let tau_s = C.cnormCTyp (tau', t') in
-	      let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau', t')) in
+	      let problem = Coverage.make loc prag cD branchesInt (Whnf.cnormCTyp (tau', t')) in
 	      (* annotate_branches total_pragma cD (cG, cIH)
 	         branchesInt branchesExt tau_s (tau,t); *)
 	      Annot.add loc (P.subCompTypToString cD ttau);
@@ -223,8 +279,8 @@ module Comp = struct
        in
        if !Total.enabled then
 	 begin
-	   match i with
-	   | Var (_, x) ->
+	   match (iInt, iExt) with
+	   | Var (_, x), SEComp.Var (_, _) ->
 	      let (f, tau') = lookup cG x in
 	      let ind =
 		begin
@@ -234,14 +290,14 @@ module Comp = struct
 		end
 	      in
 	      if ind then
-		annBranch IndDataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+		annBranch IndDataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
 	      else
-		annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+		annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
 	   | _ ->
-	      annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau,t)
+	      annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
 	 end
        else
-	 annBranch DataObj cD (cG, cIH) i branchesInt branchesExt (tau, t)
+	 annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau, t)
 
     | (Syn (_, iInt), SEComp.Syn (loc, iExt), (tau, t)) ->
        let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
@@ -249,7 +305,7 @@ module Comp = struct
        if C.convCTyp (tau, t) (tau', t') then
 	 Annot.add loc (P.subCompTypToString cD ttau)
        else
-	 raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau', t'))))
+	 raise (Error (loc, MismatchChk (cD, cG, eInt, (tau,t), (tau', t'))))
 
     | (If (_, iInt, eInt1, eInt2), SEComp.If (loc, iExt, eExt1, eExt2), (tau, t)) ->
        let (_flag, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
@@ -265,13 +321,13 @@ module Comp = struct
 	 | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
        end
 
-    | (Hole (_, f), SEComp.Hole (loc, _), (tau, t)) ->
+    | (Hole (_, f), SEComp.Hole loc, (tau, t)) ->
        Annot.add loc (P.subCompTypToString cD ttau)
 
     | eInt', eExt', _ ->
        raise (AnnotError
-		("Unable to pair: " ^ render_int_exp_chk eInt'
-		 ^ " and " ^ render_ext_exp_chk eExt'))
+		("Unable to pair:\n\t" ^ render_int_exp_chk eInt'
+		 ^ "\n\t\tand\n\t" ^ render_ext_exp_chk eExt'))
 
   and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
     | (Var (_, x), SEComp.Var (loc, _)) ->
@@ -287,8 +343,19 @@ module Comp = struct
        else
 	 (None, tau, C.m_id)
 
+  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
+    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
-  let rec render_ext_exp_chk e = match e with
+  and render_ext_exp_chk e = match e with
     | SEComp.Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
     | SEComp.Fun (loc, x, _) ->
        "(Fun " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -318,7 +385,7 @@ module Comp = struct
     | SEComp.Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
     | _ -> "(Unknown external exp_syn)"
 
-  let rec render_int_exp_chk e = match e with
+  and render_int_exp_chk e = match e with
     | Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
     | Rec (loc, x, _) ->
        "(Rec " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -344,28 +411,27 @@ module Comp = struct
     | Apply (loc, _, _) -> "(Apply at " ^ Syntax.Loc.to_string loc ^ ")"
     | MApp (loc, _, _) -> "(MApp at " ^ Syntax.Loc.to_string loc ^ ")"
     | PairVal (loc, _, _) -> "(PairVal at " ^ Syntax.Loc.to_string loc ^ ")"
-    | Ann (loc, _, _) -> "(Ann at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Ann (_, _) -> "(Ann at unknown location)"
     | Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
-    | Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
+    | Boolean _ -> "(Boolean at unknown location)"
     | _ -> "(Unknown internal exp_syn)"
-
 
 end
 
 module Sgn = struct
   open Syntax.Int
+
   let annotate_sgn_typ loc tK =
     let tK_str = P.kindToString LF.Null (tK, LF.EmptySub) in
-    Annot.add loc (mk_entry tK_str)
+    Annot.add loc tK_str
 
   let annotate_sgn_const loc tA =
     let tA_str = P.typToString LF.Empty LF.Null (tA, LF.EmptySub) in
-    Annot.add loc (mk_entry tA_str)
+    Annot.add loc tA_str
 
 end
 
-let clear_all () : unit =
-    LF.clear (); Comp.clear (); Annot.clear()
+let clear_all () : unit = Annot.clear()
 
 let print_annot (name : string) : unit =
   let pp = open_out ((fun n -> String.sub n 0 (String.rindex n '.')) name ^ ".annot") in

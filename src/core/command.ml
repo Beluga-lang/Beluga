@@ -88,6 +88,7 @@ let load = { name = "load"
               try
                 let _ = Holes.clear() in
                 let _ = Lfholes.clear () in
+		let _ = Typeinfo.clear_all () in
                 let file_name = List.hd arglist in (* .bel or .cfg *)
 		let files = Cfg.process_file_argument file_name in
 		List.iter per_file files ;

@@ -89,35 +89,13 @@ module Comp = struct
   module SELF = Syntax.Ext.LF
   module SEComp = Syntax.Ext.Comp
 
-  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
-    | IllegalParamTyp of I.mctx * I.dctx * I.typ
     | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
-    | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
-    | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
-    | CtxFunMismatch  of I.mctx * gctx  * tclo
-    | FunMismatch     of I.mctx * gctx  * tclo
-    | MLamMismatch    of I.mctx * gctx  * tclo
-    | PairMismatch    of I.mctx * gctx  * tclo
-    | BoxMismatch     of I.mctx * gctx  * tclo
-    | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
-    | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
-    | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
-    | PattMismatch    of (I.mctx * meta_obj * meta_typ) *
-	                 (I.mctx * meta_typ)
 (*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
                          (I.mctx * I.dctx * I.tclo) *)
     | IfMismatch      of I.mctx * gctx  * tclo
-    | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
-    | EqTyp           of I.mctx * tclo
-    | MAppMismatch    of I.mctx * (meta_typ * I.msub)
-    | AppMismatch     of I.mctx * (meta_typ * I.msub)
-    | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name * string
-    | InvalidRecCall
-    | MissingTotal of Id.cid_prog
     (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   exception Error of Syntax.Loc.t * error
@@ -132,9 +110,126 @@ module Comp = struct
     | IndDataObj
     | IndIndexObj of meta_obj
 
+  let is_inductive case_typ = match case_typ with
+    | IndDataObj -> true
+    | IndIndexObj mC -> true
+    | _ -> false
+
   let is_indMObj cD x = match Whnf.mctxLookupDep cD x with
     | (_, _ , I.Inductive) -> true
     | (_, _ , _) -> false
+
+  let mark_ind cD k =
+    let rec lookup cD k' =  match cD, k' with
+      | I.Dec (cD, I.Decl (u, cdec,dep)), 1 ->
+	 I.Dec (cD, I.Decl (u, cdec, I.Inductive))
+      | I.Dec (_cD, I.DeclOpt u), 1 ->
+	 raise (Error.Violation "Expected declaration to have type")
+      | I.Dec (cD, dec), k' -> I.Dec (lookup cD (k' - 1), dec)
+      | I.Empty , _  -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
+    in
+    lookup cD k
+
+  let rec fmv_normal (cD:I.mctx) tM = match tM with
+    | I.Root (_, h, tS) -> fmv_spine (fmv_head cD h) tS
+    | I.Lam (_, _ , tM) -> fmv_normal cD tM
+    | I.LFHole _ -> cD
+    | I.Tuple (_, tuple) -> fmv_tuple cD tuple
+
+  and fmv_head (cD:I.mctx) h = match h with
+    | I.MVar (I.Offset k, s) | I.PVar (k, s) ->
+	fmv_subst  (mark_ind cD k) s
+    | I.Proj (h, _ ) -> fmv_head cD h
+    | _ -> cD
+
+  and fmv_tuple (cD:I.mctx) tuple = match tuple with
+    | I.Last tM -> fmv_normal cD tM
+    | I.Cons (tM, tuple) -> fmv_tuple (fmv_normal cD tM) tuple
+
+  and fmv_spine (cD:I.mctx) tS = match tS with
+    | I.Nil -> cD
+    | I.App (tM, tS) -> fmv_spine (fmv_normal cD tM) tS
+
+  and fmv_hat (cD:I.mctx) phat = match phat with
+    | (Some (I.CtxOffset k), _ ) -> mark_ind cD k
+    | _ -> I.Empty
+
+  and fmv_dctx (cD:I.mctx) cPsi = match cPsi with
+    | I.Null -> cD
+    | I.CtxVar (I.CtxOffset k) -> mark_ind cD k
+    | I.DDec (cPsi, decl) -> fmv_decl (fmv_dctx cD cPsi) decl
+
+  and fmv_decl (cD:I.mctx) decl = match decl with
+    | I.TypDecl (_, tA) -> fmv_typ cD tA
+    | _ -> cD
+
+  and fmv_typ (cD:I.mctx) tA = match tA with
+    | I.Atom (_, _, tS) -> fmv_spine cD tS
+    | I.PiTyp ((decl, _ ) , tA) -> fmv_typ (fmv_decl cD decl) tA
+    | I.Sigma trec -> fmv_trec cD trec
+
+  and fmv_trec (cD:I.mctx) trec = match trec with
+    | I.SigmaLast (_, tA) -> fmv_typ cD tA
+    | I.SigmaElem (_, tA, trec) -> fmv_trec (fmv_typ cD tA) trec
+
+  and fmv_subst (cD:I.mctx) s = match s with
+    | I.Dot (f, s) -> fmv_subst (fmv_front cD f) s
+    | I.SVar (k, _, s) -> fmv_subst (mark_ind cD k) s
+    | _ -> cD
+
+  and fmv_front (cD:I.mctx) f = match f with
+    | I.Head h -> fmv_head cD h
+    | I.Obj tM -> fmv_normal cD tM
+    | I.Undef -> cD
+
+  let fmv_mobj cD cM = match cM with
+    | _ , I.CObj (cPsi) -> fmv_dctx cD cPsi
+    | _, I.ClObj (phat, I.MObj tM) -> fmv_normal cD tM
+    | _, I.ClObj (phat, I.PObj h) -> fmv_head (fmv_hat cD phat) h
+    | _, I.ClObj (phat, I.SObj s) ->  fmv_subst (fmv_hat cD phat) s
+
+  let rec fmv cD pat = match pat with
+    | PatConst (_ , _ , pat_spine) -> fmv_pat_spine cD pat_spine
+    | PatVar (_ , _ ) | PatTrue _ | PatFalse _ -> cD
+    | PatPair (_, pat1, pat2) ->  fmv (fmv cD pat1) pat2
+    | PatMetaObj (_, cM) -> fmv_mobj cD cM
+    | PatAnn (_, pat, _) -> fmv cD pat
+
+  and fmv_pat_spine cD pat_spine = match pat_spine with
+    | PatNil -> cD
+    | PatApp (_, pat, pat_spine) ->
+	fmv_pat_spine  (fmv cD pat) pat_spine
+
+  let mvarsInPatt cD pat =
+    fmv cD pat
+
+  let rec id_map_ind cD1' t cD = match t, cD with
+    | I.MShift k, I.Empty -> cD1'
+    | I.MShift k, cD ->
+	if k >= 0 then
+	  id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
+	else raise (Error.Violation ("Contextual substitution ill-formed"))
+
+    | I.MDot (I.MV u, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
+	if Total.is_inductive dep then
+	  let cD1' = mark_ind cD1' u in
+	    id_map_ind cD1' ms cD
+	else
+	  id_map_ind cD1' ms cD
+
+    | I.MDot (mf, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
+	(match mf with
+	   | I.ClObj (_, I.MObj(I.Root (_, I.MVar (I.Offset u, I.Shift 0), I.Nil)))
+	   | I.ClObj (_, I.MObj(I.Root (_, I.PVar (u, I.Shift 0), I.Nil)))
+	   | I.ClObj (_, I.PObj(I.PVar (u, I.Shift 0)))
+	   | I.CObj(I.CtxVar (I.CtxOffset u))
+	   | I.ClObj (_ , I.SObj (I.SVar (u, 0, I.Shift 0))) ->
+	       if Total.is_inductive dep then
+		 let cD1' = mark_ind cD1' u in
+		   id_map_ind cD1' ms cD
+	       else
+		 id_map_ind cD1' ms cD
+	   | _ -> id_map_ind cD1' ms cD)
 
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
@@ -212,7 +307,7 @@ module Comp = struct
 	 (* raise (Error.Violation "(Free meta-variable " ^ Id.render_name u)) *)
        end
 
-    | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as _tau0_sc)), branchesInt),
+    | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as tau0_sc)), branchesInt),
        SEComp.Case (loc, _, SEComp.Ann (_, SEComp.Box (_, _), (SEComp.TypBox _)), branchesExt),
        (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =
@@ -252,7 +347,7 @@ module Comp = struct
        in
        (* LF.annotate_meta_obj cD (loc, cM), (mT, C.m_id); *)
        let problem = Coverage.make loc prag cD branchesInt tau_sc in
-       (* annotate_branches total_pragma cD (cG, cIH) branchesInt branchesExt tau0_sc (tau, t); *)
+       annotate_branches total_pragma cD (cG, cIH) branchesInt branchesExt tau0_sc (tau, t);
        Annot.add loc (P.subCompTypToString cD ttau);
        Coverage.process problem projOpt
 
@@ -264,15 +359,15 @@ module Comp = struct
 	   | (TypBox (loc', mT), t') ->
 	      let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
 	      let problem = Coverage.make loc prag cD branchesInt tau_s in
-	      (* annotate_branches total_pragma cD (cG, cIH)
-                 branchesInt branchesExt tau_s (tau,t); *)
+	      annotate_branches total_pragma cD (cG, cIH)
+                 branchesInt branchesExt tau_s (tau,t);
 	      Annot.add loc (P.subCompTypToString cD ttau);
 	      Coverage.process problem None
 	   | (tau', t') ->
-	      let _tau_s = C.cnormCTyp (tau', t') in
+	      let tau_s = C.cnormCTyp (tau', t') in
 	      let problem = Coverage.make loc prag cD branchesInt (Whnf.cnormCTyp (tau', t')) in
-	      (* annotate_branches total_pragma cD (cG, cIH)
-	         branchesInt branchesExt tau_s (tau,t); *)
+	      annotate_branches total_pragma cD (cG, cIH)
+	         branchesInt branchesExt tau_s (tau,t);
 	      Annot.add loc (P.subCompTypToString cD ttau);
 	      Coverage.process problem None
 	 end
@@ -325,9 +420,65 @@ module Comp = struct
        Annot.add loc (P.subCompTypToString cD ttau)
 
     | eInt', eExt', _ ->
+       let (_, str) = render_ext_exp_chk eExt' in
        raise (AnnotError
 		("Unable to pair chk:\n\t" ^ render_int_exp_chk eInt'
-		 ^ "\n\t\tand\n\t" ^ render_ext_exp_chk eExt'))
+		 ^ "\n\t\tand\n\t" ^ str))
+
+  (* annotate_branches total_pragma cD (cG, cIH) branchesInt branchesExt tau0_sc (tau, t); *)
+    and annotate_branches caseTyp cD cG branchesInt branchesExt tau_s ttau =
+      List.iter2
+	(fun branchInt branchExt -> annotate_branch caseTyp cD cG branchInt branchExt tau_s ttau)
+	branchesInt branchesExt
+
+    and annotate_branch caseTyp cD (cG, cIH) branchInt branchExt tau_s (tau, t) =
+      match (branchInt, branchExt) with
+      | (EmptyBranch (_, cD1', pat1, t1), SEComp.EmptyBranch (loc, _, pat2)) ->
+	 let _tau_p = C.cnormCTyp (tau_s, t1) in
+	 (* LF.checkMSub loc cD1' t1 cD; *)
+	 (* annotate_pattern cD1' I.Empty pat1 pat2 (tau_p, C.m_id) *)
+	 ()
+
+    (* | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk *)
+    (* | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk *)
+      | (Branch (_, cD1', _cG, PatMetaObj (l1', mO), t1, eInt'),
+	SEComp.Branch (loc, _, SEComp.PatMetaObj (_, _), eExt')) ->
+	 let TypBox (_, mT) = tau_s in
+	 let _mT1 = C.cnormMetaTyp (mT, t1) in
+	 let cG' = C.cnormCtx (C.normCtx cG, t1) in
+	 let cIH = C.cnormCtx (C.normCtx cIH, t1) in
+	 let t'' = C.mcomp t t1 in
+	 let tau' = C.cnormCTyp (tau, t'') in
+	 let (cD1', cIH') =
+	   if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (l1', mO)) then
+	     let cD1' = mvarsInPatt cD1' (PatMetaObj (l1', mO)) in
+	     (cD1', Total.wf_rec_calls cD1' (I.Empty))
+	   else (cD1', I.Empty) in
+	 let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
+	 (* LF.checkMSub loc cD1' t1 cD; *)
+	 (* LF.checkMetaObj cD1' mO (mT1, C.m_id); *)
+	 annotate_comp_exp_chk
+	   cD1' (cG', Context.append cIH cIH') eInt' eExt' (tau', C.m_id)
+
+      | (Branch (_, cD1', cG1, patInt, t1, eInt'),
+	SEComp.Branch (loc, _, patExt, eExt')) ->
+	 let _tau_p = C.cnormCTyp (tau_s, t1) in
+	 let cG' = C.cnormCtx (cG, t1) in
+	 let cIH = C.cnormCtx (C.normCtx cIH, t1) in
+	 let t'' = C.mcomp t t1 in
+	 let tau' = C.cnormCTyp (tau, t'') in
+	 let k = Context.length cG1 in
+	 let cIH0 = Total.shiftIH cIH k in
+	 let (cD1', cIH') =
+	   if is_inductive caseTyp && Total.struct_smaller patInt then
+	     let cD1' = mvarsInPatt cD1' patInt in (cD1', Total.wf_rec_calls cD1' cG1)
+	   else (cD1', I.Empty)
+	 in
+	 let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
+	 (* LF.checkMSub loc cD1' t1 cD; *)
+	 (* annotatePattern cD1' cG1 patInt patExt (tau_p, C.m_id); *)
+	 annotate_comp_exp_chk
+	   cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') eInt' eExt' (tau', C.m_id)
 
   and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
     | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
@@ -355,37 +506,39 @@ module Comp = struct
        else
 	 (None, tau, C.m_id)
     | eInt', eExt' ->
+       let (_, str) = render_ext_exp_syn eExt' in
        raise (AnnotError
 		("Unable to pair syn:\n\t" ^ render_int_exp_syn eInt'
-		 ^ "\n\t\tand\n\t" ^ render_ext_exp_syn eExt'))
+		 ^ "\n\t\tand\n\t" ^ str))
 
   and render_ext_exp_chk e = match e with
-    | SEComp.Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Syn (loc, _) -> (loc, "(Syn at " ^ Syntax.Loc.to_string loc ^ ")")
     | SEComp.Fun (loc, x, _) ->
-       "(Fun " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Cofun (loc, _) -> "(Cofun at " ^ Syntax.Loc.to_string loc ^ ")"
+       (loc, "(Fun " ^ Id.render_name x ^ " at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Cofun (loc, _) -> (loc, "(Cofun at " ^ Syntax.Loc.to_string loc ^ ")")
     | SEComp.MLam (loc, u, _) ->
-       "(MLam " ^ Id.render_name u ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Pair (loc, _, _) -> "(Pair at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.LetPair (loc, _, _) -> "(LetPair at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Let (loc, _, _) -> "(Let at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Box (loc, _) -> "(Box at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Case (loc, _, _, _) -> "(Case at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.If (loc, _, _, _) -> "(If at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Hole loc -> "(Hole at " ^ Syntax.Loc.to_string loc ^ ")"
+       (loc, "(MLam " ^ Id.render_name u ^ " at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Pair (loc, _, _) -> (loc, "(Pair at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.LetPair (loc, _, _) -> (loc, "(LetPair at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Let (loc, _, _) -> (loc, "(Let at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Box (loc, _) -> (loc, "(Box at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Case (loc, _, _, _) -> (loc, "(Case at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.If (loc, _, _, _) -> (loc, "(If at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Hole loc -> (loc, "(Hole at " ^ Syntax.Loc.to_string loc ^ ")")
 
   and render_ext_exp_syn e = match e with
-    | SEComp.Var (loc, n) -> "(Var " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+    | SEComp.Var (loc, n) ->
+       (loc, "(Var " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")")
     | SEComp.DataConst (loc, n) ->
-       "(DataConst " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
+       (loc, "(DataConst " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")")
     | SEComp.Const (loc, n) ->
-       "(Const " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Apply (loc, _, _) -> "(Apply at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.BoxVal (loc, _) -> "(BoxVal at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.PairVal (loc, _, _) -> "(PairVal at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Ann (loc, _, _) -> "(Ann at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
-    | SEComp.Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
+       (loc, "(Const " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Apply (loc, _, _) -> (loc, "(Apply at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.BoxVal (loc, _) -> (loc, "(BoxVal at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.PairVal (loc, _, _) -> (loc, "(PairVal at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Ann (loc, _, _) -> (loc, "(Ann at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Equal (loc, _, _) -> (loc, "(Equal at " ^ Syntax.Loc.to_string loc ^ ")")
+    | SEComp.Boolean (loc, _) -> (loc, "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")")
 
   and render_int_exp_chk e = match e with
     | Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"

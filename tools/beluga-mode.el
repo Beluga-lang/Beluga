@@ -363,7 +363,7 @@ If a previous beli process already exists, kill it first."
 (set-face-doc-string 'btypes-face
                      "face for hilighting expressions and types")
 (if (not (face-differs-from-default-p 'btypes-face))
-    (set-face-background 'btypes-face "#88FF44"))
+    (set-face-background 'btypes-face "#00CCCC"))
 (overlay-put btypes-ovl 'face 'btypes-face)
 
 (defun beli--type ()

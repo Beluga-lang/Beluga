@@ -661,8 +661,8 @@ let recSgnDecls decls =
 
 	  let _ = if !Typeinfo.generate_annotations then
 	    Typeinfo.Comp.annotate_comp_exp_chk
-	  in
 	      cD (cG, Syntax.Int.LF.Empty) e_r' e (tau_ann, C.m_id)
+	  in
 (*
 	  let e_ann = Annotate.Comp.annotate cD (cG, Syntax.Int.LF.Empty) e_r' (tau_ann, C.m_id) in
 	  dprint (fun () -> "[Annotated Print]");

@@ -212,7 +212,7 @@ module Comp = struct
 	 (* raise (Error.Violation "(Free meta-variable " ^ Id.render_name u)) *)
        end
 
-    | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as tau0_sc)), branchesInt),
+    | (Case (_, prag, Ann (Box (_, (l, cM)), (TypBox (l', mT) as _tau0_sc)), branchesInt),
        SEComp.Case (loc, _, SEComp.Ann (_, SEComp.Box (_, _), (SEComp.TypBox _)), branchesExt),
        (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =
@@ -269,7 +269,7 @@ module Comp = struct
 	      Annot.add loc (P.subCompTypToString cD ttau);
 	      Coverage.process problem None
 	   | (tau', t') ->
-	      let tau_s = C.cnormCTyp (tau', t') in
+	      let _tau_s = C.cnormCTyp (tau', t') in
 	      let problem = Coverage.make loc prag cD branchesInt (Whnf.cnormCTyp (tau', t')) in
 	      (* annotate_branches total_pragma cD (cG, cIH)
 	         branchesInt branchesExt tau_s (tau,t); *)
@@ -329,6 +329,18 @@ module Comp = struct
 		("Unable to pair:\n\t" ^ render_int_exp_chk eInt'
 		 ^ "\n\t\tand\n\t" ^ render_ext_exp_chk eExt'))
 
+  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
+    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
+        if Whnf.convCTyp (tau1, theta) (tau', theta') then
+          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+        else
+          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+
   and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
     | (Var (_, x), SEComp.Var (loc, _)) ->
        let (f, tau') = lookup cG x in
@@ -342,18 +354,10 @@ module Comp = struct
 	 (Some cIH, tau, C.m_id)
        else
 	 (None, tau, C.m_id)
-
-  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
-    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
-    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | eInt', eExt' ->
+       raise (AnnotError
+		("Unable to pair:\n\t" ^ render_int_exp_syn eInt'
+		 ^ "\n\t\tand\n\t" ^ render_ext_exp_syn eExt'))
 
   and render_ext_exp_chk e = match e with
     | SEComp.Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -369,7 +373,6 @@ module Comp = struct
     | SEComp.Case (loc, _, _, _) -> "(Case at " ^ Syntax.Loc.to_string loc ^ ")"
     | SEComp.If (loc, _, _, _) -> "(If at " ^ Syntax.Loc.to_string loc ^ ")"
     | SEComp.Hole loc -> "(Hole at " ^ Syntax.Loc.to_string loc ^ ")"
-    | _ -> "(Unknown external exp_chk)"
 
   and render_ext_exp_syn e = match e with
     | SEComp.Var (loc, n) -> "(Var " ^ Id.render_name n ^ " at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -383,7 +386,6 @@ module Comp = struct
     | SEComp.Ann (loc, _, _) -> "(Ann at " ^ Syntax.Loc.to_string loc ^ ")"
     | SEComp.Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
     | SEComp.Boolean (loc, _) -> "(Boolean at " ^ Syntax.Loc.to_string loc ^ ")"
-    | _ -> "(Unknown external exp_syn)"
 
   and render_int_exp_chk e = match e with
     | Syn (loc, _) -> "(Syn at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -401,7 +403,6 @@ module Comp = struct
     | Case (loc, _, _, _) -> "(Case at " ^ Syntax.Loc.to_string loc ^ ")"
     | If (loc, _, _, _) -> "(If at " ^ Syntax.Loc.to_string loc ^ ")"
     | Hole (loc, _) -> "(Hole at " ^ Syntax.Loc.to_string loc ^ ")"
-    | _ -> "(Unknown internal exp_chk)"
 
   and render_int_exp_syn e = match e with
     | Var (loc, _) -> "(Var at " ^ Syntax.Loc.to_string loc ^ ")"
@@ -414,7 +415,6 @@ module Comp = struct
     | Ann (_, _) -> "(Ann at unknown location)"
     | Equal (loc, _, _) -> "(Equal at " ^ Syntax.Loc.to_string loc ^ ")"
     | Boolean _ -> "(Boolean at unknown location)"
-    | _ -> "(Unknown internal exp_syn)"
 
 end
 

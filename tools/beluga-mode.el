@@ -381,8 +381,8 @@ If a previous beli process already exists, kill it first."
 	   (delete-overlay btypes-ovl)
 	   (message "No type information found for current point."))
 	  (t
-	   (let ((start (nth 3 pos))
-		 (end (nth 6 pos)))
+	   (let ((start (beluga--pos (nth 1 pos) (nth 2 pos) (nth 3 pos)))
+		 (end (beluga--pos (nth 4 pos) (nth 5 pos) (nth 6 pos))))
 	     (move-overlay btypes-ovl start end target-buf)
 	     (with-current-buffer btypes-buffer
 	       (erase-buffer)

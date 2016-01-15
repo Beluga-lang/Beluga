@@ -376,7 +376,15 @@ let loc_type = {name = "loc-type";
                          file_name
                          start_line start_bol start_off
                          stop_line stop_bol stop_off
-			  | None -> fprintf ppf " - Error no type information;\n"
+			  | None -> let (file_name,
+					 start_line, start_bol, start_off,
+					 stop_line, stop_bol, stop_off,
+					 _ghost) = Syntax.Loc.to_tuple Syntax.Loc.ghost in
+					fprintf ppf
+                         "(\"%s\" %d %d %d %d %d %d);\n"
+                         file_name
+                         start_line start_bol start_off
+                         stop_line stop_bol stop_off
 			end
 		      with e -> fprintf ppf " - Error in loc-type : %s;\n" (Printexc.to_string e));
 	       help =

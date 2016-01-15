@@ -356,10 +356,49 @@ If a previous beli process already exists, kill it first."
   (beluga--send cmd)
   (beluga--receive))
 
+(defvar btypes-buf-name "*beluga-types*"
+  "Name of buffer for displaying Beluga types")
+(defvar btypes-ovl (make-overlay 1 1))
+(make-face 'btypes-face)
+(set-face-doc-string 'btypes-face
+                     "face for hilighting expressions and types")
+(if (not (face-differs-from-default-p 'btypes-face))
+    (set-face-background 'btypes-face "#88FF44"))
+(overlay-put btypes-ovl 'face 'btypes-face)
+
 (defun beli--type ()
   "Get the type at the current cursor position (if it exists)"
   (interactive)
-  (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
+  (let ((target-buf (current-buffer))
+	(line (count-lines 1 (point)))
+	(col (current-column)))
+    (setq btypes-buffer (get-buffer-create btypes-buf-name))
+    (let* ((typeinfo (beluga--rpc (format "get-type %d %d" line col)))
+	    (pos (read (beluga--rpc (format "loc-type %d %d" line col))))
+	    )
+	 (cond
+	  ((null typeinfo)
+	   (delete-overlay btypes-ovl)
+	   (message "No type information found for current point."))
+	  (t
+	   (let ((start (nth 3 pos))
+		 (end (nth 6 pos)))
+	     (move-overlay btypes-ovl start end target-buf)
+	     (with-current-buffer btypes-buffer
+	       (erase-buffer)
+	       (insert typeinfo)
+	       (message (format "type: %s" typeinfo))
+	       )
+	     )
+	   )
+	  )
+	 )
+    )
+  (unwind-protect
+      (sit-for 60)
+      (delete-overlay btypes-ovl)
+    )
+)
 
 (defun beli ()
   "Start beli mode"

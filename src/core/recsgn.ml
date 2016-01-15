@@ -402,7 +402,7 @@ let recSgnDecls decls =
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^(string_of_name a) ^
 				  " successful!")) in
         let _ =
-	  if !Typeinfo.generate_annotations then
+	  (* if !Typeinfo.generate_annotations then *)
 	  Typeinfo.Sgn.annotate_sgn_typ loc tK'
 	in
         let _a = Typ.add (Typ.mk_entry a tK' i) in
@@ -439,7 +439,7 @@ let recSgnDecls decls =
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
         let _ =
-	  if !Typeinfo.generate_annotations then
+	  (* if !Typeinfo.generate_annotations then *)
 	    Typeinfo.Sgn.annotate_sgn_const loc tA'
 	in
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
@@ -659,7 +659,8 @@ let recSgnDecls decls =
 					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
 
-	  let _ = if !Typeinfo.generate_annotations then
+	  let _ =
+	    (* if !Typeinfo.generate_annotations then *)
 	    Typeinfo.Comp.annotate_comp_exp_chk
 	      cD (cG, Syntax.Int.LF.Empty) e_r' e (tau_ann, C.m_id)
 	  in

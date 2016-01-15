@@ -47,7 +47,7 @@ s_app3 : value E2 ->
 
 % Preservation
 rec pres : [ |- has_type E T] -> [ |- step E E'] -> [ |- has_type E' T] =
-% / total s (pres e t e' d s) /
+/ total s (pres e t e' d s) /
 fn d => fn s =>
 case s of
   [ |- s_app1 S1] =>

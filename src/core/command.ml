@@ -355,9 +355,35 @@ let get_type = {name = "get-type";
                     try
                       let line = int_of_string (List.hd args) in
                       let col = int_of_string (List.hd (List.tl args)) in
-                      let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
+                      let (_, typ) = Typeinfo.type_of_position line col in fprintf ppf "%s" typ
                     with e -> fprintf ppf "- Error in get-type : %s;\n" (Printexc.to_string e));
                 help = "get-type [line] [column] Get the type at a location (for use in emacs)"}
+
+let loc_type = {name = "loc-type";
+	       run = (fun ppf args ->
+		      try
+			let line = int_of_string (List.hd args) in
+			let col = int_of_string (List.hd (List.tl args)) in
+			let (loc, _) = Typeinfo.type_of_position line col in
+			begin
+			  match loc with
+			  | Some loc -> let (file_name,
+					 start_line, start_bol, start_off,
+					 stop_line, stop_bol, stop_off,
+					 _ghost) = Syntax.Loc.to_tuple loc in
+					fprintf ppf
+                         "(\"%s\" %d %d %d %d %d %d);\n"
+                         file_name
+                         start_line start_bol start_off
+                         stop_line stop_bol stop_off
+			  | None -> fprintf ppf " - Error no type information;\n"
+			end
+		      with e -> fprintf ppf " - Error in loc-type : %s;\n" (Printexc.to_string e));
+	       help =
+		 "loc-type [line] [column]"
+		 ^ " Get the subexpression containing the type (for use in emacs)"
+	      }
+
 (* Registering built-in commands *)
 
 let _ = reg := [
@@ -383,6 +409,7 @@ let _ = reg := [
         printfun     ;
         query        ;
         get_type     ;
+	loc_type     ;
         reset        ;
         quit         ;
         ]

@@ -437,19 +437,16 @@ let print_annot (name : string) : unit =
   let pp = open_out ((fun n -> String.sub n 0 (String.rindex n '.')) name ^ ".annot") in
   Annot.print_annot pp name
 
-let type_of_position (line : int) (col : int) : string =
+let type_of_position (line : int) (col : int) : Syntax.Loc.t option * string =
   let sorted =
     let cmp l1 l2 = (Loc.start_off l1) - (Loc.start_off l2) in
     let l = Hashtbl.fold (fun k v acc -> (k,v)::acc) Annot.store [] in
       List.sort (fun (key1,_) (key2,_) -> cmp key1 key2) l in
-  (* let f (l, _) = print_string ((string_of_int (Loc.start_off l)) ^ ", " ^ (string_of_int (Loc.stop_off l)) ^ "\n") in
-  let _ = List.iter f sorted in *)
   let contains_pos (l, x) : bool = begin
     let start_c = ((Loc.start_off l) - (Loc.start_bol l)) in
     let end_c = ((Loc.stop_off l) - (Loc.stop_bol l)) in
     let start_l = Loc.start_line l in
     let end_l = Loc.stop_line l in
-    (* let _ = Format.printf "(%d, %d), (%d, %d), %s\n" (Loc.start_line l) start_c (Loc.stop_line l) end_c x.Annot.typ in *)
     if (start_l = line) && (end_l = line) then
       (start_c <= col) && (col <= end_c)
     else if (start_l = line) && (line < end_l) then
@@ -461,5 +458,5 @@ let type_of_position (line : int) (col : int) : string =
     end
   in
   match List.fold_left (fun acc x -> if contains_pos x then (Some x) else acc) None sorted with
-  | Some (_, s) -> (s.Annot.typ ^ ";\n")
-  | None -> ("No type information found for point: (" ^ (string_of_int line) ^ ", " ^ (string_of_int col)^ ");\n")
+  | Some (loc, s) -> (Some loc, (s.Annot.typ ^ ";\n"))
+  | None -> (None, "No type information found for point: (" ^ (string_of_int line) ^ ", " ^ (string_of_int col)^ ");\n")

@@ -1,7 +1,7 @@
 val generate_annotations : bool ref
 val print_annot : string -> unit
 val clear_all : unit -> unit
-val type_of_position : int -> int -> string
+val type_of_position : int -> int -> Syntax.Loc.t option * string
 
 module Annot : sig
 	type entry = {

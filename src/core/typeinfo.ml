@@ -94,13 +94,13 @@ module Comp = struct
   type error =
     | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
-(*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
-                         (I.mctx * I.dctx * I.tclo) *)
+    | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
+    | PairMismatch    of I.mctx * gctx  * tclo
+    | BoxMismatch     of I.mctx * gctx  * tclo
     | IfMismatch      of I.mctx * gctx  * tclo
     | TypMismatch     of I.mctx * tclo * tclo
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
-    (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   exception Error of Syntax.Loc.t * error
 
@@ -239,6 +239,9 @@ module Comp = struct
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
         lookup cG' (k - 1)
+
+  let lookup' cG k =
+    let (f,tau) = lookup cG k in tau
 
   let extend_mctx cD (x, cdecl, t) = match cdecl with
     | I.Decl (_u, cU, dep) ->
@@ -493,7 +496,7 @@ module Comp = struct
 
       | (Branch (_, cD1', cG1, patInt, t1, eInt'),
 	SEComp.Branch (loc, _, patExt, eExt')) ->
-	 let _tau_p = C.cnormCTyp (tau_s, t1) in
+	 let tau_p = C.cnormCTyp (tau_s, t1) in
 	 let cG' = C.cnormCtx (cG, t1) in
 	 let cIH = C.cnormCtx (C.normCtx cIH, t1) in
 	 let t'' = C.mcomp t t1 in
@@ -507,9 +510,80 @@ module Comp = struct
 	 in
 	 let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
 	 (* LF.checkMSub loc cD1' t1 cD; *)
-	 (* annotatePattern cD1' cG1 patInt patExt (tau_p, C.m_id); *)
+	 annotate_pattern cD1' cG1 patInt patExt (tau_p, C.m_id);
 	 annotate_comp_exp_chk
 	   cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') eInt' eExt' (tau', C.m_id)
+
+    and annotate_pattern cD cG patInt patExt ttau = match patInt, patExt with
+      | (PatMetaObj (_, mO), (SEComp.PatMetaObj (loc, _))) ->
+	 begin
+	   match ttau with
+	   | (TypBox (_, ctyp), theta) ->
+	      Annot.add loc (P.subCompTypToString cD ttau);
+	      (* LF.checkMetaObj cD mO (ctyp, theta) *)
+	   | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+	 end
+
+      | (PatPair (_, patInt1, patInt2), SEComp.PatPair (loc, patExt1, patExt2)) ->
+	 begin
+	   match ttau with
+	   | (TypCross (tau1, tau2), theta) ->
+	      annotate_pattern cD cG patInt1 patExt1 (tau1, theta);
+	      annotate_pattern cD cG patInt2 patExt2 (tau2, theta)
+	   | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
+	 end
+
+      | patInt', patExt' ->
+	 let (loc, ttau') = synPattern cD cG patInt' patExt' in
+	 let tau' = C.cnormCTyp ttau' in
+	 let tau = C.cnormCTyp ttau in
+	 let ttau' = (tau', C.m_id) in
+	 let ttau = (tau, C.m_id) in
+	 if C.convCTyp ttau ttau' then ()
+	 else
+	   raise (Error (loc, PatIllTyped (cD, cG, patInt', ttau, ttau')))
+
+    and synPattern cD cG patInt patExt = match (patInt, patExt) with
+      | (PatConst (_, cInt, pat_spineInt), SEComp.PatConst (loc, cExt, pat_spineExt)) ->
+	 let tau = (CompConst.get cInt).CompConst.typ in
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 (loc, synPatSpine cD cG pat_spineInt pat_spineExt (tau, C.m_id))
+      | (PatVar (_, kInt), SEComp.PatVar (loc, kExt)) ->
+	 let tau = lookup' cG kInt in
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 (loc, (tau, C.m_id))
+      | (PatTrue _, SEComp.PatTrue loc) ->
+	 Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
+	 (loc, (TypBool, C.m_id))
+      | (PatFalse _, SEComp.PatFalse loc) ->
+	 Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
+	 (loc, (TypBool, C.m_id))
+      | (PatAnn (_, patInt', tau), SEComp.PatAnn (loc, patExt', _)) ->
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 annotate_pattern cD cG patInt' patExt' (tau, C.m_id);
+	 (loc, (tau, C.m_id))
+
+    and synPatSpine cD cG pat_spineInt pat_spineExt (tau, theta) =
+      match (pat_spineInt, pat_spineExt) with
+      | (PatNil, SEComp.PatNil loc) ->
+	 Annot.add loc (P.subCompTypToString cD (tau, theta));
+	 (tau, theta)
+      | (PatApp (_, patInt, pat_spineInt'), SEComp.PatApp (loc, patExt, pat_spineExt')) ->
+	 begin
+	   match (tau, theta) with
+	   | (TypArr (tau1, tau2), theta) ->
+	      annotate_pattern cD cG patInt patExt (tau1, theta);
+	      Annot.add loc (P.subCompTypToString cD (tau, theta));
+	      synPatSpine cD cG pat_spineInt' pat_spineExt' (tau2, theta)
+	   | (TypPiBox (cdecl, tau'), theta) ->
+	      let theta' = checkPatAgainstCDecl cD patInt (cdecl, theta) in
+	      Annot.add loc (P.subCompTypToString cD (tau, theta));
+	      synPatSpine cD cG pat_spineInt' pat_spineExt' (tau', theta')
+	 end
+
+    and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+      (* LF.checkMetaObj cD mO (ctyp, theta); *)
+      I.MDot(metaObjToMFront mO, theta)
 
     and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
       | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->

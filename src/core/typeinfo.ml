@@ -99,6 +99,7 @@ module Comp = struct
     | IfMismatch      of I.mctx * gctx  * tclo
     | TypMismatch     of I.mctx * tclo * tclo
     | InvalidRecCall
+    | MissingTotal of Id.cid_prog
     (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   exception Error of Syntax.Loc.t * error
@@ -510,68 +511,86 @@ module Comp = struct
 	 annotate_comp_exp_chk
 	   cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') eInt' eExt' (tau', C.m_id)
 
-  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
-    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
-    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
+      | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+         if Whnf.convCTyp (tau1, theta) (tau', theta') then
+           (tau2, theta)
+         else
+           raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+      | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
+         if Whnf.convCTyp (tau1, theta) (tau', theta') then
+           synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+         else
+           raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
-  and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
-    | (Var (_, x), SEComp.Var (loc, _)) ->
-       let (f, tau') = lookup cG x in
-       let tau =
-	 match C.cnormCTyp (tau', C.m_id) with
-	 | TypInd tau -> tau
-	 | _ -> tau'
-       in
-       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
-       if Total.exists_total_decl f then
-	 (Some cIH, tau, C.m_id)
-       else
-	 (None, tau, C.m_id)
+    and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
+      | (Var (_, x), SEComp.Var (loc, _)) ->
+	 let (f, tau') = lookup cG x in
+	 let tau =
+	   match C.cnormCTyp (tau', C.m_id) with
+	   | TypInd tau -> tau
+	   | _ -> tau'
+	 in
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 if Total.exists_total_decl f then
+	   (Some cIH, tau, C.m_id)
+	 else
+	   (None, tau, C.m_id)
 
-    | (DataConst (_, c), SEComp.DataConst (loc, _)) ->
-       let tau = (CompConst.get c).CompConst.typ in
-       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
-       (None, (CompConst.get c).CompConst.typ, C.m_id)
+      | (DataConst (_, c), SEComp.DataConst (loc, _)) ->
+	 let tau = (CompConst.get c).CompConst.typ in
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 (None, (CompConst.get c).CompConst.typ, C.m_id)
 
-    | (Const (_, prog), SEComp.Const (loc, _)) ->
-       let tau = (Comp.get prog).Comp.typ in
-       if !Total.enabled then
-	 if (Comp.get prog).Comp.total then
+      | (Const (_, prog), SEComp.Const (loc, _)) ->
+	 let tau = (Comp.get prog).Comp.typ in
+	 if !Total.enabled then
+	   if (Comp.get prog).Comp.total then
+	     begin
+	       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+               (None, tau, C.m_id)
+	     end
+	   else
+	     raise (Error (loc, MissingTotal prog))
+	 else
 	   begin
 	     Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
-             (None, tau, C.m_id)
+	     (None, tau, C.m_id)
 	   end
-	 else
-	   raise (Error (loc, MissingTotal prog))
-       else
-	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+
+      | (Apply (_, eInt1, eInt2), SEComp.Apply (loc, eExt1, eExt2)) ->
+	 let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt1 eExt1 in
+	 let (tau1, t1) = C.cwhnfCTyp (tau1,t1) in
+	 begin
+	   match (tau1, t1) with
+	   | (TypArr (tau2, tau), t) ->
+	      annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau2, t);
+	      Annot.add loc (P.subCompTypToString cD (tau, t));
+	      (useIH loc cD cG cIH_opt eInt2, tau, t)
+	   | (tau, t) ->
+	      raise (Error (loc, MismatchSyn (cD, cG, eInt1, VariantArrow, (tau, t))))
+	 end
+
+      | (MApp (loc, eInt', mC), eExt') ->
+	 let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt' eExt' in
+	 begin
+	   match (C.cwhnfCTyp (tau1, t1)) with
+	   | (TypPiBox ((I.Decl (_, _ctyp, _)), tau), t) ->
+	      (* LF.checkMetaObj cD mC (ctyp, t) *)
+	      (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot (metaObjToMFront mC, t))
+	   | (tau, t) ->
+	      raise (Error (loc, MismatchSyn (cD, cG, eInt', VariantPiBox, (tau, t))))
+	 end
+
+      | (Ann (eInt', tau), SEComp.BoxVal (loc, cM)) ->
+	 annotate_comp_exp_chk cD (cG, cIH) eInt' (SEComp.Box (loc, cM)) (tau, C.m_id);
 	 (None, tau, C.m_id)
 
-    | (Apply (_, eInt1, eInt2), SEComp.Apply (loc, eExt1, eExt2)) ->
-       let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt1 eExt1 in
-       let (tau1, t1) = C.cwhnfCTyp (tau1,t1) in
-       begin
-	 match (tau1, t1) with
-	 | (TypArr (tau2, tau), t) ->
-	    annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau2, t);
-	    Annot.add loc (P.subCompTypToString cD (tau, t));
-	    (useIH loc cD cG cIH_opt eInt2, tau, t)
-	 | (tau, t) ->
-	    raise (Error (loc, MismatchSyn (cD, cG, eInt1, VariantArrow, (tau, t))))
-       end
-    | eInt', eExt' ->
-       let (_, str) = render_ext_exp_syn eExt' in
-       raise (AnnotError
-		("Unable to pair syn:\n\t" ^ render_int_exp_syn eInt'
-		 ^ "\n\t\tand\n\t" ^ str))
+      | eInt', eExt' ->
+	 let (_, str) = render_ext_exp_syn eExt' in
+	 raise (AnnotError
+		  ("Unable to pair syn:\n\t" ^ render_int_exp_syn eInt'
+		   ^ "\n\t\tand\n\t" ^ str))
 
   and render_ext_exp_chk e = match e with
     | SEComp.Syn (loc, _) -> (loc, "(Syn at " ^ Syntax.Loc.to_string loc ^ ")")

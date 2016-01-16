@@ -562,6 +562,32 @@ module Comp = struct
 	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	 annotate_pattern cD cG patInt' patExt' (tau, C.m_id);
 	 (loc, (tau, C.m_id))
+      | (PatAnn (loc, patInt', tau), patExt') ->
+	 annotate_pattern cD cG patInt' patExt' (tau, C.m_id);
+	 (loc, (tau, C.m_id))
+      | (patInt', patExt') ->
+	 raise (AnnotError ("Unable to pair pat:\n\t" ^ render_int_pat patInt'
+			    ^ "\n\tand\n\t" ^ render_ext_pat patExt'))
+
+    and render_int_pat pat = match pat with
+      | PatEmpty (loc, _) -> "(PatEmpty at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatMetaObj (loc, _) -> "(PatMetaObj at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatConst (loc, _, _) -> "(PatConst at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatFVar   (loc, _) -> "(PatFVar at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatVar   (loc, _) -> "(PatVar at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatPair  (loc, _, _) -> "(PatPair at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatTrue  loc -> "(PatTrue at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatFalse loc -> "(PatFalse at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatAnn   (loc, _, _) -> "(PatAnn at " ^ Syntax.Loc.to_string loc ^ ")"
+
+    and render_ext_pat pat = match pat with
+      | SEComp.PatMetaObj (loc, _) -> "(PatMetaObj at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatConst (loc, _, _) -> "(PatConst at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatVar   (loc, _) -> "(PatVar at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatPair  (loc, _, _) -> "(PatPair at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatTrue  loc -> "(PatTrue at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatFalse loc -> "(PatFalse at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatAnn   (loc, _, _) -> "(PatAnn at " ^ Syntax.Loc.to_string loc ^ ")"
 
     and synPatSpine cD cG pat_spineInt pat_spineExt (tau, theta) =
       match (pat_spineInt, pat_spineExt) with

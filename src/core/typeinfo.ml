@@ -535,6 +535,26 @@ module Comp = struct
 	 (Some cIH, tau, C.m_id)
        else
 	 (None, tau, C.m_id)
+
+    | (DataConst (_, c), SEComp.DataConst (loc, _)) ->
+       let tau = (CompConst.get c).CompConst.typ in
+       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+       (None, (CompConst.get c).CompConst.typ, C.m_id)
+
+    | (Const (_, prog), SEComp.Const (loc, _)) ->
+       let tau = (Comp.get prog).Comp.typ in
+       if !Total.enabled then
+	 if (Comp.get prog).Comp.total then
+	   begin
+	     Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+             (None, tau, C.m_id)
+	   end
+	 else
+	   raise (Error (loc, MissingTotal prog))
+       else
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 (None, tau, C.m_id)
+
     | (Apply (_, eInt1, eInt2), SEComp.Apply (loc, eExt1, eExt2)) ->
        let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt1 eExt1 in
        let (tau1, t1) = C.cwhnfCTyp (tau1,t1) in

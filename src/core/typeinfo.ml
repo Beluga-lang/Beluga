@@ -461,7 +461,6 @@ module Comp = struct
 		("Unable to pair chk:\n\t" ^ render_int_exp_chk eInt'
 		 ^ "\n\t\tand\n\t" ^ str))
 
-  (* annotate_branches total_pragma cD (cG, cIH) branchesInt branchesExt tau0_sc (tau, t); *)
     and annotate_branches caseTyp cD cG branchesInt branchesExt tau_s ttau =
       List.iter2
 	(fun branchInt branchExt -> annotate_branch caseTyp cD cG branchInt branchExt tau_s ttau)
@@ -664,8 +663,8 @@ module Comp = struct
 	 begin
 	   match (tau1, t1) with
 	   | (TypArr (tau2, tau), t) ->
+	      Annot.add loc (P.subCompTypToString cD (tau1, t1));
 	      annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau2, t);
-	      Annot.add loc (P.subCompTypToString cD (tau, t));
 	      (useIH loc cD cG cIH_opt eInt2, tau, t)
 	   | (tau, t) ->
 	      raise (Error (loc, MismatchSyn (cD, cG, eInt1, VariantArrow, (tau, t))))

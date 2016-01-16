@@ -89,13 +89,16 @@ module Comp = struct
   module SELF = Syntax.Ext.LF
   module SEComp = Syntax.Ext.Comp
 
+  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
   type error =
     | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
 (*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
                          (I.mctx * I.dctx * I.tclo) *)
     | IfMismatch      of I.mctx * gctx  * tclo
     | TypMismatch     of I.mctx * tclo * tclo
+    | InvalidRecCall
     (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   exception Error of Syntax.Loc.t * error
@@ -239,6 +242,35 @@ module Comp = struct
   let extend_mctx cD (x, cdecl, t) = match cdecl with
     | I.Decl (_u, cU, dep) ->
        I.Dec (cD, I.Decl (x, C.cnormMTyp (cU, t), dep))
+
+  let rec extract_var i = match i with
+    | Var (_, x) -> Some x
+    | Apply (_, i, _ ) -> extract_var i
+    | MApp (_, i, _ ) -> extract_var i
+    | _ -> None
+
+  let useIH loc cD cG cIH_opt e2 = match cIH_opt with
+    | None -> None
+    | Some cIH ->
+       (* We are making a recursive call *)
+       let cIH = match cIH with
+	 | I.Empty -> raise (Error (loc, InvalidRecCall))
+	 | cIH  -> match e2 with
+		   | Box (_,cM) ->
+			Total.filter cD cG cIH (loc, M cM)
+		   | Syn(_, i) -> (match extract_var i with
+				   | Some x -> Total.filter cD cG cIH (loc, V x)
+				   | None ->  Total.filter cD cG cIH (loc, E))
+       (* | _      -> raise (Error (loc, InvalidRecCall)) *)
+       in
+       (* We have now partially checked for the recursive call *)
+       match cIH with
+       | I.Dec(_ , WfRec (_, [], _ )) ->
+	  (* We have fully used a recursive call and we now are finished checking for
+           well-formedness of rec. call. *)
+          None
+       | I.Empty -> raise (Error (loc, InvalidRecCall))
+       | _ -> Some cIH
 
   let rec annotate_comp_exp_chk cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
     | (Rec (_, f, eInt'), eExt', (tau, t)) ->
@@ -439,8 +471,6 @@ module Comp = struct
 	 (* annotate_pattern cD1' I.Empty pat1 pat2 (tau_p, C.m_id) *)
 	 ()
 
-    (* | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk *)
-    (* | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk *)
       | (Branch (_, cD1', _cG, PatMetaObj (l1', mO), t1, eInt'),
 	SEComp.Branch (loc, _, SEComp.PatMetaObj (_, _), eExt')) ->
 	 let TypBox (_, mT) = tau_s in
@@ -505,6 +535,18 @@ module Comp = struct
 	 (Some cIH, tau, C.m_id)
        else
 	 (None, tau, C.m_id)
+    | (Apply (_, eInt1, eInt2), SEComp.Apply (loc, eExt1, eExt2)) ->
+       let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt1 eExt1 in
+       let (tau1, t1) = C.cwhnfCTyp (tau1,t1) in
+       begin
+	 match (tau1, t1) with
+	 | (TypArr (tau2, tau), t) ->
+	    annotate_comp_exp_chk cD (cG, cIH) eInt2 eExt2 (tau2, t);
+	    Annot.add loc (P.subCompTypToString cD (tau, t));
+	    (useIH loc cD cG cIH_opt eInt2, tau, t)
+	 | (tau, t) ->
+	    raise (Error (loc, MismatchSyn (cD, cG, eInt1, VariantArrow, (tau, t))))
+       end
     | eInt', eExt' ->
        let (_, str) = render_ext_exp_syn eExt' in
        raise (AnnotError

@@ -883,7 +883,7 @@ module Ext = struct
               (r_paren_if cond)
 
       | Comp.Box (_ , m) ->
-            fprintf ppf "%a"
+            fprintf ppf "(Box %a)"
               (fmt_ppr_meta_obj  cD 0) m
 
 
@@ -937,20 +937,20 @@ module Ext = struct
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Var %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Const (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Const %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.DataConst (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(DataConst %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
+            fprintf ppf "%s(Apply %a (%a))%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
@@ -958,36 +958,36 @@ module Ext = struct
 
       | Comp.BoxVal (_, m0) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
+            fprintf ppf "%s(BoxVal %a)%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) m0
               (r_paren_if cond)
 
       | Comp.Ann (_, e, tau) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a : %a%s"
+            fprintf ppf "%s(Ann %a : %a)%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD 1) e
               (fmt_ppr_cmp_typ cD 2) tau
               (r_paren_if cond)
 
       | Comp.PairVal(_, i1, i2) ->
-          fprintf ppf "(%a , %a)"
+          fprintf ppf "(PairVal (%a , %a))"
             (fmt_ppr_cmp_exp_syn cD 1) i1
             (fmt_ppr_cmp_exp_syn cD 1) i2
 
 
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
+            fprintf ppf "(Equal %a == %a)"
               (fmt_ppr_cmp_exp_syn cD 1) i1
               (fmt_ppr_cmp_exp_syn cD 1) i2
 
       | Comp.Boolean (_, true) ->
-          fprintf ppf "%s"
+          fprintf ppf "(True %s)"
             (to_html "ttrue" Keyword)
 
       | Comp.Boolean (_, false) ->
-          fprintf ppf "%s"
+          fprintf ppf "(False %s)"
             (to_html "ffalse" Keyword)
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function

@@ -1,3 +1,5 @@
+(* open Printf *)
+
 open Id
 
 open Store
@@ -661,6 +663,8 @@ let recSgnDecls decls =
 
 	  let _ =
 	    if !Typeinfo.generate_annotations then
+	      (* printf "%s" (Pretty.Ext.DefaultPrinter.expChkToString Syntax.Ext.LF.Empty e); *)
+	      (* printf "%s" (Pretty.Int.DefaultPrinter.expChkToString cD cG e_r'); *)
 	    Typeinfo.Comp.annotate_comp_exp_chk
 	      cD (cG, Syntax.Int.LF.Empty) e_r' e (tau_ann, C.m_id)
 	  in

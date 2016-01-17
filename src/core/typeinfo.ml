@@ -1,8 +1,11 @@
 module Loc = Syntax.Int.Loc
 module P = Pretty.Int.DefaultPrinter
+module PE = Pretty.Ext.DefaultPrinter
+module R = Store.Cid.DefaultRenderer
 open Lexing
+open Printf
 
-let generate_annotations = ref false;
+let generate_annotations = ref true;
 
 exception AnnotError of string
 
@@ -107,6 +110,83 @@ module Comp = struct
   let convToParamTyp mT = match mT with
     | I.ClTyp (I.MTyp tA, cPsi) -> I.ClTyp (I.PTyp tA, cPsi)
     | mT -> mT
+
+  let string_of_typeVariant = function
+    | VariantCross -> "product type"
+    | VariantArrow -> "function type"
+    | VariantCtxPi -> "context abstraction"
+    | VariantPiBox -> "dependent function type"
+    | VariantBox   -> "contextual type"
+
+  let _ = Error.register_printer
+    (fun (Error (loc, err)) ->
+      Error.print_with_location loc (fun ppf ->
+        match err with
+          | MissingTotal prog ->
+            Format.fprintf ppf "Function %s not known to be total."
+              (R.render_cid_prog prog)
+          | InvalidRecCall ->
+            Format.fprintf ppf "Recursive call not structurally smaller."
+
+          | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+            Error.report_mismatch ppf
+              "Ill-typed expression."
+              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
+            Format.fprintf ppf
+              "In expression: %a@."
+              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
+
+          | MismatchSyn (cD, cG, i, variant, theta_tau) ->
+            Error.report_mismatch ppf
+              "Ill-typed expression."
+              "Expected" Format.pp_print_string (string_of_typeVariant variant)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
+            Format.fprintf ppf
+              "In expression: %a@."
+              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+
+          | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+            Error.report_mismatch ppf
+              "Ill-typed pattern."
+              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
+            Format.fprintf ppf
+              "In pattern: %a@."
+              (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
+(*          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
+            Error.report_mismatch ppf
+              "Ill-typed pattern."
+              "Expected type"
+              (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
+              "Inferred type"
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
+*)
+          | BoxMismatch (cD, _cG, theta_tau) ->
+            Format.fprintf ppf "Found box-expression that does not have type %a."
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+
+          | IfMismatch (cD, _cG, theta_tau) ->
+            Error.report_mismatch ppf
+              "Type error in guard of if expression."
+	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) TypBool
+	      "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+
+          | PairMismatch (cD, _cG, theta_tau) ->
+            Format.fprintf ppf "Found tuple, but expected type %a"
+              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+
+          (* | Typmismatch (cD, (tau1, theta1), (tau2, theta2)) -> *)
+          (*     Error.report_mismatch ppf *)
+          (*       "Type of destructor did not match the type it was expected to have." *)
+          (*       "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
+          (*       (Whnf.cnormCTyp (tau1, theta1)) *)
+          (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
+          (*       (Whnf.cnormCTyp (tau2, theta2))) *)
+      ))
+
 
   type caseType =
     | IndexObj of meta_obj
@@ -388,6 +468,7 @@ module Comp = struct
        Coverage.process problem projOpt
 
     | (Case (_, prag, iInt, branchesInt), SEComp.Case (loc, _, iExt, branchesExt), (tau, t)) ->
+       printf "Case of %s\n" (P.expSynToString cD cG iInt);
        let annBranch total_pragma cD (cG, cIH) iInt iExt branchesInt branchesExt (tau, t) =
 	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
 	 begin
@@ -425,6 +506,8 @@ module Comp = struct
 	      else
 		annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
 	   | _ ->
+	      printf "cIH: %s\n"
+	     ((fun cIH -> match cIH with I.Empty -> "It's Empty." | _ -> "Not empty." ) cIH);
 	      annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
 	 end
        else
@@ -512,6 +595,8 @@ module Comp = struct
 	 annotate_pattern cD1' cG1 patInt patExt (tau_p, C.m_id);
 	 annotate_comp_exp_chk
 	   cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') eInt' eExt' (tau', C.m_id)
+      | _ ->
+	 raise (AnnotError "Incompatible branch.")
 
     and annotate_pattern cD cG patInt patExt ttau = match patInt, patExt with
       | (PatMetaObj (_, mO), (SEComp.PatMetaObj (loc, _))) ->
@@ -623,13 +708,17 @@ module Comp = struct
            raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
     and annotate_comp_exp_syn cD (cG, cIH) eInt eExt = match (eInt, eExt) with
-      | (Var (_, x), SEComp.Var (loc, _)) ->
+      | (Var (_, x), SEComp.Var (loc, n)) ->
 	 let (f, tau') = lookup cG x in
 	 let tau =
 	   match C.cnormCTyp (tau', C.m_id) with
 	   | TypInd tau -> tau
 	   | _ -> tau'
 	 in
+	 printf "Added %s to store.\n" (Id.render_name n);
+	 printf "Found %s in cG\n" (Id.render_name f);
+	 printf "Total decl found: %s\n" ((fun b -> if b then "true" else "false")
+					  (Total.exists_total_decl f));
 	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	 if Total.exists_total_decl f then
 	   (Some cIH, tau, C.m_id)
@@ -668,6 +757,21 @@ module Comp = struct
 	      (useIH loc cD cG cIH_opt eInt2, tau, t)
 	   | (tau, t) ->
 	      raise (Error (loc, MismatchSyn (cD, cG, eInt1, VariantArrow, (tau, t))))
+	 end
+
+      | (MApp (loc', iInt', mCInt), SEComp.Apply (loc, iExt', (SEComp.Box (_, mCExt)))) ->
+	 printf "Int: (MApp %s %s) - Ext: (App %s %s)\n"
+		(P.expSynToString cD cG iInt')
+		(P.expChkToString cD cG (Box (loc', mCInt)))
+		(PE.expSynToString (Syntax.Ext.LF.Empty) iExt')
+		(PE.expChkToString (Syntax.Ext.LF.Empty) (SEComp.Box (loc, mCExt)));
+	 let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) iInt' iExt' in
+	 begin
+	   match (C.cwhnfCTyp (tau1, t1)) with
+	   | (TypPiBox ((I.Decl (_, ctyp, _)), tau), t) ->
+	      (useIH loc' cD cG cIH_opt (Box (loc', mCInt)), tau, I.MDot (metaObjToMFront mCInt, t))
+	   | (tau, t) ->
+	      raise (Error (loc', MismatchSyn (cD, cG, iInt', VariantPiBox, (tau, t))))
 	 end
 
       | (MApp (loc, eInt', mC), eExt') ->

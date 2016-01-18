@@ -365,8 +365,7 @@ module Comp = struct
     annotate_comp_exp_chk cD (cG, cIH) eInt eExt ttau
 
   and annotate_comp_exp_chk cD (cG, cIH) eInt eExt (tau, t) =
-    printf "[annotate] chk cIH: %s\n" (P.gctxToString cD cIH);
-    printf "[annotate] expChk: %s\n" (P.expChkToString cD cG eInt);
+    (* printf "[annotate] expChk: %s\n" (P.expChkToString cD cG eInt); *)
     annotate_comp_exp_chkW cD (cG, cIH) eInt eExt (C.cwhnfCTyp (tau, t))
 
   and annotate_comp_exp_chkW cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
@@ -481,7 +480,6 @@ module Comp = struct
        Coverage.process problem projOpt
 
     | (Case (_, prag, iInt, branchesInt), SEComp.Case (loc, _, iExt, branchesExt), (tau, t)) ->
-       printf "[annotate] Case of %s\n" (P.expSynToString cD cG iInt);
        let annBranch total_pragma cD (cG, cIH) iInt iExt branchesInt branchesExt (tau, t) =
     	 let (_, tau', t') = annotate_comp_exp_syn cD (cG, cIH) iInt iExt in
     	 begin
@@ -515,15 +513,10 @@ module Comp = struct
     		end
     	      in
     	      if ind then
-    		begin
-    		  printf "[annotate] It's ind.\n";
-    		  annBranch IndDataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
-    		end
+    		annBranch IndDataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
     	      else
     		annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
     	   | _ ->
-    	      printf "[annotate] cIH: %s\n"
-    	     ((fun cIH -> match cIH with I.Empty -> "It's Empty." | _ -> "Not empty." ) cIH);
     	      annBranch DataObj cD (cG, cIH) iInt iExt branchesInt branchesExt (tau,t)
     	 end
        else
@@ -599,28 +592,15 @@ module Comp = struct
 	 let tau_p = C.cnormCTyp (tau_s, t1) in
 	 let cG' = C.cnormCtx (cG, t1) in
 	 let cIH = C.cnormCtx (C.normCtx cIH, t1) in
-	 printf "[annotate] Branch cIH: %s\n\tloc: %s\n" (P.gctxToString cD cIH) (Syntax.Loc.to_string loc);
 	 let t'' = C.mcomp t t1 in
 	 let tau' = C.cnormCTyp (tau, t'') in
 	 let k = Context.length cG1 in
 	 let cIH0 = Total.shiftIH cIH k in
-	 printf "[annotate] Branch cIH0: %s\n" (P.gctxToString cD cIH0);
-	 printf "[annotate] caseTyp: %s\n"
-		((fun x -> match x with
-			  | IndexObj _ -> "IndexObj"
-			  | DataObj -> "DataObj"
-			  | IndDataObj -> "IndDataObj"
-			  | IndIndexObj _ -> "IndIndexObj"
-		) caseTyp);
 	 let (cD1', cIH') =
-	   printf "[annotate] is_inductive: %s, struct_smaller: %s\n"
-		  (string_of_bool (is_inductive caseTyp))
-		  (string_of_bool (Total.struct_smaller patInt));
 	   if is_inductive caseTyp && Total.struct_smaller patInt then
 	     let cD1' = mvarsInPatt cD1' patInt in (cD1', Total.wf_rec_calls cD1' cG1)
 	   else (cD1', I.Empty)
 	 in
-	 printf "[annotate] Branch cIH': %s\n" (P.gctxToString cD cIH');
 	 let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
 	 (* LF.checkMSub loc cD1' t1 cD; *)
 	 annotate_pattern cD1' cG1 patInt patExt (tau_p, C.m_id);
@@ -721,6 +701,19 @@ module Comp = struct
 	      Annot.add loc (P.subCompTypToString cD (tau, theta));
 	      synPatSpine cD cG pat_spineInt' pat_spineExt' (tau', theta')
 	 end
+      | (pat_spineInt', pat_spineExt') ->
+	 raise (AnnotError ("Unable to pair: Int: "
+			    ^ render_int_pat_spine pat_spineInt'
+			    ^ " with Ext: "
+			    ^ render_ext_pat_spine pat_spineExt' ))
+
+    and render_int_pat_spine pat_spine = match pat_spine with
+	| PatNil -> "(PatNil)"
+	| PatApp _ -> "(PatApp)"
+
+    and render_ext_pat_spine pat_spine = match pat_spine with
+      | PatNil loc -> "(PatNil at " ^ Syntax.Loc.to_string loc ^ ")"
+      | PatApp (loc, _, _) -> "(PatApp at " ^ Syntax.Loc.to_string loc ^ ")"
 
     and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
       (* LF.checkMetaObj cD mO (ctyp, theta); *)
@@ -739,8 +732,7 @@ module Comp = struct
            raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
     and annotate_comp_exp_syn cD (cG, cIH) eInt eExt =
-      printf "[annotate] syn cIH: %s\n" (P.gctxToString cD cIH);
-      printf "[annotate] expSyn : %s\n" (P.expSynToString cD cG eInt);
+      (* printf "[annotate] expSyn : %s\n" (P.expSynToString cD cG eInt); *)
       annotate_comp_exp_synW cD (cG, cIH) eInt eExt
 
     and annotate_comp_exp_synW cD (cG, cIH) eInt eExt = match (eInt, eExt) with
@@ -751,10 +743,6 @@ module Comp = struct
 	   | TypInd tau -> tau
 	   | _ -> tau'
 	 in
-	 printf "Added %s to store.\n" (Id.render_name n);
-	 printf "Found %s in cG\n" (Id.render_name f);
-	 printf "Total decl found: %s\n" ((fun b -> if b then "true" else "false")
-					  (Total.exists_total_decl f));
 	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	 if Total.exists_total_decl f then
 	   (Some cIH, tau, C.m_id)
@@ -767,6 +755,22 @@ module Comp = struct
 	 (None, (CompConst.get c).CompConst.typ, C.m_id)
 
       | (Const (_, prog), SEComp.Const (loc, _)) ->
+	 let tau = (Comp.get prog).Comp.typ in
+	 if !Total.enabled then
+	   if (Comp.get prog).Comp.total then
+	     begin
+	       Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+               (None, tau, C.m_id)
+	     end
+	   else
+	     raise (Error (loc, MissingTotal prog))
+	 else
+	   begin
+	     Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	     (None, tau, C.m_id)
+	   end
+
+      | (Const (_, prog), SEComp.Var (loc, _)) ->
 	 let tau = (Comp.get prog).Comp.typ in
 	 if !Total.enabled then
 	   if (Comp.get prog).Comp.total then
@@ -796,15 +800,14 @@ module Comp = struct
 	 end
 
       | (MApp (loc', iInt', mCInt), SEComp.Apply (loc, iExt', (SEComp.Box (_, mCExt)))) ->
-	 printf "Int: (MApp %s %s) - Ext: (App %s %s)\n"
-		(P.expSynToString cD cG iInt')
-		(P.expChkToString cD cG (Box (loc', mCInt)))
-		(PE.expSynToString (Syntax.Ext.LF.Empty) iExt')
-		(PE.expChkToString (Syntax.Ext.LF.Empty) (SEComp.Box (loc, mCExt)));
 	 let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) iInt' iExt' in
 	 begin
 	   match (C.cwhnfCTyp (tau1, t1)) with
 	   | (TypPiBox ((I.Decl (_, ctyp, _)), tau), t) ->
+	      (* printf "Comparing int: %s with ext: %s\n" *)
+	      (* 	     (P.metaObjToString cD mCInt) *)
+	      (* 	     (PE.metaObjToString (Syntax.Ext.LF.Empty) mCExt); *)
+	      (* LF.checkMetaObj cD mC (ctyp, t) *)
 	      (useIH loc' cD cG cIH_opt (Box (loc', mCInt)), tau, I.MDot (metaObjToMFront mCInt, t))
 	   | (tau, t) ->
 	      raise (Error (loc', MismatchSyn (cD, cG, iInt', VariantPiBox, (tau, t))))
@@ -816,6 +819,7 @@ module Comp = struct
 	   match (C.cwhnfCTyp (tau1, t1)) with
 	   | (TypPiBox ((I.Decl (_, _ctyp, _)), tau), t) ->
 	      (* LF.checkMetaObj cD mC (ctyp, t) *)
+	      Annot.add loc (P.subCompTypToString cD (tau1, t1));
 	      (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot (metaObjToMFront mC, t))
 	   | (tau, t) ->
 	      raise (Error (loc, MismatchSyn (cD, cG, eInt', VariantPiBox, (tau, t))))

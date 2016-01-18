@@ -1517,6 +1517,35 @@ module Int = struct
             (Id.render_name x)
             (fmt_ppr_cmp_typ cD lvl) tau
 
+      | LF.Dec (cG, Comp.CTypDeclOpt x) ->
+	 fprintf ppf "%a, %s"
+		 (fmt_ppr_cmp_gctx cD 0) cG
+		 (Id.render_name x)
+
+      | LF.Dec (cG, Comp.WfRec (x, args, tau)) ->
+	 fprintf ppf "%a, WfRec(%s, %a) : %a"
+		 (fmt_ppr_cmp_gctx cD 0) cG
+		 (Id.render_name x)
+		 (fmt_ppr_cmp_args cD lvl) args
+		 (fmt_ppr_cmp_typ cD lvl) tau
+
+    and fmt_ppr_cmp_args cD lvl ppf = function
+      | [] -> fprintf ppf ""
+      | hd::tl ->
+	   fprintf ppf "(%a, %a)"
+		   (fmt_ppr_cmp_arg cD lvl) hd
+		   (fmt_ppr_cmp_args cD lvl) tl
+
+    and fmt_ppr_cmp_arg cD lvl ppf = function
+      | Comp.M mO ->
+	 fprintf ppf "(M %a)"
+		(fmt_ppr_meta_obj cD lvl) mO
+      | Comp.V x ->
+	 fprintf ppf "(V %a)"
+		 (fmt_ppr_lf_offset cD lvl) x
+      | Comp.E -> fprintf ppf "(E)"
+      | Comp.DC -> fprintf ppf "(DC)"
+
     let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
       fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"
             (prefix)

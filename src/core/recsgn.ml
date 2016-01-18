@@ -665,8 +665,7 @@ let recSgnDecls decls =
 	    if !Typeinfo.generate_annotations then
 	      (* printf "%s" (Pretty.Ext.DefaultPrinter.expChkToString Syntax.Ext.LF.Empty e); *)
 	      (* printf "%s" (Pretty.Int.DefaultPrinter.expChkToString cD cG e_r'); *)
-	    Typeinfo.Comp.annotate_comp_exp_chk
-	      cD (cG, Syntax.Int.LF.Empty) e_r' e (tau_ann, C.m_id)
+	    Typeinfo.Comp.annotate cD cG e_r' e (tau_ann, C.m_id)
 	  in
 (*
 	  let e_ann = Annotate.Comp.annotate cD (cG, Syntax.Int.LF.Empty) e_r' (tau_ann, C.m_id) in

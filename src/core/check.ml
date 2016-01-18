@@ -7,6 +7,7 @@
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
+module Printf = Printf
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5])
 
@@ -648,6 +649,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
+       Printf.printf "[check] Case of %s\n" (P.expSynToString cD cG i);
 	let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) =
           let (_ , tau', t') = syn cD (cG,cIH) i in
             begin match C.cwhnfCTyp (tau',t') with
@@ -675,10 +677,16 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 		     | _ -> ((* print_string ("Encountered Var " ^
 					      P.expSynToString cD cG i ^ " -	NON-INDUCTIVE\n");*) false) in
 		   if ind then
-		     chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
+		     begin
+		       Printf.printf "[check] It's ind.\n";
+		       chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
+		     end
 		   else
 		     chkBranch DataObj cD (cG,cIH) i branches (tau,t)
-	       | _ -> chkBranch DataObj cD (cG,cIH) i branches (tau,t)
+	       | _ ->
+		  Printf.printf "[check] cIH: %s\n"
+			 ((fun x -> match x with I.Empty -> "Empty" | _ -> "Not empty") cIH);
+		  chkBranch DataObj cD (cG,cIH) i branches (tau,t)
 	    )
 	  else
 	    chkBranch DataObj cD (cG,cIH) i branches (tau,t)
@@ -706,6 +714,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       ()
 
   and check cD (cG, cIH) e (tau, t) =
+    Printf.printf "[check] chk cIH: %s\n" (P.gctxToString cD cIH);
+    Printf.printf "[check] expChk: %s\n" (P.expChkToString cD cG e);
     let _ =  dprint (fun () -> "[check]  " ^
                        P.expChkToString cD cG e ^
                         " against \n    " ^
@@ -713,7 +723,12 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
                   P.compTypToString cD (Whnf.cnormCTyp (tau, t))) in
     checkW cD (cG, cIH) e (C.cwhnfCTyp (tau, t))
 
-  and syn cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
+  and syn cD (cG, cIH) e =
+    Printf.printf "[check] syn cIH: %s\n" (P.gctxToString cD cIH);
+    Printf.printf "[check] expSyn : %s\n" (P.expSynToString cD cG e);
+    synW cD (cG, cIH) e
+
+  and synW cD (cG,cIH) e : (gctx option * typ * I.msub) = match e with
     | Var (loc, x)   ->
       let (f,tau') = lookup cG x in
       (* let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^
@@ -909,6 +924,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in
           let cG'   = Whnf.cnormCtx (cG, t1) in
           let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+	  Printf.printf "[check] Branch cIH: %s\n\tloc: %s\n" (P.gctxToString cD cIH) (Syntax.Loc.to_string loc);
           let t''   = Whnf.mcomp t t1 in
           let tau'  = Whnf.cnormCTyp (tau, t'') in
 (*          let _     = print_string ("\nCheckBranch with general pattern:" ^ P.patternToString  cD1' cG1 pat ^ "\n") in
@@ -916,9 +932,22 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 				P.compTypToString cD tau_s ^ "\n") in *)
 	  let k     = Context.length cG1 in
 	  let cIH0  = Total.shiftIH cIH k in
-          let (cD1', cIH')  = if is_inductive caseTyp && Total.struct_smaller pat then
+	  Printf.printf "[check] Branch cIH0: %s\n" (P.gctxToString cD cIH0);
+	  Printf.printf "[check] caseTyp: %s\n"
+		((fun x -> match x with
+			  | IndexObj _ -> "IndexObj"
+			  | DataObj -> "DataObj"
+			  | IndDataObj -> "IndDataObj"
+			  | IndIndexObj _ -> "IndIndexObj"
+		) caseTyp);
+          let (cD1', cIH')  =
+	   Printf.printf "[check] is_inductive: %s, struct_smaller: %s\n"
+		  (string_of_bool (is_inductive caseTyp))
+		  (string_of_bool (Total.struct_smaller pat));
+	   if is_inductive caseTyp && Total.struct_smaller pat then
                        let cD1' = mvarsInPatt cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
                      else (cD1', I.Empty) in
+	  Printf.printf "[check] Branch cIH': %s\n" (P.gctxToString cD cIH');
 	  let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
      	             else cD1' in
 	  (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)

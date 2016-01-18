@@ -19,7 +19,7 @@ end
 
 
 module Comp : sig
-  val annotate_comp_exp_chk : Syntax.Int.LF.mctx -> (Syntax.Int.Comp.gctx * Syntax.Int.Comp.gctx)
+  val annotate : Syntax.Int.LF.mctx -> Syntax.Int.Comp.gctx
     -> Syntax.Int.Comp.exp_chk -> Syntax.Ext.Comp.exp_chk -> Syntax.Int.Comp.tclo -> unit
 
 end

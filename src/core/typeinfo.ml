@@ -562,10 +562,19 @@ module Comp = struct
 
     and annotate_branch caseTyp cD (cG, cIH) branchInt branchExt tau_s (tau, t) =
       match (branchInt, branchExt) with
-      | (EmptyBranch (_, cD1', pat1, t1), SEComp.EmptyBranch (loc, _, pat2)) ->
-	 let _tau_p = C.cnormCTyp (tau_s, t1) in
-	 (* LF.checkMSub loc cD1' t1 cD; *)
-	 (* annotate_pattern cD1' I.Empty pat1 pat2 (tau_p, C.m_id) *)
+      (* | (EmptyBranch (_, cD1', pat1, t1), SEComp.EmptyBranch (loc, _, pat2)) -> *)
+      (* 	 let _tau_p = C.cnormCTyp (tau_s, t1) in *)
+      (* 	 (\* LF.checkMSub loc cD1' t1 cD; *\) *)
+      (* 	 (\* annotate_pattern cD1' I.Empty pat1 pat2 (tau_p, C.m_id) *\) *)
+      (* 	 () *)
+
+      | (EmptyBranch (_, cD1', pat1, t1),
+	 SEComp.EmptyBranch (loc, cD,
+			     SEComp.PatMetaObj (_,
+						(_, SEComp.ClObj (cPsi, SEComp.MObj
+									  (SELF.PatEmpty _)))))) ->
+	 let tau_p = C.cnormCTyp (tau_s, t1) in
+	 (* LF.checkMSub loc cD1' t1 cD *)
 	 ()
 
       | (Branch (_, cD1', _cG, PatMetaObj (l1', mO), t1, eInt'),

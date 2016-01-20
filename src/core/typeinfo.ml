@@ -369,7 +369,7 @@ module Comp = struct
     annotate_comp_exp_chkW cD (cG, cIH) eInt eExt (C.cwhnfCTyp (tau, t))
 
   and annotate_comp_exp_chkW cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
-    | (Rec (_, f, eInt'), eExt', (tau, t)) ->
+    | (Rec (loc, f, eInt'), eExt', (tau, t)) ->
        annotate_comp_exp_chk
 	 cD (I.Dec (cG, CTypDecl (f, TypClo (tau, t))), (Total.shift cIH)) eInt' eExt' ttau
 
@@ -619,12 +619,20 @@ module Comp = struct
 	 raise (AnnotError "Incompatible branch.")
 
     and annotate_pattern cD cG patInt patExt ttau = match patInt, patExt with
-      | (PatMetaObj (_, mO), (SEComp.PatMetaObj (loc, _))) ->
+      | (PatMetaObj (_, mO), SEComp.PatMetaObj (loc, _)) ->
 	 begin
 	   match ttau with
 	   | (TypBox (_, ctyp), theta) ->
 	      Annot.add loc (P.subCompTypToString cD ttau);
 	      (* LF.checkMetaObj cD mO (ctyp, theta) *)
+	   | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+	 end
+
+      | (PatMetaObj (_, mO), SEComp.PatAnn (_, SEComp.PatMetaObj (loc, _), _)) ->
+	 begin
+	   match ttau with
+	   | (TypBox (_, ctyp), theta) ->
+	      Annot.add loc (P.subCompTypToString cD ttau);
 	   | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
 	 end
 

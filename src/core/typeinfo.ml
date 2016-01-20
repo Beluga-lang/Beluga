@@ -105,6 +105,8 @@ module Comp = struct
     | PairMismatch    of I.mctx * gctx  * tclo
     | BoxMismatch     of I.mctx * gctx  * tclo
     | IfMismatch      of I.mctx * gctx  * tclo
+    | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
+    | EqTyp           of I.mctx * tclo
     | TypMismatch     of I.mctx * tclo * tclo
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
@@ -366,9 +368,9 @@ module Comp = struct
 
   and annotate_comp_exp_chk cD (cG, cIH) eInt eExt (tau, t) =
     (* printf "[annotate] expChk: %s\n" (P.expChkToString cD cG eInt); *)
-    annotate_comp_exp_chkW cD (cG, cIH) eInt eExt (C.cwhnfCTyp (tau, t))
+    annotate_comp_exp_chk' cD (cG, cIH) eInt eExt (C.cwhnfCTyp (tau, t))
 
-  and annotate_comp_exp_chkW cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
+  and annotate_comp_exp_chk' cD (cG, cIH) eInt eExt ttau = match (eInt, eExt, ttau) with
     | (Rec (loc, f, eInt'), eExt', (tau, t)) ->
        annotate_comp_exp_chk
 	 cD (I.Dec (cG, CTypDecl (f, TypClo (tau, t))), (Total.shift cIH)) eInt' eExt' ttau
@@ -388,18 +390,25 @@ module Comp = struct
        Annot.add loc (P.subCompTypToString cD ttau)
 
     (* Implicit MLam, does not have a node in the external syntax tree *)
-    | (MLam (_, u, eInt'), eExt', (TypPiBox (I.Decl (_, cU, I.Maybe) as cdec, tau), t)) ->
-       annotate_comp_exp_chk
-	 (extend_mctx cD (u, cdec, t))
-	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
-	 eInt' eExt' (tau, C.mvar_dot1 t)
-
-    | (MLam (_, u, eInt'), SEComp.MLam (loc, _, eExt'), (TypPiBox (cdec, tau), t)) ->
+    | (MLam (_, u, eInt'), SEComp.MLam (loc, _, eExt'), (TypPiBox (I.Decl (_, cU, I.No) as cdec, tau), t)) ->
        annotate_comp_exp_chk
 	 (extend_mctx cD (u, cdec, t))
 	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 	 eInt' eExt' (tau, C.mvar_dot1 t);
        Annot.add loc (P.subCompTypToString cD ttau)
+
+    | (MLam (_, u, eInt'), SEComp.MLam (loc, _, eExt'), (TypPiBox (I.Decl (_, cU, I.Inductive) as cdec, tau), t)) ->
+       annotate_comp_exp_chk
+	 (extend_mctx cD (u, cdec, t))
+	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
+	 eInt' eExt' (tau, C.mvar_dot1 t);
+       Annot.add loc (P.subCompTypToString cD ttau)
+
+    | (MLam (_, u, eInt'), eExt', (TypPiBox (cdec, tau), t)) ->
+       annotate_comp_exp_chk
+	 (extend_mctx cD (u, cdec, t))
+	 (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
+	 eInt' eExt' (tau, C.mvar_dot1 t)
 
     | (Pair (_, eInt1, eInt2), SEComp.Pair (loc, eExt1, eExt2), (TypCross (tau1, tau2), t)) ->
        annotate_comp_exp_chk cD (cG, cIH) eInt1 eExt1 (tau1, t);
@@ -553,6 +562,7 @@ module Comp = struct
 		("Unable to pair chk:\n\t" ^ render_int_exp_chk eInt'
 		 ^ "\n\t\tand\n\t" ^ str
 		 ^ "\n\t [Int] exp_chk: " ^ P.expChkToString cD cG eInt'
+		 ^ " : " ^ P.subCompTypToString cD ttau
 		 ^ "\n\t [Ext] exp_chk: " ^ PE.expChkToString (Syntax.Ext.LF.Empty) eExt'))
 
     and annotate_branches caseTyp cD cG branchesInt branchesExt tau_s ttau =
@@ -645,6 +655,17 @@ module Comp = struct
 	   | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
 	 end
 
+      | ((PatVar _) as patInt', (SEComp.PatAnn (loc, ((SEComp.PatVar _) as patExt'), _))) ->
+	 let (loc', ttau') = synPattern cD cG patInt' patExt' in
+	 let tau' = C.cnormCTyp ttau' in
+	 let tau = C.cnormCTyp ttau in
+	 let ttau' = (tau', C.m_id) in
+	 let ttau = (tau, C.m_id) in
+	 if C.convCTyp ttau ttau' then
+	   ()
+	 else
+	   raise (Error (loc', PatIllTyped (cD, cG, patInt', ttau, ttau')))
+
       | patInt', patExt' ->
 	 let (loc, ttau') = synPattern cD cG patInt' patExt' in
 	 let tau' = C.cnormCTyp ttau' in
@@ -706,6 +727,14 @@ module Comp = struct
       | (PatNil, SEComp.PatNil loc) ->
 	 Annot.add loc (P.subCompTypToString cD (tau, theta));
 	 (tau, theta)
+      (* | (PatApp (_, patInt, pat_spineInt'), SEComp.PatNil loc) -> *)
+      (* 	 begin *)
+      (* 	   match (tau, theta) with *)
+      (* 	   | (TypPiBox (cdecl, tau'), theta) -> *)
+      (* 	      let theta' = checkPatAgainstCDecl cD patInt (cdecl, theta) in *)
+      (* 	      Annot.add loc (P.subCompTypToString cD (tau, theta)); *)
+      (* 	      (tau', theta') *)
+      (* 	 end *)
       | (PatApp (_, patInt, pat_spineInt'), SEComp.PatApp (loc, patExt, pat_spineExt')) ->
 	 begin
 	   match (tau, theta) with
@@ -729,8 +758,8 @@ module Comp = struct
 	| PatApp _ -> "(PatApp)"
 
     and render_ext_pat_spine pat_spine = match pat_spine with
-      | PatNil loc -> "(PatNil at " ^ Syntax.Loc.to_string loc ^ ")"
-      | PatApp (loc, _, _) -> "(PatApp at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatNil loc -> "(PatNil at " ^ Syntax.Loc.to_string loc ^ ")"
+      | SEComp.PatApp (loc, _, _) -> "(PatApp at " ^ Syntax.Loc.to_string loc ^ ")"
 
     and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
       (* LF.checkMetaObj cD mO (ctyp, theta); *)
@@ -750,9 +779,9 @@ module Comp = struct
 
     and annotate_comp_exp_syn cD (cG, cIH) eInt eExt =
       (* printf "[annotate] expSyn : %s\n" (P.expSynToString cD cG eInt); *)
-      annotate_comp_exp_synW cD (cG, cIH) eInt eExt
+      annotate_comp_exp_syn' cD (cG, cIH) eInt eExt
 
-    and annotate_comp_exp_synW cD (cG, cIH) eInt eExt = match (eInt, eExt) with
+    and annotate_comp_exp_syn' cD (cG, cIH) eInt eExt = match (eInt, eExt) with
       | (Var (_, x), SEComp.Var (loc, n)) ->
 	 let (f, tau') = lookup cG x in
 	 let tau =
@@ -842,9 +871,39 @@ module Comp = struct
 	      raise (Error (loc, MismatchSyn (cD, cG, eInt', VariantPiBox, (tau, t))))
 	 end
 
+      | PairVal (_, iInt1, iInt2), SEComp.PairVal (loc, iExt1, iExt2) ->
+         let (_, tau1,t1) =  annotate_comp_exp_syn cD (cG,cIH) iInt1 iExt1 in
+         let (_, tau2,t2) =  annotate_comp_exp_syn cD (cG,cIH) iInt2 iExt2 in
+         let (tau1,t1)    = C.cwhnfCTyp (tau1, t1) in
+         let (tau2,t2)    = C.cwhnfCTyp (tau2, t2) in
+	 Annot.add loc (P.subCompTypToString cD (TypCross (TypClo (tau1,t1),
+                          TypClo (tau2,t2)), C.m_id));
+         (None, TypCross (TypClo (tau1,t1),
+                          TypClo (tau2,t2)), C.m_id)
+
       | (Ann (eInt', tau), SEComp.Ann (loc, eExt', _)) ->
 	 annotate_comp_exp_chk cD (cG, cIH) eInt' eExt' (tau, C.m_id);
 	 (None, tau, C.m_id)
+
+      | (Equal (_, iInt1, iInt2), SEComp.Equal (loc, iExt1, iExt2)) ->
+	 let (_, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) iInt1 iExt1 in
+	 let (_, tau2, t2) = annotate_comp_exp_syn cD (cG, cIH) iInt2 iExt2 in
+	 if C.convCTyp (tau1, t1) (tau2, t2) then
+	   begin match C.cwhnfCTyp (tau1, t1) with
+		 | (TypBox _, _) ->
+		    Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
+		    (None, TypBool, C.m_id)
+		 | (TypBool, _) ->
+		    Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
+		    (None, TypBool, C.m_id)
+		 | (tau1, t1) -> raise (Error (loc, EqTyp (cD, (tau1, t1))))
+	   end
+	 else
+	   raise (Error (loc, EqMismatch (cD, (tau1, t1), (tau2, t2))))
+
+      | (Boolean _, SEComp.Boolean (loc, _))  ->
+	 Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
+	 (None, TypBool, C.m_id)
 
       | eInt', eExt' ->
 	 let (_, str) = render_ext_exp_syn eExt' in

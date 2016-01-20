@@ -1206,7 +1206,7 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
           let ttau' = (tau, t') in
           let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
               (cG', Int.Comp.PatApp (loc, pat', pat_spine' ), ttau2)
-          | _ ->   (cG, Int.Comp.PatNil, ttau))
+        | _ ->   (cG, Int.Comp.PatNil, ttau))
 
   | Apx.Comp.PatApp (loc, pat', pat_spine')  ->
       (match ttau with

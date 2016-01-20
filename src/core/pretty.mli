@@ -113,6 +113,7 @@ module Int : sig
     val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
+    val patSpineToString   : LF.mctx -> Comp.gctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
     val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
     val valueToString     :                         Comp.value   -> string
@@ -211,6 +212,7 @@ module Ext : sig
 
     val gctxToString      : LF.ctyp_decl LF.ctx -> LF.typ_decl LF.ctx -> string
     val patternToString   : LF.ctyp_decl LF.ctx -> Comp.pattern -> string
+    val patSpineToString   : LF.ctyp_decl LF.ctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.ctyp_decl LF.ctx -> Comp.exp_chk -> string
     val expSynToString    : LF.ctyp_decl LF.ctx -> Comp.exp_syn -> string
     val branchToString    : LF.ctyp_decl LF.ctx -> Syntax.Int.Comp.gctx -> Comp.branch -> string

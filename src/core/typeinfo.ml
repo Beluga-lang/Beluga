@@ -727,14 +727,32 @@ module Comp = struct
       | (PatNil, SEComp.PatNil loc) ->
 	 Annot.add loc (P.subCompTypToString cD (tau, theta));
 	 (tau, theta)
-      (* | (PatApp (_, patInt, pat_spineInt'), SEComp.PatNil loc) -> *)
-      (* 	 begin *)
-      (* 	   match (tau, theta) with *)
-      (* 	   | (TypPiBox (cdecl, tau'), theta) -> *)
-      (* 	      let theta' = checkPatAgainstCDecl cD patInt (cdecl, theta) in *)
-      (* 	      Annot.add loc (P.subCompTypToString cD (tau, theta)); *)
-      (* 	      (tau', theta') *)
-      (* 	 end *)
+
+      | (PatApp (_, patInt, pat_spineInt'), SEComp.PatNil loc) ->
+	 begin
+	   match (tau, theta) with
+	   | (TypArr (tau1, tau2), theta) ->
+	      Annot.add loc (P.subCompTypToString cD (tau, theta));
+	      synPatSpine cD cG pat_spineInt' pat_spineExt (tau2, theta)
+	   | (TypPiBox (cdecl, tau'), theta) ->
+	      let theta' = checkPatAgainstCDecl cD patInt (cdecl, theta) in
+	      Annot.add loc (P.subCompTypToString cD (tau, theta));
+	      synPatSpine cD cG pat_spineInt' pat_spineExt (tau', theta')
+	 end
+      	 (* begin *)
+      	 (*   match (tau) with *)
+	 (*   | TypBase _ -> raise (AnnotError "TypBase") *)
+	 (*   | TypCobase _ -> raise (AnnotError "TypCobase") *)
+	 (*   | TypDef _ -> raise (AnnotError "TypDef") *)
+	 (*   | TypBox _ -> raise (AnnotError "TypBox") *)
+	 (*   | TypArr _ -> raise (AnnotError "TypArr") *)
+	 (*   | TypCross _ -> raise (AnnotError "TypCross") *)
+	 (*   | TypPiBox _ -> raise (AnnotError "TypPiBox") *)
+	 (*   | TypClo _ -> raise (AnnotError "TypClo") *)
+	 (*   | TypBool -> raise (AnnotError "TypBool") *)
+	 (*   | TypInd _ -> raise (AnnotError "TypInd") *)
+      	 (* end *)
+
       | (PatApp (_, patInt, pat_spineInt'), SEComp.PatApp (loc, patExt, pat_spineExt')) ->
 	 begin
 	   match (tau, theta) with
@@ -751,7 +769,10 @@ module Comp = struct
 	 raise (AnnotError ("Unable to pair: Int: "
 			    ^ render_int_pat_spine pat_spineInt'
 			    ^ " with Ext: "
-			    ^ render_ext_pat_spine pat_spineExt' ))
+			    ^ render_ext_pat_spine pat_spineExt'
+	 ^ "\n\t [Int] pat_spine: " ^ P.patSpineToString cD cG pat_spineInt'
+	 ^ "\n\t [Ext] pat_spine: " ^ PE.patSpineToString (Syntax.Ext.LF.Empty) pat_spineExt'))
+
 
     and render_int_pat_spine pat_spine = match pat_spine with
 	| PatNil -> "(PatNil)"
@@ -884,6 +905,10 @@ module Comp = struct
       | (Ann (eInt', tau), SEComp.Ann (loc, eExt', _)) ->
 	 annotate_comp_exp_chk cD (cG, cIH) eInt' eExt' (tau, C.m_id);
 	 (None, tau, C.m_id)
+
+      (* | Ann (eInt', tau), SEComp.BoxVal (loc, mO) -> *)
+      (* 	 annotate_comp_exp_chk cD (cG, cIH) eInt' (SEComp.Box (loc, mO)); *)
+      (* 	 (None, tau, C.m_id) *)
 
       | (Equal (_, iInt1, iInt2), SEComp.Equal (loc, iExt1, iExt2)) ->
 	 let (_, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) iInt1 iExt1 in

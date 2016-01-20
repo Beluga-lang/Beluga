@@ -160,6 +160,7 @@ module Int = struct
 
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
+    val patSpineToString   : LF.mctx -> Comp.gctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
     val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
     val valueToString     :                         Comp.value   -> string
@@ -1055,9 +1056,9 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 1) tau
 
     let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
-      | Comp.PatNil -> fprintf ppf ""
+      | Comp.PatNil -> fprintf ppf "(PatNil)"
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "%a %a"
+          fprintf ppf "PatApp (%a (%a))"
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
@@ -1743,6 +1744,10 @@ module Int = struct
     let patternToString cD cG pat    =
       let pat' = Whnf.cnormPattern (pat , Whnf.m_id) in
        fmt_ppr_pat_obj cD cG std_lvl str_formatter pat'
+      ; flush_str_formatter ()
+
+    let patSpineToString cD cG pat_spine =
+      fmt_ppr_pat_spine cD cG std_lvl str_formatter pat_spine
       ; flush_str_formatter ()
 
     let expChkToString cD cG e    =

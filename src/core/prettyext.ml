@@ -111,13 +111,12 @@ module Ext = struct
 
     val gctxToString      : LF.ctyp_decl LF.ctx -> LF.typ_decl LF.ctx -> string
     val patternToString   : LF.ctyp_decl LF.ctx -> Comp.pattern -> string
+    val patSpineToString   : LF.ctyp_decl LF.ctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.ctyp_decl LF.ctx -> Comp.exp_chk -> string
     val expSynToString    : LF.ctyp_decl LF.ctx -> Comp.exp_syn -> string
     val branchToString    : LF.ctyp_decl LF.ctx -> Syntax.Int.Comp.gctx -> Comp.branch -> string
     val compKindToString  : LF.mctx -> Comp.kind  -> string
     val compTypToString   : LF.mctx -> Comp.typ   -> string
-
-
 
   end (* Ext.PRINTER *)
 
@@ -788,9 +787,9 @@ module Ext = struct
       | Comp.TypBool -> fprintf ppf "Bool"
 
     let rec fmt_ppr_pat_spine cD lvl ppf = (function
-      | Comp.PatNil _ -> fprintf ppf ""
+      | Comp.PatNil _ -> fprintf ppf "(PatNil)"
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "%a %a"
+          fprintf ppf "PatApp (%a (%a))"
             (fmt_ppr_pat_obj cD (lvl+1)) pat
             (fmt_ppr_pat_spine cD lvl) pat_spine
 
@@ -1277,6 +1276,10 @@ module Ext = struct
 
     let patternToString cD pat    =
        fmt_ppr_pat_obj cD std_lvl str_formatter pat
+      ; flush_str_formatter ()
+
+    let patSpineToString cD pat_spine =
+      fmt_ppr_pat_spine cD std_lvl str_formatter pat_spine
       ; flush_str_formatter ()
 
     let expChkToString cD e    =

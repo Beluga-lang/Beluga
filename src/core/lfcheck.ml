@@ -827,9 +827,10 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
       let tA' = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
-      dprint (fun () -> "Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id)));
+      dprint (fun () ->  ("Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id) ^ "\n")));
+      dprint (fun () -> ("Inferred type of parameter object: " ^ (P.typToString cD cPsi' (tA',Substitution.LF.id) ^ "\n\n")));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+	else raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 

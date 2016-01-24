@@ -40,6 +40,7 @@ type error =
   | PatAnn
   | PatIndexMatch  of Int.LF.mctx * Int.Comp.meta_obj
   | MCtxIllformed of Int.LF.mctx
+  | ScrutineeBlock
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | ErrorMsg of string
 
@@ -64,6 +65,9 @@ let _ = Error.register_printer
         | PatternMobj ->
             Format.fprintf ppf
               "Expected a meta-object; Found a computation-level pattern"
+        | ScrutineeBlock ->
+            Format.fprintf ppf
+              "Pattern Matching on an object of Sigma-type (block) is not allowed."
         | CtxHatMismatch (cD, tau, phat) ->
             Format.fprintf ppf
               "Context mismatch@.\
@@ -199,9 +203,10 @@ let normCaseType (cT, t) = match cT with
 
 type mTypSkelet = MT of cid_typ * Int.LF.dctx | CT of Id.cid_schema
 
-let mtypeSkelet mT = match mT with
+let mtypeSkelet loc mT = match mT with
   | Int.LF.ClTyp (Int.LF.MTyp Int.LF.Atom(_, a, _), cPsi) -> MT (a, cPsi)
   | Int.LF.CTyp (Some w) -> CT w
+  | _ -> raise (Error (loc, ScrutineeBlock))
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null -> Int.LF.Null
@@ -358,16 +363,15 @@ let rec elMCtx recT delta = match delta with
 
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-    let s_proj   = gen_conv_sub conv_list in
-
+  let s_proj   = gen_conv_sub conv_list in
   let rec genSpine sK = match sK with
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
     | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), _ ), kK), s) ->
-        let tA1' = strans_typ cD (tA1, s) conv_list in
+        let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let h    = if !strengthen then
-                    (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
+              	   (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
                        (* cPhi |- ss' : cPhi' *)
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
@@ -1027,10 +1031,8 @@ and recMObj loc cD' cM (cD, mTskel) = match cM, mTskel with
   | (loc,Apx.Comp.ClObj (psi, Apx.Comp.MObj m)), MT (a, cPsi) ->
       let cPsi' = inferCtxSchema loc (cD, cPsi) (cD', psi) in
       let _     = dprint (fun () -> "[recMObj] inferCtxSchema ... ") in
-      let _     = dprint (fun () ->  "Scrutinee's context " ^ P.mctxToString cD ^ " |- " ^
-                            P.dctxToString cD cPsi) in
-      let _     = dprint (fun () ->  "Pattern's context  " ^ P.mctxToString cD' ^ " |- " ^
-                            P.dctxToString cD' cPsi') in
+      let _     = dprint (fun () ->  "Scrutinee's context " ^ P.mctxToString cD ^ " |- " ^ P.dctxToString cD cPsi) in
+      let _     = dprint (fun () ->  "Pattern's context  " ^ P.mctxToString cD' ^ " |- " ^ P.dctxToString cD' cPsi') in
       let _     = dprint (fun () -> "[recMObj] inferCtxSchema done") in
       let _     = dprint (fun () -> "[mgAtomicTyp] Generate mg type in context " ^
 			    P.dctxToString cD' cPsi' ) in
@@ -1469,7 +1471,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
       let _ = dprint (fun () -> "[elBranch] Reconstruction of pattern ... ") in
         begin match tau_s with
           | Int.Comp.TypBox (_, mT0) ->
-              let typAnn = (cD, mtypeSkelet mT0) in
+              let typAnn = (cD, mtypeSkelet loc mT0) in
               let cD'    = elMCtx  Lfrecon.Pibox delta in
 		(* ***************  RECONSTRUCT PATTERN BEGIN *************** *)
               let ((l_cd1', l_delta), cD1', mO', mT1') = recMObj loc' cD' mO typAnn in

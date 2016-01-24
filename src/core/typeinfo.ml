@@ -655,6 +655,17 @@ module Comp = struct
 	   | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
 	 end
 
+      | ((PatConst _) as patInt', (SEComp.PatAnn (loc, ((SEComp.PatConst _) as patExt'), _))) ->
+	 let (loc', ttau') = synPattern cD cG patInt' patExt' in
+	 let tau' = C.cnormCTyp ttau' in
+	 let tau = C.cnormCTyp ttau in
+	 let ttau' = (tau', C.m_id) in
+	 let ttau = (tau, C.m_id) in
+	 if C.convCTyp ttau ttau' then
+	   ()
+	 else
+	   raise (Error (loc', PatIllTyped (cD, cG, patInt', ttau, ttau')))
+
       | ((PatVar _) as patInt', (SEComp.PatAnn (loc, ((SEComp.PatVar _) as patExt'), _))) ->
 	 let (loc', ttau') = synPattern cD cG patInt' patExt' in
 	 let tau' = C.cnormCTyp ttau' in
@@ -852,6 +863,11 @@ module Comp = struct
 	     Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	     (None, tau, C.m_id)
 	   end
+
+      | (DataDest (_, c), DataConst (loc, _)) ->
+	 let tau = (CompDest.get c).CompDest.typ in
+	 Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	 (None, tau, C.m_id)
 
       | (Apply (_, eInt1, eInt2), SEComp.Apply (loc, eExt1, eExt2)) ->
 	 let (cIH_opt, tau1, t1) = annotate_comp_exp_syn cD (cG, cIH) eInt1 eExt1 in

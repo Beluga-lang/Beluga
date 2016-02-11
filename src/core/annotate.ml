@@ -711,6 +711,54 @@ module Comp = struct
        in
        Annotated.Comp.Branch (loc', cD1' cG1, int_pat', t1, int_e')
 
+  and annPattern cD cG int_pat ext_pat ttau = match int_pat, ext_pat with
+    (* TODO PatEmpty *)
+    | PatMetaObj (loc', int_mO), SE.Comp.PatMetaObj (loc, ext_mO) ->
+       begin
+	 match ttau with
+	 | (TypBox (_, ctyp), theta) ->
+	    let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *) in
+	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau, Annotated.ExpTerm)
+	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+       end
+
+    | (PatPair (loc', int_pat1, int_pat2), SE.Comp.PatPair (loc, ext_pat1, ext_pat2)) ->
+       begin
+	 match ttau with
+	 | (TypCross (tau1, tau2), theta) ->
+	    let int_pat1' = annPattern cD cG int_pat1 ext_pat1 (tau1, theta) in
+	    let int_pat2' = annPattern cG cG int_pat2 ext_pat2 (tau2, theta) in
+	 | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
+       end
+    | int_pat, ext_pat ->
+       let ((loc, ttau'), int_pat') = synPattern cD cG int_pat ext_pat in
+       let tau' = C.cnormCTyp ttau' in
+       let tau = C.cnormCTyp ttau in
+       let ttau' = (tau', C.m_id) in
+       let ttau = (tau, C.m_id) in
+       if C.convCTyp ttau ttau' then
+	 int_pat'
+       else
+	 raise (Error (loc, PatIllTyped (cD, cG, int_pat, ttau, ttau')))
+
+  and synPattern cD cG int_pat ext_pat = match int_pat, ext_pat with
+    | (PatConst (loc', int_c, int_pat_spine), SE.Comp.PatConst (loc, ext_c, ext_pat_spine)) ->
+       (* Okay, this is a bit complicated *)
+       (* First we need to handle the implicit arguments so we can realign the internal *)
+       (* and external spines *)
+       (* But we also need to rebuild the internal spine so we can create an *)
+       (* Annotated spine *)
+       let rec handle_implicits count int_pat_spine ext_pat_spine =
+	 match count with
+	 | 0 -> (int_pat_spine, ext_pat_spine)
+	 | m ->
+	    begin
+	      match int_pat_spine with
+	      (* | PatNil -> raise an error here *)
+	      | PatApp (loc, int_pat, int_pat_spine') ->
+		 handle_implicits (m - 1) int_pat_spine' ext_pat_spine
+	    end
+
 end
 
 module Sgn = struct

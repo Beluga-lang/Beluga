@@ -310,7 +310,7 @@ module Comp = struct
 
     (* TODO: Cofuns*)
 
-    | (MLam (loc', int_u, int_e'), SE.Comp.MLam (loc, _, ext_e'),
+    | (MLam (loc', int_u, int_e'), ext_e',
        (TypPiBox (I.Decl (_, cU, I.Maybe) as cdec, tau), t)) ->
        let int_e'' =
 	 annotate (extend_mctx cD (int_u, cdec, t))

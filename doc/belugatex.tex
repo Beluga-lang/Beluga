@@ -1,0 +1,66 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+
+%%% PAGE DIMENSIONS
+\usepackage{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+% \geometry{margin=2in} % for example, change the margins to 2 inches all round
+% \geometry{landscape} % set up the page for landscape
+%   read geometry.pdf for detailed page layout information
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+\usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
+\usepackage{subfig} % make it possible to include more than one captioned figure/table in a single float
+
+%%% ToC (table of contents) APPEARANCE
+%% \usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+%% \usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
+%% \renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
+%% \renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+
+%%% END Article customizations
+
+%%% The "real" document content comes below...
+
+\title{BelugaTeX}
+\author{Steven Thephsourinthone}
+%\date{} % Activate to display a given date or no date (if empty),
+         % otherwise the current date is printed
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+This is the culmination of a project which has weighed heavily upon me for the past two years. I began this project in the summer of 2014 as a bright-eyed undergrad with little experience in the area, and even less experience with Beluga. In the past two years, I've gained much experience with Beluga and as a programmer overall, and I hope that I may finally complete this project and finally realize this two-year long dream.
+
+\subsection{The Problem}
+
+The issue at hand is the process of reasoning about programs. Generally, we would like to prove our programs correct, that is to say, they do exactly what is intended of them, nothing more and nothing less. We can do this by hand, which allows us to convince others in the know of the correctness of our programs, but we may not be able to quickly go through many of these proofs, for example, if we were to read and evaluate dozens of paper submissions full of these proofs. We can, of course, automate this process by coming up with some kind of stylized proof that can be quickly and easily mechanically checked, but the solutions we've had thus far in this approach have fallen somewhat short, either they're written in a rather difficult to understand language or they end up being much more verbose than an elegant human written proof.
+
+The goal here is to allow us to take the automated approach while also allowing us to extract a stylized proof that is much closer to what a human would write. We'll use the mechanically checkable Beluga language as a base and expand it with a module that allows us to generate these stylized proofs. Beluga has first class contexts and substitions, allowing us to forego the process of implementing our own and proving properties about them, and can infer some arguments which have been left out of the program representation of the proof, like implicit universal quantifiers, which ends up cutting some of the verbosity of the final proof.
+
+\subsection{The Approach}
+
+We will modify Beluga in several phases.
+
+\subsubsection{Phase One: The Annotated Syntax Tree}
+
+First, we will begin by constructing a syntax tree annotated with the types of each of the terms. We will implement the module \verb+Annotate+ to perform type checking once more, this time outputing an annotated syntax tree.
+
+In doing this, we would also like to mark which nodes were present in the external syntax tree, drawn directly from the programmer's code, prior to indexing, reconstruction, or type checking. As a result of this, we may output an annotation file that allows a user to check types of certain expressions when developing code via the Beluga interactive mode.
+
+We may like to combine this with type checking in the future.
+
+\section{Phase One: The Annotated Syntax Tree}
+
+
+
+\end{document}

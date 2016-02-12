@@ -1055,9 +1055,9 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 1) tau
 
     let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
-      | Comp.PatNil -> fprintf ppf ""
+      | Comp.PatNil -> fprintf ppf "(PatNil)"
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "%a %a"
+          fprintf ppf "(PatAnn %a %a)"
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
@@ -1073,40 +1073,40 @@ module Int = struct
        dropSpineLeft ms ia in
       function
       | Comp.PatEmpty (_, cPsi) ->
-            fprintf ppf "[%a |- {}]"
+            fprintf ppf "(PatEmpty [%a |- {}])"
               (fmt_ppr_lf_dctx cD 0) cPsi
       | Comp.PatMetaObj (_, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
+            fprintf ppf "%s(PatMetaObj %a)%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
       | Comp.PatConst (_, c, pat_spine) ->
           let pat_spine = deimplicitize_spine c pat_spine in
           let cond = lvl > 1 in
-            fprintf ppf "%s%s %a%s"
+            fprintf ppf "%s(PatConst %s %a)%s"
               (l_paren_if cond)
               (R.render_cid_comp_const c)
               (fmt_ppr_pat_spine cD cG 2) pat_spine
               (r_paren_if cond)
 
       | Comp.PatPair (_, pat1, pat2) ->
-          fprintf ppf "(%a , %a)"
+          fprintf ppf "(PatPair (%a , %a))"
             (fmt_ppr_pat_obj cD cG 0) pat1
             (fmt_ppr_pat_obj cD cG 0) pat2
-      | Comp.PatTrue _ -> fprintf ppf "ttrue"
-      | Comp.PatFalse _ -> fprintf ppf "ffalse"
+      | Comp.PatTrue _ -> fprintf ppf "(PatTrue ttrue)"
+      | Comp.PatFalse _ -> fprintf ppf "(PatFalse ffalse)"
       | Comp.PatAnn (_, pat, tau) ->
-          fprintf ppf "(%a : %a)"
+          fprintf ppf "(PatAnn (%a : %a))"
             (fmt_ppr_pat_obj cD cG 0) pat
             (fmt_ppr_cmp_typ cD 0) tau
 
       | Comp.PatVar (_, offset ) ->
-          fprintf ppf "%s"
+          fprintf ppf "(ParVar %s)"
             (R.render_var cG offset)
 
       | Comp.PatFVar (_, name ) ->
-          fprintf ppf "%s"
+          fprintf ppf "(PatFVar %s)"
             (Id.render_name name)
 
 
@@ -1262,24 +1262,24 @@ module Int = struct
     end
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
       | Comp.Var (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Var %s)"
             (R.render_var cG x)
 
       | Comp.Const (_ ,prog) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Const %s)"
             (R.render_cid_prog prog)
 
       | Comp.DataConst (_, c) ->
-          fprintf ppf "%s"
+          fprintf ppf "(DataConst %s)"
             (R.render_cid_comp_const c)
 
       | Comp.DataDest (_, c) ->
-          fprintf ppf "%s"
+          fprintf ppf "(DataDest %s)"
             (R.render_cid_comp_dest c)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s@[<2>%a@ %a@]%s"
+            fprintf ppf "%s(Apply @[<2>%a@ %a@])%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_cmp_exp_chk cD cG 2) e
@@ -1287,14 +1287,14 @@ module Int = struct
 
       | Comp.MApp (_, i, mC) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %a%s"
+            fprintf ppf "%s(MApp %a@ %a)%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_meta_obj cD 0) mC
               (r_paren_if cond)
 
       | Comp.PairVal (loc, i1, i2) ->
-            fprintf ppf "(%a , %a)"
+            fprintf ppf "(PairVal (%a , %a))"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
@@ -1308,20 +1308,20 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
               (r_paren_if cond)
 *)
-            fprintf ppf "%s%a%s"
+            fprintf ppf "%s(Ann %a)%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD cG 1) e
               (r_paren_if cond)
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
+            fprintf ppf "(Equal %a == %a)"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
       | Comp.Boolean true ->
-          fprintf ppf "ttrue"
+          fprintf ppf "(Boolean ttrue)"
 
       | Comp.Boolean false ->
-          fprintf ppf "ffalse"
+          fprintf ppf "(Boolean ffalse)"
 
     and fmt_ppr_cmp_value lvl ppf =
       function

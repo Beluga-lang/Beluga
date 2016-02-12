@@ -788,9 +788,9 @@ module Ext = struct
       | Comp.TypBool -> fprintf ppf "Bool"
 
     let rec fmt_ppr_pat_spine cD lvl ppf = (function
-      | Comp.PatNil _ -> fprintf ppf ""
+      | Comp.PatNil _ -> fprintf ppf "(PatNil)"
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "%a %a"
+          fprintf ppf "(PatApp %a %a)"
             (fmt_ppr_pat_obj cD (lvl+1)) pat
             (fmt_ppr_pat_spine cD lvl) pat_spine
 
@@ -798,31 +798,31 @@ module Ext = struct
     and fmt_ppr_pat_obj cD lvl ppf = function
       | Comp.PatMetaObj (_, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
+            fprintf ppf "%s(PatMetaObj %a)%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
       | Comp.PatConst (_, x, pat_spine) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%s %a%s"
+            fprintf ppf "%s(PatConst %s %a)%s"
               (l_paren_if cond)
               (to_html (Id.render_name x) Link)
               (fmt_ppr_pat_spine cD 2) pat_spine
               (r_paren_if cond)
 
       | Comp.PatPair (_, pat1, pat2) ->
-          fprintf ppf "(%a , %a)"
+          fprintf ppf "(PatPair (%a , %a))"
             (fmt_ppr_pat_obj cD 0) pat1
             (fmt_ppr_pat_obj cD 0) pat2
-      | Comp.PatTrue _ -> fprintf ppf "tt"
-      | Comp.PatFalse _ -> fprintf ppf "ff"
+      | Comp.PatTrue _ -> fprintf ppf "(PatTrue tt)"
+      | Comp.PatFalse _ -> fprintf ppf "(PatFalse ff)"
       | Comp.PatAnn (_, pat, tau) ->
-          fprintf ppf "%a : %a"
+          fprintf ppf "(PatAnn %a : %a)"
             (fmt_ppr_pat_obj cD 0) pat
             (fmt_ppr_cmp_typ cD 0) tau
 
       | Comp.PatVar (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(PatVar %s)"
             (Id.render_name x)
 
 
@@ -937,20 +937,20 @@ module Ext = struct
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Var %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Const (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Const %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.DataConst (_, x) ->
-          fprintf ppf "%s"
+          fprintf ppf "(DataConst %s)"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
+            fprintf ppf "%s(Apply %a %a)%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
@@ -958,36 +958,36 @@ module Ext = struct
 
       | Comp.BoxVal (_, m0) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a%s"
+            fprintf ppf "%s(BoxVal %a)%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) m0
               (r_paren_if cond)
 
       | Comp.Ann (_, e, tau) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a : %a%s"
+            fprintf ppf "%s(Ann %a : %a)%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD 1) e
               (fmt_ppr_cmp_typ cD 2) tau
               (r_paren_if cond)
 
       | Comp.PairVal(_, i1, i2) ->
-          fprintf ppf "(%a , %a)"
+          fprintf ppf "(PairVal (%a , %a))"
             (fmt_ppr_cmp_exp_syn cD 1) i1
             (fmt_ppr_cmp_exp_syn cD 1) i2
 
 
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
+            fprintf ppf "(Equal %a == %a)"
               (fmt_ppr_cmp_exp_syn cD 1) i1
               (fmt_ppr_cmp_exp_syn cD 1) i2
 
       | Comp.Boolean (_, true) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Boolean %s)"
             (to_html "ttrue" Keyword)
 
       | Comp.Boolean (_, false) ->
-          fprintf ppf "%s"
+          fprintf ppf "(Boolean %s)"
             (to_html "ffalse" Keyword)
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function

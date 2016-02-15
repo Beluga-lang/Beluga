@@ -312,6 +312,7 @@ module Comp = struct
 	 annotate cD (I.Dec (cG, CTypDecl (int_x, TypClo (tau1, t))), (Total.shift cIH))
 		  int_e' ext_e' (tau2, t)
        in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Fun (loc', int_x, int_e'', ttau)
 
     | (Cofun (loc', int_bs), SE.Comp.Cofun (loc, ext_bs), (TypCobase (l, cid, sp), t)) ->
@@ -327,6 +328,7 @@ module Comp = struct
 	 end
        in
        let int_bs' = List.map2 f int_bs ext_bs in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Cofun (loc', int_bs', ttau)
 
     (* TODO *)
@@ -356,6 +358,7 @@ module Comp = struct
 		  (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 		  int_e' ext_e' (tau, C.mvar_dot1 t)
        in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.MLam (loc', int_u, int_e'', ttau)
 
     | (MLam (loc', int_u, int_e'), SE.Comp.MLam (loc, _, ext_e'),
@@ -365,6 +368,7 @@ module Comp = struct
 		  (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
 		  int_e' ext_e' (tau, C.mvar_dot1 t)
        in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.MLam (loc', int_u, int_e'', ttau)
 
     (* | (MLam (loc', int_u, int_e'), SE.Comp.MLam (loc, _, ext_e'), *)
@@ -390,6 +394,7 @@ module Comp = struct
        (TypCross (tau1, tau2), t)) ->
        let int_e1' = annotate cD (cG, cIH) int_e1 ext_e1 (tau1, t) in
        let int_e2' = annotate cD (cG, cIH) int_e2 ext_e2 (tau2, t) in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Pair (loc', int_e1', int_e2', ttau)
 
     | (Let (loc', int_i, (int_x, int_e')), SE.Comp.Let (loc, ext_i, (_, ext_e')),
@@ -398,6 +403,7 @@ module Comp = struct
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        let cG' = I.Dec (cG, CTypDecl (int_x, TypClo (tau', t'))) in
        let int_e'' = annotate cD (cG', Total.shift cIH) int_e' ext_e' (tau, t) in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Let (loc', int_i', (int_x, int_e''), ttau)
 
     | (LetPair (loc', int_i, (int_x, int_y, int_e')),
@@ -414,6 +420,7 @@ module Comp = struct
 	    let int_e'' =
 	      annotate cD (cG', Total.shift (Total.shift cIH)) int_e' ext_e' (tau, t)
 	    in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	    Annotated.Comp.LetPair (loc', int_i', (int_x, int_y, int_e''), ttau)
 	 | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
        end
@@ -424,6 +431,7 @@ module Comp = struct
 	   (* TODO LF.annMetaObj *)
 	   let int_cM' = int_cM (* LF.annMetaObj cD int_cM ext_cM (mT, t) *)
 	   in
+	   Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	   Annotated.Comp.Box (loc, int_cM', ttau)
 	 with C.FreeMVar (I.FMVar (u, _)) ->
 	   raise (Error.Violation ("Free meta-variable " ^ (Id.render_name u)))
@@ -476,6 +484,7 @@ module Comp = struct
        in
        Coverage.process problem projOpt;
        (* TODO What are we doing here? What's the correct substituion? *)
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Case (loc', int_prag,
 		       Annotated.Comp.Ann
 			 (Annotated.Comp.Box (loc, (l, cM), (tau0_sc, C.m_id)),
@@ -520,29 +529,36 @@ module Comp = struct
 		let (int_i', int_branches') =
 		  anBranch IndDataObj cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t)
 		in
+		Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 		Annotated.Comp.Case (loc', int_prag, int_i', int_branches', ttau)
 	      else
 		let (int_i', int_branches') =
 		  anBranch DataObj cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t)
 		in
+		Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 		Annotated.Comp.Case (loc', int_prag, int_i', int_branches', ttau)
 	   | _ ->
 	      let (int_i', int_branches') =
 		anBranch DataObj cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t)
 	      in
+	      Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	      Annotated.Comp.Case (loc', int_prag, int_i', int_branches', ttau)
 	 end
        else
 	 let (int_i', int_branches') =
 	   anBranch DataObj cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t)
 	 in
+	 Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	 Annotated.Comp.Case (loc', int_prag, int_i', int_branches', ttau)
 
     | (Syn (loc', int_i), SE.Comp.Syn (loc, ext_i), (tau, t)) ->
        let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        if C.convCTyp (tau, t) (tau', t') then
-	 Annotated.Comp.Syn (loc', int_i', ttau)
+	 begin
+	   Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
+	   Annotated.Comp.Syn (loc', int_i', ttau)
+	 end
        else
 	 raise (Error (loc', MismatchChk (cD, cG, int_e, (tau, t), (tau', t'))))
 
@@ -557,11 +573,13 @@ module Comp = struct
 	 | (TypBool, _) ->
 	    let int_e1' = annotate cD (cG, cIH) int_e1 ext_e1 (tau, t) in
 	    let int_e2' = annotate cD (cG, cIH) int_e1 ext_e1 (tau, t) in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	    Annotated.Comp.If (loc', int_i', int_e1', int_e2', ttau)
 	 | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
        end
 
     | Hole (loc', f'), SE.Comp.Hole loc, (tau, t) ->
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
        Annotated.Comp.Hole (loc', f', ttau)
 
     | eInt', eExt', ttau' ->
@@ -607,6 +625,7 @@ module Comp = struct
 	 | TypInd tau -> tau
 	 | _ -> tau'
        in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        if Total.exists_total_decl f then
 	 ((Some cIH, tau, C.m_id), Annotated.Comp.Var (loc', x, (tau, C.m_id)))
        else
@@ -615,10 +634,12 @@ module Comp = struct
     (* Possibly has implicit variables *)
     | (DataConst (loc', c), SE.Comp.DataConst (loc, _)) ->
        let tau = (CompConst.get c).CompConst.typ in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataConst (loc', c, (tau, C.m_id)))
 
     | (DataConst (loc', c), SE.Comp.Var (loc, _)) ->
        let tau = (CompConst.get c).CompConst.typ in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataConst (loc', c, (tau, C.m_id)))
 
     (* Possibly has implicit variables *)
@@ -629,34 +650,48 @@ module Comp = struct
 
     | (DataDest (loc', c), SE.Comp.Var (loc, _)) ->
        let tau = (CompDest.get c).CompDest.typ in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
 
     | (DataDest (loc', c), SE.Comp.DataConst (loc, _)) ->
        let tau = (CompDest.get c).CompDest.typ in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
 
     (* Possibly has implicit variables *)
     | (Const (loc', prog), SE.Comp.Const (loc, _)) ->
        if !Total.enabled then
 	 if (Comp.get prog).Comp.total then
-	   let tau = (Comp.get prog).Comp.typ in
-	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	   begin
+	     let tau = (Comp.get prog).Comp.typ in
+	     Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	     ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	   end
 	 else
 	   raise (Error (loc, MissingTotal prog))
        else
-	 let tau = (Comp.get prog).Comp.typ in
-	 ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	 begin
+	   let tau = (Comp.get prog).Comp.typ in
+	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	 end
 
     | (Const (loc', prog), SE.Comp.Var (loc, _)) ->
        if !Total.enabled then
 	 if (Comp.get prog).Comp.total then
-	   let tau = (Comp.get prog).Comp.typ in
-	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	   begin
+	     let tau = (Comp.get prog).Comp.typ in
+	     Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	     ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	   end
 	 else
 	   raise (Error (loc, MissingTotal prog))
        else
-	 let tau = (Comp.get prog).Comp.typ in
-	 ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	 begin
+	   let tau = (Comp.get prog).Comp.typ in
+	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
+	 end
 
     | (Apply (loc', int_e1, int_e2), SE.Comp.Apply (loc, ext_e1, ext_e2)) ->
        let ((cIH_opt, tau1, t1), int_e1') = syn cD (cG, cIH) int_e1 ext_e1 in
@@ -664,6 +699,7 @@ module Comp = struct
        begin
 	 match (tau1, t1) with
 	 | (TypArr (tau2, tau), t) ->
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	    let int_e2' = annotate cD (cG, cIH) int_e2 ext_e2 (tau2, t) in
 	    ((useIH loc' cD cG cIH_opt int_e2, tau, t),
 	     Annotated.Comp.Apply (loc', int_e1', int_e2', (tau, t)))
@@ -690,6 +726,7 @@ module Comp = struct
        begin
 	 match (C.cwhnfCTyp (tau1, t1)) with
 	 | (TypPiBox (I.Decl (_, ctyp, _), tau), t) ->
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	    let int_mC' = int_mC (* LF.annMetaObj cD int_mC ext_mC (ctyp, t); *) in
 	    let t = I.MDot (metaObjToMFront int_mC, t) in
 	    ((useIH loc' cD cG cIH_opt (Box (loc', int_mC)), tau, t),
@@ -717,11 +754,13 @@ module Comp = struct
        let (tau1, t1) = C.cwhnfCTyp (tau1, t1) in
        let (tau2, t2) = C.cwhnfCTyp (tau2, t2) in
        let tau = TypCross (TypClo (tau1, t1), TypClo (tau2, t2)) in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id),
 	Annotated.Comp.PairVal (loc', int_i1', int_i2', (tau, C.m_id)))
 
     | (Ann (int_e, tau), SE.Comp.Ann (loc, ext_e, _)) ->
        let int_e' = annotate cD (cG, cIH) int_e ext_e (tau, C.m_id) in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.Ann (int_e', tau, (tau, C.m_id)))
 
     | (Ann (Box (loc', int_mO), tau), SE.Comp.BoxVal (loc, ext_mO)) ->
@@ -729,6 +768,7 @@ module Comp = struct
 	 try
 	   let ttau = (tau, C.m_id) in
 	   let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO ttau *) in
+	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	   ((None, tau, C.m_id),
 	    Annotated.Comp.Ann (Annotated.Comp.Box (loc', int_mO', ttau), tau, ttau))
 	 with C.FreeMVar (I.FMVar (u, _)) ->
@@ -743,9 +783,11 @@ module Comp = struct
 	 begin
 	   match C.cwhnfCTyp (tau1, t1) with
 	   | (TypBox _, _) ->
+	      Typeinfo.Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
 	      ((None, TypBool, C.m_id),
 	       Annotated.Comp.Equal (loc', int_i1', int_i2', (TypBool, C.m_id)))
 	   | (TypBool, _) ->
+	      Typeinfo.Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
 	      ((None, TypBool, C.m_id),
 	       Annotated.Comp.Equal (loc', int_i1', int_i2', (TypBool, C.m_id)))
 	   | (tau1, t1) ->
@@ -755,6 +797,7 @@ module Comp = struct
 	 raise (Error (loc, EqMismatch (cD, (tau1, t1), (tau2, t2))))
 
     | Boolean b, SE.Comp.Boolean (loc, _) ->
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
        ((None, TypBool, C.m_id), Annotated.Comp.Boolean (b, (TypBool, C.m_id)))
 
     | eInt', eExt' ->
@@ -847,7 +890,10 @@ module Comp = struct
 	 | (TypBox (_, I.ClTyp (I.MTyp tA, cPsi)), theta)
 	 | (TypBox (_, I.ClTyp (I.PTyp tA, cPsi)), theta) ->
 	    if C.convDCtx (C.cnormDCtx (cPsi, theta)) cPsi then
-	      Annotated.Comp.PatEmpty (loc', cPsi, ttau)
+	      begin
+		Typeinfo.Annot.add loc' (P.subCompTypToString cD ttau);
+		Annotated.Comp.PatEmpty (loc', cPsi, ttau)
+	      end
 	    else
 	      raise (Error (loc', BoxMismatch (cD, I.Empty, ttau)))
 	 | _ ->
@@ -859,6 +905,7 @@ module Comp = struct
 	 match ttau with
 	 | (TypBox (_, ctyp), theta) ->
 	    let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *) in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau)
 	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
        end
@@ -878,6 +925,7 @@ module Comp = struct
 	 | (TypCross (tau1, tau2), theta) ->
 	    let int_pat1' = annPattern cD cG int_pat1 ext_pat1 (tau1, theta) in
 	    let int_pat2' = annPattern cD cG int_pat2 ext_pat2 (tau2, theta) in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	    Annotated.Comp.PatPair (loc', int_pat1', int_pat2', ttau)
 	 | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
        end
@@ -949,6 +997,7 @@ module Comp = struct
        let (ttau'', int_pat_spine'') =
 	 synPatSpine cD cG int_pat_spine' ext_pat_spine' ttau'
        in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD ttau'');
        ((loc', ttau''), Annotated.Comp.PatConst (loc', int_c, int_pat_spine'', ttau''))
 
     (* | PatVar (loc', k), SE.Comp.PatAnn (loc, SE.Comp.PatVar (_, _), _) -> *)
@@ -957,16 +1006,20 @@ module Comp = struct
 
     | PatVar (loc', k), SE.Comp.PatVar (loc, _) ->
        let tau = lookup' cG k in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((loc', (tau, C.m_id)), Annotated.Comp.PatVar (loc', k, (tau, C.m_id)))
 
     | PatTrue loc', SE.Comp.PatTrue loc ->
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
        ((loc', (TypBool, C.m_id)), Annotated.Comp.PatTrue (loc', (TypBool, C.m_id)))
 
     | PatFalse loc', SE.Comp.PatFalse loc ->
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (TypBool, C.m_id));
        ((loc', (TypBool, C.m_id)), Annotated.Comp.PatFalse (loc', (TypBool, C.m_id)))
 
     | PatAnn (loc', int_pat', tau), SE.Comp.PatAnn (loc, ext_pat', _) ->
        let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau, C.m_id) in
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat'', tau, (tau, C.m_id)))
 
     | PatAnn (loc', int_pat', tau), ext_pat' ->
@@ -979,15 +1032,18 @@ module Comp = struct
 			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt'))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
-    (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n" *)
+    (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[tau] %s\n\t[ext_pat_spine] %s\n" *)
     (* 	   (P.patSpineToString cD cG int_pat_spine) *)
+    (* 	   (P.subCompTypToString cD (tau, theta)) *)
     (* 	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine); *)
     synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta)
 
 
   and synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta) =
     match int_pat_spine, ext_pat_spine with
-    | (PatNil, SE.Comp.PatNil _loc) -> ((tau, theta), Annotated.Comp.PatNil (tau, theta))
+    | (PatNil, SE.Comp.PatNil loc) ->
+       Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, theta));
+       ((tau, theta), Annotated.Comp.PatNil (tau, theta))
     | (PatApp (loc', int_pat', int_pat_spine'), SE.Comp.PatApp (loc, ext_pat', ext_pat_spine')) ->
        begin
 	 match (tau, theta) with
@@ -996,27 +1052,16 @@ module Comp = struct
 	    let (ttau, int_pat_spine'') =
 	      synPatSpine cD cG int_pat_spine' ext_pat_spine' (tau2, theta)
 	    in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau1, theta));
 	    (ttau, Annotated.Comp.PatApp (loc', int_pat'', int_pat_spine'', ttau))
 	 | (TypPiBox ((I.Decl (_, ctyp, _)) as cdecl, tau'), theta) ->
 	    let theta' = checkPatAgainstCDecl cD int_pat' (cdecl, theta) in
-	    (* let _ = *)
-	    (*   printf "Working on PatApp:\n\t%s\nwhich has type: %s\nlooking for a type for:\n\t[int_pat] %s\n\t[ext_pat] %s\ntau' has type: %s\n" *)
-	    (* 	     (P.patSpineToString cD cG int_pat_spine) *)
-	    (* 	     (P.subCompTypToString cD (tau, theta)) *)
-	    (* 	     (P.patternToString cD cG int_pat') *)
-	    (* 	     (PE.patternToString (Syntax.Ext.LF.Empty) ext_pat) *)
-	    (* 	     (P.subCompTypToString cD (tau', theta')) *)
-
-	    (* in *)
-	    (* assert false *)
 	    let tau = TypBox (loc', ctyp) in
-	    (* let _ = printf "int_pat %s has type %s\n" *)
-	    (* 		   (P.patternToString cD cG int_pat') *)
-	    (* 		   (P.subCompTypToString cD (tau, theta')) in *)
 	    let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau, theta) in
 	    let (ttau, int_pat_spine'') =
 	      synPatSpine cD cG int_pat_spine' ext_pat_spine' (tau', theta')
 	    in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, theta));
 	    (ttau, Annotated.Comp.PatApp (loc', int_pat'', int_pat_spine'', ttau))
        end
 

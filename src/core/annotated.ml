@@ -32,6 +32,7 @@ module Comp = struct
     | Boolean of bool * tclo
 
    and pattern =
+     | PatEmpty of Loc.t * Int.LF.dctx * tclo
      | PatMetaObj of Loc.t * Int.Comp.meta_obj * tclo
      | PatPair of Loc.t * pattern * pattern * tclo
      | PatConst of Loc.t * cid_comp_const * pattern_spine * tclo

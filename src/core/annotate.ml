@@ -759,7 +759,20 @@ module Comp = struct
     annPattern' cD cG int_pat ext_pat ttau
 
   and annPattern' cD cG int_pat ext_pat ttau = match int_pat, ext_pat with
-    (* TODO PatEmpty *)
+    (* TODO Find out how empty patterns are produced *)
+    | PatEmpty (loc', cPsi), _ ->
+       begin
+	 match ttau with
+	 | (TypBox (_, I.ClTyp (I.MTyp tA, cPsi)), theta)
+	 | (TypBox (_, I.ClTyp (I.PTyp tA, cPsi)), theta) ->
+	    if C.convDCtx (C.cnormDCtx (cPsi, theta)) cPsi then
+	      Annotated.Comp.PatEmpty (loc', cPsi, ttau)
+	    else
+	      raise (Error (loc', BoxMismatch (cD, I.Empty, ttau)))
+	 | _ ->
+	    raise (Error (loc', BoxMismatch (cD, I.Empty, ttau)))
+       end
+
     | PatMetaObj (loc', int_mO), SE.Comp.PatMetaObj (loc, ext_mO) ->
        begin
 	 match ttau with

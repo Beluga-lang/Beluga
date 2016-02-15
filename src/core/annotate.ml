@@ -1,7 +1,7 @@
 module P = Pretty.Int.DefaultPrinter
 module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-(* open Printf *)
+open Printf
 
 exception AnnotError of string
 
@@ -531,9 +531,9 @@ module Comp = struct
     | Hole (loc', f'), SE.Comp.Hole loc, (tau, t) ->
        Annotated.Comp.Hole (loc', f', ttau)
 
-    and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
-      (* LF.checkMetaObj cD mO (ctyp, theta); *)
-      I.MDot(metaObjToMFront mO, theta)
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+    (* LF.checkMetaObj cD mO (ctyp, theta); *)
+    I.MDot(metaObjToMFront mO, theta)
 
   and syn cD (cG, cIH) int_e ext_e =
     (* printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n" *)
@@ -832,7 +832,7 @@ module Comp = struct
 	      begin
 		match int_pat_spine, ext_pat_spine with
 		(* | PatNil, _ -> 	(\* This shouldn't happen, I think *\) *)
-		| PatApp (_, _, int_pat_spine'), ext_pat_spine ->
+		| PatApp (_, int_pat', int_pat_spine'), ext_pat_spine ->
 		   (* We have to handle the type of the pattern too *)
 		   let ttau' =
 		     begin
@@ -840,7 +840,7 @@ module Comp = struct
 		       | (TypArr (tau1, tau2), theta) ->
 			  (tau2, theta)
 		       | (TypPiBox (cdecl, tau'), theta) ->
-			  let theta' = checkPatAgainstCDecl cD int_pat (cdecl, theta) in
+			  let theta' = checkPatAgainstCDecl cD int_pat' (cdecl, theta) in
 			  (tau', theta')
 		     end
 		   in

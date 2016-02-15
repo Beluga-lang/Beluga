@@ -160,7 +160,6 @@ module Int = struct
 
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
-    val patSpineToString   : LF.mctx -> Comp.gctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
     val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
     val valueToString     :                         Comp.value   -> string
@@ -168,7 +167,7 @@ module Int = struct
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
     val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
-    val msubToString      : LF.mctx             -> LF.msub   -> string
+    val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
 
@@ -858,10 +857,10 @@ module Int = struct
       | LF.Dec (cD, ctyp_decl) ->
 	  (match ctyp_decl with
 	     | LF.Decl (_, _, dep) ->
-		 (* if ((not !Control.printImplicit) && (isImplicit dep)|| *)
-		 (*       (!Control.printNormal)) then *)
-		 (*   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD *)
-		 (* else *)
+		 if ((not !Control.printImplicit) && (isImplicit dep)||
+		       (!Control.printNormal)) then
+		   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
+		 else
 		   fprintf ppf "%a, %a"
 		     (fmt_ppr_lf_mctx 0) cD
 		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
@@ -1056,9 +1055,9 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 1) tau
 
     let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
-      | Comp.PatNil -> fprintf ppf "(PatNil)"
+      | Comp.PatNil -> fprintf ppf ""
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "(PatApp %a %a)"
+          fprintf ppf "%a %a"
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 
@@ -1067,48 +1066,47 @@ module Int = struct
       | (_, 0) -> ms
       | (Comp.PatNil, _) -> ms
       | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
-      in let _deimplicitize_spine c ms =
+      in let deimplicitize_spine c ms =
           let ia = if !Control.printImplicit
                  then 0
                 else Store.Cid.CompConst.get_implicit_arguments c in
        dropSpineLeft ms ia in
       function
       | Comp.PatEmpty (_, cPsi) ->
-            fprintf ppf "(PatEmpty [%a |- {}])"
+            fprintf ppf "[%a |- {}]"
               (fmt_ppr_lf_dctx cD 0) cPsi
       | Comp.PatMetaObj (_, mO) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(PatMetaObj %a)%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
       | Comp.PatConst (_, c, pat_spine) ->
-          (* let pat_spine = deimplicitize_spine c pat_spine in *)
+          let pat_spine = deimplicitize_spine c pat_spine in
           let cond = lvl > 1 in
-            fprintf ppf "%s(PatConst [%d] %s %a)%s"
+            fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
-	      (Store.Cid.CompConst.get_implicit_arguments c)
               (R.render_cid_comp_const c)
               (fmt_ppr_pat_spine cD cG 2) pat_spine
               (r_paren_if cond)
 
       | Comp.PatPair (_, pat1, pat2) ->
-          fprintf ppf "(PatPair (%a , %a))"
+          fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD cG 0) pat1
             (fmt_ppr_pat_obj cD cG 0) pat2
-      | Comp.PatTrue _ -> fprintf ppf "(PatTrue ttrue)"
-      | Comp.PatFalse _ -> fprintf ppf "(PatFalse ffalse)"
+      | Comp.PatTrue _ -> fprintf ppf "ttrue"
+      | Comp.PatFalse _ -> fprintf ppf "ffalse"
       | Comp.PatAnn (_, pat, tau) ->
-          fprintf ppf "(PatAnn (%a : %a))"
+          fprintf ppf "(%a : %a)"
             (fmt_ppr_pat_obj cD cG 0) pat
             (fmt_ppr_cmp_typ cD 0) tau
 
       | Comp.PatVar (_, offset ) ->
-          fprintf ppf "(ParVar %s)"
+          fprintf ppf "%s"
             (R.render_var cG offset)
 
       | Comp.PatFVar (_, name ) ->
-          fprintf ppf "(PatFVar %s)"
+          fprintf ppf "%s"
             (Id.render_name name)
 
 
@@ -1264,24 +1262,24 @@ module Int = struct
     end
     and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
       | Comp.Var (_, x) ->
-          fprintf ppf "(Var %s)"
+          fprintf ppf "%s"
             (R.render_var cG x)
 
       | Comp.Const (_ ,prog) ->
-          fprintf ppf "(Const %s)"
+          fprintf ppf "%s"
             (R.render_cid_prog prog)
 
       | Comp.DataConst (_, c) ->
-          fprintf ppf "(DataConst %s)"
+          fprintf ppf "%s"
             (R.render_cid_comp_const c)
 
       | Comp.DataDest (_, c) ->
-          fprintf ppf "(DataDest %s)"
+          fprintf ppf "%s"
             (R.render_cid_comp_dest c)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(Apply @[<2>%a@ %a@])%s"
+            fprintf ppf "%s@[<2>%a@ %a@]%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_cmp_exp_chk cD cG 2) e
@@ -1289,14 +1287,14 @@ module Int = struct
 
       | Comp.MApp (_, i, mC) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(MApp %a@ %a)%s"
+            fprintf ppf "%s%a@ %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_meta_obj cD 0) mC
               (r_paren_if cond)
 
       | Comp.PairVal (loc, i1, i2) ->
-            fprintf ppf "(PairVal (%a , %a))"
+            fprintf ppf "(%a , %a)"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
@@ -1310,20 +1308,20 @@ module Int = struct
               (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
               (r_paren_if cond)
 *)
-            fprintf ppf "%s(Ann %a)%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD cG 1) e
               (r_paren_if cond)
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "(Equal %a == %a)"
+            fprintf ppf "%a == %a"
               (fmt_ppr_cmp_exp_syn cD cG 1) i1
               (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
       | Comp.Boolean true ->
-          fprintf ppf "(Boolean ttrue)"
+          fprintf ppf "ttrue"
 
       | Comp.Boolean false ->
-          fprintf ppf "(Boolean ffalse)"
+          fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_value lvl ppf =
       function
@@ -1716,10 +1714,6 @@ module Int = struct
     let patternToString cD cG pat    =
       let pat' = Whnf.cnormPattern (pat , Whnf.m_id) in
        fmt_ppr_pat_obj cD cG std_lvl str_formatter pat'
-      ; flush_str_formatter ()
-
-    let patSpineToString cD cG pat_spine =
-      fmt_ppr_pat_spine cD cG std_lvl str_formatter pat_spine
       ; flush_str_formatter ()
 
     let expChkToString cD cG e    =

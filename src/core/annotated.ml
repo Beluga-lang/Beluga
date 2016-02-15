@@ -9,6 +9,7 @@ module Comp = struct
   type exp_chk =
     | Rec of Loc.t * name * exp_chk * tclo
     | Fun of Loc.t * name * exp_chk * tclo
+    | Cofun of Loc.t * (copattern_spine * exp_chk) list * tclo
     | MLam of Loc.t * name * exp_chk * tclo
     | Pair of Loc.t * exp_chk * exp_chk * tclo
     | Let of Loc.t * exp_syn * (name * exp_chk) * tclo
@@ -49,4 +50,9 @@ module Comp = struct
      | EmptyBranch of Loc.t * Int.LF.ctyp_decl Int.LF.ctx * pattern * Int.LF.msub
      | Branch of Loc.t * Int.LF.ctyp_decl Int.LF.ctx
 		 * Int.Comp.gctx * pattern * Int.LF.msub * exp_chk
+
+   and copattern_spine =
+     | CopatNil of Loc.t
+     | CopatApp of Loc.t * cid_comp_dest * copattern_spine
+     | CopatMeta of Loc.t * Int.Comp.meta_obj * copattern_spine
 end

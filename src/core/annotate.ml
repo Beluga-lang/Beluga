@@ -288,11 +288,11 @@ module Comp = struct
        | _ -> Some cIH
 
 
-  (* Use this version of the function to insert debug output *)
   let rec ann cD cG int_e ext_e ttau =
     let cIH = I.Empty in
     annotate cD (cG, cIH) int_e ext_e ttau
 
+  (* Use this version of the function to insert debug output *)
   and annotate cD (cG, cIH) int_e ext_e ttau =
     (* printf "Ann:\n\t[int_e] %s\n\t[ext_e] %s\n" *)
     (* 	   (P.expChkToString cD cG int_e) *)
@@ -314,7 +314,30 @@ module Comp = struct
        in
        Annotated.Comp.Fun (loc', int_x, int_e'', ttau)
 
-    (* TODO: Cofuns*)
+    | (Cofun (loc', int_bs), SE.Comp.Cofun (loc, ext_bs), (TypCobase (l, cid, sp), t)) ->
+       let f =
+    	 fun (CopatApp (ca_loc', int_dest, int_csp), int_e)
+    	     (SE.Comp.CopatApp (ca_loc, _, ext_csp), ext_e) ->
+	 begin
+	   let (ttau', int_csp') =
+	     synObs cD int_csp ext_csp ((CompDest.get int_dest).CompDest.typ, Whnf.m_id) ttau
+	   in
+	   let int_e' = annotate cD (cG, cIH) int_e ext_e ttau' in
+	   (Annotated.Comp.CopatApp (ca_loc', int_dest, int_csp'), int_e')
+	 end
+       in
+       let int_bs' = List.map2 f int_bs ext_bs in
+       Annotated.Comp.Cofun (loc', int_bs', ttau)
+
+    (* TODO *)
+    (* Also hackish, if there's a Fun in the external, just skip over any internal MLam *)
+    | (MLam (loc', int_u, int_e'), (SE.Comp.Fun _ as ext_e'), (TypPiBox (cdec, tau), t)) ->
+       let int_e'' =
+	 annotate (extend_mctx cD (int_u, cdec, t))
+		  (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1))
+		  int_e' ext_e' (tau, C.mvar_dot1 t)
+       in
+       int_e''
 
     (* This is an implicit MLam *)
     | (MLam (loc', int_u, int_e'), ext_e',
@@ -343,6 +366,15 @@ module Comp = struct
 		  int_e' ext_e' (tau, C.mvar_dot1 t)
        in
        Annotated.Comp.MLam (loc', int_u, int_e'', ttau)
+
+    (* | (MLam (loc', int_u, int_e'), SE.Comp.MLam (loc, _, ext_e'), *)
+    (*    (TypPiBox (I.Decl (_, cU, I.Inductive) as cdec, tau), t)) -> *)
+    (*    let int_e'' = *)
+    (* 	 annotate (extend_mctx cD (int_u, cdec, t)) *)
+    (* 		  (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1)) *)
+    (* 		  int_e' ext_e' (tau, C.mvar_dot1 t) *)
+    (*    in *)
+    (*    Annotated.Comp.MLam (loc', int_u, int_e'', ttau) *)
 
     (* (\* TODO: Unknown MLams *\) *)
     (* | (MLam (loc', int_u, int_e'), SE.Comp.MLam (loc, _, ext_e'), *)
@@ -514,6 +546,7 @@ module Comp = struct
        else
 	 raise (Error (loc', MismatchChk (cD, cG, int_e, (tau, t), (tau', t'))))
 
+    (* Changed to be in line with the actual type checker *)
     | (If (loc', int_i, int_e1, int_e2),
        SE.Comp.If (loc, ext_i, ext_e1, ext_e2),
        (tau, t)) ->
@@ -523,7 +556,7 @@ module Comp = struct
 	 match (tau', t') with
 	 | (TypBool, _) ->
 	    let int_e1' = annotate cD (cG, cIH) int_e1 ext_e1 (tau, t) in
-	    let int_e2' = annotate cD (cG, cIH) int_e2 ext_e2 (tau, t) in
+	    let int_e2' = annotate cD (cG, cIH) int_e1 ext_e1 (tau, t) in
 	    Annotated.Comp.If (loc', int_i', int_e1', int_e2', ttau)
 	 | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
        end
@@ -531,9 +564,34 @@ module Comp = struct
     | Hole (loc', f'), SE.Comp.Hole loc, (tau, t) ->
        Annotated.Comp.Hole (loc', f', ttau)
 
+    | eInt', eExt', ttau' ->
+       raise (AnnotError
+		("Unable to pair chk:"
+		 ^ "\n\t [Int] exp_chk: " ^ P.expChkToString cD cG eInt'
+		 ^ "\n\t [Int] ttau: " ^ P.subCompTypToString cD ttau'
+		 ^ "\n\t [Ext] exp_chk: " ^ PE.expChkToString (Syntax.Ext.LF.Empty) eExt'))
+
+
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
     (* LF.checkMetaObj cD mO (ctyp, theta); *)
     I.MDot(metaObjToMFront mO, theta)
+
+  and synObs cD int_csp ext_csp ttau1 ttau2 = match (int_csp, ext_csp, ttau1, ttau2) with
+    | (CopatNil loc', SE.Comp.CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+       if C.convCTyp (tau1, theta) (tau', theta') then
+         ((tau2, theta), Annotated.Comp.CopatNil loc')
+       else
+         raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+    | (CopatApp (loc', dest, int_csp'), SE.Comp.CopatApp (loc, _, ext_csp'),
+       (TypArr (tau1, tau2), theta), (tau', theta')) ->
+       if C.convCTyp (tau1, theta) (tau', theta') then
+         let ((tau'', theta''), int_csp'') =
+	   synObs cD int_csp' ext_csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
+	 in
+	 ((tau'', theta''), Annotated.Comp.CopatApp (loc, dest, int_csp''))
+       else
+         raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+
 
   and syn cD (cG, cIH) int_e ext_e =
     (* printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n" *)
@@ -570,6 +628,10 @@ module Comp = struct
     (*    ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id))) *)
 
     | (DataDest (loc', c), SE.Comp.Var (loc, _)) ->
+       let tau = (CompDest.get c).CompDest.typ in
+       ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
+
+    | (DataDest (loc', c), SE.Comp.DataConst (loc, _)) ->
        let tau = (CompDest.get c).CompDest.typ in
        ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
 
@@ -662,6 +724,18 @@ module Comp = struct
        let int_e' = annotate cD (cG, cIH) int_e ext_e (tau, C.m_id) in
        ((None, tau, C.m_id), Annotated.Comp.Ann (int_e', tau, (tau, C.m_id)))
 
+    | (Ann (Box (loc', int_mO), tau), SE.Comp.BoxVal (loc, ext_mO)) ->
+       begin
+	 try
+	   let ttau = (tau, C.m_id) in
+	   let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO ttau *) in
+	   ((None, tau, C.m_id),
+	    Annotated.Comp.Ann (Annotated.Comp.Box (loc', int_mO', ttau), tau, ttau))
+	 with C.FreeMVar (I.FMVar (u, _)) ->
+	   raise (Error.Violation ("Free meta-variable" ^ (Id.render_name u)))
+       end
+       (* ((None, tau, C.m_id), Annotated.Comp.Ann (int_e', tau, (tau, C.m_id))) *)
+
     | (Equal (loc', int_i1, int_i2), SE.Comp.Equal (loc, ext_i1, ext_i2)) ->
        let ((_, tau1, t1), int_i1') = syn cD (cG, cIH) int_i1 ext_i1 in
        let ((_, tau2, t2), int_i2') = syn cD (cG, cIH) int_i2 ext_i2 in
@@ -682,6 +756,13 @@ module Comp = struct
 
     | Boolean b, SE.Comp.Boolean (loc, _) ->
        ((None, TypBool, C.m_id), Annotated.Comp.Boolean (b, (TypBool, C.m_id)))
+
+    | eInt', eExt' ->
+       raise (AnnotError
+		("Unable to pair syn:"
+		 ^ "\n\t [Int] exp_syn: " ^ P.expSynToString cD cG eInt'
+		 ^ "\n\t [Ext] exp_syn: " ^ PE.expSynToString (Syntax.Ext.LF.Empty) eExt'))
+
 
   and annBranches caseTyp cD (cG, cIH) int_branches ext_branches tau_s ttau =
     List.map2

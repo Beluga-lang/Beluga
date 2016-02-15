@@ -769,14 +769,14 @@ module Comp = struct
 	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
        end
 
-    | PatMetaObj (loc', int_mO), SE.Comp.PatAnn (loc, SE.Comp.PatMetaObj (_, ext_mO), _) ->
-       begin
-	 match ttau with
-	 | (TypBox (_, ctyp), theta) ->
-	    let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *) in
-	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau)
-	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
-       end
+    (* | PatMetaObj (loc', int_mO), SE.Comp.PatAnn (loc, SE.Comp.PatMetaObj (_, ext_mO), _) -> *)
+    (*    begin *)
+    (* 	 match ttau with *)
+    (* 	 | (TypBox (_, ctyp), theta) -> *)
+    (* 	    let int_mO' = int_mO (\* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *\) in *)
+    (* 	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau) *)
+    (* 	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau))) *)
+    (*    end *)
 
     | (PatPair (loc', int_pat1, int_pat2), SE.Comp.PatPair (loc, ext_pat1, ext_pat2)) ->
        begin
@@ -787,6 +787,10 @@ module Comp = struct
 	    Annotated.Comp.PatPair (loc', int_pat1', int_pat2', ttau)
 	 | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
        end
+
+    | int_pat, SE.Comp.PatAnn (_, ext_pat, _) ->
+       annPattern cD cG int_pat ext_pat ttau
+
     | int_pat, ext_pat ->
        let ((loc, ttau'), int_pat') = synPattern cD cG int_pat ext_pat in
        let tau' = C.cnormCTyp ttau' in
@@ -840,9 +844,9 @@ module Comp = struct
        in
        ((loc', ttau''), Annotated.Comp.PatConst (loc', int_c, int_pat_spine'', ttau''))
 
-    | PatVar (loc', k), SE.Comp.PatAnn (loc, SE.Comp.PatVar (_, _), _) ->
-       let tau = lookup' cG k in
-       ((loc', (tau, C.m_id)), Annotated.Comp.PatVar (loc', k, (tau, C.m_id)))
+    (* | PatVar (loc', k), SE.Comp.PatAnn (loc, SE.Comp.PatVar (_, _), _) -> *)
+    (*    let tau = lookup' cG k in *)
+    (*    ((loc', (tau, C.m_id)), Annotated.Comp.PatVar (loc', k, (tau, C.m_id))) *)
 
     | PatVar (loc', k), SE.Comp.PatVar (loc, _) ->
        let tau = lookup' cG k in

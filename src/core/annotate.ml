@@ -840,6 +840,10 @@ module Comp = struct
        in
        ((loc', ttau''), Annotated.Comp.PatConst (loc', int_c, int_pat_spine'', ttau''))
 
+    | PatVar (loc', k), SE.Comp.PatAnn (loc, SE.Comp.PatVar (_, _), _) ->
+       let tau = lookup' cG k in
+       ((loc', (tau, C.m_id)), Annotated.Comp.PatVar (loc', k, (tau, C.m_id)))
+
     | PatVar (loc', k), SE.Comp.PatVar (loc, _) ->
        let tau = lookup' cG k in
        ((loc', (tau, C.m_id)), Annotated.Comp.PatVar (loc', k, (tau, C.m_id)))

@@ -111,6 +111,7 @@ module Ext = struct
 
     val gctxToString      : LF.ctyp_decl LF.ctx -> LF.typ_decl LF.ctx -> string
     val patternToString   : LF.ctyp_decl LF.ctx -> Comp.pattern -> string
+    val patSpineToString   : LF.ctyp_decl LF.ctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.ctyp_decl LF.ctx -> Comp.exp_chk -> string
     val expSynToString    : LF.ctyp_decl LF.ctx -> Comp.exp_syn -> string
     val branchToString    : LF.ctyp_decl LF.ctx -> Syntax.Int.Comp.gctx -> Comp.branch -> string
@@ -1277,6 +1278,10 @@ module Ext = struct
 
     let patternToString cD pat    =
        fmt_ppr_pat_obj cD std_lvl str_formatter pat
+      ; flush_str_formatter ()
+
+    let patSpineToString cD pat_spine =
+      fmt_ppr_pat_spine cD std_lvl str_formatter pat_spine
       ; flush_str_formatter ()
 
     let expChkToString cD e    =

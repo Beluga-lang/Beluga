@@ -160,6 +160,7 @@ module Int = struct
 
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
+    val patSpineToString   : LF.mctx -> Comp.gctx -> Comp.pattern_spine -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
     val expSynToString    : LF.mctx -> Comp.gctx -> Comp.exp_syn -> string
     val valueToString     :                         Comp.value   -> string
@@ -167,7 +168,7 @@ module Int = struct
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
     val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
-    val msubToString      : LF.mctx              -> LF.msub   -> string
+    val msubToString      : LF.mctx             -> LF.msub   -> string
 
   end (* Int.PRINTER *)
 
@@ -857,10 +858,10 @@ module Int = struct
       | LF.Dec (cD, ctyp_decl) ->
 	  (match ctyp_decl with
 	     | LF.Decl (_, _, dep) ->
-		 if ((not !Control.printImplicit) && (isImplicit dep)||
-		       (!Control.printNormal)) then
-		   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
-		 else
+		 (* if ((not !Control.printImplicit) && (isImplicit dep)|| *)
+		 (*       (!Control.printNormal)) then *)
+		 (*   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD *)
+		 (* else *)
 		   fprintf ppf "%a, %a"
 		     (fmt_ppr_lf_mctx 0) cD
 		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
@@ -1714,6 +1715,10 @@ module Int = struct
     let patternToString cD cG pat    =
       let pat' = Whnf.cnormPattern (pat , Whnf.m_id) in
        fmt_ppr_pat_obj cD cG std_lvl str_formatter pat'
+      ; flush_str_formatter ()
+
+    let patSpineToString cD cG pat_spine =
+      fmt_ppr_pat_spine cD cG std_lvl str_formatter pat_spine
       ; flush_str_formatter ()
 
     let expChkToString cD cG e    =

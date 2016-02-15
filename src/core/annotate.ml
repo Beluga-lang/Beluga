@@ -1,7 +1,7 @@
 module P = Pretty.Int.DefaultPrinter
 module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-open Printf
+(* open Printf *)
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
@@ -402,7 +402,7 @@ module Comp = struct
 	 begin
 	   match cM with
 	   | I.ClObj (_, I.MObj (I.Root (_, I.PVar (x,s), _)))
-	   | I.ClObj (_, I.PObj (I.PVar (x,s ))) ->
+	   | I.ClObj (_, I.PObj (I.PVar (x, s))) ->
 	      let order = if !Total.enabled && is_indMObj cD x then
 			    IndIndexObj (l, cM)
 			  else
@@ -435,7 +435,7 @@ module Comp = struct
 	      (IndexObj (l, cM), TypBox (loc', C.cnormMetaTyp (mT, C.m_id)), None)
 	 end
        in
-       let _ = () (* LF.annMetaObj cD (loc, cM) (mT, C.m_id) *) in
+       (* let _ = () (\* LF.annMetaObj cD (loc, cM) (mT, C.m_id) *\) in *)
        let problem = Coverage.make loc int_prag cD int_branches tau_sc in
        let int_branches' =
 	 annBranches total_pragma cD (cG, cIH) int_branches ext_branches tau0_sc (tau, t)
@@ -455,7 +455,7 @@ module Comp = struct
        let anBranch total_pragma cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t) =
 	 let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
 	 begin
-	   match C.cwhnfCTyp (tau', t) with
+	   match C.cwhnfCTyp (tau', t') with
 	   | (TypBox (loc'', mT), t') ->
 	      let tau_s = TypBox (loc'', C.cnormMetaTyp (mT, t')) in
 	      let problem = Coverage.make loc int_prag cD int_branches tau_s in
@@ -476,9 +476,11 @@ module Comp = struct
 	   | Var (loc', x), SE.Comp.Var (loc, _) ->
 	      let (f, tau') = lookup cG x in
 	      let ind =
-		match C.cnormCTyp (tau', C.m_id) with
-		| TypInd _tau -> true
-		| _ -> false
+		begin
+		  match C.cnormCTyp (tau', C.m_id) with
+		  | TypInd _tau -> true
+		  | _ -> false
+		end
 	      in
 	      if ind then
 		let (int_i', int_branches') =
@@ -526,6 +528,10 @@ module Comp = struct
 
     | Hole (loc', f'), SE.Comp.Hole loc, (tau, t) ->
        Annotated.Comp.Hole (loc', f', ttau)
+
+    and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+      (* LF.checkMetaObj cD mO (ctyp, theta); *)
+      I.MDot(metaObjToMFront mO, theta)
 
   and syn cD (cG, cIH) int_e ext_e =
     (* printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n" *)
@@ -683,7 +689,11 @@ module Comp = struct
 
   and annBranch caseTyp cD (cG, cIH) int_branch ext_branch tau_s (tau, t) =
     match int_branch, ext_branch with
-    (* TODO EmptyBranch *)
+    | EmptyBranch (loc', cD1', int_pat, t1), SE.Comp.EmptyBranch (loc, _, ext_pat) ->
+       let tau_p = C.cnormCTyp (tau_s, t1) in
+       let int_pat' = annPattern cD1' I.Empty int_pat ext_pat (tau_p, Whnf.m_id) in
+       Annotated.Comp.EmptyBranch (loc', cD1', int_pat', t1)
+
     | (Branch (loc', cD1', cG, PatMetaObj (l1', int_mO), t1, int_e),
       SE.Comp.Branch (loc, _, SE.Comp.PatMetaObj (_, ext_mO), ext_e)) ->
        let TypBox (_, mT) = tau_s in
@@ -698,7 +708,10 @@ module Comp = struct
 	   (cD1', Total.wf_rec_calls cD1' (I.Empty))
 	 else
 	   (cD1', I.Empty) in
-       let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
+       let cD1' = if !Total.enabled then
+		    id_map_ind cD1' t1 cD
+		  else
+		    cD1' in
        (* LF.annMSub loc cD1' t1 cD; *)
        let int_mO' = int_mO (* LF.annMetaObj cD1' int_mO ext_mO (mT1, C.m_id) *) in
        let int_e' = annotate cD1' (cG', Context.append cIH cIH') int_e ext_e (tau', C.m_id)
@@ -709,7 +722,7 @@ module Comp = struct
 
     | (Branch (loc', cD1', cG1, int_pat, t1, int_e),
       SE.Comp.Branch (loc, _, ext_pat, ext_e)) ->
-       printf "[Branch] %s\n" (P.branchToString cD cG int_branch);
+       (* printf "[Branch] %s\n" (P.branchToString cD cG int_branch); *)
        let tau_p = C.cnormCTyp (tau_s, t1) in
        let cG' = C.cnormCtx (cG, t1) in
        let cIH = C.cnormCtx (C.normCtx cIH, t1) in
@@ -717,7 +730,6 @@ module Comp = struct
        let tau' = C.cnormCTyp (tau, t'') in
        let k = Context.length cG1 in
        let cIH0 = Total.shiftIH cIH k in
-       printf "tau_p (Before Before): %s\n" (P.compTypToString cD1' tau_p);
        let (cD1', cIH') =
 	 if is_inductive caseTyp && Total.struct_smaller int_pat then
 	   let cD1' = mvarsInPatt cD1' int_pat in
@@ -725,11 +737,11 @@ module Comp = struct
 	 else
 	   (cD1', I.Empty)
        in
-       printf "tau_p (Before): %s\n" (P.compTypToString cD1' tau_p);
-       let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD else cD1' in
+       let cD1' = if !Total.enabled then
+		    id_map_ind cD1' t1 cD
+		  else
+		    cD1' in
        (* LF.annMSub loc cD1' t1 cD;  *)
-       printf "tau_p (After): %s\n" (P.compTypToString cD1' tau_p);
-       printf "cD1': %s\n" (P.mctxToString cD1');
        let int_pat' = annPattern cD1' cG1 int_pat ext_pat (tau_p, C.m_id) in
        let int_e' =
 	 annotate cD1' ((Context.append cG' cG1), Context.append cIH0 cIH')
@@ -738,10 +750,10 @@ module Comp = struct
        Annotated.Comp.Branch (loc', cD1', cG1, int_pat', t1, int_e')
 
   and annPattern cD cG int_pat ext_pat ttau =
-    printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n"
-    	   (P.patternToString cD cG int_pat)
-    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat)
-	   (P.subCompTypToString cD ttau);
+    (* printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n" *)
+    (* 	   (P.patternToString cD cG int_pat) *)
+    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat) *)
+    (* 	   (P.subCompTypToString cD ttau); *)
     annPattern' cD cG int_pat ext_pat ttau
 
   and annPattern' cD cG int_pat ext_pat ttau = match int_pat, ext_pat with
@@ -776,34 +788,46 @@ module Comp = struct
 	 raise (Error (loc, PatIllTyped (cD, cG, int_pat, ttau, ttau')))
 
   and synPattern cD cG int_pat ext_pat =
-    printf "Building patterns:\n\t[int_pat] %s\n\t[ext_pat] %s\n"
-    	   (P.patternToString cD cG int_pat)
-    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat);
+    (* printf "Building pattern types:\n\t[int_pat] %s\n\t[ext_pat] %s\n" *)
+    (* 	   (P.patternToString cD cG int_pat) *)
+    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat); *)
     synPattern' cD cG int_pat ext_pat
 
   and synPattern' cD cG int_pat ext_pat = match int_pat, ext_pat with
     | (PatConst (loc', int_c, int_pat_spine), SE.Comp.PatConst (loc, ext_c, ext_pat_spine)) ->
-       let rec handle_implicits count int_pat_spine ext_pat_spine =
+       let tau = (CompConst.get int_c).CompConst.typ in
+       let rec handle_implicits count int_pat_spine ext_pat_spine ttau =
 	 begin
 	   match count with
-	   | 0 -> (int_pat_spine, ext_pat_spine)
+	   | 0 -> (int_pat_spine, ext_pat_spine, ttau)
 	   | count' ->
 	      begin
 		match int_pat_spine, ext_pat_spine with
 		(* | PatNil, _ -> 	(\* This shouldn't happen, I think *\) *)
 		| PatApp (_, _, int_pat_spine'), ext_pat_spine ->
-		   handle_implicits (count' - 1) int_pat_spine' ext_pat_spine
+		   (* We have to handle the type of the pattern too *)
+		   let ttau' =
+		     begin
+		       match ttau with
+		       | (TypArr (tau1, tau2), theta) ->
+			  (tau2, theta)
+		       | (TypPiBox (cdecl, tau'), theta) ->
+			  let theta' = checkPatAgainstCDecl cD int_pat (cdecl, theta) in
+			  (tau', theta')
+		     end
+		   in
+		   handle_implicits (count' - 1) int_pat_spine' ext_pat_spine ttau'
 	      end
 	 end
        in
-       let tau = (CompConst.get int_c).CompConst.typ in
-       let (int_pat_spine', ext_pat_spine') =
-	 handle_implicits (CompConst.get_implicit_arguments int_c) int_pat_spine ext_pat_spine
+       let (int_pat_spine', ext_pat_spine', ttau') =
+	 handle_implicits (CompConst.get_implicit_arguments int_c)
+			  int_pat_spine ext_pat_spine (tau, C.m_id)
        in
-       let (ttau, int_pat_spine'') =
-	 synPatSpine cD cG int_pat_spine' ext_pat_spine' (tau, C.m_id)
+       let (ttau'', int_pat_spine'') =
+	 synPatSpine cD cG int_pat_spine' ext_pat_spine' ttau'
        in
-       ((loc', ttau), Annotated.Comp.PatConst (loc', int_c, int_pat_spine'', ttau))
+       ((loc', ttau''), Annotated.Comp.PatConst (loc', int_c, int_pat_spine'', ttau''))
 
     | PatVar (loc', k), SE.Comp.PatVar (loc, _) ->
        let tau = lookup' cG k in
@@ -824,6 +848,13 @@ module Comp = struct
        ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat', tau, (tau, C.m_id)))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
+    (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n" *)
+    (* 	   (P.patSpineToString cD cG int_pat_spine) *)
+    (* 	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine); *)
+    synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta)
+
+
+  and synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta) =
     match int_pat_spine, ext_pat_spine with
     | (PatNil, SE.Comp.PatNil _loc) -> ((tau, theta), Annotated.Comp.PatNil (tau, theta))
     | (PatApp (loc', int_pat, int_pat_spine), SE.Comp.PatApp (loc, ext_pat, ext_pat_spine)) ->
@@ -835,6 +866,13 @@ module Comp = struct
 	      synPatSpine cD cG int_pat_spine ext_pat_spine (tau2, theta)
 	    in
 	    (ttau, Annotated.Comp.PatApp (loc', int_pat', int_pat_spine', ttau))
+	 (* | (TypPiBox (cdecl, tau'), theta) -> *)
+	 (*    let theta' = checkPatAgainstCDecl cD int_pat (cdecl, theta) in *)
+	 (*    let int_pat' = annPattern cD cG int_pat ext_pat () *)
+	 (*    let (ttau, int_pat_spine') = *)
+	 (*      synPatSpine cD cG int_pat_spine ext_pat_spine (tau', theta) *)
+	 (*    in *)
+	 (*    (ttau, Annotated.Comp.PatApp (loc', int_pat')) *)
        end
 
 end

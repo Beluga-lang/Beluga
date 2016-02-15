@@ -45,6 +45,7 @@ module Comp = struct
      | PatApp of Loc.t * pattern * pattern_spine * tclo
 
    and branch =
+     | EmptyBranch of Loc.t * Int.LF.ctyp_decl Int.LF.ctx * pattern * Int.LF.msub
      | Branch of Loc.t * Int.LF.ctyp_decl Int.LF.ctx
 		 * Int.Comp.gctx * pattern * Int.LF.msub * exp_chk
 end

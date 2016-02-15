@@ -401,7 +401,6 @@ let recSgnDecls decls =
 				       fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK');
 			dprint (fun () ->  "\nDOUBLE CHECK for type constant " ^(string_of_name a) ^
 				  " successful!")) in
-        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
         let _a = Typ.add (Typ.mk_entry a tK' i) in
         let sgn = Int.Sgn.Typ(loc, _a, tK') in
         Store.Modules.addSgnToCurrent sgn;
@@ -435,7 +434,6 @@ let recSgnDecls decls =
 				   (P.typToString cD Int.LF.Null (tA', S.LF.id)) ^ "\n\n");
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
-        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in
         Store.Modules.addSgnToCurrent sgn;

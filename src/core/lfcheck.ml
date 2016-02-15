@@ -206,7 +206,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
       (tB, Substitution.LF.dot1 s2);
-      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Lam" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
 
   | (LFHole _, _), _ -> ()
   | (Lam (loc, _, _), _), _ ->
@@ -214,7 +213,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 
   | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
     checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
-    Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Tuple" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
 
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -234,7 +232,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 	  P.dctxToString cD cPsi ^ " |- " ^
 	  P.normalToString cD cPsi sM ^
           " => " ^ P.typToString cD cPsi sP ) in
-  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
 	let _ = dprint (fun () -> "       against " ^
 	  P.typToString cD cPsi sA) in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in

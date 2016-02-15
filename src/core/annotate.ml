@@ -1,7 +1,7 @@
 module P = Pretty.Int.DefaultPrinter
 module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-open Printf
+(* open Printf *)
 
 exception AnnotError of string
 
@@ -752,10 +752,10 @@ module Comp = struct
        Annotated.Comp.Branch (loc', cD1', cG1, int_pat', t1, int_e')
 
   and annPattern cD cG int_pat ext_pat ttau =
-    printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n"
-    	   (P.patternToString cD cG int_pat)
-    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat)
-    	   (P.subCompTypToString cD ttau);
+    (* printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n" *)
+    (* 	   (P.patternToString cD cG int_pat) *)
+    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat) *)
+    (* 	   (P.subCompTypToString cD ttau); *)
     annPattern' cD cG int_pat ext_pat ttau
 
   and annPattern' cD cG int_pat ext_pat ttau = match int_pat, ext_pat with
@@ -816,37 +816,50 @@ module Comp = struct
 	 raise (Error (loc, PatIllTyped (cD, cG, int_pat, ttau, ttau')))
 
   and synPattern cD cG int_pat ext_pat =
-    printf "Building pattern types:\n\t[int_pat] %s\n\t[ext_pat] %s\n"
-    	   (P.patternToString cD cG int_pat)
-    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat);
+    (* printf "Building pattern types:\n\t[int_pat] %s\n\t[ext_pat] %s\n" *)
+    (* 	   (P.patternToString cD cG int_pat) *)
+    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat); *)
     synPattern' cD cG int_pat ext_pat
 
   and synPattern' cD cG int_pat ext_pat = match int_pat, ext_pat with
     | (PatConst (loc', int_c, int_pat_spine), SE.Comp.PatConst (loc, ext_c, ext_pat_spine)) ->
        let tau = (CompConst.get int_c).CompConst.typ in
+       let rec int_spineLen pat_sp = match pat_sp with
+	 | PatNil -> 0
+	 | PatApp (_, _, pat_sp') -> 1 + int_spineLen pat_sp'
+       in
+       let rec ext_spineLen pat_sp = match pat_sp with
+	 | SE.Comp.PatNil _ -> 0
+	 | SE.Comp.PatApp (_, _, pat_sp') -> 1 + ext_spineLen pat_sp'
+       in
        let rec handle_implicits count int_pat_spine ext_pat_spine ttau =
-	 begin
-	   match count with
-	   | 0 -> (int_pat_spine, ext_pat_spine, ttau)
-	   | count' ->
-	      begin
-		match int_pat_spine, ext_pat_spine with
-		(* | PatNil, _ -> 	(\* This shouldn't happen, I think *\) *)
-		| PatApp (_, int_pat', int_pat_spine'), ext_pat_spine ->
-		   (* We have to handle the type of the pattern too *)
-		   let ttau' =
-		     begin
-		       match ttau with
-		       | (TypArr (tau1, tau2), theta) ->
-			  (tau2, theta)
-		       | (TypPiBox (cdecl, tau'), theta) ->
-			  let theta' = checkPatAgainstCDecl cD int_pat' (cdecl, theta) in
-			  (tau', theta')
-		     end
-		   in
-		   handle_implicits (count' - 1) int_pat_spine' ext_pat_spine ttau'
-	      end
-	 end
+	 (* This is kind of hackish, but I don't know what else to do. *)
+	 (* If the spines are the same length, then don't worry about implicits *)
+	 if int_spineLen int_pat_spine = ext_spineLen ext_pat_spine then
+	   (int_pat_spine, ext_pat_spine, ttau)
+	 else
+	   begin
+	     match count with
+	     | 0 -> (int_pat_spine, ext_pat_spine, ttau)
+	     | count' ->
+		begin
+		  match int_pat_spine, ext_pat_spine with
+		  (* | PatNil, _ -> 	(\* This shouldn't happen, I think *\) *)
+		  | PatApp (_, int_pat', int_pat_spine'), ext_pat_spine ->
+		     (* We have to handle the type of the pattern too *)
+		     let ttau' =
+		       begin
+			 match ttau with
+			 | (TypArr (tau1, tau2), theta) ->
+			    (tau2, theta)
+			 | (TypPiBox (cdecl, tau'), theta) ->
+			    let theta' = checkPatAgainstCDecl cD int_pat' (cdecl, theta) in
+			    (tau', theta')
+		       end
+		     in
+		     handle_implicits (count' - 1) int_pat_spine' ext_pat_spine ttau'
+		end
+	   end
        in
        let (int_pat_spine', ext_pat_spine', ttau') =
 	 handle_implicits (CompConst.get_implicit_arguments int_c)
@@ -885,9 +898,9 @@ module Comp = struct
 			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt'))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
-    printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n"
-    	   (P.patSpineToString cD cG int_pat_spine)
-    	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine);
+    (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n" *)
+    (* 	   (P.patSpineToString cD cG int_pat_spine) *)
+    (* 	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine); *)
     synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta)
 
 

@@ -1067,7 +1067,7 @@ module Int = struct
       | (_, 0) -> ms
       | (Comp.PatNil, _) -> ms
       | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
-      in let deimplicitize_spine c ms =
+      in let _deimplicitize_spine c ms =
           let ia = if !Control.printImplicit
                  then 0
                 else Store.Cid.CompConst.get_implicit_arguments c in
@@ -1083,10 +1083,11 @@ module Int = struct
               (fmt_ppr_meta_obj cD 0) mO
               (r_paren_if cond)
       | Comp.PatConst (_, c, pat_spine) ->
-          let pat_spine = deimplicitize_spine c pat_spine in
+          (* let pat_spine = deimplicitize_spine c pat_spine in *)
           let cond = lvl > 1 in
-            fprintf ppf "%s(PatConst %s %a)%s"
+            fprintf ppf "%s(PatConst [%d] %s %a)%s"
               (l_paren_if cond)
+	      (Store.Cid.CompConst.get_implicit_arguments c)
               (R.render_cid_comp_const c)
               (fmt_ppr_pat_spine cD cG 2) pat_spine
               (r_paren_if cond)

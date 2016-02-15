@@ -3,6 +3,8 @@ module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 (* open Printf *)
 
+exception AnnotError of string
+
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
 module LF = Lfcheck
@@ -767,6 +769,15 @@ module Comp = struct
 	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
        end
 
+    | PatMetaObj (loc', int_mO), SE.Comp.PatAnn (loc, SE.Comp.PatMetaObj (_, ext_mO), _) ->
+       begin
+	 match ttau with
+	 | (TypBox (_, ctyp), theta) ->
+	    let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *) in
+	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau)
+	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+       end
+
     | (PatPair (loc', int_pat1, int_pat2), SE.Comp.PatPair (loc, ext_pat1, ext_pat2)) ->
        begin
 	 match ttau with
@@ -839,13 +850,18 @@ module Comp = struct
     | PatFalse loc', SE.Comp.PatFalse loc ->
        ((loc', (TypBool, C.m_id)), Annotated.Comp.PatFalse (loc', (TypBool, C.m_id)))
 
-    | PatAnn (loc', int_pat, tau), SE.Comp.PatAnn (loc, ext_pat, _) ->
-       let int_pat' = annPattern cD cG int_pat ext_pat (tau, C.m_id) in
-       ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat', tau, (tau, C.m_id)))
+    | PatAnn (loc', int_pat', tau), SE.Comp.PatAnn (loc, ext_pat', _) ->
+       let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau, C.m_id) in
+       ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat'', tau, (tau, C.m_id)))
 
-    | PatAnn (loc', int_pat, tau), ext_pat->
-       let int_pat' = annPattern cD cG int_pat ext_pat (tau, C.m_id) in
-       ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat', tau, (tau, C.m_id)))
+    | PatAnn (loc', int_pat', tau), ext_pat' ->
+       let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau, C.m_id) in
+       ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat'', tau, (tau, C.m_id)))
+
+    | (patInt', patExt') ->
+       raise (AnnotError ("Unable to pair pat:\n"
+			  ^ "\n\t [Int] pat: " ^ P.patternToString cD cG patInt'
+			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt'))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
     (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n" *)

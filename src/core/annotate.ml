@@ -752,10 +752,10 @@ module Comp = struct
        Annotated.Comp.Branch (loc', cD1', cG1, int_pat', t1, int_e')
 
   and annPattern cD cG int_pat ext_pat ttau =
-    (* printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n" *)
-    (* 	   (P.patternToString cD cG int_pat) *)
-    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat) *)
-    (* 	   (P.subCompTypToString cD ttau); *)
+    printf "Annotating patterns:\n\t[int_pat] %s\n\t[ext_pat] %s \n\t[with Type] %s\n"
+    	   (P.patternToString cD cG int_pat)
+    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat)
+    	   (P.subCompTypToString cD ttau);
     annPattern' cD cG int_pat ext_pat ttau
 
   and annPattern' cD cG int_pat ext_pat ttau = match int_pat, ext_pat with
@@ -816,9 +816,9 @@ module Comp = struct
 	 raise (Error (loc, PatIllTyped (cD, cG, int_pat, ttau, ttau')))
 
   and synPattern cD cG int_pat ext_pat =
-    (* printf "Building pattern types:\n\t[int_pat] %s\n\t[ext_pat] %s\n" *)
-    (* 	   (P.patternToString cD cG int_pat) *)
-    (* 	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat); *)
+    printf "Building pattern types:\n\t[int_pat] %s\n\t[ext_pat] %s\n"
+    	   (P.patternToString cD cG int_pat)
+    	   (PE.patternToString Syntax.Ext.LF.Empty ext_pat);
     synPattern' cD cG int_pat ext_pat
 
   and synPattern' cD cG int_pat ext_pat = match int_pat, ext_pat with
@@ -885,31 +885,45 @@ module Comp = struct
 			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt'))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
-    (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n" *)
-    (* 	   (P.patSpineToString cD cG int_pat_spine) *)
-    (* 	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine); *)
+    printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[ext_pat_spine] %s\n"
+    	   (P.patSpineToString cD cG int_pat_spine)
+    	   (PE.patSpineToString (Syntax.Ext.LF.Empty) ext_pat_spine);
     synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta)
 
 
   and synPatSpine' cD cG int_pat_spine ext_pat_spine (tau, theta) =
     match int_pat_spine, ext_pat_spine with
     | (PatNil, SE.Comp.PatNil _loc) -> ((tau, theta), Annotated.Comp.PatNil (tau, theta))
-    | (PatApp (loc', int_pat, int_pat_spine), SE.Comp.PatApp (loc, ext_pat, ext_pat_spine)) ->
+    | (PatApp (loc', int_pat', int_pat_spine'), SE.Comp.PatApp (loc, ext_pat', ext_pat_spine')) ->
        begin
 	 match (tau, theta) with
 	 | (TypArr (tau1, tau2), theta) ->
-	    let int_pat' = annPattern cD cG int_pat ext_pat (tau1, theta) in
-	    let (ttau, int_pat_spine') =
-	      synPatSpine cD cG int_pat_spine ext_pat_spine (tau2, theta)
+	    let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau1, theta) in
+	    let (ttau, int_pat_spine'') =
+	      synPatSpine cD cG int_pat_spine' ext_pat_spine' (tau2, theta)
 	    in
-	    (ttau, Annotated.Comp.PatApp (loc', int_pat', int_pat_spine', ttau))
-	 (* | (TypPiBox (cdecl, tau'), theta) -> *)
-	 (*    let theta' = checkPatAgainstCDecl cD int_pat (cdecl, theta) in *)
-	 (*    let int_pat' = annPattern cD cG int_pat ext_pat () *)
-	 (*    let (ttau, int_pat_spine') = *)
-	 (*      synPatSpine cD cG int_pat_spine ext_pat_spine (tau', theta) *)
-	 (*    in *)
-	 (*    (ttau, Annotated.Comp.PatApp (loc', int_pat')) *)
+	    (ttau, Annotated.Comp.PatApp (loc', int_pat'', int_pat_spine'', ttau))
+	 | (TypPiBox ((I.Decl (_, ctyp, _)) as cdecl, tau'), theta) ->
+	    let theta' = checkPatAgainstCDecl cD int_pat' (cdecl, theta) in
+	    (* let _ = *)
+	    (*   printf "Working on PatApp:\n\t%s\nwhich has type: %s\nlooking for a type for:\n\t[int_pat] %s\n\t[ext_pat] %s\ntau' has type: %s\n" *)
+	    (* 	     (P.patSpineToString cD cG int_pat_spine) *)
+	    (* 	     (P.subCompTypToString cD (tau, theta)) *)
+	    (* 	     (P.patternToString cD cG int_pat') *)
+	    (* 	     (PE.patternToString (Syntax.Ext.LF.Empty) ext_pat) *)
+	    (* 	     (P.subCompTypToString cD (tau', theta')) *)
+
+	    (* in *)
+	    (* assert false *)
+	    let tau = TypBox (loc', ctyp) in
+	    (* let _ = printf "int_pat %s has type %s\n" *)
+	    (* 		   (P.patternToString cD cG int_pat') *)
+	    (* 		   (P.subCompTypToString cD (tau, theta')) in *)
+	    let int_pat'' = annPattern cD cG int_pat' ext_pat' (tau, theta) in
+	    let (ttau, int_pat_spine'') =
+	      synPatSpine cD cG int_pat_spine' ext_pat_spine' (tau', theta')
+	    in
+	    (ttau, Annotated.Comp.PatApp (loc', int_pat'', int_pat_spine'', ttau))
        end
 
 end

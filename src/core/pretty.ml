@@ -1058,7 +1058,7 @@ module Int = struct
     let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
       | Comp.PatNil -> fprintf ppf "(PatNil)"
       | Comp.PatApp (_, pat, pat_spine) ->
-          fprintf ppf "(PatAnn %a %a)"
+          fprintf ppf "(PatApp %a %a)"
             (fmt_ppr_pat_obj cD cG (lvl+1)) pat
             (fmt_ppr_pat_spine cD cG lvl) pat_spine)
 

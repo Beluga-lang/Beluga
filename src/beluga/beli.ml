@@ -12,7 +12,8 @@ exception Invalid_Arg
 let process_option arg rest = match arg with
   | "+readline" -> Options.readline := true; Options.ledit := false; rest
   | "-ledit"    -> Options.ledit := false; rest
-  | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
+  | "-emacs" -> Options.emacs := true; Debug.chatter := 0;
+		Typeinfo.generate_annotations := true; rest
   | _ -> raise Invalid_Arg
 
 let rec process_options = function

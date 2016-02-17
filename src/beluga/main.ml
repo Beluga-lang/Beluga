@@ -85,7 +85,6 @@ let process_option arg rest = match arg with
       | _ -> bailout "-cssfile requires an argument"
       end
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
-  | "+locs"       -> Locs.gen_loc_info := true; rest
   | "-I" -> begin
       try Beli.run rest
       with Beli.Invalid_Arg -> usage () end
@@ -174,10 +173,7 @@ let main () =
           end ;
           if !Typeinfo.generate_annotations then
             Typeinfo.print_annot file_name;
-          if !Locs.gen_loc_info then begin
-            List.iter Loctesting.store_locs sgn;
-            Locs.print_loc_info file_name end;
-          print_newline();
+          (* print_newline(); *)
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
           if !Html.genHtml then begin

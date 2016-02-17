@@ -1,7 +1,7 @@
 module P = Pretty.Int.DefaultPrinter
 module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-(* open Printf *)
+open Printf
 
 let loc_ghost = Syntax.Loc.ghost;
 
@@ -729,9 +729,9 @@ module Comp = struct
     (* | tau' -> tau' *)
 
   and syn cD (cG, cIH) int_e ext_e =
-    (* printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n" *)
-    (* 	   (P.expSynToString cD cG int_e) *)
-    (* 	   (PE.expSynToString (Syntax.Ext.LF.Empty) ext_e); *)
+    printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n"
+    	   (P.expSynToString cD cG int_e)
+    	   (PE.expSynToString (Syntax.Ext.LF.Empty) ext_e);
     syn' cD (cG, cIH) int_e ext_e
 
   and syn' cD (cG, cIH) int_e ext_e = match int_e, ext_e with

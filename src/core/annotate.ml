@@ -3,11 +3,65 @@ module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 (* open Printf *)
 
-exception AnnotError of string
+let loc_ghost = Syntax.Loc.ghost;
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
-module LF = Lfcheck
+module LF = struct
+
+  (* open Context *)
+  (* open Store.Cid *)
+  open Syntax.Int.LF
+  module SE = Syntax.Ext
+
+  module Unify = Unify.EmptyTrail
+
+  (* type error = *)
+  (*   | AnnotError of string *)
+  (*   | NothingIsEverWrong *)
+    (* | CtxVarMisCheck   of mctx * dctx * tclo * schema *)
+    (* | CtxVarMismatch   of mctx * ctx_var * schema *)
+    (* | CtxVarDiffer     of mctx * ctx_var * ctx_var *)
+    (* | CheckError       of mctx * dctx * nclo * tclo *)
+    (* | TupleArity       of mctx * dctx * nclo * trec_clo *)
+    (* | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo *)
+    (* | KindMismatch     of mctx * dctx * sclo * (kind * sub) *)
+    (* | TypMismatch      of mctx * dctx * nclo * tclo * tclo *)
+    (* | IllTypedSub      of mctx * dctx * sub * dctx *)
+    (* | SpineIllTyped    of int * int *)
+    (* | LeftoverFV *)
+    (* | ParamVarInst     of mctx * dctx * tclo *)
+    (* | CtxHatMismatch   of mctx * dctx (\* expected *\) * psi_hat (\* found *\) * (Syntax.Loc.t * mfront) *)
+    (* | IllTypedMetaObj  of mctx * clobj * dctx * cltyp  *)
+    (* | TermWhenVar      of mctx * dctx * normal *)
+    (* | SubWhenRen       of mctx * dctx * sub *)
+
+  (* exception Error of Syntax.Loc.t * error *)
+
+  (* let _ = Error.register_printer *)
+  (* 	    (fun (Error (loc, err)) -> *)
+  (* 	     Error.print_with_location loc (fun ppf -> *)
+  (* 					    match err with *)
+  (* 					    | AnnotError s -> *)
+  (* 					       Format.fprintf ppf "%s" s)) *)
+
+  let rec annMetaObj cD (loc', int_cM) (loc, ext_cM) cTt =
+    (* printf "Pairing:\n\t[int_cM] %s\n\t[ext_cM] %s\n" *)
+    (* 	  (P.metaObjToString cD (loc', int_cM)) *)
+    (* 	  (PE.metaObjToString (Syntax.Ext.LF.Empty) (loc, ext_cM)); *)
+    annMetaObj' cD (loc', int_cM) (loc, ext_cM) cTt
+
+  and annMetaObj' cD (loc', int_cM) (loc, ext_cM) cTt =
+    match (int_cM, ext_cM, cTt) with
+    | CObj _, SE.Comp.CObj _, _ -> (loc', int_cM)
+    | ClObj _, SE.Comp.ClObj _, _ -> (loc', int_cM)
+    | int_cM', ext_cM', _ -> (loc', int_cM)
+       (* raise (Error (loc_ghost, AnnotError ("Unable to pair:\n\t[int_cM'] " ^ P.metaObjToString cD (loc', int_cM') *)
+       (* 	      ^ "\n\t[ext_cM'] " ^ PE.metaObjToString (Syntax.Ext.LF.Empty) (loc, ext_cM') *)
+       (* 	      ^ "\n\t @ " ^ (Syntax.Loc.to_string loc) *)
+       (* 	      ^ "\n"))) *)
+
+end
 
 module Comp = struct
 
@@ -34,6 +88,7 @@ module Comp = struct
     | EqTyp           of I.mctx * tclo
     | TypMismatch     of I.mctx * tclo * tclo
     | InvalidRecCall
+    | AnnotError of string
     | MissingTotal of Id.cid_prog
 
   exception Error of Syntax.Loc.t * error
@@ -116,6 +171,9 @@ module Comp = struct
           (*       (Whnf.cnormCTyp (tau1, theta1)) *)
           (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
           (*       (Whnf.cnormCTyp (tau2, theta2))) *)
+
+	  | AnnotError s ->
+	     Format.fprintf ppf "%s" s
       ))
 
 
@@ -399,7 +457,8 @@ module Comp = struct
 
     | (Let (loc', int_i, (int_x, int_e')), SE.Comp.Let (loc, ext_i, (_, ext_e')),
        (tau, t)) ->
-       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
+       let int_i' = strip_mapp_args cD cG int_i in
+       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i' ext_i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        let cG' = I.Dec (cG, CTypDecl (int_x, TypClo (tau', t'))) in
        let int_e'' = annotate cD (cG', Total.shift cIH) int_e' ext_e' (tau, t) in
@@ -409,7 +468,8 @@ module Comp = struct
     | (LetPair (loc', int_i, (int_x, int_y, int_e')),
        SE.Comp.LetPair (loc, ext_i, (_, _, ext_e')),
        (tau, t)) ->
-       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
+       let int_i' = strip_mapp_args cD cG int_i in
+       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i' ext_i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin
 	 match (tau', t') with
@@ -429,7 +489,7 @@ module Comp = struct
        begin
 	 try
 	   (* TODO LF.annMetaObj *)
-	   let int_cM' = int_cM (* LF.annMetaObj cD int_cM ext_cM (mT, t) *)
+	   let int_cM' = (* int_cM *) LF.annMetaObj cD int_cM ext_cM (mT, t)
 	   in
 	   Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	   Annotated.Comp.Box (loc, int_cM', ttau)
@@ -495,8 +555,11 @@ module Comp = struct
     | (Case (loc', int_prag, int_i, int_branches),
        SE.Comp.Case (loc, ext_prag, ext_i, ext_branches),
        (tau, t)) ->
+       (* let _ = printf "[Case int_i] %s\n" (P.expSynToString cD cG int_i) in *)
        let anBranch total_pragma cD (cG, cIH) int_i ext_i int_branches ext_branches (tau, t) =
-	 let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
+	 (* let _ = printf "[anBranch int_i] %s\n" (P.expSynToString cD cG int_i) in *)
+	 let int_i' = strip_mapp_args cD cG int_i in
+	 let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i' ext_i in
 	 begin
 	   match C.cwhnfCTyp (tau', t') with
 	   | (TypBox (loc'', mT), t') ->
@@ -552,7 +615,8 @@ module Comp = struct
 	 Annotated.Comp.Case (loc', int_prag, int_i', int_branches', ttau)
 
     | (Syn (loc', int_i), SE.Comp.Syn (loc, ext_i), (tau, t)) ->
-       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
+       let int_i' = strip_mapp_args cD cG int_i in
+       let ((_, tau', t'), int_i') = syn cD (cG, cIH) int_i' ext_i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        if C.convCTyp (tau, t) (tau', t') then
 	 begin
@@ -566,7 +630,8 @@ module Comp = struct
     | (If (loc', int_i, int_e1, int_e2),
        SE.Comp.If (loc, ext_i, ext_e1, ext_e2),
        (tau, t)) ->
-       let ((_flag, tau', t'), int_i') = syn cD (cG, cIH) int_i ext_i in
+       let int_i' = strip_mapp_args cD cG int_i in
+       let ((_flag, tau', t'), int_i') = syn cD (cG, cIH) int_i' ext_i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin
 	 match (tau', t') with
@@ -583,11 +648,11 @@ module Comp = struct
        Annotated.Comp.Hole (loc', f', ttau)
 
     | eInt', eExt', ttau' ->
-       raise (AnnotError
+       raise (Error (loc_ghost, AnnotError
 		("Unable to pair chk:"
 		 ^ "\n\t [Int] exp_chk: " ^ P.expChkToString cD cG eInt'
 		 ^ "\n\t [Int] ttau: " ^ P.subCompTypToString cD ttau'
-		 ^ "\n\t [Ext] exp_chk: " ^ PE.expChkToString (Syntax.Ext.LF.Empty) eExt'))
+		 ^ "\n\t [Ext] exp_chk: " ^ PE.expChkToString (Syntax.Ext.LF.Empty) eExt')))
 
 
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
@@ -610,6 +675,58 @@ module Comp = struct
        else
          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
 
+  and strip_mapp_args cD cG int_i = int_i
+    (* (int_i, ext_i) *)
+    (* let (int_i', ext_i', _) = strip_mapp_args' cD cG int_i ext_i in (int_i', ext_i') *)
+    (* let (int_i', _) = strip_mapp_args' cD cG int_i in int_i' *)
+
+  (* and strip_mapp_args' cD cG i = match i with *)
+  (*   | Const (_, prog) -> *)
+  (*      (i, implicitCompArg (Comp.get prog).Comp.typ) *)
+  (*   | DataConst (_, c) -> *)
+  (*      (i, implicitCompArg (CompConst.get c).CompConst.typ) *)
+  (*   | Var (_, x) -> *)
+  (*      begin *)
+  (* 	 match Context.lookup cG x with *)
+  (* 	 | None -> (i, []) *)
+  (* 	 | Some tau -> (i, implicitCompArg tau) *)
+  (*      end *)
+  (*   | Apply (loc', int_e1, int_e2) -> *)
+  (*      let (int_e1', _) = strip_mapp_args' cD cG int_e1 in *)
+  (*      (Apply (loc', int_e1', int_e2), []) *)
+  (*   | MApp (loc', int_i1, int_mC) -> *)
+  (*      let (int_i1', stripArgs) = strip_mapp_args' cD cG int_i1 in *)
+  (*      begin *)
+  (* 	 match stripArgs with *)
+  (* 	 | false :: sA -> (int_i1', sA) *)
+  (* 	 | true :: sA -> (MApp (loc', int_i1', int_mC), sA) *)
+  (* 	 | [] -> (int_i1', []) *)
+  (*      end *)
+  (*   | PairVal (loc', int_i1, int_i2) -> *)
+  (*      let (int_i1', _) = strip_mapp_args' cD cG int_i1 in *)
+  (*      let (int_i2', _) = strip_mapp_args' cD cG int_i2 in *)
+  (*      (PairVal (loc', int_i1', int_i2'), []) *)
+  (*   | Equal (loc', int_i1, int_i2) -> *)
+  (*      let (int_i1', _) = strip_mapp_args' cD cG int_i1 in *)
+  (*      let (int_i2', _) = strip_mapp_args' cD cG int_i2 in *)
+  (*      (Equal (loc', int_i1', int_i2'), []) *)
+  (*   | _ -> (i, []) *)
+
+  (* and implicitCompArg tau = *)
+  (*   match tau with *)
+  (*   | TypPiBox ((I.Decl (_, I.ClTyp (I.MTyp _, _), I.Maybe)), tau) -> *)
+  (*      false :: (implicitCompArg tau) *)
+  (*   | TypPiBox (_, tau) -> *)
+  (*      true :: (implicitCompArg tau) *)
+  (*   | _ -> [] *)
+
+  and strip_imp_typs tau = tau
+    (* match tau with *)
+    (* | TypPiBox ((I.Decl (_, I.ClTyp (I.MTyp _, _), I.Maybe)), tau) -> *)
+    (*    strip_imp_typs tau *)
+    (* | TypPiBox (cdec, tau) -> *)
+    (*    TypPiBox (cdec, strip_imp_typs tau) *)
+    (* | tau' -> tau' *)
 
   and syn cD (cG, cIH) int_e ext_e =
     (* printf "Syn:\n\t[int_i] %s\n\t[ext_i] %s\n" *)
@@ -625,6 +742,7 @@ module Comp = struct
 	 | TypInd tau -> tau
 	 | _ -> tau'
        in
+       let tau = strip_imp_typs tau in
        Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        if Total.exists_total_decl f then
 	 ((Some cIH, tau, C.m_id), Annotated.Comp.Var (loc', x, (tau, C.m_id)))
@@ -634,27 +752,25 @@ module Comp = struct
     (* Possibly has implicit variables *)
     | (DataConst (loc', c), SE.Comp.DataConst (loc, _)) ->
        let tau = (CompConst.get c).CompConst.typ in
+       let tau = strip_imp_typs tau in
        Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataConst (loc', c, (tau, C.m_id)))
 
     | (DataConst (loc', c), SE.Comp.Var (loc, _)) ->
        let tau = (CompConst.get c).CompConst.typ in
+       let tau = strip_imp_typs tau in
        Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataConst (loc', c, (tau, C.m_id)))
 
-    (* Possibly has implicit variables *)
-    (* DataDest does not exist in external. *)
-    (* | (DataDest (loc', c), SE.Comp.DataDest (loc, _)) -> *)
-    (*    let tau = (CompDest.get c).CompDest.typ in *)
-    (*    ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id))) *)
-
     | (DataDest (loc', c), SE.Comp.Var (loc, _)) ->
        let tau = (CompDest.get c).CompDest.typ in
+       let tau = strip_imp_typs tau in
        Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
 
     | (DataDest (loc', c), SE.Comp.DataConst (loc, _)) ->
        let tau = (CompDest.get c).CompDest.typ in
+       let tau = strip_imp_typs tau in
        Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
        ((None, tau, C.m_id), Annotated.Comp.DataDest (loc', c, (tau, C.m_id)))
 
@@ -664,6 +780,7 @@ module Comp = struct
 	 if (Comp.get prog).Comp.total then
 	   begin
 	     let tau = (Comp.get prog).Comp.typ in
+	     let tau = strip_imp_typs tau in
 	     Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	     ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
 	   end
@@ -672,6 +789,7 @@ module Comp = struct
        else
 	 begin
 	   let tau = (Comp.get prog).Comp.typ in
+	   let tau = strip_imp_typs tau in
 	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
 	 end
@@ -681,6 +799,7 @@ module Comp = struct
 	 if (Comp.get prog).Comp.total then
 	   begin
 	     let tau = (Comp.get prog).Comp.typ in
+	     let tau = strip_imp_typs tau in
 	     Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	     ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
 	   end
@@ -689,6 +808,7 @@ module Comp = struct
        else
 	 begin
 	   let tau = (Comp.get prog).Comp.typ in
+	   let tau = strip_imp_typs tau in
 	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	   ((None, tau, C.m_id), Annotated.Comp.Const (loc', prog, (tau, C.m_id)))
 	 end
@@ -699,53 +819,46 @@ module Comp = struct
        begin
 	 match (tau1, t1) with
 	 | (TypArr (tau2, tau), t) ->
-	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	    let int_e2' = annotate cD (cG, cIH) int_e2 ext_e2 (tau2, t) in
+	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	    ((useIH loc' cD cG cIH_opt int_e2, tau, t),
 	     Annotated.Comp.Apply (loc', int_e1', int_e2', (tau, t)))
 	 | (tau, t) ->
 	    raise (Error (loc, MismatchSyn (cD, cG, int_e1, VariantArrow, (tau, t))))
        end
 
-    (* MApp does not exist in external. *)
-    (* | (MApp (loc', int_e, int_mC), SE.Comp.MApp (loc, ext_e, ext_mC)) -> *)
-    (*    let ((cIH_opt, tau1, t1), int_e') = syn cD (cG, cIH) int_e ext_e in *)
-    (*    begin *)
-    (* 	 match (C.cwhnfCTyp (tau1, t1)) with *)
-    (* 	 | (TypPiBox (I.Decl (_, ctyp, _), tau), t) -> *)
-    (* 	    let int_mC' = int_mC (\* LF.annMetaObj cD int_mC ext_mC (ctyp, t); *\) in *)
-    (* 	    let t = I.MDot (metaObjToMFront mC, t) in *)
-    (* 	    ((useIH loc cD cG cIH_opt (Box (loc, mC)), tau, t), *)
-    (* 	     Annotated.Comp.MApp (loc', int_e', int_mC', (tau, t))) *)
-    (* 	 | (tau, t) -> *)
-    (* 	    raise (Error (loc, MismatchSyn (cD, cG, int_e, VariantPiBox, (tau, t)))) *)
-    (*    end *)
-
     | (MApp (loc', int_e, int_mC), SE.Comp.Apply (loc, ext_i, (SE.Comp.Box (_, ext_mC)))) ->
-       let ((cIH_opt, tau1, t1), int_e') = syn cD (cG, cIH) int_e ext_i in
+       (* printf "[MApp 1]\n\t[int_i] %s\n\t[ext_i] %s\n" *)
+       	   (* (P.expSynToString cD cG int_e) *)
+       	   (* (PE.expSynToString (Syntax.Ext.LF.Empty) ext_i); *)
        begin
-	 match (C.cwhnfCTyp (tau1, t1)) with
-	 | (TypPiBox (I.Decl (_, ctyp, _), tau), t) ->
-	    Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
-	    let int_mC' = int_mC (* LF.annMetaObj cD int_mC ext_mC (ctyp, t); *) in
-	    let t = I.MDot (metaObjToMFront int_mC, t) in
-	    ((useIH loc' cD cG cIH_opt (Box (loc', int_mC)), tau, t),
-	     Annotated.Comp.MApp (loc', int_e', int_mC', (tau, t)))
-	 | (tau, t) ->
-	    raise (Error (loc', MismatchSyn (cD, cG, int_e, VariantPiBox, (tau, t))))
-       end
-
-    (* Strip away the implicit arguments *)
-    | (MApp (loc', int_e, int_mC), ext_i) ->
-       let ((cIH_opt, tau1, t1), int_e') = syn cD (cG, cIH) int_e ext_i in
-       begin
-	 match (C.cwhnfCTyp (tau1, t1)) with
-	 | (TypPiBox (I.Decl (_, ctyp, _), tau), t) ->
-	    let _int_mC' = int_mC (* LF.annMetaObj cD int_mC ext_mC (ctyp, t); *) in
-	    let t = I.MDot (metaObjToMFront int_mC, t) in
-	    ((useIH loc' cD cG cIH_opt (Box (loc', int_mC)), tau, t), int_e')
-	 | (tau, t) ->
-	    raise (Error (loc', MismatchSyn (cD, cG, int_e, VariantPiBox, (tau, t))))
+	 try
+	   let ((cIH_opt, tau1, t1), int_e') = syn cD (cG, cIH) int_e ext_i in
+	   begin
+	     match (C.cwhnfCTyp (tau1, t1)) with
+	     | (TypPiBox (I.Decl (_, ctyp, _), tau), t) ->
+		let int_mC' = (* int_mC *) LF.annMetaObj cD int_mC ext_mC (ctyp, t) in
+		let t = I.MDot (metaObjToMFront int_mC, t) in
+		Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+		((useIH loc' cD cG cIH_opt (Box (loc', int_mC)), tau, t),
+		 Annotated.Comp.MApp (loc', int_e', int_mC', (tau, t)))
+	     | (tau, t) ->
+		raise (Error (loc', MismatchSyn (cD, cG, int_e, VariantPiBox, (tau, t))))
+	   end
+	 (* If there's an error, then we strip the MApp and recurse again with Apply *)
+	 with Error _ ->
+	      let ((cIH_opt, tau1, t1), int_e') = syn cD (cG, cIH) int_e ext_e in
+	      begin
+		match (C.cwhnfCTyp (tau1, t1)) with
+		| (TypPiBox (I.Decl (_, ctyp, _), tau), t) ->
+		   let int_mC' = (* int_mC *) LF.annMetaObj cD int_mC ext_mC (ctyp, t) in
+		   let t = I.MDot (metaObjToMFront int_mC, t) in
+		   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
+		   ((useIH loc' cD cG cIH_opt (Box (loc', int_mC)), tau, t),
+		    Annotated.Comp.MApp (loc', int_e', int_mC', (tau, t)))
+		| (tau, t) ->
+		   raise (Error (loc', MismatchSyn (cD, cG, int_e, VariantPiBox, (tau, t))))
+	      end
        end
 
     | (PairVal (loc', int_i1, int_i2), SE.Comp.PairVal (loc, ext_i1, ext_i2)) ->
@@ -767,7 +880,7 @@ module Comp = struct
        begin
 	 try
 	   let ttau = (tau, C.m_id) in
-	   let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO ttau *) in
+	   let int_mO' = (* int_mO *) LF.annMetaObj cD int_mO ext_mO ttau in
 	   Typeinfo.Annot.add loc (P.subCompTypToString cD (tau, C.m_id));
 	   ((None, tau, C.m_id),
 	    Annotated.Comp.Ann (Annotated.Comp.Box (loc', int_mO', ttau), tau, ttau))
@@ -801,10 +914,10 @@ module Comp = struct
        ((None, TypBool, C.m_id), Annotated.Comp.Boolean (b, (TypBool, C.m_id)))
 
     | eInt', eExt' ->
-       raise (AnnotError
+       raise (Error (loc_ghost, AnnotError
 		("Unable to pair syn:"
 		 ^ "\n\t [Int] exp_syn: " ^ P.expSynToString cD cG eInt'
-		 ^ "\n\t [Ext] exp_syn: " ^ PE.expSynToString (Syntax.Ext.LF.Empty) eExt'))
+		 ^ "\n\t [Ext] exp_syn: " ^ PE.expSynToString (Syntax.Ext.LF.Empty) eExt')))
 
 
   and annBranches caseTyp cD (cG, cIH) int_branches ext_branches tau_s ttau =
@@ -823,7 +936,7 @@ module Comp = struct
     | (Branch (loc', cD1', cG, PatMetaObj (l1', int_mO), t1, int_e),
       SE.Comp.Branch (loc, _, SE.Comp.PatMetaObj (_, ext_mO), ext_e)) ->
        let TypBox (_, mT) = tau_s in
-       let _mT1 = C.cnormMetaTyp (mT, t1) in
+       let mT1 = C.cnormMetaTyp (mT, t1) in
        let cG' = C.cnormCtx (C.normCtx cG, t1) in
        let cIH = C.cnormCtx (C.normCtx cIH, t1) in
        let t'' = C.mcomp t t1 in
@@ -839,7 +952,7 @@ module Comp = struct
 		  else
 		    cD1' in
        (* LF.annMSub loc cD1' t1 cD; *)
-       let int_mO' = int_mO (* LF.annMetaObj cD1' int_mO ext_mO (mT1, C.m_id) *) in
+       let int_mO' = (* int_mO *) LF.annMetaObj cD1' int_mO ext_mO (mT1, C.m_id) in
        let int_e' = annotate cD1' (cG', Context.append cIH cIH') int_e ext_e (tau', C.m_id)
        in
        Annotated.Comp.Branch (loc', cD1', cG,
@@ -904,7 +1017,7 @@ module Comp = struct
        begin
 	 match ttau with
 	 | (TypBox (_, ctyp), theta) ->
-	    let int_mO' = int_mO (* LF.annMetaObj cD int_mO ext_mO (ctyp, theta) *) in
+	    let int_mO' = (* int_mO *) LF.annMetaObj cD int_mO ext_mO (ctyp, theta) in
 	    Typeinfo.Annot.add loc (P.subCompTypToString cD ttau);
 	    Annotated.Comp.PatMetaObj (loc', int_mO', ttau)
 	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
@@ -1027,9 +1140,9 @@ module Comp = struct
        ((loc', (tau, C.m_id)), Annotated.Comp.PatAnn (loc', int_pat'', tau, (tau, C.m_id)))
 
     | (patInt', patExt') ->
-       raise (AnnotError ("Unable to pair pat:\n"
+       raise (Error (loc_ghost, AnnotError ("Unable to pair pat:\n"
 			  ^ "\n\t [Int] pat: " ^ P.patternToString cD cG patInt'
-			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt'))
+			  ^ "\n\t [Ext] pat: " ^ PE.patternToString Syntax.Ext.LF.Empty patExt')))
 
   and synPatSpine cD cG int_pat_spine ext_pat_spine (tau, theta) =
     (* printf "Working with pattern spine:\n\t[int_pat_spine] %s\n\t[tau] %s\n\t[ext_pat_spine] %s\n" *)

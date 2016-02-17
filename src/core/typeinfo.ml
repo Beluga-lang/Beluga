@@ -2,7 +2,7 @@ module Loc = Syntax.Int.Loc
 module P = Pretty.Int.DefaultPrinter
 open Lexing
 
-let generate_annotations = ref false;
+let generate_annotations = ref true;
 
 module Annot = struct
   open Syntax.Int

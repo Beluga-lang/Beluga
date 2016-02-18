@@ -288,20 +288,20 @@ module Comp = struct
        | _ -> Some cIH
 
 
+  let mk_tstr cD ttau =
+    if !Typeinfo.generate_annotations then
+      Some (P.subCompTypToString cD ttau)
+    else
+      None
+
   let rec ann cD cG e ttau =
     let cIH = I.Empty in
     annotate cD (cG, cIH) e ttau
 
-  and annotate cD (cG, cIH) int_e ext_e ttau =
-    annotate' cD (cG, cIH) int_e ext_e ttau
+  and annotate cD (cG, cIH) e ttau =
+    annotate' cD (cG, cIH) e ttau
 
   and annotate' cD (cG, cIH) int_e ext_e ttau = match (int_e, ext_e, ttau) with
-    (* | (Rec (loc', int_f, int_e'), SE.Comp.Rec (loc, _, ext_e'), (tau, t)) -> *)
-    (*	 let int_e'' = *)
-    (*	   annotate cD (I.Dec (cG, CTypDecl (int_f, TypClo (tau, t))), (Total.shift cIH)) *)
-    (*		    int_e' ext_e' ttau *)
-    (*	 in *)
-    (*	 Annotated.Comp.Rec (loc', int_f, int_e'', ttau) *)
 
     | (Fun (loc', int_x, int_e'), SE.Comp.Fun (loc, _, ext_e'), (TypArr (tau1, tau2), t)) ->
        let int_e'' =

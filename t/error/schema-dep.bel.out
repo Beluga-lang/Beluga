@@ -1,1 +1,1 @@
-Type block (x:tm, v:oft x (A .. x)) doesn't check against schema .
+Type block (x:tm, v:oft x (A[ .., x])) doesn't check against schema .

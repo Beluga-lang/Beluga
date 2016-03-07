@@ -17,6 +17,10 @@ module Annot : sig
 
 end
 
+module Comp : sig
+  val annotate_comp_exp_chk : Syntax.Ext.Comp.exp_chk * Annotated.Comp.exp_chk
+end
+
 module Sgn : sig
   val annotate_sgn_typ : Syntax.Int.Loc.t -> Syntax.Int.LF.kind -> unit
   val annotate_sgn_const : Syntax.Int.Loc.t -> Syntax.Int.LF.typ -> unit

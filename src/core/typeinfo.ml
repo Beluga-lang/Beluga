@@ -68,6 +68,76 @@ module Annot = struct
     end
 end
 
+module Comp = struct
+  module Ann = Annotated
+  module Ext = Syntax.Ext
+
+  let add_entry loc str =
+    match str with
+    | None -> Annot.add loc ("No type information found.")
+    | Some str' -> Annot.add loc str'
+
+  let rec annotate_comp_exp_chk ext_e ann_e =
+    ann_chk ext_e ann_e
+
+  and ann_chk ext_e ann_e =
+    match ext_e, ann_e with
+    | (Ext.Comp.Fun (loc, _, ext_e'), Ann.Comp.Fun (_, _, ann_e', _, tstr)) ->
+       ann_chk ext_e' ann_e';
+       add_entry loc tstr
+
+    | (Ext.Comp.MLam (loc, _, ext_e'), Ann.Comp.MLam (_, _, ann_e', _, tstr)) ->
+       ann_chk ext_e' ann_e';
+       add_entry loc tstr
+
+    | (Ext.Comp.Cofun (loc, ext_bs), Ann.Comp.Cofun (_, ann_bs, _, tstr)) ->
+       let f = (fun (Ext.Comp.CopatApp (loc, _, _), ext_e')
+		    (Ann.Comp.CopatApp (_, _, _), ann_e') -> ann_chk ext_e' ann_e')
+       in
+       List.iter2 f ext_bs ann_bs;
+       add_entry loc tstr
+
+    | (Ext.Comp.Pair (loc, ext_e1, ext_e2), Ann.Comp.Pair (_, ann_e1, ann_e2, _, tstr)) ->
+       ann_chk ext_e1 ann_e1;
+       ann_chk ext_e2 ann_e2;
+       add_entry loc tstr
+
+    | (Ext.Comp.Let (loc, ext_i, (_, ext_e')), Ann.Comp.Let (_, ann_i, (_, ann_e'), _, tstr)) ->
+       ann_syn ext_i ann_i;
+       ann_chk ext_e' ann_e';
+       add_entry loc tstr
+
+    | (Ext.Comp.LetPair (loc, ext_i, (_,_, ext_e')),
+       Ann.Comp.LetPair (_, ann_i, (_,_, ann_e'), _, tstr)) ->
+       ann_syn ext_i ann_i;
+       ann_chk ext_e'ann_e';
+       add_entry loc tstr
+
+    | (Ext.Comp.Box (loc, _), Ann.Comp.Box (_, _, _, tstr)) ->
+       add_entry loc tstr
+
+    | (Ext.Comp.Case (loc, _, ext_i, ext_branches),
+       Ann.Comp.Case (_, _, ann_i, ann_branches, _, tstr)) ->
+       ann_syn ext_i ann_i;
+       annotate_branches ext_branches ann_branches;
+       add_entry loc tstr
+
+    | (Ext.Comp.Syn (loc, ext_i), Ann.Comp.Syn (_, ann_i, _, tstr)) ->
+       ann_syn ext_i ann_i;
+       add_entry loc tstr
+
+    | (Ext.Comp.If (loc, ext_i, ext_e1, ext_e2),
+       Ann.Comp.If (_, ann_i, ann_e1, ann_e2, _, tstr)) ->
+       ann_syn ext_i ann_i;
+       ann_chk ext_e1 ann_e1;
+       ann_chk ext_e2 ann_e2;
+       add_entry loc tstr
+
+    | (Ext.Comp.Hole loc, Ann.Comp.Hole (_, _, _, tstr)) ->
+       add_entry loc tstr
+
+end
+
 module Sgn = struct
   open Syntax.Int
 

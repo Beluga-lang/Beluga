@@ -3,7 +3,7 @@ module PE = Pretty.Ext.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 (* open Printf *)
 
-exception AnnotError of string
+(* exception AnnotError of string *)
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
@@ -21,7 +21,7 @@ module Comp = struct
   module C = Whnf
   module Ann = Annotated
 
-  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
+  type typeVariant = (* VariantCross | *) VariantArrow | (* VariantCtxPi | *) VariantPiBox (* | VariantBox *)
 
   type error =
     | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
@@ -32,7 +32,7 @@ module Comp = struct
     | IfMismatch      of I.mctx * gctx  * tclo
     | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
     | EqTyp           of I.mctx * tclo
-    | TypMismatch     of I.mctx * tclo * tclo
+    (* | TypMismatch     of I.mctx * tclo * tclo *)
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
 
@@ -43,11 +43,11 @@ module Comp = struct
     | mT -> mT
 
   let string_of_typeVariant = function
-    | VariantCross -> "product type"
+    (* | VariantCross -> "product type" *)
     | VariantArrow -> "function type"
-    | VariantCtxPi -> "context abstraction"
+    (* | VariantCtxPi -> "context abstraction" *)
     | VariantPiBox -> "dependent function type"
-    | VariantBox   -> "contextual type"
+    (* | VariantBox   -> "contextual type" *)
 
   let _ = Error.register_printer
     (fun (Error (loc, err)) ->
@@ -602,7 +602,7 @@ module Comp = struct
 
     | Branch (loc, cD1', cG, PatMetaObj (loc',mO), t1, e1) ->
        let TypBox (_, mT) = tau_s in
-       let mT1 = C.cnormMetaTyp (mT, t1) in
+       let _mT1 = C.cnormMetaTyp (mT, t1) in
        let cG' = C.cnormCtx (C.normCtx cG, t1) in
        let cIH = C.cnormCtx (C.normCtx cIH, t1) in
        let t'' = C.mcomp t t1 in
@@ -623,7 +623,8 @@ module Comp = struct
        let mO' = mO (* LF.checkMetaObj cD1' mO (mT1, C.m_id) *) in
        let e1' = annotate cD1' (cG', Context.append cIH cIH') e1 (tau', C.m_id) in
        let ttau = (tau_s, C.m_id) in
-       Ann.Comp.Branch (loc, cD1', cG, Ann.Comp.PatMetaObj (loc', mO', ttau, mk_tstr cD ttau), e1')
+       Ann.Comp.Branch (loc, cD1', cG,
+			Ann.Comp.PatMetaObj (loc', mO', ttau, mk_tstr cD ttau), t1, e1')
 
     | Branch (loc, cD1', cG1, pat, t1, e1) ->
        let tau_p = C.cnormCTyp (tau_s, t1) in
@@ -634,7 +635,7 @@ module Comp = struct
        let k = Context.length cG1 in
        let cIH0 = Total.shiftIH cIH k in
        let (cD1', cIH') = if is_inductive caseTyp && Total.struct_smaller pat then
-			    let cD1' = mvarsInPat cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
+			    let cD1' = mvarsInPatt cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
 			  else
 			    (cD1', I.Empty)
        in
@@ -646,9 +647,103 @@ module Comp = struct
        (* LF.checkMSub loc cD1' t1 cD *)
        let pat' = annPattern cD1' cG1 pat (tau_p, C.m_id) in
        let e1' =
-	 annotate cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau, C.m_id)
+	 annotate cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', C.m_id)
        in
        Ann.Comp.Branch (loc, cD1', cG1, pat', t1, e1')
+
+  and annPattern cD cG pat ttau =
+    match pat with
+    | PatEmpty (loc, cPsi) ->
+       begin
+	 match ttau with
+	 | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)), theta)
+	 | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->
+	    if C.convDCtx (C.cnormDCtx (cPhi, theta)) cPsi then
+	      Ann.Comp.PatEmpty (loc, cPsi, ttau, mk_tstr cD ttau)
+	    else
+	      raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+       end
+
+    | PatMetaObj (loc, mO) ->
+       begin
+	 match ttau with
+	 | (TypBox (_, ctyp), theta) ->
+	    let mO' = mO (* LF.checkMetaObj cD mO (ctyp, theta) *) in
+	    Ann.Comp.PatMetaObj (loc, mO', ttau, mk_tstr cD ttau)
+	 | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+       end
+
+    | PatPair (loc, pat1, pat2) ->
+       begin
+	 match ttau with
+	 | (TypCross (tau1, tau2), theta) ->
+	    let pat1' = annPattern cD cG pat1 (tau1, theta) in
+	    let pat2' = annPattern cD cG pat2 (tau2, theta) in
+	    Ann.Comp.PatPair (loc, pat1', pat2', ttau, mk_tstr cD ttau)
+	 | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau)))
+       end
+
+    | pat ->
+       let ((loc, ttau'), pat') = synPattern cD cG pat in
+       let tau' = C.cnormCTyp ttau' in
+       let tau = C.cnormCTyp ttau in
+       let ttau' = (tau', C.m_id) in
+       let ttau = (tau, C.m_id) in
+       if C.convCTyp ttau ttau' then
+	 pat'
+       else
+	 raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
+
+  and synPattern cD cG pat =
+    match pat with
+    | PatConst (loc, c, pat_spine) ->
+       let tau = (CompConst.get c).CompConst.typ in
+       let ttau = (tau, C.m_id) in
+       let (ttau', pat_spine') = synPatSpine cD cG pat_spine ttau in
+       ((loc, ttau'), Ann.Comp.PatConst (loc, c, pat_spine', ttau', mk_tstr cD ttau'))
+
+    | PatVar (loc, k) ->
+       let tau = lookup' cG k in
+       let ttau = (tau, C.m_id) in
+       ((loc, ttau), Ann.Comp.PatVar (loc, k, ttau, mk_tstr cD ttau))
+
+    | PatTrue loc ->
+       ((loc, (TypBool, C.m_id)),
+	Ann.Comp.PatTrue (loc, (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
+
+    | PatFalse loc ->
+       ((loc, (TypBool, C.m_id)),
+	Ann.Comp.PatFalse (loc, (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
+
+    | PatAnn (loc, pat, tau) ->
+       let pat' = annPattern cD cG pat (tau, C.m_id) in
+       ((loc, (tau, C.m_id)),
+       Ann.Comp.PatAnn (loc, pat', tau, (tau, C.m_id), mk_tstr cD (tau, C.m_id)))
+
+  and synPatSpine cD cG pat_spine (tau, theta) =
+    match pat_spine with
+    | PatNil -> ((tau, theta), Ann.Comp.PatNil ((tau, theta), mk_tstr cD (tau, theta)))
+    | PatApp (loc, pat, pat_spine) ->
+       begin
+	 match (tau, theta) with
+	 | (TypArr (tau1, tau2), theta) ->
+	    let pat' = annPattern cD cG pat (tau1, theta) in
+	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau2, theta) in
+	    (ttau, Ann.Comp.PatApp (loc, pat', pat_spine', ttau, mk_tstr cD ttau))
+	 (* Implicit magic here? *)
+	 | (TypPiBox ((I.Decl (_, ctyp, _)) as cdecl, tau), theta) ->
+	    let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
+	    let tau' = TypBox (loc, ctyp) in
+	    let pat' = annPattern cD cG pat (tau', theta) in
+	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau, theta') in
+	    (ttau, Ann.Comp.PatApp (loc, pat', pat_spine', ttau, mk_tstr cD ttau))
+       end
+
+  and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
+    LF.checkMetaObj cD mO (ctyp, theta);
+    I.MDot(metaObjToMFront mO, theta)
+
 end
 
 module Sgn = struct

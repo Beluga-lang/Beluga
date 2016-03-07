@@ -32,7 +32,7 @@ module Comp = struct
     | IfMismatch      of I.mctx * gctx  * tclo
     | EqMismatch      of I.mctx * tclo (* arg1 *) * tclo (* arg2 *)
     | EqTyp           of I.mctx * tclo
-    (* | TypMismatch     of I.mctx * tclo * tclo *)
+    | TypMismatch     of I.mctx * tclo * tclo
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
 
@@ -312,14 +312,14 @@ module Comp = struct
        in
        Ann.Comp.Fun (loc, x, e', ttau, mk_tstr cD ttau)
 
-    (* | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) -> *)
-    (*    let f = fun (CopatApp (loc, dest, csp), e) -> *)
-    (* 	 let (csp', ttau') = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau in *)
-    (* 	 let e' = annotate cD (cG, cIH) e ttau' in *)
-    (* 	 (csp', e') *)
-    (*    in *)
-    (*    let bs' = List.map f bs in *)
-    (*    Ann.Comp.Cofun (loc, bs', ttau, mk_tstr cD ttau) *)
+    | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
+       let f = fun (CopatApp (loc, dest, csp), e) ->
+    	 let (ttau', csp') = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau in
+    	 let e' = annotate cD (cG, cIH) e ttau' in
+    	 (csp', e')
+       in
+       let bs' = List.map f bs in
+       Ann.Comp.Cofun (loc, bs', ttau, mk_tstr cD ttau)
 
     (* Toss explicit MLams *)
     | (MLam (loc, u, e), (TypPiBox (I.Decl (_, cU, I.Maybe) as cdec, tau), t)) ->
@@ -489,7 +489,26 @@ module Comp = struct
     | (Hole (loc, f), (tau, t)) ->
        Ann.Comp.Hole (loc, f, ttau, mk_tstr cD ttau)
 
+  and synObs cD csp ttau1 ttau2 =
+    match (csp, ttau1, ttau2) with
+    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
+       if C.convCTyp (tau1, theta) (tau', theta') then
+	 ((tau2, theta), Ann.Comp.CopatNil loc)
+       else
+	 raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau', theta'))))
+    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
+       if C.convCTyp (tau1, theta) (tau', theta') then
+	 let (ttau, csp'') =
+	   synObs cD csp' ((CompDest.get dest).CompDest.typ, C.m_id) (tau2, theta)
+	 in
+	 (ttau, Ann.Comp.CopatApp (loc, dest, csp''))
+       else
+	 raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau', theta'))))
+
   and syn cD (cG, cIH) e =
+    syn' cD (cG, cIH) e
+
+  and syn' cD (cG, cIH) e =
     match e with
     | Var (loc, x) ->
        let (f, tau') = lookup cG x in
@@ -589,8 +608,8 @@ module Comp = struct
        ((None, TypBool, C.m_id),
        Ann.Comp.Boolean (b, (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
 
-  and annBranches caseTyp cD cG branches tau_s ttau =
-    List.map (fun branch -> annBranch caseTyp cD cG branch tau_s ttau) branches
+  and annBranches caseTyp cD (cG, cIH) branches tau_s ttau =
+    List.map (fun branch -> annBranch caseTyp cD (cG, cIH) branch tau_s ttau) branches
 
   and annBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
@@ -600,7 +619,7 @@ module Comp = struct
        let pat' = annPattern cD1' I.Empty pat (tau_p, C.m_id) in
        Ann.Comp.EmptyBranch (loc, cD1', pat', t1)
 
-    | Branch (loc, cD1', cG, PatMetaObj (loc',mO), t1, e1) ->
+    | Branch (loc, cD1', cG', PatMetaObj (loc',mO), t1, e1) ->
        let TypBox (_, mT) = tau_s in
        let _mT1 = C.cnormMetaTyp (mT, t1) in
        let cG' = C.cnormCtx (C.normCtx cG, t1) in
@@ -623,7 +642,7 @@ module Comp = struct
        let mO' = mO (* LF.checkMetaObj cD1' mO (mT1, C.m_id) *) in
        let e1' = annotate cD1' (cG', Context.append cIH cIH') e1 (tau', C.m_id) in
        let ttau = (tau_s, C.m_id) in
-       Ann.Comp.Branch (loc, cD1', cG,
+       Ann.Comp.Branch (loc, cD1', cG',
 			Ann.Comp.PatMetaObj (loc', mO', ttau, mk_tstr cD ttau), t1, e1')
 
     | Branch (loc, cD1', cG1, pat, t1, e1) ->
@@ -732,6 +751,10 @@ module Comp = struct
 	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau2, theta) in
 	    (ttau, Ann.Comp.PatApp (loc, pat', pat_spine', ttau, mk_tstr cD ttau))
 	 (* Implicit magic here? *)
+	 | (TypPiBox ((I.Decl (_, ctyp, I.Maybe)) as cdecl, tau), theta) ->
+	    let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
+	    let (ttau, pat_spine') = synPatSpine cD cG pat_spine (tau, theta') in
+	    (ttau, pat_spine')
 	 | (TypPiBox ((I.Decl (_, ctyp, _)) as cdecl, tau), theta) ->
 	    let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
 	    let tau' = TypBox (loc, ctyp) in

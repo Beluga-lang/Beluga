@@ -937,20 +937,20 @@ module Ext = struct
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
       | Comp.Var(_, x) ->
-          fprintf ppf "(Var %s)"
+          fprintf ppf "%s"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Const (_, x) ->
-          fprintf ppf "(Const %s)"
+          fprintf ppf "%s"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.DataConst (_, x) ->
-          fprintf ppf "(DataConst %s)"
+          fprintf ppf "%s"
             (to_html (Id.render_name x) LinkOption)
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(Apply %a %a)%s"
+            fprintf ppf "%s%a %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e
@@ -958,36 +958,36 @@ module Ext = struct
 
       | Comp.BoxVal (_, m0) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(BoxVal %a)%s"
+            fprintf ppf "%s%a%s"
               (l_paren_if cond)
               (fmt_ppr_meta_obj cD 0) m0
               (r_paren_if cond)
 
       | Comp.Ann (_, e, tau) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s(Ann %a : %a)%s"
+            fprintf ppf "%s%a : %a%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD 1) e
               (fmt_ppr_cmp_typ cD 2) tau
               (r_paren_if cond)
 
       | Comp.PairVal(_, i1, i2) ->
-          fprintf ppf "(PairVal (%a , %a))"
+          fprintf ppf "(%a , %a)"
             (fmt_ppr_cmp_exp_syn cD 1) i1
             (fmt_ppr_cmp_exp_syn cD 1) i2
 
 
       | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "(Equal %a == %a)"
+            fprintf ppf "%a == %a"
               (fmt_ppr_cmp_exp_syn cD 1) i1
               (fmt_ppr_cmp_exp_syn cD 1) i2
 
       | Comp.Boolean (_, true) ->
-          fprintf ppf "(Boolean %s)"
+          fprintf ppf "%s"
             (to_html "ttrue" Keyword)
 
       | Comp.Boolean (_, false) ->
-          fprintf ppf "(Boolean %s)"
+          fprintf ppf "%s"
             (to_html "ffalse" Keyword)
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function

@@ -356,7 +356,7 @@ module Comp = struct
 			    CTypDecl (y, TypClo (tau2, t')))
 	    in
 	    let e' = annotate cD (cG, (Total.shift (Total.shift cIH))) e (tau, t) in
-	    Ann.Comp.LetPair (loc, i' (x, y, e'), ttau, mk_tstr cD ttau)
+	    Ann.Comp.LetPair (loc, i', (x, y, e'), ttau, mk_tstr cD ttau)
 	 | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
        end
 
@@ -411,7 +411,7 @@ module Comp = struct
        let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
 
        let problem = Coverage.make loc prag cD branches tau_sc in
-       let branches' = checkBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in
+       let branches' = annBranches total_pragma cD (cG,cIH) branches tau0_sc (tau, t) in
        Coverage.process problem projOpt;
        let ttau' = (tau0_sc, C.m_id) in
        let ttau'' = (tau_sc, C.m_id) in
@@ -419,7 +419,7 @@ module Comp = struct
 		      Ann.Comp.Ann (
 			  Ann.Comp.Box (loc', (l, cM),
 					ttau'', mk_tstr cD ttau''
-			), ttau', mk_tstr cD ttau'),
+			), tau0_sc, ttau', mk_tstr cD ttau'),
 		      branches', ttau, mk_tstr cD ttau
 		     )
 
@@ -458,10 +458,10 @@ module Comp = struct
 		else
 		  annoBranch DataObj cD (cG, cIH) i branches (tau, t)
 	     | _ ->
-		annoBranches DataObj cD (cG, cIH) i branches (tau, t)
+		annoBranch DataObj cD (cG, cIH) i branches (tau, t)
 	   end
 	 else
-	   annoBranches DataObj cD (cG, cIH) i branches (tau, t)
+	   annoBranch DataObj cD (cG, cIH) i branches (tau, t)
        in
        Ann.Comp.Case (loc, prag, i', branches', ttau, mk_tstr cD ttau)
 
@@ -489,6 +489,166 @@ module Comp = struct
     | (Hole (loc, f), (tau, t)) ->
        Ann.Comp.Hole (loc, f, ttau, mk_tstr cD ttau)
 
+  and syn cD (cG, cIH) e =
+    match e with
+    | Var (loc, x) ->
+       let (f, tau') = lookup cG x in
+       let tau =
+	 match C.cnormCTyp (tau', Whnf.m_id) with
+	 | TypInd tau -> tau
+	 | _ -> tau'
+       in
+       let ttau = (tau, C.m_id) in
+       if Total.exists_total_decl f then
+	 ((Some cIH, tau, C.m_id), Ann.Comp.Var (loc, x, ttau, mk_tstr cD ttau))
+       else
+	 ((None, tau, C.m_id), Ann.Comp.Var (loc, x, ttau, mk_tstr cD ttau))
+
+    | DataConst (loc, c) ->
+       let ttau = ((CompConst.get c).CompConst.typ, C.m_id) in
+       ((None, (CompConst.get c).CompConst.typ, C.m_id),
+	 Ann.Comp.DataConst (loc, c, ttau, mk_tstr cD ttau))
+
+    | DataDest (loc, c) ->
+       let ttau = ((CompDest.get c).CompDest.typ, C.m_id) in
+       ((None, (CompDest.get c).CompDest.typ, C.m_id),
+	 Ann.Comp.DataDest (loc, c, ttau, mk_tstr cD ttau))
+
+    | Const (loc, prog) ->
+       if !Total.enabled then
+	 if (Comp.get prog).Comp.total then
+	   let ttau = ((Comp.get prog).Comp.typ, C.m_id) in
+	   ((None, (Comp.get prog).Comp.typ, C.m_id),
+	    Ann.Comp.Const (loc, prog, ttau, mk_tstr cD ttau))
+	 else
+	   raise (Error (loc, MissingTotal prog))
+       else
+	 let ttau = ((Comp.get prog).Comp.typ, C.m_id) in
+	 ((None, (Comp.get prog).Comp.typ, C.m_id),
+	  Ann.Comp.Const (loc, prog, ttau, mk_tstr cD ttau))
+
+    | Apply (loc, e1, e2) ->
+       let ((cIH_opt, tau1, t1), e1') = syn cD (cG, cIH) e1 in
+       let (tau1, t1) = C.cwhnfCTyp (tau1, t1) in
+       begin
+	 match (tau1, t1) with
+	 | (TypArr (tau2, tau), t) ->
+	    let e2' = annotate cD (cG, cIH) e2 (tau2, t) in
+	    ((useIH loc cD cG cIH_opt e2, tau, t),
+	    Ann.Comp.Apply (loc, e1', e2', (tau, t), mk_tstr cD (tau, t)))
+	 | (tau, t) ->
+	    raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau, t))))
+       end
+
+    | MApp (loc, e, mC) ->
+       let ((cIH_opt, tau1, t1), e') = syn cD (cG, cIH) e in
+       begin
+	 match (C.cwhnfCTyp (tau1, t1)) with
+	 (* Check for implicit here? *)
+	 | (TypPiBox ((I.Decl (_, ctyp, _)), tau), t) ->
+	    let mC' = mC (* LF.checkMetaObj cD mC (ctyp, t) *) in
+	    let t' = I.MDot (metaObjToMFront mC, t) in
+	    ((useIH loc cD cG cIH_opt (Box (loc, mC)), tau, t'),
+	    Ann.Comp.MApp (loc, e', mC', (tau, t'), mk_tstr cD (tau, t')))
+	 | (tau, t) ->
+	    raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau, t))))
+       end
+
+    | PairVal (loc, i1, i2) ->
+       let ((_, tau1, t1), i1') = syn cD (cG, cIH) i1 in
+       let ((_, tau2, t2), i2') = syn cD (cG, cIH) i2 in
+       let (tau1, t1) = C.cwhnfCTyp (tau1, t1) in
+       let (tau2, t2) = C.cwhnfCTyp (tau2, t2) in
+       let tau = TypCross (TypClo (tau1, t1), TypClo (tau2, t2)) in
+       ((None, tau, C.m_id),
+       Ann.Comp.PairVal (loc, i1', i2', (tau, C.m_id), mk_tstr cD (tau, C.m_id)))
+
+    | Ann (e, tau) ->
+       let e' = annotate cD (cG, cIH) e (tau, C.m_id) in
+       ((None, tau, C.m_id),
+	Ann.Comp.Ann (e', tau, (tau, C.m_id), mk_tstr cD (tau, C.m_id)))
+
+    | Equal (loc, i1, i2) ->
+       let ((_, tau1, t1), i1') = syn cD (cG, cIH) i1 in
+       let ((_, tau2, t2), i2') = syn cD (cG, cIH) i2 in
+       if C.convCTyp (tau1, t1) (tau2, t2) then
+	 begin
+	   match C.cwhnfCTyp (tau1, t1) with
+	   | (TypBox _, _) ->
+	      ((None, TypBool, C.m_id),
+	      Ann.Comp.Equal (loc, i1', i2', (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
+	   | (TypBool, _) ->
+	      ((None, TypBool, C.m_id),
+	      Ann.Comp.Equal (loc, i1', i2', (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
+	   | (tau1, t1) -> raise (Error (loc, EqTyp (cD, (tau1, t1))))
+	 end
+       else
+	 raise (Error (loc, EqMismatch (cD, (tau1, t1), (tau2, t2))))
+
+    | Boolean b ->
+       ((None, TypBool, C.m_id),
+       Ann.Comp.Boolean (b, (TypBool, C.m_id), mk_tstr cD (TypBool, C.m_id)))
+
+  and annBranches caseTyp cD cG branches tau_s ttau =
+    List.map (fun branch -> annBranch caseTyp cD cG branch tau_s ttau) branches
+
+  and annBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
+    match branch with
+    | EmptyBranch (loc, cD1', pat, t1) ->
+       let tau_p = C.cnormCTyp (tau_s, t1) in
+       (* LF.checkMSub loc cD1' t1 cD *)
+       let pat' = annPattern cD1' I.Empty pat (tau_p, C.m_id) in
+       Ann.Comp.EmptyBranch (loc, cD1', pat', t1)
+
+    | Branch (loc, cD1', cG, PatMetaObj (loc',mO), t1, e1) ->
+       let TypBox (_, mT) = tau_s in
+       let mT1 = C.cnormMetaTyp (mT, t1) in
+       let cG' = C.cnormCtx (C.normCtx cG, t1) in
+       let cIH = C.cnormCtx (C.normCtx cIH, t1) in
+       let t'' = C.mcomp t t1 in
+       let tau' = C.cnormCTyp (tau, t'') in
+       let (cD1', cIH') =
+	 if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO)) then
+	   let cD1' = mvarsInPatt cD1' (PatMetaObj (loc', mO)) in
+	   (cD1', Total.wf_rec_calls cD1' (I.Empty))
+	 else
+	   (cD1', I.Empty)
+       in
+       let cD1' = if !Total.enabled then
+		    id_map_ind cD1' t1 cD
+		  else
+		    cD1'
+       in
+       (* LF.checkMSub loc cD1' t1 cD *)
+       let mO' = mO (* LF.checkMetaObj cD1' mO (mT1, C.m_id) *) in
+       let e1' = annotate cD1' (cG', Context.append cIH cIH') e1 (tau', C.m_id) in
+       let ttau = (tau_s, C.m_id) in
+       Ann.Comp.Branch (loc, cD1', cG, Ann.Comp.PatMetaObj (loc', mO', ttau, mk_tstr cD ttau), e1')
+
+    | Branch (loc, cD1', cG1, pat, t1, e1) ->
+       let tau_p = C.cnormCTyp (tau_s, t1) in
+       let cG' = C.cnormCtx (cG, t1) in
+       let cIH = C.cnormCtx (C.normCtx cIH, t1) in
+       let t'' = C.mcomp t t1 in
+       let tau' = C.cnormCTyp (tau, t'') in
+       let k = Context.length cG1 in
+       let cIH0 = Total.shiftIH cIH k in
+       let (cD1', cIH') = if is_inductive caseTyp && Total.struct_smaller pat then
+			    let cD1' = mvarsInPat cD1' pat in (cD1', Total.wf_rec_calls cD1' cG1)
+			  else
+			    (cD1', I.Empty)
+       in
+       let cD1' = if !Total.enabled then
+		    id_map_ind cD1' t1 cD
+		  else
+		    cD1'
+       in
+       (* LF.checkMSub loc cD1' t1 cD *)
+       let pat' = annPattern cD1' cG1 pat (tau_p, C.m_id) in
+       let e1' =
+	 annotate cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau, C.m_id)
+       in
+       Ann.Comp.Branch (loc, cD1', cG1, pat', t1, e1')
 end
 
 module Sgn = struct

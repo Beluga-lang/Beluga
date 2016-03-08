@@ -232,7 +232,10 @@ module LF = struct
     | FVar _, _ ->
        raise (Error (loc, LeftoverFV))
 
-  and ann cD cPsi sM sA = match sM, sA with
+  and ann cD cPsi sM sA =
+    ann' cD cPsi sM sA
+
+  and ann' cD cPsi sM sA = match sM, sA with
     | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) ->
        let tM' =
 	 ann cD (DDec (cPsi, Substitution.LF.decSub tX s2))
@@ -257,7 +260,7 @@ module LF = struct
 	 let (sP, h', tS') = syn cD cPsi sM in
 	 let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
 	 if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-	   Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
+	   Ann.LF.Root (loc, h', tS', sP, mk_tstr cD cPsi sP)
 	 else
 	   raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        end
@@ -300,7 +303,13 @@ module LF = struct
       | (SClo (tS, s'), s), sA ->
 	 let (sA', tS') = syn (tS, Substitution.LF.comp s' s) sA in
 	 (sA', Ann.LF.SClo (tS', s'))
+      (* Remove implicits? *)
+      | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), Maybe), tB2), s2) ->
+	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
+	 let (sA', tS') = syn (tS, s1) tB2 in
+	 (sA', tS')
       | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
+	 (* print_string (sprintf "[syn] tM: %s\n" (P.normalToString cD cPsi (tM, s1))); *)
 	 let tM' = ann cD cPsi (tM, s1) (tA1, s2) in
 	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
 	 let (sA', tS') = syn (tS, s1) tB2 in
@@ -308,6 +317,8 @@ module LF = struct
     in
 
     let (tA', h') = inferHead loc cD cPsi h Subst in
+    (* print_string ("[inferHead] h: " ^ P.headToString cD cPsi h *)
+    (* 		  ^ "\ntA' :" ^ P.typToString cD cPsi (tA', Substitution.LF.id) ^ "\n"); *)
     let (sA', s') =
       C.whnfTyp (tA', Substitution.LF.id)
     in

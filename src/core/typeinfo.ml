@@ -100,22 +100,15 @@ module LF = struct
   and annotate ext_tM ann_tM =
     match ext_tM, ann_tM with
     | (Ext.LF.Lam (loc, _, ext_tM), Ann.LF.Lam (_, _, ann_tM, _, tstr)) ->
-       (* print_string ("[annotate] 1\n"); *)
        annotate ext_tM ann_tM;
-       (* add_entry loc tstr *)
     | (Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, tstr)) ->
-       (* print_string ("[annotate] 2\n"); *)
        annotate_tuple ext_tuple ann_tuple;
-       (* add_entry loc tstr *)
-    | (Ext.LF.Root _, Ann.LF.Root _) ->
-       (* print_string ("[annotate] 3\n"); *)
+    | (Ext.LF.Root (loc, _, _), Ann.LF.Root (_, _, _, _, tstr)) ->
+       add_entry loc tstr;
        syn ext_tM ann_tM
-    | (Ext.LF.TList (_, nl), ann_tM') ->
-       (* print_string ("[annotate] 4\n"); *)
+   | (Ext.LF.TList (_, nl), ann_tM') ->
        annotate (Index.shunting_yard nl) ann_tM'
     | (Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, tstr)) -> ()
-       (* print_string ("[annotate] 5\n"); *)
-       (* add_entry loc tstr *)
     | _, _ -> print_string ("Match failure: " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n")
 
   and annotate_tuple ext_tuple ann_tuple =
@@ -131,12 +124,10 @@ module LF = struct
       match ext_tS, ann_tS with
       | (Ext.LF.Nil, Ann.LF.Nil) -> ()
       | (Ext.LF.App (_, ext_tM, ext_tS), Ann.LF.App (ann_tM, ann_tS)) ->
-	 print_string ("[syn] tM: " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n");
 	 annotate ext_tM ann_tM;
 	 syn ext_tS ann_tS
       | _, _ -> ()
     in
-    add_entry loc tstr;
     syn ext_tS ann_tS
 
 end

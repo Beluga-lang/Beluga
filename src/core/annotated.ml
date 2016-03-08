@@ -2,9 +2,32 @@ open Id
 open Pragma
 open Syntax
 
+module LF = struct
+
+  type mfront =
+    | ClObj of Int.LF.psi_hat * Int.LF.clobj
+    | CObj of Int.LF.dctx
+    | MV of offset
+
+   (* and clobj = *)
+   (*   | MObj of normal *)
+   (*   | PObj of head *)
+   (*   | SObj of sub *)
+
+   (* and normal = *)
+   (*   | Lam of Loc.t * name * normal *)
+   (*   | Root of Loc.t * head * spine *)
+   (*   | LFHole of Loc.t *)
+   (*   | Clo of (normal * sub) *)
+   (*   | Tuple of Loc.t * tuple *)
+
+end
+
 module Comp = struct
 
   type tclo = Int.Comp.typ * Int.LF.msub
+
+  type meta_obj = Loc.t * LF.mfront
 
   type exp_chk =
     | Rec of Loc.t * name * exp_chk * tclo * string option
@@ -14,7 +37,7 @@ module Comp = struct
     | Pair of Loc.t * exp_chk * exp_chk * tclo * string option
     | Let of Loc.t * exp_syn * (name * exp_chk) * tclo * string option
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk) * tclo * string option
-    | Box of Loc.t * Int.Comp.meta_obj * tclo * string option
+    | Box of Loc.t * meta_obj * tclo * string option
     | Case of Loc.t * case_pragma * exp_syn * branch list * tclo * string option
     | Syn of Loc.t * exp_syn * tclo * string option
     | If of Loc.t * exp_syn * exp_chk * exp_chk * tclo * string option
@@ -26,7 +49,7 @@ module Comp = struct
     | DataDest of Loc.t * cid_comp_dest * tclo * string option
     | Const of Loc.t * cid_prog * tclo * string option
     | Apply of Loc.t * exp_syn * exp_chk * tclo * string option
-    | MApp of Loc.t * exp_syn * Int.Comp.meta_obj * tclo * string option
+    | MApp of Loc.t * exp_syn * meta_obj * tclo * string option
     | Ann of exp_chk * Int.Comp.typ * tclo * string option
     | Equal of Loc.t * exp_syn * exp_syn * tclo * string option
     | PairVal of Loc.t * exp_syn * exp_syn * tclo * string option
@@ -34,7 +57,7 @@ module Comp = struct
 
    and pattern =
      | PatEmpty of Loc.t * Int.LF.dctx * tclo * string option
-     | PatMetaObj of Loc.t * Int.Comp.meta_obj * tclo * string option
+     | PatMetaObj of Loc.t * meta_obj * tclo * string option
      | PatPair of Loc.t * pattern * pattern * tclo * string option
      | PatConst of Loc.t * cid_comp_const * pattern_spine * tclo * string option
      | PatVar of Loc.t * offset * tclo * string option
@@ -54,5 +77,5 @@ module Comp = struct
    and copattern_spine =
      | CopatNil of Loc.t
      | CopatApp of Loc.t * cid_comp_dest * copattern_spine
-     | CopatMeta of Loc.t * Int.Comp.meta_obj * copattern_spine
+     | CopatMeta of Loc.t * meta_obj * copattern_spine
 end

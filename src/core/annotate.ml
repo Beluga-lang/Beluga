@@ -233,6 +233,9 @@ module LF = struct
        raise (Error (loc, LeftoverFV))
 
   and ann cD cPsi sM sA =
+    (* print_string (sprintf "Assigned %s with type %s\n" *)
+    (* 		 (P.normalToString cD cPsi sM) *)
+    (* 		 (P.typToString cD cPsi sA)); *)
     ann' cD cPsi sM sA
 
   and ann' cD cPsi sM sA = match sM, sA with
@@ -260,7 +263,7 @@ module LF = struct
 	 let (sP, h', tS') = syn cD cPsi sM in
 	 let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
 	 if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-	   Ann.LF.Root (loc, h', tS', sP, mk_tstr cD cPsi sP)
+	   Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
 	 else
 	   raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        end
@@ -286,6 +289,7 @@ module LF = struct
     loop (tuple, s1) (trec, s2)
 
   and syn cD cPsi (Root (loc, h, tS), s) =
+    (* print_string (sprintf "[syn] tM: %s\n" (P.normalToString cD cPsi (Root (loc, h, tS), s))); *)
     let rec spineLength = function
       | Nil -> 0
       | SClo (tS, _) -> spineLength tS
@@ -305,9 +309,11 @@ module LF = struct
 	 (sA', Ann.LF.SClo (tS', s'))
       (* Remove implicits? *)
       | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), Maybe), tB2), s2) ->
-	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-	 let (sA', tS') = syn (tS, s1) tB2 in
-	 (sA', tS')
+	 (* print_string (sprintf "[inner syn] tM: %s is implicit.\n" *)
+			       (* (P.normalToString cD cPsi (tM, s1))); *)
+      	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
+      	 let (sA', tS') = syn (tS, s1) tB2 in
+      	 (sA', tS')
       | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
 	 (* print_string (sprintf "[syn] tM: %s\n" (P.normalToString cD cPsi (tM, s1))); *)
 	 let tM' = ann cD cPsi (tM, s1) (tA1, s2) in

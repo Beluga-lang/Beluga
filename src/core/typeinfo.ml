@@ -76,6 +76,9 @@ module LF = struct
   module Ann = Annotated
   module Ext = Syntax.Ext
 
+  (* let _ = Error.register_printer *)
+  (* 	    (fun (AnnotError s) -> Error.print (fun ppf -> Format.fprintf ppf "[AnnotError] %s" s)) *)
+
   let add_entry loc str =
     match str with
     | None -> Annot.add loc ("No type information found.")
@@ -92,24 +95,33 @@ module LF = struct
   and annotate_clobj ext_clobj ann_clobj =
     match ext_clobj, ann_clobj with
     | (Ext.Comp.MObj ext_tM, Ann.LF.MObj ann_tM) ->
-       (* print_string ("[annotate_clobj] MObj : " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n"); *)
        annotate ext_tM ann_tM
     | (Ext.Comp.MObj ext_tM, _) -> ()
     | (Ext.Comp.SObj _, Ann.LF.SObj _) -> ()
 
   and annotate ext_tM ann_tM =
     match ext_tM, ann_tM with
-    | (Ext.LF.Lam (loc, _, ext_tM), Ann.LF.Lam (_, _, ann_tM, _, tstr)) ->
-       annotate ext_tM ann_tM;
-    | (Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, tstr)) ->
-       annotate_tuple ext_tuple ann_tuple;
-    | (Ext.LF.Root (loc, _, _), Ann.LF.Root (_, _, _, _, tstr)) ->
+    | Ext.LF.Lam (loc, n, ext_tM'), Ann.LF.Lam (_, _, ann_tM', _, tstr) ->
        add_entry loc tstr;
+       annotate ext_tM' ann_tM'
+    | Ext.LF.Root (loc, h, tS), Ann.LF.Lam (_, _, ann_tM', _, tstr) ->
+       annotate ext_tM ann_tM'
+    | Ext.LF.Root _, Ann.LF.Root _ ->
        syn ext_tM ann_tM
-   | (Ext.LF.TList (_, nl), ann_tM') ->
-       annotate (Index.shunting_yard nl) ann_tM'
-    | (Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, tstr)) -> ()
-    | _, _ -> print_string ("Match failure: " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n")
+    | Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, tstr) ->
+       add_entry loc tstr;
+       annotate_tuple ext_tuple ann_tuple
+    | Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, tstr) ->
+       add_entry loc tstr
+    | Ext.LF.Ann (loc, ext_tM', _), ann_tM' ->
+       annotate ext_tM' ann_tM'
+    | Ext.LF.TList (loc, tMs), ann_tM' ->
+       (* In practice, ann_tM' should be Root *)
+       let ext_tM' = Index.shunting_yard tMs in
+       annotate ext_tM' ann_tM'
+  (* Never happens? *)
+    (* | Ext.LF.NTyp (loc, _) -> *)
+    (* | Ext.LF.PatEmpty loc -> () *)
 
   and annotate_tuple ext_tuple ann_tuple =
     match ext_tuple, ann_tuple with
@@ -122,12 +134,13 @@ module LF = struct
   and syn (Ext.LF.Root (loc, ext_h, ext_tS)) (Ann.LF.Root (_, ann_h, ann_tS, _, tstr)) =
     let rec syn ext_tS ann_tS =
       match ext_tS, ann_tS with
-      | (Ext.LF.Nil, Ann.LF.Nil) -> ()
-      | (Ext.LF.App (_, ext_tM, ext_tS), Ann.LF.App (ann_tM, ann_tS)) ->
-	 annotate ext_tM ann_tM;
-	 syn ext_tS ann_tS
-      | _, _ -> ()
+      | Ext.LF.Nil, Ann.LF.Nil -> ()
+      | Ext.LF.App (_, ext_tM, ext_tS'), Ann.LF.App (ann_tM, ann_tS') ->
+  	 syn ext_tS' ann_tS';
+  	 annotate ext_tM ann_tM
+      | _, _ -> ()    (* TODO: See why spines don't always line up *)
     in
+    add_entry loc tstr;
     syn ext_tS ann_tS
 
 end

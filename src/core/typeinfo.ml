@@ -72,6 +72,75 @@ module Annot = struct
     end
 end
 
+module LF = struct
+  module Ann = Annotated
+  module Ext = Syntax.Ext
+
+  let add_entry loc str =
+    match str with
+    | None -> Annot.add loc ("No type information found.")
+    | Some str' ->
+       (* print_string ("Trying to add " ^ str' ^ " to loc: " ^ Syntax.Loc.to_string loc ^ "\n"); *)
+       Annot.add loc str'
+
+  let rec annotate_meta_obj ext_mO ann_mO =
+    match ext_mO, ann_mO with
+    | (Ext.Comp.CObj _, Ann.LF.CObj _) -> ()
+    | (Ext.Comp.ClObj (_, ext_clobj), Ann.LF.ClObj (_, ann_clobj)) ->
+       annotate_clobj ext_clobj ann_clobj
+
+  and annotate_clobj ext_clobj ann_clobj =
+    match ext_clobj, ann_clobj with
+    | (Ext.Comp.MObj ext_tM, Ann.LF.MObj ann_tM) ->
+       (* print_string ("[annotate_clobj] MObj : " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n"); *)
+       annotate ext_tM ann_tM
+    | (Ext.Comp.MObj ext_tM, _) -> ()
+    | (Ext.Comp.SObj _, Ann.LF.SObj _) -> ()
+
+  and annotate ext_tM ann_tM =
+    match ext_tM, ann_tM with
+    | (Ext.LF.Lam (loc, _, ext_tM), Ann.LF.Lam (_, _, ann_tM, _, tstr)) ->
+       (* print_string ("[annotate] 1\n"); *)
+       annotate ext_tM ann_tM;
+       (* add_entry loc tstr *)
+    | (Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, tstr)) ->
+       (* print_string ("[annotate] 2\n"); *)
+       annotate_tuple ext_tuple ann_tuple;
+       (* add_entry loc tstr *)
+    | (Ext.LF.Root _, Ann.LF.Root _) ->
+       (* print_string ("[annotate] 3\n"); *)
+       syn ext_tM ann_tM
+    | (Ext.LF.TList (_, nl), ann_tM') ->
+       (* print_string ("[annotate] 4\n"); *)
+       annotate (Index.shunting_yard nl) ann_tM'
+    | (Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, tstr)) -> ()
+       (* print_string ("[annotate] 5\n"); *)
+       (* add_entry loc tstr *)
+    | _, _ -> print_string ("Match failure: " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n")
+
+  and annotate_tuple ext_tuple ann_tuple =
+    match ext_tuple, ann_tuple with
+    | Ext.LF.Last ext_tM, Ann.LF.Last ann_tM ->
+       annotate ext_tM ann_tM
+    | Ext.LF.Cons (ext_tM, ext_tuple), Ann.LF.Cons (ann_tM, ann_tuple) ->
+       annotate ext_tM ann_tM;
+       annotate_tuple ext_tuple ann_tuple
+
+  and syn (Ext.LF.Root (loc, ext_h, ext_tS)) (Ann.LF.Root (_, ann_h, ann_tS, _, tstr)) =
+    let rec syn ext_tS ann_tS =
+      match ext_tS, ann_tS with
+      | (Ext.LF.Nil, Ann.LF.Nil) -> ()
+      | (Ext.LF.App (_, ext_tM, ext_tS), Ann.LF.App (ann_tM, ann_tS)) ->
+	 print_string ("[syn] tM: " ^ PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM ^ "\n");
+	 annotate ext_tM ann_tM;
+	 syn ext_tS ann_tS
+      | _, _ -> ()
+    in
+    add_entry loc tstr;
+    syn ext_tS ann_tS
+
+end
+
 module Comp = struct
   module Ann = Annotated
   module Ext = Syntax.Ext
@@ -79,49 +148,14 @@ module Comp = struct
   let add_entry loc str =
     match str with
     | None -> Annot.add loc ("No type information found.")
-    | Some str' -> Annot.add loc str'
+    | Some str' ->
+       (* print_string ("Trying to add " ^ str' ^ " to loc: " ^ Syntax.Loc.to_string loc ^ "\n"); *)
+       Annot.add loc str'
 
   let rec annotate_comp_exp_chk ext_e ann_e =
     ann_chk ext_e ann_e
 
   and ann_chk ext_e ann_e =
-  (*   try *)
-  (*     ann_chk' ext_e ann_e *)
-  (*   with Match_failure _ -> *)
-  (*     raise (AnnotError (sprintf "[ann_chk] ext_e: %s\nann_e: %s\n" *)
-  (* 			  (what_ext_chk ext_e) *)
-  (* 			  (what_ann_chk ann_e))) *)
-
-  (* and what_ext_chk ext_e = *)
-  (*   match ext_e with *)
-  (*   | Ext.Comp.Syn (l, _) -> "Syn at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Fun (l, _, _) -> "Fun at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Cofun (l, _) -> "Cofun at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.MLam (l, _, _) -> "MLam at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Pair  (l, _, _) -> "Pair at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.LetPair (l, _, _) -> "LetPair at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Let (l, _, _) -> "Let at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Box (l, _) -> "Box at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Case (l, _, _, _) -> "Case at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.If (l, _, _, _) -> "If at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Hole l -> "Hole at " ^ Syntax.Loc.to_string l *)
-
-  (* and what_ann_chk ann_e = *)
-  (*   match ann_e with *)
-  (*   | Ann.Comp.Rec _ -> "Rec" *)
-  (*   | Ann.Comp.Fun _ -> "Fun" *)
-  (*   | Ann.Comp.Cofun _ -> "Cofun" *)
-  (*   | Ann.Comp.MLam _ -> "MLam" *)
-  (*   | Ann.Comp.Pair _ -> "Pair" *)
-  (*   | Ann.Comp.Let _ -> "Let" *)
-  (*   | Ann.Comp.LetPair _ -> "LetPair" *)
-  (*   | Ann.Comp.Box _ -> "Box" *)
-  (*   | Ann.Comp.Case _ -> "Case" *)
-  (*   | Ann.Comp.Syn _ -> "Syn" *)
-  (*   | Ann.Comp.If _ -> "If" *)
-  (*   | Ann.Comp.Hole _ -> "Hole" *)
-
-  (* and ann_chk' ext_e ann_e = *)
     match (ext_e, ann_e) with
     | (Ext.Comp.Fun (loc, _, ext_e'), Ann.Comp.Fun (_, _, ann_e', _, tstr)) ->
        ann_chk ext_e' ann_e';
@@ -159,8 +193,8 @@ module Comp = struct
        ann_chk ext_e' ann_e';
        add_entry loc tstr
 
-    | (Ext.Comp.Box (loc, ext_mO), Ann.Comp.Box (_, ann_mO, _, tstr)) ->
-       (* LF.annotate_meta_obj ext_mO ann_mO *)
+    | (Ext.Comp.Box (loc, (_, ext_mO)), Ann.Comp.Box (_, (_, ann_mO), _, tstr)) ->
+       LF.annotate_meta_obj ext_mO ann_mO;
        add_entry loc tstr
 
     | (Ext.Comp.Case (loc, _, ext_i, ext_branches),
@@ -184,40 +218,6 @@ module Comp = struct
        add_entry loc tstr
 
   and ann_syn ext_i ann_i =
-    (* try *)
-      ann_syn' ext_i ann_i
-  (*   with Match_failure _ -> *)
-  (*     print_string ("[ann_syn] ext_i: " ^ which_ext_syn ext_i *)
-  (* 		    ^ "\next_i: " ^ PE.expSynToString (Ext.LF.Empty) ext_i *)
-  (* 		    ^ "\nann_i: " ^ which_ann_syn ann_i *)
-  (* 		    ^ "\n"); *)
-
-  (* and which_ext_syn ext_i = *)
-  (*   match ext_i with *)
-  (*   | Ext.Comp.Var (l, _) -> "Var at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.DataConst  (l, _) -> "DataConst at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Const (l, _) -> "Const at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Apply (l, _, _) -> "Apply at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.BoxVal (l, _) -> "BoxVal at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.PairVal (l, _, _) -> "PairVal at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Ann (l, _, _) -> "Ann at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Equal (l, _, _) -> "Equal at " ^ Syntax.Loc.to_string l *)
-  (*   | Ext.Comp.Boolean (l, _) -> "Boolean at " ^ Syntax.Loc.to_string l *)
-
-  (* and which_ann_syn ann_i = *)
-  (*   match ann_i with *)
-  (*   | Ann.Comp.Var (l, _, _, _) -> "Var at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.DataConst  (l, _, _, _) -> "DataConst at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.DataDest  (l, _, _, _) -> "DataDest at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.Const (l, _, _, _) -> "Const at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.Apply (l, _, _, _, _) -> "Apply at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.MApp (l, _, _, _, _) -> "MApp at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.PairVal (l, _, _, _, _) -> "PairVal at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.Ann (_, _, _, _) -> "Ann" *)
-  (*   | Ann.Comp.Equal (l, _, _, _, _) -> "Equal at " ^ Syntax.Loc.to_string l *)
-  (*   | Ann.Comp.Boolean (_, _, _) -> "Boolean" *)
-
-  and ann_syn' ext_i ann_i =
     match (ext_i, ann_i) with
     | (Ext.Comp.Var (loc, _), Ann.Comp.Var (_, _, _, tstr)) ->
        add_entry loc tstr
@@ -238,15 +238,15 @@ module Comp = struct
        add_entry loc tstr
 
     | (Ext.Comp.Apply (loc, ext_i, ext_e), Ann.Comp.Apply (_, ann_i, ann_e, _, tstr)) ->
+       add_entry loc tstr;
        ann_syn ext_i ann_i;
-       ann_chk ext_e ann_e;
-       add_entry loc tstr
+       ann_chk ext_e ann_e
 
-    | (Ext.Comp.Apply (loc, ext_i, Ext.Comp.Box (_, ext_mC)),
-       Ann.Comp.MApp (_, ann_i, ann_mC, _, tstr)) ->
+    | (Ext.Comp.Apply (loc, ext_i, Ext.Comp.Box (_, (_, ext_mC))),
+       Ann.Comp.MApp (_, ann_i, (_, ann_mC), _, tstr)) ->
+       add_entry loc tstr;
        ann_syn ext_i ann_i;
-       (* LF.annotate_meta_obj ext_mC ann_mC; *)
-       add_entry loc tstr
+       LF.annotate_meta_obj ext_mC ann_mC;
 
     | (Ext.Comp.PairVal (loc, ext_i1, ext_i2), Ann.Comp.PairVal (_, ann_i1, ann_i2, _, tstr)) ->
        ann_syn ext_i1 ann_i1;
@@ -289,38 +289,10 @@ module Comp = struct
        ann_chk ext_e ann_e
 
   and annotate_pattern ext_pat ann_pat =
-    (* try *)
-      annotate_pattern' ext_pat ann_pat
-  (*   with Match_failure _ -> *)
-  (*     print_string ("[annotate_pattern] ext_pat: " ^ what_ext_pat ext_pat *)
-  (* 		    ^ "\nint_pat: " ^ what_ann_pat ann_pat *)
-  (* 		    ^ "\n") *)
-
-  (* and what_ext_pat ext_pat = *)
-  (*   match ext_pat with *)
-  (*   | Ext.Comp.PatMetaObj _ -> "PatMetaObj" *)
-  (*   | Ext.Comp.PatPair _ -> "PatPair" *)
-  (*   | Ext.Comp.PatConst _ -> "PatConst" *)
-  (*   | Ext.Comp.PatVar _ -> "PatVar" *)
-  (*   | Ext.Comp.PatTrue _ -> "PatTrue" *)
-  (*   | Ext.Comp.PatFalse _ -> "PatFalse" *)
-  (*   | Ext.Comp.PatAnn _ -> "PatAnn" *)
-
-  (* and what_ann_pat ann_pat = *)
-  (*   match ann_pat with *)
-  (*   | Ann.Comp.PatEmpty _ -> "PatEmpty" *)
-  (*   | Ann.Comp.PatMetaObj _ -> "PatMetaObj" *)
-  (*   | Ann.Comp.PatPair _ -> "PatPair" *)
-  (*   | Ann.Comp.PatConst _ -> "PatConst" *)
-  (*   | Ann.Comp.PatVar _ -> "PatVar" *)
-  (*   | Ann.Comp.PatTrue _ -> "PatTrue" *)
-  (*   | Ann.Comp.PatFalse _ -> "PatFalse" *)
-  (*   | Ann.Comp.PatAnn _ -> "PatAnn" *)
-
-  and annotate_pattern' ext_pat ann_pat =
     match (ext_pat, ann_pat) with
-    | (Ext.Comp.PatMetaObj (loc, ext_mO), Ann.Comp.PatMetaObj (_, ann_mO, _, tstr)) ->
-       (* LF.annotate_meta_obj ext_mO ann_mO *)
+    | (Ext.Comp.PatMetaObj (loc, (l, ext_mO)), Ann.Comp.PatMetaObj (_, (_, ann_mO), _, tstr)) ->
+       (* print_string ("[annotate_pattern] PatMetaObj: " ^ PE.metaObjToString (Ext.LF.Empty) (l, ext_mO) ^ "\n"); *)
+       LF.annotate_meta_obj ext_mO ann_mO;
        add_entry loc tstr
 
     | (Ext.Comp.PatConst (loc, _, ext_pat_spine),

@@ -19,6 +19,8 @@ exception Error of Syntax.Loc.t * error
 
 type free_cvars
 
+val shunting_yard : Syntax.Ext.LF.normal list -> Syntax.Ext.LF.normal
+
 val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars
 
 val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars

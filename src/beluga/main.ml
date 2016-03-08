@@ -172,7 +172,7 @@ let main () =
               raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
           end ;
           if !Typeinfo.generate_annotations then
-            (* Typeinfo.print_annot file_name; *)
+            Typeinfo.print_annot file_name;
           (* print_newline(); *)
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;

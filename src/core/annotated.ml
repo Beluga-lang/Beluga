@@ -5,14 +5,14 @@ open Syntax
 module LF = struct
 
   type mfront =
-    | ClObj of Int.LF.psi_hat * Int.LF.clobj
+    | ClObj of Int.LF.psi_hat * clobj
     | CObj of Int.LF.dctx
     | MV of offset
 
-   (* and clobj = *)
-   (*   | MObj of normal *)
-   (*   | PObj of head *)
-   (*   | SObj of sub *)
+   and clobj =
+     | MObj of Int.LF.normal
+     | PObj of Int.LF.head
+     | SObj of Int.LF.sub
 
    (* and normal = *)
    (*   | Lam of Loc.t * name * normal *)

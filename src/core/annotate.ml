@@ -7,8 +7,8 @@ module R = Store.Cid.DefaultRenderer
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
 module LF = struct
-  (* open Context *)
-  (* open Store.Cid *)
+  open Context
+  open Store.Cid
   open Syntax.Int.LF
 
   module Unify = Unify.EmptyTrail
@@ -27,11 +27,11 @@ type error =
   (* | TypMismatch      of mctx * dctx * nclo * tclo * tclo *)
   (* | IllTypedSub      of mctx * dctx * sub * dctx *)
   (* | SpineIllTyped    of int * int *)
-  (* | LeftoverFV *)
+  | LeftoverFV
   (* | ParamVarInst     of mctx * dctx * tclo *)
   | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
-  (* | IllTypedMetaObj  of mctx * clobj * dctx * cltyp  *)
-  (* | TermWhenVar      of mctx * dctx * normal *)
+  | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
+  | TermWhenVar      of mctx * dctx * normal
   (* | SubWhenRen       of mctx * dctx * sub *)
 
 exception Error of Syntax.Loc.t * error
@@ -108,13 +108,13 @@ let _ = Error.register_printer
       (* 	  "Expected number of arguments" Format.pp_print_int n_expected *)
       (* 	  "Actual number of arguments"   Format.pp_print_int n_actual *)
 
-      (* | LeftoverFV -> *)
-      (* 	  Format.fprintf ppf "Leftover free variable." *)
-      (* | IllTypedMetaObj (cD, cM, cPsi, mT) ->  *)
-      (*       Format.fprintf ppf *)
-      (*         "Meta object %a does not have type %a." *)
-      (*         (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM)) *)
-      (*         (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi)) *)
+      | LeftoverFV ->
+      	  Format.fprintf ppf "Leftover free variable."
+      | IllTypedMetaObj (cD, cM, cPsi, mT) ->
+            Format.fprintf ppf
+              "Meta object %a does not have type %a."
+              (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM))
+              (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
       | CtxHatMismatch (cD, cPsi, phat, cM) ->
           let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
             Error.report_mismatch ppf
@@ -124,10 +124,10 @@ let _ = Error.register_printer
               Format.fprintf ppf
                 "In expression: %a@."
                 (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
-      (* | TermWhenVar (cD, cPsi, tM) -> *)
-      (* 	Format.fprintf ppf "A term was found when expecting a variable.@." ; *)
-      (* 	Format.fprintf ppf "Offending term: %a @."  *)
-      (* 	  (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM *)
+      | TermWhenVar (cD, cPsi, tM) ->
+      	Format.fprintf ppf "A term was found when expecting a variable.@." ;
+      	Format.fprintf ppf "Offending term: %a @."
+      	  (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
       (* | SubWhenRen (cD, cPsi, sub) ->  *)
       (* 	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ; *)
       (* 	Format.fprintf ppf "Offending substitution: %a @."  *)
@@ -153,7 +153,84 @@ let _ = Error.register_printer
        else
 	 raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    and annotateClObj cD loc cPsi cM cTt = cM
+    and annotateClObj cD loc cPsi' cM cTt =
+      match (cM, cTt) with
+      | (MObj tM, (MTyp tA, t)) ->
+	 let tM' = tM
+	 (* ann cD cPsi' (tM, Substitution.LF.id) (C.cnormTyp (tA, t), Substitution.LF.id)*)
+	 in
+	 Ann.LF.MObj tM'
+      | (SObj tM, (STyp (cl, tA), t)) ->
+	 let tM' = tM in
+	 Ann.LF.SObj tM'
+      | (PObj h, (PTyp tA, t)) ->
+	 let (tA', h') = inferHead loc cD cPsi' h Ren in
+	 let tA = C.cnormTyp (tA, t) in
+	 if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
+	   Ann.LF.PObj h'
+	 else
+	   raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+      | (MObj (Root(l, h, Nil)), (PTyp tA, t)) ->
+	 let (tA', h') = inferHead loc cD cPsi' h Ren in
+	 let tA = C.cnormTyp (tA, t) in
+	 if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
+	   Ann.LF.MObj (Root (l, h', Nil))
+	 else
+	   raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+      | _, _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+
+    and inferHead loc cD cPsi head cl =
+      match head, cl with
+      | BVar k', _ ->
+	 let (_, _l) = dctxToHat cPsi in
+	 let TypDecl (_, tA) = ctxDec cPsi k' in
+	 (tA, head)
+
+      | Proj (tuple_head, target), _ ->
+	 let srecA =
+	   match tuple_head with
+	   | BVar k' ->
+	      let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
+	      (recA, Substitution.LF.id)
+	   | PVar (p, s) ->
+	      let (_, Sigma recA, cPsi') = C.mctxPDec cD p in
+	      (* checkSub loc cD cPsi s Subst cPsi'; *)
+	      (recA, s)
+	 in
+	 let (_tA, s) as sA = getType tuple_head srecA target 1 in
+	 (TClo sA, head)
+
+      | Const c, Subst ->
+	 ((Term.get c).Term.typ, head)
+
+      | MVar (Offset u, s), Subst ->
+	 (* cD ; cPsi' |- tA <= type *)
+	 let (_, tA, cPsi') = Whnf.mctxMDec cD u in
+	 (* checkSub loc cD cPsi s Subst cPsi' ; *)
+	 (TClo (tA, s), head)
+
+      | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
+	 (* checkSub loc cD cPsi s Subst cPsi' ; *)
+	 (TClo (tA, s), head)
+
+      | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
+	 (* let _ = checkMSub loc cD t' cD' in *)
+	 (* checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ; *)
+	 (TClo(Whnf.cnormTyp (tA, t'), r), head)
+
+      | Const _, Ren
+      | MVar _, Ren
+      | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil)))))
+
+      | PVar (p, s), _ ->
+	 (* cD ; cPsi' |- tA <= type *)
+	 let (_, tA, cPsi') = Whnf.mctxPDec cD p in
+	 (* checkSub loc cD cPsi s cl cPsi'; *)
+	 (TClo (tA, s), head)
+
+      | FVar _, _ ->
+	 raise (Error (loc, LeftoverFV))
+
 end
 
 module Comp = struct

@@ -564,6 +564,10 @@ module Comp = struct
        begin
 	 match (C.cwhnfCTyp (tau1, t1)) with
 	 (* Check for implicit here? *)
+	 | (TypPiBox ((I.Decl (_, ctyp, I.Maybe)), tau), t) ->
+	    (* let mC' = mC (\* LF.checkMetaObj cD mC (ctyp, t) *\) in *)
+	    let t' = I.MDot (metaObjToMFront mC, t) in
+	    ((useIH loc cD cG cIH_opt (Box (loc, mC)), tau, t'), e')
 	 | (TypPiBox ((I.Decl (_, ctyp, _)), tau), t) ->
 	    let mC' = mC (* LF.checkMetaObj cD mC (ctyp, t) *) in
 	    let t' = I.MDot (metaObjToMFront mC, t) in

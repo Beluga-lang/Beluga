@@ -18,7 +18,7 @@ module Annot : sig
 end
 
 module Comp : sig
-  val annotate_comp_exp_chk : Syntax.Ext.Comp.exp_chk * Annotated.Comp.exp_chk
+  val annotate_comp_exp_chk : Syntax.Ext.Comp.exp_chk -> Annotated.Comp.exp_chk -> unit
 end
 
 module Sgn : sig

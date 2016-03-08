@@ -651,7 +651,8 @@ let recSgnDecls decls =
 					      cD cG e_r' (tau_ann, C.m_id)
                                       ) in
 	  let _ = if !Typeinfo.generate_annotations then
-	    let _e_ann = Annotate.Comp.ann cD cG e_r' (tau_ann, C.m_id) in ()
+	    let e_ann = Annotate.Comp.ann cD cG e_r' (tau_ann, C.m_id) in
+	    let _ = Typeinfo.Comp.annotate_comp_exp_chk e e_ann in ()
 	  in
              (e_r' , tau')
         in

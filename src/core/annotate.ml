@@ -16,123 +16,131 @@ module LF = struct
   module C = Whnf
   module Ann = Annotated
 
-type error =
-  (* | CtxVarMisCheck   of mctx * dctx * tclo * schema *)
-  (* | CtxVarMismatch   of mctx * ctx_var * schema *)
-  (* | CtxVarDiffer     of mctx * ctx_var * ctx_var *)
-  (* | CheckError       of mctx * dctx * nclo * tclo *)
-  (* | TupleArity       of mctx * dctx * nclo * trec_clo *)
-  (* | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo *)
-  (* | KindMismatch     of mctx * dctx * sclo * (kind * sub) *)
-  (* | TypMismatch      of mctx * dctx * nclo * tclo * tclo *)
-  (* | IllTypedSub      of mctx * dctx * sub * dctx *)
-  (* | SpineIllTyped    of int * int *)
-  | LeftoverFV
-  (* | ParamVarInst     of mctx * dctx * tclo *)
-  | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
-  | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
-  | TermWhenVar      of mctx * dctx * normal
-  (* | SubWhenRen       of mctx * dctx * sub *)
+  type error =
+    (* | CtxVarMisCheck   of mctx * dctx * tclo * schema *)
+    (* | CtxVarMismatch   of mctx * ctx_var * schema *)
+    (* | CtxVarDiffer     of mctx * ctx_var * ctx_var *)
+    | CheckError       of mctx * dctx * nclo * tclo
+    | TupleArity       of mctx * dctx * nclo * trec_clo
+    (* | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo *)
+    (* | KindMismatch     of mctx * dctx * sclo * (kind * sub) *)
+    | TypMismatch      of mctx * dctx * nclo * tclo * tclo
+    (* | IllTypedSub      of mctx * dctx * sub * dctx *)
+    | SpineIllTyped    of int * int
+    | LeftoverFV
+    (* | ParamVarInst     of mctx * dctx * tclo *)
+    | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+    | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
+    | TermWhenVar      of mctx * dctx * normal
+    (* | SubWhenRen       of mctx * dctx * sub *)
 
-exception Error of Syntax.Loc.t * error
+  exception Error of Syntax.Loc.t * error
+  let _ = Error.register_printer
+	    (fun (Error (loc, err)) ->
+	     Error.print_with_location
+	       loc (fun ppf ->
+		    match err with
+		    (* | ParamVarInst (cD, cPsi, sA) -> *)
+		    (*       Format.fprintf ppf "Parameter variable of type %a does not appear as a declaration in context %a. @ @ It may be that no parameter variable of this type exists in the context or the type of the parameter variable is a projection of a declaration in the context." *)
+		    (*         (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA) *)
+		    (*         (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi *)
 
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
-      match err with
-      (* | ParamVarInst (cD, cPsi, sA) -> *)
-      (*       Format.fprintf ppf "Parameter variable of type %a does not appear as a declaration in context %a. @ @ It may be that no parameter variable of this type exists in the context or the type of the parameter variable is a projection of a declaration in the context." *)
-      (*         (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA) *)
-      (*         (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi *)
+		    (* | CtxVarMisCheck (c0, cPsi, sA, sEl ) -> *)
+		    (*       Format.fprintf ppf "Type %a doesn't check against schema %a." *)
+		    (*          (P.fmt_ppr_lf_typ c0 cPsi Pretty.std_lvl) (Whnf.normTyp sA) *)
+		    (*          (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl *)
 
-      (* | CtxVarMisCheck (c0, cPsi, sA, sEl ) -> *)
-      (*       Format.fprintf ppf "Type %a doesn't check against schema %a." *)
-      (*          (P.fmt_ppr_lf_typ c0 cPsi Pretty.std_lvl) (Whnf.normTyp sA) *)
-      (*          (P.fmt_ppr_lf_schema Pretty.std_lvl) sEl *)
+		    (* | CtxVarMismatch (cO, var, expected) -> *)
+		    (*     Format.fprintf ppf "Context variable %a doesn't check against schema %a." *)
+		    (*       (P.fmt_ppr_lf_ctx_var cO) var *)
+		    (*       (P.fmt_ppr_lf_schema Pretty.std_lvl) expected *)
 
-      (* | CtxVarMismatch (cO, var, expected) -> *)
-      (*     Format.fprintf ppf "Context variable %a doesn't check against schema %a." *)
-      (*       (P.fmt_ppr_lf_ctx_var cO) var *)
-      (*       (P.fmt_ppr_lf_schema Pretty.std_lvl) expected *)
+		    (* | CtxVarDiffer (cO, var, var1) -> *)
+		    (*     Format.fprintf ppf "Context variable %a not equal to %a." *)
+		    (*       (P.fmt_ppr_lf_ctx_var cO) var *)
+		    (*       (P.fmt_ppr_lf_ctx_var cO) var1 *)
 
-      (* | CtxVarDiffer (cO, var, var1) -> *)
-      (*     Format.fprintf ppf "Context variable %a not equal to %a." *)
-      (*       (P.fmt_ppr_lf_ctx_var cO) var *)
-      (*       (P.fmt_ppr_lf_ctx_var cO) var1 *)
+		    | CheckError (cD, cPsi, sM, sA) ->
+		        Format.fprintf ppf
+		    	    "Expression %a does not check against %a."
+      	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+		    	    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
-      (* | CheckError (cD, cPsi, sM, sA) -> *)
-      (*     Format.fprintf ppf *)
-      (* 	    "Expression %a does not check against %a." *)
-      (* 	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM) *)
-      (* 	    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA) *)
+		    (* | SigmaMismatch (cD, cPsi, sArec, sBrec) -> *)
+		    (*   Error.report_mismatch ppf *)
+		    (*	  "Sigma type mismatch." *)
+		    (*	  "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sArec) *)
+		    (*	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec) *)
 
-      (* | SigmaMismatch (cD, cPsi, sArec, sBrec) -> *)
-      (*   Error.report_mismatch ppf *)
-      (* 	  "Sigma type mismatch." *)
-      (* 	  "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sArec) *)
-      (* 	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec) *)
+		    | TupleArity (cD, cPsi, sM, sA) ->
+		    	Error.report_mismatch ppf
+		    	  "Arity of tuple doesn't match type."
+		    	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
+		    	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
 
-      (* | TupleArity (cD, cPsi, sM, sA) -> *)
-      (* 	Error.report_mismatch ppf *)
-      (* 	  "Arity of tuple doesn't match type." *)
-      (* 	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM) *)
-      (* 	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA) *)
+		    (* | KindMismatch (cD, cPsi, sS, sK) -> *)
+		    (*	Error.report_mismatch ppf *)
+		    (*     "Ill-kinded type." *)
+		    (*	  "Expected kind:" Format.pp_print_string                      (P.kindToString cPsi sK) *)
+		    (*	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS) *)
 
-      (* | KindMismatch (cD, cPsi, sS, sK) -> *)
-      (* 	Error.report_mismatch ppf *)
-      (*     "Ill-kinded type." *)
-      (* 	  "Expected kind:" Format.pp_print_string                      (P.kindToString cPsi sK) *)
-      (* 	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi Pretty.std_lvl) (Whnf.normSpine sS) *)
+		    | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
+		      Error.report_mismatch ppf
+		        "Ill-typed term."
+		    	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
+		    	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
+		      Format.fprintf ppf
+		        "In expression: %a@."
+		        (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
-      (* | TypMismatch (cD, cPsi, sM, sA1, sA2) -> *)
-      (*   Error.report_mismatch ppf *)
-      (*     "Ill-typed term." *)
-      (* 	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1) *)
-      (* 	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2); *)
-      (*   Format.fprintf ppf *)
-      (*     "In expression: %a@." *)
-      (*     (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM) *)
+		    (* | IllTypedSub (cD, cPsi, s, cPsi') -> *)
+		    (*   Format.fprintf ppf "Ill-typed substitution.@."; *)
+		    (*   Format.fprintf ppf "    Substitution: %a@." *)
+		    (*     (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s; *)
+		    (*   Format.fprintf ppf "    does not take context: %a@." *)
+		    (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi'; *)
+		    (*   Format.fprintf ppf "    to context: %a@." *)
+		    (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi; *)
 
-      (* | IllTypedSub (cD, cPsi, s, cPsi') -> *)
-      (*   Format.fprintf ppf "Ill-typed substitution.@."; *)
-      (*   Format.fprintf ppf "    Substitution: %a@." *)
-      (*     (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s; *)
-      (*   Format.fprintf ppf "    does not take context: %a@." *)
-      (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi'; *)
-      (*   Format.fprintf ppf "    to context: %a@." *)
-      (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi; *)
+		    | SpineIllTyped (n_expected, n_actual) ->
+		    	Error.report_mismatch ppf
+		    	  "Ill-typed spine."
+		    	  "Expected number of arguments" Format.pp_print_int n_expected
+		    	  "Actual number of arguments"   Format.pp_print_int n_actual
 
-      (* | SpineIllTyped (n_expected, n_actual) -> *)
-      (* 	Error.report_mismatch ppf *)
-      (* 	  "Ill-typed spine." *)
-      (* 	  "Expected number of arguments" Format.pp_print_int n_expected *)
-      (* 	  "Actual number of arguments"   Format.pp_print_int n_actual *)
+		    | LeftoverFV ->
+		       Format.fprintf ppf "Leftover free variable."
+		    | IllTypedMetaObj (cD, cM, cPsi, mT) ->
+		       Format.fprintf ppf
+				      "Meta object %a does not have type %a."
+				      (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM))
+				      (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
+		    | CtxHatMismatch (cD, cPsi, phat, cM) ->
+		       let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
+		       Error.report_mismatch ppf
+					     "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
+					     "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
+					     "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
+		       Format.fprintf ppf
+				      "In expression: %a@."
+				      (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+		    | TermWhenVar (cD, cPsi, tM) ->
+		       Format.fprintf ppf "A term was found when expecting a variable.@." ;
+		       Format.fprintf ppf "Offending term: %a @."
+				      (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
+	    (* | SubWhenRen (cD, cPsi, sub) ->  *)
+	    (*	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ; *)
+	    (*	Format.fprintf ppf "Offending substitution: %a @."  *)
+	    (*	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub *)
+	    ))
 
-      | LeftoverFV ->
-      	  Format.fprintf ppf "Leftover free variable."
-      | IllTypedMetaObj (cD, cM, cPsi, mT) ->
-            Format.fprintf ppf
-              "Meta object %a does not have type %a."
-              (P.fmt_ppr_lf_mfront cD Pretty.std_lvl) (ClObj (Context.dctxToHat cPsi, cM))
-              (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
-      | CtxHatMismatch (cD, cPsi, phat, cM) ->
-          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
-            Error.report_mismatch ppf
-              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
-              "Expected context" (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) cPhi;
-              Format.fprintf ppf
-                "In expression: %a@."
-                (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
-      | TermWhenVar (cD, cPsi, tM) ->
-      	Format.fprintf ppf "A term was found when expecting a variable.@." ;
-      	Format.fprintf ppf "Offending term: %a @."
-      	  (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
-      (* | SubWhenRen (cD, cPsi, sub) ->  *)
-      (* 	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ; *)
-      (* 	Format.fprintf ppf "Offending substitution: %a @."  *)
-      (* 	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub *)
-  ))
+  exception SpineMismatch
+
+  let mk_tstr cD cPsi sA =
+    if !Typeinfo.generate_annotations then
+      Some (P.typToString cD cPsi sA)
+    else
+      None
 
   let rec annotateMetaObj cD (loc, cM) cTt =
     match (cM, cTt) with
@@ -153,84 +161,171 @@ let _ = Error.register_printer
        else
 	 raise (Error.Violation ("Contextual substitution ill-typed"))
 
-    and annotateClObj cD loc cPsi' cM cTt =
-      match (cM, cTt) with
-      | (MObj tM, (MTyp tA, t)) ->
-	 let tM' = tM
-	 (* ann cD cPsi' (tM, Substitution.LF.id) (C.cnormTyp (tA, t), Substitution.LF.id)*)
-	 in
-	 Ann.LF.MObj tM'
-      | (SObj tM, (STyp (cl, tA), t)) ->
-	 let tM' = tM in
-	 Ann.LF.SObj tM'
-      | (PObj h, (PTyp tA, t)) ->
-	 let (tA', h') = inferHead loc cD cPsi' h Ren in
-	 let tA = C.cnormTyp (tA, t) in
-	 if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
-	   Ann.LF.PObj h'
-	 else
-	   raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
-      | (MObj (Root(l, h, Nil)), (PTyp tA, t)) ->
-	 let (tA', h') = inferHead loc cD cPsi' h Ren in
-	 let tA = C.cnormTyp (tA, t) in
-	 if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
-	   Ann.LF.MObj (Root (l, h', Nil))
-	 else
-	   raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
-      | _, _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+  and annotateClObj cD loc cPsi' cM cTt =
+    match (cM, cTt) with
+    | (MObj tM, (MTyp tA, t)) ->
+       let tM' =
+	 ann cD cPsi' (tM, Substitution.LF.id) (C.cnormTyp (tA, t), Substitution.LF.id)
+       in
+       Ann.LF.MObj tM'
+    | (SObj tM, (STyp (cl, tA), t)) ->
+       let tM' = tM in
+       Ann.LF.SObj tM'
+    | (PObj h, (PTyp tA, t)) ->
+       let (tA', h') = inferHead loc cD cPsi' h Ren in
+       let tA = C.cnormTyp (tA, t) in
+       if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
+	 Ann.LF.PObj h'
+       else
+	 raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+    | (MObj (Root(l, h, Nil)), (PTyp tA, t)) ->
+       let (tA', h') = inferHead loc cD cPsi' h Ren in
+       let tA = C.cnormTyp (tA, t) in
+       if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
+	 let sA = (tA, Substitution.LF.id) in
+	 Ann.LF.MObj (Ann.LF.Root (l, h', Ann.LF.Nil, sA, mk_tstr cD cPsi' sA))
+       else
+	 raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
+    | _, _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
 
-    and inferHead loc cD cPsi head cl =
-      match head, cl with
-      | BVar k', _ ->
-	 let (_, _l) = dctxToHat cPsi in
-	 let TypDecl (_, tA) = ctxDec cPsi k' in
-	 (tA, head)
+  and inferHead loc cD cPsi head cl =
+    match head, cl with
+    | BVar k', _ ->
+       let (_, _l) = dctxToHat cPsi in
+       let TypDecl (_, tA) = ctxDec cPsi k' in
+       (tA, head)
 
-      | Proj (tuple_head, target), _ ->
-	 let srecA =
-	   match tuple_head with
-	   | BVar k' ->
-	      let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
-	      (recA, Substitution.LF.id)
-	   | PVar (p, s) ->
-	      let (_, Sigma recA, cPsi') = C.mctxPDec cD p in
-	      (* checkSub loc cD cPsi s Subst cPsi'; *)
-	      (recA, s)
-	 in
-	 let (_tA, s) as sA = getType tuple_head srecA target 1 in
-	 (TClo sA, head)
+    | Proj (tuple_head, target), _ ->
+       let srecA =
+	 match tuple_head with
+	 | BVar k' ->
+	    let TypDecl (_, Sigma recA) = ctxSigmaDec cPsi k' in
+	    (recA, Substitution.LF.id)
+	 | PVar (p, s) ->
+	    let (_, Sigma recA, cPsi') = C.mctxPDec cD p in
+	    (* checkSub loc cD cPsi s Subst cPsi'; *)
+	    (recA, s)
+       in
+       let (_tA, s) as sA = getType tuple_head srecA target 1 in
+       (TClo sA, head)
 
-      | Const c, Subst ->
-	 ((Term.get c).Term.typ, head)
+    | Const c, Subst ->
+       ((Term.get c).Term.typ, head)
 
-      | MVar (Offset u, s), Subst ->
-	 (* cD ; cPsi' |- tA <= type *)
-	 let (_, tA, cPsi') = Whnf.mctxMDec cD u in
-	 (* checkSub loc cD cPsi s Subst cPsi' ; *)
-	 (TClo (tA, s), head)
+    | MVar (Offset u, s), Subst ->
+       (* cD ; cPsi' |- tA <= type *)
+       let (_, tA, cPsi') = Whnf.mctxMDec cD u in
+       (* checkSub loc cD cPsi s Subst cPsi' ; *)
+       (TClo (tA, s), head)
 
-      | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
-	 (* checkSub loc cD cPsi s Subst cPsi' ; *)
-	 (TClo (tA, s), head)
+    | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
+       (* checkSub loc cD cPsi s Subst cPsi' ; *)
+       (TClo (tA, s), head)
 
-      | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
-	 (* let _ = checkMSub loc cD t' cD' in *)
-	 (* checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ; *)
-	 (TClo(Whnf.cnormTyp (tA, t'), r), head)
+    | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
+       (* let _ = checkMSub loc cD t' cD' in *)
+       (* checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ; *)
+       (TClo(Whnf.cnormTyp (tA, t'), r), head)
 
-      | Const _, Ren
-      | MVar _, Ren
-      | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil)))))
+    | Const _, Ren
+    | MVar _, Ren
+    | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil)))))
 
-      | PVar (p, s), _ ->
-	 (* cD ; cPsi' |- tA <= type *)
-	 let (_, tA, cPsi') = Whnf.mctxPDec cD p in
-	 (* checkSub loc cD cPsi s cl cPsi'; *)
-	 (TClo (tA, s), head)
+    | PVar (p, s), _ ->
+       (* cD ; cPsi' |- tA <= type *)
+       let (_, tA, cPsi') = Whnf.mctxPDec cD p in
+       (* checkSub loc cD cPsi s cl cPsi'; *)
+       (TClo (tA, s), head)
 
-      | FVar _, _ ->
-	 raise (Error (loc, LeftoverFV))
+    | FVar _, _ ->
+       raise (Error (loc, LeftoverFV))
 
+  and ann cD cPsi sM sA = match sM, sA with
+    | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) ->
+       let tM' =
+	 ann cD (DDec (cPsi, Substitution.LF.decSub tX s2))
+	     (tM, Substitution.LF.dot1 s1) (tB, Substitution.LF.dot1 s2)
+       in
+       Ann.LF.Lam (loc, name, tM', sA, mk_tstr cD cPsi sA)
+
+    | ((Lam (loc, _, _), _), _) ->
+       raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
+
+    | ((Tuple (loc, tuple), s1), (Sigma typRec, s2)) ->
+       let tuple' =
+	 annTuple loc cD cPsi (tuple, s1) (typRec, s2)
+       in
+       Ann.LF.Tuple (loc, tuple', sA, mk_tstr cD cPsi sA)
+
+    | (Tuple (loc, _), _), _ ->
+       raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
+
+    | ((Root (loc, _h, _tS), _s), (Atom _, _s')) ->
+       begin
+	 try
+	   let (sP, h', tS') = syn cD cPsi sM in
+	   let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
+	   if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
+	     Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
+	   else
+	     raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
+	 with SpineMismatch ->
+	   raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
+       end
+
+    | (Root (loc, _, _), _), _ ->
+       raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
+
+    | (LFHole loc, _), _ ->
+       Ann.LF.LFHole (loc, sA, mk_tstr cD cPsi sA)
+
+  and annTuple loc cD cPsi (tuple, s1) (trec, s2) =
+    let loop (tuple, s1) (typRec, s2) =
+      match tuple, typRec with
+      | Last tM, SigmaLast (n, tA) ->
+	 let tM' = ann cD cPsi (tM, s1) (tA, s2) in
+	 Ann.LF.Last tM'
+      | Cons (tM, tuple), SigmaElem (_x, tA, typRec) ->
+	 let tM' = ann cD cPsi (tM, s1) (tA, s2) in
+	 let tuple' = annTuple loc cD cPsi (tuple, s1) (typRec, Dot (Obj tM, s2)) in
+	 Ann.LF.Cons (tM', tuple')
+      | _, _ -> raise (Error (loc, TupleArity (cD, cPsi, (Tuple (loc, tuple), s1), (trec, s2))))
+    in
+    loop (tuple, s1) (trec, s2)
+
+  and syn cD cPsi (Root (loc, h, tS), s) =
+    let rec spineLength = function
+      | Nil -> 0
+      | SClo (tS, _) -> spineLength tS
+      | App (_, tS) -> 1 + spineLength tS
+    in
+
+    let rec typLength = function
+      | Atom _ -> 0
+      | PiTyp (_, tB2) -> 1 + typLength tB2
+    in
+
+    let rec syn tS sA =
+      match tS, sA with
+      | (Nil, _), sP -> (sP, Ann.LF.Nil)
+      | (SClo (tS, s'), s), sA ->
+	 let (sA', tS') = syn (tS, Substitution.LF.comp s' s) sA in
+	 (sA', Ann.LF.SClo (tS', s'))
+      | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
+	 let tM' = ann cD cPsi (tM, s1) (tA1, s2) in
+	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
+	 let (sA', tS') = syn (tS, s1) tB2 in
+	 (sA', Ann.LF.App (tM', tS'))
+    in
+
+    let (tA', h') = inferHead loc cD cPsi h Subst in
+    let (sA', s') =
+      C.whnfTyp (tA', Substitution.LF.id)
+    in
+    if typLength sA' < spineLength tS then
+      raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
+    let (sA', tS') = syn (tS, s) (sA', s') in
+    (sA', h', tS')
 end
 
 module Comp = struct
@@ -276,70 +371,70 @@ module Comp = struct
   let _ = Error.register_printer
     (fun (Error (loc, err)) ->
       Error.print_with_location loc (fun ppf ->
-        match err with
-          | MissingTotal prog ->
-            Format.fprintf ppf "Function %s not known to be total."
-              (R.render_cid_prog prog)
-          | InvalidRecCall ->
-            Format.fprintf ppf "Recursive call not structurally smaller."
+	match err with
+	  | MissingTotal prog ->
+	    Format.fprintf ppf "Function %s not known to be total."
+	      (R.render_cid_prog prog)
+	  | InvalidRecCall ->
+	    Format.fprintf ppf "Recursive call not structurally smaller."
 
-          | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-            Error.report_mismatch ppf
-              "Ill-typed expression."
-              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
-            Format.fprintf ppf
-              "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
+	  | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+	    Error.report_mismatch ppf
+	      "Ill-typed expression."
+	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+	      "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
+	    Format.fprintf ppf
+	      "In expression: %a@."
+	      (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) e
 
-          | MismatchSyn (cD, cG, i, variant, theta_tau) ->
-            Error.report_mismatch ppf
-              "Ill-typed expression."
-              "Expected" Format.pp_print_string (string_of_typeVariant variant)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
-            Format.fprintf ppf
-              "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+	  | MismatchSyn (cD, cG, i, variant, theta_tau) ->
+	    Error.report_mismatch ppf
+	      "Ill-typed expression."
+	      "Expected" Format.pp_print_string (string_of_typeVariant variant)
+	      "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau);
+	    Format.fprintf ppf
+	      "In expression: %a@."
+	      (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
 
-          | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-            Error.report_mismatch ppf
-              "Ill-typed pattern."
-              "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
-            Format.fprintf ppf
-              "In pattern: %a@."
-              (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
+	  | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+	    Error.report_mismatch ppf
+	      "Ill-typed pattern."
+	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+	      "Inferred type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau');
+	    Format.fprintf ppf
+	      "In pattern: %a@."
+	      (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat
 (*          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
-            Error.report_mismatch ppf
-              "Ill-typed pattern."
-              "Expected type"
-              (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
-              "Inferred type"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
-              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
+	    Error.report_mismatch ppf
+	      "Ill-typed pattern."
+	      "Expected type"
+	      (P.fmt_ppr_cmp_typ cD' Pretty.std_lvl)
+	      (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
+	      "Inferred type"
+	      (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+	      (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
 *)
-          | BoxMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found box-expression that does not have type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+	  | BoxMismatch (cD, _cG, theta_tau) ->
+	    Format.fprintf ppf "Found box-expression that does not have type %a."
+	      (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
-          | IfMismatch (cD, _cG, theta_tau) ->
-            Error.report_mismatch ppf
-              "Type error in guard of if expression."
+	  | IfMismatch (cD, _cG, theta_tau) ->
+	    Error.report_mismatch ppf
+	      "Type error in guard of if expression."
 	      "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) TypBool
 	      "Actual type"   (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
-          | PairMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found tuple, but expected type %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+	  | PairMismatch (cD, _cG, theta_tau) ->
+	    Format.fprintf ppf "Found tuple, but expected type %a"
+	      (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
-          (* | Typmismatch (cD, (tau1, theta1), (tau2, theta2)) -> *)
-          (*     Error.report_mismatch ppf *)
-          (*       "Type of destructor did not match the type it was expected to have." *)
-          (*       "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau1, theta1)) *)
-          (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau2, theta2))) *)
+	  (* | Typmismatch (cD, (tau1, theta1), (tau2, theta2)) -> *)
+	  (*     Error.report_mismatch ppf *)
+	  (*       "Type of destructor did not match the type it was expected to have." *)
+	  (*       "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
+	  (*       (Whnf.cnormCTyp (tau1, theta1)) *)
+	  (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
+	  (*       (Whnf.cnormCTyp (tau2, theta2))) *)
       ))
 
 
@@ -473,7 +568,7 @@ module Comp = struct
   let rec lookup cG k = match (cG, k) with
     | (I.Dec (_cG', CTypDecl (f,  tau)), 1) -> (f,tau)
     | (I.Dec ( cG', CTypDecl (_, _tau)), k) ->
-        lookup cG' (k - 1)
+	lookup cG' (k - 1)
 
   let lookup' cG k =
     let (f,tau) = lookup cG k in tau
@@ -506,8 +601,8 @@ module Comp = struct
        match cIH with
        | I.Dec(_ , WfRec (_, [], _ )) ->
 	  (* We have fully used a recursive call and we now are finished checking for
-           well-formedness of rec. call. *)
-          None
+	   well-formedness of rec. call. *)
+	  None
        | I.Empty -> raise (Error (loc, InvalidRecCall))
        | _ -> Some cIH
 
@@ -538,9 +633,9 @@ module Comp = struct
 
     | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
        let f = fun (CopatApp (loc, dest, csp), e) ->
-    	 let (ttau', csp') = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau in
-    	 let e' = annotate cD (cG, cIH) e ttau' in
-    	 (csp', e')
+	 let (ttau', csp') = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau in
+	 let e' = annotate cD (cG, cIH) e ttau' in
+	 (csp', e')
        in
        let bs' = List.map f bs in
        Ann.Comp.Cofun (loc, bs', ttau, mk_tstr cD ttau)
@@ -598,36 +693,36 @@ module Comp = struct
        let (total_pragma, tau_sc, projOpt) =
 	 begin
 	   match cM with
-           | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
+	   | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
 	   | I.ClObj (_ , I.PObj (I.PVar (x,s)))  ->
 	      let order = if !Total.enabled && is_indMObj cD x then
 			    IndIndexObj (l, cM)
 			  else
 			    IndexObj (l, cM)
 	      in
-              (order, TypBox(loc, convToParamTyp (C.cnormMetaTyp (mT, C.m_id))), None)
-           | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k ), _ )))
+	      (order, TypBox(loc, convToParamTyp (C.cnormMetaTyp (mT, C.m_id))), None)
+	   | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k ), _ )))
 	   | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,s), k))) ->
 	      let order = if  !Total.enabled && is_indMObj cD x then
 			    IndIndexObj (l,cM)
 			  else
 			    IndexObj (l,cM)
 	      in
-              (order, TypBox (loc, convToParamTyp(C.cnormMetaTyp (mT, C.m_id))), Some k)
+	      (order, TypBox (loc, convToParamTyp(C.cnormMetaTyp (mT, C.m_id))), Some k)
 	   | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,s), _ ))) ->
 	      let order = if  !Total.enabled && is_indMObj cD x then
 			    IndIndexObj (l,cM)
 			  else
 			    IndexObj (l,cM)
 	      in
-              (order, TypBox (loc, C.cnormMetaTyp (mT, C.m_id)), None)
+	      (order, TypBox (loc, C.cnormMetaTyp (mT, C.m_id)), None)
 	   | I.CObj (I.CtxVar (I.CtxOffset k)) ->
 	      let order = if  !Total.enabled && is_indMObj cD k then
 			    IndIndexObj (l,cM)
 			  else
 			    IndexObj (l,cM)
 	      in
-              (order, TypBox (loc, C.cnormMetaTyp (mT, C.m_id)), None)
+	      (order, TypBox (loc, C.cnormMetaTyp (mT, C.m_id)), None)
 	   | _ ->
 	      (IndexObj (l,cM), TypBox (loc, C.cnormMetaTyp (mT, C.m_id)), None)
 	 end

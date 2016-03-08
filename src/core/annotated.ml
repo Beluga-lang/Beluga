@@ -4,22 +4,33 @@ open Syntax
 
 module LF = struct
 
+  type tclo = Int.LF.typ * Int.LF.sub
+
   type mfront =
     | ClObj of Int.LF.psi_hat * clobj
     | CObj of Int.LF.dctx
     | MV of offset
 
    and clobj =
-     | MObj of Int.LF.normal
+     | MObj of normal
      | PObj of Int.LF.head
      | SObj of Int.LF.sub
 
-   (* and normal = *)
-   (*   | Lam of Loc.t * name * normal *)
-   (*   | Root of Loc.t * head * spine *)
-   (*   | LFHole of Loc.t *)
-   (*   | Clo of (normal * sub) *)
-   (*   | Tuple of Loc.t * tuple *)
+   and normal =
+     | Lam of Loc.t * name * normal * tclo * string option
+     | Root of Loc.t * Int.LF.head * spine * tclo * string option
+     | LFHole of Loc.t * tclo * string option
+     | Clo of (normal * Int.LF.sub)
+     | Tuple of Loc.t * tuple * tclo * string option
+
+   and tuple =
+     | Last of normal
+     | Cons of normal * tuple
+
+   and spine =
+     | Nil
+     | App of normal * spine
+     | SClo of (spine * Int.LF.sub)
 
 end
 

@@ -25,14 +25,14 @@ module LF = struct
     (* | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo *)
     (* | KindMismatch     of mctx * dctx * sclo * (kind * sub) *)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
-    (* | IllTypedSub      of mctx * dctx * sub * dctx *)
+    | IllTypedSub      of mctx * dctx * sub * dctx
     | SpineIllTyped    of int * int
     | LeftoverFV
     (* | ParamVarInst     of mctx * dctx * tclo *)
     | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
     | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
     | TermWhenVar      of mctx * dctx * normal
-    (* | SubWhenRen       of mctx * dctx * sub *)
+    | SubWhenRen       of mctx * dctx * sub
 
   exception Error of Syntax.Loc.t * error
   let _ = Error.register_printer
@@ -61,10 +61,10 @@ module LF = struct
 		    (*       (P.fmt_ppr_lf_ctx_var cO) var1 *)
 
 		    | CheckError (cD, cPsi, sM, sA) ->
-		        Format.fprintf ppf
-		    	    "Expression %a does not check against %a."
-      	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
-		    	    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+			Format.fprintf ppf
+			    "Expression %a does not check against %a."
+	    (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+			    (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
 
 		    (* | SigmaMismatch (cD, cPsi, sArec, sBrec) -> *)
 		    (*   Error.report_mismatch ppf *)
@@ -73,10 +73,10 @@ module LF = struct
 		    (*	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sBrec) *)
 
 		    | TupleArity (cD, cPsi, sM, sA) ->
-		    	Error.report_mismatch ppf
-		    	  "Arity of tuple doesn't match type."
-		    	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
-		    	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
+			Error.report_mismatch ppf
+			  "Arity of tuple doesn't match type."
+			  "Tuple" (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl)  (Whnf.norm sM)
+			  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi Pretty.std_lvl) (Whnf.normTypRec sA)
 
 		    (* | KindMismatch (cD, cPsi, sS, sK) -> *)
 		    (*	Error.report_mismatch ppf *)
@@ -86,27 +86,27 @@ module LF = struct
 
 		    | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
 		      Error.report_mismatch ppf
-		        "Ill-typed term."
-		    	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
-		    	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
+			"Ill-typed term."
+			  "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
+			  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2);
 		      Format.fprintf ppf
-		        "In expression: %a@."
-		        (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
+			"In expression: %a@."
+			(P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) (Whnf.norm sM)
 
-		    (* | IllTypedSub (cD, cPsi, s, cPsi') -> *)
-		    (*   Format.fprintf ppf "Ill-typed substitution.@."; *)
-		    (*   Format.fprintf ppf "    Substitution: %a@." *)
-		    (*     (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s; *)
-		    (*   Format.fprintf ppf "    does not take context: %a@." *)
-		    (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi'; *)
-		    (*   Format.fprintf ppf "    to context: %a@." *)
-		    (*     (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi; *)
+		    | IllTypedSub (cD, cPsi, s, cPsi') ->
+		      Format.fprintf ppf "Ill-typed substitution.@.";
+		      Format.fprintf ppf "    Substitution: %a@."
+		        (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) s;
+		      Format.fprintf ppf "    does not take context: %a@."
+		        (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi';
+		      Format.fprintf ppf "    to context: %a@."
+		        (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
 
 		    | SpineIllTyped (n_expected, n_actual) ->
-		    	Error.report_mismatch ppf
-		    	  "Ill-typed spine."
-		    	  "Expected number of arguments" Format.pp_print_int n_expected
-		    	  "Actual number of arguments"   Format.pp_print_int n_actual
+			Error.report_mismatch ppf
+			  "Ill-typed spine."
+			  "Expected number of arguments" Format.pp_print_int n_expected
+			  "Actual number of arguments"   Format.pp_print_int n_actual
 
 		    | LeftoverFV ->
 		       Format.fprintf ppf "Leftover free variable."
@@ -128,13 +128,11 @@ module LF = struct
 		       Format.fprintf ppf "A term was found when expecting a variable.@." ;
 		       Format.fprintf ppf "Offending term: %a @."
 				      (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
-	    (* | SubWhenRen (cD, cPsi, sub) ->  *)
-	    (*	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ; *)
-	    (*	Format.fprintf ppf "Offending substitution: %a @."  *)
-	    (*	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub *)
+	    | SubWhenRen (cD, cPsi, sub) ->
+	    	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
+	    	Format.fprintf ppf "Offending substitution: %a @."
+	    	  (P.fmt_ppr_lf_sub cD cPsi Pretty.std_lvl) sub
 	    ))
-
-  exception SpineMismatch
 
   let mk_tstr cD cPsi sA =
     if !Typeinfo.generate_annotations then
@@ -203,7 +201,6 @@ module LF = struct
 	    (recA, Substitution.LF.id)
 	 | PVar (p, s) ->
 	    let (_, Sigma recA, cPsi') = C.mctxPDec cD p in
-	    (* checkSub loc cD cPsi s Subst cPsi'; *)
 	    (recA, s)
        in
        let (_tA, s) as sA = getType tuple_head srecA target 1 in
@@ -215,16 +212,12 @@ module LF = struct
     | MVar (Offset u, s), Subst ->
        (* cD ; cPsi' |- tA <= type *)
        let (_, tA, cPsi') = Whnf.mctxMDec cD u in
-       (* checkSub loc cD cPsi s Subst cPsi' ; *)
        (TClo (tA, s), head)
 
     | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
-       (* checkSub loc cD cPsi s Subst cPsi' ; *)
        (TClo (tA, s), head)
 
     | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
-       (* let _ = checkMSub loc cD t' cD' in *)
-       (* checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ; *)
        (TClo(Whnf.cnormTyp (tA, t'), r), head)
 
     | Const _, Ren
@@ -234,7 +227,6 @@ module LF = struct
     | PVar (p, s), _ ->
        (* cD ; cPsi' |- tA <= type *)
        let (_, tA, cPsi') = Whnf.mctxPDec cD p in
-       (* checkSub loc cD cPsi s cl cPsi'; *)
        (TClo (tA, s), head)
 
     | FVar _, _ ->
@@ -262,15 +254,12 @@ module LF = struct
 
     | ((Root (loc, _h, _tS), _s), (Atom _, _s')) ->
        begin
-	 try
-	   let (sP, h', tS') = syn cD cPsi sM in
-	   let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
-	   if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-	     Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
-	   else
-	     raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
-	 with SpineMismatch ->
-	   raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
+	 let (sP, h', tS') = syn cD cPsi sM in
+	 let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
+	 if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
+	   Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
+	 else
+	   raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        end
 
     | (Root (loc, _, _), _), _ ->
@@ -655,7 +644,7 @@ module Comp = struct
 
     | (Pair (loc, e1, e2), (TypCross (tau1, tau2), t)) ->
        let e1' = annotate cD (cG, cIH) e1 (tau1, t) in
-       let e2' = annotate cD (cG, cIH) e2 (tau1, t) in
+       let e2' = annotate cD (cG, cIH) e2 (tau2, t) in
        Ann.Comp.Pair (loc, e1', e2', ttau, mk_tstr cD ttau)
 
     | (Let (loc, i, (x, e)), (tau, t)) ->

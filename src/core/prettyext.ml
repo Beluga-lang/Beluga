@@ -950,7 +950,7 @@ module Ext = struct
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a %a%s"
+            fprintf ppf "(Apply %s%a %a%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD 1) i
               (fmt_ppr_cmp_exp_chk cD 2) e

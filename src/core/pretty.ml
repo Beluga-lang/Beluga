@@ -1282,7 +1282,7 @@ module Int = struct
 
       | Comp.Apply (_, i, e) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s@[<2>%a@ %a@]%s"
+            fprintf ppf "(Apply %s@[<2>%a@ %a@]%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_cmp_exp_chk cD cG 2) e
@@ -1290,7 +1290,7 @@ module Int = struct
 
       | Comp.MApp (_, i, mC) ->
           let cond = lvl > 1 in
-            fprintf ppf "%s%a@ %a%s"
+            fprintf ppf "(MApp %s%a@ %a%s)"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 1) i
               (fmt_ppr_meta_obj cD 0) mC

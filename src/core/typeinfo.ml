@@ -179,7 +179,8 @@ module LF = struct
     in
     add_entry loc tstr;
     print_string "We're in syn (ext)!\n";
-    syn ext_tS ann_tS
+    syn ext_tS ann_tS;
+    print_string "Done with syn\n";
 
 end
 
@@ -198,6 +199,11 @@ module Comp = struct
     ann_chk ext_e ann_e
 
   and ann_chk ext_e ann_e =
+    print_string (sprintf "[annotate exp_chk] %s\n"
+		 (PE.expChkToString (Ext.LF.Empty) ext_e));
+    ann_chk' ext_e ann_e
+
+  and ann_chk' ext_e ann_e =
     match (ext_e, ann_e) with
     | (Ext.Comp.Fun (loc, _, ext_e'), Ann.Comp.Fun (_, _, ann_e', _, tstr)) ->
        ann_chk ext_e' ann_e';
@@ -260,6 +266,10 @@ module Comp = struct
        add_entry loc tstr
 
   and ann_syn ext_i ann_i =
+    print_string (sprintf "[annotate exp_syn] %s\n"
+		 (PE.expSynToString (Ext.LF.Empty) ext_i));
+    ann_syn' ext_i ann_i
+  and ann_syn' ext_i ann_i =
     match (ext_i, ann_i) with
     | (Ext.Comp.Var (loc, _), Ann.Comp.Var (_, _, _, tstr)) ->
        add_entry loc tstr
@@ -331,6 +341,10 @@ module Comp = struct
        ann_chk ext_e ann_e
 
   and annotate_pattern ext_pat ann_pat =
+    print_string (sprintf "[annotate pattern] %s\n"
+		 (PE.patternToString (Ext.LF.Empty) ext_pat));
+    annotate_pattern' ext_pat ann_pat
+  and annotate_pattern' ext_pat ann_pat =
     match (ext_pat, ann_pat) with
     | (Ext.Comp.PatMetaObj (loc, (l, ext_mO)), Ann.Comp.PatMetaObj (_, (_, ann_mO), _, tstr)) ->
        (* print_string ("[annotate_pattern] PatMetaObj: " ^ PE.metaObjToString (Ext.LF.Empty) (l, ext_mO) ^ "\n"); *)

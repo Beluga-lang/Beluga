@@ -73,11 +73,12 @@ module Annot = struct
 end
 
 module LF = struct
+
   module Ann = Annotated
   module Ext = Syntax.Ext
 
   (* let _ = Error.register_printer *)
-  (* 	    (fun (AnnotError s) -> Error.print (fun ppf -> Format.fprintf ppf "[AnnotError] %s" s)) *)
+  (*	    (fun (AnnotError s) -> Error.print (fun ppf -> Format.fprintf ppf "[AnnotError] %s" s)) *)
 
   let add_entry loc str =
     match str with
@@ -100,23 +101,53 @@ module LF = struct
     | (Ext.Comp.SObj _, Ann.LF.SObj _) -> ()
 
   and annotate ext_tM ann_tM =
+    (* let ann_tM_str = *)
+    (*   match ann_tM with *)
+    (*   | Ann.LF.Lam (_, _, _, nstr, _, _) -> nstr *)
+    (*   | Ann.LF.Root (_, _, _, nstr, _, _) -> nstr *)
+    (*   | Ann.LF.Tuple (_, _, nstr, _, _) -> nstr *)
+    (*   | Ann.LF.LFHole (_, nstr, _, _) -> nstr *)
+    (* in *)
+    (* let ann_tM_str = *)
+    (*   match ann_tM_str with *)
+    (*   | None -> "" *)
+    (*   | Some str -> str *)
+    (* in *)
+    (* let ext_tM_str = PE.normalToString (Ext.LF.Empty) (Ext.LF.Null) ext_tM *)
+    (* in *)
+    (* let loc = *)
+    (*   match ext_tM with *)
+    (*   | Ext.LF.Lam (loc, _, _) -> loc *)
+    (*   | Ext.LF.Root (loc, _, _) -> loc *)
+    (*   | Ext.LF.Tuple (loc, _) -> loc *)
+    (*   | Ext.LF.LFHole loc -> loc *)
+    (*   | Ext.LF.Ann (loc, _, _) -> loc *)
+    (*   | Ext.LF.TList (loc, _) -> loc *)
+    (* in *)
+    (* let loc = Syntax.Loc.to_string loc in *)
+    (* print_string (sprintf "Matching:\n\t[ext] %s\n\t[ann] %s\nat loc: %s\n" *)
+    (* 			  ext_tM_str ann_tM_str loc); *)
+    annotate' ext_tM ann_tM
+
+  and annotate' ext_tM ann_tM =
     match ext_tM, ann_tM with
-    | Ext.LF.Lam (loc, n, ext_tM'), Ann.LF.Lam (_, _, ann_tM', _, tstr) ->
+    | Ext.LF.Lam (loc, n, ext_tM'), Ann.LF.Lam (_, _, ann_tM',_ , _, tstr) ->
        add_entry loc tstr;
        annotate ext_tM' ann_tM'
-    | Ext.LF.Root (loc, h, tS), Ann.LF.Lam (_, _, ann_tM', _, tstr) ->
+    | Ext.LF.Root (loc, h, tS), Ann.LF.Lam (_, _, ann_tM', _, _, tstr) ->
        annotate ext_tM ann_tM'
     | Ext.LF.Root _, Ann.LF.Root _ ->
+       (* print_string ("Going to syn.\n"); *)
        syn ext_tM ann_tM
-    | Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, tstr) ->
+    | Ext.LF.Tuple (loc, ext_tuple), Ann.LF.Tuple (_, ann_tuple, _, _, tstr) ->
        add_entry loc tstr;
        annotate_tuple ext_tuple ann_tuple
-    | Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, tstr) ->
+    | Ext.LF.LFHole loc, Ann.LF.LFHole (_, _, _, tstr) ->
        add_entry loc tstr
     | Ext.LF.Ann (loc, ext_tM', _), ann_tM' ->
        annotate ext_tM' ann_tM'
     | Ext.LF.TList (loc, tMs), ann_tM' ->
-       (* In practice, ann_tM' should be Root *)
+       (* In practice, ann_tM' should always be Root *)
        let ext_tM' = Index.shunting_yard tMs in
        annotate ext_tM' ann_tM'
   (* Never happens? *)
@@ -131,16 +162,23 @@ module LF = struct
        annotate ext_tM ann_tM;
        annotate_tuple ext_tuple ann_tuple
 
-  and syn (Ext.LF.Root (loc, ext_h, ext_tS)) (Ann.LF.Root (_, ann_h, ann_tS, _, tstr)) =
+  and syn (Ext.LF.Root (loc, ext_h, ext_tS)) (Ann.LF.Root (_, ann_h, ann_tS, nstr, _, tstr)) =
+    (* let Some str = nstr in *)
+    (* print_string ("Here, we have: " ^ str ^ "\n"); *)
     let rec syn ext_tS ann_tS =
       match ext_tS, ann_tS with
       | Ext.LF.Nil, Ann.LF.Nil -> ()
-      | Ext.LF.App (_, ext_tM, ext_tS'), Ann.LF.App (ann_tM, ann_tS') ->
-  	 syn ext_tS' ann_tS';
-  	 annotate ext_tM ann_tM
-      | _, _ -> ()    (* TODO: See why spines don't always line up *)
+      | Ext.LF.App (_, ext_tM, ext_tS'), Ann.LF.App (ann_tM, ann_tS', str) ->
+	 (* print_string (sprintf "Matching:\n\t[ext spine] %s\n\t[ann spine] %s\n" *)
+	 (* 		 (PE.spineToString (Ext.LF.Empty) (Ext.LF.Null) ext_tS) *)
+	 (* 		 str *)
+	 (* 	      ); *)
+	 annotate ext_tM ann_tM;
+	 syn ext_tS' ann_tS'
+      (* | _, _ -> ()    (\* TODO: See why spines don't always line up *\) *)
     in
     add_entry loc tstr;
+    (* print_string "We're in syn (ext)!\n"; *)
     syn ext_tS ann_tS
 
 end
@@ -176,7 +214,7 @@ module Comp = struct
     | (Ext.Comp.Cofun (loc, ext_bs), Ann.Comp.Cofun (_, ann_bs, _, tstr)) ->
        (* TODO Check out cofuns *)
        (* let f = (fun (ext_csp, ext_e') *)
-       (* 		    (int_csp, ann_e') -> ann_chk ext_e' ann_e') *)
+       (*		    (int_csp, ann_e') -> ann_chk ext_e' ann_e') *)
        (* in *)
        (* List.iter2 f ext_bs ann_bs; *)
        add_entry loc tstr

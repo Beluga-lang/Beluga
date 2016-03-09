@@ -17,11 +17,11 @@ module LF = struct
      | SObj of Int.LF.sub
 
    and normal =
-     | Lam of Loc.t * name * normal * tclo * string option
-     | Root of Loc.t * Int.LF.head * spine * tclo * string option
-     | LFHole of Loc.t * tclo * string option
+     | Lam of Loc.t * name * normal * string option * tclo * string option
+     | Root of Loc.t * Int.LF.head * spine * string option * tclo * string option
+     | LFHole of Loc.t * string option * tclo * string option
      | Clo of (normal * Int.LF.sub)
-     | Tuple of Loc.t * tuple * tclo * string option
+     | Tuple of Loc.t * tuple * string option * tclo * string option
 
    and tuple =
      | Last of normal
@@ -29,7 +29,7 @@ module LF = struct
 
    and spine =
      | Nil
-     | App of normal * spine
+     | App of normal * spine * string
      | SClo of (spine * Int.LF.sub)
 
 end

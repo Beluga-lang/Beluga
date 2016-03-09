@@ -140,6 +140,9 @@ module LF = struct
     else
       None
 
+  let mk_nstr cD cPsi sM =
+    Some (P.normalToString cD cPsi sM)
+
   let rec annotateMetaObj cD (loc, cM) cTt =
     match (cM, cTt) with
     | (CObj cPsi, (CTyp (Some w), _)) ->
@@ -176,12 +179,13 @@ module LF = struct
 	 Ann.LF.PObj h'
        else
 	 raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
-    | (MObj (Root(l, h, Nil)), (PTyp tA, t)) ->
+    | (MObj (Root(l, h, Nil) as sM), (PTyp tA, t)) ->
        let (tA', h') = inferHead loc cD cPsi' h Ren in
        let tA = C.cnormTyp (tA, t) in
        if C.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then
 	 let sA = (tA, Substitution.LF.id) in
-	 Ann.LF.MObj (Ann.LF.Root (l, h', Ann.LF.Nil, sA, mk_tstr cD cPsi' sA))
+	 Ann.LF.MObj (Ann.LF.Root (l, h', Ann.LF.Nil, mk_nstr cD cPsi' (sM, Substitution.LF.id),
+				   sA, mk_tstr cD cPsi' sA))
        else
 	 raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
     | _, _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
@@ -244,7 +248,7 @@ module LF = struct
 	 ann cD (DDec (cPsi, Substitution.LF.decSub tX s2))
 	     (tM, Substitution.LF.dot1 s1) (tB, Substitution.LF.dot1 s2)
        in
-       Ann.LF.Lam (loc, name, tM', sA, mk_tstr cD cPsi sA)
+       Ann.LF.Lam (loc, name, tM', mk_nstr cD cPsi sM, sA, mk_tstr cD cPsi sA)
 
     | ((Lam (loc, _, _), _), _) ->
        raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -253,7 +257,7 @@ module LF = struct
        let tuple' =
 	 annTuple loc cD cPsi (tuple, s1) (typRec, s2)
        in
-       Ann.LF.Tuple (loc, tuple', sA, mk_tstr cD cPsi sA)
+       Ann.LF.Tuple (loc, tuple', mk_nstr cD cPsi sM, sA, mk_tstr cD cPsi sA)
 
     | (Tuple (loc, _), _), _ ->
        raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -263,7 +267,7 @@ module LF = struct
 	 let (sP, h', tS') = syn cD cPsi sM in
 	 let (tP', tQ') = (C.normTyp sP, C.normTyp sA) in
 	 if (C.convTyp (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-	   Ann.LF.Root (loc, h', tS', sA, mk_tstr cD cPsi sA)
+	   Ann.LF.Root (loc, h', tS', mk_nstr cD cPsi sM, sA, mk_tstr cD cPsi sA)
 	 else
 	   raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        end
@@ -272,7 +276,7 @@ module LF = struct
        raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
     | (LFHole loc, _), _ ->
-       Ann.LF.LFHole (loc, sA, mk_tstr cD cPsi sA)
+       Ann.LF.LFHole (loc, mk_nstr cD cPsi sM, sA, mk_tstr cD cPsi sA)
 
   and annTuple loc cD cPsi (tuple, s1) (trec, s2) =
     let loop (tuple, s1) (typRec, s2) =
@@ -307,19 +311,12 @@ module LF = struct
       | (SClo (tS, s'), s), sA ->
 	 let (sA', tS') = syn (tS, Substitution.LF.comp s' s) sA in
 	 (sA', Ann.LF.SClo (tS', s'))
-      (* Remove implicits? *)
-      | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), Maybe), tB2), s2) ->
-	 (* print_string (sprintf "[inner syn] tM: %s is implicit.\n" *)
-			       (* (P.normalToString cD cPsi (tM, s1))); *)
-      	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-      	 let (sA', tS') = syn (tS, s1) tB2 in
-      	 (sA', tS')
       | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
 	 (* print_string (sprintf "[syn] tM: %s\n" (P.normalToString cD cPsi (tM, s1))); *)
 	 let tM' = ann cD cPsi (tM, s1) (tA1, s2) in
 	 let tB2 = C.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
 	 let (sA', tS') = syn (tS, s1) tB2 in
-	 (sA', Ann.LF.App (tM', tS'))
+	 (sA', Ann.LF.App (tM', tS', P.spineToString cD cPsi (App (tM, tS), s1)))
     in
 
     let (tA', h') = inferHead loc cD cPsi h Subst in
@@ -331,7 +328,22 @@ module LF = struct
     if typLength sA' < spineLength tS then
       raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
     let (sA', tS') = syn (tS, s) (sA', s') in
-    (sA', h', tS')
+
+    (* We're done with the spine, so we can safely deal with implicit args. *)
+    (* Done in the same manner as in pretty printing. *)
+    let rec dropSpineLeft tS n = match (tS, n) with
+      | (_, 0) -> tS
+      | (Ann.LF.Nil, _) -> tS
+      | (Ann.LF.App (_, rest, _), n) -> dropSpineLeft rest (n-1)
+    in
+    let deimplicitize_spine h tS = match h with
+      | Const c ->
+	 let imp_args = Term.get_implicit_arguments c in
+	 dropSpineLeft tS imp_args
+      | _ -> tS
+    in
+
+    (sA', h', deimplicitize_spine h' tS')
 end
 
 module Comp = struct
@@ -941,6 +953,10 @@ module Comp = struct
     List.map (fun branch -> annBranch caseTyp cD (cG, cIH) branch tau_s ttau) branches
 
   and annBranch caseTyp cD (cG, cIH) branch tau_s (tau, t) =
+    (* print_string ("[annBranch] branch = " ^ P.branchToString cD cG branch); *)
+    annBranch' caseTyp cD (cG, cIH) branch tau_s (tau, t)
+
+  and annBranch' caseTyp cD (cG, cIH) branch tau_s (tau, t) =
     match branch with
     | EmptyBranch (loc, cD1', pat, t1) ->
        let tau_p = C.cnormCTyp (tau_s, t1) in

@@ -311,7 +311,7 @@ module Ext = struct
       in function
         | LF.Lam (_, x, m) ->
             let cond = lvl > 0 in
-              fprintf ppf "%s%s%s. %a%s"
+              fprintf ppf "(Lam %s%s%s. %a%s)"
                 (l_paren_if cond)
                 (symbol_to_html Lam)
                 (Id.render_name x)
@@ -319,36 +319,36 @@ module Ext = struct
                 (r_paren_if cond)
 
         | LF.Tuple (_, tuple) ->
-           fprintf ppf "<%a>"
+           fprintf ppf "(Tuple <%a>)"
              (fmt_ppr_tuple cD cPsi lvl) tuple
 
         | LF.Root (_, h, LF.Nil) ->
-            fprintf ppf "%a"
+            fprintf ppf "(Root %a Nil)"
               (fmt_ppr_lf_head cD cPsi lvl) h
 
         | LF.Root (_, h, ms)  ->
             let cond = lvl > 1 in
             let ms = deimplicitize_spine h ms in
-              fprintf ppf "%s%a%a%s"
+              fprintf ppf "(Root %s%a% a%s)"
                 (l_paren_if cond)
                 (fmt_ppr_lf_head cD cPsi lvl) h
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
                 (r_paren_if cond)
 
         | LF.LFHole _ ->
-          fprintf ppf "?"
+          fprintf ppf "(LFHole ?)"
 
         | LF.NTyp (u, tA)-> fmt_ppr_lf_typ cD cPsi lvl ppf tA
 
         | LF.TList(_, [x]) -> fmt_ppr_lf_normal cD cPsi lvl ppf x
         | LF.TList(_, l) ->
           let length = List.length l in
-          fprintf ppf "%s" (l_paren_if (lvl > 0));
+          fprintf ppf "(TList %s" (l_paren_if (lvl > 0));
 
           iteri (fun i x ->
             if i = length - 1 then fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x
             else fprintf ppf "%a " (fmt_ppr_lf_normal cD cPsi (lvl + 1)) x) l;
-          fprintf ppf "%s" (r_paren_if (lvl > 0));
+          fprintf ppf "%s)" (r_paren_if (lvl > 0));
 	| LF.PatEmpty _ -> fprintf ppf "{}"
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
@@ -399,10 +399,10 @@ module Ext = struct
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
       | LF.Nil ->
-          fprintf ppf ""
+          fprintf ppf "Nil"
 
       | LF.App (_, m, ms) ->
-          fprintf ppf " %a%a"
+          fprintf ppf "(App %a %a)"
             (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
             (fmt_ppr_lf_spine   cD cPsi lvl) ms
 

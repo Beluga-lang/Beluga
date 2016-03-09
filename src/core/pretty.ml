@@ -335,29 +335,32 @@ module Int = struct
         | LF.Lam (_, x, m) ->
             let x = fresh_name_dctx cPsi x in
             let cond = lvl > 0 in
-              fprintf ppf "%s\\%s. %a%s"
+              fprintf ppf "(Lam %s\\%s. %a%s)"
                 (l_paren_if cond)
                 (Id.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
         | LF.LFHole _ ->
-          fprintf ppf "?"
+          fprintf ppf "(LFHole ?)"
         | LF.Tuple (_, tuple) ->
-           fprintf ppf "<%a>"
+           fprintf ppf "(Tuple <%a>)"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple
 
         | LF.Root (_, h, LF.Nil) ->
-            fprintf ppf "%a"
+            fprintf ppf "(Root %a Nil)"
               (fmt_ppr_lf_head cD cPsi lvl) h
 
-        | LF.Root (_, h, ms)  ->
+        | LF.Root (loc, h, ms)  ->
             let cond = lvl > 1 in
-            let ms = deimplicitize_spine h ms in
-              fprintf ppf "%s%a %a%s"
+            (* let ms = deimplicitize_spine h ms in *)
+              fprintf ppf "(Root %s%a %a%s)\n\t{Without Implicit : Root %a %a}\n\t[at loc %s]"
                 (l_paren_if cond)
                 (fmt_ppr_lf_head cD cPsi lvl) h
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
                 (r_paren_if cond)
+                (fmt_ppr_lf_head cD cPsi lvl) h
+                (fmt_ppr_lf_spine cD cPsi 2)  (deimplicitize_spine h ms)
+		(Syntax.Loc.to_string loc)
 
         | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
@@ -459,12 +462,12 @@ module Int = struct
 
 
     and fmt_ppr_lf_spine cD cPsi lvl ppf = function
-      | LF.Nil -> ()
+      | LF.Nil -> fprintf ppf "Nil"
       | LF.App(m, LF.Nil) ->
-        fprintf ppf "%a"
+        fprintf ppf "(App %a Nil)"
           (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
       | LF.App (m, ms) ->
-          fprintf ppf "%a %a"
+          fprintf ppf "(App %a %a)"
             (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
             (fmt_ppr_lf_spine   cD cPsi lvl) ms
 
@@ -1408,7 +1411,7 @@ module Int = struct
               (fmt_ppr_cmp_branch_prefix  0) cD1
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
           else
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : %a  @]  @]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : (Refinement %a)  @]  @]@ "
               (fmt_ppr_cmp_branch_prefix  0) cD1
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
               (fmt_ppr_refinement cD1 cD 2) t
@@ -1432,7 +1435,7 @@ module Int = struct
              *)
             (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
         else
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : (Refinement %a)  @]  => @]@ @[<2>@ %a@]@]@ "
             (fmt_ppr_cmp_branch_prefix  0) cD1'
             (fmt_ppr_meta_obj cD1' 0) mO
             (* this point is where the " : " is in the string above *)
@@ -1458,7 +1461,7 @@ module Int = struct
                  *)
                 (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
           else
-            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : (Refinement %a)  @]  => @]@ @[<2>@ %a@]@]@ "
                (fmt_ppr_cmp_branch_prefix  0) cD1'
               (fmt_ppr_cmp_gctx cD1' 0) cG'
                (fmt_ppr_pat_obj cD1' cG' 0) pat
@@ -1477,21 +1480,21 @@ module Int = struct
       | (LF.MShift k, _ ) ->
           (match !Control.substitutionStyle with
             | Control.Natural -> fprintf ppf ""
-            | Control.DeBruijn -> fprintf ppf "^%s" (string_of_int k))
+            | Control.DeBruijn -> fprintf ppf "(MShift ^%s)" (string_of_int k))
 
       | (LF.MDot (f, LF.MShift k), LF.Dec(cD', decl)) ->
           (match !Control.substitutionStyle with
             | Control.Natural ->
-                fprintf ppf "%a"
+                fprintf ppf "(MDot %a)"
                   (fmt_ppr_refine_elem cD decl 1) f
             | Control.DeBruijn ->
-                fprintf ppf "%a@ ,@ ^%s"
+                fprintf ppf "(MDot %a@ ,@ ^%s)"
                   (fmt_ppr_refine_elem cD decl 1) f
                   (string_of_int k))
 
 
       | (LF.MDot (f, s), LF.Dec(cD', decl)) ->
-          fprintf ppf "%a@ ,@ %a"
+          fprintf ppf "(MDot %a@ ,@ %a)"
             (fmt_ppr_refine_elem cD decl 1) f
             (fmt_ppr_refinement cD cD' lvl) s
       | _ -> fprintf ppf "No match"

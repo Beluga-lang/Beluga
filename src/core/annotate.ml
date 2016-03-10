@@ -175,8 +175,18 @@ module PrettyAnn = struct
   and branchToString cD cG b =
     match b with
     | Comp.EmptyBranch (_, cD1, pat, _) ->
-       sprintf "{EmptyBranch|@ @[<v2>| @[<v0> @[%s@] @] @]}"
+       sprintf "@ {EmptyBranch|@ @[<v2>| @[<v0> @[%s@] @] @]}"
 	       (patternToString cD1 Syntax.Int.LF.Empty pat)
+    | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO, _, _), _, e) ->
+       sprintf "@ {Branch|@[<v2>| @[<v0>@[%s@] => @]@ @[<2> %s@]@]}@ "
+	       (metaObjToString cD1' mO)
+	       (expChkToString cD1' cG e)
+    | Comp.Branch (_, cD1', cG', pat, _, e) ->
+       let cG_t = cG in
+       let cG_ext = Context.append cG_t cG' in
+       sprintf "@ {Branch|@[<v2>| @[<v0> @[ |- %s  @]  => @]@ @[<2>@ %s@]@]}@ "
+	       (patternToString cD1' cG' pat)
+	       (expChkToString cD1' cG_ext e)
 
   and patternToString cD cG pat = "{pattern|Unsupported}"
 end
@@ -365,6 +375,7 @@ module LF = struct
 	 raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
     | _, _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', C.cnormClTyp cTt))))
 
+  (* TODO Not actually necessary to return the head, fix this later *)
   and inferHead loc cD cPsi head cl =
     match head, cl with
     | BVar k', _ ->
@@ -811,7 +822,12 @@ module Comp = struct
     annotate cD (cG, cIH) e ttau
 
   and annotate cD (cG, cIH) e ttau =
-    annotate' cD (cG, cIH) e ttau
+    let e' = annotate' cD (cG, cIH) e ttau in
+    print_string (Printf.sprintf "[annotate - chk]\n\t[int] %s\n\t========>\n\t[ann] %s\n"
+			  (P.expChkToString cD cG e)
+			  (PrettyAnn.expChkToString cD cG e')
+		 );
+    e'
 
   and annotate' cD (cG, cIH) e ttau =
     match (e, ttau) with

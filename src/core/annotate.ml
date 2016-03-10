@@ -6,6 +6,181 @@ module R = Store.Cid.DefaultRenderer
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5]) *)
 
+module PrettyAnn = struct
+
+  open Annotated
+  open Format
+
+  module R = Store.Cid.DefaultRenderer
+
+  let print_tstr tstr =
+    match tstr with
+    | None -> ""
+    | Some str -> ""
+
+  let rec _get_names_dctx : Syntax.Int.LF.dctx -> Id.name list = function
+    | Syntax.Int.LF.Null -> []
+    | Syntax.Int.LF.CtxVar psi -> []
+    | Syntax.Int.LF.DDec (cPsi', Syntax.Int.LF.TypDecl (n, _))
+    | Syntax.Int.LF.DDec (cPsi', Syntax.Int.LF.TypDeclOpt n) -> n :: _get_names_dctx cPsi'
+
+  let rec get_names_mctx : Syntax.Int.LF.mctx -> Id.name list = function
+    | Syntax.Int.LF.Empty -> []
+    | Syntax.Int.LF.Dec (cD', Syntax.Int.LF.Decl (n, _, _))
+    | Syntax.Int.LF.Dec (cD', Syntax.Int.LF.DeclOpt n) -> n :: get_names_mctx cD'
+
+  let rec get_names_gctx : Syntax.Int.Comp.gctx -> Id.name list = function
+    | Syntax.Int.LF.Empty -> []
+    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.WfRec (n, _, _))
+    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDecl (n, _))
+    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
+
+  let _fresh_name_dctx (cPsi : Syntax.Int.LF.dctx) : Id.name -> Id.name =
+    Id.gen_fresh_name (_get_names_dctx cPsi)
+  let fresh_name_mctx (cD : Syntax.Int.LF.mctx) : Id.name -> Id.name =
+    Id.gen_fresh_name (get_names_mctx cD)
+  let fresh_name_gctx (cG : Syntax.Int.Comp.gctx) : Id.name -> Id.name  =
+    Id.gen_fresh_name (get_names_gctx cG)
+
+  let rec expChkToString cD cG e =
+    match e with
+    | Comp.Rec (_, x, e, _, tstr) ->
+       let x = fresh_name_gctx cG x in
+       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
+       sprintf "{Rec|rec %s =>@ %s%s}"
+	       (Id.render_name x)
+	       (expChkToString cD cG' e)
+	       (print_tstr tstr)
+    | Comp.Fun (_, x, e, _, tstr) ->
+       let x = fresh_name_gctx cG x in
+       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
+       sprintf "{Fun|fn %s =>@ %s%s}"
+	       (Id.render_name x)
+	       (expChkToString cD cG' e)
+	       (print_tstr tstr)
+    | Comp.MLam (_, u, e, _, tstr) ->
+       let u = fresh_name_mctx cD u in
+       let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt u) in
+       let cG' = Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1) in
+       sprintf "{MLam|mlam %s =>@ %s%s}"
+	       (Id.render_name u)
+	       (expChkToString cD' cG' e)
+	       (print_tstr tstr)
+    | Comp.Pair (_, e1, e2, _, tstr) ->
+       sprintf "{Pair|(%s, %s)%s}"
+	       (expChkToString cD cG e1)
+	       (expChkToString cD cG e2)
+	       (print_tstr tstr)
+    | Comp.LetPair (_, i, (x, y, e), _, tstr) ->
+       let x = fresh_name_gctx cG x in
+       let y = fresh_name_gctx cG y in
+       let cG' = Syntax.Int.LF.Dec (Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x),
+				    Syntax.Int.Comp.CTypDeclOpt y) in
+       sprintf "{LetPair|@[<2>let <%s, %s> = %s@ in %s@]%s}"
+	       (Id.render_name x)
+	       (Id.render_name y)
+	       (expSynToString cD cG i)
+	       (expChkToString cD cG' e)
+	       (print_tstr tstr)
+    | Comp.Let (_, i, (x, e), _, tstr) ->
+       let x = fresh_name_gctx cG x in
+       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
+       sprintf "{Let|@[<2>let %s = %s@ in %s@]%s}"
+	       (Id.render_name x)
+	       (expSynToString cD cG i)
+	       (expChkToString cD cG' e)
+	       (print_tstr tstr)
+    | Comp.Box (_, cM, _, tstr) ->
+       sprintf "{Box|%s%s}"
+	       (metaObjToString cD cM)
+	       (print_tstr tstr)
+    | Comp.Case (_, prag, i, bs, _, tstr) ->
+       sprintf "{Case|@[<v> case @[%s@] of %s %s @]@,%s}"
+	       (expSynToString cD cG i)
+	       (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
+	       (branchesToString cD cG bs)
+	       (print_tstr tstr)
+    | Comp.Syn (_, i, _, tstr) ->
+       sprintf "{Syn|%s%s}"
+	       (expSynToString cD cG i)
+	       (print_tstr tstr)
+    | Comp.If (_, i, e1, e2, _, tstr) ->
+       sprintf "{If|@[<2>if %s@[<-1>then %s @]else %s@]%s}"
+	       (expSynToString cD cG i)
+	       (expChkToString cD cG e1)
+	       (expChkToString cD cG e2)
+	       (print_tstr tstr)
+    | Comp.Hole (_, f, _, tstr) ->
+       let x = f () in
+       sprintf "{Hole| ? { %d }%s}"
+	       x
+	       (print_tstr tstr)
+
+  and expSynToString cD cG i =
+    match i with
+    | Comp.Var (_, x, _, tstr) ->
+       sprintf "{Var|%s%s}"
+	       (R.render_var cG x)
+	       (print_tstr tstr)
+    | Comp.Const (_, prog, _, tstr) ->
+       sprintf "{Const|%s%s}"
+	       (R.render_cid_prog prog)
+	       (print_tstr tstr)
+    | Comp.DataConst (_, c, _, tstr) ->
+       sprintf "{DataConst|%s%s}"
+	       (R.render_cid_comp_const c)
+	       (print_tstr tstr)
+    | Comp.DataDest (_, c, _, tstr) ->
+       sprintf "{DataDest|%s%s}"
+	       (R.render_cid_comp_dest c)
+	       (print_tstr tstr)
+    | Comp.Apply (_, i, e, _, tstr) ->
+       sprintf "{Apply|%s %s%s}"
+	       (expSynToString cD cG i)
+	       (expChkToString cD cG e)
+	       (print_tstr tstr)
+    | Comp.MApp (_, i, mC, _, tstr) ->
+       sprintf "{MApp|%s %s%s}"
+	       (expSynToString cD cG i)
+	       (metaObjToString cD mC)
+	       (print_tstr tstr)
+    | Comp.PairVal (_, i1, i2, _, tstr) ->
+       sprintf "{PairVal|(%s, %s)%s}"
+	       (expSynToString cD cG i1)
+	       (expSynToString cD cG i2)
+	       (print_tstr tstr)
+    | Comp.Ann (e, _, _, tstr) ->
+       sprintf "{Ann|%s%s}"
+	       (expChkToString cD cG e)
+	       (print_tstr tstr)
+    | Comp.Equal (_, i1, i2, _, tstr) ->
+       sprintf "{Equal|%s == %s%s}"
+	       (expSynToString cD cG i1)
+	       (expSynToString cD cG i2)
+	       (print_tstr tstr)
+
+    | Comp.Boolean (b, _, tstr) ->
+       sprintf "{Boolean|%s%s}"
+	       (if b then "ttrue" else "ffalse")
+	       (print_tstr tstr)
+
+  and metaObjToString cD mC = "{metaObj|Unsupported}"
+
+  and branchesToString cD cG bs =
+    match bs with
+    | [] -> ""
+    | b :: [] -> sprintf "%s" (branchToString cD cG b)
+    | b :: bs -> sprintf "%s%s" (branchToString cD cG b) (branchesToString cD cG bs)
+
+  and branchToString cD cG b =
+    match b with
+    | Comp.EmptyBranch (_, cD1, pat, _) ->
+       sprintf "{EmptyBranch|@ @[<v2>| @[<v0> @[%s@] @] @]}"
+	       (patternToString cD1 Syntax.Int.LF.Empty pat)
+
+  and patternToString cD cG pat = "{pattern|Unsupported}"
+end
+
 module LF = struct
   open Context
   open Store.Cid
@@ -887,6 +1062,10 @@ module Comp = struct
 
   and syn cD (cG, cIH) e =
     let ((cIH_opt, tau, t), e') = syn' cD (cG, cIH) e in
+    print_string (Printf.sprintf "[annotate - syn]\n\t[int] %s\n\t========>\n\t[ann] %s\n"
+			  (P.expSynToString cD cG e)
+			  (PrettyAnn.expSynToString cD cG e')
+		 );
     ((cIH_opt, tau, t), strip_mapp_args cD cG e')
 
   and syn' cD (cG, cIH) e =
@@ -1151,175 +1330,4 @@ module Comp = struct
     let _ = () (* LF.checkMetaObj cD mO (ctyp, theta) *) in
     I.MDot(metaObjToMFront mO, theta)
 
-end
-
-module Pretty = struct
-
-  open Annotated
-  open Format
-
-  module R = Store.Cid.DefaultRenderer
-
-  let print_tstr tstr =
-    match tstr with
-    | None -> "None"
-    | Some str -> str
-
-  let rec get_names_dctx : Syntax.Int.LF.dctx -> Id.name list = function
-    | Syntax.Int.LF.Null -> []
-    | Syntax.Int.LF.CtxVar psi -> []
-    | Syntax.Int.LF.DDec (cPsi', Syntax.Int.LF.TypDecl (n, _))
-    | Syntax.Int.LF.DDec (cPsi', Syntax.Int.LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
-
-  let rec get_names_mctx : Syntax.Int.LF.mctx -> Id.name list = function
-    | Syntax.Int.LF.Empty -> []
-    | Syntax.Int.LF.Dec (cD', Syntax.Int.LF.Decl (n, _, _))
-    | Syntax.Int.LF.Dec (cD', Syntax.Int.LF.DeclOpt n) -> n :: get_names_mctx cD'
-
-  let rec get_names_gctx : Syntax.Int.Comp.gctx -> Id.name list = function
-    | Syntax.Int.LF.Empty -> []
-    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.WfRec (n, _, _))
-    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDecl (n, _))
-    | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
-
-  let fresh_name_dctx (cPsi : Syntax.Int.LF.dctx) : Id.name -> Id.name =
-    Id.gen_fresh_name (get_names_dctx cPsi)
-  let fresh_name_mctx (cD : Syntax.Int.LF.mctx) : Id.name -> Id.name =
-    Id.gen_fresh_name (get_names_mctx cD)
-  let fresh_name_gctx (cG : Syntax.Int.Comp.gctx) : Id.name -> Id.name  =
-    Id.gen_fresh_name (get_names_gctx cG)
-
-  let rec expChkToString cD cG e =
-    match e with
-    | Comp.Rec (_, x, e, _, tstr) ->
-       let x = fresh_name_gctx cG x in
-       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
-       sprintf "{Rec|rec %s =>@ %s : %s}"
-	       (Id.render_name x)
-	       (expChkToString cD cG' e)
-	       (print_tstr tstr)
-    | Comp.Fun (_, x, e, _, tstr) ->
-       let x = fresh_name_gctx cG x in
-       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
-       sprintf "{Fun|fn %s =>@ %s : %s}"
-	       (Id.render_name x)
-	       (expChkToString cD cG' e)
-	       (print_tstr tstr)
-    | Comp.MLam (_, u, e, _, tstr) ->
-       let u = fresh_name_mctx cD u in
-       let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt u) in
-       let cG' = Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1) in
-       sprintf "{MLam|mlam %s =>@ %s : %s}"
-	       (Id.render_name u)
-	       (expChkToString cD' cG' e)
-	       (print_tstr tstr)
-    | Comp.Pair (_, e1, e2, _, tstr) ->
-       sprintf "{Pair|(%s, %s) : %s}"
-	       (expChkToString cD cG e1)
-	       (expChkToString cD cG e2)
-	       (print_tstr tstr)
-    | Comp.LetPair (_, i, (x, y, e), _, tstr) ->
-       let x = fresh_name_gctx cG x in
-       let y = fresh_name_gctx cG y in
-       let cG' = Syntax.Int.LF.Dec (Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x),
-				    Syntax.Int.Comp.CTypDeclOpt y) in
-       sprintf "{LetPair|@[<2>let <%s, %s> = %s@ in %s@] : %s}"
-	       (Id.render_name x)
-	       (Id.render_name y)
-	       (expSynToString cD cG i)
-	       (expChkToString cD cG' e)
-	       (print_tstr tstr)
-    | Comp.Let (_, i, (x, e), _, tstr) ->
-       let x = fresh_name_gctx cG x in
-       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
-       sprintf "{Let|@[<2>let %s = %s@ in %s@] : %s}"
-	       (Id.render_name x)
-	       (expSynToString cD cG i)
-	       (expChkToString cD cG' e)
-	       (print_tstr tstr)
-    | Comp.Box (_, cM, _, tstr) ->
-       sprintf "{Box|%s : %s}"
-	       (metaObjToString cD cM)
-	       (print_tstr tstr)
-    | Comp.Case (_, prag, i, bs, _, tstr) ->
-       sprintf "{Case|@[<v> case @[%s@] of %s %s @]@, : %s}"
-	       (expSynToString cD cG i)
-	       (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
-	       (branchesToString cD cG bs)
-	       (print_tstr tstr)
-    | Comp.If (_, i, e1, e2, _, tstr) ->
-       sprintf "{If|@[<2>if %s@[<-1>then %s @]else %s@] : %s}"
-	       (expSynToString cD cG i)
-	       (expChkToString cD cG e1)
-	       (expChkToString cD cG e2)
-	       (print_tstr tstr)
-    | Comp.Hole (_, f, _, tstr) ->
-       let x = f () in
-       sprintf "{Hole| ? { %d } : %s}"
-	       x
-	       (print_tstr tstr)
-
-  and expSynToString cD cG i =
-    match i with
-    | Comp.Var (_, x, _, tstr) ->
-       sprintf "{Var|%s : %s}"
-	       (R.render_var cG x)
-	       (print_tstr tstr)
-    | Comp.Const (_, prog, _, tstr) ->
-       sprintf "{Const|%s : %s}"
-	       (R.render_cid_prog prog)
-	       (print_tstr tstr)
-    | Comp.DataConst (_, c, _, tstr) ->
-       sprintf "{DataConst|%s : %s}"
-	       (R.render_cid_comp_const c)
-	       (print_tstr tstr)
-    | Comp.DataDest (_, c, _, tstr) ->
-       sprintf "{DataDest|%s : %s}"
-	       (R.render_cid_comp_dest c)
-	       (print_tstr tstr)
-    | Comp.Apply (_, i, e, _, tstr) ->
-       sprintf "{Apply|%s %s : %s}"
-	       (expSynToString cD cG i)
-	       (expChkToString cD cG e)
-	       (print_tstr tstr)
-    | Comp.MApp (_, i, mC, _, tstr) ->
-       sprintf "{MApp|%s %s : %s}"
-	       (expSynToString cD cG i)
-	       (metaObjToString cD mC)
-	       (print_tstr tstr)
-    | Comp.PairVal (_, i1, i2, _, tstr) ->
-       sprintf "{PairVal|(%s, %s) : %s}"
-	       (expSynToString cD cG i1)
-	       (expSynToString cD cG i2)
-	       (print_tstr tstr)
-    | Comp.Ann (e, _, _, tstr) ->
-       sprintf "{Ann|%s : %s}"
-	       (expChkToString cD cG e)
-	       (print_tstr tstr)
-    | Comp.Equal (_, i1, i2, _, tstr) ->
-       sprintf "{Equal|%s == %s : %s}"
-	       (expSynToString cD cG i1)
-	       (expSynToString cD cG i2)
-	       (print_tstr tstr)
-
-    | Comp.Boolean (b, _, tstr) ->
-       sprintf "{Boolean|%s : %s}"
-	       (if b then "ttrue" else "ffalse")
-	       (print_tstr tstr)
-
-  and metaObjToString cD mC = "{metaObj|Unsupported}"
-
-  and branchesToString cD cG bs =
-    match bs with
-    | [] -> ""
-    | b :: [] -> sprintf "%s" (branchToString cD cG b)
-    | b :: bs -> sprintf "%s%s" (branchToString cD cG b) (branchesToString cD cG bs)
-
-  and branchToString cD cG b =
-    match b with
-    | Comp.EmptyBranch (_, cD1, pat, _) ->
-       sprintf "{EmptyBranch|@ @[<v2>| @[<v0> @[%s@] @] @]}"
-	       (patternToString cD1 Syntax.Int.LF.Empty pat)
-
-  and patternToString cD cG pat = "{pattern|Unsupported}"
 end

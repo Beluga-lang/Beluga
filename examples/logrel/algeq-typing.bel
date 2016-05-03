@@ -341,7 +341,7 @@ ctype  =
 % | Top =>    let Dot s' e = s in e
 % | Pop v' => let Dot s' e = s in lookup v' s'
 % ;
-
+%{
 % Monotonicity of logical equivalence on substitutions
 rec wknLogSub :
     {h0:tctx}{h:tctx}{#W:[h0 |- h]}
@@ -371,43 +371,45 @@ rec logEqSubTrans :
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
 | Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2) [h |- D1] [h |- D4];
-
+}%
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
-   -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = 
+   -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] = ? ;
 % / total g (lookup g) /
- mlam g, #p => fn s => case [g] of 
+%{ mlam g, #p => fn s => case [g] of 
 	 | [] => impossible [ |- #p.1] 
 	 | [g',b:block x:tm,y:oft x S[]] => 
-	   let Dot rs rm [h |- D1] [h |- D2] = s in   
-	   (case [g', b:block x:tm, y:oft x S[] |- #p.2] of 
+	   let Dot rs rm [h |- D1] [h |- D2] = s in  
+	   (case [g', b:block x:tm, y:oft x S[] |- #p.2] of
+ 	      |  [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
 	      |  {#q:[g0 |- block (x:tm, u: oft x Q[])]}
-                 [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g'] [g' |- #q] rs
-	      | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
+                 [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g0] [g0 |- #q] rs
 )
  ;
-
+}%
 % Tiny fundamental theorem
 rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#S1] ~ M[#S2]] [|- T] =
- / total d (thm' g h m t s1 s2 d) /
+% / total d (thm' g h m t s1 s2 d) /
 fn d, s =>
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
-| [g |- #p.2] => lookup [g] [g |- #p] s 
-| [g |- oft/app D1 D2] =>
+%{| [g |- #p.2] =>  lookup [g] [g |- #p] s 
+| [g |- oft/app D1 D2] =>  
   let LogArr [h |- M1] [h |- M2] f = thm' [g |- D1] s in
   f [h] [h |- ..] [h |- _] [h |- D2[#S1]] [h |- _] [h |- D2[#S2]] (thm' [g |- D2] s)
+}%
 | [g |- oft/lam (\x.\y. D0)] =>
+  let (d : [g0 |- oft (lam \x.M) (arr R[] S[])]) = d in 
   LogArr [h |- lam (\x. _)] [h |- lam (\x. _)]
    (mlam h0,#W,N1,D1,N2,D2 => fn rn => 
     let q0 = Dot (wknLogSub [h0] [h] [h0 |- #W] s) rn [h0 |- D1] [h0 |- D2] in
-    % let q2 = thm' [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] q0 in
+    let q2 = thm' [g0,b:block (x:tm,y:oft x R[]) |- D0[..,b.1,b.2]] q0 in
     ? % closed [|- _] [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
    )
 ;
 
 % Perhaps an alternative to this is to explicitly carry around typing derivations in thm
 rec dtp1 : (g:ctx) [g |- deq M1 M2 T[]] -> [g |- oft M1 T[]] =
-/ total d (dtp1 g m1 m2 t d) /
+% / total d (dtp1 g m1 m2 t d) /
 fn d => case d of
 | [g |- d/app D1 D2] =>
   let [g |- E1] = dtp1 [g |- D1] in
@@ -427,7 +429,7 @@ fn d => case d of
 | [g |- d/sym D1] => dtp2 [g |- D1]
 | [g |- d/trans D1 D2] => dtp1 [g |- D1]
 and dtp2 : (g:ctx) [g |- deq M1 M2 T[]] -> [g |- oft M2 T[]] =
-/ total d (dtp2 g m1 m2 t d) /
+% / total d (dtp2 g m1 m2 t d) /
 fn d => case d of
 | [g |- d/app D1 D2] =>
   let [g |- E1] = dtp2 [g |- D1] in
@@ -452,7 +454,7 @@ fn d => case d of
 rec thm : [g |- deq M1 M2 T[]]
         -> LogSub [g] [h |- #S1] [h |- #S2]
         -> Log [h |- M1[#S1] ~ M2[#S2]] [|- T] =
-/ total d (thm g h m1 m2 t sigma sigma' d) /
+% / total d (thm g h m1 m2 t sigma sigma' d) /
 fn d , s => 
 let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
 case d of
@@ -462,7 +464,7 @@ case d of
   let [g |- E2] = dtp2 [g |- D2] in 
   f [h] [h |- ..] [h |- _] [h |- E1[#S1]] [h |- _] [h |- E2[#S2]] (thm [g |- D2] s)
 | [g |- d/beta (\x.\y. D1) D2] =>
-  % let q0 = thm [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s) ? ?) in 
+  % let q0 = thm [g,b:block x:tm, y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s) ? ?) in 
   ? % closed [|- _] [h |- trans1 beta refl] [h |- refl] ?
 | [g |- d/lam (\x.\y. E1)] =>
   LogArr [h |- lam (\x. _)] [h |- lam (\x. _)]

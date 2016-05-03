@@ -565,12 +565,21 @@ let isVar h = match h with
     | (Shift ( _k), Shift ( _k'), cPsi) -> (id, cPsi)
         (* both substitutions are the same number of shifts by invariant *)
 
-    | (EmptySub, EmptySub , Null) -> (EmptySub, Null)
+(*    | (EmptySub, EmptySub , Null) -> (EmptySub, Null)  *)
+    | (EmptySub, _ , Null) -> (EmptySub, Null) 
+    | (_, EmptySub , Null) -> (EmptySub, Null) 
+
     | (Undefs, _ , _) | (_ , Undefs, _) -> (EmptySub, Null)
     (* all other cases impossible for pattern substitutions *)
 
-    | (_s1, _s2, _cPsi )  ->
-           raise (Error "Intersection not defined")
+    | (_s1, _s2, _cPsi )  -> 
+         raise (Error ("Intersection of substitutions is not defined")) 
+	 
+(*           raise (Error ("Intersection not defined - s1 = " ^ 
+			   (P.subToString Empty  (Context.hatToDCtx phat) s1) ^ 
+		           "s2 = " ^ 
+			   (P.subToString Empty  (Context.hatToDCtx phat) s2)))
+*)
   end
 
   (* m_intersection (mt1, mt2) cD' = (mt', cD'')

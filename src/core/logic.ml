@@ -523,51 +523,74 @@ module Printer = struct
   let typToLatex cPsi sM =                 
     P.typToLatex LF.Empty cPsi sM
 
-  let rec goalToLatex cPsi (g, s) = match g with
+
+  let rec goalToLatex cPsi (g, s) superScripts = match g with
     | Atom (tA) ->
       typToLatex cPsi (tA, s)     
-    (* TODO : infera{u} : need some way to label assumptions with new letter instead of u + add this label to ruleName *)                            
+    (* TODO : infera{u} : need some way to label assumptions with new letter instead of u *)                            
     | Impl ((r, tD), g') -> 
-      sprintf "\\deduce[\\vdots]{%s}{\\infera{u}{%s}{}}"
-       (resToLatex cPsi (r, s))
-       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
-    (* TODO : add label to ruleName, only print goal *)
-    | All (tD, g') ->
+      let assumptionName = "u" in 
+      (* add assumption name to superScripts - at the end *)
+      superScripts := (!superScripts)@[assumptionName];
+      sprintf "\\deduce[\\vdots]{%s}{\\infera{%s}{%s}{}}"
+       (resToLatex cPsi (r, s) superScripts)
+       assumptionName
+       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts)  
+    | All (LF.TypDecl (x, tM) as tD, g') ->
+      (* add name of quantified variable to superScripts - at the beginning *)
+      let varName = Id.string_of_name x in
+      superScripts := varName::(!superScripts);
       sprintf "%s"
-       (* (declToString cPsi (tD, s)) *)
-       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
+       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts)  
 
 
-  and resToLatex cPsi (r, s) = match r with
+  and resToLatex cPsi (r, s) superScripts = match r with
     | Head (tH) ->
       typToLatex cPsi (tH, s)
     | And (g, r') -> sprintf "%s -> %s"
     (* TODO : find some way to print both hypothetical derivations side by side *)
-      (goalToLatex cPsi (g, s)) (resToLatex cPsi (r', s))
+      (goalToLatex cPsi (g, s) superScripts) (resToLatex cPsi (r', s) superScripts)
     | Exists (LF.TypDecl (_, tM), r') ->
     (* rarely used, simply prints the residual *)
       let tM' = Convert.etaExpand cPsi (tM, s)
-      in sprintf "%s" (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)))
+      in sprintf "%s" (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)) superScripts)
 
- 
+
   let sgnClauseToLatex (cidTerm, sCl) = 
     let ruleName = Id.string_of_name (termName cidTerm) in
     let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
+    (* list of superscripts that will be used with our rule name, updated by goalToLatex calls *)
+    let superScripts = ref [] in
+    (* function used to convert a superscript list [a1; a2] into the string " ^{a1,a2}" *)
+    let sListToString l = 
+      let rec sListToString' l = match l with
+        | []    -> ""
+        | h::[] -> h
+        | h::t  -> h ^ "," ^ (sListToString' t)
+      in 
+      match l with 
+        | [] -> ""
+        | _  -> sprintf " ^{%s}" (sListToString' l)
+    in 
     match sCl.subGoals with
       | True -> 
         sprintf "\\infera{\\RULE%s}{%s}{}" ruleName conclusion
       | Conjunct (True, g) ->
-        let p1 = goalToLatex sCl.eVars (g, S.id) in
-        sprintf "\\infera{\\RULE%s}{%s}{%s}" ruleName conclusion p1
+        let p1 = goalToLatex sCl.eVars (g, S.id) superScripts in
+        let super = sListToString !superScripts in
+        sprintf "\\infera{\\RULE%s%s}{%s}{%s}" ruleName super conclusion p1
       | Conjunct (Conjunct (True, g1), g2) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) in
-        sprintf "\\inferaa{\\RULE%s}{%s}{%s}{%s}" ruleName conclusion p1 p2
+        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts in
+        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts in
+        let super = sListToString !superScripts in
+        sprintf "\\inferaa{\\RULE%s%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2
       | Conjunct (Conjunct (Conjunct (True, g1), g2), g3) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) in
-        let p3 = goalToLatex sCl.eVars (g3, S.id) in
-        sprintf "\\inferaaa{\\RULE%s}{%s}{%s}{%s}{%s}" ruleName conclusion p1 p2 p3 
+        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts in
+        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts in
+        let p3 = goalToLatex sCl.eVars (g3, S.id) superScripts in
+        let super = sListToString !superScripts in 
+        sprintf "\\inferaaa{\\RULE%s%s}{%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2 p3 
+
 
   (* generates a maccro of the form \newcommand{\RULEcidTerm}{\ruleName{cidTerm}} *)
   let nameToRuleMaccro name =
@@ -628,7 +651,7 @@ module Printer = struct
       - print a maccro for the term constant in the maccros file
       - print an inference rule in the main file  *)
       DynArray.iter (fun w -> 
-        fprintf outMaccros "%s\n" (sgcClauseToMaccros w);
+        fprintf outMaccros "%s\n\n" (sgcClauseToMaccros w);
         fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
 
     in

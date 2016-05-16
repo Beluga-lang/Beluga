@@ -377,14 +377,10 @@ module Index = struct
      Iterate over all signature clauses associated with c.
   *)
   let iterSClauses f cidTyp =
-    DynArray.iter f (Hashtbl.find types cidTyp) (* call the function f on every elem of the dyn array (Hashtbl.find types cidTyp) *)
-                                                (* find : ('a, 'b) t -> 'a -> 'b => returns the current binding of cidTyp in hashtable types *)
+    DynArray.iter f (Hashtbl.find types cidTyp)
 
   let iterAllSClauses f =                       
-    Hashtbl.iter (fun k v -> DynArray.iter f v) types    (* calls DynArray.iter f v for every value v in pairs (_, v) of types *)
-                                                         (* which applies f to every elem of the dynamic array v *)  
-                                                         (* => applies f to every element of every dynamic array in types *)   
-
+    Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
@@ -427,7 +423,7 @@ module Printer = struct
   let dctxToString cPsi =
     P.dctxToString LF.Empty cPsi
 
-  let typToString cPsi sM =                     (* arguments : cPsi (tA, s) *)
+  let typToString cPsi sM =                 
     P.typToString LF.Empty cPsi sM
 
   let normalToString cPsi sM =
@@ -453,10 +449,10 @@ module Printer = struct
       typToString cPsi (tA, s)                                      
     | Impl ((r, tD), g') -> sprintf "%s -> %s"
       (resToString cPsi (r, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  (* add tD to our list of typ_decl cPsi for goal + something on subst *)
+      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
     | All (tD, g') -> sprintf "[∀%s. %s]"
       (declToString cPsi (tD, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  (* same as for Impl *)
+      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s)) 
 
   (* resToString cPsi (r, s) = string
      Invariants:
@@ -478,7 +474,7 @@ module Printer = struct
       (declToString cPsi (tD, s))
       (resToString cPsi (r', LF.Dot (LF.Obj tM', s)))
 
-  let rec subGoalsToString cD (cG, s) = match cG with   (* arguments : sCl.eVars (sCl.subgoals, S.id) *)
+  let rec subGoalsToString cD (cG, s) = match cG with
     | True -> ""
     | Conjunct (cG', g) -> sprintf "  <- %s\n%s"
       (goalToString cD (g, s)) (subGoalsToString cD (cG', s))
@@ -524,82 +520,127 @@ module Printer = struct
 
 
 (********************************************************************************************************************)
+  let typToLatex cPsi sM =                 
+    P.typToLatex LF.Empty cPsi sM
 
   let rec goalToLatex cPsi (g, s) = match g with
     | Atom (tA) ->
-    (* TODO : make my own printing function for typ *)
-      typToString cPsi (tA, s)     
+      typToLatex cPsi (tA, s)     
     (* TODO : infera{u} : need some way to label assumptions with new letter instead of u + add this label to ruleName *)                            
     | Impl ((r, tD), g') -> 
-      sprintf "\\deduce[\\vdots]{\\infera{u}{%s}{}}{%s}"
+      sprintf "\\deduce[\\vdots]{%s}{\\infera{u}{%s}{}}"
        (resToLatex cPsi (r, s))
        (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
     (* TODO : add label to ruleName, only print goal *)
     | All (tD, g') ->
-      sprintf "[∀decl. %s]"
+      sprintf "%s"
        (* (declToString cPsi (tD, s)) *)
        (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
 
 
   and resToLatex cPsi (r, s) = match r with
     | Head (tH) ->
-      typToString cPsi (tH, s)
+      typToLatex cPsi (tH, s)
     | And (g, r') -> sprintf "%s -> %s"
-    (* find some way to print both hypothetical derivations side by side *)
+    (* TODO : find some way to print both hypothetical derivations side by side *)
       (goalToLatex cPsi (g, s)) (resToLatex cPsi (r', s))
-    | Exists (LF.TypDecl (_, tM) as tD, r') ->
-    (* rarely used, don't worry about it *)
+    | Exists (LF.TypDecl (_, tM), r') ->
+    (* rarely used, simply prints the residual *)
       let tM' = Convert.etaExpand cPsi (tM, s)
-      in sprintf "[∃%s. %s]"
-      (declToString cPsi (tD, s))
-      (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)))
+      in sprintf "%s" (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)))
 
-
+ 
   let sgnClauseToLatex (cidTerm, sCl) = 
     let ruleName = Id.string_of_name (termName cidTerm) in
-    let conclusion = typToString sCl.eVars (sCl.tHead, S.id) in
+    let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
     match sCl.subGoals with
       | True -> 
-        sprintf "\\infera{\\%s}{%s}{}" ruleName conclusion
+        sprintf "\\infera{\\RULE%s}{%s}{}" ruleName conclusion
       | Conjunct (True, g) ->
         let p1 = goalToLatex sCl.eVars (g, S.id) in
-        sprintf "\\infera{\\%s}{%s}{%s}" ruleName conclusion p1
+        sprintf "\\infera{\\RULE%s}{%s}{%s}" ruleName conclusion p1
       | Conjunct (Conjunct (True, g1), g2) ->
         let p1 = goalToLatex sCl.eVars (g1, S.id) in
         let p2 = goalToLatex sCl.eVars (g2, S.id) in
-        sprintf "\\inferaa{\\%s}{%s}{%s}{%s}" ruleName conclusion p1 p2
+        sprintf "\\inferaa{\\RULE%s}{%s}{%s}{%s}" ruleName conclusion p1 p2
       | Conjunct (Conjunct (Conjunct (True, g1), g2), g3) ->
         let p1 = goalToLatex sCl.eVars (g1, S.id) in
         let p2 = goalToLatex sCl.eVars (g2, S.id) in
         let p3 = goalToLatex sCl.eVars (g3, S.id) in
-        sprintf "\\inferaaa{\\%s}{%s}{%s}{%s}{%s}" ruleName conclusion p1 p2 p3 
+        sprintf "\\inferaaa{\\RULE%s}{%s}{%s}{%s}{%s}" ruleName conclusion p1 p2 p3 
 
+  (* generates a maccro of the form \newcommand{\RULEcidTerm}{\ruleName{cidTerm}} *)
+  let nameToRuleMaccro name =
+    sprintf "\\newcommand{\\RULE%s}{\\ruleName{%s}}" name name
 
-  (* TODO : need real name and number *)
+  (* generates two maccros for each term constant :
+  \newcommand {\RULEcidTerm} {\ruleName{cidTerm}}
+  \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args}
+   *)
+  (* well defined up to four arguments *)
+  let sgcClauseToMaccros (cidTerm, sCl) =
+    let name = Id.string_of_name (termName cidTerm) in
+    let ruleMaccro = nameToRuleMaccro name in
+    match sCl.subGoals with
+      | True -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
+          ruleMaccro name name
+      | Conjunct (True, _) ->
+        sprintf "%s\n\\newcommand{\\TERM%s}[1]{\\mathsf{%s}\\;#1}"
+          ruleMaccro name name
+      | Conjunct (Conjunct (True, _), _) ->
+        sprintf "%s\n\\newcommand{\\TERM%s}[2]{\\mathsf{%s}\\;#1\\;#2}" 
+          ruleMaccro name name
+      | Conjunct (Conjunct (Conjunct (True, _), _), _) ->
+        sprintf "%s\n\\newcommand{\\TERM%s}[3]{\\mathsf{%s}\\;#1\\;#2\\;#3}" 
+          ruleMaccro name name
+      | Conjunct (Conjunct (Conjunct (Conjunct (True, _), _), _), _) ->
+        sprintf "%s\n\\newcommand{\\TERM%s}[4]{\\mathsf{%s}\\;#1\\;#2\\;#3\\;#4}" 
+          ruleMaccro name name
+      | _ -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}"
+          ruleMaccro name name
+
+  (* well defined up to four arguments *)
   let cidTypToMaccro cidTyp =
-    (* QUESTION : where is termName defined ??? *)
-    let name = Id.string_of_name (termName cidTyp) in
-    let size = 2 in
-    match size with 
-      | 0 -> sprintf "\\newcommand{\\%s}{\\mathsf{%s}}" name name
-      | 1 -> sprintf "\\newcommand{\\%s}[1]{\\mathsf{%s}\\;#1}" name name
-      | 2 -> sprintf "\\newcommand{\\%s}[2]{\\mathsf{%s}\\;#1\\;#2}" name name
-      | 3 -> sprintf "\\newcommand{\\%s}[3]{\\mathsf{%s}\\;#1\\;#2\\;#3}" name name
+    (* get name of type constant *)
+    let typEntry = Store.Cid.Typ.get cidTyp in
+    let typName = typEntry.Store.Cid.Typ.name in
+    let name = Id.string_of_name typName in
+    (* get number of arguments of type constant *)
+    let arguments = Store.Cid.Typ.args_of_name typName in
+    match arguments with 
+      | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" name name
+      | 1 -> sprintf "\\newcommand{\\TYP%s}[1]{\\mathsf{%s}\\;#1}" name name
+      | 2 -> sprintf "\\newcommand{\\TYP%s}[2]{\\mathsf{%s}\\;#1\\;#2}" name name
+      | 3 -> sprintf "\\newcommand{\\TYP%s}[3]{\\mathsf{%s}\\;#1\\;#2\\;#3}" name name
+      | 4 -> sprintf "\\newcommand{\\TYP%s}[4]{\\mathsf{%s}\\;#1\\;#2\\;#3\\;#4}" name name
+      | _ -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" name name
 
 
-  let printSignatureLatex maccrosFile mainFile =
-    let outMaccros = open_out maccrosFile in
+  let printSignatureLatex mainFile =
+    let outMaccros = open_out "latex/maccros.tex" in
     let outMain = open_out mainFile in
      
     (* takes as input one binding key/value of Types : k is a cidTyp, v is a DynArray of (cidTerm, sCl) *)
     let typeFamilyToLatex k v = 
       (* print a maccro for the type constant k in the maccros file *)
-      fprintf outMaccros "%s\n" (cidTypToMaccro k);
-      (* print all clauses in v, converted to LaTex inference rules, in the main file *)
-      DynArray.iter (fun w -> fprintf outMain "%s\n" (sgnClauseToLatex w)) v
+      fprintf outMaccros "\n%s\n\n" (cidTypToMaccro k);
+      (* for each clause in v :
+      - print a maccro for the term constant in the maccros file
+      - print an inference rule in the main file  *)
+      DynArray.iter (fun w -> 
+        fprintf outMaccros "%s\n" (sgcClauseToMaccros w);
+        fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
 
     in
+    (* preamble of maccros file *)
+    fprintf outMaccros "\\input{prelude}\n\n";
+    (* preamble of main file *)
+    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
+
+    (* conversion to LaTex and printing of maccros *)
     Hashtbl.iter typeFamilyToLatex types;
+    (* conclusion of main file *)
+    fprintf outMain "\n\\end{document}";
     close_out outMaccros;
     close_out outMain;
 
@@ -921,7 +962,7 @@ let runLogic () =
         Printer.printSignature ()
       else () ;
       (***********************************************************************************************************)
-      Printer.printSignatureLatex "maccros.tex" "main.tex"; 
+      Printer.printSignatureLatex "latex/main.tex"; 
       (***********************************************************************************************************)  
       (* Solve! *)
       Index.iterQueries Frontend.solve ;

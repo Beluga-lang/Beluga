@@ -141,6 +141,9 @@ module Int = struct
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    (********************************************************************************************************)
+    val typToLatex       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    (********************************************************************************************************)
     val mtypToString      : LF.mctx -> LF.ctyp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
@@ -260,15 +263,15 @@ module Int = struct
     let rec fmt_ppr_lf_typ cD cPsi lvl ppf = function
       | LF.Atom (_, a, LF.Nil) ->
           fprintf ppf "%s"
-            (R.render_cid_typ a)
+            (R.render_cid_typ a) 
 
       | LF.Atom (_, a, ms) ->
           let cond = lvl > 1 in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
-              (R.render_cid_typ a)
+              (R.render_cid_typ a) 
               (fmt_ppr_lf_spine cD cPsi 2) ms
-              (r_paren_if cond)
+              (r_paren_if cond) 
 
       | LF.PiTyp ((LF.TypDecl (x, a), LF.Maybe), b) ->
           let x = fresh_name_dctx cPsi x in
@@ -298,6 +301,7 @@ module Int = struct
             (fmt_ppr_lf_typ cD cPsi lvl) typ
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
+
     and fmt_ppr_lf_tuple cD cPsi lvl ppf = function
       | LF.Last tM ->
            fmt_ppr_lf_normal cD cPsi lvl ppf tM
@@ -306,6 +310,7 @@ module Int = struct
            fprintf ppf "%a, %a"
              (fmt_ppr_lf_normal cD cPsi lvl) tM
              (fmt_ppr_lf_tuple cD cPsi lvl) rest
+
 
     and fmt_ppr_lf_normal cD cPsi lvl ppf =
       let rec dropSpineLeft ms n = match (ms, n) with
@@ -331,25 +336,24 @@ module Int = struct
         | LF.AnnH _ ->
             ms
 
-      in function
+     in function
         | LF.Lam (_, x, m) ->
             let x = fresh_name_dctx cPsi x in
             let cond = lvl > 0 in
-              fprintf ppf "%s\\%s. %a%s"
+              fprintf ppf "%s\\%s. %a%s" 
                 (l_paren_if cond)
                 (Id.render_name x)
-                (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
-                (r_paren_if cond)
+                (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
+                (r_paren_if cond) 
+                
         | LF.LFHole _ ->
           fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"
              (fmt_ppr_lf_tuple cD cPsi lvl) tuple
-
         | LF.Root (_, h, LF.Nil) ->
             fprintf ppf "%a"
               (fmt_ppr_lf_head cD cPsi lvl) h
-
         | LF.Root (_, h, ms)  ->
             let cond = lvl > 1 in
             let ms = deimplicitize_spine h ms in
@@ -359,7 +363,8 @@ module Int = struct
                 (fmt_ppr_lf_spine cD cPsi 2)  ms
                 (r_paren_if cond)
 
-        | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
+        | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s)) 
+
 
     and fmt_ppr_lf_head cD cPsi lvl ppf head =
       let paren s = not (Control.db()) && lvl > 0 && (match s with
@@ -467,6 +472,203 @@ module Int = struct
           fprintf ppf "%a %a"
             (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
             (fmt_ppr_lf_spine   cD cPsi lvl) ms
+
+
+    (*************************************************************************************************************)
+    (* should only be called with Atoms *)
+    and fmt_ppr_lf_typ_latex cD cPsi lvl ppf = function
+      | LF.Atom (_, a, LF.Nil) ->
+          fprintf ppf "%s"
+            (R.render_cid_typ_latex a) (* changed *)
+
+      | LF.Atom (_, a, ms) ->
+          let cond = lvl > 1 in
+            fprintf ppf "%s%s %a%s"
+              (l_paren_if cond)
+              (R.render_cid_typ_latex a) (* changed *)
+              (fmt_ppr_lf_spine_latex cD cPsi 2) ms
+              (r_paren_if cond) 
+
+      | _ -> ()
+
+    (* no changes to this function *)
+    and fmt_ppr_lf_tuple_latex cD cPsi lvl ppf = function
+      | LF.Last tM ->
+           fmt_ppr_lf_normal_latex cD cPsi lvl ppf tM
+
+      | LF.Cons(tM, rest) ->
+           fprintf ppf "%a, %a"
+             (fmt_ppr_lf_normal_latex cD cPsi lvl) tM
+             (fmt_ppr_lf_tuple_latex cD cPsi lvl) rest
+
+
+    (* added {} around some strings returned by this function *)
+    and fmt_ppr_lf_normal_latex cD cPsi lvl ppf =
+      let rec dropSpineLeft ms n = match (ms, n) with
+          (_, 0) -> ms
+        | (LF.Nil, _) -> ms
+        | (LF.App (_m, rest), n) -> dropSpineLeft rest (n - 1)
+
+      in let deimplicitize_spine h ms = match h with
+        | LF.Const c ->
+            let implicit_arguments = if !Control.printImplicit
+                                     then 0
+                                     else Store.Cid.Term.get_implicit_arguments c
+            in
+              dropSpineLeft ms implicit_arguments
+
+        | LF.MVar _
+        | LF.BVar _
+        | LF.PVar _
+        | LF.FMVar _
+        | LF.FPVar _
+        | LF.Proj _
+        | LF.FVar _
+        | LF.AnnH _ ->
+            ms
+
+     in function
+        (* added {} and \ became / not to mess with LaTex *)
+        | LF.Lam (_, x, m) ->
+            let x = fresh_name_dctx cPsi x in
+            let cond = lvl > 0 in
+              fprintf ppf "{%s/%s. %a%s}" 
+                (l_paren_if cond)
+                (Id.render_name x)
+                (fmt_ppr_lf_normal_latex cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
+                (r_paren_if cond) 
+                
+        | LF.LFHole _ ->
+          fprintf ppf "?"
+        (* added {} *)
+        | LF.Tuple (_, tuple) ->
+           fprintf ppf "{<%a>}"
+             (fmt_ppr_lf_tuple_latex cD cPsi lvl) tuple
+        (* added {} *)
+        | LF.Root (_, h, LF.Nil) ->
+            fprintf ppf "{%a}"
+              (fmt_ppr_lf_head_latex cD cPsi lvl) h
+        (* added {} *)
+        | LF.Root (_, h, ms)  ->
+            let cond = lvl > 1 in
+            let ms = deimplicitize_spine h ms in
+              fprintf ppf "{%s%a %a%s}"
+                (l_paren_if cond)
+                (fmt_ppr_lf_head_latex cD cPsi lvl) h
+                (fmt_ppr_lf_spine_latex cD cPsi 2)  ms
+                (r_paren_if cond)
+
+        | LF.Clo(tM, s) -> fmt_ppr_lf_normal_latex cD cPsi lvl ppf (Whnf.norm (tM, s)) 
+
+
+    and fmt_ppr_lf_head_latex cD cPsi lvl ppf head =
+      let paren s = not (Control.db()) && lvl > 0 && (match s with
+        | LF.EmptySub
+        | LF.Undefs -> false
+        | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
+        | _ -> true)
+      in
+      let rec fmt_head_with proj = function
+      | LF.HClo (h, s, sigma) ->
+          fprintf ppf "%s[#%a[%a]]"
+            (R.render_bvar cPsi h)
+            (fmt_ppr_lf_offset cD lvl) s
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+      | LF.HMClo (h, ((s, theta),sigma)) ->
+          fprintf ppf "%s[#%a[%a ; %a]]"
+            (R.render_bvar cPsi h)
+            (fmt_ppr_lf_mmvar lvl) s
+            (fmt_ppr_lf_msub  cD lvl) theta
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+      | LF.BVar x  ->
+          fprintf ppf "%s%s"
+            (R.render_bvar cPsi x)
+            proj
+
+      | LF.Const c ->
+          fprintf ppf "%s%s"
+            (R.render_cid_term_latex c) (* changed *)
+            proj
+
+      | LF.MMVar ((c, ms), s) ->
+          fprintf ppf "%s%a%s[%a]%a%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_mmvar lvl) c
+            proj
+            (fmt_ppr_lf_msub cD lvl) ms
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.MPVar ((c, ms), s) ->
+          fprintf ppf "%s%a%s[%a]%a%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_mmvar lvl) c
+            proj
+            (fmt_ppr_lf_msub cD lvl) ms
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.MVar(c, LF.Undefs)
+      | LF.MVar(c, LF.EmptySub) ->
+          fprintf ppf "%a%s"
+            (fmt_ppr_lf_cvar cD lvl) c
+            proj
+
+      | LF.MVar (c, s) ->
+          fprintf ppf "%s%a%s[%a]%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_cvar cD lvl) c
+            proj
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.PVar (c, s) ->
+          fprintf ppf "%s#%a%s[%a]%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_offset cD lvl) c
+            proj
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.FVar x ->
+          fprintf ppf "%s%s"
+            (Id.render_name x)
+            proj
+
+      | LF.FMVar (u, s) ->
+          fprintf ppf "FMV %s%s%s[%a]%s"
+            (l_paren_if (paren s))
+            (Id.render_name u)
+            proj
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.FPVar (p, s) ->
+          fprintf ppf "%sFPV #%s%s[%a]%s"
+            (l_paren_if (paren s))
+            (Id.render_name p)
+            proj
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.Proj (head, k) ->
+          fmt_head_with ("." ^ string_of_int k) head
+
+      in
+        fmt_head_with "" head
+
+
+    and fmt_ppr_lf_spine_latex cD cPsi lvl ppf = function
+      | LF.Nil -> ()
+      | LF.App(m, LF.Nil) ->
+        fprintf ppf "%a"
+          (fmt_ppr_lf_normal_latex  cD cPsi (lvl + 1)) m
+      | LF.App (m, ms) ->
+          fprintf ppf "%a %a"
+            (fmt_ppr_lf_normal_latex  cD cPsi (lvl + 1)) m
+            (fmt_ppr_lf_spine_latex   cD cPsi lvl) ms
+    (*************************************************************************************************************)
+
 
     and fmt_ppr_lf_sub cD cPsi lvl ppf s =
       match !Control.substitutionStyle with
@@ -1640,6 +1842,14 @@ module Int = struct
       let tA = Whnf.normTyp sA in
         fmt_ppr_lf_typ cD cPsi std_lvl str_formatter tA
         ; flush_str_formatter ()
+
+    (********************************************************************************************************)
+    (* calls latex version of fmt_ppr_lf_typ *)
+    let typToLatex cD cPsi sA    =
+      let tA = Whnf.normTyp sA in
+        fmt_ppr_lf_typ_latex cD cPsi std_lvl str_formatter tA
+        ; flush_str_formatter () 
+    (********************************************************************************************************)
 
     let mtypToString cD mtyp    =
       (* let tA = Whnf.normTyp sA in *)

@@ -270,6 +270,10 @@ module Cid : sig
     val render_cid_comp_dest  : cid_comp_dest -> string
     val render_cid_typ        : cid_typ      -> string
     val render_cid_term       : cid_term     -> string
+    (***********************************************************************************************************)
+    val render_cid_typ_latex  : cid_typ      -> string
+    val render_cid_term_latex : cid_term     -> string
+    (***********************************************************************************************************)
     val render_cid_schema     : cid_schema   -> string
     val render_cid_prog       : cid_prog     -> string
     val render_offset         : offset       -> string

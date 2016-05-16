@@ -188,7 +188,7 @@ module Cid = struct
     | Int.LF.Typ -> 0
     | Int.LF.PiKind(_, k) -> 1 + (args k)
 
-    let get ?(fixName=false) (l, n) =
+    let get ?(fixName=false) (l, n) =                             
       let l' = Modules.name_of_id l in
       let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
@@ -1145,6 +1145,10 @@ module Cid = struct
     val render_cid_comp_dest : cid_comp_dest -> string
     val render_cid_typ      : cid_typ      -> string
     val render_cid_term     : cid_term     -> string
+    (***********************************************************************************************************)
+    val render_cid_typ_latex  : cid_typ      -> string
+    val render_cid_term_latex : cid_term     -> string
+    (***********************************************************************************************************)
     val render_cid_schema   : cid_schema   -> string
     val render_cid_prog     : cid_prog     -> string
     val render_offset       : offset       -> string
@@ -1165,8 +1169,13 @@ module Cid = struct
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    (***********************************************************************************************************)
     let render_cid_typ    a    = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term   c    = render_name (Term.get ~fixName:true c).Term.name
+    (* I have to provide these because of the signature, but they are not used *)
+    let render_cid_typ_latex   a = render_name (Typ.get ~fixName:true a).Typ.name
+    let render_cid_term_latex  c = render_name (Term.get ~fixName:true c).Term.name
+    (***********************************************************************************************************)
     let render_cid_schema w    = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog   f    = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
@@ -1187,10 +1196,16 @@ module Cid = struct
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    (***********************************************************************************************************)
     let render_cid_typ     a   = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term    c   = render_name (Term.get ~fixName:true c).Term.name
+    (* added \TYP and \TERM *)
+    let render_cid_typ_latex    a   = "\\TYP" ^ render_name (Typ.get ~fixName:true a).Typ.name
+    let render_cid_term_latex    c   = "\\TERM" ^ render_name (Term.get ~fixName:true c).Term.name
+    (***********************************************************************************************************)
     let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
+  
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)

@@ -833,7 +833,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
       dprint (fun () ->  ("Checking parameter object against: " ^ (P.typToString cD cPsi' (tA,Substitution.LF.id) ^ "\n")));
       dprint (fun () -> ("Inferred type of parameter object: " ^ (P.typToString cD cPsi' (tA',Substitution.LF.id) ^ "\n\n")));
         if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-	else failwith "Parameter object fails to check" (* TODO: Better error message *)
+	else raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 

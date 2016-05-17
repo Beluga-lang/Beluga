@@ -439,7 +439,7 @@ fn d => case d of
 | [g |- d_sym D1] => dtp2 [g |- D1]
 | [g |- d_trans D1 D2] => dtp1 [g |- D1]
 and dtp2 : (g:ctx) [g |- deq M1 M2 T[]] -> [g |- oft M2 T[]] =
-% / total d (dtp2 g m1 m2 t d) /
+ / total d (dtp2 g m1 m2 t d) /
 fn d => case d of
 | [g |- d_app D1 D2] =>
   let [g |- E1] = dtp2 [g |- D1] in

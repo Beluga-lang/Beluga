@@ -280,7 +280,10 @@ module Cid : sig
 
     val render_ctx_var        : LF.mctx    -> offset   -> string
     val render_cvar           : LF.mctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_bvar           : LF.dctx    -> offset   -> string
+    val render_bvar_latex     : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_var            : Comp.gctx  -> var      -> string
 
   end

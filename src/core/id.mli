@@ -62,3 +62,6 @@ type name_guide =
 val mk_name : ?modules:string list -> name_guide -> name
 val string_of_name : name -> string
 val render_name : name -> string
+(*******************************************************************************************************)
+val string_of_name_latex : name -> string
+val render_name_latex : name -> string

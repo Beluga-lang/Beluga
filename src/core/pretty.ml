@@ -534,7 +534,7 @@ module Int = struct
             let cond = lvl > 0 in
               fprintf ppf "{%s/%s. %a%s}" 
                 (l_paren_if cond)
-                (Id.render_name x)
+                (Id.render_name_latex x) (* changed *)
                 (fmt_ppr_lf_normal_latex cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
                 (r_paren_if cond) 
                 
@@ -582,12 +582,12 @@ module Int = struct
             (fmt_ppr_lf_sub cD cPsi lvl) sigma
       | LF.BVar x  ->
           fprintf ppf "%s%s"
-            (R.render_bvar cPsi x)
+            (R.render_bvar_latex cPsi x) (* changed to print cnt as subscript *)
             proj
 
       | LF.Const c ->
           fprintf ppf "%s%s"
-            (R.render_cid_term_latex c) (* changed *)
+            (R.render_cid_term_latex c) (* changed to add /TERM before name *)
             proj
 
       | LF.MMVar ((c, ms), s) ->
@@ -632,7 +632,7 @@ module Int = struct
 
       | LF.FVar x ->
           fprintf ppf "%s%s"
-            (Id.render_name x)
+            (Id.render_name_latex x) (* changed to print cnt as subscript *)
             proj
 
       | LF.FMVar (u, s) ->

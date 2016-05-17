@@ -557,7 +557,7 @@ module Printer = struct
 
 
   let sgnClauseToLatex (cidTerm, sCl) = 
-    let ruleName = Id.string_of_name (termName cidTerm) in
+    let ruleName = Id.string_of_name_latex (termName cidTerm) in
     let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
     (* list of superscripts that will be used with our rule name, updated by goalToLatex calls *)
     let superScripts = ref [] in
@@ -601,8 +601,8 @@ module Printer = struct
   \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args}
    *)
   (* well defined up to four arguments *)
-  let sgcClauseToMaccros (cidTerm, sCl) =
-    let name = Id.string_of_name (termName cidTerm) in
+  let sgnClauseToMaccros (cidTerm, sCl) =
+    let name = Id.string_of_name_latex (termName cidTerm) in
     let ruleMaccro = nameToRuleMaccro name in
     match sCl.subGoals with
       | True -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
@@ -627,7 +627,7 @@ module Printer = struct
     (* get name of type constant *)
     let typEntry = Store.Cid.Typ.get cidTyp in
     let typName = typEntry.Store.Cid.Typ.name in
-    let name = Id.string_of_name typName in
+    let name = Id.string_of_name_latex typName in
     (* get number of arguments of type constant *)
     let arguments = Store.Cid.Typ.args_of_name typName in
     match arguments with 
@@ -651,7 +651,7 @@ module Printer = struct
       - print a maccro for the term constant in the maccros file
       - print an inference rule in the main file  *)
       DynArray.iter (fun w -> 
-        fprintf outMaccros "%s\n\n" (sgcClauseToMaccros w);
+        fprintf outMaccros "%s\n\n" (sgnClauseToMaccros w);
         fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
 
     in

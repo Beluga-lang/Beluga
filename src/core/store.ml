@@ -1156,6 +1156,9 @@ module Cid = struct
     val render_ctx_var      : LF.mctx    -> offset   -> string
     val render_cvar         : LF.mctx    -> offset   -> string
     val render_bvar         : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
+    val render_bvar_latex   : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_var          : Comp.gctx  -> var      -> string
 
   end
@@ -1180,7 +1183,11 @@ module Cid = struct
     let render_cid_prog   f    = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
+    (***********************************************************************************************************)
     let render_bvar  _cPsi i   = string_of_int i
+    (* had to provide for signature but shouldn't be used *)
+    let render_bvar_latex _cPsi i   = string_of_int i
+    (***********************************************************************************************************)
     let render_offset      i   = string_of_int i
     let render_var   _cG   x   = string_of_int x
 
@@ -1200,8 +1207,8 @@ module Cid = struct
     let render_cid_typ     a   = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term    c   = render_name (Term.get ~fixName:true c).Term.name
     (* added \TYP and \TERM *)
-    let render_cid_typ_latex    a   = "\\TYP" ^ render_name (Typ.get ~fixName:true a).Typ.name
-    let render_cid_term_latex    c   = "\\TERM" ^ render_name (Term.get ~fixName:true c).Term.name
+    let render_cid_typ_latex a  = "\\TYP" ^ (render_name_latex (Typ.get ~fixName:true a).Typ.name)
+    let render_cid_term_latex c = "\\TERM" ^(render_name_latex (Term.get ~fixName:true c).Term.name)
     (***********************************************************************************************************)
     let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
@@ -1219,12 +1226,22 @@ module Cid = struct
       with
           _ -> "FREE MVar " ^ (string_of_int u)
       end
+
+    (***********************************************************************************************************)
     let render_bvar  cPsi i    =
       begin try
         render_name (Context.getNameDCtx cPsi i)
       with
           _ -> "FREE BVar " ^ (string_of_int i)
       end
+
+    let render_bvar_latex  cPsi i    =
+      begin try
+        render_name_latex (Context.getNameDCtx cPsi i)
+      with
+          _ -> "FREE BVar " ^ (string_of_int i)
+      end
+    (***********************************************************************************************************)
 
     let render_offset     i   = string_of_int i
 

@@ -109,8 +109,24 @@ let string_of_name (n : name) : string =
   let suf = match n.hint_cnt with
       | None -> ""
       | Some cnt -> (string_of_int cnt) in
-  n.hint_name ^ suf
+  n.hint_name ^ suf 
 
 let render_name n = match n.modules with
     | [] -> string_of_name n
-    | l  -> (String.concat "." l) ^ "." ^ (string_of_name n)
+    | l  -> (String.concat "." l) ^ "." ^ (string_of_name n) 
+
+(*******************************************************************************************************)
+let string_of_name_latex (n : name) : string =
+  let suf = match n.hint_cnt with
+      | None -> ""
+      (* cnt as subscript, better readability in LaTex *)
+      | Some cnt -> "_" ^ (string_of_int cnt) 
+  in let name = Str.global_replace (Str.regexp "_\\|-") "" n.hint_name
+  in name ^ suf
+
+let render_name_latex n = match n.modules with
+    | [] -> string_of_name_latex n
+    | l  -> (String.concat "." l) ^ "." ^ (string_of_name_latex n) 
+
+
+

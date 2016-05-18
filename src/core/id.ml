@@ -121,8 +121,10 @@ let string_of_name_latex (n : name) : string =
       | None -> ""
       (* cnt as subscript, better readability in LaTex *)
       | Some cnt -> "_" ^ (string_of_int cnt) 
-  in let name = Str.global_replace (Str.regexp "_\\|-") "" n.hint_name
-  in name ^ suf
+  in 
+  let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
+  let name = Str.global_replace (Str.regexp "&") "and" name in
+  name ^ suf
 
 let render_name_latex n = match n.modules with
     | [] -> string_of_name_latex n

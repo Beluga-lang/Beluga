@@ -528,11 +528,11 @@ module Int = struct
             ms
 
      in function
-        (* added {} and \ became / not to mess with LaTex *)
+        (* added {} and \ became \\lambda not to mess with LaTex *)
         | LF.Lam (_, x, m) ->
             let x = fresh_name_dctx cPsi x in
             let cond = lvl > 0 in
-              fprintf ppf "{%s/%s. %a%s}" 
+              fprintf ppf "{%s \\lambda %s. %a%s}" 
                 (l_paren_if cond)
                 (Id.render_name_latex x) (* changed *)
                 (fmt_ppr_lf_normal_latex cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
@@ -547,21 +547,24 @@ module Int = struct
         (* added {} *)
         | LF.Root (_, h, LF.Nil) ->
             fprintf ppf "{%a}"
-              (fmt_ppr_lf_head_latex cD cPsi lvl) h
+              (* call head with " ": no space in LaTex *)
+              (fmt_ppr_lf_head_latex cD cPsi lvl ("")) h
         (* added {} *)
         | LF.Root (_, h, ms)  ->
             let cond = lvl > 1 in
             let ms = deimplicitize_spine h ms in
               fprintf ppf "{%s%a %a%s}"
                 (l_paren_if cond)
-                (fmt_ppr_lf_head_latex cD cPsi lvl) h
+                (* call head with "~": space in LaTex *)
+                (fmt_ppr_lf_head_latex cD cPsi lvl ("~")) h
                 (fmt_ppr_lf_spine_latex cD cPsi 2)  ms
                 (r_paren_if cond)
 
         | LF.Clo(tM, s) -> fmt_ppr_lf_normal_latex cD cPsi lvl ppf (Whnf.norm (tM, s)) 
 
 
-    and fmt_ppr_lf_head_latex cD cPsi lvl ppf head =
+    (* added a string argument - tilde - either "~" or " " *)
+    and fmt_ppr_lf_head_latex cD cPsi lvl tilde ppf head =
       let paren s = not (Control.db()) && lvl > 0 && (match s with
         | LF.EmptySub
         | LF.Undefs -> false
@@ -581,7 +584,124 @@ module Int = struct
             (fmt_ppr_lf_msub  cD lvl) theta
             (fmt_ppr_lf_sub cD cPsi lvl) sigma
       | LF.BVar x  ->
+          (* here we use the tilde argument *)
+          fprintf ppf "%s%s%s"
+            (R.render_bvar_latex cPsi x) (* changed to print cnt as subscript *)
+            tilde
+            proj
+
+      | LF.Const c ->
           fprintf ppf "%s%s"
+            (R.render_cid_term_latex c) (* changed to add /TERM before name *)
+            proj
+
+      | LF.MMVar ((c, ms), s) ->
+          fprintf ppf "%s%a%s[%a]%a%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_mmvar lvl) c
+            proj
+            (fmt_ppr_lf_msub cD lvl) ms
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.MPVar ((c, ms), s) ->
+          fprintf ppf "%s%a%s[%a]%a%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_mmvar lvl) c
+            proj
+            (fmt_ppr_lf_msub cD lvl) ms
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.MVar(c, LF.Undefs)
+      | LF.MVar(c, LF.EmptySub) ->
+          fprintf ppf "%a%s"
+            (fmt_ppr_lf_cvar cD lvl) c
+            proj
+
+      | LF.MVar (c, s) ->
+          fprintf ppf "%s%a%s[%a]%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_cvar cD lvl) c
+            proj
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.PVar (c, s) ->
+          fprintf ppf "%s#%a%s[%a]%s"
+            (l_paren_if (paren s))
+            (fmt_ppr_lf_offset cD lvl) c
+            proj
+            (fmt_ppr_lf_sub  cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.FVar x ->
+          (* here we use the tilde argument *)
+          fprintf ppf "%s%s%s"
+            (Id.render_name_latex x) (* changed to print cnt as subscript *)
+            tilde
+            proj
+
+      | LF.FMVar (u, s) ->
+          fprintf ppf "FMV %s%s%s[%a]%s"
+            (l_paren_if (paren s))
+            (Id.render_name u)
+            proj
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.FPVar (p, s) ->
+          fprintf ppf "%sFPV #%s%s[%a]%s"
+            (l_paren_if (paren s))
+            (Id.render_name p)
+            proj
+            (fmt_ppr_lf_sub cD cPsi lvl) s
+            (r_paren_if (paren s))
+
+      | LF.Proj (head, k) ->
+          fmt_head_with ("." ^ string_of_int k) head
+
+      in
+        fmt_head_with "" head
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    (*and fmt_ppr_lf_head_latex cD cPsi lvl ppf head =
+      let paren s = not (Control.db()) && lvl > 0 && (match s with
+        | LF.EmptySub
+        | LF.Undefs -> false
+        | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
+        | _ -> true)
+      in
+      let rec fmt_head_with proj = function
+      | LF.HClo (h, s, sigma) ->
+          fprintf ppf "%s[#%a[%a]]"
+            (R.render_bvar cPsi h)
+            (fmt_ppr_lf_offset cD lvl) s
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+      | LF.HMClo (h, ((s, theta),sigma)) ->
+          fprintf ppf "%s[#%a[%a ; %a]]"
+            (R.render_bvar cPsi h)
+            (fmt_ppr_lf_mmvar lvl) s
+            (fmt_ppr_lf_msub  cD lvl) theta
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
+      | LF.BVar x  ->
+          fprintf ppf "%s~%s"
             (R.render_bvar_latex cPsi x) (* changed to print cnt as subscript *)
             proj
 
@@ -655,7 +775,7 @@ module Int = struct
           fmt_head_with ("." ^ string_of_int k) head
 
       in
-        fmt_head_with "" head
+        fmt_head_with "" head *)
 
 
     and fmt_ppr_lf_spine_latex cD cPsi lvl ppf = function

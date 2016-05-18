@@ -524,43 +524,51 @@ module Printer = struct
     P.typToLatex LF.Empty cPsi sM
 
 
-  let rec goalToLatex cPsi (g, s) superScripts = match g with
+  let rec goalToLatex cPsi (g, s) superScripts counter = match g with
     | Atom (tA) ->
-      typToLatex cPsi (tA, s)     
-    (* TODO : infera{u} : need some way to label assumptions with new letter instead of u *)                            
+      typToLatex cPsi (tA, s)                            
     | Impl ((r, tD), g') -> 
-      let assumptionName = "u" in 
+      (* we use counter to generate a new name for our assumption *)
+      let assumptionName = match !counter with 
+        | 0 -> "u"
+        | 1 -> "v"
+        | 2 -> "w"
+        | num -> sprintf "u_%d" num
+      in counter := !counter + 1;
       (* add assumption name to superScripts - at the end *)
       superScripts := (!superScripts)@[assumptionName];
       sprintf "\\deduce[\\vdots]{%s}{\\infera{%s}{%s}{}}"
-       (resToLatex cPsi (r, s) superScripts)
+       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts counter)
        assumptionName
-       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts)  
+       (resToLatex cPsi (r, s) superScripts counter)
     | All (LF.TypDecl (x, tM) as tD, g') ->
       (* add name of quantified variable to superScripts - at the beginning *)
-      let varName = Id.string_of_name x in
+      let varName = Id.string_of_name_latex x in
       superScripts := varName::(!superScripts);
-      sprintf "%s"
-       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts)  
+      (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts counter) 
 
 
-  and resToLatex cPsi (r, s) superScripts = match r with
+  and resToLatex cPsi (r, s) superScripts counter = match r with
     | Head (tH) ->
       typToLatex cPsi (tH, s)
-    | And (g, r') -> sprintf "%s -> %s"
-    (* TODO : find some way to print both hypothetical derivations side by side *)
-      (goalToLatex cPsi (g, s) superScripts) (resToLatex cPsi (r', s) superScripts)
+    | And (g, r') -> sprintf "%s \\supset %s"
+    (* rarely used, example : ((tm A -> tm B) -> tm C) -> tm D *)
+      (goalToLatex cPsi (g, s) superScripts counter) 
+      (resToLatex cPsi (r', s) superScripts counter)
     | Exists (LF.TypDecl (_, tM), r') ->
     (* rarely used, simply prints the residual *)
       let tM' = Convert.etaExpand cPsi (tM, s)
-      in sprintf "%s" (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)) superScripts)
+      in (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)) superScripts counter)
 
 
+  (* well defined up to three premises in the inference rule we want to generate *)
   let sgnClauseToLatex (cidTerm, sCl) = 
     let ruleName = Id.string_of_name_latex (termName cidTerm) in
     let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
     (* list of superscripts that will be used with our rule name, updated by goalToLatex calls *)
     let superScripts = ref [] in
+    (* counter used to generate new assumption names : u, v, w, u3, u4, etc. *)
+    let counter = ref 0 in
     (* function used to convert a superscript list [a1; a2] into the string " ^{a1,a2}" *)
     let sListToString l = 
       let rec sListToString' l = match l with
@@ -576,18 +584,18 @@ module Printer = struct
       | True -> 
         sprintf "\\infera{\\RULE%s}{%s}{}" ruleName conclusion
       | Conjunct (True, g) ->
-        let p1 = goalToLatex sCl.eVars (g, S.id) superScripts in
+        let p1 = goalToLatex sCl.eVars (g, S.id) superScripts counter in
         let super = sListToString !superScripts in
         sprintf "\\infera{\\RULE%s%s}{%s}{%s}" ruleName super conclusion p1
       | Conjunct (Conjunct (True, g1), g2) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts in
+        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts counter in
+        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts counter in
         let super = sListToString !superScripts in
         sprintf "\\inferaa{\\RULE%s%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2
       | Conjunct (Conjunct (Conjunct (True, g1), g2), g3) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts in
-        let p3 = goalToLatex sCl.eVars (g3, S.id) superScripts in
+        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts counter in
+        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts counter in
+        let p3 = goalToLatex sCl.eVars (g3, S.id) superScripts counter in
         let super = sListToString !superScripts in 
         sprintf "\\inferaaa{\\RULE%s%s}{%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2 p3 
 
@@ -598,45 +606,46 @@ module Printer = struct
 
   (* generates two maccros for each term constant :
   \newcommand {\RULEcidTerm} {\ruleName{cidTerm}}
-  \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args}
-   *)
-  (* well defined up to four arguments *)
+  \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args} *)
   let sgnClauseToMaccros (cidTerm, sCl) =
     let name = Id.string_of_name_latex (termName cidTerm) in
     let ruleMaccro = nameToRuleMaccro name in
-    match sCl.subGoals with
-      | True -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
+    let countSubgoals cG = 
+      let rec countSubgoals' cG n = match cG with
+        | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
+        | True -> n
+      in countSubgoals' cG 0
+    (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+    in 
+    let rec printArguments n = match n with
+        | 1 -> "\\;#1"
+        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+    in 
+    let n = countSubgoals sCl.subGoals in
+    (* pattern match on the number of goals in sCl.subGoals *)
+    match n with 
+      | 0 -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
           ruleMaccro name name
-      | Conjunct (True, _) ->
-        sprintf "%s\n\\newcommand{\\TERM%s}[1]{\\mathsf{%s}\\;#1}"
-          ruleMaccro name name
-      | Conjunct (Conjunct (True, _), _) ->
-        sprintf "%s\n\\newcommand{\\TERM%s}[2]{\\mathsf{%s}\\;#1\\;#2}" 
-          ruleMaccro name name
-      | Conjunct (Conjunct (Conjunct (True, _), _), _) ->
-        sprintf "%s\n\\newcommand{\\TERM%s}[3]{\\mathsf{%s}\\;#1\\;#2\\;#3}" 
-          ruleMaccro name name
-      | Conjunct (Conjunct (Conjunct (Conjunct (True, _), _), _), _) ->
-        sprintf "%s\n\\newcommand{\\TERM%s}[4]{\\mathsf{%s}\\;#1\\;#2\\;#3\\;#4}" 
-          ruleMaccro name name
-      | _ -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}"
-          ruleMaccro name name
+      | n -> sprintf "%s\n\\newcommand{\\TERM%s}[%d]{\\mathsf{%s}%s}"
+          ruleMaccro name n name (printArguments n)
 
-  (* well defined up to four arguments *)
+
   let cidTypToMaccro cidTyp =
     (* get name of type constant *)
     let typEntry = Store.Cid.Typ.get cidTyp in
     let typName = typEntry.Store.Cid.Typ.name in
     let name = Id.string_of_name_latex typName in
     (* get number of arguments of type constant *)
-    let arguments = Store.Cid.Typ.args_of_name typName in
-    match arguments with 
-      | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" name name
-      | 1 -> sprintf "\\newcommand{\\TYP%s}[1]{\\mathsf{%s}\\;#1}" name name
-      | 2 -> sprintf "\\newcommand{\\TYP%s}[2]{\\mathsf{%s}\\;#1\\;#2}" name name
-      | 3 -> sprintf "\\newcommand{\\TYP%s}[3]{\\mathsf{%s}\\;#1\\;#2\\;#3}" name name
-      | 4 -> sprintf "\\newcommand{\\TYP%s}[4]{\\mathsf{%s}\\;#1\\;#2\\;#3\\;#4}" name name
-      | _ -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" name name
+    let n = Store.Cid.Typ.args_of_name typName in
+    let rec printArguments n = match n with
+        | 1 -> "\\;#1"
+        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+    in 
+    match n with 
+      | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" 
+              name name
+      | n -> sprintf "\\newcommand{\\TYP%s}[%d]{\\mathsf{%s}%s}" 
+              name n name (printArguments n)
 
 
   let printSignatureLatex mainFile =

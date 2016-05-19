@@ -18,7 +18,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 4
+  let chatter = ref 3
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -88,21 +88,15 @@ module Shift : sig
 end = struct
 
   (* NB.
-
      Only BVar's in LF.Atom's are affected.
      Enclosed substitutions are not shifted.
-
      i: De Bruijn index.
      k: Shifting measure.
-
      Algorithm:
-
      BV bound by λ remain invariant.
       - i < lR |- BV(i) -> BV(i)
-
      BV bound by a dynamic scope are shifted by dS.
       - lR < i <= dR |- BV(i) -> BV(i + dS)
-
      BV bound to EV are shifted by k.
       - i > lR && i > dR |- BV(i) -> BV(i + k)
   *)
@@ -218,7 +212,6 @@ module Convert = struct
      Invariants:
        Psi |- s : Phi
        Phi |- A : LF.typ
-
      Effects:
        None.
   *)
@@ -238,10 +231,8 @@ module Convert = struct
        Psi |- s : Phi
        Phi |- M
        fS : spine -> spine
-
      Effects:
        None.
-
      Create MVars for all the TypDecl's in eV. Accumulate them
      in a substitution, performing eta-expansion if necessary,
      and add them to the spine of a proof-term through fS.
@@ -301,7 +292,7 @@ module Index = struct
      Create a new entry for a type constant, c, in the `types' table and
      return it's mapping, i.e. an empty DynArray.
   *)
-  let addTyp cidTyp =                                  
+  let addTyp cidTyp =
     Hashtbl.add types cidTyp (DynArray.create ()) ;
     Hashtbl.find types cidTyp
 
@@ -371,7 +362,7 @@ module Index = struct
   let robStore () =
     try
       List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
-    with _ -> ()              
+    with _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
@@ -379,7 +370,7 @@ module Index = struct
   let iterSClauses f cidTyp =
     DynArray.iter f (Hashtbl.find types cidTyp)
 
-  let iterAllSClauses f =                       
+  let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
   let iterQueries f =
@@ -416,14 +407,11 @@ module Printer = struct
 
   module P = Pretty.Int.DefaultPrinter
   open Index
-  (***************************************************************************************************************)
-  open Printf
-  (***************************************************************************************************************)
 
   let dctxToString cPsi =
     P.dctxToString LF.Empty cPsi
 
-  let typToString cPsi sM =                 
+  let typToString cPsi sM =
     P.typToString LF.Empty cPsi sM
 
   let normalToString cPsi sM =
@@ -440,26 +428,24 @@ module Printer = struct
        Psi |- s : Phi
        Phi |- g : goal
        Psi |- g[s] : goal
-
      Effects:
        None.
   *)
   let rec goalToString cPsi (g, s) = match g with
     | Atom (tA) ->
-      typToString cPsi (tA, s)                                      
+      typToString cPsi (tA, s)
     | Impl ((r, tD), g') -> sprintf "%s -> %s"
       (resToString cPsi (r, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))  
+      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
     | All (tD, g') -> sprintf "[∀%s. %s]"
       (declToString cPsi (tD, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s)) 
+      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
 
   (* resToString cPsi (r, s) = string
      Invariants:
        Psi |- s: Phi
        Phi |- r : res
        Psi |- r[s] : res
-
      Effects:
        None.
   *)
@@ -482,11 +468,11 @@ module Printer = struct
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
   *)
-  and sgnClauseToString (cidTerm, sCl) =               
+  and sgnClauseToString (cidTerm, sCl) =
     sprintf "%s: %s\n%s"
       (Id.string_of_name (termName cidTerm))
-      (typToString sCl.eVars (sCl.tHead, S.id))         
-      (subGoalsToString sCl.eVars (sCl.subGoals, S.id)) 
+      (typToString sCl.eVars (sCl.tHead, S.id))
+      (subGoalsToString sCl.eVars (sCl.subGoals, S.id))
 
   let boundToString b = match b with
     | Some i -> string_of_int i
@@ -518,166 +504,6 @@ module Printer = struct
   let printSignature () =
     iterAllSClauses (fun w -> printf "%s\n" (sgnClauseToString w))
 
-
-(********************************************************************************************************************)
-  let typToLatex cPsi sM =                 
-    P.typToLatex LF.Empty cPsi sM
-
-
-  let rec goalToLatex cPsi (g, s) superScripts counter = match g with
-    | Atom (tA) ->
-      typToLatex cPsi (tA, s)                            
-    | Impl ((r, tD), g') -> 
-      (* we use counter to generate a new name for our assumption *)
-      let assumptionName = match !counter with 
-        | 0 -> "u"
-        | 1 -> "v"
-        | 2 -> "w"
-        | num -> sprintf "u_%d" num
-      in counter := !counter + 1;
-      (* add assumption name to superScripts - at the end *)
-      superScripts := (!superScripts)@[assumptionName];
-      sprintf "\\deduce[\\vdots]{%s}{\\infera{%s}{%s}{}}"
-       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts counter)
-       assumptionName
-       (resToLatex cPsi (r, s) superScripts counter)
-    | All (LF.TypDecl (x, tM) as tD, g') ->
-      (* add name of quantified variable to superScripts - at the beginning *)
-      let varName = Id.string_of_name_latex x in
-      superScripts := varName::(!superScripts);
-      (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts counter) 
-
-
-  and resToLatex cPsi (r, s) superScripts counter = match r with
-    | Head (tH) ->
-      typToLatex cPsi (tH, s)
-    | And (g, r') -> sprintf "%s \\supset %s"
-    (* rarely used, example : ((tm A -> tm B) -> tm C) -> tm D *)
-      (goalToLatex cPsi (g, s) superScripts counter) 
-      (resToLatex cPsi (r', s) superScripts counter)
-    | Exists (LF.TypDecl (_, tM), r') ->
-    (* rarely used, simply prints the residual *)
-      let tM' = Convert.etaExpand cPsi (tM, s)
-      in (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)) superScripts counter)
-
-
-  (* well defined up to three premises in the inference rule we want to generate *)
-  let sgnClauseToLatex (cidTerm, sCl) = 
-    let ruleName = Id.string_of_name_latex (termName cidTerm) in
-    let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
-    (* list of superscripts that will be used with our rule name, updated by goalToLatex calls *)
-    let superScripts = ref [] in
-    (* counter used to generate new assumption names : u, v, w, u3, u4, etc. *)
-    let counter = ref 0 in
-    (* function used to convert a superscript list [a1; a2] into the string " ^{a1,a2}" *)
-    let sListToString l = 
-      let rec sListToString' l = match l with
-        | []    -> ""
-        | h::[] -> h
-        | h::t  -> h ^ "," ^ (sListToString' t)
-      in 
-      match l with 
-        | [] -> ""
-        | _  -> sprintf " ^{%s}" (sListToString' l)
-    in 
-    match sCl.subGoals with
-      | True -> 
-        sprintf "\\infera{\\RULE%s}{%s}{}" ruleName conclusion
-      | Conjunct (True, g) ->
-        let p1 = goalToLatex sCl.eVars (g, S.id) superScripts counter in
-        let super = sListToString !superScripts in
-        sprintf "\\infera{\\RULE%s%s}{%s}{%s}" ruleName super conclusion p1
-      | Conjunct (Conjunct (True, g1), g2) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts counter in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts counter in
-        let super = sListToString !superScripts in
-        sprintf "\\inferaa{\\RULE%s%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2
-      | Conjunct (Conjunct (Conjunct (True, g1), g2), g3) ->
-        let p1 = goalToLatex sCl.eVars (g1, S.id) superScripts counter in
-        let p2 = goalToLatex sCl.eVars (g2, S.id) superScripts counter in
-        let p3 = goalToLatex sCl.eVars (g3, S.id) superScripts counter in
-        let super = sListToString !superScripts in 
-        sprintf "\\inferaaa{\\RULE%s%s}{%s}{%s}{%s}{%s}" ruleName super conclusion p1 p2 p3 
-
-
-  (* generates a maccro of the form \newcommand{\RULEcidTerm}{\ruleName{cidTerm}} *)
-  let nameToRuleMaccro name =
-    sprintf "\\newcommand{\\RULE%s}{\\ruleName{%s}}" name name
-
-  (* generates two maccros for each term constant :
-  \newcommand {\RULEcidTerm} {\ruleName{cidTerm}}
-  \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args} *)
-  let sgnClauseToMaccros (cidTerm, sCl) =
-    let name = Id.string_of_name_latex (termName cidTerm) in
-    let ruleMaccro = nameToRuleMaccro name in
-    let countSubgoals cG = 
-      let rec countSubgoals' cG n = match cG with
-        | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
-        | True -> n
-      in countSubgoals' cG 0
-    (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
-    in 
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
-    let n = countSubgoals sCl.subGoals in
-    (* pattern match on the number of goals in sCl.subGoals *)
-    match n with 
-      | 0 -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
-          ruleMaccro name name
-      | n -> sprintf "%s\n\\newcommand{\\TERM%s}[%d]{\\mathsf{%s}%s}"
-          ruleMaccro name n name (printArguments n)
-
-
-  let cidTypToMaccro cidTyp =
-    (* get name of type constant *)
-    let typEntry = Store.Cid.Typ.get cidTyp in
-    let typName = typEntry.Store.Cid.Typ.name in
-    let name = Id.string_of_name_latex typName in
-    (* get number of arguments of type constant *)
-    let n = Store.Cid.Typ.args_of_name typName in
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
-    match n with 
-      | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" 
-              name name
-      | n -> sprintf "\\newcommand{\\TYP%s}[%d]{\\mathsf{%s}%s}" 
-              name n name (printArguments n)
-
-
-  let printSignatureLatex mainFile =
-    let outMaccros = open_out "latex/maccros.tex" in
-    let outMain = open_out mainFile in
-     
-    (* takes as input one binding key/value of Types : k is a cidTyp, v is a DynArray of (cidTerm, sCl) *)
-    let typeFamilyToLatex k v = 
-      (* print a maccro for the type constant k in the maccros file *)
-      fprintf outMaccros "\n%s\n\n" (cidTypToMaccro k);
-      (* for each clause in v :
-      - print a maccro for the term constant in the maccros file
-      - print an inference rule in the main file  *)
-      DynArray.iter (fun w -> 
-        fprintf outMaccros "%s\n\n" (sgnClauseToMaccros w);
-        fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
-
-    in
-    (* preamble of maccros file *)
-    fprintf outMaccros "\\input{prelude}\n\n";
-    (* preamble of main file *)
-    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
-
-    (* conversion to LaTex and printing of maccros *)
-    Hashtbl.iter typeFamilyToLatex types;
-    (* conclusion of main file *)
-    fprintf outMain "\n\\end{document}";
-    close_out outMaccros;
-    close_out outMain;
-
-(********************************************************************************************************************)
-
 end
 
 
@@ -696,7 +522,6 @@ module Solver = struct
   (* unify Psi (A, s) (B, s') sc = ()
      Invariants:
        sc : unit -> unit
-
      Effects:
        Instatiation of MVars in s and s'.
        Any effect of (sc ()).
@@ -740,11 +565,9 @@ module Solver = struct
        Phi |- g : Goal
        sc : proof -> unit
        If G |- M : g[s], then (sc M) is evaluated.
-
      Effects:
        Instantiation of MVars in s and dPool.
        Any effect (sc M) might have.
-
      Comments:
        In the arguments to 'sc', 'u' refers to the universal
        context and 't' refers to a proof term.
@@ -767,7 +590,6 @@ module Solver = struct
        Phi |- A : Atom
        sc : proof -> unit
        If Psi |- M : A[s], then (sc M) is evaluated.
-
      Effects:
        Instatiation of MVars in s and dPool.
        Any effect (sc M) might have.
@@ -831,7 +653,6 @@ module Solver = struct
        If Psi |- M : g[s], then (sc App (M, S)) is evaluated.
        If Psi |- G = T, then (sc Nil) is evaluated, ending the
        spine of proof-terms for the goals in G.
-
      Effects:
        Instatiation of MVars in dPool and g[s].
        Any effect of (sc S).
@@ -847,7 +668,6 @@ module Solver = struct
      Invariants:
        Empty |- g[s] : goal
        sc : dctx * normal -> unit
-
      Effects:
        Same as gSolve.
   *)
@@ -932,12 +752,12 @@ module Frontend = struct
       if !Options.chatter >= 3 then
         begin
           printf "---------- Solution %d ----------\n[%s]\n%s\n"
-            !solutions (P.dctxToString cPsi)                             
+            !solutions (P.dctxToString cPsi)
             (P.instToString sgnQuery.instMVars) ;
           (* Print proof term. *)
           (match sgnQuery.optName with
             | Some n ->
-              printf "%s\n" (P.instToString [(n, tM)])               
+              printf "%s\n" (P.instToString [(n, tM)])
             | None -> ()) ;
           printf "\n"
         end
@@ -954,7 +774,7 @@ module Frontend = struct
     if not (boundEq sgnQuery.tries (Some 0)) then
       begin
         if !Options.chatter >= 1 then
-          P.printQuery sgnQuery                                          
+          P.printQuery sgnQuery
         else () ;
         try
 
@@ -990,16 +810,15 @@ let runLogic () =
       (* Transform LF signature into clauses. *)
       Index.robStore () ;
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 4 then                      
+      if !Options.chatter >= 4 then
         Printer.printSignature ()
       else () ;
-      (***********************************************************************************************************)
-      Printer.printSignatureLatex "latex/main.tex"; 
-      (***********************************************************************************************************)  
+      (* Here we call the conversion to LaTex *)
+      Latex.runLatex ();
       (* Solve! *)
       Index.iterQueries Frontend.solve ;
       (* Clear the local storage.  *)
-      Index.clearIndex ();
+      Index.clearIndex ()
     end
   else () (* NOP *)
 
@@ -1008,8 +827,6 @@ let runLogicOn n (tA,i) e t  =
   Index.singleQuery (n,(tA,i),e,t) Frontend.solve
 
 (* 
-
-
 let runLogicOn n (cD, cPsi, tA, i) e t  =
   Index.singleQuery (n,(tA,i),e,t) Frontend.solve
  *)

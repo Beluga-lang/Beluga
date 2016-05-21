@@ -81,7 +81,7 @@ module Index = struct
      Get the string representation of comp constant c.
   *)
   let compConstName cidCompConst =
-    (Cid.CompConst.get cidCompConst).Cid.CompConst.name
+    (Cid.CompConst.get cidCompConst).Cid.CompConst.name 
 
   (* storeCompTypConst c = ()
      Add a new entry in `compTypes' for comp type constant c and fill the DynArray
@@ -102,8 +102,8 @@ module Index = struct
     in 
     (* DEBUGGING INFO *)
     printf "%s\n" (Id.string_of_name compTypEntry.Cid.CompTyp.name);
-	printf "%d\n" (List.length compTypConstr);
-	(******************)
+	  printf "%d\n" (List.length compTypConstr);
+	  (******************)
     revIter regSgnClause compTypConstr
 
   (* robStore () = ()
@@ -113,6 +113,7 @@ module Index = struct
     try
       List.iter storeCompTypConst !(DynArray.get Cid.CompTyp.entry_list !(Modules.current))
     with _ -> printf "RobStore () failed !"
+
   (* clearIndex () = ()
      Empty the local storage.
   *)

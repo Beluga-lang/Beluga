@@ -18,7 +18,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 4
+  let chatter = ref 3
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false

@@ -232,7 +232,12 @@ module Index = struct
     let rec revIter f l = match l with
       | [] -> ()
       | h :: l' -> revIter f l' ; f h
-    in revIter regSgnClause typConstr
+    in 
+    (* DEBUGGING INFO *)
+    printf "%s\n" (Id.string_of_name typEntry.Cid.Typ.name);
+    printf "%d\n" (List.length typConstr);
+   (******************)
+    revIter regSgnClause typConstr
 
   (* robStore () = ()
      Store all type constants in the `types' table.

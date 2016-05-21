@@ -120,7 +120,7 @@ let string_of_name_latex (n : name) : string =
   let suf = match n.hint_cnt with
       | None -> ""
       (* cnt as subscript, better readability in LaTex *)
-      | Some cnt -> "_" ^ (string_of_int cnt) 
+      | Some cnt -> "_{" ^ (string_of_int cnt) ^ "}"
   in 
   let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
   let name = Str.global_replace (Str.regexp "&") "and" name in

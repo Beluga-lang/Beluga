@@ -62,7 +62,9 @@ module Control = struct
   type substitution_style = Natural | DeBruijn
 
   let substitutionStyle = ref Natural
+(*************************************************************************************************************)
   let printImplicit = ref false
+(*************************************************************************************************************)
   let printNormal = ref false
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
@@ -476,20 +478,35 @@ module Int = struct
 
     (*************************************************************************************************************)
     (* should only be called with Atoms *)
-    and fmt_ppr_lf_typ_latex cD cPsi lvl ppf = function
+    and fmt_ppr_lf_typ_latex cD cPsi lvl ppf = 
+
+      let rec dropSpineLeft ms n = match (ms, n) with
+          (_, 0) -> ms
+        | (LF.Nil, _) -> ms
+        | (LF.App (_m, rest), n) -> dropSpineLeft rest (n - 1)
+
+      in let deimplicitize_spine a ms = 
+        let typEntry = Store.Cid.Typ.get a in
+        let implicit_args = if !Control.printImplicit
+                            then 0
+                            else typEntry.Store.Cid.Typ.implicit_arguments 
+        in
+          dropSpineLeft ms implicit_args
+
+    in function
       | LF.Atom (_, a, LF.Nil) ->
           fprintf ppf "%s"
             (R.render_cid_typ_latex a) (* changed *)
-
       | LF.Atom (_, a, ms) ->
           let cond = lvl > 1 in
+          let ms = deimplicitize_spine a ms in
             fprintf ppf "%s%s %a%s"
               (l_paren_if cond)
               (R.render_cid_typ_latex a) (* changed *)
               (fmt_ppr_lf_spine_latex cD cPsi 2) ms
               (r_paren_if cond) 
-
       | _ -> ()
+
 
     (* no changes to this function *)
     and fmt_ppr_lf_tuple_latex cD cPsi lvl ppf = function
@@ -504,6 +521,7 @@ module Int = struct
 
     (* added {} around some strings returned by this function *)
     and fmt_ppr_lf_normal_latex cD cPsi lvl ppf =
+
       let rec dropSpineLeft ms n = match (ms, n) with
           (_, 0) -> ms
         | (LF.Nil, _) -> ms
@@ -663,119 +681,6 @@ module Int = struct
 
       in
         fmt_head_with "" head
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    (*and fmt_ppr_lf_head_latex cD cPsi lvl ppf head =
-      let paren s = not (Control.db()) && lvl > 0 && (match s with
-        | LF.EmptySub
-        | LF.Undefs -> false
-        | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
-        | _ -> true)
-      in
-      let rec fmt_head_with proj = function
-      | LF.HClo (h, s, sigma) ->
-          fprintf ppf "%s[#%a[%a]]"
-            (R.render_bvar cPsi h)
-            (fmt_ppr_lf_offset cD lvl) s
-            (fmt_ppr_lf_sub cD cPsi lvl) sigma
-      | LF.HMClo (h, ((s, theta),sigma)) ->
-          fprintf ppf "%s[#%a[%a ; %a]]"
-            (R.render_bvar cPsi h)
-            (fmt_ppr_lf_mmvar lvl) s
-            (fmt_ppr_lf_msub  cD lvl) theta
-            (fmt_ppr_lf_sub cD cPsi lvl) sigma
-      | LF.BVar x  ->
-          fprintf ppf "%s~%s"
-            (R.render_bvar_latex cPsi x) (* changed to print cnt as subscript *)
-            proj
-
-      | LF.Const c ->
-          fprintf ppf "%s%s"
-            (R.render_cid_term_latex c) (* changed to add /TERM before name *)
-            proj
-
-      | LF.MMVar ((c, ms), s) ->
-          fprintf ppf "%s%a%s[%a]%a%s"
-            (l_paren_if (paren s))
-            (fmt_ppr_lf_mmvar lvl) c
-            proj
-            (fmt_ppr_lf_msub cD lvl) ms
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.MPVar ((c, ms), s) ->
-          fprintf ppf "%s%a%s[%a]%a%s"
-            (l_paren_if (paren s))
-            (fmt_ppr_lf_mmvar lvl) c
-            proj
-            (fmt_ppr_lf_msub cD lvl) ms
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.MVar(c, LF.Undefs)
-      | LF.MVar(c, LF.EmptySub) ->
-          fprintf ppf "%a%s"
-            (fmt_ppr_lf_cvar cD lvl) c
-            proj
-
-      | LF.MVar (c, s) ->
-          fprintf ppf "%s%a%s[%a]%s"
-            (l_paren_if (paren s))
-            (fmt_ppr_lf_cvar cD lvl) c
-            proj
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.PVar (c, s) ->
-          fprintf ppf "%s#%a%s[%a]%s"
-            (l_paren_if (paren s))
-            (fmt_ppr_lf_offset cD lvl) c
-            proj
-            (fmt_ppr_lf_sub  cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.FVar x ->
-          fprintf ppf "%s%s"
-            (Id.render_name_latex x) (* changed to print cnt as subscript *)
-            proj
-
-      | LF.FMVar (u, s) ->
-          fprintf ppf "FMV %s%s%s[%a]%s"
-            (l_paren_if (paren s))
-            (Id.render_name u)
-            proj
-            (fmt_ppr_lf_sub cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.FPVar (p, s) ->
-          fprintf ppf "%sFPV #%s%s[%a]%s"
-            (l_paren_if (paren s))
-            (Id.render_name p)
-            proj
-            (fmt_ppr_lf_sub cD cPsi lvl) s
-            (r_paren_if (paren s))
-
-      | LF.Proj (head, k) ->
-          fmt_head_with ("." ^ string_of_int k) head
-
-      in
-        fmt_head_with "" head *)
 
 
     and fmt_ppr_lf_spine_latex cD cPsi lvl ppf = function

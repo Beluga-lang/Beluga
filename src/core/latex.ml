@@ -186,9 +186,6 @@ module Index = struct
 
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
-  type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
-
-
   (* addTyp c = sgnClause DynArray.t
      Create a new entry for a type constant, c, in the `types' table and
      return it's mapping, i.e. an empty DynArray.
@@ -260,7 +257,6 @@ module Printer = struct
 
   module P = Pretty.Int.DefaultPrinter
   open Index
-
 
   let typToLatex cPsi sM =                 
     P.typToLatex LF.Empty cPsi sM

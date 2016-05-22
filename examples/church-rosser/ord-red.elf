@@ -21,10 +21,6 @@ apr1  :              --> M2 M2'
 			      %name -->* R*.
 
 id1   :    -->* M  M.
-
-% step1 :    M' --> M'' ->  M  -->* M' -> M  -->* M''.
-% Bug here:
-% Fri Dec 14 18:37:26 2001 -fp !!!
 step1 : --> M M' -> -->* M' M'' -> -->* M M''.
 
 % Conversion

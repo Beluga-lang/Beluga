@@ -15,6 +15,12 @@ LF value:  term -> type =
 | v_lam: value (lam T M)
 ;
 
+schema ctx = term;
+
+% [x:tm, y:tm |- x]
+% [x:tm, y:tm |- lam \w. app x w] 
+% 
+
 
 % ---------------------------------------------------------- %
 % Small-step operational semantics

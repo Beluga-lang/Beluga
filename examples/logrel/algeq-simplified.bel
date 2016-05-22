@@ -18,13 +18,13 @@ mstep : tm -> tm -> type.  %name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
-algeqn : tm -> tm -> tp -> type.
-algeqr : tm -> tm -> tp -> type.
-algbase : mstep M P -> mstep N Q -> algeqr P Q i -> algeqn M N i.
-algarr : ({x:tm}{p:algeqr x x T} algeqn (app M x) (app N x) S) -> algeqn M N (arr T S).
-algapp : algeqr M1 M2 (arr T S) -> algeqn N1 N2 T -> algeqr (app M1 N1) (app M2 N2) S.
+algeq : tm -> tm -> tp -> type.
+algeqNeu : tm -> tm -> tp -> type.
+alg_base : mstep M P -> mstep N Q -> algeqNeu P Q i -> algeq M N i.
+alg_arr : ({x:tm}{p:algeqNeu x x T} algeq (app M x) (app N x) S) -> algeq M N (arr T S).
+alg_app : algeqNeu M1 M2 (arr T S) -> algeq N1 N2 T -> algeqNeu (app M1 N1) (app M2 N2) S.
 
-schema tctx = some [t:tp] block x:tm, y:algeqr x x t;
+schema tctx = some [t:tp] block x:tm, y:algeqNeu x x t;
 
 % Logical equivalence. _|-_~~_:_ in the paper
 
@@ -33,7 +33,7 @@ tmpair : type.
 %infix ~ 5 right.
 
 stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
-| LogBase : [g |- algeqn M N i]
+| LogBase : [g |- algeq M N i]
           -> Log [g |- M ~ N ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
              ({h:tctx} {#R:[h |- g]} {N1:[h |- tm]}{N2:[h |- tm]}
@@ -57,30 +57,30 @@ mlam h,#W => fn e => case e of
 ;
 
 % Main lemma to escape logical relation
-rec reflect : {A:[ |- tp]} [g |- algeqr M1 M2 A[]] -> Log [g |- M1 ~ M2] [ |- A] =
+rec reflect : {A:[ |- tp]} [g |- algeqNeu M1 M2 A[]] -> Log [g |- M1 ~ M2] [ |- A] =
 / total a (reflect g m1 m2 a) /
 mlam A => fn r => case [ |- A] of
 | [ |- i] => 
     let [g |- R ] = r in
-    LogBase [g |- algbase refl refl R]
+    LogBase [g |- alg_base refl refl (R)]
 | [ |- arr A B] =>
   let [g |- R] = r in
   LogArr [g |- _] [g |-  _]
    (mlam h,#W,N1,N2 => fn rn =>
     let [h |- S] = reify [|- A] rn in
-    reflect [ |- B] [h |- algapp R[#W] S]
+    reflect [ |- B] [h |- alg_app R[#W] S]
    )
-and reify : {A:[|- tp]}Log [g |- M1 ~ M2] [ |- A] -> [g |- algeqn M1 M2 A[]] = 
+and reify : {A:[|- tp]}Log [g |- M1 ~ M2] [ |- A] -> [g |- algeq M1 M2 A[]] = 
  / total a (reify g m1 m2 a) / 
 mlam A => fn e => case [ |- A] of
 | [ |- i ] =>
   let LogBase a = e in a
 | [ |- arr A B] =>
   let LogArr [g |-  M1] [g |-  M2] f = e in
-  let [g,b:block x:tm,y:algeqr x x A[] |- R]
-      = reify [ |- B ] (f [g,b:block x:tm,y:algeqr x x A[]] [g,b |- ..] [g,b |- b.1] [g,b |- b.1]
-        (reflect [ |- A ] [g,b:block x:tm,y:algeqr x x A[] |- b.2]))
-  in [g |- algarr (\x. \y. R[..,<x;y>])]
+  let [g,b:block x:tm,y:algeqNeu x x A[] |- R]
+      = reify [ |- B ] (f [g,b:block x:tm,y:algeqNeu x x A[]] [g,b |- ..] [g,b |- b.1] [g,b |- b.1]
+        (reflect [ |- A ] [g,b:block x:tm,y:algeqNeu x x A[] |- b.2]))
+  in [g |- alg_arr \x. \y. R[..,<x;y>]]
 ;
 
 % Transitivity of mstep
@@ -88,15 +88,15 @@ rec mstep_trans : (g:tctx) [g |-  mstep M N] -> [g |-  mstep N P] -> [g |-  mste
 / total s1 (mstep_trans g m n p s1 s2) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl] => let [g |-  S2] = s2 in [g |-  S2]
-| [g |-  trans1 S1 (MS1)] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
-  [g |-  trans1 S1 (MSR)]
+| [g |-  trans1 S1 MS1] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
+  [g |-  trans1 S1 MSR]
 ;
 
 % Boxed form of trans1 for convenience
 rec trans1' : (g:tctx) [g |-  step M N] -> [g |-  mstep N P] -> [g |-  mstep M P] =
 / total (trans1') / 
 fn s1 => fn s2 => case (s1,s2) of
-| ([g |-  S], [g |-  MS]) => [g |-  trans1 S (MS)]
+| ([g |-  S], [g |-  MS]) => [g |-  trans1 S MS]
 ; % TODO: Are these actually necessary?
 
 % multi-step reduction under the function position of application
@@ -104,7 +104,7 @@ rec mstep_app : (g:tctx) [g |-  mstep M N] -> [g |-  mstep (app M P) (app N P)] 
 / total s1 (mstep_app g m n p s1) /
 fn s1 => case s1 of
 | [g |-  refl] => [g |-  refl]
-| [g |-  trans1 S (MS)] => trans1' [g |-  stepapp S] (mstep_app [g |-  MS]);
+| [g |-  trans1 S MS] => trans1' [g |-  stepapp S] (mstep_app [g |-  MS]);
 
 
 
@@ -116,10 +116,11 @@ rec closed : {T:[|- tp]} [g |-  mstep N1 M1] -> [g |-  mstep N2 M2]
  / total t (closed g n1 m1 n2 m2 t) / 
 mlam T => fn s1,s2,e => case [|- T] of 
 | [|- i] => 
-  let LogBase [g |- algbase (S1') (S2') A] = e in
+  let LogBase [g |- alg_base S1' S2' A] = e in
   let [g |- S1''] = mstep_trans s1 [g |- S1'] in
   let [g |- S2''] = mstep_trans s2 [g |- S2'] in
-  LogBase [g |- algbase (S1'') (S2'') A]
+  LogBase [g |- alg_base S1'' S2'' A]
+
 | [|- arr T1 T2] => 
   let LogArr [g |-  M1] [g |-  M2] f = e in 
   let [g |-  S1] = s1 in
@@ -130,27 +131,28 @@ mlam T => fn s1,s2,e => case [|- T] of
   );
 
 % Symmetry of algorithmic equivalence
-rec algEqRSym : (g:tctx)
-  [g |- algeqr N1 N2 T]
--> [g |- algeqr N2 N1 T] =
-/ total a (algEqRSym g n1 n2 t a) /
+rec algeqNeuSym : (g:tctx)
+  [g |- algeqNeu N1 N2 T]
+-> [g |- algeqNeu N2 N1 T] =
+/ total a (algeqNeuSym g n1 n2 t a) /
 fn a => case a of
 | [g |- #p.2] => [g |- #p.2]
-| [g |- algapp R N] => 
-  let [g |- R'] = algEqRSym [g |- R] in
-  let [g |- N'] = algEqNSym [g |- N] in
-  [g |- algapp (R') (N')]
-and algEqNSym : (g:tctx)
-  [g |- algeqn N1 N2 T]
--> [g |- algeqn N2 N1 T] =
-/ total a (algEqNSym g n1 n2 t a) /
+
+| [g |- alg_app (R) N] => 
+  let [g |- R'] = algeqNeuSym [g |- R] in
+  let [g |- N'] = algeqSym [g |- N] in
+  [g |- alg_app (R') (N')]
+and algeqSym : (g:tctx)
+  [g |- algeq N1 N2 T]
+-> [g |- algeq N2 N1 T] =
+/ total a (algeqSym g n1 n2 t a) /
 fn a => case a of
-| [g |- algbase S1 S2 R] =>
-  let [g |- R'] = algEqRSym [g |- R] in
-  [g |- algbase S2 S1 (R')]
-| [g |- algarr (\x.\u.N)] =>
-  let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
-  [g |- algarr (\x.\u.N')]
+| [g |- alg_base S1 S2 R] =>
+  let [g |- R'] = algeqNeuSym [g |- R] in
+  [g |- alg_base S2 S1 R']
+| [g |- alg_arr \x.\u.N] =>
+  let [g,b:block x:tm,y:algeqNeu x x _ |- N'[..,b.1,b.2]] = algeqSym [g,b:block x:tm,y:algeqNeu x x _ |- N[..,b.1,b.2]] in
+  [g |- alg_arr \x.\u.N']
 ;
 
 % Symmetry of logical equivalence
@@ -160,7 +162,7 @@ rec logEqSym :
 / total t (logEqSym g m1 m2 t) /
 mlam T => fn e => case [|- T] of 
 | [|- i] => 
-  let LogBase a = e in  LogBase (algEqNSym a)
+  let LogBase a = e in  LogBase (algeqSym a)
 | [|- arr T1 T2] => 
   let LogArr [g |-  M1] [g |-  M2] f = e in 
   LogArr [g |-  M2] [g |-  M1] (mlam h,#W,N1,N2 => fn rn =>
@@ -174,16 +176,16 @@ eqtp : tp -> tp -> type.
 refltp : eqtp T T.
 
 % The types from algorithmic path equivalence are uniquely determined
-rec algEqRUnique : (g:tctx)
-  [g |- algeqr N1 N2 T[]]
--> [g |- algeqr N2 N3 S[]]
+rec algeqNeuUnique : (g:tctx)
+  [g |- algeqNeu N1 N2 T[]]
+-> [g |- algeqNeu N2 N3 S[]]
 -> [|- eqtp T S] =
-/ total e1 (algEqRUnique g n1 n2 n3 t s e1) / 
+/ total e1 (algeqNeuUnique g n1 n2 n3 t s e1) / 
 fn e1 => fn e2 => case e1 of 
 | [g |- #p.2] => let [g |- #q.2] = e2 in [|- refltp]
-| [g |- algapp R N] =>
-  let [g |- algapp (R') (N')] = e2 in 
-  let [|- refltp] = algEqRUnique [g |- R] [g |- R'] in [|- refltp]
+| [g |- alg_app (R) N] =>
+  let [g |- alg_app (R') (N')] = e2 in 
+  let [|- refltp] = algeqNeuUnique [g |- R] [g |- R'] in [|- refltp]
 ;
 
 eqtm : tm -> tm -> type.
@@ -212,7 +214,7 @@ fn s1 => fn s2 => case s1 of
 | [g |-  trans1 S1 (MS1)] =>
   case s2 of 
   | [g |-  refl] => Common [g |-  refl] s1
-  | [g |-  trans1 S2 (MS2)] => 
+  | [g |-  trans1 S2 MS2] => 
     let [g|- refltm] = determinacy [g |-  S1] [g |-  S2] in
     confluence [g |-  MS1] [g |-  MS2]
 ;
@@ -222,18 +224,18 @@ LF empty : type = ;
 % Terms in algorithmic path equivalence cannot step
 rec neutral_doesnt_step : (g:tctx)
   [g |-  step M N]
--> [g |- algeqr M P T]
+-> [g |- algeqNeu M P T]
 -> [ |- empty] =
 / total s (neutral_doesnt_step g m n p t s ) /
 fn s => fn e => case s of 
-| [g |- beta] => let [g |- algapp R N] = e in impossible [g |- R]
-| [g |- stepapp S] => let [g |- algapp R N] = e in neutral_doesnt_step [g |- S] [g |- R]
+| [g |- beta] => let [g |- alg_app R N] = e in impossible [g |- R]
+| [g |- stepapp S] => let [g |- alg_app R N] = e in neutral_doesnt_step [g |- S] [g |- R]
 ;
 
 % Similarly for multi-step reduction
 rec neutral_mstep : (g:tctx)
   [g |-  mstep M N]
--> [g |- algeqr M P T]
+-> [g |- algeqNeu M P T]
 -> [g |- eqtm M N] =
 / total  (neutral_mstep) /
 fn s => fn e => case s of
@@ -243,48 +245,48 @@ fn s => fn e => case s of
 % Corollary of determinacy
 rec determinacy' : (g:tctx)
   [g |-  mstep M M1] -> [g |-  mstep M M2]
--> [g |- algeqr N1 M1 T]
--> [g |- algeqr M2 N2 T]
+-> [g |- algeqNeu N1 M1 T]
+-> [g |- algeqNeu M2 N2 T]
 -> [g |- eqtm M1 M2] =
 / total (determinacy') /
 fn s1 => fn s2 => fn e1 => fn e2 => case (confluence s1 s2) of
 | Common s1' s2' =>
-  let [g|-refltm] = neutral_mstep s1' (algEqRSym e1) in
+  let [g|-refltm] = neutral_mstep s1' (algeqNeuSym e1) in
   let [g|-refltm] = neutral_mstep s2' e2 in
   [g|-refltm]
 ;
 
 % Transitivity of algorithmic equivalence
-rec algEqRTrans : (g:tctx)
-  [g |- algeqr N1 N2 T]
--> [g |- algeqr N2 N3 T]
--> [g |- algeqr N1 N3 T] =
-/ total a1 (algEqRTrans g n1 n2 n3 t a1) /
+rec algeqNeuTrans : (g:tctx)
+  [g |- algeqNeu N1 N2 T]
+-> [g |- algeqNeu N2 N3 T]
+-> [g |- algeqNeu N1 N3 T] =
+/ total a1 (algeqNeuTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
 | [g |- #p.2] => let [g |- #q.2] = a2 in [g |- #q.2]
-| [g |- algapp (A1') B1] =>
-  let [g |- algapp (A2') B2] = a2 in 
-  let [|- refltp] = algEqRUnique [g |- A1'] [g |- A2'] in
-  let [g |- R1] = algEqRTrans [g |- A1'] [g |- A2'] in
-  let [g |- R2] = algEqNTrans [g |- B1] [g |- B2] in
-  [g |- algapp R1 R2]
-and algEqNTrans : (g:tctx)
-  [g |- algeqn N1 N2 T]
--> [g |- algeqn N2 N3 T]
--> [g |- algeqn N1 N3 T] =
-/ total a1 (algEqNTrans g n1 n2 n3 t a1) /
+| [g |- alg_app (A1') (B1)] =>
+  let [g |- alg_app (A2') (B2)] = a2 in 
+  let [|- refltp] = algeqNeuUnique [g |- A1'] [g |- A2'] in
+  let [g |- R1] = algeqNeuTrans [g |- A1'] [g |- A2'] in
+  let [g |- R2] = algeqTrans [g |- B1] [g |- B2] in
+  [g |- alg_app (R1) (R2)]
+and algeqTrans : (g:tctx)
+  [g |- algeq N1 N2 T]
+-> [g |- algeq N2 N3 T]
+-> [g |- algeq N1 N3 T] =
+/ total a1 (algeqTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- algbase S1 S2 (A1')] =>
-  let [g |- algbase (S2') S3 (A2')] = a2 in 
+| [g |- alg_base (S1) (S2) (A1')] =>
+  let [g |- alg_base (S2') (S3) (A2')] = a2 in 
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
-  let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
-  [g |- algbase S1 S3 R]
-| [g |- algarr (\x.\u.A1')] => 
-  let [g |- algarr (\x.\u.A2')] = a2 in
-  let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
-      = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[..,b.1,b.2]]
-		    [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
-  [g |- algarr (\x.\u.R)]
+  let [g |- R] = algeqNeuTrans [g |- A1'] [g |- A2'] in
+  [g |- alg_base (S1) (S3) (R)]
+| [g |- alg_arr (\x.\u.A1')] => 
+  let [g |- alg_arr (\x.\u.A2')] = a2 in
+  let [g,b:block x:tm,y:algeqNeu x x T |- R[..,b.1,b.2]]
+      = algeqTrans [g,b:block x:tm,y:algeqNeu x x _ |- A1'[..,b.1,b.2]]
+		    [g,b:block x:tm,y:algeqNeu x x _ |- A2'[..,b.1,b.2]] in
+  [g |- alg_arr (\x.\u.R)]
 ;
 
 % Transitivity of logical equivalence
@@ -296,7 +298,7 @@ rec logEqTrans : {T:[|- tp]}
 mlam T => fn e1 => fn e2 => case [|- T] of 
 | [|- i] => 
   let LogBase a1 = e1 in
-  let LogBase a2 = e2 in LogBase (algEqNTrans a1 a2)
+  let LogBase a2 = e2 in LogBase (algeqTrans a1 a2)
 | [|- arr T1 T2] => 
   let LogArr [g |-  M] [g |-  N] f1 = e1 in
   let LogArr [g |-  N] [g |-  P] f2 = e2 in
@@ -419,7 +421,7 @@ case d of
 inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){#Id:[g' |- g]} ctype =
 | INil : IdSub [|-nil] [] [|- ^]
 | ISnoc : IdSub [|-G] [g] [g' |- #Id]
-       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqr x x T[] |- #Id[..], b.1]
+       -> IdSub [|- G & T] [g,x:tm] [g',b:block x:tm,y:algeqNeu x x T[] |- #Id[..], b.1]
 ;
 
 % % The identity substitution is logically related to itself
@@ -430,12 +432,12 @@ rec idLogSub : IdSub [|-G] [g] [g' |- #Id]
 | INil => Nil
 | ISnoc (r' : IdSub [|- G] [g] [g' |- #Id]) => 
   let q = idLogSub r' in
-  Dot (wknLogSub [g',b:block x:tm,a:algeqr x x _] [g'] [g',b |-..] (idLogSub r'))
-      (reflect [ |- _] [g',b:block x:tm,y:algeqr x x _ |- b.2])
+  Dot (wknLogSub [g',b:block x:tm,a:algeqNeu x x _] [g'] [g',b |-..] (idLogSub r'))
+      (reflect [ |- _] [g',b:block x:tm,y:algeqNeu x x _ |- b.2])
 ;
 
 rec completeness : IdSub [|-G] [g] [g' |- #Id]
 -> Decl [|-G] [g |- M1 ~ M2] [ |- T]
--> [g' |- algeqn M1[#Id] M2[#Id] T[]] =
+-> [g' |- algeq M1[#Id] M2[#Id] T[]] =
  / total (completeness) /
    fn r => fn e => reify [|-_] (thm e (idLogSub r));

@@ -323,9 +323,10 @@ cvar ::= id                     (* context variable *)
 subst ::=                       (* nothing *)
        | "[" sigma "]"          (* explicit substitution *)
 
-sigma ::= ^                     (* empty substitution *)
-        | ..                    (* Identity substitution *)
-        | sigma, term           (* substitution sigma , M *)
+
+sigma ::= ^                    (* empty substitution *)
+        | ..                  (* Identity substitution *)
+        | sigma, term          (* substitution sigma , M *)
 
 \end{verbatim}
 
@@ -340,7 +341,7 @@ In order of precedence, Beluga disambiguates the syntax and imposes restrictions
 \item Juxtaposition (application) is left associative and has highest precedence
 \item Bound variables and constants must be written with lower-case letters
 \item Free meta-variables must be written with upper-case letters
-\item All LF terms need to be written in $\beta$-normal form, i.e. no redeces can occur in terms. \textit{LF terms occurring as part of a contextual object must be written in eta-expanded form.} For example, one must write} \verb+[g |- lam \x.E]+ which is equivalent to 
+\item All LF terms need to be written in $\beta$-normal form, i.e. no redeces can occur in terms. \textit{LF terms occurring as part of a contextual object must be written in eta-expanded form.} For example, one must write \verb+[g |- lam \x.E]+ which is equivalent to 
   \verb+[g |- lam \x.E[..,x] ]+ whereas \texttt{[g |- lam E]} is currently rejected.
 \end{itemize}
 
@@ -422,7 +423,7 @@ A \textit{\textbf{meta-variable}} \texttt{M} stands for an LF term. Note that me
 \texttt{id} & a bound variable\\
 \texttt{id.[id,int]} & a projection of a block declaration\\
 \texttt{\#id.[id,int]} & a projection of a schema parameter\\
-\verb+\#ID subst} & a substitution variable\\
+\texttt{\#ID subst} & a substitution variable\\
 \end{tabular}\\
 \\
 

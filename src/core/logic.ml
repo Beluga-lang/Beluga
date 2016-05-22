@@ -814,8 +814,7 @@ let runLogic () =
         Printer.printSignature ()
       else () ;
       (* Here we call the conversion to LaTex *)
-      Latex.runLatex ();
-      Latexinductive.runLatex ();
+      Latex.runLatex "latex/main.tex";
       (* Solve! *)
       Index.iterQueries Frontend.solve ;
       (* Clear the local storage.  *)

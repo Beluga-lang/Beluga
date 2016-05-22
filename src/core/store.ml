@@ -579,7 +579,9 @@ module Cid = struct
       kind                : Int.Comp.kind;
       positivity          : Int.Sgn.positivity_flag;  (* flag for positivity and stratification checking *)
       mutable frozen      : bool;
-      mutable constructors: Id.cid_comp_const list
+      (********************************************************************************************************)
+      constructors        : Id.cid_comp_const list ref
+      (********************************************************************************************************)
     }
 
     let mk_entry name kind implicit_arguments positivity =  {
@@ -588,7 +590,9 @@ module Cid = struct
       kind               = kind;
       positivity         = positivity;
       frozen             = false;
-      constructors       = []
+      (********************************************************************************************************)
+      constructors       = ref []
+      (********************************************************************************************************)
     }
 
 (*    (*  store : entry DynArray.t *)
@@ -667,12 +671,24 @@ module Cid = struct
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
+    (********************************************************************************************************)
+    let rec args = function
+      | Int.Comp.Ctype (_) -> 0
+      | Int.Comp.PiKind (_, _, k) -> 1 + (args k)
+
+    let args_of_name n =
+      let entry = get (index_of_name n) in
+      (args (entry.kind)) - entry.implicit_arguments
+    (********************************************************************************************************)
+
     let freeze a =
           (get a).frozen <- true
 
     let addConstructor c typ =
       let entry = get typ in
-        entry.constructors <- (c :: entry.constructors)
+      (********************************************************************************************************)
+        entry.constructors := c :: !(entry.constructors)
+      (********************************************************************************************************)
 
     let clear () =
       (DynArray.get entry_list !Modules.current) := [];
@@ -1140,6 +1156,9 @@ module Cid = struct
     open Syntax.Int
 
     val render_cid_comp_typ : cid_comp_typ -> string
+    (***********************************************************************************************************)
+    val render_cid_comp_typ_latex : cid_comp_typ -> string
+    (***********************************************************************************************************)
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
     val render_cid_comp_dest : cid_comp_dest -> string
@@ -1169,13 +1188,15 @@ module Cid = struct
     open Id
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    (***********************************************************************************************************)
+    let render_cid_comp_typ_latex c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    (***********************************************************************************************************)
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
     (***********************************************************************************************************)
     let render_cid_typ    a    = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term   c    = render_name (Term.get ~fixName:true c).Term.name
-    (* I have to provide these because of the signature, but they are not used *)
     let render_cid_typ_latex   a = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term_latex  c = render_name (Term.get ~fixName:true c).Term.name
     (***********************************************************************************************************)
@@ -1185,7 +1206,6 @@ module Cid = struct
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
     (***********************************************************************************************************)
     let render_bvar  _cPsi i   = string_of_int i
-    (* had to provide for signature but shouldn't be used *)
     let render_bvar_latex _cPsi i   = string_of_int i
     (***********************************************************************************************************)
     let render_offset      i   = string_of_int i
@@ -1199,7 +1219,11 @@ module Cid = struct
 
     open Id
 
+    (***********************************************************************************************************)
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    let render_cid_comp_typ_latex c  = 
+      "\\COMPTYP" ^ (render_name_latex (CompTyp.get ~fixName:true c).CompTyp.name)
+    (***********************************************************************************************************)
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name

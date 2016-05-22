@@ -12,25 +12,32 @@ type conjunction =
   | Conjunct of conjunction * goal
 
 type clause =
-  { tHead : Comp.typ         
+  { tHead : Comp.typ
+  ; eVars : LF.mctx
   ; subGoals : conjunction }
 
 
 
 module Convert = struct
 
-  let rec typToClause' cG tM = match tM with
+  let rec typToClause' eV cG tM = match tM with
     | Comp.TypArr (tA, tB) ->
-      typToClause' (Conjunct (cG, typToGoal tA)) tB
+      typToClause' eV (Conjunct (cG, typToGoal tA)) tB
     | Comp.TypBox (_) as tA ->
       { tHead = tA
+      ; eVars = eV
       ; subGoals = cG }
     | Comp.TypBase (_) as tA ->
       { tHead = tA
+      ; eVars = eV
       ; subGoals = cG }
+    | Comp.TypPiBox(mtD, tM') ->
+      typToClause' (LF.Dec (eV, mtD)) cG tM'
+
+
 
   and typToGoal tM = match tM with
-    | Comp.TypPiBox (LF.Decl(_) as mtD, tM') ->
+    | Comp.TypPiBox (mtD, tM') ->
       All (mtD, typToGoal tM')
     | Comp.TypArr (tA, tB) ->
       Impl (typToGoal tA, typToGoal tB)
@@ -40,7 +47,7 @@ module Convert = struct
       Atom (tA)
 
   let typToClause tM =
-    typToClause' True tM
+    typToClause' LF.Empty True tM
 
 
 end
@@ -92,27 +99,22 @@ module Index = struct
   *)
   let storeCompTypConst cidCompTyp =
     let compTypEntry = Cid.CompTyp.get cidCompTyp in
-    let compTypConstr = compTypEntry.Cid.CompTyp.constructors in
+    let compTypConstr = !(compTypEntry.Cid.CompTyp.constructors) in
     let compTypConst = addCompTyp cidCompTyp in
     let regSgnClause cidCompConst =
       addSgnClause compTypConst (compileSgnClause cidCompConst) in
     let rec revIter f l = match l with
       | [] -> ()
       | h :: l' -> revIter f l' ; f h
-    in 
-    (* DEBUGGING INFO *)
-    printf "%s\n" (Id.string_of_name compTypEntry.Cid.CompTyp.name);
-	  printf "%d\n" (List.length compTypConstr);
-	  (******************)
-    revIter regSgnClause compTypConstr
+    in revIter regSgnClause compTypConstr
 
   (* robStore () = ()
      Store all comp type constants in the `compTypes' table.
   *)
   let robStore () =
-    try
+    (*try*)
       List.iter storeCompTypConst !(DynArray.get Cid.CompTyp.entry_list !(Modules.current))
-    with _ -> printf "RobStore () failed !"
+    (*with _ -> printf "RobStore () failed !"*)
 
   (* clearIndex () = ()
      Empty the local storage.
@@ -130,92 +132,116 @@ module Printer = struct
   open Index
 
   
-  (* val compTypToString : LF.mctx -> Comp.typ -> string *)
-  let compTypToString cD tA  = 
-    P.compTypToString cD tA
+  (* val compTypToLatex : LF.mctx -> Comp.typ -> string *)
+  let compTypToLatex cD tA  = 
+    P.compTypToLatex cD tA
 
-  (* val cdeclToString : LF.mctx -> LF.ctyp_decl -> string *)
-  let cdeclToString cD cdecl =
-    P.cdeclToString cD cdecl
+  (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
+  let cdeclToLatex cD cdecl =
+    P.cdeclToLatex cD cdecl
 
   (* val goalToLatex : goal -> LF.mctx -> string *)
   let rec goalToLatex g cD = match g with
-    | Atom (tA) -> "(" ^ (compTypToString cD tA) ^ ")"
+    | Atom (tA) -> compTypToLatex cD tA
     | Impl (g1, g2) ->
-      sprintf "(if %s then %s)" 
+      sprintf "if %s then %s" 
        (goalToLatex g1 cD)
        (goalToLatex g2 cD)
     | All (cdecl, g) ->
-      sprintf "(for all (%s), %s)" 
-       (cdeclToString cD cdecl)
+      sprintf "(for all %s, %s)" 
+       (cdeclToLatex cD cdecl)
        (goalToLatex g (LF.Dec (cD, cdecl)))
 
   (* val sgnClauseToLatex : Id.cid_comp_const * clause -> string *)
   let sgnClauseToLatex (cidCompConst, sCl) =
-    let name = Id.string_of_name (compConstName cidCompConst) in (* maybe use string_of_name_latex *)
-    let conclusion = compTypToString LF.Empty sCl.tHead in 
+    let name = Id.string_of_name_latex (compConstName cidCompConst) in 
+    let conclusion = compTypToLatex sCl.eVars sCl.tHead in 
     let rec printSubgoals cG = match cG with
       | Conjunct (True, g) ->
-        goalToLatex g LF.Empty
+        goalToLatex g sCl.eVars
       | Conjunct (cG', g) ->
-        sprintf "%s and %s" (printSubgoals cG') (goalToLatex g LF.Empty)
+        sprintf "%s and %s" (printSubgoals cG') (goalToLatex g sCl.eVars)
     in 
     match sCl.subGoals with
       | True -> 
-        sprintf "[%s] %s" name conclusion
+        sprintf "\\begin{definition}\n[%s] %s\n\\end{definition}" 
+          name conclusion
       | Conjunct (_) as cG -> 
-        sprintf "[%s] if %s then %s" name (printSubgoals cG) conclusion
+        sprintf "\\begin{definition}\n[%s] If %s then %s\n\\end{definition}" 
+          name (printSubgoals cG) conclusion
+
+
+  let sgnClauseToMaccros (cidCompConst, sCl) =
+    let name = Id.string_of_name_latex (compConstName cidCompConst) in
+    let countSubgoals cG = 
+      let rec countSubgoals' cG n = match cG with
+        | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
+        | True -> n
+      in countSubgoals' cG 0
+    (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+    in 
+    let rec printArguments n = match n with
+        | 1 -> "\\;#1"
+        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+    in 
+    let n = countSubgoals sCl.subGoals in
+    (* pattern match on the number of goals in sCl.subGoals *)
+    match n with 
+      | 0 -> sprintf "\\newcommand{\\COMPCONST%s}{\\mathsf{%s}}" 
+          name name
+      | n -> sprintf "\\newcommand{\\COMPCONST%s}[%d]{\\mathsf{%s}%s}"
+          name n name (printArguments n)
+
+
+  let cidCompTypToMaccro cidCompTyp =
+    (* get name of type constant *)
+    let compTypEntry = Store.Cid.CompTyp.get cidCompTyp in
+    let compTypName = compTypEntry.Store.Cid.CompTyp.name in
+    let name = Id.string_of_name_latex compTypName in
+    (* get number of arguments of compType constant *)
+    let n = Store.Cid.CompTyp.args_of_name compTypName in
+    let rec printArguments n = match n with
+        | 1 -> "\\;#1"
+        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+    in 
+    match n with 
+      | 0 -> sprintf "\\newcommand{\\COMPTYP%s}{\\mathsf{%s}}" 
+              name name
+      | n -> sprintf "\\newcommand{\\COMPTYP%s}[%d]{\\mathsf{%s}%s}" 
+              name n name (printArguments n)
 
 
   let printSignatureLatex mainFile =
-    let outMaccros = open_out "latex/maccros.tex" in
-    let outMain = open_out mainFile in
+    let outMaccros = 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 "latex/maccros.tex" 
+    in
+    let outMain =
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
+    in
     (* takes as input one binding (k, v) of compTypes : 
        k : cidCompTyp, v : (cidCompConst, sCl) DynArray
     *)
     let compTypeFamilyToLatex k v = 
-      fprintf outMain "Definition:\n\n";
+      (* print a maccro for the compTyp constant k in the maccros file *)
+      fprintf outMaccros "\n%s\n\n" (cidCompTypToMaccro k);
       (* for each clause in v :
-         - print a rule in the main file  *)
-	  (* DEBUGGING INFO *)
-	  fprintf outMain "%d\n" (DynArray.length v);
-	  (******************)
-      DynArray.iter (fun w -> fprintf outMain "- %s\n\n" (sgnClauseToLatex w)) v
+        - print a maccro for the comp constant in the maccros file
+        - print a statement of the definition in the main file  *)
+      DynArray.iter (fun w ->
+        fprintf outMaccros "%s\n\n" (sgnClauseToMaccros w);
+        fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
     in
-    (* preamble of maccros file *)
-    fprintf outMaccros "\\input{prelude}\n\n";
-    (* preamble of main file *)
-    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
-    (* conversion to LaTex and printing of maccros *)
     Hashtbl.iter compTypeFamilyToLatex compTypes;
-    (* conclusion of main file *)
-    fprintf outMain "\n\\end{document}";
     close_out outMaccros;
-    close_out outMain;
+    close_out outMain
+
+  let printCompTypesLatex mainFile =
+    robStore ();
+    printSignatureLatex mainFile;
+    clearIndex ()
 
 
 end
-
-
-
-(* Interface *)
-
-let runLatex () =
-  Index.robStore ();
-  Printer.printSignatureLatex "latex/main.tex";
-  Index.clearIndex ();
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

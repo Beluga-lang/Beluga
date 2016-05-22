@@ -232,12 +232,7 @@ module Index = struct
     let rec revIter f l = match l with
       | [] -> ()
       | h :: l' -> revIter f l' ; f h
-    in 
-    (* DEBUGGING INFO *)
-    printf "%s\n" (Id.string_of_name typEntry.Cid.Typ.name);
-    printf "%d\n" (List.length typConstr);
-   (******************)
-    revIter regSgnClause typConstr
+    in revIter regSgnClause typConstr
 
   (* robStore () = ()
      Store all type constants in the `types' table.
@@ -245,7 +240,7 @@ module Index = struct
   let robStore () =
     try
       List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
-    with _ -> ()              
+    with _ -> ()
 
   (* clearIndex () = ()
      Empty the local storage.
@@ -392,39 +387,61 @@ module Printer = struct
 
 
   let printSignatureLatex mainFile =
-    let outMaccros = open_out "latex/maccros.tex" in
-    let outMain = open_out mainFile in
+    let outMaccros = 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 "latex/maccros.tex" 
+    in
+    let outMain =
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
+    in
     (* takes as input one binding key/value of Types : k is a cidTyp, v is a DynArray of (cidTerm, sCl) *)
     let typeFamilyToLatex k v = 
       (* print a maccro for the type constant k in the maccros file *)
       fprintf outMaccros "\n%s\n\n" (cidTypToMaccro k);
       (* for each clause in v :
-      - print a maccro for the term constant in the maccros file
+      - print a RULE and a TERM maccro for the term constant in the maccros file
       - print an inference rule in the main file  *)
       DynArray.iter (fun w -> 
         fprintf outMaccros "%s\n\n" (sgnClauseToMaccros w);
         fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v
     in
-    (* preamble of maccros file *)
-    fprintf outMaccros "\\input{prelude}\n\n";
-    (* preamble of main file *)
-    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
-    (* conversion to LaTex and printing of maccros *)
     Hashtbl.iter typeFamilyToLatex types;
-    (* conclusion of main file *)
-    fprintf outMain "\n\\end{document}";
     close_out outMaccros;
-    close_out outMain;
+    close_out outMain
+
+  let printTypesLatex mainFile =
+    robStore ();
+    printSignatureLatex mainFile;
+    clearIndex ()
 
 
 end
 
 
-
 (* Interface *)
 
-let runLatex () =
-  Index.robStore () ;
-  Printer.printSignatureLatex "latex/main.tex";
-  Index.clearIndex ();
+
+let runLatex mainFile =
+    let outMaccros = open_out "latex/maccros.tex" in
+    let outMain = open_out mainFile in
+    (* preamble of maccros file *)
+    fprintf outMaccros "\\input{prelude}\n\n";
+    close_out outMaccros;
+    (* preamble of main file *)
+    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
+    close_out outMain;
+
+    (* LaTex printing *)
+    Printer.printTypesLatex mainFile;
+    Latexinductive.Printer.printCompTypesLatex mainFile;
+    
+
+    (* conclusion of main file *)
+    let outMain =
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
+    in
+    fprintf outMain "\n\\end{document}";
+    close_out outMain
+
+
+
 

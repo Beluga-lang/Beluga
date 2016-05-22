@@ -1745,7 +1745,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 	cgoals
 
 
-  | Comp.TypBase (_, c, mS) ->
+  (*| Comp.TypBase (_, c, mS) ->
       let _ = dprint (fun () -> "\n[genPatCGoals] for " ^ P.compTypToString cD tau  ^ "\n") in
       let constructors = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors in
       let _ = if constructors = [] then dprint (fun () -> "[genPatCGoals] No Constructors defined for " ^ P.compTypToString cD tau) else () in
@@ -1762,7 +1762,28 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 		    let CovPatt (cG0, pat, ttau) = cg in
 		    let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in
 		      (cD, CovPatt (cG0', pat, ttau), ms))
-	  (genAllPatt (cD,tau) ctau_list)
+	  (genAllPatt (cD,tau) ctau_list)*)
+
+  | Comp.TypBase (_, c, mS) ->
+      let _ = dprint (fun () -> "\n[genPatCGoals] for " ^ P.compTypToString cD tau  ^ "\n") in
+      (*******************************************************************************************************)
+      let constructors = !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors) in
+      (*******************************************************************************************************)
+      let _ = if constructors = [] then dprint (fun () -> "[genPatCGoals] No Constructors defined for " ^ P.compTypToString cD tau) else () in
+      let constructors = List.rev constructors in
+      let ctau_list   = List.map (function c ->
+            let tau_c = (Store.Cid.CompConst.get  c).Store.Cid.CompConst.typ in
+                                dprint (fun () -> R.render_cid_comp_const c ^ " : " ^
+            P.compTypToString LF.Empty tau_c);
+                                      (c, tau_c)
+            )
+                                constructors
+      in
+  List.map (fun (cD, cg, ms) ->
+        let CovPatt (cG0, pat, ttau) = cg in
+        let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in
+          (cD, CovPatt (cG0', pat, ttau), ms))
+    (genAllPatt (cD,tau) ctau_list)
 
   | _ -> []
 

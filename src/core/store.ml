@@ -676,9 +676,11 @@ module Cid = struct
       | Int.Comp.Ctype (_) -> 0
       | Int.Comp.PiKind (_, _, k) -> 1 + (args k)
 
+    (* we don't take out implicit arguments because explicitly declared context variables are factored 
+       into implicit arguments *)
     let args_of_name n =
       let entry = get (index_of_name n) in
-      (args (entry.kind)) - entry.implicit_arguments
+      (args (entry.kind)) (* - entry.implicit_arguments *)
     (********************************************************************************************************)
 
     let freeze a =

@@ -124,6 +124,8 @@ let string_of_name_latex (n : name) : string =
   in 
   let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
   let name = Str.global_replace (Str.regexp "&") "and" name in
+  let name = Str.global_replace (Str.regexp "'") "prime" name in
+  let name = Str.global_replace (Str.regexp "#") "\\#" name in
   name ^ suf
 
 let render_name_latex n = match n.modules with

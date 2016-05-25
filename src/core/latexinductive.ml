@@ -20,34 +20,33 @@ type clause =
 
 module Convert = struct
 
-  let rec typToClause' eV cG tM = match tM with
-    | Comp.TypArr (tA, tB) ->
-      typToClause' eV (Conjunct (cG, typToGoal tA)) tB
-    | Comp.TypBox (_) as tA ->
-      { tHead = tA
+  (* val typToClause : LF.mctx -> conjunction -> Comp.typ -> clause *)
+  let rec typToClause' eV cG tau = match tau with
+    | Comp.TypArr (tauA, tauB) ->
+      typToClause' eV (Conjunct (cG, typToGoal tauA)) tauB
+    | Comp.TypBox (_) ->
+      { tHead = tau
       ; eVars = eV
       ; subGoals = cG }
-    | Comp.TypBase (_) as tA ->
-      { tHead = tA
+    | Comp.TypBase (_) ->
+      { tHead = tau
       ; eVars = eV
       ; subGoals = cG }
-    | Comp.TypPiBox(mtD, tM') ->
-      typToClause' (LF.Dec (eV, mtD)) cG tM'
+    | Comp.TypPiBox (cdecl, tau') ->
+      typToClause' (LF.Dec (eV, cdecl)) cG tau'
 
+  and typToGoal tau = match tau with
+    | Comp.TypPiBox (cdecl, tau') ->
+      All (cdecl, typToGoal tau')
+    | Comp.TypArr (tauA, tauB) ->
+      Impl (typToGoal tauA, typToGoal tauB)
+    | Comp.TypBox (_) ->
+      Atom (tau)
+    | Comp.TypBase (_) ->
+      Atom (tau)
 
-
-  and typToGoal tM = match tM with
-    | Comp.TypPiBox (mtD, tM') ->
-      All (mtD, typToGoal tM')
-    | Comp.TypArr (tA, tB) ->
-      Impl (typToGoal tA, typToGoal tB)
-    | Comp.TypBox (_) as tA ->
-      Atom (tA)
-    | Comp.TypBase (_) as tA ->
-      Atom (tA)
-
-  let typToClause tM =
-    typToClause' LF.Empty True tM
+  let typToClause tau =
+    typToClause' LF.Empty True tau
 
 
 end
@@ -81,8 +80,8 @@ module Index = struct
   *)
   let compileSgnClause cidCompConst =
     let compConstEntry = Cid.CompConst.get cidCompConst in
-    let tM = compConstEntry.Cid.CompConst.typ in
-    (cidCompConst, Convert.typToClause tM)
+    let tau = compConstEntry.Cid.CompConst.typ in
+    (cidCompConst, Convert.typToClause tau)
 
   (* compConstName c = Id.name
      Get the string representation of comp constant c.
@@ -112,9 +111,9 @@ module Index = struct
      Store all comp type constants in the `compTypes' table.
   *)
   let robStore () =
-    (*try*)
+    try
       List.iter storeCompTypConst !(DynArray.get Cid.CompTyp.entry_list !(Modules.current))
-    (*with _ -> printf "RobStore () failed !"*)
+    with _ -> ()
 
   (* clearIndex () = ()
      Empty the local storage.
@@ -133,8 +132,8 @@ module Printer = struct
 
   
   (* val compTypToLatex : LF.mctx -> Comp.typ -> string *)
-  let compTypToLatex cD tA  = 
-    P.compTypToLatex cD tA
+  let compTypToLatex cD tau  = 
+    P.compTypToLatex cD tau
 
   (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
   let cdeclToLatex cD cdecl =
@@ -142,7 +141,7 @@ module Printer = struct
 
   (* val goalToLatex : goal -> LF.mctx -> string *)
   let rec goalToLatex g cD = match g with
-    | Atom (tA) -> compTypToLatex cD tA
+    | Atom (tau) -> compTypToLatex cD tau
     | Impl (g1, g2) ->
       sprintf "if %s then %s" 
        (goalToLatex g1 cD)
@@ -152,25 +151,48 @@ module Printer = struct
        (cdeclToLatex cD cdecl)
        (goalToLatex g (LF.Dec (cD, cdecl)))
 
-  (* val sgnClauseToLatex : Id.cid_comp_const * clause -> string *)
+  (* prints explicit quantifiers in sCl.eVars *)
+  let printForAlls cD = 
+    let rec printForAlls' cD acc = match cD with
+      | LF.Empty -> acc
+      | LF.Dec (cD', cdecl) ->
+        (match cdecl with
+          (* explicit quantifier, print a for all *)
+          | LF.Decl (_, _, LF.No) ->
+            printForAlls' cD' ((sprintf "for all %s, " (cdeclToLatex cD' cdecl)) ^ acc)
+          (* implicit quantifier, print nothing *)
+          | LF.Decl (_, _, LF.Maybe) ->
+             printForAlls' cD' acc)
+     in printForAlls' cD ""
+
+  (* val printSubgoals : conjunction -> LF.mctx -> string *)
+  let rec printSubgoals cG cD = match cG with
+      | Conjunct (True, g) ->
+        goalToLatex g cD
+      | Conjunct (cG', g) ->
+        sprintf "%s and %s" (printSubgoals cG' cD) (goalToLatex g cD)
+
+  let clauseToLatex sCl = 
+    let conclusion = compTypToLatex sCl.eVars sCl.tHead in 
+    let forAlls = printForAlls sCl.eVars in
+    match sCl.subGoals with
+      | True ->
+        sprintf "%s%s" forAlls conclusion
+      | Conjunct (_) as cG ->
+        sprintf "%sif %s then %s" forAlls (printSubgoals cG sCl.eVars) conclusion
+
+  (* val sgnClauseToLatex Id.cid_comp_const * clause -> string *)
   let sgnClauseToLatex (cidCompConst, sCl) =
     let name = Id.string_of_name_latex (compConstName cidCompConst) in 
-    let conclusion = compTypToLatex sCl.eVars sCl.tHead in 
-    let rec printSubgoals cG = match cG with
-      | Conjunct (True, g) ->
-        goalToLatex g sCl.eVars
-      | Conjunct (cG', g) ->
-        sprintf "%s and %s" (printSubgoals cG') (goalToLatex g sCl.eVars)
-    in 
-    match sCl.subGoals with
-      | True -> 
-        sprintf "\\begin{definition}\n[%s] %s\n\\end{definition}" 
-          name conclusion
-      | Conjunct (_) as cG -> 
-        sprintf "\\begin{definition}\n[%s] If %s then %s\n\\end{definition}" 
-          name (printSubgoals cG) conclusion
+    sprintf "\\begin{definition}\n[%s] %s\n\\end{definition}" 
+      name (clauseToLatex sCl)
 
+  (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+  let rec printArguments n = match n with
+    | 1 -> "\\;#1"
+    | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
 
+  (* maccro : \newcommand{\COMPCONSTname}[number of args n]{\mathsf{name}\;#1\ ... \;#n} *)
   let sgnClauseToMaccros (cidCompConst, sCl) =
     let name = Id.string_of_name_latex (compConstName cidCompConst) in
     let countSubgoals cG = 
@@ -178,13 +200,7 @@ module Printer = struct
         | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
         | True -> n
       in countSubgoals' cG 0
-    (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
-    in 
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
-    let n = countSubgoals sCl.subGoals in
+    in let n = countSubgoals sCl.subGoals in
     (* pattern match on the number of goals in sCl.subGoals *)
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMPCONST%s}{\\mathsf{%s}}" 
@@ -192,24 +208,17 @@ module Printer = struct
       | n -> sprintf "\\newcommand{\\COMPCONST%s}[%d]{\\mathsf{%s}%s}"
           name n name (printArguments n)
 
-
+  (* maccro : \newcommand{\COMPTYPname}[number of args n]{\mathsf{name}\;#1\ ... \;#n} *)
   let cidCompTypToMaccro cidCompTyp =
-    (* get name of type constant *)
     let compTypEntry = Store.Cid.CompTyp.get cidCompTyp in
     let compTypName = compTypEntry.Store.Cid.CompTyp.name in
     let name = Id.string_of_name_latex compTypName in
-    (* get number of arguments of compType constant *)
     let n = Store.Cid.CompTyp.args_of_name compTypName in
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMPTYP%s}{\\mathsf{%s}}" 
               name name
       | n -> sprintf "\\newcommand{\\COMPTYP%s}[%d]{\\mathsf{%s}%s}" 
               name n name (printArguments n)
-
 
   let printSignatureLatex mainFile =
     let outMaccros = 
@@ -226,7 +235,7 @@ module Printer = struct
       fprintf outMaccros "\n%s\n\n" (cidCompTypToMaccro k);
       (* for each clause in v :
         - print a maccro for the comp constant in the maccros file
-        - print a statement of the definition in the main file  *)
+        - print a definition in the main file  *)
       DynArray.iter (fun w ->
         fprintf outMaccros "%s\n\n" (sgnClauseToMaccros w);
         fprintf outMain "%s\n\n" (sgnClauseToLatex w)) v

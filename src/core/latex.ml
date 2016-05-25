@@ -2,14 +2,6 @@ module S = Substitution.LF
 open Printf
 open Syntax.Int
 
-(* From Logic : 
-   - kept type declarations
-   - kept Shift module intact
-   - took what I needed from Convert and Index
-   - totally replaced Printer
-   - runLatex () is called from Logic
- *)
-
 
 type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
@@ -29,7 +21,6 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
     { tHead : LF.typ             (* Head A : LF.Atom                *)
     ; eVars : LF.dctx            (* Context eV : EV's bound in A/cG *)
     ; subGoals : conjunction }   (* Subgoals cG : solv. cG => A     *)
-
 
 
 
@@ -200,7 +191,6 @@ module Index = struct
   let addSgnClause typConst sgnClause =
     DynArray.add typConst sgnClause
 
-
   (* compileSgnClause c = (c, sCl)
      Retrieve LF.typ for term constant c, clausify it into sCl and
      return an sgnClause (c, sCl).
@@ -252,7 +242,6 @@ end
 
 
 
-
 module Printer = struct
 
   module P = Pretty.Int.DefaultPrinter
@@ -260,7 +249,6 @@ module Printer = struct
 
   let typToLatex cPsi sM =                 
     P.typToLatex LF.Empty cPsi sM
-
 
   let rec goalToLatex cPsi (g, s) superScripts counter = match g with
     | Atom (tA) ->
@@ -285,7 +273,6 @@ module Printer = struct
       superScripts := varName::(!superScripts);
       (goalToLatex (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s) superScripts counter) 
 
-
   and resToLatex cPsi (r, s) superScripts counter = match r with
     | Head (tH) ->
       typToLatex cPsi (tH, s)
@@ -297,7 +284,6 @@ module Printer = struct
     (* rarely used, simply prints the residual *)
       let tM' = Convert.etaExpand cPsi (tM, s)
       in (resToLatex cPsi (r', LF.Dot (LF.Obj tM', s)) superScripts counter)
-
 
   (* well defined up to three premises in the inference rule we want to generate *)
   let sgnClauseToLatex (cidTerm, sCl) = 
@@ -342,6 +328,11 @@ module Printer = struct
   let nameToRuleMaccro name =
     sprintf "\\newcommand{\\RULE%s}{\\ruleName{%s}}" name name
 
+  (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+  let rec printArguments n = match n with
+    | 1 -> "\\;#1"
+    | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+
   (* generates two maccros for each term constant :
   \newcommand {\RULEcidTerm} {\ruleName{cidTerm}}
   \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args} *)
@@ -353,32 +344,18 @@ module Printer = struct
         | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
         | True -> n
       in countSubgoals' cG 0
-    (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
-    in 
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
-    let n = countSubgoals sCl.subGoals in
-    (* pattern match on the number of goals in sCl.subGoals *)
+    in let n = countSubgoals sCl.subGoals in
     match n with 
       | 0 -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
           ruleMaccro name name
       | n -> sprintf "%s\n\\newcommand{\\TERM%s}[%d]{\\mathsf{%s}%s}"
           ruleMaccro name n name (printArguments n)
 
-
   let cidTypToMaccro cidTyp =
-    (* get name of type constant *)
     let typEntry = Store.Cid.Typ.get cidTyp in
     let typName = typEntry.Store.Cid.Typ.name in
     let name = Id.string_of_name_latex typName in
-    (* get number of arguments of type constant *)
     let n = Store.Cid.Typ.args_of_name typName in
-    let rec printArguments n = match n with
-        | 1 -> "\\;#1"
-        | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
-    in 
     match n with 
       | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" 
               name name
@@ -433,8 +410,8 @@ let runLatex mainFile =
     (* LaTex printing *)
     Printer.printTypesLatex mainFile;
     Latexinductive.Printer.printCompTypesLatex mainFile;
+    Latexrec.Printer.printRecLatex mainFile;
     
-
     (* conclusion of main file *)
     let outMain =
       open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 

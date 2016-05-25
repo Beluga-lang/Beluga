@@ -815,6 +815,7 @@ let runLogic () =
       else () ;
       (* Here we call the conversion to LaTex *)
       Latex.runLatex "latex/main.tex";
+      (*Latexrec.Index.robStore ();*)
       (* Solve! *)
       Index.iterQueries Frontend.solve ;
       (* Clear the local storage.  *)

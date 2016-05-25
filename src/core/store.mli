@@ -131,6 +131,7 @@ module Cid : sig
     val clear         : unit -> unit
     val get_implicit_arguments : cid_comp_typ -> int
     (*********************************************************************************************************)
+    val get_real_implicit_arguments : cid_comp_typ -> int
     val args_of_name : name -> int
     (*********************************************************************************************************)
   end

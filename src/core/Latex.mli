@@ -1,0 +1,1 @@
+val runLatex : string -> unit

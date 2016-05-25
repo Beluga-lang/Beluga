@@ -669,18 +669,30 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
+
     let get_implicit_arguments c = (get c).implicit_arguments
 
-    (********************************************************************************************************)
-    let rec args = function
-      | Int.Comp.Ctype (_) -> 0
-      | Int.Comp.PiKind (_, _, k) -> 1 + (args k)
 
-    (* we don't take out implicit arguments because explicitly declared context variables are factored 
-       into implicit arguments *)
+    (********************************************************************************************************)
+    let get_real_implicit_arguments c = 
+      let entry = get c in
+      let rec impl_args k = match k with
+        | Int.Comp.Ctype (_) -> 0
+        (* explicit declaration : explicit argument *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.No), k) -> impl_args k
+        (* implicit declaration : implicit argument -> add 1 *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.Maybe), k) -> 1 + (impl_args k)
+      in impl_args entry.kind
+
     let args_of_name n =
       let entry = get (index_of_name n) in
-      (args (entry.kind)) (* - entry.implicit_arguments *)
+      let rec args k = match k with
+        | Int.Comp.Ctype (_) -> 0
+        (* explicit declaration : explicit argument -> add 1 *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.No), k) -> 1 + (args k)
+        (* implicit declaration : implicit argument *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.Maybe), k) -> args k
+      in args entry.kind
     (********************************************************************************************************)
 
     let freeze a =

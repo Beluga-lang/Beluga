@@ -579,7 +579,7 @@ module Cid = struct
       kind                : Int.Comp.kind;
       positivity          : Int.Sgn.positivity_flag;  (* flag for positivity and stratification checking *)
       mutable frozen      : bool;
-      mutable constructors: Id.cid_comp_const list
+      constructors        : Id.cid_comp_const list ref
     }
 
     let mk_entry name kind implicit_arguments positivity =  {
@@ -588,7 +588,7 @@ module Cid = struct
       kind               = kind;
       positivity         = positivity;
       frozen             = false;
-      constructors       = []
+      constructors       = ref [] 
     }
 
 (*    (*  store : entry DynArray.t *)
@@ -671,8 +671,8 @@ module Cid = struct
           (get a).frozen <- true
 
     let addConstructor c typ =
-      let entry = get typ in
-        entry.constructors <- (c :: entry.constructors)
+      (let entry = get typ in
+        entry.constructors := (c :: !(entry.constructors)))
 
     let clear () =
       (DynArray.get entry_list !Modules.current) := [];
@@ -804,10 +804,10 @@ module Cid = struct
             DynArray.add directory x;
             x
           end in
-
         Hashtbl.replace directory entry.name cid_comp_const;
         CompTyp.addConstructor cid_comp_const cid_ctyp;
-        cid_comp_const end
+        cid_comp_const 
+    end
 
     let get ?(fixName=false) (l, n) =
       let l' = Modules.name_of_id l in

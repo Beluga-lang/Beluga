@@ -115,7 +115,7 @@ module Cid : sig
       kind                 : Comp.kind;
       positivity           : Sgn.positivity_flag;
       mutable frozen       : bool;
-      mutable constructors : cid_comp_const list
+      constructors : cid_comp_const list ref
     }
 
     val entry_list : (Id.cid_comp_typ list ref) DynArray.t

@@ -317,36 +317,32 @@ let recSgnDecls decls =
 				       fun () -> Abstract.comptyp tau') in
 	let _         = dprint (fun () -> "Abstracting over comp. type: done") in
 	let _         = dprint (fun () ->  (string_of_name c) ^ " : " ^
-	  (P.compTypToString cD tau')) in
+				  (P.compTypToString cD tau')) in
 	let _         = (Monitor.timer ("Data-type Constant: Type Check",
-					fun () -> Check.Comp.checkTyp cD tau'))
-        in	let cid_ctypfamily = get_target_cid_comptyp tau' in
+					fun () -> Check.Comp.checkTyp cD tau'))  in	
+	let cid_ctypfamily = get_target_cid_comptyp tau' in
 
-		let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
+	let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
 
-		(match flag with
-		  | Int.Sgn.Nocheck    -> ()
-		  | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then ()
-	            else raise (Error (loc, (NoPositive (string_of_name c))))
-		  | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
-	            else raise (Error (loc, (NoStratify (string_of_name c))))
-		  | Int.Sgn.StratifyAll loc_s   ->
-		    let t =  Total.stratifyAll cid_ctypfamily tau' in
-		    let t' = (t land (!Total.stratNum)) in
-		    if t'<>0 then Total.stratNum := t'
-		    else raise (Error (loc_s, (NoStratifyOrPositive  (R.render_cid_comp_typ cid_ctypfamily) )))
-
+	  (match flag with
+	     | Int.Sgn.Nocheck    -> ()
+	     | Int.Sgn.Positivity ->  if Total.positive cid_ctypfamily tau' then ()
+	       else raise (Error (loc, (NoPositive (string_of_name c))))
+	     | Int.Sgn.Stratify (loc_s, n)   -> if Total.stratify cid_ctypfamily tau' n then ()
+	       else raise (Error (loc, (NoStratify (string_of_name c))))
+	     | Int.Sgn.StratifyAll loc_s   ->
+		 let t =  Total.stratifyAll cid_ctypfamily tau' in
+		 let t' = (t land (!Total.stratNum)) in
+		   if t'<>0 then Total.stratNum := t'
+		   else raise (Error (loc_s, (NoStratifyOrPositive  (R.render_cid_comp_typ cid_ctypfamily) )))
+	);
 	(* if true (\* Total.stratifyAll cid_ctypfamily tau'  *\)then () *)
 	(* else raise (Error (loc, (NoStratify (string_of_name c)))) *)
-
-	);
-
 
 
 	(* (if flag then if Total.positive cid_ctypfamily tau' then ()  *)
         (*                        else raise (Error (loc, (NoPositive (string_of_name c)))) *)
 	(* else () ); *)
-
         let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
         let sgn = Int.Sgn.CompConst(loc, c, tau') in
         Store.Modules.addSgnToCurrent sgn;
@@ -436,7 +432,7 @@ let recSgnDecls decls =
 			 Monitor.timer ("Constant Check",
 					fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id))) in
         let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
-	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
+	let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in
         Store.Modules.addSgnToCurrent sgn;
         sgn

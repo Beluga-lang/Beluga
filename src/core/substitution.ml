@@ -43,7 +43,7 @@ module LF = struct
 
   let rec shiftComp n s2 = match (n, s2) with
     | (0,s) -> s
-    | (n,EmptySub) -> raise (NotComposable "Shift, EmptySub")
+    | (n,EmptySub) -> raise (NotComposable ("Shift " ^ string_of_int n ^", EmptySub"))
     | (n,Undefs) -> Undefs
     | (n,SVar(s, k, r)) -> SVar (s, (k+n), r)
     | (n,MSVar(k, ((s, t),r))) -> MSVar (k+n, ((s, t),r))
@@ -153,7 +153,11 @@ module LF = struct
               in
 (*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
-	  | Obj _ -> failwith "Found Obj which is not a tuple"
+	  | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"
+	  | Obj (Clo _ ) -> failwith "Found Clo - should not happen"
+          | Obj (Root (_, (PVar _ as h), Nil)) -> Head (Proj (h, k))
+          | Obj (Root (_, (BVar _ as h), Nil)) -> Head (Proj (h, k))
+	  | Obj _ -> failwith "Found Obj which is compatible with taking a proj."
 	  | Head (HClo (_, _, _) as h)  -> Head (Proj (h, k))
 	  | Head (HMClo (_, _) as h)  -> Head (Proj (h, k))
 	  | Head (Proj (h, _ ))  -> failwith "Found head that is a Proj?? - nested Proj not allowed"

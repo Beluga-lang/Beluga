@@ -186,7 +186,8 @@ mlam g,A,M => fn r => case [|- A] of
   let Arr [g |- M] f = r in 
   let q1 = f [g,x:tm _] [g,x |- ..] [g,x |- x] (shiftIsVarSub [g]) 
              (reflect [g,x:tm _ ] [|- A] [g,x:tm _ |- x] (Var (IsVar [g,x:tm _ |-  x]))) in
-  let Halts [g,x:tm _ |-  MS] q2 = reify [g, x:tm _ ] [|- B] [g,x:tm _ |- app M[..] x] q1 in
+  let Halts ms q2 = reify [g, x:tm _ ] [|- B] [g,x:tm _ |- app M[..] x] q1 in
+  let [g,x:tm _ |-  MS] = ms in
   Halts [g |- s_trans (s_eta _) (s_lam (\x. MS))] (Lam q2);
 
 % -----------------------------------------------------------------------------

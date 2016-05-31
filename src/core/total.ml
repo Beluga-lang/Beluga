@@ -487,7 +487,7 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 				 string_of_int (List.length mf_list)  ^
 				 " rec. functions\n") in
 	 let mk_wfrec (f,x,k,ttau) =
-          let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD (LF.Decl (u,cU, dep)) ^  " ") in
+          let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD' (LF.Decl (u,cU, dep)) ^  " ") in
 	  let _ = dprint (fun () -> "for position " ^ string_of_int x ^ 			  "\n") in
 	  let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
 	  let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in

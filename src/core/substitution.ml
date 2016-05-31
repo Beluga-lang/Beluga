@@ -153,8 +153,19 @@ module LF = struct
               in
 (*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
-	  | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"
-	  | Obj (Clo _ ) -> failwith "Found Clo - should not happen"
+	  | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"      
+	  | Obj (Clo (Tuple (_, tuple), s')) -> 
+              let rec nth s = function
+                | (Last u, 1) -> (u, s)
+                | (Cons (u, _), 1) -> (u,  s)
+                | (Cons (u, tuple), n) -> nth (Dot(Obj u, s)) (tuple, n - 1)
+              in
+(*              Obj (Clo (nth s (tuple, k))) *)
+                Obj (Clo (fst (nth s (tuple, k)), s'))
+
+	  | Obj (Clo ((Root (_, (PVar _ ), Nil)), _ )) -> failwith "Found Clo - PVar "
+	  | Obj (Clo ((Root (_, (BVar _ ), Nil)), _ )) -> failwith "Found Clo - BVar "
+          | Obj (Clo _ ) -> failwith "Found Clo - should not happen"
           | Obj (Root (_, (PVar _ as h), Nil)) -> Head (Proj (h, k))
           | Obj (Root (_, (BVar _ as h), Nil)) -> Head (Proj (h, k))
 	  | Obj _ -> failwith "Found Obj which is compatible with taking a proj."
@@ -189,7 +200,8 @@ module LF = struct
           Head (AnnH (h', a))
 
     | Head (Const c)      -> Head (Const c)
-    | Obj u               -> Obj (Clo (u, s))
+(*    | Obj (Root (_, h, Nil)) -> frontSub (Head h) s *)
+    | Obj u               ->  Obj (Clo (u, s)) 
     | Undef               -> Undef
     | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
     | Head (FPVar (_n, _s' )) -> ft

@@ -628,7 +628,10 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
           | No            -> raise (Error (loc,
 						MatchError ("Head mismatch " ^ P.headToString cD cPsi tH ^ " =/= " ^ P.headToString cD_p cPhi tH' ^ "\n")))
 	  | Inst          ->
-	      (Eqn (covGoal, patt) :: matchCands , splitCands)
+	      (dprint (fun () -> "[pre_match] Eqn : " ^ 
+			 covGoalToString cD covGoal ^ " == " ^ 
+			 pattToString cD_p patt ^ "\n");
+	      (Eqn (covGoal, patt) :: matchCands , splitCands))
 	  | SplitCand     -> (matchCands , Split (covGoal, patt)::splitCands)
 	  | CtxSplitCand (mC, sC) -> (mC @ matchCands , sC @ splitCands)
 	 end
@@ -821,7 +824,8 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
       let Comp.PatMetaObj (_, (loc,mO)) = pat in
       let Comp.PatMetaObj (_, (loc',mO')) = pat' in
       let tau1 = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA,t)), Whnf.cnormDCtx (cPsi, t)) in
-      let tau1' = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA',t)), Whnf.cnormDCtx (cPsi', t')) in
+      let tau1' = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA',t')), Whnf.cnormDCtx (cPsi', t')) in
+
       let t2 = LF.MDot(mO, t) in
       let t2' = LF.MDot(mO', t') in
       let (mC1, sC1) = match_metaobj cD cD_p ((loc,mO), tau1) ((loc',mO'), tau1') mC sC in
@@ -1970,8 +1974,13 @@ let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml)  sl = match sl with
 	    dprint (fun () -> "[subst_spliteqn] pat_r = " ^ 
 		     P.patternToString cD (gctxToCompgctx cG) pat_r );
 	   dprint (fun () -> "                 ttau = " ^ 
-		     P.compTypToString cD   (Whnf.cnormCTyp ttau) ^ " !!!!!! \n");
-	  match_pattern (cD, cG) (cD_p, cG_p) (pat_r, ttau) (patt_p, ttau_p) ml' sl')
+		     P.compTypToString cD   (Whnf.cnormCTyp ttau) ^ "!!!!!!\n");
+
+	   dprint (fun () -> "[subst_spliteqn] cD_p = " ^ P.mctxToString cD_p);
+	   dprint (fun () -> "[subst_spliteqn] pat_p = " ^ P.patternToString cD_p cG_p patt_p );
+	   dprint (fun () -> "                 ttau_p = " ^  P.compTypToString cD_p   (Whnf.cnormCTyp ttau_p) ^ "!!!!!!\n");
+	   dprint (fun () -> "[subst_spliteqn] ml' = " ^ eqnsToString cD cD_p   ml' ^ "\n");
+	   match_pattern (cD, cG) (cD_p, cG_p) (pat_r, ttau) (patt_p, ttau_p) ml' sl')
 	else
 	  let ml', sl' = subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml)  sl in
 	    (ml', seqn :: sl')
@@ -2045,13 +2054,12 @@ let rec refine_patt_cands ( (cD, cG, candidates, patt) as cov_problem ) (pvsplit
                       ^ "\n[ms]pat = " ^
 			P.patternToString cD' (gctxToCompgctx cG') (Whnf.cnormPattern (patt, ms))) in
       let patt' = subst_pattern (pat_r,pv) (Whnf.cnormPattern (patt, ms)) in
-      let _ = dprint (fun () -> "[refine_patt_cands] new patt = " ^
-			P.patternToString cD' (gctxToCompgctx cG') patt') in
+      let _ = dprint (fun () -> "[refine_patt_cands] new patt = " ^ P.patternToString cD' (gctxToCompgctx cG') patt') in
       let _ = dprint (fun () -> "ms = " ^ P.msubToString cD' ms  ^ "\n") in
-      let candidates'  = refine_candidates (cD', cG', ms) (cD, cG, candidates)
-			in
+      let candidates'  = refine_candidates (cD', cG', ms) (cD, cG, candidates) in
       let _ =  dprint (fun () -> "[refine_candidates] DONE : The remaining #refined candidates = " ^ string_of_int  (List.length candidates')) in
       let candidates'' = subst_candidates (cD', cG') (pat_r,pv) candidates' in
+      let _ = dprint (fun () -> "[subst_candidates] DONE") in
       let r_cands      = refine_patt_cands cov_problem (pvsplits, pv) in
 	(match candidates'' with
 	   |  [] ->(open_cov_goals := (cD', cG', patt') :: !open_cov_goals;

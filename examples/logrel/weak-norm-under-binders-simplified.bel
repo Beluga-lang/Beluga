@@ -38,10 +38,10 @@ LF mstep : tm A -> tm A -> type =
 % We define them in LF. We do not enforce eta-longness here, although this can in principle be done.
 %
 
-LF normal : tm A -> type =
-| n_lam : ({x:tm A} neutral x -> normal (M x)) -> normal (lam (\x. M x))
+LF normal : tm C -> type =
+| n_lam : ({x:tm C} neutral x -> normal (M x)) -> normal (lam (\x. M x))
 | n_neut : neutral M -> normal M
-and neutral : tm A -> type =
+and neutral : tm C -> type =
 | n_app : neutral M -> normal N -> neutral (app M N)
 ;
 

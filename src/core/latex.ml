@@ -1,4 +1,9 @@
 module R = Store.Cid.DefaultRenderer
+(***************************************************************************)
+module P = Pretty.Int.DefaultPrinter
+open Printf
+(***************************************************************************)
+
 
 let theorem = ref []
 let lines = ref []
@@ -11,22 +16,41 @@ module LaTeX = struct
     | None -> "No type information found."
     | Some s' -> s'
 
-  let rec parse_fun (e : Comp.exp_chk) : unit =
+  (***************************************************************************)
+  let subCompTypToString tclo = 
+    P.subCompTypToString Syntax.Int.LF.Empty tclo
+  (***************************************************************************)
+
+  (*let rec parse_fun (e : Comp.exp_chk) : unit =
     match e with
     | Comp.Fun (_, x, e', _, str) ->
-       theorem := (Id.render_name x ^ ":" ^ get_string str) :: !theorem;
+       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
        parse_fun e'
     | Comp.MLam (_, x, e', _, str) ->
-       theorem := (Id.render_name x ^ ":" ^ get_string str) :: !theorem;
+       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
+       parse_fun e'
+    | Comp.Case _ -> parse_case e
+    | _ -> print_string ("What the hell happened?") *)
+
+(***************************************************************************)
+let rec parse_fun (e : Comp.exp_chk) : unit =
+    match e with
+    | Comp.Fun (_, x, e', tclo, str) ->
+       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
+       parse_fun e';
+       printf "\nFUNCTION, tclo : %s, string : %s\n\n" (subCompTypToString tclo) (get_string str)
+    | Comp.MLam (_, x, e', _, str) ->
+       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
        parse_fun e'
     | Comp.Case _ -> parse_case e
     | _ -> print_string ("What the hell happened?")
+(***************************************************************************)
 
     and parse_case (e : Comp.exp_chk) : unit =
       match e with
       | Comp.Case (_, _, i, branches, _, _) ->
-	 lines := "Case _ of" :: !lines;
-	 List.iter parse_branch (List.rev branches)
+	 lines := !lines @ ["Case _ of"];
+	 List.iter parse_branch branches
       | _ -> print_string ("What the hell happened?")
 
     and parse_branch (branch : Comp.branch) : unit =
@@ -40,9 +64,9 @@ module LaTeX = struct
     and parse_pattern (pat : Comp.pattern) : unit =
       match pat with
       | Comp.PatMetaObj (_, mO, _, str) ->
-	 lines := ("" ^ get_string str) :: !lines
+	 lines := !lines @ ["pat: " ^ get_string str]
       | Comp.PatConst (_, c, pat_spine, _, str) ->
-	 lines := ((R.render_cid_comp_const c)  ^ ":" ^ get_string str) :: !lines;
+	 lines := !lines @ [(R.render_cid_comp_const c)  ^ ":" ^ get_string str];
 	 parse_pattern_spine pat_spine
       | Comp.PatAnn (_, pat, _, _, _) ->
 	 parse_pattern pat
@@ -57,21 +81,22 @@ module LaTeX = struct
     and parse_expr (e : Comp.exp_chk) : unit =
       match e with
       | Comp.Rec (_, n, e', _, str) ->
-	 lines := ((Id.render_name n) ^ ":" ^ get_string str) :: !lines;
+	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
 	 parse_expr e'
       | Comp.Fun (_, n, e', _, str) ->
-	 lines := ((Id.render_name n) ^ ":" ^ get_string str) :: !lines;
+	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
 	 parse_expr e'
       | Comp.MLam (_, n, e', _, str) ->
-	 lines := ((Id.render_name n) ^ ":" ^ get_string str) :: !lines;
+	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
 	 parse_expr e'
       | Comp.Case (_, _, i, branches, _, _) ->
 	 (* Could be a let. Deal with it. *)
-	 lines := "Subcase _ of" :: !lines;
-	 List.iter parse_branch (List.rev branches)
+	 lines := !lines @ ["Subcase _ of"];
+	 List.iter parse_branch branches
       | Comp.Box (_, _, _, str) ->
-	 lines := (get_string str) :: !lines
-      | _ -> ()
+	 lines := !lines @ [get_string str]
+      | _ -> 
+   lines := !lines @ ["something else"]
 end
 
 let parse e =

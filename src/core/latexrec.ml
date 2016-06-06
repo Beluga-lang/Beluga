@@ -59,33 +59,56 @@ module Printer = struct
 
   module P = Pretty.Int.DefaultPrinter
   open Index
+  open Store
 
-  (* val compTypToLatex : LF.mctx -> Comp.typ -> string *)
-  let compTypToLatex cD tau =
-    P.compTypToLatex cD tau
-
-  (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
-  let cdeclToLatex cD cdecl =
-    P.cdeclToLatex cD cdecl
 
   let theoremToLatex (Theorem (tau)) cidProg =
     let sCl = Latexinductive.Convert.typToClause tau in
-    let name = Id.string_of_name_latex (Store.Cid.Comp.get cidProg).Store.Cid.Comp.name in
+    let name = Id.string_of_name_latex (Cid.Comp.get cidProg).Cid.Comp.name in
     sprintf "\\begin{theorem}\n[%s] %s\n\\end{theorem}"
       name (Latexinductive.Printer.clauseToLatex sCl)
 
-  (*let cidProgToMaccro cidProg =
+  (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+  let rec printArguments n = match n with
+    | 1 -> "\\;#1"
+    | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+
+  let cidProgToMaccro cidProg =
     (* get name of prog constant *)
-    let compEntry = Store.Cid.Comp.get cidProg in
-    let compName = compEntry.Store.Cid.Comp.name in
+    let compEntry = Cid.Comp.get cidProg in
+    let compName = compEntry.Cid.Comp.name in
     let name = Id.string_of_name_latex compName in
     (* get number of arguments  *)
-    let n = *)
+    let n = Cid.Comp.args_of_name compName in
+    match n with 
+      | 0 -> sprintf "\\newcommand{\\COMP%s}{\\mathsf{%s}}" 
+              name name
+      | n -> sprintf "\\newcommand{\\COMP%s}[%d]{\\mathsf{%s}%s}" 
+              name n name (printArguments n)
 
 
 
-  let proofToLatex (Proof (v)) =
+  (* expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string *)
+
+  (* val ann : Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
+               -> Syntax.Int.Comp.ctyp_decl Syntax.Int.LF.ctx
+               -> Syntax.Int.Comp.exp_chk
+               -> (Syntax.Int.Comp.typ * Syntax.Int.LF.msub)
+               -> Annotated.Comp.exp_chk
+   *)
+
+  let proofToLatex (Proof (v)) cidProg =
+    (*let Comp.RecValue (cidProg, expChk, msub, env) = v in 
+    let annExpChk = Annotate.Comp.ann LF.Empty LF.Empty expChk tclo in 
+    Latexproof.parse annExpChk;*)
+
     "PROOF"
+    (*
+    sprintf "PROOF :\n\n%s" 
+      (Annotate.PrettyAnn.expChkToString LF.Empty LF.Empty annExpChk)
+     *)
+
+
 
   let printSignatureLatex mainFile =
     let outMaccros = 
@@ -98,7 +121,8 @@ module Printer = struct
        k : (Id.cid_prog * Loc.t), v : (theorem * proof) 
      *)
     let recToLatex (cidProg, loc) (theorem, proof) =
-    	fprintf outMain "%s\n\n%s\n\n" (theoremToLatex theorem cidProg) (proofToLatex proof)
+    	fprintf outMain "%s\n\n%s\n\n" (theoremToLatex theorem cidProg) (proofToLatex proof cidProg);
+      fprintf outMaccros "%s\n\n" (cidProgToMaccro cidProg)
    	in 
    	Hashtbl.iter recToLatex recTypes;
    	close_out outMaccros;

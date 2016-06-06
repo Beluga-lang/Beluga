@@ -1084,6 +1084,19 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
+    (**********************************************************************************************************************)
+    let args_of_name n =
+      let entry = get (index_of_name n) in
+      let rec args tau = match tau with
+        (* explicit -> add 1 *)
+        | Int.Comp.TypPiBox (Int.LF.Decl (_, _, Int.LF.No), tau') -> 1 + (args tau')
+        (* implicit *)
+        | Int.Comp.TypPiBox (Int.LF.Decl (_, _, Int.LF.Maybe), tau') -> args tau'
+        | Int.Comp.TypArr (_, tauB) -> 1 + (args tauB)
+        | _ -> 0
+      in args entry.typ
+    (**********************************************************************************************************************)
+
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));
       Hashtbl.clear (DynArray.get directory !(Modules.current))

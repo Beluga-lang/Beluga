@@ -130,7 +130,6 @@ module Printer = struct
   module P = Pretty.Int.DefaultPrinter
   open Index
 
-  
   (* val compTypToLatex : LF.mctx -> Comp.typ -> string *)
   let compTypToLatex cD tau  = 
     P.compTypToLatex cD tau
@@ -138,6 +137,7 @@ module Printer = struct
   (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
   let cdeclToLatex cD cdecl =
     P.cdeclToLatex cD cdecl
+
 
   (* val goalToLatex : goal -> LF.mctx -> string *)
   let rec goalToLatex g cD = match g with

@@ -565,14 +565,14 @@ and collectSub (p:int) cQ phat s = match s with
       let (cQ2, s') =  collectSub p cQ1 phat s in
         (cQ2, I.Dot(I.Head h', s'))
 
+  | I.Dot (I.Undef, s) ->
+      let (cQ2, s') =  collectSub p cQ phat s in
+        (cQ2, I.Dot(I.Undef, s'))
+
   | I.Dot (I.Obj tM, s) ->
       let (cQ1, tM') = collectTerm p cQ phat (tM, LF.id) in
       let (cQ2,s') =  collectSub p cQ1 phat s in
         (cQ2, I.Dot (I.Obj tM', s'))
-
-  | I.Dot (I.Undef, s) ->
-      let (cQ2,s') =  collectSub p cQ phat s in
-        (cQ2, I.Dot (I.Undef, s'))
 
   | I.FSVar (n, ns) ->
     let (cQ', ns) = collectFVarSub p cQ phat ns in

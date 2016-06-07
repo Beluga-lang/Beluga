@@ -192,7 +192,7 @@ module Int = struct
 
     module MInstHashtbl = Hashtbl.Make (MInstHashedType)
 
-    let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0 
+    let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0
 
     module SInstHashedType = struct
       type t    = LF.iterm option ref
@@ -376,13 +376,13 @@ module Int = struct
           fprintf ppf "%s[#%a[%a]]"
             (R.render_bvar cPsi h)
             (fmt_ppr_lf_offset cD lvl) s
-            (fmt_ppr_lf_sub  cD cPsi lvl) sigma
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
       | LF.HMClo (h, ((s, theta),sigma)) ->
           fprintf ppf "%s[#%a[%a ; %a]]"
             (R.render_bvar cPsi h)
             (fmt_ppr_lf_mmvar lvl) s
             (fmt_ppr_lf_msub  cD lvl) theta
-            (fmt_ppr_lf_sub  cD cPsi lvl) sigma
+            (fmt_ppr_lf_sub cD cPsi lvl) sigma
       | LF.BVar x  ->
           fprintf ppf "%s%s"
             (R.render_bvar cPsi x)
@@ -418,7 +418,7 @@ module Int = struct
             proj
 
       | LF.MVar (c, s) ->
-          fprintf ppf "%s%a%s%a%s"
+          fprintf ppf "%s%a%s[%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_cvar cD lvl) c
             proj
@@ -426,7 +426,7 @@ module Int = struct
             (r_paren_if (paren s))
 
       | LF.PVar (c, s) ->
-          fprintf ppf "%s#%a%s%a%s"
+          fprintf ppf "%s#%a%s[%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_offset cD lvl) c
             proj
@@ -439,7 +439,7 @@ module Int = struct
             proj
 
       | LF.FMVar (u, s) ->
-          fprintf ppf "FMV %s%s%s%a%s"
+          fprintf ppf "FMV %s%s%s[%a]%s"
             (l_paren_if (paren s))
             (Id.render_name u)
             proj
@@ -447,7 +447,7 @@ module Int = struct
             (r_paren_if (paren s))
 
       | LF.FPVar (p, s) ->
-          fprintf ppf "%sFPV #%s%s%a%s"
+          fprintf ppf "%sFPV #%s%s[%a]%s"
             (l_paren_if (paren s))
             (Id.render_name p)
             proj
@@ -482,7 +482,7 @@ module Int = struct
 	| LF.Null -> ()
 	| LF.DDec (cPsi', LF.TypDecl (x, _))
 	| LF.DDec (cPsi', LF.TypDeclOpt x) ->
-	   fprintf ppf "%a %s"
+	   fprintf ppf "%a, %s"
 		   fmt_ppr_lf_sub_id cPsi'
 		   (Id.render_name x)
 	| LF.CtxVar _ -> fprintf ppf ".."
@@ -511,7 +511,7 @@ module Int = struct
               (fmt_ppr_lf_msub cD lvl) t
               (self lvl) s
         | LF.Dot (f, s) ->
-            fprintf ppf "%a %a"
+            fprintf ppf "%a, %a"
               (self lvl) s
               print_front f
       in
@@ -552,7 +552,7 @@ module Int = struct
                   (fmt_ppr_lf_msub cD 0) t
 
         | LF.Dot (f, s) ->
-            fprintf ppf "%a  %a"
+            fprintf ppf "%a,  %a"
               (fmt_ppr_lf_front cD cPsi 1) f
               (self lvl) s
       in
@@ -647,9 +647,9 @@ module Int = struct
                               | None -> Gensym.MVarData.gensym ()
                   in
                       MInstHashtbl.replace minst_hashtbl u sym
-                    ; fprintf ppf "?%s" sym 
+                    ; fprintf ppf "?%s" sym
           end
-           
+
       | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
           fprintf ppf " %a"

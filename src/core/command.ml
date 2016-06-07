@@ -266,7 +266,9 @@ let compconst = {name = "constructors-comp";
                         let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
                         let entry = List.find (fun x -> arg = (Id.string_of_name x.CompTyp.name)) entrylist in
                         let mctx = Synint.LF.Empty in
-                        let termlist = List.rev_map (CompConst.get ~fixName:true) (entry.CompTyp.constructors) in
+                        (*******************************************************************************************************)
+                        let termlist = List.rev_map (CompConst.get ~fixName:true) !(entry.CompTyp.constructors) in
+                        (*******************************************************************************************************)
                         List.iter (fun x -> fprintf ppf "- %s: [%d] " (Id.string_of_name x.CompConst.name) x.CompConst.implicit_arguments; ppr_cmp_typ mctx x.CompConst.typ; fprintf ppf "\n") termlist;
                         fprintf ppf ";\n"
                       with

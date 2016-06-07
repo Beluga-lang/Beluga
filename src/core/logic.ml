@@ -88,21 +88,15 @@ module Shift : sig
 end = struct
 
   (* NB.
-
      Only BVar's in LF.Atom's are affected.
      Enclosed substitutions are not shifted.
-
      i: De Bruijn index.
      k: Shifting measure.
-
      Algorithm:
-
      BV bound by λ remain invariant.
       - i < lR |- BV(i) -> BV(i)
-
      BV bound by a dynamic scope are shifted by dS.
       - lR < i <= dR |- BV(i) -> BV(i + dS)
-
      BV bound to EV are shifted by k.
       - i > lR && i > dR |- BV(i) -> BV(i + k)
   *)
@@ -218,7 +212,6 @@ module Convert = struct
      Invariants:
        Psi |- s : Phi
        Phi |- A : LF.typ
-
      Effects:
        None.
   *)
@@ -238,10 +231,8 @@ module Convert = struct
        Psi |- s : Phi
        Phi |- M
        fS : spine -> spine
-
      Effects:
        None.
-
      Create MVars for all the TypDecl's in eV. Accumulate them
      in a substitution, performing eta-expansion if necessary,
      and add them to the spine of a proof-term through fS.
@@ -437,7 +428,6 @@ module Printer = struct
        Psi |- s : Phi
        Phi |- g : goal
        Psi |- g[s] : goal
-
      Effects:
        None.
   *)
@@ -456,7 +446,6 @@ module Printer = struct
        Psi |- s: Phi
        Phi |- r : res
        Psi |- r[s] : res
-
      Effects:
        None.
   *)
@@ -533,7 +522,6 @@ module Solver = struct
   (* unify Psi (A, s) (B, s') sc = ()
      Invariants:
        sc : unit -> unit
-
      Effects:
        Instatiation of MVars in s and s'.
        Any effect of (sc ()).
@@ -577,11 +565,9 @@ module Solver = struct
        Phi |- g : Goal
        sc : proof -> unit
        If G |- M : g[s], then (sc M) is evaluated.
-
      Effects:
        Instantiation of MVars in s and dPool.
        Any effect (sc M) might have.
-
      Comments:
        In the arguments to 'sc', 'u' refers to the universal
        context and 't' refers to a proof term.
@@ -604,7 +590,6 @@ module Solver = struct
        Phi |- A : Atom
        sc : proof -> unit
        If Psi |- M : A[s], then (sc M) is evaluated.
-
      Effects:
        Instatiation of MVars in s and dPool.
        Any effect (sc M) might have.
@@ -668,7 +653,6 @@ module Solver = struct
        If Psi |- M : g[s], then (sc App (M, S)) is evaluated.
        If Psi |- G = T, then (sc Nil) is evaluated, ending the
        spine of proof-terms for the goals in G.
-
      Effects:
        Instatiation of MVars in dPool and g[s].
        Any effect of (sc S).
@@ -684,7 +668,6 @@ module Solver = struct
      Invariants:
        Empty |- g[s] : goal
        sc : dctx * normal -> unit
-
      Effects:
        Same as gSolve.
   *)
@@ -830,6 +813,9 @@ let runLogic () =
       if !Options.chatter >= 4 then
         Printer.printSignature ()
       else () ;
+      (* Here we call the conversion to LaTex *)
+      Latex.runLatex "latex/main.tex";
+      (*Latexrec.Index.robStore ();*)
       (* Solve! *)
       Index.iterQueries Frontend.solve ;
       (* Clear the local storage.  *)
@@ -842,8 +828,6 @@ let runLogicOn n (tA,i) e t  =
   Index.singleQuery (n,(tA,i),e,t) Frontend.solve
 
 (* 
-
-
 let runLogicOn n (cD, cPsi, tA, i) e t  =
   Index.singleQuery (n,(tA,i),e,t) Frontend.solve
  *)

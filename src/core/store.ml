@@ -188,7 +188,7 @@ module Cid = struct
     | Int.LF.Typ -> 0
     | Int.LF.PiKind(_, k) -> 1 + (args k)
 
-    let get ?(fixName=false) (l, n) =
+    let get ?(fixName=false) (l, n) =                             
       let l' = Modules.name_of_id l in
       let m' =  if fixName && (l <> !Modules.current) &&
                    not (List.exists (fun x -> x = l) !Modules.opened)
@@ -579,7 +579,9 @@ module Cid = struct
       kind                : Int.Comp.kind;
       positivity          : Int.Sgn.positivity_flag;  (* flag for positivity and stratification checking *)
       mutable frozen      : bool;
-      mutable constructors: Id.cid_comp_const list
+      (********************************************************************************************************)
+      constructors        : Id.cid_comp_const list ref
+      (********************************************************************************************************)
     }
 
     let mk_entry name kind implicit_arguments positivity =  {
@@ -588,7 +590,9 @@ module Cid = struct
       kind               = kind;
       positivity         = positivity;
       frozen             = false;
-      constructors       = []
+      (********************************************************************************************************)
+      constructors       = ref []
+      (********************************************************************************************************)
     }
 
 (*    (*  store : entry DynArray.t *)
@@ -665,14 +669,40 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
+
     let get_implicit_arguments c = (get c).implicit_arguments
+
+
+    (********************************************************************************************************)
+    let get_real_implicit_arguments c = 
+      let entry = get c in
+      let rec impl_args k = match k with
+        | Int.Comp.Ctype (_) -> 0
+        (* explicit declaration : explicit argument *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.No), k) -> impl_args k
+        (* implicit declaration : implicit argument -> add 1 *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.Maybe), k) -> 1 + (impl_args k)
+      in impl_args entry.kind
+
+    let args_of_name n =
+      let entry = get (index_of_name n) in
+      let rec args k = match k with
+        | Int.Comp.Ctype (_) -> 0
+        (* explicit declaration : explicit argument -> add 1 *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.No), k) -> 1 + (args k)
+        (* implicit declaration : implicit argument *)
+        | Int.Comp.PiKind (_, Int.LF.Decl (_, _, Int.LF.Maybe), k) -> args k
+      in args entry.kind
+    (********************************************************************************************************)
 
     let freeze a =
           (get a).frozen <- true
 
     let addConstructor c typ =
       let entry = get typ in
-        entry.constructors <- (c :: entry.constructors)
+      (********************************************************************************************************)
+        entry.constructors := c :: !(entry.constructors)
+      (********************************************************************************************************)
 
     let clear () =
       (DynArray.get entry_list !Modules.current) := [];
@@ -1054,6 +1084,19 @@ module Cid = struct
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
 
+    (**********************************************************************************************************************)
+    let args_of_name n =
+      let entry = get (index_of_name n) in
+      let rec args tau = match tau with
+        (* explicit -> add 1 *)
+        | Int.Comp.TypPiBox (Int.LF.Decl (_, _, Int.LF.No), tau') -> 1 + (args tau')
+        (* implicit *)
+        | Int.Comp.TypPiBox (Int.LF.Decl (_, _, Int.LF.Maybe), tau') -> args tau'
+        | Int.Comp.TypArr (_, tauB) -> 1 + (args tauB)
+        | _ -> 0
+      in args entry.typ
+    (**********************************************************************************************************************)
+
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));
       Hashtbl.clear (DynArray.get directory !(Modules.current))
@@ -1140,11 +1183,18 @@ module Cid = struct
     open Syntax.Int
 
     val render_cid_comp_typ : cid_comp_typ -> string
+    (***********************************************************************************************************)
+    val render_cid_comp_typ_latex : cid_comp_typ -> string
+    (***********************************************************************************************************)
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
     val render_cid_comp_dest : cid_comp_dest -> string
     val render_cid_typ      : cid_typ      -> string
     val render_cid_term     : cid_term     -> string
+    (***********************************************************************************************************)
+    val render_cid_typ_latex  : cid_typ      -> string
+    val render_cid_term_latex : cid_term     -> string
+    (***********************************************************************************************************)
     val render_cid_schema   : cid_schema   -> string
     val render_cid_prog     : cid_prog     -> string
     val render_offset       : offset       -> string
@@ -1152,6 +1202,9 @@ module Cid = struct
     val render_ctx_var      : LF.mctx    -> offset   -> string
     val render_cvar         : LF.mctx    -> offset   -> string
     val render_bvar         : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
+    val render_bvar_latex   : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_var          : Comp.gctx  -> var      -> string
 
   end
@@ -1162,16 +1215,26 @@ module Cid = struct
     open Id
 
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    (***********************************************************************************************************)
+    let render_cid_comp_typ_latex c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    (***********************************************************************************************************)
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    (***********************************************************************************************************)
     let render_cid_typ    a    = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term   c    = render_name (Term.get ~fixName:true c).Term.name
+    let render_cid_typ_latex   a = render_name (Typ.get ~fixName:true a).Typ.name
+    let render_cid_term_latex  c = render_name (Term.get ~fixName:true c).Term.name
+    (***********************************************************************************************************)
     let render_cid_schema w    = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog   f    = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u   = "mvar " ^ string_of_int u
+    (***********************************************************************************************************)
     let render_bvar  _cPsi i   = string_of_int i
+    let render_bvar_latex _cPsi i   = string_of_int i
+    (***********************************************************************************************************)
     let render_offset      i   = string_of_int i
     let render_var   _cG   x   = string_of_int x
 
@@ -1183,14 +1246,24 @@ module Cid = struct
 
     open Id
 
+    (***********************************************************************************************************)
     let render_cid_comp_typ c  = render_name (CompTyp.get ~fixName:true c).CompTyp.name
+    let render_cid_comp_typ_latex c  = 
+      "\\COMPTYP" ^ (render_name_latex (CompTyp.get ~fixName:true c).CompTyp.name)
+    (***********************************************************************************************************)
     let render_cid_comp_cotyp c = render_name (CompCotyp.get ~fixName:true c).CompCotyp.name
     let render_cid_comp_const c = render_name (CompConst.get ~fixName:true c).CompConst.name
     let render_cid_comp_dest c = render_name (CompDest.get ~fixName:true c).CompDest.name
+    (***********************************************************************************************************)
     let render_cid_typ     a   = render_name (Typ.get ~fixName:true a).Typ.name
     let render_cid_term    c   = render_name (Term.get ~fixName:true c).Term.name
+    (* added \TYP and \TERM *)
+    let render_cid_typ_latex a  = "\\TYP" ^ (render_name_latex (Typ.get ~fixName:true a).Typ.name)
+    let render_cid_term_latex c = "\\TERM" ^(render_name_latex (Term.get ~fixName:true c).Term.name)
+    (***********************************************************************************************************)
     let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
+  
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)
@@ -1204,12 +1277,22 @@ module Cid = struct
       with
           _ -> "FREE MVar " ^ (string_of_int u)
       end
+
+    (***********************************************************************************************************)
     let render_bvar  cPsi i    =
       begin try
         render_name (Context.getNameDCtx cPsi i)
       with
           _ -> "FREE BVar " ^ (string_of_int i)
       end
+
+    let render_bvar_latex  cPsi i    =
+      begin try
+        render_name_latex (Context.getNameDCtx cPsi i)
+      with
+          _ -> "FREE BVar " ^ (string_of_int i)
+      end
+    (***********************************************************************************************************)
 
     let render_offset     i   = string_of_int i
 

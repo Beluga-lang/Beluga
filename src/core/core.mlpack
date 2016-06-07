@@ -16,7 +16,10 @@ Lfholes
 Interactive
 Id
 Index
+Latex
+Latexinductive
 Latexproof
+Latexrec
 Lexer
 Lfcheck
 Lfrecon

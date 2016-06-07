@@ -95,6 +95,9 @@ module Int : sig
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    (********************************************************************************************************)
+    val typToLatex       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    (********************************************************************************************************)
     val mtypToString      : LF.mctx -> LF.ctyp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
     val kindToString      : LF.dctx -> (LF.kind * LF.sub) -> string
@@ -111,6 +114,9 @@ module Int : sig
     val schemaToString    : LF.schema     -> string
     val schElemToString   : LF.sch_elem   -> string
     val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
+    (********************************************************************************************************)
+    val cdeclToLatex      : LF.mctx -> LF.ctyp_decl  -> string
+    (********************************************************************************************************)
     val gctxToString      : LF.mctx -> Comp.gctx -> string
     val patternToString   : LF.mctx -> Comp.gctx -> Comp.pattern -> string
     val expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string
@@ -119,7 +125,10 @@ module Int : sig
     val branchToString    : LF.mctx -> Comp.gctx -> Comp.branch  -> string
     val compKindToString  : LF.mctx              -> Comp.kind -> string
     val compTypToString   : LF.mctx              -> Comp.typ  -> string
-    val subCompTypToString   : LF.mctx              -> Comp.tclo  -> string
+    (********************************************************************************************************)
+    val compTypToLatex   : LF.mctx               -> Comp.typ  -> string
+    (********************************************************************************************************)
+    val subCompTypToString   : LF.mctx           -> Comp.tclo  -> string
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
 

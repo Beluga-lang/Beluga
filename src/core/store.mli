@@ -115,7 +115,9 @@ module Cid : sig
       kind                 : Comp.kind;
       positivity           : Sgn.positivity_flag;
       mutable frozen       : bool;
-      mutable constructors : cid_comp_const list
+      (*********************************************************************************************************)
+      constructors : cid_comp_const list ref
+      (*********************************************************************************************************)
     }
 
     val entry_list : (Id.cid_comp_typ list ref) DynArray.t
@@ -128,6 +130,10 @@ module Cid : sig
     val index_of_name : name -> cid_comp_typ
     val clear         : unit -> unit
     val get_implicit_arguments : cid_comp_typ -> int
+    (*********************************************************************************************************)
+    val get_real_implicit_arguments : cid_comp_typ -> int
+    val args_of_name : name -> int
+    (*********************************************************************************************************)
   end
 
   module CompCotyp : sig
@@ -230,6 +236,9 @@ module Cid : sig
 
     val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t
     val clear         : unit -> unit
+    (*********************************************************************************************************)
+    val args_of_name : name -> int
+    (*********************************************************************************************************)
   end
 
   module Schema : sig
@@ -265,18 +274,28 @@ module Cid : sig
     open Id
     open Syntax.Int
     val render_cid_comp_typ   : cid_comp_typ -> string
+    (***********************************************************************************************************)
+    val render_cid_comp_typ_latex   : cid_comp_typ -> string
+    (***********************************************************************************************************)
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
     val render_cid_comp_dest  : cid_comp_dest -> string
     val render_cid_typ        : cid_typ      -> string
     val render_cid_term       : cid_term     -> string
+    (***********************************************************************************************************)
+    val render_cid_typ_latex  : cid_typ      -> string
+    val render_cid_term_latex : cid_term     -> string
+    (***********************************************************************************************************)
     val render_cid_schema     : cid_schema   -> string
     val render_cid_prog       : cid_prog     -> string
     val render_offset         : offset       -> string
 
     val render_ctx_var        : LF.mctx    -> offset   -> string
     val render_cvar           : LF.mctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_bvar           : LF.dctx    -> offset   -> string
+    val render_bvar_latex     : LF.dctx    -> offset   -> string
+    (***********************************************************************************************************)
     val render_var            : Comp.gctx  -> var      -> string
 
   end

@@ -165,27 +165,53 @@ module Printer = struct
              printForAlls' cD' acc)
      in printForAlls' cD ""
 
-  (* val printSubgoals : conjunction -> LF.mctx -> string *)
-  let rec printSubgoals cG cD = match cG with
-      | Conjunct (True, g) ->
-        goalToLatex g cD
-      | Conjunct (cG', g) ->
-        sprintf "%s and %s" (printSubgoals cG' cD) (goalToLatex g cD)
+  let countSubgoals cG = 
+      let rec countSubgoals' cG n = match cG with
+        | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
+        | True -> n
+      in countSubgoals' cG 0
 
-  let clauseToLatex sCl = 
+  (* val printSubgoals : conjunction -> LF.mctx -> Id.name list -> string 
+      - when printing inductive types, l = []
+      - when printing the theorem name in recursive functions,
+          l is a list of derivation names to be paired with goals 
+
+          ex : x : [ |- exp nat]
+           x is the derivation name
+           [ |- exp nat] is the goal
+  *)
+  let rec printSubgoals cG cD l = match cG with
+    | Conjunct (True, g) ->
+      (match l with 
+        | [] ->
+          goalToLatex g cD
+        | h::[] ->
+         sprintf "%s : %s" (Id.render_name h) (goalToLatex g cD))
+    | Conjunct (cG', g) ->
+      let n = countSubgoals cG in
+      let revl = (List.rev l) in
+      if (List.length l) == n then
+        let last::revt = revl in
+        let t = (List.rev revt) in
+        sprintf "%s and %s : %s" (printSubgoals cG' cD t) (Id.render_name last) (goalToLatex g cD)
+      else 
+        sprintf "%s and %s" (printSubgoals cG' cD l) (goalToLatex g cD)
+
+
+  let clauseToLatex sCl l = 
     let conclusion = compTypToLatex sCl.eVars sCl.tHead in 
     let forAlls = printForAlls sCl.eVars in
     match sCl.subGoals with
       | True ->
         sprintf "%s%s" forAlls conclusion
       | Conjunct (_) as cG ->
-        sprintf "%sif %s then %s" forAlls (printSubgoals cG sCl.eVars) conclusion
+        sprintf "%sif %s then %s" forAlls (printSubgoals cG sCl.eVars l) conclusion
 
   (* val sgnClauseToLatex Id.cid_comp_const * clause -> string *)
   let sgnClauseToLatex (cidCompConst, sCl) =
     let name = Id.string_of_name_latex (compConstName cidCompConst) in 
     sprintf "\\begin{definition}\n[%s] %s\n\\end{definition}" 
-      name (clauseToLatex sCl)
+      name (clauseToLatex sCl [])
 
   (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
   let rec printArguments n = match n with
@@ -195,12 +221,7 @@ module Printer = struct
   (* maccro : \newcommand{\COMPCONSTname}[number of args n]{\mathsf{name}\;#1\ ... \;#n} *)
   let sgnClauseToMaccros (cidCompConst, sCl) =
     let name = Id.string_of_name_latex (compConstName cidCompConst) in
-    let countSubgoals cG = 
-      let rec countSubgoals' cG n = match cG with
-        | Conjunct (cG', _) -> countSubgoals' cG' (n+1)
-        | True -> n
-      in countSubgoals' cG 0
-    in let n = countSubgoals sCl.subGoals in
+    let n = countSubgoals sCl.subGoals in
     (* pattern match on the number of goals in sCl.subGoals *)
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMPCONST%s}{\\mathsf{%s}}" 

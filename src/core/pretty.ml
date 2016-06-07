@@ -360,7 +360,7 @@ module Int = struct
         | LF.Root (_, h, LF.Nil) ->
             fprintf ppf "(Root %a Nil)"
               (fmt_ppr_lf_head cD cPsi lvl) h
-        | LF.Root (_, h, ms)  ->
+        | LF.Root (loc, h, ms)  ->
             let cond = lvl > 1 in
             (* let ms = deimplicitize_spine h ms in *)
               fprintf ppf "(Root %s%a %a%s)\n\t{Without Implicit : Root %a %a}\n\t[at loc %s]"

@@ -21,6 +21,6 @@ end
 
 module Printer :
 sig
-  val clauseToLatex : clause -> string
+  val clauseToLatex : clause -> Id.name list -> string
   val printCompTypesLatex : string -> unit 
 end

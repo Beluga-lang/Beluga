@@ -1,8 +1,6 @@
 module R = Store.Cid.DefaultRenderer
-(***************************************************************************)
 module P = Pretty.Int.DefaultPrinter
-open Printf
-(***************************************************************************)
+(*open Printf*)
 
 
 let theorem = ref []
@@ -17,11 +15,11 @@ module LaTeX = struct
     | Some s' -> s'
 
   (***************************************************************************)
-  let subCompTypToString tclo = 
-    P.subCompTypToString Syntax.Int.LF.Empty tclo
+  (*let subCompTypToString tclo = 
+    P.subCompTypToString Syntax.Int.LF.Empty tclo*)
   (***************************************************************************)
 
-  (*let rec parse_fun (e : Comp.exp_chk) : unit =
+  let rec parse_fun (e : Comp.exp_chk) : unit =
     match e with
     | Comp.Fun (_, x, e', _, str) ->
        theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
@@ -30,21 +28,7 @@ module LaTeX = struct
        theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
        parse_fun e'
     | Comp.Case _ -> parse_case e
-    | _ -> print_string ("What the hell happened?") *)
-
-(***************************************************************************)
-let rec parse_fun (e : Comp.exp_chk) : unit =
-    match e with
-    | Comp.Fun (_, x, e', tclo, str) ->
-       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
-       parse_fun e';
-       printf "\nFUNCTION, tclo : %s, string : %s\n\n" (subCompTypToString tclo) (get_string str)
-    | Comp.MLam (_, x, e', _, str) ->
-       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
-       parse_fun e'
-    | Comp.Case _ -> parse_case e
-    | _ -> print_string ("What the hell happened?")
-(***************************************************************************)
+    | _ -> print_string ("What the hell happened?") 
 
     and parse_case (e : Comp.exp_chk) : unit =
       match e with
@@ -103,5 +87,10 @@ let parse e =
   LaTeX.parse_fun e;
   print_string ("Theorem\n");
   List.iter (fun x -> print_string (x ^ "\n")) !theorem;
+  theorem := [];
   print_string ("Lines\n");
-  List.iter (fun x -> print_string (x ^ "\n")) !lines
+  List.iter (fun x -> print_string (x ^ "\n")) !lines;
+  lines := [];
+
+
+

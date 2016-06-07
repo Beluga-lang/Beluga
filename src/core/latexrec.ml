@@ -23,7 +23,7 @@ module Index = struct
 
   open Store
 
-  (* Hashtb.
+  (* Hashtbl.
      key : (Id.cid_prog * Loc.t)
      value : (theorem * proof)
    *)
@@ -61,12 +61,29 @@ module Printer = struct
   open Index
   open Store
 
+  (* used to get the derivation names from the proof in order to factor them into our theorem statement *)
+  let rec parse_fun e l =
+    match e with
+    (* function -> add the name x at the end of our list *)
+    | Comp.Fun (_, x, e') ->
+       parse_fun e' (l @ [x])
+    (* mlam -> continue traversing *)
+    | Comp.MLam (_, _, e') ->
+       parse_fun e' l
+    (* we have reached cases, no more functions to come, return our list *)
+    | Comp.Case _ -> l
+     
 
-  let theoremToLatex (Theorem (tau)) cidProg =
+  let theoremToLatex (Theorem tau) cidProg =
     let sCl = Latexinductive.Convert.typToClause tau in
-    let name = Id.string_of_name_latex (Cid.Comp.get cidProg).Cid.Comp.name in
+    let entry = Cid.Comp.get cidProg in
+    let name = Id.string_of_name_latex entry.Cid.Comp.name in
+    let Comp.RecValue (cidProg, e, msub, env) = entry.Cid.Comp.prog in
+    (* list of derivation names to be factored into our theorem statement *)
+    let l = parse_fun e [] in
     sprintf "\\begin{theorem}\n[%s] %s\n\\end{theorem}"
-      name (Latexinductive.Printer.clauseToLatex sCl)
+      name (Latexinductive.Printer.clauseToLatex sCl l)
+      
 
   (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
   let rec printArguments n = match n with
@@ -87,28 +104,9 @@ module Printer = struct
               name n name (printArguments n)
 
 
-
-  (* expChkToString    : LF.mctx -> Comp.gctx -> Comp.exp_chk -> string *)
-
-  (* val ann : Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
-               -> Syntax.Int.Comp.ctyp_decl Syntax.Int.LF.ctx
-               -> Syntax.Int.Comp.exp_chk
-               -> (Syntax.Int.Comp.typ * Syntax.Int.LF.msub)
-               -> Annotated.Comp.exp_chk
-   *)
-
   let proofToLatex (Proof (v)) cidProg =
-    (*let Comp.RecValue (cidProg, expChk, msub, env) = v in 
-    let annExpChk = Annotate.Comp.ann LF.Empty LF.Empty expChk tclo in 
-    Latexproof.parse annExpChk;*)
-
     "PROOF"
-    (*
-    sprintf "PROOF :\n\n%s" 
-      (Annotate.PrettyAnn.expChkToString LF.Empty LF.Empty annExpChk)
-     *)
-
-
+    
 
   let printSignatureLatex mainFile =
     let outMaccros = 

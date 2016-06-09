@@ -1,9 +1,8 @@
 module R = Store.Cid.DefaultRenderer
 module P = Pretty.Int.DefaultPrinter
-(*open Printf*)
+open Printf
 
 
-let theorem = ref []
 let lines = ref []
 
 module LaTeX = struct
@@ -15,82 +14,112 @@ module LaTeX = struct
     | Some s' -> s'
 
   (***************************************************************************)
-  (*let subCompTypToString tclo = 
-    P.subCompTypToString Syntax.Int.LF.Empty tclo*)
+  let expSynToString cD cG i   =
+    Annotate.PrettyAnn.expSynToString cD cG i
+
+  let fresh_name_mctx cD x =
+    Annotate.PrettyAnn.fresh_name_mctx cD x
+
+  let fresh_name_gctx cG x =
+    Annotate.PrettyAnn.fresh_name_gctx cG x
   (***************************************************************************)
 
-  let rec parse_fun (e : Comp.exp_chk) : unit =
+  let rec parse_fun cD cG (e : Comp.exp_chk) : unit =
     match e with
-    | Comp.Fun (_, x, e', _, str) ->
-       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
-       parse_fun e'
+    | Comp.Fun (_, x, e', tclo, str) ->
+       (* let (Syntax.Int.Comp.TypArr (tau1, _), _) = tclo in *)
+       (* let decl = Syntax.Int.Comp.CTypDecl (x, tau1) in *)
+       let x = fresh_name_gctx cG x in
+       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt x) in
+       parse_fun cD cG' e'
     | Comp.MLam (_, x, e', _, str) ->
-       theorem := !theorem @ [Id.render_name x ^ ":" ^ get_string str];
-       parse_fun e'
-    | Comp.Case _ -> parse_case e
+       let x = fresh_name_mctx cD x in
+       let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt x) in
+       let cG' = Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1) in
+       parse_fun cD' cG' e'
+    | Comp.Case _ -> parse_case cD cG e
     | _ -> print_string ("What the hell happened?") 
 
-    and parse_case (e : Comp.exp_chk) : unit =
+    and parse_case cD cG (e : Comp.exp_chk): unit =
       match e with
-      | Comp.Case (_, _, i, branches, _, _) ->
-	 lines := !lines @ ["Case _ of"];
-	 List.iter parse_branch branches
+      | Comp.Case (_, _, i, branches, _, str) ->
+	       lines := !lines @ [sprintf "\n\nCase %s of :\n\n" (expSynToString cD cG i)];
+	      List.iter (parse_branch cD cG) branches
       | _ -> print_string ("What the hell happened?")
 
-    and parse_branch (branch : Comp.branch) : unit =
+    and parse_branch cD cG (branch : Comp.branch) : unit =
       match branch with
       | Comp.EmptyBranch (_, _, pat, _) ->
-	 parse_pattern pat
+	       parse_pattern cD cG pat
       | Comp.Branch (_, _, _, pat, _, e) ->
-	 parse_pattern pat;
-	 parse_expr e
+	       parse_pattern cD cG pat;
+	       parse_expr cD cG e
 
-    and parse_pattern (pat : Comp.pattern) : unit =
+    and parse_pattern cD cG (pat : Comp.pattern) : unit =
       match pat with
       | Comp.PatMetaObj (_, mO, _, str) ->
-	 lines := !lines @ ["pat: " ^ get_string str]
+	       lines := !lines @ ["pat: " ^ get_string str]
       | Comp.PatConst (_, c, pat_spine, _, str) ->
-	 lines := !lines @ [(R.render_cid_comp_const c)  ^ ":" ^ get_string str];
-	 parse_pattern_spine pat_spine
+	       lines := !lines @ [(R.render_cid_comp_const c)  ^ ":" ^ get_string str];
+	       parse_pattern_spine cD cG pat_spine
       | Comp.PatAnn (_, pat, _, _, _) ->
-	 parse_pattern pat
+	       parse_pattern cD cG pat
 
-    and parse_pattern_spine (pat_spine : Comp.pattern_spine) : unit =
+    and parse_pattern_spine cD cG (pat_spine : Comp.pattern_spine) : unit =
       match pat_spine with
       | Comp.PatNil _ -> ()
       | Comp.PatApp (_, pat, pat_spine', _, _) ->
-	 parse_pattern pat;
-	 parse_pattern_spine pat_spine'
+	       parse_pattern cD cG pat;
+	       parse_pattern_spine cD cG pat_spine'
 
-    and parse_expr (e : Comp.exp_chk) : unit =
+
+    and parse_expr cD cG (e : Comp.exp_chk) : unit =
       match e with
       | Comp.Rec (_, n, e', _, str) ->
-	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
-	 parse_expr e'
+         let n = fresh_name_gctx cG n in
+         let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt n) in
+	       lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
+	       parse_expr cD cG' e'
       | Comp.Fun (_, n, e', _, str) ->
-	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
-	 parse_expr e'
+         let n = fresh_name_gctx cG n in
+         let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDeclOpt n) in
+	       lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
+	       parse_expr cD cG' e'
       | Comp.MLam (_, n, e', _, str) ->
-	 lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
-	 parse_expr e'
+         let n = fresh_name_mctx cD n in
+         let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.DeclOpt n) in
+         let cG' = Whnf.cnormCtx (cG, Syntax.Int.LF.MShift 1) in
+	       lines := !lines @ [(Id.render_name n) ^ ":" ^ get_string str];
+	       parse_expr cD' cG' e'
       | Comp.Case (_, _, i, branches, _, _) ->
-	 (* Could be a let. Deal with it. *)
-	 lines := !lines @ ["Subcase _ of"];
-	 List.iter parse_branch branches
+	       (* Could be a let. Deal with it. *)
+         lines := !lines @ [sprintf "\n\nSubcase %s of :\n\n" (expSynToString cD cG i)];
+	       List.iter (parse_branch cD cG) branches
       | Comp.Box (_, _, _, str) ->
-	 lines := !lines @ [get_string str]
+	       lines := !lines @ [get_string str]
       | _ -> 
-   lines := !lines @ ["something else"]
+         lines := !lines @ ["something else"]
 end
 
-let parse e =
-  LaTeX.parse_fun e;
-  print_string ("Theorem\n");
-  List.iter (fun x -> print_string (x ^ "\n")) !theorem;
-  theorem := [];
-  print_string ("Lines\n");
-  List.iter (fun x -> print_string (x ^ "\n")) !lines;
-  lines := [];
+let printLines l = 
+  let rec printLines' l str = match l with
+    | [] -> str
+    | h::t -> printLines' t (str ^ h)
+  in 
+  printLines' l ""
 
-
+let parse e cidProg =
+  let entry = Store.Cid.Comp.get cidProg in
+  let name = entry.Store.Cid.Comp.name in
+  let tau = entry.Store.Cid.Comp.typ in
+  let decl = Syntax.Int.Comp.CTypDecl (name, tau) in
+  (* initial cG : type declaration (function name, function type) *)
+  let cG = Syntax.Int.LF.Dec (Syntax.Int.LF.Empty, decl) in
+  (* initial cD : LF.Empty *)
+  let cD = Syntax.Int.LF.Empty in
+  (* fill up lines *)
+  let _ = LaTeX.parse_fun cD cG e in
+  let str = printLines !lines in
+  let _ = lines := [] in
+  str
 

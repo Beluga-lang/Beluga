@@ -12,11 +12,17 @@ module PrettyAnn = struct
   open Format
 
   module R = Store.Cid.DefaultRenderer
+  (***********************************************************************************************************)
+  module R' = Store.Cid.NamedRenderer
+  (***********************************************************************************************************)
 
   let print_tstr tstr =
     match tstr with
     | None -> ""
-    | Some str -> ""
+    (*****************************************************************************************************)
+    (*| Some str -> ""*)
+    | Some str -> str
+    (*****************************************************************************************************)
 
   let rec _get_names_dctx : Syntax.Int.LF.dctx -> Id.name list = function
     | Syntax.Int.LF.Null -> []
@@ -35,7 +41,7 @@ module PrettyAnn = struct
     | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDecl (n, _))
     | Syntax.Int.LF.Dec (cG', Syntax.Int.Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
 
-  let _fresh_name_dctx (cPsi : Syntax.Int.LF.dctx) : Id.name -> Id.name =
+  let fresh_name_dctx (cPsi : Syntax.Int.LF.dctx) : Id.name -> Id.name =
     Id.gen_fresh_name (_get_names_dctx cPsi)
   let fresh_name_mctx (cD : Syntax.Int.LF.mctx) : Id.name -> Id.name =
     Id.gen_fresh_name (get_names_mctx cD)
@@ -116,12 +122,17 @@ module PrettyAnn = struct
 	       x
 	       (print_tstr tstr)
 
+(*****************************************************************************************************)
   and expSynToString cD cG i =
     match i with
-    | Comp.Var (_, x, _, tstr) ->
+
+    (* Comp.Var (_, x, _, tstr) ->
        sprintf "{Var|%s%s}"
 	       (R.render_var cG x)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Var (_, x, _, tstr) ->
+       sprintf "%s"
+         (R'.render_var cG x)
     | Comp.Const (_, prog, _, tstr) ->
        sprintf "{Const|%s%s}"
 	       (R.render_cid_prog prog)
@@ -134,11 +145,15 @@ module PrettyAnn = struct
        sprintf "{DataDest|%s%s}"
 	       (R.render_cid_comp_dest c)
 	       (print_tstr tstr)
-    | Comp.Apply (_, i, e, _, tstr) ->
+    (*| Comp.Apply (_, i, e, _, tstr) ->
        sprintf "{Apply|%s %s%s}"
 	       (expSynToString cD cG i)
 	       (expChkToString cD cG e)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Apply (_, i, e, _, tstr) ->
+       sprintf "{Apply|%s %s}"
+         (expSynToString cD cG i)
+         (expChkToString cD cG e)
     | Comp.MApp (_, i, mC, _, tstr) ->
        sprintf "{MApp|%s %s%s}"
 	       (expSynToString cD cG i)
@@ -158,11 +173,11 @@ module PrettyAnn = struct
 	       (expSynToString cD cG i1)
 	       (expSynToString cD cG i2)
 	       (print_tstr tstr)
-
     | Comp.Boolean (b, _, tstr) ->
        sprintf "{Boolean|%s%s}"
 	       (if b then "ttrue" else "ffalse")
 	       (print_tstr tstr)
+(*****************************************************************************************************)
 
   and metaObjToString cD mC = "{metaObj|Unsupported}"
 

@@ -104,6 +104,20 @@ stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype
 ;
 
 %{{
+# Reducibility of substitutions
+}}%
+
+schema ctx = tm T;
+
+
+inductive RedSub : {gamma:ctx}{#S:[ |- gamma]} ctype =
+| Nil : RedSub  [ ] [ |- ^ ]
+| Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
+     → RedSub [gamma, x:tm A[]] [ |- #S[^], M ] 
+;
+
+
+%{{
 A term of type `i` is reducible if it halts, and a `term M` of type
 `arr A B` is reducible if it halts, and moreover for every reducible
 `N` of type `A`, the application `app M N` is reducible. We write
@@ -179,18 +193,6 @@ fn r => case r of
 | I h => h
 | Arr h f => h
 | Cross h r1 r2 => h
-;
-
-%{{
-# Reducibility of substitutions
-}}%
-
-schema ctx = tm T;
-
-inductive RedSub : {gamma:ctx}{#S:[ |- gamma]} ctype =
-| Nil : RedSub  [ ] [ |- ^ ]
-| Dot : RedSub  [gamma] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A[]] [ |- #S[^], M ] 
 ;
 
 
@@ -277,7 +279,8 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 	(bwd_closed [|- step2pair] r2)
 
 | [gamma |- fst M ] => 
-  let Cross ha r1 r2 = main [gamma] [gamma |- M] rs in  r1
+  let c = main [gamma] [gamma |- M] rs in 
+  let Cross ha r1 r2 = c in  r1
   
 
 | [gamma |- snd M ] => 

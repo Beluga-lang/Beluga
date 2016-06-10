@@ -1205,7 +1205,7 @@ let isVar h = match h with
       let (_ ,{contents=None}, _cD, ClTyp (STyp (_, cPhi2), cPhi1), _cnstrs, _) = s in
       let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
       let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
-          (s', cPsi1')
+          (s', cPsi1') 
 
     | (FSVar (cshift, (s, sigma)), cPsi1) ->
         (*     D; Psi |- s[sigma] : psi  where s: psi[Phi]
@@ -1501,6 +1501,9 @@ let isVar h = match h with
 	 trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, ss) (MMVarRef r1)) in 
       (* let sM2' =
 	 trail (fun () -> prune cD cPsi1 phat (tM2', id) (mtt1, comp ss ss1) (MMVarRef r1)) in *)
+       let _  = dprint (fun () -> ("[unifyMMVarTermProj] - done " ^ 
+				    P.normalToString cD0 flat_cPsi (tM2', id) ^
+				    "\n")) in  
        instantiateMMVar (r1, sM2', !cnstrs1)
      end
 
@@ -1578,6 +1581,7 @@ let isVar h = match h with
 		    addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
     end 
 
+
     (* MVar-normal case *)
     | (Root (_, MVar (Inst i, t), _tS), sM2) 
       when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
@@ -1626,6 +1630,26 @@ let isVar h = match h with
 	end 
 
     (* MMVar-normal case *)
+    (* Special case to handle: M[#S[]] = ?M[#?S[]] *)
+    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
+       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2)) 
+    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2) ,
+      ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _ )) as s1)), _tS)) as sM1)) -> 
+	let (_, tQ, cPsi) = Whnf.mctxMDec cD0 u in
+	let _ = dprint (fun () -> "[unify] MMVar[SVar] " ) in 
+	let _ = dprint (fun () -> " tP = " ^ P.typToString cD cPsi1 (tP,id) ^ "\ncPsi1 = " ^ 
+			  P.dctxToString cD cPsi1) in 
+	let _ = dprint (fun () -> " tQ = " ^ P.typToString cD0 cPsi (tQ,id) ^ "\ncPsi = " ^ 
+			  P.dctxToString cD0 cPsi) in 
+	  (* if Whnf.convTyp (tP, id) (tQ, id) && Whnf.convDCtx cPsi1 cPsi then  *)
+	    (try 
+	       unifyDCtx1 mflag cD0 cPsi1 cPsi;unifyTyp mflag cD0 cPsi (tP,id) (tQ,id);
+	       unifySub mflag cD0 cPsi s1 s2;
+	       instantiateMMVar (r, Root (loc', MVar (Offset u, id), tS'), !cnstrs)
+	     with _ -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+	    )
+
+
     | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1, sM2)
     | (sM2, ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, mdep) as i, mt), t), _tS)) as sM1)) ->
         dprnt "(011) MMVar-_";
@@ -1640,7 +1664,7 @@ let isVar h = match h with
         let _ = dprint (fun () -> "mt = " ^ P.msubToString cD0 mt) in
             if isProjPatSub t && isPatMSub mt then
               begin try
-	       (dprint (fun () -> "Callin unifyMMVarTermProj ...");
+	       (dprint (fun () -> "Calling unifyMMVarTermProj ...");
 		unifyMMVarTermProj cD0 cPsi i mt t sM2)
                 with NotInvertible ->
                   (dprint (fun () -> "(010) Add constraints ");
@@ -2080,7 +2104,8 @@ let isVar h = match h with
     | _ , _ -> raise (Failure "Computation-level Type Clash")
 
     let rec unifyCompTyp cD tau_t tau_t' =
-      unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t')
+      (unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t'); 
+       dprint (fun () -> "[unifyCompTyp] - done"))
 
     and unifyCompTypW cD tau_t tau_t' = match (tau_t,  tau_t') with
       | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) ->

@@ -50,7 +50,7 @@ and neutral : tm C -> type =
 schema nctx = some [t:tp] block x:tm t, y:neutral x;
 
 inductive Halts : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
-| HALTS : {V:[gamma |- tm A[]]} [gamma |- mstep M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
+| Halts : {V:[gamma |- tm A[]]} [gamma |- mstep M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
 
 % -----------------------------------------------------------------------------
 % Reducibility Definition 
@@ -81,8 +81,8 @@ rec closed : {A:[|- tp]}{M:[g |- tm A[]]}{M':[g |- tm A[]]}
 / total a (closed _ a) /
 mlam A,M,M',S => fn r => case [|- A] of 
 | [|- i] =>  
-   let Base (HALTS [g |- V] [g |- S'] v) = r in 
-     Base (HALTS [g |- V] [g |- s_trans S S'] v)
+   let Base (Halts [g |- V] [g |- S'] v) = r in 
+     Base (Halts [g |- V] [g |- s_trans S S'] v)
 
 | [|- arr A B] => 
   let Arr [g |- M] f = r in 
@@ -125,11 +125,11 @@ mlam M => fn s => case s of
 rec reflect : {gamma:nctx}{A:[|-tp]}{R:[gamma |- tm A[]]}{NR:[gamma |- neutral R]} Reduce [ |- A] [gamma |- R] =
 / total a (reflect gamma a) /
 mlam gamma, A,R,NR => case [ |- A] of
-| [ |- i] => Base (HALTS [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
+| [ |- i] => Base (Halts [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
 | [ |- arr A B] =>
   Arr [gamma |- R]
   (mlam h => mlam #W => mlam M2 => fn rm2 =>
-    let HALTS [_ |- _] ms [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
+    let Halts [_ |- _] ms [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
     m_closed  (m_app2 [_ |- _] ms)
              (reflect [h] [|- B] [h |- _ ] [_ |- n_app NR[#W] N]))
 
@@ -143,15 +143,15 @@ mlam g,A,M => fn r => case [|- A] of
   let q1 = f [g,b:block x:tm _,y:neutral x] [g,b |- ..] [g,b |- b.1]
              (reflect [g,b:block x:tm _,y:neutral x ] [|- A] [g,b |- b.1] [g,b:block x:tm _,y:neutral x |- b.2]) in
   let m  = reify [g,b:block x:tm A[],y:neutral x ] [|- B] [g,b:block x:tm A[],y:neutral x |- app M[..] b.1] q1 in
-  let HALTS [g,b:block x:tm A[],y:neutral x |- _]
+  let Halts [g,b:block x:tm A[],y:neutral x |- _]
             [g,b:block x:tm A[],y:neutral x |- MS]
             [g,b:block x:tm A[],y:neutral x |- N] = m in         
   let [g,b:block x:tm A[],y:neutral x |- MS'[..,b.1]] = [g,b:block x:tm A[],y:neutral x |- MS] in % I am not sure why I have to do this separately
   let [g |- MS''] = m_lam [_ |- _] [g,x:tm A[] |- MS'] in
-  HALTS [_ |- _] [g |- s_trans (s_eta _) MS''] [g |- n_lam (\x. \y. N[..,<x;y>])]
+  Halts [_ |- _] [g |- s_trans (s_eta _) MS''] [g |- n_lam (\x. \y. N[..,<x;y>])]
 ;
 
-%{
+
 % -----------------------------------------------------------------------------
 % Defining reducibility of simultaneous substitutions.
 
@@ -241,4 +241,4 @@ mlam M => fn s => reify [_] [|- _] [_ |- _] (eval [_ |- M] (idLogSub s));
 
 % We probably want to show also that for any g:ctx there exists g':nctx and #Id:[g' |- g]
 % such that IdSub [g] [g' |- #Id]...
-}%
+

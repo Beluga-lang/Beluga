@@ -251,12 +251,9 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let s_proj = ConvSigma.gen_conv_sub conv_list in
       let s_tup    = ConvSigma.gen_conv_sub' conv_list in
 	(* let tQ    = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in*)
-      let _ = print_string "EtaExpand - Atomic type\n" in
       let tQ = Whnf.normTyp (tP, Substitution.LF.id) in  
        (* necessary to eliminate closures *)
       let tQ = Whnf.normTyp (tQ, Substitution.LF.comp s s_tup) in 
-      let _ = print_string ("EtaExpand - Normalized Atomic type = " ^
-	P.typToString cD cPhi (tQ, Substitution.LF.id) ^ "\n") in
 	(*  cPsi |- s_proj : cPhi
             cPhi |- s_tup : cPsi       
             cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
@@ -266,26 +263,13 @@ and etaExpandMVstr' cD cPsi sA  = match sA with
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let _ = print_string ("Generate MMVar of type " ^ 
-			      P.typToString cD cPhi' (tQ, ssi') ^ "\n") in
-
       let u = Whnf.newMMVar None (cD, cPhi', LF.TClo(tQ,ssi')) LF.Maybe in
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
-      let _ = print_string ("cPsi  = " ^ P.dctxToString cD cPsi ^ "\n") in
-      let _ = print_string ("cPhi  = " ^ P.dctxToString cD cPhi ^ "\n") in
-      let _ = print_string ("cPhi' = " ^ P.dctxToString cD cPhi' ^ "\n") in
-      let _ = print_string ("cPhi |- ss' : cPhi' == " ^  
-			      P.subToString cD cPhi ss' ^ "\n") in 
-      let _ = print_string ("cPsi |- s_proj : cPhi == " ^ 
-			      P.subToString cD cPsi s_proj ^ "\n") in
       let ss_proj = S.LF.comp ss' s_proj in
-      let _ = print_string ("cPsi |- ss_proj : cPhi' == ") in 
-      let _ = print_string ( P.subToString cD   cPsi ss_proj ^ "\n") in
       let tM =  LF.Root (Syntax.Loc.ghost, LF.MMVar ((u,Whnf.m_id), ss_proj),  LF.Nil) in
-	(print_string ("tM = " ^ P.normalToString cD cPsi (tM, Substitution.LF.id) ^ "\n");
-	 tM)
+	 tM
 
   | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       LF.Lam (Syntax.Loc.ghost, x, etaExpandMVstr cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s) )
@@ -367,7 +351,7 @@ let rec covGoalsToString cov_goals = match cov_goals with
   | [] -> "\n"
   | (cD, cg, _ ) :: cgoals ->
       " -- " ^  P.mctxToString cD ^ " |- " ^ covGoalToString cD cg ^
-	"\n " ^  covGoalsToString  cgoals
+	"\n" ^  covGoalsToString  cgoals
 
 let rec splitsToString' (cD, cG) (cD_p, cG_p) splits = match splits with
   | [] -> "\n"
@@ -882,13 +866,7 @@ let rec genSpine cD cPsi sA tP = begin match Whnf.whnfTyp sA with
          cPsi |- tN . s <= cPsi', x:A
       *)
 (*      let tN         = Whnf.etaExpandMV cPsi (tA,s) idSub in     *)
-      let _ = print_string ("[genSpine] Generate Obj of type tA = ") in 
-      let _ = print_string (P.typToString cD cPsi (tA,s) ^ "\n") in
-      let _ = print_string ("    cPsi = " ^ P.dctxToString cD cPsi ^ "\n") in
-
       let tN = etaExpandMVstr cD cPsi (tA, s)  in
-      let _  = print_string ("[genSpine] tN = ") in 
-      let _ = print_string ( P.normalToString cD cPsi (tN, S.LF.id) ^ "\n") in
       let tS  = genSpine cD cPsi (tB, LF.Dot(LF.Obj(tN), s))  tP  in
 	LF.App (tN, tS)
 
@@ -1174,17 +1152,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 	| Eqn (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) ->
 	  let cPsi_p' = Whnf.cnormDCtx (cPsi_p, ms) in
 	  let tR_p'   = Whnf.cnorm (tR_p, ms) in
-	  let _ = print_string ("[solve'] tA = " ^ P.typToString cD cPsi sA ^ "\n") in 
-	  let _ = print_string ("         tA_p = " ) in 
-	  let _ = print_string (P.typToString cD_p cPsi_p sA_p ^ "\n") in 
-	  let _ = print_string ("cD = " ); print_string (P.mctxToString cD ^ "\n") in
-	  let _ = print_string ("ms = " ); print_string ( P.msubToString cD ms ^
-							    "\n") in
-	  let _ = print_string ("cD_p = " ); print_string (P.mctxToString cD_p ^ "\n") in
 	  let tA_p'   = Whnf.cnormTyp (Whnf.normTyp sA_p,  ms) in
-	  let _ = print_string ("         tA_p wrt cD = " ) in 
-	  let _ = print_string (P.typToString cD cPsi_p' (tA_p', S.LF.id) ^ "\n") in 
-
 	  let _       = (dprint (fun () -> "\n[solve'] " ^ P.dctxToString cD  cPsi ^
 				   "    ==    " ^ P.dctxToString cD cPsi_p' );
 			 dprint (fun () -> "        " ^ P.typToString cD cPsi sA ^
@@ -1722,15 +1690,16 @@ let genPatt (cD_p,tau_v) (c, tau_c) =
   let _ = dprint (fun () -> "          expected type: " ^ P.compTypToString cD_p tau_v ^"\n") in
   let ms    = Ctxsub.mctxToMSub cD_p in
     begin try
-      U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms);
+      U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms); 
       let (cD', cG', pat', tau', ms') = Abstract.covpatt 
 	                                (Whnf.cnormCtx (gctxToCompgctx cG, Whnf.m_id)) 
 					(Whnf.cnormPattern (pat, Whnf.m_id))
 					(Whnf.cnormCTyp (tau_v, ms)) (Whnf.cnormMSub ms) in
       let ccG' = compgctxTogctx cG' in
-	Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
+	(dprint (fun () -> "[genPatt] - Return Coverage Pattern");
+	Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms'))
     with U.Failure _ -> (* expected type and generated type for spine do not
-			 unify; therefore c pS is not inhabit tau_v *)
+			 unify; therefore c pS is not inhabit tau_v *)                       
                        None
       | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
 	(print_string ("WARNING: Generation of pattern encountered left-over constraints in higher-order unification\n");
@@ -1799,12 +1768,15 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 						)
                                 constructors
       in
+      let r = 
 	List.map (fun (cD, cg, ms) ->
 		    let CovPatt (cG0, pat, ttau) = cg in
 		    let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in
 		      (cD, CovPatt (cG0', pat, ttau), ms))
-	  (genAllPatt (cD,tau) ctau_list)
-
+	  (genAllPatt (cD,tau) ctau_list) in 
+      let _ = dprint (fun () -> "\n[genPatCGoals] Generated " ^ string_of_int (List.length r) ^ " case(s) for " ^ P.compTypToString cD tau  ^ "\n") in
+      let _ = dprint (fun () -> covGoalsToString r) in 
+	r
   | _ -> []
 
 (* best_candidate cO cD = cov_goals
@@ -2077,6 +2049,8 @@ let refine ( (cD, cG, candidates, patt) as cov_problem ) =
 	let _ = dprint (fun () -> "\n\n[refine] Pattern = " ^ P.patternToString cD (gctxToCompgctx cG) patt) in
 	let _ = dprint (fun () -> "\n[refine] found " ^ string_of_int (List.length pvlist) ^ " candidates\n") in
 	let (pv_splits, pv) = best_pv_cand (cD, cG) pvlist in
+	let _ = dprint (fun () -> "\n[refine] Candidates generated " ^ string_of_int (List.length pv_splits) ^ " case(s) for \n" ^ 
+			  candidatesToString cov_problem ^ "\n\n") in
 	let r_cands =  refine_patt_cands cov_problem (pv_splits, pv) in
 	let _ = dprint (fun () -> "\n[refine] refined cov_problem = " ) in
 	let _ = List.map (fun (cD', cG', cands, patt) ->

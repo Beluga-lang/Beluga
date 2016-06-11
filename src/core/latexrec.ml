@@ -97,7 +97,7 @@ module Printer = struct
 
 
   let proofToLatex e_ann cidProg =
-    Latexproof.parse e_ann cidProg
+    sprintf "\\begin{proof}\n%s\n\\end{proof}" (Latexproof.parse e_ann cidProg)
     
 
   let printSignatureLatex mainFile =

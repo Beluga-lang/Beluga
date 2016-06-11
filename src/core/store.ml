@@ -1206,6 +1206,9 @@ module Cid = struct
     val render_bvar_latex   : LF.dctx    -> offset   -> string
     (***********************************************************************************************************)
     val render_var          : Comp.gctx  -> var      -> string
+    (***********************************************************************************************************)
+    val render_var_latex    : Comp.gctx  -> var      -> string
+    (***********************************************************************************************************)
 
   end
 
@@ -1236,7 +1239,10 @@ module Cid = struct
     let render_bvar_latex _cPsi i   = string_of_int i
     (***********************************************************************************************************)
     let render_offset      i   = string_of_int i
+    (***********************************************************************************************************)
     let render_var   _cG   x   = string_of_int x
+    let render_var_latex   _cG   x   = string_of_int x
+    (***********************************************************************************************************)
 
   end (* Int.DefaultRenderer *)
 
@@ -1296,12 +1302,27 @@ module Cid = struct
 
     let render_offset     i   = string_of_int i
 
+    (***********************************************************************************************************)
     let render_var   cG   x   =
       begin try
         render_name (Context.getNameCtx cG x)
       with
           _ -> "FREE Var " ^ (string_of_int x)
       end
+
+    let render_var_latex   cG   x   =
+      begin try
+        let name = Context.getNameCtx cG x in
+         (* if name is in the hashtbl, it is the name of a function and we add \COMP before it *)
+        (*(try 
+            let _ = Hashtbl.find Latexrec.annotatedProofs name in
+            "\\COMP" ^ (render_name_latex name)
+         with
+             _ ->*) render_name_latex name (*  )  *)
+        with
+           _ -> "FREE Var " ^ (string_of_int x)
+      end
+    (***********************************************************************************************************)
 
   end (* Int.NamedRenderer *)
 

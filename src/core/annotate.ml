@@ -12,17 +12,18 @@ module PrettyAnn = struct
   open Format
 
   module R = Store.Cid.DefaultRenderer
-  (***********************************************************************************************************)
   module R' = Store.Cid.NamedRenderer
-  (***********************************************************************************************************)
 
   let print_tstr tstr =
     match tstr with
     | None -> ""
-    (*****************************************************************************************************)
-    (*| Some str -> ""*)
     | Some str -> str
-    (*****************************************************************************************************)
+
+  let rec phatToDCtx phat = match phat with
+    | (None,      0) -> Syntax.Int.LF.Null
+    | (Some psi , 0) -> Syntax.Int.LF.CtxVar psi
+    | (ctx_v    , k) ->
+       Syntax.Int.LF.DDec (phatToDCtx (ctx_v, k-1), Syntax.Int.LF.TypDeclOpt (Id.mk_name Id.NoName))
 
   let rec _get_names_dctx : Syntax.Int.LF.dctx -> Id.name list = function
     | Syntax.Int.LF.Null -> []
@@ -96,10 +97,13 @@ module PrettyAnn = struct
 	       (expSynToString cD cG i)
 	       (expChkToString cD cG' e)
 	       (print_tstr tstr)
-    | Comp.Box (_, cM, _, tstr) ->
-       sprintf "{Box|%s%s}"
+    (*| Comp.Box (_, cM, _, tstr) ->
+       sprintf "{Box| %s%s}"
 	       (metaObjToString cD cM)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Box (_, cM, _, tstr) ->
+       sprintf "$%s$"
+         (metaObjToString cD cM)
     | Comp.Case (_, prag, i, bs, _, tstr) ->
        sprintf "{Case|@[<v> case @[%s@] of %s %s @]@,%s}"
 	       (expSynToString cD cG i)
@@ -122,7 +126,6 @@ module PrettyAnn = struct
 	       x
 	       (print_tstr tstr)
 
-(*****************************************************************************************************)
   and expSynToString cD cG i =
     match i with
 
@@ -132,7 +135,7 @@ module PrettyAnn = struct
 	       (print_tstr tstr)*)
     | Comp.Var (_, x, _, tstr) ->
        sprintf "%s"
-         (R'.render_var cG x)
+         (R'.render_var_latex cG x)
     | Comp.Const (_, prog, _, tstr) ->
        sprintf "{Const|%s%s}"
 	       (R.render_cid_prog prog)
@@ -151,11 +154,11 @@ module PrettyAnn = struct
 	       (expChkToString cD cG e)
 	       (print_tstr tstr)*)
     | Comp.Apply (_, i, e, _, tstr) ->
-       sprintf "{Apply|%s %s}"
+       sprintf "%s %s"
          (expSynToString cD cG i)
          (expChkToString cD cG e)
     | Comp.MApp (_, i, mC, _, tstr) ->
-       sprintf "{MApp|%s %s%s}"
+       sprintf "{MApp|%s $%s$%s}"
 	       (expSynToString cD cG i)
 	       (metaObjToString cD mC)
 	       (print_tstr tstr)
@@ -177,10 +180,101 @@ module PrettyAnn = struct
        sprintf "{Boolean|%s%s}"
 	       (if b then "ttrue" else "ffalse")
 	       (print_tstr tstr)
-(*****************************************************************************************************)
 
-  and metaObjToString cD mC = "{metaObj|Unsupported}"
+  and metaObjToString cD (loc, mO) = match mO with
+    | LF.CObj cPsi ->
+       sprintf "[%s]" (dctxToString cD cPsi)
+    | LF.ClObj (phat, tM) ->
+       let cPsi = phatToDCtx phat in
+         sprintf "[%s \\entails %s]"
+          (psiHatToString cD cPsi)
+          (clobjToString cD cPsi tM)
+    | LF.MV k ->
+       sprintf "%s" (R'.render_cvar cD k)
 
+  (* we work with Syntax.Int.LF.dctx *)
+  and dctxToString cD cPsi =
+    P.fmt_ppr_lf_dctx cD Pretty.std_lvl str_formatter cPsi
+    ; flush_str_formatter ()
+
+  (* we work with Syntax.Int.LF.psi_hat *)
+  and psiHatToString cD cPsi =
+    P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl str_formatter cPsi
+    ; flush_str_formatter ()
+
+
+  and clobjToString cD cPsi tM = match tM with
+    | LF.MObj m -> normalToString cD cPsi m
+    | LF.SObj s -> subToString cD cPsi s
+    | LF.PObj h -> headToString cD cPsi "" h
+
+  and normalToString cD cPsi m =
+    (*let rec dropSpineLeft ms n = match (ms, n) with
+      | (_, 0) -> ms
+      | (LF.Nil, _) -> ms
+      | (LF.App (m, rest, str), n) -> dropSpineLeft rest (n - 1)
+    in 
+    let deimplicitize_spine h ms = match h with
+      | Syntax.Int.LF.Const c ->
+        let implicit_arguments = Store.Cid.Term.get_implicit_arguments c in
+         dropSpineLeft ms implicit_arguments
+      | Syntax.Int.LF.MVar _
+      | Syntax.Int.LF.BVar _
+      | Syntax.Int.LF.PVar _
+      | Syntax.Int.LF.FMVar _
+      | Syntax.Int.LF.FPVar _
+      | Syntax.Int.LF.Proj _
+      | Syntax.Int.LF.FVar _
+      | Syntax.Int.LF.AnnH _ ->
+         ms
+     in*) 
+     match m with
+       | LF.Lam (_, x, m, str1, tclo, str2) ->
+          let x = fresh_name_dctx cPsi x in
+            sprintf "{\\lambda %s. %s}" 
+             (Id.render_name_latex x) 
+             (normalToString cD (Syntax.Int.LF.DDec(cPsi, Syntax.Int.LF.TypDeclOpt x)) m)
+       | LF.LFHole _ -> "?"
+       | LF.Tuple (_, tuple, _, _, _) ->
+          sprintf "{<%s>}"
+           (tupleToString cD cPsi tuple)
+       | LF.Root (_, h, LF.Nil, str1, tclo, str2) ->
+          sprintf "{%s}"
+           (* call head with "": no space in LaTex *)
+           (headToString cD cPsi "" h)
+       | LF.Root (_, h, ms, str1, tclo, str2) ->
+          (*let ms = deimplicitize_spine h ms in*)
+           sprintf "{%s %s}"
+            (* call head with "~": space in LaTex *)
+            (headToString cD cPsi "~" h)
+            (spineToString cD cPsi ms)
+       | LF.Clo(tM, s) -> 
+          (* don't want to implement Whnf.norm for Annotated.normal *)
+          (*normalToString cD cPsi (Whnf.norm (tM, s))*)
+          "Clo"
+
+
+  and tupleToString cD cPsi tuple =
+    "tuple"
+
+  and subToString cD cPSi s =
+    "sub"
+
+  (* we work with Syntax.Int.LF.head *)
+  and headToString cD cPsi tilde h = 
+    P.fmt_ppr_lf_head_latex cD cPsi Pretty.std_lvl tilde str_formatter h
+    ; flush_str_formatter ()
+    
+  and spineToString cD cPsi ms = match ms with
+    | LF.Nil -> ""
+    | LF.App (m, LF.Nil, str) ->
+       sprintf "%s"
+        (normalToString cD cPsi m)
+    | LF.App (m, ms, str) ->
+       sprintf "%s %s"
+        (normalToString cD cPsi m)
+        (spineToString cD cPsi ms)
+    
   and branchesToString cD cG bs =
     match bs with
     | [] -> ""

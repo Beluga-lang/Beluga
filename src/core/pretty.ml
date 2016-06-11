@@ -85,6 +85,9 @@ module Int = struct
     val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
+    (****************************************************************************************)
+    val fmt_ppr_lf_head_latex : LF.mctx -> LF.dctx -> lvl -> string -> formatter -> LF.head   -> unit
+    (****************************************************************************************)
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
@@ -176,6 +179,9 @@ module Int = struct
     val compTypToLatex   : LF.mctx              -> Comp.typ  -> string
     (********************************************************************************************************)
     val subCompTypToString : LF.mctx              -> Comp.tclo  -> string
+    (********************************************************************************************************)
+    val subCompTypToLatex : LF.mctx              -> Comp.tclo  -> string
+    (********************************************************************************************************)
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
   end (* Int.PRINTER *)
@@ -2301,6 +2307,13 @@ module Int = struct
       let tA = Whnf.normCTyp (Whnf.cnormCTyp sA) in
         fmt_ppr_cmp_typ cD std_lvl str_formatter tA
         ; flush_str_formatter ()
+
+    (********************************************************************************************************)
+    let subCompTypToLatex cD sA  =
+      let tA = Whnf.normCTyp (Whnf.cnormCTyp sA) in
+        fmt_ppr_cmp_typ_latex cD std_lvl str_formatter tA
+        ; flush_str_formatter ()
+    (********************************************************************************************************)
 
     let compKindToString cD cK  =
 (*      let cK' = Whnf.normCKind cK in  *)

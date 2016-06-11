@@ -38,6 +38,9 @@ module Int : sig
     val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
+    (****************************************************************************************)
+    val fmt_ppr_lf_head_latex : LF.mctx -> LF.dctx -> lvl -> string -> formatter -> LF.head   -> unit
+    (****************************************************************************************)
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
@@ -129,8 +132,10 @@ module Int : sig
     val compTypToLatex   : LF.mctx               -> Comp.typ  -> string
     (********************************************************************************************************)
     val subCompTypToString   : LF.mctx           -> Comp.tclo  -> string
+    (********************************************************************************************************)
+    val subCompTypToLatex    : LF.mctx           -> Comp.tclo  -> string
+    (********************************************************************************************************)
     val msubToString      : LF.mctx              -> LF.msub   -> string
-
 
   end
 

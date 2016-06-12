@@ -1111,7 +1111,13 @@ GLOBAL: sgn;
   cmp_exp_chkX:
     [ LEFTA
       [ "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
-        List.fold_left (fun acc f -> Comp.Fun (_loc, (Id.mk_name (Id.SomeString f)), acc)) e (List.rev fs)
+        (* -bp: we may stop supporting separating arguments with a comma;
+	        it should be a pattern spine of variables
+         *)
+        List.fold_left (fun acc f -> 
+			  let pat  = Comp.PatVar (_loc, Id.mk_name (Id.SomeString f)) in 
+			  let patS = Comp.PatApp(_loc, pat, Comp.PatNil _loc) in
+			  Comp.Fun (_loc, patS, acc)) e (List.rev fs)
 
       | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
         List.fold_left (fun acc s -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s)), acc)) e (List.rev args)

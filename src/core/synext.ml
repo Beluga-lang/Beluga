@@ -116,6 +116,10 @@ end
 (** External Computation Syntax *)
 module Comp = struct
 
+ type kind =
+   | Ctype of Loc.t
+   | PiKind  of Loc.t * LF.ctyp_decl * kind
+
  type clobj = 
    | MObj of LF.normal
    | SObj of LF.sub
@@ -127,44 +131,43 @@ module Comp = struct
 
  type meta_obj = Loc.t * mfront
 
- type meta_spine =
-   | MetaNil
-   | MetaApp of meta_obj * meta_spine
+ type meta_spine =                             (* Meta-Spine  mS :=         *)
+   | MetaNil                                   (* | .                       *) 
+   | MetaApp of meta_obj * meta_spine          (* | mC mS                   *)
 
  type meta_typ = LF.loc_ctyp
 
  type typ =                                     (* Computation-level types *)
-   | TypBase of Loc.t * name * meta_spine
-   | TypBox  of Loc.t * meta_typ
+   | TypBase of Loc.t * name * meta_spine       (*    | c mS               *)
+   | TypBool                                    (*    | Bool               *)
+   | TypBox  of Loc.t * meta_typ                (*    | [U]                *) 
    | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
-   | TypCross of Loc.t * typ * typ              (*    | tau * tau          *)
+   | TypCross of Loc.t * typ * typ              (*    | tau * tau          *) 
    | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::U.tau       *)
-   | TypBool                                    (*     | Bool              *)
    | TypInd of typ 
 
-  and exp_chk =                            (* Computation-level expressions *)
-     | Syn    of Loc.t * exp_syn                (*  e ::= i                 *)
-     | Fun    of Loc.t * name * exp_chk         (*    | fn f => e           *)
+  and exp_chk =                                 (* Computation-level expressions *)
+     | Syn    of Loc.t * exp_syn                     (*  e ::= i                 *)
+     | Fun    of Loc.t * pattern_spine * exp_chk     (*    | fn p => e           *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
-     | MLam   of Loc.t * name * exp_chk  (*| mlam f => e         *)
-     | Pair   of Loc.t * exp_chk * exp_chk      (*    | (e1 , e2)           *)
+     | MLam   of Loc.t * name * exp_chk              (*| mlam f => e         *)
+     | Pair   of Loc.t * exp_chk * exp_chk           (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-                                                (*    | let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)
-                                                (*    | let x = i in e      *)
+                                                     (*    | let (x,y) = i in e  *)
+     | Let    of Loc.t * exp_syn * (name * exp_chk)  (*    | let x = i in e      *)          
      | Box of Loc.t * meta_obj
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
-     | If of Loc.t * exp_syn * exp_chk * exp_chk(*    | if i then e1 else e2 *)
-     | Hole of Loc.t				(*    | ?                   *)
+     | If of Loc.t * exp_syn * exp_chk * exp_chk     (*    | if i then e1 else e2 *)
+     | Hole of Loc.t				     (*    | ?                   *)
 
   and exp_syn =
-     | Var    of Loc.t * name                   (*  i ::= x                 *)
-     | DataConst  of Loc.t * name               (*    | c                   *)
-     | Const  of Loc.t * name                   (*    | c                   *)
-     | Apply  of Loc.t * exp_syn * exp_chk      (*    | i e                 *)
+     | Var    of Loc.t * name                        (*  i ::= x                 *)
+     | DataConst  of Loc.t * name                    (*    | c                   *)
+     | Const  of Loc.t * name                        (*    | c                   *)
+     | Apply  of Loc.t * exp_syn * exp_chk           (*    | i e                 *)
      | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of Loc.t * exp_chk * typ          (*    | e : tau             *)
+     | Ann    of Loc.t * exp_chk * typ               (*    | e : tau             *)
      | Equal  of Loc.t * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 
@@ -205,12 +208,6 @@ module Comp = struct
 		  | Trust of Loc.t
 
  type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
-
- type  kind =
-   | Ctype of Loc.t
-(*     | ArrKind of Loc.t * meta_typ  * kind *)
-   | PiKind  of Loc.t * LF.ctyp_decl * kind
-
 
  (* Useful for debugging the parser, but there should be a better place for them... *)
  let rec synToString = function

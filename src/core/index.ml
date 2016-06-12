@@ -707,8 +707,11 @@ let rec index_exp cvars vars fcvars = function
       Apx.Comp.Syn (loc, index_exp' cvars vars fcvars i)
 
   | Ext.Comp.Fun (loc, x, e) ->
-      let vars' = Var.extend vars (Var.mk_entry x) in
-        Apx.Comp.Fun (loc, x, index_exp cvars vars' fcvars e)
+      (match x with 
+	 | Ext.Comp.PatApp (_, Ext.Comp.PatVar (_, x), Ext.Comp.PatNil _) -> 
+	     let vars' = Var.extend vars (Var.mk_entry x) in
+               Apx.Comp.Fun (loc, x, index_exp cvars vars' fcvars e)
+	 | _ -> raise (Error (loc, ParseError)))
 
   | Ext.Comp.Cofun (loc, copatterns) ->
       let copatterns' =

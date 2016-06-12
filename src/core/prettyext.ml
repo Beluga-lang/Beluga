@@ -830,12 +830,12 @@ module Ext = struct
       | Comp.Syn (_, i) ->
           fmt_ppr_cmp_exp_syn cD lvl ppf i
 
-      | Comp.Fun (_, x, e) ->
+      | Comp.Fun (_, patS, e) ->
           let cond = lvl > 0 in
-            fprintf ppf "%s%s %s %s %a%s"
+            fprintf ppf "%s%s %a %s %a%s"
               (l_paren_if cond)
               (to_html "fn" Keyword)
-              (Id.render_name x)
+	      (fmt_ppr_pat_spine cD 0) patS
               (symbol_to_html DblRArr)
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);

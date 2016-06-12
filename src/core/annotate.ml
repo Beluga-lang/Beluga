@@ -134,7 +134,7 @@ module PrettyAnn = struct
 	       (R.render_var cG x)
 	       (print_tstr tstr)*)
     | Comp.Var (_, x, _, tstr) ->
-       sprintf "%s"
+       sprintf "$%s$"
          (R'.render_var_latex cG x)
     | Comp.Const (_, prog, _, tstr) ->
        sprintf "{Const|%s%s}"

@@ -546,7 +546,7 @@ module Int = struct
             (fmt_ppr_lf_typ_rec_latex cD cPsi lvl) typRec
 
       | LF.TClo (typ, s) ->
-          fprintf ppf "TClo(%a,@ %a)"
+          fprintf ppf "FOURTClo(%a,@ %a)"
             (fmt_ppr_lf_typ cD cPsi lvl) typ
             (fmt_ppr_lf_sub cD cPsi lvl) s
 
@@ -608,7 +608,7 @@ module Int = struct
         (* added {} *)
         | LF.Root (_, h, LF.Nil) ->
             fprintf ppf "{%a}"
-              (* call head with " ": no space in LaTex *)
+              (* call head with "": no space in LaTex *)
               (fmt_ppr_lf_head_latex cD cPsi lvl ("")) h
         (* added {} *)
         | LF.Root (_, h, ms)  ->
@@ -680,13 +680,22 @@ module Int = struct
             (fmt_ppr_lf_cvar cD lvl) c
             proj
 
+      (* we ommit identity/weakening substitutions [] *)
       | LF.MVar (c, s) ->
-          fprintf ppf "%s%a%s[%a]%s"
-            (l_paren_if (paren s))
-            (fmt_ppr_lf_cvar cD lvl) c
-            proj
-            (fmt_ppr_lf_sub_latex  cD cPsi lvl) s
-            (r_paren_if (paren s))
+          (match s with 
+            | LF.Shift 0 ->
+              fprintf ppf "%s%a%s%s"
+                (l_paren_if (paren s))
+                (fmt_ppr_lf_cvar cD lvl) c
+                proj
+                (r_paren_if (paren s))
+            | _ ->
+               fprintf ppf "%s%a%s[%a]%s"
+                (l_paren_if (paren s))
+                (fmt_ppr_lf_cvar cD lvl) c
+                proj
+                (fmt_ppr_lf_sub_latex  cD cPsi lvl) s
+                (r_paren_if (paren s)))
 
       | LF.PVar (c, s) ->
           fprintf ppf "%s\\#%a%s[%a]%s"
@@ -961,23 +970,29 @@ module Int = struct
 
 
     (*********************************************************************************************************)
+    (* got rid of outer [ |- blah ] when cPsi = LF.Null *)
     and fmt_ppr_mfront'_latex cD _lvl ppf mO = match mO with
       | LF.CObj cPsi ->
-            fprintf ppf "%a"
+            fprintf ppf "[%a]"
               (fmt_ppr_lf_dctx cD 0) cPsi
       | LF.ClObj (phat, tM) ->
           let cPsi = phatToDCtx phat in
-            fprintf ppf "%a \\entails %a"
-              (fmt_ppr_lf_psi_hat cD 0) cPsi
-              (fmt_ppr_lf_clobj_latex cD 0 cPsi) tM
+          (match cPsi with 
+            | LF.Null ->
+               fprintf ppf "%a"
+                (fmt_ppr_lf_clobj_latex cD 2 cPsi) tM
+            | _ ->
+               fprintf ppf "[%a \\entails %a]"
+                (fmt_ppr_lf_psi_hat cD 0) cPsi
+                (fmt_ppr_lf_clobj_latex cD 0 cPsi) tM)
       | LF.MV k ->
-          fprintf ppf "%s"
+          fprintf ppf "[%s]"
             (R.render_cvar cD k)
       | LF.MUndef ->
-          fprintf ppf "UNDEF"
+          fprintf ppf "[UNDEF]"
 
     and fmt_ppr_lf_mfront_latex cD lvl ppf mO =
-      fprintf ppf "[%a]" (fmt_ppr_mfront'_latex cD 0) mO
+      fprintf ppf "%a" (fmt_ppr_mfront'_latex cD 0) mO
 
     and fmt_ppr_meta_obj_latex cD lvl ppf (loc,mO) =
       fmt_ppr_lf_mfront_latex cD lvl ppf mO
@@ -1375,12 +1390,19 @@ module Int = struct
 
 
     (**********************************************************************************************************)
+    (* got rid of outer [ |- blah ] when cPsi = LF.Null *)
     and fmt_ppr_lf_mtyp'_latex cD lvl ppf = function
       (* might need a latex printing function for contexts *)
       | LF.ClTyp (LF.MTyp tA, cPsi) ->
-          fprintf ppf "[%a \\entails %a]"
-            (fmt_ppr_lf_dctx cD lvl) cPsi
-            (fmt_ppr_lf_typ_latex cD cPsi lvl) tA
+          (match cPsi with 
+            | LF.Null -> 
+               fprintf ppf "%a"
+                (fmt_ppr_lf_typ_latex cD cPsi lvl) tA
+            | _ ->
+               fprintf ppf "[%a \\entails %a]"
+                (fmt_ppr_lf_dctx cD lvl) cPsi
+                (fmt_ppr_lf_typ_latex cD cPsi lvl) tA)
+
 
       | LF.ClTyp (LF.PTyp tA, cPsi) ->
           fprintf ppf "\\#[%a \\entails %a]"
@@ -1429,7 +1451,7 @@ module Int = struct
   (* This modification won't print it if Control.printImplicit is false *)
 
           if ((not !Control.printImplicit) && (isImplicit dep)|| (!Control.printNormal)) then () else begin
-          fprintf ppf "${%s : %a}%s$"
+          fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else Id.render_name_latex u)
             (fmt_ppr_lf_mtyp_latex cD) mtyp
             (if !Control.printImplicit then
@@ -1438,7 +1460,7 @@ module Int = struct
             
 
       | LF.DeclOpt name ->
-          fprintf ppf "${%s : _ }$"
+          fprintf ppf "{%s : _ }"
             (Id.render_name_latex name)
     (***********************************************************************************************************)
 
@@ -1583,13 +1605,13 @@ module Int = struct
       | Comp.TypBase (_, c, mS)->
           let cond = lvl > 1 in
           let mS = deimplicitize_meta_spine c mS in
-            fprintf ppf "$%s%s%a%s$"
+            fprintf ppf "%s%s%a%s"
               (l_paren_if cond)
               (R.render_cid_comp_typ_latex c)
               (fmt_ppr_meta_spine_latex cD lvl) mS
               (r_paren_if cond)
       | Comp.TypBox (_, mT) ->
-          fprintf ppf "$%a$"
+          fprintf ppf "%a"
             (fmt_ppr_meta_typ_latex cD 0) mT
       | _ -> ()
     (***********************************************************************************************************)

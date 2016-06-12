@@ -132,11 +132,11 @@ module Printer = struct
 
   (* val compTypToLatex : LF.mctx -> Comp.typ -> string *)
   let compTypToLatex cD tau  = 
-    P.compTypToLatex cD tau
+    sprintf "$%s$" (P.compTypToLatex cD tau)
 
   (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
   let cdeclToLatex cD cdecl =
-    P.cdeclToLatex cD cdecl
+    sprintf "$%s$" (P.cdeclToLatex cD cdecl)
 
 
   (* val goalToLatex : goal -> LF.mctx -> string *)
@@ -147,7 +147,7 @@ module Printer = struct
        (goalToLatex g1 cD)
        (goalToLatex g2 cD)
     | All (cdecl, g) ->
-      sprintf "(for all %s, %s)" 
+      sprintf "[for all %s, %s]" 
        (cdeclToLatex cD cdecl)
        (goalToLatex g (LF.Dec (cD, cdecl)))
 

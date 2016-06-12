@@ -16,6 +16,15 @@ module LaTeX = struct
     | None -> "No type information found."
     | Some s' -> s'
 
+  let phatToDCtx phat =
+    Annotate.PrettyAnn.phatToDCtx phat
+
+  let fresh_name_mctx cD x =
+    Annotate.PrettyAnn.fresh_name_mctx cD x
+
+  let fresh_name_gctx cG x =
+    Annotate.PrettyAnn.fresh_name_gctx cG x
+
   let subCompTypToLatex cD sA =
     P.subCompTypToLatex cD sA
 
@@ -34,14 +43,26 @@ module LaTeX = struct
   let headToString cD cPsi tilde h =
     Annotate.PrettyAnn.headToString cD cPsi tilde h
 
-  let phatToDCtx phat =
-    Annotate.PrettyAnn.phatToDCtx phat
+  (* CARE : not for general purpose !
+     to use when we would use headToString in this file 
+     but we don't want \TERM before the name of our function *)
+  let functionNameToString cD cPsi (h : Syntax.Int.LF.head) : string =
+    let Syntax.Int.LF.Const c = h in
+    Id.render_name_latex (Store.Cid.Term.get ~fixName:true c).Store.Cid.Term.name
 
-  let fresh_name_mctx cD x =
-    Annotate.PrettyAnn.fresh_name_mctx cD x
 
-  let fresh_name_gctx cG x =
-    Annotate.PrettyAnn.fresh_name_gctx cG x
+
+
+
+  (*let msubToString cD s =
+    P.msubToString cD s
+
+  let mctxToString cD =
+    P.mctxToString cD*)
+
+
+
+
 
   let rec parse_fun cD cG (e : Comp.exp_chk) : unit =
     match e with
@@ -61,7 +82,7 @@ module LaTeX = struct
       | Comp.Case (_, _, i, branches, _, str) ->
          let scrutinee = (expSynToString cD cG i) in
 	       lines := !lines @ [sprintf "By induction on %s.\n" scrutinee];
-	       List.iter (parse_branch (sprintf "\\begin{case}\n{%s = " scrutinee) "\n\\end{case}\n" cD cG) branches
+	       List.iter (parse_branch (sprintf "\\begin{case}\n{%s $=" scrutinee) "\n\\end{case}\n" cD cG) branches
 
 
     and parse_branch str_begin str_end cD cG (branch : Comp.branch) : unit =
@@ -75,42 +96,52 @@ module LaTeX = struct
         let rec parse_spine cD cPsi ms acc = match ms with
           | LF.App (m, LF.Nil, str) ->
               let tclo = get_tclo_from_normal m in
-              (sprintf "$%s$ : $%s$\n" (normalToString cD cPsi m) (typToLatex cD cPsi tclo)) ^ acc
+              acc @ [sprintf "\\deduce[\\vspace{2pt}]{%s}{%s}"
+                      (typToLatex cD cPsi tclo)
+                      (normalToString cD cPsi m)]
           | LF.App (m, ms, str) ->
               let tclo = get_tclo_from_normal m in
               parse_spine cD cPsi ms 
-                ((sprintf "$%s$ : $%s$\n" (normalToString cD cPsi m) (typToLatex cD cPsi tclo)) ^ acc)
+                (acc @ [sprintf "\\deduce[\\vspace{2pt}]{%s}{%s}"
+                         (typToLatex cD cPsi tclo)
+                         (normalToString cD cPsi m)])
         in
-        let parse_normal cD cPsi m = match m with
-          | LF.Root (_, h, LF.Nil, str1, tclo, str2) -> ""
+        let parse_normal cD cPsi m conclusion = 
+          match m with
+          (* no spine -> no premises *)
+          | LF.Root (_, h, LF.Nil, str1, tclo, str2) -> 
+             let ruleName = functionNameToString cD cPsi h in
+             sprintf "\\infera{\\RULE%s}{%s}{}$ }\n" ruleName conclusion
           | LF.Root (_, h, ms, str1, tclo, str2) ->
-             parse_spine cD cPsi ms (sprintf "by $%s$" (headToString cD cPsi "~" h))
+             let ruleName = functionNameToString cD cPsi h in
+             let premises = parse_spine cD cPsi ms [] in
+             match premises with
+               | p1::[] -> 
+                  sprintf "\\infera{\\RULE%s}{%s}{%s}$ }\n" ruleName conclusion p1
+               | p1::p2::[] -> 
+                  sprintf "\\inferaa{\\RULE%s}{%s}{%s}{%s}$ }\n" ruleName conclusion p1 p2
+               | p1::p2::p3::[] -> 
+                  sprintf "\\inferaaa{\\RULE%s}{%s}{%s}{%s}{%s}$ }\n" ruleName conclusion p1 p2 p3
         in
-        let parse_clobj cD cPsi tM = match tM with
-          | LF.MObj m -> parse_normal cD cPsi m
+        let parse_clobj cD cPsi tM conclusion = match tM with
+          | LF.MObj m -> parse_normal cD cPsi m conclusion
         in
-        let parse_metaObj cD (loc, mO) = match mO with
+        let parse_metaObj cD (loc, mO) conclusion = match mO with
           | LF.ClObj (phat, tM) ->
              let cPsi = phatToDCtx phat in
-             parse_clobj cD cPsi tM
+             parse_clobj cD cPsi tM conclusion
         in
         match pat with
         | Comp.PatMetaObj (_, mO, tclo, str) ->
-           let additional_info = parse_metaObj cD mO in
-           (match additional_info with 
-              | "" -> 
-                lines := !lines @ 
-                  [sprintf "%s}\n" (subCompTypToLatex cD tclo)]
-              | _ ->
-                lines := !lines @ 
-                 [sprintf "%s\n\n%s}\n" (subCompTypToLatex cD tclo) additional_info])
+           let conclusion = subCompTypToLatex cD tclo in
+           lines := !lines @ [parse_metaObj cD mO conclusion]
+        | Comp.PatAnn (_, pat, _, _, _) ->
+           parse_pattern cD cG pat
         (*| Comp.PatConst (_, c, pat_spine, _, str) ->
            lines := !lines @
             [sprintf "constant"];
             (*(R.render_cid_comp_const c)  ^ ":" ^ get_string str*)
            parse_pattern_spine cD cG pat_spine*)
-        | Comp.PatAnn (_, pat, _, _, _) ->
-           parse_pattern cD cG pat
 
         (*and parse_pattern_spine cD cG (pat_spine : Comp.pattern_spine) : unit =
           match pat_spine with
@@ -155,7 +186,7 @@ module LaTeX = struct
         match pat with
         | Comp.PatMetaObj (_, mO, tclo, str) ->
            lines := !lines @ 
-            [sprintf "$%s$ : %s %s\n" (metaObjToString cD mO) (subCompTypToLatex cD tclo) just]
+            [sprintf "$%s$ : $%s$ %s\n" (metaObjToString cD mO) (subCompTypToLatex cD tclo) just]
         | Comp.PatAnn (_, pat, _, _, _) ->
            parse_pattern just cD cG pat
       in 
@@ -168,14 +199,22 @@ module LaTeX = struct
       | Comp.EmptyBranch (_, _, pat, _) ->
          parse_pattern just cD cG pat;
          lines := !lines @ ["Empty branch"]
-      | Comp.Branch (_, cD1', cG, Comp.PatMetaObj (loc, mO, tclo, str), _, e) ->
+      | Comp.Branch (_, cD1', cG, Comp.PatMetaObj (loc, mO, tclo, str), msub, e) ->
+         (* debugging *)
+         (*lines := !lines @ [sprintf "MSUB: %s" (msubToString cD1' msub)];
+         lines := !lines @ [sprintf "CD1': %s" (mctxToString cD1')];
+         lines := !lines @ [sprintf "CD: %s" (mctxToString cD)];*)
          parse_pattern just cD1' cG (Comp.PatMetaObj (loc, mO, tclo, str));
          parse_expr cD1' cG e
-      | Comp.Branch (_, cD1', cG', pat, _, e) ->
+      | Comp.Branch (_, cD1', cG', pat, msub, e) ->
          let cG_t = cG in
          let cG_ext = Context.append cG_t cG' in
-            parse_pattern just cD1' cG' pat;
-            parse_expr cD1' cG_ext e
+         (* debugging *)
+         (*lines := !lines @ [sprintf "MSUB: %s" (msubToString cD1' msub)];
+         lines := !lines @ [sprintf "CD1': %s" (mctxToString cD1')];
+         lines := !lines @ [sprintf "CD: %s" (mctxToString cD)];*)
+         parse_pattern just cD1' cG' pat;
+         parse_expr cD1' cG_ext e
 
 
     (* similar to parse_branch *)
@@ -187,19 +226,27 @@ module LaTeX = struct
            | LF.Root (_, h, ms, str1, tclo, str2) -> tclo
         in
         (* TODO : inside normal could have another inversion : test2.bel [|- t_pred (t_succ D)] = d *)
-        let rec parse_spine just cD cPsi ms acc = match ms with
+        let rec parse_spine cD cPsi ms acc = match ms with
           | LF.App (m, LF.Nil, str) ->
               let tclo = get_tclo_from_normal m in
-              (sprintf "$%s$ : $%s$ %s\n\n" (normalToString cD cPsi m) (typToLatex cD cPsi tclo) just) ^ acc
+              acc @ [sprintf "$%s$ : $%s$" (normalToString cD cPsi m) (typToLatex cD cPsi tclo)]
           | LF.App (m, ms, str) ->
               let tclo = get_tclo_from_normal m in
-              parse_spine just cD cPsi ms 
-                ((sprintf "$%s$ : $%s$ %s\n\n" (normalToString cD cPsi m) (typToLatex cD cPsi tclo) just) ^ acc)
+              parse_spine cD cPsi ms 
+                (acc @ [sprintf "$%s$ : $%s$" (normalToString cD cPsi m) (typToLatex cD cPsi tclo)])
         in
         let parse_normal cD cPsi m = match m with
           | LF.Root (_, h, LF.Nil, str1, tclo, str2) -> ""
           | LF.Root (_, h, ms, str1, tclo, str2) ->
-             parse_spine (sprintf "by inversion using rule $%s$" (headToString cD cPsi "~" h)) cD cPsi ms ""
+             let inversion_list = parse_spine cD cPsi ms [] in
+             let justification = sprintf "by inversion using rule $%s$" (headToString cD cPsi "~" h) in
+             let rec print_inversions l = match l with
+                | h::[] -> 
+                   sprintf "%s %s\n" h justification
+                | h::t ->
+                   sprintf "%s\n\n%s" h (print_inversions t)
+             in print_inversions inversion_list
+
         in
         let parse_clobj cD cPsi tM = match tM with
           | LF.MObj m -> parse_normal cD cPsi m
@@ -212,7 +259,7 @@ module LaTeX = struct
         match pat with
         | Comp.PatMetaObj (_, mO, tclo, str) ->
            lines := !lines @ 
-            [sprintf "%s" (parse_metaObj cD mO)]
+            [parse_metaObj cD mO]
         | Comp.PatAnn (_, pat, _, _, _) ->
            parse_pattern cD cG pat
 
@@ -220,14 +267,22 @@ module LaTeX = struct
       | Comp.EmptyBranch (_, _, pat, _) ->
          parse_pattern cD cG pat;
          lines := !lines @ ["Empty branch"]
-      | Comp.Branch (_, cD1', cG, Comp.PatMetaObj (loc, mO, tclo, str), _, e) ->
+      | Comp.Branch (_, cD1', cG, Comp.PatMetaObj (loc, mO, tclo, str), msub, e) ->
+         (* debugging *)
+         (*lines := !lines @ [sprintf "MSUB: %s" (msubToString cD1' msub)];
+         lines := !lines @ [sprintf "CD1': %s" (mctxToString cD1')];
+         lines := !lines @ [sprintf "CD: %s" (mctxToString cD)];*)
          parse_pattern cD1' cG (Comp.PatMetaObj (loc, mO, tclo, str));
          parse_expr cD1' cG e
-      | Comp.Branch (_, cD1', cG', pat, _, e) ->
+      | Comp.Branch (_, cD1', cG', pat, msub, e) ->
          let cG_t = cG in
          let cG_ext = Context.append cG_t cG' in
-            parse_pattern cD1' cG' pat;
-            parse_expr cD1' cG_ext e
+         (* debugging *)
+         (*lines := !lines @ [sprintf "MSUB: %s" (msubToString cD1' msub)];
+         lines := !lines @ [sprintf "CD1': %s" (mctxToString cD1')];
+         lines := !lines @ [sprintf "CD: %s" (mctxToString cD)];*)
+         parse_pattern cD1' cG' pat;
+         parse_expr cD1' cG_ext e
 
 
     (* TODO : print other cases that are not Case *)
@@ -268,11 +323,9 @@ module LaTeX = struct
            | [branch] -> (match i with
               (* single branch and exp_syn = var -> inversion *)
               | Comp.Var _ ->
-                 (*lines := !lines @ [sprintf "Inversion of %s: \n" (expSynToString cD cG i)];*)
                  parse_inversion cD cG branch
               (* single branch and exp_syn = Apply -> real let *)
               | Comp.Apply _ ->
-                 (*lines := !lines @ [sprintf "Real let of %s: " (expSynToString cD cG i)];*)
                  parse_real_let cD cG i branch
               | _ -> 
                  lines := !lines @ [sprintf "Inversion OR real let of %s: " (expSynToString cD cG i)];
@@ -283,7 +336,7 @@ module LaTeX = struct
              List.iter (parse_branch (sprintf "\\begin{subcase}\n{%s = " scrutinee) "\\end{subcase}\n" cD cG) branches)
       | Comp.Box (_, mO, tclo, str) ->
          (* want to print head of normal of metaObj as a justification *)
-	       lines := !lines @ [sprintf "%s\nby $%s$"(subCompTypToLatex cD tclo) (parse_metaObj cD mO)]
+	       lines := !lines @ [sprintf "$%s$\nby $%s$"(subCompTypToLatex cD tclo) (parse_metaObj cD mO)]
       | _ -> 
          (* TODO test.bel last line falls in this case *)
          lines := !lines @ ["something else"]

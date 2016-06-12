@@ -1265,7 +1265,7 @@ module Cid = struct
     let render_cid_term    c   = render_name (Term.get ~fixName:true c).Term.name
     (* added \TYP and \TERM *)
     let render_cid_typ_latex a  = "\\TYP" ^ (render_name_latex (Typ.get ~fixName:true a).Typ.name)
-    let render_cid_term_latex c = "\\TERM" ^(render_name_latex (Term.get ~fixName:true c).Term.name)
+    let render_cid_term_latex c = "\\TERM" ^ (render_name_latex (Term.get ~fixName:true c).Term.name)
     (***********************************************************************************************************)
     let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
@@ -1310,15 +1310,22 @@ module Cid = struct
           _ -> "FREE Var " ^ (string_of_int x)
       end
 
+
+
     let render_var_latex   cG   x   =
       begin try
         let name = Context.getNameCtx cG x in
-         (* if name is in the hashtbl, it is the name of a function and we add \COMP before it *)
-        (*(try 
-            let _ = Hashtbl.find Latexrec.annotatedProofs name in
-            "\\COMP" ^ (render_name_latex name)
-         with
-             _ ->*) render_name_latex name (*  )  *)
+
+        (try 
+            (* if we find our cidProg in the list of function names, add \COMP *)
+            let _ = List.find 
+                     (fun (x, _) -> let n = (Comp.get x).Comp.name in n = name)
+                    !(DynArray.get Comp.entry_list !(Modules.current)) 
+            in
+              "\\COMP" ^ (render_name_latex name)
+          with
+            _ -> render_name_latex name)
+        
         with
            _ -> "FREE Var " ^ (string_of_int x)
       end

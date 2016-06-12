@@ -171,14 +171,14 @@ module Comp = struct
 
   and exp_syn =
      | Var    of Loc.t * offset                                     (* x              *)
-     | FVar   of name                                       (* x              *)
+     | FVar   of name                                               (* x              *)
      | DataConst of Loc.t * cid_comp_const                          (* c              *)
      | DataDest of Loc.t * cid_comp_dest                            (* c              *)
      | Const  of Loc.t * cid_prog                                   (* c              *)
-     | Apply  of Loc.t * exp_syn * exp_chk                  (* i e            *)
+     | Apply  of Loc.t * exp_syn * exp_chk                          (* i e            *)
      | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of exp_chk * typ                                  (* e : tau        *)
+     | Ann    of exp_chk * typ                                      (* e : tau        *)
      | Equal  of Loc.t  * exp_syn * exp_syn
      | Boolean of Loc.t * bool
 

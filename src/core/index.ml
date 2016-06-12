@@ -706,11 +706,13 @@ let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->
       Apx.Comp.Syn (loc, index_exp' cvars vars fcvars i)
 
-  | Ext.Comp.Fun (loc, x, e) ->
-      (match x with 
-	 | Ext.Comp.PatApp (_, Ext.Comp.PatVar (_, x), Ext.Comp.PatNil _) -> 
-	     let vars' = Var.extend vars (Var.mk_entry x) in
-               Apx.Comp.Fun (loc, x, index_exp cvars vars' fcvars e)
+  | Ext.Comp.Fun (loc, patS, e) ->
+      let (patS', fcvars1, vars1) = index_pat_spine cvars fcvars (Var.create ()) patS in 
+      let vars_all  = Var.append vars1 vars in
+      let patS'' = reindex_pat_spine vars1 patS' in
+	(match patS'' with 
+	   | Apx.Comp.PatApp (_, Apx.Comp.PatVar (_, x, _), Apx.Comp.PatNil _) -> 
+               Apx.Comp.Fun (loc, x, index_exp cvars vars_all fcvars1 e)
 	 | _ -> raise (Error (loc, ParseError)))
 
   | Ext.Comp.Cofun (loc, copatterns) ->

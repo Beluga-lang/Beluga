@@ -287,7 +287,8 @@ module Printer = struct
 
   (* well defined up to three premises in the inference rule we want to generate *)
   let sgnClauseToLatex (cidTerm, sCl) = 
-    let ruleName = Id.string_of_name_latex (termName cidTerm) in
+    let ruleName = Id.cleanup_name_latex 
+                    (Id.string_of_name_latex (termName cidTerm)) in
     let conclusion = typToLatex sCl.eVars (sCl.tHead, S.id) in
     (* list of superscripts that will be used with our rule name, updated by goalToLatex calls *)
     let superScripts = ref [] in
@@ -326,7 +327,8 @@ module Printer = struct
 
   (* generates a maccro of the form \newcommand{\RULEcidTerm}{\ruleName{cidTerm}} *)
   let nameToRuleMaccro name =
-    sprintf "\\newcommand{\\RULE%s}{\\ruleName{%s}}" name name
+    let cleanName = Id.cleanup_name_latex name in
+    sprintf "\\newcommand{\\RULE%s}{\\ruleName{%s}}" cleanName name
 
   (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
   let rec printArguments n = match n with
@@ -338,6 +340,7 @@ module Printer = struct
   \newcommand {\TERMcidTerm} [number of args] {\mathsf{cidTerm};args} *)
   let sgnClauseToMaccros (cidTerm, sCl) =
     let name = Id.string_of_name_latex (termName cidTerm) in
+    let cleanName = Id.cleanup_name_latex name in
     let ruleMaccro = nameToRuleMaccro name in
     let countSubgoals cG = 
       let rec countSubgoals' cG n = match cG with
@@ -347,20 +350,21 @@ module Printer = struct
     in let n = countSubgoals sCl.subGoals in
     match n with 
       | 0 -> sprintf "%s\n\\newcommand{\\TERM%s}{\\mathsf{%s}}" 
-          ruleMaccro name name
+          ruleMaccro cleanName name
       | n -> sprintf "%s\n\\newcommand{\\TERM%s}[%d]{\\mathsf{%s}%s}"
-          ruleMaccro name n name (printArguments n)
+          ruleMaccro cleanName n name (printArguments n)
 
   let cidTypToMaccro cidTyp =
     let typEntry = Store.Cid.Typ.get cidTyp in
     let typName = typEntry.Store.Cid.Typ.name in
     let name = Id.string_of_name_latex typName in
+    let cleanName = Id.cleanup_name_latex name in
     let n = Store.Cid.Typ.args_of_name typName in
     match n with 
       | 0 -> sprintf "\\newcommand{\\TYP%s}{\\mathsf{%s}}" 
-              name name
+              cleanName name
       | n -> sprintf "\\newcommand{\\TYP%s}[%d]{\\mathsf{%s}%s}" 
-              name n name (printArguments n)
+              cleanName n name (printArguments n)
 
 
   let printSignatureLatex mainFile =

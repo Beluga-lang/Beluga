@@ -115,9 +115,7 @@ module Cid : sig
       kind                 : Comp.kind;
       positivity           : Sgn.positivity_flag;
       mutable frozen       : bool;
-      (*********************************************************************************************************)
-      constructors : cid_comp_const list ref
-      (*********************************************************************************************************)
+      constructors         : cid_comp_const list ref
     }
 
     val entry_list : (Id.cid_comp_typ list ref) DynArray.t
@@ -279,6 +277,7 @@ module Cid : sig
     (***********************************************************************************************************)
     val render_cid_comp_cotyp : cid_comp_cotyp  -> string
     val render_cid_comp_const : cid_comp_const -> string
+    val render_cid_comp_const_latex : cid_comp_const -> string
     val render_cid_comp_dest  : cid_comp_dest -> string
     val render_cid_typ        : cid_typ      -> string
     val render_cid_term       : cid_term     -> string
@@ -291,8 +290,10 @@ module Cid : sig
     val render_offset         : offset       -> string
 
     val render_ctx_var        : LF.mctx    -> offset   -> string
-    val render_cvar           : LF.mctx    -> offset   -> string
     (***********************************************************************************************************)
+    val render_cvar           : LF.mctx    -> offset   -> string
+    val render_cvar_latex     : ?table:(Id.name, Id.name) Hashtbl.t -> ?mathcal:bool ->
+                                  LF.mctx -> offset -> string
     val render_bvar           : LF.dctx    -> offset   -> string
     val render_bvar_latex     : LF.dctx    -> offset   -> string
     val render_var            : Comp.gctx  -> var      -> string

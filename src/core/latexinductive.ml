@@ -221,25 +221,27 @@ module Printer = struct
   (* maccro : \newcommand{\COMPCONSTname}[number of args n]{\mathsf{name}\;#1\ ... \;#n} *)
   let sgnClauseToMaccros (cidCompConst, sCl) =
     let name = Id.string_of_name_latex (compConstName cidCompConst) in
+    let cleanName = Id.cleanup_name_latex name in
     let n = countSubgoals sCl.subGoals in
     (* pattern match on the number of goals in sCl.subGoals *)
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMPCONST%s}{\\mathsf{%s}}" 
-          name name
+          cleanName name
       | n -> sprintf "\\newcommand{\\COMPCONST%s}[%d]{\\mathsf{%s}%s}"
-          name n name (printArguments n)
+          cleanName n name (printArguments n)
 
   (* maccro : \newcommand{\COMPTYPname}[number of args n]{\mathsf{name}\;#1\ ... \;#n} *)
   let cidCompTypToMaccro cidCompTyp =
     let compTypEntry = Store.Cid.CompTyp.get cidCompTyp in
     let compTypName = compTypEntry.Store.Cid.CompTyp.name in
     let name = Id.string_of_name_latex compTypName in
+    let cleanName = Id.cleanup_name_latex name in
     let n = Store.Cid.CompTyp.args_of_name compTypName in
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMPTYP%s}{\\mathsf{%s}}" 
-              name name
+              cleanName name
       | n -> sprintf "\\newcommand{\\COMPTYP%s}[%d]{\\mathsf{%s}%s}" 
-              name n name (printArguments n)
+              cleanName n name (printArguments n)
 
   let printSignatureLatex mainFile =
     let outMaccros = 

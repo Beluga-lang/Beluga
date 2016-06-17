@@ -142,7 +142,7 @@ module PrettyAnn = struct
 	       (print_tstr tstr)
     | Comp.DataConst (_, c, _, tstr) ->
        sprintf "{DataConst|%s%s}"
-	       (R.render_cid_comp_const c)
+	       (R.render_cid_comp_const_latex c)
 	       (print_tstr tstr)
     | Comp.DataDest (_, c, _, tstr) ->
        sprintf "{DataDest|%s%s}"
@@ -186,9 +186,13 @@ module PrettyAnn = struct
        sprintf "[%s]" (dctxToString cD cPsi)
     | LF.ClObj (phat, tM) ->
        let cPsi = phatToDCtx phat in
-         sprintf "[%s \\entails %s]"
-          (psiHatToString cD cPsi)
-          (clobjToString cD cPsi tM)
+       (match cPsi with
+         | Syntax.Int.LF.Null ->
+             clobjToString cD cPsi tM
+         | _ ->
+            sprintf "[%s \\entails %s]"
+             (psiHatToString cD cPsi)
+             (clobjToString cD cPsi tM))
     | LF.MV k ->
        sprintf "%s" (R'.render_cvar cD k)
 
@@ -209,25 +213,6 @@ module PrettyAnn = struct
     | LF.PObj h -> headToString cD cPsi "" h
 
   and normalToString cD cPsi m =
-    (*let rec dropSpineLeft ms n = match (ms, n) with
-      | (_, 0) -> ms
-      | (LF.Nil, _) -> ms
-      | (LF.App (m, rest, str), n) -> dropSpineLeft rest (n - 1)
-    in 
-    let deimplicitize_spine h ms = match h with
-      | Syntax.Int.LF.Const c ->
-        let implicit_arguments = Store.Cid.Term.get_implicit_arguments c in
-         dropSpineLeft ms implicit_arguments
-      | Syntax.Int.LF.MVar _
-      | Syntax.Int.LF.BVar _
-      | Syntax.Int.LF.PVar _
-      | Syntax.Int.LF.FMVar _
-      | Syntax.Int.LF.FPVar _
-      | Syntax.Int.LF.Proj _
-      | Syntax.Int.LF.FVar _
-      | Syntax.Int.LF.AnnH _ ->
-         ms
-     in*) 
      match m with
        | LF.Lam (_, x, m, str1, tclo, str2) ->
           let x = fresh_name_dctx cPsi x in
@@ -239,30 +224,23 @@ module PrettyAnn = struct
           sprintf "{<%s>}"
            (tupleToString cD cPsi tuple)
        | LF.Root (_, h, LF.Nil, str1, tclo, str2) ->
-          sprintf "{%s}"
-           (* call head with "": no space in LaTex *)
-           (headToString cD cPsi "" h)
+           sprintf "{%s}"
+           (headToString cD cPsi "" ~mathcal:true h)
        | LF.Root (_, h, ms, str1, tclo, str2) ->
-          (*let ms = deimplicitize_spine h ms in*)
            sprintf "{%s %s}"
             (* call head with "~": space in LaTex *)
             (headToString cD cPsi "~" h)
             (spineToString cD cPsi ms)
-       | LF.Clo(tM, s) -> 
-          (* don't want to implement Whnf.norm for Annotated.normal *)
-          (*normalToString cD cPsi (Whnf.norm (tM, s))*)
-          "Clo"
+       | LF.Clo(tM, s) -> "{Clo|Unsupported}"
 
 
-  and tupleToString cD cPsi tuple =
-    "tuple"
+  and tupleToString cD cPsi tuple = "{tuple|Unsupported}"
 
-  and subToString cD cPSi s =
-    "sub"
+  and subToString cD cPSi s = "{sub|Unsupported}"
 
   (* we work with Syntax.Int.LF.head *)
-  and headToString cD cPsi tilde h = 
-    P.fmt_ppr_lf_head_latex cD cPsi Pretty.std_lvl tilde str_formatter h
+  and headToString cD cPsi tilde ?mathcal h = 
+    P.fmt_ppr_lf_head_latex cD cPsi Pretty.std_lvl tilde ?mathcal str_formatter h
     ; flush_str_formatter ()
     
   and spineToString cD cPsi ms = match ms with

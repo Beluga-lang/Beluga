@@ -116,22 +116,52 @@ let render_name n = match n.modules with
     | l  -> (String.concat "." l) ^ "." ^ (string_of_name n) 
 
 (*******************************************************************************************************)
-let string_of_name_latex (n : name) : string =
-  let suf = match n.hint_cnt with
-      | None -> ""
-      (* cnt as subscript, better readability in LaTex *)
-      | Some cnt -> "_{" ^ (string_of_int cnt) ^ "}"
-  in 
-  let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
-  let name = Str.global_replace (Str.regexp "&") "and" name in
-  let name = Str.global_replace (Str.regexp "'") "prime" name in
-  let name = Str.global_replace (Str.regexp "#") "\\#" name in
-  let name = Str.global_replace (Str.regexp "[0-9]") "" name in
-  name ^ suf
-
-let render_name_latex n = match n.modules with
-    | [] -> string_of_name_latex n
-    | l  -> (String.concat "." l) ^ "." ^ (string_of_name_latex n) 
+let rec retrieve_name table name =
+  try
+    let n = Hashtbl.find table name in
+    retrieve_name table n
+  with
+    | _ ->
+      name
 
 
+(* numbered terms in maccros and ' give us some problems *)
+let cleanup_name_latex str =
+  let str = Str.global_replace (Str.regexp "'") "prime" str in
+  let str = Str.global_replace (Str.regexp "1") "one" str in
+  let str = Str.global_replace (Str.regexp "2") "two" str in
+  let str = Str.global_replace (Str.regexp "3") "three" str in
+   str
 
+let string_of_name_latex ?(var=false) ?(mathcal=false) (n : name) : string =
+  if var 
+    then
+       let suf = match n.hint_cnt with
+         | None -> ""
+         (* cnt as subscript, better readability in LaTex *)
+         | Some cnt -> "_{" ^ (string_of_int cnt) ^ "}"
+       in 
+       let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
+       let name = Str.global_replace (Str.regexp "&") "and" name in
+       let name = Str.global_replace (Str.regexp "#") "\\#" name in
+       (* in case there is a ' at the end, index is not the cnt *)
+       let name = Str.global_replace (Str.regexp "\\([0-9]\\)") "_{\\1}" name in
+       (* here we use the mathcal argument *)
+       (if mathcal
+         then
+           ("\\mathcal {" ^ name ^ "}" ^ suf)
+       else 
+         (name ^ suf))
+    else
+       let suf = match n.hint_cnt with
+         | None -> ""
+         | Some cnt -> string_of_int cnt
+       in 
+       let name = Str.global_replace (Str.regexp "_\\|-\\|\\^") "" n.hint_name in
+       let name = Str.global_replace (Str.regexp "&") "and" name in
+       let name = Str.global_replace (Str.regexp "#") "" name in
+        (name ^ suf)
+
+let render_name_latex ?var ?mathcal n = match n.modules with
+    | [] -> string_of_name_latex ?var ?mathcal n
+    | l  -> (String.concat "." l) ^ "." ^ (string_of_name_latex ?var ?mathcal n)

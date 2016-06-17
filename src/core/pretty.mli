@@ -39,7 +39,8 @@ module Int : sig
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
     (****************************************************************************************)
-    val fmt_ppr_lf_head_latex : LF.mctx -> LF.dctx -> lvl -> string -> formatter -> LF.head   -> unit
+    val fmt_ppr_lf_head_latex : ?table:(Id.name, Id.name) Hashtbl.t -> ?mathcal:bool -> LF.mctx -> LF.dctx 
+                                 -> lvl -> string -> formatter -> LF.head -> unit
     (****************************************************************************************)
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
@@ -99,7 +100,7 @@ module Int : sig
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
     (********************************************************************************************************)
-    val typToLatex       : LF.mctx -> LF.dctx -> LF.tclo     -> string
+    val typToLatex       : ?table:(Id.name, Id.name) Hashtbl.t -> LF.mctx -> LF.dctx -> LF.tclo -> string
     (********************************************************************************************************)
     val mtypToString      : LF.mctx -> LF.ctyp -> string
     val typRecToString    : LF.mctx -> LF.dctx -> LF.trec_clo -> string
@@ -133,7 +134,7 @@ module Int : sig
     (********************************************************************************************************)
     val subCompTypToString   : LF.mctx           -> Comp.tclo  -> string
     (********************************************************************************************************)
-    val subCompTypToLatex    : LF.mctx           -> Comp.tclo  -> string
+    val subCompTypToLatex    : ?table:(Id.name, Id.name) Hashtbl.t -> LF.mctx -> Comp.tclo -> string
     (********************************************************************************************************)
     val msubToString      : LF.mctx              -> LF.msub   -> string
 

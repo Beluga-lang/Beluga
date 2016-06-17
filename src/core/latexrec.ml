@@ -87,13 +87,14 @@ module Printer = struct
     let compEntry = Cid.Comp.get cidProg in
     let compName = compEntry.Cid.Comp.name in
     let name = Id.string_of_name_latex compName in
+    let cleanName = Id.cleanup_name_latex name in
     (* get number of arguments  *)
     let n = Cid.Comp.args_of_name compName in
     match n with 
       | 0 -> sprintf "\\newcommand{\\COMP%s}{\\mathsf{%s}}" 
-              name name
+              cleanName name
       | n -> sprintf "\\newcommand{\\COMP%s}[%d]{\\mathsf{%s}%s}" 
-              name n name (printArguments n)
+              cleanName n name (printArguments n)
 
 
   let proofToLatex e_ann cidProg =

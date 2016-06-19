@@ -12,6 +12,9 @@ module PrettyAnn : sig
            -> Syntax.Int.Comp.ctyp_decl Syntax.Int.LF.ctx
            -> Annotated.Comp.exp_syn -> string
 
+  val metaObjToString : Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
+           -> Annotated.Comp.meta_obj -> string
+
   val normalToString : Syntax.Int.LF.ctyp_decl Syntax.Int.LF.ctx
            -> Syntax.Int.LF.dctx -> Annotated.LF.normal
            -> string

@@ -110,10 +110,13 @@ module PrettyAnn = struct
 	       (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
 	       (branchesToString cD cG bs)
 	       (print_tstr tstr)
-    | Comp.Syn (_, i, _, tstr) ->
+    (*| Comp.Syn (_, i, _, tstr) ->
        sprintf "{Syn|%s%s}"
 	       (expSynToString cD cG i)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Syn (_, i, _, _) ->
+       sprintf "%s"
+         (expSynToString cD cG i)
     | Comp.If (_, i, e1, e2, _, tstr) ->
        sprintf "{If|@[<2>if %s@[<-1>then %s @]else %s@]%s}"
 	       (expSynToString cD cG i)
@@ -136,10 +139,13 @@ module PrettyAnn = struct
     | Comp.Var (_, x, _, tstr) ->
        sprintf "$%s$"
          (R'.render_var_latex cG x)
-    | Comp.Const (_, prog, _, tstr) ->
+    (*| Comp.Const (_, prog, _, tstr) ->
        sprintf "{Const|%s%s}"
 	       (R.render_cid_prog prog)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Const (_, prog, _, _) ->
+       sprintf "$%s$"
+         (R'.render_cid_prog_latex prog)
     | Comp.DataConst (_, c, _, tstr) ->
        sprintf "{DataConst|%s%s}"
 	       (R.render_cid_comp_const_latex c)
@@ -153,15 +159,19 @@ module PrettyAnn = struct
 	       (expSynToString cD cG i)
 	       (expChkToString cD cG e)
 	       (print_tstr tstr)*)
-    | Comp.Apply (_, i, e, _, tstr) ->
-       sprintf "%s %s"
+    | Comp.Apply (_, i, e, _, _) ->
+       sprintf "%s \\;%s"
          (expSynToString cD cG i)
          (expChkToString cD cG e)
-    | Comp.MApp (_, i, mC, _, tstr) ->
-       sprintf "{MApp|%s $%s$%s}"
+    (*| Comp.MApp (_, i, mC, _, tstr) ->
+       sprintf "{MApp|%s %s%s}"
 	       (expSynToString cD cG i)
 	       (metaObjToString cD mC)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.MApp (_, i, mC, _, tstr) ->
+       sprintf "%s \\;$%s$"
+         (expSynToString cD cG i)
+         (metaObjToString cD mC)
     | Comp.PairVal (_, i1, i2, _, tstr) ->
        sprintf "{PairVal|(%s, %s)%s}"
 	       (expSynToString cD cG i1)

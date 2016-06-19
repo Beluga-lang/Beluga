@@ -287,6 +287,7 @@ module Cid : sig
     (***********************************************************************************************************)
     val render_cid_schema     : cid_schema   -> string
     val render_cid_prog       : cid_prog     -> string
+    val render_cid_prog_latex : cid_prog   -> string
     val render_offset         : offset       -> string
 
     val render_ctx_var        : LF.mctx    -> offset   -> string

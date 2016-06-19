@@ -1192,6 +1192,7 @@ module Cid = struct
     (***********************************************************************************************************)
     val render_cid_schema   : cid_schema   -> string
     val render_cid_prog     : cid_prog     -> string
+    val render_cid_prog_latex : cid_prog   -> string
     val render_offset       : offset       -> string
     val render_ctx_var      : LF.mctx    -> offset   -> string
     val render_cvar         : LF.mctx    -> offset   -> string
@@ -1231,6 +1232,7 @@ module Cid = struct
     (***********************************************************************************************************)
     let render_cid_schema w    = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog   f    = render_name (Comp.get ~fixName:true f).Comp.name
+    let render_cid_prog_latex   f    = render_name (Comp.get ~fixName:true f).Comp.name
     let render_ctx_var _cO g   =  string_of_int g
     let render_cvar    _cD u    = "mvar " ^ string_of_int u
     let render_cvar_latex ?table ?mathcal _cD u = "mvar " ^ string_of_int u
@@ -1283,6 +1285,10 @@ module Cid = struct
     (***********************************************************************************************************)
     let render_cid_schema  w   = render_name (Schema.get ~fixName:true w).Schema.name
     let render_cid_prog    f   = render_name (Comp.get ~fixName:true f).Comp.name
+    let render_cid_prog_latex f = 
+      let name = render_name_latex (Comp.get ~fixName:true f).Comp.name in
+      let name = Id.cleanup_name_latex name in
+        "\\COMP" ^ name
   
     let render_ctx_var cO g    =
       begin try
@@ -1354,7 +1360,7 @@ module Cid = struct
                      (fun (x, _) -> let n = (Comp.get x).Comp.name in n = name)
                     !(DynArray.get Comp.entry_list !(Modules.current)) 
             in
-              "\\COMP" ^ (render_name_latex name)
+              "\\COMP" ^ (Id.cleanup_name_latex (render_name_latex name))
           with
             _ -> render_name_latex ~var:true name)
         

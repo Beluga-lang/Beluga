@@ -62,7 +62,7 @@ module Control = struct
   type substitution_style = Natural | DeBruijn
 
   let substitutionStyle = ref Natural
-  let printImplicit = ref true
+  let printImplicit = ref false
   let printNormal = ref false
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)

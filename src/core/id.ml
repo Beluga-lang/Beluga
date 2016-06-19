@@ -149,7 +149,13 @@ let string_of_name_latex ?(var=false) ?(mathcal=false) (n : name) : string =
        (* here we use the mathcal argument *)
        (if mathcal
          then
-           ("\\mathcal {" ^ name ^ "}" ^ suf)
+           (* ex : D1' becomes \mathcal{D}_{1}' *)
+           (if Str.string_match (Str.regexp "\\(.+\\)_.+") name 0
+              then
+                let name = Str.replace_first (Str.regexp "\\(.+\\)_") "\\mathcal {\\1}_" name in
+                name ^ suf
+              else
+                ("\\mathcal {" ^ name ^ "}" ^ suf))
        else 
          (name ^ suf))
     else

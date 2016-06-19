@@ -77,10 +77,12 @@ module Printer = struct
       name (Latexinductive.Printer.clauseToLatex sCl l)
       
 
-  (* printArguments n = "\\;#1\\;#2 ... \\;#n" - only called with n > 0 *)
+  (* printArguments n = "#1#2 ... #n" - only called with n > 0 *)
+  (* CARE : we don't print \; as in other maccros since we put the \; in expSynToString 
+            in Annotate.ml, it is much easier to handle the $ in LaTeX this way *)
   let rec printArguments n = match n with
-    | 1 -> "\\;#1"
-    | n -> (printArguments (n-1)) ^ (sprintf "\\;#%d" n)
+    | 1 -> "#1"
+    | n -> (printArguments (n-1)) ^ (sprintf "#%d" n)
 
   let cidProgToMaccro cidProg =
     (* get name of prog constant *)

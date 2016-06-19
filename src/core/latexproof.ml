@@ -6,7 +6,7 @@ open Printf
 let lines = ref []
 (* used to compare the name of functions against it :
    to differentiate a call to IH of a lemma *)
-let name_ref = ref ""
+(*let name_ref = ref ""*)
 
 (* - contains one entry for each case, one entry for each subcase
    - keyed by location : Branch of Loc.t * etc..
@@ -40,6 +40,9 @@ module LaTeX = struct
   let expChkToString cD cG e =
     Annotate.PrettyAnn.expChkToString cD cG e
 
+  let metaObjToString cD mO =
+    Annotate.PrettyAnn.metaObjToString cD mO
+
   let normalToString cD cPsi m =
     Annotate.PrettyAnn.normalToString cD cPsi m
 
@@ -67,13 +70,20 @@ module LaTeX = struct
       match i with
         | Comp.Apply (_, i', _, _, _) ->
            induction_hyp cD cG i'
+        | Comp.MApp (_, i', mO, _, _) ->
+           induction_hyp cD cG i'
+        (* IH *)
         | Comp.Var (_, x, _, _) -> 
-           let name = R'.render_var cG x in
+           (*let name = R'.render_var cG x in
            if (!name_ref = name)
              then true
-             else false
-        (* DEBUGGING : if anything else, it's not a call to IH *)
-        (*| _ -> false *)
+             else false*)
+           true
+        (* lemma *)
+        | Comp.Const (_, prog, _, _) -> 
+           false
+
+
     in
     (* returns a string "arg1 and arg2 etc.." *)
     let get_args cD cG i =
@@ -83,6 +93,9 @@ module LaTeX = struct
               (match acc with 
                 | "" -> get_args' cD cG i' (expChkToString cD cG e')
                 | _  -> get_args' cD cG i' ((expChkToString cD cG e') ^ " and " ^ acc))
+          | Comp.MApp (_, i', mO, _, _) ->
+              get_args' cD cG i' 
+               (sprintf "$%s$ and %s" (metaObjToString cD mO) acc)
           | Comp.Var _ ->
               acc
         in 
@@ -318,7 +331,7 @@ module LaTeX = struct
       in match branch with
       (* Comp.Branch (_, cD1', cG, Comp.PatMetaObj (loc, mO, tclo, str), msub, e) ->
          parse_pattern just cD1' cG (Comp.PatMetaObj (loc, mO, tclo, str));
-         parse_expr cD1' cG e location *)
+         parse_expr cD1' cG e location*)
       | Comp.Branch (_, cD1', cG', pat, msub, e) ->
          let cG_t = cG in
          let cG_ext = Context.append cG_t cG' in
@@ -326,6 +339,7 @@ module LaTeX = struct
          add_bindings cD cD1' msub tbl;
          parse_pattern just cD1' cG' pat;
          parse_expr cD1' cG_ext e location
+
 
 
     and parse_inversion cD cG (branch : Comp.branch) location : unit =
@@ -437,6 +451,18 @@ module LaTeX = struct
          parse_expr cD1' cG_ext e location
 
 
+
+    and parse_impossible cD cG (i : Comp.exp_syn) (branch : Comp.branch) : unit =
+      let just = match i with 
+        | Comp.Var _ -> expSynToString cD cG i
+        | Comp.Apply _ -> fun_call_just cD cG i
+        | Comp.MApp _ -> fun_call_just cD cG i
+      in
+      let Comp.EmptyBranch (_, cD1', Comp.PatEmpty (_, cPsi, tclo, _), msub) = branch in
+       lines := !lines @ [sprintf "$%s$ \\hfill by %s\n" (subCompTypToLatex cD1' tclo) just]
+
+
+
     and parse_expr cD cG (e : Comp.exp_chk) location : unit =
 
       let Some loc = location in
@@ -495,6 +521,9 @@ module LaTeX = struct
 	       parse_expr cD' cG' e'*)
       | Comp.Case (_, _, i, branches, _, _) ->
          (match branches with
+           (* empty branch -> impossible *)
+           | [Comp.EmptyBranch _ as branch] ->
+               parse_impossible cD cG i branch 
            | [branch] -> (match i with
               (* single branch and exp_syn = Var -> inversion *)
               | Comp.Var _ ->
@@ -541,7 +570,7 @@ let printLines l =
 let parse e cidProg =
   let entry = Store.Cid.Comp.get cidProg in
   let name = entry.Store.Cid.Comp.name in
-  let _ = name_ref := (Id.render_name name) in
+  (*let _ = name_ref := (Id.render_name name) in*)
   (* initial cG : declaration containing function name *)
   let cG = Syntax.Int.LF.Dec (Syntax.Int.LF.Empty, Syntax.Int.Comp.CTypDeclOpt name) in
   (* initial cD *)

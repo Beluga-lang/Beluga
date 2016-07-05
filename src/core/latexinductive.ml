@@ -186,14 +186,14 @@ module Printer = struct
         | [] ->
           goalToLatex g cD
         | h::[] ->
-         sprintf "%s : %s" (Id.render_name h) (goalToLatex g cD))
+         sprintf "%s :: %s" (Id.render_name h) (goalToLatex g cD))
     | Conjunct (cG', g) ->
       let n = countSubgoals cG in
       let revl = (List.rev l) in
       if (List.length l) == n then
         let last::revt = revl in
         let t = (List.rev revt) in
-        sprintf "%s and %s : %s" (printSubgoals cG' cD t) (Id.render_name last) (goalToLatex g cD)
+        sprintf "%s and %s :: %s" (printSubgoals cG' cD t) (Id.render_name last) (goalToLatex g cD)
       else 
         sprintf "%s and %s" (printSubgoals cG' cD l) (goalToLatex g cD)
 

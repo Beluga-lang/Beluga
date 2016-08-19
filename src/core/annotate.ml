@@ -131,7 +131,6 @@ module PrettyAnn = struct
 
   and expSynToString cD cG i =
     match i with
-
     (* Comp.Var (_, x, _, tstr) ->
        sprintf "{Var|%s%s}"
 	       (R.render_var cG x)
@@ -224,6 +223,7 @@ module PrettyAnn = struct
 
   and normalToString cD cPsi m =
      match m with
+       (* might need to change this to use binding maccros like in Pretty.ml eventually *)
        | LF.Lam (_, x, m, str1, tclo, str2) ->
           let x = fresh_name_dctx cPsi x in
             sprintf "{\\lambda %s. %s}" 

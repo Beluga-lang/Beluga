@@ -4,9 +4,6 @@ open Printf
 
 
 let lines = ref []
-(* used to compare the name of functions against it :
-   to differentiate a call to IH of a lemma *)
-(*let name_ref = ref ""*)
 
 (* - contains one entry for each case, one entry for each subcase
    - keyed by location : Branch of Loc.t * etc..
@@ -19,6 +16,8 @@ let mainTable : (Camlp4.PreCast.Loc.t, (Id.name, Id.name) Hashtbl.t) Hashtbl.t =
 module LaTeX = struct
   open Annotated
 
+
+  (********************************************* Auxiliary functions ****************************************)
   let phatToDCtx phat =
     Annotate.PrettyAnn.phatToDCtx phat
 
@@ -82,8 +81,6 @@ module LaTeX = struct
         (* lemma *)
         | Comp.Const (_, prog, _, _) -> 
            false
-
-
     in
     (* returns a string "arg1 and arg2 etc.." *)
     let get_args cD cG i =
@@ -161,8 +158,11 @@ module LaTeX = struct
     | Syntax.Int.LF.MDot (_, msub') ->
        let Syntax.Int.LF.Dec (cD', _) = cD in
        add_bindings cD' cD1' msub' table
+  (**********************************************************************************************************)
 
 
+  (************************** Main parsing functions, give general structure of proof ***********************)
+  (************************ parse_expr is called to print justifications for every case *********************)
   let rec parse_fun cD cG (e : Comp.exp_chk) : unit =
     match e with
     | Comp.Fun (_, x, e', _, _) ->
@@ -188,16 +188,16 @@ module LaTeX = struct
             cD cG None)
           branches
 
-
     and parse_branch str_begin str_end cD cG location (branch : Comp.branch) : unit =
 
       let rec parse_pattern ?table cD cG (pat : Comp.pattern) : unit =
 
         let get_tclo_from_normal m = match m with
            | LF.Root (_, _, _, _, tclo, _) -> tclo
-           | LF.Lam (_, _, _, _, tclo, _) -> tclo 
+           | LF.Lam (_, _, _, _, tclo, _) -> tclo (* used for Lam.bel *)
         in
         let rec parse_spine ?table cD cPsi ms acc = match ms with
+          (* parse instead of call if want to change in Lam.bel *)
           | LF.App (m, LF.Nil, _) ->
               let tclo = get_tclo_from_normal m in
               acc @ [sprintf "\\deduce[\\vspace{2pt}]{%s}{%s}"
@@ -208,7 +208,7 @@ module LaTeX = struct
               parse_spine cD cPsi ms 
                 (acc @ [sprintf "\\deduce[\\vspace{2pt}]{%s}{%s}"
                          (typToLatex ?table cD cPsi tclo)
-                         (normalToString cD cPsi m)])
+                         (normalToString cD cPsi m)]) 
         in
         let parse_normal ?table cD cPsi m conclusion = 
           match m with
@@ -285,9 +285,10 @@ module LaTeX = struct
                 parse_pattern ~table:tbl cD1' cG' pat;
                 parse_expr cD1' cG_ext e (Some loc);
                 lines := !lines @ [str_end]
+  (**********************************************************************************************************)
 
 
-
+  (************* Three parsing functions called by parse_expr : real let, inversion, impossible *************)
     and parse_real_let cD cG (i : Comp.exp_syn) (branch : Comp.branch) location : unit =
 
       let Some loc = location in
@@ -460,24 +461,26 @@ module LaTeX = struct
       in
       let Comp.EmptyBranch (_, cD1', Comp.PatEmpty (_, cPsi, tclo, _), msub) = branch in
        lines := !lines @ [sprintf "$%s$ \\hfill by %s\n" (subCompTypToLatex cD1' tclo) just]
+  (**********************************************************************************************************)
 
 
-
+  (**************************** Used to print lines of justification for a case *****************************)
     and parse_expr cD cG (e : Comp.exp_chk) location : unit =
 
       let Some loc = location in
       let tbl = Hashtbl.find mainTable loc in
 
       (* box functions are used for the case e : Comp.Box *)
-      (* returns string "arg1 and arg2 etc.."*)
-      let rec parse_spine_box cD cPsi ms = match ms with
-        | LF.App (m, LF.Nil, str) ->
-           sprintf "$%s$"
-            (normalToString cD cPsi m)
-        | LF.App (m, ms, str) ->
-           sprintf "$%s$ and %s"
-            (normalToString cD cPsi m)
-            (parse_spine_box cD cPsi ms)
+      (* returns string " using arg1 and arg2 etc.." or "" *)
+      let parse_spine_box cD cPsi ms = 
+        let rec parse_spine_box' cD cPsi ms acc =
+          match ms with 
+            | LF.App (m, LF.Nil, _) ->
+                sprintf " using %s$%s$" acc (normalToString cD cPsi m)
+            | LF.App (m, ms, _) ->
+                parse_spine_box' cD cPsi ms (sprintf "%s$%s$ and " acc (normalToString cD cPsi m))
+            | _ -> ""
+        in parse_spine_box' cD cPsi ms ""
       in
       (* returns string "by name_of_rule using arg1 and arg2 etc.." *)
       let parse_normal_box cD cPsi m = match m with
@@ -489,8 +492,14 @@ module LaTeX = struct
              | _ ->
                 sprintf "\\hfill by $%s$" 
                  (headToString ~mathcal:true cD cPsi "~" h))
+        (* we isolate a special case where we use two rules, e.g [|- step_to (s_app EV)] in Lam.bel *)
+        | LF.Root (_, h, LF.App (LF.Root (_, Syntax.Int.LF.Const c, ms, _, _, _), LF.Nil, _), _, tclo, _) ->
+           sprintf "\\hfill by $\\RULE%s$ and $\\RULE%s$%s"
+            (constantNameToString cD cPsi h)
+            (constantNameToString cD cPsi (Syntax.Int.LF.Const c))
+            (parse_spine_box cD cPsi ms)
         | LF.Root (_, h, ms, _, tclo, _) ->
-           sprintf "\\hfill by $\\RULE%s$ using %s"
+           sprintf "\\hfill by $\\RULE%s$%s"
            (constantNameToString cD cPsi h)
            (parse_spine_box cD cPsi ms)
       in
@@ -558,6 +567,7 @@ module LaTeX = struct
                             (fun_call_just cD cG i)]
       | _ -> 
          lines := !lines @ ["Some weard expression."]
+  (**********************************************************************************************************)
 end
 
 let printLines l = 
@@ -570,7 +580,6 @@ let printLines l =
 let parse e cidProg =
   let entry = Store.Cid.Comp.get cidProg in
   let name = entry.Store.Cid.Comp.name in
-  (*let _ = name_ref := (Id.render_name name) in*)
   (* initial cG : declaration containing function name *)
   let cG = Syntax.Int.LF.Dec (Syntax.Int.LF.Empty, Syntax.Int.Comp.CTypDeclOpt name) in
   (* initial cD *)

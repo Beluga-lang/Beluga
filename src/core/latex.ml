@@ -406,6 +406,9 @@ let runLatex mainFile =
     let outMain = open_out mainFile in
     (* preamble of maccros file *)
     fprintf outMaccros "\\input{prelude}\n\n";
+    (* hardcoded binding maccros *)
+    fprintf outMaccros "\\newcommand{\\bindone}[2]{\\lambda #1. #2}\n";
+    fprintf outMaccros "\\newcommand{\\bindtwo}[3]{\\lambda #1. #2~(#3)}\n";
     close_out outMaccros;
     (* preamble of main file *)
     fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";

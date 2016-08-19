@@ -527,8 +527,8 @@ module Int = struct
             fprintf ppf "%s\\forall %s : %a. ~ %a%s"
               (l_paren_if cond)
               (Id.render_name_latex x)
-              (fmt_ppr_lf_typ_latex cD cPsi 0) a
-              (fmt_ppr_lf_typ_latex cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
+              (fmt_ppr_lf_typ_latex ?table cD cPsi 0) a
+              (fmt_ppr_lf_typ_latex ?table cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
               (r_paren_if cond)
 
       | LF.PiTyp ((LF.TypDecl (x, a), LF.No), b) ->
@@ -536,8 +536,8 @@ module Int = struct
           let cond = lvl > 0 in
             fprintf ppf "%s%a \\rightarrow %a%s"
               (l_paren_if cond)
-              (fmt_ppr_lf_typ_latex cD cPsi 1) a
-              (fmt_ppr_lf_typ_latex cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
+              (fmt_ppr_lf_typ_latex ?table cD cPsi 1) a
+              (fmt_ppr_lf_typ_latex ?table cD (LF.DDec(cPsi, LF.TypDecl(x, a))) 0) b
               (r_paren_if cond)
 
       (* added ~ *)
@@ -589,16 +589,29 @@ module Int = struct
             ms
 
      in function
-        (* added {} and \ became \\lambda not to mess with LaTex *)
+        (* added {} and binder maccro *)
         | LF.Lam (_, x, m) ->
             let x = fresh_name_dctx cPsi x in
             let cond = lvl > 0 in
-              fprintf ppf "{%s \\lambda %s. %a%s}" 
-                (l_paren_if cond)
-                (Id.render_name_latex x) (* changed *)
-                (fmt_ppr_lf_normal_latex cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
-                (r_paren_if cond) 
-                
+            (match m with 
+              (* no spine => use bindone maccro *)
+              | LF.Root (_, h, LF.Nil) ->
+                  fprintf ppf "{%s\\bindone {%s} {%a}%s}" 
+                   (l_paren_if cond)
+                   (Id.render_name_latex ~var:true x) (* changed *)
+                   (fmt_ppr_lf_normal_latex cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m 
+                   (r_paren_if cond)
+              (* spine with one element => use bindtwo maccro *)
+              | LF.Root (_, h, ms)  ->
+                  let cond = lvl > 1 in
+                  let ms = deimplicitize_spine h ms in
+                  let LF.App(m, LF.Nil) = ms in
+                  fprintf ppf "{%s\\bindtwo {%s} {%a} {%a}%s}" 
+                   (l_paren_if cond)
+                   (Id.render_name_latex ~var:true x) (* changed *)
+                   (fmt_ppr_lf_head_latex ?table cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0 "") h
+                   (fmt_ppr_lf_normal_latex ?table cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 3) m
+                   (r_paren_if cond))
         | LF.LFHole _ ->
           fprintf ppf "?"
         (* added {} *)
@@ -685,20 +698,21 @@ module Int = struct
       (* some empty sub [ ] still get printed in lam.bel -> how to get them ? *)
       (* here we use the mathcal argument *)
       | LF.MVar (c, s) ->
-          (match s with 
-            | LF.Shift 0 ->
-                  fprintf ppf "%s%a%s%s"
-                   (l_paren_if (paren s))
-                   (fmt_ppr_lf_cvar_latex ?table ?mathcal cD lvl) c
-                   proj
-                   (r_paren_if (paren s))
-            | _ ->
-               fprintf ppf "%s%a%s[%a]%s"
+          if Substitution.LF.isId s 
+            then 
+              fprintf ppf "%s%a%s%s"
+                (l_paren_if (paren s))
+                (fmt_ppr_lf_cvar_latex ?table ?mathcal cD lvl) c
+                proj
+                (r_paren_if (paren s))
+            else 
+              fprintf ppf "%s%a%s[%a]%s"
                 (l_paren_if (paren s))
                 (fmt_ppr_lf_cvar_latex ?table ?mathcal cD lvl) c
                 proj
                 (fmt_ppr_lf_sub_latex  cD cPsi lvl) s
-                (r_paren_if (paren s)))
+                (r_paren_if (paren s))
+
 
       | LF.PVar (c, s) ->
           fprintf ppf "%s\\#%a%s[%a]%s"

@@ -246,7 +246,9 @@ module Cid : sig
       schema : LF.schema
     }
 
-
+    (*********************************************************************************************************)
+    val store           : (entry DynArray.t) DynArray.t
+    (*********************************************************************************************************)
     val mk_entry        : name -> LF.schema -> entry
     val add             : entry -> cid_schema
     val get             : ?fixName:bool -> cid_schema -> entry

@@ -52,9 +52,19 @@ module LaTeX = struct
      to use when we would use headToString in this file 
      but we don't want \TERM before the name *)
   let constantNameToString cD cPsi (h : Syntax.Int.LF.head) : string =
-    let Syntax.Int.LF.Const c = h in
+    match h with
+      | Syntax.Int.LF.Const c ->
+          let name = Id.render_name_latex (Store.Cid.Term.get ~fixName:true c).Store.Cid.Term.name in
+          Id.cleanup_name_latex name
+      | _ ->
+          "SOMETHING ELSE"
+
+
+
+
+    (*let Syntax.Int.LF.Const c = h in
     let name = Id.render_name_latex (Store.Cid.Term.get ~fixName:true c).Store.Cid.Term.name in
-      Id.cleanup_name_latex name
+      Id.cleanup_name_latex name*)
 
   (*let msubToString cD s =
     P.msubToString cD s*)
@@ -91,8 +101,9 @@ module LaTeX = struct
                 | "" -> get_args' cD cG i' (expChkToString cD cG e')
                 | _  -> get_args' cD cG i' ((expChkToString cD cG e') ^ " and " ^ acc))
           | Comp.MApp (_, i', mO, _, _) ->
-              get_args' cD cG i' 
-               (sprintf "$%s$ and %s" (metaObjToString cD mO) acc)
+              (match acc with
+                | "" -> get_args' cD cG i' (sprintf "$%s$" (metaObjToString cD mO))
+                | _  -> get_args' cD cG i' ((sprintf "$%s$" (metaObjToString cD mO)) ^ " and " ^ acc))
           | Comp.Var _ ->
               acc
         in 
@@ -294,23 +305,57 @@ module LaTeX = struct
       let Some loc = location in
       let tbl = Hashtbl.find mainTable loc in
 
-      (* used to handle real let + inversion :
-         since normal is the left of a real let, it shouldn't have a spine *)
+      (* we borrow these three functions from parse_inversion to deal with real_let + inversion *)
+      let get_tclo_from_normal m = match m with
+        | LF.Root (_, _, _, _, tclo, _) -> tclo
+        | LF.Lam (_, _, _, _, tclo, _) -> tclo 
+      in
+      let rec print_inversions just l = match l with
+        | h::[] -> 
+            sprintf "%s %s" 
+             h just
+        | h::t ->
+            sprintf "%s\n\n%s" 
+             h (print_inversions just t)
+      in
+      let rec parse_spine cD cPsi ms acc = match ms with
+        | LF.App (m, LF.Nil, _) ->
+            let tclo = get_tclo_from_normal m in
+            acc @ [sprintf "$\\proofderiv{%s}{%s}$" 
+                    (normalToString cD cPsi m) 
+                    (typToLatex ~table:tbl cD cPsi tclo)]
+        | LF.App (m, ms, _) ->
+            let tclo = get_tclo_from_normal m in
+            parse_spine cD cPsi ms 
+              (acc @ [sprintf "$\\proofderiv{%s}{%s}$" 
+                       (normalToString cD cPsi m) 
+                       (typToLatex ~table:tbl cD cPsi tclo)])
+      in
+      (* most of the work is done here *)
       let parse_normal cD cPsi m just =
-        let LF.Root (_, h, LF.Nil, _, tclo, _) = m in
-        match h with 
-          (* inversion + real let, head is a constant *)
-          | Syntax.Int.LF.Const _ ->
-             sprintf "$%s$ %s and inversion using rule $\\RULE%s$\n"
-              (typToLatex ~table:tbl cD cPsi tclo)
-              just
-              (constantNameToString cD cPsi h)
-          (* real let only *)
-          | _ ->
-            sprintf "$\\proofderiv{%s}{%s}$ %s\n" 
-              (headToString cD cPsi "" h)
-              (typToLatex ~table:tbl cD cPsi tclo)
-              just
+        match m with
+          | LF.Root (_, Syntax.Int.LF.Const c, LF.Nil, _, tclo, _) ->
+          (* head is a constant + no spine => inversion + real let *)
+          (* e.g "let [|-eq_ref] = unique_eval [|-D1] [|-F1] in", unique-eval.bel *)
+              sprintf "$%s$ %s and inversion using rule $\\RULE%s$\n"
+               (typToLatex ~table:tbl cD cPsi tclo)
+               just
+               (constantNameToString cD cPsi (Syntax.Int.LF.Const c))
+          | LF.Root (_, h, LF.Nil, _, tclo, _) ->
+          (* other type of head + no spine => real let only *)
+              sprintf "$\\proofderiv{%s}{%s}$ %s\n" 
+               (headToString ~mathcal:true cD cPsi "" h)
+               (typToLatex ~table:tbl cD cPsi tclo)
+               just
+          | LF.Root (_, Syntax.Int.LF.Const c, ms, _, _, _) ->
+          (* head is a constant + spine => inversion + real let *)
+          (* e.g "let [|-tp_s C] = tps [|-F] [|-D] in", mini-ml-tps.bel *)
+          (* e.g "let [|-tp_lam \x. \u. D] = tps [|-F1] [|-D1] in", mini-ml-tps.bel *)
+             let inversion_list = parse_spine cD cPsi ms [] in
+             let justification = sprintf "%s and inversion using rule $\\RULE%s$\n" 
+                                   just 
+                                   (constantNameToString cD cPsi (Syntax.Int.LF.Const c)) 
+             in print_inversions justification inversion_list
       in
       let parse_clobj cD cPsi tM just = match tM with
         | LF.MObj m -> parse_normal cD cPsi m just
@@ -414,7 +459,10 @@ module LaTeX = struct
               (typToLatex ~table:tbl cD cPsi tclo)
               (constantNameToString cD cPsi h)
           (* simple inversion : first elem of spine has no spine *)
-          | LF.Root (_, h, (LF.App (LF.Root (_, _, LF.Nil, _, _, _), _, _) as ms), _, tclo, _) ->
+          | LF.Root (_, h, (LF.App (LF.Root (_, _, LF.Nil, _, _, _), _, _) as ms), _, tclo, _)
+          (* simple inversion : first elem of spine is a lambda *)
+          (* e.g "let [|-tp_match (\x.\u. D2) D1 D] = d in", mini-ml-tps.bel *)
+          | LF.Root (_, h, (LF.App (LF.Lam (_, _, _, _, _, _), _, _) as ms), _, tclo, _) ->
              let inversion_list = parse_spine cD cPsi ms [] in
              let justification = sprintf "\\hfill by inversion using rule $\\RULE%s$\n" 
                                   (constantNameToString cD cPsi h) 
@@ -537,8 +585,9 @@ module LaTeX = struct
               (* single branch and exp_syn = Var -> inversion *)
               | Comp.Var _ ->
                  parse_inversion cD cG branch location
-              (* single branch and exp_syn = Apply -> real let *)
-              | Comp.Apply _ ->
+              (* single branch and exp_syn = Apply/MApp -> real let *)
+              | Comp.Apply _ 
+              | Comp.MApp _ ->
                  parse_real_let cD cG i branch location
               (* CARE : not sure if it is correct to parse this as an inversion
                  example in lam.bel *)
@@ -562,9 +611,15 @@ module LaTeX = struct
                             (subCompTypToLatex ~table:tbl cD tclo) 
                             (parse_metaObj_box cD mO)]
       | Comp.Syn (_, i, tclo, str) ->
-         lines := !lines @ [sprintf "$%s$ %s" 
-                            (subCompTypToLatex ~table:tbl cD tclo) 
-                            (fun_call_just cD cG i)]
+         (match i with 
+           | Comp.Var _ ->
+               lines := !lines @ [sprintf "$%s$ \\hfill by %s\n" 
+                                   (subCompTypToLatex ~table:tbl cD tclo)
+                                   (expSynToString cD cG i)]
+           | _ -> 
+               lines := !lines @ [sprintf "$%s$ %s" 
+                                   (subCompTypToLatex ~table:tbl cD tclo) 
+                                   (fun_call_just cD cG i)])
       | _ -> 
          lines := !lines @ ["Some weard expression."]
   (**********************************************************************************************************)

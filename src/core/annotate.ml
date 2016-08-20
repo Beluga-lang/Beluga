@@ -176,10 +176,12 @@ module PrettyAnn = struct
 	       (expSynToString cD cG i1)
 	       (expSynToString cD cG i2)
 	       (print_tstr tstr)
-    | Comp.Ann (e, _, _, tstr) ->
+    (*| Comp.Ann (e, _, _, tstr) ->
        sprintf "{Ann|%s%s}"
 	       (expChkToString cD cG e)
-	       (print_tstr tstr)
+	       (print_tstr tstr)*)
+    | Comp.Ann (e, _, _, _) ->
+       expChkToString cD cG e
     | Comp.Equal (_, i1, i2, _, tstr) ->
        sprintf "{Equal|%s == %s%s}"
 	       (expSynToString cD cG i1)

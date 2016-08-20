@@ -162,6 +162,9 @@ module Int = struct
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string
+    (********************************************************************************************************)
+    val schemaToLatex     : LF.schema     -> string
+    (********************************************************************************************************)
     val schElemToString   : LF.sch_elem   -> string
     val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
     (********************************************************************************************************)
@@ -542,7 +545,7 @@ module Int = struct
 
       (* added ~ *)
       | LF.Sigma typRec ->
-          fprintf ppf "block~(%a)"
+          fprintf ppf "$\\block {%a}$"
             (fmt_ppr_lf_typ_rec_latex cD cPsi lvl) typRec
 
       | LF.TClo (typ, s) ->
@@ -1241,7 +1244,7 @@ module Int = struct
 
 
     (****************************************************************************************************************)
-    and fmt_ppr_lf_schema_latex ?(useName=true) lvl ppf s =
+    (*and fmt_ppr_lf_schema_latex ?(useName=true) lvl ppf s =
       let print_without_name = function
         | LF.Schema [] -> ()
 
@@ -1252,15 +1255,31 @@ module Int = struct
         | LF.Schema (f :: fs) ->
               fprintf ppf "@[%a@]@ +@ @[%a@]"
                 (fmt_ppr_lf_sch_elem lvl) f
-                (fmt_ppr_lf_schema lvl) (LF.Schema fs)
+                (fmt_ppr_lf_schema_latex lvl) (LF.Schema fs)
       in
       if useName then
         try
           fprintf ppf "%s" (Id.render_name_latex (Store.Cid.Schema.get_name_from_schema s))
         with | _ -> print_without_name s
-      else print_without_name s
-    (****************************************************************************************************************)
+      else print_without_name s*)
 
+      and fmt_ppr_lf_schema_latex ?(useName=true) lvl ppf s =
+        let name = (Id.render_name_latex (Store.Cid.Schema.get_name_from_schema s)) in
+        match s with 
+          | LF.Schema [] -> 
+              fprintf ppf "$\\mathsf{%s}$" name
+
+          | LF.Schema (f :: []) ->
+              fprintf ppf "$\\mathsf{%s}$ = %a"
+                name
+                (fmt_ppr_lf_sch_elem_latex lvl) f
+
+          | LF.Schema (f :: fs) ->
+              fprintf ppf "$\\mathsf{%s}$ = @[%a@]@ +@ @[%a@]"
+                name
+                (fmt_ppr_lf_sch_elem_latex lvl) f
+                (fmt_ppr_lf_schema_latex lvl) (LF.Schema fs)
+    (****************************************************************************************************************)
 
 
     and frugal_block cD cPsi lvl ppf = function
@@ -1293,6 +1312,39 @@ module Int = struct
             (ppr_typ_decl_dctx cD) cPsi
             (Id.render_name x)
             (fmt_ppr_lf_typ cD cPsi 0) tA
+
+    (****************************************************************************************************************)
+    and frugal_block_latex cD cPsi lvl ppf = function
+      | LF.SigmaLast(_,  tA) -> fmt_ppr_lf_typ_latex cD cPsi 0 ppf tA
+      | other -> fprintf ppf "$\\block {%a}$" (fmt_ppr_lf_typ_rec_latex cD cPsi lvl) other
+
+    and fmt_ppr_lf_sch_elem_latex lvl ppf = function
+      | LF.SchElem (LF.Empty, sgmDecl) ->
+            fprintf ppf "%a"
+              (frugal_block_latex LF.Empty LF.Null lvl) sgmDecl
+
+      | LF.SchElem (typDecls, sgmDecl) ->
+          let cPsi = projectCtxIntoDctx typDecls in
+            fprintf ppf "@[$\\mathsf{some}~[%a]$ %a@]"
+              (ppr_typ_decl_dctx_latex  LF.Empty)  cPsi
+              (frugal_block_latex LF.Empty cPsi lvl) sgmDecl
+
+
+    and ppr_typ_decl_dctx_latex cD ppf = function
+      | LF.Null ->
+          fprintf ppf ""
+
+      | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%s : %a"    (* formerly "., %s : %a"    -jd 2010-06-03 *)
+            (Id.render_name_latex x)
+            (fmt_ppr_lf_typ_latex cD LF.Null 0) tA
+
+      | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
+          fprintf ppf "%a, %s : %a"
+            (ppr_typ_decl_dctx_latex cD) cPsi
+            (Id.render_name_latex x)
+            (fmt_ppr_lf_typ_latex cD cPsi 0) tA
+    (****************************************************************************************************************)
 
 
     and fmt_ppr_lf_psi_hat cD _lvl ppf = function
@@ -2304,6 +2356,12 @@ module Int = struct
     let schemaToString schema =
       fmt_ppr_lf_schema std_lvl str_formatter schema
       ; flush_str_formatter ()
+
+    (********************************************************************************************************)
+    let schemaToLatex schema =
+      fmt_ppr_lf_schema_latex std_lvl str_formatter schema
+      ; flush_str_formatter ()
+    (********************************************************************************************************)
 
     let schElemToString sch_elem =
       fmt_ppr_lf_sch_elem std_lvl str_formatter sch_elem

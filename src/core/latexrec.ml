@@ -117,6 +117,9 @@ module Printer = struct
     	fprintf outMain "%s\n\n%s\n\n" (theoremToLatex tau cidProg) (proofToLatex e_ann cidProg);
       fprintf outMaccros "%s\n\n" (cidProgToMaccro cidProg)
    	in 
+    (* debugging *)
+    printf "number of elem in recTypes : %d\n" (Hashtbl.length recTypes);
+    (*************)
    	Hashtbl.iter recToLatex recTypes;
    	close_out outMaccros;
     close_out outMain

@@ -116,6 +116,9 @@ module Int : sig
     val metaObjToString   : LF.mctx -> Comp.meta_obj -> string
 
     val schemaToString    : LF.schema     -> string
+    (********************************************************************************************************)
+    val schemaToLatex     : LF.schema     -> string
+    (********************************************************************************************************)
     val schElemToString   : LF.sch_elem   -> string
     val cdeclToString     : LF.mctx -> LF.ctyp_decl  -> string
     (********************************************************************************************************)

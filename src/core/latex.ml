@@ -406,9 +406,10 @@ let runLatex mainFile =
     let outMain = open_out mainFile in
     (* preamble of maccros file *)
     fprintf outMaccros "\\input{prelude}\n\n";
-    (* hardcoded binding maccros *)
+    (* hardcoded binding and block maccros *)
     fprintf outMaccros "\\newcommand{\\bindone}[2]{\\lambda #1. #2}\n";
     fprintf outMaccros "\\newcommand{\\bindtwo}[3]{\\lambda #1. #2~(#3)}\n";
+    fprintf outMaccros "\\newcommand{\\block}[1]{\\mathsf{block}~(#1)}\n";
     close_out outMaccros;
     (* preamble of main file *)
     fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
@@ -417,6 +418,7 @@ let runLatex mainFile =
     (* LaTex printing *)
     Printer.printTypesLatex mainFile;
     Latexinductive.Printer.printCompTypesLatex mainFile;
+    Latexschema.Printer.printSchemasLatex mainFile;
     Latexrec.Printer.printRecLatex mainFile;
     
     (* conclusion of main file *)

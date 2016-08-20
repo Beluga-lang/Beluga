@@ -404,11 +404,11 @@ let recSgnDecls decls =
         let _a = Typ.add (Typ.mk_entry a tK' i) in
         let sgn = Int.Sgn.Typ(loc, _a, tK') in
         Store.Modules.addSgnToCurrent sgn;
-	let _ = if !Typeinfo.generate_annotations then
+	(*let _ = if !Typeinfo.generate_annotations then
 		  Typeinfo.Sgn.annotate_sgn_typ loc tK'
 		else
 		  ()
-	in
+	in*)
         sgn
 
     | Ext.Sgn.Const (loc, c, extT) ->
@@ -442,11 +442,11 @@ let recSgnDecls decls =
 	      let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
         let sgn = Int.Sgn.Const(loc, _c, tA') in
         Store.Modules.addSgnToCurrent sgn;
-	let _ = if !Typeinfo.generate_annotations then
+	(*let _ = if !Typeinfo.generate_annotations then
 		  Typeinfo.Sgn.annotate_sgn_const loc tA'
 		else
 		  ()
-	in
+	in*)
         sgn
 
     | Ext.Sgn.Schema (loc, g, schema) ->
@@ -662,7 +662,7 @@ let recSgnDecls decls =
                                       ) in
 	  let _ = if !Typeinfo.generate_annotations then
 	    let e_ann = Annotate.Comp.ann cD cG e_r' (tau_ann, C.m_id) in
-	    let _ = Typeinfo.Comp.annotate_comp_exp_chk e e_ann in
+	    (*let _ = Typeinfo.Comp.annotate_comp_exp_chk e e_ann in*)
       let _ = Hashtbl.add Latexrec.Index.annotatedProofs f e_ann in
 	    ()
 	  in

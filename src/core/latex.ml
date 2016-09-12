@@ -2,6 +2,7 @@ module S = Substitution.LF
 open Printf
 open Syntax.Int
 
+let generate_latex = ref false;
 
 type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
@@ -402,8 +403,19 @@ end
 
 
 let runLatex mainFile =
-    let outMaccros = open_out "latex/maccros.tex" in
-    let outMain = open_out mainFile in
+  let mainFile =
+    (fun n -> String.sub n 0 (String.rindex n '.'))
+      mainFile
+  in
+  let fname =
+    (fun n -> String.sub n ((String.rindex n '/' + 1))
+			 ((String.length n) - (String.rindex n '/' + 1)))
+      mainFile
+  in
+  print_string (mainFile);
+  print_string (fname);
+    let outMaccros = open_out (mainFile ^ "_macros.tex") in
+    let outMain = open_out (mainFile ^ ".tex") in
     (* preamble of maccros file *)
     fprintf outMaccros "\\input{prelude}\n\n";
     (* hardcoded binding and block maccros *)
@@ -412,7 +424,7 @@ let runLatex mainFile =
     fprintf outMaccros "\\newcommand{\\block}[1]{\\mathsf{block}~(#1)}\n";
     close_out outMaccros;
     (* preamble of main file *)
-    fprintf outMain "\\documentclass{article}\n\n\\input{maccros}\n\n\\begin{document}\n\n";
+    fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") fname;
     close_out outMain;
 
     (* LaTex printing *)

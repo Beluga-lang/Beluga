@@ -141,6 +141,9 @@ module Int : sig
     (********************************************************************************************************)
     val msubToString      : LF.mctx              -> LF.msub   -> string
 
+    val psiHatToString : LF.mctx -> LF.dctx -> string
+    val mfrontToString : LF.mctx -> LF.mfront -> string
+
   end
 
   (* Internal Syntax Pretty Printer Functor *)
@@ -234,7 +237,7 @@ module Ext : sig
     val branchToString    : LF.ctyp_decl LF.ctx -> Syntax.Int.Comp.gctx -> Comp.branch -> string
     val compKindToString  : LF.mctx -> Comp.kind  -> string
     val compTypToString   : LF.mctx -> Comp.typ   -> string
-
+						    
   end
 
   (* External Syntax Pretty Printer Functor *)

@@ -814,7 +814,7 @@ let runLogic () =
         Printer.printSignature ()
       else () ;
       (* Here we call the conversion to LaTex *)
-      Latex.runLatex "latex/main.tex";
+      (* Latex.runLatex "latex/main.tex"; *)
       (*Latexrec.Index.robStore ();*)
       (* Solve! *)
       Index.iterQueries Frontend.solve ;

@@ -250,6 +250,7 @@ module LaTeX = struct
         in
         let parse_metaObj ?table cD (loc, mO) conclusion = match mO with
           | LF.ClObj (phat, tM) ->
+	     print_string ("[Fun] " ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
              let cPsi = phatToDCtx phat in
              parse_clobj ?table cD cPsi tM conclusion
 
@@ -362,6 +363,7 @@ module LaTeX = struct
       in
       let parse_metaObj cD (loc, mO) just = match mO with
         | LF.ClObj (phat, tM) ->
+	   print_string ("[Real Let - phat] " ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
            let cPsi = phatToDCtx phat in
             parse_clobj cD cPsi tM just
       in
@@ -477,6 +479,7 @@ module LaTeX = struct
         in
         let parse_metaObj cD (loc, mO) = match mO with
           | LF.ClObj (phat, tM) ->
+	     print_string ("[Inversion] "  ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
              let cPsi = phatToDCtx phat in
              parse_clobj cD cPsi tM
         in
@@ -556,6 +559,7 @@ module LaTeX = struct
       in
       let parse_metaObj_box cD (loc, mO) = match mO with
         | LF.ClObj (phat, tM) ->
+	   print_string ("[Expr] " ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
            let cPsi = phatToDCtx phat in
            parse_clobj_box cD cPsi tM
 
@@ -633,6 +637,7 @@ let printLines l =
   printLines' l ""
 
 let parse e cidProg =
+  print_string ("[LatexProof] Parse called");
   let entry = Store.Cid.Comp.get cidProg in
   let name = entry.Store.Cid.Comp.name in
   (* initial cG : declaration containing function name *)
@@ -642,8 +647,8 @@ let parse e cidProg =
   (* fill up lines *)
   let _ = LaTeX.parse_fun cD cG e in
   let str = printLines !lines in
-  (* clear *)
+  (* Clear *)
   let _ = lines := [] in
   let _ = Hashtbl.clear mainTable in
+  (* let str = "" in *)
   str
-

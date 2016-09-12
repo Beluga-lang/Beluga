@@ -142,6 +142,8 @@ module Int = struct
     (* Conversion to string *)
     val sgnDeclToString   : Sgn.decl -> string
 
+
+
     val subToString       : LF.mctx -> LF.dctx -> LF.sub      -> string
     val spineToString     : LF.mctx -> LF.dctx -> LF.sclo     -> string
     val typToString       : LF.mctx -> LF.dctx -> LF.tclo     -> string
@@ -187,6 +189,8 @@ module Int = struct
     val subCompTypToLatex : ?table:(Id.name, Id.name) Hashtbl.t -> LF.mctx -> Comp.tclo -> string
     (********************************************************************************************************)
     val msubToString      : LF.mctx              -> LF.msub   -> string
+    val psiHatToString : LF.mctx -> LF.dctx -> string
+    val mfrontToString : LF.mctx -> LF.mfront -> string
 
   end (* Int.PRINTER *)
 
@@ -1348,7 +1352,7 @@ module Int = struct
 
 
     and fmt_ppr_lf_psi_hat cD _lvl ppf = function
-      | LF.Null   -> fprintf ppf ""
+      | LF.Null   -> fprintf ppf "Empty"
 
       | LF.CtxVar ctx_var ->
           fmt_ppr_lf_ctx_var cD ppf ctx_var
@@ -2452,6 +2456,16 @@ module Int = struct
 
     let sgnDeclToString   : Sgn.decl -> string = fun d ->
       fmt_ppr_sgn_decl std_lvl str_formatter d; flush_str_formatter ()
+
+    let psiHatToString cD s =
+      fmt_ppr_lf_psi_hat cD std_lvl str_formatter s
+      ; flush_str_formatter ()
+
+    let mfrontToString cD mO =
+      fmt_ppr_lf_mfront cD std_lvl std_formatter mO
+      ; flush_str_formatter ()
+			    
+			  
   end (* Int.Make *)
 
   (* Default Error Pretty Printer Functor Instantiation *)

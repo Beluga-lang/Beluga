@@ -100,6 +100,7 @@ module Printer = struct
 
 
   let proofToLatex e_ann cidProg =
+    print_string "[Latex Rec] proofToLatex called";
     sprintf "\\begin{proof}\n%s\n\\end{proof}" (Latexproof.parse e_ann cidProg)
     
 

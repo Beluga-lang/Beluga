@@ -34,6 +34,7 @@ let usage () =
         ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
         ^ "    +locs                 Output location information (for testing)\n"
+        ^ "    +latex                Invokes the LaTeX translation\n"
         ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
@@ -85,6 +86,7 @@ let process_option arg rest = match arg with
       | _ -> bailout "-cssfile requires an argument"
       end
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
+  | "+latex" -> Latex.generate_latex := true; rest
   | "-I" -> begin
       try Beli.run rest
       with Beli.Invalid_Arg -> usage () end
@@ -174,6 +176,8 @@ let main () =
           if !Typeinfo.generate_annotations then
             Typeinfo.print_annot file_name;
           (* print_newline(); *)
+          if !Latex.generate_latex then
+            Latex.runLatex file_name;
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;
           if !Html.genHtml then begin

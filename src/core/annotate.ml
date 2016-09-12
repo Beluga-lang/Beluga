@@ -432,6 +432,7 @@ module LF = struct
     | (CObj cPsi, (CTyp (Some w), _)) ->
        (loc, Ann.LF.CObj cPsi)
     | (ClObj (phat, tM), (ClTyp (tp, cPsi), t)) ->
+       (* print_string ("[Annotate - ClObj] " ^ P.mfrontToString cD cM); *)
        let cPsi' = C.cnormDCtx (cPsi, t) in
        if phat = Context.dctxToHat cPsi' then
 	 let tM' = annotateClObj cD loc cPsi' tM (tp, t) in
@@ -922,10 +923,10 @@ module Comp = struct
 
   and annotate cD (cG, cIH) e ttau =
     let e' = annotate' cD (cG, cIH) e ttau in
-    print_string (Printf.sprintf "[annotate - chk]\n\t[int] %s\n\t========>\n\t[ann] %s\n"
-			  (P.expChkToString cD cG e)
-			  (PrettyAnn.expChkToString cD cG e')
-		 );
+    (* print_string (Printf.sprintf "[annotate - chk]\n\t[int] %s\n\t========>\n\t[ann] %s\n" *)
+    (* 			  (P.expChkToString cD cG e) *)
+    (* 			  (PrettyAnn.expChkToString cD cG e') *)
+    (* 		 ); *)
     e'
 
   and annotate' cD (cG, cIH) e ttau =
@@ -1177,10 +1178,10 @@ module Comp = struct
 
   and syn cD (cG, cIH) e =
     let ((cIH_opt, tau, t), e') = syn' cD (cG, cIH) e in
-    print_string (Printf.sprintf "[annotate - syn]\n\t[int] %s\n\t========>\n\t[ann] %s\n"
-			  (P.expSynToString cD cG e)
-			  (PrettyAnn.expSynToString cD cG e')
-		 );
+    (* print_string (Printf.sprintf "[annotate - syn]\n\t[int] %s\n\t========>\n\t[ann] %s\n" *)
+    (* 			  (P.expSynToString cD cG e) *)
+    (* 			  (PrettyAnn.expSynToString cD cG e') *)
+    (* 		 ); *)
     ((cIH_opt, tau, t), strip_mapp_args cD cG e')
 
   and syn' cD (cG, cIH) e =

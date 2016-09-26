@@ -368,9 +368,9 @@ module Printer = struct
               cleanName n name (printArguments n)
 
 
-  let printSignatureLatex mainFile =
+  let printSignatureLatex mainFile maccrosFile =
     let outMaccros = 
-      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 "latex/maccros.tex" 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 maccrosFile
     in
     let outMain =
       open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
@@ -390,9 +390,9 @@ module Printer = struct
     close_out outMaccros;
     close_out outMain
 
-  let printTypesLatex mainFile =
+  let printTypesLatex mainFile maccrosFile =
     robStore ();
-    printSignatureLatex mainFile;
+    printSignatureLatex mainFile maccrosFile;
     clearIndex ()
 
 
@@ -407,15 +407,19 @@ let runLatex mainFile =
     (fun n -> String.sub n 0 (String.rindex n '.'))
       mainFile
   in
-  let fname =
+  (*let fname =
     (fun n -> String.sub n ((String.rindex n '/' + 1))
 			 ((String.length n) - (String.rindex n '/' + 1)))
       mainFile
   in
-  print_string (mainFile);
-  print_string (fname);
-    let outMaccros = open_out (mainFile ^ "_macros.tex") in
-    let outMain = open_out (mainFile ^ ".tex") in
+  printf "%s\n" mainFile;
+  printf "%s\n" fname;*)
+    (*let outMaccrosName = fname ^ "_macros.tex" in*)
+    let outMaccrosName = mainFile ^ "_macros.tex" in
+    let outMaccros = open_out outMaccrosName in
+    (*let outMainName = fname ^ ".tex" in*)
+    let outMainName = mainFile ^ ".tex" in
+    let outMain = open_out outMainName in
     (* preamble of maccros file *)
     fprintf outMaccros "\\input{prelude}\n\n";
     (* hardcoded binding and block maccros *)
@@ -424,18 +428,19 @@ let runLatex mainFile =
     fprintf outMaccros "\\newcommand{\\block}[1]{\\mathsf{block}~(#1)}\n";
     close_out outMaccros;
     (* preamble of main file *)
-    fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") fname;
+    (*fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") fname;*)
+    fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") mainFile;
     close_out outMain;
 
     (* LaTex printing *)
-    Printer.printTypesLatex mainFile;
-    Latexinductive.Printer.printCompTypesLatex mainFile;
-    Latexschema.Printer.printSchemasLatex mainFile;
-    Latexrec.Printer.printRecLatex mainFile;
-    
+    Printer.printTypesLatex outMainName outMaccrosName;
+    Latexinductive.Printer.printCompTypesLatex outMainName outMaccrosName;
+    Latexschema.Printer.printSchemasLatex outMainName outMaccrosName;
+    Latexrec.Printer.printRecLatex outMainName outMaccrosName;
+
     (* conclusion of main file *)
     let outMain =
-      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 outMainName
     in
     fprintf outMain "\n\\end{document}";
     close_out outMain

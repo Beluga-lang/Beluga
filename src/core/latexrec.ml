@@ -104,12 +104,12 @@ module Printer = struct
     sprintf "\\begin{proof}\n%s\n\\end{proof}" (Latexproof.parse e_ann cidProg)
     
 
-  let printSignatureLatex mainFile =
+  let printSignatureLatex mainFile maccrosFile =
     let outMaccros = 
-      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 "latex/maccros.tex" 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 maccrosFile
     in
     let outMain =
-      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 
+      open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile
     in
     (* takes as input one binding (k, v) of recTypes : 
        k : (Id.cid_prog * Loc.t), v : (Syntax.Int.Comp.typ * Annotated.Comp.exp_chk) 
@@ -125,9 +125,9 @@ module Printer = struct
    	close_out outMaccros;
     close_out outMain
 
-    let printRecLatex mainFile =
+    let printRecLatex mainFile maccrosFile =
       robStore ();
-      printSignatureLatex mainFile;
+      printSignatureLatex mainFile maccrosFile;
       clearIndex ()
 
 

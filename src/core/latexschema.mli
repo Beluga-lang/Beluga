@@ -1,4 +1,4 @@
 module Printer :
 sig
-  val printSchemasLatex : string -> unit
+  val printSchemasLatex : string -> string -> unit
 end

@@ -5,5 +5,5 @@ end
 
 module Printer :
 sig
-  val printRecLatex : string -> unit
+  val printRecLatex : string -> string -> unit
 end

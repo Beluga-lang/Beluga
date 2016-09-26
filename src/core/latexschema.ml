@@ -7,10 +7,10 @@ module Printer = struct
   module P = Pretty.Int.DefaultPrinter
 
 
-  let printSchemasLatex mainFile =
+  let printSchemasLatex mainFile maccrosFile =
     try
       let outMaccros = 
-        open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 "latex/maccros.tex" 
+        open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 maccrosFile
       in
       let outMain =
         open_out_gen [Open_wronly; Open_append; Open_creat; Open_text] 0o666 mainFile 

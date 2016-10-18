@@ -136,6 +136,7 @@ module Printer = struct
 
   (* val cdeclToLatex : LF.mctx -> LF.ctyp_decl -> string *)
   let cdeclToLatex cD cdecl =
+    print_string "[Latex Inductive] cdeclToLatex called\n";
     sprintf "$%s$" (P.cdeclToLatex cD cdecl)
 
 
@@ -153,6 +154,7 @@ module Printer = struct
 
   (* prints explicit quantifiers in sCl.eVars *)
   let printForAlls cD = 
+    print_string "[Latex Inductive] printForAlls called\n";
     let rec printForAlls' cD acc = match cD with
       | LF.Empty -> acc
       | LF.Dec (cD', cdecl) ->
@@ -180,7 +182,9 @@ module Printer = struct
            x is the derivation name
            [ |- exp nat] is the goal
   *)
-  let rec printSubgoals cG cD l = match cG with
+  let rec printSubgoals cG cD l = 
+    print_string "[Latex Inductive] printSubgoals called\n";
+    match cG with
     | Conjunct (True, g) ->
       (match l with 
         | [] ->
@@ -199,13 +203,16 @@ module Printer = struct
 
 
   let clauseToLatex sCl l = 
+    print_string "[Latex Inductive] clauseToLatex called\n";
     let conclusion = compTypToLatex sCl.eVars sCl.tHead in 
     let forAlls = printForAlls sCl.eVars in
+    print_string "[Latex Inductive] forAlls returned\n";
     match sCl.subGoals with
       | True ->
         sprintf "%s%s" forAlls conclusion
       | Conjunct (_) as cG ->
-        sprintf "%sif %s then %s" forAlls (printSubgoals cG sCl.eVars l) conclusion
+        let hyp = printSubgoals cG sCl.eVars l in
+        sprintf "%sif %s then %s" forAlls hyp conclusion
 
   (* val sgnClauseToLatex Id.cid_comp_const * clause -> string *)
   let sgnClauseToLatex (cidCompConst, sCl) =

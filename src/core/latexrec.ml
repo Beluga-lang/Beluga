@@ -25,6 +25,7 @@ module Index = struct
   
 
   let storeEntry (cidProg, loc) =
+    print_string "[Latex Rec] storeEntry called (conversion)\n";
     let compEntry = Cid.Comp.get cidProg in
     let tau = compEntry.Cid.Comp.typ in 
     let compName = compEntry.Cid.Comp.name in
@@ -67,6 +68,7 @@ module Printer = struct
      
 
   let theoremToLatex tau cidProg =
+    print_string "[Latex Rec] theoremToLatex called\n";
     let sCl = Latexinductive.Convert.typToClause tau in
     let entry = Cid.Comp.get cidProg in
     let name = Id.string_of_name_latex entry.Cid.Comp.name in
@@ -100,7 +102,7 @@ module Printer = struct
 
 
   let proofToLatex e_ann cidProg =
-    print_string "[Latex Rec] proofToLatex called";
+    print_string "[Latex Rec] proofToLatex called\n";
     sprintf "\\begin{proof}\n%s\n\\end{proof}" (Latexproof.parse e_ann cidProg)
     
 
@@ -115,12 +117,15 @@ module Printer = struct
        k : (Id.cid_prog * Loc.t), v : (Syntax.Int.Comp.typ * Annotated.Comp.exp_chk) 
      *)
     let recToLatex (cidProg, loc) (tau, e_ann) =
+      print_string "[Latex Rec] recToLatex called\n";
     	fprintf outMain "%s\n\n%s\n\n" (theoremToLatex tau cidProg) (proofToLatex e_ann cidProg);
-      fprintf outMaccros "%s\n\n" (cidProgToMaccro cidProg)
+      fprintf outMaccros "%s\n\n" (cidProgToMaccro cidProg);
+      print_string "[Latex Rec] recToLatex returned\n";
    	in 
-    (* debugging *)
-    printf "number of elem in recTypes : %d\n" (Hashtbl.length recTypes);
-    (*************)
+    printf "[Latex Rec] # elem in annotatedProofs : %d\n" (Hashtbl.length annotatedProofs);
+    printf "[Latex Rec] # functions in Store : %d\n" 
+      (List.length !(DynArray.get Store.Cid.Comp.entry_list !(Store.Modules.current)));
+    printf "[Latex Rec] # elem in recTypes : %d\n" (Hashtbl.length recTypes);
    	Hashtbl.iter recToLatex recTypes;
    	close_out outMaccros;
     close_out outMain

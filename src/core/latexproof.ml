@@ -62,7 +62,7 @@ module LaTeX = struct
 
 
 
-    (*let Syntax.Int.LF.Const c = h in
+  (*let Syntax.Int.LF.Const c = h in
     let name = Id.render_name_latex (Store.Cid.Term.get ~fixName:true c).Store.Cid.Term.name in
       Id.cleanup_name_latex name*)
 
@@ -122,7 +122,8 @@ module LaTeX = struct
      X63 -> X1 
      our recursive retrieve_name gives us back N for X63 
    *)
-  let rec add_bindings cD cD1' msub table = match msub with
+  let rec add_bindings cD cD1' msub table = 
+    match msub with
     | Syntax.Int.LF.MShift _ -> ()
     (*| Syntax.Int.LF.MDot (Syntax.Int.LF.MV u, msub') ->
        let key_name = Context.getNameMCtx cD1' u in
@@ -138,7 +139,70 @@ module LaTeX = struct
              add_bindings cD' cD1' msub' table)*)
     | Syntax.Int.LF.MDot (Syntax.Int.LF.ClObj (phat, tM), msub') ->
        (*let cPsi = phatToDCtx phat in*)
-       let Syntax.Int.LF.MObj m = tM in
+
+       (match tM with 
+         | Syntax.Int.LF.MObj m ->
+            (*print_string "[Add Binding] normal\n";*)
+            let Syntax.Int.LF.Root (_, h, _) = m in
+              (match h with
+                (* mfront is a meta variable *)
+                | Syntax.Int.LF.MVar (c, s) ->
+                   (* the s might be useful for some proofs *)
+                   let Syntax.Int.LF.Offset u = c in
+                   let key_name = Context.getNameMCtx cD1' u in
+                   let Syntax.Int.LF.Dec (cD', ctyp_decl) = cD in
+                   (match ctyp_decl with
+                      | Syntax.Int.LF.Decl (n, _, _) ->
+                         let value_name = n in
+                         (* only add binding if key_name is not the same as value_name *)
+                         if key_name = value_name 
+                           then add_bindings cD' cD1' msub' table
+                         else 
+                           Hashtbl.add table key_name value_name;
+                           add_bindings cD' cD1' msub' table
+                      | Syntax.Int.LF.DeclOpt n ->
+                         let value_name = n in
+                         Hashtbl.add table key_name value_name;
+                         add_bindings cD' cD1' msub' table)
+                (* mfront is not a meta variable, do nothing *)
+                | _ -> 
+                   let Syntax.Int.LF.Dec (cD', _) = cD in
+                   add_bindings cD' cD1' msub' table)
+         | Syntax.Int.LF.PObj h -> 
+            print_string "[Add Binding] head\n";
+            (* don't know how to handle -> copy paste of case above with head *)
+            (match h with
+                (* mfront is a meta variable *)
+                | Syntax.Int.LF.MVar (c, s) ->
+                   (* the s might be useful for some proofs *)
+                   let Syntax.Int.LF.Offset u = c in
+                   let key_name = Context.getNameMCtx cD1' u in
+                   let Syntax.Int.LF.Dec (cD', ctyp_decl) = cD in
+                   (match ctyp_decl with
+                      | Syntax.Int.LF.Decl (n, _, _) ->
+                         let value_name = n in
+                         (* only add binding if key_name is not the same as value_name *)
+                         if key_name = value_name 
+                           then add_bindings cD' cD1' msub' table
+                         else 
+                           Hashtbl.add table key_name value_name;
+                           add_bindings cD' cD1' msub' table
+                      | Syntax.Int.LF.DeclOpt n ->
+                         let value_name = n in
+                         Hashtbl.add table key_name value_name;
+                         add_bindings cD' cD1' msub' table)
+                (* mfront is not a meta variable, do nothing *)
+                | _ -> 
+                   let Syntax.Int.LF.Dec (cD', _) = cD in
+                   add_bindings cD' cD1' msub' table)
+         | Syntax.Int.LF.SObj sub -> 
+            print_string "[Add Binding] sub\n";
+            (* don't know how to handle -> skip *)
+            let Syntax.Int.LF.Dec (cD', _) = cD in
+            add_bindings cD' cD1' msub' table
+        )
+
+       (*let Syntax.Int.LF.MObj m = tM in
        (*let Syntax.Int.LF.Root (_, h, Syntax.Int.LF.Nil) = m in*)
        let Syntax.Int.LF.Root (_, h, _) = m in
        (match h with
@@ -164,7 +228,10 @@ module LaTeX = struct
           (* mfront is not a meta variable, do nothing *)
           | _ -> 
              let Syntax.Int.LF.Dec (cD', _) = cD in
-             add_bindings cD' cD1' msub' table)
+             add_bindings cD' cD1' msub' table)*)
+
+
+
     (* mfront is not a meta variable, do nothing *)
     | Syntax.Int.LF.MDot (_, msub') ->
        let Syntax.Int.LF.Dec (cD', _) = cD in
@@ -250,7 +317,7 @@ module LaTeX = struct
         in
         let parse_metaObj ?table cD (loc, mO) conclusion = match mO with
           | LF.ClObj (phat, tM) ->
-	     print_string ("[Fun] " ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
+	     print_string ("[Case] " ^ P.psiHatToString cD (phatToDCtx phat) ^ "\n");
              let cPsi = phatToDCtx phat in
              parse_clobj ?table cD cPsi tM conclusion
 
@@ -637,7 +704,7 @@ let printLines l =
   printLines' l ""
 
 let parse e cidProg =
-  print_string ("[LatexProof] Parse called");
+  print_string ("[LatexProof] Parse called\n");
   let entry = Store.Cid.Comp.get cidProg in
   let name = entry.Store.Cid.Comp.name in
   (* initial cG : declaration containing function name *)

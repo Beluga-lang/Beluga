@@ -403,23 +403,25 @@ end
 
 
 let runLatex mainFile =
-  let mainFile =
-    (fun n -> String.sub n 0 (String.rindex n '.'))
-      mainFile
-  in
-  (*let fname =
-    (fun n -> String.sub n ((String.rindex n '/' + 1))
-			 ((String.length n) - (String.rindex n '/' + 1)))
-      mainFile
-  in
-  printf "%s\n" mainFile;
-  printf "%s\n" fname;*)
-    (*let outMaccrosName = fname ^ "_macros.tex" in*)
-    let outMaccrosName = mainFile ^ "_macros.tex" in
+    let mainFile = 
+      (fun n -> String.sub n 0 (String.rindex n '.'))
+        mainFile
+    in
+    let fname = 
+      (fun file -> 
+        try 
+          (fun n -> String.sub n ((String.rindex n '/' + 1))
+            ((String.length n) - (String.rindex n '/' + 1)))
+          file
+        with
+          | _ -> file)
+        mainFile
+    in
+    let outMaccrosName = fname ^ "_macros.tex" in
     let outMaccros = open_out outMaccrosName in
-    (*let outMainName = fname ^ ".tex" in*)
-    let outMainName = mainFile ^ ".tex" in
+    let outMainName = fname ^ ".tex" in
     let outMain = open_out outMainName in
+
     (* preamble of maccros file *)
     fprintf outMaccros "\\input{prelude}\n\n";
     (* hardcoded binding and block maccros *)
@@ -428,8 +430,7 @@ let runLatex mainFile =
     fprintf outMaccros "\\newcommand{\\block}[1]{\\mathsf{block}~(#1)}\n";
     close_out outMaccros;
     (* preamble of main file *)
-    (*fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") fname;*)
-    fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") mainFile;
+    fprintf outMain ("\\documentclass{article}\n\n\\input{%s_macros}\n\n\\begin{document}\n\n") fname;
     close_out outMain;
 
     (* LaTex printing *)

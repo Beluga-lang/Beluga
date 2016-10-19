@@ -118,8 +118,8 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
 ;
 
 % Equality predicate
-equal: tp -> tp -> type.
-e_ref: equal T T.
+% equal: tp -> tp -> type.
+% e_ref: equal T T.
 
 rec unique3 : (g:tctx) [g |- type_of E T[]] -> [g |- type_of E T'[]]
              ->  [ |- equal T T'] =

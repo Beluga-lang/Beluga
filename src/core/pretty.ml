@@ -1503,7 +1503,6 @@ module Int = struct
                 (fmt_ppr_lf_dctx cD lvl) cPsi
                 (fmt_ppr_lf_typ_latex ?table cD cPsi lvl) tA)
 
-
       | LF.ClTyp (LF.PTyp tA, cPsi) ->
           fprintf ppf "\\#[%a \\entails %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
@@ -1514,12 +1513,22 @@ module Int = struct
             (fmt_ppr_lf_dctx cD lvl) cPsi
       (match cl with LF.Ren -> "\\#" | LF.Subst -> "")
             (fmt_ppr_lf_dctx cD lvl) cPhi
-      | LF.CTyp (Some schemaName) ->
+      (*| LF.CTyp (Some schemaName) ->
+          print_string "[Pretty] fmt_ppr_lf_mtyp'_latex schema case\n";
           fprintf ppf "%a"
-            (fmt_ppr_lf_schema_latex lvl) (Store.Cid.Schema.get_schema schemaName)
+            (fmt_ppr_lf_schema_latex lvl) (Store.Cid.Schema.get_schema schemaName)*)
+      | LF.CTyp (Some schemaName) ->
+          print_string "[Pretty] fmt_ppr_lf_mtyp'_latex schema case\n";
+          (try 
+            fprintf ppf "%a"
+              (fmt_ppr_lf_schema_latex lvl) (Store.Cid.Schema.get_schema schemaName)
+          with 
+            _ -> fprintf ppf "schemaNotInStore")
       | LF.CTyp None -> fprintf ppf "CTX"
 
-    and fmt_ppr_lf_mtyp_latex cD ppf = fmt_ppr_lf_mtyp'_latex cD 0 ppf
+    and fmt_ppr_lf_mtyp_latex cD ppf =
+      print_string "[Pretty] fmt_ppr_lf_mtyp_latex called\n";
+      fmt_ppr_lf_mtyp'_latex cD 0 ppf
     (**********************************************************************************************************)
 
 
@@ -1554,9 +1563,8 @@ module Int = struct
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else Id.render_name_latex u)
             (fmt_ppr_lf_mtyp_latex cD) mtyp
-            (if !Control.printImplicit then
-         dependent_string dep
-       else inductive_string dep) end
+            (if !Control.printImplicit then dependent_string dep else inductive_string dep)
+          end
             
 
       | LF.DeclOpt name ->

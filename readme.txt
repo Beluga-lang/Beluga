@@ -26,11 +26,24 @@ Beluga/examples/unique/unique-crec.bel  (source file also contains 1 lemma witho
 We have 4 elem in annotatedProofs, 4 in the Store and 4 in recTypes, the conversion goes well.
 
 From there, we hit a : DynArray.Invalid_arg error. Once again, if you run the code with +latex flag, all gets printed.
-
 This is a problem with the theorem statements of the theorems with context like :
-rec unique : {g:tctx} {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]] ->  [ |- eq T T'] =
+"rec unique : {g:tctx} {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]] ->  [ |- eq T T'] ="
 
-To print a theorem, we need to print the for alls, the assumptions and the conclusion : all this is done using functions in LatexInductive.
-The problem occurs when printing the for alls in Pretty.cdeclToLatex. 
+To print a theorem, we need to print the for alls, the assumptions and the conclusion : all this is done using functions in LatexInductive. The problem occurs when printing the for alls in Pretty.cdeclToLatex. 
+UPDATE :
+The problem occurred when printing "for all g:tctx" (corresponding to {g:tctx}) : the schema tctx is not in store at the moment we want to print it. I fixed this problem with a try with statement for the moment.
+
+
+Now we get all the way to a Latex output for Beluga/examples/unique/unique-crec.bel !
+The Latex does not compile yet but it is promising.
+The problem is I don't really know how the proof should look like on paper in order to improve the Latex generation.
+
+
+
+
+
+
+
+
 
 

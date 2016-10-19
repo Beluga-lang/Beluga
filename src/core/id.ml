@@ -168,6 +168,7 @@ let string_of_name_latex ?(var=false) ?(mathcal=false) (n : name) : string =
        let name = Str.global_replace (Str.regexp "#") "" name in
         (name ^ suf)
 
-let render_name_latex ?var ?mathcal n = match n.modules with
+let render_name_latex ?var ?mathcal n = 
+  match n.modules with
     | [] -> string_of_name_latex ?var ?mathcal n
     | l  -> (String.concat "." l) ^ "." ^ (string_of_name_latex ?var ?mathcal n)

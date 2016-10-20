@@ -1,0 +1,119 @@
+%coverage
+
+% ------------------------
+% Terms
+% ------------------------
+
+% Ordinary variables, represented by an empty datatype
+LF var : type =
+;
+
+% Constants in the language, can be arbitrarily expanded to include, for example, natural numbers
+LF cst : type =
+;
+
+LF head : type =
+   | hd_cst : cst -> head
+   | hd_var : var -> head
+
+and spine : type =
+   | sp_empty : spine
+   | sp_unr : canon -> spine -> spine
+   | sp_lin : canon -> spine -> spine
+
+and atom : type =
+   | atom_base : head -> spine -> atom
+
+
+and canon : type =
+   | c_atom : atom -> canon
+   | lam : (var -> canon) -> canon
+   | llam : (var -> canon) -> canon
+;
+
+% Schema we use throughout our proofs, context of vars
+schema sch = var;
+
+% -------------------------------------
+% Types
+
+LF tp : type =
+   | pi : tp -> (var -> tp) -> tp
+   | limp : tp -> tp -> tp
+   | atp_canon : atp -> tp
+
+% Types of constants we could add, e.g.: Nat			    
+and cst_tp : type =
+
+and atp : type =
+    | atom_tp : cst_tp -> spine -> atp
+;
+
+% -------------
+% Kinds
+% -------------
+LF kind : type =
+   | tp_kind : kind
+   | pi_kind : var -> tp -> kind
+;
+
+% -----------------------
+% Sigma (Constant signature)
+% -----------------------
+
+LF sig : type =
+| empty_sig : sig
+| snoc_sig  : sig -> cst -> tp -> sig
+;
+
+% ------------------------
+% Contexts
+% ------------------------
+
+% We explicitly define the set I as binary numbers, where a leaf is a bit containing a single bit that is one, and the join is an OR that fails if both context binaries have a one at the same position.
+
+LF bit : type =
+   | zero : bit
+   | one : bit
+;
+
+LF bin : type =
+   | nil : bin
+   | cons : bit -> bin -> bin
+;
+
+% Flags for variable declaration (Linear, Unrestricted and Unavailable)
+
+LF flag : type =
+   | lin : flag
+   | unr : flag
+   | unav : flag
+;
+
+% Variable declaration, containing the variable, its type and its flag
+
+LF vdecl : type =
+   | decl : var -> tp -> flag -> vdecl
+;
+
+% Context variable, indexed by a binary number
+
+LF ctx_var : type =
+   | cvar : bin -> ctx_var
+;
+
+% Contexts (Empty, linear cvar, unrestricted cvar, adding a variable)
+
+LF ctx : type =
+   | c_empty : ctx
+   | varctx : ctx_var -> ctx
+   | snoc : ctx -> vdecl -> ctx
+;
+
+% Context Join
+
+% Psi = Psi1 join Psi2
+% join Psi Psi1 Psi2
+LF join : type =
+   | cjoin : ctx -> ctx -> ctx -> join
+;

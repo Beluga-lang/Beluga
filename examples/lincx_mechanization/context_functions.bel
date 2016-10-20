@@ -1,0 +1,173 @@
+% Psi = Phi, Gamma
+% ctx_mer Phi Gamma Psi
+
+LF ctx_mer : ctx -> ctx -> ctx -> type = 
+   | m_empty : ctx_mer Psi1 c_empty Psi1
+   | m_cons : ctx_mer Psi1 Psi2 Psi3 -> ctx_mer Psi1 (snoc Psi2 V) (snoc Psi3 V)
+;
+
+%         _
+% G_unr = G      (G bar)
+% unrest_ctx G G_unr
+
+LF unrest_ctx : ctx -> ctx -> type =
+   | unrest_base_var   : unrest_ctx (varctx Psi) (varctx (cvar nil))
+   | unrest_base_e   : unrest_ctx (c_empty) (c_empty)
+   | unrest_l        : unrest_ctx G1 G2 -> unrest_ctx (snoc G1 (decl x A lin)) (snoc G2 (decl x A unav))
+   | unrest_unr      : unrest_ctx G1 G2 -> unrest_ctx (snoc G1 (decl x A unr)) (snoc G2 (decl x A unr))
+   | unrest_unav     : unrest_ctx G1 G2 -> unrest_ctx (snoc G1 (decl x A unav)) (snoc G2 (decl x A unav))
+;
+
+% c : A \in Sigma
+% cst_in c A Sigma
+
+LF cst_in : cst -> tp -> sig -> type = 
+   | cst_in_found : cst_in C A (snoc_sig S C A)
+   | cst_in_snoc : cst_in C A S -> cst_in C A (snoc_sig S C0 A0)
+;
+
+% unr(Psi)
+% is_unr Psi
+
+LF is_unr : ctx -> type =
+   | is_unr_b : is_unr (varctx (cvar nil))
+   | is_unr_e : is_unr c_empty
+   | is_unr_cons : is_unr G -> is_unr (snoc G (decl x T unr))
+   | is_unr_unav_cons : is_unr G -> is_unr (snoc G (decl x T unav))
+;
+
+% bin equality
+% B1 = B2
+% eq B1 B2
+
+LF eq : bin -> bin -> type =
+   | bin_refl : eq K K
+;
+
+% For all binary B, B = B
+
+rec helper_eqeq2 : {K : [|- bin]} [|- eq K K] = mlam K => [|- bin_refl] ;
+
+% Context equality
+
+LF ctx_eq : ctx -> ctx -> type = 
+   | refl : ctx_eq C C
+;
+
+rec ctx_eq_join : (g:sch) [g |- ctx_eq Psi Phi] -> [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- joining (cjoin Phi Psi1 Psi2)] = 
+    fn d => fn e =>
+    case d of
+    | [g |- refl] => e
+ ;
+
+% Unrestrictedness is preserved when two contexts are equal
+% Psi = Phi, unr(Psi) => unr(Phi)
+
+rec ctx_eq_unr : (g:sch) [g |- ctx_eq Psi Phi] -> [g |- is_unr Psi] -> [g |- is_unr Phi] = 
+    fn d => fn e => 
+    case d of
+    | [g |- refl] => e
+;
+
+%                      ___              ___
+% Psi = Phi, Psi_unr = Psi => Psi_unr = Phi
+
+rec ctx_eq_unrest : (g:sch) [g |- ctx_eq Psi Phi] -> [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Phi Psi_unr] =
+   fn d => fn e => 
+   case d of 
+   | [g |- refl] => e
+;
+
+%     ___
+% unr(Psi) holds
+
+rec ctx_unrest_unr : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- is_unr Psi_unr] = 
+    fn d => 
+    case d of 
+    | [g |- unrest_base_var] => [g |- is_unr_b]
+    | [g |- unrest_base_e] => [g |- is_unr_e]
+    | [g |- unrest_l D] => let [g |- F] = ctx_unrest_unr [g |- D] in [g |- is_unr_unav_cons F]
+    | [g |- unrest_unav D] => let [g |- F] = ctx_unrest_unr [g |- D] in [g |- is_unr_unav_cons F]
+    | [g |- unrest_unr D] => let [g |- F] = ctx_unrest_unr [g |- D] in [g |- is_unr_cons F]
+;
+
+%                   ___
+% unr(Psi) => Psi = Psi
+
+rec ctx_unr_unrest : (g:sch) [g |- is_unr Psi] -> [g |- unrest_ctx Psi Psi] = 
+    fn d =>
+    case d of
+    | [g |- is_unr_b] => [g |- unrest_base_var]
+    | [g |- is_unr_e] => [g |- unrest_base_e]
+    | [g |- is_unr_cons D] => let [g |- F] = ctx_unr_unrest [g |- D] in 
+			    [g |- unrest_unr F]
+    | [g |- is_unr_unav_cons D] => let [g |- F] = ctx_unr_unrest [g |- D] in 
+			    [g |- unrest_unav F]
+;
+
+% unr(Phi1), unr(Gamma), Phi = Phi1, Gamma => unr(Phi)
+
+rec is_unr_mer : (g:sch) [g |- is_unr Phi] -> [g |- is_unr Gam] -> [g |- ctx_mer Phi Gam Psi] -> [g |- is_unr Psi] = 
+    fn d => fn e => fn f =>
+    case f of 
+    | [g |- m_empty] => d
+    | [g |- m_cons F] =>
+      (case e of
+       | [g |- is_unr_cons E] => let [g |- G] = is_unr_mer d [g |- E] [g |- F] in 
+			       [g |- is_unr_cons G]
+       | [g |- is_unr_unav_cons E] => let [g |- G] = is_unr_mer d [g |- E] [g |- F] in 
+			       [g |- is_unr_unav_cons G]
+      ) 
+;
+
+% ===   ___
+% Psi = Psi
+
+rec unrest_repeat : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Psi_unr Psi_unr] = 
+    fn d => 
+    case d of
+    | [g |- unrest_base_var] => [g |- unrest_base_var] 
+    | [g |- unrest_base_e] => [g |- unrest_base_e]
+    | [g |- unrest_l D] => let [g |- F] = unrest_repeat [g |- D] in [g |- unrest_unav F]
+    | [g |- unrest_unav D] => let [g |- F] = unrest_repeat [g |- D] in [g |- unrest_unav F]
+    | [g |- unrest_unr D] => let [g |- F] = unrest_repeat [g |- D] in [g |- unrest_unr F]
+;
+
+% existence of the unrestricted version of a context
+
+LF int_unrest_ex : ctx -> type = 
+   | int_unr : unrest_ctx Psi Psi_unr -> int_unrest_ex Psi
+;
+
+rec ue_helper1 : {CV : [|- ctx_var]} [|- unrest_ctx (varctx CV) (varctx (cvar nil))] =
+    mlam CV => 
+    [|- unrest_base_var]
+;
+
+rec ue_helper2 : {CV : [|- ctx_var]} [|- unrest_ctx (varctx (cvar nil)) (varctx (cvar nil))] = 
+    mlam CV => 
+    [|- unrest_base_var]
+;
+
+%                                                  ___
+% For all Psi, there exists Psi_unr s.t. Psi_unr = Psi
+
+rec unrest_exist : (g:sch) {Psi : [g |- ctx]} [g |- int_unrest_ex Psi] = 
+    mlam Psi => 
+    case [_ |- Psi] of
+    | [g |- c_empty] => [g |- int_unr unrest_base_e]
+    | [g |- varctx CV[]] =>
+      let [|- D] = ue_helper1 [|- CV] in
+      [g |- int_unr D[]]
+    | [g |- varctx (cvar nil)] => 
+      [g |- int_unr unrest_base_var]
+    | [g |- snoc C VD] => 
+      let [g |- decl X A F] = [g |- VD] in
+      let [g |- int_unr D] = unrest_exist [g |- C] in
+      (case [g |- F] of 
+       | [g |- lin] => [g |- int_unr (unrest_l D)]
+       | [g |- unr] => [g |- int_unr (unrest_unr D)]
+       | [g |- unav] => [g |- int_unr (unrest_unav D)]
+      )
+;
+

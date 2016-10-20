@@ -1,0 +1,30 @@
+% -------------------------------------
+% Context Joins
+% -------------------------------------
+
+% Binary join
+% Binary OR which fails if both sides have a positive bit at the same position
+
+% B = B1 join B2
+% bin_join B1 B2 B
+LF bin_join : bin -> bin -> bin -> type =
+   | bin_join_nil_l : bin_join nil M M
+   | bin_join_nil_r : bin_join M nil M
+   | bin_join_l : bin_join M N K -> bin_join (cons one M) (cons zero N) (cons one K)
+   | bin_join_r : bin_join M N K -> bin_join (cons zero M) (cons one N) (cons one K)
+   | bin_join_zero : bin_join M N K -> bin_join (cons zero M) (cons zero N) (cons zero K)
+;
+
+% Checking a join is valid.
+% The join of linear context variables is based on the binary join.
+
+% Psi = Psi1 join Psi2
+% joining (cjoin Psi Psi1 Psi2)
+LF joining : join -> type =
+   | joining_base : bin_join M N K -> joining (cjoin (varctx (cvar K)) (varctx (cvar M)) (varctx (cvar N)))
+   | joining_empty : joining (cjoin c_empty c_empty c_empty)
+   | joining_lin_l : joining (cjoin Psi Psi_1 Psi_2) -> joining (cjoin (snoc Psi (decl x A lin)) (snoc Psi_1 (decl x A lin)) (snoc Psi_2 (decl x A unav)))
+   | joining_lin_r : joining (cjoin Psi Psi_1 Psi_2) -> joining (cjoin (snoc Psi (decl x A lin)) (snoc Psi_1 (decl x A unav)) (snoc Psi_2 (decl x A lin)))
+   | joining_unr        : joining (cjoin Psi Psi_1 Psi_2) -> joining (cjoin (snoc Psi (decl x A unr)) (snoc Psi_1 (decl x A unr)) (snoc Psi_2 (decl x A unr)))
+   | joining_unav       : joining (cjoin Psi Psi_1 Psi_2) -> joining (cjoin (snoc Psi (decl x A unav)) (snoc Psi_1 (decl x A unav)) (snoc Psi_2 (decl x A unav)) )
+;

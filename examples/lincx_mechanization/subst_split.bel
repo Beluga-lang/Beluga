@@ -1,0 +1,111 @@
+% --------------------------------------------
+% Existence of substitution typing in a split
+% --------------------------------------------
+
+
+LF subsplit_h1 : bin_join M N K -> ctx_mer (varctx (cvar K)) Gamma Phi -> type =
+   | ssh5 : ctx_mer (varctx (cvar M)) Gamma Phi1 -> ctx_mer (varctx (cvar N)) Gamma Phi2 -> joining (cjoin Phi Phi1 Phi2) -> subsplit_h1 (Or : bin_join M N K) (Mer : ctx_mer (varctx (cvar K)) Gamma Phi)
+;
+
+rec subst_split_h1 : (g:sch) {Or : [ |- bin_join M N K]} {Mer : [g |- ctx_mer (varctx (cvar K[])) Gamma Psi]} [g |- is_unr Gamma] -> [g |- subsplit_h1 Or[] Mer] =
+    mlam Or => mlam Mer => fn d => case [_ |- Mer] of
+    | [g |- m_empty] => [g |- ssh5 m_empty m_empty (joining_base Or[])]
+    | [g |- m_cons Mer'] =>
+      (case d of
+       | [g |- is_unr_cons D] =>
+	 let [g |- ssh5 F1 F2 F3] = subst_split_h1 [ |- Or] [g |- Mer'] [g |- D] in
+	 [g |- ssh5 (m_cons F1) (m_cons F2) (joining_unr F3)]
+       | [g |- is_unr_unav_cons D] =>
+	 let [g |- ssh5 F1 F2 F3] = subst_split_h1 [ |- Or] [g |- Mer'] [g |- D] in
+	 [g |- ssh5 (m_cons F1) (m_cons F2) (joining_unav F3)]
+
+      )
+;
+
+LF subsplith2 : joining (cjoin Phi Phi1 Phi2) -> type =
+   ssh6 : unrest_ctx Phi1 Phi1_unr -> unrest_ctx Phi2 Phi2_unr -> ctx_eq Phi1_unr Phi2_unr -> subsplith2 (J : joining (cjoin Phi Phi1 Phi2))
+;
+
+rec subst_split_h2 : (g:sch) {J : [g |- joining (cjoin Phi Phi1 Phi2)]} [g |- subsplith2 J] =
+    mlam J => case [_ |- J] of
+    | [g |- joining_empty] => [g |- ssh6 unrest_base_e unrest_base_e refl]
+    | [g |- joining_base J1] => [g |- ssh6 unrest_base_var unrest_base_var refl]
+    | [g |- joining_lin_l J1] =>
+      let [g |- ssh6 F1 F2 refl] = subst_split_h2 [g |- J1] in
+      [g |- ssh6 (unrest_l F1) (unrest_unav F2) refl]
+    | [g |- joining_lin_r J1] =>
+      let [g |- ssh6 F1 F2 refl] = subst_split_h2 [g |- J1] in
+      [g |- ssh6 (unrest_unav F1) (unrest_l F2) refl]
+    | [g |- joining_unr J1] =>
+      let [g |- ssh6 F1 F2 refl] = subst_split_h2 [g |- J1] in
+      [g |- ssh6 (unrest_unr F1) (unrest_unr F2) refl]
+    | [g |- joining_unav J1] =>
+      let [g |- ssh6 F1 F2 refl] = subst_split_h2 [g |- J1] in
+      [g |- ssh6 (unrest_unav F1) (unrest_unav F2) refl]
+;
+
+LF sub_split : joining (cjoin Phii Phi1 Phii2) -> subst_typing sigma Phi Psi -> type =
+   | sub_s : subst_typing sigma Phi1 Psi1 -> subst_typing sigma Phi2 Psi2 -> joining (cjoin Psi Psi1 Psi2) -> sub_split (J1 : joining (cjoin Phi Phi1 Phi2)) (J2 : subst_typing sigma Phi Psi)
+;
+
+% Let Phi = Phi1 join Phi2 and Psi |- Sig <= Phi, then there exists Psi1, Psi2 s.t. Psi1 |- Sig <= Phi1, Psi2 |- Sig <= Phi2 and Psi = Psi1 join Psi2
+
+rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- subst_typing Sig Phi Psi]} [g |- sub_split J S] = 
+    mlam J => mlam S =>
+    let [g |- J] : [g |- joining (cjoin Psi Psi1 Psi2)] = [_ |- J] in
+    let [g |- S] : [g |- subst_typing Sig Psi Phi] = [_ |- S] in
+    case [g|- S] of
+    | [g |- stp_empty S1] =>
+      let [g |- joining_empty] = [g |- J] in
+      let [g |- F3] = lemma1_6d [g |- S1] in
+      [g |- sub_s (stp_empty S1) (stp_empty S1) (F3)]
+    | [g |- stp_base S1 S2] =>
+      let [g |- joining_base J1[]] = [g |- J] in
+      let [g |- ssh5 F1 F2 F3] = subst_split_h1 [ |- J1] [g |- S2] [g |- S1] in
+      [g |- sub_s (stp_base S1 F1) (stp_base S1 F2) (F3)]
+    | [g |- stp_lin S1 S2 S3 S4 S5] => 
+      ( case [g |- J] of               
+	| [g |- joining_lin_l J1] =>
+	  let [g |- sub_s F1 F2 F3] = subst_split [g |- J1] [g |- S3] in
+	  let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
+	  let [g |- UnrPhi2] = is_unr_join_commb [g |- S1] [g |- J1] in
+	  let [g |- refl] = ctxjoinunreq [g |- J1] [g |- S1] [g |- UnrPhi1] in
+	  let [g |- refl] = ctxjoinunreqb [g |- J1] [g |- S1] [g |- UnrPhi2] in
+	  let [g |- adcjoin F _] = ctxjoinasso1 [g |- S2] [g |- F3] in
+	  let [g |- ssh6 F4 F5 F6] = subst_split_h2 [g |- F] in
+	  let [g |- F'] = ctxjoincomm [g |- F3] in
+	  let [g |- adcjoin F7 F''] = ctxjoinasso1 [g |- S2] [g |- F'] in
+	  let [g |- F8] = ctxjoincomm [g |- F''] in
+	  [g |- sub_s (stp_lin UnrPhi1 F7 F1 S4 S5) (stp_unav UnrPhi2 F2 F4 F5 F6 S4 S5) (F8)]
+	| [g |- joining_lin_r J1] =>
+	  let [g |- sub_s F1 F2 F3] = subst_split [g |- J1] [g |- S3] in
+	  let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
+	  let [g |- UnrPhi2] = is_unr_join_commb [g |- S1] [g |- J1] in
+	  let [g |- refl] = ctxjoinunreq [g |- J1] [g |- S1] [g |- UnrPhi1] in
+	  let [g |- refl] = ctxjoinunreqb [g |- J1] [g |- S1] [g |- UnrPhi2] in
+	  let [g |- F'] = ctxjoincomm [g |- F3] in
+	  let [g |- adcjoin F _] = ctxjoinasso1 [g |- S2] [g |- F'] in
+	  let [g |- ssh6 F4 F5 F6] = subst_split_h2 [g |- F] in
+	  let [g |- adcjoin F7 F8] = ctxjoinasso1 [g |- S2] [g |- F3] in
+	  [g |- sub_s (stp_unav UnrPhi1 F1 F4 F5 F6 S4 S5) (stp_lin UnrPhi2 F7 F2 S4 S5) (F8)]
+      )
+    | [g |- stp_unr S1 S2 S3 S4 S5] =>
+      let [g |- joining_unr J1] = [g |- J] in
+      let [g |- sub_s F1 F2 F3] = subst_split [g |- J1] [g |- S2] in
+      let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
+      let [g |- UnrPhi2] = is_unr_join_commb [g |- S1] [g |- J1] in
+      let [g |- UnrPsi1] = is_unr_joinb [g |- S3] [g |- F3] in
+      let [g |- UnrPsi2] = is_unr_join_commb [g |- S3] [g |- F3] in
+      [g |- sub_s (stp_unr UnrPhi1 F1 UnrPsi1 S4 S5) (stp_unr UnrPhi2 F2 UnrPsi2 S4 S5) (F3)]
+    | [g |- stp_unav S1 S2 S3 S4 S5 S6 S7] =>
+      let [g |- joining_unav J1] = [g |- J] in
+      let [g |- sub_s F1 F2 F3] = subst_split [g |- J1] [g |- S2] in
+      let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
+      let [g |- UnrPhi2] = is_unr_join_commb [g |- S1] [g |- J1] in
+      let [g |- UnrPsi1] = is_unr_joinb [g |- S3] [g |- F3] in
+      let [g |- UnrPsi2] = is_unr_join_commb [g |- S3] [g |- F3] in
+      let [g |- S5] : [g |- ctx_eq C C] = [g |- S5] in
+      let [g |- Ceq1] : [g |- ctx_eq C C] = ctxjoinunreq [g |- F3] [g |- S3] [g |- UnrPsi1] in
+      let [g |- Ceq2] : [g |- ctx_eq C C] = ctxjoinunreqb [g |- F3] [g |- S3] [g |- UnrPsi2] in
+      [g |- sub_s (stp_unav UnrPhi1 F1 UnrPsi1 S4 Ceq1 S6 S7) (stp_unav UnrPhi2 F2 UnrPsi2 S4 Ceq2 S6 S7) (F3)]
+;

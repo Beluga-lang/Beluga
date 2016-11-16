@@ -1,0 +1,604 @@
+% -------------------------
+% Lemma 1.1
+
+% B = B1 join B2 => B = B2 join B1
+
+rec bin_join_comm : [|- bin_join M N K] -> [|- bin_join N M K] =
+    fn d => case d of
+    | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+    | [|- bin_join_nil_l] => [|- bin_join_nil_r]
+    | [|- bin_join_l D] => let [|- F] = bin_join_comm [|- D] in [|- bin_join_r F]
+    | [|- bin_join_r D] => let [|- F] = bin_join_comm [|- D] in [|- bin_join_l F]
+    | [|- bin_join_zero D] => let [|- F] = bin_join_comm [|- D] in [|- bin_join_zero F]
+;
+
+% Psi = Psi1 join Psi2 => Psi = Psi2 join Psi1
+
+rec ctxjoincomm : (g:sch)[g |- joining (cjoin Psi1 Psi2 Psi3)] -> [g |- joining (cjoin Psi1 Psi3 Psi2)] = 
+    fn d => case d of
+    | [g |- joining_base D1[]] => let [|- F1] = bin_join_comm [|- D1] in
+				 [g |- joining_base F1[]]
+    | [g |- joining_empty] => [g |- joining_empty]
+    | [g |- joining_lin_l D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_lin_r F]
+    | [g |- joining_lin_r D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_lin_l F]
+    | [g |- joining_unr D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_unr F]
+    | [g |- joining_unav D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_unav F]
+;
+
+% -------------------------
+% Lemma 1.2
+
+% Datatype containing two joins at once
+
+LF double_joining : joining J1 -> joining J2 -> type =
+  | dcjoin : joining J1 -> joining J2 -> double_joining (JG1 : joining J1) (JG2 : joining J2)
+;
+
+% Determines the existence of a join between two leaves
+
+LF ex_and : bin_join M N K -> bin_join L R M -> type = 
+  | ex_a_n : bin_join M N K -> bin_join L R M -> bin_join R N F -> ex_and (A1 : bin_join M N K) (A2 : bin_join L R M)
+; 
+
+% B = B1 join B2, B1 = B11 join B12 => there exists B' s.t. B' =  B12 join B2
+
+rec exist_and : {A1 : [|- bin_join M N K]} {A2 : [|- bin_join L R M]} [|- ex_and A1 A2] = 
+   mlam A1 => mlam A2 => case [|- A1] of
+   | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_r]
+   | [|- bin_join_nil_l] =>
+     (case [|- A2] of
+      | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 bin_join_nil_l]
+      | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
+     )
+   | [|- bin_join_l D] =>
+     (case [|- A2] of
+      | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
+      | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
+      | [|- bin_join_l E] =>
+	let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in 
+	let [|- F] = [|- bin_join_zero A3] in
+	[|- ex_a_n A1 A2 F]
+      | [|- bin_join_r E] =>
+	let [|- ex_a_n D E A3] = exist_and [|- D] [|- E] in
+	[|- ex_a_n A1 A2 (bin_join_l A3)]
+     )
+   | [|- bin_join_r D] =>
+     (case [|- A2] of
+      | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
+      | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
+      | [|- bin_join_zero E] =>
+	let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
+				 [|- ex_a_n A1 A2 (bin_join_r A3)]
+     )
+   | [|- bin_join_zero D] =>
+     (case [|- A2] of
+      | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
+      | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
+      | [|- bin_join_zero E] => let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
+			       [|- ex_a_n A1 A2 (bin_join_zero A3)]
+     )
+;
+
+% Helper datatype, denotes that an intermediate node exists, denoted as desired for associativity.
+
+LF ex_node : joining (cjoin Psi Psi1 Psi2) -> joining (cjoin Psi1 Psi11 Psi12) -> type =
+  | ex_n : joining (cjoin Psi0 Psi12 Psi2) -> ex_node (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
+; 
+
+% Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi' s.t. Psi' = Psi12 join Psi2
+
+rec lemma1_2a : (g:sch) { J1 : [g |- (joining (cjoin Psi Psi1 Psi2))] } { J2 : [g |- (joining (cjoin Psi1 Psi11 Psi12))] } [g |- ex_node J1 J2] = 
+    mlam J1 => mlam J2 => 
+    case [_ |- J1] of
+    | [g |- joining_base D1[]] =>
+      (case [g |- J2] of
+       | [g |- joining_base E1[]] =>
+	 let [|- ex_a_n A1 A2 F1] = exist_and [|- D1] [|- E1] in
+	 [g |- ex_n (joining_base F1[])]
+      )
+    | [g |- joining_empty] =>
+      (case [g |- J2] of
+       | [g |- joining_empty] => [g |- ex_n joining_empty]
+      )
+    | [g |- joining_lin_l D] =>
+      (case [g |- J2] of
+       | [g |- joining_lin_l E] =>
+	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
+	 [g |- ex_n (joining_unav F)]
+       | [g |- joining_lin_r E] =>
+	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in 
+	 [g |- ex_n (joining_lin_l F)]
+      )
+    | [g |- joining_lin_r D] =>
+      (case [g |- J2] of
+       | [g |- joining_unav E] =>
+	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
+	 [g |- ex_n (joining_lin_r F)]
+      )
+    | [g |- joining_unr D] =>
+      (case [g |- J2] of
+       | [g |- joining_unr E] =>
+	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in 
+	 [g |- ex_n (joining_unr F)]
+      )
+    | [g |- joining_unav D] =>
+      (case [g |- J2] of
+       | [g |- joining_unav E] => let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
+				 [g |- ex_n (joining_unav F)]
+      )
+;
+
+% helper lemma that shows that every binary join is unique 
+
+rec helper1_2b : [|- bin_join M N K1] -> [|- bin_join M N K2] -> [|- eq K1 K2] =
+    fn d => fn e => 
+    let [|- _] : [|- bin_join M N K1] = d in
+    let [|- _] : [|- bin_join M N K2] = e in  
+    case d of
+    | [|- bin_join_nil_l] => 
+      (case e of
+       | [|- bin_join_nil_l] => [|- bin_refl]
+       | [|- bin_join_nil_r] => [|- bin_refl]
+      )
+    | [|- bin_join_nil_r] => 
+      (case e of
+       | [|- bin_join_nil_r] => [|- bin_refl]
+       | [|- bin_join_nil_l] => [|- bin_refl]
+      )
+    | [|- bin_join_l D] => 
+      (case e of
+       | [|- bin_join_l E] => let [|- bin_refl] = helper1_2b [|- D] [|- E] in [|- bin_refl]
+      )
+    | [|- bin_join_r D] => 
+      (case e of
+       | [|- bin_join_r E] => let [|- bin_refl] = helper1_2b [|- D] [|- E] in [|- bin_refl]
+      )
+    | [|- bin_join_zero D] => 
+      (case e of
+       | [|- bin_join_zero E] => let [|- bin_refl] = helper1_2b [|- D] [|- E] in [|- bin_refl]
+      )
+;
+
+% helper lemma that shows that if nil = m join n, m = nil
+
+rec bin_join_eqnil : [|- bin_join M N nil] -> [|- eq M nil] = 
+    fn d => 
+    case d of
+    | [|- bin_join_nil_l] => [|- bin_refl]
+    | [|- bin_join_nil_r] => [|- bin_refl]
+;
+
+rec bin_join_assoc : [|- bin_join M1 M2 K] -> [|- bin_join M11 M12 M1] -> [|- bin_join M12 M2 M0] -> [|- bin_join M11 M0 K] =
+    fn d => fn e => fn f => 
+    case d of
+    | [|- bin_join_nil_r] => 
+      (case e of
+       | [|- bin_join_zero E] =>
+	 (case f of
+	  | [|- bin_join_nil_r] => e
+	 )
+       | [|- bin_join_r E] =>
+	 (case f of
+	  | [|- bin_join_nil_r] => e
+	 )
+       | [|- bin_join_l E] =>
+	 (case f of
+	  | [|- bin_join_nil_r] => e
+	 )
+       | [|- bin_join_nil_l] => 
+	 (case f of
+	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+	 )
+       | [|- bin_join_nil_r] =>
+	 (case f of
+	  | [|- bin_join_nil_r] => [|- bin_join_nil_r]
+	  | [|- bin_join_nil_l] => [|- bin_join_nil_r]
+	 )
+      )
+    | [|- bin_join_nil_l] => 
+      (case e of
+       | [|- bin_join_nil_l] => 
+	 (case f of
+	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+	 )
+       | [|- bin_join_nil_r] =>
+	 (case f of
+	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+	 )
+      )
+    | [|- bin_join_l D] => 
+      (case e of
+       | [|- bin_join_nil_l] =>
+	 (case f of
+	  | [|- bin_join_l F] => 
+	    let [|- bin_refl] = helper1_2b d f in
+	    [|- bin_join_nil_l]
+	 )
+       | [|- bin_join_nil_r] =>
+	 (case f of
+	  | [|- bin_join_nil_l] => d
+	 )
+       | [|- bin_join_l E] => 
+	 (case f of
+	  | [|- bin_join_zero F] => 
+	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+	    [|- bin_join_l F0]
+	 )
+       | [|- bin_join_r E] => 
+	 (case f of
+	  | [|- bin_join_l F] => 
+	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+	    [|- bin_join_r F0]
+	 )
+      )
+    | [|- bin_join_r D] => 
+      (case e of
+       | [|- bin_join_nil_l] => 
+	 (case f of
+	  | [|- bin_join_r F] => 
+	    let [|- bin_refl] = helper1_2b d f in
+	    [|- bin_join_nil_l]
+	 )
+       | [|- bin_join_nil_r] =>
+	 (case f of
+	  | [|- bin_join_nil_l] => d
+	 )
+       | [|- bin_join_zero E] => 
+	 (case f of
+	  | [|- bin_join_r F] => 
+	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+	    [|- bin_join_r F0]
+	 )
+      )
+    | [|- bin_join_zero D] => 
+      (case e of
+       | [|- bin_join_nil_l] =>
+	 (case f of
+	  | [|- bin_join_zero F] =>
+	    let [|- bin_refl] = helper1_2b d f in
+	    [|- bin_join_nil_l]
+	 )
+       | [|- bin_join_nil_r] =>
+	 (case f of
+	  | [|- bin_join_nil_l] => d
+	 )
+       | [|- bin_join_zero E] => 
+	 (case f of
+	  | [|- bin_join_zero F] => 
+	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+	    [|- bin_join_zero F0]
+	 )
+      )
+;
+
+% Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12, Psi0 = Psi12 join Psi2 => Psi = Psi11 join Psi0
+%
+
+rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2) ]
+		-> [g |- joining (cjoin Psi1 Psi11 Psi12) ]
+		-> [g |- joining (cjoin Psi0 Psi12 Psi2)]
+		-> [g |- joining (cjoin Psi Psi11 Psi0)]  =
+    fn j1 => fn j2 => fn j3 => case j1 of
+    | [g |- joining_base D1[]] =>
+      (case j2 of
+       | [g |- joining_base E1[]] =>
+	 (case j3 of
+	  | [g |- joining_base G1[]] =>
+	    let [|- F1] = bin_join_assoc [|- D1] [|- E1] [|- G1] in
+	    [g |- joining_base F1[]]
+	 )
+      )
+    | [g |- joining_empty] =>
+      (case j2 of
+       | [g |- joining_empty] =>
+	 (case j3 of | [g |- joining_empty] =>
+		       [g |- joining_empty]
+	 )
+      )
+    | [g |- joining_lin_l D1] =>
+      (case j2 of
+       | [g |- joining_lin_l D2] =>
+	 (case j3 of
+	  | [g |- joining_unav E] =>
+	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
+	    [g |- joining_lin_l F]
+	 )
+       | [g |- joining_lin_r D2] =>
+	 (case j3 of
+	  | [g |- joining_lin_l E] =>
+	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
+	    [g |- joining_lin_r F]
+	 )
+      )
+    | [g |- joining_lin_r D1] =>
+      (case j2 of
+       | [g |- joining_unav E] =>
+	 (case j3 of
+	  | [g |- joining_lin_r D2] =>
+	    let [g |- F] = lemma1_2b [g |- D1] [g |- E] [g |- D2] in
+	    [g |- joining_lin_r F]
+	 ) 
+      )
+    | [g |- joining_unr D1] =>
+      (case j2 of
+       | [g |- joining_unr D2] =>
+	 (case j3 of
+	  | [g |- joining_unr D3] =>
+	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
+	    [g |- joining_unr F]
+	 )
+      )
+    | [g |- joining_unav D1] =>
+      (case j2 of
+       | [g |- joining_unav D2] =>
+	 (case j3 of
+	  | [g |- joining_unav D3] =>
+	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
+	    [g |- joining_unav F]
+	 )
+      )
+;
+
+% Datatype containing two joins at once
+
+LF assoc_double_joining : joining J1 -> joining J2 -> type =
+   | adcjoin : joining (cjoin Psi0 Psi12 Psi2) -> joining (cjoin Psi Psi11 Psi0)
+	      -> assoc_double_joining (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
+;
+
+% Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi0 s.t. Psi0 = Psi12 join Psi2 and Psi = Psi11 join Psi0
+
+rec ctxjoinasso1 : (g : sch){J1 : [g |- joining (cjoin Psi Psi1 Psi2)]}{J2 : [g |- joining (cjoin Psi1 Psi11 Psi12)]}[g |- assoc_double_joining J1 J2]  =
+    mlam J1 => mlam J2 =>
+    let [g |- ex_n F1] = lemma1_2a [_ |- J1] [_ |- J2] in
+    let [g |- F2] = lemma1_2b [g |- J1] [g |- J2] [g |- F1] in
+    [g |- adcjoin F1 F2]
+;
+
+% --------------------
+% Lemma 1.3
+
+LF inv_assoc_double_joining : joining J1 -> joining J2 -> type =
+   | iadcjoin : joining (cjoin Psi0 Psi1 Psi21) -> joining (cjoin Psi Psi0 Psi22)
+	      -> inv_assoc_double_joining (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi2 Psi21 Psi22))
+;
+
+% Psi = Psi1 join Psi2, Psi2 = Psi21 join Psi22 => there exists Psi0 s.t. Psi0 = Psi1 join Psi21, Psi = Psi0 join Psi22
+
+rec ctxjoinasso2 : (g : sch) {J1 : [g |- joining (cjoin Psi Psi1 Psi2)]}{J2 : [g |- joining (cjoin Psi2 Psi21 Psi22)]}  [g |- inv_assoc_double_joining J1 J2] =
+    mlam J1 => mlam J2 =>
+    let [g |- D1] = ctxjoincomm [_ |- J1] in
+    let [g |- D2] = ctxjoincomm [g |- J2] in
+    let [g |- adcjoin G1 G2] = ctxjoinasso1 [g |- D1] [g |- D2] in
+    let [g |- F1] = ctxjoincomm [g |- G1] in
+    let [g |- F2] = ctxjoincomm [g |- G2] in
+    [g |- iadcjoin F1 F2]
+;
+
+% ----------------------
+% Lemma 1.4
+
+%                                 ___              ____
+% Psi = Psi1 join Psi2, Psi_unr = Psi,  Psi1_unr = Psi1 => Psi_unr = Psi1_unr
+
+rec ctxjoinunreq : (g : sch)[g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Psi1 Psi1_unr] -> [g |- ctx_eq Psi_unr Psi1_unr] =
+    fn d => fn e => fn h =>
+    let [g |- E] : [g |- unrest_ctx Psi Psi_unr] = e in
+    let [g |- H] : [g |- unrest_ctx Psi1 Psi1_unr] = h in
+    case e of 
+    | [g |- unrest_base_var] => 
+      (case d of
+       | [g |- joining_base D1] => 
+	 (case h of
+	  | [g |- unrest_base_var] => [g |- refl]
+	 )
+      )
+    | [g |- unrest_base_e] => 
+      (case d of
+       | [g |- joining_empty] => 
+	 (case h of
+	  | [g |- unrest_base_e] => [g |- refl]
+	 )
+      )
+    | [g |- unrest_l E] => 
+      (case d of 
+       | [g |- joining_lin_l D] => 
+	 (case h of 
+	  | [g |- unrest_l G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+	 )
+       | [g |- joining_lin_r D] => 
+	 (case h of
+	  | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+	 )
+      )
+    | [g |- unrest_unr E] => 
+      (case d of
+       | [g |- joining_unr D] => 
+	 (case h of 
+	  | [g |- unrest_unr G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+	 )
+      )
+    | [g |- unrest_unav E] => 
+      (case d of
+       | [g |- joining_unav D] => 
+	 (case h of 
+	  | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+	 )
+      )
+;
+
+rec ctxjoinunreqb : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Psi2 Psi2_unr] -> [g |- ctx_eq Psi_unr Psi2_unr] = 
+    fn d => fn e => fn f => 
+    let [g |- F] = ctxjoincomm d in 
+    ctxjoinunreq [g |- F] e f 
+;
+
+
+% -----------------
+% Lemma1.5
+
+% Psi = (Phi, Gamma); Psi1 = (Phi1, Gamma); Psi2 = (Phi2, Gamma); unr(Gamma); Phi = Phi1 join Phi2 => Psi = Psi1 join Psi2
+
+rec ctxjoinmer: (g : sch) {M1 : [g |- ctx_mer Phi Gam Psi]}{M2 : [g |- ctx_mer Phi1 Gam Psi1]}{M3 : [g |- ctx_mer Phi2 Gam Psi2]} [g |- is_unr Gam] -> [g |- joining (cjoin Phi Phi1 Phi2)] -> [g |- joining (cjoin Psi Psi1 Psi2)] =
+    mlam M1 => mlam M2 => mlam M3 => fn e, d => case [_ |- M1] of
+| [g |- m_empty] =>
+  (case [g |- M2] of
+   | [g |- m_empty] : [g |- ctx_mer Psi1 c_empty Psi1] =>
+     (case [g |- M3] of
+      | [g |- m_empty] : [g |- ctx_mer Psi2 c_empty Psi2] => d
+     )
+  )
+| [g |- m_cons N1] => (case e of
+		     | [g |- is_unr_cons D] =>
+		       (case [g |- M2] of 
+			| [g |- m_cons N2] => 
+			  (case [g |- M3] of
+			   | [g |- m_cons N3] =>
+			     (case e of 
+			      | [g |- is_unr_cons Unr] =>
+				let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
+				[g |- joining_unr F]
+			     )
+			  )
+		       )
+		     | [g |- is_unr_unav_cons D] =>
+		       (case [g |- M2] of 
+			| [g |- m_cons N2] =>
+			  (case [g |- M3] of
+
+			   | [g |- m_cons N3] =>
+			     (case e of 
+			      | [g |- is_unr_unav_cons Unr] =>
+				let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
+				[g |- joining_unav F]
+			     )
+			  )
+		       )
+		    )
+;
+
+
+% -----------------
+% Lemma1.6
+
+
+rec helper1_6a : {Psi : [|- bin]} [|- joining (cjoin (varctx (cvar Psi)) (varctx (cvar Psi)) (varctx (cvar nil)))] = 
+    mlam Psi => [|- joining_base bin_join_nil_r]
+;
+
+rec helper1_6b : {Psi : [|- bin]} [|- joining (cjoin (varctx (cvar Psi)) (varctx (cvar nil)) (varctx (cvar Psi)))] = 
+    mlam Psi => [|- joining_base bin_join_nil_l]
+;
+
+%           ___
+% Psi_unr = Psi => Psi = Psi join Psi_unr
+
+rec lemma1_6a : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- joining (cjoin Psi Psi Psi_unr)] = 
+    fn d => 
+    case d of
+    | [g |- unrest_base_var] => 
+      let [g |- D] : [g |- unrest_ctx (varctx (cvar Psi[])) (varctx (cvar nil))] = d in
+      let [|- E] = helper1_6a [|- Psi] in [g |- E[]]
+    | [g |- unrest_base_e] => [g |- joining_empty]
+    | [g |- unrest_unr D] => let [g |- E] = lemma1_6a [g |- D] in [g |- joining_unr E]
+    | [g |- unrest_l D] => let [g |- E] = lemma1_6a [g |- D] in [g |- joining_lin_l E]
+    | [g |- unrest_unav D] => let [g |- E] = lemma1_6a [g |- D] in [g |- joining_unav E]
+;
+
+%           ___
+% Psi_unr = Psi => Psi = Psi_unr join Psi
+
+rec lemma1_6b : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- joining (cjoin Psi Psi_unr Psi)] = 
+    fn d =>
+    let [g |- E] = lemma1_6a d in ctxjoincomm [g |- E]
+; 
+
+%           ___
+% Psi_unr = Psi => Psi_unr = Psi_unr join Psi_unr
+
+rec lemma1_6c : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- joining (cjoin Psi_unr Psi_unr Psi_unr)] = 
+    fn d => 
+    case d of
+    | [g |- unrest_base_var] => let [|- E] = helper1_6a [|- nil] in [g |- E[]]
+    | [g |- unrest_base_e] => [g |- joining_empty]
+    | [g |- unrest_unr D] => let [g |- E] = lemma1_6c [g |- D] in [g |- joining_unr E]
+    | [g |- unrest_l D] => let [g |- E] = lemma1_6c [g |- D] in [g |- joining_unav E]
+    | [g |- unrest_unav D] => let [g |- E] = lemma1_6c [g |- D] in [g |- joining_unav E]
+;
+
+% unr(Phi) => Phi = Phi join Phi
+
+rec lemma1_6d : (g:sch) [g |- is_unr Phi] -> [g |- joining (cjoin Phi Phi Phi)] =
+    fn d =>
+    let [g |- F] = ctx_unr_unrest d in 
+    lemma1_6c [g |- F]
+;
+
+% ----------------------------------------
+% The following lemmas are reformulations of above context lemmas, for proof purposes
+
+% If a context Psi is unrestricted, both contexts in the join of Psi are unrestricted
+
+rec is_unr_join : (g : sch) [g |- is_unr Psi] -> [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- is_unr Psi1] =
+    fn d => fn e =>
+    case d of
+    | [g |- is_unr_b] =>
+      let [g |- joining_base E] = e in
+      let [g |- E] : [g |- bin_join nil nil nil] = [g |- E] in
+      [g |- is_unr_b]
+    | [g |- is_unr_e] =>
+      let [g |- joining_empty] = e in
+      [g |- is_unr_e]
+    | [g |- is_unr_cons D] =>
+      let [g |- joining_unr E] = e in
+      let [g |- F] = is_unr_join [g |- D] [g |- E] in
+      [g |- is_unr_cons F]
+    | [g |- is_unr_unav_cons D] =>
+      let [g |- joining_unav E] = e in
+      let [g |- F] = is_unr_join [g |- D] [g |- E] in
+      [g |- is_unr_unav_cons F]
+;  
+
+rec is_unr_joinb : (g : sch) [g |- unrest_ctx Psi Phi] -> [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- unrest_ctx Psi1 Phi] =
+    fn d => fn e =>
+    case d of
+    | [g |- unrest_base_var] =>
+      let [g |- joining_base E] = e in
+      [g |- unrest_base_var]
+    | [g |- unrest_base_e] =>
+      let [g |- joining_empty] = e in
+      [g |- unrest_base_e] 
+    | [g |- unrest_l D] =>
+      ( case e of
+	| [g |- joining_lin_l E] =>
+	  let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+	  [g |- unrest_l F]
+	| [g |- joining_lin_r E] => 
+	  let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+	  [g |- unrest_unav F]
+      )
+    | [g |- unrest_unr D] =>
+      let [g |- joining_unr E] = e in
+      let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+      [g |- unrest_unr F]
+    | [g |- unrest_unav D] =>
+      let [g |- joining_unav E] = e in
+      let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+      [g |- unrest_unav F]
+;
+
+rec is_unr_join_comm : (g : sch) [g |- is_unr Psi] -> [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- is_unr Psi2] =
+    fn d => fn e =>
+    let [g |- F] = ctxjoincomm e in is_unr_join d [g |- F]
+;
+
+rec is_unr_join_commb : (g : sch) [g |- unrest_ctx Psi Phi] -> [g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- unrest_ctx Psi2 Phi] =
+    fn d => fn e =>
+    let [g |- F] = ctxjoincomm e in is_unr_joinb d [g |- F]
+
+;
+
+

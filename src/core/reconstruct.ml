@@ -678,10 +678,15 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
-  | (Apx.Comp.Fun (loc, x, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
+  | (Apx.Comp.Fun (loc, ps, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
+    let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
+    let x = match ps with
+      | Apx.Comp.PatApp (_, Apx.Comp.PatVar (_, x,_), Apx.Comp.PatNil _) -> x
+      | _ -> raise (Error (loc, ErrorMsg "fn definition does not support patterns yet. Please provide a single variable instead."))
+    in (* We lose name information of PatVar during reconstruction. Need to match on Apx instead... *)
       (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Int.Comp.TypClo (tau1, theta))) in *)
-      let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta))) in
-      let e' = elExp cD cG' e (tau2, theta) in
+      (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta))) in *)
+      let e' = elExp cD cG' e ttau2 in
       let e'' =  Whnf.cnormExp (Int.Comp.Fun (loc, x, e'), Whnf.m_id) in
       let _ = dprint (fun () -> "[elExp] Fun " ^ Id.render_name x ^ " done ") in
       let _ = dprint (fun () -> "         cD = " ^ P.mctxToString cD ^

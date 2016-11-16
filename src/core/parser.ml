@@ -1103,7 +1103,8 @@ GLOBAL: sgn;
   fn_exp:
   [
     [
-      f = SYMBOL -> f
+      f = SYMBOL -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString f))
+    | p = cmp_pattern -> p
     ]
   ]
   ;
@@ -1114,8 +1115,7 @@ GLOBAL: sgn;
         (* -bp: we may stop supporting separating arguments with a comma;
 	        it should be a pattern spine of variables
          *)
-        List.fold_left (fun acc f -> 
-			  let pat  = Comp.PatVar (_loc, Id.mk_name (Id.SomeString f)) in 
+        List.fold_left (fun acc pat -> 
 			  let patS = Comp.PatApp(_loc, pat, Comp.PatNil _loc) in
 			  Comp.Fun (_loc, patS, acc)) e (List.rev fs)
 

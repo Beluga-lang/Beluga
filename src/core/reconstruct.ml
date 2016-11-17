@@ -680,6 +680,20 @@ let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Fun (loc, ps, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
     let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
+(*
+    let (cD1, cG1, ps1, tau1) = Abstract.pattern_spine loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2) in
+    let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
+            with _ -> raise (Error (loc,MCtxIllformed cD1)) in 
+      (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
+    let l_cd1    = Context.length cD1 in
+    let cD'     = Context.append cD cD1 in
+    let e'      = Apxnorm.fmvApxExp [] cD' (l_cd1, 0, 0) e 
+    let cG_extxt  = Context.append cG cG1 in
+    let e''     = elExp cD' cG_ext  e' (tau1, Whnf.m_id) in
+    let _       = FCVar.clear() in
+      Int.Comp.Fun (loc, cD1, cG1, ps1, e'')
+
+*)
     let x = match ps with
       | Apx.Comp.PatApp (_, Apx.Comp.PatVar (_, x,_), Apx.Comp.PatNil _) -> x
       | _ -> raise (Error (loc, ErrorMsg "fn definition does not support patterns yet. Please provide a single variable instead."))

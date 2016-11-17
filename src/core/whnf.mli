@@ -109,6 +109,7 @@ val cnorm_psihat: psi_hat -> msub -> psi_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern
+val cnormPatSpine : Comp.pattern_spine * msub -> Comp.pattern_spine
 
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
 val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ

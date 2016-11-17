@@ -1581,6 +1581,27 @@ let abstrPatObj loc cD cG pat tau =
     (pat_flag := false;
       (cD, cG', pat', tau'))
 
+
+let abstrPatSpine loc cD cG patSpine tau =
+  let _ = pat_flag := true in
+  let patSpine = Whnf.cnormPatSpine (patSpine, Whnf.m_id) in
+  let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
+  let (cQ1, cD1') = collectMctx I.Empty cD in
+  let (cQ2, cG)   = collectGctx cQ1 cG   in
+  let (cQ3, patSpine') = collectPatSpine cQ2 patSpine in
+  let (cQ, tau') = collectCompTyp 0 cQ3 tau in
+  let cQ'     = abstractMVarCtx cQ 0 in
+  let offset  = Context.length cD1' in
+  let cG'     = abstractMVarGctx cQ' (0,offset) cG in
+  let patSpine' = abstractMVarPatSpine cQ' cG' (0,offset) patSpine' in
+  let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
+  let cD'     = ctxToMCtx_pattern cQ' in
+  let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
+  let cD      = Context.append cD' cD2 in
+    (pat_flag := false;
+      (cD, cG', patSpine', tau'))
+
+
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
    2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
@@ -1730,6 +1751,7 @@ let compkind = abstrCompKind
 let comptyp = abstrCompTyp
 let exp = abstrExp
 let pattern = abstrPattern
+let pattern_spine = abstrPatSpine
 let patobj = abstrPatObj
 let subpattern = abstrSubPattern
 let mobj = abstrMObjPatt

@@ -49,6 +49,8 @@ val mobj       : LF.mctx -> Comp.meta_obj -> Comp.meta_typ ->
                  LF.mctx * Comp.meta_obj * Comp.meta_typ
 val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
                  LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
+val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine -> Comp.typ ->
+                 LF.mctx * Comp.gctx * Comp.pattern_spine * Comp.typ
 val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
                  LF.mctx * LF.dctx * LF.sub * LF.dctx
 

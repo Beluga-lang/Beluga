@@ -232,9 +232,12 @@ let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) = match psi with
 
 let rec cnormApxExp cD delta e (cD'', t) = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, cnormApxExp' cD delta i (cD'', t))
-  | Apx.Comp.Fun (loc, f, e)    ->
+  | Apx.Comp.Fn (loc, f, e)    ->
+      (dprint (fun () -> "[cnormApxExp] Fn ");
+      Apx.Comp.Fn (loc, f, cnormApxExp cD delta e (cD'', t)))
+  | Apx.Comp.Fun (loc, ps, e)    ->
       (dprint (fun () -> "[cnormApxExp] Fun ");
-      Apx.Comp.Fun (loc, f, cnormApxExp cD delta e (cD'', t)))
+      Apx.Comp.Fun (loc, ps, cnormApxExp cD delta e (cD'', t)))
 (*  | Apx.Comp.CtxFun (loc, g, e) ->
       (dprint (fun () -> "cnormApxExp -- CtxFun ") ;
       Apx.Comp.CtxFun (loc, g, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.CDeclOpt g)) e
@@ -746,8 +749,10 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
 
 let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
-  | Apx.Comp.Fun (loc, f, e)    ->
-      Apx.Comp.Fun (loc, f, fmvApxExp fMVs cD d_param  e)
+  | Apx.Comp.Fn (loc, f, e)    ->
+      Apx.Comp.Fn (loc, f, fmvApxExp fMVs cD d_param  e)
+  | Apx.Comp.Fun (loc, ps, e)    ->
+      Apx.Comp.Fun (loc, ps, fmvApxExp fMVs cD d_param  e)
   | Apx.Comp.MLam (loc, u, e)   ->
       Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
   | Apx.Comp.Pair (loc, e1, e2) ->

@@ -1533,7 +1533,9 @@ let mctxMVarPos cD u =
 
     | (Comp.Rec (loc, f, e), t) -> Comp.Rec (loc, f, cnormExp (e,t))
 
-    | (Comp.Fun (loc, x, e), t) -> Comp.Fun (loc, x, cnormExp (e,t))
+    | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e,t))
+      
+    | (Comp.Fun (loc, cD, cG, ps, e), t) -> Comp.Fun (loc, cD, cG, ps, cnormExp (e,t))
 
     | (Comp.Cofun (loc, bs), t) ->
         Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)

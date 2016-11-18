@@ -1114,16 +1114,29 @@ module Int = struct
       | Comp.Syn (_, i) ->
           fmt_ppr_cmp_exp_syn cD cG lvl ppf (strip_mapp_args cD cG i )
 
-      | Comp.Fun (_, x, e) ->
+      | Comp.Fn (_, x, e) ->
           let x = fresh_name_gctx cG x in
           let cond = lvl > 0 in
-(*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
+ (*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
             fprintf ppf "%sfn %s =>@ "
               (l_paren_if cond)
               (Id.render_name x);
+ 
+             fprintf ppf "%a%s"
+               (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
+               (r_paren_if cond);
+            
+       | Comp.Fun (_, cD', cG', ps, e) ->
+        (* let cD1 = Context.append cD cD' in *)
+        (* let cG1 = Context.append cG cG' in *)
+          let cond = lvl > 0 in
+(*            fprintf ppf "@[<2>%sfun %s =>@ %a%s@]" *)
+            fprintf ppf "%sfun %a =>@ "
+              (l_paren_if cond)
+              (fmt_ppr_pat_spine cD' cG' lvl) ps;
 
             fprintf ppf "%a%s"
-              (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
+              (fmt_ppr_cmp_exp_chk cD' cG' 0) e
               (r_paren_if cond);
 
       | Comp.Cofun (_, bs) ->

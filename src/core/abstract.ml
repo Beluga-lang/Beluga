@@ -534,7 +534,8 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
       else
 	raise (Error (loc, LeftoverConstraints))
     end
-    | I.Dec(_,_) -> raise (Error (loc, LeftoverVars))
+    | I.Dec(_,_) -> let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
+                    raise (Error (loc, LeftoverVars))
 
 and collectMVarMSub loc p cQ (i,ms') =
   let (cQ0, ms') = collectMSub p cQ ms' in
@@ -1259,9 +1260,14 @@ let rec collectExp cQ e = match e with
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Rec (loc, f, e') )
 
-  | Comp.Fun (loc, x, e) ->
+  | Comp.Fn (loc, x, e) ->
       let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.Fun (loc, x, e'))
+        (cQ', Comp.Fn (loc, x, e'))
+          
+  | Comp.Fun (loc, cD, cG, ps, e) ->
+      (* cG, cD, and pat cannot contain any free meta-variables *)
+      let (cQ', e') = collectExp cQ e in
+        (cQ', Comp.Fun (loc, cD, cG, ps, e'))
 
   | Comp.Cofun (loc, bs) ->
       let (cQ', bs') = collectCofuns cQ bs in

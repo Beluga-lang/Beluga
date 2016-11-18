@@ -127,7 +127,7 @@ let rec eval_syn i (theta, eta) =
         ^ "[eval_syn] with  theta = "
         ^ P.msubToString LF.Empty (Whnf.cnormMSub theta) ^ "\n");
       begin match eval_syn i' (theta, eta) with
-        | Comp.FunValue (_x , e', theta1, eta1) ->
+        | Comp.FnValue (_x , e', theta1, eta1) ->
           dprint (fun () -> "[eval_syn] Extended environment: |env1| =  "
             ^ string_of_int (length_env eta1) ^ "\n"
             ^ "[eval_syn] Extended environment: |env1'| =  "
@@ -223,10 +223,15 @@ and eval_chk e (theta, eta) =
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
 
-      | Comp.Fun (loc, n, e') ->
+      | Comp.Fn (loc, x, e') ->
+          dprint (fun () -> "[FnValue] created: theta = " ^
+                    P.msubToString LF.Empty (Whnf.cnormMSub theta));
+          Comp.FnValue (x, e', Whnf.cnormMSub theta, eta)
+
+      | Comp.Fun (loc, cD, cG, ps, e') ->
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          Comp.FunValue (n, e', Whnf.cnormMSub theta, eta)
+          Comp.FunValue (ps, e', Whnf.cnormMSub theta, eta)
 
       | Comp.Cofun (loc, bs) ->
           Comp.CofunValue (bs, Whnf.cnormMSub theta, eta)

@@ -158,7 +158,8 @@ module Comp = struct
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
-     | Fun    of Loc.t * pattern_spine * exp_chk                (* fn   p => e         *)
+     | Fn     of Loc.t * name * exp_chk                         (* fn x => e           *)
+     | Fun    of Loc.t * pattern_spine * exp_chk                (* fun   p => e        *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list       (* Cofun hd => e | tl => e' *)
      | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)

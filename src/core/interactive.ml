@@ -183,9 +183,9 @@ let rec mapHoleChk f = function
  | Rec (l, n, ec) ->
     let ec' =  mapHoleChk f ec in
     Rec (l, n, ec')
- | Fun (l, n, ec) ->
+ | Fn (l, n, ec) ->
     let ec' =  mapHoleChk f ec in
-    Fun(l, n, ec')
+    Fn(l, n, ec')
  | MLam (l, n, ec) ->
    let ec' =  mapHoleChk f ec in
    MLam (l, n, ec')
@@ -315,17 +315,17 @@ let  intro i =
          used := true;
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
-         Some (Comp.Fun(l, nam, exp))
+         Some (Comp.Fn(l, nam, exp))
      | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
-         Some (Comp.Fun(l, nam, exp))
+         Some (Comp.Fn(l, nam, exp))
      | _ ->
          used := true;
          let nam = Id.mk_name (Id.NoName) in
          let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
-         Some (Comp.Fun(Loc.ghost, nam, exp))
+         Some (Comp.Fn(Loc.ghost, nam, exp))
            )
  | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
      used := true;

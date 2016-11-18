@@ -678,37 +678,39 @@ let rec elCofunExp cD csp theta_tau1 theta_tau2 =
 let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
-  | (Apx.Comp.Fun (loc, ps, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
+  | (Apx.Comp.Fn (loc, x, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
+     (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Int.Comp.TypClo (tau1, theta))) in *)
+     let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta))) in
+     let e' = elExp cD cG' e (tau2, theta) in
+     let e'' =  Whnf.cnormExp (Int.Comp.Fn (loc, x, e'), Whnf.m_id) in
+     let _ = dprint (fun () -> "[elExp] Fn " ^ Id.render_name x ^ " done ") in
+     let _ = dprint (fun () -> "         cD = " ^ P.mctxToString cD ^
+                             "\n         cG = " ^ P.gctxToString cD cG') in
+     let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD cG' e'' ) in
+     let _ = dprint (fun () -> "[elExp] has type " ^
+                       P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
+       e''
+    
+  | (Apx.Comp.Fun (loc, ps, e), ttau) ->
     let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
-(*
     let (cD1, cG1, ps1, tau1) = Abstract.pattern_spine loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2) in
     let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
             with _ -> raise (Error (loc,MCtxIllformed cD1)) in 
       (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
     let l_cd1    = Context.length cD1 in
     let cD'     = Context.append cD cD1 in
-    let e'      = Apxnorm.fmvApxExp [] cD' (l_cd1, 0, 0) e 
-    let cG_extxt  = Context.append cG cG1 in
-    let e''     = elExp cD' cG_ext  e' (tau1, Whnf.m_id) in
+    let e'      = Apxnorm.fmvApxExp [] cD' (l_cd1, 0, 0) e in
+    let cG_ext  = Context.append cG cG1 in
+    let _ = dprint (fun () -> "[elExp] Fun: In progress") in
+    let _ = dprint (fun () -> "         cD' = " ^ P.mctxToString cD1 ^
+      "\n         cG' = " ^ P.gctxToString cD1 cG1) in
+    let e''     = elExp cD1 cG1  e' (tau1, Whnf.m_id) in
     let _       = FCVar.clear() in
+    let _ = dprint (fun () -> "[elExp] Fun: Done") in
+    let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD' cG_ext e'' ) in
+    let _ = dprint (fun () -> "[elExp] has type " ^
+      P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
       Int.Comp.Fun (loc, cD1, cG1, ps1, e'')
-
-*)
-    let x = match ps with
-      | Apx.Comp.PatApp (_, Apx.Comp.PatVar (_, x,_), Apx.Comp.PatNil _) -> x
-      | _ -> raise (Error (loc, ErrorMsg "fn definition does not support patterns yet. Please provide a single variable instead."))
-    in (* We lose name information of PatVar during reconstruction. Need to match on Apx instead... *)
-      (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Int.Comp.TypClo (tau1, theta))) in *)
-      (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta))) in *)
-      let e' = elExp cD cG' e ttau2 in
-      let e'' =  Whnf.cnormExp (Int.Comp.Fun (loc, x, e'), Whnf.m_id) in
-      let _ = dprint (fun () -> "[elExp] Fun " ^ Id.render_name x ^ " done ") in
-      let _ = dprint (fun () -> "         cD = " ^ P.mctxToString cD ^
-                              "\n         cG = " ^ P.gctxToString cD cG') in
-      let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD cG' e'' ) in
-      let _ = dprint (fun () -> "[elExp] has type " ^
-                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
-        e''
 
   | (Apx.Comp.Cofun (loc, bs), (Int.Comp.TypCobase (_, a, sp), theta)) ->
       let copatMap = function (Apx.Comp.CopatApp (loc, dest, csp), e')  ->
@@ -882,8 +884,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
-  | (Apx.Comp.Fun (loc, _x, _e),  tau_theta ) ->
-      raise (Check.Comp.Error (loc, Check.Comp.FunMismatch (cD, cG, tau_theta)))
+  | (Apx.Comp.Fn (loc, _x, _e),  tau_theta ) ->
+      raise (Check.Comp.Error (loc, Check.Comp.FnMismatch (cD, cG, tau_theta)))
   | (Apx.Comp.MLam (loc, _u, _e), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.MLamMismatch (cD, cG, tau_theta)))
   | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
@@ -1578,7 +1580,7 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
                   | IndexObj (l, Int.LF.ClObj (phat, Int.LF.MObj tR')) ->
                       IndexObj (l, Int.LF.ClObj(phat, Int.LF.MObj (Whnf.cnorm (tR', Int.LF.MShift l_cd1'))))
                   | DataObj -> DataObj
-                  end in
+                    end in
     (* cD |- tau_s and cD, cD1 |- tau_s' *)
     (* cD1 |- tau1 *)
 

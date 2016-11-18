@@ -58,7 +58,7 @@ module Comp : sig
     | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
     | CtxFunMismatch  of LF.mctx * gctx  * tclo
-    | FunMismatch     of LF.mctx * gctx  * tclo
+    | FnMismatch      of LF.mctx * gctx  * tclo
     | MLamMismatch    of LF.mctx * gctx  * tclo
     | PairMismatch    of LF.mctx * gctx  * tclo
     | BoxMismatch     of LF.mctx * gctx  * tclo

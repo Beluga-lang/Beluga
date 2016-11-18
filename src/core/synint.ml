@@ -297,7 +297,8 @@ module Comp = struct
     | Cons of value * env
 
   and value =
-    | FunValue   of name * exp_chk * LF.msub * env
+    | FnValue    of name * exp_chk * LF.msub * env
+    | FunValue   of pattern_spine * exp_chk * LF.msub * env
     | RecValue   of cid_prog * exp_chk * LF.msub * env
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
@@ -312,7 +313,8 @@ module Comp = struct
   and exp_chk =
     | Syn    of Loc.t * exp_syn
     | Rec    of Loc.t * name * exp_chk
-    | Fun    of Loc.t * name * exp_chk
+    | Fn     of Loc.t * name * exp_chk
+    | Fun    of Loc.t * LF.mctx * gctx * pattern_spine * exp_chk
     | Cofun  of Loc.t * (copattern_spine * exp_chk) list
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk

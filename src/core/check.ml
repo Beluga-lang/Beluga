@@ -59,7 +59,7 @@ module Comp = struct
     | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
     | CtxFunMismatch  of I.mctx * gctx  * tclo
-    | FunMismatch     of I.mctx * gctx  * tclo
+    | FnMismatch      of I.mctx * gctx  * tclo
     | MLamMismatch    of I.mctx * gctx  * tclo
     | PairMismatch    of I.mctx * gctx  * tclo
     | BoxMismatch     of I.mctx * gctx  * tclo
@@ -195,7 +195,7 @@ module Comp = struct
             Format.fprintf ppf "Found context abstraction, but expected type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
-          | FunMismatch (cD, _cG, theta_tau) ->
+          | FnMismatch (cD, _cG, theta_tau) ->
             Format.fprintf ppf "Found function abstraction, but expected type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
@@ -579,10 +579,16 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t))), (Total.shift cIH)) e ttau;
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Rec" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Fun (loc, x, e), (TypArr (tau1, tau2), t)) ->
+    | (Fn (loc, x, e), (TypArr (tau1, tau2), t)) ->
         check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t);
-        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
+        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fn" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
+    | (Fun (loc, cD', cG', ps, e), _) ->
+      (* let cD1 = Context.append cD cD' in *)
+      (* let cG1 = Context.append cG cG' in *)
+      let (tau2', t') = synPatSpine cD' cG' ps ttau in
+        check cD' (cG', (Total.shift cIH)) e (tau2', t');
+          
     | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
          let f = fun (CopatApp (loc, dest, csp), e') ->
            let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau

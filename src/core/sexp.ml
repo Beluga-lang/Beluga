@@ -618,7 +618,7 @@ struct
     | Comp.Syn (_, i) ->
       sexp_cmp_exp_syn cD cG ppf i
 
-    | Comp.Fun (_, x, e) ->
+    | Comp.Fn (_, x, e) ->
       fprintf ppf "(Fun %s %a)"
         (Id.render_name x)
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e

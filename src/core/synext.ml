@@ -149,7 +149,7 @@ module Comp = struct
   and exp_chk =                                 (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                     (*  e ::= i                 *)
      | Fn     of Loc.t * name * exp_chk              (*    | fn x => e           *) 
-     | Fun    of Loc.t * pattern_spine * exp_chk     (*    | fun p => e          *)
+     | Fun    of Loc.t * fun_branches                (*    | fun fbranches       *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
      | MLam   of Loc.t * name * exp_chk              (*| mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk           (*    | (e1 , e2)           *)
@@ -185,10 +185,14 @@ module Comp = struct
    | PatNil of Loc.t
    | PatApp of Loc.t * pattern * pattern_spine
 
-  and branch =
-    | EmptyBranch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern
-    | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
+ and branch =
+   | EmptyBranch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern
+   | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
 
+ and fun_branches =
+   | NilFBranch of Loc.t
+   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches 
+       
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
      it remains currently so we can still use the old parser without modifications -bp *)
   and branch_pattern =
@@ -222,7 +226,7 @@ module Comp = struct
 
  and chkToString = function
      | Syn     (_loc,  syn) -> "Syn(" ^ synToString syn ^ ")"
-     | Fun     (_loc, _, chk) -> "Fun(_, " ^ chkToString chk ^ ")"
+     | Fn     (_loc, _, chk) -> "Fn(_, " ^ chkToString chk ^ ")"
      | MLam    (_loc, _, chk) ->  "MLam(_, " ^ chkToString chk ^ ")"
      | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
      | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^",  (_, _, " ^ chkToString chk ^ "))"

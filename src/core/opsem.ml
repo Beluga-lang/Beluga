@@ -228,10 +228,10 @@ and eval_chk e (theta, eta) =
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FnValue (x, e', Whnf.cnormMSub theta, eta)
 
-      | Comp.Fun (loc, cD, cG, ps, e') ->
+      | Comp.Fun (loc, fbr) ->
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          Comp.FunValue (ps, e', Whnf.cnormMSub theta, eta)
+          Comp.FunValue (fbr, Whnf.cnormMSub theta, eta)
 
       | Comp.Cofun (loc, bs) ->
           Comp.CofunValue (bs, Whnf.cnormMSub theta, eta)

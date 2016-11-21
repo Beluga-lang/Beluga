@@ -24,12 +24,9 @@ and store_chks (e : Comp.exp_chk) = match e with
 | Comp.Syn (loc, e') ->
 	Locs.add loc (Locs.mk_entry ("Syn"));
 	store_syns e'
-| Comp.Fun (loc, n, e') ->
-       (match n with 
-	  | Comp.PatApp (_, Comp.PatVar (_, x), Comp.PatNil _) -> 
-	      Locs.add loc (Locs.mk_entry ("Fun " ^ Id.render_name x));
-	      store_chks e'
-       )
+| Comp.Fn (loc, n, e') ->
+        Locs.add loc (Locs.mk_entry ("Fn " ^ Id.render_name n));
+        store_chks e'
 | Comp.MLam  (loc, n, e') ->
 	Locs.add loc (Locs.mk_entry ("MLam " ^ Id.render_name n));
 	store_chks e'

@@ -1264,10 +1264,9 @@ let rec collectExp cQ e = match e with
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Fn (loc, x, e'))
           
-  | Comp.Fun (loc, cD, cG, ps, e) ->
-      (* cG, cD, and pat cannot contain any free meta-variables *)
-      let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.Fun (loc, cD, cG, ps, e'))
+  | Comp.Fun (loc, fbr) -> 
+    let (cQ', fbr') = collectFBranches cQ fbr in
+        (cQ', Comp.Fun (loc, fbr'))
 
   | Comp.Cofun (loc, bs) ->
       let (cQ', bs') = collectCofuns cQ bs in
@@ -1426,7 +1425,16 @@ and collectBranches cQ branches = match branches with
   | b::branches ->
       let (cQ', b') = collectBranch cQ b in
       let (cQ2, branches') =  collectBranches cQ' branches in
-        (cQ2, b'::branches')
+      (cQ2, b'::branches')
+
+and collectFBranches cQ fbr = match fbr with
+  | Comp.NilFBranch _ -> (cQ, fbr)
+  | Comp.ConsFBranch (loc, (cD, cG, ps, e), fbr') ->
+    (* cG, cD, and pat cannot contain any free meta-variables *)
+    let (cQ', e') = collectExp cQ e in
+    let (cQ1, fbr'') = collectFBranches cQ' fbr' in
+      (cQ1, Comp.ConsFBranch (loc, (cD, cG, ps, e'), fbr''))
+        
 
 let rec abstractMVarCompKind cQ (l,offset) cK = match cK with
   | Comp.Ctype _loc -> cK

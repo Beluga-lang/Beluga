@@ -1111,7 +1111,10 @@ GLOBAL: sgn;
   cmp_patSpine:
     [
       [
-        patS = LIST1 cmp_pattern -> patS
+        patS = LIST1 cmp_pattern; rArr; e = cmp_exp_chk ->
+        let patS' = List.fold_left (fun acc pat -> Comp.PatApp(_loc, pat,  acc))
+          (Comp.PatNil _loc) (List.rev patS) in
+         (patS', e) 
       ]
     ]
   ;
@@ -1121,10 +1124,10 @@ GLOBAL: sgn;
         [ "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
         List.fold_left (fun acc f -> Comp.Fn (_loc, (Id.mk_name (Id.SomeString f)), acc)) e (List.rev fs)
 
-        | "fun"; ps = cmp_patSpine; rArr; e = cmp_exp_chk ->
-        let patS = List.fold_left (fun acc pat -> Comp.PatApp(_loc, pat,  acc))
-          (Comp.PatNil _loc) (List.rev ps) in
-        Comp.Fun (_loc, patS, e)
+        | "fun"; br = LIST1 cmp_patSpine SEP "|" ->
+        let br' = List.fold_left (fun acc pat -> Comp.ConsFBranch (_loc, pat, acc))
+          (Comp.NilFBranch _loc) (List.rev br) in
+        Comp.Fun (_loc, br')
         
       | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
         List.fold_left (fun acc s -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s)), acc)) e (List.rev args)

@@ -1126,18 +1126,18 @@ module Int = struct
                (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
                (r_paren_if cond);
             
-       | Comp.Fun (_, cD', cG', ps, e) ->
+       | Comp.Fun (_, fbr) -> fprintf ppf "Some fun"
         (* let cD1 = Context.append cD cD' in *)
         (* let cG1 = Context.append cG cG' in *)
-          let cond = lvl > 0 in
-(*            fprintf ppf "@[<2>%sfun %s =>@ %a%s@]" *)
-            fprintf ppf "%sfun %a =>@ "
-              (l_paren_if cond)
-              (fmt_ppr_pat_spine cD' cG' lvl) ps;
+(*           let cond = lvl > 0 in *)
+(* (\*            fprintf ppf "@[<2>%sfun %s =>@ %a%s@]" *\) *)
+(*             fprintf ppf "%sfun %a =>@ " *)
+(*               (l_paren_if cond) *)
+(*               (fmt_ppr_pat_spine cD' cG' lvl) ps; *)
 
-            fprintf ppf "%a%s"
-              (fmt_ppr_cmp_exp_chk cD' cG' 0) e
-              (r_paren_if cond);
+(*             fprintf ppf "%a%s" *)
+(*               (fmt_ppr_cmp_exp_chk cD' cG' 0) e *)
+(*               (r_paren_if cond); *)
 
       | Comp.Cofun (_, bs) ->
           let cond = lvl > 0 in
@@ -1483,7 +1483,7 @@ module Int = struct
                * -bp
                *)
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-
+              
     (* cD |- t : cD'  *)
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with

@@ -159,7 +159,7 @@ module Comp = struct
   and exp_chk =
      | Syn    of Loc.t * exp_syn
      | Fn     of Loc.t * name * exp_chk                         (* fn x => e           *)
-     | Fun    of Loc.t * pattern_spine * exp_chk                (* fun   p => e        *)
+     | Fun    of Loc.t * fun_branches                           (* fun   fbranches     *)
      | Cofun  of Loc.t * (copattern_spine * exp_chk) list       (* Cofun hd => e | tl => e' *)
      | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)
@@ -202,6 +202,10 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern
     | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
+  and fun_branches =
+   | NilFBranch of Loc.t
+   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches 
+        
 
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
      it remains currently so we can still use the old parser without modifications -bp *)

@@ -691,26 +691,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
        e''
     
-  | (Apx.Comp.Fun (loc, ps, e), ttau) ->
-    let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
-    let (cD1, cG1, ps1, tau1) = Abstract.pattern_spine loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2) in
-    let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
-            with _ -> raise (Error (loc,MCtxIllformed cD1)) in 
-      (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
-    let l_cd1    = Context.length cD1 in
-    let cD'     = Context.append cD cD1 in
-    let e'      = Apxnorm.fmvApxExp [] cD' (l_cd1, 0, 0) e in
-    let cG_ext  = Context.append cG cG1 in
-    let _ = dprint (fun () -> "[elExp] Fun: In progress") in
-    let _ = dprint (fun () -> "         cD' = " ^ P.mctxToString cD1 ^
-      "\n         cG' = " ^ P.gctxToString cD1 cG1) in
-    let e''     = elExp cD1 cG1  e' (tau1, Whnf.m_id) in
-    let _       = FCVar.clear() in
-    let _ = dprint (fun () -> "[elExp] Fun: Done") in
-    let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD' cG_ext e'' ) in
-    let _ = dprint (fun () -> "[elExp] has type " ^
-      P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
-      Int.Comp.Fun (loc, cD1, cG1, ps1, e'')
+  | (Apx.Comp.Fun (loc, fbr), ttau) ->
+    Int.Comp.Fun (loc, elFBranch cD cG fbr theta_tau)
 
   | (Apx.Comp.Cofun (loc, bs), (Int.Comp.TypCobase (_, a, sp), theta)) ->
       let copatMap = function (Apx.Comp.CopatApp (loc, dest, csp), e')  ->
@@ -1631,6 +1613,29 @@ and elBranch caseTyp cD cG branch (i, tau_s) (tau, theta) = match branch with
     let _       = FCVar.clear() in
     Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
 
+and elFBranch cD cG fbr theta_tau = match fbr with
+  | Apx.Comp.NilFBranch loc -> Int.Comp.NilFBranch loc
+  | Apx.Comp.ConsFBranch (loc, (ps, e), fbr') ->
+    let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
+    let (cD1, cG1, ps1, tau1) = Abstract.pattern_spine loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2) in
+    let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
+            with _ -> raise (Error (loc,MCtxIllformed cD1)) in 
+      (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
+    let l_cd1    = Context.length cD1 in
+    let cD'     = Context.append cD cD1 in
+    let e'      = Apxnorm.fmvApxExp [] cD' (l_cd1, 0, 0) e in
+    let cG_ext  = Context.append cG cG1 in
+    let _ = dprint (fun () -> "[elExp] Fun: In progress") in
+    let _ = dprint (fun () -> "         cD' = " ^ P.mctxToString cD1 ^
+      "\n         cG' = " ^ P.gctxToString cD1 cG1) in
+    let e''     = elExp cD1 cG1  e' (tau1, Whnf.m_id) in
+    let _       = FCVar.clear() in
+    let _ = dprint (fun () -> "[elExp] Fun: Done") in
+    let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD' cG_ext e'' ) in
+    let _ = dprint (fun () -> "[elExp] has type " ^
+      P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
+      Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
+      
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)
 

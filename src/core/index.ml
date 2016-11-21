@@ -710,20 +710,8 @@ let rec index_exp cvars vars fcvars = function
      let vars' = Var.extend vars (Var.mk_entry x) in
        Apx.Comp.Fn (loc, x, index_exp cvars vars' fcvars e)
         
-  | Ext.Comp.Fun (loc, patS, e) ->
-    let (fcvars',_) = fcvars in
-    let (patS', fcvars1, vars1) =
-      index_pat_spine cvars ([], not term_closed) (Var.create ()) patS in 
-    let vars_all  = Var.append vars1 vars in
-      let patS'' = reindex_pat_spine vars1 patS' in
-      let (fcv1, _ ) = fcvars1 in
-      let _ = dprint (fun () -> "[Fun] fcvars in pattern = " ^ fcvarsToString fcv1) in
-      let fcv2      = List.append fcv1 fcvars' in
-      let _ = dprint (fun () -> "[Fun] fcvars in total = " ^ fcvarsToString fcv2) in
-	(* (match patS'' with  *)
-	(*    | Apx.Comp.PatApp (_, Apx.Comp.PatVar (_, x, _), Apx.Comp.PatNil _) ->  *)
-               Apx.Comp.Fun (loc, patS'', index_exp cvars vars_all (fcv2, term_closed) e)
-	 (* | _ -> raise (Error (loc, ParseError))) *)
+  | Ext.Comp.Fun (loc, fbr) ->
+    Apx.Comp.Fun(loc, index_fbranches cvars vars fcvars fbr)
 
   | Ext.Comp.Cofun (loc, copatterns) ->
       let copatterns' =
@@ -870,6 +858,20 @@ and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
       let (pat_spine', fcvars2, fvars2) = index_pat_spine cvars fcvars1 fvars1 pat_spine in
 	(Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars2, fvars2)
 
+and index_fbranches cvars vars fcvars fbranches = match fbranches with
+  | Ext.Comp.NilFBranch loc -> Apx.Comp.NilFBranch loc
+  | Ext.Comp.ConsFBranch (loc, (patS, e), fbr) ->
+        let (fcvars',_) = fcvars in
+    let (patS', fcvars1, vars1) =
+      index_pat_spine cvars ([], not term_closed) (Var.create ()) patS in 
+    let vars_all  = Var.append vars1 vars in
+      let patS'' = reindex_pat_spine vars1 patS' in
+      let (fcv1, _ ) = fcvars1 in
+      let _ = dprint (fun () -> "[Fun] fcvars in pattern = " ^ fcvarsToString fcv1) in
+      let fcv2      = List.append fcv1 fcvars' in
+      let _ = dprint (fun () -> "[Fun] fcvars in total = " ^ fcvarsToString fcv2) in
+      let e' = index_exp cvars vars_all (fcv2, term_closed) e in
+      Apx.Comp.ConsFBranch (loc, (patS'', e'), index_fbranches cvars vars fcvars fbr)
 
 (* reindex pattern *)
 and reindex_pattern fvars pat = match pat with

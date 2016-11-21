@@ -235,9 +235,9 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
   | Apx.Comp.Fn (loc, f, e)    ->
       (dprint (fun () -> "[cnormApxExp] Fn ");
       Apx.Comp.Fn (loc, f, cnormApxExp cD delta e (cD'', t)))
-  | Apx.Comp.Fun (loc, ps, e)    ->
+  | Apx.Comp.Fun (loc, fbr)    ->
       (dprint (fun () -> "[cnormApxExp] Fun ");
-      Apx.Comp.Fun (loc, ps, cnormApxExp cD delta e (cD'', t)))
+      Apx.Comp.Fun (loc, cnormApxFBranches cD delta fbr (cD'', t)))
 (*  | Apx.Comp.CtxFun (loc, g, e) ->
       (dprint (fun () -> "cnormApxExp -- CtxFun ") ;
       Apx.Comp.CtxFun (loc, g, cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.CDeclOpt g)) e
@@ -378,7 +378,12 @@ and cnormApxBranch cD delta b (cD'', t) =
 
       | Apx.Comp.EmptyBranch (loc, delta', Apx.Comp.PatEmpty _ ) -> b
 
-
+and cnormApxFBranches cD delta fbr (cD'', t) = match fbr with
+  | Apx.Comp.NilFBranch loc -> fbr
+  | Apx.Comp.ConsFBranch (loc, (patS, e), fbr') ->
+    let e' = cnormApxExp cD delta e (cD'', t) in
+    Apx.Comp.ConsFBranch (loc, (patS, e'), cnormApxFBranches cD delta fbr' (cD'', t))
+        
 (* ******************************************************************* *)
 (* Collect FMVars and FPVars in a given LF object                      *)
 
@@ -751,8 +756,8 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
   | Apx.Comp.Fn (loc, f, e)    ->
       Apx.Comp.Fn (loc, f, fmvApxExp fMVs cD d_param  e)
-  | Apx.Comp.Fun (loc, ps, e)    ->
-      Apx.Comp.Fun (loc, ps, fmvApxExp fMVs cD d_param  e)
+  | Apx.Comp.Fun (loc, fbr)    ->
+      Apx.Comp.Fun (loc, fmvApxFBranches fMVs cD d_param fbr)
   | Apx.Comp.MLam (loc, u, e)   ->
       Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
   | Apx.Comp.Pair (loc, e1, e2) ->
@@ -854,3 +859,10 @@ and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
           let l    = lengthApxMCtx delta in
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
             Apx.Comp.Branch (loc, omega, delta, pat, e')
+
+and fmvApxFBranches fMVs cD d_param fbr = match fbr with
+  | Apx.Comp.NilFBranch _ -> fbr
+  | Apx.Comp.ConsFBranch (loc, (patS, e), fbr') ->
+    Apx.Comp.ConsFBranch (loc, (patS, fmvApxExp fMVs cD d_param e),
+                          fmvApxFBranches fMVs cD d_param fbr')
+    

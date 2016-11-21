@@ -298,7 +298,7 @@ module Comp = struct
 
   and value =
     | FnValue    of name * exp_chk * LF.msub * env
-    | FunValue   of pattern_spine * exp_chk * LF.msub * env
+    | FunValue   of fun_branches * LF.msub * env
     | RecValue   of cid_prog * exp_chk * LF.msub * env
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
@@ -314,7 +314,7 @@ module Comp = struct
     | Syn    of Loc.t * exp_syn
     | Rec    of Loc.t * name * exp_chk
     | Fn     of Loc.t * name * exp_chk
-    | Fun    of Loc.t * LF.mctx * gctx * pattern_spine * exp_chk
+    | Fun    of Loc.t * fun_branches
     | Cofun  of Loc.t * (copattern_spine * exp_chk) list
     | MLam   of Loc.t * name * exp_chk
     | Pair   of Loc.t * exp_chk * exp_chk
@@ -370,6 +370,10 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
 
+  and fun_branches =
+   | NilFBranch of Loc.t
+   | ConsFBranch of Loc.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches 
+        
   and copattern_spine =
     | CopatNil of Loc.t
     | CopatApp of Loc.t * cid_comp_dest * copattern_spine

@@ -583,11 +583,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t))), (Total.shift cIH)) e (tau2, t);
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fn" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
-    | (Fun (loc, cD', cG', ps, e), _) ->
-      (* let cD1 = Context.append cD cD' in *)
-      (* let cG1 = Context.append cG cG' in *)
-      let (tau2', t') = synPatSpine cD' cG' ps ttau in
-        check cD' (cG', (Total.shift cIH)) e (tau2', t');
+    | (Fun (loc, fbr), _) ->
+      checkFBranches cD (cG, cIH) fbr ttau
           
     | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
          let f = fun (CopatApp (loc, dest, csp), e') ->
@@ -950,6 +947,13 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
            checkPattern cD1' cG1 pat (tau_p, Whnf.m_id);
            check cD1' ((Context.append cG' cG1), Context.append cIH0 cIH') e1 (tau', Whnf.m_id))
 
+  and checkFBranches cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) fbr ttau = match fbr with
+    | NilFBranch _ -> ()
+    | ConsFBranch (_, (cD', cG', patS, e), fbr') ->
+      let (tau2', t') = synPatSpine cD' cG' patS ttau in
+      check cD' (cG', (Total.shift cIH)) e (tau2', t');
+      checkFBranches cD (cG, cIH) fbr' ttau
+            
   let rec wf_mctx cD = match cD with
     | I.Empty -> ()
     | I.Dec (cD, cdecl) ->

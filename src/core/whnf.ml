@@ -1535,7 +1535,7 @@ let mctxMVarPos cD u =
 
     | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e,t))
       
-    | (Comp.Fun (loc, cD, cG, ps, e), t) -> Comp.Fun (loc, cD, cG, ps, cnormExp (e,t))
+    | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))
 
     | (Comp.Cofun (loc, bs), t) ->
         Comp.Cofun (loc, List.map (fun (cps, e) -> (cps, cnormExp (e, t))) bs)
@@ -1668,6 +1668,11 @@ let mctxMVarPos cD u =
      Comp.Branch (loc, cD, cG, pat,
                   cnormMSub t, cnormExp (e, m_id))
 
+  and cnormFBranches (fbr, t) = match fbr with
+    | Comp.NilFBranch loc -> fbr
+    | Comp.ConsFBranch (loc, (cD, cG, patS, e), fbr') ->
+      Comp.ConsFBranch (loc, (cD, cG, patS, cnormExp (e, t)), cnormFBranches (fbr',t))
+       
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
     | Dec(cG, Comp.CTypDecl (x, tau)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t)))

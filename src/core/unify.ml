@@ -8,7 +8,7 @@
    the instantiations EmptyTrail and StdTrail (hence Unify.EmptyTrail and Unify.StdTrail
    to other modules) are declared at the end of this file.
 *)
-
+open Store
 open Syntax.Int.LF
 open Syntax.Int
 open Trail
@@ -2014,7 +2014,16 @@ let isVar h = match h with
       | (cPsi , CtxVar (CInst ((_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _), theta) )) ->
           if isPatMSub theta then
             let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
-              instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1))
+            instantiateCtxVar (cvar_ref, Whnf.cnormDCtx (cPsi, mtt1));
+            begin match Context.ctxVar cPsi with
+            | None -> ()
+            | Some (CtxName psi) ->
+              begin try let _ = FCVar.get psi in ()
+                with Not_found ->
+                  FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Maybe))
+              end
+            | _ -> ()
+            end
           else
             raise (Error.Violation "Case where both meta-substitutions associated with context variables are not pattern substitutions should not happen and is not implemented for now")
 

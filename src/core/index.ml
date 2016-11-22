@@ -856,7 +856,10 @@ and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
   | Ext.Comp.PatApp (loc, pat, pat_spine) ->
       let (pat', fcvars1, fvars1) = index_pattern cvars fcvars fvars pat in
       let (pat_spine', fcvars2, fvars2) = index_pat_spine cvars fcvars1 fvars1 pat_spine in
-	(Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars2, fvars2)
+      (Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars2, fvars2)
+  | Ext.Comp.PatObs (loc, obs, pat_spine) ->
+    let (pat_spine', fcvars1, fvars1) = index_pat_spine cvars fcvars fvars pat_spine in
+      (Apx.Comp.PatObs (loc, CompDest.index_of_name obs, pat_spine'), fcvars1, fvars1)
 
 and index_fbranches cvars vars fcvars fbranches = match fbranches with
   | Ext.Comp.NilFBranch loc -> Apx.Comp.NilFBranch loc

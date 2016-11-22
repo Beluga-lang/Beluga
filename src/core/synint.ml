@@ -355,6 +355,7 @@ module Comp = struct
   and pattern_spine =
     | PatNil
     | PatApp of Loc.t * pattern * pattern_spine
+    | PatObs of Loc.t * cid_comp_dest * pattern_spine
 
   (* Arguments in data spines are accumulated in reverse order, to
      allow applications of data values in constant time. *)

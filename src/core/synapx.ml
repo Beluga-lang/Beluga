@@ -197,6 +197,7 @@ module Comp = struct
  and pattern_spine =
    | PatNil of Loc.t
    | PatApp of Loc.t * pattern * pattern_spine
+   | PatObs of Loc.t * cid_comp_dest * pattern_spine
 
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern

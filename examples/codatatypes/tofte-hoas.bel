@@ -1,0 +1,43 @@
+LF tp : type =
+| arr : tp -> tp -> tp
+| atom  : tp;
+
+LF tm : tp -> type =
+| app : tm (arr A B) -> tm A -> tm B
+| abs : (tm A -> tm B) -> tm (arr A B)
+| fix : (tm (arr A B) -> tm A -> tm B) -> tm (arr A B);
+
+
+schema ctx = tm A;
+
+coinductive Val : [ |- tp] -> ctype =
+| Out  : Val [ |- B] :: Val' [ |- B]
+
+and inductive Val' : [ |- tp] -> ctype =
+| Closure : Env [phi] -> [phi,x:tm A[] |- tm B[]] -> Val' [ |- arr A B]
+
+and inductive Env : {phi:ctx}  ctype =
+| Empty : Env  [ ]
+| Cons  : Val  [ |- A] -> Env [phi]
+          -> Env [phi, x:tm A[]];
+
+rec unfold : [phi,f:tm (arr A[] B[]), x:tm A[] |- tm B[]] -> Env [phi] -> Val [ |- arr A B] =
+fun cl env .Out => Closure  (Cons (unfold cl env) env) cl
+;
+
+rec lookup : (phi:ctx) [phi |-  tm A[]] -> Env [phi] -> Val [ |- A] =
+fun [g,x:tm A[] |- x] env =>
+    let Cons w k = env in w
+  | [g,x:tm A[] |-  #p[..]] env =>
+    let Cons w k = env in lookup [g |- #p] k
+;
+
+rec eval : (phi:ctx) [phi |- tm A[]] -> Env [phi] -> Val [ |- A] =
+fun [phi |- #p] env => lookup [phi |- #p] env
+  | [phi |- abs (\x.E)] env .Out => Closure env [phi, x:tm _  |-  E]
+  | [phi |- fix (\f. \x.E)] env => unfold [phi, f:tm _ , x:tm _  |-  E] env % Val [ |- arr A B]
+  | [phi |-  app E1 E2] env =>
+  let Closure env' [psi,x:tm _  |-  E] = Out (eval [phi |-  E1] env) in
+  let w = eval [phi |-  E2] env in
+    eval [psi,x:tm _  |-  E] (Cons w env')
+;

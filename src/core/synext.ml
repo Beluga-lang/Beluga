@@ -164,6 +164,7 @@ module Comp = struct
   and exp_syn =
      | Var    of Loc.t * name                        (*  i ::= x                 *)
      | DataConst  of Loc.t * name                    (*    | c                   *)
+     | Obs    of Loc.t * exp_chk * name              (*    | e.d                 *)
      | Const  of Loc.t * name                        (*    | c                   *)
      | Apply  of Loc.t * exp_syn * exp_chk           (*    | i e                 *)
      | BoxVal of Loc.t * meta_obj
@@ -271,7 +272,7 @@ module Sgn = struct
     | CompTyp       of Loc.t * name * Comp.kind  * datatype_flavour
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
-    | CompDest      of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * LF.mctx * Comp.typ * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of Loc.t * name * LF.schema
     | Pragma        of Loc.t * pragma

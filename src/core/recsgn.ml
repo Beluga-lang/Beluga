@@ -350,26 +350,35 @@ let recSgnDecls decls =
 
 
 
-   | Ext.Sgn.CompDest (loc , c, tau) ->
+   | Ext.Sgn.CompDest (loc , c, cD, tau0, tau1) ->
         dprint (fun () -> "[RecSgn Checking] CompDest at: \n" ^ Syntax.Loc.to_string loc);
         let _         = dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ (string_of_name c)) in
-        let apx_tau   = Index.comptyp tau in
-        let cD        = Int.LF.Empty in
+        let cD = Index.mctx cD in
+        let cD = Reconstruct.mctx cD in
+        let apx_tau0  = Index.comptyp tau0 in
+        let apx_tau1  = Index.comptyp tau1 in
         let _         = dprint (fun () -> "\nElaborating codata-type destructor " ^ (string_of_name c)) in
-        let tau'      = Monitor.timer ("Codata-type Constant: Type Elaboration",
-                                       fun () -> Reconstruct.comptyp apx_tau)  in
+        let tau0'      = Monitor.timer ("Codata-type Constant: Type Elaboration",
+                                        fun () -> Reconstruct.comptyp_cD cD apx_tau0)  in
+        let tau1'      = Monitor.timer ("Codata-type Constant: Type Elaboration",
+                                        fun () -> Reconstruct.comptyp_cD cD apx_tau1)  in
         let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
         let _         = dprint (fun () -> "Abstracting over comp. type") in
-        let (tau', i) = Monitor.timer ("Codata-type Constant: Type Abstraction",
-                                       fun () -> Abstract.comptyp tau') in
+        let (cD1, tau0', tau1', i) = Monitor.timer ("Codata-type Constant: Type Abstraction",
+                                        fun () -> Abstract.codatatyp cD tau0' tau1') in
+        let _ = dprint (fun () -> "cD1 = " ^ P.mctxToString cD1) in
+        let _         = dprint (fun () -> "tau1' = " ^ P.compTypToString cD1 tau1') in
         let _         = dprint (fun () -> "Abstracting over comp. type: done") in
         let _         = dprint (fun () ->  (string_of_name c) ^ " : " ^
-                                   (P.compTypToString cD tau')) in
+                                           (P.compTypToString cD1 tau0') ^ " :: " ^
+                                           (P.compTypToString cD1 tau1')) in
         let _         = (Monitor.timer ("Codata-type Constant: Type Check",
-                                        fun () -> Check.Comp.checkTyp cD tau'))
-        in      let cid_ctypfamily = get_target_cid_compcotyp tau' in
-        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c tau' i) in
-        let sgn = Int.Sgn.CompDest(loc, c, tau') in
+                                        fun () -> Check.Comp.checkTyp cD1 tau0')) in
+        let _         = (Monitor.timer ("Codata-type Constant: Type Check",
+                                        fun () -> Check.Comp.checkTyp cD1 tau1')) in
+        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
+        let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c cD1 tau0' tau1' i) in
+        let sgn = Int.Sgn.CompDest(loc, c, cD1, tau0', tau1') in
         Store.Modules.addSgnToCurrent sgn;
         sgn
 

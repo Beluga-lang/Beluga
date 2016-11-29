@@ -1566,7 +1566,8 @@ let mctxMVarPos cD u =
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i
     | (Comp.DataConst _, _ ) -> i
-    | (Comp.DataDest _, _ ) -> i
+    | (Comp.Obs (loc , e, t', obs), _) ->
+      Comp.Obs (loc, cnormExp (e, t), cnormMSub' (t', t), obs)
     | (Comp.Const (_, _ ), _ ) -> i
 
     | (Comp.Apply (loc, i, e), t) -> Comp.Apply (loc, cnormExp' (i, t), cnormExp (e,t))
@@ -1610,7 +1611,8 @@ let mctxMVarPos cD u =
     | Comp.PatApp (loc, pat, patSpine) ->
         Comp.PatApp (loc, cnormPattern (pat, t),
                      cnormPatSpine (patSpine, t))
-
+    | Comp.PatObs (loc, obs, msub, patSpine) ->
+      Comp.PatObs (loc, obs, cnormMSub' (msub, t), cnormPatSpine (patSpine, t))
 
   (* cnormBranch (BranchBox (cO, cD, (psihat, tM, (tA, cPsi)), e), theta, cs) =
 

@@ -828,14 +828,19 @@ module Cid = struct
     type entry = {
       name                : Id.name;
       implicit_arguments  : int;
-      typ                : Int.Comp.typ
+      mctx                : Int.LF.mctx;
+      obs_type            : Int.Comp.typ;
+      return_type         : Int.Comp.typ
     }
 
 
-    let mk_entry name tau implicit_arguments  =  {
+    let mk_entry name cD tau0 tau1 implicit_arguments  =  {
       name               = name;
       implicit_arguments = implicit_arguments;
-      typ               = tau
+      mctx               = cD;
+      obs_type           = tau0;
+      return_type        = tau1
+        
     }
    (*  store : entry DynArray.t *)
     let store : (entry DynArray.t) DynArray.t = DynArray.create ()

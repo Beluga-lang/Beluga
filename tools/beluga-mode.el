@@ -251,7 +251,7 @@ Regexp match data 0 points to the chars."
                 "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
                 "then" "type" "ctype" "ttrue" "%name" "%not" "module" "struct" "end"
                 "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
-                 "%open"  "%abbrev" "#stratified" "#positive" "total"))
+                 "%open"  "%abbrev" "#stratified" "#positive" "total" "fun"))
              "\\_>\\|\\\\")
     (,(concat "^\\(" beluga-syntax-id-re
               "\\)[ \t\n]*:\\([^.]*\\_<type\\_>[ \t\n]*.\\)?")

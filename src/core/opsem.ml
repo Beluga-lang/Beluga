@@ -100,8 +100,8 @@ let rec eval_syn i (theta, eta) =
     | Comp.DataConst (_, cid) ->
       Comp.DataValue (cid, Comp.DataNil)
 
-    | Comp.DataDest (_, cid) ->
-        Comp.CodataValue (cid, Comp.CodataNil)
+    (* | Comp.Obs (_, e, cid) -> *)
+    (*     Comp.CodataValue (cid, Comp.CodataNil) *)
 
     | Comp.Var (_, x) ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");

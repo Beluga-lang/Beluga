@@ -4,8 +4,8 @@ LF nat : type =
 ;
 
 coinductive Stream : ctype =
-| Hd : Stream -> [ |- nat]
-| Tl : Stream -> Stream
+| Hd : Stream :: [ |- nat]
+| Tl : Stream :: Stream
 ;
 
 rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
@@ -15,21 +15,21 @@ fn e => fn f => case e of
 ;
 
 rec zipwith : Stream -> Stream -> Stream =
-fn e => fn f => cofun Hd => plus (Hd e) (Hd f)
-                  | Tl => zipwith (Tl e) (Tl f)
+fun e f .Hd => plus (Hd e) (Hd f)
+  | e f .Tl => zipwith (Tl e) (Tl f)
 ;
 
 rec fib : Stream =
-cofun Hd => [ |- z]
-    | Tl Hd => [ |- s z]
-    | Tl Tl => zipwith fib (Tl fib)
+fun .Hd => [ |- z]
+  | .Tl .Hd => [ |- s z]
+  | .Tl .Tl => zipwith fib (Tl fib)
 ;
 
 
-let a = Hd fib;
-let b = Tl fib;
-let c = Tl b;
-let d = Hd b;
-let e = Tl c;
-let f = Hd e;
+% let a = Hd fib;
+% let b = Tl fib;
+% let c = Tl b;
+% let d = Hd b;
+% let e = Tl c;
+% let f = Hd e;
 

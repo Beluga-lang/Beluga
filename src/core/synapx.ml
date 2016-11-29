@@ -174,7 +174,7 @@ module Comp = struct
      | Var    of Loc.t * offset                                     (* x              *)
      | FVar   of name                                               (* x              *)
      | DataConst of Loc.t * cid_comp_const                          (* c              *)
-     | DataDest of Loc.t * cid_comp_dest                            (* c              *)
+     | Obs    of Loc.t * exp_chk * cid_comp_dest                    (* e.d            *)
      | Const  of Loc.t * cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                          (* i e            *)
      | BoxVal of Loc.t * meta_obj 

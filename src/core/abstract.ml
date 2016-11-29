@@ -1312,7 +1312,10 @@ let rec collectExp cQ e = match e with
 and collectExp' cQ i = match i with
   | Comp.Var (_, _x) -> (cQ , i)
   | Comp.DataConst (_, _c) ->  (cQ , i)
-  | Comp.DataDest (_, _c) -> (cQ , i)
+  | Comp.Obs (loc, e, t, obs) ->
+    let (cQ', t') = collectMSub 0 cQ t in
+    let (cQ1, e') = collectExp cQ' e in
+    (cQ1 , Comp.Obs (loc, e', t', obs))
   | Comp.Const (_, _c) ->  (cQ , i)
   | Comp.Apply (loc, i, e) ->
       let (cQ', i') = collectExp' cQ i  in
@@ -1388,7 +1391,10 @@ and collectPatSpine cQ pat_spine = match pat_spine with
       let (cQ1, pat') = collectPatObj cQ pat in
       let (cQ2, pat_spine') = collectPatSpine cQ1 pat_spine in
         (cQ2, Comp.PatApp (loc, pat', pat_spine'))
-
+  | Comp.PatObs (loc, obs, ms, pat_spine) ->
+    let (cQ1, ms') = collectMSub 0 cQ ms in
+    let (cQ2, pat_spine') = collectPatSpine cQ1 pat_spine in
+        (cQ2, Comp.PatObs (loc, obs, ms', pat_spine'))
 
 and collectPattern cQ cD cPsi (phat, tM) tA =
   let (cQ1, cD') = collectMctx cQ cD in
@@ -1514,7 +1520,10 @@ and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
       let pat' = abstractMVarPatObj cQ cG offset pat in
       let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in
         Comp.PatApp (loc, pat', pat_spine')
-
+  | Comp.PatObs (loc, obs, ms, pat_spine) ->
+    let ms' = abstrMSub cQ ms in
+    let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in
+    Comp.PatObs (loc, obs, ms', pat_spine')
 
 let rec raiseCompTyp cD tau =  match cD with
   | I.Empty -> tau
@@ -1575,6 +1584,69 @@ let abstrCompTyp tau =
   let tau'' = raiseCompTyp cD' tau' in
     (tau'', Context.length cD' )
 
+let abstrCodataTyp cD tau tau' =
+  let rec split cD = match cD with
+    | I.Dec (cD', (I.Decl(psi, I.CTyp (Some w), dep) as decl)) ->
+      let (cD_ctx, cD_rest) = split cD' in
+      (I.Dec (cD_ctx, decl), cD_rest)
+    | I.Dec (cD', decl) ->
+      let (cD_ctx, cD_rest) = split cD' in
+      (cD_ctx, I.Dec (cD_rest, decl))
+    | I.Empty -> (I.Empty, I.Empty)
+  in
+  let (cD_ctx, cD_rest) = split cD in
+  let _ = dprint (fun () -> "cD_ctx = " ^ P.mctxToString cD_ctx
+    ^ "\ncD_rest = " ^ P.mctxToString cD_rest) in
+  let tau0        = Whnf.cnormCTyp (tau, Whnf.m_id) in
+  let tau1        = Whnf.cnormCTyp (tau', Whnf.m_id) in
+
+  let (cQ1, cD'_ctx) = collectMctx I.Empty cD_ctx in
+  let (cQ2, cD'_rest) = collectMctx cQ1 cD_rest in
+  let l' = Context.length cD_ctx in
+  let p = Context.length cD_rest in
+  
+  let (cQ3, tau0')  = collectCompTyp (l'+p) cQ2 tau0 in
+  let k           = lengthCollection cQ3 in
+  let l = k - l' in
+  let cQ'  = abstractMVarCtx cQ3 (l-1-p) in
+  let tau_obs = abstractMVarCompTyp cQ' (l,0) tau0' in
+  let cD' = ctxToMCtx (I.Maybe) cQ' in
+  let _ = dprint (fun () -> "tau0' = " ^ P.compTypToString cD tau0'
+    ^ "\ntau_obs = " ^ P.compTypToString cD' tau_obs) in
+  let _ = dprint (fun () -> "cD' = " ^ P.mctxToString cD') in
+    
+  (* Assumes: cQ3, cQ3' = cQ4 *)
+  let (cQ4, tau1')  = collectCompTyp (l'+p) cQ3 tau1 in
+  let k           = lengthCollection cQ4 in
+  let l = k - l' in
+  let cQ''  = abstractMVarCtx cQ4 0 in
+  let tau_res = abstractMVarCompTyp cQ'' (l,0) tau1' in
+  let cD'' = ctxToMCtx (I.Maybe) cQ'' in
+  let _ = dprint (fun () -> "cD'' = " ^ P.mctxToString cD'') in
+
+  let rec drop p cD = match p, cD with
+    | 0, _ -> cD
+    | _, I.Dec (cD', decl) -> drop (p-1) cD'
+  in
+  let cD1' = drop p cD' in
+  let _ = dprint (fun () -> "cD1' = " ^ P.mctxToString cD1') in
+  let cD1'' = drop p cD'' in
+  let _ = dprint (fun () -> "cD1'' = " ^ P.mctxToString cD1'') in
+  let rec subtract cD1 cD2 =
+    let l_cD1 = Context.length cD1 in
+    let l_cD2 = Context.length cD2 in
+    if l_cD1 = l_cD2 then
+      I.Empty
+    else (* thus, l_cD1 > l_cD2 *)
+      let I.Dec (cD1', decl) = cD1 in
+      let cD = subtract cD1' cD2 in
+      I.Dec (cD, decl)
+  in
+  let cD_res = subtract cD'' cD' in
+  let _ = dprint (fun () -> "cD_res = " ^ P.mctxToString cD_res) in
+  (* cD'' = cD', cD_res *)
+  let tau_res' = raiseCompTyp cD_res tau_res in
+  (cD', tau_obs, tau_res', Context.length cD_res)
 
 let abstrPatObj loc cD cG pat tau =
   let _ = pat_flag := true in
@@ -1763,6 +1835,7 @@ let schema = abstrSchema
 let msub = abstractMSub
 let compkind = abstrCompKind
 let comptyp = abstrCompTyp
+let codatatyp = abstrCodataTyp
 let exp = abstrExp
 let pattern = abstrPattern
 let pattern_spine = abstrPatSpine

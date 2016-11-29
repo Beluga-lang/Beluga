@@ -685,9 +685,10 @@ struct
       fprintf ppf "%s"
         (R.render_cid_comp_const c)
 
-    | Comp.DataDest (_, c) ->
-      fprintf ppf "%s"
-        (R.render_cid_comp_dest c)
+    | Comp.Obs (_, e, t, obs) ->
+      fprintf ppf "(Obs %a %s)"
+        (sexp_cmp_exp_chk cD cG) e
+        (R.render_cid_comp_dest obs)
 
     | Comp.Apply (_, i, e) ->
       fprintf ppf "(Apply %a %a)"
@@ -866,9 +867,14 @@ struct
         (Id.render_name a)
         (sexp_cmp_kind LF.Empty) cK
 
-    | Sgn.CompDest (_, c, tau)
+    | Sgn.CompDest (_, c, cD, tau0, tau1) ->
+      fprintf ppf "(CompDest %s %a %a)"
+        (Id.render_name c)
+        (sexp_cmp_typ cD) tau0
+        (sexp_cmp_typ cD) tau1
+      
     | Sgn.CompConst (_, c, tau) ->
-      fprintf ppf "(CompConstDest %s %a)"
+      fprintf ppf "(CompConst %s %a)"
         (Id.render_name c)
         (sexp_cmp_typ LF.Empty) tau
 

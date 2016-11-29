@@ -171,11 +171,13 @@ module Cid : sig
     type entry = private {
       name               : name;
       implicit_arguments : int;
-      typ                : Comp.typ
+      mctx               : LF.mctx;
+      obs_type           : Comp.typ;
+      return_type        : Comp.typ
     }
 
 
-    val mk_entry      : name -> Comp.typ -> int -> entry
+    val mk_entry      : name -> LF.mctx -> Comp.typ -> Comp.typ -> int -> entry
     val add           : cid_comp_cotyp -> entry -> cid_comp_dest
     val get           : ?fixName:bool -> cid_comp_dest -> entry
     val get_implicit_arguments : cid_comp_dest -> int

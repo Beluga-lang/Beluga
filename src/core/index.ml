@@ -34,6 +34,7 @@ type error =
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
   | UnboundCompConstName of Id.name
+  | UnboundObs           of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub
@@ -63,7 +64,9 @@ let _ = Error.register_printer
       | UnboundCompName n ->
           Format.fprintf ppf "Unbound computation-level variable: %s." (Id.render_name n)
       | UnboundCompConstName n ->
-          Format.fprintf ppf "Unbound computation-level constructor: %s." (Id.render_name n)
+        Format.fprintf ppf "Unbound computation-level constructor: %s." (Id.render_name n)
+      | UnboundObs n ->
+          Format.fprintf ppf "Unbound computation-level observation: %s." (Id.render_name n)
       | PatCtxRequired ->
           Format.fprintf ppf
 	    "The context in a pattern must be a proper context, where a variable declaration must carry its type."
@@ -770,18 +773,35 @@ and index_exp' cvars vars fcvars = function
         Apx.Comp.Const (loc,Comp.index_of_name x)
       with Not_found -> try
         Apx.Comp.DataConst (loc, CompConst.index_of_name x)
-      with Not_found -> try
-        Apx.Comp.DataDest (loc, CompDest.index_of_name x)
       with Not_found ->
         raise (Error (loc, UnboundCompName x))
       end
+  | Ext.Comp.Obs (loc, e, d) ->
+    let e' = index_exp cvars vars fcvars e in
+    begin
+      try
+	Apx.Comp.Obs (loc, e', CompDest.index_of_name d)
+      with Not_found -> raise (Error (loc, UnboundCompConstName d))
+    end
   | Ext.Comp.DataConst (loc, c) ->
     begin
       try
 	Apx.Comp.DataConst (loc, CompConst.index_of_name c)
-      with Not_found -> try
-        Apx.Comp.DataDest (loc, CompDest.index_of_name c)
       with Not_found -> raise (Error (loc, UnboundCompConstName  c))
+    end
+  (* This case is a workaround to a parsing problem with observations *)
+  | Ext.Comp.Apply (loc, Ext.Comp.DataConst (loc', c), e) ->
+    begin
+      try
+        let cid = CompConst.index_of_name c in
+        let e' = index_exp  cvars vars fcvars e in
+        Apx.Comp.Apply (loc, Apx.Comp.DataConst (loc', cid), e')
+      with Not_found ->
+        try
+          let cid = CompDest.index_of_name c in
+          let e' = index_exp  cvars vars fcvars e in
+          Apx.Comp.Obs (loc, e', cid)
+        with Not_found -> raise (Error (loc', UnboundCompConstName  c))
     end
   | Ext.Comp.Apply (loc, i, e) ->
       let i' = index_exp' cvars vars fcvars i in
@@ -859,7 +879,13 @@ and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
       (Apx.Comp.PatApp (loc, pat', pat_spine'), fcvars2, fvars2)
   | Ext.Comp.PatObs (loc, obs, pat_spine) ->
     let (pat_spine', fcvars1, fvars1) = index_pat_spine cvars fcvars fvars pat_spine in
-      (Apx.Comp.PatObs (loc, CompDest.index_of_name obs, pat_spine'), fcvars1, fvars1)
+    let cid =
+      try
+        CompDest.index_of_name obs
+      with
+        Not_found -> raise (Error (loc, UnboundObs obs))
+    in
+      (Apx.Comp.PatObs (loc, cid, pat_spine'), fcvars1, fvars1)
 
 and index_fbranches cvars vars fcvars fbranches = match fbranches with
   | Ext.Comp.NilFBranch loc -> Apx.Comp.NilFBranch loc
@@ -907,7 +933,9 @@ and reindex_pat_spine fvars pat_spine = match pat_spine with
       let pat' = reindex_pattern fvars pat in
       let pat_spine' = reindex_pat_spine fvars pat_spine in
 	Apx.Comp.PatApp (loc, pat', pat_spine')
-
+  | Apx.Comp.PatObs (loc, obs, pat_spine) ->
+    Apx.Comp.PatObs (loc, obs, reindex_pat_spine fvars pat_spine)
+          
 (* TODO: Refactor this *)
 and index_branch cvars vars (fcvars, _ ) branch = match branch with
   | Ext.Comp.EmptyBranch (loc, cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty _))))) ->
@@ -992,11 +1020,14 @@ let comptypdef (cT, cK) =
 let kind     = index_kind (CVar.create ()) (BVar.create ()) ([], term_closed)
 let typ      = index_typ  (CVar.create ()) (BVar.create ()) ([], term_closed)
 let schema   = index_schema
+let mctx cD  =
+  let (_, cD', _, _) = index_mctx (CVar.create ()) ([], not term_closed) cD in
+  cD'
 let compkind = index_compkind (CVar.create ())  ([], not term_closed)
 let comptyp  tau =
   let (tau', _ ) = index_comptyp  (CVar.create ()) ([], not term_closed) tau in
     tau'
-
+      
 let exp      = fun vars -> fun e ->
 (dprint (fun () -> "Indexing expression ... " );
  index_exp (CVar.create ()) vars ([], term_closed) e)

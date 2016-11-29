@@ -41,6 +41,7 @@ val msub   : LF.msub -> LF.msub * LF.mctx
 
 val compkind : Comp.kind -> Comp.kind * Id.offset
 val comptyp  : Comp.typ -> Comp.typ * Id.offset
+val codatatyp  : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ * Id.offset
 val exp      : Comp.exp_chk -> free_var LF.ctx * Comp.exp_chk
 
 val pattern    : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->

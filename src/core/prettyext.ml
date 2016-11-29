@@ -1103,11 +1103,15 @@ module Ext = struct
             (to_html prefix Keyword)
             (to_html (Id.render_name n) (ID Typ))
             (fmt_ppr_cmp_kind LF.Empty 1) kA
-      | Sgn.CompConst(_, n, tA)
-      | Sgn.CompDest(_, n, tA) ->
+      | Sgn.CompConst(_, n, tA) -> 
         fprintf ppf "@\n| %s : %a"
           (to_html (Id.render_name n) (ID Constructor))
           (fmt_ppr_cmp_typ LF.Empty 1)  tA
+      | Sgn.CompDest(_, n, cD, tA, tA') ->
+        fprintf ppf "@\n| (%s : %a) :: %a"
+          (to_html (Id.render_name n) (ID Constructor))
+          (fmt_ppr_cmp_typ cD 1)  tA
+          (fmt_ppr_cmp_typ cD 1)  tA'
       | _ -> ()
 
     (* TODO: Refactor this *)

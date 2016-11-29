@@ -6,6 +6,7 @@ type error =
   | UnboundCtxSchemaName of Id.name
   | UnboundCompName      of Id.name
   | UnboundCompConstName of Id.name
+  | UnboundObs           of Id.name
   | PatCtxRequired
   | CompEmptyPattBranch
   | UnboundIdSub
@@ -24,6 +25,8 @@ val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars
 val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars
 
 val schema   : Syntax.Ext.LF.schema -> Syntax.Apx.LF.schema
+
+val mctx     : Syntax.Ext.LF.mctx -> Syntax.Apx.LF.mctx  
 
 val compkind : Syntax.Ext.Comp.kind -> Syntax.Apx.Comp.kind
 

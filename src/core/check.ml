@@ -250,14 +250,14 @@ module Comp = struct
             Format.fprintf ppf
               "Expected contextual object of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
-          (* | Typmismatch (cD, (tau1, theta1), (tau2, theta2)) -> *)
-          (*     Error.report_mismatch ppf *)
-          (*       "Type of destructor did not match the type it was expected to have." *)
-          (*       "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau1, theta1)) *)
-          (*       "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) *)
-          (*       (Whnf.cnormCTyp (tau2, theta2))) *)
-      ))
+          | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+              Error.report_mismatch ppf
+                "Type of destructor did not match the type it was expected to have."
+                "Type of destructor" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau1, theta1))
+                "Expected type" (P.fmt_ppr_cmp_typ cD Pretty.std_lvl)
+                (Whnf.cnormCTyp (tau2, theta2)))
+    )
 
   type caseType =
     | IndexObj of meta_obj
@@ -585,14 +585,6 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | (Fun (loc, fbr), _) ->
       checkFBranches cD (cG, cIH) fbr ttau
-          
-    | (Cofun (loc, bs), (TypCobase (l, cid, sp), t)) ->
-         let f = fun (CopatApp (loc, dest, csp), e') ->
-           let ttau' = synObs cD csp ((CompDest.get dest).CompDest.typ, Whnf.m_id) ttau
-           in check cD (cG,cIH) e' ttau'
-         in
-	 let _ = List.map f bs in
-           Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Cofun" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
     | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
 	(check (extend_mctx cD (u, cdec, t))
@@ -748,9 +740,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 	   ("DataConst" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
         (None,(CompConst.get c).CompConst.typ, C.m_id))
 
-    | DataDest (loc, c) ->
-	(dprint (fun () -> "DataDest ... ");
-        (None,(CompDest.get c).CompDest.typ, C.m_id))
+    | Obs (loc, e, t, obs) ->
+      let tau0 = (CompDest.get obs).CompDest.obs_type in
+      let tau1 = (CompDest.get obs).CompDest.return_type in
+      check cD (cG, cIH) e (tau0, t);
+      (None, tau1, t)
+          
+    (* | DataDest (loc, c) -> *)
+    (*     (dprint (fun () -> "DataDest ... "); *)
+    (*     (None,(CompDest.get c).CompDest.typ, C.m_id)) *)
 
     | Const (loc,prog) ->
 	(Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))  ("Const" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
@@ -813,17 +811,17 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | Boolean _  -> (None, TypBool, C.m_id)
 
-  and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with
-    | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
-    | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) ->
-        if Whnf.convCTyp (tau1, theta) (tau', theta') then
-          synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta)
-        else
-          raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta'))))
+  (* and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with *)
+  (*   | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) -> *)
+  (*       if Whnf.convCTyp (tau1, theta) (tau', theta') then *)
+  (*         (tau2, theta) *)
+  (*       else *)
+  (*         raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta')))) *)
+  (*   | (CopatApp (loc, dest, csp'), (TypArr (tau1, tau2), theta), (tau', theta')) -> *)
+  (*       if Whnf.convCTyp (tau1, theta) (tau', theta') then *)
+  (*         synObs cD csp' ((CompDest.get dest).CompDest.typ, Whnf.m_id) (tau2, theta) *)
+  (*       else *)
+  (*         raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta')))) *)
 
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
@@ -887,7 +885,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
           synPatSpine cD cG pat_spine (tau, theta')
       end
-
+    | PatObs (loc, obs, t, pat_spine) ->
+      let _ = dprint (fun () -> "[synPatRefine] t = " ^ P.msubToString cD t) in
+      let tau0 = (CompDest.get obs).CompDest.obs_type in
+      let tau1 = (CompDest.get obs).CompDest.return_type in
+      if Whnf.convCTyp (tau,theta) (tau0,t) then
+        synPatSpine cD cG pat_spine (tau1, t)
+      else
+        raise (Error (loc, TypMismatch (cD, (tau,theta), (tau0,t))))
+          
   and checkPatAgainstCDecl cD (PatMetaObj (loc, mO)) (I.Decl(_,ctyp,_), theta) =
     LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot(metaObjToMFront mO, theta)
@@ -951,9 +957,10 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | NilFBranch _ -> ()
     | ConsFBranch (_, (cD', cG', patS, e), fbr') ->
       let (tau2', t') = synPatSpine cD' cG' patS ttau in
+      let _ = dprint (fun () -> "[checkFBranches] tau2' = "
+        ^ P.compTypToString cD' (Whnf.cnormCTyp (tau2', t'))) in
       check cD' (cG', (Total.shift cIH)) e (tau2', t');
-      checkFBranches cD (cG, cIH) fbr' ttau
-            
+      checkFBranches cD (cG, cIH) fbr' ttau    
   let rec wf_mctx cD = match cD with
     | I.Empty -> ()
     | I.Dec (cD, cdecl) ->

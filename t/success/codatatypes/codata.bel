@@ -4,14 +4,14 @@ inductive Colour : ctype =
 ;
 
 coinductive Stream : ctype =
-| Hd : Stream -> Colour
-| Tl : Stream -> Stream
+| Hd : Stream :: Colour
+| Tl : Stream :: Stream
 ;
 
 rec test : Colour -> Stream =
-fn e => cofun Hd => e
-           | Tl => test e
+fun e .Hd => e
+  | e .Tl => test e
 ;
 
-let a = Hd (test Blue);
-let c = Hd (Tl (test Blue));
+% let a = Hd (test Blue);
+% let c = Hd (Tl (test Blue));

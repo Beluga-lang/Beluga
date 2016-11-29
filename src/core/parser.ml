@@ -185,12 +185,11 @@ let check_datatype_decl a cs =
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
 let check_codatatype_decl a cs =
-  let rec retname = function
-    | Comp.TypArr (_, Comp.TypBase (_, c', _), _) -> c'
-    | Comp.TypPiBox (_, _, tau) -> retname tau
+  let retname = function
+    | Comp.TypBase (_, c', _) -> c'
     | _ -> raise IllFormedDataDecl in
-  List.iter (fun (Sgn.CompDest (_, c, tau)) ->
-    let a' = retname tau in
+  List.iter (fun (Sgn.CompDest (_, c, _, tau0, _)) ->
+    let a' = retname tau0 in
     if not (a = a') then raise (WrongConsType (c, a, a'))) cs
 
 let rec split (c : char) (m : string) : (string list * string) =
@@ -289,8 +288,10 @@ GLOBAL: sgn;
   sgn_comp_cotyp :
     [
       [
-        a = UPSYMBOL; ":"; tau = cmp_typ ->
-          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), tau)
+        ctyp_decls = LIST0 clf_ctyp_decl;
+        OPT "("; a = UPSYMBOL; ":"; tau0 = cmp_typ; OPT ")"; "::"; tau1 = cmp_typ ->
+        let cD = List.fold_left (fun acc decl -> LF.Dec (acc, decl)) LF.Empty ctyp_decls in
+          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), cD, tau0, tau1)
       ]
     ];
 

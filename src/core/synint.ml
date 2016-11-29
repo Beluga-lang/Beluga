@@ -328,7 +328,7 @@ module Comp = struct
   and exp_syn =
     | Var    of Loc.t * offset
     | DataConst of Loc.t * cid_comp_const
-    | DataDest of Loc.t * cid_comp_dest
+    | Obs    of Loc.t * exp_chk * LF.msub * cid_comp_dest
     | Const  of Loc.t * cid_prog
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
@@ -355,7 +355,7 @@ module Comp = struct
   and pattern_spine =
     | PatNil
     | PatApp of Loc.t * pattern * pattern_spine
-    | PatObs of Loc.t * cid_comp_dest * pattern_spine
+    | PatObs of Loc.t * cid_comp_dest * LF.msub * pattern_spine
 
   (* Arguments in data spines are accumulated in reverse order, to
      allow applications of data values in constant time. *)
@@ -413,7 +413,7 @@ module Sgn = struct
     | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag
     | CompCotyp     of Loc.t * name * Comp.kind
     | CompConst     of Loc.t * name * Comp.typ
-    | CompDest      of Loc.t * name * Comp.typ
+    | CompDest      of Loc.t * name * LF.mctx * Comp.typ * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list

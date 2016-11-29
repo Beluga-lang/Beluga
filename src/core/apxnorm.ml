@@ -297,7 +297,9 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var (_, _x) -> i
   | Apx.Comp.DataConst (_, _c) -> i
-  | Apx.Comp.DataDest (_, _c) ->  i
+  | Apx.Comp.Obs (loc, e, obs) ->
+    let e' = cnormApxExp cD delta e cDt in
+    Apx.Comp.Obs (loc, e', obs)
   | Apx.Comp.Const (_, _c) ->  i
   | Apx.Comp.PairVal (loc, i1, i2) ->
       let i1' = cnormApxExp' cD delta i1 cDt in
@@ -797,7 +799,9 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var (_, _x) -> i
   | Apx.Comp.DataConst (_, _c) -> i
-  | Apx.Comp.DataDest (_, _c) -> i
+  | Apx.Comp.Obs (loc, e, obs) ->
+    let e' = fmvApxExp fMVs cD d_param e in
+    Apx.Comp.Obs (loc, e', obs)
   | Apx.Comp.Const (_, _c) -> i
   | Apx.Comp.Apply (loc, i, e) ->
       let i' = fmvApxExp' fMVs cD d_param  i in
@@ -863,6 +867,7 @@ and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
 and fmvApxFBranches fMVs cD d_param fbr = match fbr with
   | Apx.Comp.NilFBranch _ -> fbr
   | Apx.Comp.ConsFBranch (loc, (patS, e), fbr') ->
-    Apx.Comp.ConsFBranch (loc, (patS, fmvApxExp fMVs cD d_param e),
+    let fMVs' = collectApxPatSpine fMVs patS in
+    Apx.Comp.ConsFBranch (loc, (patS, fmvApxExp fMVs' cD d_param e),
                           fmvApxFBranches fMVs cD d_param fbr')
     

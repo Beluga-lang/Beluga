@@ -4,20 +4,19 @@ LF nat : type =
 ;
 
 coinductive Stream : ctype =
-| Hd : Stream -> [ |- nat]
-| Tl : Stream -> Stream
+| Hd : Stream :: [ |- nat]
+| Tl : Stream :: Stream
 ;
 
 let a = [ |- s (s z)];
 
 rec cycleNats : [ |- nat] -> Stream =
-fn e => cofun Hd => e
-           | Tl => (case e of
-                   | [ |- z] => cycleNats a
-                   | [ |- s N] => cycleNats [ |- N])
+fun e .Hd => e
+  | [ |- z] .Tl => cycleNats a
+  | [ |- s N] .Tl => cycleNats [ |- N]
 ;
 
 
-let b = cycleNats [ |- s z];
-let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));
+% let b = cycleNats [ |- s z];
+% let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));
 

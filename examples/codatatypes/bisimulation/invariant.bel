@@ -1,0 +1,122 @@
+% Version of bisimulation based on the Abella implementation
+% http://abella-prover.org/examples/process-calculi/pi-calculus/pic.html
+
+% Definition of two processes and of an invariance relation between them
+% Proofs that this invariance relation implies bisimulation
+
+inductive P : (g:ctx) [g |- p] -> ctype =
+| Pproc : P [ |- bang (nu (\z.par (out z b null) (inp z (\y. out x y null))))]
+;
+
+inductive Q : (g:ctx) [g |- p] -> ctype =
+| Qproc : Q [ |- bang (taup (out x b null))]
+;
+
+inductive Inv : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| Inv_pq : P [g |- P] -> Q [g |- Q] -> Inv [g |- P] [g |- Q]
+| Inv_qp : Q [g |- Q] -> P [g |- P] -> Inv [g |- Q] [g |- P]
+| Inv_nupar : Inv [g |- M] [g |- N] ->
+	      Inv [g |- par (nu (\z. par null null)) M] [g |- par null N]
+| Inv_parnu : Inv [g |- N] [g |- M] ->
+	      Inv [g |- par null N] [g |- par (nu (\z. par null null)) M]
+| Inv_nuout : Inv [g |- M] [g |- N] ->
+	      Inv [g |- par (nu (\z. par null (out x b null))) M]
+		  [g |- par (out x b null) N]
+| Inv_outnu : Inv [g |- N] [g |- M] ->
+	      Inv [g |- par (out x b null) N]
+		  [g |- par (nu (\z. par null (out x b null))) M]
+;
+
+inductive ExistsTransInvf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
+| MakeTransInvOne  : [g |- one Q A[] Q'] -> Inv [g |- P'] [g |- Q']
+                  -> ExistsTransInvf [g |- P'] [g |- Q] [ |- A]
+;
+
+inductive ExistsTransInvDn : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransInvOneDn : [g |- oneb Q (dn X[]) (\x.N)] ->
+		  ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransInvDn [g,x:n |-  M] [g |-  Q] [ |- X]
+;
+
+inductive ExistsTransInvUp : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransInvOneUp : [g |- oneb Q (up X[]) (\x.N)] ->
+		  ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransInvUp [g,x:n |-  M] [g |-  Q] [ |- X]
+;
+
+coinductive BisimInv : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| BInvLf : BisimInv [g |- P] [g |- Q] :: [g |- one P A[] P']
+              -> ExistsTransInvf [g |- P'] [g |- Q] [ |- A]
+| BInvLDn  : BisimInv [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
+              -> ExistsTransInvDn [g,x:n |-  M] [g |-  Q] [ |- X]
+| BInvLUp  : BisimInv [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
+              -> ExistsTransInvUp [g,x:n |-  M] [g |-  Q] [ |- X]
+| BInvRf : BisimInv [g |- P] [g |- Q] :: [g |- one Q A[] Q']
+              -> ExistsTransInvf [g |- Q'] [g |- P] [ |- A]
+| BInvRDn : BisimInv [g |- P] [g |- Q] :: [g |- oneb Q (dn X[]) (\x. M)]
+              -> ExistsTransInvDn [g,x:n |-  M] [g |-  P] [ |- X]
+| BInvRUp : BisimInv [g |- P] [g |- Q] :: [g |- oneb Q (up X[]) (\x. M)]
+              -> ExistsTransInvUp [g,x:n |-  M] [g |-  P] [ |- X]
+;
+
+coinductive SimInv : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| SInvf : SimInv [g |- P] [g |- Q] :: [g |- one P A[] P']
+              -> ExistsTransInvf [g |- P'] [g |- Q] [ |- A]
+| SInvDn  : SimInv [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
+              -> ExistsTransInvDn [g,x:n |-  M] [g |-  Q] [ |- X]
+| SInvUp  : SimInv [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
+              -> ExistsTransInvUp [g,x:n |-  M] [g |-  Q] [ |- X]
+;
+
+rec invsym : (g:ctx) Inv [g |- P] [g |- Q] -> Inv [g |- Q] [g |- P] =
+fun (Inv_pq a b) => Inv_qp b a
+  | (Inv_qp a b) => Inv_pq b a
+  | (Inv_nupar a) => let b = invsym a in Inv_parnu b
+  | (Inv_parnu a) => let b = invsym a in Inv_nupar b
+  | (Inv_nuout a) => let b = invsym a in Inv_outnu b
+  | (Inv_outnu a) => let b = invsym a in Inv_nuout b
+;
+
+rec simBisim : (g:ctx) SimInv [g |- P] [g |- Q] -> SimInv [g |- Q] [g |- P]
+	       -> BisimInv [g |- P] [g |- Q] =
+fun s1 s2 .BInvLf  t => SInvf  s1 t
+  | s1 s2 .BInvLDn t => SInvDn s1 t
+  | s1 s2 .BInvLUp t => SInvUp s1 t
+  | s1 s2 .BInvRf  t => SInvf  s2 t
+  | s1 s2 .BInvRDn t => SInvDn s2 t
+  | s1 s2 .BInvRUp t => SInvUp s2 t
+;
+
+rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] = ?
+% fn i => case i of
+% | Inv_pq a b =>
+%   let Pproc = a in
+%   let Qproc = b in
+%   (observe SInvf => mlam A => mlam P' => fn t =>
+%           (case t of
+% 	   | [ |- comm_bangf T] => ?
+% 	   | [ |- comm_bangtaub T T'] => ?
+% 	  )
+%        | SInvDn => mlam X => mlam M  => fn t => ?
+%        | SInvUp => mlam X => mlam M  => fn t => ?
+%   )
+% | Inv_qp a b => ?
+% | Inv_nupar a => ?
+% | Inv_parnu a => ?
+% | Inv_nuout a => ?
+% | Inv_outnu a => ?
+;
+
+% rec invBisim : {g:ctx} Inv [g |- P..] [g |- Q..] -> BisimInv [g |- P..] [g |- Q..] =
+% mlam g => fn i =>
+% let s1 = invSim i in
+% let s2 = invSim (invsym i) in
+% observe BInvLf  => mlam A => mlam P' => fn t => SInvf s1 [ |- A] [g |- P'..] t
+%     | BInvLDn => mlam X => mlam M  => fn t => SInvDn s1 [ |- X] [g,x:n |-  M..x] t
+%     | BInvLUp => mlam X => mlam M  => fn t => SInvUp s1 [ |- X] [g,x:n |-  M..x] t
+%     | BInvRf  => mlam A => mlam P' => fn t => SInvf s2 [ |- A] [g |- P'..] t
+%     | BInvRDn => mlam X => mlam M  => fn t => SInvDn s2 [ |- X] [g,x:n |-  M..x] t
+%     | BInvRUp => mlam X => mlam M  => fn t => SInvUp s2 [ |- X] [g,x:n |-  M..x] t
+% ;
+
+% %rec invImpliesBisim : (g:ctx) Inv [g |- P..] [g |- Q..] -> Bisim [g |- P..] [g |- Q..] =

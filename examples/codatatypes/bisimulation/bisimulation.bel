@@ -1,0 +1,135 @@
+% Version of bisimulation based on the Abella implementation
+% http://abella-prover.org/examples/process-calculi/pi-calculus/pic.html
+
+% Definition of simulation and bisimulation relations and proofs that
+% they are a preorder and an equivalence relation, respectively.
+
+schema ctx = n;
+
+coinductive Sim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| Simf : Sim [g |- P] [g |- Q] :: [g |- one P A[] P']
+            -> ExistsTransSim [g |- P'] [g |- Q] [ |- A]
+| SimDn : Sim [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
+            -> ExistsTransSimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+| SimUp : Sim [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
+            -> ExistsTransSimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+
+
+and inductive ExistsTransSim : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
+| MakeTransSimf  : [g |- one Q A[] Q'] -> Sim [g |- P'] [g |- Q']
+                  -> ExistsTransSim [g |- P'] [g |- Q] [ |- A]
+
+and inductive ExistsTransSimDn : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransSimDn : [g |- oneb Q (dn X[]) (\x.N)] ->
+		  ({W : [ |- n]} Sim [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransSimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+
+and inductive ExistsTransSimUp : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransSimUp : [g |- oneb Q (up X[]) (\x.N)] ->
+		  ({W : [ |- n]} (Sim [g |- M[..,W[]] ] [g |- N[..,W[]] ]))
+                  -> ExistsTransSimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+;
+
+rec sim_refl : (g:ctx) {P:[g |- p]} Sim [g |- P] [g |- P] =
+fun [g |- P] .Simf  (t : [g |- one P A[] P']) => MakeTransSimf t (sim_refl [g |- P'])
+  | [g |- P] .SimDn (t : [g |- oneb P (dn X[]) (\x. M)]) =>
+    MakeTransSimDn t (mlam W => sim_refl [g |- M[..,W[]]])
+  | [g |- P] .SimUp (t : [g |- oneb P (up X[]) (\x. M)]) =>
+    MakeTransSimUp t (mlam W => sim_refl [g |- M[..,W[]]])
+;
+
+rec sim_trans : (g:ctx) Sim [g |- P] [g |- Q] -> Sim [g |- Q] [g |- R] ->
+		Sim [g |- P] [g |- R] =
+fun s1 s2 .Simf t =>
+    let MakeTransSimf t1 s3 = Simf s1 t in
+    let MakeTransSimf t2 s4 = Simf s2 t1 in
+    MakeTransSimf t2 (sim_trans s3 s4)
+  | s1 s2 .SimDn t =>
+    let MakeTransSimDn t1 s3 = SimDn s1 t in
+    let MakeTransSimDn t2 s4 = SimDn s2 t1 in
+    MakeTransSimDn t2 (mlam W => sim_trans (s3 [ |- W]) (s4 [ |- W]))
+  | s1 s2 .SimUp t =>
+    let MakeTransSimUp t1 s3 = SimUp s1 t in
+    let MakeTransSimUp t2 s4 = SimUp s2 t1 in
+    MakeTransSimUp t2 (mlam W => sim_trans (s3 [ |- W]) (s4 [ |- W]))
+;
+
+% Coinductive definition of bisimulation
+coinductive Bisim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
+| Leftf  : Bisim [g |- P] [g |- Q] :: [g |- one P A[] P']
+              -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A]
+| LeftDn  : Bisim [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
+              -> ExistsTransBisimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+| LeftUp  : Bisim [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
+              -> ExistsTransBisimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+| Rightf : Bisim [g |- P] [g |- Q] :: [g |- one Q A[] Q']
+              -> ExistsTransBisimf [g |- Q'] [g |- P] [ |- A]
+| RightDn : Bisim [g |- P] [g |- Q] :: [g |- oneb Q (dn X[]) (\x. M)]
+              -> ExistsTransBisimDn [g,x:n |-  M] [g |- P] [ |- X]
+| RightUp : Bisim [g |- P] [g |- Q] :: [g |- oneb Q (up X[]) (\x. M)]
+              -> ExistsTransBisimUp [g,x:n |-  M] [g |- P] [ |- X]
+
+and inductive ExistsTransBisimf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
+| MakeTransOne  : [g |- one Q A[] Q'] -> Bisim [g |- P'] [g |- Q']
+                  -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A]
+
+and inductive ExistsTransBisimDn : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransOneDn : [g |- oneb Q (dn X[]) \x.N] ->
+		   ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransBisimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+
+and inductive ExistsTransBisimUp : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+| MakeTransOneUp : [g |- oneb Q (up X[]) \x.N] ->
+		  ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
+                  -> ExistsTransBisimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+;
+
+rec bisim_refl : (g:ctx) {P:[g|- p]} Bisim [g |- P] [g |- P] =
+fun [g |- P] .Leftf   (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g |- P'])
+  | [g |- P] .LeftDn  (t : [g |- oneb P (dn X[]) (\x. M)]) =>
+    MakeTransOneDn t (mlam W => bisim_refl [g |- M[..,W[]]])
+  | [g |- P] .LeftUp  (t : [g |- oneb P (up X[]) (\x. M)]) =>
+    MakeTransOneUp t (mlam W => bisim_refl [g |- M[..,W[]]])
+  | [g |- P] .Rightf  (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g |- P'])
+  | [g |- P] .RightDn (t : [g |- oneb P (dn X[]) (\x. M)]) =>
+    MakeTransOneDn t (mlam W => bisim_refl [g |- M[..,W[]]])
+  | [g |- P] .RightUp (t : [g |- oneb P (up X[]) (\x. M)]) =>
+    MakeTransOneUp t (mlam W => bisim_refl [g |- M[..,W[]]])
+;
+
+rec bisim_trans : (g:ctx) Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- R] ->
+		  Bisim [g |- P] [g |- R] =
+fun s1 s2 .Leftf t => 
+    let MakeTransOne t1 s3 = Leftf s1 t in
+    let MakeTransOne t2 s4 = Leftf s2 t1 in
+    MakeTransOne t2 (bisim_trans s3 s4)
+  | s1 s2 .LeftDn t =>
+    let MakeTransOneDn t1 s3 = LeftDn s1 t in
+    let MakeTransOneDn t2 s4 = LeftDn s2 t1 in
+    MakeTransOneDn t2 (mlam W => bisim_trans (s3 [ |- W]) (s4 [ |- W]))
+  | s1 s2 .LeftUp t =>
+    let MakeTransOneUp t1 s3 = LeftUp s1 t in
+    let MakeTransOneUp t2 s4 = LeftUp s2 t1 in
+    MakeTransOneUp t2 (mlam W => bisim_trans (s3 [ |- W]) (s4 [ |- W]))
+  | s1 s2 .Rightf t => 
+    let MakeTransOne t1 s3 = Rightf s2 t in
+    let MakeTransOne t2 s4 = Rightf s1 t1 in
+    MakeTransOne t2 (bisim_trans s3 s4)
+  | s1 s2 .RightDn t =>
+    let MakeTransOneDn t1 s3 = RightDn s2 t in
+    let MakeTransOneDn t2 s4 = RightDn s1 t1 in
+    MakeTransOneDn t2 (mlam W => bisim_trans (s3 [ |- W]) (s4 [ |- W]))
+  | s1 s2 .RightUp t =>
+    let MakeTransOneUp t1 s3 = RightUp s2 t in
+    let MakeTransOneUp t2 s4 = RightUp s1 t1 in
+    MakeTransOneUp t2 (mlam W => bisim_trans (s3 [ |- W]) (s4 [ |- W]))
+;
+
+rec bisim_sym : (g:ctx) Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- P] =
+fun s .Leftf   t => Rightf  s t
+  | s .LeftDn  t => RightDn s t
+  | s .LeftUp  t => RightUp s t
+  | s .Rightf  t => Leftf   s t
+  | s .RightDn t => LeftDn  s t
+  | s .RightUp t => LeftUp  s t
+;

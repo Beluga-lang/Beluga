@@ -749,7 +749,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           | ConvSigma.Error (_loc, msg) ->
               raise (ConvSigma.Error (loc, msg))
           | _ ->
-              raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau,t), tau_t')))
+            raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau,t), tau_t')))
         end
 
 
@@ -864,6 +864,9 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         end
 
   | (Apx.Comp.Hole (loc), (tau, theta)) ->
+    let _ = dprint (fun () -> "[elExp] Expected Type (Hole): " 
+                        ^
+                        P.compTypToString cD (Whnf.cnormCTyp (tau,theta) )) in
     let () = Holes.collect (loc, cD, cG, (tau, theta)) in
     Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
 
@@ -1262,7 +1265,9 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in
                (cG1, Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
 
-          | _ ->  raise (Error (loc, TooManyMetaObj))
+          | _ ->
+            let _ = dprint (fun () -> "[elPatSpine] fall through - ttau = " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)) in
+            raise (Error (loc, TooManyMetaObj))
       )
   | Apx.Comp.PatObs (loc, obs, pat_spine') ->
     begin match ttau with
@@ -1676,6 +1681,7 @@ and elFBranch cD cG fbr theta_tau = match fbr with
     let _ = dprint (fun () -> "[elExp] Fun: In progress") in
     let _ = dprint (fun () -> "         cD' = " ^ P.mctxToString cD1 ^
       "\n         cG' = " ^ P.gctxToString cD1 cG1) in
+    let _ = dprint (fun () -> "         tau1 = " ^ P.compTypToString cD1 tau1) in
     let e''     = elExp cD1 cG1  e' (tau1, Whnf.m_id) in
     let _       = FCVar.clear() in
     let _ = dprint (fun () -> "[elExp] Fun: Done") in

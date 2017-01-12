@@ -623,6 +623,9 @@ struct
         (Id.render_name x)
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
+    | Comp.Fun (_, br) ->
+      fprintf ppf "FunNoPP"
+        
     | Comp.Cofun (_, _) ->
       fprintf ppf "CofunNoPP"
 

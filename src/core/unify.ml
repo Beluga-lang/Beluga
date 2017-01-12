@@ -970,8 +970,8 @@ let isVar h = match h with
     let (ms,s) = ss in
     dprint (fun () -> "Pruning term: "
 		      ^ P.normalToString cD0 (Context.hatToDCtx phat) sM
-                    ^ " with inv. sub: " ^ P.subToString cD0 cPsi' s);
-      prune' cD0 cPsi' phat (Whnf.whnf sM) ss rOccur
+      ^ " with inv. sub: " ^ P.subToString cD0 cPsi' s);
+      prune' cD0 cPsi' phat (Whnf.whnf sM) (ms, s) rOccur
 
   and prune' cD0 cPsi' ((cvar, offset) as phat) sM ss rOccur = match sM with
     | (LFHole _ as n, s)-> n
@@ -1449,8 +1449,7 @@ let isVar h = match h with
 
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     begin (* try *)
-      let ss1  = invert t1' in
-      let ss1  = Whnf.cnormSub (ss1, Whnf.m_id) in
+      let ss1  = invert (Whnf.cnormSub (t1', Whnf.m_id)) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)
       let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
       let tp' = Whnf.cnormClTyp (tp, mt1) in

@@ -787,14 +787,18 @@ module Ext = struct
 
       | Comp.TypBool -> fprintf ppf "Bool"
 
-    let rec fmt_ppr_pat_spine cD lvl ppf = (function
+    let rec fmt_ppr_pat_spine cD lvl ppf = function
       | Comp.PatNil _ -> fprintf ppf ""
       | Comp.PatApp (_, pat, pat_spine) ->
           fprintf ppf "%a %a"
             (fmt_ppr_pat_obj cD (lvl+1)) pat
             (fmt_ppr_pat_spine cD lvl) pat_spine
-
-                                          )
+      | Comp.PatObs (_, x, pat_spine) ->
+        fprintf ppf "%s %a"
+          (Id.render_name x)
+          (fmt_ppr_pat_spine cD lvl) pat_spine
+          
+      
     and fmt_ppr_pat_obj cD lvl ppf = function
       | Comp.PatMetaObj (_, mO) ->
           let cond = lvl > 1 in
@@ -842,6 +846,11 @@ module Ext = struct
 
       | Comp.Cofun (_, l) ->
           fprintf ppf "Some Cofun"
+
+      | Comp.Fun (_, b) ->
+        fprintf ppf "%s @[%a@]"
+          (to_html "fun" Keyword)
+          (fmt_ppr_cmp_fbranches cD lvl) b
 
       | Comp.MLam (_, x, e) ->
           let cond = lvl > 0 in
@@ -1016,6 +1025,20 @@ module Ext = struct
           fprintf ppf "%a%a"
             (fmt_ppr_cmp_branch cD 0) b
             (fmt_ppr_cmp_branches cD lvl) bs
+
+    and fmt_ppr_cmp_fbranches cD lvl ppf = function
+      | Comp.NilFBranch _ -> ()
+      | Comp.ConsFBranch (_, (ps, e), Comp.NilFBranch _) ->
+        fprintf ppf "%a%s@[%a@]"
+          (fmt_ppr_pat_spine cD lvl) ps
+          (symbol_to_html DblRArr)
+          (fmt_ppr_cmp_exp_chk cD lvl) e
+      | Comp.ConsFBranch (_, (ps, e), br) ->
+        fprintf ppf "%a%s@[%a@]@\n@[<hov2>| %a"
+          (fmt_ppr_pat_spine cD lvl) ps
+          (symbol_to_html DblRArr)
+          (fmt_ppr_cmp_exp_chk cD lvl) e
+          (fmt_ppr_cmp_fbranches cD lvl) br
 
     and fmt_ppr_patternOpt cD1' cPsi ppf = function
       | Some tM -> fmt_ppr_lf_normal cD1' cPsi 0 ppf tM

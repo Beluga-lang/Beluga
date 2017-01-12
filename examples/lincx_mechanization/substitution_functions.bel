@@ -1,5 +1,5 @@
 LF int_transfer : ctx -> ctx_mer Psi1 Psi2 Psi3 -> type =
-   | int_t : ctx_mer Phi1 Psi2 Phi3 -> int_transfer Phi1 (J : ctx_mer Psi1 Psi2 Psi3)
+   | int_t : {J: ctx_mer Psi1 Psi2 Psi3} ctx_mer Phi1 Psi2 Phi3 -> int_transfer Phi1 J % (J : ctx_mer Psi1 Psi2 Psi3)
 ;
 
 
@@ -7,8 +7,8 @@ rec transfer : (g:sch){J : [g |- ctx_mer Psi Phi0 Psi1]}{Phi1 : [g |- ctx]} [g |
     mlam J => mlam Phi1 =>
     let [_ |- J] : [g |- ctx_mer Psi Phi0 Psi1] = [_ |- J] in
     case [_ |- J] of
-    | [g |- m_empty] => [g |- int_t m_empty]
-    | [g |- m_cons D] => let [g |- int_t F] = transfer [g |- D] [g |- Phi1] in [g |- int_t (m_cons F)]
+    | [g |- m_empty] => [g |- int_t J m_empty]
+    | [g |- m_cons D] => let [g |- int_t _ F] = transfer [g |- D] [g |- Phi1] in [g |- int_t J (m_cons F)]
 ; 
 
 %                                                   ___
@@ -174,3 +174,4 @@ rec sim_subst_tp_unr : (g:sch) [g |- unrest_ctx Phi Phi_unr] -> [g |- unrest_ctx
 				[g |- stp_unav H1 H2 H3 F4 F5 F6 F7]
       )
 ;
+

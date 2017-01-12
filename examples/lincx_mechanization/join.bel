@@ -1,7 +1,6 @@
 % -------------------------------------
 % Context Joins
 % -------------------------------------
-
 % Binary join
 % Binary OR which fails if both sides have a positive bit at the same position
 

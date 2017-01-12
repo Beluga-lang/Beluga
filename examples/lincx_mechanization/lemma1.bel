@@ -31,13 +31,13 @@ rec ctxjoincomm : (g:sch)[g |- joining (cjoin Psi1 Psi2 Psi3)] -> [g |- joining 
 % Datatype containing two joins at once
 
 LF double_joining : joining J1 -> joining J2 -> type =
-  | dcjoin : joining J1 -> joining J2 -> double_joining (JG1 : joining J1) (JG2 : joining J2)
+  | dcjoin : {JG1: joining J1} {JG2: joining J2} double_joining JG1 JG2 % (JG1 : joining J1) (JG2 : joining J2)
 ;
 
 % Determines the existence of a join between two leaves
 
 LF ex_and : bin_join M N K -> bin_join L R M -> type = 
-  | ex_a_n : bin_join M N K -> bin_join L R M -> bin_join R N F -> ex_and (A1 : bin_join M N K) (A2 : bin_join L R M)
+  | ex_a_n : {A1 : bin_join M N K} {A2: bin_join L R M} bin_join R N F -> ex_and A1 A2% (A1 : bin_join M N K) (A2 : bin_join L R M)
 ; 
 
 % B = B1 join B2, B1 = B11 join B12 => there exists B' s.t. B' =  B12 join B2
@@ -82,7 +82,7 @@ rec exist_and : {A1 : [|- bin_join M N K]} {A2 : [|- bin_join L R M]} [|- ex_and
 % Helper datatype, denotes that an intermediate node exists, denoted as desired for associativity.
 
 LF ex_node : joining (cjoin Psi Psi1 Psi2) -> joining (cjoin Psi1 Psi11 Psi12) -> type =
-  | ex_n : joining (cjoin Psi0 Psi12 Psi2) -> ex_node (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
+  | ex_n : {J1 : joining (cjoin Psi Psi1 Psi2)} {J2 : joining (cjoin Psi1 Psi11 Psi12)} joining (cjoin Psi0 Psi12 Psi2) -> ex_node J1 J2 % (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
 ; 
 
 % Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi' s.t. Psi' = Psi12 join Psi2
@@ -90,41 +90,40 @@ LF ex_node : joining (cjoin Psi Psi1 Psi2) -> joining (cjoin Psi1 Psi11 Psi12) -
 rec lemma1_2a : (g:sch) { J1 : [g |- (joining (cjoin Psi Psi1 Psi2))] } { J2 : [g |- (joining (cjoin Psi1 Psi11 Psi12))] } [g |- ex_node J1 J2] = 
     mlam J1 => mlam J2 => 
     case [_ |- J1] of
-    | [g |- joining_base D1[]] =>
-      (case [g |- J2] of
+    | [g |- joining_base D1[]] => (case [g |- J2] of
        | [g |- joining_base E1[]] =>
 	 let [|- ex_a_n A1 A2 F1] = exist_and [|- D1] [|- E1] in
-	 [g |- ex_n (joining_base F1[])]
+	 [g |- ex_n J1 J2 (joining_base F1[])]
       )
     | [g |- joining_empty] =>
       (case [g |- J2] of
-       | [g |- joining_empty] => [g |- ex_n joining_empty]
+       | [g |- joining_empty] => [g |- ex_n J1 J2 joining_empty]
       )
     | [g |- joining_lin_l D] =>
       (case [g |- J2] of
        | [g |- joining_lin_l E] =>
-	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n (joining_unav F)]
+	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+	 [g |- ex_n J1 J2 (joining_unav F)]
        | [g |- joining_lin_r E] =>
-	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in 
-	 [g |- ex_n (joining_lin_l F)]
+	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in 
+	 [g |- ex_n J1 J2 (joining_lin_l F)]
       )
     | [g |- joining_lin_r D] =>
       (case [g |- J2] of
        | [g |- joining_unav E] =>
-	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n (joining_lin_r F)]
+	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+	 [g |- ex_n J1 J2 (joining_lin_r F)]
       )
     | [g |- joining_unr D] =>
       (case [g |- J2] of
        | [g |- joining_unr E] =>
-	 let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in 
-	 [g |- ex_n (joining_unr F)]
+	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in 
+	 [g |- ex_n J1 J2 (joining_unr F)]
       )
     | [g |- joining_unav D] =>
       (case [g |- J2] of
-       | [g |- joining_unav E] => let [g |- ex_n F] = lemma1_2a [g |- D] [g |- E] in
-				 [g |- ex_n (joining_unav F)]
+       | [g |- joining_unav E] => let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+				 [g |- ex_n J1 J2 (joining_unav F)]
       )
 ;
 
@@ -345,25 +344,25 @@ rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2) ]
 % Datatype containing two joins at once
 
 LF assoc_double_joining : joining J1 -> joining J2 -> type =
-   | adcjoin : joining (cjoin Psi0 Psi12 Psi2) -> joining (cjoin Psi Psi11 Psi0)
-	      -> assoc_double_joining (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
+   | adcjoin : {J1 : joining (cjoin Psi Psi1 Psi2)} {J2 : joining (cjoin Psi1 Psi11 Psi12)} joining (cjoin Psi0 Psi12 Psi2) -> joining (cjoin Psi Psi11 Psi0)
+	      -> assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
 ;
 
 % Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi0 s.t. Psi0 = Psi12 join Psi2 and Psi = Psi11 join Psi0
 
 rec ctxjoinasso1 : (g : sch){J1 : [g |- joining (cjoin Psi Psi1 Psi2)]}{J2 : [g |- joining (cjoin Psi1 Psi11 Psi12)]}[g |- assoc_double_joining J1 J2]  =
     mlam J1 => mlam J2 =>
-    let [g |- ex_n F1] = lemma1_2a [_ |- J1] [_ |- J2] in
+     let [g |- ex_n _ _ F1] = lemma1_2a [_ |- J1] [_ |- J2] in
     let [g |- F2] = lemma1_2b [g |- J1] [g |- J2] [g |- F1] in
-    [g |- adcjoin F1 F2]
+    [g |- adcjoin J1 J2 F1 F2]
 ;
 
 % --------------------
 % Lemma 1.3
 
 LF inv_assoc_double_joining : joining J1 -> joining J2 -> type =
-   | iadcjoin : joining (cjoin Psi0 Psi1 Psi21) -> joining (cjoin Psi Psi0 Psi22)
-	      -> inv_assoc_double_joining (J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi2 Psi21 Psi22))
+   | iadcjoin : {J1 : joining (cjoin Psi Psi1 Psi2)} {J2 : joining (cjoin Psi2 Psi21 Psi22)} joining (cjoin Psi0 Psi1 Psi21) -> joining (cjoin Psi Psi0 Psi22)
+	      -> inv_assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi2 Psi21 Psi22))
 ;
 
 % Psi = Psi1 join Psi2, Psi2 = Psi21 join Psi22 => there exists Psi0 s.t. Psi0 = Psi1 join Psi21, Psi = Psi0 join Psi22
@@ -372,10 +371,10 @@ rec ctxjoinasso2 : (g : sch) {J1 : [g |- joining (cjoin Psi Psi1 Psi2)]}{J2 : [g
     mlam J1 => mlam J2 =>
     let [g |- D1] = ctxjoincomm [_ |- J1] in
     let [g |- D2] = ctxjoincomm [g |- J2] in
-    let [g |- adcjoin G1 G2] = ctxjoinasso1 [g |- D1] [g |- D2] in
+    let [g |- adcjoin _ _ G1 G2] = ctxjoinasso1 [g |- D1] [g |- D2] in
     let [g |- F1] = ctxjoincomm [g |- G1] in
     let [g |- F2] = ctxjoincomm [g |- G2] in
-    [g |- iadcjoin F1 F2]
+    [g |- iadcjoin J1 J2 F1 F2]
 ;
 
 % ----------------------
@@ -600,5 +599,3 @@ rec is_unr_join_commb : (g : sch) [g |- unrest_ctx Psi Phi] -> [g |- joining (cj
     let [g |- F] = ctxjoincomm e in is_unr_joinb d [g |- F]
 
 ;
-
-

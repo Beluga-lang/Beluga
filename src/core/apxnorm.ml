@@ -572,6 +572,8 @@ and collectApxPatSpine fMVd pat_spine = match pat_spine with
   | Apx.Comp.PatApp (loc, pat, pat_spine) ->
       let fMVs1 = collectApxPattern fMVd pat in
 	collectApxPatSpine fMVs1 pat_spine
+  | Apx.Comp.PatObs (loc, cid, pat_spine) ->
+      collectApxPatSpine fMVd pat_spine
 
 (* Replace FMVars with appropriate de Bruijn index
  * If a FMVar (of FPVar) occurs in fMVs do not replace it

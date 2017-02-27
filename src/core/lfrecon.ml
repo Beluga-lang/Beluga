@@ -49,6 +49,7 @@ type error =
   | TermWhenVar of Int.LF.mctx * Int.LF.dctx * Apx.LF.normal
   | SubWhenRen of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub
   | HOMVarNotSupported
+  | SubstVarConflict of Id.name
 
 exception Error of Syntax.Loc.t * error
 
@@ -185,6 +186,11 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "A substitution was found when expecting a renaming.@."
 	| HOMVarNotSupported ->
 	  Format.fprintf ppf "Higher-order meta-variables not (currently) supported"
+        | SubstVarConflict x ->
+          Format.fprintf ppf
+            "The variable %s was expected to be a substitution variable.\n\nPlease note that #%s and %s both denote the same variable and so the use of both concurrently to denote different things is disallowed."
+            (Id.render_name x) (Id.render_name x) (Id.render_name x)
+
   ))
 
 let rec conv_listToString clist = match clist with
@@ -1839,6 +1845,7 @@ and elSub loc recT cD cPsi s cl cPhi =
                Int.LF.FSVar (0, (s_name, sigma')))
             else
               raise (Error (loc, NotPatSub))
+          | Match_failure (_, _, _) -> raise (Error (loc, SubstVarConflict s_name))
 	end
 
       | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->

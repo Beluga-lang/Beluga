@@ -31,9 +31,6 @@ inductive TmVar : {g:tctx} [ |- tp] -> ctype  =
 ;
 
 
-
-
-
 inductive Extends : {g:ctx} {h:ctx} ctype  =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}

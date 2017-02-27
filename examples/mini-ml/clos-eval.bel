@@ -34,7 +34,7 @@ inductive CtxRel : {g:tctx} {h:tctx} ctype  =
 | Rsnoc : (g:tctx) (h:tctx) CtxRel [g] [h] -> CtxRel [g, x:tm] [h, x:tm]
 ;
 
-% type Env : {g:tctx} ctype = [g |- tm] -> Clos ;
+typedef Env : {g:tctx} ctype = [g |- tm] -> Clos;
 
 
 rec test : Clos -> Clos =
@@ -42,24 +42,19 @@ rec test : Clos -> Clos =
 fn x => case x of Cl y f  => x
 ;
 
-
-
 rec test_bool : Bool -> Bool =
-% / total e (test_bool e) /
 fn e => case e of
 | ttrue => ffalse
 ;
 
 
 rec ev_bool : (g:tctx) [g |- tm] -> Bool =
-%/ total e (ev_bool g e)/
 fn e => case e of
 | [g |- z ] => ttrue
 ;
 
 
 rec eval : (g:tctx) [g |- tm] -> ([g |- tm] -> Clos) -> Clos =
-% / total e (eval g e)/
 fn e => fn env => case e of
 | [g |- #p ] => env [g |- #p]
 | [g |- lam \x. E] => Cl [g, x:tm  |-  E] env
@@ -75,11 +70,12 @@ fn e => fn env => case e of
 
 ;
 
-%{
-rec eval : (g:ctx) [g |- tm] -> Env [g] -> Clos =
+
+% Using type abbreviations
+rec eval : (g:tctx) [g |- tm] -> Env [g] -> Clos =
 fn e => fn env => case e of
 | [g |- #p ] => env [g |- #p]
-| [g |- lam \x. E] => Cl [g, x:exp  |-  E] env
+| [g |- lam \x. E] => Cl [g, x:tm  |-  E] env
 | [g |- app E1 E2] =>
   case eval [g |- E1] env of
   | Cl [h, x:tm  |-  E] env' =>
@@ -87,8 +83,8 @@ fn e => fn env => case e of
     eval [h,x:tm  |-  E]
          (fn var => case var of
                | [h, x:tm  |-  x] => v
-               | [h, x:tm  |-  #p ] => env' [h |- #p]
+               | [h, x:tm  |-  #p[..] ] => env' [h |- #p]
          )
 ;
 
-}%
+

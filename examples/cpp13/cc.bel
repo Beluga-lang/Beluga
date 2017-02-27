@@ -270,6 +270,6 @@ fn t => cc' t (M_id [])
 % ----------------------------------------------------------       
 % Examples
 
-% let t0 = cc [ |- app (lam (\x.x)) z ];
-% let t1 = cc [ |- app (lam (\x.(app (lam (\y.y)) x))) z];
-% et t2 = cc [ |- app (app (app (lam \x. (lam \y. (lam \w . x))) z) z) z];
+ let t0 = cc [ |- app (lam (\x.x)) z ];
+ let t1 = cc [ |- app (lam (\x.(app (lam (\y.y)) x))) z];
+ let t2 = cc [ |- app (app (app (lam \x. (lam \y. (lam \w . x))) z) z) z];

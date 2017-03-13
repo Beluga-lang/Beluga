@@ -415,7 +415,12 @@ module Int = struct
             proj
 
       | LF.MVar (c, s) ->
-          fprintf ppf "%s%a%s[%a]%s"
+      if Substitution.LF.isId s then     
+          fprintf ppf "%a%s"
+            (fmt_ppr_lf_cvar cD lvl) c
+            proj
+      else
+           fprintf ppf "%s%a%s[%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_cvar cD lvl) c
             proj
@@ -423,6 +428,11 @@ module Int = struct
             (r_paren_if (paren s))
 
       | LF.PVar (c, s) ->
+        if Substitution.LF.isId s then
+          fprintf ppf "#%a%s"
+            (fmt_ppr_lf_offset cD lvl) c
+            proj
+	else
           fprintf ppf "%s#%a%s[%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_offset cD lvl) c

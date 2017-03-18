@@ -1249,16 +1249,18 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
             
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
-  | Apx.Comp.PatAnn (_ , (Apx.Comp.PatMetaObj (loc, _) as pat') , 
+  | Apx.Comp.PatAnn (l, (Apx.Comp.PatMetaObj (loc, _) as pat') , 
 		          Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^ 
 			P.compTypToString cD_s  tau_s) in
           let Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp _tQ, cPsi_s)) = tau_s  in
 	  let cPsi = inferCtxSchema loc (cD_s, cPsi_s) (cD, psi) in
 	  let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-          let ttau' = (Int.Comp.TypBox(loc', Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
+	  let tau' = Int.Comp.TypBox(loc', Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)) in
+          let ttau' = (tau', Whnf.m_id) in
           let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
-            (cG', pat', ttau')
+          (* Return annotated pattern? Int.Comp.PatAnn (l, pat', tau') *)
+            (cG',Int.Comp.PatAnn(l, pat', tau'), ttau')
 
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       begin match tau_s with
@@ -1384,16 +1386,18 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
     let _  = begin match (caseT, pat) with
                | (DataObj, _) -> ()
 
-               | (IndexObj mO, Int.Comp.PatMetaObj (_, mO1)) ->
-		   let Int.Comp.TypBox (_ , mT) =  tau_p' in 
+               | (IndexObj mO, Int.Comp.PatMetaObj (_, mO1)) | 
+		 (IndexObj mO, Int.Comp.PatAnn (_ , Int.Comp.PatMetaObj (_ , mO1), _ ))->
+		   let Int.Comp.TypBox (_ , mT) =  tau_p' in  
 		      begin try
 			(dprint (fun () -> "Pattern matching on index object...");
 			 Unify.unifyMetaObj Int.LF.Empty  (mO,  t)
-                           (mO1, mt1) (mT, Whnf.m_id))
+                                                          (mO1, mt1) (mT, Whnf.m_id)) 
 		      with Unify.Failure msg ->
 			(dprint (fun () -> "Unify ERROR: " ^ msg);
 			 raise (Error.Violation "Pattern matching on index argument failed"))
 		      end
+
     end
     in
 

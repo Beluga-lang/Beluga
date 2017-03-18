@@ -1307,7 +1307,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
 	let tau_p = Int.Comp.TypBox (loc', clTyp) in 
 	let ttau' = (tau_p, Whnf.m_id) in
 	let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
-	  (cG', pat', ttau')
+	  (cG', Int.Comp.PatAnn(loc, pat', tau_p), ttau')
 
   | _ ->
       let _ = dprint (fun () -> "[recPatObj'] -~~> inferPatTyp ") in

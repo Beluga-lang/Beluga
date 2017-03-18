@@ -1,3 +1,3 @@
 Ill-typed expression.
     Expected type: pf ?X1[^0] 
-    Actual type: pf (& Y1 (Y[ ..]))
+    Actual type: pf (& Y1 Y)

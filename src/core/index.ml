@@ -85,6 +85,7 @@ let _ = Error.register_printer
     ))
 
 
+
 type free_cvars = Id.name
 
 type fcvars = free_cvars list * bool
@@ -550,7 +551,7 @@ let rec index_ctx cvars bvars fvars = function
 
 let index_cltyp' cvars bvars fvars = function
   | Ext.LF.MTyp a ->
-    let (a, fvars) = index_typ  cvars bvars fvars a in
+      let (a, fvars) = index_typ  cvars bvars fvars a in
     (Apx.LF.MTyp a, fvars)
   | Ext.LF.PTyp a ->
     let (a, fvars) = index_typ cvars bvars fvars a in

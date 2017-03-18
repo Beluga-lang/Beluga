@@ -4,7 +4,8 @@ oft : tm -> tp -> type.
 
 schema tctx = some [t:tp] block x:tm,dx:oft x t;
 
-rec foo : (g:tctx) [g |- oft M T[]] -> [g |- oft M T[]] =
-fn d => case d of
-| [g,b:block x:tm,dx:oft x T[] |- M[..,b.1,b.2]] => [g,b:block x:tm,dx:oft x T[] |- M[..,b.1,b.2]]
+rec foo : {g:tctx}{M:[g |- tm]} [g |- oft M T[]] -> [g |- oft M T[]] =
+mlam g, M0 => fn d => case d of
+| % {N0:[g, x:tm |- tm]}{D:[g, x:tm, dx:oft x T[] |- oft N0[.., x] S0[]]}
+  [g,b:block x:tm,dx:oft x T[] |- D[..,b.1,b.2]] => [g,b:block x:tm,dx:oft x T[] |- D[..,b.1,b.2]]
 ;

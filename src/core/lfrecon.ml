@@ -1417,9 +1417,15 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s'), spine) ->
       begin try
         let (_, tA, cPhi) = Whnf.mctxMDec cD u in
+	let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET\n") in
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
+	let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET - ELABORATION elSub DONE \n") in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
+	let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET - ELABORATION elSpine DONE \n") in
         let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) in
+	let _ = dprint (fun () -> "\n cPsi = " ^ P.dctxToString cD cPsi ^ "\n") in
+	let tQ = Whnf.cnormTyp ((Whnf.normTyp sQ), Whnf.m_id) in 
+	let _ = dprint (fun () -> "\n[elTerm] UNIFY sQ = " ^ P.typToString cD cPsi (tQ, Substitution.LF.id) ^ "\nwith sP " ^ P.typToString cD cPsi sP ^ "\n") in
         begin
 	  try
             Unify.unifyTyp cD cPsi sQ sP;
@@ -1540,9 +1546,9 @@ and elTerm' recT cD cPsi r sP = match r with
                                   ^ P.typToString cD cPhi (tA, Substitution.LF.id) ^ "\n ill-typed") ;
                   raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
         in
-        let s''       = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
+        let s''     = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
 	let k       = getProjIndex loc cD cPsi recA proj in
-        let sA        = begin try
+        let sA      = begin try
                            Int.LF.getType h (recA, s'') k 1
                         with _ -> raise (Error (loc, ProjNotValid (cD, cPsi, k,
                                                          (Int.LF.Sigma recA, s''))))

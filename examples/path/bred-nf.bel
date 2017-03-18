@@ -179,8 +179,9 @@ rec path_exists : {g:jctx'} {U:[g |- nf] }  ExNPath [g |- U] =
 / total u (path_exists g u) /
 mlam g => mlam U => case [g |- U] of
 | [g |- nabs \x. U] =>
-let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath (U[..,x]) (P[..,p])]}
-    ExPath [g, b:block (x:tm, y:nf, _r: bred x y, p:p,_pt: path x p, _np: npath y p)  |-  Ql[..,b.2,b.4,b.6]] =
+let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath U[..,x] P[..,p]]}
+    ExPath [g, b:block (x:tm, y:nf, r: bred x y, p:p, pt: path x p, np: npath y p) 
+     |-  Ql[..,b.y,b.p, b.np]] =
     path_exists [g, b:block (x:tm, y:nf, _r: bred x y, p:p,_pt: path x p, _np: npath y p) ]
                [g,b |- U[..,b.2]]
 in

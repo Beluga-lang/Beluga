@@ -1380,6 +1380,7 @@ let mctxPDec cD k =
 let mctxSDec cD' k =
   match (mctxLookup cD' k) with
     | (u, ClTyp (STyp (cl, cPhi), cPsi)) -> (u, cPhi, cl, cPsi)
+      (* u : [cPsi |- cPhi] *)
     | _ -> raise (Error.Violation "Expected substitution variable")
 
 let mctxCDec cD k =

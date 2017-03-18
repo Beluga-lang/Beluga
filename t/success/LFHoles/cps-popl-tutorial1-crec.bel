@@ -34,42 +34,85 @@ rec cps : (g:ctx) [g |- value A] -> [g |- cvalue A] =
 fn v =>  case v of
 | [g |- #p.1[..]] =>  [g |- #p.2[..]]
 
-| [g |- lam A2[] \x. E] =>
+ | [g |- lam A2[] \x. E] =>
   let  [g, b:block (x:value A[] , _t:cvalue A[]), k:ccont B[] |-  E'[..,b.2,k]] =
     cpse [g, b:block x:value A2[] , _t:cvalue A2[] |-  E[..,b.1]]
    in
      [g |- clam \v.\c. E']
 
-
 and cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
 fn e => case e of
 | [g |- ret (V[..] )] =>
-  let [g |- V'[..]] = cps [g |- V[..] ] in
-    [g,k |- cthrow k ?]
+  let [g |- V'[..]] = cps [g |- V[..] ] in 
+[g, k |- cthrow k ? ]
 
-| [g |- app (E1[..] ) (E2[..] )] =>
+
+ | [g |- app (E1[..] ) (E2[..] )] =>
   let [g,k:ccont (arr B A) |-  E1'[..,k]] = cpse [g |- E1[..] ] in
   let [g,k:ccont B' |-  E2'[..,k]] = cpse [g |- E2[..] ] in
    [g, k |-  (E1'[..,(cconti (\f. E2'[..,(cconti (\x. capp f x k))]))])]
+
 ;
 
 
-let id_fun = [ |- lam o \x. ret x] ;
+% let id_fun = [ |- lam o \x. ret x] ;
 
-let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
+% let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;
 
-rec test : Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
-fn x => let [b:block (x:value o , _t:cvalue o) |-  V'] = cps [b:block (x:value o , _t:cvalue o) |-  b.1] in
-	[b:block (x:value o , _t:cvalue o),k |- cthrow k (V'[b])] ;
+rec test0 : [b:block (x:value o , _t:cvalue o), k:ccont o |- contra] = 
+let [b:block (x:value o , _t:cvalue o) |- X] = [b:block (x:value o , _t:cvalue o) |- b.2] in 
+  [b: block (x:value o , _t:cvalue o), k:ccont o |-cthrow k X[b]]
+;
 
-let r1' = test ttrue ;
+% let x = test0;
 
+%{
+
+rec test0: {V:[b:block (x:value o , _t:cvalue o) |- cvalue o]}
+[b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] = 
+mlam V =>  [ b:block (x:value o , _t:cvalue o), k:ccont o |- cthrow k V[b]] ;
+
+let r = test0 [b:block (x:value o , _t:cvalue o) |- b.2];
+
+}%
+%{
+rec test0: {V:[b:block (x:value o , _t:cvalue o) |- cvalue o]}
+[b:block (x:value o , _t:cvalue o), k:ccont o |- cvalue o] = 
+mlam V => let [b:block (x:value o , _t:cvalue o) |- W[b.1,b.2]] = [b:block (x:value o , _t:cvalue o) |- V] in 
+[b:block (x:value o , _t:cvalue o),k:ccont o |- W[b.1,b.2]]
+;
+
+ let r = test0 [b:block (x:value o , _t:cvalue o) |- b.2];
+}%
+
+%{
+rec test0: {V:[x:value o , _t:cvalue o |- cvalue o]}
+[b:block (x:value o , _t:cvalue o), k:ccont o |- cvalue o] = 
+mlam V => let [x:value o , _t:cvalue o |- W] = [x:value o , _t:cvalue o |- V] in 
+[b:block (x:value o , _t:cvalue o),k:ccont o |- W[b.1,b.2]]
+;
+}%
+% let r = test0 [x:value o ,t:cvalue o |- t];
+
+
+rec test :Bool -> [b:block (x:value o , _t:cvalue o), k:ccont o |-  contra] =
+fn x => 
+let r =  cps [ b:block (x:value o , _t:cvalue o) |-  b.1]   in 
+let  [b:block (x:value o , _t:cvalue o) |-  V] = r in
+% V': [t:cvalue o |- cvalue o] and 
+% [b |- V'[b.2]]
+% [b:block (x:value o , _t:cvalue o) |-  b.2] 
+ [ b:block (x:value o , _t:cvalue o), k:ccont o |- cthrow k V[b]] ;
+
+ let r1' = test ttrue ;
+
+%{
 let r1 = cpse [b:block x:value o , _t:cvalue o |-  ret b.1] ;
 
 let r2 = cps [ |- lam o \x. ret x] ;
 
 let r3 = cps  [ |- (lam (arr (arr o o) o) (\x. app (ret x) (ret (lam o (\x. ret x )))))] ;
-
+}%
 
 %{
 

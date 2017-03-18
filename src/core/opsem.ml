@@ -299,7 +299,7 @@ and match_pattern  (v,eta) (pat, mt) =
 	  match_cobj (phat, cObj) (cPsi', cObj', mt)
 
       | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
-	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->
+	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->	  
 	  match_cobj (phat, cObj) (Context.hatToDCtx phat', cObj', mt)
 (*      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
 	let cPsi = Context.hatToDCtx phat' in
@@ -367,12 +367,13 @@ and eval_branch vscrut branch (theta, eta) =
       raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
     | Comp.Branch (loc, cD, cG, pat, theta', e) ->
       begin
-        try
+        try	  
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
           let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
           let _ = dprint (fun () -> "[eval_branches] try branch with theta_k = "
                             ^ P.msubToString LF.Empty (Whnf.cnormMSub theta_k)) in
-          let _ = Unify.unifyMSub theta theta_k in
+	  let _ = dprint (fun () -> "[eval_branches] cD = " ^ P.mctxToString cD) in
+          let _ = Unify.unifyMSub theta theta_k  in
           let _ = dprint (fun () -> "match scrutinee against pattern \n     " ^
                             P.patternToString cD cG pat) in
           let _ = dprint (fun () -> "     pattern with mvars \n     " ^
@@ -381,6 +382,7 @@ and eval_branch vscrut branch (theta, eta) =
           let eta' = match_pattern  (vscrut, eta) (pat, mt) in
             eval_chk e (Whnf.cnormMSub mt, eta')
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
+	  | e -> (dprint (fun () -> "000 Branch failed\n"); raise e)
       end
 
 and eval_cofun codataval branches acc (theta, eta) =

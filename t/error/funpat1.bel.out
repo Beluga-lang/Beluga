@@ -1,3 +1,1 @@
-Cannot pattern-match on values of this type.
-  Scrutinee: g
-  Type: [ |- nat] -> [ |- nat]
+Found box-expression that does not have type [ |- nat] -> [ |- nat].

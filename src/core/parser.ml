@@ -1375,6 +1375,9 @@ cmp_exp_syn:
       | "#";"["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]"  ->
               MTPBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No)
 
+      | "$"; "["; cPsi = clf_dctx; turnstile; cPhi = clf_dctx; "]"  ->
+              MTSub(_loc, cPhi,  cPsi, LF.No)
+
       | "["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]" ->
               MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No )
      ]

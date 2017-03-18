@@ -13,19 +13,20 @@ module RR = Store.Cid.NamedRenderer
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7]) *)
 
-(* let rec conv_listToString clist = match clist with *)
-(*   | [] -> " " *)
-(*   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs *)
+ let rec conv_listToString clist = match clist with 
+   | [] -> " " 
+   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs 
 
 (* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
 let rec _blockdeclInDctx cPsi = match cPsi with
   | Int.LF.Null -> false
   | Int.LF.CtxVar psi -> false
-  |Int.LF.DDec (cPsi',Int.LF.TypDecl(x, tA)) ->
+  | Int.LF.DDec (cPsi',Int.LF.TypDecl(x, tA)) ->
      begin match Whnf.whnfTyp (tA, LF.id) with
        | (Int.LF.Sigma _ , _ ) -> true
        | _  ->    _blockdeclInDctx cPsi'
      end
+  | _ -> false
 
 type error =
   | BlockInDctx of Int.LF.mctx * Int.LF.head * Int.LF.typ * Int.LF.dctx
@@ -73,8 +74,14 @@ and strans_head loc cD cPsi h conv_list = match h with
           Int.LF.MVar(u, strans_sub cD cPsi sigma conv_list)
   | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub cD cPsi sigma conv_list)
   | Int.LF.Proj (Int.LF.BVar x, j) ->
-    let x' = (new_index x conv_list) - j + 1  in
-      Int.LF.BVar x'
+     begin try 
+       let _ = Context.ctxDec cPsi x in 
+	 (* check that there exists a typ declaration for x 
+	    – if there is none, then it is mapped to itself. *)
+       let x' = (new_index x conv_list) - j + 1  in
+	 Int.LF.BVar x'
+     with _ -> Int.LF.Proj (Int.LF.BVar x, j)
+     end
 
   | Int.LF.Proj (Int.LF.PVar (p, sigma), j) ->
       Int.LF.Proj (Int.LF.PVar (p, strans_sub cD cPsi sigma conv_list), j)

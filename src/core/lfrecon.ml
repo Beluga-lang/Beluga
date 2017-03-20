@@ -1128,9 +1128,10 @@ and elTerm' recT cD cPsi r sP = match r with
                  * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                  * This will be enforced during abstraction.
                  *)
-	      let _ = dprint (fun () -> "Added FMVar " ^ Id.render_name u ^
-				" of type " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^
-				"[" ^ P.dctxToString cD cPhi ^ "]") in
+	      let _ = dprint (fun () -> "Add FMVar " ^ Id.render_name u ^
+				" of type " ^ 
+				P.dctxToString cD cPhi ^ " |- " ^ 
+				P.typToString cD cPhi (tP, Substitution.LF.id) ) in
                 FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
 		(*The depend paramater here affects both mlam vars and case vars*)
                 Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
@@ -1277,11 +1278,10 @@ and elTerm' recT cD cPsi r sP = match r with
                   FCVar.add p (cD, Int.LF.Decl(p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP,Substitution.LF.id)),  cPhi), Int.LF.Maybe));
                   Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 
-            | (Apx.LF.Nil, false) -> failwith "Not implemented"
-                (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in *)
-                (*   add_fcvarCnstr (m, q); *)
-                (*   Int.LF.Root (loc, Int.LF.PVar (q, Substitution.LF.id), Int.LF.Nil) *)
-
+            | (Apx.LF.Nil, false) -> 
+		(* cD ; cPsi |- #p[s] : sP *)
+		(* cannot infer type of #p *)
+		raise (Error (loc, CompTypAnn ))
             | (_, _) ->  raise (Error (loc, NotPatternSpine))
           end
         | Error.Violation msg  ->

@@ -234,7 +234,8 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 	  P.dctxToString cD cPsi ^ " |- " ^
 	  P.normalToString cD cPsi sM ^
           " => " ^ P.typToString cD cPsi sP ) in
-  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
+	  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) 
+	    ("Root" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM);
 	let _ = dprint (fun () -> "       against " ^
 	  P.typToString cD cPsi sA) in
         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in

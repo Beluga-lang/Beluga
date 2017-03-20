@@ -42,7 +42,8 @@ val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 val newMMVar'   : Id.name option -> mctx * ctyp -> depend ->  mm_var
 val newMMVar    : Id.name option -> mctx * dctx * typ -> depend ->  mm_var
 val newMPVar    : Id.name option -> mctx * dctx * typ ->  depend -> mm_var
-val newMSVar    : Id.name option -> mctx (* cD *) * dctx (* cPsi *) * dctx (* cPhi *) -> depend -> mm_var 
+val newMSVar    : Id.name option -> mctx (* cD *) * svar_class * 
+                  dctx (* cPsi *) * dctx (* cPhi *) -> depend -> mm_var 
                   (* cD ; cPsi |- msvar : cPhi *)
 
 val newMVar     : Id.name option -> dctx * typ -> depend -> cvar
@@ -138,6 +139,7 @@ val conv_hat_ctx: psi_hat -> psi_hat -> bool
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool
+val closedCTyp : Comp.typ -> bool
 val closedGCtx : Comp.gctx -> bool
 val closedMetaObj : Comp.meta_obj -> bool
 

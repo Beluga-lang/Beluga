@@ -97,7 +97,7 @@ let newMMVar' n (cD, mtyp) dep = match n with
 
 let newMMVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
 let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
-let newMSVar n (cD, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (Subst, cPhi), cPsi)) dep
+let newMSVar n (cD, cl, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (cl, cPhi), cPsi)) dep
 let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
 
 let newMVar n (cPsi, tA) dep = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) dep)

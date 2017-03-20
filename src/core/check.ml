@@ -689,8 +689,10 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | (Syn (loc, i), (tau, t)) ->
 	let _ = dprint (fun () -> "check --> syn") in
         let (_, tau',t') = syn cD (cG,cIH) i in
-        let (tau',t') = Whnf.cwhnfCTyp (tau',t') in
-        if C.convCTyp (tau,t)  (tau',t') then
+        let (tau',t') = Whnf.cwhnfCTyp (tau',t') in 
+	let tau' = Whnf.cnormCTyp (tau', t') in 
+	let tau = Whnf.cnormCTyp (tau, t) in 
+        if C.convCTyp (tau, Whnf.m_id)  (tau', Whnf.m_id) then
           (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Syn" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e) ;
           ())
         else

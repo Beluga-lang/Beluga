@@ -82,6 +82,7 @@ module LF = struct
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
     | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
                                      and in the opposite order compared to FSVar and MSVar.
+				     offset is the index into Delta and describes the SVar. 
                                      This is a pain to fix *)
     | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)

@@ -150,8 +150,8 @@ let mdeclToMMVar cD0 n mtyp dep = match mtyp with
     let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep  in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, MObj (Root (Syntax.Loc.ghost, MMVar ((u, Whnf.m_id), Substitution.LF.id), Nil)))
-  | ClTyp (STyp (_, cPhi), cPsi) ->
-    let u     = Whnf.newMSVar (Some n) (cD0, cPsi, cPhi) dep in
+  | ClTyp (STyp (cl, cPhi), cPsi) ->
+    let u     = Whnf.newMSVar (Some n) (cD0, cl, cPsi, cPhi) dep in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, SObj (MSVar (0, ((u, Whnf.m_id), Substitution.LF.id))))
   | ClTyp (PTyp tA, cPsi) ->

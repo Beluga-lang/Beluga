@@ -1,0 +1,66 @@
+tp : type.
+top : tp.
+arr : tp -> tp -> tp.
+list : tp -> tp.
+
+exp : tp -> type.
+app : exp (arr S T) -> exp S -> exp T.
+lam : (exp S -> exp T) -> exp (arr S T).
+unit : exp top.
+nil : exp (list T).
+cons : exp T -> exp (list T) -> exp (list T).
+
+schema ctx = some [t:tp] exp t;
+
+
+inductive Subst : {g:ctx} {h:ctx} {#S1 : [h |- g]} ctype =
+  | Nil : Subst [] [h] [h |- ^] 
+  | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- #S1] 
+            -> Subst [g,x:exp T[]] [h] [h |- #S1, E1]
+;
+
+rec testEmpty : {#S: [ |- ]} [ |- exp top] = 
+mlam #S => let [ |- ^ ] = [ |- #S] in ? ;
+
+rec test0:{g:ctx}{#S: [ |- g]}[g |- exp top] = 
+mlam g, #S => case [g] of 
+| [] => let [ |- ^ ] : $[ |- ] = [ |- #S] in ? 
+| [g, x:exp T] => ?
+;
+
+rec test: {g:ctx}[g, x:exp T |- exp S[..]] -> [g, x:exp T |- exp S[..]] = 
+mlam g => fn e => let [g, x:exp T |- E] = e in 
+case [g, x:exp T |- E] of
+ | [g, x: exp top |- F] => e
+;
+
+rec test: {g:ctx}{h:ctx}{#S: [h |- g]} Subst [g] [h] [h |- #S] =
+mlam g,h, #S => case [h |- #S[..]] of
+| {g0:ctx}{h0:ctx}{#T:[h0 |- g0]}
+  [h0 |- #T[..] ] => ?
+;
+
+
+rec test': {g:ctx}{h:ctx}{#S: [h |- g]} Subst [g] [h] [h |- #S] =
+    mlam g,h, #S => case [h |- #S[..]] of
+| {g0:ctx}{h0:ctx}{#T:[h0 |- g0]}
+  [h0 |- #T[..] ] : $[h0 |- g0] => ?
+	    ;
+
+
+rec test0: {g:ctx}{h:ctx}{#S: [h |- g]} Subst [g] [h] [h |- #S] =
+    mlam g,h, #S => case [h |- #S[..]] of
+| [h0 |- #T[..] ] => ?
+| [h0 |- ^ ] => ?
+	    ;
+
+
+rec test1: {g:ctx}{h:ctx}{#S: [h |- g]} Subst [g] [h] [h |- #S] =
+    mlam g,h, #S => case [h |- #S[..]] of
+% | [h0 |- ^ ] => ? 
+| {g0:ctx}{h0:ctx}{#T:[h0 |- g0]}{R:[ |- tp]}{E:[h0 |- exp R[] ]}
+  [h0 |- #T, E[..]] : $[h0 |- g0, x:exp R[]]
+=> ?
+;
+
+

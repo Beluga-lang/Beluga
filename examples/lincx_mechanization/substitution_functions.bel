@@ -26,14 +26,17 @@ rec sstu_helper1 : (g:sch) [g |- ctx_mer Phi Gam Psi] -> [g |- is_unr Phi] -> [g
 	 )
        | [g |- unrest_unr G] => 
 	 (case e of
- 	  | [g |- is_unr_cons E] => 
+ 	  | [g |- is_unr_cons E] => ?
             % There is no reason to believe that ctx_mer Phi Phi2 Phi -bp
-            let [g |- H1]: [g |- ctx_mer Phi Phi2 Phi]  = sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
+            % let [g |- H1]: [g |- ctx_mer Phi Phi2 Phi]  =  
+            % sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
 	 )
        | [g |- unrest_l G] => impossible e
        | [g |- unrest_unav G] =>
 	 (case e of
-	  | [g |- is_unr_unav_cons E] => let [g |- H1] : [g |- ctx_mer Phi Phi2 Phi] = sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
+	  | [g |- is_unr_unav_cons E] => ?
+            % Coverage Failure: Same Problem as above
+            % let [g |- H1] : [g |- ctx_mer Phi Phi2 Phi] = sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
 	 )
       ) 
     | [g |- m_cons D] => 

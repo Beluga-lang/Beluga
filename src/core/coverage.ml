@@ -18,7 +18,12 @@ module R = Store.Cid.NamedRenderer
 
 let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [29])
+
+let (dprint, _) = 
+ Debug.makeFunctions (Debug.toFlags [29])
+
+
+(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n") *)
 
 type error =
     NoCover of string
@@ -424,6 +429,10 @@ let rec goalsToString ogoals k = match ogoals with
 
 let opengoalsToString ogoals = goalsToString ogoals 1
 
+let opengoalToString (cD, cG, patt) = 
+        P.mctxToString cD ^ "\n " ^
+	P.gctxToString cD (gctxToCompgctx cG) ^ "\n  |-  " ^
+	P.patternToString cD (gctxToCompgctx cG) patt  ^ "\n" 
 
 (* ****************************************************************************** *)
 
@@ -888,22 +897,22 @@ end
 *)
 let genObj (cD, cPsi, tP) (tH, tA) =
     (* make a fresh copy of tP[cPsi] *)
-   let _ = dprint (fun () -> "[genObj] cD = " ^ P.mctxToString cD) in
-    let _ = dprint (fun () -> "[genObj] " ^ P.dctxToString cD cPsi ^ " |- "
-		      ^ P.typToString cD cPsi (tP, S.LF.id)) in
-    let _ = dprint (fun () -> "[genObj] Head : " ^ P.headToString cD cPsi tH) in
-    let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id)) in
+(* !! bp    let _ = dprint (fun () -> "[genObj] cD = " ^ P.mctxToString cD) in *)
     let ms    = Ctxsub.mctxToMSub cD in
 (*    let _ = dprint (fun () -> " ms = " ^ P.msubToString LF.Empty ms ) in *)
     let tP'   = Whnf.cnormTyp (tP, ms) in
     let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
     let tA'   = Whnf.cnormTyp (Whnf.normTyp (tA, S.LF.id), ms) in
     let tH'   = Whnf.cnormHead (tH, ms) in
-    let _ = dprint (fun () -> "[genObj] Head of type : " ^
+(* !! bp    let _ = dprint (fun () -> "[genObj] Head of type : " ^
 		      P.dctxToString LF.Empty cPsi' ^ " |- " ^
 		      P.typToString LF.Empty cPsi' (tA', S.LF.id) )      in
-
+*)
     let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
+    let _ = dprint (fun () -> "[genObj] Generated Head : " ^ P.headToString cD cPsi tH) in
+    let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id) ^ " as suitable head ") in
+    let _ = dprint (fun () -> "[genObj] for " ^ P.dctxToString cD cPsi ^ " |- " ^ P.typToString cD cPsi (tP, S.LF.id)) in
+
     let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
     let (cD', cPsi', tR, tP', ms') =
       begin try
@@ -921,11 +930,11 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 let rec genAllObj cg tHtA_list  = match tHtA_list with
   | [] -> []
   | tH_tA :: tHAlist ->
+      let cgs = genAllObj cg tHAlist in 
       begin try
-	let cg' = genObj cg tH_tA in
-	   cg' :: genAllObj cg tHAlist
-      with U.Failure _ -> (dprint (fun () -> "Unification failure - no Obj generated"); genAllObj cg tHAlist)
-	| U.GlobalCnstrFailure _ -> genAllObj cg tHAlist
+       (genObj cg tH_tA)::cgs	   
+      with U.Failure _msg -> cgs
+	| U.GlobalCnstrFailure (_, _msg) -> cgs
 (*	| _ ->(dprint (fun () -> "Other failure - no Obj generated") ;genAllObj cg tHAlist)*)
       end
 
@@ -983,9 +992,9 @@ let genPVar (cD, cPsi, tP)   =
 
 	let rec genPVarCovGoals elems = match elems with
 	  | [] -> []
-	  | LF.SchElem (decls, trec) :: elems ->
+	  | ((LF.SchElem (decls, trec) as _scelem) :: elems) ->
 	      let pv_list = genPVarCovGoals elems in
-
+	      (* let _ = dprint (fun () -> "[genPVar] for schema element: " ^ P.schElemToString scelem) in *)
 	      let cPhi             = Context.projectCtxIntoDctx decls in
 	      let (cD', s, offset) = Ctxsub.ctxToSub_mclosed cD  cvar_psi cPhi in
 		(* cO ; cD' ; psi |- [s]trec  *)
@@ -1033,9 +1042,10 @@ let genPVar (cD, cPsi, tP)   =
 	      let cg_list'    = List.map (fun (cD',cg, ms) ->
 					    (cD', cg, Whnf.mcomp (LF.MShift (offset + 1)) ms)) cg_list in
 	      let all_cg = cg_list' @ pv_list in
-	      let _ = dprint (fun () -> "Generated " ^ string_of_int (List.length all_cg) ^ " pvar cases") in
-	      let _ = dprint (fun () -> "They are: " ^ covGoalsToString all_cg) in
-		all_cg
+	      (* let _ = dprint (fun () -> "Generated " ^ string_of_int (List.length all_cg) ^ " pvar cases") in
+	         let _ = dprint (fun () -> "They are: " ^ covGoalsToString all_cg) in
+	      *)
+		all_cg   
 	in
 	  genPVarCovGoals selems
 
@@ -2064,13 +2074,16 @@ let refine ( (cD, cG, candidates, patt) as cov_problem ) =
   end
 
 let rec check_all f l = (match l with
-  | [] -> ()
-  | h::t ->
-      ((try f h with
-	  Error (_, MatchError _)  -> dprint (fun () ->  "MATCH ERROR"  )
-        | Error (_, NothingToRefine)  -> dprint (fun () ->  "Nothing to refine ERROR" )); (* ??? *)
-       check_all f t )
-			)
+(* iterate through l and collect all open coverage goals;
+   f destructively updates open_cov_goals. *)
+  | [] -> 
+         (dprint (fun () ->  "*** [COVERAGE FAILURE] THERE ARE " ^ 
+	       ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals))
+	       ^ "\n\n"))
+  | h::t -> 
+    ((f h) ; 
+    check_all f t ))
+
 (* At least one of the candidates in cand_list must be solvable,
    i.e. splitCand = []  and matchCand are solvable
 *)
@@ -2153,7 +2166,7 @@ let rec check_covproblem cov_problem  =
 	   | _ ->  existsCandidate cands  (c :: nCands)  open_cg
 	)
   in
-    existsCandidate candidates [] []
+    existsCandidate candidates [] [] 
 
 and check_coverage (cov_problem_list : covproblems) =
   check_all (function  cov_prob -> check_covproblem cov_prob )   cov_problem_list
@@ -2304,10 +2317,10 @@ end
 
 let rec check_emptiness cD = match cD with
   | LF.Empty -> false
-  | LF.Dec(cD', LF.Decl (_u, LF.ClTyp (LF.MTyp tA, cPsi), _)) ->
+  | LF.Dec(cD', (LF.Decl (_u, LF.ClTyp (LF.MTyp tA, cPsi), _) as cdecl) ) ->
       begin try
 	(match genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) with
-	   | [] -> true
+	   | [] -> (dprint (fun () -> "[check_emptiness of cD] " ^ P.cdeclToString cD' cdecl ^ " is empty");  true)
 	   | _  -> check_emptiness cD'
 	)
       with Abstract.Error (_, msg) ->
@@ -2344,11 +2357,15 @@ let rec check_empty_comp cD cG = match cG with
 let rec revisit_opengoals ogoals = begin match ogoals with
   | [] -> ([], [])
   | ((cD, cG, _patt) as og) :: ogoals ->
+      dprint (fun () -> "REVISIT OPEN GOAL: " ^ opengoalToString og);
+      let _ = U.resetGlobalCnstrs () in
       if check_emptiness cD then
+	let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD ^ "\n contains an assumption of empty type.") in 
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
       else
         if check_empty_comp cD cG then
+	let _ = dprint (fun () -> "cG = " ^ P.gctxToString cD (gctxToCompgctx cG) ^ "\n contains an assumption of empty type.") in 
         let (oglist , trivial_list) = revisit_opengoals ogoals in
 	  (oglist, og::trivial_list)
         else
@@ -2393,7 +2410,7 @@ let check_coverage_success problem  =
 let covers problem projObj =
 if !Total.enabled || !enableCoverage then
  (if trivial_coverage problem.cD problem.branches problem.ctype then
-   ((* print_string "Trival Coverage\n";*)
+   ((* print_string "Trival Coverage\n"; *)
     Success)
   else
     (let _ = dprint (fun () -> "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = " ^
@@ -2412,19 +2429,23 @@ if !Total.enabled || !enableCoverage then
        dprint (fun () -> covproblemsToString cov_problems ) ;
 
        check_coverage cov_problems ;  (* there exist all cov_problems are solved *)
+       dprint (fun () -> "*** !!! COVERAGE CHECKING COMPLETED – Check whether some open coverage goals are trivial. !!!*** ");
+       dprint (fun () ->  "*** !!! " ^ 
+	       ("REVISIT :\n" ^ opengoalsToString (!open_cov_goals))
+	       ^ "\n\n");
        let o_cg         = !open_cov_goals in
-       let r            = List.length  o_cg in
        let (revisited_og, trivial_og) = revisit_opengoals o_cg in
-       let r'           = List.length (revisited_og) in
 
-	 if r  > r' then
+	 (*        let r            = List.length  o_cg in
+		   let r'           = List.length (revisited_og) in
+		   if r  > r' then
 	   ((* print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
 	    print_endline ("CASES TRIVIALLY COVERED in line " ^
 			     Syntax.Loc.to_string  problem.loc
-			   ^ " : " ^ string_of_int (List.length (trivial_og)))*)
-	      (* opengoalsToString trivial_og *)
+			   ^ " : " ^ string_of_int (List.length (trivial_og)));
+	    print_string ("\nTRIVIAL OPEN GOALS:\n" ^  opengoalsToString trivial_og ^ "\n")*)
 	   )
-	 else () ;
+	 else () ;*)
 
     open_cov_goals :=  revisited_og ;
     check_coverage_success problem

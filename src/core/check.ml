@@ -653,18 +653,10 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | (Case (loc, prag, i, branches), (tau, t)) ->
 	let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) =
           let (_ , tau', t') = syn cD (cG,cIH) i in
-            begin match C.cwhnfCTyp (tau',t') with
-              | (TypBox (loc', mT),  t') ->
-		  let tau_s = TypBox (loc', C.cnormMetaTyp (mT, t')) in
-		  let problem = Coverage.make loc prag cD branches tau_s in
-                    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
-                    Coverage.process problem None
-              | (tau',t') ->
-		  let tau_s = C.cnormCTyp (tau', t') in
-		  let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-		    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
-                    Coverage.process problem None
-            end
+	  let tau_s = C.cnormCTyp (tau', t') in
+	  let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
+	    checkBranches total_pragma cD (cG,cIH) branches tau_s (tau,t);
+            Coverage.process problem None
 	in
 	  if !Total.enabled then
 	    (match i with

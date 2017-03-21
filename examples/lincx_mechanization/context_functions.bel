@@ -133,6 +133,35 @@ rec unrest_repeat : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Ps
     | [g |- unrest_unr D] => let [g |- F] = unrest_repeat [g |- D] in [g |- unrest_unr F]
 ;
 
+% unrest_ctx gives unique result
+%       ___        ___     ___   ___
+% Psi = Psi, Psi = Psi' => Psi = Psi'
+
+rec unrest_unique : (g:sch) [g |- unrest_ctx Psi Psi_unr] -> [g |- unrest_ctx Psi Psi_unr'] -> [g |- ctx_eq Psi_unr Psi_unr'] = 
+    fn d => fn e =>
+    case d of 
+    | [g |- unrest_base_var] => 
+      (case e of 
+       | [g |- unrest_base_var] => [g |- refl] 
+      )
+    | [g |- unrest_base_e] =>
+      (case e of 
+       | [g |- unrest_base_e] => [g |- refl] 
+      )
+    | [g |- unrest_l D] => 
+      (case e of 
+       | [g |- unrest_l E] => let [g |- refl] = unrest_unique [g |- D] [g |- E] in [g |- refl] 
+      )
+    | [g |- unrest_unav D] =>
+      (case e of 
+       | [g |- unrest_unav E] => let [g |- refl] = unrest_unique [g |- D] [g |- E] in [g |- refl] 
+      )
+    | [g |- unrest_unr D] =>
+      (case e of 
+       | [g |- unrest_unr E] => let [g |- refl] = unrest_unique [g |- D] [g |- E] in [g |- refl] 
+      )
+;
+
 % existence of the unrestricted version of a context
 
 LF int_unrest_ex : ctx -> type = 

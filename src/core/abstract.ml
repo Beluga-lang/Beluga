@@ -8,12 +8,11 @@ open Substitution
 open Syntax
 open Id
 
-module S    = Substitution.LF
 module I    = Int.LF
 module Comp = Int.Comp
 
 module P = Pretty.Int.DefaultPrinter
-module R = Store.Cid.DefaultRenderer
+
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [3])
 
@@ -402,8 +401,8 @@ let rec ctxToMCtx_pattern cQ = match cQ with
   | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _dep)))) ->
       I.Dec (ctxToMCtx_pattern cQ', I.Decl (n, ityp, I.No))
 
-  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, _dep)))) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, I.Maybe))
+  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, dep))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp (Some w), dep))

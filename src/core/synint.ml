@@ -1,5 +1,5 @@
-(** Internal Syntax *)
-(** Internal LF Syntax *)
+(* Internal Syntax *)
+(* Internal LF Syntax *)
 open Id
 open Pragma
 
@@ -249,7 +249,7 @@ let rec getIndex' trec target acc = match trec with
 let getIndex trec target = getIndex' trec target 1
 end
 
-(** Internal Computation Syntax *)
+(* Internal Computation Syntax *)
 module Comp = struct
 
   type  kind =
@@ -391,7 +391,7 @@ module Comp = struct
 end
 
 
-(** Internal Signature Syntax *)
+(* Internal Signature Syntax *)
 module Sgn = struct
 
   (* type positivity_flag =  *)

@@ -5,8 +5,8 @@
 *)
 
 
-module P = Pretty.Int.DefaultPrinter
-module R = Store.Cid.DefaultRenderer
+ module P = Pretty.Int.DefaultPrinter 
+ module R = Store.Cid.DefaultRenderer
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [5])
 
@@ -47,7 +47,7 @@ module Comp = struct
   open Store.Cid
   open Syntax.Int.Comp
 
-  module S = Substitution
+  module S = Substitution 
   module I = Syntax.Int.LF
   module C = Whnf
 

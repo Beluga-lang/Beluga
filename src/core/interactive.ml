@@ -163,7 +163,7 @@ let matchFromPatterns l e bl =
 
 let genVarName tA =
 match Store.Cid.Typ.gen_var_name tA with
-         | Some vGen -> Some (fun () -> String.lowercase (vGen ()))
+         | Some vGen -> Some (fun () -> String.lowercase_ascii (vGen ()))
          | None -> None
 
 

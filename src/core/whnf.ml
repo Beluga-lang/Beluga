@@ -13,9 +13,7 @@ open Syntax.Int.LF
 open Syntax.Int
 open Substitution
 
-
-module R = Store.Cid.DefaultRenderer
-module T = Store.Cid.Typ
+module T = Store.Cid.Typ 
 
 exception Fmvar_not_found
 exception FreeMVar of head

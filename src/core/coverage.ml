@@ -19,11 +19,11 @@ module R = Store.Cid.NamedRenderer
 let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 
 
-let (dprint, _) = 
+ let (dprint, _) = 
  Debug.makeFunctions (Debug.toFlags [29])
 
 
-(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n") *)
+(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n")  *)
 
 type error =
     NoCover of string
@@ -213,15 +213,10 @@ let rec lower cPsi sA = match sA with
 let gen_str cD cPsi (LF.Atom (_, a, _tS) as tP) =
   let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
   let s_proj            = ConvSigma.gen_conv_sub conv_list in
-  let s_tup            = ConvSigma.gen_conv_sub' conv_list in
-  let _ = dprint (fun () -> "[gen_str] cPhi : " ^ P.dctxToString cD cPhi) in
-  let _ = dprint (fun () -> "[gen_str] s_tup : " ^ P.subToString cD cPhi s_tup) in
-  let _ = dprint (fun () -> "[gen_str] s_proj : " ^ P.subToString cD cPsi s_proj) in
-  (* let tQ                = ConvSigma.strans_typ cD cPsi (tP, S.LF.id) conv_list in *)
+  let s_tup             = ConvSigma.gen_conv_sub' conv_list in
     (*  cPsi |- s_proj : cPhi
         cPhi |- s_tup : cPsi       
         cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
-  let _ = dprint (fun () -> "[gen_str] Type : " ^ P.dctxToString cD cPhi ^ " |- " ^  P.typToString cD cPhi (tP, s_tup)) in
   let tQ = Whnf.normTyp (tP, s_tup) in 
   let (ss', cPhi') = Subord.thin' cD a cPhi in
     (* cPhi |- ss' : cPhi' *)
@@ -232,10 +227,6 @@ let gen_str cD cPsi (LF.Atom (_, a, _tS) as tP) =
        cPsi |- s_proj : cPhi
        cPsi |- comp  ss' s_proj   : cPhi' *)
   let ss_proj = S.LF.comp ss' s_proj in
-  let _ = dprint (fun () -> "[gen_str] (after strengthening) ss_proj : " ^ P.subToString cD cPsi ss_proj) in
-  let _ = dprint (fun () -> "[gen_str] (after strengthening) ss'  : " ^ P.subToString cD cPhi ss') in
-  let _ = dprint (fun () -> "[gen_str] (after strengthening) ssi' : " ^ P.subToString cD cPhi' ssi') in
-  let _ = dprint (fun () -> "[gen_str] tQ[ssi'] : " ^ P.typToString cD cPhi' (tQ, ssi')) in
      (ss_proj , (cPhi', LF.TClo(tQ,ssi')))
 
 
@@ -380,10 +371,10 @@ let rec eqnsToString cD cD_p eqns = match eqns with
   | (Eqn (cg, patt) :: eqns ) ->
       covGoalToString cD cg ^ " == " ^ pattToString cD_p patt ^ "\n   "
       ^ eqnsToString cD cD_p eqns
-  | (EqnCtx (cPsi, cPhi) :: splits ) ->
+(*  | (EqnCtx (cPsi, cPhi) :: splits ) ->
       P.dctxToString cD cPsi ^ " == " ^ P.dctxToString cD_p cPhi ^ "\n    "
       ^  eqnsToString cD cD_p splits
-
+*)
 
 let candToString (cD, cG) (Cand (cD_p, cG_p, eqns, splits)) =
 	 P.mctxToString cD     ^ " ; \n"  ^
@@ -436,8 +427,8 @@ let opengoalToString (cD, cG, patt) =
 
 (* ****************************************************************************** *)
 
-type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No |
-    CtxSplitCand of (eqn list * split list)
+type result = Yes of LF.tclo * LF.tclo | Inst | SplitCand | No 
+(*    | CtxSplitCand of (eqn list * split list) *)
 
 (* pre_match_head (cPsi, tH) (cPsi', tH') = result
 
@@ -510,40 +501,6 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
 	  Yes ((tA,idSub), (tA', idSub))
       with _ ->  dprint (fun () -> "[pre_match_head] pvar - SplitCand");SplitCand  (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
       end
-(*       (match cPsi , cPsi' with
-	  | _  , LF.Null -> No
-	  | LF.CtxVar _ , LF.CtxVar _ ->
-	      if Whnf.convSub s s' then
-		let (_, tA1, _cPsi)   = Whnf.mctxPDec cD p in
-		let (_, tA1', _cPsi') = Whnf.mctxPDec cD' q in
-		Yes ((tA1, s), (tA1', s'))
-	      else
-		No
-	  | _ , LF.CtxVar _ ->
-	      if Whnf.convSub s' (LF.Shift 0) then
-		Inst
-	      else
-		No
-	  | LF.CtxVar _ , LF.DDec (_, _ ) ->
-	      PSplit (SplitCtx (cPsi, cPsi'))
-
-	  | _ , _ ->
-	      let (_, tA1, _cPsi)   = Whnf.mctxPDec cD p in
-	      let (_, tA1', _cPsi') = Whnf.mctxPDec cD' q in
-	      (match pre_match_dctx cD cD' cPsi cPsi' [] [] with
-		 | [] , [] ->
-		     (match s, s' with
-			| LF.Shift 0, LF.Shift n ->
-			    if n > 0 then SplitCand
-			    else Yes ((tA1, s), (tA1', s'))
-			| LF.Shift n, LF.Shift n' ->
-			    if n' <= n then
-				Yes ((tA1, s), (tA1', s'))
-			    else
-
-	  | _ , _ -> Inst (* could be analyzed further to allow further splits *)
-       )
-*)
   | (LF.Const c, LF.Const c') ->
       if c = c' then
 	let tA  = (Const.get c ).Const.typ   in
@@ -626,7 +583,7 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
 			 pattToString cD_p patt ^ "\n");
 	      (Eqn (covGoal, patt) :: matchCands , splitCands))
 	  | SplitCand     -> (matchCands , Split (covGoal, patt)::splitCands)
-	  | CtxSplitCand (mC, sC) -> (mC @ matchCands , sC @ splitCands)
+	  (* | CtxSplitCand (mC, sC) -> (mC @ matchCands , sC @ splitCands) *)
 	 end
   end
 
@@ -758,35 +715,11 @@ match (pat, ttau) , (pat_p, ttau_p) with
   | (pat, ttau),
     (Comp.PatVar (_, v), ttau') ->   (* success *)
       (mC, sC)
-(*  | (Comp.PatFVar (_, v) , ttau),
-    (pat_p, ttau')  -> (* splitting candidate *)
-      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
-*)
-
-(*  | (Comp.PatFVar (_, _v) , ttau),
-      (Comp.PatVar (_, _p) , ttau')  -> (* success *)
-      let _ = print_string "\n\n [match_pattern] – PatVar - PatVar case \n\n" in
-      let covGoal = CovPatt (cG, pat, ttau) in
-      let patt = GenPatt (cG_p, pat_p, ttau_p) in
-      let mC' = (EqnPatt (covGoal, patt)) :: mC in
-        (mC', sC)
-*)
-  | (Comp.PatFVar (_, v) , ttau),
-    (pat_p, ttau')  -> (* splitting candidate *)
-      (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
-
-(*  | (Comp.PatFVar (_, _v) , ttau),
-      (Comp.PatVar (_, _p) , ttau')  -> (* success *)
-      let _ = print_string "\n\n [match_pattern] – PatVar - PatVar case \n\n" in
-      let covGoal = CovPatt (cG, pat, ttau) in
-      let patt = GenPatt (cG_p, pat_p, ttau_p) in
-      let mC' = (EqnPatt (covGoal, patt)) :: mC in
-        (mC', sC)
 
   | (Comp.PatFVar (_, v) , ttau),
     (pat_p, ttau')  -> (* splitting candidate *)
       (mC, SplitPat ((pat, ttau) , (pat_p, ttau')) :: sC)
-*)
+
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->
       let (mC1, sC1) = match_pattern (cD,cG) (cD_p, cG_p)
@@ -1017,9 +950,6 @@ let genPVar (cD, cPsi, tP)   =
 	      let tP'    = Whnf.cnormTyp (tP, LF.MShift (offset + 1)) in
 	      let cg'    = (cD'_pdecl, cPsi', tP') in
 
-(*	      let _      = dprint (fun () -> "cg ' = \n  " ^ P.mctxToString cD'_pdecl ^ ";\n  " ^
-				     P.dctxToString cD'_pdecl cPsi' ^ "\n  |- \n   " ^
-				     P.typToString cD'_pdecl cPsi' (tP', S.LF.id)) in*)
 	      let id_psi = Substitution.LF.justCtxVar cPsi' in
 		(* cO ; cD_ext, pdec   ; cPsi' |- id_psi : cvar_psi  *)
 
@@ -1436,44 +1366,7 @@ let rec append cD cD_tail = match cD_tail with
        cO |- cD1, [psi,x:tB / psi]cD2' mctx
 
 *)
-(* let rec append cD1 (cD2, (cpsi, tB), d) = match cD2 with
-  | LF.Empty ->  cD1
 
-  | LF.Dec (cD2', dec) ->
-      let cD1' = append cD1 (cD2', (cpsi, tB), d-1) in
-      let tB'  = Whnf.cnormTyp (tB, LF.MShift (d-1)) in
-      (* cD1 *)
-      let cs   = LF.MDot (LF.CObj(LF.DDec (cpsi, LF.TypDecl (new_bvar_name "@x", tB'))), LF.MShift k) in
-      let dec' = match dec with
-	| LF.MDecl(u, tA, cPhi) -> LF.MDecl(u, Ctxsub.ctxnorm_typ (tA, cs), Ctxsub.ctxnorm_dctx (cPhi, cs))
-	| LF.PDecl(u, tA, cPhi) -> LF.PDecl(u, Ctxsub.ctxnorm_typ (tA, cs), Ctxsub.ctxnorm_dctx (cPhi, cs))
-      in
-        LF.Dec (cD1', dec')
-*)
-
-(* cD0, cD |- id(cD) : cD *)
-(*
-let rec gen_mid cD0 cD = match cD with
-  | LF.Empty -> LF.MShift (Context.length cD0)
-  | LF.Dec(cD, _mdec) ->
-      let ms' = gen_mid cD0 cD (* cD0, cD |- ms' : cD *)
-      in LF.MDot (LF.MV 1, Whnf.mcomp ms' (LF.MShift 1))
-
-*)
-(*
-(* extend_cs cs (cO, k) = cs'
-
-   if cO'' |- cs : cO'
-     k = |cO|   and cO'' = cO', cO
-   then
-      cO'' |- cs' : cO', cO  , i.e. cs extended with identity
-
-*)
-let rec extend_cs cs (cO_tail, k) = match (cO_tail, k) with
-  | ([], 0) -> cs
-  | (cdec :: cO_tail', k) ->
-      extend_cs (LF.CDot (LF.CtxVar (LF.CtxOffset k), cs)) (cO_tail', (k-1))
-*)
   (* decTomdec cD' cPhi = (cD'' , s)
     where
     cD'' = cD', cD0

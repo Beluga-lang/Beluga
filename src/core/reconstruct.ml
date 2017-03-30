@@ -222,14 +222,14 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
   let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
     | (Int.LF.Null , Apx.LF.Null) -> ()
 
-    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, _), _cD)) , cPsi) ->
+    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, dep), _cD)) , cPsi) ->
       begin
 	let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
         Unify.instantiateCtxVar (cvar_ref, cPsi);
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe))
+            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), dep))
           | _ -> ()
       end
 
@@ -341,7 +341,7 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
-    | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), _ ), kK), s) ->
+    | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), dep ), kK), s) ->
         let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let h    = if !strengthen then
               	   (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
@@ -349,11 +349,11 @@ let mgAtomicTyp cD cPsi a kK =
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi')) Int.LF.Maybe in
+                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi')) dep in
                      let ss_proj = LF.comp ss' s_proj in
                        Int.LF.MMVar ((u, Whnf.m_id), ss_proj))
                    else
-                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  Int.LF.Maybe in
+                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  dep in
                      Int.LF.MMVar ((u, Whnf.m_id), s_proj)
         in
         let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)

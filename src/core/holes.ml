@@ -4,7 +4,6 @@ module P = Pretty.Int.DefaultPrinter
 module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
-module Cover = Coverage
 
 type hole = Loc.t * LF.mctx * Comp.gctx * (Comp.typ * LF.msub)
 

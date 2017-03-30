@@ -9,7 +9,7 @@ open Context
 open Syntax.Int.LF
 open Store.Cid
 
-module P = Pretty.Int.DefaultPrinter
+(* module P = Pretty.Int.DefaultPrinter *)
 
 let rec subToString = function
   | Shift n -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
@@ -25,7 +25,7 @@ and frontToString = function
   | Obj tM -> "Obj _"
   | Undef -> "Undef"
 
-module Comp = Syntax.Int.Comp
+(* module Comp = Syntax.Int.Comp *)
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [12])
 

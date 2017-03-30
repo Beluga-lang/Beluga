@@ -23,8 +23,8 @@ let version_content () =
 let () =
   dispatch begin function
     | After_options ->
-      pflag ["ocaml"; "compile"] "warn" (fun s -> S[A"-w"; A s]); 
-      (* pflag ["ocaml"; "compile"] "warn-error" (fun s -> S[A"-warn-error"; A s]);   *)
+      pflag ["ocaml"; "compile"] "warn" (fun s -> S[A"-w"; A s]);
+      pflag ["ocaml"; "compile"] "warn-error" (fun s -> S[A"-warn-error"; A s]);
       rule "Version file" ~deps:[hardcoded_version_file] ~prods:[version_file]
         (fun env _ -> Echo ([version_content ()], version_file))
     | _ -> ()

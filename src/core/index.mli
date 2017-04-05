@@ -13,6 +13,7 @@ type error =
   | PatVarNotUnique
   | IllFormedCompTyp
   | MisplacedOperator of Id.name
+  | MissingArguments  of Id.name * int * int
   | ParseError
   | NoRHS
 

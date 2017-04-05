@@ -68,7 +68,7 @@ let process_option arg rest = match arg with
           let width = int_of_string arg in
           Format.set_margin (max 40 width);
           rest
-        with Failure _ ->  (* "int_of_string" *)
+        with Failure msg when msg = "int_of_string" ->
           bailout "-width needs a numeric argument"
     end
   | "-logic" -> Logic.Options.enableLogic := false ; rest

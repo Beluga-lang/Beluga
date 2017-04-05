@@ -12,7 +12,7 @@ type error =
   | UnboundIdSub
   | PatVarNotUnique
   | IllFormedCompTyp
-  | MispacedOperator of Id.name
+  | MisplacedOperator of Id.name
   | ParseError
   | NoRHS
 

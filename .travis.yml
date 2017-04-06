@@ -17,6 +17,8 @@
       #  skip_join: true
     addons:
       apt:
+	addons:
+	  - avsm
         packages:
           - ocaml
           - opam

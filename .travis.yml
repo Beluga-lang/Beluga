@@ -1,25 +1,23 @@
     language: c
     script: bash -ex .travis-ci.sh
     env:
-      - OCAML_VERSION=4.02.1    
+      - OCAML_VERSION=4.04.0
+      - OCAML_VERSION=4.03.0
+      - OCAML_VERSION=4.02.3
       - OCAML_VERSION=4.01.0
       - OCAML_VERSION=4.00.1
     notifications:
       email:
         - beluga-commit@cs.mcgill.ca
       #irc: # reenable this when n mode is removed from #beluga channel
-      #  channels: 
-      #    - "chat.freenode.net#beluga"       
+      #  channels:
+      #    - "chat.freenode.net#beluga"
       #  on_success: change
       #  on_failure: change
-      #  skip_join: true 
+      #  skip_join: true
     addons:
       apt:
-        sources:
-          - avsm
         packages:
           - ocaml
-          - ocaml-native-compilers
-          - camlp4-extra
           - opam
           - zsh

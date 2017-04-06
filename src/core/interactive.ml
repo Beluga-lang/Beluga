@@ -157,16 +157,7 @@ let matchFromPatterns l e bl =
    Comp.Case(l, Pragma.RegularCase, e, bl)
 
 
-
-
-
-
-let genVarName tA =
-match Store.Cid.Typ.gen_var_name tA with
-         | Some vGen -> Some (fun () -> String.lowercase_ascii (vGen ()))
-         | None -> None
-
-
+let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
 
 let rec mapHoleChk f = function

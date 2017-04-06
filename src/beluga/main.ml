@@ -74,11 +74,11 @@ let process_option arg rest = match arg with
   | "-logic" -> Logic.Options.enableLogic := false ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
-  | _ when (String.lowercase_ascii arg = "+htmltest") -> Html.genHtml := true; Html.filename := "/dev/null"; rest
+  | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest 
   | "+html" | "+HTML" -> Html.genHtml := true; rest
   | "+sexp" -> Sexp.enabled := true ; rest
   | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
-  | _ when (String.lowercase_ascii arg = "+cssfile") ->
+  | "+cssfile" -> 
       begin match rest with
       | arg::rest when arg.[0] <> '-' && arg.[0] <> '+' ->
           Html.css := Html.File arg; rest

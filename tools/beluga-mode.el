@@ -383,7 +383,7 @@ If a previous beli process already exists, kill it first."
   (beluga--start)
   (maybe-save)
   (let ((file-name
-	 (expand-file-name (read-file-name "Load file:" buffer-file-name))))
+	 (expand-file-name (read-file-name "Load file:" nil buffer-file-name))))
     (message "%s" (beluga--rpc (concat "load " file-name)))))
 
 (defvar beluga--holes-overlays ()

@@ -624,10 +624,7 @@ struct
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
     | Comp.Fun (_, br) ->
-      fprintf ppf "FunNoPP"
-        
-    | Comp.Cofun (_, _) ->
-      fprintf ppf "CofunNoPP"
+      fprintf ppf "FunNoPP"       
 
     | Comp.MLam (_, x, e) ->
       fprintf ppf "(MLam %s %a) "
@@ -752,12 +749,6 @@ struct
         fprintf ppf "(DataValue %s %a)"
     	  (R.render_cid_comp_const c) print_spine spine
 
-      | Comp.CodataValue (cid, spine) ->
-	fprintf ppf "(CodataValue %s)"
-	  (R.render_cid_comp_dest cid)
-
-      | Comp.CofunValue _ ->
-	fprintf ppf "CofunValue"
 
   and sexp_cmp_branch_prefix ppf =
     function

@@ -100,9 +100,6 @@ let rec eval_syn i (theta, eta) =
     | Comp.DataConst (_, cid) ->
       Comp.DataValue (cid, Comp.DataNil)
 
-    (* | Comp.Obs (_, e, cid) -> *)
-    (*     Comp.CodataValue (cid, Comp.CodataNil) *)
-
     | Comp.Var (_, x) ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
@@ -140,13 +137,6 @@ let rec eval_syn i (theta, eta) =
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (w2, spine))
 
-        | Comp.CodataValue (cid, spine) ->
-            begin match w2 with
-              | Comp.CofunValue (bs, theta1, eta1) ->
-                  eval_cofun (cid, spine) bs [] (theta1, eta1)
-              | _ -> raise (Error.Violation "Expected CofnValue")
-            end
-
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
@@ -158,9 +148,6 @@ let rec eval_syn i (theta, eta) =
           eval_chk e' (LF.MDot (LF.ClObj (phat, LF.MObj tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
-        | Comp.CodataValue (cid, spine) ->
-            Comp.CodataValue (cid,
-			      Comp.CodataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
@@ -232,9 +219,6 @@ and eval_chk e (theta, eta) =
           dprint (fun () -> "[FunValue] created: theta = " ^
                     P.msubToString LF.Empty (Whnf.cnormMSub theta));
           Comp.FunValue (fbr, Whnf.cnormMSub theta, eta)
-
-      | Comp.Cofun (loc, bs) ->
-          Comp.CofunValue (bs, Whnf.cnormMSub theta, eta)
 
       | Comp.Pair (_, e1, e2) ->
         let v1 = eval_chk e1 (theta, eta) in
@@ -384,23 +368,6 @@ and eval_branch vscrut branch (theta, eta) =
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
 	  | e -> (dprint (fun () -> "000 Branch failed\n"); raise e)
       end
-
-and eval_cofun codataval branches acc (theta, eta) =
-  match (codataval, branches, acc) with
-    | (_, [], []) ->
-        raise (Error.Violation "Observation did not match any branch of the Cofun.")
-    | (_, [], acc) -> Comp.CofunValue (acc, Whnf.cnormMSub theta, eta)
-    | ((dest, spine), (Comp.CopatApp (_, cid, Comp.CopatNil _), e) :: bs, acc) ->
-        if cid = dest
-        then eval_chk e (theta, eta)
-        else eval_cofun codataval bs acc (theta, eta)
-    | ((dest, spine), (Comp.CopatApp (_, cid, Comp.CopatApp (loc, cid', sp)), e) :: bs,
-                       acc) ->
-        eval_cofun codataval bs
-          (if cid = dest then (Comp.CopatApp (loc, cid', sp), e) :: acc else acc)
-          (theta, eta)
-    (*Create another case to match meta objects with the spine. *)
-
 
 let eval e =
   dprint (fun () -> "Opsem.eval");

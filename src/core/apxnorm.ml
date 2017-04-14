@@ -288,11 +288,6 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
 
-  | Apx.Comp.Cofun (loc, bs) ->
-      (dprint (fun () -> "[cnormApxExp] Cofun ");
-       let f = function (csp, e) -> (csp, cnormApxExp cD delta e (cD'', t)) in
-         Apx.Comp.Cofun (loc, List.map f bs))
-
 
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var (_, _x) -> i
@@ -798,11 +793,6 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
         Apx.Comp.If (loc, i', e1', e2')
 
   | Apx.Comp.Hole (loc) -> Apx.Comp.Hole (loc)
-
-  | Apx.Comp.Cofun (loc, bs) ->
-      let f = function (csp, e) -> (csp, fmvApxExp fMVs cD d_param e) in
-        Apx.Comp.Cofun (loc, List.map f bs)
-          (*Might be needed to get metaobjs from csp before call fmvApxExp on e *)
 
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with

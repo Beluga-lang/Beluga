@@ -844,9 +844,6 @@ module Ext = struct
               (fmt_ppr_cmp_exp_chk cD 0) e
               (r_paren_if cond);
 
-      | Comp.Cofun (_, l) ->
-          fprintf ppf "Some Cofun"
-
       | Comp.Fun (_, b) ->
         fprintf ppf "%s @[%a@]"
           (to_html "fun" Keyword)

@@ -1268,10 +1268,6 @@ let rec collectExp cQ e = match e with
     let (cQ', fbr') = collectFBranches cQ fbr in
         (cQ', Comp.Fun (loc, fbr'))
 
-  | Comp.Cofun (loc, bs) ->
-      let (cQ', bs') = collectCofuns cQ bs in
-        (cQ', Comp.Cofun (loc, bs'))
-
   | Comp.MLam (loc, u, e) ->
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.MLam (loc, u, e'))
@@ -1344,23 +1340,6 @@ and collectExp' cQ i = match i with
 
   | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
-and collectCofun cQ csp = match csp with
-  | Comp.CopatNil loc -> (cQ, Comp.CopatNil loc)
-  | Comp.CopatApp (loc, dest, csp') ->
-      let (cQ, csp') = collectCofun cQ csp' in
-        (cQ, Comp.CopatApp (loc, dest, csp'))
-  | Comp.CopatMeta (loc, cM, csp') ->
-      let (cQ, cM') = collect_meta_obj 0 cQ cM in
-      let (cQ, csp') = collectCofun cQ csp' in
-        (cQ, Comp.CopatMeta (loc, cM', csp'))
-
-and collectCofuns cQ csps = match csps with
-  | [] -> (cQ, [])
-  | (c, e)::csps' ->
-      let (cQ', c') = collectCofun cQ c in
-      let (cQ2, e') = collectExp cQ' e in
-      let (cQ2', csps'') =  collectCofuns cQ' csps' in
-        (cQ2', (c', e')::csps'')
 
 and collectPatObj cQ pat = match pat with
   | Comp.PatEmpty (loc, cPsi) ->

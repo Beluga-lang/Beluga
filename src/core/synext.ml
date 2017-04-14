@@ -137,21 +137,20 @@ module Comp = struct
 
  type meta_typ = LF.loc_ctyp
 
- type typ =                                     (* Computation-level types *)
-   | TypBase of Loc.t * name * meta_spine       (*    | c mS               *)
-   | TypBool                                    (*    | Bool               *)
-   | TypBox  of Loc.t * meta_typ                (*    | [U]                *) 
-   | TypArr   of Loc.t * typ * typ              (*    | tau -> tau         *)
-   | TypCross of Loc.t * typ * typ              (*    | tau * tau          *) 
-   | TypPiBox of Loc.t * LF.ctyp_decl * typ     (*     | Pi u::U.tau       *)
+ type typ =                                           (* Computation-level types *)
+   | TypBase of Loc.t * name * meta_spine             (*    | c mS               *)
+   | TypBool                                          (*    | Bool               *)
+   | TypBox  of Loc.t * meta_typ                      (*    | [U]                *) 
+   | TypArr   of Loc.t * typ * typ                    (*    | tau -> tau         *)
+   | TypCross of Loc.t * typ * typ                    (*    | tau * tau          *) 
+   | TypPiBox of Loc.t * LF.ctyp_decl * typ           (*    | Pi u::U.tau        *)
    | TypInd of typ 
 
   and exp_chk =                                 (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                     (*  e ::= i                 *)
      | Fn     of Loc.t * name * exp_chk              (*    | fn x => e           *) 
      | Fun    of Loc.t * fun_branches                (*    | fun fbranches       *)
-     | Cofun  of Loc.t * (copattern_spine * exp_chk) list  (*    | (cofun hd => e | tl => e') *)
-     | MLam   of Loc.t * name * exp_chk              (*| mlam f => e         *)
+     | MLam   of Loc.t * name * exp_chk              (*| mlam f => e             *)
      | Pair   of Loc.t * exp_chk * exp_chk           (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
                                                      (*    | let (x,y) = i in e  *)
@@ -200,11 +199,6 @@ module Comp = struct
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
-
-  and copattern_spine =
-    | CopatNil of Loc.t
-    | CopatApp of Loc.t * name * copattern_spine
-    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
  type order =
       Arg of name			(* O ::= x                    *)

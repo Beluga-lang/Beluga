@@ -160,7 +160,6 @@ module Comp = struct
      | Syn    of Loc.t * exp_syn
      | Fn     of Loc.t * name * exp_chk                         (* fn x => e           *)
      | Fun    of Loc.t * fun_branches                           (* fun   fbranches     *)
-     | Cofun  of Loc.t * (copattern_spine * exp_chk) list       (* Cofun hd => e | tl => e' *)
      | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
      | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
@@ -213,10 +212,5 @@ module Comp = struct
   and branch_pattern =
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
-
-  and copattern_spine =
-    | CopatNil of Loc.t
-    | CopatApp of Loc.t * cid_comp_dest * copattern_spine
-    | CopatMeta of Loc.t * meta_obj * copattern_spine
 
 end

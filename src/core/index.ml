@@ -717,15 +717,6 @@ let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Fun (loc, fbr) ->
     Apx.Comp.Fun(loc, index_fbranches cvars vars fcvars fbr)
 
-  | Ext.Comp.Cofun (loc, copatterns) ->
-      let copatterns' =
-        List.map (function (sp, e) ->
-                    let (sp', fcvars') = index_copat_spine cvars vars fcvars sp in
-                      (sp', index_exp cvars vars fcvars' e))
-          copatterns
-      in
-        Apx.Comp.Cofun (loc, copatterns')
-
   | Ext.Comp.MLam (loc, u, e) ->
       let cvars' = CVar.extend cvars (CVar.mk_entry u) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
@@ -828,16 +819,6 @@ and index_exp' cvars vars fcvars = function
         Apx.Comp.Equal (loc, i1, i2)
 
   | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
-
-and index_copat_spine cvars vars fcvars sp = match sp with
-  | Ext.Comp.CopatNil loc -> (Apx.Comp.CopatNil loc, fcvars)
-  | Ext.Comp.CopatApp (loc, name, sp') ->
-      let (sp'', fcvars') = index_copat_spine cvars vars fcvars sp' in
-        (Apx.Comp.CopatApp (loc, CompDest.index_of_name name, sp''), fcvars')
-  | Ext.Comp.CopatMeta (loc, metaobj, sp') ->
-      let (metaobj', fcvars') = index_meta_obj cvars fcvars metaobj in
-      let (sp'', fcvars'') = index_copat_spine cvars vars fcvars' sp' in
-        (Apx.Comp.CopatMeta (loc, metaobj', sp''), fcvars'')
 
 and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatTrue loc -> (Apx.Comp.PatTrue loc, fcvars, fvars)

@@ -1149,12 +1149,6 @@ module Int = struct
 (*               (fmt_ppr_cmp_exp_chk cD' cG' 0) e *)
 (*               (r_paren_if cond); *)
 
-      | Comp.Cofun (_, bs) ->
-          let cond = lvl > 0 in
-(*            fprintf ppf "@[<2>%sfn %s =>@ %a%s@]" *)
-            fprintf ppf "%sSome cofun%s"
-              (l_paren_if cond)
-              (r_paren_if cond)
 
       | Comp.MLam (_, x, e) ->
           let x = fresh_name_mctx cD x in
@@ -1390,10 +1384,6 @@ module Int = struct
  		 (l_paren_if cond)
  		 (R.render_cid_comp_const c) print_spine pat_spine
  		 (r_paren_if cond)
-
-      | Comp.CodataValue (cid, spine) -> fprintf ppf "%s" (R.render_cid_comp_dest cid)
-      | Comp.CofunValue _ -> fprintf ppf " cofun "
-
 
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function

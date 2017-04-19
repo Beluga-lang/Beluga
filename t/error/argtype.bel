@@ -18,4 +18,4 @@ fn f => fn l => case l of
 ;
 
 let l = [ |- (cons (s z) ( cons z nil )) ];
-let y = map [ |- s] l ;
+let y = map [ |- z] l ;

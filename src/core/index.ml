@@ -231,7 +231,9 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
   in
   let rec parse : int * Ext.LF.normal list * (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list -> Ext.LF.normal = function
-  | i, Ext.LF.TList(_, nl) :: t, y, z -> let h = parse (0,nl, [], []) in parse(i+1, t,(i,h)::y,z)
+  | i, Ext.LF.TList(_, nl) :: t, y, z -> 
+      let h = parse (0,nl, [], []) 
+      in parse(i+1, t,(i,h)::y,z)
   | i, Ext.LF.Lam (loc, name, Ext.LF.TList(_, nl)) :: t, y, z ->
     let h = parse (0, nl, [], []) in
     parse(i+1, t, (i, Ext.LF.Lam(loc, name, h))::y, z)

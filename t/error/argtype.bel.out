@@ -1,1 +1,1 @@
-Illegal use of operator s.
+Found box-expression, but expected expression of type [ |- nat] -> [ |- nat].

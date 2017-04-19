@@ -192,19 +192,19 @@ module Comp = struct
               (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
 
           | CtxFunMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found context abstraction, but expected type %a."
+            Format.fprintf ppf "Found context abstraction, but expected expression of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | FnMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found function abstraction, but expected type %a."
+            Format.fprintf ppf "Found function abstraction, but expected expression of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | MLamMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found MLam abstraction, but expected type %a."
+            Format.fprintf ppf "Found MLam abstraction, but expected expression of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | BoxMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found box-expression that does not have type %a."
+            Format.fprintf ppf "Found box-expression, but expected expression of type %a."
               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | SBoxMismatch (cD, _cG, cPsi, cPhi) ->

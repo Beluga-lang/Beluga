@@ -15,7 +15,7 @@ module RR = Store.Cid.NamedRenderer
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [9])
 
 type error =
-  | MissingBranch
+| MissingBranch
 
 exception Error of Syntax.Loc.t * error
 
@@ -71,6 +71,10 @@ let rec add_mrecs n_list (theta, eta) m = match n_list with
       dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n");
       Comp.Cons (v,  eta')
 
+type fun_trim_result =
+| FunBranch of Comp.fun_branches_value
+| Value of Comp.value
+
 (* eval e (theta, eta) = v
 
 where  cD ; cG |- e <= wf_exp
@@ -99,6 +103,29 @@ let rec eval_syn i (theta, eta) =
 
     | Comp.DataConst (_, cid) ->
       Comp.DataValue (cid, Comp.DataNil)
+
+    | Comp.Obs(_, e, _, cid) ->
+      let Comp.FunValue fbr = eval_chk e (theta, eta) in
+      let rec trim = function
+        | Comp.NilValBranch -> FunBranch Comp.NilValBranch
+        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, Comp.PatNil), e, theta, eta), br) when cid = cid' ->
+          Value (eval_chk e (theta, eta)) (* should we append theta' and eta'? *)
+        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, ps), e, theta, eta), br) when cid = cid' ->
+          begin match trim br with
+          | FunBranch br' -> FunBranch (Comp.ConsValBranch ((ps, e, theta, eta), br'))
+          (* this is kind of a degenerate case where there's a
+             matching branch which is still unresolved but another
+             later branch resolved. It indicates overlapping patterns
+             that we could want to exclude during coverage *)
+          | Value v -> Value v
+          end
+        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, ps), e, _, _), br) ->
+          trim br
+      in
+      begin match trim fbr with
+      | FunBranch fr -> Comp.FunValue fr
+      | Value v -> v
+      end
 
     | Comp.Var (_, x) ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
@@ -137,6 +164,9 @@ let rec eval_syn i (theta, eta) =
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (w2, spine))
 
+        | Comp.FunValue fbr ->
+          eval_fun_branches w2 fbr
+
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
@@ -148,6 +178,8 @@ let rec eval_syn i (theta, eta) =
           eval_chk e' (LF.MDot (LF.ClObj (phat, LF.MObj tM'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
+        | Comp.FunValue fbr ->
+          eval_fun_branches (Comp.BoxValue (l, LF.ClObj(phat, LF.MObj tM'))) fbr
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
@@ -159,6 +191,8 @@ let rec eval_syn i (theta, eta) =
           eval_chk e' (LF.MDot (LF.ClObj (phat, LF.PObj h'), theta1), eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.PObj h')), spine))
+        | Comp.FunValue fbr ->
+          eval_fun_branches (Comp.BoxValue (l, LF.ClObj (phat, LF.PObj h'))) fbr
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
@@ -173,6 +207,8 @@ let rec eval_syn i (theta, eta) =
           eval_chk e' (theta1', eta1)
         | Comp.DataValue (cid, spine) ->
           Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue(l, LF.CObj cPsi'), spine))
+        | Comp.FunValue fbr ->
+          eval_fun_branches (Comp.BoxValue (l, LF.CObj cPsi')) fbr
         | _ ->
           print_endline (Syntax.Loc.to_string loc);
           raise (Error.Violation "Expected CtxValue")
@@ -217,8 +253,16 @@ and eval_chk e (theta, eta) =
 
       | Comp.Fun (loc, fbr) ->
           dprint (fun () -> "[FunValue] created: theta = " ^
-                    P.msubToString LF.Empty (Whnf.cnormMSub theta));
-          Comp.FunValue (fbr, Whnf.cnormMSub theta, eta)
+            P.msubToString LF.Empty (Whnf.cnormMSub theta));
+        let rec convert_fbranches = function
+          | Comp.NilFBranch _ -> Comp.NilValBranch
+          | Comp.ConsFBranch (_, (cD, _, ps, e), fb) ->
+            let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
+            let _ = Unify.unifyMSub theta mt in
+            Comp.ConsValBranch ((ps, e, Whnf.cnormMSub mt, eta), convert_fbranches fb)
+        in
+        Comp.FunValue (convert_fbranches fbr)
+
 
       | Comp.Pair (_, e1, e2) ->
         let v1 = eval_chk e1 (theta, eta) in
@@ -283,7 +327,7 @@ and match_pattern  (v,eta) (pat, mt) =
 	  match_cobj (phat, cObj) (cPsi', cObj', mt)
 
       | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
-	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->	  
+	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->
 	  match_cobj (phat, cObj) (Context.hatToDCtx phat', cObj', mt)
 (*      | Comp.BoxValue (_,LF.ClObj(phat, LF.MObj tM)), Comp.PatMetaObj (_, (_, LF.ClObj (phat', LF.MObj tM'))) ->
 	let cPsi = Context.hatToDCtx phat' in
@@ -351,7 +395,7 @@ and eval_branch vscrut branch (theta, eta) =
       raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
     | Comp.Branch (loc, cD, cG, pat, theta', e) ->
       begin
-        try	  
+        try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in
           let theta_k = Whnf.mcomp (Whnf.cnormMSub theta') mt in
           let _ = dprint (fun () -> "[eval_branches] try branch with theta_k = "
@@ -368,6 +412,35 @@ and eval_branch vscrut branch (theta, eta) =
         with Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg) ; raise BranchMismatch)
 	  | e -> (dprint (fun () -> "000 Branch failed\n"); raise e)
       end
+
+and eval_fun_branches v branch =
+  let rec eval_branch branch =
+      match branch with
+      | Comp.NilValBranch -> FunBranch (Comp.NilValBranch)
+      | Comp.ConsValBranch ((Comp.PatApp (_, p, Comp.PatNil), e, theta, eta), brs) ->
+        begin try
+          let eta' = match_pattern (v, eta) (p, theta) in
+          Value (eval_chk e (Whnf.cnormMSub theta, eta'))
+        with BranchMismatch ->
+          eval_branch brs
+        | Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg);
+                                eval_branch brs)
+        end
+      | Comp.ConsValBranch ((Comp.PatApp (_, p, ps), e, theta, eta), brs) ->
+        begin try
+          let eta' = match_pattern (v, eta) (p, theta) in
+          match eval_branch brs with
+          | Value v -> Value v              (* This is kind of an odd case that assumes varying length of branches *)
+          | FunBranch brs' -> FunBranch (Comp.ConsValBranch ((ps, e, theta, eta'), brs'))
+        with BranchMismatch ->
+          eval_branch brs
+        | Unify.Failure msg -> (dprint (fun () -> "Branch failed : " ^ msg);
+                                eval_branch brs)
+        end
+  in match eval_branch branch with
+  | Value v -> v
+  | FunBranch f -> Comp.FunValue f
+
 
 let eval e =
   dprint (fun () -> "Opsem.eval");

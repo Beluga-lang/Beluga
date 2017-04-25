@@ -13,5 +13,5 @@ fun e .Hd => e
   | e .Tl => test e
 ;
 
-% let a = Hd (test Blue);
-% let c = Hd (Tl (test Blue));
+let a = Hd (test Blue);
+let c = Hd (Tl (test Blue));

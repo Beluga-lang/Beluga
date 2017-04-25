@@ -26,10 +26,9 @@ fun .Hd => [ |- z]
 ;
 
 
-% let a = Hd fib;
-% let b = Tl fib;
-% let c = Tl b;
-% let d = Hd b;
-% let e = Tl c;
-% let f = Hd e;
-
+let a = Hd fib;
+let b = Tl fib;
+let c = Tl b;
+let d = Hd b;
+let e = Tl c;
+let f = Hd e;

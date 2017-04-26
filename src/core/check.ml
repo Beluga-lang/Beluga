@@ -796,7 +796,6 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
            if Whnf.convCTyp (tau1,t1) (tau2,t2) then
              begin match Whnf.cwhnfCTyp (tau1,t1) with
                | (TypBox _ , _ ) ->  (None, TypBool, C.m_id)
-               | (TypBool, _ )   ->  (None, TypBool, C.m_id)
                | (tau1,t1)       ->  raise (Error (loc, EqTyp (cD, (tau1,t1))))
              end
 

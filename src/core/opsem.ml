@@ -228,6 +228,8 @@ let rec eval_syn i (theta, eta) =
           else
             Comp.BoolValue false
 
+        | ((Comp.BoolValue b1), (Comp.BoolValue b2)) -> Comp.BoolValue (b1 == b2)
+
         | ( _ , _ ) -> raise (Error.Violation "Expected atomic object")
       end
 

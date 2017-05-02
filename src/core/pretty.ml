@@ -1418,11 +1418,10 @@ module Int = struct
     and fmt_ppr_cmp_branch cD cG _lvl ppf = function
       | Comp.EmptyBranch (_, cD1, pat, t) ->
           if !Control.printNormal then
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@]@]@ "
-              (fmt_ppr_cmp_branch_prefix  0) cD1
+            fprintf ppf "@ @[<v2>| @[%a @] @]@ "
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
           else
-            fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : %a  @]  @]@ "
+            fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : %a  @]  @] @]@ "
               (fmt_ppr_cmp_branch_prefix  0) cD1
               (fmt_ppr_pat_obj cD1 LF.Empty 0) pat
               (fmt_ppr_refinement cD1 cD 2) t
@@ -1432,12 +1431,11 @@ module Int = struct
         if !Control.printNormal then
 	  (match e with
 	     | Comp.Hole (loc, _ ) ->
-		 fprintf ppf "\n | %a %a => %a"
-		   (fmt_ppr_cmp_branch_prefix  0) cD1'
+		 fprintf ppf "@ \n@[<v2>|  %a => %a @]"
 		   (fmt_ppr_meta_obj cD1' 0) mO
 		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 	     | _ ->
-		 fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@]@ "
+		 fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
 		   (fmt_ppr_cmp_branch_prefix  0) cD1'
 		   (fmt_ppr_meta_obj cD1' 0) mO
             (* NOTE: Technically: cD |- cG ctx and
@@ -1462,9 +1460,10 @@ module Int = struct
           let cG_ext = Context.append cG_t cG' in
 
           if !Control.printNormal then
-            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
+            (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
                  (fmt_ppr_cmp_branch_prefix  0) cD1'
-                (fmt_ppr_cmp_gctx cD1' 0) cG'
+                (fmt_ppr_cmp_gctx cD1' 0) cG' *)
+	    fprintf ppf "@ @[| %a  =>  %a@]@ "
                  (fmt_ppr_pat_obj cD1' cG' 0) pat
                 (* NOTE: Technically: cD |- cG ctx and
                  *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
@@ -1476,8 +1475,7 @@ module Int = struct
                (fmt_ppr_cmp_branch_prefix  0) cD1'
               (fmt_ppr_cmp_gctx cD1' 0) cG'
                (fmt_ppr_pat_obj cD1' cG' 0) pat
-              (* this point is where the " : " is in the string a
-            bove *)
+              (* this point is where the " : " is in the string above *)
               (fmt_ppr_refinement cD1' cD 2) t
               (* NOTE: Technically: cD |- cG ctx and
                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|

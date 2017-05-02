@@ -33,17 +33,22 @@ type coverage_result =
   | Success
   | Failure of string
 
+type depend   = Atomic | Dependent
+
 (* val clear  : unit -> unit
 val stage  : problem -> unit *)
 val force  : (coverage_result -> 'a) -> 'a list
 
 (* val covers : problem -> coverage_result *)
 val process : problem -> int option -> unit   (* check coverage immediately *)
-(* val etaExpandMVstr     : sub -> dctx -> tclo -> normal *)
-val genPatCGoals : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
-val genCtxGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * LF.dctx * LF.msub) list
+
+val genPatCGoals    : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
+(* val genCtxGoals     : LF.mctx -> LF.ctyp_decl -> (LF.mctx * LF.dctx * LF.msub) list *)
 val genContextGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) list
-val genCovGoals : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
-val genBCovGoals : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
+val genCGoals       : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) list * depend
+val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
+val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
 val covGoalToString : LF.mctx -> cov_goal -> string
-val covGoalsToString : (LF.mctx * cov_goal * LF.msub) list -> string
+val covGoalsToString: (LF.mctx * cov_goal * LF.msub) list -> string
+
+val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub

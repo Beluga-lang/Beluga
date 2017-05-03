@@ -82,7 +82,7 @@ module LF = struct
     | Shift of offset                         (* sigma ::= ^(psi,n)             *)
     | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
                                      and in the opposite order compared to FSVar and MSVar.
-				     offset is the index into Delta and describes the SVar. 
+				     offset is the index into Delta and describes the SVar.
                                      This is a pain to fix *)
     | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
     | Dot   of front * sub                    (*   | Ft . s                     *)
@@ -299,7 +299,7 @@ module Comp = struct
 
   and value =
     | FnValue    of name * exp_chk * LF.msub * env
-    | FunValue   of fun_branches * LF.msub * env
+    | FunValue   of fun_branches_value
     | RecValue   of cid_prog * exp_chk * LF.msub * env
     | MLamValue  of name * exp_chk * LF.msub * env
     | CtxValue   of name * exp_chk * LF.msub * env
@@ -367,8 +367,13 @@ module Comp = struct
 
   and fun_branches =
    | NilFBranch of Loc.t
-   | ConsFBranch of Loc.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches 
-      
+   | ConsFBranch of Loc.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches
+
+  and fun_branches_value =
+  | NilValBranch
+  | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
+
+
   type tclo = typ * LF.msub
 
   let itermToClObj = function

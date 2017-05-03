@@ -19,4 +19,3 @@ fun e .Hd => e
 
 % let b = cycleNats [ |- s z];
 % let c = ((Hd b, Hd (Tl b)), Hd (Tl (Tl b)));
-

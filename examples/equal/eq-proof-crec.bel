@@ -30,7 +30,7 @@ schema equalCtx = block x: exp, v: equal x x, u:eq x x
 ;
 
 rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
-/ total m (ref g m) /
+ / total m (ref g m) /
 mlam g => mlam U => case [g |- U] of
  | [g |- #p.1 ] => [g |- #p.2 ]
  | [g |- lam \x. L ] =>

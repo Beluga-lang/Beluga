@@ -27,7 +27,7 @@ eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
 schema eqCtx = block x:exp, _t:eq x x;
 
 rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
-/ total u (ref g u) /
+ / total u (ref g u) /
  mlam g => mlam U => case [g |- U] of
 | [g |- #p.1] => [g |- #p.2]
 

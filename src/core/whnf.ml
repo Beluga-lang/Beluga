@@ -677,7 +677,7 @@ and cnorm (tM, t) = match tM with
     |  SigmaElem (x, tA, recA') ->
          let tA = cnormTyp (tA, t) in
            SigmaElem (x, tA, cnormTypRec (recA', t))
-
+	     
   and cnormDecl (decl, t) = match decl with
     | TypDecl (x, tA) ->
         TypDecl (x, cnormTyp (tA, t))

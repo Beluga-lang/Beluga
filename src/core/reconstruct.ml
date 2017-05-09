@@ -30,6 +30,7 @@ type error =
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
+  | GlobalConstraintFailure
   | MissingMetaObj
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
@@ -138,6 +139,11 @@ let _ = Error.register_printer
        | MissingMetaObj      ->
            Format.fprintf ppf
              "Too few meta-objects supplied to data-constructor"
+
+       | GlobalConstraintFailure    ->
+           Format.fprintf ppf
+             "Unification Constraint Failure – Please provide more information to help type reconstruction by making some arguments explicit and passing them explicitly."
+
 
        | TooManyMetaObj      ->
            Format.fprintf ppf
@@ -474,12 +480,17 @@ let rec elMetaObj' cD loc cM cTt = match cM , cTt with
   | (_ , _) -> raise (Error (loc,  MetaObjectClash (cD, cTt)))
 
 and elMetaObj cD (loc,cM) cTt =
-  let ctyp = C.cnormMTyp cTt in
-  let r = elMetaObj' cD loc cM ctyp in
-  let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-  let _   = dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp ) in
-  let _   = dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) ) in
-  loc, r
+
+    let ctyp = C.cnormMTyp cTt in
+    let r = elMetaObj' cD loc cM ctyp in
+      begin try 
+	Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+	dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp );
+	dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) );
+      loc, r
+      with _ -> 
+	raise (Error (loc, GlobalConstraintFailure))
+      end 
 
 and elMetaObjCTyp loc cD m theta ctyp =
   let cM = elMetaObj cD m (ctyp, theta) in

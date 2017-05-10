@@ -903,7 +903,7 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
     let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
     tM
   | (Apx.LF.LFHole loc, tA) ->
-      Lfholes.collect (loc, cD, cPsi, sA); Int.LF.LFHole loc
+       Int.LF.LFHole loc
 
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with

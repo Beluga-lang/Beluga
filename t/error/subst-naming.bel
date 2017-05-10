@@ -1,0 +1,17 @@
+tp : type.
+top : tp.
+arr : tp -> tp -> tp.
+list : tp -> tp.
+
+exp : tp -> type.
+app : exp (arr S T) -> exp S -> exp T.
+lam : (exp S -> exp T) -> exp (arr S T).
+unit : exp top.
+nil : exp (list T).
+cons : exp T -> exp (list T) -> exp (list T).
+
+schema ctx = some [t:tp] exp t;
+
+
+rec test1: {g:ctx}{S:[ |- tp]}{#S: [ |- g]}[ |- exp S] = ?
+;

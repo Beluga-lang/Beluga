@@ -208,7 +208,8 @@ let rec checkW cD cPsi sM sA = match sM, sA with
       (tB, Substitution.LF.dot1 s2);
       Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) ("Lam" ^ " " ^ Pretty.Int.DefaultPrinter.normalToString cD cPsi sM)
 
-  | (LFHole _, _), _ -> ()
+  | (LFHole loc, _), _ -> 
+      (Lfholes.collect (loc, cD, cPsi, sA);      ())
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 

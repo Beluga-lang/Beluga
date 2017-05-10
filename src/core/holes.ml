@@ -114,13 +114,14 @@ let getStagedHoleNum loc =
 let setStagedHolePos i l =
       let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
       DynArray.set stagedholes i (l, cD, cG, tclo)
-let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (tA : Comp.tclo) : Id.name list =
+
+let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   let rec aux acc = function
     | LF.Empty -> acc
-    | LF.Dec (cG', Comp.CTypDecl(n, tA')) ->
+    | LF.Dec (cG', Comp.CTypDecl(n, tau')) ->
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
-        Unify.StdTrail.unifyCompTyp cD tA (tA', LF.MShift 0);
+        Unify.StdTrail.unifyCompTyp cD ttau (tau', LF.MShift 0);
         aux (n::acc) cG'
       with | _ -> aux acc cG' end
     | LF.Dec (cG', _) -> aux acc cG'

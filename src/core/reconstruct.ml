@@ -866,7 +866,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
     let _ = dprint (fun () -> "[elExp] Expected Type (Hole): " 
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,theta) )) in
-    let () = Holes.collect (loc, cD, cG, (tau, theta)) in
+    (* let () = Holes.collect (loc, cD, cG, (tau, theta)) in *)
     Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
 
   (* TODO postpone to reconstruction *)

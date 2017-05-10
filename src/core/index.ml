@@ -44,6 +44,7 @@ type error =
   | MissingArguments  of Id.name * int * int
   | ParseError
   | NoRHS
+  | NameOvershadowing of Id.name
 
 exception Error of Syntax.Loc.t * error
 
@@ -51,6 +52,8 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
+      | NameOvershadowing n -> 
+          Format.fprintf ppf ("The declaration %s is overshadowing an earlier one.") (Id.render_name n)
       | MisplacedOperator n ->
         Format.fprintf ppf ("Illegal use of operator %s.") (Id.render_name n)
       | MissingArguments (n, expected, found) ->
@@ -583,9 +586,14 @@ let cltyp_to_cvar n _ = n
 let index_cdecl cvars fvars = function
   | Ext.LF.Decl(u, (loc,cl), dep) ->
     let (cl', fvars') = index_cltyp loc cvars fvars cl in
-    let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
-    let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-    (Apx.LF.Decl(u, cl', dep), cvars', fvars')
+      begin try 
+	let _offset = CVar.index_of_name cvars u in
+	  raise (Error (loc, NameOvershadowing u))
+      with Not_found -> 
+	let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
+	let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+	  (Apx.LF.Decl(u, cl', dep), cvars', fvars')
+      end
 
 let rec index_mctx cvars fvars = function
   | Ext.LF.Empty ->

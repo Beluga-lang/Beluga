@@ -16,6 +16,7 @@ type error =
   | MissingArguments  of Id.name * int * int
   | ParseError
   | NoRHS
+  | NameOvershadowing of Id.name
 
 exception Error of Syntax.Loc.t * error
 

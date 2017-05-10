@@ -1,0 +1,14 @@
+Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.
+
+Common causes are:
+
+- there are meta-variables which are not only applied to a distinct set of bound variables 
+- a meta-variable in the program depends on a context, but it must be in fact closed 
+
+The constraint 
+ 
+ abs (\x. M[ #S0[#S[..]], x]) =/= abs (\x. M[ #S0[#S[..]], x]) 
+
+ was not solvable. 
+ 
+ The program is considered ill-typed. 

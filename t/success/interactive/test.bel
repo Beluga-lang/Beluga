@@ -1,0 +1,29 @@
+tm: type.
+abs : (tm -> tm) -> tm.
+app: tm -> tm -> tm.
+
+schema ctx = tm;
+
+rec eta_single: (g:ctx) [g |- tm] -> [g |- tm] = 
+fn m => case m of 
+| [g |- abs \x. app M[..] x] => [g |- M]
+| [g |- N] => [g |- N]
+;
+
+rec eta : (g:ctx) [g |- tm] -> [g |- tm] = 
+fn m => (case m of 
+
+|  [g |- #p1] =>  [g |- #p1]
+
+|  [g |- abs (\z1. Y1)] =>  
+  let [g,x:tm |- M] = eta [g, x:tm |- Y1] in 
+    eta_single [g |- abs \x.M]  
+
+|  [g |- app X Z] =>  
+   let [g |- M] = eta [g |- X] in 
+   let [g |- N] = eta [g |- Z] in 
+     [g |- app M N]
+     
+) 
+;
+

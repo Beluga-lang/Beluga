@@ -140,11 +140,6 @@ let _ = Error.register_printer
            Format.fprintf ppf
              "Too few meta-objects supplied to data-constructor"
 
-       | GlobalConstraintFailure    ->
-           Format.fprintf ppf
-             "Unification Constraint Failure – Please provide more information to help type reconstruction by making some arguments explicit and passing them explicitly."
-
-
        | TooManyMetaObj      ->
            Format.fprintf ppf
              "Too many meta-objects supplied to data-constructor"
@@ -488,8 +483,8 @@ and elMetaObj cD (loc,cM) cTt =
 	dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp );
 	dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) );
       loc, r
-      with _ -> 
-	raise (Error (loc, GlobalConstraintFailure))
+      with Unify.GlobalCnstrFailure (loc,cnstr)  -> 
+	raise (Check.Comp.Error (loc, Check.Comp.UnsolvableConstraints (None, cnstr)))
       end 
 
 and elMetaObjCTyp loc cD m theta ctyp =

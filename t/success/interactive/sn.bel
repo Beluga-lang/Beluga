@@ -1,0 +1,101 @@
+% 2017-05-02
+% Strong normalization for simply-typed lambda-calculus in Beluga
+
+LF ty : type =
+  | base : ty
+  | arr  : ty -> ty -> ty
+  ;
+%name ty A.
+
+LF tm : ty -> type =
+  | abs : (tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+  ;
+%name tm M.
+
+% ==> : tm A -> tm A -> type.
+% %infix ==> 1 none.
+
+% rbeta : (app (abs M) N) ==> (M N).
+%   % | rabs  : ({x : tm A} (M x) ==> (M' x)) -> (abs M) ==> (abs M')
+
+LF step : tm A -> tm A -> type =
+  | rbeta : step (app (abs M) N) (M N)
+  | rabs  : ({x : tm A} step (M x) (M' x)) -> step (abs M) (abs M')
+  | rappl : step M M' -> step (app M N) (app M' N)
+  | rappr : step N N' -> step (app M N) (app M N')
+  ;
+
+schema cxt = tm A; % some [a : ty] block tm a;
+
+inductive SN : (g : cxt) {M : [ g |- tm A ]} ctype =
+  | Acc : ({M' : [ g |- tm A ]} [ g |- step M M' ] -> SN [ g |- M' ])
+        -> SN [ g |- M ]
+  ;
+
+stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
+  | RBase : SN [g |- M] -> Red [ |- base ] [g |- M]
+  | RArr  : ({g' : cxt} {#S : [g' |-# g]} {N : [g' |- tm A[]]}
+               Red [|- A] [g' |- N]
+            -> Red [|- B] [g' |- app M[#S] N])
+         -> Red [ |- arr A B ] [g |- M]
+  ;
+
+inductive RedS : {g : cxt} (g' : cxt) {#S : [g' |- g]} ctype =
+  | RNil  : RedS [] [ g' |- ^ ]
+  | RCons : Red [|- A] [g' |- M]
+         -> RedS [g] [g' |- #S]
+         -> RedS [g, x : tm A[]] [g' |- #S, M]
+  ;
+
+%% Lemmata for fundamental theorem
+
+rec fundVar : {g : cxt} {M : [g |- tm A[]]}
+          RedS [g] [g' |- #S]
+       -> Red [|- A] [g' |- M[#S]] =
+/ total r (fundVar g g' a s m r) /
+ mlam g, M => fn r => 
+ (case r of 
+ | RNil   =>   ? 
+
+)
+
+;
+%{
+rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
+          RedS [g] [g' |- #S]
+       -> Red [|- A] [g' |- #p[#S]] =
+% / total s (fundVar g g' A s 
+ mlam g, #p => fn s => ?
+ 
+
+
+%{case s of
+    | RNil       => impossible [ |- # p ]
+    | RCons r s' => ?
+}%
+  ;
+}%
+%% Fundamental theorem
+
+
+rec thm : {g : cxt} {M : [g |- tm A[]]}
+% g, g', A, #S, M
+          RedS [g] [g' |- #S]
+       -> Red [|- A] [g' |- M[#S]] =
+    mlam g, M => fn s => (case [g |- M] of 
+
+|  [g |- #p1] =>  ?  
+
+|  [g |- abs (\x1. M3)] =>  ?  
+
+|  [g |- app M1 M2] =>  ?  
+)   
+%{ (case [g |- M ] of
+ | [g |- #p1 ] =>  ?
+ | [g |- abs \ x. M1 ] =>  ?
+ | [g |- app M2 M3 ] =>  ?
+)
+}%
+  ;
+

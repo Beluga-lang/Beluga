@@ -633,7 +633,7 @@ let recSgnDecls decls =
           let _        = begin try
                            Unify.forceGlobalCnstr (!Unify.globalCnstrs)
                         with Unify.GlobalCnstrFailure (loc,cnstr) ->
-                          raise (Check.Comp.Error  (loc, Check.Comp.UnsolvableConstraints (f, cnstr)))
+                          raise (Check.Comp.Error  (loc, Check.Comp.UnsolvableConstraints (Some f, cnstr)))
                         end
           in
           let _        = Unify.resetGlobalCnstrs () in

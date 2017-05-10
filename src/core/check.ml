@@ -77,7 +77,7 @@ module Comp = struct
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name * string
+    | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
     | MissingTotal of Id.cid_prog
     (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
@@ -123,10 +123,11 @@ module Comp = struct
             Format.fprintf ppf
               "Parameter type %a is illegal."
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
-          | UnsolvableConstraints (f,cnstrs) ->
+          | UnsolvableConstraints (f, cnstrs) ->
+	      let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in 
             Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program  %s is considered ill-typed. "
-              cnstrs (Id.render_name f)
+            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
+              cnstrs fname
 
           | CtxMismatch (cD, cPsi, cPhi, cM) ->
             Error.report_mismatch ppf

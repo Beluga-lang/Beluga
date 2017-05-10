@@ -75,7 +75,7 @@ module Comp : sig
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
     | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
     | TypMismatch     of LF.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name * string
+    | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
     | MissingTotal    of Id.cid_prog
 

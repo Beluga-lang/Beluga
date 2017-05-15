@@ -118,6 +118,18 @@ module Make (T : TRAIL) : UNIFY = struct
   let eq_cvarRef cv cv' = match (cv, cv') with
     | (MMVarRef r, MMVarRef r') -> r == r'
 
+(* Printing of constraints *)
+  let rec cnstrsToString cnstrs = match cnstrs with
+      | [] -> ""
+      | c::cnstr' -> cnstrToStr (!c) ^ "\n" ^ cnstrsToString cnstr'
+
+  and cnstrToStr c = match c with
+  | Queued -> ""
+  | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
+     (P.normalToString cD cPsi (tM1, id)  ^  " = " ^
+      P.normalToString cD cPsi (tM2, id) )
+  | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
+      (P.headToString cD cPsi h1  ^ " = " ^ P.headToString cD cPsi h2)
 
 
 
@@ -332,9 +344,11 @@ let isVar h = match h with
 
   let unwind () = T.unwind globalTrail undo
 
+  let solvedCnstrs cnstrs =
+      List.for_all (fun c -> !c = Queued) cnstrs
 
   let solveConstraint ({contents=constrnt} as cnstr) =
-    cnstr := Queued;
+    cnstr := Queued; 
     T.log globalTrail (Solve (cnstr, constrnt))
 
   (* trail a function;
@@ -569,7 +583,7 @@ let isVar h = match h with
 
 (*    | (EmptySub, EmptySub , Null) -> (EmptySub, Null)  *)
     | (EmptySub, _ , Null) -> (EmptySub, Null) 
-    | (_, EmptySub , Null) -> (EmptySub, Null) 
+    | (_, EmptySub , Null) -> (EmptySub, Null)
 
     | (Undefs, _ , _) | (_ , Undefs, _) -> (EmptySub, Null)
     (* all other cases impossible for pattern substitutions *)
@@ -2205,7 +2219,7 @@ let isVar h = match h with
           (dprint (fun () -> "Found constraint ...\n");
           begin match !cnstr with
             | Queued (* in process elsewhere *) ->
-                (dprint (fun () -> "Constrait is queued\n") ;
+                (dprint (fun () -> "Constraint is queued\n") ;
                 forceCnstr mflag (nextCnstr ()))
             | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                 let _ = solveConstraint cnstr in
@@ -2213,21 +2227,24 @@ let isVar h = match h with
                    let tM2 = Whnf.norm (tM2, id) in   *)
                   (dprint (fun () ->  "Solve constraint: " ^ P.normalToString cD cPsi (tM1, id)  ^
                         " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
-                   if Whnf.conv (tM1, id) (tM2, id) then dprint (fun () ->  "Constraints are trivial...")
+                   (if Whnf.conv (tM1, id) (tM2, id) then
+		      dprint (fun () ->  "Constraint is  trivial...")
                    else
                      (dprint (fun () ->  "Use unification on them...");
                       unify1 mflag cD cPsi (tM1, id) (tM2, id);
                       dprint (fun () ->  "Solved constraint (DONE): " ^
                                 P.normalToString cD cPsi (tM1, id)  ^
                                 " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n"))
-                  )
+                  );
+		  forceCnstr mflag (nextCnstr ()))
             | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
                 let _ = solveConstraint cnstr in
                   (dprint (fun () -> "Solve constraint (H): " ^ P.headToString cD cPsi h1  ^
                         " = " ^ P.headToString cD cPsi h2 ^ "\n");
                   unifyHead mflag cD cPsi h1 h2 ;
                   dprint (fun () -> "Solved constraint (H): " ^ P.headToString cD cPsi h1  ^
-                        " = " ^ P.headToString cD cPsi h2 ^ "\n"))
+                        " = " ^ P.headToString cD cPsi h2 ^ "\n");
+			forceCnstr mflag (nextCnstr ()))
           end )
 
     and forceGlobalCnstr cnstr      =
@@ -2245,26 +2262,29 @@ let isVar h = match h with
             | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
             |  Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
                  let _ = solveConstraint c in
-		 let l = List.length (!globalCnstrs) in 
+		 let l = List.length (!globalCnstrs) in		
                    (dprint (fun () ->  "Solve global constraint:\n") ;
                     dprint (fun () ->  P.normalToString cD cPsi (tM1, id)  ^
-                        " = " ^ P.normalToString cD cPsi (tM2, id)
-			^ "\n");
+                               " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
 		    if Whnf.conv (tM1, id) (tM2, id) then 
 		      (* Note: we test whether tM1 and tM2 are 
 		         convertible because some terms which fall
                          outside of the pattern fragment are convertible,
-                         but not unifiable *)        
-		      forceGlobalCnstr' cnstrs
+                         but not unifiable *)
+		      (dprint  (fun () -> "Constraints are convertible (whnf).");
+        	       forceGlobalCnstr' cnstrs)	   
 		    else 
                     begin try
-                      (unify1 Unification cD cPsi (tM1, id) (tM2, id);
-		       if l = List.length (!globalCnstrs) then 
+                      (dprint (fun () -> "Existing Set of constraints (BEFORE UNIFY): " ^ cnstrsToString (!globalCnstrs));
+		       unify1 Unification cD cPsi (tM1, id) (tM2, id);
+		       (* if l = List.length (!globalCnstrs) then *)
+       		       if solvedCnstrs (!globalCnstrs) then
 			 (dprint (fun () ->  "Solved global constraint (DONE): " ^ P.normalToString cD cPsi (tM1, id)  ^
 				    " = " ^ P.normalToString cD cPsi (tM2, id) ^ "\n");
 			  forceGlobalCnstr' cnstrs)
 		       else
-			 (dprint (fun () -> "New constraints generated?" ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
+			 (dprint (fun () -> "New constraints generated? " ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
+			 dprint (fun () -> " New set of constraints: " ^ cnstrsToString (!globalCnstrs));
 			 raise (Failure "Constraints generated")))
                     with Failure _ ->
                       let cnstr_string = (P.normalToString cD cPsi (tM1, id)  ^ " =/= " ^ P.normalToString cD cPsi (tM2, id)) in
@@ -2301,7 +2321,8 @@ let isVar h = match h with
 
     let unresolvedGlobalCnstrs () =
       begin try
-        forceGlobalCnstr (!globalCnstrs);
+        let cnstr = !globalCnstrs in 
+        forceGlobalCnstr cnstr;
         resetGlobalCnstrs () ;
         false
       with Failure _ -> resetGlobalCnstrs () ; true

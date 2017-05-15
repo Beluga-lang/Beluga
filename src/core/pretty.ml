@@ -410,9 +410,15 @@ module Int = struct
 
       | LF.MVar(c, LF.Undefs)
       | LF.MVar(c, LF.EmptySub) ->
-          fprintf ppf "%a%s"
-            (fmt_ppr_lf_cvar cD lvl) c
-            proj
+     (match !Control.substitutionStyle with
+        | Control.Natural ->
+	          fprintf ppf "%a%s"
+		              (fmt_ppr_lf_cvar cD lvl) c
+            		      proj	      
+        | Control.DeBruijn -> 
+	          fprintf ppf "%a%s[e]"
+		              (fmt_ppr_lf_cvar cD lvl) c
+            		      proj)
 
       | LF.MVar (c, s) ->
       if Substitution.LF.isId s then     

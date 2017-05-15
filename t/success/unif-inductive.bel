@@ -1,0 +1,49 @@
+
+
+
+
+LF tp : type = 
+   | top : tp
+   | arr : tp -> tp -> tp
+   | list : tp -> tp;
+
+LF exp : tp -> type =
+   | app : exp (arr S T) -> exp S -> exp T
+   | lam : (exp S -> exp T) -> exp (arr S T)
+   | fix : (exp T -> exp T) -> exp T
+   | unit : exp top
+   | nil : exp (list T)
+   | cons : exp T -> exp (list T) -> exp (list T)
+   | lcase : exp (list S) -> exp T -> (exp S -> exp (list S) -> exp T) -> exp T
+;
+
+inductive Value : [ |- exp T] -> ctype = 
+  | Val-lam  : Value [ |- lam \x.E]
+  | Val-unit : Value [ |- unit]
+  | Val-nil  : Value [ |- nil]
+  | Val-cons : Value [ |- cons E1 E2]
+;
+
+inductive Eval : [ |- exp T] -> [ |- exp T] -> ctype = 
+  | Ev-app      : Eval [ |- E1] [ |- lam (\x.E)] -> Eval [ |- E[E2]]  [ |- V]
+		  -> Eval [ |- app E1 E2] [ |- V]
+  | Ev-val      : Value [ |- V] -> Eval [ |- V] [ |- V]
+  | Ev-fix      : {E: [x:exp T |- exp T[]]}
+   		 Eval [ |- E[ fix \x.E]] [ |- V]
+		  ->  Eval [ |- fix \x.E] [ |- V]
+  | Ev-case-nil : Eval [ |- E] [ |- nil] -> Eval [ |- E1] [ |- V]
+		  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
+ | Ev-case-cons : {E2: [ x:exp S, y: exp (list S[]) |- exp T[]]}
+		      Eval [ |- E]  [ |- cons EH ET] ->  Eval [ |- E2[EH, ET]] [ |- V]
+		  -> Eval [ |- lcase E E1 (\h.\t.E2)] [ |- V]
+;
+
+% rec beta_d0: {V0 :[|- exp _]}  
+%             Eval [|- (app (lam \x. (lam \y. app x y)) V0) ] [|- lam \x. (lam \y. app V0[] y)] =  ? ;
+
+rec beta_d : {V0 :[|- exp _]} {W0 :[|- exp _]} {M :[|- exp T]} Eval [|- app V0 W0] [|- M]
+             -> Eval [|- (app (app (lam \x. (lam \y. app x y)) V0) W0)] [|-  M] =  
+ mlam V, W, M => fn d => (Ev-app (Ev-app (Ev-val Val-lam) (Ev-val Val-lam)) d)
+%    fun [|- V] [|- W] [|- M] d => (Ev-app (Ev-app (Ev-val Val-lam) (Ev-val Val-lam)) d)
+;
+

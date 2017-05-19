@@ -27,6 +27,7 @@ let isExplicit = function
       begin match dep with
         | LF.No -> true
         | LF.Maybe -> false
+	| LF.Inductive -> false
       end
   | _ -> true
 

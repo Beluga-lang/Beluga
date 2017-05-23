@@ -174,6 +174,7 @@ type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
 		 | CovCtx of LF.dctx
 		 | CovSub of LF.cltyp * LF.sub * LF.dctx
 		 | CovPatt of gctx * Comp.pattern * Comp.tclo
+                 | CovPattSpine of gctx * Comp.pattern_spine * Comp.tclo
 
 type pattern =
   | MetaPatt  of  LF.dctx * LF.normal * LF.tclo
@@ -182,6 +183,7 @@ type pattern =
   | EmptyPatt of  LF.dctx * LF.tclo
   | EmptyParamPatt of  LF.dctx * LF.tclo
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
+  | GenPattSpine of Comp.gctx * Comp.pattern_spine * Comp.tclo
 
 
 type eqn   = Eqn of cov_goal * pattern | EqnCtx of LF.dctx * LF.dctx 
@@ -189,6 +191,7 @@ type eqn   = Eqn of cov_goal * pattern | EqnCtx of LF.dctx * LF.dctx
 
 type split = Split of cov_goal * pattern | SplitCtx of LF.dctx * LF.dctx
 	     | SplitPat of (Comp.pattern * Comp.tclo)  * (Comp.pattern * Comp.tclo)
+             | SplitSpine of Comp.pattern_spine * Comp.tclo
 
 type candidate =
     Cand of  LF.mctx *  Comp.gctx *        (* meta-context of pattern        *)
@@ -355,7 +358,9 @@ let covGoalToString cD cg = match cg with
       P.dctxToString cD cPsi ^ " . " ^
 	P.normalToString cD cPsi (tR, S.LF.id) ^ " : " ^ P.typToString cD cPsi sA
   | CovPatt (cG, patt, ttau) ->
-      P.patternToString cD (gctxToCompgctx cG) patt ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)
+    P.patternToString cD (gctxToCompgctx cG) patt ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)
+  | CovPattSpine (cG, pattSpine, ttau) ->
+      P.patSpineToString cD (gctxToCompgctx cG) pattSpine ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau)
 
 let rec covGoalsToString cov_goals = match cov_goals with
   | [] -> "\n"
@@ -376,6 +381,9 @@ let rec splitsToString' (cD, cG) (cD_p, cG_p) splits = match splits with
 	P.patternToString cD_p cG_p patt' ^ " : " ^
 	P.compTypToString cD_p (Whnf.cnormCTyp ttau') ^ " , \n" ^
 	splitsToString' (cD, cG) (cD_p, cG_p) splits
+  | SplitSpine (ps, ttau) :: splits ->
+    P.patSpineToString cD cG ps ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau) ^ " , \n" ^
+      splitsToString' (cD, cG) (cD_p, cG_p) splits
 (*
 let splitsToString (cD, cG) (cD_p, cG_p) splits =
   splitsToString' (cD, gctxToCompgctx cG) (cD_p, cG_p) splits
@@ -830,6 +838,9 @@ match (pat, ttau) , (pat_p, ttau_p) with
       match_pattern (cD,cG) (cD_p, cG_p) pat_ttau (pat', (tau',t')) mC sC
   | (Comp.PatAnn (_, pat', tau' ), (_ ,t')), pat_ttau  ->
       match_pattern (cD,cG) (cD_p, cG_p) (pat', (tau',t')) pat_ttau mC sC
+  | (Comp.PatSpine pS, ttau),
+    (Comp.PatSpine pS', ttau') ->
+      match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
   | _ -> raise (Error (Syntax.Loc.ghost, MatchError "Mismatch"))
 
 and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
@@ -865,9 +876,15 @@ and match_spines (cD,cG) (cD_p, cG_p) pS pS' mC sC = match (pS, pS') with
       let (mC1, sC1) = match_metaobj cD cD_p ((loc,mO), tau1) ((loc',mO'), tau1') mC sC in
 	match_spines (cD,cG) (cD_p, cG_p)
 	  (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
-
-  |  _ , (Comp.PatApp (loc, _pat', _pS') , _ )
-        -> raise (Error (loc, MatchError "Spine Mismatch"))
+  | (Comp.PatObs (loc, d, theta, pS), (Comp.TypCobase _, t)),
+    (Comp.PatObs (_, d', theta', pS'), (Comp.TypCobase _, t')) ->
+    if d = d' then
+      let tau = (Store.Cid.CompDest.get d).Store.Cid.CompDest.return_type in
+      match_spines (cD, cG) (cD_p, cG_p) (pS, (tau, theta)) (pS', (tau, theta')) mC sC
+    else
+      raise (Error (loc, MatchError "Obs mismatch"))
+  | (Comp.PatNil, _), (Comp.PatApp _ as ps, ttau) ->
+    (mC, SplitSpine (ps, ttau) :: sC)
 
   | _ -> raise (Error (Syntax.Loc.ghost, MatchError "Spine Mismatch"))
 
@@ -1981,7 +1998,10 @@ let rec subst_pattern (pat_r, pv) pattern = match pattern with
 	Comp.PatAnn (loc, pat', tau)
   | Comp.PatConst (loc, c, pS) ->
       let pS' = subst_pattern_spine (pat_r, pv) pS in
-	Comp.PatConst (loc, c, pS')
+        Comp.PatConst (loc, c, pS')
+  | Comp.PatSpine pS ->
+      let pS' = subst_pattern_spine (pat_r, pv) pS in
+        Comp.PatSpine pS'
   | _ -> pattern
 
 and subst_pattern_spine (pat_r, pv) pS = match pS with
@@ -1989,7 +2009,10 @@ and subst_pattern_spine (pat_r, pv) pS = match pS with
   | Comp.PatApp (loc, pat, pS) ->
       let pat' = subst_pattern (pat_r, pv) pat in
       let pS' = subst_pattern_spine (pat_r, pv) pS in
-	Comp.PatApp (loc, pat', pS')
+      Comp.PatApp (loc, pat', pS')
+  | Comp.PatObs (loc, obs, ms, pS) ->
+      let pS' = subst_pattern_spine (pat_r, pv) pS in
+      Comp.PatObs (loc, obs,  ms, pS')
 
 let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml)  sl = match sl with
   | [] -> (ml, sl)
@@ -2058,6 +2081,10 @@ let rec pvInSplitCand sl pvlist  = match sl with
       if List.mem x pvlist then
 	pvInSplitCand sl pvlist
       else pvInSplitCand sl (x::pvlist))
+  | SplitSpine (Comp.PatApp _, (Comp.TypArr _, _)) :: sl ->
+    (* let pv = new_patvar_name () in *)
+    (* pvInSplitCand sl (pv::pvlist) *)
+    pvInSplitCand sl pvlist
 
 let rec pvInSplitCands candidates pvlist = match candidates with
   | [] -> pvlist
@@ -2260,7 +2287,8 @@ let rec extract_patterns tau branch_patt = match branch_patt with
 
   | Comp.Branch (loc, cD, cG, pat, ms, _e) ->
       (cD, GenPatt (cG, pat, (tau, ms)))
-
+  | Comp.CovFBranch (loc, cD, cG, ps) ->
+      (cD, GenPattSpine (cG, ps, (tau, Whnf.m_id)))
 
 
 let rec gen_candidates loc cD covGoal patList = match patList with
@@ -2305,6 +2333,15 @@ let rec gen_candidates loc cD covGoal patList = match patList with
   | (cD_p, GenPatt (cG_p, pat, ttau)) :: plist ->
       let CovPatt (cG', pat', ttau') = covGoal in
       let ml , sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in
+        Cand (cD_p, cG_p, ml, sl) :: gen_candidates loc cD covGoal plist
+
+  | (cD_p, GenPattSpine (cG_p, pS, ttau)) :: plist ->
+      let CovPattSpine (cG', pS', ttau') = covGoal in
+      dprint (fun () -> "ttau = " ^ P.compTypToString cD_p (Whnf.cnormCTyp ttau));
+      dprint (fun () -> "ttau' = " ^ P.compTypToString cD (Whnf.cnormCTyp ttau'));
+      dprint (fun () -> "pS = " ^ P.patSpineToString cD_p LF.Empty pS);
+      dprint (fun () -> "pS' = " ^ P.patSpineToString cD LF.Empty pS');
+      let ml , sl = match_spines (cD, cG') (cD_p, cG_p) (pS', ttau') (pS, ttau) [] [] in
 	Cand (cD_p, cG_p, ml, sl) :: gen_candidates loc cD covGoal plist
 
 
@@ -2377,6 +2414,18 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let loc = Syntax.Loc.ghost in
       [ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , (loc, LF.ClObj (Context.dctxToHat cPhi, LF.SObj s) ))) ]
 
+  | Comp.TypCobase _ -> assert false
+  | Comp.TypArr (tau1, tau2) ->
+      (* let loc_ghost = Syntax.Loc.ghost in *)
+      (* let pv = new_patvar_name () in *)
+      (* let cG' = (pv, problem.ctype) :: problem.cG in *)
+      (* let pat = Comp.PatApp (loc_ghost, Comp.PatFVar (loc_ghost, pv), Comp.PatNil) in *)
+      let pat_list = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+      (* let covGoal = CovPattSpine (cG', pat, (Comp.TypArr (tau1, tau2), Whnf.m_id)) in *)
+      let covGoal = CovPattSpine (problem.cG, Comp.PatNil, (Comp.TypArr (tau1, tau2), Whnf.m_id)) in
+      let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
+      [ (problem.cD, problem.cG, cand_list, Comp.PatSpine Comp.PatNil) ]
+      (* [ (problem.cD, cG', cand_list, Comp.PatSpine pat) ] *)
 
  | tau ->  (* tau := Bool | Cross (tau1, tau2) | U *)
       let loc_ghost = Syntax.Loc.ghost in

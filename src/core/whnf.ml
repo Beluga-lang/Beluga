@@ -1601,6 +1601,7 @@ let mctxMVarPos cD u =
     | Comp.PatAnn (loc, pat, tau) ->
         Comp.PatAnn (loc, cnormPattern (pat, t),
                      cnormCTyp (tau, t))
+    | Comp.PatSpine ps -> Comp.PatSpine (cnormPatSpine (ps, t))
 
   and cnormPatSpine (patSpine, t) = match patSpine with
     | Comp.PatNil -> Comp.PatNil

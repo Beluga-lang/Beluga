@@ -349,6 +349,7 @@ module Comp = struct
     | PatTrue  of Loc.t
     | PatFalse of Loc.t
     | PatAnn   of Loc.t * pattern * typ
+    | PatSpine of pattern_spine         (* Used for coverage of fbranches *)
 
   and pattern_spine =
     | PatNil
@@ -364,6 +365,7 @@ module Comp = struct
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
+    | CovFBranch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern_spine (* Used only for coverage of fun_branches *)
 
   and fun_branches =
    | NilFBranch of Loc.t

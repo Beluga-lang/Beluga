@@ -585,7 +585,14 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Fn" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
 
     | (Fun (loc, fbr), _) ->
-      checkFBranches cD (cG, cIH) fbr ttau
+      let rec make_cov_branches = function
+        | NilFBranch _ -> []
+        | ConsFBranch (loc, (cD, cG, ps, _), fbr) -> CovFBranch (loc, cD, cG, ps) :: make_cov_branches fbr
+      in
+      let problem = Coverage.make loc Pragma.RegularCase cD (make_cov_branches fbr) (Whnf.cnormCTyp ttau) in
+      checkFBranches cD (cG, cIH) fbr ttau;
+      Coverage.process problem None     (* not sure what None is for *)
+
 
     | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
 	(check (extend_mctx cD (u, cdec, t))

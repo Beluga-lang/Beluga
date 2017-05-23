@@ -1,0 +1,21 @@
+%coverage
+LF nat : type =
+| z : nat
+| s : nat -> nat
+;
+
+rec copy : [|- nat] -> [|- nat] =
+fun [|- z] => [|- z]
+  | [|- s N] => [|- s N]
+;
+
+rec copy' : [|- nat] -> [|- nat] =
+fun e => e
+;
+
+rec add : [|- nat] -> [|- nat] -> [|- nat] =
+    fun [|- z] [|- z] => ? % [|- N]
+      | [|- z] [|- s N] => ? % [|- N]
+      | [|- s N] [|- z] => ? % add [|- N] [|- s M]
+      | [|- s N] [|- s M] => ? % add [|- N] [|- s M]
+;

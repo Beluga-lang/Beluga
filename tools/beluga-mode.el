@@ -1969,7 +1969,7 @@ to which that point should be aligned, if we were to reindent it.")
 
 (defun beluga-smie-indent-rules (method token)
   (cond
-   ((eq method :list-intro) (member token '("fn" "FN" "mlam")))
+   ((eq method :list-intro) (member token '("fn" "FN" "mlam" "fun")))
    ((and (eq method :elem) (eq token 'arg)) beluga-indent-basic)
    ((and (eq method :before) (equal token "|") (smie-rule-prev-p "=" "of"))
     ;; Presumable a "datatype foo = | ...".

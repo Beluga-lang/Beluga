@@ -13,6 +13,7 @@ type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
 		 | CovCtx of LF.dctx
 		 | CovSub of LF.cltyp * LF.sub * LF.dctx
 		 | CovPatt of gctx * Comp.pattern * Comp.tclo
+                 | CovPattSpine of gctx * Comp.pattern_spine * Comp.tclo
 
 
 exception Error of Syntax.Loc.t * error

@@ -11,7 +11,7 @@ type gctx = (Id.name * Comp.typ) list
 type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
                             (*  cPsi |- tR <= sP *)
 		 | CovCtx of LF.dctx
-		 | CovSub of LF.cltyp * LF.sub * LF.dctx
+		 | CovSub of LF.dctx * LF.sub * LF.cltyp
 		 | CovPatt of gctx * Comp.pattern * Comp.tclo
 
 

@@ -172,13 +172,13 @@ type depend   = Atomic | Dependent
 type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
                             (*  cPsi |- tR <= sP *)
 		 | CovCtx of LF.dctx
-		 | CovSub of LF.cltyp * LF.sub * LF.dctx
+		 | CovSub of  LF.dctx * LF.sub * LF.cltyp 
 		 | CovPatt of gctx * Comp.pattern * Comp.tclo
 
 type pattern =
   | MetaPatt  of  LF.dctx * LF.normal * LF.tclo
   | MetaCtx   of LF.dctx
-  | MetaSub   of  LF.cltyp * LF.sub * LF.dctx 
+  | MetaSub   of  LF.dctx * LF.sub * LF.cltyp
   | EmptyPatt of  LF.dctx * LF.tclo
   | EmptyParamPatt of  LF.dctx * LF.tclo
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
@@ -624,8 +624,8 @@ and pre_match_spine cD cD_p (cPsi , tS , sA)
 
 and pre_match_sub cD cD_p covGoal patt  matchCands splitCands = 
 
-  let CovSub ((LF.STyp (_r, cPsi0)) as sT0,  s0, cPhi0)  = covGoal in
-  let MetaSub ((LF.STyp (_r, _cPsi0)) as sT1, s1, cPhi1) = patt in
+  let CovSub (cPsi0,  s0, (LF.STyp (r0, cPhi0) as sT0)) = covGoal in
+  let MetaSub (cPsi1, s1, (LF.STyp (r1, cPhi1) as sT1)) = patt in
 
 
   begin match (s0, cPhi0) , (s1, cPhi1) with 
@@ -634,41 +634,41 @@ and pre_match_sub cD cD_p covGoal patt  matchCands splitCands =
 	if n = k then (matchCands, splitCands)
 	else 
 	  raise (Error (Syntax.Loc.ghost,
-			MatchError ("Substitution mismatch " ^ P.subToString cD cPsi0 s0 ^ " =/= " ^ P.subToString cD_p _cPsi0 s1 ^ "\n")))
+			MatchError ("Substitution mismatch " ^ P.subToString cD cPsi0 s0 ^ " =/= " ^ P.subToString cD_p cPsi0 s1 ^ "\n")))
 
     | (LF.SVar(_, _, _), cPhi0) , (LF.Shift 0 , cPhi1) -> 
       (* SplitCand *)
-      let covGoal = CovSub(sT0, s0, cPhi0) in  
-      let patt    = MetaSub (sT1, s1, cPhi1) in  
+      let covGoal = CovSub(cPsi0, s0, LF.STyp (r0, cPhi0)) in  
+      let patt    = MetaSub (cPsi1, s1, LF.STyp (r1, cPhi1)) in  
          (matchCands , Split (covGoal, patt)::splitCands)
 
       | (LF.Shift 0, cPhi0) , (LF.SVar( _ , _ , _), cPhi1) -> 
-        let covGoal = CovSub(sT0, s0, cPhi0)   in  
-        let patt    = MetaSub (sT1, s1, cPhi1) in 
+        let covGoal = CovSub(cPsi0, s0, sT0)   in  
+        let patt    = MetaSub (cPsi1, s1, sT1) in 
          (Eqn (covGoal, patt)::matchCands, splitCands) 
 
       | (LF.SVar(_ , _ , _ ), _ ) , (LF.SVar(_ , _ , _), _ ) -> 
-          let covGoal = CovSub(sT0, s0, cPhi0)   in  
-          let patt    = MetaSub (sT1, s1, cPhi1) in 
+          let covGoal = CovSub(cPsi0, s0, LF.STyp (r0, cPhi0))   in  
+          let patt    = MetaSub (cPsi1, s1, LF.STyp (r1, cPhi1)) in 
             (Eqn (covGoal, patt)::matchCands, splitCands) 
 
 
       | (LF.Dot (f0, s0), LF.DDec(cPhi0, tdecl0)) , (LF.Dot (f1, s1), LF.DDec (cPhi1, tdecl1)) -> 
 	  let LF.TypDecl (_, tA0) = tdecl0 in 
 	  let LF.TypDecl (_, tA1) = tdecl1 in 
-	  let covGoal = CovSub(sT0, s0, cPhi0) in 
-	  let patt    = MetaSub (sT1, s1, cPhi1) in 
+	  let covGoal = CovSub(cPsi0,  s0, LF.STyp (r0, cPhi0)) in 
+	  let patt    = MetaSub (cPsi1, s1, LF.STyp (r1, cPhi1)) in 
 	  let (matchCands', splitCands') = pre_match_front cD cD_p  (cPhi0, f0, tA0) (cPhi1, f1, tA1) matchCands splitCands in
             pre_match_sub cD cD_p covGoal patt matchCands'  splitCands' 
 
       | (LF.Shift n, _ ), (LF.Dot(LF.Head LF.BVar _k, _s'), _) ->
 	  let s0 = LF.Dot (LF.Head (LF.BVar (n+1)), LF.Shift (n+1)) in 
-	  let covGoal = CovSub(sT0, s0, cPhi0) in 
+	  let covGoal = CovSub(cPsi0, s0, LF.STyp (r0, cPhi0)) in 
             pre_match_sub cD cD_p covGoal patt matchCands splitCands
 
       | (LF.Dot(LF.Head LF.BVar _k, _s') , _ ) , (LF.Shift n, _ ) -> 
 	  let s1   = LF.Dot (LF.Head (LF.BVar (n+1)), LF.Shift (n+1)) in 
-	  let patt = MetaSub (sT1, s1, cPhi1) in 
+	  let patt = MetaSub (cPsi1,  s1, LF.STyp (r1, cPhi1)) in 
             pre_match_sub cD cD_p covGoal patt matchCands splitCands
 
 
@@ -676,15 +676,9 @@ and pre_match_sub cD cD_p covGoal patt  matchCands splitCands =
       | ( _ , _ ) , (LF.EmptySub, _ ) -> (matchCands, splitCands)
 
 
-      | (LF.SVar _ , _ ), ( _  , _ ) -> 
-	  let covGoal = CovSub(sT0, s0, cPhi0) in  
-	  let patt    = MetaSub (sT1, s1, cPhi1) in  
-         (matchCands , Split (covGoal, patt)::splitCands)
+      | (LF.SVar _ , _ ), ( _  , _ ) ->  (matchCands , Split (covGoal, patt)::splitCands)
 
-      | (_ , _ ) , (LF.SVar( _ , _ , _), _ ) -> 
-        let covGoal = CovSub(sT0, s0, cPhi0)   in  
-        let patt    = MetaSub (sT1, s1, cPhi1) in 
-         (Eqn (covGoal, patt)::matchCands, splitCands) 
+      | (_ , _ ) , (LF.SVar( _ , _ , _), _ ) -> (Eqn (covGoal, patt)::matchCands, splitCands) 
 
 
   end 
@@ -788,18 +782,45 @@ let match_metaobj cD cD_p ((loc,mO),mt) ((loc',mO_p),mtp) mC sC = match ((mO,mt)
       pre_match_dctx cD cD_p cPsi cPsi' mC sC
   | (LF.ClObj (_, LF.MObj tR), LF.ClTyp (LF.MTyp tA, cPsi)),
       (LF.ClObj (_ , LF.MObj tR') , LF.ClTyp (LF.MTyp tA', cPsi'))  ->
-      let (mC1, sC1) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+      let (mC0, sC0) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+      let (mC1, sC1) = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
       let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
       let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
 	pre_match cD cD_p covGoal pat mC1 sC1
+  | (LF.ClObj (_, LF.MObj tR), LF.ClTyp (LF.PTyp tA, cPsi)),
+      (LF.ClObj (_ , LF.MObj tR') , LF.ClTyp (LF.PTyp tA', cPsi'))  ->
+      let (mC0, sC0)  = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+      let (mC1, sC1) = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+      let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
+      let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
+	pre_match cD cD_p covGoal pat mC1 sC1
+  | (LF.ClObj (_, LF.PObj tH), LF.ClTyp (LF.PTyp tA, cPsi)),
+      (LF.ClObj (_ , LF.PObj tH') , LF.ClTyp (LF.PTyp tA', cPsi'))  ->
+      let (mC0, sC0) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+      let (mC1, sC1) = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+      let loc = Syntax.Loc.ghost in
+      let covGoal = CovGoal (cPsi, LF.Root(loc, tH, LF.Nil), (tA, S.LF.id)) in
+      let pat = MetaPatt (cPsi', LF.Root (loc, tH', LF.Nil), (tA', S.LF.id)) in
+	pre_match cD cD_p covGoal pat mC1 sC1
+  | (LF.ClObj (_, LF.SObj s), LF.ClTyp (sT, cPsi)),
+      (LF.ClObj (_ , LF.SObj s') , LF.ClTyp (sT', cPsi'))  ->
+      let (mC1, sC1) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+      let covGoal = CovSub (cPsi, s, sT) in
+      let pat = MetaSub (cPsi', s', sT') in
+	pre_match cD cD_p covGoal pat mC1 sC1
+    | (_ , _ ) -> raise (Error (Syntax.Loc.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt  ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
+
+
 
 let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
 match (pat, ttau) , (pat_p, ttau_p) with
-  | (Comp.PatMetaObj (loc, mO) , (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPsi)), t)) ,
-    (Comp.PatMetaObj (_loc, mO'), (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA', cPsi')), t')) ->
-      let tau = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA,t)), Whnf.cnormDCtx (cPsi, t)) in
-      let tau' = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA',t')), Whnf.cnormDCtx (cPsi', t')) in
-      match_metaobj cD cD_p (mO, tau) (mO', tau') mC sC
+  | (Comp.PatMetaObj (loc, mO) , (Comp.TypBox (_, mT), t)) ,
+    (Comp.PatMetaObj (_loc, mO'), (Comp.TypBox (_, mT'), t')) ->
+      let mT0  = Whnf.cnormMTyp (mT , t ) in 
+      let mT0' = Whnf.cnormMTyp (mT', t') in 
+      match_metaobj cD cD_p (mO, mT0) (mO', mT0') mC sC
+
+
   | (Comp.PatConst (_, c, pS) , (Comp.TypBase _, t)) ,
     (Comp.PatConst (loc, c', pS'), (Comp.TypBase _,t')) ->
       if c = c' then
@@ -1277,9 +1298,9 @@ let rec refineSplits (cD:LF.mctx) (cD_p:LF.mctx) matchL splitL ms = match splitL
       let result = pre_match cD cD_p covG patt matchL' splitL' in
 	result
       )
-  | Split (CovSub (sT, s, cPhi) , patt ) :: splits ->
+  | Split (CovSub (cPhi, s, sT) , patt ) :: splits ->
       let (matchL', splitL') = refineSplits cD cD_p matchL splits ms in
-       let covG = CovSub (Whnf.cnormClTyp (sT, ms), Whnf.cnormSub (s, ms), Whnf.cnormDCtx (cPhi, ms)) in 
+       let covG = CovSub (Whnf.cnormDCtx (cPhi, ms), Whnf.cnormSub (s, ms), Whnf.cnormClTyp (sT, ms)) in 
 	 pre_match_sub cD cD_p covG patt matchL' splitL'
       
   | SplitCtx (cPsi, cPsi_patt ) :: splits ->
@@ -1555,14 +1576,14 @@ let genContextGoals cD ctx_schema =
     List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms)) cgs
 
 (* Find mvar to split on *)
-let genSVCovGoals (cD, sTyp, cPhi) (* cov_problem *) = 
+let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) = 
   begin match cPhi with 
-    | LF.Null -> [(cD, CovSub (sTyp, LF.EmptySub, cPhi),  LF.MShift 0)]
+    | LF.Null -> [(cD, CovSub (cPsi, LF.EmptySub, LF.STyp(r0, cPhi)),  LF.MShift 0)]
     | LF.CtxVar _ -> []  (* Split on the context variable first *)
     | LF.DDec (cPhi', decl) -> 
 	let LF.TypDecl (x, tA) = decl in 
 	let s      = LF.SVar(2, 0, Substitution.LF.id) in
-	let mT     = LF.ClTyp(sTyp, cPhi') in 
+	let mT     = LF.ClTyp(LF.STyp (r0, cPhi'), cPsi) in 
 	let cD'    = LF.Dec(cD, LF.Decl(Id.mk_name(Whnf.newMTypName mT), mT, LF.No)) in
 	  (* if ren = renaming, generate parameter variable *)
 	let tM     = LF.Root(Syntax.Loc.ghost, LF.MVar(LF.Offset 1 , Substitution.LF.id), LF.Nil) in
@@ -1570,9 +1591,9 @@ let genSVCovGoals (cD, sTyp, cPhi) (* cov_problem *) =
 	let cPhi0  = Whnf.cnormDCtx (cPhi', LF.MShift 1) in 
 	let mT'    = LF.ClTyp(LF.MTyp tA0, cPhi0) in 
 	let cD''   = LF.Dec(cD', LF.Decl(Id.mk_name(Whnf.newMTypName mT'),mT', LF.No)) in
-	let sTyp'  = Whnf.cnormClTyp (sTyp, LF.MShift 2) in 
+	let cPsi'  = Whnf.cnormDCtx (cPsi, LF.MShift 2) in 
 	let cPhi'' = Whnf.cnormDCtx (cPhi, LF.MShift 2) in
-	  [(cD'', CovSub (sTyp', LF.Dot(LF.Obj tM, s), cPhi''), LF.MShift 2)]
+	  [(cD'', CovSub (cPsi', LF.Dot(LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
   end
 
 
@@ -1611,7 +1632,7 @@ let genCGoals (cD':LF.mctx) mdec = match mdec with
 	 either . (empty) or cPsi', _  
 	 if cPsi is simply a context variable and ask the user to split on
 	    the context first; should maybe raise Split error. *)
-	| _ -> (genSVCovGoals (cD', sTyp, cPsi), Atomic)
+	| _ -> (genSVCovGoals (cD', (cPsi, sTyp)), Atomic)
       end
 
 
@@ -1658,13 +1679,13 @@ match (mv_list, cD) with
 								Whnf.cnorm (tR, LF.MShift k) ,
 								(Whnf.cnormTyp (Whnf.normTyp sA' , LF.MShift k), S.LF.id)) in
 					       TermCandidate (cD'' , cg',  ms0 )
-					 | CovSub (sT, s, cPhi) -> 
-					     let LF.STyp (_r, cPsi) = sT in 
-					     let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi, LF.SObj s), ms) in 
+					 | CovSub (cPhi,  s, sT) -> 
+					     let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPhi, LF.SObj s), ms) in 
 					     let (cD'', ms0) = addToMCtx cD' (cD_tail, ms') in
-					     let cg' = CovSub (Whnf.cnormClTyp (sT, LF.MShift k), 
+					     let cg' = CovSub (Whnf.cnormDCtx (cPhi, LF.MShift k),
 							       Whnf.cnormSub (s, LF.MShift k), 
-							       Whnf.cnormDCtx (cPhi, LF.MShift k)) in 
+							       Whnf.cnormClTyp (sT, LF.MShift k)
+							       ) in 
 					       TermCandidate (cD'' , cg',  ms0 )
 
 				    )
@@ -2228,28 +2249,8 @@ let no_covers = ref 0           (* number of times coverage checking has yielded
 (* Printing for debugging *)
 
 let rec extract_patterns tau branch_patt = match branch_patt with
-  | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', (_, LF.CObj cPsi)), ms, _e) ->
-	(cD, MetaCtx (cPsi))
   | Comp.Branch (loc, cD, _cG, Comp.PatAnn (loc', pat, _), ms, _e) ->
       extract_patterns tau (Comp.Branch (loc, cD, _cG, pat, ms, _e))
-  | Comp.Branch (loc, cD, _cG, Comp.PatMetaObj (loc', pat), ms, _e) ->
-      begin match pat, tau with 
-	| (loc, LF.ClObj (phat, LF.MObj tR)) , 
-	  Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPhi)) -> 
-	    let (cPsi, tR) = (Whnf.cnormDCtx (cPhi, ms), tR) in 
-	      (cD, MetaPatt (cPsi, tR, (Whnf.cnormTyp (tA, ms), S.LF.id)))
-
-	| (loc, LF.ClObj (phat, LF.MObj tR)) , 
-	  Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPhi)) -> 
-	    let (cPsi, tR) = (Whnf.cnormDCtx (cPhi, ms), tR) in 
-	      (cD, MetaPatt (cPsi, tR, (Whnf.cnormTyp (tA, ms), S.LF.id)))
-
-	| (loc, LF.ClObj (phat, LF.SObj s)) , 
-	  Comp.TypBox (_, LF.ClTyp (LF.STyp (dep, cPsi), cPhi)) -> 
-	    let cPhi' = Whnf.cnormDCtx (cPhi, ms) in 
-	    let cPsi' = Whnf.cnormDCtx (cPsi, ms) in 
-	    (cD, MetaSub (LF.STyp (dep, cPsi'), s, cPhi'))
-      end 
 
   | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms)  ->
       begin match tau with
@@ -2295,8 +2296,8 @@ let rec gen_candidates loc cD covGoal patList = match patList with
       let ml, sl = pre_match_dctx cD cD_p cPsi cPhi [] [] in
 	Cand (cD_p, LF.Empty, ml, sl) :: gen_candidates loc cD covGoal plist
 
-  | (cD_p, (MetaSub (LF.STyp (_r, cPsi), s, cPhi) as pat)) :: plist ->
-      let CovSub (LF.STyp (_r, cPsi'), s', cPhi') = covGoal in
+  | (cD_p, (MetaSub (cPhi, s, LF.STyp (_r, cPsi)) as pat)) :: plist ->
+      let CovSub (cPhi', s', LF.STyp (_r, cPsi')) = covGoal in
       let ml0, sl0 = pre_match_dctx cD cD_p cPhi' cPhi [] [] in
       let ml1, sl1 = pre_match_dctx cD cD_p cPsi' cPsi ml0 sl0 in
       let ml2, sl2 = pre_match_sub  cD cD_p covGoal pat ml1 sl1 in 
@@ -2312,16 +2313,19 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 
 *)
 let initialize_coverage problem projOpt = begin match problem.ctype with
+
   | Comp.TypBox(loc, LF.CTyp w) ->
       let cD'        = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let cPsi       = LF.CtxVar (LF.CtxOffset 1) in
-      let covGoal    = CovCtx cPsi in
+      let cPsi       = LF.CtxVar (LF.CtxOffset 1) in 
+      (* let covGoal    = CovPatt(LF.Empty, Comp.PatMetaObj (loc,LF.CObj cPsi)) in  *)
+      let loc'       = Syntax.Loc.ghost in
+      let mC         = Comp.PatMetaObj(loc', (loc',LF.CObj cPsi)) in 
+      let mT         = Comp.TypBox(loc, LF.CTyp w) in
+      let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
       let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
-
       let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-      let loc = Syntax.Loc.ghost in
-	[ ( cD', cG', cand_list, Comp.PatMetaObj(loc, (loc,LF.CObj cPsi)) ) ]
+	[ ( cD', cG', cand_list,  mC) ]
 
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
@@ -2334,7 +2338,11 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
       let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
       let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
-      let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in
+      let loc'       = Syntax.Loc.ghost in
+      let mC         = Comp.PatMetaObj(loc', (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM))) in 
+      let mT         = Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
+      let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
+      (* let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in *)
 (*      let _          = print_string "\nGenerated Coverage goal: " in
       let _          = print_string (covGoalToString cD' covGoal) in
       let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
@@ -2343,8 +2351,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
 
       let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-      let loc = Syntax.Loc.ghost in
-      [ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM)))) ]
+      [ ( cD' , cG', cand_list , mC) ]
 
   | Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
@@ -2353,15 +2360,15 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
       let mv         = match projOpt with None -> LF.PVar (1, s) | Some k -> LF.Proj(LF.PVar (1, s), k) in
       let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-      let cPsi      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-      let tA        = Whnf.cnormTyp (tA, LF.MShift 1) in
-      let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in
-
-      let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
-
-      let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-      let loc = Syntax.Loc.ghost in
-      [ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM) ))) ]
+      let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+      let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
+      let loc'       = Syntax.Loc.ghost in
+      let mC         = Comp.PatMetaObj(loc', (loc', LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM) )) in
+      let mT         = Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) in
+      let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
+      let pat_list   = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+      let cand_list  =  gen_candidates problem.loc cD' covGoal pat_list in
+      [ ( cD' , cG', cand_list , mC) ]
 
   | Comp.TypBox(loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)) as mT)) ->
       let cD'       = LF.Dec (problem.cD, LF.Decl(Id.mk_name (Whnf.newMTypName mT),  mT, LF.Maybe)) in
@@ -2369,14 +2376,17 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
       let s         = LF.SVar(1, 0, Substitution.LF.id) in
       let cPhi      = Whnf.cnormDCtx (cPhi, LF.MShift 1) in
       let cPsi      = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-      let covGoal   = CovSub (LF.STyp(r, cPhi), s, cPsi) in
+      let loc'      = Syntax.Loc.ghost in
+      let mC        = Comp.PatMetaObj(loc' , (loc', LF.ClObj (Context.dctxToHat cPhi, LF.SObj s) )) in
+      let mT        = Comp.TypBox(loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)))) in
+      let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
 
       let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
 
       let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-      let loc = Syntax.Loc.ghost in
-      [ ( cD' , cG', cand_list , Comp.PatMetaObj(loc , (loc, LF.ClObj (Context.dctxToHat cPhi, LF.SObj s) ))) ]
 
+      [ ( cD' , cG', cand_list , mC) ]
+	
 
  | tau ->  (* tau := Bool | Cross (tau1, tau2) | U *)
       let loc_ghost = Syntax.Loc.ghost in

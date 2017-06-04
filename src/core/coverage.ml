@@ -341,16 +341,22 @@ let rec compgctxTogctx cG = match cG with
 
 
 let pattToString cD patt = match patt with
+  | MetaCtx cPsi ->       P.dctxToString cD cPsi 
+  | MetaSub (cPsi, s, LF.STyp (_ , cPhi)) -> 
+      P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s ^ " : "  ^ P.dctxToString cD cPhi
   | MetaPatt (cPsi, tR, sA) ->
-      P.dctxToString cD cPsi ^ " . " ^
+      P.dctxToString cD cPsi ^ " |- " ^
       P.normalToString cD cPsi (tR, S.LF.id) ^ " : " ^ P.typToString cD cPsi sA
   | EmptyPatt (cPsi, sA) ->
-           P.dctxToString cD cPsi ^ " . " ^ "     ()    : " ^ P.typToString cD cPsi sA
+           P.dctxToString cD cPsi ^ " |- " ^ "     ()    : " ^ P.typToString cD cPsi sA
   | EmptyParamPatt (cPsi, sA) ->
-           P.dctxToString cD cPsi ^ " . " ^ "     ()    : " ^ P.typToString cD cPsi sA
+           P.dctxToString cD cPsi ^ " |- " ^ "     ()    : " ^ P.typToString cD cPsi sA
 
 
 let covGoalToString cD cg = match cg with
+  | CovCtx cPsi -> P.dctxToString cD cPsi
+  | CovSub (cPsi, s, LF.STyp (_ , cPhi)) -> 
+      P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s ^ " : "  ^ P.dctxToString cD cPhi
   | CovGoal(cPsi, tR, sA) ->
       P.dctxToString cD cPsi ^ " . " ^
 	P.normalToString cD cPsi (tR, S.LF.id) ^ " : " ^ P.typToString cD cPsi sA
@@ -807,7 +813,7 @@ let match_metaobj cD cD_p ((loc,mO),mt) ((loc',mO_p),mtp) mC sC = match ((mO,mt)
       let (mC1, sC1) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
       let covGoal = CovSub (cPsi, s, sT) in
       let pat = MetaSub (cPsi', s', sT') in
-	pre_match cD cD_p covGoal pat mC1 sC1
+	pre_match_sub cD cD_p covGoal pat mC1 sC1
     | (_ , _ ) -> raise (Error (Syntax.Loc.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt  ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
 
 
@@ -1208,6 +1214,35 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands', sCands')))
   | mc :: mCands ->
       begin match mc with
+	| Eqn (CovSub (cPsi, s, sT), MetaSub (cPsi_p, s_p, sT_p) ) -> 
+	    let cT      = LF.ClTyp (sT, cPsi) in 
+	    let cT_p    = LF.ClTyp (sT_p, cPsi_p) in 
+	    let cM      = (Syntax.Loc.ghost, LF.ClObj (Context.dctxToHat cPsi , LF.SObj s)) in 
+	    let cM_p    = (Syntax.Loc.ghost, LF.ClObj (Context.dctxToHat cPsi_p, LF.SObj s_p)) in 
+	      begin try
+		U.unifyMetaTyp cD (cT, Whnf.m_id) (cT_p, ms);
+		U.unifyMetaObj cD (cM, Whnf.m_id) (cM_p,ms) (cT, Whnf.m_id);
+		solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
+	      with 
+              | U.GlobalCnstrFailure ( _loc, cnstr) -> NotSolvable
+	      | U.Failure msg  ->
+		  (if U.unresolvedGlobalCnstrs () then
+		     let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND") in
+		     let sc = Split (CovSub (cPsi, s, sT) , MetaSub (cPsi_p, s_p, sT_p)) in
+		       solve' cD (mCands, ms) cD_p mCands' (sc::sCands')
+		   else
+                     begin match msg with
+                       | "Pruning" ->
+			   (* Match Candidate is kept ? *)
+			   let sc = Split (CovSub (cPsi, s, sT) , MetaSub (cPsi_p, s_p, sT_p)) in
+			     solve' cD (mCands, ms) cD_p (mCands') (sc::sCands')
+                       | _ ->
+			   (* we are not trying to be clever and see if a context split would lead to progress *)
+			   let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
+			     NotSolvable
+	             end)
+	      end
+
 	| Eqn (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) ->
 	  let cPsi_p' = Whnf.cnormDCtx (cPsi_p, ms) in
 	  let tR_p'   = Whnf.cnorm (tR_p, ms) in

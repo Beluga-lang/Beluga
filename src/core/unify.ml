@@ -1647,7 +1647,14 @@ let isVar h = match h with
     | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
        (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2)) 
     | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2) ,
-      ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _ )) as s1)), _tS)) as sM1)) -> 
+      ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _ )) as s1)), _tS)) as sM1))
+    | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((SVar (_, _, _)) as  s1)), _tS)) as sM1,
+       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2)) 
+    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2) ,
+      ((Root (loc, MMVar (((_n, r, cD, ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((SVar (_, _ , _)) as s1)), _tS)) as sM1))
+
+ -> 
+
 	let (_, tQ, cPsi) = Whnf.mctxMDec cD0 u in
 	let _ = dprint (fun () -> "[unify] MMVar[SVar] " ) in 
 	let _ = dprint (fun () -> " tP = " ^ P.typToString cD cPsi1 (tP,id) ^ "\ncPsi1 = " ^ 

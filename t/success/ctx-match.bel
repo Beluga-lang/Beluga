@@ -1,0 +1,23 @@
+tp : type.
+top : tp.
+arr : tp -> tp -> tp.
+list : tp -> tp.
+
+exp : tp -> type.
+app : exp (arr S T) -> exp S -> exp T.
+lam : (exp S -> exp T) -> exp (arr S T).
+unit : exp top.
+nil : exp (list T).
+cons : exp T -> exp (list T) -> exp (list T).
+
+schema ctx = some [t:tp] exp t;
+
+nat: type.
+z: nat.
+suc: nat -> nat.
+
+rec length: {g:ctx} [ |- nat] = 
+mlam g => case [g] of 
+| [] => [ |- z] 
+| [g, x:exp T[]] => [ |- z]
+;

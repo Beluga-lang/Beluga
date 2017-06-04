@@ -1,0 +1,11 @@
+LF cat : type =
+   | claw : cat
+   | tail : cat → cat
+;
+
+rec f : [ ⊢ cat ] → [ ⊢ cat ] =
+    fn c => case c of
+    | [ ⊢ claw ] => c
+    | [ ⊢ tail                  % missing argument to tail constructor here
+      ] => c
+;

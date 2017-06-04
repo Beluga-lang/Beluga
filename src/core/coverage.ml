@@ -2317,27 +2317,6 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 			(Printf.sprintf "\n##   Empty Parameter Pattern ##\n \n##   Case expression of parameter type : \n##   %s\n##   is not empty.\n\n"
 			   (P.typToString cD_p cPsi sA))))
 
-  | (cD_p, (MetaPatt(cPhi, _tN, sB') as pat)) :: plist ->
-      let CovGoal (cPsi', _, sA') =  covGoal in
-      let _ = dprint (fun () -> "PATTERN : \n     " ^ P.mctxToString cD_p ^ " |- " ^  pattToString cD_p pat)  in
-
-      let ml0, sl0   = pre_match_dctx cD cD_p cPsi' cPhi [] [] in
-      let (ml', sl') = pre_match_typ cD cD_p (cPsi', sA') (cPhi, sB') ml0 sl0 in
-      let (ml, sl)   = pre_match cD cD_p covGoal pat ml' sl' in
-	Cand (cD_p, LF.Empty, ml, sl) :: gen_candidates loc cD covGoal plist
-
-  | (cD_p, MetaCtx (cPhi)) :: plist ->
-      let CovCtx cPsi = covGoal in
-      let ml, sl = pre_match_dctx cD cD_p cPsi cPhi [] [] in
-	Cand (cD_p, LF.Empty, ml, sl) :: gen_candidates loc cD covGoal plist
-
-  | (cD_p, (MetaSub (cPhi, s, LF.STyp (_r, cPsi)) as pat)) :: plist ->
-      let CovSub (cPhi', s', LF.STyp (_r, cPsi')) = covGoal in
-      let ml0, sl0 = pre_match_dctx cD cD_p cPhi' cPhi [] [] in
-      let ml1, sl1 = pre_match_dctx cD cD_p cPsi' cPsi ml0 sl0 in
-      let ml2, sl2 = pre_match_sub  cD cD_p covGoal pat ml1 sl1 in 
-	Cand (cD_p, LF.Empty, ml2, sl2) :: gen_candidates loc cD covGoal plist
-
   | (cD_p, GenPatt (cG_p, pat, ttau)) :: plist ->
       let CovPatt (cG', pat', ttau') = covGoal in
       let ml , sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in

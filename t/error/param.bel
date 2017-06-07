@@ -1,0 +1,31 @@
+tp : type.         %name tp T.
+i :  tp.
+arr: tp -> tp -> tp.
+
+nat: type.
+z: nat. 
+s: nat -> nat.
+
+tm : type.          %name tm E.
+elem: tm.
+
+oft : tm -> tp -> type.
+o/i: oft elem i.
+
+schema ctx = some [t:tp] block x:tm,y:oft x t;
+
+
+
+
+rec lookup : {g:ctx}{#p:[g |- block (x:tm, u:oft x Q[])]} [ |- nat] = 
+/ total g (lookup g) /
+mlam g,#p => case [g] of 
+| [] => impossible [ |- #p.1]
+| [g', b:block (x:tm, u:oft x S[])] => 
+ (case [g', b:block (x:tm, u:oft x S[]) |- #p.2] of 
+  | {T:[|-tp]}{P:[|-tp]} {#q:[g0 |- block (x:tm, u: oft x P[])]}
+     [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g0] [g0 |- #q]
+  | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => [ |- z]
+  | [g0, b:block (x:tm, u: oft x T[]) |- o/i] => [ |- z]
+ )
+;

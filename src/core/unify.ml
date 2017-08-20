@@ -1445,14 +1445,17 @@ let isVar h = match h with
        unifyTuple mflag cD0 cPsi (tup1, s1) (tup2, s2))
 
   and unifyMVarTerm cD0 cPsi (_n1, r1,  cD, ClTyp (_, cPsi1), cnstrs1, mdep1) t1' sM2 = 
-    begin try
-     let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
-     let phat = Context.dctxToHat cPsi in
-     let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (MShift 0, ss1) (MMVarRef r1)) in
-     instantiateMVar (r1, tM2', !cnstrs1)
-     with NotInvertible -> raise (Error.Violation "Unification violation")
-       (* This might actually need to add a constraint, in which case "NotInvertible" seems
-          the wrong kind of exception... *)
+    if isId t1' then 
+      	  instantiateMVar (r1, sM2, !cnstrs1)
+    else 
+      begin try
+	let ss1  = invert (Whnf.normSub t1') (* cD ; cPsi1 |- ss1 <= cPsi *) in
+	let phat = Context.dctxToHat cPsi in
+	let tM2' = trail (fun () -> prune cD0 cPsi1 phat (sM2,id) (MShift 0, ss1) (MMVarRef r1)) in
+	  instantiateMVar (r1, tM2', !cnstrs1)
+      with NotInvertible -> raise (Error.Violation "Unification violation")
+	(* This might actually need to add a constraint, in which case "NotInvertible" seems
+           the wrong kind of exception... *)
     end 
 
   and pruneITerm cD cPsi (hat, tm) ss rOccur = match tm with
@@ -1461,6 +1464,9 @@ let isVar h = match h with
     | ISub s , STyp (_, cPhi) -> ISub (pruneSubst cD cPsi (s,cPhi) ss rOccur)
 
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
+    if isId t1' && isMId mt1 then 
+      instantiateMMVar' (r1, sM2, !cnstrs1)
+    else 
     begin (* try *)
       let ss1  = invert (Whnf.cnormSub (t1', Whnf.m_id)) in
       (* cD ; cPsi1 |- ss1 <= cPsi *)

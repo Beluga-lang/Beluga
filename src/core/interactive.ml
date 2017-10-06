@@ -399,8 +399,9 @@ let split e i =
   let rec searchGctx i = function
   | LF.Empty -> None
   | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
-      if (Id.string_of_name n) = e then
-        (match tau with
+    if (Id.string_of_name n) = e then
+      let rec matchTyp tau =
+        match tau with
         | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
           let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
           let bl = branchCovGoals loc 0 cG0 tau0 cgs in
@@ -409,8 +410,10 @@ let split e i =
             let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
             let bl = branchCovGoals loc 0 cG0 tau0 cgs in
             Some (matchFromPatterns l (Comp.Var(l, i)) bl)
+        | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
         | _ ->
-            failwith ("Found variable in gCtx, cannot split on "^(Id.string_of_name n)))
+          failwith ("Found variable in gCtx, cannot split on "^(Id.string_of_name n))
+      in matchTyp tau
       else
         searchGctx (i+1) cG'
   in

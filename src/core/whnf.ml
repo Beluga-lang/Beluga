@@ -35,6 +35,7 @@ let rec raiseType cPsi tA = match cPsi with
 (* Eta-contract elements in substitutions *)
 let etaContract tM = begin match tM with
   | Root (_, ((BVar _) as h), Nil)
+  | Root (_, ((PVar _) as h), Nil)
   | Root (_, ((Proj _) as h), Nil) -> Head h
   | Lam  _ as tMn ->
       let rec etaUnroll k tM = begin match tM with

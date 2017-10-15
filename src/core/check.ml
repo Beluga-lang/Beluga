@@ -821,8 +821,8 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
   and checkPattern cD cG pat ttau = match pat with
     | PatEmpty (loc, cPsi) ->
-        (match ttau with
-          | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta) | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta) ->
+        (match ttau  with
+          | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta) | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta)  ->
               let _ = dprint (fun () -> "[checkPattern] PatEmpty : \n cD = " ^
                                 P.mctxToString cD ^
                                 "context of expected  type " ^
@@ -831,7 +831,11 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
               if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
               else
                 raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
-          | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+
+	  | (TypBase (_, c, mS), _ ) -> (match cPsi with  I.Null -> () 
+				     | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau))))
+
+          | _  -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
         )
 
     | PatMetaObj (loc, mO) ->

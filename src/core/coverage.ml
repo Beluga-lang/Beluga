@@ -181,6 +181,7 @@ type pattern =
   | MetaSub   of  LF.dctx * LF.sub * LF.cltyp
   | EmptyPatt of  LF.dctx * LF.tclo
   | EmptyParamPatt of  LF.dctx * LF.tclo
+  | EmptyCompPatt of Comp.tclo
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
 
@@ -1171,26 +1172,6 @@ let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.t
 				      S.LF.id)),
 		       ms))
 	  cov_goals
-
-
-
-let trivially_empty cov_problem =
-  begin try
-    begin match genCovGoals cov_problem with
-      | [] -> true
-      | _  -> false
-    end
-  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
-  end
-
-let trivially_empty_param cov_problem =
-  begin try
-    begin match genPVar cov_problem with
-      | [] -> true
-      | _  -> false
-    end
-  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
-  end
 
 
 
@@ -2283,6 +2264,38 @@ let no_covers = ref 0           (* number of times coverage checking has yielded
 (* ****************************************************************************** *)
 (* Printing for debugging *)
 
+
+let trivially_empty_patt cD_p tau = 
+  begin try 
+    (match genPatCGoals cD_p [] tau [] with 
+      | [] -> true
+      | _ -> false)
+  with _ -> false
+  end 
+
+let trivially_empty cov_problem =
+  begin try
+    begin match genCovGoals cov_problem with
+      | [] -> true
+      | _  -> false
+    end
+  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
+  end
+
+let trivially_empty_param cov_problem =
+  begin try
+    begin match genPVar cov_problem with
+      | [] -> true
+      | _  -> false
+    end
+  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
+  end
+
+
+
+
+
+
 let rec extract_patterns tau branch_patt = match branch_patt with
   | Comp.Branch (loc, cD, _cG, Comp.PatAnn (loc', pat, _), ms, _e) ->
       extract_patterns tau (Comp.Branch (loc, cD, _cG, pat, ms, _e))
@@ -2292,6 +2305,7 @@ let rec extract_patterns tau branch_patt = match branch_patt with
         | Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPhi)) -> (cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
         | Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPhi)) -> (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
 	    (* Add EmptySubPatt *)
+	| Comp.TypBase (_, c, mS) -> (cD, EmptyCompPatt (tau, ms))
       end
 
   | Comp.Branch (loc, cD, cG, pat, ms, _e) ->
@@ -2316,6 +2330,16 @@ let rec gen_candidates loc cD covGoal patList = match patList with
 	raise (Error (loc, NoCover
 			(Printf.sprintf "\n##   Empty Parameter Pattern ##\n \n##   Case expression of parameter type : \n##   %s\n##   is not empty.\n\n"
 			   (P.typToString cD_p cPsi sA))))
+
+  | (cD_p, EmptyCompPatt ttau) :: plist -> 
+      let tau = Whnf.cnormCTyp ttau in 
+      if trivially_empty_patt cD_p tau then 
+	gen_candidates loc cD covGoal plist
+      else 
+	raise (Error (loc, NoCover
+			(Printf.sprintf "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %s\n##   is not empty.\n\n"
+			   (P.compTypToString cD_p tau))))
+
 
   | (cD_p, GenPatt (cG_p, pat, ttau)) :: plist ->
       let CovPatt (cG', pat', ttau') = covGoal in

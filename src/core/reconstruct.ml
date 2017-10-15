@@ -1303,12 +1303,17 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
   | Apx.Comp.PatEmpty (loc, cpsi) ->
       begin match tau_s with
        | Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp (Int.LF.Atom(_, a, _) as _tQ), cPsi_s)) ->
-         let cPsi       = inferCtxSchema loc (cD_s, cPsi_s) (cD, cpsi) in
+         let cPsi   = inferCtxSchema loc (cD_s, cPsi_s) (cD, cpsi) in
          let tP     =  mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind in
-         let _ = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^
-                        P.typToString cD cPsi (tP, LF.id)) in
-         let ttau' = (Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
+         let _      = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^
+				P.typToString cD cPsi (tP, LF.id)) in
+         let ttau'  = (Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
            (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')
+      | Int.Comp.TypBase (_, c, _ ) -> 
+	  (* cpsi = Null by invariant *)
+	  let ttau' = mgCompTyp cD (loc, c), Whnf.m_id in 
+	    (Int.LF.Empty, Int.Comp.PatEmpty (loc, Int.LF.Null), ttau')
+
       | _ -> raise (Error (loc, CompTypEmpty (cD_s, (tau_s, Whnf.m_id))))
     end
   | Apx.Comp.PatAnn (_ , pat, tau) ->

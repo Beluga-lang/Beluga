@@ -43,6 +43,7 @@ LF ex-tran : s-tp -> type =
 ;
 
 % Proof that the translation is defined for all source types
+% This holds only for closed contexts -- but you want to use it in g:ctx
 
 rec total-tran-tp : {S : [|- s-tp]} [|- ex-tran S] =
 / total s (total-tran-tp s) /
@@ -60,8 +61,12 @@ LF eq : t-tp -> t-tp -> type =
 | refl : eq T T
 ;
 
-schema ctx = block (s: s-tm S, t: t-tm T, tr: tran-tp S T;
+schema ctx = some [s:s-tp, t:t-tp] block (s: s-tm S, t: t-tm T, tr: tran-tp S T);
 
+rec deterministic-tran'-tp :(g:ctx)  [g|- tran-tp S[] T[]] -> [g |- tran-tp S[] T'[]] -> [|- eq T T'] =
+/ total tr (deterministic-tran'-tp g s t t' tr) /
+    ? ;
+    
 rec deterministic-tran-tp : (g:ctx) [g |- tran-tp S[] T[]] -> [|- tran-tp S T'] -> [|- eq T T'] =
 / total tr (deterministic-tran-tp _ _ _ _ tr) /
 fn tr1 => fn tr2 => case tr1 of
@@ -79,7 +84,7 @@ fn tr1 => fn tr2 => case tr1 of
 
 % This one case analyses the other argument
 rec deterministic-tran-tp-2 : (g:ctx) [g |- tran-tp S[] T[]] -> [|- tran-tp S T'] -> [|- eq T T'] =
-% / total tr (deterministic-tran-tp-2 _ _ _ _ tr) /
+% / total tr2 (deterministic-tran-tp-2 g s t t' tr1 tr2) /
 fn tr1 => fn tr2 => case tr2 of
 | [|- t-bool] =>
   (case tr1 of
@@ -93,22 +98,41 @@ fn tr1 => fn tr2 => case tr2 of
   [|- refl]
 ;
 
+inductive WfCtx : {g:ctx} ctype =
+  | Nil : WfCtx [ ]
+  | Ext :   [ |- tran-tp S S'] -> WfCtx [g] 
+	    -> WfCtx [g, x: block s:s-tm S[], t:t-tm S'[], tr: tran-tp S[] S'[]]
+;
+		  
 % Type preserving translation
-
-rec tran : (g : ctx) [|- tran-tp S T] -> [g |- s-tm S[]] -> [g |- t-tm T[]] =
-/ total e (tran _ _ _  _ e) /
-fn tr => fn e => case e of
+rec wfAss : {g:ctx}{#p:[g |- tran-tp S[] T[]]} WfCtx [g] -> [ |- tran-tp S[] T[]] =
+/ total w (wfAss g s t p w) /
+  mlam g, #p => fn w => case [g] of
+  | [ ] => ? % impossible [ |- #p]
+  | [g, x: block s:s-tm S[], t:t-tm T[], tr: tran-tp S[] T[]]  =>
+    let Ext tr w' = w in 
+    (case [g, x: block s:s-tm S[], t:t-tm T[], tr: tran-tp S[] T[] |- #p.tr] of
+    | [g, x: block s:s-tm S[], t:t-tm T[], tr: tran-tp S[] T[] |- x] => ? % tr
+    | [g, x: block s:s-tm S[], t:t-tm T[], tr: tran-tp S[] T[] |- #q.tr[..] ] => ? % wfAss [g] [g |- #p] w')
+)
+;
+rec tran : (g : ctx)
+	   [ |- tran-tp S[] T[]] -> WfCtx [g] -> [g |- s-tm S[]]
+	   -> [g |- t-tm T[]] =
+/ total e (tran g s t tr wf e) /
+fn tr, wf => fn e => case e of
 | {M : [g|- s-tm (arr S[] T[])]} [g |- app M N] =>
-  let [|- ex S' TR] = total-tran-tp [|- S] in
-  let [|- TR'] = tr in
-  let [g |- M'] = tran [|- t-arr TR TR'] [g |- M] in
-  let [g |- N'] = tran [|- TR] [g |- N] in
+  let [ |- ex S' TR] = total-tran-tp [|- S] in
+  let [ |- TR'] = tr in 
+  let [g |- M'] = tran [ |- t-arr TR TR'] wf [g |- M] in
+  let [g |- N'] = tran [ |- TR] wf [g |- N] in
   [g |- tapp M' N']
 
 | [g |- lam \x.M] =>
-  let [|- t-arr TR TR'] : [|- tran-tp (arr S T) (tarr S' T')] = tr in
-  let [g, x: block s:s-tm S[], t:t-tm S'[], tr:tran-tp S[] S'[] |- M'[..,x.t]] =
-      tran [|- TR'] [g, x: block s:s-tm S[], t:t-tm S'[], tr:tran-tp S[] S'[] |- M[..,x.s]] in
+  let [ |- t-arr TS TT] : [ |- tran-tp (arr S[] T[]) (tarr S'[] T'[])] = tr in
+  let [g, x: block s:s-tm S[], t:t-tm S'[], tr: tran-tp S[] S'[] |- M'[..,x.t]] =
+      tran [ |- TT] (Ext [ |- TS] wf)
+	   [g, x: block s:s-tm S[], t:t-tm S'[], tr: tran-tp S[] S'[]  |- M[..,x.s]] in
   [g |- tlam \x.M']
 
 | [g |- tt] =>
@@ -120,12 +144,16 @@ fn tr => fn e => case e of
   [g |- tinl tone]
 
 | [g |- ife C M N] =>
-  let [g |- C'] = tran [|- t-bool] [g |- C] in
-  let [g |- M'] = tran tr [g |- M] in
-  let [g |- N'] = tran tr [g |- N] in
+  let [g |- C'] = tran [ |- t-bool] wf [g |- C] in
+  let [g |- M'] = tran tr wf [g |- M] in
+  let [g |- N'] = tran tr wf [g |- N] in
   [g |- tcase C' (\x. M'[..]) (\x. N'[..])]
 
-| {#p:[g |- block s:s-tm S[], t:t-tm T[], tr:tran-tp S[] T[]]} [g |- #p.s] =>
-  let [|- refl] = deterministic-tran-tp [g |- #p.tr] tr in
+| {#p:[g |- block s:s-tm S[], t:t-tm T[], tr: tran-tp S[] T[]] } [g |- #p.s] =>
+  let [ |- TR] = wfAss [g] [g |- #p.tr] wf in 
+  let [|- refl] = deterministic-tran-tp [ |- TR]  tr in
   [g |- #p.t]
 ;
+
+
+

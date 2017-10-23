@@ -798,8 +798,9 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
     let cIH' = filter cD cG cIH (loc, e2) in
       LF.Dec (cIH', Comp.WfRec (f, args, tau))
 
-  | x, LF.Dec (cIH, wf) ->
-      raise (Error (loc, RecCallIncompatible (cD, x, wf)))
+  | _x, LF.Dec (cIH, _wf) ->
+     filter cD cG cIH (loc, e2)
+(*      raise (Error (loc, RecCallIncompatible (cD, x, wf))) *)
 (* other cases are invalid /not valid recursive calls *)
 
 

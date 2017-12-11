@@ -118,6 +118,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-c" 'compile)
     (define-key map "\C-c\C-l" 'beluga-highlight-holes)
+    (define-key map "\C-c\C-e" 'beluga-erase-holes)
     (define-key map "\C-c\C-x" 'beli-cmd)
     (define-key map "\C-c\C-t" 'beli--type)
     (define-key map "\C-c\C-s" 'beluga-split-hole)

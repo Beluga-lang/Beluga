@@ -386,9 +386,7 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (beluga--start)
   (maybe-save)
-  (let ((file-name
-	 (expand-file-name (read-file-name "Load file:" nil buffer-file-name))))
-    (message "%s" (beluga--rpc (concat "load " file-name)))))
+  (message "%s" (beluga--rpc (concat "load " buffer-file-name))))
 
 (defvar beluga--holes-overlays ()
   "Will contain the list of hole overlays so that they can be resetted.")
@@ -491,6 +489,8 @@ If a previous beli process already exists, kill it first."
         (delete-region start end)
         (insert-and-indent (format "(%s)" resp) start)
         (save-buffer)
+        ; Need to load twice after modifying the file because
+        ; positions in Beluga are broken.
         (beluga-load)
         (beluga-highlight-holes)))))
 

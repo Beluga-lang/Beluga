@@ -414,14 +414,14 @@ module Int = struct
         | Control.Natural ->
 	          fprintf ppf "%a%s"
 		              (fmt_ppr_lf_cvar cD lvl) c
-            		      proj	      
-        | Control.DeBruijn -> 
+            		      proj
+        | Control.DeBruijn ->
 	          fprintf ppf "%a%s[e]"
 		              (fmt_ppr_lf_cvar cD lvl) c
             		      proj)
 
       | LF.MVar (c, s) ->
-      if Substitution.LF.isId s then     
+      if Substitution.LF.isId s then
           fprintf ppf "%a%s"
             (fmt_ppr_lf_cvar cD lvl) c
             proj
@@ -1137,11 +1137,11 @@ module Int = struct
             fprintf ppf "%sfn %s =>@ "
               (l_paren_if cond)
               (Id.render_name x);
- 
+
              fprintf ppf "%a%s"
                (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
                (r_paren_if cond);
-            
+
        | Comp.Fun (_, fbr) -> fprintf ppf "Some fun"
         (* let cD1 = Context.append cD cD' in *)
         (* let cG1 = Context.append cG cG' in *)
@@ -1492,7 +1492,7 @@ module Int = struct
                * -bp
                *)
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-              
+
     (* cD |- t : cD'  *)
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
@@ -1574,7 +1574,7 @@ module Int = struct
         fprintf ppf "@ | (%s : @[%a@] :: @[%a@]@\n"
             (Id.render_name c)
             (fmt_ppr_cmp_typ cD lvl) tau0
-            (fmt_ppr_cmp_typ cD lvl) tau1          
+            (fmt_ppr_cmp_typ cD lvl) tau1
       | Sgn.CompConst (_, c, tau) ->
           fprintf ppf "@ | %s : @[%a@]@\n"
             (Id.render_name c)

@@ -1211,7 +1211,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " %not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
@@ -1222,7 +1222,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " %not ")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " %not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
@@ -1235,16 +1235,12 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (loc, name_opt, f) ->
-         let name =
-           match name_opt with
-           | Some n -> n
-           | None -> "" in
-         try
-            let x = f () in
-            fprintf ppf " ?%s %%{ %d }%%" name x
-          with
-          | _ -> fprintf ppf " ?%s " name
+      | Comp.Hole (loc, f) ->
+          try
+             let x = f () in
+             fprintf ppf "? %%{ %d }%%" x
+           with
+           | _ -> fprintf ppf "?"
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1440,8 +1436,8 @@ module Int = struct
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
         if !Control.printNormal then
 	  (match e with
-	     | Comp.Hole (loc, name, _ ) ->
-		 fprintf ppf "@ \n@[<v2>|  %a => %a @]"
+	     | Comp.Hole (loc, _ ) ->
+		 fprintf ppf "\n@[<v2>| %a => %a@]"
 		   (fmt_ppr_meta_obj cD1' 0) mO
 		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 	     | _ ->
@@ -1473,7 +1469,7 @@ module Int = struct
             (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
                  (fmt_ppr_cmp_branch_prefix  0) cD1'
                 (fmt_ppr_cmp_gctx cD1' 0) cG' *)
-	    fprintf ppf "@ @[| %a  =>  %a@]@ "
+	    fprintf ppf "@ @[| %a => %a@]@ "
                  (fmt_ppr_pat_obj cD1' cG' 0) pat
                 (* NOTE: Technically: cD |- cG ctx and
                  *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
@@ -1534,7 +1530,7 @@ module Int = struct
           fprintf ppf "."
 
       | LF.Dec (cG, Comp.CTypDecl (x, tau, tag )) ->
-         let s = if tag then "*" else "" in 
+         let s = if tag then "*" else "" in
           fprintf ppf "%a, %s%s: %a"
             (fmt_ppr_cmp_gctx cD 0) cG
             (Id.render_name x) s

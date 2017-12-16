@@ -472,9 +472,9 @@ If a previous beli process already exists, kill it first."
   "Gets the overlay associated with a hole."
   (nth (beluga--lookup-hole hole) (beluga-sorted-holes)))
 
-(defun insert-and-indent (str start)
+(defun insert-formatted (str start)
   (goto-char start)
-  (insert str)
+  (insert (apply-quail-completions str))
   (indent-region start (+ start (length str))))
 
 (defun apply-quail-completions (str)
@@ -482,6 +482,9 @@ If a previous beli process already exists, kill it first."
      (replace-regexp-in-string "=>" "⇒"
       (replace-regexp-in-string "|-" "⊢" str))
      str))
+
+(defun error-no-such-hole (n)
+  (message "Couldn't find hole %s - make sure the file is loaded" n))
 
 (defun beluga-split-hole (hole var)
   "Split on a hole"
@@ -491,17 +494,19 @@ If a previous beli process already exists, kill it first."
   (let ((resp (beluga--rpc (format "split %s %s" hole var))))
     (if (beluga--is-response-error resp)
       (message "%s" resp)
-      (let* ((ovr (beluga--get-hole-overlay hole))
-             (start (overlay-start ovr))
-             (end (overlay-end ovr)))
-        (delete-overlay ovr)
-        (delete-region start end)
-        (insert-and-indent (format "(%s)" (apply-quail-completions resp)) start)
-        (save-buffer)
-        ; Need to load twice after modifying the file because
-        ; positions in Beluga are broken.
-        (beluga-load)
-        (beluga-highlight-holes)))))
+      (let ((ovr (beluga--get-hole-overlay hole)))
+        (if ovr
+          (let ((start (overlay-start ovr))
+                (end (overlay-end ovr)))
+            (delete-overlay ovr)
+            (delete-region start end)
+            (insert-formatted (format "(%s)" resp) start)
+            (save-buffer)
+            ; Need to load twice after modifying the file because
+            ; positions in Beluga are broken.
+            (beluga-load)
+            (beluga-highlight-holes))
+        (error-no-such-hole hole))))))
 
 (defun beluga-intro-hole (hole)
   "Introduce variables into a hole"
@@ -511,21 +516,24 @@ If a previous beli process already exists, kill it first."
   (let ((resp (beluga--rpc (format "intro %s" hole))))
     (if (beluga--is-response-error resp)
       (message "%s" resp)
-      (let* ((ovr (beluga--get-hole-overlay hole))
-             (start (overlay-start ovr))
-             (end (overlay-end ovr)))
-        (delete-overlay ovr)
-        (delete-region start end)
-        (insert-and-indent (apply-quail-completions resp) start)
-        (save-buffer)
-        (beluga-load)
-        (beluga-highlight-holes)))))
+      (let ((ovr (beluga--get-hole-overlay hole)))
+        (if ovr
+          (let ((start (overlay-start ovr))
+                (end (overlay-end ovr)))
+            (delete-overlay ovr)
+            (delete-region start end)
+            (insert-formatted resp start)
+            (save-buffer)
+            (beluga-load)
+            (beluga-highlight-holes))
+          (error-no-such-hole hole))))))
 
 (defun hole-jump (hole)
   (interactive "nHole to jump to: ")
-  (let* ((ovr (nth hole (beluga-sorted-holes)))
-             (start (overlay-start ovr)))
-    (goto-char start)))
+  (let ((ovr (nth hole (beluga-sorted-holes))))
+    (if ovr
+      (goto-char (overlay-start ovr))
+      (error-no-such-hole hole))))
 
 (defun beluga-erase-holes ()
   (interactive)

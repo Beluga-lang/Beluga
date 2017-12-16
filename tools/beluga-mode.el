@@ -35,8 +35,11 @@
 (provide 'beluga-unicode-input-method)
 (require 'quail)
 
+(defconst beluga-input-method-name "beluga-unicode"
+  "The name of the Beluga unicode input method.")
+
 (quail-define-package
- "beluga-unicode" ;; name
+ beluga-input-method-name ;; name
  "UTF-8" ;; language
  "\\" ;; title
  t ;; guidance
@@ -474,6 +477,12 @@ If a previous beli process already exists, kill it first."
   (insert str)
   (indent-region start (+ start (length str))))
 
+(defun apply-quail-completions (str)
+  (if (string= current-input-method beluga-input-method-name)
+     (replace-regexp-in-string "=>" "⇒"
+      (replace-regexp-in-string "|-" "⊢" str))
+     str))
+
 (defun beluga-split-hole (hole var)
   "Split on a hole"
   (interactive "sHole to split at: \nsVariable to split on: ")
@@ -487,7 +496,7 @@ If a previous beli process already exists, kill it first."
              (end (overlay-end ovr)))
         (delete-overlay ovr)
         (delete-region start end)
-        (insert-and-indent (format "(%s)" resp) start)
+        (insert-and-indent (format "(%s)" (apply-quail-completions resp)) start)
         (save-buffer)
         ; Need to load twice after modifying the file because
         ; positions in Beluga are broken.
@@ -507,7 +516,7 @@ If a previous beli process already exists, kill it first."
              (end (overlay-end ovr)))
         (delete-overlay ovr)
         (delete-region start end)
-        (insert-and-indent resp start)
+        (insert-and-indent (apply-quail-completions resp) start)
         (save-buffer)
         (beluga-load)
         (beluga-highlight-holes)))))

@@ -1121,6 +1121,9 @@ and convSub subst1 subst2 =
   | (Dot (Head BVar _k, _s'), Shift n) ->
       convSub subst1 (Dot (Head (BVar (n + 1)), Shift (n + 1)))
 
+  | MSVar (k, (_n, r, _, _, _, _)) , MSVar (k', (_n', r', _, _, _, _)) -> 
+     k = k' && r == r'  (* assumes that subst1 and subst2 have been normalized *)
+
   | _ -> false
 
 and convFront front1 front2 = match (front1, front2) with

@@ -189,7 +189,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
       Root (loc, MMVar ((u, Whnf.m_id), ss_proj), Nil)
 
 
-
   (* isPatSub s = B
 
      Invariant:
@@ -306,6 +305,15 @@ let rec blockdeclInDctx cPsi = match cPsi with
     end
 
 
+
+ let isRenameSub cD = function 
+   | SVar (offset, _k, _s') -> 
+      let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
+      (match cl' with Ren -> true
+		    | _ -> false)
+   | MSVar (_ , (((_n, _r, _cD, ClTyp (STyp (Ren, _ ), _)  , _cnstr, _ ), ms), s)) -> 
+      isPatSub s && isPatMSub ms
+   | _ -> false 
 
 let isVar h = match h with
   | BVar _ -> true
@@ -1458,6 +1466,56 @@ let isVar h = match h with
            the wrong kind of exception... *)
     end 
 
+  and craftMVTerm _cD0 _cPsi (_n1, r1,  cD1, ClTyp (_, cPsi1), cnstrs1, _mdep1) sM2 = match sM2 with 
+    | Root (loc , Const c, _tS2) ->  
+       let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in 
+       
+       let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
+         | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
+	    (* cPsi' |- Pi x:A.B <= typ
+               cPsi  |- s <= cPsi'
+               cPsi  |- tN <= [s]tA
+               cPsi |- tN . s <= cPsi', x:A
+	     *)
+            let tN = Whnf.etaExpandMV cPsi1 (tA, s) n id LF.Maybe in
+	    let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
+	    LF.App (tN, tS)
+
+	 | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
+					end
+       in 
+        let tM1 = Root(loc, Const c, genSpine cD1 cPsi1 (tA, id)) in 
+	 instantiateMVar (r1, tM1, !cnstrs1);
+	 Some tM1
+    | _ -> None
+
+
+  and craftMMVTerm _cD0 _cPsi (_n1, r1,  cD1, ClTyp (_, cPsi1), cnstrs1, _mdep1) sM2 = match sM2 with 
+    | Root (loc , Const c, _tS2) ->  
+
+       let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in 
+      
+       let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
+         | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
+	    (* cPsi' |- Pi x:A.B <= typ
+               cPsi  |- s <= cPsi'
+               cPsi  |- tN <= [s]tA
+               cPsi |- tN . s <= cPsi', x:A
+	     *)
+            let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in
+	    let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
+	    LF.App (tN, tS)
+
+	 | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
+					end
+       in 
+        let tM1 = Root(loc, Const c, genSpine cD1 cPsi1 (tA, id)) in 
+         (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
+	 instantiateMMVar (r1, tM1, !cnstrs1);
+	 Some (tM1)
+    | _ -> None
+
+
   and pruneITerm cD cPsi (hat, tm) ss rOccur = match tm with
     | INorm n , _        -> INorm (prune cD cPsi hat (n,id) ss rOccur)
     | IHead h , _        -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
@@ -1465,7 +1523,8 @@ let isVar h = match h with
 
   and unifyMMVarTerm cD0 cPsi (_, r1, cD, ClTyp (tp, cPsi1), cnstrs1, mdep1) mt1 t1' sM2 = 
     if isId t1' && isMId mt1 then 
-      instantiateMMVar' (r1, sM2, !cnstrs1)
+      (dprint (fun () -> "[unifyMMVarTerm] 200 - id/m_id");
+      instantiateMMVar' (r1, sM2, !cnstrs1))
     else 
     begin (* try *)
       let ss1  = invert (Whnf.cnormSub (t1', Whnf.m_id)) in
@@ -1607,12 +1666,32 @@ let isVar h = match h with
 
     | (sM2, (Root (_, MVar (Inst i, t), _tS)))
       when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
-    
+
+    | (Root (_, MVar (Inst i, t), _tS) as sM1, sM2) 
+      when isRenameSub cD0 t -> (dprint (fun () -> "craftMVTerm ... ") ; 
+				 match craftMVTerm cD0 cPsi i sM2 with 
+				| Some _ -> 
+				   (dprint (fun () -> ("crafted MV Term " ^ P.normalToString cD0 cPsi (sM1, id)));
+				   unifyTerm mflag cD0 cPsi (sM1, id) (sM2, id))
+				| None -> let (_, _, _, _, cnstrs, _) = i in 
+					  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
+
+    | (sM2, ((Root (_, MVar (Inst i, t), _tS)) as sM1)) 
+      when isRenameSub cD0 t -> (dprint (fun () -> "craftMVTerm ... ") ; 
+				 match craftMVTerm cD0 cPsi i sM2 with 
+				| Some _ -> 
+				   (dprint (fun () -> ("crafted MV Term " ^ P.normalToString cD0 cPsi (sM1, id)));
+				    unifyTerm mflag cD0 cPsi (sM1, id) (sM2, id))
+				| None -> let (_, _, _, _, cnstrs, _) = i in 
+					  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
+
+
     | ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1, sM2) 
     | (sM2, ((Root (_, MVar (Inst (_, _, _, _, cnstrs, _), _), _tS)) as sM1))
       -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
+
     | (((Root (loc1, MMVar (((_, r1, _, _, cnstrs1, _), mt1), t1 as q1), Nil))),
        (((Root (_, MMVar (((_, r2, _, _, _, _), mt2), t2 as q2), Nil)))))
        when r1 == r2 ->
@@ -1628,7 +1707,24 @@ let isVar h = match h with
               | (_, _, _, _) ->
                   addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
        end  
-    | (((Root (_, MMVar (((_,_,_,_,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
+
+
+    | ((Root (loc' , MMVar ((((_n', r', cD',  ClTyp (_, _   ), _cnstrs, _mdep'), MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS')) as sM1,
+       (Root (loc  , MMVar  (((_n , r , cD ,  ClTyp (_, _   ),  cnstrs, _mdep ), MShift 0), EmptySub), _tS) as sM2))
+    | ((Root (loc  , MMVar  (((_n , r , cD ,  ClTyp (_, _   ),  cnstrs, _mdep ), MShift 0), EmptySub), _tS)) as sM2 ,
+       ((Root (loc', MMVar ((((_n', r', cD',  ClTyp (_, _   ), _cnstrs, _mdep'), MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS')) as sM1))
+       -> 
+       (try 
+	   dprint (fun () -> "unifyMMVar -- EmptySub");
+	   unifySub mflag cD0 cPsi s1 EmptySub; 
+	   dprint (fun () -> "MMVar -EmptySub Case : Unifying terms: " ^ P.normalToString cD0 cPsi (sM2, id) ^ " =?= " ^ P.normalToString cD0 cPsi (sM1,id));
+	   instantiateMMVar (r, Root(loc', MMVar(mv, id), tS'), !cnstrs);
+	   dprint (fun () -> "MMVar - EmptySub Case: Unified term (after instantiation)" ^ P.normalToString cD0 cPsi (sM2,id) ^ " =?= " ^ P.normalToString cD0 cPsi (sM1,id))
+
+	 with  _ -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+       )
+
+    | (((Root (_, MMVar (((_n, _r, D1, ClTyp (MTyp tQ, cPsi1) ,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
        (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) -> dprint (fun () -> "(case 0)");
 	begin try
             begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with
@@ -1648,7 +1744,19 @@ let isVar h = match h with
 	with NotInvertible -> addConstraint (cnstrs1, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
 	end 
 
-    (* MMVar-normal case *)
+    (* MMVar-normal case *)    
+    (* Special case to handle: ?N[] = ?M[#?S[]] *)
+    | ((Root (loc, MMVar (((_n, r, _cD,  ClTyp (MTyp _tP, Null), cnstrs, _mdep), MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
+       ((Root (loc', MVar (Offset u , EmptySub), tS')) as sM2))
+    | ((Root (loc', MVar (Offset u , EmptySub), tS')) as sM2, 
+       ((Root (loc, MMVar (((_n, r, _cD,  ClTyp (MTyp _tP, Null), cnstrs, _mdep), MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1))
+      -> (try	       
+             unifySub mflag cD0 cPsi s1 EmptySub; 
+	     instantiateMMVar (r, Root (loc', MVar (Offset u, id), tS'), !cnstrs)
+	   with _ -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+	 )
+
+       
     (* Special case to handle: M[#S[]] = ?M[#?S[]] *)
     | ((Root (loc, MMVar (((_n, r, cD,  ClTyp (MTyp tP,cPsi1), cnstrs, _mdep), MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
        (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2)) 
@@ -1700,6 +1808,15 @@ let isVar h = match h with
                    addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
 		end
               else
+		if isRenameSub cD0 s && isPatMSub mt then 
+		  (dprint (fun () -> "craftMMV ... ");
+		    match craftMMVTerm cD0 cPsi i tM2 with 
+				| Some _ -> 
+				   (dprint (fun () -> ("crafted MMV Term " ^ P.normalToString cD0 cPsi (tM1, id)));
+				    dprint (fun () -> ("[unify crafted term] " ^ P.normalToString cD0 cPsi (tM1, id) ^ " =?= " ^ P.normalToString cD0 cPsi (tM2, id)));
+				    unifyTerm mflag cD0 cPsi (tM1, id) (tM2, id))
+				| None -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
+		else 
 		(dprint (fun () -> "(011) Add constraints ");
 		 addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
 

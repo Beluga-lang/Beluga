@@ -1724,7 +1724,7 @@ let isVar h = match h with
 	 with  _ -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
        )
 
-    | (((Root (_, MMVar (((_n, _r, D1, ClTyp (MTyp tQ, cPsi1) ,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
+    | (((Root (_, MMVar (((_n, _r, cD1, ClTyp (MTyp tQ, cPsi1) ,cnstrs1,_) as i, mt1), t1), Nil))) as sM1,
        (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) -> dprint (fun () -> "(case 0)");
 	begin try
             begin match (isPatMSub mt1, isPatSub t1 , isPatMSub mt2, isPatSub t2) with

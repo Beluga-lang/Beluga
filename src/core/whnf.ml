@@ -1143,7 +1143,7 @@ and convFront front1 front2 = match (front1, front2) with
       p = q && convSub s s'
 
   | (Head (MVar (u, s)), Head (MVar (v, s'))) ->
-      u = v && convSub s s'
+      u == v && convSub s s'
 
   | (Head (FMVar (u, s)), Head (FMVar (v, s'))) ->
       u = v && convSub s s'

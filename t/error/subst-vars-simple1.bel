@@ -1,0 +1,53 @@
+% Strong normalization for simply-typed lambda-calculus in Beluga
+
+LF ty : type =
+  | base : ty
+  | arr  : ty -> ty -> ty
+  ;
+%name ty A.
+
+LF tm : ty -> type =
+  | abs : (tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+  ;
+%name tm M.
+
+schema cxt = tm A; % some [a : ty] block tm a;
+
+
+
+% Applicative contexts
+
+LF ecxt : (tm A -> tm B) -> type =
+  | eid  : ecxt \ x. x
+  | eext : ecxt C  -> ecxt \ x. app (C x) M
+  ;
+
+% Closure under weakhead expansion
+
+rec whExp : (g:cxt){T : [|- ty]}
+   {C : [g, y : tm B[] |- tm T[]]}
+   %% {M : [g, x: tm A[] |- tm B[]]}
+   {N : [g |- tm A[]]}
+   [g |- ecxt \y.C]
+    -> [g |- ecxt \y.C] =
+  mlam T,C,N => fn e => 
+    let [g |- E] = e in  ?
+%{
+    case [|- T] of
+    | [|- base   ] => ?
+    | [|- arr U V] => ?
+}%
+%{ RArr (mlam g', #S, N0 => fn s => 
+ %{       whExp 
+          [|- V] 
+          [g', x : tm _ |- app C[#S[..], x] N0[..]] 
+          [g' |- N[#S]] 
+           ?
+%          [g' |- eext E[#S]] 
+}%
+          ?)
+}%
+  ;
+
+

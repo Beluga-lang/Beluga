@@ -1,0 +1,190 @@
+% Strong normalization for simply-typed lambda-calculus in Beluga
+
+LF ty : type =
+  | base : ty
+  | arr  : ty -> ty -> ty
+  ;
+%name ty A.
+
+LF tm : ty -> type =
+  | abs : (tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+  ;
+%name tm M.
+
+schema cxt = tm A; % some [a : ty] block tm a;
+
+LF step : tm A -> tm A -> type =
+  | rbeta : step (app (abs M) N) (M N)
+  | rabs  : ({x : tm A} step (M x) (M' x)) -> step (abs M) (abs M')
+  | rappl : step M M' -> step (app M N) (app M' N)
+  | rappr : step N N' -> step (app M N) (app M N')
+  ;
+
+% Lemma: If [ρ]M ⇒ M' then M ⇒ N and M' = [ρ]N.
+
+inductive ExStep : (g1 : cxt) (g2 : cxt)
+  {M : [g1 |- tm A[]]} {#R : [g2 |-# g1]} {M' : [g2 |- tm A[]]} ctype =
+  | Ex : [g1 |- step M N] -> ExStep [g1 |- M] [g2 |- #R] [g2 |- N[#R]]
+  ;
+
+rec invRenStep : {g1 : cxt} {M : [g1 |- tm A[]]} {#R : [g2 |-# g1]}
+    [g2 |- step M[#R] M'] -> ExStep [g1 |- M] [g2 |- #R] [g2 |- M'] =
+
+  % / total m (invRenStep g1 g2 a m) /  %% Totality checker does not see termination
+
+  mlam g1, M, #R => fn s =>
+
+  %% We would like to split on s, but limitations of Beluga force us
+  %% to go the longer route and split on M, such that the renaming
+  %% is pushed inside.
+  case [ g1 |- M ] of
+
+    %% Case application
+    | [g1 |- app M1 M2] =>
+
+      % Cannot reconstruct type:
+      % let ih : {#R : [g2 |-# g1]}  [g2 |- step (M1[#R]) M'] ->
+      %          ExStep [g1 |- M] [g2 |- #R] [g2 |- M']
+      %        = invRenStep [g1] [g1 |- M1] in
+
+      %% We case on the function part.
+      (case [g1 |- M1] of
+
+      %% Case beta-redex
+      | [g1 |- abs \ x. M1'] => (case s of
+        %% We either contract the beta-redex...
+        | [g2 |- rbeta] => Ex [g1 |- rbeta]
+        %% ... or reduce in the left or right subterm
+        | [g2 |- rappl S] =>
+            %% Totality checker complains here:
+            let Ex [g1 |- S'] = % ih [g2 |- #R] [g2 |- S]
+              invRenStep [g1] [g1 |- M1] [g2 |- #R] [g2 |- S]
+            in  Ex [g1 |- rappl S' ]
+        | [g2 |- rappr S] =>
+            %% Totality checker complains here:
+            let Ex [g1 |- S'] = invRenStep [g1] [g1 |- M2]  [g2 |- #R] [g2 |- S]
+            in  Ex [g1 |- rappr S' ]
+        )
+
+      %% Case not beta-redex
+      | [g1 |- M1] => (case s of
+        %% We either reduce in the left subterm ...
+        | [g2 |- rappl S] =>
+            let Ex [g1 |- S'] = invRenStep [g1] [g1 |- M1] [g2 |- #R] [g2 |- S]
+            in  Ex [g1 |- rappl S' ]
+        %% ... or in the right subterm.
+        | [g2 |- rappr S] =>
+            let Ex [g1 |- S'] = invRenStep [g1] [g1 |- M2] [g2 |- #R] [g2 |- S]
+            in  Ex [g1 |- rappr S' ]
+        )
+      )
+
+    %% Case abstraction: reduction is in function body.
+    | [g1 |- abs \x. M1] => let [g2 |- rabs \y. S] = s in
+          let Ex [g1, x : tm A[] |- S'] =
+            invRenStep [g1, x : tm _]
+              [g1, x : tm _ |- M1] [g2, x : tm _ |- #R[..], x] [g2, y : tm _ |- S ] in
+          Ex [g1 |- rabs \x. S']
+
+    % Case variable: does not reduce
+    | [g1 |- #p ] => impossible s
+  ;
+
+inductive SN : (g : cxt) {M : [ g |- tm A[] ]} ctype =
+  | Acc : ({M' : [ g |- tm A[] ]} [ g |- step M M' ] -> SN [ g |- M' ])
+        -> SN [ g |- M ]
+  ;
+
+% Lemma: closure of SN under renaming.
+%
+% Let Γ₂ ⊢ ρ : Γ₁.
+% If Γ₁ ⊢ M ∈ SN then Γ₂ ⊢ [ρ]M ∈ SN.
+% By induction on M ∈ SN.
+% We show [ρ]M ∈ SN by assuming [ρ]M ⇒ M' and proving M' ∈ SN.
+% Assume [ρ]M ⇒ M'.
+% Then M ⇒ N with M' = [ρ]N.
+% By IH on N ∈ SN, [ρ]N ∈ SN, thus, M' ∈ SN.
+% QED.
+
+rec renSN : {g2 : cxt} {#R : [g2 |-# g1]} {M : [g1 |- tm A[]]}
+       SN [g1 |- M]
+    -> SN [g2 |- M[#R]] =
+  % / total s (renSN g1 g2 a r m s) /  %% Totality checker not prepared for wf-induction.
+  mlam g2, #R, M => fn s => let s : SN [g1 |- M] = s in
+    case s of
+    | Acc f => Acc (mlam M' => fn r =>
+        let Ex [g1 |- S] = invRenStep [g1] [g1 |- M] [g2 |- #R] r
+        in  renSN [g2] [g2 |- #R] [g1 |- _] (f [g1 |- _] [g1 |- S])
+      )
+  ;
+
+stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
+  | RBase : SN [g |- M] -> Red [ |- base ] [g |- M]
+  | RArr  : ({g' : cxt} {#S : [g' |-# g]} {N : [g' |- tm A[]]}
+               Red [|- A] [g' |- N]
+            -> Red [|- B] [g' |- app M[#S] N])
+         -> Red [ |- arr A B ] [g |- M]
+  ;
+
+inductive RedS : {g : cxt} (g' : cxt) {#S : [g' |- g]} ctype =
+  | RNil  : RedS [] [ g' |- ^ ]
+  | RCons : Red [|- A] [g' |- M]
+         -> RedS [g] [g' |- #S]
+         -> RedS [g, x : tm A[]] [g' |- #S, M]
+  ;
+
+%% Closure of Red under renaming
+%% (uses closure of SN under renaming and Kripke definition)
+
+rec renRed : {g2 : cxt} {#R : [g2 |-# g1]}
+       Red [|- A[]] [g1 |- M]
+    -> Red [|- A[]] [g2 |- M[#R]] =
+  mlam g2, #R => fn r =>
+  let r : Red [|- A[]] [g1 |- M] = r in
+  case r of
+    | RBase s => RBase (renSN [g2] [g2 |- #R] [g1 |- M] s)
+    | RArr  f => RArr (mlam g', #R', N => fn r => f [g'] [g' |- #R[#R']] [g' |- N] r)
+  ;
+
+%% Closure of RedS under renaming (pointwise from Red)
+
+rec renRedS : {g2 : cxt} {#R : [g2 |-# g1]}
+       RedS [g] [g1 |- #S    ]
+    -> RedS [g] [g2 |- #S[#R]] =
+  mlam g2, #R => fn s => case s of
+    | RNil       => RNil
+    | RCons r s' => RCons (renRed  [g2] [g2 |- #R] r)
+                          (renRedS [g2] [g2 |- #R] s')
+  ;
+
+% Applicative contexts
+
+LF ecxt : (tm A -> tm B) -> type =
+  | eid  : ecxt \ x. x
+  | eext : ecxt C -> ecxt \ x. app (C x) M
+  ;
+
+% Closure under weakhead expansion
+%{
+rec whExp : {T : [|- ty]}
+   {C : [g, y : tm B[] |- tm T[]]}
+   %% {M : [g, x: tm A[] |- tm B[]]}
+   {N : [g |- tm A[]]}
+   [g |- ecxt \y.C]
+    -> Red [|- T] [g |- C[.., M [.., N]] ]
+    -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] =
+  mlam T,C,N => fn e, r =>
+    let [g |- E] = e in  
+    case [|- T] of
+    | [|- base   ] => ?
+    | [|- arr U V] => RArr (mlam g', #S, N0 => fn s => 
+        whExp 
+          [|- V] 
+          [g', x : tm _ |- app C[#S[..], x] N0[..]] 
+          [g' |- N[#S]] [g' |- eext E[#S]] 
+          ?)
+
+  ;
+
+}%

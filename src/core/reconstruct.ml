@@ -335,6 +335,8 @@ let rec elMCtx recT delta = match delta with
  * type a U1 ... Un
  *)
 
+
+
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
   let s_proj   = gen_conv_sub conv_list in
@@ -344,29 +346,25 @@ let mgAtomicTyp cD cPsi a kK =
 
     | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), dep ), kK), s) ->
         let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
-        let h    = if !strengthen then
+        let tR    = if !strengthen then
               	   (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
                        (* cPhi |- ss' : cPhi' *)
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
                        (* cPhi' |- [ssi]tQ    *)
-                     let u  = Whnf.newMMVar None (cD, cPhi' , Int.LF.TClo (tA1', ssi')) dep in
                      let ss_proj = LF.comp ss' s_proj in
-                       Int.LF.MMVar ((u, Whnf.m_id), ss_proj))
+                     Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi' (tA1', ssi') _n ss_proj dep)
                    else
-                     let u  = Whnf.newMMVar None (cD, flat_cPsi , tA1')  dep in
-                     Int.LF.MMVar ((u, Whnf.m_id), s_proj)
+                     Whnf.etaExpandMMV Syntax.Loc.ghost cD flat_cPsi (tA1', Substitution.LF.id) _n s_proj dep
         in
-        let tR = Int.LF.Root (Syntax.Loc.ghost, h, Int.LF.Nil) in  (* -bp needs to be eta-expanded *)
 
-        let _ = dprint (fun () -> "Generated meta^2-variable " ^
+        let _ = dprint (fun () -> "Generated mg Term (meta2) tR = " ^
                           P.normalToString cD cPsi (tR, LF.id)) in
         let _ = dprint (fun () -> "of type : " ^ P.dctxToString cD flat_cPsi ^
                           " |- " ^ P.typToString cD flat_cPsi (tA1',LF.id)) in
         let _ = dprint (fun () -> "orig type : " ^ P.dctxToString cD cPsi ^
                           " |- " ^ P.typToString cD cPsi (tA1,s)) in
-        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Head h, s)) in
-        (* let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  *)
+         let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR , s)) in  
           Int.LF.App (tR, tS)
 
   in

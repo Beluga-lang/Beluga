@@ -8,7 +8,7 @@ open Syntax.Int.LF
 
 module LF = struct
 
-  exception Error of string
+
   exception NotComposable of string
 
   (**************************)
@@ -203,7 +203,7 @@ module LF = struct
 (*    | Obj (Root (_, h, Nil)) -> frontSub (Head h) s *)
     | Obj u               ->  Obj (Clo (u, s)) 
     | Undef               -> Undef
-    | Head (MMVar (_n, _ )) -> raise (Error "[frontSub] mmvar undefined ")
+    | Head (MMVar (n, s')) -> Head (MMVar (n, comp s' s))
     | Head (FPVar (_n, _s' )) -> ft
 (*    | Head (HMClo(n, s', (theta, sigma))) ->
         Head (HMClo (n, s', (mt, comp sigma s)) ?? *)

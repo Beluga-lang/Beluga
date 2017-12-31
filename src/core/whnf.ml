@@ -94,7 +94,8 @@ let newMMVar' n (cD, mtyp) dep = match n with
 (*      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then	Maybe else No)*)
       (Id.inc name, ref None, cD, mtyp, ref [], dep)
 
-let newMMVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
+let newMMVar n (cD, cPsi, tA) dep =  newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
+
 let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
 let newMSVar n (cD, cl, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (cl, cPhi), cPsi)) dep
 let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
@@ -160,6 +161,65 @@ and lowerMVar = function
       (* 2011/01/14: Changed this to a violation for now, to avoid a cyclic dependency on Reconstruct. -mb *)
       raise (Error.Violation "Constraints left")
 
+
+(*
+
+(* lowerMMVar' cD cPsi tA[s] = (u, tM), see lowerMVar *)
+and lowerMMVar' cD cPsi sA' dep = match sA' with
+  | (PiTyp ((decl,_ ), tA'), s') ->
+      let (u', tM) = lowerMMVar' cD (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') dep in
+        (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+
+  | (TClo (tA, s), s') ->
+      lowerMMVar' cD cPsi (tA, LF.comp s s') dep
+
+  | (Atom (loc, a, tS), s') ->
+      let u' = newMMVar None (cD, cPsi, Atom (loc, a, SClo (tS, s')))  dep in 
+        (u', Root (Syntax.Loc.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
+
+
+(* lowerMMVar1 (u, tA[s]), tA[s] in whnf, see lowerMMVar *)
+and lowerMMVar1 cD u sA  = match (u, sA) with
+  | ((_n, r, _, ClTyp (_,cPsi), _, dep), (PiTyp _, _)) ->
+      let (u', tM) = lowerMMVar' cD cPsi sA dep in
+        r := Some (INorm tM); (* [| tM / u |] *)
+        u'            (* this is the new lowered meta-variable of atomic type *)
+
+  | (_, (TClo (tA, s), s')) ->
+      lowerMMVar1 cD u (tA, LF.comp s s') 
+
+  | (_, (Atom _, _s)) ->  u
+
+
+
+(* lowerMMVar (u:cvar) = u':cvar
+ *
+ * Invariant: (same as for lowerMVar )
+ *
+ *   If    cD = D1, u::tA[cPsi], D2
+ *   where tA = PiTyp x1:B1 ... xn:tBn. tP
+ *   and   u not subject to any constraints
+ *
+ *   then cD' = D1, u'::tP[cPsi, x1:B1, ... xn:tBn], [|t|]D2
+ *   where  [| lam x1 ... xn. u'[id(cPsi), x1 ... xn] / u |] = t
+ *
+ *   Effect: u is instantiated to lam x1 ... xn.u'[id(cPsi), x1 ... xn]
+ *           if n = 0, u = u' and no effect occurs.
+ *
+ * FIXME MVar spine is not elaborated consistently with lowering
+ *   -- Tue Dec 16 00:19:06 EST 2008
+ *)
+and lowerMMVar cD = function
+  | (_n, _r, _, ClTyp (MTyp tA,_cPsi), { contents = [] }, mdep) as u ->
+      lowerMMVar1 cD u (tA, LF.id)
+
+  | _ ->
+      (* It is not clear if it can happen that cnstr =/= nil *)
+      (* 2011/01/14: Changed this to a violation for now, to avoid a cyclic dependency on Reconstruct. -mb *)
+      raise (Error.Violation "Constraints left")
+
+
+*)
 
 (*************************************)
 
@@ -834,7 +894,7 @@ and whnf sM = match sM with
 (*      let sR =  whnfRedex ((tM', LF.comp r sigma), (tS, sigma)) in *)
         sR
 
-  | (Root (loc, MMVar (((n, ({contents = None} as uref), cD, ClTyp (MTyp tA,cPsi), cnstr, mdep), t), r), tS), sigma) ->
+  | (Root (loc, MMVar (((n, ({contents = None} as uref), cD, ClTyp (MTyp tA,cPsi), cnstr, mdep) as _u, t), r), tS) as _tM, sigma) ->
       (* note: we could split this case based on tA;
        *      this would avoid possibly building closures with id
        *)
@@ -851,7 +911,10 @@ and whnf sM = match sM with
              * Should be possible to extend it to m^2-variables; D remains unchanged
              * because we never arbitrarily mix pi and pibox.
              *)
-            raise (Error.Violation "Meta^2-variable needs to be of atomic type")
+           (* let _ = lowerMMVar cD u in
+              whnf (tM, sigma) *)
+
+             raise (Error.Violation "Meta^2-variable needs to be of atomic type") 
 
       end
 

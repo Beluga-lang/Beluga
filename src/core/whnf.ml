@@ -1134,7 +1134,7 @@ and convFront front1 front2 = match (front1, front2) with
       i = k
 
   | (Head (MMVar ((u, _t),s)), Head (MMVar ((v, _t'),s'))) ->
-      u = v && convSub s s' (* && convMSub ... to be added -bp *)
+      u == v && convSub s s' (* && convMSub ... to be added -bp *)
 
   | (Head (PVar (q, s)), Head (PVar (p, s'))) ->
       p = q && convSub s s'

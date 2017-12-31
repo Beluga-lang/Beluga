@@ -225,41 +225,6 @@ let mkShift recT cPsi = match recT with
 
 
 
-(* etaExpandMMV loc cD cPsi sA  = tN
- *
- *  cD ; cPsi   |- [s]A <= typ
- *
- *  cD ; cPsi   |- tN   <= [s]A
- *)
-let rec etaExpandMMVstr loc cD cPsi sA  n =
-  etaExpandMMVstr' loc cD cPsi (Whnf.whnfTyp sA) n
-
-and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
-  | (Int.LF.Atom (_, a, _tS) as tP, s) ->
-      let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-      let s_proj = ConvSigma.gen_conv_sub conv_list in
-      let s_tup  = ConvSigma.gen_conv_sub' conv_list in
-      let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in 
-	(*  cPsi |- s_proj : cPhi
-            cPhi |- s_tup : cPsi       
-            cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
-
-      let (ss', cPhi') = Subord.thin' cD a cPhi in
-      (* cPhi |- ss' : cPhi' *)
-      let ssi' = Substitution.LF.invert ss' in
-      (* cPhi' |- ssi : cPhi *)
-      (* cPhi' |- [ssi]tQ    *)
-      let u = Whnf.newMMVar (Some n) (cD, cPhi', Int.LF.TClo(tQ,ssi'))  Int.LF.Maybe in
-      (* cPhi |- ss'    : cPhi'
-         cPsi |- s_proj : cPhi
-         cPsi |- comp  ss' s_proj   : cPhi' *)
-      let ss_proj = Substitution.LF.comp ss' s_proj in
-        Int.LF.Root (loc, Int.LF.MMVar ((u, Whnf.m_id), ss_proj), Int.LF.Nil)
-
-  | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Int.LF.Lam (loc, x,
-                  etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, Substitution.LF.decSub decl s)) (tB, Substitution.LF.dot1 s) n)
-
 
 (* ******************************************************************* *)
 let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
@@ -2122,7 +2087,7 @@ and elSpineIW loc recT cD cPsi spine i sA  =
            *)
            (* let tN     = Whnf.etaExpandMMV loc cD cPsi (tA, s) n   Substitution.LF.id in *)
            let tN     = if !strengthen
-			then etaExpandMMVstr loc cD cPsi (tA, s) n
+			then ConvSigma.etaExpandMMVstr loc cD cPsi (tA, s) n
                         else Whnf.etaExpandMMV loc cD cPsi (tA, s) n Substitution.LF.id Int.LF.Maybe in
 
           let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
@@ -2189,7 +2154,7 @@ and elKSpineI loc recT cD cPsi spine i sK =
       | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
           (* let sshift = mkShift recT cPsi in *)
           (* let tN     = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id in*)
-          let tN = if !strengthen then etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n
+          let tN = if !strengthen then ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) n
                    else Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n Substitution.LF.id Int.LF.Maybe   in
           let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
             Int.LF.App (tN, spine')

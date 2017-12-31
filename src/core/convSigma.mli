@@ -20,3 +20,4 @@ val flattenDCtx : Int.LF.mctx -> Int.LF.dctx -> Int.LF.dctx * Id.offset list
 val gen_conv_sub: Id.offset list -> Int.LF.sub
 val gen_conv_sub': Id.offset list -> Int.LF.sub
 
+val etaExpandMMVstr    : Syntax.Loc.t -> Int.LF.mctx -> Int.LF.dctx -> Int.LF.tclo -> Id.name -> Int.LF.normal

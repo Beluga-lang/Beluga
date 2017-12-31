@@ -1469,6 +1469,7 @@ let isVar h = match h with
   and craftMVTerm _cD0 _cPsi (_n1, r1,  cD1, ClTyp (_, cPsi1), cnstrs1, _mdep1) sM2 = match sM2 with 
     | Root (loc , Const c, _tS2) ->  
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in 
+       let _ = dprint (fun () -> "[craftMVTerm] cPsi = " ^ P.dctxToString _cD0 _cPsi ^ "\n     cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
        
        let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
          | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
@@ -1494,7 +1495,7 @@ let isVar h = match h with
     | Root (loc , Const c, _tS2) ->  
 
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in 
-      
+       let _ = dprint (fun () -> "[craftMMVTerm] cPsi = " ^ P.dctxToString _cD0 _cPsi ^ "\n     cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
        let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
          | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
 	    (* cPsi' |- Pi x:A.B <= typ
@@ -1502,7 +1503,8 @@ let isVar h = match h with
                cPsi  |- tN <= [s]tA
                cPsi |- tN . s <= cPsi', x:A
 	     *)
-            let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in
+            (* let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in *)
+            let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) n in 
 	    let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
 	    LF.App (tN, tS)
 
@@ -1668,7 +1670,7 @@ let isVar h = match h with
       when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
 
     | (Root (_, MVar (Inst i, t), _tS) as sM1, sM2) 
-      when isRenameSub cD0 t -> (dprint (fun () -> "craftMVTerm ... ") ; 
+      when isRenameSub cD0 t -> (dprint (fun () -> "01 - craftMVTerm ... in cPsi = " ^ P.dctxToString cD0 cPsi) ; 
 				 match craftMVTerm cD0 cPsi i sM2 with 
 				| Some _ -> 
 				   (dprint (fun () -> ("crafted MV Term " ^ P.normalToString cD0 cPsi (sM1, id)));
@@ -1677,7 +1679,7 @@ let isVar h = match h with
 					  addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))))
 
     | (sM2, ((Root (_, MVar (Inst i, t), _tS)) as sM1)) 
-      when isRenameSub cD0 t -> (dprint (fun () -> "craftMVTerm ... ") ; 
+      when isRenameSub cD0 t -> (dprint (fun () -> "02 - craftMVTerm ... in cPsi = " ^ P.dctxToString cD0 cPsi) ; 
 				 match craftMVTerm cD0 cPsi i sM2 with 
 				| Some _ -> 
 				   (dprint (fun () -> ("crafted MV Term " ^ P.normalToString cD0 cPsi (sM1, id)));

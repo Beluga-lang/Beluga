@@ -1,0 +1,23 @@
+LF ty : type =
+  | base : ty
+  | arr  : ty -> ty -> ty
+  ;
+%name ty T.
+
+LF tm : ty -> type =
+  | abs : {A:ty}(tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+  ;
+%name tm M.
+
+schema cxt = tm A; % some [a : ty] block tm a;
+
+inductive SNe : (g : cxt) {M : [ g |- tm A[] ] } ctype =
+| SVar : {#p:[g |- tm A[]]} SNe [g |- #p]
+;
+
+rec anti_renameSNe  : (g : cxt)(g' : cxt) {#R : [g' |-# g]}{M : [g |- tm A[]]} SNe [g' |- M[#R]] -> SNe [g |- M]  =
+%        / total s (anti_renameSNe g g' a r m s) / 
+mlam #R, N => fn s =>   case s of 
+|  SVar [h' |- _ ] =>  SVar [ _ |- _ ]
+;

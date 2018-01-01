@@ -50,7 +50,6 @@ let _ = Error.register_printer
     Error.print_with_location loc (fun ppf ->
       match err with
       | ErrorMsg str -> Format.fprintf ppf "NOT IMPLEMENTED: %s" str
-
         | MCtxIllformed cD ->
             Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
               (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
@@ -402,9 +401,12 @@ let metaObjToFt (loc, m) = m
 
 
 let mmVarToCMetaObj loc' mV = function
-  | Int.LF.MTyp tA   -> Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil))
-  | Int.LF.PTyp tA   -> Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id))
-  | Int.LF.STyp (_, cPhi) -> Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id)))
+  | Int.LF.MTyp tA   -> (dprint (fun () -> "genMetaVar' [mmVarToCMetaObj]: MObj - MMV \n") ;
+                         Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil)))
+  | Int.LF.PTyp tA   -> (dprint (fun () ->  "genMetaVar' [mmVarToCMetaObj]: PObj - PVar\n"); 
+                         Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id)))
+  | Int.LF.STyp (_, cPhi) -> (dprint (fun () ->  "genMetaVar' [mmVarToCMetaObj]: PObj - PVar\n"); 
+                             Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id))))
 
 let mmVarToMetaObj loc' mV = function
   | Int.LF.ClTyp (mt, cPsi) ->
@@ -414,6 +416,7 @@ let mmVarToMetaObj loc' mV = function
 
 let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let ctyp' = C.cnormMTyp (ctyp, t) in
+  let _ = dprint (fun () -> "[genMetaVar'] Type : " ^ P.metaTypToString cD ctyp) in
   let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp') Int.LF.Maybe) ctyp' in
   ((loc',mO), Int.LF.MDot(mO,t))
 
@@ -450,10 +453,14 @@ let elClObj cD loc cPsi' clobj mtyp = match clobj, mtyp with
   | Apx.Comp.MObj m, Int.LF.STyp (cl, cPhi') -> (* This fixes up an ambiguity *)
     Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)) cl cPhi')
 
+  | Apx.Comp.MObj (Apx.LF.Root (_, Apx.LF.Hole, Apx.LF.Nil)), Int.LF.PTyp _tA' -> 
+     let mV = Whnf.newMMVar' (None) (cD, Int.LF.ClTyp (mtyp, cPsi')) Int.LF.Maybe in 
+       mmVarToCMetaObj loc mV mtyp
+
   | Apx.Comp.MObj (Apx.LF.Root (_,h,Apx.LF.Nil) as tM), Int.LF.PTyp tA' ->
     (* TODO: Something a little more gentle.. *)
     let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
-    Int.LF.PObj h
+      Int.LF.PObj h
   | _ , _ -> raise (Error (loc,  MetaObjectClash (cD, Int.LF.ClTyp (mtyp, cPsi'))))
 
 let rec elMetaObj' cD loc cM cTt = match cM , cTt with
@@ -473,7 +480,6 @@ let rec elMetaObj' cD loc cM cTt = match cM , cTt with
   | (_ , _) -> raise (Error (loc,  MetaObjectClash (cD, cTt)))
 
 and elMetaObj cD (loc,cM) cTt =
-
     let ctyp = C.cnormMTyp cTt in
     let r = elMetaObj' cD loc cM ctyp in
       begin try 
@@ -1240,9 +1246,10 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 
           | (Int.Comp.TypPiBox (Int.LF.Decl (_,ctyp,dep), tau), theta) ->
              let _ = dprint (fun () -> "[elPatSpine] TypPiBox explicit ttau = " ^
-                               P.compTypToString cD (Whnf.cnormCTyp ttau)) in
+                                         P.compTypToString cD (Whnf.cnormCTyp ttau) ^ "\n") in
              let (pat, theta') = elPatMetaObj cD pat' (ctyp, theta) in
              let _ = dprint (fun () -> "[elPatSpine] pat = " ^ P.patternToString cD cG pat ) in
+             let _ = dprint (fun () -> "[elPatSpine] theta' = " ^ P.msubToString cD theta') in
              let _ = dprint (fun () -> "[elPatSpine] remaining pattern spine must have type : " ) in
              let _ = dprint (fun () -> "              " ^ P.compTypToString cD (Whnf.cnormCTyp (tau, theta'))) in
              let (cG1, pat_spine, ttau2) = elPatSpine cD cG pat_spine' (tau, theta') in
@@ -1446,7 +1453,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
     let _ = dprnt "AbstractMSub..." in
       (* cD1' |- t' <= cD' where cD' = cD, cD_p *)
     let (t', cD1') = Abstract.msub (Whnf.cnormMSub t) in
-    let _ = dprnt "AbstractMSub... done " in
+    let _ = dprnt ("AbstractMSub... done : \n " ^ P.mctxToString cD1' ^ "\n       |- " ^ P.msubToString cD1' t' ) in
     let rec drop t l_delta1 = match (l_delta1, t) with
         | (0, t) -> t
         | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in

@@ -1491,30 +1491,37 @@ let isVar h = match h with
     | _ -> None
 
 
-  and craftMMVTerm _cD0 _cPsi (_n1, r1,  cD1, ClTyp (_, cPsi1), cnstrs1, _mdep1) sM2 = match sM2 with 
-    | Root (loc , Const c, _tS2) ->  
+  and craftMMVTerm _cD0 _cPsi (_n1, r1,  cD1, ClTyp (MTyp tB, cPsi1), cnstrs1, _mdep1) sM2 = 
+       let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
+         | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
+	   (* cPsi' |- Pi x:A.B <= typ
+              cPsi  |- s <= cPsi'
+              cPsi  |- tN <= [s]tA
+              cPsi |- tN . s <= cPsi', x:A
+	    *)
+           (* let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in *)
+           let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) n in 
+	   let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
+	     LF.App (tN, tS)
+	 | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
+         end
+       in 
+       match sM2 with 
+       | Root (loc , Const c, _tS2) ->  
 
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in 
        let _ = dprint (fun () -> "[craftMMVTerm] cPsi = " ^ P.dctxToString _cD0 _cPsi ^ "\n     cPsi1 = " ^ P.dctxToString cD1 cPsi1) in
-       let rec genSpine cD1 cPsi1 sA = begin match Whnf.whnfTyp sA with
-         | (LF.PiTyp ((LF.TypDecl (n, tA) , _ ), tB), s) ->
-	    (* cPsi' |- Pi x:A.B <= typ
-               cPsi  |- s <= cPsi'
-               cPsi  |- tN <= [s]tA
-               cPsi |- tN . s <= cPsi', x:A
-	     *)
-            (* let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in *)
-            let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) n in 
-	    let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
-	    LF.App (tN, tS)
-
-	 | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
-					end
-       in 
         let tM1 = Root(loc, Const c, genSpine cD1 cPsi1 (tA, id)) in 
          (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
-	 instantiateMMVar (r1, tM1, !cnstrs1);
-	 Some (tM1)
+	 (instantiateMMVar (r1, tM1, !cnstrs1);
+	 Some (tM1))
+
+    | Root (loc, MPVar (_v, _s), _tS) -> 
+       let p   = Whnf.newMPVar None (cD1, cPsi1, tB) Maybe  in
+       let tM1 = Root (loc, MPVar ((p, Whnf.m_id), Substitution.LF.id), genSpine cD1 cPsi1 (tB, id)) in
+         (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
+	 (instantiateMMVar (r1, tM1, !cnstrs1);
+	 Some (tM1))
     | _ -> None
 
 

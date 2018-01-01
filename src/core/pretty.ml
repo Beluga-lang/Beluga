@@ -597,7 +597,7 @@ module Int = struct
     and fmt_ppr_lf_clobj cD lvl cPsi ppf = function
       | LF.MObj m -> fmt_ppr_lf_normal cD cPsi lvl ppf m
       | LF.SObj s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
-      | LF.PObj h -> fmt_ppr_lf_head cD cPsi lvl ppf h
+      | LF.PObj h -> fprintf ppf "#%a" (fmt_ppr_lf_head cD cPsi lvl) h
 
 
    and fmt_ppr_mfront' cD _lvl ppf mO = match mO with

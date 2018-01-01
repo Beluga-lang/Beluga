@@ -4,7 +4,7 @@
 
 (1)   .
  .
-  |-  [g, z3 |- cons (elam (\x. Y1)) Z]
+  |-  [g, x4 |- cons (elam (\x. Y1)) Z]
 
 
 

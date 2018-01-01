@@ -405,11 +405,11 @@ and normHead (h, sigma) = match h with
       | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
     end 
   | MPVar (mmt,s) ->
-    begin match normMMVar mmt with
+     begin match normMMVar mmt with
       | ResMM mmt' -> Head (MPVar (mmt',normSub' (s,sigma)))
       | Result (IHead h) -> normFt' (normHead (h,s),sigma)
       | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
-    end 
+     end 
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
   | MVar (Inst mm, s) ->
     begin match normMMVar (mm,MShift 0) with
@@ -613,7 +613,7 @@ and cnormHead' (h, t) = match h with
     begin match LF.applyMSub k t with
       | MV k' -> Head (PVar(k', s'))
       | ClObj (_,PObj h) -> normHead (h, s')
-      | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
+      | ClObj (_,MObj tM) ->  Obj (norm (tM, s'))
     end
   | HClo (k,sv,s) ->
     let s' = cnormSub (s,t) in

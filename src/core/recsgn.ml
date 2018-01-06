@@ -90,7 +90,7 @@ let rec stripInd tau = match tau with
   | tau -> tau
 
 let rec lookupFun cG f = match cG with
-  | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau)) ->
+  | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau, false)) ->
       if f = f' then tau else
       lookupFun cG' f
 
@@ -612,7 +612,7 @@ let recSgnDecls decls =
 		      )
                 end ;
 		 let (cG, vars, n_list) = preprocess lf (m+1) in
-                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau')) , Var.extend  vars (Var.mk_entry f), f::n_list ))
+                 (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau',false)) , Var.extend  vars (Var.mk_entry f), f::n_list ))
 
         in
 

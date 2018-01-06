@@ -49,10 +49,12 @@ let gctxToString cD =
   let rec toString = function
     | LF.Empty ->
       "."
-    | LF.Dec (LF.Empty, Comp.CTypDecl (n, tau)) ->
-      "\n" ^ shift ^ (Id.string_of_name n) ^ ": " ^ P.compTypToString cD tau
-    | LF.Dec (cG, Comp.CTypDecl (n, tau)) ->
-      toString cG ^ "\n" ^ shift ^ (Id.string_of_name n) ^ ": " ^ P.compTypToString cD tau
+    | LF.Dec (LF.Empty, Comp.CTypDecl (n, tau, flag )) ->
+      let s =  if flag then "*" else "" in 
+      "\n" ^ shift ^ (Id.string_of_name n) ^ s ^ ": " ^ P.compTypToString cD tau
+    | LF.Dec (cG, Comp.CTypDecl (n, tau,flag)) ->
+      let s =  if flag then "*" else "" in 
+      toString cG ^ "\n" ^ shift ^ (Id.string_of_name n) ^ s ^ ": " ^ P.compTypToString cD tau
   in toString ++ Whnf.normCtx
 
 (** More holes **)
@@ -119,7 +121,7 @@ let setStagedHolePos i l =
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   let rec aux acc = function
     | LF.Empty -> acc
-    | LF.Dec (cG', Comp.CTypDecl(n, tau')) ->
+    | LF.Dec (cG', Comp.CTypDecl(n, tau', _ )) ->
       begin try
         Unify.StdTrail.resetGlobalCnstrs ();
         Unify.StdTrail.unifyCompTyp cD ttau (tau', LF.MShift 0);

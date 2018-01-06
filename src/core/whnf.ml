@@ -1740,13 +1740,13 @@ let mctxMVarPos cD u =
        
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
-    | Dec(cG, Comp.CTypDecl (x, tau)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t)))
+    | Dec(cG, Comp.CTypDecl (x, tau, flag)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t), flag))
 
 
   let rec cnormCtx (cG, t) = match cG with
     | Empty -> Empty
-    | Dec(cG, Comp.CTypDecl(x, tau)) ->
-        let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t)) in
+    | Dec(cG, Comp.CTypDecl(x, tau,flag)) ->
+        let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t),flag) in
         Dec (cnormCtx (cG, t), tdcl)
     | Dec(cG, Comp.WfRec (f, args, tau)) ->
         let tau' = cnormCTyp (tau, t) in
@@ -1759,8 +1759,8 @@ let mctxMVarPos cD u =
 
   let rec normCtx cG = match cG with
     | Empty -> Empty
-    | Dec(cG, Comp.CTypDecl (x, tau)) ->
-        Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id))))
+    | Dec(cG, Comp.CTypDecl (x, tau, flag)) ->
+        Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id)), flag))
 
     | Dec(cG, Comp.WfRec (f, args, tau)) ->
         let tau' = normCTyp (cnormCTyp (tau, m_id)) in
@@ -2007,6 +2007,6 @@ and closedCDecl (Decl (_, ctyp, _)) = closedMetaTyp ctyp
 
 let rec closedGCtx cG = match cG with
   | Empty -> true
-  | Dec(cG, Comp.CTypDecl(_ , cT)) ->
+  | Dec(cG, Comp.CTypDecl(_ , cT, _)) ->
       closedCTyp cT && closedGCtx cG
   | Dec(cG, Comp.CTypDeclOpt _ ) -> closedGCtx cG

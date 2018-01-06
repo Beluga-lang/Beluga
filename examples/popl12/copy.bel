@@ -24,7 +24,7 @@ fn e => case e of
 | IsSuc m => IsSuc (copy m)
 | IsLam m => let m' = copy m in IsLam m
 | IsApp m n => % IsApp (copy m) (copy n)
-  let m' = copy m in  
-  let n' = copy n in IsApp m' n'
+ let m' = copy m in  
+ let n' = copy n in IsApp m' n'
 
 ;

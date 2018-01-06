@@ -17,8 +17,8 @@ open Syntax.Int.Comp
 (*********************)
 let rec gctxToCompgctx cG = match cG with
   | [] -> LF.Empty
-  | (x,tau) :: cG ->
-      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau))
+  | (x,tau,tag) :: cG ->
+      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau,tag))
 
 (* drop the first i element of cD *)
 let rec dropIMCtx i cD = match (i, cD) with
@@ -48,7 +48,7 @@ let cvarOfLFcTypDecl td =
 | LF.DeclOpt(n) -> n
 
 let nameOfCompcTypDecl = function
-  | CTypDecl (n, _) -> n
+  | CTypDecl (n, _, _) -> n
   | CTypDeclOpt n -> n
 
 let rec dctxToHat cPsi = match cPsi with
@@ -98,15 +98,11 @@ let printCovGoals cgs =
 
 let rec compgctxTogctx ccG = match ccG with
 | LF.Empty -> []
-| LF.Dec (ccG', Comp.CTypDecl (x,tau)) ->
+| LF.Dec (ccG', Comp.CTypDecl (x,tau, tag)) ->
     let cG' = compgctxTogctx ccG' in
-    (x,tau)::cG'
+    (x,tau,tag)::cG'
 
 
-let rec gctxToCompgctx cG = match cG with
-  | [] -> LF.Empty
-  | (x,tau) :: cG ->
-      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau))
 
 let locCount = ref 0
 
@@ -308,17 +304,17 @@ let  intro i =
      | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
-         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
+         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1,false))) t2  in
          Some (Comp.Fn(l, nam, exp))
      | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA,psi)) ->
          used := true;
          let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
-         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
+         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1,false))) t2  in
          Some (Comp.Fn(l, nam, exp))
      | _ ->
          used := true;
          let nam = Id.mk_name (Id.NoName) in
-         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1))) t2  in
+         let Some exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1,false))) t2  in
          Some (Comp.Fn(Loc.ghost, nam, exp))
            )
  | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
@@ -398,7 +394,7 @@ let split e i =
 
   let rec searchGctx i = function
   | LF.Empty -> None
-  | LF.Dec (cG', Comp.CTypDecl (n, tau)) ->
+  | LF.Dec (cG', Comp.CTypDecl (n, tau, _)) ->
     if (Id.string_of_name n) = e then
       let rec matchTyp tau =
         match tau with

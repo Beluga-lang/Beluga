@@ -76,10 +76,10 @@ let eta_expand (tH, tA) =
 
 (* ****************************************************************************** *)
 (* Coverage problem *)
-type gctx = (Id.name * Comp.typ) list
+type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
 
 let rec lookup cG x = match cG with
-  | (y,tau) :: cG ->
+  | (y,tau, _) :: cG ->
       if x = y then tau
       else lookup cG x
 
@@ -332,13 +332,13 @@ and etaExpandMVstr' cO cPsi sA  = match sA with
 *)
 let rec gctxToCompgctx cG = match cG with
   | [] -> LF.Empty
-  | (x,tau) :: cG ->
-      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau))
+  | (x,tau,flag) :: cG ->
+      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau, flag))
 
 let rec compgctxTogctx cG = match cG with
   | LF.Empty  -> []
-  | LF.Dec(cG, Comp.CTypDecl (x,tau)) ->
-      (x,tau)::compgctxTogctx cG
+  | LF.Dec(cG, Comp.CTypDecl (x,tau, flag)) ->
+      (x,tau,flag)::compgctxTogctx cG
 
 
 let pattToString cD patt = match patt with
@@ -520,7 +520,8 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') = match (tH , tH') with
 	let (_, tA, _cPsi)   = Whnf.mctxPDec cD p in
 	let (_, tA', _cPsi') = Whnf.mctxPDec cD' q in
 	  Yes ((tA,idSub), (tA', idSub))
-      with _ ->  dprint (fun () -> "[pre_match_head] pvar - SplitCand");SplitCand  (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
+      with _ ->  dprint (fun () -> "[pre_match_head] pvar - SplitCand");
+        SplitCand  (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
       end
   | (LF.Const c, LF.Const c') ->
       if c = c' then
@@ -1331,7 +1332,7 @@ let rec refineSplits (cD:LF.mctx) (cD_p:LF.mctx) matchL splitL ms = match splitL
 (* cnormCtx (cG, ms) = cG' *)
 let rec cnormCtx (cG, ms) = match cG with
   | [] -> []
-  | (x,tau) :: cG' -> (x, Whnf.cnormCTyp (tau, ms)) :: (cnormCtx (cG', ms))
+  | (x,tau, flag) :: cG' -> (x, Whnf.cnormCTyp (tau, ms),flag) :: (cnormCtx (cG', ms))
 
 (* cnormEqn matchL ms = [ms]matchL
 
@@ -1745,7 +1746,7 @@ let rec genPattSpine (tau_v, t) = match (tau_v,t) with
       let pv1 = new_patvar_name () in
       let pat1 = Comp.PatFVar (Syntax.Loc.ghost, pv1) in
       let (cG, pS, ttau) = genPattSpine (tau2,t) in
-	((pv1, Whnf.cnormCTyp (tau1,t))::cG ,
+	((pv1, Whnf.cnormCTyp (tau1,t),false)::cG ,
 	 Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
   | (Comp.TypPiBox ((LF.Decl(x, LF.CTyp sW, _)), tau), t) ->
       let cPsi' = LF.CtxVar (LF.CInst ((x, ref None, LF.Empty, LF.CTyp sW, ref [], LF.Maybe), Whnf.m_id)) in
@@ -1810,7 +1811,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
   | Comp.TypCross (tau1, tau2) ->
       let pv1 = new_patvar_name () in
       let pv2 = new_patvar_name () in
-      let cG1' = (pv1, tau1) :: (pv2,tau2):: cG1 in
+      let cG1' = (pv1, tau1,false) :: (pv2,tau2,false):: cG1 in
       let cG' = cG1'@cG2 in
       let loc_ghost = Syntax.Loc.ghost in
       let pat = Comp.PatPair (loc_ghost,  Comp.PatFVar (loc_ghost, pv1), Comp.PatFVar (loc_ghost, pv2))  in
@@ -2429,7 +2430,7 @@ let initialize_coverage problem projOpt = begin match problem.ctype with
  | tau ->  (* tau := Bool | Cross (tau1, tau2) | U *)
       let loc_ghost = Syntax.Loc.ghost in
       let pv = new_patvar_name () in
-      let cG' = (pv, tau ) :: problem.cG in
+      let cG' = (pv, tau,false ) :: problem.cG in
       let pat = Comp.PatFVar (loc_ghost, pv) in
       let pat_list = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
       let covGoal = CovPatt (cG', pat, (problem.ctype, Whnf.m_id)) in
@@ -2473,7 +2474,7 @@ let rec check_emptiness cD = match cD with
 
 let rec check_empty_comp cD cG = match cG with
   | [] -> false
-  | (_x, tau)::cG ->
+  | (_x, tau, _)::cG ->
       begin try
         let cov_goals' = genPatCGoals cD cG tau [] in
           match  cov_goals' with

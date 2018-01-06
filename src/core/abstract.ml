@@ -1246,10 +1246,10 @@ let rec collectCompTyp p cQ tau = match tau with
 
 let rec collectGctx cQ cG = match cG with
   | I.Empty -> (cQ, I.Empty)
-  | I.Dec (cG, Comp.CTypDecl (x, tau)) ->
+  | I.Dec (cG, Comp.CTypDecl (x, tau, flag)) ->
       let (cQ1, cG') = collectGctx cQ cG in
       let (cQ2, tau') = collectCompTyp 0 cQ1 tau in
-        (cQ2, I.Dec (cG', Comp.CTypDecl (x, tau')))
+        (cQ2, I.Dec (cG', Comp.CTypDecl (x, tau', flag)))
 
 let rec collectExp cQ e = match e with
   | Comp.Syn (loc, i) ->
@@ -1463,10 +1463,10 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
 
 let rec abstractMVarGctx cQ offset cG = match cG with
   | I.Empty -> I.Empty
-  | I.Dec (cG, Comp.CTypDecl (x, tau)) ->
+  | I.Dec (cG, Comp.CTypDecl (x, tau, flag)) ->
       let cG' = abstractMVarGctx cQ offset cG in
       let tau' = abstractMVarCompTyp cQ offset tau in
-        I.Dec (cG', Comp.CTypDecl (x, tau'))
+        I.Dec (cG', Comp.CTypDecl (x, tau', flag))
 
 let rec abstractMVarPatObj cQ cG offset pat = match pat with
   | Comp.PatEmpty (loc, cPsi) ->

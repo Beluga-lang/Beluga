@@ -163,7 +163,7 @@ let rec getNameMCtx cD k = match (cD, k) with
       getNameMCtx cD (k-1)
 
 let rec getNameCtx cG k = match (cG, k) with
-  | (Dec(_cG, Comp.CTypDecl (x, _ )), 1 ) -> x
+  | (Dec(_cG, Comp.CTypDecl (x, _ , _ )), 1 ) -> x
   | (Dec(_cG, Comp.CTypDeclOpt x), 1) -> x
   | (Dec(cG, _ ) , k) -> getNameCtx cG (k-1)
 
@@ -201,7 +201,7 @@ let emptyContextVariable cPsi = (* wrong *)
     inner cPsi
 
 let rec lookup cG k = match (cG, k) with
-  | (Dec (_cG', Comp.CTypDecl (_,  tau)), 1) ->  Some tau
+  | (Dec (_cG', Comp.CTypDecl (_,  tau, _)), 1) ->  Some tau
   | (Dec (_cG', _ ), 1) ->  None
   | (Dec ( cG', _ ), k) ->
       lookup cG' (k - 1)

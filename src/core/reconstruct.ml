@@ -262,8 +262,8 @@ let rec apx_length_typ_rec t_rec = match t_rec with
       1 + apx_length_typ_rec rest )
 
 let rec lookup cG k = match cG, k with
-  | Int.LF.Dec (_cG', Int.Comp.CTypDecl (_, tau)), 1 -> Whnf.cnormCTyp (tau, Whnf.m_id)
-  | Int.LF.Dec ( cG', Int.Comp.CTypDecl (_, _tau)), k -> lookup cG' (k-1)
+  | Int.LF.Dec (_cG', Int.Comp.CTypDecl (_, tau, _ )), 1 -> Whnf.cnormCTyp (tau, Whnf.m_id)
+  | Int.LF.Dec ( cG', Int.Comp.CTypDecl (_, _tau, _ )), k -> lookup cG' (k-1)
 
 (* -------------------------------------------------------------*)
 
@@ -676,7 +676,7 @@ let rec elExp cD cG e theta_tau = elExpW cD cG e (C.cwhnfCTyp theta_tau)
 and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Fn (loc, x, e), (Int.Comp.TypArr (tau1, tau2), theta)) ->
      (* let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Int.Comp.TypClo (tau1, theta))) in *)
-     let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta))) in
+     let cG' = Int.LF.Dec (cG, Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, theta), false)) in
      let e' = elExp cD cG' e (tau2, theta) in
      let e'' =  Whnf.cnormExp (Int.Comp.Fn (loc, x, e'), Whnf.m_id) in
      let _ = dprint (fun () -> "[elExp] Fn " ^ Id.render_name x ^ " done ") in
@@ -758,8 +758,8 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
       let (i', tau_theta') = elExp' cD cG i in
         begin match C.cwhnfCTyp tau_theta' with
           | (Int.Comp.TypCross (tau1, tau2), t) ->
-              let cG1 = Int.LF.Dec (cG, Int.Comp.CTypDecl (x,  Whnf.cnormCTyp (tau1, t))) in
-              let cG2 = Int.LF.Dec (cG1, Int.Comp.CTypDecl (y, Whnf.cnormCTyp (tau2, t))) in
+              let cG1 = Int.LF.Dec (cG, Int.Comp.CTypDecl (x,  Whnf.cnormCTyp (tau1, t), false)) in
+              let cG2 = Int.LF.Dec (cG1, Int.Comp.CTypDecl (y, Whnf.cnormCTyp (tau2, t), false)) in
               let e'  =  elExp cD cG2 e (tau, theta) in
                 Int.Comp.LetPair (loc, i', (x, y, e'))
 
@@ -769,7 +769,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | (Apx.Comp.Let (loc, i, (x, e)), (tau, theta)) ->
       let (i', (tau',theta')) = elExp' cD cG i in
-      let cG1 = Int.LF.Dec (cG, Int.Comp.CTypDecl (x,  Whnf.cnormCTyp (tau',theta'))) in
+      let cG1 = Int.LF.Dec (cG, Int.Comp.CTypDecl (x,  Whnf.cnormCTyp (tau',theta'), false)) in
       let e'  =  elExp cD cG1 e (tau, theta) in
         Int.Comp.Let (loc, i', (x,  e'))
 
@@ -1130,7 +1130,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
       let _  = dprint (fun () -> "Inferred type of pat var " ^ Id.render_name name )  in
       let _ = dprint (fun () -> " ..... as   " ^ P.compTypToString cD  tau')
       in
-      (Int.LF.Dec(cG, Int.Comp.CTypDecl (name, tau')),
+      (Int.LF.Dec(cG, Int.Comp.CTypDecl (name, tau', false)),
        Int.Comp.PatVar (loc, x))
 (*  | (Apx.Comp.PatFVar (loc, x) , ttau) ->
        (FPatVar.add x (Whnf.cnormCTyp ttau);

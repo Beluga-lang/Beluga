@@ -822,7 +822,7 @@ struct
     | LF.Empty ->
       fprintf ppf "Nil"
 
-    | LF.Dec (cG, Comp.CTypDecl (x, tau)) ->
+    | LF.Dec (cG, Comp.CTypDecl (x, tau, _)) ->
       fprintf ppf "(Dec %a (%s . %a))"
         (sexp_cmp_gctx cD) cG
         (Id.render_name x)
@@ -834,7 +834,7 @@ struct
       (R.render_cid_prog  f)
       (sexp_cmp_typ LF.Empty) tau
       (sexp_cmp_exp_chk  LF.Empty
-         (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name, tau)))) e
+         (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name, tau, false)))) e
 
   let rec sexp_sgn_decl ppf =
     function

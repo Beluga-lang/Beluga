@@ -1301,11 +1301,11 @@ module FPatVar = struct
   let store    = ref Syntax.Int.LF.Empty
 
   let add x tau =
-      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau))
+      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau, false))
 
   let get x    =
     let rec lookup str = match str with
-      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau))) ->
+      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau, _ ))) ->
           if x = y then tau else lookup str'
       | _ -> raise Not_found
     in

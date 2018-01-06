@@ -284,10 +284,11 @@ module Comp = struct
     | E
     | DC (* don't care *)
 
+  type wf_tag = bool  (* indicates whether the argument is smaller *)
 
   type ctyp_decl =
     | WfRec of name * args list * typ
-    | CTypDecl    of name * typ
+    | CTypDecl    of name * typ * wf_tag
     | CTypDeclOpt of name
 
 

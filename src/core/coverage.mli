@@ -6,7 +6,7 @@ type error =
   | NothingToRefine
   | NoCoverageGoalsGenerated
 
-type gctx = (Id.name * Comp.typ) list
+type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
 
 type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
                             (*  cPsi |- tR <= sP *)

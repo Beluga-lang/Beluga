@@ -111,7 +111,10 @@ let rec smaller_meta_obj cM = match  cM with
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 *)
-
+let rec mark_gctx cG = match cG with 
+  | LF.Empty -> LF.Empty
+  | LF.Dec(cG, Comp.CTypDecl (x,tau, _ )) -> 
+     LF.Dec (mark_gctx cG, Comp.CTypDecl (x,tau, true))
 
 let rec struct_smaller patt = match patt with
   | Comp.PatMetaObj (loc', (_,mO)) ->
@@ -482,7 +485,7 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 	 let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
 	 let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
 	 let mf_list = get_order () in
-	 let _ = dprint (fun () -> "Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
+	 let _ = dprint (fun () -> "[gen_rec_calls] Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
 	 let _ = dprint (fun () -> "Considering a total of " ^
 				 string_of_int (List.length mf_list)  ^
 				 " rec. functions\n") in
@@ -491,12 +494,12 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 	  let _ = dprint (fun () -> "for position " ^ string_of_int x ^ 			  "\n") in
 	  let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
 	  let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in
-	  (* let _ = print_string ("Generated Arguments for rec. call " ^  args_to_string cD args ^ "\n") in *)
+	  let _ = dprint (fun () -> "Generated Arguments for rec. call " ^  args_to_string cD LF.Empty args ^ "\n") in  
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
-	  (* let _ = print_string ("\nGenerated Recursive Call : " ^
+	   let _ = dprint (fun () -> "\nGenerated Recursive Call : " ^
 				  calls_to_string cD (LF.Empty) (f, args, tau) ^
-				  "\n\n") in *)
+				  "\n\n") in 
 	    d
         in
         let rec mk_all (cIH,j) mf_list = match mf_list with
@@ -526,7 +529,9 @@ let rec get_return_type (i, tau) = match tau with
 
 let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Empty -> cIH
-  | LF.Dec(cG', Comp.CTypDecl (_x, tau0)) ->
+  | LF.Dec(cG', Comp.CTypDecl (_x, tau0, false)) ->
+     gen_rec_calls' cD cG cIH (cG', j+1)
+  | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
 	let _ = dprint (fun () -> "[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
@@ -536,7 +541,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
           (* let _ = print_string ("\nRecursive call : " ^
-				  calls_to_string cD cG (f, args, tau) ^ "\n\n") in  *)
+				  calls_to_string cD cG (f, args, tau) ^ "\n\n") in   *)
 	    d
 	in
 	let rec mk_all cIH mf_list = match mf_list with
@@ -560,13 +565,13 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ( (* print_string ("Generate recursive calls from \n"
+    ( (* print_string ("Generate recursive calls from \n" 
 		   ^ "cD = " ^ P.mctxToString cD
-		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n"); *)
+		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");  *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
-       dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
-       (* print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+(*       dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); 
+        print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
       cIH'
     )
   else

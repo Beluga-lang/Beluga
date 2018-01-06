@@ -306,15 +306,6 @@ let rec blockdeclInDctx cPsi = match cPsi with
 
 
 
- let isRenameSub cD = function 
-   | SVar (offset, _k, _s') -> 
-      let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
-      (match cl' with Ren -> true
-		    | _ -> false)
-   | MSVar (_ , (((_n, _r, _cD, ClTyp (STyp (Ren, _ ), _)  , _cnstr, _ ), ms), s)) -> 
-      isPatSub s && isPatMSub ms
-   | _ -> false 
-
 let isVar h = match h with
   | BVar _ -> true
   | Proj (BVar _ , _ ) -> true
@@ -327,6 +318,23 @@ let isVar h = match h with
   | Proj(MPVar ((_ , theta), sigma), _ ) ->
     isProjPatSub sigma && isPatMSub theta
   | _ -> false
+
+
+ let rec isRenameSub cD = function 
+   | SVar (offset, _k, _s') -> 
+      let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
+      (match cl' with Ren -> true
+		    | _ -> false)
+   | MSVar (_ , (((_n, _r, _cD, ClTyp (STyp (Ren, _ ), _)  , _cnstr, _ ), ms), s)) -> 
+      isPatSub s && isPatMSub ms
+   | Shift _ -> true
+   | Dot (Head (BVar _ ), s) -> isRenameSub cD s
+   | _ -> false 
+
+ let rec ground_sub cD = function 
+     | SVar (_ , _, _) |  Shift _ -> true
+     | Dot (Head (BVar _ ), s) -> ground_sub cD s
+     | _ -> false
 
 
   (*-------------------------------------------------------------------------- *)
@@ -1517,11 +1525,14 @@ let isVar h = match h with
 	 Some (tM1))
 
     | Root (loc, MPVar (_v, _s), _tS) -> 
+       let _ = dprint (fun () -> "[craftMMVTerm] MPVar ... ") in
        let p   = Whnf.newMPVar None (cD1, cPsi1, tB) Maybe  in
        let tM1 = Root (loc, MPVar ((p, Whnf.m_id), Substitution.LF.id), genSpine cD1 cPsi1 (tB, id)) in
          (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
 	 (instantiateMMVar (r1, tM1, !cnstrs1);
 	 Some (tM1))
+   
+
     | _ -> None
 
 
@@ -1818,13 +1829,23 @@ let isVar h = match h with
 		end
               else
 		if isRenameSub cD0 s && isPatMSub mt then 
-		  (dprint (fun () -> "craftMMV ... ");
-		    match craftMMVTerm cD0 cPsi i tM2 with 
-				| Some _ -> 
-				   (dprint (fun () -> ("crafted MMV Term " ^ P.normalToString cD0 cPsi (tM1, id)));
-				    dprint (fun () -> ("[unify crafted term] " ^ P.normalToString cD0 cPsi (tM1, id) ^ " =?= " ^ P.normalToString cD0 cPsi (tM2, id)));
-				    unifyTerm mflag cD0 cPsi (tM1, id) (tM2, id))
-				| None -> addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
+		  ( match ground_sub cD0 s, tM2 with 
+                  |  false , Root (loc, MVar (Offset u , s'), tS) -> 
+                     let (_, tP0, cPsi0) = Whnf.mctxMDec cD0 u in
+                     (unifyDCtx1 mflag cD0 cPsi0 cPsi1;
+                      unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP, Substitution.LF.id);
+                      instantiateMMVar (r, Root(loc, MVar (Offset u, Substitution.LF.id), tS), !cnstrs);
+                      unifySub  mflag cD0 cPsi0 s s')
+                  | _ , _ -> 
+                     (dprint (fun () -> "craftMMV ... ");
+		      match craftMMVTerm cD0 cPsi i tM2 with 
+		      | Some _ -> 
+			 (dprint (fun () -> ("crafted MMV Term " ^ P.normalToString cD0 cPsi (tM1, id)));
+			  dprint (fun () -> ("[unify crafted term] " ^ P.normalToString cD0 cPsi (tM1, id) ^ 
+                                                " =?= " ^ P.normalToString cD0 cPsi (tM2, id)));
+			  unifyTerm mflag cD0 cPsi (tM1, id) (tM2, id))
+		      | None -> 
+                         addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2)))))
 		else 
 		(dprint (fun () -> "(011) Add constraints ");
 		 addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))

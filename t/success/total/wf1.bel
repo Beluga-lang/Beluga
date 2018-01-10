@@ -1,0 +1,48 @@
+LF ty : type =
+  | base : ty
+  | one  : ty
+  | arr  : ty -> ty -> ty
+  ;
+%name ty T.
+
+LF tm : ty -> type =
+  | unit : tm one
+  | abs : {A:ty}(tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+  ;
+%name tm M.
+
+
+schema cxt = tm A; % some [a : ty] block tm a;
+
+
+inductive SN : (g : cxt) {M : [ g |- tm A[]] } ctype = 
+| SNeu : SNe [g |- R] -> SN [g |- R]
+| SUnit: SN [g |- unit] 
+| SAbs : SN [g, x: tm A[] |- M] -> SN [g |- abs A[] \x.M]
+| SRed : SNRed [g |- M] [g |- M'] -> SN [g |- M']
+       -> SN [g |- M]
+
+and inductive SNe : (g : cxt) {M : [ g |- tm A[] ] } ctype =
+| SVar : {#p:[g |- tm A[]]} SNe [g |- #p]
+| SApp : SNe [g |- R] -> SN [g |- M] -> SNe [g |- app R M]
+
+
+and inductive SNRed : (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} ctype = 
+| SNUnit : SN [g |- M] -> SNRed [g |- M] [g |- unit]
+| SBeta  :  {M:[g, x:tm A[] |- tm B[]]} SN [g |- N]
+          -> SNRed [g |- app (abs A[] \x.M) N] [g |- M[..,N]]
+| SAppl  : SNRed [g |- R] [g |- R'] -> SNRed [g |- app R M] [g |- app R' M]
+;
+
+
+rec ext_SN : {M: [g |- tm (arr A[] B[])]}{#p: [g |- tm A[]]} SN [g |- app M #p] -> SN [g |- M] =
+    / total s (ext_SN g a b m p s) /
+mlam M, #p => fn s => case s of 
+| SNeu (SApp sm sv) => SNeu sm
+| SRed r sm' => (case r of 
+  | SBeta [g, x:tm A[] |- M'] sn =>  ?  
+  | SAppl r'  => ?
+  | SNUnit s0 =>   ext_SN [_ |- _] [_ |- _] s0   
+)
+;

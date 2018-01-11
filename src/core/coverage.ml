@@ -1184,14 +1184,14 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
                                   Solved)
                       with
                         | U.Failure "Unresolved constraints" ->
-                          (dprint (fun () -> "Global constraints failed\n");
+                          (dprint (fun () -> "001 – Global constraints failed\n");
                          (* PossSolvable (Cand (cD_p , LF.Empty, mCands, sCands)) *)
                            NotSolvable
                           )
                         | U.GlobalCnstrFailure (_ , cnstr) ->
- 	                 (* let _ = print_string ("Unification of global constraint " ^ cnstr ^ " failed.\n")
-                         in *)
-                         NotSolvable
+ 	                  let _ = dprint (fun () -> "002 – Unification of global constraint " ^ cnstr ^ " failed.\n")
+                          in 
+                          NotSolvable
                       end
 	     | _ -> PossSolvable (Cand (cD_p , LF.Empty, mCands', sCands')))
   | mc :: mCands ->
@@ -1206,7 +1206,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 		U.unifyMetaObj cD (cM, Whnf.m_id) (cM_p,ms) (cT, Whnf.m_id);
 		solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
 	      with 
-              | U.GlobalCnstrFailure ( _loc, cnstr) -> NotSolvable
+              | U.GlobalCnstrFailure ( _loc, cnstr) -> (dprint (fun () -> "003  UNIFY FAILURE – GLOBAL CONSTRAINT FAILURE");NotSolvable)
 	      | U.Failure msg  ->
 		  (if U.unresolvedGlobalCnstrs () then
 		     let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND") in
@@ -1220,7 +1220,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 			     solve' cD (mCands, ms) cD_p (mCands') (sc::sCands')
                        | _ ->
 			   (* we are not trying to be clever and see if a context split would lead to progress *)
-			   let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
+			   let _ = dprint (fun () -> "004 UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
 			     NotSolvable
 	             end)
 	      end
@@ -1245,7 +1245,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 	    with
 	      (* should this case betaken care of  during pre_match phase ? *)
               | U.GlobalCnstrFailure ( _loc, cnstr) ->
-		 let _ = print_string ("Unification of pre-solved equation failed due to the fact the constraint " ^ cnstr ^ " cannot be solved.") in
+		 let _ = print_string ("005 Unification of pre-solved equation failed due to the fact the constraint " ^ cnstr ^ " cannot be solved.") in
                    NotSolvable
 	      | U.Failure "Context clash" ->
 		 let _ = print_string "Unification of pre-solved equation failed due to context mismatch - initiate context matching" in
@@ -1265,7 +1265,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 		    let sc = Split (CovGoal (cPsi, tR, sA) , MetaPatt (cPsi_p, tR_p, sA_p)) in
                       solve' cD (mCands, ms) cD_p (mCands') (sc::sCands')
                   | _ ->
-		    let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
+		    let _ = dprint (fun () -> "006 UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n") in
                      NotSolvable
 	        end)
             end
@@ -1278,7 +1278,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' = match matchCand with
 		U.unifyDCtx cD cPsi cPsi_p' ;
 		solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
 	      with U.Failure msg ->
-		  let _ = dprint (fun () -> " UNIFY FAILURE " ^ msg ) in
+		  let _ = dprint (fun () -> "007 UNIFY FAILURE " ^ msg ) in
 		    NotSolvable
 	      end
       end

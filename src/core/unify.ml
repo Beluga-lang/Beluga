@@ -1829,25 +1829,47 @@ let isVar h = match h with
 		end
               else
 		if isRenameSub cD0 s && isPatMSub mt then 
-		  ( match ground_sub cD0 s, tM2 with 
-                  |  false , Root (loc, MVar (Offset u , s'), tS) -> 
+		  ( match ground_sub cD0 s, tM2, mt with 
+                  |  false , Root (loc, MVar (Offset u , s'), tS), MShift k -> 
                      let (_, tP0, cPsi0) = Whnf.mctxMDec cD0 u in
-                     (unifyDCtx1 mflag cD0 cPsi0 cPsi1;
-                      unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP, Substitution.LF.id);
-                      instantiateMMVar (r, Root(loc, MVar (Offset u, Substitution.LF.id), tS), !cnstrs);
+                     let tP1' = Whnf.cnormTyp (tP, mt) in 
+                     (unifyDCtx1 mflag cD0 cPsi0 (Whnf.cnormDCtx (cPsi1, mt));
+                      unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
+                      instantiateMMVar (r, Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS), !cnstrs);
                       unifySub  mflag cD0 cPsi0 s s')
-                  | _ , _ -> 
-                     (dprint (fun () -> "craftMMV ... ");
+                  |  true , Root (loc, MVar (Offset u , s'), tS), MShift k -> 
+                     let (_, tP0, cPsi0) = Whnf.mctxMDec cD0 u in
+                     if Whnf.convSub s s' then 
+                       (let tP1' = Whnf.cnormTyp (tP, mt) in 
+                        dprint (fun () ->  ("craftMMV ... substitutions are convertible  \n" ^ 
+                                               P.normalToString cD0 cPsi (tM1, id)  ^
+                                         " = " ^ P.normalToString cD0 cPsi (tM2, id) ^ "\n"));
+                        unifyDCtx1 mflag cD0 cPsi0 (Whnf.cnormDCtx (cPsi1, mt));
+                        unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
+                        instantiateMMVar (r, Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS), !cnstrs))
+                     else 
+                        (dprint (fun () ->  "(0110) Add constraints "^ 
+                                           P.normalToString cD0 cPsi (tM1, id)  ^
+                                           " = " ^ P.normalToString cD0 cPsi (tM2, id) ^ "\n");
+                         addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
+
+                  | _ , _ , _ -> 
+                     (dprint (fun () ->  "craftMMV ...\n ");
 		      match craftMMVTerm cD0 cPsi i tM2 with 
 		      | Some _ -> 
-			 (dprint (fun () -> ("crafted MMV Term " ^ P.normalToString cD0 cPsi (tM1, id)));
-			  dprint (fun () -> ("[unify crafted term] " ^ P.normalToString cD0 cPsi (tM1, id) ^ 
-                                                " =?= " ^ P.normalToString cD0 cPsi (tM2, id)));
+			 (dprint (fun () -> "crafted MMV Term " ^ P.normalToString cD0 cPsi (tM1, id) ^ "\n");
+			  dprint (fun () -> "[unify crafted term] " ^ P.normalToString cD0 cPsi (tM1, id) ^ 
+                                                " =?= " ^ P.normalToString cD0 cPsi (tM2, id) ^ "\n");
 			  unifyTerm mflag cD0 cPsi (tM1, id) (tM2, id))
 		      | None -> 
-                         addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2)))))
+                         (dprint (fun () -> "(0111) Add constraints - craftMMV failed: " ^ 
+                                           P.normalToString cD0 cPsi (tM1, id)  ^
+                                           " = " ^ P.normalToString cD0 cPsi (tM2, id) ^ "\n");
+                          addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))))
 		else 
-		(dprint (fun () -> "(011) Add constraints ");
+		(dprint (fun () ->  "(011) Add constraints " ^
+                                  P.normalToString cD0 cPsi (tM1, id)  ^
+                                  " = " ^ P.normalToString cD0 cPsi (tM2, id) ^ "\n");
 		 addConstraint (cnstrs, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
 
     | (Root(_, h1,tS1) as sM1, (Root(_, h2, tS2) as sM2)) ->

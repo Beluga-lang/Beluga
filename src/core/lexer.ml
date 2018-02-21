@@ -392,10 +392,15 @@ let mk () = fun loc strm ->
       skip_failures := 0 in
   let next _    =
     try
-        skip ()
-      ; let tok = Some (lex_token loc_ref lexbuf, !loc_ref) in
-          skip ()
-        ; tok
+      skip ();
+      (* It is essential to call lex_token _before_ dereferencing
+      loc_ref, since lex_token updates this ref with the correct
+      location of the token. *)
+      let t = lex_token loc_ref lexbuf in
+      let tok = Some (t, !loc_ref) in (
+          skip ();
+          tok
+      )
     with
       | Ulexing.Error ->
           None

@@ -409,15 +409,18 @@ If a previous beli process already exists, kill it first."
   ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
   ;; the actual parsed stream.
   ;; So if there might be #line directives, we need to do:
-   (save-excursion
-     (goto-char (point-min))
-     (forward-line (1- line)) ;Lines count from 1 :-(
-     (+ (point) (- offset bol))))
+  ;; (save-excursion
+  ;;   (goto-char (point-min))
+  ;;   (forward-line (1- line)) ;Lines count from 1 :-(
+  ;;   (+ (point) (- offset bol))))
   ;; But as long as we know there's no #line directive, we can ignore all that
   ;; and use the more efficient code below.  When #line directives can appear,
   ;; we will need to make further changes anyway, such as passing the file-name
   ;; to select the appropriate buffer.
-  ; (+ (point-min) offset))
+  ;; Emacs considers the first character in the file to be at index 1,
+  ;; but the Beluga lexer starts counting at zero, so we need to add
+  ;; one here.
+  (+ (point-min) offset))
 
 (defun beluga--create-overlay (pos)
   "Create an overlay at the position described by POS (a Loc.to_tuple)."

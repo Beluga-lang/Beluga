@@ -681,7 +681,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let e'' =  Whnf.cnormExp (Int.Comp.Fn (loc, x, e'), Whnf.m_id) in
      let _ = dprint (fun () -> "[elExp] Fn " ^ Id.render_name x ^ " done ") in
      let _ = dprint (fun () -> "         cD = " ^ P.mctxToString cD ^
-                             "\n         cG = " ^ P.gctxToString cD cG') in
+                             "\n         cG = " ^ P.gctxToString cD cG' ) in
      let _ = dprint (fun () -> "[elExp] " ^ P.expChkToString cD cG' e'' ) in
      let _ = dprint (fun () -> "[elExp] has type " ^
                        P.compTypToString cD (Whnf.cnormCTyp theta_tau)) in
@@ -780,8 +780,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
       let _ = dprint (fun () -> "[elExp] case ") in
       let (i', tau_theta') =  (elExp' cD cG i) in
-      let _ = dprint (fun () -> "[elExp] case on " ^ P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id))) in
-      let _ = dprint (fun () -> "[elExp] Type of Scrutinee: " ^ P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
+      let _ = dprint (fun () -> "\n [elExp] case on " ^ P.expSynToString cD cG (Whnf.cnormExp' (i', Whnf.m_id))) in
+      let _ = dprint (fun () -> "\n        cD = " ^ P.mctxToString cD ^
+                                "\n         cG = " ^ P.gctxToString cD cG ^ "\n") in
+      let _ = dprint (fun () -> "\n [elExp] Type of Scrutinee: " ^ P.compTypToString cD (Whnf.cnormCTyp tau_theta')) in
       let (i', tau_theta') = genMApp loc cD (i', tau_theta') in
       let tau_s = Whnf.cnormCTyp tau_theta' in 
       begin match (i', tau_s) with
@@ -810,9 +812,12 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
             ^  "\n Context of expected pattern type : "
             ^  P.dctxToString cD cPsi
             ^ "\n Checking closedness ... ") in
-          if Whnf.closedTyp (Whnf.cnormTyp (tP, Whnf.m_id), LF.id) &&
-            Whnf.closedDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id))
-             && Whnf.closedGCtx (Whnf.cnormCtx (cG, Whnf.m_id))
+          let tP = Whnf.normTyp (Whnf.cnormTyp (tP, Whnf.m_id), LF.id) in 
+          let cPsi = Whnf.normDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id)) in 
+          let cG = Whnf.cnormCtx (cG, Whnf.m_id) in 
+          if Whnf.closedTyp (tP, LF.id) &&
+             Whnf.closedDCtx cPsi
+             && Whnf.closedGCtx cG 
           then
             let recBranch b =
               let _ = dprint (fun () -> "[elBranch - DataObj] " ^
@@ -862,7 +867,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         end
 
   | (Apx.Comp.Hole (loc), (tau, theta)) ->
-    let _ = dprint (fun () -> "[elExp] Expected Type (Hole): " 
+    let _ = dprint (fun () -> "\n[elExp] Expected Type (Hole): " 
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,theta) )) in
     (* let () = Holes.collect (loc, cD, cG, (tau, theta)) in *)

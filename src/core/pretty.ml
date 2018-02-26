@@ -1730,7 +1730,7 @@ module Int = struct
         ; flush_str_formatter ()
 
     let gctxToString cD cG =
-      let cG' = Whnf.normCtx cG in
+      let cG' = Whnf.cnormCtx (Whnf.normCtx cG, Whnf.m_id) in
         fmt_ppr_cmp_gctx cD std_lvl str_formatter cG'
         ; flush_str_formatter ()
 

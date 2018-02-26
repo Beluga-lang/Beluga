@@ -385,7 +385,7 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) = match i, ttau with
       let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, k-1, (tau2, theta)) in
         (Comp.DC :: spine, tau_r)
 
-let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
+let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
   | 0, _  -> ([], Whnf.cnormCTyp ttau)
 (* i = 0, k =/= 0
    | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
@@ -404,19 +404,19 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 			P.compTypToString cD tau0 ^
 			"\nExpected: " ^
 			P.compTypToString cD (Whnf.cnormCTyp (tau1,theta)) ^ "\n"); *)
-        Unify.unifyCompTyp cD (tau0, Whnf.m_id) (tau1, theta);
-	 let (spine, tau_r)  = rec_spine' cD (x, tau0) (0, k-1,(tau2, theta)) in
+        Unify.unifyCompTyp cD ttau0 (tau1, theta);
+	 let (spine, tau_r)  = rec_spine' cD (x, ttau0) (0, k-1,(tau2, theta)) in
 	   (Comp.V x::spine, tau_r )
        with
 	   _ -> raise Not_compatible
        end
    | n ,  (Comp.TypPiBox (cdecl, tau) , theta)  ->
        let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-       let (spine, tau_r)  = rec_spine' cD (x,tau0) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
+       let (spine, tau_r)  = rec_spine' cD (x,ttau0) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
 	 (Comp.M cN :: spine, tau_r)
 
    | n, (Comp.TypArr (_, tau2), theta)  ->
-       let (spine, tau_r) = rec_spine' cD (x,tau0) (n-1, k-1, (tau2, theta)) in
+       let (spine, tau_r) = rec_spine' cD (x,ttau0) (n-1, k-1, (tau2, theta)) in
 	 (Comp.DC :: spine, tau_r)
 
 
@@ -522,10 +522,12 @@ let rec rec_spine' cD (x, tau0)  (i, k, ttau) = match i, ttau with
 
 (* =================================================================================== *)
 (* Generating recursive calls on computation-level variables *)
-let rec get_return_type (i, tau) = match tau with
-  | Comp.TypArr (_tau1 , tau0) -> get_return_type (i, tau0)
-  | Comp.TypPiBox (_, tau0) -> get_return_type (i, tau0)
-  | tau -> (i, tau)
+let rec get_return_type cD x ttau = match ttau with
+  | Comp.TypArr (_tau1 , tau0)  , theta -> get_return_type cD x (tau0, theta)
+  | Comp.TypPiBox (cdecl, tau0) , theta -> 
+     let (_cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+       get_return_type cD x (tau0,  LF.MDot (ft, theta))
+  | tau, _ -> (x, ttau)
 
 let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Empty -> cIH
@@ -534,10 +536,11 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
-	let _ = dprint (fun () -> "[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
-	let (_i, tau0') = get_return_type (Comp.Var (Syntax.Loc.ghost, y), tau0) in
+(*	let _ = print_string ("\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in *)
+	let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
 	let mk_wfrec (f,x,k, ttau) =
-	  let (args, tau) = rec_spine' cD (y, tau0') (x,k,ttau) in
+(*	  let _ = print_string ("\n[gen_rec_calls'] Return Type " ^ P.compTypToString cD (Whnf.cnormCTyp ttau0') ^ " — generate appropriate spine next ...\n") in *)
+	  let (args, tau) = rec_spine' cD (y, ttau0') (x,k,ttau) in
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
           (* let _ = print_string ("\nRecursive call : " ^
@@ -565,13 +568,13 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 
 let wf_rec_calls cD cG  =
   if !enabled then
-    ( (* print_string ("Generate recursive calls from \n" 
+    (  (* print_string ("Generate recursive calls from \n" 
 		   ^ "cD = " ^ P.mctxToString cD
-		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");  *)
+		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");   *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
-(*       dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); 
-        print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+       (* dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); 
+        print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");  *)
       cIH'
     )
   else

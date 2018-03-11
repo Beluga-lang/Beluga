@@ -19,11 +19,13 @@ module R = Store.Cid.NamedRenderer
 let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 
 
- let (dprint, _) = 
+let (dprint, _) = 
  Debug.makeFunctions (Debug.toFlags [29])
 
 
-(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n")  *)
+(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n")    *)
+
+let print_str f = dprint f 
 
 type error =
     NoCover of string
@@ -203,7 +205,7 @@ type covproblems = covproblem list
 
 let open_cov_goals  = ref ([]   :  (LF.mctx * gctx * Comp.pattern) list )
 
-let reset_cov_problem () = open_cov_goals := []
+let reset_cov_problem () = (open_cov_goals := [])
 
 type solved = Solved | NotSolvable | PossSolvable of candidate
 
@@ -324,12 +326,12 @@ and etaExpandMVstr' cO cPsi sA  = match sA with
 
 *)
 
-(* let rec mvlistToString mvlist = match mvlist with
+ let rec mvlistToString mvlist = match mvlist with
   | [] -> ""
   | LF.Offset k :: []  -> string_of_int k
   | LF.Offset k :: mvl -> string_of_int k ^ " , " ^ mvlistToString mvl
 
-*)
+
 let rec gctxToCompgctx cG = match cG with
   | [] -> LF.Empty
   | (x,tau,flag) :: cG ->
@@ -971,7 +973,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
     let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id) ^ " as suitable head ") in
     let _ = dprint (fun () -> "[genObj] for " ^ P.dctxToString cD cPsi ^ " |- " ^ P.typToString cD cPsi (tP, S.LF.id)) in
 
-    let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
+    let _  = U.forceGlobalCnstr (!U.globalCnstrs) in 
     let (cD', cPsi', tR, tP', ms') =
       begin try
 	Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
@@ -992,7 +994,9 @@ let rec genAllObj cg tHtA_list  = match tHtA_list with
       begin try
        (genObj cg tH_tA)::cgs	   
       with U.Failure _msg -> cgs
-	| U.GlobalCnstrFailure (_, _msg) -> cgs
+	| U.GlobalCnstrFailure (_, _msg) ->(print_str (fun () -> "\n [genAllObj] Global Constraint Failure – no genObj generated.\n" ); 
+                                            
+                                            cgs)
 (*	| _ ->(dprint (fun () -> "Other failure - no Obj generated") ;genAllObj cg tHAlist)*)
       end
 
@@ -1097,9 +1101,9 @@ let genPVar (cD, cPsi, tP)   =
 	      let cg_list'    = List.map (fun (cD',cg, ms) ->
 					    (cD', cg, Whnf.mcomp (LF.MShift (offset + 1)) ms)) cg_list in
 	      let all_cg = cg_list' @ pv_list in
-	      (* let _ = dprint (fun () -> "Generated " ^ string_of_int (List.length all_cg) ^ " pvar cases") in
-	         let _ = dprint (fun () -> "They are: " ^ covGoalsToString all_cg) in
-	      *)
+	      let _ = dprint (fun () -> "Generated " ^ string_of_int (List.length all_cg) ^ " pvar cases") in
+	       let _ = dprint (fun () -> "They are: " ^ covGoalsToString all_cg) in
+	      
 		all_cg   
 	in
 	  genPVarCovGoals selems
@@ -1158,9 +1162,9 @@ let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.t
  =  match tA  with
   | LF.Atom _ ->
       let g_pv = genPVar cov_problem in (* (cD', cg, ms) list *)
-      (* let _ = dprint (fun () -> "[genCovGoals] generated pvar cases\n") in *)
+      let _ = dprint (fun () -> "[genCovGoals] generated pvar cases\n") in 
       let g_bv = genBVar cov_problem in
-      (* let _ = dprint (fun () -> "[genCovGoals] generated bvar cases\n") in *)
+      let _ = dprint (fun () -> "[genCovGoals] generated bvar cases\n") in 
 	g_pv @ g_bv @ genConst cov_problem
 
   | LF.PiTyp ((tdecl, dep ) , tB) ->
@@ -1449,24 +1453,38 @@ let rec refine_pattern cov_goals ( (cD, cG, candidates, patt ) as cov_problem ) 
 	       (cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem)
 	 end
 
-let rec check_empty_pattern k candidates = match candidates with
-  | [] -> []
-  | Cand (cD_p, cG_p, ml, sl) :: cands ->
-      let sl' = List.filter (fun (Split (CovGoal (_cPsi, tR, _sA) , patt)) ->
-			       match patt with
-				 | EmptyPatt (_cPhi, _sB) ->
-				     (match tR with
-					|LF.Root (_, LF.MVar (LF.Offset k', _ ), LF.Nil ) -> not (k = k' )
-					| _ -> true)
-
-				 | EmptyParamPatt (_cPhi, _sB) ->
-				     (match tR with
-					|LF.Root (_, LF.PVar (k', _ ), LF.Nil ) -> not (k = k' )
-					| _ -> true)
-
-				 | _ -> true )
-	sl in
-	Cand (cD_p, cG_p, ml, sl') :: check_empty_pattern k cands
+let check_empty_pattern k candidates = 
+     let filt_ref = ref 0 in 
+     let rec check_empty_patt k candidates = 
+       match candidates with
+       | [] -> []
+       | Cand (cD_p, cG_p, ml, sl) :: cands ->
+          let sl' = List.filter (fun (Split (CovGoal (_cPsi, tR, _sA) , patt)) ->
+	    match patt with
+	    | EmptyPatt (_cPhi, _sB) ->
+	       (match tR with
+	       |LF.Root (_, LF.MVar (LF.Offset k', _ ), LF.Nil ) -> 
+                  if not(k = k') then true else (filt_ref := !filt_ref + 1;  false)
+	       | _ -> true)
+                 
+	    | EmptyParamPatt (_cPhi, _sB) ->
+	       (match tR with
+	       |LF.Root (_, LF.PVar (k', _ ), LF.Nil ) ->
+                                           (* not (k = k') *)
+                  if not(k = k') then true else (filt_ref := !filt_ref + 1;  false)
+	       | _ -> true)
+                 
+	    | _ -> true )
+	    sl in
+	  Cand (cD_p, cG_p, ml, sl') :: check_empty_patt k cands
+     in 
+     let r = check_empty_patt k candidates in 
+     if !filt_ref > 0 then 
+       (* no progress – nothing filters and the candidates are the same *)
+       (r , true)
+     else 
+       (r , false)
+       
 
 
 (* ************************************************************************************* *)
@@ -1715,9 +1733,11 @@ match (mv_list, cD) with
 		  (match (dep, dep0) with
 		     | (Dependent,  Atomic) -> SomeTermCands (dep, cov_goals)
 		     | (Atomic,  Dependent) -> SomeTermCands (dep0, cov_goals0)
-		     | ( _       , _      ) -> (if  List.length cov_goals < List.length cov_goals0
+                     | ( _    , _         ) -> SomeTermCands (dep0, cov_goals0)
+(*		     | ( _       , _      ) -> (if  List.length cov_goals < List.length cov_goals0
 						then SomeTermCands (dep, cov_goals) else SomeTermCands (dep0, cov_goals0 )
 					       )
+*)
 		  )
 	  with Abstract.Error (_, Abstract.LeftoverConstraints) ->
 	    (print_endline ("WARNING: Encountered left-over constraints in higher-order unification.\n\
@@ -1940,7 +1960,7 @@ let best_split_candidate cD candidates =
 				    if k' < k then 1 else (if k' = k then 0 else -1))
                                  cvsplit_list in
 
-(*  let _ = dprint (fun () -> "SHOW SPLIT CANIDATE LIST " ^ mvlistToString mv_list_sorted ) in *)
+  let _ = dprint (fun () -> "SHOW SPLIT CANIDATE LIST " ^ mvlistToString mv_list_sorted ) in 
    if cv_list_sorted = [] then
      best_cand (cD, mv_list_sorted) 1 []
    else
@@ -1960,15 +1980,16 @@ let best_split_candidate cD candidates =
         and generate k new coverage problems
 
 *)
-let refine_mv ( (cD, cG, candidates, patt) as cov_problem )  =
+let refine_mv  ( (cD, cG, candidates, patt) as cov_problem )  =
   begin match cD with
     | LF.Empty  ->
-	((* print_string (candidatesToString cov_problem ) ; *)
-	 open_cov_goals := (cD, cG, patt)::!open_cov_goals ;
+	  (* print_string (candidatesToString cov_problem ) ; *)
+          (dprint (fun () -> "[refine_mv] NOTHING TO REFINE");
+	  open_cov_goals := (cD, cG, patt)::!open_cov_goals ; 
 	 raise (Error (Syntax.Loc.ghost, NothingToRefine))
 	 (* [] *))
-	(* raise (Error "Nothing to refine"))*)
-    | _  ->
+	(* raise (Error "Nothing to refine") *)
+   | _  ->
 	let cov_goals' = best_split_candidate cD candidates in
 	(* let _ = dprint (fun () -> "[Original candidates] \n" ^ candidatesToString cov_problem ) in *)
 	  begin match (cov_goals', candidates ) with
@@ -1982,8 +2003,12 @@ let refine_mv ( (cD, cG, candidates, patt) as cov_problem )  =
 
 	    | (SomeTermCands (_, []), [])  -> []
 	    | (SomeTermCands (_, []), _ )  ->
-		let _ = dprint (fun () -> "Check whether one of the candidates is empty ... ") in
-		[(cD, [], check_empty_pattern 1 candidates, patt)]
+		let _ = dprint (fun () -> "Check whether one of the candidates is empty ... ") in                
+                let (cands', progress_flag) = check_empty_pattern 1 candidates in 
+		if progress_flag then 
+                  [(cD, [], cands', patt)] 
+                else 
+                 ( open_cov_goals := (cD, cG, patt)::!open_cov_goals ; 	 raise (Error (Syntax.Loc.ghost, NothingToRefine)))
 	    | (SomeTermCands (_, cgoals), _ )  ->
 		let _ = dprint (fun () ->
 				  let cgs = List.map (fun (TermCandidate cg) -> cg) cgoals in
@@ -2137,7 +2162,7 @@ let refine ( (cD, cG, candidates, patt) as cov_problem ) =
     | [] ->
 	(dprint (fun () -> "[refine] no pattern variables to refine - refine meta-variables");
          (* dprint (fun () ->  "[refine_mv] cov_problem : " ^ candidatesToString cov_problem ); *)
-	refine_mv cov_problem  (* there are no pattern variables *))
+	refine_mv  cov_problem  (* there are no pattern variables *))
     | pvlist ->  (* there are pattern variables to be split *)
 	let _ = dprint (fun () -> "\n\n[refine] Pattern = " ^ P.patternToString cD (gctxToCompgctx cG) patt) in
 	let _ = dprint (fun () -> "\n[refine] found " ^ string_of_int (List.length pvlist) ^ " candidates\n") in
@@ -2208,7 +2233,7 @@ let rec check_covproblem cov_problem  =
         let cp        = refine cov_prob' in
         (* Refine must make progress, i.e. cp =/= cov_problem,
            i.e. nCands must be different from the candidates of the original
-           coverage problem *)
+           coverage problem *)        
         (dprint (fun () -> "\nCheck Coverage (again) for " ^ covproblemsToString cp);
 	  check_coverage cp)
 
@@ -2277,7 +2302,7 @@ let trivially_empty_patt cD_p tau =
 let trivially_empty cov_problem =
   begin try
     begin match genCovGoals cov_problem with
-      | [] -> true
+      | [] ->  true 
       | _  -> false
     end
   with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
@@ -2291,10 +2316,6 @@ let trivially_empty_param cov_problem =
     end
   with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
   end
-
-
-
-
 
 
 let rec extract_patterns tau branch_patt = match branch_patt with
@@ -2556,29 +2577,22 @@ if !Total.enabled || !enableCoverage then
 
        dprint (fun () -> "\n ### Initial coverage problem: " );
        dprint (fun () -> covproblemsToString cov_problems ) ;
-    (* ********************************************************************** *)
-       check_coverage cov_problems ;  
-    (* ********************************************************************** *)
-       dprint (fun () -> "*** !!! COVERAGE CHECKING COMPLETED – Check whether some open coverage goals are trivial. !!!*** ");
-       dprint (fun () ->  "*** !!! " ^ 
-	       ("REVISIT :\n" ^ opengoalsToString (!open_cov_goals))
-	       ^ "\n\n");
-       let o_cg         = !open_cov_goals in
-       let (revisited_og, trivial_og) = revisit_opengoals o_cg in
-
-	 (*        let r            = List.length  o_cg in
-		   let r'           = List.length (revisited_og) in
-		   if r  > r' then
-	   ((* print_endline "\n(Some) coverage goals were trivially proven to be impossible.";
-	    print_endline ("CASES TRIVIALLY COVERED in line " ^
-			     Syntax.Loc.to_string  problem.loc
-			   ^ " : " ^ string_of_int (List.length (trivial_og)));
-	    print_string ("\nTRIVIAL OPEN GOALS:\n" ^  opengoalsToString trivial_og ^ "\n")*)
-	   )
-	 else () ;*)
-
-    open_cov_goals :=  revisited_og ;
-    check_coverage_success problem
+       begin 
+         try 
+            (* ********************************************************************** *)
+             check_coverage cov_problems ;  
+            (* ********************************************************************** *)
+            dprint (fun () -> "*** !!! COVERAGE CHECKING COMPLETED – Check whether some open coverage goals are trivial. !!!*** ");
+            dprint (fun () ->  "*** !!! " ^ 
+	      ("REVISIT :\n" ^ opengoalsToString (!open_cov_goals))
+	      ^ "\n\n");
+            let o_cg         = !open_cov_goals in
+            let (revisited_og, trivial_og) = revisit_opengoals o_cg in           
+              open_cov_goals :=  revisited_og ;
+              check_coverage_success problem
+         with Error (_ , NothingToRefine) -> 
+           check_coverage_success problem
+       end 
   )
  )
 else

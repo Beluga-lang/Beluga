@@ -558,6 +558,10 @@ let recSgnDecls decls =
             match order with
               | Some (Ext.Comp.Arg x) ->
                 let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
+              | Some (Ext.Comp.Lex o) -> 
+                 let ps = List.map (function (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in 
+                 (Some (Order.Lex ps), args)
+
 	      | None -> (None, [])
 	  else
 	    raise (Error (loc, TotalDeclError (f, f')))

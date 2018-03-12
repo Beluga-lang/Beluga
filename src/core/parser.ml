@@ -426,6 +426,7 @@ GLOBAL: sgn;
     [
       [
         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
+      | "{"; xs = LIST1 [ x = SYMBOL -> x ]  ; "}" -> Comp.Lex (List.map (fun x -> Comp.Arg (Id.mk_name (Id.SomeString x))) xs)
 (*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
       ]
     ]

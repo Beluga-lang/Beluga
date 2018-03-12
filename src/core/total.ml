@@ -282,6 +282,7 @@ let get_order_for f  =
 	if dec.name = f then
 	  (match dec.order with
 	    | Some (Order.Arg x) -> Some x
+            | Some (Order.Lex o) -> raise (Error (Syntax.Loc.ghost , NotImplemented "Lexicographic orders for totality checker are not fully implemented."))
 	    | None -> None
 	   )
 	else

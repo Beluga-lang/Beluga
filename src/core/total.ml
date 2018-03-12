@@ -270,7 +270,11 @@ let get_order () =
 		match dec.order with
 		  | Some (Order.Arg x) ->
 		      let k = List.length (dec.args) in
-			(dec.name, Some x, k, (tau, Whnf.m_id))
+			(dec.name, Some [x], k, (tau, Whnf.m_id))
+                  | Some (Order.Lex xs) -> 
+                     let k = List.length (dec.args) in
+                     let xs = List.map (function (Order.Arg x) -> x) xs in 
+		     (dec.name, Some xs, k, (tau, Whnf.m_id))
 		  | None -> (dec.name, None, 0, (tau, Whnf.m_id))
 	   )
     !mutual_decs
@@ -281,8 +285,10 @@ let get_order_for f  =
     | dec::decs ->
 	if dec.name = f then
 	  (match dec.order with
-	    | Some (Order.Arg x) -> Some x
-            | Some (Order.Lex o) -> raise (Error (Syntax.Loc.ghost , NotImplemented "Lexicographic orders for totality checker are not fully implemented."))
+	    | Some (Order.Arg x) -> Some [x]
+            | Some (Order.Lex o) -> 
+               Some (List.map (function Order.Arg x -> x) o)
+               (* raise (Error (Syntax.Loc.ghost , NotImplemented ": lexicographic orders for totality checker are not fully implemented.")) *)
 	    | None -> None
 	   )
 	else
@@ -506,13 +512,14 @@ let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
         let rec mk_all (cIH,j) mf_list = match mf_list with
           | [] -> cIH
 	  | (f, None, _ , _ttau)::mf_list ->  mk_all (cIH, j) mf_list
-          | (f, Some x, k, ttau)::mf_list ->
+          | (f, Some xs, k, ttau)::mf_list ->
 	      begin try
-		let d = mk_wfrec (f,x,k,ttau) in
+		let ds = List.map (fun x -> mk_wfrec (f,x,k,ttau)) xs in
+                let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in 
 		  (* Check that generated call is valid -
 		     mostly this prevents cases where we have contexts not matching
 		     a given schema *)
-                mk_all (LF.Dec(cIH, d),j) mf_list
+                mk_all (cIH',j) mf_list
 	      with
 		  Not_compatible -> mk_all (cIH,j) mf_list
 	      end
@@ -537,7 +544,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
-(*	let _ = print_string ("\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in *)
+	let _ = print_string ("\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in 
 	let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
 	let mk_wfrec (f,x,k, ttau) =
 (*	  let _ = print_string ("\n[gen_rec_calls'] Return Type " ^ P.compTypToString cD (Whnf.cnormCTyp ttau0') ^ " — generate appropriate spine next ...\n") in *)
@@ -550,14 +557,15 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 	in
 	let rec mk_all cIH mf_list = match mf_list with
           | [] -> cIH
-	  | (f, None, _ , _ttau)::mf_list ->  mk_all cIH mf_list
-          | (f, Some x, k, ttau)::mf_list ->
+	  | (f, None,   _ , _ttau)::mf_list ->  mk_all cIH mf_list
+          | (f, Some xs, k, ttau)::mf_list ->
 	      begin try
-		let d = mk_wfrec (f,x,k,ttau) in
+		let ds = List.map (fun x -> mk_wfrec (f,x,k,ttau)) xs in
 		  (* Check that generated call is valid -
 		     mostly this prevents cases where we have contexts not matching
 		     a given schema *)
-		  mk_all (LF.Dec(cIH, d)) mf_list
+                let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in 
+		  mk_all cIH' mf_list
 	      with
 		  Not_compatible ->
 		    mk_all cIH mf_list
@@ -574,8 +582,8 @@ let wf_rec_calls cD cG  =
 		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");   *)
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
-       (* dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); 
-        print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");  *)
+       (* dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
+        print_string ("generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");  
       cIH'
     )
   else
@@ -836,7 +844,7 @@ let annotate loc f tau =
   |  _ , _ -> raise (Error (loc, TooManyArg f))
   in
     match get_order_for f with
-      Some x -> (let tau' = ann tau x in
+      Some xs -> (let tau' = List.fold_left (fun tau' x -> ann tau' x) tau xs in
 		   (* print_string ("Annotated " ^ P.compTypToString LF.Empty tau' ^
 				 " in pos = " ^ string_of_int x ^ "\n"); *)
 		   tau')

@@ -13,6 +13,9 @@ module R = Store.Cid.DefaultRenderer
 
 let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
 
+let print_str f = dprint f
+(* print_string ("\n" ^ f () ^ "\n") *)
+
 type leftoverVars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 
 type error =
@@ -553,18 +556,19 @@ let recSgnDecls decls =
           | None::ys -> pos loc x ys (k+1)
         in
         let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
-	  (* print_string ("args length: "^string_of_int (List.length args) ^"\n" ); *)
+	  (print_str (fun () -> "args length: "^string_of_int (List.length args) ^"\n" ); 
 	  if f = f' then
             match order with
               | Some (Ext.Comp.Arg x) ->
                 let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
               | Some (Ext.Comp.Lex o) -> 
                  let ps = List.map (function (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in 
+                 let _ = print_str (fun () -> "[mk_total_decl] Lex Order " ^ (List.fold_right (fun (Order.Arg x) s -> (string_of_int x) ^ " " ^ s) ps "")) in
                  (Some (Order.Lex ps), args)
 
 	      | None -> (None, [])
 	  else
-	    raise (Error (loc, TotalDeclError (f, f')))
+	    raise (Error (loc, TotalDeclError (f, f'))))
 
         in
         let is_total total =

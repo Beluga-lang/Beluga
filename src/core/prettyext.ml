@@ -1077,6 +1077,7 @@ module Ext = struct
 
     let total_to_string tdec = match tdec with
       | None -> ""
+      | Some (Comp.Trust _) -> "/ trust /"
       | Some (Comp.Total (_ , order, f, args)) ->
       let rec args_to_string args = match args with
         | [] -> ""

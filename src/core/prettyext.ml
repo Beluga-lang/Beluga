@@ -1147,7 +1147,7 @@ module Ext = struct
     let rec fmt_ppr_mrecs lvl ppf = function
       | [h] -> fmt_ppr_mrec' lvl ppf h; fprintf ppf ";@\n"
       | h::t -> fmt_ppr_mrec' lvl ppf h;
-	        fprintf ppf "and";
+	        fprintf ppf "@\n%s " (to_html "and" Keyword);
 	        fmt_ppr_mrecs lvl ppf t
 
     let rec fmt_ppr_sgn_decl lvl ppf = function

@@ -1084,14 +1084,17 @@ module Ext = struct
         | Some n :: args' -> Id.render_name n ^ " " ^ args_to_string args'
         | None :: args' -> " _ " ^ args_to_string args'
       in
-	(match order with
-	  | Some (Comp.Arg n) ->
-	      "/ total " ^ Id.render_name n ^ " ( " ^
-		Id.render_name f ^ " " ^ args_to_string args ^ ") /"
-	  | None ->
-	      "/ total " ^ " ( " ^
-		Id.render_name f ^ " " ^ args_to_string args ^ ") /"
-	)
+      let rec order_to_string order = match order with
+        | Comp.Arg n -> Id.render_name n
+        | Comp.Lex orders ->
+            "{" ^ String.concat " " (List.map order_to_string orders) ^ "}"
+      in
+      "/ total " ^
+      (match order with
+        | Some order -> order_to_string order
+        | None -> ""
+      )
+      ^ " ( " ^ Id.render_name f ^ " " ^ args_to_string args ^ ") /"
 
     let fmt_ppr_cmp_rec prefix lvl ppf = function
       | Comp.RecFun (_, x, total, a, e) ->

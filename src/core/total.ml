@@ -605,6 +605,7 @@ let wf_rec_calls cD cG  =
 		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");   
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
+    let _ = Unify.resetGlobalCnstrs () in
        (* dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
       cIH'
     )

@@ -911,12 +911,10 @@ module Ext = struct
                 (fmt_ppr_cmp_exp_syn cD' 0) i
                 (to_html "in" Keyword)
                 (fmt_ppr_cmp_exp_chk cD' 0) e
-          | _ ->
-            fprintf ppf "%s %a %s%a"
-              (to_html "case" Keyword)
+          | Comp.EmptyBranch(_, _, _) ->
+            fprintf ppf "%s %a"
+              (to_html "impossible" Keyword)
               (fmt_ppr_cmp_exp_syn cD 0) i
-              (to_html "of" Keyword)
-              (fmt_ppr_cmp_branches cD 0) [b]
         end
 
       | Comp.Case (_, prag, i, bs) ->

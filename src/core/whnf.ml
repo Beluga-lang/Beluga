@@ -1624,7 +1624,7 @@ let mctxMVarPos cD u =
         Comp.If (loc, cnormExp' (i,t),
                  cnormExp (e1, t), cnormExp (e2, t))
 
-    | (Comp.Hole (loc, f), _) -> Comp.Hole (loc,f)
+    | (Comp.Hole (loc, name, f), _) -> Comp.Hole (loc, name, f)
 
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i

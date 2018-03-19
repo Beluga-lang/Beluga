@@ -11,29 +11,43 @@ module Loc = Syntax.Loc
 
 (** Tokens *)
 type t =
-  | EOI               (** End of Input, usually the same thing as EOF. *)
-  | KEYWORD of string (** A keyword, see Lexer for examples.           *)
-  | SYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
-  | UPSYMBOL  of string (** Symbols. Can mean identifier, operator, etc. *)
+  (** End of Input, usually the same thing as EOF. *)
+  | EOI
+  (** A keyword, see Lexer for examples. *)
+  | KEYWORD of string
+  (** Symbols. Can mean identifier, operator, etc. *)
+  | SYMBOL  of string
+  (** Symbols. Can mean identifier, operator, etc. *)
+  | UPSYMBOL  of string
+  (** A symbol of the form `?hole` *)
+  | HOLE of string
+  (** An integer literal. *)
   | INTLIT  of string
+  (** A doc-comment. These are of the form %{{ ... %}} and are
+   * remembered used Beluga for its literate programming. *)
   | COMMENT of string
   | DOTS of string
-  | MODULESYM of string   (* Any string that would represent a module i.e. 'Nat.z' 'List.Nat.z' etc.
-                             NOTE: the regular expression for this DOES NOT match ordinary symbols (i.e. 'z') 
-                             and as such should be used in the parser as l = [a = MODULESYM -> a | a = SYMBOL -> a] *)
+  (** Any string that would represent a module, e.g. 'Nat.z', 'List.Nat.z'.
+   * NOTE: the regular expression for this DOES NOT match ordinary
+   * symbols (i.e. 'z') and as such should be used in the parser as l =
+   * [a = MODULESYM -> a | a = SYMBOL -> a] *)
+  | MODULESYM of string
   | UPSYMBOL_LIST of string
 (*   | TURNSTILE of string *)
 
-let to_string = function
-  | EOI       -> Printf.sprintf "EOI"
-  | KEYWORD s -> Printf.sprintf "KEYWORD %S" s
-  | SYMBOL  s -> Printf.sprintf "SYMBOL %S"  s
-  | UPSYMBOL  s -> Printf.sprintf "UPSYMBOL %S"  s
-  | INTLIT s ->  Printf.sprintf "INTEGER %S"  s
-  | COMMENT s -> Printf.sprintf "COMMENT %S" s
-  | DOTS s -> Printf.sprintf "DOTS %S"  s
-  | MODULESYM s -> Printf.sprintf "MODULESYM %S" s
-  | UPSYMBOL_LIST s -> Printf.sprintf "UPSYMBOL_LIST %S" s
+let to_string =
+  let p = Printf.sprintf "%s %S" in
+  function
+    | EOI       -> Printf.sprintf "EOI"
+    | KEYWORD s -> p "KEYWORD" s
+    | SYMBOL  s -> p "SYMBOL" s
+    | UPSYMBOL  s -> p "UPSYMBOL" s
+    | INTLIT s ->  p "INTEGER"  s
+    | COMMENT s -> p "COMMENT" s
+    | DOTS s -> p "DOTS"  s
+    | MODULESYM s -> p "MODULESYM" s
+    | UPSYMBOL_LIST s -> p "UPSYMBOL_LIST" s
+    | HOLE s -> p "HOLE" s
 
 (*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
 
@@ -62,6 +76,7 @@ let extract_string = function
   | DOTS s -> s
   | MODULESYM s -> s
   | UPSYMBOL_LIST s -> s
+  | HOLE s -> s
 (*   | TURNSTILE s -> s *)
 
 

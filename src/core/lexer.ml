@@ -129,6 +129,9 @@ let regexp digit  = [ '0'-'9' ]
 let regexp upper = ['A' - 'Z']
 let regexp lower = ['a' - 'z']
 
+(** A question mark followed by a symbol. *)
+let regexp hole = '?' ( start_sym sym* ) ?
+
 (**************************************************)
 (* Location Update and Token Generation Functions *)
 (**************************************************)
@@ -155,6 +158,8 @@ let mk_keyword s = Token.KEYWORD s
 let mk_symbol s = Token.SYMBOL s
 
 let mk_integer s = Token.INTLIT s
+
+let mk_hole s = Token.HOLE s
 
 let mk_comment loc s =
   let n = ref 0 in
@@ -223,11 +228,11 @@ let lex_token loc = lexer
   | "%abbrev"
   | "type"
   | "prop"
-  | "?"
   | "|-"
   | [ "%,.:;()[]{}|" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 
+  | hole -> mk_tok_of_lexeme mk_hole loc lexbuf
   | eof ->
      update_loc loc (shift_by_lexeme lexbuf);
      Token.EOI

@@ -322,7 +322,7 @@ module Comp = struct
     | Box    of Loc.t * meta_obj
     | Case   of Loc.t * case_pragma * exp_syn * branch list
     | If     of Loc.t * exp_syn * exp_chk * exp_chk
-    | Hole   of Loc.t * (unit -> int)
+    | Hole   of Loc.t * string option * (unit -> int)
 
   and exp_syn =
     | Var    of Loc.t * offset

@@ -811,7 +811,7 @@ GLOBAL: sgn;
 
         | "_" -> LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
-        | "?" -> LF.LFHole _loc
+        | _ = HOLE -> LF.LFHole _loc
 
         | "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m
@@ -1169,7 +1169,16 @@ GLOBAL: sgn;
             | Atom    ->   e1
           end
 
-      | "?" -> Comp.Hole (_loc)
+      | h = HOLE ->
+         (* h is a string of the form "?hole", so we drop the first
+          * character and check whether the name of the hole is empty
+          * to construct the true hole name. *)
+         let sname = String.sub h 1 (String.length h - 1) in
+         let name =
+           match sname with
+           | "" -> None
+           | _ -> Some sname in
+         Comp.Hole (_loc, name)
 
       ]
 

@@ -696,9 +696,9 @@ let recSgnDecls decls =
                     (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
                     n_list) in
 	      let _ = match loc_opt with
-                | Some loc -> Holes.destroyHoles(loc)
+                | Some loc -> Holes.destroy_holes_within loc
                 | None -> () in
-              let _ = Holes.commitHoles() in
+              let _ = Holes.commit () in
 		(cid, tau', e_r')::(reconRecFun lf) in
 	  (* For checking totality of mutual recursive functions,
 	     we should check all functions together by creating a variable
@@ -728,9 +728,9 @@ let recSgnDecls decls =
 			 (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
 			 n_list) in
 		  let _ = match loc_opt with
-		    | Some loc -> Holes.destroyHoles(loc)
+		    | Some loc -> Holes.destroy_holes_within loc
 		    | None -> () in
-		  let _ = Holes.commitHoles() in
+		  let _ = Holes.commit () in
 		  let _ = Total.clear () in
 		  let sgn = Int.Sgn.Rec((cid, tau', e_r')::(reconRecFun lf)) in
 		    Store.Modules.addSgnToCurrent sgn;

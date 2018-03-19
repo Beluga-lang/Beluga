@@ -866,12 +866,12 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
         end
 
-  | (Apx.Comp.Hole (loc), (tau, theta)) ->
+  | (Apx.Comp.Hole (loc, name), (tau, theta)) ->
     let _ = dprint (fun () -> "\n[elExp] Expected Type (Hole): " 
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,theta) )) in
     (* let () = Holes.collect (loc, cD, cG, (tau, theta)) in *)
-    Int.Comp.Hole (loc, (fun () -> Holes.getHoleNum loc))
+    Int.Comp.Hole (loc, name, (fun () -> Holes.at loc |> Option.get |> fst))
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)

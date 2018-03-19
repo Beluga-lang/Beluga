@@ -361,6 +361,10 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
 
+(defun beluga--is-response-error (resp)
+  "Determines whether a Beluga RPC response is an error."
+  (string= "-" (substring resp 0 1)))
+
 (defun beli ()
   "Start beli mode"
   (interactive)
@@ -480,7 +484,7 @@ If a previous beli process already exists, kill it first."
   "Introduce variables into a hole"
   (interactive "nHole to introduce variables into: ")
   (let ((resp (beluga--rpc (format "intro %d" hole))))
-    (if (string= "-" (substring resp 0 1))
+    (if (beluga--is-response-error resp)
       (message "%s" resp)
       (let* ((ovr (nth hole (beluga-sorted-holes)))
              (start (overlay-start ovr))

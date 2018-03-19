@@ -4,15 +4,13 @@ open Pretty.Int.DefaultPrinter
 open Format
 
 (* the type of commands  *)
-type command = { name : string ;
-                 run : Format.formatter -> string list -> unit ;
-                 help : string }
-
-
+type command =
+  { name : string
+  ; run : Format.formatter -> string list -> unit
+  ; help : string
+  }
 
 (* The built in commands *)
-
-
 
 (* args = (i, e, []) where
    i : hole number
@@ -360,32 +358,44 @@ let get_type = {name = "get-type";
                 help = "get-type [line] [column] Get the type at a location (for use in emacs)"}
 (* Registering built-in commands *)
 
-let _ = reg := [
-        helpme       ;
-        chatteroff   ;
-        chatteron    ;
-        load         ;
-        clearholes   ;
-        countholes   ;
-        numholes     ;
-        numlfholes   ;
-        lochole      ;
-        loclfhole    ;
-        printhole    ;
-        printlfhole  ;
-        types        ;
-        constructors ;
-        fill         ;
-        split        ;
-        intro        ;
-        compconst    ;
-        signature    ;
-        printfun     ;
-        query        ;
-        get_type     ;
-        reset        ;
-        quit         ;
-        ]
+let lookup_hole =
+  { name = "lookuphole"
+  ; run = (fun ppf args ->
+    let strat = Holes.unsafe_parse_lookup_strategy (List.hd args) in
+    match Holes.get strat with
+    | None -> fprintf ppf "- No such hole."
+    | Some (i, _) -> fprintf ppf "%d" i)
+  ; help = "looks up a hole's number by its name"
+  }
+
+let _ =
+  reg :=
+    [ helpme
+    ; chatteroff
+    ; chatteron
+    ; load
+    ; clearholes
+    ; countholes
+    ; numholes
+    ; numlfholes
+    ; lochole
+    ; loclfhole
+    ; printhole
+    ; printlfhole
+    ; types
+    ; constructors
+    ; fill
+    ; split
+    ; intro
+    ; compconst
+    ; signature
+    ; printfun
+    ; query
+    ; get_type
+    ; reset
+    ; quit
+    ; lookup_hole
+    ]
 
 (* registered commands *)
 

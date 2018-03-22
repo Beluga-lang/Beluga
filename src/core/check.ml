@@ -702,16 +702,10 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           | tau_theta' -> raise (Error (loc, IfMismatch (cD, cG, tau_theta')))
         end
 
-    | (Hole (_loc, _name, _f), (tau, t)) ->
-	    Typeinfo.Comp.add _loc (Typeinfo.Comp.mk_entry cD ttau) ("Hole" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
-	    Holes.stage
-        { Holes.loc = _loc;
-          Holes.name = Holes.name_of_option _name;
-          Holes.cD;
-          Holes.cG;
-          Holes.goal = (tau, t);
-        };
-	    ()
+    | (Hole (_loc, _f), (tau, t)) ->
+	(Typeinfo.Comp.add _loc (Typeinfo.Comp.mk_entry cD ttau) ("Hole" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
+	Holes.collect (_loc, cD, cG, (tau, t));
+	())
 
   and check cD (cG, cIH) e (tau, t) =
     let _ =  dprint (fun () -> "[check]  " ^

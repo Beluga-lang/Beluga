@@ -24,10 +24,6 @@ bin/beluga: src/beluga/main.$(EXT)
 	mkdir -p bin
 	cp _build/$< $@
 
-bin/lex_dump: src/beluga/lex_dump.$(EXT)
-	mkdir -p bin
-	cp _build/$< $@
-
 clean:
 	$(OCAMLBUILD) -clean
 	rm -rf bin

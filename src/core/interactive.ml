@@ -130,76 +130,38 @@ let nextLoc loc =
       cD_i |- ms_i : cD'
 *)
 let branchCovGoals loc i cG0 tau cgs =
-  let loc' = nextLoc loc in
-  let f = fun (cD, cg, ms) ->
-    match cg with
-    | Cover.CovCtx cPsi ->
+  List.map (fun (cD, cg, ms) ->  match cg with
+  | Cover.CovCtx cPsi ->
+      let loc' = nextLoc loc in
       (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n"  (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
-      Holes.stage
-        { Holes.loc = loc';
-          Holes.name = Holes.Anonymous;
-          Holes.cD = cD;
-          Holes.cG = Whnf.cnormCtx(cG0, ms);
-          Holes.goal = (tau, ms);
-        };
-      let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.CObj cPsi)) in
-      Comp.Branch
-        ( Loc.ghost
-        , cD
-        , LF.Empty
-        , patt
-        , ms
-        , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
-        )
-    | Cover.CovGoal(cPsi, tR, _tau' ) ->
-      (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms); flush stderr; *)
-      (* _tau'  = tau[ms] *)
-      Holes.stage
-        { Holes.loc = loc';
-          Holes.name = Holes.Anonymous;
-          Holes.cD = cD;
-          Holes.cG = Whnf.cnormCtx(cG0, ms);
-          Holes.goal = (tau, ms);
-        };
-      let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
-      Comp.Branch
-        ( Loc.ghost
-        , cD
-        , LF.Empty
-        , patt
-        , ms
-        , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
-        )
+      Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , (tau, ms));
+     let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.CObj cPsi)) in
+       Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
+  | Cover.CovGoal(cPsi, tR, _tau' ) ->
+      let loc' = nextLoc loc in
+       (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms); flush stderr; *)
+     (* _tau'  = tau[ms] *)
+      Holes.collect(loc', cD, Whnf.cnormCtx(cG0, ms) , (tau, ms));
+     let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
+       Comp.Branch(Loc.ghost, cD, LF.Empty, patt, ms,Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
 
-    | Cover.CovPatt (cG, patt, (_tau',ms')) ->
-      (* Printf.printf "CovPat %s \n" (P.msubToString cD ms); *)
-       Holes.stage
-         { Holes.loc = loc';
-           Holes.name = Holes.Anonymous;
-           Holes.cD = cD;
-           Holes.cG = gctxToCompgctx cG;
-           Holes.goal = (tau, ms);
-         };
-       Comp.Branch
-         ( Loc.ghost
-         , cD
-         , gctxToCompgctx cG
-         , patt
-         , ms
-         , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
-         )
-  in
-  List.map f cgs
+  | Cover.CovPatt (cG, patt, (_tau',ms')) ->
+      let loc' = nextLoc loc in
+(*       Printf.printf "CovPat %s \n" (P.msubToString cD ms); *)
+      Holes.collect(loc', cD, gctxToCompgctx cG,  (tau, ms));
+      Comp.Branch(Loc.ghost, cD, gctxToCompgctx cG , patt, ms, Comp.Hole (loc', (fun () -> Holes.getHoleNum loc')))
+        ) cgs
 
 let matchFromPatterns l e bl =
    Comp.Case(l, Pragma.RegularCase, e, bl)
 
+
 let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
-(** Traverses a computation-level type-checkable expression and
- * applies the given function to all holes. *)
+
 let rec mapHoleChk f = function
- | Hole (l, name, e) -> f name l e
+ | Hole (l, e) ->
+     f l e
  | If (l, es,ec1,ec2) ->
      let es' = mapHoleSyn f es in
      let ec1' = mapHoleChk f ec1 in
@@ -270,69 +232,52 @@ and mapHoleBranch f = function
 
 
 (* replaces the ith hole (appearing in a function) with exp, overwriting the previous definition of the function *)
-let replaceHole (s : Holes.lookup_strategy) exp =
-  let (i, h) =
-    match Holes.get s with
-    | None -> failwith "no such hole"
-    | Some p -> p in
+let replaceHole i exp =
 
-  let is = string_of_int i in
 (* test if Hole(l',f) is the ith hole, in which case
 * detroy previous hole, commit staged holes and return the expression
 * otherwise (not ith) returns back Hole(l',f)
 * IMPORTANT: Check.comp.check that exp fits the holes beforehand *)
-  let ithHoler l exp name l' f =
+  let ithHoler l exp l' f =
     if (l = l') then
-      (Holes.destroy_holes_within l; Holes.commit (); exp)
-    else
-      Comp.Hole (l', name, f) in
+      (Holes.destroyHoles(l); Holes.commitHoles(); exp)
+    else Synint.Comp.Hole(l',f) in
 
-  (* Figures out which function contains hole i. *)
   let funOfHole i =
+    let (loc, _cD, _cG, (_tau, _mS)) = Holes.getOneHole i in
     let entries = DynArray.to_list Store.Cid.Comp.entry_list in
     let opt =
       List.fold_left (fun found_opt entries' ->
         match found_opt with
         | None ->
-           begin
-             try
-               let _entries = !entries' in
-               let isWithin = fun (_, loc') -> Holes.loc_within loc' h.Holes.loc in
-               (* Loop over the entries to find the one that contains the loc of the hole *)
-               Some (List.find isWithin _entries)
-               (* List.find raises if it can't find, so we catch and keep looking *)
-             with
-               _ -> None
-           end
+          begin try
+            Some(List.find (fun (_,loc') -> Holes.locWithin loc' loc) !entries')
+          with _ -> None end
         | Some _ -> found_opt) None entries in
     match opt with
     | Some (cid_prog, loc') -> (Store.Cid.Comp.get cid_prog, loc')
-    | _ -> failwith ("Error in Interactive.funOfHole: could not find function containing hole " ^ is) in
+    | _ -> failwith "Error in Interactive.funOfHole" in
 
-  (* Now we can actually find the function that contains the ith hole. *)
   let (entry, loc) = funOfHole i in
-
-  (* We only allow replacing holes inside *functions*, so we check
-   * that indeed this is a function (a recursive value) *)
-  match entry.Store.Cid.Comp.prog with
+  let Some lh = Holes.getHolePos i in
+  (match entry.Store.Cid.Comp.prog with
   | Synint.Comp.RecValue (prog, ec, ms, env) ->
-     (* Then, we can perform the replacement using ithHoler, which
-      * traverses the expression and replaces the ith hole with the
-      * given expression *)
-     let ec' = (mapHoleChk (ithHoler (h.Holes.loc) exp) ec) in
-     let _l = Store.Cid.Comp.add loc
-         (fun cid ->
-           Store.Cid.Comp.mk_entry
-	     entry.Store.Cid.Comp.name
-	     entry.Store.Cid.Comp.typ
-	     entry.Store.Cid.Comp.implicit_arguments
-	     entry.Store.Cid.Comp.total
-             (Synint.Comp.RecValue (cid, ec', ms, env))
-             entry.Store.Cid.Comp.mut_rec) in
-     P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
-  | _ ->
-     Holes.clear_staged ();
-     failwith ("Error in replaceHole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")
+      let ec' = (mapHoleChk (ithHoler lh exp) ec) in
+      let _l = Store.Cid.Comp.add loc
+          (fun cid ->
+            Store.Cid.Comp.mk_entry
+	      entry.Store.Cid.Comp.name
+	      entry.Store.Cid.Comp.typ
+	      entry.Store.Cid.Comp.implicit_arguments
+	      entry.Store.Cid.Comp.total
+              (Synint.Comp.RecValue (cid, ec', ms, env))
+              entry.Store.Cid.Comp.mut_rec) in
+      P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
+  | _ -> Holes.stashHoles (); failwith ("Error in replaceHole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")  )
+
+
+
+
 
 (*********************)
 (* top level tactics *)
@@ -350,18 +295,9 @@ let is_inferred = function
     end
 | _ -> false
 
-let  intro (s : Holes.lookup_strategy) =
+let  intro i =
   let used = ref false in
-  let { Holes.loc;
-        Holes.name;
-        Holes.cD = cDT;
-        Holes.cG = cGT;
-        Holes.goal = (tau, mS);
-      } =
-    match Holes.get s with
-    | None -> failwith "no such hole"
-    | Some (_, h) -> h in
-
+  let (loc, cDT, cGT, (tau, mS)) = Holes.getOneHole i in
   let rec crawl cD cG  = (function
  | Comp.TypArr (t1,t2) ->
      ( match t1 with
@@ -389,14 +325,8 @@ let  intro (s : Holes.lookup_strategy) =
  | t ->
      if !used then
        let loc' = nextLoc loc in
-       Holes.stage
-         { Holes.loc = loc';
-           Holes.name = Holes.Anonymous;
-           Holes.cD = cD;
-           Holes.cG = cG;
-           Holes.goal = (t, mS);
-         };
-       Some (Comp.Hole  (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst)))
+       Holes.collect(loc', cD, cG, (t, mS));
+       Some (Comp.Hole  (loc', (fun () -> Holes.getHoleNum loc')))
      else None
          ) in
   crawl cDT cGT tau
@@ -457,17 +387,9 @@ let genCGoals cD' cd cD_tail =
 		       (cD'' , cg',  ms0 )
 		 ) cgs
 
-(* split : String -> Holes.look -> Comp.exp_chk  option *)
-let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
-  let ( i,
-        { Holes.loc;
-          Holes.name;
-          Holes.cD = cD0;
-          Holes.cG =  cG0;
-          Holes.goal = tau_theta;
-        }
-      ) = hi in
-
+(* split : String -> int -> Comp.exp_chk  option *)
+let split e i =
+  let (loc, cD0, cG0, tau_theta) = Holes.getOneHole i in
   let tau0 = Whnf.cnormCTyp tau_theta in 
 
   let rec searchGctx i = function

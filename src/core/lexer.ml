@@ -129,40 +129,31 @@ let regexp digit  = [ '0'-'9' ]
 let regexp upper = ['A' - 'Z']
 let regexp lower = ['a' - 'z']
 
-(** A question mark followed by a symbol. *)
-let regexp hole = '?' ( start_sym sym* ) ?
-
 (**************************************************)
 (* Location Update and Token Generation Functions *)
 (**************************************************)
 
-(** Updates `loc` by shifting it according to the length of `lexbuf`. *)
-let shift_by_lexeme lexbuf loc =
-  Loc.shift (Ulexing.lexeme_length lexbuf) loc
-
-let advance_lines (n : int) (lexbuf : Ulexing.lexbuf) (loc : Loc.t) : Loc.t =
-  Loc.move_line n (Loc.shift (Ulexing.lexeme_length lexbuf) loc)
-
-let advance_line : Ulexing.lexbuf -> Loc.t -> Loc.t = advance_lines 1
-
-let update_loc loc f = loc := f !loc
+(* Make a {!Token.t} taking no arguments and advance the {!Loc.t ref}. *)
+let mk_tok tok loc lexbuf =
+    loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+  ; tok
 
 (* Make a {!Token.t} taking a {!string} argument for the current
    lexeme and advance the {!Loc.t ref}. *)
 let mk_tok_of_lexeme tok_cons loc lexbuf =
-  update_loc loc (shift_by_lexeme lexbuf);
-  tok_cons (Ulexing.utf8_lexeme lexbuf)
+    loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+  ; let tok = (tok_cons (Ulexing.utf8_lexeme lexbuf)) in
+      tok
+
 
 let mk_keyword s = Token.KEYWORD s
 
-let mk_symbol s = Token.SYMBOL s
+let mk_symbol  s = Token.SYMBOL  s
 
-let mk_integer s = Token.INTLIT s
+let mk_integer  s = Token.INTLIT s
 
-let mk_hole s = Token.HOLE s
-
-let mk_comment loc s =
-  let n = ref 0 in
+let mk_comment loc s = 
+  let n = ref 0 in 
   let _ = String.iter (fun c -> if c = '\n' then incr n) s in
   let _ = loc := Loc.move_line !n !loc in Token.COMMENT s
 
@@ -228,14 +219,12 @@ let lex_token loc = lexer
   | "%abbrev"
   | "type"
   | "prop"
+  | "?"
   | "|-"
   | [ "%,.:;()[]{}|" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
          mk_tok_of_lexeme mk_keyword loc lexbuf
 
-  | hole -> mk_tok_of_lexeme mk_hole loc lexbuf
-  | eof ->
-     update_loc loc (shift_by_lexeme lexbuf);
-     Token.EOI
+  | eof                       -> mk_tok           Token.EOI  loc lexbuf
 
   | ">" (sym | "<" | ">")*  ->
       mk_tok_of_lexeme mk_symbol  loc lexbuf
@@ -257,62 +246,56 @@ let lex_token loc = lexer
 
   | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
 
-let decrease_comment_depth (depth : int ref) : unit =
-  match !depth with
-  | 0 ->
-     print_string ("Parse error: \"}%\" with no comment to close\n");
-     raise Ulexing.Error
-  (* we print a special error in this case since we have the invariant
-   * that depths must be always nonnegative. *)
-  | d when d < 0 ->
-     print_string ("Invariant violated: nested comment depth is negative.\n");
-     raise Ulexing.Error
-  | d -> depth := d - 1
-
-let increase_comment_depth (depth : int ref) : unit = incr depth
 
 let skip_nestable depth loc =
-  let update_loc = update_loc loc in
-  let incr_comment_depth = increase_comment_depth depth in
-  let decr_comment_depth = decrease_comment_depth depth in
-  lexer
-  | '\r' '\n'
-  | '\r'
-  | '\n' -> update_loc (advance_line lexbuf)
+lexer
+  | '\n' ->
+      loc := Loc.move_line 1 !loc
 
-  | '%'+ [^'{' '%' '\n'] -> update_loc (shift_by_lexeme lexbuf)
-  | [^'\n' '%' '}' ]+ -> update_loc (shift_by_lexeme lexbuf)
-  | '}' [^'%' '\n']+ -> update_loc (shift_by_lexeme lexbuf)
+  | '%'+ [^'{' '%' '\n'] ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
 
-  | '}' '\n' -> update_loc (advance_line lexbuf)
+  | [^'\n' '%' '}' ]+ ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | '}' [^'%' '\n']+ ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
+  | '}' '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
 
   | '}' '%' ->
-     update_loc (shift_by_lexeme lexbuf);
-     decr_comment_depth
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; if !depth <= 0 then
+        ( print_string ("Parse error: \"}%\" with no comment to close\n");
+          raise Ulexing.Error )
+      else
+        depth := !depth - 1
 
   | '%'+ '{' ->
-     update_loc (shift_by_lexeme lexbuf);
-     incr_comment_depth
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; depth := !depth + 1
 
-  | '%'+ '\n' -> update_loc (advance_line lexbuf)
+  | '%'+ '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
 
+let skip_nested_comment loc = lexer
+  | '%' '{' '\n' ->    
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc;
+      loc := Loc.move_line 1 !loc
+    ; let depth = ref 1 in
+      while !depth > 0 do
+        skip_nestable depth loc lexbuf ;
+      done
 
-let skip_nested_comment loc =
-  let skip_nestable_loop lexbuf =
-    let depth = ref 1 in
-    while !depth > 0 do
-      skip_nestable depth loc lexbuf;
-    done
-  in
-  let update_loc = update_loc loc in
-  lexer
-  | '%' '{' '\n' ->
-     update_loc (advance_line lexbuf);
-     skip_nestable_loop lexbuf
-
-  | '%' '{' [^'{'] ->
-     update_loc (shift_by_lexeme lexbuf);
-     skip_nestable_loop lexbuf
+  | '%' '{' [^'{'] ->    
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+    ; let depth = ref 1 in
+      while !depth > 0 do
+        skip_nestable depth loc lexbuf ;
+      done      
 
   | [^'}'] '}' '%' ->
       loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
@@ -320,26 +303,25 @@ let skip_nested_comment loc =
           raise Ulexing.Error )
 
 (* Skip %...\n comments and advance the location reference. *)
-let skip_line_comment loc =
-  lexer
-  | '%' ( [^ '\n' '{' 'a'-'z'] [^ '\n' ]* ) '\n'
-  | '%' '\n' -> update_loc loc (advance_line lexbuf)
+let skip_line_comment loc = lexer
+  | '%' ( [^ '\n' '{' 'a'-'z'] [^ '\n' ]* ) '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
+
+  | '%' '\n' ->
+      loc := Loc.shift (Ulexing.lexeme_length lexbuf - 1) !loc
+    ; loc := Loc.move_line 1 !loc
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer
-  | [ ' ' '\t' ]+ -> update_loc loc (shift_by_lexeme lexbuf)
+  | [ ' ' '\t' ]+         ->
+        loc := Loc.shift (Ulexing.lexeme_length lexbuf) !loc
+
 
 (* Skip newlines and advance the location reference. *)
-let skip_newlines loc =
-  let update_loc = update_loc loc in
-  lexer
-  (* on Windows, "\r\n" is the line terminator, so we have to divide the
-  length of the match in two. *)
-  | ('\r' '\n')+ ->
-     update_loc (advance_lines (Ulexing.lexeme_length lexbuf / 2) lexbuf)
-  (* skip lines for Unix and traditional Mac endings *)
-  | ('\n' | '\r')+ ->
-     update_loc (advance_lines (Ulexing.lexeme_length lexbuf) lexbuf)
+let skip_newlines    loc = lexer
+  | '\n'+                 ->
+        loc := Loc.move_line (Ulexing.lexeme_length lexbuf) !loc
 
 (******************)
 (* Lexer Creation *)
@@ -410,15 +392,10 @@ let mk () = fun loc strm ->
       skip_failures := 0 in
   let next _    =
     try
-      skip ();
-      (* It is essential to call lex_token _before_ dereferencing
-      loc_ref, since lex_token updates this ref with the correct
-      location of the token. *)
-      let t = lex_token loc_ref lexbuf in
-      let tok = Some (t, !loc_ref) in (
-          skip ();
-          tok
-      )
+        skip ()
+      ; let tok = Some (lex_token loc_ref lexbuf, !loc_ref) in
+          skip ()
+        ; tok
     with
       | Ulexing.Error ->
           None

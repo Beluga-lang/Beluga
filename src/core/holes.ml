@@ -5,73 +5,16 @@ module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
-type hole_id = int
+type hole = Loc.t * LF.mctx * Comp.gctx * (Comp.typ * LF.msub)
 
-type hole_name =
-  | Anonymous
-  | Named of string
+let holes = DynArray.create ()
 
-let name_of_option : string option -> hole_name = function
-  | Some name -> Named name
-  | None -> Anonymous
+let stagedholes = DynArray.create ()
 
-let option_of_name : hole_name -> string option = function
-  | Anonymous -> None
-  | Named s -> Some s
+let none () = DynArray.empty holes
 
-let string_of_name : hole_name -> string = function
-  | Anonymous -> ""
-  | Named s -> s
-
-type hole =
-  { loc : Syntax.Loc.t;
-    name : hole_name;
-    (** "Context Delta", for LF types. *)
-    cD : LF.mctx;
-    (** "Context Gamma", for computation types. *)
-    cG : Comp.gctx;
-    goal : Comp.typ * LF.msub;
-  }
-
-type lookup_strategy =
-  { repr : string
-  ; action : unit -> (hole_id * hole) option
-  }
-
-let string_of_lookup_strategy : lookup_strategy -> string = function
-  | { repr; _ } -> repr
-
-exception NoSuchHole of lookup_strategy
-
-let hole_is_named (h : hole) : bool =
-  match h.name with
-  | Anonymous -> false
-  | Named _ -> true
-
-let (holes : hole DynArray.t) = DynArray.create ()
-
-let (staged_holes : hole DynArray.t) = DynArray.create ()
-
-let index_of (haystack : 'a DynArray.t) (f : 'a -> bool) : int option =
-  try
-    Some (DynArray.index_of f haystack)
-  with
-    Not_found -> None
-
-let find_common (haystack : 'a DynArray.t) (f : 'a -> bool)  : (int * 'a) option =
-  match index_of haystack f with
-  | None -> None
-  | Some i -> Some (i, DynArray.get haystack i)
-
-let find (f : hole -> bool) : (int * hole) option =
-  find_common holes f
-
-let find_staged (f : hole -> bool) : (int * hole) option =
-  find_common staged_holes f
-
-let none () : bool = DynArray.empty holes
-
-let stage : hole -> unit = DynArray.add staged_holes
+let collect (loc, cD, cG, (tau, theta)) =
+  DynArray.add stagedholes (loc, cD, cG, (tau, theta))
 
 let ( ++ ) f g = function x -> f (g x)
 
@@ -117,39 +60,63 @@ let gctxToString cD =
 (** More holes **)
 
 (* loc -> loc' -> bool : is loc' within loc? *)
-let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
-  (* To check this, it suffices to look at the start offset and end offset.
-   * Specifically, loc' needs to start after loc and end before loc.
-   *)
-  Loc.start_off loc' >= Loc.start_off loc && Loc.stop_off loc' <= Loc.stop_off loc
+let locWithin loc loc' =
+      let (file_name,
+           start_line,
+           start_bol,
+           start_off,
+           stop_line,
+           stop_bol,
+           stop_off,
+           _ghost) = Loc.to_tuple loc in
+      let (file_name',
+           start_line',
+           start_bol',
+           start_off',
+           stop_line',
+           stop_bol',
+           stop_off',
+           _ghost') = Loc.to_tuple loc' in
+      if (file_name = file_name') then
+        (if (stop_line' < stop_line || (stop_line' = stop_line && stop_off' <= stop_off)) then
+          (if (start_line' > start_line || (start_line' = start_line && start_off' >= start_off)) then
+            (if (start_line' = start_line && (stop_line' = stop_line && (start_off' = start_off && start_bol <> start_bol'))) then
+              false
+            else
+              true)
+          else
+            false)
+        else
+          false)
+      else
+        false
+
 
 (* removes all holes located within the given loc (e.g. of a function being shadowed) *)
-let destroy_holes_within loc =
-  DynArray.filter (fun {loc = loc'; _} -> not (loc_within loc loc')) holes
+let destroyHoles loc =
+  DynArray.filter
+    (fun (loc', _cD, _cG, (_tau, _mS)) -> not (locWithin loc loc'))
+      holes
 
-let commit () =
-  DynArray.append (DynArray.copy staged_holes) holes;
-  DynArray.clear staged_holes
+let commitHoles () =
+  DynArray.append (DynArray.copy stagedholes) holes;
+  DynArray.clear stagedholes
 
-let clear_staged () =
-  DynArray.clear staged_holes
-
-(* A helper for implementing at and staged_at. *)
-let matches_loc loc' {loc; _} = loc = loc'
+let stashHoles () =
+  DynArray.clear stagedholes
 
 (* Should only be called with the loc of a hole *)
-let at (loc : Syntax.Loc.t) : (hole_id * hole) option =
-  find (matches_loc loc)
+let getHoleNum loc =
+    DynArray.index_of
+      (fun (loc', _cD, _cG, (_tau, _mS)) -> if loc = loc' then true else false) holes
 
-let staged_at (loc : Syntax.Loc.t) : (hole_id * hole) option =
-  find_staged (matches_loc loc)
+let getStagedHoleNum loc =
+    DynArray.index_of
+      (fun (loc', _cD, _cG, (_tau, _mS)) -> if loc = loc' then true else false) stagedholes
 
-(** Transforms an element of a dynamic array at a specific index with a provided function. *)
-let transform_at (haystack : 'a DynArray.t) (i : hole_id) (f : 'a -> 'a) : unit =
-  let e = DynArray.get haystack i in DynArray.set haystack i (f e)
-
-let set_staged_hole_pos i l =
-  transform_at staged_holes i (fun h -> { h with loc = l })
+let setStagedHolePos i l =
+      let  (loc, cD, cG, tclo) = DynArray.get stagedholes i in
+      DynArray.set stagedholes i (l, cD, cG, tclo)
 
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   let rec aux acc = function
@@ -163,105 +130,68 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
     | LF.Dec (cG', _) -> aux acc cG'
   in aux [] cG
 
-let replicate n c = String.init n (fun _ -> c)
-let thin_line = replicate 80 '_'
-let thick_line = replicate 80 '='
+(* let _printOne ((loc, cD, cG, (tau, theta)) : hole) : unit =
+  Store.Cid.NamedHoles.reset () ;
+  let b1 = "____________________________________________________________________________" in
+  let b2 = "============================================================================" in
+  Printf.printf
+    "\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s\n"
+    (Loc.to_string loc)
+    (mctxToString cD)
+    (b1)
+    (gctxToString cD cG)
+    (b2)
+    (P.compTypToString cD (Whnf.cnormCTyp (tau, theta)))
+(*    (P.expChkToString cD cG (Interactive.intro tau))
+    (try (match (Interactive.split "s" cD cG) with
+    | None -> "No variable s found"
+    | Some exp -> (P.expChkToString cD cG exp))
+    with _ -> "Can't split on s") *)
+*)
+let printOne i (loc, cD, cG, (tau, theta)) =
+  let _ = Store.Cid.NamedHoles.reset () in
+  let cD = (Whnf.normMCtx cD) in
+  let cG = (Whnf.normCtx cG) in
+  let l = iterGctx cD cG (tau, theta) in  
+  let b1 = "________________________________________________________________________________" in
+  let b2 = "================================================================================" in
+  let mctx = (mctxToString cD) in
+  let gctx = (gctxToString cD cG) in
+  let goal = (P.compTypToString cD (Whnf.cnormCTyp (tau, theta))) in
+   if List.length l > 0 then 
+    Format.printf
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n    - Variable%s of this type: %s@\n"
+        (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)  (if List.length l = 1 then "" else "s")
+        (String.concat ", " (List.map (fun x -> Store.Cid.NamedHoles.getName x) l))
+  else
+    Format.printf
+      "\nHole Number %d\n%s\n%s\n    - Meta-Context: %s\n%s\n    - Context: %s\n\n%s\n    - Goal Type: %s@\n"
+       (i) (Loc.to_string loc) (b1) (mctx) (b1) (gctx) (b2) (goal)
 
-let format_hole (i : hole_id) {loc; name; cD; cG; goal = (tau, theta)} : string=
-  (* First, we do some preparations. *)
-  (* Normalize the LF and computational contexts as well as the goal type. *)
-  let cD = Whnf.normMCtx cD in
-  let cG = Whnf.normCtx cG in
-  let goal = Whnf.cnormCTyp (tau, theta) in
-  (* Collect a list of variables that already have the goal type. *)
-  let suggestions = iterGctx cD cG (tau, theta) in
-  let plural b = if b then "" else "s" in
-  let loc_string = Loc.to_string loc in
-  (* Now that we've prepped all the things to format, we can prepare the message. *)
-  (* We do this by preparing different *message components* which are
-   * assembled into the final message. *)
+let printAll () =
+  Store.Cid.NamedHoles.printingHoles := true;
+  DynArray.iteri printOne holes;
+  Store.Cid.NamedHoles.printingHoles := false
 
-  (* 1. The 'hole identification component' contains the hole name (if any) and its number. *)
-  let hole_id =
-    let hole_name =
-      match name with
-      | Anonymous -> ""
-      | Named s -> Format.sprintf ", %s" s in
-    Format.sprintf "Hole number %d%s\n%s\n%s" i hole_name loc_string thin_line in
+let printOneHole i =
+  if none () then Printf.printf " - There are no holes.\n"
+  else
+    try
+      printOne i (DynArray.get holes i)
+    with
+      | DynArray.Invalid_arg (_, _, _) ->
+          if !Debug.chatter != 0 then
+            Printf.printf " - There is no hole # %d.\n" i
 
-  (* 2. The meta-context information. *)
-  let meta_ctx_info =
-    Format.sprintf "Meta-context: %s\n%s" (mctxToString cD) thin_line in
 
-  (* 3. The (computational) context information. *)
-  let comp_ctx_info =
-    Format.sprintf "Context: %s\n%s" (gctxToString cD cG) thick_line in
+let getOneHole i = DynArray.get holes i
 
-  (* 4. The goal type, i.e. the type of the hole. *)
-  let goal_type =
-    Format.sprintf "Goal: %s" (P.compTypToString cD goal) in
+let getNumHoles () = DynArray.length holes
 
-  (* 5. The in-scope variables of the correct type. *)
-  let suggestions_str =
-    let s = String.concat ", " (List.map Id.string_of_name suggestions) in
-    let p = plural (List.length suggestions = 1) in
-    Format.sprintf "Variable%s of this type: %s" p s in
-
-  (* a helper *)
-  let null =
-    function
-    | [] -> true
-    | _ :: _ -> false in
-
-  (* Finally, we can form the output. *)
-  String.concat "\n"
-    ( hole_id :: meta_ctx_info :: comp_ctx_info :: goal_type ::
-        if null suggestions then [] else [suggestions_str] )
-
-let by_id (i : hole_id) : lookup_strategy =
-  { repr = Printf.sprintf "by id '%d'" i
-  ; action =
-      fun () ->
-      try
-        Some (i, DynArray.get holes i)
-      with
-      | Invalid_argument _ -> None
-  }
-
-let lookup (name : string) : (hole_id * hole) option =
-  let matches_name =
-    function
-    | { name = Named n; _ } -> n = name
-    | _ -> false in
-  find matches_name
-
-let by_name (name : string) : lookup_strategy =
-  { repr = Printf.sprintf "by name '%s'" name
-  ; action = fun () -> lookup name
-  }
-
-(* All the work of getting the hole is inside the strategy, so we
- * just run it. *)
-let get (s : lookup_strategy) : (hole_id * hole) option = s.action ()
-
-let unsafe_get (s : lookup_strategy) : hole_id * hole =
-  match s.action () with
-  | None -> raise (NoSuchHole s)
-  | Some h -> h
-
-let count () = DynArray.length holes
+let getHolePos i =
+    try
+      let  (loc, _, _, (_, _)) = DynArray.get holes i in Some loc
+    with
+      | DynArray.Invalid_arg (_, _, _) -> None
 
 let clear () = DynArray.clear holes
-
-let list () = DynArray.to_list holes
-
-let parse_lookup_strategy (s : string) : lookup_strategy option =
-  try
-    Some (by_id (int_of_string s))
-  with
-  | Failure _ -> Some (by_name s)
-
-let unsafe_parse_lookup_strategy (s : string) : lookup_strategy =
-  match parse_lookup_strategy s with
-  | Some s -> s
-  | None -> failwith ("Invalid hole identifier: " ^ s)

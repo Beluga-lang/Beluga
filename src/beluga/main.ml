@@ -26,12 +26,12 @@ let usage () =
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
         ^ "    +test                 Make output suitable for test harness. Implies -print\n"
-        ^ "    +realNames         Print holes using real names\n"
-        ^ "    +html              Generate an html page of the source code using default CSS\n"
-        ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
-        ^ "    +sexp              Dump the elaborated code using S-expressions\n"
-        ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
-        ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
+        ^ "    +realNames            Print holes using real names\n"
+        ^ "    +html                 Generate an html page of the source code using default CSS\n"
+        ^ "    +htmltest             Run HTML mode on file, but do not create final HTML page\n"
+        ^ "    +sexp                 Dump the elaborated code using S-expressions\n"
+        ^ "    -css                  Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
+        ^ "    +cssfile [file]       Specify css file to link to from generated HTML page\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
         ^ "    +locs                 Output location information (for testing)\n"
         ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
@@ -157,7 +157,11 @@ let main () =
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
             printf "\n## Holes: %s  ##" file_name;
-            Holes.printAll ()
+            List.iteri
+              (fun i h ->
+                print_string (Holes.format_hole i h);
+                print_newline ())
+              (Holes.list ())
           end;
           if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
             printf "\n\n## LF Holes: %s  ##" file_name;

@@ -167,7 +167,7 @@ module Comp = struct
      | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
      | If     of Loc.t * exp_syn * exp_chk * exp_chk
-     | Hole   of Loc.t
+     | Hole   of Loc.t * string option
 
   and exp_syn =
      | Var    of Loc.t * offset                                     (* x              *)

@@ -1169,16 +1169,7 @@ GLOBAL: sgn;
             | Atom    ->   e1
           end
 
-      | h = HOLE ->
-         (* h is a string of the form "?hole", so we drop the first
-          * character and check whether the name of the hole is empty
-          * to construct the true hole name. *)
-         let sname = String.sub h 1 (String.length h - 1) in
-         let name =
-           match sname with
-           | "" -> None
-           | _ -> Some sname in
-         Comp.Hole (_loc, name)
+      | "?" -> Comp.Hole (_loc)
 
       ]
 

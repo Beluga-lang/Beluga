@@ -1,7 +1,0 @@
-S src/core
-S src/beluga
-
-B _build/src/core
-B _build/src/beluga
-
-PKG ulex camlp4 extlib

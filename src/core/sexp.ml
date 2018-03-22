@@ -665,15 +665,11 @@ struct
         (sexp_cmp_exp_chk cD cG) e1
         (sexp_cmp_exp_chk cD cG) e2
 
-    | Comp.Hole (_, name_opt, f) ->
-       let name =
-         match name_opt with
-         | Some n -> " " ^ n
-         | None -> "" in
+    | Comp.Hole (_, f) ->
       try
-        fprintf ppf "(Hole %s%d)" name (f ())
+        fprintf ppf "(Hole %d)" (f ())
       with
-        | _ -> fprintf ppf "(Hole %s_)" name
+        | _ -> fprintf ppf "(Hole _)"
 
   and sexp_cmp_exp_syn cD cG ppf =
     function

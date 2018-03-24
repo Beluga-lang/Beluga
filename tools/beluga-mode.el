@@ -361,6 +361,10 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
 
+(defun beluga--is-response-error (resp)
+  "Determines whether a Beluga RPC response is an error."
+  (string= "-" (substring resp 0 1)))
+
 (defun beli ()
   "Start beli mode"
   (interactive)
@@ -409,15 +413,18 @@ If a previous beli process already exists, kill it first."
   ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
   ;; the actual parsed stream.
   ;; So if there might be #line directives, we need to do:
-   (save-excursion
-     (goto-char (point-min))
-     (forward-line (1- line)) ;Lines count from 1 :-(
-     (+ (point) (- offset bol))))
+  ;; (save-excursion
+  ;;   (goto-char (point-min))
+  ;;   (forward-line (1- line)) ;Lines count from 1 :-(
+  ;;   (+ (point) (- offset bol))))
   ;; But as long as we know there's no #line directive, we can ignore all that
   ;; and use the more efficient code below.  When #line directives can appear,
   ;; we will need to make further changes anyway, such as passing the file-name
   ;; to select the appropriate buffer.
-  ; (+ (point-min) offset))
+  ;; Emacs considers the first character in the file to be at index 1,
+  ;; but the Beluga lexer starts counting at zero, so we need to add
+  ;; one here.
+  (+ (point-min) offset))
 
 (defun beluga--create-overlay (pos)
   "Create an overlay at the position described by POS (a Loc.to_tuple)."
@@ -456,13 +463,23 @@ If a previous beli process already exists, kill it first."
         (push ol beluga--holes-overlays)
         ))))
 
+(defun beluga--lookup-hole (hole)
+  "Looks up a hole number by its name"
+  (string-to-number (beluga--rpc (format "lookuphole %s" hole))))
+
+(defun beluga--get-hole-overlay (hole)
+  "Gets the overlay associated with a hole."
+  (nth (beluga--lookup-hole hole) (beluga-sorted-holes)))
+
 (defun beluga-split-hole (hole var)
   "Split on a hole"
-  (interactive "nHole to split at: \nsVariable to split on: ")
-  (let ((resp (beluga--rpc (format "split %d %s" hole var))))
-    (if (string= "-" (substring resp 0 1))
+  (interactive "sHole to split at: \nsVariable to split on: ")
+  (beluga-load)
+  (beluga-highlight-holes)
+  (let ((resp (beluga--rpc (format "split %s %s" hole var))))
+    (if (beluga--is-response-error resp)
       (message "%s" resp)
-      (let* ((ovr (nth hole (beluga-sorted-holes)))
+      (let* ((ovr (beluga--get-hole-overlay hole))
              (start (overlay-start ovr))
              (end (overlay-end ovr)))
         (delete-overlay ovr)
@@ -475,11 +492,13 @@ If a previous beli process already exists, kill it first."
 
 (defun beluga-intro-hole (hole)
   "Introduce variables into a hole"
-  (interactive "nHole to introduce variables into: ")
-  (let ((resp (beluga--rpc (format "intro %d" hole))))
-    (if (string= "-" (substring resp 0 1))
+  (interactive "sHole to introduce variables into: ")
+  (beluga-load)
+  (beluga-highlight-holes)
+  (let ((resp (beluga--rpc (format "intro %s" hole))))
+    (if (beluga--is-response-error resp)
       (message "%s" resp)
-      (let* ((ovr (nth hole (beluga-sorted-holes)))
+      (let* ((ovr (beluga--get-hole-overlay hole))
              (start (overlay-start ovr))
              (end (overlay-end ovr)))
         (delete-overlay ovr)

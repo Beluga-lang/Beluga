@@ -4,15 +4,13 @@ open Pretty.Int.DefaultPrinter
 open Format
 
 (* the type of commands  *)
-type command = { name : string ;
-                 run : Format.formatter -> string list -> unit ;
-                 help : string }
-
-
+type command =
+  { name : string
+  ; run : Format.formatter -> string list -> unit
+  ; help : string
+  }
 
 (* The built in commands *)
-
-
 
 (* args = (i, e, []) where
    i : hole number
@@ -32,16 +30,20 @@ let split = {name = "split";
 let reg : command list ref = ref []
 
 let countholes = {name = "countholes";
-                  run = (fun ppf _ -> fprintf ppf "- Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.getNumHoles()) (Lfholes.getNumHoles()));
+                  run = (fun ppf _ -> fprintf ppf "- Computation Level Holes: %d\n - LF Level Holes: %d;\n" (Holes.count ()) (Lfholes.getNumHoles()));
                   help = "Print the total number of LF and computation level holes"}
 
-let numholes = {name = "numholes";
-                  run = (fun ppf _ -> fprintf ppf "%d;\n" (Holes.getNumHoles()));
-                  help = "Print the total number of holes"}
+let numholes =
+  { name = "numholes";
+    run = (fun ppf _ -> fprintf ppf "%d;\n" (Holes.count ()));
+    help = "Print the total number of holes";
+  }
 
-let numlfholes = {name = "numlfholes";
-                  run = (fun ppf _ -> fprintf ppf "%d;\n" (Lfholes.getNumHoles()));
-                  help = "Print the total number of lf holes"}
+let numlfholes =
+  { name = "numlfholes";
+    run = (fun ppf _ -> fprintf ppf "%d;\n" (Lfholes.getNumHoles()));
+    help = "Print the total number of lf holes";
+  }
 
 let chatteron = {name = "chatteron";
                  run = (fun ppf _ -> Debug.chatter :=1; fprintf ppf "- The chatter is on now.\n");
@@ -97,14 +99,23 @@ let load = { name = "load"
               | e -> fprintf ppf "- Error: %s;\n" (Printexc.to_string e))
            ; help = "Load the file \"filename\" into the interpreter"}
 
-let printhole = {name = "printhole";
-                 run = (fun ppf arglist ->
-                   try
-                     let arg = List.hd arglist in
-                     Holes.printOneHole (to_int arg); fprintf ppf ";\n\n"
-                   with
-                   |Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
-                 help = "Print out all the information of the i-th hole passed as a parameter"}
+let printhole =
+  { name = "printhole";
+    run = (fun ppf arglist ->
+      try
+        let s_ = List.hd arglist in
+        let s =
+          match Holes.parse_lookup_strategy s_ with
+          | None -> failwith "Failed to parse hole identifier."
+          | Some s -> s in
+        match Holes.get s with
+        | None -> fprintf ppf "- No such hole %s" s_
+        | Some (i, h) -> fprintf ppf "%s" (Holes.format_hole i h)
+      with
+      | Failure _ ->
+         fprintf ppf "- Error occurs when analyzing argument list;\n" );
+    help = "Print out all the information of the i-th hole passed as a parameter";
+  }
 
 let printlfhole = {name = "printhole-lf";
                  run = (fun ppf arglist ->
@@ -115,29 +126,33 @@ let printlfhole = {name = "printhole-lf";
                    |Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
                  help = "Print out all the information of the i-th LF hole passed as a parameter"}
 
-let lochole = {name = "lochole";
-               run = (fun ppf arglist ->
-                 try
-                   let arg = List.hd arglist in
-                   match Holes.getHolePos (to_int arg) with
-                   | Some loc ->
-                       let (file_name,
-                            start_line,
-                            start_bol,
-                            start_off,
-                            stop_line,
-                            stop_bol,
-                            stop_off,
-                            _ghost) = Syntax.Loc.to_tuple loc in
-                       fprintf ppf
-                         "(\"%s\" %d %d %d %d %d %d);\n"
-                         file_name
-                         start_line start_bol start_off
-                         stop_line stop_bol stop_off
-                   | None -> fprintf ppf "- Error no such hole;\n"
-                 with
-                 |Failure _ -> fprintf ppf "- Error occured when analyzing argument list;\n");
-               help = "Print out the location information of the i-th hole passed as a parameter"}
+let lochole =
+  { name = "lochole"
+  ; run = (fun ppf arglist ->
+      try
+        let strat = Holes.unsafe_parse_lookup_strategy (List.hd arglist) in
+        match Holes.get strat with
+        | Some (_, {Holes.loc; _}) ->
+           let ( file_name,
+                 start_line,
+                 start_bol,
+                 start_off,
+                 stop_line,
+                 stop_bol,
+                 stop_off,
+                 _ghost ) = Syntax.Loc.to_tuple loc in
+           fprintf
+             ppf
+             "(\"%s\" %d %d %d %d %d %d);\n"
+             file_name
+             start_line start_bol start_off
+             stop_line stop_bol stop_off
+        | None -> fprintf ppf "- Error no such hole;\n"
+      with
+      | Failure s ->
+         fprintf ppf "- Error occured when analyzing argument list: %s\n" s)
+  ; help = "Print out the location information of the i-th hole passed as a parameter"
+  }
 
 let loclfhole = {name = "lochole-lf";
                run = (fun ppf arglist ->
@@ -188,75 +203,126 @@ let helpme = {name = "help";
 
 
 
-let fill = { name = "fill" ;
-             run = (fun ppf args ->
-               try
-                 let i = to_int (List.hd args) in
-                 let eq = List.hd (List.tl args) in
-                 let str = String.concat " " (List.tl (List.tl args)) in
-                 let input = "rec t : [ |- t] = "^str^";" in
-                 if eq = "with" then (
-                   let sgn = Parser.parse_string ~name:"<fill>" ~input:input Parser.sgn in
-                   let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,_, _, outexp))::[])::[] = sgn in
-                   (try
-                     let (loc, cD, cG, tclo) = Holes.getOneHole i in
-                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: EXT done\n");
-                     let vars = Interactive.gctxToVars cG in
-                     let cvars = Interactive.mctxToCVars cD in
-                     let apxexp = Index.hexp cvars vars outexp in
-                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: APX done\n");
-                     let intexp = Reconstruct.elExp cD cG apxexp tclo in
-                     (if !Debug.chatter != 0 then fprintf ppf "- Fill: INT done\n");
-                     Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
-                     let intexp' = Interactive.mapHoleChk (fun ll -> fun _ ->
-                       let i = Holes.getStagedHoleNum ll in
-                       let loc' = Interactive.nextLoc loc in
-                       Holes.setStagedHolePos i loc';
-                       Synint.Comp.Hole (loc', (fun () -> Holes.getHoleNum loc'))) intexp in (* makes sure that new holes have unique location *)
-                     Interactive.replaceHole i intexp'
-                   with
-                   | e -> fprintf ppf "- Error while replacing hole with expression : %s" (Printexc.to_string e) ))
-                 else
-                   failwith "- See help"
-               with
-               | e -> fprintf ppf "- \nError in fill: %s\n" (Printexc.to_string e));
-             help = "\"fill\" i \"with\" exp fills the ith hole with exp"}
+let fill =
+  { name = "fill"
+  ; run = (fun ppf args ->
+    try
+      begin
+        let strat_s = List.hd args in
+        let strat = Holes.unsafe_parse_lookup_strategy strat_s in
+        let eq = List.hd (List.tl args) in
+        let str = String.concat " " (List.tl (List.tl args)) in
+        let input = "rec t : [ |- t] = " ^ str ^ ";" in
+        if eq = "with" then
+          let sgn = Parser.parse_string ~name:"<fill>" ~input:input Parser.sgn in
+          let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,_, _, outexp))::[])::[] = sgn in
+          try
+            let ( _ ,
+                  { Holes.loc
+                  ; Holes.name
+                  ; Holes.cD
+                  ; Holes.cG
+                  ; Holes.goal = tclo
+                  }
+                ) =
+              match Holes.get strat with
+              | None -> failwith ("No such hole " ^ strat_s)
+              | Some h -> h in
+            (if !Debug.chatter != 0 then fprintf ppf "- Fill: EXT done\n");
+            let vars = Interactive.gctxToVars cG in
+            let cvars = Interactive.mctxToCVars cD in
+            let apxexp = Index.hexp cvars vars outexp in
+            (if !Debug.chatter != 0 then fprintf ppf "- Fill: APX done\n");
+            let intexp = Reconstruct.elExp cD cG apxexp tclo in
+            (if !Debug.chatter != 0 then fprintf ppf "- Fill: INT done\n");
+            Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
+            let intexp' =
+              Interactive.mapHoleChk
+                (fun _ ll _ ->
+                  let (i, _) =
+                    match Holes.staged_at ll with
+                    | None -> failwith "No such hole."
+                    | Some h -> h in
+                  let loc' = Interactive.nextLoc loc in
+                  Holes.set_staged_hole_pos i loc';
+                  Synint.Comp.Hole
+                    ( loc'
+                    , Holes.option_of_name name
+                    , fun () ->
+                      match Holes.at loc' with
+                      | None -> failwith "no such hole"
+                      | Some (i, _) -> i
+                    )
+                )
+                intexp in (* makes sure that new holes have unique location *)
+            Interactive.replaceHole strat intexp'
+          with
+          | e ->
+             fprintf
+               ppf
+               "- Error while replacing hole with expression : %s"
+               (Printexc.to_string e)
+        else
+          failwith "- See help"
+      end
+    with
+    | e ->
+       fprintf ppf "- \nError in fill: %s\n" (Printexc.to_string e))
+  ; help = "\"fill\" i \"with\" exp fills the ith hole with exp"
+  }
 
-let split = { name = "split" ;
-              run = (fun ppf args ->
-                Printexc.record_backtrace true;
-                try begin
-                  if (List.length args) < 2 then failwith "- 2 arguments expected, 1 - hole #  2 - variable to split on;\n" else (
-                  let i = to_int (List.hd args) in
-                  let e = (List.hd (List.tl args)) in
-                  (match (Interactive.split e i) with
-                  | None -> fprintf ppf "- No variable %s found;\n" e
-                  | Some exp ->
-                      let (_, cD, cG, _) = Holes.getOneHole i in
-                      Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
-                      Pretty.Control.printNormal := false;
-                      (* Interactive.replaceHole i exp  *)))
-                end with
-                | e  -> fprintf ppf "- Error in split.\n%s;\n" (Printexc.to_string e));
-              help = "split n e tries to split on variable e in the nth hole"}
+let do_split ppf (strat : Holes.lookup_strategy) (var : string) : unit =
+  match Holes.get strat with
+  | None -> fprintf ppf "- No such hole %s" (Holes.string_of_lookup_strategy strat)
+  | Some hi ->
+     match Interactive.split var hi with
+     | None -> fprintf ppf "- No variable %s found;\n" var
+     | Some exp ->
+        let (_, h) = hi in
+        Pretty.Control.printNormal := true;
+        fprintf ppf "%s;\n" (expChkToString h.Holes.cD h.Holes.cG exp);
+        Pretty.Control.printNormal := false
 
-let intro = {name = "intro";
-              run = (fun ppf args ->
-                try
-                  let i = to_int (List.hd args) in
-                  (match (Interactive.intro i) with
-                  | None -> fprintf ppf "- Nothing to introduce in hole %d;\n" i
-                  | Some exp ->
-                      let (_, cD, cG, _) = Holes.getOneHole i in
-                      Pretty.Control.printNormal := true;
-                      fprintf ppf "%s;\n" (expChkToString cD cG exp);
-                      Pretty.Control.printNormal := false)
-                with
-                | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
-                |  _ ->      fprintf ppf "- Error in intro;\n"  );
-              help = "- intro n tries to introduce variables in the nth hole"}
+let split =
+  { name = "split"
+  ; run = (fun ppf args ->
+    Printexc.record_backtrace true;
+    try
+      match args with
+      | [strat_s; e] -> (
+        match Holes.parse_lookup_strategy strat_s with
+        | None -> fprintf ppf "- Invalid hole identifier %s" strat_s
+        | Some strat -> do_split ppf strat e
+      )
+      | _ -> fprintf ppf "- 2 arguments expected: hole identifier and variable to split on;\n"
+    with
+    | e -> fprintf ppf "- Error in split.\n%s;\n" (Printexc.to_string e))
+  ; help = "split h e tries to split on variable e in hole h (specified by name or number)"
+  }
 
+let intro =
+  { name = "intro"
+  ; run = (fun ppf args ->
+    try
+      let strat_s = List.hd args in
+      let strat = Holes.unsafe_parse_lookup_strategy strat_s in
+      match (Interactive.intro strat) with
+      | None -> fprintf ppf "- Nothing to introduce in hole %s;\n" strat_s
+      | Some exp ->
+         let { Holes.cD
+             ; Holes.cG
+             ; _ } =
+           match Holes.get strat with
+           | None -> failwith "No such hole."
+           | Some (_, h) -> h in
+         Pretty.Control.printNormal := true;
+         fprintf ppf "%s;\n" (expChkToString cD cG exp);
+         Pretty.Control.printNormal := false
+    with
+    | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
+    |  _ ->      fprintf ppf "- Error in intro;\n")
+  ; help = "- intro n tries to introduce variables in the nth hole"
+  }
 
 let compconst = {name = "constructors-comp";
                     run = (fun ppf arglist ->
@@ -360,32 +426,44 @@ let get_type = {name = "get-type";
                 help = "get-type [line] [column] Get the type at a location (for use in emacs)"}
 (* Registering built-in commands *)
 
-let _ = reg := [
-        helpme       ;
-        chatteroff   ;
-        chatteron    ;
-        load         ;
-        clearholes   ;
-        countholes   ;
-        numholes     ;
-        numlfholes   ;
-        lochole      ;
-        loclfhole    ;
-        printhole    ;
-        printlfhole  ;
-        types        ;
-        constructors ;
-        fill         ;
-        split        ;
-        intro        ;
-        compconst    ;
-        signature    ;
-        printfun     ;
-        query        ;
-        get_type     ;
-        reset        ;
-        quit         ;
-        ]
+let lookup_hole =
+  { name = "lookuphole"
+  ; run = (fun ppf args ->
+    let strat = Holes.unsafe_parse_lookup_strategy (List.hd args) in
+    match Holes.get strat with
+    | None -> fprintf ppf "- No such hole."
+    | Some (i, _) -> fprintf ppf "%d" i)
+  ; help = "looks up a hole's number by its name"
+  }
+
+let _ =
+  reg :=
+    [ helpme
+    ; chatteroff
+    ; chatteron
+    ; load
+    ; clearholes
+    ; countholes
+    ; numholes
+    ; numlfholes
+    ; lochole
+    ; loclfhole
+    ; printhole
+    ; printlfhole
+    ; types
+    ; constructors
+    ; fill
+    ; split
+    ; intro
+    ; compconst
+    ; signature
+    ; printfun
+    ; query
+    ; get_type
+    ; reset
+    ; quit
+    ; lookup_hole
+    ]
 
 (* registered commands *)
 

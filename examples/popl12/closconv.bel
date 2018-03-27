@@ -4,7 +4,7 @@ LF tm:type  =
 | lam: (tm -> tm) -> tm
 | app: tm -> tm -> tm
 ;
-%name tm M.
+--name tm M.
 
 LF nat:type =
 | z : nat

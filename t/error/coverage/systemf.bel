@@ -4,14 +4,14 @@
 LF ty_f: type =
    | arr : ty_f -> ty_f -> ty_f
    | all : (ty_f -> ty_f) -> ty_f;
-%name ty_f A.
+--name ty_f A.
 
 LF tm_f: type =
    | app : tm_f -> tm_f -> tm_f
    | lam : ty_f -> (tm_f -> tm_f) -> tm_f
    | tapp: tm_f -> ty_f -> tm_f
    | tlam: (ty_f -> tm_f) -> tm_f;
-%name tm_f M.
+--name tm_f M.
 
 LF hastype: tm_f -> ty_f -> type =
    | f_app : hastype M (arr A B) -> hastype N A

@@ -1,17 +1,17 @@
 
 % Weak normalization under binders.
 
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 i :  tp.
 arr: tp -> tp -> tp.
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 
 schema ctx = tm T;
 
-mstep : tm A -> tm A -> type.  %name mstep S.
+mstep : tm A -> tm A -> type.  --name mstep S.
 beta : mstep (app (lam M) N) (M N).
 eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
 steplam : ({x:tm A} mstep (M x) (M' x)) -> mstep (lam M) (lam M').

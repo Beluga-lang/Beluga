@@ -56,7 +56,7 @@ let _ = Error.register_printer
 	  Format.fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Id.render_name f)
 
       	| UnexpectedSucess ->
-      	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for %%not'ed declaration."
+      	  Format.fprintf ppf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
         | IllegalOptsPrag s ->
           Format.fprintf ppf "\"%s\" pragma must appear before any declarations." s
         | IllegalOperatorPrag(n, f, actual) -> begin
@@ -68,9 +68,9 @@ let _ = Error.register_printer
             (actual)
             (expected) end
       | InvalidOpenPrag s ->
-        Format.fprintf ppf "Invalid module in pragma '%%open %s'" s
+        Format.fprintf ppf "Invalid module in pragma '--open %s'" s
       | InvalidAbbrev (l, s) ->
-        Format.fprintf ppf "Invalid module in pragma '%%abbrev %s %s'"
+        Format.fprintf ppf "Invalid module in pragma '--abbrev %s %s'"
       	  (String.concat "." l) s
 				  )
   )
@@ -151,7 +151,7 @@ let recSgnDecls decls =
 	    let _ = recSgnDecl not'd_decl in true
 	  with _ ->
 	    if !Debug.chatter != 0 then
-              print_string ("Reconstruction fails for %not'd declaration\n");
+              print_string ("Reconstruction fails for --not'd declaration\n");
             false
         end in
       if not'd_decl_succeeds
@@ -162,11 +162,11 @@ let recSgnDecls decls =
     | [Ext.Sgn.Pragma(_, Ext.Sgn.NotPrag)] -> []
 
     | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Warn ) :: rest ->
-      raise (Error (loc, IllegalOptsPrag "%warncoverage"))
+      raise (Error (loc, IllegalOptsPrag "--warncoverage"))
     | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.Coverage `Error ) :: rest ->
-      raise (Error (loc, IllegalOptsPrag "%coverage"))
+      raise (Error (loc, IllegalOptsPrag "--coverage"))
     | Ext.Sgn.GlobalPragma(loc, Ext.Sgn.NoStrengthen) :: rest ->
-      raise (Error (loc, IllegalOptsPrag "%nostrengthen"))
+      raise (Error (loc, IllegalOptsPrag "--nostrengthen"))
 
     | decl :: rest ->
       let decl' = recSgnDecl decl in

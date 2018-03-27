@@ -44,21 +44,21 @@ fn d => case d of
 ;
 
 rec depsplitWrong : {g:dep-ctx} (dep (B[..]))[g]  ->  bool[ ] =
-fn d => case d of  %not
+fn d => case d of  --not
  | [h, x:dep tt] U[..] => [] tt
 ;
 }%
 
 
 rec depsplitWrong1asdfasdfadsf : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep ff |-  UU] => [ |- ff]
 ;
 
 
 
 rec depsplitWrong1 : {g:dep-ctx} [g, x : dep T |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep ff |-  UU] => [ |- ff]
 % | [g, xx:dep tt] VVx => [] tt
 %   msub': has the `ff' in `xx:dep ff'
@@ -133,12 +133,12 @@ mlam g => fn d => case d of
 
 
 rec depsplitTwoWrong1 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep XX1, yy:dep ff |-  UU] => [ |- ff]
 ;
 
 rec depsplitTwoWrong2 : {g:dep-ctx} [g, x : dep TX, y : dep TY |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep tt, yy:dep YY2 |-  UU] => [ |- ff]
 ;
 

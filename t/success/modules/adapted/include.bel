@@ -1,13 +1,13 @@
 %{
-  The purpose of this is to verify modules opened via the %open pragma are included
+  The purpose of this is to verify modules opened via the --open pragma are included
   in addition to anything declared in the module itself, i.e.
-  tp, exp, etc. should all be accessible after the '%open FVNatExplicit' because of the
-  '%open Common' in FVNatExplicit
+  tp, exp, etc. should all be accessible after the '--open FVNatExplicit' because of the
+  '--open Common' in FVNatExplicit
 
 }%
 
 
-%nostrengthen
+--nostrengthen
 
 module Common = struct
   tp: type.
@@ -26,7 +26,7 @@ end;
 
 
 module FVNatExplicit = struct
-  %open Common
+  --open Common
 
   opt: type.
   nothing: opt.
@@ -36,7 +36,7 @@ module FVNatExplicit = struct
 
 end;
 
-%open FVNatExplicit 
+--open FVNatExplicit 
 rec free_var : {g:expCtx} {T:[ |- tp]} [g |- exp (T[])] -> [g |- opt] =
   mlam g => mlam T => fn e =>
    (case e of

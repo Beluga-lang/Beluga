@@ -10,7 +10,7 @@ schema tps = tp;
 %{
 rec f : {g:w} [g |- nat] -> [g |- nat] =
   mlam g => fn e =>
-    case e of  %not
+    case e of  --not
 %     {#p::(block x:nat. nat)[g]}
 % | [g] #p.1[..] => [g] z
 | [g |- #p.2[..]] => [g |- z]
@@ -21,20 +21,20 @@ rec f : {g:w} [g |- nat] -> [g |- nat] =
 
 rec f : {g:w} [g |- nat] -> [g |- nat] =
   mlam g => fn e =>
-    case e of  %not
+    case e of  --not
      {#p:[g |- block (x:nat, _t:nat)]}
       [g |- #p.1[..]] => [g |- #p.2[..]]
 ;
 }%
 
 rec qqqq : [x:block (y:nat,_t:nat) |-  nat] -> [x:block (y:nat,_t:nat) |-  nat] =
-fn eNat => case eNat of %not
+fn eNat => case eNat of --not
   [x:block (y:nat,_t:nat) |-  x.1] => [x:block (y:nat,_t:nat) |-  x.2]
 %  [x:block (y:nat,_t:nat) |-  x.1] => [x |- x.2]
 ;
 
 %{
-%not
+--not
 rec ffff1 : {h:tps} [h, extras:tp |-  nat] -> [h |- nat] =
    mlam h => fn eNat =>
      case eNat of
@@ -43,7 +43,7 @@ rec ffff1 : {h:tps} [h, extras:tp |-  nat] -> [h |- nat] =
 ;
 
 
-%not
+--not
 rec ffff2 : {g:w} {h:tps} [g |- nat] -> [h |- tp] -> [g |- nat] =
   mlam g => mlam h => fn eNat => fn eTp =>
     case eNat of
@@ -52,19 +52,19 @@ rec ffff2 : {g:w} {h:tps} [g |- nat] -> [h |- tp] -> [g |- nat] =
 
 rec ffff2-a : {h:tps} [h |- tp] -> [h |- tp] =
   mlam h => fn eTp =>
-    case eTp of %not
+    case eTp of --not
       [h |- #q[..]] => [h |- #q[..]]
 ;
 
 % not
 rec ffff2-a-misspell : {h:tps} [h |- tp] -> [h |- tp] =
   mlam h => fn eTp =>
-    case eTp of %not
+    case eTp of --not
       [g |- #q[..]] => [g |- #q[..]]        % Unknown context variable in context: g
 ;
 
 
-%not
+--not
 rec ffff3 : {g:w} {h:tps} [g |- nat] -> [h |- tp] -> [g |- nat] =
   mlam g => mlam h => fn eNat => fn eTp =>
     case eTp of
@@ -74,7 +74,7 @@ rec ffff3 : {g:w} {h:tps} [g |- nat] -> [h |- tp] -> [g |- nat] =
 
 rec ffff4 : {h:tps}{g:w}  [g |- nat] -> [h |- tp] -> [g |- nat] =
   mlam h => mlam g => fn eNat => fn eTp =>
-    case eNat of %not
+    case eNat of --not
       [g |- #pp'.1[..]] => [g |- #pp'.2[..]]
 ;
 

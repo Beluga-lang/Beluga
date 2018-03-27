@@ -7,6 +7,6 @@ schema termCtx = some [] term;
 
 rec fffConcreteOmittedFromMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, x:term |-  V[..]] => [g |- z]
 ;

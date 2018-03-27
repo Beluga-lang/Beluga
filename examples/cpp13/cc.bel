@@ -5,7 +5,7 @@
 
 
 % PRAGMA FOR CHECKING COVERAGE
-%coverage
+--coverage
 
 % ----------------------------------------------------------
 % Types 
@@ -16,7 +16,7 @@ LF tp: type =
 | cross : tp -> tp -> tp
 | unit  : tp
 ;
-%name tp T.
+--name tp T.
 
 % ----------------------------------------------------------
 % Source language M,N
@@ -31,7 +31,7 @@ LF source: tp -> type =
 | rst  : source (cross T S) -> source S
 | cons : source T -> source S -> source (cross T S)
 ;
-%name source M.
+--name source M.
 
 % ----------------------------------------------------------
 % Target language P,Q
@@ -51,7 +51,7 @@ LF target: tp -> type =
 | cz    : target nat
 | csuc  : target nat -> target nat
 ;
-%name target P.
+--name target P.
 
 % ----------------------------------------------------------       
 % Context schema declarations for source and target context

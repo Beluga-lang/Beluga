@@ -23,7 +23,7 @@ LF tp : type =
   | forall: tp -> (tp -> tp) -> tp       % Universal Type: forall x>:A1. A2    forall A1 ([x] A2 x)
 ;             
 
-%name tp T.
+--name tp T.
 
 
 

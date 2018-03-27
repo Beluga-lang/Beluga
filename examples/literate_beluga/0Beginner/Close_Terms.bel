@@ -2,7 +2,7 @@
 % Authors: Rohan Jacob-Rao & Matthias Puech 
 % Last edited: 26 Aug 2014
 
-%coverage
+--coverage
 
 %{{#Closing terms with free variables
 

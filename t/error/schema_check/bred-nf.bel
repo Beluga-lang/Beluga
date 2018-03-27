@@ -9,20 +9,20 @@ LF tm: type =
 | app: tm -> tm -> tm
 | beta: (tm -> tm) -> tm -> tm
 ;
-%name tm M.
+--name tm M.
 
 LF nf: type =
 | nabs: (nf -> nf) -> nf
 | napp: nf -> nf -> nf
 ;
-%name nf U.
+--name nf U.
 
 LF p : type =
 | left : p -> p
 | right: p -> p
 | bnd  : (p -> p) -> p
 ;
-%name p P.
+--name p P.
 
 LF bred : tm -> nf -> type =
 | r_abs : ({x:tm}{y:nf}  bred x y -> bred (M x) (N y))
@@ -32,7 +32,7 @@ LF bred : tm -> nf -> type =
 | r_beta: ({x:tm} ({u:nf} bred N u -> bred x u) -> bred (R x) V)
       -> bred (beta R N) V
 ;
-%name bred R.
+--name bred R.
 
 LF path : tm -> p -> type =
 | p_abs   : ({x:tm}{p:p} path x p -> path (M x) (P p))
@@ -45,7 +45,7 @@ LF path : tm -> p -> type =
            -> path (beta R N) P
 ;
 
-%name path Pf.
+--name path Pf.
 
 LF npath : nf -> p -> type =
 | np_abs   : ({x:nf}{p:p} npath x p -> npath (M x) (P p))
@@ -56,7 +56,7 @@ LF npath : nf -> p -> type =
          -> npath (napp M N) (right P)
 
 ;
-%name path Qf.
+--name path Qf.
 
 schema tctx = tm ;
 

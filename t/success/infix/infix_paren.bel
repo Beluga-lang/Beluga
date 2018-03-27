@@ -1,9 +1,9 @@
 nat : type.
 z : nat.
-s : nat -> nat. %prefix s 5.
+s : nat -> nat. --prefix s 5.
 
 t : type.
-test : nat -> nat -> t. %infix test 2.
+test : nat -> nat -> t. --infix test 2.
 
 rec test_fun : [ |- nat ] -> [ |- t] =
 fn n =>

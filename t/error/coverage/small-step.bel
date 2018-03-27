@@ -381,7 +381,7 @@ fn ms => case ms of
 
 rec terminate : {M:[ |- term]} [ |- steps_to_val M] =
 / total m (terminate m)/
-mlam M => case [ |- M] of %not
+mlam M => case [ |- M] of --not
 | [ |- true] =>
    [ |- result ms_ref v_true]
 
@@ -389,7 +389,7 @@ mlam M => case [ |- M] of %not
     [ |- result ms_ref v_false]
 
 | [ |- switch T T1 T2] =>
-  (case terminate [ |- T ] of %not
+  (case terminate [ |- T ] of --not
    | [ |- result MS v_true] =>
        let [ |- result MS1 V1] = terminate [ |- T1 ] in
        let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in

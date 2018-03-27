@@ -40,6 +40,6 @@ let y = [ |- Arith.Nats.s Arith.Nats.z];
 
 let z = Arith.Nats.suc [ |- Arith.Nats.z ];
 
-%open Arith
+--open Arith
 
 let test = Nats.suc x;

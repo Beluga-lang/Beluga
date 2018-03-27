@@ -6,14 +6,14 @@ tm : type.
 arr : tp -> tp -> tp.
 
 % Terms
-app : tm -> tm -> tm.           %infix app 2.
+app : tm -> tm -> tm.           --infix app 2.
 lam : tp -> (tm -> tm) -> tm.
 
 % Values
 value : tm -> type.
 
 
-step: tm -> tm -> type.         %infix step 1.
+step: tm -> tm -> type.         --infix step 1.
 
 
 s_app1 : (E1 step E1') -> 
@@ -32,12 +32,12 @@ s_app3 : value E2 ->
 
 
 % Typing
-has_type : tm -> tp -> type. %infix has_type 1 left.
+has_type : tm -> tp -> type. --infix has_type 1 left.
 
 is_app : E1 has_type (arr T1 T2) ->
          E2 has_type T1 ->
        % -------------------
-         (E1 app E2) has_type T2. %infix is_app 2 left.
+         (E1 app E2) has_type T2. --infix is_app 2 left.
 
 is_lam : ({x:tm} x has_type T1 -> (E x) has_type T2) ->
        % -----------------------------------

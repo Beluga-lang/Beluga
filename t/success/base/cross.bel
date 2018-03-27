@@ -8,7 +8,7 @@ lam  : (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
 
-tp : type.  %name tp T.
+tp : type.  --name tp T.
 
 nat   : tp.                             % Natural Numbers
 cross : tp -> tp -> tp.                 % Pairs

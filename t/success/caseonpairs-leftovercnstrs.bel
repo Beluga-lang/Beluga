@@ -22,11 +22,11 @@ LF biDer : exp -> tp -> type =
 | chk : check M T -> biDer M T
 ;
 
-%name tp T.
-%name exp M.
-%name oft D.
-%name check C.
-%name biDer B.
+--name tp T.
+--name exp M.
+--name oft D.
+--name check C.
+--name biDer B.
 
 rec completenessGood : (g:ctx) [g |- oft M T] -> [g |- biDer M T] =
 fn e => case e of

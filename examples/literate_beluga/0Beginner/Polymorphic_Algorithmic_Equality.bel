@@ -14,11 +14,11 @@ The mechanization highlights several aspects:
 
 ## Syntax
 The polymorphic lambda-calculus is introduced with the following declarations: }}%
-tp : type. %name tp T a.
+tp : type. --name tp T a.
 arr : tp -> tp -> tp.
 all : (tp -> tp) -> tp.
 
-term: type. %name term M x.
+term: type. --name term M x.
 app : term -> term -> term.
 lam : (term -> term) -> term.
 tlam: (tp -> term) -> term.
@@ -31,7 +31,7 @@ We describe algorithmic and declarative equality for the polymorphic lambda-calc
 
 %{{### Algorithmic Equality for types
 We add the judgement for type equality <code>atp</code> of type <code>tm -> tm -> type</code> along with inference rules for universal quantifiers <code>at_al</code> and arrow types <code>at_arr</code>.}}%
-atp: tp -> tp -> type. %name atp Q u.
+atp: tp -> tp -> type. --name atp Q u.
 at_al : ({a:tp} atp a a -> atp (T a) (S a))
 -> atp (all T) (all S).
 at_arr: atp T1 T2 -> atp S1 S2
@@ -39,7 +39,7 @@ at_arr: atp T1 T2 -> atp S1 S2
 
 %{{### Algorithmic Equality for terms
 We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.}}%
-aeq: term -> term -> type. %name aeq D u.
+aeq: term -> term -> type. --name aeq D u.
 ae_a : aeq M1 N1 -> aeq M2 N2
     -> aeq (app M1 M2) (app N1 N2).
 ae_l : ({x:term} aeq x x -> aeq (M x) (N x))
@@ -52,7 +52,7 @@ ae_ta : aeq M N -> atp T S
 % ----------------------------------------------------------------- %
 %{{### Declarative Equality for types
 We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.}}%
-dtp: tp -> tp -> type. %name atp P u.
+dtp: tp -> tp -> type. --name atp P u.
 dt_al : ({a:tp}dtp a a -> dtp (T a) (S a))
 -> dtp (all T) (all S).
 dt_arr: dtp T1 T2 -> dtp S1 S2

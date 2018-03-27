@@ -1,17 +1,17 @@
 % Types
-tp: type.   %name tp T.
+tp: type.   --name tp T.
 arr  : tp -> tp -> tp.
 code : tp -> tp -> tp.
 cross: tp -> tp -> tp.
 unit :tp.
 
 % source lang
-term: tp -> type.   %name term M.
+term: tp -> type.   --name term M.
 elam: (term T -> term S) -> term (arr T S).
 eapp: term (arr T S) -> term T -> term S.
 
 
-list: tp -> type. %name list F.
+list: tp -> type. --name list F.
 nil: list unit.
 cons: term T -> list S -> list (cross T S).
 

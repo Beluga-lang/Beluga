@@ -10,7 +10,7 @@ module Nats = struct
   let three = suc two;
 end;
 
-%abbrev Nats N
+--abbrev Nats N
 
 let x = [ |- N.z ];
 
@@ -28,7 +28,7 @@ cons : N.nat -> list N -> list (N.s N).
 let l1 = [ |- cons N.z (cons (N.s N.z) nil)];
 
 module Arith = struct
-	%open N
+	--open N
 
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of
@@ -44,6 +44,6 @@ end;
 let two' = N.two;
 
 
-%open N
+--open N
 let l2 = [ |- cons z nil];
 

@@ -1,9 +1,9 @@
 % Sketch of weak normalization for STLC that goes under binders
 % Author: Andrew Cave
 
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 
 schema ctx = tm T;
 

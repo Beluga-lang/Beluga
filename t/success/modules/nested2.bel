@@ -34,7 +34,7 @@ module Arith = struct
 
 end;
 
-%open Arith.Nats
+--open Arith.Nats
 
 let x = [ |- z ];
 

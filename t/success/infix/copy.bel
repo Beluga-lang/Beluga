@@ -1,15 +1,15 @@
-tp: type.   %name tp T.
+tp: type.   --name tp T.
 bool: tp.
 nat: tp.
-arrow: tp -> tp -> tp. %infix arrow 1 left.
+arrow: tp -> tp -> tp. --infix arrow 1 left.
 
-term : tp -> type.  %name term E x.
+term : tp -> type.  --name term E x.
 
 z    : term nat. 
 s    : term nat -> term nat.
 
 lam  : (term T -> term T') -> term (T arrow T'). 
-app  : term (T arrow T') -> term T -> term T'. %infix app 1.
+app  : term (T arrow T') -> term T -> term T'. --infix app 1.
 
 
 schema tctx = some [t:tp] term t;

@@ -1,5 +1,5 @@
 % PRAGMA FOR COVERAGE CHECKING
-%coverage
+--coverage
 target:type.
 z: target.
 tlam: (target → target) → target.

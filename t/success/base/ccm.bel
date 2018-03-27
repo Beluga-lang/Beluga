@@ -5,7 +5,7 @@ nat: type.
 z: nat.
 s: nat -> nat.
 
-tp  : type.                %name tp T.
+tp  : type.                --name tp T.
 arr : tp -> tp -> tp.
 card : nat -> tp.
 
@@ -41,7 +41,7 @@ rec length : {g:nat-ctx} [ |- nat] = mlam g => length' [g] [g |- z]
 
 
 rec length'2 : {g:nat-ctx} [g |- nat]  -> [ |- nat] =
-mlam g => fn v => case v of %not
+mlam g => fn v => case v of --not
  | [h,x:nat |-  U] => let [ |- N] = length'2 [h] [h |- z] in [ |- s N]
 ;
 
@@ -59,7 +59,7 @@ fn v => case v of
 
 
 rec aaa1Wrong : (g:natORtp-ctx) [g |- tp]  -> [ |- nat] =
-fn v => case v of %not
+fn v => case v of --not
  | [h,x:tp |-  x] => [ |- z]
  | [h1,y:tp,x:tp |-  y]  =>  [ |- z]
  | [h,y:tp,x:tp |-  #p[..]]  =>  [ |- z]
@@ -69,7 +69,7 @@ fn v => case v of %not
 
 
 rec aaa1Wrong2 : (g:natORtp-ctx) [g |- tp]  -> [ |- nat] =
-fn v => case v of  %not
+fn v => case v of  --not
  | [h,x:tp |-  x] => [ |- z]
  | [h,x:tp |-  #p[..]]  =>  [ |- z]
  | [h,n:nat |-  #p[..]]  =>  [ |- z]
@@ -91,7 +91,7 @@ fn v => case v of
 
 
 rec fff2Wrong : (g:tp-ctx) [g |- tp]  -> [ |- nat] =
-fn v => case v of %not
+fn v => case v of --not
  | [h,x:tp |-  x] => [ |- z]
  | [h,y:tp,x:tp |-  y]  =>  [ |- z]
  | [h,q1:tp,y:tp,x:tp |-  #p[..]]  =>  [ |- z]  % misses q1

@@ -3,14 +3,14 @@ LF ty : type =
   | one  : ty
   | arr  : ty -> ty -> ty
   ;
-%name ty T.
+--name ty T.
 
 LF tm : ty -> type =
   | unit : tm one
   | abs : {A:ty}(tm A -> tm B) -> tm (arr A B)
   | app : tm (arr A B) -> tm A -> tm B
   ;
-%name tm M.
+--name tm M.
 
 
 schema cxt = tm A; % some [a : ty] block tm a;

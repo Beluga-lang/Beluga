@@ -1,4 +1,4 @@
-%nostrengthen
+--nostrengthen
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 %
@@ -8,14 +8,14 @@ LF tp  : type =
 | nat : tp
 | bool: tp
 ;
-%name tp T.
+--name tp T.
 
 inductive Int : ctype =
 | Zero : Int
 | Suc : Int -> Int
 ;
 
-exp : tp -> type.   %name exp E x.
+exp : tp -> type.   --name exp E x.
 z   : exp nat.
 s   : exp nat -> exp nat.
 tt  : exp bool.

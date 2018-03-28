@@ -14,7 +14,7 @@ LF tp: type =
 | cross : tp -> tp -> tp
 | unit  : tp
 ;
-%name tp T.
+--name tp T.
 
 LF source   : tp -> type =
 | app   : source (arr S T) -> source S -> source T

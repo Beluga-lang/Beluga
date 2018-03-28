@@ -16,7 +16,7 @@ LF term  : type =
 | iszero: term -> term
 ;
 
-%name term M.
+--name term M.
 % ----------------------------------------------------------------------------
 % Examples : Valid Terms
 
@@ -31,12 +31,12 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 let v3 = [ |- switch (succ z) (succ z) false ] ;
 
 % Examples : Invalid Terms
-% (use keyword %not to say that the subsequent line is not true)
+% (use keyword --not to say that the subsequent line is not true)
 
-%not
+--not
 let w1 = [ |- iszero] ;
 
-%not
+--not
 let w2 = [ |- switch z z] ;
 
 % ----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ LF tp : type =
 | nat : tp
 | bool : tp
 ;
-%name tp T.
+--name tp T.
 
 LF hastype: term -> tp -> type =
 | t_zero : hastype z nat

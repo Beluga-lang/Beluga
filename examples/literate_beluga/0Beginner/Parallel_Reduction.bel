@@ -16,11 +16,11 @@ The mechanization highlights several aspects:
 ## Syntax
 We encode the simply-typed lambda-calculus in the logical framework LF using Twelf-style syntax.<br>
 }}%
-tp: type. %name tp T.
+tp: type. --name tp T.
 arr: tp -> tp -> tp.
 nat: tp.
 
-tm: type. %name tm M x.
+tm: type. --name tm M x.
 app: tm -> tm -> tm.
 lam: (tm -> tm) -> tm.
 
@@ -47,7 +47,7 @@ pr_a : pr M M' -> pr N N'
 ### Typing judgement
 Following the judgements-as-types principle, we define the type family <code>oft</code> which is indexed by terms <code>tm</code> and types <code>tp</code>. Constructors <code>of_app</code> and <code>of_lam</code> encode the typing rules for application and abstraction, respectively.
 }}%
-oft: tm -> tp -> type. %name oft H.
+oft: tm -> tp -> type. --name oft H.
 of_app: oft M1 (arr T2 T) -> oft M2 T2
        -> oft (app M1 M2) T.
 of_lam: ({x:tm}oft x T1 -> oft (M x) T2)

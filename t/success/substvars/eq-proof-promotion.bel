@@ -3,13 +3,13 @@
 %
 
 % Definition of lambda-terms
-tm: type.                         %name tm M x.
+tm: type.                         --name tm M x.
 app: tm -> tm -> tm.
 lam: (tm -> tm) -> tm.
 
 % ---------------------------------------------------------------------------
 % Algorithmic Equality
-aeq: tm -> tm -> type.   %name aeq Q u.
+aeq: tm -> tm -> type.   --name aeq Q u.
 ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
 
 ae_l :  ({x : tm} aeq x x -> aeq (M x) (N x)) 

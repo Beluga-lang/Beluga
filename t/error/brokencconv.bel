@@ -7,7 +7,7 @@ LF tp: type =
 | cross: tp -> tp -> tp
 | unit :tp
 ;
-%name tp T.
+--name tp T.
 
 
 % Target language
@@ -29,14 +29,14 @@ LF target: tp -> type =
 | tz: target int
 | tsuc: target int -> target int
 ;
-%name target Q.
+--name target Q.
 
 % Natural Numbers
 LF nat: type =
 | z:nat
 | suc: nat -> nat
 ;
-%name nat N.
+--name nat N.
 
 %{
 %  member N R P is true iff

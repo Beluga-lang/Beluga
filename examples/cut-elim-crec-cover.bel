@@ -2,9 +2,9 @@
 % Author: Brigitte Pientka
 
 i : type.  % individuals
-%name i S.
+--name i S.
 o : type.  % formulas
-%name o A.
+--name o A.
 
 imp    : o -> o -> o.
 not    : o -> o.

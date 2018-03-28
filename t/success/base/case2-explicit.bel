@@ -9,7 +9,7 @@ schema w = nat;
 
 rec copynat : {g:w} [g |- nat] -> [g |- nat] =
 mlam g => fn e =>
- case e of %not
+ case e of --not
     [g |- z] : [g |- nat] => [g |- z]
   | {U:[g |- nat]}
      [g |- suc (U[..])] : [g |- nat] => copynat [g] [g |- (U[..])]

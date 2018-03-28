@@ -3,12 +3,12 @@
 
 % ---------------------------------------------------------------------------
 % Definition of lambda-terms
-tm: type. %name tm M x.
+tm: type. --name tm M x.
 app: tm -> tm -> tm.
 lam: (tm -> tm) -> tm.
 
 % Definition of types and expressions
-tp: type. %name tp T.
+tp: type. --name tp T.
 arr: tp -> tp -> tp.
 nat: tp.
 
@@ -30,7 +30,7 @@ schema rCtx = block x:tm, pr_v: pr x x;
 
 % ---------------------------------------------------------------------------
 % Typing judgment
-oft: tm -> tp -> type. %name oft H.
+oft: tm -> tp -> type. --name oft H.
 of_lam: ({x:tm}oft x T1 -> oft (M x) T2)
 -> oft (lam M) (arr T1 T2).
 

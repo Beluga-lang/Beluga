@@ -1,4 +1,4 @@
-exp: type. %name exp E.
+exp: type. --name exp E.
 lam: (exp -> exp) -> exp.
 app: exp -> exp -> exp.
 z: exp.

@@ -2,7 +2,7 @@
 %%% Author: Frank Pfenning
 
 pred : term -> term -> type.  % infix none 10 =>.
-                            %name pred R.
+                            --name pred R.
 
 beta : ({x:term} pred x x -> pred (M1 x) (M1' x))
      ->                      pred M2 M2'
@@ -18,7 +18,7 @@ lm   : ({x:term} pred x x -> pred (M x)  (M' x))
 % Parallel, multi-step reduction
 
 pred* : term -> term -> type.  % infix none 10 =>*.
-                               %name pred* R*.
+                               --name pred* R*.
 
 id*   :   pred* M  M.
 
@@ -31,7 +31,7 @@ next    :  pred M  M' -> pred* M' M'' ->  pred* M  M''.
 % Parallel conversion
 
 pred= : term -> term -> type.  % infix none 10 <=>.
-                             %name pred= C.
+                             --name pred= C.
 
 reduce :  pred*  M  M'
        -> pred= M  M'.

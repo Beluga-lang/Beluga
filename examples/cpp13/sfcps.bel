@@ -16,7 +16,7 @@ LF tp: type =
 | unit  : tp
 | all   : (tp -> tp) -> tp
 ;
-%name tp T.
+--name tp T.
 
 LF source   : tp -> type =
 | app   : source (arr S T) -> source S -> source T

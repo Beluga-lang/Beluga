@@ -34,7 +34,7 @@ module Arith = struct
 
 end;
 
-%abbrev Arith.Nats N
+--abbrev Arith.Nats N
 
 let x = [ |- N.z ];
 

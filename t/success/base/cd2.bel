@@ -13,7 +13,7 @@ rec conslist : {G':[ |- nat]} [ |- list (suc G')] -> [ |- nat] = mlam G => fn e 
 ;
 
 rec conslist2 : {G':[ |- nat]} [ |- list (suc G')] -> [ |- nat] = mlam G => fn e =>
-  case e of %not
+  case e of --not
   | [ |- cons (cons (cons T))]          => [ |- z]
 ;
 
@@ -27,7 +27,7 @@ rec conslist3 : [ |- list (suc G')] -> [ |- nat] = fn e =>
 
 % let blah = conslist2 <. z> ([] cons nil);
 
-%not
+--not
 rec badlist : {G':[ |- nat]} [ |- list (suc G')] -> [ |- nat] = mlam G => fn e =>
   case e of
   | [ |- nil]          => [ |- z]

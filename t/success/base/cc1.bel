@@ -19,7 +19,7 @@ mlam g => fn e =>
 
 rec fffForgotConcreteVarCase : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, x:term |-  z]     => [g |- z]
   | [g, x:term |-  suc (U)]   => [g |- z]
   | [g, x:term |-  #p[..]]   => [g |- z]
@@ -51,21 +51,21 @@ mlam g => fn e =>
 
 rec fffEmptyMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, x:term |-  U] => [g |- z]
 ;
 
 
 rec fffConcreteOmittedFromMVar : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, x:term |-  U[..]] => [g |- z]
 ;
 
 
 rec fffSplitCasesBad : {g:termCtx} [g, x:term |-  term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, x:term |-  U[..]]   => [g |- z]
   | [g, x:term |-  x]      => [g |- z]
   % Doesn't cover suc (suc x)
@@ -82,7 +82,7 @@ mlam g => fn e =>
 
 rec fffForgotParamVarCase : {g:termCtx} [g |- term] -> [g |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g |- z]     => [g |- z]
 
   | [g |- suc (U[..])]   => [g |- z]

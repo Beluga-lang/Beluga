@@ -3,12 +3,12 @@
 % Adapted from Twelf's POPL tutorial
 
 % Types
-tp  : type.                %name tp T.
+tp  : type.                --name tp T.
 o   : tp.
 arr : tp -> tp -> tp.
 
 % Intrinsically well-typed expressions
-exp   : tp -> type.        %name exp E.
+exp   : tp -> type.        --name exp E.
 value : tp -> type.
 app   : exp (arr A B) -> exp A -> exp B.
 lam   : {A:tp}(value A -> exp B) -> value (arr A B).
@@ -147,5 +147,5 @@ cpse/ret : cpse (ret (V:value A)) ([c:ccont A] cthrow c V')
 
 % block cpsb : some {A : tp} block {x : value A} {x' : cvalue A} {d : cps x x'}.
 % worlds (cpsb) (cps _ _) (cpse _ _).
-%total (E V) (cps E _) (cpse V _).
+--total (E V) (cps E _) (cpse V _).
 }%

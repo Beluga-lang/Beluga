@@ -2,7 +2,7 @@
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-exp  : type.  %name exp E.
+exp  : type.  --name exp E.
 
 lam   : (exp -> exp) -> exp.
 app   : exp -> exp -> exp.
@@ -12,7 +12,7 @@ app   : exp -> exp -> exp.
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-eval : exp -> exp -> type.  %name eval D.
+eval : exp -> exp -> type.  --name eval D.
 
 % Functions
 ev_lam  : eval (lam (\x. E x)) (lam (\x. E x)).
@@ -28,17 +28,17 @@ ev_app  : eval (app E1 E2) V
 
 % Expressions
 
-exp'   : type.  %name exp' F.
+exp'   : type.  --name exp' F.
 
 one      : exp'.
-shift    : exp' -> exp'.  %postfix 20 ^.
+shift    : exp' -> exp'.  --postfix 20 ^.
 lam'     : exp' -> exp'.
 app'     : exp' -> exp' -> exp'.
 
 % Environments and values
 
-env    : type.  %name env K.
-val    : type.  %name val W.
+env    : type.  --name env K.
+val    : type.  --name val W.
 
 empty  : env.
 cons   : env -> val -> env.   % infix left 10 ;.
@@ -51,7 +51,7 @@ clo    : env -> exp' -> val.
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Michaylov & Pfenning 92]
 
-feval : env -> exp' -> val -> type.  %name feval D.
+feval : env -> exp' -> val -> type.  --name feval D.
 
 % Variables
 fev_1 : feval (cons K W) one W.
@@ -71,8 +71,8 @@ fev_app : feval K (app' F1 F2) W
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-trans  : env -> exp' -> exp -> type.  %name trans C.
-vtrans : val -> exp -> type.          %name vtrans U.
+trans  : env -> exp' -> exp -> type.  --name trans C.
+vtrans : val -> exp -> type.          --name vtrans U.
 
 % Functions
 tr_lam : trans K (lam' F) (lam (\x. E x))

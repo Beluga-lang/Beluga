@@ -132,6 +132,9 @@ let regexp lower = ['a' - 'z']
 (** A question mark followed by a symbol. *)
 let regexp hole = '?' ( start_sym sym* ) ?
 
+(** A double-dash followed by a sumbol is a pragma. *)
+let regexp pragma = "--" [ 'a'-'z' ]+
+
 (**************************************************)
 (* Location Update and Token Generation Functions *)
 (**************************************************)
@@ -182,8 +185,11 @@ let lex_token loc = lexer
   | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
   | "%{{" ([^'}']|(['}'][^'}'])|(['}']['}'][^'%']))* "}}%" -> mk_tok_of_lexeme (mk_comment loc) loc lexbuf
   | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
+
   | "…"
   | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
+
+  | pragma
   | "->"
   | "<-"
   | "::"
@@ -211,21 +217,11 @@ let lex_token loc = lexer
   | "end"
   | "ttrue"
   | "ffalse"
-  | "%name"
   | "#positive"
   | "#stratified"
   | "strust"
   | "total"
   | "#opts"
-  | "%coverage"
-  | "%nostrengthen"
-  | "%not"
-  | "%query"
-  | "%infix"
-  | "%prefix"
-  | "%assoc"
-  | "%open"
-  | "%abbrev"
   | "type"
   | "prop"
   | "|-"
@@ -317,8 +313,9 @@ let skip_nested_comment loc =
 (* Skip %...\n comments and advance the location reference. *)
 let skip_line_comment loc =
   lexer
-  | '%' ( [^ '\n' '{' 'a'-'z'] [^ '\n' ]* ) '\n'
-  | '%' '\n' -> update_loc loc (advance_line lexbuf)
+  | '%' newline
+  | '%' [^ '\r' '\n' '{'] [^ '\r' '\n' ]* newline ->
+     update_loc loc (advance_line lexbuf)
 
 (* Skip non-newline whitespace and advance the location reference. *)
 let skip_whitespace loc = lexer

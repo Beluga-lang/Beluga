@@ -1,7 +1,7 @@
 
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 
-neut : tp -> type.       %name neut R.
+neut : tp -> type.       --name neut R.
 
 schema ctx = neut T;
 

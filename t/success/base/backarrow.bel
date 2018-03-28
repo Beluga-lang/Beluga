@@ -8,7 +8,7 @@ lam  : (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
 
-tp : type.  %name tp T.
+tp : type.  --name tp T.
 
 nat   : tp.				% Natural Numbers
 cross : tp -> tp -> tp.			% Pairs
@@ -34,7 +34,7 @@ ev_app : eval (app E1 E2) V
 	  <- eval E2 V2
 	  <- eval (E1' V2) V.
 
-has_type : exp -> tp -> type.  %name has_type P u.
+has_type : exp -> tp -> type.  --name has_type P u.
 
 % Natural Numbers
 tp_z     : has_type z nat.

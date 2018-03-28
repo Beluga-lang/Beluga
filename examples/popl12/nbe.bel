@@ -1,18 +1,18 @@
 
 
 atomic_tp : type.
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 atomic : atomic_tp -> tp.
 arr: tp -> tp -> tp.
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 
 schema tctx = tm T;
 
-neut : tp -> type.       %name neut R.
-norm : tp -> type.       %name norm M.
+neut : tp -> type.       --name neut R.
+norm : tp -> type.       --name norm M.
 nlam : (neut T -> norm S) -> norm (arr T S).
 rapp : neut (arr T S) -> norm T -> neut S.
 embed : neut (atomic P) -> norm (atomic P).

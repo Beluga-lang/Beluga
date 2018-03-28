@@ -3,9 +3,9 @@ LF tp : type =
 | arr : tp -> tp -> tp
 | prod : tp -> tp -> tp
 ;
-%name tp T.        
+--name tp T.        
 
-tm : type.          %name tm E.
+tm : type.          --name tm E.
 app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 fst : tm -> tm.
@@ -23,16 +23,16 @@ prod2 : step (snd (pair M N)) N.
 steppair1 : step M M' -> step (pair M N) (pair M' N).
 steppair2 : step N N' -> step (pair M N) (pair M N').
 
-mstep : tm -> tm -> type.  %name mstep S.
+mstep : tm -> tm -> type.  --name mstep S.
 refl : mstep M M.
 onestep : step M M' -> mstep M' M'' -> mstep M M''.
 
-val : tm -> type. %name val V.
+val : tm -> type. --name val V.
 val/c : val c.
 val/lam : val (lam M).
 val/pair : val M -> val N -> val (pair M N).
 
-halts : tm -> type.  %name halts H.
+halts : tm -> type.  --name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
 stratified Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =

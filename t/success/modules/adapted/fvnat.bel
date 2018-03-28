@@ -1,4 +1,4 @@
-%nostrengthen
+--nostrengthen
 
 module Common = struct
   tp: type.
@@ -18,7 +18,7 @@ module Common = struct
 end;
 
 module FVNat = struct
-  %open Common
+  --open Common
 
 
   arr : tp -> tp -> tp.
@@ -69,7 +69,7 @@ module FVNat = struct
 end;
 
 module FVNatCrec = struct
-  %open Common
+  --open Common
 
   arr : tp -> tp -> tp.
   app:  exp (arr T T') -> exp T -> exp T'.
@@ -113,7 +113,7 @@ module FVNatCrec = struct
 end;
 
 module FVNatExplicit = struct
-  %open Common
+  --open Common
 
   opt: type.
   nothing: opt.

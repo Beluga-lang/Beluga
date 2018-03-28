@@ -5,16 +5,16 @@ LF ty : type =
   | base : ty
   | arr  : ty -> ty -> ty
   ;
-%name ty A.
+--name ty A.
 
 LF tm : ty -> type =
   | abs : (tm A -> tm B) -> tm (arr A B)
   | app : tm (arr A B) -> tm A -> tm B
   ;
-%name tm M.
+--name tm M.
 
 % ==> : tm A -> tm A -> type.
-% %infix ==> 1 none.
+% --infix ==> 1 none.
 
 % rbeta : (app (abs M) N) ==> (M N).
 %   % | rabs  : ({x : tm A} (M x) ==> (M' x)) -> (abs M) ==> (abs M')

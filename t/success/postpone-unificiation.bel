@@ -2,19 +2,19 @@
 % Accompanies Mechanizing Logical Relations using Contextual Type Theory
 % by Andrew Cave and Brigitte Pientka
 
-tp : type.         %name tp T.
+tp : type.         --name tp T.
 i :  tp.
 arr: tp -> tp -> tp.
 
-tm : type.          %name tm E.
+tm : type.          --name tm E.
 app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 
-step : tm -> tm -> type.  %name step S.
+step : tm -> tm -> type.  --name step S.
 beta : step (app (lam M) N) (M N).
 stepapp : step M M' -> step (app M N) (app M' N).
 
-mstep : tm -> tm -> type.  %name mstep S.
+mstep : tm -> tm -> type.  --name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
@@ -30,7 +30,7 @@ schema tctx = some [t:tp] block x:tm, y:algeqr x x t;
 
 tmpair : type.
 ~ : tm -> tm -> tmpair.
-%infix ~ 5 right.
+--infix ~ 5 right.
 
 stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn (M[..]) (N[..]) i]
@@ -311,7 +311,7 @@ dctx : type.
 nil : dctx.
 & : dctx -> tp -> dctx.
 
-%infix & 5 right.
+--infix & 5 right.
 
 inductive Lookup : {G:[|-dctx]}(g:ctx)[g |-  tm] -> [ |- tp] -> ctype  =
 | Top : Lookup [|- (G) & T] [g,x:tm |-  x] [ |- T]

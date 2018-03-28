@@ -4,7 +4,7 @@ LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
-%name nat N.
+--name nat N.
 % The sub-term relation on naturals
 
 LF le : nat -> nat -> type =

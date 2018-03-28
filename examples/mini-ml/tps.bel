@@ -2,11 +2,11 @@
 % Author: Brigitte Pientka
 %
 
-tp   : type.   %name tp T.
+tp   : type.   --name tp T.
 nat  : tp.
 arrow  : tp -> tp -> tp.
 
-exp  : type.   %name exp E.
+exp  : type.   --name exp E.
 z    : exp.
 suc  : exp -> exp.
 match: exp -> exp -> (exp -> exp) -> exp.   
@@ -15,7 +15,7 @@ lam  : tp -> (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
 % Evaluation
-eval : exp -> exp -> type.  %name eval F.
+eval : exp -> exp -> type.  --name eval F.
 ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
@@ -38,7 +38,7 @@ ev_app: eval E1 (lam T (\x. E x)) -> eval E2 V2 -> eval (E V2) V
 
 % Typing
 
-oft : exp -> tp -> type.  %name oft D u.
+oft : exp -> tp -> type.  --name oft D u.
 
 tp_z     : oft z nat.
 tp_s     : oft E nat ->
@@ -62,12 +62,12 @@ tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
 
 % Gives type-checking error, 'Substitution not well-typed'
 
-%query 1 * D : oft (suc (suc z)) nat.
-%query 1 * D : oft (lam T (\x.x)) S.
-%query 1 * D : oft (letv (suc (suc z)) (\x. app (lam nat (\y.y)) x) ) T.
-%query 1 * D : oft (lam T (\x.x)) S.
+--query 1 * D : oft (suc (suc z)) nat.
+--query 1 * D : oft (lam T (\x.x)) S.
+--query 1 * D : oft (letv (suc (suc z)) (\x. app (lam nat (\y.y)) x) ) T.
+--query 1 * D : oft (lam T (\x.x)) S.
 
-%query * 5 P : oft X nat -> oft (suc X) nat.
+--query * 5 P : oft X nat -> oft (suc X) nat.
 
 % Type preservation proof
 rec tps :  [ |- eval E V] -> [ |- oft E T]

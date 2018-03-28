@@ -5,12 +5,12 @@ LF term: type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 ;
-%name term M x.
+--name term M x.
 
 schema tctx = term;
 
 % Algorithmic Equality
-aeq: term -> term -> type.   %name aeq Q u.
+aeq: term -> term -> type.   --name aeq Q u.
 ae_a : aeq E1 F1 -> aeq E2 F2
     -> aeq (app E1 E2) (app F1 F2).
 ae_l :  ({x:term} aeq x x -> aeq (E x) (F x))

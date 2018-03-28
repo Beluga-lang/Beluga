@@ -10,7 +10,7 @@ list : nat -> type.
 nil : list z.
 @ : bool -> list N -> list (s N).
 
-%infix @ 5 right.
+--infix @ 5 right.
 
 let l1 = [ |- t @ t @ t @ nil];
 

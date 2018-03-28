@@ -30,12 +30,12 @@ schema bool-ctx = bool;
 
 
 rec depsplitWrong1 : {g:dep-ctx} [g, x : dep T1 T2 |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep ff ff |-  UUx] => [ |- ff]
 ;
 
 rec depsplitWrong2 : {g:dep-ctx} [g, x : dep T1 T2 |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep ff ff |-  UU1x] => [ |- ff]
  | [g, xx:dep ff tt |-  UU2x] => [ |- ff]
 ;
@@ -50,7 +50,7 @@ mlam g => fn d => case d of
 ;
 
 rec depsplitWrong3 : {g:dep-ctx} [g, x : dep T1 T2 |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep tt ff |-  UU1x] => [ |- ff]
  | [g, xx:dep ff tt |-  UU2x] => [ |- ff]
 % | [g, xx:dep tt tt] UU3x => [] ff
@@ -65,7 +65,7 @@ mlam g => fn d => case d of
 ;
 
 rec depsplitWrongConstrained2 : {g:dep-ctx} [g, x : dep tt T2 |-  bool]  ->  [ |- bool] =
-mlam g => fn d => case d of %not
+mlam g => fn d => case d of --not
  | [g, xx:dep tt ff |-  UU1x] => [ |- ff]
 ;
 

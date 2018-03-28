@@ -7,7 +7,7 @@ unitexp : exp unit.
 
 schema assn = block t:tp, _t:exp t;
 
-%not
+--not
 rec fff : {g:assn} [ |- tp] -> [ |- tp]
 = mlam g => fn e => fff[g, zz:block u:tp, _t:exp unit] e;
 
@@ -17,6 +17,6 @@ rec ggg : {g:assn} [ |- tp] -> [ |- tp]
 rec hhh : {g:assn} [ |- tp] -> [ |- tp]
 = mlam g => fn e => hhh[g, zz:block (u:tp, _t:exp u), zz1:block u':tp, _t:exp u'] e;
 
-%not
+--not
 rec iii : {g:assn} [ |- tp] -> [ |- tp]
  = mlam g => fn e => iii[g, zz:block (u:tp, _t:exp u), zz1:block u':tp, u':tp, _t:exp u'] e;

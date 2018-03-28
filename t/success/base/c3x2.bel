@@ -6,7 +6,7 @@ schema termCtx = some [] term;
 
 
 rec copy : [ |- term] -> [ |- term] = fn e =>
-  case e of %not
+  case e of --not
 %  | []  z     => [] z
   | [ |- suc U] => let [ |- V] = copy [ |- U] in [ |- suc V]
 ;

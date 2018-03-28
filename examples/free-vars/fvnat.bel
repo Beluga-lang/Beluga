@@ -1,4 +1,4 @@
-%nostrengthen
+--nostrengthen
 
 tp: type.
 nat: tp.

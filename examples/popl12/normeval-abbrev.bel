@@ -6,13 +6,13 @@ LF tp : type =
 | atomic : atomic_tp -> tp
 | arr: tp -> tp -> tp;
 
-%name tp T.
+--name tp T.
 
 LF tm : tp -> type =
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S);
 
-%name tm E.
+--name tm E.
 
 schema tctx = some [t:tp] tm t;
 
@@ -21,8 +21,8 @@ LF neut : tp -> type =
 and norm : tp -> type =
 | nlam : (neut T -> norm S) -> norm (arr T S)
 | embed : neut (atomic P) -> norm (atomic P);
-%name neut R.
-%name norm M.
+--name neut R.
+--name norm M.
 schema ctx = neut T;
 
 inductive NeutVar : {g:ctx} [ |- tp] -> ctype =

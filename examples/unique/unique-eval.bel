@@ -1,9 +1,9 @@
 % Definition of types and expressions
-tp: type.  %name tp T.
+tp: type.  --name tp T.
 arr: tp -> tp -> tp.
 nat: tp.
 
-exp: type. %name exp E.
+exp: type. --name exp E.
 % lam : tp -> (exp -> exp) -> exp.
 lam :  (exp -> exp) -> exp.
 app : exp -> exp -> exp.

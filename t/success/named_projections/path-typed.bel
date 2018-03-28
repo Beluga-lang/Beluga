@@ -1,12 +1,12 @@
-tp:type. %name tp T a.
+tp:type. --name tp T a.
 arr: tp -> tp -> tp. % infix right 10 => .
 
-exp: type. %name exp E x.
+exp: type. --name exp E x.
 
 lam: tp -> (exp -> exp) -> exp.
 app: exp -> exp -> exp.
 
-type_of: exp -> tp -> type. %name type_of D u.
+type_of: exp -> tp -> type. --name type_of D u.
 
 tof_lam: type_of (lam T E) (arr T T')
 	 <- ({x:exp}type_of x T -> type_of (E x) T').
@@ -15,13 +15,13 @@ tof_app: type_of (app E1 E2) T
 	 <- type_of E1 (arr T2 T)
 	 <- type_of E2 T2.
 
-path: type. %name path P.
+path: type. --name path P.
 bind: tp -> (path -> path) -> path.
 left: path -> path.
 right: path -> path.
 done: path.
 
-is_path: path -> exp -> type. %name is_path I.
+is_path: path -> exp -> type. --name is_path I.
 
 p_lam: is_path (bind T P) (lam T E)
        <- ({x:exp}{q:path}type_of x T -> is_path q x -> is_path (P q) (E x)).
@@ -34,7 +34,7 @@ p_right: is_path (right P) (app M N)
 
 p_done: is_path done M.
 
-eq: exp -> exp -> type.  %name eq E.
+eq: exp -> exp -> type.  --name eq E.
 e_ref: eq T T.
 %{e_lam: ({x:exp}eq x x -> eq (E x) (E' x))
         -> eq (lam T E) (lam T E').

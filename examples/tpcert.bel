@@ -1,10 +1,10 @@
-%nostrengthen
-tp   : type.  %name tp T.
+--nostrengthen
+tp   : type.  --name tp T.
 nat  : tp.
 bool : tp.
 arr  : tp -> tp -> tp.
 
-term : type.  %name term M.
+term : type.  --name term M.
 z    : term.
 tt   : term.
 ff   : term.
@@ -13,7 +13,7 @@ letv : term -> (term -> term) -> term.
 lam  : tp -> (term -> term) -> term.
 app  : term -> term -> term.
 
-oft  : term -> tp -> type.  %name oft D.
+oft  : term -> tp -> type.  --name oft D.
 o_tt : oft tt bool.
 o_ff : oft ff bool.
 o_z  : oft z nat.

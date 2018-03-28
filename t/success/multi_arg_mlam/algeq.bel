@@ -2,11 +2,11 @@
 % Accompanies Mechanizing Logical Relations using Contextual Type Theory
 % by Andrew Cave and Brigitte Pientka
 
-tp : type.         %name tp T.
+tp : type.         --name tp T.
 i :  tp.
 arr: tp -> tp -> tp.
 
-tm : type.          %name tm E.
+tm : type.          --name tm E.
 app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 
@@ -17,11 +17,11 @@ of/lam : ({x:tm} oft x T -> oft (M x) S) -> oft (lam M) (arr T S).
 schema ctx = tm;
 schema tctx = some [t:tp] block x:tm,y:oft x t;
 
-step : tm -> tm -> type.  %name step S.
+step : tm -> tm -> type.  --name step S.
 beta : step (app (lam M) N) (M N).
 stepapp : step M M' -> step (app M N) (app M' N).
 
-mstep : tm -> tm -> type.  %name mstep S.
+mstep : tm -> tm -> type.  --name mstep S.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 

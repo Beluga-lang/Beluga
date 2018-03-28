@@ -261,11 +261,11 @@ GLOBAL: sgn;
   sgn_global_prag:
   [
     [
-        "%nostrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
+        "--nostrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
       |
-        "%coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
+        "--coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
       |
-        "%warncoverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Warn))
+        "--warncoverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Warn))
     ]
   ];
 
@@ -299,17 +299,17 @@ GLOBAL: sgn;
   sgn_decl:
     [
       [
-          "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
+          "--name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
             [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
-        | "%query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
+        | "--query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
             if Option.is_some x then
               let p = Id.mk_name (Id.SomeString (Option.get x)) in
               [Sgn.Query (_loc, Some p, a, e, t)]
             else
               [Sgn.Query (_loc, None, a, e, t)]
 
-        | "%not" ->
+        | "--not" ->
             [Sgn.Pragma (_loc, Sgn.NotPrag)]
 
         | "module"; n = UPSYMBOL; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
@@ -341,7 +341,7 @@ GLOBAL: sgn;
 (*      | "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ;  ";" ->
           [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))] *)
 
-      | "%name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
+      | "--name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
         [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
 
       |
@@ -357,7 +357,7 @@ GLOBAL: sgn;
             [Sgn.Rec (_loc, f)]
 
       |
-        "%infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
+        "--infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
           begin
             match assoc with
             | Some "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left))]
@@ -370,10 +370,10 @@ GLOBAL: sgn;
         "#postfix"; i = SYMBOL; p = INTLIT; "." ->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
    *)    |
-        "%prefix"; i = SYMBOL; p = INTLIT; "."->
+        "--prefix"; i = SYMBOL; p = INTLIT; "."->
           [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Prefix, int_of_string p, Some Sgn.Left))]
 
-      | "%assoc"; assoc = SYMBOL; "." ->
+      | "--assoc"; assoc = SYMBOL; "." ->
         begin match assoc with
         | "left" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Left)]
         | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
@@ -387,12 +387,12 @@ GLOBAL: sgn;
         [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
 
       |
-        "%open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] ->
+        "--open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.OpenPrag(l@[last]))]
       |
 
-        "%abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
+        "--abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
           let (l,last) = split '.' n in
           [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
       |
@@ -1072,7 +1072,7 @@ GLOBAL: sgn;
 
   case_pragma:
     [[
-      "%not" -> Pragma.PragmaNotCase
+      "--not" -> Pragma.PragmaNotCase
     | -> Pragma.RegularCase
     ]];
 

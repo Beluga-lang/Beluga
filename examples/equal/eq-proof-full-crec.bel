@@ -2,14 +2,14 @@
 % Author: Brigitte Pientka
 
 
-exp: type.    %name exp M x.
+exp: type.    --name exp M x.
 
 app: exp -> exp -> exp.
 lam: (exp -> exp) -> exp.
 
 % ------------------------------------------------------------------------------
 
-eq: exp -> exp -> type.   %name eq Q u.
+eq: exp -> exp -> type.   --name eq Q u.
 eq_app : eq M1 N1 -> eq M2 N2 -> eq (app M1 M2) (app N1 N2).
 
 eq_lam :  ({x : exp} eq x x -> eq (M x) (N x))

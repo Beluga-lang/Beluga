@@ -7,14 +7,14 @@ LF exp: type =
 | lam: (exp -> exp) -> exp
 ;
 
-%name exp E x.
+--name exp E x.
 
 LF eq: exp -> exp -> type =
 | eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2)
 | eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
             -> eq (lam E) (lam F)
 ;
-%name eq D u.
+--name eq D u.
 
 
 LF equal: exp -> exp -> type =

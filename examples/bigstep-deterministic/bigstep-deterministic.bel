@@ -4,7 +4,7 @@
 notLam : exp -> type.
 notLam : notLam (app M N).
 
-eval : exp -> exp -> type. %name eval E.
+eval : exp -> exp -> type. --name eval E.
 eval_lam : ({x:exp} eval x x -> notLam x -> eval (M x) (N x))
            -> eval (lam M) (lam N).
 eval_app1 : eval M (lam M') -> eval (M' N) R -> eval (app M N) R.

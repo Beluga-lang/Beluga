@@ -6,7 +6,7 @@ env:
   - OCAML_VERSION=4.04.0
 notifications:
   email:
-    - beluga-commit@cs.mcgill.ca
+    - beluga-dev@cs.mcgill.ca
   irc:
     channels:
       - "chat.freenode.net#beluga"

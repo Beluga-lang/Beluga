@@ -1211,7 +1211,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " --not")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
@@ -1222,7 +1222,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " --not")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 

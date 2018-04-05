@@ -1,8 +1,8 @@
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 i :  tp.
 arr: tp -> tp -> tp.
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 

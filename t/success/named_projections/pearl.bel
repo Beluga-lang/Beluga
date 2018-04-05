@@ -16,7 +16,7 @@
 % --------------------------------------------------------------------------
 % Definition of types
 
-tp : type.  %name tp T.
+tp : type.  --name tp T.
 
 top   : tp.
 arr   : tp -> tp -> tp.			% Functions: A1 => A2
@@ -73,7 +73,7 @@ schema as_ctx =  some [u:tp]  block a:tp, w: subtype a U;
 % ------------------------------------------------------------------
 %   G |- (forall a < S1. S2)  < (forall a < T1. T2)
 
-sub : tp -> tp -> type.                %name sub S.
+sub : tp -> tp -> type.                --name sub S.
 
 
 sa_top : sub S top.

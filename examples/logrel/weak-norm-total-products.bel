@@ -21,7 +21,7 @@ LF tp : type =
 | arr  : tp -> tp -> tp
 | cross: tp -> tp -> tp
 ;
-%name tp T.        
+--name tp T.        
 
 LF tm : tp -> type = 
 | app : tm (arr T S) -> tm T -> tm S
@@ -31,7 +31,7 @@ LF tm : tp -> type =
 | fst : tm (cross T S) -> tm T
 | snd : tm (cross T S) -> tm S
 ;
-%name tm M.
+--name tm M.
 
 %{{ The type `tm` defines our family of simply-typed lambda terms
 indexed by their type as an LF signature. In typical higher-order
@@ -68,19 +68,19 @@ LF mstep : tm A -> tm A -> type =
 | refl : mstep M M
 | onestep : step M M' -> mstep M' M'' -> mstep M M''
 ;
-%name mstep S.
+--name mstep S.
 
 LF val : tm A -> type = 
 | val/c : val c
 | val/lam : val (lam M)
 | val/pair: val M -> val N -> val (pair M N)
 ;
-%name val V.
+--name val V.
 
 LF halts : tm A -> type = 
 | halts/m : mstep M M' -> val M' -> halts M
 ;
-%name halts H.
+--name halts H.
 
 %{{
 

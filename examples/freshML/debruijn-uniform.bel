@@ -12,13 +12,13 @@
 
 }%
 % Types or Terms
-term_or_typ : type.                %name term_or_typ T.
+term_or_typ : type.                --name term_or_typ T.
 typ: term_or_typ.
 term : term_or_typ.
 
 
 % Intrinsically well-typed expressions
-obj   :  term_or_typ -> type.        %name obj E.
+obj   :  term_or_typ -> type.        --name obj E.
 
 app   : obj term -> obj T_or_K -> obj term.
 lam   : (obj T_or_K  -> obj term) -> obj term.

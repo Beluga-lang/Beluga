@@ -12,9 +12,9 @@ LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
-%name tp T.        
+--name tp T.        
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 c : tm b.
@@ -42,15 +42,15 @@ Finally, we define:
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-mstep : tm A -> tm A -> type.  %name mstep S.
+mstep : tm A -> tm A -> type.  --name mstep S.
 refl : mstep M M.
 onestep : step M M' -> mstep M' M'' -> mstep M M''.
 
-val : tm A -> type. %name val V.
+val : tm A -> type. --name val V.
 val/c : val c.
 val/lam : val (lam M).
 
-halts : tm A -> type.  %name halts H.
+halts : tm A -> type.  --name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
 %{{

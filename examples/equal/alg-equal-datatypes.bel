@@ -2,7 +2,7 @@ LF term: type =
 | app : term -> term -> term
 | lam : (term -> term) -> term
 ;
-%name term M x.
+--name term M x.
 
 schema tctx = term;
 

@@ -15,10 +15,10 @@
 term : type.
 app : term -> term -> term.
 lam : (term -> term) -> term.
-%name term M x.
+--name term M x.
 
 % Algorithmic Equality
-aeq: term -> term -> type.   %name aeq Q u.
+aeq: term -> term -> type.   --name aeq Q u.
 ae_a : aeq M1 N1 -> aeq M2 N2
     -> aeq (app M1 M2) (app N1 N2).
 ae_l :  ({x:term} aeq x x -> aeq (M x) (N x))

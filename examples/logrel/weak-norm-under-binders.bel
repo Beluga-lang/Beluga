@@ -9,13 +9,13 @@ LF tp : type =
 | i :  tp
 | arr: tp -> tp -> tp
 ;
-%name tp T.
+--name tp T.
 
 LF tm : tp -> type = 
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 ;
-%name tm E.
+--name tm E.
 
 schema ctx = tm T;
 % ----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ LF step : tm A -> tm A -> type =
 | s_refl : step M M
 | s_trans : step M M' -> step M' M'' -> step M M''
 ;
-%name step S.
+--name step S.
 % -----------------------------------------------------------------------------
 % Defining Normal and Neutral Terms
 % We define them using inductive types rather than using LF to not clutter 

@@ -4,12 +4,12 @@
 %
 % TODO extend with functions and function application
 
-tp   : type. %name tp T.
+tp   : type. --name tp T.
 nat  : tp.
 bool : tp.
 
-exp  : tp -> type.  %name exp E.
-val   : tp -> type. %name val V.
+exp  : tp -> type.  --name exp E.
+val   : tp -> type. --name val V.
 
 tt   : exp bool.
 ff   : exp bool.

@@ -5,7 +5,7 @@
 LF tp: type =
 | nat: tp
 | arr: tp -> tp -> tp;
-%name tp  T.
+--name tp  T.
 
 LF term: type =
 | app: term -> term -> term
@@ -13,16 +13,16 @@ LF term: type =
 | raise : term -> term   % (raise e)
 | trywith: term -> (term -> term) -> term
 ;
-%name term M.
+--name term M.
 
 LF value:  term -> type =
 | v_lam: value (lam T M);
-%name value V.
+--name value V.
 
 LF error : term -> type =
 | er_raise : value V -> error (raise V)
 ;
-%name error E.
+--name error E.
 % ---------------------------------------------------------- %
 % Small-step operational semantics
 
@@ -55,7 +55,7 @@ LF step: term -> term -> type =
 
 | step_try_error: value V -> step (trywith (raise V) E2) (E2 V)
 ;
-%name step S.
+--name step S.
 % ---------------------------------------------------------- %
 LF oft: term -> tp -> type =
 | t_lam : ({x:term} oft x T -> oft (E x) S)

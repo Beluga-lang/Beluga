@@ -119,4 +119,4 @@ rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] = ?
 %     | BInvRUp => mlam X => mlam M  => fn t => SInvUp s2 [ |- X] [g,x:n |-  M..x] t
 % ;
 
-% %rec invImpliesBisim : (g:ctx) Inv [g |- P..] [g |- Q..] -> Bisim [g |- P..] [g |- Q..] =
+% --rec invImpliesBisim : (g:ctx) Inv [g |- P..] [g |- Q..] -> Bisim [g |- P..] [g |- Q..] =

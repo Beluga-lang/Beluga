@@ -2,18 +2,18 @@
 % definition.
 % Authors: Andrew Cave, Brigitte Pientka
 
-tm: type. %name tm T.
+tm: type. --name tm T.
 lam: (tm -> tm) -> tm.
 app: tm -> tm -> tm.
 rdx : (tm -> tm) -> tm -> tm.
 
-path: type. %name path P.
+path: type. --name path P.
 bind: (path -> path) -> path.
 left: path -> path.
 right: path -> path.
 done: path.
 
-is_path: path -> tm -> type. %name is_path I.
+is_path: path -> tm -> type. --name is_path I.
 
 p_lam: is_path (bind P) (lam E)
        <- ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)).

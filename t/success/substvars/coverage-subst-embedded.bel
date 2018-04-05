@@ -2,16 +2,16 @@
 nm : type.
 leaf : nm.
 nmbin : nm -> nm -> nm.
-tp : type.         %name tp T.
+tp : type.         --name tp T.
 tp/nm :  tp.
 tp/unit : tp.
 
-tm : type.          %name tm E.
+tm : type.          --name tm E.
 unit : tm.
 name : nm -> tm.
 bin : tm -> tm -> tm.
 
-step : tm -> tm -> type.  %name step S.
+step : tm -> tm -> type.  --name step S.
 step/bin : step M1' M1 -> step M2' M2 -> step (bin M1' M2') (bin M1 M2).
 % step/bin1 : step M1' M1 -> step (bin M1' M2) (bin M1 M2).
 % step/bin2 : step M2' M2 -> step (bin M1 M2') (bin M1 M2).
@@ -20,7 +20,7 @@ oft : tm -> tp -> type.
 oft/bin : oft M1 tp/nm -> oft M2 tp/nm -> oft (bin M1 M2) tp/nm. % need???
 
 
-mstep : tm -> tm -> type.  %name mstep S.
+mstep : tm -> tm -> type.  --name mstep S.
 refl : mstep M M.
 trans1 : mstep M M' -> step M' M''  -> mstep M M''.
 

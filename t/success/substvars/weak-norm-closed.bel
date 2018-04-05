@@ -1,19 +1,19 @@
-%nostrengthen
+--nostrengthen
 % Proof of weak normalization for STLC that doesn't go under binders
 % Author: Andrew Cave
 
-tp : type.                %name tp T.
+tp : type.                --name tp T.
 i :  tp.
 arr: tp -> tp -> tp.
 
-tm : tp -> type.          %name tm E.
+tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
 lam : (tm T -> tm S) -> tm (arr T S).
 c : tm i.
 
 schema ctx = tm T;
 
-mstep : tm A -> tm A -> type.  %name mstep S.
+mstep : tm A -> tm A -> type.  --name mstep S.
 beta : mstep (app (lam M) N) (M N).
 eta : {M:tm (arr A B)} mstep M (lam (\x. app M x)).
 stepapp : mstep M M' -> mstep N N' -> mstep (app M N) (app M' N').
@@ -115,9 +115,9 @@ mlam A => mlam M =>
 reify (eval [] [] [ |- A] [ |- M] [ |- ^ ] (Nil []))
 ;
 
-%rec weakNorm : {g:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]} Halts [g] [g |- A[..]] [g |- M[..]] =
-%mlam g => mlam A => mlam M =>
-%reify (eval [g] [g] [g |- A[..]] [g |- M[..]] [g |-[..]] ?)
+--rec weakNorm : {g:ctx}{A:[g |- tp]}{M:[g |- tm (A[..])]} Halts [g] [g |- A[..]] [g |- M[..]] =
+--mlam g => mlam A => mlam M =>
+--reify (eval [g] [g] [g |- A[..]] [g |- M[..]] [g |-[..]] ?)
 % For this I need a lemma which says that RedSub holds of the identity substitution
 %;
 

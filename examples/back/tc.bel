@@ -1,4 +1,4 @@
-exp  : type.   %name exp E x.
+exp  : type.   --name exp E x.
 z    : exp.
 suc  : exp -> exp.
 
@@ -6,7 +6,7 @@ letv : exp -> (exp -> exp) -> exp.
 lam  : (exp -> exp) -> exp.
 app  : exp -> exp -> exp.
 
-tp   : type.   %name tp T.
+tp   : type.   --name tp T.
 nat  : tp.
 even : tp.
 odd : tp.
@@ -15,7 +15,7 @@ sect   : tp -> tp -> tp.
 
 
 % Evaluation
-eval : exp -> exp -> type.  %name eval F.
+eval : exp -> exp -> type.  --name eval F.
 ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
@@ -29,8 +29,8 @@ ev_app: eval E1 (lam (\x. E x)) -> eval E2 V2 -> eval (E V2) V
 
 % Typing
 
-oft : exp -> tp -> type.  %name oft D u.
-subtype : tp -> tp -> type.  %name subtype SUB sub.
+oft : exp -> tp -> type.  --name oft D u.
+subtype : tp -> tp -> type.  --name subtype SUB sub.
 
 boolean : type.
 true : boolean.

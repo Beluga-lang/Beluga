@@ -21,7 +21,7 @@ fn n  => case n of
 
 
 rec cmatch_incorrect1 : (g:nctx) [g |- nat] -> [g |- nat] =
-fn n  => case n of  %not
+fn n  => case n of  --not
  | [g |- z] => [g |- z]
 % | [h,x:nat] x => [h,x:nat] x
  | [g,x:nat |-  #p[..]] => [g,x:nat |-  #p[..]]
@@ -29,7 +29,7 @@ fn n  => case n of  %not
 ;
 
 rec cmatch_incorrect2 : (g:nctx) [g |- nat] -> [g |- nat] =
-fn n  => case n of %not
+fn n  => case n of --not
 % | [g] z => [g] z
  | [h,x:nat |-  x] => [h,x:nat |-  x]
  | [g,x:nat |-  #p[..]] => [g,x:nat |-  #p[..]]
@@ -40,7 +40,7 @@ fn n  => case n of %not
 % PVAR CASE NOT IMPLEMENTED IN COVERAGE ???
 
 rec cmatch_incorrect3 : {g:nctx} [g |- nat] -> [g |- nat] =
-mlam g => fn n  => case n of %not
+mlam g => fn n  => case n of --not
  | [g |- z] => [g |- z]
  | [h,x:nat  |-  x] => [h,x:nat |-  x]
 % | [g,x:nat] #p[..] => [g,x:nat] #p[..]

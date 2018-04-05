@@ -25,7 +25,7 @@ mlam g => fn e =>
 
 rec fffRedundantWrongProjCases : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g |- z]     => [g |- z]
   | [g |- suc (U[..])]   => [g |- z]
   | [g |- #p.1[..]]   => [g |- z]
@@ -36,7 +36,7 @@ mlam g => fn e =>
 
 rec fffForgotBothProjCases : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g |- z]     => [g |- z]
   | [g |- suc (U[..])]   => [g |- z]
 ;
@@ -44,7 +44,7 @@ mlam g => fn e =>
 
 rec fffForgot1stProjCase : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g |- z]     => [g |- z]
   | [g |- suc (U[..])]   => [g |- z]
   | [g |- #p.3[..]]   => [g |- z]

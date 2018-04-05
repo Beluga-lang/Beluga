@@ -13,7 +13,7 @@ LF exp: type =
 | letv: exp -> (exp -> exp) -> exp
 | fix : (exp -> exp) -> exp
 ;
- %name exp E.
+ --name exp E.
 
 % Call-By-Name evaluation
 rec eval : [ |- exp] -> [ |- exp] =

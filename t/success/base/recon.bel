@@ -1,11 +1,11 @@
 % The following are a bunch of test-case raising errors (correctly!)
 
-tp: type. %name tp T.
+tp: type. --name tp T.
 nat: tp.
 bool:tp.
 arr: tp -> tp -> tp.
 
-exp: tp -> type.  %name exp E.
+exp: tp -> type.  --name exp E.
 z : exp nat.
 s : exp nat -> exp nat.
 tt: exp bool.

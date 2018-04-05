@@ -4,13 +4,13 @@ nm : type.
 leaf : nm.
 nmbin : nm -> nm -> nm.
 
-tp : type.         %name tp T.
+tp : type.         --name tp T.
 tp/nm :  tp.
 tp/unit : tp.
 prod : tp -> tp -> tp.
 arr: tp -> tp -> tp.
 
-tm : type.          %name tm E.
+tm : type.          --name tm E.
 unit : tm.
 pair : tm -> tm -> tm.
 fst : tm -> tm. % ???
@@ -20,7 +20,7 @@ bin : tm -> tm -> tm.
 app : tm -> tm -> tm.
 lam : (tm -> tm) -> tm.
 
-step : tm -> tm -> type.  %name step S.
+step : tm -> tm -> type.  --name step S.
 step/beta : step (app (lam M) N) (M N).
 step/app : step M M' -> step (app M N) (app M' N). % stepapp
 step/betaprod1 : step (fst (pair M1 M2)) M1.
@@ -35,7 +35,7 @@ oft : tm -> tp -> type.
 oft/bin : oft M1 tp/nm -> oft M2 tp/nm -> oft (bin M1 M2) tp/nm. % need???
 
 
-mstep : tm -> tm -> type.  %name mstep MS.
+mstep : tm -> tm -> type.  --name mstep MS.
 refl : mstep M M.
 trans1 : step M M' -> mstep M' M'' -> mstep M M''.
 
@@ -81,7 +81,7 @@ schema rctx = some [t:tp] block x:tm, xt:oft x t, xx:algeqr x x t
 
 tmpair : type.
 ~ : tm -> tm -> tmpair.
-%infix ~ 5 right.
+--infix ~ 5 right.
 
 stratified Log : (g:rctx) [g |- tmpair] -> [ |- tp] -> ctype =
 | LogUnit : Log [g |- M ~ N ] [|- tp/unit]

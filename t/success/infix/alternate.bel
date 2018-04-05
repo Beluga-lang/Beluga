@@ -4,18 +4,18 @@
 
 exp : type.
 lam : (exp -> exp) -> exp.
-app : exp -> exp -> exp. %infix app 4.
+app : exp -> exp -> exp. --infix app 4.
 
-eq : exp -> exp -> type. %infix eq 5.
+eq : exp -> exp -> type. --infix eq 5.
 refl : M eq M.
 
 notLam : exp -> type.
 notLam : notLam (M app N).
 
-eval : exp -> exp -> type. %infix eval 4.
+eval : exp -> exp -> type. --infix eval 4.
 eval_lam : ({x:exp} x eval x -> notLam x -> (M x) eval (N x))
            -> (lam M) eval (lam N).
-eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.   %infix eval_app1 4.
+eval_app1 : M eval (lam M') -> (M' N) eval R -> (M app N) eval R.   --infix eval_app1 4.
 eval_app2 : M eval M' -> notLam M' -> N eval N' -> (M app N) eval (M' app N').
 
 schema evctx = block x:exp, u:x eval x, _t:notLam x;

@@ -11,7 +11,7 @@ module Arith = struct
 	  let three = suc two;
 	end;
 
-	%open Nats
+	--open Nats
 
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of

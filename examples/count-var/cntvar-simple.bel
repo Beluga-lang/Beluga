@@ -3,7 +3,7 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-exp : type.   %name exp E x.
+exp : type.   --name exp E x.
 %{ z   : exp.
 s   : exp -> exp.
 

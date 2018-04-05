@@ -1,4 +1,4 @@
-%nostrengthen
+--nostrengthen
 
 i : type.
 o : type.
@@ -11,7 +11,7 @@ true   : o.
 forall : (i -> o) -> o.
 
 pf : o -> type.  % natural deductions
-%name pf D. % E
+--name pf D. % E
 
 andel   : pf (& A B) -> pf A.
 

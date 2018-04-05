@@ -3,16 +3,16 @@
 %
 
 
-exp  : type.    %name exp E.
+exp  : type.    --name exp E.
 z    : exp.
 suc  : exp -> exp.
 letv : exp -> (exp -> exp) -> exp.
 
-value : exp -> type.  %name value F.
+value : exp -> type.  --name value F.
 v_z   : value z.
 v_s   : {E:exp} value E -> value (suc E).
 
-eval : exp -> exp -> type.  %name eval D.
+eval : exp -> exp -> type.  --name eval D.
 ev_z : eval z z.
 ev_s : {E:exp} {V:exp} eval E V -> eval (suc E) (suc V).
 ev_l : {E1:exp} {E2:exp -> exp} {V1:exp} {V:exp}

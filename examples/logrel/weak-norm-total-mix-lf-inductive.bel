@@ -20,14 +20,14 @@ LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
-%name tp T.        
+--name tp T.        
 
 LF tm : tp -> type = 
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
 ;
-%name tm M.
+--name tm M.
 
 %{{ The type `tm` defines our family of simply-typed lambda terms
 indexed by their type as an LF signature. In typical higher-order

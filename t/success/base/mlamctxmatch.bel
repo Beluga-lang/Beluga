@@ -1,4 +1,4 @@
-%coverage
+--coverage
 
 nat : type.
 z : nat.

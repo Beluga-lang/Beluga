@@ -1,14 +1,14 @@
 % Definition of types and expressions
-tp: type.  %name tp T.
+tp: type.  --name tp T.
 arr: tp -> tp -> tp.
 nat: tp.
 
-exp: type. %name exp E.
+exp: type. --name exp E.
 lam : tp -> (exp -> exp) -> exp.
 app : exp -> exp -> exp.
 
 % Typing judgment
-type_of: exp -> tp -> type. %name type_of H.
+type_of: exp -> tp -> type. --name type_of H.
 
 t_lam: ({x:exp}type_of x T1 -> type_of (E x) T2)
         -> type_of (lam T1 E) (arr T1 T2).

@@ -1,14 +1,14 @@
-tm: type. %name tm T.
+tm: type. --name tm T.
 lam: (tm -> tm) -> tm.
-app: tm -> tm -> tm. %infix app 5.
+app: tm -> tm -> tm. --infix app 5.
 
-path: type. %name path P.
+path: type. --name path P.
 bind: (path -> path) -> path.
 left: path -> path.
 right: path -> path.
 done: path.
 
-is_path: path -> tm -> type. %name is_path I. %infix is_path 8.
+is_path: path -> tm -> type. --name is_path I. --infix is_path 8.
 
 p_lam: (bind P) is_path (lam E)
        <- ({x:tm}{q:path} q is_path x -> (P q) is_path (E x)).
@@ -21,7 +21,7 @@ p_right: (right P) is_path (M app N)
 
 p_done: done is_path M.
 
-eq: tm -> tm -> type.  %name eq E.  %infix eq 10.
+eq: tm -> tm -> type.  --name eq E.  --infix eq 10.
 e_ref: T eq T.
 
 schema ctx = block x:tm,p:path , _t:p is_path x ;

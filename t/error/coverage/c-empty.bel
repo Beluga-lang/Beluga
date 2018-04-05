@@ -2,7 +2,7 @@
 %
 %   a trivial example of an empty (or "absurd") case
 
-%coverage
+--coverage
 constructorless : type.
 
 nat : type.

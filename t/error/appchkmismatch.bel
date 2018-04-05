@@ -2,25 +2,25 @@ LF tp: type =
 | unit: tp
 | cross: tp -> tp -> tp
 ;
-%name tp T.
+--name tp T.
 
 LF term: tp -> type =
 ;
-%name term M.
+--name term M.
 
 % Target language
 LF target: tp -> type =
 | tunit: target unit
 | tpair: target T -> target S -> target (cross T S)
 ;
-%name target Q.
+--name target Q.
 
 % Natural Numbers
 LF nat: type =
 | z: nat
 | suc: nat -> nat
 ;
-%name nat N.
+--name nat N.
 
 
 % List of free variables occurring in a term
@@ -28,7 +28,7 @@ LF fvlist: tp -> type =
 | nil: fvlist unit
 | cons: term T -> fvlist S -> fvlist (cross T S)
 ;
-%name fvlist F.
+--name fvlist F.
 
 % ----------------------------------------------------------------------
 

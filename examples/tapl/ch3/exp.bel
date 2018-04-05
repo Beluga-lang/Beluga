@@ -17,7 +17,7 @@ LF term  : type =
 let v1 = [ |- if_then_else false true (if_then_else true false true)] ;
 
 
-%not
+--not
 let w2 = [ |- if_then_else true false] ;
 
 

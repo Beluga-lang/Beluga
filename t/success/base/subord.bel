@@ -40,7 +40,7 @@ mlam g => fn e =>
 
 rec fff2Wrong : {g:termCtx} [g, xx : bool |-  term] -> [ |- term] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g, xx : bool |-  z]      => [ |- z]
   | [g, xx : bool |-  suc U]  => [ |- z]
   | [g, xx : bool |-  #p[..]]  => [ |- z]

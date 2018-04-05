@@ -1,10 +1,10 @@
 
-tp: type.  %name tp T a.
+tp: type.  --name tp T a.
 nat: tp.
 all: (tp -> tp) -> tp.
 arr: tp -> tp -> tp.
 
-exp: tp -> type.  %name exp E x.
+exp: tp -> type.  --name exp E x.
 z: exp nat.
 s: exp nat -> exp nat.
 tlam: ({a:tp}exp (T a)) -> exp (all (\a. T a)).

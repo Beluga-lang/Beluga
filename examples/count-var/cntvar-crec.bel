@@ -1,12 +1,12 @@
-%nostrengthen
+--nostrengthen
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 
-tp  : type.   %name tp T.
+tp  : type.   --name tp T.
 nat : tp.
 bool: tp.
 
-exp : tp -> type.   %name exp E x.
+exp : tp -> type.   --name exp E x.
 z   : exp nat.
 s   : exp nat -> exp nat.
 tt  : exp bool.

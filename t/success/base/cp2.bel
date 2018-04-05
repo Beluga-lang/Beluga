@@ -22,7 +22,7 @@ mlam g => fn e =>
 
 rec fffForgotParamVarCase : {g:termCtx} [g |- term nat] -> [g |- term nat] =
 mlam g => fn e =>
-  case e of %not
+  case e of --not
   | [g |- z]     => [g |- z]
 
   | [g |- suc (U[..])]   => [g |- z]

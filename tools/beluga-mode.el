@@ -563,7 +563,7 @@ If a previous beli process already exists, kill it first."
          (concat beluga-interpreter-name
                  " "
                  (shell-quote-argument buffer-file-name))))
-  (set (make-local-variable 'comment-start) "% ")
+  (set (make-local-variable 'comment-start) "%")
   (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
   (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")
   (comment-normalize-vars)

@@ -1,7 +1,7 @@
 % Progress and preservation for the Church-style simply-typed lambda calculus
 
-tp : type.  %name tp T.
-tm : type.  %name tm M.
+tp : type.  --name tp T.
+tm : type.  --name tm M.
 
 % Types
 arr : tp -> tp -> tp.
@@ -11,7 +11,7 @@ app : tm -> tm -> tm.
 lam : tp -> (tm -> tm) -> tm.
 
 % Typing
-has_type : tm -> tp -> type.  %name has_type D.
+has_type : tm -> tp -> type.  --name has_type D.
 
 is_app : has_type E1 (arr T1 T2) ->
          has_type E2 T1 ->
@@ -23,13 +23,13 @@ is_lam : ({x:tm} has_type x T1 -> has_type (E x) T2) ->
          has_type (lam T1 (\x. E x)) (arr T1 T2).
 
 % Values
-value : tm -> type.  %name value V.
+value : tm -> type.  --name value V.
 
 value_lam : value (lam T (\x. E x)).
 
 % Operational semantics
 
-step: tm -> tm -> type.  %name step S.
+step: tm -> tm -> type.  --name step S.
 
 s_app1 : step E1 E1' ->
       % --------------------------

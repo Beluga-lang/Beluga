@@ -414,14 +414,14 @@ module Int = struct
         | Control.Natural ->
 	          fprintf ppf "%a%s"
 		              (fmt_ppr_lf_cvar cD lvl) c
-            		      proj	      
-        | Control.DeBruijn -> 
+            		      proj
+        | Control.DeBruijn ->
 	          fprintf ppf "%a%s[e]"
 		              (fmt_ppr_lf_cvar cD lvl) c
             		      proj)
 
       | LF.MVar (c, s) ->
-      if Substitution.LF.isId s then     
+      if Substitution.LF.isId s then
           fprintf ppf "%a%s"
             (fmt_ppr_lf_cvar cD lvl) c
             proj
@@ -1137,11 +1137,11 @@ module Int = struct
             fprintf ppf "%sfn %s =>@ "
               (l_paren_if cond)
               (Id.render_name x);
- 
+
              fprintf ppf "%a%s"
                (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
                (r_paren_if cond);
-            
+
        | Comp.Fun (_, fbr) -> fprintf ppf "Some fun"
         (* let cD1 = Context.append cD cD' in *)
         (* let cG1 = Context.append cG cG' in *)
@@ -1211,7 +1211,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " --not ")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
@@ -1222,7 +1222,7 @@ module Int = struct
             fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " --not ")
+              (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
@@ -1242,9 +1242,9 @@ module Int = struct
            | None -> "" in
          try
             let x = f () in
-            fprintf ppf " ?%s %%{ %d }%%" name x
+            fprintf ppf "?%s %%{ %d }%%" name x
           with
-          | _ -> fprintf ppf " ?%s " name
+          | _ -> fprintf ppf "?%s" name
 
     and strip_mapp_args cD cG i =
       if !Control.printImplicit then
@@ -1441,7 +1441,7 @@ module Int = struct
         if !Control.printNormal then
 	  (match e with
 	     | Comp.Hole (loc, name, _ ) ->
-		 fprintf ppf "@ \n@[<v2>|  %a => %a @]"
+		 fprintf ppf "\n@[<v2>| %a => %a@]"
 		   (fmt_ppr_meta_obj cD1' 0) mO
 		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 	     | _ ->
@@ -1473,7 +1473,7 @@ module Int = struct
             (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
                  (fmt_ppr_cmp_branch_prefix  0) cD1'
                 (fmt_ppr_cmp_gctx cD1' 0) cG' *)
-	    fprintf ppf "@ @[| %a  =>  %a@]@ "
+	    fprintf ppf "@ @[| %a => %a@]@ "
                  (fmt_ppr_pat_obj cD1' cG' 0) pat
                 (* NOTE: Technically: cD |- cG ctx and
                  *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
@@ -1492,7 +1492,7 @@ module Int = struct
                * -bp
                *)
               (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-              
+
     (* cD |- t : cD'  *)
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
@@ -1534,7 +1534,7 @@ module Int = struct
           fprintf ppf "."
 
       | LF.Dec (cG, Comp.CTypDecl (x, tau, tag )) ->
-         let s = if tag then "*" else "" in 
+         let s = if tag then "*" else "" in
           fprintf ppf "%a, %s%s: %a"
             (fmt_ppr_cmp_gctx cD 0) cG
             (Id.render_name x) s
@@ -1574,7 +1574,7 @@ module Int = struct
         fprintf ppf "@ | (%s : @[%a@] :: @[%a@]@\n"
             (Id.render_name c)
             (fmt_ppr_cmp_typ cD lvl) tau0
-            (fmt_ppr_cmp_typ cD lvl) tau1          
+            (fmt_ppr_cmp_typ cD lvl) tau1
       | Sgn.CompConst (_, c, tau) ->
           fprintf ppf "@ | %s : @[%a@]@\n"
             (Id.render_name c)

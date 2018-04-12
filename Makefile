@@ -18,13 +18,17 @@ OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
 
 .PHONY: all clean
 
-all: bin/lex_dump bin/beluga
+all: bin/lex_dump bin/beluga bin/replay
 
 bin/beluga: src/beluga/main.$(EXT)
 	mkdir -p bin
 	cp _build/$< $@
 
 bin/lex_dump: src/beluga/lex_dump.$(EXT)
+	mkdir -p bin
+	cp _build/$< $@
+
+bin/replay: src/beluga/replay.$(EXT)
 	mkdir -p bin
 	cp _build/$< $@
 

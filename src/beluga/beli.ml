@@ -27,8 +27,7 @@ let rec process_options = function
 
 let init_repl ppf =
   fprintf ppf "        Beluga (interactive) version %s@.@." Version.beluga_version;
-  if not !Options.emacs then Interactive.whale ();
-  Sys.catch_break true
+  Interactive.whale ()
 
 let rec loop ppf =
   begin
@@ -117,6 +116,11 @@ let run args =
     Debug.filename := (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ")") ;
   end;
 
-  init_repl ppf;
-  Command.print_usage ppf ;
+  if not !Options.emacs then
+    begin
+      init_repl ppf;
+      Command.print_usage ppf
+    end;
+
+  Sys.catch_break true;
   loop ppf

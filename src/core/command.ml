@@ -147,7 +147,9 @@ let lochole =
              file_name
              start_line start_bol start_off
              stop_line stop_bol stop_off
-        | None -> fprintf ppf "- Error no such hole;\n"
+        | None ->
+           fprintf ppf "- No such hole %s;\n"
+             (Holes.string_of_lookup_strategy strat)
       with
       | Failure s ->
          fprintf ppf "- Error occured when analyzing argument list: %s\n" s)

@@ -1,0 +1,9 @@
+% A test for issue #53
+rec foo : Bool = ttrue;
+
+%:load input.bel
+- The file input.bel has been successfully loaded;
+%:lochole 0
+- No such hole by id '0';
+%:lochole foo
+- No such hole by name 'foo';

@@ -222,10 +222,10 @@ let by_id (i : hole_id) : lookup_strategy =
   { repr = Printf.sprintf "by id '%d'" i
   ; action =
       fun () ->
-      try
+      if i < DynArray.length holes then
         Some (i, DynArray.get holes i)
-      with
-      | Invalid_argument _ -> None
+      else
+        None
   }
 
 let lookup (name : string) : (hole_id * hole) option =

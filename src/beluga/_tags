@@ -1,1 +1,2 @@
-<replay.ml> : package(extlib)
+<{replay,lex_check}.ml> : package(extlib)
+<lex_check.ml> : package(ulex)

@@ -29,7 +29,7 @@ echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
 echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
 
 # Tool for dumping lexer data.
-echo -e "\t" LEX_DUMP: ${LEX_DUMP:=$BELUGADIR/bin/lex_dump}
+echo -e "\t" LEX_CHECK: ${LEX_CHECK:=$BELUGADIR/bin/lex_check}
 
 # Tool for testing the interactive mode.
 echo -e "\t" REPLAY: ${REPLAY:=$BELUGADIR/bin/replay}
@@ -70,30 +70,6 @@ sort_cases() {
     print -C1 ${(M)cases#*.cfg}
 }
 
-# use lex_dump to calculate where Beluga thinks the file ends.
-beluga-eoi() {
-    # The lex_dump output looks like:
-    # EOI: 21-21
-    $LEX_DUMP "$1" | grep EOI | head -n 1 | cut -d " " -f2 | cut -d "-" -f1
-}
-
-true-eoi() {
-    # wc output looks like:
-    # 21 foo.bel
-    # We use `wc -m` to count *characters* (UTF-8-encoded unicode code
-    # points) so that the thing we're counting here coincides with
-    # Beluga's notion of "character" (i.e. unicode code points, as per
-    # the use of ulex.)
-    LANG=en_US.UTF-8 wc -m "$1" | cut -d " " -f1
-}
-
-lex-check() {
-    local FILE="$1"
-    local BELUGA_COUNT=$(beluga-eoi "$FILE")
-    local TRUE_COUNT=$(true-eoi "$FILE")
-    test $BELUGA_COUNT -eq $TRUE_COUNT
-}
-
 do_testing() {
     local n=0 success=0 fail=0 timeout=0 admissible=0 lexer_fail=0 replay_fail=0
 
@@ -104,7 +80,7 @@ do_testing() {
         n=$((n+1))
         echo -ne "$C[start]**$CEND TEST $n: $i ... "
 
-        if ! lex-check "$i" ; then
+        if ! $LEX_CHECK "$i" ; then
             lexer_fail=$((lexer_fail+1))
             echo -en "$C[lex_fail]LEXER FAILURE$CEND "
         fi

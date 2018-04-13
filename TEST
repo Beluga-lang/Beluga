@@ -31,8 +31,13 @@ echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
 # Tool for dumping lexer data.
 echo -e "\t" LEX_DUMP: ${LEX_DUMP:=$BELUGADIR/bin/lex_dump}
 
+# Tool for testing the interactive mode.
+echo -e "\t" REPLAY: ${REPLAY:=$BELUGADIR/bin/replay}
+
 # Test cases.
-echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t}
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t/code}
+
+echo -e "\t" INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR:=$BELUGADIR/t/interactive}
 
 # Test cases.
 echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
@@ -90,7 +95,7 @@ lex-check() {
 }
 
 do_testing() {
-    local n=0 success=0 fail=0 timeout=0 admissible=0 lexer_fail=0
+    local n=0 success=0 fail=0 timeout=0 admissible=0 lexer_fail=0 replay_fail=0
 
     # Limit runtime of each test case, in seconds.
     ulimit -t $TIMEOUT
@@ -134,12 +139,32 @@ do_testing() {
         [[ -n $RESET && -f $i.out ]] && echo "$result" > $i.out
     done
 
+    echo "===== INTERACTIVE MODE TESTS ====="
+
+    for i in $(find $INTERACTIVE_TESTDIR -type f | sort -n) ; do
+        n=$((n+1))
+        echo -ne "$C[start]**$CEND TEST $n: $i ... "
+
+        result=$($REPLAY "$i" 2>&1)
+        exit_code=$?
+
+        if [ $exit_code -eq 152 ] ; then
+            echo -e "$C[timeout]TIMEOUT$CEND"
+            timeout=$((timeout + 1))
+        elif [ $exit_code -ne 0 ] ; then
+            echo -e "$C[fail]FAIL$CEND"
+        else
+            echo -e "$C[done]DONE$CEND"
+        fi
+    done
+
     echo
     echo Successes: $success
     echo Failures: $fail
     echo Lexer failures: $lexer_fail
     echo Admissible failures: $admissible
     echo Timeouts: $timeout
+    echo Interactive mode failures: $replay_fail
     echo Total: $n
 
     echo

@@ -3,4 +3,3 @@
 <{reconstruct,holes,lfholes,logic,parser,store,unify,typeinfo,subord,interactive,command}.ml{,i}> : package(extlib)
 <html.*> : package(str)
 <lexer.ml> : package(ulex)
-<*.cmx> and not <core.cmx> : for-pack(Core)

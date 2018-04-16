@@ -1,2 +1,3 @@
+<replay.ml> : use_support
 <{replay,lex_check}.ml> : package(extlib)
 <lex_check.ml> : package(ulex)

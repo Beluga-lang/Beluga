@@ -26,6 +26,8 @@ let () =
       pflag ["ocaml"; "compile"] "warn" (fun s -> S[A"-w"; A s]);
       pflag ["ocaml"; "compile"] "warn-error" (fun s -> S[A"-warn-error"; A s]);
       rule "Version file" ~deps:[hardcoded_version_file] ~prods:[version_file]
-        (fun env _ -> Echo ([version_content ()], version_file))
+        (fun env _ -> Echo ([version_content ()], version_file));
+      ocaml_lib "src/support/support";
+      ocaml_lib "src/core/core"
     | _ -> ()
   end

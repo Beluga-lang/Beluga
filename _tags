@@ -1,3 +1,4 @@
 true : annot, warn(-P)
 "src/core" : include
-<**/*.{byte,native}> : package(unix, extlib, ulex, camlp4.lib, str)
+"src/support" : include
+<**/*.{byte,native}> : package(unix, extlib, ulex, camlp4.lib, str), use_core, use_support

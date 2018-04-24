@@ -177,6 +177,12 @@ module TranscriptRunner = struct
     flush h;
     close_out h
 
+  (** Removes the semicolon from a beluga response. *)
+  let drop_semi (str : string) : string =
+    (* drop the last two characters (the semicolon and the newline)
+    and then stick the newline back on. *)
+    String.sub str 0 (String.length str - 2) ^ "\n"
+
   let run_interaction (i : interaction) (e : env) :
         (string, env) Either.t =
     let open Maybe in
@@ -196,7 +202,7 @@ module TranscriptRunner = struct
     | Just (res, e') ->
        if res = i.response then
          begin
-           write_file "last-output.bel" res;
+           write_file "last-output.bel" (drop_semi res);
            Right e'
          end
        else

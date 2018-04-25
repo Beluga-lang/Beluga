@@ -263,7 +263,14 @@ module Make (P : ParserInfo) = struct
              stk = stk;
              count = s.count - 1;
            }
-    
+
+  (** Decides whether a rewind of the given amount is possible in the
+      given parser state.
+      Simply put, it checks that there are enough tokens in the input buffer stack.
+   *)
+  let is_rewind_possible (amount : int) (stk : 'a PureStack.t) : bool =
+    PureStack.length stk >= amount
+
   (** The type of a parser. *)
   type 'a t =
     { run : state -> state * (parse_error, 'a) Either.t }
@@ -359,12 +366,14 @@ module Make (P : ParserInfo) = struct
         let n' = s.count in
         let open Either in
         match e with
-        | Either.Left e ->
-           (* If the error is recoverable (i.e. the parser failed with
-           backtrack_enabled = true) or if the parser failed without
-           consuming any input, then we try the next parser. *)
-           if e.error_is_recoverable || n = n' then
-               p2.run (rewind (n' - n) s)
+        | Left e ->
+           (* If the first parser fails without consuming input, or if
+              it fails with backtracking enabled *and* there're enough
+              tokens on the stack, then we try the next parser.
+            *)
+           let d = n' - n in
+           if d = 0 || e.error_is_recoverable && is_rewind_possible d s.stk then
+               p2.run (rewind d s)
            else
              (s, Left e)
         | Right x -> (s, Right x)

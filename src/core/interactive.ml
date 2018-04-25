@@ -161,7 +161,7 @@ let branchCovGoals loc i cG0 tau cgs =
           Holes.cG = Whnf.cnormCtx(cG0, ms);
           Holes.goal = (tau, ms);
         };
-      let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tR))) in
+      let patt = PatMetaObj ( Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tR))) in
       Comp.Branch
         ( Loc.ghost
         , cD
@@ -470,59 +470,85 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
 
   let tau0 = Whnf.cnormCTyp tau_theta in 
 
-  let rec searchGctx i = function
-  | LF.Empty -> None
-  | LF.Dec (cG', Comp.CTypDecl (n, tau, _)) ->
-    if (Id.string_of_name n) = e then
-      let rec matchTyp tau =
-        match tau with
-        | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, cPsi)) -> (* tA:typ, cPsi: dctx *)
-          let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
-          let bl = branchCovGoals loc 0 cG0 tau0 cgs in
-            Some (matchFromPatterns l  (Comp.Var(l, i)) bl)
-        | Comp.TypBase (l, c, mS) ->  (* c: cid_comp_typ , mS: meta_spine *)
-            let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
-            let bl = branchCovGoals loc 0 cG0 tau0 cgs in
-            Some (matchFromPatterns l (Comp.Var(l, i)) bl)
-        | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
-        | _ ->
-          failwith ("Found variable in gCtx, cannot split on "^(Id.string_of_name n))
-      in matchTyp tau
-      else
-        searchGctx (i+1) cG'
+  let rec searchGctx i =
+    function
+    | LF.Empty ->
+       None
+    | LF.Dec (cG', Comp.CTypDecl (n, tau, _)) ->
+       if (Id.string_of_name n) = e then
+         let rec matchTyp tau =
+           match tau with
+           | Comp.TypBox (l, _)
+           | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
+              let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
+              let bl = branchCovGoals loc 0 cG0 tau0 cgs in
+              Some (matchFromPatterns l (Comp.Var(l, i)) bl)
+           | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
+           | _ ->
+              failwith
+                ( "Found variable in gCtx, cannot split on "
+                  ^ Id.string_of_name n )
+         in
+         matchTyp tau
+       else
+         searchGctx (i+1) cG'
+    | _ ->
+       failwith "gCtx contains something we can't split on"
   in
-  let rec searchMctx i cD (cD_tail : LF.ctyp_decl list) = match cD with 
+  let rec searchMctx i cD (cD_tail : LF.ctyp_decl list) =
+    match cD with
     | LF.Empty -> None
-    | LF.Dec (cD', cd) ->
-	let LF.Decl (n, mtyp, dep) = cd in 
-	if (Id.string_of_name n) = e then
-	  let cgs   = genCGoals cD' cd cD_tail in
-	  let bl    = branchCovGoals loc i cG0 tau0 cgs in
-	  let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in  (* cD0 |- mtyp' *)
-	  let m0    =  (match  mtyp with
-	     | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
-	     | LF.ClTyp (LF.MTyp _ , cPsi ) ->
-		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		    let phat = dctxToHat cPsi' in
-		      (Loc.ghost,
-		       LF.ClObj (phat,LF.
-				   MObj (LF.Root (Loc.ghost,
-						  LF.MVar (LF.Offset i, LF.Shift 0),
-						  LF.Nil)))) 
-	     | LF.ClTyp (LF.PTyp _ , cPsi) ->
-		    let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		    let phat  = dctxToHat cPsi' in
-		     (Loc.ghost, LF.ClObj (phat, LF.MObj (LF.Root (Loc.ghost , LF.PVar (i, LF.Shift 0), LF.Nil))))
-	     | _ -> failwith "Interactive Splitting on Substitution Variables not supported")
-	  in
-	  let entry = Comp.Ann (Comp.Box (Loc.ghost, m0),
-				Comp.TypBox(Loc.ghost, mtyp')) in
-	    Some (matchFromPatterns (Loc.ghost) entry bl)
-
-	else
-	    searchMctx (i+1) cD' (cd::cD_tail)
-
-
+    | LF.Dec (cD', (LF.Decl (n, mtyp, dep) as cd)) ->
+	     if (Id.string_of_name n) = e then
+	       let cgs = genCGoals cD' cd cD_tail in
+	       let bl  = branchCovGoals loc i cG0 tau0 cgs in
+	       let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in  (* cD0 |- mtyp' *)
+	       let m0  =
+           match  mtyp with
+	         | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
+	         | LF.ClTyp (LF.MTyp _ , cPsi ) ->
+		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		          let phat = dctxToHat cPsi' in
+		          ( Loc.ghost,
+		            LF.ClObj
+                  ( phat,
+                    LF.MObj
+                      (LF.Root
+                         ( Loc.ghost,
+					                 LF.MVar (LF.Offset i, LF.Shift 0),
+					                 LF.Nil
+                         )
+                      )
+                  )
+              )
+	         | LF.ClTyp (LF.PTyp _ , cPsi) ->
+		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+		          let phat  = dctxToHat cPsi' in
+		          ( Loc.ghost,
+                LF.ClObj
+                  ( phat,
+                    LF.MObj
+                      (LF.Root
+                         ( Loc.ghost,
+                           LF.PVar (i, LF.Shift 0),
+                           LF.Nil
+                         )
+                      )
+                  )
+              )
+	         | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
+	       in
+	       let entry =
+           Comp.Ann
+             ( Comp.Box (Loc.ghost, m0),
+               Comp.TypBox(Loc.ghost, mtyp')
+             )
+         in
+	       Some (matchFromPatterns (Loc.ghost) entry bl)
+	     else
+	       searchMctx (i+1) cD' (cd::cD_tail)
+    | _ ->
+       failwith "mCtx contains something we can't split on"
   in
     match searchGctx 1 cG0 with
       | None ->

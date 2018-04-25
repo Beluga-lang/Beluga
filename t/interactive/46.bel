@@ -1,0 +1,24 @@
+tm : type.
+true : tm.
+false : tm.
+if_then_else : tm -> tm -> tm.
+
+rec f : [ |- tm] -> [ |- tm] =
+fn m => ?foo;
+
+%:load input.bel
+- The file input.bel has been successfully loaded;
+%:numholes
+1;
+%:split foo m
+ case m of
+| [ |- true] => ?
+| [ |- false] => ?
+| [ |- if_then_else X Z] => ?
+;
+%:numholes
+1;
+%:load input.bel
+- The file input.bel has been successfully loaded;
+%:numholes
+1;

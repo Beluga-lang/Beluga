@@ -293,7 +293,7 @@ let split =
       match args with
       | [strat_s; e] -> (
         match Holes.parse_lookup_strategy strat_s with
-        | None -> fprintf ppf "- Invalid hole identifier %s" strat_s
+        | None -> fprintf ppf "- Invalid hole identifier %s;" strat_s
         | Some strat -> do_split ppf strat e
       )
       | _ -> fprintf ppf "- 2 arguments expected: hole identifier and variable to split on;\n"

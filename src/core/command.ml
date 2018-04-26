@@ -298,24 +298,40 @@ let split =
 let intro =
   { name = "intro"
   ; run = (fun ppf args ->
-    try
-      let strat_s = List.hd args in
-      let strat = Holes.unsafe_parse_lookup_strategy strat_s in
-      match (Interactive.intro strat) with
-      | None -> fprintf ppf "- Nothing to introduce in hole %s;\n" strat_s
-      | Some exp ->
-         let { Holes.cD
-             ; Holes.cG
-             ; _ } =
-           match Holes.get strat with
-           | None -> failwith "No such hole."
-           | Some (_, h) -> h in
-         Pretty.Control.printNormal := true;
-         fprintf ppf "%s;\n" (expChkToString cD cG exp);
-         Pretty.Control.printNormal := false
-    with
-    | Failure s -> fprintf ppf "- Error in intro: %s;\n" s
-    |  _ ->      fprintf ppf "- Error in intro;\n")
+      match args with
+      | [strat_s] ->
+         begin
+           let open Either in
+           Holes.parse_lookup_strategy strat_s |>
+             Maybe.of_option |>
+             of_maybe'
+               (fun () ->
+                 fprintf ppf "- Invalid hole specifier '%s';\n" strat_s) $
+             fun strat ->
+             Holes.get strat |>
+               Maybe.of_option |>
+               of_maybe'
+                 (fun () ->
+                   fprintf ppf "- No such hole %s;\n" (Holes.string_of_lookup_strategy strat)) $
+               fun (i, h) ->
+               let exp = Interactive.intro h in
+               let { Holes.cD;
+                     Holes.cG;
+                     _ } = h
+               in
+               pure
+                 begin
+                   Pretty.Control.printNormal := true;
+                   fprintf ppf "%s;\n" (expChkToString cD cG exp);
+                   Pretty.Control.printNormal := false
+                 end
+         end |>
+           Either.eliminate
+             (fun () -> ())
+             (fun () -> ())
+      | _ ->
+         fprintf ppf "- Invalid command syntax. See help.\n"
+  )
   ; help = "- intro n tries to introduce variables in the nth hole"
   }
 

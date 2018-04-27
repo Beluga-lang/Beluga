@@ -1235,14 +1235,13 @@ module Int = struct
               (fmt_ppr_cmp_exp_chk cD cG 0) e2
               (r_paren_if cond)
 
-      | Comp.Hole (loc, name_opt, f) ->
+      | Comp.Hole (loc, name_opt) ->
          let name =
            match name_opt with
            | Some n -> n
            | None -> "" in
          try
-            let x = f () in
-            fprintf ppf "?%s %%{ %d }%%" name x
+            fprintf ppf "?%s" name
           with
           | _ -> fprintf ppf "?%s" name
 
@@ -1440,7 +1439,7 @@ module Int = struct
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
         if !Control.printNormal then
 	  (match e with
-	     | Comp.Hole (loc, name, _ ) ->
+	     | Comp.Hole (loc, name) ->
 		 fprintf ppf "\n@[<v2>| %a => %a@]"
 		   (fmt_ppr_meta_obj cD1' 0) mO
 		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e

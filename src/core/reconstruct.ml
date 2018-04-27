@@ -871,7 +871,10 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                         ^
                         P.compTypToString cD (Whnf.cnormCTyp (tau,theta) )) in
     (* let () = Holes.collect (loc, cD, cG, (tau, theta)) in *)
-    Int.Comp.Hole (loc, name, (fun () -> Holes.at loc |> Option.get |> fst))
+    Int.Comp.Hole
+      ( loc,
+        name
+      )
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)

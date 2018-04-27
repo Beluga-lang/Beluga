@@ -240,21 +240,14 @@ let fill =
             Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
             let intexp' =
               Interactive.mapHoleChk
-                (fun _ ll _ ->
+                (fun _ ll ->
                   let (i, _) =
                     match Holes.staged_at ll with
                     | None -> failwith "No such hole."
                     | Some h -> h in
                   let loc' = Interactive.nextLoc loc in
                   Holes.set_staged_hole_pos i loc';
-                  Synint.Comp.Hole
-                    ( loc'
-                    , Holes.option_of_name name
-                    , fun () ->
-                      match Holes.at loc' with
-                      | None -> failwith "no such hole"
-                      | Some (i, _) -> i
-                    )
+                  Synint.Comp.Hole (loc', Holes.option_of_name name)
                 )
                 intexp in (* makes sure that new holes have unique location *)
             Interactive.replaceHole strat intexp'

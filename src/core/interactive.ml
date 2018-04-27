@@ -149,7 +149,7 @@ let branchCovGoals loc i cG0 tau cgs =
         , LF.Empty
         , patt
         , ms
-        , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
+        , Comp.Hole (loc', None)
         )
     | Cover.CovGoal(cPsi, tR, _tau' ) ->
       (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms); flush stderr; *)
@@ -168,7 +168,7 @@ let branchCovGoals loc i cG0 tau cgs =
         , LF.Empty
         , patt
         , ms
-        , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
+        , Comp.Hole (loc', None)
         )
 
     | Cover.CovPatt (cG, patt, (_tau',ms')) ->
@@ -186,7 +186,7 @@ let branchCovGoals loc i cG0 tau cgs =
          , gctxToCompgctx cG
          , patt
          , ms
-         , Comp.Hole (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst))
+         , Comp.Hole (loc', None)
          )
   in
   List.map f cgs
@@ -199,7 +199,7 @@ let genVarName tA = Store.Cid.Typ.gen_var_name tA
 (** Traverses a computation-level type-checkable expression and
  * applies the given function to all holes. *)
 let rec mapHoleChk f = function
- | Hole (l, name, e) -> f name l e
+ | Hole (l, name) -> f name l
  | If (l, es,ec1,ec2) ->
      let es' = mapHoleSyn f es in
      let ec1' = mapHoleChk f ec1 in
@@ -281,11 +281,11 @@ let replaceHole (s : Holes.lookup_strategy) exp =
 * detroy previous hole, commit staged holes and return the expression
 * otherwise (not ith) returns back Hole(l',f)
 * IMPORTANT: Check.comp.check that exp fits the holes beforehand *)
-  let ithHoler l exp name l' f =
+  let ithHoler l exp name l' =
     if (l = l') then
       (Holes.destroy_holes_within l; Holes.commit (); exp)
     else
-      Comp.Hole (l', name, f) in
+      Comp.Hole (l', name) in
 
   (* Figures out which function contains hole i. *)
   let funOfHole i =
@@ -396,7 +396,7 @@ let  intro (s : Holes.lookup_strategy) =
            Holes.cG = cG;
            Holes.goal = (t, mS);
          };
-       Some (Comp.Hole  (loc', None, (fun () -> Holes.at loc' |> Option.get |> fst)))
+       Some (Comp.Hole (loc', None))
      else None
          ) in
   crawl cDT cGT tau

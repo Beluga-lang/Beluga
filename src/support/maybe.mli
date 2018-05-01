@@ -15,3 +15,5 @@ val pure : 'a -> 'a t
 val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
 
 val void : 'a t -> unit t
+
+val of_option : 'a option -> 'a t

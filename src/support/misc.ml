@@ -3,3 +3,22 @@
 (** Converts a list of characters into an equivalent string. *)
 let string_pack (cs : char list) : string =
   String.concat "" (List.map (String.make 1) cs)
+
+(** Enumerates a list using a state transformer to generate indices.
+    The initial seed {!s!} contains the initial state and the function
+    {!f!} transforms this state to compute a new state and an index.
+    These indices are sequentially zipped with the given list to
+    produce an indexed list, and the final state is returned.
+ *)
+let rec enumerate_with_state (s : 's) (f : 's -> ('s * 'i)) (l : 'a list) : 's * ('i * 'a) list =
+  match l with
+  | [] -> (s, [])
+  | (x :: xs) ->
+     let (s', i) = f s in
+     let y = (i, x) in
+     let (s_final, ys) = enumerate_with_state s' f xs in
+     (s_final, y :: ys)
+
+(** Enumerates a list by pairing each element with its index. *)
+let enumerate (l : 'a list) : (int * 'a) list =
+  enumerate_with_state 0 (fun s -> (s + 1, s)) l |> snd

@@ -24,3 +24,8 @@ let ( $> ) (o : 'a t) (f : 'a -> 'b) : 'b t =
 
 let void (o : 'a t) : unit t =
   o $> fun _ -> ()
+
+let of_option (o : 'a option) : 'a t =
+  match o with
+  | None -> Nothing
+  | Some x -> Just x

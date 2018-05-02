@@ -238,19 +238,7 @@ let fill =
             let intexp = Reconstruct.elExp cD cG apxexp tclo in
             (if !Debug.chatter != 0 then fprintf ppf "- Fill: INT done\n");
             Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
-            let intexp' =
-              Interactive.mapHoleChk
-                (fun _ ll ->
-                  let (i, _) =
-                    match Holes.staged_at ll with
-                    | None -> failwith "No such hole."
-                    | Some h -> h in
-                  let loc' = Interactive.nextLoc loc in
-                  Holes.set_staged_hole_pos i loc';
-                  Synint.Comp.Hole (loc', Holes.option_of_name name)
-                )
-                intexp in (* makes sure that new holes have unique location *)
-            Interactive.replaceHole strat intexp'
+            Interactive.replaceHole strat intexp
           with
           | e ->
              fprintf
@@ -303,14 +291,12 @@ let intro =
          begin
            let open Either in
            Holes.parse_lookup_strategy strat_s |>
-             Maybe.of_option |>
-             of_maybe'
+             of_option'
                (fun () ->
                  fprintf ppf "- Invalid hole specifier '%s';\n" strat_s) $
              fun strat ->
              Holes.get strat |>
-               Maybe.of_option |>
-               of_maybe'
+               of_option'
                  (fun () ->
                    fprintf ppf "- No such hole %s;\n" (Holes.string_of_lookup_strategy strat)) $
                fun (i, h) ->
@@ -443,7 +429,7 @@ let lookup_hole =
     let strat = Holes.unsafe_parse_lookup_strategy (List.hd args) in
     match Holes.get strat with
     | None -> fprintf ppf "- No such hole."
-    | Some (i, _) -> fprintf ppf "%d" i)
+    | Some (i, _) -> fprintf ppf "%s" (Holes.string_of_hole_id i))
   ; help = "looks up a hole's number by its name"
   }
 

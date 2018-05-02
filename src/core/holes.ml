@@ -7,6 +7,8 @@ module Comp = Syntax.Int.Comp
 
 type hole_id = int
 
+let string_of_hole_id = string_of_int
+
 type hole_name =
   | Anonymous
   | Named of string
@@ -50,8 +52,6 @@ let hole_is_named (h : hole) : bool =
 
 let (holes : hole DynArray.t) = DynArray.create ()
 
-let (staged_holes : hole DynArray.t) = DynArray.create ()
-
 let index_of (haystack : 'a DynArray.t) (f : 'a -> bool) : int option =
   try
     Some (DynArray.index_of f haystack)
@@ -66,12 +66,7 @@ let find_common (haystack : 'a DynArray.t) (f : 'a -> bool)  : (int * 'a) option
 let find (f : hole -> bool) : (int * hole) option =
   find_common holes f
 
-let find_staged (f : hole -> bool) : (int * hole) option =
-  find_common staged_holes f
-
 let none () : bool = DynArray.empty holes
-
-let stage : hole -> unit = DynArray.add staged_holes
 
 let ( ++ ) f g = function x -> f (g x)
 
@@ -127,12 +122,9 @@ let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
 let destroy_holes_within loc =
   DynArray.filter (fun {loc = loc'; _} -> not (loc_within loc loc')) holes
 
-let commit () =
-  DynArray.append (DynArray.copy staged_holes) holes;
-  DynArray.clear staged_holes
-
-let clear_staged () =
-  DynArray.clear staged_holes
+let add (h : hole) =
+  DynArray.add holes h;
+  DynArray.length holes - 1
 
 (* A helper for implementing at and staged_at. *)
 let matches_loc loc' {loc; _} = loc = loc'
@@ -140,16 +132,6 @@ let matches_loc loc' {loc; _} = loc = loc'
 (* Should only be called with the loc of a hole *)
 let at (loc : Syntax.Loc.t) : (hole_id * hole) option =
   find (matches_loc loc)
-
-let staged_at (loc : Syntax.Loc.t) : (hole_id * hole) option =
-  find_staged (matches_loc loc)
-
-(** Transforms an element of a dynamic array at a specific index with a provided function. *)
-let transform_at (haystack : 'a DynArray.t) (i : hole_id) (f : 'a -> 'a) : unit =
-  let e = DynArray.get haystack i in DynArray.set haystack i (f e)
-
-let set_staged_hole_pos i l =
-  transform_at staged_holes i (fun h -> { h with loc = l })
 
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   let rec aux acc = function
@@ -253,7 +235,7 @@ let count () = DynArray.length holes
 
 let clear () = DynArray.clear holes
 
-let list () = DynArray.to_list holes
+let list () = Misc.enumerate (DynArray.to_list holes)
 
 let parse_lookup_strategy (s : string) : lookup_strategy option =
   try

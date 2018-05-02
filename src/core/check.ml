@@ -704,13 +704,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 
     | (Hole (loc, name), (tau, t)) ->
 	    Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Hole" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
-	    Holes.stage
-        { Holes.loc = loc;
-          Holes.name = Holes.name_of_option name;
-          Holes.cD;
-          Holes.cG;
-          Holes.goal = (tau, t);
-        };
+	    let _ =
+        Holes.add
+          { Holes.loc = loc;
+            Holes.name = Holes.name_of_option name;
+            Holes.cD;
+            Holes.cG;
+            Holes.goal = (tau, t);
+          }
+      in
 	    ()
 
   and check cD (cG, cIH) e (tau, t) =

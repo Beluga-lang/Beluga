@@ -17,9 +17,9 @@ val is_empty : 'a t -> bool
 val push : 'a -> 'a t -> 'a t
 
 (** Pops an item from the stack. *)
-val pop : 'a t -> ('a * 'a t) Maybe.t
+val pop : 'a t -> ('a * 'a t) option
 
 (** Tries to pop `n` items from a stack, yielding them in a list.
 The elements are collected in _reverse order_, so the old top of the
 stack is the last element of the returned list. *)
-val cut : int -> 'a t -> ('a list * 'a t) Maybe.t
+val cut : int -> 'a t -> ('a list * 'a t) option

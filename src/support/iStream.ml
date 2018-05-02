@@ -1,5 +1,5 @@
 type 'a t =
-  { next : unit -> ('a * 'a t) Maybe.t }
+  { next : unit -> ('a * 'a t) option }
 
 type 'a istream = 'a t
 
@@ -10,11 +10,11 @@ let rec map (f : 'a -> 'b) (s : 'a t) =
   }
 
 let empty : 'a t =
-  { next = fun () -> Maybe.Nothing }
+  { next = fun () -> None }
 
 (** Put a given element on the front of a stream. *)
 let cons (x : unit -> 'a) (s : 'a t) =
-  { next = fun () -> Maybe.Just (x (), s) }
+  { next = fun () -> Some (x (), s) }
 
 (*
 (** Prepends the list of items to the front of the stream.
@@ -30,8 +30,7 @@ let rec of_channel'
           (buf : Bytes.t) (pos : int)
           (len : int) (chan : in_channel) :
           char t =
-  let next () : (char * char t) Maybe.t =
-    let open Maybe in
+  let next () : (char * char t) option =
     (* if we've yielded all the chars in our buffer, we need to read
     more chars from the channel *)
     if pos = len then
@@ -39,16 +38,16 @@ let rec of_channel'
         let len' = input chan buf 0 (Bytes.length buf) in
         (* if input returns 0 bytes, we've reached EOF *)
         if len' = 0 then
-          Nothing
+          None
         else
           let c = Bytes.get buf 0 in
-          Just (c, of_channel' buf 1 len' chan)
+          Some (c, of_channel' buf 1 len' chan)
       end
     (* otherwise just yield the next char and bump up our pointer *)
     else
       begin
         let c = Bytes.get buf pos in
-        Just (c, of_channel' buf (pos + 1) len chan)
+        Some (c, of_channel' buf (pos + 1) len chan)
       end
   in
   { next = next }
@@ -63,15 +62,14 @@ If the second component of the pair is non-empty then it contains
 the rest of the stream as well as the first item that failed to
 satisfy the predicate. *)
 let take_while (p : 'a -> bool) (s : 'a t) :
-      'a list * ('a * 'a t) Maybe.t =
+      'a list * ('a * 'a t) option =
   let rec go (acc : 'a list) (s : 'a t) :
-        'a list * ('a * 'a t) Maybe.t =
-    let open Maybe in
+        'a list * ('a * 'a t) option =
     (* try to pull the next item from the stream *)
     match s.next () with
     (* if the stream is empty, we're done *)
-    | Nothing -> (acc, Nothing)
-    | Just (c, s) ->
+    | None -> (acc, None)
+    | Some (c, s) ->
        (* otherwise, check the predicate and prepend the item to the
        list if it passes *)
        if p c then
@@ -79,25 +77,22 @@ let take_while (p : 'a -> bool) (s : 'a t) :
        (* otherwise, we need to put the character back onto the
        stream and finish *)
        else
-         (acc, Just (c, s))
+         (acc, Some (c, s))
   in
   go [] s |> Pair.lmap List.rev
 
 let take_while_str (p : char -> bool) (s : char t) :
-      string * (char * char t) Maybe.t =
+      string * (char * char t) option =
   take_while p s |> Pair.lmap Misc.string_pack
 
 module AsBasicStream = struct
   type 'a t = 'a istream
 
-  let rec unfold (f : 's -> ('a * 's) Maybe.t) (s : 's) : 'a t =
+  let rec unfold (f : 's -> ('a * 's) option) (s : 's) : 'a t =
     { next =
         fun () ->
-        let open Maybe in
-        match f s with
-        | Nothing -> Nothing
-        | Just (x, s) -> Just (x, unfold f s)
+        f s |> Maybe.map (Pair.rmap (unfold f))
     }
 
-  let observe (s : 'a t) : ('a * 'a t) Maybe.t = s.next ()
+  let observe (s : 'a t) : ('a * 'a t) option = s.next ()
 end

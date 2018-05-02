@@ -6,19 +6,18 @@ type t =
     stop : loc;
   }
 
-let of_pair (start : loc) (stop : loc) : t Maybe.t =
-  let open Maybe in
+let of_pair (start : loc) (stop : loc) : t option =
   if compare start stop <= 0 then
-    Just { start = start; stop = stop }
+    Some { start = start; stop = stop }
   else
-    Nothing
+    None
 
 exception InvalidSpan
 let of_pair' (start : loc) (stop : loc) : t =
-  let open Maybe in
-  match of_pair start stop with
-  | Nothing -> raise InvalidSpan
-  | Just x -> x
+  of_pair start stop |>
+    Maybe.eliminate
+      (fun () -> raise InvalidSpan)
+      (fun x -> x)
 
 let to_string (s : t) : string =
   let open Printf in

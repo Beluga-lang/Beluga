@@ -16,9 +16,9 @@ exception InvalidSpan
 
 (** Constructs a span from a pair of locations.
     If the second location comes before the first, then the result is
-    {! Maybe.Nothing }.
+    {!Pervasives.None}.
  *)
-val of_pair : Loc.t -> Loc.t -> t Maybe.t
+val of_pair : Loc.t -> Loc.t -> t option
 
 (** Constructs a span from a pair of locations.
     If the second location comes before the first, then {!

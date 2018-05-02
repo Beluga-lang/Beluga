@@ -1,5 +1,5 @@
 type 'a t =
-  { next : unit -> ('a * 'a t) Maybe.t }
+  { next : unit -> ('a * 'a t) option }
 
 type 'a istream = 'a t
 
@@ -16,10 +16,10 @@ val of_channel : in_channel -> char t
 {i Warning:} if the stream is infinite and all its items satisfy the
 predicate, then this function will never terminate.
  *)
-val take_while : ('a -> bool) -> 'a t -> 'a list * ('a * 'a t) Maybe.t
+val take_while : ('a -> bool) -> 'a t -> 'a list * ('a * 'a t) option
 
 (** A string variant of {!IStream.take_while}. *)
-val take_while_str : (char -> bool) -> char t -> string * (char * char t) Maybe.t
+val take_while_str : (char -> bool) -> char t -> string * (char * char t) option
 
 (** Constructs an empty stream. *)
 val empty : 'a t

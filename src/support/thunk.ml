@@ -5,13 +5,14 @@ type 'a t =
 let value (x : 'a) : 'a t = { force = fun () -> x }
 
 let delay (f : unit -> 'a) : 'a t =
-  let r = ref Maybe.Nothing in
+  let r = ref None in
   { force =
       fun () ->
-        match !r with
-        | Maybe.Just x -> x
-        | Maybe.Nothing ->
-           let x = f () in
-           r := Maybe.Just x;
-           x
+      !r |>
+        Maybe.eliminate
+          (fun () ->
+            let x = f () in
+            r := Some x;
+            x)
+          (fun x -> x)
   }

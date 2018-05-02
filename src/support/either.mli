@@ -44,25 +44,18 @@ val void : ('e, 'a) t -> (unit, unit) t
  *)
 val bind : ('a -> ('e, 'b) t) -> ('e, 'a) t -> ('e, 'b) t
 
-(** Eliminates the union into a {!Maybe.t}, forgetting the value in
+(** Eliminates the union into a {!Pervasives.option}, forgetting the value in
 the left-hand side. *)
-val forget : ('e, 'a) t -> 'a Maybe.t
+val forget : ('e, 'a) t -> 'a option
 
-(** Converts a {!Maybe.t} into a union with a unit left-hand side. *)
-val of_maybe : 'a Maybe.t -> (unit, 'a) t
-
-(** Converts an {!Pervasives.option} into a union with a unit
-left-hand side. *)
+(** Converts a {!Pervasives.option} into a union with a unit left-hand
+    side.
+ *)
 val of_option : 'a option -> (unit, 'a) t
 
-(** Converts a {!Maybe.t} into a union with a left-hand side
-constructed from a thunk in case the {!Maybe.t} contained
-{!Maybe.Nothing}. *)
-val of_maybe' : (unit -> 'e) -> 'a Maybe.t -> ('e, 'a) t
-
-(** Converts a {!Pervatives.option} into a union with a left-hand side
-constructed from a thunk in case the {!Pervasives.option} contained
-{!Pervatives.None}.
+(** Converts a {!Pervasives.option} into a union with a left-hand side
+    constructed from a thunk in case the {!Pervasives.option}
+    contained {!Maybe.Nothing}.
  *)
 val of_option' : (unit -> 'e) -> 'a option -> ('e, 'a) t
 

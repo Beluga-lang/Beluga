@@ -38,20 +38,14 @@ let void (e : ('e, 'a) t) : (unit, unit) t =
 let bind (k : 'a -> ('e, 'b) t) (e : ('e, 'a) t) : ('e, 'b) t =
   eliminate left k e
 
-let forget (e : ('e, 'a) t) : 'a Maybe.t =
-  eliminate (fun _ -> Maybe.Nothing) Maybe.pure e
-
-let of_maybe (o : 'a Maybe.t) : (unit, 'a) t =
-  Maybe.eliminate (fun _ -> Left ()) pure o
+let forget (e : ('e, 'a) t) : 'a option =
+  eliminate (fun _ -> None) Maybe.pure e
 
 let of_option (o : 'a option) : (unit, 'a) t =
-  Maybe.of_option o |> of_maybe
-
-let of_maybe' (f : unit -> 'e) (o : 'a Maybe.t) : ('e, 'a) t =
-  Maybe.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
+  Maybe.eliminate (fun _ -> Left ()) pure o
 
 let of_option' (f : unit -> 'e) (o : 'a option) : ('e, 'a) t =
-  Maybe.of_option o |> of_maybe' f
+  Maybe.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
 
 let ( $ ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
   bind k e

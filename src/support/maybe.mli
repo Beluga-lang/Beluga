@@ -1,19 +1,15 @@
-type 'a t =
-  | Nothing
-  | Just of 'a
-  
-val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a t -> 'b
+val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
 
-val is_some : 'a t -> bool
+val is_some : 'a option -> bool
 
-val map : ('a -> 'b) -> 'a t -> 'b t
+val map : ('a -> 'b) -> 'a option -> 'b option
 
-val ( $ ) : 'a t -> ('a -> 'b t) -> 'b t
+val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
                                                 
-val pure : 'a -> 'a t
+val pure : 'a -> 'a option
 
-val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
+val none : 'a option
 
-val void : 'a t -> unit t
+val ( $> ) : 'a option -> ('a -> 'b) -> 'b option
 
-val of_option : 'a option -> 'a t
+val void : 'a option -> unit option

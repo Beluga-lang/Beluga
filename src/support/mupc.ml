@@ -56,8 +56,8 @@ module type Base = sig
   val throw : string -> 'a t
   
   (** A parser that observes the head of the input, returning
-  {!Maybe.Nothing} if the parser has reached the end of the input. *)
-  val peek : item Token.t Maybe.t t
+  {!Pervasives.None} if the parser has reached the end of the input. *)
+  val peek : item Token.t option t
   
   (** A variant of {!Mupc.peek} that throws an
    {! unexpected end of file !} error if the stream is empty.
@@ -243,13 +243,12 @@ module Make (P : ParserInfo) = struct
   (** Moves the given number of tokens from the rewind stack back onto
   the input stream. *)
   let rec rewind (n : int) (s : state) : state =
-    let open Maybe in
     if n <= 0 then
       s
     else
       match PureStack.pop s.stk with
-      | Nothing -> raise RewindTooFar
-      | Just (t, stk) ->
+      | None -> raise RewindTooFar
+      | Some (t, stk) ->
          rewind (n - 1)
            { s with
              input =
@@ -393,15 +392,14 @@ module Make (P : ParserInfo) = struct
   
   (** Pops a token from the input stream, if any.
   Returns `Nothing` if the input is already empty. *)
-  let car (s : state) : 'c Token.t Maybe.t * state =
+  let car (s : state) : 'c Token.t option * state =
     let open Either in
-    let open Maybe in
     let open HeadStrict in
     match s.input.Thunk.force () with
     | Left _ ->
-       ( Nothing, s )
+       ( None, s )
     | Right { head; tail }  ->
-         ( Just head,
+         ( Some head,
            { s with
              stk =
                if s.backtrack_enabled then
@@ -413,8 +411,8 @@ module Make (P : ParserInfo) = struct
                Thunk.delay
                  (fun () ->
                    match tail () with
-                   | Nothing -> Left head.Token.annotation.Span.stop
-                   | Just x -> Right x
+                   | None -> Left head.Token.annotation.Span.stop
+                   | Some x -> Right x
                  )
                ;
            }
@@ -423,7 +421,7 @@ module Make (P : ParserInfo) = struct
   (* For `peek` and `peek'` we need to write them in eta-long form
   without using combinators due to the value restriction. *)
   
-  let peek : item Token.t Maybe.t t =
+  let peek : item Token.t option t =
     { run =
         fun s -> (s, Either.pure (Either.forget (peeks s)))
     }
@@ -448,10 +446,9 @@ module Make (P : ParserInfo) = struct
     { run =
         fun s ->
         let open Token in
-        let open Maybe in
         match car s with
-        | (Nothing, s) -> (s, Either.Left (error_of_state "unexpected end of input" s))
-        | (Just { value; _ }, s) ->
+        | (None, s) -> (s, Either.Left (error_of_state "unexpected end of input" s))
+        | (Some { value; _ }, s) ->
            ( s, Either.Right value )
     }
   
@@ -524,9 +521,9 @@ module Make (P : ParserInfo) = struct
   input. *)
   let eof : unit t =
     peek $
-      function
-      | Maybe.Nothing -> pure ()
-      | Maybe.Just _ -> throw "expected to be at end of file"
+      Maybe.eliminate
+        pure
+        (fun _ -> throw "expected to be at end of file")
   
   (** `lookahead p` runs parser `p`, but resets the parser input state
   to its original value. `lookahead` fails if the underlying parser

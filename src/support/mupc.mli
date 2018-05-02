@@ -73,8 +73,8 @@ module type Base = sig
   val throw : string -> 'a t
   
   (** A parser that observes the head of the input, returning
-  {!Maybe.Nothing} if the parser has reached the end of the input. *)
-  val peek : item Token.t Maybe.t t
+  {!Pervasives.None} if the parser has reached the end of the input. *)
+  val peek : item Token.t option t
   
   (** A variant of {!Mupc.peek} that throws an
    {! unexpected end of file !} error if the stream is empty.

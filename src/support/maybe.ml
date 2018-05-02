@@ -1,31 +1,25 @@
-type 'a t =
-  | Nothing
-  | Just of 'a
-  
-let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a t -> 'b =
+let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a option -> 'b =
   function
-  | Nothing -> def ()
-  | Just x -> f x
+  | None -> def ()
+  | Some x -> f x
 
-let is_some (o : 'a t) : bool =
+let is_some (o : 'a option) : bool =
   eliminate (fun _ -> false) (fun _ -> true) o
 
-let map (f : 'a -> 'b) (o : 'a t) : 'b t =
-  eliminate (fun _ -> Nothing) (fun x -> Just (f x)) o
+let map (f : 'a -> 'b) (o : 'a option) : 'b option =
+  eliminate (fun _ -> None) (fun x -> Some (f x)) o
 
-let ( $ ) (o : 'a t) (k : 'a -> 'b t) : 'b t =
-  eliminate (fun _ -> Nothing) k o
+let ( $ ) (o : 'a option) (k : 'a -> 'b option) : 'b option =
+  eliminate (fun _ -> None) k o
 
-let pure (x : 'a) : 'a t =
-  Just x
+let pure (x : 'a) : 'a option =
+  Some x
 
-let ( $> ) (o : 'a t) (f : 'a -> 'b) : 'b t =
+let none : 'a option =
+  None
+
+let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
   o $ fun x -> pure (f x)
 
-let void (o : 'a t) : unit t =
+let void (o : 'a option) : unit option =
   o $> fun _ -> ()
-
-let of_option (o : 'a option) : 'a t =
-  match o with
-  | None -> Nothing
-  | Some x -> Just x

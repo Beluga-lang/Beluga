@@ -157,8 +157,8 @@ let main () =
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
             printf "\n## Holes: %s  ##" file_name;
-            List.iteri
-              (fun i h ->
+            List.iter
+              (fun (i, h) ->
                 print_string (Holes.format_hole i h);
                 print_newline ())
               (Holes.list ())

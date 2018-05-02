@@ -379,10 +379,7 @@ let intro (h : Holes.hole) =
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
        Comp.MLam (Loc.ghost, nam , exp)
     | t ->
-       Comp.Hole
-         ( Loc.ghost,
-           None
-         )
+       Comp.Hole (Loc.ghost, None)
   in
   crawl cDT cGT tau
 

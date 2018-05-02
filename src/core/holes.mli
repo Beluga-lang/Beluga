@@ -1,6 +1,8 @@
 open Syntax.Int
 
-type hole_id = int
+type hole_id
+
+val string_of_hole_id : hole_id -> string
 
 (* Essentially the same as `string option`. *)
 type hole_name =
@@ -56,9 +58,6 @@ val string_of_name : hole_name -> string
 (** Checks whether the internal array of holes is empty. *)
 val none : unit -> bool
 
-(** Stages a new hole. *)
-val stage : hole -> unit
-
 (** Pretty-prints a single hole. *)
 val format_hole : hole_id -> hole -> string
 
@@ -68,9 +67,6 @@ val get : lookup_strategy -> (hole_id * hole) option
 (** Retrieves a single hole using the given strategy,
  * raising NoSuchHole if the hole does not exist. *)
 val unsafe_get : lookup_strategy -> hole_id * hole
-
-(** Finds the first staged hole satisfying the given predicate. *)
-val find_staged : (hole -> bool) -> (int * hole) option
 
 (** Finds the first hole satisfying the given predicate. *)
 val find : (hole -> bool) -> (int * hole) option
@@ -82,7 +78,7 @@ val lookup : string -> (int * hole) option
 val loc_within : Syntax.Loc.t -> Syntax.Loc.t -> bool
 
 (** Gets the number of the hole at the given location. *)
-val at : Syntax.Loc.t -> (int * hole) option
+val at : Syntax.Loc.t -> (hole_id * hole) option
 
 (** Counts the number of holes. *)
 val count : unit -> int
@@ -90,20 +86,11 @@ val count : unit -> int
 (** Removes all holes contained in the given location. *)
 val destroy_holes_within : Syntax.Loc.t -> unit
 
-(** Transfers all staged holes (created via 'stage') to the main hole array. *)
-val commit : unit -> unit
-
-(** Clears all staged holes. *)
-val clear_staged : unit -> unit
-
-(** Gets the staged hole at the given location. *)
-val staged_at : Syntax.Loc.t -> (hole_id * hole) option
-
-(** Set the location of the given staged hole. *)
-val set_staged_hole_pos : hole_id -> Syntax.Loc.t -> unit
+(** Adds a new hole. *)
+val add : hole -> hole_id
 
 (** Clears the main hole array. *)
 val clear : unit -> unit
 
 (** Gets the current list of holes. *)
-val list : unit -> hole list
+val list : unit -> (hole_id * hole) list

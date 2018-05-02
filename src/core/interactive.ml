@@ -461,6 +461,10 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
               let bl = branchCovGoals 0 cG0 tau0 cgs in
               Some (matchFromPatterns l (Comp.Var(l, i)) bl)
            | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
+             (* if the type is the type of a variable we're doing
+               induction on, then we can just match the inner type
+              *)
+           | Comp.TypInd tau -> matchTyp tau
            | _ ->
               failwith
                 ( "Found variable in gCtx, cannot split on "

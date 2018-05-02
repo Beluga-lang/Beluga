@@ -1,0 +1,14 @@
+LF tp : type =
+   | nat : tp
+   | bool : tp;
+
+rec f: [⊢ tp] → [⊢ tp] =
+    / total t (f t) /
+    fn t ⇒ ?;
+%:load input.bel
+- The file input.bel has been successfully loaded;
+%:split 0 t
+ case t of
+| [ |- nat] => ?
+| [ |- bool] => ?
+;

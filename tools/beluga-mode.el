@@ -324,7 +324,7 @@ If a previous beli process already exists, kill it first."
   (while (and (progn
                 (goto-char comint-last-input-end)
                 (not (re-search-forward ".*;" nil t)))
-              (accept-process-output proc 0.4))))
+              (accept-process-output proc 0.025))))
 
 (defun chomp (str)
   "Chomp leading and tailing whitespace from STR."

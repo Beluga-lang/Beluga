@@ -313,6 +313,7 @@ let is_inferred = function
      match dep with
      | LF.No -> false
      | LF.Maybe -> true
+     | LF.Inductive -> false
    end
 | _ -> false
 

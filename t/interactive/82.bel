@@ -1,0 +1,66 @@
+LF tp: type =
+   | bool: tp
+   | arr: tp → tp → tp
+;
+--name tp T.
+
+LF tm: tp → type =
+   | true: tm bool
+   | false: tm bool
+   | if_then_else: tm bool → tm T → tm T → tm T
+   | lam: (tm S → tm T) → tm (arr S T)
+   | app: tm (arr S T) → tm S → tm T
+;
+--name tm M.
+
+LF value: tm _ → type =
+   | v_true: value true
+   | v_false: value false
+   | v_lam: value (lam M)
+;
+--name value V.
+
+LF step: tm A → tm A → type =
+   | e_if: step M N → step (if_then_else M M1 M2) (if_then_else N M1 M2)
+   | e_if_true: step (if_then_else true M1 M2) M1
+   | e_if_false: step (if_then_else false M1 M2) M2
+   | e_appl: step M M' → step (app M N) (app M' N)
+   | e_appr: value M → step N N' → step (app M N) (app M N')
+   | e_app: value N → step (app (lam M) N) (M N)
+;
+--name step S.
+
+LF mstep: tm A → tm A → type =
+   | m_refl: mstep M M
+   | m_trans: mstep M N → mstep N M' → mstep M M'
+   | m_step: step M N → mstep M N
+;
+--name mstep MS.
+
+schema ctx = tm T;
+
+stratified Val: {A: [⊢ tp]} (g: ctx) {M: [g ⊢ tm A[]]} ctype =
+	   | VTrue: Val [⊢ bool] [g ⊢ true]
+	   | VFalse: Val [⊢ bool] [g ⊢ false]
+	   | VLam: ({V: [g ⊢ tm S[]]} Safe [⊢ S] [g ⊢ V] → Safe [⊢ T] [g, x: tm S[] ⊢ M']) → Val [⊢ arr S T] [g ⊢ lam (\x.M')]
+and
+stratified Safe: {A: [⊢ tp]} (g: ctx) {M: [g ⊢ tm A[]]} ctype =
+	   | SafeT: ({S: [g ⊢ tm A[]]} [g ⊢ mstep M S] → [g ⊢ value S] → Val [⊢ A] [g ⊢ S]) → Safe [⊢ A] [g ⊢ M]
+;
+
+inductive SafeSub: {g: ctx} (g': ctx) {#S: [g' ⊢ g]} ctype =
+  | SNil: SafeSub [] [g' ⊢ ^]
+  | SCons: SafeSub [g] [g' ⊢ #S] → Safe [⊢ A] [g' ⊢ M] → SafeSub [g, x: tm A[]] [g' ⊢ #S, M]
+;
+
+rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {#S: [g' ⊢ g]} SafeSub [g] [g' ⊢ #S]
+			 → Safe [⊢ A] [g' ⊢ M[#S]] =
+/ total a (main_lemma g g' a m s rs) /
+    ?;
+%:load input.bel
+- The file input.bel has been successfully loaded;
+%:numholes
+1;
+%:intro 0
+mlam g => mlam g' => mlam A => mlam M => mlam S => fn x8 =>
+?;

@@ -485,7 +485,8 @@ let do_command ppf cmd =
       let command = List.find (fun x -> "help" = x.name) !reg in
       command.run ppf []
   | ExtString.Invalid_string-> fprintf ppf "Splitting error\n"
-  | _ -> helpme.run ppf []
+  | err ->
+     fprintf ppf "%s;\n" (Printexc.to_string err)
 
 let print_usage ppf =
   let _ = fprintf ppf "Usage: \n" in

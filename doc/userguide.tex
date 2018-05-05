@@ -51,19 +51,19 @@ module & ttrue & ffalse & ? & struct &  \\
 \end{center}
 
 \subsection{Pragmas}
-Pragmas provide a means of setting compilation behavior within a program. Each begins with the percent sign \texttt{\%} to indicate that it does not accept parsing. \\
+Pragmas provide a means of setting compilation behavior within a program. Each begins with a pair of dashes \texttt{--}. \\
 
 \begin{tabular}{ | l l}
-\texttt{\%coverage} & Initiate coverage check \\
-\texttt{\%warncoverage} & Enable coverage check warnings \\
-\texttt{\%nostrengthen} & Disable automatic meta-variable strengthening \\
-\texttt{\%infix} & Create an infix operator from a two-argument constructor \\
-\texttt{\%prefix} & Create a prefix operator from a two-argument constructor \\
-\texttt{\%assoc} & Set the default associativity \\
-\texttt{\%name} & Set name preference \\
-\texttt{\%abbrev} & Set module abbreviation \\
-\texttt{\%not} & Guard an expression from type-checking\\
-\texttt{\%open} & Open a module\\
+\texttt{-{}-coverage} & Initiate coverage check \\
+\texttt{-{}-warncoverage} & Enable coverage check warnings \\
+\texttt{-{}-nostrengthen} & Disable automatic meta-variable strengthening \\
+\texttt{-{}-infix} & Create an infix operator from a two-argument constructor \\
+\texttt{-{}-prefix} & Create a prefix operator from a two-argument constructor \\
+\texttt{-{}-assoc} & Set the default associativity \\
+\texttt{-{}-name} & Set name preference \\
+\texttt{-{}-abbrev} & Set module abbreviation \\
+\texttt{-{}-not} & Guard an expression from type-checking\\
+\texttt{-{}-open} & Open a module\\
 \end{tabular}
 
 
@@ -134,11 +134,11 @@ There are two ways of making LF declarations. The first follows closely the synt
 lf_decl ::= lf_datatype_decl    (* new syntax for LF signatures *)
           | id ":" lf_type "."  (* Twelf style LF signatures *)
           | id ":" lf_kind "."  (* Twelf style LF signatures *)
-          | lf_decl %name id ID "."    (* name preference pragma *)
-          | lf_decl %infix id assoc int "."    (* infix pragma *)
-          | lf_decl %prefix id int "."         (* prefix pragma *)
+          | lf_decl --name id ID "."    (* name preference pragma *)
+          | lf_decl --infix id assoc int "."    (* infix pragma *)
+          | lf_decl --prefix id int "."         (* prefix pragma *)
 
-infix_prg ::=  lf_decl %infix id [assoc] nat "."
+infix_prg ::=  lf_decl --infix id [assoc] nat "."
 
 assoc ::= none
 	   | left
@@ -377,19 +377,19 @@ LF term : type =
 \end{verbatim}
 
 \subsection{Operators}
-A type constructor which takes two arguments can be declared an infix operator using the \texttt{\%infix} pragma. The \texttt{\%infix} pragma is proceeded by the identifier of the operator which must match the identifier of the LF declaration to which it is applied. The association is specified next to be left, right, or non-associative. Operator precedence is specified last as a natural number, delineated from largest to smallest such that the largest number takes the highest precedence.
+A type constructor which takes two arguments can be declared an infix operator using the \texttt{-{}-infix} pragma. The \texttt{-{}-infix} pragma is proceeded by the identifier of the operator which must match the identifier of the LF declaration to which it is applied. The association is specified next to be left, right, or non-associative. Operator precedence is specified last as a natural number, delineated from largest to smallest such that the largest number takes the highest precedence.
 
-The precedence of ordinary prefix operators can be adjusted using the \texttt{\%prefix} pragma which takes all the same arguments as \texttt{\%infix} except associativity. Prefix operators default to the low precedence of -1 if none is specified.
+The precedence of ordinary prefix operators can be adjusted using the \texttt{-{}-prefix} pragma which takes all the same arguments as \texttt{-{}-infix} except associativity. Prefix operators default to the low precedence of -1 if none is specified.
 
-The operator is treated as non-associative by default if no associativity is stated explicitly. The default associativity can be altered with the \texttt{\%assoc} pragma.
+The operator is treated as non-associative by default if no associativity is stated explicitly. The default associativity can be altered with the \texttt{-{}-assoc} pragma.
 
 \textbf{Example:} A user may wish to declare \texttt{app} and \texttt{lam} as infix operators while ensuring that \texttt{red} has higher precedence. Seeing as no associativity was listed, \texttt{lam} takes the default associativity, here defined as \texttt{right}.
 \begin{verbatim}
-%assoc right
+--assoc right
 
-app: term -> term -> term. %infix app none 1.
-lam: (term -> term) -> term. %infix lam 1.
-red: term -> term %prefix red 2. 
+app: term -> term -> term. --infix app none 1.
+lam: (term -> term) -> term. --infix lam 1.
+red: term -> term --prefix red 2. 
 \end{verbatim}
 
 \subsection{Schemas and Context Variables}
@@ -613,7 +613,7 @@ rec ref : {h : eqCtx} {M : [g |- term]} [g |- eq M M] = ? ;
 The recursive function \texttt{ref} expects a context \texttt{h} satisfying the schema \texttt{eqCtx}. Beluga would allow passing some context \texttt{g:eCtx} to \texttt{ref} since \texttt{g:eqCtx} can be obtained by adding \texttt{equal x x} from \texttt{h}.
 
 \subsection{Meta-variable Strengthening}
-Automatic strengthening can be disabled by putting the \texttt{\%nostrengthen} pragma at the beginning of the program.
+Automatic strengthening can be disabled by putting the \texttt{-{}-nostrengthen} pragma at the beginning of the program.
 
 \subsection{Holes}
 Beluga supports \textit{\textbf{holes}} for bound variables as well as contextual objects and variables. A bound variable in an abstraction which does not appear in the body can be replaced with the underscore \texttt{\_}.
@@ -626,9 +626,9 @@ Note that holes do not synthesize objects; they can only be used in instances wh
 Holes of this nature can be filled using Interactive Mode.
 
 \subsection{Name Preference}
-Beluga assigns names to anonymous variables during reconstruction. These names are generated randomly but appending a type family constructor declarations the \texttt{\%name} pragma sets a preferred naming choice for anonymous variables of that type. 
+Beluga assigns names to anonymous variables during reconstruction. These names are generated randomly but appending a type family constructor declarations the \texttt{-{}-name} pragma sets a preferred naming choice for anonymous variables of that type. 
 \begin{verbatim}
-name_prg ::=  lf_decl %name id ID "."    
+name_prg ::=  lf_decl --name id ID "."    
 \end{verbatim}
 The first identifier must match the name of the constructor to which it is being applied. The second identifier is the preferred name itself. Note that name preference declarations have no affect on parsing. 
 
@@ -638,9 +638,9 @@ The first identifier must match the name of the constructor to which it is being
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Logic Programming with Queries}
-A query is posed as a \texttt{\%query} declaration.
+A query is posed as a \texttt{-{}-query} declaration.
 \begin{verbatim}
-qdecl ::= %query int int [ID]:lf_typ.
+qdecl ::= --query int int [ID]:lf_typ.
 \end{verbatim}
 The first integer specifies the expected number of solutions whereas the second specifies the maximum number of tries. Beluga will attempt to solve the query to determine whether it has the expected number of solutions while never exceeding the user-defined limit. Supplying either integer field with an asterisk * will set the quantity to unlimited.
 
@@ -657,14 +657,14 @@ Beluga's logic programming engine is active by default. It can be disabled with 
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Coverage}
-Coverage checking ensures that every closed object of a given type is an instance of a case outlined in the program, ruling out partial functions. Beluga does not perform coverage checks by default. To initiate a coverage check on a given program, include the \texttt{\%coverage} pragma at the beginning of the program. The program will not compile unless the coverage check is successful. The \texttt{\%warncoverage} alerts the user of missed cases without failures. Should a coverage check fail, Beluga will output the location of the incomplete pattern matching along with the cases not covered, similar to ML-style exhaustiveness checking.  
+Coverage checking ensures that every closed object of a given type is an instance of a case outlined in the program, ruling out partial functions. Beluga does not perform coverage checks by default. To initiate a coverage check on a given program, include the \texttt{-{}-coverage} pragma at the beginning of the program. The program will not compile unless the coverage check is successful. The \texttt{-{}-warncoverage} alerts the user of missed cases without failures. Should a coverage check fail, Beluga will output the location of the incomplete pattern matching along with the cases not covered, similar to ML-style exhaustiveness checking.  
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
 
 
 \section{Modules}
-Modules provide namespace separation within a program. They are declared with ML-style syntax with the \texttt{module} keyword followed by an upper-case identifier. The user can specify an abbreviation with the \texttt{\%abbrev} pragma, followed by the module's actual identifier and the desired abbreviation. Structural components are listed after the \texttt{struct} keyword in the usual Beluga syntax. The module declaration is terminated with the \texttt{end;} keyword. \\
+Modules provide namespace separation within a program. They are declared with ML-style syntax with the \texttt{module} keyword followed by an upper-case identifier. The user can specify an abbreviation with the \texttt{-{}-abbrev} pragma, followed by the module's actual identifier and the desired abbreviation. Structural components are listed after the \texttt{struct} keyword in the usual Beluga syntax. The module declaration is terminated with the \texttt{end;} keyword. \\
 
 \textbf{Example:} A module defining natural numbers could be declared as follows:
 \begin{verbatim} 
@@ -679,10 +679,10 @@ module Nats = struct
   let two = [ |- s (s z)];
   let three = suc two;
 end;
-%abbrev Nats N
+--abbrev Nats N
 \end{verbatim}
 
-Module components are accessed via fields as \texttt{Id.id}. The constructor \texttt{z} from the example above is called with \texttt{Nats.z} or \texttt{N.z} using the abbreviation. A module can be opened within a program using the \texttt{\%open} pragma followed by the module identifier. The components of open modules can be access directly, ie: \texttt{z} instead of \texttt{Nat.z}. Note that if module \texttt{B} is opened in the body of module \texttt{A}, then opening \texttt{A} within a program also opens \texttt{B}.
+Module components are accessed via fields as \texttt{Id.id}. The constructor \texttt{z} from the example above is called with \texttt{Nats.z} or \texttt{N.z} using the abbreviation. A module can be opened within a program using the \texttt{-{}-open} pragma followed by the module identifier. The components of open modules can be access directly, ie: \texttt{z} instead of \texttt{Nat.z}. Note that if module \texttt{B} is opened in the body of module \texttt{A}, then opening \texttt{A} within a program also opens \texttt{B}.
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------

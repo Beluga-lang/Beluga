@@ -173,13 +173,13 @@ and index_typ cvars bvars fvars = function
   | Ext.LF.AtomTerm(loc, n) ->
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
-	    (match  shunting_yard nl with
-	       | Ext.LF.Root(_, Ext.LF.Name(_, a), tS') -> 
-		   index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, tS'))
-	       | Ext.LF.Root(_, _h , _tS)  -> 
-		   raise (Error (loc, IllFormedCompTyp))
-	    )
-
+           begin
+	           match shunting_yard nl with
+	           | Ext.LF.Root(_, Ext.LF.Name(_, a), tS') ->
+		            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, tS'))
+	           | _ ->
+		            raise (Error (loc, IllFormedCompTyp))
+           end
         | Ext.LF.Root(loc2, Ext.LF.Name(_,name), tS) ->
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, tS))
       end

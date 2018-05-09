@@ -22,22 +22,14 @@ let ctypDeclToString cD ctypDecl =
   P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ;
   Format.flush_str_formatter ()
 
-let isExplicit = function
-  | LF.Decl(_, _, dep) ->
-      begin match dep with
-        | LF.No -> true
-        | LF.Maybe -> false
-      end
-  | _ -> true
-
 let mctxToString =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
       "."
-    | LF.Dec (LF.Empty, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit) ->
+    | LF.Dec (LF.Empty, ctypDecl) when (LF.is_explicit ctypDecl || !Pretty.Control.printImplicit) ->
       "\n" ^ shift ^ ctypDeclToString LF.Empty ctypDecl
-    | LF.Dec (cD, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit)->
+    | LF.Dec (cD, ctypDecl) when (LF.is_explicit ctypDecl || !Pretty.Control.printImplicit)->
       let s = toString cD in
       s ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
     | LF.Dec (cD, _ ) -> toString cD

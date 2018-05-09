@@ -237,16 +237,30 @@ module LF = struct
      acc is an accumulator set to 1 when the function is called
 
   *)
-let rec getIndex' trec target acc = match trec with
-  | SigmaLast(None, _) -> raise Not_found
-  | SigmaLast(Some name, _) ->
-    if String.compare (string_of_name name) (string_of_name target) == 0 then acc
-    else failwith "Projection Not found"
-  | SigmaElem(name, _, trec') ->
-    if String.compare (string_of_name name) (string_of_name target) == 0 then acc
-  else getIndex' trec' target (acc + 1)
+  let rec getIndex' trec target acc =
+    match trec with
+    | SigmaLast(None, _) -> raise Not_found
+    | SigmaLast(Some name, _) ->
+       if String.compare (string_of_name name) (string_of_name target) == 0
+       then acc
+       else failwith "Projection Not found"
+    | SigmaElem(name, _, trec') ->
+       if String.compare (string_of_name name) (string_of_name target) == 0
+       then acc
+       else getIndex' trec' target (acc + 1)
 
-let getIndex trec target = getIndex' trec target 1
+  let getIndex trec target = getIndex' trec target 1
+
+  let is_explicit =
+    function
+    | Decl(_, _, dep) ->
+       begin
+         match dep with
+         | No -> true
+         | Maybe -> false
+         | Inductive -> true
+       end
+    | _ -> true
 end
 
 (* Internal Computation Syntax *)

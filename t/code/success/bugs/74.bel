@@ -1,0 +1,16 @@
+LF t : type =
+| c : t → t
+;
+
+inductive Empty : ctype =
+;
+
+LF p : t → type =
+| d : p X → p (c X)
+;
+
+rec f : {X : [⊢ t]} ([⊢ p X] → Empty) → [⊢ t] =
+/ total x (f x) /
+mlam X ⇒ fn p ⇒ case [⊢ X] of
+| [⊢ c X] ⇒ f [⊢ X] (fn r ⇒ p [⊢ d ?])
+;

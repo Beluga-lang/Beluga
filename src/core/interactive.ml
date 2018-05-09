@@ -304,18 +304,8 @@ let replaceHole (s : Holes.lookup_strategy) exp =
 (* top level tactics *)
 (*********************)
 
-
-
-
-let is_inferred = function
-| LF.Decl(_, ctyp, dep) ->
-   begin
-     match dep with
-     | LF.No -> false
-     | LF.Maybe -> true
-     | LF.Inductive -> false
-   end
-| _ -> false
+let is_inferred decl =
+  not (LF.is_explicit decl)
 
 let intro1 (h : Holes.hole) =
   let { Holes.loc;

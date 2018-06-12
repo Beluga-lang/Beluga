@@ -81,22 +81,32 @@ Beluga supports single-line and multi-line comments using \texttt{\%} and \textt
 The Beluga executable accepts the following options from the command line.\\
 
 \begin{tabular}{ | l l }
-+annot & Creates an annotation\\
-+d & Enables debugging printing \\ 
-+ext &  Print external syntax before reconstruction \\
-+s=debruijn & Print substitution in deBruijn style \\
++d & Turn all on -- note that in interactive mode debugging information is piped to 'debug.out' \\ 
++ext &  Print external syntax before reconstruction \\ \\
+-s=debruijn & Print substitutions in deBruijn--ish style (when debugging Beluga) \\
 +implicit & Print implicit arguments \\
 +t & Print timing information \\
-+tfile & Print timing information into time.txt \\
-+printSubord & Print subordination relations \\
--print & Disable printing \\
--logic & Disable the logic engine \\
++tfile & Print timing information to file "time.txt" \\
++printSubord & Print subordination relations (experimental) \\
+-print & Turn printing off \\
++print & Turn printing on \\
 -width nnn & Set output width to nnn (default 86, min 40) \\
-+realNames & Print holes using original names\\
-+HTML & Enable HTML mode\\
-+HTML -css & Enable HTML mode without CSS\\
-+HTML +cssfile $<$filepath$>$ & Specify a CSS page for HTML mode\\
-+latex & Enables LaTeX mode\\ 
+-logic & Turn off logic programming engine \\
++test & Make output suitable for test harness \\
++realNames & Print holes using real names\\
++html &  Generate an html page of the source code using default CSS \\
++htmltest & Run HTML mode on file, but do not create final HTML page \\
++sexp & Dump the elaborated code using S-expressions \\
+-css & Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage \\
++cssfile $<$filepath$>$ & Specify css file to link to from generated HTML page\\
++annot & Generate a .annot file for use in emacs\\
++locs & Output location information (for testing) \\
+-I [beli-options] &  Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli)\\
+&  beli-options:\\
+\begin{tabular}{ l l }
+	-emacs & mode used to interact with emacs (not recommended in commandline) \\
+	 -readLine & disable readline support using rlwrap
+\end{tabular}
 \end{tabular}
 
 

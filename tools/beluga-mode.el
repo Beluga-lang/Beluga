@@ -244,32 +244,6 @@ Regexp match data 0 points to the chars."
               ;; no face.  So force evaluation by using `keep'.
               keep)))))))
 
-(defvar beluga-syntax-id-re "[[:alpha:]_][[:alnum:]_']*")
-(defvar beluga-syntax-fundec-re "^[ \t]*\\(rec\\|and\\)\\>")
-
-(defvar beluga-font-lock-keywords
-  `(,(concat "\\_<"
-             (regexp-opt
-              '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "stratified" "else" "ffalse" "fn" "if"
-                "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
-                "then" "type" "ctype" "ttrue" "%name" "%not" "module" "struct" "end"
-                "%coverage" "%nostrengthen" "%infix" "%prefix" "%assoc"
-                 "%open"  "%abbrev" "#stratified" "#positive" "total" "fun"))
-             "\\_>\\|\\\\")
-    (,(concat "^\\(" beluga-syntax-id-re
-              "\\)[ \t\n]*:\\([^.]*\\_<type\\_>[ \t\n]*.\\)?")
-     ;; This is a regexp that can span multiple lines, so it may not
-     ;; always highlight properly.  `font-lock-multiline' tries to help.
-     (0 (if (match-end 2) '(face nil font-lock-multiline t)))
-     (1 (if (match-end 2)
-            font-lock-type-face font-lock-variable-name-face)))
-    (,(concat "^\\(?:schema\\|inductive\\|coinductive\\|LF\\|stratified\\)[ \t\n]+\\("
-              beluga-syntax-id-re "\\)")
-     (1 font-lock-type-face))
-    (,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)")
-     (2 font-lock-function-name-face))
-    ,@(beluga-font-lock-symbols-keywords)))
-
 (defvar beluga-imenu-generic-expression
   `(("Schemas"
      ,(concat "^[ \t]*schema[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)
@@ -540,6 +514,51 @@ If a previous beli process already exists, kill it first."
   (mapc #'delete-overlay beluga--holes-overlays)
   (setq beluga--holes-overlays nil))
 
+(defconst beluga-syntax-pragma-re
+  "--\\(\\(name\\|query\\).*?\\.\\|\\w+\\)"
+  "A regexp for matching a Beluga pragma. Long pragmas continue until a `.` is found, e.g. `--name oft D.`.
+Short pragmas consist of only one word, e.g. `--nostrengthen`.")
+
+(defconst beluga-punct-re
+  (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
+
+(defconst beluga-syntax-id-re
+  "[[:alpha:]_][[:alnum:]_']*"
+  "A regexp for matching a Beluga identifier.")
+
+(defconst beluga-syntax-fundec-re
+  "\\<\\(rec\\|and\\)\\>"
+  "A regexp for matching a function declaration.")
+
+(defconst beluga-font-lock-keywords
+  `((,beluga-syntax-pragma-re . ,font-lock-warning-face)
+
+    ,(regexp-opt
+     '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "stratified" "else" "ffalse" "fn" "if"
+       "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
+       "then" "type" "ctype" "ttrue" "module" "struct" "end"
+       "#stratified" "#positive" "total" "fun")
+     'symbols)
+
+    ,"\\_<\\(total\\)\\_>" . 'italic)
+
+    (,"/\\s-*total.*?/" . (face 'italic))
+
+    (,(concat "^\\(" beluga-syntax-id-re "\\)"
+              "\\s-*" ":" "\\([^.]*\\_<type\\_>\\s-*.\\)?")
+     ;; This is a regexp that can span multiple lines, so it may not
+     ;; always highlight properly.  `font-lock-multiline' tries to help.
+     (0 (if (match-end 2) '(face nil font-lock-multiline t)))
+     (1 (if (match-end 2)
+            font-lock-type-face font-lock-variable-name-face)))
+
+    (,(concat "^\\(?:schema\\|inductive\\|coinductive\\|LF\\|stratified\\)" "\\s-+"
+              "\\(" beluga-syntax-id-re "\\)")
+     (1 font-lock-type-face))
+
+    (,(concat beluga-syntax-fundec-re "\\s-+\\(" beluga-syntax-id-re "\\)")
+     (2 font-lock-function-name-face))
+    ))
 
 ;;---------------------------- Loading of the mode ----------------------------;;
 
@@ -604,9 +623,6 @@ If a previous beli process already exists, kill it first."
   "Basic amount of indentation."
   :type 'integer)
 
-(defconst beluga-smie-punct-re
-  (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
-
 (defun beluga-smie-forward-token ()
   (forward-comment (point-max))
   (if (looking-at "\\.[ \t]*$")
@@ -615,7 +631,7 @@ If a previous beli process already exists, kill it first."
     (buffer-substring-no-properties
      (point)
      (progn (cond
-             ((looking-at beluga-smie-punct-re) (goto-char (match-end 0)))
+             ((looking-at beluga-punct-re) (goto-char (match-end 0)))
              ((not (zerop (skip-syntax-forward "w_'"))))
              ;; In case of non-ASCII punctuation.
              ((not (zerop (skip-syntax-forward ".")))))
@@ -631,7 +647,7 @@ If a previous beli process already exists, kill it first."
     (buffer-substring-no-properties
      (point)
      (progn (cond
-             ((looking-back beluga-smie-punct-re (- (point) 2) 'greedy)
+             ((looking-back beluga-punct-re (- (point) 2) 'greedy)
               (goto-char (match-beginning 0)))
              ((not (zerop (skip-syntax-backward "w_'"))))
              ;; In case of non-ASCII punctuation.

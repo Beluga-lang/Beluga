@@ -30,12 +30,13 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-(require 'smie nil t)                   ;Use smie when available.
+(require 'smie)
 
 (provide 'beluga-unicode-input-method)
 (require 'quail)
 
-(defconst beluga-input-method-name "beluga-unicode"
+(defconst beluga-input-method-name
+  "beluga-unicode"
   "The name of the Beluga unicode input method.")
 
 (quail-define-package
@@ -43,9 +44,12 @@
  "UTF-8" ;; language
  "\\" ;; title
  t ;; guidance
- "Beluga unicode input method: actually replaces keyword strings with a single unicode character instead of merely representing the keywords in unicode using Font Lock mode."
+ "Beluga unicode input method: actually replaces keyword strings with
+a single unicode character instead of merely representing the keywords
+in unicode using Font Lock mode."
   nil nil nil nil nil nil nil nil nil nil t)
-
+; this very final t is the SIMPLE flag of quail-define-package, and
+; causes quail to not affect the meanings of C-{f,b,n,p} or TAB.
 
 (quail-define-rules
  ;; Greek letters
@@ -135,10 +139,12 @@
     (modify-syntax-entry ?\{ "(}2 b" st)
     (modify-syntax-entry ?\} "){3 b" st)
     (modify-syntax-entry ?\n ">" st)
+    (modify-syntax-entry ?/ "$/" st)
     ;; For application of dependent arguments "exp A < ctx . term >", we'd want
     ;; <..> to match, but that breaks ->, <-, and other things.
     ;; (modify-syntax-entry ?< "(>" st)
     ;; (modify-syntax-entry ?> ")<" st)
+    ; see https://emacs.stackexchange.com/a/4149 for a possible solution
     (modify-syntax-entry ?#  "'" st)
     (modify-syntax-entry ?< "." st)
     (modify-syntax-entry ?> "." st)
@@ -147,48 +153,6 @@
     (modify-syntax-entry ?= "." st)
     (modify-syntax-entry ?\' "_" st)
     st))
-
-(defcustom beluga-font-lock-symbols
-  (not (fboundp 'prettify-symbols-mode))
-  "Display |- and -> and such using symbols in fonts.
-This may sound like a neat trick, but be extra careful: it changes the
-alignment and can thus lead to nasty surprises w.r.t layout."
-  :type 'boolean)
-(when (fboundp 'prettify-symbols-mode)
-  (make-obsolete-variable 'beluga-font-lock-symbols
-                          'prettify-symbols-mode "Emacs-24.4"))
-
-(defconst beluga-font-lock-symbols-alist
-  ;; Not sure about fn → λ, since we could also have \ → λ.
-  '(("not"   . ?¬)
-    ;; ("fn"    . ?λ)
-    ("FN"    . ?Λ)
-    ("|-"    . ?⊢)
-    ("psi"   . ?ψ)
-    ("phi"   . ?φ)
-    ("gamma" . ?γ)
-    ("sigma" . ?σ)
-    ("#S"    . ?σ)
-    ("#S[^]" . ?σ)
-    ("#R"    . ?ρ)
-    ("#R[^]" . ?ρ)
-    ("omega" . ?ω)
-    ("Sigma" . ?Σ)
-    ("->"    . ?→)
-    ("<-"    . ?←)
-    ("=>"    . ?⇒)
-    ;; ("::"    . ?∷)
-    (".." . ?…) ; Actually "..."
-    ;;(".."    . ?‥)
-    ;; ("forall" . ?∀)
-    )
-  "Alist mapping Beluga symbols to chars.
-Each element has the form (STRING . CHAR) or (STRING CHAR PREDICATE).
-STRING is the Beluga symbol.
-CHAR is the character with which to represent this symbol.
-PREDICATE if present is a function of one argument (the start position
-of the symbol) which should return non-nil if this mapping should be disabled
-at that position.")
 
 (defun proc-live (process)
   "Returns non-nil if PROCESS is alive.
@@ -376,8 +340,6 @@ If a previous beli process already exists, kill it first."
        (< s1 s2)))
   (sort beluga--holes-overlays `hole-comp))
 
-
-
 (defface beluga-holes
   '((t :background "cyan")) ;; :foreground "white"
   "Face used to highlight holes in Beluga mode.")
@@ -514,10 +476,13 @@ If a previous beli process already exists, kill it first."
   (mapc #'delete-overlay beluga--holes-overlays)
   (setq beluga--holes-overlays nil))
 
+;;; Beluga indentation and navigation via SMIE
+
 (defconst beluga-syntax-pragma-re
   "--\\(\\(name\\|query\\).*?\\.\\|\\w+\\)"
-  "A regexp for matching a Beluga pragma. Long pragmas continue until a `.` is found, e.g. `--name oft D.`.
-Short pragmas consist of only one word, e.g. `--nostrengthen`.")
+  "A regexp for matching a Beluga pragma. Long pragmas continue until
+a `.` is found, e.g. `--name oft D.`. Short pragmas consist of only
+one word, e.g. `--nostrengthen`.")
 
 (defconst beluga-punct-re
   (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
@@ -527,25 +492,40 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
   "A regexp for matching a Beluga identifier.")
 
 (defconst beluga-syntax-fundec-re
-  "\\<\\(rec\\|and\\)\\>"
-  "A regexp for matching a function declaration.")
+  (regexp-opt '("rec" "and") 'symbols)
+  "A regexp for matching a function declaration.
+ Note that this will also match the 'and' keyword!")
+
+(defconst beluga-slim-arrows
+  '("->" "<-" "→" "←")
+  "A list of the slim arrow strings.")
+
+(defconst beluga-fat-arrows
+  '("=>" "⇒")
+  "A list of the fat arrow strings.")
+
+(defconst beluga-syntax-keyword-re
+  (regexp-opt
+   '("FN" "and" "block" "case" "inductive" "LF" "coinductive"
+     "stratified" "else" "ffalse" "fn" "if" "in" "impossible" "let"
+     "mlam" "of" "rec" "schema" "some" "then" "type" "ctype" "ttrue"
+     "module" "struct" "end" "#stratified" "#positive" "fun")
+   'symbols)
+  "A regular expression to match any beluga keyword.")
 
 (defconst beluga-font-lock-keywords
   `((,beluga-syntax-pragma-re . ,font-lock-warning-face)
 
-    ,(regexp-opt
-     '("FN" "and" "block" "case" "inductive" "LF" "coinductive" "stratified" "else" "ffalse" "fn" "if"
-       "in" "impossible" "let" "mlam" "of" "rec" "schema" "some"
-       "then" "type" "ctype" "ttrue" "module" "struct" "end"
-       "#stratified" "#positive" "total" "fun")
-     'symbols)
+    ,beluga-syntax-keyword-re
 
-    ,"\\_<\\(total\\)\\_>" . 'italic)
+    (,"/\\s-*\\_<\\(total\\)\\_>.*?/" .
+     ((0 'italic)
+      (1 'font-lock-keyword-face prepend)))
 
-    (,"/\\s-*total.*?/" . (face 'italic))
-
-    (,(concat "^\\(" beluga-syntax-id-re "\\)"
-              "\\s-*" ":" "\\([^.]*\\_<type\\_>\\s-*.\\)?")
+    (,(concat
+       "^\\(" beluga-syntax-id-re "\\)"
+       "\\s-*" ":"
+       "\\([^.]*\\_<type\\_>\\s-*.\\)?")
      ;; This is a regexp that can span multiple lines, so it may not
      ;; always highlight properly.  `font-lock-multiline' tries to help.
      (0 (if (match-end 2) '(face nil font-lock-multiline t)))
@@ -560,82 +540,29 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
      (2 font-lock-function-name-face))
     ))
 
-;;---------------------------- Loading of the mode ----------------------------;;
-
-;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.s?bel\\'" . beluga-mode))
-
-(unless (fboundp 'prog-mode)
-  (defalias 'prog-mode #'fundamental-mode))
-
-;;;###autoload
-(define-derived-mode beluga-mode prog-mode "Beluga"
-  "Major mode to edit Beluga source code."
-  (set (make-local-variable 'imenu-generic-expression)
-       beluga-imenu-generic-expression)
-  (set (make-local-variable 'outline-regexp)
-       (concat beluga-syntax-fundec-re "\\|^(inductive|coinductive|LF|stratified)\\_>"))
-  (set (make-local-variable 'require-final-newline) t)
-  (when buffer-file-name
-    (set (make-local-variable 'compile-command)
-         ;; Quite dubious, but it's the intention that counts.
-         (concat beluga-interpreter-name
-                 " "
-                 (shell-quote-argument buffer-file-name))))
-  (set (make-local-variable 'comment-start) "%")
-  (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
-  (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")
-  (comment-normalize-vars)
-  (set (make-local-variable 'electric-indent-chars)
-       (append '(?|) (if (boundp 'electric-indent-chars)
-                         electric-indent-chars
-                       '(?\n))))
-  ;QUAIL
-  (add-hook 'beluga-mode-hook
-   (lambda () (set-input-method "beluga-unicode")))
-
-  ;Turn off hilighting
-  (setq input-method-highlight-flag nil)
-
-  (smie-setup
-   (with-no-warnings beluga-smie-grammar)
-   #'beluga-smie-indent-rules
-   :forward-token #'beluga-smie-forward-token
-   :backward-token #'beluga-smie-backward-token)
-
-  (set (make-local-variable 'parse-sexp-ignore-comments) t)
-
-  (set
-   (make-local-variable 'prettify-symbols-alist)
-   beluga-font-lock-symbols-alist)
-  (set
-   (make-local-variable 'font-lock-defaults)
-   '(beluga-font-lock-keywords
-     nil
-     nil
-     ()
-     nil
-     (font-lock-syntactic-keywords . nil))))
-
-;;; Beluga indentation and navigation via SMIE
-
 (defcustom beluga-indent-basic 4
   "Basic amount of indentation."
   :type 'integer)
 
 (defun beluga-smie-forward-token ()
+  ; skip all whitespace and comments
   (forward-comment (point-max))
-  (if (looking-at "\\.[ \t]*$")
+  (cond
+   ((looking-at "\\.[ \t]*$")
       ;; One of the LF-terminating dots.
-      (progn (forward-char 1) ";.")
+      (progn (forward-char 1) ";."))
+   (t
+    ; otherwise, we return a chunk of text that starts at point and
+    ; ends according to the following `cond` check.
     (buffer-substring-no-properties
      (point)
-     (progn (cond
-             ((looking-at beluga-punct-re) (goto-char (match-end 0)))
-             ((not (zerop (skip-syntax-forward "w_'"))))
-             ;; In case of non-ASCII punctuation.
-             ((not (zerop (skip-syntax-forward ".")))))
-            (point)))))
+     (progn
+       (cond
+        ((looking-at beluga-punct-re) (goto-char (match-end 0)))
+        ((not (zerop (skip-syntax-forward "w_'"))))
+        ;; In case of non-ASCII punctuation.
+        ((not (zerop (skip-syntax-forward ".")))))
+       (point))))))
 
 (defun beluga-smie-backward-token ()
   (forward-comment (- (point-max)))
@@ -646,13 +573,14 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
       (progn (forward-char -1) ";.") ;; (if (match-end 1) ".n" ";.")
     (buffer-substring-no-properties
      (point)
-     (progn (cond
-             ((looking-back beluga-punct-re (- (point) 2) 'greedy)
-              (goto-char (match-beginning 0)))
-             ((not (zerop (skip-syntax-backward "w_'"))))
-             ;; In case of non-ASCII punctuation.
-             ((not (zerop (skip-syntax-backward ".")))))
-            (point)))))
+     (progn
+       (cond
+        ((looking-back beluga-punct-re (- (point) 2) 'greedy)
+         (goto-char (match-beginning 0)))
+        ((not (zerop (skip-syntax-backward "w_'"))))
+        ;; In case of non-ASCII punctuation.
+        ((not (zerop (skip-syntax-backward ".")))))
+       (point)))))
 
 (defun beluga-smie-grammar (bnf resolvers precs)
   (smie-prec2->grammar
@@ -674,16 +602,22 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
 
      (decl
       (atom ":" type)
-      ("inductive" datatype-def)
-	    ("coinductive" datatype-def)
-	    ("LF" datatype-def)
-	    ("stratified" datatype-def)
+      (datatypes)
       ("schema" sdef)
       ("let" def)
       (recs))
 
+     (datatypes
+      ("inductive" datatype-def)
+      ("coinductive" datatype-def)
+      ("LF" datatype-def)
+      ("stratified" datatype-def)
+      (datatypes "and" datatypes))
+
      (simpletype
       (simpletype "->" simpletype)
+      (simpletype "→" simpletype)
+      (simpletype "←" simpletype)
       (simpletype "<-" simpletype))
 
      (recs
@@ -693,20 +627,21 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
      (decls
       (decl)
       (decls ";" decls)
-      (decls ";." decls)) ; JJJ is this legal syntax?
+      (decls ";." decls))
 
      ;; FIXME: only allow simple types here, otherwise we get nasty
      ;; precedence conflicts between "." and ",".  In practice, this seems to
      ;; be sufficient.
      (sdecl
-      (atom ":" type)) ; JJJ is the above comment a lie?
+      (atom ":" type))
 
      (sdecls
       (sdecl)
       (sdecls "," sdecls))
 
      (dotted-type
-      (sdecls "|-" type))
+      (sdecls "|-" type)
+      (sdecls "⊢" type))
 
      (type
       (simpletype)
@@ -740,9 +675,14 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
       ("if" exp "then" exp "else" exp)
       (type)
       ("let" def "in" exp)
+      ("fun" atom "=>" exp)
+      ("fun" atom "⇒" exp)
       ("fn" atom "=>" exp)
+      ("fn" atom "⇒" exp)
       ("FN" atom "=>" exp)
+      ("FN" atom "⇒" exp)
       ("mlam" atom "=>" exp)
+      ("mlam" atom "⇒" exp)
       ("<" dotted-type ">")
       ("case" exp "of" cases))
 
@@ -756,10 +696,12 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
       (cases "|" cases))
 
      (branch
-      (atom "=>" exp)))
+      (atom "=>" exp)
+      (atom "⇒" exp)))
 
-   '(((assoc ";" ";."))
-     ((assoc "->" "<-"))
+   ; resolvers
+   `(((assoc ";" ";."))
+     ((assoc ,@beluga-slim-arrows))
      ((assoc ","))
      ((assoc "and"))
      ((nonassoc "of") (assoc "|"))      ; Trailing | ambiguity.
@@ -769,34 +711,168 @@ Short pragmas consist of only one word, e.g. `--nostrengthen`.")
 
    ;; The above BNF grammar should cover this already, so this ends up only
    ;; useful to check that the BNF entails the expected precedences.
-   '((assoc ";")
+   ; precs
+   `((assoc ";")
      (assoc ",")
      (left ":")
-     (assoc "<-" "->")
+     (assoc ,@beluga-slim-arrows) 
      (nonassoc " -dummy- "))))          ;Bogus anchor at the end.
 
+(defconst beluga-pattern-fat-arrow
+  `(or ,@beluga-fat-arrows)
+  "A pattern for use in pcase that matches any fat arrow string.")
+
+(defun beluga-rule-parent-p (parents)
+  `(smie-rule-parent-p ,@parents))
+
 (defun beluga-smie-indent-rules (method token)
-  (cond
-   ((eq method :list-intro) (member token '("fn" "FN" "mlam")))
-   ((and (eq method :elem) (eq token 'arg)) beluga-indent-basic)
-   ((and (eq method :before) (equal token "|") (smie-rule-prev-p "=" "of"))
-    ;; Presumable a "datatype foo = | ...".
-    (smie-rule-parent))
-   ((equal token "|") (smie-rule-separator method))
-   ((eq method :after)
-    (cond
-     ((equal token "of") 2)
-     ((equal token "in") (if (smie-rule-hanging-p) 0))
-     ((equal token "=") 0)
-     ;; FIXME: Specify the indentation after => depending
-     ;; on whether it is a "=>" that goes with an "fn" or with a "|".
-     ((equal token "=>") 0)
-     ((member token '(":" "let" "if")) beluga-indent-basic)))
-   ((eq method :before)
-    (cond
-     ((and (equal token "=") (smie-rule-parent-p "inductive")) 2)
-     ((member token '("case" "fn" "mlam"))
-      (if (smie-rule-prev-p "=>") (smie-rule-parent)))))))
+  (message (format ">> indenting %s %s" method token))
+  (ignore-errors
+    (message (format "   parent is %s" (smie-indent--parent))))
+  (pcase `(,method . ,token)
+    (`(:elem . basic)
+     (message "<< basic indent")
+     beluga-indent-basic)
+
+    ; describe the tokens that introduce lists (with no separators)
+    (`(:list-intro . ,(or ":" "fn" "fun" "FN" "mlam"))
+     (message "<< list intro form")
+     't)
+
+    ; if the token is a pipe preceded by an '=' or 'of', then we
+    ; indent by adding the basic offset
+    (`(:before . ,(and "|" (guard (smie-rule-prev-p "=" "of"))))
+     (message
+      (format
+       "<< pipe preceded by = or of with parent %s"
+       (smie-indent--parent)))
+     beluga-indent-basic)
+
+    ; if the token is a pipe, (and the preceding check didn't pass, so
+    ; it isn't the first pipe in a sequence) then we consider it a
+    ; separator
+    (`(method . ,"|")
+     (message "<< pipe is a separator")
+     (smie-rule-separator method))
+
+    (`(:after . ,"of")
+     (message "<< after of")
+     beluga-indent-basic)
+
+    (`(:after . ,"in")
+     (when (smie-rule-hanging-p)
+       (message "<< hanging in")
+       nil))
+
+    (`(:after . ,(and "=" (guard (smie-rule-parent-p "rec"))))
+     (message "<< indent after = aligns to rec")
+     (smie-rule-parent))
+
+    ; if the token is a form that will use => eventually but is
+    ; preceded by a =>, then this is a chain, e.g.
+    ; mlam G => mlam Q => fn x => fn y =>
+    ; (code should be here, not indented 8 characters)
+    (`(:before
+       .
+       ,(and
+         (or "case" "fn" "FN" "mlam" "fun")
+         (guard `(smie-rule-prev-p ,@beluga-fat-arrows))))
+     (message "<< case fn FN mlam fun chain")
+     (smie-rule-parent))
+
+    ; FIXME: we should find a way to specify the indentation depending
+    ; on whether the => goes with a function introduction form (fn,
+    ; fun, mlam, ...) or with a |.
+    ; In the former case, the indentation should indeed be zero, as written here,
+    ; but in the latter case, it should indent two characters, since
+    ; the code generally looks like:
+    ; case foo of =
+    ; | bar =>
+    ;   (would like things aligned here, two spaces to the right of the `|`)
+    (`(:after . "=>")
+     (message "<< no indentation after =>")
+     0)
+
+    (`(:after . ,(and ":" (guard (smie-rule-parent-p "{"))))
+     (smie-rule-parent 1))
+
+    (`(:after . ,(or ":" "let" "if"))
+     (message "<< : let if basic indent")
+     (smie-rule-parent beluga-indent-basic))
+
+    (`(:before
+       .
+       ,(and "=" (guard `(smie-rule-parent-p ,@beluga-type-declaration-keywords))))
+     (message (format "<< parent of = declares a datatype" (smie-indent--parent)))
+     (smie-rule-parent))
+
+    ; do not indent anything else
+    (_ (message "<< nothing matched") nil)
+    ))
+
+;;---------------------------- Loading of the mode ----------------------------;;
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.s?bel\\'" . beluga-mode))
+
+(unless (fboundp 'prog-mode)
+  (defalias 'prog-mode #'fundamental-mode))
+
+(defconst beluga-type-declaration-keywords
+  '("inductive" "coinductive" "LF" "stratified")
+  "The different keywords that introduce a type definition.")
+
+(defconst beluga-type-declaration-keywords-re
+  (regexp-opt beluga-type-declaration-keywords 'symbols)
+  "A regular expression that matches any type definition keyword.")
+
+;;;###autoload
+(define-derived-mode beluga-mode prog-mode "Beluga"
+  "Major mode to edit Beluga source code."
+  (set (make-local-variable 'imenu-generic-expression)
+       beluga-imenu-generic-expression)
+  (set (make-local-variable 'outline-regexp)
+       (concat beluga-syntax-fundec-re "\\|^(inductive|coinductive|LF|stratified)\\_>"))
+  (set (make-local-variable 'require-final-newline) t)
+  (when buffer-file-name
+    (set (make-local-variable 'compile-command)
+         ;; Quite dubious, but it's the intention that counts.
+         (concat beluga-interpreter-name
+                 " "
+                 (shell-quote-argument buffer-file-name))))
+  (set (make-local-variable 'comment-start) "%")
+  (set (make-local-variable 'comment-start-skip) "%[%{]*[ \t]*")
+  (set (make-local-variable 'comment-end-skip) "[ \t]*\\(?:\n\\|}%\\)")
+  (comment-normalize-vars)
+  (set (make-local-variable 'electric-indent-chars)
+       (append '(?|) (if (boundp 'electric-indent-chars)
+                         electric-indent-chars
+                       '(?\n))))
+  ;QUAIL
+  (add-hook 'beluga-mode-hook
+   (lambda () (set-input-method "beluga-unicode")))
+
+  ;Turn off hilighting
+  (setq input-method-highlight-flag nil)
+
+  (smie-setup
+   (with-no-warnings beluga-smie-grammar)
+   'beluga-smie-indent-rules
+   :forward-token #'beluga-smie-forward-token
+   :backward-token #'beluga-smie-backward-token)
+
+  (set (make-local-variable 'parse-sexp-ignore-comments) t)
+
+  (set
+   (make-local-variable 'font-lock-defaults)
+   '(beluga-font-lock-keywords
+     nil
+     nil
+     ()
+     nil
+     (font-lock-syntactic-keywords . nil)))
+
+  (message "beluga-mode loaded"))
 
 (provide 'beluga-mode)
 ;;; beluga-mode.el ends here

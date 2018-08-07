@@ -482,10 +482,22 @@ If a previous beli process already exists, kill it first."
   "--\\(\\(name\\|query\\).*?\\.\\|\\w+\\)"
   "A regexp for matching a Beluga pragma. Long pragmas continue until
 a `.` is found, e.g. `--name oft D.`. Short pragmas consist of only
-one word, e.g. `--nostrengthen`.")
+one word, e.g. `--nostrengthen`. It's easy to use this regex to check
+which type of pragma (long or short) was matched: simply check whether
+`match-string' 2 is non-nil. In that case, a long pragma was matched
+and the result is the name of the long pragma. Otherwise,
+`match-string' 1 will contain the name of the matched short.")
+
+(defconst beluga-slim-arrows
+  '("->" "<-" "→" "←")
+  "A list of the slim arrow strings.")
+
+(defconst beluga-fat-arrows
+  '("=>" "⇒")
+  "A list of the fat arrow strings.")
 
 (defconst beluga-punct-re
-  (regexp-opt '("->" "<-" "=>" "\\" "." "<" ">" "," ";" "..")))
+  (regexp-opt `(,@beluga-fat-arrows ,@beluga-slim-arrows "\\" "." "<" ">" "," ";" "..")))
 
 (defconst beluga-syntax-id-re
   "[[:alpha:]_][[:alnum:]_']*"
@@ -495,14 +507,6 @@ one word, e.g. `--nostrengthen`.")
   (regexp-opt '("rec" "and") 'symbols)
   "A regexp for matching a function declaration.
  Note that this will also match the 'and' keyword!")
-
-(defconst beluga-slim-arrows
-  '("->" "<-" "→" "←")
-  "A list of the slim arrow strings.")
-
-(defconst beluga-fat-arrows
-  '("=>" "⇒")
-  "A list of the fat arrow strings.")
 
 (defconst beluga-syntax-keyword-re
   (regexp-opt
@@ -550,7 +554,15 @@ one word, e.g. `--nostrengthen`.")
   (cond
    ((looking-at "\\.[ \t]*$")
       ;; One of the LF-terminating dots.
-      (progn (forward-char 1) ";."))
+    (progn (forward-char 1) ";."))
+   ((looking-at beluga-syntax-pragma-re)
+    ;; move point to the end of the long-pragma name if a long-pragma was matched.
+    ;; otherwise, move it to the end of the short pragma name.
+    (goto-char (or (match-end 2) (match-end 1)))
+    ;; set to non-nil by beluga-syntax-pragma-re if the pragma is a long-form pragma
+    (if (match-string 2)
+        "--longpragma"
+        "--shortpragma"))
    (t
     ; otherwise, we return a chunk of text that starts at point and
     ; ends according to the following `cond` check.
@@ -564,13 +576,29 @@ one word, e.g. `--nostrengthen`.")
         ((not (zerop (skip-syntax-forward ".")))))
        (point))))))
 
+(defun beluga-short-pragma-before-p ()
+  "Decides whether there is a short pragma before point. Returns the
+starting position of the short pragma; else, nil."
+  (save-excursion
+    ;; idea: move backward across word-characters, and then check if
+    ;; there are two dashes before point.
+    (skip-syntax-backward "w")
+    (save-match-data
+      (when (looking-back "--" (- (point) 2))
+        (match-beginning 0)))))
+
 (defun beluga-smie-backward-token ()
   (forward-comment (- (point-max)))
-  (if (and (eq ?\. (char-before))
-           (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
-           (not (looking-back "\\.\\." (- (point) 2))))
-      ;; Either an LF-terminating dot, or a projection-dot.
-      (progn (forward-char -1) ";.") ;; (if (match-end 1) ".n" ";.")
+  (cond
+   ((and (eq ?\. (char-before))
+         (looking-at "[ \t]*$") ;; "[ \t]*\\(?:$\\|[0-9]\\(\\)\\)"
+         (not (looking-back "\\.\\." (- (point) 2))))
+    ;; Either an LF-terminating dot, or a projection-dot.
+    (progn (forward-char -1) ";."))
+   ((setq pos (beluga-short-pragma-before-p))
+    (goto-char pos)
+    "--shortpragma")
+   (t
     (buffer-substring-no-properties
      (point)
      (progn
@@ -580,7 +608,7 @@ one word, e.g. `--nostrengthen`.")
         ((not (zerop (skip-syntax-backward "w_'"))))
         ;; In case of non-ASCII punctuation.
         ((not (zerop (skip-syntax-backward ".")))))
-       (point)))))
+       (point))))))
 
 (defun beluga-smie-grammar (bnf resolvers precs)
   (smie-prec2->grammar
@@ -605,6 +633,8 @@ one word, e.g. `--nostrengthen`.")
       (datatypes)
       ("schema" sdef)
       ("let" def)
+      ("--shortpragma")
+      ("--longpragma" atom)
       (recs))
 
      (datatypes
@@ -780,18 +810,9 @@ one word, e.g. `--nostrengthen`.")
      (message "<< case fn FN mlam fun chain")
      (smie-rule-parent))
 
-    ; FIXME: we should find a way to specify the indentation depending
-    ; on whether the => goes with a function introduction form (fn,
-    ; fun, mlam, ...) or with a |.
-    ; In the former case, the indentation should indeed be zero, as written here,
-    ; but in the latter case, it should indent two characters, since
-    ; the code generally looks like:
-    ; case foo of =
-    ; | bar =>
-    ;   (would like things aligned here, two spaces to the right of the `|`)
-    (`(:after . "=>")
-     (message "<< no indentation after =>")
-     0)
+    (`(:after . ".")
+     (message "after .")
+     (smie-rule-parent))
 
     (`(:after . ,(and ":" (guard (smie-rule-parent-p "{"))))
      (smie-rule-parent 1))

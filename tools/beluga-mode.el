@@ -479,7 +479,7 @@ If a previous beli process already exists, kill it first."
 ;;; Beluga indentation and navigation via SMIE
 
 (defconst beluga-syntax-pragma-re
-  "--\\(\\(name\\|query\\).*?\\.\\|\\w+\\)"
+  "--\\(\\(name\\|query\\|infix\\|prefix\\|assoc\\).*?\\.\\|\\w+\\)"
   "A regexp for matching a Beluga pragma. Long pragmas continue until
 a `.` is found, e.g. `--name oft D.`. Short pragmas consist of only
 one word, e.g. `--nostrengthen`. It's easy to use this regex to check

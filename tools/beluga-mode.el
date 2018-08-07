@@ -1,8 +1,10 @@
 ;;; beluga-mode.el --- Major mode for Beluga source code  -*- coding: utf-8; lexical-binding:t -*-
 
-;; Copyright (C) 2009, 2010, 2012, 2013, 2014  Free Software Foundation, Inc.
+;; Copyright (C) 2009-2018  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
+;; Maintainer: beluga-dev@cs.mcgill.ca
+;; Version: 0
 ;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -41,15 +43,15 @@
 
 (quail-define-package
  beluga-input-method-name ;; name
- "UTF-8" ;; language
- "\\" ;; title
- t ;; guidance
+ "UTF-8"                  ;; language
+ "\\"                     ;; mode-line "title"
+ t                        ;; guidance
  "Beluga unicode input method: actually replaces keyword strings with
 a single unicode character instead of merely representing the keywords
 in unicode using Font Lock mode."
   nil nil nil nil nil nil nil nil nil nil t)
-; this very final t is the SIMPLE flag of quail-define-package, and
-; causes quail to not affect the meanings of C-{f,b,n,p} or TAB.
+;; This very final t is the SIMPLE flag of quail-define-package, and
+;; causes Quail to not affect the meanings of C-{f,b,n,p} or TAB.
 
 (quail-define-rules
  ;; Greek letters
@@ -130,7 +132,7 @@ in unicode using Font Lock mode."
     (define-key map "\C-c\C-t" 'beli--type)
     (define-key map "\C-c\C-s" 'beluga-split-hole)
     (define-key map "\C-c\C-i" 'beluga-intro-hole)
-    (define-key map "\C-c\C-j" 'hole-jump)
+    (define-key map "\C-c\C-j" 'beluga-hole-jump)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -154,7 +156,7 @@ in unicode using Font Lock mode."
     (modify-syntax-entry ?\' "_" st)
     st))
 
-(defun proc-live (process)
+(defun beluga--proc-live-p (process)
   "Returns non-nil if PROCESS is alive.
     A process is considered alive if its status is `run', `open',
     `listen', `connect' or `stop'."
@@ -201,12 +203,21 @@ Regexp match data 0 points to the chars."
 		   (not (assoc (car x) alist)))	;Not yet in alist.
 	  (push x alist)))
       (when alist
-	`((,(regexp-opt (mapcar 'car alist) t)
+	`((,(regexp-opt (mapcar #'car alist) t)
 	   (0 (beluga-font-lock-compose-symbol ',alist)
               ;; In Emacs-21, if the `override' field is nil, the face
               ;; expressions is only evaluated if the text has currently
               ;; no face.  So force evaluation by using `keep'.
               keep)))))))
+
+(defconst beluga-syntax-id-re
+  "[[:alpha:]_][[:alnum:]_']*"
+  "A regexp for matching a Beluga identifier.")
+
+(defconst beluga-syntax-fundec-re
+  (regexp-opt '("rec" "and") 'symbols)
+  "A regexp for matching a function declaration.
+ Note that this will also match the 'and' keyword!")
 
 (defvar beluga-imenu-generic-expression
   `(("Schemas"
@@ -216,7 +227,8 @@ Regexp match data 0 points to the chars."
     ("Type Constructors"
      ,(concat "^\\(?:inductive[ \t]+\\(" beluga-syntax-id-re
               "\\)\\|\\(?1:" beluga-syntax-id-re
-              "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.\\)") 1)
+              "\\)[ \t\n]*:[^.]*\\<type\\>[ \t\n]*.\\)")
+     1)
     ("Functions"
      ,(concat beluga-syntax-fundec-re "[ \t\n]+\\(" beluga-syntax-id-re "\\)") 1)))
 
@@ -234,8 +246,8 @@ Regexp match data 0 points to the chars."
 (make-variable-buffer-local 'beluga--proc)
 
 (defun beluga--proc ()
-(unless (proc-live beluga--proc) (beluga--start))
-;;  (beluga--start)
+  (unless (beluga--proc-live-p beluga--proc) (beluga--start))
+  ;;  (beluga--start)
   beluga--proc)
 
 ;; (defun beluga-buffer ()
@@ -264,14 +276,14 @@ If a previous beli process already exists, kill it first."
                 (not (re-search-forward ".*;" nil t)))
               (accept-process-output proc 0.025))))
 
-(defun chomp (str)
+(defun beluga--chomp (str)
   "Chomp leading and tailing whitespace from STR."
   (replace-regexp-in-string (rx (or (: bos (* (any " \t\n")))
                                     (: (* (any " \t\n")) eos)))
                             ""
                             str))
-(defun trim (str)
-  (let ((str2 (chomp str)))
+(defun beluga--trim (str)
+  (let ((str2 (beluga--chomp str)))
     (substring str2 0 (1- (length str2)))))
 
 (defun beluga--send (cmd)
@@ -287,11 +299,11 @@ If a previous beli process already exists, kill it first."
       (comint-send-input))))
 
 (defun beluga--receive ()
-  "Reads the last output of beli."
+  "Read the last output of beli."
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
       (beluga--wait proc)
-      (trim (buffer-substring-no-properties comint-last-input-end (point-max))))))
+      (beluga--trim (buffer-substring-no-properties comint-last-input-end (point-max))))))
 
 (defun beluga--rpc (cmd)
   (beluga--send cmd)
@@ -303,7 +315,7 @@ If a previous beli process already exists, kill it first."
   (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
 
 (defun beluga--is-response-error (resp)
-  "Determines whether a Beluga RPC response is an error."
+  "Determine whether a Beluga RPC response is an error."
   (string= "-" (substring resp 0 1)))
 
 (defun beli ()
@@ -316,17 +328,17 @@ If a previous beli process already exists, kill it first."
   (interactive "MCommand: ")
   (message "%s" (beluga--rpc cmd)))
 
-(defun maybe-save ()
+(defun beluga--maybe-save ()
   (if (buffer-modified-p)
     (if (y-or-n-p "Save current file?")
       (save-buffer)
       ())))
 
 (defun beluga-load ()
-  "Loads the current file in beli."
+  "Load the current file in beli."
   (interactive)
   (beluga--start)
-  (maybe-save)
+  (beluga--maybe-save)
   (message "%s" (beluga--rpc (concat "load " buffer-file-name))))
 
 (defvar beluga--holes-overlays ()
@@ -334,11 +346,11 @@ If a previous beli process already exists, kill it first."
 (make-variable-buffer-local 'beluga--holes-overlays)
 
 (defun beluga-sorted-holes ()
-  (defun hole-comp (a b)
-     (let* ((s1 (overlay-start a))
-            (s2 (overlay-start b)))
-       (< s1 s2)))
-  (sort beluga--holes-overlays `hole-comp))
+  (labels ((hole-comp (a b)
+                      (let* ((s1 (overlay-start a))
+                             (s2 (overlay-start b)))
+                        (< s1 s2))))
+    (sort beluga--holes-overlays #'hole-comp)))
 
 (defface beluga-holes
   '((t :background "cyan")) ;; :foreground "white"
@@ -408,18 +420,18 @@ If a previous beli process already exists, kill it first."
   "Gets the overlay associated with a hole."
   (nth (beluga--lookup-hole hole) (beluga-sorted-holes)))
 
-(defun insert-formatted (str start)
+(defun beluga--insert-formatted (str start)
   (goto-char start)
-  (insert (apply-quail-completions str))
+  (insert (beluga--apply-quail-completions str))
   (indent-region start (+ start (length str))))
 
-(defun apply-quail-completions (str)
+(defun beluga--apply-quail-completions (str)
   (if (string= current-input-method beluga-input-method-name)
      (replace-regexp-in-string "=>" "⇒"
       (replace-regexp-in-string "|-" "⊢" str))
      str))
 
-(defun error-no-such-hole (n)
+(defun beluga--error-no-such-hole (n)
   (message "Couldn't find hole %s - make sure the file is loaded" n))
 
 (defun beluga-split-hole (hole var)
@@ -436,13 +448,13 @@ If a previous beli process already exists, kill it first."
                 (end (overlay-end ovr)))
             (delete-overlay ovr)
             (delete-region start end)
-            (insert-formatted (format "(%s)" resp) start)
+            (beluga--insert-formatted (format "(%s)" resp) start)
             (save-buffer)
             ; Need to load twice after modifying the file because
             ; positions in Beluga are broken.
             (beluga-load)
             (beluga-highlight-holes))
-        (error-no-such-hole hole))))))
+        (beluga--error-no-such-hole hole))))))
 
 (defun beluga-intro-hole (hole)
   "Introduce variables into a hole"
@@ -458,18 +470,19 @@ If a previous beli process already exists, kill it first."
                 (end (overlay-end ovr)))
             (delete-overlay ovr)
             (delete-region start end)
-            (insert-formatted resp start)
+            (beluga--insert-formatted resp start)
             (save-buffer)
             (beluga-load)
             (beluga-highlight-holes))
-          (error-no-such-hole hole))))))
+          (beluga--error-no-such-hole hole))))))
 
-(defun hole-jump (hole)
+(defun beluga-hole-jump (hole)
   (interactive "nHole to jump to: ")
   (let ((ovr (nth hole (beluga-sorted-holes))))
     (if ovr
       (goto-char (overlay-start ovr))
-      (error-no-such-hole hole))))
+      (beluga--error-no-such-hole hole))))
+(define-obsolete-function-alias 'hole-jump #'beluga-hole-jump "Jul-2018")
 
 (defun beluga-erase-holes ()
   (interactive)
@@ -499,15 +512,6 @@ and the result is the name of the long pragma. Otherwise,
 (defconst beluga-punct-re
   (regexp-opt `(,@beluga-fat-arrows ,@beluga-slim-arrows "\\" "." "<" ">" "," ";" "..")))
 
-(defconst beluga-syntax-id-re
-  "[[:alpha:]_][[:alnum:]_']*"
-  "A regexp for matching a Beluga identifier.")
-
-(defconst beluga-syntax-fundec-re
-  (regexp-opt '("rec" "and") 'symbols)
-  "A regexp for matching a function declaration.
- Note that this will also match the 'and' keyword!")
-
 (defconst beluga-syntax-keyword-re
   (regexp-opt
    '("FN" "and" "block" "case" "inductive" "LF" "coinductive"
@@ -517,14 +521,18 @@ and the result is the name of the long pragma. Otherwise,
    'symbols)
   "A regular expression to match any beluga keyword.")
 
+(defface beluga-font-lock-annotation
+  '((t :inherit italic))
+  "Face used for Beluga's /.../ annotations.")
+
 (defconst beluga-font-lock-keywords
   `((,beluga-syntax-pragma-re . ,font-lock-warning-face)
 
     ,beluga-syntax-keyword-re
 
-    (,"/\\s-*\\_<\\(total\\)\\_>.*?/" .
-     ((0 'italic)
-      (1 'font-lock-keyword-face prepend)))
+    ("/\\s-*\\_<\\(total\\)\\_>.*?/"
+     (0 'beluga-font-lock-annotation)
+     (1 'font-lock-keyword-face prepend))
 
     (,(concat
        "^\\(" beluga-syntax-id-re "\\)"
@@ -836,9 +844,6 @@ starting position of the short pragma; else, nil."
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.s?bel\\'" . beluga-mode))
 
-(unless (fboundp 'prog-mode)
-  (defalias 'prog-mode #'fundamental-mode))
-
 (defconst beluga-type-declaration-keywords
   '("inductive" "coinductive" "LF" "stratified")
   "The different keywords that introduce a type definition.")
@@ -877,7 +882,7 @@ starting position of the short pragma; else, nil."
   (setq input-method-highlight-flag nil)
 
   (smie-setup
-   (with-no-warnings beluga-smie-grammar)
+   beluga-smie-grammar
    'beluga-smie-indent-rules
    :forward-token #'beluga-smie-forward-token
    :backward-token #'beluga-smie-backward-token)

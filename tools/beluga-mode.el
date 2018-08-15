@@ -133,6 +133,7 @@ in unicode using Font Lock mode."
     (define-key map "\C-c\C-s" 'beluga-split-hole)
     (define-key map "\C-c\C-i" 'beluga-intro-hole)
     (define-key map "\C-c\C-j" 'beluga-hole-jump)
+    (define-key map "\C-c\C-p" 'beluga-hole-info)
     map))
 
 (defvar beluga-mode-syntax-table
@@ -433,6 +434,32 @@ If a previous beli process already exists, kill it first."
 
 (defun beluga--error-no-such-hole (n)
   (message "Couldn't find hole %s - make sure the file is loaded" n))
+
+(defconst beluga-named-hole-re
+  "\\_<?\\(\\sw+\\)\\_>")
+
+(defun beluga-named-hole-at-point ()
+  "Retrieves the name of the hole at point, if any. If e.g. point is
+  over `?abracadabra`, then this function returns `abracadabra`.
+Else, if point is not over a valid hole, then this function returns
+nil."
+  (let ((thing (thing-at-point 'symbol)))
+    (when (string-match beluga-named-hole-re thing)
+      (match-string 1 thing))))
+
+(defun beluga-prompt-with-default-hole-at-point (prompt)
+  "Prompts the user to specify a hole, giving the named hole at point
+as the default if any."
+  (let ((name (beluga-named-hole-at-point)))
+    (read-string (format "%s (%s): " prompt name)
+                 nil nil name)))
+
+(defun beluga-hole-info (hole)
+  (interactive (list (beluga-prompt-with-default-hole-at-point "Hole to query")))
+  (beluga-load)
+  (beluga-highlight-holes)
+  (let ((resp (beluga--rpc (format "printhole %s" hole))))
+    (message resp)))
 
 (defun beluga-split-hole (hole var)
   "Split on a hole"

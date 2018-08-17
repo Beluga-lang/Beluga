@@ -444,10 +444,11 @@ GLOBAL: sgn;
     [
       RIGHTA
         [
-           "{"; x = symbol; ":"; a2 = lf_typ; "}"; k_or_a = SELF ->
+           "{"; x = symbol; ":"; a2 = lf_typ; "}"; OPT rarr; k_or_a = SELF ->
+             let name = LF.TypDecl (Id.mk_name (Id.SomeString x), a2) in
              begin match k_or_a with
-               | Kind k -> Kind (LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k))
-               | Typ  a -> Typ  (LF.PiTyp  (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a))
+               | Kind k -> Kind (LF.PiKind (_loc, name, k))
+               | Typ  a -> Typ  (LF.PiTyp  (_loc, name, a))
              end
 
         |
@@ -481,7 +482,7 @@ GLOBAL: sgn;
     [
       RIGHTA
         [
-           "{"; x = symbol; ":"; a2 = lf_typ; "}"; k = SELF ->
+           "{"; x = symbol; ":"; a2 = lf_typ; "}"; OPT rarr; k = SELF ->
              LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k)
 
         |
@@ -505,7 +506,7 @@ GLOBAL: sgn;
   lf_typ:
     [ RIGHTA
         [
-           "{"; x = symbol; ":"; a2 = SELF; "}"; a = SELF ->
+           "{"; x = symbol; ":"; a2 = SELF; "}"; OPT rarr; a = SELF ->
              LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
         |
            a2 = SELF; rarr; a = SELF ->

@@ -892,7 +892,7 @@ starting position of the short pragma; else, nil."
   (set (make-local-variable 'imenu-generic-expression)
        beluga-imenu-generic-expression)
   (set (make-local-variable 'outline-regexp)
-       (concat beluga-syntax-fundec-re "\\|^(inductive|coinductive|LF|stratified)\\_>"))
+       (concat beluga-syntax-fundec-re "\\|^(inductive\\|coinductive\\|LF\\|stratified)\\_>"))
   (set (make-local-variable 'require-final-newline) t)
   (when buffer-file-name
     (set (make-local-variable 'compile-command)

@@ -424,7 +424,11 @@ let printfun =
 
 let quit =
   { name = "quit";
-    run = (fun _ -> exit 0);
+    run =
+      (fun ppf _ ->
+        fprintf ppf "- Bye bye;";
+        exit 0
+      );
     help = "Exit interactive mode"
   }
 

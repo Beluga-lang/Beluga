@@ -265,6 +265,12 @@ If a previous beli process already exists, kill it first."
 		      beluga-interpreter-name
                       nil "-I" "-emacs" ))))
 
+(defun beluga-quit ()
+  "Stops the Beluga interactive process by sending the quit
+  command. This is a graceful termination."
+  (interactive)
+  (beluga--rpc "quit"))
+
 (defun beluga-stop ()
   "Stop the beli process."
   (interactive)

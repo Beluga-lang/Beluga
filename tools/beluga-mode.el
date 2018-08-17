@@ -248,25 +248,26 @@ Regexp match data 0 points to the chars."
 
 (defun beluga--proc ()
   (unless (beluga--proc-live-p beluga--proc) (beluga--start))
-  ;;  (beluga--start)
   beluga--proc)
 
 ;; (defun beluga-buffer ()
 ;;   (process-buffer (beluga--proc)))
 
-(defun beluga--start ()
+(defun beluga-start ()
   "Start an inferior beli process with the -emacs option.
-The process is put into a buffer called \"*beli*\".
+The process is put into a buffer called \"*beluga*\".
 If a previous beli process already exists, kill it first."
-  (beluga--stop)
+  (interactive)
+  (beluga-stop)
   (setq beluga--proc
         (get-buffer-process
          (make-comint "beluga"
 		      beluga-interpreter-name
                       nil "-I" "-emacs" ))))
 
-(defun beluga--stop ()
+(defun beluga-stop ()
   "Stop the beli process."
+  (interactive)
   (when (processp 'beluga--proc)
     (kill-process 'beluga--proc)))
 
@@ -780,7 +781,7 @@ starting position of the short pragma; else, nil."
    `((assoc ";")
      (assoc ",")
      (left ":")
-     (assoc ,@beluga-slim-arrows) 
+     (assoc ,@beluga-slim-arrows)
      (nonassoc " -dummy- "))))          ;Bogus anchor at the end.
 
 (defconst beluga-pattern-fat-arrow

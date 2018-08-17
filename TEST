@@ -129,6 +129,7 @@ do_testing() {
             timeout=$((timeout + 1))
         elif [ $exit_code -ne 0 ] ; then
             echo -e "$C[fail]FAIL$CEND"
+            replay_fail=$((replay_fail + 1))
         else
             echo -e "$C[done]DONE$CEND"
         fi
@@ -146,7 +147,7 @@ do_testing() {
     echo
     times
 
-    f=$((fail + timeout + lexer_fail))
+    f=$((fail + timeout + lexer_fail + replay_fail))
     # If not all tests succeeded then exit with non-zero status.
     [[ $f -eq 0 ]] || exit 1
     exit 0

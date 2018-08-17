@@ -163,7 +163,7 @@ let with_hole_from_strategy_string ppf (strat : string) (f : Holes.hole_id * Hol
   | None -> fprintf ppf "- Failed to parse hole identifier `%s';\n" strat
   | Some s ->
      match Holes.get s with
-     | None -> fprintf ppf "- No such hole `%s';\n" strat
+     | None -> fprintf ppf "- No such hole %s;\n" (Holes.string_of_lookup_strategy s)
      | Some id_and_hole -> f id_and_hole
 
 let printhole =

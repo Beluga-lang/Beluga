@@ -242,6 +242,8 @@ Regexp match data 0 points to the chars."
 
 ;;---------------------------- Interactive mode ----------------------------;;
 
+;; ------ process management ----- ;;
+
 (defvar beluga--proc ()
   "Contain the process running beli.")
 (make-variable-buffer-local 'beluga--proc)
@@ -249,9 +251,6 @@ Regexp match data 0 points to the chars."
 (defun beluga--proc ()
   (unless (beluga--proc-live-p beluga--proc) (beluga--start))
   beluga--proc)
-
-;; (defun beluga-buffer ()
-;;   (process-buffer (beluga--proc)))
 
 (defun beluga-start ()
   "Start an inferior beli process with the -emacs option.
@@ -276,6 +275,69 @@ If a previous beli process already exists, kill it first."
   (interactive)
   (when (processp 'beluga--proc)
     (kill-process 'beluga--proc)))
+
+;; ----- Stuff for hole overlays ----- ;;
+
+(defvar beluga--holes-overlays ()
+  "Will contain the list of hole overlays so that they can be resetted.")
+(make-variable-buffer-local 'beluga--holes-overlays)
+
+(defun beluga-sorted-holes ()
+  (cl-labels
+      ((hole-comp (a b)
+                  (let* ((s1 (overlay-start a))
+                         (s2 (overlay-start b)))
+                    (< s1 s2))))
+    (sort beluga--holes-overlays #'hole-comp)))
+
+(defface beluga-holes
+  '((t :background "cyan")) ;; :foreground "white"
+  "Face used to highlight holes in Beluga mode.")
+
+(defun beluga--pos (line bol offset)
+  ;; According to http://caml.inria.fr/mantis/view.php?id=5159,
+  ;; `line' can refer to line numbers in various source files,
+  ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
+  ;; the actual parsed stream.
+  ;; So if there might be #line directives, we need to do:
+  ;; (save-excursion
+  ;;   (goto-char (point-min))
+  ;;   (forward-line (1- line)) ;Lines count from 1 :-(
+  ;;   (+ (point) (- offset bol))))
+  ;; But as long as we know there's no #line directive, we can ignore all that
+  ;; and use the more efficient code below.  When #line directives can appear,
+  ;; we will need to make further changes anyway, such as passing the file-name
+  ;; to select the appropriate buffer.
+  ;; Emacs considers the first character in the file to be at index 1,
+  ;; but the Beluga lexer starts counting at zero, so we need to add
+  ;; one here.
+  (+ (point-min) offset))
+
+(defun beluga--create-overlay (pos)
+  "Create an overlay at the position described by POS (a Loc.to_tuple)."
+  (let* (;; (file-name (nth 0 pos))
+         (start-line (nth 1 pos))
+         (start-bol (nth 2 pos))
+         (start-off (nth 3 pos))
+         (stop-line (nth 4 pos))
+         (stop-bol (nth 5 pos))
+         (stop-off (nth 6 pos))
+         (ol
+          (make-overlay (beluga--pos start-line start-bol start-off)
+                        (beluga--pos stop-line  stop-bol  stop-off))))
+    (overlay-put ol 'face 'beluga-holes)
+    ol))
+
+(defun beluga-erase-holes ()
+  (interactive)
+  (mapc #'delete-overlay beluga--holes-overlays)
+  (setq beluga--holes-overlays nil))
+
+;; ----- Interaction with the interactive mode ----- ;;
+
+;; Sending and receiving strings from the inferior process.
+;; Ultimately, all you really need to use is beluga--rpc to send a
+;; command to the interactive mode and get back a string response.
 
 (defun beluga--wait (proc)
   (assert (eq (current-buffer) (process-buffer proc)))
@@ -317,14 +379,123 @@ If a previous beli process already exists, kill it first."
   (beluga--send cmd)
   (beluga--receive))
 
-(defun beli--type ()
-  "Get the type at the current cursor position (if it exists)"
-  (interactive)
-  (message "%s" (beluga--rpc (format "get-type %d %d" (count-lines 1 (point)) (current-column)))))
-
 (defun beluga--is-response-error (resp)
   "Determine whether a Beluga RPC response is an error."
   (string= "-" (substring resp 0 1)))
+
+(defun beluga--rpc! (cmd)
+  "Variant of beluga--rpc that signals an error if the command fails."
+  (let ((resp (beluga--rpc cmd)))
+    (when (beluga--is-response-error resp)
+      (error "%s" (substring resp 2)))
+    resp))
+
+(defvar beluga--last-load-time
+  '(0 0 0 0)
+  "The last time the file was loaded into the Beluga interpreter.
+This variable is updated by `beluga--maybe-save-load-current-buffer'.")
+(make-variable-buffer-local 'beluga--last-load-time)
+
+(defun beluga--should-reload-p ()
+  "Decide whether the current buffer should be reloaded into the
+  Beluga interpreter.
+The `visited-file-modtime' is compared to `beluga--last-load-time'.
+If the former is greater than the latter, then the former is
+returned. Else, `nil' is returned."
+  (let ((mtime (visited-file-modtime)))
+    (message "Comparing times %s > %s ?" (current-time-string mtime) (current-time-string beluga--last-load-time))
+    (when (> (float-time mtime) (float-time beluga--last-load-time))
+      (message "Need to reload!")
+        mtime)))
+
+;; ----- Beluga Interactive basic functions ----- ;;
+
+;; Each of these functions directly corresponds to a command in src/core/command.ml
+
+;; Since the construction of these functions is totally tedious and
+;; straightforward, we define a macro to do the real work.
+;; This macro takes:
+;;   * the name of the function to define, e.g. beluga--printhole
+;;   * the real name of the command to invoke, e.g. "printhole"
+;;   * the arguments of the function, e.g. '((hole . "%s"))
+;;
+;; Note: the type of each argument is specified as a printf-style
+;; format code. That's because the construction of the command will
+;; construct a string formatting routine using these codes.
+;;
+;; What about constant portions of the string?
+;; If you want to supply a constant portion in the format string,
+;; simply provide a string as-is in the argument list.
+;; e.g. ((hole . "%s") "with" (exp . "%s"))
+;;
+;; Two separate functions are generated by the macro invocation. The
+;; first uses exactly the given function name, but the second appends
+;; "!". This bang-variant will use beluga--rpc! under the hood, so you
+;; get an exception-raising variant of every function for free.
+
+(defun beluga--generate-format-string (args)
+  "Constructs the format string from the argument list."
+  (cons
+   "%s"
+   (mapcar
+    (lambda (x)
+      (if (stringp x)
+          x
+        (cdr x)))
+    args)))
+
+(defun beluga--generate-arg-list (args)
+  "Constructs a list of symbols representing the function arguments."
+  (mapcar 'car (cl-remove-if 'stringp args)))
+
+(defun beluga--define-command (rpc name realname args)
+  (let ((arglist (beluga--generate-arg-list args))
+        (fmt (beluga--generate-format-string args)))
+    `(defun ,name ,arglist
+       (,rpc
+        (format
+         ;; construct the format string
+         ,(mapconcat 'identity fmt " ")
+         ;; construct the argument list
+         ,realname ,@arglist)))))
+
+(defmacro beluga-define-command (name realname args)
+  `(progn
+     ,(beluga--define-command 'beluga--rpc name realname args)
+     ,(beluga--define-command 'beluga--rpc! (intern (concat (symbol-name name) "!")) realname args)))
+
+(beluga-define-command beluga--basic-chatteron "chatteron" nil)
+(beluga-define-command beluga--basic-chatteroff "chatteroff" nil)
+(beluga-define-command beluga--basic-load "load" ((path . "%s")))
+(beluga-define-command beluga--basic-clearholes "clearholes" nil)
+(beluga-define-command beluga--basic-numholes "numholes" nil)
+(beluga-define-command beluga--basic-numholes-lf "numlfholes" nil)
+(beluga-define-command beluga--basic-lochole "lochole" ((hole . "%s")))
+(beluga-define-command beluga--basic-lochole-n "lochole" ((hole . "%d")))
+(beluga-define-command beluga--basic-lochole-lf "lochole-lf" ((hole . "%s")))
+(beluga-define-command beluga--basic-lochole-lf-n "lochole-lf" ((hole . "%d")))
+(beluga-define-command beluga--basic-printhole "printhole" ((hole . "%s")))
+(beluga-define-command beluga--basic-printhole-n "printhole" ((hole . "%d")))
+(beluga-define-command beluga--basic-printhole-lf "printhole-lf" ((hole . "%s")))
+(beluga-define-command beluga--basic-printhole-lf-n "printhole-lf" ((hole . "%d")))
+(beluga-define-command beluga--basic-types "types" nil)
+(beluga-define-command beluga--basic-constructors-lf "constructors" ((type . "%s")))
+(beluga-define-command beluga--basic-fill "fill" ((hole . "%s") "with" (exp . "%s")))
+(beluga-define-command beluga--basic-split "split" ((hole . "%s") (var . "%s")))
+(beluga-define-command beluga--basic-intro "intro" ((hole . "%s")))
+(beluga-define-command beluga--basic-constructors "constructors-comp" ((type . "%s")))
+(beluga-define-command beluga--basic-signature "fsig" ((fun . "%s")))
+(beluga-define-command beluga--basic-printfun "fdef" ((fun . "%s")))
+(beluga-define-command beluga--basic-query "query" ((expected . "%s") (tries . "%s") (type . "%s")))
+(beluga-define-command beluga--basic-get-type "get-type" ((line . "%d") (col . "%d")))
+(beluga-define-command beluga--basic-reset "reset" nil)
+(beluga-define-command beluga--basic-quit "quit" nil)
+(beluga-define-command beluga--basic-lookuphole "lookuphole" ((hole . "%s")))
+
+;; ----- Higher-level commands ----- ;;
+
+;; These build off the basic commands, and will typically do something
+;; like parse the response or display it in a message.
 
 (defun beli ()
   "Start beli mode"
@@ -342,102 +513,81 @@ If a previous beli process already exists, kill it first."
       (save-buffer)
       ())))
 
-(defun beluga-load ()
-  "Load the current file in beli."
+(defun beluga-get-type ()
+  "Get the type at the current cursor position (if it exists)"
   (interactive)
-  (beluga--start)
+  (message "%s" (beluga--basic-get-type (count-lines 1 (point)) (current-column))))
+
+(defun beluga--load-current-buffer (&optional mtime)
+  "Load the current buffer in Beluga Interactive. This command signals
+an error if loading fails.
+The optional `mtime' parameter, if given, will be written to `beluga--last-load-time'."
+  (let ((resp (beluga--basic-load! (buffer-file-name))))
+    (when mtime
+      (setq beluga--last-load-time mtime))
+    resp))
+
+(defun beluga--maybe-save-load-current-buffer ()
+  "Loads the current buffer if it has either never been loaded, or
+modified since the last time it was loaded.
+This will update `beluga--last-load-time' if a load is performed."
+  ;; prompt the user to save the buffer if it is modified
   (beluga--maybe-save)
-  (message "%s" (beluga--rpc (concat "load " buffer-file-name))))
+  ;; retrieve the last time the file was written to disk, checking
+  ;; whether a reload should occur
+  (let ((mtime (beluga--should-reload-p)))
+    (when mtime ;; mtime non-nil means we must reload
+      (beluga--load-current-buffer mtime))))
 
-(defvar beluga--holes-overlays ()
-  "Will contain the list of hole overlays so that they can be resetted.")
-(make-variable-buffer-local 'beluga--holes-overlays)
+(defun beluga--numholes! ()
+  (string-to-number (beluga--basic-numholes!)))
 
-(defun beluga-sorted-holes ()
-  (labels ((hole-comp (a b)
-                      (let* ((s1 (overlay-start a))
-                             (s2 (overlay-start b)))
-                        (< s1 s2))))
-    (sort beluga--holes-overlays #'hole-comp)))
+(defun beluga--numholes-lf! ()
+  (string-to-number (beluga--basic-numholes-lf!)))
 
-(defface beluga-holes
-  '((t :background "cyan")) ;; :foreground "white"
-  "Face used to highlight holes in Beluga mode.")
+(defun beluga--lochole-n! (hole-num)
+  (read (beluga--basic-lochole-n! hole-num)))
 
-(defun beluga--pos (line bol offset)
-  ;; According to http://caml.inria.fr/mantis/view.php?id=5159,
-  ;; `line' can refer to line numbers in various source files,
-  ;; whereas `bol' and `offset' refer to "character" (byte?) positions within
-  ;; the actual parsed stream.
-  ;; So if there might be #line directives, we need to do:
-  ;; (save-excursion
-  ;;   (goto-char (point-min))
-  ;;   (forward-line (1- line)) ;Lines count from 1 :-(
-  ;;   (+ (point) (- offset bol))))
-  ;; But as long as we know there's no #line directive, we can ignore all that
-  ;; and use the more efficient code below.  When #line directives can appear,
-  ;; we will need to make further changes anyway, such as passing the file-name
-  ;; to select the appropriate buffer.
-  ;; Emacs considers the first character in the file to be at index 1,
-  ;; but the Beluga lexer starts counting at zero, so we need to add
-  ;; one here.
-  (+ (point-min) offset))
+(defun beluga--lochole-lf-n! (hole-num)
+  (read (beluga--basic-lochole-lf-n! hole-num)))
 
-(defun beluga--create-overlay (pos)
-  "Create an overlay at the position described by POS (a Loc.to_tuple)."
-  (let* (;; (file-name (nth 0 pos))
-         (start-line (nth 1 pos))
-         (start-bol (nth 2 pos))
-         (start-off (nth 3 pos))
-         (stop-line (nth 4 pos))
-         (stop-bol (nth 5 pos))
-         (stop-off (nth 6 pos))
-         (ol
-          (make-overlay (beluga--pos start-line start-bol start-off)
-                        (beluga--pos stop-line  stop-bol  stop-off))))
-    (overlay-put ol 'face 'beluga-holes)
-    ol))
+(defun beluga--lookup-hole! (hole)
+  "Looks up a hole number by its name"
+  (string-to-number (beluga--basic-lookuphole! hole)))
 
-(defun beluga-highlight-holes ()
+(defun beluga--highlight-holes ()
   "Create overlays for each of the holes and color them."
-  (interactive)
-  (beluga-load)
   (beluga-erase-holes)
-  (let ((numholes (string-to-number (beluga--rpc "numholes"))))
+  (let ((numholes (beluga--numholes!)))
     (dotimes (i numholes)
-      (let* ((pos (read (beluga--rpc (format "lochole %d" i))))
+      (let* ((pos (beluga--lochole-n! i))
              (ol (beluga--create-overlay pos))
-             (info (beluga--rpc (format "printhole %d" i))))
+             (info (beluga--basic-printhole-n! i)))
         (overlay-put ol 'help-echo info)
         (push ol beluga--holes-overlays)
         )))
-  (let ((numholes (string-to-number (beluga--rpc "numlfholes"))))
+  (let ((numholes (beluga--numholes-lf!)))
     (dotimes (i numholes)
-      (let* ((pos (read (beluga--rpc (format "lochole-lf %d" i))))
+      (let* ((pos (beluga--lochole-lf-n! i))
              (ol (beluga--create-overlay pos))
-             (info (beluga--rpc (format "printhole-lf %d" i))))
+             (info (beluga--basic-printhole-lf-n! i)))
         (overlay-put ol 'help-echo info)
-        (push ol beluga--holes-overlays)
-        ))))
+        (push ol beluga--holes-overlays)))))
 
-(defun beluga--lookup-hole (hole)
-  "Looks up a hole number by its name"
-  (string-to-number (beluga--rpc (format "lookuphole %s" hole))))
-
-(defun beluga--get-hole-overlay (hole)
+(defun beluga--get-hole-overlay! (hole)
   "Gets the overlay associated with a hole."
-  (nth (beluga--lookup-hole hole) (beluga-sorted-holes)))
-
-(defun beluga--insert-formatted (str start)
-  (goto-char start)
-  (insert (beluga--apply-quail-completions str))
-  (indent-region start (+ start (length str))))
+  (nth (beluga--lookup-hole! hole) (beluga-sorted-holes)))
 
 (defun beluga--apply-quail-completions (str)
   (if (string= current-input-method beluga-input-method-name)
      (replace-regexp-in-string "=>" "⇒"
       (replace-regexp-in-string "|-" "⊢" str))
      str))
+
+(defun beluga--insert-formatted (str start)
+  (goto-char start)
+  (insert (beluga--apply-quail-completions str))
+  (indent-region start (+ start (length str))))
 
 (defun beluga--error-no-such-hole (n)
   (message "Couldn't find hole %s - make sure the file is loaded" n))
@@ -451,79 +601,108 @@ If a previous beli process already exists, kill it first."
 Else, if point is not over a valid hole, then this function returns
 nil."
   (let ((thing (thing-at-point 'symbol)))
-    (when (string-match beluga-named-hole-re thing)
+    (when (and thing (string-match beluga-named-hole-re thing))
       (match-string 1 thing))))
 
-(defun beluga-prompt-with-default-hole-at-point (prompt)
+(defun beluga--prompt-with-hole-at-point (prompt)
   "Prompts the user to specify a hole, giving the named hole at point
 as the default if any."
   (let ((name (beluga-named-hole-at-point)))
-    (read-string (format "%s (%s): " prompt name)
-                 nil nil name)))
+    (if name
+        (read-string (format "%s (%s): " prompt name)
+                     nil nil name)
+      (read-string (format "%s: " prompt)))))
+
+(defun beluga--begin-command ()
+  "Performs necessary setup to begin a compound Beluga Interactive
+command.
+Specifically, the following are performed, if necessary:
+  - Starting the Beluga inferior process.
+  - Saving the current buffer.
+  - Loading the current buffer into Beluga.
+  - Highlighting holes."
+  (beluga--start)
+  (beluga--maybe-save-load-current-buffer)
+  (beluga--highlight-holes))
+
+(defun beluga--prompt-string (prompt)
+  "Prompts the user to input a string."
+  (read-string (format "%s: " prompt)))
+
+;; ----- Top-level commands ----- ;;
+
+(defun beluga-load ()
+  "Load the current file in Beluga Interactive. This command will
+start the interactive mode if necessary and prompt for saving."
+  (interactive)
+  (beluga--start)
+  (let ((r (beluga--maybe-save-load-current-buffer)))
+    (if r
+        (message "%s" r)
+      (message "Buffer does not require reload."))))
+
+(defun beluga-highlight-holes ()
+  "Create overlays for each of the holes and color them."
+  (interactive)
+  (beluga--begin-command))
 
 (defun beluga-hole-info (hole)
-  (interactive (list (beluga-prompt-with-default-hole-at-point "Hole to query")))
-  (beluga-load)
-  (beluga-highlight-holes)
-  (let ((resp (beluga--rpc (format "printhole %s" hole))))
+  (interactive
+   (list
+    (beluga--prompt-with-hole-at-point "Hole to query")))
+  (beluga--begin-command)
+  (let ((resp (beluga--basic-printhole! hole)))
     (message resp)))
 
 (defun beluga-split-hole (hole var)
   "Split on a hole"
-  (interactive "sHole to split at: \nsVariable to split on: ")
-  (beluga-load)
-  (beluga-highlight-holes)
-  (let ((resp (beluga--rpc (format "split %s %s" hole var))))
-    (if (beluga--is-response-error resp)
-      (message "%s" resp)
-      (let ((ovr (beluga--get-hole-overlay hole)))
-        (if ovr
-          (let ((start (overlay-start ovr))
-                (end (overlay-end ovr)))
-            (delete-overlay ovr)
-            (delete-region start end)
-            (beluga--insert-formatted (format "(%s)" resp) start)
-            (save-buffer)
-            ; Need to load twice after modifying the file because
-            ; positions in Beluga are broken.
-            (beluga-load)
-            (beluga-highlight-holes))
-        (beluga--error-no-such-hole hole))))))
+  (interactive
+   (list
+    (beluga--prompt-with-hole-at-point "Hole to split at")
+    (beluga--prompt-string "Variable to split")))
+  (beluga--begin-command)
+  (let ((resp (beluga--basic-split! hole var))
+        (ovr (beluga--get-hole-overlay! hole)))
+    (if ovr
+        (let ((start (overlay-start ovr))
+              (end (overlay-end ovr)))
+          (delete-overlay ovr)
+          (delete-region start end)
+          (beluga--insert-formatted (format "(%s)" resp) start)
+          (save-buffer)
+          (beluga--load-current-buffer)
+          (beluga--highlight-holes))
+      (beluga--error-no-such-hole hole))))
 
 (defun beluga-intro-hole (hole)
   "Introduce variables into a hole"
-  (interactive "sHole to introduce variables into: ")
-  (beluga-load)
-  (beluga-highlight-holes)
-  (let ((resp (beluga--rpc (format "intro %s" hole))))
-    (if (beluga--is-response-error resp)
-      (message "%s" resp)
-      (let ((ovr (beluga--get-hole-overlay hole)))
-        (if ovr
-          (let ((start (overlay-start ovr))
-                (end (overlay-end ovr)))
-            (delete-overlay ovr)
-            (delete-region start end)
-            (beluga--insert-formatted resp start)
-            (save-buffer)
-            (beluga-load)
-            (beluga-highlight-holes))
-          (beluga--error-no-such-hole hole))))))
+  (interactive
+   (list
+    (beluga--prompt-with-hole-at-point "Hole to introduce variables into")))
+  (beluga--begin-command)
+  (let ((resp (beluga--basic-intro! hole))
+        (ovr (beluga--get-hole-overlay! hole)))
+    (if ovr
+        (let ((start (overlay-start ovr))
+              (end (overlay-end ovr)))
+          (delete-overlay ovr)
+          (delete-region start end)
+          (beluga--insert-formatted resp start)
+          (save-buffer)
+          (beluga--load-current-buffer)
+          (beluga--highlight-holes))
+      (beluga--error-no-such-hole hole))))
 
 (defun beluga-hole-jump (hole)
-  (interactive "nHole to jump to: ")
-  (let ((ovr (nth hole (beluga-sorted-holes))))
+  (interactive "sHole to jump to: ")
+  (beluga--begin-command)
+  (let ((ovr (beluga--get-hole-overlay! hole)))
     (if ovr
-      (goto-char (overlay-start ovr))
+        (goto-char (+ 1 (overlay-start ovr)))
       (beluga--error-no-such-hole hole))))
 (define-obsolete-function-alias 'hole-jump #'beluga-hole-jump "Jul-2018")
 
-(defun beluga-erase-holes ()
-  (interactive)
-  (mapc #'delete-overlay beluga--holes-overlays)
-  (setq beluga--holes-overlays nil))
-
-;;; Beluga indentation and navigation via SMIE
+;; ----- Beluga indentation and navigation via SMIE ----- ;;
 
 (defconst beluga-syntax-pragma-re
   "--\\(\\(name\\|query\\|infix\\|prefix\\|assoc\\).*?\\.\\|\\w+\\)"

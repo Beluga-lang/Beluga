@@ -539,17 +539,26 @@ let is_command str =
     `Input str
 
 let do_command ppf cmd =
-  try
-    let head :: arglist = ExtString.String.nsplit cmd " " in
-    let command = List.find (fun x -> head = x.name) !reg in
-    command.run ppf arglist
-  with
-  | Not_found -> fprintf ppf "- No such command;\n" ;
-      let command = List.find (fun x -> "help" = x.name) !reg in
-      command.run ppf []
-  | ExtString.Invalid_string-> fprintf ppf "- Failed to split command line by spaces;\n"
-  | err ->
-     fprintf ppf "- Unhandled exception: %s;\n" (Printexc.to_string err)
+  let e =
+    let open Either in
+    trap (fun () -> ExtString.String.nsplit cmd " ") $
+      fun args ->
+      match args with
+      | [] -> pure (fprintf ppf "- Empty command line;\n")
+      | cmd_name :: args ->
+         match List.find_opt (fun x -> cmd_name = x.name) !reg with
+         | None -> pure (fprintf ppf "- No such command %s;\n" cmd_name)
+         | Some command -> trap (fun () -> command.run ppf args)
+  in
+  Either.eliminate
+    (fun e ->
+      try
+        raise e
+      with
+      | ExtString.Invalid_string -> fprintf ppf "- Failed to split command line by spaces;\n"
+      | e -> fprintf ppf "- Unhandled exception: %s;\n" (Printexc.to_string e))
+    (fun () -> ())
+    e
 
 let print_usage ppf =
   let _ = fprintf ppf "Usage: \n" in

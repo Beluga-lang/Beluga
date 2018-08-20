@@ -64,3 +64,20 @@ val ( $ ) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
 
 (** Infix form of {!Either.rmap}. *)
 val ( $> ) : ('e, 'a) t -> ('a -> 'b) -> ('e, 'b) t
+
+(** Traps exceptions thrown by evaluating a function into a union.
+    You can delay handling the exceptions until the union is eliminated
+    by using the following trick.
+    Suppose `e : (exn, a) t`. Then,
+    > eliminate
+       (fun ex ->
+         try raise ex
+         with
+         | Whatever -> do_something_to_handle_Whatever
+       )
+       (fun x -> success x)
+
+    The benefit of using `trap` is that you can be selective about
+    which code gets its exceptions caught.
+ *)
+val trap : (unit -> 'a) -> (exn, 'a) t

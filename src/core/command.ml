@@ -546,9 +546,9 @@ let do_command ppf cmd =
       match args with
       | [] -> pure (fprintf ppf "- Empty command line;\n")
       | cmd_name :: args ->
-         match List.find_opt (fun x -> cmd_name = x.name) !reg with
-         | None -> pure (fprintf ppf "- No such command %s;\n" cmd_name)
-         | Some command -> trap (fun () -> command.run ppf args)
+         match trap (fun () -> List.find (fun x -> cmd_name = x.name) !reg) with
+         | Left _ -> pure (fprintf ppf "- No such command %s;\n" cmd_name)
+         | Right command -> trap (fun () -> command.run ppf args)
   in
   Either.eliminate
     (fun e ->

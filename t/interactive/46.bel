@@ -7,7 +7,7 @@ rec f : [ |- tm] -> [ |- tm] =
 fn m => ?foo;
 
 %:load input.bel
-- The file input.bel has been successfully loaded;
+The file input.bel has been successfully loaded;
 %:numholes
 1;
 %:split foo m
@@ -19,6 +19,6 @@ fn m => ?foo;
 %:numholes
 1;
 %:load input.bel
-- The file input.bel has been successfully loaded;
+The file input.bel has been successfully loaded;
 %:numholes
 1;

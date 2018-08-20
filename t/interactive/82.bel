@@ -58,7 +58,7 @@ rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {#S: [g' �
 / total a (main_lemma g g' a m s rs) /
     ?;
 %:load input.bel
-- The file input.bel has been successfully loaded;
+The file input.bel has been successfully loaded;
 %:numholes
 1;
 %:intro 0

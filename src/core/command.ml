@@ -36,7 +36,7 @@ let command_with_arguments (n : int) f ppf arglist =
   if n' = n then
     f ppf arglist
   else
-    fprintf ppf "- Commands requires %d arguments, but %d were given;\n" n n'
+    fprintf ppf "- Command requires %d arguments, but %d were given;\n" n n'
 
 let reg : command list ref = ref []
 
@@ -45,7 +45,7 @@ let countholes =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          fprintf ppf "- Computation Level Holes: %d\n - LF Level Holes: %d;\n"
+          fprintf ppf "Computation Level Holes: %d\nLF Level Holes: %d;\n"
             (Holes.count ())
             (Lfholes.getNumHoles ())
         );
@@ -77,7 +77,7 @@ let chatteron =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          Debug.chatter := 1; fprintf ppf "- The chatter is on now;\n"
+          Debug.chatter := 1; fprintf ppf "The chatter is on now;\n"
         );
     help = "Turn on the chatter"
   }
@@ -88,7 +88,7 @@ let chatteroff =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          Debug.chatter := 0; fprintf ppf "- The chatter is off now;\n"
+          Debug.chatter := 0; fprintf ppf "The chatter is off now;\n"
         );
     help = "Turn off the chatter"
   }
@@ -101,7 +101,7 @@ let types =
         (fun ppf _ ->
           let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
           let dctx = Synint.LF.Null in
-          List.iter (fun x -> fprintf ppf "- %s:" (Id.string_of_name x.Typ.name); ppr_lf_kind dctx x.Typ.kind; fprintf ppf " \n") entrylist);
+          List.iter (fun x -> fprintf ppf "%s : " (Id.string_of_name x.Typ.name); ppr_lf_kind dctx x.Typ.kind; fprintf ppf "\n") entrylist);
     help = "Print out all types currently defined"
   }
 
@@ -113,7 +113,7 @@ let reset =
           Store.clear ();
           Typeinfo.clear_all ();
           Holes.clear();
-          Lfholes.clear (); fprintf ppf "- Reset successful;\n"
+          Lfholes.clear (); fprintf ppf "Reset successful;\n"
         );
     help="Reset the store"}
 
@@ -148,7 +148,7 @@ let load =
           let file_name = List.hd arglist in (* .bel or .cfg *)
 		      let files = Cfg.process_file_argument file_name in
 		      List.iter per_file files ;
-          fprintf ppf "- The file %s has been successfully loaded;\n" (Filename.basename file_name)
+          fprintf ppf "The file %s has been successfully loaded;\n" (Filename.basename file_name)
         )
   ; help = "Load the file \"filename\" into the interpreter"}
 
@@ -250,7 +250,7 @@ let constructors =
           let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
           List.iter
             (fun x ->
-              fprintf ppf "- %s: [%d] "
+              fprintf ppf "%s : [%d] "
                 (Id.string_of_name x.Term.name)
                 x.Term.implicit_arguments;
               ppr_lf_typ mctx dctx x.Term.typ;
@@ -296,13 +296,10 @@ let fill =
                   match Holes.get strat with
                   | None -> failwith ("No such hole " ^ strat_s)
                   | Some h -> h in
-                (if !Debug.chatter != 0 then fprintf ppf "- Fill: EXT done\n");
                 let vars = Interactive.gctxToVars cG in
                 let cvars = Interactive.mctxToCVars cD in
                 let apxexp = Index.hexp cvars vars outexp in
-                (if !Debug.chatter != 0 then fprintf ppf "- Fill: APX done\n");
                 let intexp = Reconstruct.elExp cD cG apxexp tclo in
-                (if !Debug.chatter != 0 then fprintf ppf "- Fill: INT done\n");
                 Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
                 Interactive.replaceHole strat intexp
               with
@@ -312,11 +309,11 @@ let fill =
                    "- Error while replacing hole with expression : %s"
                    (Printexc.to_string e)
             else
-              failwith "- See help"
+              failwith "- The second argument must be `with`. See help"
           end
         with
         | e ->
-           fprintf ppf "- \nError in fill: %s\n" (Printexc.to_string e))
+           fprintf ppf "- Error in fill:\n%s\n" (Printexc.to_string e))
   ; help = "`fill H with EXP` fills hole H with EXP"
   }
 
@@ -334,7 +331,8 @@ let split =
   ; run =
       command_with_arguments 2
         (fun ppf [strat_s; var] ->
-          with_hole_from_strategy_string ppf strat_s (fun hi -> do_split ppf hi var)
+          with_hole_from_strategy_string ppf strat_s
+            (fun hi -> do_split ppf hi var)
         )
   ; help = "`split H V` tries to split on variable V in hole H (specified by name or number)"
   }
@@ -371,7 +369,7 @@ let compconst =
             let termlist = List.rev_map (CompConst.get ~fixName:true) (!(entry.CompTyp.constructors)) in
             List.iter
               (fun x ->
-                fprintf ppf "- %s: [%d] "
+                fprintf ppf "%s: [%d] "
                   (Id.string_of_name x.CompConst.name)
                   x.CompConst.implicit_arguments;
                 ppr_cmp_typ mctx x.CompConst.typ;
@@ -379,7 +377,7 @@ let compconst =
               termlist;
             fprintf ppf ";\n"
           with
-          | Not_found -> fprintf ppf "- Such type does not exist;\n");
+          | Not_found -> fprintf ppf "- The type %s does not exist;\n" arg);
     help = "Print all constructors of a given computational datatype passed as a parameter"
   }
 
@@ -394,11 +392,11 @@ let signature =
             let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
 
             let mctx = Synint.LF.Empty in
-            fprintf ppf "- %s:  " (Id.string_of_name entry.Comp.name); ppr_cmp_typ mctx entry.Comp.typ; fprintf ppf "\n";
-            fprintf ppf ";\n"
+            fprintf ppf "%s: " (Id.string_of_name entry.Comp.name);
+            ppr_cmp_typ mctx entry.Comp.typ;
+            fprintf ppf ";\n";
           with
-          | Not_found -> fprintf ppf "- The function does not exist;\n"
-          | Failure _ -> fprintf ppf "- Error occurs when analyzing argument list;\n");
+          | Not_found -> fprintf ppf "- The function does not exist;\n");
     help = "fsig e : Prints the signature of the function e, if such function is currently defined" }
 
 let printfun =
@@ -414,7 +412,7 @@ let printfun =
              | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
                 ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)]);
                 fprintf ppf ";\n"
-             |     _  -> fprintf ppf "- %s is not a function.;\n" arg
+             | _  -> fprintf ppf "- %s is not a function.;\n" arg
             )
           with
           | Not_found ->
@@ -426,7 +424,7 @@ let quit =
   { name = "quit";
     run =
       (fun ppf _ ->
-        fprintf ppf "- Bye bye;";
+        fprintf ppf "Bye bye;";
         exit 0
       );
     help = "Exit interactive mode"
@@ -483,7 +481,9 @@ let get_type =
       (fun ppf [line; col] ->
         let line = to_int line in
         let col = to_int col in
-        let typ = Typeinfo.type_of_position line col in fprintf ppf "%s" typ);
+        let typ = Typeinfo.type_of_position line col in
+        fprintf ppf "%s" typ
+      );
     help = "get-type [line] [column] Get the type at a location (for use in emacs)"}
 
 let lookup_hole =

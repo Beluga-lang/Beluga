@@ -2,7 +2,7 @@
 rec foo : Bool = ttrue;
 
 %:load input.bel
-- The file input.bel has been successfully loaded;
+The file input.bel has been successfully loaded;
 %:lochole 0
 - No such hole by id '0';
 %:lochole foo

@@ -1,0 +1,8 @@
+--nostrengthen
+
+LF tm : type =
+    | u : tm
+;
+
+%:load input.bel
+The file input.bel has been successfully loaded;

@@ -130,6 +130,21 @@ let sgnDeclToHtml = function
     let _ = Format.pp_set_margin (Format.str_formatter) margin in
     Html.printingHtml := false
 
+let rec apply_global_pragmas =
+  function
+  | Synext.Sgn.GlobalPragma(_, Synext.Sgn.NoStrengthen) :: t ->
+     Lfrecon.strengthen := false;
+     apply_global_pragmas t
+  | Synext.Sgn.GlobalPragma(_, Synext.Sgn.Coverage(opt))::t ->
+     Coverage.enableCoverage := true;
+     begin
+       match opt with
+       | `Warn -> Coverage.warningOnly := true
+       | `Error -> ()
+     end;
+     apply_global_pragmas t
+  | l -> l
+
 let recSgnDecls decls =
   let leftoverVars : leftoverVars ref = ref [] in
   let is_empty = function

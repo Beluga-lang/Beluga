@@ -134,6 +134,7 @@ let load =
         (fun ppf arglist ->
 	        let per_file f =
             let sgn = Parser.parse_file ~name:f Parser.sgn in
+            let sgn = Recsgn.apply_global_pragmas sgn in
             let sgn' =
               begin match Recsgn.recSgnDecls sgn with
 	            | sgn', None -> sgn'

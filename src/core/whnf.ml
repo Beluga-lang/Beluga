@@ -1503,8 +1503,6 @@ let mctxMVarPos cD u =
 
     | Comp.TypInd tau -> Comp.TypInd (normCTyp tau)
 
-    | Comp.TypBool -> Comp.TypBool
-
   let cnormMetaTyp (mC, t) = cnormMTyp (mC, t)
 
   let rec cnormMetaObj ((loc,mO),t) = loc , mfrontMSub mO t
@@ -1543,8 +1541,6 @@ let mctxMVarPos cD u =
           cnormCTyp (tT, mcomp t' t)
 
       | (Comp.TypInd tau, t) -> Comp.TypInd (cnormCTyp (tau, t))
-
-      | (Comp.TypBool, _t) -> Comp.TypBool
     end
 
   let rec cnormCKind (cK, t) = match cK with
@@ -1576,8 +1572,6 @@ let mctxMVarPos cD u =
     | (Comp.TypPiBox (_, _) , _)       -> thetaT
 
     | (Comp.TypClo (tT, t'), t)        -> cwhnfCTyp (tT, mcomp t' t)
-
-    | (Comp.TypBool, _t)               -> thetaT
 
     | (Comp.TypInd tau, t)             -> (Comp.TypInd (Comp.TypClo (tau, t)), m_id)
 
@@ -1620,10 +1614,6 @@ let mctxMVarPos cD u =
         Comp.Case (loc, prag, cnormExp' (i,t),
                    List.map (function b -> cnormBranch (b, t)) branches)
 
-    | (Comp.If (loc, i, e1, e2), t) ->
-        Comp.If (loc, cnormExp' (i,t),
-                 cnormExp (e1, t), cnormExp (e2, t))
-
     | (Comp.Hole (loc, name), _) -> Comp.Hole (loc, name)
 
   and cnormExp' (i, t) = match (i,t) with
@@ -1644,13 +1634,6 @@ let mctxMVarPos cD u =
 
     | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
 
-    | (Comp.Equal (loc, i1, i2), t) ->
-        let i1' = cnormExp' (i1, t) in
-        let i2' = cnormExp' (i2, t) in
-         (Comp.Equal (loc, i1', i2'))
-
-    | (Comp.Boolean b, t) -> Comp.Boolean(b)
-
   and cnormPattern (pat, t) = match pat with
     | Comp.PatEmpty (loc, cPsi) ->
         Comp.PatEmpty (loc, cnormDCtx (cPsi, t))
@@ -1663,8 +1646,6 @@ let mctxMVarPos cD u =
     | Comp.PatPair (loc, pat1, pat2) ->
         Comp.PatPair (loc, cnormPattern (pat1, t),
                       cnormPattern (pat2, t))
-    | Comp.PatTrue loc -> pat
-    | Comp.PatFalse loc -> pat
     | Comp.PatAnn (loc, pat, tau) ->
         Comp.PatAnn (loc, cnormPattern (pat, t),
                      cnormCTyp (tau, t))
@@ -1848,8 +1829,6 @@ let mctxMVarPos cD u =
          (dprint (fun () -> "[convCtyp] PiBox decl done");
         convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
 
-    | ((Comp.TypBool, _t ), (Comp.TypBool, _t')) -> true
-
     | ((Comp.TypInd tau, t) , ttau' ) -> 
 	convCTyp (tau,t) ttau'
 
@@ -1992,7 +1971,6 @@ let closedMetaTyp cT = match cT with
   | CTyp _ -> true
 
 let rec closedCTyp cT = match cT with
-  | Comp.TypBool -> true
   | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS
   | Comp.TypCobase (_, _c, mS) -> closedMetaSpine mS
   | Comp.TypBox (_ , cT)  -> closedMetaTyp cT

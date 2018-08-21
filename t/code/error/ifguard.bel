@@ -1,7 +1,0 @@
-nat : type.
-z : nat.
-s : nat -> nat.
-
-rec f : [ |- nat] -> [ |- nat] =
-  fn x => if x then [ |- z] else [ |- s z]
-;

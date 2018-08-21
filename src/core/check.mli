@@ -69,9 +69,6 @@ module Comp : sig
     | PattMismatch    of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
 (*    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
                          (LF.mctx * LF.dctx * LF.tclo)*)
-    | IfMismatch      of LF.mctx * gctx  * tclo
-    | EqMismatch      of LF.mctx * tclo (* arg1 *) * tclo (* arg2 *)
-    | EqTyp           of LF.mctx * tclo
     | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
     | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
     | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj

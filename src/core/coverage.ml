@@ -891,14 +891,12 @@ match (pat, ttau) , (pat_p, ttau_p) with
 
   | (Comp.PatPair (_, pat1, pat2) , (Comp.TypCross (tau1, tau2), t)),
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->
-      let (mC1, sC1) = match_pattern (cD,cG) (cD_p, cG_p)
-                         (pat1, (tau1,t)) (pat1', (tau1',t')) mC sC in
-        match_pattern (cD,cG) (cD_p, cG_p)
-          (pat2, (tau2,t))  (pat2', (tau2',t')) mC1 sC1
-  | (Comp.PatTrue _ , _ ),
-    (Comp.PatTrue _ , _ ) -> (mC, sC)
-  | (Comp.PatFalse _ , _ ),
-    (Comp.PatFalse _ , _ ) -> (mC, sC)
+     let (mC1, sC1) =
+       match_pattern (cD,cG) (cD_p, cG_p)
+	       (pat1, (tau1,t)) (pat1', (tau1',t')) mC sC
+     in
+	   match_pattern (cD,cG) (cD_p, cG_p)
+	     (pat2, (tau2,t))  (pat2', (tau2',t')) mC1 sC1
   | pat_ttau , (Comp.PatAnn (_, pat', tau' ), (_ ,t'))  ->
       match_pattern (cD,cG) (cD_p, cG_p) pat_ttau (pat', (tau',t')) mC sC
   | (Comp.PatAnn (_, pat', tau' ), (_ ,t')), pat_ttau  ->
@@ -1810,9 +1808,6 @@ match (mv_list, cD) with
 
 *)
 let rec genPattSpine (tau_v, t) = match (tau_v,t) with
-  | (Comp.TypBool, t) ->
-      ([], Comp.PatNil, (tau_v,t))
-
   | (Comp.TypArr (tau1, tau2) , t) ->
       let pv1 = new_patvar_name () in
       let pat1 = Comp.PatFVar (Syntax.Loc.ghost, pv1) in
@@ -1873,12 +1868,6 @@ let rec genAllPatt ((cD_v, tau_v): LF.mctx * Comp.typ) ctau_list = match ctau_li
         | None -> genAllPatt (cD_v, tau_v) ctau_list
 
 let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
-  | Comp.TypBool ->
-      let cG' = cG1@cG2 in
-      let loc = Syntax.Loc.ghost in
-      let cg_true = CovPatt (cG', Comp.PatTrue loc, (tau, Whnf.m_id)) in
-      let cg_false = CovPatt (cG', Comp.PatFalse loc, (tau, Whnf.m_id)) in
-        (cD, cg_true, Whnf.m_id) ::(cD, cg_false, Whnf.m_id) ::[]
   | Comp.TypCross (tau1, tau2) ->
       let pv1 = new_patvar_name () in
       let pv2 = new_patvar_name () in

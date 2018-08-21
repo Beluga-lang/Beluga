@@ -785,8 +785,6 @@ module Ext = struct
               (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
               (r_paren_if cond)
 
-      | Comp.TypBool -> fprintf ppf "Bool"
-
     let rec fmt_ppr_pat_spine cD lvl ppf = function
       | Comp.PatNil _ -> fprintf ppf ""
       | Comp.PatApp (_, pat, pat_spine) ->
@@ -818,8 +816,6 @@ module Ext = struct
           fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD 0) pat1
             (fmt_ppr_pat_obj cD 0) pat2
-      | Comp.PatTrue _ -> fprintf ppf "tt"
-      | Comp.PatFalse _ -> fprintf ppf "ff"
       | Comp.PatAnn (_, pat, tau) ->
           fprintf ppf "%a : %a"
             (fmt_ppr_pat_obj cD 0) pat
@@ -925,18 +921,6 @@ module Ext = struct
               (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> (to_html " %not " Keyword))
               (fmt_ppr_cmp_branches cD 0) bs
 
-      | Comp.If (_, i, e1, e2) ->
-          let cond = lvl > 1 in
-            fprintf ppf "@[<2>%s%s %a @[<-1>%s %a @]%s %a%s@]"
-              (l_paren_if cond)
-              (to_html "if" Keyword)
-              (fmt_ppr_cmp_exp_syn cD 0) i
-              (to_html "then" Keyword)
-              (fmt_ppr_cmp_exp_chk cD 0) e1
-              (to_html "else" Keyword)
-              (fmt_ppr_cmp_exp_chk cD 0) e2
-              (r_paren_if cond)
-
       | Comp.Hole (_) -> fprintf ppf " ? "
 
     and fmt_ppr_cmp_exp_syn cD lvl ppf = function
@@ -980,19 +964,6 @@ module Ext = struct
             (fmt_ppr_cmp_exp_syn cD 1) i1
             (fmt_ppr_cmp_exp_syn cD 1) i2
 
-
-      | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
-              (fmt_ppr_cmp_exp_syn cD 1) i1
-              (fmt_ppr_cmp_exp_syn cD 1) i2
-
-      | Comp.Boolean (_, true) ->
-          fprintf ppf "%s"
-            (to_html "ttrue" Keyword)
-
-      | Comp.Boolean (_, false) ->
-          fprintf ppf "%s"
-            (to_html "ffalse" Keyword)
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
       | LF.Empty -> ()

@@ -139,7 +139,6 @@ module Comp = struct
 
  type typ =                                           (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine             (*    | c mS               *)
-   | TypBool                                          (*    | Bool               *)
    | TypBox  of Loc.t * meta_typ                      (*    | [U]                *) 
    | TypArr   of Loc.t * typ * typ                    (*    | tau -> tau         *)
    | TypCross of Loc.t * typ * typ                    (*    | tau * tau          *) 
@@ -157,7 +156,6 @@ module Comp = struct
      | Let    of Loc.t * exp_syn * (name * exp_chk)  (*    | let x = i in e      *)          
      | Box of Loc.t * meta_obj
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
-     | If of Loc.t * exp_syn * exp_chk * exp_chk     (*    | if i then e1 else e2 *)
      | Hole of Loc.t * string option     				     (*    | ?                   *)
 
   and exp_syn =
@@ -169,16 +167,12 @@ module Comp = struct
      | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of Loc.t * exp_chk * typ               (*    | e : tau             *)
-     | Equal  of Loc.t * exp_syn * exp_syn
-     | Boolean of Loc.t * bool
 
  and pattern =
    | PatMetaObj of Loc.t * meta_obj
    | PatConst of Loc.t * name * pattern_spine
    | PatVar   of Loc.t * name
    | PatPair  of Loc.t * pattern * pattern
-   | PatTrue  of Loc.t
-   | PatFalse of Loc.t
    | PatAnn   of Loc.t * pattern * typ
 
  and pattern_spine =
@@ -209,34 +203,6 @@ module Comp = struct
 	        | Trust of Loc.t
 
  type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
-
- (* Useful for debugging the parser, but there should be a better place for them... *)
- let rec synToString = function
-     | Var    (_loc,  _) -> "Var"
-     | Apply  (_loc,  syn, chk) -> "Apply(" ^ synToString syn ^ ", " ^ chkToString chk ^ ")"
-(*     | CtxApp (_loc,  syn, _dctx) -> "CtxApp(" ^ synToString syn ^ ", _dctx)" *)
-     | BoxVal (_loc, _) -> "BoxVal(...)"
-     | Ann    (_loc, chk, _) -> "Ann(" ^ chkToString chk ^ ", _)"
-     | Equal   (_loc,  syn1, syn2) -> "Equal("  ^ synToString syn1 ^ " == " ^ synToString syn2 ^ ")"
-     | Boolean (_loc, _) -> "Boolean(_)"
-
- and chkToString = function
-     | Syn     (_loc,  syn) -> "Syn(" ^ synToString syn ^ ")"
-     | Fn     (_loc, _, chk) -> "Fn(_, " ^ chkToString chk ^ ")"
-     | MLam    (_loc, _, chk) ->  "MLam(_, " ^ chkToString chk ^ ")"
-     | Pair    (_loc, chk1, chk2) ->  "Fun(_, " ^ chkToString chk1 ^ ", " ^ chkToString chk2 ^ ")"
-     | LetPair (_loc, syn, (_, _, chk)) -> "LetPair(" ^ synToString syn ^",  (_, _, " ^ chkToString chk ^ "))"
-     | Let (_loc, syn, (_, chk)) -> "Let(" ^ synToString syn ^",  (_, " ^ chkToString chk ^ "))"
-     | Box     (_loc, _) -> "Box(...)"
-     | Case    (_loc, _, syn, _) -> "Case(" ^ synToString syn ^ " of ...)"
-     | If      (_loc, syn, chk1, chk2) -> "If(" ^ synToString syn ^ " Then " ^  chkToString chk1 ^ " Else " ^ chkToString chk2 ^ ")"
-     | Hole    (_loc, name_opt) ->
-        let name =
-          match name_opt with
-          | None -> ""
-          | Some n -> n in
-        "Hole(" ^ name ^ ")"
-
 end
 
 
@@ -283,7 +249,4 @@ module Sgn = struct
     | Module        of Loc.t * string * decl list
     | Comment of Loc.t * string
   type sgn = decl list
-
-
-
 end

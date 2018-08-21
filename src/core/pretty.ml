@@ -1064,8 +1064,6 @@ module Int = struct
 
       | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
 
-      | Comp.TypBool -> fprintf ppf "Bool"
-
       | Comp.TypInd tau ->
             fprintf ppf "(%a)*"
               (fmt_ppr_cmp_typ cD 1) tau
@@ -1110,8 +1108,6 @@ module Int = struct
           fprintf ppf "(%a , %a)"
             (fmt_ppr_pat_obj cD cG 0) pat1
             (fmt_ppr_pat_obj cD cG 0) pat2
-      | Comp.PatTrue _ -> fprintf ppf "ttrue"
-      | Comp.PatFalse _ -> fprintf ppf "ffalse"
       | Comp.PatAnn (_, pat, tau) ->
           fprintf ppf "(%a : %a)"
             (fmt_ppr_pat_obj cD cG 0) pat
@@ -1226,15 +1222,6 @@ module Int = struct
               (fmt_ppr_cmp_branches cD cG 0) bs
               (r_paren_if cond)
 
-      | Comp.If (_, i, e1, e2) ->
-          let cond = lvl > 1 in
-            fprintf ppf "@[<2>%sif %a @[<-1>then %a @]else %a%s@]"
-              (l_paren_if cond)
-              (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-              (fmt_ppr_cmp_exp_chk cD cG 0) e1
-              (fmt_ppr_cmp_exp_chk cD cG 0) e2
-              (r_paren_if cond)
-
       | Comp.Hole (loc, name_opt) ->
          let name =
            match name_opt with
@@ -1274,10 +1261,6 @@ module Int = struct
           let (i1', _) = strip_mapp_args' cD cG i1 in
           let (i2', _) = strip_mapp_args' cD cG i2 in
           (Comp.PairVal (loc, i1', i2') , [])
-      | Comp.Equal (loc, i1, i2) ->
-          let (i1', _) = strip_mapp_args' cD cG i1 in
-          let (i2', _) = strip_mapp_args' cD cG i2 in
-          (Comp.Equal (loc, i1', i2'), [])
       | _ -> (i, [])
     and implicitCompArg tau = begin match tau with
       | Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.MTyp _,_), LF.Maybe)), tau) ->
@@ -1339,16 +1322,6 @@ module Int = struct
               (l_paren_if cond)
               (fmt_ppr_cmp_exp_chk cD cG 1) e
               (r_paren_if cond)
-      | Comp.Equal (_, i1, i2) ->
-            fprintf ppf "%a == %a"
-              (fmt_ppr_cmp_exp_syn cD cG 1) i1
-              (fmt_ppr_cmp_exp_syn cD cG 1) i2
-
-      | Comp.Boolean true ->
-          fprintf ppf "ttrue"
-
-      | Comp.Boolean false ->
-          fprintf ppf "ffalse"
 
     and fmt_ppr_cmp_value lvl ppf =
       function
@@ -1358,8 +1331,6 @@ module Int = struct
       | Comp.CtxValue _ -> fprintf ppf " mlam "
       | Comp.BoxValue mC -> fprintf ppf "%a"  (fmt_ppr_meta_obj LF.Empty 0) mC
       | Comp.ConstValue _ -> fprintf ppf " const "
-      | Comp.BoolValue true -> fprintf ppf "ttrue"
-      | Comp.BoolValue false -> fprintf ppf "ffalse"
       | Comp.PairValue (v1, v2) ->
         fprintf ppf "(%a , %a)"
           (fmt_ppr_cmp_value 0) v1

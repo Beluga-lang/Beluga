@@ -164,11 +164,6 @@ let genVarName tA = Store.Cid.Typ.gen_var_name tA
  * applies the given function to all holes. *)
 let rec mapHoleChk f = function
  | Hole (l, name) -> f name l
- | If (l, es,ec1,ec2) ->
-     let es' = mapHoleSyn f es in
-     let ec1' = mapHoleChk f ec1 in
-     let ec2' = mapHoleChk f ec2 in
-     If(l, es', ec1', ec2')
  | Syn (l, es) ->
      let es' = mapHoleSyn f es in
          Syn (l, es')
@@ -209,10 +204,6 @@ and mapHoleSyn f = function
   | Ann (ec, tau) ->
       let ec' =  mapHoleChk f ec in
       Ann(ec', tau)
-  | Equal (l, es1, es2) ->
-      let es1' = mapHoleSyn f es1 in
-      let es2' = mapHoleSyn f es2 in
-      Equal(l, es1', es2')
   | PairVal(l, es1, es2) ->
       let es1' =  mapHoleSyn f es1 in
       let es2' = mapHoleSyn f es2 in

@@ -563,8 +563,6 @@ struct
 
     | Comp.TypClo (_, _ ) -> fprintf ppf "TypClo"
 
-    | Comp.TypBool -> fprintf ppf "Bool"
-
     | Comp.TypInd tau ->
       fprintf ppf "(TypInd %a)"
         (sexp_cmp_typ cD) tau
@@ -596,9 +594,6 @@ struct
         fprintf ppf "(PatPair %a %a)"
           (sexp_pat_obj cD cG) pat1
           (sexp_pat_obj cD cG) pat2
-
-      | Comp.PatTrue _ -> fprintf ppf "PatTrue"
-      | Comp.PatFalse _ -> fprintf ppf "PatFalse"
 
       | Comp.PatAnn (_, pat, tau) ->
         fprintf ppf "(PatAnn %a %a)"
@@ -659,12 +654,6 @@ struct
         (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " PragmaNot ")
         (sexp_cmp_branches cD cG) bs
 
-    | Comp.If (_, i, e1, e2) ->
-      fprintf ppf "(If %a %a %a)"
-        (sexp_cmp_exp_syn cD cG) i
-        (sexp_cmp_exp_chk cD cG) e1
-        (sexp_cmp_exp_chk cD cG) e2
-
     | Comp.Hole (_, name_opt) ->
        let name =
          match name_opt with
@@ -713,17 +702,6 @@ struct
       fprintf ppf "%a"
         (sexp_cmp_exp_chk cD cG) e
 
-    | Comp.Equal (_, i1, i2) ->
-      fprintf ppf "(Equal %a %a)"
-        (sexp_cmp_exp_syn cD cG) i1
-        (sexp_cmp_exp_syn cD cG) i2
-
-    | Comp.Boolean true ->
-      fprintf ppf "(Boolean true)"
-
-    | Comp.Boolean false ->
-      fprintf ppf "(Boolean false)"
-
   and sexp_cmp_value ppf =
     function
       | Comp.FunValue _ -> fprintf ppf "FunValue"
@@ -732,8 +710,6 @@ struct
       | Comp.CtxValue _ -> fprintf ppf "MLamValue"
       | Comp.BoxValue mC -> fprintf ppf "(BoxValue %a)"  (sexp_meta_obj LF.Empty) mC
       | Comp.ConstValue _ -> fprintf ppf "ConstValue"
-      | Comp.BoolValue true -> fprintf ppf "(BoolValue true)"
-      | Comp.BoolValue false -> fprintf ppf "(BoolValue false)"
       | Comp.PairValue (v1, v2) ->
         fprintf ppf "(PairValue %a %a)"
           sexp_cmp_value v1

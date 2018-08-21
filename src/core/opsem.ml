@@ -217,26 +217,10 @@ let rec eval_syn i (theta, eta) =
     | Comp.Ann (e, _tau) ->
       eval_chk e (theta, eta)
 
-    | Comp.Equal (_, i1, i2) ->
-      let v1 = eval_syn i1 (theta, eta) in
-      let v2 = eval_syn i2 (theta, eta) in
-      begin match (v1, v2)  with
-        | (Comp.BoxValue (_,LF.ClObj(psihat, LF.MObj tM)),
-	   Comp.BoxValue (_, LF.ClObj(_ , LF.MObj tN))) ->
-          if Whnf.conv (tM, Substitution.LF.id) (tN, Substitution.LF.id) then
-            Comp.BoolValue true
-          else
-            Comp.BoolValue false
-
-        | ( _ , _ ) -> raise (Error.Violation "Expected atomic object")
-      end
-
     | Comp.PairVal (_, i1, i2) ->
       let v1 = eval_syn i1 (theta, eta) in
       let v2 = eval_syn i2 (theta, eta) in
       Comp.PairValue (v1, v2)
-
-    | Comp.Boolean b -> Comp.BoolValue b
 
 and eval_chk e (theta, eta) =
     match e with
@@ -284,12 +268,6 @@ and eval_chk e (theta, eta) =
       | Comp.Case (loc, _prag, i, branches) ->
         let vscrut = eval_syn i (theta, eta) in
         eval_branches loc vscrut branches (theta, eta)
-
-      | Comp.If (_, i, e1, e2) ->
-        begin match eval_syn i (theta, eta) with
-          | Comp.BoolValue true -> eval_chk e1 (theta, eta)
-          | Comp.BoolValue false -> eval_chk e2 (theta, eta)
-        end
 
       | Comp.Hole (_) ->
         raise (Error.Violation "Source contains holes")
@@ -380,11 +358,6 @@ and match_pattern  (v,eta) (pat, mt) =
 
       | v, Comp.PatVar (_, _) ->
         eta := Comp.Cons (v, !eta)
-
-      | Comp.BoolValue true, Comp.PatTrue _ -> ()
-      | Comp.BoolValue false, Comp.PatFalse _ -> ()
-      | Comp.BoolValue _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise BranchMismatch
-      | _, (Comp.PatTrue _ | Comp.PatFalse _) -> raise (Error.Violation "Expected Bool value.")
 
       | _ -> raise Error.NotImplemented
   in loop v pat; !eta

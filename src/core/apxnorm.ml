@@ -280,12 +280,6 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 	c)
 
 
-  | Apx.Comp.If(loc, i, e1, e2) ->
-      let i' =  cnormApxExp' cD delta i (cD'', t) in
-      let e1' = cnormApxExp cD delta e1 (cD'', t) in
-      let e2' = cnormApxExp cD delta e2 (cD'', t) in
-        Apx.Comp.If(loc, i', e1', e2')
-
   | Apx.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
 
@@ -316,12 +310,6 @@ and cnormApxExp' cD delta i cDt = match i with
         Apx.Comp.Ann (e', tau')
 
 *)
-
-  | Apx.Comp.Boolean (loc, b) -> Apx.Comp.Boolean(loc, b)
-  | Apx.Comp.Equal (loc, i1, i2) ->
-    let i1' = cnormApxExp' cD delta i1 cDt in
-    let i2' = cnormApxExp' cD delta i2 cDt in
-      Apx.Comp.Equal (loc, i1', i2')
 
 and cnormApxClObj cD delta clobj cDt = match clobj with
   | Apx.Comp.MObj m -> Apx.Comp.MObj (cnormApxTerm cD delta m cDt)
@@ -548,7 +536,6 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.STyp (_ , cPhi), cPsi))) ->
       let fMVd1 = collectApxDCtx fMVd cPsi in
 	 collectApxDCtx fMVd1 cPhi 
-  | Apx.Comp.TypBool -> fMVd
   | Apx.Comp.TypBase (_loc, _c, mS) ->
       collectApxMetaSpine fMVd mS
 
@@ -566,8 +553,6 @@ let rec collectApxPattern fMVd pat = match pat with
   | Apx.Comp.PatAnn (loc, pat, tau) ->
       let fMVd1 = collectApxCompTyp fMVd tau in
 	collectApxPattern fMVd1 pat
-  | Apx.Comp.PatTrue loc -> fMVd
-  | Apx.Comp.PatFalse loc -> fMVd
 
 and collectApxPatSpine fMVd pat_spine = match pat_spine with
   | Apx.Comp.PatNil _ -> fMVd
@@ -786,12 +771,6 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Case (loc, prag, i, branch) ->
       Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param  i,
                           fmvApxBranches fMVs cD d_param  branch)
-  | Apx.Comp.If (loc, i, e1, e2) ->
-      let i' = fmvApxExp' fMVs cD d_param  i in
-      let e1' = fmvApxExp  fMVs cD d_param  e1 in
-      let e2' = fmvApxExp  fMVs cD d_param  e2 in
-        Apx.Comp.If (loc, i', e1', e2')
-
   | Apx.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
 
@@ -822,12 +801,6 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
         Apx.Comp.Ann (e', tau')
 
 *)
-
-  | Apx.Comp.Boolean (loc, b) -> Apx.Comp.Boolean (loc, b)
-  | Apx.Comp.Equal (loc, i1, i2) ->
-      let i1' = fmvApxExp' fMVs cD d_param  i1 in
-      let i2' = fmvApxExp' fMVs cD d_param  i2 in
-        Apx.Comp.Equal (loc, i1', i2')
 
 and fmvApxClObj fMVs cD d_param = function
   | Apx.Comp.MObj m -> Apx.Comp.MObj (fmvApxTerm fMVs cD d_param m)

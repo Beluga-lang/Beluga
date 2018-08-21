@@ -719,8 +719,6 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
       let (tau', fcvars2) = index_comptyp cvars' fcvars1 tau in
       (Apx.Comp.TypPiBox (cdecl', tau'), fcvars2)
 
-  | Ext.Comp.TypBool -> (Apx.Comp.TypBool, fcvars)
-
   | Ext.Comp.TypInd (tau) ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
 	(Apx.Comp.TypInd tau1, fcvars1)
@@ -767,12 +765,6 @@ let rec index_exp cvars vars fcvars = function
       let _ = dprint (fun () -> "index case") in
       let branches' = List.map (function b -> index_branch cvars vars fcvars b) branches in
         Apx.Comp.Case (loc, prag, i', branches')
-
-  | Ext.Comp.If (loc, i, e1, e2) ->
-      let i' = index_exp' cvars vars fcvars i in
-      let e1' = index_exp cvars vars fcvars e1 in
-      let e2' = index_exp cvars vars fcvars e2 in
-        Apx.Comp.If(loc, i', e1', e2')
 
   | Ext.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
@@ -832,16 +824,7 @@ and index_exp' cvars vars fcvars = function
       let (tau', _ ) =  index_comptyp cvars fcvars tau in
       Apx.Comp.Ann (index_exp  cvars vars fcvars e, tau' )
 
-  | Ext.Comp.Equal (loc, i, i') ->
-      let i1 = index_exp' cvars vars fcvars i in
-      let i2 = index_exp' cvars vars fcvars i' in
-        Apx.Comp.Equal (loc, i1, i2)
-
-  | Ext.Comp.Boolean (loc , b) -> Apx.Comp.Boolean (loc, b)
-
 and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
-  | Ext.Comp.PatTrue loc -> (Apx.Comp.PatTrue loc, fcvars, fvars)
-  | Ext.Comp.PatFalse loc -> (Apx.Comp.PatFalse loc, fcvars, fvars)
   | Ext.Comp.PatVar (loc, x) ->
       begin try
 	let _x = Var.index_of_name fvars x in
@@ -905,8 +888,6 @@ and index_fbranches cvars vars fcvars fbranches = match fbranches with
 
 (* reindex pattern *)
 and reindex_pattern fvars pat = match pat with
-  | Apx.Comp.PatTrue loc -> Apx.Comp.PatTrue loc
-  | Apx.Comp.PatFalse loc -> Apx.Comp.PatFalse loc
   | Apx.Comp.PatFVar (loc, x) ->
       (* all free variable names must be in fvars *)
       let offset = Var.index_of_name fvars x in

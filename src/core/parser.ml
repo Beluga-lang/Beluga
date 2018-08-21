@@ -75,7 +75,6 @@ type mixtyp =
   | MTIndBase of Loc.t * Id.name * Comp.meta_spine
   | MTArr of Loc.t * mixtyp * mixtyp
   | MTCross of Loc.t * mixtyp * mixtyp
-  | MTBool of Loc.t
   | MTBox of Loc.t * mixtyp * LF.dctx * LF.depend
   | MTPBox of Loc.t * mixtyp * LF.dctx * LF.depend
   | MTCtx of Loc.t * Id.name * LF.depend
@@ -93,7 +92,6 @@ let mixloc = function
   |  MTCompKind l -> l
   |  MTArr(l, _, _) -> l
   |  MTCross(l, _, _) -> l
-  |  MTBool l -> l
   |  MTBox(l, _, _, _) -> l
   |  MTPBox(l, _, _, _) -> l
   |  MTCtx(l, _, _) -> l
@@ -112,21 +110,23 @@ let rec unmix = function
   | MTCompKind l -> CompKindMix (Comp.Ctype l)
   | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
   | MTIndBase (l, a, ms) -> CompMix(Comp.TypInd (Comp.TypBase (l, a, ms)))
-  | MTArr(l, mt1, mt2) -> begin match (unmix mt1, unmix mt2) with
-                                  | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
-                                  | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
-                                  | (CompMix c1, CompKindMix c2) ->
-                                      let x = Id.mk_name (Id.NoName) in
-                                      let (l, cdecl) = match c1 with
-					| Comp.TypInd (Comp.TypBox (l, mtyp)) -> (l, LF.Decl(x, mtyp, LF.Inductive))
-                                        | Comp.TypBox (l, mtyp) -> (l, LF.Decl(x, mtyp, LF.No))
-					| _ -> unmixfail (mixloc mt1)
-				      in
-                                      CompKindMix(Comp.PiKind(l, cdecl, c2))
-                                  | (_, _) -> unmixfail (mixloc mt2)
-                           end
+  | MTArr(l, mt1, mt2) ->
+     begin
+       match (unmix mt1, unmix mt2) with
+       | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
+       | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
+       | (CompMix c1, CompKindMix c2) ->
+          let x = Id.mk_name (Id.NoName) in
+          let (l, cdecl) =
+            match c1 with
+            | Comp.TypInd (Comp.TypBox (l, mtyp)) -> (l, LF.Decl(x, mtyp, LF.Inductive))
+            | Comp.TypBox (l, mtyp) -> (l, LF.Decl(x, mtyp, LF.No))
+            | _ -> unmixfail (mixloc mt1)
+          in
+          CompKindMix(Comp.PiKind(l, cdecl, c2))
+       | (_, _) -> unmixfail (mixloc mt2)
+     end
   | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-  | MTBool l -> CompMix(Comp.TypBool)
   | MTBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx))))
   | MTBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx)))))
   | MTCtx  (l, schema, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.CTyp schema)))
@@ -1156,8 +1156,6 @@ GLOBAL: sgn;
 	      | None ->
 		    Comp.Case (_loc, Pragma.RegularCase, i,
                                [Comp.EmptyBranch (_loc, LF.Empty, mkEmptyPat (_loc, LF.Null ))]))
-      | "if"; i = cmp_exp_syn; "then"; e1 = cmp_exp_chk ; "else"; e2 = cmp_exp_chk ->
-          Comp.If (_loc, i, e1, e2)
 
       | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
           Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
@@ -1212,18 +1210,13 @@ clobj:
 (* isuffix: something that can follow an i; returns a function that takes the i it follows,
   and returns the appropriate synthesizing expression *)
 isuffix:
- [ LEFTA [
+  [ LEFTA
 
-     "=="; i2 = cmp_exp_syn   ->  (fun i -> Comp.Equal(_loc, i, i2))
-   |  m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-        let (modules, n) = split '.' m in
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
+   [ m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
+     let (modules, n) = split '.' m in
+     (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
    | x = UPSYMBOL   ->
        (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
-   | "ttrue"      ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, true))))
-   | "ffalse"     ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Boolean (_loc, false))))
    | e = cmp_exp_chkX   ->
        (fun i -> Comp.Apply(_loc, i, e))
  ]];
@@ -1248,8 +1241,6 @@ cmp_exp_syn:
                                     | Atom    ->   e
                             end)
    | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
-   | "ttrue"    ->   Comp.Boolean (_loc, true)
-   | "ffalse"   ->   Comp.Boolean (_loc, false)
 
    | "("; i = SELF; p_or_a = cmp_pair_atom_syn -> match p_or_a with
        | Pair_syn i2 -> Comp.PairVal (_loc, i, i2)
@@ -1276,8 +1267,6 @@ cmp_exp_syn:
     [
       [
       mobj = meta_obj -> Comp.PatMetaObj (_loc, mobj)
-     |  "ttrue" -> Comp.PatTrue (_loc)
-     | "ffalse" -> Comp.PatFalse (_loc)
      | x = SYMBOL -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
      | x = UPSYMBOL; s = LIST0 (cmp_pattern) ->
          let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
@@ -1350,9 +1339,7 @@ cmp_exp_syn:
       "atomic"
       [
 
-        tA = "Bool" -> MTBool _loc
-
-      | tK = "ctype" -> MTCompKind _loc
+        tK = "ctype" -> MTCompKind _loc
       (* allowing prop instead of ctype for ORBI files *)
       | tK = "prop" -> MTCompKind _loc
 

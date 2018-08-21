@@ -1236,7 +1236,6 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ'', tau') = collectCompTyp p cQ' tau in
       (cQ'', Comp.TypPiBox (cdecl', tau'))
 
-  | Comp.TypBool  -> (cQ, tau)
   | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
                       raise Error.NotImplemented)
   | Comp.TypInd tau ->
@@ -1297,12 +1296,6 @@ let rec collectExp cQ e = match e with
       let (cQ2, branches') = collectBranches cQ' branches in
         (cQ2, Comp.Case (loc, prag, i', branches'))
 
-  | Comp.If (loc, i, e1, e2) ->
-      let (cQ', i') = collectExp' cQ i in
-      let (cQ1, e1') = collectExp cQ' e1 in
-      let (cQ2, e2') = collectExp cQ1 e2 in
-        (cQ2, Comp.If (loc, i', e1', e2'))
-
   | Comp.Hole (loc, name) -> (cQ, Comp.Hole (loc, name))
 
 and collectExp' cQ i = match i with
@@ -1328,17 +1321,10 @@ and collectExp' cQ i = match i with
       let (cQ'', tau') = collectCompTyp 0 cQ' tau in
         (cQ'', Comp.Ann  (e', tau'))
 
-  | Comp.Equal (loc, i1, i2) ->
-     let (cQ', i1') = collectExp' cQ i1  in
-     let (cQ'', i2') = collectExp' cQ' i2  in
-       (cQ'', Comp.Equal(loc, i1', i2'))
-
   | Comp.PairVal (loc, i1, i2) ->
      let (cQ', i1') = collectExp' cQ i1  in
      let (cQ'', i2') = collectExp' cQ' i2  in
        (cQ'', Comp.PairVal(loc, i1', i2'))
-
-  | Comp.Boolean b -> (cQ, Comp.Boolean b)
 
 
 and collectPatObj cQ pat = match pat with
@@ -1347,8 +1333,6 @@ and collectPatObj cQ pat = match pat with
         (cQ1, Comp.PatEmpty (loc, cPsi'))
   | Comp.PatFVar (loc, x) -> (cQ, pat)
   | Comp.PatVar  (loc, x) -> (cQ, pat)
-  | Comp.PatTrue loc -> (cQ, pat)
-  | Comp.PatFalse loc -> (cQ, pat)
   | Comp.PatPair (loc, pat1, pat2) ->
       let (cQ1, pat1') = collectPatObj cQ pat1 in
       let (cQ2, pat2') = collectPatObj cQ1 pat2 in
@@ -1457,7 +1441,6 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypPiBox (cdecl, tau) ->
     Comp.TypPiBox ((abstractMVarCdecl cQ offset cdecl), abstractMVarCompTyp cQ (l,d+1) tau)
 
-  | Comp.TypBool -> Comp.TypBool
   | Comp.TypInd tau ->
       Comp.TypInd (abstractMVarCompTyp cQ offset tau)
 
@@ -1472,8 +1455,6 @@ let rec abstractMVarPatObj cQ cG offset pat = match pat with
   | Comp.PatEmpty (loc, cPsi) ->
       let cPsi' = abstractMVarDctx cQ offset cPsi in
         Comp.PatEmpty (loc, cPsi')
-  | Comp.PatTrue loc -> pat
-  | Comp.PatFalse loc -> pat
   | Comp.PatVar (_loc,_x) -> pat
   | Comp.PatFVar (loc,x) -> pat
 

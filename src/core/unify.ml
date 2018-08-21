@@ -2381,7 +2381,6 @@ let isVar h = match h with
 	(unifyCLFTyp Unification cD ctyp1n ctyp2n;
 	 unifyCompTyp (Dec(cD, Decl(u, ctyp1n,dep))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
 
-      | ((Comp.TypBool, _ ), (Comp.TypBool, _ )) -> ()
       | _ -> raise (Failure "Computation-level Type Clash")
 
 

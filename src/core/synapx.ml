@@ -153,7 +153,6 @@ module Comp = struct
    | TypArr     of typ * typ
    | TypCross   of typ * typ
    | TypPiBox   of LF.ctyp_decl * typ
-   | TypBool
    | TypInd of typ 
 
   and exp_chk =
@@ -166,7 +165,6 @@ module Comp = struct
      | Let    of Loc.t * exp_syn * (name * exp_chk)             (* let x = i in e      *)
      | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
      | Case   of Loc.t * case_pragma * exp_syn * branch list
-     | If     of Loc.t * exp_syn * exp_chk * exp_chk
      | Hole   of Loc.t * string option
 
   and exp_syn =
@@ -179,8 +177,6 @@ module Comp = struct
      | BoxVal of Loc.t * meta_obj 
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                                      (* e : tau        *)
-     | Equal  of Loc.t  * exp_syn * exp_syn
-     | Boolean of Loc.t * bool
 
  and pattern =
    | PatEmpty   of Loc.t * LF.dctx
@@ -189,8 +185,6 @@ module Comp = struct
    | PatFVar    of Loc.t * name
    | PatVar     of Loc.t * name * offset
    | PatPair    of Loc.t * pattern * pattern
-   | PatTrue    of Loc.t
-   | PatFalse   of Loc.t
    | PatAnn     of Loc.t * pattern * typ
 
  and pattern_spine =

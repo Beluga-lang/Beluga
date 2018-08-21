@@ -903,7 +903,6 @@ let rec no_occurs a tau =
     | Comp.TypCross (tau1, tau2) -> (no_occurs a tau1) && (no_occurs a tau2)
     | Comp.TypPiBox (_, tau')    ->  no_occurs a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
-    | Comp.TypBool               -> true
 
 let rec check_positive a tau =
   match tau with
@@ -926,7 +925,6 @@ let rec check_positive a tau =
     | Comp.TypCross (tau1, tau2) -> (check_positive a tau1) && (check_positive a tau2)
     | Comp.TypPiBox (_, tau')    -> check_positive a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
-    | Comp.TypBool               -> true
 
 
 let rec positive a tau =
@@ -939,7 +937,6 @@ let rec positive a tau =
     | Comp.TypCross (tau1, tau2) -> (positive a tau1) && (positive a tau2)
     | Comp.TypPiBox (_, tau')    -> positive a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
-    | Comp.TypBool               -> true
 
 
 
@@ -1086,7 +1083,6 @@ let rec compare a cD tau1  mC2 n =
       compare a (LF.Dec (cD, dec))  tau    (Whnf.cnormMetaObj   (mC2 , LF.MShift  1))  n
     | Comp.TypBox _    -> true
     | Comp.TypClo _    -> true
-    | Comp.TypBool     -> true
     | Comp.TypCobase _ -> true
     | Comp.TypDef _    -> true
 
@@ -1139,7 +1135,6 @@ let stratify a tau n =
 
 	| Comp.TypPiBox (dec, tau')    ->  strat (LF.Dec (cD0, dec)) tau'
 	| Comp.TypClo  _            -> raise Unimplemented
-	| Comp.TypBool               -> true
     in
     strat LF.Empty tau
 

@@ -575,7 +575,6 @@ let rec elCompTyp cD tau = match tau with
       let tau'   = elCompTyp (Int.LF.Dec (cD, cdecl')) tau in
         Int.Comp.TypPiBox (cdecl', tau')
 
-  | Apx.Comp.TypBool -> Int.Comp.TypBool
   | Apx.Comp.TypInd tau -> Int.Comp.TypInd (elCompTyp cD tau)
 
 (* *******************************************************************************)
@@ -623,7 +622,6 @@ and mgCTyp cD' cD_s = function
 
 
 let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
-  | Int.Comp.TypBool -> Int.Comp.TypBool
   | Int.Comp.TypCross (tau1, tau2) ->
       let tau1' = inferPatTyp' cD' (cD_s, tau1) in
       let tau2' = inferPatTyp' cD' (cD_s, tau2) in
@@ -879,16 +877,6 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           Int.Comp.Case (loc, prag, i, branches')
      end
 
-  | (Apx.Comp.If (loc, i, e1, e2), ((tau, theta) as tau_theta)) ->
-      let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
-        begin match C.cwhnfCTyp tau_theta' with
-          | (Int.Comp.TypBool , _ ) ->
-              let e1' = elExp cD cG e1 tau_theta in
-              let e2' = elExp cD cG e2 tau_theta in
-                Int.Comp.If (loc, i', e1', e2')
-          | _  -> raise (Check.Comp.Error (loc, Check.Comp.IfMismatch (cD, cG, tau_theta')))
-        end
-
   | (Apx.Comp.Hole (loc, name), (tau, theta)) ->
     let _ = dprint (fun () -> "\n[elExp] Expected Type (Hole): "
                         ^
@@ -1075,20 +1063,6 @@ and elExp' cD cG i = match i with
         (Int.Comp.Ann (e', tau'), (tau', C.m_id))
 
 
-  | Apx.Comp.Equal (loc, i1, i2) ->
-      let _ = dprint (fun () -> "[elExp'] Equal ... ") in
-      let (i1', ttau1) = genMApp loc cD (elExp' cD cG i1) in
-      let (i2', ttau2) = genMApp loc cD (elExp' cD cG i2) in
-       if Whnf.convCTyp ttau1 ttau2 then
-         (Int.Comp.Equal (loc, i1', i2'), (Int.Comp.TypBool , C.m_id))
-       else
-         raise (Check.Comp.Error (loc, Check.Comp.EqMismatch (cD, ttau1, ttau2 )))
-
-
-  | Apx.Comp.Boolean (_ , b)  -> (Int.Comp.Boolean b, (Int.Comp.TypBool, C.m_id))
-
-
-
 (*
 
   recPattern cD delta psi m tPopt =
@@ -1140,8 +1114,6 @@ and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
   | Apx.Comp.PatFVar (loc, _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatVar (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatPair (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
-  | Apx.Comp.PatTrue loc -> raise (Error (loc, PatternMobj))
-  | Apx.Comp.PatFalse loc -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, PatAnn))
 
 end
@@ -1168,10 +1140,6 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         (* indexing guarantees that all pattern variables occur uniquely *)
        Int.Comp.PatFVar (loc, x))
 *)
-  | (Apx.Comp.PatTrue  loc, (Int.Comp.TypBool, _)) ->
-      (cG, Int.Comp.PatTrue loc)
-  | (Apx.Comp.PatFalse loc, (Int.Comp.TypBool, _)) ->
-      (cG, Int.Comp.PatFalse loc)
   | (Apx.Comp.PatConst (loc, _c, _), ttau) ->
       let (cG', pat', ttau') = elPatSyn cD cG pat in
       let _ = dprint (fun () -> "[elPatChk] expected tau : = " ^
@@ -1194,12 +1162,6 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
   | (Apx.Comp.PatMetaObj (loc, cM) , (Int.Comp.TypBox (_loc, ctyp), theta)) ->
      (cG, Int.Comp.PatMetaObj (loc, elMetaObj cD cM (ctyp, theta)))
   (* Error handling cases *)
-  | (Apx.Comp.PatTrue loc , tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.PatIllTyped (cD, Int.LF.Empty,
-                                                            Int.Comp.PatTrue loc, tau_theta, (Int.Comp.TypBool, Whnf.m_id))))
-  | (Apx.Comp.PatFalse loc , tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.PatIllTyped (cD, Int.LF.Empty,
-                                                            Int.Comp.PatFalse loc, tau_theta, (Int.Comp.TypBool, Whnf.m_id))))
   | (Apx.Comp.PatPair(loc, _ , _ ), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatMetaObj (loc, _) , tau_theta) ->

@@ -286,7 +286,6 @@ module Comp = struct
     | TypCross  of typ * typ
     | TypPiBox  of LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
-    | TypBool
     | TypInd of typ
 
 
@@ -320,7 +319,6 @@ module Comp = struct
     | BoxValue   of meta_obj
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
-    | BoolValue  of bool
     | PairValue  of value * value
 
   and exp_chk =
@@ -334,7 +332,6 @@ module Comp = struct
     | Let    of Loc.t * exp_syn * (name * exp_chk)
     | Box    of Loc.t * meta_obj
     | Case   of Loc.t * case_pragma * exp_syn * branch list
-    | If     of Loc.t * exp_syn * exp_chk * exp_chk
     | Hole   of Loc.t * string option
 
   and exp_syn =
@@ -345,9 +342,7 @@ module Comp = struct
     | Apply  of Loc.t * exp_syn * exp_chk
     | MApp   of Loc.t * exp_syn * meta_obj
     | Ann    of exp_chk * typ
-    | Equal  of Loc.t * exp_syn * exp_syn
     | PairVal of Loc.t * exp_syn * exp_syn
-    | Boolean of bool
 
   and branch_pattern =
     | NormalPattern of LF.normal * exp_chk
@@ -360,8 +355,6 @@ module Comp = struct
     | PatFVar   of Loc.t * name
     | PatVar   of Loc.t * offset
     | PatPair  of Loc.t * pattern * pattern
-    | PatTrue  of Loc.t
-    | PatFalse of Loc.t
     | PatAnn   of Loc.t * pattern * typ
 
   and pattern_spine =

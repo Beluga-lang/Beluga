@@ -113,14 +113,7 @@ let main () =
       try
         let sgn = Parser.parse_file ~name:file_name Parser.sgn in
         (* If the file starts with a global pragma then process it now. *)
-        let rec extract_global_pragmas = function
-          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.NoStrengthen) :: t -> begin Lfrecon.strengthen := false; extract_global_pragmas t end
-          | Synext.Sgn.GlobalPragma(_, Synext.Sgn.Coverage(opt))::t -> begin
-            Coverage.enableCoverage := true;
-            begin match opt with | `Warn -> Coverage.warningOnly := true | `Error -> () end;
-            extract_global_pragmas t end
-          | l -> l in
-        let sgn = extract_global_pragmas sgn in
+        let sgn = Recsgn.apply_global_pragmas sgn in
         if !externall then begin
           if !Debug.chatter != 0 then
             printf "\n## Pretty-printing of the external syntax : ##\n";

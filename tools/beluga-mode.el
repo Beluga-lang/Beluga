@@ -249,7 +249,7 @@ Regexp match data 0 points to the chars."
 (make-variable-buffer-local 'beluga--proc)
 
 (defun beluga--proc ()
-  (unless (beluga--proc-live-p beluga--proc) (beluga--start))
+  (unless (beluga--proc-live-p beluga--proc) (beluga-start))
   beluga--proc)
 
 (defun beluga-start ()
@@ -500,7 +500,7 @@ returned. Else, `nil' is returned."
 (defun beli ()
   "Start beli mode"
   (interactive)
-  (beluga--start))
+  (beluga-start))
 
 (defun beli-cmd (cmd)
   "Run a command in beli"
@@ -621,7 +621,7 @@ Specifically, the following are performed, if necessary:
   - Saving the current buffer.
   - Loading the current buffer into Beluga.
   - Highlighting holes."
-  (beluga--start)
+  (beluga-start)
   (beluga--maybe-save-load-current-buffer)
   (beluga--highlight-holes))
 
@@ -635,7 +635,7 @@ Specifically, the following are performed, if necessary:
   "Load the current file in Beluga Interactive. This command will
 start the interactive mode if necessary and prompt for saving."
   (interactive)
-  (beluga--start)
+  (beluga-start)
   (let ((r (beluga--maybe-save-load-current-buffer)))
     (if r
         (message "%s" r)

@@ -161,8 +161,9 @@ in unicode using Font Lock mode."
   "Returns non-nil if PROCESS is alive.
     A process is considered alive if its status is `run', `open',
     `listen', `connect' or `stop'."
-  (memq (process-status process)
-        '(run open listen connect stop)))
+  (and (not (eq process nil))
+       (memq (process-status process)
+             '(run open listen connect stop))))
 
 (defun beluga-font-lock-compose-symbol (alist)
   "Compose a sequence of ascii chars into a symbol.
@@ -258,16 +259,17 @@ Regexp match data 0 points to the chars."
   beluga--proc)
 
 (defun beluga-start ()
-  "Start an inferior beli process with the -emacs option.
-The process is put into a buffer called \"*beluga*\".
-If a previous beli process already exists, kill it first."
+  "Start an inferior Beluga Interactive process with the -emacs
+option. The process is put into a buffer called \"*beluga*\"."
   (interactive)
-  (beluga-stop)
-  (setq beluga--proc
-        (get-buffer-process
-         (make-comint "beluga"
-		      beluga-interpreter-name
-                      nil "-I" "-emacs" ))))
+  (unless (beluga--proc-live-p beluga--proc)
+    (setq beluga--proc
+          (get-buffer-process
+           (make-comint "beluga"
+		                    beluga-interpreter-name
+                        nil "-I" "-emacs" ))))
+  (message "started beluga interactive process")
+  beluga--proc)
 
 (defun beluga-quit ()
   "Stops the Beluga interactive process by sending the quit

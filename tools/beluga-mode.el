@@ -242,6 +242,11 @@ Regexp match data 0 points to the chars."
 
 ;;---------------------------- Interactive mode ----------------------------;;
 
+(define-error 'beluga-interactive-error "Beluga interactive error")
+
+(defun beluga-interactive-error (&rest data)
+  (signal 'beluga-interactive-error data))
+
 ;; ------ process management ----- ;;
 
 (defvar beluga--proc ()
@@ -387,7 +392,7 @@ If a previous beli process already exists, kill it first."
   "Variant of beluga--rpc that signals an error if the command fails."
   (let ((resp (beluga--rpc cmd)))
     (when (beluga--is-response-error resp)
-      (error "%s" (substring resp 2)))
+      (beluga-interactive-error (list (format "%s" (substring resp 2)))))
     resp))
 
 (defvar beluga--last-load-time

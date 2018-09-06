@@ -210,7 +210,7 @@ module TranscriptRunner = struct
               ( "interaction on line "
                 ^ string_of_line i.line_num
                 ^ " failed: output mismatch\n"
-                ^ "expected ouptut:\n"
+                ^ "expected output:\n"
                 ^ i.response
                 ^ "actual output:\n"
                 ^ res )

@@ -12,21 +12,6 @@ type command =
 
 (* The built in commands *)
 
-(* args = (i, e, []) where
-   i : hole number
-   e : name of a variable appearing in the ith hole
-let split = {name = "split";
-              run = (fun ppf args ->
-                let i = args.hd in
-                let e = args.tl.hd in
-                 let (loc, cD,cG,(tau,theta)) = Holes.getHole i  in
-                 try
-                 Interactive.split e cD cG
-                     with _ -> "?"
-                 );
-              help = " ... " }
-*)
-
 (** Used to define command bodies requiring a certain number of arguments.
  * This function checks the length of the argument list against the
  * given number, and in case of success runs the given command body
@@ -416,15 +401,22 @@ let printfun =
       command_with_arguments 1
         (fun ppf [arg] ->
           try
-            let (cidlist,_) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
+            let (cidlist, _) =
+              List.split
+                (List.fold_left
+                   (fun acc l -> acc@(!l))
+                   []
+                   (DynArray.to_list Comp.entry_list))
+            in
             let entrylist = List.rev_map Comp.get cidlist in
-            let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
-            (match entry.Comp.prog with
-             | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
-                ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)]);
-                fprintf ppf ";\n"
-             | _  -> fprintf ppf "- %s is not a function.;\n" arg
-            )
+            let entry =
+              List.find
+                (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist
+            in
+            match entry.Comp.prog with
+            | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
+               ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
+            | _  -> fprintf ppf "- %s is not a function.;\n" arg
           with
           | Not_found ->
              fprintf ppf "- The function %s does not exist;\n" arg

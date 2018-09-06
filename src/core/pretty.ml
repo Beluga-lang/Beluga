@@ -1437,60 +1437,60 @@ module Int = struct
 
 
       | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
-        if !Control.printNormal then
-	  (match e with
-	     | Comp.Hole (loc, name) ->
-		 fprintf ppf "\n@[<v2>| %a => %a@]"
-		   (fmt_ppr_meta_obj cD1' 0) mO
-		   (fmt_ppr_cmp_exp_chk cD1' cG 1) e
-	     | _ ->
-		 fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
-		   (fmt_ppr_cmp_branch_prefix  0) cD1'
-		   (fmt_ppr_meta_obj cD1' 0) mO
-            (* NOTE: Technically: cD |- cG ctx and
-             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-             * -bp
-             *)
-            (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
-        else
-          fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-            (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_meta_obj cD1' 0) mO
-            (* this point is where the " : " is in the string above *)
-            (fmt_ppr_refinement cD1' cD 2) t
-            (* NOTE: Technically: cD |- cG ctx and
-             *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-             * -bp
-             *)
-            (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+         if !Control.printNormal then
+           (match e with
+            | Comp.Hole (loc, name) ->
+               fprintf ppf "\n@[<v2>| %a => %a@]"
+                 (fmt_ppr_meta_obj cD1' 0) mO
+                 (fmt_ppr_cmp_exp_chk cD1' cG 1) e
+            | _ ->
+               fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
+                 (fmt_ppr_cmp_branch_prefix 0) cD1'
+                 (fmt_ppr_meta_obj cD1' 0) mO
+                 (* NOTE: Technically: cD |- cG ctx and
+                  *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+                  * -bp
+                  *)
+                 (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
+         else
+           fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+             (fmt_ppr_cmp_branch_prefix 0) cD1'
+             (fmt_ppr_meta_obj cD1' 0) mO
+             (* this point is where the " : " is in the string above *)
+             (fmt_ppr_refinement cD1' cD 2) t
+             (* NOTE: Technically: cD |- cG ctx and
+              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+              * -bp
+              *)
+             (fmt_ppr_cmp_exp_chk cD1' cG 1) e
 
       | Comp.Branch (_, cD1', cG', pat, t, e) ->
-          let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
-          let cG_ext = Context.append cG_t cG' in
+         let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
+         let cG_ext = Context.append cG_t cG' in
 
-          if !Control.printNormal then
-            (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
-                 (fmt_ppr_cmp_branch_prefix  0) cD1'
-                (fmt_ppr_cmp_gctx cD1' 0) cG' *)
-	    fprintf ppf "@ @[| %a => %a@]@ "
-                 (fmt_ppr_pat_obj cD1' cG' 0) pat
-                (* NOTE: Technically: cD |- cG ctx and
-                 *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-                 * -bp
-                 *)
-                (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-          else
-            fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-               (fmt_ppr_cmp_branch_prefix  0) cD1'
-              (fmt_ppr_cmp_gctx cD1' 0) cG'
-               (fmt_ppr_pat_obj cD1' cG' 0) pat
-              (* this point is where the " : " is in the string above *)
-              (fmt_ppr_refinement cD1' cD 2) t
-              (* NOTE: Technically: cD |- cG ctx and
-               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-               * -bp
-               *)
-              (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+         if !Control.printNormal then
+           (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
+              (fmt_ppr_cmp_branch_prefix  0) cD1'
+              (fmt_ppr_cmp_gctx cD1' 0) cG' *)
+	         fprintf ppf "@ @[| %a => %a@]@ "
+             (fmt_ppr_pat_obj cD1' cG' 0) pat
+             (* NOTE: Technically: cD |- cG ctx and
+              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+              * -bp
+              *)
+             (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
+         else
+           fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+             (fmt_ppr_cmp_branch_prefix  0) cD1'
+             (fmt_ppr_cmp_gctx cD1' 0) cG'
+             (fmt_ppr_pat_obj cD1' cG' 0) pat
+             (* this point is where the " : " is in the string above *)
+             (fmt_ppr_refinement cD1' cD 2) t
+             (* NOTE: Technically: cD |- cG ctx and
+              *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+              * -bp
+              *)
+             (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
 
     (* cD |- t : cD'  *)
 

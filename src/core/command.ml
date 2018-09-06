@@ -99,9 +99,19 @@ let types =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
+          let entrylist =
+            List.rev_map Typ.get
+              (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list))
+          in
           let dctx = Synint.LF.Null in
-          List.iter (fun x -> fprintf ppf "%s : " (Id.string_of_name x.Typ.name); ppr_lf_kind dctx x.Typ.kind; fprintf ppf "\n") entrylist);
+          List.iter
+            (fun x ->
+              fprintf ppf "%s : "
+                (Id.string_of_name x.Typ.name);
+              ppr_lf_kind dctx x.Typ.kind; fprintf ppf "\n")
+            entrylist;
+          fprintf ppf ";\n"
+        );
     help = "Print out all types currently defined"
   }
 

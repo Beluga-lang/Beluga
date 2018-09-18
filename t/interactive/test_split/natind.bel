@@ -1,0 +1,23 @@
+inductive Nat : ctype = 
+| Z : Nat
+| S : Nat -> Nat ;
+
+rec test : Nat -> Nat = fn y =>
+ (case y of 
+ | Z   =>   ? 
+ 
+ | S v1   =>   ? 
+ 
+)  ;
+
+%:load input.bel
+The file input.bel has been successfully loaded;
+%:numholes
+2;
+%:split 1 v1
+ case v1 of
+ | Z  => ?
+ 
+ | S v1  => ?
+ 
+;

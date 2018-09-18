@@ -1,0 +1,55 @@
+% caseonpairs-leftovercnstrs.bel
+
+LF tp : type =
+| nat : tp
+| prod : tp -> tp -> tp
+;
+
+LF exp : type =
+| pair : exp -> exp -> exp
+;
+
+LF oft : exp -> tp -> type =
+| oft_pair : oft M1 A -> oft M2 B -> oft (pair M1 M2) (prod A B)
+;
+
+
+LF check : exp -> tp -> type =
+| chk_pair : check M1 A -> check M2 B -> check (pair M1 M2) (prod A B)
+;
+
+schema ctx = some [t:tp] block x:exp, v:oft x t;
+
+LF biDer : exp -> tp -> type =
+| chk : check M T -> biDer M T
+;
+
+--name tp T.
+--name exp M.
+--name oft D.
+--name check C.
+--name biDer B.
+
+rec completenessGood : (g:ctx) [g |- oft M T] -> [g |- biDer M T] =
+fn e => case e of
+| [g |- oft_pair D1 D2] =>
+  (case completenessGood [g |- D1] of
+   | [g |- chk C'] =>
+     (case completenessGood [g |- D2] of
+      | [g |- chk C''] => [g |- chk (chk_pair C' C'')]
+     )
+  )
+;
+
+rec completenessFaulty : (g:ctx) [g |- oft M T] -> [g |- biDer M T] =
+fn e => case e of
+| [g |- oft_pair D1 D2] =>
+  (case (completenessFaulty [g |- D1], completenessFaulty [g |- D2]) of  % [g |- biDer (M[..]) T] * [g |- biDer (N[..]) S]
+   | ([g |- chk C'], [g |- chk C'']) => [g |- chk (chk_pair C' C'')]
+  )
+;
+
+%:load input.bel
+The file input.bel has been successfully loaded;
+%:fsig completenessGood
+completenessGood:    [g |- oft M T] -> [g |- biDer M T];

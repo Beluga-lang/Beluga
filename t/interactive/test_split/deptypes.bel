@@ -1,0 +1,19 @@
+nat:type.
+vec: nat -> type.
+z:nat.
+s: nat -> nat.
+nil: vec z.
+cons: nat -> vec N -> vec (s N).
+
+rec head: [ |- vec (s N)] -> [ |- nat] = 
+/ total x (head n x) /
+fn x => case x of [|- cons H T] => ? ;
+
+%:load input.bel
+The file input.bel has been successfully loaded;
+%:numholes
+1;
+%:split 0 x
+ case x of
+| [ |- cons Y2 X2] => ?
+;

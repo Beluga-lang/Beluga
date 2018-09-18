@@ -1,0 +1,24 @@
+tm : type.
+c : tm.
+
+schema ctx = tm;
+
+inductive Foo : (g:ctx) {#W:[g |- # g]}  ctype =
+;
+
+inductive Bar : (g:ctx) {#p:[g |- tm]} ctype =
+;
+
+rec f : Foo [g |- #W[..]] -> Bar [g |- #p[..]] -> Bar [g |- #p[#W[..]]] =
+?
+;
+
+%:load input.bel
+The file input.bel has been successfully loaded;
+%:numholes
+1;
+%:split 0 g
+ case [g] of
+| [g, x1 : tm] => ?
+| [] => ?
+;

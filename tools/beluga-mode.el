@@ -422,9 +422,7 @@ The `visited-file-modtime' is compared to `beluga--last-load-time'.
 If the former is greater than the latter, then the former is
 returned. Else, `nil' is returned."
   (let ((mtime (visited-file-modtime)))
-    (message "Comparing times %s > %s ?" (current-time-string mtime) (current-time-string beluga--last-load-time))
     (when (> (float-time mtime) (float-time beluga--last-load-time))
-      (message "Need to reload!")
         mtime)))
 
 ;; ----- Beluga Interactive basic functions ----- ;;
@@ -996,46 +994,33 @@ starting position of the short pragma; else, nil."
   `(smie-rule-parent-p ,@parents))
 
 (defun beluga-smie-indent-rules (method token)
-  (message (format ">> indenting %s %s" method token))
-  (ignore-errors
-    (message (format "   parent is %s" (smie-indent--parent))))
   (pcase `(,method . ,token)
     (`(:elem . basic)
-     (message "<< basic indent")
      beluga-indent-basic)
 
     ; describe the tokens that introduce lists (with no separators)
     (`(:list-intro . ,(or ":" "fn" "fun" "FN" "mlam"))
-     (message "<< list intro form")
      't)
 
     ; if the token is a pipe preceded by an '=' or 'of', then we
     ; indent by adding the basic offset
     (`(:before . ,(and "|" (guard (smie-rule-prev-p "=" "of"))))
-     (message
-      (format
-       "<< pipe preceded by = or of with parent %s"
-       (smie-indent--parent)))
      beluga-indent-basic)
 
     ; if the token is a pipe, (and the preceding check didn't pass, so
     ; it isn't the first pipe in a sequence) then we consider it a
     ; separator
     (`(method . ,"|")
-     (message "<< pipe is a separator")
      (smie-rule-separator method))
 
     (`(:after . ,"of")
-     (message "<< after of")
      beluga-indent-basic)
 
     (`(:after . ,"in")
      (when (smie-rule-hanging-p)
-       (message "<< hanging in")
-       nil))
+       (smie-rule-parent)))
 
     (`(:after . ,(and "=" (guard (smie-rule-parent-p "rec"))))
-     (message "<< indent after = aligns to rec")
      (smie-rule-parent))
 
     ; if the token is a form that will use => eventually but is
@@ -1047,28 +1032,21 @@ starting position of the short pragma; else, nil."
        ,(and
          (or "case" "fn" "FN" "mlam" "fun")
          (guard `(smie-rule-prev-p ,@beluga-fat-arrows))))
-     (message "<< case fn FN mlam fun chain")
      (smie-rule-parent))
 
     (`(:after . ".")
-     (message "after .")
      (smie-rule-parent))
 
     (`(:after . ,(and ":" (guard (smie-rule-parent-p "{"))))
      (smie-rule-parent 1))
 
     (`(:after . ,(or ":" "let" "if"))
-     (message "<< : let if basic indent")
      (smie-rule-parent beluga-indent-basic))
 
     (`(:before
        .
        ,(and "=" (guard `(smie-rule-parent-p ,@beluga-type-declaration-keywords))))
-     (message (format "<< parent of = declares a datatype" (smie-indent--parent)))
      (smie-rule-parent))
-
-    ; do not indent anything else
-    (_ (message "<< nothing matched") nil)
     ))
 
 ;;---------------------------- Loading of the mode ----------------------------;;

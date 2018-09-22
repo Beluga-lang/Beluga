@@ -44,7 +44,7 @@
 (quail-define-package
  beluga-input-method-name ;; name
  "UTF-8"                  ;; language
- "\\"                     ;; mode-line "title"
+ "B"                      ;; mode-line "title"
  t                        ;; guidance
  "Beluga unicode input method: actually replaces keyword strings with
 a single unicode character instead of merely representing the keywords

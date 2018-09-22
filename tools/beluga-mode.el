@@ -254,6 +254,14 @@ Regexp match data 0 points to the chars."
   "Contain the process running beli.")
 (make-variable-buffer-local 'beluga--proc)
 
+(defvar beluga--output-wait-time
+  0.025
+  "How long to wait for output from Beluga on each iteration.")
+
+(defvar beluga--output-timeout
+  1.0
+  "How long to wait in total for output before giving up.")
+
 (defun beluga--proc ()
   (unless (beluga--proc-live-p beluga--proc) (beluga-start))
   beluga--proc)
@@ -348,10 +356,14 @@ option. The process is put into a buffer called \"*beluga*\"."
 
 (defun beluga--wait (proc)
   (assert (eq (current-buffer) (process-buffer proc)))
-  (while (and (progn
-                (goto-char comint-last-input-end)
-                (not (re-search-forward ".*;" nil t)))
-              (accept-process-output proc 0.025))))
+  (setq beluga--output-timer 0.0)
+  (while (progn
+           (goto-char comint-last-input-end)
+           (not (re-search-forward ".*?;" nil t)))
+    (accept-process-output proc beluga--output-wait-time)
+    (setq beluga--output-timer (+ beluga--output-timer beluga--output-wait-time))
+    (when (> beluga--output-timer beluga--output-timeout)
+      (error "Beluga command didn't produce complete output."))))
 
 (defun beluga--chomp (str)
   "Chomp leading and tailing whitespace from STR."
@@ -368,12 +380,12 @@ option. The process is put into a buffer called \"*beluga*\"."
   ; (interactive)
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
-      (beluga--wait proc)
       ;; We could also just use `process-send-string', but then we wouldn't
       ;; have the input text in the buffer to separate the various prompts.
       (goto-char (point-max))
       (insert (concat "%:" cmd))
-      (comint-send-input))))
+      (comint-send-input)
+      (beluga--wait proc))))
 
 (defun beluga--receive ()
   "Read the last output of beli."

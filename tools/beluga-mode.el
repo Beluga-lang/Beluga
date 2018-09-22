@@ -276,7 +276,6 @@ option. The process is put into a buffer called \"*beluga*\"."
            (make-comint "beluga"
 		                    beluga-interpreter-name
                         nil "-I" "-emacs" ))))
-  (message "started beluga interactive process")
   beluga--proc)
 
 (defun beluga-quit ()

@@ -128,7 +128,7 @@ in unicode using Font Lock mode."
     (define-key map "\C-c\C-c" 'compile)
     (define-key map "\C-c\C-l" 'beluga-highlight-holes)
     (define-key map "\C-c\C-e" 'beluga-erase-holes)
-    (define-key map "\C-c\C-x" 'beli-cmd)
+    (define-key map "\C-c\C-x" 'beluga-run-command)
     (define-key map "\C-c\C-t" 'beluga-get-type)
     (define-key map "\C-c\C-s" 'beluga-split-hole)
     (define-key map "\C-c\C-i" 'beluga-intro-hole)
@@ -519,7 +519,7 @@ returned. Else, `nil' is returned."
   (interactive)
   (beluga-start))
 
-(defun beli-cmd (cmd)
+(defun beluga-run-command (cmd)
   "Run a command in beli"
   (interactive "MCommand: ")
   (message "%s" (beluga--rpc cmd)))

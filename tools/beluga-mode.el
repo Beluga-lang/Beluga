@@ -129,7 +129,7 @@ in unicode using Font Lock mode."
     (define-key map "\C-c\C-l" 'beluga-highlight-holes)
     (define-key map "\C-c\C-e" 'beluga-erase-holes)
     (define-key map "\C-c\C-x" 'beli-cmd)
-    (define-key map "\C-c\C-t" 'beli--type)
+    (define-key map "\C-c\C-t" 'beluga-get-type)
     (define-key map "\C-c\C-s" 'beluga-split-hole)
     (define-key map "\C-c\C-i" 'beluga-intro-hole)
     (define-key map "\C-c\C-j" 'beluga-hole-jump)

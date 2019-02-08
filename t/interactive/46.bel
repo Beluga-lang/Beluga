@@ -8,7 +8,7 @@ fn m => ?foo;
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 1;
 %:split foo m
  case m of
@@ -16,9 +16,9 @@ The file input.bel has been successfully loaded;
 | [ |- false] => ?
 | [ |- if_then_else X Z] => ?
 ;
-%:numholes
+%:countholes
 1;
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 1;

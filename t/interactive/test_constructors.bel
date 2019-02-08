@@ -111,8 +111,8 @@ fn f => fn d => case f of
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
-0;
+%:countholes
+1;
 %:constructors oft
 tp_z : [0] oft z nat
 tp_s : [1] {E : exp}  oft E nat -> oft (suc E) nat

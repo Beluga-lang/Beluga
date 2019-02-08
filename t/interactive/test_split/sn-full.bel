@@ -212,9 +212,6 @@ rec thm : {g : cxt} {M : [g |- tm A[]]}
 %:load input.bel
 The file input.bel has been successfully loaded;
 %:countholes
-Computation Level Holes: 2
-LF Level Holes: 0;
-%:numholes
 2;
 %:split 0 g
  case [g] of

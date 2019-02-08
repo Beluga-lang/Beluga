@@ -57,11 +57,8 @@ rec tps: [ |- hastype M T] -> [ |- step M N] -> [ |- hastype N T] =
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
-1;
 %:countholes
-Computation Level Holes: 1
-LF Level Holes: 0;
+1;
 %:split 0 s
 
 case s of

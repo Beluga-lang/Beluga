@@ -11,7 +11,7 @@ fn x => case x of [|- cons H T] => ? ;
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 1;
 %:split 0 x
  case x of

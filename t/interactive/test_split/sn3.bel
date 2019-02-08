@@ -111,7 +111,7 @@ Styling with Markdown is supported
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 2;
 %:split 0 g
  case [g] of

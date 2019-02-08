@@ -25,15 +25,40 @@ let string_of_name : hole_name -> string = function
   | Anonymous -> ""
   | Named s -> s
 
-type hole =
-  { loc : Syntax.Loc.t;
-    name : hole_name;
-    (** "Context Delta", for LF types. *)
-    cD : LF.mctx;
-    (** "Context Gamma", for computation types. *)
-    cG : Comp.gctx;
-    goal : Comp.typ * LF.msub;
+let string_of_name_or_id : hole_name * hole_id -> string = function
+  | Anonymous, i -> string_of_hole_id i
+  | Named s, _ -> s
+
+type lf_hole_info =
+  { cPsi : LF.dctx
+  ; lfGoal : LF.tclo
   }
+
+type comp_hole_info =
+  { cG : Comp.gctx
+  ; compGoal : Comp.typ * LF.msub
+  }
+
+type hole_info =
+  | LfHoleInfo of lf_hole_info
+  | CompHoleInfo of comp_hole_info
+
+type hole =
+  { loc : Syntax.Loc.t
+  ; name : hole_name
+    (** "Context Delta", for metavariables. *)
+  ; cD : LF.mctx
+    (** information specific to the hole type. *)
+  ; info : hole_info
+  }
+
+let is_lf_hole h = match h.info with
+  | LfHoleInfo _ -> true
+  | _ -> false
+
+let is_comp_hole h = match h.info with
+  | CompHoleInfo _ -> true
+  | _ -> false
 
 type lookup_strategy =
   { repr : string
@@ -96,6 +121,8 @@ let isExplicit = function
     | LF.Dec (cD, _ ) -> toString cD
   in toString ++ Whnf.normMCtx
 
+let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
+
 let gctxToString cD =
   let shift = "\t" in
   let rec toString = function
@@ -133,6 +160,34 @@ let matches_loc loc' {loc; _} = loc = loc'
 let at (loc : Syntax.Loc.t) : (hole_id * hole) option =
   find (matches_loc loc)
 
+let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
+  let (_, sub) = tA in
+  let rec aux acc c = function
+    | LF.Empty -> acc
+    | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.MTyp tA', cPsi'), LF.No))
+    | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.PTyp tA', cPsi'), LF.No))->
+      begin try
+        Unify.StdTrail.resetGlobalCnstrs ();
+        let tA' = Whnf.cnormTyp (tA', LF.MShift c) in
+        Unify.StdTrail.unifyTyp cD cPsi tA (tA', sub);
+        aux (n::acc) (c+1) cD'
+      with | _ -> aux acc (c+1) cD' end
+    | LF.Dec (cD', _) -> aux acc (c + 1) cD'
+  in aux [] 1 cD
+
+let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
+  let rec aux acc = function
+    | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
+      begin try
+        Unify.StdTrail.resetGlobalCnstrs ();
+        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
+        aux (n::acc) cPsi'
+      with | _ -> aux acc cPsi' end
+    | LF.DDec(cPsi', _) -> aux acc cPsi'
+    | _ -> acc
+  in
+    aux [] cPsi
+
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   let rec aux acc = function
     | LF.Empty -> acc
@@ -149,15 +204,11 @@ let replicate n c = String.init n (fun _ -> c)
 let thin_line = replicate 80 '_'
 let thick_line = replicate 80 '='
 
-let format_hole (i : hole_id) {loc; name; cD; cG; goal = (tau, theta)} : string=
+
+let format_hole (i : hole_id) {loc; name; cD; info} : string =
   (* First, we do some preparations. *)
   (* Normalize the LF and computational contexts as well as the goal type. *)
   let cD = Whnf.normMCtx cD in
-  let cG = Whnf.normCtx cG in
-  let goal = Whnf.cnormCTyp (tau, theta) in
-  (* Collect a list of variables that already have the goal type. *)
-  let suggestions = iterGctx cD cG (tau, theta) in
-  let plural b = if b then "" else "s" in
   let loc_string = Loc.to_string loc in
   (* Now that we've prepped all the things to format, we can prepare the message. *)
   (* We do this by preparing different *message components* which are
@@ -175,30 +226,69 @@ let format_hole (i : hole_id) {loc; name; cD; cG; goal = (tau, theta)} : string=
   let meta_ctx_info =
     Format.sprintf "Meta-context: %s\n%s" (mctxToString cD) thin_line in
 
-  (* 3. The (computational) context information. *)
-  let comp_ctx_info =
-    Format.sprintf "Context: %s\n%s" (gctxToString cD cG) thick_line in
-
-  (* 4. The goal type, i.e. the type of the hole. *)
-  let goal_type =
-    Format.sprintf "Goal: %s" (P.compTypToString cD goal) in
-
-  (* 5. The in-scope variables of the correct type. *)
-  let suggestions_str =
-    let s = String.concat ", " (List.map Id.string_of_name suggestions) in
-    let p = plural (List.length suggestions = 1) in
-    Format.sprintf "Variable%s of this type: %s" p s in
-
+  let plural b = if b then "" else "s" in
   (* a helper *)
   let null =
     function
     | [] -> true
     | _ :: _ -> false in
 
-  (* Finally, we can form the output. *)
-  String.concat "\n"
-    ( hole_id :: meta_ctx_info :: comp_ctx_info :: goal_type ::
-        if null suggestions then [] else [suggestions_str] )
+  (* The remainder of the formatting hinges on whether we're printing
+     an LF hole or a computational hole.
+   *)
+  match info with
+  | LfHoleInfo { cPsi; lfGoal } ->
+     let cPsi = Whnf.normDCtx cPsi in
+
+     (* 3. format the LF context information *)
+     let lf_ctx_info =
+       Format.sprintf "LF Context: %s" (cpsiToString cD cPsi)
+     in
+
+     (* 4. format the goal type. *)
+     let goal_type =
+       Format.sprintf "Goal: %s" (P.typToString cD cPsi lfGoal)
+     in
+
+     (* 5. The in-scope variables that have the goal type. *)
+     let suggestions =
+       (* Need to check both the LF context and the meta-variable context. *)
+       iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
+     in
+     let suggestions_str =
+       let s = String.concat ", " (List.map Id.string_of_name suggestions) in
+       let p = plural (List.length suggestions = 1) in
+       Format.sprintf "Variable%s of this type: %s" p s in
+
+     (* Finally, we can form the output. *)
+     String.concat "\n"
+       ( hole_id :: meta_ctx_info :: lf_ctx_info :: goal_type ::
+           if null suggestions then [] else [suggestions_str] )
+
+  | CompHoleInfo { cG; compGoal = (tau, theta) } ->
+     let cG = Whnf.normCtx cG in
+     let goal = Whnf.cnormCTyp (tau, theta) in
+     (* 3. The (computational) context information. *)
+     let comp_ctx_info =
+       Format.sprintf "Context: %s\n%s" (gctxToString cD cG) thick_line in
+
+     (* 4. The goal type, i.e. the type of the hole. *)
+     let goal_type =
+       Format.sprintf "Goal: %s" (P.compTypToString cD goal) in
+
+     (* Collect a list of variables that already have the goal type. *)
+     let suggestions = iterGctx cD cG (tau, theta) in
+
+     (* 5. The in-scope variables of the correct type. *)
+     let suggestions_str =
+       let s = String.concat ", " (List.map Id.string_of_name suggestions) in
+       let p = plural (List.length suggestions = 1) in
+       Format.sprintf "Variable%s of this type: %s" p s in
+
+     (* Finally, we can form the output. *)
+     String.concat "\n"
+       ( hole_id :: meta_ctx_info :: comp_ctx_info :: goal_type ::
+           if null suggestions then [] else [suggestions_str] )
 
 let by_id (i : hole_id) : lookup_strategy =
   { repr = Printf.sprintf "by id '%d'" i

@@ -308,11 +308,14 @@ let is_inferred decl =
   not (LF.is_explicit decl)
 
 let intro1 (h : Holes.hole) =
-  let { Holes.loc;
-        Holes.name;
-        Holes.cD = cD;
-        Holes.cG = cG;
-        Holes.goal = (tau, mS);
+  let { Holes.loc
+      ; Holes.name
+      ; Holes.cD = cD
+      ; Holes.info =
+          Holes.CompHoleInfo
+            { Holes.cG = cG
+            ; Holes.compGoal = (tau, mS)
+            }
       } = h
   in
   let new_hole = Comp.Hole (Loc.ghost, None) in
@@ -340,11 +343,14 @@ let intro1 (h : Holes.hole) =
 
 (* intro: int -> Comp.exp_chk option *)
 let intro (h : Holes.hole) =
-  let { Holes.loc;
-        Holes.name;
-        Holes.cD = cDT;
-        Holes.cG = cGT;
-        Holes.goal = (tau, mS);
+  let { Holes.loc
+      ; Holes.name
+      ; Holes.cD = cDT
+      ; Holes.info =
+          Holes.CompHoleInfo
+            { Holes.cG = cGT
+            ; Holes.compGoal = (tau, mS)
+            }
       } = h
   in
   let rec crawl cD cG =
@@ -428,11 +434,14 @@ let genCGoals cD' cd cD_tail =
 (* split : String -> Holes.look -> Comp.exp_chk  option *)
 let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
   let ( hole_id,
-        { Holes.loc;
-          Holes.name;
-          Holes.cD = cD0;
-          Holes.cG =  cG0;
-          Holes.goal = tau_theta;
+        { Holes.loc
+        ; Holes.name
+        ; Holes.cD = cD0
+        ; Holes.info =
+            Holes.CompHoleInfo
+              { Holes.cG = cG0
+              ; Holes.compGoal = tau_theta
+              }
         }
       ) = hi in
 

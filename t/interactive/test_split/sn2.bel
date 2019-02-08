@@ -91,8 +91,7 @@ _______________________________________
 %:load input.bel
 The file input.bel has been successfully loaded;
 %:countholes
-Computation Level Holes: 2
-LF Level Holes: 0;
+2;
 %:split 0 N
 
 case [g |- N] of

@@ -222,15 +222,16 @@ module Convert = struct
      Effects:
        None.
   *)
-  let rec etaExpand cPsi sA =
+  let rec etaExpand cD cPsi sA =
     let (tA, s) = Whnf.whnfTyp sA
     in match tA with
       | LF.Atom (_) as tA ->
-        let u = Whnf.newMVar None (cPsi, LF.TClo (tA, s)) LF.Maybe in
+        let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
         LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
-        LF.Lam (Syntax.Loc.ghost, x, etaExpand
-          (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s))
+         LF.Lam (
+             Syntax.Loc.ghost, x,
+             etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s))
 
   (* dctxToSub Psi (eV, s) fS = sub * (spine -> spine)
      Invariants:
@@ -246,10 +247,10 @@ module Convert = struct
      in a substitution, performing eta-expansion if necessary,
      and add them to the spine of a proof-term through fS.
   *)
-  let rec dctxToSub cPsi (eV, s) fS = match eV with
+  let rec dctxToSub cD cPsi (eV, s) fS = match eV with
     | LF.DDec (eV', LF.TypDecl (_, tM)) ->
-      let (s', fS') = dctxToSub cPsi (eV', s) fS in
-      let tM' = etaExpand cPsi (tM, s') in
+      let (s', fS') = dctxToSub cD cPsi (eV', s) fS in
+      let tM' = etaExpand cD cPsi (tM, s') in
       (LF.Dot (LF.Obj tM', s'), (fun tS -> fS' (LF.App (tM', tS))))
     | LF.Null -> (s, fS)
     | LF.CtxVar (_) -> invalid_arg
@@ -263,7 +264,7 @@ module Convert = struct
   let typToQuery (tA, i) =
     let rec typToQuery' (tA, i) s xs = match tA with
       | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
-        let tN' = etaExpand LF.Null (tA, s) in
+        let tN' = etaExpand LF.Empty LF.Null (tA, s) in
         typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s))
           ((x, tN') :: xs)
       | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
@@ -420,17 +421,17 @@ module Printer = struct
   let dctxToString cPsi =
     P.dctxToString LF.Empty cPsi
 
-  let typToString cPsi sM =
-    P.typToString LF.Empty cPsi sM
+  let typToString cD cPsi sM =
+    P.typToString cD cPsi sM
 
   let normalToString cPsi sM =
     P.normalToString LF.Empty cPsi sM
 
-  let declToString cPsi (tD, s) = match tD with
+  let declToString cD cPsi (tD, s) = match tD with
     | LF.TypDeclOpt x ->
       Id.string_of_name x ^ ":_"
     | LF.TypDecl (x, tM) ->
-      Id.string_of_name x ^ ":" ^ typToString cPsi (tM, s)
+      Id.string_of_name x ^ ":" ^ typToString cD cPsi (tM, s)
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -441,15 +442,17 @@ module Printer = struct
      Effects:
        None.
   *)
-  let rec goalToString cPsi (g, s) = match g with
+  let rec goalToString cD cPsi (g, s) = match g with
     | Atom (tA) ->
-      typToString cPsi (tA, s)
-    | Impl ((r, tD), g') -> sprintf "%s -> %s"
-      (resToString cPsi (r, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
-    | All (tD, g') -> sprintf "[∀%s. %s]"
-      (declToString cPsi (tD, s))
-      (goalToString (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
+       typToString cD cPsi (tA, s)
+    | Impl ((r, tD), g') ->
+       sprintf "%s -> %s"
+         (resToString cD cPsi (r, s))
+         (goalToString cD (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
+    | All (tD, g') ->
+       sprintf "[∀%s. %s]"
+         (declToString cD cPsi (tD, s))
+         (goalToString cD (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
 
   (* resToString cPsi (r, s) = string
      Invariants:
@@ -460,21 +463,25 @@ module Printer = struct
      Effects:
        None.
   *)
-  and resToString cPsi (r, s) = match r with
+  and resToString cD cPsi (r, s) = match r with
     | Head (tH) ->
-      typToString cPsi (tH, s)
-    | And (g, r') -> sprintf "%s -> %s"
-      (goalToString cPsi (g, s)) (resToString cPsi (r', s))
+      typToString cD cPsi (tH, s)
+    | And (g, r') ->
+       sprintf "%s -> %s"
+         (goalToString cD cPsi (g, s))
+         (resToString cD cPsi (r', s))
     | Exists (LF.TypDecl (_, tM) as tD, r') ->
-      let tM' = Convert.etaExpand cPsi (tM, s)
-      in sprintf "[∃%s. %s]"
-      (declToString cPsi (tD, s))
-      (resToString cPsi (r', LF.Dot (LF.Obj tM', s)))
+       let tM' = Convert.etaExpand cD cPsi (tM, s) in
+       sprintf "[∃%s. %s]"
+         (declToString cD cPsi (tD, s))
+         (resToString cD cPsi (r', LF.Dot (LF.Obj tM', s)))
 
-  let rec subGoalsToString cD (cG, s) = match cG with
+  let rec subGoalsToString cD cPsi (cG, s) = match cG with
     | True -> ""
-    | Conjunct (cG', g) -> sprintf "  <- %s\n%s"
-      (goalToString cD (g, s)) (subGoalsToString cD (cG', s))
+    | Conjunct (cG', g) ->
+       sprintf "  <- %s\n%s"
+         (goalToString cD cPsi (g, s))
+         (subGoalsToString cD cPsi (cG', s))
 
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
@@ -482,18 +489,18 @@ module Printer = struct
   and sgnClauseToString (cidTerm, sCl) =
     sprintf "%s: %s\n%s"
       (Id.string_of_name (termName cidTerm))
-      (typToString sCl.eVars (sCl.tHead, S.id))
-      (subGoalsToString sCl.eVars (sCl.subGoals, S.id))
+      (typToString LF.Empty sCl.eVars (sCl.tHead, S.id))
+      (subGoalsToString LF.Empty sCl.eVars (sCl.subGoals, S.id))
 
   let boundToString b = match b with
     | Some i -> string_of_int i
     | None -> "*"
 
   let sgnQueryToString q =
-    sprintf "%%query %s %s\n\n%s"
+    sprintf "--query %s %s\n\n%s"
       (boundToString q.expected)
       (boundToString q.tries)
-      (typToString LF.Null (q.typ, S.id))
+      (typToString LF.Empty LF.Null (q.typ, S.id))
 
   (* instToString xs = string
      Return string representation of existential variable
@@ -538,8 +545,8 @@ module Solver = struct
        Instatiation of MVars in s and s'.
        Any effect of (sc ()).
   *)
-  let unify cPsi sA sB sc =
-    U.unifyTyp LF.Empty cPsi sA sB ; sc ()
+  let unify cD cPsi sA sB sc =
+    U.unifyTyp cD cPsi sA sB ; sc ()
 
   (* trail f = ()
      Trail a function. If an exception is raised, unwind the trail and
@@ -586,15 +593,15 @@ module Solver = struct
        In the arguments to 'sc', 'u' refers to the universal
        context and 't' refers to a proof term.
   *)
-  let rec gSolve dPool (cPsi, k) (g, s) sc = match g with
+  let rec gSolve dPool cD (cPsi, k) (g, s) sc = match g with
     | Atom (tA) ->
-      matchAtom dPool (cPsi, k) (tA, s) sc
+      matchAtom dPool cD (cPsi, k) (tA, s) sc
     | Impl ((r, (LF.TypDecl (x, _) as tD)), g') ->
       let dPool' = DynCl (dPool, (C.resToClause (r, s), k)) in
-      gSolve dPool' (LF.DDec (cPsi, S.decSub tD s), k + 1)
+      gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1)
         (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
     | All (LF.TypDecl (x, _) as tD, g') ->
-      gSolve dPool (LF.DDec (cPsi, S.decSub tD s), k + 1)
+      gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1)
         (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
 
   (* matchAtom dPool (Psi, k) (A, s) sc = ()
@@ -609,7 +616,7 @@ module Solver = struct
        Instatiation of MVars in s and dPool.
        Any effect (sc M) might have.
   *)
-  and matchAtom dPool (cPsi, k) (tA, s) sc =
+  and matchAtom dPool cD (cPsi, k) (tA, s) sc =
 
     (* matchDProg dPool = ()
        Try all the dynamic clauses in dPool starting with the most
@@ -619,11 +626,11 @@ module Solver = struct
       | DynCl (dPool', (dCl, k')) ->
         if (eqHead tA dCl) then
           let (s', fS) =
-            C.dctxToSub cPsi (dCl.eVars, shiftSub (k - k'))
+            C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
               (fun tS -> tS) in
           (* Trail to undo MVar instantiations. *)
-          (try trail (fun () -> unify cPsi (tA, s) (dCl.tHead, s')
-            (fun () -> solveSubGoals dPool (cPsi, k) (dCl.subGoals, s')
+          (try trail (fun () -> unify cD cPsi (tA, s) (dCl.tHead, s')
+            (fun () -> solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
               (fun (u, tS) ->
                 sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS (spineFromRevList tS))))))
            with U.Failure _ -> ()) ; matchDProg dPool'
@@ -644,11 +651,11 @@ module Solver = struct
     *)
     and matchSgnClause (cidTerm, sCl) sc =
       let (s', fS) =
-        C.dctxToSub cPsi (sCl.eVars, shiftSub (Context.dctxLength cPsi))
+        C.dctxToSub cD cPsi (sCl.eVars, shiftSub (Context.dctxLength cPsi))
           (fun tS -> tS) in
       (* Trail to undo MVar instantiations. *)
-      try trail (fun () -> unify cPsi (tA, s) (sCl.tHead, s')
-        (fun () -> solveSubGoals dPool (cPsi, k) (sCl.subGoals, s')
+      try trail (fun () -> unify cD cPsi (tA, s) (sCl.tHead, s')
+        (fun () -> solveSubGoals dPool cD (cPsi, k) (sCl.subGoals, s')
           (fun (u, tS) -> sc (u, LF.Root (Syntax.Loc.ghost, LF.Const (cidTerm), fS (spineFromRevList tS))))))
       with U.Failure _ -> ()
 
@@ -673,11 +680,11 @@ module Solver = struct
        Instatiation of MVars in dPool and g[s].
        Any effect of (sc S).
   *)
-  and solveSubGoals dPool (cPsi, k) (cG, s) sc = match cG with
+  and solveSubGoals dPool cD (cPsi, k) (cG, s) sc = match cG with
     | True -> sc (cPsi, [])
     | Conjunct (cG', g) ->
-      gSolve dPool (cPsi, k) (g, s)
-        (fun (u, tM) -> solveSubGoals dPool (cPsi, k) (cG', s)
+      gSolve dPool cD (cPsi, k) (g, s)
+        (fun (u, tM) -> solveSubGoals dPool cD (cPsi, k) (cG', s)
           (fun (v, tS) -> sc (v, tM::tS)))
 
   (* solve (g, s) sc = ()
@@ -688,11 +695,9 @@ module Solver = struct
      Effects:
        Same as gSolve.
   *)
-  let solve (g, s) sc =
-    gSolve Empty (LF.Null, 0) (g, s) sc
-
+  let solve cD (g, s) sc =
+    gSolve Empty cD (LF.Null, 0) (g, s) sc
 end
-
 
 module Frontend = struct
 
@@ -795,7 +800,7 @@ module Frontend = struct
         else () ;
         try
 
-          Solver.solve sgnQuery.query scInit ;
+          Solver.solve LF.Empty sgnQuery.query scInit ;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with

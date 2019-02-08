@@ -94,22 +94,19 @@ fn p => case p of
 %:load input.bel
 The file input.bel has been successfully loaded;
 %:countholes
-Computation Level Holes: 0
-LF Level Holes: 1;
-%:printhole-lf 0
-
+1;
+%:printhole 0
+Hole number 0
 File "input.bel", line 91, characters 22-23
-  - Meta-Context: 
+________________________________________________________________________________
+Meta-context: 
 	{g : jctx}
 	{z3 : [g |- path]}
 	{y4 : [g |- tm]}
 	{q : #[g |- block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
 	{J : [g |- jpath z3 y4]}
 	{H : [g |- is_path z3 y4]}
-____________________________________________________________________________
-  - LF Context: g
-
-============================================================================
-  - Goal Type: is_path z3 y4
-  - Variable of this type: H
-;
+________________________________________________________________________________
+LF Context: g
+Goal: is_path z3 y4
+Variable of this type: H;

@@ -59,7 +59,7 @@ rec main_lemma: {g: ctx} {g': ctx} {A: [⊢ tp]} {M: [g ⊢ tm A[]]} {#S: [g' �
     ?;
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 1;
 %:intro 0
 mlam g => mlam g' => mlam A => mlam M => mlam S => fn x8 =>

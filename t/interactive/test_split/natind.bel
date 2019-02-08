@@ -12,7 +12,7 @@ rec test : Nat -> Nat = fn y =>
 
 %:load input.bel
 The file input.bel has been successfully loaded;
-%:numholes
+%:countholes
 2;
 %:split 1 v1
  case v1 of

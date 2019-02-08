@@ -190,7 +190,7 @@ and locOfNormal = function
   | Ext.LF.Tuple(l,_) -> l
   | Ext.LF.Ann(l,_,_) -> l
   | Ext.LF.TList(l,_) -> l
-  | Ext.LF.LFHole l -> l
+  | Ext.LF.LFHole (l, _) -> l
 
 (* Adaptation of Dijkstra's 'shunting yard' algorithm for
  * parsing infix, postfix, and prefix operators from a list
@@ -340,7 +340,7 @@ in try parse (0, l, [], [])
   | _ -> begin
     let l = match List.hd l with
       | Ext.LF.Lam(l, _, _) | Ext.LF.Root(l, _, _) | Ext.LF.Tuple(l, _)
-      | Ext.LF.Ann(l, _, _) | Ext.LF.TList(l, _)   | Ext.LF.NTyp(l, _) | Ext.LF.LFHole l-> l
+      | Ext.LF.Ann(l, _, _) | Ext.LF.TList(l, _)   | Ext.LF.NTyp(l, _) | Ext.LF.LFHole (l, _) -> l
     in raise (Error(l, ParseError)) end
 
 and index_typ_rec cvars bvars fvars = function
@@ -377,7 +377,7 @@ and index_term cvars bvars fvars = function
       let (s', fvars2) = index_spine cvars bvars fvars1 s in
         (Apx.LF.Root (loc, h', s') , fvars2)
 
-  | Ext.LF.LFHole loc -> (Apx.LF.LFHole loc, fvars)
+  | Ext.LF.LFHole (loc, name) -> (Apx.LF.LFHole (loc, name), fvars)
 
 
   | Ext.LF.Ann (loc, m, a) ->

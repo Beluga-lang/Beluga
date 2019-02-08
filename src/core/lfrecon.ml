@@ -867,8 +867,8 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
     let tM = elTerm recT cD cPsi m (tB, Substitution.LF.id) in
     let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
     tM
-  | (Apx.LF.LFHole loc, tA) ->
-       Int.LF.LFHole loc
+  | (Apx.LF.LFHole (loc, name), tA) ->
+       Int.LF.LFHole (loc, name)
 
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
@@ -893,8 +893,11 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Ann (_loc, m, a) ->
     elTerm' recT cD cPsi m sP
 
-  | Apx.LF.LFHole loc ->
-    Lfholes.collect (loc, cD, cPsi, sP); Int.LF.LFHole loc
+  | Apx.LF.LFHole (loc, m_name) ->
+     let name = Holes.name_of_option m_name in
+     let info = Holes.LfHoleInfo { cPsi; Holes.lfGoal = sP } in
+     let _ = Holes.add { Holes.loc = loc; Holes.name = name; Holes.cD = cD; Holes.info = info } in
+     Int.LF.LFHole (loc, m_name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in
@@ -1627,7 +1630,7 @@ and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema ele
             | Not_found -> self (Int.LF.Schema rest)
 
 and elClosedTerm' recT cD cPsi r = match r with
-  | Apx.LF.LFHole loc ->
+  | Apx.LF.LFHole (loc, _name) ->
       raise (Error (loc, InvalidLFHole))
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in

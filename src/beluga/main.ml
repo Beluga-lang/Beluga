@@ -149,16 +149,14 @@ let main () =
           print_newline () ;
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n## Holes: %s  ##" file_name;
+            printf "\n## Holes: %s  ##\n" file_name;
             List.iter
               (fun (i, h) ->
                 print_string (Holes.format_hole i h);
-                print_newline ())
+                print_newline ();
+                print_newline ()
+              )
               (Holes.list ())
-          end;
-          if not (Lfholes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n\n## LF Holes: %s  ##" file_name;
-            Lfholes.printAll ()
           end;
           begin match leftoverVars with
             | None -> ()

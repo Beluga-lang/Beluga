@@ -30,31 +30,8 @@ let countholes =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          fprintf ppf "Computation Level Holes: %d\nLF Level Holes: %d;\n"
-            (Holes.count ())
-            (Lfholes.getNumHoles ())
-        );
-    help = "Print the total number of LF and computation level holes"
-  }
-
-let numholes =
-  { name = "numholes";
-    run =
-      command_with_arguments 0
-        (fun ppf _ ->
-          fprintf ppf "%d;\n" (Holes.count ())
-        );
-    help = "Print the total number of computation-level holes";
-  }
-
-let numlfholes =
-  { name = "numlfholes";
-    run =
-      command_with_arguments 0
-        (fun ppf _ ->
-          fprintf ppf "%d;\n" (Lfholes.getNumHoles ())
-        );
-    help = "Print the total number of LF-level holes";
+          fprintf ppf "%d;\n" (Holes.count ()));
+    help = "Print the total number of holes"
   }
 
 let chatteron =
@@ -66,7 +43,6 @@ let chatteron =
         );
     help = "Turn on the chatter"
   }
-
 
 let chatteroff =
   { name = "chatteroff";
@@ -108,7 +84,7 @@ let reset =
           Store.clear ();
           Typeinfo.clear_all ();
           Holes.clear();
-          Lfholes.clear (); fprintf ppf "Reset successful;\n"
+          fprintf ppf "Reset successful;\n"
         );
     help="Reset the store"}
 
@@ -116,9 +92,7 @@ let clearholes =
   { name = "clearholes";
     run =
       command_with_arguments 0
-        (fun _ _ ->
-          Holes.clear(); Lfholes.clear ()
-        );
+        (fun _ _ -> Holes.clear(););
     help = "Clear all computation level holes"
   }
 
@@ -140,7 +114,6 @@ let load =
               List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
 	        in
           let _ = Holes.clear () in
-          let _ = Lfholes.clear () in
           let file_name = List.hd arglist in (* .bel or .cfg *)
 		      let files = Cfg.process_file_argument file_name in
 		      List.iter per_file files ;
@@ -159,8 +132,31 @@ let with_hole_from_strategy_string ppf (strat : string) (f : Holes.hole_id * Hol
   | None -> fprintf ppf "- Failed to parse hole identifier `%s';\n" strat
   | Some s ->
      match Holes.get s with
-     | None -> fprintf ppf "- No such hole %s;\n" (Holes.string_of_lookup_strategy s)
      | Some id_and_hole -> f id_and_hole
+     | None -> fprintf ppf "- No such hole %s;\n" (Holes.string_of_lookup_strategy s)
+
+let requiring_hole_satisfies
+      (check : Holes.hole -> bool)
+      (on_error : Holes.hole_id * Holes.hole -> unit)
+      (f : Holes.hole_id * Holes.hole -> unit)
+      (p : Holes.hole_id * Holes.hole)
+    : unit =
+  match p with
+  | (i, h) when check h -> f (i, h)
+  | (i, h) -> on_error (i, h)
+
+let requiring_computation_hole
+      ppf
+      (f : Holes.hole_id * Holes.hole -> unit)
+      (p : Holes.hole_id * Holes.hole)
+    : unit =
+  requiring_hole_satisfies
+    Holes.is_comp_hole
+    (fun (i, h) ->
+      fprintf ppf "- Hole %s is not a computational hole;\n"
+        (Holes.string_of_name_or_id (h.Holes.name, i)))
+    f
+    p
 
 let printhole =
   { name = "printhole";
@@ -169,18 +165,9 @@ let printhole =
         (fun ppf arglist ->
           let s_ = List.hd arglist in
           with_hole_from_strategy_string ppf s_
-            (fun (i, h) -> fprintf ppf "%s;" (Holes.format_hole i h)));
+            (fun (i, h) -> fprintf ppf "%s;\n" (Holes.format_hole i h)));
     help = "Print out all the information of the i-th hole passed as a parameter";
   }
-
-let printlfhole =
-  { name = "printhole-lf";
-    run =
-      command_with_arguments 1
-        (fun ppf arglist ->
-          let arg = List.hd arglist in
-          Lfholes.printOneHole (to_int arg); fprintf ppf ";\n");
-    help = "Print out all the information of the i-th LF hole passed as a parameter"}
 
 let lochole =
   { name = "lochole"
@@ -206,31 +193,6 @@ let lochole =
   ; help = "Print out the location information of the i-th hole passed as a parameter"
   }
 
-let loclfhole =
-  { name = "lochole-lf";
-    run =
-      command_with_arguments 1
-        (fun ppf arglist ->
-          let arg = List.hd arglist in
-          match Lfholes.getHolePos (to_int arg) with
-          | Some loc ->
-             let (file_name,
-                  start_line,
-                  start_bol,
-                  start_off,
-                  stop_line,
-                  stop_bol,
-                  stop_off,
-                  _ghost) = Syntax.Loc.to_tuple loc in
-             fprintf ppf
-               "(\"%s\" %d %d %d %d %d %d);\n"
-               file_name
-               start_line start_bol start_off
-               stop_line stop_bol stop_off
-          | None -> fprintf ppf "- Error no such hole"
-        );
-    help = "Print out the location information of the i-th hole passed as a parameter"
-  }
 
 let constructors =
   { name = "constructors";
@@ -285,13 +247,18 @@ let fill =
                       { Holes.loc
                       ; Holes.name
                       ; Holes.cD
-                      ; Holes.cG
-                      ; Holes.goal = tclo
+                      ; Holes.info =
+                          Holes.CompHoleInfo
+                            { Holes.compGoal = tclo
+                            ; Holes.cG
+                            }
                       }
                     ) =
                   match Holes.get strat with
+                  | Some (i, h) when Holes.is_comp_hole h -> (i, h)
+                  | Some _ -> failwith ("Hole " ^ strat_s ^ " is not a computational hole")
                   | None -> failwith ("No such hole " ^ strat_s)
-                  | Some h -> h in
+                in
                 let vars = Interactive.gctxToVars cG in
                 let cvars = Interactive.mctxToCVars cD in
                 let apxexp = Index.hexp cvars vars outexp in
@@ -313,13 +280,18 @@ let fill =
   ; help = "`fill H with EXP` fills hole H with EXP"
   }
 
+(**
+ * Actually does a split on a variable in a hole.
+ * Requires that the hole be a computation hole.
+ *)
 let do_split ppf (hi : Holes.hole_id * Holes.hole) (var : string) : unit =
   match Interactive.split var hi with
   | None -> fprintf ppf "- No variable %s found;\n" var
   | Some exp ->
      let (_, h) = hi in
+     let Holes.CompHoleInfo { Holes.cG; _ } = h.Holes.info in
      Pretty.Control.printNormal := true;
-     fprintf ppf "%s;\n" (expChkToString h.Holes.cD h.Holes.cG exp);
+     fprintf ppf "%s;\n" (expChkToString h.Holes.cD cG exp);
      Pretty.Control.printNormal := false
 
 let split =
@@ -328,7 +300,8 @@ let split =
       command_with_arguments 2
         (fun ppf [strat_s; var] ->
           with_hole_from_strategy_string ppf strat_s
-            (fun hi -> do_split ppf hi var)
+            (requiring_computation_hole ppf
+               (fun hi -> do_split ppf hi var))
         )
   ; help = "`split H V` tries to split on variable V in hole H (specified by name or number)"
   }
@@ -339,17 +312,19 @@ let intro =
       command_with_arguments 1
         (fun ppf [strat] ->
           with_hole_from_strategy_string ppf strat
-            (fun (i, h) ->
-              let exp = Interactive.intro h in
-              let { Holes.cD;
-                    Holes.cG;
-                    _ } = h
-              in
-              begin
-                Pretty.Control.printNormal := true;
-                fprintf ppf "%s;\n" (expChkToString cD cG exp);
-                Pretty.Control.printNormal := false
-              end))
+            (requiring_computation_hole ppf
+               (fun (i, h) ->
+                 let exp = Interactive.intro h in
+                 let { Holes.cD
+                     ; Holes.info = Holes.CompHoleInfo { Holes.cG; _ }
+                     ; _
+                     } = h
+                 in
+                 begin
+                   Pretty.Control.printNormal := true;
+                   fprintf ppf "%s;\n" (expChkToString cD cG exp);
+                   Pretty.Control.printNormal := false
+                 end)))
   ; help = "- intro n tries to introduce variables in the nth hole"
   }
 
@@ -507,12 +482,8 @@ let _ =
     ; load
     ; clearholes
     ; countholes
-    ; numholes
-    ; numlfholes
     ; lochole
-    ; loclfhole
     ; printhole
-    ; printlfhole
     ; types
     ; constructors
     ; fill

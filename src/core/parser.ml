@@ -812,7 +812,13 @@ GLOBAL: sgn;
 
         | "_" -> LF.Root (_loc, LF.Hole _loc , LF.Nil)
 
-        | _ = HOLE -> LF.LFHole _loc
+        | h = HOLE ->
+           let sname = String.sub h 1 (String.length h - 1) in
+           let name =
+             match sname with
+             | "" -> None
+             | _ -> Some sname in
+           LF.LFHole (_loc, name)
 
         | "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
              let rec fold = function [m] -> LF.Last m

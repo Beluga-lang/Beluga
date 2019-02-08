@@ -706,11 +706,14 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
 	    Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Hole" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e);
 	    let _ =
         Holes.add
-          { Holes.loc = loc;
-            Holes.name = Holes.name_of_option name;
-            Holes.cD;
-            Holes.cG;
-            Holes.goal = (tau, t);
+          { Holes.loc = loc
+          ; Holes.name = Holes.name_of_option name
+          ; Holes.cD
+          ; Holes.info =
+              Holes.CompHoleInfo
+                { Holes.cG
+                ; Holes.compGoal = (tau, t)
+                }
           }
       in
 	    ()

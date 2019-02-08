@@ -37,16 +37,35 @@ val by_id : hole_id -> lookup_strategy
 (** Looks up a hole by its name.
   * Use strategies with `get`. *)
 val by_name : string -> lookup_strategy
-  
-type hole =
-  { loc : Syntax.Loc.t;
-    name : hole_name;
-    (** LF context (the D is for "delta") *)
-    cD : LF.mctx;
-    (** computation context (the G is for "gamma") *)
-    cG : Comp.gctx;
-    goal : Comp.typ * LF.msub;
+
+type lf_hole_info =
+  { cPsi : LF.dctx
+  ; lfGoal : LF.tclo
   }
+
+type comp_hole_info =
+  { cG : Comp.gctx
+  ; compGoal : Comp.typ * LF.msub
+  }
+
+type hole_info =
+  | LfHoleInfo of lf_hole_info
+  | CompHoleInfo of comp_hole_info
+
+type hole =
+  { loc : Syntax.Loc.t
+  ; name : hole_name
+    (** "Context Delta", for metavariables. *)
+  ; cD : LF.mctx
+    (** information specific to the hole type. *)
+  ; info : hole_info
+  }
+
+(** Decides whether this is an LF hole. *)
+val is_lf_hole : hole -> bool
+
+(** Decides whether this is a computational hole. *)
+val is_comp_hole : hole -> bool
 
 (** Decides whether a hole has a name (is not anonymous). *)
 val hole_is_named : hole -> bool
@@ -54,6 +73,10 @@ val hole_is_named : hole -> bool
 (** Stringifies a hole name.
  * If the hole is anonymous, then its name is the empty string. *)
 val string_of_name : hole_name -> string
+
+(** Stringifies a hole name.
+ * If the hole is anonymous, then use its hole id. *)
+val string_of_name_or_id : hole_name * hole_id -> string
 
 (** Checks whether the internal array of holes is empty. *)
 val none : unit -> bool
@@ -70,7 +93,7 @@ val unsafe_get : lookup_strategy -> hole_id * hole
 
 (** Finds the first hole satisfying the given predicate. *)
 val find : (hole -> bool) -> (int * hole) option
-  
+
 (** Looks up a hole, retrieving the hole itself and its number. *)
 val lookup : string -> (int * hole) option
 

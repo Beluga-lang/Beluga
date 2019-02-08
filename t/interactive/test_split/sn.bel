@@ -102,8 +102,7 @@ rec thm : {g : cxt} {M : [g |- tm A[]]}
 %:load input.bel
 The file input.bel has been successfully loaded;
 %:countholes
-Computation Level Holes: 4
-LF Level Holes: 0;
+4;
 %:split 1 g
  case [g] of
 | [g, x1 : tm A] => ?

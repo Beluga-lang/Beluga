@@ -1,5 +1,14 @@
 (** Totally miscellaneous functions. *)
 
+(** Unpacks a string into a list of characters. *)
+let string_unpack (s : string) : char list =
+  let n = String.length s in
+  let rec go i = match () with
+    | () when i < n -> String.get s i :: go (i + 1)
+    | () -> []
+  in
+  go 0
+
 (** Converts a list of characters into an equivalent string. *)
 let string_pack (cs : char list) : string =
   String.concat "" (List.map (String.make 1) cs)

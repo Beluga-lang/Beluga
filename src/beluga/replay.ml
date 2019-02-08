@@ -182,6 +182,25 @@ module TranscriptRunner = struct
     and then stick the newline back on. *)
     String.sub str 0 (String.length str - 2) ^ "\n"
 
+  type string_match =
+    | MismatchAt of int
+    | LengthDiffers of int * int
+    | Equal
+
+  let rec string_match' i (s1 : char list) (s2 : char list) : string_match =
+    match s1, s2 with
+    | [], [] -> Equal
+    | c1 :: s1', c2 :: s2' when c1 = c2 -> string_match' (i + 1) s1' s2'
+    | _, _ -> MismatchAt i
+
+  let string_match (s1 : string) (s2 : string) : string_match =
+    let l1 = String.length s1 in
+    let l2 = String.length s2 in
+    match () with
+    | () when l1 = l2 ->
+       string_match' 0 (Misc.string_unpack s1) (Misc.string_unpack s2)
+    | () -> LengthDiffers (l1, l2)
+
   let run_interaction (i : interaction) (e : env) :
         (string, env) Either.t =
     let open Either in
@@ -200,20 +219,27 @@ module TranscriptRunner = struct
               ^ "its output channel" )
         )
         (fun (res, e') ->
-          if res = i.response then
-            begin
+          match string_match res i.response with
+          | Equal ->
               write_file "last-output.bel" (drop_semi res);
               Right e'
-            end
-          else
-            Left
-              ( "interaction on line "
-                ^ string_of_line i.line_num
-                ^ " failed: output mismatch\n"
-                ^ "expected output:\n"
-                ^ i.response
-                ^ "actual output:\n"
-                ^ res )
+          | LengthDiffers (l1, l2) ->
+             Left
+               ( "interaction on line "
+                 ^ string_of_line i.line_num
+                 ^ " failed: length mismatch\n"
+                 ^ "response length: " ^ string_of_int l1 ^ "\n"
+                 ^ "expected length: " ^ string_of_int l2 ^ "\n"
+               )
+          | MismatchAt n ->
+             Left
+               ( "interaction on line "
+                 ^ string_of_line i.line_num
+                 ^ " failed: output mismatch at byte " ^ string_of_int n ^ "\n"
+                 ^ "expected output:\n"
+                 ^ i.response
+                 ^ "actual output:\n"
+                 ^ res )
         )
     let rec run_interactions (ints : interaction list) (e : env) :
           (string, env) Either.t =

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>contactEmailRot13</key>
+	<string>znepry.tbu@znvy.zptvyy.pn</string>
+	<key>contactName</key>
+	<string>Marcel Goh</string>
+	<key>description</key>
+	<string>TextMate Bundle for the Beluga programming language.</string>
+	<key>name</key>
+	<string>Beluga</string>
+	<key>uuid</key>
+	<string>68CEDB94-D125-4BF9-B57C-5B23B8123A9B</string>
+</dict>
+</plist>

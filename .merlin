@@ -7,3 +7,7 @@ B _build/src/beluga
 B _build/src/support
 
 PKG ulex camlp4 extlib
+
+# Disable warning for inexhaustive pattern matching, because the
+# code uses it liberally.
+FLG -w -8

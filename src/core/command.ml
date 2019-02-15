@@ -181,6 +181,19 @@ let requiring_computation_hole
     f
     p
 
+let requiring_lf_hole
+      ppf
+      (f : Holes.hole_id * Holes.hole -> unit)
+      (p : Holes.hole_id * Holes.hole)
+    : unit =
+  requiring_hole_satisfies
+    Holes.is_lf_hole
+    (fun (i, h) ->
+      fprintf ppf "- Hole %s is not an LF hole;\n"
+     (Holes.string_of_name_or_id (h.Holes.name, i)))
+    f
+    p
+
 let printhole =
   { name = "printhole";
     run =
@@ -216,6 +229,58 @@ let lochole =
   ; help = "Print out the location information of the i-th hole passed as a parameter"
   }
 
+let solvelfhole =
+  { name = "solve-lf-hole"
+  ; run =
+      command_with_arguments 1
+        (fun ppf [name] ->
+          with_hole_from_strategy_string ppf name
+            (requiring_lf_hole ppf
+               (fun (i, h) ->
+                 let { Holes.name
+                     ; Holes.cD
+                     ; Holes.info =
+                         Holes.LfHoleInfo
+                           { Holes.lfGoal = (lfTyp, lfSub)
+                           ; Holes.cPsi
+                           }
+                     ; Holes.loc = _
+                     } = h
+                 in
+                 let (lfTyp', i) = Abstract.typ lfTyp in
+                 (* Not too sure what I'm doing here. *)
+                 let _ = Logic.prepare () in
+                 let (query, skinnyTyp, querySub, instMVars) =
+                   Logic.Convert.typToQuery cPsi cD (lfTyp', i) in
+                 begin
+                   (* Count the solutions that are found so we only
+                      emit a maximum number of them.
+                      Raise the "Done" exception to stop the search.
+                    *)
+                   try
+                     let n = ref 0 in
+                     Logic.Solver.solve cD cPsi query
+                       begin
+                         fun (ctx, norm) ->
+                         Pretty.Int.DefaultPrinter.fmt_ppr_lf_normal
+                           cD
+                           ctx
+                           Pretty.std_lvl
+                           ppf
+                           norm;
+
+                         fprintf ppf "\n" ;
+                         incr n;
+                         if !n = 10 then raise Logic.Frontend.Done
+                       end
+                   with
+                   | Logic.Frontend.Done -> ()
+                   | e -> raise e
+                 end;
+                 fprintf ppf ";\n";
+               )))
+  ; help = "Use logic programming to solve an LF hole"
+  }
 
 let constructors =
   { name = "constructors";
@@ -522,6 +587,7 @@ let _ =
     ; reset
     ; quit
     ; lookup_hole
+    ; solvelfhole
     ]
 
 let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg

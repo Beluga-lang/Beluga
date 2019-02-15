@@ -374,15 +374,25 @@ let isVar h = match h with
     let _ = mark  () in
       try f () with
         | NotInvertible ->
-            (dprint (fun () -> "Unwind trail - exception     notInvertible") ;
-             unwind (); raise NotInvertible)
-        | Failure msg -> (dprint (fun () -> "Unwind trail - exception Failure " ^
-     msg);unwind (); raise (Failure msg))
-        | Error msg -> (dprint (fun () -> "Unwind trail - exception Error " ^
-     msg);unwind (); raise (Error msg))
-        | GlobalCnstrFailure (loc , msg) -> (dprint (fun () -> "Unwind trail - exception GlobalCnstrFailure " ^
-     msg);unwind (); raise (GlobalCnstrFailure (loc, msg)))
-        | e -> (dprint (fun () -> "?? " ) ; unwind (); raise e )
+           dprint (fun () -> "Unwind trail - exception     notInvertible");
+           unwind ();
+           raise NotInvertible
+        | Failure msg ->
+           dprint (fun () -> "Unwind trail - exception Failure " ^ msg);
+            unwind ();
+            raise (Failure msg)
+        | Error msg ->
+           dprint (fun () -> "Unwind trail - exception Error " ^ msg);
+           unwind ();
+           raise (Error msg)
+        | GlobalCnstrFailure (loc , msg) ->
+           dprint (fun () -> "Unwind trail - exception GlobalCnstrFailure " ^ msg);
+           unwind ();
+           raise (GlobalCnstrFailure (loc, msg))
+        | e ->
+           dprint (fun () -> "?? " );
+           unwind ();
+           raise e 
 
   (* ---------------------------------------------------------------------- *)
 

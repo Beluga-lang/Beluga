@@ -484,16 +484,11 @@ returned. Else, `nil' is returned."
 (beluga-define-command beluga--basic-chatteroff "chatteroff" nil)
 (beluga-define-command beluga--basic-load "load" ((path . "%s")))
 (beluga-define-command beluga--basic-clearholes "clearholes" nil)
-(beluga-define-command beluga--basic-numholes "numholes" nil)
-(beluga-define-command beluga--basic-numholes-lf "numlfholes" nil)
+(beluga-define-command beluga--basic-countholes "countholes" nil)
 (beluga-define-command beluga--basic-lochole "lochole" ((hole . "%s")))
 (beluga-define-command beluga--basic-lochole-n "lochole" ((hole . "%d")))
-(beluga-define-command beluga--basic-lochole-lf "lochole-lf" ((hole . "%s")))
-(beluga-define-command beluga--basic-lochole-lf-n "lochole-lf" ((hole . "%d")))
 (beluga-define-command beluga--basic-printhole "printhole" ((hole . "%s")))
 (beluga-define-command beluga--basic-printhole-n "printhole" ((hole . "%d")))
-(beluga-define-command beluga--basic-printhole-lf "printhole-lf" ((hole . "%s")))
-(beluga-define-command beluga--basic-printhole-lf-n "printhole-lf" ((hole . "%d")))
 (beluga-define-command beluga--basic-types "types" nil)
 (beluga-define-command beluga--basic-constructors-lf "constructors" ((type . "%s")))
 (beluga-define-command beluga--basic-fill "fill" ((hole . "%s") "with" (exp . "%s")))
@@ -555,17 +550,12 @@ This will update `beluga--last-load-time' if a load is performed."
     (when mtime ;; mtime non-nil means we must reload
       (beluga--load-current-buffer mtime))))
 
-(defun beluga--numholes! ()
-  (string-to-number (beluga--basic-numholes!)))
-
-(defun beluga--numholes-lf! ()
-  (string-to-number (beluga--basic-numholes-lf!)))
-
 (defun beluga--lochole-n! (hole-num)
   (read (beluga--basic-lochole-n! hole-num)))
 
-(defun beluga--lochole-lf-n! (hole-num)
-  (read (beluga--basic-lochole-lf-n! hole-num)))
+(defun beluga--countholes! ()
+  "Gets the number of holes in the file."
+  (string-to-number (beluga--basic-countholes!)))
 
 (defun beluga--lookup-hole! (hole)
   "Looks up a hole number by its name"
@@ -574,21 +564,14 @@ This will update `beluga--last-load-time' if a load is performed."
 (defun beluga--highlight-holes ()
   "Create overlays for each of the holes and color them."
   (beluga-erase-holes)
-  (let ((numholes (beluga--numholes!)))
+  (let ((numholes (beluga--countholes!)))
     (dotimes (i numholes)
       (let* ((pos (beluga--lochole-n! i))
              (ol (beluga--create-overlay pos))
              (info (beluga--basic-printhole-n! i)))
         (overlay-put ol 'help-echo info)
         (push ol beluga--holes-overlays)
-        )))
-  (let ((numholes (beluga--numholes-lf!)))
-    (dotimes (i numholes)
-      (let* ((pos (beluga--lochole-lf-n! i))
-             (ol (beluga--create-overlay pos))
-             (info (beluga--basic-printhole-lf-n! i)))
-        (overlay-put ol 'help-echo info)
-        (push ol beluga--holes-overlays)))))
+        ))))
 
 (defun beluga--get-hole-overlay! (hole)
   "Gets the overlay associated with a hole."

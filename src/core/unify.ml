@@ -1911,7 +1911,7 @@ let isVar h = match h with
         if k = k' then unifySub mflag cD0 cPsi s s'
         else 
 	  (dprint (fun () -> "[unifyHead] cD0 = " ^ P.mctxToString cD0 );
-	   raise (Failure "Bound MVar clash"))
+	   raise (Failure (Format.sprintf "Bound MVar clash: %d with %d" k k')))
 
     | (FMVar (u, s) , FMVar(u', s')) ->
         if u = u' then unifySub mflag cD0 cPsi s s'

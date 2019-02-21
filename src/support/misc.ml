@@ -1,5 +1,12 @@
 (** Totally miscellaneous functions. *)
 
+(** An exception to be raised in unimplemented features.
+ * Code that raises this exception should never be committed.
+ *)
+exception NotImplemented of string
+
+let not_implemented (msg : string) : 'a = raise (NotImplemented msg)
+
 (** Unpacks a string into a list of characters. *)
 let string_unpack (s : string) : char list =
   let n = String.length s in

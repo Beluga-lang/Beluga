@@ -340,7 +340,9 @@ module Int = struct
                 (Id.render_name x)
                 (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
                 (r_paren_if cond)
-        | LF.LFHole _ ->
+        | LF.LFHole (_, Some name) ->
+           fprintf ppf "?%s" name
+        | LF.LFHole (_, None) ->
           fprintf ppf "?"
         | LF.Tuple (_, tuple) ->
            fprintf ppf "<%a>"

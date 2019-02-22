@@ -117,9 +117,7 @@ let rec ctxVar = function
   | CtxVar psi        -> Some psi
   | DDec   (cPsi, _x) -> ctxVar cPsi
 
-let hasCtxVar cPsi = match ctxVar cPsi with
-  | Some _ -> true
-  | None -> false
+let hasCtxVar cPsi = Maybe.is_some (ctxVar cPsi)
 
 (* append cD1 cD2 = (cD1, cD2) *)
 let rec append cD1 cD2 = match cD2 with

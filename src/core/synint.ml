@@ -378,7 +378,13 @@ module Comp = struct
 
   and branch =
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx  * gctx * pattern * LF.msub * exp_chk
+    | Branch of
+        Loc.t
+        * LF.ctyp_decl LF.ctx
+        * gctx
+        * pattern
+        * LF.msub (* refinement substitution for the branch *)
+        * exp_chk
 
   and fun_branches =
    | NilFBranch of Loc.t

@@ -402,34 +402,34 @@ let search tA =
 *)
 let genCGoals cD' cd cD_tail = 
   let LF.Decl (n, mtyp, dep) = cd in  
-    match mtyp with 
-      | LF.CTyp _ -> 
-	  let cgs = Cover.genContextGoals cD' cd in 
-	    List.map (fun (cDg, Coverage.CovCtx cPhi, ms) ->
-		    (* cDg |- ms : cD' *)
-			let ms' = LF.MDot (LF.CObj (cPhi),  ms) in
-			let k = List.length cD_tail in
-			let (cD'', ms0) = Coverage.addToMCtx cDg (cD_tail, ms') in
-			  (* cDg, cD_tail |- ms0 : cD', cD_tail *)
-			  (cD'' , Coverage.CovCtx (Whnf.cnormDCtx (cPhi, LF.MShift k)),  ms0 )
-                     ) cgs  
-
+  match mtyp with 
+  | LF.CTyp _ -> 
+     let cgs = Cover.genContextGoals cD' cd in 
+     List.map (fun (cDg, Coverage.CovCtx cPhi, ms) ->
+         (* cDg |- ms : cD' *)
+         let ms' = LF.MDot (LF.CObj (cPhi),  ms) in
+         let k = List.length cD_tail in
+         let (cD'', ms0) = Coverage.addToMCtx cDg (cD_tail, ms') in
+         (* cDg, cD_tail |- ms0 : cD', cD_tail *)
+         (cD'' , Coverage.CovCtx (Whnf.cnormDCtx (cPhi, LF.MShift k)),  ms0 )
+       ) cgs  
+     
   | _         -> 
-      let cgs, _ = Cover.genCGoals cD' cd in 
-	List.map (fun (cDg', cg, ms) ->
-		    let Cover.CovGoal (cPsi', tR, sA') = cg in
-		    (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n" 
-		      (P.mctxToString cDg') (Cover.covGoalToString cDg' cg); Format.flush_str_formatter () in  *)
-		    let ms' = LF.MDot (LF.ClObj ( Context.dctxToHat cPsi' , LF.MObj tR),  ms) in
-		    let k   = List.length cD_tail in
-		    let (cD'', ms0) = Coverage.addToMCtx cDg' (cD_tail, ms') in
-		    let cg' = Coverage.CovGoal (Whnf.cnormDCtx (cPsi', LF.MShift k) ,
-				       Whnf.cnorm (tR, LF.MShift k) ,
-				       (Whnf.cnormTyp (Whnf.normTyp sA' , LF.MShift k), S.LF.id)) in
-(*		    let _ = Printf.printf "\n[Generated CovGoal – shifted] k = %s\n cD'' = %s\n %s\n" 
-(string_of_int k) (P.mctxToString cD'') (Cover.covGoalToString cD'' cg'); Format.flush_str_formatter () in *)
-		       (cD'' , cg',  ms0 )
-		 ) cgs
+     let cgs, _ = Cover.genCGoals cD' cd in 
+     List.map (fun (cDg', cg, ms) ->
+         let Cover.CovGoal (cPsi', tR, sA') = cg in
+         (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n" 
+            (P.mctxToString cDg') (Cover.covGoalToString cDg' cg); Format.flush_str_formatter () in  *)
+         let ms' = LF.MDot (LF.ClObj ( Context.dctxToHat cPsi' , LF.MObj tR),  ms) in
+         let k   = List.length cD_tail in
+         let (cD'', ms0) = Coverage.addToMCtx cDg' (cD_tail, ms') in
+         let cg' = Coverage.CovGoal (Whnf.cnormDCtx (cPsi', LF.MShift k) ,
+                                     Whnf.cnorm (tR, LF.MShift k) ,
+                                     (Whnf.cnormTyp (Whnf.normTyp sA' , LF.MShift k), S.LF.id)) in
+         (*        let _ = Printf.printf "\n[Generated CovGoal – shifted] k = %s\n cD'' = %s\n %s\n" 
+                   (string_of_int k) (P.mctxToString cD'') (Cover.covGoalToString cD'' cg'); Format.flush_str_formatter () in *)
+         (cD'' , cg',  ms0 )
+       ) cgs
 
 (* split : String -> Holes.look -> Comp.exp_chk  option *)
 let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =

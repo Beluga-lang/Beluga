@@ -412,13 +412,13 @@ module Int = struct
       | LF.MVar(c, LF.EmptySub) ->
      (match !Control.substitutionStyle with
         | Control.Natural ->
-	          fprintf ppf "%a%s"
-		              (fmt_ppr_lf_cvar cD lvl) c
-            		      proj
+                fprintf ppf "%a%s"
+                          (fmt_ppr_lf_cvar cD lvl) c
+                              proj
         | Control.DeBruijn ->
-	          fprintf ppf "%a%s[e]"
-		              (fmt_ppr_lf_cvar cD lvl) c
-            		      proj)
+                fprintf ppf "%a%s[e]"
+                          (fmt_ppr_lf_cvar cD lvl) c
+                              proj)
 
       | LF.MVar (c, s) ->
       if Substitution.LF.isId s then
@@ -438,7 +438,7 @@ module Int = struct
           fprintf ppf "#%a%s"
             (fmt_ppr_lf_offset cD lvl) c
             proj
-	else
+      else
           fprintf ppf "%s#%a%s[%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_offset cD lvl) c
@@ -492,17 +492,17 @@ module Int = struct
     and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s=
       let print_front = fmt_ppr_lf_front cD cPsi 1 in
       let rec fmt_ppr_lf_sub_id ppf cPsi = match cPsi with
-	| LF.Null -> ()
-	| LF.DDec (cPsi', LF.TypDecl (x, _))
-	| LF.DDec (cPsi', LF.TypDeclOpt x) ->
-	   fprintf ppf "%a, %s"
-		   fmt_ppr_lf_sub_id cPsi'
-		   (Id.render_name x)
-	| LF.CtxVar _ -> fprintf ppf ".."
+      | LF.Null -> ()
+      | LF.DDec (cPsi', LF.TypDecl (x, _))
+      | LF.DDec (cPsi', LF.TypDeclOpt x) ->
+         fprintf ppf "%a, %s"
+               fmt_ppr_lf_sub_id cPsi'
+               (Id.render_name x)
+      | LF.CtxVar _ -> fprintf ppf ".."
       in
       let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
-	| _,0 -> fmt_ppr_lf_sub_id ppf cPsi
-	| LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
+      | _,0 -> fmt_ppr_lf_sub_id ppf cPsi
+      | LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
       in
       let rec self lvl ppf =
         function
@@ -551,7 +551,7 @@ module Int = struct
                   (self lvl) s
 
         | LF.SVar (c, n, s) ->
-	  fprintf ppf
+        fprintf ppf
                   "#^%s %a[%a]"
                   (R.render_offset n)
                   (fmt_ppr_lf_offset cD lvl) c
@@ -642,9 +642,9 @@ module Int = struct
           fprintf ppf " %a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-      | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,	 mDep) ->
+      | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,       mDep) ->
          (* Note, pretty-printing does not use the name provided n which may not be unique but generates a new one *)
-	  let s = (match mDep with LF.No -> "^e" | LF.Maybe -> "^i" | LF.Inductive -> "^*") in
+        let s = (match mDep with LF.No -> "^e" | LF.Maybe -> "^i" | LF.Inductive -> "^*") in
           begin
             try
               fprintf ppf "?%s%s"
@@ -871,20 +871,20 @@ module Int = struct
           fprintf ppf "."
 
       | LF.Dec (cD, ctyp_decl) ->
-	  (match ctyp_decl with
-	     | LF.Decl (_, _, dep) ->
-		 if ((not !Control.printImplicit) && (isImplicit dep)||
-		       (!Control.printNormal)) then
-		   fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
-		 else
-		   fprintf ppf "%a, %a"
-		     (fmt_ppr_lf_mctx 0) cD
-		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
-	     | _ ->
-		 fprintf ppf "%a, %a"
-		     (fmt_ppr_lf_mctx 0) cD
-		     (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
-	  )
+        (match ctyp_decl with
+           | LF.Decl (_, _, dep) ->
+             if ((not !Control.printImplicit) && (isImplicit dep)||
+                   (!Control.printNormal)) then
+               fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
+             else
+               fprintf ppf "%a, %a"
+                 (fmt_ppr_lf_mctx 0) cD
+                 (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
+           | _ ->
+             fprintf ppf "%a, %a"
+                 (fmt_ppr_lf_mctx 0) cD
+                 (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
+        )
 (*    and frugal_lf_octx lvl ppf = function
       | LF.Empty -> ()
       | other -> fprintf ppf "@[%a@]@ " (fmt_ppr_lf_octx lvl) other
@@ -941,7 +941,7 @@ module Int = struct
       | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
           fprintf ppf "[%a |- %s  %a]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
-	    (match cl with LF.Ren -> "#" | LF.Subst -> "")
+          (match cl with LF.Ren -> "#" | LF.Subst -> "")
             (fmt_ppr_lf_dctx cD lvl) cPhi
       | LF.CTyp (Some schemaName) ->
           fprintf ppf "%a"
@@ -953,16 +953,16 @@ module Int = struct
     and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
       | LF.Decl (u, mtyp,dep) ->
 
-	(* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
-	(* This modification won't print it if Control.printImplicit is false*)
+      (* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
+      (* This modification won't print it if Control.printImplicit is false*)
 
           if ((not !Control.printImplicit) && (isImplicit dep)|| (!Control.printNormal)) then () else begin
           fprintf ppf "{%s : %a}%s"
             (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else Id.render_name u)
             (fmt_ppr_lf_mtyp cD) mtyp
             (if !Control.printImplicit then
-	       dependent_string dep
-	     else inductive_string dep) end
+             dependent_string dep
+           else inductive_string dep) end
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -980,13 +980,13 @@ module Int = struct
     and dependent_string = function
             | LF.No -> "^e"
             | LF.Maybe -> "^i"
-	    | LF.Inductive -> "*"
+          | LF.Inductive -> "*"
 
     and inductive_string dep =
      begin match dep with
             | LF.No -> ""
             | LF.Maybe -> ""
-	    | LF.Inductive -> "*"
+          | LF.Inductive -> "*"
           end
 
     (* Computation-level *)
@@ -1035,7 +1035,7 @@ module Int = struct
               (r_paren_if cond)
       | Comp.TypBox (_, mT) ->
           fprintf ppf "%a"
-		  (fmt_ppr_meta_typ cD 0) mT
+              (fmt_ppr_meta_typ cD 0) mT
 
       | Comp.TypArr (tau1, tau2) ->
           let cond = lvl > 1 in
@@ -1365,34 +1365,34 @@ module Int = struct
           (fmt_ppr_cmp_value 0) v1
           (fmt_ppr_cmp_value 0) v2
       | Comp.DataValue (c, spine) ->
-	 (* Note: Arguments in data spines are accumulated in reverse order, to
+       (* Note: Arguments in data spines are accumulated in reverse order, to
             allow applications of data values in constant time. *)
-	 let k = if !Control.printImplicit then 0
-		 else Store.Cid.CompConst.get_implicit_arguments c in
+       let k = if !Control.printImplicit then 0
+             else Store.Cid.CompConst.get_implicit_arguments c in
          (* the function drop and print_spine can probably be combined
             to avoid traversing the spine twice.
-	  *)
-	 let rec drop ms = match ms with
-	   | Comp.DataNil -> (Comp.DataNil, 0)
-	   | Comp.DataApp (v, spine) ->
-	      let (ms', k') = drop spine in
-	      if k' < k then (ms', k'+1)
-	      else (Comp.DataApp (v, ms'), k'+1)
-	 in
+        *)
+       let rec drop ms = match ms with
+         | Comp.DataNil -> (Comp.DataNil, 0)
+         | Comp.DataApp (v, spine) ->
+            let (ms', k') = drop spine in
+            if k' < k then (ms', k'+1)
+            else (Comp.DataApp (v, ms'), k'+1)
+       in
          let rec print_spine ppf = function
            | Comp.DataNil -> ()
            | Comp.DataApp (v, spine) ->
               print_spine ppf spine;
               fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
          in
-	 let (pat_spine, k') = drop spine in (* k = length of original spine *)
+       let (pat_spine, k') = drop spine in (* k = length of original spine *)
 
 
-	 let cond = lvl > 0 &&  (k' - k) > 1 in
+       let cond = lvl > 0 &&  (k' - k) > 1 in
          fprintf ppf "%s%s%a%s"
- 		 (l_paren_if cond)
- 		 (R.render_cid_comp_const c) print_spine pat_spine
- 		 (r_paren_if cond)
+              (l_paren_if cond)
+              (R.render_cid_comp_const c) print_spine pat_spine
+              (r_paren_if cond)
 
 
     and fmt_ppr_cmp_branch_prefix _lvl ppf = function
@@ -1472,7 +1472,7 @@ module Int = struct
            (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
               (fmt_ppr_cmp_branch_prefix  0) cD1'
               (fmt_ppr_cmp_gctx cD1' 0) cG' *)
-	         fprintf ppf "@ @[| %a => %a@]@ "
+               fprintf ppf "@ @[| %a => %a@]@ "
              (fmt_ppr_pat_obj cD1' cG' 0) pat
              (* NOTE: Technically: cD |- cG ctx and
               *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
@@ -1520,13 +1520,14 @@ module Int = struct
 
 
     and fmt_ppr_refine_elem cD decl lvl ppf m =
-      let name = begin match decl with
-	| LF.Decl(name,_,_) -> name
-	| LF.DeclOpt name -> name
-      end  in
-         fprintf ppf "%a = %s"
-	   (fmt_ppr_lf_mfront cD lvl) m
-	   (Id.render_name name)
+      let name =
+        match decl with
+        | LF.Decl(name,_,_) -> name
+        | LF.DeclOpt name -> name
+      in
+      fprintf ppf "%a = %s"
+        (fmt_ppr_lf_mfront cD lvl) m
+        (Id.render_name name)
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
@@ -1600,9 +1601,9 @@ module Int = struct
             (fmt_ppr_lf_schema ~useName:false lvl) schema
 
       | Sgn.Rec (((f, _, _ ) as h)::t) ->
-	  let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total
-	                  then " total" else ""
-	  in
+        let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total
+                        then " total" else ""
+        in
           fmt_ppr_rec lvl ppf ("rec"^total) h;
           List.iter (fmt_ppr_rec lvl ppf ("and"^total)) t
 
@@ -1696,10 +1697,10 @@ module Int = struct
         ; flush_str_formatter ()
     let itermToString cD cPsi tM =
       fmt_ppr_iterm cD cPsi std_lvl str_formatter tM
-	; flush_str_formatter ()
+      ; flush_str_formatter ()
     let mmvarToString m =
       fmt_ppr_lf_mmvar std_lvl str_formatter m
-	; flush_str_formatter ()
+      ; flush_str_formatter ()
 
     let dctxToString cD cPsi =
       fmt_ppr_lf_dctx cD std_lvl str_formatter (Whnf.normDCtx cPsi);

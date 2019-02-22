@@ -24,6 +24,7 @@ module LF : sig
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp 
     | TermWhenVar      of mctx * dctx * normal
     | SubWhenRen       of mctx * dctx * sub
+    | MissingType of string
 
   exception Error of Syntax.Loc.t * error
 

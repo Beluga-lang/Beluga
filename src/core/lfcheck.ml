@@ -28,6 +28,7 @@ type error =
   | IllTypedMetaObj  of mctx * clobj * dctx * cltyp 
   | TermWhenVar      of mctx * dctx * normal
   | SubWhenRen       of mctx * dctx * sub
+  | MissingType of string
 
 exception Error of Syntax.Loc.t * error
 
@@ -54,6 +55,9 @@ let _ = Error.register_printer
           Format.fprintf ppf "Context variable %a not equal to %a."
             (P.fmt_ppr_lf_ctx_var cO) var
             (P.fmt_ppr_lf_ctx_var cO) var1
+
+            | MissingType name ->
+               Format.fprintf ppf "Need to know type of %s" name
 
       | CheckError (cD, cPsi, sM, sA) ->
           Format.fprintf ppf

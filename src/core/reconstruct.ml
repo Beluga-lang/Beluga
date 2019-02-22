@@ -208,13 +208,17 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
         (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe));
          Int.LF.CtxVar (Int.LF.CtxName psi))
       end
-  | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
-      let cPsi = elDCtxAgainstSchema loc recT cD psi' s_cid in
-      let tA   = Lfrecon.elTyp recT cD cPsi a in
-      (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
-      let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ Id.render_name x ^ ":" ^
-                        P.typToString cD cPsi (tA, LF.id)) in
+  | Apx.LF.DDec (psi', decl) ->
+     match decl with
+     | Apx.LF.TypDecl (x, a) ->
+        let cPsi = elDCtxAgainstSchema loc recT cD psi' s_cid in
+        let tA   = Lfrecon.elTyp recT cD cPsi a in
+        (* let _ = Check.LF.checkTypeAgainstSchema cO cD cPsi' tA elements in          *)
+        let _ = dprint (fun () -> "[elDCtxAgainstSchema] " ^ Id.render_name x ^ ":" ^
+                                    P.typToString cD cPsi (tA, LF.id)) in
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+     | Apx.LF.TypDeclOpt x ->
+        raise (Check.LF.Error (loc, Check.LF.MissingType (Id.string_of_name x)))
 
 (* performs reconstruction of cPsi2 while comparing it with cPsi1
    this is (apparently) necessary to get the right schema for context holes? *)

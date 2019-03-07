@@ -25,6 +25,8 @@ let command_with_arguments (n : int) f ppf arglist =
 
 let reg : command list ref = ref []
 
+let last_load : (string * string list) option ref = ref None
+
 let countholes =
   { name = "countholes";
     run =
@@ -96,28 +98,45 @@ let clearholes =
     help = "Clear all computation level holes"
   }
 
+let load_files ppf file_name files =
+	let per_file f =
+    let sgn = Parser.parse_file ~name:f Parser.sgn in
+    let sgn = Recsgn.apply_global_pragmas sgn in
+    let sgn' =
+      begin match Recsgn.recSgnDecls sgn with
+	    | sgn', None -> sgn'
+	    | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+	    end
+    in
+    if !Debug.chatter <> 0 then
+      List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
+	in
+  Holes.clear ();
+  List.iter per_file files;
+  fprintf ppf "The file %s has been successfully loaded;\n" (Filename.basename file_name)
+
+let reload =
+  { name = "reload"
+  ; run =
+      command_with_arguments 0
+        (fun ppf arglist ->
+          match !last_load with
+          | None -> fprintf ppf "- No load to repeat;"
+          | Some (file_name, files) ->
+             load_files ppf file_name files
+        )
+  ; help = "Repeats the last load command."
+  }
+
 let load =
   { name = "load"
   ; run =
       command_with_arguments 1
         (fun ppf arglist ->
-	        let per_file f =
-            let sgn = Parser.parse_file ~name:f Parser.sgn in
-            let sgn = Recsgn.apply_global_pragmas sgn in
-            let sgn' =
-              begin match Recsgn.recSgnDecls sgn with
-	            | sgn', None -> sgn'
-	            | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-	            end
-            in
-            if !Debug.chatter <> 0 then
-              List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
-	        in
-          let _ = Holes.clear () in
           let file_name = List.hd arglist in (* .bel or .cfg *)
 		      let files = Cfg.process_file_argument file_name in
-		      List.iter per_file files ;
-          fprintf ppf "The file %s has been successfully loaded;\n" (Filename.basename file_name)
+          last_load := Some (file_name, files);
+          load_files ppf file_name files
         )
   ; help = "Load the file \"filename\" into the interpreter"}
 
@@ -480,6 +499,7 @@ let _ =
     ; chatteroff
     ; chatteron
     ; load
+    ; reload
     ; clearholes
     ; countholes
     ; lochole

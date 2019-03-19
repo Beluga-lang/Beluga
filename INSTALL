@@ -28,10 +28,6 @@ ocaml 3.12.2+:           http://caml.inria.fr/download.en.html
 extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                    http://www.cduce.org/download.html#side
 
-Users not running Windows may wish to build using omake:
-
-omake:			 http://omake.metaprl.org/index.html
-
 Optional dependencies (for improved interactive mode):
 
 rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/

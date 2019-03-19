@@ -23,3 +23,14 @@ let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
 
 let void (o : 'a option) : unit option =
   o $> fun _ -> ()
+
+let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
+  match l with
+  | [] -> []
+  | x :: xs ->
+     let y' = f x in
+     let ys = filter_map f xs in
+     eliminate (fun () -> ys) (fun y -> y :: ys) y'
+
+let cat_options (l : 'a option list) : 'a list =
+  filter_map Misc.id l

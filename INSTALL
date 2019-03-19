@@ -24,7 +24,7 @@ Table of contents:
 
 The following packages must be installed to use Beluga:
 
-ocaml 3.12.2+:           http://caml.inria.fr/download.en.html
+ocaml 4.07.1+:           http://caml.inria.fr/download.en.html
 extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
 ulex:                    http://www.cduce.org/download.html#side
 

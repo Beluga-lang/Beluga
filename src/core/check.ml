@@ -630,7 +630,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           | (TypCross (tau1, tau2), t') ->
               let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'), false)), CTypDecl (y, TypClo(tau2, t'), false)) in
                 check cD (cG', (Total.shift (Total.shift cIH))) e (tau,t)
-          | _ -> raise (Error.Violation "Case scrutinee not of boxed type")
+          | _ -> raise (Error.Violation "Case scrutinee not of product type")
         end
 
     | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)

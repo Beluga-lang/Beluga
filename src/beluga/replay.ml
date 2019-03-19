@@ -149,7 +149,7 @@ module TranscriptRunner = struct
         Parser.state * (Parser.parse_error, string) Either.t =
     let open Parser in
     let response =
-      many_till any (trying (void (string ";\n"))) $>
+      many_till any (void (label "semicolon&newline" (trying (string ";\n")))) $>
         Misc.string_pack $>
         fun x -> x ^ ";\n"
     in

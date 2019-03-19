@@ -341,10 +341,15 @@ module Make (P : ParserInfo) = struct
   let trying (p : 'a t) : 'a t =
     { run =
         fun s ->
+        (* store the current backtracking state *)
         let b = s.backtrack_enabled in
+        (* run the given parser, but with backtracking enabled *)
         let (s, e) = p.run { s with backtrack_enabled = true } in
         ( { s with
+            (* restore the old backtracking state *)
             backtrack_enabled = b;
+            (* preserve the stack if backtracking is still enabled;
+             * otherwise, flush it. *)
             stk = if b then s.stk else PureStack.empty;
           },
           e
@@ -360,8 +365,11 @@ module Make (P : ParserInfo) = struct
   let alt (p1 : 'a t) (p2 : 'a t) : 'a t =
     { run =
         fun s ->
+        (* get the current position in the input stream *)
         let n = s.count in
+        (* run the left parser *)
         let (s, e) = p1.run s in
+        (* see where we are after running it *)
         let n' = s.count in
         let open Either in
         match e with
@@ -371,6 +379,11 @@ module Make (P : ParserInfo) = struct
               tokens on the stack, then we try the next parser.
             *)
            let d = n' - n in
+           (* "Without consuming input" is verified by checking that n
+              and n' are the same.
+              `error_is_recoverable` is set if the parser failed while
+              `backtrack_enabled = true`.
+            *)
            if d = 0 || e.error_is_recoverable && is_rewind_possible d s.stk then
                p2.run (rewind d s)
            else
@@ -581,6 +594,6 @@ module StringParser = struct
       let (c, str') =
         (str.[0], String.sub str 1 (String.length str - 1))
       in
-      satisfy (fun c' -> c = c') $
-        fun _ -> string str'
+      label (Printf.sprintf "= %C" c) (satisfy (fun c' -> c = c') $
+        fun _ -> string str')
 end

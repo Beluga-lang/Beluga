@@ -692,19 +692,29 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
        in
        let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
 
-        (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
-        let problem = Coverage.make loc prag cD branches tau_sc in
-          (* Coverage.stage problem; *)
-          checkBranches total_pragma cD (cG,cIH) (i,branches) tau0_sc (tau, t);
-          Coverage.process problem projOpt
+       (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
+
+       (* Instead of None, we can give (l, mT) in order to start the
+          coverage checker out with the current LF normal term.
+          However, this causes some tests to fail, so we leave it out.
+          Theoretically, this improves the coverage checker by
+          allowing to consider more cases as covering, especially in
+          situations with nested cases.
+        *)
+       let problem = Coverage.make loc prag cD branches tau_sc None in
+       (* Coverage.stage problem; *)
+       checkBranches total_pragma cD (cG,cIH) (i,branches) tau0_sc (tau, t);
+       Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
         let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) =
           let (_ , tau', t') = syn cD (cG,cIH) i in
           let tau_s = C.cnormCTyp (tau', t') in
-          let problem = Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) in
-            checkBranches total_pragma cD (cG,cIH) (i, branches) tau_s (tau,t);
-            Coverage.process problem None
+          let problem =
+            Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) None
+          in
+          checkBranches total_pragma cD (cG,cIH) (i, branches) tau_s (tau,t);
+          Coverage.process problem None
         in
           if !Total.enabled then
             (match i with

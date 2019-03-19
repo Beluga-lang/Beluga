@@ -85,12 +85,19 @@ let rec lookup cG x = match cG with
       if x = y then tau
       else lookup cG x
 
-type problem = {loc : Syntax.Loc.t;
-                prag : Pragma.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
-                cD : LF.mctx;
-        	cG : gctx;
-                branches : Comp.branch list;
-                ctype : Comp.typ}         (* type and context of scrutinee *)
+type problem = { loc : Syntax.Loc.t;
+                 prag : Pragma.case_pragma;           (* indicates if %not appeared after ``case...of'' *)
+                 cD : LF.mctx;
+                 cG : gctx;
+                 branches : Comp.branch list;
+                 ctype : Comp.typ; (* type and context of scrutinee *)
+                 m_obj : Comp.meta_obj option;
+                 (* The normal LF object begin analyzed by the case.
+                    This is used as the initial term to split on in
+                    order to avoid considering certain impossible
+                    branches.
+                  *)
+              }
 
 
 let trivial_meta_obj cD  (_loc, m0) mT = match m0, mT with
@@ -151,13 +158,15 @@ let trivial_coverage cD branches tau_sc =
 
 
 (* Make a coverage problem *)
-let make loc prag cD branches typ =
-      {loc= loc;
-       prag= prag;
-       cD= cD;
-       cG= [];
-       branches= branches;
-       ctype = typ }
+let make loc prag cD branches typ m_obj =
+      { loc= loc;
+        prag= prag;
+        cD= cD;
+        cG= [];
+        branches= branches;
+        ctype = typ;
+        m_obj = m_obj;
+      }
 
 
 (* Final Coverage Result *)
@@ -2442,30 +2451,50 @@ let initialize_coverage problem projOpt =
         [ ( cD', cG', cand_list,  mC) ]
 
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
-      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in 
-        (*  cPsi |- s  : cPsi' *)
-      let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in
-      let name       = Id.mk_name (Whnf.newMTypName mT) in
-      let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
-      let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-      let mv         = LF.MVar (LF.Offset 1, s) in
-      let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-      let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-      let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
-      let loc'       = Syntax.Loc.ghost in
-      let mC         = Comp.PatMetaObj(loc', (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM))) in 
-      let mT         = Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
-      let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
-      (* let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in *)
-(*      let _          = print_string "\nGenerated Coverage goal: " in
-      let _          = print_string (covGoalToString cD' covGoal) in
-      let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
-      let _          = print_string "\n\n" in
-*)
-      let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+     begin
+       (* If the coverage is for a box-type, we need to see whether
+          the case analysis was on a normal LF object. If it isn't then
+          we create a new variable as the initial term we
+          refine. Otherwise we start from the case's scrutinee, which we
+          received through problem.m_obj.
+        *)
+       match problem.m_obj with
+       | None ->
+          dprint (fun () -> "[initialize_coverage] not using case scrutinee");
+          let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
+          (*  cPsi |- s  : cPsi' *)
+          let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in
+          let loc'       = Syntax.Loc.ghost in
+          let name       = Id.mk_name (Whnf.newMTypName mT) in
+          let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
+          let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
+          let mv         = LF.MVar (LF.Offset 1, s) in
+          let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
+          let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+          let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
+          let mC         = Comp.PatMetaObj(loc', (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM))) in
+          let mT         = Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
+          let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
+          (* let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in *)
+          (*      let _          = print_string "\nGenerated Coverage goal: " in
+                  let _          = print_string (covGoalToString cD' covGoal) in
+                  let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
+                  let _          = print_string "\n\n" in
+           *)
+          let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
 
-      let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-      [ ( cD' , cG', cand_list , mC) ]
+          let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
+          [ ( cD' , cG', cand_list , mC) ]
+
+       | Some m_obj ->
+          dprint (fun () -> "[initialize_coverage] using case scrutinee");
+          let ghost = Syntax.Loc.ghost in
+          let mC = Comp.PatMetaObj(ghost, m_obj) in
+          let covGoal = CovPatt ([], mC, (problem.ctype, LF.MShift 0)) in
+          let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
+          let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
+          [ ( problem.cD, problem.cG, cand_list, mC ) ]
+     end
 
   | Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
       let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
@@ -2511,8 +2540,6 @@ let initialize_coverage problem projOpt =
       let covGoal = CovPatt (cG', pat, (problem.ctype, Whnf.m_id)) in
       let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
         [ (problem.cD, cG', cand_list, pat) ]
-
-end
 
 (* check_emptiness cD = bool
    if for all declarations X:U in cD such that

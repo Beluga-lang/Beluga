@@ -25,9 +25,13 @@ type problem
 
 val make : Syntax.Loc.t
         -> Pragma.case_pragma
-        -> LF.mctx            (* cD *)
-        -> Comp.branch list   (* branches *)
-        -> Comp.typ (* type of object being case-analyzed *)
+        -> LF.mctx              (* cD *)
+        -> Comp.branch list     (* branches *)
+        -> Comp.typ             (* type of object being case-analyzed *)
+        -> Comp.meta_obj option
+        (* ^ scrutinee of the case. Provided only if it as a normal LF
+         * object, as this will eliminate certain cases from the
+         * generated splits. *)
         -> problem
 
 type coverage_result =

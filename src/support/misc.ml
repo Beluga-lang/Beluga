@@ -38,3 +38,13 @@ let rec enumerate_with_state (s : 's) (f : 's -> ('s * 'i)) (l : 'a list) : 's *
 (** Enumerates a list by pairing each element with its index. *)
 let enumerate (l : 'a list) : (int * 'a) list =
   enumerate_with_state 0 (fun s -> (s + 1, s)) l |> snd
+
+
+module List = struct
+  let rec last (l : 'a list) : 'a = match l with
+    | [] -> invalid_arg
+    | [x] -> x
+    | x :: xs -> last xs
+end
+
+let id (x : 'a) : 'a = x

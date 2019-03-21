@@ -58,7 +58,7 @@ module LF = struct
     | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
     | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
     | MVar  of (cvar * sub)                   (*   | u[s]                       *)
-    | PVar  of offsetsub                      (*   | p[s]                       *)
+    | PVar  of (offset * sub)                 (*   | p[s]                       *)
     | AnnH  of head * typ                     (*   | (H:A)                      *)
     | Proj  of head * int                     (*   | x.k | #p.k s               *)
 
@@ -72,7 +72,6 @@ module LF = struct
     | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
 
   and fvarsub = name * sub
-  and offsetsub = offset * sub
   and spine =                                 (* spine                          *)
     | Nil                                     (* S ::= Nil                      *)
     | App  of normal * spine                  (*   | M . S                      *)

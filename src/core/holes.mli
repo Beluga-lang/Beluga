@@ -2,9 +2,10 @@ open Syntax.Int
 
 type hole_id
 
+(** Converts a hole identifier to a string representation. *)
 val string_of_hole_id : hole_id -> string
 
-(* Essentially the same as `string option`. *)
+(* Isomorphic to `string option`. *)
 type hole_name =
   | Anonymous
   | Named of string
@@ -99,9 +100,6 @@ val lookup : string -> (int * hole) option
 
 (** Decides whether a location is contained within a location. *)
 val loc_within : Syntax.Loc.t -> Syntax.Loc.t -> bool
-
-(** Gets the number of the hole at the given location. *)
-val at : Syntax.Loc.t -> (hole_id * hole) option
 
 (** Counts the number of holes. *)
 val count : unit -> int

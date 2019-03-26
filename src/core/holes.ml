@@ -108,7 +108,7 @@ let isExplicit = function
       end
   | _ -> true
 
- let mctxToString =
+let mctxToString =
   let shift = "\t" in
   let rec toString = function
     | LF.Empty ->
@@ -152,13 +152,6 @@ let destroy_holes_within loc =
 let add (h : hole) =
   DynArray.add holes h;
   DynArray.length holes - 1
-
-(* A helper for implementing at and staged_at. *)
-let matches_loc loc' {loc; _} = loc = loc'
-
-(* Should only be called with the loc of a hole *)
-let at (loc : Syntax.Loc.t) : (hole_id * hole) option =
-  find (matches_loc loc)
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   let (_, sub) = tA in

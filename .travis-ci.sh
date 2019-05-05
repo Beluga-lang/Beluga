@@ -9,8 +9,7 @@ echo OPAM versions
 opam --version
 opam --git-version
 
-opam init
-opam switch "$OCAML_VERSION" || opam switch create "$OCAML_VERSION"
+opam init --comp=$OCAML_VERSION
 eval `opam config env`
 opam install ${OPAM_DEPENDS}
-make && ./TEST && (./TEST -- +htmltest) && (./TEST -- +sexp)
+make all && ./TEST && (./TEST -- +htmltest) && (./TEST -- +sexp)

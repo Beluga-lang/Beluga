@@ -6,6 +6,11 @@ DEBUG = true
 WARN_ERROR = true
 PARALLEL = 4
 
+# The binaries to build
+# to add a new binary, which must correspond with an entry point file
+# of the same name in src/beluga, simply list it here
+BIN := beluga replay lex_dump lex_check
+
 EXT = $(if $(BYTE),byte,native)
 
 OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
@@ -16,29 +21,15 @@ OCAMLBUILD = ocamlbuild -r -use-ocamlfind \
 	$(if $(WARN_PATTERN),-tag warn\(P\) -tag warn-error\(p\),)\
 	$(if $(WARN_ERROR),-tag warn\(Azep-44-48-50-58\) -tag warn-error\(A-37-48-50-60\),)
 
-.PHONY: all clean
+.PHONY: all clean $(BIN)
 
-all: bin/lex_dump bin/beluga bin/replay bin/lex_check
+all: $(BIN)
 
-bin/beluga: src/beluga/main.$(EXT)
+$(BIN):
 	mkdir -p bin
-	cp _build/$< $@
-
-bin/lex_check: src/beluga/lex_check.$(EXT)
-	mkdir -p bin
-	cp _build/$< $@
-
-bin/lex_dump: src/beluga/lex_dump.$(EXT)
-	mkdir -p bin
-	cp _build/$< $@
-
-bin/replay: src/beluga/replay.$(EXT)
-	mkdir -p bin
-	cp _build/$< $@
+	$(OCAMLBUILD) src/beluga/$@.$(EXT)
+	cp _build/src/beluga/$@.$(EXT) bin/$@
 
 clean:
 	$(OCAMLBUILD) -clean
 	rm -rf bin
-
-%:
-	$(OCAMLBUILD) $@

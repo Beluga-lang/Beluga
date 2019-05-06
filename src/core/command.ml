@@ -1,3 +1,9 @@
+(**
+ * Top level functions invoked by the interactive mode.
+ * Each interactive mode command corresponds with a `command` record in this file.
+ * Available commands are added to a registry at the bottom of this file.
+ *)
+
 open ExtString.String
 open Store.Cid
 open Pretty.Int.DefaultPrinter
@@ -24,8 +30,6 @@ let command_with_arguments (n : int) f ppf arglist =
     fprintf ppf "- Command requires %d arguments, but %d were given;\n" n n'
 
 let reg : command list ref = ref []
-
-let last_load : (string * string list) option ref = ref None
 
 let countholes =
   { name = "countholes";
@@ -115,7 +119,8 @@ let load_files ppf file_name files =
   List.iter per_file files;
   fprintf ppf "The file %s has been successfully loaded;\n" (Filename.basename file_name)
 
-let reload =
+let reload, load =
+  let last_load : (string * string list) option ref = ref None in
   { name = "reload"
   ; run =
       command_with_arguments 0
@@ -126,9 +131,7 @@ let reload =
              load_files ppf file_name files
         )
   ; help = "Repeats the last load command."
-  }
-
-let load =
+  },
   { name = "load"
   ; run =
       command_with_arguments 1
@@ -138,7 +141,8 @@ let load =
           last_load := Some (file_name, files);
           load_files ppf file_name files
         )
-  ; help = "Load the file \"filename\" into the interpreter"}
+  ; help = "Load the file \"filename\" into the interpreter"
+  }
 
 (** Parses the given hole lookup strategy string, and retrieves a hole
  * using that strategy.
@@ -493,6 +497,7 @@ let lookup_hole =
   ; help = "looks up a hole's number by its name"
   }
 
+(* the default registered commands *)
 let _ =
   reg :=
     [ helpme
@@ -518,8 +523,6 @@ let _ =
     ; quit
     ; lookup_hole
     ]
-
-(* registered commands *)
 
 let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg
 

@@ -8,6 +8,8 @@ module Grammar : Camlp4.Sig.Grammar.Static
 (** Grammar entry for an entire LF Signature *)
 val sgn : Ext.Sgn.sgn Grammar.Entry.t
 
+val cmp_typ : Ext.Comp.typ Grammar.Entry.t
+
 (** Parse a stream and return a signature *)
 val parse_stream :
      ?name:string

@@ -211,6 +211,8 @@ type patOrObs = IsPat of Comp.pattern | IsObs of name
 
 let sgn = Grammar.Entry.mk "sgn"
 
+let cmp_typ = Grammar.Entry.mk "cmp_typ"
+
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
@@ -223,7 +225,7 @@ let sgn = Grammar.Entry.mk "sgn"
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn;
+GLOBAL: sgn cmp_typ;
 
   symbol:
     [

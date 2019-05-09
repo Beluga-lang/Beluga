@@ -1,0 +1,20 @@
+tp : type.
+base : tp.
+arr : tp → tp → tp.
+
+tm : type.
+c : tm.
+lam : (tm → tm) → tm.
+app : tm → tm → tm.
+
+oft : tm → tp → type.
+t_c : oft c base.
+t_lam : ({x : tm} oft x A → oft (M x) B) → oft (lam M) (arr A B).
+t_app : oft M (arr A B) → oft N A → oft (app M N) B.
+
+eval : tm → tm → type.
+e_c : eval c c.
+e_lam : eval (lam M) (lam M).
+e_app : eval M (lam M') → eval (app M N) (M' N).
+
+schema ctx = some [t:tp] block x : tm, u : oft x t;

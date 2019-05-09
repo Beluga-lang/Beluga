@@ -1,5 +1,5 @@
 <*.ml{i,}> : package(camlp4)
 <{token,lexer,parser}.ml> : syntax(camlp4o), package(camlp4.extend)
-<{reconstruct,holes,lfholes,logic,parser,store,unify,typeinfo,subord,interactive,command}.ml{,i}> : package(extlib)
+<{reconstruct,holes,lfholes,logic,parser,store,unify,typeinfo,subord,interactive,command,harpoon}.ml{,i}> : package(extlib)
 <html.*> : package(str)
 <lexer.ml> : package(ulex)

@@ -303,7 +303,6 @@ module Comp = struct
     | CTypDecl    of name * typ * wf_tag
     | CTypDeclOpt of name
 
-
   type gctx = ctyp_decl LF.ctx
 
   type env =
@@ -394,6 +393,81 @@ module Comp = struct
     | LF.IHead h -> LF.PObj h
     | LF.ISub s -> LF.SObj s
   let metaObjToMFront (loc,x) = x
+
+  (* Bundle of LF and computational hypotheses. *)
+  type hypotheses =
+    { cD : LF.mctx (* Delta / meta context / LF assumptions *)
+    ; cG : gctx    (* Gamma / computation assumptions *)
+    }
+
+  let no_hypotheses = { cD = LF.Empty; cG = LF.Empty }
+
+  (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.
+   * The type parameter 'a is used as a trick to rule out incomplete proofs:
+   * - if 'a = void then the Incomplete constructor is impossible
+   * - if 'a = unit then this is a true incomplete proof.
+   *)
+  type 'a proof =
+    | QED (* proof complete *)
+    | Incomplete (* hole *)
+      of 'a * 'a proof_state
+    | ProofCons of 'a statement * 'a proof (* another step in the proof *)
+
+  and 'a proof_state =
+    { context : hypotheses
+    ; goal : typ
+    ; mutable solution : 'a proof option
+    }
+
+  and 'a statement =
+    | Directive of 'a directive
+    | Claim
+      of name option (* Stated claims may optionally be named by a variable. *)
+         * LF.mctx (* the context in which to interpret the meta-variables occurring in the type *)
+         * typ
+
+  and 'a directive =
+    | Intros (* Prove a function type by a hypothetical derivation. *)
+      of 'a hypothetical
+    | InductionHypothesis (* Invocation of the IH *)
+      of exp_chk list (* the terms to invoke the IH with *)
+         * name (* name the result of the IH *)
+    | Split (* Splitting on an LF object *)
+      of meta_obj (* The object to split on *)
+         * 'a split_branch list
+
+  (** A branch of a case analysis. *)
+  and 'a split_branch =
+    | SplitBranch
+      of LF.msub (* refinement substitution for the branch *)
+         * 'a hypothetical (* the derivation for this case *)
+
+ (** A hypothetical derivation lists meta-hypotheses and
+     hypotheses, then proceeds with a proof.
+  *)
+  and 'a hypothetical =
+    Hypothetical of hypotheses * 'a proof
+
+  let make_proof_state (t : typ) : 'a proof_state =
+    { context = no_hypotheses
+    ; goal = t
+    ; solution = None
+    }
+
+  type complete_proof = Misc.void proof
+  type incomplete_proof = unit proof
+
+  (** Smart constructor for an unfinished proof ending. *)
+  let incomplete_proof (s : unit proof_state) : incomplete_proof =
+    Incomplete ( (), s )
+
+  (** Smart constructor for the intros directive. *)
+  let intros (ctx : hypotheses) (proof : 'a proof) : 'a statement =
+    Directive (Intros (Hypothetical (ctx, proof)))
+
+  let proof_cons (stmt : 'a statement) (proof : 'a proof) = ProofCons (stmt, proof)
+
+  let claim ?name:(name = None) (cD : LF.mctx) (t : typ) = Claim (name, cD, t)
 end
 
 
@@ -424,6 +498,7 @@ module Sgn = struct
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
+    | Proof         of Comp.typ * Comp.incomplete_proof
     | Pragma        of LF.prag
     | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
     | MRecTyp       of Loc.t * decl list list

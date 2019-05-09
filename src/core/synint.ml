@@ -260,6 +260,11 @@ module LF = struct
          | Inductive -> true
        end
     | _ -> true
+
+  let name_of_ctyp_decl (d : ctyp_decl) =
+    match d with
+    | Decl (n, _, _) -> n
+    | DeclOpt n -> n
 end
 
 (* Internal Computation Syntax *)

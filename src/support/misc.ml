@@ -48,3 +48,5 @@ module List = struct
 end
 
 let id (x : 'a) : 'a = x
+
+type void = { impossible: 'a. 'a }

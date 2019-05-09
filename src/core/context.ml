@@ -128,6 +128,44 @@ let rec append cD1 cD2 = match cD2 with
       let cD1' = append cD1 cD2' in
         Dec (cD1', dec)
 
+(** Convert the context to a list.
+    The list order will be the reverse of the context,
+    i.e. the rightmost entry of the context (which is the first entry)
+    will be the rightmost entry of the lsit (which is the last entry).
+ *)
+let rec to_list_rev (ctx : 'a LF.ctx) : 'a list =
+  match ctx with
+  | Empty -> []
+  | Dec (ctx', x) -> x :: to_list_rev ctx'
+
+(** Convert the context to a list.
+    The list order will be the same as the context,
+    i.e. the rightmost entry of the context (the first entry)
+    will be the _leftmost_ entry of the list (the first entry).
+ *)
+let to_list (ctx : 'a LF.ctx) : 'a list =
+  let rec go acc ctx =
+    match ctx with
+    | Empty -> acc
+    | Dec (ctx', x) -> go (x :: acc) ctx'
+  in
+  go [] ctx
+
+(** Iterate over a context from left to right (oldest variable first).
+    Not tail-recursive, since contexts are snoc-lists.
+ *)
+let rec iter (ctx : 'a LF.ctx) (f : 'a -> unit) : unit =
+  match ctx with
+  | Empty -> ()
+  | Dec (ctx', x) -> iter ctx' f; f x
+
+(** Iterate over a context from right to left (most recent variable first)
+    Tail recursive.
+ *)
+let rec iter_rev (ctx : 'a LF.ctx) (f : 'a -> unit) : unit =
+  match ctx with
+  | Empty -> ()
+  | Dec (ctx', x) -> f x; iter_rev ctx' f
 
 let rec length cD = match cD with
   | Empty        -> 0

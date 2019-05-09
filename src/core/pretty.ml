@@ -97,12 +97,18 @@ module Int = struct
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
     val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
+    val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
+    val fmt_ppr_cmp_proof     : formatter -> Comp.incomplete_proof -> unit
+    val fmt_ppr_cmp_statement : formatter -> unit Comp.statement -> unit
+    val fmt_ppr_cmp_directive : formatter -> unit Comp.directive -> unit
+    val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
@@ -1467,6 +1473,79 @@ module Int = struct
 
     (* cD |- t : cD'  *)
 
+    and fmt_ppr_cmp_proof_state ppf =
+      let open Comp in
+      function
+      | { context; goal; solution } ->
+         Context.iter (Whnf.normMCtx context.cD)
+           (fun v -> fprintf ppf "%a@." (fmt_ppr_lf_ctyp_decl context.cD std_lvl) v );
+         Context.iter (Whnf.normCtx context.cG)
+           (fun v -> fprintf ppf "%a@." (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
+         for _ = 1 to 80 do fprintf ppf "-" done;
+         fprintf ppf "@.";
+         fmt_ppr_cmp_typ context.cD std_lvl ppf goal
+
+    and fmt_ppr_cmp_proof ppf =
+      let open Comp in
+      function
+      | QED -> ()
+      | Incomplete ( _, s ) ->
+         begin
+           match s.solution with
+           | None -> fprintf ppf "?"
+           | Some proof -> fmt_ppr_cmp_proof ppf proof
+         end
+      | ProofCons ( stmt, proof ) ->
+         fprintf ppf "%a;@.%a"
+           fmt_ppr_cmp_statement stmt
+           fmt_ppr_cmp_proof proof
+
+    and fmt_ppr_cmp_statement ppf =
+      let open Comp in
+      function
+      | Directive d -> fmt_ppr_cmp_directive ppf d
+      | Claim (name, cD, t) ->
+         let name =
+           match name with
+           | None -> ""
+           | Some name -> Id.render_name name ^ " : "
+         in
+         fprintf ppf "%s%a" name (fmt_ppr_cmp_typ cD std_lvl) t
+
+    and fmt_ppr_cmp_directive ppf =
+      let open Comp in
+      function
+      | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
+      | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
+      | Split (meta_obj, bs) -> Misc.not_implemented "split"
+
+    and fmt_ppr_cmp_hypothetical ppf =
+      let open Comp in
+      function
+      | Hypothetical (hypotheses, proof) ->
+        fprintf ppf "@[<v>{ %a@,  @[<v>%a@]@,}@]" fmt_ppr_cmp_hypotheses hypotheses fmt_ppr_cmp_proof proof;
+
+    and fmt_ppr_cmp_hypotheses ppf =
+      let open Comp in
+      function
+      | { cD; cG } ->
+         let cD' = Context.to_list cD in
+         let cG' = Context.to_list cG in
+
+         let comma ppf () = fprintf ppf ", " in
+         pp_print_list
+           ~pp_sep: comma
+           (fmt_ppr_lf_ctyp_decl cD std_lvl)
+           ppf cD';
+
+         fprintf ppf "@,| @[<h 2>";
+
+         pp_print_list
+           ~pp_sep: comma
+           (fmt_ppr_cmp_ctyp_decl cD std_lvl)
+           ppf cG';
+         fprintf ppf ";@]"
+
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
       | (LF.MShift k, _ ) ->
           (match !Control.substitutionStyle with
@@ -1502,16 +1581,23 @@ module Int = struct
         (fmt_ppr_lf_mfront cD lvl) m
         (Id.render_name name)
 
+    and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
+      | Comp.CTypDecl (x, tau, tag) ->
+         let s = if tag then "*" else "" in
+          fprintf ppf "%s%s: %a"
+            (Id.render_name x) s
+            (fmt_ppr_cmp_typ cD lvl) tau
+      | Comp.CTypDeclOpt x ->
+         raise (Invalid_argument "CTypDeclOpt is unrepresentable")
+
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->
           fprintf ppf "."
 
-      | LF.Dec (cG, Comp.CTypDecl (x, tau, tag )) ->
-         let s = if tag then "*" else "" in
-          fprintf ppf "%a, %s%s: %a"
+      | LF.Dec (cG, d) ->
+          fprintf ppf "%a, %a"
             (fmt_ppr_cmp_gctx cD 0) cG
-            (Id.render_name x) s
-            (fmt_ppr_cmp_typ cD lvl) tau
+            (fmt_ppr_cmp_ctyp_decl cD 0) d
 
     let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
       fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"

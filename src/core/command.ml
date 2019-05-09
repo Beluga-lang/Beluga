@@ -40,6 +40,26 @@ let countholes =
     help = "Print the total number of holes"
   }
 
+let prove =
+  { name = "prove"
+  ; run =
+      command_with_arguments 1
+        (fun ppf [name] ->
+          fprintf ppf "Statement to prove (C-d to abort): @?";
+          Either.trap (fun () -> read_line ()) |>
+            Either.eliminate
+              (fun _ -> fprintf ppf "\n";)
+              (fun stmt_text ->
+                (* Parse the statement to prove, and elaborate it to internal syntax. *)
+                let stmt = Parser.parse_string ~name:"theorem statement" ~input:stmt_text Parser.cmp_typ in
+                let stmt = Index.comptyp stmt in
+                let stmt = Reconstruct.comptyp stmt in
+                let stmt, _ = Abstract.comptyp stmt in
+                Harpoon.Prover.start_toplevel ppf name stmt)
+        )
+  ; help = "Interactively prove a theorem"
+  }
+
 let chatteron =
   { name = "chatteron";
     run =
@@ -588,6 +608,7 @@ let _ =
     ; quit
     ; lookup_hole
     ; solvelfhole
+    ; prove
     ]
 
 let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg

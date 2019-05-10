@@ -9,18 +9,22 @@ end
 
 exception Invalid_Arg
 
-let process_option arg rest = match arg with
-  | "+readline" -> Options.readline := true; Options.ledit := false; rest
-  | "-ledit"    -> Options.ledit := false; rest
-  | "-emacs" -> Options.emacs := true; Debug.chatter := 0; rest
-  | _ -> raise Invalid_Arg
+let process_option arg : unit = match arg with
+  | "+readline" ->
+     Options.readline := true; Options.ledit := false
+  | "-ledit" ->
+     Options.ledit := false
+  | "-emacs" ->
+     Options.emacs := true; Debug.chatter := 0
+  | _ ->
+     raise Invalid_Arg
 
 let rec process_options = function
   | [] -> []
   | arg :: rest ->
     let first = String.get arg 0 in
     if first = '-' || first = '+' then
-      process_options (process_option arg rest)
+      (process_option arg; process_options rest)
     else
       (* reached end of options: return this and remaining arguments *)
       arg :: rest

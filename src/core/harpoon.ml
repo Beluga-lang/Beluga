@@ -93,6 +93,9 @@ module Prover = struct
     ; remaining_subgoals = DynArray.of_list [s]
     }
 
+  (** Gets the next subgoal from the interpreter state.
+      Returns `None` if there are no subgoals remaining.
+   *)
   let next_subgoal (s : interpreter_state) : unit Comp.proof_state option =
     let a = s.remaining_subgoals in
     if DynArray.empty a then
@@ -125,6 +128,15 @@ module Prover = struct
              *)
             DynArray.delete s.remaining_subgoals 0;
          | "show-proof" ->
+            (* This is a trick to print out the proof resulting from
+            the initial state correctly. The initial state's solution
+            might be None or Some; we don't know. Rather than handle
+            that distinction here, we can wrap the state into a proof
+            that immediate ends with Incomplete. The proof
+            pretty-printer will then deal with the None/Some for us by
+            printing a `?` if the initial state hasn't been solved
+            yet.
+             *)
             Format.fprintf ppf "Proof so far:@,%a"
               P.fmt_ppr_cmp_proof (Comp.incomplete_proof s.initial_state)
          | _ ->

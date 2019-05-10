@@ -367,6 +367,8 @@ module Var : sig
   val index_of_name : t -> name -> offset
   val size          : t -> int
 
+  (** Erases the context down to a list of names. *)
+  val of_gctx       : Comp.gctx -> t
 end
 
 
@@ -389,4 +391,6 @@ module CVar : sig
   val append        : t -> t -> t
   val length        : t -> int
 
+  (** Erases the context down to a list of names. *)
+  val of_mctx       : LF.mctx -> t
 end

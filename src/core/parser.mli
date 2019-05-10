@@ -1,6 +1,5 @@
 open Syntax
 
-
 module Grammar : Camlp4.Sig.Grammar.Static
   with module Loc   = Lexer.Loc
   and  module Token = Lexer.Token
@@ -9,6 +8,8 @@ module Grammar : Camlp4.Sig.Grammar.Static
 val sgn : Ext.Sgn.sgn Grammar.Entry.t
 
 val cmp_typ : Ext.Comp.typ Grammar.Entry.t
+
+val harpoon_command : Ext.Harpoon.command Grammar.Entry.t
 
 (** Parse a stream and return a signature *)
 val parse_stream :

@@ -205,6 +205,15 @@ module Comp = struct
  type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
 end
 
+(** Syntax of Harpoon commands. *)
+module Harpoon = struct
+  type command =
+    | Intros
+    (* ^ perhaps add some arguments later to control what gets introduced *)
+    | Split of Comp.exp_syn (* the expression to split on *)
+    | ShowProof
+end
+
 
 (** External Signature Syntax *)
 module Sgn = struct

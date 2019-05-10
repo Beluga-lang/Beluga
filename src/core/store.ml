@@ -1378,6 +1378,14 @@ module Var = struct
   let get          = List.nth
   let size  = List.length
 
+  (**
+   * Erases a context down to a mere list of variables.
+   * This is useful for indexing a term in the external syntax when the
+   * context it occurs in is know, e.g. as in Harpoon.
+   *)
+  let of_gctx (cG : Int.Comp.gctx) : t =
+    let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
+    List.fold_right f (Context.to_list_rev cG) (create ())
 end
 
 
@@ -1410,6 +1418,9 @@ module CVar = struct
   let append cvars cvars' = cvars @ cvars'
   let length cvars = List.length cvars
 
+  let of_mctx (cD : Int.LF.mctx) : t =
+    let f d v = Int.LF.name_of_ctyp_decl d |> mk_entry |> extend v in
+    List.fold_right f (Context.to_list_rev cD) (create ())
 end
 
 let clear () =

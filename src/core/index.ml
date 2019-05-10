@@ -1015,8 +1015,14 @@ let exp      = fun vars -> fun e ->
  index_exp (CVar.create ()) vars ([], term_closed) e)
 let exp'     = fun vars -> fun i -> index_exp' (CVar.create ()) vars ([], term_closed) i
 
-let hexp = fun cvars vars e ->
-  if Store.CVar.length cvars = 0 then
-    exp vars e
-  else
-    index_exp cvars vars ([], not term_closed) e
+let hexp cvars vars e =
+  let closed =
+    Store.CVar.length cvars = 0
+  in
+  index_exp cvars vars ([], closed) e
+
+let hexp' cvars vars e =
+  let closed =
+    Store.CVar.length cvars = 0
+  in
+  index_exp' cvars vars ([], closed) e

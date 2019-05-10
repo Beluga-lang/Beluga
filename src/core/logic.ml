@@ -705,20 +705,14 @@ module Solver = struct
      *)
     and matchDelta (cD' : LF.mctx) (k : int) =
       match cD' with
-      | LF.Dec (cD', LF.Decl (name, LF.ClTyp (cltyp, psi), depend)) ->
+      | LF.Empty -> matchDProg dPool
+      | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, psi), _)) ->
          begin
            let psi' = Whnf.cnormDCtx (psi, LF.MShift k) in
            let cltyp' = Whnf.cnormClTyp (cltyp, LF.MShift k) in
            try
              trail
                begin fun () ->
-               (*
-               Format.printf "matchDelta %s for goal [ %s ; %s |- %s ]\n"
-                 (Id.string_of_name name)
-                 (Printer.P.mctxToString cD)
-                 (Printer.dctxToString cPsi)
-                 (Printer.typToString cD cPsi (tA, s));
-                *)
                U.unifyDCtx cD psi' cPsi;
                (* We look to see whether we're dealing with a sigma type.
                   In this case, we must consider the projections of the sigma.
@@ -726,29 +720,28 @@ module Solver = struct
                 *)
                match cltyp' with
                | LF.PTyp (LF.Sigma typs) ->
-                  (*
-                  Format.printf "%s is a PTyp of a sigma type; trying all projections\n"
-                    (Id.string_of_name name);
-                   *)
                   matchSigma (pvar k) cD psi' (typs, LF.Shift 0) 1
                     (fun k' ->
-                      (* recall: k is the index of the variable in the context *)
-                      (* k' is the index of the projection into the sigma *)
+                      (* recall: k is the index of the variable in the _context_ *)
+                      (* k' is the index of the projection into the _sigma_ *)
                       sc (psi', root (proj (pvar k) k'))
                     )
-               | LF.PTyp typ' ->
-                  U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
 
-                  (* if unification of the types succeeds, then we
-                     found a solution for the goal *)
+               | LF.PTyp typ' ->
+                  (* I don't think this case ever happens; I'm pretty
+                   * sure that whenever we have a PTyp, its type is a
+                   * Sigma, so we can probably remove this case or assert
+                   * that it's impossible.
+                   * -jake
+                   *)
+
+                  U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
 
                   (* We need to create the syntax to refer to this _pattern_ variable *)
                   sc (psi', root (pvar k))
 
                | LF.MTyp typ' ->
                   U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
-                  (* if unification of the types succeeds, then we
-                     found a solution for the goal *)
 
                   (* We need to create the syntax to refer to this _meta_ variable *)
                   sc (psi', root (mvar k))
@@ -757,7 +750,6 @@ module Solver = struct
            | U.Failure s -> ()
          end;
          matchDelta cD' (k + 1)
-      | _ -> matchDProg dPool
 
     (* matchSig c = ()
        Try all the clauses in the static signature with head matching
@@ -788,8 +780,11 @@ module Solver = struct
                       , LF.Const (cidTerm)
                       , fS (spineFromRevList tS)))))
       with U.Failure _ -> ()
+    in
+    (* ^ end of the gigantic let of all the helpers for matchAtom;
+     * Now here's the actual body of matchAtom: *)
+    matchDelta cD 1
 
-    in matchDelta cD 1
 (* spineFromRevList : LF.normal list -> LF.spine
   build an LF.spine out of a list of LF.normal, reversing the order of the elements*)
   and spineFromRevList lS =

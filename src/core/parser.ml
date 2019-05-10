@@ -213,6 +213,8 @@ let sgn = Grammar.Entry.mk "sgn"
 
 let cmp_typ = Grammar.Entry.mk "cmp_typ"
 
+let harpoon_command = Grammar.Entry.mk "harpoon_command"
+
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
@@ -225,7 +227,7 @@ let cmp_typ = Grammar.Entry.mk "cmp_typ"
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn cmp_typ;
+GLOBAL: sgn cmp_typ harpoon_command;
 
   symbol:
     [
@@ -1371,6 +1373,16 @@ cmp_exp_syn:
      ]
   ] ;
 
+  harpoon_command :
+    [
+      [ (* Recall: due to the open Syntax.Ext at the top, this module
+      Harpoon does not refer to harpoon.ml but rather to the Harpoon
+      submodule within Syntax.Ext. *)
+        "%:intros" -> Syntax.Ext.Harpoon.Intros
+      | "%:show-proof" -> Syntax.Ext.Harpoon.ShowProof
+      | "%:split"; t = cmp_exp_syn -> Syntax.Ext.Harpoon.Split t
+      ]
+    ];
 
 END
 

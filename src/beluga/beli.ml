@@ -1,8 +1,6 @@
 open Format
 
 module Options = struct
-  let readline = ref false
-  let ledit = ref true
   let emacs = ref false
   let interrupt_count = ref 0
 end
@@ -10,10 +8,6 @@ end
 exception Invalid_Arg
 
 let process_option arg : unit = match arg with
-  | "+readline" ->
-     Options.readline := true; Options.ledit := false
-  | "-ledit" ->
-     Options.ledit := false
   | "-emacs" ->
      Options.emacs := true; Debug.chatter := 0
   | _ ->
@@ -68,39 +62,6 @@ let run args =
   let ppf = Format.std_formatter in
   let files = process_options args in
   let _ = Debug.pipeDebug := true in
-
-  if not !Options.emacs then
-    begin
-      (* If readline wrapper exists, replace current process with a call
-         to it and ask it to run us, wrapped. Line editing is then
-         available. Otherwise don't bother. *)
-      if !Options.ledit then
-        begin
-          try
-            let (_,pre, post) =
-              Array.fold_right
-                (fun x (f, pre, post) ->
-                  if f then (f, x::pre, post)
-                  else if x = "-I" then (true, pre, post)
-                  else (false, pre, x::post)) Sys.argv (false, [], []) in
-            let args = "ledit" :: (pre @ ("-I"::"-ledit"::post)) in
-            Unix.execvp "ledit" (Array.of_list args)
-          with Unix.Unix_error _ -> ()
-        end
-      else if !Options.readline then
-        begin
-          try
-            let (_,pre, post) =
-              Array.fold_right
-                (fun x (f, pre, post) ->
-                  if f then (f, x::pre, post)
-                  else if x = "-I" then (true, pre, post)
-                  else (false, pre, x::post)) Sys.argv (false, [], []) in
-            let args = "rlwrap" :: (pre @ ("-I"::"-ledit"::post)) in
-            Unix.execvp "rlwrap" (Array.of_list args)
-          with Unix.Unix_error _ -> ()
-        end
-    end;
 
   if List.length files = 1 then
     try

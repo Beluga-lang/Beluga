@@ -37,7 +37,6 @@ let usage () =
         ^ "    -I [beli-options]     Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli) \n"
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
-        ^ "                              -readLine     disabe readline support using rlwrap \n"
   in
   fprintf stderr "Beluga version %s\n" Version.beluga_version;
   fprintf stderr

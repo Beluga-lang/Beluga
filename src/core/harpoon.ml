@@ -3,6 +3,8 @@
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
+module ExtComp = Syntax.Ext.Comp
+
 (** Gives a more convenient way of writing complex proofs by using list syntax. *)
 let prepend_statements (stmts : 'a Comp.statement list) (proof : 'a Comp.proof)
     : 'a Comp.proof =
@@ -111,23 +113,19 @@ module Prover = struct
        (* Show the proof state and the prompt *)
        Format.fprintf ppf "@.Current state:@.%a@.@.\xCE\xBB> @?" P.fmt_ppr_cmp_proof_state g;
 
-       (* Parse the input.
-          TODO: introduce a proper command data type and extend parser.ml to parse it.
-          This will be important because it will be possible to write
-          actual Beluga terms, so we will need our command parsers to be
-          able to invoke the term parsers.
-        *)
+       (* Parse the input.*)
        let input = read_line () in
+       let cmd = Parser.parse_string ~name: "command line" ~input: input Parser.harpoon_command in
        begin
-         match input with
-         | "intros" ->
-            Tactic.intros g
-              (fun g' -> DynArray.add s.remaining_subgoals g');
+         let module Command = Syntax.Ext.Harpoon in
+         match cmd with
+         | Command.Intros ->
+            Tactic.intros g (DynArray.add s.remaining_subgoals);
             (* Because intros solves the current goal, we delete the
              * head of the subgoal array.
              *)
             DynArray.delete s.remaining_subgoals 0;
-         | "show-proof" ->
+         | Command.ShowProof ->
             (* This is a trick to print out the proof resulting from
             the initial state correctly. The initial state's solution
             might be None or Some; we don't know. Rather than handle

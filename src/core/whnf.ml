@@ -1415,12 +1415,19 @@ let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
 let mctxLookupDep cD k = 
  let rec lookup cD k' = 
    match (cD, k') with
-    | (Dec (_cD, Decl (u, mtyp, dep)), 1)
-      -> (u, cnormMTyp (mtyp, MShift k), dep)
-     | (Dec (_cD, DeclOpt u), 1)
-      -> raise (Error.Violation "Expected declaration to have type")
-    | (Dec (cD, _), k') -> lookup cD (k' - 1)
-    | (Empty , _ ) -> raise (Error.Violation ("Meta-variable out of bounds -- looking for " ^ string_of_int k ^ "in context"))
+   | (Dec (_cD, Decl (u, mtyp, dep)), 1)
+     -> (u, cnormMTyp (mtyp, MShift k), dep)
+   | (Dec (_cD, DeclOpt u), 1)
+     -> raise (Error.Violation "Expected declaration to have type")
+   | (Dec (cD, _), k') -> lookup cD (k' - 1)
+   | (Empty , _ ) ->
+      raise
+        (Error.Violation
+           ( "Meta-variable out of bounds -- looking for "
+             ^ string_of_int k
+             ^ " in context of length "
+             ^ string_of_int (List.length (Context.to_list cD))
+        ))
  in
  lookup cD k
 

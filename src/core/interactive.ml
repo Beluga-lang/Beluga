@@ -15,92 +15,6 @@ open Syntax.Int.Comp
 (*********************)
 (* helper functions *)
 (*********************)
-let rec gctxToCompgctx cG = match cG with
-  | [] -> LF.Empty
-  | (x,tau,tag) :: cG ->
-      LF.Dec(gctxToCompgctx cG, Comp.CTypDecl (x, tau,tag))
-
-(* drop the first i element of cD *)
-let rec dropIMCtx i cD = match (i, cD) with
-| (1, LF.Dec (cD', _)) -> cD'
-| (i, LF.Dec (cD', a)) ->
-   let cD' = dropIMCtx (i-1) cD' in
-   LF.Dec (cD', a)
-| _ -> failwith "dropIMCtx removed more than the context could take"
-
-(* insert mfront as the ith element of ms *)
-let rec insertIMSub i mfront ms = match (i, ms) with
-| (1, ms) -> LF.MDot (mfront, ms)
-| (i, LF.MDot (mf, ms')) ->
-   let ms' = insertIMSub (i-1) mfront ms' in
-   LF.MDot(mf, ms')
-| (i, LF.MShift k ) ->
-    insertIMSub i mfront (LF.MDot (LF.MV(k+1), LF.MShift(k+1)))
-
-
-let nameOfLFcTypDecl = (function
-| LF.Decl(n, _, _) -> n
-| LF.DeclOpt n -> n)
-
-let cvarOfLFcTypDecl td =
- match td with
-| LF.Decl(n, _, _) -> n
-| LF.DeclOpt(n) -> n
-
-let nameOfCompcTypDecl = function
-  | CTypDecl (n, _, _) -> n
-  | CTypDeclOpt n -> n
-
-let rec dctxToHat cPsi = match cPsi with
-| LF.Null -> (None, 0)
-| LF.CtxVar cvar -> (Some cvar, 0)
-| LF.DDec (cPsi', _) ->
-   let (cV, i) = dctxToHat cPsi' in
-   (cV, i+1)
-
-let rec gctxToVars cG = match cG with
-| LF.Dec (cG' , td) ->
-    let vars' = gctxToVars cG' in
-     Store.Var.extend vars' (Store.Var.mk_entry (nameOfCompcTypDecl td))
-| LF.Empty  -> Store.Var.create ()
-
-let rec mctxToCVars cD = match cD with
-| LF.Dec (cD', td) ->
-    let vars' = mctxToCVars cD' in
-     Store.CVar.extend vars' (Store.CVar.mk_entry (cvarOfLFcTypDecl td))
-| LF.Empty  -> Store.CVar.create ()
-
-(*   and dctx =                                 (* LF Context                     *)
-    | Null                                   (* Psi ::= .                      *)
-    | CtxVar   of ctx_var                    | psi
-    | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
-
-let rec psiToM = function
-| LF.Null -> failwith "IDK"
-| LF.DDec(psi', LF.TypDecl(n, tA)) ->
-| LF.DDec(psi', LF.TypDeclOpt(n)) ->
- *)
-let printCtxGoal (cD,cPsi,mS) =
-" ["^P.dctxToString cD cPsi^"]"
-
-let printCovGoals cgs =
-  let imp = !(Pretty.Control.printImplicit) in
-  Pretty.Control.printImplicit := false;
-  let strl = List.map (fun (cD,cg, _) ->  match cg with
-  | Cover.CovGoal(cPsi, tR, sA) ->
-      "["^P.dctxToString cD cPsi ^ " |- " ^
-      P.normalToString cD cPsi (tR, S.LF.id)^ "]"
-  | Cover.CovPatt (cG, patt, ttau) ->
-      P.patternToString cD (gctxToCompgctx cG) patt
-        ) cgs in
-  Pretty.Control.printImplicit := imp;
-  strl
-
-let rec compgctxTogctx ccG = match ccG with
-| LF.Empty -> []
-| LF.Dec (ccG', Comp.CTypDecl (x,tau, tag)) ->
-    let cG' = compgctxTogctx ccG' in
-    (x,tau,tag)::cG'
 
 (* loc -> (LF.mctx * cov_goal * LF.msub) list -> (Comp.typ x LF.msub) -> Comp.branch list *)
 (*  branchCovGoals loc n cG0 tA cgs =
@@ -326,7 +240,7 @@ let intro1 (h : Holes.hole) =
      let v = gen_var_for_typ t1 in
      Comp.Fn (Loc.ghost, v, new_hole)
   | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
-     let name = nameOfLFcTypDecl tdec in
+     let name = LF.name_of_ctyp_decl tdec in
      Comp.MLam (Loc.ghost, name, new_hole)
   (* Otherwise, we simply reconstruct the original hole. *)
   | t ->
@@ -363,7 +277,7 @@ let intro (h : Holes.hole) =
             Comp.Fn(Loc.ghost, nam, exp)
        end
     | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
-       let nam = nameOfLFcTypDecl tdec in
+       let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
        Comp.MLam (Loc.ghost, nam , exp)
     | t ->
@@ -448,7 +362,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
            match tau with
            | Comp.TypBox (l, _)
            | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
-              let cgs = Cover.genPatCGoals cD0 (compgctxTogctx cG0) tau [] in
+              let cgs = Cover.genPatCGoals cD0 (Cover.gctx_of_context cG0) tau [] in
               let bl = branchCovGoals 0 cG0 tau0 cgs in
               Some (matchFromPatterns l (Comp.Var(l, i)) bl)
            | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
@@ -480,7 +394,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
 	         | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
 	         | LF.ClTyp (LF.MTyp _ , cPsi ) ->
 		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		          let phat = dctxToHat cPsi' in
+		          let phat = Context.dctxToHat cPsi' in
 		          ( Loc.ghost,
 		            LF.ClObj
                   ( phat,
@@ -495,7 +409,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
               )
 	         | LF.ClTyp (LF.PTyp _ , cPsi) ->
 		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		          let phat  = dctxToHat cPsi' in
+		          let phat  = Context.dctxToHat cPsi' in
 		          ( Loc.ghost,
                 LF.ClObj
                   ( phat,

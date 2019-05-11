@@ -80,6 +80,13 @@ let eta_expand (tH, tA) =
 (* Coverage problem *)
 type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
 
+(** Converts a computational context into a coverage problem. *)
+let rec gctx_of_context (cG : Comp.gctx) : gctx =
+  match cG with
+  | LF.Empty -> []
+  | LF.Dec (cG', Comp.CTypDecl (x, tau, tag)) ->
+     (x, tau, tag) :: gctx_of_context cG'
+
 let rec lookup cG x = match cG with
   | (y,tau, _) :: cG ->
       if x = y then tau

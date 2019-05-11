@@ -367,8 +367,8 @@ let fill =
                   | Some _ -> failwith ("Hole " ^ strat_s ^ " is not a computational hole")
                   | None -> failwith ("No such hole " ^ strat_s)
                 in
-                let vars = Interactive.gctxToVars cG in
-                let cvars = Interactive.mctxToCVars cD in
+                let vars = Store.Var.of_gctx cG in
+                let cvars = Store.CVar.of_mctx cD in
                 let apxexp = Index.hexp cvars vars outexp in
                 let intexp = Reconstruct.elExp cD cG apxexp tclo in
                 Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)

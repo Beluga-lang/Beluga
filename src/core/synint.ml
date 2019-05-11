@@ -473,6 +473,12 @@ module Comp = struct
   let proof_cons (stmt : 'a statement) (proof : 'a proof) = ProofCons (stmt, proof)
 
   let claim ?name:(name = None) (cD : LF.mctx) (t : typ) = Claim (name, cD, t)
+
+  let name_of_ctyp_decl (d : ctyp_decl) =
+    match d with
+    | CTypDecl (name, _, _) -> name
+    | CTypDeclOpt name -> name
+    | WfRec (name, _, _) -> name
 end
 
 

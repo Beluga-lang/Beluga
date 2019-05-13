@@ -3,8 +3,6 @@
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
-module ExtComp = Syntax.Ext.Comp
-
 (** Gives a more convenient way of writing complex proofs by using list syntax. *)
 let prepend_statements (stmts : 'a Comp.statement list) (proof : 'a Comp.proof)
     : 'a Comp.proof =

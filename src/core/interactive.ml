@@ -3,18 +3,31 @@
 module P = Pretty.Int.DefaultPrinter
 module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
+module ExtComp = Syntax.Ext.Comp
 module Comp = Syntax.Int.Comp
 module Cover = Coverage
 module S = Substitution
 open Syntax.Int.Comp
 
- let (dprint, _) = 
- Debug.makeFunctions (Debug.toFlags [29])
-
-
 (*********************)
 (* helper functions *)
 (*********************)
+
+let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
+      (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)
+    : Comp.exp_chk =
+  let var_store = Store.Var.of_gctx cG in
+  let cvar_store = Store.CVar.of_mctx cD in
+  let t = Index.hexp cvar_store var_store t in
+  Reconstruct.elExp cD cG t tp
+
+let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
+    : Comp.exp_syn * Comp.tclo =
+  let var_store = Store.Var.of_gctx cG in
+  let cvar_store = Store.CVar.of_mctx cD in
+  let t = Index.hexp' cvar_store var_store t in
+  Reconstruct.elExp' cD cG t
+
 
 (* loc -> (LF.mctx * cov_goal * LF.msub) list -> (Comp.typ x LF.msub) -> Comp.branch list *)
 (*  branchCovGoals loc n cG0 tA cgs =
@@ -22,7 +35,7 @@ open Syntax.Int.Comp
     for all (cD_i , cg_i, ms_i)  in cg,
       cD_i |- ms_i : cD'
 *)
-let branchCovGoals i cG0 tau cgs =
+let branchCovGoals i cG0 cgs =
   let f = fun (cD, cg, ms) ->
     let make_branch patt =
       Comp.Branch
@@ -139,12 +152,7 @@ and mapHoleBranch f = function
 
 
 (* replaces the ith hole (appearing in a function) with exp, overwriting the previous definition of the function *)
-let replaceHole (s : Holes.lookup_strategy) exp =
-  let (i, h) =
-    match Holes.get s with
-    | None -> failwith "no such hole"
-    | Some p -> p in
-
+let replace_hole (i, h : Holes.hole_id * Holes.hole) exp =
   let is = Holes.string_of_hole_id i in
 (* test if Hole(l',f) is the ith hole, in which case
 * detroy previous hole, commit staged holes and return the expression
@@ -163,20 +171,24 @@ let replaceHole (s : Holes.lookup_strategy) exp =
   let funOfHole i =
     let entries = DynArray.to_list Store.Cid.Comp.entry_list in
     let opt =
-      List.fold_left (fun found_opt entries' ->
-        match found_opt with
-        | None ->
-           begin
-             try
-               let _entries = !entries' in
-               let isWithin = fun (_, loc') -> Holes.loc_within loc' h.Holes.loc in
-               (* Loop over the entries to find the one that contains the loc of the hole *)
-               Some (List.find isWithin _entries)
-               (* List.find raises if it can't find, so we catch and keep looking *)
-             with
-               _ -> None
-           end
-        | Some _ -> found_opt) None entries in
+      List.fold_left
+        (fun found_opt entries' ->
+          match found_opt with
+          | None ->
+             begin
+               try
+                 let _entries = !entries' in
+                 let isWithin = fun (_, loc') -> Holes.loc_within loc' h.Holes.loc in
+                 (* Loop over the entries to find the one that contains the loc of the hole *)
+                 Some (List.find isWithin _entries)
+                      (* List.find raises if it can't find, so we catch and keep looking *)
+               with
+                 _ -> None
+             end
+          | Some _ -> found_opt)
+        None
+        entries
+    in
     match opt with
     | Some (cid_prog, loc') -> (Store.Cid.Comp.get cid_prog, loc')
     | _ -> failwith ("Error in Interactive.funOfHole: could not find function containing hole " ^ is) in
@@ -192,18 +204,20 @@ let replaceHole (s : Holes.lookup_strategy) exp =
       * traverses the expression and replaces the ith hole with the
       * given expression *)
      let ec' = (mapHoleChk (ithHoler (h.Holes.loc) exp) ec) in
-     let _l = Store.Cid.Comp.add loc
+     let _l =
+       Store.Cid.Comp.add loc
          (fun cid ->
            Store.Cid.Comp.mk_entry
-	     entry.Store.Cid.Comp.name
-	     entry.Store.Cid.Comp.typ
-	     entry.Store.Cid.Comp.implicit_arguments
-	     entry.Store.Cid.Comp.total
+	           entry.Store.Cid.Comp.name
+	           entry.Store.Cid.Comp.typ
+	           entry.Store.Cid.Comp.implicit_arguments
+	           entry.Store.Cid.Comp.total
              (Synint.Comp.RecValue (cid, ec', ms, env))
-             entry.Store.Cid.Comp.mut_rec) in
+             entry.Store.Cid.Comp.mut_rec)
+     in
      P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
   | _ ->
-     failwith ("Error in replaceHole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")
+     failwith ("Error in replace_hole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")
 
 (*********************)
 (* top level tactics *)
@@ -350,8 +364,6 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
         }
       ) = hi in
 
-  let tau0 = Whnf.cnormCTyp tau_theta in 
-
   let rec searchGctx i =
     function
     | LF.Empty ->
@@ -363,7 +375,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
            | Comp.TypBox (l, _)
            | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
               let cgs = Cover.genPatCGoals cD0 (Cover.gctx_of_context cG0) tau [] in
-              let bl = branchCovGoals 0 cG0 tau0 cgs in
+              let bl = branchCovGoals 0 cG0 cgs in
               Some (matchFromPatterns l (Comp.Var(l, i)) bl)
            | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
              (* if the type is the type of a variable we're doing
@@ -387,7 +399,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
     | LF.Dec (cD', (LF.Decl (n, mtyp, dep) as cd)) ->
 	     if (Id.string_of_name n) = e then
 	       let cgs = genCGoals cD' cd cD_tail in
-	       let bl  = branchCovGoals i cG0 tau0 cgs in
+	       let bl  = branchCovGoals i cG0 cgs in
 	       let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in  (* cD0 |- mtyp' *)
 	       let m0  =
            match  mtyp with

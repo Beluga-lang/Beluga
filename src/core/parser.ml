@@ -209,11 +209,20 @@ type patOrObs = IsPat of Comp.pattern | IsObs of name
 (* Global Grammar Entry Points *)
 (*******************************)
 
-let sgn = Grammar.Entry.mk "sgn"
+(* Each of these needs to also be listed in the GLOBAL section of the
+ * camlp4 grammar below. *)
 
-let cmp_typ = Grammar.Entry.mk "cmp_typ"
+let sgn : Sgn.sgn Grammar.Entry.t =
+  Grammar.Entry.mk "sgn"
 
-let harpoon_command = Grammar.Entry.mk "harpoon_command"
+let cmp_typ : Comp.typ Grammar.Entry.t =
+  Grammar.Entry.mk "cmp_typ"
+
+let harpoon_command : Syntax.Ext.Harpoon.command Grammar.Entry.t =
+  Grammar.Entry.mk "harpoon_command"
+
+let cmp_exp_chk : Comp.exp_chk Grammar.Entry.t =
+  Grammar.Entry.mk "cmp_exp_chk"
 
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
@@ -227,7 +236,7 @@ let harpoon_command = Grammar.Entry.mk "harpoon_command"
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn cmp_typ harpoon_command;
+GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk;
 
   symbol:
     [

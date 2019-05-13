@@ -343,44 +343,28 @@ let fill =
         try
           begin
             let strat_s = List.hd args in
-            let strat = Holes.unsafe_parse_lookup_strategy strat_s in
             let eq = List.hd (List.tl args) in
             let str = String.concat " " (List.tl (List.tl args)) in
-            let input = "rec t : [ |- t] = " ^ str ^ ";" in
-            if eq = "with" then
-              let sgn = Parser.parse_string ~name:"<fill>" ~input:input Parser.sgn in
-              let Syntax.Ext.Sgn.Rec (_, (Synext.Comp.RecFun(_,_,_, _, outexp))::[])::[] = sgn in
-              try
-                let ( _ ,
-                      { Holes.loc
-                      ; Holes.name
-                      ; Holes.cD
-                      ; Holes.info =
-                          Holes.CompHoleInfo
-                            { Holes.compGoal = tclo
-                            ; Holes.cG
-                            }
-                      }
-                    ) =
-                  match Holes.get strat with
-                  | Some (i, h) when Holes.is_comp_hole h -> (i, h)
-                  | Some _ -> failwith ("Hole " ^ strat_s ^ " is not a computational hole")
-                  | None -> failwith ("No such hole " ^ strat_s)
-                in
-                let vars = Store.Var.of_gctx cG in
-                let cvars = Store.CVar.of_mctx cD in
-                let apxexp = Index.hexp cvars vars outexp in
-                let intexp = Reconstruct.elExp cD cG apxexp tclo in
-                Check.Comp.check cD cG intexp tclo; (* checks that exp fits the hole *)
-                Interactive.replaceHole strat intexp
-              with
-              | e ->
-                 fprintf
-                   ppf
-                   "- Error while replacing hole with expression : %s"
-                   (Printexc.to_string e)
-            else
-              failwith "- The second argument must be `with`. See help"
+            if not (eq = "with") then failwith "- second argument must be `with`; see help;";
+            let exp = Parser.parse_string ~name:"<fill>" ~input:str Parser.cmp_exp_chk in
+            with_hole_from_strategy_string ppf strat_s
+              (requiring_computation_hole ppf
+                 (fun hi ->
+                   let ( _ ,
+                         { Holes.loc
+                         ; Holes.name
+                         ; Holes.cD
+                         ; Holes.info =
+                             Holes.CompHoleInfo
+                               { Holes.compGoal = tclo
+                               ; Holes.cG
+                               }
+                         }
+                       ) = hi
+                   in
+                   let exp = Interactive.elaborate_exp cD cG exp tclo in
+                   Check.Comp.check cD cG exp tclo; (* checks that exp fits the hole *)
+                   Interactive.replace_hole hi exp))
           end
         with
         | e ->
@@ -399,7 +383,7 @@ let do_split ppf (hi : Holes.hole_id * Holes.hole) (var : string) : unit =
      let (_, h) = hi in
      let Holes.CompHoleInfo { Holes.cG; _ } = h.Holes.info in
      Pretty.Control.printNormal := true;
-     fprintf ppf "%s;\n" (expChkToString h.Holes.cD cG exp);
+     fprintf ppf "%a;\n" (fmt_ppr_cmp_exp_chk h.Holes.cD cG Pretty.std_lvl) exp;
      Pretty.Control.printNormal := false
 
 let split =

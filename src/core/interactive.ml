@@ -226,40 +226,6 @@ let replace_hole (i, h : Holes.hole_id * Holes.hole) exp =
 let is_inferred decl =
   not (LF.is_explicit decl)
 
-let intro1 (h : Holes.hole) =
-  let { Holes.loc
-      ; Holes.name
-      ; Holes.cD = cD
-      ; Holes.info =
-          Holes.CompHoleInfo
-            { Holes.cG = cG
-            ; Holes.compGoal = (tau, mS)
-            }
-      } = h
-  in
-  let new_hole = Comp.Hole (Loc.ghost, None) in
-  let gen_var_for_typ =
-    function
-    | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, psi)) ->
-       Id.mk_name (Id.BVarName (genVarName tA))
-    | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA, psi)) ->
-       Id.mk_name (Id.PVarName (genVarName tA))
-    | _ ->
-       Id.mk_name Id.NoName
-  in
-  (* We can only introduce an argument if the goal type of the hole is
-  a (dependent) function space *)
-  match tau with
-  | Comp.TypArr (t1, t2) ->
-     let v = gen_var_for_typ t1 in
-     Comp.Fn (Loc.ghost, v, new_hole)
-  | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
-     let name = LF.name_of_ctyp_decl tdec in
-     Comp.MLam (Loc.ghost, name, new_hole)
-  (* Otherwise, we simply reconstruct the original hole. *)
-  | t ->
-     Comp.Hole (loc, Holes.option_of_name name)
-
 (* intro: int -> Comp.exp_chk option *)
 let intro (h : Holes.hole) =
   let { Holes.loc
@@ -298,15 +264,6 @@ let intro (h : Holes.hole) =
        Comp.Hole (Loc.ghost, None)
   in
   crawl cDT cGT tau
-
-(* search: Int.LF.typ -> string option *)
-
-let search tA =
-  let (tA', i) = Monitor.timer ("Constant Abstraction",
-                                fun () -> Abstract.typ tA) in
-  Logic.runLogicOn (Some (Id.mk_name (Id.SomeString "L"))) (tA', i) None (Some 1)
-
-
 
 (* genCGoals cD' cd cD_tail = cgs 
 

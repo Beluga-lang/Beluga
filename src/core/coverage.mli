@@ -8,9 +8,6 @@ type error =
 
 type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
 
-(** Converts a computational context into a coverage problem. *)
-val gctx_of_context : Comp.gctx -> gctx
-
 type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
                             (*  cPsi |- tR <= sP *)
 		 | CovCtx of LF.dctx
@@ -60,3 +57,6 @@ val covGoalToString : LF.mctx -> cov_goal -> string
 val covGoalsToString: (LF.mctx * cov_goal * LF.msub) list -> string
 
 val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
+
+val compgctx_of_gctx : gctx -> Comp.gctx
+val gctx_of_compgctx : Comp.gctx -> gctx

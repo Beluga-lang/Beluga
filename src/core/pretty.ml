@@ -1525,7 +1525,8 @@ module Int = struct
       function
       | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
       | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
-      | Split (meta_obj, bs) -> Misc.not_implemented "split"
+      | Split (m, _, bs) ->
+         fprintf ppf "--split@,(%a)" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m
 
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in

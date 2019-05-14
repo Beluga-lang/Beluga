@@ -80,7 +80,46 @@ module Tactic = struct
       Comp.QED
     |> solve' s
 
-           (* let split : Comp.meta_obj -> t = Misc.not_implemented "Tactic.split" *)
+  let split (m : Comp.exp_syn) (tau : Comp.typ) : t =
+    let open Comp in
+    fun s callback ->
+    let cgs =
+      Coverage.genPatCGoals
+        s.context.cD
+        (Coverage.gctx_of_compgctx s.context.cG)
+        tau
+        []
+    in
+    let f (cD, cov_goal, ms) =
+      match cov_goal with
+      | Coverage.CovCtx cPsi -> Misc.not_implemented "split on context variables"
+      | Coverage.CovGoal (cPsi, tR, (tau', ms')) -> Misc.not_implemented "bar"
+      | Coverage.CovPatt (cG, patt, tau) ->
+         let cG = Coverage.compgctx_of_gctx cG in
+         (*
+         let open Format in
+         let open Pretty.Int.DefaultPrinter in
+         fprintf err_formatter "cD = %a\ncG = %a\ntau = %a\n"
+           (fmt_ppr_lf_mctx Pretty.std_lvl) cD
+           (fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG
+           (fmt_ppr_cmp_typ cD Pretty.std_lvl) tau;
+          *)
+         let open Comp in
+         let h = { cD; cG } in
+         let new_state =
+           { context = h
+           ; goal = tau
+           ; solution = None
+           }
+         in
+         callback new_state;
+         split_branch h (incomplete_proof new_state)
+    in
+    let bs = List.map f cgs in
+    prepend_statements
+      [ Comp.split m tau bs ]
+      Comp.QED
+    |> solve' s
 end
 
 module Prover = struct
@@ -131,11 +170,39 @@ module Prover = struct
        let s = s.initial_state in
        Format.fprintf ppf "Proof so far:@,%a"
          (P.fmt_ppr_cmp_proof cD cG) (incomplete_proof s)
+    | Command.Defer ->
+       (* Remove the current subgoal from the list (it's in head position)
+        * and then add it back (on the end of the list) *)
+       remove_current_subgoal ();
+       add_subgoal g
 
     (* Real tactics: *)
     | Command.Intros ->
        Tactic.intros g add_subgoal;
        remove_current_subgoal ()
+    | Command.Split t ->
+       let (m, tclo) = Interactive.elaborate_exp' cD cG t in
+       let tau = Whnf.cnormCTyp tclo in
+       (*
+       Format.fprintf ppf "@[Elaborated term:@;%a : %a@,"
+         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m
+         (P.fmt_ppr_cmp_typ g.context.cD Pretty.std_lvl) tau;
+        *)
+       Tactic.split m tau g add_subgoal;
+       remove_current_subgoal ()
+    | Command.Solve m ->
+       let m = Interactive.elaborate_exp cD cG m g.goal in
+       try
+         Check.Comp.check cD cG m g.goal;
+         prepend_statements
+           [ Comp.claim ~term: (Some m) cD g.goal ]
+           Comp.QED
+         |> Tactic.solve' g
+       with
+         Check.Comp.Error (_l, _e) ->
+          Printexc.print_backtrace stderr
+
+
   let rec loop ppf (s : interpreter_state) : unit =
     (* Get the next subgoal *)
     match next_subgoal s with

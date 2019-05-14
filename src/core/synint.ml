@@ -441,14 +441,15 @@ module Comp = struct
       of exp_chk list (* the terms to invoke the IH with *)
          * name (* name the result of the IH *)
     | Split (* Splitting on an LF object *)
-      of meta_obj (* The object to split on *)
+      of exp_syn (* The object to split on *)
+         * typ (* The type of the object that we're splitting on *)
          * 'a split_branch list
 
   (** A branch of a case analysis. *)
   and 'a split_branch =
     | SplitBranch
-      of LF.msub (* refinement substitution for the branch *)
-         * 'a hypothetical (* the derivation for this case *)
+      of (* LF.msub (* refinement substitution for the branch *) * *)
+           'a hypothetical (* the derivation for this case *)
 
  (** A hypothetical derivation lists meta-hypotheses and
      hypotheses, then proceeds with a proof.
@@ -477,6 +478,12 @@ module Comp = struct
 
   let claim ?name:(name = None) ?term:(term = None) (cD : LF.mctx) (t : tclo) =
     Claim (name, cD, term, t)
+
+  let split (m : exp_syn) (tau : typ) (bs : 'a split_branch list) : 'a statement =
+    Directive (Split (m, tau, bs))
+
+  let split_branch (h : hypotheses) (d : 'a proof) : 'a split_branch =
+    SplitBranch (Hypothetical (h, d))
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with

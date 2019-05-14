@@ -208,10 +208,15 @@ end
 (** Syntax of Harpoon commands. *)
 module Harpoon = struct
   type command =
+    (* Actual tactics *)
     | Intros
     (* ^ perhaps add some arguments later to control what gets introduced *)
     | Split of Comp.exp_syn (* the expression to split on *)
+    | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
+    (* Administrative commands *)
     | ShowProof
+    | Defer (* Defers the current subgoal to later *)
+    | ShowSubgoals (* Lists all open subgoals *)
 end
 
 

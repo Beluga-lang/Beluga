@@ -1388,8 +1388,11 @@ cmp_exp_syn:
       Harpoon does not refer to harpoon.ml but rather to the Harpoon
       submodule within Syntax.Ext. *)
         "%:intros" -> Syntax.Ext.Harpoon.Intros
-      | "%:show-proof" -> Syntax.Ext.Harpoon.ShowProof
       | "%:split"; t = cmp_exp_syn -> Syntax.Ext.Harpoon.Split t
+      | "%:show-proof" -> Syntax.Ext.Harpoon.ShowProof
+      | "%:defer" -> Syntax.Ext.Harpoon.Defer
+      | "%:show-subgoals" -> Syntax.Ext.Harpoon.ShowSubgoals
+      | "%:solve"; t = cmp_exp_chk -> Syntax.Ext.Harpoon.Solve t
       ]
     ];
 

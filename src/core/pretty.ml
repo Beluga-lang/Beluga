@@ -105,9 +105,9 @@ module Int = struct
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
-    val fmt_ppr_cmp_proof     : formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_statement : formatter -> unit Comp.statement -> unit
-    val fmt_ppr_cmp_directive : formatter -> unit Comp.directive -> unit
+    val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
+    val fmt_ppr_cmp_statement : LF.mctx -> Comp.gctx -> formatter -> unit Comp.statement -> unit
+    val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
@@ -1482,10 +1482,11 @@ module Int = struct
          Context.iter (Whnf.normCtx context.cG)
            (fun v -> fprintf ppf "%a@." (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
          for _ = 1 to 80 do fprintf ppf "-" done;
+         let goal = Whnf.cnormCTyp goal in
          fprintf ppf "@.";
          fmt_ppr_cmp_typ context.cD std_lvl ppf goal
 
-    and fmt_ppr_cmp_proof ppf =
+    and fmt_ppr_cmp_proof cD cG ppf =
       let open Comp in
       function
       | QED -> ()
@@ -1493,26 +1494,33 @@ module Int = struct
          begin
            match s.solution with
            | None -> fprintf ppf "?"
-           | Some proof -> fmt_ppr_cmp_proof ppf proof
+           | Some proof -> fmt_ppr_cmp_proof cD cG ppf proof
          end
       | ProofCons ( stmt, proof ) ->
          fprintf ppf "%a;@.%a"
-           fmt_ppr_cmp_statement stmt
-           fmt_ppr_cmp_proof proof
+           (fmt_ppr_cmp_statement cD cG) stmt
+           (fmt_ppr_cmp_proof cD cG) proof
 
-    and fmt_ppr_cmp_statement ppf =
+    and fmt_ppr_cmp_statement cD cG ppf =
       let open Comp in
       function
-      | Directive d -> fmt_ppr_cmp_directive ppf d
-      | Claim (name, cD, t) ->
-         let name =
-           match name with
-           | None -> ""
-           | Some name -> Id.render_name name ^ " : "
-         in
-         fprintf ppf "%s%a" name (fmt_ppr_cmp_typ cD std_lvl) t
+      | Directive d -> fmt_ppr_cmp_directive cD cG ppf d
+      | Claim (name, cD, term, ts) ->
+         let t = Whnf.cnormCTyp ts in
+         fprintf ppf "%a%a%a"
+           (Maybe.print
+              (fun ppf x ->
+                fprintf ppf "%s = " (Id.string_of_name x)))
+           name
+           (Maybe.print
+              (fun ppf x ->
+                fprintf ppf "%a : "
+                  (fmt_ppr_cmp_exp_chk cD cG std_lvl) x))
+           term
+           (fmt_ppr_cmp_typ cD std_lvl)
+           t
 
-    and fmt_ppr_cmp_directive ppf =
+    and fmt_ppr_cmp_directive cD cG ppf =
       let open Comp in
       function
       | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
@@ -1522,8 +1530,10 @@ module Int = struct
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in
       function
-      | Hypothetical (hypotheses, proof) ->
-        fprintf ppf "@[<v>{ %a@,  @[<v>%a@]@,}@]" fmt_ppr_cmp_hypotheses hypotheses fmt_ppr_cmp_proof proof;
+      | Hypothetical ({cD; cG}, proof) ->
+         fprintf ppf "@[<v>{ %a@,  @[<v>%a@]@,}@]"
+           fmt_ppr_cmp_hypotheses {cD; cG}
+           (fmt_ppr_cmp_proof cD cG) proof;
 
     and fmt_ppr_cmp_hypotheses ppf =
       let open Comp in

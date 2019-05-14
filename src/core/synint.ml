@@ -420,7 +420,7 @@ module Comp = struct
 
   and 'a proof_state =
     { context : hypotheses
-    ; goal : typ
+    ; goal : tclo
     ; mutable solution : 'a proof option
     }
 
@@ -429,7 +429,10 @@ module Comp = struct
     | Claim
       of name option (* Stated claims may optionally be named by a variable. *)
          * LF.mctx (* the context in which to interpret the meta-variables occurring in the type *)
-         * typ
+         * exp_chk option
+         (* ^ the term that justifies the claim; filled in by proof
+          * search if the user doesn't specify it *)
+         * tclo
 
   and 'a directive =
     | Intros (* Prove a function type by a hypothetical derivation. *)
@@ -453,7 +456,7 @@ module Comp = struct
   and 'a hypothetical =
     Hypothetical of hypotheses * 'a proof
 
-  let make_proof_state (t : typ) : 'a proof_state =
+  let make_proof_state (t : tclo) : 'a proof_state =
     { context = no_hypotheses
     ; goal = t
     ; solution = None
@@ -472,7 +475,8 @@ module Comp = struct
 
   let proof_cons (stmt : 'a statement) (proof : 'a proof) = ProofCons (stmt, proof)
 
-  let claim ?name:(name = None) (cD : LF.mctx) (t : typ) = Claim (name, cD, t)
+  let claim ?name:(name = None) ?term:(term = None) (cD : LF.mctx) (t : tclo) =
+    Claim (name, cD, term, t)
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with

@@ -28,3 +28,8 @@ val filter_map : ('a -> 'b option) -> 'a list -> 'b list
  * In fact, `cat_options` is implemented in terms of `filter_map`.
  *)
 val cat_options : 'a option list -> 'a list
+
+(**
+ * Prints an option by doing nothing if it is `None`; else it uses the given printer.
+ *)
+val print : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit

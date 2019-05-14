@@ -34,3 +34,10 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
 
 let cat_options (l : 'a option list) : 'a list =
   filter_map Misc.id l
+
+let print
+      (f : Format.formatter -> 'a -> unit)
+      (ppf : Format.formatter)
+      (m : 'a option)
+    : unit =
+  eliminate (fun () -> ()) (f ppf) m

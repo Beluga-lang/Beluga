@@ -325,30 +325,27 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
     function
     | LF.Empty ->
        None
-    | LF.Dec (cG', Comp.CTypDecl (n, tau, _)) ->
-       if (Id.string_of_name n) = e then
-         let rec matchTyp tau =
-           match tau with
-           | Comp.TypBox (l, _)
+    | LF.Dec (cG', Comp.CTypDecl (n, tau, _))
+      when Id.string_of_name n = e ->
+       let rec matchTyp tau =
+         match tau with
+         | Comp.TypBox (l, _)
            | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
-              let cgs = Cover.genPatCGoals cD0 (Cover.gctx_of_context cG0) tau [] in
-              let bl = branchCovGoals 0 cG0 cgs in
-              Some (matchFromPatterns l (Comp.Var(l, i)) bl)
-           | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
-             (* if the type is the type of a variable we're doing
-               induction on, then we can just match the inner type
-              *)
-           | Comp.TypInd tau -> matchTyp tau
-           | _ ->
-              failwith
-                ( "Found variable in gCtx, cannot split on "
-                  ^ Id.string_of_name n )
-         in
-         matchTyp tau
-       else
-         searchGctx (i+1) cG'
-    | _ ->
-       failwith "gCtx contains something we can't split on"
+            let cgs = Cover.genPatCGoals cD0 (Cover.gctx_of_compgctx cG0) tau [] in
+            let bl = branchCovGoals 0 cG0 cgs in
+            Some (matchFromPatterns l (Comp.Var(l, i)) bl)
+         | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))
+         (* if the type is the type of a variable we're doing
+            induction on, then we can just match the inner type
+          *)
+         | Comp.TypInd tau -> matchTyp tau
+         | _ ->
+            failwith
+              ( "Found variable in gCtx, cannot split on "
+                ^ Id.string_of_name n )
+       in
+       matchTyp tau
+    | LF.Dec (cG', _) -> searchGctx (i+1) cG'
   in
   let rec searchMctx i cD (cD_tail : LF.ctyp_decl list) =
     match cD with
@@ -406,11 +403,11 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
        failwith "mCtx contains something we can't split on"
   in
     match searchGctx 1 cG0 with
-      | None ->
-	  (match searchMctx 1 cD0 [] with
-	     | None -> None
-	     | Some s -> Some s)
       | Some s -> Some s
+      | None ->
+	       match searchMctx 1 cD0 [] with
+	       | None -> None
+	       | Some s -> Some s
 
 let whale_str =
   "%,,,,,,,,,,,,,,,,,#++++++++++++#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n\

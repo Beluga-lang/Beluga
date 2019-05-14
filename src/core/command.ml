@@ -55,7 +55,7 @@ let prove =
                 let stmt = Index.comptyp stmt in
                 let stmt = Reconstruct.comptyp stmt in
                 let stmt, _ = Abstract.comptyp stmt in
-                Harpoon.Prover.start_toplevel ppf name stmt)
+                Harpoon.Prover.start_toplevel ppf name (stmt, Syntax.Int.LF.MShift 0) )
         )
   ; help = "Interactively prove a theorem"
   }

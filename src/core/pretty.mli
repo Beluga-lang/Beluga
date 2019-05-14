@@ -58,9 +58,9 @@ module Int : sig
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
-    val fmt_ppr_cmp_proof     : formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_statement : formatter -> unit Comp.statement -> unit
-    val fmt_ppr_cmp_directive : formatter -> unit Comp.directive -> unit
+    val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
+    val fmt_ppr_cmp_statement : LF.mctx -> Comp.gctx -> formatter -> unit Comp.statement -> unit
+    val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 

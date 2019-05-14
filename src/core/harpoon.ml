@@ -58,9 +58,12 @@ module Tactic = struct
          intro' (LF.Dec (cD, tdec)) cG t2
       | _ -> cD, cG, t
     in
+    (* Main body of `intros`: *)
     fun s callback ->
     let open Comp in
-    let cD, cG, goal' = intro' LF.Empty LF.Empty s.goal in
+    let (t, sigma) = s.goal in
+    let cD, cG, t' = intro' LF.Empty LF.Empty t in
+    let goal' = (t', sigma) in
     let context =
       { cG = Context.append s.context.cG cG
       ; cD = Context.append s.context.cD cD
@@ -103,6 +106,36 @@ module Prover = struct
     else
       Some (DynArray.get a 0)
 
+  let process_command
+        (ppf : Format.formatter)
+        (s : interpreter_state) (g : unit Comp.proof_state)
+        (cmd : Syntax.Ext.Harpoon.command)
+      : unit =
+    let module Command = Syntax.Ext.Harpoon in
+    let add_subgoal = DynArray.add s.remaining_subgoals in
+    let remove_current_subgoal () = DynArray.delete s.remaining_subgoals 0 in
+    let open Comp in
+    let { cD; cG } = g.context in
+    match cmd with
+    (* Administrative commands: *)
+    | Command.ShowProof ->
+       (* This is a trick to print out the proof resulting from
+          the initial state correctly. The initial state's solution
+          might be None or Some; we don't know. Rather than handle
+          that distinction here, we can wrap the state into a proof
+          that immediate ends with Incomplete. The proof
+          pretty-printer will then deal with the None/Some for us by
+          printing a `?` if the initial state hasn't been solved
+          yet.
+        *)
+       let s = s.initial_state in
+       Format.fprintf ppf "Proof so far:@,%a"
+         (P.fmt_ppr_cmp_proof cD cG) (incomplete_proof s)
+
+    (* Real tactics: *)
+    | Command.Intros ->
+       Tactic.intros g add_subgoal;
+       remove_current_subgoal ()
   let rec loop ppf (s : interpreter_state) : unit =
     (* Get the next subgoal *)
     match next_subgoal s with
@@ -114,33 +147,10 @@ module Prover = struct
        (* Parse the input.*)
        let input = read_line () in
        let cmd = Parser.parse_string ~name: "command line" ~input: input Parser.harpoon_command in
-       begin
-         let module Command = Syntax.Ext.Harpoon in
-         match cmd with
-         | Command.Intros ->
-            Tactic.intros g (DynArray.add s.remaining_subgoals);
-            (* Because intros solves the current goal, we delete the
-             * head of the subgoal array.
-             *)
-            DynArray.delete s.remaining_subgoals 0;
-         | Command.ShowProof ->
-            (* This is a trick to print out the proof resulting from
-            the initial state correctly. The initial state's solution
-            might be None or Some; we don't know. Rather than handle
-            that distinction here, we can wrap the state into a proof
-            that immediate ends with Incomplete. The proof
-            pretty-printer will then deal with the None/Some for us by
-            printing a `?` if the initial state hasn't been solved
-            yet.
-             *)
-            Format.fprintf ppf "Proof so far:@,%a"
-              P.fmt_ppr_cmp_proof (Comp.incomplete_proof s.initial_state)
-         | _ ->
-            Format.fprintf ppf "unknown input@.";
-       end;
+       process_command ppf s g cmd;
        loop ppf s
 
-  let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.typ) : unit =
+  let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.tclo) : unit =
     let initial_state = stmt |> Comp.make_proof_state |> make_prover_state in
     loop ppf initial_state
 end

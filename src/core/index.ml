@@ -52,7 +52,7 @@ let _ = Error.register_printer
   (fun (Error (loc, err)) ->
     Error.print_with_location loc (fun ppf ->
       match err with
-      | NameOvershadowing n -> 
+      | NameOvershadowing n ->
           Format.fprintf ppf ("The declaration %s is overshadowing an earlier one.") (Id.render_name n)
       | MisplacedOperator n ->
         Format.fprintf ppf ("Illegal use of operator %s.") (Id.render_name n)
@@ -61,8 +61,8 @@ let _ = Error.register_printer
 
       | UnboundName n ->
           Format.fprintf ppf
-	    "Unbound data-level variable (ordinary or meta-variable) or constructor: %s."
-	    (Id.render_name n)
+            "Unbound data-level variable (ordinary or meta-variable) or constructor: %s."
+            (Id.render_name n)
       | UnboundCtxName n ->
           Format.fprintf ppf "Unbound context variable: %s." (Id.render_name n)
       | UnboundCtxSchemaName n ->
@@ -75,7 +75,7 @@ let _ = Error.register_printer
           Format.fprintf ppf "Unbound computation-level observation: %s." (Id.render_name n)
       | PatCtxRequired ->
           Format.fprintf ppf
-	    "The context in a pattern must be a proper context, where a variable declaration must carry its type."
+            "The context in a pattern must be a proper context, where a variable declaration must carry its type."
       | CompEmptyPattBranch ->
           Format.fprintf ppf "If the pattern in a branch is empty, there should be no branch body."
       | UnboundIdSub ->
@@ -83,11 +83,11 @@ let _ = Error.register_printer
       | PatVarNotUnique ->
           Format.fprintf ppf "Pattern variable not linear."
       | IllFormedCompTyp ->
-	       Format.fprintf ppf "Ill-formed computation-level type."
+               Format.fprintf ppf "Ill-formed computation-level type."
       | ParseError ->
         Format.fprintf ppf "Unable to parse operators into valid structure"
       | NoRHS ->
-	Format.fprintf ppf "Body of branch missing; this is only permitted for absurd patterns"
+        Format.fprintf ppf "Body of branch missing; this is only permitted for absurd patterns"
     ))
 
 
@@ -147,10 +147,10 @@ and index_typ cvars bvars fvars = function
     begin
       try
         let a' = Typ.index_of_name a in
-	      let (s', fvars') = index_spine cvars bvars fvars s in
+              let (s', fvars') = index_spine cvars bvars fvars s in
           (Apx.LF.Atom (loc, a', s') , fvars')
         with Not_found ->
-	        raise (Error (loc, UnboundName a))
+                raise (Error (loc, UnboundName a))
     end
 
   | Ext.LF.ArrTyp (_loc, a, b) ->
@@ -174,11 +174,11 @@ and index_typ cvars bvars fvars = function
       begin match n with
         | Ext.LF.TList(loc2,nl) ->
            begin
-	           match shunting_yard nl with
-	           | Ext.LF.Root(_, Ext.LF.Name(_, a), tS') ->
-		            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, tS'))
-	           | _ ->
-		            raise (Error (loc, IllFormedCompTyp))
+                   match shunting_yard nl with
+                   | Ext.LF.Root(_, Ext.LF.Name(_, a), tS') ->
+                            index_typ cvars bvars fvars (Ext.LF.Atom (loc, a, tS'))
+                   | _ ->
+                            raise (Error (loc, IllFormedCompTyp))
            end
         | Ext.LF.Root(loc2, Ext.LF.Name(_,name), tS) ->
             index_typ cvars bvars fvars (Ext.LF.Atom(loc2, name, tS))
@@ -239,8 +239,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
   in
   let rec parse : int * Ext.LF.normal list * (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list -> Ext.LF.normal = function
-  | i, Ext.LF.TList(_, nl) :: t, y, z -> 
-      let h = parse (0,nl, [], []) 
+  | i, Ext.LF.TList(_, nl) :: t, y, z ->
+      let h = parse (0,nl, [], [])
       in parse(i+1, t,(i,h)::y,z)
   | i, Ext.LF.Lam (loc, name, Ext.LF.TList(_, nl)) :: t, y, z ->
     let h = parse (0, nl, [], []) in
@@ -418,14 +418,14 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
           let (s' , fvs') = index_sub cvars bvars fvs s in
             (Apx.LF.PVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
-	  if closed_flag then
-	    ((* if lookup_fv fvars (FPV p) then
+          if closed_flag then
+            ((* if lookup_fv fvars (FPV p) then
                 let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
                 (Apx.LF.FPVar (p, s') , (fvars' , closed_flag))
-	        else *)
-	      raise (Error (loc, UnboundName p))
-	    )
-	  else
+                else *)
+              raise (Error (loc, UnboundName p))
+            )
+          else
             let (s', (fvars', closed_flag))  = index_sub cvars bvars fvs s in
               (Apx.LF.FPVar (p, s') , (p :: fvars' , closed_flag))
         end
@@ -434,25 +434,24 @@ and index_head cvars bvars ((fvars, closed_flag) as fvs) = function
       (Apx.LF.Hole , fvs)
 
   | Ext.LF.MVar (loc, u, s) ->
-      if lookup_fv fvars (u) then
-        let (s', fvs')     = index_sub cvars bvars fvs s in
-          (Apx.LF.FMVar (u, s') , fvs')
-      else
-        begin try
-          let offset = CVar.index_of_name cvars u in
-          let (s', fvs')     = index_sub cvars bvars fvs s in
-            (Apx.LF.MVar (Apx.LF.Offset offset, s') , fvs')
-        with Not_found ->
-	  if closed_flag then
-	    (* if lookup_fv fvars (FMV u) then
-               let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-		 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
-	     else *)
-	       raise (Error (loc, UnboundName u))
-	  else
-            let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-              (Apx.LF.FMVar (u, s') , (u :: fvars' , closed_flag))
-        end
+     if lookup_fv fvars (u) then
+       let (s', fvs')     = index_sub cvars bvars fvs s in
+       (Apx.LF.FMVar (u, s') , fvs')
+     else
+       try
+         let offset = CVar.index_of_name cvars u in
+         let (s', fvs')     = index_sub cvars bvars fvs s in
+         (Apx.LF.MVar (Apx.LF.Offset offset, s') , fvs')
+       with
+       | Not_found when closed_flag ->
+          (* if lookup_fv fvars (FMV u) then
+             let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+                   (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
+             else *)
+          raise (Error (loc, UnboundName u))
+       | Not_found ->
+          let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
+          (Apx.LF.FMVar (u, s') , (u :: fvars' , closed_flag))
 
   (* | Ext.LF.SVar (loc, n, _sigma) -> *)
   (*     let _        = dprint (fun () -> "Indexing head : SVar " ^ (string_of_name n)) in *)
@@ -507,13 +506,13 @@ and index_sub cvars bvars ((fvs, closed_flag )  as fvars) =
           let _ = dprint (fun () -> "[index_sub] s = " ^ string_of_int offset) in
             (Apx.LF.SVar (Apx.LF.Offset offset, s') , fvs')
         with Not_found ->
-	  if closed_flag then
-	    (* if lookup_fv fvars (FMV u) then
+          if closed_flag then
+            (* if lookup_fv fvars (FMV u) then
                let (s', (fvars', closed_flag))     = index_sub cvars bvars fvs s in
-		 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
-	     else *)
-	       raise (Error (loc, UnboundName u))
-	  else
+                 (Apx.LF.FMVar (u, s') , (fvars' , closed_flag))
+             else *)
+               raise (Error (loc, UnboundName u))
+          else
             let (s', (fvars', closed_flag))     = index_sub cvars bvars fvars s in
               (Apx.LF.FSVar (u, s') , (u :: fvars' , closed_flag))
         end
@@ -534,17 +533,17 @@ let rec index_dctx cvars bvars ((fvs, closed) as fvars) = function
 
   | Ext.LF.CtxVar (loc, psi_name)  ->
       if lookup_fv fvs (psi_name) then
-	(Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, (fvs, closed))
+        (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, (fvs, closed))
       else
-	begin try
+        begin try
           let offset = CVar.index_of_name cvars psi_name in
             (Apx.LF.CtxVar (Apx.LF.CtxOffset offset) , bvars, fvars)
-	with Not_found ->
-	if closed then
-	     raise (Error (loc, UnboundName psi_name))
-	else
-	  (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((psi_name :: fvs),  closed))
-	end
+        with Not_found ->
+        if closed then
+             raise (Error (loc, UnboundName psi_name))
+        else
+          (Apx.LF.CtxVar (Apx.LF.CtxName psi_name), bvars, ((psi_name :: fvs),  closed))
+        end
   | Ext.LF.DDec (psi, decl) ->
       let (psi', bvars', fvars')    = index_dctx cvars bvars fvars psi in
       let (decl', bvars'', fvars'') = index_decl cvars bvars' fvars' decl in
@@ -581,8 +580,8 @@ let index_cltyp loc cvars fvars = function
         (Apx.LF.ClTyp (cl', psi'), fvars'')
   | Ext.LF.CTyp (schema_name) ->
       begin try
-	let schema_cid    = Schema.index_of_name schema_name in
-	  (Apx.LF.CTyp schema_cid, fvars)
+        let schema_cid    = Schema.index_of_name schema_name in
+          (Apx.LF.CTyp schema_cid, fvars)
       with Not_found ->           raise (Error (loc, UnboundCtxSchemaName schema_name))
       end
 
@@ -591,13 +590,13 @@ let cltyp_to_cvar n _ = n
 let index_cdecl cvars fvars = function
   | Ext.LF.Decl(u, (loc,cl), dep) ->
     let (cl', fvars') = index_cltyp loc cvars fvars cl in
-      begin try 
-	let _offset = CVar.index_of_name cvars u in
-	  raise (Error (loc, NameOvershadowing u))
-      with Not_found -> 
-	let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
-	let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
-	  (Apx.LF.Decl(u, cl', dep), cvars', fvars')
+      begin try
+        let _offset = CVar.index_of_name cvars u in
+          raise (Error (loc, NameOvershadowing u))
+      with Not_found ->
+        let cvars'        = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
+        let dep = match dep with Ext.LF.Maybe -> Apx.LF.Maybe | Ext.LF.No -> Apx.LF.No in
+          (Apx.LF.Decl(u, cl', dep), cvars', fvars')
       end
 
 let rec index_mctx cvars fvars = function
@@ -686,11 +685,11 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
       begin try
         let a' = CompTyp.index_of_name a in
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
-	  (Apx.Comp.TypBase (loc, a', ms'), fcvars')
+          (Apx.Comp.TypBase (loc, a', ms'), fcvars')
       with Not_found -> try
         let a' = CompCotyp.index_of_name a in
         let (ms', fcvars') = index_meta_spine cvars fcvars ms in
-	  (Apx.Comp.TypCobase (loc, a', ms'), fcvars')
+          (Apx.Comp.TypCobase (loc, a', ms'), fcvars')
       with Not_found ->
         begin try
           let a' = CompTypDef.index_of_name a in
@@ -712,7 +711,7 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
   | Ext.Comp.TypCross (_loc, tau, tau') ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
       let (tau2, fcvars2) = index_comptyp cvars fcvars1 tau' in
-	(Apx.Comp.TypCross (tau1, tau2), fcvars2)
+        (Apx.Comp.TypCross (tau1, tau2), fcvars2)
 
   | Ext.Comp.TypPiBox (_loc, cdecl, tau)    ->
       let (cdecl', cvars', fcvars1) = index_cdecl cvars fcvars cdecl in
@@ -721,7 +720,7 @@ let rec index_comptyp cvars  ((fcvs, closed) as fcvars) =
 
   | Ext.Comp.TypInd (tau) ->
       let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
-	(Apx.Comp.TypInd tau1, fcvars1)
+        (Apx.Comp.TypInd tau1, fcvars1)
 
 let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->
@@ -730,7 +729,7 @@ let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Fn (loc, x, e) ->
      let vars' = Var.extend vars (Var.mk_entry x) in
        Apx.Comp.Fn (loc, x, index_exp cvars vars' fcvars e)
-        
+
   | Ext.Comp.Fun (loc, fbr) ->
     Apx.Comp.Fun(loc, index_fbranches cvars vars fcvars fbr)
 
@@ -783,13 +782,13 @@ and index_exp' cvars vars fcvars = function
     let e' = index_exp cvars vars fcvars e in
     begin
       try
-	Apx.Comp.Obs (loc, e', CompDest.index_of_name d)
+        Apx.Comp.Obs (loc, e', CompDest.index_of_name d)
       with Not_found -> raise (Error (loc, UnboundCompConstName d))
     end
   | Ext.Comp.DataConst (loc, c) ->
     begin
       try
-	Apx.Comp.DataConst (loc, CompConst.index_of_name c)
+        Apx.Comp.DataConst (loc, CompConst.index_of_name c)
       with Not_found -> raise (Error (loc, UnboundCompConstName  c))
     end
   (* This case is a workaround to a parsing problem with observations *)
@@ -818,7 +817,7 @@ and index_exp' cvars vars fcvars = function
   | Ext.Comp.PairVal (loc, i1, i2) ->
       let i1' = index_exp' cvars vars fcvars i1 in
       let i2' = index_exp' cvars vars fcvars i2 in
-	    Apx.Comp.PairVal (loc, i1', i2')
+            Apx.Comp.PairVal (loc, i1', i2')
 
   | Ext.Comp.Ann (_loc, e, tau) ->
       let (tau', _ ) =  index_comptyp cvars fcvars tau in
@@ -827,24 +826,24 @@ and index_exp' cvars vars fcvars = function
 and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatVar (loc, x) ->
       begin try
-	let _x = Var.index_of_name fvars x in
-	  raise (Error (loc, PatVarNotUnique))
+        let _x = Var.index_of_name fvars x in
+          raise (Error (loc, PatVarNotUnique))
       with Not_found ->
-	let fvars' = Var.extend fvars (Var.mk_entry x) in
-	  (Apx.Comp.PatFVar (loc, x), fcvars, fvars')
-	    (* (Apx.Comp.PatVar (loc, name, offset), fcvars, fvars') *)
+        let fvars' = Var.extend fvars (Var.mk_entry x) in
+          (Apx.Comp.PatFVar (loc, x), fcvars, fvars')
+            (* (Apx.Comp.PatVar (loc, name, offset), fcvars, fvars') *)
       end
   | Ext.Comp.PatPair (loc, pat1, pat2) ->
       let (pat1, fcvars1, fvars1) = index_pattern cvars fcvars fvars pat1 in
       let (pat2, fcvars2, fvars2) = index_pattern cvars fcvars1 fvars1 pat2 in
-	(Apx.Comp.PatPair (loc, pat1, pat2), fcvars2, fvars2)
+        (Apx.Comp.PatPair (loc, pat1, pat2), fcvars2, fvars2)
   | Ext.Comp.PatConst (loc, c, pat_spine) ->
       let cid = begin try CompConst.index_of_name c
                 with
-		    Not_found -> raise (Error (loc, UnboundName c))
+                    Not_found -> raise (Error (loc, UnboundName c))
                 end in
       let (pat_spine', fcvars', fvars')  = index_pat_spine cvars fcvars fvars pat_spine in
-	(Apx.Comp.PatConst (loc, cid, pat_spine'), fcvars', fvars')
+        (Apx.Comp.PatConst (loc, cid, pat_spine'), fcvars', fvars')
 
   | Ext.Comp.PatMetaObj (loc, mO) ->
     let (mO', fcvars1) = index_meta_obj cvars fcvars mO in
@@ -853,7 +852,7 @@ and index_pattern cvars ((fvs, closed) as fcvars) fvars pat = match pat with
   | Ext.Comp.PatAnn (loc, pat, tau) ->
       let (pat', fcvars', fvars') = index_pattern cvars fcvars fvars pat in
       let (tau', fcvars'') = index_comptyp cvars fcvars' tau in
-	(Apx.Comp.PatAnn (loc, pat', tau') , fcvars'', fvars')
+        (Apx.Comp.PatAnn (loc, pat', tau') , fcvars'', fvars')
 
 and index_pat_spine cvars fcvars fvars pat_spine = match pat_spine with
   | Ext.Comp.PatNil loc -> (Apx.Comp.PatNil loc, fcvars, fvars)
@@ -876,7 +875,7 @@ and index_fbranches cvars vars fcvars fbranches = match fbranches with
   | Ext.Comp.ConsFBranch (loc, (patS, e), fbr) ->
         let (fcvars',_) = fcvars in
     let (patS', fcvars1, vars1) =
-      index_pat_spine cvars ([], not term_closed) (Var.create ()) patS in 
+      index_pat_spine cvars ([], not term_closed) (Var.create ()) patS in
     let vars_all  = Var.append vars1 vars in
       let patS'' = reindex_pat_spine vars1 patS' in
       let (fcv1, _ ) = fcvars1 in
@@ -891,15 +890,15 @@ and reindex_pattern fvars pat = match pat with
   | Apx.Comp.PatFVar (loc, x) ->
       (* all free variable names must be in fvars *)
       let offset = Var.index_of_name fvars x in
-	Apx.Comp.PatVar (loc, x, offset)
+        Apx.Comp.PatVar (loc, x, offset)
 
   | Apx.Comp.PatPair (loc, pat1, pat2) ->
       let pat1 = reindex_pattern fvars pat1 in
       let pat2 = reindex_pattern fvars pat2 in
-	Apx.Comp.PatPair (loc, pat1, pat2)
+        Apx.Comp.PatPair (loc, pat1, pat2)
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
       let pat_spine'  = reindex_pat_spine  fvars pat_spine in
-	Apx.Comp.PatConst (loc, c, pat_spine')
+        Apx.Comp.PatConst (loc, c, pat_spine')
 
   | Apx.Comp.PatMetaObj (loc, mO) -> pat
 
@@ -907,17 +906,17 @@ and reindex_pattern fvars pat = match pat with
 
   | Apx.Comp.PatAnn (loc, pat, tau) ->
       let pat' = reindex_pattern fvars pat in
-	Apx.Comp.PatAnn (loc, pat', tau)
+        Apx.Comp.PatAnn (loc, pat', tau)
 
 and reindex_pat_spine fvars pat_spine = match pat_spine with
   | Apx.Comp.PatNil loc -> Apx.Comp.PatNil loc
   | Apx.Comp.PatApp (loc, pat, pat_spine) ->
       let pat' = reindex_pattern fvars pat in
       let pat_spine' = reindex_pat_spine fvars pat_spine in
-	Apx.Comp.PatApp (loc, pat', pat_spine')
+        Apx.Comp.PatApp (loc, pat', pat_spine')
   | Apx.Comp.PatObs (loc, obs, pat_spine) ->
     Apx.Comp.PatObs (loc, obs, reindex_pat_spine fvars pat_spine)
-          
+
 (* TODO: Refactor this *)
 and index_branch cvars vars (fcvars, _ ) branch = match branch with
   | Ext.Comp.EmptyBranch (loc, cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty _))))) ->
@@ -933,7 +932,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       Apx.Comp.EmptyBranch (loc, cD', Apx.Comp.PatEmpty (loc', cPsi'))
 
   | Ext.Comp.EmptyBranch (loc, cD,
-			  Ext.Comp.PatAnn (loc1, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty loc2)))), tau)) ->
+                          Ext.Comp.PatAnn (loc1, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cpsi,Ext.Comp.MObj (Ext.LF.PatEmpty loc2)))), tau)) ->
     let empty_fcvars = [] in
     let fcvars' = begin match get_ctxvar cpsi with
                      | None -> empty_fcvars
@@ -945,7 +944,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
     let (cPsi', _bvars, fcvars2) = index_dctx cvars1 (BVar.create ()) fcvars1 cpsi in
     let (tau', fcvars1) = index_comptyp cvars1 fcvars2 tau in
       Apx.Comp.EmptyBranch(loc, cD',
-			   Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau'))
+                           Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau'))
 
   | Ext.Comp.EmptyBranch (loc,_,_) -> raise (Error (loc, NoRHS))
   | Ext.Comp.Branch (loc, _cD, Ext.Comp.PatMetaObj (loc', (_l,Ext.Comp.ClObj (cspi,Ext.Comp.MObj (Ext.LF.PatEmpty _)))) , _e) ->
@@ -974,7 +973,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       let empty_fcvars = [] in
       let _ = dprint (fun () -> "index_branch - pat") in
       let (omega, cD', cvars1, fcvars1)  =
-	index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
+        index_mctx (CVar.create()) (empty_fcvars, not term_closed) cD in
       let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ())  pat in
       let _ = dprint (fun () -> "index_pattern done") in
       let cvars_all  = CVar.append cvars1 cvars in
@@ -985,7 +984,7 @@ and index_branch cvars vars (fcvars, _ ) branch = match branch with
       let _ = dprint (fun () -> "fcvars in pattern = " ^ fcvarsToString fcv2) in
       let fcv3      = List.append fcv2 fcvars in
       let e'        = index_exp cvars_all vars_all (fcv3, term_closed) e in
-	Apx.Comp.Branch (loc, omega, cD', pat'', e')
+        Apx.Comp.Branch (loc, omega, cD', pat'', e')
 
 
 let comptypdef (cT, cK) =
@@ -1009,7 +1008,7 @@ let compkind = index_compkind (CVar.create ())  ([], not term_closed)
 let comptyp  tau =
   let (tau', _ ) = index_comptyp  (CVar.create ()) ([], not term_closed) tau in
     tau'
-      
+
 let exp      = fun vars -> fun e ->
 (dprint (fun () -> "Indexing expression ... " );
  index_exp (CVar.create ()) vars ([], term_closed) e)

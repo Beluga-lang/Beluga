@@ -106,9 +106,10 @@ module Tactic = struct
           *)
          let open Comp in
          let h = { cD; cG } in
+         let goal_type, goal_sub = s.goal in
          let new_state =
            { context = h
-           ; goal = tau
+           ; goal = (goal_type, Whnf.mcomp goal_sub ms)
            ; solution = None
            }
          in

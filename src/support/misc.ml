@@ -39,6 +39,19 @@ let rec enumerate_with_state (s : 's) (f : 's -> ('s * 'i)) (l : 'a list) : 's *
 let enumerate (l : 'a list) : (int * 'a) list =
   enumerate_with_state 0 (fun s -> (s + 1, s)) l |> snd
 
+(** Forms the tuple of its two inputs. *)
+let tuple (x : 'a) (y : 'b) : 'a * 'b =
+  (x, y)
+
+(** Forms a constant function returning the given value.
+    Warning: since OCaml is an eager language, the expression `const x`
+    will fully evaluate `x` before forming the constant function.
+    Therefore, if evaluation of `x` produces side-effects, they will
+    be performed at the time that the constant function is _formed_
+    rather than when it is _run_.
+ *)
+let const (x : 'b) : 'a -> 'b =
+  fun _ -> x
 
 module List = struct
   let rec last (l : 'a list) : 'a = match l with

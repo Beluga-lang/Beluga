@@ -19,10 +19,16 @@ val ctxVar      : dctx -> ctx_var option
 val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
-val to_list_rev : 'a ctx -> 'a list
-val to_list : 'a ctx -> 'a list
-val iter        : 'a ctx -> ('a -> unit) -> unit
-val iter_rev    : 'a ctx -> ('a -> unit) -> unit
+val to_list_map_rev : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
+val to_list_map     : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
+val to_list_rev     : 'a ctx -> 'a list
+val to_list         : 'a ctx -> 'a list
+val to_sublist      : 'a ctx -> ('a ctx * 'a) list
+val to_sublist_rev  : 'a ctx -> ('a ctx * 'a) list
+val iter        : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
+val iter'       : 'a ctx -> ('a -> unit) -> unit
+val iter_rev    : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
+val iter_rev'   : 'a ctx -> ('a -> unit) -> unit
 val length      : 'a ctx -> int
 val dctxLength  : dctx -> int    (* number of concrete variables *)
 

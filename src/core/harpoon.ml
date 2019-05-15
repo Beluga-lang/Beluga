@@ -214,8 +214,27 @@ module Prover = struct
 
        (* Parse the input.*)
        let input = read_line () in
-       let cmd = Parser.parse_string ~name: "command line" ~input: input Parser.harpoon_command in
-       process_command ppf s g cmd;
+       begin
+         match
+           try
+             Either.Right (Parser.parse_string ~name: "command line" ~input: input Parser.harpoon_command)
+           with
+           | Parser.Grammar.Loc.Exc_located (_, _) as e -> Either.Left e
+         with
+         | Either.Left err ->
+            Format.fprintf ppf "@[<v>Parse error.@.%s@]" (Printexc.to_string err);
+         | Either.Right cmd ->
+            try
+              process_command ppf s g cmd
+            with
+            | e ->
+               (* This is kind of dangerous, because we don't have any
+               guarantee that the error arising in process_command
+               didn't leave us in an undefined state. *)
+               Format.fprintf ppf
+                 "@[<v>Internal error. (State may be undefined.)@.%s@]"
+                 (Printexc.to_string e)
+       end;
        loop ppf s
 
   let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.tclo) : unit =

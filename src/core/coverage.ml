@@ -1035,9 +1035,8 @@ let rec genAllObj cg tHtA_list  = match tHtA_list with
       begin try
        (genObj cg tH_tA)::cgs
       with U.Failure _msg -> cgs
-        | U.GlobalCnstrFailure (_, _msg) ->(print_str (fun () -> "\n [genAllObj] Global Constraint Failure – no genObj generated.\n" );
-
-                                            cgs)
+         | U.GlobalCnstrFailure (_, _msg) ->
+            (print_str (fun () -> "\n [genAllObj] Global Constraint Failure – no genObj generated.\n" ); cgs)
 (*        | _ ->(dprint (fun () -> "Other failure - no Obj generated") ;genAllObj cg tHAlist)*)
       end
 
@@ -1048,9 +1047,11 @@ let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
       (* Reverse the list so coverage will be checked in the order that the
          constructors were declared, which is more natural to the user *)
     let constructors = List.rev !constructors in
-    let tH_tA_list   = List.map (function c -> (LF.Const c,
-                                      (Const.get  c).Const.typ))
-                                constructors
+    let tH_tA_list   =
+      List.map
+        (fun c ->
+          (LF.Const c, (Const.get  c).Const.typ))
+        constructors
     in
       genAllObj cg tH_tA_list
   end

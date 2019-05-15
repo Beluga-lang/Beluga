@@ -51,10 +51,7 @@ let popIndentationLevel () =
     indentLevelStack := rest;
     level := poppedLevel
 
-let print_level_spaces f () =
-  let rec p n = if n < 1 then () else (f " "; p (n - 1))
-  in
-     p (!level)
+let print_level_spaces f () = for _ = 1 to !level do f " " done
 
 let rec print_noticing_newlines f s x len =
   if x >= len then ()

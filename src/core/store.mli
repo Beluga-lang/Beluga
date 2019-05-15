@@ -393,4 +393,6 @@ module CVar : sig
 
   (** Erases the context down to a list of names. *)
   val of_mctx       : LF.mctx -> t
+
+  val to_string     : t -> string
 end

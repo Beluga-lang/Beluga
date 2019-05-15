@@ -1418,6 +1418,14 @@ module CVar = struct
   let append cvars cvars' = cvars @ cvars'
   let length cvars = List.length cvars
 
+  let to_string (cvars : t) : string =
+    let rec go s =
+      function
+      | [] -> s
+      | x :: xs -> go (s ^ ", " ^ Id.string_of_name x.name) xs
+    in
+    go "" cvars
+
   let of_mctx (cD : Int.LF.mctx) : t =
     let f d v = Int.LF.name_of_ctyp_decl d |> mk_entry |> extend v in
     List.fold_right f (Context.to_list_rev cD) (create ())

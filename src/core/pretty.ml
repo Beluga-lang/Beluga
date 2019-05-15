@@ -1526,7 +1526,11 @@ module Int = struct
       | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
       | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
       | Split (m, _, bs) ->
-         fprintf ppf "--split@,(%a)" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m
+         fprintf ppf "--split (%a)@.@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
+         List.iter
+           (fun (SplitBranch h) -> fprintf ppf "%a@." fmt_ppr_cmp_hypothetical h)
+           bs;
+         fprintf ppf "@]"
 
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in

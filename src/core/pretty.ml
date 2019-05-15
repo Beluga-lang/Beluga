@@ -1478,8 +1478,8 @@ module Int = struct
       function
       | { context; goal; solution } ->
          Context.iter (Whnf.normMCtx context.cD)
-           (fun v -> fprintf ppf "%a@." (fmt_ppr_lf_ctyp_decl context.cD std_lvl) v );
-         Context.iter (Whnf.normCtx context.cG)
+           (fun cD v -> fprintf ppf "%a@." (fmt_ppr_lf_ctyp_decl cD std_lvl) v );
+         Context.iter' (Whnf.normCtx context.cG)
            (fun v -> fprintf ppf "%a@." (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
          for _ = 1 to 80 do fprintf ppf "-" done;
          let goal = Whnf.cnormCTyp goal in
@@ -1540,20 +1540,20 @@ module Int = struct
       let open Comp in
       function
       | { cD; cG } ->
-         let cD' = Context.to_list cD in
+         let cDs = Context.to_sublist cD in
          let cG' = Context.to_list cG in
 
          let comma ppf () = fprintf ppf ", " in
          pp_print_list
            ~pp_sep: comma
-           (fmt_ppr_lf_ctyp_decl cD std_lvl)
-           ppf cD';
+           (fun ppf (cD, x) -> fmt_ppr_lf_ctyp_decl cD std_lvl ppf x)
+           ppf cDs;
 
          fprintf ppf "@,| @[<h 2>";
 
          pp_print_list
            ~pp_sep: comma
-           (fmt_ppr_cmp_ctyp_decl cD std_lvl)
+           (fun ppf x -> fmt_ppr_cmp_ctyp_decl cD std_lvl ppf x)
            ppf cG';
          fprintf ppf ";@]"
 

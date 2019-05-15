@@ -1405,7 +1405,7 @@ module CVar = struct
     let rec loop i = function
       | []        -> raise Not_found
       | (e :: es) ->
-          if e.name = n then
+          if Id.equals e.name n then
             i
           else
             loop (i + 1) es

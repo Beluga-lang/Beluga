@@ -62,3 +62,11 @@ type name_guide =
 val mk_name : ?modules:string list -> name_guide -> name
 val string_of_name : name -> string
 val render_name : name -> string
+
+(** Decide whether two names represent the same thing.
+    This simply compares the string representations of the names. This
+    corresponds with a user's intuition about when names are equal,
+    and ignores all name generation hinting built in to the `name`
+    type.
+ *)
+val equals : name -> name -> bool

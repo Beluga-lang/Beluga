@@ -114,3 +114,6 @@ let string_of_name (n : name) : string =
 let render_name n = match n.modules with
     | [] -> string_of_name n
     | l  -> (String.concat "." l) ^ "." ^ (string_of_name n)
+
+let equals n1 n2 =
+  string_of_name n1 = string_of_name n2

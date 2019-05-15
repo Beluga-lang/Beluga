@@ -376,7 +376,7 @@ module Comp = struct
     | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
     | Branch of
         Loc.t
-        * LF.ctyp_decl LF.ctx
+        * LF.mctx
         * gctx
         * pattern
         * LF.msub (* refinement substitution for the branch *)

@@ -169,7 +169,7 @@ module Prover = struct
           yet.
         *)
        let s = s.initial_state in
-       Format.fprintf ppf "Proof so far:@,%a"
+       Format.fprintf ppf "@[<v>Proof so far:@.%a@]"
          (P.fmt_ppr_cmp_proof cD cG) (incomplete_proof s)
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
@@ -208,10 +208,12 @@ module Prover = struct
   let rec loop ppf (s : interpreter_state) : unit =
     (* Get the next subgoal *)
     match next_subgoal s with
-    | None -> () (* we're done; proof complete *)
+    | None ->
+       Format.fprintf ppf "@.Proof complete!@.";
+       () (* we're done; proof complete *)
     | Some g ->
        (* Show the proof state and the prompt *)
-       Format.fprintf ppf "@.Current state:@.%a@.@.\xCE\xBB> @?" P.fmt_ppr_cmp_proof_state g;
+       Format.fprintf ppf "@.@[<v>Current state:@.%a@]@.@.\xCE\xBB> @?" P.fmt_ppr_cmp_proof_state g;
 
        (* Parse the input.*)
        let input = read_line () in

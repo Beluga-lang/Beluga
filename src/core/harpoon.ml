@@ -197,7 +197,8 @@ module Prover = struct
          prepend_statements
            [ Comp.claim ~term: (Some m) cD g.goal ]
            Comp.QED
-         |> Tactic.solve' g
+         |> Tactic.solve' g;
+         remove_current_subgoal ()
        with
          Check.Comp.Error (_l, _e) ->
           Printexc.print_backtrace stderr

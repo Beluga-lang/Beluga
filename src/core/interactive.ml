@@ -9,6 +9,8 @@ module Cover = Coverage
 module S = Substitution
 open Syntax.Int.Comp
 
+let dprint, _ = Debug.makeFunctions (Debug.toFlags [11])
+
 (*********************)
 (* helper functions *)
 (*********************)
@@ -16,6 +18,18 @@ open Syntax.Int.Comp
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)
     : Comp.exp_chk =
+  dprint
+    (fun _ ->
+      (* let module PExt = Pretty.Ext.DefaultPrinter in
+      let rec erase =
+        let module ExtLF = Syntax.Ext.LF in
+        function
+        | LF.Empty -> ExtLF.Empty
+        | LF.Dec (ctx, x) -> ExtLF.Dec (erase ctx, x)
+      in
+      "[elaborate_exp] term = " ^ PExt.expChkToString (erase cD) t ^ "\n"
+      ^ *) "[elaborate_exp] cD = " ^ P.mctxToString cD ^ "\n"
+      ^ "[elaborate_exp] cG = " ^ P.gctxToString cD cG);
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx cD in
   let t = Index.hexp cvar_store var_store t in
@@ -23,6 +37,18 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
 
 let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
     : Comp.exp_syn * Comp.tclo =
+  dprint
+    (fun _ ->
+      (* let module PExt = Pretty.Ext.DefaultPrinter in
+      let rec erase =
+        let module ExtLF = Syntax.Ext.LF in
+        function
+        | LF.Empty -> ExtLF.Empty
+        | LF.Dec (ctx, x) -> ExtLF.Dec (erase ctx, x)
+      in
+      "[elaborate_exp] term = " ^ PExt.expChkToString (erase cD) t ^ "\n"
+      ^ *) "[elaborate_exp] cD = " ^ P.mctxToString cD ^ "\n"
+      ^ "[elaborate_exp] cG = " ^ P.gctxToString cD cG);
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx cD in
   let t = Index.hexp' cvar_store var_store t in

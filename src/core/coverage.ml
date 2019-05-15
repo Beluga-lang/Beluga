@@ -1025,6 +1025,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
       end
       in
     let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
+    dprint (fun () -> "[genObj] output context cD = " ^ P.mctxToString cD');
       (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
 
 let rec genAllObj cg tHtA_list  = match tHtA_list with

@@ -399,7 +399,7 @@ module Int = struct
             proj
 
       | LF.MMVar ((c, ms), s) ->
-          fprintf ppf "%s%a%s[%a]%a%s"
+          fprintf ppf "%s%a%s[%a][%a]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar lvl) c
             proj

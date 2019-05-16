@@ -1146,7 +1146,7 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
   | (FVar x, FVar y) ->
       x = y
 
-  | (_, _) -> (dprint (fun () -> "falls through ") ;
+  | (_, _) -> (dprint (fun () -> "[convHead] falls through ") ;
       false)
 
 
@@ -1235,7 +1235,7 @@ and convFront front1 front2 = match (front1, front2) with
   | (Undef, Undef) -> 
       true
 
-  | (_, _) -> dprint (fun () -> "Falls through");
+  | (_, _) -> dprint (fun () -> "[convFront] Falls through");
       false
 
 

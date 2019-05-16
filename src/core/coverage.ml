@@ -22,11 +22,6 @@ let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 let (dprint, _) =
  Debug.makeFunctions (Debug.toFlags [29])
 
-
-(* let dprint f = print_string ("\n" ^ (f ()) ^ "\n\n")    *)
-
-let print_str f = dprint f
-
 type error =
     NoCover of string
   | MatchError of string
@@ -967,7 +962,8 @@ let getSchemaElems cD cPsi =  match Context.ctxVar cPsi with
   then
      cD' ; cPsi |- tS : sA <= tP
 *)
-let rec genSpine cD cPsi sA tP = begin match Whnf.whnfTyp sA with
+let rec genSpine cD cPsi sA tP =
+  match Whnf.whnfTyp sA with
   | (LF.PiTyp ((LF.TypDecl (_, tA) , _ ), tB), s) ->
       (* cPsi' |- Pi x:A.B <= typ
          cPsi  |- s <= cPsi'
@@ -975,14 +971,17 @@ let rec genSpine cD cPsi sA tP = begin match Whnf.whnfTyp sA with
          cPsi |- tN . s <= cPsi', x:A
       *)
 (*      let tN         = Whnf.etaExpandMV cPsi (tA,s) idSub in     *)
-      let tN = etaExpandMVstr cD cPsi (tA, s)  in
-      let tS  = genSpine cD cPsi (tB, LF.Dot(LF.Obj(tN), s))  tP  in
-        LF.App (tN, tS)
+     dprint
+       (fun _ -> "[genSpine] Pi-type");
+     let tN = etaExpandMVstr cD cPsi (tA, s)  in
+     let tS  = genSpine cD cPsi (tB, LF.Dot(LF.Obj(tN), s))  tP  in
+     LF.App (tN, tS)
 
   | (LF.Atom (_ , _a, _tS) as tQ, s) ->
-      (U.unifyTyp LF.Empty cPsi (tQ, s) (tP, idSub);
-       LF.Nil )
-end
+     dprint
+       (fun _ -> "[genSpine] atom");
+     U.unifyTyp LF.Empty cPsi (tQ, s) (tP, idSub);
+     LF.Nil
 
 
 (* genObj (cD, cPsi, tP) (tH, tA) =  (cD', CovGoal (cPsi', tR, tP'), ms)
@@ -996,8 +995,13 @@ end
 
 *)
 let genObj (cD, cPsi, tP) (tH, tA) =
+  dprint
+    (fun _ ->
+      "[genObj] in the beginning, there were "
+      ^ string_of_int (List.length !U.globalCnstrs)
+      ^ " constraints.");
     (* make a fresh copy of tP[cPsi] *)
-(* !! bp    let _ = dprint (fun () -> "[genObj] cD = " ^ P.mctxToString cD) in *)
+  dprint (fun () -> "[genObj] cD = " ^ P.mctxToString cD);
     let ms    = Ctxsub.mctxToMSub cD in
 (*    let _ = dprint (fun () -> " ms = " ^ P.msubToString LF.Empty ms ) in *)
     let tP'   = Whnf.cnormTyp (tP, ms) in
@@ -1008,12 +1012,14 @@ let genObj (cD, cPsi, tP) (tH, tA) =
                     P.dctxToString LF.Empty cPsi' ^ " |- " ^
                     P.typToString LF.Empty cPsi' (tA', S.LF.id) )      in
 *)
-    let tM = LF.Root (Syntax.Loc.ghost, tH' , genSpine LF.Empty cPsi' (tA', S.LF.id) tP') in
+    let spine = genSpine LF.Empty cPsi' (tA', S.LF.id) tP' in
+    let tM = LF.Root (Syntax.Loc.ghost, tH' , spine) in
     let _ = dprint (fun () -> "[genObj] Generated Head : " ^ P.headToString cD cPsi tH) in
     let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id) ^ " as suitable head ") in
     let _ = dprint (fun () -> "[genObj] for " ^ P.dctxToString cD cPsi ^ " |- " ^ P.typToString cD cPsi (tP, S.LF.id)) in
 
     let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
+    dprint (fun _ -> "[genObj] global constraints forced!");
     let (cD', cPsi', tR, tP', ms') =
       begin try
         Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
@@ -1032,12 +1038,15 @@ let rec genAllObj cg tHtA_list  = match tHtA_list with
   | [] -> []
   | tH_tA :: tHAlist ->
       let cgs = genAllObj cg tHAlist in
-      begin try
-       (genObj cg tH_tA)::cgs
-      with U.Failure _msg -> cgs
-         | U.GlobalCnstrFailure (_, _msg) ->
-            (print_str (fun () -> "\n [genAllObj] Global Constraint Failure – no genObj generated.\n" ); cgs)
-(*        | _ ->(dprint (fun () -> "Other failure - no Obj generated") ;genAllObj cg tHAlist)*)
+      begin
+        try
+          (genObj cg tH_tA)::cgs
+        with
+        | U.Failure _msg | U.GlobalCnstrFailure (_, _msg) ->
+           dprint
+             (fun _ ->
+               "\n [genAllObj] Global Constraint Failure – no genObj generated.\n" );
+           cgs
       end
 
 let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
@@ -1682,14 +1691,20 @@ let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
           [(cD'', CovSub (cPsi', LF.Dot(LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
   end
 
-
-
 let genCGoals (cD':LF.mctx) mdec = match mdec with
   | LF.Decl (_u, LF.ClTyp (LF.MTyp tA, cPsi), _) ->
-      let _ = dprint (fun () -> "[SPLIT] CovGoal : " ^ P.dctxToString cD' cPsi ^ " . " ^
-                    P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
-      let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
-        (genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)) , dep0)
+     dprint
+       (fun _ -> "[SPLIT] CovGoal : " ^ P.dctxToString cD' cPsi ^ " . " ^
+                   P.typToString cD' cPsi (tA, S.LF.id) ^ "\n");
+     let dep0 =
+       match tA with
+       | LF.Atom (_, _ , LF.Nil) -> Atomic
+       | _ -> Dependent
+     in
+     ( genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
+     , dep0
+     )
+
   | LF.Decl (_u,  LF.ClTyp (LF.PTyp tA, cPsi), _) ->
       begin match cPsi with
         | LF.CtxVar _ -> ([], Atomic)
@@ -1876,11 +1891,23 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       let cG1' = (pv1, tau1,false) :: (pv2,tau2,false):: cG1 in
       let cG' = cG1'@cG2 in
       let loc_ghost = Syntax.Loc.ghost in
-      let pat = Comp.PatPair (loc_ghost,  Comp.PatFVar (loc_ghost, pv1), Comp.PatFVar (loc_ghost, pv2))  in
+      let pat =
+        Comp.PatPair
+          ( loc_ghost
+          , Comp.PatFVar (loc_ghost, pv1)
+          , Comp.PatFVar (loc_ghost, pv2)
+          )
+      in
       let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
-        [ (cD, cg, Whnf.m_id) ]
+      [ (cD, cg, Whnf.m_id) ]
+
   | Comp.TypBox (loc, (LF.ClTyp (LF.MTyp tA, cPsi) as mT)) ->
       let name = Id.mk_name (Whnf.newMTypName mT) in
+      dprint
+        (fun _ ->
+          "[genPatCGoals] in the beginning, there were "
+          ^ string_of_int (List.length !U.globalCnstrs)
+          ^ " constraints.");
       let (cgoals, _ ) = genCGoals cD (LF.Decl(name, LF.ClTyp (LF.MTyp tA, cPsi), LF.Maybe)) in
       List.map
         (fun (cD', cg, ms) ->

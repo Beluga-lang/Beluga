@@ -23,16 +23,6 @@ let rec toFlags = function
        else
          (toFlags xs) lor (1 lsl x)
 
-let flagsToString flags =
-  let rec seq n =
-    if n > 30 then ""
-    else (if flags land (1 lsl n) <> 0 then string_of_int n ^ ";" else "")
-       ^ seq (n + 1)
-  in
-    if flags = lnot 0 then "[all]"
-    else if flags = 0 then "[none]"
-    else "[" ^ seq 0 ^ "]"
-
 let showAll () =
     show (lnot 0)
 
@@ -64,45 +54,35 @@ let rec print_noticing_newlines f s x len =
         f (Char.escaped ch));
       print_noticing_newlines f s (x + 1) len
 
-
-let print flags f =
-  if (flags land !r_flags) = 0 then
-    ()
-  else begin
-    if !pipeDebug then begin
+let print' f =
+  let finalize, out =
+    if !pipeDebug then
       let oc = open_out_gen [Open_creat; Open_text; Open_append] 0o640 (!filename ^ ".out") in
       let out = output_string oc in
-      (print_level_spaces out ();
-      let s = try f()
-      with
-        | Match_failure (file, line, column) -> (out ("*** Match_failure("
-                ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
-                ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
-                                  exit 200)
-        | exn -> (out ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
-                  flush_all();
-                  raise exn) in
-      let _ = print_noticing_newlines out s 0 (String.length s) in
-      let _ = out "\n" in
-      close_out oc;
-      flush_all()) 
-    end else begin
-      let out = print_string in
-      (print_level_spaces out ();
-      let s = try f()
-      with
-        | Match_failure (file, line, column) -> (out ("*** Match_failure("
-                ^ file ^ ", " ^ string_of_int line ^ ", " ^ string_of_int column ^ ")"
-                ^ " exception raised inside function passed to dprint ***\n*** Goodbye. ***" ^ flagsToString flags ^ "\n");
-                                  exit 200)
-        | exn -> (out ("*** WARNING: EXCEPTION RAISED INSIDE FUNCTION PASSED TO dprint *** " ^ flagsToString flags ^ "\n");
-                  flush_all();
-                  raise exn) in
-      print_noticing_newlines out s 0 (String.length s);
-      out "\n";
-      flush_all()) 
-      end
-    end
+      (fun () -> close_out oc), out
+    else
+      Misc.const (), prerr_string
+  in
+  let s =
+    try
+      f ()
+    with
+      exn ->
+      out
+        ( "*** Exception raised inside function passed to dprint:\n"
+          ^ Printexc.to_string exn ^ "\n\n"
+          ^ Printexc.get_backtrace()
+        );
+      flush_all ();
+      raise exn
+  in
+  print_noticing_newlines out s 0 (String.length s);
+  out "\n";
+  finalize ();
+  flush_all ()
+
+let print flags f =
+  if flags land !r_flags = 0 then () else print' f
 
 let prnt flags s =
   print flags (fun () -> s)

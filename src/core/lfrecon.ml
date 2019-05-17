@@ -1336,21 +1336,27 @@ and elTerm' recT cD cPsi r sP = match r with
 
   (* Reconstruction for meta-variables  *)
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tN, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi)), s'), Apx.LF.Nil)  ->
-          let _ = dprint (fun () -> "[elTerm] Projected type of already reconstructed object " ^
-                            " which is embedded into an approximate object:\n                  " ^
-                            P.dctxToString cD cPhi ^ " |- " ^
-                            P.normalToString cD cPhi (tN, Substitution.LF.id) ^
-                            " : " ^ P.typToString cD cPhi (tQ, Substitution.LF.id)) in
-          let _ = dprint (fun () -> " in cD = " ^ P.mctxToString cD ) in
-
-          let _ = dprint (fun () -> "\n [elTerm] Show cPsi = " ^ P.dctxToString cD  cPsi) in
-          let _ = dprint (fun () -> "\n [elTerm] Show cPhi = " ^ P.dctxToString cD cPhi) in
+          dprint (fun () -> "[elTerm] Projected type of already reconstructed object " ^
+                    " which is embedded into an approximate object:\n                  " ^
+                    P.dctxToString cD cPhi ^ " |- " ^
+                    P.normalToString cD cPhi (tN, Substitution.LF.id) ^
+                    " : " ^ P.typToString cD cPhi (tQ, Substitution.LF.id));
+          dprint (fun () -> " in cD = " ^ P.mctxToString cD );
+          dprint (fun () -> "[elTerm] Show cPsi = " ^ P.dctxToString cD  cPsi);
+          dprint (fun () -> "[elTerm] Show cPhi = " ^ P.dctxToString cD cPhi);
+          dprint (fun _ -> "[elTerm] (at " ^ Loc.to_string loc ^ ")");
           let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
 
-          let _ = dprint (fun () -> "[elTerm] " ^ P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s'' ^ " : " ^ P.dctxToString cD cPhi ) in
+          dprint
+            (fun () ->
+              "[elTerm] Show cPsi after elSub = " ^ P.dctxToString cD  cPsi
+             ^ " has length " ^ string_of_int (Context.dctxLength cPsi)
+            );
 
-          let _   = dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cD cPsi sP ^ "\n") in
-          let _   = dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ "\n") in
+          dprint (fun () -> "[elTerm] " ^ P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s'' ^ " : " ^ P.dctxToString cD cPhi );
+
+          dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cD cPsi sP ^ "\n");
+          dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ "\n");
           begin
             try
               (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
@@ -1359,27 +1365,30 @@ and elTerm' recT cD cPsi r sP = match r with
               dprint (fun () -> "  sQ = " ^ P.typToString cD cPsi (tQ,s'') ^ " == " ^ P.typToString cD cPsi sP) ;
               dprint (fun () -> "  tN = " ^ P.normalToString cD cPsi (tN, s''));
               Int.LF.Clo(tN, s'')
-            with Error.Violation msg  ->
-              (dprint (fun () -> "[elTerm] Violation: " ^ msg);
+            with
+            | Error.Violation msg  ->
+               dprint (fun () -> "[elTerm] Violation: " ^ msg);
                dprint (fun () -> "[elTerm] Encountered term: " ^
-                         P.normalToString cD cPsi (tN,s''));
-                dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
-                dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
-               raise (Error (loc, CompTypAnn)))
-              |  Unify.Failure msg  ->
-                dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
-                dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-                dprint (fun () -> "[elTerm] in cD  = " ^ P.mctxToString cD );
-                dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
-                dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
-                dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
-                raise (Error (loc, TypMismatchElab (cD, cPsi, sP, (tQ,s''))))
-              | _ ->
-                begin
-                  dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-                  dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ " does not match expected type");
-                  raise (Error (loc, CompTypAnn))
-                end
+                                   P.normalToString cD cPsi (tN,s''));
+               dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
+               dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
+               raise (Error (loc, CompTypAnn))
+            | Unify.Failure msg  ->
+               dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
+               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+               dprint (fun () -> "[elTerm] in cD  = " ^ P.mctxToString cD );
+               dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
+               dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
+               dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
+               raise (Error (loc, TypMismatchElab (cD, cPsi, sP, (tQ,s''))))
+            | _ ->
+               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
+               dprint
+                 (fun () ->
+                   "[elTerm] Inferred type: "
+                   ^ P.typToString cD cPsi (tQ, s'')
+                   ^ " does not match expected type");
+               raise (Error (loc, CompTypAnn))
           end
 
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s'), spine) ->
@@ -1747,7 +1756,13 @@ and elClosedTerm' recT cD cPsi r = match r with
   | _ -> (dprint (fun () -> "[elClosedTerm] Violation?");
                 raise (Error (Syntax.Loc.ghost, CompTypAnn)))
 
+(* When we elaborate a substitution, the source and target LF contexts
+   cPsi and cPhi have already been elaborated.
+ *)
 and elSub loc recT cD cPsi s cl cPhi =
+  (* This helper exists to do the real work.
+     The main body of elSub just normalizes the contexts and then calls this.
+   *)
   let rec elSub' loc recT cD cPsi s cPhi =
     let svar_le = function
       | Int.LF.Ren, Int.LF.Ren
@@ -1766,11 +1781,11 @@ and elSub loc recT cD cPsi s cl cPhi =
       | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
         begin match cvar with
           | Int.LF.CInst ((_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _), _ ) ->
-            (cref := Some (Int.LF.ICtx (Int.LF.Null)); Int.LF.EmptySub
-         (* begin match Context.dctxToHat cPsi with *)
-         (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
-         (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
-         (* end *))
+             cref := Some (Int.LF.ICtx (Int.LF.Null)); Int.LF.EmptySub
+          (* begin match Context.dctxToHat cPsi with *)
+          (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
+          (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
+          (* end *)
           | _     -> raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
         end
       | (Apx.LF.FSVar (s_name, sigma), cPhi) ->
@@ -1783,44 +1798,50 @@ and elSub loc recT cD cPsi s cl cPhi =
          is a context variable.
 
       *)
-        begin try
-                let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0) , cPsi0), dep)) =
-                  FCVar.get s_name
-                in svar_le (cl0, cl) ;
+         begin
+           try
+             let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0) , cPsi0), dep)) =
+               FCVar.get s_name
+             in
+             svar_le (cl0, cl);
                 let d = Context.length cD - Context.length cD_d in
-                let (cPhi0', cPsi0') = if d = 0 then (cPhi0, cPsi0) else
-                    (if d > 0 then
-                        (Whnf.cnormDCtx (cPhi0, Int.LF.MShift d), Whnf.cnormDCtx (cPsi0, Int.LF.MShift d))
-                     else
-                        let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
-                            Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
-                        let t = createMSub d in
-                        (Whnf.cnormDCtx (cPhi0, t), Whnf.cnormDCtx (cPsi0, t)))
-
+                let (cPhi0', cPsi0') =
+                  match () with
+                  | () when d = 0 -> cPhi0, cPsi0
+                  | () when d > 0 ->
+                     Whnf.cnormDCtx (cPhi0, Int.LF.MShift d), Whnf.cnormDCtx (cPsi0, Int.LF.MShift d)
+                  | () ->
+                     let rec createMSub d =
+                       if d = 0
+                       then Int.LF.MShift 0
+                       else Int.LF.MDot (Int.LF.MUndef, createMSub (d+1))
+                     in
+                     let t = createMSub d in
+                     (Whnf.cnormDCtx (cPhi0, t), Whnf.cnormDCtx (cPsi0, t))
                 in
-        (* For type reconstruction to succeed, we must have
-         *    . |- cPsi0 ctx and .|- cPhi0 ctx, i.e. cPsi0 and cPhi0  cannot depend on
-         * meta-variables in cD. This will be enforced during abstraction *)
+                (* For type reconstruction to succeed, we must have
+                 *    . |- cPsi0 ctx and .|- cPhi0 ctx, i.e. cPsi0 and cPhi0  cannot depend on
+                 * meta-variables in cD. This will be enforced during abstraction *)
 
                 let sigma' = elSub loc recT cD cPsi sigma Int.LF.Subst cPsi0' in
                 begin try
-                        Unify.unifyDCtx cD cPhi cPhi0';
-                        Int.LF.FSVar(0, (s_name, sigma'))
+                    Unify.unifyDCtx cD cPhi cPhi0';
+                    Int.LF.FSVar(0, (s_name, sigma'))
                   with Unify.Failure msg ->
                     raise (Error (loc, IllTypedSubVar (cD, cPsi, cPhi)))
                 end
-          with Not_found ->
-            if isPatSub sigma then
-              let (cPsi', sigma') = synDom cD loc cPsi sigma in
-              (FCVar.add s_name
-                 (cD, Int.LF.Decl
-                   (s_name, Int.LF.ClTyp
-                     (Int.LF.STyp (cl, cPhi), cPsi'), Int.LF.Maybe));
-               Int.LF.FSVar (0, (s_name, sigma')))
-            else
-              raise (Error (loc, NotPatSub))
-          | Match_failure (_, _, _) -> raise (Error (loc, SubstVarConflict s_name))
-        end
+           with Not_found ->
+                 if isPatSub sigma then
+                   let (cPsi', sigma') = synDom cD loc cPsi sigma in
+                   (FCVar.add s_name
+                      (cD, Int.LF.Decl
+                             (s_name, Int.LF.ClTyp
+                                        (Int.LF.STyp (cl, cPhi), cPsi'), Int.LF.Maybe));
+                    Int.LF.FSVar (0, (s_name, sigma')))
+                 else
+                   raise (Error (loc, NotPatSub))
+              | Match_failure (_, _, _) -> raise (Error (loc, SubstVarConflict s_name))
+         end
 
       | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
         let (_, cPhi1, cl1, cPhi2) = Whnf.mctxSDec cD offset in
@@ -1865,9 +1886,12 @@ and elSub loc recT cD cPsi s cl cPhi =
         begin match Context.dctxToHat (C.cnormDCtx (cPsi, C.m_id)) with
           | (Some psi, d)  ->
             (*            if psi = phi then  *)
-            let _ = dprint (fun () -> "[elSub'] \n cD = " ^
-              P.mctxToString cD ^ "\n cPsi " ^ P.dctxToString cD cPsi
-              ^ "\n phi = " ^ P.dctxToString cD cPhi ^ "\n") in
+             dprint
+               (fun _ ->
+                 "[elSub] cD = " ^ P.mctxToString cD ^ "\n"
+                 ^ "[elSub] cPsi = " ^ P.dctxToString cD cPsi ^ "\n"
+                 ^ "[elSub] cPhi = " ^ P.dctxToString cD cPhi);
+
             if unify_phat cD (Some phi, 0) (Some psi, 0) then
               Int.LF.Shift d
             else
@@ -1891,12 +1915,13 @@ and elSub loc recT cD cPsi s cl cPhi =
         let _ = dprint (fun () -> "[elSub'] in cPsi = " ^ P.dctxToString cD  cPsi) in
         let (h', sA') = elHead loc recT cD cPsi h cl in
         let s' = elSub'  loc recT cD cPsi s cPhi' in
-        begin try
-                Unify.unifyTyp cD cPsi sA' (tA, s');
-                Int.LF.Dot (Int.LF.Head h', s')
+        begin
+          try
+            Unify.unifyTyp cD cPsi sA' (tA, s');
           with
-            |  _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sA', (tA, s'))))
-        end
+          |  _ -> raise (Error (loc, TypMismatchElab (cD, cPsi, sA', (tA, s'))))
+        end;
+        Int.LF.Dot (Int.LF.Head h', s')
 
       | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.CtxVar cvar) ->
         begin match cvar with

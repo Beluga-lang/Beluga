@@ -819,7 +819,7 @@ end
  *     U' = FV(A)  where U' is an extension of U s.t. [|r|]U,U0 = U'
  *     O' = FMV(A) where O' |-{U'} r <= O
  *)
-and elTerm recT cD cPsi m sA = elTermW recT cD cPsi m (Whnf.whnfTyp sA)
+and elTerm recT cD cPsi m sA = elTermW recT cD (Whnf.normDCtx cPsi) m (Whnf.whnfTyp sA)
 
 and elTermW recT cD cPsi m sA = match (m, sA) with
   | (Apx.LF.Lam (loc, x, m),  (Int.LF.PiTyp ((Int.LF.TypDecl (_x, _tA) as decl, _ ), tB), s)) ->

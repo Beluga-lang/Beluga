@@ -122,10 +122,8 @@ let main () =
           printf "\n## Type Reconstruction: %s ##\n" file_name;
         let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
         let _ = Store.Modules.reset () in
-        if !Debug.chatter > 1 then begin
-          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn' end
-        else
-          ();
+        if !Debug.chatter > 1 then
+          List.iter (Pretty.Int.DefaultPrinter.ppr_sgn_decl) sgn';
 
         if !Debug.chatter <> 0 then
           printf "\n## Type Reconstruction done: %s  ##\n" file_name;

@@ -51,7 +51,7 @@ let rec print_noticing_newlines f s x len =
         (f "\n";
          print_level_spaces f ())
       else
-        f (Char.escaped ch));
+        f (String.make 1 ch));
       print_noticing_newlines f s (x + 1) len
 
 let print' f =

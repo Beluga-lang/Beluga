@@ -655,7 +655,7 @@ let recSgnDecls decls =
 		               if m = 1 then
                      begin
 			                 (*Coverage.enableCoverage := true; *)
-			                 Total.enabled := true;
+                       Total.enabled := true;
 			                 (* print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
 			                 Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t))
                      end

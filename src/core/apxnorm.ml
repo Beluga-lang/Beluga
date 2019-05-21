@@ -724,23 +724,22 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
 
 let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
   begin match phat with
-    | (Some (Int.LF.CtxOffset offset), d) ->
-        if offset > (l_delta + k) then
-         (Some (Int.LF.CtxOffset (offset + l_cd1)), d)
-        else phat
-    | (Some (Int.LF.CtxName psi), d) ->
-	if List.mem psi fMVs then
-	  phat
-	else
-	  begin try
-            let (offset, _) = Whnf.mctxMVarPos cD psi in
-              (Some (Int.LF.CtxOffset (offset + k)), d)
-	  with Whnf.Fmvar_not_found ->
-	    (Printf.printf "Unbound context variable %s"  (Id.render_name psi);
-	    raise (Index.Error (loc, Index.UnboundCtxName psi)))
-	  end
-
-    | _ -> phat
+  | (Some (Int.LF.CtxOffset offset), d) ->
+     if offset > (l_delta + k) then
+       (Some (Int.LF.CtxOffset (offset + l_cd1)), d)
+     else phat
+  | (Some (Int.LF.CtxName psi), d) ->
+     if List.mem psi fMVs then
+       phat
+     else
+       begin try
+           let (offset, _) = Whnf.mctxMVarPos cD psi in
+           (Some (Int.LF.CtxOffset (offset + k)), d)
+         with Whnf.Fmvar_not_found ->
+           (Printf.printf "Unbound context variable %s"  (Id.render_name psi);
+            raise (Index.Error (loc, Index.UnboundCtxName psi)))
+       end
+  | _ -> phat
   end
 
 let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with

@@ -497,19 +497,22 @@ module Int = struct
         | Control.Natural -> fmt_ppr_lf_sub_natural cD cPsi lvl ppf s
         | Control.DeBruijn -> fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s
 
-    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s=
+    and fmt_ppr_lf_sub_natural cD cPsi lvl ppf s =
+      let s = Whnf.normSub s in
+      let cPsi = Whnf.normDCtx cPsi in
       let print_front = fmt_ppr_lf_front cD cPsi 1 in
-      let rec fmt_ppr_lf_sub_id ppf cPsi = match cPsi with
-      | LF.Null -> ()
-      | LF.DDec (cPsi', LF.TypDecl (x, _))
-      | LF.DDec (cPsi', LF.TypDeclOpt x) ->
-         fprintf ppf "%a, %s"
-               fmt_ppr_lf_sub_id cPsi'
-               (Id.render_name x)
-      | LF.CtxVar _ -> fprintf ppf ".."
+      let rec fmt_ppr_lf_sub_id ppf cPsi =
+        match cPsi with
+        | LF.Null -> ()
+        | LF.DDec (cPsi', LF.TypDecl (x, _))
+          | LF.DDec (cPsi', LF.TypDeclOpt x) ->
+           fprintf ppf "%a, %s"
+             fmt_ppr_lf_sub_id cPsi'
+             (Id.render_name x)
+        | LF.CtxVar _ -> fprintf ppf ".."
       in
       let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
-      | _,0 -> fmt_ppr_lf_sub_id ppf cPsi
+      | _, 0 -> fmt_ppr_lf_sub_id ppf cPsi
       | LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
       in
       let rec self lvl ppf =

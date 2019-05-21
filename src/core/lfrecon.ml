@@ -983,176 +983,222 @@ and elTerm' recT cD cPsi r sP = match r with
 
 
   | Apx.LF.Root (loc, Apx.LF.Hole, spine) ->
-      begin try
-     (let (_l, pat_spine) = patSpine spine in
-      let sshift = mkShift recT cPsi in
-      let (tS, tA) = elSpineSynth recT  cD cPsi pat_spine sshift sP in
-        (* For LF type reconstruction to succeed, we must have
-         *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
-         *  This will be enforced during abstraction.
-         *)
-        (* Potentially need to handle eta-expansion -bp *)
-        begin match recT with
-          | Pi ->
-              (* let u =  Whnf.newMVar (cPsi, tA) in
-                Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
-              let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
-                Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
-          | Pibox ->
-              begin match tA with
-                | Int.LF.Atom (_, a, _ ) ->
-                    let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-                    let s_proj = ConvSigma.gen_conv_sub conv_list in
-                    let s_tup    = ConvSigma.gen_conv_sub' conv_list in
-                    let tA' = Whnf.normTyp (tA, s_tup) in
-                      (*  cPsi |- s_proj : cPhi
-                          cPhi |- s_tup : cPsi
-                          cPhi |- tQ   where  cPsi |- tA  !! tQ = [s_tup]tA !!  *)
-                    (* let tA'    = ConvSigma.strans_typ cD cPsi (tA, Substitution.LF.id) conv_list  in*)
-                    let h      = if !strengthen then
-                                   let (ss', cPhi') = Subord.thin' cD a cPhi in
-                                     (* cPhi |- ss' : cPhi' *)
-                                   let ssi' = Substitution.LF.invert ss' in
-                                     (* cPhi' |- ssi : cPhi *)
-                                     (* cPhi' |- [ssi]tQ    *)
-                                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in
-                                     Int.LF.MMVar((u, Whnf.m_id), Substitution.LF.comp ss'  s_proj)
-                                 else
-                                   let u = Whnf.newMMVar None (cD, cPhi, tA')  Int.LF.Maybe in
-                                     Int.LF.MMVar ((u, Whnf.m_id), s_proj)
-                    in
-                      Int.LF.Root (loc, h, tS)
-                | _ -> raise (Error (loc, HolesFunction))
-              end
-        end)
-      with NotPatSpine -> raise (Error (loc, NotPatternSpine))
-      end
+     begin
+       try
+         let (_l, pat_spine) = patSpine spine in
+         let sshift = mkShift recT cPsi in
+         let (tS, tA) = elSpineSynth recT  cD cPsi pat_spine sshift sP in
+         (* For LF type reconstruction to succeed, we must have
+          *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
+          *  This will be enforced during abstraction.
+          *)
+         (* Potentially need to handle eta-expansion -bp *)
+         begin match recT with
+         | Pi ->
+            (* let u =  Whnf.newMVar (cPsi, tA) in
+               Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
+            let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
+            Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
+         | Pibox ->
+            begin match tA with
+            | Int.LF.Atom (_, a, _ ) ->
+               let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+               let s_proj = ConvSigma.gen_conv_sub conv_list in
+               let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+               let tA' = Whnf.normTyp (tA, s_tup) in
+               (*  cPsi |- s_proj : cPhi
+                   cPhi |- s_tup : cPsi
+                   cPhi |- tQ   where  cPsi |- tA  !! tQ = [s_tup]tA !!  *)
+               (* let tA'    = ConvSigma.strans_typ cD cPsi (tA, Substitution.LF.id) conv_list  in*)
+               let h =
+                 if !strengthen
+                 then
+                   let (ss', cPhi') = Subord.thin' cD a cPhi in
+                   (* cPhi |- ss' : cPhi' *)
+                   let ssi' = Substitution.LF.invert ss' in
+                   (* cPhi' |- ssi : cPhi *)
+                   (* cPhi' |- [ssi]tQ    *)
+                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in
+                   Int.LF.MMVar((u, Whnf.m_id), Substitution.LF.comp ss'  s_proj)
+                 else
+                   let u = Whnf.newMMVar None (cD, cPhi, tA')  Int.LF.Maybe in
+                   Int.LF.MMVar ((u, Whnf.m_id), s_proj)
+               in
+               Int.LF.Root (loc, h, tS)
+            | _ -> raise (Error (loc, HolesFunction))
+            end
+         end
+       with NotPatSpine -> raise (Error (loc, NotPatternSpine))
+     end
   (* We only allow free meta-variables of atomic type *)
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) as m ->
-      begin try
-        let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _)) = FCVar.get u in
-        let _ = dprint (fun () -> "Retrieving type of FMV " ^ Id.render_name u ^
-      " of type " ^ P.typToString cD_d cPhi (tQ, Substitution.LF.id) ^ "[" ^
-                          P.dctxToString cD_d cPhi ^ "]" ^
-"\n in cD_d = " ^ P.mctxToString cD_d) in
+     begin
+       try
+         let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _)) = FCVar.get u in
+         dprint
+           (fun _ ->
+             "Retrieving type of FMV " ^ Id.render_name u
+             ^ " of type " ^ P.typToString cD_d cPhi (tQ, Substitution.LF.id)
+             ^ "[" ^ P.dctxToString cD_d cPhi ^ "]"
+             ^ "\n in cD_d = " ^ P.mctxToString cD_d);
+         dprint (fun () -> "Current context cD = " ^ P.mctxToString cD);
+         let d = Context.length cD - Context.length cD_d in
 
-        let _ = dprint (fun () -> "Current context cD = " ^ P.mctxToString cD) in
-        let d = Context.length cD - Context.length cD_d in
-
-        let _ = dprint (fun () -> "d = " ^ string_of_int d) in
-        let (tQ', cPhi') = if d = 0 then (tQ, cPhi) else
-          (if d > 0 then
-             (Whnf.cnormTyp (tQ, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d))
-           else
-             let rec createMSub d = if d = 0 then Int.LF.MShift 0 else
-                Int.LF.MDot (Int.LF.MUndef, createMSub (d+1)) in
-             let t = createMSub d in
-             let roccur = Unify.MMVarRef (ref None) (* create dummy mmvar since pruning requires it *) in
-             let cPhi' = Unify.pruneDCtx cD cPhi t roccur in
-             let tQ'   = Unify.pruneTyp cD cPhi' (Context.dctxToHat cPhi')
-                               (tQ, Substitution.LF.id) (t, Substitution.LF.id)
-                               roccur
-             in
-               (tQ' , cPhi'))
-
-           in
-          (* For type reconstruction to succeed, we must have
-           *    . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on
-           * meta-variables in cD. This will be enforced during abstraction *)
-        let _ = dprint (fun () -> "[elTerm] Normalized retrieved type of FMV " ^ Id.render_name u ^
-      " of type " ^ P.typToString cD cPhi' (tQ', Substitution.LF.id) ^ "[" ^
-                          P.dctxToString cD cPhi' ^ "]") in
-        let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi' in
-        let _ = dprint (fun () -> "[elTerm] s = " ^ P.subToString cD cPsi s'') in
-        let _ = dprint (fun () -> "[elTerm] domain : " ^ P.dctxToString cD cPhi') in
-        let _ = dprint (fun () -> "[elTerm] range : " ^ P.dctxToString cD cPsi) in
-        let _ = dprint (fun () -> "[elTerm] Expected type : " ^ P.typToString cD cPsi sP)
-          in
-        (* We do not check here that tP approx. [s']tP' --
-           * this check is delayed to reconstruction *)
-        let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in
-        begin try
-                Unify.unifyTyp cD  cPsi (tQ', s'') sP ;
-                tR
-          with Unify.Failure msg ->
-            raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
-            |_ -> raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
-          end
-      with
+         let _ = dprint (fun () -> "d = " ^ string_of_int d) in
+         let (tQ', cPhi') =
+           match () with
+           | _ when d = 0 -> (tQ, cPhi)
+           | _ when d > 0 ->
+              Whnf.cnormTyp (tQ, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)
+           | _ ->
+              let rec createMSub d =
+                if d = 0
+                then Int.LF.MShift 0
+                else Int.LF.MDot (Int.LF.MUndef, createMSub (d+1))
+              in
+              let t = createMSub d in
+              let roccur = Unify.MMVarRef (ref None) (* create dummy mmvar since pruning requires it *) in
+              let cPhi' = Unify.pruneDCtx cD cPhi t roccur in
+              let tQ'   = Unify.pruneTyp cD cPhi' (Context.dctxToHat cPhi')
+                            (tQ, Substitution.LF.id) (t, Substitution.LF.id)
+                            roccur
+              in
+              (tQ' , cPhi')
+         in
+         (* For type reconstruction to succeed, we must have
+          *    . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on
+          * meta-variables in cD. This will be enforced during abstraction *)
+         let _ = dprint (fun () -> "[elTerm] Normalized retrieved type of FMV " ^ Id.render_name u ^
+                                     " of type " ^ P.typToString cD cPhi' (tQ', Substitution.LF.id) ^ "[" ^
+                                       P.dctxToString cD cPhi' ^ "]") in
+         let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi' in
+         dprint (fun () -> "[elTerm] s = " ^ P.subToString cD cPsi s'');
+         dprint (fun () -> "[elTerm] domain : " ^ P.dctxToString cD cPhi');
+         dprint (fun () -> "[elTerm] range : " ^ P.dctxToString cD cPsi);
+         dprint (fun () -> "[elTerm] Expected type : " ^ P.typToString cD cPsi sP);
+         (* We do not check here that tP approx. [s']tP' --
+          * this check is delayed to reconstruction *)
+         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in
+         begin
+           try
+             Unify.unifyTyp cD  cPsi (tQ', s'') sP ;
+             tR
+           with
+           | Unify.Failure msg ->
+              raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
+           |_ -> raise (Check.LF.Error (loc, Check.LF.TypMismatch (cD, cPsi, (tR, Substitution.LF.id), (tQ', s''), sP)))
+         end
+       with
+        | Error.Violation msg  ->
+            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ;
+            raise (Error (loc, CompTypAnn ))
         | Not_found ->
-          if isPatSub s then
-          (* 1) given cPsi and s synthesize the domain cPhi
-           * 2) [s]^-1 ([s']tP) is the type of u
-           *)
-          let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u)
-                         ^ " in context " ^ P.dctxToString cD cPsi) in
-          let (cPhi, s'') = synDom cD loc cPsi s in
-          let ss =  Substitution.LF.invert s'' in
-          let _ = dprint (fun () ->  " with substitution "  ^ P.subToString cD cPhi s'' ^
-                         " and domain  " ^ P.dctxToString cD cPhi ) in
+           match () with
+           | _ when isPatSub s ->
+              (* 1) given cPsi and s synthesize the domain cPhi
+               * 2) [s]^-1 ([s']tP) is the type of u
+               *)
+              dprint
+                (fun _ ->
+                  "[elTerm] synthesize domain for meta-variable "
+                  ^ (string_of_name u) ^ " in context " ^ P.dctxToString cD cPsi);
+              let (cPhi, s'') = synDom cD loc cPsi s in
+
+              dprint
+                (fun _ ->
+                  "[elTerm] it's " ^ P.dctxToString cD cPhi ^ " at " ^ Loc.to_string loc);
+
+              begin
+                match Context.ctxVar cPhi with
+                | None ->
+                   dprint (fun _ -> "[elTerm] it's not a context variable")
+                | Some v ->
+                   match v with
+                   | Int.LF.CInst c ->
+                      dprint (fun _ -> "[elTerm] it's a ctxvar instantiation");
+                   | Int.LF.CtxName name ->
+                      dprint (fun _ -> "[elTerm] it's a ctxvar name " ^ Id.string_of_name name)
+                   | Int.LF.CtxOffset off ->
+                      dprint (fun _ -> "[elTerm] it's a ctxvar offset (into Delta)")
+              end;
+
+              dprint
+                (fun _ ->
+                  "[elTerm] and btw it's " ^
+                    (if not (Context.hasCtxVar cPhi) then "not" else "")
+                    ^ " a context variable");
+
+              (*
+              dprint
+                (fun _ ->
+                  " with substitution "  ^ P.subToString cD cPhi s''
+                  ^ " and domain  " ^ P.dctxToString cD cPhi );
+               *)
+
+              let ss =  Substitution.LF.invert s'' in
               let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
-                (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
-                (* For type reconstruction to succeed, we must have
-                 * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
-                 * This will be enforced during abstraction.
-                 *)
-              let _ = dprint (fun () -> "Add FMVar " ^ Id.render_name u ^
-                                " of type " ^
-                                P.dctxToString cD cPhi ^ " |- " ^
-                                P.typToString cD cPhi (tP, Substitution.LF.id) ) in
-                FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
-                (*The depend paramater here affects both mlam vars and case vars*)
-                Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+              (* let tP = Int.LF.TClo (Int.LF.TClo sP, Substitution.LF.invert s'') in *)
+              (* For type reconstruction to succeed, we must have
+               * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+               * This will be enforced during abstraction.
+               *)
+              dprint
+                (fun _ ->
+                  "Add FMVar " ^ Id.render_name u
+                  ^ " of type "
+                  ^ P.dctxToString cD cPhi ^ " |- " ^ P.typToString cD cPhi (tP, Substitution.LF.id));
 
-          else
-           if isProjPatSub s then
-             let _ = dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u) ) in
-             let _ = dprint (fun () -> "isProjPatSub ... " ) in
-             let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-             let _ = dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n") in
-             let _ = dprint (fun () -> "conv_list " ^ conv_listToString conv_list ) in
-             let flat_s = flattenProjPat loc cD s conv_list cPsi in
-             let _ = dprint (fun () -> "flattenProjPat done " ) in
+              FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
+              (*The depend paramater here affects both mlam vars and case vars*)
+              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+           | _ when isProjPatSub s ->
+              dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u) );
+              dprint (fun () -> "isProjPatSub ... " );
+              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
+              dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n");
+              dprint (fun () -> "conv_list " ^ conv_listToString conv_list );
+              let flat_s = flattenProjPat loc cD s conv_list cPsi in
+              let _ = dprint (fun () -> "flattenProjPat done " ) in
 
-             let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in
-               (*
-                  cD ; cPsi |- sP
-                  cD ; cPsi |- s : cPsi'   and   cD ; cPsi' |- P
+              let (cPhi, s'') = synDom cD loc flat_cPsi flat_s in
+              (*
+                cD ; cPsi |- sP
+                cD ; cPsi |- s : cPsi'   and   cD ; cPsi' |- P
 
-                  flat_cPsi |-  s'' : cPhi
-                  cPhi      |-  ss  : flat_cPsi
+                flat_cPsi |-  s'' : cPhi
+                cPhi      |-  ss  : flat_cPsi
 
                *)
-             let ss =  Substitution.LF.invert s'' in
+              let ss =  Substitution.LF.invert s'' in
 
-             let _ = dprint (fun () -> "[synDom] (after flattening) cPhi = " ^ P.dctxToString cD cPhi ^ "\n") in
-             let s_tup    = ConvSigma.gen_conv_sub' conv_list in
-             let (tP, s_p) = sP in
-             let tP' = Whnf.normTyp (tP, Substitution.LF.comp s_p s_tup) in
-             (* let tP' = ConvSigma.strans_typ cD cPsi sP conv_list in *)
-             let _ = dprint (fun () -> "[synDom] Prune type sP = " ^ P.typToString cD cPsi sP ) in
-      (*             let _ = dprint (fun () -> "[synDom] Prune flattened type " ^ P.typToString cD cPhi (tP', Substitution.LF.id) ) in *)
-             let _ = dprint (fun () -> "[synDom] Prune flattened type (1 with resp. flat_cPsi) " ^ P.typToString cD flat_cPsi (tP', Substitution.LF.id) ) in
-(*             let _ = dprint (fun () -> "[synDom] Prune flattened type (2 with resp. cPhi) (may not exist yet)" ^ P.typToString cD cPhi (tP', ss) ) in *)
-             let _ = dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss ) in
+              dprint (fun () -> "[synDom] (after flattening) cPhi = " ^ P.dctxToString cD cPhi ^ "\n");
+              let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+              let (tP, s_p) = sP in
+              let tP' = Whnf.normTyp (tP, Substitution.LF.comp s_p s_tup) in
+              (* let tP' = ConvSigma.strans_typ cD cPsi sP conv_list in *)
+              dprint (fun () -> "[synDom] Prune type sP = " ^ P.typToString cD cPsi sP );
+              dprint (fun () -> "[synDom] Prune flattened type (1 with resp. flat_cPsi) " ^ P.typToString cD flat_cPsi (tP', Substitution.LF.id) );
+              dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss );
 
-             let tP = pruningTyp loc cD flat_cPsi
+              let tP = pruningTyp loc cD flat_cPsi
                          (Context.dctxToHat flat_cPsi) (tP', Substitution.LF.id) (Int.LF.MShift 0, ss)  in
 
-             let sorig = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
-             let _ = dprint (fun () -> "sorig = " ^ P.subToString cD cPsi sorig ^ "\n") in
-            (* For type reconstruction to succeed, we must have
-             * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
-             * This will be enforced during abstraction.
-             *)
-             let _ = dprint (fun () -> "[synDom] Type of mvar " ^ (string_of_name u) ^ ":" ^
-                               P.typToString cD cPhi (tP, Substitution.LF.id) ^ " [ " ^
-                               P.dctxToString cD cPhi ^ " ] ") in
+              let sorig = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
+              dprint (fun () -> "sorig = " ^ P.subToString cD cPsi sorig ^ "\n");
+              (* For type reconstruction to succeed, we must have
+               * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
+               * This will be enforced during abstraction.
+               *)
+              dprint
+                (fun _ ->
+                  "[synDom] Type of mvar "
+                  ^ (string_of_name u) ^ ":" ^ P.typToString cD cPhi (tP, Substitution.LF.id)
+                  ^ " [ " ^ P.dctxToString cD cPhi ^ " ] ");
 
-            FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
-            Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
+              FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
+              Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
 
-           else
+           | _ ->
 (*  TO BE ADDED, if we want to synthesize the type of meta-variables
     applied to variable tuples instead of individual variables -bp
              if isTuplePatSub s then
@@ -1182,15 +1228,10 @@ and elTerm' recT cD cPsi r sP = match r with
 
              else
  *)
-             ( (* if s = substvar whose type is known *)
+             (* if s = substvar whose type is known *)
               let v = Whnf.newMMVar None (cD, cPsi, Int.LF.TClo sP) Int.LF.Maybe in
-                add_fcvarCnstr (m, v);
-                Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), Substitution.LF.id), Int.LF.Nil)
-
-             )
-        | Error.Violation msg  ->
-            dprint (fun () -> "[elClosedTerm] Violation: " ^ msg) ;
-            raise (Error (loc, CompTypAnn ))
+              add_fcvarCnstr (m, v);
+              Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), Substitution.LF.id), Int.LF.Nil)
 
       end
 

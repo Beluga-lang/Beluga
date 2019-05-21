@@ -1022,9 +1022,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (LFHole _ as n, s)-> n
     | (Lam (loc, x, tM),   s) ->
         let _ = dprint (fun () -> "[prune] Lam " ) in
-        let _ = dprint (fun () -> "[prune[ sM = " ^
+        let _ = dprint (fun () -> "[prune] sM = " ^
                           P.normalToString cD0  (Context.hatToDCtx phat) sM) in
-        let _ = dprint (fun () -> "[prune[ sM' = " ^
+        let _ = dprint (fun () -> "[prune] sM' = " ^
                           P.normalToString cD0
                           (Context.hatToDCtx (cvar,offset+1)) (tM, dot1 s)) in
         let (ms, ssubst) = ss in
@@ -1116,8 +1116,11 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | MPVar ((i, mt), t) -> MPVar (pruneMMVarInst cD0 cPsi' loc i (mt,t) ss rOccur)
     | BVar k ->
        begin match bvarSub k ssubst with
-        | Undef -> raise (Failure ("[Prune] Bound variable dependency : " ^
-                                                      "head = " ^ P.headToString cD0 cPsi' head))
+       | Undef ->
+          raise
+            (Failure
+               ("[Prune] Bound variable dependency : "
+                ^ "head = " ^ P.headToString cD0 cPsi' head))
         | Head (BVar _k as h') -> h'
        end
     | Const _ as h -> h
@@ -2710,7 +2713,7 @@ let unify_phat psihat phihat =
       begin try
         unifyCompTyp cD ttau ttau'
       with Failure msg ->
-        (dprint (fun () -> "[unifyCompTyp " ^ msg) ;
+        (dprint (fun () -> "[unifyCompTyp] " ^ msg) ;
          raise (Failure msg))
       end
 end

@@ -228,7 +228,7 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
 
     | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, dep), _cD)) , cPsi) ->
       begin
-	let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
+        let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
         Unify.instantiateCtxVar (cvar_ref, cPsi);
         match Context.ctxVar cPsi with
           | None -> ()
@@ -350,7 +350,7 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), dep ), kK), s) ->
         let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let tR    = if !strengthen then
-              	   (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
+                         (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
                        (* cPhi |- ss' : cPhi' *)
                      let ssi' = LF.invert ss' in
                        (* cPhi' |- ssi : cPhi *)
@@ -384,7 +384,7 @@ let rec mgTyp cD cPsi tA = begin match tA with
   | Int.LF.PiTyp ((tdecl, dep), tA) ->
    let tdecl' = mgTypDecl cD cPsi tdecl in
      Int.LF.PiTyp ((tdecl', dep),
-		   mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA)
+                   mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA)
  end
 
  and mgTypDecl cD cPsi tdecl = begin match tdecl with
@@ -397,7 +397,7 @@ let rec mgTyp cD cPsi tA = begin match tA with
    | Int.LF.SigmaElem (x, tA, trec) ->
        let tA' = mgTyp cD cPsi tA in
        let trec' = mgTypRec cD (Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA'))) trec in
-	 Int.LF.SigmaElem (x, tA', trec')
+         Int.LF.SigmaElem (x, tA', trec')
  end
 
 
@@ -473,33 +473,34 @@ let rec elMetaObj' cD loc cM cTt = match cM , cTt with
         Int.LF.CObj cPsi'
 
   | (Apx.Comp.ClObj (cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
-      let _ =
-        try unifyDCtxWithFCVar loc cD cPsi' cPhi
-        with Unify.Failure _ ->
-	  let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD cPhi in
-	  raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi))) in
-      let _ = dprint (fun () -> "\n[elMetaObj'] ==> elCloObj \n") in
-      Int.LF.ClObj (Context.dctxToHat cPsi', elClObj cD loc cPsi' clobj mtyp)
+     begin
+       try unifyDCtxWithFCVar loc cD cPsi' cPhi
+       with Unify.Failure _ ->
+         let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD cPhi in
+         raise (Error (loc, MetaObjContextClash (cD, cPsi', cPhi)))
+     end;
+     let _ = dprint (fun () -> "\n[elMetaObj'] ==> elCloObj \n") in
+     Int.LF.ClObj (Context.dctxToHat cPsi', elClObj cD loc cPsi' clobj mtyp)
 
   | (_ , _) -> raise (Error (loc,  MetaObjectClash (cD, cTt)))
 
 and elMetaObj cD (loc,cM) cTt =
-    let ctyp = C.cnormMTyp cTt in
-    let r = elMetaObj' cD loc cM ctyp in
-      begin try
-	Unify.forceGlobalCnstr (!Unify.globalCnstrs);
-	dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp );
-	dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) );
-      loc, r
-      with Unify.GlobalCnstrFailure (loc,cnstr)  ->
-	raise (Check.Comp.Error (loc, Check.Comp.UnsolvableConstraints (None, cnstr)))
-      end
+  let ctyp = C.cnormMTyp cTt in
+  let r = elMetaObj' cD loc cM ctyp in
+  try
+          Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+          dprint (fun () -> "[elMetaObj] type = " ^ P.mtypToString cD ctyp );
+          dprint (fun () -> "[elMetaObj] term = " ^ P.metaObjToString cD (loc,r) );
+    loc, r
+  with Unify.GlobalCnstrFailure (loc,cnstr)  ->
+          raise (Check.Comp.Error (loc, Check.Comp.UnsolvableConstraints (None, cnstr)))
 
 and elMetaObjCTyp loc cD m theta ctyp =
   let cM = elMetaObj cD m (ctyp, theta) in
   (cM, Int.LF.MDot (metaObjToFt cM, theta))
 
-and elMetaSpine loc cD s cKt  = match (s, cKt) with
+and elMetaSpine loc cD s cKt  =
+  match (s, cKt) with
   | (Apx.Comp.MetaNil , (Int.Comp.Ctype _ , _ )) -> Int.Comp.MetaNil
 
   | (Apx.Comp.MetaNil , (Int.Comp.PiKind (_, cdecl , _cK), theta )) ->
@@ -598,14 +599,14 @@ let mgCompTyp cD (loc, c) =
 
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
     | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
-	let (n , sW) = Whnf.mctxCDec cD psi_var in
-	  Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD', Int.LF.CTyp (Some sW),
-					ref [], Int.LF.Maybe), Whnf.m_id))
+        let (n , sW) = Whnf.mctxCDec cD psi_var in
+          Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD', Int.LF.CTyp (Some sW),
+                                        ref [], Int.LF.Maybe), Whnf.m_id))
     | Int.LF.Null -> Int.LF.Null
     | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->
-	let cPsi' = mgCtx cD' (cD, cPsi) in
-	let tA'   = mgTyp cD' cPsi' tA in
-	  Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA'))
+        let cPsi' = mgCtx cD' (cD, cPsi) in
+        let tA'   = mgTyp cD' cPsi' tA in
+          Int.LF.DDec (cPsi', Int.LF.TypDecl (x, tA'))
   end
 
 
@@ -804,7 +805,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let tau_s = Whnf.cnormCTyp tau_theta' in
      begin
        match (i', tau_s) with
-	     (* Not only the object but also its type must be closed *)
+             (* Not only the object but also its type must be closed *)
        | (Int.Comp.Ann (Int.Comp.Box (_ , mC), _ ) as i, Int.Comp.TypBox (_, mT)) ->
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closedMetaObj mC && Whnf.closedCTyp tau_s then
@@ -967,8 +968,8 @@ and elExp' cD cG i = match i with
       MetaObj are off *)
                 (i'', (tau', Whnf.m_id))
           | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
-	        let cM = elMetaObj cD mC (ctyp, theta) in
-	        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
+                let cM = elMetaObj cD mC (ctyp, theta) in
+                (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
           | _ ->
               raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantArrow, tau_theta')))
                 (* TODO postpone to reconstruction *)
@@ -990,45 +991,45 @@ and elExp' cD cG i = match i with
       (dprint (fun () -> "Case Analysis on SubstVar");
 
        let isId = (match id with
-	 | Apx.LF.Id | Apx.LF.RealId -> true
-	 | Apx.LF.EmptySub ->
-	    let (_ ,  cPsi, _ , cPhi) = Whnf.mctxSDec cD k in
-	      (match cPhi, cPsi with
-		 | Int.LF.Null, Int.LF.Null -> true
-		 | _ -> false) ) in
-	 if isId then
-	   let sv = Int.LF.SVar (k, 0, Int.LF.Shift 0) in
-	   let cPhi     = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
-	   let (_ , cPsi, cl , _cPhi) = Whnf.mctxSDec cD k in (* cD; cPhi |- svar: cPsi  *)
-	   let phat     = Context.dctxToHat cPhi in
-	   let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) in
-	   let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj sv)) in
+         | Apx.LF.Id | Apx.LF.RealId -> true
+         | Apx.LF.EmptySub ->
+            let (_ ,  cPsi, _ , cPhi) = Whnf.mctxSDec cD k in
+              (match cPhi, cPsi with
+                 | Int.LF.Null, Int.LF.Null -> true
+                 | _ -> false) ) in
+         if isId then
+           let sv = Int.LF.SVar (k, 0, Int.LF.Shift 0) in
+           let cPhi     = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
+           let (_ , cPsi, cl , _cPhi) = Whnf.mctxSDec cD k in (* cD; cPhi |- svar: cPsi  *)
+           let phat     = Context.dctxToHat cPhi in
+           let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) in
+           let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj sv)) in
              (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
-	 else
-	      raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported")))
+         else
+              raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported")))
 
   | Apx.Comp.BoxVal (loc, (_loc',Apx.Comp.ClObj (phi2, Apx.Comp.SObj (Apx.LF.SVar (s , s' ))))) ->
       let Apx.LF.MInst (Int.LF.SObj s0, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) = s in
       let cPhi2     = Lfrecon.elDCtx Lfrecon.Pibox cD phi2 in
       let s'        = Lfrecon.elSub loc Lfrecon.Pibox cD cPhi2 s' cl cPhi in
       let s0' = Substitution.LF.comp s0 s' in
-	(match s0'  with
-	   | Int.LF.SVar (k, 0, id) ->
-(*	       let isId = (match id with
-			     | Int.LF.EmptySub ->
-				 let (_ ,  cPsi, _ , cPhi) = Whnf.mctxSDec cD k in
-				   (match cPhi, cPsi with
-				      | Int.LF.Null, Int.LF.Null -> true
-				      | _ -> false)
-			     | s -> Substitution.LF.isId s ) in *)
-		 if Substitution.LF.isId id then
-		   let phat     = Context.dctxToHat cPhi in
-		   let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2)) in
-		   let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj s0')) in
-		     (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
-		 else
-		   raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported - 0"))
-	   | _  -> raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported - 1")))
+        (match s0'  with
+           | Int.LF.SVar (k, 0, id) ->
+(*               let isId = (match id with
+                             | Int.LF.EmptySub ->
+                                 let (_ ,  cPsi, _ , cPhi) = Whnf.mctxSDec cD k in
+                                   (match cPhi, cPsi with
+                                      | Int.LF.Null, Int.LF.Null -> true
+                                      | _ -> false)
+                             | s -> Substitution.LF.isId s ) in *)
+                 if Substitution.LF.isId id then
+                   let phat     = Context.dctxToHat cPhi in
+                   let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2)) in
+                   let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj s0')) in
+                     (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+                 else
+                   raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported - 0"))
+           | _  -> raise (Error (loc, ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported - 1")))
 
 
 | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.CObj (cpsi))) ->
@@ -1036,18 +1037,18 @@ and elExp' cD cG i = match i with
      begin
        match cpsi with
        | Apx.LF.CtxVar (ctxvar) ->
-	  let c_var = Lfrecon.elCtxVar ctxvar in
-	  let cM = (loc', Int.LF.CObj (Int.LF.CtxVar c_var)) in
-	  begin
-	    match c_var with
-	    | (Int.LF.CtxOffset offset) as phi ->
-	       let sW = Context.lookupCtxVarSchema cD  phi in
-	       let tau = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.CTyp (Some sW)) in
-	       (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
-	    | _ ->
-	       raise (Error (loc, ErrorMsg
-				    "In general the schema of the given context  cannot be uniquely inferred"))
-	  end
+          let c_var = Lfrecon.elCtxVar ctxvar in
+          let cM = (loc', Int.LF.CObj (Int.LF.CtxVar c_var)) in
+          begin
+            match c_var with
+            | (Int.LF.CtxOffset offset) as phi ->
+               let sW = Context.lookupCtxVarSchema cD  phi in
+               let tau = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.CTyp (Some sW)) in
+               (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+            | _ ->
+               raise (Error (loc, ErrorMsg
+                                    "In general the schema of the given context  cannot be uniquely inferred"))
+          end
      end
 
   | Apx.Comp.PairVal (loc, i1, i2) ->
@@ -1092,15 +1093,15 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
           let _ = dprint (fun () -> "[inferSchema] looking up psi = " ^
                             P.dctxToString cD cPsi) in
           let (_ , s_cid) = Whnf.mctxCDec cD psi1_var in
-	  elDCtxAgainstSchema loc Lfrecon.Pibox cD' cPsi' s_cid
+          elDCtxAgainstSchema loc Lfrecon.Pibox cD' cPsi' s_cid
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(x , tA2))) ->
         let cPsi'' = inferCtxSchema loc (cD, cPsi1) (cD',cPsi2) in
-	let tA = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi'' tA2 in
-	Int.LF.DDec (cPsi'', Int.LF.TypDecl (x, tA))
+        let tA = Lfrecon.elTyp Lfrecon.Pibox cD' cPsi'' tA2 in
+        Int.LF.DDec (cPsi'', Int.LF.TypDecl (x, tA))
       | _ ->
-	let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD' cPsi' in
-	raise (Error (loc, PatternContextClash (cD, cPsi, cD', cPsi')))
+        let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD' cPsi' in
+        raise (Error (loc, PatternContextClash (cD, cPsi, cD', cPsi')))
 
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *)
@@ -1206,8 +1207,8 @@ and elPatSpine (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat_spine ttau =
 and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatNil loc ->
       (match ttau with
-	| (Int.Comp.TypPiBox (Int.LF.Decl (n, ctyp, Int.LF.Maybe), tau), theta) ->
-	  let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+        | (Int.Comp.TypPiBox (Int.LF.Decl (n, ctyp, Int.LF.Maybe), tau), theta) ->
+          let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
           let pat'  = Int.Comp.PatMetaObj (loc, mO) in
           let ttau' = (tau, t') in
           let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1224,10 +1225,10 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
              let (cG', pat) = elPatChk cD cG pat' (tau1, theta) in
              let (cG'', pat_spine, ttau2) = elPatSpine cD cG' pat_spine' (tau2, theta) in
                (cG'', Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-	 | (Int.Comp.TypPiBox ((Int.LF.Decl (n, ctyp, Int.LF.Maybe)), tau), theta) ->
-	     let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
+         | (Int.Comp.TypPiBox ((Int.LF.Decl (n, ctyp, Int.LF.Maybe)), tau), theta) ->
+             let _ = (dprint (fun () -> "[elPatSpine] TypPiBox implicit ttau = ");
                       dprint (fun () -> "       " ^ P.compTypToString cD (Whnf.cnormCTyp ttau))) in
-	     let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+             let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
              let pat'  = Int.Comp.PatMetaObj (loc, mO) in
              let ttau' = (tau, t')
              in
@@ -1286,13 +1287,13 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
   | Apx.Comp.PatAnn (l, (Apx.Comp.PatMetaObj (loc, _) as pat') ,
-		          Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
+                          Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
       let _ = dprint (fun () -> "[recPatObj' - PatMetaObj] scrutinee has type tau = " ^
-			P.compTypToString cD_s  tau_s) in
+                        P.compTypToString cD_s  tau_s) in
           let Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp _tQ, cPsi_s)) = tau_s  in
-	  let cPsi = inferCtxSchema loc (cD_s, cPsi_s) (cD, psi) in
-	  let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-	  let tau' = Int.Comp.TypBox(loc', Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)) in
+          let cPsi = inferCtxSchema loc (cD_s, cPsi_s) (cD, psi) in
+          let tP   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
+          let tau' = Int.Comp.TypBox(loc', Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)) in
           let ttau' = (tau', Whnf.m_id) in
           let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
           (* Return annotated pattern? Int.Comp.PatAnn (l, pat', tau') *)
@@ -1304,13 +1305,13 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
          let cPsi   = inferCtxSchema loc (cD_s, cPsi_s) (cD, cpsi) in
          let tP     =  mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind in
          let _      = dprint (fun () -> "[recPattern] Reconstruction of pattern of empty type  " ^
-				P.typToString cD cPsi (tP, LF.id)) in
+                                P.typToString cD cPsi (tP, LF.id)) in
          let ttau'  = (Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
            (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')
       | Int.Comp.TypBase (_, c, _ ) ->
-	  (* cpsi = Null by invariant *)
-	  let ttau' = mgCompTyp cD (loc, c), Whnf.m_id in
-	    (Int.LF.Empty, Int.Comp.PatEmpty (loc, Int.LF.Null), ttau')
+          (* cpsi = Null by invariant *)
+          let ttau' = mgCompTyp cD (loc, c), Whnf.m_id in
+            (Int.LF.Empty, Int.Comp.PatEmpty (loc, Int.LF.Null), ttau')
 
       | _ -> raise (Error (loc, CompTypEmpty (cD_s, (tau_s, Whnf.m_id))))
     end
@@ -1323,32 +1324,32 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
 
   | Apx.Comp.PatMetaObj (loc, (_ , Apx.Comp.ClObj (psi, _ ))) ->
       (* Factor out the case for PatMetaObj, since the context associated
-	 with the MetaObj is used in generating the mg type of pattern;
-	 this is useful, if the context psi contains Sigma-types,
-	 as existential variables can be generated in a flattened context.
+         with the MetaObj is used in generating the mg type of pattern;
+         this is useful, if the context psi contains Sigma-types,
+         as existential variables can be generated in a flattened context.
       *)
       let inferClTyp cD psi (cD_s, tau_s) =
-	begin match tau_s with
-	| Int.Comp.TypBox (loc', Int.LF.ClTyp (mT, cPsi)) ->
+        begin match tau_s with
+        | Int.Comp.TypBox (loc', Int.LF.ClTyp (mT, cPsi)) ->
           (match mT with
-	     | Int.LF.MTyp (Int.LF.Atom(_, a, _)) ->
-		 let cPsi' = inferCtxSchema loc (cD_s, cPsi) (cD, psi) in
-		 let tP'   = mgAtomicTyp cD cPsi' a (Typ.get a).Typ.kind in
-		   loc', Int.LF.ClTyp (Int.LF.MTyp tP', cPsi')
-	     | Int.LF.STyp (sv_class, cPhi) ->
-		 let cPsi' = mgCtx cD (cD_s, cPsi) in
-		 let cPhi' = mgCtx cD (cD_s, cPhi) in
-		   loc', Int.LF.ClTyp (Int.LF.STyp (sv_class, cPhi'), cPsi')
-	    )
-	| Int.Comp.TypBox (loc', mT) -> raise (Error (loc, MetaObjectClash (cD, mT)))
-	| _ ->  raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD_s, Int.LF.Empty, (tau_s, Whnf.m_id))))
+             | Int.LF.MTyp (Int.LF.Atom(_, a, _)) ->
+                 let cPsi' = inferCtxSchema loc (cD_s, cPsi) (cD, psi) in
+                 let tP'   = mgAtomicTyp cD cPsi' a (Typ.get a).Typ.kind in
+                   loc', Int.LF.ClTyp (Int.LF.MTyp tP', cPsi')
+             | Int.LF.STyp (sv_class, cPhi) ->
+                 let cPsi' = mgCtx cD (cD_s, cPsi) in
+                 let cPhi' = mgCtx cD (cD_s, cPhi) in
+                   loc', Int.LF.ClTyp (Int.LF.STyp (sv_class, cPhi'), cPsi')
+            )
+        | Int.Comp.TypBox (loc', mT) -> raise (Error (loc, MetaObjectClash (cD, mT)))
+        | _ ->  raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD_s, Int.LF.Empty, (tau_s, Whnf.m_id))))
         end
       in
       let (loc', clTyp) = inferClTyp cD psi (cD_s, tau_s) in
-	let tau_p = Int.Comp.TypBox (loc', clTyp) in
-	let ttau' = (tau_p, Whnf.m_id) in
-	let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
-	  (cG', Int.Comp.PatAnn(loc, pat', tau_p), ttau')
+        let tau_p = Int.Comp.TypBox (loc', clTyp) in
+        let ttau' = (tau_p, Whnf.m_id) in
+        let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
+          (cG', Int.Comp.PatAnn(loc, pat', tau_p), ttau')
 
   | _ ->
       let _ = dprint (fun () -> "[recPatObj'] -~~> inferPatTyp ") in
@@ -1430,17 +1431,17 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
     | (DataObj, _) -> ()
 
     | (IndexObj mO, Int.Comp.PatMetaObj (_, mO1)) |
-		    (IndexObj mO, Int.Comp.PatAnn (_ , Int.Comp.PatMetaObj (_ , mO1), _ ))->
-		   let Int.Comp.TypBox (_ , mT) =  tau_p' in
-		   begin
+                    (IndexObj mO, Int.Comp.PatAnn (_ , Int.Comp.PatMetaObj (_ , mO1), _ ))->
+                   let Int.Comp.TypBox (_ , mT) =  tau_p' in
+                   begin
          try
-			     dprint (fun () -> "Pattern matching on index object...");
-			     Unify.unifyMetaObj Int.LF.Empty  (mO,  t)
+                             dprint (fun () -> "Pattern matching on index object...");
+                             Unify.unifyMetaObj Int.LF.Empty  (mO,  t)
              (mO1, mt1) (mT, Whnf.m_id)
-		     with Unify.Failure msg ->
-			     (dprint (fun () -> "Unify ERROR: " ^ msg);
-			      raise (Error.Violation "Pattern matching on index argument failed"))
-		   end
+                     with Unify.Failure msg ->
+                             (dprint (fun () -> "Unify ERROR: " ^ msg);
+                              raise (Error.Violation "Pattern matching on index argument failed"))
+                   end
     end
   in
 
@@ -1491,14 +1492,14 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
      let _ = dprint (fun () -> "[recPatObj] done") in
      let _ = dprint (fun () -> "           " ^ P.mctxToString cD1' ^ " ; " ^
-			                           P.gctxToString cD1' cG1 ^ "\n    |- " ^
-			                             P.patternToString cD1' cG1 pat1 ^ " : " ^
-			                               P.compTypToString cD1' tau1) in
+                                                   P.gctxToString cD1' cG1 ^ "\n    |- " ^
+                                                     P.patternToString cD1' cG1 pat1 ^ " : " ^
+                                                       P.compTypToString cD1' tau1) in
      let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in
-	   (* ***************                            *************** *)
+           (* ***************                            *************** *)
      let caseT'  =
        match caseTyp with
-	     | IndexObj mO -> IndexObj (Whnf.cnormMetaObj (mO, Int.LF.MShift l_cd1'))
+             | IndexObj mO -> IndexObj (Whnf.cnormMetaObj (mO, Int.LF.MShift l_cd1'))
 
        (*                  | IndexObj (l, Int.LF.ClObj (phat, Int.LF.MObj tR')) ->
                            IndexObj (l, Int.LF.ClObj(phat, Int.LF.MObj (Whnf.cnorm (tR', Int.LF.MShift l_cd1'))))
@@ -1617,8 +1618,8 @@ let comptypdef loc a (tau, cK) =
   let _  = (solve_fvarCnstr Lfrecon.Pibox;
             Unify.forceGlobalCnstr (!Unify.globalCnstrs)) in
   let (cK,i) = Abstract.compkind cK in
-  let _  = (reset_fvarCnstr ();
-	    Unify.resetGlobalCnstrs ()) in
+  reset_fvarCnstr ();
+  Unify.resetGlobalCnstrs ();
   let rec unroll cD cK = begin match cK with
     | Int.Comp.Ctype _ -> cD
     | Int.Comp.PiKind (_, cdecl, cK) -> unroll (Int.LF.Dec(cD, cdecl)) cK

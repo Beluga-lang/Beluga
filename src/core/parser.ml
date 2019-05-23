@@ -224,6 +224,9 @@ let harpoon_command : Syntax.Ext.Harpoon.command Grammar.Entry.t =
 let cmp_exp_chk : Comp.exp_chk Grammar.Entry.t =
   Grammar.Entry.mk "cmp_exp_chk"
 
+let numeric_total_order : Comp.numeric_order Grammar.Entry.t =
+  Grammar.Entry.mk "numeric_order"
+
 (*****************************************)
 (* Dynamically Extensible Beluga Grammar *)
 (*****************************************)
@@ -236,7 +239,7 @@ let cmp_exp_chk : Comp.exp_chk Grammar.Entry.t =
 open Token
 
 EXTEND Grammar
-GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk;
+GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk numeric_total_order;
 
   symbol:
     [
@@ -441,6 +444,16 @@ GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk;
         x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
       | "{"; xs = LIST1 [ x = SYMBOL -> x ]  ; "}" -> Comp.Lex (List.map (fun x -> Comp.Arg (Id.mk_name (Id.SomeString x))) xs)
 (*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
+      ]
+    ]
+;
+
+  numeric_total_order:
+    [
+      [
+        x = INTLIT -> Comp.Arg (int_of_string x)
+      | "{"; xs = LIST1 [ x = SYMBOL -> int_of_string x ] ; "}" ->
+         Comp.Lex (List.map (fun x -> Comp.Arg x) xs)
       ]
     ]
 ;

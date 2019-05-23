@@ -194,10 +194,20 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
- type order =
-      Arg of name			(* O ::= x                    *)
-    | Lex of order list                 (*     | {O1 .. On}           *)
-    | Simul of order list               (*     | [O1 .. On]           *)
+ type 'a order' =
+      Arg of 'a			(* O ::= x                    *)
+    | Lex of 'a order' list                 (*     | {O1 .. On}           *)
+    | Simul of 'a order' list               (*     | [O1 .. On]           *)
+ (* Note: Simul is currently unused. It doesn't even have a parser. -je *)
+
+ let rec map_order (f : 'a -> 'b) : 'a order' -> 'b order' =
+   function
+   | Arg x -> Arg (f x)
+   | Lex xs -> Lex (List.map (map_order f) xs)
+   | Simul xs -> Simul (List.map (map_order f) xs)
+
+ type order = name order'
+ type numeric_order = int order'
 
  type total_dec = Total of Loc.t * order option * name * (name option) list
 	        | Trust of Loc.t

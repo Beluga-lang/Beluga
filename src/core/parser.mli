@@ -18,6 +18,9 @@ val harpoon_command : Ext.Harpoon.command Grammar.Entry.t
 (** Grammar entry for a checkable computation expression. *)
 val cmp_exp_chk : Ext.Comp.exp_chk Grammar.Entry.t
 
+(** Grammar entry for a numeric induction ordering. *)
+val numeric_total_order : Ext.Comp.numeric_order Grammar.Entry.t
+
 (***** Parsing functions *****)
 
 (** Parse a stream and return a signature *)

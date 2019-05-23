@@ -143,12 +143,18 @@ module Prover = struct
      *)
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
     ; theorem_name : Id.name
+    ; order : Order.order
     }
 
-  let make_prover_state (name : Id.name) (s : unit Comp.proof_state) : interpreter_state =
+  let make_prover_state
+        (name : Id.name)
+        (order : Order.order)
+        (s : unit Comp.proof_state)
+      : interpreter_state =
     { initial_state = s
     ; remaining_subgoals = DynArray.of_list [s]
     ; theorem_name = name
+    ; order = order
     }
 
   (** Gets the next subgoal from the interpreter state.
@@ -293,9 +299,13 @@ module Prover = struct
          e;
        loop ppf s
 
-  let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.tclo) : unit =
-    stmt
-    |> Comp.make_proof_state
-    |> make_prover_state (Id.mk_name (Id.SomeString name))
+  let start_toplevel
+        (ppf : Format.formatter) (* The formatter used to display messages *)
+        (name : Id.name) (* The name of the theorem to prove *)
+        (stmt : Comp.tclo) (* The statement of the theorem *)
+        (order : Order.order) (* The induction order of the theorem *)
+      : unit =
+    Comp.make_proof_state stmt
+    |> make_prover_state name order
     |> loop ppf
 end

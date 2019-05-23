@@ -52,5 +52,5 @@ end;
 module Comp = Syntax.Int.Comp
 
 module Prover : sig
-  val start_toplevel : Format.formatter -> string -> Comp.tclo -> unit
+  val start_toplevel : Format.formatter -> Id.name -> Comp.tclo -> Order.order -> unit
 end

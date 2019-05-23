@@ -603,7 +603,7 @@ let recSgnDecls decls =
            | Some (Ext.Comp.Arg x) ->
               let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
            | Some (Ext.Comp.Lex o) ->
-              let ps = List.map (function (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in
+              let ps = List.map (fun (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in
               let _ = print_str (fun () -> "[mk_total_decl] Lex Order " ^ (List.fold_right (fun (Order.Arg x) s -> (string_of_int x) ^ " " ^ s) ps "")) in
               (Some (Order.Lex ps), args)
 	         | None -> (None, [])

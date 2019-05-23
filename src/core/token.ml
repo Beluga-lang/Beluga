@@ -22,7 +22,7 @@ type t =
   (** A symbol of the form `?hole` *)
   | HOLE of string
   (** An integer literal. *)
-  | INTLIT  of string
+  | INTLIT  of int
   (** A doc-comment. These are of the form %{{ ... %}} and are
    * remembered used Beluga for its literate programming. *)
   | COMMENT of string
@@ -42,7 +42,7 @@ let to_string =
     | KEYWORD s -> p "KEYWORD" s
     | SYMBOL  s -> p "SYMBOL" s
     | UPSYMBOL  s -> p "UPSYMBOL" s
-    | INTLIT s ->  p "INTEGER"  s
+    | INTLIT s ->  p "INTEGER" (string_of_int s)
     | COMMENT s -> p "COMMENT" s
     | DOTS s -> p "DOTS"  s
     | MODULESYM s -> p "MODULESYM" s
@@ -71,7 +71,7 @@ let extract_string = function
   | KEYWORD s -> s
   | SYMBOL  s -> s
   | UPSYMBOL  s -> s
-  | INTLIT  s -> s
+  | INTLIT  s -> string_of_int s
   | COMMENT s -> s
   | DOTS s -> s
   | MODULESYM s -> s

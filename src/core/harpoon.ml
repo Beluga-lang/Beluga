@@ -195,6 +195,15 @@ module Prover = struct
         *)
        Tactic.split m tau g add_subgoal;
        remove_current_subgoal ()
+    | Command.UseIH t ->
+       (*
+       let (m, tau) =
+         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
+         (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+       in
+        *)
+       Misc.not_implemented "UseIH"
+
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
        try

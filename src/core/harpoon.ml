@@ -83,6 +83,7 @@ module Tactic = struct
   let split (m : Comp.exp_syn) (tau : Comp.typ) : t =
     let open Comp in
     fun s callback ->
+    (* Compute the coverage goals for the type to split on *)
     let cgs =
       Coverage.genPatCGoals
         s.context.cD
@@ -90,26 +91,31 @@ module Tactic = struct
         tau
         []
     in
+    (* We will map f over the coverage goals that were generated.
+       f computes the subgoal for the given coverage goal, invokes the
+       callback on the computed subgoal (to register it), and
+       constructs the Harpoon syntax for this split branch.
+     *)
     let f (cD, cov_goal, ms) =
       match cov_goal with
+      (* Because we called genPatCGoals, I'm pretty sure that the
+         CovCtx and CovGoal constructors are impossible here,
+         but I could be wrong.
+       *)
       | Coverage.CovCtx cPsi -> Misc.not_implemented "split on context variables"
       | Coverage.CovGoal (cPsi, tR, (tau', ms')) -> Misc.not_implemented "bar"
       | Coverage.CovPatt (cG, patt, tau) ->
          let cG = Coverage.compgctx_of_gctx cG in
-         (*
-         let open Format in
-         let open Pretty.Int.DefaultPrinter in
-         fprintf err_formatter "cD = %a\ncG = %a\ntau = %a\n"
-           (fmt_ppr_lf_mctx Pretty.std_lvl) cD
-           (fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG
-           (fmt_ppr_cmp_typ cD Pretty.std_lvl) tau;
-          *)
          let open Comp in
          let h = { cD; cG } in
          let goal_type, goal_sub = s.goal in
          let new_state =
            { context = h
            ; goal = (goal_type, Whnf.mcomp goal_sub ms)
+           (* ^ our goal already has a delayed msub, so we compose the
+              one we obtain from the split (the refinement substitution)
+              with the one we have (eagerly).
+            *)
            ; solution = None
            }
          in
@@ -117,6 +123,9 @@ module Tactic = struct
          split_branch h (incomplete_proof new_state)
     in
     let bs = List.map f cgs in
+    (* Assemble the split branches computed in `bs` into the Harpoon
+       Split syntax.
+     *)
     prepend_statements
       [ Comp.split m tau bs ]
       Comp.QED
@@ -128,6 +137,10 @@ module Prover = struct
 
   type interpreter_state =
     { initial_state : unit Comp.proof_state
+    (* ^ it's important to remember the initial proof state, since it
+       gives us a way to track the original full statement of the theorem
+       to prove as well as a handle on the whole (partial) proof.
+     *)
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
     ; theorem_name : Id.name
     }
@@ -165,7 +178,7 @@ module Prover = struct
           the initial state correctly. The initial state's solution
           might be None or Some; we don't know. Rather than handle
           that distinction here, we can wrap the state into a proof
-          that immediate ends with Incomplete. The proof
+          that immediately ends with Incomplete. The proof
           pretty-printer will then deal with the None/Some for us by
           printing a `?` if the initial state hasn't been solved
           yet.
@@ -217,6 +230,7 @@ module Prover = struct
          Check.Comp.Error (_l, _e) ->
           Printexc.print_backtrace stderr
 
+  (** A computed value of type 'a or a function to print an error. *)
   type 'a error = (Format.formatter -> unit, 'a) Either.t
 
   (** Parses the given string to a Syntax.Ext.Harpoon.command or an

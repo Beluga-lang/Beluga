@@ -160,7 +160,7 @@ let mk_keyword s = Token.KEYWORD s
 
 let mk_symbol s = Token.SYMBOL s
 
-let mk_integer s = Token.INTLIT s
+let mk_integer (s : string) = Token.INTLIT (int_of_string s)
 
 let mk_hole s = Token.HOLE s
 

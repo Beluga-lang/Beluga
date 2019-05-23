@@ -129,11 +129,13 @@ module Prover = struct
   type interpreter_state =
     { initial_state : unit Comp.proof_state
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
+    ; theorem_name : Id.name
     }
 
-  let make_prover_state (s : unit Comp.proof_state) : interpreter_state =
+  let make_prover_state (name : Id.name) (s : unit Comp.proof_state) : interpreter_state =
     { initial_state = s
     ; remaining_subgoals = DynArray.of_list [s]
+    ; theorem_name = name
     }
 
   (** Gets the next subgoal from the interpreter state.
@@ -271,6 +273,6 @@ module Prover = struct
   let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.tclo) : unit =
     stmt
     |> Comp.make_proof_state
-    |> make_prover_state
+    |> make_prover_state (Id.mk_name (Id.SomeString name))
     |> loop ppf
 end

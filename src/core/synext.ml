@@ -213,6 +213,10 @@ module Harpoon = struct
     (* ^ perhaps add some arguments later to control what gets introduced *)
     | Split of Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
+    | UseIH of Comp.exp_syn
+    (* ^ the application of the IH; must be a (nested) Apply, but this
+     * is not checked at parse-time. It is checked later in the
+     * Harpoon command processor. *)
     (* Administrative commands *)
     | ShowProof
     | Defer (* Defers the current subgoal to later *)

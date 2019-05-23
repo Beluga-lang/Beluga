@@ -53,7 +53,7 @@ let _ = Error.register_printer
     )
   )
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11]) 
+let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 let print_str f = dprint f
 (* let dprint f = print_string ("\n" ^ f () )*)
@@ -114,9 +114,9 @@ let rec smaller_meta_obj cM = match  cM with
 (*  | Comp.MetaSObj (_, phat, s ) -> LF.SObj (phat, s)
   | Comp.MetaSObjAnn (_, cPsi, s ) -> LF.SObj (Context.dctxToHat cPsi, s)
 *)
-let rec mark_gctx cG = match cG with 
+let rec mark_gctx cG = match cG with
   | LF.Empty -> LF.Empty
-  | LF.Dec(cG, Comp.CTypDecl (x,tau, _ )) -> 
+  | LF.Dec(cG, Comp.CTypDecl (x,tau, _ )) ->
      LF.Dec (mark_gctx cG, Comp.CTypDecl (x,tau, true))
 
 let rec struct_smaller _i patt = match patt with
@@ -274,9 +274,9 @@ let get_order () =
 		  | Some (Order.Arg x) ->
 		      let k = List.length (dec.args) in
 			(dec.name, Some [x], k, (tau, Whnf.m_id))
-                  | Some (Order.Lex xs) -> 
+                  | Some (Order.Lex xs) ->
                      let k = List.length (dec.args) in
-                     let xs = List.map (function (Order.Arg x) -> x) xs in 
+                     let xs = List.map (function (Order.Arg x) -> x) xs in
                      (dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
 		     (dec.name, Some xs, k, (tau, Whnf.m_id)))
 		  | None -> (dec.name, None, 0, (tau, Whnf.m_id))
@@ -290,7 +290,7 @@ let get_order_for f  =
 	if dec.name = f then
 	  (match dec.order with
 	    | Some (Order.Arg x) -> Some [x]
-            | Some (Order.Lex o) -> 
+            | Some (Order.Lex o) ->
                Some (List.map (function Order.Arg x -> x) o)
                (* raise (Error (Syntax.Loc.ghost , NotImplemented ": lexicographic orders for totality checker are not fully implemented.")) *)
 	    | None -> None
@@ -541,7 +541,7 @@ let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
 (* Generating recursive calls on computation-level variables *)
 let rec get_return_type cD x ttau = match ttau with
   | Comp.TypArr (_tau1 , tau0)  , theta -> get_return_type cD x (tau0, theta)
-  | Comp.TypPiBox (cdecl, tau0) , theta -> 
+  | Comp.TypPiBox (cdecl, tau0) , theta ->
      let (_cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
        get_return_type cD x (tau0,  LF.MDot (ft, theta))
   | tau, _ -> (x, ttau)
@@ -553,30 +553,30 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
 	let y = j+1 in
 	let mf_list = get_order () in
-	let _ = print_str (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in 
+	let _ = print_str (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
 	let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
 	let mk_wfrec (f,x,k, ttau) =
 	  let _ = print_str (fun () -> "\n[gen_rec_calls'] Return Type " ^ P.compTypToString cD (Whnf.cnormCTyp ttau0') ^
-                                   " for arg " ^ (string_of_int x) ^ 
-                                   " — generate appropriate spine next ...\n") in 
-          let _ = dprint (fun () -> "Type of function " ^ (Id.render_name f) ^ " : " ^ 
+                                   " for arg " ^ (string_of_int x) ^
+                                   " — generate appropriate spine next ...\n") in
+          let _ = dprint (fun () -> "Type of function " ^ (Id.render_name f) ^ " : " ^
                                         P.compTypToString cD (Whnf.cnormCTyp ttau) ) in
 	  let (args, tau) = rec_spine' cD (y, ttau0') (x,k,ttau) in
 	  let args = generalize args in
 	  let d = Comp.WfRec (f, args, tau) in
           let _ = print_str (fun () -> "\nRecursive call : " ^
-				  calls_to_string cD cG (f, args, tau) ^ "\n\n") in   
+				  calls_to_string cD cG (f, args, tau) ^ "\n\n") in
 	    d
 	in
 
-         let rec mk_wfrec_all (f,k,ttau) xs = match xs with 
+         let rec mk_wfrec_all (f,k,ttau) xs = match xs with
            | [] -> []
-           | x::xs' -> 
-             begin try 
+           | x::xs' ->
+             begin try
                      (mk_wfrec (f,x,k,ttau))::mk_wfrec_all (f,k,ttau) xs'
                with Not_compatible -> mk_wfrec_all (f,k,ttau) xs'
-             end 
-         in 
+             end
+         in
 
 	let rec mk_all cIH mf_list = match mf_list with
           | [] -> cIH
@@ -587,7 +587,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) = match cG0 with
 		  (* Check that generated call is valid -
 		     mostly this prevents cases where we have contexts not matching
 		     a given schema *)
-                let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in 
+                let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in
 		  mk_all cIH' mf_list
 
 	in
@@ -600,7 +600,7 @@ let wf_rec_calls cD cG  =
   if !enabled then
     (print_str (fun () -> "Generate recursive calls from " ^ "\n"
 		   ^ "cD = " ^ P.mctxToString cD
-		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");   
+		   ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");
     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
     let _ = Unify.resetGlobalCnstrs () in

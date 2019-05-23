@@ -44,19 +44,47 @@ let prove =
   { name = "prove"
   ; run =
       command_with_arguments 1
-        (fun ppf [name] ->
+        begin
+          fun ppf [name] ->
+          let open Either in
           fprintf ppf "Statement to prove (C-d to abort): @?";
-          Either.trap (fun () -> read_line ()) |>
-            Either.eliminate
-              (fun _ -> fprintf ppf "\n";)
-              (fun stmt_text ->
-                (* Parse the statement to prove, and elaborate it to internal syntax. *)
-                let stmt = Parser.parse_string ~name:"theorem statement" ~input:stmt_text Parser.cmp_typ in
-                let stmt = Index.comptyp stmt in
-                let stmt = Reconstruct.comptyp stmt in
-                let stmt, _ = Abstract.comptyp stmt in
-                Harpoon.Prover.start_toplevel ppf name (stmt, Syntax.Int.LF.MShift 0) )
-        )
+          let e =
+            trap
+              (fun () ->
+                let input = read_line () in
+                Parser.parse_string ~name: "<theorem statement>" ~input: input Parser.cmp_typ
+                |> Index.comptyp
+                |> Reconstruct.comptyp
+                |> Abstract.comptyp)
+            $ fun (stmt, k) -> (* k is the number of added implicit vars *)
+              fprintf ppf "Totality ordering (C-d to abort): @?";
+              trap
+                (fun () ->
+                  let input = read_line () in
+                  let order =
+                    Parser.parse_string
+                      ~name: "<totality ordering>"
+                      ~input: input
+                      Parser.numeric_total_order
+                  in
+                  (* Shift the indices used in the ordering to account
+                  for the implicit arguments that were added by
+                  Abstract.comptyp *)
+                  let order = Syntax.Ext.Comp.map_order (fun n -> n + k) order in
+                  (* Convert to a proper Order.order, which is used by the Total module. *)
+                  (stmt, Order.of_numeric_order order))
+          in
+          Either.eliminate
+            (fun exn -> fprintf ppf "%s\n" (Printexc.to_string exn))
+            (fun (stmt, order) ->
+              Harpoon.Prover.start_toplevel
+                ppf
+                (Id.mk_name (Id.SomeString name))
+                (stmt, Syntax.Int.LF.MShift 0)
+                order
+            )
+            e
+        end
   ; help = "Interactively prove a theorem"
   }
 

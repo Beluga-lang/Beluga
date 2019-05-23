@@ -182,8 +182,10 @@ module Prover = struct
        Tactic.intros g add_subgoal;
        remove_current_subgoal ()
     | Command.Split t ->
-       let (m, tclo) = Interactive.elaborate_exp' cD cG t in
-       let tau = Whnf.cnormCTyp tclo in
+       let (m, tau) =
+         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
+         (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+       in
        (*
        Format.fprintf ppf "@[Elaborated term:@;%a : %a@,"
          (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m
@@ -204,43 +206,71 @@ module Prover = struct
          Check.Comp.Error (_l, _e) ->
           Printexc.print_backtrace stderr
 
+  type 'a error = (Format.formatter -> unit, 'a) Either.t
+
+  (** Parses the given string to a Syntax.Ext.Harpoon.command or an
+      error-printing function.
+   *)
+  let parse_input (input : string) : Syntax.Ext.Harpoon.command error =
+    try
+      Parser.parse_string
+        ~name: "command line"
+        ~input: input
+        Parser.harpoon_command
+      |> Either.pure
+    with
+    | Parser.Grammar.Loc.Exc_located (_, _) as e ->
+       Either.Left
+         (fun ppf ->
+           Format.fprintf ppf
+             "@[<v>Parse error.@.%s@]"
+             (Printexc.to_string e))
+
+  (** Runs the given function, trapping exceptions in Either.t
+      and converting the exception to a function that prints the
+      error with a given formatter.
+   *)
+  let run_safe (f : unit -> 'a) : 'a error =
+    let show_error e ppf =
+      Format.fprintf ppf
+        "@[<v>Internal error. (State may be undefined.)@.%s@]"
+        (Printexc.to_string e)
+    in
+    Either.trap f |> Either.lmap show_error
+
+  (* UTF-8 encoding of the lowercase Greek letter lambda. *)
+  let lambda : string = "\xCE\xBB"
 
   let rec loop ppf (s : interpreter_state) : unit =
     (* Get the next subgoal *)
     match next_subgoal s with
     | None ->
-       Format.fprintf ppf "@.Proof complete!@.";
+       Format.fprintf ppf "@.Proof complete! (No subgoals left.)@.";
        () (* we're done; proof complete *)
     | Some g ->
        (* Show the proof state and the prompt *)
-       Format.fprintf ppf "@.@[<v>Current state:@.%a@]@.@.\xCE\xBB> @?" P.fmt_ppr_cmp_proof_state g;
+       Format.fprintf ppf
+         "@.@[<v>Current state:@.%a@]@.@.%s> @?"
+         P.fmt_ppr_cmp_proof_state g
+         lambda;
 
-       (* Parse the input.*)
+       (* Parse the input and run the command *)
        let input = read_line () in
-       begin
-         match
-           try
-             Either.Right (Parser.parse_string ~name: "command line" ~input: input Parser.harpoon_command)
-           with
-           | Parser.Grammar.Loc.Exc_located (_, _) as e -> Either.Left e
-         with
-         | Either.Left err ->
-            Format.fprintf ppf "@[<v>Parse error.@.%s@]" (Printexc.to_string err);
-         | Either.Right cmd ->
-            try
-              process_command ppf s g cmd
-            with
-            | e ->
-               (* This is kind of dangerous, because we don't have any
-               guarantee that the error arising in process_command
-               didn't leave us in an undefined state. *)
-               Format.fprintf ppf
-                 "@[<v>Internal error. (State may be undefined.)@.%s@]"
-                 (Printexc.to_string e)
-       end;
+       let e =
+         let open Either in
+         parse_input input
+         $ fun cmd ->
+           run_safe (fun () -> process_command ppf s g cmd)
+       in
+       Either.eliminate
+         (fun f -> f ppf)
+         (Misc.const ())
+         e;
        loop ppf s
 
   let start_toplevel (ppf : Format.formatter) (name : string) (stmt : Comp.tclo) : unit =
-    let initial_state = stmt |> Comp.make_proof_state |> make_prover_state in
-    loop ppf initial_state
+    stmt
+    |> Comp.make_proof_state
+    |> make_prover_state
+    |> loop ppf
 end

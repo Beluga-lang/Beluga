@@ -597,20 +597,18 @@ let recSgnDecls decls =
          | None::ys -> pos loc x ys (k+1)
        in
        let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
-	       (print_str (fun () -> "args length: "^string_of_int (List.length args) ^"\n" );
-	        if f = f' then
-            match order with
-            | Some (Ext.Comp.Arg x) ->
-               let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
-            | Some (Ext.Comp.Lex o) ->
-               let ps = List.map (function (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in
-               let _ = print_str (fun () -> "[mk_total_decl] Lex Order " ^ (List.fold_right (fun (Order.Arg x) s -> (string_of_int x) ^ " " ^ s) ps "")) in
-               (Some (Order.Lex ps), args)
-
-	          | None -> (None, [])
-	        else
-	          raise (Error (loc, TotalDeclError (f, f'))))
-
+	       print_str (fun () -> "args length: "^string_of_int (List.length args) ^"\n" );
+	       if f = f' then
+           match order with
+           | Some (Ext.Comp.Arg x) ->
+              let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
+           | Some (Ext.Comp.Lex o) ->
+              let ps = List.map (function (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in
+              let _ = print_str (fun () -> "[mk_total_decl] Lex Order " ^ (List.fold_right (fun (Order.Arg x) s -> (string_of_int x) ^ " " ^ s) ps "")) in
+              (Some (Order.Lex ps), args)
+	         | None -> (None, [])
+	       else
+	         raise (Error (loc, TotalDeclError (f, f')))
        in
        let is_total total =
          match total with None -> false | Some _ -> true in

@@ -489,54 +489,52 @@ let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
 
  let rec gen_rec_calls cD cIH (cD', j) = match cD' with
    | LF.Empty -> cIH
+   | LF.Dec (cD', LF.Decl (u, cU, dep)) when not (is_inductive dep) -> gen_rec_calls cD cIH (cD', j+1)
    | LF.Dec (cD', LF.Decl (u, cU, dep)) ->
-       if not (is_inductive dep) then
-	 gen_rec_calls cD cIH (cD', j+1)
-       else
-	 (let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
-	 let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
-	 let mf_list = get_order () in
-	 let _ = dprint (fun () -> "[gen_rec_calls] Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
-	 let _ = dprint (fun () -> "Considering a total of " ^
-				 string_of_int (List.length mf_list)  ^
-				 " rec. functions\n") in
-	 let mk_wfrec (f,x,k,ttau) =
-          let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD' (LF.Decl (u,cU, dep)) ^  " for position " ^ string_of_int x ^   "\n") in
-	  let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
-	  let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in
-          (* rec_spine may raise Not_compatible *)
-	  let _ = dprint (fun () -> "Generated Arguments for rec. call " ^  args_to_string cD LF.Empty args ^ "\n") in  
-	  let args = generalize args in
-	  let d = Comp.WfRec (f, args, tau) in
-	   let _ = dprint (fun () -> "\nGenerated Recursive Call : " ^
-				  calls_to_string cD (LF.Empty) (f, args, tau) ^
-				  "\n\n") in 
-	    d
-        in
-         let rec mk_wfrec_all (f,k,ttau) xs = match xs with 
-           | [] -> []
-           | x::xs' -> 
-             begin try 
-                     (mk_wfrec (f,x,k,ttau))::mk_wfrec_all (f,k,ttau) xs'
-               with Not_compatible -> mk_wfrec_all (f,k,ttau) xs'
-             end 
-         in 
-                          
-        let rec mk_all (cIH,j) mf_list = match mf_list with
-          | [] -> cIH
-	  | (f, None, _ , _ttau)::mf_list ->  mk_all (cIH, j) mf_list
-          | (f, Some xs, k, ttau)::mf_list ->
-		let ds =  mk_wfrec_all (f,k,ttau) xs in
-                let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in 
-		  (* Check that generated call is valid -
-		     mostly this prevents cases where we have contexts not matching
-		     a given schema *)
-                mk_all (cIH',j) mf_list
-        in
-        let _ =  dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n") in 
-        let cIH' = mk_all (cIH,j)  mf_list in
-          dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j+1) ^ "\n");
-          gen_rec_calls cD cIH'  (cD', j+1))
+      let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
+      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
+      let mf_list = get_order () in
+      let _ = dprint (fun () -> "[gen_rec_calls] Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
+      let _ = dprint (fun () -> "Considering a total of " ^
+                                  string_of_int (List.length mf_list)  ^
+                                    " rec. functions\n") in
+      let mk_wfrec (f,x,k,ttau) =
+        let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD' (LF.Decl (u,cU, dep)) ^  " for position " ^ string_of_int x ^   "\n") in
+        let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
+        let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in
+        (* rec_spine may raise Not_compatible *)
+        let _ = dprint (fun () -> "Generated Arguments for rec. call " ^  args_to_string cD LF.Empty args ^ "\n") in
+        let args = generalize args in
+        let d = Comp.WfRec (f, args, tau) in
+        let _ = dprint (fun () -> "\nGenerated Recursive Call : " ^
+                                    calls_to_string cD (LF.Empty) (f, args, tau) ^
+                                      "\n\n") in
+        d
+      in
+      let rec mk_wfrec_all (f,k,ttau) xs = match xs with
+        | [] -> []
+        | x::xs' ->
+           begin try
+               (mk_wfrec (f,x,k,ttau))::mk_wfrec_all (f,k,ttau) xs'
+             with Not_compatible -> mk_wfrec_all (f,k,ttau) xs'
+           end
+      in
+
+      let rec mk_all (cIH,j) mf_list = match mf_list with
+        | [] -> cIH
+        | (f, None, _ , _ttau)::mf_list ->  mk_all (cIH, j) mf_list
+        | (f, Some xs, k, ttau)::mf_list ->
+           let ds =  mk_wfrec_all (f,k,ttau) xs in
+           let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in
+           (* Check that generated call is valid -
+              mostly this prevents cases where we have contexts not matching
+              a given schema *)
+           mk_all (cIH',j) mf_list
+      in
+      let _ =  dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n") in
+      let cIH' = mk_all (cIH,j)  mf_list in
+      dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j+1) ^ "\n");
+      gen_rec_calls cD cIH'  (cD', j+1)
 
 
 (* =================================================================================== *)

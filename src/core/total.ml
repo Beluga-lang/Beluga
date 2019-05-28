@@ -283,22 +283,28 @@ let get_order () =
 	   )
     !mutual_decs
 
-let get_order_for f  =
+let lookup_dec f : dec option =
+  let rec go = function
+    | [] -> None
+    | d :: _ when d.name = f -> Some d
+    | _ :: ds -> go ds
+  in
+  go !mutual_decs
+
+
+(** Gets the induction order for the function with name `f`
+    Returns None if the
+ *)
+let get_order_for f : int list option =
   let rec find decs = match decs with
     | [] -> None
     | dec::decs ->
-	if dec.name = f then
-	  (match dec.order with
-	    | Some (Order.Arg x) -> Some [x]
-            | Some (Order.Lex o) ->
-               Some (List.map (function Order.Arg x -> x) o)
-               (* raise (Error (Syntax.Loc.ghost , NotImplemented ": lexicographic orders for totality checker are not fully implemented.")) *)
-	    | None -> None
-	   )
-	else
-	  find decs
+	     if dec.name = f then
+         let open Maybe in
+	       dec.order $ Order.list_of_order
+	     else
+	       find decs
   in find !mutual_decs
-
 
 (* Given C:U, f, order Arg i, and type T of f where
    T = Pi X1:U1, ... X:i:Un. T, generate
@@ -854,24 +860,45 @@ let filter cD cG cIH (loc, e) =
 
 *)
 
-let annotate loc f tau =
+(** Adjusts the given type signature with annotations for the
+    induction arguments according to the given order.
+    Call `get_order_for` to retrieve an induction order before calling
+    this.
+    Returns None if the order does not match the type, i.e. goes out
+    of bounds.
+ *)
+let annotate
+      (tau : Syntax.Int.Comp.typ) (order : int list)
+    : Syntax.Int.Comp.typ option =
+  let open Maybe in
   let rec ann tau pos = match tau , pos with
   | Comp.TypPiBox (LF.Decl (x, cU, _dep), tau) , 1 ->
-      Comp.TypPiBox (LF.Decl (x, cU, LF.Inductive),
-		     tau)
-  | Comp.TypArr (tau1, tau2) , 1 -> Comp.TypArr (Comp.TypInd tau1, tau2)
-  | Comp.TypArr (tau1, tau2) , n -> Comp.TypArr (tau1, ann tau2 (n-1))
-  | Comp.TypPiBox (cd , tau) , n -> Comp.TypPiBox( cd, ann tau (n-1))
-  |  _ , _ -> raise (Error (loc, TooManyArg f))
+     Comp.TypPiBox (LF.Decl (x, cU, LF.Inductive), tau)
+     |> pure
+  | Comp.TypArr (tau1, tau2) , 1 ->
+     Comp.TypArr (Comp.TypInd tau1, tau2)
+     |> pure
+  | Comp.TypArr (tau1, tau2) , n ->
+     ann tau2 (n-1)
+     $> fun tau2' ->
+        Comp.TypArr (tau1, tau2')
+  | Comp.TypPiBox (cd , tau) , n ->
+     ann tau (n-1)
+     $> fun tau2' ->
+        Comp.TypPiBox(cd, tau2')
+  |  _ , _ -> None
   in
-    match get_order_for f with
-      Some xs -> (let tau' = List.fold_left (fun tau' x -> ann tau' x) tau xs in
-		   (* print_string ("Annotated " ^ P.compTypToString LF.Empty tau' ^
-				 " in pos = " ^ string_of_int x ^ "\n"); *)
-		   tau')
+  fold_left (fun tau' x -> ann tau' x) tau order
 
-      | None -> tau
-
+(** Removes all TypInd marks in a computational type. *)
+let rec strip (tau : Syntax.Int.Comp.typ) : Syntax.Int.Comp.typ =
+  match tau with
+  | Comp.TypInd tau' -> strip tau'
+  | Comp.TypPiBox (d, tau') -> Comp.TypPiBox (d, strip tau')
+  | Comp.TypArr (tau1, tau2) -> Comp.TypArr (strip tau1, strip tau2)
+  | Comp.TypCross (tau1, tau2) -> Comp.TypCross (strip tau1, strip tau2)
+  | Comp.TypClo (tau', ms) -> Comp.TypClo (strip tau', ms)
+  | tau -> tau
 
 (*  ------------------------------------------------------------------------ *)
 

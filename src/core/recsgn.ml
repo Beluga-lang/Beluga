@@ -598,17 +598,18 @@ let recSgnDecls decls =
        in
        let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
 	       print_str (fun () -> "args length: "^string_of_int (List.length args) ^"\n" );
-	       if f = f' then
-           match order with
-           | Some (Ext.Comp.Arg x) ->
-              let p = pos loc x args 1 in  (Some (Order.Arg p) , args)
-           | Some (Ext.Comp.Lex o) ->
-              let ps = List.map (fun (Ext.Comp.Arg x) -> Order.Arg (pos loc x args 1)) o in
-              let _ = print_str (fun () -> "[mk_total_decl] Lex Order " ^ (List.fold_right (fun (Order.Arg x) s -> (string_of_int x) ^ " " ^ s) ps "")) in
-              (Some (Order.Lex ps), args)
-	         | None -> (None, [])
-	       else
-	         raise (Error (loc, TotalDeclError (f, f')))
+	       if f <> f' then raise (Error (loc, TotalDeclError (f, f')));
+           ( Maybe.map
+               (fun order ->
+                 (* convert to a numeric order by looking up the
+                    positions of the specified arguments;
+                    then convert to a proper Order.order.
+                  *)
+                 Ext.Comp.map_order (fun x -> pos loc x args 1) order
+                 |> Order.of_numeric_order)
+               order
+           , args
+           )
        in
        let is_total total =
          match total with None -> false | Some _ -> true in
@@ -668,43 +669,84 @@ let recSgnDecls decls =
        let (cG , vars', n_list ) = preprocess recFuns 1 in
 
        let reconFun loc f  e =
-         let apx_e   = Index.exp vars' e in
-         let _       = dprint (fun () -> "\n  Indexing expression done \n") in
-         let tau'    = lookupFun cG f in
-         let e'      = Monitor.timer ("Function Elaboration", fun () ->
-					                                                    Reconstruct.exp cG apx_e (stripInd tau', C.m_id)) in
-
-         let _       = dprint (fun () ->  "\n Elaboration of function " ^ (string_of_name f) ^
-                                            "\n   type: " ^ P.compTypToString cD tau' ^
-                                              "\n   result:  " ^
-                                                P.expChkToString cD cG e' ^ "\n") in
-
-         let _        = begin try
-                            Unify.forceGlobalCnstr (!Unify.globalCnstrs)
-                          with Unify.GlobalCnstrFailure (loc,cnstr) ->
-                            raise (Check.Comp.Error  (loc, Check.Comp.UnsolvableConstraints (Some f, cnstr)))
-                        end
+         let apx_e = Index.exp vars' e in
+         dprint (fun () -> "\n  Indexing expression done \n");
+         let tau' = lookupFun cG f in
+         let e' =
+           Monitor.timer
+             ( "Function Elaboration",
+               fun () -> Reconstruct.exp cG apx_e (stripInd tau', C.m_id)
+             )
          in
-         let _        = Unify.resetGlobalCnstrs () in
+         dprint
+           (fun _ ->
+             "Elaboration of function "
+             ^ (string_of_name f)
+             ^ " : "
+             ^ P.compTypToString cD tau'
+             ^ "\nresult: " ^ P.expChkToString cD cG e');
+
+         begin
+           try
+             Unify.forceGlobalCnstr (!Unify.globalCnstrs)
+           with Unify.GlobalCnstrFailure (loc,cnstr) ->
+             raise
+               ( Check.Comp.Error
+                   ( loc
+                   , Check.Comp.UnsolvableConstraints (Some f, cnstr)
+                   )
+               )
+         end;
+
+         Unify.resetGlobalCnstrs ();
 
          (* let e_r     = Monitor.timer ("Function Reconstruction", fun () -> check  cO cD cG e' (tau', C.m_id)) in  *)
 
-         let _       = dprint (fun () ->  "\n [AFTER reconstruction] Function " ^ (string_of_name f) ^
-                                            "\n   type: " ^ P.compTypToString cD tau' ^
-                                              "\n   result:  " ^
-                                                P.expChkToString cD cG e' ^ "\n") in
+         dprint
+           (fun _ ->
+             "[AFTER reconstruction] Function "
+             ^ (string_of_name f)
+             ^ " : " ^ P.compTypToString cD tau'
+             ^ "\nresult: "
+             ^ P.expChkToString cD cG e' ^ "\n");
 
-         let e''     = Whnf.cnormExp (e', Whnf.m_id) in
-         let cQ, e_r' = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp e'' ) in
-	       let _       = storeLeftoverVars cQ loc in
-         let e_r'    = Whnf.cnormExp (e_r', Whnf.m_id) in
+         let e'' = Whnf.cnormExp (e', Whnf.m_id) in
+         let cQ, e_r' =
+           Monitor.timer
+             ( "Function Abstraction"
+             , fun () -> Abstract.exp e''
+             )
+         in
+	       storeLeftoverVars cQ loc;
+         let e_r' = Whnf.cnormExp (e_r', Whnf.m_id) in
 
-	       let tau_ann = if !Total.enabled then Total.annotate loc f tau'
- 	                     else tau' in
-         let _       = Monitor.timer ("Function Check", fun () ->
-					                                              Check.Comp.check
-					                                                cD cG e_r' (tau_ann, C.m_id)
-                         ) in
+	       let tau_ann =
+           match
+             let open Maybe in
+             of_bool !Total.enabled
+             $ fun _ ->
+               Total.lookup_dec f
+               $ fun d ->
+                 Total.(d.order)
+                 $> fun order ->
+                    Order.list_of_order order
+                    |> Maybe.get'
+                         (Total.Error
+                            ( loc
+                            , Total.NotImplemented
+                                "lexicographic order not fully supported"))
+                    |> Total.annotate tau'
+                    |> Maybe.get'
+                         (Total.Error ( loc , Total.TooManyArg f))
+           with
+           | None -> tau'
+           | Some x -> x
+         in
+         Monitor.timer
+           ( "Function Check"
+           , fun _ ->
+             Check.Comp.check cD cG e_r' (tau_ann, C.m_id)
+           );
          (e_r' , tau')
        in
 

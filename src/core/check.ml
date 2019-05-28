@@ -908,34 +908,36 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
 
       | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
-(*         let _ = print_string ("\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO
-                                ^ "\nwhere scrutinee has type " ^
-                                P.compTypToString cD tau_s ^ "\n") in *)
-          let TypBox (_, mT) = tau_s in
-          (* By invariant: cD1' |- t1 <= cD *)
-          let mT1   = Whnf.cnormMetaTyp (mT, t1) in
-          let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
-          let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
-          let t''   = Whnf.mcomp t t1 in
-          let tau'  = Whnf.cnormCTyp (tau, t'') in
-          let (cD1',cIH')  =
-            if is_inductive caseTyp && Total.struct_smaller i (PatMetaObj (loc', mO))
-            then
-              let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in
-              (* print_string "Inductive and Structurally smaller\n"; *)
-              (cD1', Total.wf_rec_calls cD1' (I.Empty))
-            else (cD1', I.Empty)
-          in
-          let cD1' =
-            if !Total.enabled
-            then id_map_ind cD1' t1 cD
-            else cD1'
-          in
-          let cIH0' = Total.wf_rec_calls cD1' cG' in
-          (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
-            (LF.checkMSub loc cD1' t1 cD;
-             LF.checkMetaObj cD1' mO (mT1, C.m_id);
-             check cD1' (cG', Context.append cIH (Context.append cIH0' cIH')) e1 (tau', Whnf.m_id))
+         dprint
+           (fun _ ->
+             "\nCheckBranch with meta-obj pattern : " ^  P.metaObjToString cD1'  mO
+             ^ "\nwhere scrutinee has type " ^
+               P.compTypToString cD tau_s ^ "\n");
+         let TypBox (_, mT) = tau_s in
+         (* By invariant: cD1' |- t1 <= cD *)
+         let mT1   = Whnf.cnormMetaTyp (mT, t1) in
+         let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
+         let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+         let t''   = Whnf.mcomp t t1 in
+         let tau'  = Whnf.cnormCTyp (tau, t'') in
+         let (cD1',cIH')  =
+           if is_inductive caseTyp && Total.struct_smaller i (PatMetaObj (loc', mO))
+           then
+             let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in
+             (* print_string "Inductive and Structurally smaller\n"; *)
+             (cD1', Total.wf_rec_calls cD1' (I.Empty))
+           else (cD1', I.Empty)
+         in
+         let cD1' =
+           if !Total.enabled
+           then id_map_ind cD1' t1 cD
+           else cD1'
+         in
+         let cIH0' = Total.wf_rec_calls cD1' cG' in
+         (* let _ = print_string ("Outer cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\n\n") in *)
+         LF.checkMSub loc cD1' t1 cD;
+         LF.checkMetaObj cD1' mO (mT1, C.m_id);
+         check cD1' (cG', Context.append cIH (Context.append cIH0' cIH')) e1 (tau', Whnf.m_id)
 
       | Branch (loc, cD1', cG1, pat, t1, e1) ->
           let tau_p = Whnf.cnormCTyp (tau_s, t1) in

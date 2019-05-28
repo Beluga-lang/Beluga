@@ -53,6 +53,12 @@ let tuple (x : 'a) (y : 'b) : 'a * 'b =
 let const (x : 'b) : 'a -> 'b =
   fun _ -> x
 
+(** Creates a constant function that raises the given exception.
+    Useful when eliminating option-types.
+ *)
+let throw (e : exn) : 'b -> 'a =
+  fun _ -> raise e
+
 module List = struct
   let rec last (l : 'a list) : 'a = match l with
     | [] -> invalid_arg

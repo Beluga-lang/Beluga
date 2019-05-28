@@ -67,6 +67,7 @@ module Tactic = struct
     let context =
       { cG = Context.append s.context.cG cG
       ; cD = Context.append s.context.cD cD
+      ; cIH = s.context.cIH
       }
     in
     let new_state = { context; goal = goal'; solution = None } in
@@ -107,7 +108,7 @@ module Tactic = struct
       | Coverage.CovPatt (cG, patt, tau) ->
          let cG = Coverage.compgctx_of_gctx cG in
          let open Comp in
-         let h = { cD; cG } in
+         let h = { cD; cG; cIH = s.context.cIH } in
          let goal_type, goal_sub = s.goal in
          let new_state =
            { context = h
@@ -176,7 +177,7 @@ module Prover = struct
     let add_subgoal = DynArray.add s.remaining_subgoals in
     let remove_current_subgoal () = DynArray.delete s.remaining_subgoals 0 in
     let open Comp in
-    let { cD; cG } = g.context in
+    let { cD; cG; cIH } = g.context in
     match cmd with
     (* Administrative commands: *)
     | Command.ShowProof ->

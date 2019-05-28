@@ -1538,17 +1538,20 @@ module Int = struct
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in
       function
-      | Hypothetical ({cD; cG}, proof) ->
+      | Hypothetical ({cD; cG; cIH = _} as h, proof) ->
          fprintf ppf "@[<v>{ %a@,  @[<v>%a@]@,}@]"
-           fmt_ppr_cmp_hypotheses {cD; cG}
+           fmt_ppr_cmp_hypotheses h
            (fmt_ppr_cmp_proof cD cG) proof;
 
     and fmt_ppr_cmp_hypotheses ppf =
       let open Comp in
       function
-      | { cD; cG } ->
+      | { cD; cG; cIH = _ } ->
          let cDs = Context.to_sublist cD in
          let cG' = Context.to_list cG in
+         (* We don't print accumulated induction hypotheses,
+            since a user wouldn't ever write them.
+          *)
 
          let comma ppf () = fprintf ppf ", " in
          pp_print_list

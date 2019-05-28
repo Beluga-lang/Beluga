@@ -655,24 +655,25 @@ module Int = struct
 
       | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,       mDep) ->
          (* Note, pretty-printing does not use the name provided n which may not be unique but generates a new one *)
-        let s = (match mDep with LF.No -> "^e" | LF.Maybe -> "^i" | LF.Inductive -> "^*") in
-          begin
-            try
-              fprintf ppf "?%s%s"
-                (MInstHashtbl.find minst_hashtbl u) s
-            with
-              | Not_found ->
-                  (* (* Should probably create a sep. generator for this -dwm *)
-                  let sym = String.uppercase (Gensym.VarData.gensym ()) in
-                  *)
-                  (* Not working -bp *)
-                  let sym = match Store.Cid.Typ.gen_mvar_name tA with
-                              | Some vGen -> vGen ()
-                              | None -> Gensym.MVarData.gensym ()
-                  in
-                      MInstHashtbl.replace minst_hashtbl u sym
-                    ; fprintf ppf "?%s" sym
-          end
+         let s = dependent_string mDep in
+         begin
+           try
+             fprintf ppf "?%s%s"
+               (MInstHashtbl.find minst_hashtbl u) s
+           with
+           | Not_found ->
+              (* (* Should probably create a sep. generator for this -dwm *)
+                 let sym = String.uppercase (Gensym.VarData.gensym ()) in
+               *)
+              (* Not working -bp *)
+              let sym =
+                match Store.Cid.Typ.gen_mvar_name tA with
+                | Some vGen -> vGen ()
+                | None -> Gensym.MVarData.gensym ()
+              in
+              MInstHashtbl.replace minst_hashtbl u sym;
+              fprintf ppf "?%s" sym
+         end
 
       | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
           (* fprintf ppf "MMV SOME %a" *)
@@ -967,13 +968,17 @@ module Int = struct
       (* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
       (* This modification won't print it if Control.printImplicit is false*)
 
-          if ((not !Control.printImplicit) && (isImplicit dep)|| (!Control.printNormal)) then () else begin
-          fprintf ppf "{%s : %a}%s"
-            (if printing_holes then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u else Id.render_name u)
-            (fmt_ppr_lf_mtyp cD) mtyp
-            (if !Control.printImplicit then
-             dependent_string dep
-           else inductive_string dep) end
+         if ((not !Control.printImplicit) && (isImplicit dep) || (!Control.printNormal))
+         then ()
+         else
+           fprintf ppf "{%s : %a}%s"
+             (if printing_holes
+              then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
+              else Id.render_name u)
+             (fmt_ppr_lf_mtyp cD) mtyp
+             (if !Control.printImplicit
+              then dependent_string dep
+              else inductive_string dep)
 
       | LF.DeclOpt name ->
           fprintf ppf "{%s : _ }"
@@ -988,17 +993,17 @@ module Int = struct
             | LF.No -> false
             | LF.Maybe -> true
             | LF.Inductive -> false
-    and dependent_string = function
-            | LF.No -> "^e"
-            | LF.Maybe -> "^i"
-          | LF.Inductive -> "*"
+    and dependent_string =
+      function
+      | LF.No -> "^e"
+      | LF.Maybe -> "^i"
+      | LF.Inductive -> "*"
 
     and inductive_string dep =
-     begin match dep with
-            | LF.No -> ""
-            | LF.Maybe -> ""
-          | LF.Inductive -> "*"
-          end
+      match dep with
+      | LF.No -> ""
+      | LF.Maybe -> ""
+      | LF.Inductive -> "*"
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function

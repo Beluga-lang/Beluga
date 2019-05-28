@@ -229,14 +229,40 @@ module Prover = struct
         *)
        Tactic.split m tau g add_subgoal;
        remove_current_subgoal ()
-    | Command.UseIH t ->
-       (*
+    | Command.UseIH (t, name, typ) ->
+       let cG' =
+         (* We elaborate the IH in an extended context with the
+            theorem already defined.
+            This is just to make sure that the appeal to the IH is
+            well-typed; we check well-foundededness separately
+            after.
+            It's worth noting that because of this, all the
+            indices will be off-by-one compared to the smaller
+            context, so we will need to shift them down.
+          *)
+         LF.Dec
+           ( cG
+           , Comp.CTypDecl
+               ( s.theorem_name
+               , Whnf.cnormCTyp s.initial_state.Comp.goal |> Total.strip
+               (* In command.ml, when we enter Harpoon, we pass
+                  the theorem to prove *with* induction
+                  annotations. Sadly, elaboration does *not* play
+                  nice with these annotations, so we need to strip
+                  them off when we elaborate the IH.
+                *)
+               , false
+               )
+           )
+       in
        let (m, tau) =
-         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
+         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG' t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
        in
-        *)
-       Misc.not_implemented "UseIH"
+       Format.fprintf ppf "Elaborated IH: %a : %a@."
+         (P.fmt_ppr_cmp_exp_syn cD cG' Pretty.std_lvl) m
+         (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau;
+    (*  Misc.not_implemented "UseIH" *)
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in

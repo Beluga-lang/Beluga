@@ -1402,7 +1402,8 @@ cmp_exp_syn:
       | "--defer" -> Syntax.Ext.Harpoon.Defer
       | "--show-subgoals" -> Syntax.Ext.Harpoon.ShowSubgoals
       | "--solve"; t = cmp_exp_chk -> Syntax.Ext.Harpoon.Solve t
-      | "--ih"; t = cmp_exp_syn -> Syntax.Ext.Harpoon.UseIH t
+      | "--ih"; "("; t = cmp_exp_syn; ")"; "as"; name = SYMBOL; ":"; typ = cmp_typ ->
+         Syntax.Ext.Harpoon.UseIH (t, Id.mk_name (Id.SomeString name), typ)
       ]
     ];
 

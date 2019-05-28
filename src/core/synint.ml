@@ -403,9 +403,10 @@ module Comp = struct
   type hypotheses =
     { cD : LF.mctx (* Delta / meta context / LF assumptions *)
     ; cG : gctx    (* Gamma / computation assumptions *)
+    ; cIH : gctx   (* Generated induction hypotheses. *)
     }
 
-  let no_hypotheses = { cD = LF.Empty; cG = LF.Empty }
+  let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.
    * The type parameter 'a is used as a trick to rule out incomplete proofs:

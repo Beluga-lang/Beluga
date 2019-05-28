@@ -34,7 +34,7 @@ module Tactic = struct
   (** Introduces all assumptions present in the current goal.
       Solves the input proof state.
    *)
-  let intros : t =
+  let intros (names : string list option) : t =
     let genVarName tA = Store.Cid.Typ.gen_var_name tA in
     let gen_var_for_typ =
       function
@@ -48,21 +48,35 @@ module Tactic = struct
     (* Walks a type and collects assumptions into cD and cG,
        returning the conclusion type.
      *)
-    let rec intro' (cD : LF.mctx) (cG : Comp.gctx) (t : Comp.typ)
+    let rec intro'
+              (names : string list option)
+              (cD : LF.mctx) (cG : Comp.gctx) (t : Comp.typ)
             : LF.mctx * Comp.gctx * Comp.typ =
+      let next_name : (string * string list) option =
+        let open Maybe in
+        names
+        $ function
+          | [] -> None
+          | x :: xs -> Some (x , xs)
+      in
       match t with
       | Comp.TypArr (t1, t2) ->
-         let name = gen_var_for_typ t1 in
-         intro' cD (LF.Dec (cG, Comp.CTypDecl (name, t1, false))) t2
+         let name , names =
+           next_name
+           |> Maybe.eliminate
+                (fun _ -> gen_var_for_typ t1 , None)
+                (fun (name, names) -> Id.mk_name (Id.SomeString name), Some names)
+         in
+         intro' names cD (LF.Dec (cG, Comp.CTypDecl (name, t1, false))) t2
       | Comp.TypPiBox (tdec, t2) ->
-         intro' (LF.Dec (cD, tdec)) cG t2
+         intro' names (LF.Dec (cD, tdec)) cG t2
       | _ -> cD, cG, t
     in
     (* Main body of `intros`: *)
     fun s callback ->
     let open Comp in
     let (t, sigma) = s.goal in
-    let cD, cG, t' = intro' LF.Empty LF.Empty t in
+    let cD, cG, t' = intro' names LF.Empty LF.Empty t in
     let goal' = (t', sigma) in
     let context =
       { cG = Context.append s.context.cG cG
@@ -200,8 +214,8 @@ module Prover = struct
        add_subgoal g
 
     (* Real tactics: *)
-    | Command.Intros ->
-       Tactic.intros g add_subgoal;
+    | Command.Intros names ->
+       Tactic.intros names g add_subgoal;
        remove_current_subgoal ()
     | Command.Split t ->
        let (m, tau) =

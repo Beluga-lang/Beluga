@@ -263,13 +263,24 @@ let emptyContextVariable cPsi = (* wrong *)
   in
     inner cPsi
 
-let rec lookup cG k = match (cG, k) with
-  | (Dec (_cG', Comp.CTypDecl (_,  tau, _)), 1) ->  Some tau
-  | (Dec (_cG', _ ), 1) ->  None
-  | (Dec ( cG', _ ), k) ->
-      lookup cG' (k - 1)
+let rec lookup' ctx k = match ctx, k with
+  | Dec (_, x), 1 -> Some x
+  | Dec (ctx', _), k -> lookup' ctx' (k - 1)
   | _ -> None
 
+let lookup_dep (cD : LF.mctx) k =
+  let open Maybe in
+  lookup' cD k
+  $ function
+    | LF.Decl (_, tau, dep) -> Some (tau, dep)
+    | _ -> None
+
+let lookup cG k =
+  let open Maybe in
+  lookup' cG k
+  $ function
+    | Comp.CTypDecl (_, tau, _) -> Some tau
+    | _ -> None
 
 let rec lookupSchema cD psi_offset = match (cD, psi_offset) with
   | (Dec (_cD, Decl (_, CTyp (Some cid_schema), _)), 1) -> cid_schema

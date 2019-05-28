@@ -48,42 +48,45 @@ let prove =
           fun ppf [name] ->
           let open Either in
           fprintf ppf "Statement to prove (C-d to abort): @?";
-          let e =
-            trap
-              (fun () ->
-                let input = read_line () in
-                Parser.parse_string ~name: "<theorem statement>" ~input: input Parser.cmp_typ
-                |> Index.comptyp
-                |> Reconstruct.comptyp
-                |> Abstract.comptyp)
-            $ fun (stmt, k) -> (* k is the number of added implicit vars *)
-              fprintf ppf "Totality ordering (C-d to abort): @?";
+          let prompt message entry sc fc =
+            fprintf ppf "%s: @?" message;
+            trap read_line |> lmap (fun _ _ -> ())
+            $ fun input ->
               trap
                 (fun () ->
-                  let input = read_line () in
-                  let order =
-                    Parser.parse_string
-                      ~name: "<totality ordering>"
-                      ~input: input
-                      Parser.numeric_total_order
-                  in
-                  (* Shift the indices used in the ordering to account
-                  for the implicit arguments that were added by
-                  Abstract.comptyp *)
-                  let order = Syntax.Ext.Comp.map_order (fun n -> n + k) order in
-                  (* Convert to a proper Order.order, which is used by the Total module. *)
-                  (stmt, Order.of_numeric_order order))
+                  Parser.parse_string ~name: "<prompt>" ~input: input entry
+                  |> sc)
+              |> lmap fc
           in
-          Either.eliminate
-            (fun exn -> fprintf ppf "%s\n" (Printexc.to_string exn))
-            (fun (stmt, order) ->
-              Harpoon.Prover.start_toplevel
-                ppf
-                (Id.mk_name (Id.SomeString name))
-                (stmt, Syntax.Int.LF.MShift 0)
-                order
-            )
-            e
+          begin
+            prompt "Statement to prove" Parser.cmp_typ
+              (fun x -> x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp)
+              (fun e ppf -> fprintf ppf "- Error interpreting statement:\n%s;" (Printexc.to_string e))
+            $ fun (stmt, k) -> (* k is the number of added implicit vars *)
+              prompt "Induction order" Parser.numeric_total_order
+                (fun x -> x |> Syntax.Ext.Comp.map_order (fun n -> n + k) |> Order.of_numeric_order)
+                (fun e ppf -> fprintf ppf "- Error interpreting induction order:\n%s" (Printexc.to_string e))
+              $ fun order ->
+                Order.list_of_order order
+                |> Either.of_option'
+                     (fun _ ppf -> fprintf ppf "- Induction order too complicated;")
+                $ fun order_list ->
+                  Total.annotate stmt order_list
+                  |> Either.of_option'
+                       (fun _ ppf ->
+                         fprintf ppf "- Induction order doesn't match statement;")
+                  $> fun stmt ->
+                     (stmt, order)
+
+          end
+          |> Either.eliminate
+               (fun f -> f ppf)
+               (fun (stmt, order) ->
+                 Harpoon.Prover.start_toplevel
+                   ppf
+                   (Id.mk_name (Id.SomeString name))
+                   (stmt, Syntax.Int.LF.MShift 0)
+                   order)
         end
   ; help = "Interactively prove a theorem"
   }

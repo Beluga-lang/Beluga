@@ -27,3 +27,15 @@ type mutual =		                (* Mutual dependencies        *)
 
 type dec =                           (* Termination declaration    *)
     Dec of order * mutual            (* Dec ::= (O, C)            *)
+
+(** Converts the order to a list of argument positions
+    If the order is too complicated, returns None.
+ *)
+let list_of_order : order -> int list option = function
+  | Arg x -> Some [x]
+  | Lex xs ->
+     let f = function
+       | Arg x -> Some x
+       | _ -> None (* We don't support nested lexicographic orders. *)
+     in
+     Maybe.traverse f xs

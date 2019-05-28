@@ -618,25 +618,29 @@ let recSgnDecls decls =
          | [] -> (Int.LF.Empty, Var.create (), [])
          | Ext.Comp.RecFun (loc, f, total, tau, _e) :: lf ->
             let apx_tau = Index.comptyp  tau in
-	          (* print_string ("Reconstructing function " ^  (string_of_name f) ^ " \n"); *)
-            let _       = dprint (fun () ->  "Reconstructing function " ^  (string_of_name f) ^ " \n") in
-            let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
-            let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+            dprint (fun () ->  "Reconstructing function " ^  (string_of_name f));
+            let tau' = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau) in
+            Unify.forceGlobalCnstr (!Unify.globalCnstrs);
             (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
-            let _        = dprint (fun () ->  "Elaboration of function type " ^ (string_of_name f) ^
-                                                " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
+            dprint
+              (fun _ ->
+                "Elaboration of function "
+                ^ (string_of_name f)
+                ^ " : " ^ (P.compTypToString cD tau'));
 
             let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
-            let _ = dprint (fun () ->  "Abstracted elaborated function type " ^ (string_of_name f) ^
-                                         " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" )   in
-
+            dprint
+              (fun _ ->
+                "Abstracted elaborated function type "
+                ^ (string_of_name f)
+                ^ " : " ^  (P.compTypToString cD tau'));
 
             (* print_string ( "Abstracted elaborated function type " ^ (string_of_name f) ^ *)
             (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
 
-            let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
-            let _       = dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n")  in
-            let _       = FCVar.clear () in
+            Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');
+            dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n");
+            FCVar.clear ();
             (* check that names are unique ? *)
             begin
               match total with

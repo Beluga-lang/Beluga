@@ -40,6 +40,8 @@ val projectCtxIntoDctx : typ_decl ctx -> dctx
 val splitContextVariable : dctx -> typ_decl -> dctx
 val emptyContextVariable : dctx -> dctx
 
+val lookup' : 'a LF.ctx -> int -> 'a option
+val lookup_dep : LF.mctx -> int -> (LF.ctyp * LF.depend) option
 val lookup : Comp.gctx -> int -> Comp.typ option
 
 val lookupSchema : mctx -> int -> Id.cid_schema

@@ -1,12 +1,37 @@
+exception NoValue (** Thrown when attempting to get a maybe when there's None. *)
 val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
 
 val is_some : 'a option -> bool
+
+val get' : exn -> 'a option -> 'a
+
+val get : 'a option -> 'a
+
+(** Convert a boolean to an option.
+    When used with other monadic operations, this is (a specialized)
+    `guard` function from Haskell, which allows to abort a monadic
+    computation on account of a boolean check.
+ *)
+val of_bool : bool -> unit option
 
 val map : ('a -> 'b) -> 'a option -> 'b option
 
 val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
                                                 
 val pure : 'a -> 'a option
+
+(** Maps a function that may fail over a list, and eagerly fails as
+    soon as any individual call fails.
+    Note that elements beyond the first failing one will not be
+    processed.
+ *)
+val traverse : ('a -> 'b option) -> 'a list -> 'b list option
+
+(** Folds a list with a function that may fail, eagerly failing.
+    Note that elements beyond the first failing one will not be
+    processed.
+ *)
+val fold_left : ('b -> 'a -> 'b option) -> 'b -> 'a list -> 'b option
 
 val none : 'a option
 

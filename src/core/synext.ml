@@ -219,8 +219,7 @@ end
 module Harpoon = struct
   type command =
     (* Actual tactics *)
-    | Intros
-    (* ^ perhaps add some arguments later to control what gets introduced *)
+    | Intros of string list option (* list of names for introduced variables *)
     | Split of Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
     | UseIH of Comp.exp_syn

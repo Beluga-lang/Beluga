@@ -892,10 +892,10 @@ match (pat, ttau) , (pat_p, ttau_p) with
     (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'),t')) ->
      let (mC1, sC1) =
        match_pattern (cD,cG) (cD_p, cG_p)
-	       (pat1, (tau1,t)) (pat1', (tau1',t')) mC sC
+         (pat1, (tau1,t)) (pat1', (tau1',t')) mC sC
      in
-	   match_pattern (cD,cG) (cD_p, cG_p)
-	     (pat2, (tau2,t))  (pat2', (tau2',t')) mC1 sC1
+     match_pattern (cD,cG) (cD_p, cG_p)
+       (pat2, (tau2,t))  (pat2', (tau2',t')) mC1 sC1
   | pat_ttau , (Comp.PatAnn (_, pat', tau' ), (_ ,t'))  ->
       match_pattern (cD,cG) (cD_p, cG_p) pat_ttau (pat', (tau',t')) mC sC
   | (Comp.PatAnn (_, pat', tau' ), (_ ,t')), pat_ttau  ->
@@ -1699,7 +1699,8 @@ let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
           [(cD'', CovSub (cPsi', LF.Dot(LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
   end
 
-let genCGoals (cD':LF.mctx) mdec = match mdec with
+let genCGoals (cD':LF.mctx) mdec : (LF.mctx * cov_goal * LF.msub) list * depend
+  = match mdec with
   | LF.Decl (_u, LF.ClTyp (LF.MTyp tA, cPsi), _) ->
      dprint
        (fun _ -> "[SPLIT] CovGoal : " ^ P.dctxToString cD' cPsi ^ " . " ^
@@ -1913,34 +1914,42 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 
   | Comp.TypBox (loc, (LF.ClTyp (LF.MTyp tA, cPsi) as mT)) ->
       let name = Id.mk_name (Whnf.newMTypName mT) in
-      let (cgoals, _ ) = genCGoals cD (LF.Decl(name, LF.ClTyp (LF.MTyp tA, cPsi), LF.Maybe)) in
+      let (cgoals, _ ) =
+        LF.Decl
+          ( name
+          , LF.ClTyp (LF.MTyp tA, cPsi)
+          , LF.Maybe
+          )
+        |> genCGoals cD
+      in
       List.map
         (fun (cD', cg, ms) ->
-              let CovGoal (cPsi', tR, sA') = cg in
-              let _ = dprint (fun () -> "[genPatCGoals] " ^
-                                                  P.mctxToString cD' ^ " \n |- " ^
-                                                    P.msubToString cD' ms ^ " \n : " ^
-                                                      P.mctxToString cD) in
-              let ghost_loc = Syntax.Loc.ghost in
+          let CovGoal (cPsi', tR, sA') = cg in
+          dprint (fun () -> "[genPatCGoals] " ^
+                              P.mctxToString cD' ^ " \n |- " ^
+                                P.msubToString cD' ms ^ " \n : " ^
+                                  P.mctxToString cD);
+          let ghost_loc = Syntax.Loc.ghost in
           let m_obj =
             ( ghost_loc
             , LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR)
             )
           in
-              let pat_r = Comp.PatMetaObj (ghost_loc, m_obj) in
+          let pat_r = Comp.PatMetaObj (ghost_loc, m_obj) in
           let tau_r =
             ( Comp.TypBox (loc, LF.ClTyp (LF.MTyp (LF.TClo sA'), cPsi'))
             , Whnf.m_id
             )
           in
-              let cG' =
+          let cG' =
             cnormCtx (cG1, ms)@cnormCtx(cG2,ms)
           in
-              let _ = dprint (fun () -> "[genPatCGoals] " ^
-                                                  "old cG = " ^ P.gctxToString cD (compgctx_of_gctx (cG1@cG2))) in
-              let _ = dprint (fun () -> "[genPatCGoals] " ^
-                                                  "new cG' = " ^ P.gctxToString cD' (compgctx_of_gctx cG')) in
-
+          dprint
+            (fun _ ->
+              "[genPatCGoals] old cG = " ^ P.gctxToString cD (compgctx_of_gctx (cG1@cG2)));
+          dprint
+            (fun _ ->
+              "[genPatCGoals] new cG' = " ^ P.gctxToString cD' (compgctx_of_gctx cG'));
 
           (cD', CovPatt (cG', pat_r, tau_r), ms)
         )
@@ -1961,14 +1970,16 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
                                 constructors
       in
       let r =
-        List.map (fun (cD, cg, ms) ->
-                  let CovPatt (cG0, pat, ttau) = cg in
-                  let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in
-                    (cD, CovPatt (cG0', pat, ttau), ms))
-          (genAllPatt (cD,tau) ctau_list) in
-      let _ = dprint (fun () -> "\n[genPatCGoals] Generated " ^ string_of_int (List.length r) ^ " case(s) for " ^ P.compTypToString cD tau  ^ "\n") in
-      let _ = dprint (fun () -> covGoalsToString r) in
-        r
+        List.map
+          (fun (cD, cg, ms) ->
+            let CovPatt (cG0, pat, ttau) = cg in
+            let cG0' = cnormCtx (cG1, ms)@cG0@ cnormCtx(cG2, ms) in
+            (cD, CovPatt (cG0', pat, ttau), ms))
+          (genAllPatt (cD,tau) ctau_list)
+      in
+      dprint (fun () -> "\n[genPatCGoals] Generated " ^ string_of_int (List.length r) ^ " case(s) for " ^ P.compTypToString cD tau  ^ "\n");
+      dprint (fun () -> covGoalsToString r);
+      r
   | _ -> []
 
 (* best_candidate cO cD = cov_goals

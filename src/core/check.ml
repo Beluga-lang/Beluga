@@ -121,10 +121,10 @@ module Comp = struct
               "Parameter type %a is illegal."
               (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp (tA, Substitution.LF.id))
           | UnsolvableConstraints (f, cnstrs) ->
-	      let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in 
-            Format.fprintf ppf
-            "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
-              cnstrs fname
+             let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in
+             Format.fprintf ppf
+               "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
+               cnstrs fname
 
           | CtxMismatch (cD, cPsi, cPhi, cM) ->
             Error.report_mismatch ppf
@@ -965,9 +965,15 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           let cD1' = if !Total.enabled then id_map_ind cD1' t1 cD
                           else cD1' in
           (* let _ = print_string ("\nOuter cD = " ^ P.mctxToString cD ^ "\nInner cD' = " ^ P.mctxToString cD1' ^ "\nGiven ref. subst. = " ^ P.msubToString cD1' t1 ^ "\n") in *)
-          (LF.checkMSub loc  cD1' t1 cD;
-           checkPattern cD1' cG1' pat (tau_p, Whnf.m_id);
-           check cD1' ((Context.append cG' cG1'), Context.append cIH0 (Context.append cIH0' cIH')) e1 (tau', Whnf.m_id))
+          LF.checkMSub loc  cD1' t1 cD;
+          checkPattern cD1' cG1' pat (tau_p, Whnf.m_id);
+          check
+            cD1'
+            ( Context.append cG' cG1'
+            , Context.append cIH0 (Context.append cIH0' cIH')
+            )
+            e1
+            (tau', Whnf.m_id)
 
   and checkFBranches cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) fbr ttau = match fbr with
     | NilFBranch _ -> ()

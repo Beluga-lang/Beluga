@@ -601,52 +601,44 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
           raise (Error.Violation ("Free meta-variable " ^ (Id.render_name u)))
         end
     | (Case (loc, prag, (Ann (Box (_, (l,cM)), (TypBox (_, mT) as tau0_sc)) as i), branches), (tau, t)) ->
+       let decide_ind x =
+         if !Total.enabled && is_indMObj cD x
+         then IndIndexObj (l, cM)
+         else IndexObj (l, cM)
+       in
        let (total_pragma, tau_sc, projOpt) =
+         let ptyp = TypBox (loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))) in
+         let same_typ = TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)) in
          match  cM with
-         | I.ClObj (_ , I.MObj (I.Root (_, I.PVar (x,s) , _ )))
-           | I.ClObj (_ , I.PObj (I.PVar (x,s)))  ->
-            let order =
-              if !Total.enabled && is_indMObj cD x
-              then IndIndexObj (l,cM)
-              else IndexObj (l,cM)
-            in
-            (order, TypBox(loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))), None)
+         | I.ClObj (_ , I.PObj (I.PVar (x,_)))
+           | I.ClObj (_, I.MObj (I.Root (_, I.PVar (x, _), _))) ->
+            ( decide_ind x
+            , ptyp
+            , None
+            )
 
-         | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,s), k ), _ )))
-           | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,s), k))) ->
-            let order =
-              if !Total.enabled && is_indMObj cD x
-              then IndIndexObj (l,cM)
-              else IndexObj (l,cM)
-            in
-            (order, TypBox (loc, convToParamTyp(Whnf.cnormMetaTyp (mT, C.m_id))), Some k)
+         (* case for a metavariable or context variable *)
+         | I.CObj (I.CtxVar (I.CtxOffset x))
+           | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,_), _ ))) ->
+           (* cases for a pattern variable without a projection *)
+            ( decide_ind x
+            , same_typ
+            , None
+            )
 
-         | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,s), _ ))) ->
-            let order =
-              if !Total.enabled && is_indMObj cD x
-              then
-                begin
-                  (* print_string ("\n inductive in " ^ P.metaObjToString cD cM ^ "\n");*)
-                  IndIndexObj (l,cM)
-                end
-              else
-                begin
-                  (* print_string ("\n NOT inductive " ^ P.metaObjToString cD cM ^ "\n in cD = " ^ P.mctxToString cD ^  "\n");*)
-                  IndexObj (l,cM)
-                end
-            in
-            (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
-
-         | I.CObj (I.CtxVar (I.CtxOffset k)) ->
-            let order =
-              if !Total.enabled && is_indMObj cD k
-              then IndIndexObj (l,cM)
-              else IndexObj (l,cM)
-            in
-            (order, TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+         (* cases for a pattern variable with a projection *)
+         | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,_), k)))
+           | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,_), k ), _ ))) ->
+            ( decide_ind x
+            , ptyp
+            , Some k
+            )
 
          | _ ->
-            (IndexObj (l,cM), TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)), None)
+            ( IndexObj (l,cM)
+            , TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id))
+            , None
+            )
        in
        let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
 

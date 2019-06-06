@@ -265,6 +265,26 @@ module LF = struct
     match d with
     | Decl (n, _, _) -> n
     | DeclOpt n -> n
+
+  (** Decides whether the given mfront is a variable,
+      viz. [projection of a] pattern variable, metavariable, or
+      context variable.
+      Returns the offset of the variable, and optionally the
+      projection offset.
+   *)
+  let variable_of_mfront (mf : mfront) : (offset * offset option) option =
+    match mf with
+    | ClObj (_, MObj (Root (_, MVar (Offset x,_), _ )))
+      | CObj (CtxVar (CtxOffset x))
+      | ClObj (_ , MObj (Root (_, PVar (x,_) , _ )))
+      | ClObj (_ , PObj (PVar (x,_)))  ->
+       Some (x, None)
+
+    | ClObj (_, MObj (Root (_, Proj (PVar (x,s), k ), _ )))
+      | ClObj (_, PObj (Proj (PVar (x,s), k))) ->
+       Some (x, Some k)
+
+    | _ -> None
 end
 
 (* Internal Computation Syntax *)
@@ -295,16 +315,18 @@ module Comp = struct
 
 
   (* For ih *)
-  type args =
+  type arg =
     | M  of meta_obj
     | V  of offset
-    | E
-    | DC (* don't care *)
+    | E (* what is E? -je *)
+    | DC
+  (* ^ For arguments that not constrained in the IH call. Stands
+     for don't care. *)
 
   type wf_tag = bool  (* indicates whether the argument is smaller *)
 
   type ctyp_decl =
-    | WfRec of name * args list * typ
+    | WfRec of name * arg list * typ
     | CTypDecl    of name * typ * wf_tag
     | CTypDeclOpt of name
 
@@ -491,6 +513,23 @@ module Comp = struct
     | CTypDecl (name, _, _) -> name
     | CTypDeclOpt name -> name
     | WfRec (name, _, _) -> name
+
+  (** Decides whether the computational term is actually a variable
+      index object.
+      See `LF.variable_of_mfront`.
+   *)
+  let metavariable_of_exp (t : exp_syn) : (offset * offset option) option =
+    match t with
+    | Ann (Box (_, (_, mf)), _) -> LF.variable_of_mfront mf
+    | _ -> None
+
+  (* Decides whether the given term is a computational variable.
+     Returns the offset of the variable.
+   *)
+  let variable_of_exp (t : exp_syn) : offset option =
+    match t with
+    | Var (_, k) -> Some k
+    | _ -> None
 end
 
 

@@ -10,7 +10,7 @@ type error =
   | NoStratifyCheck of string
   | NoStratifyOrPositiveCheck of string
   | WrongArgNum  of Id.cid_comp_typ * int
-  | RecCallIncompatible of LF.mctx * Comp.args * Comp.ctyp_decl
+  | RecCallIncompatible of LF.mctx * Comp.arg * Comp.ctyp_decl
   | NotImplemented of string
   | TooManyArg of Id.name
 

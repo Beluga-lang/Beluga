@@ -276,17 +276,15 @@ let get_order () =
           " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
       match dec.order with
       | Some (Order.Arg x) ->
-         let k = List.length (dec.args) in
-         (dec.name, Some [x], k, (tau, Whnf.m_id))
+         (dec.name, Some [x], (tau, Whnf.m_id))
       | Some (Order.Lex xs) ->
-         let k = List.length (dec.args) in
          let xs = List.map (function (Order.Arg x) -> x) xs in
          dprint
            (fun _ ->
              "[get_order] "
              ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
-         (dec.name, Some xs, k, (tau, Whnf.m_id))
-      | None -> (dec.name, None, 0, (tau, Whnf.m_id))
+         (dec.name, Some xs, (tau, Whnf.m_id))
+      | None -> (dec.name, None, (tau, Whnf.m_id))
     )
     !mutual_decs
 
@@ -372,7 +370,7 @@ let gen_var loc cD cdecl =
    will generate a term M.
  *)
 
-let rec rec_spine cD (cM, cU)  (i, k, ttau) =
+let rec rec_spine cD (cM, cU)  (i, ttau) =
   match i, ttau with
   | 0, _ ->  ([], Whnf.cnormCTyp ttau)
   (*  | 0, n, (Comp.TypPiBox ( _ , tau), theta) ->
@@ -386,12 +384,15 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
   | 1 , (Comp.TypPiBox ((LF.Decl (_, cU', _) as _cdecl), tau) , theta)  ->
      begin
        try
+         (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
+           "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
          Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
          let (_,ft) = cM in
-         let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1, (tau, LF.MDot (ft, theta))) in
+         let (spine, tau_r)  = rec_spine cD (cM, cU) (0, (tau, LF.MDot (ft, theta))) in
          (Comp.M cM::spine, tau_r )
        with
-         _ -> raise Not_compatible
+         e ->
+         raise Not_compatible
      end
 
   | 1, (Comp.TypArr (Comp.TypBox (loc, LF.ClTyp(LF.MTyp tA, cPsi)), tau), theta) ->
@@ -399,22 +400,30 @@ let rec rec_spine cD (cM, cU)  (i, k, ttau) =
      begin
        try
          Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
-         let (spine, tau_r)  = rec_spine cD (cM, cU) (0, k-1,(tau, theta)) in
+         let (spine, tau_r)  = rec_spine cD (cM, cU) (0, (tau, theta)) in
          (Comp.M cM::spine, tau_r )
        with
-         _ -> raise Not_compatible
+         e ->
+         raise Not_compatible
      end
-  | 1, _ -> raise Not_compatible
+  | 1, ttau ->
+     let tau = Whnf.cnormCTyp ttau in
+     dprint
+       (fun _ ->
+         "[rec_spine] Incompatible IH: ran out of arguments; "
+         ^ "last type is: " ^ P.compTypToString cD tau);
+     raise Not_compatible
+
   | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-     let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
+     let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, (tau, LF.MDot (ft, theta))) in
      (Comp.M cN :: spine, tau_r)
 
   | n, (Comp.TypArr (_, tau2), theta)  ->
-     let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, k-1, (tau2, theta)) in
+     let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, (tau2, theta)) in
      (Comp.DC :: spine, tau_r)
 
-let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
+let rec rec_spine' cD (x, ttau0)  (i, ttau) = match i, ttau with
   | 0, _  -> ([], Whnf.cnormCTyp ttau)
   (* i = 0, k =/= 0
      | (n, (Comp.TypPiBox ( _ , tau), theta)) ->
@@ -435,19 +444,20 @@ let rec rec_spine' cD (x, ttau0)  (i, k, ttau) = match i, ttau with
             "\nExpected: " ^
             P.compTypToString cD (Whnf.cnormCTyp (tau1,theta)) ^ "\n"); *)
          Unify.unifyCompTyp cD ttau0 (tau1, theta);
-         let (spine, tau_r)  = rec_spine' cD (x, ttau0) (0, k-1,(tau2, theta)) in
-         (Comp.V x::spine, tau_r )
+	       let (spine, tau_r)  = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
+	       (Comp.V x::spine, tau_r )
        with
          _ -> raise Not_compatible
      end
-  | n ,  (Comp.TypPiBox (cdecl, tau) , theta)  ->
+  | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-     let (spine, tau_r)  = rec_spine' cD (x,ttau0) (n-1, k-1, (tau, LF.MDot (ft, theta))) in
-     (Comp.M cN :: spine, tau_r)
+     let (spine, tau_r)  = rec_spine' cD (x,ttau0) (n-1, (tau, LF.MDot (ft, theta))) in
+	   (Comp.M cN :: spine, tau_r)
 
   | n, (Comp.TypArr (_, tau2), theta)  ->
-     let (spine, tau_r) = rec_spine' cD (x,ttau0) (n-1, k-1, (tau2, theta)) in
-     (Comp.DC :: spine, tau_r)
+     let (spine, tau_r) = rec_spine' cD (x,ttau0) (n-1, (tau2, theta)) in
+	   (Comp.DC :: spine, tau_r)
+
 
 let gen_meta_obj (cdecl, theta) k = match cdecl with
   | LF.CTyp (schema_cid) ->
@@ -517,10 +527,10 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
      let _ = dprint (fun () -> "Considering a total of " ^
                                  string_of_int (List.length mf_list)  ^
                                    " rec. functions\n") in
-     let mk_wfrec (f,x,k,ttau) =
+     let mk_wfrec (f,x,ttau) =
        let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD' (LF.Decl (u,cU, dep)) ^  " for position " ^ string_of_int x ^   "\n") in
        let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
-       let (args, tau) = rec_spine cD (cM, cU') (x, k, ttau) in
+       let (args, tau) = rec_spine cD (cM, cU') (x, ttau) in
        (* rec_spine may raise Not_compatible *)
        let _ = dprint (fun () -> "Generated Arguments for rec. call " ^  args_to_string cD LF.Empty args ^ "\n") in
        let args = generalize args in
@@ -530,20 +540,30 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
                                      "\n\n") in
        d
      in
-     let rec mk_wfrec_all (f,k,ttau) xs = match xs with
+     let rec mk_wfrec_all (f,ttau) xs = match xs with
        | [] -> []
        | x::xs' ->
-          try
-            (mk_wfrec (f,x,k,ttau))::mk_wfrec_all (f,k,ttau) xs'
-          with
-            Not_compatible -> mk_wfrec_all (f,k,ttau) xs'
+          begin
+            try
+              dprint
+                (fun _ ->
+                  "[mk_wfrec_all] trying recursive call on argument "
+                  ^ string_of_int x ^ " of function " ^ Id.render_name f);
+              (mk_wfrec (f,x,ttau))::mk_wfrec_all (f,ttau) xs'
+            with
+            | Not_compatible ->
+               dprint
+                 (fun _ ->
+                   "[wk_wfrec_all] skipped Not_compatible recursive call");
+               mk_wfrec_all (f,ttau) xs'
+          end
      in
+
      let rec mk_all (cIH,j) mf_list = match mf_list with
        | [] -> cIH
-       | (f, None, _ , _ttau) :: mf_list ->
-          mk_all (cIH, j) mf_list
-       | (f, Some xs, k, ttau) :: mf_list ->
-          let ds =  mk_wfrec_all (f,k,ttau) xs in
+       | (f, None, _ttau)::mf_list ->  mk_all (cIH, j) mf_list
+       | (f, Some xs, ttau)::mf_list ->
+          let ds =  mk_wfrec_all (f,ttau) xs in
           let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in
           (* Check that generated call is valid -
              mostly this prevents cases where we have contexts not matching
@@ -574,7 +594,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) =
      let mf_list = get_order () in
      let _ = print_str (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
      let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
-     let mk_wfrec (f,x,k, ttau) =
+     let mk_wfrec (f,x, ttau) =
        dprint
          (fun _ ->
            "\n[gen_rec_calls'] Return Type "
@@ -583,9 +603,9 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) =
            ^ " — generate appropriate spine next ...\n");
        dprint
          (fun _ ->
-           "Type of function " ^ (Id.render_name f)
-           ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau));
-       let (args, tau) = rec_spine' cD (y, ttau0') (x,k,ttau) in
+           "Type of function "
+           ^ (Id.render_name f) ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau));
+       let (args, tau) = rec_spine' cD (y, ttau0') (x, ttau) in
        let args = generalize args in
        let d = Comp.WfRec (f, args, tau) in
        dprint
@@ -593,24 +613,27 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) =
            "\nRecursive call : " ^ calls_to_string cD cG (f, args, tau) ^ "\n\n");
        d
      in
-     let rec mk_wfrec_all (f,k,ttau) xs = match xs with
+     let rec mk_wfrec_all (f,ttau) xs = match xs with
        | [] -> []
        | x::xs' ->
-          try
-            (mk_wfrec (f,x,k,ttau))::mk_wfrec_all (f,k,ttau) xs'
-          with
-            Not_compatible -> mk_wfrec_all (f,k,ttau) xs'
+          begin
+            try
+              (mk_wfrec (f,x,ttau))::mk_wfrec_all (f,ttau) xs'
+            with
+              Not_compatible ->
+              mk_wfrec_all (f,ttau) xs'
+          end
      in
      let rec mk_all cIH mf_list =
        match mf_list with
        | [] -> cIH
-       | (f, None,   _ , _ttau) :: mf_list ->  mk_all cIH mf_list
-       | (f, Some xs, k, ttau) :: mf_list ->
+       | (f, None,   _ttau)::mf_list ->  mk_all cIH mf_list
+       | (f, Some xs, ttau)::mf_list ->
           dprint
-            (fun _ ->
-              "[mk_all] Function " ^ (Id.render_name f)
-              ^ " with lex Order: " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
-          let ds = mk_wfrec_all (f,k,ttau) xs in
+            (fun () ->
+              "[mk_all] Function " ^ Id.render_name f ^ " with lex Order: "
+              ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
+          let ds = mk_wfrec_all (f, ttau) xs in
           (* Check that generated call is valid -
              mostly this prevents cases where we have contexts not matching
              a given schema *)

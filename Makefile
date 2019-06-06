@@ -28,6 +28,7 @@ all: $(BIN)
 $(BIN):
 	mkdir -p bin
 	$(OCAMLBUILD) src/beluga/$@.$(EXT)
+	-rm bin/$@
 	cp _build/src/beluga/$@.$(EXT) bin/$@
 
 clean:

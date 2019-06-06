@@ -1399,11 +1399,16 @@ cmp_exp_syn:
     [ [ "--intros"; names = OPT [ LIST0 [ x = SYMBOL -> x ] ] -> Syntax.Ext.Harpoon.Intros names
       | "--split"; t = cmp_exp_syn -> Syntax.Ext.Harpoon.Split t
       | "--show-proof" -> Syntax.Ext.Harpoon.ShowProof
+      | "--show-ihs" -> Syntax.Ext.Harpoon.ShowIHs
       | "--defer" -> Syntax.Ext.Harpoon.Defer
       | "--show-subgoals" -> Syntax.Ext.Harpoon.ShowSubgoals
       | "--solve"; t = cmp_exp_chk -> Syntax.Ext.Harpoon.Solve t
-      | "--ih"; "("; t = cmp_exp_syn; ")"; "as"; name = SYMBOL; ":"; typ = cmp_typ ->
-         Syntax.Ext.Harpoon.UseIH (t, Id.mk_name (Id.SomeString name), typ)
+      | "--ih"; "("; t = cmp_exp_syn; ")"; "as"; name = SYMBOL (* ; ":"; typ = cmp_typ *) ->
+         Syntax.Ext.Harpoon.UseIH
+           ( t
+           , Id.mk_name (Id.SomeString name)
+           (* , typ *)
+           )
       ]
     ];
 

@@ -212,6 +212,15 @@ module Prover = struct
         * and then add it back (on the end of the list) *)
        remove_current_subgoal ();
        add_subgoal g
+    | Command.ShowIHs ->
+       let f i =
+         Format.fprintf ppf "%d. %a@."
+           (i + 1)
+           (P.fmt_ppr_cmp_ctyp_decl g.context.cD Pretty.std_lvl)
+       in
+       Format.fprintf ppf "There are %d IHs:@."
+         (Context.length g.context.cIH);
+       Context.to_list g.context.cIH |> List.iteri f
 
     (* Real tactics: *)
     | Command.Intros names ->
@@ -229,16 +238,15 @@ module Prover = struct
         *)
        Tactic.split m tau g add_subgoal;
        remove_current_subgoal ()
-    | Command.UseIH (t, name, typ) ->
+    | Command.UseIH (t, name (* , typ *)) ->
        let cG' =
          (* We elaborate the IH in an extended context with the
             theorem already defined.
             This is just to make sure that the appeal to the IH is
-            well-typed; we check well-foundededness separately
-            after.
+            well-typed; we check well-foundedness after.
             It's worth noting that because of this, all the
-            indices will be off-by-one compared to the smaller
-            context, so we will need to shift them down.
+            (computational) indices will be off-by-one compared to the
+            smaller context, so we will need to shift them down.
           *)
          LF.Dec
            ( cG

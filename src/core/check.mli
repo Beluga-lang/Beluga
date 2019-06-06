@@ -84,6 +84,21 @@ module Comp : sig
   val checkKind   : LF.mctx -> kind                -> unit
   val checkTyp    : LF.mctx -> typ                  -> unit
   val wf_mctx     : LF.mctx -> unit
+
+  (** Transforms the given meta-context by marking all meta-variables
+      appearing in the pattern as Inductive.
+
+      This function relies on numerous (non-exported; 87 lines total)
+      helpers to traverse the syntax tree. I believe that there is an
+      opportunity to refactor this and move it to a different
+      module. -je
+   *)
+  val mvars_in_patt : LF.mctx -> pattern -> LF.mctx
+
+  (** Transfers inductivity annotations from a source context to a
+      target context related by a meta-substitution.
+   *)
+  val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
 end
 
 

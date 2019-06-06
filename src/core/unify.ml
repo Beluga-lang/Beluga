@@ -2350,6 +2350,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        dprint (fun () -> "[unifyCompTyp] - done"))
 
     and unifyCompTypW cD tau_t tau_t' = match (tau_t,  tau_t') with
+      | (Comp.TypInd tau, t), tau_t' -> unifyCompTyp cD (tau, t) tau_t'
+      | tau_t, (Comp.TypInd tau', t') -> unifyCompTyp cD tau_t (tau', t')
+
       | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) ->
           if c = c' then
             let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.kind in

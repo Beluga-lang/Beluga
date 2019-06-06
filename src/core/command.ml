@@ -367,6 +367,16 @@ let helpme =
     help = "list all availale commands with a short description"
   }
 
+(* The fill command is actually broken when you use it to fill in an
+   induction hypothesis since the check at the end will not verify that
+   the recursive call is well-founded.
+   You could fix this by traversing the whole syntax tree to find the
+   hole and recover the totality declarations that surround it, but
+   that's a lot of work. Another solution could be to augment the hole
+   datatype with the information about the totality declarations that
+   were in scope at the moment that the hole was reconstructed. This
+   is probably simpler.
+ *)
 let fill =
   { name = "fill"
   ; run =

@@ -64,6 +64,17 @@ module List = struct
     | [] -> invalid_arg
     | [x] -> x
     | x :: xs -> last xs
+
+  (** Computes the list of all successive pairs in a given
+      list.contents.
+      `pairs [x_1; x_2; ... x_n]
+      = `[(x_1, x_2); (x_2, x_3); ...; (x_n-1, x_n)]`
+      The output list will have one less element than the input list.
+   *)
+  let rec pairs l =
+    match l with
+    | [] | [_] -> []
+    | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
 end
 
 let id (x : 'a) : 'a = x

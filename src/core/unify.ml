@@ -1011,12 +1011,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
          pattern substitution and [ss](t) does not exist
   *)
 
-  and prune  cD0 cPsi' phat sM ss rOccur =
-    let (ms,s) = ss in
-    dprint (fun () -> "Pruning term: "
-                      ^ P.normalToString cD0 (Context.hatToDCtx phat) sM
-      ^ " with inv. sub: " ^ P.subToString cD0 cPsi' s);
-      prune' cD0 cPsi' phat (Whnf.whnf sM) (ms, s) rOccur
+  and prune  cD0 cPsi' phat sM (ms, s) rOccur =
+    prune' cD0 cPsi' phat (Whnf.whnf sM) (ms, s) rOccur
 
   and prune' cD0 cPsi' ((cvar, offset) as phat) sM ss rOccur = match sM with
     | (LFHole _ as n, s)-> n

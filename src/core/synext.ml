@@ -222,11 +222,12 @@ module Harpoon = struct
     | Intros of string list option (* list of names for introduced variables *)
     | Split of Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
-    | UseIH of Comp.exp_syn * Id.name * Comp.typ
+    | UseIH of Comp.exp_syn * Id.name (* * Comp.typ *)
     (* ^ the application of the IH; must be a (nested) Apply, but this
      * is not checked at parse-time. It is checked later in the
      * Harpoon command processor. *)
     (* Administrative commands *)
+    | ShowIHs
     | ShowProof
     | Defer (* Defers the current subgoal to later *)
     | ShowSubgoals (* Lists all open subgoals *)

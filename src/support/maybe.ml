@@ -64,9 +64,10 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
   match l with
   | [] -> []
   | x :: xs ->
-     let y' = f x in
-     let ys = filter_map f xs in
-     eliminate (fun () -> ys) (fun y -> y :: ys) y'
+     f x
+     |> eliminate
+       (fun () -> filter_map f xs)
+       (fun y -> y :: filter_map f xs)
 
 let cat_options (l : 'a option list) : 'a list =
   filter_map Misc.id l

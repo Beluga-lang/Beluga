@@ -178,7 +178,7 @@ module Tactic = struct
                 (* mark subterms in the context as inductive *)
                 let cD1 = Check.Comp.mvars_in_patt cD p in
                 (* Compute the well-founded recursive calls *)
-                let cIH = Total.wf_rec_calls cD1 LF.Empty in
+                let cIH = Total.wf_rec_calls cD1 LF.Empty (Misc.not_implemented "mfs") in
                 dprint
                   (fun _ ->
                     "[harpoon-split] computed WF rec calls "
@@ -189,7 +189,7 @@ module Tactic = struct
                 (cD, LF.Empty)
             in
             let cD = Check.Comp.id_map_ind cD ms s.context.cD in
-            let cIH0 = Total.wf_rec_calls cD cG in
+            let cIH0 = Total.wf_rec_calls cD cG (Misc.not_implemented "mfs") in
 
             let h =
               { cD
@@ -379,14 +379,14 @@ module Prover = struct
        (* This will verify that the IH is well-founded
           (Ignoring thepresence of bugs)
         *)
-       let _ = Check.Comp.syn cD cG' m in
+       let _ = Check.Comp.syn cD cG' (Misc.not_implemented "mfs") m in
        Tactic.useIH m tau name g add_subgoal;
        remove_current_subgoal ()
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
        try
-         Check.Comp.check cD cG m g.goal;
+         Check.Comp.check cD cG (Misc.not_implemented "mfs") m g.goal;
          Comp.solve m
          |> Tactic.solve' g;
          remove_current_subgoal ()

@@ -54,28 +54,16 @@ init_tab ();;
 
 (* @brief Add the time to the bound flag in the array named "array". *)
 let writeTime (name, time, array) =
-  match name with
-      n when n = etapes.(0) -> array.(0) <- array.(0) +. time;
-    | n when n = etapes.(1) -> array.(1) <- array.(1) +. time;
-    | n when n = etapes.(2) -> array.(2) <- array.(2) +. time;
-    | n when n = etapes.(3) -> array.(3) <- array.(3) +. time;
-    | n when n = etapes.(4) -> array.(4) <- array.(4) +. time;
-    | n when n = etapes.(5) -> array.(5) <- array.(5) +. time;
-    | n when n = etapes.(6) -> array.(6) <- array.(6) +. time;
-    | n when n = etapes.(7) -> array.(7) <- array.(7) +. time;
-    | n when n = etapes.(8) -> array.(8) <- array.(8) +. time;
-    | n when n = etapes.(9) -> array.(9) <- array.(9) +. time;
-    | n when n = etapes.(10) -> array.(10) <- array.(10) +. time;
-    | n when n = etapes.(11) -> array.(11) <- array.(11) +. time;
-    | n when n = etapes.(12) -> array.(12) <- array.(12) +. time;
-    | n when n = etapes.(13) -> array.(13) <- array.(13) +. time;
-    | n when n = etapes.(14) -> array.(14) <- array.(14) +. time;
-    | n when n = etapes.(15) -> array.(15) <- array.(15) +. time;
-    | n when n = etapes.(16) -> array.(16) <- array.(16) +. time;
-    | _ -> Printf.printf "Non existing argument for function writeTime (name, time).\n";;
-
-
-
+  let found = ref false in
+  for i = 1 to 16 do
+    if name = etapes.(i) then
+      begin
+        (array.(i) <- array.(i) +. time);
+        found := true
+      end
+  done;
+  if not !found then
+    Printf.printf "Non existing argument for function writeTime (name, time).\n"
 
 (* Get the time before and after executing function f. Then call writeTime() to save data. *)
 let timer (name, f) =

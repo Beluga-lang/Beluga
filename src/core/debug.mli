@@ -12,41 +12,62 @@
 
     where `...' is the category (conceivably, categories) specific to the module.
 
-   - `print' takes a thunk; `prnt' (misspelled) takes a string.
-     If debugging is turned off, `print' is more efficient whenever
-      computing the string is at all nontrivial.  This can actually matter, because
-      the point of this module is really to allow you to leave debugging print statements
-      everywhere, and it's easy to forget they're around.
+   - `print' takes a thunk; `prnt' (misspelled) takes a string;
+     `printf' takes a callback receiving formatter, with which you can
+     generate formatted output, including custom indentation.
 
-     Both `print' and `prnt' add a newline.
+   If debugging is turned off, `print' is more efficient whenever
+   computing the string is at all nontrivial.
+   This actually matters; running the test suite with debug mode
+   enabled takes several times longer.
 
-  TODO: Add a third form that's like `printf', for those who enjoy such things.
-
-  OLD TODO: Functorize.  Have one debug-functor for each category; the numbers
-    then become debugging levels per category, allowing one to incrementally
-    crank up verbosity for the module of interest.  Have a single module whose `show'
-    is propagated to all debug-functors.
-*)
+   All functions will add a newline after printing your text.
+ *)
 
 type flags
 
+val enable : unit -> unit
+val init : string option -> unit
+
 val chatter : int ref
-val pipeDebug : bool ref
-val filename : string ref
 val makeFunctions :
   flags ->
   ((unit -> string) -> unit) * (string -> unit)
 
-(* In most cases, you should use `makeFunctions' rather than `print'/`prnt' directly *)
-val print : flags -> (unit -> string) -> unit
-val prnt : flags -> string -> unit
+(** This submodule defines a record containing a higher-rank
+    polymorhic function. We need this record type so that we can pass
+    a partially-applied Format.fprintf function to client modules.
+    We introduce the submodule so that client modules can selectively
+    open it if they want to use the format-string support provided by
+    Debug; this will bring into scope only the `fmt` type and the
+    `fmt` projection for the record.
+
+    Clients can then write:
+    let dprintf, _, _ = Debug.makeFunctions (Debug.toFlags [11])
+    open Debug.Fmt
+    let _ =
+      dprintf (fun p -> p.fmt "%s %d" "hello" 4)
+ *)
+module Fmt : sig
+  type fmt =
+    { fmt : 'a. ('a, Format.formatter, unit) format -> 'a }
+end
+
+type 'a io = 'a -> unit
+val makeFunctions' :
+  flags ->
+  Fmt.fmt io io
+  * (unit -> string) io
+  * string io
+
 val toFlags : int list -> flags
 
-val show : flags -> unit    (* Set the types of output to be printed *)
-val showAll : unit -> unit
-val showNone : unit -> unit
-
-val indent : int -> unit
-val outdent : int -> unit
-val pushIndentationLevel : unit -> unit
-val popIndentationLevel : unit -> unit
+(** Runs the given function with debug printing indented by the given
+    number of spaces.
+    Pass in dprintf obtained by calling makeFunctions'.
+    Note that the vbox introduced to indent will NOT be closed if the
+    given function raises an exception. This is a trade-off since the
+    alternative would be to reraise the exception, which sadly
+    destroys the backtrace.
+ *)
+val indented : Fmt.fmt io io -> int -> (unit -> 'a) -> 'a

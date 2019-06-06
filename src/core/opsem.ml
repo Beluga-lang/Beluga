@@ -12,7 +12,8 @@ module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [9])
+let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [9])
+open Debug.Fmt
 
 type error =
 | MissingBranch
@@ -417,7 +418,7 @@ and eval_fun_branches v branch =
 
 let eval e =
   dprint (fun () -> "Opsem.eval");
-  Debug.indent 2;
+  dprintf (fun p -> p.fmt "  @[<v>");
   let result = eval_chk e (LF.MShift 0, Comp.Empty) in
-  Debug.outdent 2;
+  dprintf (fun p -> p.fmt "@]");
   result

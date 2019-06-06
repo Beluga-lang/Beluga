@@ -2644,7 +2644,6 @@ let rec revisit_opengoals ogoals = begin match ogoals with
 end
 
 let check_coverage_success problem  =
-  Debug.popIndentationLevel ();
   match problem.prag with
     | Pragma.RegularCase ->
       if !open_cov_goals = [] then
@@ -2688,7 +2687,6 @@ if !Total.enabled || !enableCoverage then
          "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = "
          ^ P.compTypToString problem.cD problem.ctype
          ^ " at " ^ Loc.to_string problem.loc);
-     let _ = (Debug.pushIndentationLevel(); Debug.indent 2) in
      let _ = U.resetGlobalCnstrs () in
     (* *********************************************************************** *)
      let cov_problems : covproblems = initialize_coverage problem projObj in

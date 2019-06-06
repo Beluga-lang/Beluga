@@ -50,6 +50,7 @@ module Int : sig
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     ->  unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
     val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
     val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
@@ -59,7 +60,7 @@ module Int : sig
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_statement : LF.mctx -> Comp.gctx -> formatter -> unit Comp.statement -> unit
+    val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit

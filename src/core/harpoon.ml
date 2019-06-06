@@ -3,10 +3,46 @@
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
+module P = Pretty.Int.DefaultPrinter
+
+let dprint, _ = Debug.makeFunctions (Debug.toFlags [11])
+
 (** Gives a more convenient way of writing complex proofs by using list syntax. *)
-let prepend_statements (stmts : 'a Comp.statement list) (proof : 'a Comp.proof)
+let prepend_commands (cmds : Comp.command list) (proof : 'a Comp.proof)
     : 'a Comp.proof =
-  List.fold_right Comp.proof_cons stmts proof
+  List.fold_right Comp.proof_cons cmds proof
+
+(** Decides whether something we're splitting on is inductive.
+    Either:
+    * it's a computational variable whose type is TypInd or with a WF
+      flag
+    * or it's a metavariable such that when you look it up in the
+      context cD it's marked Inductive.
+
+    This is similar to the logic used in check.ml to determine the
+    kind of a branch: [Ind]DataObj or [Ind]IndexObj.
+ *)
+let is_inductive (cG : Comp.gctx) (cD : LF.mctx) (m : Comp.exp_syn) : bool =
+  let open Comp in
+  let open Id in
+  let is_inductive_comp_variable (k : offset) : bool =
+    Context.lookup' cG k
+    |> Maybe.get' (Failure "Computational variable out of bounds")
+    |> function
+      (* Either it's a TypInd or the WF flag is true *)
+      | CTypDecl (u, tau, true) -> true
+      | CTypDecl (u, TypInd _, _) -> true
+      | _ -> false
+  in
+  let is_inductive_meta_variable (k : offset) : bool =
+    Context.lookup_dep cD k
+    |> Maybe.get' (Failure "Metavariable out of bounds or missing type")
+    |> fun (_, dep) -> dep = LF.Inductive
+  in
+  let open Maybe in
+  variable_of_exp m $> is_inductive_comp_variable $ of_bool |> is_some
+  || metavariable_of_exp m $> fst $> is_inductive_meta_variable $ of_bool |> is_some
+
 
 (** All the high-level proof tactics.
  * In general, a tactic has inputs
@@ -81,29 +117,32 @@ module Tactic = struct
     let context =
       { cG = Context.append s.context.cG cG
       ; cD = Context.append s.context.cD cD
-      ; cIH = s.context.cIH
+      ; cIH = s.context.cIH (* TODO shift any IHs *)
       }
     in
     let new_state = { context; goal = goal'; solution = None } in
     (* Invoke the callback on the subgoal that we created *)
     callback new_state;
     (* Solve the current goal with the subgoal. *)
-    prepend_statements
-      [ Comp.intros context (Comp.incomplete_proof new_state)
-      ; Comp.claim s.context.cD s.goal
-      ]
-      Comp.QED
+    Comp.intros context (Comp.incomplete_proof new_state)
     |> solve' s
 
   let split (m : Comp.exp_syn) (tau : Comp.typ) : t =
     let open Comp in
     fun s callback ->
     (* Compute the coverage goals for the type to split on *)
+    dprint
+      (fun _ ->
+        "[harpoon-split] splitting on "
+        ^ P.expSynToString s.context.cD s.context.cG m);
     let cgs =
       Coverage.genPatCGoals
         s.context.cD
         (Coverage.gctx_of_compgctx s.context.cG)
-        tau
+        (* We need to strip off the inductivity annotations as the
+           coverage checker generally pretends they don't exist
+         *)
+        (Total.strip tau)
         []
     in
     (* We will map f over the coverage goals that were generated.
@@ -117,39 +156,95 @@ module Tactic = struct
          CovCtx and CovGoal constructors are impossible here,
          but I could be wrong.
        *)
-      | Coverage.CovCtx cPsi -> Misc.not_implemented "split on context variables"
-      | Coverage.CovGoal (cPsi, tR, (tau', ms')) -> Misc.not_implemented "bar"
-      | Coverage.CovPatt (cG, patt, tau) ->
-         let cG = Coverage.compgctx_of_gctx cG in
-         let open Comp in
-         let h = { cD; cG; cIH = s.context.cIH } in
-         let goal_type, goal_sub = s.goal in
-         let new_state =
-           { context = h
-           ; goal = (goal_type, Whnf.mcomp goal_sub ms)
-           (* ^ our goal already has a delayed msub, so we compose the
-              one we obtain from the split (the refinement substitution)
-              with the one we have (eagerly).
-            *)
-           ; solution = None
-           }
-         in
-         callback new_state;
-         split_branch h (incomplete_proof new_state)
+      | Coverage.CovCtx cPsi ->
+         Format.eprintf "OH NO 1\n";
+         Misc.not_implemented "CovCtx impossible"
+      | Coverage.CovGoal (cPsi, tR, (tau', ms')) ->
+         Format.eprintf "OH NO 2\n";
+         Misc.not_implemented "CovGoal impossible"
+      | Coverage.CovPatt (cG, p, tau) ->
+         match p with
+         | PatMetaObj (_, patt) ->
+            let open Comp in
+            let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
+            let cG = refine_ctx s.context.cG in
+            let cIH = refine_ctx s.context.cIH in
+            dprint
+              (fun _ ->
+                "[harpoon-split] got pattern " ^ P.patternToString cD cG p);
+            let (cD, cIH') =
+              if is_inductive cG cD m && Total.struct_smaller m p
+              then
+                (* mark subterms in the context as inductive *)
+                let cD1 = Check.Comp.mvars_in_patt cD p in
+                (* Compute the well-founded recursive calls *)
+                let cIH = Total.wf_rec_calls cD1 LF.Empty in
+                dprint
+                  (fun _ ->
+                    "[harpoon-split] computed WF rec calls "
+                    ^ P.gctxToString cD cIH);
+
+                (cD1, cIH)
+              else
+                (cD, LF.Empty)
+            in
+            let cD = Check.Comp.id_map_ind cD ms s.context.cD in
+            let cIH0 = Total.wf_rec_calls cD cG in
+
+            let h =
+              { cD
+              ; cG
+              ; cIH =
+                  Context.append cIH
+                    (Context.append cIH0 cIH')
+              }
+            in
+
+            let new_state =
+              { context = h
+              ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
+              (* ^ our goal already has a delayed msub, so we compose the
+                 one we obtain from the split (the refinement substitution)
+                 with the one we have (eagerly).
+               *)
+              ; solution = None
+              }
+            in
+            callback new_state;
+            split_branch h (incomplete_proof new_state)
     in
     let bs = List.map f cgs in
     (* Assemble the split branches computed in `bs` into the Harpoon
        Split syntax.
      *)
-    prepend_statements
-      [ Comp.split m tau bs ]
-      Comp.QED
+    Comp.split m tau bs
     |> solve' s
+
+  let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+    fun g callback ->
+    let open Comp in
+    let new_state =
+      { g with
+        context =
+          { g.context with
+            cG =
+              LF.Dec
+                ( g.context.cG
+                , CTypDecl (name, tau, false)
+                )
+          }
+      ; solution = None
+      }
+    in
+    callback new_state;
+    prepend_commands
+      [ Comp.IH (m, name) ]
+      (Comp.incomplete_proof new_state)
+    |> solve' g
+
 end
 
 module Prover = struct
-  module P = Pretty.Int.DefaultPrinter
-
   type interpreter_state =
     { initial_state : unit Comp.proof_state
     (* ^ it's important to remember the initial proof state, since it
@@ -172,15 +267,19 @@ module Prover = struct
     ; order = order
     }
 
+  (** Computes the index of the current subgoal we're working on. *)
+  let current_subgoal_index gs =
+    DynArray.length gs - 1
+
   (** Gets the next subgoal from the interpreter state.
       Returns `None` if there are no subgoals remaining.
    *)
   let next_subgoal (s : interpreter_state) : unit Comp.proof_state option =
-    let a = s.remaining_subgoals in
-    if DynArray.empty a then
+    let gs = s.remaining_subgoals in
+    if DynArray.empty gs then
       None
     else
-      Some (DynArray.get a 0)
+      Some (DynArray.get gs (current_subgoal_index gs))
 
   let process_command
         (ppf : Format.formatter)
@@ -188,8 +287,11 @@ module Prover = struct
         (cmd : Syntax.Ext.Harpoon.command)
       : unit =
     let module Command = Syntax.Ext.Harpoon in
-    let add_subgoal = DynArray.add s.remaining_subgoals in
-    let remove_current_subgoal () = DynArray.delete s.remaining_subgoals 0 in
+    let add_subgoal = DynArray.insert s.remaining_subgoals 0 in
+    let remove_current_subgoal () =
+      let gs = s.remaining_subgoals in
+      DynArray.delete gs (current_subgoal_index gs)
+    in
     let open Comp in
     let { cD; cG; cIH } = g.context in
     match cmd with
@@ -267,18 +369,25 @@ module Prover = struct
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG' t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
        in
-       Format.fprintf ppf "Elaborated IH: %a : %a@."
-         (P.fmt_ppr_cmp_exp_syn cD cG' Pretty.std_lvl) m
-         (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau;
-    (*  Misc.not_implemented "UseIH" *)
+       dprint
+         (fun _ ->
+           "[harpoon-UseIH] elaborated IH: "
+           ^ P.expSynToString cD cG' m
+           ^ " : "
+           ^ P.compTypToString cD tau
+           ^ " in cIH = " ^ P.gctxToString cD cIH);
+       (* This will verify that the IH is well-founded
+          (Ignoring thepresence of bugs)
+        *)
+       let _ = Check.Comp.syn cD cG' m in
+       Tactic.useIH m tau name g add_subgoal;
+       remove_current_subgoal ()
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
        try
          Check.Comp.check cD cG m g.goal;
-         prepend_statements
-           [ Comp.claim ~term: (Some m) cD g.goal ]
-           Comp.QED
+         Comp.solve m
          |> Tactic.solve' g;
          remove_current_subgoal ()
        with
@@ -330,8 +439,9 @@ module Prover = struct
     | Some g ->
        (* Show the proof state and the prompt *)
        Format.fprintf ppf
-         "@.@[<v>Current state:@.%a@]@.@.%s> @?"
+         "@.@[<v>Current state:@.%a@]@.There are %d IHs.@.%s> @?"
          P.fmt_ppr_cmp_proof_state g
+         (Context.length g.Comp.context.Comp.cIH)
          lambda;
 
        (* Parse the input and run the command *)

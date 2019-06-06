@@ -991,46 +991,4 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
       check cD (cG,cIH) e ttau
 
 
-
-end
-
-module Sgn = struct
-
-  module S = Store.Cid
-
-  let rec check_sgn_decls = function
-    | [] -> ()
-
-    | Syntax.Int.Sgn.Typ (l, _a, tK):: decls ->
-        let cD   = Syntax.Int.LF.Empty in
-        let cPsi = Syntax.Int.LF.Null in
-          LF.checkKind cD cPsi tK;
-          check_sgn_decls decls;
-
-    | Syntax.Int.Sgn.Const (l, _c, tA)  :: decls ->
-        let cD   = Syntax.Int.LF.Empty in
-        let cPsi = Syntax.Int.LF.Null in
-          LF.checkTyp cD cPsi (tA, Substitution.LF.id);
-          check_sgn_decls decls;
-
-    | Syntax.Int.Sgn.Schema (_w, schema) :: decls ->
-        let cD   = Syntax.Int.LF.Empty in
-        let cPsi = Syntax.Int.LF.Null in
-          LF.checkSchema (Syntax.Loc.ghost) cD cPsi schema;
-          check_sgn_decls decls
-
-    | Syntax.Int.Sgn.Rec (l) :: decls ->
-        let cD = Syntax.Int.LF.Empty in
-        let cG = Syntax.Int.LF.Empty in
-        List.iter (fun (f, tau, e)->
-          Comp.checkTyp cD tau;
-          Comp.check cD cG e (tau, Whnf.m_id)) l;
-          check_sgn_decls decls
-
-    | Syntax.Int.Sgn.Pragma (_a) :: decls ->
-        check_sgn_decls decls
-
-
-
-
 end

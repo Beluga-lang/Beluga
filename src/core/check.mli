@@ -100,10 +100,3 @@ module Comp : sig
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
 end
-
-
-module Sgn : sig
-  open Syntax.Int.Sgn
-
-  val check_sgn_decls :  decl list -> unit
-end

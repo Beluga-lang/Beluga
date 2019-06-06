@@ -9,6 +9,9 @@ open Context
 open Syntax.Int.LF
 open Store.Cid
 
+let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [12])
+open Debug.Fmt
+
 (* module P = Pretty.Int.DefaultPrinter *)
 
 let rec subToString = function
@@ -26,9 +29,6 @@ and frontToString = function
   | Undef -> "Undef"
 
 (* module Comp = Syntax.Int.Comp *)
-
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [12])
-
 
 let ctxShift cPsi = EmptySub (* match cPsi with *)
   (* | Null              -> Shift (NoCtxShift , 0 ) *)
@@ -60,9 +60,9 @@ let ctxToSub_mclosed cD psi cPsi =
       (cD, ctxShift psi, 0)
 
     | DDec (cPsi', TypDecl (_, (Atom _  as tA))) ->
-        Debug.indent 2;
+       dprintf (fun p -> p.fmt "  @[<v>");
       let (cD', s, k) = toSub cPsi' in  (* cD' ; psi |- s : cPsi' *)
-        Debug.outdent 2;
+       dprintf (fun p -> p.fmt "@]");
         dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
 
@@ -105,10 +105,10 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
       ctxShift cPhi
 
   | DDec (cPsi', TypDecl (n, tA)) ->
-      Debug.indent 2;
+      dprintf (fun p -> p.fmt "  @[<v>");
       let s = ((ctxToSub' cD cPhi cPsi') : sub) in
       (* cD ; cPhi |- s : cPsi' *)
-         Debug.outdent 2;
+      dprintf (fun p -> p.fmt "@]");
       dprint (fun () -> "s = " ^ subToString s);
         (* For the moment, assume tA atomic. *)
         (* lower tA? *)

@@ -62,7 +62,7 @@ let rec loop ppf =
 let run args =
   let ppf = Format.std_formatter in
   let files = process_options args in
-  let _ = Debug.pipeDebug := true in
+  Debug.init (Some "debug.out");
 
   if List.length files = 1 then
     try
@@ -80,14 +80,6 @@ let run args =
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;
   else begin if List.length files > 1 then fprintf ppf "Please supply only 1 file" end;
-
-  if !Debug.pipeDebug && Sys.file_exists (!Debug.filename ^ ".out") then begin
-    let x = ref 1 in
-    while Sys.file_exists (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ").out") do
-      incr x
-    done ;
-    Debug.filename := (!Debug.filename ^ "(" ^ (string_of_int !x) ^ ")") ;
-  end;
 
   if not !Options.emacs then
     begin

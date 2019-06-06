@@ -7,6 +7,9 @@
 
 open Printf
 
+let dprintf, _, _ = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
+
 let bailout msg =
   fprintf stderr "%s\n" msg;
   exit 2
@@ -14,7 +17,7 @@ let bailout msg =
 let usage () =
   let options =
           "    +d                    Turn all debugging printing on - note that in interactive mode\n"
-        ^ "                              debugging information is piped to '"^ !Debug.filename ^ ".out" ^ "'\n"
+        ^ "                              debugging information is piped to 'debug.out'\n"
         ^ "    +ext                  Print external syntax before reconstruction\n"
         ^ "    -s=debruijn           Print substitutions in deBruijn-ish style (when debugging Beluga)\n"
         ^ "    +implicit             Print implicit arguments\n"
@@ -50,7 +53,7 @@ module PC = Pretty.Control
 
 let process_option arg rest = match arg with
   (* these strings must be lowercase *)
-  | "+d" ->Debug.showAll (); Printexc.record_backtrace true; rest
+  | "+d" -> Debug.enable (); Printexc.record_backtrace true; rest
   | "+ext" -> externall := true; rest
   | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
   | "+implicit" -> PC.printImplicit := true; rest
@@ -186,12 +189,15 @@ let main () =
                 printf "\n## Dumped AST to: %s ##\n" sexp_file_name
             end
       with e ->
-        Debug.print (Debug.toFlags [0]) (fun () -> "\nBacktrace:\n" ^ Printexc.get_backtrace () ^ "\n");
+        dprintf
+          (fun p ->
+            p.fmt "Backtrace: %s" (Printexc.get_backtrace ()));
         output_string stderr (Printexc.to_string e);
         abort_session ()
     in
     let args   = List.tl (Array.to_list Sys.argv) in
     let files = process_options args in
+    Debug.init None;
     let status_code =
       match files with
         | [file] ->

@@ -41,6 +41,16 @@ val splitContextVariable : dctx -> typ_decl -> dctx
 val emptyContextVariable : dctx -> dctx
 
 val lookup' : 'a LF.ctx -> int -> 'a option
+
+(** Looks up an index in a meta-context, giving the type and `depend` field.
+    - Warning: This function does not MShift the type it returns;
+      typically you should do this so the type makes sense in the
+      whole context Delta.
+    - Warning: returns None if the index is out of bounds OR if the
+      context declaration does not assign a type (i.e. it's a
+      DeclOpt).  If you need to distinguish these cases, then you
+      should use `lookup'` and match on the `ctyp_decl` yourself.
+ *)
 val lookup_dep : LF.mctx -> int -> (LF.ctyp * LF.depend) option
 val lookup : Comp.gctx -> int -> Comp.typ option
 

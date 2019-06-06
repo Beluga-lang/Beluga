@@ -436,10 +436,14 @@ module Comp = struct
    * - if 'a = unit then this is a true incomplete proof.
    *)
   type 'a proof =
-    | QED (* proof complete *)
     | Incomplete (* hole *)
       of 'a * 'a proof_state
-    | ProofCons of 'a statement * 'a proof (* another step in the proof *)
+    | Command of command * 'a proof
+    | Directive of 'a directive (* which can end proofs or split into subgoals *)
+
+  and command =
+    | IH of exp_syn * name
+    | By (* not implemented yet *)
 
   and 'a proof_state =
     { context : hypotheses
@@ -447,19 +451,11 @@ module Comp = struct
     ; mutable solution : 'a proof option
     }
 
-  and 'a statement =
-    | Directive of 'a directive
-    | Claim
-      of name option (* Stated claims may optionally be named by a variable. *)
-         * LF.mctx (* the context in which to interpret the meta-variables occurring in the type *)
-         * exp_chk option
-         (* ^ the term that justifies the claim; filled in by proof
-          * search if the user doesn't specify it *)
-         * tclo
-
   and 'a directive =
     | Intros (* Prove a function type by a hypothetical derivation. *)
       of 'a hypothetical
+    | Solve (* End the proof with the given term *)
+      of exp_chk
     | InductionHypothesis (* Invocation of the IH *)
       of exp_chk list (* the terms to invoke the IH with *)
          * name (* name the result of the IH *)
@@ -494,15 +490,15 @@ module Comp = struct
     Incomplete ( (), s )
 
   (** Smart constructor for the intros directive. *)
-  let intros (ctx : hypotheses) (proof : 'a proof) : 'a statement =
+  let intros (ctx : hypotheses) (proof : 'a proof) : 'a proof =
     Directive (Intros (Hypothetical (ctx, proof)))
 
-  let proof_cons (stmt : 'a statement) (proof : 'a proof) = ProofCons (stmt, proof)
+  let proof_cons (stmt : command) (proof : 'a proof) = Command (stmt, proof)
 
-  let claim ?name:(name = None) ?term:(term = None) (cD : LF.mctx) (t : tclo) =
-    Claim (name, cD, term, t)
+  let solve (t : exp_chk) : 'a proof =
+    Directive (Solve t)
 
-  let split (m : exp_syn) (tau : typ) (bs : 'a split_branch list) : 'a statement =
+  let split (m : exp_syn) (tau : typ) (bs : 'a split_branch list) : 'a proof =
     Directive (Split (m, tau, bs))
 
   let split_branch (h : hypotheses) (d : 'a proof) : 'a split_branch =

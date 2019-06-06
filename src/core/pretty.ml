@@ -97,6 +97,7 @@ module Int = struct
     val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
     val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
     val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
@@ -106,7 +107,7 @@ module Int = struct
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_statement : LF.mctx -> Comp.gctx -> formatter -> unit Comp.statement -> unit
+    val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
@@ -1497,20 +1498,29 @@ module Int = struct
     and fmt_ppr_cmp_proof cD cG ppf =
       let open Comp in
       function
-      | QED -> ()
       | Incomplete ( _, s ) ->
          begin
            match s.solution with
            | None -> fprintf ppf "?"
            | Some proof -> fmt_ppr_cmp_proof cD cG ppf proof
          end
-      | ProofCons ( stmt, proof ) ->
+      | Command ( stmt, proof ) ->
          fprintf ppf "%a;@.%a"
-           (fmt_ppr_cmp_statement cD cG) stmt
+           (fmt_ppr_cmp_command cD cG) stmt
            (fmt_ppr_cmp_proof cD cG) proof
+      | Directive d ->
+         fmt_ppr_cmp_directive cD cG ppf d
 
-    and fmt_ppr_cmp_statement cD cG ppf =
+    and fmt_ppr_cmp_command cD cG ppf =
       let open Comp in
+      function
+      | By -> Misc.not_implemented "command By"
+      | IH (t, name) ->
+         fprintf ppf
+           "IH (%a) as %s"
+           (fmt_ppr_cmp_exp_syn cD cG std_lvl) t
+           (Id.render_name name)
+      (*
       function
       | Directive d -> fmt_ppr_cmp_directive cD cG ppf d
       | Claim (name, cD, term, ts) ->
@@ -1527,8 +1537,9 @@ module Int = struct
            term
            (fmt_ppr_cmp_typ cD std_lvl)
            t
+       *)
 
-    and fmt_ppr_cmp_directive cD cG ppf =
+    and fmt_ppr_cmp_directive cD cG ppf : unit Comp.directive -> unit =
       let open Comp in
       function
       | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
@@ -1539,6 +1550,7 @@ module Int = struct
            (fun (SplitBranch h) -> fprintf ppf "%a@." fmt_ppr_cmp_hypothetical h)
            bs;
          fprintf ppf "@]"
+      | Solve t -> Misc.not_implemented "solve"
 
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in
@@ -1607,12 +1619,25 @@ module Int = struct
         (fmt_ppr_lf_mfront cD lvl) m
         (Id.render_name name)
 
+    and fmt_ppr_cmp_arg cD lvl ppf = function
+      | Comp.M m_obj -> fmt_ppr_meta_obj cD lvl ppf m_obj
+      | Comp.V k -> Misc.not_implemented "IH offset arg printing"
+      | Comp.DC -> fprintf ppf "_"
+      | Comp.E -> Misc.not_implemented "IH E printing"
+
     and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
       | Comp.CTypDecl (x, tau, tag) ->
          let s = if tag then "*" else "" in
           fprintf ppf "%s%s: %a"
             (Id.render_name x) s
             (fmt_ppr_cmp_typ cD lvl) tau
+
+      | Comp.WfRec (name, args, typ) ->
+         fprintf ppf "%s @[<v>%a@] : %a"
+           (Id.render_name name)
+           (pp_print_list (fmt_ppr_cmp_arg cD lvl)) args
+           (fmt_ppr_cmp_typ cD lvl) typ
+
       | Comp.CTypDeclOpt x ->
          raise (Invalid_argument "CTypDeclOpt is unrepresentable")
 

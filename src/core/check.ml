@@ -338,7 +338,7 @@ let mark_ind cD k =
     | PatApp (_, pat, pat_spine) ->
         fmv_pat_spine  (fmv cD pat) pat_spine
 
-  let mvarsInPatt cD pat =
+  let mvars_in_patt cD pat =
     fmv cD pat
 
   let rec id_map_ind cD1' t cD = match t, cD with
@@ -915,7 +915,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
          let (cD1',cIH')  =
            if is_inductive caseTyp && Total.struct_smaller i (PatMetaObj (loc', mO))
            then
-             let cD1' = mvarsInPatt cD1' (PatMetaObj(loc', mO)) in
+             let cD1' = mvars_in_patt cD1' (PatMetaObj(loc', mO)) in
              (* print_string "Inductive and Structurally smaller\n"; *)
              (cD1', Total.wf_rec_calls cD1' (I.Empty))
            else (cD1', I.Empty)
@@ -946,7 +946,7 @@ let useIH loc cD cG cIH_opt e2 = match cIH_opt with
             if is_inductive caseTyp && Total.struct_smaller i pat
             then
               let cG1' = Total.mark_gctx cG1 in
-              let cD1' = mvarsInPatt cD1' pat in
+              let cD1' = mvars_in_patt cD1' pat in
               (cD1', cG1', Total.wf_rec_calls cD1' cG1')
             else (cD1', cG1, I.Empty)
           in

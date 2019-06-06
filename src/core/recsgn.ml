@@ -11,10 +11,8 @@ module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [11])
-
-let print_str f = dprint f
-(* print_string ("\n" ^ f () ^ "\n") *)
+let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 
 type leftoverVars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 
@@ -514,69 +512,104 @@ let recSgnDecls decls =
 
     | Ext.Sgn.Val (loc, x, None, i) ->
        dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
-       let apx_i              = Index.exp' (Var.create ()) i in
-	     let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
+       let apx_i = Index.exp' (Var.create ()) i in
+	     let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
-       let _                  = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-       let tau'               = Whnf.cnormCTyp (tau, theta) in
-       let i'                 = Whnf.cnormExp' (i', Whnf.m_id) in
+       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       let tau' = Whnf.cnormCTyp (tau, theta) in
+       let i' = Whnf.cnormExp' (i', Whnf.m_id) in
 
-       let _                  = dprint (fun () ->  "\n [AFTER Reconstruction Val] let " ^ (string_of_name x) ^
-					                                           "\n   : " ^ P.compTypToString cD tau' ^
-					                                             "\n  =  " ^
-                                                         P.expSynToString cD cG i' ^ "\n") in
-       let cQ, i''             = Monitor.timer ("Function Abstraction", fun () ->
-						                                                            Abstract.exp (Int.Comp.Syn (loc, i'))) in
-	     let _                  = storeLeftoverVars cQ loc in
-       let _                  = Monitor.timer ("Function Check", fun () ->
-						                                                     Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+       dprint
+         (fun _ ->
+           "\n [AFTER Reconstruction Val] let@,"
+           ^ (string_of_name x) ^ " : "
+           ^ P.compTypToString cD tau' ^
+             " = " ^ P.expSynToString cD cG i');
+       let cQ, i'' =
+         Monitor.timer
+           ( "Function Abstraction"
+           , fun _ ->
+             Abstract.exp (Int.Comp.Syn (loc, i')))
+       in
+	     storeLeftoverVars cQ loc;
+       Monitor.timer
+         ( "Function Check"
+         , fun _ -> Check.Comp.check cD  cG None i'' (tau', C.m_id));
 
-	     let v = if Holes.none () && is_empty cQ then
-	               begin
-                   let v = Opsem.eval i'' in
-                   let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
-		               Some v
-	               end
-	             else None in
-       let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
-       let _ = Store.Modules.addSgnToCurrent sgn in
+	     let v =
+         if Holes.none () && is_empty cQ then
+	         begin
+             let v = Opsem.eval i'' in
+             let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
+		         Some v
+	         end
+	       else
+           None
+       in
+       let sgn =
+         Int.Sgn.Val(loc, x, tau', i'', v)
+       in
+       Store.Modules.addSgnToCurrent sgn;
        sgn
 
-
     | Ext.Sgn.Val (loc, x, Some tau, i) ->
-       dprint (fun () -> "[RecSgn Checking] Val at: \n" ^ Syntax.Loc.to_string loc);
+       dprintf
+         (fun p ->
+           p.fmt "[RecSgn Checking] Val at %s"
+             (Syntax.Loc.to_string loc)
+         );
        let apx_tau = Index.comptyp tau in
-	     let (cD, cG)       = (Int.LF.Empty, Int.LF.Empty) in
-       let tau'    = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
-       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-       let (tau', _imp) = Monitor.timer ("Function Type Abstraction", fun ()
-					                                                            -> Abstract.comptyp tau') in
-	     let _       = dprint (fun () -> "[checkTyp] ") in
-       let  _      = Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau') in
-
-       let apx_i   = Index.exp' (Var.create ()) i in
-
-       let i'      = Monitor.timer ("Function Elaboration",
-                                    fun () ->
-                                    Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)) in
-       let i'      = Whnf.cnormExp (i', Whnf.m_id) in
-       let _       = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+	     let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
+       let tau' = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
+       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       let (tau', _imp) =
+         Monitor.timer
+           ( "Function Type Abstraction"
+           , fun _ -> Abstract.comptyp tau'
+           )
+       in
+       Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');
+       let apx_i = Index.exp' (Var.create ()) i in
+       let i' =
+         Monitor.timer
+           ( "Function Elaboration"
+           , fun _ ->
+             Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)
+           )
+       in
+       let i' = Whnf.cnormExp (i', Whnf.m_id) in
+       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
        let tau'    = Whnf.cnormCTyp (tau', C.m_id) in
-       let _       = dprint (fun () ->  "\n [AFTER Reconstruction Val - 2] let " ^ (string_of_name x) ^
-                                          "\n   : " ^ P.compTypToString cD tau' ^
-                                            "\n  =  " ^
-                                              P.expChkToString cD cG i' ^ "\n") in
+       dprintf
+         (fun p ->
+           p.fmt "[AFTER Reconstruction Val - 2] let %s : %a =@,%a"
+             (Id.render_name x)
+             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau'
+             (P.fmt_ppr_cmp_exp_chk cD cG Pretty.std_lvl) i');
 
-       let cQ, i''  = Monitor.timer ("Function Abstraction", fun () -> Abstract.exp i') in
-	     let _       = storeLeftoverVars cQ loc in
-       let _       = Monitor.timer ("Function Check", fun () -> Check.Comp.check cD  cG i'' (tau', C.m_id)) in
+       let cQ, i''  =
+         Monitor.timer
+           ( "Function Abstraction"
+           , fun () -> Abstract.exp i'
+           )
+       in
+	     storeLeftoverVars cQ loc;
+       Monitor.timer
+         ( "Function Check"
+         , fun _ ->
+           Check.Comp.check cD  cG None i'' (tau', C.m_id)
+         );
 
-	     let v = if Holes.none () && is_empty cQ then begin
-                   let v = Opsem.eval i'' in
-                   let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in Some v
-                 end else None in
+	     let v =
+         if Holes.none () && is_empty cQ then
+           let v = Opsem.eval i'' in
+           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
+           Some v
+         else
+           None
+       in
 	     let sgn = Int.Sgn.Val(loc, x, tau', i'', v) in
-	     let _ = Store.Modules.addSgnToCurrent sgn in
+	     Store.Modules.addSgnToCurrent sgn;
 	     sgn
 
     | Ext.Sgn.MRecTyp (loc, recDats) ->
@@ -596,35 +629,43 @@ let recSgnDecls decls =
          | (Some y)::ys -> if x = y then k else pos loc x ys (k+1)
          | None::ys -> pos loc x ys (k+1)
        in
-       let mk_total_decl f (Ext.Comp.Total (loc, order, f', args)) =
-	       print_str (fun () -> "args length: "^string_of_int (List.length args) ^"\n" );
-	       if f <> f' then raise (Error (loc, TotalDeclError (f, f')));
-           ( Maybe.map
-               (fun order ->
-                 (* convert to a numeric order by looking up the
-                    positions of the specified arguments;
-                    then convert to a proper Order.order.
-                  *)
-                 Ext.Comp.map_order (fun x -> pos loc x args 1) order
-                 |> Order.of_numeric_order)
-               order
-           , args
-           )
+       let mk_total_decl f tau (Ext.Comp.Total (loc, order, f', args)) =
+         (* Validate the inputs: can't have too many args or the wrong name *)
+         if not (Total.is_valid_args tau (List.length args)) then
+           raise (Error (loc, TotalArgsError f));
+
+	       if f <> f' then
+           raise (Error (loc, TotalDeclError (f, f')));
+
+         let open Maybe in
+         order
+         $> fun order ->
+            (* convert to a numeric order by looking up the
+               positions of the specified arguments;
+               then convert to a proper Order.order.
+             *)
+            Ext.Comp.map_order (fun x -> pos loc x args 1) order
+            |> Order.of_numeric_order
        in
        let is_total total =
          match total with None -> false | Some _ -> true in
 
        let rec preprocess l m = match l with
-         | [] -> (Int.LF.Empty, Var.create (), [])
+         | [] -> (Int.LF.Empty, Var.create (), [], [])
          | Ext.Comp.RecFun (loc, f, total, tau, _e) :: lf ->
             let apx_tau = Index.comptyp  tau in
-            dprint (fun () ->  "Reconstructing function " ^  (string_of_name f));
-            let tau' = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau) in
+            dprint (fun () ->  "[recsgn] Reconstructing function " ^  (string_of_name f));
+            let tau' =
+              Monitor.timer
+                ( "Function Type Elaboration"
+                , fun () -> Reconstruct.comptyp apx_tau
+                )
+            in
             Unify.forceGlobalCnstr (!Unify.globalCnstrs);
             (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
             dprint
               (fun _ ->
-                "Elaboration of function "
+                "[recsgn] elaboration of function "
                 ^ (string_of_name f)
                 ^ " : " ^ (P.compTypToString cD tau'));
 
@@ -635,42 +676,43 @@ let recSgnDecls decls =
                 ^ (string_of_name f)
                 ^ " : " ^  (P.compTypToString cD tau'));
 
-            (* print_string ( "Abstracted elaborated function type " ^ (string_of_name f) ^ *)
-            (*               " \n : " ^  (P.compTypToString cD tau') ^ " \n\n" ) ; *)
-
             Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');
             dprint (fun () -> "Checked computation type " ^ (P.compTypToString cD tau') ^ " successfully\n\n");
             FCVar.clear ();
             (* check that names are unique ? *)
-            begin
+            let d =
               match total with
               | None ->
 		             if !Total.enabled then
 		               raise (Error (loc, MutualTotalDecl f))
 		             else
-		               ()
-		          | Some (Ext.Comp.Trust _) -> ()
+                   None
+		          | Some (Ext.Comp.Trust _) -> None
               | Some t ->
 		             if !Total.enabled then
-		               ((*print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
-	   	              Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t)))
+                    Some (Total.make_total_dec f tau' (mk_total_decl f tau' t))
 		             else
 		               if m = 1 then
                      begin
 			                 (*Coverage.enableCoverage := true; *)
                        Total.enabled := true;
 			                 (* print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
-			                 Total.extend_dec (Total.make_dec loc f tau' (mk_total_decl f t))
+                       Some (Total.make_total_dec f tau' (mk_total_decl f tau' t))
                      end
 		               else
 			               raise (Error (loc, MutualTotalDeclAfter f))
-             end;
-		         let (cG, vars, n_list) = preprocess lf (m+1) in
-             (Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau',false)) , Var.extend  vars (Var.mk_entry f), f::n_list)
+            in
+		        let (cG, vars, n_list, ds) = preprocess lf (m+1) in
+            ( Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau',false))
+            , Var.extend vars (Var.mk_entry f)
+            , f::n_list
+            , d::ds
+            )
 
        in
 
-       let (cG , vars', n_list ) = preprocess recFuns 1 in
+       let (cG , vars', n_list, total_decs ) = preprocess recFuns 1 in
+       let total_decs = Maybe.cat_options total_decs in
 
        let reconFun loc f  e =
          let apx_e = Index.exp vars' e in
@@ -729,7 +771,7 @@ let recSgnDecls decls =
              let open Maybe in
              of_bool !Total.enabled
              $ fun _ ->
-               Total.lookup_dec f
+               Total.lookup_dec f total_decs
                $ fun d ->
                  Total.(d.order)
                  $> fun order ->
@@ -749,7 +791,7 @@ let recSgnDecls decls =
          Monitor.timer
            ( "Function Check"
            , fun _ ->
-             Check.Comp.check cD cG e_r' (tau_ann, C.m_id)
+             Check.Comp.check cD cG (Some total_decs) e_r' (tau_ann, C.m_id)
            );
          (e_r' , tau')
        in
@@ -808,15 +850,16 @@ let recSgnDecls decls =
 				     (Id.render_name f))
 		         end ;*)
 		      dprint (fun () -> "DOUBLE CHECK of function " ^ (string_of_name f) ^ " successful!\n");
-		      let (loc_opt, cid) = Comp.add loc
-		                             (fun cid ->
-                                   Comp.mk_entry  f tau' 0 (is_total total)
-			                               (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
-			                               n_list) in
+		      let (loc_opt, cid) =
+            Comp.add loc
+		          (fun cid ->
+                Comp.mk_entry  f tau' 0 (is_total total)
+			            (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+			            n_list)
+          in
 		      let _ = match loc_opt with
 		        | Some loc -> Holes.destroy_holes_within loc
 		        | None -> () in
-		      let _ = Total.clear () in
 		      let sgn = Int.Sgn.Rec((cid, tau', e_r')::(reconRecFun lf)) in
 		      Store.Modules.addSgnToCurrent sgn;
 		      sgn

@@ -5,6 +5,9 @@ module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
+let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
+
 type error =
   | NoPositiveCheck of string
   | NoStratifyCheck of string
@@ -54,15 +57,13 @@ let _ =
         )
     )
 
-let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [11])
-
 let print_str f = dprint f
 (* let dprint f = print_string ("\n" ^ f () )*)
 
 exception Not_compatible
 exception CtxNot_compatible
 
-let enabled = ref false
+let enabled = ref true
 
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
 
@@ -140,39 +141,27 @@ let rec struct_smaller _i patt = match patt with
 
 type dec =
   { name : Id.name
-  ; args : (Id.name option) list
   ; typ  : Comp.typ
   ; order: Order.order option
   }
-
-let mutual_decs : (dec list) ref = ref []
-
-let clear () = (mutual_decs :=  [])
 
 let order_to_string order = match order with
   | None -> " _ "
   | Some (Order.Arg x) -> string_of_int x
 
-let make_dec loc f tau (order,args) =
-  let n = List.length args in
-  let rec valid_args tau n = match tau, n with
-    | Comp.TypPiBox (_ , tau), 1 -> true
+(** Determine whether the arguments given in a totality declaration are valid.
+    n: number of args
+    tau: type of the recursive function
+ *)
+let rec is_valid_args tau n = match tau, n with
+  | Comp.TypPiBox (_ , tau), 1
     | Comp.TypArr   (_ , tau), 1 -> true
-    | Comp.TypPiBox (_ , tau), n -> valid_args tau (n-1)
-    | Comp.TypArr   (_ , tau), n -> valid_args tau (n-1)
-    | _ -> false
-  in
-  if n = 0 || valid_args tau n then
-    { name = f
-    ; args = args
-    ; typ  = tau
-    ; order = order
-    }
-  else
-    raise (Error (loc, TooManyArg f))
+  | Comp.TypPiBox (_ , tau), n
+    | Comp.TypArr   (_ , tau), n -> is_valid_args tau (n-1)
+  | _ -> false
 
-let extend_dec l =
-  mutual_decs := l::!mutual_decs
+let make_total_dec name typ order =
+  { name; typ; order }
 
 (* Check whether the argument specified by i
    corresponds to a given totality order
@@ -236,13 +225,6 @@ let extend_dec l =
 
  *)
 
-let exists_total_decl f =
-  let rec exists decs = match decs with
-    | [] -> false
-    | l :: decs -> l.name = f || exists decs
-  in
-  exists (!mutual_decs)
-
 let rec args_to_string cD cG args = match args with
   | [] -> ""
   | Comp.M cM :: args ->
@@ -267,39 +249,34 @@ let rec ih_to_string cD cG cIH =
      "IH: " ^  calls_to_string cD cG (f, args, tau) ^ "\n"
      ^ ih_to_string cD cG cIH
 
-
-let get_order () =
-  List.map
-    (fun dec ->
-      let tau = dec.typ in
-      (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
-          " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
-      match dec.order with
-      | Some (Order.Arg x) ->
-         (dec.name, Some [x], (tau, Whnf.m_id))
-      | Some (Order.Lex xs) ->
-         let xs = List.map (function (Order.Arg x) -> x) xs in
-         dprint
-           (fun _ ->
-             "[get_order] "
-             ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
-         (dec.name, Some xs, (tau, Whnf.m_id))
-      | None -> (dec.name, None, (tau, Whnf.m_id))
-    )
-    !mutual_decs
-
-let lookup_dec f : dec option =
-  let rec go = function
-    | [] -> None
-    | d :: _ when d.name = f -> Some d
-    | _ :: ds -> go ds
+(** Converts the list of totality declarations into an induction ordering list *)
+let get_order (mfs : dec list) =
+  let f dec =
+    let tau = dec.typ in
+    (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
+        " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
+    match dec.order with
+    | Some (Order.Arg x) ->
+       (dec.name, Some [x], (tau, Whnf.m_id))
+    | Some (Order.Lex xs) ->
+       let xs = List.map (function (Order.Arg x) -> x) xs in
+       dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
+       (dec.name, Some xs, (tau, Whnf.m_id))
+    | None -> (dec.name, None, (tau, Whnf.m_id))
   in
-  go !mutual_decs
+  List.map f mfs
+
+(** Looks up a declaration based on a function name *)
+let rec lookup_dec f : dec list -> dec option =
+  function
+  | [] -> None
+  | d :: _ when Id.equals d.name f -> Some d
+  | _ :: ds -> lookup_dec f ds
 
 (** Gets the induction order for the function with name `f`
     Returns None if the
  *)
-let get_order_for f : int list option =
+let get_order_for mfs f : int list option =
   let rec find decs = match decs with
     | [] -> None
     | dec::decs ->
@@ -309,7 +286,7 @@ let get_order_for f : int list option =
        else
          find decs
   in
-  find !mutual_decs
+  find mfs
 
 (* Given C:U, f, order Arg i, and type T of f where
    T = Pi X1:U1, ... X:i:Un. T, generate
@@ -326,7 +303,7 @@ let gen_var' loc cD (x, cU) =
   match cU with
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
      let psihat  = Context.dctxToHat cPsi in
-     let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x	Substitution.LF.id LF.Maybe in
+     let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x Substitution.LF.id LF.Maybe in
      ( (loc, LF.ClObj (psihat, LF.MObj tM))
      , LF.ClObj (psihat, LF.MObj tM)
      )
@@ -444,19 +421,19 @@ let rec rec_spine' cD (x, ttau0)  (i, ttau) = match i, ttau with
             "\nExpected: " ^
             P.compTypToString cD (Whnf.cnormCTyp (tau1,theta)) ^ "\n"); *)
          Unify.unifyCompTyp cD ttau0 (tau1, theta);
-	       let (spine, tau_r)  = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
-	       (Comp.V x::spine, tau_r )
+         let (spine, tau_r)  = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
+         (Comp.V x::spine, tau_r )
        with
          _ -> raise Not_compatible
      end
   | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      let (spine, tau_r)  = rec_spine' cD (x,ttau0) (n-1, (tau, LF.MDot (ft, theta))) in
-	   (Comp.M cN :: spine, tau_r)
+     (Comp.M cN :: spine, tau_r)
 
   | n, (Comp.TypArr (_, tau2), theta)  ->
      let (spine, tau_r) = rec_spine' cD (x,ttau0) (n-1, (tau2, theta)) in
-	   (Comp.DC :: spine, tau_r)
+     (Comp.DC :: spine, tau_r)
 
 
 let gen_meta_obj (cdecl, theta) k = match cdecl with
@@ -481,20 +458,16 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
      let psihat' = Whnf.cnorm_psihat phat theta in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.SObj sv))
 
-let uninstantiated_arg cM =
-  match Whnf.cnormMetaObj (cM, Whnf.m_id) with
+let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
   | _ , LF.CObj (LF.CtxVar (LF.CInst _)) -> true
   | _ , LF.ClObj (phat, LF.MObj (LF.Root (_, h, _spine))) ->
-     begin
-       match h with
-       | LF.MMVar (_ , _ ) -> true
-       | _ -> false
-     end
+     (match h with
+      | LF.MMVar (_ , _ ) -> true
+      | _ -> false)
   | _ , LF.ClObj ((Some _, n), LF.PObj h) ->
      if n > 0 then
-       match h with
-       | LF.MPVar (_, _) -> true
-       | _ -> false
+       match h with LF.MPVar (_, _) -> true
+                  | _ -> false
      else
        false
   | _ , LF.ClObj (_phat, LF.SObj (LF.MSVar (_, _))) -> true
@@ -512,33 +485,59 @@ let rec generalize args = match args with
   | Comp.DC :: args ->
      Comp.DC :: generalize args
 
+
 let valid_args args = match List.rev args with
   | Comp.DC :: _ -> false
   | _ -> true
 
-let rec gen_rec_calls cD cIH (cD', j) = match cD' with
+
+
+let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
   | LF.Empty -> cIH
-  | LF.Dec (cD', LF.Decl (u, cU, dep)) when not (is_inductive dep) -> gen_rec_calls cD cIH (cD', j+1)
+  | LF.Dec (cD', LF.Decl (u, cU, dep)) when not (is_inductive dep) ->
+     dprintf
+       (fun p ->
+         p.fmt "[gen_rec_calls] ignoring argument %d since it isn't inductive" j);
+     gen_rec_calls cD cIH (cD', j+1) mfs
   | LF.Dec (cD', LF.Decl (u, cU, dep)) ->
      let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
-     let mf_list = get_order () in
-     let _ = dprint (fun () -> "[gen_rec_calls] Generate rec. calls given variable " ^ P.cdeclToString cD' (LF.Decl (u, cU, dep))^ "\n") in
-     let _ = dprint (fun () -> "Considering a total of " ^
-                                 string_of_int (List.length mf_list)  ^
-                                   " rec. functions\n") in
+     let mf_list = get_order mfs in
+     dprint
+       (fun _ ->
+         "[gen_rec_calls] Generate rec. calls given variable "
+         ^ P.cdeclToString cD' (LF.Decl (u, cU, dep)));
+     dprint
+       (fun _ ->
+         "Considering a total of "
+         ^ string_of_int (List.length mf_list)
+         ^ " rec. functions\n");
+
      let mk_wfrec (f,x,ttau) =
-       let _ = dprint (fun () -> "mk_wf_rec ... for " ^ P.cdeclToString cD' (LF.Decl (u,cU, dep)) ^  " for position " ^ string_of_int x ^   "\n") in
-       let _ = dprint (fun () -> "Type of rec. call: " ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n") in
+       dprint
+         (fun _ ->
+           "[mk_wf_rec] for "
+           ^ P.cdeclToString cD' (LF.Decl (u,cU, dep))
+           ^ " for position "
+           ^ string_of_int x ^ "\n");
+       dprint
+         (fun _ ->
+           "Type of rec. call: "
+           ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n");
+
        let (args, tau) = rec_spine cD (cM, cU') (x, ttau) in
        (* rec_spine may raise Not_compatible *)
-       let _ = dprint (fun () -> "Generated Arguments for rec. call " ^  args_to_string cD LF.Empty args ^ "\n") in
+       dprint
+         (fun _ ->
+           "[mk_wfrec] generated Arguments for rec. call " ^
+             args_to_string cD LF.Empty args ^ "\n");
        let args = generalize args in
-       let d = Comp.WfRec (f, args, tau) in
-       let _ = dprint (fun () -> "\nGenerated Recursive Call : " ^
-                                   calls_to_string cD (LF.Empty) (f, args, tau) ^
-                                     "\n\n") in
-       d
+       dprint
+         (fun _ ->
+           "[mk_wfrec] generated recursive Call : " ^
+             calls_to_string cD (LF.Empty) (f, args, tau) ^
+               "\n\n");
+       Comp.WfRec (f, args, tau)
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
        | [] -> []
@@ -570,10 +569,10 @@ let rec gen_rec_calls cD cIH (cD', j) = match cD' with
              a given schema *)
           mk_all (cIH',j) mf_list
      in
-     dprint (fun _ -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n");
+     let _ =  dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n") in
      let cIH' = mk_all (cIH,j)  mf_list in
-     dprint (fun _ -> "[gen_rec_calls] for j = " ^ string_of_int (j+1) ^ "\n");
-     gen_rec_calls cD cIH'  (cD', j+1)
+     dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j+1) ^ "\n");
+     gen_rec_calls cD cIH'  (cD', j+1) mfs
 
 (* Generating recursive calls on computation-level variables *)
 let rec get_return_type cD x ttau =
@@ -584,15 +583,15 @@ let rec get_return_type cD x ttau =
      get_return_type cD x (tau0,  LF.MDot (ft, theta))
   | tau, _ -> (x, ttau)
 
-let rec gen_rec_calls' cD cG cIH (cG0, j) =
+let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
   match cG0 with
   | LF.Empty -> cIH
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, false)) ->
-     gen_rec_calls' cD cG cIH (cG', j+1)
+     gen_rec_calls' cD cG cIH (cG', j+1) mfs
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
      let y = j+1 in
-     let mf_list = get_order () in
-     let _ = print_str (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0 ^ "\n") in
+     let mf_list = get_order mfs in
+     dprint (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0);
      let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
      let mk_wfrec (f,x, ttau) =
        dprint
@@ -610,7 +609,8 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) =
        let d = Comp.WfRec (f, args, tau) in
        dprint
          (fun _ ->
-           "\nRecursive call : " ^ calls_to_string cD cG (f, args, tau) ^ "\n\n");
+           "\nRecursive call : "
+           ^ calls_to_string cD cG (f, args, tau));
        d
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
@@ -641,25 +641,29 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) =
           mk_all cIH' mf_list
      in
      let cIH' = mk_all cIH mf_list in
-     dprint (fun () -> "[gen_rec_calls'] Generate more possible rec. calls");
-     gen_rec_calls' cD cG cIH' (cG', j+1)
+     dprint
+       (fun _ ->
+         "[gen_rec_calls'] Generate more possible rec. calls");
+     gen_rec_calls' cD cG cIH' (cG', j+1) mfs
 
-let wf_rec_calls cD cG  =
-  if !enabled then
-    begin
-      dprint
-        (fun _ ->
-          "Generate recursive calls from " ^ "\n"
-          ^ "cD = " ^ P.mctxToString cD
-          ^ "\ncG = " ^ P.gctxToString cD cG);
-      let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) in
-      let cIH' = gen_rec_calls' cD cG cIH (cG, 0) in
-      Unify.resetGlobalCnstrs ();
-      (* dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n"); *)
-      cIH'
-    end
-  else
-    LF.Empty
+
+(** Computes the well-founded recursive calls for the given induction
+    order on the given contexts. If no induction order is specified,
+    then one is picked up through a global variable.
+    The given order must contain all the mutual-recursive functions in
+    a group.
+ *)
+let wf_rec_calls cD cG mfs =
+  print_str
+    (fun _ ->
+      "Generate recursive calls from " ^ "\n"
+      ^ "cD = " ^ P.mctxToString cD
+      ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");
+  let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) mfs in
+  let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
+  let _ = Unify.resetGlobalCnstrs () in
+  dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
+  cIH'
 
 (*  ------------------------------------------------------------------------ *)
 (* wkSub cPsi cPsi' = s
@@ -836,56 +840,47 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
     *)
   | Comp.M (_ , LF.CObj cPsi) ,
     LF.Dec (cIH, Comp.WfRec (f , (Comp.M (_, LF.CObj cPhi)) :: args, tau )) ->
-    let cIH' = filter cD cG cIH (loc, e2) in
-    let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
-    let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
-    (* let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
-                      "\n           EXPECTED " ^ P.dctxToString cD cPsi ^  "\n\n") in *)
-      if Whnf.convDCtx cPsi cPhi then
-      LF.Dec (cIH', Comp.WfRec (f, args, tau))
-      else
-      (match convDCtxMod cD cPhi cPsi with
+     let cIH' = filter cD cG cIH (loc, e2) in
+     let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
+     let cPhi = Whnf.cnormDCtx (cPhi, Whnf.m_id) in
+     (* let _ = print_string ("MetaCtx : FOUND " ^ P.dctxToString cD cPhi ^
+        "\n           EXPECTED " ^ P.dctxToString cD cPsi ^  "\n\n") in *)
+     if Whnf.convDCtx cPsi cPhi then
+       LF.Dec (cIH', Comp.WfRec (f, args, tau))
+     else
+       (match convDCtxMod cD cPhi cPsi with
         | Some s_proj ->  (*  cPsi |- s_proj : cPhi *)
-            let args' = shiftArgs args (cPsi, s_proj, cPhi) in
-            (* let tau' = shiftCompTyp tau (cPsi, s_proj, cPhi) in  *)
-            LF.Dec (cIH', Comp.WfRec (f, args', tau))
+           let args' = shiftArgs args (cPsi, s_proj, cPhi) in
+           (* let tau' = shiftCompTyp tau (cPsi, s_proj, cPhi) in  *)
+           LF.Dec (cIH', Comp.WfRec (f, args', tau))
         | None -> cIH'
-      )
+       )
 
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
-    let cIH' = filter cD cG cIH (loc, e2) in
-    if Whnf.convMetaObj cM' cM then
-      (  dprint  (fun () -> "IH and recursive call agree on : "
-                      ^ P.metaObjToString cD cM' ^ " == " ^
-                      P.metaObjToString cD cM ^ "\n");
-      LF.Dec (cIH', Comp.WfRec (f, args, tau)))
-      (* Note: tau' is understood as the approximate type *)
-    else
-      (dprint (fun () -> "IH and recursive call do NOT agree : "
-        ^ P.metaObjToString cD cM' ^ " == " ^
-          P.metaObjToString cD cM  ^ "\n");
-      cIH')
+     let cIH' = filter cD cG cIH (loc, e2) in
+     if Whnf.convMetaObj cM' cM then
+       (  dprint  (fun () -> "IH and recursive call agree on : "
+                             ^ P.metaObjToString cD cM' ^ " == " ^
+                               P.metaObjToString cD cM ^ "\n");
+          LF.Dec (cIH', Comp.WfRec (f, args, tau)))
+         (* Note: tau' is understood as the approximate type *)
+     else
+       (dprint (fun () -> "IH and recursive call do NOT agree : "
+                          ^ P.metaObjToString cD cM' ^ " == " ^
+                            P.metaObjToString cD cM  ^ "\n");
+        cIH')
 
   | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->
-    let cIH' = filter cD cG cIH (loc, e2) in
-    if x = y then
-      ((* print_string  ("IH and recursive call agree on : " ^
-                  (R.render_var cG x)
-                  ^ " == " ^ (R.render_var cG y)
-                  ^ "\n");*)
-      LF.Dec (cIH', Comp.WfRec (f, args, tau)))
-      (* Note: tau is the overall return type of ih type
-         and it is not the type of f args : tau *)
-    else
-      ((* print_string ("Given cG=" ^ P.gctxToString cD cG ^ "\n");
-      print_string  ("IH and recursive call DO NOT agree on : " ^
-                  (R.render_var cG x)
-                  ^ " =/= " ^ (R.render_var cG y)
-                  ^ "\n");*)
-      cIH')
+     let cIH' = filter cD cG cIH (loc, e2) in
+     if x = y then
+       LF.Dec (cIH', Comp.WfRec (f, args, tau))
+     (* Note: tau is the overall return type of ih type
+        and it is not the type of f args : tau *)
+     else
+       cIH'
   | _ , LF.Dec (cIH,Comp.WfRec (f , Comp.DC :: args, tau )) ->
-    let cIH' = filter cD cG cIH (loc, e2) in
-      LF.Dec (cIH', Comp.WfRec (f, args, tau))
+     let cIH' = filter cD cG cIH (loc, e2) in
+     LF.Dec (cIH', Comp.WfRec (f, args, tau))
 
   | _x, LF.Dec (cIH, _wf) ->
      filter cD cG cIH (loc, e2)

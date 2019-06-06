@@ -79,8 +79,29 @@ module Comp : sig
 
   exception Error of Syntax.Loc.t * error
 
-  val check       : LF.mctx -> gctx -> exp_chk -> tclo -> unit
-  val syn         : LF.mctx -> gctx -> exp_syn -> tclo
+  val check :
+    LF.mctx ->
+    gctx ->
+    Total.dec list option ->
+    (* ^ the group of mutual recursive functions the expression is being checked in *)
+    exp_chk ->
+    (* ^ The expression to check *)
+    tclo ->
+    (* ^ The type it should have *)
+    unit
+
+  val syn :
+    LF.mctx ->
+    gctx ->
+    Total.dec list option ->
+    (* ^ The group of mutual recursive functions the expression is being checked in *)
+    ?cIH: gctx ->
+    (* ^ The context of available induction hypotheses *)
+    exp_syn ->
+    (* ^ The expression whose type to synthesize *)
+    gctx option * tclo
+  (* ^ A possibly refined context of induction hypotheses and the synthesized type *)
+
   val checkKind   : LF.mctx -> kind                -> unit
   val checkTyp    : LF.mctx -> typ                  -> unit
   val wf_mctx     : LF.mctx -> unit

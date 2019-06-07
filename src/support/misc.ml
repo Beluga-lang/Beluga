@@ -75,6 +75,13 @@ module List = struct
     match l with
     | [] | [_] -> []
     | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
+
+  (** Decides if a list is empty. *)
+  let null = function
+    | [] -> true
+    | _ -> false
+
+  let nonempty l = not (null l)
 end
 
 let id (x : 'a) : 'a = x

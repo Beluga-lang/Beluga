@@ -63,7 +63,7 @@ let print_str f = dprint f
 exception Not_compatible
 exception CtxNot_compatible
 
-let enabled = ref true
+let enabled = ref false
 
 type rec_arg = M of Comp.meta_obj | V of Comp.exp_syn
 

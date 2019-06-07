@@ -153,12 +153,16 @@ let order_to_string order = match order with
     n: number of args
     tau: type of the recursive function
  *)
-let rec is_valid_args tau n = match tau, n with
-  | Comp.TypPiBox (_ , tau), 1
-    | Comp.TypArr   (_ , tau), 1 -> true
-  | Comp.TypPiBox (_ , tau), n
-    | Comp.TypArr   (_ , tau), n -> is_valid_args tau (n-1)
-  | _ -> false
+let is_valid_args tau n =
+  let rec go tau n =
+    match tau, n with
+    | Comp.TypPiBox (_ , tau), 1
+      | Comp.TypArr   (_ , tau), 1 -> true
+    | Comp.TypPiBox (_ , tau), n
+      | Comp.TypArr   (_ , tau), n -> go tau (n-1)
+    | _ -> false
+  in
+  n = 0 || go tau n
 
 let make_total_dec name typ order =
   { name; typ; order }

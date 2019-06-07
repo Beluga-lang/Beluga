@@ -773,6 +773,10 @@ let recSgnDecls decls =
              $ fun _ ->
                Total.lookup_dec f total_decs
                $ fun d ->
+                 dprintf
+                   (fun p ->
+                     p.fmt "[recsgn] found total dec for %s"
+                       (Id.render_name f));
                  Total.(d.order)
                  $> fun order ->
                     Order.list_of_order order

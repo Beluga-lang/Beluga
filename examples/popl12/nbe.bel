@@ -94,7 +94,7 @@ case t of
 
 
 rec reflect : (g:ctx) {A:[|- tp]}[g |- neut A[]] ->  Sem [g] [ |- A] =
-/ total a (reflect g a) /
+/ trust /
 mlam A => fn r => 
 case [ |- A] of
 | [ |- atomic P ] => Syn r
@@ -105,14 +105,14 @@ and extendSem : [g |- neut (arr A[] B[])] ->
                 ({h:ctx} Extends [g] [h] ->
                  Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
-/ total  (extendSem) /
+/ trust /
 fn r => mlam h => fn s => fn e =>
 let [h |- N ] = reify e in
 let [h |- R' ] = weak_neut s r in
   reflect [ |- _ ] [h |- rapp (R') N]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
-/ total a (reify g a) /
+/ trust /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>

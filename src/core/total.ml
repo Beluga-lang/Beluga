@@ -647,23 +647,26 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
      gen_rec_calls' cD cG cIH' (cG', j+1) mfs
 
 
-(** Computes the well-founded recursive calls for the given induction
-    order on the given contexts. If no induction order is specified,
-    then one is picked up through a global variable.
-    The given order must contain all the mutual-recursive functions in
-    a group.
+(** Computes the well-founded recursive calls for the given group of
+    mutual functions on the given contexts.
+    If the list of functions is empty, then an empty context is
+    computed.
  *)
 let wf_rec_calls cD cG mfs =
-  print_str
-    (fun _ ->
-      "Generate recursive calls from " ^ "\n"
-      ^ "cD = " ^ P.mctxToString cD
-      ^ "\ncG = " ^ P.gctxToString cD cG ^ "\n");
-  let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) mfs in
-  let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
-  let _ = Unify.resetGlobalCnstrs () in
-  dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
-  cIH'
+  match Misc.List.null mfs with
+  | true -> LF.Empty
+  | false ->
+     dprintf
+       (fun p ->
+         p.fmt
+           "Generate recursive calls from@.cD = %a@.cG = %a"
+           (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
+           (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG);
+     let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) mfs in
+     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
+     let _ = Unify.resetGlobalCnstrs () in
+     dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
+     cIH'
 
 (*  ------------------------------------------------------------------------ *)
 (* wkSub cPsi cPsi' = s

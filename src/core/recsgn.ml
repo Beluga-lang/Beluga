@@ -534,7 +534,7 @@ let recSgnDecls decls =
 	     storeLeftoverVars cQ loc;
        Monitor.timer
          ( "Function Check"
-         , fun _ -> Check.Comp.check cD  cG None i'' (tau', C.m_id));
+         , fun _ -> Check.Comp.check cD  cG [] i'' (tau', C.m_id));
 
 	     let v =
          if Holes.none () && is_empty cQ then
@@ -597,7 +597,7 @@ let recSgnDecls decls =
        Monitor.timer
          ( "Function Check"
          , fun _ ->
-           Check.Comp.check cD  cG None i'' (tau', C.m_id)
+           Check.Comp.check cD  cG [] i'' (tau', C.m_id)
          );
 
 	     let v =
@@ -795,7 +795,7 @@ let recSgnDecls decls =
          Monitor.timer
            ( "Function Check"
            , fun _ ->
-             Check.Comp.check cD cG (Some total_decs) e_r' (tau_ann, C.m_id)
+             Check.Comp.check cD cG total_decs e_r' (tau_ann, C.m_id)
            );
          (e_r' , tau')
        in

@@ -82,7 +82,7 @@ module Comp : sig
   val check :
     LF.mctx ->
     gctx ->
-    Total.dec list option ->
+    Total.dec list ->
     (* ^ the group of mutual recursive functions the expression is being checked in *)
     exp_chk ->
     (* ^ The expression to check *)
@@ -93,7 +93,7 @@ module Comp : sig
   val syn :
     LF.mctx ->
     gctx ->
-    Total.dec list option ->
+    Total.dec list ->
     (* ^ The group of mutual recursive functions the expression is being checked in *)
     ?cIH: gctx ->
     (* ^ The context of available induction hypotheses *)

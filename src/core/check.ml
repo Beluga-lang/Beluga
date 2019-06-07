@@ -561,7 +561,7 @@ module Comp = struct
    * otherwise exception Error is raised
    *)
 
-  let rec checkW cD (cG , cIH) (total_decs : Total.dec list option) e ttau = match (e, ttau) with
+  let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau = match (e, ttau) with
     | (Rec (loc, f, e), (tau, t)) ->
        check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t), false)), (Total.shift cIH)) total_decs e ttau;
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Rec" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e)
@@ -611,7 +611,7 @@ module Comp = struct
        end
     | (Case (loc, prag, (Ann (Box (_, (l,cM)), (TypBox (_, mT) as tau0_sc)) as i), branches), (tau, t)) ->
        let decide_ind x =
-         if Maybe.is_some total_decs && is_indMObj cD x
+         if Misc.List.nonempty total_decs && is_indMObj cD x
          then
            let _ =
              dprintf
@@ -681,7 +681,7 @@ module Comp = struct
          checkBranches total_pragma cD (cG,cIH) total_decs (i, branches) tau_s (tau,t);
          Coverage.process problem None
        in
-       if Maybe.is_some total_decs then
+       if Misc.List.nonempty total_decs then
          (match i with
           | Var (_, x)  ->
              let (f,tau', wf_tag) = lookup cG x in
@@ -729,7 +729,7 @@ module Comp = struct
        in
        ()
 
-  and check cD (cG, cIH) (total_decs : Total.dec list option) e (tau, t) =
+  and check cD (cG, cIH) (total_decs : Total.dec list) e (tau, t) =
     dprint
       (fun _ ->
         "[check]  " ^ P.expChkToString cD cG e ^ " against \n    "
@@ -754,7 +754,7 @@ module Comp = struct
        let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with
          | TypInd tau -> tau
          | _ -> tau' in
-       if Maybe.(total_decs $ Total.lookup_dec f |> is_some) then
+       if Total.lookup_dec f total_decs |> Maybe.is_some then
          let _ =
            dprintf
              (fun p ->
@@ -792,7 +792,7 @@ module Comp = struct
 
     | Const (loc,prog) ->
        (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))  ("Const" ^ " " ^ Pretty.Int.DefaultPrinter.expSynToString cD cG e);
-        if Maybe.is_some total_decs then
+        if Misc.List.nonempty total_decs then
           if (Comp.get prog).Comp.total then
             (None,(Comp.get prog).Comp.typ, C.m_id)
           else
@@ -972,30 +972,12 @@ module Comp = struct
            (* ^ cD is the outer meta-context; cD1' is the refined
               meta-context + induction marks;
               t1 is the refinement substitution that relates cD to cD1'.
-              It's not clear what id_map_ind does.
             *)
-           , match total_decs with
-             | None ->
-                dprintf
-                  (fun p ->
-                    p.fmt "[checkBranch] no total decs in split on meta-object %a"
-                      (P.fmt_ppr_meta_obj cD1' Pretty.std_lvl) mO);
-                I.Empty
-             | Some decs ->
-                dprintf
-                  (fun p ->
-                    p.fmt "[checkBranch] found total decs in split on meta-object %a"
-                      (P.fmt_ppr_meta_obj cD1' Pretty.std_lvl) mO);
-                Total.wf_rec_calls cD1' I.Empty decs
+           , Total.wf_rec_calls cD1' I.Empty total_decs
            )
          else (cD1', I.Empty)
        in
-       let cIH0' =
-         Maybe.eliminate
-           (fun _ -> I.Empty)
-           (Total.wf_rec_calls cD1' cG')
-           total_decs
-       in
+       let cIH0' = Total.wf_rec_calls cD1' cG' total_decs in
        LF.checkMSub loc cD1' t1 cD;
        LF.checkMetaObj cD1' mO (mT1, C.m_id);
        check cD1' (cG', Context.append cIH (Context.append cIH0' cIH')) total_decs e1 (tau', Whnf.m_id)
@@ -1024,28 +1006,11 @@ module Comp = struct
            let cD1' = mvars_in_patt cD1' pat in
            ( cD1'
            , cG1'
-           , match total_decs with
-             | None ->
-                dprintf
-                  (fun p ->
-                    p.fmt "[checkBranch] no total decs for general pattern %a"
-                      (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat);
-                I.Empty
-             | Some decs ->
-                dprintf
-                  (fun p ->
-                    p.fmt "[checkBranch] found total decs for general pattern %a"
-                      (P.fmt_ppr_pat_obj cD cG Pretty.std_lvl) pat);
-                Total.wf_rec_calls cD1' cG1' decs
+           , Total.wf_rec_calls cD1' cG1' total_decs
            )
          else (cD1', cG1, I.Empty)
        in
-       let cIH0' =
-         Maybe.eliminate
-           (fun _ -> I.Empty)
-           (fun mfs -> Total.shiftIH (Total.wf_rec_calls cD1' cG' mfs) k)
-           total_decs
-       in
+       let cIH0' = Total.shiftIH (Total.wf_rec_calls cD1' cG' total_decs) k in
        dprint
          (fun _ ->
            match cIH0' with
@@ -1058,9 +1023,9 @@ module Comp = struct
               ^ "\n");
 
        let cD1' =
-         if Maybe.is_some total_decs
-         then id_map_ind cD1' t1 cD
-         else cD1'
+         if Misc.List.null total_decs
+         then cD1'
+         else id_map_ind cD1' t1 cD
        in
 
        LF.checkMSub loc  cD1' t1 cD;
@@ -1088,11 +1053,11 @@ module Comp = struct
        (wf_mctx cD ; checkCDecl cD cdecl)
 
 
-  let syn cD cG (total_decs : Total.dec list option) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
+  let syn cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in
     cIH, (tau, ms)
 
-  let check cD cG (total_decs : Total.dec list option) e ttau =
+  let check cD cG (total_decs : Total.dec list) e ttau =
     let cIH = Syntax.Int.LF.Empty in
     check cD (cG,cIH) total_decs e ttau
 

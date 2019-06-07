@@ -404,7 +404,7 @@ let fill =
                        ) = hi
                    in
                    let exp = Interactive.elaborate_exp cD cG exp tclo in
-                   Check.Comp.check cD cG None exp tclo; (* checks that exp fits the hole *)
+                   Check.Comp.check cD cG [] exp tclo; (* checks that exp fits the hole *)
                    Interactive.replace_hole hi exp))
           end
         with

@@ -1,15 +1,11 @@
 module Comp = Syntax.Ext.Comp
+module I = Syntax.Int.Comp
 
-type order =	       	                (* Orders                     *)
-    Arg of int			(* O ::= x                    *)
-  | Lex of order list                 (*     | {O1 .. On}           *)
-  | Simul of order list               (*     | [O1 .. On]           *)
-
-let rec of_numeric_order (o : Comp.numeric_order) : order =
+let rec of_numeric_order (o : Comp.numeric_order) : I.order =
   match o with
-  | Comp.Arg n -> Arg n
-  | Comp.Lex xs -> Lex (List.map of_numeric_order xs)
-  | Comp.Simul xs -> Simul (List.map of_numeric_order xs)
+  | Comp.Arg n -> I.Arg n
+  | Comp.Lex xs -> I.Lex (List.map of_numeric_order xs)
+  | Comp.Simul xs -> I.Simul (List.map of_numeric_order xs)
 
 
 (* Mutual dependencies in call patterns:                            *)
@@ -26,16 +22,16 @@ type mutual =		                (* Mutual dependencies        *)
   | LT of Id.cid_prog * mutual	(*     |  > (a) C             *)
 
 type dec =                           (* Termination declaration    *)
-    Dec of order * mutual            (* Dec ::= (O, C)            *)
+    Dec of I.order * mutual            (* Dec ::= (O, C)            *)
 
 (** Converts the order to a list of argument positions
     If the order is too complicated, returns None.
  *)
-let list_of_order : order -> int list option = function
-  | Arg x -> Some [x]
-  | Lex xs ->
+let list_of_order : I.order -> int list option = function
+  | I.Arg x -> Some [x]
+  | I.Lex xs ->
      let f = function
-       | Arg x -> Some x
+       | I.Arg x -> Some x
        | _ -> None (* We don't support nested lexicographic orders. *)
      in
      Maybe.traverse f xs

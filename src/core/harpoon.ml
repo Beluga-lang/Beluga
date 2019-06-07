@@ -253,12 +253,12 @@ module Prover = struct
      *)
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
     ; theorem_name : Id.name
-    ; order : Order.order
+    ; order : Comp.order
     }
 
   let make_prover_state
         (name : Id.name)
-        (order : Order.order)
+        (order : Comp.order)
         (s : unit Comp.proof_state)
       : interpreter_state =
     { initial_state = s
@@ -462,7 +462,7 @@ module Prover = struct
         (ppf : Format.formatter) (* The formatter used to display messages *)
         (name : Id.name) (* The name of the theorem to prove *)
         (stmt : Comp.tclo) (* The statement of the theorem *)
-        (order : Order.order) (* The induction order of the theorem *)
+        (order : Comp.order) (* The induction order of the theorem *)
       : unit =
     Comp.make_proof_state stmt
     |> make_prover_state name order

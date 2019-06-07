@@ -142,12 +142,12 @@ let rec struct_smaller _i patt = match patt with
 type dec =
   { name : Id.name
   ; typ  : Comp.typ
-  ; order: Order.order option
+  ; order: Comp.order option
   }
 
 let order_to_string order = match order with
   | None -> " _ "
-  | Some (Order.Arg x) -> string_of_int x
+  | Some (Comp.Arg x) -> string_of_int x
 
 (** Determine whether the arguments given in a totality declaration are valid.
     n: number of args
@@ -256,10 +256,10 @@ let get_order (mfs : dec list) =
     (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
         " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
     match dec.order with
-    | Some (Order.Arg x) ->
+    | Some (Comp.Arg x) ->
        (dec.name, Some [x], (tau, Whnf.m_id))
-    | Some (Order.Lex xs) ->
-       let xs = List.map (function (Order.Arg x) -> x) xs in
+    | Some (Comp.Lex xs) ->
+       let xs = List.map (function (Comp.Arg x) -> x) xs in
        dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
        (dec.name, Some xs, (tau, Whnf.m_id))
     | None -> (dec.name, None, (tau, Whnf.m_id))

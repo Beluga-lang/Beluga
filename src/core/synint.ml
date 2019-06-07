@@ -415,6 +415,12 @@ module Comp = struct
 
   type tclo = typ * LF.msub
 
+  type order =	       	              (* Induction Orders           *)
+    Arg of int			(* O ::= x                    *)
+  | Lex of order list                 (*     | {O1 .. On}           *)
+  | Simul of order list               (*     | [O1 .. On]           *)
+
+
   let itermToClObj = function
     | LF.INorm n -> LF.MObj n
     | LF.IHead h -> LF.PObj h

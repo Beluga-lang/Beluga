@@ -5,26 +5,24 @@ module Comp = Syntax.Int.Comp
 
 module P = Pretty.Int.DefaultPrinter
 
-let dprint, _ = Debug.makeFunctions (Debug.toFlags [11])
+let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 
 (** Gives a more convenient way of writing complex proofs by using list syntax. *)
 let prepend_commands (cmds : Comp.command list) (proof : 'a Comp.proof)
     : 'a Comp.proof =
   List.fold_right Comp.proof_cons cmds proof
 
-(** Decides whether something we're splitting on is inductive.
-    Either:
-    * it's a computational variable whose type is TypInd or with a WF
-      flag
-    * or it's a metavariable such that when you look it up in the
-      context cD it's marked Inductive.
+(** Decides whether a data object is something we're doing induction
+    on, i.e. it's a computational variable whose type is TypInd or
+    with a WF flag
 
     This is similar to the logic used in check.ml to determine the
     kind of a branch: [Ind]DataObj or [Ind]IndexObj.
  *)
-let is_inductive (cG : Comp.gctx) (cD : LF.mctx) (m : Comp.exp_syn) : bool =
-  let open Comp in
+let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp_syn) : bool =
   let open Id in
+  let open Comp in
   let is_inductive_comp_variable (k : offset) : bool =
     Context.lookup' cG k
     |> Maybe.get' (Failure "Computational variable out of bounds")
@@ -34,14 +32,32 @@ let is_inductive (cG : Comp.gctx) (cD : LF.mctx) (m : Comp.exp_syn) : bool =
       | CTypDecl (u, TypInd _, _) -> true
       | _ -> false
   in
+  let open Maybe in
+  variable_of_exp m
+  $> is_inductive_comp_variable
+  $ of_bool
+  |> is_some
+
+  (*
+(** Decides whether an index object is something we're doing
+    induction on, i.e. it's a metavariable with the Inductive flag set
+    when we look it up in the meta-context.
+ *)
+let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
+  let open Id in
+  let open LF in
   let is_inductive_meta_variable (k : offset) : bool =
     Context.lookup_dep cD k
     |> Maybe.get' (Failure "Metavariable out of bounds or missing type")
     |> fun (_, dep) -> dep = LF.Inductive
   in
   let open Maybe in
-  variable_of_exp m $> is_inductive_comp_variable $ of_bool |> is_some
-  || metavariable_of_exp m $> fst $> is_inductive_meta_variable $ of_bool |> is_some
+  variable_of_mfront mf
+  $> fst
+  $> is_inductive_meta_variable
+  $ of_bool
+  |> is_some
+   *)
 
 
 (** All the high-level proof tactics.
@@ -127,14 +143,15 @@ module Tactic = struct
     Comp.intros context (Comp.incomplete_proof new_state)
     |> solve' s
 
-  let split (m : Comp.exp_syn) (tau : Comp.typ) : t =
+  let meta_split (m : Comp.exp_syn) (tau : Comp.meta_typ) mfs : t =
     let open Comp in
     fun s callback ->
     (* Compute the coverage goals for the type to split on *)
-    dprint
-      (fun _ ->
-        "[harpoon-split] splitting on "
-        ^ P.expSynToString s.context.cD s.context.cG m);
+    dprintf
+      (fun p ->
+        p.fmt
+          "[harpoon-split] meta-split on %a"
+          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m);
     let cgs =
       Coverage.genPatCGoals
         s.context.cD
@@ -142,7 +159,7 @@ module Tactic = struct
         (* We need to strip off the inductivity annotations as the
            coverage checker generally pretends they don't exist
          *)
-        (Total.strip tau)
+        (TypBox (Syntax.Loc.ghost, tau))
         []
     in
     (* We will map f over the coverage goals that were generated.
@@ -166,6 +183,11 @@ module Tactic = struct
          match p with
          | PatMetaObj (_, patt) ->
             let open Comp in
+            let c =
+              head_of_meta_obj patt
+              |> Maybe.get
+              |> Pair.lmap Context.hatToDCtx
+            in
             let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
             let cG = refine_ctx s.context.cG in
             let cIH = refine_ctx s.context.cIH in
@@ -173,12 +195,12 @@ module Tactic = struct
               (fun _ ->
                 "[harpoon-split] got pattern " ^ P.patternToString cD cG p);
             let (cD, cIH') =
-              if is_inductive cG cD m && Total.struct_smaller p
+              if is_comp_inductive cG m && Total.struct_smaller p
               then
                 (* mark subterms in the context as inductive *)
                 let cD1 = Check.Comp.mvars_in_patt cD p in
                 (* Compute the well-founded recursive calls *)
-                let cIH = Total.wf_rec_calls cD1 LF.Empty (Misc.not_implemented "mfs") in
+                let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
                 dprint
                   (fun _ ->
                     "[harpoon-split] computed WF rec calls "
@@ -189,7 +211,7 @@ module Tactic = struct
                 (cD, LF.Empty)
             in
             let cD = Check.Comp.id_map_ind cD ms s.context.cD in
-            let cIH0 = Total.wf_rec_calls cD cG (Misc.not_implemented "mfs") in
+            let cIH0 = Total.wf_rec_calls cD cG mfs in
 
             let h =
               { cD
@@ -211,13 +233,13 @@ module Tactic = struct
               }
             in
             callback new_state;
-            split_branch h (incomplete_proof new_state)
+            meta_branch c h (incomplete_proof new_state)
     in
     let bs = List.map f cgs in
     (* Assemble the split branches computed in `bs` into the Harpoon
        Split syntax.
      *)
-    Comp.split m tau bs
+    Comp.meta_split m tau bs
     |> solve' s
 
   let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
@@ -294,6 +316,13 @@ module Prover = struct
     in
     let open Comp in
     let { cD; cG; cIH } = g.context in
+    let mfs =
+      [ Total.make_total_dec
+          s.theorem_name
+          (Whnf.cnormCTyp s.initial_state.goal)
+          (Some s.order)
+      ]
+    in
     match cmd with
     (* Administrative commands: *)
     | Command.ShowProof ->
@@ -333,12 +362,14 @@ module Prover = struct
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
        in
-       (*
-       Format.fprintf ppf "@[Elaborated term:@;%a : %a@,"
-         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m
-         (P.fmt_ppr_cmp_typ g.context.cD Pretty.std_lvl) tau;
-        *)
-       Tactic.split m tau g add_subgoal;
+       (* Now to decide whether we're splitting on an index object or
+          a data object. *)
+       begin
+         match tau with
+         | TypInd (TypBox (_, m_typ)) | TypBox (_, m_typ) ->
+            Tactic.meta_split m m_typ mfs g add_subgoal;
+         | _ -> failwith "wtf"
+       end;
        remove_current_subgoal ()
     | Command.UseIH (t, name (* , typ *)) ->
        let cG' =
@@ -379,14 +410,14 @@ module Prover = struct
        (* This will verify that the IH is well-founded
           (Ignoring thepresence of bugs)
         *)
-       let _ = Check.Comp.syn cD cG' (Misc.not_implemented "mfs") m in
+       let _ = Check.Comp.syn cD cG' mfs m in
        Tactic.useIH m tau name g add_subgoal;
        remove_current_subgoal ()
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
        try
-         Check.Comp.check cD cG (Misc.not_implemented "mfs") m g.goal;
+         Check.Comp.check cD cG mfs m g.goal;
          Comp.solve m
          |> Tactic.solve' g;
          remove_current_subgoal ()

@@ -221,12 +221,6 @@ module Int = struct
 
     let pinst_hashtbl : string PInstHashtbl.t = PInstHashtbl.create 0
 
-    let rec phatToDCtx phat = match phat with
-      | (None,      0) -> LF.Null
-      | (Some psi , 0) -> LF.CtxVar psi
-      | (ctx_v    , k) ->
-         LF.DDec (phatToDCtx (ctx_v, k-1), LF.TypDeclOpt (Id.mk_name Id.NoName))
-
     (* Fresh name generation *)
 
     let rec get_names_dctx : LF.dctx -> Id.name list = function
@@ -617,7 +611,7 @@ module Int = struct
             fprintf ppf "%a"
               (fmt_ppr_lf_dctx cD 0) cPsi
       | LF.ClObj (phat, tM) ->
-          let cPsi = phatToDCtx phat in
+          let cPsi = Context.hatToDCtx phat in
             fprintf ppf "%a |- %a"
                (fmt_ppr_lf_psi_hat cD 0) cPsi
               (fmt_ppr_lf_clobj cD 0 cPsi) tM
@@ -1486,13 +1480,15 @@ module Int = struct
       let open Comp in
       function
       | { context; goal; solution } ->
+         fprintf ppf "@[<v>";
          Context.iter (Whnf.normMCtx context.cD)
-           (fun cD v -> fprintf ppf "%a@." (fmt_ppr_lf_ctyp_decl cD std_lvl) v );
+           (fun cD v -> fprintf ppf "%a@," (fmt_ppr_lf_ctyp_decl cD std_lvl) v );
          Context.iter' (Whnf.normCtx context.cG)
-           (fun v -> fprintf ppf "%a@." (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
+           (fun v -> fprintf ppf "%a@," (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
+         fprintf ppf "@]";
          for _ = 1 to 80 do fprintf ppf "-" done;
          let goal = Whnf.cnormCTyp goal in
-         fprintf ppf "@.";
+         fprintf ppf "@,";
          fmt_ppr_cmp_typ context.cD std_lvl ppf goal
 
     and fmt_ppr_cmp_proof cD cG ppf =
@@ -1505,7 +1501,7 @@ module Int = struct
            | Some proof -> fmt_ppr_cmp_proof cD cG ppf proof
          end
       | Command ( stmt, proof ) ->
-         fprintf ppf "%a;@.%a"
+         fprintf ppf "%a;@,%a"
            (fmt_ppr_cmp_command cD cG) stmt
            (fmt_ppr_cmp_proof cD cG) proof
       | Directive d ->
@@ -1517,46 +1513,53 @@ module Int = struct
       | By -> Misc.not_implemented "command By"
       | IH (t, name) ->
          fprintf ppf
-           "IH (%a) as %s"
+           "IH: (%a) as %s"
            (fmt_ppr_cmp_exp_syn cD cG std_lvl) t
            (Id.render_name name)
-      (*
+
+    and fmt_ppr_cmp_split_branch
+        : 'b. (Format.formatter -> 'b -> unit) -> Format.formatter ->
+          (unit, 'b) Comp.split_branch ->
+          unit =
+      fun f ppf ->
+      let open Comp in
       function
-      | Directive d -> fmt_ppr_cmp_directive cD cG ppf d
-      | Claim (name, cD, term, ts) ->
-         let t = Whnf.cnormCTyp ts in
-         fprintf ppf "%a%a%a"
-           (Maybe.print
-              (fun ppf x ->
-                fprintf ppf "%s = " (Id.string_of_name x)))
-           name
-           (Maybe.print
-              (fun ppf x ->
-                fprintf ppf "%a : "
-                  (fmt_ppr_cmp_exp_chk cD cG std_lvl) x))
-           term
-           (fmt_ppr_cmp_typ cD std_lvl)
-           t
-       *)
+      | SplitBranch (c, h) ->
+         fprintf ppf "@[<v>Case %a:@,%a@]@,"
+           f c
+           fmt_ppr_cmp_hypothetical h
 
     and fmt_ppr_cmp_directive cD cG ppf : unit Comp.directive -> unit =
       let open Comp in
       function
       | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
       | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
-      | Split (m, _, bs) ->
-         fprintf ppf "--split (%a)@.@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
+      | CompSplit (t, _, bs) ->
+         fprintf ppf "--comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) t;
          List.iter
-           (fun (SplitBranch h) -> fprintf ppf "%a@." fmt_ppr_cmp_hypothetical h)
+           (fmt_ppr_cmp_split_branch
+              (fun ppf x ->
+                fprintf ppf "%s" (Id.render_name x))
+              ppf)
            bs;
          fprintf ppf "@]"
-      | Solve t -> Misc.not_implemented "solve"
+      | MetaSplit (m, _, bs) ->
+         fprintf ppf "--meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
+         List.iter
+           (fmt_ppr_cmp_split_branch
+              (fun ppf (cPsi, h) ->
+                fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi std_lvl) h)
+              ppf)
+           bs;
+         fprintf ppf "@]"
+      | Solve t ->
+         fprintf ppf "--solve (%a)" (fmt_ppr_cmp_exp_chk cD cG std_lvl) t;
 
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in
       function
       | Hypothetical ({cD; cG; cIH = _} as h, proof) ->
-         fprintf ppf "@[<v>{ %a@,  @[<v>%a@]@,}@]"
+         fprintf ppf "@[<v>{ %a @[<v 2>%a@]@,}@]"
            fmt_ppr_cmp_hypotheses h
            (fmt_ppr_cmp_proof cD cG) proof;
 
@@ -1570,19 +1573,22 @@ module Int = struct
             since a user wouldn't ever write them.
           *)
 
-         let comma ppf () = fprintf ppf ", " in
+         let comma ppf () = fprintf ppf ",@ " in
+
+         fprintf ppf "@[<hv>";
          pp_print_list
            ~pp_sep: comma
            (fun ppf (cD, x) -> fmt_ppr_lf_ctyp_decl cD std_lvl ppf x)
            ppf cDs;
+         fprintf ppf "@]";
 
-         fprintf ppf "@,| @[<h 2>";
+         fprintf ppf "@,| @[<hv>";
 
          pp_print_list
            ~pp_sep: comma
            (fun ppf x -> fmt_ppr_cmp_ctyp_decl cD std_lvl ppf x)
            ppf cG';
-         fprintf ppf ";@]"
+         fprintf ppf "@]@,;"
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
       | (LF.MShift k, _ ) ->

@@ -963,7 +963,7 @@ module Comp = struct
        let t''   = Whnf.mcomp t t1 in
        let tau'  = Whnf.cnormCTyp (tau, t'') in
        let (cD1',cIH')  =
-         if is_inductive caseTyp && Total.struct_smaller i (PatMetaObj (loc', mO))
+         if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO))
          then
            (* marks in the context as inductive all mvars appearing in
               the pattern *)
@@ -1000,7 +1000,7 @@ module Comp = struct
        let k     = Context.length cG1 in
        let cIH0  = Total.shiftIH cIH k in
        let (cD1', cG1', cIH') =
-         if is_inductive caseTyp && Total.struct_smaller i pat
+         if is_inductive caseTyp && Total.struct_smaller pat
          then
            let cG1' = Total.mark_gctx cG1 in
            let cD1' = mvars_in_patt cD1' pat in

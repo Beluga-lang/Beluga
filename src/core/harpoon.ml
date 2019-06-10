@@ -173,7 +173,7 @@ module Tactic = struct
               (fun _ ->
                 "[harpoon-split] got pattern " ^ P.patternToString cD cG p);
             let (cD, cIH') =
-              if is_inductive cG cD m && Total.struct_smaller m p
+              if is_inductive cG cD m && Total.struct_smaller p
               then
                 (* mark subterms in the context as inductive *)
                 let cD1 = Check.Comp.mvars_in_patt cD p in

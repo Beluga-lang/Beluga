@@ -128,15 +128,15 @@ let rec mark_gctx cG = match cG with
   | LF.Dec(cG, Comp.CTypDecl (x,tau, _ )) ->
      LF.Dec (mark_gctx cG, Comp.CTypDecl (x,tau, true))
 
-let rec struct_smaller _i patt = match patt with
+let rec struct_smaller patt = match patt with
   | Comp.PatMetaObj (loc', (_,mO)) ->
      smaller_meta_obj mO
   | Comp.PatConst (_, _, _ ) -> true
   | Comp.PatVar (_, _ ) -> false
   | Comp.PatPair (_, pat1, pat2 ) ->
      (* This is quite naive - possibly one of them being smaller is enough *)
-     struct_smaller _i pat1 && struct_smaller _i pat2
-  | Comp.PatAnn (_, pat, _) -> struct_smaller _i pat
+     struct_smaller pat1 && struct_smaller pat2
+  | Comp.PatAnn (_, pat, _) -> struct_smaller pat
   | _ -> false
 
 type dec =

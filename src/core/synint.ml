@@ -420,6 +420,16 @@ module Comp = struct
   | Lex of order list                 (*     | {O1 .. On}           *)
   | Simul of order list               (*     | [O1 .. On]           *)
 
+  let is_meta_obj : exp_syn -> meta_obj option =
+    function
+    | Ann (Box (_, m), _) -> Some m
+    | _ -> None
+
+  let head_of_meta_obj : meta_obj -> (LF.psi_hat * LF.head) option =
+    let open LF in
+    function
+    | (_, ClObj (phat, MObj (Root (_, h, _)))) -> Some (phat, h)
+    | _ -> None
 
   let itermToClObj = function
     | LF.INorm n -> LF.MObj n
@@ -465,16 +475,23 @@ module Comp = struct
     | InductionHypothesis (* Invocation of the IH *)
       of exp_chk list (* the terms to invoke the IH with *)
          * name (* name the result of the IH *)
-    | Split (* Splitting on an LF object *)
+    | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
-         * typ (* The type of the object that we're splitting on *)
-         * 'a split_branch list
+         * LF.ctyp (* The type of the object that we're splitting on *)
+         * 'a meta_branch list
+    | CompSplit (* Splitting on an inductive type *)
+      of exp_syn (* THe computational term to split on *)
+         * typ (* The type of the object to split on *)
+         * 'a comp_branch list
+
+  and 'a meta_branch = ('a, LF.dctx * LF.head) split_branch
+  and 'a comp_branch = ('a, name) split_branch
 
   (** A branch of a case analysis. *)
-  and 'a split_branch =
+  and ('a, 'b) split_branch =
     | SplitBranch
-      of (* LF.msub (* refinement substitution for the branch *) * *)
-           'a hypothetical (* the derivation for this case *)
+      of 'b (* the name of the constructor for this split *)
+         * 'a hypothetical (* the derivation for this case *)
 
  (** A hypothetical derivation lists meta-hypotheses and
      hypotheses, then proceeds with a proof.
@@ -504,11 +521,21 @@ module Comp = struct
   let solve (t : exp_chk) : 'a proof =
     Directive (Solve t)
 
-  let split (m : exp_syn) (tau : typ) (bs : 'a split_branch list) : 'a proof =
-    Directive (Split (m, tau, bs))
+  let meta_split (m : exp_syn) (a : LF.ctyp) (bs : 'a meta_branch list)
+      : 'a proof =
+    Directive (MetaSplit (m, a, bs))
 
-  let split_branch (h : hypotheses) (d : 'a proof) : 'a split_branch =
-    SplitBranch (Hypothetical (h, d))
+  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : 'a proof)
+      : 'a meta_branch =
+    SplitBranch (c, (Hypothetical (h, d)))
+
+  let comp_split (t : exp_syn) (tau : typ) (bs : 'a comp_branch list)
+      : 'a proof =
+    Directive (CompSplit (t, tau, bs))
+
+  let comp_branch (c : name) (h : hypotheses) (d : 'a proof)
+      : 'a comp_branch =
+    SplitBranch (c, (Hypothetical (h, d)))
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with

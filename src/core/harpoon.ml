@@ -404,17 +404,14 @@ module Prover = struct
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG' t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
        in
-       dprint
-         (fun _ ->
-           "[harpoon-UseIH] elaborated IH: "
-           ^ P.expSynToString cD cG' m
-           ^ " : "
-           ^ P.compTypToString cD tau
-           ^ " in cIH = " ^ P.gctxToString cD cIH);
-       (* This will verify that the IH is well-founded
-          (Ignoring thepresence of bugs)
-        *)
-       let _ = Check.Comp.syn cD cG' mfs m in
+       dprintf
+         (fun p ->
+           p.fmt
+             "@[<v 2>[harpoon-UseIH] elaborated IH:@,%a@ : %a@,in cIH = @[<v>%a@]"
+             (P.fmt_ppr_cmp_exp_syn cD cG' Pretty.std_lvl) m
+             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
+             (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cIH);
+       let _ = Check.Comp.syn cD cG' ~cIH: cIH mfs m in
        Tactic.useIH m tau name g add_subgoal;
        remove_current_subgoal ()
 

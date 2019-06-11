@@ -968,7 +968,7 @@ module Comp = struct
            (* marks in the context as inductive all mvars appearing in
               the pattern *)
            let cD1' = mvars_in_patt cD1' (PatMetaObj(loc', mO)) in
-           ( id_map_ind cD1' t1 cD
+           ( cD1'
            (* ^ cD is the outer meta-context; cD1' is the refined
               meta-context + induction marks;
               t1 is the refinement substitution that relates cD to cD1'.
@@ -977,6 +977,7 @@ module Comp = struct
            )
          else (cD1', I.Empty)
        in
+       let cD1' = id_map_ind cD1' t1 cD in
        let cIH0' = Total.wf_rec_calls cD1' cG' total_decs in
        LF.checkMSub loc cD1' t1 cD;
        LF.checkMetaObj cD1' mO (mT1, C.m_id);

@@ -317,9 +317,13 @@ module Prover = struct
     let open Comp in
     let { cD; cG; cIH } = g.context in
     let mfs =
+      (* this should probably directly be a part of interpreter_state,
+         or perhaps a part of a larger state for the collection of
+         mutually inductive theorems being defined.
+       *)
       [ Total.make_total_dec
           s.theorem_name
-          (Whnf.cnormCTyp s.initial_state.goal)
+          (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
           (Some s.order)
       ]
     in

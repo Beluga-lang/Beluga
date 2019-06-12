@@ -1645,7 +1645,7 @@ module Int = struct
            (fmt_ppr_cmp_typ cD lvl) typ
 
       | Comp.CTypDeclOpt x ->
-         raise (Invalid_argument "CTypDeclOpt is unrepresentable")
+         fprintf ppf "%s : _" (Id.render_name x)
 
     and fmt_ppr_cmp_gctx cD lvl ppf = function
       | LF.Empty ->

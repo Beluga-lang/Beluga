@@ -873,25 +873,28 @@ module Int = struct
             (fmt_ppr_lf_dctx cD 0) cPsi
             (Id.render_name x)
 
-    and fmt_ppr_lf_mctx lvl ppf = function
-      | LF.Empty ->
+    and fmt_ppr_lf_mctx lvl ppf cD =
+      (* Compute the list of declarations to print *)
+      let ds =
+        let should_print = function
+          | (_, LF.Decl (_, _, dep)) ->
+             not !Control.printNormal && (!Control.printImplicit || not (isImplicit dep))
+          | _ -> true
+        in
+        Context.to_sublist_rev cD
+        |> Misc.List.filter_rev should_print
+      in
+      match ds with
+      | [] ->
           fprintf ppf "."
-
-      | LF.Dec (cD, ctyp_decl) ->
-        (match ctyp_decl with
-           | LF.Decl (_, _, dep) ->
-             if ((not !Control.printImplicit) && (isImplicit dep)||
-                   (!Control.printNormal)) then
-               fprintf ppf "%a" (fmt_ppr_lf_mctx 0) cD
-             else
-               fprintf ppf "%a, %a"
-                 (fmt_ppr_lf_mctx 0) cD
-                 (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
-           | _ ->
-             fprintf ppf "%a, %a"
-                 (fmt_ppr_lf_mctx 0) cD
-                 (fmt_ppr_lf_ctyp_decl cD lvl) ctyp_decl
-        )
+      | _ ->
+         let comma ppf () = fprintf ppf ",@ " in
+         fprintf ppf "@[";
+         pp_print_list ~pp_sep: comma
+           (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d)
+           ppf
+           ds;
+         fprintf ppf "@]"
 (*    and frugal_lf_octx lvl ppf = function
       | LF.Empty -> ()
       | other -> fprintf ppf "@[%a@]@ " (fmt_ppr_lf_octx lvl) other
@@ -1647,14 +1650,13 @@ module Int = struct
       | Comp.CTypDeclOpt x ->
          fprintf ppf "%s : _" (Id.render_name x)
 
-    and fmt_ppr_cmp_gctx cD lvl ppf = function
-      | LF.Empty ->
-          fprintf ppf "."
-
-      | LF.Dec (cG, d) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_cmp_gctx cD 0) cG
-            (fmt_ppr_cmp_ctyp_decl cD 0) d
+    and fmt_ppr_cmp_gctx cD lvl ppf cG =
+      match cG with
+      | LF.Empty -> fprintf ppf "."
+      | _ ->
+         let ds = Context.to_list cG in
+         let comma ppf () = fprintf ppf ",@ " in
+         pp_print_list ~pp_sep: comma (fmt_ppr_cmp_ctyp_decl cD 0) ppf ds
 
     let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
       fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"

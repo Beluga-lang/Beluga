@@ -87,7 +87,6 @@ let process_option arg rest = match arg with
       | _ -> bailout "-cssfile requires an argument"
       end
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
-  | "+locs"       -> Locs.gen_loc_info := true; rest
   | "-I" -> begin
       try Beli.run rest
       with Beli.Invalid_Arg -> usage () end
@@ -113,7 +112,7 @@ let main () =
     let per_file file_name =
       let abort_session () = raise SessionFatal in
       try
-        let sgn = Parser.parse_file ~name:file_name Parser.sgn in
+        let sgn = Misc.not_implemented "parser" (* Parser.parse_file ~name:file_name Parser.sgn *) in
         (* If the file starts with a global pragma then process it now. *)
         let sgn = Recsgn.apply_global_pragmas sgn in
         if !externall then begin
@@ -169,9 +168,6 @@ let main () =
           end ;
           if !Typeinfo.generate_annotations then
             Typeinfo.print_annot file_name;
-          if !Locs.gen_loc_info then begin
-            List.iter Loctesting.store_locs sgn;
-            Locs.print_loc_info file_name end;
           print_newline();
           if !Monitor.on || !Monitor.onf then
             Monitor.print_timer () ;

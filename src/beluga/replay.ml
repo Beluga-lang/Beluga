@@ -68,7 +68,7 @@ module TranscriptParser = struct
       ( trying bol_sigil $
           fun _ ->
           many_till any (void (trying (string "\n"))) $>
-            Misc.string_pack $>
+            Misc.String.pack $>
             fun s -> "%:" ^ s ^ "\n" )
 
   (** A parser for an interaction: a command followed by an expected
@@ -80,7 +80,7 @@ module TranscriptParser = struct
           command $
             fun cmd ->
             many_till any (trying (lookahead (alt (void bol_sigil) eof))) $>
-              Misc.string_pack $>
+              Misc.String.pack $>
               fun resp ->
                 { request = cmd;
                   response = resp;
@@ -94,7 +94,7 @@ module TranscriptParser = struct
       begin
         let p =
           many_till any (void (trying (lookahead bol_sigil))) in
-        label "input beluga code" p $> Misc.string_pack $
+        label "input beluga code" p $> Misc.String.pack $
           fun bel ->
           let f ints =
             { input_file = bel;
@@ -150,7 +150,7 @@ module TranscriptRunner = struct
     let open Parser in
     let response =
       many_till any (void (label "semicolon&newline" (trying (string ";\n")))) $>
-        Misc.string_pack $>
+        Misc.String.pack $>
         fun x -> x ^ ";\n"
     in
     parse response s
@@ -198,7 +198,7 @@ module TranscriptRunner = struct
     let l2 = String.length s2 in
     match () with
     | () when l1 = l2 ->
-       string_match' 0 (Misc.string_unpack s1) (Misc.string_unpack s2)
+       string_match' 0 (Misc.String.unpack s1) (Misc.String.unpack s2)
     | () -> LengthDiffers (l1, l2)
 
   let run_interaction (i : interaction) (e : env) :

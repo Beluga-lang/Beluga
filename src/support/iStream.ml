@@ -83,7 +83,7 @@ let take_while (p : 'a -> bool) (s : 'a t) :
 
 let take_while_str (p : char -> bool) (s : char t) :
       string * (char * char t) option =
-  take_while p s |> Pair.lmap Misc.string_pack
+  take_while p s |> Pair.lmap Misc.String.pack
 
 module AsBasicStream = struct
   type 'a t = 'a istream

@@ -16,8 +16,8 @@ inductive SNe : (g : cxt) {M : [ g |- tm A[] ] } ctype =
 | SVar : {#p:[g |- tm A[]]} SNe [g |- #p]
 ;
 
-rec anti_renameSNe  : (g : cxt)(g' : cxt) {#R : [g' |-# g]}{M : [g |- tm A[]]} SNe [g' |- M[#R]] -> SNe [g |- M]  =
+rec anti_renameSNe  : (g : cxt)(g' : cxt) {$R : [g' |-# g]}{M : [g |- tm A[]]} SNe [g' |- M[$R]] -> SNe [g |- M]  =
         / total s (anti_renameSNe g g' a r m s) / 
-mlam #R, N => fn s =>   case s of 
+mlam $R, N => fn s =>   case s of 
 |  SVar [h' |- _ ] =>  SVar [ _ |- _ ] 
 ;

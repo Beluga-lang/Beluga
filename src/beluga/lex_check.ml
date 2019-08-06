@@ -12,30 +12,31 @@
      - 2: unhandled OCaml exception
  *)
 
+open Support
+open Beluga
 module Loc = Lexer.Loc
 
 (** From a token stream, finds to location of the EOI token. *)
-let rec find_eoi (s : (Token.t * Loc.t) Stream.t) : Loc.t option =
-  let o =
-    try
-      Some (Stream.next s)
-    with
-    | Stream.Failure -> None
-  in
-  match o with
+let rec find_eoi (s : (Loc.t * Token.t) Gen.t) : Loc.t option =
+  match s () with
   | None -> None
-  | Some (Token.EOI, l) -> Some l
+  | Some (l, Token.EOI) -> Some l
   | _ -> find_eoi s
 
+let rec count n lexbuf =
+  match Sedlexing.next lexbuf with
+  | None -> n
+  | Some _ -> count (n + 1) lexbuf
 
 let passes_check (path : string) : bool =
   let input = Std.input_file ?bin:(Some true) path in
-  let real_end = Ulexing.from_utf8_string input |> Ulexing.get_buf |> Array.length in
-  let stream = Stream.of_string input in
-  let out = Lexer.mk () (Loc.mk path) stream in
+  let real_end = Sedlexing.Utf8.from_string input |> count 0 in
+  Printf.printf "found end %d\n" real_end;
+  let stream = Misc.Gen.of_string input in
+  let out = Lexer.mk (Loc.initial path) stream in
   match find_eoi out with
   | None -> false
-  | Some l -> Loc.start_off l = real_end
+  | Some l -> Loc.start_offset l = real_end
 
 let main () =
   match Array.to_list Sys.argv with

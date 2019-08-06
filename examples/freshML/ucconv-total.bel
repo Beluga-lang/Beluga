@@ -3,31 +3,35 @@
 %
 
 % term is the source language
-term: type.
-elam:(term -> term) -> term.
-eapp:term -> term -> term.
-elet:term -> (term -> term) -> term.
+LF term: type =
+  | elam:(term -> term) -> term
+  | eapp:term -> term -> term
+  | elet:term -> (term -> term) -> term
+;
 
 % targer is the target language
-target:type.
-tunit: target. % used as nil to list with pairs
-tfst: target -> target.
-tsnd: target -> target.
-tpair: target -> target -> target.
-tapp: target -> target -> target. % app is wrapped in topen
-tlam: (target -> target) -> target. % lam is wrapped in tpack
-tlet: target -> (target -> target) -> target.
-tpack: target -> target.
-topen: target -> (target -> target) -> target.
+LF target:type =
+  | tunit: target
+  | tfst: target -> target
+  | tsnd: target -> target
+  | tpair: target -> target -> target
+  | tapp: target -> target -> target
+  | tlam: (target -> target) -> target
+  | tlet: target -> (target -> target) -> target
+  | tpack: target -> target
+  | topen: target -> (target -> target) -> target
+;
 
-nat: type.
-z:nat.
-suc: nat -> nat.
+LF nat: type =
+  | z:nat
+  | suc: nat -> nat
+;
 
 % list of term
-fvlist: type.
-nil:fvlist.
-cons: term -> fvlist -> fvlist.
+LF fvlist: type =
+  | nil:fvlist
+  | cons: term -> fvlist -> fvlist
+;
 
 schema ctx = term;
 schema tctx = target;
@@ -165,5 +169,3 @@ let [h |- T2] = b_env [h] map fvs in
 let t1 = convert [ ] (mlam #p => [ |- tunit]) [ |- elam (\x.(x))];
 let t2 = convert [ ] (mlam #p => [ |- tunit]) [ |- elet (elam (\y.y)) (\x.x)];
 let t3 = convert [ ] (mlam #p => [ |- tunit]) [ |- elam (\x.(elam (\y. eapp x y)))];
-
-

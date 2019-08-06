@@ -1,153 +1,171 @@
-(** Locations, used to locate a token within a file.  Since locations
-    are slightly complicated, we just reuse the existing Camlp4
-    definition. *)
-module Loc = Syntax.Loc
-
-
-
+open Support
+   
 (**********************************)
 (* Token Type and Token Functions *)
 (**********************************)
 
 (** Tokens *)
 type t =
-  (** End of Input, usually the same thing as EOF. *)
+  (* End of Input, usually the same thing as EOF. *)
   | EOI
-  (** A keyword, see Lexer for examples. *)
-  | KEYWORD of string
-  (** Symbols. Can mean identifier, operator, etc. *)
-  | SYMBOL  of string
-  (** Symbols. Can mean identifier, operator, etc. *)
-  | UPSYMBOL  of string
-  (** A symbol of the form `?hole` *)
+  | DUMMY
+
+  (* Symbols *)
+  | LPAREN (* ( *)
+  | RPAREN (* ) *)
+  | LBRACK (* [ *)
+  | RBRACK (* ] *)
+  | LBRACE (* { *)
+  | RBRACE (* } *)
+  | LANGLE (* < *)
+  | RANGLE (* > *)
+  | COMMA (* , *)
+  | DOUBLE_COLON (* :: *)
+  | COLON (* : *)
+  | SEMICOLON (* ; *)
+  | PIPE (* | *)
+  | TURNSTILE (* |- *)
+  | DOTS (* .. *)
+  | ARROW (* -> *)
+  | THICK_ARROW (* => *)
+  | HAT (* ^ *)
+  | DOT (* . *)
+  | LAMBDA (* \ *)
+  | STAR (* * *)
+  | EQUALS (* = *)
+  | SLASH (* / *)
+  | UNDERSCORE (* _ *)
+  | HASH (* # *)
+  | DOLLAR (* $ *)
+  | PLUS (* + *)
+
+  (* Keywords *)
+  | KW_AND
+  | KW_BLOCK
+  | KW_CASE
+  | KW_IF
+  | KW_THEN
+  | KW_ELSE
+  | KW_IMPOSSIBLE
+  | KW_LET
+  | KW_IN
+  | KW_OF
+  | KW_REC
+  | KW_SCHEMA
+  | KW_SOME
+  | KW_FN
+  | KW_MLAM
+  | KW_MODULE
+  | KW_STRUCT
+  | KW_END
+  | KW_TOTAL
+  | KW_TRUST
+  | KW_TYPE
+  | KW_CTYPE
+  | KW_PROP
+  | KW_INDUCTIVE
+  | KW_COINDUCTIVE
+  | KW_STRATIFIED
+  | KW_LF
+  | KW_FUN
+  | KW_TYPEDEF
+
+  (* Can mean identifier, operator, etc. *)
+  | IDENT  of string
+  (* Two dashes followed by an identifier *)
+  | PRAGMA of string
+  (* A dot followed by an integer; used for projections *)
+  | DOT_NUMBER of int (* .n *)
+  (* A hash followed by an identifier; used for parameter variables. *)
+  | HASH_IDENT of string (* #x *)
+  (* A dollar followed by an identifier; used for substitution variables. *)
+  | DOLLAR_IDENT of string (* $x *)
+  (* A question mark followed by an identifier *)
   | HOLE of string
-  (** An integer literal. *)
+  (* An integer literal. *)
   | INTLIT  of int
-  (** A doc-comment. These are of the form %{{ ... %}} and are
-   * remembered used Beluga for its literate programming. *)
-  | COMMENT of string
-  | DOTS of string
-  (** Any string that would represent a module, e.g. 'Nat.z', 'List.Nat.z'.
-   * NOTE: the regular expression for this DOES NOT match ordinary
-   * symbols (i.e. 'z') and as such should be used in the parser as l =
-   * [a = MODULESYM -> a | a = SYMBOL -> a] *)
-  | MODULESYM of string
-  | UPSYMBOL_LIST of string
-(*   | TURNSTILE of string *)
+  (* A block comment of the form %{{ ... %}} *)
+  | BLOCK_COMMENT of string
 
-let to_string =
-  let p = Printf.sprintf "%s %S" in
+type class_or_string = [ `CLASS | `TOKEN ]
+
+let print (c : class_or_string) ppf =
+  let p x = Format.fprintf ppf x in
+  let case p1 p2 =
+    match c with
+    | `TOKEN -> Lazy.force p1
+    | `CLASS -> Lazy.force p2
+  in
   function
-    | EOI       -> Printf.sprintf "EOI"
-    | KEYWORD s -> p "KEYWORD" s
-    | SYMBOL  s -> p "SYMBOL" s
-    | UPSYMBOL  s -> p "UPSYMBOL" s
-    | INTLIT s ->  p "INTEGER" (string_of_int s)
-    | COMMENT s -> p "COMMENT" s
-    | DOTS s -> p "DOTS"  s
-    | MODULESYM s -> p "MODULESYM" s
-    | UPSYMBOL_LIST s -> p "UPSYMBOL_LIST" s
-    | HOLE s -> p "HOLE" s
+  | EOI       -> case (lazy (p "EOI")) (lazy (p "EOI"))
+  | DUMMY -> case (lazy (p "DUMMY")) (lazy (p "DUMMY"))
 
-(*   | TURNSTILE s -> Printf.sprintf "TURNSTILE %S"  s *)
+  | LPAREN (* ( *) -> case (lazy (p "(")) (lazy (p "LPAREN"))
+  | RPAREN (* ) *) -> case (lazy (p ")")) (lazy (p "RPAREN"))
+  | LBRACK (* [ *) -> case (lazy (p "[")) (lazy (p "LBRACK"))
+  | RBRACK (* ] *) -> case (lazy (p "]")) (lazy (p "RBRACK"))
+  | LBRACE (* { *) -> case (lazy (p "{")) (lazy (p "LBRACE"))
+  | RBRACE (* } *) -> case (lazy (p "}")) (lazy (p "RBRACE"))
+  | LANGLE (* < *) -> case (lazy (p "<")) (lazy (p "LANGLE"))
+  | RANGLE (* > *) -> case (lazy (p ">")) (lazy (p "RANGLE"))
+  | COMMA (* , *) -> case (lazy (p ",")) (lazy (p "COMMA"))
+  | DOUBLE_COLON (* :: *) -> case (lazy (p "::")) (lazy (p "DOUBLE_COLON"))
+  | COLON (* : *) -> case (lazy (p ":")) (lazy (p "COLON" ))
+  | SEMICOLON (* ; *) -> case (lazy (p ";")) (lazy (p "SEMICOLON"))
+  | PIPE (* | *) -> case (lazy (p "|")) (lazy (p "PIPE"))
+  | TURNSTILE (* |- *) -> case (lazy (p "|-")) (lazy (p "TURNSTILE"))
+  | DOTS (* .. *) -> case (lazy (p "..")) (lazy (p "DOTS"))
+  | ARROW (* -> *) -> case (lazy (p "->")) (lazy (p "ARROW" ))
+  | THICK_ARROW (* => *) -> case (lazy (p "=>")) (lazy (p "THICK_ARROW"))
+  | HAT (* ^ *) -> case (lazy (p "^")) (lazy (p "HAT"))
+  | DOT (* . *) -> case (lazy (p ".")) (lazy (p "DOT"))
+  | LAMBDA (* \ *) -> case (lazy (p "\\")) (lazy (p "LAMBDA"))
+  | STAR (* * *) -> case (lazy (p "*")) (lazy (p "STAR"))
+  | EQUALS (* = *) -> case (lazy (p "=")) (lazy (p "EQUALS"))
+  | SLASH (* / *) -> case (lazy (p "/")) (lazy (p "SLASH"))
+  | UNDERSCORE (* _ *) -> case (lazy (p "_")) (lazy (p "UNDERSCORE"))
+  | HASH (* # *) -> case (lazy (p "#")) (lazy (p "HASH"))
+  | DOLLAR (* $ *) -> case (lazy (p "$")) (lazy (p "DOLLAR"))
+  | PLUS (* + *) -> case (lazy (p "+")) (lazy (p "PLUS"))
 
-(** Pretty print a token using {!Format} functionality. *)
-let print ppf x = Format.pp_print_string ppf (to_string x)
+  | KW_AND -> case (lazy (p "and")) (lazy (p "KW_AND"))
+  | KW_BLOCK -> case (lazy (p "block")) (lazy (p "KW_BLOCK"))
+  | KW_CASE -> case (lazy (p "case")) (lazy (p "KW_CASE"))
+  | KW_IF -> case (lazy (p "if")) (lazy (p "KW_IF"))
+  | KW_THEN -> case (lazy (p "then")) (lazy (p "KW_THEN"))
+  | KW_ELSE -> case (lazy (p "else")) (lazy (p "KW_ELSE"))
+  | KW_IMPOSSIBLE -> case (lazy (p "impossible")) (lazy (p "KW_IMPOSSIBLE"))
+  | KW_LET -> case (lazy (p "let")) (lazy (p "KW_LET"))
+  | KW_IN -> case (lazy (p "in")) (lazy (p "KW_IN"))
+  | KW_OF -> case (lazy (p "of")) (lazy (p "KW_OF"))
+  | KW_REC -> case (lazy (p "rec")) (lazy (p "KW_REC"))
+  | KW_SCHEMA -> case (lazy (p "schema")) (lazy (p "KW_SCHEMA"))
+  | KW_SOME -> case (lazy (p "some")) (lazy (p "KW_SOME"))
+  | KW_FN -> case (lazy (p "fn")) (lazy (p "KW_FN"))
+  | KW_MLAM -> case (lazy (p "mlam")) (lazy (p "KW_MLAM"))
+  | KW_MODULE -> case (lazy (p "module")) (lazy (p "KW_MODULE"))
+  | KW_STRUCT -> case (lazy (p "struct")) (lazy (p "KW_STRUCT"))
+  | KW_END -> case (lazy (p "end")) (lazy (p "KW_END"))
+  | KW_TOTAL -> case (lazy (p "total")) (lazy (p "KW_TOTAL"))
+  | KW_TRUST -> case (lazy (p "trust")) (lazy (p "KW_TRUST"))
+  | KW_TYPE -> case (lazy (p "type")) (lazy (p "KW_TYPE"))
+  | KW_CTYPE -> case (lazy (p "ctype")) (lazy (p "KW_CTYPE"))
+  | KW_PROP -> case (lazy (p "prop")) (lazy (p "KW_PROP"))
+  | KW_INDUCTIVE -> case (lazy (p "inductive")) (lazy (p "KW_INDUCTIVE"))
+  | KW_COINDUCTIVE -> case (lazy (p "coinductive")) (lazy (p "KW_COINDUCTIVE"))
+  | KW_STRATIFIED -> case (lazy (p "stratified")) (lazy (p "KW_STRATIFIED"))
+  | KW_LF -> case (lazy (p "LF")) (lazy (p "KW_LF"))
+  | KW_FUN -> case (lazy (p "fun")) (lazy (p "KW_FUN"))
+  | KW_TYPEDEF -> case (lazy (p "typedef")) (lazy (p "KW_TYPEDEF"))
 
-(** Determine whether a token is a keyword or not.  Keywords are
-    determined automatically by the extensible camlp4 grammar system.
-    When a grammar is loaded, all string literals used in the grammar
-    rules are treated as keywords.  But the lexer must also determine
-    during lexical analysis if a symbol is a keyword. *)
-let match_keyword kwd = function
-  | KEYWORD kwd' when kwd' = kwd -> true
-  | _                            -> false
+  | BLOCK_COMMENT s -> case (lazy (p "%%{{ %s %%}}" s)) (lazy (p "BLOCK_COMMENT"))
+  | IDENT s -> case (lazy (p "%s" s)) (lazy (p "IDENT"))
+  | HOLE s -> case (lazy (p "?%s" s)) (lazy (p "HOLE"))
+  | INTLIT n -> case (lazy (p "%d" n)) (lazy (p "INTLIT"))
+  | DOT_NUMBER k -> case (lazy (p ".%d" k)) (lazy (p "DOT_NUMBER"))
+  | HASH_IDENT s -> case (lazy (p "#%s" s)) (lazy (p "HASH_IDENT"))
+  | DOLLAR_IDENT s -> case (lazy (p "$%s" s)) (lazy (p "DOLLAR_IDENT"))
+  | PRAGMA s -> case (lazy (p "--%s" s)) (lazy (p "PRAGMA"))
 
-(** Convert a token back to its textual representation. *)
-let extract_string = function
-  | EOI       ->
-      invalid_arg ("Cannot extract string from token: " ^
-                     to_string EOI)
-  | KEYWORD s -> s
-  | SYMBOL  s -> s
-  | UPSYMBOL  s -> s
-  | INTLIT  s -> string_of_int s
-  | COMMENT s -> s
-  | DOTS s -> s
-  | MODULESYM s -> s
-  | UPSYMBOL_LIST s -> s
-  | HOLE s -> s
-(*   | TURNSTILE s -> s *)
-
-
-
-(** Located Errors *)
-module Error = Camlp4.Struct.EmptyError
-
-
-
-(** Token stream filtering functionality. *)
-module Filter = struct
-
-  (** The camlp4 extensible grammar system relies on (dynamically
-      updatable) stream filters.  This is the shape these stream filters
-      take. *)
-  type token_filter = (t, Loc.t) Camlp4.Sig.stream_filter
-
-  (** A token filter can determine whether a token is a keyword
-      and dynamically update its underlying filter function. *)
-  type t = {
-    is_kwd         : string -> bool;
-    mutable filter : token_filter
-  }
-
-  (** Functionality to promote a token to a keyword.  This is
-      necessary because if the grammar is updated during parsing, then
-      what the lexer originally thought was only a symbol may actually
-      be a keyword. *)
-  let keyword_conversion tok is_kwd =
-    match tok with
-    | KEYWORD s              -> KEYWORD s
-    | SYMBOL s when is_kwd s -> KEYWORD s
-    | SYMBOL s               ->
-        let firstChar = String.get s 0 in
-          if firstChar >= 'A' && firstChar <= 'Z' then
-            UPSYMBOL  s
-          else
-            SYMBOL s
-    | tok -> tok  (* EOI, INTLIT *)
-
-  (** Create a token filter given a function to determine keywords. *)
-  let mk is_kwd = {
-    is_kwd = is_kwd;
-    filter = (fun s -> s)
-  }
-
-  (** Run a series of validation checks against a token. *)
-  let validate_tok _ _ _ = ()
-
-  (** Create a function mapping an unfiltered token stream to a
-      filtered token stream. *)
-  let filter x =
-    let filter_tok tok loc =
-      (* First promote the token to a keyword if necessary. *)
-      let tok' = keyword_conversion tok x.is_kwd in
-        (* Next, validate the token. *)
-          validate_tok tok loc x.is_kwd
-        ; (tok', loc)
-    in
-    let rec filter = parser
-      | [< ' (tok, loc); s >] -> [< ' filter_tok tok loc; filter s >]
-      | [<                 >] -> [<                                >]
-    in
-      fun strm -> x.filter (filter strm)
-
-  let define_filter x f = x.filter <- f x.filter
-
-  (** Called each time a keyword is added to the grammar *)
-  let keyword_added _ _ _ = ()
-
-  (** Called each time a keyword is removed from the grammar *)
-  let keyword_removed _ _ = ()
-
-end
+let to_string t = Misc.Format.stringify (print `TOKEN) t
+let class_to_string t = Misc.Format.stringify (print `CLASS) t

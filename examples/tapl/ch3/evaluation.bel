@@ -87,7 +87,6 @@ fn s1 => fn s2 => case s1 of
       | [|- e_if_true] => impossible [|- D] in []
       | [|- e_if_false] => impossible [|- D] in []
   )
-}%
 ;
 
 

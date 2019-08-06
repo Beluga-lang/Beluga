@@ -7,6 +7,8 @@ exception NotImplemented of string
 
 let not_implemented (msg : string) : 'a = raise (NotImplemented msg)
 
+module S = String
+
 module String = struct
   (** Unpacks a string into a list of characters. *)
   let unpack (s : string) : char list =
@@ -67,7 +69,7 @@ module List = struct
   let rec last (l : 'a list) : 'a = match l with
     | [] -> invalid_arg
     | [x] -> x
-    | x :: xs -> last xs
+    | _ :: xs -> last xs
 
   (** Computes the list of all successive pairs in a given
       list.contents.
@@ -86,8 +88,59 @@ module List = struct
     | _ -> false
 
   let nonempty l = not (null l)
+
+  let filter_rev p l =
+    let rec go acc = function
+      | [] -> acc
+      | x :: xs -> go (if p x then x :: acc else acc) xs
+    in
+    go [] l
 end
 
 let id (x : 'a) : 'a = x
 
 type void = { impossible: 'a. 'a }
+
+module Format = struct
+  open Format
+
+  let stringify p x = fprintf str_formatter "%a" p x; flush_str_formatter ()
+  let comma (ppf : Format.formatter) () = fprintf ppf ",@ "
+end
+
+module Gen = struct
+  let of_string s =
+    let n = ref 0 in
+    let n_max = S.length s in
+    fun () ->
+    if !n < n_max
+    then
+      let c = S.get s !n in
+      let _ = incr n in
+      Some c
+    else
+      None
+
+  let of_in_channel ?(buffer_size = 1024) chan =
+    let bs = Bytes.create buffer_size in
+    let count = ref 0 in
+    let i = ref 0 in
+    let more () = count := input chan bs 0 buffer_size; i := 0 in
+    let next () =
+      let c = Bytes.get bs !i in
+      incr i;
+      Some c
+    in
+    more ();
+    fun () ->
+    match () with
+    | _ when !count = 0 -> None
+    | _ when i < count -> next ()
+    | _ when i = count ->
+       more ();
+       if !count = 0 then
+         None
+       else
+         next ()
+    | () -> failwith "impossible"
+end

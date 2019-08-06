@@ -27,14 +27,10 @@ LF error : term -> type =
 % Small-step operational semantics
 
 LF step: term -> term -> type =
-| step_app_1    : step (app E1 E2) (app E1' E2)
-                 <- step E1 E1'
-| step_app_2    : step (app E1 E2) (app E1 E2')
-                 <- value E1
-                 <- step E2 E2'
+| step_app_1    : step E1 E1' → step (app E1 E2) (app E1' E2)
+| step_app_2    : step E2 E2' → value E1 → step (app E1 E2) (app E1 E2')
 
-| step_app_beta : step (app (lam T E ) E2) (E E2)
-                 <- value E2
+| step_app_beta : value E2 → step (app (lam T E ) E2) (E E2)
 
 | step_app_err1 : value V
 		-> step (app (raise V) E2) (raise V)

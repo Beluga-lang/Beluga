@@ -19,6 +19,12 @@ let get' (e : exn) (o : 'a option) : 'a =
 
 let get o = get' NoValue o
 
+let get_default def o =
+  eliminate
+    (Misc.const def)
+    (Misc.id)
+    o
+
 let of_bool =
   function
   | true -> Some ()
@@ -29,6 +35,29 @@ let map (f : 'a -> 'b) (o : 'a option) : 'b option =
 
 let ( $ ) (o : 'a option) (k : 'a -> 'b option) : 'b option =
   eliminate (fun _ -> None) k o
+
+(** Prioritized choice between options.
+    This will force the first option, but will never force the second.
+    This operation is associative.
+ *)
+let ( <|> ) (p : 'a option lazy_t) (q : 'a option lazy_t) : 'a option lazy_t =
+  begin match Lazy.force p with
+  | Some _ -> p
+  | None -> q
+  end
+
+(* This is hoisted out so that forcing becomes a no-op after the first force. *)
+let lazy_none = lazy None
+
+let choice (ps : 'a option lazy_t list) : 'a option lazy_t =
+  List.fold_left ( <|> ) lazy_none ps
+
+(** Non-lazy version of `<|>'. *)
+let alt (o1 : 'a option) (o2 : 'a option) : 'a option =
+  match o1, o2 with
+  | Some x, _ -> Some x
+  | _, Some y -> Some y
+  | _ -> None
 
 let pure (x : 'a) : 'a option =
   Some x
@@ -56,6 +85,10 @@ let none : 'a option =
 
 let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
   o $ fun x -> pure (f x)
+
+(** Ignores the result of the first option and gives the second. *)
+let ( &> ) (o : 'a option) (o' : 'b option) : 'b option =
+  o $ fun _ -> o'
 
 let void (o : 'a option) : unit option =
   o $> fun _ -> ()

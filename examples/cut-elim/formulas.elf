@@ -2,18 +2,16 @@
 %%% predicate calculus.
 %%% Author: Frank Pfenning
 
-i : type.  % individuals
-%name i T. % S % more than one currently disallowed
+LF i : type = ;
 
-o : type.  % formulas
-%name o A. % B C % more than one currently disallowed
-
-&    : o -> o -> o.    % infix right 11 &.
-imp    : o -> o -> o.  % infix right 10 imp.
-or     : o -> o -> o.  % infix right 11 or.
-not    : o -> o.       % prefix 12 not.
-true   : o.
-false  : o.
-forall : (i -> o) -> o.
-exists : (i -> o) -> o.
+LF o : type = % formulas
+  | conj   : o -> o -> o
+  | imp    : o -> o -> o
+  | or     : o -> o -> o
+  | not    : o -> o
+  | true   : o
+  | false  : o
+  | forall : (i -> o) -> o
+  | exists : (i -> o) -> o
+;
 

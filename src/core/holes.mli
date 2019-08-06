@@ -83,7 +83,7 @@ val string_of_name_or_id : hole_name * hole_id -> string
 val none : unit -> bool
 
 (** Pretty-prints a single hole. *)
-val format_hole : hole_id -> hole -> string
+val print : Format.formatter -> (hole_id * hole) -> unit
 
 (** Retrieves a single hole using the given strategy. *)
 val get : lookup_strategy -> (hole_id * hole) option

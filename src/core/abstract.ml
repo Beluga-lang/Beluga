@@ -14,7 +14,8 @@ module Comp = Int.Comp
 module P = Pretty.Int.DefaultPrinter
 
 
-let (dprint, _) = Debug.makeFunctions (Debug.toFlags [3])
+let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [3])
+open Debug.Fmt
 
 
 type kind =
@@ -720,6 +721,13 @@ and collectDctx' loc p cQ ((cvar, offset)) cPsi = match cPsi with
   | I.CtxVar cv ->
     let (cQ', cv') = collectCVar loc p cQ cv
     in (cQ', I.CtxVar cv')
+
+  | I.DDec(cPsi, I.TypDeclOpt x) ->
+     dprintf
+       (fun p ->
+         p.fmt "[collectDctx'] a type is required for variable %a"
+           Id.print x);
+     failwith "missing type information"
 
   | I.DDec(cPsi, I.TypDecl(x, tA)) ->
       let (cQ', cPsi') =  collectDctx' loc p cQ (cvar, offset - 1) cPsi in

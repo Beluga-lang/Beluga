@@ -3,9 +3,9 @@
     @author Brigitte Pientka
 *)
 
+open Support
 open Syntax.Int.LF
 open Syntax.Int
-
 
 exception NoTypAvailable
 

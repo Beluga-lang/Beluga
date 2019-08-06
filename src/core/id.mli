@@ -62,6 +62,7 @@ type name_guide =
 val mk_name : ?modules:string list -> name_guide -> name
 val string_of_name : name -> string
 val render_name : name -> string
+val print : Format.formatter -> name -> unit
 
 (** Decide whether two names represent the same thing.
     This simply compares the string representations of the names. This

@@ -1,11 +1,13 @@
-(** External Syntax *)
-(** External LF Syntax *)
+(* External Syntax *)
+
 open Id
 open Pragma
 
-module Loc = Camlp4.PreCast.Loc
+module Loc = Location
 
+(** External LF Syntax *)
 module LF = struct
+  include Syncom.LF
   
   type depend =
     | Maybe
@@ -59,10 +61,9 @@ module LF = struct
     | PatEmpty  of Loc.t
 
   and head =
-    | Name  of Loc.t * name
-    | MVar  of Loc.t * name * sub
+    | Name  of Loc.t * name * sub option
     | Hole  of Loc.t
-    | PVar  of Loc.t * name * sub
+    | PVar  of Loc.t * name * sub option
     | Proj  of Loc.t * head * proj
 
   and proj = 
@@ -73,16 +74,12 @@ module LF = struct
     | Nil
     | App of Loc.t * normal * spine
 
-  and sub =
+  and sub_start =
     | EmptySub of Loc.t
-    | Dot      of Loc.t * sub * front
-    | Id       of Loc.t
-    | RealId
-    | SVar     of Loc.t * name * sub  (* this needs to be be then turned into a subst. *)
+    | Id of Loc.t
+    | SVar of Loc.t * name * sub option
 
-  and front =
-    | Head     of head
-    | Normal   of normal
+  and sub = sub_start * normal list
 
   and typ_rec =
     | SigmaLast of name option * typ
@@ -98,10 +95,6 @@ module LF = struct
     | DDec     of dctx * typ_decl
     | CtxHole
 
-  and 'a ctx =
-    | Empty
-    | Dec of 'a ctx * 'a
-
   and sch_elem =
     | SchElem of Loc.t * typ_decl ctx * typ_rec
 
@@ -110,6 +103,11 @@ module LF = struct
 
   and mctx = ctyp_decl ctx
 
+  (** Converts a spine to a list. It is visually "backwards" *)
+  let rec list_of_spine (sp : spine) : (Loc.t * normal) list =
+    match sp with
+    | Nil -> []
+    | App (l, m, s) -> (l, m) :: list_of_spine s
 end
 
 
@@ -120,13 +118,18 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
- type clobj = 
-   | MObj of LF.normal
-   | SObj of LF.sub
-   | PObj of LF.head
-
  type mfront =
-   | ClObj of LF.dctx * clobj
+   | ClObj of LF.dctx
+              * LF.sub
+   (* ClObj doesn't *really* contain just a substitution.
+      The problem is that syntactically, we can't tell
+      whether `[psi |- a]' is a boxed object or
+      substitution! So it turns out that,
+      syntactically, substitutions encompass both
+      possibilities: a substitution beginning with
+      EmptySub and having just one normal term in it
+      can represent a boxed term. We disambiguate
+      substitutions from terms at a later time. *)
    | CObj of LF.dctx
 
  type meta_obj = Loc.t * mfront
@@ -159,19 +162,20 @@ module Comp = struct
      | Hole of Loc.t * string option     				     (*    | ?                   *)
 
   and exp_syn =
-     | Var    of Loc.t * name                        (*  i ::= x                 *)
-     | DataConst  of Loc.t * name                    (*    | c                   *)
-     | Obs    of Loc.t * exp_chk * name              (*    | e.d                 *)
-     | Const  of Loc.t * name                        (*    | c                   *)
+     | Name   of Loc.t * name                        (*  i ::= x/c               *)
      | Apply  of Loc.t * exp_syn * exp_chk           (*    | i e                 *)
-     | BoxVal of Loc.t * meta_obj
-     | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of Loc.t * exp_chk * typ               (*    | e : tau             *)
+     | BoxVal of Loc.t * meta_obj                    (*    | [C]                 *)
+     | PairVal of Loc.t * exp_syn * exp_syn          (*    | (i , i)             *)
+  (* Note that observations are missing.
+     In the external syntax, observations are syntactically
+     indistinguishable from applications, so we parse them as
+     applications. During indexing, they are disambiguated into
+     observations.
+   *)
 
  and pattern =
    | PatMetaObj of Loc.t * meta_obj
-   | PatConst of Loc.t * name * pattern_spine
-   | PatVar   of Loc.t * name
+   | PatName   of Loc.t * name * pattern_spine
    | PatPair  of Loc.t * pattern * pattern
    | PatAnn   of Loc.t * pattern * typ
 

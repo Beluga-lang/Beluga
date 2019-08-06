@@ -38,13 +38,13 @@ rec whExp : (g:cxt){T : [|- ty]}
     | [|- base   ] => ?
     | [|- arr U V] => ?
 }%
-%{ RArr (mlam g', #S, N0 => fn s => 
+%{ RArr (mlam g', $S, N0 => fn s => 
  %{       whExp 
           [|- V] 
-          [g', x : tm _ |- app C[#S[..], x] N0[..]] 
-          [g' |- N[#S]] 
+          [g', x : tm _ |- app C[$S[..], x] N0[..]] 
+          [g' |- N[$S]] 
            ?
-%          [g' |- eext E[#S]] 
+%          [g' |- eext E[$S]] 
 }%
           ?)
 }%

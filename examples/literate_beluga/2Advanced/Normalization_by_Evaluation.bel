@@ -36,14 +36,14 @@ schema ctx = neut T;
 
 %{{
 The key idea is to evaluate terms into a special domain of semantic values, which can then be reified back into normal forms.
-Below we describe the domain of semantic values, which we can think of as being defined by recursion on the type. At base type, semantic values are precisely normal forms. At arrow type `arr A B`, a semantic value `Sem [g] [ |- arr A B]` is a function from semantic values of type `A` in an extended context `h` to semantic values of type `B` in `h`. The extension of a context is tracked by a substitution `#W` which transports normal terms in context `g` to normal terms in context `h`.
+Below we describe the domain of semantic values, which we can think of as being defined by recursion on the type. At base type, semantic values are precisely normal forms. At arrow type `arr A B`, a semantic value `Sem [g] [ |- arr A B]` is a function from semantic values of type `A` in an extended context `h` to semantic values of type `B` in `h`. The extension of a context is tracked by a substitution `$W` which transports normal terms in context `g` to normal terms in context `h`.
 
-In the course of this development, `#W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g,x1:neut T1,...,xn:neut Tn`, but the extra generality does no harm here.
+In the course of this development, `$W` will only ever be instantiated with a weakening substitution, transporting from `g` to `g,x1:neut T1,...,xn:neut Tn`, but the extra generality does no harm here.
 }}%
 
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Base :  [g |- norm b] -> Sem [g] [ |- b]
-| Arr : {g:ctx}({h:ctx}{#W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Arr : {g:ctx}({h:ctx}{$W: [h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
@@ -51,12 +51,12 @@ stratified Sem : {g:ctx} [ |- tp] -> ctype =
 We can weaken semantic values:
 }}%
 
-rec sem_wkn : {h:ctx} {#W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
-mlam h => mlam #W => fn e =>
+rec sem_wkn : {h:ctx} {$W: [h |- g]} Sem [g] [ |- A] -> Sem [h] [ |- A] =
+mlam h => mlam $W => fn e =>
 case e of
-| Base [g |- R] => Base [h |- R[#W]]
+| Base [g |- R] => Base [h |- R[$W]]
 | Arr [g] f =>
-  Arr [h] (mlam h' => mlam #W2 => f [h'] [h' |- #W[#W2]])
+  Arr [h] (mlam h' => mlam $W2 => f [h'] [h' |- $W[$W2]])
 ;
 
 %{{
@@ -71,9 +71,9 @@ fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |
 | [g,x:tm S |-  #q[..] ] => s [ |- T ] [g |- #q]
 ;
 
-rec env_wkn : {h':ctx}{h:ctx}{#W:[h' |- h]} Env [g] [h] -> Env [g] [h'] =
-mlam h' => mlam h => mlam #W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
-sem_wkn [h'] [h' |- #W] (s [ |- T] [g |- #p])
+rec env_wkn : {h':ctx}{h:ctx}{$W:[h' |- h]} Env [g] [h] -> Env [g] [h'] =
+mlam h' => mlam h => mlam $W => fn s => let s : Env [g] [h] = s in mlam T => mlam #p =>
+sem_wkn [h'] [h' |- $W] (s [ |- T] [g |- #p])
 ;
 
 %{{
@@ -85,8 +85,8 @@ fn t => fn s => let s : Env [g] [h] = s in
 case t of
 | [g |- #p ] =>  s [ |- _] [g |- #p ]
 | [g |- lam (\x. E) ] =>
-  Arr [h] (mlam h' => mlam #W => fn e =>
-     eval [g,x:tm _ |- E] (env_ext (env_wkn [h'] [h] [h' |- #W] s) e))
+  Arr [h] (mlam h' => mlam $W => fn e =>
+     eval [g,x:tm _ |- E] (env_ext (env_wkn [h'] [h] [h' |- $W] s) e))
 | [g |- app E1 E2 ] =>
   let Arr [h] f = eval [g |- E1] s in
    f [h] [h |- ..] (eval [g |- E2] s)
@@ -104,7 +104,7 @@ fn r => let [g |- R ] : [g |- neut A[]] = r in
 case [ |- A] of
 | [ |- b ] => Base [g |- embed R]
 | [ |- arr T S ] =>
- Arr [g] (mlam h => mlam #W => fn e => reflect (app' [h |- R[#W]] (reify e)))
+ Arr [g] (mlam h => mlam $W => fn e => reflect (app' [h |- R[$W]] (reify e)))
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => case e of

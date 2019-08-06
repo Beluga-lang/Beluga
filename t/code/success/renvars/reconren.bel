@@ -3,12 +3,12 @@ c : tm.
 
 schema ctx = tm;
 
-inductive Foo : (g:ctx) {#W:[g |- # g]}  ctype =
+inductive Foo : (g:ctx) {$W:[g |- # g]}  ctype =
 ;
 
 inductive Bar : (g:ctx) {#p:[g |- tm]} ctype =
 ;
 
-rec f : Foo [g |- #W[..]] -> Bar [g |- #p[..]] -> Bar [g |- #p[#W[..]]] =
+rec f : Foo [g |- $W[..]] -> Bar [g |- #p[..]] -> Bar [g |- #p[$W[..]]] =
 ?
 ;

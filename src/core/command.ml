@@ -4,6 +4,7 @@
  * Available commands are added to a registry at the bottom of this file.
  *)
 
+open Support
 open ExtString.String
 open Store.Cid
 open Pretty.Int.DefaultPrinter
@@ -47,25 +48,27 @@ let prove =
         begin
           fun ppf [name] ->
           let open Either in
-          fprintf ppf "Statement to prove (C-d to abort): @?";
-          let prompt message entry sc fc =
+          let prompt message (type a) (entry : a Parser.t) fc : (formatter -> unit, a) Either.t =
             fprintf ppf "%s: @?" message;
             trap read_line |> lmap (fun _ _ -> ())
             $ fun input ->
-              trap
-                (fun () ->
-                  Parser.parse_string ~name: "<prompt>" ~input: input entry
-                  |> sc)
-              |> lmap fc
+              Runparser.parse_string "<prompt>" input (Parser.only entry)
+              |> snd
+              |> Parser.to_either
+              |> Either.lmap (fun e ppf -> fc ppf e)
           in
           begin
-            prompt "Statement to prove" Parser.cmp_typ
-              (fun x -> x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp)
-              (fun e ppf -> fprintf ppf "- Error interpreting statement:\n%s;" (Printexc.to_string e))
+            prompt "Statement to prove (C-d to abort)" Parser.cmp_typ
+              (fun ppf e -> fprintf ppf "@[<v>- Error parsing statement:@,%a@]" Parser.print_error e)
+            |> Either.rmap (fun x -> x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp)
             $ fun (stmt, k) -> (* k is the number of added implicit vars *)
               prompt "Induction order" Parser.numeric_total_order
-                (fun x -> x |> Syntax.Ext.Comp.map_order (fun n -> n + k) |> Order.of_numeric_order)
-                (fun e ppf -> fprintf ppf "- Error interpreting induction order:\n%s" (Printexc.to_string e))
+                (fun ppf e ->
+                      fprintf ppf "@[<v>- Error parsing induction order:@,%a@]" Parser.print_error e)
+              |> Either.rmap
+                   (fun x ->
+                     Syntax.Ext.Comp.map_order (fun n -> n + k) x
+                     |> Order.of_numeric_order)
               $ fun order ->
                 Order.list_of_order order
                 |> Either.of_option'
@@ -77,7 +80,6 @@ let prove =
                          fprintf ppf "- Induction order doesn't match statement;")
                   $> fun stmt ->
                      (stmt, order)
-
           end
           |> Either.eliminate
                (fun f -> f ppf)
@@ -155,16 +157,15 @@ let clearholes =
 
 let load_files ppf file_name files =
 	let per_file f =
-    let sgn = Parser.parse_file ~name:f Parser.sgn in
-    let sgn = Recsgn.apply_global_pragmas sgn in
-    let sgn' =
-      begin match Recsgn.recSgnDecls sgn with
-	    | sgn', None -> sgn'
-	    | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-	    end
+    let sgn =
+      Parser.(Runparser.parse_file file_name (only sgn) |> extract)
+      |> Recsgn.apply_global_pragmas
+      |> Recsgn.recSgnDecls
+      |> function
+        | sgn', None -> sgn'
+        | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
     in
-    if !Debug.chatter <> 0 then
-      List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
+    if !Debug.chatter <> 0 then List.iter Pretty.Int.DefaultPrinter.ppr_sgn_decl sgn
 	in
   Holes.clear ();
   List.iter per_file files;
@@ -252,7 +253,7 @@ let printhole =
         (fun ppf arglist ->
           let s_ = List.hd arglist in
           with_hole_from_strategy_string ppf s_
-            (fun (i, h) -> fprintf ppf "%s;\n" (Holes.format_hole i h)));
+            (fun h -> fprintf ppf "%a;\n" Holes.print h));
     help = "Print out all the information of the i-th hole passed as a parameter";
   }
 
@@ -263,14 +264,13 @@ let lochole =
         (fun ppf arglist ->
           with_hole_from_strategy_string ppf (List.hd arglist)
             (fun (_, {Holes.loc; _}) ->
-              let ( file_name,
-                    start_line,
-                    start_bol,
-                    start_off,
-                    stop_line,
-                    stop_bol,
-                    stop_off,
-                    _ghost ) = Syntax.Loc.to_tuple loc in
+              let file_name = Location.filename loc in
+              let start_line = Location.start_line loc in
+              let start_bol = Location.start_bol loc in
+              let start_off = Location.start_offset loc in
+              let stop_line = Location.stop_line loc in
+              let stop_bol = Location.stop_bol loc in
+              let stop_off = Location.stop_offset loc in
               fprintf
                 ppf
                 "(\"%s\" %d %d %d %d %d %d);\n"
@@ -385,9 +385,12 @@ let fill =
           begin
             let strat_s = List.hd args in
             let eq = List.hd (List.tl args) in
-            let str = String.concat " " (List.tl (List.tl args)) in
-            if not (eq = "with") then failwith "- second argument must be `with`; see help;";
-            let exp = Parser.parse_string ~name:"<fill>" ~input:str Parser.cmp_exp_chk in
+            if not (eq = "with") then failwith "- second argument must be `with`. See help;";
+            let exp =
+              let str = String.concat " " (List.tl (List.tl args)) in
+              Runparser.parse_string "<fill>" str Parser.(only cmp_exp_chk)
+              |> Parser.extract
+            in
             with_hole_from_strategy_string ppf strat_s
               (requiring_computation_hole ppf
                  (fun hi ->
@@ -547,12 +550,15 @@ let query =
       (fun ppf arglist ->
         try
           begin
-            let expected = List.hd arglist in
-            let tries = List.hd (List.tl arglist) in
-            let str = String.concat " " (List.tl (List.tl arglist)) in
-            let input = "%query " ^ expected ^ " " ^ tries ^ " " ^ str in
-            let [Synext.Sgn.Query (_loc, name, extT, expected, tries)] = Parser.parse_string ~name:"<query>" ~input:input Parser.sgn in
-            let (apxT, _ ) = Index.typ extT in
+            let [Synext.Sgn.Query (_loc, name, extT, expected, tries)] =
+              let expected = List.hd arglist in
+              let tries = List.hd (List.tl arglist) in
+              let str = String.concat " " (List.tl (List.tl arglist)) in
+              let input = "%query " ^ expected ^ " " ^ tries ^ " " ^ str in
+              Runparser.parse_string "<query>" input Parser.sgn
+              |> Parser.extract
+            in
+            let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
             let _ = Store.FVar.clear () in
             let tA =
               Monitor.timer
@@ -653,7 +659,7 @@ let do_command ppf cmd =
     trap (fun () -> ExtString.String.nsplit cmd " ") $
       fun args ->
       match args with
-      | [] -> pure (fprintf ppf "- Empty command line;\n")
+      | [] -> pure ()
       | cmd_name :: args ->
          match trap (fun () -> List.find (fun x -> cmd_name = x.name) !reg) with
          | Left _ -> pure (fprintf ppf "- No such command %s;\n" cmd_name)

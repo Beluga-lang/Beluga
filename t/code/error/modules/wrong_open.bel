@@ -9,23 +9,23 @@ module Nats = struct
   | [ |- N ] => [ |- s N];
 end;
 
-let x = [ |- Nats.z ];
+let x = [ |- Nats::z ];
 
-let y = [ |- Nats.s Nats.z];
+let y = [ |- Nats::s Nats::z];
 
-let z = Nats.suc [ |- Nats.z ];
+let z = Nats::suc [ |- Nats::z ];
 
-list : Nats.nat -> type.
+list : Nats::nat -> type.
 
-nil : list Nats.z.
+nil : list Nats::z.
 
-cons : Nats.nat -> list N -> list (Nats.s N).
+cons : Nats::nat -> list N -> list (Nats::s N).
 
 
-let l1 = [ |- cons Nats.z (cons (Nats.s Nats.z) nil)];
+let l1 = [ |- cons Nats::z (cons (Nats::s Nats::z) nil)];
 
 module Arith = struct
-	--open WrongModule
+	--open WrongModule.
 
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of

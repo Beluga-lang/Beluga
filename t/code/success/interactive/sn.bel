@@ -35,24 +35,24 @@ inductive SN : (g : cxt) {M : [ g |- tm A ]} ctype =
 
 stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
   | RBase : SN [g |- M] -> Red [ |- base ] [g |- M]
-  | RArr  : ({g' : cxt} {#S : [g' |-# g]} {N : [g' |- tm A[]]}
+  | RArr  : ({g' : cxt} {$S : [g' |-# g]} {N : [g' |- tm A[]]}
                Red [|- A] [g' |- N]
-            -> Red [|- B] [g' |- app M[#S] N])
+            -> Red [|- B] [g' |- app M[$S] N])
          -> Red [ |- arr A B ] [g |- M]
   ;
 
-inductive RedS : {g : cxt} (g' : cxt) {#S : [g' |- g]} ctype =
+inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
   | RNil  : RedS [] [ g' |- ^ ]
   | RCons : Red [|- A] [g' |- M]
-         -> RedS [g] [g' |- #S]
-         -> RedS [g, x : tm A[]] [g' |- #S, M]
+         -> RedS [g] [g' |- $S]
+         -> RedS [g, x : tm A[]] [g' |- $S, M]
   ;
 
 %% Lemmata for fundamental theorem
 
 rec fundVar : {g : cxt} {M : [g |- tm A[]]}
-          RedS [g] [g' |- #S]
-       -> Red [|- A] [g' |- M[#S]] =
+          RedS [g] [g' |- $S]
+       -> Red [|- A] [g' |- M[$S]] =
 / total r (fundVar g g' a s m r) /
  mlam g, M => fn r => 
  (case r of 
@@ -63,8 +63,8 @@ rec fundVar : {g : cxt} {M : [g |- tm A[]]}
 ;
 %{
 rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
-          RedS [g] [g' |- #S]
-       -> Red [|- A] [g' |- #p[#S]] =
+          RedS [g] [g' |- $S]
+       -> Red [|- A] [g' |- #p[$S]] =
 % / total s (fundVar g g' A s 
  mlam g, #p => fn s => ?
  
@@ -80,9 +80,9 @@ rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
 
 
 rec thm : {g : cxt} {M : [g |- tm A[]]}
-% g, g', A, #S, M
-          RedS [g] [g' |- #S]
-       -> Red [|- A] [g' |- M[#S]] =
+% g, g', A, $S, M
+          RedS [g] [g' |- $S]
+       -> Red [|- A] [g' |- M[$S]] =
     mlam g, M => fn s => (case [g |- M] of 
 
 |  [g |- #p1] =>  ?  

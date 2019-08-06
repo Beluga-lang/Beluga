@@ -14,15 +14,17 @@
 % - also requires explicit use of "remove parameter x and u" in the
 %   definition of `extend' and the use of `extend' in `eqfun'
 
-exp: type.    --name exp E x.
-app: exp -> exp -> exp.
-lam: (exp -> exp) -> exp.
+LF exp: type =
+  | app: exp -> exp -> exp
+  | lam: (exp -> exp) -> exp
+;
+--name exp E x.
 
-eq: exp -> exp -> type.   --name eq Q u.
-eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2).
-
-eq_lam :  ({x : exp} eq x x -> eq (E x) (F x))
-          -> eq (lam (\x. E x)) (lam (\x. F x)).
+LF eq: exp -> exp -> type =
+  | eq_app : eq E1 F1 -> eq E2 F2 -> eq (app E1 E2) (app F1 F2)
+  | eq_lam :  ({x : exp} eq x x -> eq (E x) (F x)) -> eq (lam (\x. E x)) (lam (\x. F x))
+;
+--name eq Q u.
 
 schema eqCtx = block x:exp, _t:eq x x;
 

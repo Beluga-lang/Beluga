@@ -354,12 +354,11 @@ end
 
 module Var : sig
 
-  type entry = private {
-    name : name
-  }
+  type entry = { name : name }
 
   val mk_entry      : name -> entry
-  type t  (* NOTE: t is an ordered data structure *)
+  type t (* NOTE: t is an ordered data structure *)
+  val to_list       : t -> entry list
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry

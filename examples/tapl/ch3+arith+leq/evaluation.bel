@@ -192,49 +192,49 @@ fn s => case s of
 
 % Impos cases for leq
 | [ |- andalso (e_leq_1 D)          (e_leq_2 NV F)]      =>
-  (case values_dont_step [ |- D] [ |- v_num NV] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num NV]
   % This case below may not be necessary
 | [ |- andalso (e_leq_1 D)          (e_leq_zero NV)]      =>
-  (case values_dont_step [ |- D] [ |- v_num v_z] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num v_z]
 | [ |- andalso (e_leq_1 D)          (e_leq_succ_zero NV)]      =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV)]
 | [ |- andalso (e_leq_1 D)          (e_leq_succ_succ NV1 _ )]  =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV1)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV1)]
 
 | [ |- andalso (e_leq_zero NV)      (e_leq_1 D)]      =>
-  (case values_dont_step [ |- D] [ |- v_num v_z] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num v_z]
 | [ |- andalso (e_leq_succ_zero NV) (e_leq_1 D)]      =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV)]
 | [ |- andalso (e_leq_succ_succ NV1 _ ) (e_leq_1 D)]  =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV1)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV1)]
 
 
 | [ |- andalso (e_leq_2 NV F)       (e_leq_1 D)]         =>
-  (case values_dont_step [ |- D] [ |- v_num NV] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num NV]
 
 | [ |- andalso (e_leq_2 _ D)        (e_leq_zero NV)]      =>
-  (case values_dont_step [ |- D] [ |- v_num NV] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num NV]
 
 | [ |- andalso (e_leq_2 _ D)        (e_leq_succ_zero NV)]     =>
-  (case values_dont_step [ |- D] [ |- v_num v_z] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num v_z]
 | [ |- andalso (e_leq_2 _ D)        (e_leq_succ_succ _ NV2)]  =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV2)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV2)]
 
 
 | [ |- andalso (e_leq_1 D)          (e_leq_2 NV F)]        =>
-  (case values_dont_step [ |- D] [ |- v_num NV] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num NV]
 | [ |- andalso (e_leq_zero NV)      (e_leq_2 _ D)]         =>
-  (case values_dont_step [ |- D] [ |- v_num NV] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num NV]
 | [ |- andalso (e_leq_succ_zero NV) (e_leq_2 _ D)]         =>
-  (case values_dont_step [ |- D] [ |- v_num v_z] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num v_z]
 | [ |- andalso (e_leq_succ_succ _ NV2) (e_leq_2 _ D)]      =>
-  (case values_dont_step [ |- D] [ |- v_num (v_s NV2)] of [ |- {}])
+  impossible values_dont_step [ |- D] [ |- v_num (v_s NV2)]
 
 % Impossible cases for pred
 | [ |- andalso (e_pred D)          (e_pred_succ V )]    =>
-   (case values_dont_step [ |- D] [ |- v_num (v_s V)] of [ |- {}])
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)]
 | [ |- andalso (e_pred_succ V )       (e_pred D)]       =>
-   (case values_dont_step [ |- D] [ |- v_num (v_s V)] of [ |- {}])
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)]
 
 | [ |- andalso (e_iszero_zero)     (e_iszero_zero)]     => [ |- ref]
 | [ |- andalso (e_iszero_succ _ )  (e_iszero_succ _)]   => [ |- ref]
@@ -243,10 +243,10 @@ fn s => case s of
 
 % Impossible cases for iszero
 | [ |- andalso (e_iszero_succ V )  (e_iszero F)]        =>
-   (case values_dont_step [ |- F] [ |- v_num (v_s V)] of [ |- {}])
+   impossible values_dont_step [ |- F] [ |- v_num (v_s V)]
 
 | [ |- andalso (e_iszero D)        (e_iszero_succ V )]  =>
-   (case values_dont_step [ |- D] [ |- v_num (v_s V)] of [ |- {}])
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)]
 
 ;
 
@@ -287,8 +287,7 @@ fn v => fn s => case v of
 | [ |- v_num (v_s V)]   =>
   (case s of
    | [ |- m_ref] => [ |- ref]
-   | [ |- m_step S MS] =>
-     case values_dont_step [ |- S] v of [ |- {}]
+   | [ |- m_step S MS] => impossible values_dont_step [ |- S] v
   )
 
 ;
@@ -319,7 +318,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
    [ |- ref]
 
 | [ |- andalso' (m_ref )       (m_step S MS)]   =>
-  (case values_dont_step [ |- S]  vn1 of [ |- {}])
+  impossible values_dont_step [ |- S]  vn1
 
 ;
 

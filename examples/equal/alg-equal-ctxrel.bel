@@ -12,27 +12,27 @@
       o Completeness
 }%
 
-term : type.
-app : term -> term -> term.
-lam : (term -> term) -> term.
+LF term : type =
+  | app : term -> term -> term
+  | lam : (term -> term) -> term
+;
+
 --name term M x.
 
 % Algorithmic Equality
-aeq: term -> term -> type.   --name aeq Q u.
-ae_a : aeq M1 N1 -> aeq M2 N2
-    -> aeq (app M1 M2) (app N1 N2).
-ae_l :  ({x:term} aeq x x -> aeq (M x) (N x))
-        -> aeq (lam (\x. M x)) (lam (\x. N x)).
+LF aeq: term -> term -> type =
+  | ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2)
+  | ae_l :  ({x:term} aeq x x -> aeq (M x) (N x)) -> aeq (lam (\x. M x)) (lam (\x. N x))
+;
+--name aeq Q u.
 
 % Declarative Equality
-deq: term -> term -> type.
-de_l: ({x:term} deq x x -> deq (M x) (M' x))
-     -> deq (lam (\x. M x)) (lam (\x. M' x)).
-de_a: deq M1 N1 -> deq M2 N2
-     -> deq (app M1 M2) (app N1 N2).
-de_r: deq M M.
-de_t: deq M L -> deq L N
-     -> deq M N.
+LF deq: term -> term -> type =
+  | de_l: ({x:term} deq x x -> deq (M x) (M' x)) -> deq (lam (\x. M x)) (lam (\x. M' x))
+  | de_a: deq M1 N1 -> deq M2 N2 -> deq (app M1 M2) (app N1 N2)
+  | de_r: deq M M
+  | de_t: deq M L -> deq L N -> deq M N
+;
 
 % Context declarations
 schema tCtx = term;

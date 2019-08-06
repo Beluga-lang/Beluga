@@ -5,7 +5,9 @@
     @author Joshua Dunfield
 *)
 
+open Beluga
 open Printf
+module P = Parser
 
 let dprintf, _, _ = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
@@ -41,7 +43,7 @@ let usage () =
         ^ "                          beli-options: \n"
         ^ "                              -emacs        mode used to interact with emacs (not recommended in command line)\n"
   in
-  fprintf stderr "Beluga version %s\n" Version.beluga_version;
+  fprintf stderr "Beluga version %s\n" (Version.get ());
   fprintf stderr
     "Usage: %s [options] file.(bel|cfg)\noptions:\n%s"
     Sys.argv.(0) options;
@@ -103,8 +105,6 @@ let rec process_options = function
 
 exception SessionFatal
 
-open Cfg
-
 let main () =
   if Array.length Sys.argv < 2 then
     usage ()
@@ -112,7 +112,9 @@ let main () =
     let per_file file_name =
       let abort_session () = raise SessionFatal in
       try
-        let sgn = Misc.not_implemented "parser" (* Parser.parse_file ~name:file_name Parser.sgn *) in
+        let sgn =
+          Parser.(Runparser.parse_file file_name (only sgn) |> extract)
+        in
         (* If the file starts with a global pragma then process it now. *)
         let sgn = Recsgn.apply_global_pragmas sgn in
         if !externall then begin
@@ -148,14 +150,11 @@ let main () =
           print_newline () ;
           Logic.runLogic ();
           if not (Holes.none ()) && !Debug.chatter != 0 then begin
-            printf "\n## Holes: %s  ##\n" file_name;
-            List.iter
-              (fun (i, h) ->
-                print_string (Holes.format_hole i h);
-                print_newline ();
-                print_newline ()
-              )
-              (Holes.list ())
+              let open Format in
+              fprintf std_formatter
+                "\n## Holes: %s  ##\n@[<v>%a@]"
+                file_name
+                (pp_print_list Holes.print) (Holes.list ());
           end;
           begin match leftoverVars with
             | None -> ()
@@ -199,7 +198,7 @@ let main () =
         | [file] ->
           begin
             try
-              List.iter per_file (process_file_argument file) ; 0
+              List.iter per_file (Cfg.process_file_argument file) ; 0
             with SessionFatal -> 1
           end
         | _ -> bailout "Wrong number of command line arguments."

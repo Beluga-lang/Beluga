@@ -13,5 +13,5 @@ cons : exp T -> exp (list T) -> exp (list T).
 schema ctx = some [t:tp] exp t;
 
 
-rec test1: {g:ctx}{S:[ |- tp]}{#S: [ |- g]}[ |- exp S] = ?
+rec test1: {g:ctx}{S:[ |- tp]}{$S: [ |- g]}[ |- exp S] = ?
 ;

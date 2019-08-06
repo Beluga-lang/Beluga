@@ -8,17 +8,17 @@ f : bool.
 
 list : nat -> type.
 nil : list z.
-@ : bool -> list N -> list (s N).
+ap : bool -> list N -> list (s N).
 
---infix @ 5 right.
+--infix ap 5 right.
 
-let l1 = [ |- t @ t @ t @ nil];
+let l1 = [ |- t ap t ap t ap nil];
 
 
 rec copy : [ |- list N ] -> [ |- list N] =
 fn l => case l of
 | [ |- nil ] => [ |- nil ]
-| [ |- (X[]) @ T ] =>
-	let [ |- T' ] = copy [ |- T ] in [ |- (X[]) @ T' ];
+| [ |- (X[]) ap T ] =>
+	let [ |- T' ] = copy [ |- T ] in [ |- (X[]) ap T' ];
 
 

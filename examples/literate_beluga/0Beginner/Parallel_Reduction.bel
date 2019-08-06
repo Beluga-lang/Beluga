@@ -14,15 +14,19 @@ The mechanization highlights several aspects:
 - Type reconstruction via inference 
 
 ## Syntax
-We encode the simply-typed lambda-calculus in the logical framework LF using Twelf-style syntax.<br>
+We encode the simply-typed lambda-calculus in the logical framework LF.<br>
 }}%
-tp: type. --name tp T.
-arr: tp -> tp -> tp.
-nat: tp.
+LF tp: type  =
+  | arr: tp -> tp -> tp
+  | nat: tp
+;
+--name tp T.
 
-tm: type. --name tm M x.
-app: tm -> tm -> tm.
-lam: (tm -> tm) -> tm.
+LF tm: type =
+  | app: tm -> tm -> tm
+  | lam: (tm -> tm) -> tm
+;
+--name tm M x.
 
 % ---------------------------------------------------------------------------
 %{{
@@ -32,28 +36,22 @@ We describe parallel reduction and typing judgement for the simply-typed lambda-
 ### Parallel reduction
 The predicate <code>pr</code> of type <code>tm -> tm -> type</code> defines parallel reduction, that M may reduce to M' or <code>M -> M'</code>. &beta;-reduction <code>pr_b</code> and its congruence rules <code>pr_l</code> and <code>pr_a</code> comprise the set of inference rules.
 }}%
-pr : tm -> tm -> type.
-
-pr_l : ({x:tm} pr x x -> pr (M x) (N x))
-       -> pr (lam M) (lam N).
-pr_b : ({x:tm} pr x x -> pr (M x) (M' x))
-          -> pr N N'
-          -> pr (app (lam M) N) (M' N').
-pr_a : pr M M' -> pr N N'
-       -> pr (app M N) (app M' N').
+LF pr : tm -> tm -> type =
+  | pr_l : ({x:tm} pr x x -> pr (M x) (N x)) -> pr (lam M) (lam N)
+  | pr_b : ({x:tm} pr x x -> pr (M x) (M' x)) -> pr N N' -> pr (app (lam M) N) (M' N')
+  | pr_a : pr M M' -> pr N N' -> pr (app M N) (app M' N')
+;
 
 % ---------------------------------------------------------------------------
 %{{
 ### Typing judgement
 Following the judgements-as-types principle, we define the type family <code>oft</code> which is indexed by terms <code>tm</code> and types <code>tp</code>. Constructors <code>of_app</code> and <code>of_lam</code> encode the typing rules for application and abstraction, respectively.
 }}%
-oft: tm -> tp -> type. --name oft H.
-of_app: oft M1 (arr T2 T) -> oft M2 T2
-       -> oft (app M1 M2) T.
-of_lam: ({x:tm}oft x T1 -> oft (M x) T2)
--> oft (lam M) (arr T1 T2).
-
-
+LF oft: tm -> tp -> type =
+  | of_app: oft M1 (arr T2 T) -> oft M2 T2 -> oft (app M1 M2) T
+  | of_lam: ({x:tm}oft x T1 -> oft (M x) T2) -> oft (lam M) (arr T1 T2)
+;
+--name oft H.
 	   
 % ---------------------------------------------------------------------------
 %{{

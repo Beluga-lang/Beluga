@@ -1,51 +1,68 @@
-open Syntax
+open Support
 
-module Grammar : Camlp4.Sig.Grammar.Static
-  with module Loc   = Lexer.Loc
-  and  module Token = Lexer.Token
+module Loc = Location
+module Comp = Syntax.Ext.Comp
+module LF = Syntax.Ext.LF
 
-(***** Exported grammar productions *****)
+type input = (Loc.t * Token.t) LinkStream.t
+type state
 
-(** Grammar entry for an entire LF Signature *)
-val sgn : Ext.Sgn.sgn Grammar.Entry.t
+(** Constructs the initial state for a parser by providing an input stream. *)
+val initial_state : input -> state
 
-(** Grammar entry for a computation type. *)
-val cmp_typ : Ext.Comp.typ Grammar.Entry.t
+type error
 
-(** Grammar entry for a Harpoon command. *)
-val harpoon_command : Ext.Harpoon.command Grammar.Entry.t
+exception Error of state * error
 
-(** Grammar entry for a checkable computation expression. *)
-val cmp_exp_chk : Ext.Comp.exp_chk Grammar.Entry.t
+(***** Type of parse results. *****)
 
-(** Grammar entry for a numeric induction ordering. *)
-val numeric_total_order : Ext.Comp.numeric_order Grammar.Entry.t
+type 'a result
 
-(***** Parsing functions *****)
+(* Eliminators for `result`: *)
 
-(** Parse a stream and return a signature *)
-val parse_stream :
-     ?name:string
-  -> input:char Stream.t
-  -> 'a Grammar.Entry.t
-  -> 'a
+(** Extracts the result of the parser, raising an exception if it failed. *)
+val extract : state * 'a result -> 'a
 
-(** Parse a string and return a signature *)
-val parse_string :
-     ?name:string
-  -> input:string
-  -> 'a Grammar.Entry.t
-  -> 'a
+(** Handles parse errors. *)
+val handle : (error -> 'b) -> ('a -> 'b) -> 'a result -> 'b
 
-(** Parse a channel and return a signature *)
-val parse_channel :
-  ?name:string
-  -> input:in_channel
-  -> 'a Grammar.Entry.t
-  -> 'a
+val to_either : 'a result -> (error, 'a) Either.t
 
-(** Parse a file and return a signature *)
-val parse_file   :
-     name:string
-  -> 'a Grammar.Entry.t
-  -> 'a
+val print_error : Format.formatter -> error -> unit
+
+(***** Parser type *****)
+
+type 'a t
+
+(* Eliminator for parsers: *)
+(** Runs a parser on a given state, resulting in a final state and a result. *)
+val run : 'a t -> state -> state * 'a result
+
+(** Require end of input after the given parser. *)
+val only : 'a t -> 'a t
+
+(***** Exported productions *****)
+
+(** Parser for a full Beluga signature. *)
+val sgn : Syntax.Ext.Sgn.decl list t
+
+(** Parser for a Harpoon command. *)
+val harpoon_command : Syntax.Ext.Harpoon.command t
+
+val numeric_total_order : Syntax.Ext.Comp.numeric_order t
+
+(** Parser for computation type. *)
+val cmp_typ : Comp.typ t
+
+(** Parser for computation checkable expressions. *)
+val cmp_exp_chk : Comp.exp_chk t
+
+(** Parser for computation synthesizable expressions. *)
+val cmp_exp_syn : Comp.exp_syn t
+
+  (*
+(* exports for debugging! *)
+val cmp_kind : Comp.kind t
+val cmp_exp_syn : Comp.exp_syn t
+val clf_typ_rec_block : LF.typ_rec t
+   *)

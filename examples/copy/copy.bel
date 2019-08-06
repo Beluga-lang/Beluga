@@ -1,16 +1,17 @@
-tp: type.   --name tp T.
-bool: tp.
-nat: tp.
-arrow: tp -> tp -> tp.
+LF tp: type =  
+  | bool: tp
+  | nat: tp
+  | arrow: tp -> tp -> tp
+;
+--name tp T.
 
-term : tp -> type.  --name term E x.
-
-z    : term nat.
-s    : term nat -> term nat.
-
-lam  : (term T -> term T') -> term (arrow T T').
-app  : term (arrow T T') -> term T -> term T'.
-
+LF term : tp -> type = 
+  | z    : term nat
+  | s    : term nat -> term nat
+  | lam  : (term T -> term T') -> term (arrow T T')
+  | app  : term (arrow T T') -> term T -> term T'
+;
+--name term E x.
 
 schema tctx = some [t:tp] term t;
 % schema W = term nat;

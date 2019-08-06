@@ -5,7 +5,7 @@ oft: tm -> tp -> type.
 
 schema xtG = some [t:tp] block (x:tm, u:oft x t) + tp;
 
-inductive Rxrt: {h:xtG} prop =
+inductive Rxrt: {h:xtG} ctype =
 | Rxrt_nil : Rxrt []
 | Rxrt_cons: Rxrt [h] ->
      Rxrt [h, b:block(x:tm, v:oft x A)];

@@ -6,5 +6,5 @@ schema ctx = tm;
 rec foo : {g:ctx} {#p:[g |- tm]} [g |- tm] =
 mlam g,#p => [g |- #p[..]];
 
-rec bar : {h:ctx}{g:ctx} {#p:[h |- tm]} {#W :[g |- # h]} [g |- tm] =
-mlam h,g,#p,#W => foo [g] [g |- #p[#W[..]]];
+rec bar : {h:ctx}{g:ctx} {#p:[h |- tm]} {$W :[g |- # h]} [g |- tm] =
+mlam h,g,#p,$W => foo [g] [g |- #p[$W[..]]];

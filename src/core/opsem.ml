@@ -9,8 +9,6 @@ module Unify = Unify.StdTrail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module RR = Store.Cid.NamedRenderer
-
 
 let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [9])
 open Debug.Fmt
@@ -211,8 +209,9 @@ let rec eval_syn i (theta, eta) =
         | Comp.FunValue fbr ->
           eval_fun_branches (Comp.BoxValue (l, LF.CObj cPsi')) fbr
         | _ ->
-          print_endline (Syntax.Loc.to_string loc);
-          raise (Error.Violation "Expected CtxValue")
+           Format.fprintf Format.std_formatter "@[<v%a@,@]"
+             Syntax.Loc.print loc;
+           raise (Error.Violation "Expected CtxValue")
       end
 
     | Comp.Ann (e, _tau) ->

@@ -35,8 +35,7 @@ rec test0 : (exp T)[ ] -> (exp T)[ ] =
 }%
 tExp: type.
 
-exS : tExp
-    <- exp S.
+exS : exp S → tExp.
 
 %{
 rec test1 : (exp T)[ ] -> tExp[ ] =

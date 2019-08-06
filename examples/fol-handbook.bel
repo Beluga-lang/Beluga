@@ -1,44 +1,35 @@
-
 % Natural Deduction - Hilbert Translation
 % adapted from Handbook article on Logical Frameworks
 % by F. Pfenning
 %
 % Author: Brigitte Pientka
 
-i : type.  % individual
-o : type.  % formulas
+LF i : type = ;  % individual
+LF o : type =  % formulas
+  | imp : o -> o -> o
+  | all : (i -> o) -> o
+  | not  : o -> o
+;
 
-imp : o -> o -> o.
-all : (i -> o) -> o.
-not  : o -> o.
+LF nd : o -> type = % Natural deduction
+  | impi : (nd A -> nd B) -> nd (imp A B)
+  | impe : nd (imp A B) -> nd A -> nd B
+  | noti : ({p:o} nd A -> nd p) -> nd (not A)
+  | note : nd (not A) -> {C:o} nd A -> nd C
+  | alli : ({a:i} nd (A a)) -> nd (all (\x. A x))
+  | alle : nd (all (\x.A x)) -> {T:i} nd (A T)
+;
 
-%{  
-even: i -> o.
-all (\x. impl (even x)  (even x))
-
-(\x. impl (even x)  (even x)) a  ----> imp (even a) (even a)
-}%
-
-
-nd : o -> type. % Natural deduction
-impi : (nd A -> nd B) -> nd (imp A B).
-impe : nd (imp A B) -> nd A -> nd B.
-noti : ({p:o} nd A -> nd p) -> nd (not A).
-note : nd (not A) -> {C:o} nd A -> nd C.
-alli : ({a:i} nd (A a)) -> nd (all (\x. A x)).
-alle : nd (all (\x.A x)) -> {T:i} nd (A T).
-
-
-
-hil : o -> type.  % Hilbert deductions
-k  : hil (imp A (imp B A)).
-s  : hil (imp (imp A (imp B C)) (imp (imp A B) (imp A C))).
-n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A))).
-n2 : hil (imp (not A) (imp A B)).
-f1 : {T:i} hil (imp (all (\x.A x)) (A T)).
-f2 : hil (imp (all (\x.(imp B  (A x))))  (imp B (all (\x.A x)))).
-mp : hil (imp A B) -> hil A -> hil B.
-ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
+LF hil : o -> type = % Hilbert deductions
+  | k  : hil (imp A (imp B A))
+  | s  : hil (imp (imp A (imp B C)) (imp (imp A B) (imp A C)))
+  | n1 : hil (imp (imp A (not B)) (imp (imp A B) (not A)))
+  | n2 : hil (imp (not A) (imp A B))
+  | f1 : {T:i} hil (imp (all (\x.A x)) (A T))
+  | f2 : hil (imp (all (\x.(imp B  (A x))))  (imp B (all (\x.A x))))
+  | mp : hil (imp A B) -> hil A -> hil B
+  | ug : ({a:i} hil (A a)) -> hil (all (\x.A x))
+;
 
 % Implementation of the Deduction Theorem
 %
@@ -46,7 +37,6 @@ ug : ({a:i} hil (A a)) -> hil (all (\x.A x)).
 %
 
 schema hilCtx =  i + some [ a:o ] hil a ;
-
 
 rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp A (imp A A))] =
 / total a (trivial_imp g a) /

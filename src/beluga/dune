@@ -1,0 +1,34 @@
+(executable
+  (name main)
+  (public_name beluga)
+  (package beluga)
+  (libraries support beluga dune-build-info)
+  (modules main beli version))
+
+(executable
+  (name replay)
+  (public_name replay)
+  (package beluga)
+  (libraries support beluga)
+  (modules replay))
+
+(executable
+  (name lex_check)
+  (public_name lex_check)
+  (package beluga)
+  (libraries support beluga sedlex)
+  (modules lex_check))
+
+(executable
+  (name parse_check)
+  (public_name parse_check)
+  (package beluga)
+  (libraries support beluga)
+  (modules parse_check))
+
+(executable
+  (name lex_dump)
+  (public_name lex_dump)
+  (package beluga)
+  (libraries support beluga)
+  (modules lex_dump))

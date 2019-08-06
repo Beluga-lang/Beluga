@@ -6,10 +6,10 @@ B _build/src/core
 B _build/src/beluga
 B _build/src/support
 
-PKG ulex camlp4 extlib
+PKG ulex camlp4 extlib sedlex
 
 # Disable warning for inexhaustive pattern matching (8),
 # (the code uses it liberally)
 # Enable the warning for type-directed disambiguation which does not
 # compile with OCaml <4.00
-FLG -w -8+40+42
+FLG -w -8+40+42 -ppx sedlex.std

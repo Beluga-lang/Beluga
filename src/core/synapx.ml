@@ -4,10 +4,11 @@
 open Id
 open Pragma
 
-module Loc = Camlp4.PreCast.Loc
+module Loc = Location
 module Int = Synint
 
 module LF = struct
+  include Syncom.LF
 
   type depend =
     | No
@@ -62,13 +63,13 @@ module LF = struct
   and head =
     | BVar  of offset
     | Const of cid_term
-    | MVar  of cvar * sub
+    | MVar  of cvar * sub option
     | Proj  of head * proj
     | Hole
-    | PVar  of cvar * sub
+    | PVar  of cvar * sub option
     | FVar  of name
-    | FMVar of name   * sub
-    | FPVar of name   * sub
+    | FMVar of name * sub option
+    | FPVar of name * sub option
 
   and proj = 
     | ByPos of int
@@ -81,10 +82,9 @@ module LF = struct
   and sub =
     | EmptySub
     | Id    
-    | RealId
     | Dot   of front * sub
-    | SVar  of cvar * sub
-    | FSVar of name * sub
+    | SVar  of cvar * sub option
+    | FSVar of name * sub option
 
   and front =
     | Head of head
@@ -104,10 +104,6 @@ module LF = struct
     | CtxName   of name
     | CtxOffset of offset
 
-  and 'a ctx =
-    | Empty
-    | Dec of 'a ctx * 'a
-
   and mctx = ctyp_decl ctx
 
   and sch_elem =
@@ -125,18 +121,14 @@ end
 (** Approximate Computation Syntax *)
 module Comp = struct
 
- type  kind =
+ type kind =
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
  type meta_typ = Loc.t * LF.ctyp
 
- type clobj = 
-   | MObj of LF.normal
-   | SObj of LF.sub
-
  type mfront =
-   | ClObj of LF.dctx * clobj
+   | ClObj of LF.dctx * LF.sub
    | CObj of LF.dctx
 
  type meta_obj = Loc.t * mfront

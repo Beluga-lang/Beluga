@@ -15,14 +15,11 @@ done: path.
 
 is_path: path -> tm -> type. --name is_path I.
 
-p_lam: is_path (bind P) (lam E)
-       <- ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)).
+p_lam: ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)) → is_path (bind P) (lam E).
 
-p_left: is_path (left P) (app M N)
-       <- is_path P M.
+p_left: is_path P M → is_path (left P) (app M N).
 
-p_right: is_path (right P) (app M N)
-       <- is_path P N.
+p_right: is_path P N → is_path (right P) (app M N).
 
 p_done: is_path done M.
 
@@ -31,14 +28,11 @@ p_rdx : ({x:tm} ({q:path} is_path q M -> is_path q x) -> is_path P (F x)) -> is_
 jpath : path -> tm -> type.
 jump : tm -> tm -> type.
 
-j_lam: jpath (bind P) (lam E)
-       <- ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)).
+j_lam: ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)) → jpath (bind P) (lam E).
 
-j_left: jpath (left P) (app M N)
-       <- jpath P M.
+j_left: jpath P M → jpath (left P) (app M N).
 
-j_right: jpath (right P) (app M N)
-       <- jpath P N.
+j_right: jpath P N → jpath (right P) (app M N).
 
 j_done: jpath done M.
 

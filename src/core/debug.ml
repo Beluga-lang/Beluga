@@ -1,3 +1,5 @@
+module Maybe = Support.Maybe
+   
 exception NotInitialized
 
 type flags = int
@@ -11,7 +13,7 @@ end
 
 open Fmt
 
-let chatter : int ref =  ref 1
+let chatter : int ref = ref 1
 
 let r_flags : flags ref = ref 0
 
@@ -19,6 +21,9 @@ let enable () =
   r_flags := lnot 0
 
 let out : Format.formatter option ref = ref None
+
+(** Tests if a given flag is set. *)
+let flag (n : int) : bool = 1 = !r_flags land (1 lsl n)
 
 let rec toFlags = function
   | [] -> 0

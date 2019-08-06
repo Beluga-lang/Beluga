@@ -1,72 +1,45 @@
 %%% Translation to representation using de Bruijn indices
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-trans  : env -> exp' -> exp -> type.
-vtrans : val -> exp -> type.
+LF trans  : env -> exp' -> exp -> type =
+  % Natural numbers
+  | tr_z     : trans K z' z
+  | tr_s     : trans K F E ->  trans K (s' F) (s E)
 
-% Natural numbers
-tr_z     : trans K z' z.
-tr_s     :  trans K (s' F) (s E)
-          <- trans K F E.
-
-tr_match : trans K (match' F1 F2 F3) (match E1 E2 (\x. E3 x))
-	   <- trans K F1 E1
-	   <- trans K F2 E2
-	   <- ({w:val} {x:exp}
-		 vtrans w x -> trans (vcons K  w) F3 (E3 x)).
+  | tr_match : ({w:val} {x:exp} vtrans w x -> trans (vcons K  w) F3 (E3 x)) ->
+               trans K F2 E2 -> trans K F1 E1 -> trans K (match' F1 F2 F3) (match E1 E2 (\x. E3 x))
 
 % Pairs
-tr_pair : trans K (pair' F1 F2) (pair E1 E2)
-	     <- trans K F1 E1
-	     <- trans K F2 E2.
-tr_fst  : trans K (fst' F1) (fst E1)
-	     <- trans K F1 E1.
-tr_snd  : trans K (snd' F1) (snd E1)
-	     <- trans K F1 E1.
+  | tr_pair : trans K F2 E2 -> trans K F1 E1 -> trans K (pair' F1 F2) (pair E1 E2)
+  | tr_fst  : trans K F1 E1 -> trans K (fst' F1) (fst E1)
+  | tr_snd  : trans K F1 E1 -> trans K (snd' F1) (snd E1)
+
 
 % Functions
-tr_lam : trans K (lam' F) (lam (\x. E x))
-	    <- ({w:val} {x:exp}
-		  vtrans w x -> trans (vcons K w) F (E x)).
-
-tr_app : trans K (app' F1 F2) (app E1 E2)
-	    <- trans K F1 E1
-	    <- trans K F2 E2.
+  | tr_lam : ({w:val} {x:exp} vtrans w x -> trans (vcons K w) F (E x)) -> trans K (lam' F) (lam (\x. E x))
+  | tr_app : trans K F2 E2 -> trans K F1 E1 -> trans K (app' F1 F2) (app E1 E2)
 
 % Definitions
-tr_letv: trans K (letv' F1  F2) (letv E1 (\x. E2 x))
-	    <- trans K F1 E1
-	    <- ({w:val} {x:exp}
-		  vtrans w x -> trans (vcons K w) F2 (E2 x)).
-
-tr_letn: trans K (letn' F1 F2) (letn E1 (\x. E2 x))
-	    <- trans K F1 E1
-	    <- ({f:exp'} {x:exp}
-		  trans K f x -> trans (cons K f) F2 (E2 x)).
+  | tr_letv: ({w:val} {x:exp} vtrans w x -> trans (vcons K w) F2 (E2 x)) -> trans K F1 E1 -> trans K (letv' F1  F2) (letv E1 (\x. E2 x))
+  | tr_letn: ({f:exp'} {x:exp} trans K f x -> trans (cons K f) F2 (E2 x)) -> trans K F1 E1 -> trans K (letn' F1 F2) (letn E1 (\x. E2 x))
 
 % Recursion
-tr_fix : trans K (fix' F) (fix (\x. E x))
-	    <- ({f:exp'} {x:exp}
-		  trans K f x -> trans (cons K f) F (E x)).
+  | tr_fix : ({f:exp'} {x:exp} trans K f x -> trans (cons K f) F (E x)) -> trans K (fix' F) (fix (\x. E x))
 
 % Variables
-tr_1    : trans (vcons K W) one E <- vtrans W E.
-tr_^    : trans (vcons K W) (shift F) E <- trans K F E.
+  | tr_1    : vtrans W E -> trans (vcons K W) one E
+  | tr_^    : trans K F E -> trans (vcons K W) (shift F) E
+  | tr_1+   : trans K F E -> trans (cons K  F) one E
+  | tr_^+   : trans K F E -> trans (cons K  F') (shift F) E
 
-tr_1+   : trans (cons K  F) one E <- trans K F E.
-tr_^+   : trans (cons K  F') (shift F) E <- trans K F E.
-
+and vtrans : val -> exp -> type =
 % Natural number values
-vtr_z : vtrans z_val z.
-vtr_s : vtrans (s_val W) (s V)
-	 <- vtrans W V.
+  | vtr_z : vtrans z_val z
+  | vtr_s : vtrans W V -> vtrans (s_val W) (s V)
 
 % Pair values
-vtr_pair : vtrans (pair_val W1 W2) (pair V1 V2)
-	    <- vtrans W1 V1
-	    <- vtrans W2 V2.
+  | vtr_pair : vtrans W2 V2 -> vtrans W1 V1 -> vtrans (pair_val W1 W2) (pair V1 V2)
 
 % Function values
-vtr_lam : vtrans (clo K (lam' F)) (lam (\x. E x))
-	   <- trans K (lam' F) (lam (\x. E x)).
-
+  | vtr_lam : trans K (lam' F) (lam (\x. E x)) -> vtrans (clo K (lam' F)) (lam (\x. E x))
+;

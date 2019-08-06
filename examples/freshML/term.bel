@@ -4,16 +4,17 @@
 % Author: Brigitte Pientka
 
 
-nat: type.
-z: nat.
-suc: nat -> nat.
+LF nat: type =
+  | z: nat
+  | suc: nat -> nat
+;
 
-
-term: type.
-lam   : (term -> term) -> term.
-app   : term -> term -> term.
-letv  : term -> (term -> term) -> term.
-const : nat -> term.
+LF term: type =
+  | lam   : (term -> term) -> term
+  | app   : term -> term -> term
+  | letv  : term -> (term -> term) -> term
+  | const : nat -> term
+;
 
 schema ctx = term ;
 

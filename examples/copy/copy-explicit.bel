@@ -1,8 +1,10 @@
-tp: type.
-arrow: tp -> tp -> tp.
+LF tp: type =
+  | arrow: tp -> tp -> tp
+;
 
-term : tp -> type.
-lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T').
+LF term : tp -> type =
+  | lam  : {T:tp} {T':tp} (term T -> term T') -> term (arrow T T')
+;
 
 schema termCtx = some [t:tp] term t;
 

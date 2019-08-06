@@ -9,6 +9,7 @@
  * Normalization, and alpha-conversion
  *)
 
+open Support
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution

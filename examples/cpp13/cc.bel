@@ -152,7 +152,7 @@ fn sigma =>
 % ----------------------------------------------------------       
 % Variable lookups
 
-rec lookup: Map [h] [g] -> {#q:[g |- source T[]]}[h |-  target T[]] =
+rec lookup: Map [h] [g] -> {#q:[g |- source T[]]} [h |-  target T[]] =
  / total m (lookup _ _ _ m) /
 fn sigma => mlam #q => case sigma of
 | M_dot sigma' [h |-  M] => 

@@ -1,5 +1,6 @@
 (* module Harpoon *)
 
+open Support
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
@@ -208,6 +209,11 @@ module Tactic = struct
 
                 (cD1, cIH)
               else
+                let _ =
+                  dprint
+                    (fun _ ->
+                      "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable")
+                in
                 (cD, LF.Empty)
             in
             let cD = Check.Comp.id_map_ind cD ms s.context.cD in
@@ -290,8 +296,7 @@ module Prover = struct
     }
 
   (** Computes the index of the current subgoal we're working on. *)
-  let current_subgoal_index gs =
-    DynArray.length gs - 1
+  let current_subgoal_index gs = 0
 
   (** Gets the next subgoal from the interpreter state.
       Returns `None` if there are no subgoals remaining.
@@ -309,7 +314,7 @@ module Prover = struct
         (cmd : Syntax.Ext.Harpoon.command)
       : unit =
     let module Command = Syntax.Ext.Harpoon in
-    let add_subgoal = DynArray.insert s.remaining_subgoals 0 in
+    let add_subgoal = DynArray.add s.remaining_subgoals in
     let remove_current_subgoal () =
       let gs = s.remaining_subgoals in
       DynArray.delete gs (current_subgoal_index gs)
@@ -433,19 +438,9 @@ module Prover = struct
       error-printing function.
    *)
   let parse_input (input : string) : Syntax.Ext.Harpoon.command error =
-    try
-      Parser.parse_string
-        ~name: "command line"
-        ~input: input
-        Parser.harpoon_command
-      |> Either.pure
-    with
-    | Parser.Grammar.Loc.Exc_located (_, _) as e ->
-       Either.Left
-         (fun ppf ->
-           Format.fprintf ppf
-             "@[<v>Parse error.@.%s@]"
-             (Printexc.to_string e))
+    Runparser.parse_string "<prompt>" input Parser.(only harpoon_command)
+    |> snd |> Parser.to_either
+    |> Either.lmap (fun e ppf -> Parser.print_error ppf e)
 
   (** Runs the given function, trapping exceptions in Either.t
       and converting the exception to a function that prints the

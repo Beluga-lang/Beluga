@@ -1,1 +1,4 @@
-Parse Error: Ill-formed datatype declaration.
+Parse error.
+Wrong datatype for constructor Blue.
+  Expected type Colour
+  Actual type t

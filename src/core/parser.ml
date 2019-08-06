@@ -1,1437 +1,2731 @@
-(* NOTE: Be careful with tuareg-mode M-q in this file -- it doesn't
-   understand the grammar formatting below very well and will easily
-   trash the layout. *)
+(***** Beluga external syntax parser
 
-open Syntax.Ext
-open Id
+**** Intro to parser combinators
 
-module Grammar = Camlp4.Struct.Grammar.Static.Make (Lexer)
+This is a hand-made parser combinator system.
+The basic idea in parser combinators is to use higher-order functions
+to manipulate _parsing functions_ to build up more complex parsers.
 
-exception MixError of (Format.formatter -> unit)
-exception IllFormedDataDecl
-exception WrongConsType of Id.name * Id.name * Id.name
-exception InvalidAssociativity of string
+The most basic type we can give for a parsing function would be
+something like:
 
-(** Remove any trailing newlines. Named after the Perl function that
-    does the same thing. *)
-let chomp = function
-  | "" -> ""
-  | s when s.[String.length s - 1] = '\n' -> String.sub s 0 (String.length s - 1)
-  | s -> s
+> type 'a parser = char list -> char list * 'a option
 
-let _ = Error.register_printer
-  (fun (Grammar.Loc.Exc_located (loc, exn)) ->
-    Error.print_with_location loc (fun ppf ->
-      Format.fprintf ppf "%s" (chomp (Printexc.to_string exn))))
+`char list` represents the input stream. We must return a new stream,
+perhaps with some characters removed since we parsed them. The result
+of the parse is parametric. Since parsing may fail, we use a type
+constructor to represent this, namely `option`.
 
-let _ = Error.register_printer
-  (fun (Stream.Error str) ->
-    Error.print (fun ppf -> Format.fprintf ppf "%s" str))
+However this design has many shortcomings.
+1. Representing the input as a `char list` requires the entire input
+   to be buffered in memory. This is wasteful. Instead, we should
+   progressively read input as we need it. Therefore in our
+   implementation we use a lazy list `LinkStream.t`.
+2. Using `option` to represent failure doesn't give us a means to
+   specify what the error is. Instead we use `Either.t` in order to
+   also return some information in case of failure.
+3. Finally, in order to control backtracking and other parsing
+   features, we will need to not only pass around and transform the
+   _input_, but a more general _parser state_.
 
-let _ = Error.register_printer
-  (fun (MixError f) ->
-    Error.print (fun ppf -> f ppf))
+So our parsing function type now looks like:
 
-let _ = Error.register_printer
-  (fun IllFormedDataDecl ->
-    Error.print (fun ppf ->
-      Format.fprintf ppf "Parse Error: Ill-formed datatype declaration."))
+> type 'a parser = state -> state * (error, 'a) Either.t
 
-let _ = Error.register_printer
-  (fun (WrongConsType (c, a, a')) ->
-    Error.print (fun ppf ->
-      Error.report_mismatch ppf
-        ("Parse Error: Wrong datatype for constructor " ^ (string_of_name c) ^ ".")
-        "Expected datatype" Format.pp_print_string (string_of_name a)
-        "Actual datatype"   Format.pp_print_string (string_of_name a')))
+where `state` contains a `(Loc.t * Token.t) LinkStream.t` for the
+input as well as extra stuff for handling backtracking.
 
-let _ = Error.register_printer
-  (fun (InvalidAssociativity s) -> Error.print (fun ppf ->
-    Format.fprintf ppf "Invalid Associativity \"%s\"" s))
+In reality, we wrap the parsing function into a record so that we can
+possibly extend parsing functions later with metadata.
 
-let last l = match List.rev l with
+**** OCaml shortcomings
+
+OCaml is a strict language, so one cannot define recursive values that
+are _not functions_.
+In particular, one cannot write `let rec x = x`; we get the error
+"this kind of expression is not allowed on the right-hand side of `let
+rec'."
+
+So suppose we are parsing arithmetic expressions with addition and
+multiplication. We would like to write:
+
+> let rec term =
+>   seq2
+>     factor
+>     (token T.PLUS &> term)
+>   $> fun (x, y) ->
+>      match y with
+>      | Some y -> Add (x, y)
+>      | None -> x
+> and factor = ...
+> and literal = ...
+
+But now we have a problem, because clearly `term` refers to itself and
+it isn't syntactically a function. Really, though, this *is* a
+function. In fact, it has function type. So what we can do is
+eta-expand the definition to make `term` syntactically a function,
+thus avoiding the recursive value error.
+
+> let rec term =
+>   { run =
+>       fun s ->
+>       let p =
+>         seq2
+>           factor
+>           (token T.PLUS &> term)
+>         $> fun (x, y) ->
+>            match y with
+>            | Some y -> Add (x, y)
+>            | None -> x
+>       in
+>       p.run s
+>   }
+> and ...
+
+Because our parsing functions are wrapped in records, we also need to
+eta-expand the records, which amounts to wrapping and unwrapping.
+But we can see that our original implementation appears verbatim
+within the expanded version. (Perhaps one could write a PPX rewriter
+that does this transformation and avoids the administrative clutter of
+eta-expanding.)
+This trick is used extensively in the definition of the parsers below,
+so it's important to be aware of it.
+
+***** Backtracking
+
+The naive implementation of the `alt' alternation combinator is to say
+that `alt p1 p2' first runs `p1', and if it fails, runs `p2'.
+This implementation has the major drawback of allowing _unlimited_
+backtracking. This is undesirable because it results in terrible error
+messages. What we would like is a way to control the backtracking
+behaviour of parsers on a more fine-grained level.
+
+Instead, the library below is non-backtracking, so it introduces the
+`trying' combinator to selectively enable backtracking.
+`trying p' runs `p', and if `p' fails having even consumed input, then
+`trying p' can still be backtracked out of.
+The `alt' combinator is implemented like this:
+- Run `p1'. If it succeeds, return its result without trying p2.
+- If `p1' failed without consuming any input, then run `p2'.
+- If `p1' failed under a `trying', then run `p2'.
+- Otherwise, the error generated by `p1' was fatal, so return it.
+ *)
+
+open Support
+
+module Loc = Location
+module Comp = Syntax.Ext.Comp
+module LF = Syntax.Ext.LF
+module Sgn = Syntax.Ext.Sgn
+module T = Token
+
+(***** Parser state definition *****)
+
+(** Type of located values, i.e. values paired with their location. *)
+type 'a locd = Loc.t * 'a
+
+(** The input to the parser is a backtrackable stream of tokens paired
+    with their locations.
+ *)
+type input = T.t locd LinkStream.t
+
+(** The parser state contains the input stream as well as control
+    information to handle backtracking.
+ *)
+type state =
+  { input : input
+  ; backtrack : bool
+                  (* ; loc : Loc.t (* Location of the last token seen by the parser. *) *)
+  }
+
+  (*
+(** Peeks at the next token in the input stream in the given state. *)
+let peek_at (s : state) : T.t locd option =
+  Maybe.(LinkStream.observe s.input $> fst)
+   *)
+
+  (*
+(** Like `peek_at` but forgets the location. *)
+let next_token s =
+  Maybe.(peek_at s $> snd |> get_default T.EOI)
+   *)
+
+(***** ERROR HANDLING *****)
+
+type error_entry =
+  { label : string
+  ; location : Loc.t option
+  }
+
+type path' =
+  | Entry of error_entry
+  | Shift of error_entry * path
+and path = path' list
+
+         (*
+let entry (location : Loc.t) (label : string) : path' =
+  Entry { location = Some location; label }
+          *)
+
+let rec path_head (p : path) : error_entry option =
+  match p with
   | [] -> None
-  | h::t -> Some (h, t)
+  | x :: _ -> Some (path'_head x)
+
+and path'_head (p' : path') : error_entry =
+  match p' with
+  | Entry e -> e
+  | Shift (e, p) ->
+     match path_head p with
+     | Some e' ->
+        { e with label = e.label ^ " " ^ e'.label }
+     | None -> e
+
+type content =
+  [ `token of Token.t option
+  | `identifier of string option
+  | `qualified_identifier of (string list * string) option
+  | `keyword of string option
+  | `hash_identifier of string option
+  | `dollar_identifier of string option
+  | `hole of string option
+  | `integer of int option
+  | `dot_integer
+  | `html_comment
+  | `eoi
+  ]
+
+let print_content ppf : content -> unit =
+  let open Format in
+  let format_option_with g ppf t =
+    Maybe.print (fun ppf t -> fprintf ppf " `%a'" g t) ppf t
+  in
+  let string_option = format_option_with pp_print_string in
+  let int_option = format_option_with pp_print_int in
+  let format_with ppf s f x = fprintf ppf "%s%a" s f x in
+  function
+  | `token t ->
+     fprintf ppf "token%a"
+       (format_option_with (Token.print `TOKEN)) t
+  | `dot_integer -> fprintf ppf "dot integer"
+  | `identifier i ->
+     format_with ppf "identifier" string_option i
+  | `qualified_identifier i ->
+     fprintf ppf "qualified identifier%a"
+       (format_option_with
+          (fun ppf (ss, s) ->
+            fprintf ppf "%a%s"
+              (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf ".")
+                 pp_print_string) ss
+              s))
+       i
+  | `hash_identifier i ->
+     format_with ppf "hash identifier" string_option i
+  | `dollar_identifier i ->
+     format_with ppf "dollar identifier" string_option i
+  | `hole i ->
+     format_with ppf "hole" string_option i
+  | `keyword i ->
+     format_with ppf "keyword" string_option i
+  | `integer i ->
+     format_with ppf "integer literal" int_option i
+  | `eoi ->
+     fprintf ppf "end of input"
+  | `html_comment -> fprintf ppf "HTML comment"
+
+type error' =
+  (* External errors: the user's fault. *)
+  | Unexpected of
+      content (* expected *)
+      * content (* actual *)
+  | IllFormedDataDecl
+  (* ^ incorrect constructor type: the type of a constructor must be a
+     base type or a function type.
+   *)
+  | Custom of string (* Generic external error. *)
+  | WrongConstructorType of
+      Id.name (* constructor name *)
+      * Id.name (* expected type name *)
+      * Id.name (* actual type name *)
+  | NoMoreChoices of error list (* all alternatives failed *)
+
+  (* Internal errors: our fault; these should never go to the user. *)
+  (** Raised by `satisfy` when it fails.
+      This is an internal error because it is totally uninformative
+      and low-level. When a high-level parser is constructed using
+      `satisfy`, it should check for this error and rewrite it into a
+      nicer one for the user.
+   *)
+  | NotFollowedBy
+
+  (** Generic internal error. *)
+  | Violation of string
+
+and error =
+  { error : error'
+  (* ^ The actual error. *)
+  ; path : path
+  (* ^ Sequence of parser labels that led to the parse error.
+     This is used to generate errors of the form.
+     ```
+     Parse error: unexpected `bar', expected `foo'.
+     In a parser for `production1'
+     In a parser for `production2'
+     and so on
+     ```
+   *)
+  ; loc : Loc.t (* the location the error occurred at *)
+  }
+
+  (*
+(** Adds a label to the error path *)
+let push_label (l : string) : error -> error =
+  fun e -> { e with path = Entry l :: e.path }
+   *)
+
+         (*
+(** Adds a label to an error path, if any. *)
+let push_label_option (l : string option) (e : error) : error =
+  let open Maybe in
+  l $> (fun l -> push_label l e)
+  |> get_default e
+          *)
+
+exception Error of state * error
+
+(** Pretty-print an error path. *)
+let print_path ppf (path : path) : unit =
+  let open Format in
+  let print_entry ppf { label; location } : unit =
+    fprintf ppf "in `%s'%a" label
+      (Maybe.print
+         (fun ppf x -> fprintf ppf " at %a" Loc.print x))
+      location
+  in
+  let rec go' ppf (path' : path') =
+    match path' with
+    | Entry e -> fprintf ppf "%a" print_entry e
+    | Shift (e, p) ->
+       fprintf ppf "@[%a@]@,%a" print_entry e go_box p
+  and go ppf (path : path) =
+    pp_print_list go' ppf path
+  and go_box ppf (path : path) =
+    fprintf ppf "  @[<v>%a@]" go path
+  in
+  fprintf ppf "%a" go_box path
+
+let print_error ppf ({path; loc; _} as e : error) =
+  let open Format in
+  fprintf ppf "@[<v>Parse error.@,";
+  let (* rec *) g ppf {error = e; _} =
+    match e with
+    | NoMoreChoices ss ->
+       fprintf ppf "Expected:@,  @[<v>";
+       pp_print_list ~pp_sep: (fun _ _ -> ())
+         (fun ppf x ->
+           Maybe.print
+             (fun ppf x -> fprintf ppf "%s@," x.label)
+             ppf
+             (path_head x.path))
+         ppf
+         ss;
+       fprintf ppf "@]"
+    (* fprintf ppf "Next token: %a@." Token.(print `TOKEN) (next_token s) *)
+    | Unexpected (t_exp, t_act) ->
+       fprintf ppf "Unexpected token in stream@,  @[<v>Expected %a@,Got %a@]@,"
+         print_content t_exp
+         print_content t_act
+    | IllFormedDataDecl ->
+       fprintf ppf
+         ( "Ill-formed constructor declaration.@," ^^
+             "The type of a constructor must be a base type or function type."
+         )
+    | WrongConstructorType (c, exp, act) ->
+       fprintf ppf
+         ( "Wrong datatype for constructor %s.@,  @[<v>"
+           ^^ "Expected type %s@,"
+           ^^ "Actual type %s"
+           ^^ "@]"
+         )
+         (Id.string_of_name c)
+         (Id.string_of_name exp)
+         (Id.string_of_name act)
+    | Custom s -> fprintf ppf "%s" s
+    | Violation s -> fprintf ppf "%s" s
+  in
+  fprintf ppf "%a" g e;
+  if Debug.flag 11 then fprintf ppf "@,%a" print_path path;
+  fprintf ppf "@]"
+
+let _ =
+  Error.register_printer'
+    (function
+     | Error (s, e) ->
+        Some
+          (Error.print_with_location e.loc
+             (fun ppf -> print_error ppf e))
+     | _ -> None)
+
+(***** Syntax mangling helpers *****)
+
+type typ_or_ctx =
+  [ `Typ of LF.typ
+  | `Ctx of LF.dctx
+  ]
 
 type kind_or_typ =
-  | Kind of LF.kind
-  | Typ  of LF.typ
+  [ `Kind of LF.kind
+  | `Typ  of LF.typ
+  ]
 
-type pair_or_atom =
-  | Pair of Comp.exp_chk
-  | Atom
+(***** Parser type definition *****)
 
-type pair_or_atom_syn =
-  | Pair_syn of Comp.exp_syn
-  | Atom_syn
+(** Gets the location of the next item in the input stream *)
+let next_loc_at (s : state) : Loc.t =
+  match LinkStream.observe s.input with
+  | None -> failwith "lexer invariant failed"
+  (* the lexer should infinitely repeat "EOI" when it's done. *)
+  | Some ((loc, _), _) -> loc
 
-type pair_or_atom_pat =
-  | Pair_pat of Comp.pattern
-  | Atom_pat
+let initial_state input =
+  { input
+  ; backtrack = false
+  }
 
-type mixtyp =
-  | MTCompKind of Loc.t
-  | MTBase of Loc.t * Id.name * Comp.meta_spine
-  | MTIndBase of Loc.t * Id.name * Comp.meta_spine
-  | MTArr of Loc.t * mixtyp * mixtyp
-  | MTCross of Loc.t * mixtyp * mixtyp
-  | MTBox of Loc.t * mixtyp * LF.dctx * LF.depend
-  | MTPBox of Loc.t * mixtyp * LF.dctx * LF.depend
-  | MTCtx of Loc.t * Id.name * LF.depend
-  | MTSub of Loc.t * LF.dctx * LF.dctx * LF.depend
-  | MTPiBox of Loc.t * LF.ctyp_decl * mixtyp
-(* -bp Pi-types should not occur in computation-level types
-  |  MTPiTyp of Loc.t * LF.typ_decl * mixtyp *)
-  | MTAtom of Loc.t * Id.name * LF.spine
-  | MTAtomTerm of Loc.t * LF.normal
+(** A parsing result is either an error or a successfully computed value. *)
+type 'a result = (error, 'a) Either .t
 
+(** A parsing function transforms a state and produces a parsing result. *)
+type 'a parser' = state -> state * 'a result
 
-type whichmix = LFMix of LF.typ | CompMix of Comp.typ | CompKindMix of Comp.kind
+(** An annotated parsing function with an optional label. *)
+type 'a parser =
+  { run : 'a parser' (** The parsing function. *)
+             (* ; label : string option (** The name of the parser. Used to generate error messages. *) *)
+  }
 
-let mixloc = function
-  |  MTCompKind l -> l
-  |  MTArr(l, _, _) -> l
-  |  MTCross(l, _, _) -> l
-  |  MTBox(l, _, _, _) -> l
-  |  MTPBox(l, _, _, _) -> l
-  |  MTCtx(l, _, _) -> l
-  |  MTSub(l, _, _, _) -> l
-  |  MTPiBox(l, _, _) -> l
-(*  |  MTPiTyp(l, _, _) -> l *)
-  |  MTAtom(l, _, _) -> l
-  |  MTBase(l, _, _) -> l
-  |  MTIndBase(l, _, _) -> l
-  |  MTAtomTerm(l, _) -> l
+(** Run a parser.
+    In other words, extracts the parsing function from a parser. *)
+let run p = p.run
 
-let unmixfail loc = raise (Error.Violation ("Can't unmix. At " ^ Syntax.Loc.to_string loc))
+(** Eliminator for parse results. *)
+let handle catch f = Either.eliminate catch f
 
-(* unmix : mixtyp -> whichmix *  *)
-let rec unmix = function
-  | MTCompKind l -> CompKindMix (Comp.Ctype l)
-  | MTBase (l, a, ms) -> CompMix(Comp.TypBase (l, a, ms))
-  | MTIndBase (l, a, ms) -> CompMix(Comp.TypInd (Comp.TypBase (l, a, ms)))
-  | MTArr(l, mt1, mt2) ->
-     begin
-       match (unmix mt1, unmix mt2) with
-       | (LFMix lf1, LFMix lf2) -> LFMix(LF.ArrTyp(l, lf1, lf2))
-       | (CompMix c1, CompMix c2) -> CompMix(Comp.TypArr(l, c1, c2))
-       | (CompMix c1, CompKindMix c2) ->
-          let x = Id.mk_name (Id.NoName) in
-          let (l, cdecl) =
-            match c1 with
-            | Comp.TypInd (Comp.TypBox (l, mtyp)) -> (l, LF.Decl(x, mtyp, LF.Inductive))
-            | Comp.TypBox (l, mtyp) -> (l, LF.Decl(x, mtyp, LF.No))
-            | _ -> unmixfail (mixloc mt1)
-          in
-          CompKindMix(Comp.PiKind(l, cdecl, c2))
-       | (_, _) -> unmixfail (mixloc mt2)
-     end
-  | MTCross(l, mt1, mt2) -> CompMix(Comp.TypCross(l, toComp mt1, toComp mt2))
-  | MTBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx))))
-  | MTBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l, LF.ClTyp (LF.MTyp (toLF mt0), dctx)))))
-  | MTCtx  (l, schema, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.CTyp schema)))
-  | MTCtx  (l, schema, LF.Inductive) -> CompMix (Comp.TypInd(Comp.TypBox (l, (l, LF.CTyp schema))))
-  | MTPBox(l, mt0, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.PTyp (toLF mt0), dctx))))
-  | MTPBox(l, mt0, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l, LF.ClTyp (LF.PTyp (toLF mt0), dctx)))))
-  | MTSub(l, dctx1, dctx, LF.No) -> CompMix (Comp.TypBox (l, (l, LF.ClTyp (LF.STyp (LF.Subst,dctx1), dctx))))
-  | MTSub(l, dctx1, dctx, LF.Inductive) -> CompMix (Comp.TypInd (Comp.TypBox (l, (l,LF.ClTyp (LF.STyp (LF.Subst,dctx1), dctx)))))
-  | MTPiBox(l, cdecl, mt0) ->
-       begin match unmix mt0 with
-         | CompKindMix mk -> CompKindMix (Comp.PiKind(l, cdecl, mk))
-         | CompMix mt -> CompMix(Comp.TypPiBox(l, cdecl, mt))
-         | _ -> unmixfail (mixloc mt0)
-       end
-(*  |  MTPiTyp(l, tdecl, mt0) -> LFMix(LF.PiTyp(l, tdecl, toLF mt0)) *)
-  | MTAtom(l, name, spine) -> LFMix(LF.Atom(l, name, spine))
-  | MTAtomTerm(l, n) -> LFMix (LF.AtomTerm(l, n))
+(** Converts a parse result to Either. *)
+let to_either (r : 'a result) : (error, 'a) Either.t = r
 
-and toLF mt = match unmix mt with
-  |  LFMix lf -> lf
-  |  _ -> unmixfail (mixloc mt)
+(** Extracts the value from a parse result.
+    If the parse was unsuccessful, then this raises a parse error exception. *)
+let extract =
+  let open Either in
+  function
+  | (s, Left e) -> raise (Error (s, e))
+  | (_, Either.Right x) -> x
 
-and toComp mt = match unmix mt with
-  | CompMix c -> c
-  | CompKindMix c ->
-    raise (MixError (fun ppf -> Format.fprintf ppf
-      "Syntax error: @[<v>Found Computation-level kind@;\
-                          Expected: computation-level type@]"))
-  |  _ ->
-    raise (MixError (fun ppf -> Format.fprintf ppf
-      "Syntax error: @[<v>Found LF-type@;\
-       Expected: computation-level type"))
+type 'a t = 'a parser
 
-and toCompKind k = match unmix k with
-  | CompKindMix c -> c
-  | CompMix c ->
-    raise (MixError (fun ppf -> Format.fprintf ppf
-      "Syntax error: @[<v>Found Computation-level type@;\
-       Expected: computation-level kind@]"))
-  |  _ ->
-    raise (MixError (fun ppf -> Format.fprintf ppf
-      "Syntax error: @[<v>Found LF-type@;\
-       Expected: computation-level kind"))
+(***** Basic parser helpers *****)
 
-(* Check that datatype declarations are well formed. We can't do this
-   later because after parsing there is no structural grouping between
-   constructors of a same datatype. *)
-let check_datatype_decl a cs =
+(** Runs `p' and invokes the given handler to modify the outcome.
+    Despite being called "catch", this parser is actually a kind of `map',
+    and is used to implement "low-level" parser transformations.
+ *)
+let catch (p : 'a parser) (handler : state * 'a result -> state * 'b result) : 'b parser =
+  { run = fun s -> p.run s |> handler }
+
+  (*
+(** Runs p. If it fails, its error path is transformed by the given
+    function.
+    Use a constant function to replace an error path with a new one.
+ *)
+let repathing (l : path -> path) (p : 'a parser) : 'a parser =
+  let open Either in
+  catch p
+    (function
+     | Left {error; path} -> Left {error; path = l path}
+     | x -> x)
+   *)
+
+(** Constructs a failure result for a given state. *)
+let fail_at' s loc path error =
+  ( s
+  , Either.Left {error ; path; loc}
+  )
+
+(** Fail with no error path. *)
+let fail_at s error = fail_at' s (next_loc_at s) [] error
+
+(** A parser that fails with the given error and path. *)
+let fail' path e : 'a parser =
+  { run = fun s -> fail_at' s (next_loc_at s) path e }
+
+(** A parser that fails with the given error and an empty path. *)
+let fail e : 'a parser = fail' [] e
+
+let pure_at s x =
+  (s, Either.Right x)
+let pure x : 'a parser =
+  { run = fun s -> pure_at s x }
+
+(** Gets the current parser state. *)
+let get_state : state parser =
+  { run = fun s -> pure_at s s }
+
+(** Sets the current parser state. *)
+let put_state (s : state) : unit parser =
+  { run = fun _ -> pure_at s () }
+
+  (*
+(** Keeps the state unchanged, but reads the current location. *)
+let get_loc =
+  anon_parser
+    (fun s -> pure_at s (s.loc))
+   *)
+
+(***** Parser combinators *****)
+
+(** Runs the parser `p` with unlimited backtracking enabled. *)
+let trying p =
+  { run =
+      fun s ->
+      let open Either in
+      match p.run s with
+      | (s, Left e) -> ({ s with backtrack = true}, Left e)
+      | x -> x
+  }
+
+(** Sequential composition of parsers.
+    This runs `p` and uses its result to compute the next parser to run.
+    (This is a monadic bind operation.)
+ *)
+let seq : type a b. a parser -> (a -> b parser) -> b parser =
+  fun p k ->
+  { run =
+      fun s ->
+      match p.run s with
+      | (s, Either.Right x) -> (k x).run s
+      | (s, Either.Left e) -> (s, Either.Left e)
+  }
+
+(** Infix operator form of `seq`. *)
+let ($) = seq
+
+(** Sequence two parsers. *)
+let seq2 : type a b. a parser -> b parser -> (a * b) parser =
+  fun p1 p2 ->
+  p1 $ fun x -> p2 $ fun y -> pure (x , y)
+
+(** Sequence three parsers. *)
+let seq3 p1 p2 p3 =
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> pure (x1 , x2 , x3)
+
+(** Sequence four parsers. *)
+let seq4 p1 p2 p3 p4 =
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> pure (x1 , x2 , x3 , x4)
+
+(** Sequence five parsers. *)
+let seq5 p1 p2 p3 p4 p5 =
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> p5 $ fun x5 -> pure (x1 , x2 , x3 , x4 , x5)
+
+(** Runs p1 and p2, discarding the result of p1. *)
+let (&>) p1 p2 = p1 $ fun _ -> p2
+
+(** Runs p1 and p2, discarding the result of p2. *)
+let (<&) p1 p2 = p1 $ fun x -> p2 &> pure x
+
+(** Transforms the result of a parser with a pure function. *)
+let ($>) (p : 'a parser) (f : 'a -> 'b) : 'b parser =
+  p $ fun x -> pure (f x)
+
+             (*
+(** Forgets the result of a parser. *)
+let void (p : 'a parser) : unit parser = p &> pure ()
+              *)
+
+(***** Combinators for handling error labels. *****)
+
+(** Gets the location of the next token in the input stream.
+    If the stream is ended, gets the location of the last token.
+ *)
+let next_loc : Loc.t parser =
+  get_state
+  $> fun s -> next_loc_at s
+
+(** Runs `p` tracking the span of source material processed by it. *)
+let span p =
+  { run =
+      fun s ->
+      let p =
+        seq3 next_loc p next_loc
+        $> fun (l1, x, l2) -> (Loc.join l1 l2, x)
+      in
+      p.run s
+  }
+
+(** Runs the parser, and if it fails, runs the given function to
+    transform the label stack.
+    Also provides the location of the very next token `p` would see.
+ *)
+let relabelling (type a) (p : a parser) (f : Loc.t -> path -> path) : a parser =
+  next_loc
+  $ fun loc ->
+    let open Either in
+    catch p
+      (function
+       | s, Left e -> s, Left {e with path = f loc e.path }
+       | x -> x)
+
+    (*
+(** Flipped version of `relabelling` *)
+let relabelled f p = relabelling p f
+     *)
+
+let shift p s =
+  relabelling p
+    (fun loc path ->
+      [ Shift
+          ( { location = Some loc
+            ; label = s
+            }
+          , path
+          )
+      ])
+
+let shifted s p = shift p s
+
+(** Adds the given label to the stack if `p` fails. *)
+let label p s =
+  relabelling p
+    (fun loc path ->
+      Entry
+        { location = Some loc
+        ; label = s
+        }
+      :: path)
+
+(** Flipped version of `label'. *)
+let labelled s p = label p s
+
+(** Replaces the _name_ of the last entry on the path. *)
+let renamed label p =
+  relabelling p
+    (fun loc -> function
+      | [] -> []
+      | Shift (e, p) :: xs -> Shift ({ e with label }, p) :: xs
+      | Entry e :: xs -> Entry {e with label} :: xs)
+
+(***** Special combinators *****)
+
+(** `not_followed_by p` succeeds if the parser `p` fails.
+    This parser does not consume any input.
+ *)
+let not_followed_by (p : 'a parser) : unit parser =
+  span get_state
+  $ fun (loc, s) ->
+    catch p
+      (function
+       | s', Either.Left _ ->
+          (* if `p` fails, we restore the original state *)
+          (put_state s).run s'
+       | _, Either.Right _ ->
+          (* if `p` succeeds, then we need to fail *)
+          s, Either.Left { error = NotFollowedBy; path = []; loc = loc }
+      )
+
+(***** Parsing lists. *****)
+
+    (*
+(** Transforms each element of a list into a parser, and sequences the
+    parsers.
+ *)
+let rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
+  match xs with
+  | [] -> pure []
+  | x :: xs ->
+     seq2 (f x) (traverse f xs)
+     $> fun (x, xs) -> x :: xs
+     *)
+
+(** Like `traverse' but for parsers without interesting outputs. *)
+let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
+  match xs with
+  | [] -> pure ()
+  | x :: xs ->
+     f x &> traverse_ f xs
+
+                     (*
+(** Runs a sequence of parsers in order and collects their results. *)
+let sequence (ps : 'a parser list) : 'a list parser =
+  traverse (Misc.id) ps
+                      *)
+
+                                (*
+(** Gets the next item in the input stream without advancing the parser. *)
+let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> pure_at s (peek_at s))
+                                 *)
+
+(***** Prioritized choice *****)
+
+(** Alternation between parsers.
+
+    Runs `p1`. If it fails, p2 is run if one of the following is true.
+    - p1 failed without consuming any input.
+    - p2 failed with backtracking enabled.
+
+    Backtracking is enabled by the `trying` combinator.
+ *)
+let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
+  let open Either in
+  { run =
+      fun s ->
+      match p1.run s with
+      | (s', Left e) ->
+         let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
+         if not consumed_input || s'.backtrack then
+           p2.run s
+         else
+           (s', Left e)
+      | x -> x
+  }
+
+let choice (ps : 'a parser list) : 'a parser =
+  { run =
+      fun s ->
+      let rec go es ps' =
+        match ps' with
+        | [] -> fail (NoMoreChoices es)
+        | p :: ps' ->
+           catch p
+             (function
+              | s', Either.Left e ->
+                 let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
+                 if not consumed_input || s'.backtrack then
+                   (go (e :: es) ps').run s
+                 else
+                   s', Either.Left e
+              | x -> x)
+      in
+      (go [] ps).run s
+  }
+
+(** Succeeds only if the stream has reached the end of the input. *)
+let eoi : unit parser =
+  { run =
+      fun s ->
+      match LinkStream.observe s.input with
+      | None | Some ((_, T.EOI), _) -> pure_at s ()
+      | Some ((_, t), _) -> fail_at s (Unexpected (`eoi, `token (Some t)))
+  }
+  |> labelled "end of input"
+
+(** Constructs a parser that accepts the current token if it satisfies
+    the given predicate.
+    The predicate is _successful_ if it returns `Right`.
+    The `Left` output indicates failure and can be used to remember
+    the next token in the stream to construct better eroros in a
+    downstream parser. If you don't care, use unit.
+    The input stream advances only if the predicate succeeds.
+ *)
+let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
+  { run =
+      fun s ->
+      match LinkStream.observe s.input with
+      | None -> failwith "lexer invariant failed: end-of-input is a token"
+      | Some ((loc, t), xs) ->
+         let r = f t in
+         let s' =
+           (* construct the new state with the input depending on
+              whether the predicate succeeded.
+            *)
+           Either.eliminate (Misc.const s) (Misc.const {s with input = xs}) r
+         in
+         pure_at s' r
+  }
+
+(** Tries a parser, and if it fails returns None *)
+let maybe (p : 'a parser) : 'a option parser =
+  shifted "optionally"
+    (alt (p $> Maybe.pure) (pure None))
+
+(** Internal implementation of `many` that doesn't label. *)
+let rec many' (p : 'a parser) : 'a list parser =
+  { run =
+      fun s ->
+      (alt (some' p) (pure [])).run s
+  }
+
+(** Internal implementation of `some` that doesn't label. *)
+and some' (p : 'a parser) : 'a list parser =
+  { run =
+      fun s ->
+      (p $ fun x -> many' p $ fun xs -> pure (x :: xs)).run s
+  }
+
+(** `many p` repeats the parser `p` zero or more times and collects
+    the results in a list.
+ *)
+let many (p : 'a parser) : 'a list parser =
+  shifted "many" (many' p)
+
+(** `some p` repeats the parser `p` one or more times and collects the
+    results in a list.
+ *)
+let some (p : 'a parser) : 'a list parser =
+  shifted "some" (some' p)
+
+(** `sep_by0 p sep` parses zero or more occurrences of `p` separated
+    by `sep` and collects the results in a list.
+    Remark: the separator parser must not produce a result; to forget
+    the result of a parser, use `void`.
+ *)
+let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
+  shifted "many separated"
+    { run =
+        fun s ->
+        let q =
+          seq (maybe p)
+            (function
+             | None -> pure []
+             | Some x ->
+                many' (sep &> p)
+                $ fun xs -> pure (x :: xs))
+        in
+        q.run s
+    }
+
+(** `sep_by1 p sep` parses one or more occurrences of `p` separated by
+    `sep` and collects the results in a list.
+    Remark: the separator parser must not produce a result; to forget
+    the result of a parser, use `void`.
+ *)
+let sep_by1 (p : 'a parser) (sep : unit parser) : 'a Nonempty.t parser =
+  shifted "some separated"
+    { run =
+        fun s ->
+        let q =
+          seq2 p (many' (sep &> p))
+          $> fun (x, xs) -> Nonempty.from x xs
+        in
+        q.run s
+    }
+
+(***** Unmixing & other checks *****)
+
+(** Checks that datatype declarations are well formed.
+    We can't do this later because after parsing there is no
+    structural grouping between constructors of a same datatype.
+ *)
+let check_datatype_decl loc a cs : unit parser =
   let rec retname = function
-    | Comp.TypBase (_, c', _) -> c'
+    | Comp.TypBase (_, c', _) -> pure c'
     | Comp.TypArr (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
-    | _ -> raise IllFormedDataDecl in
-  List.iter (fun (Sgn.CompConst (_, c, tau)) ->
-    let a' = retname tau in
-    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+    | _ -> fail IllFormedDataDecl
+  in
+  traverse_
+    (function
+     | Sgn.CompConst (_, c, tau) ->
+        retname tau
+        $ fun a' ->
+          if not (a = a')
+          then fail (WrongConstructorType (c, a, a'))
+          else pure ()
+     | _ -> fail (Violation "check_datatype_decl invalid input"))
+    cs
 
-let check_codatatype_decl a cs =
+let check_codatatype_decl loc a cs : unit parser =
   let retname = function
-    | Comp.TypBase (_, c', _) -> c'
-    | _ -> raise IllFormedDataDecl in
-  List.iter (fun (Sgn.CompDest (_, c, _, tau0, _)) ->
-    let a' = retname tau0 in
-    if not (a = a') then raise (WrongConsType (c, a, a'))) cs
+    | Comp.TypBase (_, c', _) -> pure c'
+    | _ -> fail IllFormedDataDecl
+  in
+  traverse_
+    (function
+     | Sgn.CompDest (_, c, _, tau0, _) ->
+        retname tau0
+        $ fun a' ->
+          if not (a = a')
+          then fail (WrongConstructorType (c, a, a'))
+          else pure ()
+     | _ -> fail (Violation "check_codatatype_decl invalid input"))
+    cs
 
-let rec split (c : char) (m : string) : (string list * string) =
-  try
-    let i = String.index m c in
-    let l = String.length m in
-    let (a, rest) = (String.sub m 0 i, String.sub m (i+1) (l- i - 1)) in
-    let (l, n) = split c rest in (a::l, n)
-  with
-  | Not_found -> ([], m)
+(****** Simple parsers *****)
 
-let mkEmptyPat (loc, pHat) = Comp.PatMetaObj (loc, (loc,Comp.ClObj (pHat,Comp.MObj (LF.PatEmpty loc))))
+let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
+  satisfy (fun t -> f t |> Maybe.eliminate (Misc.const (Either.Left t)) Either.pure)
+  |> span
+  $ fun (loc, x) ->
+    match x with
+    | Either.Left t ->
+       fail'
+         [ Entry { location = Some loc; label = Misc.Format.stringify print_content expected } ]
+         (Unexpected (expected, `token (Some t)))
+    | Either.Right x -> pure x
 
-type patOrObs = IsPat of Comp.pattern | IsObs of name
-  
-(*******************************)
-(* Global Grammar Entry Points *)
-(*******************************)
+(** Parses an exact token. *)
+let token (t : T.t) : unit parser =
+  satisfy' (`token (Some t))
+    (fun x -> Maybe.of_bool (x = t))
 
-(* Each of these needs to also be listed in the GLOBAL section of the
- * camlp4 grammar below. *)
+(** Parses an exact sequence of tokens. *)
+let tokens (ts : T.t list) : unit parser =
+  traverse_ token ts
 
-let sgn : Sgn.sgn Grammar.Entry.t =
-  Grammar.Entry.mk "sgn"
+(** Parses an identifier and verifies that it is exactly the given
+    string. This is used for parsing "weak keywords", which we would
+    still like to allow as general identifiers, but which appear in
+    restricted contexts as keywords.
+ *)
+let keyword (kw : string) : unit parser =
+  satisfy' (`keyword (Some kw))
+    (fun x -> Maybe.of_bool (x = T.IDENT kw))
 
-let cmp_typ : Comp.typ Grammar.Entry.t =
-  Grammar.Entry.mk "cmp_typ"
+let identifier : string parser =
+  satisfy' (`identifier None)
+    (function
+     | T.IDENT s -> Some s
+     | _ -> None)
 
-let harpoon_command : Syntax.Ext.Harpoon.command Grammar.Entry.t =
-  Grammar.Entry.mk "harpoon_command"
+let hash_identifier : string parser =
+  satisfy' (`hash_identifier None)
+    (function
+     | T.HASH_IDENT s -> Some s
+     | _ -> None)
 
-let cmp_exp_chk : Comp.exp_chk Grammar.Entry.t =
-  Grammar.Entry.mk "cmp_exp_chk"
+let dollar_identifier : string parser =
+  satisfy' (`dollar_identifier None)
+    (function
+     | T.DOLLAR_IDENT s -> Some s
+     | _ -> None)
 
-let numeric_total_order : Comp.numeric_order Grammar.Entry.t =
-  Grammar.Entry.mk "numeric_order"
+let name : Id.name parser =
+  identifier $> fun s -> Id.mk_name (Id.SomeString s)
 
-(*****************************************)
-(* Dynamically Extensible Beluga Grammar *)
-(*****************************************)
+let dot_name : Id.name parser =
+  token T.DOT &> name
 
-(* We are forced to do this because of a bug in camlp4 that prevents
-   qualified names in productions. Also we can't open earlier because
-   camlp4 mandates the presence of an error module in Token, so when
-   opening that module the module defined by error.ml gets
-   overshadowed. *)
-open Token
+let hash_name : Id.name parser =
+  hash_identifier $> fun s -> Id.mk_name (Id.SomeString s)
 
-EXTEND Grammar
-GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk numeric_total_order;
+let dollar_name : Id.name parser =
+  dollar_identifier $> fun s -> Id.mk_name (Id.SomeString s)
 
-  symbol:
-    [
-      [
-        sym = SYMBOL -> sym
-      |
-        sym = UPSYMBOL -> sym
-      ]
-    ]
-  ;
+let integer : int parser =
+  satisfy' (`integer None)
+    (function
+     | T.INTLIT k -> Some k
+     | _ -> None)
 
-  rarr: [[ "->" -> ()
-         | "→" -> () ]];  (* Unicode right arrow (HTML &rarr;) *)
+let dot_integer : int parser =
+  satisfy' `dot_integer
+    (function
+     | T.DOT_NUMBER k -> Some k
+     | _ -> None)
 
-  rArr:  [[ "=>" -> ()
-         | "⇒" -> () ]];  (* Unicode double right arrow (HTML &rArr;) *)
+let fqidentifier = sep_by1 (trying identifier) (token T.DOUBLE_COLON)
 
-  turnstile: [[ "|-" -> ()
-	 | "⊢" -> () ]];
+(** A qualified name, with possible module names before. *)
+let fqname =
+  fqidentifier
+  $> fun is ->
+     let (ms, i) = Nonempty.unsnoc is in
+     Id.mk_name ~modules: ms (Id.SomeString i)
 
-  sgn:
-    [
-      [ prag = sgn_global_prag; decls = sgn -> prag :: decls
-      | decls = sgn_eoi -> decls
-      ]
-    ];
+let pragma s = token (T.PRAGMA s)
 
-  sgn_eoi:
-   [
-     [ decl = sgn_decl; decls = sgn_eoi -> decl @ decls
-     | `EOI -> []
-     ]
-   ];
+(** Runs the parser `p` between two parsers whose results are
+    ignored. *)
+let bracketed start stop p =
+  start &> p <& stop
 
-  sgn_global_prag:
-  [
-    [
-        "--nostrengthen" -> Sgn.GlobalPragma(_loc, Sgn.NoStrengthen)
-      |
-        "--coverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Error))
-      |
-        "--warncoverage" -> Sgn.GlobalPragma(_loc, Sgn.Coverage(`Warn))
-    ]
-  ];
+(** Runs the parser `p` between the two instances of the same parser
+    `b` whose results are ignored. *)
+let bracketed' b p = bracketed b b p
 
-  sgn_lf_typ :
-    [
-      [ a = SYMBOL; ":"; tA = lf_typ ->
-          Sgn.Const   (_loc, Id.mk_name (Id.SomeString a), tA)
-      ]
-    ];
+(** Helpers for parsing something between parens, braces, or brackets. *)
+let parens , braces , bracks , angles =
+  let f l r p = bracketed (token l) (token r) p in
+  (* The functions here must be eta-expanded to avoid the value restriction ! *)
+  let open T in
+  (fun p -> f LPAREN RPAREN p),
+  (fun p -> f LBRACE RBRACE p),
+  (fun p -> f LBRACK RBRACK p),
+  (fun p -> f LANGLE RANGLE p)
 
+(** Helper for parsing something *optionally* between parens. *)
+let opt_parens p = alt (parens p) p
 
-  sgn_comp_typ :
-    [
-      [
-        a = UPSYMBOL; ":"; tau = cmp_typ ->
-          Sgn.CompConst (_loc, Id.mk_name (Id.SomeString a), tau)
-      ]
-    ];
+(** Parses p and requires that the input stream be finished. *)
+let only p = p <& eoi
 
-  sgn_comp_cotyp :
-    [
-      [
-        ctyp_decls = LIST0 clf_ctyp_decl;
-        OPT "("; a = UPSYMBOL; ":"; tau0 = cmp_typ; OPT ")"; "::"; tau1 = cmp_typ ->
-        let cD = List.fold_left (fun acc decl -> LF.Dec (acc, decl)) LF.Empty ctyp_decls in
-          Sgn.CompDest (_loc, Id.mk_name (Id.SomeString a), cD, tau0, tau1)
-      ]
-    ];
+(***** Production rules *****)
 
+open Syntax.Ext
 
-  sgn_decl:
-    [
-      [
-          "--name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-            [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-
-        | "--query" ; e = bound ; t = bound ; x = OPT [ y = UPSYMBOL ; ":" -> y ] ; a = lf_typ ; "." ->
-            if Option.is_some x then
-              let p = Id.mk_name (Id.SomeString (Option.get x)) in
-              [Sgn.Query (_loc, Some p, a, e, t)]
-            else
-              [Sgn.Query (_loc, None, a, e, t)]
-
-        | "--not" ->
-            [Sgn.Pragma (_loc, Sgn.NotPrag)]
-
-        | "module"; n = UPSYMBOL; "="; "struct"; decls = LIST1 sgn_decl; "end" ; ";"  ->
-              let decls = List.map (fun [x] -> x) decls in
-              [Sgn.Module(_loc, n, decls)]
-
-        | a_or_c = SYMBOL; ":"; k_or_a = lf_kind_or_typ;  "." ->
-             begin match k_or_a with
-               | Kind k -> [Sgn.Typ   (_loc, Id.mk_name (Id.SomeString a_or_c), k)]
-               | Typ  a -> [Sgn.Const (_loc, Id.mk_name (Id.SomeString a_or_c), a)]
-             end
-
-        | f = mutual_cmp_cdat;
-          g = OPT [ "and"; f = LIST1 mutual_cmp_cdat SEP "and" -> f]; ";" ->
-            begin match g with
-              | None -> [Sgn.MRecTyp(_loc, [f])]
-              | Some g' -> [Sgn.MRecTyp(_loc, f::g')]
-            end
-
-        | "LF"; f = LIST1 cmp_dat SEP "and"; ";" ->
-             [Sgn.MRecTyp(_loc, f)]
-
-        | "typedef"; a = UPSYMBOL; ":"; k = cmp_kind ; "=";  tau = cmp_typ ; ";" ->
-            [Sgn.CompTypAbbrev (_loc, Id.mk_name (Id.SomeString a), k, tau)]
-        |
-          "schema"; w = SYMBOL; "="; bs = LIST1 lf_schema_elem SEP "+"; ";" ->
-            [Sgn.Schema (_loc, Id.mk_name (Id.SomeString w), LF.Schema bs)]
-
-(*      | "total" ; x = total_order ; "("; r = SYMBOL ; args = LIST0 call_args ; ")" ;  ";" ->
-          [Sgn.Pragma (_loc, Sgn.Total (x, Id.mk_name (Id.SomeString r), args))] *)
-
-      | "--name"; w = SYMBOL ; mv = UPSYMBOL ; x = OPT [ y = SYMBOL -> y ]; "." ->
-        [Sgn.Pragma (_loc, Sgn.NamePrag (Id.mk_name (Id.SomeString w), mv, x))]
-
-      |
-          "let"; x = SYMBOL; tau = OPT [ ":"; tau = cmp_typ -> tau] ;
-          "="; i = cmp_exp_syn;  ";" ->
-            [Sgn.Val (_loc, Id.mk_name (Id.SomeString x), tau, i)]
-      |
-  (*        "rec"; f = SYMBOL; ":"; tau = cmp_typ; "="; e = cmp_exp_chk; ";" ->
-            Sgn.Rec (_loc, [Comp.RecFun (Id.mk_name (Id.SomeString f), tau, e)])
-  *)
-
-          "rec"; f = LIST1 cmp_rec SEP "and";  ";" ->
-            [Sgn.Rec (_loc, f)]
-
-      |
-        "--infix"; i = SYMBOL; p = INTLIT; assoc = OPT[x = SYMBOL -> x]; "."->
-          begin
-            match assoc with
-            | Some "left" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Left))]
-            | Some "right" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.Right))]
-            | Some "none" -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, Some Sgn.None))]
-            | None -> [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Infix, int_of_string p, None))]
-            | Some s -> raise (InvalidAssociativity s)
-          end
-  (*     |
-        "#postfix"; i = SYMBOL; p = INTLIT; "." ->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Postfix, int_of_string p, Some Sgn.Left))]
-   *)    |
-        "--prefix"; i = SYMBOL; p = INTLIT; "."->
-          [Sgn.Pragma (_loc, Sgn.FixPrag(Id.mk_name (Id.SomeString i), Sgn.Prefix, int_of_string p, Some Sgn.Left))]
-
-      | "--assoc"; assoc = SYMBOL; "." ->
-        begin match assoc with
-        | "left" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Left)]
-        | "right" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.Right)]
-        | "none" -> [Sgn.Pragma(_loc, Sgn.DefaultAssocPrag Sgn.None)]
-        | s -> raise (InvalidAssociativity s)
-
-        end
-
-      (* A naked expression, in REPL. *)
-      | i = cmp_exp_syn ->
-        [Sgn.Val (_loc, Id.mk_name (Id.SomeString "it"), None, i)]
-
-      |
-        "--open"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n] ->
-          let (l,last) = split '.' n in
-          [Sgn.Pragma(_loc, Sgn.OpenPrag(l@[last]))]
-      |
-
-        "--abbrev"; n = [n = UPSYMBOL_LIST -> n | n = UPSYMBOL -> n]; abbrev = UPSYMBOL ->
-          let (l,last) = split '.' n in
-          [Sgn.Pragma(_loc, Sgn.AbbrevPrag(l@[last], abbrev))]
-      |
-	    x = COMMENT -> [Sgn.Comment(_loc, x)]
-
-    ]
-  ]
-  ;
-
-  call_args:
-    [
-      [
-        x = SYMBOL -> Some (Id.mk_name (Id.SomeString x))
-
-      | "_" -> None
-      ]
-    ]
-;
-
-  total_decl:
-    [
-      [
-        "total"; x = OPT total_order ; "("; r = SYMBOL ; args = LIST0 call_args ;  ")"  ->
-            Comp.Total (_loc, x, Id.mk_name (Id.SomeString r), args)
-      | "trust" -> Comp.Trust _loc
-      ]
-    ]
-;
-
-  total_order:
-    [
-      [
-        x = SYMBOL -> Comp.Arg (Id.mk_name (Id.SomeString x))
-      | "{"; xs = LIST1 [ x = SYMBOL -> x ]  ; "}" -> Comp.Lex (List.map (fun x -> Comp.Arg (Id.mk_name (Id.SomeString x))) xs)
-(*      | x = SYMBOL -> Id.mk_name (Id.SomeString x)  *)
-      ]
-    ]
-;
-
-  numeric_total_order:
-    [
-      [
-        x = INTLIT -> Comp.Arg (int_of_string x)
-      | "{"; xs = LIST1 [ x = SYMBOL -> int_of_string x ] ; "}" ->
-         Comp.Lex (List.map (fun x -> Comp.Arg x) xs)
-      ]
-    ]
-;
-
-  bound:
-    [
-      [ "*" -> None
-      | k = INTLIT -> Some (int_of_string k)
-      ]
-    ]
-  ;
-
-  lf_kind_or_typ:
-    [
-      RIGHTA
-        [
-           "{"; x = symbol; ":"; a2 = lf_typ; "}"; OPT rarr; k_or_a = SELF ->
-             let name = LF.TypDecl (Id.mk_name (Id.SomeString x), a2) in
-             begin match k_or_a with
-               | Kind k -> Kind (LF.PiKind (_loc, name, k))
-               | Typ  a -> Typ  (LF.PiTyp  (_loc, name, a))
-             end
-
-        |
-           a2 = lf_typ LEVEL "atomic"; rarr; k_or_a = SELF ->
-             begin match k_or_a with
-               | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
-               | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
-             end
-
-        |
-          "type" ->
-            Kind (LF.Typ _loc)
-
-        |
-          a = lf_typ LEVEL "atomic" ->
-            Typ a
+let sgn_global_prag : Sgn.decl parser =
+  let g s = span (pragma (s)) in
+  let f prag (loc, _) = Sgn.GlobalPragma (loc, prag) in
+  let h s a = g s $> f a in
+  labelled "global pragma"
+    begin
+      choice
+        [ h "nostrengthen" Sgn.NoStrengthen
+        ; h "coverage" (Sgn.Coverage `Error)
+        ; h "warncoverage" (Sgn.Coverage `Warn)
         ]
-
-    | LEFTA
-        [
-          k_or_a = SELF; "<-"; a2 = lf_typ LEVEL "atomic" ->
-             begin match k_or_a with
-               | Kind k -> Kind (LF.ArrKind (_loc, a2, k))
-               | Typ  a -> Typ  (LF.ArrTyp  (_loc, a2, a))
-             end
-        ]
-    ]
-  ;
-
-  lf_kind:
-    [
-      RIGHTA
-        [
-           "{"; x = symbol; ":"; a2 = lf_typ; "}"; OPT rarr; k = SELF ->
-             LF.PiKind (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), k)
-
-        |
-           a2 = lf_typ LEVEL "atomic"; rarr; k = SELF ->
-             LF.ArrKind (_loc, a2, k)
-
-        |
-          "type"-> LF.Typ _loc
-        ]
-
-    | LEFTA
-        [
-
-          k = SELF; "<-"; a2 = lf_typ LEVEL "atomic" ->
-            LF.ArrKind (_loc, a2, k)
-
-        ]
-    ]
-  ;
-
-  lf_typ:
-    [ RIGHTA
-        [
-           "{"; x = symbol; ":"; a2 = SELF; "}"; OPT rarr; a = SELF ->
-             LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
-        |
-           a2 = SELF; rarr; a = SELF ->
-             LF.ArrTyp (_loc, a2, a)
-
-        ]
-    | LEFTA
-        [
-           a2 = SELF; "<-"; a = SELF ->
-             LF.ArrTyp (_loc, a, a2)
-
-        ]
-
-    | "atomic"
-        [
-          term = lf_term -> begin match term with
-            | LF.NTyp(_, t) -> t
-            | LF.TList(_, [LF.NTyp(_,t)]) -> t
-            | LF.TList(_, [n]) -> LF.AtomTerm(_loc, n)
-            | _ -> LF.AtomTerm (_loc, term) end
-        |
-          x = [a = MODULESYM -> a | a = SYMBOL -> a]; ms = LIST0 (lf_term LEVEL "atomic") ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-            let (modules, a) = split '.' x in
-              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
-(*         |
-          a = SYMBOL; ms = LIST0 (lf_term LEVEL "atomic") ->
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name (Id.SomeString a), sp) *)
-        ]
-    ]
-  ;
-
-  lf_term:
-    [
-    "list" [
-      l = LIST1 (lf_term LEVEL "lam") ->
-            (LF.TList(_loc, l))
-      ]
-    | "lam" RIGHTA
-        [
-          "\\"; x = SYMBOL; "."; ms = LIST1 (lf_term LEVEL "lam")->
-            LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), LF.TList(_loc, ms))
-        ]
-
-    | "atomic"
-        [
-         "("; m = lf_typ; ann = OPT [ ":"; a = lf_typ -> a ]; ")" ->
-            begin match ann, m with
-              | None, LF.AtomTerm(_, t) -> t
-              | None, _ -> LF.NTyp(_loc, m)
-              | Some a, LF.AtomTerm(_, t) -> LF.Ann(_loc, t, a)
-            end
-        |
-            h = lf_head ->
-             LF.Root (_loc, h, LF.Nil)
-
-        |
-            "_" ->
-            LF.Root (_loc, LF.Hole _loc , LF.Nil)
-        ]
-    ]
-  ;
-
-  lf_head:
-    [
-      [
-        x = [a = MODULESYM -> a | a = SYMBOL -> a] -> let (l, n) = split '.' x in (LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString n)))
-    |
-        u = UPSYMBOL  ->
-          LF.Name (_loc, Id.mk_name (Id.SomeString u))
-
-      ]
-    ]
-  ;
-
-  lf_schema_elem:
-    [
-      [
-        some_arg = lf_schema_some; arec = lf_typ_rec ->
-          LF.SchElem (_loc,
-                      List.fold_left (fun d ds -> LF.Dec (d, ds)) LF.Empty some_arg,
-                      arec)
-      ]
-    ]
-  ;
-
-  lf_schema_some:
-    [
-      [
-       "some"; "["; ahat_decls = LIST0 lf_ahat_decl SEP ","; "]" -> ahat_decls
-       |
-          -> []
-      ]
-    ]
-  ;
-
-  lf_typ_rec_block:
-    [
-      [
-      "block"; OPT "("; a_list = LIST1 lf_typ_rec_elem SEP "," ; OPT ")"
-        (* ","; _u=SYMBOL; ":"; a_last = clf_typ LEVEL "atomic" *)
-        ->
-          begin match last a_list with
-          | Some ((x, a) , a_list) ->
-              (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest))
-                (List.rev a_list) (LF.SigmaLast(Some x, a)))
-        end
-      ]
-    ]
-  ;
-
-
-  lf_typ_rec:
-    [
-      [
-        b = lf_typ_rec_block
-        -> b
-      |
-        a = lf_typ
-        -> let aux = function
-           | LF.Atom(_, n, _) -> Some n
-           | _ -> None
-           in LF.SigmaLast(aux a, a)
-      ]
-    ]
-  ;
-
-
-  lf_typ_rec_elem:
-    [
-      [
-        x = SYMBOL; ":"; a = lf_typ
-         -> (Id.mk_name (Id.SomeString x), a)
-
-      |
-        x = UPSYMBOL; ":"; a = lf_typ
-         -> (Id.mk_name (Id.SomeString x), a)
-
-      ]
-    ]
-  ;
-
-  lf_ahat_decl:
-    [
-      [
-        x = SYMBOL; ":"; a = lf_typ ->
-          LF.TypDecl (Id.mk_name (Id.SomeString x), a)
-      ]
-    ]
-  ;
-
-(* ************************************************************************************** *)
-(* Parsing of computations and LF terms occurring in computations                         *)
-
-(*  clf_decl:
-  [
-    [
-      x = SYMBOL; ":"; tA = clf_typ -> LF.TypDecl (Id.mk_name (Id.SomeString x), tA)
-    ]
-
-  ]
-;
-*)
-  clf_ctyp_decl:
-    [ (* TODO: Refactor this *)
-      [
-        "{"; hash = "#"; p = SYMBOL; ":";
-
-         "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}"; ind = OPT ["*"] ->
-	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString p), (_loc,LF.ClTyp (LF.PTyp tA, cPsi)), dep)
-
-      |
-        "{"; hash = "#"; s = UPSYMBOL; ":";
-         "["; cPsi = clf_dctx; turnstile; ren = OPT["#"] ; cPhi = clf_dctx; "]"; "}" ; ind = OPT ["*"] ->
-	   let cl = match ren with None -> LF.Subst | Some _ -> LF.Ren in
-	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-            LF.Decl(Id.mk_name (Id.SomeString s), (_loc,LF.ClTyp (LF.STyp (cl, cPhi), cPsi)), dep)
-
-      |
-          "{";  u = UPSYMBOL; ":";
-         "["; cPsi = clf_dctx; turnstile; tA = clf_typ LEVEL "atomic";  "]"; "}" ; ind = OPT ["*"] ->
-	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-           LF.Decl(Id.mk_name (Id.SomeString u), (_loc,LF.ClTyp (LF.MTyp tA, cPsi)), dep)
-
-      |
-          "{"; psi = SYMBOL; ":"; w = SYMBOL; "}" ; ind = OPT ["*"] ->
-	   let dep = match ind with None -> LF.No | Some _  -> LF.Inductive in
-            LF.Decl(Id.mk_name (Id.SomeString psi), (_loc,LF.CTyp(Id.mk_name (Id.SomeString w))), dep)
-
-      ]
-    ]
-  ;
-
-
-
-  clf_typ_pure:
-    [ RIGHTA
-        [
-           "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
-             LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
-        |
-           a2 = SELF; rarr; a = SELF ->
-             LF.ArrTyp (_loc, a2, a)
-        ]
-
-    | "atomic"
-        [
-          "("; a = SELF; ")" ->
-            a
-          |
-             a = SYMBOL; ms = LIST0 clf_normal ->
-                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms))
-          |
-             a = UPSYMBOL; ms = LIST0 clf_normal ->
-                LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
-
-
-
-        ]
-    ]
-  ;
-
-
-  clf_typ:
-    [
-      "modules"
-      [
-          l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; a = SYMBOL; ms = LIST0 clf_normal ->
-            let modules = match l with None -> [] | Some l -> l in
-            let sp = List.fold_right (fun t s -> LF.App (_loc, t, s)) ms LF.Nil in
-              LF.Atom (_loc, Id.mk_name ~modules:modules (Id.SomeString a), sp)
-      ]
-
-    |
-      RIGHTA
-        [
-           "{"; x = SYMBOL; ":"; a2 = SELF; "}"; a = SELF ->
-             LF.PiTyp (_loc, LF.TypDecl (Id.mk_name (Id.SomeString x), a2), a)
-        |
-           a2 = SELF; rarr; a = SELF ->
-             LF.ArrTyp (_loc, a2, a)
-        ]
-
-    | "atomic" [
-           (* a = SYMBOL; *) ms = LIST1 clf_normal ->
-            begin match ms with
-              | [LF.NTyp(_, a)] -> a
-              | _ -> LF.AtomTerm(_loc, LF.TList(_loc,(*  (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil)):: *) ms))
-            end
-
-           |
-           a = UPSYMBOL; ms = LIST0 clf_normal ->
-              LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.MVar(_loc, Id.mk_name(Id.SomeString a), LF.RealId), LF.Nil))::ms))
-              (* LF.AtomTerm(_loc, LF.TList(_loc, (LF.Root(_loc, LF.Name(_loc, Id.mk_name(Id.SomeString a)), LF.Nil))::ms)) *)
-
-        ]
-    | "sigma"
-        [
-          "("; a = SELF; ")" ->
-            a
-        |
-          typRec = clf_typ_rec_block
-          ->  LF.Sigma (_loc, typRec)
-        ]
-    ]
-  ;
-
-  clf_normal:
-     [
-      RIGHTA
-       [
-          "\\"; x = SYMBOL; "."; m = clf_term_app ->
-            let m = begin match m with
-              | LF.TList(l, (LF.Root(_, LF.MVar (l2, u, LF.EmptySub _), LF.Nil)) :: [LF.Root(_, (LF.Name _ as h), LF.Nil)]) ->
-                  LF.Root(l, LF.MVar(l2, u, LF.Dot(l2, LF.EmptySub l2, LF.Head h)), LF.Nil)
-              | _ -> m
-            end in
-            LF.Lam (_loc, (Id.mk_name (Id.SomeString x)), m)
-       ]
-
-    | "module"
-      [
-        modules = LIST1 [ x = UPSYMBOL; "." -> x]; n = SYMBOL ->
-          let name = Id.mk_name ~modules:modules (Id.SomeString n) in
-          LF.Root(_loc, LF.Name(_loc, name), LF.Nil)
-      ]
-    | "atomic"
-        [
-          u = UPSYMBOL ->
-            LF.Root(_loc, LF.MVar (_loc, Id.mk_name (Id.SomeString u), LF.RealId), LF.Nil)
-
-	| u = UPSYMBOL; "["; s = clf_sub_new; "]" ->
-           LF.Root(_loc, LF.MVar(_loc, Id.mk_name (Id.SomeString u), s), LF.Nil)
-        |
-           "("; m = clf_term_app; ann = OPT [ ":"; a = clf_typ -> a ]; ")" ->
-           begin match ann with
-           | None -> m
-           | Some a -> LF.Ann (_loc, m, a)
-           end
-        | h = clf_head -> LF.Root (_loc, h, LF.Nil)
-
-        | "_" -> LF.Root (_loc, LF.Hole _loc , LF.Nil)
-
-        | h = HOLE ->
-           let sname = String.sub h 1 (String.length h - 1) in
-           let name =
-             match sname with
-             | "" -> None
-             | _ -> Some sname in
-           LF.LFHole (_loc, name)
-
-        | "<"; ms = LIST1 clf_term_app SEP ";"; ">"  ->
-             let rec fold = function [m] -> LF.Last m
-                                    | m :: rest -> LF.Cons(m, fold rest)
-             in
-               LF.Tuple (_loc, fold ms)
-
-        ]
-     ]
-   ;
-
-  clf_typ_rec_block:
-    [[
-       "block"; OPT "("; arg_list = LIST1 clf_typ_rec_elem SEP "," ; OPT ")"
-       (* ; "."; a_last = clf_typ LEVEL "atomic" *)
-         -> begin match  last arg_list with
-          | Some ((n , a_last) , a_list) ->
-              let b0 = (List.fold_right (fun (x, a) -> fun rest -> LF.SigmaElem (x, a, rest))
-                          (List.rev a_list) (LF.SigmaLast (Some n, a_last)))
-              in
-                b0
-        end
-
-     ]];
-
-  clf_typ_rec_elem:
-    [
-      [
-        x = SYMBOL; ":"; a = clf_typ_pure
-         -> (Id.mk_name (Id.SomeString x), a)
-      ]
-    ]
-  ;
-
-
-  clf_term_app:
-    [
-      [
-        ms = LIST1 clf_normal -> LF.TList(_loc, ms)
-      | a = clf_typ -> LF.NTyp(_loc, a)
-      | "{"; "}" -> LF.PatEmpty _loc
-      ]
-  ];
-
-  clf_head:
-    [
-      [
-        "#"; p = SYMBOL; "."; k = clf_proj; "["; sigma = clf_sub_new; "]" ->
-          LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma), k)
-
-      | "#"; p = SYMBOL; "."; k = clf_proj ->
-          LF.Proj(_loc, LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId), k)
-
-      |
-        "#"; p = SYMBOL; "["; sigma = clf_sub_new; "]" ->
-           LF.PVar (_loc, Id.mk_name (Id.SomeString p), sigma)
-
-      | "#"; p = SYMBOL -> LF.PVar (_loc, Id.mk_name (Id.SomeString p), LF.RealId)
-
-      |
-        x = SYMBOL; "."; k = clf_proj ->
-          LF.Proj(_loc, LF.Name (_loc, Id.mk_name (Id.SomeString x)), k)
-
-      | (* Namespaces supported for non-projection case only? *)
-        m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-          let (l, x) = split '.' m in
-          LF.Name (_loc, Id.mk_name ~modules:l (Id.SomeString x))
-
-      ]
-    ]
-  ;
-
-  clf_proj:
-    [
-      [
-	k = INTLIT -> LF.ByPos (int_of_string k)
-      | n = SYMBOL -> LF.ByName (Id.mk_name (Id.SomeString n))
-      ]
-    ];
-
-  clf_sub_term:
-    [
-     [
-          "^" ->
-          LF.EmptySub (_loc )
-
-      |    DOTS  ->
-          LF.Id (_loc)
-
-      |
-         "#"; s = UPSYMBOL; "["; sigma = clf_sub_new ; "]"->
-          LF.SVar (_loc, Id.mk_name (Id.SomeString s), sigma)
-      | "#"; s = UPSYMBOL -> LF.SVar(_loc, Id.mk_name (Id.SomeString s), LF.RealId)
-     ]
-    ]
-;
-
-  clf_sub_new:
-    [
-      [   -> LF.EmptySub _loc
-      | s = clf_sub_term -> s
-      | sigma = SELF; ","; tM = clf_term_app ->
-          LF.Dot (_loc, sigma, LF.Normal tM)
-      | tM = clf_term_app ->
-          LF.Dot (_loc, LF.EmptySub _loc, LF.Normal tM)
-      ]
-    ]
-  ;
-
-  clf_dctx:
-    [
-      [
-       (* turnstile  *)
-        ->
-          LF.Null
-      | "_" -> LF.CtxHole
-
-      |
-        psi = SYMBOL ->
-          LF.CtxVar (_loc, Id.mk_name (Id.SomeString psi))
-
-      |  x = SYMBOL; ":"; tA = clf_typ ->
-          LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-
-      |
-        cPsi = clf_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
-          LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-      ]
-    ]
-  ;
-
-
-
-  clf_hat_or_dctx:
-    [
-      [
-         -> (* Hat [ ] *)
-           LF.Null
-      | "_" -> LF.CtxHole
-
-      |    x = SYMBOL ->
-             LF.CtxVar (_loc, Id.mk_name (Id.SomeString x))
-            (* Hat ([Id.mk_name (Id.SomeString x)]) *)
-
-      |   x = SYMBOL; ":"; tA = clf_typ ->
-          LF.DDec (LF.Null, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-      |
-        cPsi = clf_hat_or_dctx; ","; x = SYMBOL; ":"; tA = clf_typ ->
-          LF.DDec (cPsi, LF.TypDecl (Id.mk_name (Id.SomeString x), tA))
-
-      | cPsi = clf_hat_or_dctx; "," ; x = SYMBOL  ->
-          LF.DDec (cPsi, LF.TypDeclOpt  (Id.mk_name (Id.SomeString x)))
-
-      ]
-    ]
-  ;
-
-(* ************************************************************************************** *)
-
-  cmp_kind:
-    [
-      [
-      k = mixtyp -> toCompKind k
-      ]
-    ]
-  ;
-
-  cmp_typ:
-   [
-     [
-       m = mixtyp -> toComp m
-     ]
-   ]
-  ;
-
-  cmp_pair_atom :
-    [
-      [
-        ","; e2 = cmp_exp_chk ; ")" -> Pair e2
-
-      | ")"                 -> Atom
-      ]
-    ]
-  ;
-
-  cmp_pair_atom_syn :
-    [
-      [
-        ","; e2 = cmp_exp_syn ; ")" -> Pair_syn e2
-
-      | ")"                 -> Atom_syn
-
-      ]
-    ]
-  ;
-
-  cmp_pair_atom_pat :
-    [
-      [
-        ","; e2 = cmp_pattern ; ")" -> Pair_pat e2
-
-      | ")"  -> Atom_pat
-
-      ]
-    ]
-  ;
-
-
-
-  cmp_dat:
-    [[
-     a = SYMBOL; ":"; k = lf_kind ; "=" ; OPT ["|"] ; const_decls = LIST0 sgn_lf_typ SEP "|" ->
-      (Sgn.Typ (_loc, Id.mk_name (Id.SomeString a), k) , const_decls)
-    ]]
-  ;
-
-  cmp_cdat:
-    [[
-     p = datatype_flavour; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_typ SEP "|" ->
-      check_datatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      (Sgn.CompTyp (_loc, Id.mk_name (Id.SomeString a), k, p) , c_decls)
-    ]]
-;
- cocmp_cdat:
-    [[
-    "coinductive"; a = UPSYMBOL; ":"; k = cmp_kind ; "="; OPT ["|"] ; c_decls = LIST0 sgn_comp_cotyp SEP "|" ->
-      check_codatatype_decl (Id.mk_name (Id.SomeString a)) c_decls;
-      (Sgn.CompCotyp (_loc, Id.mk_name (Id.SomeString a), k) , c_decls)
-    ]]
-;
-
- mutual_cmp_cdat:
-    [[
-        f = cmp_cdat -> f
-      | f = cocmp_cdat -> f
-   ]]
-;
-
- datatype_flavour:
-   [[
-     "inductive" -> Sgn.InductiveDatatype
-   | "stratified" -> Sgn.StratifiedDatatype
-   ]]
-;
-
-  cmp_rec:
-    [[
-      f = SYMBOL; ":"; tau = cmp_typ; "="; t = OPT [ "/"; td = total_decl; "/" -> td] ; e = cmp_exp_chk ->
-       Comp.RecFun (_loc, Id.mk_name (Id.SomeString f), t, tau, e)
-    ]]
-  ;
-
-  cmp_exp_chk:
-    [ LEFTA [
-      e = cmp_exp_chkX   ->   e
-    | i = cmp_exp_syn    ->   Comp.Syn (_loc, i)
-    ]];
-
-  case_pragma:
-    [[
-      "--not" -> Pragma.PragmaNotCase
-    | -> Pragma.RegularCase
-    ]];
-
-
-  (* cmp_exp_chkX:  checkable expressions, except for synthesizing expressions *)
-
-  mlam_exp:
-  [
-    [
-      f = SYMBOL -> f
-    |
-      f = UPSYMBOL -> f
-    |
-      "#"; f = SYMBOL -> f
-    |
-      "#"; f = UPSYMBOL -> f
-    ]
-  ]
-  ;
-
-  fn_exp:
-  [
-    [
-      f = SYMBOL -> f
-    ]
-  ]
-  ;
-
-  cmp_copat:
-    [
-      [ pat = cmp_pattern -> IsPat pat
-      | "."; obs = UPSYMBOL -> IsObs (Id.mk_name (Id.SomeString obs))
-      ]
-    ]
-  ;
-
-  cmp_copatSpine:
-    [
-      [
-        patS = LIST1 cmp_copat; rArr; e = cmp_exp_chk ->
-        let f acc = function
-          | IsPat pat -> Comp.PatApp (_loc, pat, acc)
-          | IsObs obs -> Comp.PatObs (_loc, obs, acc)
+    end
+
+let sgn_name_pragma : Sgn.decl parser =
+  seq3
+    (pragma "name" &> name)
+    identifier
+    (maybe identifier <& token T.DOT)
+  |> labelled "name pragma"
+  |> span
+  $> fun (loc, ( w , mv , x )) ->
+     Sgn.Pragma (loc, Sgn.NamePrag (w, mv, x))
+
+(** Parses the `type' kind. *)
+let type_kind =
+  labelled "`type' kind"
+    (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
+
+let rec lf_kind =
+  { run =
+      fun s ->
+      let pi_kind =
+        seq2
+          (lf_typ_decl () |> braces <& maybe (token T.ARROW))
+          lf_kind
+        |> span
+        $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
+      in
+      let arr_kind =
+        seq2
+          (lf_typ_atomic <& token T.ARROW)
+          lf_kind
+        |> span
+        $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
+      in
+      let p =
+        choice
+          [ label pi_kind "LF Pi kind"
+          ; label arr_kind "LF arrow kind"
+          ; type_kind
+          ]
+        |> labelled "LF kind"
+      in
+      p.run s
+  }
+
+and lf_term =
+  { run =
+      fun s ->
+      let p =
+        span (some lf_term_lam) $> (fun (loc, ms) -> LF.TList (loc, ms))
+        |> labelled "LF term sequence"
+      in
+      p.run s
+  }
+
+and lf_term_lam =
+  { run =
+      fun s ->
+      let lam =
+        seq4 (token T.LAMBDA) name (token T.DOT) lf_term
+        |> span
+        |> labelled "LF lambda term"
+        $> fun (loc, (_, x, _, ms)) ->
+           LF.Lam (loc, x, ms)
+      in
+      let atomic =
+        choice
+          [ span (token T.UNDERSCORE)
+            $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
+          ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
+            $ fun (loc, (m, q)) ->
+              match q, m with
+              | None, LF.AtomTerm (_, t) -> pure t
+              | None, _ -> LF.NTyp (loc, m) |> pure
+              | Some a, LF.AtomTerm (_, t) -> LF.Ann(loc, t, a) |> pure
+              | _, _ -> fail (Violation "invalid atomic LF term")
+                                     (* ^ XXX not sure if this is a violation or a user error -je *)
+          ]
+        |> labelled "atomic LF term"
+      in
+      let head =
+        span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+      in
+      (choice
+         [ lam
+         ; head
+         ; atomic
+         ]
+       |> labelled "LF term"
+      ).run s
+  }
+
+and lf_head =
+  span fqname
+  |> labelled "LF application head"
+  $> fun (loc, n) -> LF.Name (loc, n, None)
+
+(** An LF type declaration, `x : a'. *)
+and lf_typ_decl () =
+  seq2
+    (name <& token T.COLON)
+    lf_typ
+  |> labelled "LF type declaration"
+  $> fun (x, a) -> LF.TypDecl (x, a)
+
+(** Parses an LF kind or type.
+    This is an optimization. In situations where either a type or a
+    kind could appear, use this and then match on the `typ_or_kind`
+    returned. This is more efficient than backtracking the parser.
+ *)
+and lf_kind_or_typ : kind_or_typ parser =
+  { run =
+      fun s ->
+      let pi =
+        seq2
+          (lf_typ_decl () |> braces <& maybe (token T.ARROW))
+          lf_kind_or_typ
+        |> span
+        |> labelled "LF Pi kind or type"
+        $> fun (loc, (name, k_or_a)) ->
+           match k_or_a with
+           | `Kind k -> `Kind (LF.PiKind (loc, name, k))
+           | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
+      in
+      let arrow =
+        seq2
+          lf_typ_atomic
+          (maybe (token T.ARROW &> lf_kind_or_typ))
+        |> span
+        |> labelled "LF arrow kind or type"
+        $> fun (loc, (a, k_or_a)) ->
+           match k_or_a with
+           | None -> `Typ a
+           | Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
+           | Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
+      in
+      let p =
+        choice
+          [ pi
+          ; type_kind $> (fun a -> `Kind a)
+          ; arrow
+          ]
+        |> labelled "LF kind or type"
+      in
+      p.run s
+  }
+
+and lf_typ : LF.typ parser =
+  { run =
+      fun s ->
+      let p =
+        let pi_typ =
+          seq2
+            (trying (lf_typ_decl () |> braces <& maybe (token T.ARROW)))
+            lf_typ
+          |> span
+          $> fun (loc, (d, ty2)) ->
+            LF.PiTyp (loc, d, ty2)
         in
-        let patS' = List.fold_left f (Comp.PatNil _loc) (List.rev patS) in
-        (patS', e)
-      ]
-    ]
-  ;
-  
-  cmp_exp_chkX:
-    [ LEFTA
-        [ "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
-        List.fold_left (fun acc f -> Comp.Fn (_loc, (Id.mk_name (Id.SomeString f)), acc)) e (List.rev fs)
+        choice
+          [ label pi_typ "LF Pi type"
+          ; seq2
+              (trying (lf_typ_atomic <& token T.ARROW))
+              lf_typ
+            |> span
+            $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+          ; lf_typ_atomic
+          ]
+        |> labelled "LF type"
+      in
+      p.run s
+  }
 
-        | "fun"; br = LIST1 cmp_copatSpine SEP "|" ->
-        let br' = List.fold_left (fun acc pat -> Comp.ConsFBranch (_loc, pat, acc))
-          (Comp.NilFBranch _loc) (List.rev br) in
-        Comp.Fun (_loc, br')
-        
-      | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
-        List.fold_left (fun acc s -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s)), acc)) e (List.rev args)
-
-      | "case"; i = cmp_exp_syn; "of"; prag = case_pragma; OPT [ "|"]; bs = LIST1 cmp_branch SEP "|" ->
-          Comp.Case (_loc, prag, i, bs)
-
-     | "impossible"; i = cmp_exp_syn; cd = OPT ["in";
-         ctyp_decls = LIST0 clf_ctyp_decl; "["; pHat = clf_dctx ;"]" -> (ctyp_decls, pHat)]  ->
-           (match cd with
-	      | Some (ctyp_decls, pHat) ->
-		  let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-		    Comp.Case (_loc, Pragma.RegularCase, i,
-                               [Comp.EmptyBranch (_loc, ctyp_decls', mkEmptyPat (_loc, pHat))])
-	      | None ->
-		    Comp.Case (_loc, Pragma.RegularCase, i,
-                               [Comp.EmptyBranch (_loc, LF.Empty, mkEmptyPat (_loc, LF.Null ))]))
-
-      | "let";  x = SYMBOL; "="; i = cmp_exp_syn;  "in"; e = cmp_exp_chk ->
-          Comp.Let (_loc, i, (Id.mk_name (Id.SomeString x), e))
-
-      | "let"; ctyp_decls = LIST0 clf_ctyp_decl;
-           pat = cmp_pattern; "="; i = cmp_exp_syn; "in"; e = cmp_exp_chk ->
-          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds))
-                           LF.Empty ctyp_decls in
-
-          let branch = Comp.Branch(_loc, ctyp_decls', pat, e)  in
-          Comp.Case (_loc, Pragma.RegularCase, i, [branch])
-
-      | "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
-          begin match p_or_a with
-            | Pair e2 ->   Comp.Pair (_loc, e1, e2)
-            | Atom    ->   e1
+and lf_typ_atomic =
+  { run =
+      fun s ->
+      let p =
+        alt
+          begin
+            span lf_term
+            $> function
+              | loc , LF.NTyp(_, t) -> t
+              | loc , LF.TList(_, [LF.NTyp(_,t)]) -> t
+              | loc , LF.TList(_, [n]) -> LF.AtomTerm(loc, n)
+              | loc , t -> LF.AtomTerm (loc, t)
           end
+          (parens lf_typ)
+        |> labelled "atomic LF type"
+      in
+      p.run s
+  }
 
-      | h = HOLE ->
-         (* h is a string of the form "?hole", so we drop the first
-          * character and check whether the name of the hole is empty
-          * to construct the true hole name. *)
-         let sname = String.sub h 1 (String.length h - 1) in
-         let name =
-           match sname with
-           | "" -> None
-           | _ -> Some sname in
-         Comp.Hole (_loc, name)
+  (*
+let lf_typ_decl (* sgn_lf_kind *) =
+  labelled "LF type declaration"
+    (seq2
+       (name <& token T.COLON)
+       lf_kind
+     |> span
+     $> fun (loc, (id, tK)) ->
+        Sgn.Typ (loc, id, tK))
+   *)
 
-      ]
+let lf_const_decl (* sgn_lf_typ *) =
+  labelled "LF constant declaration"
+    (seq2
+       (name <& token T.COLON)
+       lf_typ
+     |> span
+     $ fun (loc, (id, tA)) ->
+       pure (Sgn.Const (loc, id, tA)))
 
-    | "atomic"
-      [
+let sgn_lf_typ_decl : Sgn.decl parser =
+  let lf_typ_decl_body (* cmp_dat *) =
+    let typ_decl =
+      seq2
+        (name <& token T.COLON)
+        lf_kind
+    in
+    seq2
+      (typ_decl <& token T.EQUALS)
+      (maybe (token T.PIPE)
+       &> sep_by0 lf_const_decl (token (T.PIPE)))
+    |> span
+    $> fun (loc, ( (a, k) , const_decls ) ) ->
+       Sgn.Typ (loc, a, k), const_decls
+  in
 
-        tR = meta_obj  -> Comp.Box (_loc, tR)
+  labelled "LF type declaration block"
+    (token T.KW_LF
+     &> (sep_by1 lf_typ_decl_body (token T.KW_AND)
+         $> Nonempty.to_list)
+     <& token T.SEMICOLON
+     |> span
+     $> fun (loc, f) ->
+        Sgn.MRecTyp(loc, f))
 
-       |
-        "(" ; e1 = cmp_exp_chk; p_or_a = cmp_pair_atom ->
-          begin match p_or_a with
-            | Pair e2 ->   Comp.Pair (_loc, e1, e2)
-            | Atom    ->   e1
+  (*
+let ctyp_decl , implicit_ctyp_decl =
+  let f g =
+    seq2
+      (name <& token T.COLON)
+      fqname
+    |> span
+    |> g
+    $> fun (loc, (psi, w)) ->
+       LF.Decl (psi, (loc, LF.CTyp w), LF.No)
+  in
+  f braces,
+  f parens
+   *)
+
+let hole : string option parser =
+  satisfy' (`hole None)
+    (function
+     | T.HOLE s -> Some (match s with "" -> None | _ -> Some s)
+     | _ -> None)
+  |> labelled "hole"
+
+let rec_block (p : (Id.name * LF.typ) parser) =
+  token T.KW_BLOCK
+  &> opt_parens (sep_by1 p (token T.COMMA))
+  |> span
+  $> fun (loc, es) ->
+     Nonempty.fold_right
+       (fun (x, a) -> LF.SigmaLast (Some x, a))
+       (fun (x, a) s -> LF.SigmaElem (x, a, s))
+       es
+
+let clf_projection : LF.proj parser =
+  alt
+    (dot_integer $> (fun k -> LF.ByPos k))
+    (dot_name $> (fun x -> LF.ByName x))
+
+(** Parses an LF function type (uniform pi or arrow)
+    using the given parsers for types and atomic types.
+ *)
+let rec lf_function_type p p_atomic =
+  let pi =
+    let d =
+      seq2 (name <& token T.COLON) p
+      |> braces
+      $> fun (name, a) -> LF.TypDecl (name, a)
+    in
+    seq2 d p
+    |> span
+    $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
+  in
+  let arrow =
+    seq2 (trying (p_atomic <& token T.ARROW)) p
+    |> span
+    $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
+  in
+  alt pi arrow
+
+(** Parses a sequence of contextual LF normal terms and packages them
+    into a TList for infix operator parsing later during indexing.
+ *)
+and clf_term_app =
+  { run =
+      fun s ->
+      let normal_list =
+        some clf_normal
+        |> span
+        $> fun (loc, ms) -> LF.TList (loc, ms)
+      in
+      let p =
+        choice
+          [ normal_list
+          ; span T.(tokens [LBRACE; RBRACE])
+            $> (fun (loc, _) -> LF.PatEmpty loc)
+          ; span clf_typ
+            $> (fun (loc, a) -> LF.NTyp (loc, a))
+          ]
+        |> labelled "contextual LF application"
+      in
+      p.run s
+  }
+
+and clf_typ_atomic =
+  { run =
+      fun s ->
+      let a =
+        labelled
+          "nonempty sequence of contextual LF normal terms"
+          begin
+            some clf_normal
+            |> span
+            $> fun (loc, ms) ->
+               match ms with
+               | [LF.NTyp(_, a)] -> a
+               | _ -> LF.AtomTerm (loc, LF.TList(loc, ms))
           end
-      ]
- ];
+      in
+      let b =
+        seq2
+          name
+          (many clf_normal)
+        |> span
+        $> fun (loc, (x, ms)) ->
+           LF.AtomTerm
+             ( loc
+             , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, None), LF.Nil)) :: ms)
+             )
+      in
+      let p =
+        choice
+          [ a
+          ; b
+          ; parens clf_typ
+          ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
+          ]
+        |> labelled "atomic contextual LF type"
+      in
+      p.run s
+  }
 
-clobj:
-  [[
-       cPsi = clf_hat_or_dctx ; turnstile ; tR = term_or_sub -> (_loc,Comp.ClObj(cPsi, tR))
-     | psi = clf_hat_or_dctx   ->  (_loc,Comp.CObj psi)
-  ]];
+and clf_typ_pure =
+  { run =
+      fun s ->
+      let p =
+        alt
+          (lf_function_type clf_typ_pure clf_typ_pure_atomic)
+          (clf_typ_pure_atomic)
+        |> labelled "pure contextual LF type"
+      in
+      p.run s
+  }
 
-(* isuffix: something that can follow an i; returns a function that takes the i it follows,
-  and returns the appropriate synthesizing expression *)
-isuffix:
-  [ LEFTA
+and clf_typ_pure_atomic =
+  { run =
+      fun s ->
+      let p =
+        choice
+          [ parens clf_typ_pure
+          ; seq2 name (many clf_normal)
+            |> span
+            $> fun (loc, (x, ms)) ->
+               LF.AtomTerm
+                 ( loc
+                 , LF.TList
+                     ( loc
+                     , LF.Root (loc, LF.Name (loc, x, None), LF.Nil)
+                       :: ms
+                     )
+                 )
+          ]
+        |> labelled "atomic pure contextual LF type"
+      in
+      p.run s
+  }
 
-   [ m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-     let (modules, n) = split '.' m in
-     (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n)))))
-   | x = UPSYMBOL   ->
-       (fun i -> Comp.Apply(_loc, i, Comp.Syn (_loc, Comp.DataConst (_loc, Id.mk_name (Id.SomeString x)))))
-   | e = cmp_exp_chkX   ->
-       (fun i -> Comp.Apply(_loc, i, e))
- ]];
+and clf_typ_rec_elem =
+  { run =
+      fun s ->
+      let p =
+        seq2 (name <& token T.COLON) clf_typ_pure
+        |> labelled "contextual LF block element"
+      in
+      p.run s
+  }
 
-cmp_exp_syn:
- [
-  "modules"[
-     m = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-     let (modules, n) = split '.' m in
-      Comp.Var (_loc, Id.mk_name ~modules:modules (Id.SomeString n))
-  ]
+and clf_typ_rec_block =
+  { run =
+      fun s ->
+      let p =
+        rec_block clf_typ_rec_elem
+        |> labelled "contextual LF block"
+      in
+      p.run s
+  }
 
-  |
+and clf_typ =
+  { run =
+      fun s ->
+      let pi_decl =
+        seq2
+          (name <& token T.COLON)
+          clf_typ
+        |> braces
+      in
+      let pi =
+        seq2
+          (pi_decl <& maybe (token T.ARROW))
+          clf_typ
+        |> span
+        $> fun (loc, ((x, a), a')) ->
+           LF.PiTyp (loc, LF.TypDecl (x, a), a')
+      in
+      let arrow_or_atomic =
+        seq2
+          clf_typ_atomic
+          (maybe (token T.ARROW &> clf_typ))
+        |> span
+        $> fun (loc, (a, b)) ->
+           match b with
+           | None -> a
+           | Some b -> LF.ArrTyp (loc, a, b)
+      in
+      (choice
+         [ pi; arrow_or_atomic ]
+       |> labelled "contextual LF type"
+      ).run s
+  }
 
- LEFTA [
-     tR = meta_obj -> Comp.BoxVal (_loc, tR)
+and clf_sub_term =
+  { run =
+      fun s ->
+      let p =
+        choice
+          [ token T.HAT |> span $> (fun (loc, _) -> LF.EmptySub loc)
+          ; token T.DOTS |> span $> (fun (loc, _) -> LF.Id loc)
+          ; seq2
+              dollar_name
+              (maybe (bracks clf_sub_new))
+            |> span
+            $> fun (loc, (x, s)) -> LF.SVar (loc, x, s)
+          ]
+        |> labelled "contextual LF substitution term"
+      in
+      p.run s
+  }
 
-   | h = SELF; s = isuffix  ->  s(h)
-   | h = SELF; "("; e = cmp_exp_chk; p_or_a = cmp_pair_atom   ->
-       Comp.Apply (_loc, h, begin match p_or_a with
-                                    | Pair e2 ->   Comp.Pair (_loc, e, e2)
-                                    | Atom    ->   e
-                            end)
-   | x = UPSYMBOL ->  Comp.DataConst (_loc, Id.mk_name (Id.SomeString x))
+and clf_sub_new =
+  { run =
+      fun s ->
+      let start =
+        alt
+          (clf_sub_term
+           $> fun t -> (t, []))
+          (span clf_term_app
+           $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
+      in
+      let nonemptysub =
+        seq2 start (many (token T.COMMA &> clf_term_app))
+        (* we need to reverse xs because the *rightmost* element
+           (textually) must be the head of the list.
+           This is also why ts comes after xs, despite being *parsed*
+           before!
+         *)
+        $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
+      in
+      let emptysub =
+        span (pure ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
+      in
+      let p =
+        alt nonemptysub emptysub
+        |> labelled "contextual LF substitution"
+      in
+      p.run s
+  }
 
-   | "("; i = SELF; p_or_a = cmp_pair_atom_syn -> match p_or_a with
-       | Pair_syn i2 -> Comp.PairVal (_loc, i, i2)
-       | Atom_syn -> i
+and clf_head =
+  { run =
+      fun s ->
+      let var =
+        seq3
+          (alt
+             (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
+             (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
+          (maybe clf_projection)
+          (maybe (bracks clf_sub_new))
+        |> shifted "variable head"
+        |> span
+        $> fun (loc, (f, proj, sigma)) ->
+           let m = f loc sigma in
+           match proj with
+           | Some k -> LF.Proj (loc, m, k)
+           | None -> m
+      in
+      let hole =
+        token T.UNDERSCORE
+        |> span
+        $> fun (loc, _) -> LF.Hole loc
+      in
+      let p = choice [hole ; var] in
+      p.run s
+  }
 
- ]];
+and clf_normal =
+  { run =
+      fun s ->
+      let lam =
+        seq2
+          (token T.LAMBDA &> name)
+          (token T.DOT &> clf_term_app)
+        |> span
+        |> labelled "LF lambda"
+        $> fun (loc, (x, m)) ->
+           LF.Lam (loc, x, m)
+      in
+      (*
+      let modul =
+        span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
+      in
+       *)
+      let head =
+        span clf_head
+        $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+      in
+      let app =
+        seq2
+          clf_term_app
+          (maybe (token T.COLON &> clf_typ))
+        |> parens
+        |> span
+        |> labelled "LF application"
+        $> fun (loc, (tm, ann)) ->
+           match ann with
+           | None -> tm
+           | Some a -> LF.Ann (loc, tm, a)
+      in
+      let lfhole =
+        span hole
+        |> labelled "LF hole"
+        $> fun (loc, h) -> LF.LFHole (loc, h)
+      in
+      let tuple =
+        sep_by1 clf_term_app (token T.SEMICOLON)
+        |> angles
+        |> span
+        |> labelled "LF tuple"
+        $> fun (loc, ms) ->
+           LF.Tuple
+             ( loc
+             , Nonempty.fold_right
+                 (fun x -> LF.Last x)
+                 (fun x r -> LF.Cons (x, r))
+                 ms
+             )
+      in
+      let p =
+        choice
+          [ lam
+          (* ; modul *) (* modules are wacky *)
+          ; app
+          ; head
+          ; lfhole
+          ; tuple
+          ]
+        |> labelled "contextual LF normal term"
+      in
+      p.run s
+  }
 
-(* pattern spine: something that can follow a constructor; returns a function
-   that takes the constructor it follows, and returns the appropriate
-   synthesizing expression. *)
+(** Parses an LF context, commonly referred to by cPsi.
+    This parser allows declarations without a type; if you require
+    that all declarations give a type, then separately validate the
+    context after.
+ *)
+and clf_dctx : LF.dctx parser =
+  { run =
+      fun s ->
+      let clf_typ_decl =
+        seq2
+          name
+          (maybe (token T.COLON &> clf_typ))
+        $> fun (x, tA) ->
+           match tA with
+           | Some tA -> LF.TypDecl (x, tA)
+           | None -> LF.TypDeclOpt x
+      in
+      (* the different ways a context can begin:
+         a hole, a variable, or a declaration
+       *)
+      let start =
+        choice
+          [ token T.UNDERSCORE &> pure LF.CtxHole
+          ; span clf_typ_decl
+            $> fun (loc, d) ->
+               (* This is nasty. XXX
+                  We need this to handle context variables, which are
+                  syntactically indistinguishable from a concrete
+                  context beginning with a variable whose type is
+                  omitted (to be solved by unification later).
+                  A better way to do this would be to change, in the
+                  external syntax, the type `dctx` to be something like
+                  ```
+                  type dctx_start = Null | CtxHole
+                  type dctx = dctx_start * typ_decl list
+                  ```
+                  The empty context would be `(Null, [])`.
+                  A context like `g, x:tm` would be `(Null, [TypDeclOpt g; TypDecl (x, tm)])`
+                  A disambiguation would be performed during indexing in the case of a context that
+                  - begins with Null; and
+                  - whose first entry is a TypDeclOpt that refers to a context variable.
+                  This would be transformed into a proper context
+                  beginning with a context variable in the approximate
+                  syntax.
+                *)
+               match d with
+               | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
+               | _ -> LF.DDec (LF.Null, d)
 
-  term_or_sub:
-  [
-    [ (* TODO: Refactor this once head and sub are merged *)
-     h = SYMBOL; ","; t = SYMBOL ->
-            let su = LF.Dot (_loc, (LF.Dot (_loc, LF.EmptySub _loc, LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString h))))), LF.Head (LF.Name (_loc, Id.mk_name (Id.SomeString t)))) in
-            Comp.SObj su
-    | tM = clf_term_app -> Comp.MObj tM
-    | s  = clf_sub_new -> Comp.SObj s
+          ]
+      in
+      let p =
+        choice
+          [ seq2
+              start
+              (many (token T.COMMA &> clf_typ_decl))
+            $> (fun (cPsi, ds) ->
+              List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
+          ; pure LF.Null
+          ]
+        |> labelled "contextual LF context"
+      in
+      p.run s
+  }
+
+(** Parses
+    `[ dctx |- p ]`
+    Since this is pretty common for various choices of `p`.
+    Returns the parse of the dctx and p in a tuple.
+ *)
+and contextual : type a. a parser -> (LF.dctx * a) parser =
+  fun p ->
+  seq2
+    (clf_dctx <& token T.TURNSTILE)
+    p
+  |> bracks
+
+let meta_obj =
+  { run =
+      fun s ->
+      let p =
+        let clobj =
+          seq2
+            clf_dctx
+            (maybe (token T.TURNSTILE &> clf_sub_new))
+          |> span
+          $> fun (loc, (cPsi, tR)) ->
+             match tR with
+             | Some tR -> (loc, Comp.ClObj (cPsi, tR))
+             | None -> (loc, Comp.CObj cPsi)
+        in
+        clobj
+        |> bracks
+        |> labelled "meta object"
+      in
+      p.run s
+  }
+
+(** Parses the `ctype` kind, the kind of computation types. *)
+let ctype_kind =
+  token T.KW_CTYPE |> span
+  $> fun (loc, _) -> Comp.Ctype loc
+
+(** Parses a variable declaration for a contextual type.
+    `name : [ dctx |- p ]`
+    Note that this doesn't include the braces around the declaration!
+ *)
+let contextual_variable_decl name p =
+  seq2
+    (name <& token T.COLON)
+    (contextual p)
+
+let cltyp : (LF.dctx * typ_or_ctx) parser =
+  labelled "boxed type"
+    begin
+      let typ =
+        contextual clf_typ_atomic
+        $> fun (cPsi, a) ->
+           (cPsi, `Typ a)
+      in
+      let ctx =
+        contextual clf_dctx
+        $> fun (cPsi, cPhi) ->
+           (cPsi, `Ctx cPhi)
+      in
+      alt
+        (label typ "proper contextual type")
+        (label ctx "contextual context type")
+    end
+
+(** Contextual LF contextual type declaration *)
+let clf_ctyp_decl allow_implicit_ctx =
+  { run =
+      fun s ->
+      (* Parses `#name : [ dctx |- p ]` *)
+      let hash_variable_decl p =
+        contextual_variable_decl hash_name p
+      in
+      let dollar_variable_decl p =
+        contextual_variable_decl dollar_name p
+      in
+      let mk_decl ind f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), ind)
+      in
+      let mk_cltyp_decl f d =
+        mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+      in
+
+      let param_variable =
+        labelled "parameter variable declaration"
+          begin
+            hash_variable_decl (trying clf_typ_atomic)
+            |> span
+            $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
+          end
+      in
+      let subst_variable =
+        let subst_class =
+          maybe (token T.HASH)
+          $> Maybe.eliminate (Misc.const LF.Subst) (Misc.const LF.Ren)
+        in
+        labelled "substitution/renaming variable"
+          begin
+            dollar_variable_decl (seq2 subst_class clf_dctx)
+            |> span
+            $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+          end
+      in
+      (* parses `name : name` *)
+      let ctx_variable =
+        labelled "implicit context variable"
+          begin
+            seq2
+              (trying (name <& token T.COLON))
+              (name <& trying (not_followed_by meta_obj))
+            |> span
+            $> mk_decl LF.Maybe (fun w -> LF.CTyp w)
+          end
+      in
+      let q =
+        choice
+          [ param_variable
+          ; subst_variable
+          (* since a name followed by a colon happens in both
+             the case for an mvar and the case for a context
+             variable, we refactor the grammar to parse first the
+             name followed by the colon, and *then* we perform an
+             alternation to see whether we have another name (so
+             a ctx var) or a box (so an mvar)
+           *)
+          ; name <& token T.COLON |> span
+            $ fun (loc1, x) ->
+              alt
+                (span name
+                 $> fun (loc2, ctx) ->
+                    mk_decl LF.No
+                      (fun w -> LF.CTyp w)
+                      (Loc.join loc1 loc2, (x, ctx)))
+                (contextual clf_typ_atomic |> span
+                 $> fun (loc2, d) ->
+                    mk_cltyp_decl
+                      (fun tA -> LF.MTyp tA)
+                      (Loc.join loc1 loc2, (x, d)))
+          ]
+        |> braces
+      in
+
+      let p =
+        labelled "contextual type declaration"
+          begin
+            if allow_implicit_ctx
+            then alt (parens ctx_variable) q
+            else q
+          end
+      in
+      p.run s
+  }
+
+let pibox ?(allow_implicit_ctx = true) r f =
+  seq2
+    (clf_ctyp_decl allow_implicit_ctx
+     <& maybe (token T.ARROW))
+    r
+  |> span
+  $> fun (loc, (ctyp_decl, x)) ->
+     f loc ctyp_decl x
+
+let arrow atomic r f =
+  seq2
+    (trying (atomic <& token T.ARROW))
+    r
+  |> span
+  $> fun (loc, (a1, a2)) -> f loc a1 a2
+
+let rec cmp_typ =
+  { run =
+      fun s ->
+      let pibox =
+        labelled "Pi-box type"
+          (pibox cmp_typ
+             (fun loc ctyp_decl tau ->
+               Comp.TypPiBox (loc, ctyp_decl, tau)))
+      in
+      let arr =
+        labelled "Arrow computation type"
+          (arrow cmp_typ_cross cmp_typ
+             (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
+      in
+      let p =
+        choice
+          [ pibox
+          ; arr
+          ; cmp_typ_cross
+          ]
+        |> labelled "computation type"
+      in
+      p.run s
+  }
+
+and cmp_typ_cross =
+  { run =
+      fun s ->
+      let p =
+        seq2
+          cmp_typ_atomic
+          (maybe (token T.STAR &> cmp_typ_cross))
+        |> span
+        |> labelled "computation product type"
+        $> fun (loc, (tau, m)) ->
+           match m with
+           | None -> tau
+           | Some tau' -> Comp.TypCross (loc, tau, tau')
+      in
+      p.run s
+  }
+
+and cmp_typ_atomic : Comp.typ parser =
+  { run =
+      fun s ->
+      let base =
+        labelled "base computation type"
+          (seq2 name (many meta_obj)
+           |> span
+           $> fun (loc, (a, ms)) ->
+              let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
+              Comp.TypBase (loc, a, sp))
+      in
+      let pbox =
+        token T.HASH
+        &> contextual (some clf_normal |> span)
+        |> span
+        $> fun (loc, (cPsi, (loc', ms))) ->
+           Comp.TypBox
+             ( loc
+             , ( loc
+               , LF.ClTyp
+                   ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
+                   , cPsi
+                   )
+               )
+             )
+      in
+      let sub =
+        token T.DOLLAR
+        &> contextual clf_dctx
+        |> span
+        $> fun (loc, (cPsi, cPhi)) ->
+           Comp.TypBox
+             ( loc
+             , ( loc
+               , LF.ClTyp
+                   ( LF.STyp (LF.Subst, cPhi), cPsi)
+               )
+             )
+      in
+      let ctx =
+        span fqname
+        $> fun (loc, schema) ->
+           Comp.TypBox (loc, (loc, LF.CTyp schema))
+      in
+      let ordinary =
+        seq2
+          (trying (clf_dctx <& token T.TURNSTILE))
+          (some clf_normal)
+        |> span
+        |> labelled "boxed type"
+        $> fun (loc, (cPsi, ms)) ->
+           Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
+      in
+      let p =
+        choice
+          [ base
+          ; ctx
+          ; pbox
+          ; sub
+          ; bracks (alt ordinary ctx)
+          ; parens cmp_typ
+          ]
+        |> labelled "atomic computation type"
+      in
+      p.run s
+  }
+
+let rec cmp_kind =
+  { run =
+      fun s ->
+      let pibox =
+        labelled "Pi-box kind"
+          begin
+            seq2
+              (trying (clf_ctyp_decl true <& maybe (token T.ARROW)))
+              cmp_kind
+            |> span
+            $> fun (loc, (ctyp_decl, k)) ->
+               (* XXX the ctyp_decl must be for an ordinary box-type. *)
+               Comp.PiKind (loc, ctyp_decl, k)
+          end
+      in
+      let arrow =
+        labelled "arrow kind"
+          begin
+            seq2
+              (trying (cltyp <& token T.ARROW) |> span)
+              cmp_kind
+            |> span
+            $> fun (loc, ((loc', (cPsi, a)), k)) ->
+               let x = Id.mk_name (Id.NoName) in
+               Comp.PiKind
+                 ( loc
+                 , LF.Decl
+                     ( x
+                     , ( loc'
+                       , LF.ClTyp
+                           ( begin match a with
+                             | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                             | `Typ a -> LF.MTyp a
+                             end
+                           , cPsi
+                           )
+                       )
+                     , LF.No
+                     )
+                 , k
+                 )
+          end
+      in
+      let p =
+        choice
+          [ ctype_kind
+          ; pibox
+          ; arrow
+          ]
+        |> labelled "computation kind"
+      in
+      p.run s
+  }
+
+(** Parses a sequence of zero or more clf_ctyp_decl into a context. *)
+let ctyp_decls allow_implicit_ctx =
+  many (clf_ctyp_decl allow_implicit_ctx)
+  $> List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty
+
+(** Parses a sequence of `p` separated by commas, in parentheses.
+    This is used to parse nested & tuple patterns and expressions
+    generically.
+ *)
+let nested (type a) (p : a parser) (g : a locd -> a) (f : a locd -> a locd -> a) : a parser =
+  sep_by1 (span p) (token T.COMMA)
+  |> span
+  |> parens
+  $> fun (loc', l) ->
+     Nonempty.fold_left g (fun acc p -> f (loc', acc) p) l
+     (* We use a left fold because the tuples in Beluga naturally nest on the left.
+        We always use the loc' location on the accumulator since `f`
+        should join the locations of its inputs. Location joining uses
+        the start of the first input and the stop of the second, so
+        the effect is to generate progressively right-expanding
+        location spans.
+      *)
+
+(** Parses a pragma that can appear before a case.
+    Either it's the `--not' pragma, or there's no pragma. In the
+    latter case we produce `Pragma.RegularCase' without consuming any
+    input.
+ *)
+let case_pragma =
+  alt
+    (pragma "not" &> pure Pragma.PragmaNotCase)
+    (pure Pragma.RegularCase)
+
+(** Parses a checkable computation term *)
+let rec cmp_exp_chk =
+  { run =
+      fun s ->
+      let p =
+        choice
+          [ cmp_exp_chk'
+          ; span cmp_exp_syn
+            $> fun (loc, i) -> Comp.Syn (loc, i)
+          ]
+      in
+      p.run s
+  }
+
+and cmp_branch =
+  { run =
+      fun s ->
+      let p =
+        seq3
+          (ctyp_decls false)
+          cmp_pattern
+          (maybe (token T.THICK_ARROW &> cmp_exp_chk))
+        |> span
+        |> labelled "case branch"
+        $> fun (loc, (ctyp_decls, pat, rest)) ->
+           match rest with
+           | Some e -> Comp.Branch (loc, ctyp_decls, pat, e)
+           | None -> Comp.EmptyBranch (loc, ctyp_decls, pat)
+      in
+      p.run s
+  }
+
+and cmp_pattern =
+  { run =
+      fun s ->
+      let pattern_spine =
+        many (span cmp_pattern_atomic)
+        |> span
+        $> fun (loc, s) ->
+           List.fold_right
+             (fun (loc, t) s -> Comp.PatApp (loc, t, s))
+             s
+             (Comp.PatNil loc)
+      in
+      let app =
+        seq2
+          name
+          pattern_spine
+        |> span
+        |> labelled "variable or inductive type pattern"
+        $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
+      in
+      let pattern = alt app cmp_pattern_atomic in
+      let p =
+        seq2
+          pattern
+          (maybe (token T.COLON &> cmp_typ))
+        |> labelled "possibly annotated pattern"
+        |> span
+        $> fun (loc, (p, tau)) ->
+           match tau with
+           | None -> p
+           | Some tau -> Comp.PatAnn (loc, p, tau)
+      in
+      p.run s
+  }
+
+and cmp_pattern_atomic =
+  { run =
+      fun s ->
+      let mobj_pat =
+        span meta_obj
+        |> labelled "meta object pattern"
+        $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
+      in
+      let nested =
+        nested cmp_pattern
+          snd
+          (fun (l1, p1) (l2, p2) ->
+            Comp.PatPair (Loc.join l1 l2, p1, p2))
+        |> labelled "nested/pair pattern"
+      in
+      let var =
+        name
+        |> span
+        |> labelled "variable pattern"
+        $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
+      in
+      let p =
+        choice
+          [ mobj_pat
+          ; nested
+          ; var
+          ]
+        |> labelled "bare pattern"
+      in
+      p.run s
+  }
+
+(** Parses a pure checkable computation term,
+    i.e. a checkable term *except* for applications.
+ *)
+and cmp_exp_chk' =
+  let empty_pat (loc, pHat) =
+    Comp.PatMetaObj
+      ( loc
+      , ( loc
+        , Comp.ClObj
+            ( pHat
+            , (LF.EmptySub loc, [LF.PatEmpty loc])
+            )
+        )
+      )
+  in
+  { run =
+      fun s ->
+      let abstraction param c =
+        seq2
+          (sep_by1 param (token T.COMMA) $> Nonempty.to_list)
+          (token T.THICK_ARROW &> cmp_exp_chk)
+        |> span
+        $> fun (loc, (params, i)) ->
+           List.fold_left
+             (fun acc f -> c loc f acc) i (List.rev params)
+      in
+      let fn =
+        token T.KW_FN
+        &> abstraction name
+             (fun loc f acc -> Comp.Fn (loc, f, acc))
+        |> labelled "ordinary function abstraction"
+      in
+      let mlam =
+        token T.KW_MLAM
+        &> abstraction (choice [hash_name; dollar_name; name])
+             (fun loc f acc -> Comp.MLam (loc, f, acc))
+        |> labelled "meta function abstraction"
+      in
+      let matching_fun =
+        token T.KW_FUN
+        &> maybe (token T.PIPE)
+        &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
+        $> Nonempty.to_list
+        |> span
+        |> labelled "copattern abstraction"
+        $> fun (loc, branches) ->
+           let branches =
+             List.fold_left
+               (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
+               (Comp.NilFBranch loc)
+               (List.rev branches)
+           in
+           Comp.Fun (loc, branches)
+      in
+      let case =
+        seq3
+          (token T.KW_CASE &> cmp_exp_syn)
+          (token T.KW_OF &> case_pragma)
+          (maybe (token T.PIPE)
+           &> sep_by1 cmp_branch (token T.PIPE)
+           $> Nonempty.to_list)
+        |> span
+        |> labelled "case expression"
+        $> fun (loc, (i, prag, bs)) ->
+           Comp.Case (loc, prag, i, bs)
+      in
+      let impossible =
+        token T.KW_IMPOSSIBLE &>
+          seq2
+            cmp_exp_syn
+            (maybe
+               (token T.KW_IN &>
+                  seq2 (ctyp_decls false) (bracks clf_dctx)))
+        |> span
+        $> fun (loc, (i, cd)) ->
+           Comp.Case
+             ( loc
+             , Pragma.RegularCase
+             , i
+             , [ match cd with
+                 | None -> Comp.EmptyBranch (loc, LF.Empty, empty_pat (loc, LF.Null))
+                 | Some (ctyp_decls, pHat) ->
+                    Comp.EmptyBranch (loc, ctyp_decls, empty_pat (loc, pHat))
+               ]
+             )
+      in
+      let lets =
+        let let_pattern =
+          seq4
+            (ctyp_decls false)
+            (cmp_pattern <& token T.EQUALS)
+            (cmp_exp_syn <& token T.KW_IN)
+            cmp_exp_chk
+          |> span
+          $> fun (loc, (ctyp_decls, pat, i, e)) ->
+             let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
+             Comp.Case (loc, Pragma.RegularCase, i, [branch])
+        in
+        token T.KW_LET
+        (* XXX
+           there is ambiguity between let_exp and let_pattern, in
+           particular because exp is a proper subclass of pattern:
+           i.e. a variable is a valid pattern.
+           Furthermore, there is no syntactic way we can tell,
+           since variables may be any case.
+           During parsing, we will prioritize let_pattern, and during
+           indexing, when we have scoping information, we will
+           disambiguate.
+           -je
+         *)
+        &> let_pattern
+      in
+      let nested =
+        nested cmp_exp_chk
+          snd
+          (fun (l1, e1) (l2, e2) ->
+            Comp.Pair (Loc.join l1 l2, e1, e2))
+      in
+      let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
+      let meta_obj =
+        meta_obj
+        |> span
+        $> fun (loc, tR) -> Comp.Box (loc, tR)
+      in
+      let p =
+        choice
+          [ fn (* fn introduction form *)
+          ; mlam (* mlam introduction form *)
+          ; matching_fun (* generalized fun form *)
+          ; case (* case expression *)
+          ; impossible (* empty case expression *)
+          ; nested (* an expression nested in parens or a tuple *)
+          ; hole
+          ; meta_obj
+          ; lets (* let expressions: true let and pattern let *)
+          ]
+      in
+      p.run s
+  }
+
+and cmp_copat_spine =
+  let rec go =
+    { run =
+        fun s ->
+        let p =
+          choice
+            [ seq2 dot_name go
+              |> span
+              |> labelled "observation pattern"
+              $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
+            ; seq2 cmp_pattern_atomic go
+              |> span
+              |> labelled "application pattern"
+              $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
+            ; span (pure ()) $> fun (loc, _) -> Comp.PatNil loc
+            ]
+        in
+        p.run s
+    }
+  in
+  { run =
+      fun s ->
+      let p =
+        seq2
+          (go <& token T.THICK_ARROW)
+          cmp_exp_chk
+        |> shifted "copattern spine"
+      in
+      p.run s
+  }
+
+(** Parses a synthesizable expression *)
+and cmp_exp_syn =
+  { run =
+      fun s ->
+      let p =
+        seq2
+          cmp_exp_syn'
+          (many (span cmp_exp_chk''))
+        |> span
+        $> fun (loc, (i, es)) ->
+           let rec fold i es =
+             match es with
+             | [] -> i
+             | (loc', e) :: es ->
+                let i = Comp.Apply (Loc.join loc loc', i, e) in
+                fold i es
+           in
+           fold i es
+      in
+      p.run s
+  }
+
+(** Parses a purely checkable expression or an atomic
+    (non-application) synthesizable expression.
+ *)
+and cmp_exp_chk'' =
+  { run =
+      fun s ->
+      let p =
+        choice
+          [ cmp_exp_chk'
+          ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
+          ]
+      in
+      p.run s
+  }
+
+(** Parses a synthesizable expression except applications. *)
+and cmp_exp_syn' =
+  { run =
+      fun s ->
+      let meta_obj =
+        meta_obj
+        |> span
+        |> labelled "synthesizable box"
+        $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
+      in
+      let nested =
+        nested cmp_exp_syn
+          snd
+          (fun (l1, i1) (l2, i2) ->
+            Comp.PairVal (Loc.join l1 l2, i1, i2))
+        |> labelled "nested synthesizable expression or pair"
+      in
+      let name =
+        fqname
+        |> span
+        |> labelled "computation variable or constructor"
+        $> fun (loc, x) -> Comp.Name (loc, x)
+      in
+      let p =
+        choice
+          [ name
+          ; meta_obj
+          ; nested
+          ]
+      in
+      p.run s
+  }
+
+let call_arg =
+  alt
+    (name $> Maybe.pure)
+    (token T.UNDERSCORE &> pure None)
+  |> labelled "call argument"
+
+let named_total_arg : Id.name Comp.order' t =
+  name $> fun x -> Comp.Arg x
+
+let numeric_total_arg : int Comp.order' t =
+  integer $> fun x -> Comp.Arg x
+
+let total_order (arg : 'a Comp.order' t) : 'a Comp.order' t  =
+  alt
+    arg
+    (braces (some arg) $> fun args -> Comp.Lex args)
+  |> labelled "totality ordering"
+
+(** Parses a totality declaration whose arguments are parsed by `arg` *)
+let total_decl (arg : Comp.order t) : Comp.total_dec t =
+  let trust =
+    token T.KW_TRUST
+    |> span
+    |> labelled "trust totality"
+    $> fun (loc, _) -> Comp.Trust loc
+  in
+  let total =
+    token T.KW_TOTAL &>
+      seq2
+        (maybe (total_order arg))
+        (parens (seq2 name (many call_arg)))
+    |> span
+    $> fun (loc, (order, (r, args))) ->
+       Comp.Total (loc, order, r, args)
+  in
+  alt trust total
+  |> labelled "totality declaration"
+
+let numeric_total_order = total_order numeric_total_arg
+
+(** Mutual block of computation type declarations. *)
+let sgn_cmp_typ_decl =
+  labelled "Inductive or stratified computation type declaration"
+    begin
+      let cmp_typ_decl =
+        let flavour =
+          alt
+            (token T.KW_INDUCTIVE &> pure Sgn.InductiveDatatype)
+            (token T.KW_STRATIFIED &> pure Sgn.StratifiedDatatype)
+        in
+        let sgn_cmp_typ_decl_body =
+          seq2
+            (name <& token (T.COLON))
+            cmp_typ
+          |> span
+          $> fun (loc, (x, tau)) ->
+             Sgn.CompConst (loc, x, tau)
+        in
+        seq5
+          flavour
+          (name <& token (T.COLON))
+          (cmp_kind <& token (T.EQUALS) <& maybe (token (T.PIPE)))
+          (sep_by0 sgn_cmp_typ_decl_body (token T.PIPE))
+          get_state
+        |> span
+        $ fun (loc, (flavour, name, kind, decls, s)) ->
+          check_datatype_decl loc name decls
+          $> fun () ->
+             Sgn.CompTyp (loc, name, kind, flavour), decls
+      in
+      let cmp_cotyp_decl =
+        let cmp_cotyp_body =
+          seq2
+            (* There was this unused feature in the old parser that
+               let a metacontext appear *before* the declaration of the observation.
+               Since it introduces an ambiguity in the parser, I have removed it.
+               In particular, since an optional pair of parens are
+               allowed around the declaration of the observation,
+               `( foo : ` looks like the beginning of a clf_ctyp_decl,
+               namely the beginning of an implicit context
+               abstraction. So `clf_ctyp_decl` will consume some
+               input, and then fail after the colon, thus causing a
+               fatal parse error.
+               Rather than introduce backtracking to resolve this, I
+               think it is preferable to simply remove this unused
+               feature.
+               -je
+             *)
+            (* (many clf_ctyp_decl $> List.fold_left (fun acc d -> LF.Dec (acc, d)) LF.Empty) *)
+            (opt_parens
+               (seq2
+                  (name <& token T.COLON)
+                  cmp_typ)
+             <& token T.DOUBLE_COLON)
+            cmp_typ
+          |> span
+          $> fun (loc, ((* cD, *) (a, tau0), tau1)) ->
+             Sgn.CompDest (loc, a, (* cD, *) LF.Empty, tau0, tau1)
+
+        in
+        seq4
+          (token T.KW_COINDUCTIVE &> name <& token T.COLON)
+          (cmp_kind <& token T.EQUALS <& maybe (token T.PIPE))
+          (sep_by0 cmp_cotyp_body (token T.PIPE))
+          get_state
+        |> span
+        $ fun (loc, (a, k, decls, s)) ->
+          check_codatatype_decl loc a decls
+          $> fun () ->
+             Sgn.CompCotyp (loc, a, k), decls
+      in
+
+      sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token T.KW_AND)
+      $> Nonempty.to_list
+      <& token T.SEMICOLON
+      |> span
+      $> fun (loc, ds) -> Sgn.MRecTyp (loc, ds)
+    end
+
+let sgn_query_pragma =
+  let bound =
+    alt
+      (token T.STAR &> pure None)
+      (integer $> Maybe.pure)
+    |> labelled "search bound"
+  in
+  pragma "query" &>
+    seq3
+      (seq2 bound bound)
+      (maybe (name <& token T.COLON))
+      lf_typ
+  <& token T.DOT
+  |> span
+  |> labelled "logic programming engine query pragma"
+  $> fun (loc, ((e, t), x, a)) ->
+     Sgn.Query (loc, x, a, e, t)
+
+let sgn_oldstyle_lf_decl =
+  labelled
+    "old-style LF type or constant declaration"
+    begin
+      seq2
+        (name <& token T.COLON)
+        (lf_kind_or_typ <& token T.DOT)
+      |> span
+      $> fun (loc, (a_or_c, k_or_a)) ->
+         match k_or_a with
+         | `Kind k -> Sgn.Typ (loc, a_or_c, k)
+         | `Typ a -> Sgn.Const (loc, a_or_c, a)
+    end
+
+let sgn_not_pragma : Sgn.decl parser =
+  pragma "not"
+  |> span
+  $> fun (loc, _) -> Sgn.Pragma (loc, Sgn.NotPrag)
+
+let associativity =
+  [ "left", Sgn.Left
+  ; "right", Sgn.Right
+  ; "none", Sgn.None ]
+  |> List.map (fun (k, r) -> keyword k &> pure r |> labelled ("associativity `" ^ k ^ "'"))
+  |> choice
+  |> labelled "associativity"
+
+let sgn_fixity_pragma : Sgn.decl parser =
+  let infix_pragma : Sgn.decl parser =
+    pragma "infix"
+    &> seq3 name integer (maybe associativity)
+    <& token T.DOT
+    |> span
+    $> fun (loc, (x, precedence, assoc)) ->
+       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Infix, precedence, assoc))
+  in
+  let prefix_pragma : Sgn.decl parser =
+    pragma "prefix"
+    &> seq2 name integer
+    <& token T.DOT
+    |> span
+    $> fun (loc, (x, precedence)) ->
+       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left))
+  in
+  alt infix_pragma prefix_pragma
+
+let sgn_associativity_pragma : Sgn.decl parser =
+  pragma "assoc"
+  &> associativity
+  <& token T.DOT
+  |> span
+  $> fun (loc, assoc) -> Sgn.Pragma (loc, Sgn.DefaultAssocPrag assoc)
+
+let sgn_open_pragma : Sgn.decl parser =
+  pragma "open"
+  &> fqidentifier
+  |> span
+  |> labelled "open pragma"
+  <& token T.DOT
+  $> fun (loc, id) ->
+     Sgn.Pragma (loc, Sgn.OpenPrag (Nonempty.to_list id))
+
+let sgn_abbrev_pragma : Sgn.decl parser =
+  pragma "abbrev"
+  &> seq2 fqidentifier identifier
+  <& token T.DOT
+  |> span
+  |> labelled "module abbreviation pragma"
+  $> fun (loc, (fq, x)) ->
+     let fq = Nonempty.to_list fq in
+     Sgn.Pragma (loc, Sgn.AbbrevPrag (fq, x))
+
+let sgn_comment : Sgn.decl parser =
+  satisfy' `html_comment
+    (function
+     | T.BLOCK_COMMENT s -> Some s
+     | _ -> None)
+  |> span
+  |> labelled "HTML comment"
+  $> fun (loc, s) -> Sgn.Comment (loc, s)
+
+let sgn_typedef_decl : Sgn.decl parser =
+  seq3
+    (token T.KW_TYPEDEF &> name)
+    (token T.COLON &> cmp_kind)
+    (token T.EQUALS &> cmp_typ <& token T.SEMICOLON)
+  |> span
+  |> labelled "type synonym declaration"
+  $> fun (loc, (x, k, tau)) ->
+     Sgn.CompTypAbbrev(loc, x, k, tau)
+
+let lf_schema_some : LF.typ_decl LF.ctx parser =
+  alt
+    (token T.KW_SOME
+     &> bracks
+          (sep_by0
+             (lf_typ_decl ())
+             (token T.COMMA))
+     $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d) ) LF.Empty ds)
+    (pure LF.Empty)
+  |> labelled "existential declaration"
+
+let lf_typ_rec_elem = seq2 (name <& token T.COLON) lf_typ
+
+let lf_typ_rec_block =
+  rec_block lf_typ_rec_elem
+  |> labelled "LF block"
+
+let lf_typ_rec =
+  alt lf_typ_rec_block
+    (lf_typ
+     |> labelled "single-entry schema body"
+     $> fun a ->
+        let x =
+          match a with
+          | LF.Atom (_, n, _) -> Some n
+          | _ -> None
+        in
+        LF.SigmaLast (x, a))
+
+let lf_schema_elem =
+  seq2 lf_schema_some lf_typ_rec
+  |> span
+  $> fun (loc, (s, a)) ->
+     LF.SchElem (loc, s, a)
+
+let sgn_schema_decl : Sgn.decl parser =
+  seq2
+    (token T.KW_SCHEMA &> name <& token T.EQUALS)
+    (sep_by1 lf_schema_elem (token T.PLUS)
+     $> Nonempty.to_list)
+  <& token T.SEMICOLON
+  |> span
+  |> labelled "schema declaration"
+  $> fun (loc, (x, bs)) ->
+     Sgn.Schema (loc, x, LF.Schema bs)
+
+let sgn_let_decl : Sgn.decl parser =
+  seq2
+    (token T.KW_LET &>
+       seq2
+         name
+         (maybe (token T.COLON &> cmp_typ)))
+    (token T.EQUALS &> cmp_exp_syn <& token T.SEMICOLON)
+  |> span
+  |> labelled "value declaration"
+  $> fun (loc, ((x, tau), i)) ->
+     Sgn.Val (loc, x, tau, i)
+
+let sgn_rec_decl : Sgn.decl parser =
+  let cmp_rec =
+    seq4
+      (name <& token T.COLON)
+      (cmp_typ <& token T.EQUALS)
+      (maybe (bracketed' (token T.SLASH) (total_decl named_total_arg)))
+      cmp_exp_chk
+    |> span
+    $> fun (loc, (x, tau, t, e)) ->
+       Comp.RecFun (loc, x, t, tau, e)
+  in
+  token T.KW_REC
+  &> sep_by1 cmp_rec (token T.KW_AND)
+  $> Nonempty.to_list
+  <& token T.SEMICOLON
+  |> span
+  |> labelled "(mutual) recursive function declaration(s)"
+  $> fun (loc, f) -> Sgn.Rec (loc, f)
+
+let rec sgn_decl : Sgn.decl parser =
+  { run =
+      fun s ->
+      let p =
+        choice
+          (* pragmas *)
+          [ sgn_name_pragma
+          ; sgn_query_pragma
+          ; sgn_not_pragma
+          ; sgn_fixity_pragma
+          ; sgn_associativity_pragma
+          ; sgn_open_pragma
+          ; sgn_abbrev_pragma
+          ; sgn_comment
+
+          (* misc declarations *)
+          ; sgn_module_decl
+          ; sgn_typedef_decl
+
+          (* type declarations *)
+          ; sgn_lf_typ_decl
+          ; sgn_cmp_typ_decl
+          ; sgn_oldstyle_lf_decl
+          ; sgn_schema_decl
+
+          (* term declarations *)
+          ; sgn_let_decl
+          ; sgn_rec_decl
+          ; sgn_module_decl
+          ]
+        |> labelled "top-level declaration"
+      in
+      p.run s
+  }
+
+and sgn_module_decl : Sgn.decl parser =
+  { run =
+      fun s ->
+      let p =
+        seq2
+          (token T.KW_MODULE &> identifier)
+          (T.(tokens [EQUALS; KW_STRUCT]) &> some sgn_decl)
+        <& T.(tokens [KW_END; SEMICOLON])
+        |> span
+        |> labelled "module declaration"
+        $> fun (loc, (x, decls)) ->
+           Sgn.Module (loc, x, decls)
+      in
+      p.run s
+  }
+
+let sgn =
+  seq2
+    (many sgn_global_prag |> renamed "zero or more global pragmas")
+    (many sgn_decl |> renamed "zero or more top-level declarations")
+  $> fun (prags, decls) ->
+     prags @ decls
+
+let harpoon_command =
+  let module H = Syntax.Ext.Harpoon in
+  let intros =
+    keyword "intros"
+    &> maybe (some identifier)
+    $> fun xs -> H.Intros xs
+  in
+  let split =
+    keyword "split"
+    &> cmp_exp_syn
+    $> fun t -> H.Split t
+  in
+  let solve =
+    keyword "solve"
+    &> cmp_exp_chk
+    $> fun t -> H.Solve t
+  in
+  let ih =
+    seq2
+      (keyword "ih" &> parens cmp_exp_syn <& keyword "as")
+      name
+    $> fun (t, name) -> H.UseIH (t, name)
+  in
+  let trivial_command =
+    [ "show-proof", H.ShowProof
+    ; "show-ihs", H.ShowIHs
+    ; "defer", H.Defer
+    ; "show-subgoals", H.ShowSubgoals
     ]
-  ];
-
-  cmp_pattern:
-    [
-      [
-      mobj = meta_obj -> Comp.PatMetaObj (_loc, mobj)
-     | x = SYMBOL -> Comp.PatVar (_loc, Id.mk_name (Id.SomeString x))
-     | x = UPSYMBOL; s = LIST0 (cmp_pattern) ->
-         let sp = List.fold_right (fun t s -> Comp.PatApp (_loc, t, s)) s (Comp.PatNil _loc)in
-           Comp.PatConst (_loc, Id.mk_name (Id.SomeString x), sp)
-     | "("; p = cmp_pattern; p_or_a = cmp_pair_atom_pat   ->
-         (match p_or_a with
-            | Pair_pat p2 -> Comp.PatPair (_loc, p, p2)
-            | Atom_pat -> p)
-     | pat = cmp_pattern; ":"; tau = cmp_typ -> Comp.PatAnn (_loc, pat, tau)
-      ]
-    ]
-  ;
-
-  cmp_branch:
-    [
-      [
-        ctyp_decls = LIST0 clf_ctyp_decl;
-        pattern = cmp_pattern;
-         rest = OPT [rArr; e = cmp_exp_chk -> e] ->
-          let ctyp_decls' = List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty ctyp_decls in
-           (match rest with
-              | Some e  -> Comp.Branch (_loc, ctyp_decls', pattern, e)
-              | None    ->  Comp.EmptyBranch (_loc, ctyp_decls', pattern)
-           )
-      ]
-    ]
-  ;
-
-
-
-  meta_obj:
-    [
-      [
-        "["; tR = clobj; "]"   -> tR
-      ]
-    ];
-
-  mixtyp:
-    [ RIGHTA
-      [
-        "{"; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; "}"; ind = OPT ["*"]; mixtau = SELF ->
-          let modules = match l with None -> [] | Some l -> l in
-	  let dep = match ind with None -> LF.No | Some _ -> LF.Inductive in
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi),
-            (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), dep)) in
-          MTPiBox (_loc, ctyp_decl, mixtau)
-
-      | "("; psi = SYMBOL; ":"; l = OPT[LIST1 [x = UPSYMBOL; "." -> x]]; w = SYMBOL; ")"; mixtau = SELF ->
-          let modules = match l with None -> [] | Some l -> l in
-          let ctyp_decl = (LF.Decl(Id.mk_name (Id.SomeString psi),
-            (_loc,LF.CTyp(Id.mk_name ~modules:modules (Id.SomeString w))), LF.Maybe)) in
-          MTPiBox (_loc, ctyp_decl, mixtau)
-      |
-        ctyp_decl = clf_ctyp_decl; mixtau = SELF ->
-          MTPiBox (_loc, ctyp_decl, mixtau)
-      |
-        mixtau1 = SELF; rarr; mixtau2 = SELF ->
-          MTArr (_loc, mixtau1, mixtau2)
-      ]
-     |
-        LEFTA
-      [
-
-        tau1 = SELF; "*"; tau2 = SELF ->
-          MTCross (_loc, tau1, tau2)
-
-      ]
-
-     |
-      "atomic"
-      [
-
-        tK = "ctype" -> MTCompKind _loc
-      (* allowing prop instead of ctype for ORBI files *)
-      | tK = "prop" -> MTCompKind _loc
-
-      | a = UPSYMBOL; ms = LIST0 meta_obj  ->
-          let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-              MTBase (_loc, Id.mk_name (Id.SomeString a), sp)
-
-(*      | "("; a = UPSYMBOL; ms = LIST0 meta_obj; ")"; "*"  ->
-          let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-              MTIndBase (_loc, Id.mk_name (Id.SomeString a), sp)
-*)
-      | x = [a = MODULESYM -> a | a = SYMBOL -> a] ->
-          let (modules, a) = split '.' x in
-          MTCtx (_loc, Id.mk_name ~modules:modules (Id.SomeString a), LF.No)
-      |
-        "("; mixtau = mixtyp ; ")" ->
-           mixtau
-
-      | "#";"["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]"  ->
-              MTPBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No)
-
-      | "$"; "["; cPsi = clf_dctx; turnstile; cPhi = clf_dctx; "]"  ->
-              MTSub(_loc, cPhi,  cPsi, LF.No)
-
-      | "["; cPsi = clf_dctx; turnstile; ms = LIST1 clf_normal; "]" ->
-              MTBox (_loc, MTAtomTerm(_loc, LF.TList(_loc, ms)), cPsi, LF.No )
-     ]
-  ] ;
-
-  harpoon_command :
-    [ [ "--intros"; names = OPT [ LIST0 [ x = SYMBOL -> x ] ] -> Syntax.Ext.Harpoon.Intros names
-      | "--split"; t = cmp_exp_syn -> Syntax.Ext.Harpoon.Split t
-      | "--show-proof" -> Syntax.Ext.Harpoon.ShowProof
-      | "--show-ihs" -> Syntax.Ext.Harpoon.ShowIHs
-      | "--defer" -> Syntax.Ext.Harpoon.Defer
-      | "--show-subgoals" -> Syntax.Ext.Harpoon.ShowSubgoals
-      | "--solve"; t = cmp_exp_chk -> Syntax.Ext.Harpoon.Solve t
-      | "--ih"; "("; t = cmp_exp_syn; ")"; "as"; name = SYMBOL (* ; ":"; typ = cmp_typ *) ->
-         Syntax.Ext.Harpoon.UseIH
-           ( t
-           , Id.mk_name (Id.SomeString name)
-           (* , typ *)
-           )
-      ]
-    ];
-
-END
-
-(********************)
-(* Parser Interface *)
-(********************)
-
-let parse_stream ?(name = "<stream>") ~input entry =
-  Grammar.parse entry (Grammar.Loc.mk name) input
-
-let parse_string ?(name = "<string>") ~input entry =
-  let stream = Stream.of_string input in
-    parse_stream ~name:name ~input:stream entry
-
-let parse_channel ?(name = "<channel>") ~input entry =
-  let stream = Stream.of_channel input in
-    parse_stream ~name:name ~input:stream entry
-
-let parse_file ~name entry =
-  let in_channel = Pervasives.open_in name in
-  let stream     = Stream.of_channel in_channel in
-  let result     = parse_stream ~name:name ~input:stream entry in
-     close_in in_channel
-   ; result
+    |> List.map (fun (x, t) -> keyword x &> pure t)
+  in
+  choice
+    ( intros
+      :: split
+      :: solve
+      :: ih
+      :: trivial_command
+    )

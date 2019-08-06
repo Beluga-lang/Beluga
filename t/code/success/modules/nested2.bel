@@ -11,30 +11,30 @@ module Arith = struct
 	  let three = suc two;
 	end;
 
-	rec add : [ |- Nats.nat ] -> [ |- Nats.nat ] -> [ |- Nats.nat ] =
+	rec add : [ |- Nats::nat ] -> [ |- Nats::nat ] -> [ |- Nats::nat ] =
 	fn x, y => case x of
-	| [ |- Nats.z ] => y
-	| [ |- Nats.s N ] => 
+	| [ |- Nats::z ] => y
+	| [ |- Nats::s N ] => 
 		let [ |- N' ] = add [ |- N ] y in
-		[ |- Nats.s N'];
+		[ |- Nats::s N'];
 
 
-	rec mult : [ |- Nats.nat ] -> [ |- Nats.nat ] -> [ |- Nats.nat ] =
+	rec mult : [ |- Nats::nat ] -> [ |- Nats::nat ] -> [ |- Nats::nat ] =
 	fn x, y => case x of
-	| [ |- Nats.z] => [ |- Nats.z]
-	| [ |- Nats.s N] => 
+	| [ |- Nats::z] => [ |- Nats::z]
+	| [ |- Nats::s N] => 
 		let [ |- N' ] = mult [ |- N ] y in
 		add [ |- N' ] y;
 
 
 
-	let five = add Nats.two Nats.three;
+	let five = add Nats::two Nats::three;
 
-	let six = mult Nats.two Nats.three;
+	let six = mult Nats::two Nats::three;
 
 end;
 
---open Arith.Nats
+--open Arith::Nats.
 
 let x = [ |- z ];
 

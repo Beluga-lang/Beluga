@@ -10,7 +10,7 @@ module Nats = struct
   let three = suc two;
 end;
 
---abbrev UnboundModule U
+--abbrev UnboundModule U.
 
 
 

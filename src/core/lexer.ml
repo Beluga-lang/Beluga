@@ -1,415 +1,209 @@
+open Support
 
-module Loc   = Syntax.Loc
-module Token = Token
-module Error = Camlp4.Struct.EmptyError
+module Loc = Location
 
-(*
-Beluga lexical categories:
+type error =
+  | UnlexableCharacter of string
+  | MismatchedBlockComment
+  | Violation of string
 
-- Reserved characters (cannot be used anywhere in an ordinary identifier):
+exception Error of Loc.t * error
 
-        %
-        ,  .  :  ;
-        (  )  [  ]  {  }
-        \
-        "
-        ::
+let throw loc e = raise (Error (loc, e))
 
-   Note for Twelf users: the Twelf reserved characters
+let _ =
+  Error.register_printer'
+    (function
+     | Error (loc, e) ->
+        let open Format in
+        Error.print_with_location loc
+          (fun ppf ->
+            fprintf ppf "lexical error: ";
+            match e with
+            | UnlexableCharacter c -> fprintf ppf "unrecognizable character(s) %s" c
+            | MismatchedBlockComment -> fprintf ppf "unexpected end of block comment"
+            | Violation msg -> fprintf ppf "(internal error) %s" msg)
+        |> Maybe.pure
+     | _ -> None)
 
-      %  .  :  [  ]  {  }
+let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
+(* open Debug.Fmt *)
 
-   as well as the forbidden character " are also reserved in Beluga.
-   However, Beluga also reserves
+let sym_head = [%sedlex.regexp? id_start | '_']
+let sym_tail = [%sedlex.regexp? id_continue | Chars "\'-*+@=^/#?" ]
 
-           ,   ;  (  )  \
+let ident = [%sedlex.regexp? sym_head, Star sym_tail]
+let digit = [%sedlex.regexp? '0'..'9']
+let number = [%sedlex.regexp? Plus digit]
+let hole = [%sedlex.regexp? '?', Opt ident]
+let pragma = [%sedlex.regexp? "--", Plus alphabetic]
+let hash_ident = [%sedlex.regexp? '#', ident]
+let dollar_ident = [%sedlex.regexp? '$', ident]
+let dot_number = [%sedlex.regexp? '.', number]
 
-   and # is not allowed as the first character in an identifier (but may appear
-   subsequently).
-
-- Symbols
-
-      First character:
-
-         ABCDEFGHIJKLMNOPQRSTUVWXYZ
-         abcdefghijklmnopqrstuvwxyz
-         !  $  &  '  *  +  -  /   : = ? @
-         ^ _ ` ~
-
-        (and any other UTF-8 character above 127)
-
-     Characters after the first:
-
-         0 1 2 3 4 5 6 7 8 9
-         ABCDEFGHIJKLMNOPQRSTUVWXYZ
-         abcdefghijklmnopqrstuvwxyz
-         !  $  &  '  *  +  -  /   : = ? @
-         ^ _ ` ~
-         # |
-
-        (and any other UTF-8 character above 127)
-
-   Keyword symbols:
-
-         |   !
-         =  +  *
-         <  >
-         ->  <-   =>
-         FN
-         block  case  fn  id  in
-         impossible
-         let  mlam  of
-         rec  schema  some  type
-         bool
-         %name %not #positive #stratified
-        
-          
-
-     presently reserved but unused:           box
-
-- Single-character symbols that are also permitted as the second/third/...
-   character of an identifier:
-
-       #
-
-- Special rules for < and >,
-  intended to allow not only < g, x. U .. x > but <g, x. U .. x> too:
-
-     No letter can follow a <
-     No letter can PRECEDE a >
-     A symbol containing < and/or > can only contain:
-
-         !  $  &  '  *  +  -  /   : = ? @
-         ^ ` | ~
-         #
-
-- Integers
-
-        Any sequence of '0'-'9' [generates token INTLIT]
-*)
-
-(*******************************)
-(* Regular Expression Patterns *)
-(*******************************)
-
-(* Matches any printable utf-8 character that isn't reserved or a digit *)
-let regexp start_sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\#|" '"'    (* exclude reserved characters *)
-                          '0'-'9'                 (* exclude digits *)
-                          "<>"   '`'                 (* exclude < and >, which can only be used with certain other characters *)
-                       ]
-
-(* Matches any printable utf-8 character that isn't reserved *)
-let regexp sym = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters, but include # *)
-                          "<>" '|'     '`'               (* exclude < and > *)
-                       ]
-(* let regexp sym       = [^ '\000'-' '   "!\\#%()*,.:;=[]{|}+<>" ] *)
-
-let regexp angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z' '\''
-                          '0'-'9' '`'
-                          "<>"
-                       ]
-
-let regexp start_angle_compatible = [^ '\000'-' '  '\177'      (* exclude nonprintable ASCII *)
-                          "%,.:;()[]{}\\|" '"'    (* exclude reserved characters *)
-                          'a'-'z'  'A'-'Z'
-                          '#' '\'' 
-                          '`'
-                          '0'-'9'
-                          "<>"
-                       ]
-
-let regexp letter = [ 'a'-'z' 'A'-'Z' ]
-
-let regexp digit  = [ '0'-'9' ]
-
-let regexp upper = ['A' - 'Z']
-let regexp lower = ['a' - 'z']
-
-(** A question mark followed by a symbol. *)
-let regexp hole = '?' ( start_sym sym* ) ?
-
-(** A double-dash followed by a sumbol is a pragma. *)
-let regexp pragma = "--" [ 'a'-'z' ]+
-
-(**************************************************)
-(* Location Update and Token Generation Functions *)
-(**************************************************)
-
-(** Updates `loc` by shifting it according to the length of `lexbuf`. *)
 let shift_by_lexeme lexbuf loc =
-  Loc.shift (Ulexing.lexeme_length lexbuf) loc
+  Loc.shift (Sedlexing.lexeme_length lexbuf) loc
 
-let advance_lines (n : int) (lexbuf : Ulexing.lexbuf) (loc : Loc.t) : Loc.t =
-  Loc.move_line n (Loc.shift (Ulexing.lexeme_length lexbuf) loc)
+let advance_lines (n : int) (lexbuf : Sedlexing.lexbuf) (loc : Loc.t) : Loc.t =
+  Loc.move_line n (Loc.shift (Sedlexing.lexeme_length lexbuf) loc)
 
-let advance_line : Ulexing.lexbuf -> Loc.t -> Loc.t = advance_lines 1
+let advance_line : Sedlexing.lexbuf -> Loc.t -> Loc.t = advance_lines 1
 
 let update_loc loc f = loc := f !loc
 
-(* Make a {!Token.t} taking a {!string} argument for the current
-   lexeme and advance the {!Loc.t ref}. *)
-let mk_tok_of_lexeme tok_cons loc lexbuf =
-  update_loc loc (shift_by_lexeme lexbuf);
-  tok_cons (Ulexing.utf8_lexeme lexbuf)
+let update_loc_by_lexeme loc lexbuf = update_loc loc (shift_by_lexeme lexbuf)
 
-let mk_keyword s = Token.KEYWORD s
+let get_lexeme loc lexbuf =
+  update_loc_by_lexeme loc lexbuf;
+  Sedlexing.Utf8.lexeme lexbuf
 
-let mk_symbol s = Token.SYMBOL s
-
-let mk_integer (s : string) = Token.INTLIT (int_of_string s)
-
-let mk_hole s = Token.HOLE s
-
-let mk_comment loc s =
+(** Counts the linebreaks in the string and adds them to the
+ * location's line counter.
+ *)
+let count_linebreaks loc s =
   let n = ref 0 in
-  let _ = String.iter (fun c -> if c = '\n' then incr n) s in
-  let _ = loc := Loc.move_line !n !loc in Token.COMMENT s
+  String.iter (fun c -> if c = '\n' then incr n) s;
+  if !n <> 0 then loc := Loc.move_line !n !loc
 
-let mk_dots s = Token.DOTS s
+let arrow =       [%sedlex.regexp? ("->" | 0x2192)]
+let turnstile =   [%sedlex.regexp? ("|-" | 0x22a2)]
+let thick_arrow = [%sedlex.regexp? ("=>" | 0x21d2)]
+let dots =        [%sedlex.regexp? (".." | 0x2026)]
 
-let mk_module s = Token.MODULESYM s
+let doc_comment_begin = [%sedlex.regexp? "%{{"]
+let doc_comment_end = [%sedlex.regexp? "}}%"]
 
-(**********)
-(* Lexers *)
-(**********)
+(** Basically, anything that doesn't terminate the block comment.
+    This is somewhat tricky to detect.
+ *)
+let doc_comment_char = [%sedlex.regexp? Compl '}' | ('}', Compl '}') | ("}}", Compl '%') ]
+let doc_comment = [%sedlex.regexp? doc_comment_begin, Star doc_comment_char, doc_comment_end]
 
-(** @see http://www.cduce.org/ulex/ See [ulex] for details *)
+let line_comment =
+  [%sedlex.regexp?
+      '%', Opt(Intersect(Compl '\n', Compl '{'), Star (Compl '\n'))
+  ]
+let block_comment_begin = [%sedlex.regexp? "%{"]
+let block_comment_end = [%sedlex.regexp? "}%"]
+let block_comment_char = [%sedlex.regexp? Compl '%' | Compl '}' ]
 
-(* Main lexical analyzer.  Converts a lexeme to a token. *)
-let lex_token loc = lexer
-  | (upper sym* ".")+ lower sym* -> mk_tok_of_lexeme mk_module loc lexbuf
-  | (upper sym* ".")+ upper sym* -> mk_tok_of_lexeme (fun x -> Token.UPSYMBOL_LIST x) loc lexbuf
-  | "%{{" ([^'}']|(['}'][^'}'])|(['}']['}'][^'%']))* "}}%" -> mk_tok_of_lexeme (mk_comment loc) loc lexbuf
-  | upper sym* "." (upper sym* "." | start_sym sym* )+ -> mk_tok_of_lexeme mk_module loc lexbuf
+(** Skips the _body_ of a block comment.
+    Calls itself recursively upon encountering a nested block comment.
+    Consumes the block_comment_end symbol. *)
+let rec skip_nested_block_comment loc lexbuf =
+  (* let const t = Misc.const t (get_lexeme loc lexbuf) in *)
+  let skip () = update_loc_by_lexeme loc lexbuf in
+  match%sedlex lexbuf with
+  | block_comment_begin ->
+     skip ();
+     skip_nested_block_comment loc lexbuf; (* for the body of the new comment *)
+     skip_nested_block_comment loc lexbuf (* for the remaining characters in this comment *)
+  | block_comment_end -> skip ()
+  | any ->
+     get_lexeme loc lexbuf |> count_linebreaks loc;
+     skip_nested_block_comment loc lexbuf
+  | _ ->
+     throw !loc (Violation "catch-all case for skip_nested_block_comment should be unreachable")
 
-  | "…"
-  | ".." -> mk_tok_of_lexeme mk_dots loc lexbuf
 
-  | pragma
-  | "->"
-  | "<-"
-  | "::"
-  | "=>"
-  | "=="
-  | "FN"
-  | "and"
-  | "block"
-  | "Bool"
-  | "case"
-  | "fn"
-  | "else"
-  | "if"
-  | "impossible"
-  | "in"
-  | "let"
-  | "mlam" 
-  | "of"
-  | "rec"
-  | "schema"
-  | "some"
-  | "then"
-  | "module"
-  | "struct"
-  | "end"
-  | "ttrue"
-  | "ffalse"
-  | "#positive"
-  | "#stratified"
-  | "strust"
-  | "total"
-  | "#opts"
-  | "type"
-  | "prop"
-  | "|-"
-  | [ "%,.:;()[]{}|" '\\' '#' "$" "^" '\"']  -> (* reserved character *)
-         mk_tok_of_lexeme mk_keyword loc lexbuf
+let rec tokenize loc lexbuf =
+  let const t = Misc.const t (get_lexeme loc lexbuf) in
+  let skip () = update_loc_by_lexeme loc lexbuf in
+  let module T = Token in
+  match%sedlex lexbuf with
+  (* comments *)
+  | eof -> const T.EOI
+  | white_space ->
+     get_lexeme loc lexbuf |> count_linebreaks loc;
+     tokenize loc lexbuf
+  | block_comment_begin ->
+     skip ();
+     skip_nested_block_comment loc lexbuf;
+     tokenize loc lexbuf
+  | block_comment_end -> throw !loc MismatchedBlockComment
+  | line_comment -> skip (); tokenize loc lexbuf
 
-  | hole -> mk_tok_of_lexeme mk_hole loc lexbuf
-  | eof ->
-     update_loc loc (shift_by_lexeme lexbuf);
-     Token.EOI
+  (* KEYWORDS *)
+  | "and" -> const T.KW_AND
+  | "block" -> const T.KW_BLOCK
+  | "case" -> const T.KW_CASE
+  | "fn" -> const T.KW_FN
+  | "else" -> const T.KW_ELSE
+  | "if" -> const T.KW_IF
+  | "impossible" -> const T.KW_IMPOSSIBLE
+  | "in" -> const T.KW_IN
+  | "let" -> const T.KW_LET
+  | "mlam"  -> const T.KW_MLAM
+  | "of" -> const T.KW_OF
+  | "rec" -> const T.KW_REC
+  | "schema" -> const T.KW_SCHEMA
+  | "some" -> const T.KW_SOME
+  | "then" -> const T.KW_THEN
+  | "module" -> const T.KW_MODULE
+  | "struct" -> const T.KW_STRUCT
+  | "end" -> const T.KW_END
+  | "trust" -> const T.KW_TRUST
+  | "total" -> const T.KW_TOTAL
+  | "type" -> const T.KW_TYPE
+  | "ctype" -> const T.KW_CTYPE
+  | "prop" -> const T.KW_PROP
+  | "inductive" -> const T.KW_INDUCTIVE
+  | "coinductive" -> const T.KW_COINDUCTIVE
+  | "stratified" -> const T.KW_STRATIFIED
+  | "LF" -> const T.KW_LF
+  | "fun" -> const T.KW_FUN
+  | "typedef" -> const T.KW_TYPEDEF
 
-  | ">" (sym | "<" | ">")*  ->
-      mk_tok_of_lexeme mk_symbol  loc lexbuf
+  (* SYMBOLS *)
+  | pragma -> T.PRAGMA (Misc.String.drop 2 (get_lexeme loc lexbuf))
+  | arrow -> const T.ARROW
+  | thick_arrow -> const T.THICK_ARROW
+  | turnstile -> const T.TURNSTILE
+  | "[" -> const T.LBRACK
+  | "]" -> const T.RBRACK
+  | "{" -> const T.LBRACE
+  | "}" -> const T.RBRACE
+  | "(" -> const T.LPAREN
+  | ")" -> const T.RPAREN
+  | "<" -> const T.LANGLE
+  | ">" -> const T.RANGLE
+  | "^" -> const T.HAT
+  | "," -> const T.COMMA
+  | "::" -> const T.DOUBLE_COLON
+  | ":" -> const T.COLON
+  | ";" -> const T.SEMICOLON
+  | "|" -> const T.PIPE
+  | "\\" -> const T.LAMBDA
+  | "*" -> const T.STAR
+  | "=" -> const T.EQUALS
+  | "/" -> const T.SLASH
+  | "_" -> const T.UNDERSCORE
+  | "+" -> const T.PLUS
 
-  | start_angle_compatible (sym | "<" | ">")*  ->
-    mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | hole -> T.HOLE (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | ident -> T.IDENT (get_lexeme loc lexbuf)
 
-  | start_sym
-     (sym
-     | "<"
-     | angle_compatible ">" (sym | "<" | ">")*
-     )*  ->  mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | dot_number -> T.DOT_NUMBER (int_of_string (Misc.String.drop 1 (get_lexeme loc lexbuf)))
+  | dots -> const T.DOTS
+  | hash_ident -> T.HASH_IDENT (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | dollar_ident -> T.DOLLAR_IDENT (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | "." -> const T.DOT
+  | "#" -> const T.HASH
+  | "$" -> const T.DOLLAR
 
-  | "<" (angle_compatible | "<" | ">") (sym | "<" | ">")*  ->
-      mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | eof -> const T.EOI
 
-  | "<" (angle_compatible | "<" | ">")?  ->
-      mk_tok_of_lexeme mk_symbol  loc lexbuf
+  | number -> T.INTLIT (get_lexeme loc lexbuf |> int_of_string)
+  | _ -> throw !loc (UnlexableCharacter (get_lexeme loc lexbuf))
 
-  | digit+   -> mk_tok_of_lexeme mk_integer loc lexbuf
-
-let decrease_comment_depth (depth : int ref) : unit =
-  match !depth with
-  | 0 -> failwith "Parse error: \"}%\" with no comment to close\n"
-  | d when d < 0 -> failwith "Invariant violated: nested comment depth is negative.\n"
-  | d -> depth := (d - 1)
-
-let increase_comment_depth (depth : int ref) : unit = incr depth
-
-let regexp newline = ('\r' '\n' | '\r' | '\n')
-
-let skip_nestable depth loc =
-  let update_loc = update_loc loc in
-  let incr_comment_depth () = increase_comment_depth depth in
-  let decr_comment_depth () = decrease_comment_depth depth in
-  lexer
-  | newline -> update_loc (advance_line lexbuf)
-
-  | '%'+ [^'{' '%' '\n'] -> update_loc (shift_by_lexeme lexbuf)
-  | [^'\r' '\n' '%' '}' ]+ -> update_loc (shift_by_lexeme lexbuf)
-  | '}' [^'%' '\n']+ -> update_loc (shift_by_lexeme lexbuf)
-
-  | '}' '\n' -> update_loc (advance_line lexbuf)
-
-  | '}' '%' ->
-     update_loc (shift_by_lexeme lexbuf);
-     decr_comment_depth ()
-
-  | '%' '{' ->
-     update_loc (shift_by_lexeme lexbuf);
-     incr_comment_depth ()
-
-  | [^ '%' '{' ] -> update_loc (shift_by_lexeme lexbuf)
-
-  | '%'+ '\n' -> update_loc (advance_line lexbuf)
-
-let skip_nested_comment loc =
-  let skip_nestable_loop lexbuf =
-    let depth = ref 1 in
-    while !depth > 0 do
-      skip_nestable depth loc lexbuf;
-    done
+(** From a given generator for UTF-8, constructs a generator for tokens.
+    Raises `Error` if a lexical error is encountered.
+ *)
+let mk initial_loc gen =
+  let lexbuf = Sedlexing.Utf8.from_gen gen in
+  let loc = ref initial_loc in
+  let next () =
+    let t = tokenize loc lexbuf in
+    Some (!loc, t)
   in
-  let update_loc = update_loc loc in
-  lexer
-  | '%' '{' '\n' ->
-     update_loc (advance_line lexbuf);
-     skip_nestable_loop lexbuf
-
-  | '%' '{' [^'{'] ->
-     update_loc (shift_by_lexeme lexbuf);
-     skip_nestable_loop lexbuf
-
-  | [^'}'] '}' '%' ->
-     update_loc (shift_by_lexeme lexbuf);
-     print_string "Parse error: \"}%\" with no comment to close\n";
-     raise Ulexing.Error
-
-(* Skip %...\n comments and advance the location reference. *)
-let skip_line_comment loc =
-  lexer
-  | '%' newline
-  | '%' [^ '\r' '\n' '{'] [^ '\r' '\n' ]* newline ->
-     update_loc loc (advance_line lexbuf)
-
-(* Skip non-newline whitespace and advance the location reference. *)
-let skip_whitespace loc = lexer
-  | [ ' ' '\t' ]+ -> update_loc loc (shift_by_lexeme lexbuf)
-
-(* Skip newlines and advance the location reference. *)
-let skip_newlines loc =
-  let update_loc = update_loc loc in
-  lexer
-  (* on Windows, "\r\n" is the line terminator, so we have to divide the
-  length of the match in two. *)
-  | ('\r' '\n')+ ->
-     update_loc (advance_lines (Ulexing.lexeme_length lexbuf / 2) lexbuf)
-  (* skip lines for Unix and traditional Mac endings *)
-  | ('\n' | '\r')+ ->
-     update_loc (advance_lines (Ulexing.lexeme_length lexbuf) lexbuf)
-
-(******************)
-(* Lexer Creation *)
-(******************)
-
-type skip_state =
-  | Comment
-  | LineComment
-  | Newline
-  | Whitespace
-
-let mk () = fun loc strm ->
-  let lexbuf        = Ulexing.from_utf8_stream strm
-  and loc_ref       = ref loc
-  and state         = ref Newline
-  and skip_failures = ref 0 (* used to break cycle *) in
-  let rec skip ()   =
-    if !skip_failures < 4 then
-      match !state with
-        | Comment ->
-           begin
-             try
-               skip_nested_comment loc_ref lexbuf;
-               skip_failures := 0
-             with
-             | Ulexing.Error -> incr skip_failures
-           end;
-           state := LineComment;
-           skip ()
-
-        | LineComment ->
-           begin
-             try
-               skip_line_comment loc_ref lexbuf;
-               skip_failures := 0
-             with
-             | Ulexing.Error -> incr skip_failures
-           end;
-           state := Newline;
-           skip ()
-
-        | Newline ->
-           begin
-             try
-               skip_newlines loc_ref lexbuf;
-               skip_failures := 0
-             with
-             | Ulexing.Error -> incr skip_failures
-           end;
-           state := Whitespace;
-           skip ()
-
-        | Whitespace ->
-           begin
-             try
-               skip_whitespace loc_ref lexbuf;
-               skip_failures := 0
-             with
-             | Ulexing.Error -> incr skip_failures
-           end;
-           state := Comment;
-           skip ()
-    else
-      skip_failures := 0 in
-
-  let next _    =
-    try
-      skip ();
-      (* It is essential to call lex_token _before_ dereferencing
-      loc_ref, since lex_token updates this ref with the correct
-      location of the token. *)
-      let t = lex_token loc_ref lexbuf in
-      let tok = Some (t, !loc_ref) in (
-          skip ();
-          tok
-      )
-    with
-      | Ulexing.Error ->
-          None
- in
-    Stream.from next
+  next

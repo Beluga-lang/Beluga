@@ -2,11 +2,12 @@
 (* Internal LF Syntax *)
 open Id
 open Pragma
+open Support
 
-
-module Loc = Camlp4.PreCast.Loc
+module Loc = Location
 
 module LF = struct
+  include Syncom.LF
 
   type depend =
     | No      (* Explicit *)
@@ -147,11 +148,6 @@ module LF = struct
     | CInst  of mm_var_inst'
         (* D |- Psi : schema   *)
 
-  and 'a ctx =                           (* Generic context declaration    *)
-    | Empty                              (* Context                        *)
-    | Dec of 'a ctx * 'a                 (* C ::= Empty                    *)
-                                         (* | C, x:'a                      *)
-
   and sch_elem =                         (* Schema Element                 *)
     | SchElem of typ_decl ctx * typ_rec    (* Pi    x1:A1 ... xn:An.
                                             Sigma y1:B1 ... yk:Bk. B       *)
@@ -280,8 +276,8 @@ module LF = struct
       | ClObj (_ , PObj (PVar (x,_)))  ->
        Some (x, None)
 
-    | ClObj (_, MObj (Root (_, Proj (PVar (x,s), k ), _ )))
-      | ClObj (_, PObj (Proj (PVar (x,s), k))) ->
+    | ClObj (_, MObj (Root (_, Proj (PVar (x, _), k ), _ )))
+      | ClObj (_, PObj (Proj (PVar (x,_), k))) ->
        Some (x, Some k)
 
     | _ -> None
@@ -435,7 +431,9 @@ module Comp = struct
     | LF.INorm n -> LF.MObj n
     | LF.IHead h -> LF.PObj h
     | LF.ISub s -> LF.SObj s
-  let metaObjToMFront (loc,x) = x
+    | _ -> failwith "can't convert iterm to clobj"
+
+  let metaObjToMFront (_loc, x) = x
 
   (* Bundle of LF and computational hypotheses. *)
   type hypotheses =

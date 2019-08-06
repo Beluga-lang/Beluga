@@ -1,4 +1,10 @@
+open Support
 open Format
+open Beluga
+
+module LF = Syntax.Int.LF
+
+module P = Pretty.Int.DefaultPrinter
 
 module Options = struct
   let emacs = ref false
@@ -25,28 +31,28 @@ let rec process_options = function
 
 let init_repl ppf =
   fprintf ppf "        Beluga (interactive) version %s@.@.%s"
-    Version.beluga_version
+    (Version.get ())
     Interactive.whale
 
 let rec loop ppf =
   begin
     try
-      if not !Options.emacs then fprintf ppf "# ";
-      pp_print_flush ppf ();
+      if not !Options.emacs then fprintf ppf "# @?";
       let input = read_line () in
       match Command.is_command input with
       | `Cmd cmd ->
          Command.do_command ppf cmd
-      | `Input input ->
-         let sgn = Parser.parse_string ~name:"<interactive>" ~input:input Parser.sgn in
-         let sgn'=
-           match Recsgn.recSgnDecls sgn with
-           | sgn', None -> sgn'
-           | _, Some _ ->
-              raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+      | `Input input when input <> "" ->
+         let (exp, tau) =
+           Runparser.parse_string "<interactive>" input Parser.(only cmp_exp_syn)
+           |> Parser.extract
+           |> Interactive.elaborate_exp' LF.Empty LF.Empty
+           |> Pair.rmap Whnf.cnormCTyp
          in
-         if !Debug.chatter <> 0 then
-           List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn'
+         fprintf ppf "%a : %a"
+           (P.fmt_ppr_cmp_exp_syn LF.Empty LF.Empty Pretty.std_lvl) exp
+           (P.fmt_ppr_cmp_typ LF.Empty Pretty.std_lvl) tau
+      | `Input _ -> ()
     with
       | End_of_file -> exit 0
       | Sys.Break ->
@@ -67,7 +73,7 @@ let run args =
   if List.length files = 1 then
     try
       let arg = List.hd files in
-      let sgn = Parser.parse_file ~name:arg Parser.sgn in
+      let sgn = Runparser.parse_file arg Parser.(only sgn) |> Parser.extract in
       let sgn' = begin match Recsgn.recSgnDecls sgn with
     | sgn', None -> sgn'
     | _, Some _ ->

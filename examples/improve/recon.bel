@@ -4,15 +4,17 @@
   type labels.
 
 }%
-exp: type.
-lam: (exp -> exp) -> exp.
+LF exp: type =
+  | lam: (exp -> exp) -> exp
+;
 
-tp: type.
-arr: tp -> tp -> tp.
+LF tp: type =
+  | arr: tp -> tp -> tp
+;
 
-oft: exp -> tp -> type.
-t_lam: ({x:exp} oft x T -> oft (M x) S)
-       -> oft (lam M) (arr T S).
+LF oft: exp -> tp -> type =
+  | t_lam: ({x:exp} oft x T -> oft (M x) S) -> oft (lam M) (arr T S)
+;
 
 schema ctx = exp ;
 

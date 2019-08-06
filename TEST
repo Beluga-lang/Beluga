@@ -12,6 +12,7 @@ usage() {
     echo "  --examples       Only test $EXAMPLEDIR."
     echo "  --interactive    Only test the interactive mode."
     echo "  --reset          Replace all .out files with new output (use with caution!)."
+    echo "  --stop           Stop on the first failed test."
     echo
     echo "Notes:"
     echo "  - If any .cfg files are found in a subdirectory, only them will be tested."
@@ -20,33 +21,7 @@ usage() {
     echo "  - To inhibit testing .bel files, put an empty test.cfg in that directory."
 }
 
-echo "Parameters for this run (override as necessary using environment variables):"
-echo
-
-# Path to the Beluga source distribution.
-echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
-
-# Set $EXE to the executable to test.
-echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
-
-# Tool for dumping lexer data.
-echo -e "\t" LEX_CHECK: ${LEX_CHECK:=$BELUGADIR/bin/lex_check}
-
-# Tool for testing the interactive mode.
-echo -e "\t" REPLAY: ${REPLAY:=$BELUGADIR/bin/replay}
-
-# Test cases.
-echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t/code}
-
-echo -e "\t" INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR:=$BELUGADIR/t/interactive}
-
-# Test cases.
-echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
-
-# Time limit.
-echo -e "\t" TIMEOUT: ${TIMEOUT:=10} seconds
-
-echo
+STOP=0
 
 # Allow file globs to match nothing.
 setopt null_glob
@@ -80,10 +55,21 @@ do_testing() {
     for i in $(test_cases | sort -n) ; do
         n=$((n+1))
         echo -ne "$C[start]**$CEND TEST $n: $i ... "
+        local uhoh=0
 
-        if ! $LEX_CHECK "$i" ; then
+        result=$($LEX_CHECK "$i" 2>&1)
+        exit_code=$?
+
+        if [ $exit_code -eq 2 ] ; then
+            let lexer_fail=lexer_fail+1
+            echo -e "$C[lex_fail]FATAL LEXER FAILURE$CEND"
+            test $STOP -eq 1 && exit 1 || continue
+        fi
+
+        if [ $exit_code -ne 0 ] ; then
             lexer_fail=$((lexer_fail+1))
             echo -en "$C[lex_fail]LEXER FAILURE$CEND "
+            test $STOP -eq 1 && exit 1
         fi
 
         result=$($EXE +test $* $i 2>&1)
@@ -96,21 +82,21 @@ do_testing() {
         then
             echo -e "$C[timeout]TIMEOUT$CEND"
             timeout=$((timeout+1))
+            test $STOP -eq 1 && exit 1
         elif [[ $diff_code -eq 0 || (exit_code -eq 0 && $diff_code -eq 2) ]]
         then
-            echo -e "$C[done]DONE$CEND"
+            echo -e "$C[ok]OK$CEND"
             success=$((success+1))
         else
-            grep --quiet "$i" .admissible-fail
-            is_adm=$?
-            if [[ $is_adm -eq 0  ]]; then
+            if grep --quiet "$i" .admissible-fail ; then
                 echo -e "$C[admissible]ADMISSIBLE$CEND"
                 admissible=$((admissible+1))
             else
                 echo -e "$C[fail]FAIL$CEND"
                 fail=$((fail+1))
+                [[ -z "$diff_result" ]] && echo "$result" || (echo "$diff_result" | colorize_diff)
+                test $STOP -eq 1 && exit 1
             fi
-            [[ -z "$diff_result" ]] && echo "$result" || (echo "$diff_result" | colorize_diff)
         fi
 
         [[ -n $RESET && -f $i.out ]] && echo "$result" > $i.out
@@ -132,7 +118,7 @@ do_testing() {
             echo -e "$C[fail]FAIL$CEND"
             replay_fail=$((replay_fail + 1))
         else
-            echo -e "$C[done]DONE$CEND"
+            echo -e "$C[ok]OK$CEND"
         fi
     done
 
@@ -150,8 +136,9 @@ do_testing() {
 
     f=$((fail + timeout + lexer_fail + replay_fail))
     # If not all tests succeeded then exit with non-zero status.
-    [[ $f -eq 0 ]] || exit 1
-    exit 0
+    # double-negate the failure count to get 0 if it was zero, and
+    # 1 if it was nonzero.
+    exit $(( ! ! $f ))
 }
 
 typeset -A C
@@ -165,15 +152,47 @@ colorize_diff() {
 set_colors() {
     autoload colors
     colors
-    C=(start ${fg[blue]} admissible ${fg_bold[yellow]} done ${fg_bold[green]} timeout ${fg_bold[magenta]} fail ${fg_bold[red]} lex_fail ${fg_bold[cyan]})
+    C=(start ${fg[blue]}
+       admissible ${fg_bold[yellow]}
+       ok ${fg_bold[green]}
+       timeout ${fg_bold[magenta]}
+       fail ${fg_bold[red]}
+       lex_fail ${fg_bold[cyan]})
     CEND=$reset_color
 }
+
+echo "Parameters for this run (override as necessary using environment variables):"
+echo
+
+# Path to the Beluga source distribution.
+echo -e "\t" BELUGADIR: ${BELUGADIR:=$(dirname $0)}
+
+# Set $EXE to the executable to test.
+echo -e "\t" EXE: ${EXE:=$BELUGADIR/bin/beluga}
+
+# Tool for dumping lexer data.
+echo -e "\t" LEX_CHECK: ${LEX_CHECK:=$BELUGADIR/bin/lex_check}
+
+# Tool for testing the interactive mode.
+echo -e "\t" REPLAY: ${REPLAY:=$BELUGADIR/bin/replay}
+
+# Test cases.
+echo -e "\t" TESTDIR: ${TESTDIR:=$BELUGADIR/t/code}
+
+echo -e "\t" INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR:=$BELUGADIR/t/interactive}
+
+# Test cases.
+echo -e "\t" EXAMPLEDIR: ${EXAMPLEDIR:=$BELUGADIR/examples}
+
+# Time limit.
+echo -e "\t" TIMEOUT: ${TIMEOUT:=10} seconds
+
+echo
 
 # By default, use colors only when connected to a terminal.
 [[ -t 1 ]] && set_colors
 
-while true
-do
+while (( $# )) ; do
     case "$1" in
         -h|--help)
             usage
@@ -181,24 +200,22 @@ do
             ;;
         -c|--colour|--color)
             set_colors
-            shift
             ;;
         --noexamples)
             EXAMPLEDIR=/dev/null
-            shift
             ;;
         --examples)
             TESTDIR=/dev/null
-            shift
             ;;
         --reset)
             RESET=true
-            shift
             ;;
         --interactive)
             EXAMPLEDIR=/dev/null
             TESTDIR=/dev/null
-            shift
+            ;;
+        --stop)
+            STOP=1
             ;;
         --)
             shift
@@ -212,6 +229,7 @@ do
             echo "Make sure to write -- before any argument that should be passed to Beluga."
             exit 2
     esac
+    shift
 done
 
 do_testing $*

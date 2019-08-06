@@ -2,125 +2,68 @@
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
 %%% Single step transition.
-step : state -> state -> type.  % infix none 10 =>.
-			      %name step R.
-% mode => +St -St'.
-
+LF step : state -> state -> type =
 % Variables
-
-c_1 : step (st (push Ks (vcons K W)) (prog (ev one) P) S)
-           (st Ks P (vcons S W)).
-
-c_^ : step (st (push Ks (vcons K W')) (prog (ev (shift F)) P) S)
-           (st (push Ks K) (prog (ev F)  P) S).
-
-c_1+ : step (st (push Ks (cons K F)) (prog (ev one) P) S)
-            (st (push Ks K) (prog (ev F) P) S).
-
-c_^+ : step (st (push Ks (cons K F')) (prog (ev (shift F))  P) S)
-            (st (push Ks K) (prog (ev F) P) S).
+  | c_1 : step (st (push Ks (vcons K W)) (prog (ev one) P) S) (st Ks P (vcons S W))
+  | c_^ : step (st (push Ks (vcons K W')) (prog (ev (shift F)) P) S) (st (push Ks K) (prog (ev F)  P) S)
+  | c_1+ : step (st (push Ks (cons K F)) (prog (ev one) P) S) (st (push Ks K) (prog (ev F) P) S)
+  | c_^+ : step (st (push Ks (cons K F')) (prog (ev (shift F))  P) S) (st (push Ks K) (prog (ev F) P) S)
 
 % Natural Numbers
+  | c_z     : step (st (push Ks K) (prog (ev z') P) S) (st Ks P (vcons S  z_val))
+  | c_s     : step (st (push Ks K) (prog (ev (s' F)) P) S) (st (push Ks K) (prog (ev F) (prog add1 P)) S)
 
-c_z     : step (st (push Ks K) (prog (ev z') P) S)
-	   (st Ks P (vcons S  z_val)).
+  | c_add1  : step (st Ks (prog add1 P) (vcons S W)) (st Ks P (vcons S (s_val W)))
+  | c_match  : step (st (push Ks K) (prog (ev (match' F1 F2 F3))  P) S) (st (push (push Ks K) K) (prog (ev F1) (prog branch  (prog (ev F2)  (prog (ev F3)  P)))) S)
 
-c_s     : step (st (push Ks K) (prog (ev (s' F)) P) S)
-	   (st (push Ks K) (prog (ev F) (prog add1 P)) S).
-
-c_add1  : step (st Ks (prog add1 P) (vcons S W))
-	   (st Ks P (vcons S (s_val W))).
-
-c_match  : step (st (push Ks K) (prog (ev (match' F1 F2 F3))  P) S)
-	   (st (push (push Ks K) K) (prog (ev F1) (prog branch  (prog (ev F2)  (prog (ev F3)  P)))) S).
-
-c_branch_z : step (st (push Ks K) (prog branch  (prog (ev F2)  (prog (ev F3)  P))) (vcons S z_val))
-	      (st (push Ks K) (prog (ev F2) P) S).
-
-c_branch_s : step (st (push Ks K) (prog branch (prog (ev F2) (prog (ev F3) P))) (vcons S  (s_val W)))
-	      (st (push Ks (vcons K W)) (prog (ev F3) P) S).
+  | c_branch_z : step (st (push Ks K) (prog branch  (prog (ev F2)  (prog (ev F3)  P))) (vcons S z_val)) (st (push Ks K) (prog (ev F2) P) S)
+  | c_branch_s : step (st (push Ks K) (prog branch (prog (ev F2) (prog (ev F3) P))) (vcons S  (s_val W))) (st (push Ks (vcons K W)) (prog (ev F3) P) S)
 
 % Pairs
-c_pair   : step (st (push Ks K) (prog (ev (pair' F1 F2)) P) S)
-	    (st (push (push Ks K) K) (prog (ev F1) (prog (ev F2) (prog mkpair  P))) S).
-
-c_mkpair : step (st Ks (prog mkpair P) (vcons (vcons S  W1)  W2))
-	    (st Ks P (vcons S  (pair_val W1 W2))).
-
-c_fst    : step (st (push Ks K) (prog (ev (fst' F)) P) S)
-	    (st (push Ks K) (prog (ev F) (prog getfst P)) S).
-
-c_getfst : step (st Ks (prog getfst P) (vcons S  (pair_val W1 W2)))
-	    (st Ks P (vcons S W1)).
-
-c_snd    : step (st (push Ks K) (prog (ev (snd' F))  P) S)
-	    (st (push Ks K) (prog (ev F) (prog getsnd  P)) S).
-c_getsnd : step (st Ks (prog getsnd  P) (vcons S  (pair_val W1 W2)))
-	    (st Ks P (vcons S W2)).
+  | c_pair   : step (st (push Ks K) (prog (ev (pair' F1 F2)) P) S) (st (push (push Ks K) K) (prog (ev F1) (prog (ev F2) (prog mkpair  P))) S)
+  | c_mkpair : step (st Ks (prog mkpair P) (vcons (vcons S  W1)  W2)) (st Ks P (vcons S  (pair_val W1 W2)))
+  | c_fst    : step (st (push Ks K) (prog (ev (fst' F)) P) S) (st (push Ks K) (prog (ev F) (prog getfst P)) S)
+  | c_getfst : step (st Ks (prog getfst P) (vcons S  (pair_val W1 W2))) (st Ks P (vcons S W1))
+  | c_snd    : step (st (push Ks K) (prog (ev (snd' F))  P) S) (st (push Ks K) (prog (ev F) (prog getsnd  P)) S)
+  | c_getsnd : step (st Ks (prog getsnd  P) (vcons S  (pair_val W1 W2))) (st Ks P (vcons S W2))
 
 % Functions
-
-c_lam     : step (st (push Ks K) (prog (ev (lam' F)) P) S)
-	     (st Ks P (vcons S  (clo K (lam' F)))).
-c_app     : step (st (push Ks K) (prog (ev (app' F1 F2))  P) S)
-	     (st (push (push Ks K) K) (prog (ev F1) (prog (ev F2) (prog apply P))) S).
-c_apply   : step (st Ks (prog apply P) (vcons (vcons S  (clo K' (lam' F1')))  W2))
-	     (st (push Ks (vcons K' W2)) (prog (ev F1') P) S).
+  | c_lam     : step (st (push Ks K) (prog (ev (lam' F)) P) S) (st Ks P (vcons S  (clo K (lam' F))))
+  | c_app     : step (st (push Ks K) (prog (ev (app' F1 F2))  P) S) (st (push (push Ks K) K) (prog (ev F1) (prog (ev F2) (prog apply P))) S)
+  | c_apply   : step (st Ks (prog apply P) (vcons (vcons S  (clo K' (lam' F1')))  W2)) (st (push Ks (vcons K' W2)) (prog (ev F1') P) S)
 
 % Definitions
-c_letv : step (st (push Ks K) (prog (ev (letv' F1 F2))  P) S)
-	  (st (push (push Ks K) K) (prog (ev F1) (prog bind  (prog (ev F2) P))) S).
-
-c_bind : step (st (push Ks K) (prog bind (prog  (ev F2) P)) (vcons S W1))
-	  (st (push Ks (vcons K W1)) (prog (ev F2) P) S).
-
-c_letn : step (st (push Ks K) (prog (ev (letn' F1 F2))  P) S)
-	  (st (push Ks (cons K F1)) (prog (ev F2) P) S).
+  | c_letv : step (st (push Ks K) (prog (ev (letv' F1 F2))  P) S) (st (push (push Ks K) K) (prog (ev F1) (prog bind  (prog (ev F2) P))) S)
+  | c_bind : step (st (push Ks K) (prog bind (prog  (ev F2) P)) (vcons S W1)) (st (push Ks (vcons K W1)) (prog (ev F2) P) S)
+  | c_letn : step (st (push Ks K) (prog (ev (letn' F1 F2))  P) S) (st (push Ks (cons K F1)) (prog (ev F2) P) S)
 
 % Recursion
-c_fix  : step (st (push Ks K) (prog (ev (fix' F))  P) S)
-	  (st (push Ks (cons K (fix' F))) (prog (ev F) P) S).
+  | c_fix  : step (st (push Ks K) (prog (ev (fix' F))  P) S) (st (push Ks (cons K (fix' F))) (prog (ev F) P) S)
+;
 
 %%% Multi-step transition
 
-mstep  : state -> state -> type.  % infix none 10 =>*.
-		 		  %name mstep C.
-
-id_step : mstep St St.
-
-% to    : step St St'
-%    -> mstep St' St''
-%    -> mstep St  St''.
-
-
-to    : step (st K P S) (st K' P' S')
-    -> mstep (st K' P' S') (st K'' P'' S'')
-    -> mstep (st K P S)  (st K'' P'' S'').
+LF mstep  : state -> state -> type =
+  | id_step : mstep St St
+  | to    : step (st K P S) (st K' P' S') -> mstep (st K' P' S') (st K'' P'' S'') -> mstep (st K P S)  (st K'' P'' S'')
+;
 
 % infix right 10 ~.
 
 %%% Evaluation in environment K
 
-ceval : env -> exp' -> val -> type.
-
-run :  mstep  (st (push emptys K) (prog (ev F) done) (empty))
-       (st (emptys) (done) (vcons empty  W))
-   -> ceval K F W.
+LF ceval : env -> exp' -> val -> type =
+  | run :  mstep  (st (push emptys K) (prog (ev F) done) (empty)) (st (emptys) (done) (vcons empty  W)) -> ceval K F W
+;
 
 %%% Executable versions.
 
-exec  : state -> state -> type.  % infix none 10 >=>*.
-% mode >=>* +St -St'.
-
-id<   : exec St  St.
-to<   : exec St  St''
-	 <- step St  St'
-	 <- exec St'  St''.
-% infix left 10 <=<.
-
->ceval : env -> exp' -> val -> type.
-% mode >ceval +K +F -W.
-
->run   : >ceval K F W
-	  <- exec (st (push emptys K) (prog (ev F) done) (empty))
-	      (st (emptys) (done) (vcons empty W)).
+LF exec  : state -> state -> type =
+  | id-lt   : exec St  St
+  | to-lt   : exec St'  St'' -> step St  St' -> exec St  St''
+;
+	 
+LF gt-ceval : env -> exp' -> val -> type =
+  | gt-run   : exec (st (push emptys K) (prog (ev F) done) (empty)) (st (emptys) (done) (vcons empty W))
+             -> gt-ceval K F W
+;

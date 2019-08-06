@@ -1,0 +1,13 @@
+opam-version: "2.0"
+maintainer: "jacob.errington@mail.mcgill.ca"
+authors: ["Brigitte Pientka" "Joshua Dunfield" "Andrew Cave"]
+homepage: "https://github.com/Beluga-lang/Beluga"
+bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
+dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"
+license: "GPLv3"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+dependencies: [
+  "gen" "sedlex" "extlib"
+]

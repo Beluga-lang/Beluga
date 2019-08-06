@@ -3,13 +3,14 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-exp : type.   --name exp E x.
-z   : exp.
-s   : exp -> exp.
-
-tt  : exp.
-add : exp -> exp -> exp.
-letv: exp -> (exp  -> exp) -> exp.
+LF exp : type =  
+  | z   : exp
+  | s   : exp -> exp
+  | tt  : exp
+  | add : exp -> exp -> exp
+  | letv: exp -> (exp  -> exp) -> exp
+;
+--name exp E x.
 
 schema expCtx = exp;
 

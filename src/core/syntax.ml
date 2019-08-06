@@ -4,15 +4,9 @@
 
 (** Syntax for the LF and Computation languages *)
 
-module Loc : Camlp4.Sig.Loc with type t = Camlp4.PreCast.Loc.t = struct
-  include Camlp4.PreCast.Loc
+module Loc = Location
 
-  (* Override camlp4's to_string implementation. *)
-  let to_string loc =
-    if is_ghost loc then "<unknown location>"
-    else to_string loc
-end
-
+module Common = Syncom
 module Int = Synint
 module Apx = Synapx
 module Ext = Synext

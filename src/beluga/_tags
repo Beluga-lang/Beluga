@@ -1,3 +1,4 @@
 <replay.ml> : use_support
 <{replay,lex_check}.ml> : package(extlib)
-<lex_check.ml> : package(ulex)
+<lex_check.ml> : package(sedlex, gen)
+<lex_dump.ml> : package(gen)

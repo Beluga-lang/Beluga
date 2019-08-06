@@ -1,5 +1,6 @@
 (* Checking termination of a function *)
 
+open Support
 open Syntax.Int
 module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter

@@ -14,16 +14,19 @@ The mechanization highlights several aspects:
 
 ## Syntax
 The polymorphic lambda-calculus is introduced with the following declarations: }}%
-tp : type. --name tp T a.
-arr : tp -> tp -> tp.
-all : (tp -> tp) -> tp.
+LF tp : type =
+  | arr : tp -> tp -> tp
+  | all : (tp -> tp) -> tp
+;
+--name tp T a.
 
-term: type. --name term M x.
-app : term -> term -> term.
-lam : (term -> term) -> term.
-tlam: (tp -> term) -> term.
-tapp: term -> tp -> term.
-
+LF term: type =
+  | app : term -> term -> term
+  | lam : (term -> term) -> term
+  | tlam: (tp -> term) -> term
+  | tapp: term -> tp -> term
+;
+--name term M x.
 
 %{{## Judgements and Rules
 We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.}}%
@@ -31,52 +34,46 @@ We describe algorithmic and declarative equality for the polymorphic lambda-calc
 
 %{{### Algorithmic Equality for types
 We add the judgement for type equality <code>atp</code> of type <code>tm -> tm -> type</code> along with inference rules for universal quantifiers <code>at_al</code> and arrow types <code>at_arr</code>.}}%
-atp: tp -> tp -> type. --name atp Q u.
-at_al : ({a:tp} atp a a -> atp (T a) (S a))
--> atp (all T) (all S).
-at_arr: atp T1 T2 -> atp S1 S2
--> atp (arr T1 S1) (arr T2 S2).
+LF atp: tp -> tp -> type =
+  | at_al : ({a:tp} atp a a -> atp (T a) (S a)) -> atp (all T) (all S)
+  | at_arr: atp T1 T2 -> atp S1 S2 -> atp (arr T1 S1) (arr T2 S2)
+;
+--name atp Q u.
 
 %{{### Algorithmic Equality for terms
 We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.}}%
-aeq: term -> term -> type. --name aeq D u.
-ae_a : aeq M1 N1 -> aeq M2 N2
-    -> aeq (app M1 M2) (app N1 N2).
-ae_l : ({x:term} aeq x x -> aeq (M x) (N x))
-        -> aeq (lam (\x. M x)) (lam (\x. N x)).
-ae_tl: ({a:tp} atp a a -> aeq (M a) (N a))
-        -> aeq (tlam (\a. M a)) (tlam (\a. N a)).
-ae_ta : aeq M N -> atp T S
-    -> aeq (tapp M T) (tapp N S).
+LF aeq: term -> term -> type =
+  | ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2)
+  | ae_l : ({x:term} aeq x x -> aeq (M x) (N x)) -> aeq (lam (\x. M x)) (lam (\x. N x))
+  | ae_tl: ({a:tp} atp a a -> aeq (M a) (N a)) -> aeq (tlam (\a. M a)) (tlam (\a. N a))
+  | ae_ta : aeq M N -> atp T S -> aeq (tapp M T) (tapp N S)
+;
+--name aeq D u.
+
 %{{Note that type equality <code>atp A B</code> can be defined independently of term equality <code>aeq M N</code>. In other words, <code>aeq M N</code> depends on <code>atp A B</code>, but not vice-versa.}}%
 % ----------------------------------------------------------------- %
 %{{### Declarative Equality for types
 We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.}}%
-dtp: tp -> tp -> type. --name atp P u.
-dt_al : ({a:tp}dtp a a -> dtp (T a) (S a))
--> dtp (all T) (all S).
-dt_arr: dtp T1 T2 -> dtp S1 S2
--> dtp (arr T1 S1) (arr T2 S2).
-dt_r: dtp T T.
-dt_t: dtp T R -> dtp R S
-     -> dtp T S.
-dt_s: dtp T S -> dtp S T.
+LF dtp: tp -> tp -> type =
+  | dt_al : ({a:tp}dtp a a -> dtp (T a) (S a)) -> dtp (all T) (all S)
+  | dt_arr: dtp T1 T2 -> dtp S1 S2 -> dtp (arr T1 S1) (arr T2 S2)
+  | dt_r: dtp T T
+  | dt_t: dtp T R -> dtp R S -> dtp T S
+  | dt_s: dtp T S -> dtp S T
+;
+--name atp P u.
 
 %{{### Declarative Equality for terms
 Declarative equality for terms is encoded similarly to its counterpart. Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction <code>de_tl</code> and type application <code>de_ta</code> }}%
-deq: term -> term -> type.
-de_l: ({x:term} deq x x -> deq (M x) (N x))
-     -> deq (lam (\x. M x)) (lam (\x. N x)).
-de_a: deq M1 N1 -> deq M2 N2
-     -> deq (app M1 M2) (app N1 N2).
-de_tl: ({a:tp} dtp a a -> deq (M a) (N a))
-        -> deq (tlam (\a. M a)) (tlam (\a. N a)).
-de_ta : deq M N -> dtp T S
-    -> deq (tapp M T) (tapp N S).
-de_r: deq M M.
-de_t: deq M L -> deq L N
-     -> deq M N.
-de_s: deq T S -> deq S T.
+LF deq: term -> term -> type =
+  | de_l: ({x:term} deq x x -> deq (M x) (N x)) -> deq (lam (\x. M x)) (lam (\x. N x))
+  | de_a: deq M1 N1 -> deq M2 N2 -> deq (app M1 M2) (app N1 N2)
+  | de_tl: ({a:tp} dtp a a -> deq (M a) (N a)) -> deq (tlam (\a. M a)) (tlam (\a. N a))
+  | de_ta : deq M N -> dtp T S -> deq (tapp M T) (tapp N S)
+  | de_r: deq M M
+  | de_t: deq M L -> deq L N -> deq M N
+  | de_s: deq T S -> deq S T
+;
 
 % ----------------------------------------------------------------- %
 %{{## Context declarations

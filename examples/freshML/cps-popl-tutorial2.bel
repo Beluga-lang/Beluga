@@ -1,26 +1,27 @@
-
 %
 % Problem 2: Elimination of Administrative Redices
 % Author: Brigitte Pientka
 %
 
+LF tp : type =
+  | o : tp
+  | arr : tp -> tp -> tp
+;
 
-tp : type.
-o : tp.
-arr : tp -> tp -> tp.
+LF exp   : tp -> type =
+  | app   : exp (arr A B) -> exp A -> exp B
+  | ret   : value A -> exp A
 
-exp   : tp -> type.
-value : tp -> type.
+and value : tp -> type =
+  | lam   : (value A -> exp B) -> value (arr A B)
+;
 
-app   : exp (arr A B) -> exp A -> exp B.
-lam   : (value A -> exp B) -> value (arr A B).
-ret   : value A -> exp A.
+LF contra : type =
+  | capp   : cvalue (arr A B) -> cvalue A -> (cvalue B -> contra) -> contra
 
-
-contra : type.
-cvalue : tp -> type.
-capp   : cvalue (arr A B) -> cvalue A -> (cvalue B -> contra) -> contra.
-clam   : (cvalue A -> (cvalue B -> contra) -> contra) -> cvalue (arr A B).
+and cvalue : tp -> type =
+  | clam   : (cvalue A -> (cvalue B -> contra) -> contra) -> cvalue (arr A B)
+;
 
 
 % Translating values to cvalues

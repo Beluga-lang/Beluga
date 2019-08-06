@@ -4,20 +4,20 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-tp  : type.   --name tp T.
-nat : tp.
-bool: tp.
+LF tp  : type =  
+  | nat : tp
+  | bool: tp
+;
+--name tp T.
 
-exp : tp -> type.  --name exp E x.
-z   : exp nat.
-s   : exp nat -> exp nat.
-
-tt  : exp bool.
-
-add : exp nat -> exp nat -> exp nat.
-letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2.
-%% letv: exp T1 -> (exp T1 -> exp T2) -> exp T2.
-
+LF exp : tp -> type =
+  | z   : exp nat
+  | s   : exp nat -> exp nat
+  | tt  : exp bool
+  | add : exp nat -> exp nat -> exp nat
+  | letv: {T1:tp}exp T1 -> (exp T1 -> exp T2) -> exp T2
+;
+--name exp E x.
 
 schema expCtx = some [t:tp] exp t;
 

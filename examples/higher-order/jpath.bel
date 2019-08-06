@@ -2,48 +2,39 @@
 % definition.
 % Authors: Andrew Cave, Brigitte Pientka
 
-tm: type. --name tm T.
-lam: (tm -> tm) -> tm.
-app: tm -> tm -> tm.
-rdx : (tm -> tm) -> tm -> tm.
+LF tm: type =
+  | lam: (tm -> tm) -> tm
+  | app: tm -> tm -> tm
+  | rdx : (tm -> tm) -> tm -> tm
+;
+--name tm T.
 
-path: type. --name path P.
-bind: (path -> path) -> path.
-left: path -> path.
-right: path -> path.
-done: path.
+LF path: type =
+  | bind: (path -> path) -> path
+  | left: path -> path
+  | right: path -> path
+  | done: path
+;
+--name path P.
 
-is_path: path -> tm -> type. --name is_path I.
+LF is_path: path -> tm -> type =
+  | p_lam: ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)) → is_path (bind P) (lam E)
+  | p_left: is_path P M → is_path (left P) (app M N)
+  | p_right: is_path P N → is_path (right P) (app M N)
+  | p_done: is_path done M
+  | p_rdx : ({x:tm} ({q:path} is_path q M -> is_path q x) -> is_path P (F x)) -> is_path P (rdx F M)
+;
+ --name is_path I.
 
-p_lam: is_path (bind P) (lam E)
-       <- ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)).
+LF jpath : path -> tm -> type =
+  | j_lam: ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)) → jpath (bind P) (lam E)
+  | j_left: jpath P M → jpath (left P) (app M N)
+  | j_right: jpath P N → jpath (right P) (app M N)
+  | j_done: jpath done M
+  | j_rdx : ({x:tm} jump M x -> jpath P (F x)) -> jpath P (rdx F M)
+  | j_jump : jump N X -> jpath P N -> jpath P X
 
-p_left: is_path (left P) (app M N)
-       <- is_path P M.
-
-p_right: is_path (right P) (app M N)
-       <- is_path P N.
-
-p_done: is_path done M.
-
-p_rdx : ({x:tm} ({q:path} is_path q M -> is_path q x) -> is_path P (F x)) -> is_path P (rdx F M).
-
-jpath : path -> tm -> type.
-jump : tm -> tm -> type.
-
-j_lam: jpath (bind P) (lam E)
-       <- ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)).
-
-j_left: jpath (left P) (app M N)
-       <- jpath P M.
-
-j_right: jpath (right P) (app M N)
-       <- jpath P N.
-
-j_done: jpath done M.
-
-j_rdx : ({x:tm} jump M x -> jpath P (F x)) -> jpath P (rdx F M).
-j_jump : jump N X -> jpath P N -> jpath P X.
+and jump : tm -> tm -> type = ;
 
 schema jctx = block x:tm, p:path, _t:is_path p x, _u:jpath p x
  + some [n:tm] block x:tm, _t: ({q:path} is_path q n -> is_path q x), _u:jump n x;

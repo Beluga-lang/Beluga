@@ -4,7 +4,7 @@
 
 --coverage
 
-%{{#Closing terms with free variables
+%{{$Closing terms with free variables
 
 We'll first defining what terms are in the untyped lambda calculus.}}%
 
@@ -17,7 +17,7 @@ LF tm : type =
 representing data) and the computation-level. Note that type name and
 constructors for an index-level type are lower case.
 
-##Open terms in Beluga
+#$Open terms in Beluga
 
 One thing that's unique about Beluga is that we can easily represent open terms,
 that is, terms with free variables. For example, the term `x + 1` is open because
@@ -33,7 +33,7 @@ multiple free variables, we can apply this process repeatedly to turn them all
 into bound variables. The aim of this example is to write a function to do this
 in Beluga.
 
-##Simple case: removing one free variable
+#$Simple case: removing one free variable
 
 Let's start by closing a term with just one free variable. Observe that the free
 variables in the argument and return value are expressed in the type signature.
@@ -51,7 +51,7 @@ variable `u`. Notice how we do this by writing `T` like a function of `x`. Also
 note how the term is named with an upper case letter, which is required to
 distinguish index-level terms.
 
-##Removing one free variable (out of many)
+#$Removing one free variable (out of many)
 
 We now want to write a function that closes more general terms, i.e. terms with
 more free variables. In order for such terms to be well-typed, however, their
@@ -78,7 +78,7 @@ in its context besides `x`. But since we are only replacing the `x` variable, we
 need a way to say to skip over the other variables. The `..` symbol represents
 the free variables in `g` without naming them.
 
-##General case: removing all free variables
+#$General case: removing all free variables
 
 The idea here is to use `close1` repeatedly to replace all free variables
 with lambda abstractions. Notice the new type signature, where the parameter

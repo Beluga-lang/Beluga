@@ -1,17 +1,17 @@
-term: type.
-lam   : (term -> term) -> term.
-app   : term -> term -> term.
+LF term: type =
+  | lam   : (term -> term) -> term
+  | app   : term -> term -> term
+;
 
-
-target: type.
-
-tunit: target.
-tfst: target -> target.
-tsnd: target -> target.
-tpair: target -> target -> target.
-tapp : target ->  target ->  target.
-tabs : (target -> target) -> target.
-tlet :  target -> (target -> target) -> target.
+LF target: type =
+  | tunit: target
+  | tfst: target -> target
+  | tsnd: target -> target
+  | tpair: target -> target -> target
+  | tapp : target ->  target ->  target
+  | tabs : (target -> target) -> target
+  | tlet :  target -> (target -> target) -> target
+;
 
 schema tctx = target ;
 schema sctx = term ;

@@ -35,17 +35,13 @@ subtype_top    : subtype T top.
 
 subtype_refl   : subtype T T.
 
-subtype_trans  : subtype T1 T3
-		 <- subtype T1 T2
-		 <- subtype T2 T3.
+subtype_trans  : subtype T2 T3 → subtype T1 T2 → subtype T1 T3.
 
-subtype_arrow  : subtype (arr S1 S2) (arr T1 T2)
-		 <- subtype T1 S1
-		 <- subtype S2 T2.
+subtype_arrow  : subtype S2 T2 → subtype T1 S1 → subtype (arr S1 S2) (arr T1 T2).
 
-subtype_forall : subtype (forall S1 S2) (forall T1 T2)
-		 <- subtype T1 S1
-		 <- ({x:tp} subtype x T1 -> subtype (S2 x) (T2 x)).
+subtype_forall : ({x:tp} subtype x T1 -> subtype (S2 x) (T2 x)) →
+                 subtype T1 S1 →
+                 subtype (forall S1 S2) (forall T1 T2).
 
 
 schema as_ctx =  some [u:tp]  block a:tp, w: subtype a U;
@@ -78,16 +74,11 @@ sub : tp -> tp -> type.                --name sub S.
 
 sa_top : sub S top.
 
-sa_arr : sub (arr S1 S2) (arr T1 T2)
-        <- sub T1 S1
-	<- sub S2 T2.
+sa_arr : sub S2 T2 → sub T1 S1 → sub (arr S1 S2) (arr T1 T2).
 
-sa_all : sub (forall S1 S2) (forall T1 T2)
-	 <- sub T1 S1
-         <- ({a:tp} ({U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T')
-            -> sub a T1
-	    -> sub a a
-	    -> sub (S2 a) (T2 a)).
+sa_all : ({a:tp} ({U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T') ->
+          sub a T1 -> sub a a -> sub (S2 a) (T2 a)) →
+         sub T1 S1 → sub (forall S1 S2) (forall T1 T2).
 
 
 schema s_ctx   = some [u:tp] block a:tp, tr:{U':tp}{T':tp} sub U' T' -> sub a U' -> sub a T', w: sub a u, ref: sub a a ;

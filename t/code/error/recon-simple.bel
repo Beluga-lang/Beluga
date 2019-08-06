@@ -38,45 +38,45 @@ inductive SN : (g : cxt) {M : [ g |- tm A[] ]} ctype =
 % By IH on N ∈ SN, [ρ]N ∈ SN, thus, M' ∈ SN.
 % QED.
 
-rec renSN : {g2 : cxt} {#R : [g2 |-# g1]} {M : [g1 |- tm A[]]}
+rec renSN : {g2 : cxt} {$R : [g2 |-# g1]} {M : [g1 |- tm A[]]}
        SN [g1 |- M]
-    -> SN [g2 |- M[#R]] = ? 
+    -> SN [g2 |- M[$R]] = ? 
   % / total s (renSN g1 g2 a r m s) /  %% Totality checker not prepared for wf-induction.
-%{  mlam g2, #R, M => fn s => let s : SN [g1 |- M] = s in
+%{  mlam g2, $R, M => fn s => let s : SN [g1 |- M] = s in
     case s of
     | Acc f => Acc (mlam M' => fn r =>
-        let Ex [g1 |- S] = invRenStep [g1] [g1 |- M] [g2 |- #R] r
-        in  renSN [g2] [g2 |- #R] [g1 |- _] (f [g1 |- _] [g1 |- S])
+        let Ex [g1 |- S] = invRenStep [g1] [g1 |- M] [g2 |- $R] r
+        in  renSN [g2] [g2 |- $R] [g1 |- _] (f [g1 |- _] [g1 |- S])
       )
 }%
   ;
 
 stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
   | RBase : SN [g |- M] -> Red [ |- base ] [g |- M]
-  | RArr  : ({g' : cxt} {#S : [g' |-# g]} {N : [g' |- tm A[]]}
+  | RArr  : ({g' : cxt} {$S : [g' |-# g]} {N : [g' |- tm A[]]}
                Red [|- A] [g' |- N]
-            -> Red [|- B] [g' |- app M[#S] N])
+            -> Red [|- B] [g' |- app M[$S] N])
          -> Red [ |- arr A B ] [g |- M]
   ;
 
-inductive RedS : {g : cxt} (g' : cxt) {#S : [g' |- g]} ctype =
+inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
   | RNil  : RedS [] [ g' |- ^ ]
   | RCons : Red [|- A] [g' |- M]
-         -> RedS [g] [g' |- #S]
-         -> RedS [g, x : tm A[]] [g' |- #S, M]
+         -> RedS [g] [g' |- $S]
+         -> RedS [g, x : tm A[]] [g' |- $S, M]
   ;
 
 %% Closure of Red under renaming
 %% (uses closure of SN under renaming and Kripke definition)
 
-rec renRed : {g2 : cxt} {#R : [g2 |-# g1]}
+rec renRed : {g2 : cxt} {$R : [g2 |-# g1]}
        Red [|- A[]] [g1 |- M]
-    -> Red [|- A[]] [g2 |- M[#R]] =
-  mlam g2, #R => fn r =>
+    -> Red [|- A[]] [g2 |- M[$R]] =
+  mlam g2, $R => fn r =>
   let r : Red [|- A[]] [g1 |- M] = r in
   case r of
-    | RBase s => RBase (renSN [g2] [g2 |- #R] [g1 |- M] s)
-    | RArr  f => RArr (mlam g', #R', N => fn r => f [g'] [g' |- #R[#R']] [g' |- N] r)
+    | RBase s => RBase (renSN [g2] [g2 |- $R] [g1 |- M] s)
+    | RArr  f => RArr (mlam g', $R', N => fn r => f [g'] [g' |- $R[$R']] [g' |- N] r)
   ;
 
 

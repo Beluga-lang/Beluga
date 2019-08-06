@@ -5,22 +5,23 @@
 %
 
 
-tp : type.
-o : tp.
-arr : tp -> tp -> tp.
+LF tp : type =
+  | o : tp
+  | arr : tp -> tp -> tp
+;
 
-exp   : tp -> type.
-value : tp -> type.
+LF exp   : tp -> type =
+  | app   : exp (arr A B) -> exp A -> exp B
+  | ret   : value A -> exp A
+and value : tp -> type =
+  | lam   : (value A -> exp B) -> value (arr A B)
+;
 
-app   : exp (arr A B) -> exp A -> exp B.
-lam   : (value A -> exp B) -> value (arr A B).
-ret   : value A -> exp A.
-
-
-contra : type.
-cvalue : tp -> type.
-capp   : cvalue (arr A B) -> cvalue A -> (cvalue B -> contra) -> contra.
-clam   : (cvalue A -> (cvalue B -> contra) -> contra) -> cvalue (arr A B).
+LF contra : type =
+  | capp   : cvalue (arr A B) -> cvalue A -> (cvalue B -> contra) -> contra
+and cvalue : tp -> type =
+  | clam   : (cvalue A -> (cvalue B -> contra) -> contra) -> cvalue (arr A B)
+;
 
 
 % Translating values to cvalues
@@ -53,8 +54,9 @@ fn e => case e of
 
 ;
 
-cval: type.
-cv: cvalue T -> cval.
+LF cval: type =
+  | cv: cvalue T -> cval
+;
 
 rec eval : [ |- contra] -> [ |- cval] =
 % / total e (eval e) /
@@ -73,14 +75,9 @@ cps : value A -> cvalue A -> type.
 cpse : exp A -> ((cvalue A -> contra) -> contra) -> type.
 % mode cpse +X1 -X2.
 
-cps/lam : cps (lam (E : value A -> exp B))
-              (clam (E' : cvalue A -> (cvalue B -> contra) -> contra))
-              <- ({x:value A}{x':cvalue A} cps x x' -> cpse (E x) (E' x')).
+cps/lam : ({x:value A}{x':cvalue A} cps x x' -> cpse (E x) (E' x')) -> cps (lam (E : value A -> exp B)) (clam (E' : cvalue A -> (cvalue B -> contra) -> contra)).
 
-cpse/app : cpse (app (E1:exp (B => A)) (E2:exp B))
-                ([c : (cvalue A -> contra)] E1' ([f:cvalue (B => A)]
-                                                   E2' ([x:cvalue B]
-                                                          capp f x c)))
+cpse/app : cpse (app (E1:exp (B => A)) (E2:exp B)) ([c : (cvalue A -> contra)] E1' ([f:cvalue (B => A)] E2' ([x:cvalue B] capp f x c)))
                 <- cpse E1 (E1':(cvalue (B => A) -> contra) -> contra)
                 <- cpse E2 (E2':(cvalue B -> contra) -> contra).
 cpse/ret : cpse (ret (V:value A)) ([c:(cvalue A -> contra)] c V')

@@ -49,8 +49,8 @@ tp_s-even : E oft even ->
 tp_s-odd : E oft odd ->
 	   (suc E) oft even.
 
-sub_odd<nat :  odd subtype nat.
-sub_even<nat : even subtype nat.
+sub_odd-nat :  odd subtype nat.
+sub_even-nat : even subtype nat.
 sub_arrow : B1 subtype A1 -> A2 subtype B2 -> (A2 arrow A1) subtype (B2 arrow B1).
 
 tp_sub : E oft T1 -> T1 subtype T2 -> E oft T2.

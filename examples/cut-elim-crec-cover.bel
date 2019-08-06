@@ -1,32 +1,33 @@
 % Cut-admissibility as a function
 % Author: Brigitte Pientka
 
-i : type.  % individuals
+LF i : type = ; % individuals
 --name i S.
-o : type.  % formulas
+LF o : type =  % formulas
+  | imp    : o -> o -> o
+  | not    : o -> o
+  | true   : o
+  | forall : (i -> o) -> o
+;
 --name o A.
 
-imp    : o -> o -> o.
-not    : o -> o.
-true   : o.
-forall : (i -> o) -> o.
-
-hyp  : o -> type.  % Hypotheses (left)
-conc : o -> type.  % Conclusion (right)
-
-axiom   : (hyp A -> conc A).
-truer   : conc (true).
-impr    : (hyp A -> conc B) -> conc (imp A B).
-impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
-notr    : ({p:o}hyp A -> conc p) -> conc (not A).
-notl    : conc A -> (hyp (not A) -> conc C).
-forallr : ({a:i} conc (A a)) -> conc (forall (\x. A x)).
-foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C).
+LF hyp  : o -> type = ;  % Hypotheses (left)
+LF conc : o -> type =  % Conclusion (right)
+  | axiom   : (hyp A -> conc A)
+  | truer   : conc (true)
+  | impr    : (hyp A -> conc B) -> conc (imp A B)
+  | impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C)
+  | notr    : ({p:o}hyp A -> conc p) -> conc (not A)
+  | notl    : conc A -> (hyp (not A) -> conc C)
+  | forallr : ({a:i} conc (A a)) -> conc (forall (\x. A x))
+  | foralll : {T:i}(hyp (A T) -> conc C) -> (hyp (forall (\x . A x)) -> conc C)
+;
 
 schema ctx = some [a: o] hyp a + i + o;
 
-ass: o -> o -> type.
-assume: {A:o}conc A -> (hyp A -> conc C) -> ass A C.
+LF ass: o -> o -> type =
+  | assume : {A:o}conc A -> (hyp A -> conc C) -> ass A C
+;
 
 % (assum A D (\h. E h))
 %  {A:o} conc A -> (hyp A -> conc C) -> conc C.

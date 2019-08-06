@@ -12,12 +12,9 @@
 
 fev_vtr: env -> exp' -> exp  -> type.
 
-fev_vtrans: fev_vtr K F V
-            <- vtrans W V
-	    <- feval K F W.
+fev_vtrans: feval K F W → vtrans W V → fev_vtr K F V.
 
-rec map_eval : [ |- eval E V] -> [ |- trans K F E]
- 	      -> [ |- fev_vtr K F V] =
+rec map_eval : [ |- eval E V] -> [ |- trans K F E] -> [ |- fev_vtr K F V] =
 % / total c (map_eval e v k f d c)/
 fn d => fn c => case c of
 | [ |- tr_1 (vtr_lam (tr_lam (\w. \x. \v. C2)))] =>
@@ -49,12 +46,8 @@ fn d => fn c => case c of
 
 ev_vtr: exp -> val  -> type.
 
-ev_vtrans: ev_vtr E W
-            <- vtrans W V
-	    <- eval E V.
-
-
-
+ev_vtrans: eval E V → vtrans W V → ev_vtr E W.
+	    
 rec map_eval' : [ |- trans K F E] -> [ |- feval K F W] -> [ |- ev_vtr E W] =
 % / total c (map_eval' k f e w c) /
 fn c => fn d => case c of

@@ -80,21 +80,21 @@ schema rctx = some [t:tp] block x:tm, xt:oft x t, xx:algeqr x x t
 % Logical equivalence. _|-_~~_:_ in the paper
 
 tmpair : type.
-~ : tm -> tm -> tmpair.
---infix ~ 5 right.
+sim : tm -> tm -> tmpair.
+--infix sim 5 right.
 
 stratified Log : (g:rctx) [g |- tmpair] -> [ |- tp] -> ctype =
-| LogUnit : Log [g |- M ~ N ] [|- tp/unit]
+| LogUnit : Log [g |- M sim N ] [|- tp/unit]
 | LogName : [g |- algeqn M N tp/nm]
-            -> Log [g |- M ~ N ] [|- tp/nm]
-| LogProd : Log [g |- (fst M) ~ (fst N) ] [|- T1]
-            -> Log [g |- (snd M) ~ (snd N) ] [|- T2]
-            -> Log [g |- M ~ N ] [|- prod T1 T2]
+            -> Log [g |- M sim N ] [|- tp/nm]
+| LogProd : Log [g |- (fst M) sim (fst N) ] [|- T1]
+            -> Log [g |- (snd M) sim (snd N) ] [|- T2]
+            -> Log [g |- M sim N ] [|- prod T1 T2]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
-             ({h:rctx} {#R:[h |- g]} {N1:[h |- tm]}{D1:[h |- oft N1 T[]]}{N2:[h |- tm]}{D2:[h |- oft N2 T[]]}
-                Log [h |- N1 ~ N2] [ |- T]
-              -> Log [h |- (app M1[#R] N1) ~ (app M2[#R] N2)] [|- S])
-            -> Log [g |- M1 ~ M2] [ |- arr T S]
+             ({h:rctx} {$R:[h |- g]} {N1:[h |- tm]}{D1:[h |- oft N1 T[]]}{N2:[h |- tm]}{D2:[h |- oft N2 T[]]}
+                Log [h |- N1 sim N2] [ |- T]
+              -> Log [h |- (app M1[$R] N1) sim (app M2[$R] N2)] [|- S])
+            -> Log [g |- M1 sim M2] [ |- arr T S]
 ;
 
 rec mstep_bin : (g:rctx) [g |- mstep M1 N1] -> [g |- mstep M2 N2] -> [g |- mstep (bin M1 M2) (bin N1 N2)] =
@@ -110,29 +110,29 @@ refltm : eqtm M M.
 
 schema ctx = some [t:tp] block x:tm,y:oft x t;
 
-% % Logical equivalence of substitutions. Written _|-s_~~_:_ in the paper
-inductive LogSub : {g0:ctx}(h:rctx){#S1: [h |- g0]}{#S2: [h |- g0]}
+% % Logical equivalence of substitutions. Written _|-s_simsim_:_ in the paper
+inductive LogSub : {g0:ctx}(h:rctx){$S1: [h |- g0]}{$S2: [h |- g0]}
 ctype  =
 | Nil : LogSub [] [h |- ^] [h |- ^]
-| Dot : LogSub [g0] [h |- #S1] [h |- #S2]
-       -> Log [h |- M1 ~ M2] [ |- R]
+| Dot : LogSub [g0] [h |- $S1] [h |- $S2]
+       -> Log [h |- M1 sim M2] [ |- R]
        -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
-         LogSub [g0,b:block x:tm,y:oft x R[]] [h |- #S1, <M1;D1>] [h |- #S2, <M2;D2>]
+         LogSub [g0,b:block x:tm,y:oft x R[]] [h |- $S1, <M1;D1>] [h |- $S2, <M2;D2>]
 ;
 
 
 
-rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- #S1] [h |- #S2]
-   -> Log [h |- #p.1[#S1] ~ #p.1[#S2]] [|- Q] =  
+rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1] [h |- $S2]
+   -> Log [h |- #p.1[$S1] sim #p.1[$S2]] [|- Q] =  
  / total g (lookup g) /
 ?
 ;
 
 % Tiny fundamental theorem (Crary's fundamental theorem I)
-rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- #S1] [h |- #S2] -> Log [h |- M[#S1] ~ M[#S2]] [|- T] =
+rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- $S1] [h |- $S2] -> Log [h |- M[$S1] sim M[$S2]] [|- T] =
 / total d (thm' g h m t s1 s2 d) /
 fn d, s =>
-let s : LogSub [g] [h |- #S1] [h |- #S2] = s in
+let s : LogSub [g] [h |- $S1] [h |- $S2] = s in
 case d of
 | [g |- oft/bin D1 D2] =>
   let ih1 = thm' [g |- D1] s in

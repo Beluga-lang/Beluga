@@ -4,21 +4,21 @@
 
 % Expressions
 
-exp'   : type.  %name exp' F.
-
-one      : exp'.
-shift    : exp' -> exp'.  % postfix 20 ^.
-lam'     : exp' -> exp'.
-app'     : exp' -> exp' -> exp'.
+LF exp'   : type = %name exp' F.
+  | one      : exp'
+  | shift    : exp' -> exp'
+  | lam'     : exp' -> exp'
+  | app'     : exp' -> exp' -> exp'
+;
 
 % Environments and values
 
-env    : type.  %name env K.
-val    : type.  %name val W.
+LF env    : type = %name env K.
+  | empty  : env
+  | cons   : env -> val -> env
 
-empty  : env.
-cons   : env -> val -> env.   % infix left 10 ;.
-
-clo    : env -> exp' -> val.
+and val    : type = %name val W.
+  | clo    : env -> exp' -> val
+;
 
 

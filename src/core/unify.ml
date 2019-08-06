@@ -15,7 +15,7 @@ open Trail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module Loc = Camlp4.PreCast.Loc
+module Loc = Location
 
 let (dprint, dprnt) = Debug.makeFunctions (Debug.toFlags [15])
 

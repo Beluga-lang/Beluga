@@ -8,9 +8,9 @@ LF nat : type =
 
 LF list : nat -> type =
 | nil : list z
-| @ : bool -> list N -> list (s N);
+| ap : bool -> list N -> list (s N);
 
 % This would work if it was right associative
---infix @ 1 left.
+--infix ap 1 left.
 
-let test = [ |- f @ f @ f @ nil];
+let test = [ |- f ap f ap f ap nil];

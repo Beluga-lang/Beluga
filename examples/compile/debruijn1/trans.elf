@@ -2,23 +2,20 @@
 %%% Version restricted to pure lambda-calculus
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-trans  : env -> exp' -> exp -> type.  % name trans C.
-vtrans : val -> exp -> type.          % name vtrans U.
-
+LF trans  : env -> exp' -> exp -> type = % name trans C.
 %%%  Functions
-tr_lam : trans K (lam' F) (lam (\x. E x))
-	    <- {w:val} {x:exp}
-		  vtrans w x -> trans (cons K w) F (E x).
-tr_app : trans K (app' F1 F2) (app E1 E2)
-	    <- trans K F1 E1
-	    <- trans K F2 E2.
+  | tr_lam : ({w:val} {x:exp} vtrans w x -> trans (cons K w) F (E x)) -> trans K (lam' F) (lam (\x. E x))
+  | tr_app : trans K F2 E2 -> trans K F1 E1 -> trans K (app' F1 F2) (app E1 E2)
 
 % Variables
-tr_1  : trans (cons K W) one E <- vtrans W E.
-tr_^  : trans (cons K W) (shift F) E <- trans K F E.
+  | tr_1  : vtrans W E -> trans (cons K W) one E
+  | tr_^  : trans K F E -> trans (cons K W) (shift F) E
 
+
+and vtrans : val -> exp -> type =         % name vtrans U.
 % Values
-vtr_lam : vtrans (clo K (lam' F)) (lam (\x. E x))
-	   <- trans K (lam' F) (lam (\x. E x)).
+  | vtr_lam : trans K (lam' F) (lam (\x. E x)) -> vtrans (clo K (lam' F)) (lam (\x. E x))
+;
+
 
 

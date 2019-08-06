@@ -2,27 +2,26 @@
 %%% Positive fragment with implies, and, true.
 %%% Author: Frank Pfenning
 
-% Type of propositions.
-o : type.
-%name o A.
-
 % Type of atomic propositions.
-atm : type.
+LF atm : type = ;
 
-% Syntax: implication, plus a few constants.
-imp : o -> o -> o.  % infix right 10 =>.
-& : o -> o -> o.  % infix right 11 &.
-true : o.
-atom : atm -> o.
+% Type of propositions.
+LF o : type =
+  | imp : o -> o -> o
+  | conj : o -> o -> o
+  | true : o
+  | atom : atm -> o
+;
 
 % Atomic deductions (for faster search)
-!^ : o -> type.
-!v : o -> type.
+LF up : o -> type =
+  | andI^ : up A -> up B -> up (conj A B)
+  | impI^ : (down A -> up B) -> up (imp A B)
+  | close : down (atom P) -> up (atom P)
+  | trueI^ : up true
+and down : o -> type =
+  | andEvL : down (conj A B) -> down A
+  | andEvR : down (conj A B) -> down B
+  | impEv : down (imp A B) -> up A -> down B
+;
 
-trueI^ : !^ true.
-andI^ : !^ A -> !^ B -> !^ (& A B).
-andEvL : !v (& A B) -> !v A.
-andEvR : !v (& A B) -> !v B.
-impI^ : (!v A -> !^ B) -> !^ (imp A B).
-impEv : !v (imp A B) -> !^ A -> !v B.
-close : !v (atom P) -> !^ (atom P).

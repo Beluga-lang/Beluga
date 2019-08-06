@@ -1,3 +1,4 @@
+open Support
 open Syntax
 
 type error =
@@ -1372,6 +1373,7 @@ module Var = struct
     in
       loop 1 store
 
+  let to_list (l : entry list) = Misc.id l
   let create ()    = []
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'

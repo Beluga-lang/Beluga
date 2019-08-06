@@ -22,13 +22,9 @@ ev_z : eval z z.
 
 ev_s : eval E V -> eval (suc E) (suc V).
 
-ev_m_z: eval (match E E1 (\x. E2 x)) V
-	<- eval E z
-	<- eval E1 V.
+ev_m_z: eval E1 V → eval E z → eval (match E E1 (\x. E2 x)) V.
 
-ev_m_s: eval (match E E1 (\x. E2 x)) V
-	<- eval E (suc V2)
-	<- eval (E2 V2) V.
+ev_m_s: eval (E2 V2) V → eval E (suc V2) → eval (match E E1 (\x. E2 x)) V.
 
 ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 
@@ -46,10 +42,7 @@ tp_z     : oft z nat.
 tp_s     : oft E nat ->
 	   oft (suc E) nat.
 
-tp_match : oft (match E E1 (\x. E2 x)) T
-	 <- oft E nat
-	 <- oft E1 T
-	 <- ({x:exp}oft x nat -> oft (E2 x) T).
+tp_match : ({x:exp}oft x nat -> oft (E2 x) T) → oft E1 T → oft E nat → oft (match E E1 (\x. E2 x)) T.
 
 tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2)
         -> oft (lam T1 (\x . E x)) (arrow T1 T2).

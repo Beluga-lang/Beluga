@@ -8,30 +8,21 @@ app: exp -> exp -> exp.
 
 type_of: exp -> tp -> type. --name type_of D u.
 
-tof_lam: type_of (lam T E) (arr T T')
-	 <- ({x:exp}type_of x T -> type_of (E x) T').
+tof_lam: ({x:exp}type_of x T -> type_of (E x) T') → type_of (lam T E) (arr T T').
 
-tof_app: type_of (app E1 E2) T
-	 <- type_of E1 (arr T2 T)
-	 <- type_of E2 T2.
+tof_app: type_of E2 T2 → type_of E1 (arr T2 T) → type_of (app E1 E2) T.
 
 notLam: exp -> type.
 n_app: notLam (app M N).
 
 step: exp -> exp -> type.
 
-s_lam: step (lam T M) (lam T N)
-	<- ({x:exp}step x x -> notLam x -> step (M x) (N x)).
+s_lam: ({x:exp}step x x -> notLam x -> step (M x) (N x)) → step (lam T M) (lam T N).
 
-s_app1: step (app M N) R
-	 <- step M (lam T M')
-	 <- step (M' N) R.
+s_app1: step (M' N) R → step M (lam T M') → step (app M N) R.
 
 
-s_app2: step (app M N) (app M' N')
-	 <- step M M'
-	 <- notLam M'
-	 <- step N N'.
+s_app2: step N N' → notLam M' → step M M' → step (app M N) (app M' N').
 
 schema tctx = tp + some [t:tp] block x:exp,u:type_of x t, v:step x x , _t:notLam x;
 

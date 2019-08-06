@@ -104,16 +104,29 @@ let mk_name ?(modules=[]) : name_guide -> name =
   | SomeName x  -> sanitize_name x
   | SomeString x -> mk_name_helper x
 
-
+(** Computes a string representation of a name, without modules. *)
 let string_of_name (n : name) : string =
-  let suf = match n.hint_cnt with
-      | None -> ""
-      | Some cnt -> (string_of_int cnt) in
+  let suf =
+    match n.hint_cnt with
+    | None -> ""
+    | Some cnt -> (string_of_int cnt)
+  in
   n.hint_name ^ suf
 
-let render_name n = match n.modules with
-    | [] -> string_of_name n
-    | l  -> (String.concat "." l) ^ "." ^ (string_of_name n)
+(** Computes a string representation of a name, with all modules. *)
+let render_name n =
+  match n.modules with
+  | [] -> string_of_name n
+  | l  -> (String.concat "::" l) ^ "::" ^ (string_of_name n)
+
+(** Does the same as `render_name', but for use with pretty-printing. *)
+let print ppf n =
+  let open Format in
+  fprintf ppf "%a%s"
+    (pp_print_list ~pp_sep: (fun _ _ -> ())
+       (fun ppf x -> fprintf ppf "%s::" x))
+    n.modules
+    (string_of_name n)
 
 let equals n1 n2 =
   string_of_name n1 = string_of_name n2

@@ -10,14 +10,11 @@ done: path.
 
 is_path: path -> tm -> type. --name is_path I. --infix is_path 8.
 
-p_lam: (bind P) is_path (lam E)
-       <- ({x:tm}{q:path} q is_path x -> (P q) is_path (E x)).
+p_lam: ({x:tm}{q:path} q is_path x -> (P q) is_path (E x)) → (bind P) is_path (lam E).
 
-p_left: (left P) is_path (M app N)
-       <- P is_path M.
+p_left: P is_path M → (left P) is_path (M app N).
 
-p_right: (right P) is_path (M app N)
-       <- P is_path N.
+p_right: P is_path N → (right P) is_path (M app N).
 
 p_done: done is_path M.
 

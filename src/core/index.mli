@@ -1,30 +1,22 @@
-type fcvars
+type open_or_closed =
+  [ `open_term
+  | `closed_term
+  ]
+  
+type fvars =
+  { open_flag : open_or_closed
+  ; vars : Store.CVar.cvar list
+  }
 
-type error =
-  | UnboundName          of Id.name
-  | UnboundCtxName       of Id.name
-  | UnboundCtxSchemaName of Id.name
-  | UnboundCompName      of Id.name
-  | UnboundCompConstName of Id.name
-  | UnboundObs           of Id.name
-  | PatCtxRequired
-  | CompEmptyPattBranch
-  | UnboundIdSub
-  | PatVarNotUnique
-  | IllFormedCompTyp
-  | MisplacedOperator of Id.name
-  | MissingArguments  of Id.name * int * int
-  | ParseError
-  | NoRHS
-  | NameOvershadowing of Id.name
+type name_disambiguator
+val disambiguate_to_fvars : name_disambiguator
+val disambiguate_to_fmvars : name_disambiguator
 
-exception Error of Syntax.Loc.t * error
+val kind     : name_disambiguator ->
+               Syntax.Ext.LF.kind -> fvars * Syntax.Apx.LF.kind
 
-type free_cvars
-
-val kind     : Syntax.Ext.LF.kind -> Syntax.Apx.LF.kind * fcvars
-
-val typ      : Syntax.Ext.LF.typ -> Syntax.Apx.LF.typ * fcvars
+val typ      : name_disambiguator ->
+               Syntax.Ext.LF.typ -> fvars * Syntax.Apx.LF.typ
 
 val schema   : Syntax.Ext.LF.schema -> Syntax.Apx.LF.schema
 

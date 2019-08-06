@@ -1,3 +1,5 @@
+open Support
+
 module Comp = Syntax.Ext.Comp
 module I = Syntax.Int.Comp
 

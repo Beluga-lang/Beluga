@@ -10,37 +10,18 @@ focus  : o -> p -> type.  % immediate entailment
 %name assume H.
 %name focus I.
 
-s_and  : solve (& A1 A2)
-	  <- solve A1
-	  <- solve A2.
-
-%{ s_imp  : solve (imp A2 A1)
-	  <- (assume A2 -> solve A1).
-}%
+s_and  : solve A2 -> solve A1 -> solve (conj A1 A2).
 
 s_true : solve (true).
 
+s_atom : focus A P -> assume A -> solve (atom P).
 
-%{ s_forall : solve (forall (\x. A1 x))
-	    <- {a:i} solve (A1 a).
-}%
+i_andl : focus A1 P -> focus (conj A1 A2) P.
 
-s_atom : solve (atom P)
-	  <- assume A
-	  <- focus A P.
+i_andr : focus A2 P -> focus (conj A1  A2) P.
 
-i_andl : focus (& A1 A2) P
-	   <- focus A1 P.
+i_imp  : solve A2 -> focus A1 P -> focus (imp A2 A1)  P.
 
-i_andr : focus (& A1  A2) P
-	   <- focus A2 P.
-
-i_imp  : focus (imp A2 A1)  P
-	  <- focus A1 P
-	  <- solve A2.
-
-i_forall : {T:i}
-	     focus (forall (\x. A1 x)) P
-	     <- focus (A1 T) P.
+i_forall : {T:i} focus (A1 T) P -> focus (forall (\x. A1 x)) P.
 
 i_atom : focus (atom P) P.

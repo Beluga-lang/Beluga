@@ -17,6 +17,8 @@ let register_printer f =
   Printexc.register_printer
     (fun e -> try Some (f e) with Match_failure _ -> None)
 
+let register_printer' f = Printexc.register_printer f
+
 let print f =
   (* Print to stderr any uncaught exception resulting from applying f
      to error_format. Such an exception would be thrown when in the
@@ -30,7 +32,7 @@ let print f =
 
 let print_with_location loc f =
   if !Options.print_loc then
-    Format.fprintf error_format "%s:@." (Syntax.Loc.to_string loc);
+    Format.fprintf error_format "%a:@." Syntax.Loc.print loc;
   print f
 
 (* Since this printer is registered first, it will be executed only if

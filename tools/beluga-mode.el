@@ -729,6 +729,7 @@ and the result is the name of the long pragma. Otherwise,
    '("FN" "and" "block" "case" "inductive" "LF" "coinductive"
      "stratified" "else" "ffalse" "fn" "if" "in" "impossible" "let"
      "mlam" "of" "rec" "schema" "some" "then" "type" "ctype" "ttrue"
+     "typedef"
      "module" "struct" "end" "#stratified" "#positive" "fun")
    'symbols)
   "A regular expression to match any beluga keyword.")
@@ -986,8 +987,8 @@ starting position of the short pragma; else, nil."
 
     ; if the token is a pipe preceded by an '=' or 'of', then we
     ; indent by adding the basic offset
-    (`(:before . ,(and "|" (guard (smie-rule-prev-p "=" "of"))))
-     beluga-indent-basic)
+    (`(:before . ,(and "|" (guard (smie-rule-prev-p "=" "of" "fun"))))
+     2)
 
     ; if the token is a pipe, (and the preceding check didn't pass, so
     ; it isn't the first pipe in a sequence) then we consider it a

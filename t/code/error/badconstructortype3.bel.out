@@ -1,1 +1,3 @@
-Parse Error: Ill-formed datatype declaration.
+Parse error.
+Ill-formed constructor declaration.
+The type of a constructor must be a base type or function type.

@@ -2,7 +2,7 @@
 %%% Author: Frank Pfenning
 
 % Every term reduces to itself (in parallel)
-schema ctx = block x:term, _t:pred x x;
+schema ctx = block x:term, t:pred x x;
 
 % Theorem:
 % For all terms M, pred M M.
@@ -11,8 +11,8 @@ rec identity :{g:ctx}{M:[g |- term]} [g |- pred M M] =
 / total m (identity g m) / 
 mlam g => mlam M => case [g |- M] of
 | [g |- lam \x. M1] =>
-  let [g, b:block x:term, _t:pred x x |-  R1] =
-      identity [g, b:block x:term, _t:pred x x] [ g,b  |-  M1[..,b.1] ]
+  let [g, b:block x:term, t:pred x x |-  R1] =
+      identity [g, b:block x:term, t:pred x x] [ g,b  |-  M1[..,b.1] ]
   in
    [g |- (lm \x.\u. R1[..,<x ; u>] )]
 | [g |- app M1 M2] =>

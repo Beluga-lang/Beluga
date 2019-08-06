@@ -14,7 +14,7 @@ schema xtG = some [t:tp] block (x:tm, u:oft x t);
 OK, so I fixed that. But what about the (free) A in
 }%
 
-inductive Rxrt: {g:xrG} {h:xtG} prop =
+inductive Rxrt: {g:xrG} {h:xtG} ctype =
 | Rxrt_nil : Rxrt [] []
 | Rxrt_cons: Rxrt [g] [h] ->
      Rxrt [g,b: block (x:tm, u:pr x x)] [h, b:block(x:tm, v:oft x A)];

@@ -36,12 +36,13 @@ fn d => fn e => case d of
 
 ;
 
-dia_prop: term -> term  -> type.
-dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''.
+LF dia_prop: term -> term  -> type =  
+  | dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''
+;
 
-split_red: {M1:term}{M2:term}type.
-
-assume: pred M M1 -> pred M M2 -> split_red M1 M2.
+LF split_red: {M1:term}{M2:term}type =
+  | assume: pred M M1 -> pred M M2 -> split_red M1 M2
+;
 
 rec dia : (g:ctx) [g |- split_red M1 M2]
                -> [g |- dia_prop M1 M2] =

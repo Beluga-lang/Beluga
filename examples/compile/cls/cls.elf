@@ -1,26 +1,24 @@
 %%% The CLS machine (a variant of the SECD machine)
 %%% Author: Frank Pfenning, based on [Hannan & Pfenning 92]
 
-instruction : type.  %name instruction I.
-program     : type.  %name program P.
-envstack    : type.  %name envstack Ks.
-state       : type.  %name state St.
+LF instruction : type =
+  | ev     : exp' -> instruction
+  | add1   : instruction
+  | branch : instruction
+  | mkpair : instruction
+  | getfst : instruction
+  | getsnd : instruction
+  | apply  : instruction
+  | bind   : instruction
 
-ev     : exp' -> instruction.
-add1   : instruction.
-branch : instruction.
-mkpair : instruction.
-getfst : instruction.
-getsnd : instruction.
-apply  : instruction.
-bind   : instruction.
+and program     : type =
+  | done : program
+  | prog : instruction -> program -> program
 
-done : program.
-prog : instruction -> program -> program.
-% infix right 10 &.
+and envstack    : type =
+  | emptys : envstack
+  | push   : envstack -> env -> envstack
 
-emptys : envstack.
-push   : envstack -> env -> envstack.
-% infix left 10 ;;.
-
-st : envstack -> program -> env -> state.
+and state       : type =
+  | st : envstack -> program -> env -> state
+;

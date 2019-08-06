@@ -1,7 +1,9 @@
 
-nat :  type.     --name nat N x.
-z : nat.
-s : nat -> nat.
+LF nat :  type =     
+| z : nat
+| s : nat -> nat
+;
+--name nat N x.
 
 
 rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =  

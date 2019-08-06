@@ -1,9 +1,9 @@
-
-term :  type.
-z    : term.
-suc  : term -> term.
-app  : term -> term -> term.
-lam  : (term -> term) -> term.
+LF term :  type =
+  | z    : term
+  | suc  : term -> term
+  | app  : term -> term -> term
+  | lam  : (term -> term) -> term
+;
 
 schema termCtx = some [] term;
 

@@ -1,5 +1,7 @@
 (* module Holes *)
 
+open Support
+
 module P = Pretty.Int.DefaultPrinter
 module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
@@ -93,49 +95,6 @@ let find (f : hole -> bool) : (int * hole) option =
 
 let none () : bool = DynArray.empty holes
 
-let ( ++ ) f g = function x -> f (g x)
-
-let ctypDeclToString cD ctypDecl =
-  P.fmt_ppr_lf_ctyp_decl ~printing_holes:true cD Pretty.std_lvl Format.str_formatter ctypDecl ;
-  Format.flush_str_formatter ()
-
-let isExplicit = function
-  | LF.Decl(_, _, dep) ->
-      begin match dep with
-        | LF.No -> true
-        | LF.Maybe -> false
-	| LF.Inductive -> false
-      end
-  | _ -> true
-
-let mctxToString =
-  let shift = "\t" in
-  let rec toString = function
-    | LF.Empty ->
-      "."
-    | LF.Dec (LF.Empty, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit) ->
-      "\n" ^ shift ^ ctypDeclToString LF.Empty ctypDecl
-    | LF.Dec (cD, ctypDecl) when (isExplicit ctypDecl || !Pretty.Control.printImplicit)->
-      let s = toString cD in
-      s ^ "\n" ^ shift ^ ctypDeclToString cD ctypDecl
-    | LF.Dec (cD, _ ) -> toString cD
-  in toString ++ Whnf.normMCtx
-
-let cpsiToString cD cPsi = P.dctxToString cD (Whnf.normDCtx cPsi)
-
-let gctxToString cD =
-  let shift = "\t" in
-  let rec toString = function
-    | LF.Empty ->
-      "."
-    | LF.Dec (LF.Empty, Comp.CTypDecl (n, tau, flag )) ->
-      let s =  if flag then "*" else "" in 
-      "\n" ^ shift ^ (Id.string_of_name n) ^ s ^ ": " ^ P.compTypToString cD tau
-    | LF.Dec (cG, Comp.CTypDecl (n, tau,flag)) ->
-      let s =  if flag then "*" else "" in 
-      toString cG ^ "\n" ^ shift ^ (Id.string_of_name n) ^ s ^ ": " ^ P.compTypToString cD tau
-  in toString ++ Whnf.normCtx
-
 (** More holes **)
 
 (* loc -> loc' -> bool : is loc' within loc? *)
@@ -143,7 +102,7 @@ let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
   (* To check this, it suffices to look at the start offset and end offset.
    * Specifically, loc' needs to start after loc and end before loc.
    *)
-  Loc.start_off loc' >= Loc.start_off loc && Loc.stop_off loc' <= Loc.stop_off loc
+  Loc.start_offset loc' >= Loc.start_offset loc && Loc.stop_offset loc' <= Loc.stop_offset loc
 
 (* removes all holes located within the given loc (e.g. of a function being shadowed) *)
 let destroy_holes_within loc =
@@ -193,95 +152,94 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
     | LF.Dec (cG', _) -> aux acc cG'
   in aux [] cG
 
-let replicate n c = String.init n (fun _ -> c)
+let replicate n c = String.init n (Misc.const c)
 let thin_line = replicate 80 '_'
-let thick_line = replicate 80 '='
+let thin_line ppf () = Format.fprintf ppf "%s" thin_line
 
-
-let format_hole (i : hole_id) {loc; name; cD; info} : string =
+let print ppf (i, {loc; name; cD; info}) : unit =
+  let open Format in
   (* First, we do some preparations. *)
   (* Normalize the LF and computational contexts as well as the goal type. *)
   let cD = Whnf.normMCtx cD in
-  let loc_string = Loc.to_string loc in
   (* Now that we've prepped all the things to format, we can prepare the message. *)
   (* We do this by preparing different *message components* which are
    * assembled into the final message. *)
 
+  fprintf ppf "@[<v>";
+
   (* 1. The 'hole identification component' contains the hole name (if any) and its number. *)
-  let hole_id =
-    let hole_name =
-      match name with
-      | Anonymous -> ""
-      | Named s -> Format.sprintf ", %s" s in
-    Format.sprintf "Hole number %d%s\n%s\n%s" i hole_name loc_string thin_line in
+  let print_hole_name ppf = function
+    | Anonymous -> fprintf ppf "<anonymous>"
+    | Named s -> fprintf ppf "?%s" s
+  in
+  fprintf ppf
+    "@[<hov>%a:@ Hole number %d, %a@]@,"
+    Loc.print loc
+    i
+    print_hole_name name;
+  fprintf ppf "@,";
+  (* thin_line ppf (); *)
 
   (* 2. The meta-context information. *)
-  let meta_ctx_info =
-    Format.sprintf "Meta-context: %s\n%s" (mctxToString cD) thin_line in
+  fprintf ppf "Meta-context:@,  @[<v>%a@]@,"
+    (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cD;
+  fprintf ppf "@,";
+  (* thin_line ppf (); *)
 
-  let plural b = if b then "" else "s" in
-  (* a helper *)
-  let null =
-    function
-    | [] -> true
-    | _ :: _ -> false in
+  let plural ppf = function
+    | true -> fprintf ppf "s"
+    | false -> ()
+  in
 
   (* The remainder of the formatting hinges on whether we're printing
      an LF hole or a computational hole.
    *)
-  match info with
+  begin match info with
   | LfHoleInfo { cPsi; lfGoal } ->
+     let lfGoal' = Whnf.normTyp lfGoal in
      let cPsi = Whnf.normDCtx cPsi in
 
      (* 3. format the LF context information *)
-     let lf_ctx_info =
-       Format.sprintf "LF Context: %s" (cpsiToString cD cPsi)
-     in
+     fprintf ppf "LF Context:@,  @[<v>%a@]@,"
+       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
+     fprintf ppf "@,";
 
-     (* 4. format the goal type. *)
-     let goal_type =
-       Format.sprintf "Goal: %s" (P.typToString cD cPsi lfGoal)
-     in
+     (* 4. Format the goal. *)
+     thin_line ppf ();
+     fprintf ppf "@[Goal:@ %a@]" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) lfGoal';
 
-     (* 5. The in-scope variables that have the goal type. *)
+     (* 5. The in-scope variables that have the goal type, if any *)
      let suggestions =
        (* Need to check both the LF context and the meta-variable context. *)
        iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
      in
-     let suggestions_str =
-       let s = String.concat ", " (List.map Id.string_of_name suggestions) in
-       let p = plural (List.length suggestions = 1) in
-       Format.sprintf "Variable%s of this type: %s" p s in
-
-     (* Finally, we can form the output. *)
-     String.concat "\n"
-       ( hole_id :: meta_ctx_info :: lf_ctx_info :: goal_type ::
-           if null suggestions then [] else [suggestions_str] )
+     if Misc.List.nonempty suggestions then
+       fprintf ppf
+         "@,@,Variable%a of this type: @[<h>%a@]"
+         plural (List.length suggestions = 1)
+         (pp_print_list ~pp_sep: Misc.Format.comma Id.print) suggestions
 
   | CompHoleInfo { cG; compGoal = (tau, theta) } ->
      let cG = Whnf.normCtx cG in
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
-     let comp_ctx_info =
-       Format.sprintf "Context: %s\n%s" (gctxToString cD cG) thick_line in
+     fprintf ppf "Computation context:@,  @[<v>%a@]@,"
+       (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG;
+     fprintf ppf "@,";
 
      (* 4. The goal type, i.e. the type of the hole. *)
-     let goal_type =
-       Format.sprintf "Goal: %s" (P.compTypToString cD goal) in
+     fprintf ppf "@[Goal:@ %a@]"
+       (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) goal;
 
      (* Collect a list of variables that already have the goal type. *)
      let suggestions = iterGctx cD cG (tau, theta) in
-
-     (* 5. The in-scope variables of the correct type. *)
-     let suggestions_str =
-       let s = String.concat ", " (List.map Id.string_of_name suggestions) in
-       let p = plural (List.length suggestions = 1) in
-       Format.sprintf "Variable%s of this type: %s" p s in
-
-     (* Finally, we can form the output. *)
-     String.concat "\n"
-       ( hole_id :: meta_ctx_info :: comp_ctx_info :: goal_type ::
-           if null suggestions then [] else [suggestions_str] )
+     if Misc.List.nonempty suggestions then
+       fprintf ppf
+         "@,@,Variable%a of this type: @[<h>%a@]"
+         plural (List.length suggestions = 1)
+         (pp_print_list ~pp_sep: Misc.Format.comma Id.print) suggestions
+  end;
+  fprintf ppf "@]"
 
 let by_id (i : hole_id) : lookup_strategy =
   { repr = Printf.sprintf "by id '%d'" i

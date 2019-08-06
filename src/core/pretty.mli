@@ -47,7 +47,8 @@ module Int : sig
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
-    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     ->  unit
+    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) ->
+                                lvl -> formatter -> LF.mctx ->  unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
@@ -156,7 +157,8 @@ module Ext : sig
     val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
     val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
     val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
-    val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
+    val fmt_ppr_lf_sub        : ?pp_empty:(formatter -> unit -> bool) ->
+                                LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
 
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
@@ -164,7 +166,8 @@ module Ext : sig
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
-    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit)
+                                -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_exp_chk   : LF.ctyp_decl LF.ctx -> int -> Format.formatter -> Comp.exp_chk -> unit

@@ -59,64 +59,64 @@ value_lAM : value (lAM (\a. E a)).
 
 % Operational semantics
 
-~> : tm -> tm -> type. % infix left 5 ~>.
+step : tm -> tm -> type. % infix left 5 step.
 
-~>_s : ~> E E' ->
+step_s : step E E' ->
      % ---------------
-       ~> (s E) (s E').
+       step (s E) (s E').
 
-~>_@1 : (~>  E1 E1') ->
+step_@1 : (step  E1 E1') ->
       % --------------------------
-        (~>  (app E1 E2) (app E1' E2)).
+        (step  (app E1 E2) (app E1' E2)).
 
-~>_@2 : value E1 ->
-        (~>  E2 E2') ->
+step_@2 : value E1 ->
+        (step  E2 E2') ->
       % --------------------------
-        (~>  (app E1 E2) (app E1 E2')).
+        (step  (app E1 E2) (app E1 E2')).
 
-~>_@3 : value E2 ->
+step_@3 : value E2 ->
       % --------------------------
-        (~>  (app (lam T (\x. E1 x)) E2)  (E1 E2)).
+        (step  (app (lam T (\x. E1 x)) E2)  (E1 E2)).
 
-~>_#1 : (~>  E E') ->
+step_#1 : (step  E E') ->
       % --------------------------
-        (~> (ann E T)  (ann E' T)).
+        (step (ann E T)  (ann E' T)).
 
-~>_#2 :
+step_#2 :
       % --------------------------
-        ~> (ann (lAM (\a. E a)) T)  (E T).
+        step (ann (lAM (\a. E a)) T)  (E T).
 
 
 % Preservation
 
 
-rec pres : [ |- has E T] -> [ |- ~> E E'] -> [ |- has E' T] =
+rec pres : [ |- has E T] -> [ |- step E E'] -> [ |- has E' T] =
 / total ev (pres e t e' d ev)/
 fn d => fn ev => case ev of
-| [ |- ~>_s EV] =>
+| [ |- step_s EV] =>
  (let [ |- is_s D] = d in
   let [ |- D']      = pres [ |- D] [ |- EV] in
     [ |- is_s D']
 )
-| [ |- ~>_@1 EV1] =>
+| [ |- step_@1 EV1] =>
  (let [ |- is_@ D1 D2] = d in
   let [ |- D1']       = pres [ |- D1] [ |- EV1] in
     [ |- is_@ D1' D2]
  )
-| [ |- ~>_@2 V EV2]  =>
+| [ |- step_@2 V EV2]  =>
  (let [ |- is_@ D1 D2] = d in
   let [ |- D2']       = pres [ |- D2] [ |- EV2] in
     [ |- is_@ D1 D2']
  )
-| [ |- ~>_@3 V] =>
+| [ |- step_@3 V] =>
   let  [ |- is_@ (is_lam (\x. (\d. (D1')))) D2] = d in  [ |- D1'[_,D2]]
 
-| [ |- (~>_#1 EV)] =>
+| [ |- (step_#1 EV)] =>
  (let [ |- is_# D]  = d in
   let [ |- D']         = pres [ |- D] [ |- EV] in
     [ |- is_# D']
  )
-| [ |- ~>_#2] =>
+| [ |- step_#2] =>
   let {D':[a:tp |-  has E T] }
      [ |- is_# (is_lAM (\a. D'))]  : [ |- has (ann _ T2) T[T2]] = d in [ |- D'[T2]]
 ;
@@ -127,7 +127,7 @@ fn d => fn ev => case ev of
 % take a step and it is a value.
 step_or_val : tm -> type.
 
-step : (~> E E') -> step_or_val E.
+step : (step E E') -> step_or_val E.
 val : (value E) -> step_or_val E.
 
 rec progress : [ |- has E T] -> [ |- step_or_val E] =
@@ -136,16 +136,16 @@ fn d => case d of
  | [ |- is_z] => [ |- val value_z]
  | [ |- is_s D] =>
    (case    progress [ |- D]   of
-    | [ |- step EV] => [ |- step (~>_s EV)]
+    | [ |- step EV] => [ |- step (step_s EV)]
     | [ |- val VL]  => [ |- val (value_s VL)]
    )
  | [ |- is_@ D1 D2] =>
    (case   progress [ |- D1]   of
-    | [ |- step EV] => [ |- step (~>_@1 EV)]
+    | [ |- step EV] => [ |- step (step_@1 EV)]
     | [ |- val value_lam]  =>  % needs a canonical forms lemma
       (case  progress [ |- D2]   of
-        | [ |- step EV] => [ |- step (~>_@2 value_lam EV)]
-        | [ |- val VL2] => [ |- step (~>_@3 VL2)]
+        | [ |- step EV] => [ |- step (step_@2 value_lam EV)]
+        | [ |- val VL2] => [ |- step (step_@3 VL2)]
        )
     | [ |- val value_z]      => impossible [ |- D1] in []
     | [ |- val (value_s _ )] => impossible [ |- D1] in []
@@ -156,8 +156,8 @@ fn d => case d of
 
 | [ |- is_# D] =>
   (case   progress [ |- D]   of
-   | [ |- step EV] => [ |- step (~>_#1 EV)]
-   | [ |- val value_lAM]  => [ |- step (~>_#2)]
+   | [ |- step EV] => [ |- step (step_#1 EV)]
+   | [ |- val value_lAM]  => [ |- step (step_#2)]
    | [ |- val value_z]      => impossible [ |- D] in []
    | [ |- val (value_s _ )] => impossible [ |- D] in []
    | [ |- val value_lam]    => impossible [ |- D] in [])

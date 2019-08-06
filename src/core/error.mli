@@ -15,8 +15,18 @@ exception NotImplemented
     printing functions provided by this module. *)
 type print_result
 
-(** Wrapper around Printexc.register_printer. *)
+(** Wrapper around Printexc.register_printer.
+    The given function should use partial pattern matching (ew) to
+    signal that it doesn't know how to deal with other types of
+    exceptions.
+ *)
 val register_printer : (exn -> print_result) -> unit
+
+(** Wrapper around Printexc.register_printer.
+    The given function should return None if it doesn't know how to
+    handle a given exception.
+ *)
+val register_printer' : (exn -> print_result option) -> unit
 
 (** Use suplied formatter for printing errors. *)
 val print : (Format.formatter -> unit) -> print_result

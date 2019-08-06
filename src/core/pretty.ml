@@ -3,7 +3,8 @@
     @see http://caml.inria.fr/resources/doc/guides/format.html
 *)
 
-include Format
+open Format
+open Support
 
 (* Explanation of formatting markup:
 
@@ -94,7 +95,7 @@ module Int = struct
     val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
-    val fmt_ppr_lf_mctx       : lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
@@ -873,7 +874,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cD 0) cPsi
             (Id.render_name x)
 
-    and fmt_ppr_lf_mctx lvl ppf cD =
+    and fmt_ppr_lf_mctx ?(sep = Misc.Format.comma) lvl ppf cD =
       (* Compute the list of declarations to print *)
       let ds =
         let should_print = function
@@ -888,31 +889,10 @@ module Int = struct
       | [] ->
           fprintf ppf "."
       | _ ->
-         let comma ppf () = fprintf ppf ",@ " in
-         fprintf ppf "@[";
-         pp_print_list ~pp_sep: comma
+         pp_print_list ~pp_sep: sep
            (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d)
            ppf
-           ds;
-         fprintf ppf "@]"
-(*    and frugal_lf_octx lvl ppf = function
-      | LF.Empty -> ()
-      | other -> fprintf ppf "@[%a@]@ " (fmt_ppr_lf_octx lvl) other
-
-    and fmt_ppr_lf_octx lvl ppf = function
-      | LF.Empty ->
-          fprintf ppf "."
-
-      | LF.Dec (LF.Empty, ctyp_decl) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_ctyp_decl LF.Empty LF.Empty lvl) ctyp_decl
-
-      | LF.Dec (cO, ctyp_decl) ->
-          fprintf ppf "%a, %a"
-            (fmt_ppr_lf_octx 0) cO
-            (fmt_ppr_lf_ctyp_decl LF.Empty LF.Empty lvl) ctyp_decl
-
-*)
+           ds
 
     and fmt_ppr_lf_kind cPsi lvl ppf = function
       | LF.Typ ->

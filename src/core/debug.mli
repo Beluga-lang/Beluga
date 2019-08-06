@@ -1,5 +1,5 @@
 (* File: Debug.sml
-  Author: Joshua Dunfield
+  Author: Joshua Dunfield, Jacob Thomas Errington
   Contents: Debug-print library with up to 31 separate categories of information.
 
   Usage:
@@ -61,6 +61,9 @@ val makeFunctions' :
   * string io
 
 val toFlags : int list -> flags
+
+(** Tests if a given flag is set. *)
+val flag : int -> bool
 
 (** Runs the given function with debug printing indented by the given
     number of spaces.

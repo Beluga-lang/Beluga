@@ -19,8 +19,8 @@ module R = Store.Cid.NamedRenderer
 let idSub  = S.LF.id (* LF.Shift (LF.NoCtxShift, 0) *)
 
 
-let (dprint, _) =
- Debug.makeFunctions (Debug.toFlags [29])
+let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [29])
+open Debug.Fmt
 
 type error =
     NoCover of string
@@ -2655,15 +2655,56 @@ let check_coverage_success problem  =
                  ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals)))
 
     | Pragma.PragmaNotCase ->
-      if !open_cov_goals = [] then
-        Failure (Printf.sprintf "\n##   Case expression covers : ##\n##   %s\n##\n\n"
-                   (Syntax.Loc.to_string problem.loc))
-      else begin
-        Printf.printf "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %s\n##   %s\n\n"
-          (Syntax.Loc.to_string problem.loc)
-          ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) );
-        Success
-      end
+       let open Format in
+       if !open_cov_goals = [] then
+         Failure
+           (fprintf str_formatter
+              "\n##   Case expression covers : ##\n##   %a\n##\n\n"
+              Syntax.Loc.print problem.loc;
+            flush_str_formatter ())
+       else
+         begin
+           fprintf std_formatter
+             "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %a\n##   %s\n\n"
+             Syntax.Loc.print problem.loc
+             ("CASE(S) NOT COVERED :\n" ^ opengoalsToString (!open_cov_goals) );
+           Success
+         end
+
+let covers' problem projObj = 
+  dprintf
+    (fun p ->
+      p.fmt "@[<hv>#################################@,### BEGIN COVERAGE FOR TYPE tau = %a@,at %a@]"
+        (P.fmt_ppr_cmp_typ problem.cD Pretty.std_lvl) problem.ctype
+        Loc.print problem.loc);
+  let _ = U.resetGlobalCnstrs () in
+  (* *********************************************************************** *)
+  let cov_problems : covproblems = initialize_coverage problem projObj in
+  (* *********************************************************************** *)
+  dprintf
+    (fun p ->
+      p.fmt "@[<v>Coverage checking a case with %d branch(es)@,at: %a@]"
+        (List.length problem.branches)
+        Loc.print problem.loc);
+  
+  dprint (fun () -> "\n ### Initial coverage problem: " );
+  dprint (fun () -> covproblemsToString cov_problems ) ;
+  begin
+    try
+      (* ********************************************************************** *)
+      check_coverage cov_problems ;
+      (* ********************************************************************** *)
+      dprint (fun () -> "*** !!! COVERAGE CHECKING COMPLETED – Check whether some open coverage goals are trivial. !!!*** ");
+      dprint (fun () ->  "*** !!! " ^
+                           ("REVISIT :\n" ^ opengoalsToString (!open_cov_goals))
+                           ^ "\n\n");
+      let o_cg         = !open_cov_goals in
+      let (revisited_og, trivial_og) = revisit_opengoals o_cg in
+      open_cov_goals :=  revisited_og ;
+      check_coverage_success problem
+    with Error (_ , NothingToRefine) ->
+      check_coverage_success problem
+  end
 
 (* covers problem = ()
 
@@ -2677,49 +2718,19 @@ let check_coverage_success problem  =
   Fails, otherwise
 *)
 let covers problem projObj =
-if !Total.enabled || !enableCoverage then
- (if trivial_coverage problem.cD problem.branches problem.ctype then
-   ((* print_string "Trival Coverage\n"; *)
-    Success)
+  (* this entry point does some basic checks, i.e. that coverage is
+     actually enabled, and that the problem isn't completely trivial.
+     Nontrivial coverage problems are discharged to the main function
+     covers'.
+   *)
+  if !Total.enabled || !enableCoverage then
+    if trivial_coverage problem.cD problem.branches problem.ctype then
+      ((* print_string "Trival Coverage\n"; *)
+       Success)
+    else
+      covers' problem projObj
   else
-    (dprint
-       (fun _ ->
-         "\n #################################\n ### BEGIN COVERAGE FOR TYPE tau = "
-         ^ P.compTypToString problem.cD problem.ctype
-         ^ " at " ^ Loc.to_string problem.loc);
-     let _ = U.resetGlobalCnstrs () in
-    (* *********************************************************************** *)
-     let cov_problems : covproblems = initialize_coverage problem projObj in
-    (* *********************************************************************** *)
-       dprint (fun () -> "Coverage checking a case with "
-               ^ string_of_int (List.length problem.branches)
-               ^ " branch(es) at:\n"
-               ^ Syntax.Loc.to_string problem.loc);
-
-       dprint (fun () -> "\n ### Initial coverage problem: " );
-       dprint (fun () -> covproblemsToString cov_problems ) ;
-       begin
-         try
-            (* ********************************************************************** *)
-             check_coverage cov_problems ;
-            (* ********************************************************************** *)
-            dprint (fun () -> "*** !!! COVERAGE CHECKING COMPLETED – Check whether some open coverage goals are trivial. !!!*** ");
-            dprint (fun () ->  "*** !!! " ^
-              ("REVISIT :\n" ^ opengoalsToString (!open_cov_goals))
-              ^ "\n\n");
-            let o_cg         = !open_cov_goals in
-            let (revisited_og, trivial_og) = revisit_opengoals o_cg in
-              open_cov_goals :=  revisited_og ;
-              check_coverage_success problem
-         with Error (_ , NothingToRefine) ->
-           check_coverage_success problem
-       end
-  )
- )
-else
-  Success
-
-
+    Success
 
 let process problem projObj  =
   reset_cov_problem () ;

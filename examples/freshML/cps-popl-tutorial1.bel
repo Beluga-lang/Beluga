@@ -4,27 +4,31 @@
 % Adapted from Twelf's POPL tutorial
 
 % Types
-tp  : type.                --name tp T.
-o   : tp.
-arr : tp -> tp -> tp.
+LF tp  : type =
+  | o   : tp
+  | arr : tp -> tp -> tp
+;
+--name tp T.
 
 % Intrinsically well-typed expressions
-exp   : tp -> type.        --name exp E.
-value : tp -> type.
-app   : exp (arr A B) -> exp A -> exp B.
-lam   : {A:tp}(value A -> exp B) -> value (arr A B).
-ret   : value A -> exp A.
+LF exp   : tp -> type =
+  | app   : exp (arr A B) -> exp A -> exp B
+  | ret   : value A -> exp A
+and value : tp -> type =
+  | lam   : {A:tp}(value A -> exp B) -> value (arr A B)
+;
 
+--name exp E.
 % CPS expression (target of the cps translation)
 % Intrinsically well-typed
-contra : type.
-cvalue : tp -> type.
-ccont  : tp -> type.
-capp   : cvalue (arr A B) -> cvalue A -> ccont B -> contra.
-clam   : (cvalue A -> ccont B -> contra) -> cvalue (arr A B).
-cconti : (cvalue A -> contra) -> ccont A.
-cthrow : ccont A -> cvalue A -> contra.
-
+LF contra : type =
+  | capp   : cvalue (arr A B) -> cvalue A -> ccont B -> contra
+  | cthrow : ccont A -> cvalue A -> contra
+and cvalue : tp -> type =
+  | clam   : (cvalue A -> ccont B -> contra) -> cvalue (arr A B)
+and ccont  : tp -> type =
+  | cconti : (cvalue A -> contra) -> ccont A
+;
 
 % Translating values to cvalues
 % and expressions to.

@@ -3,85 +3,74 @@
 
 % Specifications of the pi-calculus
 
-n : type.
-a : type.
-p : type.
+LF n : type =
+  | b : n
+  | x : n
 
-eq : p -> p -> type.
+and a : type =
+  | tau   : a
+  | dn    : n -> n -> a
+  | up    : n -> n -> a
 
-null  : p.
-bang  : p -> p.
-taup  : p -> p.
-match : n -> n -> p -> p.
-out   : n -> n -> p -> p.
-plus  : p -> p -> p.
-par   : p -> p -> p.
-nu    : (n -> p) -> p.
-inp   : n -> (n -> p) -> p.
-
-tau   : a.
-dn    : n -> n -> a.
-up    : n -> n -> a.
-
-b : n.
-x : n.
-
-one   : p -> a -> p -> type.
-oneb  : p -> (n -> a) -> (n -> p) -> type.
+and p : type =
+  | null  : p
+  | bang  : p -> p
+  | taup  : p -> p
+  | match : n -> n -> p -> p
+  | out   : n -> n -> p -> p
+  | plus  : p -> p -> p
+  | par   : p -> p -> p
+  | nu    : (n -> p) -> p
+  | inp   : n -> (n -> p) -> p
+;
 
 % Syntactic equality
-refl  : eq X X.
+LF eq : p -> p -> type =
+  | refl  : eq X X
+;
 
-% bound input
-inb   : oneb (inp X M) (dn X) M.
+LF one   : p -> a -> p -> type =
+  % free output
+  | outf  : one (out X Y P) (up X Y) P
+  % tau
+  | taua  : one (taup P) tau P
+  % match prefix
+  | mf    : one  P A Q -> one  (match X X P) A Q
+  | slf   : one  P A R -> one  (plus P Q) A R
+  | srf   : one  Q A R -> one  (plus P Q) A R
+  | prf   : one P A P1 -> one (par P Q) A (par P1 Q)
+  | plf   : one Q A Q1 -> one (par P Q) A (par P Q1)
+  | resf  : ({x:n} one  (P x) A (Q x))       -> one  (nu (\x.P x)) A (nu (\x.Q x))
 
-% free output
-outf  : one (out X Y P) (up X Y) P.
+  % close
+  | cldownup  : oneb P (dn X) M -> oneb Q (up X) N -> one (par P Q) tau (nu (\y.par (M y) (N y)))
+  | clupdown  : oneb P (up X) M -> oneb Q (dn X) N -> one (par P Q) tau (nu (\y.par (M y) (N y)))
 
-% tau
-taua  : one (taup P) tau P.
+  % comm
+  | comm_downup  : oneb P (dn X) M -> one Q (up X Y) T -> eq R (M Y) -> one (par P Q) tau (par R T)
+  | comm_updown  : oneb Q (dn X) M -> one P (up X Y) R -> eq T (M Y) -> one (par P Q) tau (par R T)
+  | comm_bangf : one  P A Q -> one (bang P) A (par Q (bang P))
+  | comm_bangtauf : one P (up X Y) Q -> oneb P (dn X) M -> eq R (M Y) -> one (bang P) tau (par (par Q R) (bang P))
+  | comm_bangtaub : oneb P (up X) M -> oneb P (dn X) N -> one (bang P) tau (par (nu (\z.par (M z) (N z))) (bang P))
 
-% match prefix
-mf    : one  P A Q -> one  (match X X P) A Q.
-mb    : oneb P A M -> oneb (match X X P) A M.
+and oneb  : p -> (n -> a) -> (n -> p) -> type =
+  % bound input
+  | inb   : oneb (inp X M) (dn X) M
+  | mb    : oneb P A M -> oneb (match X X P) A M
+                               
+  % sum
+  | slb   : oneb P A R -> oneb (plus P Q) A M
+  | srb   : oneb Q A R -> oneb (plus P Q) A M
+                               
+  % par
+  | prb   : oneb P A (\x.M x) -> oneb (par P Q) A (\x. par (M x) Q)
+  | prb   : oneb Q A (\x.M x) -> oneb (par P Q) A (\x. par P (M x))
 
-% sum
-slf   : one  P A R -> one  (plus P Q) A R.
-srf   : one  Q A R -> one  (plus P Q) A R.
-slb   : oneb P A R -> oneb (plus P Q) A M.
-srb   : oneb Q A R -> oneb (plus P Q) A M.
-
-% par
-prf   : one P A P1 -> one (par P Q) A (par P1 Q).
-plf   : one Q A Q1 -> one (par P Q) A (par P Q1).
-prb   : oneb P A (\x.M x) -> oneb (par P Q) A (\x. par (M x) Q).
-prb   : oneb Q A (\x.M x) -> oneb (par P Q) A (\x. par P (M x)).
+  % restriction
+  | resb  : ({x:n} oneb (P x) A (\y.Q x y))  -> oneb (nu (\x.P x)) A (\y.nu (\x. Q x y))
+  % open
+  | open  : ({y:n} one (M y) (up X y) (N y)) -> oneb (nu (\x.M x)) (up X) N
+  | comm_bangb : oneb P X M -> oneb (bang P) X (\y. par (M y) (bang P))
+;
 
 
-% restriction
-resf  : ({x:n} one  (P x) A (Q x))       ->
-	one  (nu (\x.P x)) A (nu (\x.Q x)).
-resb  : ({x:n} oneb (P x) A (\y.Q x y))  ->
-	oneb (nu (\x.P x)) A (\y.nu (\x. Q x y)).
-
-% open
-open  : ({y:n} one (M y) (up X y) (N y)) -> oneb (nu (\x.M x)) (up X) N.
-
-% close
-cldownup  : oneb P (dn X) M -> oneb Q (up X) N ->
-	    one (par P Q) tau (nu (\y.par (M y) (N y))).
-clupdown  : oneb P (up X) M -> oneb Q (dn X) N ->
-	    one (par P Q) tau (nu (\y.par (M y) (N y))).
-
-% comm
-comm_downup  : oneb P (dn X) M -> one Q (up X Y) T -> eq R (M Y) ->
-	       one (par P Q) tau (par R T).
-comm_updown  : oneb Q (dn X) M -> one P (up X Y) R -> eq T (M Y) ->
-	       one (par P Q) tau (par R T).
-
-comm_bangf : one  P A Q -> one (bang P) A (par Q (bang P)).
-comm_bangb : oneb P X M -> oneb (bang P) X (\y. par (M y) (bang P)).
-comm_bangtauf : one P (up X Y) Q -> oneb P (dn X) M -> eq R (M Y) ->
-		one (bang P) tau (par (par Q R) (bang P)).
-comm_bangtaub : oneb P (up X) M -> oneb P (dn X) N ->
-		one (bang P) tau (par (nu (\z.par (M z) (N z))) (bang P)).

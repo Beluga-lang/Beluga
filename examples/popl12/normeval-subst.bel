@@ -40,17 +40,17 @@ inductive TmVar : {g:tctx} [ |- tp] -> ctype =
 
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
-| Slam : ({h:ctx}{#S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Slam : ({h:ctx}{$S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
-rec subst : {g:ctx}{h:ctx}{#S:[h |- g]}
+rec subst : {g:ctx}{h:ctx}{$S:[h |- g]}
             Sem [g] [ |- A] -> Sem [h] [ |- A] =
-mlam g,h,#S => fn e =>
+mlam g,h,$S => fn e =>
 case e of
-| Syn [g |- R] => Syn [h |- R[#S]]
+| Syn [g |- R] => Syn [h |- R[$S]]
 | Slam  f =>
-  Slam (mlam h' => mlam #W => fn e => f [h'] [h'|- #S[#W[..]]] e)
+  Slam (mlam h' => mlam $W => fn e => f [h'] [h'|- $S[$W[..]]] e)
 ;
 
 
@@ -71,8 +71,8 @@ let (s : Map [g] [h]) = s in
 case t of
 | [g |- #p ]          : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
-  Slam  (mlam h' => mlam #W => fn e =>
-         eval (extend (mlam T => fn x => subst [h] [h'] [h'|- #W] (s [ |- T] x))  e)
+  Slam  (mlam h' => mlam $W => fn e =>
+         eval (extend (mlam T => fn x => subst [h] [h'] [h'|- $W] (s [ |- T] x))  e)
               [g,x:tm A[] |-  E])
 
 | [g |- app E1 E2 ] =>
@@ -90,12 +90,12 @@ case [ |- A] of
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
 and extendSem : (g:ctx)[g |- neut (arr A[] B[])] ->
-                ({h:ctx}{#S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+                ({h:ctx}{$S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
-fn r => mlam h => mlam #S => fn e =>
+fn r => mlam h => mlam $S => fn e =>
 let [h |- N ] = reify e in
 let [g |- R ] = r in 
-  reflect [h |- rapp R[#S] N]
+  reflect [h |- rapp R[$S] N]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of

@@ -2,20 +2,22 @@
  * usage: lex_dump FILE
  * synopsis: pretty-prints the output of the Beluga lexer run on FILE.
  *)
-module Loc = Lexer.Loc
-module Token = Lexer.Token
-open Printf
+open Beluga
+module Loc = Location
 
-let string_of_loc l =
-  (Loc.start_off l |> string_of_int) ^ "-" ^ (Loc.stop_off l |> string_of_int)
+let print_loc ppf l =
+  Format.fprintf ppf "L %d C %d-%d" (Loc.start_line l) (Loc.start_column l) (Loc.stop_column l)
 
 let dump_lex path =
-  let chan = open_in path in
-  let stream = Stream.of_channel chan in
-  let out = Lexer.mk () (Loc.mk path) stream in
-  let f (t, l) = printf "%s: %s\n" (Token.to_string t) (string_of_loc l) in
-  Stream.iter f out
+  Gen.IO.with_in path
+    (fun stream ->
+      let out = Lexer.mk (Loc.initial path) stream in
+      let ppf = Format.formatter_of_out_channel stdout in
+      let f (l, t) = Format.fprintf ppf "%a %a: %a\n" (Token.print `CLASS) t (Token.print `TOKEN) t print_loc l in
+      Gen.iter f out)
 
-let main () = dump_lex (Array.get Sys.argv 1)
+let main () =
+  Debug.enable ();
+  dump_lex (Array.get Sys.argv 1)
 
 let _ = main ()

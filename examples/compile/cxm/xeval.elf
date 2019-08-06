@@ -2,75 +2,63 @@
 %%% Author: Frank Pfenning
 
 %%% One-Step Reductions
-step : exp -> exp -> type.
-% infix none 8 ==>.
+LF step : exp -> exp -> type =
 
-red_z      : step  z                     (vl z*).
-red_s      : step (s (vl V))             (vl (s* V)).
-red_match_z : step (match (vl z*) E2 E3)  E2.
-red_match_s : step (match (vl (s* V1')) E2 E3)  (E3 V1').
+  | red_z      : step  z                     (vl z*)
+  | red_s      : step (s (vl V))             (vl (s* V))
+  | red_match_z : step (match (vl z*) E2 E3)  E2
+  | red_match_s : step (match (vl (s* V1')) E2 E3)  (E3 V1')
 
-red_pair   : step (pair (vl V1) (vl V2))   (vl (pair* V1 V2)).
-red_fst    : step (fst (vl (pair* V1 V2))) (vl V1).
-red_snd    : step (snd (vl (pair* V2 V2))) (vl V2).
+  | red_pair   : step (pair (vl V1) (vl V2))   (vl (pair* V1 V2))
+  | red_fst    : step (fst (vl (pair* V1 V2))) (vl V1)
+  | red_snd    : step (snd (vl (pair* V2 V2))) (vl V2)
 
-red_lam    : step (lam E)                  (vl (lam* E)).
-red_app    : step (app (vl (lam* E1')) (vl V2)) (E1' V2).
+  | red_lam    : step (lam E)                  (vl (lam* E))
+  | red_app    : step (app (vl (lam* E1')) (vl V2)) (E1' V2)
 
-red_letv   : step (letv (vl V1) E2)            (E2 V1).
-red_letn   : step (letn E1 E2)                 (E2 E1).
+  | red_letv   : step (letv (vl V1) E2)            (E2 V1)
+  | red_letn   : step (letn E1 E2)                 (E2 E1)
 
-red_fix    : step (fix E)                       (E (fix E)).
+  | red_fix    : step (fix E)                       (E (fix E))
 
-% no red_vl rule
+  % no red_vl rule
+;
 
 %%% Redices
-redex : exp -> type.
-
-rdx : redex E
-       <- step E E'.
+LF redex : exp -> type =
+  | rdx : step E E' -> redex E
+;
 
 %%% Splitting an Expression
-split : (exp -> exp) -> exp -> (exp -> exp) -> exp -> type.
-
-%{ split C E C' E'
-   Evaluation context C and expression E are given,
-   C' and E' are constructed.
-   Invariant: (C E) == (C' E')
-}%
+LF split : (exp -> exp) -> exp -> (exp -> exp) -> exp -> type =
+% split C E C' E'
+% Evaluation context C and expression E are given,
+% C' and E' are constructed.
+% Invariant: (C E) == (C' E')
+%
 
 % Redices
-sp_redex : split C E C E
-	    <- redex E.
+  | sp_redex : redex E -> split C E C E
 
 % Natural Numbers
 % no sp_z
-sp_s : split C (s E1) C' E'
-	<- split (\h. C (s h)) E1 C' E'.
+  | sp_s : split (\h. C (s h)) E1 C' E' -> split C (s E1) C' E'
 
-sp_match : split C (match E1 E2 E3) C' E'
-	   <- split (\h. C (match h E2 E3)) E1 C' E'.
+  | sp_match : split (\h. C (match h E2 E3)) E1 C' E' -> split C (match E1 E2 E3) C' E'
 
 % Pairs
-sp_pair2 : split C (pair (vl V1) E2) C' E'
-	    <- split (\h. C (pair (vl V1) h)) E2 C' E'.
-sp_pair1 : split C (pair E1 E2) C' E'
-	    <- split (\h. C (pair h E2)) E1 C' E'.
-sp_fst   : split C (fst E) C' E'
-	    <- split (\h. C (fst h)) E C' E'.
-sp_snd   : split C (snd E) C' E'
-	    <- split (\h. C (snd h)) E C' E'.
+  | sp_pair2 : split (\h. C (pair (vl V1) h)) E2 C' E' -> split C (pair (vl V1) E2) C' E'
+  | sp_pair1 : split (\h. C (pair h E2)) E1 C' E' -> split C (pair E1 E2) C' E'
+  | sp_fst   : split (\h. C (fst h)) E C' E' -> split C (fst E) C' E'
+  | sp_snd   : split (\h. C (snd h)) E C' E' -> split C (snd E) C' E'
 
 % Functions
 % no sp_lam
-sp_app2 : split C (app (vl V1) E2) C' E'
-	   <- split (\h. C (app (vl V1) h)) E2 C' E'.
-sp_app1 : split C (app E1 E2) C' E'
-	   <- split (\h. C (app h E2)) E1 C' E'.
+  | sp_app2 : split (\h. C (app (vl V1) h)) E2 C' E' -> split C (app (vl V1) E2) C' E'
+  | sp_app1 : split (\h. C (app h E2)) E1 C' E' -> split C (app E1 E2) C' E'
 
 % Definitions
-sp_letv : split C (letv E1 E2) C' E'
-	   <- split (\h. C (letv h E2)) E1 C' E'.
+  | sp_letv : split (\h. C (letv h E2)) E1 C' E' -> split C (letv E1 E2) C' E'
 % no sp_letn
 
 % Recursion
@@ -78,27 +66,23 @@ sp_letv : split C (letv E1 E2) C' E'
 
 % Values
 % no sp_vl
+;
 
 %%% Top-Level Splitting
 
-split_exp : exp -> (exp -> exp) -> exp -> type.
-
-spe : split_exp E C E'
-       <- split (\h. h) E C E'.
+LF split_exp : exp -> (exp -> exp) -> exp -> type =
+  | spe : split (\h. h) E C E' -> split_exp E C E'
+;
 
 %%% One-Step Contextual Evaluation
 
-one_step : exp -> exp -> type.
-
-ostp : one_step E (C R')
-	<- split_exp E C R
-	<- step R R'.
+LF one_step : exp -> exp -> type =
+  | ostp : step R R' -> split_exp E C R -> one_step E (C R')
+;
 
 %%% Full Contextual Evaluation
 
-xeval : exp -> val -> type.
-
-xev_vl : xeval (vl V) V.
-xev_step : xeval E V
-	    <- one_step E E'
-	    <- xeval E' V.
+LF xeval : exp -> val -> type =
+  | xev_vl : xeval (vl V) V
+  | xev_step : xeval E' V -> one_step E E' -> xeval E V
+;

@@ -87,7 +87,7 @@ fun s1 s2 .BInvLf  t => SInvf  s1 t
   | s1 s2 .BInvRUp t => SInvUp s2 t
 ;
 
-rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] = ?
+% rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] =
 % fn i => case i of
 % | Inv_pq a b =>
 %   let Pproc = a in
@@ -105,7 +105,7 @@ rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] = ?
 % | Inv_parnu a => ?
 % | Inv_nuout a => ?
 % | Inv_outnu a => ?
-;
+% ;
 
 % rec invBisim : {g:ctx} Inv [g |- P..] [g |- Q..] -> BisimInv [g |- P..] [g |- Q..] =
 % mlam g => fn i =>

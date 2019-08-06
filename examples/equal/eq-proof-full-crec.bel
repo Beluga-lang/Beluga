@@ -2,18 +2,19 @@
 % Author: Brigitte Pientka
 
 
-exp: type.    --name exp M x.
-
-app: exp -> exp -> exp.
-lam: (exp -> exp) -> exp.
+LF exp: type =
+  | app: exp -> exp -> exp
+  | lam: (exp -> exp) -> exp
+;
+--name exp M x.
 
 % ------------------------------------------------------------------------------
 
-eq: exp -> exp -> type.   --name eq Q u.
-eq_app : eq M1 N1 -> eq M2 N2 -> eq (app M1 M2) (app N1 N2).
-
-eq_lam :  ({x : exp} eq x x -> eq (M x) (N x))
-          -> eq (lam (\x. M x)) (lam (\x. N x)).
+LF eq: exp -> exp -> type =
+  | eq_app : eq M1 N1 -> eq M2 N2 -> eq (app M1 M2) (app N1 N2)
+  | eq_lam : ({x : exp} eq x x -> eq (M x) (N x)) -> eq (lam (\x. M x)) (lam (\x. N x))
+;
+--name eq Q u.
 
 % ------------------------------------------------------------------------------
 
@@ -60,11 +61,12 @@ fn e1 => fn e2 => case e1 of
 
 % ------------------------------------------------------------------------------
 
-equal: exp -> exp -> type.
-e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam (\x. T x)) (lam (\x. T' x)).
-e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2).
-e_r: equal T T.
-e_t: equal T' S -> equal T T' -> equal T S.
+LF equal: exp -> exp -> type =
+  | e_l: ({x:exp} equal x x -> equal (T x) (T' x)) -> equal (lam (\x. T x)) (lam (\x. T' x))
+  | e_a: equal T2 S2  -> equal T1 S1 -> equal (app T1 T2) (app S1 S2)
+  | e_r: equal T T
+  | e_t: equal T' S -> equal T T' -> equal T S
+;
 
 % ------------------------------------------------------------------------------
 

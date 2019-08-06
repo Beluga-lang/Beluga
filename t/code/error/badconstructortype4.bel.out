@@ -1,3 +1,4 @@
-Parse Error: Wrong datatype for constructor Blue.
-    Expected datatype: Colour
-    Actual datatype: Car
+Parse error.
+Wrong datatype for constructor Blue.
+  Expected type Colour
+  Actual type Car

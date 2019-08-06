@@ -4,61 +4,41 @@
 ce : conc* C -> conc C -> type.
 % mode ce +D* -D.
 
-ce_cut   : ce (cut* A D1* D2*) D
-	    <- ce D1* D1
-	    <- ({h1:hyp A} ce (D2* h1) (D2 h1))
-	    <- ca A D1 D2 D.
+ce_cut   : ca A D1 D2 D → ({h1:hyp A} ce (D2* h1) (D2 h1)) → ce D1* D1 → ce (cut* A D1* D2*) D.
 
 ce_axiom : ce (axiom* H) (axiom H).
 
-ce_andr  : ce (andr* D1* D2*) (andr D1 D2)
-	    <- ce D1* D1
-	    <- ce D2* D2.
+ce_andr  : ce D2* D2 → ce D1* D1 → ce (andr* D1* D2*) (andr D1 D2).
 
-ce_andl1 : ce (andl1* D1* H) (andl1 D1 H)
-	    <- ({h1:hyp A} ce (D1* h1) (D1 h1)).
+ce_andl1 : ({h1:hyp A} ce (D1* h1) (D1 h1)) → ce (andl1* D1* H) (andl1 D1 H).
 
-ce_andl2 : ce (andl2* D2* H) (andl2 D2 H)
-	    <- ({h2:hyp B} ce (D2* h2) (D2 h2)).
+ce_andl2 : ({h2:hyp B} ce (D2* h2) (D2 h2)) → ce (andl2* D2* H) (andl2 D2 H).
 
-ce_impr  : ce (impr* D1*) (impr D1)
-	    <- ({h1:hyp A} ce (D1* h1) (D1 h1)).
+ce_impr  : ({h1:hyp A} ce (D1* h1) (D1 h1)) → ce (impr* D1*) (impr D1).
 
-ce_impl  : ce (impl* D1* D2* H) (impl D1 D2 H)
-	    <- ce D1* D1
-	    <- ({h2:hyp B} ce (D2* h2) (D2 h2)).
+ce_impl  : ({h2:hyp B} ce (D2* h2) (D2 h2)) → ce D1* D1 → ce (impl* D1* D2* H) (impl D1 D2 H).
 
-ce_orr1  : ce (orr1* D1*) (orr1 D1)
-	    <- ce D1* D1.
+ce_orr1  : ce D1* D1 → ce (orr1* D1*) (orr1 D1).
 
-ce_orr2  : ce (orr2* D2*) (orr2 D2)
-	    <- ce D2* D2.
+ce_orr2  : ce D2* D2 → ce (orr2* D2*) (orr2 D2).
 
-ce_orl   : ce (orl* D1* D2* H) (orl D1 D2 H)
-	    <- ({h1:hyp A} ce (D1* h1) (D1 h1))
-	    <- ({h2:hyp B} ce (D2* h2) (D2 h2)).
+ce_orl   : ({h2:hyp B} ce (D2* h2) (D2 h2)) → ({h1:hyp A} ce (D1* h1) (D1 h1)) → ce (orl* D1* D2* H) (orl D1 D2 H).
 
-ce_notr  : ce (notr* D1*) (notr D1)
-	    <- ({p:o} {h1:hyp A} ce (D1* p h1) (D1 p h1)).
+ce_notr  : ({p:o} {h1:hyp A} ce (D1* p h1) (D1 p h1)) → ce (notr* D1*) (notr D1).
 
-ce_notl  : ce (notl* D1* H) (notl D1 H)
-	    <- ce D1* D1.
+ce_notl  : ce D1* D1 → ce (notl* D1* H) (notl D1 H).
 
 ce_truer : ce (truer*) (truer).
 
 ce_falsel : ce (falsel* H) (falsel H).
 
-ce_forallr : ce (forallr* D1*) (forallr D1)
-	      <- {a:i} ce (D1* a) (D1 a).
+ce_forallr : {a:i} ce (D1* a) (D1 a) → ce (forallr* D1*) (forallr D1).
 
-ce_foralll : ce (foralll* T D1* H) (foralll T D1 H)
-	      <- ({h1:hyp _ } ce (D1* h1) (D1 h1)).
+ce_foralll : ({h1:hyp _ } ce (D1* h1) (D1 h1)) → ce (foralll* T D1* H) (foralll T D1 H).
 
-ce_existsr : ce (existsr* T D1*) (existsr T D1)
-	      <- ce D1* D1.
+ce_existsr : ce D1* D1 → ce (existsr* T D1*) (existsr T D1).
 
-ce_existsl : ce (existsl* D1* H) (existsl D1 H)
-	      <- ({a:i} {h1:hyp (A1 a)} ce (D1* a h1) (D1 a h1)).
+ce_existsl : ({a:i} {h1:hyp (A1 a)} ce (D1* a h1) (D1 a h1)) → ce (existsl* D1* H) (existsl D1 H).
 
 % worlds (l1 | l2 | l3) (ce D* D).
 % covers ce +D *D*.

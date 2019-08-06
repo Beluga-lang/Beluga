@@ -1,6 +1,5 @@
 module Loc = Syntax.Int.Loc
 module P = Pretty.Int.DefaultPrinter
-open Lexing
 
 let generate_annotations = ref false;
 
@@ -47,23 +46,23 @@ module Annot = struct
 
   and print_location (pp : out_channel) (loc : Loc.t) (name : string) : unit =
     begin      
-      let start_pos = Loc.start_pos loc in
-      let end_pos = Loc.stop_pos loc in
+      let start_pos = Loc.start_position loc in
+      let end_pos = Loc.stop_position loc in
       print_position pp start_pos name;    
       output_char pp ' ';
       print_position pp end_pos name
     end
 
-  and print_position (pp : out_channel) (pos : position) (name : string) : unit =
+  and print_position (pp : out_channel) (pos : Loc.pos) (name : string) : unit =
     begin
       output_string pp "\"";
       output_string pp (String.escaped name);
       output_string pp "\" ";
-      output_int pp pos.pos_lnum;
+      output_int pp (Loc.position_line pos);
       output_char pp ' ';
-      output_int pp pos.pos_bol;
+      output_int pp (Loc.position_bol pos);
       output_char pp ' ';
-      output_int pp (pos.pos_cnum + 1)
+      output_int pp (Loc.position_column pos)
     end
 end
 
@@ -165,14 +164,14 @@ let print_annot (name : string) : unit =
 
 let type_of_position (line : int) (col : int) : string =
   let sorted =
-    let cmp l1 l2 = (Loc.start_off l1) - (Loc.start_off l2) in
+    let cmp l1 l2 = (Loc.start_offset l1) - (Loc.start_offset l2) in
     let l = Hashtbl.fold (fun k v acc -> (k,v)::acc) Annot.store [] in
       List.sort (fun (key1,_) (key2,_) -> cmp key1 key2) l in
   (* let f (l, _) = print_string ((string_of_int (Loc.start_off l)) ^ ", " ^ (string_of_int (Loc.stop_off l)) ^ "\n") in
   let _ = List.iter f sorted in *)
   let contains_pos (l, x) : bool = begin
-    let start_c = ((Loc.start_off l) - (Loc.start_bol l)) in
-    let end_c = ((Loc.stop_off l) - (Loc.stop_bol l)) in
+    let start_c = ((Loc.start_offset l) - (Loc.start_bol l)) in
+    let end_c = ((Loc.stop_offset l) - (Loc.stop_bol l)) in
     let start_l = Loc.start_line l in
     let end_l = Loc.stop_line l in
     (* let _ = Format.printf "(%d, %d), (%d, %d), %s\n" (Loc.start_line l) start_c (Loc.stop_line l) end_c x.Annot.typ in *)

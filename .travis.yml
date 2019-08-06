@@ -20,7 +20,6 @@ addons:
       - ocaml
       - opam
       - zsh
-      - camlp4-extra
 cache:
   directories:
     - $HOME/.opam

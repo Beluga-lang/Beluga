@@ -1,10 +1,17 @@
-exception NoValue (** Thrown when attempting to get a maybe when there's None. *)
+(** Thrown when attempting to get a maybe when there's None. *)
+exception NoValue 
+
 val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
 
 val is_some : 'a option -> bool
 
+(** Gets the value from an option if it exists. Otherwise gives a default value. *)
+val get_default : 'a -> 'a option -> 'a
+
+(** Gets the value from an option if it exists. Otherwise raises the given exception. *)
 val get' : exn -> 'a option -> 'a
 
+(** Gets the value from an option if it exists. Otherwise raises `NoValue`. *)
 val get : 'a option -> 'a
 
 (** Convert a boolean to an option.
@@ -17,6 +24,16 @@ val of_bool : bool -> unit option
 val map : ('a -> 'b) -> 'a option -> 'b option
 
 val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
+
+val ( <|> ) : 'a option lazy_t -> 'a option lazy_t -> 'a option lazy_t
+
+(** Selects the first alternative that succeeds.
+    Forces every thunk until one computes `Some x'.
+ *)
+val choice : 'a option lazy_t list -> 'a option lazy_t
+
+(** Returns the first option that isn't None, if any. *)
+val alt : 'a option -> 'a option -> 'a option
                                                 
 val pure : 'a -> 'a option
 
@@ -35,7 +52,13 @@ val fold_left : ('b -> 'a -> 'b option) -> 'b -> 'a list -> 'b option
 
 val none : 'a option
 
+(** Transforms the contents of an option with a pure function. *)
 val ( $> ) : 'a option -> ('a -> 'b) -> 'b option
+
+(** Returns the second option only if the first is `Some _'.
+    In a sense, this is the opposite of <|>.
+ *)
+val ( &> ) : 'a option -> 'b option -> 'b option
 
 val void : 'a option -> unit option
 

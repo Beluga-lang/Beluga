@@ -22,52 +22,36 @@ csd : mstep (st K (ev E)) (answer W)
 %name csd CS.
 
 % Natural Numbers
-csd_z : csd (<< C' st_z) (ev_z) C'.
+csd_z : csd (next C' st_z) (ev_z) C'.
 
-csd_s : csd (<< C1 st_s) (ev_s D1) C'
-	 <- csd C1 D1 (<< C' (st_return _ _)).
+csd_s : csd C1 D1 (next C' (st_return _ _)) -> csd (next C1 st_s) (ev_s D1) C'.
 
-csd_match_z : csd (<< C1 st_match) (ev_match_z D2 D1) C'
-	      <- csd C1 D1 (<< (<< C2 st_match1_z) (st_return _ _))
-	      <- csd C2 D2 C'.
+csd_match_z : csd C2 D2 C' -> csd C1 D1 (next (next C2 st_match1_z) (st_return _ _)) -> csd (next C1 st_match) (ev_match_z D2 D1) C'.
 
-csd_match_s : csd (<< C1 st_match) (ev_match_s D3 D1) C'
-	      <- csd C1 D1 (<< (<< C3 st_match1_s)  (st_return _ _))
-	      <- csd C3 D3 C'.
+csd_match_s : csd C3 D3 C' -> csd C1 D1 (next (next C3 st_match1_s)  (st_return _ _)) -> csd (next C1 st_match) (ev_match_s D3 D1) C'.
 
 % Pairs
-csd_pair : csd (<< C1 st_pair) (ev_pair D2 D1) C'
-	    <- csd C1 D1 (<< (<< C2 st_pair1) (st_return _ _))
-	    <- csd C2 D2 (<< C' (st_return _ _)).
+csd_pair : csd C2 D2 (next C' (st_return _ _)) -> csd C1 D1 (next (next C2 st_pair1) (st_return _ _)) -> csd (next C1 st_pair) (ev_pair D2 D1) C'.
 
-csd_fst : csd (<< C1 st_fst) (ev_fst D1) C'
-	   <- csd C1 D1 (<< (<< C' st_fst1) (st_return _ _)).
+csd_fst : csd C1 D1 (next (next C' st_fst1) (st_return _ _)) -> csd (next C1 st_fst) (ev_fst D1) C'.
 
-csd_snd : csd (<< C1 st_snd) (ev_snd D1) C'
-	   <- csd C1 D1 (<< (<< C' st_snd1) (st_return _ _)).
+csd_snd : csd C1 D1 (next (next C' st_snd1) (st_return _ _)) -> csd (next C1 st_snd) (ev_snd D1) C'.
 
 % Functions
-csd_lam : csd (<< C' st_lam) (ev_lam) C'.
+csd_lam : csd (next C' st_lam) (ev_lam) C'.
 
-csd_app : csd (<< C1 st_app) (ev_app D3 D2 D1) C'
-	   <- csd C1 D1 (<< (<< C2 st_app1) (st_return _ _))
-	   <- csd C2 D2 (<< (<< C3 st_app2) (st_return _ _))
-	   <- csd C3 D3 C'.
+csd_app : csd C3 D3 C' -> csd C2 D2 (next (next C3 st_app2) (st_return _ _)) -> csd C1 D1 (next (next C2 st_app1) (st_return _ _)) -> csd (next C1 st_app) (ev_app D3 D2 D1) C'.
 
 % Definitions
-csd_letv : csd (<< C1 st_letv) (ev_letv D2 D1) C'
-	    <- csd C1 D1 (<< C2 (st_return _ _))
-	    <- csd C2 D2 C'.
+csd_letv : csd C2 D2 C' -> csd C1 D1 (next C2 (st_return _ _)) -> csd (next C1 st_letv) (ev_letv D2 D1) C'.
 
-csd_letn : csd (<< C1 st_letn) (ev_letn D1) C'
-	    <- csd C1 D1 C'.
+csd_letn : csd C1 D1 C' -> csd (next C1 st_letn) (ev_letn D1) C'.
 
 % Recursion
-csd_fix : csd (<< C1 st_fix) (ev_fix D1) C'
-	   <- csd C1 D1 C'.
+csd_fix : csd C1 D1 C' -> csd (next C1 st_fix) (ev_fix D1) C'.
 
 % Values
-csd_vl : csd (<< C' st_vl) (ev_vl) C'.
+csd_vl : csd (next C' st_vl) (ev_vl) C'.
 
 % Return instruction are not possible since the initial state
 % is of the form K # (ev E).
@@ -81,5 +65,4 @@ csd_vl : csd (<< C' st_vl) (ev_vl) C'.
 
 ceval_sound : ceval E V -> eval E V -> type.
 
-cevsd : ceval_sound (cev C) D
-	 <- csd C D (<< stop st_init).
+cevsd : csd C D (next stop st_init) -> ceval_sound (cev C) D.

@@ -1,4 +1,4 @@
-
+open Support
 open Syntax
 
 (* ********************************************************************************)
@@ -14,17 +14,24 @@ let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
 
 type error =
   | CtxOverGeneral
+  | IndexInvariantFailed of (Format.formatter -> unit -> unit)
 
 exception Error of Syntax.Loc.t * error
 
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
-      match err with
-        | CtxOverGeneral ->
-          Format.fprintf ppf
-            "context  in the body appears to be more general than the context supplied\n"
-                                  ))
+let _ =
+  Error.register_printer
+    (fun (Error (loc, err)) ->
+      Error.print_with_location loc
+        (fun ppf ->
+          let open Format in
+          match err with
+          | CtxOverGeneral ->
+             fprintf ppf
+               "context in the body appears to be more general than the context supplied\n"
+          | IndexInvariantFailed f ->
+             fprintf ppf "Indexing invariant failed: %a@." f ()))
+
+let throw loc e = raise (Error (loc, e))
 
 (* ********************************************************************************)
 let rec lengthApxMCtx cD = match cD with
@@ -45,9 +52,12 @@ end
 
 and shiftApxHead k h = begin match h with
   | Apx.LF.BVar x -> Apx.LF.BVar (x+k)
-  | Apx.LF.FMVar (u, s) -> Apx.LF.FMVar (u, shiftApxSub k s)
-  | Apx.LF.FPVar (p, s) -> Apx.LF.FMVar (p, shiftApxSub k s)
-  | Apx.LF.MVar (u, s) -> Apx.LF.MVar (u, shiftApxSub k s)
+  | Apx.LF.FMVar (u, s) ->
+     Apx.LF.FMVar (u, Maybe.(s $> fun s -> shiftApxSub k s))
+  | Apx.LF.FPVar (p, s) ->
+     Apx.LF.FMVar (p, Maybe.(s $> fun s -> shiftApxSub k s))
+  | Apx.LF.MVar (u, s) ->
+     Apx.LF.MVar (u, Maybe.(s $> fun s -> shiftApxSub k s))
   | _ -> h
 end
 
@@ -132,25 +142,30 @@ and cnormApxCVar cD delta cv (cD'', t) = cnormApxCVar' cD (lengthApxMCtx delta) 
 
 and cnormApxHead cD delta h (cD'', t) = match h with
   | Apx.LF.MVar (cv, s) ->
-    Apx.LF.MVar (cnormApxCVar cD delta cv (cD'', t), cnormApxSub cD delta s (cD'', t))
+     Apx.LF.MVar
+       ( cnormApxCVar cD delta cv (cD'', t)
+       , cnormApxSubOpt cD delta s (cD'', t))
 
   | Apx.LF.PVar (cv, s) ->
-    Apx.LF.PVar (cnormApxCVar cD delta cv (cD'', t), cnormApxSub cD delta s (cD'', t))
+    Apx.LF.PVar (cnormApxCVar cD delta cv (cD'', t), cnormApxSubOpt cD delta s (cD'', t))
 
   | Apx.LF.Proj (pv, j) ->
     Apx.LF.Proj (cnormApxHead cD delta pv (cD'', t), j)
 
   | Apx.LF.FMVar(u, s) ->
-      Apx.LF.FMVar(u, cnormApxSub cD delta s (cD'', t))
+      Apx.LF.FMVar(u, cnormApxSubOpt cD delta s (cD'', t))
 
   | Apx.LF.FPVar(u, s) ->
-      Apx.LF.FPVar(u, cnormApxSub cD delta s (cD'', t))
+      Apx.LF.FPVar(u, cnormApxSubOpt cD delta s (cD'', t))
   | _ -> h
 
-and cnormApxSub cD delta s (cD'', t) = match s with
+and cnormApxSubOpt cD delta s (cD'', t) =
+  Maybe.(s $> fun s -> cnormApxSub cD delta s (cD'', t))
+
+and cnormApxSub cD delta (s : Apx.LF.sub) (cD'', t) =
+  match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> s
-  | Apx.LF.RealId -> s
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = cnormApxHead cD delta h (cD'', t) in
@@ -162,11 +177,11 @@ and cnormApxSub cD delta s (cD'', t) = match s with
         Apx.LF.Dot (Apx.LF.Obj m', s')
 
   | Apx.LF.SVar (cv, sigma) ->
-      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
+      let sigma' = cnormApxSubOpt cD delta sigma (cD'', t) in
       Apx.LF.SVar (cnormApxCVar cD delta cv (cD'', t), sigma')
 
   | Apx.LF.FSVar (s, sigma) ->
-      let sigma' = cnormApxSub cD delta sigma (cD'', t) in
+      let sigma' = cnormApxSubOpt cD delta sigma (cD'', t) in
         Apx.LF.FSVar (s, sigma')
 
 and cnormApxSpine cD delta s (cD'', t) = match s with
@@ -311,16 +326,12 @@ and cnormApxExp' cD delta i cDt = match i with
 
 *)
 
-and cnormApxClObj cD delta clobj cDt = match clobj with
-  | Apx.Comp.MObj m -> Apx.Comp.MObj (cnormApxTerm cD delta m cDt)
-  | Apx.Comp.SObj s -> Apx.Comp.SObj (cnormApxSub cD delta s cDt)
-
 and cnormApxMetaObj cD delta (loc,mobj) cDt =
   loc, match mobj with
-    | Apx.Comp.ClObj (psi, clobj) ->
+    | Apx.Comp.ClObj (psi, sigma) ->
       let psi'   = cnormApxDCtx loc cD delta psi cDt in
-      let clobj' = cnormApxClObj cD delta clobj cDt in
-      Apx.Comp.ClObj (psi', clobj')
+      let sigma' = cnormApxSub cD delta sigma cDt in
+      Apx.Comp.ClObj (psi', sigma')
 
     | Apx.Comp.CObj (psi) -> Apx.Comp.CObj (cnormApxDCtx loc cD delta psi cDt)
 
@@ -392,26 +403,30 @@ and collectApxTuple fMVs tuple = match tuple with
 
 and collectApxHead fMVs h = match h with
   | Apx.LF.FPVar (p, s) ->
-      collectApxSub (p::fMVs) s
+      collectApxSubOpt (p::fMVs) s
 
   | Apx.LF.FMVar (u, s) ->
-      collectApxSub (u::fMVs) s
+      collectApxSubOpt (u::fMVs) s
 
   | Apx.LF.MVar (Apx.LF.Offset _offset, s) ->
-      collectApxSub fMVs s
+      collectApxSubOpt fMVs s
 
   | Apx.LF.PVar (Apx.LF.Offset _offset, s) ->
-      collectApxSub fMVs s
+      collectApxSubOpt fMVs s
 
   | Apx.LF.Proj(h, _k) ->
       collectApxHead fMVs h
 
   | _ -> fMVs
 
+and collectApxSubOpt fMVs s =
+  match s with
+  | Some s -> collectApxSub fMVs s
+  | None -> fMVs
+
 and collectApxSub fMVs s = match s with
   | Apx.LF.EmptySub -> fMVs
   | Apx.LF.Id -> fMVs
-  | Apx.LF.RealId -> fMVs
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let fMVs' = collectApxHead fMVs h in
         collectApxSub fMVs' s
@@ -420,9 +435,9 @@ and collectApxSub fMVs s = match s with
       let fMVs' = collectApxTerm fMVs m in
         collectApxSub fMVs' s
   | Apx.LF.SVar (i,s) ->
-      collectApxSub fMVs s
+      collectApxSubOpt fMVs s
   | Apx.LF.FSVar (n,s) ->
-      collectApxSub (n::fMVs) s
+      collectApxSubOpt (n::fMVs) s
 
 and collectApxSpine fMVs s = match s with
   | Apx.LF.Nil -> fMVs
@@ -477,16 +492,12 @@ and collectApxCTypDecl fMVs ct_decl = match ct_decl with
       collectApxDCtx fMVs' c_phi
   | Apx.LF.Decl(_, Apx.LF.CTyp _, _) ->  fMVs
 
-and collectApxClObj fMVs = function
-  | Apx.Comp.MObj tR -> collectApxTerm fMVs tR
-  | Apx.Comp.SObj s -> collectApxSub fMVs s
-
 and collectApxMetaObj fMVs (_loc,mO) = match mO with
   | Apx.Comp.CObj (cPsi) ->
       collectApxDCtx fMVs cPsi
-  | Apx.Comp.ClObj (psi, clobj) ->
+  | Apx.Comp.ClObj (psi, sub) ->
       let fMVh = collectApxDCtx fMVs psi  in
-      collectApxClObj fMVh clobj
+      collectApxSub fMVh sub
 
 and collectApxMetaSpine fMVs mS = match mS with
   | Apx.Comp.MetaNil -> fMVs
@@ -605,7 +616,7 @@ and fmvApxCvar fMVs cD (l_cd1, l_delta, k) i = fmvApxCvar' cD (l_cd1, l_delta + 
 and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
   (* free meta-variables / parameter variables *)
   | Apx.LF.FPVar (p, s) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
+      let s' = fmvApxSubOpt fMVs cD d_param  s in
       if List.mem p fMVs then
         Apx.LF.FPVar (p, s')
       else
@@ -613,7 +624,7 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
           Apx.LF.PVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.FMVar (u, s) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
+      let s' = fmvApxSubOpt fMVs cD d_param  s in
       if List.mem u fMVs then
         Apx.LF.FMVar (u, s')
       else
@@ -624,18 +635,20 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
 
   (* bound meta-variables / parameters *)
   | Apx.LF.MVar (i, s) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
+      let s' = fmvApxSubOpt fMVs cD d_param  s in
       Apx.LF.MVar (fmvApxCvar fMVs cD d_param i, s')
 
   | Apx.LF.PVar (i, s) ->
-      let s' = fmvApxSub fMVs cD d_param  s in
+      let s' = fmvApxSubOpt fMVs cD d_param  s in
       Apx.LF.PVar (fmvApxCvar fMVs cD d_param i, s')
   | _ ->  h
+
+and fmvApxSubOpt fMVs cD d_param s =
+  Maybe.(s $> fmvApxSub fMVs cD d_param)
 
 and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
   | Apx.LF.EmptySub -> s
   | Apx.LF.Id -> Apx.LF.Id
-  | Apx.LF.RealId -> Apx.LF.RealId
 
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
       let h' = fmvApxHead fMVs cD d_param  h in
@@ -647,7 +660,7 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
         Apx.LF.Dot (Apx.LF.Obj m', s')
 
   | Apx.LF.FSVar (u, sigma) ->
-    let sigma' = fmvApxSub fMVs cD d_param  sigma in
+    let sigma' = fmvApxSubOpt fMVs cD d_param  sigma in
       if List.mem u fMVs then
         Apx.LF.FSVar (u, sigma')
       else
@@ -656,7 +669,7 @@ and fmvApxSub fMVs cD ((l_cd1, l_delta, k) as d_param)  s = match s with
           Apx.LF.SVar (Apx.LF.Offset (offset+k), sigma')
 
   | Apx.LF.SVar (i, sigma) ->
-      let sigma' = fmvApxSub fMVs cD d_param  sigma in
+      let sigma' = fmvApxSubOpt fMVs cD d_param  sigma in
         Apx.LF.SVar (fmvApxCvar fMVs cD d_param i, sigma')
 
 
@@ -702,20 +715,24 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) psi = match psi 
 
   | Apx.LF.CtxVar (Apx.LF.CtxName x) ->
       if List.mem x fMVs then
-	psi
+	      psi
       else
-	begin try
-	  let (offset, _w) = Whnf.mctxMVarPos cD x  in
-(*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ Id.render_name x ^
-			    " with CtxOffset " ^ R.render_offset offset) in
-	  let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
-	  let _ = dprint (fun () -> "[fmvApxDCtx] l_cd1 " ^ string_of_int l_cd1) in
-	  let _ = dprint (fun () -> "[fmvApxDCtx] l_delta " ^ string_of_int l_delta) in
-	  let _ = dprint (fun () -> "[fmvApxDCtx] k " ^ string_of_int k) in *)
-	    Apx.LF.CtxVar (Apx.LF.CtxOffset (offset + k))
-	with Whnf.Fmvar_not_found ->
-	  raise (Index.Error (loc, Index.UnboundCtxName x))
-	end
+	      begin
+          try
+	          let (offset, _w) = Whnf.mctxMVarPos cD x  in
+            (*	  let _ = dprint (fun () -> "[fmvApxDCtx] CtxName " ^ Id.render_name x ^
+			            " with CtxOffset " ^ R.render_offset offset) in
+	                let _ = dprint (fun () -> "[fmvApxDCtx] in cD " ^ P.mctxToString cD) in
+	                let _ = dprint (fun () -> "[fmvApxDCtx] l_cd1 " ^ string_of_int l_cd1) in
+	                let _ = dprint (fun () -> "[fmvApxDCtx] l_delta " ^ string_of_int l_delta) in
+	                let _ = dprint (fun () -> "[fmvApxDCtx] k " ^ string_of_int k) in *)
+	          Apx.LF.CtxVar (Apx.LF.CtxOffset (offset + k))
+	        with Whnf.Fmvar_not_found ->
+            throw loc
+              (IndexInvariantFailed
+                 (fun ppf () ->
+                   Format.fprintf ppf "unbound context %s" (Id.render_name x)))
+	      end
 
   | Apx.LF.DDec (psi, t_decl) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param  psi in
@@ -736,8 +753,10 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
            let (offset, _) = Whnf.mctxMVarPos cD psi in
            (Some (Int.LF.CtxOffset (offset + k)), d)
          with Whnf.Fmvar_not_found ->
-           (Printf.printf "Unbound context variable %s"  (Id.render_name psi);
-            raise (Index.Error (loc, Index.UnboundCtxName psi)))
+           throw loc
+             (IndexInvariantFailed
+                (fun ppf () ->
+                  Format.fprintf ppf "unbound context variable %s" (Id.render_name psi)))
        end
   | _ -> phat
   end
@@ -801,15 +820,11 @@ and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
 
 *)
 
-and fmvApxClObj fMVs cD d_param = function
-  | Apx.Comp.MObj m -> Apx.Comp.MObj (fmvApxTerm fMVs cD d_param m)
-  | Apx.Comp.SObj s -> Apx.Comp.SObj (fmvApxSub fMVs cD d_param s)
-
 and fmvApxMetaObj fMVs cD d_param (loc,mobj) = loc , match mobj with
-  | Apx.Comp.ClObj (psi, clobj) ->
+  | Apx.Comp.ClObj (psi, sigma) ->
       let psi' = fmvApxDCtx loc fMVs cD d_param psi in
-      let clobj'    = fmvApxClObj fMVs cD d_param  clobj in
-        Apx.Comp.ClObj (psi', clobj')
+      let sigma' = fmvApxSub fMVs cD d_param sigma in
+      Apx.Comp.ClObj (psi', sigma')
 
   | Apx.Comp.CObj psi -> Apx.Comp.CObj (fmvApxDCtx loc fMVs cD d_param psi)
 

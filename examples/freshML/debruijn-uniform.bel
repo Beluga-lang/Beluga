@@ -1,4 +1,3 @@
-
 %{
 
   Translating HOAS terms into de Bruijn terms:
@@ -12,37 +11,36 @@
 
 }%
 % Types or Terms
-term_or_typ : type.                --name term_or_typ T.
-typ: term_or_typ.
-term : term_or_typ.
-
+LF term_or_typ : type =
+  | typ: term_or_typ
+  | term : term_or_typ
+;
+--name term_or_typ T.
 
 % Intrinsically well-typed expressions
-obj   :  term_or_typ -> type.        --name obj E.
-
-app   : obj term -> obj T_or_K -> obj term.
-lam   : (obj T_or_K  -> obj term) -> obj term.
-
-nat   : obj typ.
-arr   : obj typ -> obj typ -> obj typ.
-all   : (obj typ -> obj typ) -> obj typ.
+LF obj   :  term_or_typ -> type =
+  | app   : obj term -> obj T_or_K -> obj term
+  | lam   : (obj T_or_K  -> obj term) -> obj term
+  | nat   : obj typ
+  | arr   : obj typ -> obj typ -> obj typ
+  | all   : (obj typ -> obj typ) -> obj typ
+;
+--name obj E.
 
 % Translating to untyped deBruijn terms
 
 
-obj'   : term_or_typ -> type.
-
-one    : obj' T.
-shift  : obj' T -> obj' T.  % ^
-lam'   : obj' T -> obj' term.
-app'   : obj' term -> obj' T  -> obj' term.
-
-nat'   : obj' typ.
-arr'   : obj' typ -> obj' typ -> obj' typ.
-all'   : obj' typ -> obj' typ.
+LF obj'   : term_or_typ -> type =
+  | one    : obj' T
+  | shift  : obj' T -> obj' T
+  | lam'   : obj' T -> obj' term
+  | app'   : obj' term -> obj' T  -> obj' term
+  | nat'   : obj' typ
+  | arr'   : obj' typ -> obj' typ -> obj' typ
+  | all'   : obj' typ -> obj' typ
+;
 
 schema ctx = some [a:term_or_typ] obj a ;
-
 
 rec vhoas2db: {g:ctx} {#p: [g |- obj (S[])]}[ |- obj' S] = / total p (vhoas2db g _ p) /
 mlam g => mlam #p => case [g |- #p] of  

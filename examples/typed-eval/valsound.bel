@@ -18,10 +18,7 @@ app  : exp (arr T1 T2) -> exp T1 -> exp T2.
 
 eval: exp T -> exp T -> type.
 ev_lam: eval (lam (\x. E x)) (lam (\x. E x)).
-ev_app: eval (app E1 E2) V
-        <- eval E1 (lam (\x. E x))
-        <- eval E2 V2
-        <- eval (E V2) V.
+ev_app: eval (E V2) V → eval E2 V2 → eval E1 (lam (\x. E x)) → eval (app E1 E2) V.
 
 
 val: exp T -> type.

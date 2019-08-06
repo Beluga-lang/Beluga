@@ -5,7 +5,7 @@ o : type.
 p : type. 
 
 atom   : p -> o.
-&      : o -> o -> o.  %% infix right 11 &.
+conj   : o -> o -> o.  %% infix right 11 conj.
 imp    : o -> o -> o.  %% infix right 10 imp.
 true   : o.
 forall : (i -> o) -> o.
@@ -13,20 +13,19 @@ forall : (i -> o) -> o.
 pf : o -> type.  % natural deductions
 --name pf D. % E
 
-andel   : pf (& A B) -> pf A.
+andel   : pf (conj A B) -> pf A.
 
 
 can : {A:o} pf A -> type.
 atm : pf A -> type.
 
-atm_andel : atm (andel D) <- atm D.
+atm_andel : atm D → atm (andel D).
 
 solve  : o -> type.       % solve goal formulas
 assume : o -> type.       % assume program formulas
 focus  : o -> p -> type.  % immediate entailment
 
-i_andl : focus (& A1 A2) P
-	   <- focus A1 P.
+i_andl : focus A1 P → focus (conj A1 A2) P.
 
 schema c_ctx = some [a:o] block u: assume a, v:pf a , _t:atm v ;
 

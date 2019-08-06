@@ -7,6 +7,7 @@
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
+open Support
 
 let (dprintf, dprint, _) =
   Debug.makeFunctions' (Debug.toFlags [5])
@@ -992,9 +993,9 @@ module Comp = struct
        dprintf
          (fun p ->
            p.fmt
-             ("[checkBranch] at %s with general pattern "
+             ("[checkBranch] at %a with general pattern "
               ^^ "@[<v>%a@.where scrutinee has type %a@]")
-             (Syntax.Loc.to_string loc)
+             Syntax.Loc.print_short loc
              (P.fmt_ppr_pat_obj cD1' cG Pretty.std_lvl) pat
              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau_s
          );

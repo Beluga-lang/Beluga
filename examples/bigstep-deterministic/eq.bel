@@ -1,15 +1,19 @@
 % Equality lemmas
 % Author: Andrew Cave
 
-exp : type. --name exp M.
-app : exp -> exp -> exp.
-lam : (exp -> exp) -> exp.
+LF exp : type = 
+  | app : exp -> exp -> exp
+  | lam : (exp -> exp) -> exp
+;
+--name exp M.
 
-eq : exp -> exp -> type. --name eq D.
-eq_lam : ({x:exp} eq x x -> eq (M x) (N x)) -> eq (lam M) (lam N).
-eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N').
+LF eq : exp -> exp -> type = 
+  | eq_lam : ({x:exp} eq x x -> eq (M x) (N x)) -> eq (lam M) (lam N)
+  | eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N')
+;
+ --name eq D.
 
-schema eqctx = block x:exp, _t:eq x x;
+schema eqctx = block x:exp, t:eq x x;
 
 rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq M M] =
 / total m (eq_refl _ m) / 
@@ -21,7 +25,7 @@ case [g |- M] of
     [g |- eq_app D1 D2]
 
  | [g |- lam (\x. N)] =>
-   let [g,b:block x:exp, _t:eq x x |-  D1[..,b.1,b.2]] = eq_refl [g,b:block x:exp, _t:eq x x] [ g,b  |-  N[..,b.1] ] in
+   let [g,b:block x:exp, t:eq x x |-  D1[..,b.1,b.2]] = eq_refl [g,b:block x:exp, t:eq x x] [ g,b  |-  N[..,b.1] ] in
     [g |- eq_lam (\x.\u. D1)]
 
  | [g |- #p.1] => [g |- #p.2]
@@ -36,7 +40,7 @@ fn d => case d of
    [g |- eq_app F1 F2]
 
  | [g |- eq_lam (\x.\u. D)] =>
-   let [g,b:block x:exp, _t:eq x x |-  F[..,b.1,b.2]] = eq_sym [g,b:block x:exp, _t:eq x x |-  D[..,b.1,b.2]] in
+   let [g,b:block x:exp, t:eq x x |-  F[..,b.1,b.2]] = eq_sym [g,b:block x:exp, t:eq x x |-  D[..,b.1,b.2]] in
    [g |- eq_lam (\x.\u. F)]
 
  | [g |- #p.2] => [g |- #p.2]
@@ -54,8 +58,8 @@ mlam g => mlam M => fn d => case [g,x:exp |-  M] of
 
  | [g,x:exp |-  lam (\y. M1[..,y,x])] =>
    let [g |- D3] = d in
-   let [g,b:block z:exp, _t:eq z z |-  D1[..,b.1,b.2]]
-     = subst_respects_eq [g,b:block z:exp, _t:eq z z] [ g,b,x  |-  M1[..,b.1,x] ] [g,b |- D3[..]] in
+   let [g,b:block z:exp, t:eq z z |-  D1[..,b.1,b.2]]
+     = subst_respects_eq [g,b:block z:exp, t:eq z z] [ g,b,x  |-  M1[..,b.1,x] ] [g,b |- D3[..]] in
    [g |- eq_lam (\x.\u. D1)]
 
  | [g,x:exp |-  x] => d

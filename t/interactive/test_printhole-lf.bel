@@ -16,14 +16,11 @@ done: path.
 
 is_path: path -> tm -> type. --name is_path I.
 
-p_lam: is_path (bind P) (lam E)
-       <- ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)).
+p_lam: ({x:tm}{q:path}is_path q x -> is_path (P q) (E x)) → is_path (bind P) (lam E).
 
-p_left: is_path (left P) (app M N)
-       <- is_path P M.
+p_left: is_path P M → is_path (left P) (app M N).
 
-p_right: is_path (right P) (app M N)
-       <- is_path P N.
+p_right: is_path P N → is_path (right P) (app M N).
 
 p_done: is_path done M.
 
@@ -32,14 +29,11 @@ p_rdx : ({x:tm} ({q:path} is_path q M -> is_path q x) -> is_path P (F x)) -> is_
 jpath : path -> tm -> type.
 jump : tm -> tm -> type.
 
-j_lam: jpath (bind P) (lam E)
-       <- ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)).
+j_lam: ({x:tm}{q:path} jpath q x -> jpath (P q) (E x)) → jpath (bind P) (lam E).
 
-j_left: jpath (left P) (app M N)
-       <- jpath P M.
+j_left: jpath P M → jpath (left P) (app M N).
 
-j_right: jpath (right P) (app M N)
-       <- jpath P N.
+j_right: jpath P N → jpath (right P) (app M N).
 
 j_done: jpath done M.
 
@@ -96,17 +90,20 @@ The file input.bel has been successfully loaded;
 %:countholes
 1;
 %:printhole 0
-Hole number 0
-File "input.bel", line 91, characters 22-23
+input.bel, line 85, column 22: Hole number 0, <anonymous>
+
+Meta-context:
+  {g : jctx}
+  {z3 : [g |- path]}
+  {y4 : [g |- tm]}
+  {q : #[g |- block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
+  {J : [g |- jpath z3 y4]}
+  {H : [g |- is_path z3 y4]}
+
+LF Context:
+  g
+
 ________________________________________________________________________________
-Meta-context: 
-	{g : jctx}
-	{z3 : [g |- path]}
-	{y4 : [g |- tm]}
-	{q : #[g |- block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
-	{J : [g |- jpath z3 y4]}
-	{H : [g |- is_path z3 y4]}
-________________________________________________________________________________
-LF Context: g
 Goal: is_path z3 y4
-Variable of this type: H;
+
+Variables of this type: H;

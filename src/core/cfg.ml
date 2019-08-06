@@ -1,7 +1,7 @@
 (* .cfg file management *)
 
-let is_cfg file_name =
-  Filename.check_suffix file_name ".cfg"
+let is_cfg filename =
+  Filename.check_suffix filename ".cfg"
 
 let rec accum_lines input =
   try
@@ -23,12 +23,21 @@ let filter_lines files =
   let files' = List.map trim_comment files in
   List.filter (fun s -> String.length s != 0) files'
 
-let process_cfg_file file_name =
-  let cfg = open_in file_name in
-  let lines = accum_lines cfg in
-  close_in cfg
-  ; let dir = Filename.dirname file_name ^ "/" in
-    List.map (fun x -> dir ^ x) (filter_lines lines)
+(** Given a path to a cfg file and an open input channel to it,
+    computes the paths to all the referenced beluga files.
+ *)
+let process_cfg_chan filename chan =
+  let lines = accum_lines chan in
+  close_in chan;
+  let dir = Filename.dirname filename ^ "/" in
+  List.map (fun x -> dir ^ x) (filter_lines lines)
+
+(** Given a path to a cfg file, computes the paths to all the
+    references beluga files.
+ *)
+let process_cfg_file filename =
+  let cfg = open_in filename in
+  process_cfg_chan filename cfg
 
 let process_file_argument f =
   if is_cfg f

@@ -28,6 +28,8 @@ What Replay does with _interaction transcripts_ is the following:
       * Should they differ, Replay exits with a nonzero status.
  *)
 
+open Support
+
 (**
 An interaction consists of a _request_, which is sent to the
 subprocess, and a response, which is compared with the output

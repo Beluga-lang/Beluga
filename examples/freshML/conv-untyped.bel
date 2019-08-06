@@ -1,21 +1,25 @@
-
 % Types
-tp  : type.                --name tp T.
-o   : tp.
-arr : tp -> tp -> tp.
-
+LF tp  : type =
+  | o   : tp
+  | arr : tp -> tp -> tp
+;
+--name tp T.
 
 % Intrinsically well-typed expressions
-exp   : tp -> type.        --name exp E.
-value : tp -> type.
-app   : exp (arr A B) -> exp A -> exp B.
-lam   : {A:tp}(value A -> exp B) -> value (arr A B).
-ret   : value A -> exp A.
+LF exp   : tp -> type =
+  | app   : exp (arr A B) -> exp A -> exp B
+  | ret   : value A -> exp A
+and value : tp -> type =
+  | lam   : {A:tp}(value A -> exp B) -> value (arr A B)
+;
 
+--name value V.
+--name exp E.
 
-term: type.
-lam' : (term -> term) -> term.
-app' : term -> term -> term.
+LF term: type =
+  | lam' : (term -> term) -> term
+  | app' : term -> term -> term
+;
 
 schema ctx = some [t:tp] block x:term , _t:value t ;
 

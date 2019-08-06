@@ -86,13 +86,13 @@ inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 | C : Oft [|- G] [gamma |- c] [|- b]
 ;
 
-inductive RedSub : {g:ctx}{G:[|-tctx]}{#S:[ |- g]} ctype =
+inductive RedSub : {g:ctx}{G:[|-tctx]}{$S:[ |- g]} ctype =
 | Nil : RedSub  [ ] [|- nil] [ |- ^ ]
-| Dot : RedSub  [g] [|- G] [ |- #S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm] [|- snoc G A] [ |- #S[^] , M ] 
+| Dot : RedSub  [g] [|- G] [ |- $S[^] ] → Reduce [|- A] [ |- M]
+     → RedSub [g, x:tm] [|- snoc G A] [ |- $S[^] , M ] 
 ;
 
-rec lookup : Lookup [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M[#S[^]]] =
+rec lookup : Lookup [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] [ |- $S[^]] -> Reduce [|- A] [ |- M[$S[^]]] =
 fn v => fn rs => case v of
  | Top =>   let (Dot rs' rN) = rs in rN
  | Pop x => let Dot rs' rN = rs in lookup x rs'
@@ -131,7 +131,7 @@ fn d1, d2 =>
   [|- halts/m MS' (val/pair V1 V2)]
 ;
 
-rec main : {g:ctx} Oft [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] [ |- #S[^]] -> Reduce [|- A] [ |- M[#S[^]]] =
+rec main : {g:ctx} Oft [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] [ |- $S[^]] -> Reduce [|- A] [ |- M[$S[^]]] =
 mlam g => fn d => fn s => case d of
 | Var v => lookup v s
 | Lam d1 =>

@@ -1,0 +1,9 @@
+(library
+  (name beluga)
+  (modules :standard \ old-lexer old-parser)
+  (libraries gen sedlex extlib support unix str)
+  (preprocess
+    (pps sedlex.ppx)))
+(env
+  (dev
+    (flags (:standard -w Azep-44-48-50-58 -warn-error Ap-37-48-50-60))))

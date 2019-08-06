@@ -1,5 +1,5 @@
 # Edit this for your own project dependencies
-OPAM_DEPENDS="ocamlfind extlib ulex"
+OPAM_DEPENDS="ocamlfind sedlex extlib dune dune-build-info"
 
 export OPAMYES=1
 export OPAMVERBOSE=1

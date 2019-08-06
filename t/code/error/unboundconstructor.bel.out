@@ -1,1 +1,2 @@
-Unbound data-level variable (ordinary or meta-variable) or constructor: plus.
+Higher-order meta-variables not (currently) supported
+The variable plus is free; is this intentional?

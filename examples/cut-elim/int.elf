@@ -1,61 +1,26 @@
 %%% Cut-Free Intuitionistic Sequent Calculus
 %%% Author: Frank Pfenning
 
-hyp  : o -> type.  % Hypotheses (left)
-conc : o -> type.  % Conclusion (right)
-%name hyp H.
-%name conc D.
-
-axiom : (hyp A -> conc A).
-
-andr  : conc A
-	 -> conc B
-	 -> conc (& A B).
-
-andl1 : (hyp A -> conc C)
-	 -> (hyp (& A B) -> conc C).
-
-andl2 : (hyp B -> conc C)
-	 -> (hyp (& A B) -> conc C).
-
-impr  : (hyp A -> conc B)
-	 -> conc (imp A B).
-
-impl  : conc A
-	 -> (hyp B -> conc C)
-	 -> (hyp (imp A B) -> conc C).
-
-orr1  : conc A
-	 -> conc (or A B).
-
-orr2  : conc B
-	 -> conc (or A B).
-
-orl   : (hyp A -> conc C)
-	 -> (hyp B -> conc C)
-	 -> (hyp (or A B) -> conc C).
-
-notr  : ({p:o} hyp A -> conc p)
-	 -> conc (not A).
-
-notl  : conc A
-	 -> (hyp (not A) -> conc C).
-
-truer : conc (true).
-
-falsel : (hyp (false) -> conc C).
-
-forallr : ({a:i} conc (A a))
-	   -> conc (forall  A).
-
-foralll : {T:i} (hyp (A T) -> conc C)
-	   -> (hyp (forall A) -> conc C).
-
-existsr : {T:i} conc (A T)
-	   -> conc (exists A).
-
-existsl : ({a:i} hyp (A a) -> conc C)
-	   -> (hyp (exists A) -> conc C).
+LF hyp  : o -> type = ;
+LF conc : o -> type =  % Conclusion (right)
+  | axiom : (hyp A -> conc A)
+  | andr  : conc A -> conc B -> conc (conj A B)
+  | andl1 : (hyp A -> conc C) -> (hyp (conj A B) -> conc C)
+  | andl2 : (hyp B -> conc C) -> (hyp (conj A B) -> conc C)
+  | impr  : (hyp A -> conc B) -> conc (imp A B)
+  | impl  : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C)
+  | orr1  : conc A -> conc (or A B)
+  | orr2  : conc B -> conc (or A B)
+  | orl   : (hyp A -> conc C) -> (hyp B -> conc C) -> (hyp (or A B) -> conc C)
+  | notr  : ({p:o} hyp A -> conc p) -> conc (not A)
+  | notl  : conc A -> (hyp (not A) -> conc C)
+  | truer : conc (true)
+  | falsel : (hyp (false) -> conc C)
+  | forallr : ({a:i} conc (A a)) -> conc (forall  A)
+  | foralll : {T:i} (hyp (A T) -> conc C) -> (hyp (forall A) -> conc C)
+  | existsr : {T:i} conc (A T) -> conc (exists A)
+  | existsl : ({a:i} hyp (A a) -> conc C) -> (hyp (exists A) -> conc C)
+;
 
 
 

@@ -11,7 +11,7 @@ module Arith = struct
 	  let three = suc two;
 	end;
 
-	--open Nats
+	--open Nats.
 
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of
@@ -23,10 +23,10 @@ module Arith = struct
 	let five = add two three;
 end;
 
-let x = [ |- Arith.Nats.z ];
+let x = [ |- Arith::Nats::z ];
 
-let y = [ |- Arith.Nats.s Arith.Nats.z];
+let y = [ |- Arith::Nats::s Arith::Nats::z];
 
-let z = Arith.Nats.suc [ |- Arith.Nats.z ];
+let z = Arith::Nats::suc [ |- Arith::Nats::z ];
 
-let will_fail = Nats.suc x;
+let will_fail = Nats::suc x;

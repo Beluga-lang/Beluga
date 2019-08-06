@@ -425,7 +425,7 @@ fn s => fn v => case s of
 | [ |- m_step (s_pred_succ V) MS] =>
     [ |- pred_subseq_succ m_ref V MS]
 
-| [ |- m_ref] => (case v of [ |- {}])
+| [ |- m_ref] => impossible v % (case v of [ |- {}])
 ;
 
 
@@ -504,7 +504,7 @@ fn s => fn v => case s of
 | [ |- m_step (s_iszero_succ V) MS] =>
     [ |- iszero_subseq_succ m_ref V MS]
 
-| [ |- m_ref] => (case v of [ |- {}])
+| [ |- m_ref] => impossible v % (case v of [ |- {}])
 ;
 
 
@@ -537,16 +537,16 @@ fn s => fn v => case s of
 | [ |- m_step s_switch_false MS] =>
     [ |- switch_subseq_false m_ref MS]
 
-| [ |- m_ref] => (case v of [ |- {}])
+| [ |- m_ref] => impossible v % (case v of [ |- {}])
 ;
 
 empty : type.
 rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- empty]=
 / total v (values_dont_step m m' s v )/
 fn s => fn v => case v of
-| [ |- v_true]    => (case s of [ |- {}] )
-| [ |- v_false]   => (case s of [ |- {}] )
-| [ |- v_z] => (case s of [ |- {}] )
+| [ |- v_true]    => impossible s % (case s of [ |- {}] )
+| [ |- v_false]   => impossible s % (case s of [ |- {}] )
+| [ |- v_z] => impossible s % (case s of [ |- {}] )
 | [ |- (v_s V)] =>
     (case s of [ |- s_succ D] =>
 		values_dont_step [ |- D] [ |- V])
@@ -556,7 +556,7 @@ rec values_mstep_to_themselves: [ |- value V] -> [ |- mstep V V'] -> [ |- eq V V
 / total ms (values_mstep_to_themselves _ _ _ ms)/
 fn v => fn ms => case ms of
  | [ |- m_ref] => [ |- ref]
- | [ |- m_step S MS] => case (values_dont_step [ |- S] v) of [ |- {}]
+ | [ |- m_step S MS] => impossible values_dont_step [ ⊢ S ] v % case (values_dont_step [ |- S] v) of [ |- {}]
 ;
 
 rec small_to_big : {M:[ |- term]}[ |- mstep M V] -> [ |- value V] -> [ |- eval M V] =

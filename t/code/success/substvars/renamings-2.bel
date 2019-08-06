@@ -49,13 +49,13 @@ rec sim_refl : {E:[|- exp T]} Sim [|- T] [|- E] [|- E] = ? ;
 
 
 inductive OSim : (g:ctx) {T:[|- tp]} [g |- exp T[]] -> [g |- exp T[]] -> ctype =
-  | OSimC : {g:ctx}({#S:[ |- g]} Sim [|- T] [|- E1 [#S]] [|- E2 [#S]])
+  | OSimC : {g:ctx}({$S:[ |- g]} Sim [|- T] [|- E1 [$S]] [|- E2 [$S]])
                -> OSim [|- T] [g |- E1] [g |- E2]
 ;
 
-rec osim_cus : (g:ctx) (h:ctx) {#S:[h |- g]} OSim [|- T] [g |- E1] [g |- E2]
-               -> OSim [|- T] [h |- E1[#S]] [h |- E2[#S]] =
-    fun [h |- #S] (OSimC [g] f) => OSimC [h] (mlam #S' => f [|- #S[#S']])
+rec osim_cus : (g:ctx) (h:ctx) {$S:[h |- g]} OSim [|- T] [g |- E1] [g |- E2]
+               -> OSim [|- T] [h |- E1[$S]] [h |- E2[$S]] =
+    fun [h |- $S] (OSimC [g] f) => OSimC [h] (mlam $S' => f [|- $S[$S']])
 ;
 
 
@@ -76,13 +76,13 @@ rec howe_osim_trans : (g:ctx) Howe [|- T] [g |- E1] [g |- E2]
 
 rec howe_refl : (g:ctx) {E:[g |- exp T[]]} Howe [|- T] [g |- E] [g |- E] = ? ;
 
-rec howe_ren : {g:ctx}{h:ctx}{#S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]               
-                -> Howe [|- T] [h |- E1[#S]] [h |- E2[#S]] =
- mlam g, h, #S => fn hr => case hr of 
-| Howe_unit s => Howe_unit (osim_cus [h |- #S] s)
+rec howe_ren : {g:ctx}{h:ctx}{$S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]               
+                -> Howe [|- T] [h |- E1[$S]] [h |- E2[$S]] =
+ mlam g, h, $S => fn hr => case hr of 
+| Howe_unit s => Howe_unit (osim_cus [h |- $S] s)
 | Howe_var [g |- #p] s =>
-      let os = osim_cus [h |- #S] s in
-      howe_osim_trans (howe_refl [h |- #p[#S]]) os 
+      let os = osim_cus [h |- $S] s in
+      howe_osim_trans (howe_refl [h |- #p[$S]]) os 
 
 
 ;
@@ -90,15 +90,15 @@ rec howe_ren : {g:ctx}{h:ctx}{#S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]
 
 
 %{
-inductive Ren : {g:ctx} (h:ctx) {#S : [h |-# g]} ctype =
+inductive Ren : {g:ctx} (h:ctx) {$S : [h |-# g]} ctype =
   | RNil : Ren [] [h |- ^]
-  | RCons : Ren [g] [h |- #S] -> {#p:[h |- exp T[]]} Ren [g,x:exp T[]] [h |- #S, #p]
+  | RCons : Ren [g] [h |- $S] -> {#p:[h |- exp T[]]} Ren [g,x:exp T[]] [h |- $S, #p]
 ;
 
 inductive IsVar : (g:ctx) {T:[|- tp]} [g |-# exp T[]] -> ctype =
   | IsVarC : {#p:[g |- exp T[]]} IsVar [|- T] [g |- #p]
 ;
 
-rec ren_var : (g:ctx)(h:ctx) {T:[ |- tp]}{#R: [h |-# g]}{#p: [g |- exp T[]]} IsVar [ |- T] [h |- #p[#R]] =  ? ; 
+rec ren_var : (g:ctx)(h:ctx) {T:[ |- tp]}{$R: [h |-# g]}{#p: [g |- exp T[]]} IsVar [ |- T] [h |- #p[$R]] =  ? ; 
 }%
 

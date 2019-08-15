@@ -1,4 +1,0 @@
-<{reconstruct,holes,lfholes,logic,parser,store,unify,typeinfo,subord,interactive,command,harpoon}.ml{,i}> : package(extlib)
-<html.*> : package(str)
-<lexer.ml> : package(sedlex)
-<{linkStream,runparser}.ml{,i}>: package(gen)

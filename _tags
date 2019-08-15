@@ -1,4 +1,0 @@
-true : annot, warn(-P)
-"src/core" : include
-"src/support" : include
-<**/*.{byte,native}> : package(unix, extlib, sedlex, gen, str)

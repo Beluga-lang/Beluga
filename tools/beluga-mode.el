@@ -158,8 +158,8 @@ in unicode using Font Lock mode."
     st))
 
 (defun beluga--proc-live-p (process)
-  "Returns non-nil if PROCESS is alive.
-    A process is considered alive if its status is `run', `open',
+  "Return non-nil if PROCESS is alive.
+A process is considered alive if its status is `run', `open',
     `listen', `connect' or `stop'."
   (and (not (eq process nil))
        (memq (process-status process)
@@ -219,7 +219,7 @@ Regexp match data 0 points to the chars."
 (defconst beluga-syntax-fundec-re
   (regexp-opt '("rec" "and") 'symbols)
   "A regexp for matching a function declaration.
- Note that this will also match the 'and' keyword!")
+Note that this will also match the 'and' keyword!")
 
 (defvar beluga-imenu-generic-expression
   `(("Schemas"
@@ -262,13 +262,15 @@ Regexp match data 0 points to the chars."
   1.0
   "How long to wait in total for output before giving up.")
 
+(defvar beluga--output-timer 0.0)
+
 (defun beluga--proc ()
   (unless (beluga--proc-live-p beluga--proc) (beluga-start))
   beluga--proc)
 
 (defun beluga-start ()
-  "Start an inferior Beluga Interactive process with the -emacs
-option. The process is put into a buffer called \"*beluga*\"."
+  "Start an inferior Beluga Interactive process with the -emacs option.
+The process is put into a buffer called \"*beluga*\"."
   (interactive)
   (unless (beluga--proc-live-p beluga--proc)
     (setq beluga--proc
@@ -279,8 +281,8 @@ option. The process is put into a buffer called \"*beluga*\"."
   beluga--proc)
 
 (defun beluga-quit ()
-  "Stops the Beluga interactive process by sending the quit
-  command. This is a graceful termination."
+  "Stop the Beluga interactive process by sending the quit command.
+This is a graceful termination."
   (interactive)
   (beluga--rpc "quit"))
 
@@ -362,7 +364,7 @@ option. The process is put into a buffer called \"*beluga*\"."
     (accept-process-output proc beluga--output-wait-time)
     (setq beluga--output-timer (+ beluga--output-timer beluga--output-wait-time))
     (when (> beluga--output-timer beluga--output-timeout)
-      (error "Beluga command didn't produce complete output."))))
+      (error "Beluga command didn't produce complete output"))))
 
 (defun beluga--chomp (str)
   "Chomp leading and tailing whitespace from STR."
@@ -375,7 +377,7 @@ option. The process is put into a buffer called \"*beluga*\"."
     (substring str2 0 (1- (length str2)))))
 
 (defun beluga--send (cmd)
-  "Send commands to beli."
+  "Send CMD to beli."
   ; (interactive)
   (let ((proc (beluga--proc)))
     (with-current-buffer (process-buffer proc)
@@ -398,11 +400,11 @@ option. The process is put into a buffer called \"*beluga*\"."
   (beluga--receive))
 
 (defun beluga--is-response-error (resp)
-  "Determine whether a Beluga RPC response is an error."
+  "Determine whether a Beluga RPC response (RESP) is an error."
   (string= "-" (substring resp 0 1)))
 
 (defun beluga--rpc! (cmd)
-  "Variant of beluga--rpc that signals an error if the command fails."
+  "Variant of beluga--rpc that signals an error if CMD fails."
   (let ((resp (beluga--rpc cmd)))
     (when (beluga--is-response-error resp)
       (beluga-interactive-error (list (format "%s" (substring resp 2)))))
@@ -415,11 +417,10 @@ This variable is updated by `beluga--maybe-save-load-current-buffer'.")
 (make-variable-buffer-local 'beluga--last-load-time)
 
 (defun beluga--should-reload-p ()
-  "Decide whether the current buffer should be reloaded into the
-  Beluga interpreter.
+  "Decide whether the current buffer should be reloaded into beli.
 The `visited-file-modtime' is compared to `beluga--last-load-time'.
 If the former is greater than the latter, then the former is
-returned. Else, `nil' is returned."
+returned.  Else, nil is returned."
   (let ((mtime (visited-file-modtime)))
     (when (> (float-time mtime) (float-time beluga--last-load-time))
         mtime)))
@@ -450,7 +451,7 @@ returned. Else, `nil' is returned."
 ;; get an exception-raising variant of every function for free.
 
 (defun beluga--generate-format-string (args)
-  "Constructs the format string from the argument list."
+  "Construct the format string from the ARGS."
   (cons
    "%s"
    (mapcar
@@ -461,7 +462,7 @@ returned. Else, `nil' is returned."
     args)))
 
 (defun beluga--generate-arg-list (args)
-  "Constructs a list of symbols representing the function arguments."
+  "Construct a list of symbols representing the function arguments from ARGS."
   (mapcar 'car (cl-remove-if 'stringp args)))
 
 (defun beluga--define-command (rpc name realname args)
@@ -509,37 +510,37 @@ returned. Else, `nil' is returned."
 ;; like parse the response or display it in a message.
 
 (defun beli ()
-  "Start beli mode"
+  "Start beli mode."
   (interactive)
   (beluga-start))
 
 (defun beluga-run-command (cmd)
-  "Run a command in beli"
+  "Run CMD in beli."
   (interactive "MCommand: ")
   (message "%s" (beluga--rpc cmd)))
 
 (defun beluga--maybe-save ()
   (if (buffer-modified-p)
-    (if (y-or-n-p "Save current file?")
+    (if (y-or-n-p "Save current file? ")
       (save-buffer)
       ())))
 
 (defun beluga-get-type ()
-  "Get the type at the current cursor position (if it exists)"
+  "Get the type at the current cursor position (if it exists)."
   (interactive)
   (message "%s" (beluga--basic-get-type (count-lines 1 (point)) (current-column))))
 
 (defun beluga--load-current-buffer (&optional mtime)
-  "Load the current buffer in Beluga Interactive. This command signals
-an error if loading fails.
-The optional `mtime' parameter, if given, will be written to `beluga--last-load-time'."
+  "Load the current buffer in Beluga Interactive.
+This command signals an error if loading fails.
+The optional MTIME parameter, if given, will be written to `beluga--last-load-time'."
   (let ((resp (beluga--basic-load! (buffer-file-name))))
     (when mtime
       (setq beluga--last-load-time mtime))
     resp))
 
 (defun beluga--maybe-save-load-current-buffer ()
-  "Loads the current buffer if it has either never been loaded, or
+  "Load the current buffer if it has either never been loaded, or
 modified since the last time it was loaded.
 This will update `beluga--last-load-time' if a load is performed."
   ;; prompt the user to save the buffer if it is modified
@@ -554,11 +555,11 @@ This will update `beluga--last-load-time' if a load is performed."
   (read (beluga--basic-lochole-n! hole-num)))
 
 (defun beluga--countholes! ()
-  "Gets the number of holes in the file."
+  "Get the number of holes in the file."
   (string-to-number (beluga--basic-countholes!)))
 
 (defun beluga--lookup-hole! (hole)
-  "Looks up a hole number by its name"
+  "Look up a hole number by its name (HOLE)."
   (string-to-number (beluga--basic-lookuphole! hole)))
 
 (defun beluga--highlight-holes ()
@@ -574,7 +575,7 @@ This will update `beluga--last-load-time' if a load is performed."
         ))))
 
 (defun beluga--get-hole-overlay! (hole)
-  "Gets the overlay associated with a hole."
+  "Get the overlay associated with HOLE."
   (nth (beluga--lookup-hole! hole) (beluga-sorted-holes)))
 
 (defun beluga--apply-quail-completions (str)
@@ -595,16 +596,16 @@ This will update `beluga--last-load-time' if a load is performed."
   "\\_<?\\(\\sw+\\)\\_>")
 
 (defun beluga-named-hole-at-point ()
-  "Retrieves the name of the hole at point, if any. If e.g. point is
-  over `?abracadabra`, then this function returns `abracadabra`.
-Else, if point is not over a valid hole, then this function returns
-nil."
+  "Retrieve the name of the hole at point, if any.
+If e.g. point is over \"?abracadabra\", then this function returns
+\"abracadabra\". Else, if point is not over a valid hole, then this
+function returns nil."
   (let ((thing (thing-at-point 'symbol)))
     (when (and thing (string-match beluga-named-hole-re thing))
       (match-string 1 thing))))
 
 (defun beluga--prompt-with-hole-at-point (prompt)
-  "Prompts the user to specify a hole, giving the named hole at point
+  "Prompt the user to specify a hole, giving the named hole at point
 as the default if any."
   (let ((name (beluga-named-hole-at-point)))
     (if name
@@ -613,8 +614,7 @@ as the default if any."
       (read-string (format "%s: " prompt)))))
 
 (defun beluga--begin-command ()
-  "Performs necessary setup to begin a compound Beluga Interactive
-command.
+  "Perform necessary setup to begin a compound Beluga Interactive command.
 Specifically, the following are performed, if necessary:
   - Starting the Beluga inferior process.
   - Saving the current buffer.
@@ -631,8 +631,9 @@ Specifically, the following are performed, if necessary:
 ;; ----- Top-level commands ----- ;;
 
 (defun beluga-load ()
-  "Load the current file in Beluga Interactive. This command will
-start the interactive mode if necessary and prompt for saving."
+  "Load the current file in Beluga Interactive.
+This command will start the interactive mode if necessary and
+prompt for saving."
   (interactive)
   (beluga-start)
   (let ((r (beluga--maybe-save-load-current-buffer)))
@@ -654,7 +655,7 @@ start the interactive mode if necessary and prompt for saving."
     (message resp)))
 
 (defun beluga-split-hole (hole var)
-  "Split on a hole"
+  "Split on HOLE."
   (interactive
    (list
     (beluga--prompt-with-hole-at-point "Hole to split at")
@@ -674,7 +675,7 @@ start the interactive mode if necessary and prompt for saving."
       (beluga--error-no-such-hole hole))))
 
 (defun beluga-intro-hole (hole)
-  "Introduce variables into a hole"
+  "Introduce variables into HOLE"
   (interactive
    (list
     (beluga--prompt-with-hole-at-point "Hole to introduce variables into")))
@@ -705,13 +706,13 @@ start the interactive mode if necessary and prompt for saving."
 
 (defconst beluga-syntax-pragma-re
   "--\\(\\(name\\|query\\|infix\\|prefix\\|assoc\\).*?\\.\\|\\w+\\)"
-  "A regexp for matching a Beluga pragma. Long pragmas continue until
-a `.` is found, e.g. `--name oft D.`. Short pragmas consist of only
-one word, e.g. `--nostrengthen`. It's easy to use this regex to check
-which type of pragma (long or short) was matched: simply check whether
-`match-string' 2 is non-nil. In that case, a long pragma was matched
-and the result is the name of the long pragma. Otherwise,
-`match-string' 1 will contain the name of the matched short.")
+  "A regexp for matching a Beluga pragma.
+Long pragmas continue until a `.` is found, e.g. `--name oft D.`.
+Short pragmas consist of only one word, e.g. `--nostrengthen`.
+It's easy to use this regex to check which type of pragma (long or short)
+was matched: simply check whether `match-string' 2 is non-nil.  In that case,
+a long pragma was matched and the result is the name of the long pragma.
+Otherwise, `match-string' 1 will contain the name of the matched short.")
 
 (defconst beluga-slim-arrows
   '("->" "<-" "→" "←")
@@ -798,8 +799,8 @@ and the result is the name of the long pragma. Otherwise,
        (point))))))
 
 (defun beluga-short-pragma-before-p ()
-  "Decides whether there is a short pragma before point. Returns the
-starting position of the short pragma; else, nil."
+  "Decide whether there is a short pragma before point.
+Return the starting position of the short pragma; else, nil."
   (save-excursion
     ;; idea: move backward across word-characters, and then check if
     ;; there are two dashes before point.

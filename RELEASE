@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -u
+set -eu
 
 # tests that the output of git status --porcelain is non-empty
 if [ -n "$(git status --porcelain)" ]; then

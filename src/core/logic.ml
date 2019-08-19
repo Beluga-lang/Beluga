@@ -532,7 +532,6 @@ module Solver = struct
 
   module U = Unify.StdTrail
   module C = Convert
-  module P = Printer
   module I = Index
 
   (* Dynamic Assumptions *)

@@ -16,8 +16,6 @@ module C     = Whnf
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module RR = Store.Cid.NamedRenderer
-module T = Store.Cid.Typ
 
 let strengthen : bool ref =  Lfrecon.strengthen
 

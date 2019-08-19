@@ -33,9 +33,6 @@ debug.out
 .projectile
 
 # ???
-*.omc
-*.run
 .build
-.omake*
 release
 *.sexp

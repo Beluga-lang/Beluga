@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -e
+set -u
 
 # tests that the output of git status --porcelain is non-empty
 if [ -n "$(git status --porcelain)" ]; then
@@ -17,11 +17,11 @@ echo
 cat VERSION || ( echo "VERSION file doesn't exist; aborting release" ; exit 1 )
 echo
 
-release=./beluga-`cat VERSION`
+release=./beluga-$(cat VERSION)
 
 echo 'Release directory name is:'
 echo
-echo '    '$release
+echo "    ${release}"
 echo
 
 echo 'Building (bytecode) in-tree first, for testing ...'
@@ -38,12 +38,12 @@ make || ( echo 'native make failed; aborting release.' ; exit 1 )
 echo 'Running TEST (native) ...'
 ./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
-if [ -e $release ]; then
-    echo Release directory "$release" already exists.
+if [ -e "${release}" ]; then
+    echo "Release directory ${release} already exists."
     exit 1
 fi
 
-mkdir $release
+mkdir "${release}"
 
 echo 'Copying files in root ...'
 cp -a \
@@ -55,9 +55,9 @@ cp -a \
     myocamlbuild.ml \
     Makefile \
     _tags \
-    $release
+    "${release}"
 
-mkdir $release/bin
+mkdir "${release}/bin"
 
 # Set the RELEASE to true by default.
 # sed -i 's/RELEASE *= *false/RELEASE = true/' $release
@@ -65,51 +65,54 @@ mkdir $release/bin
 echo 'Copying src ...'
 cp -a \
     src \
-    $release
+    "${release}"
 
 echo 'Copying tools ...'
 cp -a \
     tools \
-    $release
+    "${release}"
 
 echo 'Copying examples ...'
 cp -a \
     examples \
-    $release
+    "${release}"
 
-cd $release
-echo Deleting useless files:
-useless=$(find . -print | egrep '~|.DS_Store' || true)
-echo rm -rf $useless
-rm -rf $useless
+(
+    cd "${release}"
+    echo Deleting useless files:
+    useless=$(find . -print | grep -E '~|.DS_Store' || true)
+    echo rm -rf "${useless}"
+    rm -rf "${useless}"
 
-# Remove examples not yet ready for public consumption
-echo rm -rf examples/{notworking,cfg,beluga}
-rm -rf examples/{notworking,cfg,beluga}
+    # Remove examples not yet ready for public consumption
+    echo rm -rf examples/{notworking,cfg,beluga}
+    rm -rf examples/{notworking,cfg,beluga}
 
-echo "Copying $release to $release-sandbox ..."
-cd ..
-if [ -e $release-sandbox ]; then
+    echo "Copying ${release} to ${release-sandbox} ..."
+)
+
+if [ -e "${release}-sandbox" ]; then
     echo Release sandbox directory "$release-sandbox" already exists.
     exit 1
 fi
-cp -a $release $release-sandbox
+cp -a "${release}" "${release}-sandbox"
 
-cd $release-sandbox
+(
+    cd "${release}-sandbox"
 
-echo 'Building (bytecode) in release directory ...'
-make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
+    echo 'Building (bytecode) in release directory ...'
+    make BYTE=1 || ( echo 'make failed; aborting release.' ; exit 1 )
 
-echo 'Building (native) in release directory ...'
-make clean
-make || ( echo 'native make failed; aborting release.' ; exit 1 )
+    echo 'Building (native) in release directory ...'
+    make clean
+    make || ( echo 'native make failed; aborting release.' ; exit 1 )
+)
 
-cd ..
-echo 'Leaving '$release-sandbox' around if you want to test further.'
+echo "Leaving ${release}-sandbox around if you want to test further."
 
-echo 'Building archive' $release.tar.gz
-tar zcf $release.tar.gz $release || ( echo 'tar failed.' ; exit 1 )
+echo "Building archive ${release}.tar.gz"
+tar zcf "${release}.tar.gz" "${release}" || ( echo 'tar failed.' ; exit 1 )
 echo
-ls -l $release.tar.gz
+ls -l "${release}.tar.gz"
 echo
 echo "Release built.  Don't forget to "'`'"git push' if needed."

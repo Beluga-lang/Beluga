@@ -1,11 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -u
 
 ##
 ## Configuration
 ##
 
 # Path to the syntax conversion script.
-CONVERT="$(cd $(dirname $0); pwd)/syntax-conv.rb"
+CONVERT="$(cd "$(dirname "$0")"; pwd)/syntax-conv.rb"
 
 # Filters to exclude certain files and directories from translation.
 # The filters are find(1) expressions.
@@ -23,13 +25,13 @@ VERBOSE=0
 usage () {
   echo "Usage:"
   echo
-  echo "  $ $(basename $0) -o <file-out> <file-in>"
+  echo "  $ $(basename "$0") -o <file-out> <file-in>"
   echo
   echo "  Convert the Beluga source file <file-in> to the new 1.0 syntax."
   echo "  If <file-out> is specified with the '-o' switch then the output"
   echo "  is recorded in <file-out>, otherwise it is dumped to STDIN."
   echo
-  echo "  $ $(basename $0) -s <src-dir> -t <dst-dir>"
+  echo "  $ $(basename "$0") -s <src-dir> -t <dst-dir>"
   echo
   echo "  Copy the contents of <src-dir> to a new directory, <dst-dir>,"
   echo "  and the convert every Beluga source file in <dst-dir> to the"
@@ -39,7 +41,7 @@ usage () {
   echo "  you can point to one explicitly using the RUBY environment"
   echo "  variable, as in the following example:"
   echo
-  echo "  $ RUBY=/path/to/ruby $(basename $0) -o <file-out> <file-in>"
+  echo "  $ RUBY=/path/to/ruby $(basename "$0") -o <file-out> <file-in>"
   echo
   echo "Options:"
   echo -e "  -q\t\t No output."
@@ -54,7 +56,7 @@ usage () {
 
 # Check if a program is in PATH.
 exists () {
-  type $1 &>/dev/null
+  type "$1" &>/dev/null
 }
 
 # Abandon ship.
@@ -65,7 +67,7 @@ abort () {
 
 # Get the absolute path of a file or directory.
 abspath () {
-  echo "$(cd $(dirname $1); pwd)/$(basename $1)"
+  echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 }
 
 
@@ -73,8 +75,8 @@ abspath () {
 ## Preliminary checks
 ##
 
-if [[ ! -z "$RUBY" ]]; then
-  $(exists "$RUBY") ||
+if [[ ! -z "${RUBY}" ]]; then
+  $(exists "${RUBY}") ||
   abort "Error: Unable to find Ruby executable."
 elif exists "ruby1.9"; then
   RUBY="ruby1.9"
@@ -85,11 +87,11 @@ else
 fi
 
 AWKSRC='{if ($1 >= 1 && $2 >= 9) {print 0}}'
-if [[ -z $($RUBY -e 'puts RUBY_VERSION' | tr . ' ' | awk "$AWKSRC") ]]; then
-  abort "Error: $(basename $0) requires Ruby version >= '1.9'."
+if [[ -z $(${RUBY} -e 'puts RUBY_VERSION' | tr . ' ' | awk "${AWKSRC}") ]]; then
+  abort "Error: $(basename "$0") requires Ruby version >= '1.9'."
 fi
 
-[[ -x "$CONVERT" ]] || abort "Error: Conversion script is not executable."
+[[ -x "${CONVERT}" ]] || abort "Error: Conversion script is not executable."
 
 
 ##
@@ -130,50 +132,50 @@ while (( "$#" )); do
   shift
 done
 
-if [[ -z "$SOURCE_DIRECTORY" && -z "$INPUT_FILE" ]]; then
+if [[ -z "${SOURCE_DIRECTORY}" && -z "${INPUT_FILE}" ]]; then
   usage
 fi
 
-if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
-  [[ -d $SOURCE_DIRECTORY && -r $SOURCE_DIRECTORY ]] ||
-  abort "Error: Directory is not accessible, $SOURCE_DIRECTORY."
-  if [[ -z "$TARGET_DIRECTORY" ]]; then
+if [[ ! -z "${SOURCE_DIRECTORY}" ]]; then
+  [[ -d "${SOURCE_DIRECTORY}" && -r "${SOURCE_DIRECTORY}" ]] ||
+  abort "Error: Directory is not accessible, ${SOURCE_DIRECTORY}."
+  if [[ -z "${TARGET_DIRECTORY}" ]]; then
     abort "Error: Target directory must be specified."
   fi
 fi
 
-if [[ ! -z "$TARGET_DIRECTORY" ]]; then
-  if [[ -z "$SOURCE_DIRECTORY" ]]; then
+if [[ ! -z "${TARGET_DIRECTORY}" ]]; then
+  if [[ -z "${SOURCE_DIRECTORY}" ]]; then
     abort "Error: Source directory must be specified."
   fi
-  if [[ ! -d $TARGET_DIRECTORY ]]; then
-    mkdir -p $TARGET_DIRECTORY ||
-    abort "Error: Cannot create $TARGET_DIRECTORY."
-  elif [[ ! -w $TARGET_DIRECTORY ]]; then
-    abort "Error: Cannot access $TARGET_DIRECTORY."
+  if [[ ! -d "${TARGET_DIRECTORY}" ]]; then
+    mkdir -p "${TARGET_DIRECTORY}" ||
+    abort "Error: Cannot create ${TARGET_DIRECTORY}."
+  elif [[ ! -w "${TARGET_DIRECTORY}" ]]; then
+    abort "Error: Cannot access ${TARGET_DIRECTORY}."
   fi
 fi
 
-if [[ ! -z "$INPUT_FILE" ]]; then
-  if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
+if [[ ! -z "${INPUT_FILE}" ]]; then
+  if [[ ! -z "${SOURCE_DIRECTORY}" ]]; then
     abort "Error: Cannot mix directory and file modes."
   fi
-  [[ -f "$INPUT_FILE" && -r "$INPUT_FILE" ]] ||
-  abort "Error: File is not readable, $INPUT_FILE."
+  [[ -f "${INPUT_FILE}" && -r "${INPUT_FILE}" ]] ||
+  abort "Error: File is not readable, ${INPUT_FILE}."
 fi
 
-if [[ ! -z "$OUTPUT_FILE" ]]; then
-  if [[ ! -z "$SOURCE_DIRECTORY" ]]; then
+if [[ ! -z "${OUTPUT_FILE}" ]]; then
+  if [[ ! -z "${SOURCE_DIRECTORY}" ]]; then
     abort "Error: Cannot mix directory and file modes."
   fi
-  if [[ -d "$OUTPUT_FILE" ]]; then
+  if [[ -d "${OUTPUT_FILE}" ]]; then
     abort "Error: Output file exists and is a directory."
-  elif [[ -f "$OUTPUT_FILE" ]]; then
-    [[ -w "$OUTPUT_FILE" ]] ||
+  elif [[ -f "${OUTPUT_FILE}" ]]; then
+    [[ -w "${OUTPUT_FILE}" ]] ||
     abort "Error: Output file exists but it is not writable."
   else
-    OUTPUT_DIR=$(dirname $OUTPUT_FILE)
-    [[ -d $OUTPUT_DIR && -w $OUTPUT_DIR ]] ||
+    OUTPUT_DIR=$(dirname "${OUTPUT_FILE}")
+    [[ -d "${OUTPUT_DIR}" && -w "${OUTPUT_DIR}" ]] ||
     abort "Error: Destination directory of output file is not writable."
   fi
 fi
@@ -183,23 +185,22 @@ fi
 ## Translation
 ##
 
-if [[ ! -z "$INPUT_FILE" ]]; then
-  if [[ ! -z "$OUTPUT_FILE" ]]; then
-    $CONVERT "$INPUT_FILE" > "$OUTPUT_FILE"
+if [[ ! -z "${INPUT_FILE}" ]]; then
+  if [[ ! -z "${OUTPUT_FILE}" ]]; then
+    ${CONVERT} "${INPUT_FILE}" > "${OUTPUT_FILE}"
   else
-    $CONVERT "$INPUT_FILE"
+    ${CONVERT} "${INPUT_FILE}"
   fi
 else
-  SRCDIR=$(abspath $SOURCE_DIRECTORY)
-  rm -rf $TARGET_DIRECTORY
-  cp -r $SOURCE_DIRECTORY/ $TARGET_DIRECTORY/
-  pushd $TARGET_DIRECTORY &>/dev/null
+  rm -rf "${TARGET_DIRECTORY}"
+  cp -r "${SOURCE_DIRECTORY}/" "${TARGET_DIRECTORY}/"
+  pushd "${TARGET_DIRECTORY}" &>/dev/null
   echo find . -name "*.bel" -not "${IGNORE[@]}"
   for f in $(find . -name "*.bel" "${IGNORE[@]}"); do
-      [[ $VERBOSE = 0 ]] && echo -n "Converting: $f"
-      t=$(mktemp -q "$f-XXXX.tmp") &&
-      $CONVERT "$f" > "$t" && rm -f "$f" && mv "$t" "$f" &&
-      [[ $VERBOSE = 0 ]] && echo " => DONE." || echo " => FAILED."
+      [[ ${VERBOSE} = 0 ]] && echo -n "Converting: ${f}"
+      t=$(mktemp -q "${f}-XXXX.tmp") &&
+      ${CONVERT} "${f}" > "${t}" && rm -f "${f}" && mv "${t}" "${f}" &&
+      [[ ${VERBOSE} = 0 ]] && echo " => DONE." || echo " => FAILED."
   done
   popd &>/dev/null
 fi

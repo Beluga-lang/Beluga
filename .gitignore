@@ -32,7 +32,8 @@ debug.out
 *~
 .projectile
 
-# ???
-.build
-release
+# S-expression dump for proof assistant comparison
 *.sexp
+
+# ???
+release

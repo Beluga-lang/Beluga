@@ -1462,17 +1462,21 @@ module Int = struct
     and fmt_ppr_cmp_proof_state ppf =
       let open Comp in
       function
-      | { context; goal; solution } ->
+      | { context = {cD; cG; _} ; goal; solution; _ } ->
          fprintf ppf "@[<v>";
-         Context.iter (Whnf.normMCtx context.cD)
-           (fun cD v -> fprintf ppf "%a@," (fmt_ppr_lf_ctyp_decl cD std_lvl) v );
-         Context.iter' (Whnf.normCtx context.cG)
-           (fun v -> fprintf ppf "%a@," (fmt_ppr_cmp_ctyp_decl context.cD std_lvl) v );
-         fprintf ppf "@]";
+         fprintf ppf "@[<v 2>Meta-context:";
+         Context.iter (Whnf.normMCtx cD)
+           (fun cD v -> fprintf ppf "@,%a" (fmt_ppr_lf_ctyp_decl cD std_lvl) v );
+         fprintf ppf "@]@,";
+         fprintf ppf "@[<v 2>Computational context:";
+         Context.iter' (Whnf.normCtx cG)
+           (fun v -> fprintf ppf "@,%a" (fmt_ppr_cmp_ctyp_decl cD std_lvl) v );
+         fprintf ppf "@]@,";
          for _ = 1 to 80 do fprintf ppf "-" done;
          let goal = Whnf.cnormCTyp goal in
          fprintf ppf "@,";
-         fmt_ppr_cmp_typ context.cD std_lvl ppf goal
+         fmt_ppr_cmp_typ cD std_lvl ppf goal;
+         fprintf ppf "@]";
 
     and fmt_ppr_cmp_proof cD cG ppf =
       let open Comp in
@@ -1508,17 +1512,17 @@ module Int = struct
       let open Comp in
       function
       | SplitBranch (c, h) ->
-         fprintf ppf "@[<v>Case %a:@,%a@]@,"
+         fprintf ppf "@[<v>case %a:@,%a@]@,"
            f c
            fmt_ppr_cmp_hypothetical h
 
     and fmt_ppr_cmp_directive cD cG ppf : unit Comp.directive -> unit =
       let open Comp in
       function
-      | Intros h -> fprintf ppf "--intros@,%a" fmt_ppr_cmp_hypothetical h
+      | Intros h -> fprintf ppf "intros@,%a" fmt_ppr_cmp_hypothetical h
       | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
       | CompSplit (t, _, bs) ->
-         fprintf ppf "--comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) t;
+         fprintf ppf "comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) t;
          List.iter
            (fmt_ppr_cmp_split_branch
               (fun ppf x ->
@@ -1527,7 +1531,7 @@ module Int = struct
            bs;
          fprintf ppf "@]"
       | MetaSplit (m, _, bs) ->
-         fprintf ppf "--meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
+         fprintf ppf "meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
          List.iter
            (fmt_ppr_cmp_split_branch
               (fun ppf (cPsi, h) ->
@@ -1536,13 +1540,13 @@ module Int = struct
            bs;
          fprintf ppf "@]"
       | Solve t ->
-         fprintf ppf "--solve (%a)" (fmt_ppr_cmp_exp_chk cD cG std_lvl) t;
+         fprintf ppf "solve (%a)" (fmt_ppr_cmp_exp_chk cD cG std_lvl) t;
 
     and fmt_ppr_cmp_hypothetical ppf =
       let open Comp in
       function
       | Hypothetical ({cD; cG; cIH = _} as h, proof) ->
-         fprintf ppf "@[<v>{ %a @[<v 2>%a@]@,}@]"
+         fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
            fmt_ppr_cmp_hypotheses h
            (fmt_ppr_cmp_proof cD cG) proof;
 
@@ -1622,9 +1626,9 @@ module Int = struct
             (fmt_ppr_cmp_typ cD lvl) tau
 
       | Comp.WfRec (name, args, typ) ->
-         fprintf ppf "%s @[<v>%a@] : %a"
+         fprintf ppf "@[<v 2>%s @[<hv>%a@]@,: %a@]"
            (Id.render_name name)
-           (pp_print_list (fmt_ppr_cmp_arg cD lvl)) args
+           (pp_print_list ~pp_sep: pp_print_space (fmt_ppr_cmp_arg cD lvl)) args
            (fmt_ppr_cmp_typ cD lvl) typ
 
       | Comp.CTypDeclOpt x ->

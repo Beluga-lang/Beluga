@@ -63,16 +63,21 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
 module type TacticContext = sig
   val add_subgoal : unit Comp.proof_state -> unit
   val remove_current_subgoal : unit -> unit
+
+  (** Shows a message to the user. *)
+  val printf : ('a, Format.formatter, unit) format -> 'a
 end
 
 (** All the high-level proof tactics.
  * In general, a tactic has inputs
  * 1. Some tactic-specific parameters
  * 2. A `proof_state` to act on
- * 3. An action to perform for each subgoal introduced.
  *
- * Each tactic is expected to _solve_ the input `proof_state`,
- * i.e. fill its `solution` field.
+ * Tactics are parameterized by a TacticContext that gives them
+ * certain capabilities, such as manipulating the subgoal list or
+ * showing messages to the user.
+ *
+ * Tactics are not obligated to solve the current subgoal!
  *)
 module Tactic (T : TacticContext) = struct
   type t = unit Comp.proof_state -> unit
@@ -154,6 +159,14 @@ module Tactic (T : TacticContext) = struct
     Comp.intros context (Comp.incomplete_proof new_state)
     |> solve' s
 
+  (** Calls the coverage checker to compute the list of goals for a
+      given type in the contexts of the given proof state.
+   *)
+  let generate_pattern_coverage_goals (tau : Comp.typ) (g : unit Comp.proof_state)
+      : (LF.mctx * Coverage.cov_goal * LF.msub) list =
+    let open Comp in
+    Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) tau []
+
   let meta_split (m : Comp.exp_syn) (tau : Comp.meta_typ) mfs : t =
     let open Comp in
     fun s ->
@@ -164,14 +177,7 @@ module Tactic (T : TacticContext) = struct
           "[harpoon-split] meta-split on %a"
           (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m);
     let cgs =
-      Coverage.genPatCGoals
-        s.context.cD
-        (Coverage.gctx_of_compgctx s.context.cG)
-        (* We need to strip off the inductivity annotations as the
-           coverage checker generally pretends they don't exist
-         *)
-        (TypBox (Syntax.Loc.ghost, tau))
-        []
+      generate_pattern_coverage_goals (TypBox (Syntax.Loc.ghost, tau)) s
     in
     (* We will map f over the coverage goals that were generated.
        f computes the subgoal for the given coverage goal, invokes the
@@ -260,6 +266,19 @@ module Tactic (T : TacticContext) = struct
     Comp.meta_split m tau bs
     |> solve' s
 
+  (** Inverts the given expression, i.e. performs a
+      case-split, but only if there is a unique branch. *)
+  let invert (m : Comp.exp_syn) (tau : Comp.typ) : t =
+    fun g ->
+    let open Comp in
+    let cgs = generate_pattern_coverage_goals tau g in
+    match () with
+    | _ when List.length cgs <> 1 ->
+       T.printf "Can't invert %a. (Not a unique case.)@,"
+         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m
+    | _ ->
+       Misc.not_implemented "invert"
+
   let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
     fun g ->
     let open Comp in
@@ -333,6 +352,7 @@ module Prover = struct
         let remove_current_subgoal () =
           let gs = s.remaining_subgoals in
           DynArray.delete gs (current_subgoal_index gs)
+        let printf x = Format.fprintf ppf x
       end
     in
     let module T = Tactic (TCtx) in
@@ -382,7 +402,7 @@ module Prover = struct
     (* Real tactics: *)
     | Command.Intros names ->
        T.intros names g;
-    | Command.Split t ->
+    | Command.Split (split_kind, t) ->
        let (m, tau) =
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))

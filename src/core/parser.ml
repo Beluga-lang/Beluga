@@ -2711,7 +2711,12 @@ let harpoon_command =
   let split =
     keyword "split"
     &> cmp_exp_syn
-    $> fun t -> H.Split t
+    $> fun t -> H.(Split (`split, t))
+  in
+  let invert =
+    keyword "invert"
+    &> cmp_exp_syn
+    $> fun t -> H.(Split (`invert, t))
   in
   let solve =
     keyword "solve"
@@ -2735,6 +2740,7 @@ let harpoon_command =
   choice
     ( intros
       :: split
+      :: invert
       :: solve
       :: ih
       :: trivial_command

@@ -58,7 +58,7 @@ The file input.bel has been successfully loaded;
 %:countholes
 1;
 %:lochole 0
-("input.bel" 54 1517 1535 54 1517 1537);
+("input.bel" 54 1517 1535 54 1517 1536);
 %:split 0 s
 
 case s of

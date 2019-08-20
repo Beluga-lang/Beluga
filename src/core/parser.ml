@@ -135,7 +135,7 @@ type input = T.t locd LinkStream.t
 type state =
   { input : input
   ; backtrack : bool
-                  (* ; loc : Loc.t (* Location of the last token seen by the parser. *) *)
+  ; last_loc : Loc.t (* Location of the last token seen by the parser. *)
   }
 
   (*
@@ -387,9 +387,12 @@ let next_loc_at (s : state) : Loc.t =
   (* the lexer should infinitely repeat "EOI" when it's done. *)
   | Some ((loc, _), _) -> loc
 
+let prev_loc_at (s : state) : Loc.t = s.last_loc
+
 let initial_state input =
   { input
   ; backtrack = false
+  ; last_loc = Loc.ghost
   }
 
 (** A parsing result is either an error or a successfully computed value. *)
@@ -551,12 +554,16 @@ let next_loc : Loc.t parser =
   get_state
   $> fun s -> next_loc_at s
 
+let prev_loc : Loc.t parser =
+  get_state
+  $> fun s -> prev_loc_at s
+
 (** Runs `p` tracking the span of source material processed by it. *)
 let span p =
   { run =
       fun s ->
       let p =
-        seq3 next_loc p next_loc
+        seq3 next_loc p prev_loc
         $> fun (l1, x, l2) -> (Loc.join l1 l2, x)
       in
       p.run s
@@ -737,7 +744,10 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
            (* construct the new state with the input depending on
               whether the predicate succeeded.
             *)
-           Either.eliminate (Misc.const s) (Misc.const {s with input = xs}) r
+           let open Either in
+           match r with
+           | Left _ -> s
+           | Right _ -> {s with input = xs; last_loc = loc}
          in
          pure_at s' r
   }

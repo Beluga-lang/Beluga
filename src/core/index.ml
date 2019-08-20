@@ -273,7 +273,7 @@ let is_empty_metapat = function
 let print_fvars ppf (vs : Var.t) =
   let open Format in
   pp_print_list
-    ~pp_sep: Misc.Format.comma
+    ~pp_sep: Fmt.comma
     (fun ppf x -> Id.print ppf x.Var.name)
     ppf
     (Var.to_list vs)
@@ -281,7 +281,7 @@ let print_fvars ppf (vs : Var.t) =
 let print_fcvars ppf fcvars =
   let open Format in
   pp_print_list
-    ~pp_sep: Misc.Format.comma
+    ~pp_sep: Fmt.comma
     (fun ppf x ->
       fprintf ppf "FMV %s" (Id.render_name x))
     ppf
@@ -354,7 +354,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
           (fun p ->
             p.fmt "[index_typ] shunting_yard' of %a gives %a with %a"
               (Format.pp_print_list
-                 ~pp_sep: Misc.Format.comma
+                 ~pp_sep: Fmt.comma
                  (P.fmt_ppr_lf_normal Ext.LF.Empty Ext.LF.Null Pretty.std_lvl))
               nl
               Id.print a

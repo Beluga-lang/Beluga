@@ -217,7 +217,7 @@ let print ppf (i, {loc; name; cD; info}) : unit =
        fprintf ppf
          "@,@,Variable%a of this type: @[<h>%a@]"
          plural (List.length suggestions = 1)
-         (pp_print_list ~pp_sep: Misc.Format.comma Id.print) suggestions
+         (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
 
   | CompHoleInfo { cG; compGoal = (tau, theta) } ->
      let cG = Whnf.normCtx cG in
@@ -237,7 +237,7 @@ let print ppf (i, {loc; name; cD; info}) : unit =
        fprintf ppf
          "@,@,Variable%a of this type: @[<h>%a@]"
          plural (List.length suggestions = 1)
-         (pp_print_list ~pp_sep: Misc.Format.comma Id.print) suggestions
+         (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
   end;
   fprintf ppf "@]"
 

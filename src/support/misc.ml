@@ -101,13 +101,6 @@ let id (x : 'a) : 'a = x
 
 type void = { impossible: 'a. 'a }
 
-module Format = struct
-  open Format
-
-  let stringify p x = fprintf str_formatter "%a" p x; flush_str_formatter ()
-  let comma (ppf : Format.formatter) () = fprintf ppf ",@ "
-end
-
 module Gen = struct
   let of_string s =
     let n = ref 0 in

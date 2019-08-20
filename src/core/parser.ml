@@ -868,7 +868,7 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
     match x with
     | Either.Left t ->
        fail'
-         [ Entry { location = Some loc; label = Misc.Format.stringify print_content expected } ]
+         [ Entry { location = Some loc; label = Fmt.stringify print_content expected } ]
          (Unexpected (expected, `token (Some t)))
     | Either.Right x -> pure x
 

@@ -167,5 +167,5 @@ let print (c : class_or_string) ppf =
   | DOLLAR_IDENT s -> case (lazy (p "$%s" s)) (lazy (p "DOLLAR_IDENT"))
   | PRAGMA s -> case (lazy (p "--%s" s)) (lazy (p "PRAGMA"))
 
-let to_string t = Misc.Format.stringify (print `TOKEN) t
-let class_to_string t = Misc.Format.stringify (print `CLASS) t
+let to_string t = Fmt.stringify (print `TOKEN) t
+let class_to_string t = Fmt.stringify (print `CLASS) t

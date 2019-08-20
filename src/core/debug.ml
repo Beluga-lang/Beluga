@@ -6,11 +6,7 @@ type flags = int
 
 type 'a io = 'a -> unit
 
-module Fmt = struct
-  type fmt =
-    { fmt : 'a. ('a, Format.formatter, unit) format -> 'a }
-end
-
+module Fmt = Support.Fmt
 open Fmt
 
 let chatter : int ref = ref 1

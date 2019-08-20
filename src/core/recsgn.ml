@@ -83,7 +83,7 @@ let _ =
            fprintf ppf "Argument %a does not appear in argument list @[<h>%a@]."
              Id.print a
              (pp_print_list
-                ~pp_sep: Misc.Format.comma
+                ~pp_sep: Fmt.comma
                 (fun ppf ->
                   (Maybe.eliminate
                      (fun _ -> fprintf ppf "_")

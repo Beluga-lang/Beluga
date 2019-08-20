@@ -433,9 +433,9 @@ module Ext = struct
            else, just print each term comma-separated *)
         
         if nonempty && Misc.List.nonempty tms then  
-          Misc.Format.comma ppf ();
+          Fmt.comma ppf ();
         
-        pp_print_list ~pp_sep: Misc.Format.comma
+        pp_print_list ~pp_sep: Fmt.comma
           print_tm ppf tms;
       in
         
@@ -560,7 +560,7 @@ module Ext = struct
             (fmt_ppr_lf_dctx cD 0) cPsi
             (fmt_ppr_lf_typ_decl cD cPsi lvl) d
 
-    and fmt_ppr_lf_mctx ?(sep = Misc.Format.comma) lvl ppf = function
+    and fmt_ppr_lf_mctx ?(sep = Fmt.comma) lvl ppf = function
       | LF.Empty ->
           fprintf ppf "."
 

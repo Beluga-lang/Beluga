@@ -874,7 +874,7 @@ module Int = struct
             (fmt_ppr_lf_dctx cD 0) cPsi
             (Id.render_name x)
 
-    and fmt_ppr_lf_mctx ?(sep = Misc.Format.comma) lvl ppf cD =
+    and fmt_ppr_lf_mctx ?(sep = Fmt.comma) lvl ppf cD =
       (* Compute the list of declarations to print *)
       let ds =
         let should_print = function

@@ -348,6 +348,26 @@ module Tactic = struct
     |> solve' g
 end
 
+module Automation = struct
+  open Comp
+
+  type t = unit proof_state -> Tactic.tactic_context -> unit
+
+  let auto_intros : t =
+    fun g tctx ->
+    let (t, _) = g.goal in
+    dprintf
+      (fun p ->
+        p.fmt
+          "[auto_intros]: invoked on %a"
+          (P.fmt_ppr_cmp_typ g.context.cD Pretty.std_lvl) t
+      );
+    match t with
+    | TypArr _ | TypPiBox _ ->
+       Tactic.intros None g tctx
+    | _ -> ()
+end
+
 module Prover = struct
   type interpreter_state =
     { initial_state : unit Comp.proof_state
@@ -384,6 +404,9 @@ module Prover = struct
     else
       Some (DynArray.get gs (current_subgoal_index gs))
 
+  let add_subgoal_hook g tctx =
+    Automation.auto_intros g tctx
+
   let process_command
         (ppf : Format.formatter)
         (s : interpreter_state) (g : unit Comp.proof_state)
@@ -401,11 +424,29 @@ module Prover = struct
           (Some s.order)
       ]
     in
-    let tctx =
-      { Tactic.add_subgoal = DynArray.add s.remaining_subgoals
+    let rec tctx =
+      { Tactic.add_subgoal =
+          (fun g ->
+            dprintf
+              (fun p ->
+                p.fmt
+                  "[automation] add the following:\n%a"
+                  P.fmt_ppr_cmp_proof_state g
+              );
+            DynArray.add s.remaining_subgoals g;
+            add_subgoal_hook g tctx
+          )
       ; Tactic.remove_current_subgoal =
           (fun () ->
             let gs = s.remaining_subgoals in
+            let csg_index = current_subgoal_index gs in
+            dprintf
+              (fun p ->
+                p.fmt
+                  "[automation] remove goal %d of the following:\n%a"
+                  csg_index
+                  P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
+              );
             DynArray.delete gs (current_subgoal_index gs)
           )
       ; Tactic.printf = (fun x -> Format.fprintf ppf x)

@@ -82,14 +82,6 @@ let filter_mctx_refinement
   in
   List.filter f cDl'
 
-module type TacticContext = sig
-  val add_subgoal : unit Comp.proof_state -> unit
-  val remove_current_subgoal : unit -> unit
-
-  (** Shows a message to the user. *)
-  val printf : ('a, Format.formatter, unit) format -> 'a
-end
-
 (** All the high-level proof tactics.
  * In general, a tactic has inputs
  * 1. Some tactic-specific parameters
@@ -101,8 +93,14 @@ end
  *
  * Tactics are not obligated to solve the current subgoal!
  *)
-module Tactic (T : TacticContext) = struct
-  type t = unit Comp.proof_state -> unit
+module Tactic = struct
+  type t = unit Comp.proof_state -> tactic_context -> unit
+
+  and tactic_context =
+    { add_subgoal : unit Comp.proof_state -> unit
+    ; remove_current_subgoal : unit -> unit
+    ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
+    }
 
   (** `solve` with the arguments switched around to make it more
       convenient to call from other tactics.
@@ -114,9 +112,9 @@ module Tactic (T : TacticContext) = struct
       This will solve the current subgoal.
    *)
   let solve (proof : Comp.incomplete_proof) : t =
-    fun s ->
+    fun s tctx ->
     solve' s proof;
-    T.remove_current_subgoal ()
+    tctx.remove_current_subgoal ()
 
   (** Walks a type and collects assumptions into cD and cG,
       returning the conclusion type.
@@ -162,7 +160,7 @@ module Tactic (T : TacticContext) = struct
    *)
   let intros (names : string list option) : t =
     (* Main body of `intros`: *)
-    fun s ->
+    fun s tctx ->
     let open Comp in
     let (t, sigma) = s.goal in
     let cD, cG, t' = intros' names LF.Empty LF.Empty t in
@@ -184,8 +182,8 @@ module Tactic (T : TacticContext) = struct
     in
     (* Invoke the callback on the subgoal that we created *)
     (* Solve the current goal with the subgoal. *)
-    T.remove_current_subgoal ();
-    T.add_subgoal new_state;
+    tctx.remove_current_subgoal ();
+    tctx.add_subgoal new_state;
     Comp.intros context local_context (Comp.incomplete_proof new_state)
     |> solve' s
 
@@ -193,7 +191,7 @@ module Tactic (T : TacticContext) = struct
       given type in the contexts of the given proof state.
    *)
   let generate_pattern_coverage_goals
-        (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : unit Comp.proof_state)
+        (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : unit Comp.proof_state) (tctx : tactic_context)
       : (LF.mctx * Coverage.cov_goal * LF.msub) list option =
     let open Comp in
     let cgs =
@@ -203,14 +201,14 @@ module Tactic (T : TacticContext) = struct
     let n = List.length cgs in
     match k with
     | `invert when n <> 1 ->
-       T.printf "Can't invert %a. (Not a unique case.)@,"
+       tctx.printf "Can't invert %a. (Not a unique case.)@,"
          (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m;
        None
     | _ -> Some cgs
 
   let split (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) mfs : t =
     let open Comp in
-    fun s ->
+    fun s tctx ->
     (* Compute the coverage goals for the type to split on. *)
     dprintf
       (fun p ->
@@ -219,7 +217,7 @@ module Tactic (T : TacticContext) = struct
           (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m
        (P.fmt_ppr_cmp_typ s.context.cD Pretty.std_lvl) tau
       );
-    match generate_pattern_coverage_goals k m tau s with
+    match generate_pattern_coverage_goals k m tau s tctx with
     | None -> ()
     (* splitting failed, so we do nothing *)
     | Some cgs ->
@@ -315,10 +313,10 @@ module Tactic (T : TacticContext) = struct
               |> Maybe.get
               |> Pair.lmap Context.hatToDCtx
             in
-            T.add_subgoal new_state;
+            tctx.add_subgoal new_state;
             meta_branch c context local_context (incomplete_proof new_state)
        in
-       T.remove_current_subgoal ();
+       tctx.remove_current_subgoal ();
        let bs = List.map f cgs in
        (* Assemble the split branches computed in `bs` into the Harpoon
           Split syntax.
@@ -327,7 +325,7 @@ module Tactic (T : TacticContext) = struct
        |> solve' s
 
   let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
-    fun g ->
+    fun g tctx ->
     let open Comp in
     let new_state =
       { g with
@@ -342,8 +340,8 @@ module Tactic (T : TacticContext) = struct
       ; solution = None
       }
     in
-    T.remove_current_subgoal ();
-    T.add_subgoal new_state;
+    tctx.remove_current_subgoal ();
+    tctx.add_subgoal new_state;
     prepend_commands
       [ Comp.IH (m, name) ]
       (Comp.incomplete_proof new_state)
@@ -391,18 +389,7 @@ module Prover = struct
         (s : interpreter_state) (g : unit Comp.proof_state)
         (cmd : Syntax.Ext.Harpoon.command)
       : unit =
-    let module TCtx : TacticContext =
-      struct
-        let add_subgoal = DynArray.add s.remaining_subgoals
-        let remove_current_subgoal () =
-          let gs = s.remaining_subgoals in
-          DynArray.delete gs (current_subgoal_index gs)
-        let printf x = Format.fprintf ppf x
-      end
-    in
-    let module T = Tactic (TCtx) in
     let open Comp in
-    let { cD; cG; cIH } = g.context in
     let mfs =
       (* this should probably directly be a part of interpreter_state,
          or perhaps a part of a larger state for the collection of
@@ -414,6 +401,17 @@ module Prover = struct
           (Some s.order)
       ]
     in
+    let tctx =
+      { Tactic.add_subgoal = DynArray.add s.remaining_subgoals
+      ; Tactic.remove_current_subgoal =
+          (fun () ->
+            let gs = s.remaining_subgoals in
+            DynArray.delete gs (current_subgoal_index gs)
+          )
+      ; Tactic.printf = (fun x -> Format.fprintf ppf x)
+      }
+    in
+    let { cD; cG; cIH } = g.context in
     match cmd with
     (* Administrative commands: *)
     | Command.ShowProof ->
@@ -432,8 +430,8 @@ module Prover = struct
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
         * and then add it back (on the end of the list) *)
-       TCtx.remove_current_subgoal ();
-       TCtx.add_subgoal g
+       Tactic.(tctx.remove_current_subgoal ());
+       Tactic.(tctx.add_subgoal g)
     | Command.ShowIHs ->
        let f i =
          Format.fprintf ppf "%d. %a@,"
@@ -446,7 +444,7 @@ module Prover = struct
 
     (* Real tactics: *)
     | Command.Intros names ->
-       T.intros names g;
+       Tactic.intros names g tctx;
     | Command.Split (split_kind, t) ->
        let (m, tau) =
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
@@ -455,7 +453,7 @@ module Prover = struct
        begin
          match tau with
          | TypInd tau | tau ->
-            T.split split_kind m tau mfs g
+            Tactic.split split_kind m tau mfs g tctx
        end
     | Command.UseIH (t, name (* , typ *)) ->
        let cG' =
@@ -494,15 +492,15 @@ module Prover = struct
              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
              (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cIH);
        let _ = Check.Comp.syn cD cG' ~cIH: cIH mfs m in
-       T.useIH m tau name g;
+       Tactic.useIH m tau name g tctx;
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
        try
          Check.Comp.check cD cG mfs m g.goal;
          ( Comp.solve m
-           |> T.solve
-         ) g ;
+           |> Tactic.solve
+         ) g tctx;
        with
          Check.Comp.Error (_l, _e) ->
           Printexc.print_backtrace stderr

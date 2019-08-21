@@ -386,7 +386,7 @@ module Prover = struct
         (s : unit Comp.proof_state)
       : interpreter_state =
     { initial_state = s
-    ; remaining_subgoals = DynArray.of_list [s]
+    ; remaining_subgoals = DynArray.of_list []
     ; theorem_name = name
     ; order = order
     }
@@ -411,6 +411,7 @@ module Prover = struct
         (ppf : Format.formatter)
         (s : interpreter_state) (g : unit Comp.proof_state)
         (cmd : Syntax.Ext.Harpoon.command)
+        (tctx : Tactic.tactic_context)
       : unit =
     let open Comp in
     let mfs =
@@ -423,34 +424,6 @@ module Prover = struct
           (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
           (Some s.order)
       ]
-    in
-    let rec tctx =
-      { Tactic.add_subgoal =
-          (fun g ->
-            dprintf
-              (fun p ->
-                p.fmt
-                  "[automation] add the following:\n%a"
-                  P.fmt_ppr_cmp_proof_state g
-              );
-            DynArray.add s.remaining_subgoals g;
-            add_subgoal_hook g tctx
-          )
-      ; Tactic.remove_current_subgoal =
-          (fun () ->
-            let gs = s.remaining_subgoals in
-            let csg_index = current_subgoal_index gs in
-            dprintf
-              (fun p ->
-                p.fmt
-                  "[automation] remove goal %d of the following:\n%a"
-                  csg_index
-                  P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
-              );
-            DynArray.delete gs (current_subgoal_index gs)
-          )
-      ; Tactic.printf = (fun x -> Format.fprintf ppf x)
-      }
     in
     let { cD; cG; cIH } = g.context in
     match cmd with
@@ -569,10 +542,41 @@ module Prover = struct
     in
     Either.trap f |> Either.lmap show_error
 
+  let build_tactic_context ppf s =
+    let rec tctx =
+      { Tactic.add_subgoal =
+          (fun g ->
+            dprintf
+              (fun p ->
+                p.fmt
+                  "[automation] add the following:\n%a"
+                  P.fmt_ppr_cmp_proof_state g
+              );
+            DynArray.add s.remaining_subgoals g;
+            add_subgoal_hook g tctx
+          )
+      ; Tactic.remove_current_subgoal =
+          (fun () ->
+            let gs = s.remaining_subgoals in
+            let csg_index = current_subgoal_index gs in
+            dprintf
+              (fun p ->
+                p.fmt
+                  "[automation] remove goal %d of the following:\n%a"
+                  csg_index
+                  P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
+              );
+            DynArray.delete gs (current_subgoal_index gs)
+          )
+      ; Tactic.printf = (fun x -> Format.fprintf ppf x)
+      }
+    in
+    tctx
+
   (* UTF-8 encoding of the lowercase Greek letter lambda. *)
   let lambda : string = "\xCE\xBB"
 
-  let rec loop ppf (s : interpreter_state) : unit =
+  let rec loop ppf (s : interpreter_state) tctx : unit =
     (* Get the next subgoal *)
     match next_subgoal s with
     | None ->
@@ -592,13 +596,13 @@ module Prover = struct
          let open Either in
          parse_input input
          $ fun cmd ->
-           run_safe (fun () -> process_command ppf s g cmd)
+           run_safe (fun () -> process_command ppf s g cmd tctx)
        in
        Either.eliminate
          (fun f -> f ppf)
          (Misc.const ())
          e;
-       loop ppf s
+       loop ppf s tctx
 
   let start_toplevel
         (ppf : Format.formatter) (* The formatter used to display messages *)
@@ -606,7 +610,9 @@ module Prover = struct
         (stmt : Comp.tclo) (* The statement of the theorem *)
         (order : Comp.order) (* The induction order of the theorem *)
       : unit =
-    Comp.make_proof_state stmt
-    |> make_prover_state name order
-    |> loop ppf
+    let g = Comp.make_proof_state stmt in
+    let s = make_prover_state name order g in
+    let tctx = build_tactic_context ppf s in
+    Tactic.(tctx.add_subgoal g);
+    loop ppf s tctx
 end

@@ -3,7 +3,7 @@
 open Support
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
-
+module Command = Syntax.Ext.Harpoon
 module P = Pretty.Int.DefaultPrinter
 
 let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
@@ -143,86 +143,84 @@ module Tactic (T : TacticContext) = struct
     let (t, sigma) = s.goal in
     let cD, cG, t' = intro' names LF.Empty LF.Empty t in
     let goal' = (t', sigma) in
-    let context =
-      { cG = Context.append s.context.cG cG
-      ; cD = Context.append s.context.cD cD
-      ; cIH = s.context.cIH (* TODO shift any IHs *)
-      }
-    in
-    let new_state = { context; goal = goal'; solution = None } in
-    (* Invoke the remove_current_subgoal callback and
-       the add_subgoal callback on the subgoal that we created.
-     *)
+    let local_context = { cG; cD; cIH = LF.Empty } in
+    let context = Context.append_hypotheses s.context local_context in
+    let new_state = { context; local_context; goal = goal'; solution = None } in
+    (* Invoke the callback on the subgoal that we created *)
+    (* Solve the current goal with the subgoal. *)
     T.remove_current_subgoal ();
     T.add_subgoal new_state;
-    (* Solve the current goal with the subgoal. *)
     Comp.intros context (Comp.incomplete_proof new_state)
     |> solve' s
 
   (** Calls the coverage checker to compute the list of goals for a
       given type in the contexts of the given proof state.
    *)
-  let generate_pattern_coverage_goals (tau : Comp.typ) (g : unit Comp.proof_state)
-      : (LF.mctx * Coverage.cov_goal * LF.msub) list =
+  let generate_pattern_coverage_goals
+        (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : unit Comp.proof_state)
+      : (LF.mctx * Coverage.cov_goal * LF.msub) list option =
     let open Comp in
-    Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) tau []
+    let cgs =
+      Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) tau []
+                            (* XXX should be Total.strip tau? *)
+    in
+    let n = List.length cgs in
+    match k with
+    | `invert when n <> 1 ->
+       T.printf "Can't invert %a. (Not a unique case.)@,"
+         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m;
+       None
+    | _ -> Some cgs
 
-  let meta_split (m : Comp.exp_syn) (tau : Comp.meta_typ) mfs : t =
+  let split (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) mfs : t =
     let open Comp in
     fun s ->
     (* Compute the coverage goals for the type to split on. *)
     dprintf
       (fun p ->
         p.fmt
-          "[harpoon-split] meta-split on %a"
-          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m);
-    let cgs =
-      generate_pattern_coverage_goals (TypBox (Syntax.Loc.ghost, tau)) s
-    in
-    (* We will map f over the coverage goals that were generated.
-       f computes the subgoal for the given coverage goal, invokes the
-       add_subgoal callback on the computed subgoal (to register it),
-       invokes the remove_current_subgoal callback, and constructs the
-       Harpoon syntax for this split branch.
-     *)
-    let f (cD, cov_goal, ms) =
-      match cov_goal with
-      (* Because we called genPatCGoals, I'm pretty sure that the
-         CovCtx and CovGoal constructors are impossible here,
-         but I could be wrong.
-       *)
-      | Coverage.CovCtx cPsi ->
-         Format.eprintf "OH NO 1\n";
-         Misc.not_implemented "CovCtx impossible"
-      | Coverage.CovGoal (cPsi, tR, (tau', ms')) ->
-         Format.eprintf "OH NO 2\n";
-         Misc.not_implemented "CovGoal impossible"
-      | Coverage.CovPatt (cG, p, tau) ->
-         match p with
-         | PatMetaObj (_, patt) ->
+          "[harpoon-split] split on %a with type %a"
+          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m
+       (P.fmt_ppr_cmp_typ s.context.cD Pretty.std_lvl) tau
+      );
+    match generate_pattern_coverage_goals k m tau s with
+    | None -> ()
+    (* splitting failed, so we do nothing *)
+    | Some cgs ->
+       (* We will map f over the coverage goals that were generated.
+          f computes the subgoal for the given coverage goal, invokes the
+          add_subgoal callback on the computed subgoal (to register it),
+          invokes the remove_current_subgoal callback, and constructs the
+          Harpoon syntax for this split branch.
+        *)
+       let f (cD, cov_goal, ms) =
+         match cov_goal with
+         (* Because we called genPatCGoals, I'm pretty sure that the
+            CovCtx and CovGoal constructors are impossible here,
+            but I could be wrong.
+          *)
+         | Coverage.CovCtx _
+           | Coverage.CovGoal (_, _, _) ->
+            Misc.not_implemented "CovCtx impossible"
+         | Coverage.CovPatt (cG, p, tau) ->
             let open Comp in
-            let c =
-              head_of_meta_obj patt
-              |> Maybe.get
-              |> Pair.lmap Context.hatToDCtx
-            in
             let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
             let cG = refine_ctx s.context.cG in
             let cIH = refine_ctx s.context.cIH in
             dprint
               (fun _ ->
                 "[harpoon-split] got pattern " ^ P.patternToString cD cG p);
-            let (cD, cIH') =
+            let (cDext, cIH') =
               if is_comp_inductive cG m && Total.struct_smaller p
               then
                 (* mark subterms in the context as inductive *)
                 let cD1 = Check.Comp.mvars_in_patt cD p in
                 (* Compute the well-founded recursive calls *)
                 let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
-                dprint
-                  (fun _ ->
-                    "[harpoon-split] computed WF rec calls "
-                    ^ P.gctxToString cD cIH);
+                dprintf
+                  (fun p ->
+                    p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
+                      (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cIH);
 
                 (cD1, cIH)
               else
@@ -233,10 +231,23 @@ module Tactic (T : TacticContext) = struct
                 in
                 (cD, LF.Empty)
             in
-            let cD = Check.Comp.id_map_ind cD ms s.context.cD in
+            (* propagate inductive annotations *)
+            let cD = Check.Comp.id_map_ind cDext ms s.context.cD in
+            dprintf
+              (fun p ->
+                let open Format in
+                p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,ms@,%a@,=@,%a@]"
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cDext
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) s.context.cD
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cD);
             let cIH0 = Total.wf_rec_calls cD cG mfs in
-
-            let h =
+            let local_context =
+              { no_hypotheses with
+                cIH = Context.append cIH0 cIH'
+              ; cD = cDext
+              }
+            in
+            let context =
               { cD
               ; cG
               ; cIH =
@@ -244,9 +255,9 @@ module Tactic (T : TacticContext) = struct
                     (Context.append cIH0 cIH')
               }
             in
-
             let new_state =
-              { context = h
+              { context
+              ; local_context
               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
               (* ^ our goal already has a delayed msub, so we compose the
                  one we obtain from the split (the refinement substitution)
@@ -255,29 +266,27 @@ module Tactic (T : TacticContext) = struct
               ; solution = None
               }
             in
+            (* compute the head of the pattern to be the case label *)
+            let patt =
+              match p with
+              | PatMetaObj (_, patt) -> patt
+              | _ -> failwith "splitting on non computation-level types not supported yet"
+            in
+            let c =
+              head_of_meta_obj patt
+              |> Maybe.get
+              |> Pair.lmap Context.hatToDCtx
+            in
             T.add_subgoal new_state;
-            meta_branch c h (incomplete_proof new_state)
-    in
-    T.remove_current_subgoal ();
-    let bs = List.map f cgs in
-    (* Assemble the split branches computed in `bs` into the Harpoon
-       Split syntax.
-     *)
-    Comp.meta_split m tau bs
-    |> solve' s
-
-  (** Inverts the given expression, i.e. performs a
-      case-split, but only if there is a unique branch. *)
-  let invert (m : Comp.exp_syn) (tau : Comp.typ) : t =
-    fun g ->
-    let open Comp in
-    let cgs = generate_pattern_coverage_goals tau g in
-    match () with
-    | _ when List.length cgs <> 1 ->
-       T.printf "Can't invert %a. (Not a unique case.)@,"
-         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m
-    | _ ->
-       Misc.not_implemented "invert"
+            meta_branch c local_context (incomplete_proof new_state)
+       in
+       T.remove_current_subgoal ();
+       let bs = List.map f cgs in
+       (* Assemble the split branches computed in `bs` into the Harpoon
+          Split syntax.
+        *)
+       Comp.meta_split m tau bs
+       |> solve' s
 
   let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
     fun g ->
@@ -301,7 +310,6 @@ module Tactic (T : TacticContext) = struct
       [ Comp.IH (m, name) ]
       (Comp.incomplete_proof new_state)
     |> solve' g
-
 end
 
 module Prover = struct
@@ -345,7 +353,6 @@ module Prover = struct
         (s : interpreter_state) (g : unit Comp.proof_state)
         (cmd : Syntax.Ext.Harpoon.command)
       : unit =
-    let module Command = Syntax.Ext.Harpoon in
     let module TCtx : TacticContext =
       struct
         let add_subgoal = DynArray.add s.remaining_subgoals
@@ -382,7 +389,7 @@ module Prover = struct
           yet.
         *)
        let s = s.initial_state in
-       Format.fprintf ppf "@[<v>Proof so far:@.%a@]"
+       Format.fprintf ppf "@[<v>Proof so far:@,%a@]"
          (P.fmt_ppr_cmp_proof cD cG) (incomplete_proof s)
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
@@ -391,11 +398,11 @@ module Prover = struct
        TCtx.add_subgoal g
     | Command.ShowIHs ->
        let f i =
-         Format.fprintf ppf "%d. %a@."
+         Format.fprintf ppf "%d. %a@,"
            (i + 1)
            (P.fmt_ppr_cmp_ctyp_decl g.context.cD Pretty.std_lvl)
        in
-       Format.fprintf ppf "There are %d IHs:@."
+       Format.fprintf ppf "There are %d IHs:@,"
          (Context.length g.context.cIH);
        Context.to_list g.context.cIH |> List.iteri f
 
@@ -407,14 +414,11 @@ module Prover = struct
          let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
          (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
        in
-       (* Now to decide whether we're splitting on an index object or
-          a data object. *)
        begin
          match tau with
-         | TypInd (TypBox (_, m_typ)) | TypBox (_, m_typ) ->
-            T.meta_split m m_typ mfs g;
-         | _ -> failwith "wtf"
-       end;
+         | TypInd tau | tau ->
+            T.split split_kind m tau mfs g
+       end
     | Command.UseIH (t, name (* , typ *)) ->
        let cG' =
          (* We elaborate the IH in an extended context with the
@@ -430,7 +434,7 @@ module Prover = struct
            , Comp.CTypDecl
                ( s.theorem_name
                , Whnf.cnormCTyp s.initial_state.Comp.goal |> Total.strip
-               (* In command.ml, when we enter Harpoon, we pass
+               (* ^ In command.ml, when we enter Harpoon, we pass
                   the theorem to prove *with* induction
                   annotations. Sadly, elaboration does *not* play
                   nice with these annotations, so we need to strip
@@ -483,7 +487,7 @@ module Prover = struct
   let run_safe (f : unit -> 'a) : 'a error =
     let show_error e ppf =
       Format.fprintf ppf
-        "@[<v>Internal error. (State may be undefined.)@.%s@]"
+        "@[<v>Internal error. (State may be undefined.)@,%s@]"
         (Printexc.to_string e)
     in
     Either.trap f |> Either.lmap show_error
@@ -495,12 +499,12 @@ module Prover = struct
     (* Get the next subgoal *)
     match next_subgoal s with
     | None ->
-       Format.fprintf ppf "@.Proof complete! (No subgoals left.)@.";
+       Format.fprintf ppf "@,Proof complete! (No subgoals left.)@,";
        () (* we're done; proof complete *)
     | Some g ->
        (* Show the proof state and the prompt *)
        Format.fprintf ppf
-         "@.@[<v>Current state:@.%a@]@.There are %d IHs.@.%s> @?"
+         "@,@[<v>Current state:@,%a@,There are %d IHs.@,@]%s> @?"
          P.fmt_ppr_cmp_proof_state g
          (Context.length g.Comp.context.Comp.cIH)
          lambda;

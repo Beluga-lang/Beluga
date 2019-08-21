@@ -1,5 +1,7 @@
 (* module Interactive *)
 
+open Support
+
 module P = Pretty.Int.DefaultPrinter
 module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
@@ -428,12 +430,8 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
     | _ ->
        failwith "mCtx contains something we can't split on"
   in
-    match searchGctx 1 cG0 with
-      | Some s -> Some s
-      | None ->
-	       match searchMctx 1 cD0 [] with
-	       | None -> None
-	       | Some s -> Some s
+  Maybe.(lazy (searchGctx 1 cG0) <|> lazy (searchMctx 1 cD0 []))
+  |> Lazy.force
 
 let whale_str =
   "%,,,,,,,,,,,,,,,,,#++++++++++++#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n\

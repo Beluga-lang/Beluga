@@ -19,6 +19,7 @@ val ctxVar      : dctx -> ctx_var option
 val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
+val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
 val to_list_map_rev : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_map     : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_rev     : 'a ctx -> 'a list

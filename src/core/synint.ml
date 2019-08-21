@@ -460,9 +460,17 @@ module Comp = struct
     | By (* not implemented yet *)
 
   and 'a proof_state =
-    { context : hypotheses
+    { context : hypotheses (* all the assumptions *)
+    (* The full context in scope at this point. *)
+
+    ; local_context : hypotheses
+    (* Just the assumptions locally introduced by this hypothetical *)
+
     ; goal : tclo
+    (* The goal of this proof state. Contains a type with a delayed msub. *)
+
     ; mutable solution : 'a proof option
+    (* The solution to this proof obligation. Filled in by a tactic later. *)
     }
 
   and 'a directive =
@@ -475,7 +483,7 @@ module Comp = struct
          * name (* name the result of the IH *)
     | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
-         * LF.ctyp (* The type of the object that we're splitting on *)
+         * typ (* The type of the object that we're splitting on *)
          * 'a meta_branch list
     | CompSplit (* Splitting on an inductive type *)
       of exp_syn (* THe computational term to split on *)
@@ -499,6 +507,7 @@ module Comp = struct
 
   let make_proof_state (t : tclo) : 'a proof_state =
     { context = no_hypotheses
+    ; local_context = no_hypotheses
     ; goal = t
     ; solution = None
     }
@@ -519,7 +528,7 @@ module Comp = struct
   let solve (t : exp_chk) : 'a proof =
     Directive (Solve t)
 
-  let meta_split (m : exp_syn) (a : LF.ctyp) (bs : 'a meta_branch list)
+  let meta_split (m : exp_syn) (a : typ) (bs : 'a meta_branch list)
       : 'a proof =
     Directive (MetaSplit (m, a, bs))
 

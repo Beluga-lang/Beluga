@@ -348,10 +348,10 @@ module Comp = struct
 
   let rec id_map_ind (cD1' : I.mctx) t (cD : I.mctx) : I.mctx = match t, cD with
     | I.MShift k, I.Empty -> cD1'
-    | I.MShift k, cD ->
-       if k >= 0 then
-         id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
-       else raise (Error.Violation ("Contextual substitution ill-formed"))
+    | I.MShift k, cD when k < 0 ->
+       raise (Error.Violation "Contextual substitution ill-formed")
+    | I.MShift k, cD -> (* k >= 0 *)
+       id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
 
     | I.MDot (I.MV u, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
        if Total.is_inductive dep then

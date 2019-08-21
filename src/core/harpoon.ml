@@ -549,7 +549,7 @@ module Prover = struct
             dprintf
               (fun p ->
                 p.fmt
-                  "[automation] add the following:\n%a"
+                  "@[<v>[tactic context] add the following:@,%a@]"
                   P.fmt_ppr_cmp_proof_state g
               );
             DynArray.add s.remaining_subgoals g;
@@ -562,7 +562,7 @@ module Prover = struct
             dprintf
               (fun p ->
                 p.fmt
-                  "[automation] remove goal %d of the following:\n%a"
+                  "@[<v>[tactic context] remove goal %d of the following:@,%a@]"
                   csg_index
                   P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
               );

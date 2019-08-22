@@ -214,6 +214,72 @@ let rec iter_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> unit) : unit =
 let iter_rev' (ctx : 'a LF.ctx) (f : 'a -> unit) : unit =
   iter_rev ctx (fun _ -> f)
 
+let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int) option =
+  let rec go (ctx : 'a LF.ctx) (idx : int) =
+    match ctx with
+    | Empty -> None
+    | Dec (ctx', x) ->
+       begin
+         match go ctx' (idx + 1) with
+         | None ->
+            if f ctx' x
+            then Some (x, idx)
+            else None
+         | Some a -> Some a
+       end
+  in
+  go ctx 1
+
+let find_with_index' (ctx : 'a LF.ctx) (f : 'a -> bool) : ('a * int) option =
+  find_with_index ctx (Misc.const f)
+
+let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int) option =
+  let rec go (ctx : 'a LF.ctx) (idx : int) =
+    match ctx with
+    | Empty -> None
+    | Dec (ctx', x) ->
+       if f ctx' x
+       then Some (x, idx)
+       else go ctx' (idx + 1)
+  in
+  go ctx 1
+
+let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : ('a * int) option =
+  find_with_index_rev ctx (Misc.const f)
+
+(** Find an item satisfying a condition in a context from left to right
+    (oldest one first)
+ *)
+let rec find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
+  match ctx with
+  | Empty -> None
+  | Dec (ctx', x) ->
+     begin
+       match find ctx' f with
+       | None ->
+          if (f ctx' x)
+          then Some x
+          else None
+       | Some a -> Some a
+     end
+
+let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
+  find ctx (Misc.const f)
+
+(** Find an item satisfying a condition in a context from right to left
+    (most recent one first)
+ *)
+let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
+  match ctx with
+  | Empty -> None
+  | Dec (ctx', x) ->
+     if (f ctx' x)
+     then Some x
+     else find_rev ctx' f
+
+let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
+  find_rev ctx (Misc.const f)
+
 let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypotheses =
   let open Comp in
   let { cD = cD1; cG = cG1; cIH = cIH1 } = h1 in

@@ -319,7 +319,7 @@ let genCGoals cD' cd cD_tail =
        ) cgs  
      
   | _         -> 
-     let cgs, _ = Cover.genCGoals cD' cd in 
+     let cgs, _ = Cover.genCGoals cD' mtyp in
      List.map (fun (cDg', cg, ms) ->
          let Cover.CovGoal (cPsi', tR, sA') = cg in
          (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n" 

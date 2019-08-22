@@ -1699,51 +1699,55 @@ let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
           [(cD'', CovSub (cPsi', LF.Dot(LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
   end
 
-let genCGoals (cD':LF.mctx) mdec : (LF.mctx * cov_goal * LF.msub) list * depend
-  = match mdec with
-  | LF.Decl (_u, LF.ClTyp (LF.MTyp tA, cPsi), _) ->
+let genCGoals (cD':LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) list * depend =
+  let dep_of_typ = function
+    | LF.Atom (_, _, LF.Nil) -> Atomic
+    | _ -> Dependent
+  in
+  match cT with
+  | LF.ClTyp (LF.MTyp tA, cPsi) ->
      dprint
        (fun _ -> "[SPLIT] CovGoal : " ^ P.dctxToString cD' cPsi ^ " . " ^
                    P.typToString cD' cPsi (tA, S.LF.id) ^ "\n");
-     let dep0 =
-       match tA with
-       | LF.Atom (_, _ , LF.Nil) -> Atomic
-       | _ -> Dependent
-     in
+     let dep0 = dep_of_typ tA in
      ( genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
      , dep0
      )
 
-  | LF.Decl (_u,  LF.ClTyp (LF.PTyp tA, cPsi), _) ->
-      begin match cPsi with
-        | LF.CtxVar _ -> ([], Atomic)
-         (* In the interactive mode, prevent splitting on parameter variables
-            whose type is simply a context variable and ask the user to split on
-            the context first; should maybe raise error. *)
-        | _ ->
-            let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^
-                                 P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
-            let dep0 = match tA with LF.Atom (_, _ , LF.Nil) -> Atomic | _ -> Dependent in
-              (* bp : This may potentially even loop! ;
-                      but this could initiate a potential split of PV including splitting the context
-                      g |- #A  should result in  g',x|- x   g',x|- #q
-               in this implementation, we assume that the context split has been done separetely,
-                      and hence we would only loop if we were to split #p (and initiate another context split)
-              *)
-                     (genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id)), dep0)
-      end
+  | LF.ClTyp (LF.PTyp tA, cPsi) ->
+     begin match cPsi with
+     | LF.CtxVar _ -> ([], Atomic)
+     (* In the interactive mode, prevent splitting on parameter variables
+        whose type is simply a context variable and ask the user to split on
+        the context first; should maybe raise error. *)
+     | _ ->
+        let _ = dprint (fun () -> "[SPLIT] CovGoal (PVAR): " ^ P.dctxToString cD' cPsi ^ " . " ^
+                                    P.typToString cD' cPsi (tA, S.LF.id) ^ "\n")  in
+        let dep0 = dep_of_typ tA in
+        (* bp : This may potentially even loop! ;
+           but this could initiate a potential split of PV including splitting the context
+           g |- #A  should result in  g',x|- x   g',x|- #q
+           in this implementation, we assume that the context split has been done separetely,
+           and hence we would only loop if we were to split #p (and initiate another context split)
+         *)
+        ( genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
+        , dep0
+        )
+     end
 
-
-  | LF.Decl (_u, LF.ClTyp (sTyp, cPsi), _ ) ->
-      begin match cPsi with
-        | LF.CtxVar _ -> ([], Atomic)
-      (* In the interactive mode, prevent splitting on substitution variables
-         should be postponed until the domain, cPsi, has been refined and is
-         either . (empty) or cPsi', _
-         if cPsi is simply a context variable and ask the user to split on
-            the context first; should maybe raise Split error. *)
-        | _ -> (genSVCovGoals (cD', (cPsi, sTyp)), Atomic)
-      end
+  | LF.ClTyp (sTyp, cPsi) ->
+     begin match cPsi with
+     | LF.CtxVar _ -> ([], Atomic)
+     (* In the interactive mode, prevent splitting on substitution variables
+        should be postponed until the domain, cPsi, has been refined and is
+        either . (empty) or cPsi', _
+        if cPsi is simply a context variable and ask the user to split on
+        the context first; should maybe raise Split error. *)
+     | _ ->
+        ( genSVCovGoals (cD', (cPsi, sTyp))
+        , Atomic
+        )
+     end
 
 
 let rec best_ctx_cand (cD, cv_list) k cD_tail = match (cv_list, cD)  with
@@ -1774,11 +1778,11 @@ let rec best_ctx_cand (cD, cv_list) k cD_tail = match (cv_list, cD)  with
 let rec best_cand (* (cO,cv_list) *) (cD, mv_list) k cD_tail  =
   match (mv_list, cD) with
   | ([] , _ )  -> NoCandidate
-  | (LF.Offset j :: mvlist' ,  LF.Dec (cD', md))->
+  | (LF.Offset j :: mvlist' ,  LF.(Dec (cD', (Decl(_, cT, _) as md)))) ->
      if k = j then
        begin
          try
-           let (cov_goals' , dep0) = genCGoals cD' md  in
+           let (cov_goals' , dep0) = genCGoals cD' cT  in
            let cov_goals0 =
              List.map
                (fun (cD', cg, ms) ->
@@ -1829,39 +1833,64 @@ let rec best_cand (* (cO,cv_list) *) (cD, mv_list) k cD_tail  =
 (* genPattSpine cD (tau_v, t) = (cD0, cG0, pS, ttau)
 
    if cD |- [t] tau_v
-
-   then
-
-      cD0 ; cG0 |- pS : [t]tau_v > ttau
-
+   then cD0 ; cG0 |- pS : [t]tau_v > ttau
 *)
 let rec genPattSpine (tau_v, t) = match (tau_v,t) with
   | (Comp.TypArr (tau1, tau2) , t) ->
       let pv1 = new_patvar_name () in
       let pat1 = Comp.PatFVar (Syntax.Loc.ghost, pv1) in
-      let (cG, pS, ttau) = genPattSpine (tau2,t) in
-        ((pv1, Whnf.cnormCTyp (tau1,t),false)::cG ,
-         Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau)
+      let (cG, pS, ttau) =
+        genPattSpine (tau2,t)
+      in
+      ( (pv1, Whnf.cnormCTyp (tau1,t),false) :: cG
+      , Comp.PatApp (Syntax.Loc.ghost, pat1, pS)
+      , ttau
+      )
   | (Comp.TypPiBox ((LF.Decl(x, LF.CTyp sW, _)), tau), t) ->
       let cPsi' = LF.CtxVar (LF.CInst ((x, ref None, LF.Empty, LF.CTyp sW, ref [], LF.Maybe), Whnf.m_id)) in
-      let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
-                            (Syntax.Loc.ghost, LF.CObj cPsi')) in
-      let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t)) in
-        (cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
+      let pat1 =
+        Comp.PatMetaObj
+          ( Syntax.Loc.ghost
+          , (Syntax.Loc.ghost, LF.CObj cPsi')
+          )
+      in
+      let (cG, pS, ttau0) =
+        genPattSpine (tau, LF.MDot (LF.CObj(cPsi'), t))
+      in
+      ( cG
+      , Comp.PatApp (Syntax.Loc.ghost, pat1, pS)
+      , ttau0
+      )
 
   | (Comp.TypPiBox ((LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), _)), tau), t) ->
       let tP' = Whnf.cnormTyp (tP, t) in
       let cPsi' = Whnf.cnormDCtx (cPsi,t) in
       let tR    = etaExpandMVstr LF.Empty cPsi' (tP', S.LF.id) in
-      let pat1 = Comp.PatMetaObj (Syntax.Loc.ghost,
-                            (Syntax.Loc.ghost, LF.ClObj(Context.dctxToHat cPsi', LF.MObj tR))) in
-      let (cG, pS, ttau0) = genPattSpine (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t)) in
-        (cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
+      let pat1 =
+        Comp.PatMetaObj
+          ( Syntax.Loc.ghost
+          , (Syntax.Loc.ghost, LF.ClObj(Context.dctxToHat cPsi', LF.MObj tR))
+          )
+      in
+      let (cG, pS, ttau0) =
+        genPattSpine (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t))
+      in
+      (cG, Comp.PatApp (Syntax.Loc.ghost, pat1, pS), ttau0)
 
+  (* XXX these two cases can be collapsed; why aren't they? -je *)
   | (Comp.TypBox _ , t ) ->
       ( [], Comp.PatNil, (tau_v, t))
   | _ -> ( [], Comp.PatNil, (tau_v, t))
 
+(** Suppose tau_v is a well-formed type in meta-context cD_p and c is
+    a computation-level constructor with type tau_c.
+    This function tries to generate a pattern for the constructor `c`.
+    To do this, it first generates a spine consisting of variables for
+    the pattern (one for each arrow/pibox type in tau_c) (the pattern
+    head is `c`).
+    This computes a new type `tau` with a delayed meta-substitution
+    `t` such that `tau[t]` makes sense in the empty context.
+ *)
 let genPatt (cD_p,tau_v) (c, tau_c) =
   let (cG, pS, (tau,t)) = genPattSpine  (tau_c, Whnf.m_id) in
   let pat = Comp.PatConst (Syntax.Loc.ghost, c, pS) in
@@ -1871,10 +1900,12 @@ let genPatt (cD_p,tau_v) (c, tau_c) =
   let ms    = Ctxsub.mctxToMSub cD_p in
     begin try
       U.unifyCompTyp LF.Empty (tau,t) (tau_v, ms);
-      let (cD', cG', pat', tau', ms') = Abstract.covpatt
-                                        (Whnf.cnormCtx (compgctx_of_gctx cG, Whnf.m_id))
-                                (Whnf.cnormPattern (pat, Whnf.m_id))
-                                (Whnf.cnormCTyp (tau_v, ms)) (Whnf.cnormMSub ms) in
+      let (cD', cG', pat', tau', ms') =
+        Abstract.covpatt
+          (Whnf.cnormCtx (compgctx_of_gctx cG, Whnf.m_id))
+          (Whnf.cnormPattern (pat, Whnf.m_id))
+          (Whnf.cnormCTyp (tau_v, ms)) (Whnf.cnormMSub ms)
+      in
       let ccG' = gctx_of_compgctx cG' in
         (dprint (fun () -> "[genPatt] - Return Coverage Pattern");
         Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms'))
@@ -1913,15 +1944,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
       [ (cD, cg, Whnf.m_id) ]
 
   | Comp.TypBox (loc, (LF.ClTyp (LF.MTyp tA, cPsi) as mT)) ->
-      let name = Id.mk_name (Whnf.newMTypName mT) in
-      let (cgoals, _ ) =
-        LF.Decl
-          ( name
-          , LF.ClTyp (LF.MTyp tA, cPsi)
-          , LF.Maybe
-          )
-        |> genCGoals cD
-      in
+      let (cgoals, _ ) = genCGoals cD mT in
       List.map
         (fun (cD', cg, ms) ->
           let CovGoal (cPsi', tR, sA') = cg in
@@ -1958,16 +1981,23 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
 
   | Comp.TypBase (_, c, mS) ->
       let _ = dprint (fun () -> "\n[genPatCGoals] for " ^ P.compTypToString cD tau  ^ "\n") in
-      let constructors = !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors) in
-      let _ = if constructors = [] then dprint (fun () -> "[genPatCGoals] No Constructors defined for " ^ P.compTypToString cD tau) else () in
-      let constructors = List.rev constructors in
-      let ctau_list   = List.map (function c ->
-                              let tau_c = (Store.Cid.CompConst.get  c).Store.Cid.CompConst.typ in
-                                      dprint (fun () -> R.render_cid_comp_const c ^ " : " ^
-                                      P.compTypToString LF.Empty tau_c);
-                                            (c, tau_c)
-                                      )
-                                constructors
+      let constructors =
+        !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors)
+        |> List.rev
+      in
+      if constructors = [] then
+        dprint
+          (fun () ->
+            "[genPatCGoals] No Constructors defined for "
+            ^ P.compTypToString cD tau);
+      let ctau_list =
+        let f c =
+          let tau_c = (Store.Cid.CompConst.get  c).Store.Cid.CompConst.typ in
+          dprint (fun () -> R.render_cid_comp_const c ^ " : " ^
+                              P.compTypToString LF.Empty tau_c);
+          (c, tau_c)
+        in
+        List.map f constructors
       in
       let r =
         List.map

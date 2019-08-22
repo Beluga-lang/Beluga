@@ -351,7 +351,7 @@ end
 module Automation = struct
   open Comp
 
-  type t = unit proof_state -> Tactic.tactic_context -> unit
+  type t = unit proof_state -> Tactic.tactic_context -> bool
 
   let auto_intros : t =
     fun g tctx ->
@@ -364,8 +364,9 @@ module Automation = struct
       );
     match t with
     | TypArr _ | TypPiBox _ ->
-       Tactic.intros None g tctx
-    | _ -> ()
+       Tactic.intros None g tctx;
+       true
+    | _ -> false
 end
 
 module Prover = struct
@@ -405,7 +406,7 @@ module Prover = struct
       Some (DynArray.get gs (current_subgoal_index gs))
 
   let add_subgoal_hook g tctx =
-    Automation.auto_intros g tctx
+    ignore (Automation.auto_intros g tctx)
 
   let process_command
         (ppf : Format.formatter)

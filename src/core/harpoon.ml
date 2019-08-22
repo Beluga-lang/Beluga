@@ -5,6 +5,8 @@ module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 module Command = Syntax.Ext.Harpoon
 module P = Pretty.Int.DefaultPrinter
+module S = Substitution
+module Loc = Location
 
 let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
@@ -367,6 +369,101 @@ module Automation = struct
        Tactic.intros None g tctx;
        true
     | _ -> false
+
+  (** Solve {v ... -> P -> ... -> P v} case automatically.
+      For example,
+      this function will resolve
+
+        x: [|- a]
+      -------------
+      [|- a]
+   *)
+  let auto_solve_trivial : t =
+    fun g tctx ->
+    let { cD; cG; _ } = g.context in
+    let m_is_witness (m : LF.ctyp_decl) =
+      dprintf
+        (fun p ->
+          p.fmt
+            "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+            (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl) m
+        );
+      match m with
+      | LF.Decl (_, mtyp, _) ->
+         Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), LF.MShift 0)
+      | LF.DeclOpt _ ->
+         raise (Error.Violation "[auto_solve_trivial] Unexpected DeclOpt")
+    in
+    let build_mwitness (m : LF.ctyp_decl * int) =
+      match m with
+      | (LF.Decl (_, LF.ClTyp (_, dctx), _), idx) ->
+         let open LF in
+         let open Loc in
+         let head = MVar (Offset idx, S.LF.id) in
+         let clobj = MObj (Root (ghost, head, Nil)) in
+         let psi_hat = Context.dctxToHat dctx in
+         Box (ghost, (ghost, ClObj (psi_hat, clobj)))
+      (** The following case is impossible because m_is_witness
+          will never return true for a DeclOpt.
+       *)
+      | _ ->
+         raise (Error.Violation "[auto_solve_trivial] Impossible case")
+    in
+    let c_is_witness (c : Comp.ctyp_decl) =
+      dprintf
+        (fun p ->
+          p.fmt
+            "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+            (P.fmt_ppr_cmp_ctyp_decl cD Pretty.std_lvl) c
+        );
+      match c with
+      | Comp.CTypDecl (_, typ, _) ->
+         Whnf.convCTyp g.goal (typ, LF.MShift 0)
+      | Comp.CTypDeclOpt _ ->
+         raise (Error.Violation "[auto_solve_trivial] Unexpected CTypDeclOpt")
+      | Comp.WfRec _ ->
+         raise (Error.Violation "[auto_solve_trivial] Unexpected WfRec")
+    in
+    let build_cwitness (c : Comp.ctyp_decl * int) =
+      match c with
+      | (_, idx) ->
+         let open Comp in
+         let open Loc in
+         Syn (ghost, Var (ghost, idx))
+    in
+    let open Maybe in
+    let opt_mwitness =
+      lazy
+        (Context.find_with_index' cD m_is_witness
+         $> build_mwitness
+        )
+    in
+    let opt_cwitness =
+      lazy
+        (Context.find_with_index' cG c_is_witness
+         $> build_cwitness
+        )
+    in
+    let opt_witness = opt_mwitness <|> opt_cwitness in
+    match opt_witness with
+    | lazy None ->
+       dprintf
+         (fun p ->
+           p.fmt
+             "@[<v>[auto_solve_trivial] There are no witness in@,%a@,@]"
+             P.fmt_ppr_cmp_proof_state g
+         );
+       false
+    | lazy (Some w) ->
+       Tactic.(
+        tctx.printf
+          "@[<v>@,A goal %a is automatically solved.@,@]"
+          (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp g.goal)
+       );
+       (Comp.solve w
+        |> Tactic.solve
+       ) g tctx;
+       true
 end
 
 module Prover = struct
@@ -406,7 +503,13 @@ module Prover = struct
       Some (DynArray.get gs (current_subgoal_index gs))
 
   let add_subgoal_hook g tctx =
-    ignore (Automation.auto_intros g tctx)
+    ignore
+      (List.exists
+         (fun f -> f g tctx)
+         [ Automation.auto_solve_trivial
+         ; Automation.auto_intros
+         ]
+      )
 
   let process_command
         (ppf : Format.formatter)

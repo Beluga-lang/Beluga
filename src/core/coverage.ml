@@ -999,44 +999,42 @@ let rec genSpine cD cPsi sA tP =
 
 *)
 let genObj (cD, cPsi, tP) (tH, tA) =
-  dprint
-    (fun _ ->
-      "[genObj] in the beginning, there were "
-      ^ string_of_int (List.length !U.globalCnstrs)
-      ^ " constraints.");
     (* make a fresh copy of tP[cPsi] *)
   dprint (fun () -> "[genObj] cD = " ^ P.mctxToString cD);
-    let ms    = Ctxsub.mctxToMSub cD in
-(*    let _ = dprint (fun () -> " ms = " ^ P.msubToString LF.Empty ms ) in *)
-    let tP'   = Whnf.cnormTyp (tP, ms) in
-    let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
-    let tA'   = Whnf.cnormTyp (Whnf.normTyp (tA, S.LF.id), ms) in
-    let tH'   = Whnf.cnormHead (tH, ms) in
-(* !! bp    let _ = dprint (fun () -> "[genObj] Head of type : " ^
-                    P.dctxToString LF.Empty cPsi' ^ " |- " ^
-                    P.typToString LF.Empty cPsi' (tA', S.LF.id) )      in
-*)
-    let spine = genSpine LF.Empty cPsi' (tA', S.LF.id) tP' in
-    let tM = LF.Root (Syntax.Loc.ghost, tH' , spine) in
-    let _ = dprint (fun () -> "[genObj] Generated Head : " ^ P.headToString cD cPsi tH) in
-    let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id) ^ " as suitable head ") in
-    let _ = dprint (fun () -> "[genObj] for " ^ P.dctxToString cD cPsi ^ " |- " ^ P.typToString cD cPsi (tP, S.LF.id)) in
+  (* construct a substitution from cD that maps each contextual
+     variable to an (appropriate) MMVar
+   *)
+  let ms    = Ctxsub.mctxToMSub cD in
+  let tP'   = Whnf.cnormTyp (tP, ms) in
+  let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
+  let tA'   = Whnf.cnormTyp (Whnf.normTyp (tA, S.LF.id), ms) in
+  let tH'   = Whnf.cnormHead (tH, ms) in
 
-    let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
-    dprint (fun _ -> "[genObj] global constraints forced!");
-    let (cD', cPsi', tR, tP', ms') =
-      begin try
+  (* now tP', cPsi', tA', tH' are all "closed" but contain MMVars instead of MVars *)
+
+  let spine = genSpine LF.Empty cPsi' (tA', S.LF.id) tP' in
+  let tM = LF.Root (Syntax.Loc.ghost, tH' , spine) in
+  let _ = dprint (fun () -> "[genObj] Generated Head : " ^ P.headToString cD cPsi tH) in
+  let _ = dprint (fun () -> "[genObj] type of head : " ^ P.typToString cD cPsi (tA, S.LF.id) ^ " as suitable head ") in
+  let _ = dprint (fun () -> "[genObj] for " ^ P.dctxToString cD cPsi ^ " |- " ^ P.typToString cD cPsi (tP, S.LF.id)) in
+
+  let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
+  dprint (fun _ -> "[genObj] global constraints forced!");
+  let (cD', cPsi', tR, tP', ms') =
+    begin
+      try
         Abstract.covgoal cPsi'  tM   tP' (Whnf.cnormMSub ms) (* cD0 ; cPsi0 |- tM : tP0 *)
-      with Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
-        (print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
-         print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^
-                      P.typToString LF.Empty cPsi' (tP', S.LF.id) ^ "\n");
-         raise e)
-      end
-      in
-    let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
-    dprint (fun () -> "[genObj] finished.");
-    (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
+      with
+        Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
+        print_string ("WARNING: Encountered left-over constraints in higher-order unification\n");
+        print_string ("Coverage goal : " ^ P.normalToString LF.Empty  cPsi' (tM, S.LF.id) ^ " : " ^
+                        P.typToString LF.Empty cPsi' (tP', S.LF.id) ^ "\n");
+        raise e
+    end
+  in
+  let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
+  dprint (fun () -> "[genObj] finished.");
+  (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
 
 let rec genAllObj cg tHtA_list  = match tHtA_list with
   | [] -> []
@@ -1226,10 +1224,12 @@ let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.t
  =  match tA  with
   | LF.Atom _ ->
       let g_pv = genPVar cov_problem in (* (cD', cg, ms) list *)
-      let _ = dprint (fun () -> "[genCovGoals] generated pvar cases\n") in
+      dprint (fun () -> "[genCovGoals] generated pvar cases");
       let g_bv = genBVar cov_problem in
-      let _ = dprint (fun () -> "[genCovGoals] generated bvar cases\n") in
-        g_pv @ g_bv @ genConst cov_problem
+      dprint (fun () -> "[genCovGoals] generated bvar cases");
+      let g_cv = genConst cov_problem in
+      dprint (fun () -> "[genCovGoals] generated const cases");
+      g_pv @ g_bv @ g_cv
 
   | LF.PiTyp ((tdecl, dep ) , tB) ->
       let cov_goals = genCovGoals (cD, LF.DDec (cPsi, tdecl), tB) in
@@ -2701,7 +2701,7 @@ let check_coverage_success problem  =
            Success
          end
 
-let covers' problem projObj = 
+let covers' problem projObj =
   dprintf
     (fun p ->
       p.fmt "@[<hv>#################################@,### BEGIN COVERAGE FOR TYPE tau = %a@,at %a@]"
@@ -2716,7 +2716,7 @@ let covers' problem projObj =
       p.fmt "@[<v>Coverage checking a case with %d branch(es)@,at: %a@]"
         (List.length problem.branches)
         Loc.print problem.loc);
-  
+
   dprint (fun () -> "\n ### Initial coverage problem: " );
   dprint (fun () -> covproblemsToString cov_problems ) ;
   begin

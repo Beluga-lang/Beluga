@@ -491,9 +491,10 @@ and collectBothTyp loc p cQ = function
     let (cQ', tA') = collectTyp p cQ (None, 0) (tA, LF.id) in
     (cQ', LFTyp tA')
 
-and addVar loc p cQ v tp = match checkOccurrence loc v cQ with
-   | Yes ->  (cQ, tp)
-   | No  ->
+and addVar loc p cQ v tp =
+  match checkOccurrence loc v cQ with
+  | Yes ->  (cQ, tp)
+  | No  ->
      let cQ' = I.Dec(cQ, FDecl(v, Impure)) in
      let (cQ2, tp') = collectBothTyp loc p cQ' tp in
      (I.Dec (cQ2, FDecl (v, Pure tp')), tp')
@@ -524,18 +525,18 @@ and collectFVarSub p cQ phat (name, s') =
 
 and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
   match cD with
-    | I.Empty -> begin
+  | I.Empty -> begin
       if constraints_solved !c then
-	match !q with
-	  | None -> 
-	       let (cQ', MetaTyp (tp',dep')) = addVar loc p cQ (MMV (n,q)) (MetaTyp (tp, dep)) in
-	       (cQ', (n, q, cD, tp', c, dep'))
-	  | Some _ -> raise (Error.Violation "Expected whnf")
+	      match !q with
+	      | None ->
+	         let (cQ', MetaTyp (tp',dep')) = addVar loc p cQ (MMV (n,q)) (MetaTyp (tp, dep)) in
+	         (cQ', (n, q, cD, tp', c, dep'))
+	      | Some _ -> raise (Error.Violation "Expected whnf")
       else
-	raise (Error (loc, LeftoverConstraints))
+	      raise (Error (loc, LeftoverConstraints))
     end
-    | I.Dec(_,_) -> let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
-                    raise (Error (loc, LeftoverVars))
+  | I.Dec(_,_) -> let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
+                  raise (Error (loc, LeftoverVars))
 
 and collectMVarMSub loc p cQ (i,ms') =
   let (cQ0, ms') = collectMSub p cQ ms' in
@@ -1270,8 +1271,8 @@ let rec collectExp cQ e = match e with
   | Comp.Fn (loc, x, e) ->
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Fn (loc, x, e'))
-          
-  | Comp.Fun (loc, fbr) -> 
+
+  | Comp.Fun (loc, fbr) ->
     let (cQ', fbr') = collectFBranches cQ fbr in
         (cQ', Comp.Fun (loc, fbr'))
 
@@ -1411,7 +1412,7 @@ and collectFBranches cQ fbr = match fbr with
     let (cQ', e') = collectExp cQ e in
     let (cQ1, fbr'') = collectFBranches cQ' fbr' in
       (cQ1, Comp.ConsFBranch (loc, (cD, cG, ps, e'), fbr''))
-        
+
 
 let rec abstractMVarCompKind cQ (l,offset) cK = match cK with
   | Comp.Ctype _loc -> cK
@@ -1572,7 +1573,7 @@ let abstrCodataTyp cD tau tau' =
   let (cQ2, cD'_rest) = collectMctx cQ1 cD_rest in
   let l' = Context.length cD_ctx in
   let p = Context.length cD_rest in
-  
+
   let (cQ3, tau0')  = collectCompTyp (l'+p) cQ2 tau0 in
   let k           = lengthCollection cQ3 in
   let l = k - l' in
@@ -1582,7 +1583,7 @@ let abstrCodataTyp cD tau tau' =
   let _ = dprint (fun () -> "tau0' = " ^ P.compTypToString cD tau0'
     ^ "\ntau_obs = " ^ P.compTypToString cD' tau_obs) in
   let _ = dprint (fun () -> "cD' = " ^ P.mctxToString cD') in
-    
+
   (* Assumes: cQ3, cQ3' = cQ4 *)
   let (cQ4, tau1')  = collectCompTyp (l'+p) cQ3 tau1 in
   let k           = lengthCollection cQ4 in
@@ -1792,7 +1793,7 @@ let abstrCovPatt cG pat tau ms =
   let pat'    = abstractMVarPatObj cQ' cG' (0,0) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in
   let cD'     = ctxToMCtx (I.Maybe) cQ' in
-    (cD', cG', pat', tau', ms0)
+  (cD', cG', pat', tau', ms0)
 
 (* Shorter names for export outside of this module. *)
 let kind = abstrKind
@@ -1810,4 +1811,3 @@ let pattern_spine = abstrPatSpine
 let patobj = abstrPatObj
 let subpattern = abstrSubPattern
 let mobj = abstrMObjPatt
-

@@ -128,6 +128,11 @@ let rec append cD1 cD2 = match cD2 with
       let cD1' = append cD1 cD2' in
         Dec (cD1', dec)
 
+let rec fold (empty : 'b) (f : 'b -> 'a -> 'b) (ctx : 'a LF.ctx) =
+  match ctx with
+  | LF.Empty -> empty
+  | LF.Dec (ctx', d) -> f (fold empty f ctx') d
+
 (** Transforms a context into a list by applying the given function.
     The list order will be the reverse of the context,
     i.e. the rightmost entry of the context (which is the first entry)
@@ -170,6 +175,21 @@ let to_list (ctx : 'a LF.ctx) : 'a list =
 
 let to_sublist (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
   to_list_map ctx Misc.tuple
+
+let rec of_list_map (l : 'a list) (f : 'a -> 'b) : 'b LF.ctx =
+  match l with
+  | [] -> LF.Empty
+  | x :: xs -> LF.Dec(of_list_map xs f, f x)
+
+let of_list (l : 'a list) : 'a LF.ctx =
+  of_list_map l Misc.id
+
+(** Converts a collection of hypotheses into local hypotheses. *)
+let to_local_context (h : Comp.hypotheses) : Comp.local_hypotheses =
+  let open Comp in
+  { cDl = to_list h.cD
+  ; cGl = to_list h.cG
+  }
 
 (** Iterate over a context from left to right (oldest variable first).
     The callback `f` gets both the subcontext of the variable _and_ the variable as input.

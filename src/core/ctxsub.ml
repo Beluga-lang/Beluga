@@ -170,4 +170,3 @@ let rec mctxToMMSub cD0 cD = match cD with
       MDot (mdeclToMMVar cD0 n mtyp' dep, t)
 
 let mctxToMSub cD = mctxToMMSub Empty cD
-;; (* ocaml is unhappy without the ;; *)

@@ -20,12 +20,19 @@ val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
 val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
+
+(** General eliminator for contexts. *)
+val fold            : 'b -> ('b -> 'a -> 'b) -> 'a ctx -> 'b
+
 val to_list_map_rev : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_map     : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_rev     : 'a ctx -> 'a list
 val to_list         : 'a ctx -> 'a list
 val to_sublist      : 'a ctx -> ('a ctx * 'a) list
 val to_sublist_rev  : 'a ctx -> ('a ctx * 'a) list
+val of_list_map     : 'a list -> ('a -> 'b) -> 'b ctx
+val of_list         : 'a list -> 'a ctx
+val to_local_context : Comp.hypotheses -> Comp.local_hypotheses
 val iter        : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
 val iter'       : 'a ctx -> ('a -> unit) -> unit
 val iter_rev    : 'a ctx -> ('a ctx -> 'a -> unit) -> unit

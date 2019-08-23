@@ -8,3 +8,10 @@ module LF = struct
     | Empty                              (* C ::= Empty                    *)
     | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
 end
+
+module Harpoon = struct
+  type invoke_kind =
+    [ `ih
+    | `lemma
+    ]
+end

@@ -414,7 +414,7 @@ module Int = struct
             proj
 
       | LF.MMVar ((c, ms), s) ->
-          fprintf ppf "%s%a%s[%a][%a]%s"
+          fprintf ppf "%s%a%s[@[%a@]][@[%a@]]%s"
             (l_paren_if (paren s))
             (fmt_ppr_lf_mmvar lvl) c
             proj
@@ -1502,13 +1502,17 @@ module Int = struct
 
     and fmt_ppr_cmp_command cD cG ppf =
       let open Comp in
+      let print_invoke_kind ppf : invoke_kind -> unit =
+        function
+        | `ih -> fprintf ppf "ih"
+        | `lemma -> fprintf ppf "lemma"
+      in
       function
-      | By -> Misc.not_implemented "command By"
-      | IH (t, name) ->
-         fprintf ppf
-           "IH: (%a) as %s"
-           (fmt_ppr_cmp_exp_syn cD cG std_lvl) t
-           (Id.render_name name)
+      | By (k, t, name) ->
+        fprintf ppf "@[<hv>by %a (@[%a@])@ as %a@]"
+          print_invoke_kind k
+          (fmt_ppr_cmp_exp_syn cD cG std_lvl) t
+          Id.print name
 
     and fmt_ppr_cmp_split_branch :
           type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
@@ -1620,8 +1624,8 @@ module Int = struct
            (fmt_ppr_cmp_typ cD lvl) tau
 
       | Comp.WfRec (name, args, typ) ->
-         fprintf ppf "@[<v 2>%s @[<hv>%a@]@,: %a@]"
-           (Id.render_name name)
+         fprintf ppf "@[<v 2>%a @[<hv>%a@]@,: %a@]"
+           Id.print name
            (pp_print_list ~pp_sep: pp_print_space (fmt_ppr_cmp_arg cD lvl)) args
            (fmt_ppr_cmp_typ cD lvl) typ
 

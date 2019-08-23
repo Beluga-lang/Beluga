@@ -60,6 +60,28 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   |> is_some
    *)
 
+(** Given an initial context cDl and a refined context cDl', compute the
+    list of all declarations in cD' that are either new variables (not
+    present in cD) or have different types in the new context
+    (refined).
+    The contexts cDl and cDl' should have been converted to lists using
+    Context.to_list.
+ *)
+let filter_mctx_refinement
+      (cDl : LF.ctyp_decl list) (cDl' : LF.ctyp_decl list)
+    : LF.ctyp_decl list =
+  let f d =
+    match List.find_opt (fun d' -> Whnf.convCTypDecl d d') cDl with
+    | Some _ ->
+       false
+    | None ->
+       (* if we cannot find a convertible declaration in the original
+          context, then we keep the current declaration d.
+        *)
+       true
+  in
+  List.filter f cDl'
+
 module type TacticContext = sig
   val add_subgoal : unit Comp.proof_state -> unit
   val remove_current_subgoal : unit -> unit
@@ -96,10 +118,11 @@ module Tactic (T : TacticContext) = struct
     solve' s proof;
     T.remove_current_subgoal ()
 
-  (** Introduces all assumptions present in the current goal.
-      Solves the input proof state.
+  (** Walks a type and collects assumptions into cD and cG,
+      returning the conclusion type.
    *)
-  let intros (names : string list option) : t =
+  let intros' : string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
+                LF.mctx * Comp.gctx * Comp.typ =
     let genVarName tA = Store.Cid.Typ.gen_var_name tA in
     let gen_var_for_typ =
       function
@@ -110,13 +133,7 @@ module Tactic (T : TacticContext) = struct
       | _ ->
          Id.mk_name Id.NoName
     in
-    (* Walks a type and collects assumptions into cD and cG,
-       returning the conclusion type.
-     *)
-    let rec intro'
-              (names : string list option)
-              (cD : LF.mctx) (cG : Comp.gctx) (t : Comp.typ)
-            : LF.mctx * Comp.gctx * Comp.typ =
+    let rec go names cD cG t =
       let next_name : (string * string list) option =
         let open Maybe in
         names
@@ -132,25 +149,44 @@ module Tactic (T : TacticContext) = struct
                 (fun _ -> gen_var_for_typ t1 , None)
                 (fun (name, names) -> Id.mk_name (Id.SomeString name), Some names)
          in
-         intro' names cD (LF.Dec (cG, Comp.CTypDecl (name, t1, false))) t2
+         go names cD (LF.Dec (cG, Comp.CTypDecl (name, t1, false))) t2
       | Comp.TypPiBox (tdec, t2) ->
-         intro' names (LF.Dec (cD, tdec)) cG t2
+         go names (LF.Dec (cD, tdec)) cG t2
       | _ -> cD, cG, t
     in
+    go
+
+
+  (** Introduces all assumptions present in the current goal.
+      Solves the input proof state.
+   *)
+  let intros (names : string list option) : t =
     (* Main body of `intros`: *)
     fun s ->
     let open Comp in
     let (t, sigma) = s.goal in
-    let cD, cG, t' = intro' names LF.Empty LF.Empty t in
+    let cD, cG, t' = intros' names LF.Empty LF.Empty t in
     let goal' = (t', sigma) in
-    let local_context = { cG; cD; cIH = LF.Empty } in
+    let local_context = {cD; cG; cIH = LF.Empty} in
     let context = Context.append_hypotheses s.context local_context in
-    let new_state = { context; local_context; goal = goal'; solution = None } in
+    let local_context =
+      let c = Context.to_local_context local_context in
+      { c with
+        cDl = List.mapi (fun i d -> Whnf.cnormCDecl (d, LF.MShift (i + 1))) c.cDl
+      }
+    in
+    let new_state =
+      { context
+      ; local_context
+      ; goal = goal'
+      ; solution = None
+      }
+    in
     (* Invoke the callback on the subgoal that we created *)
     (* Solve the current goal with the subgoal. *)
     T.remove_current_subgoal ();
     T.add_subgoal new_state;
-    Comp.intros context (Comp.incomplete_proof new_state)
+    Comp.intros context local_context (Comp.incomplete_proof new_state)
     |> solve' s
 
   (** Calls the coverage checker to compute the list of goals for a
@@ -242,9 +278,11 @@ module Tactic (T : TacticContext) = struct
                   (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cD);
             let cIH0 = Total.wf_rec_calls cD cG mfs in
             let local_context =
-              { no_hypotheses with
-                cIH = Context.append cIH0 cIH'
-              ; cD = cDext
+              { no_local_hypotheses with
+                cDl =
+                  filter_mctx_refinement
+                    (Whnf.mctx_to_list_shifted s.context.cD)
+                    (Whnf.mctx_to_list_shifted cDext)
               }
             in
             let context =
@@ -278,7 +316,7 @@ module Tactic (T : TacticContext) = struct
               |> Pair.lmap Context.hatToDCtx
             in
             T.add_subgoal new_state;
-            meta_branch c local_context (incomplete_proof new_state)
+            meta_branch c context local_context (incomplete_proof new_state)
        in
        T.remove_current_subgoal ();
        let bs = List.map f cgs in
@@ -390,7 +428,7 @@ module Prover = struct
         *)
        let s = s.initial_state in
        Format.fprintf ppf "@[<v>Proof so far:@,%a@]"
-         (P.fmt_ppr_cmp_proof cD cG) (incomplete_proof s)
+         (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
         * and then add it back (on the end of the list) *)

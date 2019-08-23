@@ -63,7 +63,7 @@ module Int : sig
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
     val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
-    val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
+    val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit

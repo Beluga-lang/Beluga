@@ -132,9 +132,11 @@ val normCtx    : Comp.gctx -> Comp.gctx
 val normCTyp   : Comp.typ  -> Comp.typ
 
 val convMTyp   : ctyp -> ctyp -> bool
+val convCTypDecl : ctyp_decl -> ctyp_decl -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
 val conv_hat_ctx: psi_hat -> psi_hat -> bool
+val convCompCTypDecl : Comp.ctyp_decl -> Comp.ctyp_decl -> bool
 
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
@@ -144,3 +146,11 @@ val closedGCtx : Comp.gctx -> bool
 val closedMetaObj : Comp.meta_obj -> bool
 
 val constraints_solved : cnstr list -> bool
+
+(** Convert a meta-context to a list of declarations in which the
+  * types have been shifted to make sense in the whole context.
+  *
+  * This would go in Context, but we need to invoke Whnf to perform
+  * the shifting, and Whnf depends on Context.
+ *)
+val mctx_to_list_shifted : mctx -> ctyp_decl list

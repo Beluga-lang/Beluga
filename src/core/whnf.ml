@@ -21,6 +21,7 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Loc.t
 
+let m_id = MShift 0
 
 type mm_res =
     | ResMM of (mm_var * msub)
@@ -223,8 +224,6 @@ and lowerMMVar cD = function
 *)
 
 (*************************************)
-
-let m_id = MShift 0
 
 (* mvar_dot1 psihat t = t'
    Invariant:
@@ -1845,6 +1844,29 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
   &&
     convTypRec (trec, LF.id) (trec', LF.id)
 
+  let convCTypDecl d1 d2 =
+    match d1, d2 with
+    | Decl (x1, cT1, dep1), Decl (x2, cT2, dep2) ->
+       Id.equals x1 x2 && dep1 = dep2
+       && convMTyp cT1 cT2
+    | DeclOpt x1, DeclOpt x2 ->
+       Id.equals x1 x2
+
+  (** Checks if two declarations are convertible.
+      If they're coming from a metacontext you should shift them so
+      they make sense in the same context.
+   *)
+  let convCompCTypDecl d1 d2 =
+    let open Comp in
+    match d1, d2 with
+    | CTypDeclOpt x1, CTypDeclOpt x2 -> Id.equals x1 x2
+    | CTypDecl (x1, tau1, w1), CTypDecl (x2, tau2, w2) ->
+       Id.equals x1 x2 && w1 = w2
+       && convCTyp (tau1, m_id) (tau2, m_id)
+
+let mctx_to_list_shifted x =
+  let f i d = cnormCDecl (d, MShift (i + 1)) in
+  x |> Context.to_list |> List.mapi f
 
 (* ------------------------------------------------------------ *)
 

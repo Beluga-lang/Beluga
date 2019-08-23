@@ -68,9 +68,26 @@ module Control = struct
   let db() = !substitutionStyle = DeBruijn
 end (* Control *)
 
+let print_wf_tag ppf : bool -> unit =
+  function
+  | true -> fprintf ppf "*"
+  | false -> ()
+
 module Int = struct
 
   open Syntax.Int
+
+  let print_depend ppf : LF.depend -> unit =
+    function
+    | LF.No -> fprintf ppf "^e"
+    | LF.Maybe -> fprintf ppf "^i"
+    | LF.Inductive -> fprintf ppf "*"
+
+  let print_inductive ppf : LF.depend -> unit =
+    function
+    | LF.No -> fprintf ppf ""
+    | LF.Maybe -> fprintf ppf ""
+    | LF.Inductive -> fprintf ppf "*"
 
   (* Internal Syntax Printer Signature *)
   module type PRINTER = sig
@@ -106,11 +123,13 @@ module Int = struct
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
+
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
     val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
-    val fmt_ppr_cmp_hypothetical : formatter -> unit Comp.hypothetical -> unit
+    val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> unit Comp.hypothetical -> unit
+
     val fmt_ppr_pat_obj       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
 
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
@@ -180,7 +199,7 @@ module Int = struct
   end (* Int.PRINTER *)
 
   (* Internal Syntax Pretty Printer Functor *)
-  module Make : functor (R : Store.Cid.RENDERER) -> PRINTER = functor (R : Store.Cid.RENDERER) -> struct
+  module Make (R : Store.Cid.RENDERER) : PRINTER = struct
 
     module InstHashedType = struct
       type t    = LF.iterm option ref
@@ -651,11 +670,11 @@ module Int = struct
 
       | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,       mDep) ->
          (* Note, pretty-printing does not use the name provided n which may not be unique but generates a new one *)
-         let s = dependent_string mDep in
          begin
            try
-             fprintf ppf "?%s%s"
-               (MInstHashtbl.find minst_hashtbl u) s
+             fprintf ppf "?%s%a"
+               (MInstHashtbl.find minst_hashtbl u)
+               print_depend mDep
            with
            | Not_found ->
               (* (* Should probably create a sep. generator for this -dwm *)
@@ -949,17 +968,15 @@ module Int = struct
          if ((not !Control.printImplicit) && (isImplicit dep) || (!Control.printNormal))
          then ()
          else
-           fprintf ppf "{%s : %a}%s"
+           fprintf ppf "{%s : %a}%a"
              (if printing_holes
               then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
               else Id.render_name u)
              (fmt_ppr_lf_mtyp cD) mtyp
-             (if !Control.printImplicit
-              then dependent_string dep
-              else inductive_string dep)
+             (if !Control.printImplicit then print_depend else print_inductive) dep
 
       | LF.DeclOpt name ->
-          fprintf ppf "{%s : _ }"
+          fprintf ppf "{%s : _}"
             (Id.render_name name)
 
     and getTyp = function
@@ -971,17 +988,6 @@ module Int = struct
             | LF.No -> false
             | LF.Maybe -> true
             | LF.Inductive -> false
-    and dependent_string =
-      function
-      | LF.No -> "^e"
-      | LF.Maybe -> "^i"
-      | LF.Inductive -> "*"
-
-    and inductive_string dep =
-      match dep with
-      | LF.No -> ""
-      | LF.Maybe -> ""
-      | LF.Inductive -> "*"
 
     (* Computation-level *)
     let rec fmt_ppr_cmp_kind cD lvl ppf = function
@@ -1504,78 +1510,66 @@ module Int = struct
            (fmt_ppr_cmp_exp_syn cD cG std_lvl) t
            (Id.render_name name)
 
-    and fmt_ppr_cmp_split_branch
-        : 'b. (Format.formatter -> 'b -> unit) -> Format.formatter ->
-          (unit, 'b) Comp.split_branch ->
-          unit =
-      fun f ppf ->
+    and fmt_ppr_cmp_split_branch :
+          type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
+               Format.formatter ->
+               (unit, b) Comp.split_branch -> unit =
+      fun cD cG f ppf ->
       let open Comp in
       function
       | SplitBranch (c, h) ->
          fprintf ppf "@[<v>case %a:@,%a@]@,"
            f c
-           fmt_ppr_cmp_hypothetical h
+           (fmt_ppr_cmp_hypothetical cD cG) h
 
     and fmt_ppr_cmp_directive cD cG ppf : unit Comp.directive -> unit =
       let open Comp in
       function
-      | Intros h -> fprintf ppf "intros@,%a" fmt_ppr_cmp_hypothetical h
+      | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
       | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
-      | CompSplit (t, _, bs) ->
-         fprintf ppf "comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) t;
-         List.iter
-           (fmt_ppr_cmp_split_branch
-              (fun ppf x ->
-                fprintf ppf "%s" (Id.render_name x))
-              ppf)
-           bs;
-         fprintf ppf "@]"
       | MetaSplit (m, _, bs) ->
          fprintf ppf "meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) m;
          List.iter
-           (fmt_ppr_cmp_split_branch
+           (fmt_ppr_cmp_split_branch cD cG
               (fun ppf (cPsi, h) ->
                 fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi std_lvl) h)
+              ppf)
+           bs;
+         fprintf ppf "@]"
+      | CompSplit (t, _, bs) ->
+         fprintf ppf "comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG std_lvl) t;
+         List.iter
+           (fmt_ppr_cmp_split_branch cD cG
+              (fun ppf x ->
+                fprintf ppf "%s" (Id.render_name x))
               ppf)
            bs;
          fprintf ppf "@]"
       | Solve t ->
          fprintf ppf "solve (%a)" (fmt_ppr_cmp_exp_chk cD cG std_lvl) t;
 
-    and fmt_ppr_cmp_hypothetical ppf =
+    and fmt_ppr_cmp_hypothetical cD cG ppf =
       let open Comp in
       function
-      | Hypothetical ({cD; cG; cIH = _} as h, proof) ->
+      | Hypothetical (h, h', proof) ->
          fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
-           fmt_ppr_cmp_hypotheses h
-           (fmt_ppr_cmp_proof cD cG) proof;
+           (fmt_ppr_cmp_local_hypotheses h.cD h.cG) h'
+           (fmt_ppr_cmp_proof h.cD h.cG) proof;
 
-    and fmt_ppr_cmp_hypotheses ppf =
+    and fmt_ppr_cmp_local_hypotheses cD cG ppf =
       let open Comp in
-      function
-      | { cD; cG; cIH = _ } ->
-         let cDs = Context.to_sublist cD in
-         let cG' = Context.to_list cG in
-         (* We don't print accumulated induction hypotheses,
-            since a user wouldn't ever write them.
-          *)
+      fun { cDl; cGl } ->
+      let comma ppf () = fprintf ppf ",@ " in
 
-         let comma ppf () = fprintf ppf ",@ " in
-
-         fprintf ppf "@[<hv>";
-         pp_print_list
+      fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
+        (pp_print_list
            ~pp_sep: comma
-           (fun ppf (cD, x) -> fmt_ppr_lf_ctyp_decl cD std_lvl ppf x)
-           ppf cDs;
-         fprintf ppf "@]";
-
-         fprintf ppf "@,| @[<hv>";
-
-         pp_print_list
+           (fmt_ppr_lf_ctyp_decl cD std_lvl))
+        cDl
+        (pp_print_list
            ~pp_sep: comma
-           (fun ppf x -> fmt_ppr_cmp_ctyp_decl cD std_lvl ppf x)
-           ppf cG';
-         fprintf ppf "@]@,;"
+           (fmt_ppr_cmp_ctyp_decl cD std_lvl))
+        cGl;
 
     and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
       | (LF.MShift k, _ ) ->
@@ -1620,10 +1614,10 @@ module Int = struct
 
     and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
       | Comp.CTypDecl (x, tau, tag) ->
-         let s = if tag then "*" else "" in
-          fprintf ppf "%s%s: %a"
-            (Id.render_name x) s
-            (fmt_ppr_cmp_typ cD lvl) tau
+         fprintf ppf "%a%a : %a"
+           Id.print x
+           print_wf_tag tag
+           (fmt_ppr_cmp_typ cD lvl) tau
 
       | Comp.WfRec (name, args, typ) ->
          fprintf ppf "@[<v 2>%s @[<hv>%a@]@,: %a@]"

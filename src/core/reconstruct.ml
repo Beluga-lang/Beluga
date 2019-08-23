@@ -1017,13 +1017,13 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
   | (Apx.Comp.Fn (loc, _x, _e),  tau_theta ) ->
-      raise (Check.Comp.Error (loc, Check.Comp.FnMismatch (cD, cG, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`fn, cD, cG, tau_theta)))
   | (Apx.Comp.MLam (loc, _u, _e), tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.MLamMismatch (cD, cG, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`mlam, cD, cG, tau_theta)))
   | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, cG, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`pair, cD, cG, tau_theta)))
   | (Apx.Comp.Box (loc, _ ) , tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, cG, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, cG, tau_theta)))
 
 and elExp' cD cG i =
   let elBoxVal loc loc' psi r =
@@ -1326,9 +1326,9 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
      (cG, Int.Comp.PatMetaObj (loc, elMetaObj cD cM (ctyp, theta)))
   (* Error handling cases *)
   | (Apx.Comp.PatPair(loc, _ , _ ), tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.PairMismatch (cD, Int.LF.Empty, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`pair, cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatMetaObj (loc, _) , tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD, Int.LF.Empty, tau_theta)))
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, Int.LF.Empty, tau_theta)))
   | (Apx.Comp.PatAnn (loc, _, _ ) , ttau) ->
       let (cG', pat', ttau') = elPatSyn cD cG pat in
       let _ = dprint (fun () -> "[elPatChk] expected tau : = " ^
@@ -1504,7 +1504,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
                    loc', Int.LF.ClTyp (Int.LF.STyp (sv_class, cPhi'), cPsi')
             )
         | Int.Comp.TypBox (loc', mT) -> raise (Error (loc, MetaObjectClash (cD, mT)))
-        | _ ->  raise (Check.Comp.Error (loc, Check.Comp.BoxMismatch (cD_s, Int.LF.Empty, (tau_s, Whnf.m_id))))
+        | _ ->  raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD_s, Int.LF.Empty, (tau_s, Whnf.m_id))))
         end
       in
       let (loc', clTyp) = inferClTyp cD psi (cD_s, tau_s) in

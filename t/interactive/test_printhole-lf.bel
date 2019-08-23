@@ -96,7 +96,8 @@ Meta-context:
   {g : jctx}
   {z3 : [g |- path]}
   {y4 : [g |- tm]}
-  {q : #[g |- block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
+  {q : #[g |-
+         block (x:tm, _t:{q : path}  is_path q (y4[ ..]) -> is_path q x, _u:jump (y4[ ..]) x)]}
   {J : [g |- jpath z3 y4]}
   {H : [g |- is_path z3 y4]}
 

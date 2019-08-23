@@ -77,6 +77,11 @@ module Int = struct
 
   open Syntax.Int
 
+  let print_svar_class ppf : LF.svar_class -> unit =
+    function
+    | LF.Ren -> fprintf ppf "#"
+    | LF.Subst -> ()
+
   let print_depend ppf : LF.depend -> unit =
     function
     | LF.No -> fprintf ppf "^e"
@@ -938,19 +943,19 @@ module Int = struct
 
     and fmt_ppr_lf_mtyp' cD lvl ppf = function
       | LF.ClTyp (LF.MTyp tA, cPsi) ->
-          fprintf ppf "[%a |- %a]"
+          fprintf ppf "[@[%a |-@ %a@]]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
 
       | LF.ClTyp (LF.PTyp tA, cPsi) ->
-          fprintf ppf "#[%a |- %a]"
+          fprintf ppf "#[@[%a |-@ %a@]]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
             (fmt_ppr_lf_typ cD cPsi lvl) tA
 
       | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
-          fprintf ppf "[%a |- %s  %a]"
+          fprintf ppf "[@[%a |- %a@ %a@]]"
             (fmt_ppr_lf_dctx cD lvl) cPsi
-          (match cl with LF.Ren -> "#" | LF.Subst -> "")
+            print_svar_class cl
             (fmt_ppr_lf_dctx cD lvl) cPhi
       | LF.CTyp (Some schemaName) ->
           fprintf ppf "%a"

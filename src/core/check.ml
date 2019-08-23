@@ -56,16 +56,20 @@ module Comp = struct
 
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
+  type mismatch_kind =
+    [ `fn
+    | `mlam
+    | `box
+    | `ctxfun
+    | `pair
+    ]
+
   type error =
     | IllegalParamTyp of I.mctx * I.dctx * I.typ
     | MismatchChk     of I.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of I.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of I.mctx * gctx * pattern * tclo * tclo
-    | CtxFunMismatch  of I.mctx * gctx  * tclo
-    | FnMismatch      of I.mctx * gctx  * tclo
-    | MLamMismatch    of I.mctx * gctx  * tclo
-    | PairMismatch    of I.mctx * gctx  * tclo
-    | BoxMismatch     of I.mctx * gctx  * tclo
+    | BasicMismatch   of mismatch_kind * I.mctx * gctx * tclo
     | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
     | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
@@ -187,36 +191,31 @@ module Comp = struct
 *)
           | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
             Format.fprintf ppf
-              "Expected: %a\n  in context %a\n  Used in context %a"
+              "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
               (P.fmt_ppr_lf_normal cD cPsi Pretty.std_lvl) tM
-              (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
               (P.fmt_ppr_lf_psi_hat cD Pretty.std_lvl) (Context.hatToDCtx phat)
+              (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
 
-          | CtxFunMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found context abstraction, but expected expression of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-
-          | FnMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found function abstraction, but expected expression of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-
-          | MLamMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found MLam abstraction, but expected expression of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
-
-          | BoxMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found box-expression, but expected expression of type %a."
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
+          | BasicMismatch (k, cD, _cG, ttau) ->
+             let tau = Whnf.cnormCTyp ttau in
+             let print_mismatch_kind ppf : mismatch_kind -> unit =
+               let p s = Format.fprintf ppf "%s" s in
+               function
+               | `fn -> p "function abstraction"
+               | `mlam -> p "meta abstraction (mlam)"
+               | `ctxfun -> p "context abstraction"
+               | `box -> p "box-expression"
+               | `pair -> p "tuple"
+             in
+             Format.fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
+               print_mismatch_kind k
+               (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
 
           | SBoxMismatch (cD, _cG, cPsi, cPhi) ->
             Format.fprintf ppf
               "Found substitution that does not have type %a[%a]."
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
               (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPhi)
-
-          | PairMismatch (cD, _cG, theta_tau) ->
-            Format.fprintf ppf "Found tuple, but expected type %a"
-              (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp theta_tau)
 
           | SynMismatch (cD, theta_tau, theta_tau') ->
             Error.report_mismatch ppf
@@ -873,26 +872,30 @@ module Comp = struct
                                            ^ "\n context given " ^ P.dctxToString cD cPsi) in
            if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
            else
-             raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+             raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
 
-        | (TypBase (_, c, mS), _ ) -> (match cPsi with  I.Null -> ()
-                                                      | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau))))
+        | (TypBase (_, c, mS), _ ) ->
+           begin match cPsi with
+           | I.Null -> ()
+           | _ -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
+           end
 
-        | _  -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+        | _  -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
        )
 
     | PatMetaObj (loc, mO) ->
        (match ttau with
         | (TypBox (_, ctyp) , theta) ->
            LF.checkMetaObj cD mO (ctyp, theta)
-        | _ -> raise (Error (loc, BoxMismatch (cD, I.Empty, ttau)))
+        | _ -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
        )
     | PatPair (loc, pat1, pat2) ->
-       (match ttau with
+       begin match ttau with
         | (TypCross (tau1, tau2), theta) ->
            checkPattern cD cG pat1 (tau1, theta);
            checkPattern cD cG pat2 (tau2, theta)
-        | _ -> raise (Error (loc, PairMismatch (cD, cG, ttau))))
+        | _ -> raise (Error (loc, BasicMismatch (`pair, cD, cG, ttau)))
+       end
 
     | pat ->
        let (loc, ttau') = synPattern cD cG pat in

@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: [h |- target (cross T S)]
-    Inferred type: [h |- target S]
+    Expected type:
+      [h |- target (cross T S)]
+    Inferred type:
+      [h |- target S]

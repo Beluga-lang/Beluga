@@ -66,13 +66,13 @@ case s of
 | [ |- e_if_false ] => ?
 | [ |- e_pred_zero] => ?
 
-| [ |- e_pred_succ Y6] => ?
+| [ |- e_pred_succ Z5] => ?
 | [ |- e_iszero_zero] => ?
-| [ |- e_iszero_succ X5] => ?
+| [ |- e_iszero_succ Y5] => ?
 
-| [ |- e_if_then_else Z4] => ?
-| [ |- e_succ Y3] => ?
-| [ |- e_pred Y2] => ?
+| [ |- e_if_then_else X4] => ?
+| [ |- e_succ Z2] => ?
+| [ |- e_pred Z1] => ?
 
-| [ |- e_iszero Y1] => ?
+| [ |- e_iszero Z] => ?
 ;

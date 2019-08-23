@@ -14,7 +14,7 @@ The file input.bel has been successfully loaded;
  case m of
 | [ |- true] => ?
 | [ |- false] => ?
-| [ |- if_then_else X Z] => ?
+| [ |- if_then_else Y X] => ?
 ;
 %:countholes
 1;

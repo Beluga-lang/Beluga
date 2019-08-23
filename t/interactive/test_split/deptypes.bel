@@ -15,5 +15,5 @@ The file input.bel has been successfully loaded;
 1;
 %:split 0 x
  case x of
-| [ |- cons Y2 X2] => ?
+| [ |- cons Z1 Y2] => ?
 ;

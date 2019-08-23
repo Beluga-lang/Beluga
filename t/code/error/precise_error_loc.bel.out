@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: cat
-    Actual type: cat -> cat
+    Expected type:
+      cat
+    Actual type:
+      cat -> cat

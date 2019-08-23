@@ -53,16 +53,20 @@ module Comp : sig
 
   type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
 
+  type mismatch_kind =
+    [ `fn
+    | `mlam
+    | `box
+    | `ctxfun
+    | `pair
+    ]
+
   type error =
     | IllegalParamTyp of LF.mctx * LF.dctx * LF.typ
     | MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
     | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
     | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
-    | CtxFunMismatch  of LF.mctx * gctx  * tclo
-    | FnMismatch      of LF.mctx * gctx  * tclo
-    | MLamMismatch    of LF.mctx * gctx  * tclo
-    | PairMismatch    of LF.mctx * gctx  * tclo
-    | BoxMismatch     of LF.mctx * gctx  * tclo
+    | BasicMismatch   of mismatch_kind * LF.mctx * gctx * tclo
     | SBoxMismatch    of LF.mctx * gctx  * LF.dctx  * LF.dctx
     | SynMismatch     of LF.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)

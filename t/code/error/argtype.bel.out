@@ -1,1 +1,4 @@
-Found box-expression, but expected expression of type [ |- nat] -> [ |- nat].
+Found
+  box-expression
+but expected expression of type
+  [ |- nat] -> [ |- nat]

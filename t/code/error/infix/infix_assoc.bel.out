@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: list ?Y[^0][]
-    Actual type: bool
+    Expected type:
+      list ?Y[^0][]
+    Actual type:
+      bool

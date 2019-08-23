@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: pred ?Y[^0][ ]
-    Actual type: pred N
+    Expected type:
+      pred ?Y[^0][ ]
+    Actual type:
+      pred N

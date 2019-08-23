@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: nat
-    Actual type: t
+    Expected type:
+      nat
+    Actual type:
+      t

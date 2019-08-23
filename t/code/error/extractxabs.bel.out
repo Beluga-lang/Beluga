@@ -1,1 +1,4 @@
-Found MLam abstraction, but expected expression of type Nlist [g] [ |- succ M] -> Nlist [g] [ |- M].
+Found
+  meta abstraction (mlam)
+but expected expression of type
+  Nlist [g] [ |- succ M] -> Nlist [g] [ |- M]

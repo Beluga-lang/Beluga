@@ -1,3 +1,5 @@
 Context of meta-object does not match expected context.
-    Expected context: g
-    Encountered context: h
+    Expected context:
+      g
+    Encountered context:
+      h

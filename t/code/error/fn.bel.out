@@ -1,3 +1,5 @@
 Ill-typed expression.
-    Expected type: [g |- opt] -> [g |- exp T]
-    Inferred type: [g |- exp T]
+    Expected type:
+      [g |- opt] -> [g |- exp T]
+    Inferred type:
+      [g |- exp T]

@@ -41,14 +41,6 @@ test_cases() {
     done
 }
 
-sort_cases() {
-    cases=($(</dev/stdin))
-    for i in ${(M)cases#*.bel}; do
-        wc -c "${i}";
-    done | sort -n | awk '{print $2}'
-    print -C1 ${(M)cases#*.cfg}
-}
-
 do_testing() {
     local n=0 success=0 fail=0 timeout=0 admissible=0 lexer_fail=0 replay_fail=0
 

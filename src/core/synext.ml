@@ -8,7 +8,7 @@ module Loc = Location
 (** External LF Syntax *)
 module LF = struct
   include Syncom.LF
-  
+
   type depend =
     | Maybe
     | No
@@ -22,19 +22,19 @@ module LF = struct
   and typ_decl =
     | TypDecl of name * typ
     | TypDeclOpt of name
- 
+
   and cltyp =
     | MTyp of typ
     | PTyp of typ
     | STyp of svar_class * dctx
 
-  and svar_class = 
+  and svar_class =
     | Ren
     | Subst
 
   and ctyp =
     | ClTyp of cltyp * dctx
-    | CTyp of name 
+    | CTyp of name
 
   and loc_ctyp = Loc.t * ctyp
 
@@ -66,7 +66,7 @@ module LF = struct
     | PVar  of Loc.t * name * sub option
     | Proj  of Loc.t * head * proj
 
-  and proj = 
+  and proj =
     | ByPos of int
     | ByName of name
 
@@ -135,28 +135,28 @@ module Comp = struct
  type meta_obj = Loc.t * mfront
 
  type meta_spine =                             (* Meta-Spine  mS :=         *)
-   | MetaNil                                   (* | .                       *) 
+   | MetaNil                                   (* | .                       *)
    | MetaApp of meta_obj * meta_spine          (* | mC mS                   *)
 
  type meta_typ = LF.loc_ctyp
 
  type typ =                                           (* Computation-level types *)
    | TypBase of Loc.t * name * meta_spine             (*    | c mS               *)
-   | TypBox  of Loc.t * meta_typ                      (*    | [U]                *) 
+   | TypBox  of Loc.t * meta_typ                      (*    | [U]                *)
    | TypArr   of Loc.t * typ * typ                    (*    | tau -> tau         *)
-   | TypCross of Loc.t * typ * typ                    (*    | tau * tau          *) 
+   | TypCross of Loc.t * typ * typ                    (*    | tau * tau          *)
    | TypPiBox of Loc.t * LF.ctyp_decl * typ           (*    | Pi u::U.tau        *)
-   | TypInd of typ 
+   | TypInd of typ
 
   and exp_chk =                                 (* Computation-level expressions *)
      | Syn    of Loc.t * exp_syn                     (*  e ::= i                 *)
-     | Fn     of Loc.t * name * exp_chk              (*    | fn x => e           *) 
+     | Fn     of Loc.t * name * exp_chk              (*    | fn x => e           *)
      | Fun    of Loc.t * fun_branches                (*    | fun fbranches       *)
      | MLam   of Loc.t * name * exp_chk              (*| mlam f => e             *)
      | Pair   of Loc.t * exp_chk * exp_chk           (*    | (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
                                                      (*    | let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)  (*    | let x = i in e      *)          
+     | Let    of Loc.t * exp_syn * (name * exp_chk)  (*    | let x = i in e      *)
      | Box of Loc.t * meta_obj
      | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
      | Hole of Loc.t * string option     				     (*    | ?                   *)
@@ -190,8 +190,8 @@ module Comp = struct
 
  and fun_branches =
    | NilFBranch of Loc.t
-   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches 
-       
+   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches
+
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
      it remains currently so we can still use the old parser without modifications -bp *)
   and branch_pattern =
@@ -221,6 +221,8 @@ end
 
 (** Syntax of Harpoon commands. *)
 module Harpoon = struct
+  include Syncom.Harpoon
+
   type split_kind =
     [ `split
     | `invert
@@ -228,14 +230,16 @@ module Harpoon = struct
 
   type command =
     (* Actual tactics *)
+
     | Intros of string list option (* list of names for introduced variables *)
+
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
-    | UseIH of Comp.exp_syn * Id.name (* * Comp.typ *)
-    (* ^ the application of the IH; must be a (nested) Apply, but this
-     * is not checked at parse-time. It is checked later in the
-     * Harpoon command processor. *)
+    | Unbox of Comp.exp_syn * Id.name
+    | By of invoke_kind * Comp.exp_syn * Id.name
+
     (* Administrative commands *)
+
     | ShowIHs
     | ShowProof
     | Defer (* Defers the current subgoal to later *)
@@ -253,7 +257,7 @@ module Sgn = struct
   type assoc = Left | Right | None
   type precedence = int
   type fix = Prefix | Postfix | Infix
-  
+
   type pragma =
     | OptsPrag          of string list
     | NamePrag          of name * string * string option
@@ -264,7 +268,7 @@ module Sgn = struct
     | AbbrevPrag        of string list * string
 
   (* Pragmas that need to be declared first *)
-  type global_pragma = 
+  type global_pragma =
     | NoStrengthen
     | Coverage     of [`Error | `Warn]
 

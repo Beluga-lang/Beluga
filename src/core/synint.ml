@@ -284,8 +284,9 @@ end
 
 (* Internal Computation Syntax *)
 module Comp = struct
+  include Syncom.Harpoon
 
-  type  kind =
+  type kind =
     | Ctype of Loc.t
     | PiKind  of Loc.t * LF.ctyp_decl * kind
 
@@ -434,6 +435,14 @@ module Comp = struct
 
   let metaObjToMFront (_loc, x) = x
 
+  (** Finds the head of an application. Chases meta-applications and
+      computation applications.
+   *)
+  let rec head_of_application : exp_syn -> exp_syn = function
+    | Apply (_, i, _) -> head_of_application i
+    | MApp (_, i, _) -> head_of_application i
+    | _ as i -> i
+
   (* Bundle of LF and computational hypotheses. *)
   type hypotheses =
     { cD : LF.mctx (* Delta / meta context / LF assumptions *)
@@ -461,8 +470,8 @@ module Comp = struct
     | Directive of 'a directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | IH of exp_syn * name
-    | By (* not implemented yet *)
+    | By of invoke_kind * exp_syn * name
+    | Unbox of exp_syn * name
 
   and 'a proof_state =
     { context : hypotheses (* all the assumptions *)

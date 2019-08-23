@@ -96,13 +96,14 @@ let filter_mctx_refinement
  * Tactics are not obligated to solve the current subgoal!
  *)
 module Tactic = struct
-  type t = unit Comp.proof_state -> tactic_context -> unit
-
-  and tactic_context =
+  type tactic_context =
     { add_subgoal : unit Comp.proof_state -> unit
     ; remove_current_subgoal : unit -> unit
     ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
+    ; defer : unit -> unit
     }
+
+  type t = unit Comp.proof_state -> tactic_context -> unit
 
   (** `solve` with the arguments switched around to make it more
       convenient to call from other tactics.
@@ -326,18 +327,48 @@ module Tactic = struct
        Comp.meta_split m tau bs
        |> solve' s
 
-  let useIH (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+  let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+    let open Comp in
     fun g tctx ->
+    let {cD; cG; _} = g.context in
+    match tau with
+    | TypBox (_, cT) ->
+       (* Because we are adding a new declaration to cD, the goal type
+          no longer makes sense in the new context. We need to weaken it
+          by one.
+        *)
+       let goal =
+         let (tau, t) = g.goal in
+         (tau, Whnf.mcomp t (LF.MShift 1))
+       in
+       let new_state =
+         { g with
+           context =
+             { g.context with
+               cD = LF.(Dec (cD, Decl (name, cT, No)))
+             }
+         ; goal
+         ; solution = None
+         }
+       in
+       tctx.remove_current_subgoal ();
+       tctx.add_subgoal new_state;
+       prepend_commands
+         [ Unbox (m, name) ]
+         (Comp.incomplete_proof new_state)
+       |> solve' g
+    | _ ->
+       tctx.printf "@[<v>The expression@,  %a@, cannot be unboxed as its type@,  %a@, is not a box.@]"
+         (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) m
+         (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
+
+  let solve_with_new_decl decl cmd g tctx =
     let open Comp in
     let new_state =
       { g with
         context =
           { g.context with
-            cG =
-              LF.Dec
-                ( g.context.cG
-                , CTypDecl (name, tau, false)
-                )
+            cG = LF.Dec ( g.context.cG , decl)
           }
       ; solution = None
       }
@@ -345,9 +376,13 @@ module Tactic = struct
     tctx.remove_current_subgoal ();
     tctx.add_subgoal new_state;
     prepend_commands
-      [ Comp.IH (m, name) ]
+      [ cmd ]
       (Comp.incomplete_proof new_state)
     |> solve' g
+
+  let invoke (k : Command.invoke_kind) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+    let open Comp in
+    solve_with_new_decl (CTypDecl (name, tau, false)) (Comp.By (k, m, name))
 end
 
 module Automation = struct
@@ -518,63 +553,10 @@ module Prover = struct
         (tctx : Tactic.tactic_context)
       : unit =
     let open Comp in
-    let mfs =
-      (* this should probably directly be a part of interpreter_state,
-         or perhaps a part of a larger state for the collection of
-         mutually inductive theorems being defined.
-       *)
-      [ Total.make_total_dec
-          s.theorem_name
-          (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
-          (Some s.order)
-      ]
-    in
-    let { cD; cG; cIH } = g.context in
-    match cmd with
-    (* Administrative commands: *)
-    | Command.ShowProof ->
-       (* This is a trick to print out the proof resulting from
-          the initial state correctly. The initial state's solution
-          might be None or Some; we don't know. Rather than handle
-          that distinction here, we can wrap the state into a proof
-          that immediately ends with Incomplete. The proof
-          pretty-printer will then deal with the None/Some for us by
-          printing a `?` if the initial state hasn't been solved
-          yet.
-        *)
-       let s = s.initial_state in
-       Format.fprintf ppf "@[<v>Proof so far:@,%a@]"
-         (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
-    | Command.Defer ->
-       (* Remove the current subgoal from the list (it's in head position)
-        * and then add it back (on the end of the list) *)
-       Tactic.(tctx.remove_current_subgoal ());
-       Tactic.(tctx.add_subgoal g)
-    | Command.ShowIHs ->
-       let f i =
-         Format.fprintf ppf "%d. %a@,"
-           (i + 1)
-           (P.fmt_ppr_cmp_ctyp_decl g.context.cD Pretty.std_lvl)
-       in
-       Format.fprintf ppf "There are %d IHs:@,"
-         (Context.length g.context.cIH);
-       Context.to_list g.context.cIH |> List.iteri f
-
-    (* Real tactics: *)
-    | Command.Intros names ->
-       Tactic.intros names g tctx;
-    | Command.Split (split_kind, t) ->
-       let (m, tau) =
-         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
-         (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
-       in
-       begin
-         match tau with
-         | TypInd tau | tau ->
-            Tactic.split split_kind m tau mfs g tctx
-       end
-    | Command.UseIH (t, name (* , typ *)) ->
-       let cG' =
+    let prepare_cG_for_invocation cG : Command.invoke_kind -> Comp.gctx =
+      function
+      | `lemma -> cG (* nothing special to do for lemma invocation *)
+      | `ih ->
          (* We elaborate the IH in an extended context with the
             theorem already defined.
             This is just to make sure that the appeal to the IH is
@@ -597,31 +579,99 @@ module Prover = struct
                , false
                )
            )
+    in
+    let mfs =
+      (* this should probably directly be a part of interpreter_state,
+         or perhaps a part of a larger state for the collection of
+         mutually inductive theorems being defined.
+       *)
+      [ Total.make_total_dec
+          s.theorem_name
+          (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
+          (Some s.order)
+      ]
+    in
+    (** Checks that the given term corresponds to the given kind of invocation.
+        Without this, it is possible to invoke lemmas using `by ih`.
+     *)
+    let check_invocation (k : invoke_kind) cD cG (i : exp_syn) f =
+      match k with
+      | `lemma -> f ()
+      | `ih ->
+         match head_of_application i |> variable_of_exp with
+         | Some 1 -> f ()
+         | _ ->
+            Format.fprintf ppf
+              "@[<v>The expression@,  %a@,is not an appeal to an induction hypothesis.@]"
+              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+    in
+    let elaborate_exp' cD cG t =
+      let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
+      (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+    in
+    let { cD; cG; cIH } = g.context in
+    match cmd with
+    (* Administrative commands: *)
+    | Command.ShowProof ->
+       (* This is a trick to print out the proof resulting from
+          the initial state correctly. The initial state's solution
+          might be None or Some; we don't know. Rather than handle
+          that distinction here, we can wrap the state into a proof
+          that immediately ends with Incomplete. The proof
+          pretty-printer will then deal with the None/Some for us by
+          printing a `?` if the initial state hasn't been solved
+          yet.
+        *)
+       let s = s.initial_state in
+       Format.fprintf ppf "@[<v>Proof so far:@,%a@]"
+         (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
+    | Command.Defer ->
+       (* Remove the current subgoal from the list (it's in head position)
+        * and then add it back (on the end of the list) *)
+       Tactic.(tctx.defer ())
+    | Command.ShowIHs ->
+       let f i =
+         Format.fprintf ppf "%d. %a@,"
+           (i + 1)
+           (P.fmt_ppr_cmp_ctyp_decl g.context.cD Pretty.std_lvl)
        in
-       let (m, tau) =
-         let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG' t in
-         (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
-       in
+       Format.fprintf ppf "There are %d IHs:@,"
+         (Context.length g.context.cIH);
+       Context.to_list g.context.cIH |> List.iteri f
+
+    (* Real tactics: *)
+    | Command.Unbox (t, name) ->
+       let (m, tau) = elaborate_exp' cD cG t in
+       Tactic.unbox m tau name g tctx
+
+    | Command.Intros names ->
+       Tactic.intros names g tctx;
+    | Command.Split (split_kind, t) ->
+       let (m, tau) = elaborate_exp' cD cG t in
+       begin
+         match tau with
+         | TypInd tau | tau ->
+            Tactic.split split_kind m tau mfs g tctx
+       end
+    | Command.By (k, t, name) ->
+       let cG = prepare_cG_for_invocation cG k in
+       let (m, tau) = elaborate_exp' cD cG t in
        dprintf
          (fun p ->
-           p.fmt
-             "@[<v 2>[harpoon-UseIH] elaborated IH:@,%a@ : %a@,in cIH = @[<v>%a@]"
-             (P.fmt_ppr_cmp_exp_syn cD cG' Pretty.std_lvl) m
-             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
-             (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cIH);
-       let _ = Check.Comp.syn cD cG' ~cIH: cIH mfs m in
-       Tactic.useIH m tau name g tctx;
+           p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
+             (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) m
+             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau);
+       let _ = Check.Comp.syn cD cG ~cIH: cIH mfs m in
+       (* validate the invocation and call the suspension if it passes. *)
+       check_invocation k cD cG m
+         (fun () -> Tactic.invoke k m tau name g tctx);
 
     | Command.Solve m ->
        let m = Interactive.elaborate_exp cD cG m g.goal in
-       try
-         Check.Comp.check cD cG mfs m g.goal;
-         ( Comp.solve m
-           |> Tactic.solve
-         ) g tctx;
-       with
-         Check.Comp.Error (_l, _e) ->
-          Printexc.print_backtrace stderr
+       Check.Comp.check cD cG mfs m g.goal;
+       ( Comp.solve m
+         |> Tactic.solve
+       ) g tctx ;
 
   (** A computed value of type 'a or a function to print an error. *)
   type 'a error = (Format.formatter -> unit, 'a) Either.t
@@ -647,33 +697,38 @@ module Prover = struct
     Either.trap f |> Either.lmap show_error
 
   let build_tactic_context ppf s =
+    let open Tactic in
+    let printf x = Format.fprintf ppf x in
     let rec tctx =
-      { Tactic.add_subgoal =
-          (fun g ->
-            dprintf
-              (fun p ->
-                p.fmt
-                  "@[<v>[tactic context] add the following:@,%a@]"
-                  P.fmt_ppr_cmp_proof_state g
-              );
-            DynArray.add s.remaining_subgoals g;
-            add_subgoal_hook g tctx
-          )
-      ; Tactic.remove_current_subgoal =
-          (fun () ->
-            let gs = s.remaining_subgoals in
-            let csg_index = current_subgoal_index gs in
-            dprintf
-              (fun p ->
-                p.fmt
-                  "@[<v>[tactic context] remove goal %d of the following:@,%a@]"
-                  csg_index
-                  P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
-              );
-            DynArray.delete gs (current_subgoal_index gs)
-          )
-      ; Tactic.printf = (fun x -> Format.fprintf ppf x)
+      { add_subgoal
+      ; remove_current_subgoal
+      ; printf
+      ; defer
       }
+    and add_subgoal g =
+      dprintf
+        (fun p ->
+          p.fmt
+            "@[<v>[tactic context] add the following:@,%a@]"
+            P.fmt_ppr_cmp_proof_state g
+        );
+      DynArray.add s.remaining_subgoals g;
+      add_subgoal_hook g tctx
+    and remove_current_subgoal () =
+      let gs = s.remaining_subgoals in
+      let csg_index = current_subgoal_index gs in
+      dprintf
+        (fun p ->
+          p.fmt
+            "@[<v>[tactic context] remove goal %d of the following:@,%a@]"
+            csg_index
+            P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
+        );
+      DynArray.delete gs (current_subgoal_index gs)
+    and defer () =
+      let g = DynArray.get s.remaining_subgoals 0 in
+      remove_current_subgoal ();
+      DynArray.add s.remaining_subgoals g
     in
     tctx
 
@@ -689,7 +744,7 @@ module Prover = struct
     | Some g ->
        (* Show the proof state and the prompt *)
        Format.fprintf ppf
-         "@,@[<v>Current state:@,%a@,There are %d IHs.@,@]%s> @?"
+         "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
          P.fmt_ppr_cmp_proof_state g
          (Context.length g.Comp.context.Comp.cIH)
          lambda;

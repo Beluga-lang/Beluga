@@ -2723,11 +2723,25 @@ let harpoon_command =
     &> cmp_exp_chk
     $> fun t -> H.Solve t
   in
-  let ih =
-    seq2
-      (keyword "ih" &> parens cmp_exp_syn <& keyword "as")
-      name
-    $> fun (t, name) -> H.UseIH (t, name)
+  let invoke_kind =
+    alt
+      (keyword "ih" &> pure `ih)
+      (keyword "lemma" &> pure `lemma)
+  in
+  let by =
+    keyword "by" &>
+    seq3
+      invoke_kind
+      (parens cmp_exp_syn)
+      (keyword "as" &> name)
+    $> fun (k, t, name) -> H.By (k, t, name)
+  in
+  let unbox =
+    keyword "unbox" &>
+      seq2
+        (parens cmp_exp_syn)
+        (keyword "as" &> name)
+    $> fun (t, name) -> H.Unbox (t, name)
   in
   let trivial_command =
     [ "show-proof", H.ShowProof
@@ -2742,6 +2756,7 @@ let harpoon_command =
       :: split
       :: invert
       :: solve
-      :: ih
+      :: by
+      :: unbox
       :: trivial_command
     )

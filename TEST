@@ -80,8 +80,6 @@ do_testing() {
         # diff responds 0 if same, 1 if different, 2 if couldn't compare.
         diff_code=$?
 
-        echo "${diff_code}"
-
         if [[ ${exit_code} -eq 152 ]]
         then
             echo -e "${C[timeout]}TIMEOUT${CEND}"

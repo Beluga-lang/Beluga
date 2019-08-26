@@ -425,7 +425,7 @@ module Automation = struct
         );
       match m with
       | LF.Decl (_, mtyp, _) ->
-         Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), LF.MShift 0)
+         Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), Whnf.m_id)
       | LF.DeclOpt _ ->
          raise (Error.Violation "[auto_solve_trivial] Unexpected DeclOpt")
     in

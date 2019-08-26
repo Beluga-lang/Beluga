@@ -12,6 +12,8 @@ declare FORCE_COLOR_OUTPUT=""
 declare NO_EXAMPLES=""
 declare ONLY_EXAMPLES=""
 declare ONLY_INTERACTIVES=""
+declare ONLY_HARPOON=""
+declare PRINT_HARPOON_OUTPUT_ON_FAILURE=""
 declare RESET_OUT_FILES=""
 declare STOP_ON_FAILURE=""
 
@@ -32,6 +34,7 @@ declare -r REPLAY=${REPLAY:-"${BELUGADIR}/bin/replay"}
 declare -r TESTDIR=${TESTDIR:-"${BELUGADIR}/t/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"${BELUGADIR}/examples"}
 declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${BELUGADIR}/t/interactive"}
+declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${BELUGADIR}/t/harpoon"}
 
 declare -i TIMEOUT=${TIMEOUT:-10}
 
@@ -43,6 +46,7 @@ declare -A TEST_RESULT=(
     [fail]=0
     [lexer_fail]=0
     [replay_fail]=0
+    [harpoon_fail]=0
 )
 
 declare -A C=(
@@ -56,6 +60,16 @@ declare -A C=(
     [removed]=""
 )
 declare CEND=""
+
+declare -Ar TYPE_TO_C=(
+    [success]="ok"
+    [timeout]="timeout"
+    [admissible]="admissible"
+    [fail]="fail"
+    [lexer_fail]="lexer_fail"
+    [replay_fail]="fail"
+    [harpoon_fail]="fail"
+)
 
 function main {
     parse_opts "$@"
@@ -88,6 +102,13 @@ function parse_opts {
             --interactive)
                 ONLY_INTERACTIVES="true"
                 ;;
+            --harpoon)
+                ONLY_HARPOON="true"
+                ;;
+            --printharpoon)
+                PRINT_HARPOON_OUTPUT_ON_FAILURE="true"
+                STOP_ON_FAILURE="true"
+                ;;
             --stop)
                 STOP_ON_FAILURE="true"
                 ;;
@@ -111,11 +132,11 @@ function parse_opts {
 }
 
 function do_testing {
-    local exit_code=0 is_failed=0
+    local output="" exit_code=0 is_failed=0
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
-    if [[ -z "${NO_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" ]]; then
+    if [[ -z "${NO_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
         echo "===== EXAMPLES ====="
 
         for f in $(find_compiler_tests_in "${EXAMPLEDIR}"); do
@@ -129,7 +150,7 @@ function do_testing {
         done
     fi
 
-    if [[ -z "${ONLY_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" ]]; then
+    if [[ -z "${ONLY_EXAMPLES}" && -z "${ONLY_INTERACTIVES}" && -z "${ONLY_HARPOON}" ]]; then
         echo "===== COMPILER TESTS ====="
 
         for f in $(find_compiler_tests_in "${TESTDIR}") ; do
@@ -143,18 +164,41 @@ function do_testing {
         done
     fi
 
-    echo "===== INTERACTIVE MODE TESTS ====="
+    if [[ -z "${ONLY_HARPOON}" ]]; then
+        echo "===== INTERACTIVE MODE TESTS ====="
 
-    for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
+        for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
+            start_test_case "${f}"
+
+            ${REPLAY} "${f}" > /dev/null 2>&1
+            exit_code=$?
+
+            if [ "${exit_code}" -eq 152 ] ; then
+                process_result "timeout" "TIMEOUT"
+            elif [ "${exit_code}" -ne 0 ] ; then
+                process_result "replay_fail" "FAIL"
+            else
+                process_result "success" "OK"
+            fi
+        done
+    fi
+
+    echo "===== HARPOON MODE TESTS ====="
+
+    for f in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
         start_test_case "${f}"
 
-        ${REPLAY} "${f}" > /dev/null 2>&1
+        output=$(${EXE} -I 2>&1 < "${f}")
+        check_harpoon_output "${output}"
         exit_code=$?
 
         if [ "${exit_code}" -eq 152 ] ; then
             process_result "timeout" "TIMEOUT"
+            stop_on_failure
         elif [ "${exit_code}" -ne 0 ] ; then
-            process_result "replay_fail" "FAIL"
+            process_result "harpoon_fail" "FAIL"
+            print_harpoon_output_on_failure "${output}"
+            stop_on_failure
         else
             process_result "success" "OK"
         fi
@@ -167,11 +211,12 @@ function do_testing {
     echo "Admissible failures: ${TEST_RESULT[admissible]}"
     echo "Timeouts: ${TEST_RESULT[timeout]}"
     echo "Interactive mode failures: ${TEST_RESULT[replay_fail]}"
+    echo "Harpoon mode failures: ${TEST_RESULT[harpoon_fail]}"
     echo "Total: ${TEST_RESULT[total]}"
     echo
     times
 
-    (( is_failed=TEST_RESULT[fail] + TEST_RESULT[timeout] + TEST_RESULT[lexer_fail] + TEST_RESULT[replay_fail] ))
+    (( is_failed=TEST_RESULT[fail] + TEST_RESULT[timeout] + TEST_RESULT[lexer_fail] + TEST_RESULT[replay_fail] + TEST_RESULT[harpoon_fail] ))
     # If not all tests succeeded then exit with non-zero status.
     # double-negate the failure count to get 0 if it was zero, and
     # 1 if it was nonzero.
@@ -238,6 +283,22 @@ function check_compiler_test_case_output {
     fi
 }
 
+function check_harpoon_output {
+    local -r output=$1
+    local -r proof_complete_message="Proof complete! (No subgoals left.)"
+    local -r uncaught_exception_message="Uncaught exception"
+
+    if [ "$(echo "${output}" | grep -c "${proof_complete_message}")" -eq 0 ]; then
+        return 1
+    fi
+
+    if [ "$(echo "${output}" | grep -c "${uncaught_exception_message}")" -gt 1 ]; then
+        return 1
+    fi
+
+    return 0
+}
+
 function start_test_case {
     local -r file_path=$1
 
@@ -248,18 +309,18 @@ function start_test_case {
 function process_result {
     local -r type=$1 message=$2
 
-    local -Ar type_to_color=(
-        [success]="ok"
-        [timeout]="timeout"
-        [admissible]="admissible"
-        [fail]="fail"
-        [lexer_fail]="lexer_fail"
-        [replay_fail]="fail"
-    )
-    local -r color=${type_to_color[${type}]}
+    local -r color=${TYPE_TO_C[${type}]}
 
     echo -e "${C[${color}]}${message}${CEND}"
     (( TEST_RESULT[${type}]+=1 ))
+}
+
+function print_harpoon_output_on_failure {
+    local -r output=$1
+
+    if [ -n "${PRINT_HARPOON_OUTPUT_ON_FAILURE}" ]; then
+        echo "${output}"
+    fi
 }
 
 function stop_on_failure {
@@ -294,6 +355,9 @@ function usage {
     echo "  --noexamples     Do not also test ${EXAMPLEDIR}."
     echo "  --examples       Only test ${EXAMPLEDIR}."
     echo "  --interactive    Only test the interactive mode."
+    echo "  --harpoon        Only test the harpoon mode."
+    echo "  --printharpoon   Print harpoon output of a test when the test is failed."
+    echo "                   This option implies --stop."
     echo "  --reset          Replace all .out files with new output (use with caution!)."
     echo "  --stop           Stop on the first failed test."
     echo

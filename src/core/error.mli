@@ -8,6 +8,7 @@ sig
 end
 
 exception Violation of string
+val violation : string -> 'a
 
 exception NotImplemented
 

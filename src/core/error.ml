@@ -4,6 +4,7 @@ struct
 end
 
 exception Violation of string
+let violation msg = raise (Violation msg)
 
 exception NotImplemented
 

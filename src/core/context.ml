@@ -219,14 +219,11 @@ let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int)
     match ctx with
     | Empty -> None
     | Dec (ctx', x) ->
-       begin
-         match go ctx' (idx + 1) with
-         | None ->
-            if f ctx' x
-            then Some (x, idx)
-            else None
-         | Some a -> Some a
-       end
+       let open Maybe in
+       Lazy.force
+         ( lazy (go ctx' (idx + 1))
+           <|> lazy (of_bool (f ctx' x) &> Some (x, idx))
+         )
   in
   go ctx 1
 
@@ -238,6 +235,9 @@ let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * 
     match ctx with
     | Empty -> None
     | Dec (ctx', x) ->
+       (** The following does not use Maybe.(<|>) to be optimized by
+           TCO (Tail Call Optimzations)
+        *)
        if f ctx' x
        then Some (x, idx)
        else go ctx' (idx + 1)
@@ -254,14 +254,11 @@ let rec find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   match ctx with
   | Empty -> None
   | Dec (ctx', x) ->
-     begin
-       match find ctx' f with
-       | None ->
-          if (f ctx' x)
-          then Some x
-          else None
-       | Some a -> Some a
-     end
+     let open Maybe in
+     Lazy.force
+       ( lazy (find ctx' f)
+         <|> lazy (of_bool (f ctx' x) &> Some x)
+       )
 
 let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find ctx (Misc.const f)
@@ -273,6 +270,9 @@ let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   match ctx with
   | Empty -> None
   | Dec (ctx', x) ->
+     (** The following does not use Maybe.(<|>) to be optimized by
+         TCO (Tail Call Optimzations)
+      *)
      if (f ctx' x)
      then Some x
      else find_rev ctx' f

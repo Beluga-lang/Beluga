@@ -282,6 +282,34 @@ let by_id (i : hole_id) : lookup_strategy =
       $> fun h -> (i, h)
   }
 
+module Snapshot =
+  Set.Make
+    (struct
+      type t = hole_id
+      let compare = compare
+    end)
+
+(** Represents a collection of holes at a particular time.
+    Essentially, this is a set of hole ids.
+ *)
+type snapshot = Snapshot.t
+
+let get_snapshot () : snapshot =
+  let f k _ s = Snapshot.add k s in
+  Hashtbl.fold f holes Snapshot.empty
+
+(** Gets all the holes that were added since the given snapshot. *)
+let holes_since (past : snapshot) : (hole_id * hole) list =
+  let f k =
+    Hashtbl.find_opt holes k
+    |> Maybe.get' (Error.Violation "membership of hole is guaranteed by snapshot")
+    |> Pair.left k
+  in
+  let present = get_snapshot () in
+  Snapshot.diff present past
+  |> Snapshot.elements
+  |> List.map f
+
 let lookup (name : string) : (hole_id * hole) option =
   let matches_name =
     function

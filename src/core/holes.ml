@@ -11,6 +11,12 @@ type hole_id = int
 
 let string_of_hole_id = string_of_int
 
+let next_key = ref 0
+let get_next_key () =
+  let x = !next_key in
+  incr next_key;
+  x
+
 type hole_name =
   | Anonymous
   | Named of string
@@ -67,33 +73,52 @@ type lookup_strategy =
   ; action : unit -> (hole_id * hole) option
   }
 
+type error =
+  | InvalidHoleIdentifier of string
+  | NoSuchHole of lookup_strategy
+
 let string_of_lookup_strategy : lookup_strategy -> string = function
   | { repr; _ } -> repr
 
-exception NoSuchHole of lookup_strategy
+let print_lookup_strategy ppf (s : lookup_strategy) : unit =
+  let open Format in
+  fprintf ppf "%s" (string_of_lookup_strategy s)
+
+exception Error of error
+
+let throw e = raise (Error e)
+
+let format_error ppf : error -> unit =
+  let open Format in
+  function
+  | InvalidHoleIdentifier s ->
+     fprintf ppf "Invalid hole identifier: %s" s
+  | NoSuchHole s ->
+     fprintf ppf "No such hole %a" print_lookup_strategy s
+
+let _ =
+  Error.register_printer'
+    (function
+     | Error e -> Some (Error.print (fun ppf -> format_error ppf e))
+     | _ -> None)
 
 let hole_is_named (h : hole) : bool =
   match h.name with
   | Anonymous -> false
   | Named _ -> true
 
-let (holes : hole DynArray.t) = DynArray.create ()
+let (holes : (hole_id, hole) Hashtbl.t) = Hashtbl.create 32
 
-let index_of (haystack : 'a DynArray.t) (f : 'a -> bool) : int option =
-  try
-    Some (DynArray.index_of f haystack)
-  with
-    Not_found -> None
+let find (p : hole -> bool) : (hole_id * hole) option =
+  let f k h m =
+    let open Maybe in
+    m <|> lazy (p h |> of_bool &> pure (k, h))
+  in
+  Hashtbl.fold f holes (lazy None)
+  |> Lazy.force
 
-let find_common (haystack : 'a DynArray.t) (f : 'a -> bool)  : (int * 'a) option =
-  match index_of haystack f with
-  | None -> None
-  | Some i -> Some (i, DynArray.get haystack i)
-
-let find (f : hole -> bool) : (int * hole) option =
-  find_common holes f
-
-let none () : bool = DynArray.empty holes
+let count () : int = Hashtbl.length holes
+let none () : bool = 0 = count ()
 
 (** More holes **)
 
@@ -106,11 +131,18 @@ let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
 
 (* removes all holes located within the given loc (e.g. of a function being shadowed) *)
 let destroy_holes_within loc =
-  DynArray.filter (fun {loc = loc'; _} -> not (loc_within loc loc')) holes
+  Hashtbl.filter_map_inplace
+    (fun k h ->
+      let open Maybe in
+      not (loc_within loc h.loc)
+      |> of_bool
+      &> pure h)
+    holes
 
 let add (h : hole) =
-  DynArray.add holes h;
-  DynArray.length holes - 1
+  let x = get_next_key () in
+  Hashtbl.add holes x h;
+  x
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   let (_, sub) = tA in
@@ -245,10 +277,9 @@ let by_id (i : hole_id) : lookup_strategy =
   { repr = Printf.sprintf "by id '%d'" i
   ; action =
       fun () ->
-      if i < DynArray.length holes then
-        Some (i, DynArray.get holes i)
-      else
-        None
+      let open Maybe in
+      Hashtbl.find_opt holes i
+      $> fun h -> (i, h)
   }
 
 let lookup (name : string) : (hole_id * hole) option =
@@ -269,14 +300,14 @@ let get (s : lookup_strategy) : (hole_id * hole) option = s.action ()
 
 let unsafe_get (s : lookup_strategy) : hole_id * hole =
   match s.action () with
-  | None -> raise (NoSuchHole s)
+  | None -> throw (NoSuchHole s)
   | Some h -> h
 
-let count () = DynArray.length holes
+let clear () = Hashtbl.clear holes
 
-let clear () = DynArray.clear holes
-
-let list () = Misc.enumerate (DynArray.to_list holes)
+let list () =
+  let f k h l = (k, h) :: l in
+  Hashtbl.fold f holes []
 
 let parse_lookup_strategy (s : string) : lookup_strategy option =
   try
@@ -287,4 +318,4 @@ let parse_lookup_strategy (s : string) : lookup_strategy option =
 let unsafe_parse_lookup_strategy (s : string) : lookup_strategy =
   match parse_lookup_strategy s with
   | Some s -> s
-  | None -> failwith ("Invalid hole identifier: " ^ s)
+  | None -> throw (InvalidHoleIdentifier s)

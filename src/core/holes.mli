@@ -19,8 +19,12 @@ type lookup_strategy
 (** Gets a string representation of the given strategy. *)
 val string_of_lookup_strategy : lookup_strategy -> string
 
+type error =
+  | InvalidHoleIdentifier of string
+  | NoSuchHole of lookup_strategy
+
 (** An error that arises when lookup by a given strategy fails. *)
-exception NoSuchHole of lookup_strategy
+exception Error of error
 
 (** Parses a lookup strategy.
  * An integer gives the `by_id` strategy, whereas a non-integer gives
@@ -91,9 +95,6 @@ val get : lookup_strategy -> (hole_id * hole) option
 (** Retrieves a single hole using the given strategy,
  * raising NoSuchHole if the hole does not exist. *)
 val unsafe_get : lookup_strategy -> hole_id * hole
-
-(** Finds the first hole satisfying the given predicate. *)
-val find : (hole -> bool) -> (int * hole) option
 
 (** Looks up a hole, retrieving the hole itself and its number. *)
 val lookup : string -> (int * hole) option

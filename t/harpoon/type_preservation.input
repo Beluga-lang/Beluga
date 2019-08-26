@@ -1,0 +1,9 @@
+%: load t/harpoon/type_preservation.bel
+%: prove tpr
+[|- oft M A] -> [|- eval M M'] -> [|- oft M' A]
+2
+split y7
+split z6
+ih (tpr [|- D1] [|- E1]) as ih0
+split ih0
+ih (tpr [|- D7 [_,D2]] [|- E2]) as ih1

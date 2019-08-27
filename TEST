@@ -251,7 +251,9 @@ function check_compiler_test_case_output {
 
     local output exit_code diff_output diff_code
 
-    output=$(${EXE} +test "${BELUGA_FLAGS[@]}" "${file_path}" 2>&1)
+    # ${...[@]+${...[@]}} is a workaround for bash < 4.4
+    # In bash < 4.4, array without an item is considered as an undefined variable.
+    output=$(${EXE} +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
     exit_code=$?
     diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.

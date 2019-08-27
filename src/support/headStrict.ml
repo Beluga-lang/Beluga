@@ -1,7 +1,7 @@
 (** A head-strict stream is non-empty and its head is a value. *)
 type 'a t =
   { head : 'a;
-    tail : unit -> 'a t option;
+    tail : 'a t option Lazy.t;
   }
 
 (** Constructs a head-strict stream. *)
@@ -10,7 +10,7 @@ let rec unfold (seed : 's) (next : 's -> ('a * 's) option) : 'a t option =
   next seed $>
     fun (x, seed) ->
     { head = x;
-      tail = fun () -> unfold seed next;
+      tail = lazy (unfold seed next);
     }
 
 (** Converts any basic stream into a head-strict stream.
@@ -23,7 +23,7 @@ module OfBasicStream (S : Types.BasicStream) = struct
 end
      
 (** Prepend an element to a head-strict stream. *)
-let cons (x : 'a) (s : unit -> 'a t option) : 'a t =
+let cons (x : 'a) (s : 'a t option Lazy.t) : 'a t =
   { head = x;
     tail = s;
   }

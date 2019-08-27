@@ -239,7 +239,7 @@ module Make (P : ParserInfo) = struct
     { s with semantic_loc = List.tl s.semantic_loc }
   
   exception RewindTooFar
-  
+
   (** Moves the given number of tokens from the rewind stack back onto
   the input stream. *)
   let rec rewind (n : int) (s : state) : state =
@@ -256,7 +256,7 @@ module Make (P : ParserInfo) = struct
                  (* pull out the input eagerly to avoid putting the
                  whole state inside the closure *)
                  let i = s.input.Thunk.force () in
-                 let x = Either.pure (HeadStrict.cons t (fun () -> (Either.forget i))) in
+                 let x = Either.pure (HeadStrict.cons t (lazy (Either.forget i))) in
                  Thunk.value x
                end;
              stk = stk;
@@ -423,9 +423,9 @@ module Make (P : ParserInfo) = struct
              input =
                Thunk.delay
                  (fun () ->
-                   match tail () with
-                   | None -> Left head.Token.annotation.Span.stop
-                   | Some x -> Right x
+                   match tail with
+                   | lazy None -> Left head.Token.annotation.Span.stop
+                   | lazy (Some x) -> Right x
                  )
                ;
            }

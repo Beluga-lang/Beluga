@@ -632,14 +632,25 @@ module Prover = struct
                                   is not an appeal to an induction hypothesis.@]"
               (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
     in
-    let elaborate_exp' cD cG t =
-      let (hs, (m, (tau, ms))) =
-        Holes.catch (fun _ -> Interactive.elaborate_exp' cD cG t)
+    let elaborate_exp' cIH cD cG t =
+      let (hs, (i, tau)) =
+        Holes.catch
+        (fun _ ->
+          let (i, (tau, theta)) =
+            Interactive.elaborate_exp' cD cG t
+          in
+          let _ = Check.Comp.syn ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
+          (i, Whnf.cnormCTyp (tau, theta)))
       in
-      (hs, Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+      (hs, i, tau)
     in
-    let elaborate_exp cD cG t ttau =
-      Holes.catch (fun _ -> Interactive.elaborate_exp cD cG t ttau)
+    let elaborate_exp cIH cD cG t ttau =
+      Holes.catch
+        (fun _ ->
+          let e = Interactive.elaborate_exp cD cG t ttau in
+          Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
+          e
+        )
     in
     let { cD; cG; cIH } = g.context in
     match cmd with
@@ -677,13 +688,13 @@ module Prover = struct
 
     (* Real tactics: *)
     | Command.Unbox (t, name) ->
-       let (hs, m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cIH cD cG t in
        Tactic.unbox m tau name g tctx
 
     | Command.Intros names ->
        Tactic.intros names g tctx;
     | Command.Split (split_kind, t) ->
-       let (hs, m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cIH cD cG t in
        begin
          match tau with
          | TypInd tau | tau ->
@@ -691,20 +702,19 @@ module Prover = struct
        end
     | Command.By (k, t, name) ->
        let cG = prepare_gctx_for_invocation cG k in
-       let (hs, m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cIH cD cG t in
        dprintf
          begin fun p ->
-         p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
+         p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
-       let _ = Check.Comp.syn cD cG ~cIH: cIH mfs m in
        (* validate the invocation and call the suspension if it passes. *)
        check_invocation k cD cG m
          (fun () -> Tactic.invoke k m tau name g tctx);
 
     | Command.Solve m ->
-       let (hs, m) = elaborate_exp cD cG m g.goal in
+       let (hs, m) = elaborate_exp cIH cD cG m g.goal in
        printf "Found %d holes in solution@," (List.length hs);
        let f (id, h) =
          let open Holes in

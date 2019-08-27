@@ -265,7 +265,7 @@ function check_compiler_test_case_output {
     elif [[ "${diff_code}" -eq 0 || ("${exit_code}" -eq 0 && "${diff_code}" -eq 2) ]]; then
         process_result "success" "OK"
     else
-        if grep --quiet "${file_path}" .admissible-fail ; then
+        if grep -q "${file_path}" .admissible-fail ; then
             process_result "admissible" "ADMISSIBLE"
         else
             process_result "fail" "FAIL"
@@ -290,11 +290,11 @@ function check_harpoon_output {
     local -r proof_complete_message="Proof complete! (No subgoals left.)"
     local -r uncaught_exception_message="Uncaught exception"
 
-    if [ "$(echo "${output}" | grep -c "${proof_complete_message}")" -eq 0 ]; then
+    if ! grep -q "${proof_complete_message}" <(echo "${output}"); then
         return 1
     fi
 
-    if [ "$(echo "${output}" | grep -c "${uncaught_exception_message}")" -gt 1 ]; then
+    if grep -q "${uncaught_exception_message}" <(echo "${output}"); then
         return 1
     fi
 

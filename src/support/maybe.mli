@@ -25,12 +25,12 @@ val map : ('a -> 'b) -> 'a option -> 'b option
 
 val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
 
-val ( <|> ) : 'a option lazy_t -> 'a option lazy_t -> 'a option lazy_t
+val ( <|> ) : 'a option Lazy.t -> 'a option Lazy.t -> 'a option Lazy.t
 
 (** Selects the first alternative that succeeds.
     Forces every thunk until one computes `Some x'.
  *)
-val choice : 'a option lazy_t list -> 'a option lazy_t
+val choice : 'a option Lazy.t list -> 'a option Lazy.t
 
 (** Returns the first option that isn't None, if any. *)
 val alt : 'a option -> 'a option -> 'a option

@@ -40,7 +40,7 @@ let ( $ ) (o : 'a option) (k : 'a -> 'b option) : 'b option =
     This will force the first option, but will never force the second.
     This operation is associative.
  *)
-let ( <|> ) (p : 'a option lazy_t) (q : 'a option lazy_t) : 'a option lazy_t =
+let ( <|> ) (p : 'a option Lazy.t) (q : 'a option Lazy.t) : 'a option Lazy.t =
   begin match Lazy.force p with
   | Some _ -> p
   | None -> q
@@ -49,7 +49,7 @@ let ( <|> ) (p : 'a option lazy_t) (q : 'a option lazy_t) : 'a option lazy_t =
 (* This is hoisted out so that forcing becomes a no-op after the first force. *)
 let lazy_none = lazy None
 
-let choice (ps : 'a option lazy_t list) : 'a option lazy_t =
+let choice (ps : 'a option Lazy.t list) : 'a option Lazy.t =
   List.fold_left ( <|> ) lazy_none ps
 
 (** Non-lazy version of `<|>'. *)

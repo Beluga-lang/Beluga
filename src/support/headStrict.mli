@@ -1,6 +1,6 @@
 type 'a t =
   { head : 'a;
-    tail : unit -> 'a t option;
+    tail : 'a t option Lazy.t;
   }
 
 (** Construct a head-strict stream from an initial state and a state
@@ -12,4 +12,4 @@ module OfBasicStream (S : Types.BasicStream) : sig
 end
 
 (** Prepend a value to a head-strict stream. *)
-val cons : 'a -> (unit -> 'a t option) -> 'a t
+val cons : 'a -> 'a t option Lazy.t -> 'a t

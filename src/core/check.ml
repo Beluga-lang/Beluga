@@ -734,14 +734,16 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Hole " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
        let _ =
-         Holes.add
-           { Holes.loc = loc
-           ; Holes.name = Holes.name_of_option name
+         let open Holes in
+         add
+           { loc = loc
+           ; name = Holes.name_of_option name
            ; Holes.cD
-           ; Holes.info =
-               Holes.CompHoleInfo
+           ; info =
+               CompHoleInfo
                  { Holes.cG
-                 ; Holes.compGoal = (tau, t)
+                 ; compGoal = (tau, t)
+                 ; compSolution = None
                  }
            }
        in

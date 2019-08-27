@@ -22,6 +22,7 @@ val string_of_lookup_strategy : lookup_strategy -> string
 type error =
   | InvalidHoleIdentifier of string
   | NoSuchHole of lookup_strategy
+  | NameShadowing of string * Loc.t
 
 (** An error that arises when lookup by a given strategy fails. *)
 exception Error of error
@@ -46,11 +47,13 @@ val by_name : string -> lookup_strategy
 type lf_hole_info =
   { cPsi : LF.dctx
   ; lfGoal : LF.tclo
+  ; mutable lfSolution : LF.normal option
   }
 
 type comp_hole_info =
   { cG : Comp.gctx
   ; compGoal : Comp.typ * LF.msub
+  ; mutable compSolution : Comp.exp_chk option
   }
 
 type hole_info =
@@ -87,6 +90,12 @@ val is_lf_hole : hole -> bool
 
 (** Decides whether this is a computational hole. *)
 val is_comp_hole : hole -> bool
+
+(** Decides whether this hole is solved. *)
+val is_solved : hole -> bool
+
+(** Decides whether this hole is unsolved. *)
+val is_unsolved : hole -> bool
 
 (** Decides whether a hole has a name (is not anonymous). *)
 val hole_is_named : hole -> bool

@@ -254,6 +254,7 @@ let intro (h : Holes.hole) =
           Holes.CompHoleInfo
             { Holes.cG = cGT
             ; Holes.compGoal = (tau, mS)
+            ; _
             }
       } = h
   in
@@ -336,6 +337,7 @@ let split (e : string) (hi : Holes.hole_id * Holes.hole) : Comp.exp_chk option =
             Holes.CompHoleInfo
               { Holes.cG = cG0
               ; Holes.compGoal = tau_theta
+              ; _
               }
         }
       ) = hi in

@@ -936,12 +936,8 @@ and elTermW recT cD cPsi m sA = match (m, sA) with
     let tM = elTerm recT cD cPsi m (tB, Substitution.LF.id) in
     let () = Unify.unifyTyp cD cPsi (tB, Substitution.LF.id) sA in
     tM
-  | (Apx.LF.LFHole (loc, name), tA) ->
-     dprintf
-       (fun p ->
-         p.fmt "[elTermW] elaborated LFHole at %a"
-           Loc.print_short loc);
-     Int.LF.LFHole (loc, name)
+  | (Apx.LF.LFHole (loc, m_name), tA) ->
+     Int.LF.LFHole (loc, m_name)
 
 and elTuple recT cD cPsi tuple (typRec, s) =
   match (tuple, typRec) with
@@ -969,7 +965,7 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.LFHole (loc, m_name) ->
      let open Holes in
      let name = name_of_option m_name in
-     let info = LfHoleInfo { cPsi; lfGoal = sP } in
+     let info = LfHoleInfo { cPsi; lfGoal = sP; lfSolution = None } in
      let _ = add { loc; name; cD; info } in
      dprintf
        (fun p ->

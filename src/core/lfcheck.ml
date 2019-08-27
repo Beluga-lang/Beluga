@@ -219,7 +219,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 
   | (LFHole (loc, m_name), _), _ ->
      begin
-       let info = Holes.LfHoleInfo { cPsi; Holes.lfGoal = sA } in
+       let info = Holes.LfHoleInfo { cPsi; Holes.lfGoal = sA; Holes.lfSolution = None } in
        let name = Holes.name_of_option m_name in
        let _ = Holes.add { Holes.loc = loc; Holes.name = name; Holes.cD = cD; Holes.info = info } in
        ()

@@ -705,13 +705,13 @@ module Prover = struct
 
     | Command.Solve m ->
        let (hs, m) = elaborate_exp cD cG m g.goal in
-       printf "Found %d holes in solution" (List.length hs);
+       printf "Found %d holes in solution@," (List.length hs);
        let f (id, h) =
          let open Holes in
          let { name; Holes.cD = cDh; info; _ } = h in
          match info with
          | CompHoleInfo _ -> failwith "computational holes not supported"
-         | LfHoleInfo { lfGoal; cPsi } ->
+         | LfHoleInfo { lfGoal; cPsi; lfSolution } ->
             let typ = Whnf.normTyp lfGoal in
             let ti = Abstract.typ typ in
             Logic.prepare ();
@@ -723,7 +723,7 @@ module Prover = struct
               Logic.Solver.solve cDh cPsi query
                 begin
                   fun (cPsi, tM) ->
-                  printf "@[%a@]@,"
+                  Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
                     (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
                   incr n;
                   if !n >= 10 then raise Logic.Frontend.Done

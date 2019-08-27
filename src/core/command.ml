@@ -241,35 +241,57 @@ let requiring_hole_satisfies
       (f : Holes.hole_id * Holes.hole -> unit)
       (p : Holes.hole_id * Holes.hole)
     : unit =
-  match p with
-  | (i, h) when check h -> f (i, h)
-  | (i, h) -> on_error (i, h)
+  let g =
+    match p with
+    | (i, h) when check h -> f
+    | (i, h) -> on_error
+  in
+  g p
+
+(** Requires that an list of checks on the hole pass before invoking
+    the continuation `f`.
+ *)
+let rec require checks f p =
+  match checks with
+  | [] -> f p
+  | (check, on_error) :: checks ->
+     requiring_hole_satisfies check on_error
+       (require checks f)
+       p
+
+let string_of_id_hole (i, h) = Holes.string_of_name_or_id (h.Holes.name, i)
+
+let check_is_comp_hole ppf =
+  Holes.is_comp_hole,
+  fun p ->
+  fprintf ppf "- Hole %s is not a computational hole;\n@?"
+    (string_of_id_hole p)
+
+let check_is_lf_hole ppf =
+  Holes.is_lf_hole,
+  fun p ->
+  fprintf ppf "- Hole %s is not an LF hole;\n@?"
+    (string_of_id_hole p)
+
+let check_is_unsolved ppf =
+  Holes.is_unsolved,
+  fun p ->
+  fprintf ppf "- Hole %s is already solved;\n@?"
+    (string_of_id_hole p)
 
 let requiring_computation_hole
       ppf
       (f : Holes.hole_id * Holes.hole -> unit)
       (p : Holes.hole_id * Holes.hole)
     : unit =
-  requiring_hole_satisfies
-    Holes.is_comp_hole
-    (fun (i, h) ->
-      fprintf ppf "- Hole %s is not a computational hole;\n@?"
-        (Holes.string_of_name_or_id (h.Holes.name, i)))
-    f
-    p
+  require [ check_is_comp_hole ppf; check_is_unsolved ppf] f p
 
 let requiring_lf_hole
       ppf
       (f : Holes.hole_id * Holes.hole -> unit)
       (p : Holes.hole_id * Holes.hole)
     : unit =
-  requiring_hole_satisfies
-    Holes.is_lf_hole
-    (fun (i, h) ->
-      fprintf ppf "- Hole %s is not an LF hole;\n@?"
-     (Holes.string_of_name_or_id (h.Holes.name, i)))
-    f
-    p
+  require [ check_is_lf_hole ppf; check_is_unsolved ppf] f p
 
 let printhole =
   { name = "printhole";
@@ -319,6 +341,7 @@ let solvelfhole =
                          Holes.LfHoleInfo
                            { Holes.lfGoal = (lfTyp, lfSub)
                            ; Holes.cPsi
+                           ; Holes.lfSolution
                            }
                      ; Holes.loc = _
                      } = h
@@ -388,7 +411,7 @@ let helpme =
         (fun ppf _ ->
           List.iter (fun x -> fprintf ppf "%%:%20s\t %s\n@?" x.name x.help) !reg
         );
-    help = "list all availale commands with a short description"
+    help = "list all available commands with a short description"
   }
 
 (* The fill command is actually broken when you use it to fill in an
@@ -426,6 +449,7 @@ let fill =
                              Holes.CompHoleInfo
                                { Holes.compGoal = tclo
                                ; Holes.cG
+                               ; Holes.compSolution
                                }
                          }
                        ) = hi

@@ -40,16 +40,23 @@ let string_of_name_or_id : hole_name * hole_id -> string = function
 type lf_hole_info =
   { cPsi : LF.dctx
   ; lfGoal : LF.tclo
+  ; mutable lfSolution : LF.normal option
   }
 
 type comp_hole_info =
   { cG : Comp.gctx
   ; compGoal : Comp.typ * LF.msub
+  ; mutable compSolution : Comp.exp_chk option
   }
 
 type hole_info =
   | LfHoleInfo of lf_hole_info
   | CompHoleInfo of comp_hole_info
+
+let is_info_solved : hole_info -> bool = function
+  | LfHoleInfo { lfSolution = Some _; _ } -> true
+  | CompHoleInfo { compSolution = Some _; _} -> true
+  | _ -> false
 
 type hole =
   { loc : Syntax.Loc.t
@@ -67,6 +74,9 @@ let is_lf_hole h = match h.info with
 let is_comp_hole h = match h.info with
   | CompHoleInfo _ -> true
   | _ -> false
+
+let is_solved h = is_info_solved h.info
+let is_unsolved h = not (is_solved h)
 
 type lookup_strategy =
   { repr : string
@@ -251,7 +261,7 @@ let print ppf (i, {loc; name; cD; info}) : unit =
      an LF hole or a computational hole.
    *)
   begin match info with
-  | LfHoleInfo { cPsi; lfGoal } ->
+  | LfHoleInfo { cPsi; lfGoal; lfSolution } ->
      let lfGoal' = Whnf.normTyp lfGoal in
      let cPsi = Whnf.normDCtx cPsi in
 
@@ -262,20 +272,26 @@ let print ppf (i, {loc; name; cD; info}) : unit =
 
      (* 4. Format the goal. *)
      thin_line ppf ();
-     fprintf ppf "@[Goal:@ %a@]" (P.fmt_ppr_lf_typ cD cPsi P.l0) lfGoal';
+     fprintf ppf "@[Goal:@ @[%a@]@]" (P.fmt_ppr_lf_typ cD cPsi P.l0) lfGoal';
 
-     (* 5. The in-scope variables that have the goal type, if any *)
-     let suggestions =
-       (* Need to check both the LF context and the meta-variable context. *)
-       iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
-     in
-     if Misc.List.nonempty suggestions then
-       fprintf ppf
-         "@,@,Variable%a of this type: @[<h>%a@]"
-         plural (List.length suggestions = 1)
-         (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+     begin match lfSolution with
+     | None ->
+        (* 5. The in-scope variables that have the goal type, if any *)
+        let suggestions =
+          (* Need to check both the LF context and the meta-variable context. *)
+          iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
+        in
+        if Misc.List.nonempty suggestions then
+          fprintf ppf
+            "@,@,Variable%a of this type: @[<h>%a@]"
+            plural (List.length suggestions = 1)
+            (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+     | Some tM ->
+        fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
+          (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
+     end
 
-  | CompHoleInfo { cG; compGoal = (tau, theta) } ->
+  | CompHoleInfo { cG; compGoal = (tau, theta); compSolution } ->
      let cG = Whnf.normCtx cG in
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
@@ -287,13 +303,19 @@ let print ppf (i, {loc; name; cD; info}) : unit =
      fprintf ppf "@[Goal:@ %a@]"
        (P.fmt_ppr_cmp_typ cD P.l0) goal;
 
-     (* Collect a list of variables that already have the goal type. *)
-     let suggestions = iterGctx cD cG (tau, theta) in
-     if Misc.List.nonempty suggestions then
-       fprintf ppf
-         "@,@,Variable%a of this type: @[<h>%a@]"
-         plural (List.length suggestions = 1)
-         (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+     begin match compSolution with
+     | None ->
+        (* Collect a list of variables that already have the goal type. *)
+        let suggestions = iterGctx cD cG (tau, theta) in
+        if Misc.List.nonempty suggestions then
+          fprintf ppf
+            "@,@,Variable%a of this type: @[<h>%a@]"
+            plural (List.length suggestions = 1)
+            (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+     | Some e ->
+        fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
+          (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
+     end
   end;
   fprintf ppf "@]"
 

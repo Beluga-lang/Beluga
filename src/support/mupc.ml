@@ -198,7 +198,7 @@ module Make (P : ParserInfo) = struct
     { semantic_loc : semantic;
       (** Either we have a head-strict input stream or we've reached
       EOF and recorded the position of the EOF. *)
-      input : (Loc.t, item Token.t HeadStrict.t) Either.t Thunk.t;
+      input : (Loc.t, item Token.t HeadStrict.t) Either.t Lazy.t;
       stk : item Token.t PureStack.t;
       backtrack_enabled : bool;
       count : int;
@@ -210,7 +210,7 @@ module Make (P : ParserInfo) = struct
     Either.eliminate
       (fun l -> Span.of_pair' l l)
       (fun i -> i.head.annotation)
-      (s.input.Thunk.force ())
+      (Lazy.force s.input)
   
   type parse_error =
     { error_span : Span.t;
@@ -255,9 +255,9 @@ module Make (P : ParserInfo) = struct
                begin
                  (* pull out the input eagerly to avoid putting the
                  whole state inside the closure *)
-                 let i = s.input.Thunk.force () in
+                 let i = Lazy.force s.input in
                  let x = Either.pure (HeadStrict.cons t (lazy (Either.forget i))) in
-                 Thunk.value x
+                 lazy x
                end;
              stk = stk;
              count = s.count - 1;
@@ -320,7 +320,7 @@ module Make (P : ParserInfo) = struct
       Either.eliminate
         (fun l -> l)
         (fun t -> t.HeadStrict.head.Token.annotation.Span.start)
-        (s.input.Thunk.force ())
+        (Lazy.force s.input)
   
   (** Gets the current line the parser is on inside the input,
   i.e. the line at which the last token processed by the parser *ends
@@ -401,17 +401,17 @@ module Make (P : ParserInfo) = struct
   let peeks (s : state) : (Loc.t, item Token.t) Either.t =
     let open Either in
     let open HeadStrict in
-    s.input.Thunk.force () $> fun { head; _ } -> head
+    Lazy.force s.input $> fun { head; _ } -> head
   
   (** Pops a token from the input stream, if any.
   Returns `Nothing` if the input is already empty. *)
   let car (s : state) : 'c Token.t option * state =
     let open Either in
     let open HeadStrict in
-    match s.input.Thunk.force () with
-    | Left _ ->
+    match s.input with
+    | lazy (Left _) ->
        ( None, s )
-    | Right { head; tail }  ->
+    | lazy (Right { head; tail })  ->
          ( Some head,
            { s with
              stk =
@@ -421,11 +421,10 @@ module Make (P : ParserInfo) = struct
                  s.stk;
              count = s.count + 1;
              input =
-               Thunk.delay
-                 (fun () ->
-                   match tail with
-                   | lazy None -> Left head.Token.annotation.Span.stop
-                   | lazy (Some x) -> Right x
+               lazy
+                 (match tail with
+                  | lazy None -> Left head.Token.annotation.Span.stop
+                  | lazy (Some x) -> Right x
                  )
                ;
            }
@@ -562,12 +561,11 @@ module Make (P : ParserInfo) = struct
   
   let initialize (input : item Token.t Stream.t) : state =
     { input =
-        Thunk.delay
-          (fun () ->
-            Maybe.eliminate
-              (fun _ -> Either.Left Loc.initial)
-              (fun s -> Either.Right s)
-              (let module M = HeadStrict.OfBasicStream (Stream) in M.f input)
+        lazy
+          (Maybe.eliminate
+             (fun _ -> Either.Left Loc.initial)
+             (fun s -> Either.Right s)
+             (let module M = HeadStrict.OfBasicStream (Stream) in M.f input)
           );
       semantic_loc = [];
       backtrack_enabled = false;

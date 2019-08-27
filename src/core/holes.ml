@@ -76,6 +76,9 @@ type lookup_strategy =
 type error =
   | InvalidHoleIdentifier of string
   | NoSuchHole of lookup_strategy
+  | NameShadowing of
+      string (* problematic name *)
+      * Loc.t (* location of existing hole *)
 
 let string_of_lookup_strategy : lookup_strategy -> string = function
   | { repr; _ } -> repr
@@ -95,6 +98,10 @@ let format_error ppf : error -> unit =
      fprintf ppf "Invalid hole identifier: %s" s
   | NoSuchHole s ->
      fprintf ppf "No such hole %a" print_lookup_strategy s
+  | NameShadowing (s, loc) ->
+     fprintf ppf "Hole with name %s already defined at %a"
+       s
+       Loc.print loc
 
 let _ =
   Error.register_printer'
@@ -116,6 +123,13 @@ let find (p : hole -> bool) : (hole_id * hole) option =
   in
   Hashtbl.fold f holes (lazy None)
   |> Lazy.force
+
+let lookup (name : string) : (hole_id * hole) option =
+  let matches_name =
+    function
+    | { name = Named n; _ } -> n = name
+    | _ -> false in
+  find matches_name
 
 let count () : int = Hashtbl.length holes
 let none () : bool = 0 = count ()
@@ -139,7 +153,17 @@ let destroy_holes_within loc =
       &> pure h)
     holes
 
+(** Checks that the given hole's name is not already stored. *)
+let check_hole_uniqueness (h : hole) : unit =
+  match h.name with
+  | Anonymous -> () (* anonymous holes never overlap existing holes *)
+  | Named s ->
+     match lookup s with
+     | None -> ()
+     | Some (_, h') -> throw (NameShadowing (s, h'.loc))
+
 let add (h : hole) =
+  check_hole_uniqueness h;
   let x = get_next_key () in
   Hashtbl.add holes x h;
   x
@@ -315,13 +339,6 @@ let catch f =
   let x = f () in
   let hs = holes_since s in
   (hs, x)
-
-let lookup (name : string) : (hole_id * hole) option =
-  let matches_name =
-    function
-    | { name = Named n; _ } -> n = name
-    | _ -> false in
-  find matches_name
 
 let by_name (name : string) : lookup_strategy =
   { repr = Printf.sprintf "by name '%s'" name

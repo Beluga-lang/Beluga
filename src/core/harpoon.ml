@@ -211,6 +211,11 @@ module Tactic = struct
            | Coverage.CovGoal (_, _, _) ->
             Misc.not_implemented "CovCtx impossible"
          | Coverage.CovPatt (cG, pat, tau) ->
+            let open Comp in
+            (* compute the head of the pattern to be the case label
+               We do this right away since it could fail if the user
+               did something funny.
+             *)
             let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
             let cG = Coverage.compgctx_of_gctx cG in
             let cIH = refine_ctx s.context.cIH in

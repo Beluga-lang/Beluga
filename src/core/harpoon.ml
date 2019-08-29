@@ -196,13 +196,13 @@ module Tactic = struct
     | None -> ()
     (* splitting failed, so we do nothing *)
     | Some cgs ->
-       (* We will map f over the coverage goals that were generated.
-          f computes the subgoal for the given coverage goal, invokes the
-          add_subgoal callback on the computed subgoal (to register it),
+       (* We will map get_branch_by f over the coverage goals that were generated.
+          get_branch_by f computes the subgoal for the given coverage goal,
+          invokes the add_subgoal callback on the computed subgoal (to register it),
           invokes the remove_current_subgoal callback, and constructs the
           Harpoon syntax for this split branch.
         *)
-       let f (cD, cov_goal, ms) =
+       let get_branch_by f (cD, cov_goal, ms) =
          match cov_goal with
          (* Because we called genPatCGoals, I'm pretty sure that the
             CovCtx and CovGoal constructors are impossible here,
@@ -211,28 +211,26 @@ module Tactic = struct
          | Coverage.CovCtx _
            | Coverage.CovGoal (_, _, _) ->
             Misc.not_implemented "CovCtx impossible"
-         | Coverage.CovPatt (cG, p, tau) ->
-            let open Comp in
+         | Coverage.CovPatt (cG, pat, tau) ->
             let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
-            let cG = refine_ctx s.context.cG in
+            let cG = Coverage.compgctx_of_gctx cG in
             let cIH = refine_ctx s.context.cIH in
             dprintf
-              begin fun pr ->
-              pr.fmt "[harpoon-split] got pattern @[%a@]"
-                (P.fmt_ppr_cmp_pattern cD cG P.l0) p
+              begin fun p ->
+              p.fmt "[harpoon-split] got pattern @[%a@]"
+                (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
               end;
             let (cDext, cIH') =
-              if is_comp_inductive cG m && Total.struct_smaller p
+              if is_comp_inductive cG m && Total.struct_smaller pat
               then
                 (* mark subterms in the context as inductive *)
-                let cD1 = Check.Comp.mvars_in_patt cD p in
+                let cD1 = Check.Comp.mvars_in_patt cD pat in
                 (* Compute the well-founded recursive calls *)
                 let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
                 dprintf
                   (fun p ->
                     p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
                       (P.fmt_ppr_cmp_gctx cD P.l0) cIH);
-
                 (cD1, cIH)
               else
                 let _ =
@@ -252,44 +250,87 @@ module Tactic = struct
                   (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
                   (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD);
             let cIH0 = Total.wf_rec_calls cD cG mfs in
-            let context =
-              { cD
-              ; cG
-              ; cIH =
-                  Context.append cIH
-                    (Context.append cIH0 cIH')
-              }
-            in
-            let new_state =
-              { context
-              ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
-              (* ^ our goal already has a delayed msub, so we compose the
+            let cIH = Context.(append cIH (append cIH0 cIH')) in
+            let context = { cD; cG; cIH } in
+            f context pat ms
+       in
+       (* We will map get_meta_branch over the coverage goals that were generated.
+          get_meta_branch computes the subgoal for the given coverage goal,
+          invokes the add_subgoal callback on the computed subgoal (to register it),
+          invokes the remove_current_subgoal callback, and constructs the
+          Harpoon syntax for this split branch.
+        *)
+       let get_meta_branch =
+         get_branch_by
+           (fun context pat ms ->
+             in
+             let new_state =
+               { context
+               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
+               (* ^ our goal already has a delayed msub, so we compose the
                  one we obtain from the split (the refinement substitution)
                  with the one we have (eagerly).
-               *)
-              ; solution = None
-              }
-            in
-            (* compute the head of the pattern to be the case label *)
-            let patt =
-              match p with
-              | PatMetaObj (_, patt) -> patt
-              | _ -> failwith "splitting on non computation-level types not supported yet"
-            in
-            let c =
-              head_of_meta_obj patt
-              |> Maybe.get
-              |> Pair.lmap Context.hatToDCtx
-            in
-            tctx.add_subgoal new_state;
-            meta_branch c context (incomplete_proof new_state)
+                *)
+               ; solution = None
+               }
+             in
+             (* compute the head of the pattern to be the case label *)
+             match pat with
+             | PatMetaObj (_, patt) ->
+                let c =
+                  head_of_meta_obj patt
+                  |> Maybe.get
+                  |> Pair.lmap Context.hatToDCtx
+                in
+                tctx.add_subgoal new_state;
+                meta_branch c context (incomplete_proof new_state)
+             | _ ->
+                raise (Error.Violation "[get_meta_branch] Impossible case")
+           )
+         (* Because we called genPatCGoals, I'm pretty sure that the
+            CovCtx and CovGoal constructors are impossible here,
+            but I could be wrong.
+          *)
        in
+
+       let get_comp_branch =
+         get_branch_by
+           (fun context pat ms ->
+             let new_state =
+               { context
+               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
+               ; solution = None
+               }
+             in
+             match pat with
+             | PatConst (_, cid, _) ->
+                tctx.add_subgoal new_state;
+                comp_branch cid context (incomplete_proof new_state)
+             | _ ->
+                raise (Error.Violation "[get_meta_branch] Impossible case")
+           )
+       in
+
+       let is_meta_split =
+         function
+         | (_, Coverage.CovPatt (_, PatMetaObj _, _), _) -> true
+         | _ -> false
+       in
+       let is_comp_split cg = not (is_meta_split cg) in
        tctx.remove_current_subgoal ();
-       let bs = List.map f (List.rev cgs) in
-       (* Assemble the split branches computed in `bs` into the Harpoon
-          Split syntax.
-        *)
-       Comp.meta_split m tau bs
+       let revCgs = List.rev cgs in
+       (match (List.for_all is_meta_split revCgs, List.for_all is_comp_split revCgs) with
+        | (true, false) ->
+           List.map get_meta_branch revCgs
+           |> Comp.meta_split m tau
+        | (false, true) ->
+           List.map get_comp_branch revCgs
+           |> Comp.comp_split m tau
+        | (false, false) ->
+           failwith "[split] Mixed cases of meta and comp split"
+        | _ ->
+           raise (Error.Violation "[split] Impossible case")
+       )
        |> solve' s
 
   let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =

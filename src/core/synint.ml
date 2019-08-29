@@ -487,7 +487,7 @@ module Comp = struct
          * 'a comp_branch list
 
   and 'a meta_branch = ('a, LF.dctx * LF.head) split_branch
-  and 'a comp_branch = ('a, name) split_branch
+  and 'a comp_branch = ('a, cid_comp_const) split_branch
 
   (** A branch of a case analysis. *)
   and ('a, 'b) split_branch =
@@ -537,7 +537,7 @@ module Comp = struct
       : 'a proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : name) (h : hypotheses) (d : 'a proof)
+  let comp_branch (c : cid_comp_const) (h : hypotheses) (d : 'a proof)
       : 'a comp_branch =
     SplitBranch (c, (Hypothetical (h, d)))
 

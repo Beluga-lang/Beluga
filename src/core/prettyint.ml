@@ -1372,7 +1372,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        List.iter
          (fmt_ppr_cmp_split_branch cD cG
             (fun ppf x ->
-              fprintf ppf "%s" (Id.render_name x))
+              fprintf ppf "%s" (R.render_cid_comp_const x))
             ppf)
          bs;
        fprintf ppf "@]"

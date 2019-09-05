@@ -564,13 +564,12 @@ module Prover = struct
       Some (DynArray.get gs (current_subgoal_index gs))
 
   let add_subgoal_hook s g tctx =
-    let open Automation in
     let auto_st = s.automation_state in
     ignore
       (List.exists
          (fun f -> f g tctx)
-         [ get_automation auto_st `auto_solve_trivial
-         ; get_automation auto_st `auto_intros
+         [ Automation.get_automation auto_st `auto_solve_trivial
+         ; Automation.get_automation auto_st `auto_intros
          ]
       )
 

@@ -11,7 +11,8 @@ module Cover = Coverage
 module S = Substitution
 open Syntax.Int.Comp
 
-let dprint, _ = Debug.makeFunctions (Debug.toFlags [11])
+let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 
 (*********************)
 (* helper functions *)
@@ -20,18 +21,12 @@ let dprint, _ = Debug.makeFunctions (Debug.toFlags [11])
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)
     : Comp.exp_chk =
-  dprint
-    (fun _ ->
-      (* let module PExt = Pretty.Ext.DefaultPrinter in
-      let rec erase =
-        let module ExtLF = Syntax.Ext.LF in
-        function
-        | LF.Empty -> ExtLF.Empty
-        | LF.Dec (ctx, x) -> ExtLF.Dec (erase ctx, x)
-      in
-      "[elaborate_exp] term = " ^ PExt.expChkToString (erase cD) t ^ "\n"
-      ^ *) "[elaborate_exp] cD = " ^ P.mctxToString cD ^ "\n"
-      ^ "[elaborate_exp] cG = " ^ P.gctxToString cD cG);
+  dprintf
+    begin fun p ->
+    p.fmt "[elaborate_exp] @[<v>cD = %a@,cG = %a@]"
+      (P.fmt_ppr_lf_mctx P.l0) cD
+      (P.fmt_ppr_cmp_gctx cD P.l0) cG
+    end;
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx cD in
   let t = Index.hexp cvar_store var_store t in
@@ -39,18 +34,12 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
 
 let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
     : Comp.exp_syn * Comp.tclo =
-  dprint
-    (fun _ ->
-      (* let module PExt = Pretty.Ext.DefaultPrinter in
-      let rec erase =
-        let module ExtLF = Syntax.Ext.LF in
-        function
-        | LF.Empty -> ExtLF.Empty
-        | LF.Dec (ctx, x) -> ExtLF.Dec (erase ctx, x)
-      in
-      "[elaborate_exp] term = " ^ PExt.expChkToString (erase cD) t ^ "\n"
-      ^ *) "[elaborate_exp] cD = " ^ P.mctxToString cD ^ "\n"
-      ^ "[elaborate_exp] cG = " ^ P.gctxToString cD cG);
+  dprintf
+    begin fun p ->
+    p.fmt "[elaborate_exp] @[<v>cD = %a@,cG = %a@]"
+      (P.fmt_ppr_lf_mctx P.l0) cD
+      (P.fmt_ppr_cmp_gctx cD P.l0) cG
+    end;
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx cD in
   let t = Index.hexp' cvar_store var_store t in
@@ -243,7 +232,9 @@ let replace_hole (i, h : Holes.hole_id * Holes.hole) exp =
              (Synint.Comp.RecValue (cid, ec', ms, env))
              entry.Store.Cid.Comp.mut_rec)
      in
-     P.ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
+     let open Format in
+     fprintf std_formatter "%a@?"
+       P.fmt_ppr_sgn_decl (Synint.Sgn.Rec [(prog,entry.Store.Cid.Comp.typ ,ec')])
   | _ ->
      failwith ("Error in replace_hole: "^(Id.string_of_name entry.Store.Cid.Comp.name)^" is not a function\n")
 

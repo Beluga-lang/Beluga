@@ -51,7 +51,7 @@ let usage () =
 
 let externall = ref false
 
-module PC = Pretty.Control
+module PC = Printer.Control
 
 let process_option arg rest = match arg with
   (* these strings must be lowercase *)
@@ -105,106 +105,115 @@ let rec process_options = function
 
 exception SessionFatal
 
+let per_file file_name =
+  let chatter f = if !Debug.chatter <> 0 then f () in
+  let abort_session () = raise SessionFatal in
+  try
+    let sgn =
+      Parser.(Runparser.parse_file file_name (only sgn) |> extract)
+    in
+    (* If the file starts with a global pragma then process it now. *)
+    let sgn = Recsgn.apply_global_pragmas sgn in
+    if !externall then
+      begin
+        chatter
+          (fun _ -> printf "\n## Pretty-printing of the external syntax : ##\n");
+        let module P = Pretty.Ext.DefaultPrinter in
+        P.fmt_ppr_sgn Format.std_formatter sgn
+      end;
+    chatter (fun _ -> printf "\n## Type Reconstruction: %s ##\n" file_name);
+    let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
+    let _ = Store.Modules.reset () in
+    if !Debug.chatter > 1 then
+      begin
+        let module P = Pretty.Int.DefaultPrinter in
+        List.iter (P.fmt_ppr_sgn_decl Format.std_formatter) sgn'
+      end;
+    
+    if !Debug.chatter <> 0 then
+      printf "\n## Type Reconstruction done: %s  ##\n" file_name;
+    
+    Coverage.iter
+      begin function
+        | Coverage.Success -> ()
+        | Coverage.Failure message ->
+           if !Coverage.warningOnly then
+             Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
+           else
+             raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
+      end;
+    
+    if !Coverage.enableCoverage && !Debug.chatter <> 0 then
+      printf "\n## Coverage checking done: %s  ##\n" file_name;
+    
+    if !Subord.dump then begin
+        Subord.dump_subord();
+        (* Subord.dump_typesubord() *)
+      end;
+    print_newline () ;
+    Logic.runLogic ();
+    if not (Holes.none ()) && !Debug.chatter != 0 then
+      begin
+        let open Format in
+        fprintf std_formatter
+          "\n## Holes: %s  ##\n@[<v>%a@]@."
+          file_name
+          (pp_print_list Holes.print) (Holes.list ());
+      end;
+    begin match leftoverVars with
+    | None -> ()
+    | Some vars ->
+       if !Debug.chatter != 0 then begin
+           printf "\n## Left over variables ##" ;
+           Recsgn.print_leftoverVars vars
+         end ;
+       raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+    end ;
+    if !Typeinfo.generate_annotations then
+      Typeinfo.print_annot file_name;
+    print_newline();
+    if !Monitor.on || !Monitor.onf then
+      Monitor.print_timer () ;
+    if !Html.genHtml then begin
+        Html.generatePage file_name
+      end;
+    (* If requested, dump the elaborated program as S-expressions *)
+    if !Sexp.enabled then
+      begin
+        let sexp_file_name = file_name ^ ".sexp" in
+        let oc = open_out sexp_file_name in
+        Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
+        flush oc ; close_out oc ;
+        if !Sexp.testing == false then
+          printf "\n## Dumped AST to: %s ##\n" sexp_file_name
+      end
+  with e ->
+    dprintf
+      (fun p ->
+        p.fmt "Backtrace: %s" (Printexc.get_backtrace ()));
+    output_string stderr (Printexc.to_string e);
+    abort_session ()
+
 let main () =
+  let args   = List.tl (Array.to_list Sys.argv) in
+  let files = process_options args in
+  Debug.init None;
+  let status_code =
+    match files with
+    | [file] ->
+       begin
+         try
+           List.iter per_file (Cfg.process_file_argument file) ; 0
+         with SessionFatal -> 1
+       end
+    | _ -> bailout "Wrong number of command line arguments."
+  in
+  printf "%s" (Error.getInformation ());
+  exit status_code
+
+let _ =
+  Format.set_margin 80;
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    let per_file file_name =
-      let abort_session () = raise SessionFatal in
-      try
-        let sgn =
-          Parser.(Runparser.parse_file file_name (only sgn) |> extract)
-        in
-        (* If the file starts with a global pragma then process it now. *)
-        let sgn = Recsgn.apply_global_pragmas sgn in
-        if !externall then begin
-          if !Debug.chatter != 0 then
-            printf "\n## Pretty-printing of the external syntax : ##\n";
-          List.iter Pretty.Ext.DefaultPrinter.ppr_sgn_decl sgn
-        end;
-        if !Debug.chatter <> 0 then
-          printf "\n## Type Reconstruction: %s ##\n" file_name;
-        let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
-        let _ = Store.Modules.reset () in
-        if !Debug.chatter > 1 then
-          List.iter (Pretty.Int.DefaultPrinter.ppr_sgn_decl) sgn';
-
-        if !Debug.chatter <> 0 then
-          printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-          ignore (Coverage.force
-                  (function
-                    | Coverage.Success -> ()
-                    | Coverage.Failure message ->
-                      if !Coverage.warningOnly then
-                        Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
-                      else
-                        raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))));
-
-          if !Coverage.enableCoverage then
-            (if !Debug.chatter != 0 then
-                printf "\n## Coverage checking done: %s  ##\n" file_name);
-          if !Subord.dump then begin
-            Subord.dump_subord();
-            (* Subord.dump_typesubord() *)
-          end;
-          print_newline () ;
-          Logic.runLogic ();
-          if not (Holes.none ()) && !Debug.chatter != 0 then begin
-              let open Format in
-              fprintf std_formatter
-                "\n## Holes: %s  ##\n@[<v>%a@]"
-                file_name
-                (pp_print_list Holes.print) (Holes.list ());
-          end;
-          begin match leftoverVars with
-            | None -> ()
-            | Some vars ->
-              if !Debug.chatter != 0 then begin
-                printf "\n## Left over variables ##" ;
-                Recsgn.print_leftoverVars vars
-              end ;
-              raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-          end ;
-          if !Typeinfo.generate_annotations then
-            Typeinfo.print_annot file_name;
-          print_newline();
-          if !Monitor.on || !Monitor.onf then
-            Monitor.print_timer () ;
-          if !Html.genHtml then begin
-            Html.generatePage file_name
-          end;
-          (* If requested, dump the elaborated program as S-expressions *)
-          if !Sexp.enabled then
-            begin
-              let sexp_file_name = file_name ^ ".sexp" in
-              let oc = open_out sexp_file_name in
-              Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
-              flush oc ; close_out oc ;
-              if !Sexp.testing == false then
-                printf "\n## Dumped AST to: %s ##\n" sexp_file_name
-            end
-      with e ->
-        dprintf
-          (fun p ->
-            p.fmt "Backtrace: %s" (Printexc.get_backtrace ()));
-        output_string stderr (Printexc.to_string e);
-        abort_session ()
-    in
-    let args   = List.tl (Array.to_list Sys.argv) in
-    let files = process_options args in
-    Debug.init None;
-    let status_code =
-      match files with
-        | [file] ->
-          begin
-            try
-              List.iter per_file (Cfg.process_file_argument file) ; 0
-            with SessionFatal -> 1
-          end
-        | _ -> bailout "Wrong number of command line arguments."
-    in
-    printf "%s" (Error.getInformation());
-    exit status_code
-
-let _ = Format.set_margin 80
-let _ = main ()
+    main ()

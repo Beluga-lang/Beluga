@@ -7,8 +7,11 @@
 open Support
 open ExtString.String
 open Store.Cid
-open Pretty.Int.DefaultPrinter
+module P = Pretty.Int.DefaultPrinter
 open Format
+
+let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 
 (* the type of commands  *)
 type command =
@@ -62,6 +65,10 @@ let prove =
               (fun ppf e -> fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?" Parser.print_error e)
             |> Either.rmap (fun x -> x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp)
             $ fun (stmt, k) -> (* k is the number of added implicit vars *)
+              dprintf
+                begin fun p ->
+                p.fmt "[prove] abstracted over %d implicit arguments" k
+                end;
               prompt "Induction order" Parser.numeric_total_order
                 (fun ppf e ->
                       fprintf ppf "@[<v>- Error parsing induction order:@,%a@]\n@?" Parser.print_error e)
@@ -124,13 +131,13 @@ let types =
               (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list))
           in
           let dctx = Synint.LF.Null in
-          List.iter
-            (fun x ->
-              fprintf ppf "%s : "
-                (Id.string_of_name x.Typ.name);
-              ppr_lf_kind dctx x.Typ.kind; fprintf ppf "\n")
-            entrylist;
-          fprintf ppf ";\n@?"
+          fprintf ppf "@[<v>%a@];\n@?"
+            (pp_print_list ~pp_sep: pp_print_cut
+               (fun ppf x ->
+                 fprintf ppf "%a : %a"
+                   Id.print x.Typ.name
+                   (P.fmt_ppr_lf_kind dctx P.l0) x.Typ.kind))
+            entrylist
         );
     help = "Print out all types currently defined"
   }
@@ -165,7 +172,7 @@ let load_files ppf file_name files =
         | sgn', None -> sgn'
         | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
     in
-    if !Debug.chatter <> 0 then List.iter Pretty.Int.DefaultPrinter.ppr_sgn_decl sgn
+    if !Debug.chatter <> 0 then P.fmt_ppr_sgn std_formatter sgn
 	in
   Holes.clear ();
   List.iter per_file files;
@@ -316,7 +323,7 @@ let solvelfhole =
                          Pretty.Int.DefaultPrinter.fmt_ppr_lf_normal
                            cD
                            ctx
-                           Pretty.std_lvl
+                           P.l0
                            ppf
                            norm;
 
@@ -345,15 +352,14 @@ let constructors =
           let mctx = Synint.LF.Empty in
           let dctx = Synint.LF.Null in
           let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
-          List.iter
-            (fun x ->
-              fprintf ppf "%s : [%d] "
-                (Id.string_of_name x.Term.name)
-                x.Term.implicit_arguments;
-              ppr_lf_typ mctx dctx x.Term.typ;
-              fprintf ppf "\n")
-            termlist;
-          fprintf ppf ";\n@?"
+          fprintf ppf "@[<v>%a@]@.;@."
+            (pp_print_list ~pp_sep: pp_print_cut
+               (fun ppf x ->
+                 fprintf ppf "%a : [%d] %a"
+                   Id.print x.Term.name
+                   x.Term.implicit_arguments
+                   (P.fmt_ppr_lf_typ mctx dctx P.l0) x.Term.typ))
+            termlist
         );
     help = "Print all constructors of a given type passed as a parameter"}
 
@@ -426,9 +432,9 @@ let do_split ppf (hi : Holes.hole_id * Holes.hole) (var : string) : unit =
   | Some exp ->
      let (_, h) = hi in
      let Holes.CompHoleInfo { Holes.cG; _ } = h.Holes.info in
-     Pretty.Control.printNormal := true;
-     fprintf ppf "%a;\n@?" (fmt_ppr_cmp_exp_chk h.Holes.cD cG Pretty.std_lvl) exp;
-     Pretty.Control.printNormal := false
+     Printer.Control.printNormal := true;
+     fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp_chk h.Holes.cD cG P.l0) exp;
+     Printer.Control.printNormal := false
 
 let split =
   { name = "split"
@@ -457,9 +463,10 @@ let intro =
                      } = h
                  in
                  begin
-                   Pretty.Control.printNormal := true;
-                   fprintf ppf "%s;\n@?" (expChkToString cD cG exp);
-                   Pretty.Control.printNormal := false
+                   Printer.Control.printNormal := true;
+                   fprintf ppf "%a;\n@?"
+                     (P.fmt_ppr_cmp_exp_chk cD cG P.l0) exp;
+                   Printer.Control.printNormal := false
                  end)))
   ; help = "- intro n tries to introduce variables in the nth hole"
   }
@@ -474,15 +481,14 @@ let compconst =
             let entry = List.find (fun x -> arg = (Id.string_of_name x.CompTyp.name)) entrylist in
             let mctx = Synint.LF.Empty in
             let termlist = List.rev_map (CompConst.get ~fixName:true) (!(entry.CompTyp.constructors)) in
-            List.iter
-              (fun x ->
-                fprintf ppf "%s: [%d] "
-                  (Id.string_of_name x.CompConst.name)
-                  x.CompConst.implicit_arguments;
-                ppr_cmp_typ mctx x.CompConst.typ;
-                fprintf ppf "\n")
+            fprintf ppf "@[<v>%a@]@.;@."
+              (pp_print_list ~pp_sep: pp_print_cut
+                 (fun ppf x ->
+                   fprintf ppf "%s : [%d] %a"
+                     (Id.string_of_name x.CompConst.name)
+                     x.CompConst.implicit_arguments
+                     (P.fmt_ppr_cmp_typ mctx P.l0) x.CompConst.typ))
               termlist;
-            fprintf ppf ";\n@?"
           with
           | Not_found -> fprintf ppf "- The type %s does not exist;\n@?" arg);
     help = "Print all constructors of a given computational datatype passed as a parameter"
@@ -499,9 +505,9 @@ let signature =
             let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
 
             let mctx = Synint.LF.Empty in
-            fprintf ppf "%s: " (Id.string_of_name entry.Comp.name);
-            ppr_cmp_typ mctx entry.Comp.typ;
-            fprintf ppf ";\n@?";
+            fprintf ppf "%a : %a;@."
+              Id.print entry.Comp.name
+              (P.fmt_ppr_cmp_typ mctx P.l0) entry.Comp.typ
           with
           | Not_found -> fprintf ppf "- The function does not exist;\n@?");
     help = "fsig e : Prints the signature of the function e, if such function is currently defined" }
@@ -526,7 +532,7 @@ let printfun =
             in
             match entry.Comp.prog with
             | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
-               ppr_sgn_decl (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
+               P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
             | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
           with
           | Not_found ->

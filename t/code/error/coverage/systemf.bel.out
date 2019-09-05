@@ -1,11 +1,6 @@
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
-##       CASE(S) NOT COVERED :
-
-(1)   .
- .
-  |-  [g |- #p1.4]
-
-
+##       CASE(S) NOT COVERED:
+(1) . ; . |- [g |- #p1.4]
 
 ##

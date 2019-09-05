@@ -52,4 +52,4 @@ fn e => case e of
 %:load input.bel
 The file input.bel has been successfully loaded;
 %:fsig completenessGood
-completenessGood:    [g |- oft M T] -> [g |- biDer M T];
+completenessGood :    [g |- oft M T] -> [g |- biDer M T];

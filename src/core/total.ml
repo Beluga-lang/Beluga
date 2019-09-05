@@ -34,12 +34,12 @@ let _ =
                  Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n Report as a bug."
               | Comp.M cM  , (Comp.M cM' :: _ ) ->
                  Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \nBeluga cannot establish that the given recursive call is a size-preserving variant of it.\nArgument found: %a@\nArgument expected: %a@"
-                   (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
-                   (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM'
+                   (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
+                   (P.fmt_ppr_cmp_meta_obj cD P.l0) cM'
 
               | Comp.M cM  , (Comp.V _ :: _ ) ->
                  Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\nArgument found: %a@\nExpected computation-level variable.\n\nCheck specified totality declaration. "
-                   (P.fmt_ppr_meta_obj cD Pretty.std_lvl) cM
+                   (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
 
               | Comp.V _ , _ ->
                  Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
@@ -230,29 +230,32 @@ let make_total_dec name typ order =
 
  *)
 
-let rec args_to_string cD cG args = match args with
-  | [] -> ""
-  | Comp.M cM :: args ->
-     P.metaObjToString cD cM ^ " " ^
-       args_to_string cD cG args
-  | Comp.DC :: args ->
-     " _ " ^
-       args_to_string cD cG args
-  | Comp.V x :: args ->
-     " (V " ^ R.render_var cG x ^ ") " ^
-       args_to_string cD cG args
+let fmt_ppr_args cD cG ppf : Comp.arg list -> unit =
+  let open Format in
+  let print_arg ppf = function
+    | Comp.M cM -> P.fmt_ppr_cmp_meta_obj cD P.l0 ppf cM
+    | Comp.DC -> fprintf ppf "_"
+    | Comp.V x -> fprintf ppf "(V %s)" (R.render_var cG x)
+  in
+  pp_print_list ~pp_sep: pp_print_space print_arg ppf
 
+let fmt_ppr_call cD cG ppf (f, args, tau) =
+  let open Format in
+  fprintf ppf "%a %a : %a"
+    Id.print f
+    (fmt_ppr_args cD cG) args
+    (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let calls_to_string cD cG (f, args, tau) =
-  Id.render_name f ^ " " ^ args_to_string cD cG args
-  ^ " : "  ^ P.compTypToString cD tau
-
-let rec ih_to_string cD cG cIH =
-  match cIH with
-  | LF.Empty -> "\n"
-  | LF.Dec(cIH, Comp.WfRec (f, args, tau) ) ->
-     "IH: " ^  calls_to_string cD cG (f, args, tau) ^ "\n"
-     ^ ih_to_string cD cG cIH
+let fmt_ppr_ihctx cD cG ppf cIH =
+  let open Format in
+  let print_entry ppf = function
+    | Comp.WfRec (f, args, tau) ->
+       fprintf ppf "IH: %a" (fmt_ppr_call cD cG) (f, args, tau)
+    | _ -> failwith "cIH should contain only WfRec entries"
+  in
+  fprintf ppf "@[<v>%a@]"
+    (pp_print_list ~pp_sep: pp_print_cut print_entry)
+    (Context.to_list cIH)
 
 (** Converts the list of totality declarations into an induction ordering list *)
 let get_order (mfs : dec list) =
@@ -390,10 +393,10 @@ let rec rec_spine cD (cM, cU)  (i, ttau) =
      end
   | 1, ttau ->
      let tau = Whnf.cnormCTyp ttau in
-     dprint
-       (fun _ ->
-         "[rec_spine] Incompatible IH: ran out of arguments; "
-         ^ "last type is: " ^ P.compTypToString cD tau);
+     dprintf
+       (fun p ->
+         p.fmt "[rec_spine] @[<v>Incompatible IH: ran out of arguments;@,last type is: %a@]"
+           (P.fmt_ppr_cmp_typ cD P.l0) tau);
      raise Not_compatible
 
   | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
@@ -508,10 +511,10 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
      let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
      let mf_list = get_order mfs in
-     dprint
-       (fun _ ->
-         "[gen_rec_calls] Generate rec. calls given variable "
-         ^ P.cdeclToString cD' (LF.Decl (u, cU, dep)));
+     dprintf
+       (fun p ->
+         p.fmt "[gen_rec_calls] Generate rec. calls given variable %a"
+           (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u, cU, dep)));
      dprint
        (fun _ ->
          "Considering a total of "
@@ -519,29 +522,24 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
          ^ " rec. functions\n");
 
      let mk_wfrec (f,x,ttau) =
-       dprint
-         (fun _ ->
-           "[mk_wf_rec] for "
-           ^ P.cdeclToString cD' (LF.Decl (u,cU, dep))
-           ^ " for position "
-           ^ string_of_int x ^ "\n");
-       dprint
-         (fun _ ->
-           "Type of rec. call: "
-           ^ P.compTypToString cD  (Whnf.cnormCTyp ttau) ^ "\n");
+       dprintf
+         (fun p ->
+           p.fmt "[mk_wf_rec] @[<v>for %a for position %d@,type of recursive call: %a@]"
+             (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u,cU, dep))
+             x
+             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau));
 
        let (args, tau) = rec_spine cD (cM, cU') (x, ttau) in
        (* rec_spine may raise Not_compatible *)
-       dprint
-         (fun _ ->
-           "[mk_wfrec] generated Arguments for rec. call " ^
-             args_to_string cD LF.Empty args ^ "\n");
+       dprintf
+         (fun p ->
+           p.fmt "[mk_wfrec] generated Arguments for rec. call %a"
+             (fmt_ppr_args cD LF.Empty) args);
        let args = generalize args in
-       dprint
-         (fun _ ->
-           "[mk_wfrec] generated recursive Call : " ^
-             calls_to_string cD (LF.Empty) (f, args, tau) ^
-               "\n\n");
+       dprintf
+         (fun p ->
+           p.fmt "[mk_wfrec] generated recursive Call : %a"
+             (fmt_ppr_call cD LF.Empty) (f, args, tau));
        Comp.WfRec (f, args, tau)
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
@@ -596,26 +594,26 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
   | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
      let y = j+1 in
      let mf_list = get_order mfs in
-     dprint (fun () -> "\n[gen_rec_calls'] for " ^ P.compTypToString cD tau0);
+     dprintf
+       (fun p ->
+         p.fmt "[gen_rec_calls'] for %a"
+           (P.fmt_ppr_cmp_typ cD P.l0) tau0);
      let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
      let mk_wfrec (f,x, ttau) =
-       dprint
-         (fun _ ->
-           "\n[gen_rec_calls'] Return Type "
-           ^ P.compTypToString cD (Whnf.cnormCTyp ttau0')
-           ^ " for arg " ^ (string_of_int x)
-           ^ " — generate appropriate spine next ...\n");
-       dprint
-         (fun _ ->
-           "Type of function "
-           ^ (Id.render_name f) ^ " : " ^ P.compTypToString cD (Whnf.cnormCTyp ttau));
+       dprintf
+         (fun p ->
+           p.fmt "[gen_rec_calls'] @[<v>Return Type @[%a@] for arg %d@,type of function: %a : %a@]"
+             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau0')
+             x
+             Id.print f
+             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+         );
        let (args, tau) = rec_spine' cD (y, ttau0') (x, ttau) in
        let args = generalize args in
        let d = Comp.WfRec (f, args, tau) in
-       dprint
-         (fun _ ->
-           "\nRecursive call : "
-           ^ calls_to_string cD cG (f, args, tau));
+       dprintf
+         (fun p ->
+           p.fmt "Recursive call : %a" (fmt_ppr_call cD cG) (f, args, tau));
        d
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
@@ -665,12 +663,14 @@ let wf_rec_calls cD cG mfs =
        (fun p ->
          p.fmt
            "Generate recursive calls from@.cD = %a@.cG = %a"
-           (P.fmt_ppr_lf_mctx Pretty.std_lvl) cD
-           (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG);
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_cmp_gctx cD P.l0) cG);
      let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) mfs in
      let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
      let _ = Unify.resetGlobalCnstrs () in
-     dprint (fun () -> "generated IH = " ^ ih_to_string cD cG cIH' ^ "\n\n");
+     dprintf
+       (fun p ->
+         p.fmt "[wf_rec_calls] generated IH = %a" (fmt_ppr_ihctx cD cG) cIH');
      cIH'
 
 (*  ------------------------------------------------------------------------ *)
@@ -866,16 +866,19 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
 
   | Comp.M cM' , LF.Dec (cIH, Comp.WfRec (f , Comp.M cM :: args, tau )) ->
      let cIH' = filter cD cG cIH (loc, e2) in
+     let print_meta_obj = P.fmt_ppr_cmp_meta_obj cD P.l0 in
      if Whnf.convMetaObj cM' cM then
-       (  dprint  (fun () -> "IH and recursive call agree on : "
-                             ^ P.metaObjToString cD cM' ^ " == " ^
-                               P.metaObjToString cD cM ^ "\n");
+       (  dprintf
+            (fun p ->
+              p.fmt "[total-filter] @[<v>IH and recursive call agree on:@,%a == %a@]"
+                print_meta_obj cM' print_meta_obj cM);
           LF.Dec (cIH', Comp.WfRec (f, args, tau)))
          (* Note: tau' is understood as the approximate type *)
      else
-       (dprint (fun () -> "IH and recursive call do NOT agree : "
-                          ^ P.metaObjToString cD cM' ^ " == " ^
-                            P.metaObjToString cD cM  ^ "\n");
+       (dprintf
+          (fun p ->
+            p.fmt "[total-filter] @[<v>IH and recursive call do NOT agree:@,%a == %a@]"
+            print_meta_obj cM' print_meta_obj cM);
         cIH')
 
   | Comp.V y , LF.Dec (cIH,Comp.WfRec (f , Comp.V x :: args, tau )) ->
@@ -1135,21 +1138,26 @@ let rec compare a cD tau1  mC2 n =
   match  tau1 with
     | Comp.TypBase  (loc, c, mS1) ->
       if a = c then
-      let  mC1 =  find_meta_obj mS1 n in
-      let b = less_meta_obj cD mC1 mC2 in
-        ((if b then dprint (fun () -> ("COMPARE mC1: " ^  (P.metaObjToString cD  mC1)^"\n"
-                            ^ "       mC2: " ^  (P.metaObjToString cD  mC2)^" LESS\n"))
-         else dprint (fun () -> ("COMPARE mC1: " ^  (P.metaObjToString cD  mC1)^"\n"
-                            ^ "       mC2: " ^  (P.metaObjToString cD  mC2) ^ " NOT LESS!!!\n"))) ; b)
-
+        begin
+          let  mC1 =  find_meta_obj mS1 n in
+          let b = less_meta_obj cD mC1 mC2 in
+          dprintf
+            (fun p ->
+              let f = P.fmt_ppr_cmp_meta_obj cD P.l0 in
+              p.fmt "COMPARE @[<v>mC1: %a@,mC2: %a@,%aLESS@]"
+                f mC1 f mC2
+                (fun ppf x ->
+                  Format.pp_print_string ppf (if x then "" else "NOT ")) b);
+          b
+        end
       else
-      (match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with
+        begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
         | Sgn.StratifyAll _ -> true
         | _ ->  let n =  R.render_cid_comp_typ c in
-              raise (Error (loc, (NoStratifyOrPositiveCheck n)))
-      )
+                raise (Error (loc, (NoStratifyOrPositiveCheck n)))
+        end
     | Comp.TypArr   (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
     | Comp.TypCross (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
     | Comp.TypPiBox (dec, tau)   ->

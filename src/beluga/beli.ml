@@ -50,8 +50,8 @@ let rec loop ppf =
            |> Pair.rmap Whnf.cnormCTyp
          in
          fprintf ppf "%a : %a"
-           (P.fmt_ppr_cmp_exp_syn LF.Empty LF.Empty Pretty.std_lvl) exp
-           (P.fmt_ppr_cmp_typ LF.Empty Pretty.std_lvl) tau
+           (P.fmt_ppr_cmp_exp_syn LF.Empty LF.Empty P.l0) exp
+           (P.fmt_ppr_cmp_typ LF.Empty P.l0) tau
       | `Input _ -> ()
     with
       | End_of_file -> exit 0
@@ -81,7 +81,7 @@ let run args =
       end
       in
         if !Debug.chatter <> 0 then
-          List.iter (fun x -> let _ = Pretty.Int.DefaultPrinter.ppr_sgn_decl x in ()) sgn';
+          List.iter (P.fmt_ppr_sgn_decl std_formatter) sgn';
       fprintf ppf "The file has been successfully loaded.\n"
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;

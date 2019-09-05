@@ -49,19 +49,20 @@ let init (filename : string option) : unit =
 let print' f =
   let ppf = Maybe.get' NotInitialized !out in
   begin
-    let g fmt = Format.fprintf ppf fmt in
+    let fmt x = Format.fprintf ppf x in
     try
-      f { fmt = g }
+      f { fmt }
     with
       exn ->
       Format.fprintf ppf
-        "*** Exception raised inside function passed to dprint:\n%s\n\n%s"
+        "*** @[<v>Exception raised inside function passed to dprint:@,\
+         %s@,%s@]"
           (Printexc.to_string exn)
           (Printexc.get_backtrace ());
       flush_all ();
       raise exn
   end;
-  Format.fprintf ppf "@.";
+  Format.fprintf ppf "@,@?";
   flush_all ()
 
 let printf flags (f : fmt -> unit) : unit =

@@ -7,6 +7,13 @@ module LF = struct
   type 'a ctx =                          (* Generic context declaration    *)
     | Empty                              (* C ::= Empty                    *)
     | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
+
+  type svar_class = Ren | Subst
+
+  type depend =
+    | Maybe     (* implicit *)
+    | No        (* explicit *)
+    | Inductive (* used for induction *)
 end
 
 module Harpoon = struct

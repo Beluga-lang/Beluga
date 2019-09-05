@@ -14,9 +14,8 @@ module P = Pretty.Int.DefaultPrinter
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7]) *)
 
- let rec conv_listToString clist = match clist with 
-   | [] -> " " 
-   | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs 
+let fmt_ppr_conv_list =
+  Format.(pp_print_list ~pp_sep: Support.Fmt.comma pp_print_int)
 
 (* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
 let rec _blockdeclInDctx cPsi = match cPsi with
@@ -42,10 +41,10 @@ let _ = Error.register_printer
             Format.fprintf ppf
               "Encountered contextual object [%a.%a] of type [%a.%a].@.\
                Unification cannot prune it because its context contains blocks.@."
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
-            (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h
-            (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi
-            (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) tA)
+            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+            (P.fmt_ppr_lf_head cD cPsi P.l0) h
+            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+            (P.fmt_ppr_lf_typ cD cPsi P.l0) tA)
   )
 (* ************************************************************************ *)
 let rec new_index k conv_list = match (conv_list, k) with

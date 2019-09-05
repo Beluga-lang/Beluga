@@ -150,40 +150,35 @@ let rec raiseKind cPsi tK = match cPsi with
   | I.Dec (cPsi', decl) ->
       raiseKind cPsi' (I.PiKind ((decl, I.Maybe), tK))
 
-let depToString dep = match dep with
-  | I.No -> "^e"
-  | I.Maybe -> "^i"
-  | _ -> "*"
-
-let rec collectionToString cQ = match cQ with
-  | I.Empty -> ""
-
+let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
+  let open Format in
+  function
+  | I.Empty -> ()
   | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, dep)))) ->
-       collectionToString cQ ^ " MMV"
-     ^ P.mtypToString I.Empty mtyp ^ depToString dep
-     ^ "\n"
+     fprintf ppf "%a MMV%a%a@,"
+       fmt_ppr_collection cQ
+       (P.fmt_ppr_cmp_meta_typ I.Empty P.l0) mtyp
+       (P.fmt_ppr_lf_depend `depend) dep
   | I.Dec(cQ, FDecl (MMV (_n,_r), Impure)) ->
-       collectionToString cQ ^ " MMV Impure"
-     ^ "\n"
-
+     fprintf ppf "%a MMV Impure@,"
+       fmt_ppr_collection cQ
   | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp, _ )))) ->
-      let cD = I.Empty in
-       collectionToString cQ
-     ^ " " ^ Id.render_name u ^ " : "
-     ^ P.mtypToString cD mtyp ^"\n"
-
-  | I.Dec(cQ, FDecl (FV _n, Impure)) ->  collectionToString cQ ^ ",  FV _ .\n"
+     fprintf ppf "%a %a : %a@,"
+       fmt_ppr_collection cQ
+       Id.print u
+       (P.fmt_ppr_cmp_meta_typ I.Empty P.l0) mtyp
+  | I.Dec(cQ, FDecl (FV _n, Impure)) ->
+     fprintf ppf "%a, FV _ .@,"
+       fmt_ppr_collection cQ
 
   | I.Dec(cQ, FDecl (FV n, Pure (LFTyp tA))) ->
-      let cD = I.Empty in
-        collectionToString cQ ^ ",  FV " ^ (string_of_name n) ^ " : "
-      ^ "(" ^ P.typToString cD I.Null (tA, LF.id) ^ ")"
-      ^ "\n"
-  | I.Dec(_cQ, _ ) -> " ?? "
+     fprintf ppf "%a, FV %a : (%a)@,"
+       fmt_ppr_collection cQ
+       Id.print n
+       (P.fmt_ppr_lf_typ I.Empty I.Null P.l0) tA
 
-let printCollection s =
-  (print_string "Print Collection of contextual variables:\n";
-   print_string (collectionToString s) )
+  | I.Dec(_cQ, _ ) ->
+     fprintf ppf " ?? "
 
 (* checkOccurrence p cQ = result
 
@@ -192,8 +187,7 @@ let printCollection s =
    otherwise No
 
 *)
-type occurrs = Yes | No
-
+type occurs = Yes | No
 
 (* eqMMVar mV mV' = B
    where B iff mV and mV' represent same variable
@@ -260,15 +254,17 @@ let rec constraints_solved cnstr = match cnstr with
   | ({contents = I.Queued} :: cnstrs) ->
       constraints_solved cnstrs
   | ({contents = I.Eqn (_cD, cPsi, tM, tN)} :: cnstrs) ->
-      if Whnf.convITerm tM tN then
-        constraints_solved cnstrs
-      else
-        (dprint (fun () -> "Encountered unsolved constraint:\n" ^
-           P.itermToString I.Empty cPsi tM ^ " == " ^
-           P.itermToString I.Empty cPsi tN ^ "\n\n") ;
-         false )
-
-
+     if Whnf.convITerm tM tN
+     then constraints_solved cnstrs
+     else
+       let _ =
+         dprintf
+           (fun p ->
+             p.fmt "@[<v 2>Encountered unsolved constraint:@,%a == %a@]@,"
+               (P.fmt_ppr_lf_iterm I.Empty cPsi) tM
+               (P.fmt_ppr_lf_iterm I.Empty cPsi) tN)
+       in
+       false
 
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with
@@ -535,8 +531,12 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
       else
 	      raise (Error (loc, LeftoverConstraints))
     end
-  | I.Dec(_,_) -> let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
-                  raise (Error (loc, LeftoverVars))
+  | I.Dec(_,_) ->
+     dprintf
+       (fun p ->
+         p.fmt "cD = %a"
+           (P.fmt_ppr_lf_mctx P.l0) cD);
+     raise (Error (loc, LeftoverVars))
 
 and collectMVarMSub loc p cQ (i,ms') =
   let (cQ0, ms') = collectMSub p cQ ms' in
@@ -1161,8 +1161,10 @@ and abstractMSub t =
   let (cQ, t') = collectMSub 0 I.Empty t in
   let cQ' = abstractMVarCtx cQ 0 in
   let t'' = abstrMSub cQ' t' in
-  let _ = dprint (fun () -> "[abstractMSub] Collection cQ'  = " ^
-		    collectionToString cQ') in
+  dprintf
+    (fun p ->
+      p.fmt "[abstractMSub] Collection cQ' = %a"
+		    fmt_ppr_collection cQ');
   let cD' = ctxToMCtx'  cQ' in
   (t'', cD')
 
@@ -1564,8 +1566,11 @@ let abstrCodataTyp cD tau tau' =
     | I.Empty -> (I.Empty, I.Empty)
   in
   let (cD_ctx, cD_rest) = split cD in
-  let _ = dprint (fun () -> "cD_ctx = " ^ P.mctxToString cD_ctx
-    ^ "\ncD_rest = " ^ P.mctxToString cD_rest) in
+  dprintf
+    (fun p ->
+      p.fmt "@[<v>cD_ctx = %a@,cD_rest = %a@]"
+        (P.fmt_ppr_lf_mctx P.l0) cD_ctx
+        (P.fmt_ppr_lf_mctx P.l0) cD_rest);
   let tau0        = Whnf.cnormCTyp (tau, Whnf.m_id) in
   let tau1        = Whnf.cnormCTyp (tau', Whnf.m_id) in
 
@@ -1580,9 +1585,14 @@ let abstrCodataTyp cD tau tau' =
   let cQ'  = abstractMVarCtx cQ3 (l-1-p) in
   let tau_obs = abstractMVarCompTyp cQ' (l,0) tau0' in
   let cD' = ctxToMCtx (I.Maybe) cQ' in
-  let _ = dprint (fun () -> "tau0' = " ^ P.compTypToString cD tau0'
-    ^ "\ntau_obs = " ^ P.compTypToString cD' tau_obs) in
-  let _ = dprint (fun () -> "cD' = " ^ P.mctxToString cD') in
+  dprintf
+    (fun p ->
+      p.fmt "@[<v>tau0' = %a@,tau_obs = %a@]"
+        (P.fmt_ppr_cmp_typ cD P.l0) tau0'
+        (P.fmt_ppr_cmp_typ cD' P.l0) tau_obs;
+      p.fmt "cD' = %a"
+        (P.fmt_ppr_lf_mctx P.l0) cD'
+    );
 
   (* Assumes: cQ3, cQ3' = cQ4 *)
   let (cQ4, tau1')  = collectCompTyp (l'+p) cQ3 tau1 in
@@ -1591,16 +1601,22 @@ let abstrCodataTyp cD tau tau' =
   let cQ''  = abstractMVarCtx cQ4 0 in
   let tau_res = abstractMVarCompTyp cQ'' (l,0) tau1' in
   let cD'' = ctxToMCtx (I.Maybe) cQ'' in
-  let _ = dprint (fun () -> "cD'' = " ^ P.mctxToString cD'') in
+  dprintf
+    (fun p ->
+      p.fmt "cD'' = %a" (P.fmt_ppr_lf_mctx P.l0) cD'');
 
   let rec drop p cD = match p, cD with
     | 0, _ -> cD
     | _, I.Dec (cD', decl) -> drop (p-1) cD'
   in
   let cD1' = drop p cD' in
-  let _ = dprint (fun () -> "cD1' = " ^ P.mctxToString cD1') in
+  dprintf
+    (fun p ->
+      p.fmt "cD1' = %a" (P.fmt_ppr_lf_mctx P.l0) cD1');
   let cD1'' = drop p cD'' in
-  let _ = dprint (fun () -> "cD1'' = " ^ P.mctxToString cD1'') in
+  dprintf
+    (fun p ->
+      p.fmt "cD1'' = %a" (P.fmt_ppr_lf_mctx P.l0) cD1'');
   let rec subtract cD1 cD2 =
     let l_cD1 = Context.length cD1 in
     let l_cD2 = Context.length cD2 in
@@ -1612,7 +1628,9 @@ let abstrCodataTyp cD tau tau' =
       I.Dec (cD, decl)
   in
   let cD_res = subtract cD'' cD' in
-  let _ = dprint (fun () -> "cD_res = " ^ P.mctxToString cD_res) in
+  dprintf
+    (fun p ->
+      p.fmt "cD_res = %a" (P.fmt_ppr_lf_mctx P.l0) cD_res);
   (* cD'' = cD', cD_res *)
   let tau_res' = raiseCompTyp cD_res tau_res in
   (cD', tau_obs, tau_res', Context.length cD_res)
@@ -1740,7 +1758,8 @@ let abstrSchema (I.Schema elements) =
 
 let printFreeMVars phat tM =
   let (cQ, _ ) = collectTerm 0 I.Empty  phat (tM, LF.id) in
-    printCollection cQ
+  fmt_ppr_collection Format.std_formatter cQ;
+  flush_all ()
 
 let rec fvarInCollection cQ = begin match cQ with
   | I.Empty -> false

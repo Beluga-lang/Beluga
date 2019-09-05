@@ -79,13 +79,13 @@ let print_error ppf =
   | ProjBVarImpossible (cD, cPsi, x, proj) ->
      fprintf ppf
        "%a.%s is illegal; there is no block declaration in %a."
-       (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) (Int.LF.BVar x)
+       (P.fmt_ppr_lf_head cD cPsi P.l0) (Int.LF.BVar x)
        (string_of_proj proj)
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
   | BVarTypMissing (cD, cPsi, _h) ->
      fprintf ppf
        "Missing type information for bound variable. Provide a fully annotated context."
-  (*              (P.fmt_ppr_lf_head cD cPsi Pretty.std_lvl) h *)
+  (*              (P.fmt_ppr_lf_head cD cPsi P.l0) h *)
   | SubstTyp ->
      fprintf ppf
        "We currently only support substitution variables which either map a context\
@@ -108,7 +108,7 @@ let print_error ppf =
   | SigmaTypImpos (cD, cPsi, sA) ->
      fprintf ppf
        "Ill-typed expression. @ @ The head of a spine has type %a. "
-       (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
   | ParamFun ->
      fprintf ppf "Projection on a parameter variable has a functional type which type reconstruction cannot infer - please specify the type of the parameter variable"
   | HolesFunction ->
@@ -119,39 +119,39 @@ let print_error ppf =
      fprintf ppf
        "Cannot get the %s. projection from type %a."
        (string_of_int k)
-       (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
     
   | ProjNotFound (cD, cPsi, k, sA) ->
      fprintf ppf
        "There is no projection named %s in type %a."
        (string_of_name k)
-       (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
     
   | TypMismatchElab (cD, cPsi, sA1, sA2) ->
      Error.report_mismatch ppf
        "Ill-typed expression."
-       "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA1)
-       "Actual type"   (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA2)
+       "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
+       "Actual type"   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA2)
     
   | IllTypedElab (cD, cPsi, sA, variant) ->
      Error.report_mismatch ppf
        "Ill-typed expression."
-       "Expected type" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) (Whnf.normTyp sA)
+       "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
        "Actual type"   (pp_print_string)                  (string_of_typeVariant variant)
     
   | IllTypedSub (cD, cPsi, s, cPsi') ->
      fprintf ppf "Ill-typed substitution.@.";
      fprintf ppf "    Does not take context: %a@."
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
+       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
      fprintf ppf "    to context: %a@."
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
      
   | IllTypedSubVar (cD, cPsi, cPsi') ->
      fprintf ppf "Ill-typed substitution variable.@.";
      fprintf ppf "    Does not take context: %a@."
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi');
+       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
      fprintf ppf "    to context: %a@."
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) (Whnf.normDCtx cPsi)
+       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
      
   | LeftoverConstraints x ->
      fprintf ppf
@@ -751,8 +751,12 @@ let rec synDom cD loc cPsi s =
   | Apx.LF.Id ->
      begin match Context.dctxToHat cPsi with
      | (Some psi, d) ->
-        let _ = dprint (fun () -> "[synDom] cPsi = " ^ P.dctxToString cD cPsi) in
-        let _ = dprint (fun () -> "[synDom] d = " ^ string_of_int d) in
+        dprintf
+          begin fun p ->
+          p.fmt "[synDom] @[<v>cPsi = %a@,d = %d@]"
+            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+            d
+          end;
         (Int.LF.CtxVar psi, Int.LF.Shift d)
         
      | (None, _d) ->
@@ -841,13 +845,21 @@ and elTyp recT cD cPsi a = match a with
 and elTypRec recT cD cPsi typ_rec = begin match typ_rec with
   | Apx.LF.SigmaLast(n, a) ->
       let tA = elTyp recT cD cPsi a in
-      let _ = dprint (fun () -> "[elTypRec] Last " ^ " : " ^ P.typToString cD cPsi (tA, Substitution.LF.id)) in
-        Int.LF.SigmaLast(n, tA)
+      dprintf
+        begin fun p ->
+        p.fmt "[elTypRec] Last: %a"
+          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
+        end;
+      Int.LF.SigmaLast(n, tA)
 
   | Apx.LF.SigmaElem (name, a, typRec) ->
       let tA = elTyp recT cD cPsi a in
-      let _ = dprint (fun () -> "[elTypRec] " ^ Id.render_name name ^ " : " ^
-      P.typToString cD cPsi (tA, Substitution.LF.id)) in
+      dprintf
+        begin fun p ->
+        p.fmt "[elTypRec] %a : %a"
+          Id.print name
+          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
+        end;
       let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (name, tA)) in
       let typRec' = elTypRec recT cD cPsi' typRec in
         Int.LF.SigmaElem (name, tA, typRec')
@@ -1092,13 +1104,15 @@ and elTerm' recT cD cPsi r sP = match r with
      begin
        try
          let (cD_d, Int.LF.Decl(_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _)) = FCVar.get u in
-         dprint
-           (fun _ ->
-             "Retrieving type of FMV " ^ Id.render_name u
-             ^ " of type " ^ P.typToString cD_d cPhi (tQ, Substitution.LF.id)
-             ^ "[" ^ P.dctxToString cD_d cPhi ^ "]"
-             ^ "\n in cD_d = " ^ P.mctxToString cD_d);
-         dprint (fun () -> "Current context cD = " ^ P.mctxToString cD);
+         dprintf
+           begin fun p ->
+           p.fmt "[elTerm'] @[<v>FMV %a of type %a[%a]@,in cD_d = %a@,and cD = %a@]"
+             Id.print u
+             (P.fmt_ppr_lf_typ cD_d cPhi P.l0) tQ
+             (P.fmt_ppr_lf_dctx cD_d P.l0) cPhi
+             (P.fmt_ppr_lf_mctx P.l0) cD_d
+             (P.fmt_ppr_lf_mctx P.l0) cD
+           end;
          let d = Context.length cD - Context.length cD_d in
 
          let _ = dprint (fun () -> "d = " ^ string_of_int d) in
@@ -1125,14 +1139,22 @@ and elTerm' recT cD cPsi r sP = match r with
          (* For type reconstruction to succeed, we must have
           *    . ; cPsi |- tA <= type , i.e. cPsi and tA cannot depend on
           * meta-variables in cD. This will be enforced during abstraction *)
-         let _ = dprint (fun () -> "[elTerm] Normalized retrieved type of FMV " ^ Id.render_name u ^
-                                     " of type " ^ P.typToString cD cPhi' (tQ', Substitution.LF.id) ^ "[" ^
-                                       P.dctxToString cD cPhi' ^ "]") in
+         dprintf
+           begin fun p ->
+           p.fmt "[elTerm] @[<v>Normalized retrieved type of FMV %a@,of type %a[%a]@]"
+             Id.print u
+             (P.fmt_ppr_lf_typ cD cPhi' P.l0) tQ'
+             (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
+           end;
          let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi' in
-         dprint (fun () -> "[elTerm] s = " ^ P.subToString cD cPsi s'');
-         dprint (fun () -> "[elTerm] domain : " ^ P.dctxToString cD cPhi');
-         dprint (fun () -> "[elTerm] range : " ^ P.dctxToString cD cPsi);
-         dprint (fun () -> "[elTerm] Expected type : " ^ P.typToString cD cPsi sP);
+         dprintf
+           begin fun p ->
+           p.fmt "[elTerm] @[<v>s = %a@,domain: %a@,range: %a@,expected type: %a@]"
+             (P.fmt_ppr_lf_sub cD cPsi P.l0) s''
+             (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
+             (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+             (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+           end;
          (* We do not check here that tP approx. [s']tP' --
           * this check is delayed to reconstruction *)
          let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in
@@ -1155,10 +1177,12 @@ and elTerm' recT cD cPsi r sP = match r with
               (* 1) given cPsi and s synthesize the domain cPhi
                * 2) [s]^-1 ([s']tP) is the type of u
                *)
-              dprint
-                (fun _ ->
-                  "[elTerm] synthesize domain for meta-variable "
-                  ^ (string_of_name u) ^ " in context " ^ P.dctxToString cD cPsi);
+              dprintf
+                begin fun p ->
+                p.fmt "[elTerm] synthesize domain for meta-variable %a in context %a"
+                  Id.print u
+                  (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+                end;
               let (cPhi, s'') = synDomOpt cD loc cPsi s in
 
               (*
@@ -1166,7 +1190,7 @@ and elTerm' recT cD cPsi r sP = match r with
                 (fun p ->
                   p.fmt
                     "[elTerm] it's %a at %a "
-                    (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPhi
+                    (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                     Loc.print_short loc);
 
               begin
@@ -1204,11 +1228,13 @@ and elTerm' recT cD cPsi r sP = match r with
                * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                * This will be enforced during abstraction.
                *)
-              dprint
-                (fun _ ->
-                  "Add FMVar " ^ Id.render_name u
-                  ^ " of type "
-                  ^ P.dctxToString cD cPhi ^ " |- " ^ P.typToString cD cPhi (tP, Substitution.LF.id));
+              dprintf
+                begin fun p ->
+                p.fmt "[elTerm'] @[<v>Add FMVar %a@ of type %a |- %a@]"
+                  Id.print u
+                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
+                end;
 
               FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
               (*The depend paramater here affects both mlam vars and case vars*)
@@ -1217,8 +1243,12 @@ and elTerm' recT cD cPsi r sP = match r with
               dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u) );
               dprint (fun () -> "isProjPatSub ... " );
               let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-              dprint (fun () -> "flattenDCtx done " ^ P.dctxToString cD flat_cPsi ^ "\n");
-              dprint (fun () -> "conv_list " ^ conv_listToString conv_list );
+              dprintf
+                begin fun p ->
+                p.fmt "[elTerm'] @[<v>flattenDCtx done %a@,conv_list = %a@]"
+                  (P.fmt_ppr_lf_dctx cD P.l0) flat_cPsi
+                  ConvSigma.fmt_ppr_conv_list conv_list
+                end;
               let flat_s = flattenProjPat loc cD s conv_list cPsi in
               let _ = dprint (fun () -> "flattenProjPat done " ) in
 
@@ -1233,29 +1263,45 @@ and elTerm' recT cD cPsi r sP = match r with
                *)
               let ss =  Substitution.LF.invert s'' in
 
-              dprint (fun () -> "[synDom] (after flattening) cPhi = " ^ P.dctxToString cD cPhi ^ "\n");
+              dprintf
+                begin fun p ->
+                p.fmt "[synDom] (after flattening) cPhi = %a"
+                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                end;
               let s_tup    = ConvSigma.gen_conv_sub' conv_list in
               let (tP, s_p) = sP in
               let tP' = Whnf.normTyp (tP, Substitution.LF.comp s_p s_tup) in
               (* let tP' = ConvSigma.strans_typ cD cPsi sP conv_list in *)
-              dprint (fun () -> "[synDom] Prune type sP = " ^ P.typToString cD cPsi sP );
-              dprint (fun () -> "[synDom] Prune flattened type (1 with resp. flat_cPsi) " ^ P.typToString cD flat_cPsi (tP', Substitution.LF.id) );
-              dprint (fun () -> "         with respect to ss = " ^ P.subToString cD cPhi ss );
+              dprintf
+                begin fun p ->
+                p.fmt "[synDom] @[<v>Prune type sP = @[%a@]@,\
+                       Prune flattened type (q with resp. flat_cPsi) @[%a@]@,\
+                       with respect to ss = @[%a@]@]"
+                  (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                  (P.fmt_ppr_lf_typ cD flat_cPsi P.l0) tP'
+                  (P.fmt_ppr_lf_sub cD cPhi P.l0) ss
+                end;
 
               let tP = pruningTyp loc cD flat_cPsi
                          (Context.dctxToHat flat_cPsi) (tP', Substitution.LF.id) (Int.LF.MShift 0, ss)  in
 
               let sorig = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
-              dprint (fun () -> "sorig = " ^ P.subToString cD cPsi sorig ^ "\n");
+              dprintf
+                begin fun p ->
+                p.fmt "[synDom] sorig = @[%a@]"
+                  (P.fmt_ppr_lf_sub cD cPsi P.l0) sorig
+                end;
               (* For type reconstruction to succeed, we must have
                * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                * This will be enforced during abstraction.
                *)
-              dprint
-                (fun _ ->
-                  "[synDom] Type of mvar "
-                  ^ (string_of_name u) ^ ":" ^ P.typToString cD cPhi (tP, Substitution.LF.id)
-                  ^ " [ " ^ P.dctxToString cD cPhi ^ " ] ");
+              dprintf
+                begin fun p ->
+                p.fmt "[synDom] Type of mvar %a : %a[%a]"
+                  Id.print u
+                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
+                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                end;
 
               FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
               Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
@@ -1339,15 +1385,24 @@ and elTerm' recT cD cPsi r sP = match r with
                    * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi
                    * This will be enforced during abstraction.
                    *)
-                let _ = begin match cPhi with
-                  | Int.LF.Null -> dprint (fun () -> "Add Parameter variable in empty context !!! of type : " ^
-                    P.dctxToString cD cPhi ^ " |- " ^ P.typToString cD cPhi (tP, Substitution.LF.id))
-                    ;
-                    dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi);
-                    dprint (fun () -> "s = " ^ P.subToString cD cPhi s'')
-                  | _ -> () end in
-                  FCVar.add p (cD, Int.LF.Decl(p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP,Substitution.LF.id)),  cPhi), Int.LF.Maybe));
-                  Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
+                let _ =
+                  match cPhi with
+                  | Int.LF.Null ->
+                     dprintf
+                       begin fun p ->
+                       p.fmt "[elTerm'] @[<v>add Parameter variable in empty context !!!@,\
+                              of type : %a |- %a@,\
+                              cPsi = %a@,\
+                              s = %a@,"
+                         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                         (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
+                         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+                         (P.fmt_ppr_lf_sub cD cPhi P.l0) s''
+                       end
+                  | _ -> ()
+                in
+                FCVar.add p (cD, Int.LF.Decl(p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP,Substitution.LF.id)),  cPhi), Int.LF.Maybe));
+                Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
 
             | (Apx.LF.Nil, false) ->
                 (* cD ; cPsi |- #p[s] : sP *)
@@ -1371,9 +1426,13 @@ and elTerm' recT cD cPsi r sP = match r with
           let (tA, cPhi) = if d = 0 then (tA, cPhi) else
             (Whnf.cnormTyp (tA, Int.LF.MShift d), Whnf.cnormDCtx (cPhi, Int.LF.MShift d)) in
 
-          let _ = dprint (fun () -> "[Reconstruct Projection Parameter] Found its type ") in
-          let _ = dprint (fun () -> "      with type " ^
-                            P.typToString cD cPhi (tA, Substitution.LF.id) ^ "[" ^ P.dctxToString cD cPhi ^ "]") in
+          dprintf
+            begin fun p ->
+            p.fmt "[Reconstruct Projection Parameter] @[<v>Found its type@,\
+                   with type %a[%a]@]"
+              (P.fmt_ppr_lf_typ cD cPhi P.l0) tA
+              (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+            end;
           let k = getProjIndex loc cD cPsi typRec proj in
           let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
           let sA =
@@ -1398,30 +1457,56 @@ and elTerm' recT cD cPsi r sP = match r with
           begin match (isPatSubOpt s, spine) with
             | (true, Apx.LF.Nil) ->
                 let (cPhi, s'') = synDomOpt cD loc cPsi s in
-                let _ = dprint (fun () -> "#p is used in context cPsi = " ^  P.dctxToString cD cPsi) in
-                let _ = dprint (fun () -> "           at type tP = " ^ P.typToString cD cPsi sP) in
-                let _ = dprint (fun () -> "Context of #p : cPhi = " ^ P.dctxToString cD cPhi) in
+                dprintf
+                  begin fun p ->
+                  p.fmt "#p is used @[<v>in context cPsi = %a@,\
+                         at type tP = %a@,\
+                         context of #p : cPhi = %a@]"
+                    (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+                    (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                    (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                  end;
                 let si          = Substitution.LF.invert s'' in
                 let tP = pruningTyp loc cD cPsi
                   (Context.dctxToHat  cPsi) sP (Int.LF.MShift 0, si)  in
-                let _ = dprint (fun () -> "cD = " ^ P.mctxToString cD) in
-                let _ = dprint (fun () -> "cPsi = " ^ P.dctxToString cD cPsi) in
+                dprintf
+                  begin fun p ->
+                  p.fmt "    @[<v>cD = %a@,cPsi = %a@]"
+                    (P.fmt_ppr_lf_mctx P.l0) cD
+                    (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+                  end;
                 let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx  (cPsi, Whnf.m_id))) loc in
                 let _ = dprint (fun () -> "[ctxVar] done") in
                 let h = Int.LF.FPVar (p, Substitution.LF.id) in
                 let (typRec, s_inst,  kIndex) =
                   begin match synSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
-                  | None , _ -> raise (Error.Violation ("type sP = " ^ P.typToString cD cPhi (tP, Substitution.LF.id) ^ " not in schema " ^
-                                             P.schemaToString schema))
+                  | None , _ ->
+                     let s =
+                       let open Format in
+                       fprintf str_formatter "type sP = %a not in schema %a"
+                         (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
+                         (P.fmt_ppr_lf_schema P.l0) schema;
+                       flush_str_formatter ()
+                     in
+                     raise (Error.Violation s)
                   | Some (typrec, subst) , index -> (typrec, subst, index)
                   end in
                 let tB  =
                   begin match typRec with
                   | Int.LF.SigmaLast(n, tA) ->
-                      (dprint (fun () -> "synType for PVar: [SigmaLast]" ^ P.typToString cD cPhi (tA, s_inst) ^ "\n"); tA)
+                     dprintf
+                       begin fun p ->
+                       p.fmt "[elTerm'] synType for PVar: [SigmaLast] %a"
+                         (P.fmt_ppr_lf_typ cD cPhi P.l0) (Whnf.normTyp (tA, s_inst))
+                       end;
+                     tA
                   | typRec' ->
-                      (dprint (fun () -> "synType for PVar: [SigmaElem]" ^ P.typRecToString cD cPhi (typRec', s_inst) ^ "\n") ;
-                       Int.LF.Sigma typRec' )
+                     dprintf
+                       begin fun p ->
+                       p.fmt "[elTerm'] synType for PVar: [SigmaElem] %a"
+                         (P.fmt_ppr_lf_typ_rec cD cPhi P.l0) (Whnf.normTypRec (typRec', s_inst))
+                       end;
+                       Int.LF.Sigma typRec'
                   end in
                   FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Int.LF.Maybe));
                   Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
@@ -1439,58 +1524,92 @@ and elTerm' recT cD cPsi r sP = match r with
 
   (* Reconstruction for meta-variables  *)
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.MInst (Int.LF.MObj tN, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi)), s'), Apx.LF.Nil)  ->
-          dprint (fun () -> "[elTerm] Projected type of already reconstructed object " ^
-                    " which is embedded into an approximate object:\n                  " ^
-                    P.dctxToString cD cPhi ^ " |- " ^
-                    P.normalToString cD cPhi (tN, Substitution.LF.id) ^
-                    " : " ^ P.typToString cD cPhi (tQ, Substitution.LF.id));
-          dprint (fun () -> " in cD = " ^ P.mctxToString cD );
-          dprint (fun () -> "[elTerm] Show cPsi = " ^ P.dctxToString cD  cPsi);
-          dprint (fun () -> "[elTerm] Show cPhi = " ^ P.dctxToString cD cPhi);
-          dprintf (fun p -> p.fmt "[elTerm] (at %a)" Loc.print_short loc);
-          let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
+     dprintf
+       begin fun p ->
+       p.fmt "[elTerm] @[<v>Projected type of already reconstructed object \
+              which is embedded into an approximate object:@,\
+              @[<hv 2>%a |- %a@ : %a@]@,\
+              in @[<v>cD = %a@,\
+              cPsi = %a@,\
+              cPhi = %a@]@,\
+              at %a@]"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+         (P.fmt_ppr_lf_normal cD cPhi P.l0) tN
+         (P.fmt_ppr_lf_typ cD cPhi P.l0) tQ
+         (P.fmt_ppr_lf_mctx P.l0) cD
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+         Loc.print loc
+       end;
+     let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
 
-          dprint
-            (fun () ->
-              "[elTerm] Show cPsi after elSub = " ^ P.dctxToString cD  cPsi
-             ^ " has length " ^ string_of_int (Context.dctxLength cPsi)
-            );
+     dprintf
+       begin fun p ->
+       p.fmt "[elTerm] @[<v>cPsi after elSub = %a@,\
+              has length %d@,\
+              @[%a |- %a : %a@]
+              apx-mvar: expected type: @[%a@]@,\
+              inferred type: @[%a@]@,@]"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (Context.dctxLength cPsi)
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_sub cD cPsi P.l0) s''
+         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, s''))
+       end;
 
-          dprint (fun () -> "[elTerm] " ^ P.dctxToString cD cPsi ^ " |- " ^ P.subToString cD cPsi s'' ^ " : " ^ P.dctxToString cD cPhi );
-
-          dprint (fun () -> "[elTerm] Apx-mvar: Expected type: " ^ P.typToString cD cPsi sP ^ "\n");
-          dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s'') ^ "\n");
           begin
             try
               (* This case only applies to Beluga; MInst are introduced during cnormApxTerm. *)
               Unify.unifyTyp cD  cPsi (tQ, s'') sP ;
-              dprint (fun () -> "[elTerm] reconstruction of mvar done ");
-              dprint (fun () -> "  sQ = " ^ P.typToString cD cPsi (tQ,s'') ^ " == " ^ P.typToString cD cPsi sP) ;
-              dprint (fun () -> "  tN = " ^ P.normalToString cD cPsi (tN, s''));
+              dprintf
+                begin fun p ->
+                p.fmt "[elTerm] @[<v>reconstruction of mvar done@,\
+                       sQ = @[%a == %a@]@,\
+                       tN = @[%a@]@]"
+                  (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, s''))
+                  (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                  (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm (tN, s''))
+                end;
               Int.LF.Clo(tN, s'')
             with
             | Error.Violation msg  ->
-               dprint (fun () -> "[elTerm] Violation: " ^ msg);
-               dprint (fun () -> "[elTerm] Encountered term: " ^
-                                   P.normalToString cD cPsi (tN,s''));
-               dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
-               dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
+               dprintf
+                 begin fun p ->
+                 p.fmt "[elTerm] @[<v>violation:@,\
+                        encountered term: @[%a@]@,\
+                        expected type: @[%a@]@,\
+                        inferred type: @[%a@]@]"
+                   (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm (tN, s''))
+                   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, s''))
+                 end;
                throw loc CompTypAnn
             | Unify.Failure msg  ->
-               dprint (fun () -> "[elTerm] Unification Violation: " ^ msg) ;
-               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-               dprint (fun () -> "[elTerm] in cD  = " ^ P.mctxToString cD );
-               dprint (fun () -> "[elTerm] Expected type: " ^ P.typToString cD cPsi sP);
-               dprint (fun () -> "[elTerm] Inferred type: " ^ P.typToString cD cPsi (tQ, s''));
-               dprint (fun () -> "[elTerm] cD = " ^ P.mctxToString cD);
+               dprintf
+                 begin fun p ->
+                 p.fmt "[elTerm] @[<v>unification violation: %s@,\
+                        encountered term: @[%a@]@,\
+                        in cD = @[%a@]@,\
+                        expected type: @[%a@]@,\
+                        inferred type: @[%a@]@]"
+                   msg
+                   (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm (tN, s''))
+                   (P.fmt_ppr_lf_mctx P.l0) cD
+                   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, s''))
+                 end;
                throw loc (TypMismatchElab (cD, cPsi, sP, (tQ,s'')))
             | _ ->
-               dprint (fun () -> "[elTerm] Encountered term: " ^ P.normalToString cD cPsi (tN,s''));
-               dprint
-                 (fun () ->
-                   "[elTerm] Inferred type: "
-                   ^ P.typToString cD cPsi (tQ, s'')
-                   ^ " does not match expected type");
+               dprintf
+                 begin fun p ->
+                 p.fmt "[elTerm] @[<v>encountered term: @[%a@]@,\
+                        inferred type: @[%a@]@,\
+                        does not match expected type@]"
+                   (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm (tN, s''))
+                   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, s''))
+                 end;
                throw loc CompTypAnn
           end
 
@@ -1503,9 +1622,18 @@ and elTerm' recT cD cPsi r sP = match r with
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
         let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET - ELABORATION elSpine DONE \n") in
         let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) in
-        let _ = dprint (fun () -> "\n cPsi = " ^ P.dctxToString cD cPsi ^ "\n") in
+        dprintf
+          begin fun p ->
+          p.fmt "cPsi = %a"
+            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+          end;
         let tQ = Whnf.cnormTyp ((Whnf.normTyp sQ), Whnf.m_id) in
-        let _ = dprint (fun () -> "\n[elTerm] UNIFY sQ = " ^ P.typToString cD cPsi (tQ, Substitution.LF.id) ^ "\nwith sP " ^ P.typToString cD cPsi sP ^ "\n") in
+        dprintf
+          begin fun p ->
+          p.fmt "[elTerm] UNIFY @[<v>sQ = %a@ with sP = %a@]"
+            (P.fmt_ppr_lf_typ cD cPsi P.l0) tQ
+            (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+          end;
         begin
           try
             Unify.unifyTyp cD cPsi sQ sP;
@@ -1554,7 +1682,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let (u, tp, dep) = Whnf.mctxLookupDep cD k in
           p.fmt "[elTerm'] elaborating parameter variable at index %d -> %a"
             k
-            (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl) (Int.LF.Decl (u, tp, dep))
+            (P.fmt_ppr_lf_ctyp_decl cD P.l0) (Int.LF.Decl (u, tp, dep))
         );
         let (_, tA, cPhi) = Whnf.mctxPDec cD k in
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
@@ -1607,10 +1735,12 @@ and elTerm' recT cD cPsi r sP = match r with
                    with _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
                     end
           in
-          let _ = dprint (fun () -> "[elTerm'] PVar " ^ P.headToString cD cPsi
-                            (Int.LF.Proj (Int.LF.PVar (p, t'), k))) in
-
-          let _ = dprint (fun () -> "[elTerm'] against type " ^ P.typToString cD cPsi sA) in
+          dprintf
+            begin fun pr ->
+            pr.fmt "[elTerm'] @[<v>PVar %a@,against type %a@]"
+              (P.fmt_ppr_lf_head cD cPsi P.l0) (Int.LF.Proj (Int.LF.PVar (p, t'), k))
+              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+            end;
           let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
           begin
             try
@@ -1631,10 +1761,14 @@ and elTerm' recT cD cPsi r sP = match r with
               match tA with
               | Int.LF.Sigma recA -> recA
               | _ ->
-                  dprint (fun () -> "Type of Parameter variable " ^ P.headToString cD cPhi h
-                                  ^ "not a Sigma-Type, yet used with Projection; found "
-                                  ^ P.typToString cD cPhi (tA, Substitution.LF.id) ^ "\n ill-typed") ;
-                  raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
+                 dprintf
+                   begin fun p ->
+                   p.fmt "@[<v>Type of Parameter variable %a not a sigma, but used with projection;@,\
+                    found @[%a@] ill-typed@]"
+                    (P.fmt_ppr_lf_head cD cPhi P.l0) h
+                    (P.fmt_ppr_lf_typ cD cPhi P.l0) tA
+                   end;
+                 raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
         in
         let s''     = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let k       = getProjIndex loc cD cPsi recA proj in
@@ -1683,33 +1817,50 @@ and elTerm' recT cD cPsi r sP = match r with
    (* let sArec = match Whnf.whnfTyp (tA, s) with
       | (Int.LF.Sigma tArec,s') ->  (tArec, s')
       | (nonsigma, s')          ->  (Int.LF.SigmaLast nonsigma, s') in *)
-    let _ = dprint (fun () -> ("tA =" ^ P.typToString cD cPsi (tA, s) ^ " \n")) in
+    dprintf
+      begin fun p ->
+      p.fmt "tA = %a"
+        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
+      end;
     let dctx        = Context.projectCtxIntoDctx some_part in
     let dctxSub     = Ctxsub.ctxToSub' cD cPsi dctx in
 
     (* let phat        = dctxToHat cPsi in *)
 
-    let _ =  dprint (fun () -> "***Unify.unifyTyp ("
-                        ^ "\n   cPsi = " ^ P.dctxToString cD cPsi
-                        ^ "\n   dctx = " ^ P.dctxToString cD dctx
-                        ^ "\n   " ^  P.typToString cD cPsi (tA, s) ) in
-    let _ = dprint (fun () -> "dctxSub = " ^ P.subToString cD cPsi dctxSub ^ "\n") in
+    dprintf
+      begin fun p ->
+      p.fmt "***@[<v>Unify.unifyTyp@,\
+             cPsi = @[%a@]@,\
+             dctx = @[%a@]@,\
+             @[%a@]@,
+             dctxSub = @[%a@]@,\
+             @[%a == %a@]@]"
+      (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+      (P.fmt_ppr_lf_dctx cD P.l0) dctx
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
+      (P.fmt_ppr_lf_sub cD cPsi P.l0) dctxSub
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (Int.LF.TClo sB, dctxSub))
+      end;
 
-    let _ = dprint (fun () ->  P.typToString cD cPsi (tA,s)) in
-    let _ = dprint (fun () ->  "== " ) in
-    let _ = dprint (fun () -> P.typToString cD cPsi (Int.LF.TClo sB, dctxSub) ^ "\n" )  in
     let nB  = Whnf.normTyp (Int.LF.TClo sB, dctxSub) in
     let nA  = Whnf.normTyp (tA,s) in
       begin
         try
-          Unify.unifyTyp cD cPsi (nA, Substitution.LF.id) (nB, Substitution.LF.id)
-        ; dprint (fun () -> "instanceOfSchElem\n"
-                            ^ "  block_part = " ^ P.typToString cD cPsi (Int.LF.TClo sB, dctxSub) ^ "\n"
-                            ^ "  succeeded.")
-        ; (Int.LF.TClo sB, dctxSub)
+          Unify.unifyTyp cD cPsi (nA, Substitution.LF.id) (nB, Substitution.LF.id);
+          dprintf
+            begin fun p ->
+            p.fmt "[instanceOfSchElem] @[<v>block_part = @[%a@] succeeded@]"
+              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (Int.LF.TClo sB, dctxSub))
+            end;
+          (Int.LF.TClo sB, dctxSub)
         with
         | (Unify.Failure _)  ->
-           dprint (fun () -> "Type " ^ P.typToString cD cPsi (tA,s) ^ " doesn't unify with schema element\n");
+           dprintf
+             begin fun p ->
+             p.fmt "Type %a doesn't unify with schema element"
+               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA,s))
+             end;
            throw loc (TypMismatchElab (cD, cPsi, (nA, Substitution.LF.id), (nB, Substitution.LF.id)))
         | exn ->
            dprint (fun () -> "[instanceOfSchElem] Non-Unify ERROR -2- ");
@@ -1717,13 +1868,21 @@ and elTerm' recT cD cPsi r sP = match r with
       end
 
   and instanceOfSchElemProj loc cD cPsi (tA, s) (var, proj) (Int.LF.SchElem (cPhi, trec)) =
-    let _ = dprint (fun () -> "[instanceOfSchElemProj] getType of " ^ string_of_proj proj ^ ". argument\n") in
     let cPhi'  = Context.projectCtxIntoDctx cPhi in
-    let _ = dprint (fun () -> " of " ^ P.typRecToString cD cPhi' (trec, Substitution.LF.id)) in
-    let _ = dprint (fun () -> " var = " ^ P.headToString cD cPsi var) in
+    dprintf
+      begin fun p ->
+      p.fmt "[instanceOfSchElemProj] @[<v>getType of %s@,of %a@,var = %a@]"
+        (string_of_proj proj)
+        (P.fmt_ppr_lf_typ_rec cD cPhi' P.l0) trec
+        (P.fmt_ppr_lf_head cD cPsi P.l0) var
+      end;
     let k = getProjIndex loc cD cPsi trec proj in
     let sA_k (* : tclo *) = Int.LF.getType var (trec, Substitution.LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence,eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
-    let _ = dprint (fun () -> "[instanceOfSchElemProj] retrieved the type  " ^ P.typToString cD cPhi' sA_k) in
+    dprintf
+      begin fun p ->
+      p.fmt "[instanceOfSchElemProj] retrieved the type @[%a@]"
+        (P.fmt_ppr_lf_typ cD cPhi' P.l0) (Whnf.normTyp sA_k)
+      end;
     let (_tA'_k, subst) =
       instanceOfSchElem loc cD cPsi (tA, s) (cPhi, sA_k)
       (* tA'_k = [subst] (sA_k) = [s]tA *)
@@ -1733,11 +1892,14 @@ and elTerm' recT cD cPsi r sP = match r with
 (* Synthesize the type for a free parameter variable *)
 and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema elements) as schema) =
   let self = synSchemaElem loc recT cD cPsi sP (head, k) in
-  let _ = dprint (fun () -> "synSchemaElem ... head = " ^
-                    P.headToString cD cPsi head ^ " Projection " ^
-                    string_of_proj k  ^ "\n") in
-  let _ = dprint (fun () -> "[synSchemaElem]  " ^ P.typToString cD cPsi sP
-                    ^ "  schema= " ^ P.schemaToString schema) in
+  dprintf
+    begin fun p ->
+    p.fmt "[synSchemaElem] @[<v>head = %a@,projection: %s@,type = %a@,schema = %a@]"
+      (P.fmt_ppr_lf_head cD cPsi P.l0) head
+      (string_of_proj k)
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+      (P.fmt_ppr_lf_schema P.l0) schema
+    end;
     match elements with
       | [] -> None, -1
       | (Int.LF.SchElem (_some_part, block_part)) as elem  ::  rest  ->
@@ -1745,9 +1907,12 @@ and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema ele
             let _ = dprint (fun () -> "[instanceOfSchElemProj ] ... ") in
             let (typRec, subst, k) = instanceOfSchElemProj loc cD cPsi sP (head, k) elem in
               (* Check.LF.instanceOfSchElemProj loc cO cD cPsi sP (head, k) elem in *)
-            dprint (fun () -> "synSchemaElem RESULT = "
-                            ^ P.typRecToString cD cPsi (typRec, subst))
-          ; (Some (typRec, subst), k) (* sP *)
+            dprintf
+              begin fun p ->
+              p.fmt "[synSchemaElem] RESULT = @[%a@]"
+                (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec (typRec, subst))
+              end;
+            (Some (typRec, subst), k) (* sP *)
           with Unify.Failure _  -> self (Int.LF.Schema rest)
             | Not_found -> self (Int.LF.Schema rest)
 
@@ -1836,9 +2001,13 @@ and elClosedTerm' recT cD cPsi r = match r with
             let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
               (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS) , sQ)
         | _  ->
-            dprint (fun () -> "[elClosedTerm'] Looking for p with offset " ^ R.render_offset p);
-            dprint (fun () -> "in context cD = " ^ P.mctxToString cD);
-            throw loc CompTypAnn
+           dprintf
+             begin fun pr ->
+             pr.fmt "[elClosedTerm'] Looking for p @[<v>with offset %s@,in context cD = %a@]"
+               (R.render_offset p)
+               (P.fmt_ppr_lf_mctx P.l0) cD
+             end;
+           throw loc CompTypAnn
       end
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj h, Int.LF.ClTyp (Int.LF.PTyp tA, cPsi')) , s ), proj) , spine ) ->
@@ -1855,8 +2024,12 @@ and elClosedTerm' recT cD cPsi r = match r with
               end
 
             | _  ->
-                dprint (fun () -> "[elClosedTerm'] Looking for p " ^ P.headToString cD cPsi' h);
-                throw loc CompTypAnn
+               dprintf
+                 begin fun p ->
+                 p.fmt "[elClosedTerm'] Looking for p %a"
+                   (P.fmt_ppr_lf_head cD cPsi' P.l0) h
+                 end;
+               throw loc CompTypAnn
           end
 
   | Apx.LF.Root (loc, h , _ ) ->
@@ -1961,19 +2134,29 @@ and elSub loc recT cD cPsi s cl cPhi =
       | (Apx.LF.SVar (Apx.LF.Offset offset, s), cPhi) ->
         let (_, cPhi1, cl1, cPhi2) = Whnf.mctxSDec cD offset in
         svar_le (cl1, cl) ;
-        let _ = dprint (fun () -> "[elSub] Encountered #S : "
-          ^ P.dctxToString cD cPhi1 ^
-          "[ " ^ P.dctxToString cD cPhi2 ^ "]") in
+        dprintf
+          begin fun p ->
+          p.fmt "[elSub] Encountered #S : %a[%a]"
+            (P.fmt_ppr_lf_dctx cD P.l0) cPhi1
+            (P.fmt_ppr_lf_dctx cD P.l0) cPhi2
+          end;
         begin
-          try Unify.unifyDCtx cD (Whnf.cnormDCtx (cPhi, Whnf.m_id))
-                (Whnf.cnormDCtx (cPhi1, Whnf.m_id));
-              let s' = elSub loc recT cD cPsi s Int.LF.Subst cPhi2 in
-              let sigma = Int.LF.SVar (offset, 0, s') in
-              let _ = dprint (fun () -> "[elSub] reconstructed subst = " ^
-                                          P.subToString cD cPsi sigma) in
-              let _ = dprint (fun () -> "[elSub] domain : " ^ P.dctxToString cD cPhi) in
-              let _ = dprint (fun () -> "[elSub] range : " ^ P.dctxToString cD cPsi) in
-              sigma
+          try
+            Unify.unifyDCtx cD
+              (Whnf.cnormDCtx (cPhi, Whnf.m_id))
+              (Whnf.cnormDCtx (cPhi1, Whnf.m_id));
+            let s' = elSub loc recT cD cPsi s Int.LF.Subst cPhi2 in
+            let sigma = Int.LF.SVar (offset, 0, s') in
+            dprintf
+              begin fun p ->
+              p.fmt "[elSub] @[<v>reconstructed subst = @[%a@]@,\
+                     domain: @[%a@]@,\
+                     range: @[%a@]@]"
+                (P.fmt_ppr_lf_sub cD cPsi P.l0) sigma
+                (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+                (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+              end;
+            sigma
               
           with Unify.Failure msg ->
             throw loc (IllTypedSubVar (cD, cPsi, cPhi))
@@ -1999,12 +2182,15 @@ and elSub loc recT cD cPsi s cl cPhi =
         begin match Context.dctxToHat (C.cnormDCtx (cPsi, C.m_id)) with
           | (Some psi, d)  ->
             (*            if psi = phi then  *)
-             dprint
-               (fun _ ->
-                 "[elSub] cD = " ^ P.mctxToString cD ^ "\n"
-                 ^ "[elSub] cPsi = " ^ P.dctxToString cD cPsi ^ "\n"
-                 ^ "[elSub] cPhi = " ^ P.dctxToString cD cPhi);
-
+             dprintf
+               begin fun p ->
+               let f = P.fmt_ppr_lf_dctx cD P.l0 in
+               p.fmt "[elSub] @[<v>cD = @[%a@]@,\
+                      cPsi = @[%a@]@,\
+                      cPhi = @[%a@]@]"
+                 (P.fmt_ppr_lf_mctx P.l0) cD
+                 f cPsi f cPhi
+               end;
             if unify_phat cD (Some phi, 0) (Some psi, 0) then
               Int.LF.Shift d
             else
@@ -2024,8 +2210,12 @@ and elSub loc recT cD cPsi s cl cPhi =
       (* NOTE: if decl = x:A, and cPsi(h) = A' s.t. A =/= A'
        *       we will fail during reconstruction / type checking
        *)
-        let _ = dprint (fun () -> "[elSub'] elaborate head ") in
-        let _ = dprint (fun () -> "[elSub'] in cPsi = " ^ P.dctxToString cD  cPsi) in
+         dprintf
+           begin fun p ->
+           p.fmt "[elSub'] @[<v>elaborate head@,\
+                  in cPsi = @[%a@]@]"
+             (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+           end;
         let (h', sA') = elHead loc recT cD cPsi h cl in
         let s' = elSub'  loc recT cD cPsi s cPhi' in
         begin
@@ -2058,25 +2248,37 @@ and elSub loc recT cD cPsi s cl cPhi =
 
       | (Apx.LF.Dot (Apx.LF.Obj m, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->
         let s' = elSub' loc recT cD cPsi s cPhi' in
-        let _ = dprint (fun () -> "[elSub]: s := " ^ P.dctxToString cD cPsi ^
-          " |- " ^ P.subToString cD cPsi s' ^ " : " ^
-          P.dctxToString cD cPhi' ) in
-        let _ = dprint (fun () -> "[elSub] in context type : " ^ P.typToString cD cPhi' (tA, Substitution.LF.id)) in
-        let _ = dprint (fun () -> "[elSub] elaborate argument checking against type : " ^ P.typToString cD cPsi (tA, s')) in
+        dprintf
+          begin fun p ->
+          p.fmt "[elSub]: @[<v>s = @[%a |-@ %a : %a@]@,\
+                 in context type: @[%a@]@,\
+                 elaborate argument checking against type: @[%a@]@]"
+            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+            (P.fmt_ppr_lf_sub cD cPsi P.l0) s'
+            (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
+            (P.fmt_ppr_lf_typ cD cPhi' P.l0) tA
+            (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s'))
+          end;
         let m' = elTerm recT cD cPsi m (tA, s') in
         Int.LF.Dot (Int.LF.Obj m', s')
       | (Apx.LF.Dot (Apx.LF.Obj m, _), Int.LF.DDec(_,_)) when cl = Int.LF.Ren ->
          throw loc (TermWhenVar (cD, cPsi, m))
 
       | (s, cPhi) ->
-        dprint (fun () ->
-          let s = match s with
-            | Apx.LF.Dot _ -> "Dot _ "
-            | Apx.LF.EmptySub -> " . "
-            | Apx.LF.Id -> " .. "
-            | Apx.LF.SVar(u,s) -> "SVAR"
-            | Apx.LF.FSVar(u,s) -> "FSVAR" in
-          "Expected substitution : " ^ P.dctxToString cD cPsi  ^ " |- " ^ s ^ " : "  ^ P.dctxToString cD cPhi);
+         dprintf
+           begin fun p ->
+           let s = match s with
+             | Apx.LF.Dot _ -> "Dot _ "
+             | Apx.LF.EmptySub -> " . "
+             | Apx.LF.Id -> " .. "
+             | Apx.LF.SVar(u,s) -> "SVAR"
+             | Apx.LF.FSVar(u,s) -> "FSVAR"
+           in
+           p.fmt "Expected substitution: @[%a |- %s : %a@]"
+             (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+             s
+             (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+           end;
         throw loc (IllTypedSubVar (cD, cPsi, cPhi))
   in
   let cPsi = Whnf.cnormDCtx (cPsi, Whnf.m_id) in
@@ -2097,8 +2299,14 @@ and elSub loc recT cD cPsi s cl cPhi =
 
 and elHead loc recT cD cPsi head cl = match head, cl with
   | Apx.LF.BVar x, _ ->
-      begin try
-      let _ = dprint (fun () -> "[elHead] cPsi = " ^ P.dctxToString cD cPsi ^ "|- BVar " ^ string_of_int x ) in
+     begin
+       try
+          dprintf
+            begin fun p ->
+            p.fmt "[elHead] cPsi = %a |- BVar %d"
+              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+              x
+            end;
       let Int.LF.TypDecl (_, tA') = Context.ctxDec (Whnf.cnormDCtx (cPsi, Whnf.m_id)) x in
       let _ = dprint (fun () -> "[elHead] done") in
         (Int.LF.BVar x,  (tA' , Substitution.LF.id))
@@ -2129,10 +2337,15 @@ and elHead loc recT cD cPsi head cl = match head, cl with
       end
 
   | Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p,r)), Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s), _ ->
-      begin try
-        let _ = dprint (fun () -> "[elHead] PInst : " ^ P.headToString cD cPhi (Int.LF.PVar (p,r))) in
-        let _ = dprint (fun () -> "[elHead] PInst cPhi : " ^ P.dctxToString cD  cPhi ) in
-        let _ = dprint (fun () -> "[elHead] PInst target cPsi : " ^ P.dctxToString cD cPsi ) in
+     begin
+       try
+          dprintf
+            begin fun pr ->
+            pr.fmt "[elHead] PInst @[<v>head: @[%a@]@,cPhi @[%a@]@,target cPsi @[%a@]@]"
+              (P.fmt_ppr_lf_head cD cPhi P.l0) (Int.LF.PVar (p,r))
+              (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+            end;
         let s' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
         let r' = Substitution.LF.comp r s' in
          (Int.LF.PVar (p, r') , (tA, r'))
@@ -2167,8 +2380,14 @@ and elHead loc recT cD cPsi head cl = match head, cl with
                  | (Int.LF.Sigma tA'rec, s') ->
                    let i  = getProjIndex loc cD cPsi tA'rec proj in
                    (Int.LF.getType head' (tA'rec, s') i 1, i)
-                 | (tA',s') -> raise (Error.Violation ("[elHead] expected Sigma type  "
-                                                 ^ "found type " ^ P.typToString cD cPsi (tA', s')))
+                 | (tA',s') ->
+                    let s =
+                      let open Format in
+                      fprintf str_formatter "[elHead] expected Sigma type; found type %a"
+                        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA', s'));
+                      flush_str_formatter ()
+                    in
+                    raise (Error.Violation s)
                 end
       in
         (Int.LF.Proj (head', i) , sAi)
@@ -2411,20 +2630,31 @@ let rec elDCtx recT cD psi = match psi with
 
   | Apx.LF.CtxVar (c_var) ->
       let cPsi = Int.LF.CtxVar(elCtxVar c_var) in
-        (dprint (fun () -> "[elDCtx] " ^ P.dctxToString cD cPsi );
-        cPsi)
+      dprintf
+        begin fun p ->
+        p.fmt "[elDCtx] %a"
+          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+        end;
+      cPsi
 
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
       let cPsi = elDCtx recT cD psi' in
-      let _ = dprint (fun () -> "[elDCtx] cPsi = " ^ P.dctxToString cD cPsi) in
+      dprintf
+        begin fun p ->
+        p.fmt "[elDCtx] cPsi = %a"
+          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+        end;
       let tA   = elTyp  recT cD cPsi a in
-      let _ = dprint (fun () -> "[elDCtx] " ^ Id.render_name x ^ ":" ^
-                        P.typToString cD cPsi (tA, Substitution.LF.id)) in
-        Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+      dprintf
+        begin fun p ->
+        p.fmt "[elDCtx] %a : %a"
+          Id.print x
+          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
+        end;
+      Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
   | Apx.LF.DDec (psi', Apx.LF.TypDeclOpt x) ->
       let cPsi = elDCtx recT cD psi' in
       Int.LF.DDec (cPsi, Int.LF.TypDeclOpt x)
-
 
 let checkCtxVar loc cD c_var w = match c_var with
   | Apx.LF.CtxOffset offset  ->
@@ -2444,8 +2674,12 @@ let rec checkDCtx loc recT cD psi w = match psi with
   | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
       let cPsi = checkDCtx loc recT cD psi' w in
       let tA   = elTyp  recT cD cPsi a in
-      let _ = dprint (fun () -> "[elDCtx] " ^ Id.render_name x ^ ":" ^
-                        P.typToString cD cPsi (tA, Substitution.LF.id)) in
+      dprintf
+        begin fun p ->
+        p.fmt "[elDCtx] %a : %a"
+          Id.print x
+          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
+        end;
       let Syntax.Int.LF.Schema s_elems = Schema.get_schema w in
       let _ = begin try
                 Check.LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems

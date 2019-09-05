@@ -5,7 +5,7 @@
  *)
 
 module S = Substitution.LF
-open Printf
+open Format
 open Syntax.Int
 
 
@@ -73,6 +73,11 @@ and res =                               (* Residual Goals   *)
 type conjunction =                      (* Subgoals         *)
   | True                                (* cG ::= True      *)
   | Conjunct of conjunction * goal      (*      | cG' ∧ g   *)
+
+let rec list_of_conjunction (c : conjunction) : goal list =
+  match c with
+  | True -> []
+  | Conjunct (c, x) -> x :: list_of_conjunction c
 
 type bound = int option                 (* b ::= '*' | nat  *)
 
@@ -421,20 +426,23 @@ module Printer = struct
   module P = Pretty.Int.DefaultPrinter
   open Index
 
-  let dctxToString cPsi =
-    P.dctxToString LF.Empty cPsi
+  let fmt_ppr_dctx ppf cPsi =
+    P.fmt_ppr_lf_dctx LF.Empty P.l0 ppf cPsi
 
-  let typToString cD cPsi sM =
-    P.typToString cD cPsi sM
+  let fmt_ppr_typ cD cPsi ppf sM =
+    P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sM)
 
-  let normalToString cPsi sM =
-    P.normalToString LF.Empty cPsi sM
+  let fmt_ppr_normal cPsi ppf sM =
+    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
 
-  let declToString cD cPsi (tD, s) = match tD with
+  let fmt_ppr_decl cD cPsi ppf (tD, s) = match tD with
     | LF.TypDeclOpt x ->
-      Id.string_of_name x ^ ":_"
+       fprintf ppf "%a : _"
+         Id.print x
     | LF.TypDecl (x, tM) ->
-      Id.string_of_name x ^ ":" ^ typToString cD cPsi (tM, s)
+       fprintf ppf "%a : %a"
+         Id.print x
+         (fmt_ppr_typ cD cPsi) (tM, s)
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -445,17 +453,17 @@ module Printer = struct
      Effects:
        None.
   *)
-  let rec goalToString cD cPsi (g, s) = match g with
+  let rec fmt_ppr_goal cD cPsi ppf (g, s) = match g with
     | Atom (tA) ->
-       typToString cD cPsi (tA, s)
+       fmt_ppr_typ cD cPsi ppf (tA, s)
     | Impl ((r, tD), g') ->
-       sprintf "%s -> %s"
-         (resToString cD cPsi (r, s))
-         (goalToString cD (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
+       fprintf ppf "%a -> %a"
+         (fmt_ppr_res cD cPsi) (r, s)
+         (fmt_ppr_goal cD (LF.DDec (cPsi, S.decSub tD s))) (g', S.dot1 s)
     | All (tD, g') ->
-       sprintf "[∀%s. %s]"
-         (declToString cD cPsi (tD, s))
-         (goalToString cD (LF.DDec (cPsi, S.decSub tD s)) (g', S.dot1 s))
+       fprintf ppf "[∀%a. %a]"
+         (fmt_ppr_decl cD cPsi) (tD, s)
+         (fmt_ppr_goal cD (LF.DDec (cPsi, S.decSub tD s))) (g', S.dot1 s)
 
   (* resToString cPsi (r, s) = string
      Invariants:
@@ -466,65 +474,72 @@ module Printer = struct
      Effects:
        None.
   *)
-  and resToString cD cPsi (r, s) = match r with
+  and fmt_ppr_res cD cPsi ppf (r, s) = match r with
     | Head (tH) ->
-      typToString cD cPsi (tH, s)
+      fmt_ppr_typ cD cPsi ppf (tH, s)
     | And (g, r') ->
-       sprintf "%s -> %s"
-         (goalToString cD cPsi (g, s))
-         (resToString cD cPsi (r', s))
+       fprintf ppf "%a -> %a"
+         (fmt_ppr_goal cD cPsi) (g, s)
+         (fmt_ppr_res cD cPsi) (r', s)
     | Exists (LF.TypDecl (_, tM) as tD, r') ->
        let tM' = Convert.etaExpand cD cPsi (tM, s) in
-       sprintf "[∃%s. %s]"
-         (declToString cD cPsi (tD, s))
-         (resToString cD cPsi (r', LF.Dot (LF.Obj tM', s)))
+       fprintf ppf "[∃%a. %a]"
+         (fmt_ppr_decl cD cPsi) (tD, s)
+         (fmt_ppr_res cD cPsi) (r', LF.Dot (LF.Obj tM', s))
 
-  let rec subGoalsToString cD cPsi (cG, s) = match cG with
-    | True -> ""
-    | Conjunct (cG', g) ->
-       sprintf "  <- %s\n%s"
-         (goalToString cD cPsi (g, s))
-         (subGoalsToString cD cPsi (cG', s))
+  (** Prints each subgoal with a leading `<-`. *)
+  let fmt_ppr_subgoals cD cPsi ppf (cG, s) =
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut
+         (fun ppf g ->
+           fprintf ppf "<- %a"
+             (fmt_ppr_goal cD cPsi) (g, s)))
+      (list_of_conjunction cG)
 
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
   *)
-  and sgnClauseToString (cidTerm, sCl) =
-    sprintf "%s: %s\n%s"
-      (Id.string_of_name (termName cidTerm))
-      (typToString LF.Empty sCl.eVars (sCl.tHead, S.id))
-      (subGoalsToString LF.Empty sCl.eVars (sCl.subGoals, S.id))
+  let fmt_ppr_sgn_clause ppf (cidTerm, sCl) =
+    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
+      Id.print (termName cidTerm)
+      (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
+      (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
-  let boundToString b = match b with
-    | Some i -> string_of_int i
-    | None -> "*"
+  let fmt_ppr_bound ppf = function
+    | Some i -> fprintf ppf "%d" i
+    | None -> fprintf ppf "*"
 
-  let sgnQueryToString q =
-    sprintf "--query %s %s\n\n%s"
-      (boundToString q.expected)
-      (boundToString q.tries)
-      (typToString LF.Empty LF.Null (q.typ, S.id))
+  let fmt_ppr_sgn_query ppf q =
+    fprintf ppf "--query %a %a %a."
+      fmt_ppr_bound q.expected
+      fmt_ppr_bound q.tries
+      (fmt_ppr_typ LF.Empty LF.Null) (q.typ, S.id)
 
   (* instToString xs = string
      Return string representation of existential variable
      instantiations in the query.
   *)
-  let rec instToString xs = match xs with
-    | ((x, tM) :: []) -> sprintf "%s = %s."
-      (Id.string_of_name x)
-      (normalToString LF.Null (tM, S.id))
-    | ((x, tM) :: ys) -> sprintf "%s = %s;\n%s"
-      (Id.string_of_name x)
-      (normalToString LF.Null (tM, S.id))
-      (instToString ys)
-    | [] -> "Empty substitution."
+  let fmt_ppr_inst ppf xs =
+    match xs with
+    | [] -> fprintf ppf "^."
+    | _ ->
+       fprintf ppf "@[<v>%a@]."
+         (pp_print_list ~pp_sep: pp_print_cut
+            (fun ppf (x, tM) ->
+              fprintf ppf "%a = %a;"
+                Id.print x
+                (fmt_ppr_normal LF.Null) (tM, S.id)))
+         xs
 
   let printQuery q =
-    printf "%s.\n\n" (sgnQueryToString q)
+    fprintf std_formatter "%a.@.@."
+      fmt_ppr_sgn_query q
 
   let printSignature () =
-    iterAllSClauses (fun w -> printf "%s\n" (sgnClauseToString w))
-
+    iterAllSClauses
+      (fun w ->
+        fprintf std_formatter "%a@."
+          fmt_ppr_sgn_clause w)
 end
 
 
@@ -854,24 +869,35 @@ module Frontend = struct
     | (None, y) -> y
 
   (* Abort query. *)
-  let abort s = raise (AbortQuery s)
+  let abort f =
+    let s =
+      f str_formatter ();
+      flush_str_formatter ()
+    in
+    raise (AbortQuery s)
 
   (* checkSolutions e t s = () *)
   let checkSolutions e t s = match (e, t) with
     | (None, None) -> ()
     | _ ->
       if not (boundEq (lowerBound e t) (Some s)) then
-        abort ("Query error: Wrong number of solutions -- "
-               ^ "expected " ^ (P.boundToString e) ^ " in "
-               ^ (P.boundToString t) ^ " tries, but found "
-               ^ (string_of_int s))
+        abort
+          begin fun ppf () ->
+          fprintf ppf
+            "Query error: Wrong number of solutions -- \
+             expected %a in %a tries, but found %d"
+            P.fmt_ppr_bound e
+            P.fmt_ppr_bound t
+            s
+          end
       else ()
 
   (* moreSolutions () = () *)
   let moreSolutions () =
     printf "More? " ; match (read_line ()) with
       | "y" | "Y" | ";" -> true
-      | "q" | "Q" -> abort "Query error -- explicit quit."
+      | "q" | "Q" ->
+         abort (fun ppf () -> fprintf ppf "Query error -- explicit quit.")
       | _ -> false
 
   (* solve q = () *)
@@ -897,15 +923,18 @@ module Frontend = struct
       (* Print MVar instantiations. *)
       if !Options.chatter >= 3 then
         begin
-          printf "---------- Solution %d ----------\n[%s]\n%s\n"
-            !solutions (P.dctxToString cPsi)
-            (P.instToString sgnQuery.instMVars) ;
+          fprintf std_formatter "@[<v>---------- Solution %d ----------@,[%a]@,%a@,@]"
+            (!solutions)
+            P.fmt_ppr_dctx cPsi
+            P.fmt_ppr_inst sgnQuery.instMVars;
           (* Print proof term. *)
-          (match sgnQuery.optName with
-            | Some n ->
-              printf "%s\n" (P.instToString [(n, tM)])
-            | None -> ()) ;
-          printf "\n"
+          begin match sgnQuery.optName with
+          | Some n ->
+             fprintf std_formatter "%a@."
+               P.fmt_ppr_inst [(n, tM)]
+          | None -> ()
+          end;
+          fprintf std_formatter "@."
         end
       else () ;
       (* Interactive. *)

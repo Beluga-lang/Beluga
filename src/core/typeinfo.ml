@@ -1,3 +1,4 @@
+open Support
 module Loc = Syntax.Int.Loc
 module P = Pretty.Int.DefaultPrinter
 
@@ -74,8 +75,7 @@ module LF = struct
     tc : LF.tclo
   }
 
-  let mk_entry (c : LF.mctx) (p : LF.dctx) (t : LF.tclo) : entry =
-  {
+  let mk_entry (c : LF.mctx) (p : LF.dctx) (t : LF.tclo) : entry = {
     ctx = c;
     psi = p;
     tc = t
@@ -86,7 +86,9 @@ module LF = struct
     if l <> Loc.ghost
       then begin                                      
         (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ P.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
-        Annot.add l (Annot.mk_entry ((* s ^ " :: " ^ *) P.typToString e.ctx e.psi e.tc));
+        Fmt.stringify (P.fmt_ppr_lf_typ e.ctx e.psi P.l0) (Whnf.normTyp e.tc)
+        |> Annot.mk_entry
+        |> Annot.add l;
         Hashtbl.add store l e
       end else ()
 
@@ -110,15 +112,15 @@ module Comp = struct
 
   let store         = Hashtbl.create 0
 
-  let add (l : Loc.t) (e : entry) (s : string) = if l <> Loc.ghost
-                                    then   
-                                      begin
-                                      (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
-                                      Annot.add l (Annot.mk_entry ((* s ^ " :: " ^  *)P.subCompTypToString e.ctx e.tc)) ; 
-                                      Hashtbl.add store l e
-                                      end
-                                    else
-                                      ()
+  let add (l : Loc.t) (e : entry) (s : string) =
+    match () with
+    | _ when l = Loc.ghost -> ()
+    | _ ->
+       (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
+       Fmt.stringify (P.fmt_ppr_cmp_typ e.ctx P.l0) (Whnf.cnormCTyp e.tc)
+       |> Annot.mk_entry
+       |> Annot.add l;
+       Hashtbl.add store l e
 
   let get           = Hashtbl.find store
 
@@ -139,24 +141,30 @@ module Sgn = struct
 
   let store = Hashtbl.create 0
 
-  let add : Loc.t -> entry -> string -> unit = 
-    fun l e _ -> if l <> Loc.ghost then begin
-      let s = match e.sgn with
-      | Typ t -> P.typToString LF.Empty LF.Null (t, LF.EmptySub)
-      | Kind k -> P.kindToString LF.Null (k, LF.EmptySub)
-      in
-      Annot.add l (Annot.mk_entry s);
-      Hashtbl.add store l e
-    end
+  let add (l : Loc.t) (e : entry) (_ : string) : unit = 
+    match () with
+    | _ when l = Loc.ghost -> ()
+    | _ ->
+       begin
+         match e.sgn with
+         | Typ t ->
+            Fmt.stringify (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) t
+         | Kind k ->
+            Fmt.stringify (P.fmt_ppr_lf_kind LF.Null P.l0) k
+       end
+       |> Annot.mk_entry
+       |> Annot.add l;
+       Hashtbl.add store l e
 
   let get : Loc.t -> entry = Hashtbl.find store
 
-  let clear : unit -> unit = fun () -> Hashtbl.clear store
-
+  let clear () : unit = Hashtbl.clear store
 end
 
 let clear_all () : unit =
-    LF.clear (); Comp.clear (); Annot.clear()
+  LF.clear ();
+  Comp.clear ();
+  Annot.clear()
 
 let print_annot (name : string) : unit =
   let pp = open_out ((fun n -> String.sub n 0 (String.rindex n '.')) name ^ ".annot") in

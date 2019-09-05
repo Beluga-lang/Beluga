@@ -109,26 +109,24 @@ The file input.bel has been successfully loaded;
 %:constructors oft
 tp_z : [0] oft z nat
 tp_s : [1] {E : exp}  oft E nat -> oft (suc E) nat
-tp_match : [4] 
-{E2 : {x5 : exp}  exp} 
- {T : tp} 
-  {E1 : exp} 
-   {E : exp} 
-    ({x : exp}  oft x nat -> oft (E2 x) T) -> oft E1 T -> oft E nat -> oft (match E E1 (\x. E2 x)) T
-tp_lam : [3] 
-{T1 : tp} 
- {E : {x6 : exp}  exp} 
-  {T2 : tp} 
-   ({x : exp}  oft x T1 -> oft (E x) T2) -> oft (lam T1 (\x. E x)) (arrow T1 T2)
-tp_app : [4] 
-{E2 : exp} 
- {T2 : tp} 
-  {E1 : exp} 
-   {T1 : tp}  oft E2 T2 -> oft E1 (arrow T2 T1) -> oft (app E1 E2) T1
-tp_letv : [4] 
-{T1 : tp} 
- {E2 : {x7 : exp}  exp} 
-  {T2 : tp} 
-   {E1 : exp} 
-    ({x : exp}  oft x T1 -> oft (E2 x) T2) -> oft E1 T1 -> oft (letv E1 (\x. E2 x)) T2
+tp_match : [4] {E2 : {x5 : exp}  exp} 
+                {T : tp} 
+                 {E1 : exp} 
+                  {E : exp} 
+                   ({x : exp}  oft x nat -> oft (E2 x) T) -> oft E1 T -> 
+                                                              oft E nat -> oft (match E E1 (\x. E2 x)) T
+tp_lam : [3] {T1 : tp} 
+              {E : {x6 : exp}  exp} 
+               {T2 : tp} 
+                ({x : exp}  oft x T1 -> oft (E x) T2) -> oft (lam T1 (\x. E x)) (arrow T1 T2)
+tp_app : [4] {E2 : exp} 
+              {T2 : tp} 
+               {E1 : exp} 
+                {T1 : tp} 
+                 oft E2 T2 -> oft E1 (arrow T2 T1) -> oft (app E1 E2) T1
+tp_letv : [4] {T1 : tp} 
+               {E2 : {x7 : exp}  exp} 
+                {T2 : tp} 
+                 {E1 : exp} 
+                  ({x : exp}  oft x T1 -> oft (E2 x) T2) -> oft E1 T1 -> oft (letv E1 (\x. E2 x)) T2
 ;

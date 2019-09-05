@@ -182,7 +182,7 @@ let print ppf (i, {loc; name; cD; info}) : unit =
 
   (* 2. The meta-context information. *)
   fprintf ppf "Meta-context:@,  @[<v>%a@]@,"
-    (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cD;
+    (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD;
   fprintf ppf "@,";
   (* thin_line ppf (); *)
 
@@ -201,12 +201,12 @@ let print ppf (i, {loc; name; cD; info}) : unit =
 
      (* 3. format the LF context information *)
      fprintf ppf "LF Context:@,  @[<v>%a@]@,"
-       (P.fmt_ppr_lf_dctx cD Pretty.std_lvl) cPsi;
+       (P.fmt_ppr_lf_dctx cD P.l0) cPsi;
      fprintf ppf "@,";
 
      (* 4. Format the goal. *)
      thin_line ppf ();
-     fprintf ppf "@[Goal:@ %a@]" (P.fmt_ppr_lf_typ cD cPsi Pretty.std_lvl) lfGoal';
+     fprintf ppf "@[Goal:@ %a@]" (P.fmt_ppr_lf_typ cD cPsi P.l0) lfGoal';
 
      (* 5. The in-scope variables that have the goal type, if any *)
      let suggestions =
@@ -224,12 +224,12 @@ let print ppf (i, {loc; name; cD; info}) : unit =
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
      fprintf ppf "Computation context:@,  @[<v>%a@]@,"
-       (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cG;
+       (P.fmt_ppr_cmp_gctx cD P.l0) cG;
      fprintf ppf "@,";
 
      (* 4. The goal type, i.e. the type of the hole. *)
      fprintf ppf "@[Goal:@ %a@]"
-       (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) goal;
+       (P.fmt_ppr_cmp_typ cD P.l0) goal;
 
      (* Collect a list of variables that already have the goal type. *)
      let suggestions = iterGctx cD cG (tau, theta) in

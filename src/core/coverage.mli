@@ -8,11 +8,11 @@ type error =
 
 type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
 
-type cov_goal =  CovGoal of LF.dctx * LF.normal * LF.tclo
-                            (*  cPsi |- tR <= sP *)
-		 | CovCtx of LF.dctx
-		 | CovSub of LF.dctx * LF.sub * LF.cltyp
-		 | CovPatt of gctx * Comp.pattern * Comp.tclo
+type cov_goal =
+  | CovGoal of LF.dctx * LF.normal * LF.tclo (*  cPsi |- tR <= sP *)
+	| CovCtx of LF.dctx
+	| CovSub of LF.dctx * LF.sub * LF.cltyp
+	| CovPatt of gctx * Comp.pattern * Comp.tclo
 
 
 exception Error of Syntax.Loc.t * error
@@ -40,9 +40,12 @@ type coverage_result =
 
 type depend   = Atomic | Dependent
 
+
+
 (* val clear  : unit -> unit
 val stage  : problem -> unit *)
-val force  : (coverage_result -> 'a) -> 'a list
+val map  : (coverage_result -> 'a) -> 'a list
+val iter : (coverage_result -> unit) -> unit
 
 (* val covers : problem -> coverage_result *)
 val process : problem -> int option -> unit   (* check coverage immediately *)
@@ -53,8 +56,6 @@ val genContextGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) 
 val genCGoals       : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
 val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
 val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
-val covGoalToString : LF.mctx -> cov_goal -> string
-val covGoalsToString: (LF.mctx * cov_goal * LF.msub) list -> string
 
 val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
 

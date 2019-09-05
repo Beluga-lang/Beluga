@@ -9,11 +9,6 @@ module Loc = Location
 module LF = struct
   include Syncom.LF
 
-  type depend =
-    | Maybe
-    | No
-    | Inductive
-
   type kind =
     | Typ     of Loc.t
     | ArrKind of Loc.t * typ      * kind
@@ -27,10 +22,6 @@ module LF = struct
     | MTyp of typ
     | PTyp of typ
     | STyp of svar_class * dctx
-
-  and svar_class =
-    | Ren
-    | Subst
 
   and ctyp =
     | ClTyp of cltyp * dctx

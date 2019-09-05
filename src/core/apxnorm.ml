@@ -7,7 +7,8 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module RR = Store.Cid.NamedRenderer
 
-let (dprint, _dprnt) = Debug.makeFunctions (Debug.toFlags [11])
+let (dprintf, dprint, _dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 (* ********************************************************************************)
 
 (* exception NotImplemented *)
@@ -285,7 +286,10 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
   | Apx.Comp.Case (loc, prag, i, branch) ->
       let _  = dprint (fun () -> "[cnormApxExp] Case Scrutinee ... ") in
-      let _ = dprint (fun () -> "[cnormApxExp] cD = " ^ P.mctxToString cD) in
+      dprintf
+        (fun p ->
+          p.fmt "[cnormApxExp] cD = %a"
+            (P.fmt_ppr_lf_mctx P.l0) cD);
       let e' = cnormApxExp' cD delta i (cD'', t) in
       let _  = dprint (fun () -> "[cnormApxExp] Case Scrutinee done") in
       let bs' = cnormApxBranches cD delta branch (cD'', t) in

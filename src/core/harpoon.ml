@@ -205,7 +205,7 @@ module Tactic = struct
     match k with
     | `invert when n <> 1 ->
        tctx.printf "Can't invert %a. (Not a unique case.)@,"
-         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG Pretty.std_lvl) m;
+         (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG P.l0) m;
        None
     | _ -> Some cgs
 
@@ -217,8 +217,8 @@ module Tactic = struct
       (fun p ->
         p.fmt
           "[harpoon-split] split on %a with type %a"
-          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG Pretty.std_lvl) m
-       (P.fmt_ppr_cmp_typ s.context.cD Pretty.std_lvl) tau
+          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) m
+       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
       );
     match generate_pattern_coverage_goals k m tau s tctx with
     | None -> ()
@@ -244,9 +244,11 @@ module Tactic = struct
             let refine_ctx ctx = Whnf.cnormCtx (Whnf.normCtx ctx, ms) in
             let cG = refine_ctx s.context.cG in
             let cIH = refine_ctx s.context.cIH in
-            dprint
-              (fun _ ->
-                "[harpoon-split] got pattern " ^ P.patternToString cD cG p);
+            dprintf
+              begin fun pr ->
+              pr.fmt "[harpoon-split] got pattern @[%a@]"
+                (P.fmt_ppr_cmp_pattern cD cG P.l0) p
+              end;
             let (cDext, cIH') =
               if is_comp_inductive cG m && Total.struct_smaller p
               then
@@ -257,7 +259,7 @@ module Tactic = struct
                 dprintf
                   (fun p ->
                     p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
-                      (P.fmt_ppr_cmp_gctx cD Pretty.std_lvl) cIH);
+                      (P.fmt_ppr_cmp_gctx cD P.l0) cIH);
 
                 (cD1, cIH)
               else
@@ -274,9 +276,9 @@ module Tactic = struct
               (fun p ->
                 let open Format in
                 p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,ms@,%a@,=@,%a@]"
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cDext
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) s.context.cD
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut Pretty.std_lvl) cD);
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cDext
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
+                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD);
             let cIH0 = Total.wf_rec_calls cD cG mfs in
             let local_context =
               { no_local_hypotheses with
@@ -359,8 +361,8 @@ module Tactic = struct
        |> solve' g
     | _ ->
        tctx.printf "@[<v>The expression@,  %a@, cannot be unboxed as its type@,  %a@, is not a box.@]"
-         (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) m
-         (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau
+         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
 
   let solve_with_new_decl decl cmd g tctx =
     let open Comp in
@@ -397,7 +399,7 @@ module Automation = struct
       (fun p ->
         p.fmt
           "[auto_intros]: invoked on %a"
-          (P.fmt_ppr_cmp_typ g.context.cD Pretty.std_lvl) t
+          (P.fmt_ppr_cmp_typ g.context.cD P.l0) t
       );
     match t with
     | TypArr _ | TypPiBox _ ->
@@ -421,7 +423,7 @@ module Automation = struct
         (fun p ->
           p.fmt
             "@[<v>[auto_solve_trivial] witness candidate = %a@]"
-            (P.fmt_ppr_lf_ctyp_decl cD Pretty.std_lvl) m
+            (P.fmt_ppr_lf_ctyp_decl cD P.l0) m
         );
       match m with
       | LF.Decl (_, mtyp, _) ->
@@ -449,7 +451,7 @@ module Automation = struct
         (fun p ->
           p.fmt
             "@[<v>[auto_solve_trivial] witness candidate = %a@]"
-            (P.fmt_ppr_cmp_ctyp_decl cD Pretty.std_lvl) c
+            (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
         );
       match c with
       | Comp.CTypDecl (_, typ, _) ->
@@ -493,7 +495,7 @@ module Automation = struct
        Tactic.(
         tctx.printf
           "@[<v>@,A goal %a is automatically solved.@,@]"
-          (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) (Whnf.cnormCTyp g.goal)
+          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
        );
        (Comp.solve w
         |> Tactic.solve
@@ -603,7 +605,7 @@ module Prover = struct
          | _ ->
             Format.fprintf ppf
               "@[<v>The expression@,  %a@,is not an appeal to an induction hypothesis.@]"
-              (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) i
+              (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
     in
     let elaborate_exp' cD cG t =
       let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
@@ -633,7 +635,7 @@ module Prover = struct
        let f i =
          Format.fprintf ppf "%d. %a@,"
            (i + 1)
-           (P.fmt_ppr_cmp_ctyp_decl g.context.cD Pretty.std_lvl)
+           (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
        in
        Format.fprintf ppf "There are %d IHs:@,"
          (Context.length g.context.cIH);
@@ -659,8 +661,8 @@ module Prover = struct
        dprintf
          (fun p ->
            p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
-             (P.fmt_ppr_cmp_exp_syn cD cG Pretty.std_lvl) m
-             (P.fmt_ppr_cmp_typ cD Pretty.std_lvl) tau);
+             (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
+             (P.fmt_ppr_cmp_typ cD P.l0) tau);
        let _ = Check.Comp.syn cD cG ~cIH: cIH mfs m in
        (* validate the invocation and call the suspension if it passes. *)
        check_invocation k cD cG m

@@ -2743,6 +2743,17 @@ let harpoon_command =
         (keyword "as" &> name)
     $> fun (t, name) -> H.Unbox (t, name)
   in
+  let automation_kind =
+    choice
+      [ keyword "auto-intros" &> pure `auto_intros
+      ; keyword "auto-solve-trivial" &> pure `auto_solve_trivial
+      ]
+  in
+  let toggle_automation =
+    keyword "toggle-automation"
+    &> automation_kind
+    $> fun t -> H.ToggleAutomation t
+  in
   let trivial_command =
     [ "show-proof", H.ShowProof
     ; "show-ihs", H.ShowIHs
@@ -2758,5 +2769,6 @@ let harpoon_command =
       :: solve
       :: by
       :: unbox
+      :: toggle_automation
       :: trivial_command
     )

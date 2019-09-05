@@ -240,6 +240,8 @@ module Harpoon = struct
     | ShowProof
     | Defer (* Defers the current subgoal to later *)
     | ShowSubgoals (* Lists all open subgoals *)
+
+    | ToggleAutomation of automation_kind
 end
 
 

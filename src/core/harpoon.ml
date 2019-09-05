@@ -517,12 +517,10 @@ module Automation = struct
     hashtbl
 
   let get_automation auto_st automation_kind : t =
-    let filter_auto (cond, auto) : t =
-      if !cond
-      then auto
-      else auto_nothing
-    in
-    filter_auto (Hashtbl.find auto_st automation_kind)
+    let (b, auto) = Hashtbl.find auto_st automation_kind in
+    if !b
+    then auto
+    else auto_nothing
 
   let toggle_automation auto_st automation_kind : unit =
     let (b, _) = Hashtbl.find auto_st automation_kind in

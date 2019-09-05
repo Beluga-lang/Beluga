@@ -523,6 +523,10 @@ module Automation = struct
       else auto_nothing
     in
     filter_auto (Hashtbl.find auto_st automation_kind)
+
+  let toggle_automation auto_st automation_kind : unit =
+    let (b, _) = Hashtbl.find auto_st automation_kind in
+    b := not !b
 end
 
 module Prover = struct
@@ -665,6 +669,9 @@ module Prover = struct
        Format.fprintf ppf "There are %d IHs:@,"
          (Context.length g.context.cIH);
        Context.to_list g.context.cIH |> List.iteri f
+
+    | Command.ToggleAutomation automation_kind ->
+       Automation.toggle_automation s.automation_state automation_kind
 
     (* Real tactics: *)
     | Command.Unbox (t, name) ->

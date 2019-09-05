@@ -392,6 +392,8 @@ module Automation = struct
 
   type t = unit proof_state -> Tactic.tactic_context -> bool
 
+  let auto_nothing : t = fun _ _ -> false
+
   let auto_intros : t =
     fun g tctx ->
     let (t, _) = g.goal in
@@ -501,6 +503,26 @@ module Automation = struct
         |> Tactic.solve
        ) g tctx;
        true
+
+
+  type automation_state =
+    (Command.automation_kind, (bool ref * t)) Hashtbl.t
+
+  let make_automation_state () : automation_state =
+    let hashtbl = Hashtbl.create 2 in
+    Hashtbl.add hashtbl `auto_intros
+      (ref true, auto_intros);
+    Hashtbl.add hashtbl `auto_solve_trivial
+      (ref true, auto_solve_trivial);
+    hashtbl
+
+  let get_automation auto_st automation_kind : t =
+    let filter_auto (cond, auto) : t =
+      if !cond
+      then auto
+      else auto_nothing
+    in
+    filter_auto (Hashtbl.find auto_st automation_kind)
 end
 
 module Prover = struct
@@ -511,6 +533,7 @@ module Prover = struct
        to prove as well as a handle on the whole (partial) proof.
      *)
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
+    ; automation_state : Automation.automation_state
     ; theorem_name : Id.name
     ; order : Comp.order
     }
@@ -522,6 +545,7 @@ module Prover = struct
       : interpreter_state =
     { initial_state = s
     ; remaining_subgoals = DynArray.of_list []
+    ; automation_state = Automation.make_automation_state ()
     ; theorem_name = name
     ; order = order
     }
@@ -539,12 +563,14 @@ module Prover = struct
     else
       Some (DynArray.get gs (current_subgoal_index gs))
 
-  let add_subgoal_hook g tctx =
+  let add_subgoal_hook s g tctx =
+    let open Automation in
+    let auto_st = s.automation_state in
     ignore
       (List.exists
          (fun f -> f g tctx)
-         [ Automation.auto_solve_trivial
-         ; Automation.auto_intros
+         [ get_automation auto_st `auto_solve_trivial
+         ; get_automation auto_st `auto_intros
          ]
       )
 
@@ -715,7 +741,7 @@ module Prover = struct
             P.fmt_ppr_cmp_proof_state g
         );
       DynArray.add s.remaining_subgoals g;
-      add_subgoal_hook g tctx
+      add_subgoal_hook s g tctx
     and remove_current_subgoal () =
       let gs = s.remaining_subgoals in
       let csg_index = current_subgoal_index gs in

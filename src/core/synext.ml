@@ -219,6 +219,11 @@ module Harpoon = struct
     | `invert
     ]
 
+  type automation_kind =
+    [ `auto_intros
+    | `auto_solve_trivial
+    ]
+
   type command =
     (* Actual tactics *)
 

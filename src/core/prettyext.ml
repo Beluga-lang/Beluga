@@ -7,48 +7,6 @@ open Support
 open Format
 open Syntax.Ext
 
-  (* 
-  (* External Syntax Printer Signature *)
-  module type PRINTER = sig
-
-    (* Contextual Format Based Pretty Printers *)
-    val fmt_ppr_sgn_decl      : lvl -> formatter -> Sgn.decl  -> unit
-    val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl  : LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
-    val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
-
-    val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ        -> unit
-    val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal     -> unit
-    val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head       -> unit
-    val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine      -> unit
-    val fmt_ppr_lf_sub        : ?pp_empty:(Format.formatter -> unit -> bool) ->
-                                LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub        -> unit
-
-    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
-    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-
-    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) ->
-                                lvl -> formatter -> LF.mctx     -> unit
-    val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
-    val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
-    val fmt_ppr_cmp_exp_chk   : LF.mctx -> lvl -> formatter -> Comp.exp_chk -> unit
-    val fmt_ppr_cmp_exp_syn   : LF.mctx -> lvl -> formatter -> Comp.exp_syn -> unit
-    val fmt_ppr_cmp_branches  : LF.mctx -> lvl -> formatter -> Comp.branch list -> unit
-    val fmt_ppr_cmp_branch    : LF.mctx -> lvl -> formatter -> Comp.branch -> unit
-    val fmt_ppr_pat_obj       : LF.mctx -> lvl -> formatter -> Comp.pattern -> unit
-      (*
-    val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
-       *)
-
-    val fmt_ppr_patternOpt    : LF.mctx -> LF.dctx -> formatter -> LF.normal option -> unit
-
-  end (* Ext.PRINTER *)
-                        *)
-
-(* External Syntax Pretty Printer Functor *)
 module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
   include Prettycom
 
@@ -113,14 +71,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | LinkOption
     
   let to_html (s : string) (tag : html) : string =
-    if not !Html.printingHtml then s else match tag with
-                                          | Keyword -> "<keyword>" ^ s ^ "</keyword>"
-                                          | ID Constructor -> Html.addId s; "<span class=\"constructor\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
-                                          | ID Typ -> Html.addId s; "<span class=\"typ\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
-                                          | ID Fun -> Html.addId s; "<span class=\"function\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
-                                          | ID Schema -> "<span class=\"schema\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
-                                          | Link -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
-                                          | LinkOption -> if Html.idExists s then "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>" else s
+    match tag with
+    | _ when not !Html.printingHtml -> s
+    | Keyword -> "<keyword>" ^ s ^ "</keyword>"
+    | ID Constructor -> Html.addId s; "<span class=\"constructor\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
+    | ID Typ -> Html.addId s; "<span class=\"typ\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
+    | ID Fun -> Html.addId s; "<span class=\"function\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
+    | ID Schema -> "<span class=\"schema\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
+    | Link -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
+    | LinkOption when Html.idExists s -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
+    | LinkOption -> s
+
   let iteri f =
 	  let rec iteri' i = function
 	    | [] -> ()
@@ -134,12 +95,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | Dots
     | Lam
     
-  let symbol_to_html : symbol -> string = function
-    | Turnstile -> if !Html.printingHtml then "&#x22A2" else "|-"
-    | RArr -> if !Html.printingHtml then "&#x2192" else "->"
-    | DblRArr -> if !Html.printingHtml then "&#x21D2" else "=>"
-    | Dots -> if !Html.printingHtml then "&hellip;" else ".."
-    | Lam -> if !Html.printingHtml then "&lambda;" else "\\"
+  let symbol_to_html : symbol -> string =
+    let f s1 s2 = if !Html.printingHtml then s1 else s2 in
+    function
+    | Turnstile -> f "&#x22A2" "|-"
+    | RArr -> f "&#x2192" "->"
+    | DblRArr -> f "&#x21D2" "=>"
+    | Dots -> f "&hellip;" ".."
+    | Lam -> f "&lambda;" "\\"
            
   let rec fmt_ppr_lf_typ  cD cPsi lvl ppf = function
     | LF.AtomTerm(_, n) -> fmt_ppr_lf_normal cD cPsi lvl ppf n

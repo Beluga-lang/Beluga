@@ -2,69 +2,6 @@ open Support
 open Format
 open Syntax.Int
 include Prettycom
-   
-      (*
-(* Internal Syntax Printer Signature *)
-module type PRINTER = sig
-  
-  val fmt_ppr_sgn           : formatter -> Sgn.sgn -> unit
-  val fmt_ppr_sgn_decl      : formatter -> Sgn.decl  -> unit
-    
-  (* LF printers *)
-  val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
-  val fmt_ppr_lf_depend : depend_print_style -> formatter -> LF.depend -> unit
-  val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-  val fmt_ppr_lf_ctyp_decl  : ?printing_holes:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
-  val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
-  val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
-  val fmt_ppr_lf_mtyp       : LF.mctx                    -> formatter -> LF.ctyp  -> unit
-  val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
-  val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
-  val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
-  val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
-  val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
-  val fmt_ppr_lf_schema     : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
-  val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-  val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-  val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-  val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
-  val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
-  val fmt_ppr_lf_mfront     : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
-  val fmt_ppr_lf_iterm      : LF.mctx -> LF.dctx -> formatter -> LF.iterm -> unit
-  val fmt_ppr_lf_msub       : LF.mctx -> lvl -> formatter -> LF.msub -> unit
-    
-  (** Prints a typing judgment for an msub: cD' |- theta : cD *)
-  val fmt_ppr_lf_msub_typing : formatter -> LF.mctx * LF.msub * LF.mctx -> unit
-    
-  (* computational printers *)
-  val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
-  val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
-  val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
-  val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
-  val fmt_ppr_cmp_gctx      : LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
-  val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
-  val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
-  val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
-  val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
-  val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
-    
-  (** Prints a typing judgment for a computational context.
-      cD |- cG
-   *)
-  val fmt_ppr_cmp_typ_typing : formatter -> LF.mctx * Comp.typ -> unit
-  val fmt_ppr_cmp_gctx_typing : formatter -> LF.mctx * Comp.gctx -> unit
-    
-  val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
-  val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
-  val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
-  val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
-  val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> unit Comp.hypothetical -> unit
-  val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
-  val fmt_ppr_cmp_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
-  val fmt_ppr_cmp_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
-  val fmt_ppr_cmp_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
-end
-       *)
                     
 (* Internal Syntax Pretty Printer Functor *)
 module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct

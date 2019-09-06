@@ -53,7 +53,13 @@ let externall = ref false
 
 module PC = Printer.Control
 
-let process_option arg rest = match arg with
+let process_option arg rest =
+  let with_arg_for arg k =
+    match rest with
+    | [] -> bailout (arg ^ " requires an argument")
+    | a :: rest -> k a rest
+  in
+  match arg with
   (* these strings must be lowercase *)
   | "+d" -> Debug.enable (); Printexc.record_backtrace true; rest
   | "+ext" -> externall := true; rest
@@ -65,16 +71,15 @@ let process_option arg rest = match arg with
   | "-print" -> Debug.chatter := 0; rest
   | "+print" -> Debug.chatter := 2; rest
   | "-width" ->
-    begin match rest with
-      | [] -> bailout "-width needs an argument"
-      | arg::rest ->
-        try
-          let width = int_of_string arg in
-          Format.set_margin (max 40 width);
-          rest
-        with Failure msg when msg = "int_of_string" ->
-          bailout "-width needs a numeric argument"
-    end
+     with_arg_for "-width"
+       begin fun arg rest ->
+       let width =
+         try int_of_string arg
+         with Failure _ -> bailout "-width requires a numeric argument"
+       in
+       Format.set_margin (max 40 width);
+       rest
+       end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
@@ -83,16 +88,16 @@ let process_option arg rest = match arg with
   | "+sexp" -> Sexp.enabled := true ; rest
   | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
   | "+cssfile" -> 
-      begin match rest with
-      | arg::rest when arg.[0] <> '-' && arg.[0] <> '+' ->
-          Html.css := Html.File arg; rest
-      | _ -> bailout "-cssfile requires an argument"
-      end
+     with_arg_for "+cssfile"
+       (fun arg rest -> Html.css := Html.File arg; rest)
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
-  | "-I" -> begin
-      try Beli.run rest
-      with Beli.Invalid_Arg -> usage () end
-  | _ -> usage ()
+  | "-I" ->
+     begin
+       try Beli.run rest
+       with Beli.Invalid_Arg -> usage ()
+     end
+  | _ ->
+     usage ()
 
 let rec process_options = function
   | [] -> []

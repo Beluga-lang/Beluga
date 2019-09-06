@@ -41,10 +41,11 @@ possibly extend parsing functions later with metadata.
 **** OCaml shortcomings
 
 OCaml is a strict language, so one cannot define recursive values that
-are _not functions_.
-In particular, one cannot write `let rec x = x`; we get the error
-"this kind of expression is not allowed on the right-hand side of `let
-rec'."
+are _not functions_ in which the recursion is not guarded by a
+constructor.
+For instance, one can write `let rec zeroes = 0 :: zeroes`, but not
+`let rec x = x`. We get the error "this kind of expression is not
+allowed on the right-hand side of `let rec'."
 
 So suppose we are parsing arithmetic expressions with addition and
 multiplication. We would like to write:

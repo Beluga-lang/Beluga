@@ -1,0 +1,26 @@
+%: load t/harpoon/nats_and_bools_tps.bel
+%: prove tps
+[|- hastype M T] -> [|- step M N] -> [|- hastype N T]
+2
+split x8
+invert y8
+invert y8
+invert y8
+invert y8
+invert y8
+invert y8
+invert y8
+invert y8
+invert y8
+by lemma ([|- Y11]) as l1
+by lemma ([|- Y17]) as l2
+by lemma ([|- t_false]) as l3
+by ih (tps [|- Y35] [|- Z2]) as r1
+by ih (tps [|- Z38] [|- Z1]) as r2
+by ih (tps [|- X42] [|- Z]) as r3
+solve l1
+solve l2
+solve l3
+unbox (r1) as R1
+unbox (r3) as R3
+by lemma ([|- t_iszero R3]) as l4

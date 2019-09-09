@@ -1726,19 +1726,27 @@ let mctxMVarPos cD u =
     | Dec(cG, Comp.CTypDecl (x, tau, flag)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t), flag))
 
 
-  let rec cnormCtx (cG, t) = match cG with
-    | Empty -> Empty
-    | Dec(cG, Comp.CTypDecl(x, tau,flag)) ->
-        let tdcl = Comp.CTypDecl (x, cnormCTyp (tau, t),flag) in
-        Dec (cnormCtx (cG, t), tdcl)
-    | Dec(cG, Comp.WfRec (f, args, tau)) ->
-        let tau' = cnormCTyp (tau, t) in
-        let args' = List.map (function m -> match m with
-                                | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
-                                | _ -> m) args in
-          Dec (cnormCtx(cG,t), Comp.WfRec (f, args', tau'))
-    | Dec(cG, Comp.CTypDeclOpt x) ->
-        Dec (cnormCtx (cG, t), Comp.CTypDeclOpt x)
+  let cnormCtx (cG, t) =
+    Context.map
+      begin fun d ->
+      match d with
+      | Comp.CTypDecl (x, tau, flag) ->
+         Comp.CTypDecl (x, cnormCTyp (tau, t), flag)
+      | Comp.WfRec (f, args, tau) ->
+         Comp.WfRec
+           ( f
+           , List.map
+               begin fun m ->
+               match m with
+               | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
+               | _ -> m
+               end
+               args
+           , cnormCTyp (tau, t)
+           )
+      | Comp.CTypDeclOpt x -> Comp.CTypDeclOpt x
+      end
+      cG
 
   let rec normCtx cG = match cG with
     | Empty -> Empty

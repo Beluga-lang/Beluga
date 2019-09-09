@@ -133,6 +133,9 @@ let rec fold (empty : 'b) (f : 'b -> 'a -> 'b) (ctx : 'a LF.ctx) =
   | LF.Empty -> empty
   | LF.Dec (ctx', d) -> f (fold empty f ctx') d
 
+let map f ctx =
+  fold LF.Empty (fun ctx' x -> LF.Dec (ctx', f x)) ctx
+
 (** Transforms a context into a list by applying the given function.
     The list order will be the reverse of the context,
     i.e. the rightmost entry of the context (which is the first entry)

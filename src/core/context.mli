@@ -24,6 +24,9 @@ val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
 (** General eliminator for contexts. *)
 val fold            : 'b -> ('b -> 'a -> 'b) -> 'a ctx -> 'b
 
+(** Lift a function into contexts. *)
+val map             : ('a -> 'b) -> 'a ctx -> 'b ctx
+
 val to_list_map_rev : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_map     : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
 val to_list_rev     : 'a ctx -> 'a list

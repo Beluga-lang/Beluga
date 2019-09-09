@@ -32,7 +32,6 @@ val to_sublist      : 'a ctx -> ('a ctx * 'a) list
 val to_sublist_rev  : 'a ctx -> ('a ctx * 'a) list
 val of_list_map     : 'a list -> ('a -> 'b) -> 'b ctx
 val of_list         : 'a list -> 'a ctx
-val to_local_context : Comp.hypotheses -> Comp.local_hypotheses
 val iter        : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
 val iter'       : 'a ctx -> ('a -> unit) -> unit
 val iter_rev    : 'a ctx -> ('a ctx -> 'a -> unit) -> unit

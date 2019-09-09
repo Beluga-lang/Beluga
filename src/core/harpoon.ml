@@ -62,28 +62,6 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   |> is_some
    *)
 
-(** Given an initial context cDl and a refined context cDl', compute the
-    list of all declarations in cD' that are either new variables (not
-    present in cD) or have different types in the new context
-    (refined).
-    The contexts cDl and cDl' should have been converted to lists using
-    Context.to_list.
- *)
-let filter_mctx_refinement
-      (cDl : LF.ctyp_decl list) (cDl' : LF.ctyp_decl list)
-    : LF.ctyp_decl list =
-  let f d =
-    match List.find_opt (fun d' -> Whnf.convCTypDecl d d') cDl with
-    | Some _ ->
-       false
-    | None ->
-       (* if we cannot find a convertible declaration in the original
-          context, then we keep the current declaration d.
-        *)
-       true
-  in
-  List.filter f cDl'
-
 (** All the high-level proof tactics.
  * In general, a tactic has inputs
  * 1. Some tactic-specific parameters
@@ -170,15 +148,8 @@ module Tactic = struct
     let goal' = (t', sigma) in
     let local_context = {cD; cG; cIH = LF.Empty} in
     let context = Context.append_hypotheses s.context local_context in
-    let local_context =
-      let c = Context.to_local_context local_context in
-      { c with
-        cDl = List.mapi (fun i d -> Whnf.cnormCDecl (d, LF.MShift (i + 1))) c.cDl
-      }
-    in
     let new_state =
       { context
-      ; local_context
       ; goal = goal'
       ; solution = None
       }
@@ -187,7 +158,7 @@ module Tactic = struct
     (* Solve the current goal with the subgoal. *)
     tctx.remove_current_subgoal ();
     tctx.add_subgoal new_state;
-    Comp.intros context local_context (Comp.incomplete_proof new_state)
+    Comp.intros context (Comp.incomplete_proof new_state)
     |> solve' s
 
   (** Calls the coverage checker to compute the list of goals for a
@@ -280,14 +251,6 @@ module Tactic = struct
                   (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
                   (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD);
             let cIH0 = Total.wf_rec_calls cD cG mfs in
-            let local_context =
-              { no_local_hypotheses with
-                cDl =
-                  filter_mctx_refinement
-                    (Whnf.mctx_to_list_shifted s.context.cD)
-                    (Whnf.mctx_to_list_shifted cDext)
-              }
-            in
             let context =
               { cD
               ; cG
@@ -298,7 +261,6 @@ module Tactic = struct
             in
             let new_state =
               { context
-              ; local_context
               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
               (* ^ our goal already has a delayed msub, so we compose the
                  one we obtain from the split (the refinement substitution)
@@ -319,7 +281,7 @@ module Tactic = struct
               |> Pair.lmap Context.hatToDCtx
             in
             tctx.add_subgoal new_state;
-            meta_branch c context local_context (incomplete_proof new_state)
+            meta_branch c context (incomplete_proof new_state)
        in
        tctx.remove_current_subgoal ();
        let bs = List.map f cgs in
@@ -344,8 +306,7 @@ module Tactic = struct
          (tau, Whnf.mcomp t (LF.MShift 1))
        in
        let new_state =
-         { g with
-           context =
+         { context =
              { g.context with
                cD = LF.(Dec (cD, Decl (name, cT, No)))
              }

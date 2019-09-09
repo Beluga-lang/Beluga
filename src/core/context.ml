@@ -184,13 +184,6 @@ let rec of_list_map (l : 'a list) (f : 'a -> 'b) : 'b LF.ctx =
 let of_list (l : 'a list) : 'a LF.ctx =
   of_list_map l Misc.id
 
-(** Converts a collection of hypotheses into local hypotheses. *)
-let to_local_context (h : Comp.hypotheses) : Comp.local_hypotheses =
-  let open Comp in
-  { cDl = to_list h.cD
-  ; cGl = to_list h.cG
-  }
-
 (** Iterate over a context from left to right (oldest variable first).
     The callback `f` gets both the subcontext of the variable _and_ the variable as input.
     Not tail-recursive, since contexts are snoc-lists.

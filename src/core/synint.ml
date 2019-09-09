@@ -441,13 +441,7 @@ module Comp = struct
     ; cIH : gctx   (* Generated induction hypotheses. *)
     }
 
-  type local_hypotheses =
-    { cDl : LF.ctyp_decl list
-    ; cGl : ctyp_decl list
-    }
-
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
-  let no_local_hypotheses = { cDl = []; cGl = [] }
 
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.
    * The type parameter 'a is used as a trick to rule out incomplete proofs:
@@ -467,13 +461,6 @@ module Comp = struct
   and 'a proof_state =
     { context : hypotheses (* all the assumptions *)
     (* The full context in scope at this point. *)
-
-    ; local_context : local_hypotheses
-    (* Just the assumptions locally introduced by this hypothetical.
-       These are represented as lists because they are not
-       well-formed contexts! They are supposed to be interpreted in
-       context.cD and context.cD/context.cG respectively.
-     *)
 
     ; goal : tclo
     (* The goal of this proof state. Contains a type with a delayed msub. *)
@@ -514,12 +501,10 @@ module Comp = struct
   and 'a hypothetical =
     Hypothetical of
       hypotheses (* the full contexts *)
-      * local_hypotheses (* the new variables introduced; should make sense in `hypotheses`. *)
       * 'a proof (* the proof; should make sense in `hypotheses`. *)
 
   let make_proof_state (t : tclo) : 'a proof_state =
     { context = no_hypotheses
-    ; local_context = no_local_hypotheses
     ; goal = t
     ; solution = None
     }
@@ -532,8 +517,8 @@ module Comp = struct
     Incomplete ( (), s )
 
   (** Smart constructor for the intros directive. *)
-  let intros (h : hypotheses) (h' : local_hypotheses) (proof : 'a proof) : 'a proof =
-    Directive (Intros (Hypothetical (h, h', proof)))
+  let intros (h : hypotheses) (proof : 'a proof) : 'a proof =
+    Directive (Intros (Hypothetical (h, proof)))
 
   let proof_cons (stmt : command) (proof : 'a proof) = Command (stmt, proof)
 
@@ -544,17 +529,17 @@ module Comp = struct
       : 'a proof =
     Directive (MetaSplit (m, a, bs))
 
-  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (h' : local_hypotheses) (d : 'a proof)
+  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : 'a proof)
       : 'a meta_branch =
-    SplitBranch (c, (Hypothetical (h, h', d)))
+    SplitBranch (c, (Hypothetical (h, d)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : 'a comp_branch list)
       : 'a proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : name) (h : hypotheses) (h' : local_hypotheses) (d : 'a proof)
+  let comp_branch (c : name) (h : hypotheses) (d : 'a proof)
       : 'a comp_branch =
-    SplitBranch (c, (Hypothetical (h, h', d)))
+    SplitBranch (c, (Hypothetical (h, d)))
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with

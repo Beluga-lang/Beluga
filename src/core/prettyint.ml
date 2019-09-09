@@ -1382,25 +1382,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in
     function
-    | Hypothetical (h, h', proof) ->
+    | Hypothetical (h, proof) ->
        fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
-         (fmt_ppr_cmp_local_hypotheses h.cD h.cG) h'
+         fmt_ppr_cmp_hypotheses h
          (fmt_ppr_cmp_proof h.cD h.cG) proof;
        
-  and fmt_ppr_cmp_local_hypotheses cD cG ppf =
+  and fmt_ppr_cmp_hypotheses ppf =
     let open Comp in
-    fun { cDl; cGl } ->
-    let comma ppf () = fprintf ppf ",@ " in
-    
+    fun { cD; cG; _ } ->
     fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
       (pp_print_list
-         ~pp_sep: comma
+         ~pp_sep: Fmt.comma
          (fmt_ppr_lf_ctyp_decl cD l0))
-      cDl
+      (Context.to_list_rev cD)
       (pp_print_list
-         ~pp_sep: comma
+         ~pp_sep: Fmt.comma
          (fmt_ppr_cmp_ctyp_decl cD l0))
-      cGl;
+      (Context.to_list_rev cG);
     
   and fmt_ppr_refinement cD cD0 lvl ppf t = begin match (t, cD0) with
                                             | (LF.MShift k, _ ) ->

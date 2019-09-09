@@ -76,6 +76,7 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
 module Tactic = struct
   type tactic_context =
     { add_subgoal : unit Comp.proof_state -> unit
+    ; remove_subgoal : unit Comp.proof_state -> unit
     ; remove_current_subgoal : unit -> unit
     ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
     ; defer : unit -> unit
@@ -95,7 +96,7 @@ module Tactic = struct
   let solve (proof : Comp.incomplete_proof) : t =
     fun s tctx ->
     solve' s proof;
-    tctx.remove_current_subgoal ()
+    tctx.remove_subgoal s
 
   (** Walks a type and collects assumptions into cD and cG,
       returning the conclusion type.
@@ -705,6 +706,7 @@ module Prover = struct
     let printf x = Format.fprintf ppf x in
     let rec tctx =
       { add_subgoal
+      ; remove_subgoal
       ; remove_current_subgoal
       ; printf
       ; defer
@@ -713,18 +715,27 @@ module Prover = struct
       dprintf
         (fun p ->
           p.fmt
-            "@[<v>[tactic context] add the following:@,%a@]"
+            "@[<v>[tactic context] add the following subgoal@,%a@]"
             P.fmt_ppr_cmp_proof_state g
         );
       DynArray.add s.remaining_subgoals g;
       add_subgoal_hook s g tctx
+    and remove_subgoal g =
+      dprintf
+        (fun p ->
+          p.fmt
+            "@[<v>[tactic context] remove the following subgoal@,%a@]"
+            P.fmt_ppr_cmp_proof_state g
+        );
+      let idx = DynArray.index_of (fun g' -> g = g') s.remaining_subgoals in
+      DynArray.delete s.remaining_subgoals idx
     and remove_current_subgoal () =
       let gs = s.remaining_subgoals in
       let csg_index = current_subgoal_index gs in
       dprintf
         (fun p ->
           p.fmt
-            "@[<v>[tactic context] remove goal %d of the following:@,%a@]"
+            "@[<v>[tactic context] remove the goal %d of the following@,%a@]"
             csg_index
             P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
         );

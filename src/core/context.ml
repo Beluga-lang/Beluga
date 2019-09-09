@@ -210,7 +210,7 @@ let rec iter_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> unit) : unit =
 let iter_rev' (ctx : 'a LF.ctx) (f : 'a -> unit) : unit =
   iter_rev ctx (fun _ -> f)
 
-let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int) option =
+let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a * int) option =
   let rec go (ctx : 'a LF.ctx) (idx : int) =
     match ctx with
     | Empty -> None
@@ -218,15 +218,15 @@ let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int)
        let open Maybe in
        Lazy.force
          ( lazy (go ctx' (idx + 1))
-           <|> lazy (of_bool (f ctx' x) &> Some (x, idx))
+           <|> lazy (of_bool (f ctx' (x, idx)) &> Some (x, idx))
          )
   in
   go ctx 1
 
-let find_with_index' (ctx : 'a LF.ctx) (f : 'a -> bool) : ('a * int) option =
+let find_with_index' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) option =
   find_with_index ctx (Misc.const f)
 
-let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * int) option =
+let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a * int) option =
   let rec go (ctx : 'a LF.ctx) (idx : int) =
     match ctx with
     | Empty -> None
@@ -234,13 +234,13 @@ let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : ('a * 
        (** The following does not use Maybe.(<|>) to be optimized by
            TCO (Tail Call Optimzations)
         *)
-       if f ctx' x
+       if f ctx' (x, idx)
        then Some (x, idx)
        else go ctx' (idx + 1)
   in
   go ctx 1
 
-let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : ('a * int) option =
+let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) option =
   find_with_index_rev ctx (Misc.const f)
 
 (** Find an item satisfying a condition in a context from left to right

@@ -45,10 +45,10 @@ val find        : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
 val find'       : 'a ctx -> ('a -> bool) -> 'a option
 val find_rev    : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
 val find_rev'   : 'a ctx -> ('a -> bool) -> 'a option
-val find_with_index     : 'a ctx -> ('a ctx -> 'a -> bool) -> ('a * int) option
-val find_with_index'    : 'a ctx -> ('a -> bool) -> ('a * int) option
-val find_with_index_rev : 'a ctx -> ('a ctx -> 'a -> bool) -> ('a * int) option
-val find_with_index_rev': 'a ctx -> ('a -> bool) -> ('a * int) option
+val find_with_index     : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
+val find_with_index'    : 'a ctx -> ('a * int -> bool) -> ('a * int) option
+val find_with_index_rev : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
+val find_with_index_rev': 'a ctx -> ('a * int -> bool) -> ('a * int) option
 
 val getNameDCtx : dctx -> int -> Id.name
 val getNameMCtx : mctx -> int -> Id.name

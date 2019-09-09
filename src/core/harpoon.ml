@@ -380,7 +380,7 @@ module Automation = struct
   let auto_solve_trivial : t =
     fun g tctx ->
     let { cD; cG; _ } = g.context in
-    let m_is_witness (m : LF.ctyp_decl) =
+    let m_is_witness ((m, idx) : LF.ctyp_decl * int) =
       dprintf
         (fun p ->
           p.fmt
@@ -389,7 +389,7 @@ module Automation = struct
         );
       match m with
       | LF.Decl (_, mtyp, _) ->
-         Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), Whnf.m_id)
+         Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), LF.MShift idx)
       | LF.DeclOpt _ ->
          raise (Error.Violation "[auto_solve_trivial] Unexpected DeclOpt")
     in
@@ -408,7 +408,7 @@ module Automation = struct
       | _ ->
          raise (Error.Violation "[auto_solve_trivial] Impossible case")
     in
-    let c_is_witness (c : Comp.ctyp_decl) =
+    let c_is_witness ((c, _) : Comp.ctyp_decl * int) =
       dprintf
         (fun p ->
           p.fmt
@@ -417,7 +417,7 @@ module Automation = struct
         );
       match c with
       | Comp.CTypDecl (_, typ, _) ->
-         Whnf.convCTyp g.goal (typ, LF.MShift 0)
+         Whnf.convCTyp g.goal (typ, Whnf.m_id)
       | Comp.CTypDeclOpt _ ->
          raise (Error.Violation "[auto_solve_trivial] Unexpected CTypDeclOpt")
       | Comp.WfRec _ ->

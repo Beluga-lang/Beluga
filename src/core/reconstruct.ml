@@ -1317,8 +1317,10 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
              (P.fmt_ppr_lf_mctx P.l0) cD'
              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
            end;
-          let (_ , s_cid) = Whnf.mctxCDec cD psi1_var in
-          elDCtxAgainstSchema loc Lfrecon.Pibox cD' cPsi' s_cid
+         (* lookup the schema of the context variable on the RHS *)
+         let (_ , s_cid) = Whnf.mctxCDec cD psi1_var in
+         (* and then elaborate the given context against that schema *)
+         elDCtxAgainstSchema loc Lfrecon.Pibox cD' cPsi' s_cid
 
       | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , _tA1)) , Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(x , tA2))) ->
         let cPsi'' = inferCtxSchema loc (cD, cPsi1) (cD',cPsi2) in
@@ -1577,7 +1579,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
          dprintf
            begin fun p ->
            p.fmt "[recPattern] @[<v>Reconstruction of pattern of empty type@,@[%a@]@]"
-             (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
+             P.fmt_ppr_lf_typ_typing (cD, cPsi, tP)
            end;
          let ttau'  = (Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
          (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')

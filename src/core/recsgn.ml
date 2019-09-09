@@ -14,7 +14,7 @@ module R = Store.Cid.DefaultRenderer
 let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
-type leftoverVars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
+type leftover_vars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 
 type error =
   | UnexpectedSucess
@@ -94,11 +94,17 @@ let _ =
       )
   )
 
-let print_leftoverVars = function
-  | [] -> ()
-  | (_cQ, loc):: rest ->
-    Format.fprintf Format.std_formatter "\n%a@." Syntax.Loc.print loc;
-    ()
+let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
+  let open Format in
+  fprintf ppf "@[<v>%a@]"
+    (pp_print_list ~pp_sep: pp_print_cut
+       begin fun ppf (cQ, loc) ->
+       fprintf ppf "@[<2>@[%a@] |-@ @[%a@]@]"
+         Abstract.fmt_ppr_collection cQ
+         Syntax.Loc.print loc
+       end)
+
+let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
 let rec stripInd tau = match tau with
   | Int.Comp.TypArr (tau1, tau2) ->
@@ -166,7 +172,7 @@ let rec apply_global_pragmas =
   | l -> l
 
 let recSgnDecls decls =
-  let leftoverVars : leftoverVars ref = ref [] in
+  let leftoverVars : leftover_vars ref = ref [] in
   let is_empty = function
     | Int.LF.Empty -> true
     | _ -> false

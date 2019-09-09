@@ -58,3 +58,5 @@ val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
 val closedTyp : (LF.dctx * LF.typ) -> bool
 
 val printFreeMVars : LF.psi_hat -> LF.normal -> unit
+
+val fmt_ppr_collection : Format.formatter -> free_var LF.ctx -> unit

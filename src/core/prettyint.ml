@@ -802,6 +802,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.No -> false
     | LF.Maybe -> true
     | LF.Inductive -> false
+
+  let fmt_ppr_lf_typ_typing ppf (cD, cPsi, tA) =
+    fprintf ppf "@[<2>@[%a@] ; @[%a@] |-@ @[%a@]@ : type@]"
+      (fmt_ppr_lf_mctx l0) cD
+      (fmt_ppr_lf_dctx cD l0) cPsi
+      (fmt_ppr_lf_typ cD cPsi l0) tA
                     
   let fmt_ppr_lf_msub_typing ppf (cD', t, cD) =
     fprintf ppf "@[%a@] |-@ @[%a@]@ : @[%a@]"
@@ -1466,12 +1472,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_lf_mctx l0) cD
       (fmt_ppr_cmp_gctx cD l0) cG
     
-  let fmt_ppr_cmp_typ_typing ppf (cD, tau) = assert false
-  (*
+  let fmt_ppr_cmp_typ_typing ppf (cD, tau) =
     fprintf ppf "@[%a@] |-@ @[%a@]"
     (fmt_ppr_lf_mctx l0) cD
     (fmt_ppr_cmp_typ cD l0) tau
-   *)
                                            
   let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
     fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"

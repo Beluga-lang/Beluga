@@ -161,19 +161,20 @@ let per_file file_name =
       begin
         let open Format in
         fprintf std_formatter
-          "\n## Holes: %s  ##\n@[<v>%a@]@."
+          "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@."
           file_name
           (pp_print_list Holes.print) (Holes.list ());
       end;
     begin match leftoverVars with
     | None -> ()
     | Some vars ->
-       if !Debug.chatter != 0 then begin
-           printf "\n## Left over variables ##" ;
-           Recsgn.print_leftoverVars vars
-         end ;
-       raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-    end ;
+      let open Format in
+      if !Debug.chatter <> 0 then
+        fprintf std_formatter "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@."
+          file_name
+          Recsgn.fmt_ppr_leftover_vars vars;
+      raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+    end;
     if !Typeinfo.generate_annotations then
       Typeinfo.print_annot file_name;
     print_newline();

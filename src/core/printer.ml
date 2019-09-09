@@ -61,6 +61,9 @@ module Int = struct
     (** Prints a typing judgment for an msub: cD' |- theta : cD *)
     val fmt_ppr_lf_msub_typing : formatter -> LF.mctx * LF.msub * LF.mctx -> unit
 
+    (** Prints a typing judgment for an LF type: cD ; cPsi |- tA : type *)
+    val fmt_ppr_lf_typ_typing : formatter -> LF.mctx * LF.dctx * LF.typ -> unit
+
     (* computational printers *)
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit

@@ -626,6 +626,19 @@ module Prover = struct
        Format.fprintf ppf "There are %d IHs:@,"
          (Context.length g.context.cIH);
        Context.to_list g.context.cIH |> List.iteri f
+    | Command.ShowSubgoals ->
+       let open Format in
+       let f ppf i g =
+         let open Comp in
+         fprintf ppf "%2d. @[%a@]@,"
+           (i + 1)
+           (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal)
+       in
+       let print_subgoals ppf gs =
+         List.iteri (f ppf) gs
+       in
+       fprintf ppf "@[<v>%a@]"
+         print_subgoals (DynArray.to_list s.remaining_subgoals)
 
     | Command.ToggleAutomation automation_kind ->
        Automation.toggle_automation s.automation_state automation_kind

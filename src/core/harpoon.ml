@@ -294,23 +294,21 @@ module Tactic = struct
   let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
     let open Comp in
     fun g tctx ->
-    let {cD; cG; _} = g.context in
+    let {cD; cG; cIH} = g.context in
     match tau with
     | TypBox (_, cT) ->
        (* Because we are adding a new declaration to cD, the goal type
           no longer makes sense in the new context. We need to weaken it
           by one.
         *)
-       let goal =
-         let (tau, t) = g.goal in
-         (tau, Whnf.mcomp t (LF.MShift 1))
-       in
+       let shift = LF.MShift 1 in
        let new_state =
          { context =
-             { g.context with
-               cD = LF.(Dec (cD, Decl (name, cT, No)))
+             { cD = LF.(Dec (cD, Decl (name, cT, No)))
+             ; cG = Whnf.cnormCtx (cG, shift)
+             ; cIH = Whnf.cnormCtx (cIH, shift)
              }
-         ; goal
+         ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
          ; solution = None
          }
        in

@@ -252,28 +252,18 @@ module Tactic = struct
             let cIH0 = Total.wf_rec_calls cD cG mfs in
             let cIH = Context.(append cIH (append cIH0 cIH')) in
             let context = { cD; cG; cIH } in
-            f context pat ms
+            let new_state =
+              { context
+              ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
+              ; solution = None
+              }
+            in
+            f context new_state pat
        in
-       (* We will map get_meta_branch over the coverage goals that were generated.
-          get_meta_branch computes the subgoal for the given coverage goal,
-          invokes the add_subgoal callback on the computed subgoal (to register it),
-          invokes the remove_current_subgoal callback, and constructs the
-          Harpoon syntax for this split branch.
-        *)
+
        let get_meta_branch =
          get_branch_by
-           (fun context pat ms ->
-             in
-             let new_state =
-               { context
-               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
-               (* ^ our goal already has a delayed msub, so we compose the
-                 one we obtain from the split (the refinement substitution)
-                 with the one we have (eagerly).
-                *)
-               ; solution = None
-               }
-             in
+           (fun context new_state pat ->
              (* compute the head of the pattern to be the case label *)
              match pat with
              | PatMetaObj (_, patt) ->
@@ -295,13 +285,7 @@ module Tactic = struct
 
        let get_comp_branch =
          get_branch_by
-           (fun context pat ms ->
-             let new_state =
-               { context
-               ; goal = Pair.rmap (fun s -> Whnf.mcomp s ms) s.goal
-               ; solution = None
-               }
-             in
+           (fun context new_state pat ->
              match pat with
              | PatConst (_, cid, _) ->
                 tctx.add_subgoal new_state;

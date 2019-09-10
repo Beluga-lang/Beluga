@@ -332,14 +332,19 @@ and etaExpandMVstr' cO cPsi sA  = match sA with
 
 *)
 
-let fmt_ppr_mvlist ppf : LF.cvar list -> unit =
+let fmt_ppr_mvlist ppf (vars : LF.cvar list) : unit =
   let open Format in
-  pp_print_list ~pp_sep: Fmt.comma
-    (fun ppf -> function
-      | LF.Offset k -> fprintf ppf "%d" k
-      | _ -> failwith "[fmt_ppr_mvlist] cvar is not an offset"
-    )
-    ppf
+  match vars with
+  | [] ->
+     fprintf ppf "<no mvs>"
+  | _ ->
+     pp_print_list ~pp_sep: Fmt.comma
+       (fun ppf -> function
+         | LF.Offset k -> fprintf ppf "%d" k
+         | _ -> failwith "[fmt_ppr_mvlist] cvar is not an offset"
+       )
+       ppf
+       vars
 
 let rec compgctx_of_gctx cG = match cG with
   | [] -> LF.Empty
@@ -454,23 +459,26 @@ let fmt_ppr_candidate (cD, cG) ppf : candidate -> unit =
 
 let fmt_ppr_candidates (cD, cG) ppf (candidates : candidate list) : unit =
   let open Format in
-  let f ppf i c =
-    fprintf ppf "@[<v 2>CANDIDATE %d:@,%a@]"
-      (i + 1)
-      (fmt_ppr_candidate (cD, cG)) c
-  in
-  fprintf ppf "@[<v>";
-  List.iteri (f ppf) candidates;
-  fprintf ppf "@]"
+  match candidates with
+  | [] -> fprintf ppf "<no candidates>"
+  | _ ->
+     let f ppf i c =
+       fprintf ppf "@[<v 2>CANDIDATE %d:@,%a@]"
+         (i + 1)
+         (fmt_ppr_candidate (cD, cG)) c
+     in
+     fprintf ppf "@[<v>";
+     List.iteri (f ppf) candidates;
+     fprintf ppf "@]"
 
 let fmt_ppr_cov_problem ppf (cD, cG, candidates, patt) : unit =
   let cG' = compgctx_of_gctx cG in
   let open Format in
   fprintf ppf "#### @[<v>COVERAGE GOAL:@,\
                cD = @[%a@]@,\
-               @[%a@] |- @[%a]@,\
-               is possibly covered by@,\
-               %a"
+               @[%a@] |- @[%a@]@,\
+               is possibly covered by:@,\
+               @[%a@]@]"
     (P.fmt_ppr_lf_mctx P.l0) cD
     (P.fmt_ppr_cmp_gctx cD P.l0) cG'
     (P.fmt_ppr_cmp_pattern cD cG' P.l0) patt
@@ -493,7 +501,7 @@ let fmt_ppr_goals ppf (gs : (LF.mctx * gctx * Comp.pattern) list) : unit =
   let f ppf i (cD, cG, patt) =
     fprintf ppf "@[(%d)@ @[%a@]@]@,"
       (i + 1)
-      fmt_ppr_goal (cD, cG, patt) 
+      fmt_ppr_goal (cD, cG, patt)
   in
   fprintf ppf "@[<v>";
   List.iteri (f ppf) gs;
@@ -2213,7 +2221,7 @@ let genPatCGoals (cD:LF.mctx) (cG1:gctx) tau (cG2:gctx) = match tau with
          dprintf
            begin fun p ->
            p.fmt "[genPatCGoals] constructor: %s : %a"
-             (R.render_cid_comp_const c) 
+             (R.render_cid_comp_const c)
              (P.fmt_ppr_cmp_typ LF.Empty P.l0) tau_c
            end;
          (c, tau_c)
@@ -2668,12 +2676,12 @@ let rec check_covproblem cov_problem  =
                end;
              (* Coverage succeeds *)
              ()
-             
+
           | (Solved, true) ->  (* No new splitting candidates, but leftover constraints *)
              (* Coverage Fails *)
              let open_goal = (cD, cG, cg) in
              existsCandidate cands nCands  (open_goal::open_cg)
-             
+
           | (PossSolvable cand, _ )  ->
              dprintf
                begin fun p ->
@@ -2683,7 +2691,7 @@ let rec check_covproblem cov_problem  =
              (* Some equations in matchCand cannot be solved by hounif;
                 they will be resurrected as new splitting candidates *)
              existsCandidate cands (cand :: nCands) open_cg
-            
+
           | (NotSolvable, _ ) -> (* match candidates were not solvable;
                                     this candidate gives rise to coverage failure *)
              (* Coverage Fails *)
@@ -2717,33 +2725,34 @@ let no_covers = ref 0           (* number of times coverage checking has yielded
 
 
 let trivially_empty_patt cD_p tau =
-  begin try
-    (match genPatCGoals cD_p [] tau [] with
-      | [] -> true
-      | _ -> false)
+  try
+    match genPatCGoals cD_p [] tau [] with
+    | [] -> true
+    | _ -> false
   with _ -> false
-  end
 
 let trivially_empty cov_problem =
-  begin try
-    begin match genCovGoals cov_problem with
-      | [] ->  true
-      | _  -> false
-    end
-  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
-  end
+  try
+    match genCovGoals cov_problem with
+    | [] ->  true
+    | _  -> false
+  with Abstract.Error _ ->
+    print_endline "Unable to prove remaining open coverage goals trivially empty \
+                   due to higher-order constraints.";
+    false
 
 let trivially_empty_param cov_problem =
-  begin try
-    begin match genPVar cov_problem with
-      | [] -> true
-      | _  -> false
-    end
-  with Abstract.Error _ -> (print_endline "Unable to prove remaining open coverage goals trivially empty due to higher-order constraints." ; false)
-  end
+  try
+    match genPVar cov_problem with
+    | [] -> true
+    | _  -> false
+  with Abstract.Error _ ->
+    print_endline "Unable to prove remaining open coverage goals trivially empty \
+                   due to higher-order constraints.";
+    false
 
-
-let rec extract_patterns tau branch_patt = match branch_patt with
+let rec extract_patterns tau branch_patt =
+  match branch_patt with
   | Comp.Branch (loc, cD, _cG, Comp.PatAnn (loc', pat, _), ms, _e) ->
       extract_patterns tau (Comp.Branch (loc, cD, _cG, pat, ms, _e))
 
@@ -2753,9 +2762,19 @@ let rec extract_patterns tau branch_patt = match branch_patt with
   | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms)  ->
       match tau with
       | Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPhi)) ->
-         (cD, EmptyPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+         let tA = Whnf.cnormTyp (tA, ms) in
+         dprintf
+           begin fun p ->
+           p.fmt "[extract_patterns] @[<v>EmptyBranch for TypBox of an MTyp@,\
+                  @[%a@]@,Note: cPsi = @[%a@]@]"
+             P.fmt_ppr_lf_typ_typing (cD, cPhi, tA)
+             (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+           end;
+         (cD, EmptyPatt (cPsi, (tA, S.LF.id)))
+
       | Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPhi)) ->
          (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
+
       (* Add EmptySubPatt *)
       | Comp.TypBase (_, c, mS) ->
          (cD, EmptyCompPatt (tau, ms))
@@ -2763,16 +2782,29 @@ let rec extract_patterns tau branch_patt = match branch_patt with
 let rec gen_candidates loc cD covGoal patList = match patList with
   | [] -> []
   | (cD_p, EmptyPatt (cPsi, sA) ) :: plist ->
-      if trivially_empty (cD_p, cPsi, Whnf.normTyp sA) then
-        gen_candidates loc cD covGoal plist
-      else
-        let s =
-          let open Format in
-          fprintf str_formatter "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %a\n##   is not empty.\n\n"
-            (P.fmt_ppr_lf_typ cD_p cPsi P.l0) (Whnf.normTyp sA);
-          flush_str_formatter ()
-        in
-        raise (Error (loc, NoCover s))
+     let tA = Whnf.normTyp sA in
+     dprintf
+       begin fun p ->
+       p.fmt "[gen_candidates] @[EmptyPatt:@ @[%a@]@]"
+         P.fmt_ppr_lf_typ_typing (cD_p, cPsi, tA)
+       end;
+     if trivially_empty (cD_p, cPsi, tA) then
+       begin
+         dprintf
+           begin fun p ->
+           p.fmt "[gen_candidates] @[tA = @[%a@]@] is trivially empty"
+             (P.fmt_ppr_lf_typ cD_p cPsi P.l0) tA
+           end;
+         gen_candidates loc cD covGoal plist
+       end
+     else
+       let s =
+         let open Format in
+         fprintf str_formatter "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %a\n##   is not empty.\n\n"
+           (P.fmt_ppr_lf_typ cD_p cPsi P.l0) (Whnf.normTyp sA);
+         flush_str_formatter ()
+       in
+       raise (Error (loc, NoCover s))
 
   | (cD_p, EmptyParamPatt (cPsi, sA) ) :: plist ->
       if trivially_empty_param (cD_p, cPsi, Whnf.normTyp sA) then
@@ -2829,49 +2861,60 @@ let initialize_coverage problem projOpt =
         [ ( cD', cG', cand_list,  mC) ]
 
   | Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
-     begin
-       (* If the coverage is for a box-type, we need to see whether
-          the case analysis was on a normal LF object. If it isn't then
-          we create a new variable as the initial term we
-          refine. Otherwise we start from the case's scrutinee, which we
-          received through problem.m_obj.
-        *)
-       match problem.m_obj with
-       | None ->
-          dprint (fun () -> "[initialize_coverage] not using case scrutinee");
-          let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
-          (*  cPsi |- s  : cPsi' *)
-          let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in
-          let loc'       = Syntax.Loc.ghost in
-          let name       = Id.mk_name (Whnf.newMTypName mT) in
-          let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
-          let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
-          let mv         = LF.MVar (LF.Offset 1, s) in
-          let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
-          let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-          let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
-          let mC         = Comp.PatMetaObj(loc', (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM))) in
-          let mT         = Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
-          let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
-          (* let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in *)
-          (*      let _          = print_string "\nGenerated Coverage goal: " in
-                  let _          = print_string (covGoalToString cD' covGoal) in
-                  let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
-                  let _          = print_string "\n\n" in
-           *)
-          let pat_list  = List.map (function b -> extract_patterns problem.ctype b) problem.branches in
+     (* If the coverage is for a box-type, we need to see whether
+        the case analysis was on a normal LF object. If it isn't then
+        we create a new variable as the initial term we
+        refine. Otherwise we start from the case's scrutinee, which we
+        received through problem.m_obj.
+      *)
+     begin match problem.m_obj with
+     | None ->
+        let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
+        (*  cPsi |- s  : cPsi' *)
+        dprintf
+          begin fun p ->
+          p.fmt "[initialize_coverage] @[<v>not using case scrutinee@,\
+                 @[%a@]@]"
+            P.fmt_ppr_lf_sub_typing (problem.cD, cPsi, s, cPsi')
+          end;
+        let mT         =  LF.ClTyp (LF.MTyp tA', cPsi') in
+        let loc'       = Syntax.Loc.ghost in
+        let name       = Id.mk_name (Whnf.newMTypName mT) in
+        let cD'        = LF.Dec (problem.cD, LF.Decl(name, mT, LF.Maybe)) in
+        let cG'        = cnormCtx (problem.cG, LF.MShift 1) in
+        let mv         = LF.MVar (LF.Offset 1, s) in
+        let tM         = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
+        let cPsi       = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
+        let tA         = Whnf.cnormTyp (tA, LF.MShift 1) in
+        let mC         = Comp.PatMetaObj(loc', (loc, LF.ClObj(Context.dctxToHat cPsi, LF.MObj tM))) in
+        let mT         = Comp.TypBox(loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
+        let covGoal    = CovPatt ([], mC, (mT, LF.MShift 0)) in
 
-          let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
-          [ ( cD' , cG', cand_list , mC) ]
+        dprintf
+          begin fun p ->
+          p.fmt "[initialize_coverage] @[<v>cD' = @[%a@]@,mC = @[%a@]@]"
+            (P.fmt_ppr_lf_mctx P.l0) cD'
+            (P.fmt_ppr_cmp_pattern cD' (compgctx_of_gctx cG') P.l0) mC
+          end;
+        (* let covGoal    = CovGoal (cPsi, tM, (tA, S.LF.id)) in *)
+        (*      let _          = print_string "\nGenerated Coverage goal: " in
+                let _          = print_string (covGoalToString cD' covGoal) in
+                let _          = print_string ("\n cD' = " ^ P.mctxToString cD' ^ "\n") in
+                let _          = print_string "\n\n" in
+         *)
+        let pat_list  = List.map (extract_patterns problem.ctype) problem.branches in
 
-       | Some m_obj ->
-          dprint (fun () -> "[initialize_coverage] using case scrutinee");
-          let ghost = Syntax.Loc.ghost in
-          let mC = Comp.PatMetaObj(ghost, m_obj) in
-          let covGoal = CovPatt ([], mC, (problem.ctype, LF.MShift 0)) in
-          let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
-          let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
-          [ ( problem.cD, problem.cG, cand_list, mC ) ]
+        let cand_list =  gen_candidates problem.loc cD' covGoal pat_list in
+        [ ( cD' , cG', cand_list , mC) ]
+
+     | Some m_obj ->
+        dprint (fun () -> "[initialize_coverage] using case scrutinee");
+        let ghost = Syntax.Loc.ghost in
+        let mC = Comp.PatMetaObj(ghost, m_obj) in
+        let covGoal = CovPatt ([], mC, (problem.ctype, LF.MShift 0)) in
+        let pat_list = List.map (extract_patterns problem.ctype) problem.branches in
+        let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
+        [ ( problem.cD, problem.cG, cand_list, mC ) ]
      end
 
   | Comp.TypBox(loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
@@ -3122,4 +3165,3 @@ let map f =
 
 let iter (f : coverage_result -> unit) : unit =
   List.iter (fun problem -> f (covers problem None)) (List.rev !problems)
-  

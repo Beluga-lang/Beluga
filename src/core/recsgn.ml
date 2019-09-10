@@ -788,7 +788,7 @@ let recSgnDecls decls =
             let (tau', _i) = Monitor.timer ("Function Type Abstraction", fun () -> Abstract.comptyp tau') in
             dprintf
               begin fun p ->
-              p.fmt "[recSgnDecl] Abstracted elaborated function type %a : %a"
+              p.fmt "[recSgnDecl] @[<v>Abstracted elaborated function type@,@[%a@] : @[%a@]@]"
                 Id.print f
                 (P.fmt_ppr_cmp_typ cD P.l0) tau'
               end;

@@ -316,6 +316,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
          (fmt_ppr_lf_spine   cD cPsi lvl) ms
 
+  and fmt_ppr_lf_sub_typing ppf (cD, cPsi, s, cPsi') =
+    fprintf ppf "@[@[%a@] ;@ @[%a@]@] |-@ @[@[%a@] :@ @[%a@]@]"
+      (fmt_ppr_lf_mctx l0) cD
+      (fmt_ppr_lf_dctx cD l0) cPsi
+      (fmt_ppr_lf_sub cD cPsi l0) s
+      (fmt_ppr_lf_dctx cD l0) cPsi'
+
   and fmt_ppr_lf_sub cD cPsi lvl ppf s =
     match !Printer.Control.substitutionStyle with
     | Printer.Control.Natural -> fmt_ppr_lf_sub_natural cD cPsi lvl ppf s

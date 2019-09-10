@@ -198,7 +198,7 @@ module Tactic = struct
        (* We will map get_branch_by f over the coverage goals that were generated.
           get_branch_by f computes the subgoal for the given coverage goal,
           invokes the add_subgoal callback on the computed subgoal (to register it),
-          invokes the remove_current_subgoal callback, and constructs the
+          invokes the remove_subgoal callback, and constructs the
           Harpoon syntax for this split branch.
         *)
        let get_branch_by f (cD, cov_goal, ms) =
@@ -303,7 +303,7 @@ module Tactic = struct
          | _ -> false
        in
        let is_comp_split cg = not (is_meta_split cg) in
-       tctx.remove_current_subgoal ();
+       tctx.remove_subgoal s;
        let revCgs = List.rev cgs in
        (match (List.for_all is_meta_split revCgs, List.for_all is_comp_split revCgs) with
         | (true, false) ->

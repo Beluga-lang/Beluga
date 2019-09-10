@@ -186,12 +186,11 @@ module Tactic = struct
     fun s tctx ->
     (* Compute the coverage goals for the type to split on. *)
     dprintf
-      (fun p ->
-        p.fmt
-          "[harpoon-split] split on %a with type %a"
-          (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) m
-       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
-      );
+      begin fun p ->
+      p.fmt "[harpoon-split] split on %a with type %a"
+        (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) m
+        (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
+      end;
     match generate_pattern_coverage_goals k m tau s tctx with
     | None -> ()
     (* splitting failed, so we do nothing *)
@@ -228,27 +227,30 @@ module Tactic = struct
                 (* Compute the well-founded recursive calls *)
                 let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
                 dprintf
-                  (fun p ->
-                    p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
-                      (P.fmt_ppr_cmp_gctx cD P.l0) cIH);
+                  begin fun p ->
+                  p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
+                    (P.fmt_ppr_cmp_gctx cD P.l0) cIH
+                  end;
                 (cD1, cIH)
               else
-                let _ =
+                begin
                   dprint
-                    (fun _ ->
-                      "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable")
-                in
-                (cD, LF.Empty)
+                    begin fun _ ->
+                    "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable"
+                    end;
+                  (cD, LF.Empty)
+                end
             in
             (* propagate inductive annotations *)
             let cD = Check.Comp.id_map_ind cDext ms s.context.cD in
             dprintf
-              (fun p ->
-                let open Format in
-                p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,ms@,%a@,=@,%a@]"
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cDext
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
-                  (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD);
+              begin fun p ->
+              let open Format in
+              p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,ms@,%a@,=@,%a@]"
+                (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cDext
+                (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
+                (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD
+              end;
             let cIH0 = Total.wf_rec_calls cD cG mfs in
             let cIH = Context.(append cIH (append cIH0 cIH')) in
             let context = { cD; cG; cIH } in
@@ -383,11 +385,10 @@ module Automation = struct
     fun g tctx ->
     let (t, _) = g.goal in
     dprintf
-      (fun p ->
-        p.fmt
-          "[auto_intros]: invoked on %a"
-          (P.fmt_ppr_cmp_typ g.context.cD P.l0) t
-      );
+      begin fun p ->
+      p.fmt "[auto_intros]: invoked on %a"
+        (P.fmt_ppr_cmp_typ g.context.cD P.l0) t
+      end;
     match t with
     | TypArr _ | TypPiBox _ ->
        Tactic.intros None g tctx;
@@ -407,11 +408,10 @@ module Automation = struct
     let { cD; cG; _ } = g.context in
     let m_is_witness ((m, idx) : LF.ctyp_decl * int) =
       dprintf
-        (fun p ->
-          p.fmt
-            "@[<v>[auto_solve_trivial] witness candidate = %a@]"
-            (P.fmt_ppr_lf_ctyp_decl cD P.l0) m
-        );
+        begin fun p ->
+        p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+          (P.fmt_ppr_lf_ctyp_decl cD P.l0) m
+        end;
       match m with
       | LF.Decl (_, mtyp, _) ->
          Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), LF.MShift idx)
@@ -435,11 +435,10 @@ module Automation = struct
     in
     let c_is_witness ((c, _) : Comp.ctyp_decl * int) =
       dprintf
-        (fun p ->
-          p.fmt
-            "@[<v>[auto_solve_trivial] witness candidate = %a@]"
-            (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
-        );
+        begin fun p ->
+        p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
+          (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
+        end;
       match c with
       | Comp.CTypDecl (_, typ, _) ->
          Whnf.convCTyp g.goal (typ, Whnf.m_id)
@@ -472,16 +471,14 @@ module Automation = struct
     match opt_witness with
     | lazy None ->
        dprintf
-         (fun p ->
-           p.fmt
-             "@[<v>[auto_solve_trivial] There are no witness in@,%a@,@]"
-             P.fmt_ppr_cmp_proof_state g
-         );
+         begin fun p ->
+         p.fmt "@[<v>[auto_solve_trivial] There are no witness in@,%a@,@]"
+           P.fmt_ppr_cmp_proof_state g
+         end;
        false
     | lazy (Some w) ->
        Tactic.(
-        tctx.printf
-          "@[<v>@,A goal %a is automatically solved.@,@]"
+        tctx.printf "@[<v>@,A goal %a is automatically solved.@,@]"
           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
        );
        (Comp.solve w
@@ -615,8 +612,7 @@ module Prover = struct
          match head_of_application i |> variable_of_exp with
          | Some 1 -> f ()
          | _ ->
-            Format.fprintf ppf
-              "@[<v>The expression@,  %a@,is not an appeal to an induction hypothesis.@]"
+            Tactic.(tctx.printf) "@[<v>The expression@,  %a@,is not an appeal to an induction hypothesis.@]"
               (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
     in
     let elaborate_exp' cD cG t =
@@ -637,7 +633,7 @@ module Prover = struct
           yet.
         *)
        let s = s.initial_state in
-       Format.fprintf ppf "@[<v>Proof so far:@,%a@]"
+       Tactic.(tctx.printf) "@[<v>Proof so far:@,%a@]"
          (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
@@ -645,25 +641,24 @@ module Prover = struct
        Tactic.(tctx.defer ())
     | Command.ShowIHs ->
        let f i =
-         Format.fprintf ppf "%d. %a@,"
+         Tactic.(tctx.printf) "%d. %a@,"
            (i + 1)
            (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
        in
-       Format.fprintf ppf "There are %d IHs:@,"
+       Tactic.(tctx.printf) "There are %d IHs:@,"
          (Context.length g.context.cIH);
        Context.to_list g.context.cIH |> List.iteri f
     | Command.ShowSubgoals ->
-       let open Format in
        let f ppf i g =
          let open Comp in
-         fprintf ppf "%2d. @[%a@]@,"
+         Tactic.(tctx.printf) "%2d. @[%a@]@,"
            (i + 1)
            (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal)
        in
        let print_subgoals ppf gs =
          List.iteri (f ppf) gs
        in
-       fprintf ppf "@[<v>%a@]"
+       Tactic.(tctx.printf) "@[<v>%a@]"
          print_subgoals (DynArray.to_list s.remaining_subgoals)
 
     | Command.ToggleAutomation automation_kind ->
@@ -687,10 +682,11 @@ module Prover = struct
        let cG = prepare_cG_for_invocation cG k in
        let (m, tau) = elaborate_exp' cD cG t in
        dprintf
-         (fun p ->
-           p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
-             (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
-             (P.fmt_ppr_cmp_typ cD P.l0) tau);
+         begin fun p ->
+         p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
+           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
+           (P.fmt_ppr_cmp_typ cD P.l0) tau
+         end;
        let _ = Check.Comp.syn cD cG ~cIH: cIH mfs m in
        (* validate the invocation and call the suspension if it passes. *)
        check_invocation k cD cG m
@@ -720,8 +716,7 @@ module Prover = struct
    *)
   let run_safe (f : unit -> 'a) : 'a error =
     let show_error e ppf =
-      Format.fprintf ppf
-        "@[<v>Internal error. (State may be undefined.)@,%s@]"
+      Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@]"
         (Printexc.to_string e)
     in
     Either.trap f |> Either.lmap show_error
@@ -738,32 +733,29 @@ module Prover = struct
       }
     and add_subgoal g =
       dprintf
-        (fun p ->
-          p.fmt
-            "@[<v>[tactic context] add the following subgoal@,%a@]"
-            P.fmt_ppr_cmp_proof_state g
-        );
+        begin fun p ->
+        p.fmt "@[<v>[tactic context] add the following subgoal@,%a@]"
+          P.fmt_ppr_cmp_proof_state g
+        end;
       DynArray.insert s.remaining_subgoals 0 g;
       add_subgoal_hook s g tctx
     and remove_subgoal g =
       dprintf
-        (fun p ->
-          p.fmt
-            "@[<v>[tactic context] remove the following subgoal@,%a@]"
-            P.fmt_ppr_cmp_proof_state g
-        );
+        begin fun p ->
+        p.fmt "@[<v>[tactic context] remove the following subgoal@,%a@]"
+          P.fmt_ppr_cmp_proof_state g
+        end;
       let idx = DynArray.index_of (fun g' -> g = g') s.remaining_subgoals in
       DynArray.delete s.remaining_subgoals idx
     and remove_current_subgoal () =
       let gs = s.remaining_subgoals in
       let csg_index = current_subgoal_index gs in
       dprintf
-        (fun p ->
-          p.fmt
-            "@[<v>[tactic context] remove the goal %d of the following@,%a@]"
-            csg_index
-            P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
-        );
+        begin fun p ->
+        p.fmt "@[<v>[tactic context] remove the goal %d of the following@,%a@]"
+          csg_index
+          P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
+        end;
       DynArray.delete gs (current_subgoal_index gs)
     and defer () =
       let g = DynArray.get s.remaining_subgoals 0 in
@@ -779,12 +771,11 @@ module Prover = struct
     (* Get the next subgoal *)
     match next_subgoal s with
     | None ->
-       Format.fprintf ppf "@,Proof complete! (No subgoals left.)@,";
+       Tactic.(tctx.printf) "@,Proof complete! (No subgoals left.)@,";
        () (* we're done; proof complete *)
     | Some g ->
        (* Show the proof state and the prompt *)
-       Format.fprintf ppf
-         "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
+       Tactic.(tctx.printf) "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
          P.fmt_ppr_cmp_proof_state g
          (Context.length g.Comp.context.Comp.cIH)
          lambda;

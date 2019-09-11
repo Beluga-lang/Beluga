@@ -285,7 +285,7 @@ module Tactic = struct
             meta_branch c context (incomplete_proof new_state)
        in
        tctx.remove_current_subgoal ();
-       let bs = List.map f cgs in
+       let bs = List.map f (List.rev cgs) in
        (* Assemble the split branches computed in `bs` into the Harpoon
           Split syntax.
         *)
@@ -718,7 +718,7 @@ module Prover = struct
             "@[<v>[tactic context] add the following subgoal@,%a@]"
             P.fmt_ppr_cmp_proof_state g
         );
-      DynArray.add s.remaining_subgoals g;
+      DynArray.insert s.remaining_subgoals 0 g;
       add_subgoal_hook s g tctx
     and remove_subgoal g =
       dprintf

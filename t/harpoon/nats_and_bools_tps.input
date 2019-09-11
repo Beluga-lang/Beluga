@@ -7,25 +7,24 @@ invert y8
 invert y8
 invert y8
 invert y8
+invert [|- X21]
 invert y8
+solve [|- t_true]
 invert y8
+solve [|- t_false]
 invert y8
+by ih (tps [|- Y41] [|- X4]) as ih0
+unbox (ih0) as IH0
+solve [|- t_if IH0 X41 Z41]
 invert y8
+by ih (tps [|- Z43] [|- Z2]) as ih1
+unbox (ih1) as IH1
+solve [|- t_succ IH1]
 invert y8
+by ih (tps [|- X47] [|- Z1]) as ih2
+unbox (ih2) as IH2
+solve [|- t_pred IH2]
 invert y8
-split ([|- X21])
-solve ([|- t_true])
-solve ([|- t_false])
-solve ([|- t_false])
-by ih (tps [|- Z36] [|- X4]) as r0
-by ih (tps [|- X39] [|- Z2]) as r0
-by ih (tps [|- Y43] [|- Z1]) as r0
-by ih (tps [|- Z46] [|- Z]) as r0
-unbox (r0) as R0
-unbox (r0) as R0
-unbox (r0) as R0
-unbox (r0) as R0
-solve ([|- t_if R0 Y37 X37])
-solve [|- t_succ R0]
-solve [|- t_pred R0]
-solve [|- t_iszero R0]
+by ih (tps [|- Y51] [|- Z]) as ih3
+unbox (ih3) as IH3
+solve [|- t_iszero IH3]

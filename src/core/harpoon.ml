@@ -574,11 +574,11 @@ module Prover = struct
       )
 
   let process_command
-        (ppf : Format.formatter)
         (s : interpreter_state) (g : unit Comp.proof_state)
         (cmd : Syntax.Ext.Harpoon.command)
         (tctx : Tactic.tactic_context)
       : unit =
+    let printf x = Tactic.(tctx.printf) x in
     let open Comp in
     let prepare_gctx_for_invocation cG : Command.invoke_kind -> Comp.gctx =
       function
@@ -633,8 +633,13 @@ module Prover = struct
               (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
     in
     let elaborate_exp' cD cG t =
-      let (m, (tau, ms)) = Interactive.elaborate_exp' cD cG t in
-      (Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+      let (hs, (m, (tau, ms))) =
+        Holes.catch (fun _ -> Interactive.elaborate_exp' cD cG t)
+      in
+      (hs, Whnf.cnormExp' (m, ms), Whnf.cnormCTyp (tau, ms))
+    in
+    let elaborate_exp cD cG t ttau =
+      Holes.catch (fun _ -> Interactive.elaborate_exp cD cG t ttau)
     in
     let { cD; cG; cIH } = g.context in
     match cmd with
@@ -672,13 +677,13 @@ module Prover = struct
 
     (* Real tactics: *)
     | Command.Unbox (t, name) ->
-       let (m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cD cG t in
        Tactic.unbox m tau name g tctx
 
     | Command.Intros names ->
        Tactic.intros names g tctx;
     | Command.Split (split_kind, t) ->
-       let (m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cD cG t in
        begin
          match tau with
          | TypInd tau | tau ->
@@ -686,7 +691,7 @@ module Prover = struct
        end
     | Command.By (k, t, name) ->
        let cG = prepare_gctx_for_invocation cG k in
-       let (m, tau) = elaborate_exp' cD cG t in
+       let (hs, m, tau) = elaborate_exp' cD cG t in
        dprintf
          begin fun p ->
          p.fmt "@[<v>[harpoon-By] elaborated lemma invocation:@,%a@ : %a@]"
@@ -699,7 +704,34 @@ module Prover = struct
          (fun () -> Tactic.invoke k m tau name g tctx);
 
     | Command.Solve m ->
-       let m = Interactive.elaborate_exp cD cG m g.goal in
+       let (hs, m) = elaborate_exp cD cG m g.goal in
+       printf "Found %d holes in solution" (List.length hs);
+       let f (id, h) =
+         let open Holes in
+         let { name; Holes.cD = cDh; info; _ } = h in
+         match info with
+         | CompHoleInfo _ -> failwith "computational holes not supported"
+         | LfHoleInfo { lfGoal; cPsi } ->
+            let typ = Whnf.normTyp lfGoal in
+            let ti = Abstract.typ typ in
+            Logic.prepare ();
+            let (query, skinnyTyp, querySub, instMVars) =
+              Logic.Convert.typToQuery cPsi cDh ti
+            in
+            try
+              let n = ref 0 in
+              Logic.Solver.solve cDh cPsi query
+                begin
+                  fun (cPsi, tM) ->
+                  printf "@[%a@]@,"
+                    (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+                  incr n;
+                  if !n >= 10 then raise Logic.Frontend.Done
+                end
+            with
+            | Logic.Frontend.Done -> ()
+       in
+       List.iter f hs;
        Check.Comp.check cD cG mfs m g.goal;
        ( Comp.solve m
          |> Tactic.solve
@@ -793,7 +825,7 @@ module Prover = struct
          let open Either in
          parse_input input
          $ fun cmd ->
-           run_safe (fun () -> process_command ppf s g cmd tctx)
+           run_safe (fun () -> process_command s g cmd tctx)
        in
        Either.eliminate
          (fun f -> f ppf)

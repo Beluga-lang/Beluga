@@ -243,6 +243,7 @@ module Tactic = struct
             in
             (* propagate inductive annotations *)
             let cD = Check.Comp.id_map_ind cDext ms s.context.cD in
+            let cG = Total.mark_gctx cG in
             dprintf
               begin fun p ->
               let open Format in

@@ -315,6 +315,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "%a %a"
          (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
          (fmt_ppr_lf_spine   cD cPsi lvl) ms
+    | LF.SClo (ms, s) ->
+       let ms' = Whnf.normSpine (ms, s) in
+       fprintf ppf "%a"
+         (fmt_ppr_lf_spine cD cPsi lvl) ms'
 
   and fmt_ppr_lf_sub_typing ppf (cD, cPsi, s, cPsi') =
     fprintf ppf "@[@[%a@] ;@ @[%a@]@] |-@ @[@[%a@] :@ @[%a@]@]"

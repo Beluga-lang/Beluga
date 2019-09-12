@@ -310,6 +310,12 @@ let holes_since (past : snapshot) : (hole_id * hole) list =
   |> Snapshot.elements
   |> List.map f
 
+let catch f =
+  let s = get_snapshot () in
+  let x = f () in
+  let hs = holes_since s in
+  (hs, x)
+
 let lookup (name : string) : (hole_id * hole) option =
   let matches_name =
     function

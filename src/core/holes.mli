@@ -66,6 +66,22 @@ type hole =
   ; info : hole_info
   }
 
+type snapshot
+
+(** Gets a snapshot of the current hole ids. *)
+val get_snapshot : unit -> snapshot
+
+(** Gets a list of holes added since the given snapshot.
+    This can be used to whether an ad hoc expression contained any
+    holes.
+ *)
+val holes_since : snapshot -> (hole_id * hole) list
+
+(** Runs a function, and catches any new holes added as a result of
+    running it.
+ *)
+val catch : (unit -> 'a) -> (hole_id * hole) list * 'a
+
 (** Decides whether this is an LF hole. *)
 val is_lf_hole : hole -> bool
 

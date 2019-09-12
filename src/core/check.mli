@@ -85,9 +85,13 @@ module Comp : sig
 
   val check :
     LF.mctx ->
+    (* ^ The meta context *)
     gctx ->
+    (* ^ The computation context *)
     Total.dec list ->
     (* ^ the group of mutual recursive functions the expression is being checked in *)
+    ?cIH: gctx ->
+    (* ^ the context of available induction hypotheses *)
     exp_chk ->
     (* ^ The expression to check *)
     tclo ->
@@ -96,7 +100,9 @@ module Comp : sig
 
   val syn :
     LF.mctx ->
+    (* ^ The meta context *)
     gctx ->
+    (* ^ The computation context *)
     Total.dec list ->
     (* ^ The group of mutual recursive functions the expression is being checked in *)
     ?cIH: gctx ->

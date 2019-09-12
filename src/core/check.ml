@@ -1081,9 +1081,6 @@ module Comp = struct
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in
     cIH, (tau, ms)
 
-  let check cD cG (total_decs : Total.dec list) e ttau =
-    let cIH = Syntax.Int.LF.Empty in
+  let check cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
     check cD (cG,cIH) total_decs e ttau
-
-
 end

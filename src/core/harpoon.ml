@@ -613,7 +613,8 @@ module Prover = struct
          match head_of_application i |> variable_of_exp with
          | Some 1 -> f ()
          | _ ->
-            Tactic.(tctx.printf) "@[<v>The expression@,  %a@,is not an appeal to an induction hypothesis.@]"
+            Tactic.(tctx.printf) "@[<v>The expression@,  @[%a@]@,\
+                                  is not an appeal to an induction hypothesis.@]"
               (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
     in
     let elaborate_exp' cD cG t =

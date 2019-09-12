@@ -1451,7 +1451,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_arg cD lvl ppf = function
     | Comp.M m_obj -> fmt_ppr_cmp_meta_obj cD lvl ppf m_obj
-    | Comp.V k -> Misc.not_implemented "IH offset arg printing"
+    | Comp.V k -> fprintf ppf "(offset %d)" k
     | Comp.DC -> fprintf ppf "_"
     | Comp.E -> Misc.not_implemented "IH E printing"
 

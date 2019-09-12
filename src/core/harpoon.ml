@@ -565,7 +565,7 @@ module Prover = struct
         (tctx : Tactic.tactic_context)
       : unit =
     let open Comp in
-    let prepare_cG_for_invocation cG : Command.invoke_kind -> Comp.gctx =
+    let prepare_gctx_for_invocation cG : Command.invoke_kind -> Comp.gctx =
       function
       | `lemma -> cG (* nothing special to do for lemma invocation *)
       | `ih ->
@@ -680,7 +680,7 @@ module Prover = struct
             Tactic.split split_kind m tau mfs g tctx
        end
     | Command.By (k, t, name) ->
-       let cG = prepare_cG_for_invocation cG k in
+       let cG = prepare_gctx_for_invocation cG k in
        let (m, tau) = elaborate_exp' cD cG t in
        dprintf
          begin fun p ->

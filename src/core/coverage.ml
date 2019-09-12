@@ -1056,9 +1056,12 @@ let rec genSpine cD cPsi sA tP =
      let tS  = genSpine cD cPsi (tB, LF.Dot(LF.Obj(tN), s))  tP  in
      LF.App (tN, tS)
 
-  | (LF.Atom (_ , _a, _tS) as tQ, s) ->
-     dprint
-       (fun _ -> "[genSpine] atom");
+  | (LF.Atom (_ , a, _tS) as tQ, s) ->
+     dprintf
+       begin fun p ->
+       p.fmt "[genSpine] atom type @[%a@]"
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) tQ
+       end;
      U.unifyTyp LF.Empty cPsi (tQ, s) (tP, idSub);
      LF.Nil
 

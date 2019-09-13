@@ -5,6 +5,10 @@ val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
 
 val is_some : 'a option -> bool
 
+(** Compare options for equality. *)
+val eq : ?by: ('a -> 'a -> bool) ->
+         'a option -> 'a option -> bool
+
 (** Gets the value from an option if it exists. Otherwise gives a default value. *)
 val get_default : 'a -> 'a option -> 'a
 

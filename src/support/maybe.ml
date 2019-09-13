@@ -5,6 +5,13 @@ let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a option -> 'b =
   | None -> def ()
   | Some x -> f x
 
+(** Compare options for equality. *)
+let eq ?(by = (=)) o1 o2 =
+  match o1, o2 with
+  | Some x, Some y -> by x y
+  | None, None -> true
+  | _ -> false
+
 let is_some (o : 'a option) : bool =
   eliminate (fun _ -> false) (fun _ -> true) o
 

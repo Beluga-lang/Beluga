@@ -1797,6 +1797,7 @@ let mctxMVarPos cD u =
   let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | (ClTyp (t1, cPsi1)) , (ClTyp (t2, cPsi2)) -> convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
     | (CTyp cid_schema) , (CTyp cid_schema') -> cid_schema = cid_schema'
+    | _ -> false (* ClTyp is never convertible to CTyp *)
 
   let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
 

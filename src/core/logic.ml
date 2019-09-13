@@ -4,6 +4,7 @@
    Jacob Thomas Errington
  *)
 
+open Support
 module S = Substitution.LF
 open Format
 open Syntax.Int
@@ -857,10 +858,7 @@ module Frontend = struct
   (* boundEq B1 B2 = b
      Equality function for bounds.
   *)
-  let boundEq x y = match (x, y) with
-    | (Some i, Some j) -> i = j
-    | (None, None) -> true
-    | (_, _) -> false
+  let boundEq x y = Maybe.eq x y
 
   (* lowerBound B1 B2 = min (B1, B2) *)
   let lowerBound x y = match (x, y) with
@@ -917,8 +915,7 @@ module Frontend = struct
 
       (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs then
-        check cPsi tM (Convert.solToSub sgnQuery.instMVars) (* !querySub *)
-      else () ;
+        check cPsi tM (Convert.solToSub sgnQuery.instMVars); (* !querySub *)
 
       (* Print MVar instantiations. *)
       if !Options.chatter >= 3 then
@@ -939,21 +936,20 @@ module Frontend = struct
       else () ;
       (* Interactive. *)
       if !Options.askSolution then
-        if moreSolutions () then () else raise Done
-      else () ;
+        if not (moreSolutions ()) then
+          raise Done;
+
       (* Stop when no. of solutions exceeds tries. *)
       if exceeds (Some !solutions) sgnQuery.tries then
         raise Done
-      else ()
     in
 
     if not (boundEq sgnQuery.tries (Some 0)) then
       begin
         if !Options.chatter >= 1 then
-          P.printQuery sgnQuery
-        else () ;
-        try
+          P.printQuery sgnQuery;
 
+        try
           Solver.solve LF.Empty LF.Null sgnQuery.query scInit ;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
@@ -963,13 +959,10 @@ module Frontend = struct
           | _ -> ()
       end
 
-    else if !Options.chatter >= 2 then
-      printf "Skipping query -- bound for tries = 0.\n"
-
-    else ()
-
+    else
+      if !Options.chatter >= 2 then
+        printf "Skipping query -- bound for tries = 0.\n"
 end
-
 
 (* Interface *)
 

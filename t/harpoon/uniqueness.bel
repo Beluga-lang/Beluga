@@ -1,0 +1,22 @@
+% Prove type-uniqueness for the simply typed lambda-calculus
+
+LF tp : type =
+| arr : tp -> tp -> tp
+| nat : tp
+;
+
+LF term : type = 
+| lam : tp -> (term -> term) -> term
+| app : term -> term -> term
+;
+
+LF hastype : term -> tp -> type = 
+| t_lam : ({x:term} hastype x T1 -> hastype (E x) T2) -> hastype (lam T1 E) (arr T1 T2)
+| t_app : hastype E1 (arr T2 T) -> hastype E2 T2 -> hastype (app E1 E2) T
+;
+
+LF eq: tp -> tp -> type = 
+| refl: eq T T
+;
+
+schema tctx = some [t:tp] block (x:term, _t:hastype x t);

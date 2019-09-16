@@ -22,4 +22,5 @@ opam --git-version
 opam init --comp="${OCAML_VERSION}"
 eval "$(opam config env)"
 opam install "${OPAM_DEPENDS[@]}"
+./LINT
 make all && ./TEST && (./TEST -- +htmltest) && (./TEST -- +sexp)

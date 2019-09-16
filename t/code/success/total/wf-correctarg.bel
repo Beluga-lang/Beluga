@@ -1,6 +1,6 @@
 % coverage
 
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -21,11 +21,8 @@ rec wf-rel' : {N : [|- nat]} {M : [|- nat]}[|- le M N] -> Acc-le [|- M] =
 / total x (wf-rel' x) /
  mlam X => mlam Y => fn p => case [ |- X ] of
 | [|- z] => impossible p in []
-| [|- s X'] => (case p of 
+| [|- s X'] => (case p of
    | [|- le-base] => % le X' (s X')  and hence X' = Y at this point
        Acc (wf-rel' [|- Y])
    | [|- le-step P] => wf-rel' [|- X'] [|- Y] [|- P])
 ;
-
-
-    

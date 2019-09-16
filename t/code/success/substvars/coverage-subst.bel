@@ -13,39 +13,38 @@ cons : exp T -> exp (list T) -> exp (list T).
 schema ctx = some [t:tp] exp t;
 
 
-rec testEmpty : {$S: [ |- ]} [ |- exp top] = 
+rec testEmpty : {$S: [ |- ]} [ |- exp top] =
 / total s (testEmpty s) /
 mlam $S => let [ |- ^ ] = [ |- $S] in ? ;
 
-rec test0:{g:ctx}{$S: [ |- g]}[g |- exp top] = 
+rec test0:{g:ctx}{$S: [ |- g]}[g |- exp top] =
 / total g (test0 g) /
-mlam g, $S => case [g] of 
-| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ? 
+mlam g, $S => case [g] of
+| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ?
 | [g, x:exp T] => let [ |- $S, M] = [ |- $S] in ?
 ;
 
 
 rec test1: {g:ctx}{$S: [ |- g]}{R:[ |- tp]}[ |- exp R] =
 % / total g (test1 g) /
-mlam g, $S, R => case [g] of 
-| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ? 
-| [g, x:exp T] => 
-  let [ |- $S, M] = [ |- $S] in 
-  let ih = test1 [g] [|- $S] [ |- R] in 
-? 
+mlam g, $S, R => case [g] of
+| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ?
+| [g, x:exp T] =>
+  let [ |- $S, M] = [ |- $S] in
+  let ih = test1 [g] [|- $S] [ |- R] in
+?
 ;
 
 inductive Subst : {g:ctx} {h:ctx} {$S1 : [h |- g]} ctype =
-  | Nil : Subst [] [h] [h |- ^] 
-  | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- $S1]  
+  | Nil : Subst [] [h] [h |- ^]
+  | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- $S1]
             -> Subst [g,x:exp T[]] [h] [h |- $S1, E1]
 ;
 
-rec test2 : Subst [g] [h] [h |- $S] -> [|- exp top] = 
+rec test2 : Subst [g] [h] [h |- $S] -> [|- exp top] =
 / total s (test2 g h r s) /
-fn s => case s of 
+fn s => case s of
 | Nil => ?
-| Cons [h |- E] s0 => 
+| Cons [h |- E] s0 =>
   let ih = test2 s0 in ?
 ;
-

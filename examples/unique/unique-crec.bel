@@ -1,4 +1,3 @@
-
 % Definition of types and expressions
 tp: type.  --name tp T.
 arr: tp -> tp -> tp.
@@ -96,7 +95,7 @@ e_ref: equal T T.
 
 rec unique2 : {g:tctx} {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
              ->  [ |- equal T T'] =
-/ total e (unique2 g t t' e) / 
+/ total e (unique2 g t t' e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
 | [g |- app (E1 ) (E2 )] =>
   let [g |- t_app D1 D2] = d in

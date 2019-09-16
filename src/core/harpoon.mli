@@ -5,7 +5,7 @@ Harpoon is an interactive mode for Beluga that uses a small set of
 tactics for elaborating proofs.
 The syntax of Harpoon proofs is defined in Syntax.Ext.Comp; it is a
 part of the computation language.
- 
+
 This module defines the datatypes for Harpoon syntax and operations
 for transforming it.
 

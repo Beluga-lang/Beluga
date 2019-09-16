@@ -110,4 +110,3 @@ vs_letn :  vs D2 P2
 
 vs_fix :  vs D1 P1
        -> vs (ev_fix D1) P1.
-

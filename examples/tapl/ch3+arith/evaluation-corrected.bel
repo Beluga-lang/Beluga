@@ -133,11 +133,11 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 
 not_possible : type.
 
-rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- not_possible] = 
+rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- not_possible] =
 / total v (natval_dont_step m m' s v) /
-fn s => fn v => case v of 
+fn s => fn v => case v of
 | [ |- v_z ] => impossible s in []
-| [ |- v_s V] => 
+| [ |- v_s V] =>
   let [ |- e_succ D] = s in natval_dont_step [ |- D] [ |- V]
 ;
 
@@ -541,6 +541,3 @@ mlam M => case [ |- M] of
   )
 
 ;
-
-
-

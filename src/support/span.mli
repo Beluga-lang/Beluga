@@ -27,7 +27,7 @@ val of_pair : Loc.t -> Loc.t -> t option
     that the locations respect the invariant.
     (Or if you really like exceptions.)
  *)
-val of_pair' : Loc.t -> Loc.t -> t 
+val of_pair' : Loc.t -> Loc.t -> t
 
 (** Constructs a string representation of a span. *)
 val to_string : t -> string

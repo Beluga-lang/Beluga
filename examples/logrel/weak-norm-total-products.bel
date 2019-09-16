@@ -10,7 +10,7 @@ $\frac 1 2$
 
 # Weak head normalization for simply-typed lambda calculus
 
-This example follows the proof presented in 
+This example follows the proof presented in
 <a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
 Cave and Pientka[2013]</a>.
 
@@ -21,9 +21,9 @@ LF tp : type =
 | arr  : tp -> tp -> tp
 | cross: tp -> tp -> tp
 ;
---name tp T.        
+--name tp T.
 
-LF tm : tp -> type = 
+LF tm : tp -> type =
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
@@ -43,7 +43,7 @@ We now encode the step relation of the operational semantics. In
 particular, we create the `step` type indexed by two terms that
 represent each step of the computation.
 }}%
-LF step : tm A → tm A → type = 
+LF step : tm A → tm A → type =
 | beta : step (app (lam M) N) (M N)
 | stepapp : step M M' -> step (app M N) (app M' N)
 
@@ -59,25 +59,25 @@ LF step : tm A → tm A → type =
 computing the application of `M` to `N`. <br/>
 
 Finally, we define:
--  a multiple step reduction `mstep`. 
+-  a multiple step reduction `mstep`.
 - values `val`
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-LF mstep : tm A -> tm A -> type = 
+LF mstep : tm A -> tm A -> type =
 | refl : mstep M M
 | onestep : step M M' -> mstep M' M'' -> mstep M M''
 ;
 --name mstep S.
 
-LF val : tm A -> type = 
+LF val : tm A -> type =
 | val/c : val c
 | val/lam : val (lam M)
 | val/pair: val M -> val N -> val (pair M N)
 ;
 --name val V.
 
-LF halts : tm A -> type = 
+LF halts : tm A -> type =
 | halts/m : mstep M M' -> val M' -> halts M
 ;
 --name halts H.
@@ -93,7 +93,7 @@ type. Contextual LF objects and contexts which are embedded into
 computation-level types and programs are written inside `[ ]`.
 }}%
 
-stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype 
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype
  =
 | I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
 | Arr :  [ |- halts M] ->
@@ -113,7 +113,7 @@ schema ctx = tm T;
 inductive RedSub : {gamma:ctx}{$S:[ |- gamma]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [gamma] [ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A[]] [ |- $S[^], M ] 
+     → RedSub [gamma, x:tm A[]] [ |- $S[^], M ]
 ;
 
 
@@ -123,7 +123,7 @@ A term of type `i` is reducible if it halts, and a `term M` of type
 `N` of type `A`, the application `app M N` is reducible. We write
 `{N:[.tm A]}` for explicit &Pi;-quantification over `N`, a closed term
 of type `A`. To the left of the turnstile in `[|- tm A]` is where one
-writes the context the term is defined in – in this case, it is empty.  
+writes the context the term is defined in – in this case, it is empty.
 
 In this definition, the arrows represent the usual computational
 function space, not the weak function space of LF. We note that this
@@ -137,19 +137,19 @@ term(additionally this is why we cannot leave the type implicit).
 
 
 Now, we need to prove some more or less trivial lemmas that are
-usually omitted in paper presentations.  
+usually omitted in paper presentations.
 
 First, we prove that halts is closed under expansion in the `halts_step` lemma.
 }}%
 
 rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
 / total (halts_step) /
- mlam S ⇒ fn h => 
+ mlam S ⇒ fn h =>
 let [ |- halts/m MS' V] = h in
  [ |- halts/m (onestep S MS') V]
 ;
 
-%{{ 
+%{{
 Next we prove closure of Reduce under expansion. This follows the
 handwritten proof, proceeding by induction on the type A which is an
 implicit argument. In the base case we appeal to `halts_step`, while
@@ -159,32 +159,32 @@ the range type, going inside the function position of applications.
 rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}
                   {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total a (bwd_closed' a) /
- mlam A, M, M' => mlam MS => fn r => case [|- A] of 
+ mlam A, M, M' => mlam MS => fn r => case [|- A] of
 | [|- b] => let I ha = r in I (halts_step [ |- MS] ha)
-| [|- arr A B] => 
+| [|- arr A B] =>
   let Arr ha f = r in
     Arr (halts_step [ |- MS] ha)
 	(mlam N => fn rn =>
 	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
 
-| [|- cross A B] => 
-   let Cross ha r1 r2 = r in 
-   Cross (halts_step [|- MS] ha) 
+| [|- cross A B] =>
+   let Cross ha r1 r2 = r in
+   Cross (halts_step [|- MS] ha)
 	 (bwd_closed' [|- A] [|- _ ] [|- _ ] [|- stepfst MS] r1)
 	 (bwd_closed' [|- B] [|- _ ] [|- _ ] [|- stepsnd MS] r2)
 
 ;
 
-rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] = 
+rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total (bwd_closed) /
-mlam S => fn r => 
-let [|- S] : [|- step M M'] = [|- S] in 
+mlam S => fn r =>
+let [|- S] : [|- step M M'] = [|- S] in
 let [|- M] : [|- tm A]    = [|- M] in
   bwd_closed' [|- A ] [|- M ] [|- M' ]  [|- S] r;
 
 %{{
 The trivial fact that reducible terms halt has a corresponding
-trivial proof, analyzing the construction of the the proof of 
+trivial proof, analyzing the construction of the the proof of
 'Reduce[|- T] [|- M]'
 }}%
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
@@ -198,8 +198,8 @@ fn r => case r of
 
 
 rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]] =
-/ total gamma (lookup gamma) / 
-mlam gamma => mlam #p => fn rs => case [gamma] of 
+/ total gamma (lookup gamma) /
+mlam gamma => mlam #p => fn rs => case [gamma] of
 | [] => impossible [ |- #p]
 | [gamma', x:tm A] => (case [gamma', x:tm A |- #p] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
@@ -211,79 +211,79 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 # Main theorem
 }}%
 
-rec pair_mstep1 : {M1:[|- tm A]}{M2:[|- tm B]}[|- mstep M1 V1] ->  
-                 [|- mstep (pair M1 M2) (pair V1 M2)] = 
+rec pair_mstep1 : {M1:[|- tm A]}{M2:[|- tm B]}[|- mstep M1 V1] ->
+                 [|- mstep (pair M1 M2) (pair V1 M2)] =
 / total ms (pair_mstep1 b a v1 m1 m2 ms) /
 mlam M1, M2 => fn ms1 => case ms1 of
 | [|- refl] => [|- refl]
-| [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep1 [|- _ ] [|- M2] [|- MS] in 
+| [|- onestep S MS] =>
+  let [|- MS'] = pair_mstep1 [|- _ ] [|- M2] [|- MS] in
      [ |- onestep (step_pairl S) MS']
 ;
 
-rec pair_mstep2 : {V:[|- tm A]}{M2:[|- tm B]}[|- mstep M2 V2] ->  
-                 [|- mstep (pair V M2) (pair V V2)] = 
+rec pair_mstep2 : {V:[|- tm A]}{M2:[|- tm B]}[|- mstep M2 V2] ->
+                 [|- mstep (pair V M2) (pair V V2)] =
 / total ms (pair_mstep2 b a v2 v m2 ms) /
 mlam V, M2 => fn ms2 => case ms2 of
 | [|- refl] => [|- refl]
-| [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep2 [|- V ] [|- _ ] [|- MS] in 
+| [|- onestep S MS] =>
+  let [|- MS'] = pair_mstep2 [|- V ] [|- _ ] [|- MS] in
      [ |- onestep (step_pairr S) MS']
 ;
 
 
-rec trans : [|- mstep M N] -> [|- mstep N R] -> [|- mstep M R] = 
-/ total ms (trans a m n r ms) / 
-fn ms1 => fn ms2 => (case ms1 of 
+rec trans : [|- mstep M N] -> [|- mstep N R] -> [|- mstep M R] =
+/ total ms (trans a m n r ms) /
+fn ms1 => fn ms2 => (case ms1 of
  | [ |- refl ] =>  ms2
- | [ |- onestep S MS] =>  
-   let [|- MS'] = trans [|- MS] ms2 in 
+ | [ |- onestep S MS] =>
+   let [|- MS'] = trans [|- MS] ms2 in
    [|- onestep S MS']
 );
 
 rec pair_halts: {M1: [|- tm A]}{M2:[|- tm B]}
-               [|- halts M1] -> [|- halts M2] -> 
-               [|- halts (pair M1 M2)] = 
-/ total  (pair_halts) /  
-mlam M1, M2 => fn h1 => fn h2 => 
-let [|- halts/m MS1 V1] = h1 in 
-let [|- halts/m MS2 V2] = h2 in 
+               [|- halts M1] -> [|- halts M2] ->
+               [|- halts (pair M1 M2)] =
+/ total  (pair_halts) /
+mlam M1, M2 => fn h1 => fn h2 =>
+let [|- halts/m MS1 V1] = h1 in
+let [|- halts/m MS2 V2] = h2 in
 let (s1 : [|- mstep (pair M1 M2) (pair W1 M2)]) = pair_mstep1 [|- M1] [|- M2] [|- MS1] in
 let (s2 : [|- mstep (pair W1 M2) (pair W1 W2)]) = pair_mstep2 [|- W1 ] [|- M2] [|- MS2] in
-let [|- MS] = trans s1 s2 in 
+let [|- MS] = trans s1 s2 in
 [|- halts/m MS (val/pair V1 V2)]
 ;
 
-rec main : {gamma:ctx}{M:[gamma |- tm A[]]} 
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]}
           RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]] =
  / total m (main gamma a s m) /
 mlam gamma, M => fn rs => case [gamma |- M] of
 | [gamma |- #p] =>  lookup [gamma] [gamma |- #p] rs
-| [gamma |- lam \x. M] => 
+| [gamma |- lam \x. M] =>
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
     bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
 
-| [gamma |- app M1 M2] => 
+| [gamma |- app M1 M2] =>
   let Arr ha f = main [gamma] [gamma |- M1] rs in
   f [ |- _ ] (main [gamma] [gamma |- M2] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 
-| [gamma |- pair M1 M2] => 
+| [gamma |- pair M1 M2] =>
   let r1 = main [gamma] [gamma |- M1] rs in
   let r2 = main [gamma] [gamma |- M2] rs in
-  let h1 = reduce_halts r1 in 
-  let h2 = reduce_halts r2 in 
+  let h1 = reduce_halts r1 in
+  let h2 = reduce_halts r2 in
   Cross (pair_halts [|- _] [|- _] h1 h2)
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 
-| [gamma |- fst M ] => 
-  let c = main [gamma] [gamma |- M] rs in 
+| [gamma |- fst M ] =>
+  let c = main [gamma] [gamma |- M] rs in
   let Cross ha r1 r2 = c in  r1
-  
 
-| [gamma |- snd M ] => 
+
+| [gamma |- snd M ] =>
   let Cross ha r1 r2 = main [gamma] [gamma |- M] rs in  r2
 
 ;
@@ -292,4 +292,3 @@ rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
 / total (weakNorm) /
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
-

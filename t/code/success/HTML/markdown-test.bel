@@ -3,13 +3,13 @@
 ## Level 2 Header
 ### Level 3 Header
 
-for a breakline, put two spaces at the end of the line  
+for a breakline, put two spaces at the end of the line
 
-Inline code `[ |- nat ]`.  
+Inline code `[ |- nat ]`.
 
-Italics: *like this*.  
+Italics: *like this*.
 
-Bold: **like this**.  
+Bold: **like this**.
 
 ### 5 or more '-' for a horizontal line
 ---------
@@ -45,10 +45,10 @@ by using &lt;h1 align="center"&gt;A Centered HTML Tag&lt;/h1&gt;
 - &Delta; &rarr; &amp;Delta;
 - &forall; &rarr; &amp;forall;
 - &exist; &rarr; &amp;exist;
-- &#8866; are replaced automatically  
+- &#8866; are replaced automatically
 }}%
 
-nat :  type.     
+nat :  type.
 
 z : nat.
 s : nat -> nat.

@@ -1,13 +1,13 @@
 % Equality lemmas
 % Author: Andrew Cave
 
-LF exp : type = 
+LF exp : type =
   | app : exp -> exp -> exp
   | lam : (exp -> exp) -> exp
 ;
 --name exp M.
 
-LF eq : exp -> exp -> type = 
+LF eq : exp -> exp -> type =
   | eq_lam : ({x:exp} eq x x -> eq (M x) (N x)) -> eq (lam M) (lam N)
   | eq_app : eq M M' -> eq N N' -> eq (app M N) (app M' N')
 ;
@@ -16,7 +16,7 @@ LF eq : exp -> exp -> type =
 schema eqctx = block x:exp, t:eq x x;
 
 rec eq_refl : {g:eqctx}{M:[g |- exp]} [g |- eq M M] =
-/ total m (eq_refl _ m) / 
+/ total m (eq_refl _ m) /
 mlam g => mlam M =>
 case [g |- M] of
  | [g |- app M1 M2] =>
@@ -68,5 +68,3 @@ mlam g => mlam M => fn d => case [g,x:exp |-  M] of
  | [g,x:exp |-  #p.1[..]] => [g |- #p.2[..]]
 
 ;
-
-

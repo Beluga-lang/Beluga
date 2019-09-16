@@ -33,7 +33,7 @@ rec invRenStep : {g1 : cxt} {M : [g1 |- tm A[]]} {$R : [g2 |-# g1]}
 
   % / total m (invRenStep g1 g2 a m) /  %% Totality checker does not see termination
 
-  mlam g1, M, $R => fn s => 
+  mlam g1, M, $R => fn s =>
 
   %% We would like to split on s, but limitations of Beluga force us
   %% to go the longer route and split on M, such that the renaming
@@ -56,12 +56,12 @@ rec invRenStep : {g1 : cxt} {M : [g1 |- tm A[]]} {$R : [g2 |-# g1]}
         %% We either contract the beta-redex...
         | [g2 |- rbeta] => Ex [g1 |- rbeta]
         %% ... or reduce in the left or right subterm
-        | [g2 |- rappl S] => 
+        | [g2 |- rappl S] =>
             %% Totality checker complains here:
             let Ex [g1 |- S'] = % ih [g2 |- $R] [g2 |- S]
               invRenStep [g1] [g1 |- M1] [g2 |- $R] [g2 |- S]
             in  Ex [g1 |- rappl S' ]
-        | [g2 |- rappr S] => 
+        | [g2 |- rappr S] =>
             %% Totality checker complains here:
             let Ex [g1 |- S'] = invRenStep [g1] [g1 |- M2]  [g2 |- $R] [g2 |- S]
             in  Ex [g1 |- rappr S' ]

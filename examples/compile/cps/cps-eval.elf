@@ -10,4 +10,3 @@ LF ceval : cexp -> cval -> type =
   | ceval_app : {E1':cval -> (cval -> cexp) -> cexp} ceval (E1' V2 (\v. K v)) V ->
           ceval (app+ (lam+ (\x.\k. E1' x (\v. k v))) V2 (\v. K v)) V
 ;
-	     

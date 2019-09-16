@@ -55,5 +55,3 @@ case d of
 
 | [g |- #p.u[..]] => let [g |- #q.u[..]] = f in [g |- refl]
 ;
-
-

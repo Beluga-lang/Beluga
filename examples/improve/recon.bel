@@ -25,4 +25,3 @@ fn e => case e of
   let [h,x:exp |- N] = copy [h, x:exp |- M] in
     [h |- lam \x. N ]
 ;
-

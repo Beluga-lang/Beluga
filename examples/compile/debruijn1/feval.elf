@@ -13,5 +13,3 @@ LF feval : env -> exp' -> val -> type = %name feval D.
 
   | fev_app : feval (cons K' W2) F1' W -> feval K F2 W2 -> feval K F1 (clo K' (lam' F1')) -> feval K (app' F1 F2) W
 ;
-
-

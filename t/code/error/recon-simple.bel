@@ -40,7 +40,7 @@ inductive SN : (g : cxt) {M : [ g |- tm A[] ]} ctype =
 
 rec renSN : {g2 : cxt} {$R : [g2 |-# g1]} {M : [g1 |- tm A[]]}
        SN [g1 |- M]
-    -> SN [g2 |- M[$R]] = ? 
+    -> SN [g2 |- M[$R]] = ?
   % / total s (renSN g1 g2 a r m s) /  %% Totality checker not prepared for wf-induction.
 %{  mlam g2, $R, M => fn s => let s : SN [g1 |- M] = s in
     case s of
@@ -96,4 +96,4 @@ rec whExp : {A : [|- ty]} {B : [|- ty]} {T : [|- ty]}
     [g |- SN N] ->
    {E : [g |- ecxt \y.C]}
     Red [|- T] [g |- C[.., M [.., N]] ]
-    -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] = ? ; 
+    -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] = ? ;

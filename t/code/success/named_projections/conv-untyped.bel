@@ -30,7 +30,7 @@ and convv: (g:ctx)[g |- value T] -> [g |- term] =
 fn v => case v of
 | [g |- #p._t[..]] => [g |- #p.x[..]]
 | [g |- lam A (\v. E[..] v)] =>
-    let [g,b:block x:term, _t:value A |-  T[..] b.x] = conv [g,b:block (x:term , _t:value A) |-  E[..] b._t] in 
+    let [g,b:block x:term, _t:value A |-  T[..] b.x] = conv [g,b:block (x:term , _t:value A) |-  E[..] b._t] in
       [g |- lam' \x. T]
 
 ;

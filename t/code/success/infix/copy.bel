@@ -5,10 +5,10 @@ arrow: tp -> tp -> tp. --infix arrow 1 left.
 
 term : tp -> type.  --name term E x.
 
-z    : term nat. 
+z    : term nat.
 s    : term nat -> term nat.
 
-lam  : (term T -> term T') -> term (T arrow T'). 
+lam  : (term T -> term T') -> term (T arrow T').
 app  : term (T arrow T') -> term T -> term T'. --infix app 1.
 
 

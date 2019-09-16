@@ -619,7 +619,7 @@ struct
         (sexp_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))) e
 
     | Comp.Fun (_, br) ->
-      fprintf ppf "FunNoPP"       
+      fprintf ppf "FunNoPP"
 
     | Comp.MLam (_, x, e) ->
       fprintf ppf "(MLam %s %a) "
@@ -846,7 +846,7 @@ struct
         (Id.render_name c)
         (sexp_cmp_typ cD) tau0
         (sexp_cmp_typ cD) tau1
-      
+
     | Sgn.CompConst (_, c, tau) ->
       fprintf ppf "(CompConst %s %a)"
         (Id.render_name c)

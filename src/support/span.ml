@@ -1,6 +1,6 @@
 open Loc
 type loc = Loc.t
-   
+
 type t =
   { start : loc;
     stop : loc;

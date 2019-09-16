@@ -9,4 +9,3 @@ schema ctx = tm;
 rec f : {g:ctx}{h:ctx} {$S : [h |- g]} {M : [g |- tm]} [h |- pred (M[ $S[..] ])] =
 mlam g => mlam h => mlam $S => mlam M => [h |- yep ]
 ;
-

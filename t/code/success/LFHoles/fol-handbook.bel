@@ -1,4 +1,3 @@
-
 % Natural Deduction - Hilbert Translation
 % adapted from Handbook article on Logical Frameworks
 % by F. Pfenning
@@ -12,7 +11,7 @@ imp : o -> o -> o.
 all : (i -> o) -> o.
 not  : o -> o.
 
-%{  
+%{
 even: i -> o.
 all (\x. impl (even x)  (even x))
 
@@ -52,9 +51,9 @@ rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp (A[..]) (imp (A[..]) (A[.
 / total a (trivial_imp g a) /
  mlam g => mlam A => [g |- k] ;
 
-rec ded: (g:hilCtx) [g, u:hil (A[..]) |-  hil (B[..])] 
-        -> [g |- hil (imp (A[..]) (B[..]))] = 
-/ total h (ded g _ _ h) / 
+rec ded: (g:hilCtx) [g, u:hil (A[..]) |-  hil (B[..])]
+        -> [g |- hil (imp (A[..]) (B[..]))] =
+/ total h (ded g _ _ h) /
 fn h =>  case h of
 | [g, u: hil _  |-  #p[..]] =>  [g |- mp k (#p[..])]  % SPECIAL!
 
@@ -141,4 +140,3 @@ fn d =>  case d of
 rec ndhil_main : [ |- nd A] -> [ |- hil A] =
 / total d (ndhil_main d) /
  fn d => ndhil d ;
-

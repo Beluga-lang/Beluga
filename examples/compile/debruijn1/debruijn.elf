@@ -20,5 +20,3 @@ LF env    : type = %name env K.
 and val    : type = %name val W.
   | clo    : env -> exp' -> val
 ;
-
-

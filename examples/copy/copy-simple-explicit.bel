@@ -1,4 +1,3 @@
-
 term :  type.
 lam  : (term -> term) -> term.
 

@@ -35,14 +35,14 @@ module Make (T : TokenizerInfo) : Base
 
   let trivial_tokenize_from (l : Loc.t) (s : 'a Stream.t) : 'a token Stream.t =
     Stream.unfold
-      (fun (l, s) -> 
+      (fun (l, s) ->
         let open Maybe in
         Stream.observe s $>
           fun (x, s) ->
           let l' = trivial_inc l in
           (T.token x (Span.of_pair' l l')), (l', s))
       (l, s)
-  
+
   (** Tokenizes a stream of characters and increments the line number
   whenever '\n' is encountered. *)
   let char_tokenize_from (l : Loc.t) (s : char Stream.t) : char token Stream.t =

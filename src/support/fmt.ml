@@ -1,5 +1,5 @@
 open Format
-   
+
 type fmt =
   { fmt : 'a. ('a, formatter, unit) format -> 'a }
 

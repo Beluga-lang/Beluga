@@ -40,4 +40,3 @@ ev_letn :
       eval (E2 E1) V -> eval (letn E1 (\ x . E2 x)) V.
 
 ev_fix : eval (E (fix (\ x . E x))) V -> eval (fix (\ x . E x)) V.
-

@@ -1,6 +1,6 @@
 % coverage
 
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -14,16 +14,13 @@ LF le : nat -> nat -> type =
   | le-foo: le M N -> le N M
 ;
 
-rec test :  {N : [|- nat]} {M : [|- nat]} [|- le M N] -> [|- nat] = 
+rec test :  {N : [|- nat]} {M : [|- nat]} [|- le M N] -> [|- nat] =
 / total x (test x) /
  mlam X => mlam Y =>  fn p => case [ |- X ] of
 | [|- z] => [|- z]
-| [|- s X'] => (case p of 
+| [|- s X'] => (case p of
               | [|- le-base ] => [|- z]
               | [|- le-step D] => test [|- Y] [|- X'] [|- le-foo D]
               | [|- le-foo P] => [|- z])
 
 ;
-
-
-    

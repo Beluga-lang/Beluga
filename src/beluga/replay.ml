@@ -55,14 +55,14 @@ module TranscriptParser = struct
   module Tokenizer = Tokenizer.ForParser (Parser)
 
   type 'a parser = 'a Parser.t
-     
+
   open Parser
 
   (** A parser for the interactive mode command sigil `%:` *)
   let sigil : string parser = label "command sigil" (string "%:")
 
   let bol_sigil : string parser = bol $ fun _ -> sigil
-  
+
   (** A parser for an interactive mode command, which is a line
   beginning with a sigil. *)
   let command : string parser =
@@ -88,7 +88,7 @@ module TranscriptParser = struct
                   response = resp;
                   line_num = Some line_num;
                 } )
-  
+
   (** A parser for a transcript: an input file followed by a number of
   interactions. *)
   let transcript : transcript parser =
@@ -119,7 +119,7 @@ module TranscriptRunner = struct
   open Unix
 
   type 'a istream = 'a IStream.t
-     
+
   (** The environment in which the transcript runner executes. *)
   type env =
     { beluga_out : Parser.state;

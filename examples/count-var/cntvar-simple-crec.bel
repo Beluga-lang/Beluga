@@ -3,7 +3,7 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-LF exp : type =  
+LF exp : type =
   | z   : exp
   | s   : exp -> exp
   | tt  : exp
@@ -52,6 +52,3 @@ fn e => case e of
           (cntV [g,x |- W])
 
 ;
-
-
-

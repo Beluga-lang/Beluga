@@ -1,4 +1,3 @@
-
 o:type. --name o A p.
 i:type. --name i T x.
 
@@ -30,5 +29,3 @@ pr_neg: proof D → proof (nd_neg D).
 prove: proof D -> ({a:i}proof (E a)) -> type.
 
 prove_all: ({a:i} prove (D a)  (\b. (pr_neg (E a)))) → prove (pr_all (\a. D a))  (\a. E a).
-
-

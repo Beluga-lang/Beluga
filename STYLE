@@ -8,7 +8,7 @@ Naming conventions
   LF Terms	      tM, tN
   LF Types	      tA, tB
   LF Spines           tS
-  LF Heads	      tH  
+  LF Heads	      tH
 
 - LF objects under a substitution are prefixed with a s: sA, sK, sM, ...
 
@@ -20,13 +20,13 @@ Naming conventions
   Meta-Context	     cD
   Meta-subst.	     theta or t
 
-- Beluga expressions and types 
+- Beluga expressions and types
   Beluga expressions e,i
   Beluga types	     tau
   Beluga context     cD
 
 - Beluga types under a meta-substitution are prefixed with a t: ttau
-  
+
 
 - function names follow the CamelCase convention
 

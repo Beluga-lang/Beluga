@@ -21,4 +21,3 @@ module VarData : GENSYM
 module MVarData : GENSYM
 
 val reset : unit -> unit
-

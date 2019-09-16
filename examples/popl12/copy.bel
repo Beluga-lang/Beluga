@@ -6,7 +6,7 @@ s: exp -> exp.
 
 schema ctx = exp;
 
-inductive IsExp : {g:ctx} [g |- exp] -> ctype  
+inductive IsExp : {g:ctx} [g |- exp] -> ctype
 =
 | IsZero : (g:ctx) IsExp [g] [g |- z]
 | IsSuc : (g:ctx) IsExp [g] [g |- M] -> IsExp [g] [g |- s M]
@@ -24,7 +24,7 @@ fn e => case e of
 | IsSuc m => IsSuc (copy m)
 | IsLam m => let m' = copy m in IsLam m
 | IsApp m n => % IsApp (copy m) (copy n)
- let m' = copy m in  
+ let m' = copy m in
  let n' = copy n in IsApp m' n'
 
 ;

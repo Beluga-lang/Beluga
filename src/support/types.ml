@@ -7,4 +7,3 @@ module type BasicStream = sig
   (** A way to construct a stream from a seed. *)
   val unfold : ('s -> ('a * 's) option) -> 's -> 'a t
 end
-                        

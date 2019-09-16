@@ -1,4 +1,3 @@
-
 term: type.
 z: term.
 s: term -> term.
@@ -17,7 +16,3 @@ fn t => case t of
 | [h |- U[..]]  => [ |- z]
 
 ;
-
-
-
-

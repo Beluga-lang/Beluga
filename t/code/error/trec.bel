@@ -1,4 +1,3 @@
-
 tp: type.  --name tp T a.
 nat: tp.
 all: (tp -> tp) -> tp.
@@ -11,8 +10,8 @@ tlam: ({a:tp}exp (T a)) -> exp (all (\a. T a)).
 tapp: exp (all (\a. T a)) -> {S:tp} exp (T S).
 
 
-rec ev': [ |- exp T] -> [ |- exp S] = 
- fn e => case e of 
+rec ev': [ |- exp T] -> [ |- exp S] =
+ fn e => case e of
 
  [ |- z]  => [ |- z]
 
@@ -25,6 +24,3 @@ rec ev': [ |- exp T] -> [ |- exp S] =
 %  in context:
 %
 %
-
-
-

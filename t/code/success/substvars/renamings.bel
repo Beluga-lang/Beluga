@@ -5,12 +5,12 @@ lam: (exp -> exp) -> exp.
 
 schema ctx = exp;
 
-inductive Ren : {g:ctx}{h:ctx} {$S:[h |-# g] } ctype = 
+inductive Ren : {g:ctx}{h:ctx} {$S:[h |-# g] } ctype =
 | RNil : Ren [ ] [h] [h |- ^]
 | RCons: Ren [g] [h] [h |- $S] -> {#p:[h |- exp]} Ren [g, x:exp] [h] [h |- $S, #p] ;
 
 
-inductive IsVar : {g:ctx}{#p:[g |- exp]} ctype = 
+inductive IsVar : {g:ctx}{#p:[g |- exp]} ctype =
 | IsVarC : {#p:[g |- exp]} IsVar [g] [g |- #p]
 ;
 

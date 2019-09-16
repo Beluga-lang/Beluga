@@ -52,19 +52,19 @@ LF target: tp -> type =
 ;
 --name target P.
 
-% ----------------------------------------------------------       
+% ----------------------------------------------------------
 % Context schema declarations for source and target context
 schema sctx = source T;
 schema tctx = target T;
 
-% ----------------------------------------------------------       
+% ----------------------------------------------------------
 % SubCtx Γ' Γ ⇔ Γ' ⊆ Γ
-% This is in fact a weakening substitution between 
+% This is in fact a weakening substitution between
 % Γ and Γ'. We can in fact use substitution variables in
 % Beluga to give a witness for this relationship.
 % However, since substitution variables are more general,
 % i.e. they do not guarantee that variables are mapped to
-% variables, one would need to carry a proof that the 
+% variables, one would need to carry a proof that the
 % strengthening substitution is indeed just a variable
 % to variable substitution.
 inductive SubCtx: {g':sctx} {g:sctx} ctype =
@@ -73,16 +73,16 @@ inductive SubCtx: {g':sctx} {g:sctx} ctype =
 | WKeep: SubCtx [g'] [g] -> SubCtx [g',x:source T[]] [g,x:source T[]]
 ;
 
-% ----------------------------------------------------------       
-% Term Strengthening: 
-% 
-% Given a source term M in a context Γ, 
+% ----------------------------------------------------------
+% Term Strengthening:
+%
+% Given a source term M in a context Γ,
 % we compute a strengthened version of M which only depends on
 % the free variables occurring in M.
 % To accomplish this efficiently, we use an auxiliary datatype
 % wrap T N which describes a source term with N free variables.
-% If M has type S and has N free variables x1:T1, ... xn:Tn, 
-% then wrap T N intuitively denotes a term  of type 
+% If M has type S and has N free variables x1:T1, ... xn:Tn,
+% then wrap T N intuitively denotes a term  of type
 % T1 -> T2 -> ... -> Tn -> S .
 %
 LF nat: type =
@@ -102,9 +102,9 @@ inductive StrTerm': {g:sctx} [ |- tp] -> [|- nat] -> ctype =
 
 rec str: {g:sctx}[g |-  wrap T[] N[]] ->  StrTerm' [g] [ |- T] [|- N] =
 / total g (str g) /
-mlam g => fn e => case [g] of 
+mlam g => fn e => case [g] of
 | [] => let [|- M] = e  in STm' [|- M] WInit
-| [g, x:source _] => 
+| [g, x:source _] =>
   case e of
   | [g,x:source _ |- M[..] ] =>
     let STm' [h |-  M'] rel = str [g] [g |-  M] in
@@ -115,17 +115,17 @@ mlam g => fn e => case [g] of
 ;
 
 inductive StrTerm: {g:sctx} [ |- tp] -> ctype =
-| STm: [g',x:source S[] |- source T[]] -> SubCtx [g'] [g] -> StrTerm [g,x:source S[]] [ |- T] 
+| STm: [g',x:source S[] |- source T[]] -> SubCtx [g'] [g] -> StrTerm [g,x:source S[]] [ |- T]
 ;
 
-rec strengthen: [g,x:source S[] |- source T[]] -> StrTerm [g, x:source S[]] [|- T] = 
+rec strengthen: [g,x:source S[] |- source T[]] -> StrTerm [g, x:source S[]] [|- T] =
 / total  (strengthen) /
-fn m => 
-  let [g,x:source _ |- M] = m in 
-  let STm' [g' |- abs \x. init M'[ .., x]] wk = str [g] [g |- abs \x. init M[ .. ,x]] in 
+fn m =>
+  let [g,x:source _ |- M] = m in
+  let STm' [g' |- abs \x. init M'[ .., x]] wk = str [g] [g |- abs \x. init M[ .. ,x]] in
     STm [g',x:source _ |- M'] wk
 ;
-% ----------------------------------------------------------       
+% ----------------------------------------------------------
 
 % Map [Δ] [Γ] ⇔ Δ ⊢ ρ : Γ
 inductive Map:{h:tctx}{g:sctx} ctype =
@@ -133,7 +133,7 @@ inductive Map:{h:tctx}{g:sctx} ctype =
 | M_dot: Map [h] [g] -> [h |-  target S[]] -> Map [h] [g,x:source S[]]
 ;
 
-rec weaken: Map [h] [g] -> Map [h,x:target S[]] [g] = 
+rec weaken: Map [h] [g] -> Map [h,x:target S[]] [g] =
 % / total m (weaken _ _ _ m) /
 fn sigma => case sigma of
 | M_id [h] => M_id [h,x:target _]
@@ -143,18 +143,18 @@ fn sigma => case sigma of
 
 rec extend: Map [h] [g] -> Map [h,x:target S[]] [g,x:source S[]] =
 % / total m (extend _ _ _ m) /
-fn sigma => 
+fn sigma =>
   let (sigma : Map [h] [g]) = sigma in
     M_dot (weaken sigma) [h,x:target _ |- x]
 ;
 
-% ----------------------------------------------------------       
+% ----------------------------------------------------------
 % Variable lookups
 
 rec lookup: Map [h] [g] -> {#q:[g |- source T[]]}[h |-  target T[]] =
 % / total m (lookup _ _ _ m) /
 fn sigma => mlam #q => case sigma of
-| M_dot sigma' [h |- M] => 
+| M_dot sigma' [h |- M] =>
  let (sigma : Map [h] [g',x:source S[]]) = sigma in
  (case [g', x:source S[] |- #q] of
  | [g', x:source T |- x   ] =>  [h |-  M]
@@ -166,7 +166,7 @@ fn sigma => mlam #q => case sigma of
 % This definition may be thought of a tuple of type T which is known to consist only
 % of variables
 inductive VarTup: (g:sctx) {T:[ |- tp]} [g |- source T[]] -> ctype =
-| Emp : VarTup [|- unit] [|- nil] 
+| Emp : VarTup [|- unit] [|- nil]
 | Nex : VarTup [|-  L] [g |- R] -> VarTup [|- cross T L] [g,x:source T[] |- cons x R[..] ]
 ;
 
@@ -187,44 +187,44 @@ fn r => fn vt => fn sigma =>  let (sigma : Map [h] [g]) = sigma in case r of
     [h |-  ccons P M]
 ;
 
-% ----------------------------------------------------------       
-% Context reification 
+% ----------------------------------------------------------
+% Context reification
 
 % CtxAsTup Γ ⇔ ∃ ρ, (x1,...,xn):(t1 × ... × tn) ⊢ ρ : Γ where Γ = x1:t1,...,xn:tn
 inductive CtxAsTup: {g:sctx} ctype =
 | EnvClo: VarTup [|- G] [g |- M] -> Map [x:target G] [g] -> CtxAsTup [g]
 ;
 
-rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] = 
+rec extendEnv: Map [x:target S] [g] -> Map [x:target (cross Y S)] [g] =
 % / total m (extendEnv _ _ _ m) /
 fn sigma => case sigma of
 | M_id [x:target S] => M_id [x:target _]
-| M_dot sigma' [x:target S |- M] => 
+| M_dot sigma' [x:target S |- M] =>
     M_dot (extendEnv sigma') [x:target _  |- M[crst x] ]
 ;
 
-rec reify : {g:sctx} CtxAsTup [g] = 
+rec reify : {g:sctx} CtxAsTup [g] =
 % / total g (reify  g) /
 mlam g => case [g] of
 | [ ] =>  EnvClo Emp (M_id [x:target unit])
 | [g,x:source S[]] =>
   let EnvClo vt sigma = reify [g] in
-  let  rho' = extendEnv sigma in 
+  let  rho' = extendEnv sigma in
   let rho = M_dot rho' [xenv:target (cross S[] _) |- cfst xenv] in
    EnvClo (Nex  vt) rho
 ;
 
-% ----------------------------------------------------------       
-% NEW PART FOR HOISTING 
+% ----------------------------------------------------------
+% NEW PART FOR HOISTING
 
-LF env:  {Lf:tp}target Lf -> type = 
+LF env:  {Lf:tp}target Lf -> type =
 | env_nil:  env unit cnil
 | env_cons: {P:target T} env L E -> env (cross T L) (ccons P E)
 ;
 
 % Result of Hoisting: Result [Δ] [|- T] ⇔ ∃ P L, Δ,l : L ⊢ M : T and · ⊢ E : L
 inductive Result:{h:tctx} [ |- tp] -> ctype =
-| Result : [h,l:target Lf[] |- target T[]] -> [ |- env Lf E] 
+| Result : [h,l:target Lf[] |- target T[]] -> [ |- env Lf E]
          -> Result [h] [ |- T]
 ;
 
@@ -244,7 +244,7 @@ mlam Env1, Env2 =>  case [|- Env1] of
 | [|- env_nil] =>  ExEnv  App_nil
 | [|- env_cons P Env1'] =>
   let ExEnv a = append [|- Env1'] [|- Env2] in
-   ExEnv (App_cons a) 
+   ExEnv (App_cons a)
 ;
 
 LF eq: env L E -> env L' E' -> type =
@@ -262,52 +262,52 @@ fn a => case a of
    [ |- refl]
 ;
 
-rec weakenEnv1:(g:tctx)  
+rec weakenEnv1:(g:tctx)
                {Env1 : [ |- env L1 E1]}{Env2: [|- env L2 E2]}{Env3: [|- env L3 E3]}
                Append [|- Env1] [|- Env2] [|- Env3]  -> [g, l:target L2[] |- target T[]] -> [g, l: target L3[] |- target T[]] =
 % / total p (weakenEnv1 _ _ _ _ _ _ _ _ p) /
 mlam Env1, Env2, Env3 => fn prf => fn m => case prf of
 | App_nil =>  m
-| App_cons p =>  
+| App_cons p =>
   let [g,l: target _ |- M'] = weakenEnv1 [|- _ ] [|- _ ] [|- _] p m in
     [g,l:target _  |- M' [.., crst l] ]
 ;
 
 
-rec weakenEnv2:(g:tctx) 
+rec weakenEnv2:(g:tctx)
                {Env1 : [ |- env L1 E1]}{Env2:[|- env L2 E2]}{Env3: [|- env L3 E3]}
                Append [|- Env1] [|- Env2] [|- Env3]  ->
                [g, l:target L1[] |- target T[]] -> [g, l: target L3[] |- target T[]] =
 % / total p (weakenEnv2 _ _ _ _ _ _ _ _ p) /
 mlam Env1, Env2, Env3 => fn prf => fn n => case prf of
-| App_nil => 
-  let ExEnv a = append [|- Env2] [|- env_nil] in 
+| App_nil =>
+  let ExEnv a = append [|- Env2] [|- env_nil] in
   let [ |- refl] = append_nil a in
     weakenEnv1 [|- _ ] [|- _ ] [ |- _ ] a n
 | App_cons p =>
-  let [g,l:target (cross S[] L1'[]) |- N]  = n in 
-  let [g,x:target S[], l:target L3'[] |- N'[..,x,l]] = 
+  let [g,l:target (cross S[] L1'[]) |- N]  = n in
+  let [g,x:target S[], l:target L3'[] |- N'[..,x,l]] =
      weakenEnv2 [|- _ ] [|- _ ][|- _ ] p [g,x:target S[],l:target L1'[] |-  N[ .. , ccons x l]] in
     [g,l:target (cross S[] L3'[]) |- N'[ .. , cfst l , crst l] ]
 
 ;
 
-% ----------------------------------------------------------       
+% ----------------------------------------------------------
 
 rec hcc: [g |-  source T[]] -> Map [h] [g] -> Result [h] [|- T[]] =
 % / total e (hcc _ _ _ e)/
 fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
 | [g |- z] => Result [h,l:target unit |- cz] [|- env_nil]
 
-| [g |- suc M] => 
+| [g |- suc M] =>
  let Result [h,l:target L[] |- P'] e  = hcc [g |-  M]  sigma in
     Result [h,l:target L[] |- csuc P'] e
 
-| [g |- #p] => 
+| [g |- #p] =>
   let [h |- M] = lookup sigma [g |-  #p] in
     Result [h,l:target unit |- M[..]  ] [ |- env_nil]
 
-| [g |- app M N] =>  
+| [g |- app M N] =>
   let Result r1 [|- Env1]  = hcc [g |- M ] sigma in
   let Result r2 [|- Env2]  = hcc [g |- N ] sigma in
   let ExEnv (a12 : Append [|- _ ] [|- _ ] [|- Env3])  = append [|- Env1] [|- Env2] in
@@ -315,22 +315,22 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let [h, l:target L |- Q] = weakenEnv1 [|- _ ] [|- _ ] [|- _ ] a12 r2 in
     Result [h, l:target L |- copen P \e.\xf.\xenv. capp xf (ccons  Q [..,l] xenv)] [|- Env3]
 
-| [g |- letv M \x. N] => 
+| [g |- letv M \x. N] =>
   let Result r1 [|- Env1] = hcc [g |- M] sigma in
   let Result r2 [|- Env2] = hcc [g,x: source _ |- N] (extend sigma) in
   let ExEnv (a12 : Append [|- _] [|- _] [|- Env3]) = append [|- Env1] [|- Env2] in
   let [h, l:target L[] |- P]                      = weakenEnv2 [|- _ ] [|- _ ] [|- _ ] a12 r1  in
   let [h,x:target T1[], l:target L[] |- Q]        = weakenEnv1 [|- _ ] [|- _ ] [|- _ ] a12 r2 in
     Result [h, l:target L[] |- clet P (\x. Q[..,x,l])] [|- Env3]
- 
+
 | [g |- lam \x.M] =>
   let STm [g',x:source S[] |- M' ] wk = strengthen [g, x:source _ |- M ] in
   let EnvClo env rho = reify [g'] in
   let Result r1 [|- Env1] = hcc [g',x:source _ |- M' ] (extend rho) in
   let [h |- C] = lookupVars wk env sigma in
   let [xenv:target Lg[],x:target T[],l:target L[] |- P [xenv, x, l] ] = r1 in
-    Result [h,l:target (cross (code L[] (code (cross T[] Lg[]) _ )) L[]) |- cpack  (capp (cfst l) (crst l))   C[..] ]  
-           [|- env_cons (clam \l. clam (\clo. clet (cfst clo) \x. clet (crst clo)  \xenv. P[xenv, x, l])) Env1 ] 
+    Result [h,l:target (cross (code L[] (code (cross T[] Lg[]) _ )) L[]) |- cpack  (capp (cfst l) (crst l))   C[..] ]
+           [|- env_cons (clam \l. clam (\clo. clet (cfst clo) \x. clet (crst clo)  \xenv. P[xenv, x, l])) Env1 ]
 
 | [g |-  cons M N] =>
   let Result r1 [|- Env1] = hcc [g |- M] sigma in

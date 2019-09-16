@@ -2,7 +2,7 @@
 % Author: Brigitte Pientka
 %{{
 # Algorithmic Equality for the Polymorphic Lambda-calculus (G-version)
-We discuss completeness of algorithmic equality for typed lambda-terms with respect to declarative equality of lambda-terms. 
+We discuss completeness of algorithmic equality for typed lambda-terms with respect to declarative equality of lambda-terms.
 This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 <br>
 The mechanization highlights several aspects:
@@ -30,7 +30,7 @@ LF term: type =
 
 %{{## Judgements and Rules
 We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.}}%
-% ----------------------------------------------------------------- 
+% -----------------------------------------------------------------
 
 %{{### Algorithmic Equality for types
 We add the judgement for type equality <code>atp</code> of type <code>tm -> tm -> type</code> along with inference rules for universal quantifiers <code>at_al</code> and arrow types <code>at_arr</code>.}}%
@@ -165,7 +165,7 @@ fn ae1 => fn ae2 => case ae1 of
                [gamma, b |- D2[..,b.1,b.2]]
   in
     [gamma |- at_al \a. \u. D[..,a,u]]
-       
+
 | [gamma |- at_arr D1 D2] =>
   let [gamma |- at_arr D3 D4] = ae2 in
   let [gamma |- D] = transtp [gamma |- D1] [gamma |- D3] in
@@ -187,7 +187,7 @@ fn ae1 => fn ae2 => case ae1 of
                [gamma, b |- D2[..,b.1,b.2]]
   in
     [gamma |- ae_l \x. \u. D]
-       
+
 | [gamma |- ae_a D1 D2] =>
   let [gamma |- ae_a D3 D4] = ae2 in
   let [gamma |- D] = trans [gamma |- D1] [gamma |- D3] in
@@ -201,7 +201,7 @@ fn ae1 => fn ae2 => case ae1 of
                [gamma, b |- D2[..,b.1,b.2]]
   in
     [gamma |- ae_tl \x. \u. D]
-       
+
 | [gamma |- ae_ta D1 Q1] =>
   let [gamma |- ae_ta D2 Q2] = ae2 in
   let [gamma |- D] = trans [gamma |- D1] [gamma |- D2] in
@@ -314,4 +314,3 @@ fn e => case e of
   let [gamma |- D1] = ceq [gamma |- F1] in
   [gamma |- ae_ta D1 Q2]
 ;
-

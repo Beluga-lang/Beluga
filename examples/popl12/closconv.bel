@@ -77,4 +77,3 @@ fn cr => fn m => case m of
   let [h |- N'] = conv cr [g |- N ] in
     [h |- open (M') (\env. \f. capp f (create (snoc env (N'[..]) )))]
 ;
-

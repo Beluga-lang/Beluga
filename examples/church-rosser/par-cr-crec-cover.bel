@@ -36,7 +36,7 @@ fn d => fn e => case d of
 
 ;
 
-LF dia_prop: term -> term  -> type =  
+LF dia_prop: term -> term  -> type =
   | dia_result: {N:term}pred M' N -> pred M'' N -> dia_prop M' M''
 ;
 

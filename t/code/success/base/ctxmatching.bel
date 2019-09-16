@@ -45,4 +45,3 @@ mlam g => fn n  => case n of --not
  | [h,x:nat  |-  x] => [h,x:nat |-  x]
 % | [g,x:nat] #p[..] => [g,x:nat] #p[..]
 ;
-

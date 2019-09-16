@@ -2,7 +2,7 @@ LF tp: type =
   | nat: tp
   | bool: tp
 ;
- 
+
 
 LF exp : tp -> type =
   | z   : exp nat
@@ -12,7 +12,7 @@ LF exp : tp -> type =
   | ff  : exp bool
 ;
 
-LF  opt: type =  
+LF  opt: type =
   | nothing: opt
   | something: {T:tp} exp T -> opt
 ;

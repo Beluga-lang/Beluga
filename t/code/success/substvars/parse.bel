@@ -22,4 +22,3 @@ mlam g => f [x:tm,y:tm] [z:tm] [z:tm |- i, z] [x:tm,y:tm |-  x]
 rec f5 : {g:ctx} [z:tm |-  tm] =
 mlam g => f [x:tm,y:tm] [z:tm] [z:tm |- z, z] [x:tm,y:tm |-  x]
 ;
-

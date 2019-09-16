@@ -5,7 +5,7 @@ LF bool : type =
 
 schema ctx = bool;
 
-rec test : (g:ctx) [g |- bool] -> [g |- bool] = 
+rec test : (g:ctx) [g |- bool] -> [g |- bool] =
 fn p => case p of [g |- X[..]] => p;
 
 
@@ -18,4 +18,3 @@ rec snd : (g:ctx) [g |- bool] * [g |- bool] -> [g |- bool] =
     fn p => case p of
       | ([g |- X], [g |- Y]) => [g |- Y]
 ;
-

@@ -1,6 +1,3 @@
-
-
-
 % Definition of types and expressions
 LF tp: type =
 | arr: tp -> tp -> tp
@@ -8,14 +5,14 @@ LF tp: type =
 ;
 --name tp T.
 
-LF exp: type = 
+LF exp: type =
 | lam : tp -> (exp -> exp) -> exp
 | app : exp -> exp -> exp
 ;
 --name exp E.
 
 % Typing judgment
-LF type_of: exp -> tp -> type = 
+LF type_of: exp -> tp -> type =
 | t_lam: ({x:exp}type_of x T1 -> type_of (E x) T2)
         -> type_of (lam T1 E) (arr T1 T2)
 | t_app: type_of E1 (arr T2 T) -> type_of E2 T2
@@ -58,7 +55,7 @@ schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 
 
 rec unique : {g:tctx}{E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
-             ->  [ |- eq T T'] =  / total e (unique _ _ _ e) / 
+             ->  [ |- eq T T'] =  / total e (unique _ _ _ e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
  | [g |- app E1 E2] =>
   let [g |- t_app D1 D2] = d in
@@ -100,7 +97,7 @@ equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
-             ->  [ |- equal T T'] = / total e (unique2 _ _ _ e) / 
+             ->  [ |- equal T T'] = / total e (unique2 _ _ _ e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
 | [g |- app E1 E2] =>
   let [g |- t_app D1 D2] = d in
@@ -127,7 +124,7 @@ equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique3 : (g:tctx)[g |- type_of E T[]] -> [g |- type_of E T'[]]
-             ->  [ |- equal T T'] =  
+             ->  [ |- equal T T'] =
 / total d (unique3 _ _ _ _ d) /
 fn d => fn f => case d of
 | [g |- t_app D1 D2] =>
@@ -148,7 +145,6 @@ fn d => fn f => case d of
 
 % let v : [ |- type_of (lam \x.x) (arr nat nat)]  = [ |- t_lam \x.\u. u ] ;
 
-let v : [ |- equal (arr nat nat) (arr nat nat)] = 
+let v : [ |- equal (arr nat nat) (arr nat nat)] =
   unique3 [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
 ;
-

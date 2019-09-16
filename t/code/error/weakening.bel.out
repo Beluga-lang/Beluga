@@ -1,6 +1,6 @@
 Context clash in pattern.
     Pattern's context:
-      
+
     Scrutinee's context:
       h
 Note that we do not allow the context in the pattern

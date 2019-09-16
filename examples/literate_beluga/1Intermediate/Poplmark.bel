@@ -1,5 +1,3 @@
-
-
 %{{
 <script type="text/x-mathjax-config">
   MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
@@ -9,19 +7,19 @@
 </script>
 
 # Transitivity of Algorithmic Subtyping
-This example follows the proof in the proof pearl description which appeared at TPHOLs2007 
+This example follows the proof in the proof pearl description which appeared at TPHOLs2007
 <a href="http://www.cs.mcgill.ca/~bpientka/papers/pearl.pdf"> [Pientka 2007]</a>. It shows a solution of  <a href="http://www.seas.upenn.edu/~plclub/poplmark/">POPLMARK Challenge</a>,  part 1A : Transitivity of Subtyping. <br>
 
-This implementation not only uses higher-order abstract syntax in specifying the types, but we will exploit extensively the power of parametric and hypothetical judgment. As a benefit we do not need to implement a narrowing lemma separately, but get it "for free". 
+This implementation not only uses higher-order abstract syntax in specifying the types, but we will exploit extensively the power of parametric and hypothetical judgment. As a benefit we do not need to implement a narrowing lemma separately, but get it "for free".
 
 First, we define or type `tp` with higher-order abstract syntax in LF as follows:
 }}%
 
-LF tp : type = 
+LF tp : type =
   | top   : tp
   | arr   : tp -> tp -> tp	        % Functions: A1 => A2
   | forall: tp -> (tp -> tp) -> tp       % Universal Type: forall x>:A1. A2    forall A1 ([x] A2 x)
-;             
+;
 
 --name tp T.
 
@@ -32,7 +30,7 @@ LF tp : type =
 
 We do not give a general reflexivity and transitivity rule
 for type variables, but instead we provide for each type variable
-its own reflexivity and transitivity version. In other words, our rule for polymorphic types implements the following: 
+its own reflexivity and transitivity version. In other words, our rule for polymorphic types implements the following:
 $$\frac{\Gamma \vdash T_1 <: S_1 \qquad \Gamma,tr:a <: U \rightarrow U <: T \rightarrow a <: T, w:a <: T, ref : a <: a \vdash S_2 <: T_2 }{\Gamma \vdash \forall a:S_1.S_2(a) <: \forall a:T_1.T_2(a)}$$
 
 We use (<:) to denote algorithmic subtyping.
@@ -42,14 +40,14 @@ We use (<:) to denote algorithmic subtyping.
 
 LF sub : tp -> tp -> type =
   | sa_top : sub S top
-  | sa_arr : sub T1 S1 
-             -> sub S2 T2 
+  | sa_arr : sub T1 S1
+             -> sub S2 T2
              -> sub (arr S1 S2) (arr T1 T2)
-  | sa_all : sub T1 S1 
+  | sa_all : sub T1 S1
              -> ({a:tp} ({U:tp}{T:tp} sub a U -> sub U T -> sub a T)
-                -> sub a T1 
+                -> sub a T1
                 -> sub a a
-                -> sub (S2 a) (T2 a) 
+                -> sub (S2 a) (T2 a)
                )
              -> sub (forall S1 S2) (forall T1 T2)
 ;
@@ -68,28 +66,28 @@ schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 ### Reflexivity
 <b>Theorem</b> :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$. <br>
 
-The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`. 
+The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`.
 }}%
 
-rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] = 
-    mlam g => mlam T => case [g |- T] of 
+rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] =
+    mlam g => mlam T => case [g |- T] of
     | [g |- #p.1] => [g |- #p.4]
     | [g |- top ] => [g |- sa_top]
-    | [g |- arr T1 T2] => 
+    | [g |- arr T1 T2] =>
       let  [g |- S1] = refl [g] [g |- T1] in
       let  [g |- S2] = refl [g] [g |- T2] in
       [g |- sa_arr S1 S2]
-    | [g |- forall T1  (\a. T2) ] => 
+    | [g |- forall T1  (\a. T2) ] =>
       let [g |- S1 ] =  refl [g] [g |- T1] in
       let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a ) |- S2[..,b.1,b.2,b.3,b.4]]
-          = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )] 
+          = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )]
                   [g, b |- T2[..,b.1]]
-      in [g |- sa_all S1 (\a.\tr.\w.\ref.S2)] 
+      in [g |- sa_all S1 (\a.\tr.\w.\ref.S2)]
 
 ;
 
 
-%{{ 
+%{{
 ### Transitivity
 <b>Theorem</b> :  For every $\Gamma$, $S$, $Q$ and $T$,  if $\Gamma\vdash S <: Q$ and  $\Gamma\vdash Q <: T$, then  $\Gamma\vdash S <: T$. <br>
 
@@ -97,13 +95,13 @@ The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub S Q] 
 }}%
 
 rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
- 	    -> [g |- sub S T] = 
-    mlam Q => fn d1 => fn d2 => 
-    case d1 of 
-    | [g |- #p.3 ] => 
+ 	    -> [g |- sub S T] =
+    mlam Q => fn d1 => fn d2 =>
+    case d1 of
+    | [g |- #p.3 ] =>
       let [g |- D2] = d2 in
-      [g |- #p.2 Q  _ #p.3 D2] 
-    | [g |- #p.4 ] => d2 
+      [g |- #p.2 Q  _ #p.3 D2]
+    | [g |- #p.4 ] => d2
     | {#p : [g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a U'[..], ref: sub a a )] }
 	  {D1 : [g |- sub #p.1  U']}
 	  [g |- #p.2 U' T' D1 D2] =>
@@ -111,21 +109,21 @@ rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
       trans [ g |- U' ] [g |- D1]  [g |- F1]
     | [g |- sa_top] => let [g |- sa_top] = d2 in [g |- sa_top]
     | [g |- sa_arr D1 D2] : [g |- sub (arr S1 S2) (arr Q1 Q2) ] =>
-      (case d2 of 
-       | [g |- sa_arr E1 E2] => 
+      (case d2 of
+       | [g |- sa_arr E1 E2] =>
          let [g |- F1] = trans [g |- Q1] [g |- E1] [g |- D1] in
          let [g |- F2] = trans [g |- Q2] [g |- D2] [g |- E2] in
          [g |- sa_arr F1 F2]
-       | [g |- sa_top] => [g |- sa_top] 
-      )
-    | [g |- sa_all D1 (\a.\tr.\w.\ref.D2)]  : [g |- sub (forall S1 (\a.S2)) (forall Q1 (\a.Q2))] => 
-      (case d2 of 
        | [g |- sa_top] => [g |- sa_top]
-       | [g |- sa_all E1 (\a.\tr.\w.\ref.E2)] : [g |- sub (forall Q1 (\a.Q2)) (forall T1 (\a.T2))] => 
-         let [g |- F1] = trans [g |- Q1] [g |- E1][g |- D1] 
+      )
+    | [g |- sa_all D1 (\a.\tr.\w.\ref.D2)]  : [g |- sub (forall S1 (\a.S2)) (forall Q1 (\a.Q2))] =>
+      (case d2 of
+       | [g |- sa_top] => [g |- sa_top]
+       | [g |- sa_all E1 (\a.\tr.\w.\ref.E2)] : [g |- sub (forall Q1 (\a.Q2)) (forall T1 (\a.T2))] =>
+         let [g |- F1] = trans [g |- Q1] [g |- E1][g |- D1]
  in
-         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )  |- F2[..,b.1,b.2,b.3,b.4]]  = 
-             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )  |- Q2[..,b.1]]  
+         let [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )  |- F2[..,b.1,b.2,b.3,b.4]]  =
+             trans [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )  |- Q2[..,b.1]]
                    [g, b |- D2[..,b.1,b.2,(b.2 T1[..] Q1[..] b.3 E1[..]), b.4] ]
                    [g, b |- E2[..,b.1,b.2,b.3,b.4] ] in
          [g |- sa_all F1 (\a.\tr.\w.\ref.F2)]
@@ -168,16 +166,16 @@ We can also define declarative subtyping in Beluga and prove the equivalence bet
 }}%
 
 
-LF  subtype : tp -> tp -> type = 
+LF  subtype : tp -> tp -> type =
   | subtype_top    : subtype T top
   | subtype_refl   : subtype T T
-  | subtype_trans  : subtype T1 T2 
-                     -> subtype T2 T3 
+  | subtype_trans  : subtype T1 T2
+                     -> subtype T2 T3
                      -> subtype T1 T3
   | subtype_arrow  : subtype T1 S1
                      -> subtype S2 T2
                      -> subtype (arr S1 S2) (arr T1 T2)
-  | subtype_forall : subtype T1 S1 
+  | subtype_forall : subtype T1 S1
 		     -> ({x:tp} subtype x T1 -> subtype (S2 x) (T2 x))
                      ->  subtype (forall S1 S2) (forall T1 T2)
 ;
@@ -193,16 +191,16 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 <b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
 }}%
 rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
-    fn d => case d of 
+    fn d => case d of
     | [g |- sa_top] => [g |- subtype_top]
-    | [g |- sa_arr D1 D2] => 
+    | [g |- sa_arr D1 D2] =>
       let [g |- E1] = sound [g |- D1] in
       let [g |- E2] = sound [g |- D2] in
       [g |- subtype_arrow E1 E2]
     | [g |- sa_all D1 (\a.\tr.\w.\ref.D2) ] : [g |- sub (forall S1 (\a.S2 )) ( forall T1 (\a.T2 ))] =>
       let [g |- E1] = sound [g |- D1] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- E2[..,b.1,b.5] ] = 
-	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4]] in 
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- E2[..,b.1,b.5] ] =
+	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4]] in
       [g |- subtype_forall E1 (\a.\w.E2)]
     % Assumption w : sub a Q
     | [g |- #p.3] => [g |- #p.5]
@@ -214,37 +212,34 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
 	  [g |- #p.2 U' T' D1 D2] =>
       let [g |- E1] = sound [g |- D1] in
       let [g |- E2] = sound [g |- D2] in
-      [g |- subtype_trans E1 E2]   
-;						    
+      [g |- subtype_trans E1 E2]
+;
 
 
 
 
 %{{
 ### Completeness
-<b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .  
+<b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .
 }}%
 
-rec complete : (g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] = 
-    fn d => case d of 
+rec complete : (g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] =
+    fn d => case d of
     | [g |- #p.5] => [g |- #p.3]
     | [g |- subtype_top] => [g |- sa_top]
-    | [g |- subtype_refl] => refl [g] [g |- _] 
+    | [g |- subtype_refl] => refl [g] [g |- _]
     | [g |- subtype_trans E1 E2] =>
       let [g |- D1] = complete [g |- E1] in
-      let [g |- D2] = complete [g |- E2] in 
+      let [g |- D2] = complete [g |- E2] in
       trans [g |- _] [g |- D1] [g |- D2]
     | [g |- subtype_arrow E1 E2] =>
       let [g |- D1] = complete [g |- E1] in
-      let [g |- D2] = complete [g |- E2] in 
-      [g |- sa_arr D1 D2] 
+      let [g |- D2] = complete [g |- E2] in
+      [g |- sa_arr D1 D2]
     | [g |- subtype_forall E1 (\x.\y. E2)] : [g |- subtype (forall S1 (\a. S2)) ( forall T1 (\a. T2))] =>
       let [g |- D1 ] = complete [g |- E1] in
-      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4] ] = 
+      let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4] ] =
 
-          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- E2[..,b.1,b.5] ] in 
+          complete [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- E2[..,b.1,b.5] ] in
       [g |- sa_all D1 (\a.\tr.\w.\ref.D2)]
 ;
-
-
-

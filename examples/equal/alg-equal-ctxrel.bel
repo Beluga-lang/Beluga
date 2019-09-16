@@ -69,17 +69,17 @@ inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 ;
 
 % ----------------------------------------------------------------------
-%  Note one could simply pattern match and recurse on TRel and 
+%  Note one could simply pattern match and recurse on TRel and
 %  pattern match on M and recurse on TRel.
 
 rec ref' : (h:taCtx)(g:tCtx) TRel [g |- M] [h |- N] ->
           [h |- aeq N N] =
-fn r => 
-let (r:TRel [g |- M] [h |- N]) = r in 
+fn r =>
+let (r:TRel [g |- M] [h |- N]) = r in
 case [g |- M] of
 | [g,x:term |-  x] =>
   let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |-  b.2]
-			       
+
 | [g, x:term |-  #p ] =>
   let TRvar r' = r in
   let [h |- E] = ref' r' in
@@ -282,7 +282,7 @@ inductive ExWkV' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
 | ExWkV' :  TRel' [l |- #q] [h |- #p.1] -> ExWkV' [l] [h |- #p.1]
 ;
 
-inductive Var : (h: tdCtx) [h |- term] -> ctype = 
+inductive Var : (h: tdCtx) [h |- term] -> ctype =
 | BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |-  b.1 ]
 | PV : Var [h |- #p.1] -> Var [h, b: block x:term, _u:deq x x |-  #p.1[..] ];
 
@@ -301,7 +301,7 @@ fn tr => case tr of
 ;
 
 % Guarantee that for every variable in h there is a corresponding variable in l
-rec exTRelV' :  {#p: [h |- block x:term, _u:deq x x]} 
+rec exTRelV' :  {#p: [h |- block x:term, _u:deq x x]}
 		    TdCxt [l] [h] -> ExWkV' [l] [h |- #p.1] =
 mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- #p.1] of
 | [h,b: block x:term, _u:deq x x |-  b.1 ] =>
@@ -338,20 +338,20 @@ inductive EqT : (l:tCtx) [l |- term] -> [l |- term] -> ctype =
 rec unique' : TRel' [l |- T] [h |- T1] -> TRel' [l |- S] [h |- T1]
       -> EqT [l |- T] [l |- S]  =
  fn tr => fn sr => case tr of
-| TRvar0' [h] cr => 
+| TRvar0' [h] cr =>
   let TRvar0' [h] cr' = sr in EqTRef
-| TRvar' tr' => 
-    let TRvar' sr' = sr in 
+| TRvar' tr' =>
+    let TRvar' sr' = sr in
     let EqTRef = unique' tr' sr' in EqTRef
 
-| TRapp' tr1 tr2 => 
-    let TRapp' sr1 sr2 = sr in 
+| TRapp' tr1 tr2 =>
+    let TRapp' sr1 sr2 = sr in
     let EqTRef = unique' tr1 sr1 in
     let EqTRef = unique' tr2 sr2 in
     EqTRef
 
-| TRlam'  tr' => 
-    let TRlam' sr' = sr in 
+| TRlam'  tr' =>
+    let TRlam' sr' = sr in
     let EqTRef = unique' tr' sr' in EqTRef
 ;
 
@@ -437,6 +437,3 @@ fn de => case de of
     trans tr' sr' srr [g |- AE1]  [g |- AE2]
 }%
 ;
-
-
-

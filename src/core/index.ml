@@ -195,7 +195,7 @@ let print_error ppf =
      fprintf ppf ("Illegal use of operator %a.") Id.print n
   | MissingArguments (n, expected, found) ->
      fprintf ppf ("Operator %a expected %d arguments, found %d.") Id.print n expected found
-    
+
   | UnboundName n ->
      fprintf ppf
        "Unbound data-level variable (ordinary or meta-variable) or constructor: %a."
@@ -259,7 +259,7 @@ let lookup_fv' (m : Id.name) fvars = List.mem m fvars.vars
 
 let lookup_fv (m : Id.name) : bool index =
   Bind.(get_fvars $> lookup_fv' m)
-                                                
+
 (** Decides whether a given external pattern is for an empty meta object. *)
 let is_empty_metapat = function
   | Ext.Comp.PatMetaObj
@@ -338,7 +338,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
       seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
       $> fun (a', b') ->
          Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Apx.LF.No), b')
-         
+
   | Ext.LF.PiTyp (_loc, Ext.LF.TypDecl (x, a), b) ->
      seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
      $> fun (a', b') ->
@@ -396,7 +396,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
      Ext.LF.Root(loc, h, normalListToSpine ms)
   | _ -> failwith "cannot be empty"
    *)
-  
+
 and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
   let get_pragma = function
@@ -664,7 +664,7 @@ and index_spine (s : Ext.LF.spine) : Apx.LF.spine index =
   | Ext.LF.Nil -> pure Apx.LF.Nil
   | Ext.LF.App (_, Ext.LF.TList (loc, nl), s) -> app (shunting_yard nl) s
   | Ext.LF.App (_, m, s) -> app m s
-       
+
 (* In the external syntax, `Name` is used for bound variables, constants, and metavariables.
    Since the logic is a bit nasty, it is encapsulated in this helper.
 
@@ -771,7 +771,7 @@ and disambiguate_to_fmvars : name_disambiguator =
          )
     )
     cvars bvars (loc, name) sub_opt fvars
-  
+
 and disambiguate_to_fvars : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
   disambiguate_name'
@@ -782,7 +782,7 @@ and disambiguate_to_fvars : name_disambiguator =
       (fvars, Apx.LF.FVar name)
     )
     cvars bvars (loc, name) sub_opt fvars
-      
+
 
 and index_sub_opt (s : Ext.LF.sub option) : Apx.LF.sub option index =
   let open Bind in
@@ -913,7 +913,7 @@ let index_svar_class = function
 let rec index_ctx d cvars bvars fvars = function
   | Ext.LF.Empty ->
      (Apx.LF.Empty , bvars, fvars)
-    
+
   | Ext.LF.Dec (psi, dec) ->
      let (psi', bvars', fvars')   = index_ctx d cvars bvars fvars psi in
      let (dec', bvars'', fvars'') = index_decl d cvars bvars' fvars' dec in
@@ -1149,7 +1149,7 @@ let d_var, d_const, d_dataconst, d_codataobs =
   let dataconst = mk "data constructor" CompConst.index_of_name (fun loc k -> Apx.Comp.DataConst (loc, k)) in
   let codataobs = mk "observation" CompDest.index_of_name (fun loc k e' -> Apx.Comp.Obs (loc, e', k)) in
   var, const, dataconst, codataobs
-    
+
 let disambiguate loc x ps =
   Maybe.choice (List.map (fun f -> f loc x) ps) |> Lazy.force
 
@@ -1261,7 +1261,7 @@ and index_exp' cvars vars fcvars =
             in
             throw_hint' loc' hint (UnboundCompName c))
           (fun f -> index_exp cvars vars fcvars e |> f)
-            
+
           (*
     begin
       try
@@ -1611,5 +1611,3 @@ let hexp' cvars vars e =
       `open_term
   in
   index_exp' cvars vars (empty_fvars closed) e
-
-

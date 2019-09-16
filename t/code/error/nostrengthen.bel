@@ -2,7 +2,7 @@
 
 i : type.
 o : type.
-p : type. 
+p : type.
 
 atom   : p -> o.
 conj   : o -> o -> o.  %% infix right 11 conj.
@@ -42,4 +42,3 @@ mlam g, E => fn at => case [g |- E[..] ] of
 
 
 ;
-

@@ -16,5 +16,3 @@ LF list: nat -> type =
 inductive IsList : [|- list N] -> ctype =
 IL: {L:[|- list N]} IsList [|- L]
 ;
-
-

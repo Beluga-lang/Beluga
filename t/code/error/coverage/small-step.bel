@@ -20,7 +20,7 @@
 }%
 
 
-LF term  : type = 
+LF term  : type =
 | true  : term
 | false : term
 | switch: term -> term -> term -> term
@@ -38,7 +38,7 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 
 
 % Values
-LF value     : term -> type = 
+LF value     : term -> type =
 | v_true : value true
 | v_false: value false
 | v_z    : value z
@@ -46,14 +46,14 @@ LF value     : term -> type =
 ;
 
 % Small-step operational semantics
-LF step: term -> term -> type = 
+LF step: term -> term -> type =
 | e_switch_true:  step (switch true T2 T3)    T2
 | e_switch_false: step (switch false T2 T3)   T3
 | e_pred_zero:    step (pred z) z
 | e_pred_succ:    value N
                  -> step (pred (succ N)) N
 | e_iszero_zero:  step (iszero z) true
-| e_iszero_succ:  value N 
+| e_iszero_succ:  value N
                 -> step (iszero (succ N)) false
 | e_switch:       step T1 T1'
                 -> step (switch T1 T2 T3)      (switch T1' T2 T3)
@@ -86,67 +86,67 @@ fn s => fn v => case v of
 | [ |- v_true]    => impossible s in []
 | [ |- v_false]   => impossible s in []
 | [ |- v_z ]      => impossible s in []
-| [ |- v_s V] => 
+| [ |- v_s V] =>
   let [ |- e_succ D] = s in values_dont_step [ |- D] [ |- V]
 ;
 
 
 rec det : [|- step T T1] -> [|- step T T2] -> [ |- equal T1 T2] =
 / total s (det t t1 t2 s)/
-fn s1 => fn s2 => case s1 of 
-| [ |- e_switch_true] => 
-  (case s2 of 
+fn s1 => fn s2 => case s1 of
+| [ |- e_switch_true] =>
+  (case s2 of
    | [|- e_switch_true]  =>  [ |- ref]
    | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_true] in []
 )
-| [ |- e_switch_false] => 
-  (case s2 of 
+| [ |- e_switch_false] =>
+  (case s2 of
    | [|- e_switch_false] =>  [ |- ref]
    | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_false] in []
 )
 
-| [ |- e_switch D] => 
-  (case s2 of 
+| [ |- e_switch D] =>
+  (case s2 of
   | [|- e_switch E] =>
     let [ |- ref] = det [|- D] [|- E] in  [ |- ref]
   | [|- e_switch_true] => impossible values_dont_step [|- D] [|- v_true] in []
   | [|- e_switch_false] => impossible values_dont_step [|- D] [|- v_false] in [])
 
-| [ |- e_succ D] => 
-  (case s2 of 
+| [ |- e_succ D] =>
+  (case s2 of
    | [|- e_succ F] => let [ |- ref] = det [|- D] [|- F] in  [ |- ref])
 
-| [ |- e_pred_zero] => 
-  (case s2 of 
+| [ |- e_pred_zero] =>
+  (case s2 of
   | [|- e_pred_zero] =>  [|- ref]
   | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_z] in [])
 
-| [ |- e_pred_succ V] => 
-  (case s2 of 
+| [ |- e_pred_succ V] =>
+  (case s2 of
   | [|- e_pred_succ V'] =>  [|- ref]
   | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_s V] in [])
 
-| [ |- e_pred D] => 
-  (case s2 of 
+| [ |- e_pred D] =>
+  (case s2 of
    | [|- e_pred F]   => let [ |- ref] = det [ |- D] [|- F] in [|- ref]
    | [|- e_pred_zero] => impossible values_dont_step [|- D] [|- v_z] in []
-   | [|- e_pred_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])  
- 
-| [ |- e_iszero_zero] => 
-  (case s2 of 
+   | [|- e_pred_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])
+
+| [ |- e_iszero_zero] =>
+  (case s2 of
    | [|- e_iszero_zero] =>  [|- ref]
    | [|- e_iszero D]    => impossible values_dont_step [|- D] [|- v_z] in [])
 
-| [ |- e_iszero_succ V] => 
+| [ |- e_iszero_succ V] =>
   (case s2 of
   | [|- e_iszero_succ V']  =>  [ |- ref]
-  | [|- e_iszero D]        => impossible values_dont_step [|- D] [|- v_s V] in [])  
+  | [|- e_iszero D]        => impossible values_dont_step [|- D] [|- v_s V] in [])
 
-| [ |- e_iszero D] => 
-  (case s2 of 
+| [ |- e_iszero D] =>
+  (case s2 of
   | [|- e_iszero F]     => let [ |- ref] = det [|- D] [|- F] in  [|- ref]
   | [|- e_iszero_zero]  => impossible values_dont_step [|- D] [|- v_z] in []
-  | [|- e_iszero_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])  
+  | [|- e_iszero_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])
 ;
 
 
@@ -184,8 +184,8 @@ fn v => fn s => case v of
   let [ |- m_ref] = s in
     [ |- ref]
 
-| [ |- v_s V]   =>  
- (case s of 
+| [ |- v_s V]   =>
+ (case s of
 | [ |- m_ref] => [ |- ref])
 ;
 
@@ -199,20 +199,20 @@ If mstep M N  and mstep M N'  then equal N N'.
 msteps_to_terms: term -> term -> term -> type.
 andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 %{
-rec unique : [ |- msteps M N1] -> [|- msteps M N2] 
+rec unique : [ |- msteps M N1] -> [|- msteps M N2]
              -> [ |- value N1] -> [ |- value N2]
 	     -> [ |- equal N1 N2] =
 / total ms (unique m n1 n2 ms)/
-fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of 
-| [ |- m_step S1 MS1] => 
-  (case  ms2 of 
+fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
+| [ |- m_step S1 MS1] =>
+  (case  ms2 of
   | [|- m_ref] => lemma_val vn2 ms1
   | [|- m_step S2 MS2] =>
     let [ |- ref] = det [|- S1] [|- S2] in
     unique [|- MS1] [|- MS2] vn1 vn2
 
-| [ |- m_ref] => 
-  (case ms2 of 
+| [ |- m_ref] =>
+  (case ms2 of
   | [|- m_ref]  =>  [ |- ref]
   | [|- m_step S2 MS2]  => lemma_val vn1 ms2 )
 ;
@@ -429,4 +429,3 @@ mlam M => case [ |- M] of --not
 
 
 ;
-

@@ -98,7 +98,7 @@ fn m => case m of
 
 % The function below is not known to terminate.
 % it could in principle diverge - the fact that it
-% will not diverge has to do with the fact that 
+% will not diverge has to do with the fact that
 % step m will return a term which is in fact smaller.
 rec mstep : [ |- term] -> [ |- val_or_error] =
 fn m => case is_value? m of

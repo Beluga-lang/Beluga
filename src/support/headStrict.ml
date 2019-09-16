@@ -21,7 +21,7 @@ module OfBasicStream (S : Types.BasicStream) = struct
   let f (s : 'a S.t) : 'a t option =
     unfold s (fun s -> S.observe s)
 end
-     
+
 (** Prepend an element to a head-strict stream. *)
 let cons (x : 'a) (s : 'a t option Lazy.t) : 'a t =
   { head = x;

@@ -8,7 +8,7 @@ schema ctx = block x:term, t:pred x x;
 % For all terms M, pred M M.
 
 rec identity :{g:ctx}{M:[g |- term]} [g |- pred M M] =
-/ total m (identity g m) / 
+/ total m (identity g m) /
 mlam g => mlam M => case [g |- M] of
 | [g |- lam \x. M1] =>
   let [g, b:block x:term, t:pred x x |-  R1] =
@@ -28,11 +28,10 @@ mlam g => mlam M => case [g |- M] of
 
 rec append : (g:ctx) [g |- pred* M M']  ->  [g |- pred* M' M'']
 	     ->  [g |- pred* M M''] =
-/ total d1 (append g m m' m'' d1 d2) / 
+/ total d1 (append g m m' m'' d1 d2) /
 fn d1 => fn d2 => case d1 of
 | [g |- id*] => d2
 | [g |- next R1 R2*] =>
     let [g |- S2*'] = append [g |- R2*] d2 in
       [g |- next R1 S2*']
 ;
-

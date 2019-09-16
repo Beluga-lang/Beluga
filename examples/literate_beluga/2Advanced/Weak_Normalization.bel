@@ -2,7 +2,7 @@
 
 # Weak head normalization for simply-typed lambda calculus
 
-This example follows the proof presented in 
+This example follows the proof presented in
 <a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
 Cave and Pientka[2013]</a>.
 
@@ -12,7 +12,7 @@ LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
---name tp T.        
+--name tp T.
 
 tm : tp -> type.          --name tm E.
 app : tm (arr T S) -> tm T -> tm S.
@@ -37,7 +37,7 @@ stepapp : step M M' -> step (app M N) (app M' N).
 computing the application of `M` to `N`. <br/>
 
 Finally, we define:
--  a multiple step reduction `mstep`. 
+-  a multiple step reduction `mstep`.
 - values `val`
 - `halts` to encode that a term halts if it steps into a value.
 }}%
@@ -77,7 +77,7 @@ A term of type `i` is reducible if it halts, and a `term M` of type
 `N` of type `A`, the application `app M N` is reducible. We write
 `{N:[.tm A]}` for explicit &Pi;-quantification over `N`, a closed term
 of type `A`. To the left of the turnstile in `[|- tm A]` is where one
-writes the context the term is defined in – in this case, it is empty.  
+writes the context the term is defined in – in this case, it is empty.
 
 In this definition, the arrows represent the usual computational
 function space, not the weak function space of LF. We note that this
@@ -91,7 +91,7 @@ term(additionally this is why we cannot leave the type implicit).
 
 
 Now, we need to prove some more or less trivial lemmas that are
-usually omitted in paper presentations.  
+usually omitted in paper presentations.
 
 First, we prove that halts is closed under expansion in the `halts_step` lemma.
 }}%
@@ -102,7 +102,7 @@ mlam S ⇒ fn h =>
  [ |- halts/m (onestep S MS') V]
 ;
 
-%{{ 
+%{{
 Next we prove closure of Reduce under expansion. This follows the
 handwritten proof, proceeding by induction on the type A which is an
 implicit argument. In the base case we appeal to `halts_step`, while
@@ -120,7 +120,7 @@ mlam MS => fn r => case r of
 
 %{{
 The trivial fact that reducible terms halt has a corresponding
-trivial proof, analyzing the construction of the the proof of 
+trivial proof, analyzing the construction of the the proof of
 'Reduce[|- T] [|- M]'
 }}%
 rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
@@ -138,7 +138,7 @@ schema ctx = tm T;
 inductive RedSub : {g:ctx}{$S:[ |- g]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [g] [ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm A[]] [ |- $S,M ] 
+     → RedSub [g, x:tm A[]] [ |- $S,M ]
 ;
 
 
@@ -170,4 +170,3 @@ rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] [ |- $S[^]] -> Reduce [|- A] [ |-
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
-

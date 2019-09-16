@@ -73,4 +73,3 @@ let v4   =  [ |- switch (iszero (pred (succ z))) (switch false z (succ z)) (swit
 let r1' = mstep' v1 ; % Result will be : [ ] succ z
 let r2' = mstep' v2 ; % Result will be : [ ] true
 let r3' = mstep' v3 ; % Result will be : [ ] no_val
-

@@ -170,7 +170,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
   let genMMVarstr loc cD cPsi (Atom (_, a, _tS) as tP, s) =
     dprintf
       (fun p ->
-        p.fmt "@[<v 6>[genMMVarstr] of type %a@,in context cPsi = %a" 
+        p.fmt "@[<v 6>[genMMVarstr] of type %a@,in context cPsi = %a"
           (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tP, s))
           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       );

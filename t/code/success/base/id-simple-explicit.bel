@@ -24,4 +24,3 @@ rec plus' : [ |- nat] -> [ |- nat] -> [ |- nat] =
             | {U: [ |- nat]}[ |- s U] : [ |- nat] =>
 	      (case (plus' [ |- U] y) of
  	        {V: [ |- nat]} [ |- V] : [ |- nat] => [ |- s V]);
-

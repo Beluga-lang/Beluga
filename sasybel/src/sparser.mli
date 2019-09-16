@@ -1,5 +1,3 @@
-
-
 module Grammar : Camlp4.Sig.Grammar.Static
   with module Loc   = Slexer.Loc
   and  module Token = Slexer.Token

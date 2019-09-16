@@ -1,4 +1,4 @@
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -16,11 +16,11 @@ LF vec : nat -> type =
 % the sub-vec relation
 
 inductive LTvec : [|- vec M] -> [|- vec N] -> ctype =
-| LTcons : LTvec [|- V] [|- cons B V] 
+| LTcons : LTvec [|- V] [|- cons B V]
   % B has to be left implicit for some reason (if explicit it fails)
-  % | LTcons : {B : [|- bool]} LTvec [|- V] [|- cons B V] % B has to be left implicit for some reason (if explicit it fails)		   
+  % | LTcons : {B : [|- bool]} LTvec [|- V] [|- cons B V] % B has to be left implicit for some reason (if explicit it fails)
 | LTstep : LTvec [|- V] [|- W] -> LTvec [|- V] [|- cons B W]
-;  
+;
 
 % the accessibility predicate on LTvec
 
@@ -31,4 +31,3 @@ inductive Acc-LTvec : [|- vec N] -> ctype =
 % this works
 % | Acc : {W : [|- vec N]}({V : [|- vec M]} LTvec [|- V] [|- W] -> Acc-LTvec [|- V]) -> Acc-LTvec [|- W]
 ;
-

@@ -6,7 +6,7 @@ let symbol (s : string) : symbol option =
 
 let symbol' (s : string) : symbol =
   Symbol s
-            
+
 type atom =
   | String of string
   | SymbolAtom of symbol

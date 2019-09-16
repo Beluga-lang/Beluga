@@ -383,7 +383,7 @@ and cnormApxFBranches cD delta fbr (cD'', t) = match fbr with
   | Apx.Comp.ConsFBranch (loc, (patS, e), fbr') ->
     let e' = cnormApxExp cD delta e (cD'', t) in
     Apx.Comp.ConsFBranch (loc, (patS, e'), cnormApxFBranches cD delta fbr' (cD'', t))
-        
+
 (* ******************************************************************* *)
 (* Collect FMVars and FPVars in a given LF object                      *)
 
@@ -525,7 +525,7 @@ and collectApxTypRec fMVd trec = match trec with
 	collectApxTypRec fMVd1 trec
 
 let collectApxCDecl fMVd cdecl = match cdecl with
-  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp(_, cPhi), cPsi), _) -> 
+  | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.STyp(_, cPhi), cPsi), _) ->
       let fMVd1 = collectApxDCtx fMVd cPsi in
 	collectApxDCtx fMVd1 cPhi
   | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.MTyp tA, cPsi), _)
@@ -544,13 +544,13 @@ let rec collectApxCompTyp fMVd tau = match tau with
   | Apx.Comp.TypPiBox (cdecl, tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
-  | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi))) 
+  | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi)))
   | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.PTyp tA, cPsi))) ->
       let fMVd1 = collectApxDCtx fMVd cPsi in
 	collectApxTyp fMVd1 tA
   | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.STyp (_ , cPhi), cPsi))) ->
       let fMVd1 = collectApxDCtx fMVd cPsi in
-	 collectApxDCtx fMVd1 cPhi 
+	 collectApxDCtx fMVd1 cPhi
   | Apx.Comp.TypBase (_loc, _c, mS) ->
       collectApxMetaSpine fMVd mS
 
@@ -860,4 +860,3 @@ and fmvApxFBranches fMVs cD d_param fbr = match fbr with
     let fMVs' = collectApxPatSpine fMVs patS in
     Apx.Comp.ConsFBranch (loc, (patS, fmvApxExp fMVs' cD d_param e),
                           fmvApxFBranches fMVs cD d_param fbr')
-    

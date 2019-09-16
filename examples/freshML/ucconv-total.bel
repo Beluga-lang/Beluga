@@ -36,14 +36,14 @@ LF fvlist: type =
 schema ctx = term;
 schema tctx = target;
 
-inductive Fvs: {g:ctx} ctype = 
+inductive Fvs: {g:ctx} ctype =
 | Nil : Fvs [g]
 | Cons: {#p:[g |- term]} Fvs [g] -> Fvs [g];
 
 
-rec append: Fvs [g] -> Fvs [g] -> Fvs [g] = 
-/ total l (append g l) /  
-fn a => fn b => case a of 
+rec append: Fvs [g] -> Fvs [g] -> Fvs [g] =
+/ total l (append g l) /
+fn a => fn b => case a of
 | Nil => b
 | Cons [g |- #p] l => Cons [g |- #p] (append l b)
 ;
@@ -76,7 +76,7 @@ fn e => case e of
 % makeproj return the nth project of pair y
 % makeproj n = tfst(. (tfst y))
 rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
-/ total n (makeproj' n ) / 
+/ total n (makeproj' n ) /
 fn n => case n of
 | [ |- z] => [xenv:target |-  (tfst xenv)]
 | [ |- suc M] =>
@@ -85,7 +85,7 @@ fn n => case n of
 ;
 
 rec makeproj: [ |- nat] -> [xenv:target |- target] =
-/ total n (makeproj n) /  
+/ total n (makeproj n) /
 fn n =>
    let [xenv:target |-  T] = makeproj' n in
        [xenv:target |-  tfst T]
@@ -97,9 +97,9 @@ fn n =>
 
 rec b_map:(g:ctx)Fvs [g] ->({#p:[g,x:term |- term]} [xenv:target |-  target]) -> [ |- nat] ->
 	  {#p:[g,x:term |- term]}[xenv:target |-  target] =
-/ total l (b_map g l )/  
+/ total l (b_map g l )/
 fn l => fn map => fn n => case l of
-| Nil => 
+| Nil =>
   let ( l : Fvs [g]) = l in
     (mlam #p => case [g,x:term |- #p]  of
 	       |[g,x:term |- x]     => [xenv:target |- tsnd xenv]
@@ -107,9 +107,9 @@ fn l => fn map => fn n => case l of
 	    )
 | Cons [g |- #p] l =>
 let [ |- N] = n in
- (mlam #q => case ([g,x:term |- #q], [g,x:term |- #p[..]]) of 
+ (mlam #q => case ([g,x:term |- #q], [g,x:term |- #p[..]]) of
                 | ([g,x:term |- #v], [g,x:term |- #v]) => makeproj [ |- N]
-                | ([g,x:term |- _ ] , [g,x:term |- _ ] ) => 
+                | ([g,x:term |- _ ] , [g,x:term |- _ ] ) =>
                  b_map l map [ |- suc N] [g,x:term |- #q])
 
 ;

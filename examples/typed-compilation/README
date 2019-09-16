@@ -1,4 +1,3 @@
-
 - Translation between DeBruijn and HOAS
    (type preserving)
 
@@ -62,7 +61,3 @@ Possible extensions / Related systems :
    Eijiro Sumii
 
 - From System F to typed assembly language
-
-
-
-

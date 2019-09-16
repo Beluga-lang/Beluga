@@ -2,16 +2,15 @@ inductive Empty : ctype     =
  ;
 
 
-inductive D : ctype    
- = 
+inductive D : ctype
+ =
  | Con :  (D -> Empty) -> D
 ;
 
 rec t1 : D -> Empty
- = 
-fn d => case d of 
+ =
+fn d => case d of
    | Con f => f d
 ;
 
-% let t2 : Empty = t1 (Con t1); 
-
+% let t2 : Empty = t1 (Con t1);

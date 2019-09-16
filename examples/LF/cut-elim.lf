@@ -171,5 +171,3 @@ cal_forallr' :
           ca' A (\ p . D1 p a p1) (\ n . E n) (F1 a p1))
          -> ca' A (\ p . forallr' (\ a . \ p1 . D1 p a p1) P)
                (\ n . E n) (forallr' (\ a . \ p . F1 a p) P).
-
-

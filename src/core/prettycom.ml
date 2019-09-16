@@ -1,6 +1,6 @@
 open Syntax.Common
 open Format
-   
+
 let print_wf_tag ppf : bool -> unit =
   function
   | true -> fprintf ppf "*"
@@ -20,12 +20,12 @@ let fmt_ppr_lf_svar_class ppf : LF.svar_class -> unit =
   function
   | LF.Ren -> fprintf ppf "#"
   | LF.Subst -> ()
-              
+
 type depend_print_style =
   [ `depend
   | `inductive
   ]
-  
+
 let fmt_ppr_lf_depend (style : depend_print_style) ppf : LF.depend -> unit =
   fun d ->
   match style with

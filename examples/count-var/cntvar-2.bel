@@ -4,7 +4,7 @@
 %
 % This example only uses weak higher-order abstract syntax.
 
-LF tp  : type =  
+LF tp  : type =
   | nat : tp
   | bool: tp
 ;
@@ -34,7 +34,7 @@ case x of
 % [ |- U] => y
 ;
 
-rec cntV : {g:expCtx} [g, x:exp T |-  exp S] -> [ |- exp nat] = 
+rec cntV : {g:expCtx} [g, x:exp T |-  exp S] -> [ |- exp nat] =
 % / total e (cntV _ _ _ e) /
 mlam g =>
  fn e =>

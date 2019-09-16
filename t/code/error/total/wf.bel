@@ -1,6 +1,6 @@
 % coverage
 
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -21,9 +21,8 @@ rec half-wf' : {M : [|- nat]} Acc-le [|- M] -> [|- nat] =
 mlam M => fn p => case [|- M] of
 | [|- z] => [|- z]
 | [|- s z] => [|- z]
-| [|- s (s N)] => 
+| [|- s (s N)] =>
   let Acc x = p in
   let [|- R] = half-wf' [|- s (s N)] p in %% Should fail here
   [|- s R]
 ;
-

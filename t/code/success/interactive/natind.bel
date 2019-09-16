@@ -1,11 +1,11 @@
-inductive Nat : ctype = 
+inductive Nat : ctype =
 | Z : Nat
 | S : Nat -> Nat ;
 
 rec test : Nat -> Nat = fn y =>
- (case y of 
- | Z   =>   ? 
- 
- | S v1   =>   ? 
- 
+ (case y of
+ | Z   =>   ?
+
+ | S v1   =>   ?
+
 )  ;

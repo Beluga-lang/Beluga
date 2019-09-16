@@ -1,20 +1,20 @@
-inductive A: ctype 
+inductive A: ctype
 =
 % | A1: ((A -> A) -> A) -> A % fail
  | A2: A * A -> A
 % | A3: (A -> (A * A)) -> A % fail
 ;
 
-inductive B: ctype 
+inductive B: ctype
 =
 % | B1: ((A -> B) -> B) -> B % fail
  | B2: ((A -> A) -> B) -> B
- | B3: A -> (A * B) -> B 
+ | B3: A -> (A * B) -> B
  | B4: (A -> (A -> B)) -> B
  | B5: (A -> B) -> (B * B) -> B
 ;
 
-inductive C: ctype 
+inductive C: ctype
 =
  | C1: (A -> B) * (A -> C) -> C
  | C2: (B -> A) -> (C * (A -> C)) -> C
@@ -22,5 +22,5 @@ inductive C: ctype
 % | C4:  ((A -> C) -> (B -> C)) * (A -> (B * C)) -> C % fail
  | C5: (A -> B) -> (B * C) -> A -> C
  | C6: (B * A) -> (C * A) -> C
-% | C7: (B * A) -> ((A * C) -> (A -> B -> C)) -> C  % fail 
+% | C7: (B * A) -> ((A * C) -> (A -> B -> C)) -> C  % fail
 ;

@@ -11,4 +11,3 @@ fn e => case e of
 | [g |- lam \x. M] => e
 
 ;
-

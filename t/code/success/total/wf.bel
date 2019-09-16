@@ -1,6 +1,6 @@
 % coverage
 
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -21,7 +21,7 @@ rec wf-rel' : {N : [|- nat]} {M : [|- nat]}[|- le M N] -> Acc-le [|- M] =
 / total x (wf-rel' x) /
  mlam X => mlam Y => fn p => case [ |- X ] of
 | [|- z] => impossible p in []
-| [|- s X'] => let ih = wf-rel' [|- X'] in (case p of 
+| [|- s X'] => let ih = wf-rel' [|- X'] in (case p of
 %    | [|- le-base] => Acc (wf-rel' [|- X'])
    | [|- le-base] => Acc ih
    | [|- le-step P] => ih [|- Y] [|- P])
@@ -37,10 +37,8 @@ rec half-wf : {M : [|- nat]} Acc-le [|- M] -> [|- nat] =
 mlam M => fn p => case [|- M] of
 | [|- z] => [|- z]
 | [|- s z] => [|- z]
-| [|- s (s N)] => 
+| [|- s (s N)] =>
   let Acc x = p in
-  let [|- R] = half-wf [|- N] (x [|- N] [|- le-step le-base]) in 
+  let [|- R] = half-wf [|- N] (x [|- N] [|- le-step le-base]) in
   [|- s R]
 ;
-
-    

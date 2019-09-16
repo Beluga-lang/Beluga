@@ -5,7 +5,7 @@ type filename = string
 let parse_gen (filename : filename) g (p : 'a Parser.t) : Parser.state * 'a Parser.result =
   let l = Lexer.mk (Location.initial filename) g |> LinkStream.of_gen in
   Parser.run p (Parser.initial_state l)
-  
+
 let parse_file (filename : filename) (p : 'a Parser.t) : Parser.state * 'a Parser.result =
   Gen.IO.with_in filename (fun g -> parse_gen filename g p)
 

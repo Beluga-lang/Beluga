@@ -202,7 +202,7 @@ let rec split (c : char) (m : string) : (string list * string) =
 let mkEmptyPat (loc, pHat) = Comp.PatMetaObj (loc, (loc,Comp.ClObj (pHat,Comp.MObj (LF.PatEmpty loc))))
 
 type patOrObs = IsPat of Comp.pattern | IsObs of name
-  
+
 (*******************************)
 (* Global Grammar Entry Points *)
 (*******************************)
@@ -1150,7 +1150,7 @@ GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk numeric_total_order;
       ]
     ]
   ;
-  
+
   cmp_exp_chkX:
     [ LEFTA
         [ "fn"; fs = LIST1 fn_exp SEP ","; rArr; e = cmp_exp_chk ->
@@ -1160,7 +1160,7 @@ GLOBAL: sgn cmp_typ harpoon_command cmp_exp_chk numeric_total_order;
         let br' = List.fold_left (fun acc pat -> Comp.ConsFBranch (_loc, pat, acc))
           (Comp.NilFBranch _loc) (List.rev br) in
         Comp.Fun (_loc, br')
-        
+
       | "mlam"; args = LIST1 mlam_exp SEP ","; rArr; e = cmp_exp_chk ->
         List.fold_left (fun acc s -> Comp.MLam(_loc, (Id.mk_name (Id.SomeString s)), acc)) e (List.rev args)
 

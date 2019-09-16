@@ -7,7 +7,7 @@
 }%
 
 % Small-step operational semantics
-LF step: term -> term -> type = 
+LF step: term -> term -> type =
 | e_if_true:   step (if_then_else true T2 T3)    T2
 | e_if_false:  step (if_then_else false T2 T3)   T3
 | e_if:        step T1 T1'
@@ -73,15 +73,15 @@ fn s => case s of
 rec deterministic : [ |- step T T1] -> [|- step T T2] -> [ |- equal T1 T2] =
 / total s1 (deterministic t t1 t2 s1)/
 fn s1 => fn s2 => case s1 of
-| [ |- e_if_true] => (case s2 of 
+| [ |- e_if_true] => (case s2 of
        | [ |- e_if_true]  =>  [ |- ref]
        | [|- e_if D] => impossible [|- D] in []
   )
-| [ |- e_if_false] => (case s2 of 
+| [ |- e_if_false] => (case s2 of
        | [ |- e_if_false]  =>  [ |- ref]
        | [|- e_if D] => impossible [|- D] in []
   )
- | [ |- e_if D] => (case s2 of 
+ | [ |- e_if D] => (case s2 of
       | [|- e_if E] =>
           let [ |- ref] = deterministic [ |- D] [|- E] in  [ |- ref]
       | [|- e_if_true] => impossible [|- D] in []

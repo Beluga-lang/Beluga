@@ -9,7 +9,7 @@
 
 This case study shows how to implement a type-preserving normalizer using normalization by evaluation [Berger and Schwichtenberg 1991]. Here we compute $\eta$-long normal forms for the simply-typed lambda calculus. See also [Cave and Pientka 2012] for more information on this example.
 
-The setup is a standard intrinsically-typed lambda calculus: 
+The setup is a standard intrinsically-typed lambda calculus:
 }}%
 
 tp : type.                --name tp T.
@@ -64,7 +64,7 @@ Environments:
 }}%
 
 typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:[g |- tm T[]]} Sem [h] [ |- T]);
- 
+
 rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S[]] [h] =
 fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p] of
 | [g,x:tm S |-  x] => e
@@ -127,5 +127,3 @@ fn t => reify (eval t emp_env);
 %{{
 One could also implement `nbe` to directly normalize terms in an environment: `[g |- tm A] -> [h |- norm A]` where `h` is appropriately related to `g`. We leave this as an exercise for the reader.
 }}%
-
-

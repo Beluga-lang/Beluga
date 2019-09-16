@@ -1,5 +1,3 @@
-
-
 atomic_tp : type.
 
 LF tp : type =
@@ -166,6 +164,3 @@ mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)
 ;
-
-
-

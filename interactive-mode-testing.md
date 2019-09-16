@@ -8,7 +8,7 @@ Terminology:
 * _The interactive mode_ refers to the interactive prompt you get when you run
   `beluga -I` (and optionally with `-emacs`, which just suppresses certain
   helpful human-intended output.)
-  
+
 To test the interactive mode, we use a _test transcript_, with the following
 format:
 
@@ -32,4 +32,3 @@ format:
    If the output matches, then the output is written to the file
    `last-output.bel`; this allows the subsequent command to use the output of
    the previous command, e.g. to fill a hole with the output of a split.
-   

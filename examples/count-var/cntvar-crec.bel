@@ -2,13 +2,13 @@
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 
-LF tp  : type =  
+LF tp  : type =
   | nat : tp
   | bool: tp
 ;
 --name tp T.
 
-LF exp : tp -> type =  
+LF exp : tp -> type =
   | z   : exp nat
   | s   : exp nat -> exp nat
   | tt  : exp bool
@@ -38,7 +38,7 @@ fn x => fn y => case x of
 % if  G, x: exp T |-  U ==> n1
 % if  G, y:exp _ , x: exp T |-  V  y ==> n2
 
-rec cntV : (g:expCtx)  [g, x:exp T |-  exp S] -> [ |- exp nat] = 
+rec cntV : (g:expCtx)  [g, x:exp T |-  exp S] -> [ |- exp nat] =
 % / total e (cntV _ _ _ e) /
 fn e => case e of
  | [g,x : exp _  |-  tt]        => [ |- z]
@@ -57,6 +57,3 @@ fn e => case e of
         (cntV [g,x |- W])
 
 ;
-
-
-

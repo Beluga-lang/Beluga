@@ -45,4 +45,3 @@ LF hastype : term -> tp -> type =
 | t_pred : hastype M nat -> hastype (pred M) nat
 | t_iszero : hastype M nat -> hastype (iszero M) bool
 ;
-

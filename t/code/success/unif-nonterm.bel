@@ -21,4 +21,3 @@ inductive IsLam : {g:ctx}{M:[g,x:tm (A[]) |-  tm (B[])]}{N:[ |- tm (arr (A[]) (B
    ({U:[ |- tm A]} IsInstantiation [g,x:tm (A[])] [g,x:tm (A[]) |- M] [ |- N1[U]]) ->
   IsLam [g] [g,x:tm (A[]) |-  M] [ |- lam (\x. N1)]
 ;
-

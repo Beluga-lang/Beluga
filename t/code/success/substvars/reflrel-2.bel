@@ -464,5 +464,3 @@ case d of
   [psi |-  ae_l \x.\u. E]
 
 ;
-
-

@@ -1,8 +1,7 @@
 inductive Person : ctype  = P : Person;
 
-inductive Test : ctype 
+inductive Test : ctype
  =
- | T  : Test 
+ | T  : Test
  | T1 : ((Test -> Person)  -> Test) -> Test
 ;
-

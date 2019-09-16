@@ -1,5 +1,4 @@
-inductive A: ctype 
+inductive A: ctype
 =
  | A3: (A -> (A * A)) -> A % fail
 ;
-

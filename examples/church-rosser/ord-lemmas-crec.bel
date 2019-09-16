@@ -51,4 +51,3 @@ mlam M1 => fn r => case r of
   let [g |- S2*] = apr1* [g |- M1 ] [g |- R2*] in
     [g |- step1 (apr1 (R1 )) (S2*)]
 ;
-

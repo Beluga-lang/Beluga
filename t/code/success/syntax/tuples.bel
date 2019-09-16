@@ -6,7 +6,7 @@ bilam : (tm -> tm -> tm) -> tm. % a lambda with two parameters
 schema ctx = block x: tm , y: tm;
 
 % rec subst : (gamma : ctx) [gamma, b:block(x: tm, y: tm) |- tm] -> [gamma |- tm] -> [gamma |- tm] =
-% fn m => fn n => 
+% fn m => fn n =>
 % let [gamma, b:block(x: tm, y: tm)  |- M..b] = m in
 % let [gamma |- N..] = n in
 % [gamma |- M.. <N.. , N..>]
@@ -14,7 +14,7 @@ schema ctx = block x: tm , y: tm;
 
 
 rec subst :  [b:block(x: tm, y: tm) |- tm] -> [|- tm] -> [|- tm] =
-fn m => fn n => 
+fn m => fn n =>
 let [b:block(x: tm, y: tm)  |- M] = m in
 let [|- N] = n in
 [|- M[<N ; N>]]

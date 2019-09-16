@@ -1,7 +1,7 @@
 % coverage checking example:
 %
 %   a trivial example of an empty (or "absurd") case
-% 
+%
 constructorless : type.
 
 nat : type.
@@ -24,5 +24,3 @@ rec empty-example-2 : (g:nats) [g |- constructorless] -> [ |- nat] =
     case c of
       [g |- {}]
 ;
-
-

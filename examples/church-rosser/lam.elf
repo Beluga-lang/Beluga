@@ -1,8 +1,7 @@
 %%% Untyped lambda-calculus
 %%% Author: Frank Pfenning
 
-LF term : type =  
+LF term : type =
   | lam : (term -> term) -> term
   | app : term -> term -> term
 ;
- 

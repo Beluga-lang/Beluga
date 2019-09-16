@@ -92,4 +92,3 @@ let a2 = (equal y1) y1;
 let y4 = eval [ |- eq (suc z) (suc z)] ;
 
 let y5 = eval [ |- letv (iff tt (suc z) z) (\y. iff (eq (value y) (suc z)) (suc (value y)) (value y))] ;
-

@@ -174,7 +174,7 @@ rec whExp : {A : [|- ty]} {B : [|- ty]} {T : [|- ty]}
    [g |- SN N] ->
    {E : [g |- ecxt \y.C]}
     Red [|- T] [g |- C[.., M [.., N]] ]
-    -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] = ? ; 
+    -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] = ? ;
 %{
   %% / total t (whExp g a b t) /
   mlam A,B,T,C,M,N => fn sn => mlam E => fn r =>

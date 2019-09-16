@@ -2,7 +2,7 @@ type open_or_closed =
   [ `open_term
   | `closed_term
   ]
-  
+
 type fvars =
   { open_flag : open_or_closed
   ; vars : Store.CVar.cvar list
@@ -20,7 +20,7 @@ val typ      : name_disambiguator ->
 
 val schema   : Syntax.Ext.LF.schema -> Syntax.Apx.LF.schema
 
-val mctx     : Syntax.Ext.LF.mctx -> Syntax.Apx.LF.mctx  
+val mctx     : Syntax.Ext.LF.mctx -> Syntax.Apx.LF.mctx
 
 val compkind : Syntax.Ext.Comp.kind -> Syntax.Apx.Comp.kind
 

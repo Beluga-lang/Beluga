@@ -619,5 +619,3 @@ mlam M => fn ms => fn v => case [ |- M] of
     vself v
 
 ;
-
-

@@ -16,6 +16,3 @@ and vtrans : val -> exp -> type =         % name vtrans U.
 % Values
   | vtr_lam : trans K (lam' F) (lam (\x. E x)) -> vtrans (clo K (lam' F)) (lam (\x. E x))
 ;
-
-
-

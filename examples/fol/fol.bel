@@ -65,5 +65,3 @@ rec join :  [ |- up (imp (conj (imp (atom P) (atom Q))  (imp (atom P) (atom R)))
 
           )]
 ;
-
-

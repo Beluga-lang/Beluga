@@ -1,4 +1,3 @@
-
 LF ty : type =
   | base : ty
   | arr  : ty -> ty -> ty
@@ -52,7 +51,7 @@ inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
 
 %% rec fundAbs : Red
 
-rec whExp : Red [|- A] [g |- M [.., N] ] 
+rec whExp : Red [|- A] [g |- M [.., N] ]
          -> Red [|- A] [g |- (app (abs \ x. M) N)] =
   ?
   ;
@@ -77,7 +76,7 @@ Entry S displays B, but should display g as source context for the renaming.
 Hole Number 1
 File "/home/abel/play/beluga/sn.bel", line 208, characters 38-39
 ________________________________________________________________________________
-    - Meta-Context: 
+    - Meta-Context:
 	{g : cxt}
 	{A : [ |- ty]}
 	{B : [ |- ty]}

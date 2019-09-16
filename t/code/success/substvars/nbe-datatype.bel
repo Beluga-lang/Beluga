@@ -1,5 +1,3 @@
-
-
 atomic_tp : type.
 tp : type.                --name tp T.
 atomic : atomic_tp -> tp.
@@ -85,5 +83,3 @@ case e of
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify (eval Nil t)
 ;
-
-

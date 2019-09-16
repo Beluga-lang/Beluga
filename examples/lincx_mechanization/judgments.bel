@@ -6,20 +6,20 @@
 
 % Psi |- M <= A
 
-LF check_tp : ctx -> canon -> tp -> type = 
+LF check_tp : ctx -> canon -> tp -> type =
    | chk_lam : ({x:var} check_tp (snoc Psi (decl x A unr)) (M x) (B x)) -> check_tp Psi (lam (\x.M x)) (pi A (\x.B x))
    | chk_llam : ({x:var} check_tp (snoc Psi (decl x A lin)) (M x) B) -> check_tp Psi (llam (\x.M x)) (limp A B)
    | chk_sp : joining (cjoin Psi1 Psi2 Psi) -> synth_tp Psi1 H A -> spine_synth_tp Psi2 S A P -> check_tp Psi (c_atom (atom_base H S)) (atp_canon P)
 
-% Psi |- H => A										  
+% Psi |- H => A
 and synth_tp : ctx -> head -> tp -> type =
    | syn_cst : cst_in C A S -> is_unr Psi -> synth_tp Psi (hd_cst C) A
    | syn_var_unr : ({x : var} is_unr Psi) -> synth_tp (snoc Psi (decl x A unr)) (hd_var x) A
    | syn_var_lin : ({x : var} is_unr Psi) -> synth_tp (snoc Psi (decl x A lin)) (hd_var x) A
 
-% Psi |- S > A 
-						      
-and spine_synth_tp : ctx -> spine -> tp -> atp -> type = 
+% Psi |- S > A
+
+and spine_synth_tp : ctx -> spine -> tp -> atp -> type =
    | sp_syn_empty : is_unr Psi -> spine_synth_tp Psi sp_empty (atp_canon P) P
    | sp_syn_lam : unrest_ctx Psi Psi_unr -> check_tp Psi_unr M A -> ({x : var} subst_tp M Alpha (\x.B x) B_sub) -> spine_synth_tp Psi S B_sub P -> spine_synth_tp Psi (sp_unr M S) (pi A (\x.B x)) P
    | sp_syn_llam : joining (cjoin Psi Psi1 Psi2) -> check_tp Psi1 M A -> spine_synth_tp Psi2 S B P -> spine_synth_tp Psi (sp_lin M S) (limp A B) P
@@ -37,7 +37,7 @@ LF subst_typing : sim_subst -> ctx -> ctx -> type =
    | stp_unr      : unrest_ctx Phi Phi_unr -> subst_typing sigma Phi Psi
 		    -> unrest_ctx Psi Psi_unr -> sim_subst_tp sigma Phi_unr cer_empty A B
 		    -> check_tp Psi_unr M B -> subst_typing (s_snoc sigma M) (snoc Phi (decl x A unr)) Psi
-   | stp_unav     : unrest_ctx Phi Phi_unr -> subst_typing sigma Phi Psi 
+   | stp_unav     : unrest_ctx Phi Phi_unr -> subst_typing sigma Phi Psi
 		     -> unrest_ctx Psi Psi_unr -> unrest_ctx Psi' Psi'_unr
 		     -> ctx_eq Psi_unr Psi'_unr
 		     -> sim_subst_tp sigma Phi_unr cer_empty A B -> check_tp Psi' M B

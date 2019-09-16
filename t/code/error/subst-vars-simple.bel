@@ -51,7 +51,7 @@ inductive SN : (g : cxt) {M : [ g |- tm A[] ]} ctype =
 
 rec renSN : {g2 : cxt} {$R : [g2 |-# g1]} {M : [g1 |- tm A[]]}
        SN [g1 |- M]
-    -> SN [g2 |- M[$R]] = ? 
+    -> SN [g2 |- M[$R]] = ?
 
   ;
 
@@ -75,7 +75,7 @@ inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
 
 rec renRed : {g2 : cxt} {$R : [g2 |-# g1]}
        Red [|- A[]] [g1 |- M]
-    -> Red [|- A[]] [g2 |- M[$R]] = ? 
+    -> Red [|- A[]] [g2 |- M[$R]] = ?
 
   ;
 
@@ -103,23 +103,21 @@ rec whExp : {T : [|- ty]}
    [g |- ecxt \y.C]
     -> Red [|- T] [g |- C[.., M [.., N]] ]
     -> Red [|- T] [g |- C[.., app (abs \ x. M) N] ] =
-  mlam T,C,N => fn e, r => 
+  mlam T,C,N => fn e, r =>
     let [g |- E] = e in  ?
 %{
     case [|- T] of
     | [|- base   ] => ?
     | [|- arr U V] => ?
 }%
-%{ RArr (mlam g', $S, N0 => fn s => 
- %{       whExp 
-          [|- V] 
-          [g', x : tm _ |- app C[$S[..], x] N0[..]] 
-          [g' |- N[$S]] 
+%{ RArr (mlam g', $S, N0 => fn s =>
+ %{       whExp
+          [|- V]
+          [g', x : tm _ |- app C[$S[..], x] N0[..]]
+          [g' |- N[$S]]
            ?
-%          [g' |- eext E[$S]] 
+%          [g' |- eext E[$S]]
 }%
           ?)
 }%
   ;
-
-

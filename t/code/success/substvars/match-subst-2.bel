@@ -25,23 +25,23 @@ eq : exp T -> exp T -> type.
 refl : eq E E.
 
 
-inductive Ex_var: (g:ctx)(h:ctx){$S:[h |- g]}{#p:[g |- exp T[]]} ctype = 
+inductive Ex_var: (g:ctx)(h:ctx){$S:[h |- g]}{#p:[g |- exp T[]]} ctype =
 | Ex_V: {h:ctx}{g:ctx}{$S:[h |- g]}{#p:[g |- exp T[]]} {E:[h |- exp T[]]}
          IsVar [ |- T] [h |- E] -> [h |- eq E #p[$S]  ]
           -> Ex_var [h |- $S] [g |- #p]
 ;
 
- rec ren_var : (g:ctx)(h:ctx) IsVar [|- T] [g |- #p] -> Ren [g] [h |- $S] -> Ex_var [h |- $S] [g |- #p] = 
-fn e, r => 
-  case r of 
-| RNil => let IsVarC [ |- #p] = e in impossible [ |- #p] 
+ rec ren_var : (g:ctx)(h:ctx) IsVar [|- T] [g |- #p] -> Ren [g] [h |- $S] -> Ex_var [h |- $S] [g |- #p] =
+fn e, r =>
+  case r of
+| RNil => let IsVarC [ |- #p] = e in impossible [ |- #p]
 | {h:ctx}{g0:ctx}{T:[ |- tp]}{$R0:[h |- g0]} {#q:[h |- exp T[]]}
   (RCons r' [h |- #q]) : Ren [g0, x:exp T[]] [h |- $R0, #q]  =>
-  case e of 
-   | IsVarC [g0,x:exp T[] |- x ] => 
-   let r' : Ren [g0] [h |- $R] = r' in 
-      Ex_V [h] [g0, x:exp T[]] [h |- $R, #q] [g0, x:exp T[] |- x] [h |- #q] 
-        (IsVarC [h |- #q]) [h |- refl] 
+  case e of
+   | IsVarC [g0,x:exp T[] |- x ] =>
+   let r' : Ren [g0] [h |- $R] = r' in
+      Ex_V [h] [g0, x:exp T[]] [h |- $R, #q] [g0, x:exp T[] |- x] [h |- #q]
+        (IsVarC [h |- #q]) [h |- refl]
 
    | IsVarC [g0,x:exp T[] |- #p[..]] =>
       let r' : Ren [g0] [h |- $R] = r' in  % [h |- $R : g0]
@@ -53,12 +53,12 @@ fn e, r =>
 
 %  rec ren_var : (g:ctx)(h:ctx) IsVar [|- T] [g |- #p] -> Ren [g] [h |- $S] -> IsVar [ |- T] [h |- #p[$S] ] = ?
 % fn e => fn r => ?
-%{ case r of 
+%{ case r of
 | RNil => let IsVarC [ |- #p] = e in impossible [ |- #p]
 }%
-%{ | [] => 
+%{ | [] =>
    | IsVarC [g,x:exp T[] |- x] => let RCons r' [h |- #q] = r in IsVarC [h |- #q]
-   | IsVarC [g,x:exp T[] |- #p[..]] => let RCons r' [h |- #q] = r in ren_var (IsVarC [g |- #p]) r' 
+   | IsVarC [g,x:exp T[] |- #p[..]] => let RCons r' [h |- #q] = r in ren_var (IsVarC [g |- #p]) r'
 }%
 ;
 
@@ -67,22 +67,22 @@ fn e, r =>
 
 
 inductive Subst : {g:ctx} {h:ctx} {$S1 : [h |- g]} ctype =
-  | Nil : Subst [] [h] [h |- ^] 
-  | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- $S1] 
+  | Nil : Subst [] [h] [h |- ^]
+  | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- $S1]
             -> Subst [g,x:exp T[]] [h] [h |- $S1, E1]
 ;
 
-rec testEmpty : {$S: [ |- ]} [ |- exp top] = 
+rec testEmpty : {$S: [ |- ]} [ |- exp top] =
 mlam $S => let [ |- ^ ] = [ |- $S] in ? ;
 
-rec test0:{g:ctx}{$S: [ |- g]}[g |- exp top] = 
-mlam g, $S => case [g] of 
-| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ? 
+rec test0:{g:ctx}{$S: [ |- g]}[g |- exp top] =
+mlam g, $S => case [g] of
+| [] => let [ |- ^ ] : $[ |- ] = [ |- $S] in ?
 | [g, x:exp T] => ?
 ;
 
-rec test: {g:ctx}[g, x:exp T |- exp S[..]] -> [g, x:exp T |- exp S[..]] = 
-mlam g => fn e => let [g, x:exp T |- E] = e in 
+rec test: {g:ctx}[g, x:exp T |- exp S[..]] -> [g, x:exp T |- exp S[..]] =
+mlam g => fn e => let [g, x:exp T |- E] = e in
 case [g, x:exp T |- E] of
  | [g, x: exp top |- F] => e
 ;
@@ -110,7 +110,7 @@ rec test0: {g:ctx}{h:ctx}{$S: [h |- g]} Subst [g] [h] [h |- $S] =
 
 rec test1: {g:ctx}{h:ctx}{$S: [h |- g]} Subst [g] [h] [h |- $S] =
     mlam g,h, $S => case [h |- $S[..]] of
-% | [h0 |- ^ ] => ? 
+% | [h0 |- ^ ] => ?
 | {g0:ctx}{h0:ctx}{$T:[h0 |- g0]}{R:[ |- tp]}{E:[h0 |- exp R[] ]}
   [h0 |- $T, E[..]] : $[h0 |- g0, x:exp R[]]
 => ?

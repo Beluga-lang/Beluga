@@ -1,9 +1,8 @@
-
 tm: type.
-tp: type. 
+tp: type.
 oft: tm -> tp -> type.
 
-% 
+%
 % schema xtG = block (x:tm, u:oft x T);
 %{%
 instead of
@@ -18,4 +17,3 @@ inductive Rxrt: {g:xrG} {h:xtG} ctype =
 | Rxrt_nil : Rxrt [] []
 | Rxrt_cons: Rxrt [g] [h] ->
      Rxrt [g,b: block (x:tm, u:pr x x)] [h, b:block(x:tm, v:oft x A)];
-

@@ -26,4 +26,3 @@ peqr : ccp D C' C
 
 % mode peqr +CP -SD.
 %lex {CP} peqr CP _.
-

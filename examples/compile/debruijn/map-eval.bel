@@ -49,5 +49,3 @@ fn d => fn c => case c of
 ev_vtr: exp -> val  -> type.
 
 ev_vtrans: eval E V → vtrans W V → ev_vtr E W.
-
-

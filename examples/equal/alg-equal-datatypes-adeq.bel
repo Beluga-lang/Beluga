@@ -182,6 +182,3 @@ rec saeq : (h:aCtx)(g:tctx) Aeq [g |- M'] [g |- N'] ->
            [h |- aeq M N] =
 fn ae => fn tr1 => fn tr2 => atrans_s (aeq_wk ae tr1 tr2)
 ;
-
-
-

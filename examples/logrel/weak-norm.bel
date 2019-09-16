@@ -187,4 +187,3 @@ rec main : {g:ctx}{M:[g |- tm A[]]} RedSub [g] [ |- $S[^]] -> Reduce [|- A] [ |-
 rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
 mlam M => reduce_halts (main [] [ |- M] Nil)
 ;
-

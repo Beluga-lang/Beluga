@@ -26,7 +26,7 @@ type error =
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
   | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
-  | IllTypedMetaObj  of mctx * clobj * dctx * cltyp 
+  | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
   | TermWhenVar      of mctx * dctx * normal
   | SubWhenRen       of mctx * dctx * sub
   | MissingType of string
@@ -110,7 +110,7 @@ let _ = Error.register_printer
 
       | LeftoverFV ->
 	  Format.fprintf ppf "Leftover free variable."
-      | IllTypedMetaObj (cD, cM, cPsi, mT) -> 
+      | IllTypedMetaObj (cD, cM, cPsi, mT) ->
             Format.fprintf ppf
               "Meta object %a does not have type %a."
               (P.fmt_ppr_lf_mfront cD P.l0) (ClObj (Context.dctxToHat cPsi, cM))
@@ -126,11 +126,11 @@ let _ = Error.register_printer
                 (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
       | TermWhenVar (cD, cPsi, tM) ->
 	Format.fprintf ppf "A term was found when expecting a variable.@." ;
-	Format.fprintf ppf "Offending term: %a @." 
+	Format.fprintf ppf "Offending term: %a @."
 	  (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
-      | SubWhenRen (cD, cPsi, sub) -> 
+      | SubWhenRen (cD, cPsi, sub) ->
 	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
-	Format.fprintf ppf "Offending substitution: %a @." 
+	Format.fprintf ppf "Offending substitution: %a @."
 	  (P.fmt_ppr_lf_sub cD cPsi P.l0) sub
   ))
 
@@ -147,10 +147,10 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
 
 (* let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
   | (_ , Empty) -> true
-  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
-      if Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) then 
-	convSubsetCtx cPsi1 cPsi2 
-      else 
+  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) ->
+      if Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) then
+	convSubsetCtx cPsi1 cPsi2
+      else
 	convSubsetCtx cPsi1 cPsi'
 *)
 
@@ -163,19 +163,19 @@ let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast (x,tB), s')) ->
       Whnf.convTyp (tA, s) (tB, s') ||
-	convPrefixTypRec (recA, Substitution.LF.dot1 s) 
+	convPrefixTypRec (recA, Substitution.LF.dot1 s)
 	                 (SigmaLast (x,tB), Substitution.LF.comp s' Substitution.LF.shift)
 
   | ((SigmaElem (_xA, tA, recA), s), ((SigmaElem(xB, tB, recB) as rB), s')) ->
-      if Whnf.convTyp (tA, s) (tB, s') 
-      then convPrefixTypRec (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s') 
-      else convPrefixTypRec (recA, Substitution.LF.dot1 s) (rB, Substitution.LF.comp s' Substitution.LF.shift)  
+      if Whnf.convTyp (tA, s) (tB, s')
+      then convPrefixTypRec (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s')
+      else convPrefixTypRec (recA, Substitution.LF.dot1 s) (rB, Substitution.LF.comp s' Substitution.LF.shift)
 
   | ((SigmaLast _ , _ ), _ ) -> false
 
 let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
-  convPrefixCtx cSome1 cSome2 && 
-    convPrefixTypRec (typRec1, Substitution.LF.id) (typRec2, Substitution.LF.id) 
+  convPrefixCtx cSome1 cSome2 &&
+    convPrefixTypRec (typRec1, Substitution.LF.id) (typRec2, Substitution.LF.id)
 
 
 (* ctxToSub' cPhi cPsi = s
@@ -206,7 +206,7 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
  * otherwise exception Error is raised
  *)
 let rec checkW cD cPsi sM sA = match sM, sA with
-  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)    
+  | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)
     check cD
       (DDec (cPsi, Substitution.LF.decSub tX s2))
       (tM, Substitution.LF.dot1 s1)
@@ -227,7 +227,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->    
+  | (Tuple (loc, tuple), s1), (Sigma typRec, s2) ->
     checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
     Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
       (let open Format in
@@ -238,7 +238,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->    
+  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
     begin
       try
@@ -259,7 +259,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
           );
-	  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA) 
+	  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
 	    (let open Format in
        fprintf str_formatter "Root %a"
          (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
@@ -299,7 +299,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
   let rec syn tS sA = match tS, sA with
     | (Nil, _), sP -> sP
 
-    | (SClo (tS, s'), s), sA ->    
+    | (SClo (tS, s'), s), sA ->
       syn (tS, Substitution.LF.comp s' s) sA
 
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
@@ -310,7 +310,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
   let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS then
-    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));  
+    raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
   syn (tS, s) (sA', s')
 
 (* TODO: move this function somewhere else, and get rid of duplicate in reconstruct.ml  -jd 2009-03-14 *)
@@ -458,8 +458,8 @@ and canAppear cD cPsi head sA loc=
  * succeeds iff cD ; cPsi |- s : cPsi'
  *)
 and checkSub loc cD cPsi1 s1 cl cPsi1' =
-  let svar_le = function 
-    | Ren, Ren 
+  let svar_le = function
+    | Ren, Ren
     | Subst, Subst
     | Ren, Subst -> ()
     | Subst, Ren ->
@@ -718,7 +718,7 @@ and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
       (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec (block_part, dctxSub))
     end;
-     
+
   begin
     try
       Unify.unifyTypRec cD cPsi sArec (block_part, dctxSub);
@@ -901,7 +901,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | SObj tM, (STyp (cl, tA), t) ->
      checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t))
   | PObj h, (PTyp tA, t)
-  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) -> 
+  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) ->
       let tA' = inferHead loc cD cPsi' h Ren in
       let tA  = Whnf.cnormTyp (tA, t) in
       dprintf
@@ -928,7 +928,7 @@ and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
         checkClObj cD loc cPsi' tM (tp, t)
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
-  | MV u , (mtyp1 , t) -> 
+  | MV u , (mtyp1 , t) ->
     let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
     let (_, mtyp2) = Whnf.mctxLookup cD u in
     if Whnf.convMTyp mtyp1 mtyp2 then ()
@@ -966,5 +966,3 @@ and checkMSub loc cD  ms cD'  = match ms, cD' with
          flush_str_formatter ()
        in
        raise (Error.Violation s)
-
-

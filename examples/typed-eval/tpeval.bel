@@ -52,14 +52,14 @@ rec eval : [ |- exp T] -> [ |- exp T] =
   | [ |- eq E1 E2] =>
     equal (eval [ |- E1])  (eval  [ |- E2])
 
-  | [ |- iff  E E1 E2]  => ? 
+  | [ |- iff  E E1 E2]  => ?
 %{    (case eval [ |- E] of
        [ |- tt] => eval [ |- E1]
      | [ |- ff] => eval [ |- E2]
      )
 }%
    | [ |- letv  E (\x . E1)]  =>
-   let [ |- V] = eval [ |- E] in 
+   let [ |- V] = eval [ |- E] in
   eval [ |- E1[V]]
 ;
 

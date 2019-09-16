@@ -173,5 +173,3 @@ fn c => case c of
   let [ |- S*] = eq3 [ |- R*] in
     [ |- reduce S*]
 ;
-
-

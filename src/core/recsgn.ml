@@ -54,12 +54,12 @@ let _ =
 	         fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	      | NoStratify n ->
 	         fprintf ppf "Stratification checking of constructor %s fails.\n" n
-          
+
 	      | NoStratifyOrPositive n ->
 	         fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
 	      | TotalArgsError f ->
 	         fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Id.render_name f)
-          
+
       	| UnexpectedSucess ->
       	   fprintf ppf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
         | IllegalOptsPrag s ->
@@ -1008,7 +1008,7 @@ let recSgnDecls decls =
        in
        dprint (fun () -> "Reconstructing query.");
 
-       FVar.clear (); 
+       FVar.clear ();
        let tA =
          Monitor.timer
            ( "Constant Elaboration"

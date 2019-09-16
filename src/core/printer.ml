@@ -2,7 +2,7 @@ open Format
 
 module Control = struct
   type substitution_style = Natural | DeBruijn
-                                    
+
   let substitutionStyle = ref Natural
   let printImplicit = ref false
   let printNormal = ref false
@@ -17,12 +17,12 @@ module Common = struct
       [ `depend
       | `inductive
       ]
-      
+
     val fmt_ppr_lf_depend     : depend_print_style -> formatter -> LF.depend -> unit
     val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
   end
 end
-              
+
 module Int = struct
   module type T = sig
     include Common.T

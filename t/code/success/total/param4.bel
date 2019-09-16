@@ -1,4 +1,4 @@
---coverage 
+--coverage
 
 term: type.
 lam:(term -> term) -> term.
@@ -7,20 +7,20 @@ nat: type.
 z:nat.
 s: nat -> nat.
 
-inductive Nat : ctype = 
+inductive Nat : ctype =
 | Z: Nat
 | S: Nat -> Nat;
 
 schema ctx = term;
 
-rec pos_v : {g:ctx}{#p:[g |- term]} [|- nat] = 
+rec pos_v : {g:ctx}{#p:[g |- term]} [|- nat] =
 / total v (pos_v g v) /
-mlam g, #p => case [g |- #p[..]] of 
+mlam g, #p => case [g |- #p[..]] of
 | [g,y:term |- y] => [|- z]
-| [g,y:term |- #p[..]] => 
-  let [|- N] = pos_v [g] [g |- #p[..]] in 
+| [g,y:term |- #p[..]] =>
+  let [|- N] = pos_v [g] [g |- #p[..]] in
     [|- s N]
-; 
+;
 
 %{
 rec pos :(g:ctx)[g |- term] -> [ |- nat] =

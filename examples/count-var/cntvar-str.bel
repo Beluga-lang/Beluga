@@ -1,7 +1,7 @@
 % Variable counting (see Pientka [POPL'08])
 % Author:  Brigitte Pientka
 
-LF tp  : type =  
+LF tp  : type =
   | nat : tp
   | bool: tp
 ;
@@ -53,6 +53,3 @@ fn e => case e of
         (cntV [g,x |- W])
 
 ;
-
-
-

@@ -60,7 +60,7 @@ schema trCtx = some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
 % ---------------------------------------------------------------------------
 % Type preservation for parallel reduction
 %{<h3>Substitution</h3>
-Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free. Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context <code>g</code>}% 
+Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free. Consider the proof of type preservation for the simply-typed lambda-calculus with parallel reductions: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. Since we allow reductions underneath an abstraction, we may step terms containing variables. We therefore allow expressions to depend on the context <code>g</code>}%
 
 rec tps : (g:trCtx)
             [g |-  pr (M[..]) (N[..])] -> [g |-  oft (M[..]) A]

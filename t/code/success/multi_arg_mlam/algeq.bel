@@ -449,4 +449,3 @@ rec completeness : CtxRel [g] [g']
 -> DecEq [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- T]
 -> AlgEqN [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- T] =
 fn r, e => reify r (thm e r (idLogEqSub r));
-

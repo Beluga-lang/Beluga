@@ -4,4 +4,3 @@
 about formal systems. It features direct support for object-level
 binding constructs using higher order abstract syntax and treats
 contexts as first class objects.
-

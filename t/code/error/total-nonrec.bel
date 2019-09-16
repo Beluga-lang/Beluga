@@ -1,5 +1,5 @@
 nat : type.
 
-rec foo : [ |- nat] -> [ |- nat ] = 
+rec foo : [ |- nat] -> [ |- nat ] =
 / total n (foo n) /
 fn n => foo n ;

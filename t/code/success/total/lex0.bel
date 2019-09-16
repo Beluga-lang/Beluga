@@ -1,23 +1,18 @@
-
-inductive Nat :  ctype = 
+inductive Nat :  ctype =
 | Zero : Nat
 | Suc : Nat -> Nat;
 
-inductive Nat' :  ctype = 
+inductive Nat' :  ctype =
 | Zero' : Nat'
 | Suc' : Nat' -> Nat';
 
 
 
-rec test0 : Nat -> Nat' -> Nat = 
-  / total {x y} (test0 x y) / 
-fn x => fn y => case x of 
+rec test0 : Nat -> Nat' -> Nat =
+  / total {x y} (test0 x y) /
+fn x => fn y => case x of
 | Zero => Zero
-| Suc x' => (case y of 
+| Suc x' => (case y of
     | Zero' => test0 x' y
     | Suc' y' => test0 x y')
 ;
-
-
-
-

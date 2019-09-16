@@ -58,8 +58,8 @@ fn p => case p of
     [g |- j_rdx (\x. \j. E)]
 | [g |- #p.3[..]] => [g |- #p.4[..]]
 | {#q : [g |- block x:tm, _t: ({q:path} is_path q (N[..]) -> is_path q x), _u:jump (N[..]) x]}
-  [g |- (#q.2[..]) (P[..]) (D[..])] => 
-  let [g |- J[..]] = fwd [g |- D] in  
+  [g |- (#q.2[..]) (P[..]) (D[..])] =>
+  let [g |- J[..]] = fwd [g |- D] in
    [g |- j_jump (#q.3[..]) (J[..])]
 ;
 

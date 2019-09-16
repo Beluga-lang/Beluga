@@ -21,6 +21,3 @@ LF conc : o -> type =  % Conclusion (right)
   | existsr : {T:i} conc (A T) -> conc (exists A)
   | existsl : ({a:i} hyp (A a) -> conc C) -> (hyp (exists A) -> conc C)
 ;
-
-
-

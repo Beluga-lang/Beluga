@@ -180,7 +180,7 @@ rec path_exists : {g:jctx'} {U:[g |- nf] }  ExNPath [g |- U] =
 mlam g => mlam U => case [g |- U] of
 | [g |- nabs \x. U] =>
 let {Ql: [g, x:nf, p:p, pt: npath x p  |-  npath U[..,x] P[..,p]]}
-    ExPath [g, b:block (x:tm, y:nf, r: bred x y, p:p, pt: path x p, np: npath y p) 
+    ExPath [g, b:block (x:tm, y:nf, r: bred x y, p:p, pt: path x p, np: npath y p)
      |-  Ql[..,b.y,b.p, b.np]] =
     path_exists [g, b:block (x:tm, y:nf, _r: bred x y, p:p,_pt: path x p, _np: npath y p) ]
                [g,b |- U[..,b.2]]
@@ -189,7 +189,7 @@ in
 
 | [g |- napp U V] =>
     let ExPath [g |- Ql ] = path_exists [g] [g |- U] in
-    ExPath [g |- np_app_l (Ql)]  
+    ExPath [g |- np_app_l (Ql)]
 
 
 | {#p: [g |- block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p]}
@@ -286,5 +286,3 @@ mlam g => mlam U => mlam V => fn r1 => fn r2 => fn pf =>
  tm_same  [g] [g |- U] [g |- V]
       (mlam P => fn l => bred_ltr r2 (pf [g |- P] (bred_rtl r1 l)))
  ;
-
-

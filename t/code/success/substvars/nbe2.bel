@@ -79,5 +79,3 @@ mlam T => mlam #p => impossible [ |- #p] in [ ];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify (eval t emp_env);
-
-

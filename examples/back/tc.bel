@@ -34,14 +34,14 @@ LF boolean : type =
   | false : boolean
 ;
 
-LF  subtype : tp -> tp -> type =  
+LF  subtype : tp -> tp -> type =
   | sub_odd_nat :  subtype odd nat
   | sub_even_nat : subtype even nat
   | sub_arrow : subtype B1 A1 -> subtype A2 B2 -> subtype (arrow A1 A2) (arrow B1 B2)
 ;
 --name subtype SUB sub.
 
-LF oft : exp -> tp -> type =  
+LF oft : exp -> tp -> type =
   | tp_z     : oft z even
   | tp_s-base     : oft E nat -> oft (suc E) nat
   | tp_s-even : oft E even -> oft (suc E) odd

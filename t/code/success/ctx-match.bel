@@ -16,8 +16,8 @@ nat: type.
 z: nat.
 suc: nat -> nat.
 
-rec length: {g:ctx} [ |- nat] = 
-mlam g => case [g] of 
-| [] => [ |- z] 
+rec length: {g:ctx} [ |- nat] =
+mlam g => case [g] of
+| [] => [ |- z]
 | [g, x:exp T[]] => [ |- z]
 ;

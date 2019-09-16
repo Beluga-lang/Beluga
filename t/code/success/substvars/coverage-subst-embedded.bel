@@ -1,4 +1,3 @@
-
 nm : type.
 leaf : nm.
 nmbin : nm -> nm -> nm.
@@ -26,13 +25,12 @@ trans1 : mstep M M' -> step M' M''  -> mstep M M''.
 
 schema ctx = some [t:tp] block x:tm,y:oft x t;
 
-rec thm : {g:ctx}{h:ctx}{$S1: [h |- g]}  [g |- mstep M M'] -> [h |- mstep M[$S1] M'[$S1]] = 
+rec thm : {g:ctx}{h:ctx}{$S1: [h |- g]}  [g |- mstep M M'] -> [h |- mstep M[$S1] M'[$S1]] =
 / total e (thm g h s m m' e) /
-mlam g, h, $S => fn  e => case e of 
-| [g0 |- trans1 E1 E2] =>  
+mlam g, h, $S => fn  e => case e of
+| [g0 |- trans1 E1 E2] =>
    let [h0 |- E'] = thm [g0] [h] [h |- $S] [g0 |- E1] in ?
 
 | [g |- refl] => ?
 
 ;
-

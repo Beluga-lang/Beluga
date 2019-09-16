@@ -10,4 +10,3 @@ rec fff : [ |- term] -> [ |- term] = fn e =>
   | [ |- z]         => [ |- z]
   | [ |- fiver U V W X Y] => [ |- z]
 ;
-

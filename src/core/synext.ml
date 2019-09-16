@@ -219,6 +219,12 @@ module Harpoon = struct
     | `invert
     ]
 
+  type automation_change =
+    [ `on
+    | `off
+    | `toggle
+    ]
+
   type automation_kind =
     [ `auto_intros
     | `auto_solve_trivial
@@ -241,7 +247,7 @@ module Harpoon = struct
     | Defer (* Defers the current subgoal to later *)
     | ShowSubgoals (* Lists all open subgoals *)
 
-    | ToggleAutomation of automation_kind
+    | ToggleAutomation of automation_kind * automation_change
 end
 
 

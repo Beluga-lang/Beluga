@@ -168,8 +168,8 @@ let process_command
      Tactic.(tctx.printf) "@[<v>%a@]"
        print_subgoals (DynArray.to_list s.remaining_subgoals)
 
-  | Command.ToggleAutomation automation_kind ->
-     Automation.toggle_automation s.automation_state automation_kind
+  | Command.ToggleAutomation (automation_kind, automation_change) ->
+     Automation.toggle_automation s.automation_state automation_kind automation_change
 
   (* Real tactics: *)
   | Command.Unbox (t, name) ->

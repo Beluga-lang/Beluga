@@ -143,6 +143,16 @@ let get_automation auto_st automation_kind : t =
   then auto
   else auto_nothing
 
-let toggle_automation auto_st automation_kind : unit =
-  let (b, _) = Hashtbl.find auto_st automation_kind in
-  b := not !b
+let toggle_automation auto_st (k : Command.automation_kind) (state : Command.automation_change) : unit =
+  (* find here is guaranteed to succeed by the external invariant
+     that the hashtable has been populated with all the keys of the
+     polymorphic variant `automation_kind`.
+   *)
+  let (b, _) = Hashtbl.find auto_st k in
+  let s =
+    match state with
+    | `on -> true
+    | `off -> false
+    | `toggle -> not !b
+  in
+  b := s

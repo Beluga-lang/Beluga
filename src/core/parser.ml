@@ -758,6 +758,13 @@ let maybe (p : 'a parser) : 'a option parser =
   shifted "optionally"
     (alt (p $> Maybe.pure) (pure None))
 
+(** Tries a parser, and if it fails uses the given default value. *)
+let maybe_default (p : 'a parser) x : 'a parser =
+  maybe p $>
+    function
+    | None -> x
+    | Some x -> x
+
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
   { run =
@@ -2751,10 +2758,17 @@ let harpoon_command =
       ; keyword "auto-solve-trivial" &> pure `auto_solve_trivial
       ]
   in
+  let automation_change =
+    choice
+      [ keyword "on" &> pure `on
+      ; keyword "off" &> pure `off
+      ; keyword "toggle" &> pure `toggle
+      ]
+  in
   let toggle_automation =
     keyword "toggle-automation"
-    &> automation_kind
-    $> fun t -> H.ToggleAutomation t
+    &> seq2 automation_kind (maybe_default automation_change `toggle)
+    $> fun (t, c) -> H.ToggleAutomation (t, c)
   in
   let trivial_command =
     [ "show-proof", H.ShowProof

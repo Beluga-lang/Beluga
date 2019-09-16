@@ -1,6 +1,5 @@
-
 tm: type.
-tp: type. 
+tp: type.
 oft: tm -> tp -> type.
 
 

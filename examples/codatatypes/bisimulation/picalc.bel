@@ -57,11 +57,11 @@ and oneb  : p -> (n -> a) -> (n -> p) -> type =
   % bound input
   | inb   : oneb (inp X M) (dn X) M
   | mb    : oneb P A M -> oneb (match X X P) A M
-                               
+
   % sum
   | slb   : oneb P A R -> oneb (plus P Q) A M
   | srb   : oneb Q A R -> oneb (plus P Q) A M
-                               
+
   % par
   | prb   : oneb P A (\x.M x) -> oneb (par P Q) A (\x. par (M x) Q)
   | prb   : oneb Q A (\x.M x) -> oneb (par P Q) A (\x. par P (M x))
@@ -72,5 +72,3 @@ and oneb  : p -> (n -> a) -> (n -> p) -> type =
   | open  : ({y:n} one (M y) (up X y) (N y)) -> oneb (nu (\x.M x)) (up X) N
   | comm_bangb : oneb P X M -> oneb (bang P) X (\y. par (M y) (bang P))
 ;
-
-

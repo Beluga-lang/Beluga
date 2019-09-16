@@ -83,11 +83,11 @@ let process_option arg rest =
   | "-logic" -> Logic.Options.enableLogic := false ; rest
   | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
-  | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest 
+  | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html" | "+HTML" -> Html.genHtml := true; rest
   | "+sexp" -> Sexp.enabled := true ; rest
   | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
-  | "+cssfile" -> 
+  | "+cssfile" ->
      with_arg_for "+cssfile"
        (fun arg rest -> Html.css := Html.File arg; rest)
   | "+annot"      -> Typeinfo.generate_annotations := true; rest
@@ -134,10 +134,10 @@ let per_file file_name =
         let module P = Pretty.Int.DefaultPrinter in
         List.iter (P.fmt_ppr_sgn_decl Format.std_formatter) sgn'
       end;
-    
+
     if !Debug.chatter <> 0 then
       printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-    
+
     Coverage.iter
       begin function
         | Coverage.Success -> ()
@@ -147,10 +147,10 @@ let per_file file_name =
            else
              raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
       end;
-    
+
     if !Coverage.enableCoverage && !Debug.chatter <> 0 then
       printf "\n## Coverage checking done: %s  ##\n" file_name;
-    
+
     if !Subord.dump then begin
         Subord.dump_subord();
         (* Subord.dump_typesubord() *)

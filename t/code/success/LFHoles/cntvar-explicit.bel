@@ -69,4 +69,3 @@ mlam g => mlam T => mlam TT => fn e =>
                (cntV [g] < . T' > < . nat > ([g,x] (W)))
 }%
 ;
-

@@ -4,7 +4,7 @@ suc  : term -> term.
 
 schema termCtx = some [] term;
 
-rec copy : [ |- term] -> [ |- term] = 
+rec copy : [ |- term] -> [ |- term] =
 / total e (copy e)/
 fn e =>
   case e of

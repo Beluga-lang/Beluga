@@ -1,5 +1,5 @@
 module Maybe = Support.Maybe
-   
+
 exception NotInitialized
 
 type flags = int

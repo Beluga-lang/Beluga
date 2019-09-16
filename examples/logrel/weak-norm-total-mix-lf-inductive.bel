@@ -10,7 +10,7 @@ $\frac 1 2$
 
 # Weak head normalization for simply-typed lambda calculus
 
-This example follows the proof presented in 
+This example follows the proof presented in
 <a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
 Cave and Pientka[2013]</a>.
 
@@ -20,9 +20,9 @@ LF tp : type =
 | b :  tp
 | arr : tp -> tp -> tp
 ;
---name tp T.        
+--name tp T.
 
-LF tm : tp -> type = 
+LF tm : tp -> type =
 | app : tm (arr T S) -> tm T -> tm S
 | lam : (tm T -> tm S) -> tm (arr T S)
 | c : tm b
@@ -38,7 +38,7 @@ case for variables, as they are treated implicitly in HOAS.
 We choose to encode the step relation of the operational semantics as an inductive type emphasizing that we only step closed terms. The inductive type `step` is  indexed by two terms that represent each step of the computation.
 }}%
 
-inductive Step : [ |- tm A] → [ |- tm A] → ctype = 
+inductive Step : [ |- tm A] → [ |- tm A] → ctype =
   | Beta : Step [|- app (lam \x.M) N] [ |- M[N]]
   | Stepapp : Step [|- M] [|- M'] -> Step [ |- app M N] [ |- app M' N]
 ;
@@ -47,22 +47,22 @@ inductive Step : [ |- tm A] → [ |- tm A] → ctype =
 computing the application of `M` to `N`. <br/>
 
 Finally, we define:
--  a multiple step reduction `mstep`. 
+-  a multiple step reduction `mstep`.
 - values `val`
 - `halts` to encode that a term halts if it steps into a value.
 }}%
 
-inductive MStep : [|- tm A] -> [|- tm A] -> ctype = 
+inductive MStep : [|- tm A] -> [|- tm A] -> ctype =
   | Refl : MStep [ |- M] [ |- M]
   | Onestep : Step [|- M] [|- M'] -> MStep [ |- M'] [|- M''] -> MStep [ |- M] [|- M'']
 ;
 
 
-inductive Val : [ |- tm A] -> ctype = 
+inductive Val : [ |- tm A] -> ctype =
   | Val/c : Val [ |- c]
   | Val/lam : Val [ |- lam \x.M]
 ;
-inductive Halts : [ |- tm A] -> ctype = 
+inductive Halts : [ |- tm A] -> ctype =
   | Halts : MStep [ |- M] [ |- M'] -> Val [ |- M'] -> Halts [ |- M]
 ;
 
@@ -94,7 +94,7 @@ A term of type `i` is reducible if it halts, and a `term M` of type
 `N` of type `A`, the application `app M N` is reducible. We write
 `{N:[.tm A]}` for explicit &Pi;-quantification over `N`, a closed term
 of type `A`. To the left of the turnstile in `[|- tm A]` is where one
-writes the context the term is defined in – in this case, it is empty.  
+writes the context the term is defined in – in this case, it is empty.
 
 In this definition, the arrows represent the usual computational
 function space, not the weak function space of LF. We note that this
@@ -108,20 +108,20 @@ term(additionally this is why we cannot leave the type implicit).
 
 
 Now, we need to prove some more or less trivial lemmas that are
-usually omitted in paper presentations.  
+usually omitted in paper presentations.
 
 First, we prove that halts is closed under expansion in the `halts_step` lemma.
 }}%
 
 rec halts_step : Step [ |- M] [|- M'] -> Halts [ |- M'] -> Halts [ |-  M] =
 / total (halts_step) /
-fn s, h => 
+fn s, h =>
 let Halts ms' v = h in
  Halts (Onestep s ms') v
 ;
 
 
-%{{ 
+%{{
 Next we prove closure of Reduce under expansion. This follows the
 handwritten proof, proceeding by induction on the type A which is an
 implicit argument. In the base case we appeal to `halts_step`, while
@@ -130,9 +130,9 @@ the range type, going inside the function position of applications.
 }}%
 rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]} Step [ |- M] [ |-  M'] -> Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total a (bwd_closed' a) /
- mlam A, M, M' => fn s, r => case [|- A] of 
+ mlam A, M, M' => fn s, r => case [|- A] of
 | [|- b] => let I ha = r in I (halts_step s ha)
-| [|- arr A B] => 
+| [|- arr A B] =>
   let Arr ha f = r in
     Arr (halts_step s ha)
 	(mlam N => fn rn =>
@@ -140,14 +140,14 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]} Step [ |- M] [ |-  M'] 
 ;
 
 
-rec bwd_closed : Step [ |- M] [ |- M'] -> Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] = 
+rec bwd_closed : Step [ |- M] [ |- M'] -> Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total (bwd_closed) /
 fn s, r =>   bwd_closed' [|- _ ] [|- _ ] [|- _ ]  s r;
 
 
 %{{
 The trivial fact that reducible terms halt has a corresponding
-trivial proof, analyzing the construction of the the proof of 
+trivial proof, analyzing the construction of the the proof of
 'Reduce[|- T] [|- M]'
 }}%
 
@@ -169,14 +169,14 @@ schema ctx = tm T;
 inductive RedSub : {gamma:ctx}{$S:[ |- gamma]} ctype =
 | Nil : RedSub  [ ] [ |- ^ ]
 | Dot : RedSub  [gamma] [ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A[]] [ |- $S[^], M ] 
+     → RedSub [gamma, x:tm A[]] [ |- $S[^], M ]
 ;
 
 
 
 rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]] =
-/ total gamma (lookup gamma) / 
-mlam gamma => mlam #p => fn rs => case [gamma] of 
+/ total gamma (lookup gamma) /
+mlam gamma => mlam #p => fn rs => case [gamma] of
 | [] => impossible [ |- #p]
 | [gamma', x:tm A] => (case [gamma', x:tm A |- #p] of
  | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
@@ -188,17 +188,17 @@ mlam gamma => mlam #p => fn rs => case [gamma] of
 # Main theorem
 }}%
 
-rec main : {gamma:ctx}{M:[gamma |- tm A[]]} 
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]}
           RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]] =
 / total m (main gamma a s m) /
 mlam gamma, M => fn rs => case [gamma |- M] of
 | [gamma |- #p] =>  lookup [gamma] [gamma |- #p] rs
-| [gamma |- lam \x. M] => 
+| [gamma |- lam \x. M] =>
  Arr (Halts Refl Val/lam)
    (mlam N => fn rN =>
     bwd_closed Beta (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
 
-| [gamma |- app M1 M2] => 
+| [gamma |- app M1 M2] =>
   let Arr ha f = main [gamma] [gamma |- M1] rs in
   f [ |- _ ] (main [gamma] [gamma |- M2] rs)
 | [gamma |-  c] =>  I (Halts Refl Val/c)
@@ -207,4 +207,3 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 rec weakNorm : {M:[ |- tm A]} Halts [ |- M] =
 / total (weakNorm) /
 mlam M => reduce_halts (main [] [ |- M] Nil);
-

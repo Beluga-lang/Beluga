@@ -5,7 +5,7 @@
 
 % Type approximations
 
-LF tp_appro : type = 
+LF tp_appro : type =
    | tpa_a : cst_tp -> tp_appro
    | tpa_unr : tp_appro -> tp_appro -> tp_appro
    | tpa_lin : tp_appro -> tp_appro -> tp_appro
@@ -16,7 +16,7 @@ LF tp_appro : type =
 % a = A-
 % depend_er A a
 
-LF depend_er : tp -> tp_appro -> type = 
+LF depend_er : tp -> tp_appro -> type =
    | d_atp : depend_er (atp_canon (atom_tp a S)) (tpa_a a)
    | d_pi : {x : var} depend_er A A' -> depend_er (B x) B' -> depend_er (pi A (\x.B x)) (tpa_unr A' B')
    | d_limp : depend_er A A' -> depend_er B B' -> depend_er (limp A B) (tpa_lin A' B')
@@ -24,7 +24,7 @@ LF depend_er : tp -> tp_appro -> type =
 
 % Typeless variable declaration
 
-LF vdecl_er : type = 
+LF vdecl_er : type =
    | decl_er : var -> flag -> vdecl_er
 ;
 
@@ -39,7 +39,7 @@ LF ctx_erased : type =
 %  ~                                                         ~
 % Phi is the typeless version of context Psi in type_er Psi Phi
 
-LF ctx_er : ctx -> ctx_erased -> type = 
+LF ctx_er : ctx -> ctx_erased -> type =
    | ce_empty : ctx_er c_empty cer_empty
    | ce_lin : ctx_er (varctx CV) (varcer CV)
    | ce_snoc : ctx_er Psi Phi -> ctx_er (snoc Psi (decl x A F)) (cer_snoc Phi (decl_er x F))
@@ -47,17 +47,17 @@ LF ctx_er : ctx -> ctx_erased -> type =
 
 % variable x is in a context Psi
 
-LF in_ctx : (var -> ctx) -> type = 
+LF in_ctx : (var -> ctx) -> type =
    | ic_base_l : in_ctx (\x.snoc (Psi) (decl x A lin))
    | ic_base_unr : in_ctx (\x.snoc (Psi) (decl x A unr))
    | ic_snoc : in_ctx (\x.Psi x) -> in_ctx (\x.snoc (Psi x) (decl y A F))
-; 
+;
 
-LF nin_ctx : (var -> ctx) -> type = 
+LF nin_ctx : (var -> ctx) -> type =
    | nic_base : nin_ctx (\x.empty)
    | nic_cv   : nin_ctx (\x.varctx CV)
    | nic_snoc : nin_ctx (\x.Psi x) -> nin_ctx (\x.snoc (Psi x) (decl y A F))
-; 
+;
 
 
 % simultaneous substitution
@@ -86,7 +86,7 @@ and subst_canon :  canon  -> tp_appro -> (var -> canon) -> canon -> type =
     | sc_varspine_eq : subst_spine M alpha (\x.S x) (S') -> reduce M alpha (S') (N)
 		       -> subst_canon M alpha (\x.c_atom (atom_base (hd_var x) (S x))) (N)
 
-and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type = 
+and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type =
    | ssp_empty : subst_spine M alpha (\x.sp_empty) sp_empty
    | ssp_unr : subst_spine M alpha (\x.S x) S'
 	       -> subst_canon M alpha (\x.N x) N'
@@ -94,8 +94,8 @@ and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type =
    | ssp_lin : subst_spine M alpha (\x.S x) S'
 	       -> subst_canon M alpha (\x.N x) N'
 	       -> subst_spine M alpha (\x.sp_lin (N x) (S x)) (sp_lin N' S')
-			      
-and subst_subst : canon -> tp_appro -> (var -> sim_subst) -> sim_subst -> type = 
+
+and subst_subst : canon -> tp_appro -> (var -> sim_subst) -> sim_subst -> type =
    | su_empty : subst_subst M alpha (\x.s_empty) s_empty
    | su_id_lin : subst_subst M alpha (\x.s_id) (s_id)
    | su_id_snoc : subst_subst M alpha (\x.sigma x) (sigma') -> subst_canon M alpha (\x.N x) (N')
@@ -115,20 +115,20 @@ and subst_tp : canon -> tp_appro -> (var -> tp) -> tp -> type =
 % --------------------------------------
 % Simultaneous substitution
 
-LF var_look : sim_subst -> (var -> ctx) -> canon -> tp_appro -> type = 
+LF var_look : sim_subst -> (var -> ctx) -> canon -> tp_appro -> type =
    | vl_unr : depend_er A A' -> is_unr Psi -> var_look (s_snoc sigma M) (\x.snoc Psi (decl x A unr)) M A'
    | vl_lin : depend_er A A' -> is_unr Psi -> var_look (s_snoc sigma M) (\x.snoc Psi (decl x A lin)) M A'
    | vl_ind_unr : ({y : var} var_look sigma (\x.Psi x) M A') -> var_look (s_snoc sigma N) (\x.snoc (Psi x) (decl y A unr)) M A'
    | vl_ind_unav : ({y : var} var_look sigma (\x.Psi x) M A') -> var_look (s_snoc sigma N) (\x.snoc (Psi x) (decl y A unav)) M A'
 
-and sim_subst_canon : sim_subst -> ctx -> ctx_erased -> canon -> canon -> type = 
+and sim_subst_canon : sim_subst -> ctx -> ctx_erased -> canon -> canon -> type =
     | ssc_unr : ({y : var} sim_subst_canon sigma Psi (cer_snoc Phi (decl_er y unr)) (N y) (N' y))
 		-> sim_subst_canon sigma Psi Phi (lam \y.N y) (lam \y.N' y)
 
     | ssc_lin : ({y : var} sim_subst_canon sigma Psi (cer_snoc Phi (decl_er y lin)) (N y) (N' y))
 		-> sim_subst_canon sigma Psi Phi (llam \y.N y) (llam \y.N' y)
     | ssc_cspine : sim_subst_spine sigma Psi Phi S S'
-		   -> sim_subst_canon sigma Psi Phi (c_atom (atom_base (hd_cst c) S)) (c_atom (atom_base (hd_cst c) S')) 
+		   -> sim_subst_canon sigma Psi Phi (c_atom (atom_base (hd_cst c) S)) (c_atom (atom_base (hd_cst c) S'))
     | ssc_varspine_nin : reduce M alpha S' N
 			 -> ({x : var} var_look sigma1 (\x.Psi1 x) M alpha)
 			 -> ctx_er Phi Phi_er
@@ -141,12 +141,12 @@ and sim_subst_canon : sim_subst -> ctx -> ctx_erased -> canon -> canon -> type =
 			-> ctx_er Phi Phi_er
 			-> sim_subst_spine sigma Psi Phi1_er S S'
 			-> sim_subst_canon sigma Psi Phi_er (c_atom (atom_base (hd_var y) S)) (c_atom (atom_base (hd_var y) S'))
-		
+
 and sim_subst_spine : sim_subst -> ctx -> ctx_erased -> spine -> spine -> type =
    | sspi_empty : is_unr Psi -> is_unr Phi -> ctx_er Phi Phi_er -> sim_subst_spine sigma Psi Phi_er sp_empty sp_empty
    | sspi_unr : unrest_ctx Phi Phi_unr -> ctx_er Phi_unr Phi_er_unr -> ctx_er Phi Phi_er
 		-> unrest_ctx Psi Psi_unr
-		-> sim_subst_canon sigma Psi_unr Phi_er_unr N N' 
+		-> sim_subst_canon sigma Psi_unr Phi_er_unr N N'
 		-> sim_subst_spine sigma Psi Phi_er S S'
 		-> sim_subst_spine sigma Psi Phi_er (sp_unr N S) (sp_unr N' S')
    | sspi_lin : joining (cjoin Psi Psi1 Psi2) -> ctx_er Phi0 Phi
@@ -154,7 +154,7 @@ and sim_subst_spine : sim_subst -> ctx -> ctx_erased -> spine -> spine -> type =
 		-> sim_subst_canon sigma1 Psi1 Phi' N N' -> sim_subst_spine sigma2 Psi2 Phi'' S S'
 		-> sim_subst_spine sigma Psi Phi (sp_lin N S) (sp_lin N' S')
 
-and sim_subst_subst : sim_subst -> ctx -> ctx_erased -> sim_subst -> sim_subst -> type = 
+and sim_subst_subst : sim_subst -> ctx -> ctx_erased -> sim_subst -> sim_subst -> type =
    | ssu_empty : is_unr Psi -> sim_subst_subst sigma Psi Phi s_empty s_empty
    | ssu_id_lin : is_unr Psi -> sim_subst_subst sigma Psi Phi (s_id) (s_id)
    | ssu_id_snoc : ctx_er Phi0 Phi -> ctx_er Phi1 Phi' -> ctx_er Phi2 Phi''
@@ -164,23 +164,23 @@ and sim_subst_subst : sim_subst -> ctx -> ctx_erased -> sim_subst -> sim_subst -
 		   -> sim_subst_canon sigma Psi2 Phi'' M M'
 		   -> sim_subst_subst sigma Psi Phi (s_snoc tau M) (s_snoc tau' M')
 
-and sim_subst_at_tp : sim_subst -> ctx -> ctx_erased -> atp -> atp -> type = 
-   | ssat_atom : sim_subst_spine sigma Psi Phi S S' -> sim_subst_at_tp sigma Psi Phi (atom_tp a S) (atom_tp a S') 
-	      
-and sim_subst_tp : sim_subst -> ctx -> ctx_erased -> tp -> tp -> type = 
+and sim_subst_at_tp : sim_subst -> ctx -> ctx_erased -> atp -> atp -> type =
+   | ssat_atom : sim_subst_spine sigma Psi Phi S S' -> sim_subst_at_tp sigma Psi Phi (atom_tp a S) (atom_tp a S')
+
+and sim_subst_tp : sim_subst -> ctx -> ctx_erased -> tp -> tp -> type =
    | sst_atom : sim_subst_at_tp sigma Psi Phi_er A A' -> sim_subst_tp sigma Psi Phi_er (atp_canon A) (atp_canon A')
-   | sst_unr : sim_subst_tp sigma Psi Phi_er A A' 
+   | sst_unr : sim_subst_tp sigma Psi Phi_er A A'
 	       -> ({x : var} sim_subst_tp sigma Psi (cer_snoc Phi_er (decl_er x unr)) (B x) (B' x))
 	       -> sim_subst_tp sigma Psi Phi_er (pi A (\x.B x)) (pi A' (\x.B' x))
-   | sst_lin : sim_subst_tp sigma Psi Phi_er A A' 
+   | sst_lin : sim_subst_tp sigma Psi Phi_er A A'
 	       -> sim_subst_tp sigma Psi Phi_er B B'
 	       -> sim_subst_tp sigma Psi Phi_er (limp A B) (limp A' B')
 
-and sim_subst_ctx : sim_subst -> ctx -> ctx -> ctx -> type = 
+and sim_subst_ctx : sim_subst -> ctx -> ctx -> ctx -> type =
     | ssctx_empty : is_unr Psi -> sim_subst_ctx sigma Psi c_empty c_empty
     | ssctx_base  : is_unr Psi -> sim_subst_ctx sigma Psi (varctx I) (varctx I)
    | ssctx_snoc  : is_unr Psi -> unrest_ctx Phi Phi_unr -> ctx_er Phi_unr Phi_unr_er ->
-		   sim_subst_ctx sigma Psi Phi Phi' -> 
-		   sim_subst_tp sigma Psi Phi_unr_er A A' 
-		  -> sim_subst_ctx sigma Psi (snoc Phi (decl x A F)) (snoc Phi' (decl x A' F)) 
+		   sim_subst_ctx sigma Psi Phi Phi' ->
+		   sim_subst_tp sigma Psi Phi_unr_er A A'
+		  -> sim_subst_ctx sigma Psi (snoc Phi (decl x A F)) (snoc Phi' (decl x A' F))
 ;

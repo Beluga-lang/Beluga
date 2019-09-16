@@ -114,50 +114,50 @@ let print_error ppf =
   | HolesFunction ->
      fprintf ppf
        "Underscores occurring inside LF objects must be of atomic type."
-    
+
   | ProjNotValid (cD, cPsi, k, sA) ->
      fprintf ppf
        "Cannot get the %s. projection from type %a."
        (string_of_int k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-    
+
   | ProjNotFound (cD, cPsi, k, sA) ->
      fprintf ppf
        "There is no projection named %s in type %a."
        (string_of_name k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-    
+
   | TypMismatchElab (cD, cPsi, sA1, sA2) ->
      Error.report_mismatch ppf
        "Ill-typed expression."
        "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
        "Actual type"   (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA2)
-    
+
   | IllTypedElab (cD, cPsi, sA, variant) ->
      Error.report_mismatch ppf
        "Ill-typed expression."
        "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
        "Actual type"   (pp_print_string)                  (string_of_typeVariant variant)
-    
+
   | IllTypedSub (cD, cPsi, s, cPsi') ->
      fprintf ppf "Ill-typed substitution.@.";
      fprintf ppf "    Does not take context: %a@."
        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
      fprintf ppf "    to context: %a@."
        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-     
+
   | IllTypedSubVar (cD, cPsi, cPsi') ->
      fprintf ppf "Ill-typed substitution variable.@.";
      fprintf ppf "    Does not take context: %a@."
        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
      fprintf ppf "    to context: %a@."
        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-     
+
   | LeftoverConstraints x ->
      fprintf ppf
        "Cannot reconstruct a type for free variable %s (leftover constraints)."
        (Id.render_name x)
-    
+
   | IdCtxsub ->
      fprintf ppf
        "Identity substitution .. must be associated with a context variable. \n \n If your object is closed, you should omit the identitiy substitution, since it is empty."
@@ -165,20 +165,20 @@ let print_error ppf =
      fprintf ppf
        "Pruning a type failed.@ This can happen when you have some free@ \
         meta-variables whose type cannot be inferred."
-    
+
   | CompTypAnn ->
      fprintf ppf "Type synthesis of term failed."
 
   | InvalidLFHole ->
      fprintf ppf
        "This LF hole is invalid."
-    
+
   | CompTypAnnSub ->
      fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
-    
+
   | NotPatternSpine ->
      fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
-    
+
   | MissingSchemaForCtxVar psi ->
      fprintf ppf
        "Missing schema for context variable %s."
@@ -191,7 +191,7 @@ let print_error ppf =
        "Actual type" (pp_print_string) (RR.render_cid_schema w')
   | TermWhenVar (_, _, _) ->
      fprintf ppf "A term was found when expecting a variable.@." ;
-     
+
   | SubWhenRen (_, _, _) ->
      fprintf ppf "A substitution was found when expecting a renaming.@."
   | HOMVarNotSupported ->
@@ -499,11 +499,11 @@ let rec isPatSub s =
      one containing blocks; instead we would need to create FMVars as
      going from a flattened block context to its block equivalent, and
      unroll the id substitution to b.1 b.2 b.3 etc instead of b
-     
+
      | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar _k,_j)), s) ->
      isPatSub s
    *)
-                                                  
+
   | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
   | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
   | Apx.LF.SVar _ -> false
@@ -521,17 +521,17 @@ let isProjPatSub s =
   let rec go s =
     match s with
     | Apx.LF.Id -> true
-                 
+
     | Apx.LF.EmptySub -> true
-                       
+
     | Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k), s) ->
        go s
-      
+
     | Apx.LF.Dot (Apx.LF.Head (Apx.LF.Proj(Apx.LF.BVar _k,_j)), s) ->
        go s
-      
+
     | Apx.LF.Dot (Apx.LF.Head _, _s) -> false
-                                      
+
     | Apx.LF.Dot (Apx.LF.Obj  _, _s) -> false
     | Apx.LF.SVar _ -> false
     | Apx.LF.FSVar _ -> false
@@ -758,11 +758,11 @@ let rec synDom cD loc cPsi s =
             d
           end;
         (Int.LF.CtxVar psi, Int.LF.Shift d)
-        
+
      | (None, _d) ->
         throw loc UnboundIdSub
      end
-    
+
   | Apx.LF.EmptySub -> (Int.LF.Null, Int.LF.EmptySub)
   | Apx.LF.Dot (Apx.LF.Head h, s) ->
      let (cPhi, s') = synDom cD loc cPsi s in
@@ -774,7 +774,7 @@ let rec synDom cD loc cPsi s =
         (Int.LF.DDec (cPhi, Int.LF.TypDecl (x, tA')),
          Int.LF.Dot (Int.LF.Head h', s'))
      end
-     
+
   | _ -> raise (Error.Violation "Encountered non-pattern substitution")
 
 let synDomOpt cD loc cPsi s =
@@ -2157,7 +2157,7 @@ and elSub loc recT cD cPsi s cl cPhi =
                 (P.fmt_ppr_lf_dctx cD P.l0) cPsi
               end;
             sigma
-              
+
           with Unify.Failure msg ->
             throw loc (IllTypedSubVar (cD, cPsi, cPhi))
         end

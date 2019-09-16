@@ -38,9 +38,9 @@ let header =
 \n\t</style>\n\
 </head>\n"
 
-let generatePage orig = 
+let generatePage orig =
   if not (!filename = "/dev/null") then
-    let l = String.length orig in 
+    let l = String.length orig in
     filename := ((String.sub orig 0 (l-3)) ^ "html");
   begin
     let orig = Filename.basename orig in
@@ -59,7 +59,7 @@ let generatePage orig =
     (* Output the HTML file *)
     let oc = open_out !filename in
     let out = output_string oc in
-    begin match !css with    
+    begin match !css with
     | NoCSS -> begin
         out  (page ^ "\n");
         out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
@@ -89,7 +89,7 @@ let append innerHtml =
 
 let (|>) x f = f x
 
-let appendAsComment innerHtml = 
+let appendAsComment innerHtml =
   let from_markdown s =
        (* H3 Header -- needs to be before H2 and H1*)
        Str.global_replace (Str.regexp "^###\\([^\n]*\\)$") "<h3>\\1</h3>" s
@@ -104,11 +104,11 @@ let appendAsComment innerHtml =
        (* Italics *)
     |> Str.global_replace (Str.regexp "\\*\\([^\\*]*\\)\\*") "<i>\\1</i>"
        (* Unordered Lists *)
-    |> Str.global_replace (Str.regexp "^-\\([^-]\\)\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ul><li>\\1\\2</li></ul>" 
+    |> Str.global_replace (Str.regexp "^-\\([^-]\\)\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ul><li>\\1\\2</li></ul>"
        (* Fix Unordered Lists *)
     |> Str.global_replace (Str.regexp "</ul>\\([ \n\r]?\\)<ul>") "\\1"
        (* Ordered Lists *)
-    |> Str.global_replace (Str.regexp "^[0-9]+\\.\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ol><li>\\1</li></ol>" 
+    |> Str.global_replace (Str.regexp "^[0-9]+\\.\\(\\([^\n]\\|[\n][ ]\\)*\\)") "<ol><li>\\1</li></ol>"
        (* Fix Ordered Lists *)
     |> Str.global_replace (Str.regexp "</ol>\\([ \n\r]?\\)<ol>") "\\1"
        (* Two space at the end of a line for a <br> *)

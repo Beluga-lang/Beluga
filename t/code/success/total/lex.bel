@@ -1,35 +1,35 @@
-nat :  type.     
+nat :  type.
 zero : nat.
 suc : nat -> nat.
 
 %{
-rec test0 : [ |- nat] -> [ |- nat] -> [ |- nat] = 
-  / total {x y} (test0 x y) / 
-fn x => fn y => case x of 
+rec test0 : [ |- nat] -> [ |- nat] -> [ |- nat] =
+  / total {x y} (test0 x y) /
+fn x => fn y => case x of
 | [ |- zero] => y
-| [ |- suc X'] => (case y of 
+| [ |- suc X'] => (case y of
     | [ |- zero] => test0 [|- X'] y
     | [ |- suc Y'] => test0 x [ |- Y'])
 ;
 }%
-nat' :  type.     
+nat' :  type.
 zero' : nat'.
 suc' : nat' -> nat'.
 
 
-rec test1 : [ |- nat] -> [ |- nat'] -> [ |- nat] = 
-  / total {y x} (test1 x y) / 
-fn x => fn y => case x of 
+rec test1 : [ |- nat] -> [ |- nat'] -> [ |- nat] =
+  / total {y x} (test1 x y) /
+fn x => fn y => case x of
 | [ |- zero] => [ |- zero]
-| [ |- suc X'] => 
+| [ |- suc X'] =>
   test1 [|- X'] y
 ;
 
-rec test2 : [ |- nat] -> [ |- nat'] -> [ |- nat] = 
-  / total {x y} (test2 x y) / 
-fn x => fn y => case x of 
+rec test2 : [ |- nat] -> [ |- nat'] -> [ |- nat] =
+  / total {x y} (test2 x y) /
+fn x => fn y => case x of
 | [ |- zero] => [ |- zero]
-| [ |- suc X'] =>  (case y of 
+| [ |- suc X'] =>  (case y of
     | [ |- zero'] => test2 [ |- X'] y
     | [ |- suc' Y'] => test2 x [ |- Y'])
 ;
@@ -39,36 +39,36 @@ fn x => fn y => case x of
 
 
 %{
-rec lt : [ |- nat] -> [ |- nat] -> Bool = 
+rec lt : [ |- nat] -> [ |- nat] -> Bool =
 / total x (lt x) /
 ? ;
 
-rec fake_gcd: {M:[ |- nat]}{N: [ |- nat]} [ |- nat] = 
-/ total x (fake_gcd x) / 
-mlam M, N => case [|- M] of 
-| [ |- zero] => [|- N] 
-| [ |- suc X] => case [|- N] of 
+rec fake_gcd: {M:[ |- nat]}{N: [ |- nat]} [ |- nat] =
+/ total x (fake_gcd x) /
+mlam M, N => case [|- M] of
+| [ |- zero] => [|- N]
+| [ |- suc X] => case [|- N] of
    | [ |- zero] => [|- M]
    | [ |- suc Y] => case lt [ |- suc X] [ |- suc Y] of
-     | ttrue => 
+     | ttrue =>
          fake_gcd [ |- X] [|- N]
-     | ffalse => 
-         fake_gcd_y [|- M] [ |- Y] 
+     | ffalse =>
+         fake_gcd_y [|- M] [ |- Y]
 
-and fake_gcd_y: {M:[ |- nat]}{N: [ |- nat]} [ |- nat] = 
-/ total y (fake_gcd_y _ y) / 
-mlam M, N => case [|- M] of 
-| [ |- zero] => [|- N] 
-| [ |- suc X] => case [|- N] of 
+and fake_gcd_y: {M:[ |- nat]}{N: [ |- nat]} [ |- nat] =
+/ total y (fake_gcd_y _ y) /
+mlam M, N => case [|- M] of
+| [ |- zero] => [|- N]
+| [ |- suc X] => case [|- N] of
    | [ |- zero] => [|- M]
    | [ |- suc Y] => case lt [ |- suc X] [ |- suc Y] of
-     | ttrue => 
+     | ttrue =>
          fake_gcd [ |- X] [|- N]
-     | ffalse => 
-         fake_gcd' [|- M] [ |- Y] 
+     | ffalse =>
+         fake_gcd' [|- M] [ |- Y]
 
 
-; 
+;
 
 %{
 gcd_z1: gcd z Y Y.

@@ -1,5 +1,3 @@
-
-
 atomic_tp : type.
 tp : type.                --name tp T.
 atomic : atomic_tp -> tp.
@@ -37,7 +35,7 @@ inductive Extends : {g:ctx} {h:ctx} ctype  =
           Extends [g] [h] -> Extends [g] [h,x:neut A[]]
 ;
 
-stratified Sem : {g:ctx} [ |- tp] -> ctype    = 
+stratified Sem : {g:ctx} [ |- tp] -> ctype    =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
 | Slam : ({h:ctx} Extends [g] [h] -> Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
@@ -78,7 +76,7 @@ rec eval : (g:tctx)(h:ctx)
            [g |- tm S[]] ->
            ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
            -> Sem [h] [ |- S]  =
-/ total t (eval g h s t _) / 
+/ total t (eval g h s t _) /
 fn t => fn s =>
 case t of
 | [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
@@ -95,7 +93,7 @@ case t of
 
 rec reflect : (g:ctx) {A:[|- tp]}[g |- neut A[]] ->  Sem [g] [ |- A] =
 / trust /
-mlam A => fn r => 
+mlam A => fn r =>
 case [ |- A] of
 | [ |- atomic P ] => Syn r
 | [ |- arr T S ] =>  Slam (extendSem r)
@@ -132,4 +130,3 @@ rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /
 fn t => reify  (eval t initialMap)
 ;
-

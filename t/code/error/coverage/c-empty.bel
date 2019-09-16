@@ -13,7 +13,6 @@ schema constructorlesses = constructorless;
 
 rec empty-example-3X : (g:constructorlesses) [g |- constructorless] -> [ |- nat] =
   fn c =>
-    case c of 
+    case c of
       [g |- {} ]
 ;
-

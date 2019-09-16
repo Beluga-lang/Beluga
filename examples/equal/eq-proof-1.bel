@@ -106,5 +106,3 @@ fn e => case e of
   let [g |- F1] = ceq [g |- D1] in
     trans [g |- F1]  [g |- F2]
 ;
-
-

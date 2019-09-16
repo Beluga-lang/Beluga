@@ -4,7 +4,7 @@ type symbol =
 val symbol : string -> symbol option
 
 val symbol' : string -> symbol
-            
+
 type atom =
   | String of string
   | SymbolAtom of symbol

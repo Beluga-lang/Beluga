@@ -10,14 +10,14 @@ LF tp: type =
 ;
 --name tp T.
 
-LF term: type = 
+LF term: type =
 | lam : tp -> (term -> term) -> term
 | app : term -> term -> term
 ;
 --name term E.
 
 % Typing judgment
-LF hastype: term -> tp -> type = 
+LF hastype: term -> tp -> type =
 | t_lam: ({x:term}hastype x T1 -> hastype (E x) T2)
         -> hastype (lam T1 E) (arr T1 T2)
 | t_app: hastype E1 (arr T2 T) -> hastype E2 T2
@@ -26,7 +26,7 @@ LF hastype: term -> tp -> type =
 --name hastype H.
 
 % Equality predicate
-LF eq: tp -> tp -> type = 
+LF eq: tp -> tp -> type =
 | refl: eq T T;
 
 
@@ -40,7 +40,7 @@ Proof by induction on E.
 schema tctx = some [t:tp] block (x:term, _t:hastype x t);
 
 rec unique : (g:tctx)[g |- hastype E (T[])] -> [g |- hastype E (T'[])]
-             ->  [ |- eq T T'] =  
+             ->  [ |- eq T T'] =
 / total d (unique _ _ _ _ d) /
 fn d => fn f => case d of
 | [g |- t_app D1 D2] =>
@@ -59,7 +59,6 @@ fn d => fn f => case d of
 ;
 
 
-let v : [ |- eq (arr nat nat) (arr nat nat)] = 
+let v : [ |- eq (arr nat nat) (arr nat nat)] =
   unique [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
 ;
-

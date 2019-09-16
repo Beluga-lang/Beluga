@@ -3,7 +3,7 @@
 % adapted from Danvy and Filinski, Representing Control, 1992
 % author: Olivier Savary-Belanger
 % date: 2012-2013
-% #opts +strengthen; 
+% #opts +strengthen;
 %
 % Types T
 %
@@ -59,10 +59,10 @@ fn e => case e of
    let [g,k1:value S[] -> exp |- P] = cpse [g |- M] in
    let [g,k2:value T[] -> exp |- Q] = cpse [g |- N] in
     [g,k:value (cross S[] T[]) -> exp |- P[..,(\p. Q[..,(\q. k (kcons p q))])] ]
-| [g |- lam \x. M] => 
-   let [g, x:source S[] |- M[..,x] ] = [g, x:source _ |- M[..,x]] in 
+| [g |- lam \x. M] =>
+   let [g, x:source S[] |- M[..,x] ] = [g, x:source _ |- M[..,x]] in
    let [g, b:block (x:source S[], y:value S[]), c:value T[] -> exp |- P[..,b.2,c] ] =
-       cpse [g,b:block (x:source S[], y:value S[]) |- M[..,b.1]] in  
+       cpse [g,b:block (x:source S[], y:value S[]) |- M[..,b.1]] in
      [g, k:value (arr S[] T[]) -> exp |- k (klam (\x.\c. P[..,x,c]))]
 | [g |- letv M (\x. N)] =>
    let [g,k1:value S[] -> exp |- P] = cpse [g |- M] in

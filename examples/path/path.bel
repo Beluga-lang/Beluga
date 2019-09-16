@@ -33,7 +33,7 @@ then  eq M N.
 rec eqPath : {g:ctx}{M:[g |- tm]}{N:[g |- tm]}
              ({P:[g |- path]} [g |- is_path P M] -> [g |- is_path P N])
 	     -> [g |- eq M N] =
-/ total m (eqPath g m) / 
+/ total m (eqPath g m) /
 mlam g => mlam M => mlam N => fn f => case [g |- M] of
 | [g |- app M1 M2]  =>
     let [g |- p_left p_done] : [g |- is_path (left done) (app N1 N2)]

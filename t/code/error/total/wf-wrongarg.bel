@@ -1,6 +1,6 @@
 % coverage
 
-LF nat : type = 
+LF nat : type =
 | z : nat
 | s : nat -> nat
 ;
@@ -9,18 +9,15 @@ LF nat : type =
 % The sub-term relation on naturals
 
 inductive Foo: [|- nat] -> [|- nat] -> ctype =
-| F1: Foo [|- M] [|- N] 
+| F1: Foo [|- M] [|- N]
 | Swap: Foo [|- N] [|- M] -> Foo [|- M] [|-  N]
 ;
 
 
 
-rec test :  {N : [|- nat]} {M : [|- nat]} Foo [|- M] [|- N] = 
+rec test :  {N : [|- nat]} {M : [|- nat]} Foo [|- M] [|- N] =
 / total x (test x) /
  mlam X => mlam Y =>  case [ |- X ] of
 | [|- z] => F1
 | [|- s X'] => Swap (test [|- Y] [|- s X'])
 ;
-
-
-    

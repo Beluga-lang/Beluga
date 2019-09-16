@@ -60,5 +60,3 @@ case [g,x:exp |-  M] of
  | [g,x:exp |-  #p.x[..]] => [g |- #p._t[..]]
 
 ;
-
-

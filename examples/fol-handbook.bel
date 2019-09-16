@@ -42,9 +42,9 @@ rec trivial_imp : {g:hilCtx}{A:[g |- o]}[g |- hil (imp A (imp A A))] =
 / total a (trivial_imp g a) /
  mlam g => mlam A => [g |- k] ;
 
-rec ded: (g:hilCtx) [g, u:hil A |-  hil (B[..])] 
-        -> [g |- hil (imp A B)] = 
-/ total h (ded g _ _ h) / 
+rec ded: (g:hilCtx) [g, u:hil A |-  hil (B[..])]
+        -> [g |- hil (imp A B)] =
+/ total h (ded g _ _ h) /
 fn h =>  case h of
 | [g, u: hil _  |-  #p[..]] =>  [g |- mp k (#p)]  % SPECIAL!
 
@@ -131,4 +131,3 @@ fn d =>  case d of
 rec ndhil_main : [ |- nd A] -> [ |- hil A] =
 / total d (ndhil_main d) /
  fn d => ndhil d ;
-

@@ -98,6 +98,3 @@ rec ceval_sound : [ |- ceval E V] -> [ |- eval E V] =
 fn c => let [ |- cev C] = c in
         let [ |- result D (next stop st_init)] = csd [ |- C] in [ |- D]
 ;
-
-
-

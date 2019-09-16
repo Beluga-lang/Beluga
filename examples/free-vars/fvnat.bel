@@ -60,5 +60,3 @@ mlam g  => % mlam T  =>
     | [g, x: exp _  |-  something U]  => [g |- nothing]
    )
 ;
-
-

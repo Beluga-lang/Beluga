@@ -1,12 +1,12 @@
 %%% Parallel reduction in the untyped lambda calculus
 %%% Author: Frank Pfenning
 
-LF  pred : term -> term -> type = 
+LF  pred : term -> term -> type =
   | beta : ({x:term} pred x x -> pred (M1 x) (M1' x)) -> pred M2 M2' -> pred (app (lam M1) M2) (M1' M2')
   | ap   : pred M1 M1' -> pred M2 M2' -> pred (app M1 M2) (app M1' M2')
   | lm   : ({x:term} pred x x -> pred (M x)  (M' x)) -> pred (lam M) (lam M')
 ;
- 
+
 
 % Parallel, multi-step reduction
 
@@ -14,7 +14,7 @@ LF  pred* : term -> term -> type =
   | id*   :   pred* M  M
   | next    :  pred M  M' -> pred* M' M'' ->  pred* M  M''
 ;
- 
+
 % Parallel conversion
 
 LF pred= : term -> term -> type =
@@ -22,4 +22,3 @@ LF pred= : term -> term -> type =
   | expand :  pred* M  M' -> pred= M'  M
   | next=  :  pred= M  M' -> pred= M' M'' -> pred= M  M''
 ;
- 

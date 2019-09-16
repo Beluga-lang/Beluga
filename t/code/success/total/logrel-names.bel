@@ -645,13 +645,13 @@ case d of
   let ih1 = thm' [g |- D1] s in
   let ih2 = thm' [g |- D2] s in
   let LogName [h |- algeqname MS11 MS12 A1] = ih1 in
-  let LogName [h |- algeqname MS21 MS22 A2] = ih2 in 
-  let s1 = mstep_bin [h |- MS11] [h |- MS21] in 
-  let s2 = mstep_bin [h |- MS12] [h |- MS22] in 
+  let LogName [h |- algeqname MS21 MS22 A2] = ih2 in
+  let s1 = mstep_bin [h |- MS11] [h |- MS21] in
+  let s2 = mstep_bin [h |- MS12] [h |- MS22] in
   let [h |- MS1] = s1 in ?
 
 %  let [h |- MS1] = mstep_bin [h |- MS11] [h |- MS21] in ?
-% 
+%
 %  let [h |- MS2] = mstep_bin [h |- MS12] [h |- MS22] in
 %  let thing = [h |- algeqname MS1 MS2 ?] in
 %  ?
@@ -771,4 +771,3 @@ fn r => case r of
 
 rec main : {T:[ |- tp]}[g |- deq M N T[]] -> IdSub [g] [h |- $S] -> [h |- algeqn M[$S] N[$S] T[]] =
 mlam T => fn d => fn wk => reify [|- T] (thm d (idLogSub wk)) ;
-

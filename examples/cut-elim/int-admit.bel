@@ -241,5 +241,3 @@ mlam g => mlam A => fn d => fn e => case e of
       in [g |- existsl (\a.\h. D1') H]
 
 ;
-
-

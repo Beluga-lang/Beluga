@@ -14,7 +14,7 @@ LF eval : exp -> exp -> type =
 
 schema evctx = block x:exp, u:eval x x, t:notLam x, v:eq x x;
 
-rec eval_respects_eq : 
+rec eval_respects_eq :
 (g:evctx) [g |- eq M N] -> [g |- eval M R]
 -> [g |- eval N R] =
 / total f (eval_respects_eq g m n r e f ) /
@@ -49,7 +49,7 @@ fn d => fn f => case f of
 ;
 
 rec deterministic : (g:evctx) [g |- eval M R] -> [g |- eval M (R')]
--> [g |- eq R (R')] =  
+-> [g |- eq R (R')] =
 / total d (deterministic g m r r' d)/
 fn d => fn f =>
 case d of
@@ -92,5 +92,3 @@ case d of
 | [g |- #p.2] => let [g |- #q.2] = f in eq_refl [g] [g |- _ ]
 
 ;
-
-

@@ -123,7 +123,7 @@ ctype  =
 
 
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1] [h |- $S2]
-   -> Log [h |- #p.1[$S1] sim #p.1[$S2]] [|- Q] =  
+   -> Log [h |- #p.1[$S1] sim #p.1[$S2]] [|- Q] =
  / total g (lookup g) /
 ?
 ;
@@ -138,12 +138,11 @@ case d of
   let ih1 = thm' [g |- D1] s in
   let ih2 = thm' [g |- D2] s in
   let LogName [h |- algeqname MS11 MS12 A1] = ih1 in
-  let LogName [h |- algeqname MS21 MS22 A2] = ih2 in 
-  let [h |- MS1] = mstep_bin [h |- MS11] [h |- MS21] in 
-%  let s2 = mstep_bin [h |- MS12] [h |- MS22] in 
+  let LogName [h |- algeqname MS21 MS22 A2] = ih2 in
+  let [h |- MS1] = mstep_bin [h |- MS11] [h |- MS21] in
+%  let s2 = mstep_bin [h |- MS12] [h |- MS22] in
  ?
 %  let [h |- MS1] = s1 in ?
 
 | [g |- #p.2] => lookup [g] [g |- #p] s
 ;
-

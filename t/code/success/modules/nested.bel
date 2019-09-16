@@ -14,7 +14,7 @@ module Arith = struct
 	rec add : [ |- Nats::nat ] -> [ |- Nats::nat ] -> [ |- Nats::nat ] =
 	fn x, y => case x of
 	| [ |- Nats::z ] => y
-	| [ |- Nats::s N ] => 
+	| [ |- Nats::s N ] =>
 		let [ |- N' ] = add [ |- N ] y in
 		[ |- Nats::s N'];
 
@@ -22,7 +22,7 @@ module Arith = struct
 	rec mult : [ |- Nats::nat ] -> [ |- Nats::nat ] -> [ |- Nats::nat ] =
 	fn x, y => case x of
 	| [ |- Nats::z] => [ |- Nats::z]
-	| [ |- Nats::s N] => 
+	| [ |- Nats::s N] =>
 		let [ |- N' ] = mult [ |- N ] y in
 		add [ |- N' ] y;
 

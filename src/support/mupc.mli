@@ -36,19 +36,19 @@ module type Base = sig
   "Parse error at (line, col) in FOO in BAR in XYZ in ..."
   *)
   type semantic
-  
+
   (** The internal state of the parser. *)
   type state
-  
+
   (** Parse errors. *)
   type parse_error
-  
+
   (** Produces a nice, human-readable version of a parse error. *)
   val string_of_parse_error : parse_error -> string
-  
+
   (** The type of a parser. *)
   type 'a t
-  
+
   (** Runs a parser with backtracking enabled.
   This will allow alternation to succeed if this parser fails even
   while consuming input.
@@ -60,7 +60,7 @@ module type Base = sig
   The stack will be flushed once the parser exits backtracking
   mode. *)
   val trying : 'a t -> 'a t
-  
+
   (** Constructs a parser that tries the left parser, and if it fails
   *without consuming input*, tries the right parser.
   In other words, this is an alternation operator on parsers.
@@ -68,37 +68,37 @@ module type Base = sig
   parser must fail with `backtrack_enabled = true`. This can be
   achieved by using the `trying` combinator. *)
   val alt : 'a t -> 'a t -> 'a t
-  
+
   (** Causes the current parser to fail with the given message. *)
   val throw : string -> 'a t
-  
+
   (** A parser that observes the head of the input, returning
   {!Pervasives.None} if the parser has reached the end of the input. *)
   val peek : item Token.t option t
-  
+
   (** A variant of {!Mupc.peek} that throws an
    {! unexpected end of file !} error if the stream is empty.
    *)
   val peek' : item Token.t t
-  
+
   (** Reads one token of input. Fails with a parse error if the parse is
       at EOF.
    *)
   val any : item t
-  
+
   (** Transforms the output of a parser with a plain function. *)
   val map : ('a -> 'b) -> 'a t -> 'b t
-  
+
   (** Attaches an arbitrary label to a parser.
       If the parser fails, then this label will appear in the error.
    *)
   val label : string -> 'a t -> 'a t
-  
+
   (** Constructs a parser that doesn't affect its state and simply
       yields the given value.
    *)
   val pure : 'a -> 'a t
-  
+
   (** A sequencing operator for parsers.
       This operator takes a parser on the left and a continuation on the
       right.
@@ -108,15 +108,15 @@ module type Base = sig
       the new parser.
    *)
   val ( $ ) : 'a t -> ('a -> 'b t) -> 'b t
-  
+
   (** A flipped, operator version of `map`. *)
   val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
-  
+
   (** Tries all the parsers from left to right.
       The same caveats regarding input consumption apply as in `alt`.
    *)
   val choice : 'a t list -> 'a t
-  
+
   (** Repeatedly applies a parser until it fails, collecting all
       results.
       The parser could succeed zero times, consuming no input, producing
@@ -125,20 +125,20 @@ module type Base = sig
       accepts the empty input!
    *)
   val many : 'a t -> 'a list t
-  
+
   (** `some` repeatedly applies a parser until it fails, but must
       succeed at least once.
    *)
   val some : 'a t -> 'a list t
-    
+
   (** Constructs a parser that consumes a single character of input,
       returning it, if that character satisfies the given predicate.
    *)
   val satisfy : (item -> bool) -> item t
-  
+
   (** Matches an item from a given list. *)
   val one_of : item list -> item t
-  
+
   (** {! many_till p pend !} repeatedly applies {! p !}, testing whether
       {! pend !} succeeds between applications.
       Once {! pend !} succeeds, this parser stops, yielding all
@@ -148,23 +148,23 @@ module type Base = sig
       backtracking enabled, then {! many_till !} will also fail.
    *)
   val many_till : 'a t -> unit t -> 'a list t
-  
+
   (** `some_till` does the same, but `p` must succeed at least once.
       The same input consumption caveats apply as in {! Mupc.many_till !}.
    *)
   val some_till : 'a t -> unit t -> 'a list t
-  
+
   (** Forgets the result of a parser, preserving only its effects. *)
   val void : 'a t -> unit t
-  
+
   (** A parser that succeeds only if the parser is at the beginning of
   a line. *)
   val bol : unit t
-  
+
   (** A parser that succeeds only if the parser is at the end of the
   input. *)
   val eof : unit t
-  
+
   (** {! lookahead p !} runs parser {! p !}, but resets the parser input
   state to its original value. {! lookahead !} fails if the underlying
   parser fails.
@@ -178,23 +178,23 @@ module type Base = sig
   {! trying (lookahead (string "%:")) !}.
    *)
   val lookahead : 'a t -> 'a t
-  
+
   (** A parser that simply yields the internal parser state. *)
   val get : state t
-  
+
   (** Gets the location that the parser is currently at. *)
   val get_loc : Loc.t t
-  
+
   (** Gets the current line the parser is on inside the input. *)
   val get_line : int t
-  
+
   (** Constructs an initial parser state from given input. *)
   val initialize : item Token.t Stream.t -> state
-  
+
   (** Runs a parser on a given state. *)
   val parse : 'a t -> state -> state * (parse_error, 'a) Either.t
 end
-                     
+
 module Make (P : ParserInfo) : Base
        with type item = P.item
        with module Stream = P.Stream
@@ -207,4 +207,3 @@ module StringParser : sig
   (** Parses the given string. *)
   val string : string -> string t
 end
-

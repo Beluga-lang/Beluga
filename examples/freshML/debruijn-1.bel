@@ -1,5 +1,3 @@
-
-
 % Author: Brigitte Pientka
 %
 LF nat: type =
@@ -36,21 +34,21 @@ LF exp'   : tp -> type =
 schema ctx = value T ;
 
 
- rec var : {g:ctx}{#p:[g |- value (S[])]}  [ |- exp' S] = 
+ rec var : {g:ctx}{#p:[g |- value (S[])]}  [ |- exp' S] =
 / total p (var g s p) /
 mlam g => mlam #p => case [g |- #p] of
 | [g,x:value S |- x] =>  [ |- one]
-| [g,x:value S |- #q[..]] => 
+| [g,x:value S |- #q[..]] =>
   let [ |- Db] = var [g] [g |- #q] in
   [ |- shift Db]
-; 
+;
 
 
 rec vhoas2db : (g:ctx) [g |- value (S[])]  -> [ |- exp' S] =
  / total v (vhoas2db g s v) /
 fn v =>  case v of
  | [g |-  #p] => var [g] [g |- #p]
-			
+
  | [g |- lam (T[]) (\x. E)] =>
    let [ |- F]  =  hoas2db [g,x:value (T[]) |-  E] in
      [ |- lam' (T[]) F]
@@ -93,5 +91,3 @@ and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
 
 rec tohoas : [ |- exp' T] -> [ |- exp T] =
 fn e => db2hoas e ;
-
-

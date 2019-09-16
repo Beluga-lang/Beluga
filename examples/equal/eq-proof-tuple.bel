@@ -14,7 +14,7 @@
 % - also requires explicit use of "remove parameter x and u" in the
 %   definition of `extend' and the use of `extend' in `eqfun'
 
-LF exp: type =   
+LF exp: type =
   | app: exp -> exp -> exp
   | lam: (exp -> exp) -> exp
 ;
@@ -103,5 +103,3 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
                         E1  E2]
            )
 ;
-
-

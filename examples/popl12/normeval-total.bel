@@ -107,13 +107,13 @@ mlam T => fn y => y ;
 
 rec eval :  [g |- tm S[]] -> ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
            -> Sem [h] [ |- S]  =
-/ total t (eval g h _ t s) / 
+/ total t (eval g h _ t s) /
 fn t => fn s =>
 let (s :{T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) = s in
 case t of
 | [g |- #p ]           : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
-  Slam [h] [|- A] [|- B] 
+  Slam [h] [|- A] [|- B]
        (mlam h' => fn s' => fn e =>
          eval [g,x:tm A[] |-  E]
               (extend (mlam T => fn x => subst s' (s [ |- T] x))  e))
@@ -128,12 +128,12 @@ rec reflect : {g:ctx}{A:[|- tp]}[g |- neut A[]] ->  Sem [g] [ |- A] =
 / total a (reflect g a) /
 mlam g, A => fn r => case [ |- A] of
 | [ |- atomic P ] => Syn r
-| [ |- arr T S ] =>  
- Slam [g] [|- T] [|- S] 
+| [ |- arr T S ] =>
+ Slam [g] [|- T] [|- S]
     (mlam h => fn s => fn e =>
-      let [h |- N ] = reify [h] [|- T] e in  
+      let [h |- N ] = reify [h] [|- T] e in
       let [h |- R' ] = nsubst [h] [g] [|- arr T S] s r in
-       reflect [h] [|- S] [h |- rapp (R') N] 
+       reflect [h] [|- S] [h |- rapp (R') N]
 )
 
 and reify : {g:ctx}{A:[|- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =
@@ -156,5 +156,3 @@ rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /
 fn t => reify  [] [|- _] (eval t initialMap)
 ;
-
-

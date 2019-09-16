@@ -6,7 +6,7 @@
 of modelling substitutions as functions from neutral variables to
 neutral variables. This eliminates the need of implementing
 functions for weakening and pushing a substitution through normal
-and neutral terms. 
+and neutral terms.
 
 }%
 atomic_tp : type.
@@ -94,7 +94,7 @@ and extendSem : (g:ctx)[g |- neut (arr A[] B[])] ->
 =
 fn r => mlam h => mlam $S => fn e =>
 let [h |- N ] = reify e in
-let [g |- R ] = r in 
+let [g |- R ] = r in
   reflect [h |- rapp R[$S] N]
 
 and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
@@ -115,6 +115,3 @@ mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)
 ;
-
-
-

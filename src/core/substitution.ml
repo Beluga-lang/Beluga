@@ -50,7 +50,7 @@ module LF = struct
     | (n,FSVar (k, (s, tau))) -> FSVar (k+n, (s, tau))
     | (n,Shift m) -> Shift (n + m)
     | (n,Dot (_ft, s)) -> shiftComp (n - 1) s
- 
+
   (* comp s1 s2 = s'
    *
    * Invariant:
@@ -153,8 +153,8 @@ module LF = struct
               in
 (*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (fst (nth s (tuple, k)))
-	  | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"      
-	  | Obj (Clo (Tuple (_, tuple), s')) -> 
+	  | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"
+	  | Obj (Clo (Tuple (_, tuple), s')) ->
               let rec nth s = function
                 | (Last u, 1) -> (u, s)
                 | (Cons (u, _), 1) -> (u,  s)
@@ -201,7 +201,7 @@ module LF = struct
 
     | Head (Const c)      -> Head (Const c)
 (*    | Obj (Root (_, h, Nil)) -> frontSub (Head h) s *)
-    | Obj u               ->  Obj (Clo (u, s)) 
+    | Obj u               ->  Obj (Clo (u, s))
     | Undef               -> Undef
     | Head (MMVar (n, s')) -> Head (MMVar (n, comp s' s))
     | Head (FPVar (_n, _s' )) -> ft

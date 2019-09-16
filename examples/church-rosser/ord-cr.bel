@@ -15,4 +15,3 @@ fn c =>
  let [ |- S*'] = eq4 [ |- R*'] in
   [ |- cr+ord_result S* S*']
 ;
-

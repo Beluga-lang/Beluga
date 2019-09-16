@@ -44,4 +44,3 @@ end case
 end induction
 end theorem
 }%
-

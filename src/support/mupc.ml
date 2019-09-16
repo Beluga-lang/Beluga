@@ -19,19 +19,19 @@ module type Base = sig
       error at (line, col) in FOO in BAR in XYZ in ..."
    *)
   type semantic
-  
+
   (** The internal state of the parser. *)
   type state
-  
+
   (** Parse errors. *)
   type parse_error
-  
+
   (** Produces a nice, human-readable version of a parse error. *)
   val string_of_parse_error : parse_error -> string
-  
+
   (** The type of a parser. *)
   type 'a t
-  
+
   (** Runs a parser with backtracking enabled.
   This will allow alternation to succeed if this parser fails even
   while consuming input.
@@ -43,7 +43,7 @@ module type Base = sig
   The stack will be flushed once the parser exits backtracking
   mode. *)
   val trying : 'a t -> 'a t
-  
+
   (** Constructs a parser that tries the left parser, and if it fails
   *without consuming input*, tries the right parser.
   In other words, this is an alternation operator on parsers.
@@ -51,37 +51,37 @@ module type Base = sig
   parser must fail with `backtrack_enabled = true`. This can be
   achieved by using the `trying` combinator. *)
   val alt : 'a t -> 'a t -> 'a t
-  
+
   (** Causes the current parser to fail with the given message. *)
   val throw : string -> 'a t
-  
+
   (** A parser that observes the head of the input, returning
   {!Pervasives.None} if the parser has reached the end of the input. *)
   val peek : item Token.t option t
-  
+
   (** A variant of {!Mupc.peek} that throws an
    {! unexpected end of file !} error if the stream is empty.
    *)
   val peek' : item Token.t t
-  
+
   (** Reads one token of input. Fails with a parse error if the parse is
       at EOF.
    *)
   val any : item t
-  
+
   (** Transforms the output of a parser with a plain function. *)
   val map : ('a -> 'b) -> 'a t -> 'b t
-  
+
   (** Attaches an arbitrary label to a parser.
       If the parser fails, then this label will appear in the error.
    *)
   val label : string -> 'a t -> 'a t
-  
+
   (** Constructs a parser that doesn't affect its state and simply
       yields the given value.
    *)
   val pure : 'a -> 'a t
-  
+
   (** A sequencing operator for parsers.
       This operator takes a parser on the left and a continuation on the
       right.
@@ -91,15 +91,15 @@ module type Base = sig
       the new parser.
    *)
   val ( $ ) : 'a t -> ('a -> 'b t) -> 'b t
-  
+
   (** A flipped, operator version of `map`. *)
   val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
-  
+
   (** Tries all the parsers from left to right.
       The same caveats regarding input consumption apply as in `alt`.
    *)
   val choice : 'a t list -> 'a t
-  
+
   (** Repeatedly applies a parser until it fails, collecting all
       results.
       The parser could succeed zero times, consuming no input, producing
@@ -108,20 +108,20 @@ module type Base = sig
       accepts the empty input!
    *)
   val many : 'a t -> 'a list t
-  
+
   (** `some` repeatedly applies a parser until it fails, but must
       succeed at least once.
    *)
   val some : 'a t -> 'a list t
-    
+
   (** Constructs a parser that consumes a single character of input,
       returning it, if that character satisfies the given predicate.
    *)
   val satisfy : (item -> bool) -> item t
-  
+
   (** Matches an item from a given list. *)
   val one_of : item list -> item t
-  
+
   (** {! many_till p pend !} repeatedly applies {! p !}, testing whether
       {! pend !} succeeds between applications.
       Once {! pend !} succeeds, this parser stops, yielding all
@@ -131,23 +131,23 @@ module type Base = sig
       backtracking enabled, then {! many_till !} will also fail.
    *)
   val many_till : 'a t -> unit t -> 'a list t
-  
+
   (** `some_till` does the same, but `p` must succeed at least once.
       The same input consumption caveats apply as in {! Mupc.many_till !}.
    *)
   val some_till : 'a t -> unit t -> 'a list t
-  
+
   (** Forgets the result of a parser, preserving only its effects. *)
   val void : 'a t -> unit t
-  
+
   (** A parser that succeeds only if the parser is at the beginning of
   a line. *)
   val bol : unit t
-  
+
   (** A parser that succeeds only if the parser is at the end of the
   input. *)
   val eof : unit t
-  
+
   (** {! lookahead p !} runs parser {! p !}, but resets the parser input
   state to its original value. {! lookahead !} fails if the underlying
   parser fails.
@@ -161,19 +161,19 @@ module type Base = sig
   {! trying (lookahead (string "%:")) !}.
    *)
   val lookahead : 'a t -> 'a t
-  
+
   (** A parser that simply yields the internal parser state. *)
   val get : state t
-  
+
   (** Gets the location that the parser is currently at. *)
   val get_loc : Loc.t t
-  
+
   (** Gets the current line the parser is on inside the input. *)
   val get_line : int t
-  
+
   (** Constructs an initial parser state from given input. *)
   val initialize : item Token.t Stream.t -> state
-  
+
   (** Runs a parser on a given state. *)
   val parse : 'a t -> state -> state * (parse_error, 'a) Either.t
 end
@@ -190,10 +190,10 @@ module Make (P : ParserInfo) = struct
       end)
 
   type semantic = string list
-  
+
   let string_of_semantic (locs : semantic) : string =
     String.concat ", " (List.map (fun l -> "in " ^ l) locs)
-  
+
   type state =
     { semantic_loc : semantic;
       (** Either we have a head-strict input stream or we've reached
@@ -203,7 +203,7 @@ module Make (P : ParserInfo) = struct
       backtrack_enabled : bool;
       count : int;
     }
-  
+
   let state_span (s : state) : Span.t =
     let open HeadStrict in
     let open Token in
@@ -211,33 +211,33 @@ module Make (P : ParserInfo) = struct
       (fun l -> Span.of_pair' l l)
       (fun i -> i.head.annotation)
       (Lazy.force s.input)
-  
+
   type parse_error =
     { error_span : Span.t;
       error_semantic_loc : semantic;
       error_message : string;
       error_is_recoverable : bool;
     }
-  
+
   let string_of_parse_error (e : parse_error) : string =
     Printf.sprintf "%s: %s %s"
       (Span.to_string e.error_span)
       e.error_message
       (string_of_semantic e.error_semantic_loc)
-  
+
   let error_of_state (msg : string) (s : state) : parse_error =
     { error_span = state_span s;
       error_semantic_loc = s.semantic_loc;
       error_message = msg;
       error_is_recoverable = s.backtrack_enabled;
     }
-  
+
   let push_semantic_loc (l : string) (s : state) : state =
     { s with semantic_loc = l :: s.semantic_loc }
-  
+
   let pop_semantic_loc (s : state) : state =
     { s with semantic_loc = List.tl s.semantic_loc }
-  
+
   exception RewindTooFar
 
   (** Moves the given number of tokens from the rewind stack back onto
@@ -273,19 +273,19 @@ module Make (P : ParserInfo) = struct
   (** The type of a parser. *)
   type 'a t =
     { run : state -> state * (parse_error, 'a) Either.t }
-  
+
   let map (f : 'a -> 'b) (p : 'a t) : 'b t =
     { run =
         fun s -> Pair.rmap (Either.rmap f) (p.run s)
     }
-  
+
   (** Constructs a parser that doesn't affect its state and simply
   yields the given value. *)
   let pure (x : 'a) : 'a t =
     { run =
         fun s -> (s, Either.pure x)
     }
-  
+
   (** A sequencing operator for parsers.
   This operator takes a parser on the left and a continuation on the
   right.
@@ -302,17 +302,17 @@ module Make (P : ParserInfo) = struct
         | Left err -> (s', Left err)
         | Right x -> (k x).run s'
     }
-  
+
   (** A flipped, operator version of `map`. *)
   let ( $> ) (p : 'a t) (f : 'a -> 'b) : 'b t =
     p $ fun x -> pure (f x)
-  
+
   (** A parser that simply yields the internal parser state. *)
   let get : state t =
     { run =
         fun s -> (s, Either.pure s)
     }
-  
+
   (** Gets the location that the parser is currently at. *)
   let get_loc : Loc.t t =
     get $>
@@ -321,13 +321,13 @@ module Make (P : ParserInfo) = struct
         (fun l -> l)
         (fun t -> t.HeadStrict.head.Token.annotation.Span.start)
         (Lazy.force s.input)
-  
+
   (** Gets the current line the parser is on inside the input,
   i.e. the line at which the last token processed by the parser *ends
   on*. *)
   let get_line : int t =
     get_loc $> fun l -> l.Loc.line
-  
+
   (** Runs a parser with backtracking enabled.
   This will allow alternation to succeed if this parser fails even
   while consuming input.
@@ -355,7 +355,7 @@ module Make (P : ParserInfo) = struct
           e
         )
     }
-  
+
   (** Constructs a parser that tries the left parser, and if it fails
   *without consuming input*, tries the right parser.
   In other words, this is an alternation operator on parsers.
@@ -390,19 +390,19 @@ module Make (P : ParserInfo) = struct
              (s, Left e)
         | Right x -> (s, Right x)
     }
-  
+
   let throw (msg : string) : 'a t =
     { run =
         fun s -> (s, Either.Left (error_of_state msg s))
     }
-  
+
   (** Observes the head of the input stream without consuming any
   new input. *)
   let peeks (s : state) : (Loc.t, item Token.t) Either.t =
     let open Either in
     let open HeadStrict in
     Lazy.force s.input $> fun { head; _ } -> head
-  
+
   (** Pops a token from the input stream, if any.
   Returns `Nothing` if the input is already empty. *)
   let car (s : state) : 'c Token.t option * state =
@@ -429,28 +429,28 @@ module Make (P : ParserInfo) = struct
                ;
            }
          )
-  
+
   (* For `peek` and `peek'` we need to write them in eta-long form
   without using combinators due to the value restriction. *)
-  
+
   let peek : item Token.t option t =
     { run =
         fun s -> (s, Either.pure (Either.forget (peeks s)))
     }
-  
+
   let peek' : item Token.t t =
     { run =
         fun s ->
         let open Either in
         let (s, e) = peek.run s in
         ( s,
-          e $ 
+          e $
             (Maybe.eliminate
               (fun _ -> Left (error_of_state "unexpected end of input" s))
               (fun x -> pure x))
         )
     }
-  
+
   (** A variant of `car` that pops a character from the input, if any,
   but otherwise throws a `parse_error` with the message "unexpected
   end of input". *)
@@ -463,27 +463,27 @@ module Make (P : ParserInfo) = struct
         | (Some { value; _ }, s) ->
            ( s, Either.Right value )
     }
-  
+
     (*
   (** Transforms the input state of a parser and runs it. *)
   let state (f : 'c state -> 'c state) (p : ('c, 'a) t) : ('c, 'a) t =
     fun s -> p (f s)
      *)
-  
+
   (** Pushes the given semantic location onto the stack, runs the
   given parser, and pops the semantic location. *)
   let label (l : string) (p : 'a t) : 'a t =
     { run =
         fun s -> Pair.lmap pop_semantic_loc (p.run (push_semantic_loc l s))
     }
-  
+
   (** Tries all the parsers from left to right.
   The same caveats regarding input consumption apply as in `alt`. *)
   let rec choice : 'a t list -> 'a t =
     function
     | [] -> throw "all choices failed"
     | (p :: ps) -> alt p (choice ps)
-  
+
   (** `many` repeatedly applies a parser until it fails, collecting
   all results.  The parser could succeed zero times, consuming no
   input, producing an empty list.
@@ -492,20 +492,20 @@ module Make (P : ParserInfo) = struct
   let rec many (p : 'a t) : 'a list t = alt (some p) (pure [])
   and some (p : 'a t) : 'a list t =
     p $ fun x -> many p $ fun xs -> pure (x :: xs)
-    
+
   (** Constructs a parser that consumes a single character of input,
   returning it, if that character satisfies the given predicate. *)
   let satisfy (f : item -> bool) : item t =
     let open Token in
-    (peek' $> fun c -> f c.value) $ 
+    (peek' $> fun c -> f c.value) $
       function
       | true -> any (* if it passes, then consume a character *)
       | false -> throw "predicate failed"
-  
+
   (** Matches an item from a given list. *)
   let one_of (cs : item list) : item t =
     choice (List.map (fun c -> satisfy (fun c' -> c = c')) cs)
-  
+
   (** `many_till` repeatedly applies the given parser, testing whether
   `pend` succeeds between applications. Once `pend` succeeds, this
   parser stops.
@@ -514,10 +514,10 @@ module Make (P : ParserInfo) = struct
     alt (pend $ fun _ -> pure []) (some_till p pend)
   and some_till (p : 'a t) (pend : unit t) : 'a list t =
     p $ fun x -> many_till p pend $ fun xs -> pure (x :: xs)
-  
+
   (** Forgets the result of a parser, preserving only its effects. *)
   let void (p : 'a t) : unit t = map (fun _ -> ()) p
-  
+
   (** A parser that succeeds only if the parser is at the beginning of
   a line. *)
   let bol : unit t =
@@ -528,7 +528,7 @@ module Make (P : ParserInfo) = struct
         pure ()
       else
         throw "expected to be at beginning of line"
-  
+
   (** A parser that succeeds only if the parser is at the end of the
   input. *)
   let eof : unit t =
@@ -536,7 +536,7 @@ module Make (P : ParserInfo) = struct
       Maybe.eliminate
         pure
         (fun _ -> throw "expected to be at end of file")
-  
+
   (** `lookahead p` runs parser `p`, but resets the parser input state
   to its original value. `lookahead` fails if the underlying parser
   fails.
@@ -558,7 +558,7 @@ module Make (P : ParserInfo) = struct
         else
           (rewind (n' - n) s, e)
     }
-  
+
   let initialize (input : item Token.t Stream.t) : state =
     { input =
         lazy
@@ -572,7 +572,7 @@ module Make (P : ParserInfo) = struct
       stk = PureStack.empty;
       count = 0;
     }
-  
+
   let parse (p : 'a t) (s : state) : state * (parse_error, 'a) Either.t =
     p.run s
 end

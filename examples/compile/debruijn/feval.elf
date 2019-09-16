@@ -32,4 +32,3 @@ LF feval : env -> exp' -> val -> type = % name feval D.
 % Recursion
   | fev_fix  : feval (cons K (fix' F)) F W -> feval K (fix' F) W
 ;
-

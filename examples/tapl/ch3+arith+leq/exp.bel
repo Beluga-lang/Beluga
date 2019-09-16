@@ -38,5 +38,3 @@ let w1 = [ |- iszero] ;
 
 --not
 let w2 = [ |- switch z z] ;
-
-

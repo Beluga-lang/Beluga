@@ -38,4 +38,3 @@ fn p =>  let ( e1, e2 ) = p in
               | [ |- s U] =>
                   testPairs3  ([ |- U] , e2 )
  ;
-

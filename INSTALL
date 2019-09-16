@@ -57,7 +57,7 @@ and the easiest way to install opam is via Homebrew (https://brew.sh/):
 
 # brew install opam
 # opam init
-# opam switch create ocaml-base-compiler.4.07.1 
+# opam switch create ocaml-base-compiler.4.07.1
 # opam install ocamlfind extlib ulex
 # eval $(opam env)
 
@@ -70,7 +70,7 @@ so you might also want to consider:
 -------------
 
 Beluga can be executed on Windows through Cygwin. The necessary prerequisites can be installed
-using an OCalm package manager called WODI. 
+using an OCalm package manager called WODI.
 
 1. Download WODI's graphical installer wodi32/64.exe
 http://wodi.forge.ocamlcore.org/download.html
@@ -93,7 +93,7 @@ Compile by running "make" from the Beluga directory.
 ./beluga
 # make
 
-You can now run Beluga programs with the newly 
+You can now run Beluga programs with the newly
 "beluga" executable in the "bin" directory
 
 ./beluga
@@ -166,21 +166,16 @@ find rvm without giving the full path.
 Beluga includes a major mode for programming in Emacs. The elisp file is locationed in the
 ./beluga/tools directory. To configure Beluga-mode:
 
-1. Update your ~/.emacs configuration file with the lines written below. XEmacs users must 
-update ~/.xemacs and ~/.xema.cs/init.el with the same text. Create any of these files if 
+1. Update your ~/.emacs configuration file with the lines written below. XEmacs users must
+update ~/.xemacs and ~/.xema.cs/init.el with the same text. Create any of these files if
 they do not exist already.
 
 (add-to-list 'load-path "/home/bpientka/complogic/beluga/tools/")
 (load "beluga-mode.el")
 
-NOTE: Feel free to move ther beluga-mode.el file to another directory so long as you 
+NOTE: Feel free to move ther beluga-mode.el file to another directory so long as you
 ensure its location is included in the Emacs load-path.
 
 2. Restart Emacs.
  .
-Emacs will now launch in Beluga-mode automatically when you open a Beluga program. 
-
-
-
-
-
+Emacs will now launch in Beluga-mode automatically when you open a Beluga program.

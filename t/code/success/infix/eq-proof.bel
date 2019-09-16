@@ -90,4 +90,3 @@ e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.
 }%
-

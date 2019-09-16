@@ -94,4 +94,3 @@
 
     converts an expression in a simply typed lambda calculus to a
     normal form (changing the representation to a value only representation)
-

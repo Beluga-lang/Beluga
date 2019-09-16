@@ -74,9 +74,9 @@ and strans_head loc cD cPsi h conv_list = match h with
           Int.LF.MVar(u, strans_sub cD cPsi sigma conv_list)
   | Int.LF.PVar (p, sigma) -> Int.LF.PVar(p, strans_sub cD cPsi sigma conv_list)
   | Int.LF.Proj (Int.LF.BVar x, j) ->
-     begin try 
-       let _ = Context.ctxDec cPsi x in 
-	 (* check that there exists a typ declaration for x 
+     begin try
+       let _ = Context.ctxDec cPsi x in
+	 (* check that there exists a typ declaration for x
 	    – if there is none, then it is mapped to itself. *)
        let x' = (new_index x conv_list) - j + 1  in
 	 Int.LF.BVar x'
@@ -127,7 +127,7 @@ and shift_conv_list n = function
   | (k, x::xs) -> shift_conv_list (n+x) (k-1, xs)
 
 and strans_sub cD cPsi s conv_list = match s with
-(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *) 
+(*  | Int.LF.Shift (Int.LF.NoCtxShift, 0) ->s *)
   | Int.LF.EmptySub -> Int.LF.EmptySub
   | Int.LF.Undefs -> Int.LF.Undefs
   | Int.LF.Shift offset -> Int.LF.Shift (shift_conv_list 0 (offset, conv_list))
@@ -228,7 +228,7 @@ and flattenDCtx' cD cPsi = match cPsi with
       cO ; cD ; cPsi |- s : cPhi
 
 
-   Example: 
+   Example:
             cPsi:        g, b:block x:exp. nat
             cPhi:        g, x:exp, y:nat
             conv_list    [2]
@@ -239,13 +239,13 @@ and flattenDCtx' cD cPsi = match cPsi with
 
    AND
 
-   genConvSub' generates : 
+   genConvSub' generates :
          cPhi |-   s'  : ^2, <x,y>  : cPsi
 
 *)
 let gen_conv_sub conv_list  =
   let l  = List.length conv_list in                         (* length of cPsi *)
-  let rec gen_sub conv_list pos = match conv_list with 
+  let rec gen_sub conv_list pos = match conv_list with
     | [] -> Int.LF.Shift l
     | 1::clist ->
         let s = gen_sub clist (pos + 1) in
@@ -262,30 +262,30 @@ let gen_conv_sub conv_list  =
       gen_projs (Int.LF.Dot (Int.LF.Head (Int.LF.Proj (Int.LF.BVar pos, index)), s))
         pos (k, index+1)
   in
-    gen_sub conv_list 1 
+    gen_sub conv_list 1
 
 let gen_conv_sub' conv_list  =
   let l' = List.fold_left (fun r x -> r + x) 0 conv_list in (* length of cPhi *)
-  let rec gen_sub' conv_list pos = match conv_list with 
+  let rec gen_sub' conv_list pos = match conv_list with
     | [] -> Int.LF.Shift l'
-    | 1::clist -> 
+    | 1::clist ->
         let s = gen_sub' clist (pos + 1) in
           Int.LF.Dot (Int.LF.Head (Int.LF.BVar pos), s)
     | k::clist ->
         let s = gen_sub' clist (pos + 1) in
         (* let tM = gen_tup  pos (k, 1) in *)
-	let tM = gen_tup  (pos + k - 1) (k, 1) in 
+	let tM = gen_tup  (pos + k - 1) (k, 1) in
 	  Int.LF.Dot(Int.LF.Obj(Int.LF.Tuple (Syntax.Loc.ghost, tM)), s)
 
-  and gen_tup pos (k,index) = 
-    if k = index then 
+  and gen_tup pos (k,index) =
+    if k = index then
       (* only correct if pos stands for a variable of atomic type *)
       Int.LF.Last (Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil))
-    else 
+    else
       let tM = Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil) in
-      let tTup = gen_tup (pos-1) (k, index+1) in 
-	Int.LF.Cons (tM, tTup)      
-  in 
+      let tTup = gen_tup (pos-1) (k, index+1) in
+	Int.LF.Cons (tM, tTup)
+  in
     gen_sub' conv_list 1
 
 
@@ -304,9 +304,9 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
       let (cPhi, conv_list) = flattenDCtx cD cPsi in
       let s_proj = gen_conv_sub conv_list in
       let s_tup  = gen_conv_sub' conv_list in
-      let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in 
+      let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in
 	(*  cPsi |- s_proj : cPhi
-            cPhi |- s_tup : cPsi       
+            cPhi |- s_tup : cPsi
             cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
 
       let (ss', cPhi') = Subord.thin' cD a cPhi in
@@ -324,4 +324,3 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
   | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Int.LF.Lam (loc, x,
            etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n)
-

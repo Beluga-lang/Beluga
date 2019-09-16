@@ -50,7 +50,7 @@ LF sub_split : joining (cjoin Phii Phi1 Phii2) -> subst_typing sigma Phi Psi -> 
 
 % Let Phi = Phi1 join Phi2 and Psi |- Sig <= Phi, then there exists Psi1, Psi2 s.t. Psi1 |- Sig <= Phi1, Psi2 |- Sig <= Phi2 and Psi = Psi1 join Psi2
 
-rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- subst_typing Sig Phi Psi]} [g |- sub_split J S] = 
+rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- subst_typing Sig Phi Psi]} [g |- sub_split J S] =
     mlam J => mlam S =>
     let [g |- J] : [g |- joining (cjoin Psi Psi1 Psi2)] = [_ |- J] in
     let [g |- S] : [g |- subst_typing Sig Psi Phi] = [_ |- S] in
@@ -63,8 +63,8 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
       let [g |- joining_base J1[]] = [g |- J] in
       let [g |- ssh5 _ _ F1 F2 F3] = subst_split_h1 [ |- J1] [g |- S2] [g |- S1] in
       [g |- sub_s J S (stp_base S1 F1) (stp_base S1 F2) (F3)]
-    | [g |- stp_lin S1 S2 S3 S4 S5] => 
-      ( case [g |- J] of               
+    | [g |- stp_lin S1 S2 S3 S4 S5] =>
+      ( case [g |- J] of
 	| [g |- joining_lin_l J1] =>
 	  let [g |- sub_s _ _ F1 F2 F3] = subst_split [g |- J1] [g |- S3] in
 	  let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
@@ -110,4 +110,3 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
       let [g |- refl] : [g |- ctx_eq C C] = ctxjoinunreqb [g |- F3] [g |- S3] [g |- UnrPsi2] in
       [g |- sub_s J S (stp_unav UnrPhi1 F1 UnrPsi1 S4 refl S6 S7) (stp_unav UnrPhi2 F2 UnrPsi2 S4 refl S6 S7) (F3)]
 ;
-

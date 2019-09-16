@@ -109,7 +109,7 @@ fn e => case e of
 ;
 
 
-rec ceq_main: [ |- equal T S] -> [ |- eq T S] =  
+rec ceq_main: [ |- equal T S] -> [ |- eq T S] =
 / total e (ceq_main t s e) /
 fn e =>  ceq  e
 ;

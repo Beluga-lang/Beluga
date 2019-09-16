@@ -3,7 +3,7 @@ LF tp : type =
 | arr : tp -> tp -> tp
 | prod : tp -> tp -> tp
 ;
---name tp T.        
+--name tp T.
 
 tm : type.          --name tm E.
 app : tm -> tm -> tm.
@@ -44,7 +44,7 @@ stratified Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
 ;
 
 rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
-mlam S ⇒ fn h => 
+mlam S ⇒ fn h =>
 let [ |- halts/m MS' V] = h in
  [ |- halts/m (onestep S MS') V]
 ;
@@ -89,7 +89,7 @@ inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 inductive RedSub : {g:ctx}{G:[|-tctx]}{$S:[ |- g]} ctype =
 | Nil : RedSub  [ ] [|- nil] [ |- ^ ]
 | Dot : RedSub  [g] [|- G] [ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm] [|- snoc G A] [ |- $S[^] , M ] 
+     → RedSub [g, x:tm] [|- snoc G A] [ |- $S[^] , M ]
 ;
 
 rec lookup : Lookup [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] [ |- $S[^]] -> Reduce [|- A] [ |- M[$S[^]]] =
@@ -98,32 +98,32 @@ fn v => fn rs => case v of
  | Pop x => let Dot rs' rN = rs in lookup x rs'
 ;
 
-rec pair_mstep1 : {M2:[|-tm]}[|- mstep M1 V1] -> [|- mstep (pair M1 M2) (pair V1 M2)] = 
+rec pair_mstep1 : {M2:[|-tm]}[|- mstep M1 V1] -> [|- mstep (pair M1 M2) (pair V1 M2)] =
 mlam M2 => fn ms1 => case ms1 of
 | [|- refl] => [|- refl]
-| [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep1 [|- M2] [|- MS] in 
+| [|- onestep S MS] =>
+  let [|- MS'] = pair_mstep1 [|- M2] [|- MS] in
      [ |- onestep (steppair1 S) MS']
 ;
 
-rec pair_mstep2 : {M1:[|-tm]}[|- mstep M2 V2] -> [|- mstep (pair M1 M2) (pair M1 V2)] = 
+rec pair_mstep2 : {M1:[|-tm]}[|- mstep M2 V2] -> [|- mstep (pair M1 M2) (pair M1 V2)] =
 mlam M1 => fn ms1 => case ms1 of
 | [|- refl] => [|- refl]
-| [|- onestep S MS] => 
-  let [|- MS'] = pair_mstep2 [|- M1] [|- MS] in 
+| [|- onestep S MS] =>
+  let [|- MS'] = pair_mstep2 [|- M1] [|- MS] in
      [ |- onestep (steppair2 S) MS']
 ;
 
 rec mstep_trans : [|- mstep M1 M2] -> [|- mstep M2 M3] -> [|- mstep M1 M3] =
 fn d1 , d2 => case d1 of
 | [|- refl] => d2
-| [|- onestep S MS] => 
+| [|- onestep S MS] =>
   let [|- MS'] = mstep_trans [|- MS ] d2 in
   [|- onestep S MS']
 ;
 
-rec pair_halts: [|- halts M1] -> [|- halts M2] -> 
-               [|- halts (pair M1 M2)] = 
+rec pair_halts: [|- halts M1] -> [|- halts M2] ->
+               [|- halts (pair M1 M2)] =
 fn d1, d2 =>
   let [|- halts/m MS1 V1] = d1 in
   let [|- halts/m MS2 V2] = d2 in
@@ -137,7 +137,7 @@ mlam g => fn d => fn s => case d of
 | Lam d1 =>
   Arr [ |- halts/m refl val/lam ]
       (mlam N => fn r => bwd_closed [ |- beta ] (main [g,x:tm] d1 (Dot s r)))
-| App d1 d2 => 
+| App d1 d2 =>
   let Arr h f = main [g] d1 s in
   f [|- _] (main [g] d2 s)
 | C => I [|- halts/m refl val/c ]
@@ -152,4 +152,3 @@ mlam g => fn d => fn s => case d of
 rec weakNorm : Oft [|- nil] [|- M] [ |- A] -> [ |- halts M] =
 fn d => reduce_halts (main [] d Nil)
 ;
-

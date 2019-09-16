@@ -87,5 +87,3 @@ case d of
 | [g |- #p.u[..]] => let [g |- #q.u[..]] = f in eq_refl [g] [g |- _ ]
 
 ;
-
-

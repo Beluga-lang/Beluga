@@ -1,4 +1,3 @@
-
 (* a not-so-pretty printer for external syntax, for use in debugging *)
 
 open Format
@@ -11,7 +10,7 @@ module LF = struct
     | Maybe -> fprintf ppf "Maybe"
     | No -> fprintf ppf "No"
     | Inductive -> fprintf ppf "Inductive"
-     
+
   let rec show_kind ppf = function
     | Typ _ -> fprintf ppf "type"
     | ArrKind (_, t, k) ->
@@ -81,7 +80,7 @@ module LF = struct
     | AtomTerm (_, m) ->
        fprintf ppf "AtomTerm(%a)"
          show_normal m
-         
+
   and show_normal ppf = function
     | Lam (_, x, m) ->
        fprintf ppf "Lam(@[<hv>%a,@ %a@])"

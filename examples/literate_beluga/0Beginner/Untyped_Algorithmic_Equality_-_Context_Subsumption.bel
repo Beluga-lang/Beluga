@@ -3,7 +3,7 @@
 %
 %{{
 # Algorithmic Equality for the Untyped Lambda-calculus (Generalized context version)
-We discuss completeness of algorithmic equality for untyped lambda-terms with respect to declarative equality of lambda-terms. 
+We discuss completeness of algorithmic equality for untyped lambda-terms with respect to declarative equality of lambda-terms.
 This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 <br>
 The mechanization highlights several aspects:
@@ -17,7 +17,7 @@ The mechanization highlights several aspects:
 %{{
 ## Syntax
 We first define lambda-terms in the logical framework LF using Beluga-style syntax. }}%
-LF tm: type = 
+LF tm: type =
 | app: tm -> tm -> tm
 | lam: (tm -> tm) -> tm
 ;
@@ -31,7 +31,7 @@ We describe algorithmic and declarative equality for the untyped lambda-calculus
 ### Algorithmic Equality
 For algorithmic equality, we have the predicate <code>aeq</code> of type <code>tm -> tm -> type</code>, and inference rules for term applications <code>ae_a</code> and lambda-abstractions <code>ae_l</code>}}%
 
-LF aeq: tm -> tm -> type = 
+LF aeq: tm -> tm -> type =
 | ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2)
 
 | ae_l : ({x : tm} aeq x x -> aeq (M x) (N x))
@@ -43,7 +43,7 @@ LF aeq: tm -> tm -> type =
 ### Declarative Equality
 Next we define declarative equality in order to establish its equivalence with algorithmic equality and prove completeness. Note that the only difference between the two judgements is that declarative equality explicitly includes inference rules for reflexivity <code>de_r</code>, transitivity <code>de_t</code>, and symmetry <code>de_s</code>: properties which we will prove to be intrinsic to algorithmic equality in the untyped lambda-calculus.}}%
 
-LF deq: tm -> tm -> type = 
+LF deq: tm -> tm -> type =
 | de_l: ({x:tm} deq x x -> deq (M x) (M' x))
      -> deq (lam (\x. M x)) (lam (\x. M' x))
 | de_a: deq M1 N1 -> deq M2 N2
@@ -159,5 +159,3 @@ fn e => case e of
 <br><br><p>Third, we consider the case for <code>de_l</code>, the case for lambda-abstractions. In this case, we extend the context with the new declarations about variables and pass to the recursive call <code>ceqG</code> the derivation <code>[gamma, b:block (x:tm ,ae_v:aeq x x, de_v: deq x x) |- D[..,b.1, b.3]]</code>. Declaration weakening (in the informal proof d-wk (Felty et al, 2014)) is built-in. In the pattern, the derivation <code>D</code> has type <code>[gamma, x:tm , ae_v:aeq x x |- deq M[..,x] N]</code>. We hence construct a weakening substitution <code>.. b.1 b.3</code> that allows us to move <code>D</code> to the context <code>gamma, b:block (x:tm,ae_v:aeq x x, de_v:deq x x)</code>. The result of recursive call is a derivation <code>F</code>, where <code>F</code> only depends on <code>x:tm</code> and <code>u:aeq x x</code>. In the on-paper proof we refer to declaration strengthening (d-str) to justify that <code>F</code> cannot depend on <code>de_v</code> assumptions. In Beluga, the programmer uses strengthening by stating which assumptions <code>F</code> can depend on. The coverage checker will then subsequently rely on subordination to verify that the restricted case is sufficient and no other cases have been forgotten. Subordination allows us to verify that indeed assumptions of type <code>de_v: deq x x</code> cannot be used in proofs for <code>aeq M[.., b.1] N[.., b.1]</code>. Finally, we use <code>F</code> to assemble the final result <code>ae_l (\x.\v. F)</code>.</p>
 <br><br><p>We conclude this example with a few observations: The statement of the theorem is directly and succinctly represented in Beluga using contextual types and contextual objects. Every case in the on-paper proof corresponds directly to a case in the implementation of the recursive function. Type reconstruction is used to reconstruct implicit type arguments and infer the type of free contextual variables that occur in patterns. This is crucial to achieve a palatable source language. Weakening and strengthening are supported in Beluga through the typing rules and on the level of context variables and context schemas using context subsumption. If schema <code>W</code> is a prefix of a schema <code>W'</code>, then we can always use a context of schema <code>W'</code> in place of a context of schema <code>W</code>.</p>
 }}%
-
-

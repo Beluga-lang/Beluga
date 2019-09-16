@@ -8,7 +8,7 @@ inductive Foo : ctype =
 | C : [|- vec M] -> Foo
 ;
 
-rec f : [|- nat] -> Foo = 
+rec f : [|- nat] -> Foo =
 fn n => C ?
 ;
 

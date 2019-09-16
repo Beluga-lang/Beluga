@@ -16,7 +16,7 @@ module Annot = struct
   }
 
   let store     = Hashtbl.create 0
-  let add (l : Loc.t) (e : entry) = 
+  let add (l : Loc.t) (e : entry) =
                   (* dprint (fun () -> "[TypeInfo.Annot] Entry of " ^ e.typ ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n");  *)
                   Hashtbl.replace store l e
   let get       = Hashtbl.find store
@@ -25,11 +25,11 @@ module Annot = struct
 
   let output_int (pp : out_channel) (i : int) : unit = output_string pp (string_of_int i)
 
-  let rec print_annot (pp : out_channel) (name : string) : unit = 
+  let rec print_annot (pp : out_channel) (name : string) : unit =
   begin
     let sorted =
     let l = Hashtbl.fold (fun k v acc -> (k,v)::acc) store [] in
-      List.sort (fun (key1,_) (key2,_) -> compare key1 key2) l in    
+      List.sort (fun (key1,_) (key2,_) -> compare key1 key2) l in
     let f = print_one pp name in
     ignore (List.iter f sorted);
     close_out pp
@@ -46,10 +46,10 @@ module Annot = struct
     end
 
   and print_location (pp : out_channel) (loc : Loc.t) (name : string) : unit =
-    begin      
+    begin
       let start_pos = Loc.start_position loc in
       let end_pos = Loc.stop_position loc in
-      print_position pp start_pos name;    
+      print_position pp start_pos name;
       output_char pp ' ';
       print_position pp end_pos name
     end
@@ -81,10 +81,10 @@ module LF = struct
     tc = t
   }
 
-  let store         = Hashtbl.create 0  
-  let add (l : Loc.t) (e : entry) (s : string) = 
+  let store         = Hashtbl.create 0
+  let add (l : Loc.t) (e : entry) (s : string) =
     if l <> Loc.ghost
-      then begin                                      
+      then begin
         (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ P.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
         Fmt.stringify (P.fmt_ppr_lf_typ e.ctx e.psi P.l0) (Whnf.normTyp e.tc)
         |> Annot.mk_entry
@@ -104,7 +104,7 @@ module Comp = struct
     tc: Comp.tclo
   }
 
-  let mk_entry (c : LF.mctx) (t : Comp.tclo) : entry = 
+  let mk_entry (c : LF.mctx) (t : Comp.tclo) : entry =
   {
     ctx = c;
     tc = t
@@ -141,7 +141,7 @@ module Sgn = struct
 
   let store = Hashtbl.create 0
 
-  let add (l : Loc.t) (e : entry) (_ : string) : unit = 
+  let add (l : Loc.t) (e : entry) (_ : string) : unit =
     match () with
     | _ when l = Loc.ghost -> ()
     | _ ->
@@ -183,7 +183,7 @@ let type_of_position (line : int) (col : int) : string =
     let start_l = Loc.start_line l in
     let end_l = Loc.stop_line l in
     (* let _ = Format.printf "(%d, %d), (%d, %d), %s\n" (Loc.start_line l) start_c (Loc.stop_line l) end_c x.Annot.typ in *)
-    if (start_l = line) && (end_l = line) then 
+    if (start_l = line) && (end_l = line) then
       (start_c <= col) && (col <= end_c)
     else if (start_l = line) && (line < end_l) then
       start_c <= col
@@ -196,4 +196,3 @@ let type_of_position (line : int) (col : int) : string =
   match List.fold_left (fun acc x -> if contains_pos x then (Some x) else acc) None sorted with
   | Some (_, s) -> (s.Annot.typ ^ ";\n")
   | None -> ("No type information found for point: (" ^ (string_of_int line) ^ ", " ^ (string_of_int col)^ ");\n")
-

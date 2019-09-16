@@ -62,7 +62,7 @@ LF exec  : state -> state -> type =
   | id-lt   : exec St  St
   | to-lt   : exec St'  St'' -> step St  St' -> exec St  St''
 ;
-	 
+
 LF gt-ceval : env -> exp' -> val -> type =
   | gt-run   : exec (st (push emptys K) (prog (ev F) done) (empty)) (st (emptys) (done) (vcons empty W))
              -> gt-ceval K F W

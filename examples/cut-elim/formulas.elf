@@ -14,4 +14,3 @@ LF o : type = % formulas
   | forall : (i -> o) -> o
   | exists : (i -> o) -> o
 ;
-

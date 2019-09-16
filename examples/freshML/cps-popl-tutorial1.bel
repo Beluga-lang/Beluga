@@ -1,4 +1,3 @@
-
 %
 % Author: Brigitte Pientka
 % Adapted from Twelf's POPL tutorial
@@ -49,7 +48,7 @@ mlam g => fn v =>  case v of
 
 
 and cpse : {g:ctx}[g |- exp A] -> [g,k:ccont A |-  contra] =
-/ total e (cpse g a e)/ 
+/ total e (cpse g a e)/
 mlam g => fn e => case e of
 | [g |- ret (V )] =>
   let [g |- V'] = cps [g] [g |- V ] in

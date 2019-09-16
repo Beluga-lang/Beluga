@@ -1,5 +1,5 @@
 tm: type.
-tp: type. 
+tp: type.
 oft: tm -> tp -> type.
 
 schema xtG = some [t:tp] block (x:tm, u:oft x t);
@@ -9,5 +9,5 @@ inductive Rxrt: {h:xtG} ctype =
 | Rxrt_cons: Rxrt [h] ->
      Rxrt [h, b:block(x:tm, v:oft x A)];
 % The point of this test is to make sure that the Shift 0 substitution
-% which gets associated with A is printed as A[..,x] (or perhaps just A), but 
+% which gets associated with A is printed as A[..,x] (or perhaps just A), but
 % NOT A[..], which is wrong

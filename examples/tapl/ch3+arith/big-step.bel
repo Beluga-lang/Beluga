@@ -167,4 +167,3 @@ fn d => case d of
    Theorem 2) : If mstep M V and value V then eval M V
 
 }%
-

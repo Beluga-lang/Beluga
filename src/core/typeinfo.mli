@@ -5,7 +5,7 @@ val type_of_position : int -> int -> string
 
 module Annot : sig
 	type entry = {
-		typ : string	
+		typ : string
 	}
 	val store : (Syntax.Int.Loc.t, entry) Hashtbl.t
 	val mk_entry : string -> entry
@@ -14,7 +14,7 @@ module Annot : sig
 	val get : Syntax.Int.Loc.t -> entry
 	val clear : unit -> unit
 	val to_string : entry -> string
-	
+
 end
 
 module LF : sig
@@ -29,7 +29,7 @@ module LF : sig
 	val add : Syntax.Int.Loc.t -> entry -> string -> unit
 	val get : Syntax.Int.Loc.t -> entry
 	val clear : unit -> unit
-	
+
 end
 
 module Comp : sig

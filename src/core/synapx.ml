@@ -62,7 +62,7 @@ module LF = struct
     | FMVar of name * sub option
     | FPVar of name * sub option
 
-  and proj = 
+  and proj =
     | ByPos of int
     | ByName of name
 
@@ -72,7 +72,7 @@ module LF = struct
 
   and sub =
     | EmptySub
-    | Id    
+    | Id
     | Dot   of front * sub
     | SVar  of cvar * sub option
     | FSVar of name * sub option
@@ -136,7 +136,7 @@ module Comp = struct
    | TypArr     of typ * typ
    | TypCross   of typ * typ
    | TypPiBox   of LF.ctyp_decl * typ
-   | TypInd of typ 
+   | TypInd of typ
 
   and exp_chk =
      | Syn    of Loc.t * exp_syn
@@ -157,7 +157,7 @@ module Comp = struct
      | Obs    of Loc.t * exp_chk * cid_comp_dest                    (* e.d            *)
      | Const  of Loc.t * cid_prog                                   (* c              *)
      | Apply  of Loc.t * exp_syn * exp_chk                          (* i e            *)
-     | BoxVal of Loc.t * meta_obj 
+     | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
      | Ann    of exp_chk * typ                                      (* e : tau        *)
 
@@ -181,8 +181,8 @@ module Comp = struct
 
   and fun_branches =
    | NilFBranch of Loc.t
-   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches 
-        
+   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches
+
 
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
      it remains currently so we can still use the old parser without modifications -bp *)

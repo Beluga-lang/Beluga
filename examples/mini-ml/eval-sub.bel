@@ -4,7 +4,7 @@
 %   Author: Brigitte Pientka
 %
 
-LF exp: type = 
+LF exp: type =
 | z   : exp
 | suc : exp -> exp
 | app : exp -> exp -> exp

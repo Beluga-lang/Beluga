@@ -16,7 +16,7 @@ LF value : term -> type =
 | v_false : value false
 ;
 
-LF step: term -> term -> type = 
+LF step: term -> term -> type =
 | e_if_true   : step (if_then_else true M2 M3) M2
 | e_if_false  : step (if_then_else false M2 M3) M3
 | e_pred_zero : step (pred z) z
@@ -28,7 +28,7 @@ LF step: term -> term -> type =
 | e_pred	  : step M N -> step (pred M) (pred N)
 | e_iszero 	  : step M N -> step (iszero M) (iszero N)
 ;
- 
+
 let e1 : [ |- step (pred (succ ( pred z))) (pred (succ z))] =
        	     [ |- e_pred (e_succ e_pred_zero)]
 ;
@@ -46,10 +46,10 @@ LF hastype : term -> tp -> type =
 	   -> hastype (if_then_else M1 M2 M3) T
    | t_succ: hastype M nat -> hastype (succ M) nat
    | t_pred : hastype M nat -> hastype (pred M) nat
-   | t_iszero : hastype M nat -> hastype (iszero M) bool 
+   | t_iszero : hastype M nat -> hastype (iszero M) bool
 ;
 
-rec tps: [ |- hastype M T] -> [ |- step M N] -> [ |- hastype N T] = 
+rec tps: [ |- hastype M T] -> [ |- step M N] -> [ |- hastype N T] =
 / total s (tps m t n d s) /
   fn d => fn s => ?
 ;

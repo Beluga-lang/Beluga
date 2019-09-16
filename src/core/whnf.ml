@@ -14,7 +14,7 @@ open Syntax.Int.LF
 open Syntax.Int
 open Substitution
 
-module T = Store.Cid.Typ 
+module T = Store.Cid.Typ
 
 exception Fmvar_not_found
 exception FreeMVar of head
@@ -89,10 +89,10 @@ let newMTypName = function
   | CTyp _ -> Id.NoName
 
 let newMMVar' n (cD, mtyp) dep = match n with
-  | None -> 
-      let n = Id.mk_name (newMTypName mtyp) in 
+  | None ->
+      let n = Id.mk_name (newMTypName mtyp) in
 	 (n, ref None, cD, mtyp, ref [], dep)
-  | Some name -> 
+  | Some name ->
 (*      (Id.inc name, ref None, cD, mtyp, ref [], if name.Id.was_generated then	Maybe else No)*)
       (Id.inc name, ref None, cD, mtyp, ref [], dep)
 
@@ -119,7 +119,7 @@ let rec lowerMVar' cPsi sA' dep = match sA' with
       lowerMVar' cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  dep in 
+      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  dep in
         (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
 
 
@@ -131,7 +131,7 @@ and lowerMVar1 u sA  = match (u, sA) with
         u'            (* this is the new lowered meta-variable of atomic type *)
 
   | (_, (TClo (tA, s), s')) ->
-      lowerMVar1 u (tA, LF.comp s s') 
+      lowerMVar1 u (tA, LF.comp s s')
 
   | (_, (Atom _, _s)) ->
       u
@@ -176,7 +176,7 @@ and lowerMMVar' cD cPsi sA' dep = match sA' with
       lowerMMVar' cD cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMMVar None (cD, cPsi, Atom (loc, a, SClo (tS, s')))  dep in 
+      let u' = newMMVar None (cD, cPsi, Atom (loc, a, SClo (tS, s')))  dep in
         (u', Root (Syntax.Loc.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
 
 
@@ -188,7 +188,7 @@ and lowerMMVar1 cD u sA  = match (u, sA) with
         u'            (* this is the new lowered meta-variable of atomic type *)
 
   | (_, (TClo (tA, s), s')) ->
-      lowerMMVar1 cD u (tA, LF.comp s s') 
+      lowerMMVar1 cD u (tA, LF.comp s s')
 
   | (_, (Atom _, _s)) ->  u
 
@@ -380,7 +380,7 @@ and norm (tM, sigma) = match tM with
     begin match normHead (h,sigma) with
       | Head h' -> Root(loc, h', normSpine (tS, sigma))
       | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
-    end 
+    end
 
 
 and normHead (h, sigma) = match h with
@@ -397,25 +397,25 @@ and normHead (h, sigma) = match h with
     begin match normMMVar mmt with
       | ResMM mmt' -> Head (HMClo(k,(mmt',normSub' (s,sigma))))
       | Result (ISub r) -> normFt' (normFt' (LF.bvarSub k r, s), sigma)
-    end 
+    end
   | MMVar (mmt,s) ->
     begin match normMMVar mmt with
     (* The order in which we normalize mm, n, s, and sigma seems to matter..*)
       | ResMM mmt' -> Head (MMVar (mmt',normSub' (s,sigma)))
       | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
-    end 
+    end
   | MPVar (mmt,s) ->
      begin match normMMVar mmt with
       | ResMM mmt' -> Head (MPVar (mmt',normSub' (s,sigma)))
       | Result (IHead h) -> normFt' (normHead (h,s),sigma)
       | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
-     end 
+     end
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
   | MVar (Inst mm, s) ->
     begin match normMMVar (mm,MShift 0) with
       | ResMM (mm',_) -> Head (MVar (Inst mm', normSub' (s,sigma)))
       | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
-    end 
+    end
 
 and normMMVar ((n,r,cD,ityp,cnstr,d), t) = match !r with
   | None -> ResMM ((n,r,cD,normITyp ityp,cnstr,d), t)
@@ -437,7 +437,7 @@ and normFt' (ft,s) = match ft with
 and cnormITerm (tM,mt) = match tM with
   | INorm n -> INorm (cnorm (n,mt))
   | IHead h -> IHead (cnormHead (h,mt))
-  | ISub s -> ISub (cnormSub (s,mt))    
+  | ISub s -> ISub (cnormSub (s,mt))
 
 and normMObj (tM, s) = match tM with
   | MObj n -> MObj (norm (n,s))
@@ -445,7 +445,7 @@ and normMObj (tM, s) = match tM with
     begin match normHead (h,s) with
       | Obj tM -> MObj tM
       | Head h' -> PObj h'
-    end 
+    end
   | SObj r -> SObj (normSub' (r,s))
 
 and reduceTupleFt (ft, i) = match ft with
@@ -488,7 +488,7 @@ and reduce' = function
   | (Lam (loc,n,tM'), App(tN, tS)) -> reduce (tM', Dot(Obj tN, LF.id)) tS
   | (Lam (loc,n,tM'), Nil) -> Lam (loc, n, tM')
   | (Clo sM, tS) -> reduce sM tS
-  
+
 and appendSpine = function
   | (Nil,s) -> s
   | (App (tN, tS), s) -> App (tN, appendSpine (tS, s))
@@ -602,12 +602,12 @@ and cnormHead' (h, t) = match h with
   | FVar x -> Head (FVar x)
   | FMVar (n,s) -> Head (FMVar (n,cnormSub (s,t)))
   | FPVar (n,s) -> Head (FPVar (n,cnormSub (s,t)))
-  | MVar (Offset k, s) -> 
+  | MVar (Offset k, s) ->
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub k t with
       | MV k' -> Head (MVar(Offset k', s'))
       | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
-    end	
+    end
   | PVar (k, s) ->
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub k t with
@@ -625,23 +625,23 @@ and cnormHead' (h, t) = match h with
     begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (MMVar((mm', cnormMSub' (mt,t)), cnormSub (s, t)))
       | Result (INorm n) -> Obj (cnorm(norm(n,s),t))
-    end 
+    end
   | MPVar (mmt,s) ->
     begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (MPVar((mm', cnormMSub' (mt,t)), cnormSub (s,t)))
       | Result (IHead h) -> cnormFt' (normHead(h,s), t)
       | Result (INorm n) -> Obj (cnorm (norm (n, s), t))
-    end 
+    end
   | HMClo (k,(mmt,s)) ->
     begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (HMClo (k, ((mm', cnormMSub' (mt,t)), cnormSub (s,t))))
       | Result (ISub r) -> cnormFt' (normFt' (LF.bvarSub k r, s), t)
-    end 
-  | MVar (Inst mm, s) -> 
+    end
+  | MVar (Inst mm, s) ->
     begin match normMMVar (mm,MShift 0) with
       | ResMM (mm',_) -> Head (MVar (Inst mm', cnormSub(s,t)))
       | Result (INorm n) -> Obj (norm (n,s))
-    end 
+    end
 
 and cnormMSub' (mt,t) = cnormMSub (mcomp mt t)
 and cnormFt' = function
@@ -656,12 +656,12 @@ and cnorm (tM, t) = match tM with
     | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
 
     | LFHole (loc, name) -> LFHole (loc, name)
-    
+
     | Root (loc, head, tS) ->
       begin match cnormHead' (head, t) with
 	| Head h' -> Root(loc, h', cnormSpine (tS, t))
 	| Obj tM -> reduce (tM, LF.id) (cnormSpine (tS, t))
-      end 
+      end
 
 (* cnormHead (h,t) = h'
    requires that h is a head such as bound variable or parameter variable associated with pattern sub
@@ -708,7 +708,7 @@ and cnorm (tM, t) = match tM with
           MSVar (n , ((s, cnormMSub (mcomp mt t)), s'))
 
   and cnormFront = function
-    | Head h , t -> cnormHead' (h, t) 
+    | Head h , t -> cnormHead' (h, t)
     | Obj tM , t -> Obj (cnorm (tM , t))
     | Undef , t -> Undef
 
@@ -738,7 +738,7 @@ and cnorm (tM, t) = match tM with
     |  SigmaElem (x, tA, recA') ->
          let tA = cnormTyp (tA, t) in
            SigmaElem (x, tA, cnormTypRec (recA', t))
-	     
+
   and cnormDecl (decl, t) = match decl with
     | TypDecl (x, tA) ->
         TypDecl (x, cnormTyp (tA, t))
@@ -914,7 +914,7 @@ and whnf sM = match sM with
            (* let _ = lowerMMVar cD u in
               whnf (tM, sigma) *)
 
-             raise (Error.Violation "Meta^2-variable needs to be of atomic type") 
+             raise (Error.Violation "Meta^2-variable needs to be of atomic type")
 
       end
 
@@ -1169,7 +1169,7 @@ and convSub subst1 subst2 =
   | (_,EmptySub) -> true
   | (Undefs,_) -> true (* hopefully Undefs only show up with empty domain? *)
   | (_,Undefs) -> true
-  | (Shift n, Shift k) -> n = k 
+  | (Shift n, Shift k) -> n = k
   | (SVar (s1, k, sigma1), SVar (s2, k', sigma2)) ->
      k = k' &&
      s1 = s2 &&
@@ -1184,7 +1184,7 @@ and convSub subst1 subst2 =
   | (Dot (Head BVar _k, _s'), Shift n) ->
       convSub subst1 (Dot (Head (BVar (n + 1)), Shift (n + 1)))
 
-  | MSVar (k, ((_s, mt), s0)) , MSVar (k', ((_s', mt'), s0')) -> 
+  | MSVar (k, ((_s, mt), s0)) , MSVar (k', ((_s', mt'), s0')) ->
      k = k' && convSub s0 s0' && convMSub mt mt'  (* assumes that subst1 and subst2 have been normalized *)
 
   | _ -> false
@@ -1232,7 +1232,7 @@ and convFront front1 front2 = match (front1, front2) with
         | _ -> false
       end
 
-  | (Undef, Undef) -> 
+  | (Undef, Undef) ->
       true
 
   | (_, _) -> dprint (fun () -> "[convFront] Falls through");
@@ -1347,10 +1347,10 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
  *)
 let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
   | (_ , Empty) -> true
-  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) -> 
-      if convTyp (tA, LF.id) (tB, LF.id) then 
-	convSubsetCtx cPsi1 cPsi2 
-      else 
+  | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) ->
+      if convTyp (tA, LF.id) (tB, LF.id) then
+	convSubsetCtx cPsi1 cPsi2
+      else
 	(* keep tBs around and check that tA is a subordinate of tB,
 	   i.e. anything in tA cannot influence tB *)
 	convSubsetCtx cPsi1 cPsi'
@@ -1372,7 +1372,7 @@ and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
 	convPrefixTypRec (recA, LF.dot1 s) sBrec
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
-      if convTyp (tA, s) (tB, s') 
+      if convTyp (tA, s) (tB, s')
       then convPrefixTypRec (recA, LF.dot1 s) (recB, LF.dot1 s')
       else convPrefixTypRec (recA, LF.dot1 s) sBrec
 
@@ -1412,7 +1412,7 @@ let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
 
 (* ************************************************* *)
 
-let mctxLookupDep cD k = 
+let mctxLookupDep cD k =
   Context.lookup' cD k
   |> Maybe.get'
        (Error.Violation
@@ -1426,7 +1426,7 @@ let mctxLookupDep cD k =
     | DeclOpt _ ->
        raise (Error.Violation "Expected declaration to have a type")
 
-let mctxLookup cD k = 
+let mctxLookup cD k =
   let (u,tp,dep) = mctxLookupDep cD k in (u,tp)
 
 (* ************************************************* *)
@@ -1481,7 +1481,7 @@ let mctxMVarPos cD u =
     | Comp.MetaNil -> mS
     | Comp.MetaApp (mO, mS) ->
         Comp.MetaApp (normMetaObj mO, normMetaSpine mS)
- 
+
   let normMTyp = normITyp
 
   let normMetaTyp = normITyp
@@ -1513,7 +1513,7 @@ let mctxMVarPos cD u =
     | Comp.MetaNil -> mS
     | Comp.MetaApp (mO, mS) ->
         Comp.MetaApp (cnormMetaObj (mO,t), cnormMetaSpine (mS,t))
-  
+
   let cnormCDecl (cdecl, t) = match cdecl with
     | Decl(u, mtyp,dep) -> Decl (u, cnormMTyp (mtyp, t),dep)
 
@@ -1565,7 +1565,7 @@ let mctxMVarPos cD u =
         let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
           (Comp.TypCobase (loc, c, mS'), m_id)
 
-    | (Comp.TypBox (loc, cT), t)  -> (Comp.TypBox(loc, cnormMetaTyp (cT, t)), m_id) 
+    | (Comp.TypBox (loc, cT), t)  -> (Comp.TypBox(loc, cnormMetaTyp (cT, t)), m_id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
@@ -1596,7 +1596,7 @@ let mctxMVarPos cD u =
     | (Comp.Rec (loc, f, e), t) -> Comp.Rec (loc, f, cnormExp (e,t))
 
     | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e,t))
-      
+
     | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))
 
     | (Comp.MLam (loc, u, e), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t))
@@ -1606,7 +1606,7 @@ let mctxMVarPos cD u =
     | (Comp.LetPair (loc, i, (x, y, e)), t) ->
         Comp.LetPair (loc, cnormExp' (i, t), (x, y, cnormExp (e, t)))
 
-    | (Comp.Let (loc, i, (x, e)), t) -> 
+    | (Comp.Let (loc, i, (x, e)), t) ->
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
     | (Comp.Box (loc, cM), t) ->
@@ -1693,8 +1693,8 @@ let mctxMVarPos cD u =
          Comp.EmptyBranch (loc, cD, pat, cnormMSub t)
 
     | (Comp.Branch (loc, cD, cG, Comp.PatAnn(loc'', Comp.PatMetaObj (loc', mO), tau), t, e), theta) ->
-	Comp.Branch (loc, cD, cG, 
-		     Comp.PatAnn(loc'', 
+	Comp.Branch (loc, cD, cG,
+		     Comp.PatAnn(loc'',
 				 Comp.PatMetaObj (loc', normMetaObj mO),
 				 cnormCTyp (tau, m_id)),
 		     cnormMSub t,
@@ -1720,7 +1720,7 @@ let mctxMVarPos cD u =
     | Comp.NilFBranch loc -> fbr
     | Comp.ConsFBranch (loc, (cD, cG, patS, e), fbr') ->
       Comp.ConsFBranch (loc, (cD, cG, patS, cnormExp (e, t)), cnormFBranches (fbr',t))
-       
+
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
     | Dec(cG, Comp.CTypDecl (x, tau, flag)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t), flag))
@@ -1770,10 +1770,10 @@ let mctxMVarPos cD u =
      computation-level types
   *)
 
-  let conv_hat_ctx psi_hat phi_hat = 
+  let conv_hat_ctx psi_hat phi_hat =
     let psi = cnorm_psihat psi_hat m_id in
     let phi = cnorm_psihat phi_hat m_id in
-      psi = phi 
+      psi = phi
 
   let convITerm tM1 tM2 = match (tM1, tM2) with
     | INorm n1, INorm n2 -> conv (n1, LF.id) (n2, LF.id)
@@ -1790,7 +1790,7 @@ let mctxMVarPos cD u =
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
   let convClTyp = function
     | MTyp tA , MTyp tA'
-    | PTyp tA , PTyp tA' -> convTyp (tA, LF.id) (tA', LF.id)  
+    | PTyp tA , PTyp tA' -> convTyp (tA, LF.id) (tA', LF.id)
     | STyp (_, cPhi) , STyp (_, cPhi') -> convDCtx cPhi cPhi'
     | _ , _ -> false
 
@@ -1840,11 +1840,11 @@ let mctxMVarPos cD u =
          (dprint (fun () -> "[convCtyp] PiBox decl done");
         convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')))
 
-    | ((Comp.TypInd tau, t) , ttau' ) -> 
+    | ((Comp.TypInd tau, t) , ttau' ) ->
 	convCTyp (tau,t) ttau'
 
-    | (ttau, (Comp.TypInd tau', t')) -> 
-	convCTyp ttau (tau',t') 
+    | (ttau, (Comp.TypInd tau', t')) ->
+	convCTyp ttau (tau',t')
 
     | ( _ , _ ) -> (dprint (fun () -> "[convCtyp] falls through?");false)
 
@@ -1890,7 +1890,7 @@ let mctx_to_list_shifted x =
 let rec etaExpandMV cPsi sA n s' dep =  etaExpandMV' cPsi (whnfTyp sA) n s' dep
 and etaExpandMV' cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) dep in 
+      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) dep in
         Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
@@ -1905,12 +1905,12 @@ and etaExpandMV' cPsi sA n s' dep = match sA with
  *
  *  cD ; cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMMV loc cD cPsi sA n s' dep = 
+let rec etaExpandMMV loc cD cPsi sA n s' dep =
   etaExpandMMV' loc cD cPsi (whnfTyp sA) n s' dep
 
 and etaExpandMMV' loc cD cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) dep in 
+      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) dep in
         Root (loc, MMVar ((u, m_id), s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
@@ -1997,10 +1997,10 @@ and closedMetaObj (loc,mO) = match mO with
   | ClObj (phat, t) ->
       closedDCtx (Context.hatToDCtx phat) && closedMObj t
 let closedClTyp = function
-  | MTyp tA 
+  | MTyp tA
   | PTyp tA -> closedTyp (tA, LF.id)
   | STyp (_, cPhi) -> closedDCtx cPhi
-let closedMetaTyp cT = match cT with 
+let closedMetaTyp cT = match cT with
   | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
   | CTyp _ -> true
 

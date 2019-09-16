@@ -14,7 +14,7 @@ mlam g => case [g] of
 | [g, x:tp _ ] => let [|- N] = f [g] in [|- s N]
 ;
 
-inductive Ctx: {g:ctx} ctype = 
+inductive Ctx: {g:ctx} ctype =
 | Empty : Ctx []
 | Cons  : Ctx [g] -> Ctx [g, x:tp A]
 ;

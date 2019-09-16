@@ -43,4 +43,3 @@ let process_file_argument f =
   if is_cfg f
   then process_cfg_file f
   else [f]
-

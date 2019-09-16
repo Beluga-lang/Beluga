@@ -92,4 +92,3 @@ fn s => case s of
    impossible values_dont_step [ |- D] [ |- v_s V]
 
 ;
-

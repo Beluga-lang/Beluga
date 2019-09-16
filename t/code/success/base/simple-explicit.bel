@@ -44,4 +44,3 @@ rec identity2 : {g:w} [g |- nat] -> [g |- nat] =
 %      case x of
 %          [g] z)   : nat [g] => [g] z)
 %        | [g] s n) : nat [g] => [g] s n);
-

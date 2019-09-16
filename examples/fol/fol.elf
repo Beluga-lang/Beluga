@@ -24,4 +24,3 @@ and down : o -> type =
   | andEvR : down (conj A B) -> down B
   | impEv : down (imp A B) -> up A -> down B
 ;
-

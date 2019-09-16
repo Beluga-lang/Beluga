@@ -1,4 +1,3 @@
-
 % Author: Brigitte Pientka
 % Adapted from Twelf's POPL tutorial
 
@@ -54,7 +53,7 @@ fn e => case e of
 ;
 
 %{
-% TEST CASES: 
+% TEST CASES:
 let id_fun = [ |- lam o \x. ret x] ;
 
 let r0 = cps [b:block x:value o , _t:cvalue o |-  b.1] ;

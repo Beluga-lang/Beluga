@@ -118,6 +118,3 @@ fn d =>  case d of
        )
 | [ |- is_lam (\x. (\d. D1))]  =>  [ |- val value_lam]
 ;
-
-
-

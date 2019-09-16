@@ -16,5 +16,3 @@ mlam g => fn e =>
     let [g |- V'[..]]  = copy [g] [g |- V[..]] in
        [g |- app (U'[..]) (V'[..])]
 );
-
-

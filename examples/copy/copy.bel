@@ -1,11 +1,11 @@
-LF tp: type =  
+LF tp: type =
   | bool: tp
   | nat: tp
   | arrow: tp -> tp -> tp
 ;
 --name tp T.
 
-LF term : tp -> type = 
+LF term : tp -> type =
   | z    : term nat
   | s    : term nat -> term nat
   | lam  : (term T -> term T') -> term (arrow T T')
@@ -41,7 +41,7 @@ mlam g => fn e => case e of
 
 ;
 
-inductive Term : [|- term T] -> ctype = 
+inductive Term : [|- term T] -> ctype =
 | Tm : {M:[|- term T]} Term [ |- M];
 
 
@@ -52,7 +52,7 @@ let t = copy [x:term _ ] [x : term nat |-  s x];
 let t : [ |- term (arrow nat nat)] =
      copy [ ] [ |- lam \x. x];
 
-rec mkTm : {M:[|- term (arrow nat nat)]}  Term [|- M] = 
+rec mkTm : {M:[|- term (arrow nat nat)]}  Term [|- M] =
 mlam M =>  Tm [|- M];
 
 let t  =

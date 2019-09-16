@@ -14,7 +14,7 @@ fn cn => case cn of
 
 |[g |- can_truei] =>  [g |- s_true]
 
-| [g |- can_atm (AT1)] => 
+| [g |- can_atm (AT1)] =>
   let ([g |- AT1] : [g |- atm D]) = [g |- AT1] in
   let [g,q:p,u:focus A q |-  I1] = cmpai [g] [g |- D] [g |- AT1 ] in
     [g |- I1[..,_,(i_atom)]]
@@ -47,4 +47,3 @@ mlam g, E => fn at => case [g |- E ] of
       [g,q,i |-  I1[..,q,(i_forall T[] i)]]
 
 ;
-

@@ -26,5 +26,3 @@ vs: eval E V -> value V -> type.
 vs_lam: vs ev_lam val_lam.
 
 vs_app: vs D3 P3 -> vs (ev_app D1 D2 D3) P3.
-
-

@@ -99,7 +99,7 @@ fun [g |- P] .Leftf   (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g
 
 rec bisim_trans : (g:ctx) Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- R] ->
 		  Bisim [g |- P] [g |- R] =
-fun s1 s2 .Leftf t => 
+fun s1 s2 .Leftf t =>
     let MakeTransOne t1 s3 = Leftf s1 t in
     let MakeTransOne t2 s4 = Leftf s2 t1 in
     MakeTransOne t2 (bisim_trans s3 s4)
@@ -111,7 +111,7 @@ fun s1 s2 .Leftf t =>
     let MakeTransOneUp t1 s3 = LeftUp s1 t in
     let MakeTransOneUp t2 s4 = LeftUp s2 t1 in
     MakeTransOneUp t2 (mlam W => bisim_trans (s3 [ |- W]) (s4 [ |- W]))
-  | s1 s2 .Rightf t => 
+  | s1 s2 .Rightf t =>
     let MakeTransOne t1 s3 = Rightf s2 t in
     let MakeTransOne t2 s4 = Rightf s1 t1 in
     MakeTransOne t2 (bisim_trans s3 s4)

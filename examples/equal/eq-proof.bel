@@ -34,7 +34,7 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
 | [g |- #p.1] => [g |- #p.2]
 
 | [g |- lam \x. L] =>
-  let [g,e:block yyy:exp, _t:eq yyy yyy |-  V] = 
+  let [g,e:block yyy:exp, _t:eq yyy yyy |-  V] =
          ref [g, e:block q:exp, _t:eq q q] [g, e |-  L[..,e.1]]  in
      [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
 
@@ -84,4 +84,3 @@ e_a: eq T2 S2  -> eq T1 S1 -> eq (app T1 T2) (app S1 S2).
 e_r: eq T T.
 e_t: eq T' S -> eq T T' -> eq T S.
 }%
-

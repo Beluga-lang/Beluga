@@ -131,7 +131,7 @@ let _basisToString basis =
 let rec relevant tA basis = (match tA with
   | Atom(_, a, _spine) ->
       Types.freeze a;
-      if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a 
+      if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a
                         || a = type_in_basis) basis then
         (* there is some `b' in basis such that `a'-terms can appear in `b'-terms, that is,
            `a'-terms can appear in something we need *)
@@ -148,14 +148,14 @@ let rec relevant tA basis = (match tA with
 
   | PiTyp((TypDecl(_x, tA1), _), tA2) ->
       (* extract_pos returns all types which are in a positive position *)
-      let rec extract_pos tA = match tA with 
+      let rec extract_pos tA = match tA with
 	| Atom(_, _a, _spine) -> [tA]
 	| PiTyp ((TypDecl(_x, tA1), _ ), tA2) -> (extract_neg tA1) @ (extract_pos tA2)
-      and extract_neg tA = match tA with 
+      and extract_neg tA = match tA with
 	| Atom(_, _a, _spine) -> []
 	| PiTyp ((TypDecl(_x, tA1), _ ) , tA2) -> (extract_pos tA1) @ (extract_neg tA2)
       in
-      (* (relevant tA1 basis) @  
+      (* (relevant tA1 basis) @
 	 If we keep this, then we might not strengthen enough... -bp*)
 	List.fold_left (fun l tA -> (relevant tA basis) @ l) [] (extract_neg tA1)
 	  @ (relevant tA2 basis)

@@ -2,10 +2,10 @@ nat : type.
 z: nat.
 s: nat -> nat.
 
-rec id : [ |- nat ] -> [|- nat] = 
+rec id : [ |- nat ] -> [|- nat] =
 / total (id) /
 fn n => n;
 
-rec foo : [ |- nat] -> [ |- nat ] = 
+rec foo : [ |- nat] -> [ |- nat ] =
 / total n (foo n) /
 fn n => case (id n) of [ |- z] => [ |- z] | [ |- s X] => foo [ |- X] ;

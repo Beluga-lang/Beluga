@@ -61,7 +61,7 @@ rec osim_cus : (g:ctx) (h:ctx) {$S:[h |- g]} OSim [|- T] [g |- E1] [g |- E2]
 
 inductive Howe : (g:ctx) {T:[|- tp]} [g |- exp T[]] -> [g |- exp T[]] -> ctype =
   | Howe_unit : OSim [|- top] [g |- unit] [g |- E] -> Howe [|- top] [g |- unit] [g |- E]
-  | Howe_var : {#p:[g |- exp T[]]}               
+  | Howe_var : {#p:[g |- exp T[]]}
                 OSim [|- T] [g |- #p] [g |- E]
                -> Howe [|- T] [g |- #p] [g |- E]
 
@@ -72,17 +72,17 @@ inductive Howe : (g:ctx) {T:[|- tp]} [g |- exp T[]] -> [g |- exp T[]] -> ctype =
 
 rec howe_osim_trans : (g:ctx) Howe [|- T] [g |- E1] [g |- E2]
                       -> OSim [|- T] [g |- E2] [g |- E3]
-                      -> Howe [|- T] [g |- E1] [g |- E3] = ? ; 
+                      -> Howe [|- T] [g |- E1] [g |- E3] = ? ;
 
 rec howe_refl : (g:ctx) {E:[g |- exp T[]]} Howe [|- T] [g |- E] [g |- E] = ? ;
 
-rec howe_ren : {g:ctx}{h:ctx}{$S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]               
+rec howe_ren : {g:ctx}{h:ctx}{$S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]
                 -> Howe [|- T] [h |- E1[$S]] [h |- E2[$S]] =
- mlam g, h, $S => fn hr => case hr of 
+ mlam g, h, $S => fn hr => case hr of
 | Howe_unit s => Howe_unit (osim_cus [h |- $S] s)
 | Howe_var [g |- #p] s =>
       let os = osim_cus [h |- $S] s in
-      howe_osim_trans (howe_refl [h |- #p[$S]]) os 
+      howe_osim_trans (howe_refl [h |- #p[$S]]) os
 
 
 ;
@@ -99,6 +99,5 @@ inductive IsVar : (g:ctx) {T:[|- tp]} [g |-# exp T[]] -> ctype =
   | IsVarC : {#p:[g |- exp T[]]} IsVar [|- T] [g |- #p]
 ;
 
-rec ren_var : (g:ctx)(h:ctx) {T:[ |- tp]}{$R: [h |-# g]}{#p: [g |- exp T[]]} IsVar [ |- T] [h |- #p[$R]] =  ? ; 
+rec ren_var : (g:ctx)(h:ctx) {T:[ |- tp]}{$R: [h |-# g]}{#p: [g |- exp T[]]} IsVar [ |- T] [h |- #p[$R]] =  ? ;
 }%
-

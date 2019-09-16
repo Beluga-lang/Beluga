@@ -3,7 +3,7 @@
 
 % ---------------------------------------------------------------------------
 %{{
-# Type Preservation for Parallel Reduction for the Simply-typed Lambda-calculus 
+# Type Preservation for Parallel Reduction for the Simply-typed Lambda-calculus
 We discuss the notion of parallel reduction, a standard relation relevant to many other important case studies, like the Church-Rosser Theorem.
 This case study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, the Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
 <br>
@@ -11,7 +11,7 @@ The mechanization highlights several aspects:
 
 - Context exchange via substitution
 - Free substitution property for parametric and hypothetical derivations
-- Type reconstruction via inference 
+- Type reconstruction via inference
 
 ## Syntax
 We encode the simply-typed lambda-calculus in the logical framework LF.<br>
@@ -52,7 +52,7 @@ LF oft: tm -> tp -> type =
   | of_lam: ({x:tm}oft x T1 -> oft (M x) T2) -> oft (lam M) (arr T1 T2)
 ;
 --name oft H.
-	   
+
 % ---------------------------------------------------------------------------
 %{{
 ## Context declarations
@@ -89,7 +89,7 @@ let [g |-  D2] = d2 in
 % Type preservation for parallel reduction
 %{{
 ## Type Preservation for Parallel Reductions
-We prove type preservation for parallel reduction: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. expressions to depend on the context since we may step terms containing variables. Substitution property for parametric and hypothetical derivations is free. We do not enforce here that the type <code>A</code> is closed. Although this is possible by writing <code>A[]</code> the statement looks simpler if we do not enforce this extra invariant.}}% 
+We prove type preservation for parallel reduction: when <code>M</code> steps to <code>N</code> and <code>M</code> has type <code>A</code> then <code>N</code> has the same type <code>A</code>. expressions to depend on the context since we may step terms containing variables. Substitution property for parametric and hypothetical derivations is free. We do not enforce here that the type <code>A</code> is closed. Although this is possible by writing <code>A[]</code> the statement looks simpler if we do not enforce this extra invariant.}}%
 
 rec tps : (g:trCtx)
             [g |- pr M N] -> [g |- oft M A]

@@ -11,5 +11,3 @@ nt_s : {X:nat}nt X -> nt (s X).
 plus : nat -> nat -> nat -> type.
 p_z : plus z Y Y.
 p_s : plus X Y Z -> plus (s X) Y (s Z).
-
-

@@ -104,17 +104,17 @@ schema tmrel_ctx_wf =
 % of the corresponding PTS propositions
 rec tmrel_fl_tot_pres: (g:tmrel_ctx_wf) [g |- hastype M A] -> [g |- exists_rel_proof M A] =
     / total d (tmrel_fl_tot_pres g m a d)/
-      fn d => (case d of 
-  %  
-  %  [g |- #p1.4] =>  ? 
-  %       
-  % [g |- f_app Z Y1] =>  ? 
-  %      
- [g |- f_lam (\x. \x483. X1)] =>  ? 
- |     
- [g |- f_tapp Z1] =>  ? 
- |    
- [g |- f_tlam (\a. Y2)] =>  ? 
+      fn d => (case d of
+  %
+  %  [g |- #p1.4] =>  ?
+  %
+  % [g |- f_app Z Y1] =>  ?
+  %
+ [g |- f_lam (\x. \x483. X1)] =>  ?
+ |
+ [g |- f_tapp Z1] =>  ?
+ |
+ [g |- f_tlam (\a. Y2)] =>  ?
 )
 %{ case d of
       % | [g |- f_app Dm Dn] =>
@@ -149,4 +149,3 @@ rec tmrel_fl_tot_pres: (g:tmrel_ctx_wf) [g |- hastype M A] -> [g |- exists_rel_p
       %   [g |- e_rel_proof #p.3 TyrA #p.6 Ta]
 }%
 ;
-

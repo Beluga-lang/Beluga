@@ -31,7 +31,7 @@ fn v => case v of
 | [g |- #p._t[..]] => [g |- #p.x[..]]
 | [g |- lam (A[]) (\v. E)] =>
 % This line fails because the projection b.y is named incorrectly; it should be b.x
-    let [g,b:block x:term, _t:value (A[]) |-  T[..,b.y]] = conv [g,b:block (x:term , _t:value (A[])) |-  E[..,b._t]] in 
+    let [g,b:block x:term, _t:value (A[]) |-  T[..,b.y]] = conv [g,b:block (x:term , _t:value (A[])) |-  E[..,b._t]] in
       [g |- lam' \x. T]
 
 ;

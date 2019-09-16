@@ -46,8 +46,3 @@ mlam g => fn f => case f of
 %
 rec ss_sound : [ |- solve A] -> [ |- pf A] =
  fn d =>  s_sound [ ] d ;
-
-
-
-
-

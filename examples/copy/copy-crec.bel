@@ -5,7 +5,7 @@ LF tp: type =
 ;
 --name tp T.
 
-LF term : tp -> type = 
+LF term : tp -> type =
   | z    : term nat
   | s    : term nat -> term nat
   | lam  : (term T -> term T') -> term (arrow T T')
@@ -55,5 +55,3 @@ let t : [ |- term (arrow (arrow bool nat) (arrow bool nat))]
 let t = copy [y:term (arrow (arrow (arrow bool nat) (arrow bool nat)) nat) |-  app y (lam \x. (lam \y. app x y))];
 
 let t = copy [y:term nat,x:term bool |-  s y];
-
-

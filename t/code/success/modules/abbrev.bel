@@ -33,7 +33,7 @@ module Arith = struct
 	rec add : [ |- nat ] -> [ |- nat ] -> [ |- nat ] =
 	fn x, y => case x of
 	| [ |- z ] => y
-	| [ |- s N ] => 
+	| [ |- s N ] =>
 		let [ |- N' ] = add [ |- N ] y in
 		[ |- s N'];
 
@@ -46,4 +46,3 @@ let two' = N::two;
 
 --open N.
 let l2 = [ |- cons z nil];
-

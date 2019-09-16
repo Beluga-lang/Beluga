@@ -22,7 +22,7 @@ module FVNat = struct
 
   arr : tp -> tp -> tp.
   app:  exp (arr T T') -> exp T -> exp T'.
-  lam : (exp T -> exp T') -> exp (arr T T').  
+  lam : (exp T -> exp T') -> exp (arr T T').
 
   opt: type.
   nothing: opt.

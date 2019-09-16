@@ -10,6 +10,3 @@ mlam g => mlam h => mlam $S => mlam M => [h |- M[$S[..]] ]
 rec f3 : {g:ctx} [ |- tm] =
 mlam g => f [x:tm,y:tm] [] [ |- i, i ] [x:tm,y:tm |-  x] % also not a renaming
 ;
-
-
-

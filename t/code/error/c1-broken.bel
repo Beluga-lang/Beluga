@@ -5,7 +5,7 @@ app  : term -> term -> term.
 
 schema termCtx = some [] term;
 
-rec copyBroken : {g:termCtx} [g |- term] -> [g |- term] = 
+rec copyBroken : {g:termCtx} [g |- term] -> [g |- term] =
 / total e (copyBroken g e)/
 mlam g => fn e =>
  (case e of

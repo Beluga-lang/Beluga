@@ -420,5 +420,3 @@ case d of
   [psi, b:block (x:tm, u:aeq x x) |-  E[..]]
 
 ;
-
-

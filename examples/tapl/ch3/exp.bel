@@ -6,7 +6,7 @@
 }%
 
 
-LF term  : type = 
+LF term  : type =
 | true  : term
 | false : term
 | if_then_else : term -> term -> term -> term
@@ -19,5 +19,3 @@ let v1 = [ |- if_then_else false true (if_then_else true false true)] ;
 
 --not
 let w2 = [ |- if_then_else true false] ;
-
-

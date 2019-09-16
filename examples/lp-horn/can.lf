@@ -79,4 +79,3 @@ ta_andel : toatm (conj A B) D D' -> toatm A (andel D) (andel D').
 ta_ander : toatm (conj A B) D D' -> toatm B (ander D) (ander D').
 
 ta_foralle : toatm (forall A) D D' -> toatm (A T) (foralle D T) (foralle D' T).
-

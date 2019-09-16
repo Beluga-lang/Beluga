@@ -589,7 +589,7 @@ module Cid = struct
       kind               = kind;
       positivity         = positivity;
       frozen             = false;
-      constructors       = ref [] 
+      constructors       = ref []
     }
 
 (*    (*  store : entry DynArray.t *)
@@ -807,7 +807,7 @@ module Cid = struct
           end in
         Hashtbl.replace directory entry.name cid_comp_const;
         CompTyp.addConstructor cid_comp_const cid_ctyp;
-        cid_comp_const 
+        cid_comp_const
     end
 
     let get ?(fixName=false) (l, n) =
@@ -841,7 +841,7 @@ module Cid = struct
       mctx               = cD;
       obs_type           = tau0;
       return_type        = tau1
-        
+
     }
    (*  store : entry DynArray.t *)
     let store : (entry DynArray.t) DynArray.t = DynArray.create ()

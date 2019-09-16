@@ -1,10 +1,10 @@
 module type Type = sig
   type t
 end
-                 
+
 module type Base = sig
   type annotation
-     
+
   type 'a t =
     { value : 'a;
       annotation : annotation;

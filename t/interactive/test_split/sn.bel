@@ -54,9 +54,9 @@ rec fundVar : {g : cxt} {M : [g |- tm A[]]}
           RedS [g] [g' |- $S]
        -> Red [|- A] [g' |- M[$S]] =
 / total r (fundVar g g' a s m r) /
- mlam g, M => fn r => 
- (case r of 
- | RNil   =>   ? 
+ mlam g, M => fn r =>
+ (case r of
+ | RNil   =>   ?
 
 )
 
@@ -65,9 +65,9 @@ rec fundVar : {g : cxt} {M : [g |- tm A[]]}
 rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
           RedS [g] [g' |- $S]
        -> Red [|- A] [g' |- #p[$S]] =
-% / total s (fundVar g g' A s 
+% / total s (fundVar g g' A s
  mlam g, #p => fn s => ?
- 
+
 
 
 %{case s of
@@ -83,14 +83,14 @@ rec thm : {g : cxt} {M : [g |- tm A[]]}
 % g, g', A, $S, M
           RedS [g] [g' |- $S]
        -> Red [|- A] [g' |- M[$S]] =
-    mlam g, M => fn s => (case [g |- M] of 
+    mlam g, M => fn s => (case [g |- M] of
 
-|  [g |- #p1] =>  ?  
+|  [g |- #p1] =>  ?
 
-|  [g |- abs (\x1. M3)] =>  ?  
+|  [g |- abs (\x1. M3)] =>  ?
 
-|  [g |- app M1 M2] =>  ?  
-)   
+|  [g |- app M1 M2] =>  ?
+)
 %{ (case [g |- M ] of
  | [g |- #p1 ] =>  ?
  | [g |- abs \ x. M1 ] =>  ?

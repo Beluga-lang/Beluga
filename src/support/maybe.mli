@@ -1,5 +1,5 @@
 (** Thrown when attempting to get a maybe when there's None. *)
-exception NoValue 
+exception NoValue
 
 val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
 
@@ -34,7 +34,7 @@ val choice : 'a option Lazy.t list -> 'a option Lazy.t
 
 (** Returns the first option that isn't None, if any. *)
 val alt : 'a option -> 'a option -> 'a option
-                                                
+
 val pure : 'a -> 'a option
 
 (** Maps a function that may fail over a list, and eagerly fails as

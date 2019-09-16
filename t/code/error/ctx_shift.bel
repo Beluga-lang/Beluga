@@ -7,7 +7,7 @@ yep : {N:exp} pred N.
 schema ctx = exp;
 
 rec foo : (g:ctx) [ g |- pred (M[]) ] -> [ |- exp ] =
-fn p => case p of 
+fn p => case p of
 | [g |- yep z] => [ |- z ];
 
 rec bar : {g:ctx} {N : [ g |- exp ]} [ |- exp ] =
@@ -16,4 +16,4 @@ rec bar : {g:ctx} {N : [ g |- exp ]} [ |- exp ] =
 
 % let v = bar [x:exp] [x:exp |- x];
 
-% foo [x:exp] [ |- x[NegCtxShift(1) ] 
+% foo [x:exp] [ |- x[NegCtxShift(1) ]

@@ -11,6 +11,3 @@ mlam g => mlam h => mlam $S => mlam M => [h |- M[$S[..]] ]
 rec f2 : {g:ctx} [ |- tm] =
 mlam g => f [x:tm] [] [ |- c i ] [x:tm |-  x] % i is a term not a var
 ;
-
-
-

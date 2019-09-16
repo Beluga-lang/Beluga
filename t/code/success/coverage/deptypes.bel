@@ -5,27 +5,27 @@ s: nat -> nat.
 nil: vec z.
 cons: nat -> vec N -> vec (s N).
 
-rec head: [ |- vec (s N)] -> [ |- nat] = 
+rec head: [ |- vec (s N)] -> [ |- nat] =
 / total x (head n x) /
 fn x => case x of [|- cons H T] => ? ;
 %{
-rec copy: [ |- vec N] -> [ |- vec N] = 
+rec copy: [ |- vec N] -> [ |- vec N] =
 / total x (copy n x) /
-fn v => case v of 
-| [ |- nil] => ? 
-| [ |- cons H T] => ? 
+fn v => case v of
+| [ |- nil] => ?
+| [ |- cons H T] => ?
 ;
 }%
 %{
-inductive Vec: [|- nat] -> ctype = 
+inductive Vec: [|- nat] -> ctype =
 | Nil : Vec [|- z]
 | Cons: [|- nat] -> Vec [|- N] -> Vec [ |- s N]
 ;
 
-rec test: Vec [|- N] -> Vec [|- N] = 
+rec test: Vec [|- N] -> Vec [|- N] =
 / total x (test n x) /
-fn x => case x of 
-| Nil => ? 
+fn x => case x of
+| Nil => ?
 | Cons h t =>  ?
 ;
 }%

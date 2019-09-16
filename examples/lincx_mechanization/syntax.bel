@@ -42,7 +42,7 @@ LF tp : type =
    | limp : tp -> tp -> tp
    | atp_canon : atp -> tp
 
-% Types of constants we could add, e.g.: Nat			    
+% Types of constants we could add, e.g.: Nat
 and cst_tp : type =
 
 and atp : type =

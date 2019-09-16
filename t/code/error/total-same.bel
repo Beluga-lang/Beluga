@@ -2,8 +2,8 @@ nat:type.
 z: nat.
 suc: nat -> nat.
 
-rec foo: [ |- nat] -> [ |- nat] = 
+rec foo: [ |- nat] -> [ |- nat] =
 / total n (foo n) /
-fn n => case n of 
+fn n => case n of
 | [ |- z ] => [ |- z]
 | [ |- N] => foo [ |- N] ;

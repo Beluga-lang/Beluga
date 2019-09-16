@@ -36,7 +36,7 @@ stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
 
 % Corollary: closure under weak head expansion
 
-rec whExp : Red [|- A] [g |- M [.., N] ] 
+rec whExp : Red [|- A] [g |- M [.., N] ]
          -> Red [|- A] [g |- (app (abs \ x. M) N)] =
   ?
   ;
@@ -70,13 +70,13 @@ rec fundApp : %% {g : cxt} {M : [g |- tm (arr A[] B[])]} {N : [g |- tm A}
        -> Red [|- A]        [g |- N ]
        -> Red [|- B]        [g |- app M N ] =
   fn r, s => let s : Red [|- B] [g |- N] = s in   %% fake match to bind g and N
-    let RArr f = r in 
+    let RArr f = r in
     f [g] [ g |- .. ] [g |- N] s
   ;
 
 %% Abstraction
 
-%% rec fundAbs : Red 
+%% rec fundAbs : Red
 
 %% Fundamental theorem
 

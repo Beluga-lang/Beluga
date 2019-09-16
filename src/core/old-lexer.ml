@@ -57,8 +57,8 @@ Beluga lexical categories:
          rec  schema  some  type
          bool
          %name %not #positive #stratified
-        
-          
+
+
 
      presently reserved but unused:           box
 

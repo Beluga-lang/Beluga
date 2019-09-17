@@ -548,6 +548,21 @@ module Prover = struct
     else
       Some (DynArray.get gs (current_subgoal_index gs))
 
+  let show_proof s tctx =
+    let open Comp in
+    (* This is a trick to print out the proof resulting from
+       the initial state correctly. The initial state's solution
+       might be None or Some; we don't know. Rather than handle
+       that distinction here, we can wrap the state into a proof
+       that immediately ends with Incomplete. The proof
+       pretty-printer will then deal with the None/Some for us by
+       printing a `?` if the initial state hasn't been solved
+       yet.
+     *)
+    let s = s.initial_state in
+    Tactic.(tctx.printf) "@[<v>Proof so far:@,%a@]"
+      (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
+
   let add_subgoal_hook s g tctx =
     let auto_st = s.automation_state in
     ignore
@@ -625,18 +640,7 @@ module Prover = struct
     match cmd with
     (* Administrative commands: *)
     | Command.ShowProof ->
-       (* This is a trick to print out the proof resulting from
-          the initial state correctly. The initial state's solution
-          might be None or Some; we don't know. Rather than handle
-          that distinction here, we can wrap the state into a proof
-          that immediately ends with Incomplete. The proof
-          pretty-printer will then deal with the None/Some for us by
-          printing a `?` if the initial state hasn't been solved
-          yet.
-        *)
-       let s = s.initial_state in
-       Tactic.(tctx.printf) "@[<v>Proof so far:@,%a@]"
-         (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
+       show_proof s tctx
     | Command.Defer ->
        (* Remove the current subgoal from the list (it's in head position)
         * and then add it back (on the end of the list) *)
@@ -774,6 +778,7 @@ module Prover = struct
     match next_subgoal s with
     | None ->
        Tactic.(tctx.printf) "@,Proof complete! (No subgoals left.)@,";
+       show_proof s tctx;
        () (* we're done; proof complete *)
     | Some g ->
        (* Show the proof state and the prompt *)

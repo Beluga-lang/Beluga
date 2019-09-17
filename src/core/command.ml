@@ -63,7 +63,12 @@ let prove =
           begin
             prompt "Statement to prove (C-d to abort)" Parser.cmp_typ
               (fun ppf e -> fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?" Parser.print_error e)
-            |> Either.rmap (fun x -> x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp)
+            |> Either.rmap
+                 begin fun x ->
+                 Reconstruct.reset_fvarCnstr ();
+                 Store.FCVar.clear ();
+                 x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp
+                 end
             $ fun (stmt, k) -> (* k is the number of added implicit vars *)
               dprintf
                 begin fun p ->

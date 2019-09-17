@@ -1351,6 +1351,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          print_invoke_kind k
          (fmt_ppr_cmp_exp_syn cD cG l0) t
          Id.print name
+    | Unbox (i, name) ->
+       fprintf ppf "@[<hv 2>unbox@ (@[%a@])@ as @[%a@]@]"
+         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         Id.print name
 
   and fmt_ppr_cmp_split_branch :
         type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->

@@ -520,12 +520,12 @@ module Prover = struct
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
     ; automation_state : Automation.automation_state
     ; theorem_name : Id.name
-    ; order : Comp.order
+    ; order : Comp.order option
     }
 
   let make_prover_state
         (name : Id.name)
-        (order : Comp.order)
+        (order : Comp.order option)
         (s : unit Comp.proof_state)
       : interpreter_state =
     { initial_state = s
@@ -615,7 +615,7 @@ module Prover = struct
       [ Total.make_total_dec
           s.theorem_name
           (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
-          (Some s.order)
+          s.order
       ]
     in
     (** Checks that the given term corresponds to the given kind of invocation.
@@ -805,7 +805,7 @@ module Prover = struct
         (ppf : Format.formatter) (* The formatter used to display messages *)
         (name : Id.name) (* The name of the theorem to prove *)
         (stmt : Comp.tclo) (* The statement of the theorem *)
-        (order : Comp.order) (* The induction order of the theorem *)
+        (order : Comp.order option) (* The induction order of the theorem *)
       : unit =
     let g = Comp.make_proof_state stmt in
     let s = make_prover_state name order g in

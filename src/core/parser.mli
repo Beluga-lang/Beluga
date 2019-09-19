@@ -49,7 +49,7 @@ val sgn : Syntax.Ext.Sgn.decl list t
 (** Parser for a Harpoon command. *)
 val harpoon_command : Syntax.Ext.Harpoon.command t
 
-val numeric_total_order : Syntax.Ext.Comp.numeric_order t
+val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t
 
 (** Parser for computation type. *)
 val cmp_typ : Comp.typ t

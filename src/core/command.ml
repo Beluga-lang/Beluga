@@ -58,49 +58,62 @@ let prove =
               Runparser.parse_string "<prompt>" input (Parser.only entry)
               |> snd
               |> Parser.to_either
-              |> Either.lmap (fun e ppf -> fc ppf e)
+              |> lmap (fun e ppf -> fc ppf e)
           in
           begin
             prompt "Statement to prove (C-d to abort)" Parser.cmp_typ
-              (fun ppf e -> fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?" Parser.print_error e)
-            |> Either.rmap
-                 begin fun x ->
-                 Reconstruct.reset_fvarCnstr ();
-                 Store.FCVar.clear ();
-                 x |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp
-                 end
+              begin fun ppf e ->
+              fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?"
+                Parser.print_error e
+              end
+            $> begin fun comptyp ->
+               Reconstruct.reset_fvarCnstr ();
+               Store.FCVar.clear ();
+               comptyp
+               |> Index.comptyp
+               |> Reconstruct.comptyp
+               |> Abstract.comptyp
+               end
             $ fun (stmt, k) -> (* k is the number of added implicit vars *)
               dprintf
                 begin fun p ->
                 p.fmt "[prove] abstracted over %d implicit arguments" k
                 end;
-              prompt "Induction order" Parser.numeric_total_order
-                (fun ppf e ->
-                      fprintf ppf "@[<v>- Error parsing induction order:@,%a@]\n@?" Parser.print_error e)
-              |> Either.rmap
-                   (fun x ->
-                     Syntax.Ext.Comp.map_order (fun n -> n + k) x
-                     |> Order.of_numeric_order)
-              $ fun order ->
-                Order.list_of_order order
-                |> Either.of_option'
-                     (fun _ ppf -> fprintf ppf "- Induction order too complicated;\n@?")
-                $ fun order_list ->
-                  Total.annotate stmt order_list
-                  |> Either.of_option'
-                       (fun _ ppf ->
-                         fprintf ppf "- Induction order doesn't match statement;\n@?")
-                  $> fun stmt ->
-                     (stmt, order)
+              prompt "Induction order" Parser.optional_numeric_total_order
+                begin fun ppf e ->
+                fprintf ppf "@[<v>- Error parsing induction order:@,%a@]\n@?"
+                  Parser.print_error e
+                end
+              $> Maybe.map
+                   begin fun x ->
+                   x
+                   |> Syntax.Ext.Comp.map_order (fun n -> n + k)
+                   |> Order.of_numeric_order
+                   end
+              $ function
+                | None -> pure (stmt, None)
+                | Some order ->
+                   Order.list_of_order order
+                   |> Either.of_option'
+                        begin fun _ ppf ->
+                        fprintf ppf "- Induction order too complicated;\n@?"
+                        end
+                   $> Total.annotate stmt
+                   $ Either.of_option'
+                       begin fun _ ppf ->
+                       fprintf ppf "- Induction order doesn't match statement;\n@?"
+                       end
+                   $> fun stmt' ->
+                      (stmt', Some order)
           end
-          |> Either.eliminate
-               (fun f -> f ppf)
-               (fun (stmt, order) ->
-                 Harpoon.Prover.start_toplevel
-                   ppf
-                   (Id.mk_name (Id.SomeString name))
-                   (stmt, Syntax.Int.LF.MShift 0)
-                   order)
+          |> function
+            | Left f -> f ppf
+            | Right (stmt, optOrder) ->
+               Harpoon.Prover.start_toplevel
+                 ppf
+                 (Id.mk_name (Id.SomeString name))
+                 (stmt, Syntax.Int.LF.MShift 0)
+                 optOrder
         end
   ; help = "Interactively prove a theorem"
   }

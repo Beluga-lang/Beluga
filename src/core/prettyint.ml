@@ -814,6 +814,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Maybe -> true
     | LF.Inductive -> false
 
+  and fmt_ppr_lf_iterm cD cPsi lvl ppf = function
+    | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi lvl ppf tM
+    | LF.IHead h -> fmt_ppr_lf_head cD cPsi lvl ppf h
+    | LF.ISub s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
+    | LF.ICtx _ -> failwith "printing ICtx is weird because a dctx was also passed in."
+
   let fmt_ppr_lf_typ_typing ppf (cD, cPsi, tA) =
     fprintf ppf "@[<2>@[%a@] ; @[%a@] |-@ @[%a@]@ : type@]"
       (fmt_ppr_lf_mctx l0) cD
@@ -849,12 +855,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf " %a%a"
          (fmt_ppr_cmp_meta_obj  cD (lvl + 1)) mO
          (fmt_ppr_cmp_meta_spine   cD lvl) mS
-
-  and fmt_ppr_lf_iterm cD cPsi ppf = function
-    | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi 0 ppf tM
-    | LF.IHead h -> fmt_ppr_lf_head cD cPsi 0 ppf h
-    | LF.ISub s -> fmt_ppr_lf_sub cD cPsi 0 ppf s
-    | LF.ICtx _ -> failwith "printing ICtx is weird because a dctx was also passed in."
 
   let rec fmt_ppr_cmp_typ cD lvl ppf = function
     | Comp.TypBase (_, c, mS)->

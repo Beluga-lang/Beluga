@@ -261,8 +261,8 @@ let rec constraints_solved cnstr = match cnstr with
          dprintf
            (fun p ->
              p.fmt "@[<v 2>Encountered unsolved constraint:@,%a == %a@]@,"
-               (P.fmt_ppr_lf_iterm I.Empty cPsi) tM
-               (P.fmt_ppr_lf_iterm I.Empty cPsi) tN)
+               (P.fmt_ppr_lf_iterm I.Empty cPsi P.l0) tM
+               (P.fmt_ppr_lf_iterm I.Empty cPsi P.l0) tN)
        in
        false
 

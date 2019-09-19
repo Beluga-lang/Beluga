@@ -55,7 +55,7 @@ module Int = struct
     val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_lf_mfront     : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
-    val fmt_ppr_lf_iterm      : LF.mctx -> LF.dctx -> formatter -> LF.iterm -> unit
+    val fmt_ppr_lf_iterm      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit
     val fmt_ppr_lf_msub       : LF.mctx -> lvl -> formatter -> LF.msub -> unit
 
     (** Prints a typing judgment for an msub: cD' |- theta : cD *)

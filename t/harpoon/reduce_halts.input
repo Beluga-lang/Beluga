@@ -1,5 +1,5 @@
 %: load t/harpoon/reduce_halts.bel
 %: prove rh
 {T: [|- tp]} {M: [|- tm T]} Reduce [|- T] [|- M] -> [|- halts M]
-2
+
 split z6

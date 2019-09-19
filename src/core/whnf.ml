@@ -483,7 +483,7 @@ and normSpine (tS, sigma) =
 and reduce sM spine = reduce' (norm sM, spine)
 
 and reduce' = function
-  | (LFHole (l, _), _) -> raise (InvalidLFHole l)
+  | (LFHole (l, _, _), _) -> raise (InvalidLFHole l)
   | (Root (loc,h,sp), spine) -> Root (loc, h, appendSpine (sp,spine))
   | (Lam (loc,n,tM'), App(tN, tS)) -> reduce (tM', Dot(Obj tN, LF.id)) tS
   | (Lam (loc,n,tM'), Nil) -> Lam (loc, n, tM')
@@ -655,8 +655,8 @@ and cnorm (tM, t) = match tM with
 
     | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
 
-    | LFHole (loc, name) -> LFHole (loc, name)
-
+    | LFHole (loc, id, name) -> LFHole (loc, id, name)
+    
     | Root (loc, head, tS) ->
       begin match cnormHead' (head, t) with
 	| Head h' -> Root(loc, h', cnormSpine (tS, t))
@@ -1006,7 +1006,7 @@ and whnf sM = match sM with
 
   | (Root (_, Proj (MPVar _, _), _), _) -> (dprint (fun () -> "oops 3"); exit 3)
 
-  | (LFHole (loc, name), _s) -> (LFHole (loc, name), _s)
+  | (LFHole (loc, id, name), _s) -> (LFHole (loc, id, name), _s)
   | _ -> (dprint (fun () -> "oops 4"); exit 4)
 
 (* whnfRedex((tM,s1), (tS, s2)) = (R,s')
@@ -1019,7 +1019,7 @@ and whnf sM = match sM with
  *    [s']tP' = [s2]tP and [s']R' = tM[s1] @ tS[s2]
  *)
 and whnfRedex (sM, sS) = match (sM, sS) with
-  | ((LFHole (l, name), s1), _) -> raise (InvalidLFHole l)
+  | ((LFHole (l, id, name), s1), _) -> raise (InvalidLFHole l)
   | ((Root (_, _, _) as root, s1), (Nil, _s2)) ->
       whnf (root, s1)
 
@@ -1616,7 +1616,7 @@ let mctxMVarPos cD u =
         Comp.Case (loc, prag, cnormExp' (i,t),
                    List.map (function b -> cnormBranch (b, t)) branches)
 
-    | (Comp.Hole (loc, name), _) -> Comp.Hole (loc, name)
+    | (Comp.Hole (loc, id, name), _) -> Comp.Hole (loc, id, name)
 
   and cnormExp' (i, t) = match (i,t) with
     | (Comp.Var _, _ ) -> i

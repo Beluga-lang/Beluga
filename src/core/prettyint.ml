@@ -170,10 +170,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             (Id.render_name x)
             (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
             (r_paren_if cond)
-       | LF.LFHole (_, Some name) ->
+       | LF.LFHole (_, _, name) ->
+          let open HoleId in
+          let name =
+            match name with
+            | Anonymous -> ""
+            | Named s -> s
+          in
           fprintf ppf "?%s" name
-       | LF.LFHole (_, None) ->
-          fprintf ppf "?"
        | LF.Tuple (_, tuple) ->
           fprintf ppf "<%a>"
             (fmt_ppr_lf_tuple cD cPsi lvl) tuple
@@ -1060,11 +1064,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_branches cD cG 0) bs
          (r_paren_if cond)
 
-    | Comp.Hole (loc, name_opt) ->
+    | Comp.Hole (loc, id, name) ->
        let name =
-         match name_opt with
-         | Some n -> n
-         | None -> "" in
+         let open HoleId in
+         match name with
+         | Named n -> n
+         | Anonymous -> "" in
        try
          fprintf ppf "?%s" name
        with
@@ -1248,7 +1253,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
        if !Printer.Control.printNormal then
          (match e with
-          | Comp.Hole (loc, name) ->
+          | Comp.Hole (loc, id, name) ->
              fprintf ppf "\n@[<v2>| %a => %a@]"
                (fmt_ppr_cmp_meta_obj cD1' 0) mO
                (fmt_ppr_cmp_exp_chk cD1' cG 1) e

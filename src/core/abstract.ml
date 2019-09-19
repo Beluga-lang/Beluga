@@ -442,8 +442,8 @@ and collectTermW p cQ ((cvar, offset) as phat) sM = match sM with
       let (cQ', h') = collectHead p cQ phat loc (h, s) in
       let (cQ'', tS') =  collectSpine p cQ' phat (tS, s) in
         (cQ'', I.Root(loc, h', tS'))
-  | (I.LFHole (loc, name), s) ->
-      (cQ, I.LFHole (loc, name))
+  | (I.LFHole (loc, id, name), s) ->
+      (cQ, I.LFHole (loc, id, name))
 
 
 and collectTuple p cQ phat = function
@@ -956,8 +956,8 @@ and abstractMVarTermW cQ offset sM = match sM with
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
 
-  | (I.LFHole (loc, name), s) ->
-      I.LFHole (loc, name)
+  | (I.LFHole (loc, id, name), s) ->
+      I.LFHole (loc, id, name)
 
 and abstractMVarTuple cQ offset = function
   | (I.Last tM, s) ->
@@ -1307,7 +1307,7 @@ let rec collectExp cQ e = match e with
       let (cQ2, branches') = collectBranches cQ' branches in
         (cQ2, Comp.Case (loc, prag, i', branches'))
 
-  | Comp.Hole (loc, name) -> (cQ, Comp.Hole (loc, name))
+  | Comp.Hole (loc, id, name) -> (cQ, Comp.Hole (loc, id, name))
 
 and collectExp' cQ i = match i with
   | Comp.Var (_, _x) -> (cQ , i)

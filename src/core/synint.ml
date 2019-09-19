@@ -40,7 +40,7 @@ module LF = struct
   and normal =                                (* normal terms                   *)
     | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
     | Root of Loc.t * head * spine            (*   | h . S                      *)
-    | LFHole of Loc.t * string option
+    | LFHole of Loc.t * HoleId.t * HoleId.name
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
@@ -345,7 +345,7 @@ module Comp = struct
     | Let    of Loc.t * exp_syn * (name * exp_chk)
     | Box    of Loc.t * meta_obj
     | Case   of Loc.t * case_pragma * exp_syn * branch list
-    | Hole   of Loc.t * string option
+    | Hole   of Loc.t * HoleId.t * HoleId.name
 
   and exp_syn =
     | Var    of Loc.t * offset

@@ -730,24 +730,13 @@ module Comp = struct
        else
          raise (Error (loc, MismatchChk (cD, cG, e, (tau,t), (tau',t'))))
 
-    | (Hole (loc, name), (tau, t)) ->
+    | (Hole (loc, id, name), (tau, t)) ->
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Hole " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
-       let _ =
-         let open Holes in
-         add
-           { loc = loc
-           ; name = Holes.name_of_option name
-           ; Holes.cD
-           ; info =
-               CompHoleInfo
-                 { Holes.cG
-                 ; compGoal = (tau, t)
-                 ; compSolution = None
-                 }
-           }
-       in
-       ()
+       let info = { Holes.cG; compGoal = (tau, t); compSolution = None } in
+       let h = { Holes.loc ; name ; cD ; info } in
+       let h = Holes.Exists (Holes.CompInfo, h) in
+       Holes.assign id h
 
   and check cD (cG, cIH) (total_decs : Total.dec list) e (tau, t) =
     dprintf

@@ -5,6 +5,7 @@ module Abstract = B.Abstract
 module Check = B.Check
 module Command = B.Syntax.Ext.Harpoon
 module Context = B.Context
+module HoleId = B.HoleId
 module Holes = B.Holes
 module Id = B.Id
 module Interactive = B.Interactive
@@ -15,7 +16,7 @@ module Total = B.Total
 module Whnf = B.Whnf
 module Debug = B.Debug
 
-let dprintf, _, _ = Debug.(makeFunctions' (toFlags [13]))
+let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
 module Comp = B.Syntax.Int.Comp
@@ -195,6 +196,58 @@ let process_command
 
   | Command.Solve m ->
      let (hs, m) = elaborate_exp cIH cD cG m g.goal in
+     dprnt "[harpoon] [solve] elaboration finished";
+     printf "Found %d hole(s) in solution@." (List.length hs);
+     let open Holes in
+     let f (id, Exists (w, h)) =
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon] [solve] [holes] processing hole %s"
+           (HoleId.string_of_name_or_id (h.name, id))
+         end;
+       let { name; Holes.cD = cDh; info; _ } = h in
+       match w with
+       | Holes.CompInfo -> failwith "computational holes not supported"
+       | Holes.LFInfo ->
+          let { lfGoal; cPsi; lfSolution } = h.info in
+          let typ = Whnf.normTyp lfGoal in
+          let (ti, k) = Abstract.typ typ in
+          dprintf
+            begin fun p ->
+            p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@,abstracted: @[%a@]@]"
+              (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
+              (P.fmt_ppr_lf_typ cDh cPsi P.l0) ti
+            end;
+          Logic.prepare ();
+          let (query, skinnyTyp, querySub, instMVars) =
+            Logic.Convert.typToQuery cPsi cDh (ti, k)
+          in
+          try
+            let n = ref 0 in
+            Logic.Solver.solve cDh cPsi query
+              begin
+                fun (cPsi, tM) ->
+                Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
+                  (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+                incr n;
+                if !n >= 10 then raise Logic.Frontend.Done
+              end
+          with
+          | Logic.Frontend.Done ->
+             printf "logic programming finished@,@?";
+             ()
+     in
+     List.iter f hs;
+     Check.Comp.check cD cG mfs m g.goal;
+     ( Comp.solve m
+       |> Tactic.solve
+     ) g tctx ;
+
+
+
+
+     (*
+     let (hs, m) = elaborate_exp cIH cD cG m g.goal in
      printf "Found %d holes in solution@," (List.length hs);
      let f (id, h) =
        let open Holes in
@@ -226,6 +279,7 @@ let process_command
      ( Comp.solve m
        |> Tactic.solve
      ) g tctx ;
+      *)
 
 (** A computed value of type 'a or a function to print an error. *)
 type 'a error = (Format.formatter -> unit, 'a) Either.t

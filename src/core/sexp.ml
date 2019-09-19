@@ -654,15 +654,17 @@ struct
         (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " PragmaNot ")
         (sexp_cmp_branches cD cG) bs
 
-    | Comp.Hole (_, name_opt) ->
+    | Comp.Hole (_, _, name_opt) ->
        let name =
+         let open HoleId in
          match name_opt with
-         | Some n -> " " ^ n
-         | None -> "" in
-      try
-        fprintf ppf "(Hole%s)" name
-      with
-        | _ -> fprintf ppf "(Hole %s_)" name
+         | Named n -> " " ^ n
+         | Anonymous -> ""
+       in
+       try
+         fprintf ppf "(Hole%s)" name
+       with
+       | _ -> fprintf ppf "(Hole %s_)" name
 
   and sexp_cmp_exp_syn cD cG ppf =
     function

@@ -150,7 +150,7 @@ let reload, load =
  * If the string is invalid, or the lookup fails, an error is
  * displayed. Otherwise, the given function is executed with the hole
  * identifier and information. *)
-let with_hole_from_strategy_string ppf (strat : string) (f : Holes.hole_id * Holes.hole -> unit) : unit =
+let with_hole_from_strategy_string ppf (strat : string) (f : HoleId.t * Holes.some_hole -> unit) : unit =
   match Holes.parse_lookup_strategy strat with
   | None -> fprintf ppf "- Failed to parse hole identifier `%s';\n@?" strat
   | Some s ->
@@ -159,10 +159,10 @@ let with_hole_from_strategy_string ppf (strat : string) (f : Holes.hole_id * Hol
      | None -> fprintf ppf "- No such hole %s;\n@?" (Holes.string_of_lookup_strategy s)
 
 let requiring_hole_satisfies
-      (check : Holes.hole -> bool)
-      (on_error : Holes.hole_id * Holes.hole -> unit)
-      (f : Holes.hole_id * Holes.hole -> unit)
-      (p : Holes.hole_id * Holes.hole)
+      (check : Holes.some_hole -> bool)
+      (on_error : HoleId.t * Holes.some_hole -> unit)
+      (f : HoleId.t * Holes.some_hole -> unit)
+      (p : HoleId.t * Holes.some_hole)
     : unit =
   let g =
     match p with
@@ -182,39 +182,45 @@ let rec require checks f p =
        (require checks f)
        p
 
-let string_of_id_hole (i, h) = Holes.string_of_name_or_id (h.Holes.name, i)
-
-let check_is_comp_hole ppf =
-  Holes.is_comp_hole,
-  fun p ->
-  fprintf ppf "- Hole %s is not a computational hole;\n@?"
-    (string_of_id_hole p)
-
-let check_is_lf_hole ppf =
-  Holes.is_lf_hole,
-  fun p ->
-  fprintf ppf "- Hole %s is not an LF hole;\n@?"
-    (string_of_id_hole p)
+let string_of_id_hole (i, h) = HoleId.string_of_name_or_id (h.Holes.name, i)
 
 let check_is_unsolved ppf =
   Holes.is_unsolved,
-  fun p ->
+  fun (id, Holes.Exists (_, h)) ->
   fprintf ppf "- Hole %s is already solved;\n@?"
-    (string_of_id_hole p)
+    (string_of_id_hole (id, h))
 
 let requiring_computation_hole
       ppf
-      (f : Holes.hole_id * Holes.hole -> unit)
-      (p : Holes.hole_id * Holes.hole)
+      (f : HoleId.t * Holes.comp_hole_info Holes.hole -> unit)
+      (p : HoleId.t * Holes.some_hole)
     : unit =
-  require [ check_is_comp_hole ppf; check_is_unsolved ppf] f p
+  let open Holes in
+  require [ check_is_unsolved ppf]
+    begin fun (id, Exists (w, h)) ->
+    match w with
+    | CompInfo -> f (id, h)
+    | _ ->
+       fprintf ppf "- Hole %s is not a computational hole;\n@?"
+         (string_of_id_hole (id, h))
+    end
+    p
 
 let requiring_lf_hole
       ppf
-      (f : Holes.hole_id * Holes.hole -> unit)
-      (p : Holes.hole_id * Holes.hole)
+      (f : HoleId.t * Holes.lf_hole_info Holes.hole -> unit)
+      (p : HoleId.t * Holes.some_hole)
     : unit =
-  require [ check_is_lf_hole ppf; check_is_unsolved ppf] f p
+  let open Holes in
+  require [ check_is_unsolved ppf]
+    begin fun (id, Exists (w, h)) ->
+    match w with
+    | LFInfo -> f (id, h)
+    | _ ->
+       fprintf ppf "- Hole %s is not an LF hole;\n@?"
+         (string_of_id_hole (id, h))
+    end
+    p
 
 let printhole =
   { name = "printhole";
@@ -223,7 +229,7 @@ let printhole =
         (fun ppf arglist ->
           let s_ = List.hd arglist in
           with_hole_from_strategy_string ppf s_
-            (fun h -> fprintf ppf "%a;\n" Holes.print h));
+            (fun h -> fprintf ppf "%a;\n" Interactive.fmt_ppr_hole h));
     help = "Print out all the information of the i-th hole passed as a parameter@?";
   }
 
@@ -233,7 +239,7 @@ let lochole =
       command_with_arguments 1
         (fun ppf arglist ->
           with_hole_from_strategy_string ppf (List.hd arglist)
-            (fun (_, {Holes.loc; _}) ->
+            (fun (_, Holes.Exists (w, {Holes.loc; _})) ->
               let file_name = Location.filename loc in
               let start_line = Location.start_line loc in
               let start_bol = Location.start_bol loc in
@@ -261,11 +267,10 @@ let solvelfhole =
                  let { Holes.name
                      ; Holes.cD
                      ; Holes.info =
-                         Holes.LfHoleInfo
-                           { Holes.lfGoal = (lfTyp, lfSub)
-                           ; Holes.cPsi
-                           ; Holes.lfSolution
-                           }
+                         { Holes.lfGoal = (lfTyp, lfSub)
+                         ; Holes.cPsi
+                         ; Holes.lfSolution
+                         }
                      ; Holes.loc = _
                      } = h
                  in
@@ -337,66 +342,16 @@ let helpme =
     help = "list all available commands with a short description"
   }
 
-(* The fill command is actually broken when you use it to fill in an
-   induction hypothesis since the check at the end will not verify that
-   the recursive call is well-founded.
-   You could fix this by traversing the whole syntax tree to find the
-   hole and recover the totality declarations that surround it, but
-   that's a lot of work. Another solution could be to augment the hole
-   datatype with the information about the totality declarations that
-   were in scope at the moment that the hole was reconstructed. This
-   is probably simpler.
- *)
-let fill =
-  { name = "fill"
-  ; run =
-      (fun ppf args ->
-        try
-          begin
-            let strat_s = List.hd args in
-            let eq = List.hd (List.tl args) in
-            if not (eq = "with") then failwith "- second argument must be `with`. See help;";
-            let exp =
-              let str = String.concat " " (List.tl (List.tl args)) in
-              Runparser.parse_string "<fill>" str Parser.(only cmp_exp_chk)
-              |> Parser.extract
-            in
-            with_hole_from_strategy_string ppf strat_s
-              (requiring_computation_hole ppf
-                 (fun hi ->
-                   let ( _ ,
-                         { Holes.loc
-                         ; Holes.name
-                         ; Holes.cD
-                         ; Holes.info =
-                             Holes.CompHoleInfo
-                               { Holes.compGoal = tclo
-                               ; Holes.cG
-                               ; Holes.compSolution
-                               }
-                         }
-                       ) = hi
-                   in
-                   let exp = Interactive.elaborate_exp cD cG exp tclo in
-                   Check.Comp.check cD cG [] exp tclo; (* checks that exp fits the hole *)
-                   Interactive.replace_hole hi exp))
-          end
-        with
-        | e ->
-           fprintf ppf "- Error in fill:\n%s\n@?" (Printexc.to_string e))
-  ; help = "`fill H with EXP` fills hole H with EXP"
-  }
-
 (**
  * Actually does a split on a variable in a hole.
  * Requires that the hole be a computation hole.
  *)
-let do_split ppf (hi : Holes.hole_id * Holes.hole) (var : string) : unit =
+let do_split ppf (hi : HoleId.t * Holes.comp_hole_info Holes.hole) (var : string) : unit =
   match Interactive.split var hi with
   | None -> fprintf ppf "- No variable %s found;\n@?" var
   | Some exp ->
      let (_, h) = hi in
-     let Holes.CompHoleInfo { Holes.cG; _ } = h.Holes.info in
+     let { Holes.cG; _ } = h.Holes.info in
      Printer.Control.printNormal := true;
      fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp_chk h.Holes.cD cG P.l0) exp;
      Printer.Control.printNormal := false
@@ -423,7 +378,7 @@ let intro =
                (fun (i, h) ->
                  let exp = Interactive.intro h in
                  let { Holes.cD
-                     ; Holes.info = Holes.CompHoleInfo { Holes.cG; _ }
+                     ; Holes.info = { Holes.cG; _ }
                      ; _
                      } = h
                  in
@@ -580,7 +535,7 @@ let lookup_hole =
       command_with_arguments 1
         (fun ppf [strat] ->
           with_hole_from_strategy_string ppf strat
-            (fun (i, _) -> fprintf ppf "%s;\n@?" (Holes.string_of_hole_id i)))
+            (fun (i, _) -> fprintf ppf "%s;\n@?" (HoleId.string_of_hole_id i)))
   ; help = "looks up a hole's number by its name"
   }
 
@@ -598,7 +553,6 @@ let _ =
     ; printhole
     ; types
     ; constructors
-    ; fill
     ; split
     ; intro
     ; compconst

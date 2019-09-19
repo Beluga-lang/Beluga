@@ -1,17 +1,36 @@
 open Syntax.Int
 
-type hole_id
+(* Define two opaque types to be used as indices for `hole_info`. *)
 
-(** Converts a hole identifier to a string representation. *)
-val string_of_hole_id : hole_id -> string
+type lf_hole_info =
+  { cPsi : LF.dctx
+  ; lfGoal : LF.tclo
+  ; mutable lfSolution : LF.nclo option
+  }
 
-(* Isomorphic to `string option`. *)
-type hole_name =
-  | Anonymous
-  | Named of string
+type comp_hole_info =
+  { cG : Comp.gctx
+  ; compGoal : Comp.typ * LF.msub
+  ; mutable compSolution : (Comp.exp_chk * LF.msub) option
+  }
 
-val name_of_option : string option -> hole_name
-val option_of_name : hole_name -> string option
+type _ hole_info =
+  | LFInfo : lf_hole_info hole_info
+  | CompInfo : comp_hole_info hole_info
+
+(** A hole with a known kind of information. *)
+type 'a hole =
+  { loc : Syntax.Loc.t
+  ; name : HoleId.name
+    (** "Context Delta", for metavariables. *)
+  ; cD : LF.mctx
+    (** information specific to the hole type. *)
+  ; info : 'a
+  }
+
+(** Existential wrapper for 'a hole with a singleton type. *)
+type some_hole =
+  | Exists : 'a hole_info * 'a hole -> some_hole
 
 (** A strategy for retrieving a hole. *)
 type lookup_strategy
@@ -23,9 +42,10 @@ type error =
   | InvalidHoleIdentifier of string
   | NoSuchHole of lookup_strategy
   | NameShadowing of string * Loc.t
+  | UnsolvedHole of HoleId.name * HoleId.t
 
 (** An error that arises when lookup by a given strategy fails. *)
-exception Error of error
+exception Error of Loc.t * error
 
 (** Parses a lookup strategy.
  * An integer gives the `by_id` strategy, whereas a non-integer gives
@@ -33,41 +53,18 @@ exception Error of error
  * Returns None if the parsing fails. *)
 val parse_lookup_strategy : string -> lookup_strategy option
 
-(** Parses a lookup strategy, throwing an exception on failure. *)
-val unsafe_parse_lookup_strategy : string -> lookup_strategy
+(** Parses a lookup strategy, throwing an exception on failure.
+    The given location is used in the thrown exception.
+ *)
+val unsafe_parse_lookup_strategy : Loc.t -> string -> lookup_strategy
 
 (** Looks up a hole by its number.
   * Use strategies with `get`. *)
-val by_id : hole_id -> lookup_strategy
+val by_id : HoleId.t -> lookup_strategy
 
 (** Looks up a hole by its name.
   * Use strategies with `get`. *)
 val by_name : string -> lookup_strategy
-
-type lf_hole_info =
-  { cPsi : LF.dctx
-  ; lfGoal : LF.tclo
-  ; mutable lfSolution : LF.normal option
-  }
-
-type comp_hole_info =
-  { cG : Comp.gctx
-  ; compGoal : Comp.typ * LF.msub
-  ; mutable compSolution : Comp.exp_chk option
-  }
-
-type hole_info =
-  | LfHoleInfo of lf_hole_info
-  | CompHoleInfo of comp_hole_info
-
-type hole =
-  { loc : Syntax.Loc.t
-  ; name : hole_name
-    (** "Context Delta", for metavariables. *)
-  ; cD : LF.mctx
-    (** information specific to the hole type. *)
-  ; info : hole_info
-  }
 
 type snapshot
 
@@ -78,51 +75,40 @@ val get_snapshot : unit -> snapshot
     This can be used to whether an ad hoc expression contained any
     holes.
  *)
-val holes_since : snapshot -> (hole_id * hole) list
+val holes_since : snapshot -> (HoleId.t * some_hole) list
 
 (** Runs a function, and catches any new holes added as a result of
     running it.
  *)
-val catch : (unit -> 'a) -> (hole_id * hole) list * 'a
+val catch : (unit -> 'a) -> (HoleId.t * some_hole) list * 'a
 
 (** Decides whether this is an LF hole. *)
-val is_lf_hole : hole -> bool
+val to_lf_hole : some_hole -> lf_hole_info hole option
 
 (** Decides whether this is a computational hole. *)
-val is_comp_hole : hole -> bool
+val to_comp_hole : some_hole -> comp_hole_info hole option
 
 (** Decides whether this hole is solved. *)
-val is_solved : hole -> bool
+val is_solved : some_hole -> bool
 
 (** Decides whether this hole is unsolved. *)
-val is_unsolved : hole -> bool
+val is_unsolved : some_hole -> bool
 
 (** Decides whether a hole has a name (is not anonymous). *)
-val hole_is_named : hole -> bool
-
-(** Stringifies a hole name.
- * If the hole is anonymous, then its name is the empty string. *)
-val string_of_name : hole_name -> string
-
-(** Stringifies a hole name.
- * If the hole is anonymous, then use its hole id. *)
-val string_of_name_or_id : hole_name * hole_id -> string
+val hole_is_named : some_hole -> bool
 
 (** Checks whether the internal array of holes is empty. *)
 val none : unit -> bool
 
-(** Pretty-prints a single hole. *)
-val print : Format.formatter -> (hole_id * hole) -> unit
-
 (** Retrieves a single hole using the given strategy. *)
-val get : lookup_strategy -> (hole_id * hole) option
+val get : lookup_strategy -> (HoleId.t * some_hole) option
 
 (** Retrieves a single hole using the given strategy,
  * raising NoSuchHole if the hole does not exist. *)
-val unsafe_get : lookup_strategy -> hole_id * hole
+val unsafe_get : lookup_strategy -> HoleId.t * some_hole
 
 (** Looks up a hole, retrieving the hole itself and its number. *)
-val lookup : string -> (int * hole) option
+val lookup : string -> (HoleId.t * some_hole) option
 
 (** Decides whether a location is contained within a location. *)
 val loc_within : Syntax.Loc.t -> Syntax.Loc.t -> bool
@@ -133,11 +119,14 @@ val count : unit -> int
 (** Removes all holes contained in the given location. *)
 val destroy_holes_within : Syntax.Loc.t -> unit
 
-(** Adds a new hole. *)
-val add : hole -> hole_id
+(** Allocates a new hole ID. *)
+val allocate : unit -> HoleId.t
+
+(** Assigns the hole to the given ID. *)
+val assign : HoleId.t -> some_hole -> unit
 
 (** Clears the main hole array. *)
 val clear : unit -> unit
 
 (** Gets the current list of holes. *)
-val list : unit -> (hole_id * hole) list
+val list : unit -> (HoleId.t * some_hole) list

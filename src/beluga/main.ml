@@ -163,7 +163,7 @@ let per_file file_name =
         fprintf std_formatter
           "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@."
           file_name
-          (pp_print_list Holes.print) (Holes.list ());
+          (pp_print_list Interactive.fmt_ppr_hole) (Holes.list ());
       end;
     begin match leftoverVars with
     | None -> ()

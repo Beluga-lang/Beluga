@@ -1059,10 +1059,9 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
        p.fmt "[elExp] @[<v>Expected Type (Hole):@,@[%a@]@] "
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,theta))
        end;
-    Int.Comp.Hole
-      ( loc,
-        name
-      )
+     let id = Holes.allocate () in
+     let name = HoleId.name_of_option name in
+     Int.Comp.Hole (loc, id, name)
 
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)

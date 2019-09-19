@@ -217,12 +217,19 @@ let rec checkW cD cPsi sM sA = match sM, sA with
          (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
        flush_str_formatter ())
 
-  | (LFHole (loc, m_name), _), _ ->
-     begin
-       let info = Holes.LfHoleInfo { cPsi; Holes.lfGoal = sA; Holes.lfSolution = None } in
-       let name = Holes.name_of_option m_name in
-       let _ = Holes.add { Holes.loc = loc; Holes.name = name; Holes.cD = cD; Holes.info = info } in
-       ()
+  | (LFHole (loc, id, name), s), sA ->
+     let open Holes in
+     begin match get (by_id id) with
+     | Some (_, Exists (CompInfo, _)) ->
+        Error.violation "hole kind mismatch"
+     | Some (id, Exists (LFInfo, { name; info = {lfSolution; _ }; _})) ->
+        begin match lfSolution with
+        | None -> () (* raise (Error (loc, UnsolvedHole (name, id))) *)
+        | Some sM -> checkW cD cPsi sM sA
+        end
+     | None ->
+        let info = { cPsi; lfGoal = sA; lfSolution = None } in
+        assign id (Exists (LFInfo, { loc; name; cD; info }))
      end
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))

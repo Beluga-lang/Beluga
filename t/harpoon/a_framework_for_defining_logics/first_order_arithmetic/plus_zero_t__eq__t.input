@@ -1,0 +1,5 @@
+%: load t/harpoon/a_framework_for_defining_logics/first_order_arithmetic.bel
+%: prove plus_zero_t__eq__t
+[⊢ true (forall (\t. eq (plus zero t) t))]
+
+solve ([⊢ IND (\t. eq (plus zero t) t) (PLUS-Z zero) (\t. \ih. SUB (plus zero t) t (\u. eq (plus zero (succ t)) (succ u)) ih (PLUS-S zero t))])

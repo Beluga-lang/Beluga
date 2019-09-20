@@ -1,0 +1,213 @@
+LF holtype : type =
+  | term : holtype
+  | formula : holtype
+  | arrow : holtype → holtype → holtype
+;
+--infix arrow 10 right.
+
+LF obj : holtype → type =
+  | zero   : obj term
+  | succ   : obj (term arrow term)
+
+  | plus   : obj (term arrow term arrow term)
+  | mult   : obj (term arrow term arrow term)
+
+  | lt     : obj (term arrow term arrow formula)
+
+  | not    : obj (formula arrow formula)
+  | conj   : obj (formula arrow formula arrow formula)
+  | disj   : obj (formula arrow formula arrow formula)
+  | imply  : obj (formula arrow formula arrow formula)
+
+  | eq     : { h : holtype } obj (h arrow h arrow formula)
+
+  | forall : { h : holtype } obj ((h arrow formula) arrow formula)
+  | exists : { h : holtype } obj ((h arrow formula) arrow formula)
+
+  | lambda : { h : holtype } { i : holtype } (obj h → obj i) → obj (h arrow i)
+  | apply  : { h : holtype } { i : holtype } obj (h arrow i) → obj h → obj i
+;
+
+LF true : obj formula → type =
+  | ALL-I : { h : holtype }
+            { s : obj (h arrow formula) }
+            ({ t : obj h } true (apply h formula s t))
+            → true (apply (h arrow formula) formula (forall h) s)
+  | ALL-E : { h : holtype }
+            { s : obj (h arrow formula) }
+            { t : obj h }
+            true (apply (h arrow formula) formula (forall h) s)
+            → true (apply h formula s t)
+
+  | EQ    : { p : obj formula }
+            { q : obj formula }
+            true p
+            → true (apply formula formula (apply formula (formula arrow formula) (eq formula) p) q)
+            → true q
+  | LAM   : { h : holtype }
+            { i : holtype }
+            { f : obj h → obj i }
+            { g : obj h → obj i }
+            ({ t : obj h } true (apply i formula (apply i (i arrow formula) (eq i) (f t)) (g t)))
+            → true ((apply (h arrow i) formula (apply (h arrow i) ((h arrow i) arrow formula) (eq (h arrow i)) (lambda h i (\t. f t))) (lambda h i (\t. g t))))
+  | BETA  : { h : holtype }
+            { i : holtype }
+            { f : obj h → obj i }
+            { t : obj h }
+            true (apply i formula (apply i (i arrow formula) (eq i) (apply h i (lambda h i (\u. f u)) t)) (f t))
+  | ETA   : { h : holtype }
+            { i : holtype }
+            { f : obj (h arrow i) }
+            true (apply (h arrow i) formula (apply (h arrow i) ((h arrow i) arrow formula) (eq (h arrow i)) (lambda h i (\x. apply h i f x))) f)
+
+  % Extra Rules
+  | RAA   : { p : obj formula }
+            true (apply formula formula not (apply formula formula not p))
+            → true p
+  | IMP-I : { p : obj formula }
+            { q : obj formula }
+            (true p -> true q)
+            -> true (apply formula formula (apply formula (formula arrow formula) imply p) q)
+  | EXT-I  : { h : holtype }
+             { s : obj (h arrow formula) }
+             { t : obj h }
+             true (apply h formula s t)
+             → true (apply (h arrow formula) formula (exists h) s)
+
+  | EQ_RFL : { h : holtype }
+             { t : obj h }
+             true (apply h formula (apply h (h arrow formula) (eq h) t) t)
+  | EQ_SYM : { h : holtype }
+             { t : obj h }
+             { u : obj h }
+             true (apply h formula (apply h (h arrow formula) (eq h) t) u)
+             -> true (apply h formula (apply h (h arrow formula) (eq h) u) t)
+
+  | SUB    : { h : holtype }
+             { i : holtype }
+             { t : obj h }
+             { u : obj h }
+             { s : obj (h arrow i) }
+             true (apply h formula (apply h (h arrow formula) (eq h) t) u)
+             → true (apply i formula (apply i (i arrow formula) (eq i) (apply h i s t)) (apply h i s u))
+  | IND    : { s : obj (term arrow formula) }
+             true (apply term formula s zero)
+             → ({ t : obj term } true (apply term formula s t) → true (apply term formula s (apply term term succ t)))
+             → true (apply (term arrow formula) formula (forall term) s)
+
+  | PLUS-Z : { t : obj term }
+             true (apply term formula (apply term (term arrow formula) (eq term) (apply term term (apply term (term arrow term) plus t) zero)) t)
+  | PLUS-S : { t : obj term }
+             { u : obj term }
+             true (apply term formula (apply term (term arrow formula) (eq term) (apply term term (apply term (term arrow term) plus t) (apply term term succ u))) (apply term term succ (apply term term (apply term (term arrow term) plus t) u)))
+;
+
+rec const :
+    { P : [⊢ obj formula] }
+    { Q : [⊢ obj formula] }
+    [⊢
+     true
+         (apply
+              formula
+              formula
+              (apply formula (formula arrow formula) imply P )
+              (apply
+                   formula
+                   formula
+                   (apply formula (formula arrow formula) imply Q)
+                   P
+              )
+         )
+    ]
+=
+/ total (const) /
+mlam P ⇒ mlam Q ⇒
+    [⊢
+     IMP-I
+        P
+        (apply formula formula (apply formula (formula arrow formula) imply Q) P)
+        (\p. IMP-I Q[] P[] (\q. p))
+    ]
+;
+
+rec forall_to_exists :
+    { S : [t : obj term ⊢ obj formula] }
+    [⊢
+     true
+         (apply
+              formula
+              formula
+              (apply
+                   formula
+                   (formula arrow formula)
+                   imply
+                   (apply
+                        (term arrow formula)
+                        formula
+                        (forall term)
+                        (lambda term formula (\t. S[t]))
+                   )
+              )
+              (apply
+                   (term arrow formula)
+                   formula
+                   (exists term)
+                   (lambda term formula (\t. S[t]))
+              )
+         )
+    ]
+=
+/ total (forall_to_exists) /
+mlam S ⇒
+    [⊢
+     IMP-I
+        (apply
+             (term arrow formula)
+             formula
+             (forall term)
+             (lambda term formula (\t. S[t]))
+        )
+        (apply
+             (term arrow formula)
+             formula
+             (exists term)
+             (lambda term formula (\t. S[t]))
+        )
+        (\all.
+         EXT-I
+            term
+            (lambda term formula (\t. S[t]))
+            zero
+            (ALL-E term (lambda term formula (\t. S[t])) zero all)
+        )
+    ]
+;
+
+rec schroder_heister_elimination :
+    { H : [|- holtype] }
+    { S : [t : obj H ⊢ obj formula] }
+    { P : [⊢ obj formula] }
+    [⊢
+     true
+         (apply
+              (H arrow formula)
+              formula
+              (forall H)
+              (lambda H formula (\t. S[t]))
+         )
+    ]
+    → (({ T : [⊢ obj H] } [⊢ true S[T]]) → [⊢ true P])
+    → [⊢ true P]=
+/ total (schroder_heister_elimination) /
+mlam H => mlam S ⇒ mlam P ⇒
+fn all ⇒ fn getP ⇒
+    let [|- A] = all in
+    getP mlam T =>
+        [|-
+         EQ
+             (apply H formula (lambda H formula (\t. S[t])) T)
+             (S[T])
+             (ALL-E H (lambda H formula (\t. S[t])) T A)
+             (BETA H formula (\t. S[t]) T)
+        ]
+;

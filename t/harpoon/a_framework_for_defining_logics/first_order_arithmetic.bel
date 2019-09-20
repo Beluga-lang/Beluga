@@ -1,0 +1,119 @@
+LF term : type =
+  | zero : term
+  | succ : term → term
+  | plus : term → term → term
+  | mult : term → term → term
+;
+
+LF formula : type =
+  | eq     : term → term → formula
+  | lt     : term → term → formula
+  | not    : formula → formula
+  | conj   : formula → formula → formula
+  | disj   : formula → formula → formula
+  | imply  : formula → formula → formula
+  | forall : (term → formula) → formula
+  | exists : (term → formula) → formula
+;
+
+LF true : formula → type =
+  | RAA    : { p : formula }
+             true (not (not p))
+             → true p
+  | IMP-I  : { p : formula }
+             { q : formula }
+             (true p → true q)
+             → true (imply p q)
+  | ALL-E  : { s : term → formula }
+             { t : term }
+             true (forall s)
+             → true (s t)
+  | ALL-I  : { s : term → formula }
+             ({ t : term } true (s t))
+             → true (forall s)
+  | EXT-E  : { s : term → formula }
+             { p : formula }
+             true (exists s)
+             → ({ t : term } true (s t) → true p)
+             → true p
+
+  | SUB    : { t : term }
+             { u : term }
+             { s : term → formula }
+             true (eq t u)
+             → true (s t)
+             → true (s u)
+  | IND    : { s : term → formula }
+             true (s zero)
+             → ({ t : term } true (s t) → true (s (succ t)))
+             → true (forall s)
+
+  % Extra Rules
+  | EXT-I  : { s : term → formula }
+             { t : term }
+             true (s t)
+             → true (exists s)
+
+  | EQ_RFL : { t : term }
+             true (eq t t)
+
+  | PLUS-Z : { t : term }
+             true (eq (plus t zero) t)
+  | PLUS-S : { t : term }
+             { u : term }
+             true (eq (plus t (succ u)) (succ (plus t u)))
+
+  | MULT-Z : { t : term }
+             true (eq (mult t zero) zero)
+  | MULT-S : { t : term }
+             { u : term }
+             true (eq (mult t (succ u)) (plus (mult t u) u))
+;
+
+rec const :
+    { P : [⊢ formula] }
+    { Q : [⊢ formula] }
+    [⊢ true (imply P (imply Q P))]
+=
+/ total (const) /
+mlam P ⇒ mlam Q ⇒
+    [⊢ IMP-I P (imply Q P) (\p. IMP-I Q[] P[] (\q. p))]
+;
+
+rec forall_to_exists :
+    { S : [t : term ⊢ formula] }
+    [⊢ true (imply (forall (\t. S[t])) (exists (\t. S[t])))]
+=
+/ total (forall_to_exists) /
+mlam S ⇒
+    [⊢ IMP-I (forall (\t. S[t])) (exists (\t. S[t])) (\all. EXT-I (\t. S[t]) zero (ALL-E (\t. S[t]) zero all))]
+;
+
+rec schroder_heister_elimination :
+    { S : [x : term ⊢ formula] }
+    { P : [⊢ formula] }
+    [⊢ true (forall (\t. S[t]))]
+    → (({ T : [⊢ term] } [⊢ true S[T]]) → [⊢ true P])
+    → [⊢ true P]
+=
+/ total (schroder_heister_elimination) /
+mlam S ⇒ mlam P ⇒
+fn all ⇒ fn getP ⇒
+    getP mlam T ⇒
+        let [⊢ A] = all in
+        [⊢ ALL-E (\t. S[t]) T A]
+;
+
+rec plus_zero_t__eq__t :
+    [⊢ true (forall (\t. eq (plus zero t) t))]
+=
+/ total (plus_zero_t__eq__t) /
+[⊢ IND (\t. eq (plus zero t) t)
+       (PLUS-Z zero)
+       (\t. \ih.
+        SUB (plus zero t) t (\u. eq (plus zero (succ t)) (succ u))
+            ih
+            (PLUS-S zero t)
+       )
+]
+;

@@ -622,13 +622,13 @@ module Solver = struct
       gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1)
         (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
 
-  (* matchAtom dPool (Psi, k) (A, s) sc = ()
+  (* matchAtom dPool Delta (Psi, k) (A, s) sc = ()
      Invariants:
        dPool ~ Psi, k = |Psi|
-       Psi |- s : Phi
-       Phi |- A : Atom
+       Delta; Psi |- s : Phi
+       Delta; Phi |- A : Atom
        sc : proof -> unit
-       If Psi |- M : A[s], then (sc M) is evaluated.
+       If Delta; Psi |- M : A[s], then (sc M) is evaluated.
 
      Effects:
        Instatiation of MVars in s and dPool.
@@ -677,17 +677,19 @@ module Solver = struct
     and matchSigma (pv : LF.head) (cD : LF.mctx) (psi : LF.dctx) ((typs, ts) : LF.typ_rec * LF.sub) (k : int) sc : unit =
       let check typ =
         try
-          trail (fun () ->
-              (*
+          trail
+            begin fun () ->
+            (*
               Format.printf "[matchSigma] %s ~=~ %s ?\n"
-                (Printer.P.typToString cD psi (typ, ts))
-                (Printer.P.typToString cD psi (tA, s));
-               *)
-              (* We added k-1 entries to psi at this point, so we need
-                 to weaken the goal type by k-1 before trying to
-                 unify. *)
-              U.unifyTyp cD psi (typ, ts) (tA, s);
-              sc k)
+              (Printer.P.typToString cD psi (typ, ts))
+              (Printer.P.typToString cD psi (tA, s));
+             *)
+            (* We added k-1 entries to psi at this point, so we need
+               to weaken the goal type by k-1 before trying to
+               unify. *)
+            U.unifyTyp cD psi (typ, ts) (tA, s);
+            sc k
+            end
         with
         | U.Failure s -> ()
       in
@@ -752,7 +754,9 @@ module Solver = struct
 
                   U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
 
-                  (* We need to create the syntax to refer to this _pattern_ variable *)
+                  (* We need to create the syntax to refer to this
+                     _pattern_ variable
+                   *)
                   sc (psi', root (pvar k))
 
                | LF.MTyp typ' ->
@@ -784,16 +788,20 @@ module Solver = struct
       (* Trail to undo MVar instantiations. *)
       try
         trail
-          ( fun () ->
-            U.unifyTyp cD cPsi (tA, s) (sCl.tHead, s');
-            solveSubGoals dPool cD (cPsi, k) (sCl.subGoals, s')
-              ( fun (u, tS) ->
-                sc
-                  ( u
-                  , LF.Root
-                      ( Syntax.Loc.ghost
-                      , LF.Const (cidTerm)
-                      , fS (spineFromRevList tS)))))
+          begin fun () ->
+          U.unifyTyp cD cPsi (tA, s) (sCl.tHead, s');
+          solveSubGoals dPool cD (cPsi, k) (sCl.subGoals, s')
+            begin fun (u, tS) ->
+            let tM =
+              LF.Root
+                ( Syntax.Loc.ghost
+                , LF.Const (cidTerm)
+                , fS (spineFromRevList tS)
+                )
+            in
+            sc (u, tM)
+            end
+          end
       with U.Failure _ -> ()
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;

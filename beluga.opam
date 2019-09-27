@@ -1,6 +1,6 @@
 opam-version: "2.0"
 maintainer: "jacob.errington@mail.mcgill.ca"
-authors: ["Brigitte Pientka" "Joshua Dunfield" "Andrew Cave"]
+authors: ["Brigitte Pientka" "Joshua Dunfield" "Andrew Cave" "Jacob Thomas Errington"]
 homepage: "https://github.com/Beluga-lang/Beluga"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"

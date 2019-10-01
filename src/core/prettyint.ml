@@ -1332,13 +1332,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          | Some proof -> fmt_ppr_cmp_proof cD cG ppf proof
        end
     | Command ( stmt, proof ) ->
-       fprintf ppf "%a;@,%a"
-         (fmt_ppr_cmp_command cD cG) stmt
-         (fmt_ppr_cmp_proof cD cG) proof
+       fprintf ppf "%a"
+         (fmt_ppr_cmp_command_and_proof cD cG) (stmt, proof)
     | Directive d ->
        fmt_ppr_cmp_directive cD cG ppf d
 
-  and fmt_ppr_cmp_command cD cG ppf =
+  and fmt_ppr_cmp_command_and_proof cD cG ppf =
     let open Comp in
     let print_invoke_kind ppf : invoke_kind -> unit =
       function
@@ -1346,15 +1345,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | `lemma -> fprintf ppf "lemma"
     in
     function
-    | By (k, t, name) ->
-       fprintf ppf "@[<hv>by %a (@[%a@])@ as %a@]"
+    | By (k, t, name, tau), proof ->
+       let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
+       fprintf ppf "@[<hv>by %a (@[%a@])@ as %a@];@,%a"
          print_invoke_kind k
          (fmt_ppr_cmp_exp_syn cD cG l0) t
          Id.print name
-    | Unbox (i, name) ->
-       fprintf ppf "@[<hv 2>unbox@ (@[%a@])@ as @[%a@]@]"
+         (fmt_ppr_cmp_proof cD cG') proof
+    | Unbox (i, name, mT), proof ->
+       let cD' = LF.Dec (cD, LF.Decl (name, mT, LF.Maybe)) in
+       fprintf ppf "@[<hv 2>unbox@ (@[%a@])@ as @[%a@]@];@,%a"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
+         (fmt_ppr_cmp_proof cD' (Whnf.cnormCtx (cG, LF.MShift 1))) proof
 
   and fmt_ppr_cmp_split_branch :
         type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->

@@ -349,7 +349,7 @@ module Tactic = struct
        tctx.remove_current_subgoal ();
        tctx.add_subgoal new_state;
        prepend_commands
-         [ Unbox (m, name) ]
+         [ Unbox (m, name, cT) ]
          (Comp.incomplete_proof new_state)
        |> solve' g
     | _ ->
@@ -377,7 +377,7 @@ module Tactic = struct
 
   let invoke (k : Command.invoke_kind) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
     let open Comp in
-    solve_with_new_decl (CTypDecl (name, tau, false)) (Comp.By (k, m, name))
+    solve_with_new_decl (CTypDecl (name, tau, false)) (Comp.By (k, m, name, tau))
 end
 
 module Automation = struct

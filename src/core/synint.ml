@@ -455,8 +455,8 @@ module Comp = struct
     | Directive of 'a directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | By of invoke_kind * exp_syn * name
-    | Unbox of exp_syn * name
+    | By of invoke_kind * exp_syn * name * typ
+    | Unbox of exp_syn * name * LF.ctyp
 
   and 'a proof_state =
     { context : hypotheses (* all the assumptions *)

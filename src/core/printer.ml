@@ -84,7 +84,6 @@ module Int = struct
 
     val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> unit Comp.hypothetical -> unit
     val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit

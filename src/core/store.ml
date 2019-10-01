@@ -978,7 +978,7 @@ module Cid = struct
       name               : Id.name;
       implicit_arguments : int;
       typ                : Int.Comp.typ;
-      prog               : Int.Comp.value;
+      prog               : Int.Comp.value option;
       mut_rec            : Id.name list;
       total              : bool
     }

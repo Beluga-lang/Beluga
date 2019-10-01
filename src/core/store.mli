@@ -210,12 +210,12 @@ module Cid : sig
       name               : name;
       implicit_arguments : int;
       typ                : Comp.typ;
-      prog               : Comp.value;
+      prog               : Comp.value option;
       mut_rec            : name list;
       total              : bool
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value -> name list -> entry
+    val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value option -> name list -> entry
 
 
 

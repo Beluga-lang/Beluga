@@ -573,7 +573,7 @@ let printfun =
                 (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist
             in
             match entry.Comp.prog with
-            | Synint.Comp.RecValue (prog, ec, _ms, _env) ->
+            | Some (Synint.Comp.RecValue (prog, ec, _ms, _env)) ->
                P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
             | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
           with

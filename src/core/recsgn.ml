@@ -647,7 +647,7 @@ let recSgnDecls decls =
          if Holes.none () && is_empty cQ then
 	         begin
              let v = Opsem.eval i'' in
-             let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
+             let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false (Some v) []) in
 		         Some v
 	         end
 	       else
@@ -710,7 +710,7 @@ let recSgnDecls decls =
 	     let v =
          if Holes.none () && is_empty cQ then
            let v = Opsem.eval i'' in
-           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false v []) in
+           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false (Some v) []) in
            Some v
          else
            None
@@ -951,7 +951,7 @@ let recSgnDecls decls =
                       p.fmt "[reconRecFun] adding definition for %a at %a"
                         Id.print f Loc.print_short loc);
                   Comp.mk_entry f tau' 0 (is_total total)
-                    (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+                    (Some (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty)))
                     n_list)
             in
 	          let _ = match loc_opt with
@@ -984,7 +984,7 @@ let recSgnDecls decls =
             Comp.add loc
 		          (fun cid ->
                 Comp.mk_entry  f tau' 0 (is_total total)
-			            (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty))
+			            (Some (Int.Comp.RecValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty)))
 			            n_list)
           in
 		      let _ = match loc_opt with

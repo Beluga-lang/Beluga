@@ -216,7 +216,7 @@ let replace_hole (i, h : Holes.hole_id * Holes.hole) exp =
   (* We only allow replacing holes inside *functions*, so we check
    * that indeed this is a function (a recursive value) *)
   match entry.Store.Cid.Comp.prog with
-  | Synint.Comp.RecValue (prog, ec, ms, env) ->
+  | Some (Syntax.Int.Comp.RecValue (prog, ec, ms, env)) ->
      (* Then, we can perform the replacement using ithHoler, which
       * traverses the expression and replaces the ith hole with the
       * given expression *)
@@ -229,7 +229,7 @@ let replace_hole (i, h : Holes.hole_id * Holes.hole) exp =
 	           entry.Store.Cid.Comp.typ
 	           entry.Store.Cid.Comp.implicit_arguments
 	           entry.Store.Cid.Comp.total
-             (Synint.Comp.RecValue (cid, ec', ms, env))
+             (Some (Synint.Comp.RecValue (cid, ec', ms, env)))
              entry.Store.Cid.Comp.mut_rec)
      in
      let open Format in

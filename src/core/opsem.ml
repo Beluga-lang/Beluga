@@ -68,7 +68,9 @@ let rec add_mrecs n_list (theta, eta) m = match n_list with
       let v = (Store.Cid.Comp.get cid').Store.Cid.Comp.prog in
       let eta' = add_mrecs n_list' (theta, eta) m in
       dprint (fun () -> "[eval_syn] found -- extend environment with rec \""  ^ R.render_cid_prog cid' ^ "\"\n");
-      Comp.Cons (v,  eta')
+      match v with
+      | None -> eta'
+      | Some v -> Comp.Cons (v,  eta')
 
 type fun_trim_result =
 | FunBranch of Comp.fun_branches_value
@@ -93,7 +95,7 @@ let rec eval_syn i (theta, eta) =
       let m = Store.Modules.name_of_id l in
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
-        | Comp.RecValue (cid, e', theta', eta') ->
+        | Some (Comp.RecValue (cid, e', theta', eta')) ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') m in
           dprintf
@@ -108,7 +110,9 @@ let rec eval_syn i (theta, eta) =
               (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty P.l0) (Whnf.cnormExp (e', theta'))
             end;
           eval_chk e' (Whnf.cnormMSub theta', eta'')
-        | v -> v
+        | Some v -> v
+        | None ->
+           failwith "can't evaluate missing program"
       end
 
     | Comp.DataConst (_, cid) ->

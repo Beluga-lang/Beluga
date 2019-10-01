@@ -88,7 +88,7 @@ module LF = struct
 
                                               (* Contextual substitutions       *)
   and mfront =                                (* Fronts:                        *)
-    | ClObj of psi_hat * clobj
+    | ClObj of dctx_hat * clobj
     | CObj of dctx                            (*    | Psi                       *)
     | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
     | MUndef (* This shouldn't be here, we should use a different datastructure for
@@ -147,10 +147,10 @@ module LF = struct
   and schema =
     | Schema of sch_elem list
 
-  and psi_hat = ctx_var option * offset  (* Psihat ::=         *)
-                                         (*        | psi       *)
-                                         (*        | .         *)
-                                         (*        | Psihat, x *)
+  and dctx_hat = ctx_var option * offset  (* Psihat ::=         *)
+                                          (*        | psi       *)
+                                          (*        | .         *)
+                                          (*        | Psihat, x *)
 
 
   and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
@@ -412,7 +412,7 @@ module Comp = struct
     | Ann (Box (_, m), _) -> Some m
     | _ -> None
 
-  let head_of_meta_obj : meta_obj -> (LF.psi_hat * LF.head) option =
+  let head_of_meta_obj : meta_obj -> (LF.dctx_hat * LF.head) option =
     let open LF in
     function
     | (_, ClObj (phat, MObj (Root (_, h, _)))) -> Some (phat, h)

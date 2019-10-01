@@ -25,7 +25,7 @@ type error =
   | SpineIllTyped    of int * int
   | LeftoverFV
   | ParamVarInst     of mctx * dctx * tclo
-  | CtxHatMismatch   of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+  | CtxHatMismatch   of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
   | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
   | TermWhenVar      of mctx * dctx * normal
   | SubWhenRen       of mctx * dctx * sub
@@ -120,7 +120,7 @@ let _ = Error.register_printer
             Error.report_mismatch ppf
               "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
               "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_psi_hat cD P.l0) cPhi;
+              "Given context" (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi;
               Format.fprintf ppf
                 "In expression: %a@."
                 (P.fmt_ppr_cmp_meta_obj cD P.l0) cM

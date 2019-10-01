@@ -106,7 +106,7 @@ val cnormTypRec: typ_rec * msub -> typ_rec
 val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
 val cnormClTyp  : cltyp * msub -> cltyp
-val cnorm_psihat: psi_hat -> msub -> psi_hat
+val cnorm_psihat: dctx_hat -> msub -> dctx_hat
 val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
 
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern
@@ -135,7 +135,7 @@ val convMTyp   : ctyp -> ctyp -> bool
 val convCTypDecl : ctyp_decl -> ctyp_decl -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
-val conv_hat_ctx: psi_hat -> psi_hat -> bool
+val conv_hat_ctx: dctx_hat -> dctx_hat -> bool
 val convCompCTypDecl : Comp.ctyp_decl -> Comp.ctyp_decl -> bool
 
 val closed     : nclo -> bool

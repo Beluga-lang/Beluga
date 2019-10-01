@@ -44,8 +44,8 @@ val comptyp  : Comp.typ -> Comp.typ * Id.offset
 val codatatyp  : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ * Id.offset
 val exp      : Comp.exp_chk -> free_var LF.ctx * Comp.exp_chk
 
-val pattern    : LF.mctx -> LF.dctx -> (LF.psi_hat * LF.normal) -> LF.typ ->
-                 LF.mctx * LF.dctx * (LF.psi_hat * LF.normal) * LF.typ
+val pattern    : LF.mctx -> LF.dctx -> (LF.dctx_hat * LF.normal) -> LF.typ ->
+                 LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal) * LF.typ
 val mobj       : LF.mctx -> Comp.meta_obj -> Comp.meta_typ ->
                  LF.mctx * Comp.meta_obj * Comp.meta_typ
 val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
@@ -57,6 +57,6 @@ val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
 
 val closedTyp : (LF.dctx * LF.typ) -> bool
 
-val printFreeMVars : LF.psi_hat -> LF.normal -> unit
+val printFreeMVars : LF.dctx_hat -> LF.normal -> unit
 
 val fmt_ppr_collection : Format.formatter -> free_var LF.ctx -> unit

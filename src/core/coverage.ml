@@ -1096,6 +1096,11 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 
   let spine = genSpine LF.Empty cPsi' (tA', S.LF.id) tP' in
   let tM = LF.Root (Syntax.Loc.ghost, tH' , spine) in
+  (*
+    (* This print will crash Beluga sometimes, because it *seems* like
+       tA doesn't always make sense in cD.
+       This is probably a bug. -je
+     *)
   dprintf
     begin fun p ->
     p.fmt "[genObj] @[<v>Generated Head@,\
@@ -1107,6 +1112,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
     end;
+   *)
 
   let _  = U.forceGlobalCnstr (!U.globalCnstrs) in
   dprint (fun _ -> "[genObj] global constraints forced!");

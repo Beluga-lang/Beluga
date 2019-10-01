@@ -424,7 +424,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (Id.render_name x)
 
 
-  and fmt_ppr_lf_psi_hat cD _lvl ppf = function
+  and fmt_ppr_lf_dctx_hat cD _lvl ppf = function
     | LF.Null   -> fprintf ppf ""
 
     | LF.CtxVar (_, x) -> (***)
@@ -438,7 +438,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
        fprintf ppf "%s, %a"
          (Id.render_name x)
-         (fmt_ppr_lf_psi_hat cD 0) cPsi
+         (fmt_ppr_lf_dctx_hat cD 0) cPsi
 
   and fmt_ppr_lf_typ_decl cD cPsi lvl ppf = function
     | LF.TypDecl (x,tA) ->

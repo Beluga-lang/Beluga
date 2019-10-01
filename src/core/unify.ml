@@ -60,7 +60,7 @@ module type UNIFY = sig
 
   (* unification *)
 
-  val intersection : psi_hat -> sub -> sub -> dctx -> (sub * dctx)
+  val intersection : dctx_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Failure of string
   exception GlobalCnstrFailure of Loc.t * string
@@ -68,11 +68,11 @@ module type UNIFY = sig
 
   (* All unify* functions return () on success and raise Failure on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
-  val unifyH       : mctx -> psi_hat -> head -> head -> unit
+  val unifyH       : mctx -> dctx_hat -> head -> head -> unit
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
-  val unify_phat   : psi_hat -> psi_hat -> unit
+  val unify_phat   : dctx_hat -> dctx_hat -> unit
 
   val unifyCompTyp : mctx -> (Comp.typ * LF.msub) -> (Comp.typ * msub) -> unit
   val unifyMSub    : msub  -> msub -> unit
@@ -89,7 +89,7 @@ module type UNIFY = sig
     | MMVarRef of iterm option ref
 
 
-  val pruneTyp : mctx -> dctx -> psi_hat -> tclo  -> (msub * sub)  -> cvarRef -> typ
+  val pruneTyp : mctx -> dctx -> dctx_hat -> tclo  -> (msub * sub)  -> cvarRef -> typ
   val pruneDCtx : mctx -> dctx ->  msub -> cvarRef -> dctx
 end
 

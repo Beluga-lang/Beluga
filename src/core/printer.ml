@@ -50,7 +50,7 @@ module Int = struct
     val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
     val fmt_ppr_lf_schema     : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
+    val fmt_ppr_lf_dctx_hat   : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
@@ -119,7 +119,7 @@ module Ext = struct
     val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
     val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
 
-    val fmt_ppr_lf_psi_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
+    val fmt_ppr_lf_dctx_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
 
     val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit)

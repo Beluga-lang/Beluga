@@ -574,7 +574,7 @@ and normDecl (decl, sigma) = match decl with
 
   *)
 
-and cnorm_psihat (phat: psi_hat) t = match phat with
+and cnorm_psihat (phat: dctx_hat) t = match phat with
   | (None , _ ) -> phat
   | (Some (CInst ((_n, ({contents = None} as cvar_ref), cD, schema, cnstr,dep), theta)),  k) ->
       (Some (CInst ((_n, cvar_ref, cD, schema, cnstr, dep), mcomp theta t)), k)

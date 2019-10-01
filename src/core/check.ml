@@ -72,7 +72,7 @@ module Comp = struct
     | BasicMismatch   of mismatch_kind * I.mctx * gctx * tclo
     | SBoxMismatch    of I.mctx * gctx  * I.dctx  * I.dctx
     | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
-    | BoxCtxMismatch  of I.mctx * I.dctx * (I.psi_hat * I.normal)
+    | BoxCtxMismatch  of I.mctx * I.dctx * (I.dctx_hat * I.normal)
     | PattMismatch    of (I.mctx * meta_obj * meta_typ) *
                          (I.mctx * meta_typ)
 (*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
@@ -193,7 +193,7 @@ module Comp = struct
             Format.fprintf ppf
               "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
               (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
-              (P.fmt_ppr_lf_psi_hat cD P.l0) (Context.hatToDCtx phat)
+              (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
               (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
 
           | BasicMismatch (k, cD, _cG, ttau) ->

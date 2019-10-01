@@ -9,9 +9,9 @@ open Syntax.Int
 
 exception NoTypAvailable
 
-val dctxToHat   : dctx -> psi_hat
-val addToHat   : psi_hat -> psi_hat   (* Lengthen by one declaration *)
-val hatToDCtx   : psi_hat -> dctx
+val dctxToHat   : dctx -> dctx_hat
+val addToHat   : dctx_hat -> dctx_hat   (* Lengthen by one declaration *)
+val hatToDCtx   : dctx_hat -> dctx
 (* Declaration Contexts *)
 val ctxDec      : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> typ_decl

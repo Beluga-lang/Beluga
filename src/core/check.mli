@@ -20,7 +20,7 @@ module LF : sig
     | SpineIllTyped    of int * int
     | LeftoverFV
     | ParamVarInst     of mctx * dctx * tclo
-    | CtxHatMismatch  of mctx * dctx (* expected *) * psi_hat (* found *) * (Syntax.Loc.t * mfront)
+    | CtxHatMismatch  of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp
     | TermWhenVar      of mctx * dctx * normal
     | SubWhenRen       of mctx * dctx * sub
@@ -69,7 +69,7 @@ module Comp : sig
     | BasicMismatch   of mismatch_kind * LF.mctx * gctx * tclo
     | SBoxMismatch    of LF.mctx * gctx  * LF.dctx  * LF.dctx
     | SynMismatch     of LF.mctx * tclo (* expected *) * tclo (* inferred *)
-    | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.psi_hat * LF.normal)
+    | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal)
     | PattMismatch    of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
 (*    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
                          (LF.mctx * LF.dctx * LF.tclo)*)

@@ -453,7 +453,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.ClObj (phat, tM) ->
        let cPsi = Context.hatToDCtx phat in
        fprintf ppf "%a |- %a"
-         (fmt_ppr_lf_psi_hat cD 0) cPsi
+         (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (fmt_ppr_lf_clobj cD 0 cPsi) tM
     | LF.MV k ->
        fprintf ppf "%s"
@@ -662,7 +662,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_typ cD cPsi 0) tA
 
 
-  and fmt_ppr_lf_psi_hat cD _lvl ppf = function
+  and fmt_ppr_lf_dctx_hat cD _lvl ppf = function
     | LF.Null   -> fprintf ppf ""
 
     | LF.CtxVar ctx_var ->
@@ -674,7 +674,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.DDec (cPsi, LF.TypDeclOpt x) ->
        fprintf ppf "%a, %s"
-         (fmt_ppr_lf_psi_hat cD 0) cPsi
+         (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (Id.render_name x)
 
     | LF.DDec (LF.Null, LF.TypDecl(x, _ )) ->
@@ -683,7 +683,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
        fprintf ppf "%a, %s"
-         (fmt_ppr_lf_psi_hat cD 0) cPsi
+         (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (Id.render_name x)
 
   and fmt_ppr_lf_dctx cD _lvl ppf = function

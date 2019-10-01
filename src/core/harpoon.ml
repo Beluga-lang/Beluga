@@ -588,33 +588,6 @@ module Prover = struct
       : unit =
     let printf x = Tactic.(tctx.printf) x in
     let open Comp in
-    let prepare_gctx_for_invocation cG : Command.invoke_kind -> Comp.gctx =
-      function
-      | `lemma -> cG (* nothing special to do for lemma invocation *)
-      | `ih ->
-         (* We elaborate the IH in an extended context with the
-            theorem already defined.
-            This is just to make sure that the appeal to the IH is
-            well-typed; we check well-foundedness after.
-            It's worth noting that because of this, all the
-            (computational) indices will be off-by-one compared to the
-            smaller context, so we will need to shift them down.
-          *)
-         LF.Dec
-           ( cG
-           , Comp.CTypDecl
-               ( s.theorem_name
-               , Whnf.cnormCTyp s.initial_state.Comp.goal |> Total.strip
-               (* ^ In command.ml, when we enter Harpoon, we pass
-                  the theorem to prove *with* induction
-                  annotations. Sadly, elaboration does *not* play
-                  nice with these annotations, so we need to strip
-                  them off when we elaborate the IH.
-                *)
-               , false
-               )
-           )
-    in
     let mfs =
       (* this should probably directly be a part of interpreter_state,
          or perhaps a part of a larger state for the collection of
@@ -709,7 +682,6 @@ module Prover = struct
             Tactic.split split_kind m tau mfs g tctx
        end
     | Command.By (k, t, name) ->
-       let cG = prepare_gctx_for_invocation cG k in
        let (hs, m, tau) = elaborate_exp' cIH cD cG t in
        dprintf
          begin fun p ->
@@ -869,7 +841,8 @@ module Prover = struct
        -je
      *)
     let _, cid =
-      S.add Loc.ghost (fun _ -> S.mk_entry name (Whnf.cnormCTyp stmt) 0 true None [name])
+      S.add Loc.ghost
+        (fun _ -> S.mk_entry name (Whnf.cnormCTyp stmt |> Total.strip) 0 true None [name])
     in
     let g = Comp.make_proof_state stmt in
     let s = make_prover_state cid name order g in

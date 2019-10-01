@@ -160,19 +160,19 @@ type candidate =
 
 type candidates = candidate list
 
-type covproblem =
+type cov_problem =
   LF.mctx * gctx * candidates * Comp.pattern
 
-type covproblems = covproblem list
+type cov_problems = cov_problem list
 
-type opencovproblem =
+type open_cov_problem =
   LF.mctx * gctx * Comp.pattern
 
-type opencovproblems = opencovproblem list
+type open_cov_problems = open_cov_problem list
 
-let open_cov_goals = ref ([] : opencovproblems)
+let open_cov_problems = ref ([] : open_cov_problems)
 
-let reset_cov_problem () = open_cov_goals := []
+let reset_open_cov_problems () = open_cov_problems := []
 
 type solved =
   | Solved
@@ -448,7 +448,7 @@ let fmt_ppr_goal ppf (cD, cG, patt) : unit =
     (P.fmt_ppr_cmp_gctx cD P.l0) (compgctx_of_gctx cG)
     (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
 
-let fmt_ppr_goals ppf (gs : opencovproblems) : unit =
+let fmt_ppr_goals ppf (gs : open_cov_problems) : unit =
   let open Format in
   let f ppf i (cD, cG, patt) =
     fprintf ppf "@[(%d)@ @[%a@]@]@,"
@@ -1744,7 +1744,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
           p.fmt "[OPEN COVERAGE GOAL] %a"
             fmt_ppr_cov_goals [cg]
           end;
-        open_cov_goals := (cD_cg, cG', pat') :: !open_cov_goals;
+        open_cov_problems := (cD_cg, cG', pat') :: !open_cov_problems;
         refine_pattern cgs cov_problem
      | _ ->
         dprintf
@@ -1798,7 +1798,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
                P.l0)
             pat'
           end;
-        open_cov_goals := (cD_cg, cG', pat') :: !open_cov_goals;
+        open_cov_problems := (cD_cg, cG', pat') :: !open_cov_problems;
         refine_pattern cgs cov_problem
      | _ ->
         dprintf
@@ -2536,7 +2536,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
        begin fun _ ->
        "[refine_mv] NOTHING TO REFINE"
        end;
-     open_cov_goals := (cD, cG, patt) :: !open_cov_goals;
+     open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
      raise (Error (Loc.ghost, NothingToRefine))
   (* [] *)
   (* raise (Error "Nothing to refine") *)
@@ -2550,7 +2550,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
      begin match cov_goals', candidates with
      | SomeCtxCands ctx_goals, [] -> []
      | SomeCtxCands ctx_goals, _ ->
-        (* bp : TODO refine_ctx_covproblem ctx_goals cov_problem *)
+        (* bp : TODO refine_ctx_cov_problem ctx_goals cov_problem *)
         (*      raise (Error "Context refinment not implemented yet") *)
         dprint
           begin fun _ ->
@@ -2574,7 +2574,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
         then [(cD, [], cands', patt)]
         else
           begin
-            open_cov_goals := (cD, cG, patt) :: !open_cov_goals;
+            open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
             raise (Error (Loc.ghost, NothingToRefine))
           end
      | SomeTermCands (_, cgoals), _ ->
@@ -2593,11 +2593,11 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
                       | Comp.MetaObj (loc, phat, tM) -> (Context.hatToDCtx phat, tM)
                       in
 
-                      let lf_covproblem = (cD, cG, candidates, (cPhi, tM)) in
-                      refine_lf_covproblem cgoals lf_covproblem      *)
+                      let lf_cov_problem = (cD, cG, candidates, (cPhi, tM)) in
+                      refine_lf_cov_problem cgoals lf_cov_problem      *)
      | NoCandidate, [] -> []
      | NoCandidate, _ ->
-        open_cov_goals := (cD, cG, patt) :: !open_cov_goals;
+        open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
         []
      end
 
@@ -2758,7 +2758,7 @@ let rec refine_patt_cands ((cD, cG, candidates, patt) as cov_problem) (pvsplits,
      let r_cands = refine_patt_cands cov_problem (pvsplits, pv) in
      begin match candidates'' with
      | [] ->
-        open_cov_goals := (cD', cG', patt') :: !open_cov_goals;
+        open_cov_problems := (cD', cG', patt') :: !open_cov_problems;
         r_cands
      | _ ->
         (cD', cG', candidates'', patt') :: r_cands
@@ -2801,13 +2801,13 @@ let refine ((cD, cG, candidates, patt) as cov_problem) =
 let rec check_all f =
   function
   (* iterate through l and collect all open coverage goals;
-     f destructively updates open_cov_goals. *)
+     f destructively updates open_cov_problems. *)
   | [] ->
      dprintf
        begin fun p ->
        p.fmt "*** @[<v>[COVERAGE FAILURE] THERE ARE CASE(S) NOT COVERED:@,\
               @[%a@]@]"
-         fmt_ppr_goals !open_cov_goals
+         fmt_ppr_goals !open_cov_problems
        end
   | h :: t ->
      f h;
@@ -2818,7 +2818,7 @@ let rec check_all f =
  *)
 
 
-(* check_covproblem cov_problem = ()
+(* check_cov_problem cov_problem = ()
 
    (cD, cG, candidates, cg) = cov_problem
 
@@ -2831,11 +2831,11 @@ let rec check_all f =
 
 
    if there are candidates where there are no splitCandidate but matchCand
-   cannot be solved, then add them to open_cov_goals, i.e. objects which are
+   cannot be solved, then add them to open_cov_problems, i.e. objects which are
    not covered.
 
  *)
-let rec check_covproblem cov_problem =
+let rec check_cov_problem cov_problem =
   let cD, cG, candidates, cg = cov_problem in
   (* existsCandidate candidates nCands open_cg
       Tries to see whether a given candidate is true, i.e.
@@ -2851,7 +2851,7 @@ let rec check_covproblem cov_problem =
     match candidates with
     | [] ->
        let cov_prob' = (cD, cG, nCands, cg) in
-       open_cov_goals := open_cg @ !open_cov_goals;
+       open_cov_problems := open_cg @ !open_cov_problems;
        dprint
          begin fun _ ->
          "[existsCandidate] refining variables since candidates have been processed"
@@ -2872,7 +2872,7 @@ let rec check_covproblem cov_problem =
        | [] ->
           dprintf
             begin fun p ->
-            p.fmt "[check_covproblem] @[<v>CHECK WHETHER@,  @[%a@]@,IS COVERED?@]"
+            p.fmt "[check_cov_problem] @[<v>CHECK WHETHER@,  @[%a@]@,IS COVERED?@]"
               (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) cg
             end;
           let s_result = solve cD cD_p matchCand in
@@ -2882,7 +2882,7 @@ let rec check_covproblem cov_problem =
           | Solved, false ->
              dprintf
                begin fun p ->
-               p.fmt "[check_covproblem] @[<v>COVERED@,@[%a@]@]"
+               p.fmt "[check_cov_problem] @[<v>COVERED@,@[%a@]@]"
                  (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) cg
                end;
              (* Coverage succeeds *)
@@ -2914,7 +2914,7 @@ let rec check_covproblem cov_problem =
                  (fmt_ppr_candidate (cD, compgctx_of_gctx cG)) c
                end;
              let open_goal = (cD, cG, cg) in
-             (* open_cov_goals := ((cO, cD), cPhi,  tM)::!open_cov_goals; *)
+             (* open_cov_problems := ((cO, cD), cPhi,  tM)::!open_cov_problems; *)
              existsCandidate cands nCands (open_goal :: open_cg)
           end
        | _ -> existsCandidate cands (c :: nCands) open_cg
@@ -2922,8 +2922,8 @@ let rec check_covproblem cov_problem =
   in
   existsCandidate candidates [] []
 
-and check_coverage (cov_problem_list : covproblems) =
-  check_all (function cov_prob -> check_covproblem cov_prob) cov_problem_list
+and check_coverage (cov_problems : cov_problems) =
+  check_all (function cov_prob -> check_cov_problem cov_prob) cov_problems
 
 
 (* ****************************************************************************** *)
@@ -3063,7 +3063,7 @@ let rec gen_candidates loc cD covGoal =
      let ml, sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in
      Cand (cD_p, cG_p, ml, sl) :: gen_candidates loc cD covGoal plist
 
-let initialize_coverage problem projOpt : covproblems =
+let initialize_coverage problem projOpt : cov_problems =
   match problem.ctype with
   | Comp.TypBox (loc, LF.CTyp w) ->
      let cD' = LF.Dec (problem.cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
@@ -3231,7 +3231,7 @@ let rec check_empty_comp cD =
        | _ -> check_empty_comp cD cG
      end
 
-let rec revisit_opengoals : opencovproblems -> opencovproblems * opencovproblems =
+let rec revisit_opengoals : open_cov_problems -> open_cov_problems * open_cov_problems =
   function
   | [] -> ([], [])
   | ((cD, cG, _) as og) :: ogoals ->
@@ -3265,7 +3265,7 @@ let rec revisit_opengoals : opencovproblems -> opencovproblems * opencovproblems
 let check_coverage_success problem =
   match problem.prag with
   | Pragma.RegularCase ->
-     if !open_cov_goals = []
+     if !open_cov_problems = []
      then
        begin
          dprint
@@ -3278,7 +3278,7 @@ let check_coverage_success problem =
        let s =
          let open Format in
          fprintf str_formatter "@[<v>CASE(S) NOT COVERED:@,@[%a@]@]"
-           fmt_ppr_goals !open_cov_goals;
+           fmt_ppr_goals !open_cov_problems;
          flush_str_formatter ()
        in
        (* Check if the open coverage goals can be proven to be impossible *)
@@ -3286,7 +3286,7 @@ let check_coverage_success problem =
 
   | Pragma.PragmaNotCase ->
      let open Format in
-     if !open_cov_goals = []
+     if !open_cov_problems = []
      then
        Failure
          (fprintf str_formatter
@@ -3298,7 +3298,7 @@ let check_coverage_success problem =
          fprintf std_formatter
            "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %a\n##   CASE(S) NOT COVERED :\n%a\n\n"
            Loc.print problem.loc
-           fmt_ppr_goals !open_cov_goals;
+           fmt_ppr_goals !open_cov_problems;
          Success
        end
 
@@ -3331,11 +3331,11 @@ let covers' problem projObj =
     dprintf
       begin fun p ->
       p.fmt "*** @[<v>!!! REVISIT :@,@[%a@]"
-        fmt_ppr_goals !open_cov_goals
+        fmt_ppr_goals !open_cov_problems
       end;
-    let o_cg = !open_cov_goals in
+    let o_cg = !open_cov_problems in
     let revisited_og, trivial_og = revisit_opengoals o_cg in
-    open_cov_goals := revisited_og;
+    open_cov_problems := revisited_og;
     check_coverage_success problem
   with
   | Error (_, NothingToRefine) ->
@@ -3376,7 +3376,7 @@ let covers problem projObj =
     Success
 
 let process problem projObj =
-  reset_cov_problem ();
+  reset_open_cov_problems ();
   match covers problem projObj with
   | Success -> NameGenerator.reset_generator ()
   | Failure message ->

@@ -1,2 +1,3 @@
 Higher-order meta-variables not (currently) supported
-The variable M is free; is this intentional?
+  - The variable M is free; is this intentional?
+  - Maybe you want to eta-expand M?

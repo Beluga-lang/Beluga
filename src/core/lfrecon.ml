@@ -24,6 +24,7 @@ type typeVariant = VariantAtom | VariantPi | VariantSigma
 
 type hint =
   [ `accidental_free_variable of name
+  | `maybe_eta_expand of name
   ]
 
 type error =
@@ -59,10 +60,10 @@ type error =
   | UnboundName of Id.name
   | UnboundIdSub
 
-exception Error of Syntax.Loc.t * error * hint option
+exception Error of Syntax.Loc.t * error * hint list
 
-let throw_hint loc e hint = raise  (Error (loc, e, hint))
-let throw loc e = throw_hint loc e None
+let throw_hint loc e hints = raise  (Error (loc, e, hints))
+let throw loc e = throw_hint loc e []
 
 let string_of_typeVariant = function
   | VariantAtom -> "atomic type"
@@ -211,20 +212,21 @@ let print_hint ppf : hint -> unit =
   | `accidental_free_variable x ->
      fprintf ppf "The variable %a is free; is this intentional?"
        Id.print x
+  | `maybe_eta_expand x ->
+     fprintf ppf "Maybe you want to eta-expand %a?"
+       Id.print x
 
 let _ =
   let open Format in
   Error.register_printer
-    (fun (Error (loc, err, hint)) ->
+    (fun (Error (loc, err, hints)) ->
       Error.print_with_location loc
         (fun ppf ->
           fprintf ppf "@[<v>%a%a@]"
             print_error err
-            (Maybe.print
-               (fun ppf x ->
-                 fprintf ppf "@,%a"
-                   print_hint x))
-            hint
+            (pp_print_list ~pp_sep: (fun _ _ -> ())
+               (fun ppf x -> fprintf ppf "@,  - %a" print_hint x))
+            hints
     ))
 
 let rec conv_listToString clist = match clist with
@@ -1811,7 +1813,7 @@ and elTerm' recT cD cPsi r sP = match r with
       raise (Error.Violation "[elTerm'] PVar ")
 
   | Apx.LF.Root (loc, Apx.LF.FMVar (x,_), _s) ->
-    throw_hint loc HOMVarNotSupported (Some (`accidental_free_variable x))
+    throw_hint loc HOMVarNotSupported [`accidental_free_variable x; `maybe_eta_expand x]
 
   | Apx.LF.Root (loc, h, _s) ->
       dprint (fun () -> "[elTerm' **] h = " ^ what_head h ^ "\n");

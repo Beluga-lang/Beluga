@@ -525,19 +525,22 @@ module Prover = struct
     ; remaining_subgoals : unit Comp.proof_state DynArray.t
     ; automation_state : Automation.automation_state
     ; theorem_name : Id.name
+    ; cid : Id.cid_prog
     ; order : Comp.order option
     }
 
   let make_prover_state
-        (name : Id.name)
+        (cid : Id.cid_prog)
+        (theorem_name : Id.name)
         (order : Comp.order option)
-        (s : unit Comp.proof_state)
+        (initial_state : unit Comp.proof_state)
       : interpreter_state =
-    { initial_state = s
+    { initial_state
     ; remaining_subgoals = DynArray.of_list []
     ; automation_state = Automation.make_automation_state ()
-    ; theorem_name = name
-    ; order = order
+    ; theorem_name
+    ; order
+    ; cid
     }
 
   (** Computes the index of the current subgoal we're working on. *)
@@ -630,8 +633,8 @@ module Prover = struct
       match k with
       | `lemma -> f ()
       | `ih ->
-         match head_of_application i |> variable_of_exp with
-         | Some 1 -> f ()
+         match head_of_application i with
+         | Const (_, c) when c = s.cid -> f ()
          | _ ->
             Tactic.(tctx.printf) "@[<v>The expression@,  @[%a@]@,\
                                   is not an appeal to an induction hypothesis.@]"
@@ -854,8 +857,16 @@ module Prover = struct
         (stmt : Comp.tclo) (* The statement of the theorem *)
         (order : Comp.order option) (* The induction order of the theorem *)
       : unit =
+    let module S = Store.Cid.Comp in
+    (* maybe we should actually say the correct number of implicits
+       here instead of zero.
+       -je
+     *)
+    let _, cid =
+      S.add Loc.ghost (fun _ -> S.mk_entry name (Whnf.cnormCTyp stmt) 0 true None [name])
+    in
     let g = Comp.make_proof_state stmt in
-    let s = make_prover_state name order g in
+    let s = make_prover_state cid name order g in
     let tctx = build_tactic_context ppf s in
     Tactic.(tctx.add_subgoal g);
     loop ppf s tctx

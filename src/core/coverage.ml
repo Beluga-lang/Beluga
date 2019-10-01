@@ -264,36 +264,6 @@ and etaExpandMVstr' cD cPsi =
   | LF.PiTyp ((LF.TypDecl (x, _) as decl, _), tB), s ->
      LF.Lam (Loc.ghost, x, etaExpandMVstr cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
 
-(* ****************************************************************************** *)
-(* Printing for debugging *)
-
-(*
- Example:
-
- X:nat
- |-  Cand ( Null , [], [ X = z     ]),
-     Cand ( N:nat, [], [ X = suc N ])
- *)
-
-let fmt_ppr_mvlist ppf (vars : LF.cvar list) : unit =
-  let open Format in
-  match vars with
-  | [] ->
-     fprintf ppf "<no mvs>"
-  | _ ->
-     pp_print_list ~pp_sep: Fmt.comma
-       begin fun ppf ->
-       function
-       | LF.Offset k ->
-          fprintf ppf "%d"
-            k
-       | _ ->
-          failwith
-            "[fmt_ppr_mvlist] cvar is not an offset"
-       end
-       ppf
-       vars
-
 let rec compgctx_of_gctx =
   function
   | [] -> LF.Empty
@@ -306,158 +276,204 @@ let rec gctx_of_compgctx =
   | LF.Dec (cG, Comp.CTypDecl (x, tau, flag)) ->
      (x, tau, flag) :: gctx_of_compgctx cG
 
-let fmt_ppr_pattern cD ppf : pattern -> unit =
-  let open Format in
-  function
-  | MetaCtx cPsi ->
-     P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
-  | MetaSub (cPsi, s, LF.STyp (_, cPhi)) ->
-     fprintf ppf "%a |- %a : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_sub cD cPsi P.l0) s
-       (P.fmt_ppr_lf_dctx cD P.l0) cPhi
-  | MetaPatt (cPsi, tR, sA) ->
-     fprintf ppf "%a |- %a : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_normal cD cPsi P.l0) tR
-       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-  | EmptyPatt (cPsi, sA) ->
-     fprintf ppf "%a |- () : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-  | EmptyParamPatt (cPsi, sA) ->
-     fprintf ppf "%a |- () : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+(* ****************************************************************************** *)
+(** Printing for debugging
 
-let fmt_ppr_cov_goal cD ppf : cov_goal -> unit =
-  let open Format in
-  function
-  | CovCtx cPsi -> P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
-  | CovSub (cPsi, s, LF.STyp (_, cPhi)) ->
-     fprintf ppf "%a |- %a : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_sub cD cPsi P.l0) s
-       (P.fmt_ppr_lf_dctx cD P.l0) cPhi
-  | CovGoal (cPsi, tR, sA) ->
-     fprintf ppf "%a |- %a : %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_normal cD cPsi P.l0) tR
-       (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-  | CovPatt (cG, patt, ttau) ->
-     fprintf ppf "%a : %a"
-       (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
-       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+Example:
 
-let fmt_ppr_cov_goals ppf goals =
-  let open Format in
-  let f ppf (cD, cg, _) =
-    fprintf ppf "-- %a |- %a"
+X:nat
+|-  Cand ( Null , [], [ X = z     ]),
+    Cand ( N:nat, [], [ X = suc N ])
+ *)
+
+module Prettycov : sig
+  open Format
+
+  val fmt_ppr_open_cov_problems : formatter -> open_cov_problems -> unit
+  val fmt_ppr_open_cov_problem : formatter -> open_cov_problem -> unit
+  val fmt_ppr_cov_problems : formatter -> cov_problems -> unit
+  val fmt_ppr_cov_problem : formatter -> cov_problem -> unit
+  val fmt_ppr_candidates : LF.mctx * Comp.gctx -> formatter -> candidates -> unit
+  val fmt_ppr_candidate : LF.mctx * Comp.gctx -> formatter -> candidate -> unit
+  val fmt_ppr_equations : LF.mctx -> LF.mctx -> formatter -> eqn list -> unit
+  val fmt_ppr_splits : LF.mctx * Comp.gctx -> LF.mctx * Comp.gctx -> formatter -> split list -> unit
+  val fmt_ppr_cov_goals : formatter -> (LF.mctx * cov_goal * LF.msub) list -> unit
+  val fmt_ppr_cov_goal : LF.mctx -> formatter -> cov_goal -> unit
+  val fmt_ppr_pattern : LF.mctx -> formatter -> pattern -> unit
+  val fmt_ppr_mvlist : formatter -> LF.cvar list -> unit
+end = struct
+  let fmt_ppr_mvlist ppf (vars : LF.cvar list) : unit =
+    let open Format in
+    match vars with
+    | [] ->
+       fprintf ppf "<no mvs>"
+    | _ ->
+       pp_print_list ~pp_sep: Fmt.comma
+         begin fun ppf ->
+         function
+         | LF.Offset k ->
+            fprintf ppf "%d"
+              k
+         | _ ->
+            failwith
+              "[fmt_ppr_mvlist] cvar is not an offset"
+         end
+         ppf
+         vars
+
+  let fmt_ppr_pattern cD ppf : pattern -> unit =
+    let open Format in
+    function
+    | MetaCtx cPsi ->
+       P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
+    | MetaSub (cPsi, s, LF.STyp (_, cPhi)) ->
+       fprintf ppf "%a |- %a : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_sub cD cPsi P.l0) s
+         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+    | MetaPatt (cPsi, tR, sA) ->
+       fprintf ppf "%a |- %a : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_normal cD cPsi P.l0) tR
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+    | EmptyPatt (cPsi, sA) ->
+       fprintf ppf "%a |- () : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+    | EmptyParamPatt (cPsi, sA) ->
+       fprintf ppf "%a |- () : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+
+  let fmt_ppr_cov_goal cD ppf : cov_goal -> unit =
+    let open Format in
+    function
+    | CovCtx cPsi -> P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
+    | CovSub (cPsi, s, LF.STyp (_, cPhi)) ->
+       fprintf ppf "%a |- %a : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_sub cD cPsi P.l0) s
+         (P.fmt_ppr_lf_dctx cD P.l0) cPhi
+    | CovGoal (cPsi, tR, sA) ->
+       fprintf ppf "%a |- %a : %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_normal cD cPsi P.l0) tR
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+    | CovPatt (cG, patt, ttau) ->
+       fprintf ppf "%a : %a"
+         (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+
+  let fmt_ppr_cov_goals ppf (goals : (LF.mctx * cov_goal * LF.msub) list) : unit =
+    let open Format in
+    let f ppf (cD, cg, _) =
+      fprintf ppf "-- %a |- %a"
+        (P.fmt_ppr_lf_mctx P.l0) cD
+        (fmt_ppr_cov_goal cD) cg
+    in
+    pp_print_list ~pp_sep: pp_print_cut f ppf goals
+
+  let fmt_ppr_split (cD, cG) (cD_p, cG_p) ppf : split -> unit =
+    let open Format in
+    function
+    | Split (cg, patt) ->
+       fprintf ppf "%a == %a"
+         (fmt_ppr_cov_goal cD) cg
+         (fmt_ppr_pattern cD_p) patt
+    | SplitCtx (cPsi, cPhi) ->
+       fprintf ppf "%a == %a"
+         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         (P.fmt_ppr_lf_dctx cD_p P.l0) cPhi
+    | SplitPat ((patt, ttau), (patt', ttau')) ->
+       fprintf ppf "%a : %a == %a : %a"
+         (P.fmt_ppr_cmp_pattern cD cG P.l0) patt
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+         (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) patt'
+         (P.fmt_ppr_cmp_typ cD_p P.l0) (Whnf.cnormCTyp ttau')
+
+  let fmt_ppr_splits c c' ppf : split list -> unit =
+    let open Format in
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_split c c'))
+
+  let fmt_ppr_equation cD cD_p ppf : eqn -> unit =
+    let open Format in
+    function
+    | Eqn (cg, patt) ->
+       fprintf ppf "%a == %a"
+         (fmt_ppr_cov_goal cD) cg
+         (fmt_ppr_pattern cD_p) patt
+    | _ ->
+       failwith "[fmt_ppr_eqn] not an equation"
+
+  let fmt_ppr_equations cD cD_p ppf : eqn list -> unit =
+    let open Format in
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_equation cD cD_p))
+
+  let fmt_ppr_candidate (cD, cG) ppf : candidate -> unit =
+    let open Format in
+    function
+    | Cand (cD_p, cG_p, eqns, splits) ->
+       fprintf ppf "@[<v>@[%a@]; @[%a@]@,@[%a@]; @[%a@] |-@,MATCHES {@,%a@,}@,SPLITS {@,%a@,}@]"
+         (P.fmt_ppr_lf_mctx P.l0) cD
+         (P.fmt_ppr_cmp_gctx cD P.l0) cG
+         (P.fmt_ppr_lf_mctx P.l0) cD_p
+         (P.fmt_ppr_cmp_gctx cD_p P.l0) cG_p
+         (fmt_ppr_equations cD cD_p) eqns
+         (fmt_ppr_splits (cD, cG) (cD_p, cG_p)) splits
+
+  let fmt_ppr_candidates (cD, cG) ppf (candidates : candidate list) : unit =
+    let open Format in
+    match candidates with
+    | [] ->
+       fprintf ppf "<no candidates>"
+    | _ ->
+       let f ppf i c =
+         fprintf ppf "@[<v 2>CANDIDATE %d:@,%a@]"
+           (i + 1)
+           (fmt_ppr_candidate (cD, cG)) c
+       in
+       fprintf ppf "@[<v>";
+       List.iteri (f ppf) candidates;
+       fprintf ppf "@]"
+
+  let fmt_ppr_cov_problem ppf ((cD, cG, candidates, patt) : cov_problem) : unit =
+    let cG' = compgctx_of_gctx cG in
+    let open Format in
+    fprintf ppf "#### @[<v>COVERAGE GOAL:@,\
+                 cD = @[%a@]@,\
+                 @[%a@] |- @[%a@]@,\
+                 is possibly covered by:@,\
+                 @[%a@]@]"
       (P.fmt_ppr_lf_mctx P.l0) cD
-      (fmt_ppr_cov_goal cD) cg
-  in
-  pp_print_list ~pp_sep: pp_print_cut f ppf goals
+      (P.fmt_ppr_cmp_gctx cD P.l0) cG'
+      (P.fmt_ppr_cmp_pattern cD cG' P.l0) patt
+      (fmt_ppr_candidates (cD, cG')) candidates
 
-let fmt_ppr_split (cD, cG) (cD_p, cG_p) ppf : split -> unit =
-  let open Format in
-  function
-  | Split (cg, patt) ->
-     fprintf ppf "%a == %a"
-       (fmt_ppr_cov_goal cD) cg
-       (fmt_ppr_pattern cD_p) patt
-  | SplitCtx (cPsi, cPhi) ->
-     fprintf ppf "%a == %a"
-       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-       (P.fmt_ppr_lf_dctx cD_p P.l0) cPhi
-  | SplitPat ((patt, ttau), (patt', ttau')) ->
-     fprintf ppf "%a : %a == %a : %a"
-       (P.fmt_ppr_cmp_pattern cD cG P.l0) patt
-       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
-       (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) patt'
-       (P.fmt_ppr_cmp_typ cD_p P.l0) (Whnf.cnormCTyp ttau')
+  let fmt_ppr_cov_problems ppf : cov_problems -> unit =
+    let open Format in
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cov_problem)
 
-let fmt_ppr_splits c c' ppf : split list -> unit =
-  let open Format in
-  fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_split c c'))
+  let fmt_ppr_open_cov_problem ppf ((cD, cG, patt) : open_cov_problem) : unit =
+    let open Format in
+    fprintf ppf "@[<2>@[@[%a@] ;@ @[%a@]@] |-@ @[%a@]@]"
+      (P.fmt_ppr_lf_mctx P.l0) cD
+      (P.fmt_ppr_cmp_gctx cD P.l0) (compgctx_of_gctx cG)
+      (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
 
-let fmt_ppr_equation cD cD_p ppf : eqn -> unit =
-  let open Format in
-  function
-  | Eqn (cg, patt) ->
-     fprintf ppf "%a == %a"
-       (fmt_ppr_cov_goal cD) cg
-       (fmt_ppr_pattern cD_p) patt
-  | _ ->
-     failwith "[fmt_ppr_eqn] not an equation"
-
-let fmt_ppr_equations cD cD_p ppf : eqn list -> unit =
-  let open Format in
-  fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_equation cD cD_p))
-
-let fmt_ppr_candidate (cD, cG) ppf : candidate -> unit =
-  let open Format in
-  function
-  | Cand (cD_p, cG_p, eqns, splits) ->
-     fprintf ppf "@[<v>@[%a@]; @[%a@]@,@[%a@]; @[%a@] |-@,MATCHES {@,%a@,}@,SPLITS {@,%a@,}@]"
-       (P.fmt_ppr_lf_mctx P.l0) cD
-       (P.fmt_ppr_cmp_gctx cD P.l0) cG
-       (P.fmt_ppr_lf_mctx P.l0) cD_p
-       (P.fmt_ppr_cmp_gctx cD_p P.l0) cG_p
-       (fmt_ppr_equations cD cD_p) eqns
-       (fmt_ppr_splits (cD, cG) (cD_p, cG_p)) splits
-
-let fmt_ppr_candidates (cD, cG) ppf (candidates : candidate list) : unit =
-  let open Format in
-  match candidates with
-  | [] ->
-     fprintf ppf "<no candidates>"
-  | _ ->
-     let f ppf i c =
-       fprintf ppf "@[<v 2>CANDIDATE %d:@,%a@]"
-         (i + 1)
-         (fmt_ppr_candidate (cD, cG)) c
-     in
-     fprintf ppf "@[<v>";
-     List.iteri (f ppf) candidates;
-     fprintf ppf "@]"
-
-let fmt_ppr_cov_problem ppf (cD, cG, candidates, patt) : unit =
-  let cG' = compgctx_of_gctx cG in
-  let open Format in
-  fprintf ppf "#### @[<v>COVERAGE GOAL:@,\
-               cD = @[%a@]@,\
-               @[%a@] |- @[%a@]@,\
-               is possibly covered by:@,\
-               @[%a@]@]"
-    (P.fmt_ppr_lf_mctx P.l0) cD
-    (P.fmt_ppr_cmp_gctx cD P.l0) cG'
-    (P.fmt_ppr_cmp_pattern cD cG' P.l0) patt
-    (fmt_ppr_candidates (cD, cG')) candidates
-
-let fmt_ppr_cov_problems ppf =
-  let open Format in
-  fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cov_problem)
-
-let fmt_ppr_goal ppf (cD, cG, patt) : unit =
-  let open Format in
-  fprintf ppf "@[<2>@[@[%a@] ;@ @[%a@]@] |-@ @[%a@]@]"
-    (P.fmt_ppr_lf_mctx P.l0) cD
-    (P.fmt_ppr_cmp_gctx cD P.l0) (compgctx_of_gctx cG)
-    (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
-
-let fmt_ppr_goals ppf (gs : open_cov_problems) : unit =
-  let open Format in
-  let f ppf i (cD, cG, patt) =
-    fprintf ppf "@[(%d)@ @[%a@]@]@,"
-      (i + 1)
-      fmt_ppr_goal (cD, cG, patt)
-  in
-  fprintf ppf "@[<v>";
-  List.iteri (f ppf) gs;
-  fprintf ppf "@]"
+  let fmt_ppr_open_cov_problems ppf (gs : open_cov_problems) : unit =
+    let open Format in
+    let f ppf i (cD, cG, patt) =
+      fprintf ppf "@[(%d)@ @[%a@]@]@,"
+        (i + 1)
+        fmt_ppr_open_cov_problem (cD, cG, patt)
+    in
+    fprintf ppf "@[<v>";
+    List.iteri (f ppf) gs;
+    fprintf ppf "@]"
+end
 
 (* ****************************************************************************** *)
 
@@ -602,8 +618,8 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
      dprintf
        begin fun p ->
        p.fmt "[pre_match_head] @[<v>pre_match_dctx yields@,sC = @[%a@]@,mC = @[%a@]@]"
-         (fmt_ppr_splits (cD, LF.Empty) (cD', LF.Empty)) sC
-         (fmt_ppr_equations cD cD') mC
+         (Prettycov.fmt_ppr_splits (cD, LF.Empty) (cD', LF.Empty)) sC
+         (Prettycov.fmt_ppr_equations cD cD') mC
        end;
      begin try
          U.unifyDCtx cD cPsi cPsi_p';
@@ -720,8 +736,8 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
         dprintf
           begin fun p ->
           p.fmt "[pre_match] Eqn : @[<hv>%a@ == %a@]"
-            (fmt_ppr_cov_goal cD) covGoal
-            (fmt_ppr_pattern cD_p) patt
+            (Prettycov.fmt_ppr_cov_goal cD) covGoal
+            (Prettycov.fmt_ppr_pattern cD_p) patt
           end;
         (Eqn (covGoal, patt) :: matchCands, splitCands)
 
@@ -1331,7 +1347,7 @@ let genPVar (cD, cPsi, tP) =
             begin fun p ->
             p.fmt "[genPVar] @[<v>generated %d cases@,%a@]"
               (List.length all_cg)
-              fmt_ppr_cov_goals all_cg
+              Prettycov.fmt_ppr_cov_goals all_cg
             end;
           all_cg
      in
@@ -1697,14 +1713,14 @@ let rec refine_candidates (cD', cG', ms) (cD, cG, candidates) =
            begin fun p ->
            p.fmt "[refine_candidates] @[<v>REFINING candidate:@,\
                   @[%a@]@]"
-             (fmt_ppr_candidate (cD, LF.Empty)) cand
+             (Prettycov.fmt_ppr_candidate (cD, LF.Empty)) cand
            end;
          let cand' = refine_cand (cD', cG', ms) (cD, cG, cand) in
          dprintf
            begin fun p ->
            p.fmt "[refine_candidates] @[<v>REFINED candidate:@,\
                   @[%a@]@]"
-             (fmt_ppr_candidate (cD', LF.Empty)) cand'
+             (Prettycov.fmt_ppr_candidate (cD', LF.Empty)) cand'
            end;
          cand' :: refine_candidates (cD', cG', ms) (cD, cG, cands)
        with
@@ -1713,7 +1729,7 @@ let rec refine_candidates (cD', cG', ms) (cD, cG, candidates) =
             begin fun p ->
             p.fmt "[refine_candidate] @[<v>irrelevant candidate:@,\
                    @[%a@]@]"
-              (fmt_ppr_candidate (cD, LF.Empty)) cand
+              (Prettycov.fmt_ppr_candidate (cD, LF.Empty)) cand
             end;
           refine_candidates (cD', cG', ms) (cD, cG, cands)
      end
@@ -1727,7 +1743,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
        begin fun p ->
        p.fmt "[refine_pattern] @[<v>considering coverage goal@,  @[%a]@,\
               There are %d candidates@]"
-         fmt_ppr_cov_goals [cg]
+         Prettycov.fmt_ppr_cov_goals [cg]
          (List.length candidates)
        end;
      let cG' = cnormCtx (cG, ms) in
@@ -1742,7 +1758,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
         dprintf
           begin fun p ->
           p.fmt "[OPEN COVERAGE GOAL] %a"
-            fmt_ppr_cov_goals [cg]
+            Prettycov.fmt_ppr_cov_goals [cg]
           end;
         open_cov_problems := (cD_cg, cG', pat') :: !open_cov_problems;
         refine_pattern cgs cov_problem
@@ -1753,7 +1769,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
                  covering candidates (after refine_pattern):@,\
                  @[%a@]@]"
             (List.length candidates')
-            (fmt_ppr_candidates (cD_cg, compgctx_of_gctx cG'))
+            (Prettycov.fmt_ppr_candidates (cD_cg, compgctx_of_gctx cG'))
             candidates'
           end;
         (cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem
@@ -1809,7 +1825,7 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
             (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG)
                P.l0)
             patt
-            (fmt_ppr_candidates (cD_cg, (compgctx_of_gctx cG'))) candidates'
+            (Prettycov.fmt_ppr_candidates (cD_cg, (compgctx_of_gctx cG'))) candidates'
           end;
         (cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem
      end
@@ -2150,7 +2166,7 @@ let rec best_cand (cD, mv_list) k cD_tail =
                     dprintf
                       begin fun p ->
                       p.fmt "[best_cand] generated covgoal @[%a@]"
-                        (fmt_ppr_cov_goal cD') cg
+                        (Prettycov.fmt_ppr_cov_goal cD') cg
                       end;
                     let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), ms) in
                     let cD'', ms0 = addToMCtx cD' (cD_tail, ms') in
@@ -2406,7 +2422,7 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
               @[%a@]"
          (List.length r)
          (P.fmt_ppr_cmp_typ cD P.l0) tau
-         fmt_ppr_cov_goals r
+         Prettycov.fmt_ppr_cov_goals r
        end;
      r
   | _ -> []
@@ -2502,7 +2518,7 @@ let best_split_candidate cD candidates =
   dprintf
     begin fun p ->
     p.fmt "[best_split_candidate] @[<v>candidates:@,@[%a@]@]"
-      fmt_ppr_mvlist mv_list_sorted
+      Prettycov.fmt_ppr_mvlist mv_list_sorted
     end;
   if cv_list_sorted = []
   then best_cand (cD, mv_list_sorted) 1 []
@@ -2545,7 +2561,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
      dprintf
        begin fun p ->
        p.fmt "[Original candidates] @[<v>%a@]"
-         fmt_ppr_cov_problem cov_problem
+         Prettycov.fmt_ppr_cov_problem cov_problem
        end;
      begin match cov_goals', candidates with
      | SomeCtxCands ctx_goals, [] -> []
@@ -2583,7 +2599,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
           p.fmt "[refine_mv] @[<v>generated coverage goals:@,\
                  @[%a@]@,
                  for pattern: @[%a@]@]"
-            fmt_ppr_cov_goals (List.map (fun (TermCandidate cg) -> cg) cgoals)
+            Prettycov.fmt_ppr_cov_goals (List.map (fun (TermCandidate cg) -> cg) cgoals)
             (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG) P.l0) patt
           end;
         refine_pattern cgoals cov_problem
@@ -2650,7 +2666,7 @@ let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) =
              (P.fmt_ppr_lf_mctx P.l0) cD_p
              (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) patt_p
              (P.fmt_ppr_cmp_typ cD_p P.l0) (Whnf.cnormCTyp ttau_p)
-             (fmt_ppr_equations cD cD_p) ml'
+             (Prettycov.fmt_ppr_equations cD cD_p) ml'
            end;
          match_pattern (cD, cG) (cD_p, cG_p) (pat_r, ttau) (patt_p, ttau_p) ml' sl'
        end
@@ -2690,7 +2706,7 @@ let best_pv_cand (cD, cG) (x :: pvlist) =
     begin fun p ->
     p.fmt "[genPatCGoals] @[<v>for %a@,@[%a@]@]"
       Id.print x
-      fmt_ppr_cov_goals cov_goals'
+      Prettycov.fmt_ppr_cov_goals cov_goals'
     end;
   let l = List.length cov_goals' in
   best_pv_cand' (cD, cG) pvlist (l, (cov_goals', x))
@@ -2771,7 +2787,7 @@ let refine ((cD, cG, candidates, patt) as cov_problem) =
        begin fun p ->
        p.fmt "[refine] @[<v>no pattern variables to refine - refine meta-variables@,\
               cov_problem:@,@[%a@]@]"
-         fmt_ppr_cov_problem cov_problem
+         Prettycov.fmt_ppr_cov_problem cov_problem
        end;
      refine_mv cov_problem (* there are no pattern variables *)
   | pvlist ->  (* there are pattern variables to be split *)
@@ -2786,14 +2802,14 @@ let refine ((cD, cG, candidates, patt) as cov_problem) =
        begin fun p ->
        p.fmt "[refine] @[<v>Candidates generated %d cases for:@,@[%a@]@]"
          (List.length pv_splits)
-         fmt_ppr_cov_problem cov_problem
+         Prettycov.fmt_ppr_cov_problem cov_problem
        end;
      let r_cands = refine_patt_cands cov_problem (pv_splits, pv) in
      dprintf
        begin fun p ->
        let open Format in
        p.fmt "[refine] @[<v>refined cov_problem:@,@[%a@]@]"
-         (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cov_problem)
+         (pp_print_list ~pp_sep: pp_print_cut Prettycov.fmt_ppr_cov_problem)
          r_cands
        end;
      r_cands
@@ -2807,7 +2823,7 @@ let rec check_all f =
        begin fun p ->
        p.fmt "*** @[<v>[COVERAGE FAILURE] THERE ARE CASE(S) NOT COVERED:@,\
               @[%a@]@]"
-         fmt_ppr_goals !open_cov_problems
+         Prettycov.fmt_ppr_open_cov_problems !open_cov_problems
        end
   | h :: t ->
      f h;
@@ -2863,7 +2879,7 @@ let rec check_cov_problem cov_problem =
        dprintf
          begin fun p ->
          p.fmt "[existsCandidate] @[<v>check coverage (again) for:@,@[%a@]@]"
-           fmt_ppr_cov_problems cp
+           Prettycov.fmt_ppr_cov_problems cp
          end;
        check_coverage cp
 
@@ -2898,7 +2914,7 @@ let rec check_cov_problem cov_problem =
              dprintf
                begin fun p ->
                p.fmt "#### (A) @[<v>NOT COVERED YET BUT THERE IS HOPE AND WE CAN SPLIT ON@,@[%a@]@]"
-                 (fmt_ppr_candidate (cD, compgctx_of_gctx cG)) c
+                 (Prettycov.fmt_ppr_candidate (cD, compgctx_of_gctx cG)) c
                end;
              (* Some equations in matchCand cannot be solved by hounif;
                  they will be resurrected as new splitting candidates *)
@@ -2911,7 +2927,7 @@ let rec check_cov_problem cov_problem =
              dprintf
                begin fun p ->
                p.fmt "**** (B) @[<v>THE FOLLOWING CANDIDATE IS NOT COVERED@,@[%a@]@]"
-                 (fmt_ppr_candidate (cD, compgctx_of_gctx cG)) c
+                 (Prettycov.fmt_ppr_candidate (cD, compgctx_of_gctx cG)) c
                end;
              let open_goal = (cD, cG, cg) in
              (* open_cov_problems := ((cO, cD), cPhi,  tM)::!open_cov_problems; *)
@@ -3238,7 +3254,7 @@ let rec revisit_opengoals : open_cov_problems -> open_cov_problems * open_cov_pr
      dprintf
        begin fun p ->
        p.fmt "REVISIT OPEN GOAL: %a"
-         fmt_ppr_goal og
+         Prettycov.fmt_ppr_open_cov_problem og
        end;
      U.resetGlobalCnstrs ();
      match () with
@@ -3278,7 +3294,7 @@ let check_coverage_success problem =
        let s =
          let open Format in
          fprintf str_formatter "@[<v>CASE(S) NOT COVERED:@,@[%a@]@]"
-           fmt_ppr_goals !open_cov_problems;
+           Prettycov.fmt_ppr_open_cov_problems !open_cov_problems;
          flush_str_formatter ()
        in
        (* Check if the open coverage goals can be proven to be impossible *)
@@ -3298,7 +3314,7 @@ let check_coverage_success problem =
          fprintf std_formatter
            "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %a\n##   CASE(S) NOT COVERED :\n%a\n\n"
            Loc.print problem.loc
-           fmt_ppr_goals !open_cov_problems;
+           Prettycov.fmt_ppr_open_cov_problems !open_cov_problems;
          Success
        end
 
@@ -3320,7 +3336,7 @@ let covers' problem projObj =
   dprintf
     begin fun p ->
     p.fmt "### @[<v>Initial coverage problem:@,@[%a@]@]"
-      fmt_ppr_cov_problems cov_problems
+      Prettycov.fmt_ppr_cov_problems cov_problems
     end;
   try
     check_coverage cov_problems;
@@ -3331,7 +3347,7 @@ let covers' problem projObj =
     dprintf
       begin fun p ->
       p.fmt "*** @[<v>!!! REVISIT :@,@[%a@]"
-        fmt_ppr_goals !open_cov_problems
+        Prettycov.fmt_ppr_open_cov_problems !open_cov_problems
       end;
     let o_cg = !open_cov_problems in
     let revisited_og, trivial_og = revisit_opengoals o_cg in

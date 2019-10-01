@@ -106,17 +106,6 @@ let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
 
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
-let rec stripInd tau = match tau with
-  | Int.Comp.TypArr (tau1, tau2) ->
-      Int.Comp.TypArr (stripInd tau1, stripInd tau2)
-  | Int.Comp.TypCross (tau1, tau2) ->
-      Int.Comp.TypCross (stripInd tau1, stripInd tau2)
-  | Int.Comp.TypInd tau ->
-      stripInd tau
-  | Int.Comp.TypPiBox (cdec, tau) ->
-      Int.Comp.TypPiBox (cdec, stripInd tau)
-  | tau -> tau
-
 let rec lookupFun cG f = match cG with
   | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau, false)) ->
       if f = f' then tau else
@@ -824,7 +813,7 @@ let recSgnDecls decls =
 			               raise (Error (loc, MutualTotalDeclAfter f))
             in
 		        let (cG, vars, n_list, ds) = preprocess lf (m+1) in
-            ( Int.LF.Dec(cG, Int.Comp.CTypDecl (f, stripInd tau',false))
+            ( Int.LF.Dec(cG, Int.Comp.CTypDecl (f, Total.strip tau',false))
             , Var.extend vars (Var.mk_entry f)
             , f::n_list
             , d::ds
@@ -842,7 +831,7 @@ let recSgnDecls decls =
          let e' =
            Monitor.timer
              ( "Function Elaboration",
-               fun () -> Reconstruct.exp cG apx_e (stripInd tau', C.m_id)
+               fun () -> Reconstruct.exp cG apx_e (Total.strip tau', C.m_id)
              )
          in
          dprintf

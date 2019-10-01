@@ -924,6 +924,13 @@ and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
 
   | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      dprintf
+        begin fun p ->
+        p.fmt "[checkMetaObj] @[<v>cPsi = @[%a@]@,\
+               phat = @[%a@]@]"
+          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+          (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
+        end;
       if phat = Context.dctxToHat cPsi' then
         checkClObj cD loc cPsi' tM (tp, t)
       else

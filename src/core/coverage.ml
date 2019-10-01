@@ -937,9 +937,8 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
     (LF.ClObj (_, LF.PObj tH'), LF.ClTyp (LF.PTyp tA', cPsi')) ->
      let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
      let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-     let loc = Loc.ghost in
-     let covGoal = CovGoal (cPsi, LF.Root (loc, tH, LF.Nil), (tA, S.LF.id)) in
-     let pat = MetaPatt (cPsi', LF.Root (loc, tH', LF.Nil), (tA', S.LF.id)) in
+     let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil), (tA, S.LF.id)) in
+     let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil), (tA', S.LF.id)) in
      pre_match cD cD_p covGoal pat mC1 sC1
   | (LF.ClObj (_, LF.SObj s), LF.ClTyp (sT, cPsi)),
     (LF.ClObj (_, LF.SObj s'), LF.ClTyp (sT', cPsi')) ->
@@ -2319,12 +2318,11 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
      let pv2 = NameGenerator.new_patvar_name () in
      let cG1' = (pv1, tau1, false) :: (pv2, tau2, false) :: cG1 in
      let cG' = cG1' @ cG2 in
-     let loc_ghost = Loc.ghost in
      let pat =
        Comp.PatPair
-         ( loc_ghost
-         , Comp.PatFVar (loc_ghost, pv1)
-         , Comp.PatFVar (loc_ghost, pv2)
+         ( Loc.ghost
+         , Comp.PatFVar (Loc.ghost, pv1)
+         , Comp.PatFVar (Loc.ghost, pv2)
          )
      in
      let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
@@ -2339,13 +2337,12 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
          p.fmt "[genPatCGoals] @[<v>%a@]"
            P.fmt_ppr_lf_msub_typing (cD', ms, cD)
          end;
-       let ghost_loc = Loc.ghost in
        let m_obj =
-         ( ghost_loc
+         ( Loc.ghost
          , LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR)
          )
        in
-       let pat_r = Comp.PatMetaObj (ghost_loc, m_obj) in
+       let pat_r = Comp.PatMetaObj (Loc.ghost, m_obj) in
        let tau_r =
          ( Comp.TypBox (loc, LF.ClTyp (LF.MTyp (LF.TClo sA'), cPsi'))
          , Whnf.m_id
@@ -3073,8 +3070,7 @@ let initialize_coverage problem projOpt : covproblems =
      let cG' = cnormCtx (problem.cG, LF.MShift 1) in
      let cPsi = LF.CtxVar (LF.CtxOffset 1) in
      (* let covGoal = CovPatt (LF.Empty, Comp.PatMetaObj (loc, LF.CObj cPsi)) in *)
-     let loc' = Loc.ghost in
-     let mC = Comp.PatMetaObj (loc', (loc', LF.CObj cPsi)) in
+     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.CObj cPsi)) in
      let mT = Comp.TypBox (loc, LF.CTyp w) in
      let covGoal = CovPatt ([], mC, (mT, LF.MShift 0)) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
@@ -3099,7 +3095,6 @@ let initialize_coverage problem projOpt : covproblems =
             P.fmt_ppr_lf_sub_typing (problem.cD, cPsi, s, cPsi')
           end;
         let mT = LF.ClTyp (LF.MTyp tA', cPsi') in
-        let loc' = Loc.ghost in
         let name = Id.mk_name (Whnf.newMTypName mT) in
         let cD' = LF.Dec (problem.cD, LF.Decl (name, mT, LF.Maybe)) in
         let cG' = cnormCtx (problem.cG, LF.MShift 1) in
@@ -3107,7 +3102,7 @@ let initialize_coverage problem projOpt : covproblems =
         let tM = LF.Root (Loc.ghost, mv, LF.Nil) in
         let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
         let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
-        let mC = Comp.PatMetaObj (loc', (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
+        let mC = Comp.PatMetaObj (Loc.ghost, (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
         let mT = Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
         let covGoal = CovPatt ([], mC, (mT, LF.MShift 0)) in
 
@@ -3126,8 +3121,7 @@ let initialize_coverage problem projOpt : covproblems =
           begin fun _ ->
           "[initialize_coverage] using case scrutinee"
           end;
-        let ghost = Loc.ghost in
-        let mC = Comp.PatMetaObj (ghost, m_obj) in
+        let mC = Comp.PatMetaObj (Loc.ghost, m_obj) in
         let covGoal = CovPatt ([], mC, (problem.ctype, LF.MShift 0)) in
         let pat_list = List.map (extract_patterns problem.ctype) problem.branches in
         let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
@@ -3147,8 +3141,7 @@ let initialize_coverage problem projOpt : covproblems =
      let tM = LF.Root (Loc.ghost, mv, LF.Nil) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
      let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
-     let loc' = Loc.ghost in
-     let mC = Comp.PatMetaObj (loc', (loc', LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
+     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
      let mT = Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) in
      let covGoal = CovPatt ([], mC, (mT, LF.MShift 0)) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
@@ -3161,8 +3154,7 @@ let initialize_coverage problem projOpt : covproblems =
      let s = LF.SVar (1, 0, S.LF.id) in
      let cPhi = Whnf.cnormDCtx (cPhi, LF.MShift 1) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-     let loc' = Loc.ghost in
-     let mC = Comp.PatMetaObj (loc', (loc', LF.ClObj (Context.dctxToHat cPhi, LF.SObj s))) in
+     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPhi, LF.SObj s))) in
      let mT = Comp.TypBox (loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)))) in
      let covGoal = CovPatt ([], mC, (mT, LF.MShift 0)) in
 
@@ -3175,10 +3167,9 @@ let initialize_coverage problem projOpt : covproblems =
 
   (* tau := Bool | Cross (tau1, tau2) | U *)
   | tau ->
-     let loc_ghost = Loc.ghost in
      let pv = NameGenerator.new_patvar_name () in
      let cG' = (pv, tau, false) :: problem.cG in
-     let pat = Comp.PatFVar (loc_ghost, pv) in
+     let pat = Comp.PatFVar (Loc.ghost, pv) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
      let covGoal = CovPatt (cG', pat, (problem.ctype, Whnf.m_id)) in
      let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in

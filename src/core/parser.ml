@@ -1743,7 +1743,7 @@ let clf_ctyp_decl allow_implicit_ctx =
           begin
             seq2
               (trying (name <& token T.COLON))
-              (name <& trying (not_followed_by meta_obj))
+              (name <& not_followed_by meta_obj)
             |> span
             $> mk_decl LF.Maybe (fun w -> LF.CTyp w)
           end

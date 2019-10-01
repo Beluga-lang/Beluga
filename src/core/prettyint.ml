@@ -348,7 +348,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
       | _, 0 -> fmt_ppr_lf_sub_id ppf cPsi
-      | LF.DDec (cPsi', _), n when n > 0 -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
+      | LF.DDec (cPsi', _), n -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
     in
     let rec self lvl ppf =
       function

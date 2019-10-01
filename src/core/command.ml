@@ -61,7 +61,7 @@ let prove =
               |> lmap (fun e ppf -> fc ppf e)
           in
           begin
-            prompt "Statement to prove (C-d to abort)" Parser.cmp_typ
+            prompt "Statement to prove (C-d to abort)" Parser.(only cmp_typ)
               begin fun ppf e ->
               fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?"
                 Parser.print_error e

@@ -171,7 +171,6 @@ module Tactic = struct
     let open Comp in
     let cgs =
       Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) tau []
-                            (* XXX should be Total.strip tau? *)
     in
     let n = List.length cgs in
     match k with
@@ -676,11 +675,7 @@ module Prover = struct
        Tactic.intros names g tctx;
     | Command.Split (split_kind, t) ->
        let (hs, m, tau) = elaborate_exp' cIH cD cG t in
-       begin
-         match tau with
-         | TypInd tau | tau ->
-            Tactic.split split_kind m tau mfs g tctx
-       end
+       Tactic.split split_kind m tau mfs g tctx
     | Command.By (k, t, name) ->
        let (hs, m, tau) = elaborate_exp' cIH cD cG t in
        dprintf

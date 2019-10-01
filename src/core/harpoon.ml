@@ -788,31 +788,37 @@ module Prover = struct
       ; defer
       }
     and add_subgoal g =
+      (*
       dprintf
         begin fun p ->
         p.fmt "@[<v>[tactic context] add the following subgoal@,%a@]"
           P.fmt_ppr_cmp_proof_state g
         end;
+       *)
       DynArray.insert s.remaining_subgoals 0 g;
       add_subgoal_hook s g tctx
     and remove_subgoal g =
+      (*
       dprintf
         begin fun p ->
         p.fmt "@[<v>[tactic context] remove the following subgoal@,%a@]"
           P.fmt_ppr_cmp_proof_state g
         end;
+       *)
       let idx = DynArray.index_of (fun g' -> g = g') s.remaining_subgoals in
       DynArray.delete s.remaining_subgoals idx
     and remove_current_subgoal () =
       let gs = s.remaining_subgoals in
       let csg_index = current_subgoal_index gs in
+      (*
       dprintf
         begin fun p ->
         p.fmt "@[<v>[tactic context] remove the goal %d of the following@,%a@]"
           csg_index
           P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
         end;
-      DynArray.delete gs (current_subgoal_index gs)
+       *)
+      DynArray.delete gs csg_index
     and defer () =
       let g = DynArray.get s.remaining_subgoals 0 in
       remove_current_subgoal ();

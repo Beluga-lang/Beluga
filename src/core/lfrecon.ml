@@ -162,7 +162,8 @@ let print_error ppf =
 
   | IdCtxsub ->
      fprintf ppf
-       "Identity substitution .. must be associated with a context variable. \n \n If your object is closed, you should omit the identitiy substitution, since it is empty."
+       "@[<v>The identity substitution [..] must be associated with a context variable.@,\
+        Perhaps you mean to use the empty substitution [] to weaken a closed object?@]"
   | PruningFailed ->
      fprintf ppf
        "Pruning a type failed.@ This can happen when you have some free@ \

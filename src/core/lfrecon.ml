@@ -59,6 +59,7 @@ type error =
   | SubstVarConflict of Id.name
   | UnboundName of Id.name
   | UnboundIdSub
+  | InvalidProjection of Int.LF.mctx * Int.LF.dctx * Int.LF.typ * Apx.LF.proj
 
 exception Error of Syntax.Loc.t * error * hint list
 
@@ -179,6 +180,13 @@ let print_error ppf =
 
   | NotPatternSpine ->
      fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
+
+  | InvalidProjection (cD, cPsi, tA, proj) ->
+     fprintf ppf
+       "@[<v>The projection `.%s' is not valid for the type@,  @[%a@]@,\
+        Only sigma-types (blocks) can be projected.@]"
+       (string_of_proj proj)
+       (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
 
   | MissingSchemaForCtxVar psi ->
      fprintf ppf
@@ -2383,21 +2391,15 @@ and elHead loc recT cD cPsi head cl = match head, cl with
 
   | Apx.LF.Proj (head, proj), _ ->
       let (head', sA) = elHead loc recT cD cPsi head cl in
-      let (sAi, i) = begin match Whnf.whnfTyp sA with
-                 | (Int.LF.Sigma tA'rec, s') ->
-                   let i  = getProjIndex loc cD cPsi tA'rec proj in
-                   (Int.LF.getType head' (tA'rec, s') i 1, i)
-                 | (tA',s') ->
-                    let s =
-                      let open Format in
-                      fprintf str_formatter "[elHead] expected Sigma type; found type %a"
-                        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA', s'));
-                      flush_str_formatter ()
-                    in
-                    raise (Error.Violation s)
-                end
+      let (sAi, i) =
+        match Whnf.whnfTyp sA with
+        | (Int.LF.Sigma tA'rec, s') ->
+           let i  = getProjIndex loc cD cPsi tA'rec proj in
+           (Int.LF.getType head' (tA'rec, s') i 1, i)
+        | (tA',s') ->
+           throw loc (InvalidProjection (cD, cPsi, tA', proj))
       in
-        (Int.LF.Proj (head', i) , sAi)
+      (Int.LF.Proj (head', i) , sAi)
 
   | Apx.LF.Const _, Int.LF.Ren
   | Apx.LF.MVar (Apx.LF.Offset _, _), Int.LF.Ren

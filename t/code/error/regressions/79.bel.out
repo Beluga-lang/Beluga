@@ -1,0 +1,3 @@
+The projection `.non-existing-projection' is not valid for the type
+  t 
+Only sigma-types (blocks) can be projected.

@@ -2377,7 +2377,8 @@ let total_decl (arg : Comp.order t) : Comp.total_dec t =
   alt trust total
   |> labelled "totality declaration"
 
-let optional_numeric_total_order = maybe (total_order numeric_total_arg)
+let numeric_total_order = total_order numeric_total_arg
+let optional_numeric_total_order = maybe numeric_total_order
 
 (** Mutual block of computation type declarations. *)
 let sgn_cmp_typ_decl =

@@ -116,8 +116,6 @@ module TranscriptRunner = struct
   module Parser = Mupc.StringParser
   module Tokenizer = Tokenizer.ForParser (Parser)
 
-  open Unix
-
   type 'a istream = 'a IStream.t
 
   (** The environment in which the transcript runner executes. *)
@@ -129,11 +127,11 @@ module TranscriptRunner = struct
   let beluga_command = "bin/beluga -I -emacs"
 
   let create_env () : env =
-    let (in_chan, out_chan) = open_process beluga_command in
+    let (in_chan, out_chan) = Unix.open_process beluga_command in
     { beluga_out =
         in_chan |>
           IStream.of_channel |>
-          IStream.map (fun c -> Printf.printf "%c" c; flush Stdlib.stdout; c) |>
+          IStream.map (fun c -> Printf.printf "%c" c; flush stdout; c) |>
           Tokenizer.char_tokenize_from Loc.initial |>
           Parser.initialize;
       beluga_in = out_chan;

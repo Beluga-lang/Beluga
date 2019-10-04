@@ -16,7 +16,7 @@ let to_string (loc : t) : string =
   Printf.sprintf "line %d, column %d" (loc.line + 1) (loc.offset - loc.bol + 1)
 
 let compare (l1 : t) (l2 : t) : int =
-  Pervasives.compare l1.offset l2.offset
+  compare l1.offset l2.offset
 
 let inc_by_char (c : char) (loc : t) =
   { line = if c = '\n' then loc.line + 1 else loc.line;

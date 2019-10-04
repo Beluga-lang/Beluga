@@ -133,7 +133,7 @@ module TranscriptRunner = struct
     { beluga_out =
         in_chan |>
           IStream.of_channel |>
-          IStream.map (fun c -> Printf.printf "%c" c; flush Pervasives.stdout; c) |>
+          IStream.map (fun c -> Printf.printf "%c" c; flush Stdlib.stdout; c) |>
           Tokenizer.char_tokenize_from Loc.initial |>
           Parser.initialize;
       beluga_in = out_chan;

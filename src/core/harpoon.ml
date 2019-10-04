@@ -146,21 +146,26 @@ module Tactic = struct
     let open Comp in
     let (t, sigma) = s.goal in
     let cD, cG, t' = intros' names LF.Empty LF.Empty t in
-    let goal' = (t', sigma) in
-    let local_context = {cD; cG; cIH = LF.Empty} in
-    let context = Context.append_hypotheses s.context local_context in
-    let new_state =
-      { context
-      ; goal = goal'
-      ; solution = None
-      }
-    in
-    (* Invoke the callback on the subgoal that we created *)
-    (* Solve the current goal with the subgoal. *)
-    tctx.remove_current_subgoal ();
-    tctx.add_subgoal new_state;
-    Comp.intros context (Comp.incomplete_proof new_state)
-    |> solve' s
+    (* only create a new intros node if something actually happened *)
+    if t' <> t then
+      let goal' = (t', sigma) in
+      let local_context = {cD; cG; cIH = LF.Empty} in
+      let context = Context.append_hypotheses s.context local_context in
+      let new_state =
+        { context
+        ; goal = goal'
+        ; solution = None
+        }
+      in
+      (* Invoke the callback on the subgoal that we created *)
+      (* Solve the current goal with the subgoal. *)
+      tctx.remove_current_subgoal ();
+      tctx.add_subgoal new_state;
+      Comp.intros context (Comp.incomplete_proof new_state)
+      |> solve' s
+    else
+      tctx.printf "Nothing to introduce.@,\
+                   This command works only when the goal is a function type.@,"
 
   (** Calls the coverage checker to compute the list of goals for a
       given type in the contexts of the given proof state.

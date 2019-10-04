@@ -97,7 +97,7 @@ end = struct
     { o with
       path =
         check
-          "-i"
+          "--sig"
           "specifies the input signature"
           o.path
     ; theorem_name =

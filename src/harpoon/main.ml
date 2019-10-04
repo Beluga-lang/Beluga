@@ -222,6 +222,13 @@ let rec take_exactly n =
        (take_exactly (n-1) xs)
   | [] -> Left 0
 
+let sanitize_statement_string (stmt : string) : string =
+  let length = String.length stmt in
+  match stmt.[0], stmt.[length - 1] with
+  | '"', '"' -> String.sub stmt 1 (length - 2)
+  | '\'', '\'' -> String.sub stmt 1 (length - 2)
+  | _ -> stmt
+
 let rec parse_arguments options : string list -> string list * partial_options =
   let beluga_parse name input entry =
     let open B in
@@ -262,6 +269,7 @@ let rec parse_arguments options : string list -> string list * partial_options =
         with_args_for "--theorem" 1
           (parse_the_rest_with
              (fun [stmt] ->
+               let stmt = sanitize_statement_string stmt in
                let theorem = beluga_parse "--theorem" stmt B.Parser.cmp_typ in
                { options with theorem = Some theorem }))
      | "--sig" ->

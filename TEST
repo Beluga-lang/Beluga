@@ -31,6 +31,9 @@ declare -r LEX_CHECK=${LEX_CHECK:-"${BELUGADIR}/bin/lex_check"}
 # Path to the Beluga replay to test.
 declare -r REPLAY=${REPLAY:-"${BELUGADIR}/bin/replay"}
 
+# Path to the Harpoon to test.
+declare -r HARPOON=${HARPOON:-"${BELUGADIR}/bin/harpoon"}
+
 declare -r TESTDIR=${TESTDIR:-"${BELUGADIR}/t/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"${BELUGADIR}/examples"}
 declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${BELUGADIR}/t/interactive"}
@@ -132,7 +135,7 @@ function parse_opts {
 }
 
 function do_testing {
-    local output="" exit_code=0 is_failed=0
+    local exit_code=0 is_failed=0
     # Limit runtime of each test case, in seconds.
     ulimit -t "${TIMEOUT}"
 
@@ -188,20 +191,7 @@ function do_testing {
     for f in $(find "${HARPOON_TESTDIR}" -type f -name "*.input" | sort -n) ; do
         start_test_case "${f}"
 
-        output=$(${EXE} -I 2>&1 < "${f}")
-        check_harpoon_output "${output}"
-        exit_code=$?
-
-        if [ "${exit_code}" -eq 152 ] ; then
-            process_result "timeout" "TIMEOUT"
-            stop_on_failure
-        elif [ "${exit_code}" -ne 0 ] ; then
-            process_result "harpoon_fail" "FAIL"
-            print_harpoon_output_on_failure "${output}"
-            stop_on_failure
-        else
-            process_result "success" "OK"
-        fi
+        check_harpoon "${f}"
     done
 
     echo
@@ -282,6 +272,48 @@ function check_compiler_test_case {
 
     if [[ -n "${RESET_OUT_FILES}" && -f "${file_path}.out" ]]; then
         echo "${output}" > "${file_path}.out"
+    fi
+}
+
+function check_harpoon {
+    local -r file_path=$1
+
+    local sig_path theorem_name theorem induction_order
+    local options
+    local commands
+    local output exit_code
+
+    sig_path=$(sed -n '1{s/^%: \?load // ; p}' "${file_path}")
+    theorem_name=$(sed -n '2{s/^%: \?prove // ; p}' "${file_path}")
+    theorem=$(sed -n '3p' "${file_path}")
+    induction_order=$(sed -n '4p' "${file_path}")
+    commands=$(sed '1,4d' "${file_path}")
+
+    options=(
+        "--sig" "${sig_path}"
+        "--name" "${theorem_name}"
+        "--theorem" "\"${theorem}\""
+        "--order" "${induction_order}"
+        "--implicit"
+    )
+
+    echo "asdf"
+
+    echo "${options[@]}"
+
+    output=$(${HARPOON} "${options[@]}" 2>&1 <(printf "%s" "${commands}"))
+    check_harpoon_output "${output}"
+    exit_code=$?
+
+    if [ "${exit_code}" -eq 152 ] ; then
+        process_result "timeout" "TIMEOUT"
+        stop_on_failure
+    elif [ "${exit_code}" -ne 0 ] ; then
+        process_result "harpoon_fail" "FAIL"
+        print_harpoon_output_on_failure "${output}"
+        stop_on_failure
+    else
+        process_result "success" "OK"
     fi
 }
 

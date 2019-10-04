@@ -146,7 +146,7 @@ function do_testing {
                 continue
             fi
 
-            check_compiler_test_case_output "${f}"
+            check_compiler_test_case "${f}"
         done
     fi
 
@@ -160,7 +160,7 @@ function do_testing {
                 continue
             fi
 
-            check_compiler_test_case_output "${f}"
+            check_compiler_test_case "${f}"
         done
     fi
 
@@ -246,7 +246,7 @@ function lex_check_test_case {
     return 0
 }
 
-function check_compiler_test_case_output {
+function check_compiler_test_case {
     local -r file_path=$1
 
     local output exit_code diff_output diff_code

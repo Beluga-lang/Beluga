@@ -82,6 +82,26 @@ let initial_options : partial_options =
   ; order = None
   }
 
+let usage () : unit =
+  let usageString : (_, out_channel, unit) format =
+    ""
+    ^^ "Usage: %s <mandatory options> <other options>\n"
+    ^^ "\n"
+    ^^ "Mandatory options:\n"
+    ^^ "  --sig file             specify the input signature\n"
+    ^^ "  --name 'theorem name'  specify the name of the theorem to prove\n"
+    ^^ "  --theorem 'theorem'    specify the statement of the theorem to prove\n"
+    ^^ "\n"
+    ^^ "Other options:\n"
+    ^^ "  --order number         specify the induction order of the theorem\n"
+    ^^ "                         for the totality checker\n"
+    ^^ "  --debug                use debugging mode\n"
+    ^^ "  --implicit             print implicit variables\n"
+    ^^ "\n"
+  in
+  Printf.eprintf usageString
+    Sys.argv.(0)
+
 module Validate :
 sig
   val options : partial_options -> valid_options
@@ -255,6 +275,9 @@ let rec parse_arguments options : string list -> string list * partial_options =
              (fun [order] ->
                let order = beluga_parse "--order" order B.Parser.numeric_total_order in
                { options with order = Some order }))
+     | "--help" ->
+        usage ();
+        exit 1
      | _ ->
         rest, options
           

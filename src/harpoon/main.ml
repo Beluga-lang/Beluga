@@ -21,7 +21,7 @@ module Error = struct
       of string list
     | OrderTooComplicated
     | OrderDoesntMatch
-  
+
   exception E of t
   let throw e = raise (E e)
 
@@ -46,7 +46,7 @@ module Error = struct
     | OrderDoesntMatch ->
        fprintf ppf "Induction order doesn't match theorem statement.@."
 end
-  
+
 (* Register error formatting. *)
 let _ =
   let open Error in
@@ -110,7 +110,7 @@ end = struct
     function
     | None -> Error.(throw (MissingMandatoryOption (opt_name, hint)))
     | Some x -> x
-              
+
   (** Checks that mandatory options are specified, throwing exceptions
       if they're missing. *)
   let options (o : partial_options) : valid_options =
@@ -155,7 +155,7 @@ end = struct
     Reconstruct.reset_fvarCnstr ();
     Store.FCVar.clear ();
     thm |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp
-       
+
   let load_file path =
     let open B in
     let sgn, leftover_vars =
@@ -280,7 +280,7 @@ let rec parse_arguments options : string list -> string list * partial_options =
         exit 1
      | _ ->
         rest, options
-          
+
 let main () =
   B.Debug.init None;
   let (arg0 :: args) = Array.to_list Sys.argv in
@@ -299,5 +299,5 @@ let main () =
     (B.Id.(mk_name (SomeString options.theorem_name)))
     (options.theorem, I.LF.MShift 0)
     options.order
-  
+
 let _ = main ()

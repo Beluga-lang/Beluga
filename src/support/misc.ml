@@ -66,6 +66,9 @@ let throw (e : exn) : 'b -> 'a =
   fun _ -> raise e
 
 module List = struct
+  (** Gets the last element of a list.
+      Raises `invalid_arg` if the list is empty.
+   *)
   let rec last (l : 'a list) : 'a = match l with
     | [] -> invalid_arg
     | [x] -> x

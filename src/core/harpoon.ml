@@ -175,7 +175,7 @@ module Tactic = struct
       : (LF.mctx * Coverage.cov_goal * LF.msub) list option =
     let open Comp in
     let cgs =
-      Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) tau []
+      Coverage.genPatCGoals g.context.cD (Coverage.gctx_of_compgctx g.context.cG) (Total.strip tau) []
     in
     let n = List.length cgs in
     match k with

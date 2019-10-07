@@ -290,7 +290,7 @@ let rec parse_arguments options : string list -> string list * partial_options =
         rest, options
 
 let main () =
-  B.Debug.init None;
+  B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let rest, options = parse_arguments initial_options args in
   begin match rest with

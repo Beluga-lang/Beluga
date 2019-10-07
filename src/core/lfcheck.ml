@@ -922,25 +922,28 @@ and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
   | (CObj cPsi, (CTyp (Some w), _)) ->
       checkSchema loc cD cPsi (Schema.get_schema w)
 
-  | (ClObj(phat, tM), (ClTyp (tp, cPsi), t)) ->
+  | (ClObj (phat, tM), (ClTyp (tp, cPsi), t)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+      let cPhi = Whnf.normDCtx (Context.hatToDCtx phat) in
       dprintf
         begin fun p ->
-        p.fmt "[checkMetaObj] @[<v>cPsi = @[%a@]@,\
+        p.fmt "[checkMetaObj] @[<v>cD = @[%a@]@,\
+               cPsi = @[%a@]@,\
                phat = @[%a@]@]"
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-          (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
+          (P.fmt_ppr_lf_mctx P.l0) cD
+          (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
+          (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi
         end;
-      if phat = Context.dctxToHat cPsi' then
+      if Whnf.convDCtxHat (Context.dctxToHat cPhi) (Context.dctxToHat cPsi') then
         checkClObj cD loc cPsi' tM (tp, t)
       else
         raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
+
   | MV u , (mtyp1 , t) ->
     let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
     let (_, mtyp2) = Whnf.mctxLookup cD u in
     if Whnf.convMTyp mtyp1 mtyp2 then ()
     else raise (Error.Violation ("Contextual substitution ill-typed"))
-;
 
 
   (* checkMSub loc cD ms cD'  = ()

@@ -33,6 +33,7 @@ val convSub     : sub          -> sub          -> bool
 val convITerm   : iterm        -> iterm        -> bool
 val convMSub    : msub         -> msub         -> bool
 val convDCtx    : dctx         -> dctx         -> bool
+val convDCtxHat : dctx_hat     -> dctx_hat     -> bool
 val convCtx     : typ_decl ctx -> typ_decl ctx -> bool
 
 (*************************************)

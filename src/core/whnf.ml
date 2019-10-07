@@ -1318,11 +1318,11 @@ and convDCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (CtxVar c1, CtxVar c2) ->  c1 = c2
 
   | (DDec (cPsi1, TypDecl (_, tA)), DDec (cPsi2, TypDecl (_, tB))) ->
-     convTyp (tA, LF.id) (tB, LF.id) &&
-          convDCtx cPsi1 cPsi2
+     convTyp (tA, LF.id) (tB, LF.id) && convDCtx cPsi1 cPsi2
 
   | (_, _) -> false
 
+and convDCtxHat phat1 phat2 = phat1 = phat2
 
 (* convCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx

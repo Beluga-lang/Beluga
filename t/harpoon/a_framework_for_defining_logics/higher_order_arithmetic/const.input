@@ -1,5 +1,5 @@
-%: load t/harpoon/a_framework_for_defining_logics/higher_order_arithmetic.bel
-%: prove const
+t/harpoon/a_framework_for_defining_logics/higher_order_arithmetic.bel
+const
 { P : [⊢ obj formula] } { Q : [⊢ obj formula] } [⊢ true (apply formula formula (apply formula (formula arrow formula) imply P) (apply formula formula (apply formula (formula arrow formula) imply Q) P))]
 
 solve ([⊢ IMP-I P (apply formula formula (apply formula (formula arrow formula) imply Q) P) (\p. IMP-I Q[] P[] (\q. p))])

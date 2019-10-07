@@ -1,5 +1,5 @@
-%: load t/harpoon/uniqueness.bel
-%: prove unique
+t/harpoon/uniqueness.bel
+unique
 (g:tctx)[g |- hastype E (T[])] -> [g |- hastype E (T'[])] -> [|- eq T T']
 1
 split z5

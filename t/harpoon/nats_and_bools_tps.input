@@ -1,5 +1,5 @@
-%: load t/harpoon/nats_and_bools_tps.bel
-%: prove tps
+t/harpoon/nats_and_bools_tps.bel
+tps
 [|- hastype M A] -> [|- step M N] -> [|- hastype N A]
 2
 split x8

@@ -1,5 +1,5 @@
-%: load t/harpoon/type_preservation.bel
-%: prove tpr
+t/harpoon/type_preservation.bel
+tpr
 [|- oft M A] -> [|- eval M M'] -> [|- oft M' A]
 2
 split y7

@@ -279,29 +279,34 @@ function check_harpoon {
     local -r file_path=$1
 
     local sig_path theorem_name theorem induction_order
-    local options
     local commands
+    local options
     local output exit_code
 
-    sig_path=$(sed -n '1{s/^%: \?load // ; p}' "${file_path}")
-    theorem_name=$(sed -n '2{s/^%: \?prove // ; p}' "${file_path}")
+    sig_path=$(sed -n '1p' "${file_path}")
+    theorem_name=$(sed -n '2p' "${file_path}")
     theorem=$(sed -n '3p' "${file_path}")
     induction_order=$(sed -n '4p' "${file_path}")
     commands=$(sed '1,4d' "${file_path}")
 
-    options=(
-        "--sig" "${sig_path}"
-        "--name" "${theorem_name}"
-        "--theorem" "\"${theorem}\""
-        "--order" "${induction_order}"
-        "--implicit"
-    )
+    if [ "${induction_order}" == "" ] ; then
+        options=(
+            "--sig" "${sig_path}"
+            "--name" "${theorem_name}"
+            "--theorem" "\"${theorem}\""
+            "--implicit"
+        )
+    else
+        options=(
+            "--sig" "${sig_path}"
+            "--name" "${theorem_name}"
+            "--theorem" "\"${theorem}\""
+            "--order" "${induction_order}"
+            "--implicit"
+        )
+    fi
 
-    echo "asdf"
-
-    echo "${options[@]}"
-
-    output=$(${HARPOON} "${options[@]}" 2>&1 <(printf "%s" "${commands}"))
+    output=$(${HARPOON} "${options[@]}" 2>&1 < <(printf "%s" "${commands}"))
     check_harpoon_output "${output}"
     exit_code=$?
 

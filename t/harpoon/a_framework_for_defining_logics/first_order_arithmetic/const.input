@@ -1,5 +1,5 @@
-%: load t/harpoon/a_framework_for_defining_logics/first_order_arithmetic.bel
-%: prove const
+t/harpoon/a_framework_for_defining_logics/first_order_arithmetic.bel
+const
 { P : [⊢ formula] } { Q : [⊢ formula] } [⊢ true (imply P (imply Q P))]
 
 solve ([⊢ IMP-I P (imply Q P) (\p. IMP-I Q[] P[] (\q. p))])

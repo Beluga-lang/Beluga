@@ -1251,3 +1251,47 @@ let stratifyAll a tau =
       (* else stratAll (n-1) num *)
     else 0
   in stratAll mSize
+
+(** Decides whether a data object is something we're doing induction
+    on, i.e. it's a computational variable whose type is TypInd or
+    with a WF flag
+
+    This is similar to the logic used in check.ml to determine the
+    kind of a branch: [Ind]DataObj or [Ind]IndexObj.
+ *)
+let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp_syn) : bool =
+  let open Id in
+  let open Comp in
+  let is_inductive_comp_variable (k : offset) : bool =
+    Context.lookup' cG k
+    |> Maybe.get' (Failure "Computational variable out of bounds")
+    |> function
+      (* Either it's a TypInd or the WF flag is true *)
+      | CTypDecl (u, tau, true) -> true
+      | CTypDecl (u, TypInd _, _) -> true
+      | _ -> false
+  in
+  let open Maybe in
+  variable_of_exp m
+  $> is_inductive_comp_variable
+  $ of_bool
+  |> is_some
+
+(** Decides whether an index object is something we're doing
+    induction on, i.e. it's a metavariable with the Inductive flag set
+    when we look it up in the meta-context.
+ *)
+let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
+  let open Id in
+  let open LF in
+  let is_inductive_meta_variable (k : offset) : bool =
+    Context.lookup_dep cD k
+    |> Maybe.get' (Failure "Metavariable out of bounds or missing type")
+    |> fun (_, dep) -> dep = LF.Inductive
+  in
+  let open Maybe in
+  variable_of_mfront mf
+  $> fst
+  $> is_inductive_meta_variable
+  $ of_bool
+  |> is_some

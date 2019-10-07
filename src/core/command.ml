@@ -10,9 +10,6 @@ open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 open Format
 
-let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
-open Debug.Fmt
-
 (* the type of commands  *)
 type command =
   { name : string
@@ -42,80 +39,6 @@ let countholes =
         (fun ppf _ ->
           fprintf ppf "%d;\n@?" (Holes.count ()));
     help = "Print the total number of holes"
-  }
-
-let prove =
-  { name = "prove"
-  ; run =
-      command_with_arguments 1
-        begin
-          fun ppf [name] ->
-          let open Either in
-          let prompt message (type a) (entry : a Parser.t) fc : (formatter -> unit, a) Either.t =
-            fprintf ppf "%s: @?" message;
-            trap read_line |> lmap (fun _ _ -> ())
-            $ fun input ->
-              Runparser.parse_string "<prompt>" input (Parser.only entry)
-              |> snd
-              |> Parser.to_either
-              |> lmap (fun e ppf -> fc ppf e)
-          in
-          begin
-            prompt "Statement to prove (C-d to abort)" Parser.(only cmp_typ)
-              begin fun ppf e ->
-              fprintf ppf "@[<v>- Error parsing statement:@,%a@]\n@?"
-                Parser.print_error e
-              end
-            $> begin fun comptyp ->
-               Reconstruct.reset_fvarCnstr ();
-               Store.FCVar.clear ();
-               comptyp
-               |> Index.comptyp
-               |> Reconstruct.comptyp
-               |> Abstract.comptyp
-               end
-            $ fun (stmt, k) -> (* k is the number of added implicit vars *)
-              dprintf
-                begin fun p ->
-                p.fmt "[prove] abstracted over %d implicit arguments" k
-                end;
-              prompt "Induction order" Parser.optional_numeric_total_order
-                begin fun ppf e ->
-                fprintf ppf "@[<v>- Error parsing induction order:@,%a@]\n@?"
-                  Parser.print_error e
-                end
-              $> Maybe.map
-                   begin fun x ->
-                   x
-                   |> Syntax.Ext.Comp.map_order (fun n -> n + k)
-                   |> Order.of_numeric_order
-                   end
-              $ function
-                | None -> pure (stmt, None)
-                | Some order ->
-                   Order.list_of_order order
-                   |> Either.of_option'
-                        begin fun _ ppf ->
-                        fprintf ppf "- Induction order too complicated;\n@?"
-                        end
-                   $> Total.annotate stmt
-                   $ Either.of_option'
-                       begin fun _ ppf ->
-                       fprintf ppf "- Induction order doesn't match statement;\n@?"
-                       end
-                   $> fun stmt' ->
-                      (stmt', Some order)
-          end
-          |> function
-            | Left f -> f ppf
-            | Right (stmt, optOrder) ->
-               Harpoon.Prover.start_toplevel
-                 ppf
-                 (Id.mk_name (Id.SomeString name))
-                 (stmt, Syntax.Int.LF.MShift 0)
-                 optOrder
-        end
-  ; help = "Interactively prove a theorem"
   }
 
 let chatteron =
@@ -687,7 +610,6 @@ let _ =
     ; quit
     ; lookup_hole
     ; solvelfhole
-    ; prove
     ]
 
 let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg

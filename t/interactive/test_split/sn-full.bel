@@ -220,12 +220,12 @@ The file input.bel has been successfully loaded;
 ;
 %:split 0 M
 
-case [g, x51 |- M] of
-| [g, z51 |- #p2[ ..]] => ?
-| [g, y52 |- y52] => ?
+case [g, y59 |- M] of
+| [g, x59 |- #p2[ ..]] => ?
+| [g, z59 |- z59] => ?
 
-| [g, x52 |- abs (\x1. M8)] => ?
-| [g, z52 |- app M6 M7] => ?
+| [g, y60 |- abs (\x1. M8)] => ?
+| [g, x60 |- app M6 M7] => ?
 ;
 %:split 0 N
 

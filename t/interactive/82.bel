@@ -62,5 +62,5 @@ The file input.bel has been successfully loaded;
 %:countholes
 1;
 %:intro 0
-mlam g => mlam g' => mlam A => mlam M => mlam S => fn x8 =>
+mlam g => mlam g' => mlam A => mlam M => mlam S => fn z8 =>
 ?;

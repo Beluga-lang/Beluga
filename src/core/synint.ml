@@ -541,6 +541,11 @@ module Comp = struct
       : 'a comp_branch =
     SplitBranch (c, (Hypothetical (h, d)))
 
+  (** Gives a more convenient way of writing complex proofs by using list syntax. *)
+  let prepend_commands (cmds : command list) (proof : 'a proof)
+      : 'a proof =
+    List.fold_right proof_cons cmds proof
+
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with
     | CTypDecl (name, _, _) -> name

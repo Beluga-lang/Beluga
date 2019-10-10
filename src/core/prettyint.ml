@@ -1370,7 +1370,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let open Comp in
     function
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
-    | InductionHypothesis (ts, name) -> Misc.not_implemented "ih"
     | MetaSplit (m, _, bs) ->
        fprintf ppf "meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG l0) m;
        List.iter

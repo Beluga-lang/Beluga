@@ -485,9 +485,6 @@ module Comp = struct
       of 'a hypothetical
     | Solve (* End the proof with the given term *)
       of exp_chk
-    | InductionHypothesis (* Invocation of the IH *)
-      of exp_chk list (* the terms to invoke the IH with *)
-         * name (* name the result of the IH *)
     | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
          * typ (* The type of the object that we're splitting on *)

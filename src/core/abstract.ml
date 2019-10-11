@@ -292,12 +292,9 @@ and cnstr_spine sS = match sS with
 
 
 and cnstr_head h = match h with
-  | I.MMVar(((_, _r, _, _ , cnstr, _), _), s)
-  | I.MVar(I.Inst (_, _r, _ , _ , cnstr, _), s) ->
-
-       (if constraints_solved (!cnstr) then
-          cnstr_sub s
-        else false)
+  | I.MMVar((mmvar, _), s)
+  | I.MVar(I.Inst mmvar, s) ->
+     constraints_solved (!I.(mmvar.constraints)) && cnstr_sub s
  |  _  -> false
 
 
@@ -519,14 +516,20 @@ and collectFVarSub p cQ phat (name, s') =
   let (cQ,s') = collectSub p cQ phat s' in
   (cQ, (name,s'))
 
-and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
+and collectMMVar loc p cQ (mmvar : I.mm_var)  =
+  (* (n,q,cD,tp,c,dep) *)
+  let { I.name; I.instantiation; I.cD; I.typ; I.constraints; I.depend } = mmvar in
   match cD with
   | I.Empty -> begin
-      if constraints_solved !c then
-	      match !q with
+      if constraints_solved !constraints then
+	      match !instantiation with
 	      | None ->
-	         let (cQ', MetaTyp (tp',dep')) = addVar loc p cQ (MMV (n,q)) (MetaTyp (tp, dep)) in
-	         (cQ', (n, q, cD, tp', c, dep'))
+	         let (cQ', MetaTyp (typ, depend)) =
+             addVar loc p cQ (MMV (name, instantiation)) (MetaTyp (typ, depend)) in
+	         ( cQ'
+           , let open I in
+             { name; instantiation; cD; typ; constraints; depend }
+           )
 	      | Some _ -> raise (Error.Violation "Expected whnf")
       else
 	      raise (Error (loc, LeftoverConstraints))
@@ -538,12 +541,12 @@ and collectMMVar loc p cQ (n,q,cD,tp,c,dep) =
            (P.fmt_ppr_lf_mctx P.l0) cD);
      raise (Error (loc, LeftoverVars))
 
-and collectMVarMSub loc p cQ (i,ms') =
+and collectMVarMSub loc p cQ (i, ms' : I.mm_var_inst') =
   let (cQ0, ms') = collectMSub p cQ ms' in
   let (cQ1, i') = collectMMVar loc p cQ0 i in
   (cQ1, (i', ms'))
 
-and collectMVarInst loc p cQ phat (ims, s') =
+and collectMVarInst loc p cQ phat (ims, s' : I.mm_var_inst) =
   let (cQ0, ims') = collectMVarMSub loc p cQ ims in
   let (cQ1, s') = collectSub p cQ0 phat s' in
   (cQ1, (ims',s'))
@@ -816,11 +819,11 @@ and abstractTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
       I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (loc, (I.MVar (I.Inst ((n, r, _, (I.ClTyp (_,cPsi)), _cnstr, _)), s)), _tS (* Nil *)), _s)
-  | (I.Root (loc, I.MMVar (((n,r,_,(I.ClTyp (_,cPsi)),_cnstr,_), _),s), _tS), _s) ->
+  | (I.Root (loc, (I.MVar (I.Inst ( { I.name; I.instantiation; I.typ = I.ClTyp (_, cPsi); _}), s)), _), _)
+  | (I.Root (loc, I.MMVar (({ I.name; I.instantiation; I.typ = I.ClTyp (_, cPsi); _}, _),s), _), _) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
-      let x = index_of cQ (MMV (n,r)) + offset in
-        I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
+      let x = index_of cQ (MMV (name, instantiation)) + offset in
+      I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
 
   | (I.Root (loc, tH, tS), s (* LF.id *)) ->
       I.Root (loc, abstractHead cQ offset tH, abstractSpine cQ offset (tS, s))
@@ -968,14 +971,14 @@ and abstractMVarTuple cQ offset = function
       let tuple' = abstractMVarTuple cQ offset (tuple, s) in
       I.Cons (tM', tuple')
 
-and abstractMMVar cQ d = function
-  | (n,r,I.Empty,_tp,_cnstr,_dep) -> index_of cQ (MMV (n,r)) + d
-  | (n,r,_cD,_tp,_cnstr,_dep) -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
+and abstractMMVar cQ d : I.mm_var -> 'a = function
+  | {I.name; I.instantiation; I.cD = I.Empty; _} -> index_of cQ (MMV (name, instantiation)) + d
+  | {I.name; I.instantiation; _} -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
 
-and abstractMMVarMSub cQ (l,d) (i,_ms) =
+and abstractMMVarMSub cQ (l,d) (i,_ms : I.mm_var_inst') =
   abstractMMVar cQ d i (* Shouldn't this apply ms? *)
 
-and abstractMMVarInst cQ loff (ims,s) =
+and abstractMMVarInst cQ loff (ims,s : I.mm_var_inst) =
   (abstractMMVarMSub cQ loff ims, abstractMVarSub cQ loff s)
 
 and abstractFVarSub cQ ((l,d) as offset) (name,s) =

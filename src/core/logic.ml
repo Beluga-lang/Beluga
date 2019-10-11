@@ -9,6 +9,8 @@ module S = Substitution.LF
 open Format
 open Syntax.Int
 
+let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
+open Debug.Fmt
 
 module Options = struct
 
@@ -546,6 +548,7 @@ end
 
 module Solver = struct
 
+  module P = Printer.P
   module U = Unify.StdTrail
   module C = Convert
   module I = Index
@@ -613,14 +616,21 @@ module Solver = struct
   *)
   let rec gSolve dPool cD (cPsi, k) (g, s) sc = match g with
     | Atom (tA) ->
-      matchAtom dPool cD (cPsi, k) (tA, s) sc
+       matchAtom dPool cD (cPsi, k) (tA, s) sc
+
     | Impl ((r, (LF.TypDecl (x, _) as tD)), g') ->
-      let dPool' = DynCl (dPool, (C.resToClause (r, s), k)) in
-      gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1)
-        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+       (* extend the dynamic pool with the new assumption and prove the conclusion *)
+       let dPool' =
+         DynCl (dPool, (C.resToClause (r, s), k))
+       in
+       gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
+         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+
     | All (LF.TypDecl (x, _) as tD, g') ->
-      gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1)
-        (g', S.dot1 s) (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+       (* we *don't* get an assumption from a forall; it's just a parameter.
+          So we just prove the conclusion in an extended context. *)
+       gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
+         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
 
   (* matchAtom dPool Delta (Psi, k) (A, s) sc = ()
      Invariants:
@@ -648,16 +658,26 @@ module Solver = struct
     let rec matchDProg dPool = match dPool with
       | DynCl (dPool', (dCl, k')) ->
         if (eqHead tA dCl) then
-          let (s', fS) =
-            C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
-              (fun tS -> tS) in
-          (* Trail to undo MVar instantiations. *)
-          (try trail (fun () -> unify cD cPsi (tA, s) (dCl.tHead, s')
-            (fun () -> solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
-              (fun (u, tS) ->
-                sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS (spineFromRevList tS))))))
-           with U.Failure _ -> ()) ; matchDProg dPool'
-        else matchDProg dPool'
+          begin
+            let (s', fS) =
+              C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
+                (fun tS -> tS) in
+            (* Trail to undo MVar instantiations. *)
+            try
+              trail
+                begin fun () ->
+                unify cD cPsi (tA, s) (dCl.tHead, s')
+                  begin fun () ->
+                  solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
+                    begin fun (u, tS) ->
+                    sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS (spineFromRevList tS)))
+                    end
+                  end
+                end
+            with U.Failure _ -> ()
+          end;
+        matchDProg dPool'
+
       | Empty ->
         matchSig (cidFromAtom tA)
 
@@ -674,39 +694,44 @@ module Solver = struct
      * projection with the goal type, we need to eliminate its bound
      * variables by substituting in the appropriate earlier projections.
      *)
-    and matchSigma (pv : LF.head) (cD : LF.mctx) (psi : LF.dctx) ((typs, ts) : LF.typ_rec * LF.sub) (k : int) sc : unit =
-      let check typ =
-        try
-          trail
-            begin fun () ->
-            (*
-              Format.printf "[matchSigma] %s ~=~ %s ?\n"
-              (Printer.P.typToString cD psi (typ, ts))
-              (Printer.P.typToString cD psi (tA, s));
-             *)
-            (* We added k-1 entries to psi at this point, so we need
-               to weaken the goal type by k-1 before trying to
-               unify. *)
-            U.unifyTyp cD psi (typ, ts) (tA, s);
-            sc k
-            end
-        with
-        | U.Failure s -> ()
+    and matchSigma (pv : LF.head) (cD : LF.mctx) (psi : LF.dctx) (tRec : LF.typ_rec) sc : unit =
+      let rec loop (typs, ts) k =
+        let check typ =
+          try
+            trail
+              begin fun () ->
+              (*
+                Format.printf "[matchSigma] %s ~=~ %s ?\n"
+                (Printer.P.typToString cD psi (typ, ts))
+                (Printer.P.typToString cD psi (tA, s));
+               *)
+              (* We added k-1 entries to psi at this point, so we need
+                 to weaken the goal type by k-1 before trying to
+                 unify. *)
+              U.unifyTyp cD psi (typ, ts) (tA, s);
+              dprintf
+                begin fun p ->
+                p.fmt "[logic] [matchSigma] @[<v>Found solution with projection %d of sigma-type:@,@[%a@]@]"
+                  k
+                  (P.fmt_ppr_lf_typ_rec cD psi P.l0) tRec
+                end;
+              sc k
+              end
+          with
+          | U.Failure s -> ()
+        in
+        match typs with
+        | LF.SigmaLast (name, typ) ->
+           check typ
+        | LF.SigmaElem (name, typ, typs) ->
+           check typ;
+           (* extend the substitution to use on subsequent entries of the sigma.
+            *)
+           loop
+             (typs, LF.Dot (LF.Head (proj pv k), ts))
+             (k + 1)
       in
-      match typs with
-      | LF.SigmaLast (name, typ) ->
-         check typ
-      | LF.SigmaElem (name, typ, typs) ->
-         check typ;
-         (* extend the substitution to use on subsequent entries of the sigma.
-          *)
-         matchSigma
-           pv
-           cD
-           psi
-           (typs, LF.Dot (LF.Head (proj pv k), ts))
-           (k + 1)
-           sc
+      loop (tRec, LF.Shift 0) 1
 
     (* Try to find a solution in the meta-context.
      * The index `k` is the position we're looking at currently,
@@ -720,55 +745,64 @@ module Solver = struct
      * In that case, it will call matchSigma to figure out the
        appropriate projection to use on the variable, if any.
      *)
-    and matchDelta (cD' : LF.mctx) (k : int) =
-      match cD' with
-      | LF.Empty -> matchDProg dPool
-      | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, psi), _)) ->
-         begin
-           let psi' = Whnf.cnormDCtx (psi, LF.MShift k) in
-           let cltyp' = Whnf.cnormClTyp (cltyp, LF.MShift k) in
-           try
-             trail
-               begin fun () ->
-               U.unifyDCtx cD psi' cPsi;
-               (* We look to see whether we're dealing with a sigma type.
-                  In this case, we must consider the projections of the sigma.
-                  If it isn't a sigma then we can just try to unify the types.
-                *)
-               match cltyp' with
-               | LF.PTyp (LF.Sigma typs) ->
-                  matchSigma (pvar k) cD psi' (typs, LF.Shift 0) 1
-                    (fun k' ->
-                      (* recall: k is the index of the variable in the _context_ *)
-                      (* k' is the index of the projection into the _sigma_ *)
-                      sc (psi', root (proj (pvar k) k'))
-                    )
+    and matchDelta (cD' : LF.mctx) =
+      let rec loop cD' k =
+        match cD' with
+        | LF.Empty -> matchDProg dPool
+        | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, psi), _)) ->
+           begin
+             let psi' = Whnf.cnormDCtx (psi, LF.MShift k) in
+             let cltyp' = Whnf.cnormClTyp (cltyp, LF.MShift k) in
+             try
+               trail
+                 begin fun () ->
+                 U.unifyDCtx cD psi' cPsi;
+                 (* We look to see whether we're dealing with a sigma type.
+                    In this case, we must consider the projections of the sigma.
+                    If it isn't a sigma then we can just try to unify the types.
+                  *)
+                 match cltyp' with
+                 | LF.PTyp (LF.Sigma typs) ->
+                    matchSigma (pvar k) cD psi' typs
+                      (fun k' ->
+                        (* recall: k is the index of the variable in the _context_ *)
+                        (* k' is the index of the projection into the _sigma_ *)
+                        sc (psi', root (proj (pvar k) k'))
+                      )
+                   
+                 | LF.PTyp typ' ->
+                    (* I don't think this case ever happens; I'm pretty
+                     * sure that whenever we have a PTyp, its type is a
+                     * Sigma, so we can probably remove this case or assert
+                     * that it's impossible.
+                     * -jake
+                     *)
+                    
+                    U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
+                    
+                    (* We need to create the syntax to refer to this _pattern_ variable *)
+                    sc (psi', root (pvar k))
+                    
+                 | LF.MTyp typ' ->
+                    U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
+                    dprintf
+                      begin fun p ->
+                      p.fmt "[logic] [matchDelta] found solution: variable %d" k
+                      end;
+                    
+                    (* We need to create the syntax to refer to this _meta_ variable *)
+                    sc (psi', root (mvar k))
 
-               | LF.PTyp typ' ->
-                  (* I don't think this case ever happens; I'm pretty
-                   * sure that whenever we have a PTyp, its type is a
-                   * Sigma, so we can probably remove this case or assert
-                   * that it's impossible.
-                   * -jake
-                   *)
-
-                  U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
-
-                  (* We need to create the syntax to refer to this
-                     _pattern_ variable
-                   *)
-                  sc (psi', root (pvar k))
-
-               | LF.MTyp typ' ->
-                  U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
-
-                  (* We need to create the syntax to refer to this _meta_ variable *)
-                  sc (psi', root (mvar k))
-               end
-           with
-           | U.Failure s -> ()
-         end;
-         matchDelta cD' (k + 1)
+                 | LF.STyp _ ->
+                    (* ignore substitution variables for now *)
+                    ()
+                 end
+             with
+             | U.Failure s -> ()
+           end;
+           loop cD' (k + 1)
+      in
+      loop cD' 1
 
     (* matchSig c = ()
        Try all the clauses in the static signature with head matching
@@ -806,7 +840,7 @@ module Solver = struct
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;
      * Now here's the actual body of matchAtom: *)
-    matchDelta cD 1
+    matchDelta cD
 
 (* spineFromRevList : LF.normal list -> LF.spine
   build an LF.spine out of a list of LF.normal, reversing the order of the elements*)

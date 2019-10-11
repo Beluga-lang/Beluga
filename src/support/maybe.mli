@@ -85,3 +85,9 @@ val cat_options : 'a option list -> 'a list
  * Prints an option by doing nothing if it is `None`; else it uses the given printer.
  *)
 val print : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
+
+(**
+ * Prints an option by showing `None` or `Some X` where X is generated
+ * by the given formatting function.
+ *)
+val show : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit

@@ -178,9 +178,14 @@ let mk_name_cdec cdec = match cdec with
  *)
 
 
-type caseType  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
+type case_type  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
   | IndexObj of Int.Comp.meta_obj
   | DataObj
+
+let case_type i =
+  match i with
+  | Int.Comp.Ann (Int.Comp.Box (_, mC), _) -> IndexObj mC
+  | _ -> DataObj
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null ->
@@ -246,14 +251,15 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
   let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
     | (Int.LF.Null , Apx.LF.Null) -> ()
 
-    | (Int.LF.CtxVar (Int.LF.CInst ((_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, dep), _cD)) , cPsi) ->
+    | (Int.LF.CtxVar (Int.LF.CInst (mmvar (*(_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, dep)*), _cD)) , cPsi) ->
+       let Int.LF.CTyp (Some s_cid) = Int.LF.(mmvar.typ) in
       begin
         let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
-        Unify.instantiateCtxVar (cvar_ref, cPsi);
+        Unify.instantiateCtxVar (Int.LF.(mmvar.instantiation), cPsi);
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), dep))
+            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), mmvar.depend)))
           | _ -> ()
       end
 
@@ -767,8 +773,17 @@ let mgCompTyp cD (loc, c) =
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
     | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
         let (n , sW) = Whnf.mctxCDec cD psi_var in
-          Int.LF.CtxVar (Int.LF.CInst ((n, ref None, cD', Int.LF.CTyp (Some sW),
-                                        ref [], Int.LF.Maybe), Whnf.m_id))
+        let mmvar =
+          let open Int.LF in
+          { name = n
+          ; instantiation = ref None
+          ; cD = cD'
+          ; typ = CTyp (Some sW)
+          ; constraints = ref []
+          ; depend = Maybe
+          }
+        in
+        Int.LF.(CtxVar (CInst (mmvar, Whnf.m_id)))
     | Int.LF.Null -> Int.LF.Null
     | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->
         let cPsi' = mgCtx cD' (cD, cPsi) in
@@ -969,16 +984,17 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
        end;
-     let (i', tau_theta') = genMApp loc cD (i', tau_theta') in
+     let (i, tau_theta') = genMApp loc cD (i', tau_theta') in
      let tau_s = Whnf.cnormCTyp tau_theta' in
+     let ct = case_type i in
      begin
-       match (i', tau_s) with
+       match (i, tau_s) with
              (* Not only the object but also its type must be closed *)
-       | (Int.Comp.Ann (Int.Comp.Box (_ , mC), _ ) as i, Int.Comp.TypBox (_, mT)) ->
+       | (Int.Comp.Ann (Int.Comp.Box (_ , mC), _ ), Int.Comp.TypBox (_, mT)) ->
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closedMetaObj mC && Whnf.closedCTyp tau_s then
             let recBranch b =
-              let b = elBranch (IndexObj mC) cD cG b tau_s tau_theta in
+              let b = elBranch ct cD cG b tau_s tau_theta in
               let _ = Gensym.MVarData.reset () in
               b in
             let branches' = List.map recBranch branches in
@@ -1015,7 +1031,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                   (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i, Whnf.m_id))
                   (P.fmt_ppr_cmp_typ cD P.l0) tau_s
                 end;
-              let b = elBranch DataObj cD cG b tau_s tau_theta in
+              let b = elBranch ct cD cG b tau_s tau_theta in
               let _ = Gensym.MVarData.reset () in
               b
             in
@@ -1041,7 +1057,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
               p.fmt "[elBranch - PatObj] has type @[%a@]"
                 (P.fmt_ppr_cmp_typ cD P.l0) tau_s
               end;
-            let b = elBranch DataObj cD cG b tau_s tau_theta in
+            let b = elBranch ct cD cG b tau_s tau_theta in
             Gensym.MVarData.reset () ; b in
 
           let branches' = List.map recBranch branches in
@@ -1846,8 +1862,8 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
         *)
        | DataObj -> DataObj
      in
-     (* cD |- tau_s and cD, cD1 |- tau_s' *)
-     (* cD1 |- tau1 *)
+     (* cD |- tau_s and cD, cD1' |- tau_s' *)
+     (* cD1' |- tau1 *)
 
      let (t', t1, cD1'', pat1') = synPatRefine loc caseT' (cD, cD1') pat1 (tau_s', tau1) in
      (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
@@ -1878,7 +1894,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
 
      dprintf
        begin fun p ->
-       p.fmt "[after synPatRefine]: @[<v>@[%a@]@,refinement: @[%a@]@]"
+       p.fmt "[after synPatRefine]: @[<v>t': @[%a@]@,refinement: @[%a@]@]"
          P.fmt_ppr_lf_msub_typing (cD1'', t', cD)
          P.fmt_ppr_lf_msub_typing (cD1'', t1, cD')
        end;
@@ -1993,3 +2009,4 @@ let comptypdef loc a (tau, cK) =
 let exp  = elExp  Int.LF.Empty
 
 let exp' = elExp' Int.LF.Empty
+

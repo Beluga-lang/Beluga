@@ -1,7 +1,6 @@
 open Support
 
 module B = Beluga
-module Abstract = B.Abstract
 module Check = B.Check
 module Command = B.Syntax.Ext.Harpoon
 module Context = B.Context
@@ -9,6 +8,7 @@ module HoleId = B.HoleId
 module Holes = B.Holes
 module Id = B.Id
 module Interactive = B.Interactive
+module LF = B.Syntax.Int.LF
 module Loc = B.Location
 module Logic = B.Logic
 module P = B.Pretty.Int.DefaultPrinter
@@ -138,6 +138,42 @@ let process_command
         e
       )
   in
+  let solve_hole (id, Holes.Exists (w, h)) =
+    let open Holes in
+    dprintf
+      begin fun p ->
+      p.fmt "[harpoon] [solve_hole] processing hole %s"
+        (HoleId.string_of_name_or_id (h.name, id))
+      end;
+    let { name; Holes.cD = cDh; info; _ } = h in
+    match w with
+    | Holes.CompInfo -> failwith "computational holes not supported"
+    | Holes.LFInfo ->
+       let { lfGoal; cPsi; lfSolution } = h.info in
+       assert (lfSolution = None);
+       let typ = Whnf.normTyp lfGoal in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
+           (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
+         end;
+       Logic.prepare ();
+       let (query, skinnyTyp, querySub, instMVars) =
+         Logic.Convert.typToQuery cPsi cDh (typ, 0)
+       in
+       try
+         Logic.Solver.solve cDh cPsi query
+           begin fun (cPsi, tM) ->
+           Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
+             (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+           h.info.lfSolution <- Some (tM, LF.Shift 0);
+           raise Logic.Frontend.Done
+           end
+       with
+       | Logic.Frontend.Done ->
+          printf "logic programming finished@,@?";
+          ()
+  in
   let { cD; cG; cIH } = g.context in
   match cmd with
   (* Administrative commands: *)
@@ -190,6 +226,7 @@ let process_command
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
          (P.fmt_ppr_cmp_typ cD P.l0) tau
        end;
+     List.iter solve_hole hs;
      (* validate the invocation and call the suspension if it passes. *)
      check_invocation k cD cG m
        (fun () -> Tactic.invoke k m tau name g tctx);
@@ -198,46 +235,7 @@ let process_command
      let (hs, m) = elaborate_exp cIH cD cG m g.goal in
      dprnt "[harpoon] [solve] elaboration finished";
      printf "Found %d hole(s) in solution@." (List.length hs);
-     let open Holes in
-     let f (id, Exists (w, h)) =
-       dprintf
-         begin fun p ->
-         p.fmt "[harpoon] [solve] [holes] processing hole %s"
-           (HoleId.string_of_name_or_id (h.name, id))
-         end;
-       let { name; Holes.cD = cDh; info; _ } = h in
-       match w with
-       | Holes.CompInfo -> failwith "computational holes not supported"
-       | Holes.LFInfo ->
-          let { lfGoal; cPsi; lfSolution } = h.info in
-          let typ = Whnf.normTyp lfGoal in
-          let (ti, k) = Abstract.typ typ in
-          dprintf
-            begin fun p ->
-            p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@,abstracted: @[%a@]@]"
-              (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
-              (P.fmt_ppr_lf_typ cDh cPsi P.l0) ti
-            end;
-          Logic.prepare ();
-          let (query, skinnyTyp, querySub, instMVars) =
-            Logic.Convert.typToQuery cPsi cDh (ti, k)
-          in
-          try
-            let n = ref 0 in
-            Logic.Solver.solve cDh cPsi query
-              begin
-                fun (cPsi, tM) ->
-                Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
-                  (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
-                incr n;
-                if !n >= 10 then raise Logic.Frontend.Done
-              end
-          with
-          | Logic.Frontend.Done ->
-             printf "logic programming finished@,@?";
-             ()
-     in
-     List.iter f hs;
+     List.iter solve_hole hs;
      Check.Comp.check cD cG mfs m g.goal;
      ( Comp.solve m
        |> Tactic.solve

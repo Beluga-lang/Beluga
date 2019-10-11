@@ -733,10 +733,24 @@ module Comp = struct
     | (Hole (loc, id, name), (tau, t)) ->
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Hole " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
-       let info = { Holes.cG; compGoal = (tau, t); compSolution = None } in
-       let h = { Holes.loc ; name ; cD ; info } in
-       let h = Holes.Exists (Holes.CompInfo, h) in
-       Holes.assign id h
+       let open Holes in
+       match get (by_id id) with
+       | None ->
+          let info = { Holes.cG; compGoal = (tau, t); compSolution = None } in
+          let h = { Holes.loc ; name ; cD ; info } in
+          let h = Holes.Exists (Holes.CompInfo, h) in
+          Holes.assign id h
+       | Some (_, (Exists (w, h))) ->
+          match w with
+          | LFInfo ->
+             Error.violation "wrong hole kind"
+          | CompInfo ->
+             let { compSolution; compGoal; _ } = h.info in
+             if not (Whnf.convCTyp compGoal (tau, t)) then
+               Error.violation "mismatched hole type";
+             match compSolution with
+             | None -> ()
+             | Some e -> checkW cD (cG, cIH) total_decs e (tau, t)
 
   and check cD (cG, cIH) (total_decs : Total.dec list) e (tau, t) =
     dprintf
@@ -976,7 +990,7 @@ module Comp = struct
          then
            (* marks in the context as inductive all mvars appearing in
               the pattern *)
-           let cD1' = mvars_in_patt cD1' (PatMetaObj(loc', mO)) in
+           let cD1' = mvars_in_patt cD1' (PatMetaObj (loc', mO)) in
            ( cD1'
            (* ^ cD is the outer meta-context; cD1' is the refined
               meta-context + induction marks;

@@ -331,7 +331,17 @@ let gen_var' loc cD (x, cU) =
      )
 
   | LF.CTyp (schema_cid) ->
-     let cPsi = LF.CtxVar (LF.CInst ((x, ref None, cD , LF.CTyp schema_cid, ref [], LF.Maybe), Whnf.m_id)) in
+     let mmvar =
+       let open! LF in
+       { name = x
+       ; instantiation = ref None
+       ; cD
+       ; typ = CTyp schema_cid
+       ; constraints = ref []
+       ; depend = LF.Maybe
+       }
+     in
+     let cPsi = LF.CtxVar (LF.CInst (mmvar, Whnf.m_id)) in
      ( (loc, LF.CObj cPsi)
      , LF.CObj (cPsi)
      )

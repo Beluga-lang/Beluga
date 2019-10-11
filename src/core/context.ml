@@ -15,9 +15,12 @@ let addToHat (ctxvarOpt, length) =
 (* More appropriate: Psi into psihat  Oct  4 2008 -bp *)
 let rec dctxToHat = function
   | Null            -> (None, 0)
-  | CtxVar (CInst ((_, {contents = Some (ICtx cPsi)}, _cD, _G, _, _), _ ))   ->
-      dctxToHat cPsi
-  | CtxVar psi      -> (Some psi, 0)
+  | CtxVar psi ->
+     begin match psi with
+     | CInst ({instantiation = {contents = Some (ICtx cPsi)}; _}, _) ->
+        dctxToHat cPsi
+     | _ -> (Some psi, 0)
+     end
   | DDec (cPsi', _) -> addToHat (dctxToHat cPsi')
 
 let rec hatToDCtx phat = match phat with
@@ -68,7 +71,7 @@ let ctxDec cPsi k =
     | (DDec (cPsi', _), k') ->
         ctxDec' (cPsi', k'-1)
 
-    | (CtxVar (CInst ((_psiname, {contents = Some (ICtx cPsi)}, _, _, _, _), _ )), k) ->
+    | (CtxVar (CInst ({instantiation = {contents = Some (ICtx cPsi)}; _}, _ )), k) ->
         ctxDec' (cPsi, k)
     (* (Null, _) and (CtxVar _, _) should not occur by invariant *)
   in
@@ -97,7 +100,7 @@ let ctxSigmaDec cPsi k =
 
     | (DDec (cPsi', TypDecl (_x, _tA')), k') ->
         ctxDec' (cPsi', k' - 1)
-    | (CtxVar (CInst ((_n, {contents = Some (ICtx cPhi) }, _schema, _octx, _, _), _mctx)) , k) ->
+    | (CtxVar (CInst ({instantiation = {contents = Some (ICtx cPhi) }; _}, _)) , k) ->
         ctxDec' (cPhi, k)
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
@@ -277,7 +280,7 @@ let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find_rev ctx (Misc.const f)
 
 let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypotheses =
-  let open Comp in
+  let open! Comp in
   let { cD = cD1; cG = cG1; cIH = cIH1 } = h1 in
   let { cD = cD2; cG = cG2; cIH = cIH2 } = h2 in
   let cD = append cD1 cD2 in

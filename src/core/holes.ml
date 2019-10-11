@@ -15,7 +15,7 @@ type lf_hole_info =
 type comp_hole_info =
   { cG : Comp.gctx
   ; compGoal : Comp.typ * LF.msub
-  ; mutable compSolution : (Comp.exp_chk * LF.msub) option
+  ; mutable compSolution : Comp.exp_chk option
   }
 
 (* Define some singletons for selecting comp or LF holes. *)

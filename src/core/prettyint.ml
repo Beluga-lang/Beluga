@@ -10,16 +10,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   type lvl = int
   let l0 = 0
 
-  module InstHashedType = struct
-    type t    = LF.iterm option ref
-    let equal = (==)
-    let hash  = Hashtbl.hash
-  end
-
-  module InstHashtbl = Hashtbl.Make (InstHashedType)
-
-  let inst_hashtbl : string InstHashtbl.t = InstHashtbl.create 0
-
   module MInstHashedType = struct
     type t    = LF.iterm option ref
     let equal = (==)
@@ -170,14 +160,27 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             (Id.render_name x)
             (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
             (r_paren_if cond)
-       | LF.LFHole (_, _, name) ->
+       | LF.LFHole (_, id, name) ->
+          let open Holes in
           let open HoleId in
           let name =
             match name with
             | Anonymous -> ""
             | Named s -> s
           in
-          fprintf ppf "?%s" name
+          begin match get (by_id id) with
+          | None -> fprintf ppf "?%s" name
+          | Some (_, Exists (w, h)) ->
+             match w with
+             | CompInfo -> Error.violation "expected LFHole; got comp hole"
+             | LFInfo ->
+                let { lfSolution; cPsi; _ } = h.info in
+                match lfSolution with
+                | None ->
+                   fprintf ppf "?%s" name
+                | Some sM ->
+                   fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi l0) (Whnf.norm sM)
+          end
        | LF.Tuple (_, tuple) ->
           fprintf ppf "<%a>"
             (fmt_ppr_lf_tuple cD cPsi lvl) tuple
@@ -471,8 +474,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_meta_obj cD lvl ppf (loc,mO) =
     fmt_ppr_lf_mfront cD lvl ppf mO
 
-  and fmt_ppr_lf_mmvar lvl ppf = function
-    | (_, ({ contents = None } as u), _, LF.ClTyp (LF.PTyp tA,_), _, mDep) ->
+  and fmt_ppr_lf_mmvar_uninstantiated ppf (u, typ, dep) =
+    match typ with
+    | LF.(ClTyp (PTyp tA, _)) ->
        begin
          try
            fprintf ppf "?#%s"
@@ -483,22 +487,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
               | Some vGen -> vGen ()
               | None -> Gensym.MVarData.gensym ()
             in
-            PInstHashtbl.replace pinst_hashtbl u sym
-            ; fprintf ppf "?#%s" sym
+            PInstHashtbl.replace pinst_hashtbl u sym;
+            fprintf ppf "?#%s" sym
        end
-
-    | (_, {contents = Some (LF.IHead h)}, cD, LF.ClTyp (LF.PTyp _,cPsi), _, mDep) ->
-       (* fprintf ppf "MMV SOME %a" *)
-       fprintf ppf " %a"
-         (fmt_ppr_lf_head cD cPsi lvl) h
-
-    | (_n, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _,       mDep) ->
-       (* Note, pretty-printing does not use the name provided n which may not be unique but generates a new one *)
+    | LF.(ClTyp (MTyp tA, _)) ->
        begin
          try
            fprintf ppf "?%s%a"
              (MInstHashtbl.find minst_hashtbl u)
-             (fmt_ppr_lf_depend `depend) mDep
+             (fmt_ppr_lf_depend `depend) dep
          with
          | Not_found ->
             (* (* Should probably create a sep. generator for this -dwm *)
@@ -513,13 +510,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             MInstHashtbl.replace minst_hashtbl u sym;
             fprintf ppf "?%s" sym
        end
-
-    | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
-       (* fprintf ppf "MMV SOME %a" *)
-       fprintf ppf " %a"
-         (fmt_ppr_lf_normal cD cPsi lvl) m
-
-    | (_, ({ contents = None } as u), _, LF.ClTyp (LF.STyp (_, cPsi),_), _, mDep) ->
+    | LF.(ClTyp (STyp (_, cPsi), _)) ->
        begin
          try
            fprintf ppf "?%s"
@@ -536,10 +527,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             ; fprintf ppf "#?%s" sym
        end
 
-    | (_, {contents = Some (LF.ISub s)}, cD, LF.ClTyp (LF.STyp _,cPsi), _, mDep) ->
-       (* fprintf ppf "MMV SOME %a" *)
-       fprintf ppf " #%a"
-         (fmt_ppr_lf_sub cD cPsi lvl) s
+  and fmt_ppr_lf_mmvar lvl ppf mmvar =
+    (* check whether the mmvar is instantiated or not before proceeding to print *)
+    let u = LF.(mmvar.instantiation) in
+    match !u with
+    | None ->
+       fmt_ppr_lf_mmvar_uninstantiated ppf LF.(u, mmvar.typ, mmvar.depend)
+    | Some it ->
+       match LF.(mmvar.typ) with
+       | LF.ClTyp (_, cPsi) ->
+          fmt_ppr_lf_iterm LF.(mmvar.cD) cPsi lvl ppf it
 
   and fmt_ppr_lf_offset cD ppf n =
     fprintf ppf "%s" (R.render_cvar cD n)
@@ -547,31 +544,29 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_cvar cD ppf = function
     | LF.Offset n -> fmt_ppr_lf_offset cD ppf n
 
-    | LF.Inst (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, _) ->
-       begin
-         try
-           fprintf ppf "?%s"
-             (InstHashtbl.find inst_hashtbl u)
-         with
-         | Not_found ->
-            let sym = match Store.Cid.Typ.gen_mvar_name tA with
-              | Some vGen -> vGen ()
-              | None -> Gensym.MVarData.gensym ()
-            in
-            InstHashtbl.replace inst_hashtbl u sym
-            ; fprintf ppf "?%s" sym
-       end
-    | LF.Inst _ ->               fprintf ppf "?INST _ "
+    | LF.Inst mmvar ->
+       let u = LF.(mmvar.instantiation) in
+       let open LF in
+       match !u with
+       | Some it ->
+          let ClTyp (_, cPsi) = mmvar.typ in
+          fmt_ppr_lf_iterm mmvar.cD cPsi 0 ppf it
+       | None ->
+          fmt_ppr_lf_mmvar_uninstantiated ppf (u, mmvar.typ, mmvar.depend)
 
   and fmt_ppr_lf_ctx_var cD ppf = function
-    | LF.CInst ((n, {contents = None}, _cD, _schema, _cnstr,_dep), theta) ->
-       fprintf ppf "?%s[%a]"
-         (Id.render_name n)
-         (fmt_ppr_lf_msub cD 0) theta
+    | LF.CInst (mmvar, theta) ->
+       let g = LF.(mmvar.instantiation) in
+       begin match !g with
+       | None -> 
+          fprintf ppf "?%a[%a]"
+            Id.print LF.(mmvar.name) 
+            (fmt_ppr_lf_msub cD 0) theta
 
-    | LF.CInst ((_n, {contents = Some (LF.ICtx cPsi)}, cD', _schema, _cnstr, _dep), theta) ->
-       fprintf ppf "%a"
-         (fmt_ppr_lf_dctx cD' 0) (Whnf.cnormDCtx (cPsi, theta))
+       | Some (LF.ICtx cPsi) ->
+          fprintf ppf "%a"
+            (fmt_ppr_lf_dctx LF.(mmvar.cD) 0) (Whnf.cnormDCtx (cPsi, theta))
+       end
 
     | LF.CtxOffset psi ->
        fprintf ppf "%s"
@@ -579,7 +574,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.CtxName psi ->
        fprintf ppf "%s"
          (Id.render_name psi)
-
 
   and fmt_ppr_lf_typ_rec cD cPsi _lvl ppf typrec =
     let ppr_element cD cPsi ppf suffix = function
@@ -1132,7 +1126,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.Apply (_, i, e) ->
        let cond = lvl > 1 in
-       fprintf ppf "%s@[<2>%a@ %a@]%s"
+       fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_exp_syn cD cG 1) i
          (fmt_ppr_cmp_exp_chk cD cG 2) e
@@ -1140,7 +1134,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.MApp (_, i, mC) ->
        let cond = lvl > 1 in
-       fprintf ppf "%s%a@ %a%s"
+       fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_exp_syn cD cG 1) i
          (fmt_ppr_cmp_meta_obj cD 0) mC

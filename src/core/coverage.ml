@@ -1182,12 +1182,14 @@ let genObj (cD, cPsi, tP) (tH, tA) =
          (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
        raise e
   in
-  let cPsi', tR', tP' = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
-  dprint
-    begin fun _ ->
-    "[genObj] finished."
+  let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
+  dprintf
+    begin fun p ->
+    p.fmt "[genObj] @[<v>finished@,\
+           meta-sub typing: @,  @[%a@]@]"
+      P.fmt_ppr_lf_msub_typing (cD', ms', cD)
     end;
-  (cD', CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
+  (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
 
 let rec genAllObj cg =
   function
@@ -1207,21 +1209,19 @@ let rec genAllObj cg =
           cgs
      end
 
-let genConst ((cD, cPsi, LF.Atom (_, a, _)) as cg) =
-  begin
-    Types.freeze a;
-    let constructors = (Types.get a).Types.constructors in
-    (* Reverse the list so coverage will be checked in the order that the
-         constructors were declared, which is more natural to the user *)
-    let constructors = List.rev !constructors in
-    let tH_tA_list =
-      List.map
-        (fun c ->
-          (LF.Const c, (Const.get c).Const.typ))
-        constructors
-    in
-    genAllObj cg tH_tA_list
-  end
+let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
+  let _ = Types.freeze a in
+  let constructors = (Types.get a).Types.constructors in
+  (* Reverse the list so coverage will be checked in the order that the
+     constructors were declared, which is more natural to the user *)
+  let constructors = List.rev !constructors in
+  let tH_tA_list =
+    List.map
+      (fun c ->
+        (LF.Const c, (Const.get c).Const.typ))
+      constructors
+  in
+  genAllObj cg tH_tA_list
 
 
 let genHeads (tH, tA) =
@@ -2055,8 +2055,7 @@ let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
      [(cD'', CovSub (cPsi', LF.Dot (LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
 
 let genCGoals (cD' : LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) list * depend =
-  let dep_of_typ =
-    function
+  let dep_of_typ = function
     | LF.Atom (_, _, LF.Nil) -> Atomic
     | _ -> Dependent
   in
@@ -2235,7 +2234,19 @@ let rec genPattSpine =
      , ttau
      )
   | Comp.TypPiBox ((LF.Decl (x, LF.CTyp sW, _)), tau), t ->
-     let cPsi' = LF.CtxVar (LF.CInst ((x, ref None, LF.Empty, LF.CTyp sW, ref [], LF.Maybe), Whnf.m_id)) in
+     let cPsi' =
+       let open! LF in
+       let mmvar =
+         { name = x
+         ; instantiation = ref None
+         ; cD = Empty
+         ; typ = LF.CTyp sW
+         ; constraints = ref []
+         ; depend = Maybe
+         }
+       in
+       CtxVar (CInst (mmvar, Whnf.m_id))
+     in
      let pat1 =
        Comp.PatMetaObj
          ( Loc.ghost

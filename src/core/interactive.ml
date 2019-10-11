@@ -545,7 +545,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
             (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
      | Some e ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
-          (P.fmt_ppr_cmp_exp_chk cD cG P.l0) (Whnf.cnormExp e)
+          (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
      end
   end;
   fprintf ppf "@]"

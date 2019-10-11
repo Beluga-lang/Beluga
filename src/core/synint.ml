@@ -1,11 +1,12 @@
 (* Internal Syntax *)
-(* Internal LF Syntax *)
+
 open Id
 open Pragma
 open Support
 
 module Loc = Location
 
+(* Internal LF Syntax *)
 module LF = struct
   include Syncom.LF
 
@@ -107,7 +108,15 @@ module LF = struct
     | Offset of offset                        (* Bound Variables                *)
     | Inst   of mm_var                 (* D ; Psi |- M <= A provided constraint *)
 
-  and mm_var = name * iterm option ref * mctx * ctyp * cnstr list ref * depend
+  and mm_var =
+    { name : name
+    ; instantiation : iterm option ref
+    ; cD : mctx
+    ; typ : ctyp
+    ; constraints : cnstr list ref (* not really used *)
+    ; depend : depend
+    }
+
   and mm_var_inst' = mm_var * msub
   and mm_var_inst = mm_var_inst' * sub
 
@@ -162,6 +171,8 @@ module LF = struct
     | Cons of normal * tuple
 
   and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
+
+  let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
 
   (**********************)
   (* Type Abbreviations *)

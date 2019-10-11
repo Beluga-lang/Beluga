@@ -274,26 +274,26 @@ struct
     sexp_lf_mfront cD ppf mO
 
   and sexp_lf_mmvar ppf = function
-    | (_, ({ contents = None } as u), _, LF.ClTyp (LF.PTyp tA,_), _, mDep) ->
+    | {LF.instantiation = { contents = None } as u; typ = LF.ClTyp (LF.PTyp tA, _); _} ->
       begin
         try
           fprintf ppf "(MMVar-1 %s)"
             (PInstHashtbl.find pinst_hashtbl u)
         with
-          | Not_found ->
-            let sym = match Store.Cid.Typ.gen_mvar_name tA with
-              | Some vGen -> vGen ()
-              | None -> Gensym.MVarData.gensym ()
-            in
-            PInstHashtbl.replace pinst_hashtbl u sym
-            ; fprintf ppf "(MMVar-2 %s)" sym
+        | Not_found ->
+           let sym = match Store.Cid.Typ.gen_mvar_name tA with
+             | Some vGen -> vGen ()
+             | None -> Gensym.MVarData.gensym ()
+           in
+           PInstHashtbl.replace pinst_hashtbl u sym;
+           fprintf ppf "(MMVar-2 %s)" sym
       end
-    | (_, {contents = Some (LF.IHead h)}, cD, LF.ClTyp (LF.PTyp _,cPsi), _, mDep) ->
+    | {LF.instantiation = {contents = Some (LF.IHead h) }; LF.cD; LF.typ = LF.ClTyp (LF.PTyp _, cPsi); _} ->
       fprintf ppf " %a"
         (sexp_lf_head cD cPsi) h
 
-    | (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, mDep) ->
-      let s = (match mDep with LF.No -> "No" | LF.Maybe -> "Maybe" | LF.Inductive -> "Inductive") in
+    | {LF.instantiation = {contents = None } as u; LF.typ = LF.ClTyp (LF.MTyp tA,_); LF.depend; _} ->
+      let s = (match depend with LF.No -> "No" | LF.Maybe -> "Maybe" | LF.Inductive -> "Inductive") in
       begin
         try
           fprintf ppf "(MMVar-3 (?%s . %s))"
@@ -308,24 +308,24 @@ struct
             ; fprintf ppf "(MMVar-4 %s)" sym
       end
 
-    | (_, {contents = Some (LF.INorm m)}, cD, LF.ClTyp (LF.MTyp _,cPsi), _, _) ->
-      fprintf ppf " %a"
-        (sexp_lf_normal cD cPsi) m
+    | {LF.instantiation = { contents = Some (LF.INorm m)}; LF.cD; LF.typ = LF.ClTyp (LF.MTyp _,cPsi); _} ->
+       fprintf ppf " %a"
+         (sexp_lf_normal cD cPsi) m
 
-    | (_, ({ contents = None } as u), _, LF.ClTyp (LF.STyp (_, cPsi),_), _, mDep) ->
-      begin
-        try
-          fprintf ppf "(MMVar-5 %s)"
-            (SInstHashtbl.find sinst_hashtbl u)
-        with
-          | Not_found ->
+    | {LF.instantiation = { contents = None } as u; LF.typ = LF.ClTyp (LF.STyp (_, cPsi),_); _} ->
+       begin
+         try
+           fprintf ppf "(MMVar-5 %s)"
+             (SInstHashtbl.find sinst_hashtbl u)
+         with
+         | Not_found ->
             let sym = Gensym.MVarData.gensym ()
             in
-            SInstHashtbl.replace sinst_hashtbl u sym
-            ; fprintf ppf "(MMVar-6 %s)" sym
-      end
+            SInstHashtbl.replace sinst_hashtbl u sym;
+            fprintf ppf "(MMVar-6 %s)" sym
+       end
 
-    | (_, {contents = Some (LF.ISub s)}, cD, LF.ClTyp (LF.STyp _,cPsi), _, mDep) ->
+    | {LF.instantiation = { contents = Some (LF.ISub s) }; LF.cD; LF.typ = LF.ClTyp (LF.STyp _,cPsi); _} ->
       fprintf ppf " #%a"
         (sexp_lf_sub cD cPsi) s
 
@@ -336,7 +336,7 @@ struct
     | LF.Offset n ->
       sexp_lf_offset cD ppf n
 
-    | LF.Inst (_, ({ contents = None } as u), _, LF.ClTyp (LF.MTyp tA,_), _, _) ->
+    | LF.Inst { LF.instantiation = {contents = None} as u; typ = LF.ClTyp (LF.MTyp tA, _); _} ->
       begin
         try
           fprintf ppf "?%s"
@@ -355,14 +355,14 @@ struct
       fprintf ppf "(?INST _)"
 
   and sexp_lf_ctx_var cD ppf = function
-    | LF.CInst ((n, {contents = None}, _cD, _schema, _cnstr,_dep), theta) ->
+    | LF.CInst ({LF.name; LF.instantiation = {contents = None}; _}, theta) ->
       fprintf ppf "(CInst %s %a)"
-        (Id.render_name n)
+        (Id.render_name name)
         (sexp_lf_msub cD) theta
 
-    | LF.CInst ((_n, {contents = Some (LF.ICtx cPsi)}, cD', _schema, _cnstr, _dep), theta) ->
+    | LF.CInst ({LF.instantiation = {contents = Some (LF.ICtx cPsi)}; LF.cD; _}, theta) ->
       fprintf ppf "%a"
-        (sexp_lf_dctx cD') (Whnf.cnormDCtx (cPsi, theta))
+        (sexp_lf_dctx cD) (Whnf.cnormDCtx (cPsi, theta))
 
     | LF.CtxOffset psi ->
       fprintf ppf "%s"

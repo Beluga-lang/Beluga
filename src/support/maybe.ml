@@ -115,6 +115,14 @@ let cat_options (l : 'a option list) : 'a list =
 let print
       (f : Format.formatter -> 'a -> unit)
       (ppf : Format.formatter)
-      (m : 'a option)
-    : unit =
-  eliminate (fun () -> ()) (f ppf) m
+    : 'a option -> unit =
+  eliminate (fun () -> ()) (f ppf)
+
+let show
+      (f : Format.formatter -> 'a -> unit)
+      (ppf : Format.formatter)
+    : 'a option -> unit =
+  let open Format in
+  eliminate
+    (fun () -> fprintf ppf "None")
+    (fun x -> fprintf ppf "Some (@[%a@])" f x)

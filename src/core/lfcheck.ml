@@ -218,18 +218,27 @@ let rec checkW cD cPsi sM sA = match sM, sA with
        flush_str_formatter ())
 
   | (LFHole (loc, id, name), s), sA ->
-     let open Holes in
+     let open! Holes in
      begin match get (by_id id) with
+     | None ->
+        (* no hole here yet, so we should fill it in *)
+        let info = { cPsi; lfGoal = sA; lfSolution = None } in
+        assign id (Exists (LFInfo, { loc; name; cD; info }))
      | Some (_, Exists (CompInfo, _)) ->
+        (* this hole ID belongs to a computation hole;
+           this is supposed to be impossible
+         *)
         Error.violation "hole kind mismatch"
      | Some (id, Exists (LFInfo, { name; info = {lfSolution; _ }; _})) ->
         begin match lfSolution with
         | None -> () (* raise (Error (loc, UnsolvedHole (name, id))) *)
-        | Some sM -> checkW cD cPsi sM sA
+        | Some sM ->
+           dprintf
+             begin fun p ->
+             p.fmt "[lfcheck] [checkW] LF hole with solution: checking inside"
+             end;
+           checkW cD cPsi sM sA
         end
-     | None ->
-        let info = { cPsi; lfGoal = sA; lfSolution = None } in
-        assign id (Exists (LFInfo, { loc; name; cD; info }))
      end
   | (Lam (loc, _, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
@@ -383,7 +392,8 @@ and inferHead loc cD cPsi head cl = match head, cl with
     checkSub loc cD cPsi s Subst cPsi' ;
     TClo (tA, s)
 
-  | MVar (Inst (_n, {contents = None}, _cD, ClTyp (MTyp tA,cPsi'), _cnstr, _), s), Subst ->
+  | MVar (Inst mmvar, s), Subst when not (is_mmvar_instantiated mmvar) ->
+     let ClTyp (MTyp tA, cPsi') = mmvar.typ in
      dprintf
        (fun p ->
          let f = P.fmt_ppr_lf_dctx cD P.l0 in
@@ -395,16 +405,18 @@ and inferHead loc cD cPsi head cl = match head, cl with
     checkSub loc cD cPsi s Subst cPsi' ;
     TClo (tA, s)
 
-  | MMVar (((_n, {contents = None}, cD' , ClTyp (MTyp tA,cPsi'), _cnstr, _) , t'), r), Subst ->
+  | MMVar ((mmvar , t'), r), Subst when not (is_mmvar_instantiated mmvar) ->
+     let ClTyp (MTyp tA, cPsi') = mmvar.typ in
      dprintf
-       (fun p ->
-         let f = P.fmt_ppr_lf_mctx P.l0 in
-         p.fmt "[inferHead] @[<v>MMVar %a@,cD = %a@,t' = %a@,cD' = %a@]"
-           (P.fmt_ppr_lf_head cD cPsi P.l0) head
-           f cD
-           (P.fmt_ppr_lf_msub cD P.l0) t'
-           f cD');
-    checkMSub loc cD t' cD';
+       begin fun p ->
+       let f = P.fmt_ppr_lf_mctx P.l0 in
+       p.fmt "[inferHead] @[<v>MMVar %a@,cD = %a@,t' = %a@,cD' = %a@]"
+         (P.fmt_ppr_lf_head cD cPsi P.l0) head
+         f cD
+         (P.fmt_ppr_lf_msub cD P.l0) t'
+         f mmvar.cD
+       end;
+    checkMSub loc cD t' mmvar.cD;
     dprint (fun () -> "[inferHead] MMVar - msub done \n");
     checkSub loc cD cPsi r Subst (Whnf.cnormDCtx (cPsi', t')) ;
     TClo(Whnf.cnormTyp (tA, t'), r)
@@ -418,13 +430,18 @@ and inferHead loc cD cPsi head cl = match head, cl with
     let (_, tA, cPsi') = Whnf.mctxPDec cD p in
     dprnt "[inferHead] PVar case";
     dprintf
-      (fun p ->
-        p.fmt "[inferHead] @[<v>PVar case: s = %a@,check: @[<v>cPsi' (context of pvar) = %a@,cPsi (pattern context) = %a@,synthesizing %a for PVar@,cD = %a@]@]"
-          (P.fmt_ppr_lf_sub cD cPsi P.l0) s
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-          (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
-          (P.fmt_ppr_lf_mctx P.l0) cD);
+      begin fun p ->
+      p.fmt "[inferHead] @[<v>PVar case: s = %a@,\
+             check: @[<v>cPsi' (context of pvar) = %a@,\
+             cPsi (pattern context) = %a@,\
+             synthesizing %a for PVar@,\
+             cD = %a@]@]"
+        (P.fmt_ppr_lf_sub cD cPsi P.l0) s
+        (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
+        (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s))
+        (P.fmt_ppr_lf_mctx P.l0) cD
+      end;
     checkSub loc cD cPsi s cl cPsi';
     (* Check that something of type tA could possibly appear in cPsi *)
 (*    if not (canAppear cD cPsi head (tA, s) loc) then
@@ -831,16 +848,17 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
     end;
   match cPsi with
     | Null -> ()
-    | CtxVar (CInst ((_, {contents = Some (ICtx cPhi)}, _, _, _, _), _ )) ->
-      checkSchema loc cD cPhi schema
+    | CtxVar (CInst (mmvar, _ )) ->
+       let Some (ICtx cPhi) = mmvar.instantiation.contents in
+       checkSchema loc cD cPhi schema
     | CtxVar ((CtxOffset _ ) as phi) ->
       let Schema phiSchemaElements =
-	Schema.get_schema (lookupCtxVarSchema cD phi) in
+	      Schema.get_schema (lookupCtxVarSchema cD phi)
+      in
       (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cD phiElem elements) phiSchemaElements) then *)
       (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
-      if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements then ()
-      else
-        raise (Error (loc, CtxVarMismatch (cD, phi, schema)))
+      if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements |> not
+      then raise (Error (loc, CtxVarMismatch (cD, phi, schema)))
 
     | DDec (cPsi', decl) ->
       begin

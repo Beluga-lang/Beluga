@@ -283,32 +283,48 @@ let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
 
 let unify_phat cD psihat phihat =
   match phihat with
-    | (Some (Int.LF.CInst ((_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _), _ )), d) ->
-        begin match psihat with
-          | (Some (Int.LF.CInst ((_, ({contents = None} as cref'), _, _, _, _), _) as c_var) , d') ->
-              if cref == cref' then
-                d = d'
-              else
-                (cref := Some (Int.LF.ICtx (Int.LF.CtxVar (c_var)))  ; true)
-          | ((Some (c_var)) , d') ->
-              if d = d' then
-                ((match c_var with
-                   | Int.LF.CtxName psi ->
-                       FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp s_cid, Int.LF.Maybe))
-                   | _ -> ());
-                  cref := Some (Int.LF.ICtx (Int.LF.CtxVar (c_var)))  ; true)
-              else
-                (dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");
-                 raise Error.NotImplemented)
-          | (None , d') ->
-              if d = d' then
-                (cref := Some (Int.LF.ICtx (Int.LF.Null)) ; true)
-              else
-                (dprint (fun () -> "[unify_phat - 2] unify ctx_var with a full context");
-                 raise Error.NotImplemented)
-        end
+  | (Some (Int.LF.CInst (mmvar1 (* (_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _) *), _ )), d)
+       when not (Int.LF.is_mmvar_instantiated mmvar1) ->
+     begin match psihat with
+     | (Some (Int.LF.CInst (mmvar2 (* (_, ({contents = None} as cref'), _, _, _, _) *), _) as c_var) , d')
+          when not (Int.LF.is_mmvar_instantiated mmvar2) ->
+        let open Int.LF in
+        if mmvar1.instantiation == mmvar2.instantiation then
+          d = d'
+        else
+          begin
+            mmvar1.instantiation := Some (ICtx (CtxVar (c_var)));
+            true
+          end
+     | ((Some (c_var)) , d') ->
+        let open Int.LF in
+        let CTyp s_cid = mmvar1.typ in
+        if d = d' then
+          ((match c_var with
+            | CtxName psi ->
+               FCVar.add psi (cD, Decl (psi, CTyp s_cid, Maybe))
+            | _ -> ());
+           mmvar1.instantiation := Some (ICtx (CtxVar (c_var)))  ; true)
+        else
+          begin
+            dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");
+            raise Error.NotImplemented
+          end
+     | (None , d') ->
+        let open Int.LF in
+        if d = d' then
+          begin
+            mmvar1.instantiation := Some (ICtx Null);
+            true
+          end
+        else
+          begin
+            dprint (fun () -> "[unify_phat - 2] unify ctx_var with a full context");
+            raise Error.NotImplemented
+          end
+     end
 
-    | _ ->  (psihat = phihat)
+  | _ -> psihat = phihat
 
 (* ******************************************************************* *)
 
@@ -322,7 +338,7 @@ let getSchema cD ctxvar loc = match ctxvar with
       with _ ->  throw loc (CtxVarSchema n)
       end
 
-  | Some (Int.LF.CInst ((_,_,_,Int.LF.CTyp (Some s_cid),_,_),_)) ->
+  | Some Int.LF.(CInst ({ typ = CTyp (Some s_cid); _ }, _)) ->
      Schema.get_schema s_cid
   | None -> raise (Error.Violation "No context variable for which we could retrieve a schema")
 
@@ -2088,8 +2104,10 @@ and elSub loc recT cD cPsi s cl cPhi =
 
       | (Apx.LF.EmptySub, Int.LF.CtxVar cvar) ->
         begin match cvar with
-          | Int.LF.CInst ((_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _), _ ) ->
-             cref := Some (Int.LF.ICtx (Int.LF.Null)); Int.LF.EmptySub
+          | Int.LF.(CInst ({ instantiation = {contents = None} as cref; typ = CTyp s_cid; _ }, _)) ->
+             let open Int.LF in
+             cref := Some (ICtx Null);
+             EmptySub
           (* begin match Context.dctxToHat cPsi with *)
           (*   | (Some psi, d) -> Int.LF.Shift (Int.LF.CtxShift psi, d) *)
           (*   | (None, d)     -> Int.LF.Shift (Int.LF.NoCtxShift, d) *)
@@ -2248,7 +2266,7 @@ and elSub loc recT cD cPsi s cl cPhi =
 
       | (Apx.LF.Dot (Apx.LF.Obj m, s), Int.LF.CtxVar cvar) ->
         begin match cvar with
-          | Int.LF.CInst ((_phi, ({contents = None} as _cref), _cD', Int.LF.CTyp s_cid, _, _), _ms') ->
+        | Int.LF.(CInst ({ typ = CTyp s_cid; instantiation = { contents = None }; _}, _ms')) ->
             throw loc (MissingInformationCtx (cD, cPhi))
       (*          begin try
                   let tA = synTyp loc recT cD cPsi m in
@@ -2262,7 +2280,7 @@ and elSub loc recT cD cPsi s cl cPhi =
          raise Error.NotImplemented)
       *)
 
-          | _     -> throw loc (IllTypedSubVar (cD, cPsi, cPhi))
+        | _     -> throw loc (IllTypedSubVar (cD, cPsi, cPhi))
         end
 
 
@@ -2708,71 +2726,107 @@ let rec checkDCtx loc recT cD psi w = match psi with
 
 let rec solve_fvarCnstr recT cD cnstr = match cnstr with
   | [] -> ()
-  | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, ({contents = None} as r), _, Int.LF.ClTyp (Int.LF.MTyp tP,cPsi), _, _)) :: cnstrs) ->
-      begin try
-        begin match FVar.get x with
-          | Int.LF.Type tA ->
-              (* For type reconstruction to succeed, we must have
-               *  . |- tA <= type
-               *  This will be enforced during abstraction.
-               *)
-              let sshift = mkShift recT cPsi in
-
-              (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
-              let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-              begin
-                try
-                  Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id);
-                  r := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS)));
-                  solve_fvarCnstr recT cD cnstrs
-                with
-                  | Unify.Failure msg ->
+  | ((_ , Apx.LF.(Root (loc, FVar x, spine)),
+      Int.LF.(Inst {instantiation; typ = ClTyp (MTyp tP, cPsi); _})) :: cnstrs) ->
+     begin match instantiation.contents with
+     | None ->
+        begin
+          try
+            begin match FVar.get x with
+            | Int.LF.Type tA ->
+               (* For type reconstruction to succeed, we must have
+                *  . |- tA <= type
+                *  This will be enforced during abstraction.
+                *)
+               let sshift = mkShift recT cPsi in
+               
+               (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
+               let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
+               begin
+                 try
+                   Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id);
+                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS)));
+                   solve_fvarCnstr recT cD cnstrs
+                 with
+                 | Unify.Failure msg ->
                     throw loc (TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ))
-              end
-          | Int.LF.TypVar _ ->
-              throw loc (LeftoverConstraints x)
-        end
-        with _ ->
-          throw loc (UnboundName x)
-      end
-
-
-  | ((_ , Apx.LF.Root (loc, Apx.LF.FVar x, spine),
-      Int.LF.Inst (_, {contents = Some (Int.LF.INorm tR)}, _, Int.LF.ClTyp (Int.LF.MTyp tP,cPsi), _ , _)) :: cnstrs) ->
-      begin try
-        begin match FVar.get x with
-        | Int.LF.Type tA ->
-          (* For type reconstruction to succeed, we must have
-           *  . |- tA <= type
-           *  This will be enforced during abstraction.
-           *)
-            let sshift = mkShift recT cPsi in
-
-            (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
-            let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-            (* let psihat = Context.dctxToHat cPsi in *)
-            begin
-              try
-                Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
-                Unify.unify cD cPsi
-                  (Int.LF.Root (loc, Int.LF.FVar x, tS), Substitution.LF.id)
-                  (tR, Substitution.LF.id);
-                (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
-                solve_fvarCnstr recT cD cnstrs
-              with
-                | Unify.Failure msg ->
-                  throw loc (TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ))
+               end
+            | Int.LF.TypVar _ ->
+               throw loc (LeftoverConstraints x)
             end
-        | Int.LF.TypVar _ ->
-          throw loc (LeftoverConstraints x)
-      end
-
-        with _ ->
-          throw loc (UnboundName x)
+          with _ ->
+            throw loc (UnboundName x)
+        end
+     | Some Int.LF.(INorm tR) ->
+        begin try
+            begin match FVar.get x with
+            | Int.LF.Type tA ->
+               (* For type reconstruction to succeed, we must have
+                *  . |- tA <= type
+                *  This will be enforced during abstraction.
+                *)
+               let sshift = mkShift recT cPsi in
+               
+               (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
+               let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
+               (* let psihat = Context.dctxToHat cPsi in *)
+               begin
+                 try
+                   Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
+                   Unify.unify cD cPsi
+                     (Int.LF.Root (loc, Int.LF.FVar x, tS), Substitution.LF.id)
+                     (tR, Substitution.LF.id);
+                   (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
+                   solve_fvarCnstr recT cD cnstrs
+                 with
+                 | Unify.Failure msg ->
+                    throw loc (TypMismatchElab (cD, cPsi, (tP, Substitution.LF.id), sQ))
+               end
+            | Int.LF.TypVar _ ->
+               throw loc (LeftoverConstraints x)
+            end
+          with _ ->
+            throw loc (UnboundName x)
+        end
     end
 
-let rec solve_fcvarCnstr cnstr = match cnstr with
+let solve_fcvarCnstr cnstrs =
+  let solve_one (tM, mmvar) =
+    let lookup_fcvar loc u =
+      try
+        FCVar.get u
+      with
+      | Not_found -> throw loc (LeftoverConstraints u)
+    in
+    let elSub loc cPsi s cPhi =
+      Int.LF.(elSub loc Pibox mmvar.cD cPsi s Subst cPhi)
+    in
+    let weakenAppropriately cD_d cPhi =
+      let d = Context.length Int.LF.(mmvar.cD) - Context.length cD_d in
+      if d = 0 then cPhi else Whnf.cnormDCtx (cPhi, Int.LF.MShift d)
+    in
+    match tM, Int.LF.(mmvar.typ) with
+    | Apx.LF.(Root (loc, FMVar (u, s), _nil_spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
+       assert (_nil_spine = Apx.LF.Nil);
+       let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _))) =
+         lookup_fcvar loc u
+       in
+       let cPhi = weakenAppropriately cD_d cPhi in
+       let s'' = elSub loc cPsi s cPhi in
+       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil))))
+    | Apx.LF.(Root (loc, FPVar (x, s), spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
+       let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _))) =
+         lookup_fcvar loc x
+       in
+       let cPhi = weakenAppropriately cD_d cPhi in
+       let s'' = elSub loc cPsi s cPhi in
+       let (tS, _) = elSpine loc Pibox Int.LF.(mmvar.cD) cPsi spine (tA, s'') in
+       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS))))
+  in
+  List.iter solve_one cnstrs
+
+(*
+  match cnstrs with
   | [] -> ()
   | ((Apx.LF.Root (loc, Apx.LF.FMVar (u,s), _nil_spine), (_, r, cD, Int.LF.ClTyp (Int.LF.MTyp _,cPsi), _, _)) :: cnstrs) ->
       begin try
@@ -2803,12 +2857,13 @@ let rec solve_fcvarCnstr cnstr = match cnstr with
       with Not_found ->
         throw loc (LeftoverConstraints x)
       end
+ *)
 
 let solve_constraints cD' =
-  (solve_fcvarCnstr !fcvar_cnstr ;
+  solve_fcvarCnstr !fcvar_cnstr ;
   reset_fcvarCnstr ();
   Unify.forceGlobalCnstr (!Unify.globalCnstrs);
-  Unify.resetGlobalCnstrs () )
+  Unify.resetGlobalCnstrs ()
 
 let solve_fvarCnstr rectyp =
   solve_fvarCnstr rectyp Int.LF.Empty !fvar_cnstr

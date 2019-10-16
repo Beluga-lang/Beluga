@@ -187,8 +187,14 @@ let rec of_list_map (l : 'a list) (f : 'a -> 'b) : 'b LF.ctx =
   | [] -> LF.Empty
   | x :: xs -> LF.Dec(of_list_map xs f, f x)
 
+let of_list_map_rev (l : 'a list) (f : 'a -> 'b) : 'b LF.ctx =
+  List.fold_left (fun acc x -> LF.Dec (acc, f x)) LF.Empty l
+
 let of_list (l : 'a list) : 'a LF.ctx =
   of_list_map l Misc.id
+
+let of_list_rev (l : 'a list) : 'a LF.ctx =
+  of_list_map_rev l Misc.id
 
 (** Iterate over a context from left to right (oldest variable first).
     The callback `f` gets both the subcontext of the variable _and_ the variable as input.

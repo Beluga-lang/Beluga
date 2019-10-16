@@ -34,7 +34,9 @@ val to_list         : 'a ctx -> 'a list
 val to_sublist      : 'a ctx -> ('a ctx * 'a) list
 val to_sublist_rev  : 'a ctx -> ('a ctx * 'a) list
 val of_list_map     : 'a list -> ('a -> 'b) -> 'b ctx
+val of_list_map_rev : 'a list -> ('a -> 'b) -> 'b ctx
 val of_list         : 'a list -> 'a ctx
+val of_list_rev     : 'a list -> 'a ctx
 val iter        : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
 val iter'       : 'a ctx -> ('a -> unit) -> unit
 val iter_rev    : 'a ctx -> ('a ctx -> 'a -> unit) -> unit

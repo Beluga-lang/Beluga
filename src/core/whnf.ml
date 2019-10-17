@@ -1628,8 +1628,6 @@ let mctxMVarPos cD u =
   let rec cnormExp (e, t) = match (e,t) with
     | (Comp.Syn (loc, i), t) -> Comp.Syn (loc, cnormExp' (i, t))
 
-    | (Comp.Rec (loc, f, e), t) -> Comp.Rec (loc, f, cnormExp (e,t))
-
     | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e,t))
 
     | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))

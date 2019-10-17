@@ -112,9 +112,6 @@ let rec mapHoleChk f = function
  | Syn (l, es) ->
      let es' = mapHoleSyn f es in
          Syn (l, es')
- | Rec (l, n, ec) ->
-    let ec' =  mapHoleChk f ec in
-    Rec (l, n, ec')
  | Fn (l, n, ec) ->
     let ec' =  mapHoleChk f ec in
     Fn(l, n, ec')

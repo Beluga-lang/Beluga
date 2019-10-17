@@ -574,11 +574,6 @@ module Comp = struct
    *)
 
   let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau = match (e, ttau) with
-    | (Rec (loc, f, e), (tau, t)) ->
-       check cD (I.Dec (cG, CTypDecl (f, TypClo (tau,t), false)), (Total.shift cIH)) total_decs e ttau;
-       Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("Rec " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
-
     | (Fn (loc, x, e), (TypArr (tau1, tau2), t)) ->
        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)

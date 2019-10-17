@@ -347,7 +347,6 @@ module Comp = struct
 
   and exp_chk =
     | Syn    of Loc.t * exp_syn
-    | Rec    of Loc.t * name * exp_chk
     | Fn     of Loc.t * name * exp_chk
     | Fun    of Loc.t * fun_branches
     | MLam   of Loc.t * name * exp_chk

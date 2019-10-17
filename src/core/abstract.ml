@@ -1269,10 +1269,6 @@ let rec collectExp cQ e = match e with
       let (cQ', i') = collectExp' cQ i in
         (cQ', Comp.Syn(loc, i'))
 
-  | Comp.Rec (loc, f, e) ->
-      let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.Rec (loc, f, e') )
-
   | Comp.Fn (loc, x, e) ->
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Fn (loc, x, e'))

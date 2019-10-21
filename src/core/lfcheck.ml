@@ -23,7 +23,7 @@ type error =
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
   | IllTypedSub      of mctx * dctx * sub * dctx
   | SpineIllTyped    of int * int
-  | LeftoverFV
+  | LeftoverFV       of Id.name
   | ParamVarInst     of mctx * dctx * tclo
   | CtxHatMismatch   of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
   | IllTypedMetaObj  of mctx * clobj * dctx * cltyp
@@ -108,8 +108,9 @@ let _ = Error.register_printer
 	  "Expected number of arguments" Format.pp_print_int n_expected
 	  "Actual number of arguments"   Format.pp_print_int n_actual
 
-      | LeftoverFV ->
-	  Format.fprintf ppf "Leftover free variable."
+      | LeftoverFV name ->
+	       Format.fprintf ppf "Leftover free variable %a. Perhaps it is misspelled?"
+           Id.print name
       | IllTypedMetaObj (cD, cM, cPsi, mT) ->
             Format.fprintf ppf
               "Meta object %a does not have type %a."
@@ -449,8 +450,8 @@ and inferHead loc cD cPsi head cl = match head, cl with
     (* Return p's type from cD *)
     TClo (tA, s)
 
-  | FVar _, _ ->
-    raise (Error (loc, LeftoverFV))
+  | (FVar name | FMVar (name, _)), _ ->
+    raise (Error (loc, LeftoverFV name))
 
 
 and canAppear cD cPsi head sA loc=

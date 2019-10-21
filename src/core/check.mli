@@ -18,7 +18,7 @@ module LF : sig
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
     | IllTypedSub      of mctx * dctx * sub * dctx
     | SpineIllTyped    of int * int
-    | LeftoverFV
+    | LeftoverFV       of Id.name
     | ParamVarInst     of mctx * dctx * tclo
     | CtxHatMismatch  of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp

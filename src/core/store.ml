@@ -357,7 +357,6 @@ module Cid = struct
           inspectKind cid_tp (acc @ (inspect [] tA1)) tK2
 
     let add entry = begin
-      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tp =
         let store =
           try DynArray.get store (!Modules.current)
@@ -454,7 +453,6 @@ module Cid = struct
     | _ -> 0
 
     let add loc e_typ entry = begin
-      OpPragmas.addPragma entry.name Ext.Sgn.Prefix None (Some Ext.Sgn.Left) ;
       let cid_tm =
         let store =
           try DynArray.get store (!Modules.current)

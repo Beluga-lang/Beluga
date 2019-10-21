@@ -1,1 +1,5 @@
-Unbound data-level variable (ordinary or meta-variable) or constructor: z.
+Ill-typed spine.
+    Expected number of arguments:
+      1
+    Actual number of arguments:
+      2

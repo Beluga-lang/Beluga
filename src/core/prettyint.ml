@@ -1406,16 +1406,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_hypotheses ppf =
     let open Comp in
+    let comma_sep_by fmt l = pp_print_list ~pp_sep: Fmt.comma fmt l in
     fun { cD; cG; _ } ->
     fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
-      (pp_print_list
-         ~pp_sep: Fmt.comma
-         (fmt_ppr_lf_ctyp_decl cD l0))
-      (Context.to_list_rev cD)
-      (pp_print_list
-         ~pp_sep: Fmt.comma
-         (fmt_ppr_cmp_ctyp_decl cD l0))
-      (Context.to_list_rev cG);
+      (comma_sep_by (fun ppf (cD, x) -> fmt_ppr_lf_ctyp_decl cD l0 ppf x))
+      (Context.to_sublist cD)
+      (comma_sep_by (fmt_ppr_cmp_ctyp_decl cD l0))
+      (Context.to_list cG)
 
   and fmt_ppr_refinement cD cD0 lvl ppf t =
     match (t, cD0) with

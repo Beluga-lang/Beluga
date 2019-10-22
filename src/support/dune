@@ -1,2 +1,3 @@
 (library
-  (name support))
+  (name support)
+  (libraries gen))

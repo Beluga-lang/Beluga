@@ -21,6 +21,19 @@ open Debug.Fmt
 
 module Comp = B.Syntax.Int.Comp
 
+exception EndOfInput
+
+let _ =
+  B.Error.register_printer
+    begin fun EndOfInput ->
+    B.Error.print
+      begin fun ppf ->
+      Format.fprintf ppf "End of input."
+      end
+    end
+
+type input_source = string Gen.t
+
 type interpreter_state =
   { initial_state : Comp.proof_state
   (* ^ it's important to remember the initial proof state, since it
@@ -32,9 +45,11 @@ type interpreter_state =
   ; theorem_name : Id.name
   ; cid : Id.cid_prog
   ; order : Comp.order option
+  ; input_source : input_source
   }
 
 let make_prover_state
+      (input_source : input_source)
       (cid : Id.cid_prog)
       (theorem_name : Id.name)
       (order : Comp.order option)
@@ -46,6 +61,7 @@ let make_prover_state
   ; theorem_name
   ; order
   ; cid
+  ; input_source
   }
 
 (** Computes the index of the current subgoal we're working on. *)
@@ -391,11 +407,11 @@ let rec loop ppf (s : interpreter_state) tctx : unit =
      (* Show the proof state and the prompt *)
      Tactic.(tctx.printf) "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
        P.fmt_ppr_cmp_proof_state g
-       (Context.length g.Comp.context.Comp.cIH)
+       (Context.length Comp.(g.context.cIH))
        lambda;
 
      (* Parse the input and run the command *)
-     let input = read_line () in
+     let input = Maybe.get' EndOfInput (Gen.next s.input_source) in
      let e =
        let open Either in
        parse_input input
@@ -409,6 +425,7 @@ let rec loop ppf (s : interpreter_state) tctx : unit =
      loop ppf s tctx
 
 let start_toplevel
+      (src : input_source)
       (ppf : Format.formatter) (* The formatter used to display messages *)
       (name : Id.name) (* The name of the theorem to prove *)
       (stmt : Comp.tclo) (* The statement of the theorem *)
@@ -424,7 +441,7 @@ let start_toplevel
       (fun _ -> S.mk_entry name (Whnf.cnormCTyp stmt |> Total.strip) 0 true None [name])
   in
   let g = Comp.make_proof_state stmt in
-  let s = make_prover_state cid name order g in
+  let s = make_prover_state src cid name order g in
   let tctx = build_tactic_context ppf s in
   Tactic.(tctx.add_subgoal g);
   loop ppf s tctx

@@ -66,6 +66,7 @@ module Error = struct
       of string list
     | OrderTooComplicated
     | OrderDoesntMatch
+    | InvalidIncomplete
 
   exception E of t
   let throw e = raise (E e)
@@ -90,6 +91,8 @@ module Error = struct
        fprintf ppf "Induction order too complicated@."
     | OrderDoesntMatch ->
        fprintf ppf "Induction order doesn't match theorem statement.@."
+    | InvalidIncomplete ->
+       fprintf ppf "--incomplete can be specified only after --test"
 end
 
 (* Register error formatting. *)
@@ -103,13 +106,16 @@ let _ =
     | _ -> None
     end
 
+type test_kind = [ `incomplete | `complete ]
+
 (** The command-line options specified to Harpoon. *)
 type ('a, 'b, 'c, 'd, 'e) options =
-  { path : 'a
-  ; all_paths : 'b
-  ; theorem_name : 'c
-  ; theorem : 'd
-  ; order : 'e
+  { path : 'a (* the path of the signature file to load, could be a cfg *)
+  ; all_paths : 'b (* the list of paths resolved from the signature file to load *)
+  ; theorem_name : 'c (* the name of the theorem to prove *)
+  ; theorem : 'd (* the statement of the theorem to prove *)
+  ; order : 'e (* the induction order for the theorem *)
+  ; test_file : (string * test_kind) option (* the harpoon test file to load *)
   }
 
 type elaborated_options =
@@ -125,6 +131,7 @@ let initial_options : partial_options =
   ; theorem_name = None
   ; theorem = None
   ; order = None
+  ; test_file = None
   }
 
 let usage () : unit =
@@ -328,26 +335,47 @@ let rec parse_arguments options : string list -> string list * partial_options =
              (fun [order] ->
                let order = beluga_parse "--order" order B.Parser.numeric_total_order in
                { options with order = Some order }))
+     | "--test" ->
+        with_args_for "--test" 1
+          (parse_the_rest_with
+             (fun [test_path] ->
+               { options with test_file = Some (test_path, `complete) }))
+     | "--incomplete" ->
+        begin match options.test_file with
+        | None -> Error.(throw InvalidIncomplete)
+        | Some (f, k) ->
+           parse_arguments { options with test_file = Some (f, `incomplete) } rest
+        end
      | "--help" ->
         usage ();
         exit 1
      | _ ->
         rest, options
 
+let forbid_dangling_arguments = function
+  | [] -> ()
+  | rest -> Error.(throw (DanglingArguments rest))
+
 let main () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let rest, options = parse_arguments initial_options args in
-  begin match rest with
-  | [] -> ()
-  | _ ->
-     let open Error in
-     throw (DanglingArguments rest)
-  end;
-  let options =
-    options |> Validate.options |> Elab.options
+  forbid_dangling_arguments rest;
+  let options = options |> Validate.options |> Elab.options in
+  let input_source =
+    let stdin = Misc.Gen.of_in_channel_lines stdin in
+    match options.test_file with
+    | None -> stdin
+    | Some (path, k) ->
+       let h = open_in path in
+       let g = Misc.Gen.of_in_channel_lines h in
+       match k with
+       | `incomplete ->
+          Misc.Gen.sequence [g; stdin]
+       | `complete -> g
   in
   Prover.start_toplevel
+    input_source
     Format.std_formatter
     (B.Id.(mk_name (SomeString options.theorem_name)))
     (options.theorem, I.LF.MShift 0)

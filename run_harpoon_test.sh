@@ -1,19 +1,52 @@
 #!/bin/bash
 
-set -u
+set -e
 
-sig=$(sed -n '1p' "$1")
-name=$(sed -n '2p' "$1")
-thm=$(sed -n '3p' "$1")
-order=$(sed -n '4p' "$1")
+incomplete=0
 
-path="$1"
+function die() {
+    echo $@ >&2
+    exit 1
+}
+
+while (( $# )) ; do
+    case "$1" in
+        "--incomplete")
+            incomplete=1
+            ;;
+        *)
+            input_path="$1"
+            break
+            ;;
+    esac
+    shift
+done
+
+[ -z "${input_path}" ] && die "no input file specified"
+
+sig=$(sed -n '1p' "${input_path}")
+name=$(sed -n '2p' "${input_path}")
+thm=$(sed -n '3p' "${input_path}")
+order=$(sed -n '4p' "${input_path}")
+
 shift
 
+function the_rest() {
+    if [ $incomplete -eq 0 ] ; then
+        echo '/dev/null'
+    else
+        echo '-'
+    fi
+}
+
 if test -n "$order" ; then
-    tail -n+5 "${path}" |
-        bin/harpoon --sig "${sig}" --name "${name}" --theorem "${thm}" --order "${order}" --implicit $@
+    rlwrap bin/harpoon --sig "${sig}" --name "${name}" --theorem "${thm}" --order "${order}" \
+           --implicit \
+           --test <(tail -n+5 "${input_path}") \
+           $@
 else
-    tail -n+5 "${path}" |
-        bin/harpoon --sig "${sig}" --name "${name}" --theorem "${thm}" --implicit $@
+    rlwrap bin/harpoon --sig "${sig}" --name "${name}" --theorem "${thm}" \
+           --implicit \
+           --test <(tail -n+5 "${input_path}") \
+           $@
 fi

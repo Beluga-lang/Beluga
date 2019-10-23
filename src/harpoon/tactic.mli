@@ -21,6 +21,7 @@ type tactic_context =
   { add_subgoal : unit Comp.proof_state -> unit
   ; remove_subgoal : unit Comp.proof_state -> unit
   ; remove_current_subgoal : unit -> unit
+  ; replace_subgoal : Comp.proof_state -> unit
   ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
   ; defer : unit -> unit
   }
@@ -57,3 +58,9 @@ val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
     given name, in cG.
  *)
 val invoke : Command.invoke_kind -> Command.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
+
+(** A low-level tactic that replaces the current subgoal with the
+    given one, and adds some number of commands to the proof.
+    The first proof state is the new one, and the second one is the one to solve.
+ *)
+val solve_by_replacing_subgoal : Comp.proof_state -> Comp.command list -> t

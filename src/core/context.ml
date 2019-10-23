@@ -405,3 +405,19 @@ and lookupCtxVar cD cvar =
     lookup cD 0
 
 and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
+
+let rec rename src dst get_name rename_decl = function
+  | LF.Empty -> LF.Empty
+  | LF.Dec (ctx', d) when Id.equals (get_name d) src ->
+     LF.Dec (ctx', rename_decl (fun _ -> dst) d)
+  | LF.Dec (ctx', d) ->
+     let ctx' = rename src dst get_name rename_decl ctx' in
+     LF.Dec (ctx', d)
+
+(** Renames the first (from right to left) variable named `src` to
+    `dst`. *)
+let rename_mctx src dst =
+  rename src dst LF.name_of_ctyp_decl LF.rename_ctyp_decl
+
+let rename_gctx src dst =
+  rename src dst Comp.name_of_ctyp_decl Comp.rename_ctyp_decl

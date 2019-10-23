@@ -250,6 +250,9 @@ module Harpoon = struct
 
     (* Administrative commands *)
 
+    | Rename of name (* from *)
+                * name (* to *)
+                * level
     | ShowIHs
     | ShowProof
     | Defer (* Defers the current subgoal to later *)

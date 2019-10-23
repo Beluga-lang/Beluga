@@ -17,6 +17,7 @@ type tactic_context =
   { add_subgoal : unit Comp.proof_state -> unit
   ; remove_subgoal : unit Comp.proof_state -> unit
   ; remove_current_subgoal : unit -> unit
+  ; replace_subgoal : Comp.proof_state -> unit
   ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
   ; defer : unit -> unit
   }
@@ -265,16 +266,6 @@ let split (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      )
      |> solve' s
 
-(** Replaces the current subgoal with the given new_state.
-    You should then solve the old subgoal by using solve'.
- *)
-let replace_subgoal_with new_state cmd tctx =
-  tctx.remove_current_subgoal ();
-  tctx.add_subgoal new_state;
-  Comp.prepend_commands
-    [ cmd ]
-    (Comp.incomplete_proof new_state)
-
 (** Constructs a new proof state from `g` in which the meta-context is
     extended with the given declaration, and the goal type is
     appropriately shifted.
@@ -306,8 +297,9 @@ let extending_comp_context decl g =
   ; solution = None
   }
 
-let solve_by_replacing_subgoal g' cmd g tctx =
-  replace_subgoal_with g' cmd tctx |> solve' g
+let solve_by_replacing_subgoal g' cmds g tctx =
+  tctx.replace_subgoal g';
+  Comp.(prepend_commands cmds (incomplete_proof g')) |> solve' g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the meta context with a new declaration.
@@ -331,7 +323,7 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
   let {cD; cG; cIH} = g.context in
   match tau with
   | TypBox (_, cT) ->
-     solve_by_unbox' (mk_cmd cT) cT name g tctx
+     solve_by_unbox' [mk_cmd cT] cT name g tctx
   | _ ->
      tctx.printf "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
        (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
@@ -346,6 +338,6 @@ let invoke (k : Command.invoke_kind) (b : Command.boxity) (m : Comp.exp_syn) (ta
   let cmd = By (k, m, name, tau, b) in
   match b with
   | `boxed ->
-     solve_with_new_comp_decl (CTypDecl (name, tau, false)) cmd
+     solve_with_new_comp_decl (CTypDecl (name, tau, false)) [cmd]
   | `unboxed ->
      solve_by_unbox m (fun _ -> cmd) tau name

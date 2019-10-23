@@ -77,3 +77,6 @@ val lookup : Comp.gctx -> int -> Comp.typ option
 val lookupSchema : mctx -> int -> Id.cid_schema
 val lookupCtxVar : mctx -> ctx_var -> Id.name * Id.cid_schema
 val lookupCtxVarSchema : mctx -> ctx_var -> Id.cid_schema
+
+val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx
+val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx

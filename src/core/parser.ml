@@ -2774,6 +2774,17 @@ let harpoon_command =
     &> seq2 automation_kind (maybe_default automation_change `toggle)
     $> fun (t, c) -> H.ToggleAutomation (t, c)
   in
+  let level =
+    choice
+      [ keyword "comp" &> pure `comp
+      ; keyword "meta" &> pure `meta
+      ]
+  in
+  let rename =
+    keyword "rename"
+    &> seq3 level name name
+    $> fun (level, x_src, x_dst) -> H.Rename (x_src, x_dst, level)
+  in
   let trivial_command =
     [ "show-proof", H.ShowProof
     ; "show-ihs", H.ShowIHs
@@ -2790,5 +2801,6 @@ let harpoon_command =
       :: by
       :: unbox
       :: toggle_automation
+      :: rename
       :: trivial_command
     )

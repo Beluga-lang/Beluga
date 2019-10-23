@@ -172,7 +172,12 @@ module LF = struct
 
   and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
+
   let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
+
+  let rename_ctyp_decl f = function
+    | Decl (x, tA, ind) -> Decl (f x, tA, ind)
+    | DeclOpt x -> DeclOpt (f x)
 
   (**********************)
   (* Type Abbreviations *)
@@ -327,6 +332,11 @@ module Comp = struct
     | WfRec of name * arg list * typ
     | CTypDecl    of name * typ * wf_tag
     | CTypDeclOpt of name
+
+  let rename_ctyp_decl f = function
+    | WfRec (x, args, tau) -> WfRec (f x, args, tau)
+    | CTypDecl (x, tau, tag) -> CTypDecl (f x, tau, tag)
+    | CTypDeclOpt x -> CTypDeclOpt (f x)
 
   type gctx = ctyp_decl LF.ctx
 

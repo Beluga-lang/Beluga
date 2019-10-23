@@ -61,6 +61,26 @@ let next_subgoal (s : interpreter_state) : unit Comp.proof_state option =
   else
     Some (DynArray.get gs (current_subgoal_index gs))
 
+let rename src dst level g tctx =
+  let open Comp in
+  let g' =
+    { g with
+      context =
+        begin match level with
+        | `comp ->
+           { g.context with
+             cG = Context.rename_gctx src dst g.context.cG
+           }
+        | `meta ->
+           { g.context with
+             cD = Context.rename_mctx src dst g.context.cD
+           }
+        end
+    ; solution = None
+    }
+  in
+  Tactic.solve_by_replacing_subgoal g' [] g tctx
+
 let show_proof s tctx =
   let open Comp in
   (* This is a trick to print out the proof resulting from
@@ -179,6 +199,8 @@ let process_command
   (* Administrative commands: *)
   | Command.ShowProof ->
      show_proof s tctx
+  | Command.Rename (x_src, x_dst, level) ->
+     rename x_src x_dst level g tctx
   | Command.Defer ->
      (* Remove the current subgoal from the list (it's in head position)
       * and then add it back (on the end of the list) *)
@@ -309,9 +331,13 @@ let build_tactic_context ppf s =
     { add_subgoal
     ; remove_subgoal
     ; remove_current_subgoal
+    ; replace_subgoal
     ; printf
     ; defer
     }
+  and replace_subgoal g =
+    remove_current_subgoal ();
+    add_subgoal g
   and add_subgoal g =
     (*
       dprintf

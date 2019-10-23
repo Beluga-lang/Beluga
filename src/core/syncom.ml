@@ -31,4 +31,9 @@ module Harpoon = struct
     [ `boxed
     | `unboxed
     ]
+
+  type level =
+    [ `meta
+    | `comp
+    ]
 end

@@ -227,11 +227,6 @@ end
 module Harpoon = struct
   include Syncom.Harpoon
 
-  type split_kind =
-    [ `split
-    | `invert
-    ]
-
   type automation_change =
     [ `on
     | `off
@@ -251,7 +246,7 @@ module Harpoon = struct
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
     | Unbox of Comp.exp_syn * Id.name
-    | By of invoke_kind * Comp.exp_syn * Id.name
+    | By of invoke_kind * Comp.exp_syn * Id.name * boxity
 
     (* Administrative commands *)
 

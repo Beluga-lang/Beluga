@@ -218,7 +218,7 @@ let process_command
   | Command.Split (split_kind, t) ->
      let (hs, m, tau) = elaborate_exp' cIH cD cG t in
      Tactic.split split_kind m tau mfs g tctx
-  | Command.By (k, t, name) ->
+  | Command.By (k, t, name, b) ->
      let (hs, m, tau) = elaborate_exp' cIH cD cG t in
      dprintf
        begin fun p ->
@@ -229,7 +229,7 @@ let process_command
      List.iter solve_hole hs;
      (* validate the invocation and call the suspension if it passes. *)
      check_invocation k cD cG m
-       (fun () -> Tactic.invoke k m tau name g tctx);
+       (fun () -> Tactic.invoke k b m tau name g tctx);
 
   | Command.Solve m ->
      let (hs, m) = elaborate_exp cIH cD cG m g.goal in

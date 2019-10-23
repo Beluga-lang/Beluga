@@ -21,4 +21,14 @@ module Harpoon = struct
     [ `ih
     | `lemma
     ]
+
+  type split_kind =
+    [ `split
+    | `invert
+    ]
+
+  type boxity =
+    [ `boxed
+    | `unboxed
+    ]
 end

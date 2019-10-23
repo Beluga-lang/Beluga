@@ -1343,13 +1343,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | `lemma -> fprintf ppf "lemma"
     in
     function
-    | By (k, t, name, tau), proof ->
-       let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
-       fprintf ppf "@[<hv>by %a (@[%a@])@ as %a@];@,%a"
-         print_invoke_kind k
-         (fmt_ppr_cmp_exp_syn cD cG l0) t
-         Id.print name
-         (fmt_ppr_cmp_proof cD cG') proof
+    | By (k, t, name, tau, b), proof ->
+       begin match b, tau with
+       | `boxed, _ ->
+          let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
+          fprintf ppf "@[<hv>by %a @[%a@]@ as %a@];@,%a"
+            print_invoke_kind k
+            (fmt_ppr_cmp_exp_syn cD cG l0) t
+            Id.print name
+            (fmt_ppr_cmp_proof cD cG') proof
+       | `unboxed, TypBox (_, cT) ->
+          let cD' = LF.(Dec (cD, Decl (name, cT, No))) in
+          fprintf ppf "@[<hv>by %a @[%a@]@ as %a unboxed@];@,%a"
+            print_invoke_kind k
+            (fmt_ppr_cmp_exp_syn cD cG l0) t
+            Id.print name
+            (fmt_ppr_cmp_proof cD' cG) proof
+       end
     | Unbox (i, name, mT), proof ->
        let cD' = LF.Dec (cD, LF.Decl (name, mT, LF.Maybe)) in
        fprintf ppf "@[<hv 2>unbox@ (@[%a@])@ as @[%a@]@];@,%a"

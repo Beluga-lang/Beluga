@@ -758,12 +758,9 @@ let maybe (p : 'a parser) : 'a option parser =
   shifted "optionally"
     (alt (p $> Maybe.pure) (pure None))
 
-(** Tries a parser, and if it fails uses the given default value. *)
-let maybe_default (p : 'a parser) x : 'a parser =
-  maybe p $>
-    function
-    | None -> x
-    | Some x -> x
+(** Tries a parser, and if it fails uses a default value. *)
+let maybe_default (p : 'a parser) (x : 'a) : 'a parser =
+  maybe p $> Maybe.get_default x
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
@@ -2737,13 +2734,20 @@ let harpoon_command =
       (keyword "ih" &> pure `ih)
       (keyword "lemma" &> pure `lemma)
   in
+  let boxity =
+    choice
+      [ keyword "boxed" &> pure `boxed
+      ; keyword "unboxed" &> pure `unboxed
+      ]
+  in
   let by =
     keyword "by" &>
-    seq3
+    seq4
       invoke_kind
       (parens cmp_exp_syn)
       (keyword "as" &> name)
-    $> fun (k, t, name) -> H.By (k, t, name)
+      (maybe_default boxity `boxed)
+    $> fun (k, t, name, b) -> H.By (k, t, name, b)
   in
   let unbox =
     keyword "unbox" &>

@@ -4,6 +4,7 @@ module Comp = Beluga.Syntax.Int.Comp
 module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
+module Whnf = B.Whnf
 
 module P = B.Pretty.Int.DefaultPrinter
 
@@ -264,57 +265,87 @@ let split (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      )
      |> solve' s
 
-let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
+(** Replaces the current subgoal with the given new_state.
+    You should then solve the old subgoal by using solve'.
+ *)
+let replace_subgoal_with new_state cmd tctx =
+  tctx.remove_current_subgoal ();
+  tctx.add_subgoal new_state;
+  Comp.prepend_commands
+    [ cmd ]
+    (Comp.incomplete_proof new_state)
+
+(** Constructs a new proof state from `g` in which the meta-context is
+    extended with the given declaration, and the goal type is
+    appropriately shifted.
+    The solution field of the new proof state will be empty.
+ *)
+let extending_meta_context decl g =
+  let open Comp in
+  (* Because we are adding a new declaration to cD, the goal type
+     no longer makes sense in the new context. We need to weaken it
+     by one.
+   *)
+  let shift = LF.MShift 1 in
+  { context =
+      { cD = LF.(Dec (g.context.cD, decl))
+      ; cG = Whnf.cnormCtx (g.context.cG, shift)
+      ; cIH = Whnf.cnormCtx (g.context.cIH, shift)
+      }
+  ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
+  ; solution = None
+  }
+
+let extending_comp_context decl g =
+  let open Comp in
+  { g with
+    context =
+      { g.context with
+        cG = LF.Dec (g.context.cG, decl)
+      }
+  ; solution = None
+  }
+
+let solve_by_replacing_subgoal g' cmd g tctx =
+  replace_subgoal_with g' cmd tctx |> solve' g
+
+(** Solves the current subgoal by keeping it the same, but extending
+    the meta context with a new declaration.
+    This will appropriately MShift the goal type.
+ *)
+let solve_with_new_meta_decl decl cmd g tctx =
+  solve_by_replacing_subgoal (extending_meta_context decl g) cmd g tctx
+
+(** Solves the current subgoal by keeping it the same, but extending
+    the computational context with a new declaration.
+ *)
+let solve_with_new_comp_decl decl cmd g tctx =
+  solve_by_replacing_subgoal (extending_comp_context decl g) cmd g tctx
+
+let solve_by_unbox' cmd (cT : Comp.meta_typ) (name : B.Id.name) : t =
+  solve_with_new_meta_decl LF.(Decl (name, cT, No)) cmd
+
+let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
   fun g tctx ->
   let {cD; cG; cIH} = g.context in
   match tau with
   | TypBox (_, cT) ->
-     let open B in
-     (* Because we are adding a new declaration to cD, the goal type
-        no longer makes sense in the new context. We need to weaken it
-        by one.
-      *)
-     let shift = LF.MShift 1 in
-     let new_state =
-       { context =
-           { cD = LF.(Dec (cD, Decl (name, cT, No)))
-           ; cG = Whnf.cnormCtx (cG, shift)
-           ; cIH = Whnf.cnormCtx (cIH, shift)
-           }
-       ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
-       ; solution = None
-       }
-     in
-     tctx.remove_current_subgoal ();
-     tctx.add_subgoal new_state;
-     prepend_commands
-       [ Unbox (m, name, cT) ]
-       (Comp.incomplete_proof new_state)
-     |> solve' g
+     solve_by_unbox' (mk_cmd cT) cT name g tctx
   | _ ->
-     tctx.printf "@[<v>The expression@,  %a@, cannot be unboxed as its type@,  %a@, is not a box.@]"
+     tctx.printf "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
        (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
        (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let solve_with_new_decl decl cmd g tctx =
+let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
-  let new_state =
-    { g with
-      context =
-        { g.context with
-          cG = LF.Dec ( g.context.cG , decl)
-        }
-    ; solution = None
-    }
-  in
-  tctx.remove_current_subgoal ();
-  tctx.add_subgoal new_state;
-  prepend_commands
-    [ cmd ]
-    (Comp.incomplete_proof new_state)
-  |> solve' g
+  solve_by_unbox m (fun cT -> Unbox (m, name, cT)) tau name
 
-let invoke (k : Command.invoke_kind) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+let invoke (k : Command.invoke_kind) (b : Command.boxity) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in
-  solve_with_new_decl (CTypDecl (name, tau, false)) (Comp.By (k, m, name, tau))
+  let cmd = By (k, m, name, tau, b) in
+  match b with
+  | `boxed ->
+     solve_with_new_comp_decl (CTypDecl (name, tau, false)) cmd
+  | `unboxed ->
+     solve_by_unbox m (fun _ -> cmd) tau name

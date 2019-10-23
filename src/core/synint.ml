@@ -3,7 +3,6 @@ open Support
 
 open Id
 open Pragma
-open Support
 
 module Loc = Location
 
@@ -466,7 +465,7 @@ module Comp = struct
     | Directive of 'a directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | By of invoke_kind * exp_syn * name * typ
+    | By of invoke_kind * exp_syn * name * typ * boxity
     | Unbox of exp_syn * name * LF.ctyp
 
   and 'a proof_state =

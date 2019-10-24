@@ -1308,6 +1308,10 @@ let rec collectExp cQ e = match e with
 
   | Comp.Hole (loc, id, name) -> (cQ, Comp.Hole (loc, id, name))
 
+  | Comp.Impossible (loc, i) ->
+     let (cQ', i') = collectExp' cQ i in
+     (cQ', Comp.Impossible (loc, i))
+
 and collectExp' cQ i = match i with
   | Comp.Var (_, _x) -> (cQ , i)
   | Comp.DataConst (_, _c) ->  (cQ , i)
@@ -1338,9 +1342,6 @@ and collectExp' cQ i = match i with
 
 
 and collectPatObj cQ pat = match pat with
-  | Comp.PatEmpty (loc, cPsi) ->
-      let (cQ1, cPsi') = collectDctx loc 0 cQ (Context.dctxToHat cPsi) cPsi in
-        (cQ1, Comp.PatEmpty (loc, cPsi'))
   | Comp.PatFVar (loc, x) -> (cQ, pat)
   | Comp.PatVar  (loc, x) -> (cQ, pat)
   | Comp.PatPair (loc, pat1, pat2) ->
@@ -1396,8 +1397,6 @@ and collectBranch cQ branch = match branch with
       (* cG, cD, and pat cannot contain any free meta-variables *)
       let (cQ', e') = collectExp cQ e in
         (cQ', Comp.Branch (loc, cD, cG, pat, msub, e'))
-  | Comp.EmptyBranch _  ->
-        (cQ, branch)
 
 and collectBranches cQ branches = match branches with
   | [] -> (cQ, [])
@@ -1462,9 +1461,6 @@ let rec abstractMVarGctx cQ offset cG = match cG with
         I.Dec (cG', Comp.CTypDecl (x, tau', flag))
 
 let rec abstractMVarPatObj cQ cG offset pat = match pat with
-  | Comp.PatEmpty (loc, cPsi) ->
-      let cPsi' = abstractMVarDctx cQ offset cPsi in
-        Comp.PatEmpty (loc, cPsi')
   | Comp.PatVar (_loc,_x) -> pat
   | Comp.PatFVar (loc,x) -> pat
 

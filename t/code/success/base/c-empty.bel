@@ -10,17 +10,12 @@ succ : nat -> nat.
 
 rec empty-example : [ |- constructorless] -> [ |- nat] =
 / total c (empty-example c)/
-  fn c =>
-    case c of
-%       impossible c in []
-      [ |- {}]
+  fn c => impossible c
 ;
 
 schema nats = nat;
 
 rec empty-example-2 : (g:nats) [g |- constructorless] -> [ |- nat] =
 / total c (empty-example-2 g c)/
-  fn c =>
-    case c of
-      [g |- {}]
+  fn c => impossible c
 ;

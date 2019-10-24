@@ -1999,9 +1999,9 @@ let nested (type a) (p : a parser) (g : a locd -> a) (f : a locd -> a locd -> a)
     input.
  *)
 let case_pragma =
-  alt
-    (pragma "not" &> pure Pragma.PragmaNotCase)
-    (pure Pragma.RegularCase)
+  maybe_default
+    (pragma "not" &> pure Comp.PragmaNotCase)
+    Comp.PragmaCase
 
 (** Parses a checkable computation term *)
 let rec cmp_exp_chk =
@@ -2024,13 +2024,11 @@ and cmp_branch =
         seq3
           (ctyp_decls false)
           cmp_pattern
-          (maybe (token T.THICK_ARROW &> cmp_exp_chk))
+          (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
         |> labelled "case branch"
-        $> fun (loc, (ctyp_decls, pat, rest)) ->
-           match rest with
-           | Some e -> Comp.Branch (loc, ctyp_decls, pat, e)
-           | None -> Comp.EmptyBranch (loc, ctyp_decls, pat)
+        $> fun (loc, (ctyp_decls, pat, rhs)) ->
+           Comp.Branch (loc, ctyp_decls, pat, rhs)
       in
       p.run s
   }
@@ -2106,17 +2104,6 @@ and cmp_pattern_atomic =
     i.e. a checkable term *except* for applications.
  *)
 and cmp_exp_chk' =
-  let empty_pat (loc, pHat) =
-    Comp.PatMetaObj
-      ( loc
-      , ( loc
-        , Comp.ClObj
-            ( pHat
-            , (LF.EmptySub loc, [LF.PatEmpty loc])
-            )
-        )
-      )
-  in
   { run =
       fun s ->
       let abstraction param c =
@@ -2169,24 +2156,10 @@ and cmp_exp_chk' =
            Comp.Case (loc, prag, i, bs)
       in
       let impossible =
-        token T.KW_IMPOSSIBLE &>
-          seq2
-            cmp_exp_syn
-            (maybe
-               (token T.KW_IN &>
-                  seq2 (ctyp_decls false) (bracks clf_dctx)))
+        token T.KW_IMPOSSIBLE
+        &> cmp_exp_syn
         |> span
-        $> fun (loc, (i, cd)) ->
-           Comp.Case
-             ( loc
-             , Pragma.RegularCase
-             , i
-             , [ match cd with
-                 | None -> Comp.EmptyBranch (loc, LF.Empty, empty_pat (loc, LF.Null))
-                 | Some (ctyp_decls, pHat) ->
-                    Comp.EmptyBranch (loc, ctyp_decls, empty_pat (loc, pHat))
-               ]
-             )
+        $> fun (loc, i) -> Comp.Impossible (loc, i)
       in
       let lets =
         let let_pattern =
@@ -2198,7 +2171,7 @@ and cmp_exp_chk' =
           |> span
           $> fun (loc, (ctyp_decls, pat, i, e)) ->
              let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
-             Comp.Case (loc, Pragma.RegularCase, i, [branch])
+             Comp.(Case (loc, PragmaCase, i, [branch]))
         in
         token T.KW_LET
         (* XXX

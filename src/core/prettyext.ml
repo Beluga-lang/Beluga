@@ -732,7 +732,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_meta_obj  cD 0) m
 
 
-    | Comp.Case (_, Pragma.RegularCase, i, [b]) ->
+    | Comp.(Case (_, PragmaCase, i, [b])) ->
        begin match b with
        | Comp.Branch(_, cD', Comp.PatMetaObj(_, m0), e) ->
           fprintf ppf "@[<0>%s %a %a =@ %a %s@ @]%a"
@@ -750,19 +750,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
             (fmt_ppr_cmp_exp_syn cD' 0) i
             (to_html "in" Keyword)
             (fmt_ppr_cmp_exp_chk cD' 0) e
-       | Comp.EmptyBranch(_, _, _) ->
-          fprintf ppf "%s %a"
-            (to_html "impossible" Keyword)
-            (fmt_ppr_cmp_exp_syn cD 0) i
        end
 
     | Comp.Case (_, prag, i, bs) ->
+       let open Comp in
        fprintf ppf "%s %a %s %s%a"
          (to_html "case" Keyword)
          (fmt_ppr_cmp_exp_syn cD 0) i
          (to_html "of" Keyword)
-         (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> (to_html " %not " Keyword))
-         (fmt_ppr_cmp_branches cD 0) bs
+         (match prag with PragmaCase -> "" | PragmaNotCase -> (to_html " %not " Keyword))
+         (fmt_ppr_cmp_branches LF.Empty 0) bs
 
     | Comp.Hole (_) -> fprintf ppf " ? "
 
@@ -838,11 +835,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | None ->fprintf ppf "@[{}@]"
 
   and fmt_ppr_cmp_branch cD _lvl ppf = function
-    | Comp.EmptyBranch (_, cD1, pat) ->
-       fprintf ppf "@\n@[<hov2>| @[%a[%a]@]@]"
-         (fmt_ppr_cmp_branch_prefix  0) cD1
-         (fmt_ppr_pat_obj cD1 0) pat
-
     | Comp.Branch (_, cD1', Comp.PatMetaObj (_, mO), e) ->
        fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v>%a@]@]"
          (fmt_ppr_cmp_branch_prefix  0) cD1'

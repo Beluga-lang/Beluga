@@ -83,9 +83,9 @@ not_possible : type.
 rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- not_possible]=
 / total v (values_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_true]    => impossible s in []
-| [ |- v_false]   => impossible s in []
-| [ |- v_z ]      => impossible s in []
+| [ |- v_true]    => impossible s
+| [ |- v_false]   => impossible s
+| [ |- v_z ]      => impossible s
 | [ |- v_s V] =>
   let [ |- e_succ D] = s in values_dont_step [ |- D] [ |- V]
 ;
@@ -97,20 +97,20 @@ fn s1 => fn s2 => case s1 of
 | [ |- e_switch_true] =>
   (case s2 of
    | [|- e_switch_true]  =>  [ |- ref]
-   | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_true] in []
+   | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_true]
 )
 | [ |- e_switch_false] =>
   (case s2 of
    | [|- e_switch_false] =>  [ |- ref]
-   | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_false] in []
+   | [|- e_switch D]      => impossible values_dont_step [|- D] [|- v_false]
 )
 
 | [ |- e_switch D] =>
   (case s2 of
   | [|- e_switch E] =>
     let [ |- ref] = det [|- D] [|- E] in  [ |- ref]
-  | [|- e_switch_true] => impossible values_dont_step [|- D] [|- v_true] in []
-  | [|- e_switch_false] => impossible values_dont_step [|- D] [|- v_false] in [])
+  | [|- e_switch_true] => impossible values_dont_step [|- D] [|- v_true]
+  | [|- e_switch_false] => impossible values_dont_step [|- D] [|- v_false])
 
 | [ |- e_succ D] =>
   (case s2 of
@@ -119,34 +119,34 @@ fn s1 => fn s2 => case s1 of
 | [ |- e_pred_zero] =>
   (case s2 of
   | [|- e_pred_zero] =>  [|- ref]
-  | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_z] in [])
+  | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_z])
 
 | [ |- e_pred_succ V] =>
   (case s2 of
   | [|- e_pred_succ V'] =>  [|- ref]
-  | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_s V] in [])
+  | [|- e_pred D] => impossible values_dont_step [|- D] [|- v_s V])
 
 | [ |- e_pred D] =>
   (case s2 of
    | [|- e_pred F]   => let [ |- ref] = det [ |- D] [|- F] in [|- ref]
-   | [|- e_pred_zero] => impossible values_dont_step [|- D] [|- v_z] in []
-   | [|- e_pred_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])
+   | [|- e_pred_zero] => impossible values_dont_step [|- D] [|- v_z]
+   | [|- e_pred_succ V] => impossible values_dont_step [|- D] [|- v_s V])
 
 | [ |- e_iszero_zero] =>
   (case s2 of
    | [|- e_iszero_zero] =>  [|- ref]
-   | [|- e_iszero D]    => impossible values_dont_step [|- D] [|- v_z] in [])
+   | [|- e_iszero D]    => impossible values_dont_step [|- D] [|- v_z])
 
 | [ |- e_iszero_succ V] =>
   (case s2 of
   | [|- e_iszero_succ V']  =>  [ |- ref]
-  | [|- e_iszero D]        => impossible values_dont_step [|- D] [|- v_s V] in [])
+  | [|- e_iszero D]        => impossible values_dont_step [|- D] [|- v_s V])
 
 | [ |- e_iszero D] =>
   (case s2 of
   | [|- e_iszero F]     => let [ |- ref] = det [|- D] [|- F] in  [|- ref]
-  | [|- e_iszero_zero]  => impossible values_dont_step [|- D] [|- v_z] in []
-  | [|- e_iszero_succ V] => impossible values_dont_step [|- D] [|- v_s V] in [])
+  | [|- e_iszero_zero]  => impossible values_dont_step [|- D] [|- v_z]
+  | [|- e_iszero_succ V] => impossible values_dont_step [|- D] [|- v_s V])
 ;
 
 

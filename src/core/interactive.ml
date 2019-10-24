@@ -101,7 +101,7 @@ let branchCovGoals i cG0 cgs =
   List.map f cgs
 
 let matchFromPatterns l e bl =
-   Comp.Case(l, Pragma.RegularCase, e, bl)
+   Comp.(Case(l, PragmaCase, e, bl))
 
 let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
@@ -152,14 +152,6 @@ and mapHoleBranch f = function
   | Branch (l, cD, cG, p, mS, ec) ->
       let ec' =  mapHoleChk f ec  in
       Branch (l, cD, cG, p, mS, ec')
-  | e -> e
-(*   %% deprecated
-| BranchSBox (l, cD1, cD2, cG, ec) ->
-     let ec' =  mapHoleChk f ec in
-     BranchSBox (l, cD1, cD2, cG, ec')
-  | BranchBox (l, cD, (cPsi, NormalPattern( n, ec), ms, tA)) ->
-     let ec' =  mapHoleChk f ec in
-     BranchBox (l, cD, (cPsi, NormalPattern (n, ec'), ms, tA)) *)
 
 (*********************)
 (* top level tactics *)

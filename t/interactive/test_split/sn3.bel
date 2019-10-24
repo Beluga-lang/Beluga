@@ -127,12 +127,12 @@ case [g |- N] of
 ;
 %:split 1 M
 
-case [g, z26 |- M] of
-| [g, y27 |- #p3[ ..]] => ?
-| [g, x27 |- x27] => ?
+case [g, x26 |- M] of
+| [g, z26 |- #p3[ ..]] => ?
+| [g, y27 |- y27] => ?
 
-| [g, z27 |- abs (\x1. M9)] => ?
-| [g, y28 |- app M7 M8] => ?
+| [g, x27 |- abs (\x1. M9)] => ?
+| [g, z27 |- app M7 M8] => ?
 ;
 %:split 1 g
  case [g] of

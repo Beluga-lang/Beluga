@@ -577,10 +577,6 @@ struct
 
   and sexp_pat_obj cD cG ppf =
     function
-      | Comp.PatEmpty (_, cPsi) ->
-        fprintf ppf "(PatEmpty %a)"
-          (sexp_lf_dctx cD) cPsi
-
       | Comp.PatMetaObj (_, mO) ->
         fprintf ppf "(PatMetaObj %a)"
           (sexp_meta_obj cD) mO
@@ -649,10 +645,11 @@ struct
         (sexp_meta_obj cD) cM
 
     | Comp.Case (_, prag, i, bs) ->
-      fprintf ppf "(Case %a%s%a)"
-        (sexp_cmp_exp_syn cD cG) i
-        (match prag with Pragma.RegularCase -> " " | Pragma.PragmaNotCase -> " PragmaNot ")
-        (sexp_cmp_branches cD cG) bs
+       let open Comp in
+       fprintf ppf "(Case %a%s%a)"
+         (sexp_cmp_exp_syn cD cG) i
+         (match prag with PragmaCase -> " " | PragmaNotCase -> " PragmaNot ")
+         (sexp_cmp_branches cD cG) bs
 
     | Comp.Hole (_, _, name_opt) ->
        let name =
@@ -761,12 +758,6 @@ struct
 
   and sexp_cmp_branch cD cG ppf =
     function
-    | Comp.EmptyBranch (_, cD1, pat, t) ->
-      fprintf ppf "(EmptyBranch %a %a %a)"
-          sexp_cmp_branch_prefix cD1
-          (sexp_pat_obj cD1 LF.Empty) pat
-          (sexp_refinement cD1 cD) t
-
     | Comp.Branch (_, cD1', cG', pat, t, e) ->
       let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
       let cG_ext = Context.append cG_t cG' in

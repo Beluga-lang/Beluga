@@ -926,9 +926,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       dropSpineLeft ms ia
     in
     function
-    | Comp.PatEmpty (_, cPsi) ->
-       fprintf ppf "[%a |- {}]"
-         (fmt_ppr_lf_dctx cD 0) cPsi
     | Comp.PatMetaObj (_, mO) ->
        let cond = lvl > 1 in
        fprintf ppf "%s%a%s"
@@ -1037,27 +1034,31 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_meta_obj cD 0) cM
          (r_paren_if cond)
 
+    | Comp.Impossible (_, i) ->
+       fprintf ppf "impossible @[%a@]"
+         (fmt_ppr_cmp_exp_syn cD cG 0) i
+
     | Comp.Case (_, prag, i, ([] as bs)) ->
        let cond = lvl > 0 in
        if !Printer.Control.printNormal then
          fprintf ppf "impossible %a"
            (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
        else
+         let open Comp in
          fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
            (l_paren_if cond)
            (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-           (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
+           (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
            (fmt_ppr_cmp_branches cD cG 0) bs
            (r_paren_if cond)
 
-
-
     | Comp.Case (_, prag, i, bs) ->
+       let open Comp in
        let cond = lvl > 0 in
        fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
-         (match prag with Pragma.RegularCase -> "" | Pragma.PragmaNotCase -> " --not")
+         (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
          (fmt_ppr_cmp_branches cD cG 0) bs
          (r_paren_if cond)
 
@@ -1232,17 +1233,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
 
   and fmt_ppr_cmp_branch cD cG _lvl ppf = function
-    | Comp.EmptyBranch (_, cD1, pat, t) ->
-       if !Printer.Control.printNormal then
-         fprintf ppf "@ @[<v2>| @[%a @] @]@ "
-           (fmt_ppr_cmp_pattern cD1 LF.Empty 0) pat
-       else
-         fprintf ppf "@ @[<v2>| @[<v0>%a@[ %a : %a  @]  @] @]@ "
-           (fmt_ppr_cmp_branch_prefix  0) cD1
-           (fmt_ppr_cmp_pattern cD1 LF.Empty 0) pat
-           (fmt_ppr_refinement cD1 cD 2) t
-
-
     | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
        if !Printer.Control.printNormal then
          (match e with

@@ -284,6 +284,10 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
       let m'     = cnormApxMetaObj cD delta m (cD'', t) in
       Apx.Comp.Box (loc, m')
 
+  | Apx.Comp.Impossible (loc, i) ->
+     let i' = cnormApxExp' cD delta i (cD'', t) in
+     Apx.Comp.Impossible (loc, i')
+
   | Apx.Comp.Case (loc, prag, i, branch) ->
       let _  = dprint (fun () -> "[cnormApxExp] Case Scrutinee ... ") in
       dprintf
@@ -374,9 +378,6 @@ and cnormApxBranch cD delta b (cD'', t) =
           let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
                                                            mvar_dot_apx t delta') in
             Apx.Comp.Branch (loc, omega, delta', pat, e')
-
-
-      | Apx.Comp.EmptyBranch (loc, delta', Apx.Comp.PatEmpty _ ) -> b
 
 and cnormApxFBranches cD delta fbr (cD'', t) = match fbr with
   | Apx.Comp.NilFBranch loc -> fbr
@@ -555,8 +556,6 @@ let rec collectApxCompTyp fMVd tau = match tau with
       collectApxMetaSpine fMVd mS
 
 let rec collectApxPattern fMVd pat = match pat with
-  | Apx.Comp.PatEmpty (_ , cPsi) ->
-      collectApxDCtx fMVd cPsi
   | Apx.Comp.PatMetaObj (loc, mO) ->
       collectApxMetaObj fMVd mO
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
@@ -790,6 +789,9 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
       let m' = fmvApxMetaObj fMVs cD d_param  m in
       Apx.Comp.Box (loc, m')
 
+  | Apx.Comp.Impossible (loc, i) ->
+     Apx.Comp.Impossible (loc, fmvApxExp' fMVs cD d_param i)
+
   | Apx.Comp.Case (loc, prag, i, branch) ->
       Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param  i,
                           fmvApxBranches fMVs cD d_param  branch)
@@ -838,7 +840,6 @@ and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match br
 
 and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
    match b with
-     | Apx.Comp.EmptyBranch (loc, delta, Apx.Comp.PatEmpty _ ) -> b
      | Apx.Comp.Branch (loc, omega, delta, Apx.Comp.PatMetaObj (loc', mO), e) ->
           let fMVd  = collectApxMCtx [] delta in
           let fMVb = collectApxMetaObj fMVd mO in

@@ -31,7 +31,6 @@ type error =
   | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
   | MissingMetaObj
   | TooManyMetaObj
-  | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
   | TypeAbbrev         of Id.name
   | PatternMobj
   | PatAnn
@@ -61,23 +60,16 @@ let _ = Error.register_printer
           Format.fprintf ppf
             "Type definition %s cannot contain any free meta-variables in its type."
             (Id.render_name a)
-        | CompTypEmpty (cD, (tau, theta)) ->
-          Format.fprintf ppf
-           "Coverage cannot determine whether a computation-level type %a is empty;@.\
-            currently, we only attempt to show LF-level types to be empty, if this can be done trivially.@\
-            Try splitting further.\n"
-            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,theta))
-
         | ValueRestriction (cD, cG, i, theta_tau) ->
           Format.fprintf ppf
-            "value restriction [pattern matching]@.\
-             @ @ expected: closed boxed type@.\
-             @ @ inferred: %a@.\
-             @ @ for expression: %a@.\
-             @ @ in context:@.    %s"
+            "@[<v 2>value restriction [pattern matching]@,\
+             expected: closed boxed type@,\
+             inferred: @[%a@]@,\
+             for expression:@ @[%a@]@,\
+             in context:   @[%a@]@]"
             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
             (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-            "[no comp-level context printing yet]" (* TODO print context? *)
+            (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
         | IllegalCase (cD, cG, i, theta_tau) ->
           Format.fprintf ppf
@@ -523,43 +515,6 @@ let elClObj cD loc cPsi' clobj mtyp =
      let m = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
      Int.LF.MObj m
 
-     (*
-  (* disambiguation for when a parameter variable can't be
-     distinguished from a substitution variable.
-     If we try to elaborate a substitution variable against
-     something other than a substitution type parameter type, then we
-     recast the substitution variable as a parameter variable and
-     elaborate as such.
-   *)
-  | Apx.LF.SVar (cvar, s)
-  , Int.LF.MTyp tA ->
-     let tM = Apx.LF.Root (Loc.ghost, Apx.LF.PVar (cvar, s), Apx.LF.Nil) in
-     let m = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id) in
-     Int.LF.MObj m
-
-  (* because the LF syntax is used for both terms and patterns, we may
-     encounter a free substitution variable, which needs to be
-     rewritten into a free parameter variable.
-   *)
-  | Apx.LF.FSVar (name, s)
-  , Int.LF.PTyp tA ->
-     let tM = Apx.LF.Root (Loc.ghost, Apx.LF.FPVar (name, s), Apx.LF.Nil) in
-     let Int.LF.Root (_, h, _) = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id) in
-     Int.LF.PObj h
-  | Apx.LF.FSVar (name, s)
-  , Int.LF.MTyp tA ->
-     let tM = Apx.LF.Root (Loc.ghost, Apx.LF.FPVar (name, s), Apx.LF.Nil) in
-     let m = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id) in
-     Int.LF.MObj m
-
-  (* same idea, in case the target type is a parameter type *)
-  | Apx.LF.SVar (cvar, s)
-  , Int.LF.PTyp tA ->
-     let tM = Apx.LF.Root (Loc.ghost, Apx.LF.PVar (cvar, s), Apx.LF.Nil) in
-     let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id) in
-     Int.LF.PObj h
-      *)
-
   | _, _ ->
      let x = match mtyp with
        | Int.LF.PTyp _  -> true
@@ -567,30 +522,6 @@ let elClObj cD loc cPsi' clobj mtyp =
      in
      dprintf (fun p -> p.fmt "[elClObj] failure. Is ptyp? %b" x);
      throw loc (MetaObjectClash (cD, Int.LF.ClTyp (mtyp, cPsi')))
-
-
-          (*
-let elClObj cD loc cPsi' clobj mtyp =
-  match clobj, mtyp with
-  | Apx.Comp.MObj tM, Int.LF.MTyp tA -> (* ok *)
-      (dprint (fun () -> "[elClObj] Elaborate MObj \n");
-       let r = Int.LF.MObj (Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id))
-       in dprint (fun () -> "̱\n[ElClObj] ELABORATION MObj DONE\n"); r)
-  | Apx.Comp.SObj s, Int.LF.STyp (cl, cPhi') -> (* ok *)
-    Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' s cl cPhi')
-  | Apx.Comp.MObj m, Int.LF.STyp (cl, cPhi') -> (* This fixes up an ambiguity *) (* not needed *)
-    Int.LF.SObj (Lfrecon.elSub loc Lfrecon.Pibox cD cPsi' (Apx.LF.Dot(Apx.LF.Obj m, Apx.LF.EmptySub)) cl cPhi')
-
-  | Apx.Comp.MObj (Apx.LF.Root (_, Apx.LF.Hole, Apx.LF.Nil)), Int.LF.PTyp _tA' ->
-     let mV = Whnf.newMMVar' (None) (cD, Int.LF.ClTyp (mtyp, cPsi')) Int.LF.Maybe in
-       mmVarToCMetaObj loc mV mtyp
-
-  | Apx.Comp.MObj (Apx.LF.Root (_,h,Apx.LF.Nil) as tM), Int.LF.PTyp tA' ->
-    (* TODO: Something a little more gentle.. *)
-    let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm  Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
-      Int.LF.PObj h
-  | _ , _ -> raise (Error (loc,  MetaObjectClash (cD, Int.LF.ClTyp (mtyp, cPsi'))))
-           *)
 
 let rec elMetaObj' cD loc cM cTt = match cM , cTt with
   | (Apx.Comp.CObj psi, (Int.LF.CTyp (Some w))) ->
@@ -962,6 +893,13 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
   | (Apx.Comp.Box (loc, cM), (Int.Comp.TypBox (_loc, cT), theta)) ->
      Int.Comp.Box (loc, elMetaObj cD cM (cT, theta))
 
+  | Apx.Comp.Impossible (loc, i), (tau, theta) ->
+     let i', ttau' = elExp' cD cG i in
+     let i', _ = genMApp loc cD (i', ttau') in
+     (* Not sure if we need to work any harder at this point, since we
+        don't have any branches to elaborate. *)
+     Int.Comp.Impossible (loc, i')
+
   | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
      dprintf (fun p -> p.fmt "[elExp] case at %a" Loc.print_short loc);
      dprintf (fun p -> p.fmt "[elExp] elaborating scrutinee");
@@ -1084,6 +1022,13 @@ and elExp' cD cG i =
   let elBoxVal loc loc' psi r =
     let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
     let (tR, sP) = Lfrecon.elClosedTerm' Lfrecon.Pibox cD cPsi r in
+    (* maybe we should detect whether tR is actually a parameter variable
+       and generate a PObj instead of an MObj?
+       Currently this is detected during typechecking, only to make
+       sure we generate the appropriate cases during coverage
+       checking.
+       -je
+     *)
     let phat = Context.dctxToHat cPsi in
     let cT = Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi) in
     let tau = Int.Comp.TypBox (Loc.ghost, cT) in
@@ -1350,29 +1295,17 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *)
 
-and elPatMetaObj cD pat (cdecl, theta) = begin match pat with
+and elPatMetaObj cD pat (cdecl, theta) = match pat with
   | Apx.Comp.PatMetaObj (loc, cM) ->
     let (mO,t') = elMetaObjCTyp loc cD cM theta cdecl in
     (Int.Comp.PatMetaObj (loc, mO), t')
-  | Apx.Comp.PatEmpty (loc, _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatConst (loc, _, _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatFVar (loc, _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatVar (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatPair (loc, _ , _ ) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, PatAnn))
 
-end
-
 and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) with
-  | (Apx.Comp.PatEmpty (loc, cpsi), (tau, theta)) ->
-      let cPsi' = Lfrecon.elDCtx (Lfrecon.Pibox) cD cpsi in
-      let Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp _tQ, cPsi_s)) = Whnf.cnormCTyp ttau  in
-        begin try
-          Unify.unifyDCtx (Int.LF.Empty) cPsi' cPsi_s;
-          (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi'))
-        with Unify.Failure _msg ->
-          raise (Error.Violation "Context mismatch in pattern")
-        end
   | (Apx.Comp.PatVar (loc, name, x) , (tau, theta)) ->
       let tau' = Whnf.cnormCTyp (tau, theta) in
       dprintf
@@ -1588,29 +1521,6 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
      (* Return annotated pattern? Int.Comp.PatAnn (l, pat', tau') *)
      (cG',Int.Comp.PatAnn(l, pat', tau'), ttau')
 
-  | Apx.Comp.PatEmpty (loc, cpsi) ->
-      begin match tau_s with
-       | Int.Comp.TypBox (_ , Int.LF.ClTyp (Int.LF.MTyp (Int.LF.Atom(_, a, _) as _tQ), cPsi_s)) ->
-         let cPsi = inferCtxSchema loc (cD_s, cPsi_s) (cD, cpsi) in
-         (* cPsi is the elaborated context of the pattern;
-            this context may not actually be correct, however. *)
-         let tP =  mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind in
-         dprintf
-           begin fun p ->
-           p.fmt "[recPattern] @[<v>Reconstruction of pattern of empty type@,@[%a@]@]"
-             P.fmt_ppr_lf_typ_typing (cD, cPsi, tP)
-           end;
-         let ttau'  = (Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi)), Whnf.m_id) in
-         (Int.LF.Empty, Int.Comp.PatEmpty (loc, cPsi), ttau')
-
-      | Int.Comp.TypBase (_, c, _ ) ->
-          (* cpsi = Null by invariant *)
-         assert (cpsi = Apx.LF.Null);
-         let ttau' = mgCompTyp cD (loc, c), Whnf.m_id in
-         (Int.LF.Empty, Int.Comp.PatEmpty (loc, Int.LF.Null), ttau')
-
-      | _ -> raise (Error (loc, CompTypEmpty (cD_s, (tau_s, Whnf.m_id))))
-    end
   | Apx.Comp.PatAnn (_ , pat, tau) ->
      dprintf
        begin fun p ->
@@ -1792,29 +1702,6 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
 
 and elBranch caseTyp cD cG branch tau_s (tau, theta) =
   match branch with
-  | Apx.Comp.EmptyBranch(loc, delta, pat) ->
-     let cD'    = elMCtx  Lfrecon.Pibox delta in
-     let ((l_cd1', l_delta) , cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat  (cD, tau_s)  in
-     dprintf
-       begin fun p ->
-       p.fmt "[elBranch] @[<v>- EmptyBranch@,\
-              cD1' = @[%a@]@,\
-              pat = @[%a@]@]"
-         (P.fmt_ppr_lf_mctx P.l0) cD1'
-         (P.fmt_ppr_cmp_pattern cD1' cG1 P.l0) pat1
-       end;
-     let tau_s' = Whnf.cnormCTyp (tau_s, Int.LF.MShift l_cd1') in
-     (* cD |- tau_s and cD, cD1 |- tau_s' *)
-     (* cD1 |- tau1 *)
-     dprintf
-       begin fun p ->
-       p.fmt "[elBranch] Reconstructed pattern: @[%a@]"
-         (P.fmt_ppr_cmp_pattern cD1' cG1 P.l0) pat1
-       end;
-     let (t', t1, cD1'', pat1') = synPatRefine loc DataObj (cD, cD1') pat1 (tau_s', tau1) in
-     (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
-     Int.Comp.EmptyBranch (loc, cD1'', pat1', t')
-
   | Apx.Comp.Branch (loc, _omega, delta, pat, e) ->
      dprintf
        begin fun p ->

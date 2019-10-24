@@ -150,7 +150,7 @@ mlam g, A => fn e => case [ |- A] of
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
 / total (initialMap) /
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
+mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /

@@ -297,8 +297,8 @@ fn d => case d of
        let [ |- result MS2 V2] = terminate [ |- D2 ] in
        let [ |- MS']           = mstep_switch [ |- M1 ] [ |- M2 ] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2]
-   | [ |- result MS (v_num v_z)]     => impossible multi_tps [|- D] [|- MS] in []
-   | [ |- result MS (v_num (v_s V))] => impossible multi_tps [|- D] [|- MS] in []
+   | [ |- result MS (v_num v_z)]     => impossible multi_tps [|- D] [|- MS]
+   | [ |- result MS (v_num (v_s V))] => impossible multi_tps [|- D] [|- MS]
   )
 
 | [ |- t_zero] => [ |- result ms_ref (v_num v_z)]
@@ -308,8 +308,8 @@ fn d => case d of
    | [ |- result MS (v_num V)] =>
      let [ |- MS']         = mstep_succ [ |- MS] in
      [ |- result MS' (v_num (v_s V))]
-   | [|- result MS v_true]  => impossible multi_tps [|- D] [|- MS] in []
-   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS] in []
+   | [|- result MS v_true]  => impossible multi_tps [|- D] [|- MS]
+   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS]
 
  )
 
@@ -321,8 +321,8 @@ fn d => case d of
    | [ |- result MS (v_num (v_s V))] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
        [ |- result (ms_tr MS' (ms_step (e_pred_succ V))) (v_num V)]
-   | [ |- result MS v_true] => impossible multi_tps [|- D] [|- MS] in []
-   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS] in []
+   | [ |- result MS v_true] => impossible multi_tps [|- D] [|- MS]
+   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS]
  )
 
 | [|- t_iszero D] =>
@@ -334,7 +334,7 @@ fn d => case d of
      let [ |- MS']         = mstep_iszero [ |- MS] in
        [ |- result (ms_tr MS' (ms_step (e_iszero_succ V))) v_false]
 
-   | [ |- result MS v_true] => impossible multi_tps [|- D] [|- MS] in []
-   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS] in []
+   | [ |- result MS v_true] => impossible multi_tps [|- D] [|- MS]
+   | [|- result MS v_false] => impossible multi_tps [|- D] [|- MS]
   )
 ;

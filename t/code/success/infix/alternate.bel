@@ -33,7 +33,7 @@ case d of
 
     | [g |- (F1[..]) eval_app1 (F2[..])] =>
       let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
-       impossible [g |- NL[..]] in [g])
+       impossible [g |- NL[..]])
 
  | [g |- eval_lam (\x.\u.\v. D1)] =>
   let [g |- eval_lam (\x.\u.\v. F1)] = f in
@@ -51,7 +51,7 @@ case d of
 
     | [g |- eval_app2 (F1[..]) (NL[..]) (F2[..])] =>
       let [g |- refl] = deterministic [g |- D1[..]] [g |- F1[..]] in
-      impossible [g |- NL[..]] in [g])
+      impossible [g |- NL[..]])
 
 | [g |- #p.2[..]] => let [g |- #q.2[..]] = f in [g |- refl]
 ;

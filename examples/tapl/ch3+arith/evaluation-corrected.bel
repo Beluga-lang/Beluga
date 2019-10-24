@@ -136,7 +136,7 @@ not_possible : type.
 rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- not_possible] =
 / total v (natval_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_z ] => impossible s in []
+| [ |- v_z ] => impossible s
 | [ |- v_s V] =>
   let [ |- e_succ D] = s in natval_dont_step [ |- D] [ |- V]
 ;
@@ -144,8 +144,8 @@ fn s => fn v => case v of
 rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- not_possible]=
 / total v (values_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_true]    => impossible s in []
-| [ |- v_false]   => impossible s in []
+| [ |- v_true]    => impossible s
+| [ |- v_false]   => impossible s
 | [ |- v_num V] => natval_dont_step s [ |- V]
 ;
 
@@ -167,9 +167,9 @@ fn s => case s of
 
 % Not_Possible cases for pred
 | [ |- andalso (e_pred D)          (e_pred_succ V )]    =>
-   impossible values_dont_step [ |- D] [ |- v_num (v_s V)] in []
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)]
 | [ |- andalso (e_pred_succ V )       (e_pred D)]       =>
-   impossible values_dont_step [ |- D] [ |- v_num (v_s V)] in []
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)]
 | [ |- andalso (e_iszero_zero)     (e_iszero_zero)]     => [ |- ref]
 | [ |- andalso (e_iszero_succ _ )  (e_iszero_succ _)]   => [ |- ref]
 | [ |- andalso (e_iszero D)        (e_iszero F)]        =>
@@ -177,9 +177,9 @@ fn s => case s of
 
 % Not_Possible cases for iszero
 | [ |- andalso (e_iszero_succ V )  (e_iszero F)]        =>
-   impossible values_dont_step [ |- F] [ |- v_num (v_s V)] in []
+   impossible values_dont_step [ |- F] [ |- v_num (v_s V)]
 | [ |- andalso (e_iszero D)        (e_iszero_succ V )]  =>
-   impossible values_dont_step [ |- D] [ |- v_num (v_s V)] in [];
+   impossible values_dont_step [ |- D] [ |- v_num (v_s V)] ;
 
 
 % -------------------------------------------------------- %
@@ -219,7 +219,7 @@ fn v => fn s => case v of
   (case s of
    | [ |- m_ref] => [ |- ref]
    | [ |- m_step S MS] =>
-     impossible values_dont_step [ |- S] v in [])
+     impossible values_dont_step [ |- S] v )
 
 ;
 
@@ -249,7 +249,7 @@ fn ms => fn vn1 => fn vn2 => case ms of
    [ |- ref]
 
 | [ |- andalso' (m_ref )       (m_step S MS)]   =>
-  (impossible values_dont_step [ |- S]  vn1 in [ ])
+  (impossible values_dont_step [ |- S]  vn1 )
 
 ;
 

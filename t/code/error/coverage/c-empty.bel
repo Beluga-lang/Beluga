@@ -12,7 +12,5 @@ succ : nat -> nat.
 schema constructorlesses = constructorless;
 
 rec empty-example-3X : (g:constructorlesses) [g |- constructorless] -> [ |- nat] =
-  fn c =>
-    case c of
-      [g |- {} ]
+fn c => impossible c
 ;

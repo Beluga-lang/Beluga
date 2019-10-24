@@ -147,9 +147,9 @@ fn d => case d of
         | [ |- step EV] => [ |- step (step_@2 value_lam EV)]
         | [ |- val VL2] => [ |- step (step_@3 VL2)]
        )
-    | [ |- val value_z]      => impossible [ |- D1] in []
-    | [ |- val (value_s _ )] => impossible [ |- D1] in []
-    | [ |- val (value_lAM )] => impossible [ |- D1] in [])
+    | [ |- val value_z]      => impossible [ |- D1]
+    | [ |- val (value_s _ )] => impossible [ |- D1]
+    | [ |- val (value_lAM )] => impossible [ |- D1] )
  | [ |- is_lam (\x.\d. D1)] => [ |- val value_lam]
 
 | [ |- is_lAM (\a. D)]       => [ |- val value_lAM]
@@ -158,7 +158,7 @@ fn d => case d of
   (case   progress [ |- D]   of
    | [ |- step EV] => [ |- step (step_#1 EV)]
    | [ |- val value_lAM]  => [ |- step (step_#2)]
-   | [ |- val value_z]      => impossible [ |- D] in []
-   | [ |- val (value_s _ )] => impossible [ |- D] in []
-   | [ |- val value_lam]    => impossible [ |- D] in [])
+   | [ |- val value_z]      => impossible [ |- D]
+   | [ |- val (value_s _ )] => impossible [ |- D]
+   | [ |- val value_lam]    => impossible [ |- D] )
 ;

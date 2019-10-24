@@ -29,34 +29,35 @@ rec ccp : [ |- eval E V]
        -> [ |- mstep (st K (ev E)) (answer W)] =
 / total d (ccp e v k w d s) /
 fn d => fn s => case d of
-  [ |- ev_z] => let [ |- S'] = s in [ |- next S' st_z]
+  | [ |- ev_z] => let [ |- S'] = s in [ |- next S' st_z]
 
- | [ |- ev_s D1] =>
-      (let [ |- S']  = s in
-       let [ |- S1]  = ccp [ |- D1] [ |- next S' (st_return (\v. return (s_val v)) _)] in
-        [ |- next S1 st_s])
+  | [ |- ev_s D1] =>
+        let [ |- S']  = s in
+        let [ |- S1]  = ccp [ |- D1] [ |- next S' (st_return (\v. return (s_val v)) _)] in
+        [ |- next S1 st_s]
 
 
- | [ |- ev_match_z D2 D1] : [ |- (eval (match E E1 (\y. E2)) V)] =>
-   (let [ |- S2]  = ccp [ |- D2] s in
-    let [ |- S1]  = ccp [ |- D1] [ |- next (next S2 st_match1_z) (st_return (\v. match1 v E1[] (\y. (E2[y]))) _ )] in
-      [ |- next S1 st_match])
+  | [ |- ev_match_z D2 D1] : [ |- (eval (match E E1 (\y. E2)) V)] =>
+        let [ |- S2]  = ccp [ |- D2] s in
+        let [ |- S1]  = ccp [ |- D1] [ |- next (next S2 st_match1_z) (st_return (\v. match1 v E1[] (\y. (E2[y]))) _ )] in
+        [ |- next S1 st_match]
 
  | [ |- ev_match_s D3 D1] : [ |- (eval (match E E1 (\y. E2)) V)] =>
-   (let [ |- S3]  = ccp [ |- D3] s in
-    let [ |- S1]  = ccp [ |- D1] [ |- next (next S3 st_match1_s) (st_return (\v. match1 v E1[] (\y. (E2[y]))) _)] in
-      [ |- next S1 st_match])
+       let [ |- S3]  = ccp [ |- D3] s in
+       let [ |- S1]  = ccp [ |- D1]
+                           [ |- next (next S3 st_match1_s) (st_return (\v. match1 v E1[] (\y. (E2[y]))) _)] in
+       [ |- next S1 st_match]
 
  | [ |- ev_pair D2 D1] : [ |- (eval (pair E1 E2) (pair_val V1 V2))]  =>
-   let [ |- S'] = s in
-   let [ |- S2] = ccp [ |- D2] [ |- next S' (st_return  (\x. return (pair_val V1[] x))  _)] in
-   let [ |- S1] = ccp [ |- D1] [ |- next (next S2 st_pair1) (st_return  (\x. pair1 x E2[]) _)] in
-     [ |- next S1 st_pair]
+       let [ |- S'] = s in
+       let [ |- S2] = ccp [ |- D2] [ |- next S' (st_return  (\x. return (pair_val V1[] x))  _)] in
+       let [ |- S1] = ccp [ |- D1] [ |- next (next S2 st_pair1) (st_return  (\x. pair1 x E2[]) _)] in
+       [ |- next S1 st_pair]
 
  | [ |- ev_fst D1] =>
-   (let [ |- S'] = s in
-    let [ |- S1] = ccp [ |- D1] [ |- next (next S' st_fst1) (st_return (\v. fst1 v)  _)] in
-       [ |- next S1 st_fst])
+       let [ |- S'] = s in
+       let [ |- S1] = ccp [ |- D1] [ |- next (next S' st_fst1) (st_return (\v. fst1 v)  _)] in
+       [ |- next S1 st_fst]
 
  | [ |- ev_snd D1] =>
    (let [ |- S'] = s in

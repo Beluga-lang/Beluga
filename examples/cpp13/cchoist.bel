@@ -160,7 +160,7 @@ fn sigma => mlam #q => case sigma of
  | [g', x:source T |- x   ] =>  [h |-  M]
  | [g', x:source S |- #p[..]] => lookup sigma' [g' |- #p]
  )
-| M_id [h] => impossible [ |- #q] in []
+| M_id [h] => impossible [ |- #q]
 ;
 
 % This definition may be thought of a tuple of type T which is known to consist only

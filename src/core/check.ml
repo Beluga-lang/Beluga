@@ -74,39 +74,49 @@ module Comp = struct
     | SynMismatch     of I.mctx * tclo (* expected *) * tclo (* inferred *)
     | BoxCtxMismatch  of I.mctx * I.dctx * (I.dctx_hat * I.normal)
     | PattMismatch    of (I.mctx * meta_obj * meta_typ) *
-                         (I.mctx * meta_typ)
-(*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
-                         (I.mctx * I.dctx * I.tclo) *)
+                           (I.mctx * meta_typ)
+    (*    | PattMismatch    of (I.mctx * I.dctx * I.normal option * I.tclo) *
+          (I.mctx * I.dctx * I.tclo) *)
     | MAppMismatch    of I.mctx * (meta_typ * I.msub)
     | AppMismatch     of I.mctx * (meta_typ * I.msub)
     | CtxMismatch     of I.mctx * I.dctx (* expected *) * I.dctx (* found *) * meta_obj
     | TypMismatch     of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
-    | MissingTotal of Id.cid_prog
-    (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
+    | MissingTotal    of Id.cid_prog
+    | NotImpossible   of I.mctx * gctx * typ * exp_syn
+  (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
-(*  type rec_call = bool *)
+  (*  type rec_call = bool *)
 
   exception Error of Syntax.Loc.t * error
+
+  let throw loc e = raise (Error (loc, e))
 
   let convToParamTyp mT = match mT with
     | I.ClTyp (I.MTyp tA, cPsi) -> I.ClTyp (I.PTyp tA, cPsi)
     | mT -> mT
-(*  let matchMetaV mC = match mC with
-    | MetaCtx (_, I.CtxVar _ ) -> true
-    | MetaObj (_, phat, I.Root (_ , I.MVar (_ , s), _ )) ->
-        s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-    | MetaObjAnn (_, cPsi, I.Root (_ , I.MVar (_ , s), _ )) ->
-        s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
-    | MetaParam (_, phat, I.Root (_ , I.PVar (_ , s ), _ )) ->
-        s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-    | MetaSubObj (_, phat, I.SVar (_, 0, s)) ->
-        s = S.Shift 0 || (s = S.EmptySub && phat = (None, 0))
-    | MetaSubObjAnn (_, cPsi, I.SVar (_, 0, s)) ->
-        s = S.Shift 0 || (s = S.EmptySub && cPsi = I.Null)
-    | _ -> false
-*)
+
+  (** Analyzes a contextual object to decide whether it's a
+      (contextual) variable and rewrites its type from MTyp to PTyp if
+      necessary. This is crucial for coverage checking of a case analysis
+      on a parameter variable.
+      Also returns the index of the variable (so we can later decide
+      if it's a variable we're doing induction on) as well what
+      projection, if any, is applied to the parameter variable.
+   *)
+  let fixParamTyp mC mT = match mC with
+    (* cases for a parameter variable without a projection *)
+    | I.(ClObj (_, (PObj (PVar (x, _)) | MObj (Root (_, I.PVar (x, _), _))))) ->
+       Some x, convToParamTyp mT, None
+    (* cases for a parameter variable with a projection *)
+    | I.(ClObj (_, (PObj (I.Proj (I.PVar (x, _), k)) | MObj (Root (_, Proj (PVar (x, _), k), _))))) ->
+       Some x, convToParamTyp mT, Some k
+    (* cases for a context variable or a metavariable *)
+    | I.(CObj (CtxVar (CtxOffset x)) | ClObj(_, MObj (Root (_, MVar (Offset x, _), _)))) ->
+       Some x, mT, None
+    | _ -> None, mT, None
+
   let string_of_typeVariant = function
     | VariantCross -> "product type"
     | VariantArrow -> "function type"
@@ -114,132 +124,137 @@ module Comp = struct
     | VariantPiBox -> "dependent function type"
     | VariantBox   -> "contextual type"
 
-  let _ = Error.register_printer
-    (fun (Error (loc, err)) ->
-      Error.print_with_location loc (fun ppf ->
-        match err with
-          | MissingTotal prog ->
-            Format.fprintf ppf "Function %s not known to be total."
-              (R.render_cid_prog prog)
-          | InvalidRecCall ->
-            Format.fprintf ppf "Recursive call not structurally smaller."
-          | IllegalParamTyp (cD, cPsi, tA) ->
-            Format.fprintf ppf
-              "Parameter type %a is illegal."
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, Substitution.LF.id))
-          | UnsolvableConstraints (f, cnstrs) ->
-             let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in
-             Format.fprintf ppf
-               "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
-               cnstrs fname
+  let format_error ppf = function
+    | MissingTotal prog ->
+       Format.fprintf ppf "Function %s not known to be total."
+         (R.render_cid_prog prog)
+    | InvalidRecCall ->
+       Format.fprintf ppf "Recursive call not structurally smaller."
+    | IllegalParamTyp (cD, cPsi, tA) ->
+       Format.fprintf ppf
+         "Parameter type %a is illegal."
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, Substitution.LF.id))
+    | UnsolvableConstraints (f, cnstrs) ->
+       let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in
+       Format.fprintf ppf
+         "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
+         cnstrs fname
 
-          | CtxMismatch (cD, cPsi, cPhi, cM) ->
-            Error.report_mismatch ppf
-              "Type checking Ill-typed meta-object. This is a bug in type reconstruction."
-              "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi);
-              Format.fprintf ppf
-                "In expression: %a@."
-                (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
+    | CtxMismatch (cD, cPsi, cPhi, cM) ->
+       Error.report_mismatch ppf
+         "Type checking Ill-typed meta-object. This is a bug in type reconstruction."
+         "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
+         "Given context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi);
+       Format.fprintf ppf
+         "In expression: %a@."
+         (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
 
-          | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-            Error.report_mismatch ppf
-              "Ill-typed expression."
-              "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
-            Format.fprintf ppf
-              "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
+    | MismatchChk (cD, cG, e, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+       Error.report_mismatch ppf
+         "Ill-typed expression."
+         "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
+         "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
+       Format.fprintf ppf
+         "In expression: %a@."
+         (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
 
-          | MismatchSyn (cD, cG, i, variant, theta_tau) ->
-            Error.report_mismatch ppf
-              "Ill-typed expression."
-              "Expected" Format.pp_print_string (string_of_typeVariant variant)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau);
-            Format.fprintf ppf
-              "In expression: %a@."
-              (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+    | MismatchSyn (cD, cG, i, variant, theta_tau) ->
+       Error.report_mismatch ppf
+         "Ill-typed expression."
+         "Expected" Format.pp_print_string (string_of_typeVariant variant)
+         "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau);
+       Format.fprintf ppf
+         "In expression: %a@."
+         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
 
-          | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
-            Error.report_mismatch ppf
-              "Ill-typed pattern."
-              "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
-            Format.fprintf ppf
-              "In pattern: %a@."
-              (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
+    | PatIllTyped (cD, cG, pat, theta_tau (* expected *),  theta_tau' (* inferred *)) ->
+       Error.report_mismatch ppf
+         "Ill-typed pattern."
+         "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
+         "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
+       Format.fprintf ppf
+         "In pattern: %a@."
+         (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
 
-          | PattMismatch ((cD, _cM, mT) , (cD', mT')) ->
-            Error.report_mismatch ppf
-              "Ill-typed pattern."
-              "Expected type"
-              (P.fmt_ppr_cmp_typ cD' P.l0)
-              (TypBox (Syntax.Loc.ghost, mT'))
-              "Inferred type"
-              (P.fmt_ppr_cmp_typ cD P.l0)
-              (TypBox (Syntax.Loc.ghost, mT))
+    | PattMismatch ((cD, _cM, mT) , (cD', mT')) ->
+       Error.report_mismatch ppf
+         "Ill-typed pattern."
+         "Expected type"
+         (P.fmt_ppr_cmp_typ cD' P.l0)
+         (TypBox (Syntax.Loc.ghost, mT'))
+         "Inferred type"
+         (P.fmt_ppr_cmp_typ cD P.l0)
+         (TypBox (Syntax.Loc.ghost, mT))
 
-(*          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
-            Error.report_mismatch ppf
-              "Ill-typed pattern."
-              "Expected type"
-              (P.fmt_ppr_cmp_typ cD' P.l0)
-              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
-              "Inferred type"
-              (P.fmt_ppr_cmp_typ cD P.l0)
-              (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
-*)
-          | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
-            Format.fprintf ppf
-              "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
-              (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
-              (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
-              (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
+    (*          | PattMismatch ((cD, cPsi, pattern, sA) , (cD', cPsi', sA')) ->
+                Error.report_mismatch ppf
+                "Ill-typed pattern."
+                "Expected type"
+                (P.fmt_ppr_cmp_typ cD' P.l0)
+                (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
+                "Inferred type"
+                (P.fmt_ppr_cmp_typ cD P.l0)
+                (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
+     *)
+    | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
+       Format.fprintf ppf
+         "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
+         (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
+         (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
+         (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
 
-          | BasicMismatch (k, cD, _cG, ttau) ->
-             let tau = Whnf.cnormCTyp ttau in
-             let print_mismatch_kind ppf : mismatch_kind -> unit =
-               let p s = Format.fprintf ppf "%s" s in
-               function
-               | `fn -> p "function abstraction"
-               | `mlam -> p "meta abstraction (mlam)"
-               | `ctxfun -> p "context abstraction"
-               | `box -> p "box-expression"
-               | `pair -> p "tuple"
-             in
-             Format.fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
-               print_mismatch_kind k
-               (P.fmt_ppr_cmp_typ cD P.l0) tau
+    | BasicMismatch (k, cD, _cG, ttau) ->
+       let tau = Whnf.cnormCTyp ttau in
+       let print_mismatch_kind ppf : mismatch_kind -> unit =
+         let p s = Format.fprintf ppf "%s" s in
+         function
+         | `fn -> p "function abstraction"
+         | `mlam -> p "meta abstraction (mlam)"
+         | `ctxfun -> p "context abstraction"
+         | `box -> p "box-expression"
+         | `pair -> p "tuple"
+       in
+       Format.fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
+         print_mismatch_kind k
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-          | SBoxMismatch (cD, _cG, cPsi, cPhi) ->
-            Format.fprintf ppf
-              "Found substitution that does not have type %a[%a]."
-              (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-              (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi)
+    | SBoxMismatch (cD, _cG, cPsi, cPhi) ->
+       Format.fprintf ppf
+         "Found substitution that does not have type %a[%a]."
+         (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
+         (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi)
 
-          | SynMismatch (cD, theta_tau, theta_tau') ->
-            Error.report_mismatch ppf
-              "Ill-typed expression."
-              "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
-              "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau')
+    | SynMismatch (cD, theta_tau, theta_tau') ->
+       Error.report_mismatch ppf
+         "Ill-typed expression."
+         "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
+         "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau')
 
-          | AppMismatch (cD, (ctyp, theta)) ->
-            Format.fprintf ppf
-              "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
+    | AppMismatch (cD, (ctyp, theta)) ->
+       Format.fprintf ppf
+         "Expected contextual object of type %a."
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
-          | MAppMismatch (cD, (ctyp, theta)) ->
-            Format.fprintf ppf
-              "Expected contextual object of type %a."
-              (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
-          | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
-              Error.report_mismatch ppf
-                "Type of destructor did not match the type it was expected to have."
-                "Type of destructor" (P.fmt_ppr_cmp_typ cD P.l0)
-                (Whnf.cnormCTyp (tau1, theta1))
-                "Expected type" (P.fmt_ppr_cmp_typ cD P.l0)
-                (Whnf.cnormCTyp (tau2, theta2)))
-    )
+    | MAppMismatch (cD, (ctyp, theta)) ->
+       Format.fprintf ppf
+         "Expected contextual object of type %a."
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
+    | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+       Error.report_mismatch ppf
+         "Type of destructor did not match the type it was expected to have."
+         "Type of destructor" (P.fmt_ppr_cmp_typ cD P.l0)
+         (Whnf.cnormCTyp (tau1, theta1))
+         "Expected type" (P.fmt_ppr_cmp_typ cD P.l0)
+         (Whnf.cnormCTyp (tau2, theta2))
+
+    | NotImpossible (cD, cG, tau, i) ->
+       Format.fprintf ppf
+         "@[<v>The expression@,  @[%a@]@,is not impossible.@,Its type@,  @[%a@]@,is (possibly) inhabited.@]"
+         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
+  let _ =
+    Error.register_printer
+      (fun (Error (loc, err)) -> Error.print_with_location loc (fun ppf -> format_error ppf err))
 
   type caseType =
     | IndexObj of meta_obj
@@ -582,7 +597,22 @@ module Comp = struct
     with Whnf.FreeMVar (I.FMVar (u, _ )) ->
       Error.violation ("Free meta-variable " ^ Id.render_name u)
 
-  let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau = match (e, ttau) with
+  let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau =
+    let decide_ind cM x =
+      if Misc.List.nonempty total_decs && is_indMObj cD x
+      then
+        let _ =
+          dprintf
+            (fun p ->
+              p.fmt "[checkBranch] doing induction on a box-type");
+        in
+        IndIndexObj cM
+      else IndexObj cM
+    in
+    let decide_ind_maybe cM k =
+      Maybe.(get_default (IndexObj cM) (k $> decide_ind cM))
+    in
+    match (e, ttau) with
     | (Fn (loc, x, e), (TypArr (tau1, tau2), t)) ->
        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
@@ -624,51 +654,29 @@ module Comp = struct
     | (Box (loc, cM), (TypBox (l, mT), t)) ->
        checkMetaObj cD cM mT t
 
-    | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
-       let decide_ind x =
-         if Misc.List.nonempty total_decs && is_indMObj cD x
-         then
-           let _ =
-             dprintf
-               (fun p ->
-                 p.fmt "[checkBranch] doing induction on a box-type");
-           in
-           IndIndexObj (l, cM)
-         else IndexObj (l, cM)
+    | Impossible (loc, i), (tau, t) ->
+       let _, tau_sc, t' = syn cD (cG, cIH) total_decs i in
+       let tau_sc = Whnf.cnormCTyp (tau_sc, t') in
+       let total_pragma, tau_sc, projOpt =
+         match i, tau_sc with
+         | AnnBox ((l, mC), _), TypBox (loc, mT) ->
+            let k, mT, projOpt = fixParamTyp mC (Whnf.cnormMetaTyp (mT, C.m_id)) in
+            ( decide_ind_maybe (l, mC) k
+            , TypBox (loc, mT)
+            , projOpt
+            )
+         | _, _ -> DataObj, tau_sc, None
        in
+       if not (Coverage.is_impossible cD tau_sc) then
+         throw loc (NotImpossible (cD, cG, tau_sc, i))
+
+    | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =
-         let ptyp = TypBox (loc, convToParamTyp (Whnf.cnormMetaTyp (mT, C.m_id))) in
-         let same_typ = TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id)) in
-         match  cM with
-         | I.ClObj (_ , I.PObj (I.PVar (x,_)))
-           | I.ClObj (_, I.MObj (I.Root (_, I.PVar (x, _), _))) ->
-            ( decide_ind x
-            , ptyp
-            , None
-            )
-
-         (* case for a metavariable or context variable *)
-         | I.CObj (I.CtxVar (I.CtxOffset x))
-           | I.ClObj (_, I.MObj (I.Root (_, I.MVar (I.Offset x,_), _ ))) ->
-           (* cases for a pattern variable without a projection *)
-            ( decide_ind x
-            , same_typ
-            , None
-            )
-
-         (* cases for a pattern variable with a projection *)
-         | I.ClObj (_, I.PObj (I.Proj (I.PVar (x,_), k)))
-           | I.ClObj (_, I.MObj (I.Root (_, I.Proj (I.PVar (x,_), k ), _ ))) ->
-            ( decide_ind x
-            , ptyp
-            , Some k
-            )
-
-         | _ ->
-            ( IndexObj (l,cM)
-            , TypBox (loc, Whnf.cnormMetaTyp (mT, C.m_id))
-            , None
-            )
+         let (k, mT, projOpt) = fixParamTyp cM (Whnf.cnormMetaTyp (mT, C.m_id)) in
+         ( Maybe.(get_default (IndexObj (l, cM)) (k $> decide_ind (l, cM)))
+         , TypBox (loc, mT)
+         , projOpt
+         )
        in
        let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
 
@@ -867,31 +875,6 @@ module Comp = struct
   (*         raise (Error (loc, TypMismatch (cD, (tau1, theta), (tau',theta')))) *)
 
   and checkPattern cD cG pat ttau = match pat with
-    | PatEmpty (loc, cPsi) ->
-       (match ttau  with
-        | (TypBox (_, I.ClTyp (I.MTyp tA, cPhi)) , theta) | (TypBox (_, I.ClTyp (I.PTyp tA, cPhi)), theta)  ->
-           dprintf
-             begin fun p ->
-             p.fmt "[checkPattern] @[<v>PatEmpty:@,cD = @[%a@]@,\
-                    context of expected type: @[%a@]@,\
-                    context given: @[%a@]@]"
-               (P.fmt_ppr_lf_mctx P.l0) cD
-               (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.cnormDCtx (cPhi, theta))
-               (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-             end;
-           if C.convDCtx (Whnf.cnormDCtx (cPhi, theta)) cPsi then ()
-           else
-             raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
-
-        | (TypBase (_, c, mS), _ ) ->
-           begin match cPsi with
-           | I.Null -> ()
-           | _ -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
-           end
-
-        | _  -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
-       )
-
     | PatMetaObj (loc, mO) ->
        (match ttau with
         | (TypBox (_, ctyp) , theta) ->
@@ -964,12 +947,6 @@ module Comp = struct
 
   and checkBranch caseTyp cD (cG, cIH) total_decs (i, branch) tau_s (tau, t) =
     match branch with
-    | EmptyBranch (loc, cD1', pat, t1) ->
-       dprint (fun () -> "[checkBranch] Empty Pattern");
-       let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-       LF.checkMSub  loc cD1' t1 cD;
-       checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)
-
     | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
        dprintf
          begin fun p ->

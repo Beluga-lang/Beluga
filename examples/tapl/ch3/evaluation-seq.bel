@@ -63,20 +63,20 @@ rec det : [ |- step T T1] -> [ |- step T T2] -> [ |- equal T1 T2] =
 fn s1 => fn s2 => case s1 of
 | [ |- e_if_true]  =>
     (case s2 of [ |- e_if_true]  =>  [ |- ref]
-%	     | [ ] e_if D     =>  impossible ([ |- D]) in [ ]
+%	     | [ ] e_if D     =>  impossible ([ |- D])
     )
 
 | [ |- e_if_false]  =>
   (case  s2 of [ |- e_if_false] =>  [ |- ref]
-%	     | [ ] e_if D     => impossible ([ |- D]) in []
+%	     | [ ] e_if D     => impossible ([ |- D])
   )
 
 | [ |- e_if D] =>
   (case s2 of
    | [ |- e_if E]  =>
        let [ |- ref]        = det [ |- D] [ |- E] in  [ |- ref]
-   | [ |- e_if_false] => impossible [ |- D] in []
-   | [ |- e_if_true]  => impossible [ |- D] in [])
+   | [ |- e_if_false] => impossible [ |- D]
+   | [ |- e_if_true]  => impossible [ |- D] )
 ;
 
 
@@ -128,8 +128,8 @@ absurd : type.
 rec values_dont_step : [ |- value N] -> [ |- step N M] -> [ |- absurd] =
 / total v (values_dont_step n m v)/
 fn v => fn s => case v of
-| [ |- v_true] => impossible s in []
-| [ |- v_false] => impossible s in [];
+| [ |- v_true] => impossible s
+| [ |- v_false] => impossible s ;
 
 
 % -------------------------------------------------------- %
@@ -150,8 +150,8 @@ fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
 | [ |- m_step S1 MS1] =>
   (case ms2 of
    | [ |- m_ref] => (case vn2 of
-		  | [ |- v_true]  => impossible [ |- S1] in []
-		  | [ |- v_false] => impossible [ |- S1] in [])
+		  | [ |- v_true]  => impossible [ |- S1]
+		  | [ |- v_false] => impossible [ |- S1] )
    | [ |- m_step S2 MS2] =>
      let [ |- ref] = det [ |- S1] [ |- S2] in
        unique [ |- MS1] [ |- MS2] vn1 vn2
@@ -161,8 +161,8 @@ fn ms1 => fn ms2 => fn vn1 => fn vn2 => case ms1 of
      | [ |- m_ref]  =>  [ |- ref]
      | [ |- m_step S2 MS2] =>
 	 (case vn1 of
-	  | [ |- v_true]  => impossible [ |- S2] in []
-	  | [ |- v_false] => impossible [ |- S2] in [])
+	  | [ |- v_true]  => impossible [ |- S2]
+	  | [ |- v_false] => impossible [ |- S2] )
   )
 
 %{  let [ ] V1 = vn1 in

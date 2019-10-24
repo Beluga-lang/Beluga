@@ -16,6 +16,10 @@ module LF = struct
     | Inductive (* used for induction *)
 end
 
+module Comp = struct
+  type case_pragma = PragmaCase | PragmaNotCase
+end
+
 module Harpoon = struct
   type invoke_kind =
     [ `ih

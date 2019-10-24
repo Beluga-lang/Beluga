@@ -2,7 +2,6 @@
 
 (** Approximate LF Syntax *)
 open Id
-open Pragma
 
 module Loc = Location
 module Int = Synint
@@ -111,6 +110,7 @@ end
 
 (** Approximate Computation Syntax *)
 module Comp = struct
+  include Syncom.Comp
 
  type kind =
    | Ctype of Loc.t
@@ -147,8 +147,9 @@ module Comp = struct
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
      | Let    of Loc.t * exp_syn * (name * exp_chk)             (* let x = i in e      *)
      | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
-     | Case   of Loc.t * case_pragma * exp_syn * branch list
-     | Hole   of Loc.t * string option
+     | Case   of Loc.t * case_pragma * exp_syn * branch list    (* case i of bs *)
+     | Impossible of Loc.t * exp_syn                            (* impossible i *)
+     | Hole   of Loc.t * string option                          (* ?name *)
 
   and exp_syn =
      | Var    of Loc.t * offset                                     (* x              *)
@@ -162,7 +163,6 @@ module Comp = struct
      | Ann    of exp_chk * typ                                      (* e : tau        *)
 
  and pattern =
-   | PatEmpty   of Loc.t * LF.dctx
    | PatMetaObj of Loc.t * meta_obj
    | PatConst   of Loc.t * cid_comp_const * pattern_spine
    | PatFVar    of Loc.t * name
@@ -176,7 +176,6 @@ module Comp = struct
    | PatObs of Loc.t * cid_comp_dest * pattern_spine
 
   and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern
     | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
   and fun_branches =

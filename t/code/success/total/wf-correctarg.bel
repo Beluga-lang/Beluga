@@ -20,7 +20,7 @@ inductive Acc-le : [|- nat] -> ctype =
 rec wf-rel' : {N : [|- nat]} {M : [|- nat]}[|- le M N] -> Acc-le [|- M] =
 / total x (wf-rel' x) /
  mlam X => mlam Y => fn p => case [ |- X ] of
-| [|- z] => impossible p in []
+| [|- z] => impossible p
 | [|- s X'] => (case p of
    | [|- le-base] => % le X' (s X')  and hence X' = Y at this point
        Acc (wf-rel' [|- Y])

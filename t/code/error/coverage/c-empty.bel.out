@@ -1,11 +1,6 @@
-
-######   COVERAGE FAILURE: Case expression doesn't cover: ######
-##       
-##   Empty Pattern ##
- 
-##   Case expression of type : 
-##   constructorless
-##   is not empty.
-
-
-##
+The expression
+  c
+is not impossible.
+Its type
+  [g |- constructorless]
+is (possibly) inhabited.

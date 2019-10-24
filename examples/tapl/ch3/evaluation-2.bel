@@ -123,8 +123,8 @@ absurd : type.
 rec values_dont_step : [ |- value N] -> [ |- step N M] -> [ |- absurd] =
 / total v (values_dont_step n m v )/
 fn v => fn s => case v of
-| [ |- v_true] => impossible s in []
-| [ |- v_false] => impossible s in [];
+| [ |- v_true] => impossible s
+| [ |- v_false] => impossible s ;
 
 
 % -------------------------------------------------------- %
@@ -143,10 +143,10 @@ rec unique : [ |- msteps_to_terms M N1 N2]
 fn ms => fn vn1 => fn vn2 => case ms of
 | [ |- andalso' (m_step S1 MS1) (m_ref)] =>
   (case vn2 of
-   | [ |- v_true]  => impossible [ |- S1] in []
-   | [ |- v_false] => impossible [ |- S1] in [])
+   | [ |- v_true]  => impossible [ |- S1]
+   | [ |- v_false] => impossible [ |- S1] )
 % Alternatively:
-%  impossible values_dont_step vn2 ([ ] S1) in [ ]
+%  impossible values_dont_step vn2 ([ ] S1)
 | [ |- andalso' (m_step S1 MS1) (m_step S2 MS2)] =>
   let [ |- ref] = det [ |- andalso S1 S2] in
     unique [ |- andalso' MS1 MS2] vn1 vn2
@@ -156,8 +156,8 @@ fn ms => fn vn1 => fn vn2 => case ms of
 
 | [ |- andalso' (m_ref )       (m_step S2 MS2)] =>
   (case vn1 of
-   | [ |- v_true]  => impossible [ |- S2] in []
-   | [ |- v_false] => impossible [ |- S2] in [])
+   | [ |- v_true]  => impossible [ |- S2]
+   | [ |- v_false] => impossible [ |- S2] )
 
 %{  let [ ] V1 = vn1 in
     lemma_val_1 ([ ] V1) ([ ] m_step S2 MS2)

@@ -24,7 +24,7 @@ val no_covers : int ref
 type problem
 
 val make : Syntax.Loc.t
-        -> Pragma.case_pragma
+        -> Comp.case_pragma
         -> LF.mctx              (* cD *)
         -> Comp.branch list     (* branches *)
         -> Comp.typ             (* type of object being case-analyzed *)
@@ -61,3 +61,6 @@ val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
 
 val compgctx_of_gctx : gctx -> Comp.gctx
 val gctx_of_compgctx : Comp.gctx -> gctx
+
+(** Decide whether a given computational type is impossible. *)
+val is_impossible : LF.mctx -> Comp.typ -> bool

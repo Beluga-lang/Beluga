@@ -153,7 +153,7 @@ impos : type.
 rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- impos] =
 / total v (natval_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_z ] => impossible s in []
+| [ |- v_z ] => impossible s
 | [ |- v_s V] =>
   let [ |- e_succ D] = s in natval_dont_step [ |- D] [ |- V]
 ;
@@ -161,8 +161,8 @@ fn s => fn v => case v of
 rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- impos]=
 / total v (values_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_true]    => impossible s in []
-| [ |- v_false]   => impossible s in []
+| [ |- v_true]    => impossible s
+| [ |- v_false]   => impossible s
 | [ |- v_num V] => natval_dont_step s [ |- V]
 ;
 

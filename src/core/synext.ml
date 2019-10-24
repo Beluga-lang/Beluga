@@ -1,7 +1,6 @@
 (* External Syntax *)
 
 open Id
-open Pragma
 
 module Loc = Location
 
@@ -117,6 +116,7 @@ end
 
 (** External Computation Syntax *)
 module Comp = struct
+  include Syncom.Comp
 
  type kind =
    | Ctype of Loc.t
@@ -153,17 +153,17 @@ module Comp = struct
    | TypInd of typ
 
   and exp_chk =                                 (* Computation-level expressions *)
-     | Syn    of Loc.t * exp_syn                     (*  e ::= i                 *)
-     | Fn     of Loc.t * name * exp_chk              (*    | fn x => e           *)
-     | Fun    of Loc.t * fun_branches                (*    | fun fbranches       *)
-     | MLam   of Loc.t * name * exp_chk              (*| mlam f => e             *)
-     | Pair   of Loc.t * exp_chk * exp_chk           (*    | (e1 , e2)           *)
-     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-                                                     (*    | let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)  (*    | let x = i in e      *)
-     | Box of Loc.t * meta_obj
-     | Case   of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches   *)
-     | Hole of Loc.t * string option     				     (*    | ?                   *)
+     | Syn        of Loc.t * exp_syn                           (*  e ::= i                 *)
+     | Fn         of Loc.t * name * exp_chk                    (*    | fn x => e           *)
+     | Fun        of Loc.t * fun_branches                      (*    | fun fbranches       *)
+     | MLam       of Loc.t * name * exp_chk                    (*    | mlam f => e         *)
+     | Pair       of Loc.t * exp_chk * exp_chk                 (*    | (e1 , e2)           *)
+     | LetPair    of Loc.t * exp_syn * (name * name * exp_chk) (*    | let (x,y) = i in e  *)
+     | Let        of Loc.t * exp_syn * (name * exp_chk)        (*    | let x = i in e      *)
+     | Box        of Loc.t * meta_obj                          (*    | [C]                 *)
+     | Impossible of Loc.t * exp_syn                           (*    | impossible i        *)
+     | Case       of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches *)
+     | Hole       of Loc.t * string option     				         (*    | ?name               *)
 
   and exp_syn =
      | Name   of Loc.t * name                        (*  i ::= x/c               *)
@@ -189,7 +189,6 @@ module Comp = struct
    | PatObs of Loc.t * name * pattern_spine
 
  and branch =
-   | EmptyBranch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern
    | Branch of Loc.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
 
  and fun_branches =

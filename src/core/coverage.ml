@@ -89,7 +89,7 @@ let lookup (cG : gctx) x =
 
 type problem =
   { loc : Loc.t
-  ; prag : Pragma.case_pragma (* indicates if % not appeared after ``case...of'' *)
+  ; prag : Comp.case_pragma (* indicates if % not appeared after ``case...of'' *)
   ; cD : LF.mctx
   ; cG : gctx
   ; branches : Comp.branch list
@@ -137,9 +137,6 @@ type pattern =
   | MetaPatt of LF.dctx * LF.normal * LF.tclo
   | MetaCtx of LF.dctx
   | MetaSub of LF.dctx * LF.sub * LF.cltyp
-  | EmptyPatt of LF.dctx * LF.tclo
-  | EmptyParamPatt of LF.dctx * LF.tclo
-  | EmptyCompPatt of Comp.tclo
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
 type eqn =
@@ -336,14 +333,6 @@ end = struct
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
          (P.fmt_ppr_lf_normal cD cPsi P.l0) tR
          (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-    | EmptyPatt (cPsi, sA) ->
-       fprintf ppf "%a |- () : %a"
-         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-    | EmptyParamPatt (cPsi, sA) ->
-       fprintf ppf "%a |- () : %a"
-         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 
   let fmt_ppr_cov_goal cD ppf : cov_goal -> unit =
     let open Format in
@@ -534,7 +523,6 @@ end = struct
           check_meta_obj cD0 m0 (Whnf.cnormMetaTyp (mT, t)) && is_id cD0 t cD
        | _ -> false
        end
-    | _ -> false
 
   let check cD cG tau_sc =
     List.exists (check_branch cD cG tau_sc)
@@ -1417,19 +1405,22 @@ let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.t
   match tA with
   | LF.Atom _ ->
      let g_pv = genPVar cov_problem in (* (cD', cg, ms) list *)
-     dprint
-       begin fun _ ->
-       "[genCovGoals] generated pvar cases"
+     dprintf
+       begin fun p ->
+       p.fmt "[genCovGoals] generated pvar cases: @[%a@]"
+         Prettycov.fmt_ppr_cov_goals g_pv
        end;
      let g_bv = genBVar cov_problem in
-     dprint
-       begin fun _ ->
-       "[genCovGoals] generated bvar cases"
+     dprintf
+       begin fun p ->
+       p.fmt "[genCovGoals] generated bvar cases: @[%a@]"
+         Prettycov.fmt_ppr_cov_goals g_bv
        end;
      let g_cv = genConst cov_problem in
-     dprint
-       begin fun _ ->
-       "[genCovGoals] generated const cases"
+     dprintf
+       begin fun p ->
+       p.fmt "[genCovGoals] generated const cases: @[%a@]"
+         Prettycov.fmt_ppr_cov_goals g_cv
        end;
      g_pv @ g_bv @ g_cv
 
@@ -1829,51 +1820,6 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
           end;
         (cD_cg, cG', candidates', pat') :: refine_pattern cgs cov_problem
      end
-
-let check_empty_pattern k candidates =
-  let filt_ref = ref 0 in
-  let rec check_empty_patt k =
-    function
-    | [] -> []
-    | Cand (cD_p, cG_p, ml, sl) :: cands ->
-       let sl' =
-         List.filter
-           (fun (Split (CovGoal (_, tR, _), patt)) ->
-             match patt with
-             | EmptyPatt _ ->
-                begin match tR with
-                | LF.Root (_, LF.MVar (LF.Offset k', _), LF.Nil) ->
-                   if not (k = k') then true else (filt_ref := !filt_ref + 1;  false)
-                | _ -> true
-                end
-             | EmptyParamPatt _ ->
-                begin match tR with
-                | LF.Root (_, LF.PVar (k', _), LF.Nil) ->
-                   if not (k = k')
-                   then true
-                   else
-                     begin
-                       filt_ref := !filt_ref + 1;
-                       false
-                     end
-                | _ -> true
-                end
-
-             | _ -> true
-           )
-           sl
-       in
-       Cand (cD_p, cG_p, ml, sl') :: check_empty_patt k cands
-  in
-  let r = check_empty_patt k candidates in
-  if !filt_ref > 0
-  then
-    (* no progress – nothing filters and the candidates are the same *)
-    (r, true)
-  else
-    (r, false)
-
-
 
 (* ************************************************************************************* *)
 
@@ -2592,18 +2538,8 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
 
      | SomeTermCands (_, []), [] -> []
      | SomeTermCands (_, []), _ ->
-        dprint
-          begin fun _ ->
-          "Check whether one of the candidates is empty ... "
-          end;
-        let cands', progress_flag = check_empty_pattern 1 candidates in
-        if progress_flag
-        then [(cD, [], cands', patt)]
-        else
-          begin
-            open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
-            raise (Error (Loc.ghost, NothingToRefine))
-          end
+        open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
+        raise (Error (Loc.ghost, NothingToRefine))
      | SomeTermCands (_, cgoals), _ ->
         dprintf
           begin fun p ->
@@ -2962,38 +2898,6 @@ let no_covers = ref 0 (* number of times coverage checking has yielded a negativ
 
 (* ****************************************************************************** *)
 
-let trivially_empty_patt cD_p tau =
-  try
-    match genPatCGoals cD_p [] tau [] with
-    | [] -> true
-    | _ -> false
-  with
-  | _ -> false
-
-let trivially_empty cov_problem =
-  try
-    match genCovGoals cov_problem with
-    | [] -> true
-    | _ -> false
-  with
-  | Abstract.Error _ ->
-     print_endline
-       "Unable to prove remaining open coverage goals trivially empty \
-        due to higher-order constraints.";
-     false
-
-let trivially_empty_param cov_problem =
-  try
-    match genPVar cov_problem with
-    | [] -> true
-    | _ -> false
-  with
-  | Abstract.Error _ ->
-     print_endline
-       "Unable to prove remaining open coverage goals trivially empty \
-        due to higher-order constraints.";
-     false
-
 let rec extract_patterns tau =
   function
   | Comp.Branch (loc, cD, cG, Comp.PatAnn (loc', pat, _), ms, e) ->
@@ -3002,83 +2906,9 @@ let rec extract_patterns tau =
   | Comp.Branch (loc, cD, cG, pat, ms, _) ->
      (cD, GenPatt (cG, pat, (tau, ms)))
 
-  | Comp.EmptyBranch (loc, cD, Comp.PatEmpty (loc', cPsi), ms) ->
-     begin match tau with
-     | Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPhi)) ->
-        let tA = Whnf.cnormTyp (tA, ms) in
-        dprintf
-          begin fun p ->
-          p.fmt "[extract_patterns] @[<v>EmptyBranch for TypBox of an MTyp@,\
-                 @[%a@]@,Note: cPsi = @[%a@]@]"
-            P.fmt_ppr_lf_typ_typing (cD, cPhi, tA)
-            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-          end;
-        (cD, EmptyPatt (cPsi, (tA, S.LF.id)))
-
-     | Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPhi)) ->
-        (cD, EmptyParamPatt (cPsi, (Whnf.cnormTyp (tA, ms), S.LF.id)))
-
-     (* Add EmptySubPatt *)
-     | Comp.TypBase (_, c, mS) ->
-        (cD, EmptyCompPatt (tau, ms))
-     end
-
 let rec gen_candidates loc cD covGoal =
   function
   | [] -> []
-  | (cD_p, EmptyPatt (cPsi, sA)) :: plist ->
-     let tA = Whnf.normTyp sA in
-     dprintf
-       begin fun p ->
-       p.fmt "[gen_candidates] @[EmptyPatt:@ @[%a@]@]"
-         P.fmt_ppr_lf_typ_typing (cD_p, cPsi, tA)
-       end;
-     if trivially_empty (cD_p, cPsi, tA)
-     then
-       begin
-         dprintf
-           begin fun p ->
-           p.fmt "[gen_candidates] @[tA = @[%a@]@] is trivially empty"
-             (P.fmt_ppr_lf_typ cD_p cPsi P.l0) tA
-           end;
-         gen_candidates loc cD covGoal plist
-       end
-     else
-       let s =
-         let open Format in
-         fprintf str_formatter "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %a\n##   is not empty.\n\n"
-           (P.fmt_ppr_lf_typ cD_p cPsi P.l0) (Whnf.normTyp sA);
-         flush_str_formatter ()
-       in
-       raise (Error (loc, NoCover s))
-
-  | (cD_p, EmptyParamPatt (cPsi, sA)) :: plist ->
-     if trivially_empty_param (cD_p, cPsi, Whnf.normTyp sA)
-     then
-       gen_candidates loc cD covGoal plist
-     else
-       let s =
-         let open Format in
-         fprintf str_formatter "\n##   Empty Parameter Pattern ##\n \n##   Case expression of parameter type : \n##   %a\n##   is not empty.\n\n"
-           (P.fmt_ppr_lf_typ cD_p cPsi P.l0) (Whnf.normTyp sA);
-         flush_str_formatter ()
-       in
-       raise (Error (loc, NoCover s))
-
-  | (cD_p, EmptyCompPatt ttau) :: plist ->
-     let tau = Whnf.cnormCTyp ttau in
-     if trivially_empty_patt cD_p tau
-     then
-       gen_candidates loc cD covGoal plist
-     else
-       let s =
-         let open Format in
-         fprintf str_formatter "\n##   Empty Pattern ##\n \n##   Case expression of type : \n##   %a\n##   is not empty.\n\n"
-           (P.fmt_ppr_cmp_typ cD_p P.l0) tau;
-         flush_str_formatter ()
-       in
-       raise (Error (loc, NoCover s))
-
   | (cD_p, GenPatt (cG_p, pat, ttau)) :: plist ->
      let CovPatt (cG', pat', ttau') = covGoal in
      dprintf
@@ -3291,7 +3121,7 @@ let rec revisit_opengoals : open_cov_problems -> open_cov_problems * open_cov_pr
 
 let check_coverage_success problem =
   match problem.prag with
-  | Pragma.RegularCase ->
+  | Comp.PragmaCase ->
      if !open_cov_problems = []
      then
        begin
@@ -3311,7 +3141,7 @@ let check_coverage_success problem =
        (* Check if the open coverage goals can be proven to be impossible *)
        Failure s
 
-  | Pragma.PragmaNotCase ->
+  | Comp.PragmaNotCase ->
      let open Format in
      if !open_cov_problems = []
      then
@@ -3401,6 +3231,9 @@ let covers problem projObj =
       covers' problem projObj
   else
     Success
+
+let is_impossible cD tau =
+  [] = genPatCGoals cD [] tau []
 
 let process problem projObj =
   reset_open_cov_problems ();

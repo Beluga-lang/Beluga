@@ -238,7 +238,7 @@ rec neutral_mstep : (g:tctx)
 / total  (neutral_mstep) /
 fn s => fn e => case s of
 | [_ |-  refl] => [_ |- refltm]
-| [_ |-  trans1 S1 MS] => impossible (neutral_doesnt_step [_ |-  S1] e) in [];
+| [_ |-  trans1 S1 MS] => impossible (neutral_doesnt_step [_ |-  S1] e);
 
 % Corollary of determinacy
 rec determinacy' : (g:tctx)

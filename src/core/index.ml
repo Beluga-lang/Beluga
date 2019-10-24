@@ -175,7 +175,6 @@ type error =
   | MisplacedOperator of Id.name
   | MissingArguments  of Id.name * int * int
   | ParseError
-  | NoRHS
   | NameOvershadowing of Id.name
   | SubstitutionNotAllowed of illegal_subst_term
   | NonemptyPatternSpineForVariable of Id.name
@@ -214,8 +213,6 @@ let print_error ppf =
      fprintf ppf "Ill-formed computation-level type."
   | ParseError ->
      fprintf ppf "Unable to parse operators into valid structure"
-  | NoRHS ->
-     fprintf ppf "Body of branch missing; this is only permitted for absurd patterns"
   | SubstitutionNotAllowed s ->
      fprintf ppf "Substitution is not allowed in %a" print_illegal_subst_term s
   | NonemptyPatternSpineForVariable x ->
@@ -259,16 +256,6 @@ let lookup_fv' (m : Id.name) fvars = List.mem m fvars.vars
 
 let lookup_fv (m : Id.name) : bool index =
   Bind.(get_fvars $> lookup_fv' m)
-
-(** Decides whether a given external pattern is for an empty meta object. *)
-let is_empty_metapat = function
-  | Ext.Comp.PatMetaObj
-    ( _
-    , ( _
-      , Ext.Comp.ClObj
-          ( cspi
-          , (Ext.LF.EmptySub _, [ Ext.LF.PatEmpty _ ])))) -> true
-  | _ -> false
 
 let print_fvars ppf (vs : Var.t) =
   let open Format in
@@ -1157,6 +1144,9 @@ let rec index_exp cvars vars fcvars = function
   | Ext.Comp.Syn (loc , i)   ->
       Apx.Comp.Syn (loc, index_exp' cvars vars fcvars i)
 
+  | Ext.Comp.Impossible (loc, i) ->
+     Apx.Comp.Impossible (loc, index_exp' cvars vars fcvars i)
+
   | Ext.Comp.Fn (loc, x, e) ->
      let vars' = Var.extend vars (Var.mk_entry x) in
        Apx.Comp.Fn (loc, x, index_exp cvars vars' fcvars e)
@@ -1411,8 +1401,6 @@ and reindex_pattern fvars pat = match pat with
 
   | Apx.Comp.PatMetaObj (loc, mO) -> pat
 
-  | Apx.Comp.PatEmpty (loc, cpsi) -> pat
-
   | Apx.Comp.PatAnn (loc, pat, tau) ->
       let pat' = reindex_pattern fvars pat in
         Apx.Comp.PatAnn (loc, pat', tau)
@@ -1426,80 +1414,8 @@ and reindex_pat_spine fvars pat_spine = match pat_spine with
   | Apx.Comp.PatObs (loc, obs, pat_spine) ->
     Apx.Comp.PatObs (loc, obs, reindex_pat_spine fvars pat_spine)
 
-(* TODO: Refactor this *)
 and index_branch cvars vars fcvars branch =
   match branch with
-  | Ext.Comp.EmptyBranch
-    ( loc
-    , cD
-    , Ext.Comp.PatMetaObj
-        ( loc'
-        , ( _l
-          , Ext.Comp.ClObj
-              ( cpsi
-              , (Ext.LF.EmptySub _, [ Ext.LF.PatEmpty _ ]))))) ->
-
-    let fcvars' =
-      match get_ctxvar cpsi with
-      | None -> empty_fvars `open_term
-      | Some psi_name ->
-         extending_by psi_name (empty_fvars `open_term)
-    in
-    let (omega, cD', cvars1, fcvars1)  =
-      index_mctx (CVar.create()) fcvars' cD
-    in
-    let (cPsi', _bvars, fcvars2) =
-      index_dctx disambiguate_to_fmvars cvars1 (BVar.create ()) fcvars1 cpsi
-    in
-    Apx.Comp.EmptyBranch (loc, cD', Apx.Comp.PatEmpty (loc', cPsi'))
-
-  | Ext.Comp.EmptyBranch
-    ( loc
-    , cD
-    , Ext.Comp.PatAnn
-      ( loc1
-      , Ext.Comp.PatMetaObj
-          ( loc'
-          , ( _l
-            , Ext.Comp.ClObj
-                ( cpsi
-                , ( Ext.LF.EmptySub _
-                  , [ Ext.LF.PatEmpty loc2 ]
-                  )
-                )
-            )
-          )
-      , tau
-      )
-    ) ->
-     let fcvars' =
-       begin match get_ctxvar cpsi with
-       | None -> empty_fvars `open_term
-       | Some psi_name ->
-          extending_by psi_name (empty_fvars `open_term)
-       end
-     in
-     let (omega, cD', cvars1, fcvars1)  =
-       index_mctx (CVar.create()) fcvars' cD
-     in
-     let (cPsi', _bvars, fcvars2) =
-       index_dctx disambiguate_to_fmvars cvars1 (BVar.create ()) fcvars1 cpsi
-     in
-     let (fcvars1, tau') =
-       index_comptyp tau cvars1 fcvars2
-     in
-     Apx.Comp.EmptyBranch
-       ( loc
-       , cD'
-       , Apx.Comp.PatAnn (loc1, Apx.Comp.PatEmpty (loc2, cPsi'), tau')
-       )
-
-  | Ext.Comp.EmptyBranch (loc,_,_) -> throw loc NoRHS
-
-  | Ext.Comp.Branch (loc, _cD, pat, _e) when is_empty_metapat pat ->
-      dprint (fun () -> "[index_branch] PatEmpty " );
-      throw loc CompEmptyPattBranch
-
   | Ext.Comp.Branch (loc, cD, Ext.Comp.PatMetaObj (loc', mO), e) ->
     let _ = dprint (fun () -> "index_branch") in
     (* computing fcvars' is unnecessary? -bp *)
@@ -1510,7 +1426,6 @@ and index_branch cvars vars fcvars branch =
         (get_ctxvar_mobj mO)
         (empty_fvars `open_term)
     in
-
     let (omega, cD', cvars1, fcvars1)  =
       dprintf (fun p -> p.fmt "[index_branch] indexing cD in branch at %a" Loc.print_short loc);
       index_mctx (CVar.create()) fcvars' cD

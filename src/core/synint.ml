@@ -2,7 +2,6 @@
 open Support
 
 open Id
-open Pragma
 
 module Loc = Location
 
@@ -292,6 +291,7 @@ end
 (* Internal Computation Syntax *)
 module Comp = struct
   include Syncom.Harpoon
+  include Syncom.Comp
 
   type kind =
     | Ctype of Loc.t
@@ -356,16 +356,17 @@ module Comp = struct
     | PairValue  of value * value
 
   and exp_chk =
-    | Syn     of Loc.t * exp_syn
-    | Fn      of Loc.t * name * exp_chk
-    | Fun     of Loc.t * fun_branches
-    | MLam    of Loc.t * name * exp_chk
-    | Pair    of Loc.t * exp_chk * exp_chk
-    | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-    | Let     of Loc.t * exp_syn * (name * exp_chk)
-    | Box     of Loc.t * meta_obj
-    | Case    of Loc.t * case_pragma * exp_syn * branch list
-    | Hole    of Loc.t * HoleId.t * HoleId.name
+    | Syn        of Loc.t * exp_syn
+    | Fn         of Loc.t * name * exp_chk
+    | Fun        of Loc.t * fun_branches
+    | MLam       of Loc.t * name * exp_chk
+    | Pair       of Loc.t * exp_chk * exp_chk
+    | LetPair    of Loc.t * exp_syn * (name * name * exp_chk)
+    | Let        of Loc.t * exp_syn * (name * exp_chk)
+    | Box        of Loc.t * meta_obj
+    | Case       of Loc.t * case_pragma * exp_syn * branch list
+    | Impossible of Loc.t * exp_syn
+    | Hole       of Loc.t * HoleId.t * HoleId.name
 
   and exp_syn =
     | Var       of Loc.t * offset
@@ -382,7 +383,6 @@ module Comp = struct
     | EmptyPattern
 
   and pattern =
-    | PatEmpty   of Loc.t * LF.dctx
     | PatMetaObj of Loc.t * meta_obj
     | PatConst of Loc.t * cid_comp_const * pattern_spine
     | PatFVar   of Loc.t * name
@@ -402,7 +402,7 @@ module Comp = struct
     | DataApp of value * data_spine
 
   and branch =
-    | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub
+    (* | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub *)
     | Branch of
         Loc.t
         * LF.mctx

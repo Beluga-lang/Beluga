@@ -1645,6 +1645,9 @@ let mctxMVarPos cD u =
     | (Comp.Box (loc, cM), t) ->
         Comp.Box (loc, cnormMetaObj (cM,t))
 
+    | Comp.Impossible (loc, i), t ->
+       Comp.Impossible (loc, cnormExp' (i, t))
+
     | (Comp.Case (loc, prag, i, branches), t) ->
         Comp.Case (loc, prag, cnormExp' (i,t),
                    List.map (function b -> cnormBranch (b, t)) branches)
@@ -1673,8 +1676,6 @@ let mctxMVarPos cD u =
        Comp.AnnBox (cM', cT')
 
   and cnormPattern (pat, t) = match pat with
-    | Comp.PatEmpty (loc, cPsi) ->
-        Comp.PatEmpty (loc, cnormDCtx (cPsi, t))
     | Comp.PatMetaObj (loc, mO) ->
         Comp.PatMetaObj (loc, cnormMetaObj (mO, t))
     | Comp.PatConst (loc, c, patSpine) ->
@@ -1724,10 +1725,6 @@ let mctxMVarPos cD u =
 
   *)
   and cnormBranch = function
-    | (Comp.EmptyBranch (loc, cD, pat, t), theta) ->
-         (* THIS IS WRONG. -bp *)
-         Comp.EmptyBranch (loc, cD, pat, cnormMSub t)
-
     | (Comp.Branch (loc, cD, cG, Comp.PatAnn(loc'', Comp.PatMetaObj (loc', mO), tau), t, e), theta) ->
 	Comp.Branch (loc, cD, cG,
 		     Comp.PatAnn(loc'',

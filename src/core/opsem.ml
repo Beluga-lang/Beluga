@@ -407,8 +407,6 @@ and match_pattern  (v,eta) (pat, mt) =
 
 and eval_branch vscrut branch (theta, eta) =
   match branch with
-    | Comp.EmptyBranch (loc, cD, pat, t) ->
-      raise (Error.Violation "Case {}-pattern -- coverage checking is off or broken")
     | Comp.Branch (loc, cD, cG, pat, theta', e) ->
       begin
         try

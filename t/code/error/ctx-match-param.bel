@@ -12,7 +12,7 @@ schema ctx = term;
 rec pos :{g:ctx}{#p:[g |- term]} Nat =
 / total m (pos _ m) /
 mlam g,#p => case [g] of
-| [ ] => impossible [|- #p] in []
+| [ ] => impossible [|- #p]
 | [g,y:term] =>
   (case [g,y:term |- #p[..] ] of   % This passes and associates #p with Shift 0 == Shift 1, y/y
                                  % This should not happen. It should have Shift 1 associated with it

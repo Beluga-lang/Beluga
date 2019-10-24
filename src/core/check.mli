@@ -80,6 +80,7 @@ module Comp : sig
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
     | MissingTotal    of Id.cid_prog
+    | NotImpossible   of LF.mctx * gctx * typ * exp_syn
 
   exception Error of Syntax.Loc.t * error
 

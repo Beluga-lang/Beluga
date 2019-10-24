@@ -119,7 +119,7 @@ Finally, we can normalize terms, by first evaluating them into semantic values, 
 }}%
 
 rec emp_env : Env [] [] =
-mlam T => mlam #p => impossible [ |- #p] in [ ];
+mlam T => mlam #p => impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify (eval t emp_env);

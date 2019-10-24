@@ -80,7 +80,7 @@ case e of
 ;
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] in [ ];
+mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)

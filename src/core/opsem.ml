@@ -83,6 +83,14 @@ where  cD ; cG |- e <= wf_exp
        .  ; .  |- eta   <= [|theta|]cG
 *)
 
+let eval_meta_obj cM theta =
+	let loc, cM' = Whnf.cnormMetaObj (cM, theta) in
+  (* why on earth do we do this case split? -je *)
+  match cM' with
+  | LF.ClObj (phat, LF.MObj tM) -> (loc, cM')
+  | LF.ClObj (phat, LF.PObj h) -> (loc, cM')
+  | LF.CObj cPsi -> (loc, cM')
+
 let rec eval_syn i (theta, eta) =
   dprintf
     begin fun p ->
@@ -250,8 +258,9 @@ let rec eval_syn i (theta, eta) =
            raise (Error.Violation "Expected CtxValue")
       end
 
-    | Comp.Ann (e, _tau) ->
-      eval_chk e (theta, eta)
+    | Comp.AnnBox (cM, _tau) ->
+       let loc, cM' = eval_meta_obj cM theta in
+       Comp.BoxValue (loc, cM')
 
     | Comp.PairVal (_, i1, i2) ->
       let v1 = eval_syn i1 (theta, eta) in
@@ -288,12 +297,8 @@ and eval_chk e (theta, eta) =
             eval_chk e (theta, Comp.Cons (w, eta))
 
       | Comp.Box (loc, cM) ->
-	 let (_,cM') = Whnf.cnormMetaObj (cM, theta) in
-          begin match cM' with
-            | LF.ClObj (phat, LF.MObj tM) -> Comp.BoxValue (loc,cM')
-            | LF.ClObj (phat, LF.PObj h) -> Comp.BoxValue (loc,cM')
-            | LF.CObj cPsi -> Comp.BoxValue (loc,cM')
-          end
+         let loc, cM' = eval_meta_obj cM theta in
+         Comp.BoxValue (loc, cM')
 
       | Comp.Case (loc, _prag, i, branches) ->
         let vscrut = eval_syn i (theta, eta) in

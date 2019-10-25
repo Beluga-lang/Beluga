@@ -1,4 +1,5 @@
 (* Internal Syntax *)
+open Support
 
 open Id
 open Pragma
@@ -346,26 +347,26 @@ module Comp = struct
     | PairValue  of value * value
 
   and exp_chk =
-    | Syn    of Loc.t * exp_syn
-    | Fn     of Loc.t * name * exp_chk
-    | Fun    of Loc.t * fun_branches
-    | MLam   of Loc.t * name * exp_chk
-    | Pair   of Loc.t * exp_chk * exp_chk
+    | Syn     of Loc.t * exp_syn
+    | Fn      of Loc.t * name * exp_chk
+    | Fun     of Loc.t * fun_branches
+    | MLam    of Loc.t * name * exp_chk
+    | Pair    of Loc.t * exp_chk * exp_chk
     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)
-    | Let    of Loc.t * exp_syn * (name * exp_chk)
-    | Box    of Loc.t * meta_obj
-    | Case   of Loc.t * case_pragma * exp_syn * branch list
-    | Hole   of Loc.t * HoleId.t * HoleId.name
+    | Let     of Loc.t * exp_syn * (name * exp_chk)
+    | Box     of Loc.t * meta_obj
+    | Case    of Loc.t * case_pragma * exp_syn * branch list
+    | Hole    of Loc.t * HoleId.t * HoleId.name
 
   and exp_syn =
-    | Var    of Loc.t * offset
+    | Var       of Loc.t * offset
     | DataConst of Loc.t * cid_comp_const
-    | Obs    of Loc.t * exp_chk * LF.msub * cid_comp_dest
-    | Const  of Loc.t * cid_prog
-    | Apply  of Loc.t * exp_syn * exp_chk
-    | MApp   of Loc.t * exp_syn * meta_obj
-    | Ann    of exp_chk * typ
-    | PairVal of Loc.t * exp_syn * exp_syn
+    | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest
+    | Const     of Loc.t * cid_prog
+    | Apply     of Loc.t * exp_syn * exp_chk
+    | MApp      of Loc.t * exp_syn * meta_obj
+    | AnnBox    of meta_obj * meta_typ
+    | PairVal   of Loc.t * exp_syn * exp_syn
 
   and branch_pattern =
     | NormalPattern of LF.normal * exp_chk
@@ -419,7 +420,7 @@ module Comp = struct
 
   let is_meta_obj : exp_syn -> meta_obj option =
     function
-    | Ann (Box (_, m), _) -> Some m
+    | AnnBox (m, _)  -> Some m
     | _ -> None
 
   let head_of_meta_obj : meta_obj -> (LF.dctx_hat * LF.head) option =
@@ -568,7 +569,7 @@ module Comp = struct
    *)
   let metavariable_of_exp (t : exp_syn) : (offset * offset option) option =
     match t with
-    | Ann (Box (_, (_, mf)), _) -> LF.variable_of_mfront mf
+    | AnnBox ((_, mf), _) -> LF.variable_of_mfront mf
     | _ -> None
 
   (* Decides whether the given term is a computational variable.

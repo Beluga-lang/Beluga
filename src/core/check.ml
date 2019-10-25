@@ -573,6 +573,15 @@ module Comp = struct
    * otherwise exception Error is raised
    *)
 
+  let checkMetaObj cD cM cT t =
+    try
+      LF.checkMetaObj cD cM (cT, t);
+      Typeinfo.Comp.add (getLoc cM)
+        (Typeinfo.Comp.mk_entry cD (TypBox (getLoc cM, cT), t))
+        ("Box " ^ Fmt.stringify (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
+    with Whnf.FreeMVar (I.FMVar (u, _ )) ->
+      Error.violation ("Free meta-variable " ^ Id.render_name u)
+
   let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau = match (e, ttau) with
     | (Fn (loc, x, e), (TypArr (tau1, tau2), t)) ->
        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
@@ -612,16 +621,10 @@ module Comp = struct
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
        end
 
-    | (Box (loc, cM), (TypBox (l, mT), t)) -> (* Offset by 1 *)
-       begin try
-           LF.checkMetaObj cD cM (mT, t);
-           Typeinfo.Comp.add (getLoc cM) (Typeinfo.Comp.mk_entry cD ttau)
-             ("Box " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
-           dprint (fun () -> "loc <> metaLoc " ^ string_of_bool(loc <> (getLoc cM)))
-         with Whnf.FreeMVar (I.FMVar (u, _ )) ->
-           raise (Error.Violation ("Free meta-variable " ^ (Id.render_name u)))
-       end
-    | (Case (loc, prag, (Ann (Box (_, (l,cM)), (TypBox (_, mT) as tau0_sc)) as i), branches), (tau, t)) ->
+    | (Box (loc, cM), (TypBox (l, mT), t)) ->
+       checkMetaObj cD cM mT t
+
+    | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
        let decide_ind x =
          if Misc.List.nonempty total_decs && is_indMObj cD x
          then
@@ -680,7 +683,10 @@ module Comp = struct
         *)
        let problem = Coverage.make loc prag cD branches tau_sc None in
        (* Coverage.stage problem; *)
-       checkBranches total_pragma cD (cG,cIH) total_decs (i,branches) tau0_sc (tau, t);
+       checkBranches total_pragma cD (cG,cIH) total_decs
+         (i, branches)
+         (TypBox (Syntax.Loc.ghost, mT))
+         (tau, t);
        Coverage.process problem projOpt
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
@@ -844,10 +850,9 @@ module Comp = struct
        (None, TypCross (TypClo (tau1,t1),
                         TypClo (tau2,t2)), C.m_id)
 
-
-    | Ann (e, tau) ->
-       check cD (cG, cIH) total_decs e (tau, C.m_id);
-       (None, tau, C.m_id)
+    | AnnBox (cM, cT) ->
+       checkMetaObj cD cM cT C.m_id;
+       (None, TypBox (getLoc cM, cT), C.m_id)
 
   (* and synObs cD csp ttau1 ttau2 = match (csp, ttau1, ttau2) with *)
   (*   | (CopatNil loc, (TypArr (tau1, tau2), theta), (tau', theta')) -> *)
@@ -960,10 +965,10 @@ module Comp = struct
   and checkBranch caseTyp cD (cG, cIH) total_decs (i, branch) tau_s (tau, t) =
     match branch with
     | EmptyBranch (loc, cD1', pat, t1) ->
-       let _ = dprint (fun () -> "\nCheckBranch - Empty Pattern\n") in
+       dprint (fun () -> "[checkBranch] Empty Pattern");
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-       (LF.checkMSub  loc cD1' t1 cD;
-        checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id))
+       LF.checkMSub  loc cD1' t1 cD;
+       checkPattern cD1' I.Empty pat (tau_p, Whnf.m_id)
 
     | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
        dprintf

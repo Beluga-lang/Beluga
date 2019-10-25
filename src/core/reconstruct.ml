@@ -29,16 +29,13 @@ type error =
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
-  | GlobalConstraintFailure
   | MissingMetaObj
   | TooManyMetaObj
   | CompTypEmpty       of Int.LF.mctx * Int.Comp.tclo
   | TypeAbbrev         of Id.name
   | PatternMobj
   | PatAnn
-  | PatIndexMatch  of Int.LF.mctx * Int.Comp.meta_obj
   | MCtxIllformed of Int.LF.mctx
-  | ScrutineeBlock
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
   | ErrorMsg of string
@@ -54,19 +51,12 @@ let _ = Error.register_printer
         | MCtxIllformed cD ->
             Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
               (P.fmt_ppr_lf_mctx P.l0) cD
-        | PatIndexMatch (cD, cM) ->
-            Format.fprintf ppf "Pattern matching on index argument %a fails. @@\
-  Note that unification is conservative and will fail if it cannot handle a case."
-              (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
         | PatAnn     ->
             Format.fprintf ppf
               "Type annotations on context variables and parameter variables not supported at this point."
         | PatternMobj ->
             Format.fprintf ppf
               "Expected a meta-object; Found a computation-level pattern"
-        | ScrutineeBlock ->
-            Format.fprintf ppf
-              "Pattern Matching on an object of Sigma-type (block) is not allowed."
         | TypeAbbrev a ->
           Format.fprintf ppf
             "Type definition %s cannot contain any free meta-variables in its type."
@@ -184,7 +174,7 @@ type case_type  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
 
 let case_type i =
   match i with
-  | Int.Comp.Ann (Int.Comp.Box (_, mC), _) -> IndexObj mC
+  | Int.Comp.AnnBox (mC, _) -> IndexObj mC
   | _ -> DataObj
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
@@ -990,7 +980,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      begin
        match (i, tau_s) with
              (* Not only the object but also its type must be closed *)
-       | (Int.Comp.Ann (Int.Comp.Box (_ , mC), _ ), Int.Comp.TypBox (_, mT)) ->
+       | (Int.Comp.AnnBox (mC, _) as i, Int.Comp.TypBox (_, mT)) ->
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closedMetaObj mC && Whnf.closedCTyp tau_s then
             let recBranch b =
@@ -1002,7 +992,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
           else
             raise (Error (loc, ValueRestriction (cD, cG, i, (tau_s, Whnf.m_id))))
 
-       | (Int.Comp.Ann (Int.Comp.Box (_ , _), _ ) as i, _ ) ->
+       | (Int.Comp.AnnBox (_, _) as i, _ ) ->
           raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, Whnf.m_id)))))
 
        | (i, Int.Comp.TypBox (_, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi))) ->
@@ -1095,9 +1085,10 @@ and elExp' cD cG i =
     let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
     let (tR, sP) = Lfrecon.elClosedTerm' Lfrecon.Pibox cD cPsi r in
     let phat = Context.dctxToHat cPsi in
-    let tau = Int.Comp.TypBox (Loc.ghost, Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi)) in
+    let cT = Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi) in
+    let tau = Int.Comp.TypBox (Loc.ghost, cT) in
     let cM = (loc, Int.LF.ClObj (phat, Int.LF.MObj tR)) in
-    (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+    (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
   in
   match i with
   | Apx.Comp.Var (loc, offset) ->
@@ -1247,9 +1238,10 @@ and elExp' cD cG i =
        let cPhi     = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
        let (_ , cPsi, cl , _cPhi) = Whnf.mctxSDec cD k in (* cD; cPhi |- svar: cPsi  *)
        let phat     = Context.dctxToHat cPhi in
-       let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) in
+       let cT       = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi) in
+       let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
        let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj sv)) in
-       (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+       (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
      else
        throw loc IllegalSubstMatch
   (* (ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported") *)
@@ -1270,9 +1262,10 @@ and elExp' cD cG i =
                           | s -> Substitution.LF.isId s ) in *)
          if Substitution.LF.isId id then
            let phat     = Context.dctxToHat cPhi in
-           let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2)) in
+           let cT       = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2) in
+           let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
            let cM       = (loc, Int.LF.ClObj(phat, Int.LF.SObj s0')) in
-           (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+           (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
          else
            throw loc IllegalSubstMatch
       | _  -> throw loc IllegalSubstMatch
@@ -1289,9 +1282,10 @@ and elExp' cD cG i =
           begin
             match c_var with
             | (Int.LF.CtxOffset offset) as phi ->
-               let sW = Context.lookupCtxVarSchema cD  phi in
-               let tau = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.CTyp (Some sW)) in
-               (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
+               let sW  = Context.lookupCtxVarSchema cD  phi in
+               let cT  = Int.LF.CTyp (Some sW) in
+               let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
+               (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
             | _ ->
                throw loc (ErrorMsg "In general the schema of the given context cannot be uniquely inferred")
           end
@@ -1302,12 +1296,6 @@ and elExp' cD cG i =
      let (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in
      (Int.Comp.PairVal (loc, i1', i2'),
       (Int.Comp.TypCross (Whnf.cnormCTyp (tau1,t1), Whnf.cnormCTyp (tau2,t2)), C.m_id))
-
-
-  | Apx.Comp.Ann (e, tau) ->
-     let tau' = elCompTyp cD tau in
-     let e'   = elExp cD cG e (tau', C.m_id) in
-     (Int.Comp.Ann (e', tau'), (tau', C.m_id))
 
   | _ -> failwith "uh oh"
 

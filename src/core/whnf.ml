@@ -1667,7 +1667,10 @@ let mctxMVarPos cD u =
     | (Comp.MApp (loc, i, cM), t) ->
         Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t))
 
-    | (Comp.Ann (e, tau), t') -> Comp.Ann (cnormExp (e, t), cnormCTyp (tau, mcomp t' t))
+    | (Comp.AnnBox (cM, cT), t') ->
+       let cM' = cnormMetaObj (cM, t') in
+       let cT' = cnormMetaTyp (cT, t') in
+       Comp.AnnBox (cM', cT')
 
   and cnormPattern (pat, t) = match pat with
     | Comp.PatEmpty (loc, cPsi) ->

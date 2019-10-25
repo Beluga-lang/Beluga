@@ -700,9 +700,9 @@ struct
         (sexp_cmp_exp_syn cD cG) i1
         (sexp_cmp_exp_syn cD cG) i2
 
-    | Comp.Ann (e, _tau) ->
+    | Comp.AnnBox (cM, _tau) ->
       fprintf ppf "%a"
-        (sexp_cmp_exp_chk cD cG) e
+        (sexp_meta_obj cD) cM
 
   and sexp_cmp_value ppf =
     function

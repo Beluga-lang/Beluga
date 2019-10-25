@@ -1145,8 +1145,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_syn cD cG 1) i1
          (fmt_ppr_cmp_exp_syn cD cG 1) i2
 
-    | Comp.Ann (e, _tau) ->
-       let cond = lvl > 1 in
+    | Comp.AnnBox (cM, _cT) ->
        (* When we are printing refined programs through the interactive mod
           we should not print type annotations.
           fprintf ppf "%s%a : %a%s"
@@ -1155,10 +1154,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
           (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
           (r_paren_if cond)
         *)
-       fprintf ppf "%s%a%s"
-         (l_paren_if cond)
-         (fmt_ppr_cmp_exp_chk cD cG 1) e
-         (r_paren_if cond)
+       fmt_ppr_cmp_meta_obj cD 1 ppf cM
 
   and fmt_ppr_cmp_value lvl ppf =
     function

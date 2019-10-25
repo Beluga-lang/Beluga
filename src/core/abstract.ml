@@ -1136,7 +1136,7 @@ let abstrClObj cQ off = function
 
 let abstrMObj cQ off = function
   | I.ClObj(phat, tM) ->
-    I.ClObj(abstractMVarHat cQ off phat, (abstrClObj cQ off tM))
+     I.ClObj(abstractMVarHat cQ off phat, abstrClObj cQ off tM)
   | I.CObj(cPsi) -> I.CObj(abstractMVarDctx cQ off cPsi)
   | I.MV k -> I.MV k
 
@@ -1326,10 +1326,10 @@ and collectExp' cQ i = match i with
       let (cQ'', cM') = collect_meta_obj 0 cQ cM in
         (cQ'', Comp.MApp (loc, i', cM'))
 
-  | Comp.Ann  (e, tau) ->
-      let (cQ', e') = collectExp cQ e in
-      let (cQ'', tau') = collectCompTyp 0 cQ' tau in
-        (cQ'', Comp.Ann  (e', tau'))
+  | Comp.AnnBox (cM, cT) ->
+      let (cQ', cM') = collect_meta_obj 0 cQ cM in
+      let (cQ'', cT') = collectMetaTyp Syntax.Loc.ghost 0 cQ' cT in
+      (cQ'', Comp.AnnBox (cM', cT'))
 
   | Comp.PairVal (loc, i1, i2) ->
      let (cQ', i1') = collectExp' cQ i1  in
@@ -1635,7 +1635,7 @@ let abstrCodataTyp cD tau tau' =
   (cD', tau_obs, tau_res', Context.length cD_res)
 
 let abstrPatObj loc cD cG pat tau =
-  let _ = pat_flag := true in
+  pat_flag := true;
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -1650,12 +1650,11 @@ let abstrPatObj loc cD cG pat tau =
   let cD'     = ctxToMCtx_pattern cQ' in
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
-    (pat_flag := false;
-      (cD, cG', pat', tau'))
-
+  pat_flag := false;
+  (cD, cG', pat', tau')
 
 let abstrPatSpine loc cD cG patSpine tau =
-  let _ = pat_flag := true in
+  pat_flag := true;
   let patSpine = Whnf.cnormPatSpine (patSpine, Whnf.m_id) in
   let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
   let (cQ1, cD1') = collectMctx I.Empty cD in
@@ -1670,8 +1669,8 @@ let abstrPatSpine loc cD cG patSpine tau =
   let cD'     = ctxToMCtx_pattern cQ' in
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
-    (pat_flag := false;
-      (cD, cG', patSpine', tau'))
+  pat_flag := false;
+  (cD, cG', patSpine', tau')
 
 
 (*
@@ -1680,7 +1679,7 @@ let abstrPatSpine loc cD cG patSpine tau =
 
 *)
 let abstrPattern cD1 cPsi1  (phat, tM) tA =
-  let _ = pat_flag := true in
+  pat_flag := true;
   let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
   let cQ'     = abstractMVarCtx cQ 0 in
   let offset  = Context.length cD1' in
@@ -1692,11 +1691,11 @@ let abstrPattern cD1 cPsi1  (phat, tM) tA =
   let cs'     = abstractMVarCSub cQ' offset cs in *)
   let cD'     = ctxToMCtx_pattern cQ' in
   let cD      = Context.append cD' cD2 in
-    (pat_flag := false ; (cD, cPsi2, (phat, tM2), tA2))
-
+  pat_flag := false;
+  (cD, cPsi2, (phat, tM2), tA2)
 
 let abstrMObjPatt cD1 cM mT =
-  let _ = pat_flag := true in
+  pat_flag := true;
   let (cQ1, cD1') = collectMctx I.Empty cD1 in
   let (cQ2, cM')  = collect_meta_obj 0 cQ1 cM in
   let (cQ3, mT')  = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
@@ -1707,7 +1706,8 @@ let abstrMObjPatt cD1 cM mT =
   let cD2         = abstractMVarMctx cQ' cD1' (0, offset-1) in
   let cD'         = ctxToMCtx_pattern cQ' in
   let cD          = Context.append cD' cD2 in
-    (pat_flag := false ; (cD, cM', mT'))
+  pat_flag := false;
+  (cD, cM', mT')
 
 (*
    1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA

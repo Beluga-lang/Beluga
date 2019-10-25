@@ -106,7 +106,7 @@ let matchFromPatterns l e bl =
 let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
 (** Traverses a computation-level type-checkable expression and
- * applies the given function to all holes. *)
+ * applies the given function to all computational holes. *)
 let rec mapHoleChk f = function
  | Hole (l, id, name) -> f name l
  | Syn (l, es) ->
@@ -143,9 +143,6 @@ and mapHoleSyn f = function
   | MApp (l, es, c) ->
      let es' =  mapHoleSyn f es in
      MApp(l, es', c)
-  | Ann (ec, tau) ->
-      let ec' =  mapHoleChk f ec in
-      Ann(ec', tau)
   | PairVal(l, es1, es2) ->
       let es1' =  mapHoleSyn f es1 in
       let es2' = mapHoleSyn f es2 in
@@ -336,12 +333,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
               )
 	         | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
 	       in
-	       let entry =
-           Comp.Ann
-             ( Comp.Box (Loc.ghost, m0),
-               Comp.TypBox(Loc.ghost, mtyp')
-             )
-         in
+	       let entry = Comp.AnnBox (m0, mtyp') in
 	       Some (matchFromPatterns (Loc.ghost) entry bl)
 	     else
 	       searchMctx (i+1) cD' (cd::cD_tail)

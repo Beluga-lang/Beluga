@@ -18,8 +18,8 @@ module Total = Beluga.Total
 (** Capabilities passed to tactics so they can manipulate the
     interpreter state. *)
 type tactic_context =
-  { add_subgoal : unit Comp.proof_state -> unit
-  ; remove_subgoal : unit Comp.proof_state -> unit
+  { add_subgoal : Comp.proof_state -> unit
+  ; remove_subgoal : Comp.proof_state -> unit
   ; remove_current_subgoal : unit -> unit
   ; replace_subgoal : Comp.proof_state -> unit
   ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
@@ -29,10 +29,10 @@ type tactic_context =
 (** Tactics operate on an incomplete proof in a tactic context.
     They may choose to solve the goal by removing it or add new subgoals, or both.
  *)
-type t = unit Comp.proof_state -> tactic_context -> unit
+type t = Comp.proof_state -> tactic_context -> unit
 
 (** Solves the subgoal with the given proof. *)
-val solve : Comp.incomplete_proof -> t
+val solve : Comp.proof -> t
 
 (** Introduces the arguments to a function type, with the given names, if any. *)
 val intros : string list option -> t

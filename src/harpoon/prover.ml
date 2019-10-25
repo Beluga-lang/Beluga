@@ -22,12 +22,12 @@ open Debug.Fmt
 module Comp = B.Syntax.Int.Comp
 
 type interpreter_state =
-  { initial_state : unit Comp.proof_state
+  { initial_state : Comp.proof_state
   (* ^ it's important to remember the initial proof state, since it
      gives us a way to track the original full statement of the theorem
      to prove as well as a handle on the whole (partial) proof.
    *)
-  ; remaining_subgoals : unit Comp.proof_state DynArray.t
+  ; remaining_subgoals : Comp.proof_state DynArray.t
   ; automation_state : Automation.automation_state
   ; theorem_name : Id.name
   ; cid : Id.cid_prog
@@ -38,7 +38,7 @@ let make_prover_state
       (cid : Id.cid_prog)
       (theorem_name : Id.name)
       (order : Comp.order option)
-      (initial_state : unit Comp.proof_state)
+      (initial_state : Comp.proof_state)
     : interpreter_state =
   { initial_state
   ; remaining_subgoals = DynArray.of_list []
@@ -54,7 +54,7 @@ let current_subgoal_index gs = 0
 (** Gets the next subgoal from the interpreter state.
     Returns `None` if there are no subgoals remaining.
  *)
-let next_subgoal (s : interpreter_state) : unit Comp.proof_state option =
+let next_subgoal (s : interpreter_state) : Comp.proof_state option =
   let gs = s.remaining_subgoals in
   if DynArray.empty gs then
     None
@@ -107,7 +107,7 @@ let add_subgoal_hook s g tctx =
     )
 
 let process_command
-      (s : interpreter_state) (g : unit Comp.proof_state)
+      (s : interpreter_state) (g : Comp.proof_state)
       (cmd : Command.command)
       (tctx : Tactic.tactic_context)
     : unit =

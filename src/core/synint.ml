@@ -463,104 +463,97 @@ module Comp = struct
 
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
-  (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.
-   * The type parameter 'a is used as a trick to rule out incomplete proofs:
-   * - if 'a = void then the Incomplete constructor is impossible
-   * - if 'a = unit then this is a true incomplete proof.
-   *)
-  type 'a proof =
+  (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
+  type proof =
     | Incomplete (* hole *)
-      of 'a * 'a proof_state
-    | Command of command * 'a proof
-    | Directive of 'a directive (* which can end proofs or split into subgoals *)
+      of proof_state
+    | Command of command * proof
+    | Directive of directive (* which can end proofs or split into subgoals *)
 
   and command =
     | By of invoke_kind * exp_syn * name * typ * boxity
     | Unbox of exp_syn * name * LF.ctyp
 
-  and 'a proof_state =
+  and proof_state =
     { context : hypotheses (* all the assumptions *)
     (* The full context in scope at this point. *)
 
     ; goal : tclo
     (* The goal of this proof state. Contains a type with a delayed msub. *)
 
-    ; mutable solution : 'a proof option
+    ; mutable solution : proof option
     (* The solution to this proof obligation. Filled in by a tactic later. *)
     }
 
-  and 'a directive =
+  and directive =
     | Intros (* Prove a function type by a hypothetical derivation. *)
-      of 'a hypothetical
+      of hypothetical
     | Solve (* End the proof with the given term *)
       of exp_chk
     | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
          * typ (* The type of the object that we're splitting on *)
-         * 'a meta_branch list
+         * meta_branch list
     | CompSplit (* Splitting on an inductive type *)
       of exp_syn (* THe computational term to split on *)
          * typ (* The type of the object to split on *)
-         * 'a comp_branch list
+         * comp_branch list
 
-  and 'a meta_branch = ('a, LF.dctx * LF.head) split_branch
-  and 'a comp_branch = ('a, cid_comp_const) split_branch
+  and meta_branch = (LF.dctx * LF.head) split_branch
+  and comp_branch = cid_comp_const split_branch
 
   (** A branch of a case analysis. *)
-  and ('a, 'b) split_branch =
+  and 'b split_branch =
     | SplitBranch
       of 'b (* the name of the constructor for this split *)
-         * 'a hypothetical (* the derivation for this case *)
+         * hypothetical (* the derivation for this case *)
 
  (** A hypothetical derivation lists new meta-hypotheses and
      hypotheses, then proceeds with a proof.
   *)
-  and 'a hypothetical =
+  and hypothetical =
     Hypothetical of
       hypotheses (* the full contexts *)
-      * 'a proof (* the proof; should make sense in `hypotheses`. *)
+      * proof (* the proof; should make sense in `hypotheses`. *)
 
-  let make_proof_state (t : tclo) : 'a proof_state =
+  let make_proof_state (t : tclo) : proof_state =
     { context = no_hypotheses
     ; goal = t
     ; solution = None
     }
 
-  type complete_proof = Misc.void proof
-  type incomplete_proof = unit proof
-
   (** Smart constructor for an unfinished proof ending. *)
-  let incomplete_proof (s : unit proof_state) : incomplete_proof =
-    Incomplete ( (), s )
+  let incomplete_proof (s : proof_state) : proof =
+    Incomplete s
 
   (** Smart constructor for the intros directive. *)
-  let intros (h : hypotheses) (proof : 'a proof) : 'a proof =
+  let intros (h : hypotheses) (proof : proof) : proof =
     Directive (Intros (Hypothetical (h, proof)))
 
-  let proof_cons (stmt : command) (proof : 'a proof) = Command (stmt, proof)
+  let proof_cons (stmt : command) (proof : proof) = Command (stmt, proof)
 
-  let solve (t : exp_chk) : 'a proof =
+  let solve (t : exp_chk) : proof =
     Directive (Solve t)
 
-  let meta_split (m : exp_syn) (a : typ) (bs : 'a meta_branch list)
-      : 'a proof =
+  let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
+      : proof =
     Directive (MetaSplit (m, a, bs))
 
-  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : 'a proof)
-      : 'a meta_branch =
+  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : proof)
+      : meta_branch =
     SplitBranch (c, (Hypothetical (h, d)))
 
-  let comp_split (t : exp_syn) (tau : typ) (bs : 'a comp_branch list)
-      : 'a proof =
+  let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
+      : proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : cid_comp_const) (h : hypotheses) (d : 'a proof)
-      : 'a comp_branch =
+  let comp_branch (c : cid_comp_const) (h : hypotheses) (d : proof)
+      : comp_branch =
     SplitBranch (c, (Hypothetical (h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
-  let prepend_commands (cmds : command list) (proof : 'a proof)
-      : 'a proof =
+  let prepend_commands (cmds : command list) (proof : proof)
+      : proof =
     List.fold_right proof_cons cmds proof
 
   let name_of_ctyp_decl (d : ctyp_decl) =
@@ -615,7 +608,7 @@ module Sgn = struct
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
-    | Proof         of Comp.typ * Comp.incomplete_proof
+    | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
     | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
     | MRecTyp       of Loc.t * decl list list

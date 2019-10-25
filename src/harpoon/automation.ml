@@ -16,7 +16,7 @@ open Comp
 let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
-type t = unit proof_state -> Tactic.tactic_context -> bool
+type t = proof_state -> Tactic.tactic_context -> bool
 
 let auto_nothing : t = fun _ _ -> false
 

@@ -1323,7 +1323,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_proof cD cG ppf =
     let open Comp in
     function
-    | Incomplete ( _, s ) ->
+    | Incomplete s ->
        begin
          match s.solution with
          | None -> fprintf ppf "?"
@@ -1369,8 +1369,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_split_branch :
         type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
-             Format.formatter ->
-             (unit, b) Comp.split_branch -> unit =
+        Format.formatter ->
+        b Comp.split_branch -> unit =
     fun cD cG f ppf ->
     let open Comp in
     function
@@ -1379,7 +1379,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h
 
-  and fmt_ppr_cmp_directive cD cG ppf : unit Comp.directive -> unit =
+  and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
     let open Comp in
     function
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h

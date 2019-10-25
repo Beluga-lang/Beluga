@@ -14,26 +14,26 @@ let dprintf, dprint, _ = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
 type tactic_context =
-  { add_subgoal : unit Comp.proof_state -> unit
-  ; remove_subgoal : unit Comp.proof_state -> unit
+  { add_subgoal : Comp.proof_state -> unit
+  ; remove_subgoal : Comp.proof_state -> unit
   ; remove_current_subgoal : unit -> unit
   ; replace_subgoal : Comp.proof_state -> unit
   ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
   ; defer : unit -> unit
   }
 
-type t = unit Comp.proof_state -> tactic_context -> unit
+type t = Comp.proof_state -> tactic_context -> unit
 
 (** `solve` with the arguments switched around to make it more
     convenient to call from other tactics.
  *)
-let solve' (s : unit Comp.proof_state) (proof : Comp.incomplete_proof) : unit =
+let solve' (s : Comp.proof_state) (proof : Comp.proof) : unit =
   s.Comp.solution <- Some proof
 
 (** Fill the hole with the given proof.
     This will solve the current subgoal.
  *)
-let solve (proof : Comp.incomplete_proof) : t =
+let solve (proof : Comp.proof) : t =
   fun s tctx ->
   solve' s proof;
   tctx.remove_subgoal s
@@ -111,7 +111,7 @@ let intros (names : string list option) : t =
     given type in the contexts of the given proof state.
  *)
 let generate_pattern_coverage_goals
-      (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : unit Comp.proof_state) (tctx : tactic_context)
+      (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : Comp.proof_state) (tctx : tactic_context)
     : (LF.mctx * B.Coverage.cov_goal * LF.msub) list option =
   let open Comp in
   let cgs =
@@ -279,7 +279,7 @@ let extending_meta_context decl g =
    *)
   let shift = LF.MShift 1 in
   { context =
-      { cD = LF.(Dec (g.context.cD, decl))
+      { cD = LF.Dec (g.context.cD, decl)
       ; cG = Whnf.cnormCtx (g.context.cG, shift)
       ; cIH = Whnf.cnormCtx (g.context.cIH, shift)
       }

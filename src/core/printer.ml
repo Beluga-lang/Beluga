@@ -82,10 +82,10 @@ module Int = struct
     val fmt_ppr_cmp_gctx_typing : formatter -> LF.mctx * Comp.gctx -> unit
     val fmt_ppr_cmp_typ_typing : formatter -> LF.mctx * Comp.typ -> unit
 
-    val fmt_ppr_cmp_proof_state : formatter -> unit Comp.proof_state -> unit
-    val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.incomplete_proof -> unit
-    val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> unit Comp.directive -> unit
-    val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> unit Comp.hypothetical -> unit
+    val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
+    val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
+    val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit
+    val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> Comp.hypothetical -> unit
     val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
     val fmt_ppr_cmp_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
     val fmt_ppr_cmp_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit

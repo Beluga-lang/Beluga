@@ -70,7 +70,7 @@ mlam A => fn r => case [ |- A] of
     let [h |- S] = reify [|- A] rn in
     reflect [ |- B] [h |- alg_app R[$W] S]
    )
-and reify : {A:[|- tp]}Log [g |- M1 sim M2] [ |- A] -> [g |- algeq M1 M2 A[]] =
+and rec reify : {A:[|- tp]}Log [g |- M1 sim M2] [ |- A] -> [g |- algeq M1 M2 A[]] =
  / total a (reify g m1 m2 a) /
 mlam A => fn e => case [ |- A] of
 | [ |- i ] =>
@@ -142,7 +142,7 @@ fn a => case a of
   let [g |- R'] = algeqNeuSym [g |- R] in
   let [g |- N'] = algeqSym [g |- N] in
   [g |- alg_app (R') (N')]
-and algeqSym : (g:tctx)
+and rec algeqSym : (g:tctx)
   [g |- algeq N1 N2 T]
 -> [g |- algeq N2 N1 T] =
 / total a (algeqSym g n1 n2 t a) /
@@ -270,7 +270,7 @@ fn a1 => fn a2 => case a1 of
   let [g |- R1] = algeqNeuTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algeqTrans [g |- B1] [g |- B2] in
   [g |- alg_app (R1) (R2)]
-and algeqTrans : (g:tctx)
+and rec algeqTrans : (g:tctx)
   [g |- algeq N1 N2 T]
 -> [g |- algeq N2 N3 T]
 -> [g |- algeq N1 N3 T] =

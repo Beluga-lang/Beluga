@@ -450,9 +450,17 @@ let printfun =
               List.find
                 (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist
             in
-            match entry.Comp.prog with
-            | Some (Synint.Comp.RecValue (prog, ec, _ms, _env)) ->
-               P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Rec[(prog,entry.Comp.typ ,ec)])
+            match Comp.(entry.prog) with
+            | Some (Synint.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->
+               let d =
+                 let open Syntax.Int.Sgn in
+                 { thm_name
+                 ; thm_typ = Comp.(entry.typ)
+                 ; thm_body
+                 ; thm_loc = Syntax.Loc.ghost
+                 }
+               in
+               P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Theorem [d])
             | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
           with
           | Not_found ->

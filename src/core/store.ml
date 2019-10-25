@@ -1386,6 +1386,9 @@ module Var = struct
   let of_gctx (cG : Int.Comp.gctx) : t =
     let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
     List.fold_right f (Context.to_list_rev cG) (create ())
+
+  let of_list (l : Id.name list) : t =
+    List.map mk_entry l
 end
 
 
@@ -1429,6 +1432,9 @@ module CVar = struct
   let of_mctx (cD : Int.LF.mctx) : t =
     let f d v = Int.LF.name_of_ctyp_decl d |> mk_entry |> extend v in
     List.fold_right f (Context.to_list_rev cD) (create ())
+
+  let of_list (l : Id.name list) : t =
+    List.map mk_entry l
 end
 
 let clear () =

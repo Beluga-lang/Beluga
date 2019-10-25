@@ -99,7 +99,7 @@ case [ |- A] of
 | [ |- arr T S ] =>  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
-and extendSem : [g |- neut (arr A[] B[])] ->
+and rec extendSem : [g |- neut (arr A[] B[])] ->
                 ({h:ctx} Extends [g] [h] ->
                  Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
@@ -109,7 +109,7 @@ let [h |- N ] = reify e in
 let [h |- R' ] = weak_neut s r in
   reflect [ |- _ ] [h |- rapp (R') N]
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 / trust /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])

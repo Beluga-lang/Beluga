@@ -69,6 +69,9 @@ type t =
   | KW_LF
   | KW_FUN
   | KW_TYPEDEF
+  | KW_PROOF
+  | KW_BY
+  | KW_AS
 
   (* Can mean identifier, operator, etc. *)
   | IDENT  of string
@@ -157,6 +160,9 @@ let print (c : class_or_string) ppf =
   | KW_LF -> case (lazy (p "LF")) (lazy (p "KW_LF"))
   | KW_FUN -> case (lazy (p "fun")) (lazy (p "KW_FUN"))
   | KW_TYPEDEF -> case (lazy (p "typedef")) (lazy (p "KW_TYPEDEF"))
+  | KW_PROOF -> case (lazy (p "proof")) (lazy (p "KW_PROOF"))
+  | KW_AS -> case (lazy (p "as")) (lazy (p "KW_AS"))
+  | KW_BY -> case (lazy (p "by")) (lazy (p "KW_BY"))
 
   | BLOCK_COMMENT s -> case (lazy (p "%%{{ %s %%}}" s)) (lazy (p "BLOCK_COMMENT"))
   | IDENT s -> case (lazy (p "%s" s)) (lazy (p "IDENT"))

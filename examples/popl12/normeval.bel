@@ -54,7 +54,7 @@ fn s => fn e => case e of
   let [h |- N' ] = nosubst s [g |- N ] in
     [h |- rapp (R') (N' ) ]
 
-and nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
+and rec nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 	    -> [g |- norm S[]]
             -> [h |- norm S[]] =
 / total n (nosubst g h _ s n) /
@@ -127,7 +127,7 @@ case [ |- A] of
  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
-and extendSem : [g |- neut (arr A[] B[])] ->
+and rec extendSem : [g |- neut (arr A[] B[])] ->
                 ({h:ctx} ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h]  [ |- T]) ->
                  Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
@@ -137,7 +137,7 @@ and extendSem : [g |- neut (arr A[] B[])] ->
     let [h |- R' ] = nsubst s r in
        reflect [|- _ ] [h |- rapp (R') N]
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 % / total e (reify g a e) /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])

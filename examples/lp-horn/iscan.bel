@@ -34,7 +34,7 @@ fn tc => case tc of
  let [g |- AT1] = isatm [g |- TA1 ] in
    [g |- can_atm (AT1 )]
 
-and isatm : (g:i_ctx) [g |- toatm A D (D')]   -> [g |- atm (D')] =
+and rec isatm : (g:i_ctx) [g |- toatm A D (D')]   -> [g |- atm (D')] =
 fn ta => case ta of
 | [g |- #p.2] => [g |- #p.3]
 | [g |- ta_andel (TA1)] =>

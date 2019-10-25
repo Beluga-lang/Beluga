@@ -344,21 +344,6 @@ module Comp = struct
 
   type gctx = ctyp_decl LF.ctx
 
-  type env =
-    | Empty
-    | Cons of value * env
-
-  and value =
-    | FnValue    of name * exp_chk * LF.msub * env
-    | FunValue   of fun_branches_value
-    | RecValue   of cid_prog * exp_chk * LF.msub * env
-    | MLamValue  of name * exp_chk * LF.msub * env
-    | CtxValue   of name * exp_chk * LF.msub * env
-    | BoxValue   of meta_obj
-    | ConstValue of cid_prog
-    | DataValue  of cid_comp_const * data_spine
-    | PairValue  of value * value
-
   and exp_chk =
     | Syn        of Loc.t * exp_syn
     | Fn         of Loc.t * name * exp_chk
@@ -399,12 +384,6 @@ module Comp = struct
     | PatApp of Loc.t * pattern * pattern_spine
     | PatObs of Loc.t * cid_comp_dest * LF.msub * pattern_spine
 
-  (* Arguments in data spines are accumulated in reverse order, to
-     allow applications of data values in constant time. *)
-  and data_spine =
-    | DataNil
-    | DataApp of value * data_spine
-
   and branch =
     (* | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub *)
     | Branch of
@@ -419,11 +398,6 @@ module Comp = struct
    | NilFBranch of Loc.t
    | ConsFBranch of Loc.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches
 
-  and fun_branches_value =
-  | NilValBranch
-  | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
-
-
   type tclo = typ * LF.msub
 
   type order =	       	              (* Induction Orders           *)
@@ -431,6 +405,9 @@ module Comp = struct
   | Lex of order list                 (*     | {O1 .. On}           *)
   | Simul of order list               (*     | [O1 .. On]           *)
 
+  (** Decides whether this synthesizable expression is actually an
+      annotated box.
+   *)
   let is_meta_obj : exp_syn -> meta_obj option =
     function
     | AnnBox (m, _)  -> Some m
@@ -582,6 +559,37 @@ module Comp = struct
     match t with
     | Var (_, k) -> Some k
     | _ -> None
+
+  type thm =
+    | Proof of proof
+    | Program of exp_chk
+
+  type env =
+    | Empty
+    | Cons of value * env
+
+  (* Syntax of values, used by the operational semantics *)
+
+  and value =
+    | FnValue    of name * exp_chk * LF.msub * env
+    | FunValue   of fun_branches_value
+    | ThmValue   of cid_prog * thm * LF.msub * env
+    | MLamValue  of name * exp_chk * LF.msub * env
+    | CtxValue   of name * exp_chk * LF.msub * env
+    | BoxValue   of meta_obj
+    | ConstValue of cid_prog
+    | DataValue  of cid_comp_const * data_spine
+    | PairValue  of value * value
+
+  (* Arguments in data spines are accumulated in reverse order, to
+     allow applications of data values in constant time. *)
+  and data_spine =
+    | DataNil
+    | DataApp of value * data_spine
+
+  and fun_branches_value =
+  | NilValBranch
+  | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
 end
 
 
@@ -600,7 +608,12 @@ module Sgn = struct
     | Stratify of  Loc.t * int
     | StratifyAll of Loc.t
 
-
+  type thm_decl =
+    { thm_name : cid_prog
+    ; thm_typ : Comp.typ
+    ; thm_body : Comp.thm
+    ; thm_loc : Loc.t
+    }
 
   type decl =
     | Typ           of Loc.t * cid_typ  * LF.kind
@@ -611,7 +624,7 @@ module Sgn = struct
     | CompDest      of Loc.t * name * LF.mctx * Comp.typ * Comp.typ
     | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
-    | Rec           of (cid_prog   * Comp.typ * Comp.exp_chk) list
+    | Theorem       of thm_decl list
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
     | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option

@@ -130,7 +130,7 @@ fn r => fn iv => case r of
 | App r' n => App (rwkn r' iv) (nwkn n iv)
 
 % Applying a variable substitution to a normal term results in a normal term
-and nwkn : Normal [g |- N] -> IsVarSub [g] [h |- $W] -> Normal [h |- N[$W]] =
+and rec nwkn : Normal [g |- N] -> IsVarSub [g] [h |- $W] -> Normal [h |- N[$W]] =
 / total r (nwkn g h w n _ r) /
 fn r => fn iv => case r of
 | Neut r' => Neut (rwkn r' iv)
@@ -177,7 +177,7 @@ mlam g, A,R => fn r =>  case [ |- A] of
     closed [|- _ ] [h |- _ ]  [h |- _ ] [h |- s_app s_refl (MS)]
            (reflect [h] [|- B] [h |- _ ] (App (rwkn r iv) n)))
 
-and reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}
+and rec reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}
             Reduce [ |- A] [g |- M] -> Halts [ |- A] [g |- M] =
  / total a (reify g a ) /
 mlam g,A,M => fn r => case [|- A] of

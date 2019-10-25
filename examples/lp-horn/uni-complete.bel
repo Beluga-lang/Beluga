@@ -19,7 +19,7 @@ fn cn => case cn of
   let [g,q:p,u:focus A q |-  I1] = cmpai [g] [g |- D] [g |- AT1 ] in
     [g |- I1[..,_,(i_atom)]]
 
-and cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm E] ->
+and rec cmpai:  {g:c_ctx}{E:[g |- pf B[]]}[g |- atm E] ->
 	       [g, q:p, u:focus B[] q  |-  solve (atom q)] =
 % / total at (cmpai g a at)/
 mlam g, E => fn at => case [g |- E ] of

@@ -69,7 +69,7 @@ case [ |- A] of
    reflect [h |- rapp (R[$W]) (N[..])]
   )
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in
 case e of
 | Syn [g |- R[..]] => [g |- embed (R[..])]

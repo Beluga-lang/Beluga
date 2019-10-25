@@ -318,7 +318,7 @@ type 'a error = (Format.formatter -> unit, 'a) Either.t
  *)
 let parse_input (input : string) : Command.command error =
   let open B in
-  Runparser.parse_string "<prompt>" input Parser.(only harpoon_command)
+  Runparser.parse_string "<prompt>" input Parser.(only interactive_harpoon_command)
   |> snd |> Parser.to_either
   |> Either.lmap (fun e ppf -> Parser.print_error ppf e)
 

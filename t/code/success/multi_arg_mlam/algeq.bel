@@ -127,7 +127,7 @@ rec algEqR_Monotone :   IsVarSub [g] [g'] [h] [h' |- $W[..]]
 fn iv => fn r => case r of
 | AlgVar v => algVar (wknVar v iv)
 | AlgApp r' n' => AlgApp (algEqR_Monotone iv r') (algEqN_Monotone iv n')
-and algEqN_Monotone : IsVarSub [g] [g'] [h] [h' |- $W[..]]
+and rec algEqN_Monotone : IsVarSub [g] [g'] [h] [h' |- $W[..]]
                     -> AlgEqN [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A]
                     -> AlgEqN [h] [h' |-  M1[$W]] [h' |-  M2[$W]] [ |- A] =
 fn iv => let iv : IsVarSub [h] [g'] [h] [h' |- $W[..]] = iv in fn r => case r of
@@ -157,7 +157,7 @@ mlam A => fn r => let r : AlgEqR [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] = r
    (mlam h, h', $W, N1, N2 => fn rh, iv, rn =>
     reflect [ |- B] (AlgApp (algEqR_Monotone iv r) (reify rh rn))
    )
-and reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] -> AlgEqN [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] =
+and rec reify : CtxRel [g] [g'] -> LogEq [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] -> AlgEqN [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] =
 fn r, e => let e : LogEq [g] [g' |-  M1[..]] [g' |-  M2[..]] [ |- A] = e in case e of
 | LogBase a => a
 | LogArr [g' |-  M1[..]] [g' |-  M2[..]] f =>
@@ -254,7 +254,7 @@ rec algEqRSym :
 fn a => case a of
 | AlgVar v => AlgVar v
 | AlgApp a1 a2 => AlgApp (algEqRSym a1) (algEqNSym a2)
-and algEqNSym :
+and rec algEqNSym :
   AlgEqN [g] [g' |-  N1[..]] [g' |-  N2[..]] [ |- T]
 -> AlgEqN [g] [g' |-  N2[..]] [g' |-  N1[..]] [ |- T] =
 fn a => case a of
@@ -377,7 +377,7 @@ fn a1, a2 => case (a1,a2) of
 | (AlgApp a1' b1, AlgApp a2' b2) =>
   let ReflTp = algEqRUnique a1' a2' in
   AlgApp (algEqRTrans a1' a2') (algEqNTrans b1 b2)
-and algEqNTrans :
+and rec algEqNTrans :
   AlgEqN [g] [g' |-  N1[..]] [g' |-  N2[..]] [ |- T]
 -> AlgEqN [g] [g' |-  N2[..]] [g' |-  N3[..]] [ |- T]
 -> AlgEqN [g] [g' |-  N1[..]] [g' |-  N3[..]] [ |- T] =

@@ -61,11 +61,13 @@ case [ |- A] of
 | [ |- b ] => Base [g |- embed (R[..])]
 | [ |- arr T S ] =>  Arr [g] (body [g |- R[..]])
 
-and body : (g:ctx) {R:[g |- neut (arr T[] S[])]}{h:ctx}{$W : [h |- g]} Sem [h] [ |- T] -> Sem [h] [ |- S] =
+and
+rec body : (g:ctx) {R:[g |- neut (arr T[] S[])]}{h:ctx}{$W : [h |- g]} Sem [h] [ |- T] -> Sem [h] [ |- S] =
 mlam R => mlam h => mlam $W => fn e =>
 let [h |- N[..]] = reify e in reflect [h |- rapp (R[$W[..]]) (N[..])]
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and
+rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => case e of
 | Base [g |- R[..]] => [g |- R[..]]
 | Arr [g] f =>

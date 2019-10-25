@@ -16,6 +16,8 @@ open Support
 open Store
 open Store.Cid
 open Syntax
+module Ext = Syntax.Ext
+module Apx = Syntax.Apx
 
 module P = Pretty.Ext.DefaultPrinter
 
@@ -338,14 +340,15 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
      begin match shunting_yard' nl with
      | Ext.LF.Root(_, Ext.LF.Name(_, a, None), tS') ->
         dprintf
-          (fun p ->
-            p.fmt "[index_typ] shunting_yard' of %a gives %a with %a"
-              (Format.pp_print_list
-                 ~pp_sep: Fmt.comma
-                 (P.fmt_ppr_lf_normal P.l0))
-              nl
-              Id.print a
-              (P.fmt_ppr_lf_spine P.l0) tS');
+          begin fun p ->
+          p.fmt "[index_typ] shunting_yard' of @[%a@] gives head @[%a@] and spine @[%a@]"
+            (Format.pp_print_list
+               ~pp_sep: Format.pp_print_space
+               (P.fmt_ppr_lf_normal P.l0))
+            nl
+            Id.print a
+            (P.fmt_ppr_lf_spine P.l0) tS'
+          end;
         index_typ (Ext.LF.Atom (loc, a, tS'))
      | _ -> throw loc IllFormedCompTyp
      end
@@ -385,7 +388,6 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
    *)
 
 and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
-
   let get_pragma = function
     | Ext.LF.Root(_, Ext.LF.Name(_, name, _), Ext.LF.Nil)
     | Ext.LF.Root(_, Ext.LF.PVar(_, name, _), Ext.LF.Nil) ->
@@ -399,7 +401,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
            try Term.args_of_name name with _ ->
              -1
        in
-       (Store.OpPragmas.pragmaExists name) && (args_expected > 0)
+       Store.OpPragmas.pragmaExists name && args_expected > 0
     | _ -> false
   in
   let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool =
@@ -419,7 +421,11 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     | [] -> Ext.LF.Nil
     | h::t -> Ext.LF.App(locOfNormal h, h, normalListToSpine t)
   in
-  let rec parse : int * Ext.LF.normal list * (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list -> Ext.LF.normal = function
+  let rec parse : int
+                  * Ext.LF.normal list
+                  * (int * Ext.LF.normal) list
+                  * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list ->
+                  Ext.LF.normal = function
   | i, Ext.LF.TList(_, nl) :: t, y, z ->
       let h = parse (0,nl, [], [])
       in parse(i+1, t,(i,h)::y,z)
@@ -431,16 +437,15 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     and loc = locOfNormal h in
     parse(i+1, t, exps, [(i, p, loc)])
   | i, h::t, exps, (x, o, loc_o)::os when pragmaExists h ->
-    begin
-      let p = get_pragma h in
-      let loc = locOfNormal h in
-      if lte p o then
-        begin match o.Store.OpPragmas.fix with
-        | Ext.Sgn.Prefix ->
+     let p = get_pragma h in
+     let loc = locOfNormal h in
+     if lte p o then
+       begin match o.Store.OpPragmas.fix with
+       | Ext.Sgn.Prefix ->
           let args_expected =
             try Typ.args_of_name o.Store.OpPragmas.name with _ ->
-            try Term.args_of_name o.Store.OpPragmas.name with _ ->
-              throw loc (UnboundOperator o.Store.OpPragmas.name)
+              try Term.args_of_name o.Store.OpPragmas.name with _ ->
+                throw loc (UnboundOperator o.Store.OpPragmas.name)
           in
           let (ops, es) = take args_expected exps in
           let loc = loc_o in
@@ -448,25 +453,24 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name, None), normalListToSpine ops) in
           parse(i+1, h::t, (i, e')::es, os)
 
-        | Ext.Sgn.Postfix ->
+       | Ext.Sgn.Postfix ->
           let (_, e)::es = exps in
           let loc = locOfNormal e in
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name, None), Ext.LF.App(loc, e, Ext.LF.Nil)) in
           parse(i+1, h::t, (i, e')::es, os)
 
-        | Ext.Sgn.Infix ->
+       | Ext.Sgn.Infix ->
           let (_, e2)::(_, e1)::es = exps in
           let loc = locOfNormal e1 in
           let e' = Ext.LF.Root(loc, Ext.LF.Name(loc, o.Store.OpPragmas.name, None), normalListToSpine [e1; e2]) in
           parse(i+1, h::t, (i, e')::es, os)
-        end
-      else
-        let loc_p = locOfNormal h in
-        parse(i+1, t, exps, (i, p, loc_p)::(x, o, loc_o)::os)
-    end
+       end
+     else
+       let loc_p = locOfNormal h in
+       parse(i+1, t, exps, (i, p, loc_p)::(x, o, loc_o)::os)
   | i, h ::t, y, z -> parse(i+1, t, (i, h)::y, z)
   | _, [], y, z ->
-    reconstruct (y, z)
+     reconstruct (y, z)
 
   and reconstruct : (int * Ext.LF.normal) list * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list -> Ext.LF.normal = function
   | [(_, e)], [] -> e
@@ -519,24 +523,28 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   | a, b ->
     failwith "Error in indexing"
 
-  and take = fun i l ->
-    let rec aux n l c = match l with
+  and take i l =
+    let rec aux n l c =
+      match l with
       | h::t when n > 0 -> aux (n-1) t (h::c)
       | _  -> (c, l)
-  in aux i l []
-in try parse (0, l, [], [])
+    in
+    aux i l []
+  in
+  try
+    parse (0, l, [], [])
   with
   | (Error _) as e -> raise e
-  | _ ->
-    let l = match List.hd l with
-      | Ext.LF.Lam(l, _, _) | Ext.LF.Root(l, _, _) | Ext.LF.Tuple(l, _)
-      | Ext.LF.Ann(l, _, _) | Ext.LF.TList(l, _)   | Ext.LF.NTyp(l, _) | Ext.LF.LFHole (l, _) -> l
-    in
-    throw l ParseError
+  | _ -> throw (List.hd l |> Ext.LF.loc_of_normal) ParseError
 
 (* Records are not handled in a general manner
  * We need to change the datatype for typ_rec to be typ_decl ctx
  * XXX
+ * Remark: records *must* be nonempty (this is enforced by
+   construction) but contexts may be empty.
+   If we rewrite records to be contexts, then we now have an
+   additional invariant in the code that is not enforced by the types.
+   -je
  *)
 and index_typ_rec (r : Ext.LF.typ_rec) : Apx.LF.typ_rec index =
   let open Bind in
@@ -545,7 +553,9 @@ and index_typ_rec (r : Ext.LF.typ_rec) : Apx.LF.typ_rec index =
      index_typ a $> fun a' -> Apx.LF.SigmaLast (n, a')
 
   | Ext.LF.SigmaElem (x, a, rest) ->
-     seq2 (index_typ a) (locally (extending_bvars x) (index_typ_rec rest))
+     seq2
+       (index_typ a)
+       (locally (extending_bvars x) (index_typ_rec rest))
      $> fun (a', rest') -> Apx.LF.SigmaElem (x, a', rest')
 
 and index_tuple (tuple : Ext.LF.tuple) : Apx.LF.tuple index =
@@ -665,16 +675,19 @@ and index_spine (s : Ext.LF.spine) : Apx.LF.spine index =
  *)
 and disambiguate_name' f : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
+  let disambiguation_message kind p =
+    p.fmt "[disambiguate_name] variable %a -> %s (at %a)"
+      Id.print name
+      kind
+      Loc.print_short loc
+  in
   (* form an LF indexing context so we can invoke index_sub_opt *)
   let c = {cvars; bvars; disambiguate_name = disambiguate_name' f} in
   try
     ( fvars
     , ( let k = BVar.index_of_name bvars name in
         require_no_sub loc `bvar sub_opt;
-        dprintf
-          (fun p ->
-            p.fmt "[disambiguate_name] variable %a is a bound variable."
-              Id.print name);
+        dprintf (disambiguation_message "bound variable");
         Apx.LF.BVar k
       (* it's essential to perform `index_of_name` first since it will
          throw the Not_found exception that leads to trying the next case
@@ -687,10 +700,7 @@ and disambiguate_name' f : name_disambiguator =
   with Not_found ->
     if lookup_fv' name fvars then
       let (fvs', o') =
-        dprintf
-          (fun p ->
-            p.fmt "[disambiguate_name] variable %a already known to be free."
-              Id.print name);
+        dprintf (disambiguation_message "known to be free");
         match sub_opt with
         | Some s ->
            let fvs', s' =
@@ -703,10 +713,7 @@ and disambiguate_name' f : name_disambiguator =
     else
       try
         let offset = CVar.index_of_name cvars name in
-        dprintf
-          (fun p ->
-            p.fmt "[disambiguate_name] variable %a is a contextual variable"
-              Id.print name);
+        dprintf (disambiguation_message "contextual variable");
         let (fvs', o') =
           index_sub_opt sub_opt c fvars
         in
@@ -718,10 +725,7 @@ and disambiguate_name' f : name_disambiguator =
           ( fvars
           , ( let k = Term.index_of_name name in
               require_no_sub loc `const sub_opt;
-              dprintf
-                (fun p ->
-                  p.fmt "[disambiguate_name] variable %a is an LF constant"
-                    Id.print name);
+              dprintf (disambiguation_message "LF constant");
               Apx.LF.Const k
               (* similar consideration here as for BVar;
                  we must ascertain that it is in fact a Const before
@@ -730,9 +734,7 @@ and disambiguate_name' f : name_disambiguator =
             )
           )
         with Not_found ->
-          dprintf
-            (fun p -> p.fmt "[disambiguate_name] variable %a is free"
-                        Id.print name);
+          dprintf (disambiguation_message "new free variable");
           f c (loc, name) sub_opt fvars
                 (*
           match fvars.open_flag with
@@ -1464,6 +1466,73 @@ and index_branch cvars vars fcvars branch =
      let e' = index_exp cvars_all vars_all fcvars3 e in
      Apx.Comp.Branch (loc, omega, cD', pat'', e')
 
+let rec index_gctx cvars vars fvars = function
+  | Ext.LF.Empty -> Ext.LF.Empty, vars, fvars
+  | Ext.LF.Dec (cG, Ext.Comp.CTypDecl (x, tau)) ->
+     let cG', vars, fvars = index_gctx cvars vars fvars cG in
+     let fvars, tau' = index_comptyp tau cvars fvars in
+     let vars = Var.extend vars (Var.mk_entry x) in
+     Apx.LF.Dec (cG', Apx.Comp.CTypDecl (x, tau')), vars, fvars
+
+let rec index_proof cvars vars fvars = function
+  | Ext.Comp.Incomplete (loc, name) -> Apx.Comp.Incomplete (loc, name)
+  | Ext.Comp.Command (loc, cmd, p) ->
+     let cmd', vars, cvars = index_command cvars vars fvars cmd in
+     let p' = index_proof cvars vars fvars p in
+     Apx.Comp.Command (loc, cmd', p')
+  | Ext.Comp.Directive (loc, d) ->
+     let d' = index_directive cvars vars fvars d in
+     Apx.Comp.Directive (loc, d')
+
+and index_command cvars vars fvars = function
+  | Ext.Comp.By (loc, k, i, x) ->
+     let i' = index_exp' cvars vars fvars i in
+     let vars = Var.extend vars (Var.mk_entry x) in
+     Apx.Comp.By (loc, k, i', x), vars, cvars
+  | Ext.Comp.Unbox (loc, i, x) ->
+     let i' = index_exp' cvars vars fvars i in
+     let cvars = CVar.extend cvars (CVar.mk_entry x) in
+     Apx.Comp.Unbox (loc, i', x), vars, cvars
+
+and index_directive cvars vars fvars = function
+  | Ext.Comp.Intros (loc, h) ->
+     let h' = index_hypothetical h in
+     Apx.Comp.Intros (loc, h')
+  | Ext.Comp.Solve (loc, e) ->
+     let e' = index_exp cvars vars fvars e in
+     Apx.Comp.Solve (loc, e')
+  | Ext.Comp.Split (loc, i, bs) ->
+     let i' = index_exp' cvars vars fvars i in
+     let bs' = List.map (index_split_branch cvars vars fvars) bs in
+     Apx.Comp.Split (loc, i', bs')
+
+and index_split_branch cvars vars fvars b =
+  let Ext.Comp.({ case_label; branch_body; split_branch_loc }) = b in
+  let branch_body = index_hypothetical branch_body in
+  Apx.Comp.(
+    { case_label
+    ; branch_body
+    ; split_branch_loc
+    }
+  )
+
+and index_hypothetical h =
+  let Ext.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc }) = h in
+  let cvars =
+    Context.to_list_map_rev cD
+      (fun _ (Ext.LF.Decl (x, _, _)) -> x)
+    |> CVar.of_list
+  in
+  let vars =
+    Context.to_list_map_rev cG
+      (fun _ (Ext.Comp.CTypDecl (x, _)) -> x)
+    |> Var.of_list
+  in
+  let proof =
+    index_proof cvars vars (empty_fvars `closed_term) proof in
+  let _, cD, cvars, fvars = index_mctx (CVar.create ()) (empty_fvars `closed_term) cD in
+  let cG, vars, fvars = index_gctx cvars (Var.create ()) fvars cG in
+  Apx.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc })
 
 let comptypdef (cT, cK) =
   let cK' = index_compkind (CVar.create ())  (empty_fvars `closed_term) cK in
@@ -1503,11 +1572,17 @@ let comptyp tau =
   tau'
 
 let exp vars e =
-  dprint (fun () -> "Indexing expression ... ");
   index_exp (CVar.create ()) vars (empty_fvars `closed_term) e
 
 let exp' vars i =
   index_exp' (CVar.create ()) vars (empty_fvars `closed_term) i
+
+let proof vars p =
+  index_proof (CVar.create ()) vars (empty_fvars `closed_term) p
+
+let thm vars = function
+  | Ext.Comp.Program e -> Apx.Comp.Program (exp vars e)
+  | Ext.Comp.Proof p -> Apx.Comp.Proof (proof vars p)
 
 let hexp cvars vars e =
   let closed =

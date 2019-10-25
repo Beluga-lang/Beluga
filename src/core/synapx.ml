@@ -189,4 +189,48 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
+  type ctyp_decl =
+    | CTypDecl of name * typ
+
+  type gctx = ctyp_decl LF.ctx
+
+  type hypotheses =
+    { cD : LF.mctx
+    ; cG : gctx
+    }
+
+  type proof =
+    | Incomplete of Loc.t * string option
+    | Command of Loc.t * command * proof
+    | Directive of Loc.t * directive
+
+  and command =
+    | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name
+    | Unbox of Loc.t * exp_syn * name
+
+  and directive =
+    | Intros of Loc.t * hypothetical
+    | Solve of Loc.t * exp_chk
+    | Split of Loc.t * exp_syn * split_branch list
+
+  and split_branch =
+    { case_label : name
+    (* we don't index the case label yet since we don't know whether
+       it should be comp constructors or LF constructors,
+       so this is deferred till type reconstruction when we know the
+       scrutinee's type.
+     *)
+    ; branch_body : hypothetical
+    ; split_branch_loc : Loc.t
+    }
+
+  and hypothetical =
+    { hypotheses : hypotheses
+    ; proof : proof
+    ; hypothetical_loc : Loc.t
+    }
+
+  type thm =
+    | Program of exp_chk
+    | Proof of proof
 end

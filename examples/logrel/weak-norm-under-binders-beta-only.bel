@@ -133,7 +133,7 @@ mlam gamma, A,R,NR => case [ |- A] of
     m_closed  (m_app2 [_ |- _] ms)
              (reflect [h] [|- B] [h |- _ ] [_ |- n_app NR[$W] N]))
 
-and reify : {g:nctx}{A:[|- tp]}{M:[g |- tm A[]]}
+and rec reify : {g:nctx}{A:[|- tp]}{M:[g |- tm A[]]}
             Reduce [ |- A] [g |- M] -> Halts [ |- A] [g |- M] =
  / total a (reify g a ) /
 mlam g,A,M => fn r => case [|- A] of

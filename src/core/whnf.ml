@@ -1754,6 +1754,10 @@ let mctxMVarPos cD u =
     | Comp.ConsFBranch (loc, (cD, cG, patS, e), fbr') ->
       Comp.ConsFBranch (loc, (cD, cG, patS, cnormExp (e, t)), cnormFBranches (fbr',t))
 
+  let cnormThm (t, theta) = match t with
+    | Comp.Program e -> Comp.Program (cnormExp (e, theta))
+    | Comp.Proof p -> Misc.not_implemented "cnormThm Proof"
+
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty
     | Dec(cG, Comp.CTypDecl (x, tau, flag)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t), flag))

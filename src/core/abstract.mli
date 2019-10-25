@@ -23,6 +23,8 @@ type free_var =
   | FDecl of kind * marker
   | CtxV of (Id.name * Id.cid_schema * LF.depend)
 
+type fctx = free_var LF.ctx
+
 
 exception Error of Syntax.Loc.t * error
 
@@ -42,7 +44,8 @@ val msub   : LF.msub -> LF.msub * LF.mctx
 val compkind : Comp.kind -> Comp.kind * Id.offset
 val comptyp  : Comp.typ -> Comp.typ * Id.offset
 val codatatyp  : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ * Id.offset
-val exp      : Comp.exp_chk -> free_var LF.ctx * Comp.exp_chk
+val exp      : Comp.exp_chk -> fctx * Comp.exp_chk
+val thm      : Comp.thm -> fctx * Comp.thm
 
 val pattern    : LF.mctx -> LF.dctx -> (LF.dctx_hat * LF.normal) -> LF.typ ->
                  LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal) * LF.typ
@@ -59,4 +62,4 @@ val closedTyp : (LF.dctx * LF.typ) -> bool
 
 val printFreeMVars : LF.dctx_hat -> LF.normal -> unit
 
-val fmt_ppr_collection : Format.formatter -> free_var LF.ctx -> unit
+val fmt_ppr_collection : Format.formatter -> fctx -> unit

@@ -818,42 +818,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     (fmt_ppr_lf_typ cD LF.Null lvl) tau
    *)
 
-  let total_to_string tdec = match tdec with
-    | None -> ""
-    | Some (Comp.Trust _) -> "/ trust /"
-    | Some (Comp.Total (_ , order, f, args)) ->
-       let rec args_to_string args = match args with
-         | [] -> ""
-         | Some n :: args' -> Id.render_name n ^ " " ^ args_to_string args'
-         | None :: args' -> " _ " ^ args_to_string args'
-       in
-       let rec order_to_string order = match order with
-         | Comp.Arg n -> Id.render_name n
-         | Comp.Lex orders ->
-            "{" ^ String.concat " " (List.map order_to_string orders) ^ "}"
-       in
-       "/ total " ^
-         (match order with
-          | Some order -> order_to_string order
-          | None -> ""
-         )
-         ^ " ( " ^ Id.render_name f ^ " " ^ args_to_string args ^ ") /"
-
-  let fmt_ppr_cmp_rec prefix lvl ppf = function
-    | Comp.RecFun (_, x, total, a, e) ->
-       fprintf ppf "@[<h>%s %s : %a %s@] =@[<v2>%a@]"
-         (to_html prefix Keyword)
-         (to_html (Id.render_name x) (ID Fun))
-         (fmt_ppr_cmp_typ lvl)  a
-         (total_to_string total)
-         (fmt_ppr_cmp_exp_chk lvl)  e
-
-  let fmt_ppr_rec lvl ppf = function
-    | [] -> ()
-    | h::t -> fmt_ppr_cmp_rec "rec" lvl ppf h;
-              List.iter (fun x -> fmt_ppr_cmp_rec "and" lvl ppf x) t;
-              fprintf ppf ";@ "
-
   let fmt_ppr_mrec prefix lvl ppf = function
     | Sgn.Typ(_, n, kA) ->
        fprintf ppf "%s %s : %a = "
@@ -931,9 +895,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (to_html "schema" Keyword)
          (to_html (Id.render_name  x) (ID Schema))
          (fmt_ppr_lf_schema 0) schema
-
-    | Sgn.Rec (_, lrec) ->
-       (fmt_ppr_rec l0 ppf) lrec
 
     | Sgn.Pragma (_, Sgn.NamePrag(name, s, s_opt)) ->
        fprintf ppf "@[<h>%s %s %s %s@]@\n"

@@ -12,20 +12,20 @@ nd_allI: ({a:i} nd (A a)) → nd (all (\x. A x)).
 
 nd_neg : nd A → nd (neg A).
 
-proof: nd A -> type.
+prf: nd A -> type.
 
-pr_all: ({a:i} proof (D a)) → proof (nd_allI (\a. D a)).
+pr_all: ({a:i} prf (D a)) → prf (nd_allI (\a. D a)).
 
-pr_neg: proof D → proof (nd_neg D).
+pr_neg: prf D → prf (nd_neg D).
 
 %
 % pr_all : {A :  i -> o}
 %          {D: {a : i} nd (A a)}
-%           ({a : i} proof (A a) (D a)) ->
-%            proof (all (\ x . A x)) (nd_allI (\x . A x) (\a . D a)).
+%           ({a : i} prf (A a) (D a)) ->
+%            prf (all (\ x . A x)) (nd_allI (\x . A x) (\a . D a)).
 %
 
 
-prove: proof D -> ({a:i}proof (E a)) -> type.
+prove: prf D -> ({a:i}prf (E a)) -> type.
 
 prove_all: ({a:i} prove (D a)  (\b. (pr_neg (E a)))) → prove (pr_all (\a. D a))  (\a. E a).

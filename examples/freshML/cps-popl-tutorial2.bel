@@ -40,7 +40,7 @@ mlam g => fn v => case v of
     [g |- clam \v.\c. E'[..,v,c]]
 
 
-and cpse : {g:ctx}[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
+and rec cpse : {g:ctx}[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
 / total e (cpse g a e) /
 mlam g => fn e => case e of
 | [g |- ret (V )] =>

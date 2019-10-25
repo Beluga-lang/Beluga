@@ -147,7 +147,7 @@ mlam A => fn r => case [ |- A] of
   let ih2 = reflect [|- T2] p2 in
   LogProd ih1 ih2
 | [ |- tp/unit] => LogUnit
-and reify : {A:[|- tp]} Log [g |- M1 sim M2] [ |- A] -> [g |- algeqn M1 M2 A[]] =
+and rec reify : {A:[|- tp]} Log [g |- M1 sim M2] [ |- A] -> [g |- algeqn M1 M2 A[]] =
  / total a (reify g m1 m2 a) /
 mlam A => fn e => case [ |- A] of
 | [ |- tp/nm ] =>
@@ -294,7 +294,7 @@ fn a => case a of
   let [g |- A2'] = algEqRSym [g |- A2] in
   [g |- algeqbinp A1' A2']
 | [g |- algeqnamep] => [g |- algeqnamep]
-and algEqNSym : (g:rctx)
+and rec algEqNSym : (g:rctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N1 T] =
 / total a (algEqNSym g n1 n2 t a) /
@@ -486,7 +486,7 @@ fn a1 => fn a2 => case a1 of
   let [g |- A2''] = algEqRTrans [g |- A2] [g |- A2'] in
   [g |- algeqbinp A1'' A2'']
 | [g |- algeqnamep] => let [g |- algeqnamep] = a2 in [g |- algeqnamep]
-and algEqNTrans : (g:rctx)
+and rec algEqNTrans : (g:rctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N3 T]
 -> [g |- algeqn N1 N3 T] =
@@ -684,7 +684,7 @@ fn d => case d of
 | [g |- d_sym D1] => dtp2 [g |- D1]
 | [g |- d_trans D1 D2] => dtp1 [g |- D1]
 | todo => ?
-and dtp2 : (g:ctx) [g |- deq M1 M2 T[]] -> [g |- oft M2 T[]] =
+and rec dtp2 : (g:ctx) [g |- deq M1 M2 T[]] -> [g |- oft M2 T[]] =
  / total d (dtp2 g m1 m2 t d) /
 fn d => case d of
 | [g |- d_app D1 D2] =>

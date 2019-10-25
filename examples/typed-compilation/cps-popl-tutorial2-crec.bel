@@ -37,7 +37,7 @@ fn v => case v of
     [g |- clam \v.\c. E'[..,v,c]]
 
 
-and cpse : (g:ctx)[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
+and rec cpse : (g:ctx)[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
 fn e => case e of
 | [g |- ret (V )] =>
   let [g |- V'] = cps [g |- V ] in

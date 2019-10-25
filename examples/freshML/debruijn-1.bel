@@ -54,7 +54,7 @@ fn v =>  case v of
      [ |- lam' (T[]) F]
 
 
-and hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
+and rec hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
  / total e (hoas2db _ _ e ) /
   fn e =>  case e of
   | [g |- app (E1 ) (E2 )] =>
@@ -80,7 +80,7 @@ rec db2vhoas : (g:ctx) [g |- exp' (T[])] -> [g |- value (T[])] =
       let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |- E[..]] in
         [g |- lam (T[]) (\x. F)]
 
-and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
+and rec db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
 % / total e (db2hoas _ _ e)/
   fn e => case e of
   | [g |- app' E1 E2] =>

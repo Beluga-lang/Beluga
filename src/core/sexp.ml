@@ -712,7 +712,7 @@ struct
   and sexp_cmp_value ppf =
     function
       | Comp.FunValue _ -> fprintf ppf "FunValue"
-      | Comp.RecValue _ -> fprintf ppf "RecValue"
+      | Comp.ThmValue _ -> fprintf ppf "ThmValue"
       | Comp.MLamValue _ -> fprintf ppf "MLamValue"
       | Comp.CtxValue _ -> fprintf ppf "MLamValue"
       | Comp.BoxValue mC -> fprintf ppf "(BoxValue %a)"  (sexp_meta_obj LF.Empty) mC
@@ -809,13 +809,15 @@ struct
         (Id.render_name x)
         (sexp_cmp_typ cD) tau
 
-  let sexp_rec ppf total (f, tau, e) =
+  let sexp_thm ppf total d (* (f, tau, e) *) =
+    (* do not currently support sexp formatting of Harpoon proofs *)
+    let Sgn.({ thm_name; thm_typ; thm_body = Comp.Program e; _ }) = d in
     fprintf ppf "(%s %s %a %a)"
       (if total then "RecTotal" else "Rec")
-      (R.render_cid_prog  f)
-      (sexp_cmp_typ LF.Empty) tau
+      (R.render_cid_prog thm_name)
+      (sexp_cmp_typ LF.Empty) thm_typ
       (sexp_cmp_exp_chk  LF.Empty
-         (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name, tau, false)))) e
+         (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get thm_name).Store.Cid.Comp.name, thm_typ, false)))) e
 
   let rec sexp_sgn_decl ppf =
     function
@@ -874,10 +876,11 @@ struct
         (R.render_cid_schema  w)
         sexp_lf_schema schema
 
-    | Sgn.Rec (((f, _, _ ) as h)::t) ->
-      let total = (Store.Cid.Comp.get f).Store.Cid.Comp.total  in
-      sexp_rec ppf total h;
-      List.iter (sexp_rec ppf total) t
+    | Sgn.Theorem (thm :: t as ts) ->
+       let total =
+         Store.Cid.Comp.((get Sgn.(thm.thm_name)).total)
+       in
+      List.iter (sexp_thm ppf total) ts
 
     (* Pragmas are not dumped for now *)
     (* | Sgn.Pragma (LF.OpenPrag n) -> *)

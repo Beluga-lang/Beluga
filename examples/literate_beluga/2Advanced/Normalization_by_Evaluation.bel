@@ -106,7 +106,7 @@ case [ |- A] of
 | [ |- arr T S ] =>
  Arr [g] (mlam h => mlam $W => fn e => reflect (app' [h |- R[$W]] (reify e)))
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => case e of
 | Base [g |- R] => [g |- R]
 | Arr [g] f =>

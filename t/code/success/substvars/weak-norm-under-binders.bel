@@ -91,7 +91,7 @@ rec rwkn : IsNeutral [g |- R[..]] -> IsVarSub [g]  [h |- $W] -> IsNeutral [h |- 
 fn r => fn iv => case r of
 | Var i => Var (wknVar' i iv)
 | App r' n => App (rwkn r' iv) (nwkn n iv)
-and nwkn : IsNormal [g |- N[..]] -> IsVarSub [g] [h |- $W] -> IsNormal [h |- N[$W]] =
+and rec nwkn : IsNormal [g |- N[..]] -> IsVarSub [g] [h |- $W] -> IsNormal [h |- N[$W]] =
 fn r => fn iv => case r of
 | Neut r' => Neut (rwkn r' iv)
 | Lam n => Lam (nwkn n (extVarSub iv));
@@ -106,7 +106,7 @@ case [ |- A] of
     let Halts [h |- MS[..]] n = reify rm2 in
     closed2 [h |- stepapp refl (MS[..])] (reflect (App (rwkn r iv) n)))
 
-and reify : Reduce [ |- A] [g |- M[..]] -> Halts [ |- A] [g |- M[..]] =
+and rec reify : Reduce [ |- A] [g |- M[..]] -> Halts [ |- A] [g |- M[..]] =
 fn r => case r of
 | Base h => h
 | Arr [g |- M[..]] f =>

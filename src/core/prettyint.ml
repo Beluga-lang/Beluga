@@ -904,59 +904,62 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "(%a)*"
          (fmt_ppr_cmp_typ cD 1) tau
 
-  let rec fmt_ppr_pat_spine cD cG lvl ppf = (function
-                                             | Comp.PatNil -> fprintf ppf ""
-                                             | Comp.PatApp (_, pat, pat_spine) ->
-                                                fprintf ppf "%a %a"
-                                                  (fmt_ppr_cmp_pattern cD cG (lvl+1)) pat
-                                                  (fmt_ppr_pat_spine cD cG lvl) pat_spine)
+  let rec fmt_ppr_pat_spine cD cG lvl ppf = function
+    | Comp.PatNil -> fprintf ppf ""
+    | Comp.PatApp (_, pat, pat_spine) ->
+       fprintf ppf "%a %a"
+         (fmt_ppr_cmp_pattern cD cG (lvl+1)) pat
+         (fmt_ppr_pat_spine cD cG lvl) pat_spine
 
   and fmt_ppr_cmp_pattern cD cG lvl ppf =
     let rec dropSpineLeft ms n = match (ms, n) with
       | (_, 0) -> ms
       | (Comp.PatNil, _) -> ms
       | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
-    in let deimplicitize_spine c ms =
-         let ia = if !Printer.Control.printImplicit
-                  then 0
-                  else Store.Cid.CompConst.get_implicit_arguments c in
-         dropSpineLeft ms ia in
-       function
-       | Comp.PatEmpty (_, cPsi) ->
-          fprintf ppf "[%a |- {}]"
-            (fmt_ppr_lf_dctx cD 0) cPsi
-       | Comp.PatMetaObj (_, mO) ->
-          let cond = lvl > 1 in
-          fprintf ppf "%s%a%s"
-            (l_paren_if cond)
-            (fmt_ppr_cmp_meta_obj cD 0) mO
-            (r_paren_if cond)
-       | Comp.PatConst (_, c, pat_spine) ->
-          let pat_spine = deimplicitize_spine c pat_spine in
-          let cond = lvl > 1 in
-          fprintf ppf "%s%s %a%s"
-            (l_paren_if cond)
-            (R.render_cid_comp_const c)
-            (fmt_ppr_pat_spine cD cG 2) pat_spine
-            (r_paren_if cond)
+    in
+    let deimplicitize_spine c ms =
+      let ia =
+        if !Printer.Control.printImplicit
+        then 0
+        else Store.Cid.CompConst.get_implicit_arguments c
+      in
+      dropSpineLeft ms ia
+    in
+    function
+    | Comp.PatEmpty (_, cPsi) ->
+       fprintf ppf "[%a |- {}]"
+         (fmt_ppr_lf_dctx cD 0) cPsi
+    | Comp.PatMetaObj (_, mO) ->
+       let cond = lvl > 1 in
+       fprintf ppf "%s%a%s"
+         (l_paren_if cond)
+         (fmt_ppr_cmp_meta_obj cD 0) mO
+         (r_paren_if cond)
+    | Comp.PatConst (_, c, pat_spine) ->
+       let pat_spine = deimplicitize_spine c pat_spine in
+       let cond = lvl > 1 in
+       fprintf ppf "%s%s %a%s"
+         (l_paren_if cond)
+         (R.render_cid_comp_const c)
+         (fmt_ppr_pat_spine cD cG 2) pat_spine
+         (r_paren_if cond)
 
-       | Comp.PatPair (_, pat1, pat2) ->
-          fprintf ppf "(%a , %a)"
-            (fmt_ppr_cmp_pattern cD cG 0) pat1
-            (fmt_ppr_cmp_pattern cD cG 0) pat2
-       | Comp.PatAnn (_, pat, tau) ->
-          fprintf ppf "(%a : %a)"
-            (fmt_ppr_cmp_pattern cD cG 0) pat
-            (fmt_ppr_cmp_typ cD 0) tau
+    | Comp.PatPair (_, pat1, pat2) ->
+       fprintf ppf "(%a , %a)"
+         (fmt_ppr_cmp_pattern cD cG 0) pat1
+         (fmt_ppr_cmp_pattern cD cG 0) pat2
+    | Comp.PatAnn (_, pat, tau) ->
+       fprintf ppf "(%a : %a)"
+         (fmt_ppr_cmp_pattern cD cG 0) pat
+         (fmt_ppr_cmp_typ cD 0) tau
 
-       | Comp.PatVar (_, offset ) ->
-          fprintf ppf "%s"
-            (R.render_var cG offset)
+    | Comp.PatVar (_, offset ) ->
+       fprintf ppf "%s"
+         (R.render_var cG offset)
 
-       | Comp.PatFVar (_, name ) ->
-          fprintf ppf "%s"
-            (Id.render_name name)
-
+    | Comp.PatFVar (_, name ) ->
+       fprintf ppf "%s"
+         (Id.render_name name)
 
   let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
     | Comp.Syn (_, i) ->

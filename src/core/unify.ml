@@ -1594,7 +1594,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     in
     match sM2 with
     | Root (loc , Const c, _tS2) ->
-       
+
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in
        dprintf
          begin fun p ->
@@ -1763,10 +1763,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           let (s', cPsi') = intersection phat t1 t2 cPsi1 in
           (* if cD ; cPsi |- t1' <= cPsi1 and cD ; cPsi |- t2' <= cPsi1
              then cD ; cPsi1 |- s' <= cPsi' *)
-          
+
           let ss' = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s')) in
           (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
-          
+
           let w = Whnf.newMVar None (cPsi', TClo(tP1, ss')) mmvar1.depend in
           (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
           (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
@@ -2106,11 +2106,11 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        | (true, true, _, _) ->
           unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
           unifyMMVarTerm cD0 cPsi i1 mt1 s1 (IHead head2)
-          
+
        | (_, _, true , true ) ->
           unifyTyp mflag cD0 cPsi (tA1, s1) (tA2, s2);
           unifyMMVarTerm cD0 cPsi i2 mt2 s2 (IHead head1)
-          
+
        | (_, _, _ , _ ) ->
           addConstraint
             ( i1.constraints
@@ -2894,7 +2894,7 @@ let unify_phat psihat phihat =
            let cPsi = Context.hatToDCtx (Some (c_var), d'-d) in
            mmvar1.instantiation := Some (ICtx cPsi)
         end
-       
+
      | (None , d') ->
         begin match () with
         | _ when d = d' ->
@@ -2907,7 +2907,7 @@ let unify_phat psihat phihat =
            mmvar1.instantiation := Some (ICtx cPsi)
         end
      end
-    
+
   | _ when psihat = phihat -> ()
   | _ -> fail "Hat context mismatch - 2"
 

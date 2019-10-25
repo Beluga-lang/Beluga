@@ -769,7 +769,7 @@ module Solver = struct
                         (* k' is the index of the projection into the _sigma_ *)
                         sc (psi', root (proj (pvar k) k'))
                       )
-                   
+
                  | LF.PTyp typ' ->
                     (* I don't think this case ever happens; I'm pretty
                      * sure that whenever we have a PTyp, its type is a
@@ -777,19 +777,19 @@ module Solver = struct
                      * that it's impossible.
                      * -jake
                      *)
-                    
+
                     U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
-                    
+
                     (* We need to create the syntax to refer to this _pattern_ variable *)
                     sc (psi', root (pvar k))
-                    
+
                  | LF.MTyp typ' ->
                     U.unifyTyp cD psi' (typ', LF.Shift 0) (tA, s);
                     dprintf
                       begin fun p ->
                       p.fmt "[logic] [matchDelta] found solution: variable %d" k
                       end;
-                    
+
                     (* We need to create the syntax to refer to this _meta_ variable *)
                     sc (psi', root (mvar k))
 

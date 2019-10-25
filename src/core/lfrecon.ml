@@ -2739,7 +2739,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
                 *  This will be enforced during abstraction.
                 *)
                let sshift = mkShift recT cPsi in
-               
+
                (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
                let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
                begin
@@ -2766,7 +2766,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
                 *  This will be enforced during abstraction.
                 *)
                let sshift = mkShift recT cPsi in
-               
+
                (* let tS = elSpine cPsi spine (tA, Substitution.LF.id) (tP,s) in *)
                let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, sshift) in
                (* let psihat = Context.dctxToHat cPsi in *)

@@ -91,7 +91,7 @@ let newMTypName = function
 let newMMVar' name (cD, mtyp) depend =
   let name =
     match name with
-    | None -> 
+    | None ->
       Id.mk_name (newMTypName mtyp)
     | Some name ->
        Id.inc name
@@ -405,25 +405,25 @@ and normHead (h, sigma) = match h with
      begin match normMMVar mmt with
      | ResMM mmt' -> Head (HMClo(k,(mmt',normSub' (s,sigma))))
      | Result (ISub r) -> normFt' (normFt' (LF.bvarSub k r, s), sigma)
-     end 
+     end
   | MMVar (mmt,s) ->
      begin match normMMVar mmt with
      (* The order in which we normalize mm, n, s, and sigma seems to matter..*)
      | ResMM mmt' -> Head (MMVar (mmt',normSub' (s,sigma)))
      | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
-     end 
+     end
   | MPVar (mmt,s) ->
      begin match normMMVar mmt with
      | ResMM mmt' -> Head (MPVar (mmt',normSub' (s,sigma)))
      | Result (IHead h) -> normFt' (normHead (h,s),sigma)
      | Result (INorm n) -> Obj (norm (norm (n,s), sigma))
-     end 
+     end
   | MVar (Offset u, s) -> Head (MVar(Offset u, normSub' (s,sigma)))
   | MVar (Inst mm, s) ->
      begin match normMMVar (mm,MShift 0) with
      | ResMM (mm',_) -> Head (MVar (Inst mm', normSub' (s,sigma)))
      | Result (INorm n) -> Obj (norm (norm (n,s),sigma))
-     end 
+     end
 
 and normMMVar (mmvar, t) =
   match mmvar.instantiation.contents with
@@ -593,7 +593,7 @@ and cnorm_psihat (phat: dctx_hat) t = match phat with
   | (Some (CInst (mmvar (* (_n, ({contents = None} as cvar_ref), cD, schema, cnstr,dep) *), theta)),  k) ->
      let u = mmvar.instantiation in
      begin match !u with
-     | None -> 
+     | None ->
         (Some (CInst (mmvar, mcomp theta t)), k)
      | Some (ICtx cPsi) ->
         (* | (Some (CInst ((_n, {contents = Some (ICtx cPsi)}, _cD, _schema, _cnstr, _dep), theta)),  k) -> *)
@@ -675,7 +675,7 @@ and cnorm (tM, t) = match tM with
     | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
 
     | LFHole (loc, id, name) -> LFHole (loc, id, name)
-    
+
     | Root (loc, head, tS) ->
       begin match cnormHead' (head, t) with
 	| Head h' -> Root(loc, h', cnormSpine (tS, t))

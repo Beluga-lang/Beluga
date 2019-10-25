@@ -558,9 +558,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.CInst (mmvar, theta) ->
        let g = LF.(mmvar.instantiation) in
        begin match !g with
-       | None -> 
+       | None ->
           fprintf ppf "?%a[%a]"
-            Id.print LF.(mmvar.name) 
+            Id.print LF.(mmvar.name)
             (fmt_ppr_lf_msub cD 0) theta
 
        | Some (LF.ICtx cPsi) ->

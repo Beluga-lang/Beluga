@@ -99,6 +99,19 @@ module LF = struct
     match sp with
     | Nil -> []
     | App (l, m, s) -> (l, m) :: list_of_spine s
+
+  let loc_of_normal = function
+    | Lam (l, _, _) -> l
+    | Root (l, _, _) -> l
+    | Tuple (l, _) -> l
+    | LFHole (l, _) -> l
+    | Ann (l, _, _) -> l
+    | TList (l, _) -> l
+    | NTyp (l, _) -> l
+    | PatEmpty l -> l
+
+  (** Wraps a term into a dummy substitution. *)
+  let term tM = (EmptySub (loc_of_normal tM), [tM])
 end
 
 

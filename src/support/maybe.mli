@@ -82,6 +82,15 @@ val filter_map : ('a -> 'b option) -> 'a list -> 'b list
 val cat_options : 'a option list -> 'a list
 
 (**
+ * Specialized eliminator for options to print them generally.
+ *)
+val print' : (Format.formatter -> unit -> unit) ->
+             (Format.formatter -> 'a -> unit) ->
+             Format.formatter ->
+             'a option ->
+             unit
+
+(**
  * Prints an option by doing nothing if it is `None`; else it uses the given printer.
  *)
 val print : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit

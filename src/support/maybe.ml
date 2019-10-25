@@ -112,12 +112,26 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
 let cat_options (l : 'a option list) : 'a list =
   filter_map Misc.id l
 
+(** Eliminate the option into a printer. *)
+let print'
+      (none : Format.formatter -> unit -> unit)
+      (some : Format.formatter -> 'a -> unit)
+      (ppf : Format.formatter)
+      (m : 'a option)
+    : unit =
+  eliminate (none ppf) (some ppf) m
+
+(** Eliminate the option into a printer, emitting nothing if there's
+    nothing there.
+ *)
 let print
       (f : Format.formatter -> 'a -> unit)
       (ppf : Format.formatter)
-    : 'a option -> unit =
-  eliminate (fun () -> ()) (f ppf)
+      (m : 'a option)
+    : unit =
+  print' (fun _ _ -> ()) f ppf m
 
+(** Print an option for debugging. *)
 let show
       (f : Format.formatter -> 'a -> unit)
       (ppf : Format.formatter)

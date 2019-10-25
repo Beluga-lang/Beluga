@@ -2,6 +2,7 @@
    @author Brigitte Pientka
 *)
 
+open Support
 open Syntax.Int
 
 (* module Unify = Unify.EmptyTrail  *)
@@ -103,7 +104,7 @@ let rec eval_syn i (theta, eta) =
       let m = Store.Modules.name_of_id l in
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
       begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
-        | Some (Comp.RecValue (cid, e', theta', eta')) ->
+        | Some (Comp.ThmValue (cid, Comp.Program e', theta', eta')) ->
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
           let eta'' = add_mrecs n_list (theta', eta') m in
           dprintf
@@ -118,6 +119,8 @@ let rec eval_syn i (theta, eta) =
               (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty P.l0) (Whnf.cnormExp (e', theta'))
             end;
           eval_chk e' (Whnf.cnormMSub theta', eta'')
+        | Some (Comp.ThmValue (_, Comp.Proof _, _, _)) ->
+           Misc.not_implemented "eval_syn Const Proof"
         | Some v -> v
         | None ->
            failwith "can't evaluate missing program"
@@ -152,7 +155,7 @@ let rec eval_syn i (theta, eta) =
     | Comp.Var (_, x) ->
       dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
       begin match lookupValue x eta with
-        | Comp.RecValue (cid, e', theta', eta') ->
+        | Comp.ThmValue (cid, Comp.Program e', theta', eta') ->
           let (l, _) = cid in
           let m = Store.Modules.name_of_id l in
           let n_list = (Store.Cid.Comp.get cid).Store.Cid.Comp.mut_rec in
@@ -169,6 +172,8 @@ let rec eval_syn i (theta, eta) =
               (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty P.l0) (Whnf.cnormExp (e', theta'))
             end;
           eval_chk e' (Whnf.cnormMSub theta', eta'')
+        | Comp.ThmValue (_, Comp.Proof _, _, _) ->
+           Misc.not_implemented "eval_syn Proof"
         | v -> v
       end
 
@@ -267,7 +272,7 @@ let rec eval_syn i (theta, eta) =
       let v2 = eval_syn i2 (theta, eta) in
       Comp.PairValue (v1, v2)
 
-and eval_chk e (theta, eta) =
+and eval_chk (e : Comp.exp_chk) (theta, eta) =
     match e with
       | Comp.Syn (_, i) -> eval_syn i (theta, eta)
       | Comp.MLam (loc, n, e') ->
@@ -464,7 +469,7 @@ and eval_fun_branches v branch =
   | FunBranch f -> Comp.FunValue f
 
 
-let eval e =
+let eval (e : Comp.exp_chk) =
   dprint (fun () -> "Opsem.eval");
   dprintf (fun p -> p.fmt "  @[<v>");
   let result = eval_chk e (LF.MShift 0, Comp.Empty) in

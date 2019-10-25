@@ -2,6 +2,7 @@
    @author Renaud Germain
    @author Brigitte Pientka
 *)
+open Support
 open Store
 open Store.Cid
 open Substitution
@@ -124,6 +125,7 @@ type free_var =
   (* Would these in general be a kind of FDecl and have a marker? *)
   | CtxV of (Id.name * cid_schema * I.depend)
 
+type fctx = free_var I.ctx
 
 let rec prefixCompTyp tau = match tau with
   | Comp.TypPiBox (_, tau) -> 1 + prefixCompTyp tau
@@ -1756,19 +1758,19 @@ let printFreeMVars phat tM =
   fmt_ppr_collection Format.std_formatter cQ;
   flush_all ()
 
-let rec fvarInCollection cQ = begin match cQ with
+let rec fvarInCollection cQ =
+  match cQ with
   | I.Empty -> false
   | I.Dec(_cQ, FDecl (FV _, Impure)) ->  true
   | I.Dec(cQ, FDecl (FV _, Pure (LFTyp tA))) ->
        let (cQ',_ ) = collectTyp 0 I.Empty (None, 0) (tA, LF.id) in
          begin match cQ' with
-             Int.LF.Empty -> (print_string "empty" ; fvarInCollection cQ)
-           | _ -> true
+         | Int.LF.Empty ->
+            print_string "fvarInCollection Empty\n";
+            fvarInCollection cQ
+         | _ -> true
          end
-
-
   | I.Dec(cQ, _ ) -> fvarInCollection cQ
-end
 
 let closedTyp (cPsi, tA) =
   let (cQ1, _ ) = collectDctx (Syntax.Loc.ghost) 0 I.Empty (None, 0) cPsi in
@@ -1809,6 +1811,13 @@ let abstrCovPatt cG pat tau ms =
   let cD'     = ctxToMCtx (I.Maybe) cQ' in
   (cD', cG', pat', tau', ms0)
 
+let abstrThm = function
+  | Comp.Program e ->
+     let cQ, e' = abstrExp e in
+     cQ, Comp.Program e'
+  | Comp.Proof p ->
+     Misc.not_implemented "abstraction.ml Proof"
+
 (* Shorter names for export outside of this module. *)
 let kind = abstrKind
 let typ = abstrTyp
@@ -1825,3 +1834,4 @@ let pattern_spine = abstrPatSpine
 let patobj = abstrPatObj
 let subpattern = abstrSubPattern
 let mobj = abstrMObjPatt
+let thm = abstrThm

@@ -128,6 +128,7 @@ val cwhnfCtx   : Comp.gctx * msub -> Comp.gctx
 
 val cnormExp   : Comp.exp_chk * msub -> Comp.exp_chk
 val cnormExp'  : Comp.exp_syn * msub -> Comp.exp_syn
+val cnormThm   : Comp.thm * msub -> Comp.thm
 
 val normCtx    : Comp.gctx -> Comp.gctx
 val normCTyp   : Comp.typ  -> Comp.typ

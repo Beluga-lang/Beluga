@@ -1827,6 +1827,8 @@ and elFBranch cD cG fbr theta_tau = match fbr with
       end;
     Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
 
+let elProof cD cG p ttau = assert false
+
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)
 
@@ -1880,3 +1882,7 @@ let comptypdef loc a (tau, cK) =
 let exp  = elExp  Int.LF.Empty
 
 let exp' = elExp' Int.LF.Empty
+
+let thm cG t ttau = match t with
+  | Apx.Comp.Program e -> Int.Comp.Program (elExp Int.LF.Empty cG e ttau)
+  | Apx.Comp.Proof p -> Int.Comp.Proof (elProof Int.LF.Empty cG p ttau)

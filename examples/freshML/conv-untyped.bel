@@ -32,7 +32,7 @@ fn e => case e of
     [g |- app' (T1 ) T2]
 | [g |- ret (V )] => convv [g |- V ]
 
-and convv: (g:ctx)[g |- value (T[])] -> [g |- term] =
+and rec convv: (g:ctx)[g |- value (T[])] -> [g |- term] =
 % / total v (convv g v)/
 fn v => case v of
 | [g |- #p.2] => [g |- #p.1]

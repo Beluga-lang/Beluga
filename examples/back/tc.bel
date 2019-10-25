@@ -63,7 +63,7 @@ schema expCtx = exp ;
 rec synth : {g:expCtx} {E : [g |- exp]} [ |- oft-option] =
   mlam g => mlam E =>
      [ |- none]
-and check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
+and rec check : {g:expCtx} {E : [g |- exp]} {T : [ |- tp]} [ |- boolean] =
   mlam g => mlam E => mlam T =>
     [ |- false]
 ;

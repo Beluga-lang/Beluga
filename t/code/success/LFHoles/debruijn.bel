@@ -41,7 +41,7 @@ fn v =>  case v of
    let [ |- F]  =  hoas2db [g,x:value (T[]) |-  E] in
      [ |- lam' (T[]) F]
 
-and hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
+and rec hoas2db : (g:ctx) [g |- exp (T[])] ->  [ |- exp' T] =
   fn e =>  case e of
    | [g |- app (E1[..] ) (E2[..] )] =>
      let [ |- F1] = hoas2db [g |- E1[..]]  in
@@ -66,7 +66,7 @@ rec db2vhoas : (g:ctx) [g |- exp' T] -> [g |- value T] =
       let [g,x:value (T[]) |-  F] = db2hoas  [h, x:value (T[]) |- E[]] in
         [g |- lam (T[]) (\x. F)]
 
-and db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
+and rec db2hoas : (g:ctx) [g |- exp' T] -> [g |- exp T] =
   fn e => case e of
   | [g |- app' E1 E2] =>
     let [g |- F1[..]] = db2hoas [g |- E1] in

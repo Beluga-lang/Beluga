@@ -66,7 +66,7 @@ mlam g => fn v =>  case v of
      [g |- tlam' \a. F]
 
 
-and hoas2db : {g:ctx} [g |- exp T] ->  [g |- exp' T ] =
+and rec hoas2db : {g:ctx} [g |- exp T] ->  [g |- exp' T ] =
 % / total e (hoas2db _ _ e ) /
 mlam g => fn e =>  case e of
  | [g |- app (E1 ) (E2 )] =>

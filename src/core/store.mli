@@ -368,6 +368,7 @@ module Var : sig
 
   (** Erases the context down to a list of names. *)
   val of_gctx       : Comp.gctx -> t
+  val of_list       : Id.name list -> t
 end
 
 
@@ -394,4 +395,5 @@ module CVar : sig
   val of_mctx       : LF.mctx -> t
 
   val to_string     : t -> string
+  val of_list       : Id.name list -> t
 end

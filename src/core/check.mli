@@ -84,6 +84,15 @@ module Comp : sig
 
   exception Error of Syntax.Loc.t * error
 
+  val thm :
+    LF.mctx ->
+    gctx ->
+    Total.dec list ->
+    ?cIH: gctx ->
+    thm ->
+    tclo ->
+    unit
+
   val check :
     LF.mctx ->
     (* ^ The meta context *)

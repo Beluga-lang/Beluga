@@ -1164,7 +1164,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_value lvl ppf =
     function
     | Comp.FunValue _ -> fprintf ppf " fn "
-    | Comp.RecValue _ -> fprintf ppf " rec "
+    | Comp.ThmValue _ -> fprintf ppf " rec "
     | Comp.MLamValue _ -> fprintf ppf " mlam "
     | Comp.CtxValue _ -> fprintf ppf " mlam "
     | Comp.BoxValue mC -> fprintf ppf "%a"  (fmt_ppr_cmp_meta_obj LF.Empty 0) mC
@@ -1487,13 +1487,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (fmt_ppr_lf_mctx l0) cD
     (fmt_ppr_cmp_typ cD l0) tau
 
-  let fmt_ppr_rec lvl ppf prefix (f, tau, e) =
-    fprintf ppf "@\n%s %s : %a =@ @[<2>%a ;@]@\n"
-      (prefix)
-      (R.render_cid_prog  f)
-      (fmt_ppr_cmp_typ LF.Empty lvl) tau
-      (fmt_ppr_cmp_exp_chk  LF.Empty
-         (LF.Dec(LF.Empty, Comp.CTypDecl ((Store.Cid.Comp.get f).Store.Cid.Comp.name ,  tau, false)))  lvl) e
+  let fmt_ppr_cmp_thm ppf = function
+    (* should cG contain a Dec for the theorem itself? *)
+    | Comp.Program e ->
+       fmt_ppr_cmp_exp_chk LF.Empty LF.Empty 0 ppf e
+    | Comp.Proof p ->
+       fmt_ppr_cmp_proof LF.Empty LF.Empty ppf p
+
+  let fmt_ppr_cmp_thm_prefix ppf = function
+    | Comp.Program _ -> fprintf ppf "rec"
+    | Comp.Proof _ -> fprintf ppf "proof"
+
+  let fmt_ppr_sgn_thm_decl ppf = function
+    | Sgn.({ thm_name; thm_typ; thm_body; thm_loc }) ->
+       fprintf ppf "%a %s : %a =@ @[<v2>%a;@]"
+         fmt_ppr_cmp_thm_prefix thm_body
+         (R.render_cid_prog thm_name)
+         (fmt_ppr_cmp_typ LF.Empty 0) thm_typ
+         fmt_ppr_cmp_thm thm_body
 
   let rec fmt_ppr_sgn_decl ppf = function
     | Sgn.CompTypAbbrev (_,_,_,_) -> ()
@@ -1547,12 +1558,22 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (R.render_cid_schema  w)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
+    | Sgn.Theorem thms ->
+       fprintf ppf "@[<v>%a@]"
+         (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
+            (fun ppf x ->
+              fprintf ppf "@[%a@]"
+                fmt_ppr_sgn_thm_decl x))
+         thms
+
+      (*
     | Sgn.Rec (((f, _, _ ) as h)::t) ->
        let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total
                    then " total" else ""
        in
        fmt_ppr_rec l0 ppf ("rec"^total) h;
        List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
+       *)
 
     | Sgn.Pragma (LF.OpenPrag n) ->
        let n' = Store.Modules.name_of_id n in

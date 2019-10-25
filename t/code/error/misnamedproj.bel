@@ -26,7 +26,8 @@ fn e => case e of
     [g |- app' (T1[..] ) (T2[..])]
 | [g |- ret (V[..] )] => convv [g |- V[..] ]
 
-and convv: (g:ctx)[g |- value (T[])] -> [g |- term] =
+and
+rec convv: (g:ctx)[g |- value (T[])] -> [g |- term] =
 fn v => case v of
 | [g |- #p._t[..]] => [g |- #p.x[..]]
 | [g |- lam (A[]) (\v. E)] =>

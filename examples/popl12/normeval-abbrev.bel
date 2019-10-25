@@ -66,7 +66,7 @@ fn s => fn e => case e of
   let {N':[h |- norm T[]]} [h |- N' ] = nosubst s [g |- N ] in
     [h |- rapp (R') (N' ) ]
 
-and nosubst : (g:ctx)(h:ctx)
+and rec nosubst : (g:ctx)(h:ctx)
               Sub [g] [h]
 	    -> [g |- norm S[]]
             -> [h |- norm S[]] =
@@ -139,7 +139,7 @@ case [ |- A] of
 | [ |- arr T S ] =>  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
-and extendSem : [g |- neut (arr A[] B[])] ->
+and rec extendSem : [g |- neut (arr A[] B[])] ->
                 ({h:ctx} Sub [g] [h]  -> Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
 fn r => mlam h => fn s => fn e =>
@@ -147,7 +147,7 @@ let [h |- N ] = reify e in
 let [h |- R' ] = nsubst s r in
   reflect [h |- rapp (R') N]
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>

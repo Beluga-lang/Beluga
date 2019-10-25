@@ -89,7 +89,7 @@ case [ |- A] of
 
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
-and extendSem : (g:ctx)[g |- neut (arr A[] B[])] ->
+and rec extendSem : (g:ctx)[g |- neut (arr A[] B[])] ->
                 ({h:ctx}{$S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
 fn r => mlam h => mlam $S => fn e =>
@@ -97,7 +97,7 @@ let [h |- N ] = reify e in
 let [g |- R ] = r in
   reflect [h |- rapp R[$S] N]
 
-and reify : Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
 | [ |- arr T S ] =>

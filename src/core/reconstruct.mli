@@ -62,3 +62,5 @@ val elExp' : Int.LF.mctx ->
 
 val exp  : Int.Comp.gctx -> Apx.Comp.exp_chk -> Int.Comp.typ * Int.LF.msub -> Int.Comp.exp_chk
 val exp' : Int.Comp.gctx -> Apx.Comp.exp_syn -> Int.Comp.exp_syn * Int.Comp.tclo
+
+val thm : Int.Comp.gctx -> Apx.Comp.thm -> Int.Comp.typ * Int.LF.msub -> Int.Comp.thm

@@ -1791,6 +1791,10 @@ let clf_ctyp_decl allow_implicit_ctx =
       p.run s
   }
 
+let mctx =
+  sep_by0 (clf_ctyp_decl false) (token T.COMMA)
+  $> Context.of_list_rev
+
 let pibox ?(allow_implicit_ctx = true) r f =
   seq2
     (clf_ctyp_decl allow_implicit_ctx
@@ -2357,6 +2361,16 @@ let total_decl (arg : Comp.order t) : Comp.total_dec t =
 let numeric_total_order = total_order numeric_total_arg
 let optional_numeric_total_order = maybe numeric_total_order
 
+(** Parses `x : tau`. *)
+let cmp_ctyp_decl =
+  seq2 (name <& token T.COLON) cmp_typ
+  |> labelled "computational type declaration"
+  $> fun (x, tau) -> Comp.CTypDecl (x, tau)
+
+let gctx =
+  sep_by0 cmp_ctyp_decl (token T.COMMA)
+  $> Context.of_list_rev
+
 (** Mutual block of computation type declarations. *)
 let sgn_cmp_typ_decl =
   labelled "Inductive or stratified computation type declaration"
@@ -2603,24 +2617,147 @@ let sgn_let_decl : Sgn.decl parser =
   $> fun (loc, ((x, tau), i)) ->
      Sgn.Val (loc, x, tau, i)
 
-let sgn_rec_decl : Sgn.decl parser =
-  let cmp_rec =
-    seq4
-      (name <& token T.COLON)
-      (cmp_typ <& token T.EQUALS)
-      (maybe (bracketed' (token T.SLASH) (total_decl named_total_arg)))
-      cmp_exp_chk
-    |> span
-    $> fun (loc, (x, tau, t, e)) ->
-       Comp.RecFun (loc, x, t, tau, e)
+let harpoon_command : Comp.command parser =
+  let invocation_kind =
+    choice
+      [ keyword "ih" &> pure `ih
+      ; keyword "lemma" &> pure `lemma
+      ]
   in
+  token T.KW_BY
+  &> choice
+       [ seq3
+           invocation_kind
+           (parens (span cmp_exp_syn) <& token T.KW_AS)
+           name
+         $> (fun (k, (loc, i), x) -> Comp.By (loc, k, i, x))
+       ; keyword "unboxing" &>
+           seq2
+             (parens (span cmp_exp_syn) <& token T.KW_AS)
+             name
+         $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x)
+       ]
+
+let rec harpoon_proof : Comp.proof parser =
+  { run =
+      fun s ->
+      let incomplete_proof =
+        hole
+        |> span
+        $> fun (loc, h) -> Comp.Incomplete (loc, h)
+      in
+      let command_proof =
+        seq2
+          (harpoon_command <& token T.SEMICOLON)
+          harpoon_proof
+        |> span
+        $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
+      in
+      let directive_proof =
+        harpoon_directive
+        |> span
+        $> fun (loc, d) -> Comp.Directive (loc, d)
+      in
+      let p =
+        choice
+          [ incomplete_proof
+          ; command_proof
+          ; directive_proof
+          ]
+      in
+      p.run s
+  }
+
+and harpoon_directive : Comp.directive parser =
+  { run =
+      fun s ->
+      let p =
+        choice
+          [ keyword "intros"
+            &> harpoon_hypothetical
+            |> span
+            $> (fun (loc, h) -> Comp.Intros (loc, h))
+          ; keyword "solve"
+            &> cmp_exp_chk
+            |> span
+            $> (fun (loc, e) -> Comp.Solve (loc, e))
+          ; keyword "split"
+            &> seq2
+                 (parens cmp_exp_syn)
+                 (many harpoon_split_branch)
+            |> span
+            $> fun (loc, (i, bs)) -> Comp.Split (loc, i, bs)
+          ]
+      in
+      p.run s
+  }
+
+and harpoon_hypothetical : Comp.hypothetical parser =
+  let open Comp in
+  let hypotheses =
+    seq2
+      (mctx <& token T.PIPE)
+      gctx
+    $> fun (cD, cG) -> { cD; cG }
+  in
+  { run =
+      fun s ->
+      let p =
+        seq2
+          (hypotheses <& token T.SEMICOLON)
+          harpoon_proof
+        |> braces
+        |> span
+        $> fun (hypothetical_loc, (hypotheses, proof)) ->
+           { hypotheses; proof; hypothetical_loc }
+      in
+      p.run s
+  }
+
+and harpoon_split_branch : Comp.split_branch parser =
+  { run =
+      fun s ->
+      let p =
+        token T.KW_CASE &>
+          seq2
+            (name <& token T.COLON)
+            harpoon_hypothetical
+        |> span
+        $> fun (split_branch_loc, (case_label, branch_body)) ->
+           let open Comp in
+           { case_label; branch_body; split_branch_loc }
+      in
+      p.run s
+  }
+
+let thm p =
+  seq4
+    (name <& token T.COLON)
+    (cmp_typ <& token T.EQUALS)
+    (maybe (bracketed' (token T.SLASH) (total_decl named_total_arg)))
+    p
+  |> span
+  $> fun (thm_loc, (thm_name, thm_typ, thm_order, thm_body)) ->
+     let open Sgn in
+     { thm_loc; thm_name; thm_typ; thm_order; thm_body }
+
+let proof_decl : Sgn.thm_decl parser =
+  token T.KW_PROOF
+  &> thm (harpoon_proof $> fun p -> Comp.Proof p)
+
+let program_decl : Sgn.thm_decl parser =
   token T.KW_REC
-  &> sep_by1 cmp_rec (token T.KW_AND)
+  &> thm (cmp_exp_chk $> fun e -> Comp.Program e)
+
+let sgn_thm_decl : Sgn.decl parser =
+  sep_by1
+    (choice [program_decl; proof_decl])
+    (token T.KW_AND)
   $> Nonempty.to_list
   <& token T.SEMICOLON
   |> span
   |> labelled "(mutual) recursive function declaration(s)"
-  $> fun (loc, f) -> Sgn.Rec (loc, f)
+  $> fun (loc, f) -> Sgn.Theorem (loc, f)
 
 let rec sgn_decl : Sgn.decl parser =
   { run =
@@ -2649,7 +2786,7 @@ let rec sgn_decl : Sgn.decl parser =
 
           (* term declarations *)
           ; sgn_let_decl
-          ; sgn_rec_decl
+          ; sgn_thm_decl
           ; sgn_module_decl
           ]
         |> labelled "top-level declaration"
@@ -2680,7 +2817,7 @@ let sgn =
   $> fun (prags, decls) ->
      prags @ decls
 
-let harpoon_command =
+let interactive_harpoon_command =
   let module H = Syntax.Ext.Harpoon in
   let intros =
     keyword "intros"
@@ -2714,19 +2851,19 @@ let harpoon_command =
       ]
   in
   let by =
-    keyword "by" &>
+    token T.KW_BY &>
     seq4
       invoke_kind
-      (parens cmp_exp_syn)
-      (keyword "as" &> name)
+      cmp_exp_syn
+      (token T.KW_AS &> name)
       (maybe_default boxity `boxed)
     $> fun (k, t, name, b) -> H.By (k, t, name, b)
   in
   let unbox =
     keyword "unbox" &>
       seq2
-        (parens cmp_exp_syn)
-        (keyword "as" &> name)
+        cmp_exp_syn
+        (token T.KW_AS &> name)
     $> fun (t, name) -> H.Unbox (t, name)
   in
   let automation_kind =

@@ -153,6 +153,10 @@ and mapHoleBranch f = function
       let ec' =  mapHoleChk f ec  in
       Branch (l, cD, cG, p, mS, ec')
 
+let mapHoleThm f = function
+  | Program e -> Program (mapHoleChk f e)
+  | Proof p -> Misc.not_implemented "mapHoleThm"
+
 (*********************)
 (* top level tactics *)
 (*********************)

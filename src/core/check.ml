@@ -1065,4 +1065,10 @@ module Comp = struct
 
   let check cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
     check cD (cG,cIH) total_decs e ttau
+
+  let thm cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
+    match t with
+    | Syntax.Int.Comp.Program e -> check cD cG total_decs ~cIH: cIH e ttau
+    | Syntax.Int.Comp.Proof p -> Misc.not_implemented "checking Harpoon proofs"
+
 end

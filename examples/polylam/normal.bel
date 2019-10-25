@@ -50,7 +50,7 @@ fn e => case e of
                      in
                        [g |- lam \y.M[..,y]]
 
-and neutral2exp : (g: ctx) [g |- neutral T] -> [g |- exp T] =
+and rec neutral2exp : (g: ctx) [g |- neutral T] -> [g |- exp T] =
 / total e (neutral2exp g t e) /
 fn e => case e of
 |[g |- app' R S] => let [g |- M] = neutral2exp [g |- R] in

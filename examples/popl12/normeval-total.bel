@@ -57,7 +57,7 @@ mlam h,g, S => fn s => fn e => case e of
   let {N':[h |- norm T[]]} [h |- N' ] = nosubst s [g |- N ] in
     [h |- rapp (R') (N' ) ]
 
-and nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
+and rec nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 	    -> [g |- norm S[]]
             -> [h |- norm S[]] =
 / total n (nosubst g h _ s n) /
@@ -136,7 +136,7 @@ mlam g, A => fn r => case [ |- A] of
        reflect [h] [|- S] [h |- rapp (R') N]
 )
 
-and reify : {g:ctx}{A:[|- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =
+and rec reify : {g:ctx}{A:[|- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =
  / total a (reify g a) /
 mlam g, A => fn e => case [ |- A] of
 | [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])

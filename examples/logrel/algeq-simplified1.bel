@@ -65,7 +65,7 @@ mlam A => fn r => case [ |- A] of
     let [h |- S] = reify [|- A] rn in
     reflect [ |- B] [h |- algapp R[$W] S]
    )
-and reify : {A:[|- tp]}LogEq [g |- M1] [g |- M2] [ |- A] -> [g |- algeqn M1 M2 A[]] =
+and rec reify : {A:[|- tp]}LogEq [g |- M1] [g |- M2] [ |- A] -> [g |- algeqn M1 M2 A[]] =
  / total a (reify g m1 m2 a) /
 mlam A => fn e => case [ |- A] of
 | [ |- i ] =>
@@ -135,7 +135,7 @@ fn a => case a of
   let [g |- R'] = algEqRSym [g |- R] in
   let [g |- N'] = algEqNSym [g |- N] in
   [g |- algapp (R') (N')]
-and algEqNSym : (g:tctx)
+and rec algEqNSym : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N1 T] =
 / total a (algEqNSym g n1 n2 t a) /
@@ -263,7 +263,7 @@ fn a1 => fn a2 => case a1 of
   let [g |- R1] = algEqRTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algEqNTrans [g |- B1] [g |- B2] in
   [g |- algapp R1 R2]
-and algEqNTrans : (g:tctx)
+and rec algEqNTrans : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N3 T]
 -> [g |- algeqn N1 N3 T] =

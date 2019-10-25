@@ -221,25 +221,64 @@ module Comp = struct
  type order = name order'
  type numeric_order = int order'
 
- type total_dec = Total of Loc.t * order option * name * (name option) list
-	        | Trust of Loc.t
+ type total_dec =
+   | Total of Loc.t * order option * name * (name option) list
+	 | Trust of Loc.t
 
- type rec_fun = RecFun of Loc.t * name * total_dec option * typ * exp_chk
+ type ctyp_decl =
+   | CTypDecl of name * typ
+
+ type gctx = ctyp_decl LF.ctx
+
+ type hypotheses =
+   { cD : LF.mctx
+   ; cG : gctx
+   }
+
+ type proof =
+   | Incomplete of Loc.t * string option
+   | Command of Loc.t * command * proof
+   | Directive of Loc.t * directive
+
+ and command =
+   | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name
+   | Unbox of Loc.t * exp_syn * name
+
+ and directive =
+   | Intros of Loc.t * hypothetical
+   | Solve of Loc.t * exp_chk
+   | Split of Loc.t * exp_syn * split_branch list
+
+ and split_branch =
+   { case_label : name
+   ; branch_body : hypothetical
+   ; split_branch_loc : Loc.t
+   }
+
+ and hypothetical =
+   { hypotheses : hypotheses
+   ; proof : proof
+   ; hypothetical_loc : Loc.t
+   }
+
+ type thm =
+   | Program of exp_chk
+   | Proof of proof
 end
 
 (** Syntax of Harpoon commands. *)
 module Harpoon = struct
   include Syncom.Harpoon
 
+  type automation_kind =
+    [ `auto_intros
+    | `auto_solve_trivial
+    ]
+
   type automation_change =
     [ `on
     | `off
     | `toggle
-    ]
-
-  type automation_kind =
-    [ `auto_intros
-    | `auto_solve_trivial
     ]
 
   type command =
@@ -291,6 +330,14 @@ module Sgn = struct
     | NoStrengthen
     | Coverage     of [`Error | `Warn]
 
+  type thm_decl =
+    { thm_loc : Loc.t
+    ; thm_name : name
+    ; thm_typ : Comp.typ
+    ; thm_order : Comp.total_dec option
+    ; thm_body : Comp.thm
+    }
+
   type decl =
     | Const         of Loc.t * name * LF.typ
     | Typ           of Loc.t * name * LF.kind
@@ -303,7 +350,7 @@ module Sgn = struct
     | Pragma        of Loc.t * pragma
     | GlobalPragma  of Loc.t * global_pragma
     | MRecTyp       of Loc.t * (decl * decl list) list
-    | Rec           of Loc.t * Comp.rec_fun list
+    | Theorem       of Loc.t * thm_decl list
     | Val           of Loc.t * name * Comp.typ option * Comp.exp_syn
     | Query         of Loc.t * name option * LF.typ * int option * int option
     | Module        of Loc.t * string * decl list

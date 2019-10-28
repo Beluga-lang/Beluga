@@ -243,7 +243,7 @@ type error' =
   (* ^ incorrect constructor type: the type of a constructor must be a
      base type or a function type.
    *)
-  | Custom of string (* Generic external error. *)
+  (* | Custom of string (* Generic external error. *) *)
   | WrongConstructorType of
       Id.name (* constructor name *)
       * Id.name (* expected type name *)
@@ -351,7 +351,7 @@ let print_error ppf ({path; loc; _} as e : error) =
          (Id.string_of_name c)
          (Id.string_of_name exp)
          (Id.string_of_name act)
-    | Custom s -> fprintf ppf "%s" s
+    (* | Custom s -> fprintf ppf "%s" s *)
     | Violation s -> fprintf ppf "%s" s
   in
   fprintf ppf "%a" g e;

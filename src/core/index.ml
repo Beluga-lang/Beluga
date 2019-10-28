@@ -282,8 +282,8 @@ let rec get_ctxvar psi = match psi with
 
 
 let get_ctxvar_mobj (_loc,mO) = match mO with
-  | Ext.Comp.CObj cPsi -> get_ctxvar cPsi
-  | Ext.Comp.ClObj (cPsi, (Ext.LF.EmptySub _, [ _tM ])) -> get_ctxvar cPsi
+  | Ext.LF.CObj cPsi -> get_ctxvar cPsi
+  | Ext.LF.ClObj (cPsi, (Ext.LF.EmptySub _, [ _tM ])) -> get_ctxvar cPsi
   | _ -> None
 
 let rec length_typ_rec t_rec = match t_rec with
@@ -342,10 +342,10 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
             p.fmt "[index_typ] shunting_yard' of %a gives %a with %a"
               (Format.pp_print_list
                  ~pp_sep: Fmt.comma
-                 (P.fmt_ppr_lf_normal Ext.LF.Empty Ext.LF.Null P.l0))
+                 (P.fmt_ppr_lf_normal P.l0))
               nl
               Id.print a
-              (P.fmt_ppr_lf_spine Ext.LF.Empty Ext.LF.Null P.l0) tS');
+              (P.fmt_ppr_lf_spine P.l0) tS');
         index_typ (Ext.LF.Atom (loc, a, tS'))
      | _ -> throw loc IllFormedCompTyp
      end
@@ -913,14 +913,14 @@ let index_cltyp' (a : Ext.LF.cltyp) : Apx.LF.cltyp index =
      dprintf
        (fun p ->
          p.fmt "[index_cltyp'] indexing meta type %a"
-           (P.fmt_ppr_lf_typ Ext.LF.Empty Ext.LF.Null P.l0) a);
+           (P.fmt_ppr_lf_typ P.l0) a);
      index_typ a $> fun a' -> Apx.LF.MTyp a'
 
   | Ext.LF.PTyp a ->
      dprintf
        (fun p ->
          p.fmt "[index_cltyp'] indexing parameter type %a"
-           (P.fmt_ppr_lf_typ Ext.LF.Empty Ext.LF.Null P.l0) a);
+           (P.fmt_ppr_lf_typ P.l0) a);
      index_typ a $> fun a' -> Apx.LF.PTyp a'
                               (*
      in
@@ -940,7 +940,7 @@ let index_cltyp' (a : Ext.LF.cltyp) : Apx.LF.cltyp index =
        (fun p ->
          p.fmt "[index_cltyp'] indexing %a type %a"
            print_subst_class cl
-           (P.fmt_ppr_lf_dctx Ext.LF.Empty P.l0) phi);
+           (P.fmt_ppr_lf_dctx P.l0) phi);
      seq2 get_env get_fvars
      $ fun (c, fvars) ->
        let (phi', _bvars', fvars) =
@@ -1033,7 +1033,7 @@ let index_clobj cvars bvars fcvars m =
    *)
 
 let rec index_meta_obj cvars fcvars (l,cM) = match cM with
-  | Ext.Comp.CObj cpsi ->
+  | Ext.LF.CObj cpsi ->
      let (cPsi, _bvars, fcvars') =
        index_dctx disambiguate_to_fmvars cvars (BVar.create ()) fcvars cpsi
      in
@@ -1041,7 +1041,7 @@ let rec index_meta_obj cvars fcvars (l,cM) = match cM with
      , fcvars'
      )
 
-  | Ext.Comp.ClObj (cpsi, s) ->
+  | Ext.LF.ClObj (cpsi, s) ->
      let (cPsi, bvars, fcvars') =
        index_dctx disambiguate_to_fmvars cvars (BVar.create ()) fcvars cpsi
      in

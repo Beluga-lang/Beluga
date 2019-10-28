@@ -482,7 +482,7 @@ let elClObj cD loc cPsi' clobj mtyp =
          p.fmt "[elClObj] disambiguating substitution to term at %a"
            Loc.print loc);
      let r = Int.LF.MObj (Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id)) in
-     dprint (fun () -> "̱\n[ElClObj] ELABORATION MObj DONE\n");
+     dprint (fun () -> "[ElClObj] ELABORATION MObj DONE");
      r
 
   (* proper substitution elaboration *)
@@ -526,7 +526,7 @@ let elClObj cD loc cPsi' clobj mtyp =
 let rec elMetaObj' cD loc cM cTt = match cM , cTt with
   | (Apx.Comp.CObj psi, (Int.LF.CTyp (Some w))) ->
       let cPsi' = elDCtxAgainstSchema loc Lfrecon.Pibox cD psi w in
-        Int.LF.CObj cPsi'
+      Int.LF.CObj cPsi'
 
   | (Apx.Comp.ClObj (cPhi, clobj), (Int.LF.ClTyp (mtyp, cPsi'))) ->
      begin

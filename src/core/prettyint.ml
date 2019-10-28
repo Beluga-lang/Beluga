@@ -135,9 +135,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     in let deimplicitize_spine h ms = match h with
          | LF.Const c ->
-            let implicit_arguments = if !Printer.Control.printImplicit
-                                     then 0
-                                     else Store.Cid.Term.get_implicit_arguments c
+            let implicit_arguments =
+              if !Printer.Control.printImplicit
+              then 0
+              else Store.Cid.Term.get_implicit_arguments c
             in
             dropSpineLeft ms implicit_arguments
 

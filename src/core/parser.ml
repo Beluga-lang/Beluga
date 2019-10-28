@@ -1661,8 +1661,8 @@ let meta_obj =
           |> span
           $> fun (loc, (cPsi, tR)) ->
              match tR with
-             | Some tR -> (loc, Comp.ClObj (cPsi, tR))
-             | None -> (loc, Comp.CObj cPsi)
+             | Some tR -> (loc, LF.ClObj (cPsi, tR))
+             | None -> (loc, LF.CObj cPsi)
         in
         clobj
         |> bracks

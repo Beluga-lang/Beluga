@@ -93,6 +93,19 @@ module LF = struct
 
   and mctx = ctyp_decl ctx
 
+ type mfront =
+   | ClObj of dctx * sub
+   (* ClObj doesn't *really* contain just a substitution.
+      The problem is that syntactically, we can't tell
+      whether `[psi |- a]' is a boxed object or
+      substitution! So it turns out that,
+      syntactically, substitutions encompass both
+      possibilities: a substitution beginning with
+      EmptySub and having just one normal term in it
+      can represent a boxed term. We disambiguate
+      substitutions from terms at a later time. *)
+   | CObj of dctx
+
   (** Converts a spine to a list. It is visually "backwards" *)
   let rec list_of_spine (sp : spine) : (Loc.t * normal) list =
     match sp with
@@ -109,6 +122,12 @@ module LF = struct
     | NTyp (l, _) -> l
     | PatEmpty l -> l
 
+  let loc_of_head = function
+    | Name (l, _, _) -> l
+    | Hole l -> l
+    | PVar (l, _, _) -> l
+    | Proj (l, _, _) -> l
+
   (** Wraps a term into a dummy substitution. *)
   let term tM = (EmptySub (loc_of_normal tM), [tM])
 end
@@ -122,21 +141,7 @@ module Comp = struct
    | Ctype of Loc.t
    | PiKind  of Loc.t * LF.ctyp_decl * kind
 
- type mfront =
-   | ClObj of LF.dctx
-              * LF.sub
-   (* ClObj doesn't *really* contain just a substitution.
-      The problem is that syntactically, we can't tell
-      whether `[psi |- a]' is a boxed object or
-      substitution! So it turns out that,
-      syntactically, substitutions encompass both
-      possibilities: a substitution beginning with
-      EmptySub and having just one normal term in it
-      can represent a boxed term. We disambiguate
-      substitutions from terms at a later time. *)
-   | CObj of LF.dctx
-
- type meta_obj = Loc.t * mfront
+ type meta_obj = Loc.t * LF.mfront
 
  type meta_spine =                             (* Meta-Spine  mS :=         *)
    | MetaNil                                   (* | .                       *)

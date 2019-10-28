@@ -44,6 +44,10 @@ module LF = struct
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
+  (* TODO: Heads ought to carry their location.
+     Erasure currently needs to invent / pretend that a different
+     location is the correct one.
+   *)
   and head =
     | BVar  of offset                         (* H ::= x                        *)
     | Const of cid_term                       (*   | c                          *)

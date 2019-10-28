@@ -1255,6 +1255,10 @@ module BVar = struct
   let length       = List.length
   let get          = List.nth
 
+  let rec of_dctx = function
+    | Int.LF.Null | Int.LF.CtxVar _ -> create ()
+    | Int.LF.(DDec (cPsi, (TypDecl (x, _) | TypDeclOpt x))) -> mk_entry x :: of_dctx cPsi
+
 end
 
 

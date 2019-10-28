@@ -306,6 +306,12 @@ module BVar : sig
   val get           : t -> var  -> entry
   val length        : t -> int
   val index_of_name : t -> name -> offset
+
+  (** Converts an LF context into a list of bound variables.
+      The context must be normalized. (So any context variables on
+      the end should not be pointing to other contexts. Such pointers
+      will _not_ be chased by this function.) *)
+  val of_dctx       : LF.dctx -> t
 end
 
 

@@ -459,6 +459,10 @@ module Comp = struct
     { context : hypotheses (* all the assumptions *)
     (* The full context in scope at this point. *)
 
+    ; label : string list
+    (* A list of labels representing where we are in the proof.
+       Used to generate a label for the state by assembling them. *)
+
     ; goal : tclo
     (* The goal of this proof state. Contains a type with a delayed msub. *)
 
@@ -497,9 +501,13 @@ module Comp = struct
       hypotheses (* the full contexts *)
       * proof (* the proof; should make sense in `hypotheses`. *)
 
+  (** Generates a unsolved subgoal with the given goal in an empty
+      context, with no label.
+   *)
   let make_proof_state (t : tclo) : proof_state =
     { context = no_hypotheses
     ; goal = t
+    ; label = []
     ; solution = None
     }
 

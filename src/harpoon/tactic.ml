@@ -95,6 +95,7 @@ let intros (names : string list option) : t =
       { context
       ; goal = goal'
       ; solution = None
+      ; label = "intros" :: s.label
       }
     in
     (* Invoke the callback on the subgoal that we created *)
@@ -272,6 +273,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
             ; solution = None
+            ; label = "subcase" :: s.label
             }
           in
           f context new_state pat
@@ -348,6 +350,7 @@ let extending_meta_context decl g =
       }
   ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
   ; solution = None
+  ; label = g.label
   }
 
 let extending_comp_context decl g =

@@ -19,7 +19,9 @@ let (!) bvars x = BVar.( (get bvars x).name )
 let (!!) cvars x = CVar.( (get cvars x).name )
 
 module LF = struct
+  (*
   let mctx cD = assert false
+   *)
   let dctx cvars cPsi = assert false
 
   let rec normal cvars bvars : I.LF.normal -> E.LF.normal = function

@@ -1,7 +1,6 @@
 open Support
 open Format
 open Syntax.Int
-include Prettycom
 
 (* Internal Syntax Pretty Printer Functor *)
 module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
@@ -1324,8 +1323,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_proof_state ppf =
     let open Comp in
     function
-    | { context = {cD; cG; _} ; goal; solution; _ } ->
+    | { context = {cD; cG; _} ; goal; solution; label } ->
        fprintf ppf "@[<v>";
+       fprintf ppf "@[<hov 2>%a@]@,"
+         (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf " <-@ ")
+            (fun ppf l -> fprintf ppf "%s" l))
+         label;
        fprintf ppf "@[<v 2>Meta-context:";
        Context.iter (Whnf.normMCtx cD)
          (fun cD v -> fprintf ppf "@,%a" (fmt_ppr_lf_ctyp_decl cD l0) v );
@@ -1401,7 +1404,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
     let open Comp in
     let print_split ppf label i bs f =
-      fprintf ppf "%s (%a)@,@[<v>%a@]"
+      fprintf ppf "@[%s@ (@[%a@])@]@,@[<v>%a@]"
         label
         (fmt_ppr_cmp_exp_syn cD cG l0) i
          (pp_print_list ~pp_sep: (fun _ _ -> ())
@@ -1436,14 +1439,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | ContextSplit (i, _, bs) ->
        print_split ppf
          "ctx-split" i bs
-         begin fun ppf case ->
-         match case with
-         | EmptyContext _ ->
-            fprintf ppf "empty context"
-         | ExtendedBy (_, tA) ->
-            fprintf ppf "@[<hov 2>extended by@ @[%a@]@]"
-              (fmt_ppr_lf_typ cD LF.Null l0) tA
-         end
+         (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->
        fprintf ppf "solve (%a)" (fmt_ppr_cmp_exp_chk cD cG l0) t;

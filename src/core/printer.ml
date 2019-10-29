@@ -27,6 +27,8 @@ module Common = struct
     val fmt_ppr_lf_depend     : depend_print_style -> formatter -> LF.depend -> unit
     val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
     val fmt_ppr_cmp_split_kind : formatter -> Harpoon.split_kind -> unit
+    val fmt_ppr_cmp_context_case : (formatter -> 'a -> unit) ->
+                                   formatter -> 'a Comp.generic_context_case -> unit
   end
 end
 

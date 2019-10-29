@@ -91,6 +91,7 @@ let intros (names : string list option) : t =
       { context
       ; goal = goal'
       ; solution = None
+      ; label = "intros" :: s.label
       }
     in
     (* Invoke the callback on the subgoal that we created *)
@@ -165,13 +166,13 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        p.fmt "[harpoon-split] generated %d cases"
          (List.length cgs)
        end;
-     (* We will map get_branch_by f over the coverage goals that were generated.
+     (* We will map get_branch over the coverage goals that were generated.
         get_branch_by f computes the subgoal for the given coverage goal,
         invokes the add_subgoal callback on the computed subgoal (to register it),
         invokes the remove_subgoal callback, and constructs the
         Harpoon syntax for this split branch.
       *)
-     let get_branch_by f (cD, cov_goal, t) =
+     let get_branch (cD, cov_goal, t) =
        match cov_goal with
        (* Because we called genPatCGoals, I'm pretty sure that the
           CovCtx and CovGoal constructors are impossible here,
@@ -336,62 +337,60 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let cIH0 = Total.wf_rec_calls cD cG mfs in
           let cIH = Context.(append cIH_b (append cIH0 cIH')) in
           let context = { cD; cG; cIH } in
-          let new_state =
+          let new_state case_label =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
             ; solution = None
+            ; label = ("case " ^ case_label) :: s.label
             }
           in
-          f context new_state pat
+          (context, new_state, pat)
      in
 
-     let get_context_branch =
-       get_branch_by
-         begin fun context new_state pat ->
-         let case_label =
-           match pat with
-           | PatMetaObj (_, (_, LF.CObj cPsi)) ->
-              begin match cPsi with
-              | LF.Null -> EmptyContext Loc.ghost
-              | LF.(DDec (CtxVar _, TypDecl (x, tA))) ->
-                 ExtendedBy (Loc.ghost, Whnf.cnormTyp (tA, Whnf.m_id))
-              | _ -> B.Error.violation "[get_context_branch] impossible"
-              end
-           | _ ->
-              B.Error.violation "[get_context_branch] pattern not a context"
-         in
-         Theorem.add_subgoal t new_state;
-         context_branch case_label context (incomplete_proof new_state)
-         end
+     let make_context_branch (context, new_state, pat) =
+       match pat with
+       | PatMetaObj (_, (_, LF.CObj cPsi)) ->
+          let case_label =
+            match cPsi with
+            | LF.Null -> EmptyContext Loc.ghost
+            | LF.(DDec (CtxVar _, TypDecl (x, tA))) ->
+               ExtendedBy (Loc.ghost, Whnf.cnormTyp (tA, Whnf.m_id))
+            | _ -> B.Error.violation "[get_context_branch] pattern not a context"
+          in
+          let label =
+            Fmt.stringify
+              P.(fmt_ppr_cmp_context_case
+                 (fmt_ppr_lf_typ context.cD LF.Null l0))
+              case_label
+          in
+          let s' = new_state label in
+          Theorem.add_subgoal t s';
+          context_branch case_label context (incomplete_proof s')
+       | _ -> assert false
      in
-
-     let get_meta_branch =
-       get_branch_by
-         begin fun context new_state pat ->
-         (* compute the head of the pattern to be the case label *)
-         match pat with
-         | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
-            let c =
-              let LF.(MObj (Root (_, h, _))) = tM in
-              B.Context.hatToDCtx cPsi, h
-            in
-            Theorem.add_subgoal t new_state;
-            meta_branch c context (incomplete_proof new_state)
-         | _ ->
-            B.Error.violation "[get_meta_branch] pattern not a meta-obj"
-         end
+     let make_meta_branch (context, new_state, pat) =
+       match pat with
+       | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
+          let label, c =
+            let LF.(MObj (Root (_, h, _))) = tM in
+            ( Fmt.stringify P.(fmt_ppr_lf_head LF.Empty LF.Null l0) h
+            , (B.Context.hatToDCtx cPsi, h)
+            )
+          in
+          let s' = new_state label in
+          Theorem.add_subgoal t s';
+          meta_branch c context (incomplete_proof s')
+       | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
      in
-
-     let get_comp_branch =
-       get_branch_by
-         begin fun context new_state pat ->
-         match pat with
-         | PatConst (_, cid, _) ->
-            Theorem.add_subgoal t new_state;
-            comp_branch cid context (incomplete_proof new_state)
-         | _ ->
-            B.Error.violation "[get_comp_branch] pattern not a constant"
-         end
+     let make_comp_branch (context, new_state, pat) =
+       match pat with
+       | PatConst (_, cid, _) ->
+          let label = Store.Cid.DefaultRenderer.render_cid_comp_const cid in
+          let s' = new_state label in
+          Theorem.add_subgoal t s';
+          comp_branch cid context (incomplete_proof s')
+       | _ ->
+          B.Error.violation "[get_context_branch] pattern not a constant"
      in
 
      let decide_split_kind =
@@ -415,12 +414,13 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      | Some (Some k) ->
         Theorem.remove_subgoal t s;
         let finish f g =
-          List.map f revCgs |> g i tau |> Theorem.solve s
+          let f' cg = f (get_branch cg) in
+          List.map f' revCgs |> g i tau |> Theorem.solve s
         in
         match k with
-        | `meta -> finish get_meta_branch Comp.meta_split
-        | `comp -> finish get_comp_branch Comp.comp_split
-        | `context -> finish get_context_branch Comp.context_split
+        | `meta -> finish make_meta_branch Comp.meta_split
+        | `comp -> finish make_comp_branch Comp.comp_split
+        | `context -> finish make_context_branch Comp.context_split
 
 (** Constructs a new proof state from `g` in which the meta-context is
     extended with the given declaration, and the goal type is
@@ -441,6 +441,7 @@ let extending_meta_context decl g =
       }
   ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
   ; solution = None
+  ; label = g.label
   }
 
 let extending_comp_context decl g =
@@ -587,13 +588,20 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
               Theorem.remove_subgoal t s;
               (* generate the subgoals for the arguments.
                  by unification it doesn't matter which list we use. *)
+              let lemma_name =
+                Fmt.stringify
+                  P.(fmt_ppr_cmp_exp_syn s.context.cD s.context.cG l0)
+                  i
+              in
               let subproofs =
-                Misc.Function.flip List.map tau_args
-                  begin fun tau ->
+                Misc.Function.flip List.mapi tau_args
+                  begin fun k tau ->
                   let new_state =
                     { context = s.context
                     ; goal = (tau, Whnf.m_id)
                     ; solution = None
+                    ; label = ("premise " ^ string_of_int k ^ " of " ^ lemma_name)
+                              :: s.label
                     }
                   in
                   Theorem.add_subgoal t new_state;

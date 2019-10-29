@@ -51,3 +51,10 @@ let fmt_ppr_invoke_kind ppf : Harpoon.invoke_kind -> unit =
   function
   | `ih -> fprintf ppf "ih"
   | `lemma -> fprintf ppf "lemma"
+
+let fmt_ppr_cmp_context_case f ppf = function
+  | Comp.EmptyContext _ ->
+     fprintf ppf "empty context"
+  | Comp.ExtendedBy (_, a) ->
+     fprintf ppf "@[<hov 2>extended by@ @[%a@]@]"
+       f a

@@ -257,35 +257,35 @@ let rec checkW cD cPsi sM sA = match sM, sA with
 
   | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
-    begin
-      try
-        dprintf
-          (fun p ->
-            p.fmt "[ROOT check] %a ; %a |- %a <= %a"
-              (P.fmt_ppr_lf_mctx P.l0) cD
-              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-              (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA));
-        let sP = syn cD cPsi sM in
-        dprintf
-          (fun p ->
-            p.fmt "[ROOT check] @[<v>synthesized:@,%a ; %a |- %a <= %a@,against %a@]"
-              (P.fmt_ppr_lf_mctx P.l0) cD
-              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-              (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-          );
-	  Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
-	    (let open Format in
-       fprintf str_formatter "Root %a"
-         (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
-       flush_str_formatter ());
-      let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
-      if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
-        raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
-      with SpineMismatch ->
-        raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
+     begin
+       try
+         dprintf
+           (fun p ->
+             p.fmt "[ROOT check] %a ; %a |- %a <= %a"
+               (P.fmt_ppr_lf_mctx P.l0) cD
+               (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+               (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
+               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA));
+         let sP = syn cD cPsi sM in
+         dprintf
+           (fun p ->
+             p.fmt "[ROOT check] @[<v>synthesized:@,%a ; %a |- %a <= %a@,against %a@]"
+               (P.fmt_ppr_lf_mctx P.l0) cD
+               (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+               (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
+               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+               (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+           );
+	       Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
+	         (let open Format in
+            fprintf str_formatter "Root %a"
+              (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
+            flush_str_formatter ());
+         let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
+         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
+           raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
+       with SpineMismatch ->
+         raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
 
   | (Root (loc, _, _), _), _ ->

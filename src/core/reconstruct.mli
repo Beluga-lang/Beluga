@@ -7,9 +7,7 @@ val reset_fvarCnstr : unit -> unit
     In the case of an index object, we store the scrutinee in order to
     correctly implement dependent pattern matching.
  *)
-type case_type =
-  | IndexObj of Int.Comp.meta_obj
-  | DataObj
+type case_type
 
 (** Analyzes the given case scrutinee to decide what kind of case we
     have.
@@ -18,23 +16,35 @@ type case_type =
  *)
 val case_type : Int.Comp.exp_syn -> case_type
 
-(** Refines a pattern according to the given case type, computing a
-    refinement substitution with which to elaborate the branch body.
+(** Transforms a case_type if it was actually an index object. *)
+val map_case_type : (Int.Comp.meta_obj -> Int.Comp.meta_obj) -> case_type -> case_type
 
-    synPatRefine l ct (cD, cD1') pat1 (tau_s, tau1) = (t', t1, cD1'', pat1')
+(** Constructs the refinement substitution for a case analysis.
+    If
+      * cD; cG |- tau_s <= type
+      * cD'; cG' |- tau_s <= type
+      * cD'; cG' |- pat => tau_p
+      * cD' |- t : cD
+      * if caseT = IndexObj C then
+        - tau_s = [U]
+        - cD; cG |- C <= U
+    then
+      synPatRefine' loc caseT (cD, cD') t pat (tau_s, tau_p)
+              =
+      t', t1', cD'', pat'
     such that
-    cD1'  |- tau1 <= type
-    cD1'  |- pat1 : tau1
-    cD1'' |- t' : cD
-    cD1'' |- t1 : cD, cD1'
-    where cD is the meta-context of the scrutinee
-          cD1' is the meta-context of the pattern
-    (So t1 is actually an extension of t'.)
-    And cD1'' is the meta-context in which to elaborate the branch
-    body.
+      * cD'' |- t' : cD
+      * cD'' |- t1' : cD'
+      * cD'', [[t1']]cG |- pat' => [[t1']]tau_p
+
+    Remark:
+      * cD'' is the meta-context in which the branch of the case
+        should be elaborated.
+      * t' is just t1' composed with t.
  *)
 val synPatRefine : Loc.t -> case_type ->
                    Int.LF.mctx * Int.LF.mctx ->
+                   Int.LF.msub ->
                    Int.Comp.pattern ->
                    Int.Comp.typ * Int.Comp.typ ->
                    Int.LF.msub * Int.LF.msub * Int.LF.mctx * Int.Comp.pattern

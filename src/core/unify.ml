@@ -1954,9 +1954,11 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           end;
         begin match () with
         | () when isId s && isMId mt && not (blockdeclInDctx cPsi) ->
-           dprint
-             (fun _ ->
-               "[unifyTerm] instantiating immediately because all substitutions are identity and there's no block in cPsi");
+           dprintf
+             begin fun p ->
+               p.fmt "[unifyTerm] @[<v>instantiating immediately:@, mmvar := @[%a@]@]"
+                 (P.fmt_ppr_lf_normal cD cPsi P.l0) tM2
+             end;
            instantiateMMVar (instantiation, tM2, !constraints)
         | () when blockdeclInDctx (Whnf.cnormDCtx (cPsi1, Whnf.m_id)) ->
            dprnt "[unifyTerm] there's a block decl in cPsi";

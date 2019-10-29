@@ -1,0 +1,47 @@
+examples/compile/cpm/test.cfg
+complete
+[|- eval E V] -> [|- mstep (st K (return V)) (answer W)] -> [|- mstep (st K (ev E)) (answer W)]
+1
+split x85
+unbox (z85) as S
+solve [|- next S st_z]
+unbox (z85) as S
+by ih (complete [|- X17] [|- next S (st_return (\v. return (s_val v)) _)]) as ih
+unbox (ih) as IH
+solve [|- next IH st_s]
+by ih (complete [|- Y16] z85) as ih
+unbox (ih) as IH
+by ih (complete [|- X16] [|- next (next IH st_match1_z) (st_return (\v. match1 v Z14[] (\y. Z15[y])) _)]) as ih'
+unbox ih' as IH'
+solve [|- next IH' st_match]
+unbox z85 as S'
+by ih complete [|- Y14] [|- S'] as ih
+unbox ih as IH
+by ih complete [|- X14] [|- next (next IH st_match1_s) (st_return (\v. match1 v Z13[] (\y. X12[y])) _)] as ih'
+unbox ih' as IH'
+solve [|- next IH' st_match]
+unbox z85 as S'
+by ih complete [|- Z11] [|- next S' (st_return (\x. return (pair_val X11[] x)) _)] as S2 unboxed
+by ih complete [|- Y12] [|- next (next S2 st_pair1) (st_return (\x. pair1 x X10[]) _)] as S1 unboxed
+solve [|- next S1 st_pair]
+unbox z85 as S'
+by ih complete [|- Y10] [|- next (next S' st_fst1) (st_return (\v. fst1 v) _)] as S1 unboxed
+solve [|- next S1 st_fst]
+unbox z85 as S'
+by ih complete [|- Z8] [|- next (next S' st_snd1) (st_return (\v. snd1 v ) _)] as S1 unboxed
+solve [|- next S1 st_snd]
+unbox z85 as S'
+solve [|- next S' st_lam]
+by ih complete [|- X6] z85 as S2 unboxed
+by ih complete [|- Z6] [|- next (next S2 st_app2) (st_return (\v. app2 (lam_val (\x. Z4[x])) v) _)] as S2' unboxed
+by ih complete [|- Y7] [|- next (next S2' st_app1) (st_return (\x1. app1 x1 Z5[]) _)] as S1 unboxed
+solve [|- next S1 st_app]
+by ih complete [|- Y4] z85 as S2 unboxed
+by ih complete [|- X4] [|- next S2 (st_return (\x1. ev (Z2[x1])) _)] as S1 unboxed
+solve [|- next S1 st_letv]
+by ih complete [|- X2] z85 as S unboxed
+solve [|- next S st_letn]
+by ih complete [|- Y1] z85 as S unboxed
+solve [|- next S st_fix]
+unbox z85 as S'
+solve [|- next S' st_vl]

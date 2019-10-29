@@ -1,0 +1,9 @@
+t/harpoon/tp-refl.bel
+tp-refl
+{EXTRA : [|- tp]} {A : [|- tp]} [|- eq A A]
+2
+split [|- A]
+solve [|- eq_i]
+by ih tp-refl [|- EXTRA] [|- Y] as EQ_Y unboxed
+by ih tp-refl [|- EXTRA] [|- X] as EQ_X unboxed
+solve [|- eq_arr EQ_Y EQ_X]

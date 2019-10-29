@@ -1,0 +1,21 @@
+% An extremely simple test to make sure dependent pattern matching works in Harpoon.
+
+LF tp : type =
+  | i : tp
+  | arr : tp → tp → tp
+;
+
+LF eq : tp → tp → type =
+  | eq_i : eq i i
+  | eq_arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
+;
+
+rec tp-refl : {EXTRA : [⊢ tp]} {A : [⊢ tp]} [ ⊢ eq A A] =
+mlam EXTRA, A ⇒
+case [⊢ A] of
+  | [⊢ i] ⇒ [⊢ eq_i]
+  | [⊢ arr A B] ⇒
+        let [⊢ EQ_A] = tp-refl [⊢ EXTRA] [⊢ A] in
+        let [⊢ EQ_B] = tp-refl [⊢ EXTRA] [⊢ B] in
+        [⊢ eq_arr EQ_A EQ_B]
+;

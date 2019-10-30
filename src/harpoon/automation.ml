@@ -4,8 +4,8 @@ module B = Beluga
 
 module P = B.Pretty.Int.DefaultPrinter
 module Command = B.Syntax.Ext.Harpoon
-module LF = B.Syntax.Int.LF
 module Comp = B.Syntax.Int.Comp
+module LF = B.Syntax.Int.LF
 module Loc = B.Syntax.Loc
 module Context = B.Context
 module Whnf = B.Whnf
@@ -17,8 +17,6 @@ let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
 type t = proof_state -> Tactic.tactic_context -> bool
-
-let auto_nothing : t = fun _ _ -> false
 
 let auto_intros : t =
   fun g tctx ->
@@ -53,7 +51,7 @@ let auto_solve_trivial : t =
       end;
     match m with
     | LF.Decl (_, mtyp, _) ->
-       Whnf.convCTyp g.goal (Comp.TypBox (Loc.ghost, mtyp), LF.MShift idx)
+       Whnf.convCTyp g.goal (TypBox (Loc.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
@@ -72,24 +70,23 @@ let auto_solve_trivial : t =
     | _ ->
        B.Error.violation "[auto_solve_trivial] Impossible case"
   in
-  let c_is_witness ((c, _) : Comp.ctyp_decl * int) =
+  let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
       begin fun p ->
       p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
         (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
       end;
     match c with
-    | Comp.CTypDecl (_, typ, _) ->
+    | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
-    | Comp.CTypDeclOpt _ ->
+    | CTypDeclOpt _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
-    | Comp.WfRec _ ->
+    | WfRec _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected WfRec"
   in
-  let build_cwitness (c : Comp.ctyp_decl * int) =
+  let build_cwitness (c : ctyp_decl * int) =
     match c with
     | (_, idx) ->
-       let open Comp in
        let open Loc in
        Syn (ghost, Var (ghost, idx))
   in
@@ -120,35 +117,34 @@ let auto_solve_trivial : t =
       tctx.printf "@[<v>@,A goal %a is automatically solved.@,@]"
         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
      );
-     (Comp.solve w
+     (solve w
       |> Tactic.solve
      ) g tctx;
      true
 
+type automation_info = bool ref * t
 
 type automation_state =
-  (Command.automation_kind, (bool ref * t)) Hashtbl.t
+  (Command.automation_kind, automation_info) Hashtbl.t
 
 let make_automation_state () : automation_state =
   let hashtbl = Hashtbl.create 2 in
-  Hashtbl.add hashtbl `auto_intros
-    (ref true, auto_intros);
-  Hashtbl.add hashtbl `auto_solve_trivial
-    (ref true, auto_solve_trivial);
+  let open List in
+  [ (`auto_intros, auto_intros)
+  ; (`auto_solve_trivial, auto_solve_trivial)
+  ]
+  |> iter (fun (k, f) -> Hashtbl.add hashtbl k (ref true, f));
   hashtbl
 
-let get_automation auto_st automation_kind : t =
-  let (b, auto) = Hashtbl.find auto_st automation_kind in
-  if !b
-  then auto
-  else auto_nothing
-
-let toggle_automation auto_st (k : Command.automation_kind) (state : Command.automation_change) : unit =
+let get_automation_info auto_st (k : Command.automation_kind) : automation_info =
   (* find here is guaranteed to succeed by the external invariant
      that the hashtable has been populated with all the keys of the
      polymorphic variant `automation_kind`.
    *)
-  let (b, _) = Hashtbl.find auto_st k in
+  Hashtbl.find auto_st k
+
+let toggle_automation auto_st (k : Command.automation_kind) (state : Command.automation_change) : unit =
+  let (b, _) = get_automation_info auto_st k in
   let s =
     match state with
     | `on -> true
@@ -156,3 +152,16 @@ let toggle_automation auto_st (k : Command.automation_kind) (state : Command.aut
     | `toggle -> not !b
   in
   b := s
+
+let exec_automation auto_st : t =
+  fun g tctx ->
+  let open List in
+  (* The order of automation kinds is important,
+     because it is the order in which automations are executed.
+   *)
+  [ `auto_solve_trivial
+  ; `auto_intros
+  ]
+  |> map (fun k -> get_automation_info auto_st k)
+  |> filter (fun (b, _) -> !b)
+  |> exists (fun (_, auto) -> auto g tctx)

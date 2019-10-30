@@ -113,14 +113,7 @@ let show_proof s tctx =
     (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
 
 let add_subgoal_hook s g tctx =
-  let auto_st = s.automation_state in
-  ignore
-    (List.exists
-       (fun f -> f g tctx)
-       [ Automation.get_automation auto_st `auto_solve_trivial
-       ; Automation.get_automation auto_st `auto_intros
-       ]
-    )
+  ignore (Automation.exec_automation s.automation_state g tctx)
 
 let process_command
       (s : interpreter_state) (g : Comp.proof_state)

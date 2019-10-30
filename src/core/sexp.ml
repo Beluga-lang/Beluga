@@ -658,10 +658,18 @@ struct
          | Named n -> " " ^ n
          | Anonymous -> ""
        in
-       try
-         fprintf ppf "(Hole%s)" name
-       with
-       | _ -> fprintf ppf "(Hole %s_)" name
+       begin
+         try
+           fprintf ppf "(Hole%s)" name
+         with
+         | _ -> fprintf ppf "(Hole %s_)" name
+       end
+
+    (* I'm not sure this sexp representation is acceptable or not...
+     *)
+    | Comp.Impossible (_, i) ->
+      fprintf ppf "(Impossible %a)"
+        (sexp_cmp_exp_syn cD cG) i
 
   and sexp_cmp_exp_syn cD cG ppf =
     function

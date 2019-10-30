@@ -147,6 +147,18 @@ module Gen = struct
          next ()
     | () -> failwith "impossible"
 
+  let drop_lines g ln : unit =
+    let rec go n =
+      if n <= 0
+      then ()
+      else
+        begin
+          ignore (g ());
+          go (n - 1)
+        end
+    in
+    go ln
+
   (** Not portable. Will not work with windows line endings. *)
   let line_generator ?(buffer_size = 2048) (g : char Gen.t) : string Gen.t =
     let bs = Bytes.create buffer_size in

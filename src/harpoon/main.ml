@@ -387,15 +387,7 @@ let main () =
        begin
          match options.test_start with
          | None -> ()
-         | Some ln ->
-           let rec ignore_n_lines =
-             function
-             | 0 -> ()
-             | n ->
-               let _ = g () in
-               ignore_n_lines (n - 1)
-           in
-           ignore_n_lines (ln - 1)
+         | Some ln -> Misc.Gen.drop_lines g (ln - 1)
        end;
        match k with
        | `incomplete ->

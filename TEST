@@ -279,7 +279,6 @@ function check_harpoon {
     local -r file_path=$1
 
     local sig_path theorem_name theorem induction_order
-    local commands
     local options
     local output exit_code
 
@@ -287,26 +286,23 @@ function check_harpoon {
     theorem_name=$(sed -n '2p' "${file_path}")
     theorem=$(sed -n '3p' "${file_path}")
     induction_order=$(sed -n '4p' "${file_path}")
-    commands=$(sed '1,4d' "${file_path}")
 
-    if [ "${induction_order}" == "" ] ; then
-        options=(
-            "--sig" "${sig_path}"
-            "--name" "${theorem_name}"
-            "--theorem" "\"${theorem}\""
-            "--implicit"
-        )
-    else
-        options=(
-            "--sig" "${sig_path}"
-            "--name" "${theorem_name}"
-            "--theorem" "\"${theorem}\""
+    options=(
+        "--sig" "${sig_path}"
+        "--name" "${theorem_name}"
+        "--theorem" "\"${theorem}\""
+        "--test" "${file_path}"
+        "--test-start" "5"
+        "--implicit"
+    )
+
+    if [ "${induction_order}" != "" ] ; then
+        options+=(
             "--order" "${induction_order}"
-            "--implicit"
         )
     fi
 
-    output=$(${HARPOON} "${options[@]}" 2>&1 < <(printf "%s" "${commands}"))
+    output=$(${HARPOON} "${options[@]}" 2>&1)
     check_harpoon_output "${output}"
     exit_code=$?
 

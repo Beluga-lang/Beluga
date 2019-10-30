@@ -1690,11 +1690,7 @@ and synPatRefine loc caseT (cD, cD_p) pat (tau_s, tau_p) =
       (P.fmt_ppr_lf_mctx P.l0) cD1'
       (P.fmt_ppr_lf_msub cD1' P.l0) t'
     end;
-  let rec drop t l_delta1 = match (l_delta1, t) with
-    | (0, t) -> t
-    | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
-
-  let t0   = drop t' n in  (* cD1' |- t0 <= cD *)
+  let t0   = Ctxsub.drop n t' in  (* cD1' |- t0 <= cD *)
 
   let pat' = Whnf.cnormPattern (pat,  Whnf.mcomp t1 t') in
   let _    = dprint (fun () -> "cnormPat done ... ") in

@@ -116,6 +116,7 @@ type ('a, 'b, 'c, 'd, 'e) options =
   ; theorem : 'd (* the statement of the theorem to prove *)
   ; order : 'e (* the induction order for the theorem *)
   ; test_file : (string * test_kind) option (* the harpoon test file to load *)
+  ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   }
 
 type elaborated_options =
@@ -132,6 +133,7 @@ let initial_options : partial_options =
   ; theorem = None
   ; order = None
   ; test_file = None
+  ; test_start = None
   }
 
 let usage () : unit =
@@ -152,6 +154,8 @@ let usage () : unit =
     ^^ "  --incomplete           mark the test input file as incomplete so that\n"
     ^^ "                         stdin user input is followed after the test input\n"
     ^^ "                         (valid only when --test option is provided)\n"
+    ^^ "  --test-start number    specify the first line of test file considered\n"
+    ^^ "                         as test input\n"
     ^^ "  --debug                use debugging mode\n"
     ^^ "  --implicit             print implicit variables\n"
     ^^ "  --help                 print this message\n"
@@ -352,6 +356,11 @@ let rec parse_arguments options : string list -> string list * partial_options =
         | Some (f, k) ->
            parse_arguments { options with test_file = Some (f, `incomplete) } rest
         end
+     | "--test-start" ->
+       with_args_for "--test-start" 1
+         (parse_the_rest_with
+            (fun [test_start] ->
+               { options with test_start = Some (int_of_string test_start) }))
      | "--help" ->
         usage ();
         exit 1
@@ -375,6 +384,19 @@ let main () =
     | Some (path, k) ->
        let h = open_in path in
        let g = Misc.Gen.of_in_channel_lines h in
+       begin
+         match options.test_start with
+         | None -> ()
+         | Some ln ->
+           let rec ignore_n_lines =
+             function
+             | 0 -> ()
+             | n ->
+               let _ = g () in
+               ignore_n_lines (n - 1)
+           in
+           ignore_n_lines (ln - 1)
+       end;
        match k with
        | `incomplete ->
           Misc.Gen.sequence [g; stdin]

@@ -170,3 +170,14 @@ let rec mctxToMMSub cD0 cD = match cD with
       MDot (mdeclToMMVar cD0 n mtyp' dep, t)
 
 let mctxToMSub cD = mctxToMMSub Empty cD
+
+(** Drops `n` rightmost entries from an msub. *)
+let rec drop n t =
+  match t with
+  | _ when n <= 0 -> t
+  | MDot (_, t') -> drop (n-1) t'
+
+(** Counts the entries in an msub. *)
+let rec length = function
+  | MShift _ -> 0
+  | MDot (_, t') -> 1 + length t'

@@ -29,3 +29,12 @@ val mctxToMMSub : mctx -> mctx -> msub
 
 (* lookupSchemaOpt cO psi_offset *)
 (* val lookupSchemaOpt : mctx -> int -> schema option *)
+
+(** drop n t = t'
+    Drops `n` entries from `t`. *)
+val drop : int -> msub -> msub
+
+(** length t = n
+    Counts the entries in `t`.
+ *)
+val length : msub -> int

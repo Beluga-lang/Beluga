@@ -444,8 +444,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.MDot (f, s) ->
        fprintf ppf "%a@ ,@ %a"
-         (fmt_ppr_lf_mfront cD 1) f
          (fmt_ppr_lf_msub cD lvl) s
+         (fmt_ppr_lf_mfront cD 1) f
 
   and fmt_ppr_lf_clobj cD lvl cPsi ppf = function
     | LF.MObj m -> fmt_ppr_lf_normal cD cPsi lvl ppf m

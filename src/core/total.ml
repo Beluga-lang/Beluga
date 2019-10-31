@@ -1302,6 +1302,20 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   let open Maybe in
   variable_of_mfront mf
   $> fst
+  (* this `fst` is possibly sketchy because of projected parameter
+     variables, but I don't think parameter variables can ever be
+     inductive, so I don't *think* it's a problem.
+     -je *)
   $> is_inductive_meta_variable
   $ of_bool
   |> is_some
+
+(** Checks if the scrutinee of a case is on an inductive computational
+    variable or an inductive meta-variable. *)
+let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp_syn) : bool =
+  is_comp_inductive cG i
+  || let open Maybe in
+     Comp.is_meta_obj i
+     $> snd
+     $> is_meta_inductive cD
+     |> is_some

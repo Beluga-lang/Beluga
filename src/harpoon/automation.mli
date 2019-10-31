@@ -4,9 +4,7 @@ module Command = Beluga.Syntax.Ext.Harpoon
 type t =
   Comp.proof_state -> Tactic.tactic_context -> bool
 
-type automation_info = bool ref * t
-type automation_state =
-  (Command.automation_kind, automation_info) Hashtbl.t
+type automation_state
 
 val make_automation_state : unit -> automation_state
 

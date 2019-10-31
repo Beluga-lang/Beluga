@@ -64,8 +64,8 @@ let auto_solve_trivial : t =
        let clobj = MObj (Root (ghost, head, Nil)) in
        let psi_hat = Context.dctxToHat dctx in
        Box (ghost, (ghost, ClObj (psi_hat, clobj)))
-    (** The following case is impossible because m_is_witness
-        will never return true for a DeclOpt.
+    (* The following case is impossible because m_is_witness
+       will never return true for a DeclOpt.
      *)
     | _ ->
        B.Error.violation "[auto_solve_trivial] Impossible case"

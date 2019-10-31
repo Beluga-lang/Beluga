@@ -364,6 +364,8 @@ module Comp = struct
     | I.MShift k, I.Empty -> cD1'
     | I.MShift k, cD when k < 0 ->
        raise (Error.Violation "Contextual substitution ill-formed")
+    | I.MDot (_, _), I.Empty ->
+       Error.violation "Contextual substitution ill-formed"
     | I.MShift k, cD -> (* k >= 0 *)
        id_map_ind cD1' (I.MDot (I.MV (k+1), I.MShift (k+1))) cD
 

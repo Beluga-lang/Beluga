@@ -109,6 +109,7 @@ let intros (names : string list option) : t =
 
 (** Calls the coverage checker to compute the list of goals for a
     given type in the contexts of the given proof state.
+    Strips totality annotations from `tau` if any.
  *)
 let generate_pattern_coverage_goals
       (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : Comp.proof_state) (tctx : tactic_context)

@@ -8,6 +8,6 @@ license: "GPLv3"
 build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
-dependencies: [
+depends: [
   "gen" "sedlex" "extlib"
 ]

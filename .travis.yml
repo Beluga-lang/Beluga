@@ -10,7 +10,6 @@ env:
   - OCAML_VERSION=4.09
 os:
   - linux
-  - osx
 notifications:
   email:
     - beluga-dev@cs.mcgill.ca

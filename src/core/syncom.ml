@@ -21,6 +21,11 @@ module Comp = struct
 end
 
 module Harpoon = struct
+  type defer_kind =
+    [ `subgoal
+    | `theorem
+    ]
+
   type invoke_kind =
     [ `ih
     | `lemma

@@ -109,29 +109,23 @@ let _ =
 type test_kind = [ `incomplete | `complete ]
 
 (** The command-line options specified to Harpoon. *)
-type ('a, 'b, 'c, 'd, 'e) options =
+type ('a, 'b) options =
   { path : 'a (* the path of the signature file to load, could be a cfg *)
   ; all_paths : 'b (* the list of paths resolved from the signature file to load *)
-  ; theorem_name : 'c (* the name of the theorem to prove *)
-  ; theorem : 'd (* the statement of the theorem to prove *)
-  ; order : 'e (* the induction order for the theorem *)
   ; test_file : (string * test_kind) option (* the harpoon test file to load *)
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   }
 
 type elaborated_options =
-  (string, string list, string, I.Comp.typ, I.Comp.order option) options
+  (string, string list) options
 type valid_options =
-  (string, unit, string, E.Comp.typ, E.Comp.numeric_order option) options
+  (string, unit) options
 type partial_options =
-  (string option, unit, string option, E.Comp.typ option, E.Comp.numeric_order option) options
+  (string option, unit) options
 
 let initial_options : partial_options =
   { path = None
   ; all_paths = ()
-  ; theorem_name = None
-  ; theorem = None
-  ; order = None
   ; test_file = None
   ; test_start = None
   }
@@ -143,12 +137,8 @@ let usage () : unit =
     ^^ "\n"
     ^^ "Mandatory options:\n"
     ^^ "  --sig path             specify the input signature\n"
-    ^^ "  --name name            specify the name of the theorem to prove\n"
-    ^^ "  --theorem 'theorem'    specify the statement of the theorem to prove\n"
     ^^ "\n"
     ^^ "Other options:\n"
-    ^^ "  --order number         specify the induction order of the theorem\n"
-    ^^ "                         for the totality checker\n"
     ^^ "  --test path            specify the test input file that is used as\n"
     ^^ "                         a test input instead of stdin user input\n"
     ^^ "  --incomplete           mark the test input file as incomplete so that\n"
@@ -156,7 +146,7 @@ let usage () : unit =
     ^^ "                         (valid only when --test option is provided)\n"
     ^^ "  --test-start number    specify the first line of test file considered\n"
     ^^ "                         as test input\n"
-    ^^ "  --debug                use debugging mode\n"
+    ^^ "  --debug                use debugging mode (writes to debug.out in CWD)\n"
     ^^ "  --implicit             print implicit variables\n"
     ^^ "  --help                 print this message\n"
     ^^ "\n"
@@ -182,18 +172,6 @@ end = struct
           "--sig"
           "specifies the input signature"
           o.path
-    ; theorem_name =
-        check
-          "--name"
-          "specifies the name of the theorem to prove"
-          o.theorem_name
-    ; theorem =
-        check
-          "--theorem"
-          "specifies the statement of the theorem to prove"
-          o.theorem
-    ; order =
-        o.order
     }
 end
 
@@ -212,12 +190,6 @@ end = struct
            Recsgn.fmt_ppr_leftover_vars vars;
        raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
 
-  let elaborate_theorem (thm : E.Comp.typ) : I.Comp.typ * int =
-    let open B in
-    Reconstruct.reset_fvarCnstr ();
-    Store.FCVar.clear ();
-    thm |> Index.comptyp |> Reconstruct.comptyp |> Abstract.comptyp
-
   let load_file path =
     let open B in
     let sgn, leftover_vars =
@@ -235,38 +207,7 @@ end = struct
   let options (o : valid_options) : elaborated_options =
     let all_paths = B.Cfg.process_file_argument o.path in
     List.iter load_file all_paths;
-    (* Now that the signature has been loaded, we can elaborate the
-       statement of the theorem. *)
-    let theorem, k = elaborate_theorem o.theorem in
-    let order =
-      Maybe.map
-        begin fun x ->
-        E.Comp.map_order (fun n -> n + k) x
-        |> B.Order.of_numeric_order
-        end
-        o.order
-    in
-    let theorem =
-      match order with
-      | None -> theorem
-      | Some order ->
-         match B.Order.list_of_order order with
-         | None ->
-            let open Error in
-            throw OrderTooComplicated
-         | Some order ->
-            match B.Total.annotate theorem order with
-            | None ->
-               let open Error in
-               throw OrderDoesntMatch
-            | Some theorem ->
-               theorem
-    in
-    { o with
-      theorem
-    ; order
-    ; all_paths
-    }
+    { o with all_paths }
 end
 
 (** Gets exactly the first `n` elements from a list.
@@ -292,11 +233,6 @@ let sanitize_statement_string (stmt : string) : string =
   | _ -> stmt
 
 let rec parse_arguments options : string list -> string list * partial_options =
-  let beluga_parse name input entry =
-    let open B in
-    Runparser.parse_string ("<" ^ name ^ "'s argument>") input (Parser.only entry)
-    |> Parser.extract
-  in
   function
   | [] -> [], options
   | arg :: rest ->
@@ -322,29 +258,11 @@ let rec parse_arguments options : string list -> string list * partial_options =
      | "--implicit" ->
         PC.printImplicit := true;
         parse_the_rest ()
-     | "--name" ->
-        with_args_for "--name" 1
-          (parse_the_rest_with
-             (fun [name] ->
-               { options with theorem_name = Some name}))
-     | "--theorem" ->
-        with_args_for "--theorem" 1
-          (parse_the_rest_with
-             (fun [stmt] ->
-               let stmt = sanitize_statement_string stmt in
-               let theorem = beluga_parse "--theorem" stmt B.Parser.cmp_typ in
-               { options with theorem = Some theorem }))
      | "--sig" ->
         with_args_for "--sig" 1
           (parse_the_rest_with
              (fun [path] ->
                { options with path = Some path }))
-     | "--order" ->
-        with_args_for "--order" 1
-          (parse_the_rest_with
-             (fun [order] ->
-               let order = beluga_parse "--order" order B.Parser.numeric_total_order in
-               { options with order = Some order }))
      | "--test" ->
         with_args_for "--test" 1
           (parse_the_rest_with
@@ -371,34 +289,42 @@ let forbid_dangling_arguments = function
   | [] -> ()
   | rest -> Error.(throw (DanglingArguments rest))
 
-let main () =
+let realMain () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let rest, options = parse_arguments initial_options args in
   forbid_dangling_arguments rest;
   let options = options |> Validate.options |> Elab.options in
   let input_source =
-    let stdin = Misc.Gen.of_in_channel_lines stdin in
+    let stdin = GenMisc.of_in_channel_lines stdin in
     match options.test_file with
     | None -> stdin
     | Some (path, k) ->
        let h = open_in path in
-       let g = Misc.Gen.of_in_channel_lines h in
+       let g =
+         let open GenMisc in
+         of_in_channel_lines h
+         |> iter_through (fun x -> print_string (x ^ "\n"))
+       in
        begin
          match options.test_start with
          | None -> ()
-         | Some ln -> Misc.Gen.drop_lines g (ln - 1)
+         | Some ln -> GenMisc.drop_lines g (ln - 1)
        end;
        match k with
        | `incomplete ->
-          Misc.Gen.sequence [g; stdin]
+          GenMisc.sequence [g; stdin]
        | `complete -> g
   in
   Prover.start_toplevel
     input_source
     Format.std_formatter
-    (B.Id.(mk_name (SomeString options.theorem_name)))
-    (options.theorem, I.LF.MShift 0)
-    options.order
 
-let _ = main ()
+let main () =
+  try
+    realMain ()
+  with
+  | e -> print_string (Printexc.to_string e)
+
+let _ =
+  main ()

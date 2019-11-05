@@ -2,8 +2,10 @@ t/harpoon/type_preservation.bel
 tpr
 [|- oft M A] -> [|- eval M M'] -> [|- oft M' A]
 2
+
 split y7
 split z6
 by ih (tpr [|- D] [|- E]) as ih0
 split ih0
 by ih (tpr [|- D5 [_,D1]] [|- E1]) as ih1
+

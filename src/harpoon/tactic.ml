@@ -13,30 +13,15 @@ open B.Syntax.Int
 let dprintf, dprint, _ = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
-type tactic_context =
-  { add_subgoal : Comp.proof_state -> unit
-  ; remove_subgoal : Comp.proof_state -> unit
-  ; remove_current_subgoal : unit -> unit
-  ; replace_subgoal : Comp.proof_state -> unit
-  ; printf : 'a. ('a, Format.formatter, unit) format -> 'a
-  ; defer : unit -> unit
-  }
-
-type t = Comp.proof_state -> tactic_context -> unit
-
-(** `solve` with the arguments switched around to make it more
-    convenient to call from other tactics.
- *)
-let solve' (s : Comp.proof_state) (proof : Comp.proof) : unit =
-  s.Comp.solution <- Some proof
+type t = Theorem.t -> Comp.proof_state -> unit
 
 (** Fill the hole with the given proof.
     This will solve the current subgoal.
  *)
 let solve (proof : Comp.proof) : t =
-  fun s tctx ->
-  solve' s proof;
-  tctx.remove_subgoal s
+  fun t g ->
+  Theorem.solve g proof;
+  Theorem.remove_subgoal t g
 
 (** Walks a type and collects assumptions into cD and cG,
     returning the conclusion type.
@@ -82,13 +67,13 @@ let intros' : string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
  *)
 let intros (names : string list option) : t =
   (* Main body of `intros`: *)
-  fun s tctx ->
+  fun t s ->
   let open Comp in
-  let (t, sigma) = s.goal in
-  let cD, cG, t' = intros' names LF.Empty LF.Empty t in
+  let (tau, theta) = s.goal in
+  let cD, cG, tau' = intros' names LF.Empty LF.Empty tau in
   (* only create a new intros node if something actually happened *)
-  if t' <> t then
-    let goal' = (t', sigma) in
+  if tau' <> tau then
+    let goal' = (tau', theta) in
     let local_context = {cD; cG; cIH = LF.Empty} in
     let context = B.Context.append_hypotheses s.context local_context in
     let new_state =
@@ -99,19 +84,20 @@ let intros (names : string list option) : t =
     in
     (* Invoke the callback on the subgoal that we created *)
     (* Solve the current goal with the subgoal. *)
-    tctx.remove_current_subgoal ();
-    tctx.add_subgoal new_state;
+    Theorem.remove_current_subgoal t;
+    Theorem.add_subgoal t new_state;
     Comp.intros context (Comp.incomplete_proof new_state)
-    |> solve' s
+    |> Theorem.solve s
   else
-    tctx.printf "Nothing to introduce.@,\
-                 This command works only when the goal is a function type.@,"
+    Theorem.printf t
+      "Nothing to introduce.@,\
+       This command works only when the goal is a function type.@,"
 
 (** Calls the coverage checker to compute the list of goals for a
     given type in the contexts of the given proof state.
  *)
 let generate_pattern_coverage_goals
-      (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : Comp.proof_state) (tctx : tactic_context)
+      (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : Comp.proof_state) t
     : (LF.mctx * B.Coverage.cov_goal * LF.msub) list option =
   let open Comp in
   let cgs =
@@ -120,14 +106,14 @@ let generate_pattern_coverage_goals
   let n = List.length cgs in
   match k with
   | `invert when n <> 1 ->
-     tctx.printf "Can't invert %a. (Not a unique case.)@,"
+     Theorem.printf t "Can't invert %a. (Not a unique case.)@,"
        (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG P.l0) m;
      None
   | _ -> Some cgs
 
 let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
   let open Comp in
-  fun s tctx ->
+  fun t s ->
   (* Compute the coverage goals for the type to split on. *)
   dprintf
     begin fun p ->
@@ -135,7 +121,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
     end;
-  match generate_pattern_coverage_goals k i tau s tctx with
+  match generate_pattern_coverage_goals k i tau s t with
   | None -> ()
   (* splitting failed, so we do nothing *)
   | Some cgs ->
@@ -287,7 +273,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
               |> Maybe.get
               |> Pair.lmap B.Context.hatToDCtx
             in
-            tctx.add_subgoal new_state;
+            Theorem.add_subgoal t new_state;
             meta_branch c context (incomplete_proof new_state)
          | _ ->
             B.Error.violation "[get_meta_branch] Impossible case"
@@ -299,7 +285,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
          begin fun context new_state pat ->
          match pat with
          | PatConst (_, cid, _) ->
-            tctx.add_subgoal new_state;
+            Theorem.add_subgoal t new_state;
             comp_branch cid context (incomplete_proof new_state)
          | _ ->
             B.Error.violation "[get_meta_branch] Impossible case"
@@ -312,7 +298,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | _ -> false
      in
      let is_comp_split cg = not (is_meta_split cg) in
-     tctx.remove_subgoal s;
+     Theorem.remove_subgoal t s;
      let revCgs = List.rev cgs in
      (match (List.for_all is_meta_split revCgs, List.for_all is_comp_split revCgs) with
       | (true, false) ->
@@ -326,7 +312,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
       | _ ->
          B.Error.violation "[split] Impossible case"
      )
-     |> solve' s
+     |> Theorem.solve s
 
 (** Constructs a new proof state from `g` in which the meta-context is
     extended with the given declaration, and the goal type is
@@ -359,35 +345,31 @@ let extending_comp_context decl g =
   ; solution = None
   }
 
-let solve_by_replacing_subgoal g' cmds g tctx =
-  tctx.replace_subgoal g';
-  Comp.(prepend_commands cmds (incomplete_proof g')) |> solve' g
-
 (** Solves the current subgoal by keeping it the same, but extending
     the meta context with a new declaration.
     This will appropriately MShift the goal type.
  *)
-let solve_with_new_meta_decl decl cmd g tctx =
-  solve_by_replacing_subgoal (extending_meta_context decl g) cmd g tctx
+let solve_with_new_meta_decl decl cmd t g =
+  Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) cmd g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the computational context with a new declaration.
  *)
-let solve_with_new_comp_decl decl cmd g tctx =
-  solve_by_replacing_subgoal (extending_comp_context decl g) cmd g tctx
+let solve_with_new_comp_decl decl cmd t g =
+  Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) cmd g
 
 let solve_by_unbox' cmd (cT : Comp.meta_typ) (name : B.Id.name) : t =
   solve_with_new_meta_decl LF.(Decl (name, cT, No)) cmd
 
 let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
-  fun g tctx ->
+  fun t g ->
   let {cD; cG; cIH} = g.context in
   match tau with
   | TypBox (_, cT) ->
-     solve_by_unbox' [mk_cmd cT] cT name g tctx
+     solve_by_unbox' [mk_cmd cT] cT name t g
   | _ ->
-     tctx.printf "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
+     Theorem.printf t "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
        (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
        (P.fmt_ppr_cmp_typ cD P.l0) tau
 

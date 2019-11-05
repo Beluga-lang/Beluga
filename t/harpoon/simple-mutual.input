@@ -1,0 +1,15 @@
+t/harpoon/simple-mutual.bel
+size
+[|- tree] -> [|- nat]
+1
+size'
+[|- children] -> [|- nat]
+1
+
+split x1
+solve [|- z]
+solve size' [|- Y1]
+split z1
+solve [|- z]
+solve add (size [|- X1]) (size' [|- Z1])
+

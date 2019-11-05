@@ -2,6 +2,7 @@ t/harpoon/type_preservation.bel
 tpr
 [|- oft M A] -> [|- eval M M'] -> [|- oft M' A]
 2
+
 toggle-automation auto-solve-trivial
 split y7
 solve z6
@@ -11,3 +12,4 @@ by ih (tpr [|- D] [|- E]) as ih0
 split ih0
 by ih (tpr [|- D5 [_,D1]] [|- E1]) as ih1
 solve ih1
+

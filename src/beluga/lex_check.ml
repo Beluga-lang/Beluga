@@ -32,7 +32,7 @@ let passes_check (path : string) : bool =
   let input = Std.input_file ?bin:(Some true) path in
   let real_end = Sedlexing.Utf8.from_string input |> count 0 in
   Printf.printf "found end %d\n" real_end;
-  let stream = Misc.Gen.of_string input in
+  let stream = GenMisc.of_string input in
   let out = Lexer.mk (Loc.initial path) stream in
   match find_eoi out with
   | None -> false

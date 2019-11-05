@@ -2,4 +2,6 @@ t/harpoon/a_framework_for_defining_logics/first_order_arithmetic.bel
 forall_to_exists
 { S : [t : term ⊢ formula] } [⊢ true (imply (forall (\t. S[t])) (exists (\t. S[t])))]
 
+
 solve ([⊢ IMP-I (forall (\t. S[t])) (exists (\t. S[t])) (\all. EXT-I (\t. S[t]) zero (ALL-E (\t. S[t]) zero all))])
+

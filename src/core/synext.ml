@@ -298,7 +298,7 @@ module Harpoon = struct
                 * level
     | ShowIHs
     | ShowProof
-    | Defer (* Defers the current subgoal to later *)
+    | Defer of defer_kind (* Defers the current subgoal to later *)
     | ShowSubgoals (* Lists all open subgoals *)
 
     | ToggleAutomation of automation_kind * automation_change

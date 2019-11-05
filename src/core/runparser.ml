@@ -11,8 +11,8 @@ let parse_file (filename : filename) (p : 'a Parser.t) : Parser.state * 'a Parse
 
 let parse_channel (filename : filename) (chan : in_channel) (p : 'a Parser.t)
     : Parser.state * 'a Parser.result =
-  parse_gen filename (Misc.Gen.of_in_channel chan) p
+  parse_gen filename (GenMisc.of_in_channel chan) p
 
 let parse_string (filename : filename) (input : string) (p : 'a Parser.t)
     : Parser.state * 'a Parser.result =
-  parse_gen filename (Misc.Gen.of_string input) p
+  parse_gen filename (GenMisc.of_string input) p

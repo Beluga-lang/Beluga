@@ -2,7 +2,7 @@ module Comp = Beluga.Syntax.Int.Comp
 module Command = Beluga.Syntax.Ext.Harpoon
 
 type t =
-  Comp.proof_state -> Tactic.tactic_context -> bool
+  Theorem.t -> Comp.proof_state -> bool
 
 type automation_state
 

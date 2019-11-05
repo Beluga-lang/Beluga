@@ -16,19 +16,19 @@ open Comp
 let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
-type t = proof_state -> Tactic.tactic_context -> bool
+type t = Theorem.t -> proof_state -> bool
 
 let auto_intros : t =
-  fun g tctx ->
-  let (t, _) = g.goal in
+  fun t g ->
+  let (tau, _) = g.goal in
   dprintf
     begin fun p ->
     p.fmt "[auto_intros]: invoked on %a"
-      (P.fmt_ppr_cmp_typ g.context.cD P.l0) t
+      (P.fmt_ppr_cmp_typ g.context.cD P.l0) tau
     end;
-  match t with
+  match tau with
   | TypArr _ | TypPiBox _ ->
-     Tactic.intros None g tctx;
+     Tactic.intros None t g;
      true
   | _ -> false
 
@@ -41,7 +41,7 @@ let auto_intros : t =
     [|- a]
  *)
 let auto_solve_trivial : t =
-  fun g tctx ->
+  fun t g ->
   let { cD; cG; _ } = g.context in
   let m_is_witness ((m, idx) : LF.ctyp_decl * int) =
     dprintf
@@ -113,13 +113,9 @@ let auto_solve_trivial : t =
        end;
      false
   | lazy (Some w) ->
-     Tactic.(
-      tctx.printf "@[<v>@,A goal %a is automatically solved.@,@]"
-        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
-     );
-     (solve w
-      |> Tactic.solve
-     ) g tctx;
+     Theorem.printf t "@[<v>@,A goal %a is automatically solved.@,@]"
+       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
+     (solve w |> Tactic.solve) t g;
      true
 
 type automation_info = bool ref * t
@@ -154,7 +150,7 @@ let toggle_automation auto_st (k : Command.automation_kind) (state : Command.aut
   b := s
 
 let exec_automation auto_st : t =
-  fun g tctx ->
+  fun t g ->
   let open List in
   (* The order of automation kinds is important,
      because it is the order in which automations are executed.
@@ -164,4 +160,4 @@ let exec_automation auto_st : t =
   ]
   |> map (fun k -> get_automation_info auto_st k)
   |> filter (fun (b, _) -> !b)
-  |> exists (fun (_, auto) -> auto g tctx)
+  |> exists (fun (_, auto) -> auto t g)

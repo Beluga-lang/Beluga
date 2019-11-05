@@ -1,3 +1,3 @@
 (library
   (name support)
-  (libraries gen))
+  (libraries gen extlib))

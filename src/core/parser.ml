@@ -2884,21 +2884,35 @@ let interactive_harpoon_command =
     &> seq2 automation_kind (maybe_default automation_change `toggle)
     $> fun (t, c) -> H.ToggleAutomation (t, c)
   in
-  let level =
-    choice
-      [ keyword "comp" &> pure `comp
-      ; keyword "meta" &> pure `meta
-      ]
-  in
   let rename =
+    let level =
+      choice
+        [ keyword "comp" &> pure `comp
+        ; keyword "meta" &> pure `meta
+        ]
+    in
     keyword "rename"
     &> seq3 level name name
     $> fun (level, x_src, x_dst) -> H.Rename (x_src, x_dst, level)
   in
+  let defer =
+    let level =
+      maybe_default
+        begin
+          choice
+            [ keyword "theorem" &> pure `theorem
+            ; keyword "subgoal" &> pure `subgoal
+            ]
+        end
+        `subgoal
+    in
+    keyword "defer"
+    &> level
+    $> fun k -> H.Defer k
+  in
   let trivial_command =
     [ "show-proof", H.ShowProof
     ; "show-ihs", H.ShowIHs
-    ; "defer", H.Defer
     ; "show-subgoals", H.ShowSubgoals
     ]
     |> List.map (fun (x, t) -> keyword x &> pure t)
@@ -2912,5 +2926,6 @@ let interactive_harpoon_command =
       :: unbox
       :: toggle_automation
       :: rename
+      :: defer
       :: trivial_command
     )

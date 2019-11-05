@@ -2,4 +2,6 @@ t/harpoon/a_framework_for_defining_logics/higher_order_arithmetic.bel
 forall_to_exists
 { S : [t : obj term ⊢ obj formula] } [⊢ true (apply formula formula (apply formula (formula arrow formula) imply (apply (term arrow formula) formula (forall term) (lambda term formula (\t. S[t])))) (apply (term arrow formula) formula (exists term) (lambda term formula (\t. S[t]))))]
 
+
 solve ([⊢ IMP-I (apply (term arrow formula) formula (forall term) (lambda term formula (\t. S[t]))) (apply (term arrow formula) formula (exists term) (lambda term formula (\t. S[t]))) (\all. EXT-I term (lambda term formula (\t. S[t])) zero (ALL-E term (lambda term formula (\t. S[t])) zero all))])
+

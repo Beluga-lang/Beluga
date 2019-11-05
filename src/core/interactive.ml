@@ -18,6 +18,25 @@ open Debug.Fmt
 (* helper functions *)
 (*********************)
 
+(** Elaborates a numeric induction order by shifting the numbers by
+    the number of implicit parameters `k`.
+ *)
+let elaborate_numeric_order (k : int) (order : ExtComp.numeric_order) : Comp.order =
+  ExtComp.map_order (fun n -> n + k) order |> Order.of_numeric_order
+
+(** Elaborates an external syntax type into internal syntax, with abstraction.
+    The returned integer is the number of implicit parameters.
+ *)
+let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
+  dprintf
+    begin fun p ->
+    p.fmt "[elaborate_typ] @[<v>cD = @[%a@]@]"
+      (P.fmt_ppr_lf_mctx P.l0) cD
+    end;
+  Index.comptyp tau
+  |> Reconstruct.comptyp
+  |> Abstract.comptyp
+
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)
     : Comp.exp_chk =

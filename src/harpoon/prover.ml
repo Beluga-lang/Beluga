@@ -4,12 +4,12 @@ module B = Beluga
 module Check = B.Check
 module Command = B.Syntax.Ext.Harpoon
 module Context = B.Context
+module Comp = B.Syntax.Int.Comp
 module HoleId = B.HoleId
 module Holes = B.Holes
 module Id = B.Id
 module Interactive = B.Interactive
 module LF = B.Syntax.Int.LF
-module Loc = B.Location
 module Logic = B.Logic
 module P = B.Pretty.Int.DefaultPrinter
 module Total = B.Total
@@ -19,7 +19,6 @@ module Debug = B.Debug
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
-module Comp = B.Syntax.Int.Comp
 
 exception EndOfInput
 
@@ -34,284 +33,299 @@ let _ =
 
 type input_source = string Gen.t
 
-type interpreter_state =
-  { initial_state : Comp.proof_state
-  (* ^ it's important to remember the initial proof state, since it
-     gives us a way to track the original full statement of the theorem
-     to prove as well as a handle on the whole (partial) proof.
-   *)
-  ; remaining_subgoals : Comp.proof_state DynArray.t
-  ; automation_state : Automation.automation_state
-  ; theorem_name : Id.name
-  ; cid : Id.cid_prog
-  ; order : Comp.order option
-  ; input_source : input_source
-  }
+module Prover = struct
+  open Theorem
 
-let make_prover_state
-      (input_source : input_source)
-      (cid : Id.cid_prog)
-      (theorem_name : Id.name)
-      (order : Comp.order option)
-      (initial_state : Comp.proof_state)
-    : interpreter_state =
-  { initial_state
-  ; remaining_subgoals = DynArray.of_list []
-  ; automation_state = Automation.make_automation_state ()
-  ; theorem_name
-  ; order
-  ; cid
-  ; input_source
-  }
-
-(** Computes the index of the current subgoal we're working on. *)
-let current_subgoal_index gs = 0
-
-(** Gets the next subgoal from the interpreter state.
-    Returns `None` if there are no subgoals remaining.
- *)
-let next_subgoal (s : interpreter_state) : Comp.proof_state option =
-  let gs = s.remaining_subgoals in
-  if DynArray.empty gs then
-    None
-  else
-    Some (DynArray.get gs (current_subgoal_index gs))
-
-let rename src dst level g tctx =
-  let open Comp in
-  let g' =
-    { g with
-      context =
-        begin match level with
-        | `comp ->
-           { g.context with
-             cG = Context.rename_gctx src dst g.context.cG
-           }
-        | `meta ->
-           { g.context with
-             cD = Context.rename_mctx src dst g.context.cD
-           }
-        end
-    ; solution = None
+  type state =
+    { theorems : Theorem.t DynArray.t
+    (* ^ The theorems currently being proven. *)
+    
+    ; automation_state : Automation.automation_state
+    ; input_source : input_source
+    ; ppf : Format.formatter
     }
-  in
-  Tactic.solve_by_replacing_subgoal g' [] g tctx
 
-let show_proof s tctx =
-  let open Comp in
-  (* This is a trick to print out the proof resulting from
-     the initial state correctly. The initial state's solution
-     might be None or Some; we don't know. Rather than handle
-     that distinction here, we can wrap the state into a proof
-     that immediately ends with Incomplete. The proof
-     pretty-printer will then deal with the None/Some for us by
-     printing a `?` if the initial state hasn't been solved
-     yet.
+  let next_input s =
+    Maybe.get' EndOfInput (Gen.next s.input_source)
+
+  let printf (s : state) x =
+    Format.fprintf s.ppf x
+    
+  (** Gets the list of mutual declarations corresponding to the
+      currently loaded theorems.
    *)
-  let s = s.initial_state in
-  Tactic.(tctx.printf) "@[<v>Proof so far:@,%a@]"
-    (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
+  let get_mutual_decs (s : state) : Total.dec list =
+    let get_dec ts =
+      Total.make_total_dec
+        ts.name
+        Comp.(Whnf.cnormCTyp ts.initial_state.goal |> Total.strip)
+        ts.order
+    in
+    List.map get_dec (DynArray.to_list s.theorems)
+    
+  let make_state
+        (ppf : Format.formatter)
+        (input_source : input_source)
+      : state =
+    let theorems = DynArray.make 16 in
+    { theorems
+    ; automation_state = Automation.make_automation_state ()
+    ; input_source
+    ; ppf
+    }
 
-let add_subgoal_hook s g tctx =
-  ignore (Automation.exec_automation s.automation_state g tctx)
-
-let process_command
-      (s : interpreter_state) (g : Comp.proof_state)
-      (cmd : Command.command)
-      (tctx : Tactic.tactic_context)
-    : unit =
-  let printf x = Tactic.(tctx.printf) x in
-  let open Comp in
-  let mfs =
-    (* this should probably directly be a part of interpreter_state,
-       or perhaps a part of a larger state for the collection of
-       mutually inductive theorems being defined.
+    (*
+  (** Removes the theorem with a given name from the list of theorems. *)
+  let remove_theorem s name =
+    let n = DynArray.length s.theorems in
+    let rec loop = function
+      | i when i >= n -> ()
+      | i when Id.equals name (DynArray.get s.theorems i).Theorem.name ->
+         DynArray.delete s.theorems i
+      | i -> loop (i + 1)
+    in
+    loop 0
      *)
-    [ Total.make_total_dec
-        s.theorem_name
-        (Whnf.cnormCTyp s.initial_state.goal |> Total.strip)
-        s.order
+
+  let remove_current_theorem s =
+    DynArray.delete s.theorems 0
+
+  let defer_theorem s =
+    let t = DynArray.get s.theorems 0 in
+    remove_current_theorem s;
+    DynArray.add s.theorems t
+
+  (** Gets the next theorem from the interpreter state.
+      Returns `None` if there are no theorems left,
+      i.e. all theorems in the mutual block have been proven.
+   *)
+  let next_theorem (s : state) : Theorem.t option =
+    match s.theorems with
+    | ts when DynArray.empty ts -> None
+    | ts -> Some (DynArray.get ts 0)
+
+  (** Decides whether a given `cid` is in among the currently being
+      proven theorems. *)
+  let cid_is_in_current_theorem_set s c =
+    List.exists (fun t -> t.cid = c) (DynArray.to_list s.theorems)
+
+  (** Runs proof automation on a given subgoal. *)
+  let run_automation (s : state) (t : theorem) (g : Comp.proof_state) =
+    ignore (Automation.exec_automation s.automation_state t g)
+
+  type invocation_status =
+    [ `ok
+    | `not_an_ih
     ]
-  in
+
   (** Checks that the given term corresponds to the given kind of invocation.
       Without this, it is possible to invoke lemmas using `by ih`.
    *)
-  let check_invocation (k : invoke_kind) cD cG (i : exp_syn) f =
+  let check_invocation s (k : Comp.invoke_kind) (i : Comp.exp_syn) : invocation_status =
     match k with
-    | `lemma -> f ()
+    | `lemma -> `ok
     | `ih ->
-       match head_of_application i with
-       | Const (_, c) when c = s.cid -> f ()
-       | _ ->
-          Tactic.(tctx.printf) "@[<v>The expression@,  @[%a@]@,\
-                                is not an appeal to an induction hypothesis.@]"
-            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-  in
-  let elaborate_exp' cIH cD cG t =
+       match Comp.head_of_application i with
+       | Comp.Const (_, c) when cid_is_in_current_theorem_set s c -> `ok
+       | _ -> `not_an_ih
+
+  (** Elaborates a synthesizable expression in the given contexts. *)
+  let elaborate_exp' cIH cD cG mfs t =
     let (hs, (i, tau)) =
       Holes.catch
-        (fun _ ->
-          let (i, (tau, theta)) =
-            Interactive.elaborate_exp' cD cG t
-          in
-          let _ = Check.Comp.syn ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
-          (i, Whnf.cnormCTyp (tau, theta)))
+        begin fun _ ->
+        let (i, (tau, theta)) =
+          Interactive.elaborate_exp' cD cG t
+        in
+        let _ = Check.Comp.syn ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
+        (i, Whnf.cnormCTyp (tau, theta))
+        end
     in
     (hs, i, tau)
-  in
-  let elaborate_exp cIH cD cG t ttau =
+
+  (** Elaborates a checkable expression in the given contexts against the given type. *)
+  let elaborate_exp cIH cD cG mfs t ttau =
     Holes.catch
-      (fun _ ->
-        let e = Interactive.elaborate_exp cD cG t ttau in
-        Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
-        e
-      )
-  in
-  let solve_hole (id, Holes.Exists (w, h)) =
-    let open Holes in
-    dprintf
-      begin fun p ->
-      p.fmt "[harpoon] [solve_hole] processing hole %s"
-        (HoleId.string_of_name_or_id (h.name, id))
-      end;
-    let { name; Holes.cD = cDh; info; _ } = h in
-    match w with
-    | Holes.CompInfo -> failwith "computational holes not supported"
-    | Holes.LFInfo ->
-       let { lfGoal; cPsi; lfSolution } = h.info in
-       assert (lfSolution = None);
-       let typ = Whnf.normTyp lfGoal in
+      begin fun _ ->
+      let e = Interactive.elaborate_exp cD cG t ttau in
+      Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
+      e
+      end
+
+  let process_command
+        (s : state)
+        (t : theorem)
+        (g : Comp.proof_state)
+        (cmd : Command.command)
+      : unit =
+    let mfs = lazy (get_mutual_decs s) in
+
+    let open Comp in
+    
+    let solve_hole (id, Holes.Exists (w, h)) =
+      let open Holes in
+      dprintf
+        begin fun p ->
+        p.fmt "[harpoon] [solve_hole] processing hole %s"
+          (HoleId.string_of_name_or_id (h.Holes.name, id))
+        end;
+      let { name; Holes.cD = cDh; info; _ } = h in
+      match w with
+      | Holes.CompInfo -> failwith "computational holes not supported"
+      | Holes.LFInfo ->
+         let { lfGoal; cPsi; lfSolution } = h.info in
+         assert (lfSolution = None);
+         let typ = Whnf.normTyp lfGoal in
+         dprintf
+           begin fun p ->
+           p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
+             (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
+           end;
+         Logic.prepare ();
+         let (query, skinnyTyp, querySub, instMVars) =
+           Logic.Convert.typToQuery cPsi cDh (typ, 0)
+         in
+         try
+           Logic.Solver.solve cDh cPsi query
+             begin fun (cPsi, tM) ->
+             printf s "found solution: @[%a@]@,@?"
+               (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+             h.info.lfSolution <- Some (tM, LF.Shift 0);
+             raise Logic.Frontend.Done
+             end
+         with
+         | Logic.Frontend.Done ->
+            printf s "logic programming finished@,@?";
+            ()
+    in
+
+    let { cD; cG; cIH } = g.context in
+
+    match cmd with
+    (* Administrative commands: *)
+    | Command.ShowProof ->
+       Theorem.show_proof t
+    | Command.Rename (x_src, x_dst, level) ->
+       Theorem.rename_variable x_src x_dst level t g
+    | Command.Defer k ->
+       begin match k with
+       | `theorem -> defer_theorem s
+       | `subgoal -> Theorem.defer_subgoal t
+       end
+    | Command.ShowIHs ->
+       let f i =
+         printf s "%d. %a@,"
+           (i + 1)
+           (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
+       in
+       printf s "There are %d IHs:@,"
+         (Context.length g.context.cIH);
+       Context.to_list g.context.cIH |> List.iteri f
+
+    | Command.ShowSubgoals ->
+       Theorem.show_subgoals t
+       
+    | Command.ToggleAutomation (automation_kind, automation_change) ->
+       Automation.toggle_automation s.automation_state automation_kind automation_change
+      
+    (* Real tactics: *)
+    | Command.Unbox (i, name) ->
+       let (hs, m, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
+       Tactic.unbox m tau name t g
+       
+    | Command.Intros names ->
+       Tactic.intros names t g
+
+    | Command.Split (split_kind, i) ->
+       let (hs, m, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
+       Tactic.split split_kind m tau (Lazy.force mfs) t g
+    | Command.By (k, i, name, b) ->
+       let (hs, i, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
        dprintf
          begin fun p ->
-         p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
-           (P.fmt_ppr_lf_typ cDh cPsi P.l0) typ
+         p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
+           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+           (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
-       Logic.prepare ();
-       let (query, skinnyTyp, querySub, instMVars) =
-         Logic.Convert.typToQuery cPsi cDh (typ, 0)
-       in
-       try
-         Logic.Solver.solve cDh cPsi query
-           begin fun (cPsi, tM) ->
-           Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
-             (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
-           h.info.lfSolution <- Some (tM, LF.Shift 0);
-           raise Logic.Frontend.Done
-           end
-       with
-       | Logic.Frontend.Done ->
-          printf "logic programming finished@,@?";
-          ()
-  in
-  let { cD; cG; cIH } = g.context in
-  match cmd with
-  (* Administrative commands: *)
-  | Command.ShowProof ->
-     show_proof s tctx
-  | Command.Rename (x_src, x_dst, level) ->
-     rename x_src x_dst level g tctx
-  | Command.Defer ->
-     (* Remove the current subgoal from the list (it's in head position)
-      * and then add it back (on the end of the list) *)
-     Tactic.(tctx.defer ())
-  | Command.ShowIHs ->
-     let f i =
-       Tactic.(tctx.printf) "%d. %a@,"
-         (i + 1)
-         (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
-     in
-     Tactic.(tctx.printf) "There are %d IHs:@,"
-       (Context.length g.context.cIH);
-     Context.to_list g.context.cIH |> List.iteri f
-  | Command.ShowSubgoals ->
-     let f ppf i g =
-       let open Comp in
-       Tactic.(tctx.printf) "%2d. @[%a@]@,"
-         (i + 1)
-         (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal)
-     in
-     let print_subgoals ppf gs =
-       List.iteri (f ppf) gs
-     in
-     Tactic.(tctx.printf) "@[<v>%a@]"
-       print_subgoals (DynArray.to_list s.remaining_subgoals)
+       List.iter solve_hole hs;
+       (* validate the invocation and call the suspension if it passes. *)
+       begin match check_invocation s k i with
+       | `ok -> Tactic.invoke k b i tau name t g
+       | `not_an_ih ->
+          printf s "@[<v>The expression@,  @[%a@]@,\
+                    is not an appeal to an induction hypothesis.@]"
+            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+       end
+       
+    | Command.Solve e ->
+       let (hs, e) = elaborate_exp cIH cD cG (Lazy.force mfs) e g.goal in
+       dprnt "[harpoon] [solve] elaboration finished";
+       printf s "Found %d hole(s) in solution@." (List.length hs);
+       List.iter solve_hole hs;
+       Check.Comp.check cD cG (Lazy.force mfs) e g.goal;
+       (Comp.solve e |> Tactic.solve) t g
 
-  | Command.ToggleAutomation (automation_kind, automation_change) ->
-     Automation.toggle_automation s.automation_state automation_kind automation_change
+  (** Displays the given prompt `msg` and awaits a line of input from the user.
+      The line is parsed using the given parser.
+      In case of a parse error, the prompt is repeated.
+      The user can abort the prompt by giving an empty string.
+   *)
+  let rec prompt s msg (p : 'a B.Parser.t) : 'a option =
+    printf s "%s: @?" msg;
+    match next_input s with
+    | "" -> None
+    | line ->
+       B.Runparser.parse_string "<prompt>" line (B.Parser.only p)
+       |> snd
+       |> B.Parser.handle
+            begin fun err ->
+            printf s "@[<v>Parse error.@,@[%a@]@]@."
+              B.Parser.print_error err;
+            prompt s msg p
+            end
+            Maybe.pure
 
-  (* Real tactics: *)
-  | Command.Unbox (t, name) ->
-     let (hs, m, tau) = elaborate_exp' cIH cD cG t in
-     Tactic.unbox m tau name g tctx
+  (** Repeats the prompt even if the user gives an empty response. *)
+  let rec prompt_forever s msg p =
+    match prompt s msg p with
+    | None -> prompt_forever s msg p
+    | Some x -> x
 
-  | Command.Intros names ->
-     Tactic.intros names g tctx;
-  | Command.Split (split_kind, t) ->
-     let (hs, m, tau) = elaborate_exp' cIH cD cG t in
-     Tactic.split split_kind m tau mfs g tctx
-  | Command.By (k, t, name, b) ->
-     let (hs, m, tau) = elaborate_exp' cIH cD cG t in
-     dprintf
-       begin fun p ->
-       p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
-         (P.fmt_ppr_cmp_typ cD P.l0) tau
-       end;
-     List.iter solve_hole hs;
-     (* validate the invocation and call the suspension if it passes. *)
-     check_invocation k cD cG m
-       (fun () -> Tactic.invoke k b m tau name g tctx);
+  (** Runs the theorem configuration prompt to set up the next batch of theorems.
+   *)
+  let theorem_configuration_wizard s : unit =
+    assert (DynArray.length s.theorems = 0);
+    let rec do_prompts i : Theorem.Conf.t list =
+      printf s "Configuring theorem #%d@." i;
+    (* prompt for name, and allow using empty to signal we're done. *)
+      match prompt s "  Name of theorem (empty name to finish)" B.Parser.name with
+      | None -> []
+      | Some name ->
+         let stmt, k =
+           (* XXX These calls are sketchy as hell.
+              There must be a better place to put them -je
+            *)
+           B.Reconstruct.reset_fvarCnstr ();
+           B.Store.FCVar.clear ();
+           (* Now prompt for the statement, and disallow empty to signal we're done. *)
+           prompt_forever s "  Statement of theorem" B.Parser.cmp_typ
+           |> Interactive.elaborate_typ LF.Empty
+         in
+         let order =
+           prompt s "  Induction order (empty for none)" B.Parser.numeric_total_order
+           |> Maybe.map (Interactive.elaborate_numeric_order k)
+         in
+         printf s "@]";
+         { Theorem.Conf.name; order; stmt } :: do_prompts (i + 1)
+    in
 
-  | Command.Solve m ->
-     let (hs, m) = elaborate_exp cIH cD cG m g.goal in
-     dprnt "[harpoon] [solve] elaboration finished";
-     printf "Found %d hole(s) in solution@." (List.length hs);
-     List.iter solve_hole hs;
-     Check.Comp.check cD cG mfs m g.goal;
-     ( Comp.solve m
-       |> Tactic.solve
-     ) g tctx ;
-
-
-
-
-     (*
-     let (hs, m) = elaborate_exp cIH cD cG m g.goal in
-     printf "Found %d holes in solution@," (List.length hs);
-     let f (id, h) =
-       let open Holes in
-       let { name; Holes.cD = cDh; info; _ } = h in
-       match info with
-       | CompHoleInfo _ -> failwith "computational holes not supported"
-       | LfHoleInfo { lfGoal; cPsi; lfSolution } ->
-          let typ = Whnf.normTyp lfGoal in
-          let ti = Abstract.typ typ in
-          Logic.prepare ();
-          let (query, skinnyTyp, querySub, instMVars) =
-            Logic.Convert.typToQuery cPsi cDh ti
-          in
-          try
-            let n = ref 0 in
-            Logic.Solver.solve cDh cPsi query
-              begin
-                fun (cPsi, tM) ->
-                Tactic.(tctx.printf) "found solution: @[%a@]@,@?"
-                  (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
-                incr n;
-                if !n >= 10 then raise Logic.Frontend.Done
-              end
-          with
-          | Logic.Frontend.Done -> ()
-     in
-     List.iter f hs;
-     Check.Comp.check cD cG mfs m g.goal;
-     ( Comp.solve m
-       |> Tactic.solve
-     ) g tctx ;
-      *)
+    let confs = do_prompts 1 in
+    let thms = Theorem.configure_set s.ppf [run_automation s] confs in
+    Misc.DynArray.append_list s.theorems thms
+end
 
 (** A computed value of type 'a or a function to print an error. *)
-type 'a error = (Format.formatter -> unit, 'a) Either.t
+type 'a error = (Format.formatter -> unit -> unit, 'a) Either.t
 
 (** Parses the given string to a Syntax.Ext.Harpoon.command or an
     error-printing function.
@@ -320,121 +334,67 @@ let parse_input (input : string) : Command.command error =
   let open B in
   Runparser.parse_string "<prompt>" input Parser.(only interactive_harpoon_command)
   |> snd |> Parser.to_either
-  |> Either.lmap (fun e ppf -> Parser.print_error ppf e)
+  |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
 
 (** Runs the given function, trapping exceptions in Either.t
     and converting the exception to a function that prints the
     error with a given formatter.
  *)
 let run_safe (f : unit -> 'a) : 'a error =
-  let show_error e ppf =
+  let show_error e ppf () =
     Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@]"
       (Printexc.to_string e)
   in
   Either.trap f |> Either.lmap show_error
 
-let build_tactic_context ppf s =
-  let open Tactic in
-  let printf x = Format.fprintf ppf x in
-  let rec tctx =
-    { add_subgoal
-    ; remove_subgoal
-    ; remove_current_subgoal
-    ; replace_subgoal
-    ; printf
-    ; defer
-    }
-  and replace_subgoal g =
-    remove_current_subgoal ();
-    add_subgoal g
-  and add_subgoal g =
-    (*
-      dprintf
-      begin fun p ->
-      p.fmt "@[<v>[tactic context] add the following subgoal@,%a@]"
-      P.fmt_ppr_cmp_proof_state g
-      end;
-     *)
-    DynArray.insert s.remaining_subgoals 0 g;
-    add_subgoal_hook s g tctx
-  and remove_subgoal g =
-    (*
-      dprintf
-      begin fun p ->
-      p.fmt "@[<v>[tactic context] remove the following subgoal@,%a@]"
-      P.fmt_ppr_cmp_proof_state g
-      end;
-     *)
-    let idx = DynArray.index_of (fun g' -> g = g') s.remaining_subgoals in
-    DynArray.delete s.remaining_subgoals idx
-  and remove_current_subgoal () =
-    let gs = s.remaining_subgoals in
-    let csg_index = current_subgoal_index gs in
-    (*
-      dprintf
-      begin fun p ->
-      p.fmt "@[<v>[tactic context] remove the goal %d of the following@,%a@]"
-      csg_index
-      P.fmt_ppr_cmp_proof_state (DynArray.get gs csg_index)
-      end;
-     *)
-    DynArray.delete gs csg_index
-  and defer () =
-    let g = DynArray.get s.remaining_subgoals 0 in
-    remove_current_subgoal ();
-    DynArray.add s.remaining_subgoals g
-  in
-  tctx
-
 (* UTF-8 encoding of the lowercase Greek letter lambda. *)
 let lambda : string = "\xCE\xBB"
 
-let rec loop ppf (s : interpreter_state) tctx : unit =
+let rec loop (s : Prover.state) : unit =
+  let printf x = Prover.printf s x in
   (* Get the next subgoal *)
-  match next_subgoal s with
+  match Prover.next_theorem s with
   | None ->
-     Tactic.(tctx.printf) "@,Proof complete! (No subgoals left.)@,";
-     show_proof s tctx;
-     () (* we're done; proof complete *)
-  | Some g ->
-     (* Show the proof state and the prompt *)
-     Tactic.(tctx.printf) "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
-       P.fmt_ppr_cmp_proof_state g
-       (Context.length Comp.(g.context.cIH))
-       lambda;
-
-     (* Parse the input and run the command *)
-     let input = Maybe.get' EndOfInput (Gen.next s.input_source) in
-     let e =
-       let open Either in
-       parse_input input
-       $ fun cmd ->
-         run_safe (fun () -> process_command s g cmd tctx)
-     in
-     Either.eliminate
-       (fun f -> f ppf)
-       (Misc.const ())
-       e;
-     loop ppf s tctx
+     printf "@,Proof complete! (No theorems left.)@,";
+     Prover.theorem_configuration_wizard s;
+     (* s will be populated with theorems; if there are none it's
+        because the session is over. *)
+     if DynArray.length Prover.(s.theorems) > 0 then
+       loop s
+     else
+       printf "@,Session terminated.@,"
+  | Some t ->
+     match Theorem.next_subgoal t with
+     | None ->
+        printf "@,Subproof complete! (No subgoals left.)@,";
+        Theorem.show_proof t;
+        Prover.remove_current_theorem s;
+        loop s
+     | Some g ->
+        (* Show the proof state and the prompt *)
+        printf "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
+          P.fmt_ppr_cmp_proof_state g
+          (Context.length Comp.(g.context.cIH))
+          lambda;
+        
+        (* Parse the input and run the command *)
+        let input = Prover.next_input s in
+        let e =
+          let open Either in
+          parse_input input
+          $ fun cmd ->
+            run_safe (fun () -> Prover.process_command s t g cmd)
+        in
+        Either.eliminate
+          (fun f -> printf "%a" f ())
+          (Misc.const ())
+          e;
+        loop s
 
 let start_toplevel
       (src : input_source)
       (ppf : Format.formatter) (* The formatter used to display messages *)
-      (name : Id.name) (* The name of the theorem to prove *)
-      (stmt : Comp.tclo) (* The statement of the theorem *)
-      (order : Comp.order option) (* The induction order of the theorem *)
     : unit =
-  let module S = B.Store.Cid.Comp in
-  (* maybe we should actually say the correct number of implicits
-     here instead of zero.
-     -je
-   *)
-  let _, cid =
-    S.add Loc.ghost
-      (fun _ -> S.mk_entry name (Whnf.cnormCTyp stmt |> Total.strip) 0 true None [name])
-  in
-  let g = Comp.make_proof_state stmt in
-  let s = make_prover_state src cid name order g in
-  let tctx = build_tactic_context ppf s in
-  Tactic.(tctx.add_subgoal g);
-  loop ppf s tctx
+  let s = Prover.make_state ppf src in
+  Prover.theorem_configuration_wizard s;
+  loop s

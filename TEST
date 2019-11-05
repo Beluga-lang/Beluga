@@ -278,29 +278,18 @@ function check_compiler_test_case {
 function check_harpoon {
     local -r file_path=$1
 
-    local sig_path theorem_name theorem induction_order
+    local sig_path
     local options
     local output exit_code
 
     sig_path=$(sed -n '1p' "${file_path}")
-    theorem_name=$(sed -n '2p' "${file_path}")
-    theorem=$(sed -n '3p' "${file_path}")
-    induction_order=$(sed -n '4p' "${file_path}")
 
     options=(
         "--sig" "${sig_path}"
-        "--name" "${theorem_name}"
-        "--theorem" "\"${theorem}\""
         "--test" "${file_path}"
-        "--test-start" "5"
+        "--test-start" "2"
         "--implicit"
     )
-
-    if [ "${induction_order}" != "" ] ; then
-        options+=(
-            "--order" "${induction_order}"
-        )
-    fi
 
     output=$(${HARPOON} "${options[@]}" 2>&1)
     check_harpoon_output "${output}"
@@ -320,7 +309,7 @@ function check_harpoon {
 
 function check_harpoon_output {
     local -r output=$1
-    local -r proof_complete_message="Proof complete! (No subgoals left.)"
+    local -r proof_complete_message="Proof complete! (No theorems left.)"
     local -r uncaught_exception_message="Uncaught exception"
 
     if ! grep -q "${proof_complete_message}" <(echo "${output}"); then

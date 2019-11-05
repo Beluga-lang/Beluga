@@ -7,6 +7,4 @@ module Comp = Beluga.Syntax.Int.Comp
  *)
 type input_source = string Gen.t
 
-val start_toplevel : input_source -> Format.formatter ->
-                     Id.name -> Comp.tclo -> Comp.order option ->
-                     unit
+val start_toplevel : input_source -> Format.formatter -> unit

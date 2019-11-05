@@ -1,0 +1,36 @@
+LF nat : type =
+  | z : nat
+  | s : nat → nat
+;
+
+LF tree : type =
+  | empty : tree
+  | node : children → tree
+and children : type =
+  | nil : children
+  | cons : tree → children → children
+;
+
+rec add : [⊢ nat] → [⊢ nat] → [⊢ nat] =
+/ total n (add n m) /
+fn n, m ⇒ case n of
+  | [⊢ z] ⇒ m
+  | [⊢ s N] ⇒
+        let [⊢ K] = add [⊢ N] m in
+        [⊢ s K]
+;
+
+rec size : [⊢ tree] → [⊢ nat] =
+/ total t (size t) /
+fn t ⇒ case t of
+  | [⊢ empty] ⇒ [⊢ z]
+  | [⊢ node C] ⇒
+        size' [⊢ C]
+and
+rec size' : [⊢ children] → [⊢ nat] =
+/ total c (size' c) /
+fn c ⇒ case c of
+  | [⊢ nil] ⇒ [⊢ z]
+  | [⊢ cons T C] ⇒
+        add (size [⊢ T]) (size' [⊢ C])
+;

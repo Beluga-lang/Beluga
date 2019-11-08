@@ -181,12 +181,14 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           dprintf
             begin fun p ->
             p.fmt "@[<v 2>[harpoon-split] [after synPatRefine]@,\
-                   t' = @[%a@]@,\
-                   t1 = @[%a@]@,\
-                   cD_b (target ctx) = @[%a@]\
+                   t' = @[<v>@[%a@]@,: @[%a@]@]@,\
+                   t1 = @[<v>@[%a@]@,: @[%a@]@]@,\
+                   cD_b (target ctx) = @[%a@]@,\
                    @]"
               (P.fmt_ppr_lf_msub cD_b P.l0) t'
+              (P.fmt_ppr_lf_mctx P.l0) s.context.cD
               (P.fmt_ppr_lf_msub cD_b P.l0) t1'
+              (P.fmt_ppr_lf_mctx P.l0) cD
               (P.fmt_ppr_lf_mctx P.l0) cD_b
             end;
           (* cD_b |- t' : s.context.cD (outside the branch)
@@ -204,6 +206,17 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let cG_b = refine_ctx_inside cG in
           (* cD_b |- cG_b *)
           let cIH_b =  refine_ctx_outside (Whnf.normCtx s.context.cIH) in
+
+          dprintf
+            begin fun p ->
+            p.fmt "[harpoon-split] @[<v>refined cG and cIH@,\
+                   cG_b = @[%a@]@,\
+                   cIH = <elided>@,\
+                   pat' = @[%a@]@]"
+              (P.fmt_ppr_cmp_gctx cD_b P.l0) cG_b
+              (P.fmt_ppr_cmp_pattern cD_b cG_b P.l0) pat'
+            end;
+
           (* cD_b |- cIH_b *)
           let (cD_b, cIH') =
             if Total.is_inductive_split s.context.cD s.context.cG i && Total.struct_smaller pat'

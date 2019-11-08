@@ -165,7 +165,7 @@ module Comp = struct
  and pattern =
    | PatMetaObj of Loc.t * meta_obj
    | PatConst   of Loc.t * cid_comp_const * pattern_spine
-   | PatFVar    of Loc.t * name
+   | PatFVar    of Loc.t * name (* used only temporarily during indexing *)
    | PatVar     of Loc.t * name * offset
    | PatPair    of Loc.t * pattern * pattern
    | PatAnn     of Loc.t * pattern * typ

@@ -347,7 +347,7 @@ module Comp = struct
 
   let rec fmv cD pat = match pat with
     | PatConst (_ , _ , pat_spine) -> fmv_pat_spine cD pat_spine
-    | PatVar (_ , _ ) -> cD
+    | PatVar (_ , _ ) | PatFVar (_, _) -> cD
     | PatPair (_, pat1, pat2) ->  fmv (fmv cD pat1) pat2
     | PatMetaObj (_, cM) -> fmv_mobj cD cM
     | PatAnn (_, pat, _) -> fmv cD pat

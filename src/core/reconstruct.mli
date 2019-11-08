@@ -22,7 +22,7 @@ val map_case_type : (Int.Comp.meta_obj -> Int.Comp.meta_obj) -> case_type -> cas
 (** Constructs the refinement substitution for a case analysis.
     If
       * cD; cG |- tau_s <= type
-      * cD'; cG' |- tau_s <= type
+      * cD'; cG' |- tau_p <= type
       * cD'; cG' |- pat => tau_p
       * cD' |- t : cD
       * if caseT = IndexObj C then

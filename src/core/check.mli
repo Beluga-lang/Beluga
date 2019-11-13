@@ -150,4 +150,5 @@ module Comp : sig
       target context related by a meta-substitution.
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
+  val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ
 end

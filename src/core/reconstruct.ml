@@ -351,7 +351,6 @@ let rec elMCtx recT delta = match delta with
       let cdec' = elCDecl recT cD cdec in
         Int.LF.Dec (cD, cdec')
 
-
 (* ******************************************************************* *)
 (* Elaboration of computations                                         *)
 (* Given a type-level constant a of type K , it will generate the most general
@@ -1826,7 +1825,62 @@ and elFBranch cD cG fbr theta_tau = match fbr with
       end;
     Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
 
-let elProof cD cG p ttau = assert false
+(* elaborate gamma contexts *)
+let rec elGCtx recT (delta : Int.LF.mctx) gamma =
+  match gamma with
+  | Apx.LF.Empty -> Int.LF.Empty
+  | Apx.LF.Dec (gamma', Apx.Comp.CTypDecl (name, tau)) ->
+      let cG = elGCtx recT delta gamma' in
+      let tau' = elCompTyp delta tau in
+      Int.LF.Dec (cG, Int.Comp.CTypDecl (name, tau', false))
+
+(* elaborate hypotheses *)
+let elHypotheses h =
+  match h with
+  | { Apx.Comp.cD = delta; Apx.Comp.cG = gamma } ->
+    let delta' = elMCtx Lfrecon.Pibox delta in
+    let gamma' = elGCtx Lfrecon.Pibox delta' gamma in
+  { Int.Comp.cD = delta'; Int.Comp.cG = gamma'; Int.Comp.cIH = Int.LF.Empty }
+
+(* elaborate Harpoon proofs *)
+let rec elProof cD cG (p : Apx.Comp.proof) ttau : Int.Comp.proof =
+  let module A = Apx.Comp in
+  let module I = Int.Comp in
+  match p with
+  | A.Incomplete (loc, str_opt) ->
+      let hyp = { I.cD = cD; I.cG = cG; I.cIH = Int.LF.Empty } in
+      I.Incomplete { I.context = hyp; I.goal = ttau; I.solution = None }
+  | A.Command (loc, cmd, p') ->
+      (match cmd with
+       | A.By (loc, i_kind, e_syn, name) ->
+           let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
+           let tau' = Whnf.cnormCTyp (tau, m_sub) in
+           let gamma' = Int.LF.Dec (cG, I.CTypDecl (name, tau', false)) in
+           let int_proof = elProof cD gamma' p' ttau in
+           I.Command (I.By (i_kind, e_syn', name, tau, `boxed), int_proof)
+       | A.Unbox (loc, e_syn, name) ->
+           let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
+           (match tau with
+            | I.TypBox (_, mT) ->
+                let cD' = Int.LF.Dec (cD, Int.LF.Decl (name, mT, Syncom.LF.No)) in
+                let int_proof = elProof cD' cG p' ttau in
+                I.Command (I.Unbox (e_syn', name, mT), int_proof)))
+  | A.Directive (loc, d) -> I.Directive (elDirective cD cG d ttau)
+
+(* elaborate Harpoon directives *)
+and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
+  let module A = Apx.Comp in
+  let module I = Int.Comp in
+  match d with
+  | A.Intros (loc, hyp) ->
+      (match hyp with
+       | { A.hypotheses = h; A.proof = p; _ } ->
+           let h' = elHypotheses h in
+           let { I.cD = cD'; I.cG = gamma'; I.cIH = _ } = h' in
+           let p' = elProof cD' gamma' p ttau in
+           I.Intros (I.Hypothetical (h', p')))
+  | A.Solve (loc, e) -> I.Solve (elExp cD cG e ttau)
+  | A.Split (loc, e, s_branches) -> assert false
 
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)

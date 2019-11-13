@@ -13,6 +13,7 @@ module LF = B.Syntax.Int.LF
 module Logic = B.Logic
 module P = B.Pretty.Int.DefaultPrinter
 module Total = B.Total
+module T = Translate
 module Whnf = B.Whnf
 module S = B.Substitution
 module Debug = B.Debug

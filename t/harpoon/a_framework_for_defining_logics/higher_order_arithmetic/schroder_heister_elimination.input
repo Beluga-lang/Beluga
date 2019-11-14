@@ -3,6 +3,6 @@ schroder_heister_elimination
 { H : [|- holtype] } { S : [t : obj H ⊢ obj formula] } { P : [⊢ obj formula] } [⊢ true (apply (H arrow formula) formula (forall H) (lambda H formula (\t. S[t])))] → (({ T : [⊢ obj H] } [⊢ true S[T]]) → [⊢ true P]) → [⊢ true P]
 
 
-unbox (x10) as A
-solve (z10 mlam T => [|- EQ (apply H formula (lambda H formula (\t. S[t])) T) (S[T]) (ALL-E H (lambda H formula (\t. S[t])) T A) (BETA H formula (\t. S[t]) T)])
+unbox (x8) as A
+solve (z8 mlam T => [|- EQ (apply H formula (lambda H formula (\t. S[t])) T) (S[T]) (ALL-E H (lambda H formula (\t. S[t])) T A) (BETA H formula (\t. S[t]) T)])
 

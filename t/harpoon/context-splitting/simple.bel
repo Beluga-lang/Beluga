@@ -1,0 +1,16 @@
+LF a : type =;
+
+schema ctx = a;
+
+LF nat : type =
+  | z : nat
+  | s : nat → nat
+;
+
+rec length : {g : ctx} → [⊢ nat] =
+mlam g ⇒ case [g] of
+  | [] ⇒ [⊢ z]
+  | [g', x : a] ⇒
+        let [⊢ N] = length [g'] in
+        [⊢ s N]
+;

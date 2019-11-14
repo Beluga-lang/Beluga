@@ -1,0 +1,158 @@
+LF tp : type =
+| b :  tp
+| arr : tp -> tp -> tp
+;
+--name tp T.
+
+LF tm : tp -> type =
+| app : tm (arr T S) -> tm T -> tm S
+| lam : (tm T -> tm S) -> tm (arr T S)
+| c : tm b
+;
+--name tm M.
+
+LF step : tm A → tm A → type =
+| beta : step (app (lam M) N) (M N)
+| stepapp : step M M' -> step (app M N) (app M' N)
+;
+
+LF mstep : tm A -> tm A -> type =
+| refl : mstep M M
+| onestep : step M M' -> mstep M' M'' -> mstep M M''
+;
+--name mstep S.
+
+LF val : tm A -> type =
+| val/c : val c
+| val/lam : val (lam M)
+;
+--name val V.
+
+LF halts : tm A -> type =
+| halts/m : mstep M M' -> val M' -> halts M
+;
+--name halts H.
+
+stratified Reduce : {A : [⊢ tp]} {M : [ |- tm A] } → ctype =
+| I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| Arr :  [ |- halts M] ->
+    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
+  -> Reduce [ ⊢ arr A B ] [ |- M]
+;
+
+rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
+/ total (halts_step) /
+ mlam S ⇒ fn h =>
+let [ |- halts/m MS' V] = h in
+ [ |- halts/m (onestep S MS') V]
+;
+
+% proof halts_step' : {S : [ ⊢ step M M']} [ ⊢ halts M' ] → [⊢ halts M ] =
+% intros
+% { {A : [ |- tp]},
+%   {M : [ |- tm A]},
+%   {M' : [ |- tm A]},
+%   {S : [ |- step A M M']}
+% | x25 : [ |- halts A M']
+% ; split (x25)
+%   case halts/m:
+%   { {A : [ |- tp]},
+%     {M : [ |- tm A]},
+%     {M' : [ |- tm A]},
+%     {S : [ |- step A M M']},
+%     {M19 : [ |- tm A]},
+%     {S1 : [ |- mstep A M' M19]},
+%     {V1 : [ |- val A M19]}
+%   | x25 : [ |- halts A M']
+%   ; solve ([ |- halts/m A M M19 (onestep A M M' M19 S S1) V1])
+%   }
+% }
+% ;
+
+%{{
+Next we prove closure of Reduce under expansion. This follows the
+handwritten proof, proceeding by induction on the type A which is an
+implicit argument. In the base case we appeal to `halts_step`, while
+in the `Arr` case we must also appeal to the induction hypothesis at
+the range type, going inside the function position of applications.
+}}%
+rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
+/ total a (bwd_closed' a) /
+ mlam A, M, M' => mlam MS => fn r => case [|- A] of
+| [|- b] => let I ha = r in I (halts_step [ |- MS] ha)
+| [|- arr A B] =>
+  let Arr ha f = r in
+    Arr (halts_step [ |- MS] ha)
+	(mlam N => fn rn =>
+	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
+;
+
+rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
+/ total (bwd_closed) /
+mlam S => fn r =>
+let [|- S] : [|- step M M'] = [|- S] in
+let [|- M] : [|- tm A]    = [|- M] in
+  bwd_closed' [|- A ] [|- M ] [|- M' ]  [|- S] r;
+
+%{{
+The trivial fact that reducible terms halt has a corresponding
+trivial proof, analyzing the construction of the the proof of
+'Reduce[|- T] [|- M]'
+}}%
+
+rec reduce_halts : Reduce [|- T] [ |- M] -> [ |- halts M] =
+/ total (reduce_halts) /
+fn r => case r of
+| I h => h
+| Arr h f => h
+;
+
+
+%{{
+# Reducibility of substitutions
+}}%
+
+
+schema ctx = tm T;
+
+inductive RedSub : {gamma:ctx}{$S:[ |- gamma]} ctype =
+| Nil : RedSub  [ ] [ |- ^ ]
+| Dot : RedSub  [gamma] [ |- $S[^] ] → Reduce [|- A] [ |- M]
+     → RedSub [gamma, x:tm A[]] [ |- $S[^], M ]
+;
+
+
+
+rec lookup : {gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]] =
+/ total gamma (lookup gamma) /
+mlam gamma => mlam #p => fn rs => case [gamma] of
+| [] => impossible [ |- #p]
+| [gamma', x:tm T] => case [gamma', x:tm T |- #p] of
+  | [gamma',x:tm A |-  x] => let (Dot rs' rN) = rs in rN
+  | [gamma',x:tm A |-  #q[..]] =>
+        let Dot rs' rN = rs in
+        lookup [gamma'] [gamma' |- #q] rs'
+;
+
+%{{
+# Main theorem
+}}%
+
+rec main : {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]] =
+/ total m (main gamma a s m) /
+mlam gamma, M => fn rs => case [gamma |- M] of
+| [gamma |- #p] =>  lookup [gamma] [gamma |- #p] rs
+| [gamma |- lam \x. M] =>
+ Arr [ |- halts/m refl val/lam]
+   (mlam N => fn rN =>
+    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
+
+| [gamma |- app M1 M2] =>
+  let Arr ha f = main [gamma] [gamma |- M1] rs in
+  f [ |- _ ] (main [gamma] [gamma |- M2] rs)
+| [gamma |-  c] =>  I [ |- halts/m refl val/c]
+;
+
+rec weakNorm : {M:[ |- tm A]} [ |- halts M] =
+/ total (weakNorm) /
+mlam M => reduce_halts (main [] [ |- M] Nil);

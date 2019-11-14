@@ -981,7 +981,7 @@ module Comp = struct
     | PatObs (loc, obs, t, pat_spine) ->
        dprintf
          begin fun p ->
-         p.fmt "[synPatRefine] t = %a"
+         p.fmt "[synPatSpine] t = %a"
            (P.fmt_ppr_lf_msub cD P.l0) t
          end;
        let tau0 = (CompDest.get obs).CompDest.obs_type in

@@ -136,6 +136,16 @@ module Comp : sig
    *)
   val mvars_in_patt : LF.mctx -> pattern -> LF.mctx
 
+  (** Analyzes a contextual object to decide whether it's a
+      (contextual) variable and rewrites its type from MTyp to PTyp if
+      necessary. This is crucial for coverage checking of a case analysis
+      on a parameter variable.
+      Also returns the index of the variable (so we can later decide
+      if it's a variable we're doing induction on) as well what
+      projection, if any, is applied to the parameter variable.
+   *)
+  val fixParamTyp : LF.mfront -> Comp.meta_typ -> int option * Comp.meta_typ * int option
+
   (** Transfers inductivity annotations from a source context to a
       target context related by a meta-substitution.
    *)

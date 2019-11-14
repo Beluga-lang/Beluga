@@ -1,0 +1,10 @@
+t/harpoon/context-splitting/simple.bel
+length
+{g : ctx} -> [|- nat]
+1
+
+split [g]
+solve [|- z]
+toggle-automation auto-solve-trivial off
+by ih length [x] as N unboxed
+solve [|- s N]

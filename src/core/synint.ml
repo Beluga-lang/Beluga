@@ -468,6 +468,10 @@ module Comp = struct
     ; cIH : gctx   (* Generated induction hypotheses. *)
     }
 
+  type context_case =
+    | EmptyContext
+    | ExtendedBy of LF.typ
+
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
@@ -497,6 +501,8 @@ module Comp = struct
       of hypothetical
     | Solve (* End the proof with the given term *)
       of exp_chk
+    | ImpossibleSplit
+      of exp_syn
     | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
          * typ (* The type of the object that we're splitting on *)
@@ -505,18 +511,23 @@ module Comp = struct
       of exp_syn (* THe computational term to split on *)
          * typ (* The type of the object to split on *)
          * comp_branch list
+    | ContextSplit (* Splitting on a context *)
+      of exp_syn (* The scrutinee *)
+         * typ (* The type of the scrutinee *)
+         * context_branch list
 
+  and context_branch = context_case split_branch
   and meta_branch = (LF.dctx * LF.head) split_branch
   and comp_branch = cid_comp_const split_branch
 
-  (** A branch of a case analysis. *)
+  (** A general branch of a case analysis. *)
   and 'b split_branch =
     | SplitBranch
       of 'b (* the name of the constructor for this split *)
          * hypothetical (* the derivation for this case *)
 
- (** A hypothetical derivation lists new meta-hypotheses and
-     hypotheses, then proceeds with a proof.
+ (** A hypothetical derivation lists meta-hypotheses and hypotheses,
+     then proceeds with a proof.
   *)
   and hypothetical =
     Hypothetical of
@@ -542,9 +553,20 @@ module Comp = struct
   let solve (t : exp_chk) : proof =
     Directive (Solve t)
 
+  let context_split (i : exp_syn) (tau : typ) (bs : context_branch list)
+      : proof =
+    Directive (ContextSplit (i, tau, bs))
+
+  let context_branch (c : context_case) (h : hypotheses) (d : proof)
+      : context_branch =
+    SplitBranch (c, (Hypothetical (h, d)))
+
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
     Directive (MetaSplit (m, a, bs))
+
+  let impossible_split (i : exp_syn) : proof =
+    Directive (ImpossibleSplit i)
 
   let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : proof)
       : meta_branch =

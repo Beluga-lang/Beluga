@@ -34,6 +34,7 @@ module Harpoon = struct
   type split_kind =
     [ `split
     | `invert
+    | `impossible
     ]
 
   type boxity =

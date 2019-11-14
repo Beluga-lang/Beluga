@@ -1,0 +1,8 @@
+t/harpoon/logrel/weak-norm-total.bel
+halts_step'
+{S : [ ⊢ step M M']} [ ⊢ halts M' ] → [⊢ halts M ]
+
+
+invert x7
+solve [|- halts/m (onestep S S1) V1]
+

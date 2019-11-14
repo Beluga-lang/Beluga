@@ -275,11 +275,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
       | LF.PVar (c, s) ->
          if Substitution.LF.isId s then
-           fprintf ppf "#%a%s"
+           fprintf ppf "%a%s"
              (fmt_ppr_lf_offset cD) c
              proj
          else
-           fprintf ppf "%s#%a%s[%a]%s"
+           fprintf ppf "%s%a%s[%a]%s"
              (l_paren_if (paren s))
              (fmt_ppr_lf_offset cD) c
              proj
@@ -1381,6 +1381,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Id.print name
          (fmt_ppr_cmp_proof cD' (Whnf.cnormCtx (cG, LF.MShift 1))) proof
 
+  (** Pretty-prints a Harpoon split branch who's case label is of the
+      abstract type `b` using the supplied printing function.
+   *)
   and fmt_ppr_cmp_split_branch :
         type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
         Format.formatter ->
@@ -1395,26 +1398,42 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
     let open Comp in
+    let print_split ppf label i bs f =
+      fprintf ppf "%s (%a)@,@[<v>%a@]"
+        label
+        (fmt_ppr_cmp_exp_syn cD cG l0) i
+         (pp_print_list ~pp_sep: (fun _ _ -> ())
+            (fmt_ppr_cmp_split_branch cD cG f))
+         bs
+    in
     function
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
-    | MetaSplit (m, _, bs) ->
-       fprintf ppf "meta-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG l0) m;
-       List.iter
-         (fmt_ppr_cmp_split_branch cD cG
-            (fun ppf (cPsi, h) ->
-              fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi l0) h)
-            ppf)
-         bs;
-       fprintf ppf "@]"
-    | CompSplit (t, _, bs) ->
-       fprintf ppf "comp-split (%a)@,@[<v>" (fmt_ppr_cmp_exp_syn cD cG l0) t;
-       List.iter
-         (fmt_ppr_cmp_split_branch cD cG
-            (fun ppf x ->
-              fprintf ppf "%s" (R.render_cid_comp_const x))
-            ppf)
-         bs;
-       fprintf ppf "@]"
+    | ImpossibleSplit i ->
+       fprintf ppf "impossible @[%a@]"
+         (fmt_ppr_cmp_exp_syn cD cG l0) i
+
+    | MetaSplit (i, _, bs) ->
+       print_split ppf
+         "meta-split" i bs
+         (fun ppf (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h)
+
+    | CompSplit (i, _, bs) ->
+       print_split ppf
+         "comp-split" i bs
+         (fun ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
+
+    | ContextSplit (i, _, bs) ->
+       print_split ppf
+         "ctx-split" i bs
+         begin fun ppf case ->
+         match case with
+         | EmptyContext ->
+            fprintf ppf "empty context"
+         | ExtendedBy tA ->
+            fprintf ppf "@[<hov 2>extended by@ @[%a@]@]"
+              (fmt_ppr_lf_typ cD LF.Null l0) tA
+         end
+
     | Solve t ->
        fprintf ppf "solve (%a)" (fmt_ppr_cmp_exp_chk cD cG l0) t;
 

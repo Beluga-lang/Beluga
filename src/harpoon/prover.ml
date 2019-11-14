@@ -132,6 +132,13 @@ module Prover = struct
         let (i, (tau, theta)) =
           Interactive.elaborate_exp' cD cG t
         in
+        dprintf
+          begin fun p ->
+          p.fmt "[elaborate_exp'] @[<v>done:@,\
+                 i = @[%a@] (internal)@]"
+            P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+          end;
+        let i = Whnf.(cnormExp' (i, m_id)) in
         let _ = Check.Comp.syn ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
         (i, Whnf.cnormCTyp (tau, theta))
         end
@@ -143,6 +150,7 @@ module Prover = struct
     Holes.catch
       begin fun _ ->
       let e = Interactive.elaborate_exp cD cG t ttau in
+      let e = Whnf.(cnormExp (e, m_id)) in
       Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
       e
       end
@@ -336,11 +344,17 @@ let parse_input (input : string) : Command.command error =
     error with a given formatter.
  *)
 let run_safe (f : unit -> 'a) : 'a error =
-  let show_error e ppf () =
-    Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@]"
-      (Printexc.to_string e)
-  in
-  Either.trap f |> Either.lmap show_error
+  try
+    Either.Right (f ())
+  with
+  | e ->
+     let s = Printexc.to_string e in
+     let bt = Printexc.get_backtrace () in
+     Either.Left
+       begin fun ppf () ->
+       Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@,%s@]"
+         s bt
+       end
 
 let rec loop (s : Prover.state) : unit =
   let printf x = Prover.printf s x in

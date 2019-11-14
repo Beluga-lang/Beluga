@@ -2027,9 +2027,11 @@ let genCtxGoals cD (LF.Decl (x, LF.CTyp (Some schema_cid), dep)) =
   let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some schema_cid), dep)) in
   genCtx cD' (LF.CtxVar (LF.CtxOffset 1)) elems
 
+let remap_to_covctx =
+  List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms))
+
 let genContextGoals cD ctx_schema =
-  let cgs = genCtxGoals cD ctx_schema in
-  List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms)) cgs
+  genCtxGoals cD ctx_schema |> remap_to_covctx
 
 (* Find mvar to split on *)
 let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
@@ -2373,6 +2375,37 @@ let rec genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
      end
 
 let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
+  let remap_cltyp_to_covpatt loc f =
+    fun (cD', cg, ms) ->
+    let CovGoal (cPsi', tR, sA') = cg in
+    dprintf
+      begin fun p ->
+      p.fmt "[genPatCGoals] @[<v>%a@]"
+        P.fmt_ppr_lf_msub_typing (cD', ms, cD)
+      end;
+    let m_obj =
+      ( Loc.ghost
+      , LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR)
+      )
+    in
+    let pat_r = Comp.PatMetaObj (Loc.ghost, m_obj) in
+    let tau_r =
+      ( Comp.TypBox (loc, LF.ClTyp (f sA', cPsi'))
+      , Whnf.m_id
+      )
+    in
+    let cG' = cnormCtx (cG1, ms) @ cnormCtx (cG2,ms) in
+    dprintf
+      begin fun p ->
+      p.fmt "[genPatCGoals] @[<v>old cG = @[%a@]@,\
+             new cG' = @[%a@]@]"
+        (P.fmt_ppr_cmp_gctx cD P.l0)
+        (compgctx_of_gctx (cG1 @ cG2))
+        (P.fmt_ppr_cmp_gctx cD' P.l0)
+        (compgctx_of_gctx cG')
+      end;
+    (cD', CovPatt (cG', pat_r, tau_r), ms)
+  in
   match tau with
   | Comp.TypCross (tau1, tau2) ->
      let pv1 = NameGenerator.new_patvar_name () in
@@ -2389,39 +2422,38 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
      let cg = CovPatt (cG', pat, (tau, Whnf.m_id)) in
      [(cD, cg, Whnf.m_id)]
 
-  | Comp.TypBox (loc, (LF.ClTyp (LF.MTyp tA, cPsi) as mT)) ->
-     let cgoals, _ = genCGoals cD mT in
-     let f (cD', cg, ms) =
-       let CovGoal (cPsi', tR, sA') = cg in
-       dprintf
-         begin fun p ->
-         p.fmt "[genPatCGoals] @[<v>%a@]"
-           P.fmt_ppr_lf_msub_typing (cD', ms, cD)
-         end;
-       let m_obj =
-         ( Loc.ghost
-         , LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR)
-         )
-       in
-       let pat_r = Comp.PatMetaObj (Loc.ghost, m_obj) in
-       let tau_r =
-         ( Comp.TypBox (loc, LF.ClTyp (LF.MTyp (LF.TClo sA'), cPsi'))
-         , Whnf.m_id
-         )
-       in
-       let cG' = cnormCtx (cG1, ms) @ cnormCtx (cG2,ms) in
-       dprintf
-         begin fun p ->
-         p.fmt "[genPatCGoals] @[<v>old cG = @[%a@]@,\
-                new cG' = @[%a@]@]"
-           (P.fmt_ppr_cmp_gctx cD P.l0)
-           (compgctx_of_gctx (cG1 @ cG2))
-           (P.fmt_ppr_cmp_gctx cD' P.l0)
-           (compgctx_of_gctx cG')
-         end;
-       (cD', CovPatt (cG', pat_r, tau_r), ms)
-     in
-     List.map f cgoals
+  | Comp.TypBox (loc, mT) ->
+     begin match mT with
+     | LF.(ClTyp (tC, cPsi)) ->
+        let tA, f =
+          let open LF in
+          match tC with
+          | MTyp tA -> tA, fun sA -> MTyp (TClo sA)
+          | PTyp tA -> tA, fun sA -> PTyp (TClo sA)
+        in
+        genCGoals cD mT
+        |> fst
+        |> List.map (remap_cltyp_to_covpatt loc f)
+
+     | LF.(CTyp w) ->
+        (* require that a schema be actually present *)
+        let Some (LF.Schema elems) = Maybe.map Store.Cid.Schema.get_schema w in
+        let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
+        let shift = LF.MShift 1 in
+        let cG' = cnormCtx (cG1, shift) in
+        let cPsi = LF.CtxVar (LF.CtxOffset 1) in
+
+        genCtx cD' cPsi elems
+        |> remap_to_covctx
+        |> List.map
+             begin fun (cD', CovCtx cPsi, ms) ->
+             let mC = (Loc.ghost, LF.CObj cPsi) in
+             ( cD'
+             , CovPatt (cnormCtx (cG', ms), Comp.PatMetaObj (Loc.ghost, mC), (tau, Whnf.m_id))
+             , Whnf.mcomp shift ms
+             )
+             end
+     end
 
   | Comp.TypBase (_, c, mS) ->
      dprintf

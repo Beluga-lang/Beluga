@@ -52,6 +52,12 @@ let print ?(pp_sep = Format.pp_print_cut)
       (f : Format.formatter -> 'a -> unit) (ppf : Format.formatter) (l : 'a t) =
   Format.pp_print_list ~pp_sep: pp_sep f ppf (to_list l)
 
+let rec all_equal (x, l : 'a t) : 'a option =
+  match l with
+  | [] -> Some x
+  | x' :: xs when x = x' -> all_equal (x, xs)
+  | _ -> None
+
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =
     map f p

@@ -710,11 +710,13 @@ and cnorm (tM, t) = match tM with
     | Shift k -> s
     | Dot (ft, s')    -> Dot (cnormFront (ft, t), cnormSub (s', t))
     | SVar (offset, n, s') ->
-      begin match LF.applyMSub offset t with
-        | MV offset' -> SVar (offset', n, cnormSub (s', t))
-        | ClObj (_phat, SObj r) ->
-              LF.comp (LF.comp (Shift n) r) (cnormSub (s',t))
-      end
+       begin match LF.applyMSub offset t with
+       | MV offset' -> SVar (offset', n, cnormSub (s', t))
+       | ClObj (_phat, SObj r) ->
+          LF.comp (LF.comp (Shift n) r) (cnormSub (s',t))
+       | ClObj (_, _) ->
+          Error.violation "[cnormSub] t @ offset must give an MV or ClObj SObj"
+       end
 
     | FSVar (n, (s_name, s')) ->
         FSVar (n, (s_name, cnormSub (s', t)))

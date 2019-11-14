@@ -2842,6 +2842,11 @@ let interactive_harpoon_command =
     &> cmp_exp_syn
     $> fun t -> H.(Split (`invert, t))
   in
+  let impossible =
+    token T.KW_IMPOSSIBLE
+    &> cmp_exp_syn
+    $> fun t -> H.(Split (`impossible, t))
+  in
   let solve =
     keyword "solve"
     &> cmp_exp_chk
@@ -2929,6 +2934,7 @@ let interactive_harpoon_command =
     ( intros
       :: split
       :: invert
+      :: impossible
       :: solve
       :: by
       :: unbox

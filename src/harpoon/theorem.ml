@@ -129,15 +129,14 @@ let replace_subgoal t g =
 let solve (s : proof_state) (proof : proof) : unit =
   s.solution <- Some proof
 
-(** Primitive solving tactic.
-    solve_by_replacing_subgoal g' cmds g t
+(** High-level solving tactic.
+    solve_by_replacing_subgoal g' f g t
     - removes the current subgoal (which must be g)
-    - fill's in g's solution with an incomplete proof beginning with
-      the given commands.
+    - fill's in g's solution with an incomplete proof for g', transformed by f.
  *)
-let solve_by_replacing_subgoal t g' cmds g =
+let solve_by_replacing_subgoal t g' f g =
   replace_subgoal t g';
-  prepend_commands cmds (incomplete_proof g') |> solve g
+  f (incomplete_proof g') |> solve g
 
 (** Renames a variable from `src` to `dst` at the given level
     (`comp or `meta) in the subgoal `g`.
@@ -159,7 +158,7 @@ let rename_variable src dst level t g =
     ; solution = None
     }
   in
-  solve_by_replacing_subgoal t g' [] g
+  solve_by_replacing_subgoal t g' Misc.id g
 
 let register { name; Conf.stmt; order } mut_names : cid_prog =
   let open Store.Cid.Comp in

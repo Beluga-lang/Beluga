@@ -25,6 +25,15 @@ let solve (proof : Comp.proof) : t =
 
 (** Walks a type and collects assumptions into cD and cG,
     returning the conclusion type.
+
+    intros' names cD cG tau = cD' cG' tau'
+    such that:
+    - cD' is an extension of cD obtained from all the Pi-types in tau;
+    - cG' is an extension of cG obtained from all the simple function
+      types in tau.
+
+    The given optional names are used for the introduced arguments.
+    Else, fresh names are generated internally.
  *)
 let intros' : string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
               LF.mctx * Comp.gctx * Comp.typ =
@@ -84,34 +93,36 @@ let intros (names : string list option) : t =
     in
     (* Invoke the callback on the subgoal that we created *)
     (* Solve the current goal with the subgoal. *)
-    Theorem.remove_current_subgoal t;
-    Theorem.add_subgoal t new_state;
-    Comp.intros context (Comp.incomplete_proof new_state)
-    |> Theorem.solve s
+    Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
   else
     Theorem.printf t
       "Nothing to introduce.@,\
        This command works only when the goal is a function type.@,"
 
+let is_valid_goals_for_split_kind k cgs =
+  let n = List.length cgs in
+  match k with
+  | `invert when n <> 1 -> `cant_invert
+  | `impossible when n <> 0 -> `not_impossible
+  | _ -> `ok
+
 (** Calls the coverage checker to compute the list of goals for a
     given type in the contexts of the given proof state.
+
+    g is a proof state containing cD such that
+    - cD |- tau <== type
  *)
 let generate_pattern_coverage_goals
-      (k : Command.split_kind) (m : Comp.exp_syn) (tau : Comp.typ) (g : Comp.proof_state) t
-    : (LF.mctx * B.Coverage.cov_goal * LF.msub) list option =
+      (tau : Comp.typ) (g : Comp.proof_state) t
+    : (LF.mctx * B.Coverage.cov_goal * LF.msub) list =
   let open Comp in
   let cgs =
     B.Coverage.genPatCGoals g.context.cD (B.Coverage.gctx_of_compgctx g.context.cG) (B.Total.strip tau) []
   in
-  let n = List.length cgs in
-  match k with
-  | `invert when n <> 1 ->
-     Theorem.printf t "Can't invert %a. (Not a unique case.)@,"
-       (P.fmt_ppr_cmp_exp_syn g.context.cD g.context.cG P.l0) m;
-     None
-  | _ -> Some cgs
+  cgs
 
 let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
+  let open B in
   let open Comp in
   fun t s ->
   (* Compute the coverage goals for the type to split on. *)
@@ -121,10 +132,36 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
     end;
-  match generate_pattern_coverage_goals k i tau s t with
-  | None -> ()
-  (* splitting failed, so we do nothing *)
-  | Some cgs ->
+  (* hack for parameter variables, as usual *)
+  let _, tau, _ =
+    match i, tau with
+    | AnnBox ((_, mC), _), TypBox (loc, mT) ->
+       let k, mT', p_opt = Check.Comp.fixParamTyp mC mT in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] fixed parameter variable type: @[%a]"
+           (P.fmt_ppr_cmp_meta_typ s.context.cD P.l0) mT
+         end;
+       k, TypBox(loc, mT'), p_opt
+    | _ -> None, tau, None
+  in
+  let cgs = generate_pattern_coverage_goals tau s t in
+  match is_valid_goals_for_split_kind k cgs with
+  | `cant_invert ->
+     Theorem.printf t "Can't invert @[%a@]. (Not a unique case.)@,"
+       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
+  | `not_impossible ->
+     Theorem.printf t "Can't eliminate @[%a@] as impossible@ as its type\
+                       @,  @[%a@]@,\
+                       cannot be shown to be empty."
+       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
+       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
+  | `ok ->
+     dprintf
+       begin fun p ->
+       p.fmt "[harpoon-split] generated %d cases"
+         (List.length cgs)
+       end;
      (* We will map get_branch_by f over the coverage goals that were generated.
         get_branch_by f computes the subgoal for the given coverage goal,
         invokes the add_subgoal callback on the computed subgoal (to register it),
@@ -139,10 +176,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
         *)
        | B.Coverage.CovCtx _
          | B.Coverage.CovGoal (_, _, _) ->
-          Misc.not_implemented "CovCtx impossible"
+          B.Error.violation "getPatCGoals must return CovPatt coverage goals"
        | B.Coverage.CovPatt (cG, pat, tau_p) ->
-          let open Comp in
-          let open B in
           let cG = Coverage.compgctx_of_gctx cG in
 
           let tau_p = Whnf.cnormCTyp tau_p in
@@ -167,6 +202,22 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             (* Refine the pattern to compute the branch's
                meta-context, accounting for dependent pattern matching on
                `m`. *)
+            dprintf
+              begin fun p ->
+              p.fmt "[harpoon-split] @[<v>before synPatRefine:@,\
+                     cD = @[%a@]@,\
+                     cD' = @[%a@]@,\
+                     cD' |- t : cD = @[%a@]@,\
+                     pat1 = @[%a@]@,\
+                     tau_s = @[%a@]@,\
+                     tau1 = @[%a@]@]"
+                (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+                (P.fmt_ppr_lf_mctx P.l0) cD
+                (P.fmt_ppr_lf_msub cD P.l0) t
+                (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
+                (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
+                (P.fmt_ppr_cmp_typ cD P.l0) tau_p
+              end;
             Reconstruct.synPatRefine
               Loc.ghost
               (Reconstruct.case_type i)
@@ -221,8 +272,24 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let (cD_b, cIH') =
             if Total.is_inductive_split s.context.cD s.context.cG i && Total.struct_smaller pat'
             then
+              let _ =
+                dprintf
+                  begin fun p ->
+                  p.fmt "[harpoon-split] @[<v>marking subterms inductive in:@,\
+                         cD_b = @[%a@]@,\
+                         where pat' = @[%a@]@]"
+                    P.(fmt_ppr_lf_mctx l0) cD_b
+                    P.(fmt_ppr_cmp_pattern cD_b cG_b l0) pat'
+                  end
+              in
               (* mark subterms in the context as inductive *)
               let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
+              dprintf
+                begin fun p ->
+                p.fmt "[harpoon-split] @[<v>mvars_in_pat cD_b pat':@,\
+                       cD1 = @[%a@]@]"
+                  P.(fmt_ppr_lf_mctx l0) cD1
+                end;
               (* Compute the well-founded recursive calls *)
               let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
               dprintf
@@ -237,7 +304,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                   begin fun _ ->
                   "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable"
                   end;
-                (cD, LF.Empty)
+                (cD_b, LF.Empty)
               end
           in
           dprintf
@@ -248,7 +315,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           (* propagate inductive annotations *)
           dprintf
             begin fun p ->
-            p.fmt "[harpoon-split @[<v>s.context.cD = @[%a@]@,\
+            p.fmt "[harpoon-split] @[<v>s.context.cD = @[%a@]@,\
                    t' = @[%a@]@]"
               (P.fmt_ppr_lf_mctx P.l0) s.context.cD
               (P.fmt_ppr_lf_msub cD_b P.l0) t'
@@ -275,21 +342,39 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           f context new_state pat
      in
 
+     let get_context_branch =
+       get_branch_by
+         begin fun context new_state pat ->
+         let case_label =
+           match pat with
+           | PatMetaObj (_, (_, LF.CObj cPsi)) ->
+              begin match cPsi with
+              | LF.Null -> EmptyContext
+              | LF.(DDec (CtxVar _, TypDecl (x, tA))) -> ExtendedBy (Whnf.cnormTyp (tA, Whnf.m_id))
+              | _ -> B.Error.violation "[get_context_branch] impossible"
+              end
+           | _ ->
+              B.Error.violation "[get_context_branch] pattern not a context"
+         in
+         Theorem.add_subgoal t new_state;
+         context_branch case_label context (incomplete_proof new_state)
+         end
+     in
+
      let get_meta_branch =
        get_branch_by
          begin fun context new_state pat ->
          (* compute the head of the pattern to be the case label *)
          match pat with
-         | PatMetaObj (_, patt) ->
+         | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
             let c =
-              head_of_meta_obj patt
-              |> Maybe.get
-              |> Pair.lmap B.Context.hatToDCtx
+              let LF.(MObj (Root (_, h, _))) = tM in
+              B.Context.hatToDCtx cPsi, h
             in
             Theorem.add_subgoal t new_state;
             meta_branch c context (incomplete_proof new_state)
          | _ ->
-            B.Error.violation "[get_meta_branch] Impossible case"
+            B.Error.violation "[get_meta_branch] pattern not a meta-obj"
          end
      in
 
@@ -301,31 +386,37 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             Theorem.add_subgoal t new_state;
             comp_branch cid context (incomplete_proof new_state)
          | _ ->
-            B.Error.violation "[get_meta_branch] Impossible case"
+            B.Error.violation "[get_comp_branch] pattern not a constant"
          end
      in
 
-     let is_meta_split =
+     let decide_split_kind =
        function
-       | (_, B.Coverage.CovPatt (_, PatMetaObj _, _), _) -> true
-       | _ -> false
+       | _, B.Coverage.CovPatt (_, PatMetaObj (_, LF.(_, CObj _)), _), _ -> `context
+       | _, B.Coverage.CovPatt (_, PatMetaObj (_, LF.(_, ClObj (_, _))), _), _ -> `meta
+       | _, B.Coverage.CovPatt (_, PatConst (_, _, _), _), _ -> `comp
+       | _ -> B.Error.violation "unhandled pattern type for split"
      in
-     let is_comp_split cg = not (is_meta_split cg) in
-     Theorem.remove_subgoal t s;
      let revCgs = List.rev cgs in
-     (match (List.for_all is_meta_split revCgs, List.for_all is_comp_split revCgs) with
-      | (true, false) ->
-         List.map get_meta_branch revCgs
-         |> Comp.meta_split i tau
-      | (false, true) ->
-         List.map get_comp_branch revCgs
-         |> Comp.comp_split i tau
-      | (false, false) ->
-         failwith "[split] Mixed cases of meta and comp split"
-      | _ ->
-         B.Error.violation "[split] Impossible case"
-     )
-     |> Theorem.solve s
+     match
+       List.map decide_split_kind revCgs
+       |> Nonempty.of_list
+       |> Maybe.map Nonempty.all_equal
+     with
+     | None ->
+        Theorem.remove_subgoal t s;
+        impossible_split i |> Theorem.solve s
+     | Some None ->
+        B.Error.violation "mixed cases in split (bug in coverage?)"
+     | Some (Some k) ->
+        Theorem.remove_subgoal t s;
+        let finish f g =
+          List.map f revCgs |> g i tau |> Theorem.solve s
+        in
+        match k with
+        | `meta -> finish get_meta_branch Comp.meta_split
+        | `comp -> finish get_comp_branch Comp.comp_split
+        | `context -> finish get_context_branch Comp.context_split
 
 (** Constructs a new proof state from `g` in which the meta-context is
     extended with the given declaration, and the goal type is
@@ -362,17 +453,17 @@ let extending_comp_context decl g =
     the meta context with a new declaration.
     This will appropriately MShift the goal type.
  *)
-let solve_with_new_meta_decl decl cmd t g =
-  Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) cmd g
+let solve_with_new_meta_decl decl f t g =
+  Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) f g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the computational context with a new declaration.
  *)
-let solve_with_new_comp_decl decl cmd t g =
-  Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) cmd g
+let solve_with_new_comp_decl decl f t g =
+  Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) f g
 
-let solve_by_unbox' cmd (cT : Comp.meta_typ) (name : B.Id.name) : t =
-  solve_with_new_meta_decl LF.(Decl (name, cT, No)) cmd
+let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
+  solve_with_new_meta_decl LF.(Decl (name, cT, No)) f
 
 let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
@@ -380,7 +471,7 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
   let {cD; cG; cIH} = g.context in
   match tau with
   | TypBox (_, cT) ->
-     solve_by_unbox' [mk_cmd cT] cT name t g
+     solve_by_unbox' (prepend_commands [mk_cmd cT]) cT name t g
   | _ ->
      Theorem.printf t "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
        (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
@@ -395,6 +486,6 @@ let invoke (k : Command.invoke_kind) (b : Command.boxity) (m : Comp.exp_syn) (ta
   let cmd = By (k, m, name, tau, b) in
   match b with
   | `boxed ->
-     solve_with_new_comp_decl (CTypDecl (name, tau, false)) [cmd]
+     solve_with_new_comp_decl (CTypDecl (name, tau, false)) (prepend_commands [cmd])
   | `unboxed ->
      solve_by_unbox m (fun _ -> cmd) tau name

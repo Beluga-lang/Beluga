@@ -37,6 +37,10 @@ val to_list : 'a t -> 'a list
 (** Maps a function over the nonempty list. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
+(** Collapses a nonempty sequence to a single element, provided all
+    elements are (structurally) equal. *)
+val all_equal : 'a t -> 'a option
+
 val print : ?pp_sep:(Format.formatter -> unit -> unit) ->
             (Format.formatter -> 'a -> unit) ->
             Format.formatter ->

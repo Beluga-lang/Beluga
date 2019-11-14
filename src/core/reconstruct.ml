@@ -167,7 +167,8 @@ type case_type  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
 (** Decides what the case type is. *)
 let case_type i =
   match i with
-  | Int.Comp.AnnBox (mC, _) -> IndexObj mC
+  | Int.Comp.AnnBox (mC, _) ->
+     IndexObj mC
   | _ -> DataObj
 
 let map_case_type f = function
@@ -787,8 +788,17 @@ let synPatRefine loc caseT (cD, cD') t pat (tau_s, tau_p) =
     | DataObj, _ -> () (* not dependent pattern matching; nothing to do *)
     | IndexObj mC, Int.Comp.PatMetaObj (_, mC_p)
       | IndexObj mC, Int.Comp.(PatAnn (_, PatMetaObj (_, mC_p), _)) ->
+       let mC_p = Whnf.(cnormMetaObj (mC_p, m_id)) in
        (* tau_p' _has_ to be a box type if caseT is an IndexObj  *)
        let Int.Comp.TypBox (_, mT) = tau_p' in
+       dprintf
+         begin fun p ->
+         p.fmt "[synPatRefine] @[<v>unifying scrutinee and pattern:@,\
+                mC[t1]    = @[%a@]@,
+                mC_p[t1t] = @[%a@]@]"
+           (P.fmt_ppr_cmp_meta_obj cD P.l0) mC
+           (P.fmt_ppr_cmp_meta_obj cD' P.l0) mC_p
+         end;
        try
          Unify.unifyMetaObj Int.LF.Empty
            (Whnf.cnormMetaObj (mC, t), t1)
@@ -798,11 +808,11 @@ let synPatRefine loc caseT (cD, cD') t pat (tau_s, tau_p) =
          Unify.Failure msg ->
          Error.violation ("Dependent pattern matching failed: " ^ msg)
   in
-  let t1 = Ctxsub.mctxToMSub cD' in
-  let t1t = Whnf.mcomp t t1 in
-  let tau_s' = Whnf.cnormCTyp (tau_s, t1t) in
-  let tau_p' = Whnf.cnormCTyp (tau_p, t1) in
-  unifyPatternType tau_s' tau_p';
+  let t1 = Ctxsub.mctxToMSub cD' in (* . |- t1 : cD' *)
+  let t1t = Whnf.mcomp t t1 in (* . |- t1t : cD  since  cD' |- t : cD  and  t1t = t mcomp t1 *)
+  let tau_s' = Whnf.cnormCTyp (tau_s, t1t) in (* . |- tau_s' <= type *)
+  let tau_p' = Whnf.cnormCTyp (tau_p, t1) in (* . |- tau_p' <= type *)
+  unifyPatternType tau_s' tau_p'; (* . |- tau_s' === tau_p' <= type *)
   unifyScrutinee tau_p' t1 t1t;
   let t1', cD'' = Abstract.msub (Whnf.cnormMSub t1) in
   let t' = Whnf.mcomp t t1' in
@@ -1685,7 +1695,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      let cD' = elMCtx Lfrecon.Pibox delta in
      dprintf
        begin fun p ->
-       p.fmt "[recPatObj] @[<v>reconstruction of delta done : cD' (explicit) =@,@[%a@]@]"
+       p.fmt "[elBranch] @[<v>reconstruction of delta done : cD' (explicit) =@,@[%a@]@]"
          (P.fmt_ppr_lf_mctx P.l0) cD'
        end;
      let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
@@ -1708,6 +1718,22 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
        (* since tau1 and pat1 make sense in cD1', they also make sense in cD'
           because cD' is obtained from cD by putting stuff *on the
           left*, so the indices are still valid. *)
+       dprintf
+         begin fun p ->
+         p.fmt "[elBranch] @[<v>before synPatRefine:@,\
+                cD = @[%a@]@,\
+                cD' = @[%a@]@,\
+                cD' |- t : cD = @[%a@]@,\
+                pat1 = @[%a@]@,\
+                tau_s = @[%a@]@,\
+                tau1 = @[%a@]@]"
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_lf_mctx P.l0) cD'
+           (P.fmt_ppr_lf_msub cD' P.l0) t
+           (P.fmt_ppr_cmp_pattern cD' cG1 P.l0) pat1
+           (P.fmt_ppr_cmp_typ cD P.l0) tau_s
+           (P.fmt_ppr_cmp_typ cD' P.l0) tau1
+         end;
        synPatRefine loc caseTyp (cD, cD') t pat1 (tau_s, tau1)
      in
      (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)

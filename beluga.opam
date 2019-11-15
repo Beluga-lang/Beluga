@@ -6,6 +6,12 @@ homepage: "https://github.com/Beluga-lang/Beluga"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"
 license: "GPLv3"
+
+run-test: [
+  [ "./TEST" ]
+  [ "./TEST -- +htmltest" ]
+  [ "./TEST -- +sexp" ]
+]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
   ["dune" "exec" "./TEST"] {with-test}

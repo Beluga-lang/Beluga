@@ -57,7 +57,7 @@ rec fundVar : {g : cxt} {M : [g |- tm A[]]}
  mlam g, M => fn r =>
  (case r of
  | RNil   =>   ?
-
+ | RCons v1 v2 ⇒ ?
 )
 
 ;

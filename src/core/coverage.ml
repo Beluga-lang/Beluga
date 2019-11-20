@@ -229,10 +229,10 @@ let eta_expand (tH, tA) =
    cPsi  |- ss   <= cPsi'
    cPsi' |- tN   <= [s'][s]A
  *)
-let rec etaExpandMVstr cD cPsi sA =
-  etaExpandMVstr' cD cPsi (Whnf.whnfTyp sA)
+let rec etaExpandMVstr u cD cPsi sA =
+  etaExpandMVstr' u cD cPsi (Whnf.whnfTyp sA)
 
-and etaExpandMVstr' cD cPsi =
+and etaExpandMVstr' u cD cPsi =
   function
   | LF.Atom (_, a, _) as tP, s ->
      let cPhi, conv_list = ConvSigma.flattenDCtx cD cPsi in
@@ -250,7 +250,7 @@ and etaExpandMVstr' cD cPsi =
      let ssi' = S.LF.invert ss' in
      (* cPhi' |- ssi             : cPhi  *)
      (* cPhi' |- [ssi]tQ                 *)
-     let u = Whnf.newMMVar None (cD, cPhi', LF.TClo (tQ, ssi')) LF.Maybe in
+     let u = Whnf.newMMVar u (cD, cPhi', LF.TClo (tQ, ssi')) LF.Maybe in
      (* cPhi  |- ss'             : cPhi'
         cPsi  |- s_proj          : cPhi
         cPsi  |- comp ss' s_proj : cPhi' *)
@@ -258,7 +258,7 @@ and etaExpandMVstr' cD cPsi =
      let tM = LF.Root (Loc.ghost, LF.MMVar ((u, Whnf.m_id), ss_proj),  LF.Nil) in
      tM
   | LF.PiTyp ((LF.TypDecl (x, _) as decl, _), tB), s ->
-     LF.Lam (Loc.ghost, x, etaExpandMVstr cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
+     LF.Lam (Loc.ghost, x, etaExpandMVstr u cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
 
 let rec compgctx_of_gctx =
   function
@@ -365,15 +365,15 @@ end = struct
     let open Format in
     function
     | Split (cg, patt) ->
-       fprintf ppf "%a == %a"
+       fprintf ppf "@[<v>@[%a@]@ ==@ @[%a@]@]"
          (fmt_ppr_cov_goal cD) cg
          (fmt_ppr_pattern cD_p) patt
     | SplitCtx (cPsi, cPhi) ->
-       fprintf ppf "%a == %a"
+       fprintf ppf "@[<v>@[%a@]@ ==@ @[%a@]@]"
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
          (P.fmt_ppr_lf_dctx cD_p P.l0) cPhi
     | SplitPat ((patt, ttau), (patt', ttau')) ->
-       fprintf ppf "%a : %a == %a : %a"
+       fprintf ppf "@[<v>@[<v 2>@[%a@] :@ @[%a@]@]@ ==@ @[<v 2>@[%a@] :@ @[%a@]@]@]"
          (P.fmt_ppr_cmp_pattern cD cG P.l0) patt
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) patt'
@@ -382,7 +382,7 @@ end = struct
   let fmt_ppr_splits c c' ppf : split list -> unit =
     let open Format in
     fprintf ppf "@[<v>%a@]"
-      (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_split c c'))
+      (fun ppf -> List.iteri (fun i -> fprintf ppf "%2d. @[%a@]@," (i+1) (fmt_ppr_split c c')))
 
   let fmt_ppr_equation cD cD_p ppf : eqn -> unit =
     let open Format in
@@ -404,7 +404,7 @@ end = struct
     let open Format in
     function
     | Cand (cD_p, cG_p, eqns, splits) ->
-       fprintf ppf "@[<v>@[%a@]; @[%a@]@,@[%a@]; @[%a@] |-@,MATCHES {@,  @[%a@]@,}@,SPLITS {@,%a@,}@]"
+       fprintf ppf "@[<v>outside:@,@[%a@];@ @[%a@]@,pattern:@,@[%a@];@ @[%a@] |-@,MATCHES {@,  @[%a@]@,}@,SPLITS {@,  @[%a@]@,}@]"
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
          (P.fmt_ppr_lf_mctx P.l0) cD_p
@@ -1066,6 +1066,19 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
+  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.STyp (cl, cPhi), cPsi), _)), tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.STyp (cl', cPhi'), cPsi'), _)), tau2'), t')) ->
+     let Comp.PatMetaObj (_, (loc, mO)) = pat in
+     let Comp.PatMetaObj (_, (loc', mO')) = pat' in
+     let mk_cltyp cl cPhi cPsi t = LF.(ClTyp (STyp (cl, Whnf.cnormDCtx (cPhi, t)), Whnf.cnormDCtx (cPsi, t))) in
+     let mT1 = mk_cltyp cl cPhi cPsi t in
+     let mT2 = mk_cltyp cl' cPhi' cPsi' t' in
+     let t2 = LF.MDot (mO, t) in
+     let t2' = LF.MDot (mO', t') in
+     let mC1, sC1 = match_metaobj cD cD_p ((loc, mO), mT1) ((loc', mO'), mT2) mC sC in
+     match_spines (cD, cG) (cD_p, cG_p)
+       (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
+
   | _, (Comp.PatApp (loc, _, _), _) ->
      raise (Error (loc, MatchError "Spine Mismatch"))
   | _ ->
@@ -1099,14 +1112,14 @@ let getSchemaElems cD cPsi =
  *)
 let rec genSpine cD cPsi sA tP =
   match Whnf.whnfTyp sA with
-  | (LF.PiTyp ((LF.TypDecl (_, tA), _), tB), s) ->
+  | (LF.PiTyp ((LF.TypDecl (u, tA), _), tB), s) ->
      (* cPsi' |- Pi x:A.B <= typ
         cPsi  |- s <= cPsi'
         cPsi  |- tN <= [s]tA
         cPsi |- tN . s <= cPsi', x:A
       *)
      (* let tN = Whnf.etaExpandMV cPsi (tA, s) S.LF.id in *)
-     let tN = etaExpandMVstr cD cPsi (tA, s) in
+     let tN = etaExpandMVstr (Some u) cD cPsi (tA, s) in
      dprintf
        begin fun p ->
        p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
@@ -2235,7 +2248,7 @@ let rec genPattSpine =
   | Comp.TypPiBox ((LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), _)), tau), t ->
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
-     let tR = etaExpandMVstr LF.Empty cPsi' (tP', S.LF.id) in
+     let tR = etaExpandMVstr (Some u) LF.Empty cPsi' (tP', S.LF.id) in
      let pat1 =
        Comp.PatMetaObj
          ( Loc.ghost
@@ -2246,6 +2259,26 @@ let rec genPattSpine =
        genPattSpine (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t))
      in
      (cG, Comp.PatApp (Loc.ghost, pat1, pS), ttau0)
+
+  | Comp.TypPiBox (LF.(Decl (u, ClTyp (STyp (cl, cPhi), cPsi), _)), tau), t ->
+     let cPhi' = Whnf.cnormDCtx (cPhi, t) in
+     let cPsi' = Whnf.cnormDCtx (cPsi, t) in
+
+     dprintf
+       begin fun p ->
+       p.fmt "[genPattSpine] STyp case"
+       end;
+
+     let s =
+       let v = Whnf.newMSVar (Some u) ( LF.Empty, cl, cPsi', cPhi' ) LF.No in
+       LF.MSVar (0, ((v, Whnf.m_id), S.LF.id))
+     in
+     let sO = LF.ClObj (Context.dctxToHat cPsi', LF.SObj s) in
+     let pat = Comp.PatMetaObj (Loc.ghost , (Loc.ghost, sO)) in
+     let cG, pS, ttau0 =
+       genPattSpine (tau, LF.MDot (sO, t))
+     in
+     (cG, Comp.PatApp (Loc.ghost, pat, pS), ttau0)
 
   | typ ->
      ([], Comp.PatNil, typ)
@@ -2260,6 +2293,15 @@ let rec genPattSpine =
     `t` such that `tau[t]` makes sense in the empty context.
  *)
 let genPatt (cD_p, tau_v) (c, tau_c) =
+  dprintf
+    begin fun p ->
+    p.fmt "[genPatt] @[<v>generating spine for constructor %s@,\
+           with type: @[%a@]@,\
+           in cD_p = @[%a@]@]"
+      (R.render_cid_comp_const c)
+      (P.fmt_ppr_cmp_typ cD_p P.l0) tau_c
+      (P.fmt_ppr_lf_mctx P.l0) cD_p
+    end;
   let cG, pS, (tau, t) = genPattSpine (tau_c, Whnf.m_id) in
   let pat = Comp.PatConst (Loc.ghost, c, pS) in
   dprintf
@@ -2378,12 +2420,6 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
        !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors)
        |> List.rev
      in
-     if constructors = []
-     then
-       dprint
-         begin fun _ ->
-         "[genPatCGoals] No Constructors defined for that type"
-         end;
      let ctau_list =
        let f c =
          let tau_c = (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ in
@@ -2409,7 +2445,7 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
      dprintf
        begin fun p ->
        p.fmt "[genPatCGoals] @[<v>generated %d cases for type @[%a@]:@,\
-              @[%a@]"
+              @[%a@]@]"
          (List.length r)
          (P.fmt_ppr_cmp_typ cD P.l0) tau
          Prettycov.fmt_ppr_cov_goals r
@@ -2667,7 +2703,13 @@ let rec subst_candidates (cD, cG) (pat_r, pv) =
          let ml', sl' = subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) sl in
          Cand (cD_p, cG_p, ml', sl') :: cands'
        with
-         Error (_, MatchError _) -> cands'
+         Error (_, MatchError s) ->
+         dprintf
+           begin fun p ->
+           p.fmt "[subst_candidates] @[<v>FAILED:@,%a@]"
+             Format.pp_print_string s
+           end;
+         cands'
      end
 
 let rec best_pv_cand' (cD, cG) pvlist (l, bestC) =
@@ -2922,19 +2964,19 @@ let rec extract_patterns tau =
   | Comp.Branch (loc, cD, cG, pat, ms, _) ->
      (cD, GenPatt (cG, pat, (tau, ms)))
 
-let rec gen_candidates loc cD covGoal =
-  function
-  | [] -> []
-  | (cD_p, GenPatt (cG_p, pat, ttau)) :: plist ->
-     let CovPatt (cG', pat', ttau') = covGoal in
-     dprintf
-       begin fun p ->
-       p.fmt "[gen_candidates] @[<v>pat = @[%a@]@,pat' = @[%a@]@]"
-         (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) pat
-         (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG') P.l0) pat'
-       end;
-     let ml, sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in
-     Cand (cD_p, cG_p, ml, sl) :: gen_candidates loc cD covGoal plist
+let gen_candidate loc cD covGoal (cD_p, GenPatt (cG_p, pat, ttau)) =
+  let CovPatt (cG', pat', ttau') = covGoal in
+  dprintf
+    begin fun p ->
+    p.fmt "[gen_candidates] @[<v>pat = @[%a@]@,pat' = @[%a@]@]"
+      (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) pat
+      (P.fmt_ppr_cmp_pattern cD_p (compgctx_of_gctx cG') P.l0) pat'
+    end;
+  let ml, sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in
+  Cand (cD_p, cG_p, ml, sl)
+
+let gen_candidates loc cD covGoal pats =
+  List.map (gen_candidate loc cD covGoal) pats
 
 let initialize_coverage problem projOpt : cov_problems =
   match problem.ctype with

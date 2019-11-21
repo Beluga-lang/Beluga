@@ -3,6 +3,7 @@
 open Support
 
 module P = Pretty.Int.DefaultPrinter
+module PExt = Pretty.Ext.DefaultPrinter
 module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module ExtComp = Syntax.Ext.Comp
@@ -30,7 +31,9 @@ let elaborate_numeric_order (k : int) (order : ExtComp.numeric_order) : Comp.ord
 let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   dprintf
     begin fun p ->
-    p.fmt "[elaborate_typ] @[<v>cD = @[%a@]@]"
+    p.fmt "[elaborate_typ] @[<v>tau =@ @[%a@] (external)@,\
+           cD = @[%a@]@]"
+      PExt.(fmt_ppr_cmp_typ l0) tau
       (P.fmt_ppr_lf_mctx P.l0) cD
     end;
   Index.comptyp tau
@@ -42,7 +45,10 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
     : Comp.exp_chk =
   dprintf
     begin fun p ->
-    p.fmt "[elaborate_exp] @[<v>cD = %a@,cG = %a@]"
+    p.fmt "[elaborate_exp] @[<v>e = @[%a@] (external)@,\
+           cD = @[%a@]@,\
+           cG = @[%a@]@]"
+      PExt.(fmt_ppr_cmp_exp_chk l0) t
       (P.fmt_ppr_lf_mctx P.l0) cD
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;
@@ -55,7 +61,10 @@ let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
     : Comp.exp_syn * Comp.tclo =
   dprintf
     begin fun p ->
-    p.fmt "[elaborate_exp] @[<v>cD = %a@,cG = %a@]"
+    p.fmt "[elaborate_exp] @[<v>i = @[%a@] (external)@,\
+           cD = @[%a@]@,\
+           cG = @[%a@]@]"
+      PExt.(fmt_ppr_cmp_exp_syn l0) t
       (P.fmt_ppr_lf_mctx P.l0) cD
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;

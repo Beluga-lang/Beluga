@@ -1478,19 +1478,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
     | Comp.CTypDecl (x, tau, tag) ->
-       fprintf ppf "%a%a : %a"
+       fprintf ppf "@[%a%a@ :@ @[%a@]@]"
          Id.print x
          print_wf_tag tag
          (fmt_ppr_cmp_typ cD lvl) tau
 
     | Comp.WfRec (name, args, typ) ->
-       fprintf ppf "@[<v 2>%a @[<hv>%a@]@,: %a@]"
+       fprintf ppf "@[<v 2>%a @[<hv>%a@]@,:@ %a@]"
          Id.print name
          (pp_print_list ~pp_sep: pp_print_space (fmt_ppr_cmp_arg cD lvl)) args
          (fmt_ppr_cmp_typ cD lvl) typ
 
     | Comp.CTypDeclOpt x ->
-       fprintf ppf "%s : _" (Id.render_name x)
+       fprintf ppf "%a : _" Id.print x
 
   and fmt_ppr_cmp_gctx cD lvl ppf cG =
     match cG with

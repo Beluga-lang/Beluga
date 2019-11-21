@@ -335,7 +335,7 @@ module Comp = struct
 
   and fmv_hat (cD:I.mctx) phat = match phat with
     | (Some (I.CtxOffset k), _ ) -> mark_ind cD k
-    | _ -> I.Empty
+    | _ -> cD
 
   and fmv_dctx (cD:I.mctx) cPsi = match cPsi with
     | I.Null -> cD

@@ -44,7 +44,7 @@ Administrative commands:
 * `show-ihs`: dumps the currently available induction hypotheses.
 * `show-subgoals`: lists all open subgoals
 * `toggle-automation KIND`: enables/disables the automatic tactic `KIND`.
-  Supported values of `KIND` are: `auto-intros`, `auto-solve-trivial`.
+  Supported values of `KIND` are: `auto-intros`, `auto-solve-trivial` and `auto-impossible`.
   These are described in the section _Automatic Tactics_
 
 The following are the proof tactics. In these commands, `E` denotes a
@@ -80,6 +80,8 @@ The following are the available automatic tactics.
   with automatically generated names.
 * `auto-solve-trivial`: trivial subgoals will be solved automatically.
   A subgoal is _trivial_ if the goal is present as an assumption.
+* `auto-impossible`: remove impossible subgoals automatically.
+  A subgoal is _impossible_ if the one of the assumption is not instantiable.
 
 ### Example
 

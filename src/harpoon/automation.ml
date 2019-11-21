@@ -5,6 +5,7 @@ module B = Beluga
 module P = B.Pretty.Int.DefaultPrinter
 module Command = B.Syntax.Ext.Harpoon
 module Comp = B.Syntax.Int.Comp
+module Coverage = B.Coverage
 module LF = B.Syntax.Int.LF
 module Loc = B.Syntax.Loc
 module Context = B.Context
@@ -124,7 +125,94 @@ let auto_solve_trivial : t =
     a hypothesis spliting into 0 cases.
  *)
 let auto_impossible : t =
-  fun mfs t g -> false
+  fun mfs t g ->
+  let { cD; cG; _ } = g.context in
+  let m_is_impossible ((m, idx) : LF.ctyp_decl * int) =
+    dprintf
+      begin fun p ->
+      p.fmt "@[<v>[auto_impossible] witness candidate = %a@]"
+        (P.fmt_ppr_lf_ctyp_decl cD P.l0) m
+      end;
+    match m with
+    (* Fix the following two cases after
+     * fixing genPatCGoals (and related functions) to
+     * emit an error for illegal cases and
+     * return appropriate coverage goals
+     *)
+    | LF.Decl (_, LF.ClTyp (LF.STyp _, _), _) -> false
+    | LF.Decl (_, LF.ClTyp (LF.PTyp _, _), _) -> false
+    | LF.Decl (_, mtyp, _) ->
+      let typ = Whnf.cnormCTyp (TypBox (Loc.ghost, mtyp), LF.MShift idx) in
+      let cgs = Coverage.genPatCGoals cD (Coverage.gctx_of_compgctx cG) (Total.strip typ) [] in
+      cgs == []
+    | LF.DeclOpt _ ->
+      B.Error.violation "[auto_impossible] Unexpected DeclOpt"
+  in
+  let build_mimpossible ((m, idx) : LF.ctyp_decl * int) =
+    match m with
+    | LF.Decl (_, mtyp, _) ->
+      let exp = Comp.Var (Loc.ghost, idx) in
+      let typ = Whnf.cnormCTyp (TypBox (Loc.ghost, mtyp), LF.MShift idx) in
+      (exp, typ)
+    (* The following case is impossible because m_is_impossible
+       will never return true for a DeclOpt.
+     *)
+    | LF.DeclOpt _ ->
+      B.Error.violation "[auto_impossible] Impossible case"
+  in
+  let c_is_impossible ((c, idx) : ctyp_decl * int) =
+    dprintf
+      begin fun p ->
+      p.fmt "@[<v>[auto_impossible] witness candidate = %a@]"
+        (P.fmt_ppr_cmp_ctyp_decl cD P.l0) c
+      end;
+    match c with
+    | CTypDecl (_, typ, _) ->
+      let cgs = Coverage.genPatCGoals cD (Coverage.gctx_of_compgctx cG) (Total.strip typ) [] in
+      cgs == []
+    | CTypDeclOpt _ ->
+       B.Error.violation "[auto_impossible] Unexpected CTypDeclOpt"
+    | WfRec _ ->
+       B.Error.violation "[auto_impossible] Unexpected WfRec"
+  in
+  let build_cimpossible ((c, idx) : ctyp_decl * int) =
+    match c with
+    | CTypDecl (_, typ, _) ->
+       let open Loc in
+       (Var (ghost, idx), typ)
+    | CTypDeclOpt _ ->
+       B.Error.violation "[auto_impossible] Impossible case"
+    | WfRec _ ->
+       B.Error.violation "[auto_impossible] Impossible case"
+  in
+  let open Maybe in
+  let opt_mimpossible =
+    lazy
+      (Context.find_with_index' cD m_is_impossible
+       $> build_mimpossible)
+  in
+  let opt_cimpossible =
+    lazy
+      (Context.find_with_index' cG c_is_impossible
+       $> build_cimpossible)
+  in
+  let opt_impossible =
+    opt_mimpossible <|> opt_cimpossible
+  in
+  match opt_impossible with
+  | lazy None ->
+     dprintf
+      begin fun p ->
+        p.fmt "@[<v>[auto_impossible] There are no impossible hypotheses in@,%a@,@]"
+          P.fmt_ppr_cmp_proof_state g
+      end;
+     false
+  | lazy (Some (exp, typ)) ->
+     Theorem.printf t "@[<v>@,A goal %a is automatically solved for an impossible hypothesis %a.@,@]"
+       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
+       (P.fmt_ppr_cmp_typ cD P.l0) typ;
+     Tactic.split `impossible exp typ (Lazy.force mfs) t g;
+     true
 
 type automation_info = bool ref * t
 

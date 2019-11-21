@@ -130,11 +130,11 @@ module Ext = struct
                                 -> lvl -> formatter -> LF.mctx     -> unit
     val fmt_ppr_cmp_kind      : lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ -> unit
-    val fmt_ppr_cmp_exp_chk   : int -> Format.formatter -> Comp.exp_chk -> unit
-    val fmt_ppr_cmp_exp_syn   : int -> Format.formatter -> Comp.exp_syn -> unit
+    val fmt_ppr_cmp_exp_chk   : lvl -> Format.formatter -> Comp.exp_chk -> unit
+    val fmt_ppr_cmp_exp_syn   : lvl -> Format.formatter -> Comp.exp_syn -> unit
     val fmt_ppr_cmp_branches  : Format.formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : Format.formatter -> Comp.branch -> unit
-    val fmt_ppr_pat_obj       : int -> Format.formatter -> Comp.pattern -> unit
+    val fmt_ppr_pat_obj       : lvl -> Format.formatter -> Comp.pattern -> unit
 
     val fmt_ppr_patternOpt    : formatter -> LF.normal option -> unit
   end

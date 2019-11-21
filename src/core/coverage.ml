@@ -2273,6 +2273,14 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
   let ms = Ctxsub.mctxToMSub cD_p in
   begin
     try
+      dprintf
+        begin fun p ->
+        p.fmt "[genPatt] @[<v>unifying computational types:@,\
+               tau (generated pattern type) = @[%a@]@,\
+               tau_v (given pattern type) = @[%a@]@]"
+          P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau, t))
+          P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau_v, ms))
+        end;
       U.unifyCompTyp LF.Empty (tau, t) (tau_v, ms);
       let cD', cG', pat', tau', ms' =
         Abstract.covpatt

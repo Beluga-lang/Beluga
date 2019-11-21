@@ -14,6 +14,9 @@ open Syntax.Int.LF
 open Syntax.Int
 open Substitution
 
+let dprintf, _, _ = Debug.(makeFunctions' (toFlags [11]))
+open Debug.Fmt
+
 module T = Store.Cid.Typ
 
 exception Fmvar_not_found
@@ -719,7 +722,11 @@ and cnorm (tM, t) = match tM with
     | MSVar (n, ((mmvar, mt),s')) ->
        match mmvar.instantiation.contents with
        | Some (ISub s) ->
-          dprint (fun () -> "[cnormSub] MSVar - MSInst");
+          dprintf
+            begin fun p ->
+            p.fmt "[cnormSub] @[<v>MSVar - MSInst for @[%s@]@]"
+              (Id.render_name mmvar.name)
+            end;
           let s0 = cnormSub (LF.comp (normSub s) (normSub s') , mt) in
           let s0' = LF.comp (Shift n) s0 in
           cnormSub (s0', t)

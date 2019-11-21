@@ -276,6 +276,7 @@ module Harpoon = struct
   type automation_kind =
     [ `auto_intros
     | `auto_solve_trivial
+    | `auto_impossible
     ]
 
   type automation_change =

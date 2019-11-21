@@ -2909,6 +2909,7 @@ let interactive_harpoon_command =
     choice
       [ keyword "auto-intros" &> pure `auto_intros
       ; keyword "auto-solve-trivial" &> pure `auto_solve_trivial
+      ; keyword "auto-impossible" &> pure `auto_impossible
       ]
   in
   let automation_change =

@@ -118,6 +118,13 @@ let auto_solve_trivial : t =
      (solve w |> Tactic.solve) t g;
      true
 
+(** Solve a goal with an impossible hypothesis automatically.
+    Be more precise, this automation solves a goal which has
+    a hypothesis spliting into 0 cases.
+ *)
+let auto_impossible : t =
+  fun t g -> false
+
 type automation_info = bool ref * t
 
 type automation_state =
@@ -128,6 +135,7 @@ let make_automation_state () : automation_state =
   let open List in
   [ (`auto_intros, auto_intros)
   ; (`auto_solve_trivial, auto_solve_trivial)
+  ; (`auto_impossible, auto_impossible)
   ]
   |> iter (fun (k, f) -> Hashtbl.add hashtbl k (ref true, f));
   hashtbl
@@ -157,6 +165,7 @@ let exec_automation auto_st : t =
    *)
   [ `auto_solve_trivial
   ; `auto_intros
+  ; `auto_impossible
   ]
   |> map (fun k -> get_automation_info auto_st k)
   |> filter (fun (b, _) -> !b)

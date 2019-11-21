@@ -501,44 +501,48 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
                           Psi'  |- shift (cs , k) : Psi
                           Phi   |- s'             : Phi'
       *)
-      let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
-      svar_le (cl', cl) ;
-      checkSub loc cD cPsi' (Shift k) cPsi;
-      checkSub loc cD cPhi  s'            cPhi'
+       dprintf
+         begin fun p ->
+         p.fmt "[checkSub] SVar case"
+         end;
+       let (_, cPsi', cl', cPhi') = Whnf.mctxSDec cD offset in
+       svar_le (cl', cl) ;
+       checkSub loc cD cPsi' (Shift k) cPsi;
+       checkSub loc cD cPhi  s'            cPhi'
 
     | CtxVar psi, Shift 0, CtxVar psi' ->
       (* if psi = psi' then *)
       if not (psi = psi') then
 (*      if not (subsumes cD psi' psi) then *)
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     (* SVar case to be added - bp *)
 
     | DDec (cPsi, _tX),  Shift k,  Null ->
-      if k > 0 then
-	checkSub loc cD cPsi (Shift (k - 1)) Null
-      else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+       if k > 0 then
+         checkSub loc cD cPsi (Shift (k - 1)) Null
+       else
+         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | DDec (cPsi, _tX),  Shift k,  CtxVar psi ->
-      if k > 0 then
-	checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
-      else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+       if k > 0 then
+         checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
+       else
+         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi',  Shift k,  cPsi ->
-      if k >= 0 then
-	checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
-      else
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+       if k >= 0 then
+         checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
+       else
+         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2))
     (* | cPsi', Dot (Obj (Root(_,h,Nil)), s'), DDec (cPsi, TypDecl (_, tA2)) *) ->
-      let _ = checkSub loc cD cPsi' s' cPsi
-      (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
-      and tA1 = inferHead loc cD cPsi' h cl in
-      if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
-	raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+       let _ = checkSub loc cD cPsi' s' cPsi
+       (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
+       and tA1 = inferHead loc cD cPsi' h cl in
+       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
+         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
     | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) when cl = Subst ->
       (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
@@ -547,11 +551,13 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
 
     | _, Dot (Obj tM, _), DDec (_,_) when cl = Ren ->
-      raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
+       raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
 
     | cPsi1, s, cPsi2 ->
-      raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
-  in checkSub loc cD cPsi1 s1 cPsi1'
+       raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+
+  in
+  checkSub loc cD cPsi1 s1 cPsi1'
 
 (*****************)
 (* Kind Checking *)
@@ -924,8 +930,16 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
      check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
 
-  | SObj tM, (STyp (cl, tA), t) ->
-     checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (tA, t))
+  | SObj tM, (STyp (cl, cPhi), t) ->
+     dprintf
+       begin fun p ->
+       p.fmt "[checkClObj] @[<v>--> checkSub@,\
+              for tM = @[%a@]@,\
+              and cPhi = @[%a@]@]"
+         P.(fmt_ppr_lf_sub cD cPsi' l0) tM
+         P.(fmt_ppr_lf_dctx cD l0) (Whnf.cnormDCtx (cPhi, t))
+       end;
+     checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (cPhi, t))
   | PObj h, (PTyp tA, t)
   | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) ->
       let tA' = inferHead loc cD cPsi' h Ren in
@@ -960,10 +974,10 @@ and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
           (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
           (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi
         end;
-      if Whnf.convDCtxHat (Context.dctxToHat cPhi) (Context.dctxToHat cPsi') then
-        checkClObj cD loc cPsi' tM (tp, t)
-      else
-        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))))
+      if not (Whnf.convDCtxHat (Context.dctxToHat cPhi) (Context.dctxToHat cPsi')) then
+        raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc,cM))));
+
+      checkClObj cD loc cPsi' tM (tp, t)
 
   | MV u , (mtyp1 , t) ->
     let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in

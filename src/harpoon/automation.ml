@@ -8,6 +8,7 @@ module Comp = B.Syntax.Int.Comp
 module LF = B.Syntax.Int.LF
 module Loc = B.Syntax.Loc
 module Context = B.Context
+module Total = B.Total
 module Whnf = B.Whnf
 module S = B.Substitution
 
@@ -16,10 +17,10 @@ open Comp
 let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
-type t = Theorem.t -> proof_state -> bool
+type t = Total.dec list Lazy.t -> Theorem.t -> proof_state -> bool
 
 let auto_intros : t =
-  fun t g ->
+  fun _ t g ->
   let (tau, _) = g.goal in
   dprintf
     begin fun p ->
@@ -41,7 +42,7 @@ let auto_intros : t =
     [|- a]
  *)
 let auto_solve_trivial : t =
-  fun t g ->
+  fun _ t g ->
   let { cD; cG; _ } = g.context in
   let m_is_witness ((m, idx) : LF.ctyp_decl * int) =
     dprintf
@@ -123,7 +124,7 @@ let auto_solve_trivial : t =
     a hypothesis spliting into 0 cases.
  *)
 let auto_impossible : t =
-  fun t g -> false
+  fun mfs t g -> false
 
 type automation_info = bool ref * t
 
@@ -158,7 +159,7 @@ let toggle_automation auto_st (k : Command.automation_kind) (state : Command.aut
   b := s
 
 let exec_automation auto_st : t =
-  fun t g ->
+  fun mfs t g ->
   let open List in
   (* The order of automation kinds is important,
      because it is the order in which automations are executed.
@@ -169,4 +170,4 @@ let exec_automation auto_st : t =
   ]
   |> map (fun k -> get_automation_info auto_st k)
   |> filter (fun (b, _) -> !b)
-  |> exists (fun (_, auto) -> auto t g)
+  |> exists (fun (_, auto) -> auto mfs t g)

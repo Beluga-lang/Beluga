@@ -109,7 +109,7 @@ module Prover = struct
 
   (** Runs proof automation on a given subgoal. *)
   let run_automation (s : state) (t : theorem) (g : Comp.proof_state) =
-    ignore (Automation.exec_automation s.automation_state t g)
+    ignore (Automation.exec_automation s.automation_state (lazy (get_mutual_decs s)) t g)
 
   type invocation_status =
     [ `ok

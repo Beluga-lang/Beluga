@@ -1,8 +1,9 @@
 module Comp = Beluga.Syntax.Int.Comp
 module Command = Beluga.Syntax.Ext.Harpoon
+module Total = Beluga.Total
 
 type t =
-  Theorem.t -> Comp.proof_state -> bool
+  Total.dec list Lazy.t -> Theorem.t -> Comp.proof_state -> bool
 
 type automation_state
 

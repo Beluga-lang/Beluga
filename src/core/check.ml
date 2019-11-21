@@ -137,9 +137,34 @@ module Comp = struct
          (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, Substitution.LF.id))
     | UnsolvableConstraints (f, cnstrs) ->
        let fname = match f with None -> "" | Some g -> " " ^ (Id.render_name g) in
-       Format.fprintf ppf
-         "Unification in type reconstruction encountered constraints because the given signature contains unification problems which fall outside the decideable pattern fragment.\n\nCommon causes are:\n\n- there are meta-variables which are not only applied to a distinct set of bound variables \n- a meta-variable in the program depends on a context, but it must be in fact closed \n\nThe constraint \n \n %s \n\n was not solvable. \n \n The program%s is considered ill-typed. "
-         cnstrs fname
+       let msg1 =
+         "Unification in type reconstruction encountered constraints \
+          because the given signature contains unification problems \
+          which fall outside the (decidable) pattern fragment;"
+       in
+       let msg2 =
+         "there are meta-variables which are not only applied \
+          to a distinct set of bound variables;"
+       in
+       let msg3 =
+         "a meta-variable in the program depends on a context, but \
+          that meta-varaible must be in fact closed."
+       in
+       let open Format in
+       fprintf ppf
+         "@[<v>%a@,@,\
+          Common causes are:@,
+          @[<v>\
+          - @[%a@]@,\
+          - @[%a@]@,@]@,@,\
+          The constraint@,  @[%a@]@,\
+          could not be solved.@,
+          The program @[%a@] is considered ill-typed.@]"
+         pp_print_string msg1
+         pp_print_string msg2
+         pp_print_string msg3
+         pp_print_string cnstrs
+         pp_print_string fname
 
     | CtxMismatch (cD, cPsi, cPhi, cM) ->
        Error.report_mismatch ppf

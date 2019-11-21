@@ -114,7 +114,6 @@ val cnormPattern  : Comp.pattern * msub -> Comp.pattern
 val cnormPatSpine : Comp.pattern_spine * msub -> Comp.pattern_spine
 
 val cnormMetaObj : Comp.meta_obj * msub -> Comp.meta_obj
-val cnormMetaTyp : Comp.meta_typ * msub -> Comp.meta_typ
 
 val cnormClObj : clobj -> msub -> clobj
 val cnormMFt : mfront  -> msub -> mfront

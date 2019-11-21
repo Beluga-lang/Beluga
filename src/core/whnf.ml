@@ -1547,8 +1547,6 @@ let mctxMVarPos cD u =
 
     | Comp.TypInd tau -> Comp.TypInd (normCTyp tau)
 
-  let cnormMetaTyp (mC, t) = cnormMTyp (mC, t)
-
   let rec cnormMetaObj ((loc,mO),t) = loc , mfrontMSub mO t
 
   and cnormMetaSpine (mS,t) = match mS with
@@ -1568,7 +1566,7 @@ let mctxMVarPos cD u =
           let mS' = cnormMetaSpine (mS, t) in
             Comp.TypCobase (loc, a, mS')
       | (Comp.TypBox (loc, cT), t) ->
-	 Comp.TypBox (loc, cnormMetaTyp (cT, t))
+	 Comp.TypBox (loc, cnormMTyp (cT, t))
 
       | (Comp.TypArr (tT1, tT2), t)   ->
           Comp.TypArr (cnormCTyp (tT1, t), cnormCTyp (tT2, t))
@@ -1607,7 +1605,7 @@ let mctxMVarPos cD u =
         let mS' = normMetaSpine (cnormMetaSpine (mS, t)) in
           (Comp.TypCobase (loc, c, mS'), m_id)
 
-    | (Comp.TypBox (loc, cT), t)  -> (Comp.TypBox(loc, cnormMetaTyp (cT, t)), m_id)
+    | (Comp.TypBox (loc, cT), t)  -> (Comp.TypBox(loc, cnormMTyp (cT, t)), m_id)
 
     | (Comp.TypArr (_tT1, _tT2), _t)   -> thetaT
 
@@ -1679,7 +1677,7 @@ let mctxMVarPos cD u =
 
     | (Comp.AnnBox (cM, cT), t') ->
        let cM' = cnormMetaObj (cM, t') in
-       let cT' = cnormMetaTyp (cT, t') in
+       let cT' = cnormMTyp (cT, t') in
        Comp.AnnBox (cM', cT')
 
   and cnormPattern (pat, t) = match pat with

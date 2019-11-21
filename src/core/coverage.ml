@@ -500,7 +500,7 @@ end = struct
             check_meta_obj
               cD
               (Loc.ghost, m)
-              (Whnf.cnormMetaTyp (tU, t))
+              (Whnf.cnormMTyp (tU, t))
             && id t cD0
          | _ -> false
          end
@@ -513,7 +513,7 @@ end = struct
     | Comp.PatVar _ -> is_id cD_p t cD
     | Comp.PatMetaObj (_, mO) ->
        let Comp.TypBox (_, mT) = tau_sc in
-       check_meta_obj cD_p mO (Whnf.cnormMetaTyp (mT, t)) && is_id cD_p t cD
+       check_meta_obj cD_p mO (Whnf.cnormMTyp (mT, t)) && is_id cD_p t cD
     | _ -> false
 
   let check_branch cD cG tau_sc (Comp.Branch (_, cD_p, _, patt, t, _)) =

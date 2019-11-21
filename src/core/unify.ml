@@ -2507,7 +2507,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
 
   and unifyClObj cD (mO, t) (mO', t') (cT, mt) =
-   unifyClObj' cD (Whnf.cnormClObj mO t) (Whnf.cnormClObj mO' t') (Whnf.cnormMetaTyp (cT, mt))
+   unifyClObj' cD (Whnf.cnormClObj mO t) (Whnf.cnormClObj mO' t') (Whnf.cnormMTyp (cT, mt))
 
   and unifyMFront' cD (mO, t) (mO', t') (cT, mt) = match ((mO, t) , (mO', t')) with
     | (CObj (cPsi), t) , (CObj (cPsi'), t') ->
@@ -2597,8 +2597,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 *)
 
       | ((Comp.TypBox (_, mT), t) , (Comp.TypBox (_, mT'), t')) ->
-        unifyCLFTyp Unification cD (Whnf.cnormMetaTyp (mT, t))
-                                    (Whnf.cnormMetaTyp (mT', t'))
+        unifyCLFTyp Unification cD (Whnf.cnormMTyp (mT, t))
+                                    (Whnf.cnormMTyp (mT', t'))
 
       | ((Comp.TypArr (tau1, tau2), t), (Comp.TypArr (tau1', tau2'), t')) ->
           (unifyCompTyp cD (tau1, t) (tau1', t') ;
@@ -3022,8 +3022,8 @@ let unify_phat psihat phihat =
       unifyMObj cD (cM, ms) (cM', ms) (mT, mt)
 
     let unifyMetaTyp cD (mT, ms) (mT', ms') =
-        unifyCLFTyp Unification cD (Whnf.cnormMetaTyp (mT, ms))
-                                    (Whnf.cnormMetaTyp (mT', ms'))
+        unifyCLFTyp Unification cD (Whnf.cnormMTyp (mT, ms))
+                                    (Whnf.cnormMTyp (mT', ms'))
 
 
     let unifyCompTyp cD ttau ttau' =

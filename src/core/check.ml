@@ -705,7 +705,7 @@ module Comp = struct
          match i, tau_sc with
          | AnnBox ((l, mC), _), TypBox (loc, mT) ->
             dprint (fun _ -> "[syn] [impossible] we are splitting on a meta-object");
-            let k, mT, projOpt = fixParamTyp mC (Whnf.cnormMetaTyp (mT, C.m_id)) in
+            let k, mT, projOpt = fixParamTyp mC (Whnf.cnormMTyp (mT, C.m_id)) in
             ( decide_ind_maybe (l, mC) k
             , TypBox (loc, mT)
             , projOpt
@@ -725,7 +725,7 @@ module Comp = struct
 
     | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =
-         let (k, mT, projOpt) = fixParamTyp cM (Whnf.cnormMetaTyp (mT, C.m_id)) in
+         let (k, mT, projOpt) = fixParamTyp cM (Whnf.cnormMTyp (mT, C.m_id)) in
          ( Maybe.(get_default (IndexObj (l, cM)) (k $> decide_ind (l, cM)))
          , TypBox (loc, mT)
          , projOpt
@@ -1010,7 +1010,7 @@ module Comp = struct
          end;
        let TypBox (_, mT) = tau_s in
        (* By invariant: cD1' |- t1 <= cD *)
-       let mT1   = Whnf.cnormMetaTyp (mT, t1) in
+       let mT1   = Whnf.cnormMTyp (mT, t1) in
        let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
        let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
        let t''   = Whnf.mcomp t t1 in

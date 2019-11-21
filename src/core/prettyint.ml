@@ -899,7 +899,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypArr (tau1, tau2) ->
        let cond = lvl > 1 in
-       fprintf ppf "%s%a -> %a%s"
+       fprintf ppf "@[<2>%s%a ->@ %a%s@]"
          (l_paren_if cond)
          (fmt_ppr_cmp_typ cD 0) tau1
          (fmt_ppr_cmp_typ cD 0) tau2
@@ -916,7 +916,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.TypPiBox (ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
        let cond = lvl > 1 in
-       fprintf ppf "%s%a %a%s"
+       fprintf ppf "@[<2>%s%a@ %a%s@]"
          (l_paren_if cond)
          (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
          (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
@@ -1326,7 +1326,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "@]@,";
        fprintf ppf "@[<v 2>Computational context:";
        Context.iter' (Whnf.normCtx cG)
-         (fun v -> fprintf ppf "@,%a" (fmt_ppr_cmp_ctyp_decl cD l0) v );
+         (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
        fprintf ppf "@]@,";
        for _ = 1 to 80 do fprintf ppf "-" done;
        let goal = Whnf.cnormCTyp goal in
@@ -1478,7 +1478,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
     | Comp.CTypDecl (x, tau, tag) ->
-       fprintf ppf "@[%a%a@ :@ @[%a@]@]"
+       fprintf ppf "@[<2>%a%a@ :@ @[%a@]@]"
          Id.print x
          print_wf_tag tag
          (fmt_ppr_cmp_typ cD lvl) tau

@@ -882,14 +882,14 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
     let (i1,tau1) = elExp' cD cG i in
     dprintf
       begin fun p ->
-      p.fmt "[elExp] @[<v>Syn i = %a@,done: %a@]"
+      p.fmt "[elExp] @[<v>Syn i = @[%a@]@,done: @[%a@]@]"
         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i1, Whnf.m_id))
         P.fmt_ppr_cmp_typ_typing (cD, Whnf.cnormCTyp tau1)
       end;
     let (i', tau_t') = genMApp loc cD (i1, tau1) in
     dprintf
       begin fun p ->
-      p.fmt "[elExp] @[<v>Unify computation-level types:@,%a == %a@]"
+      p.fmt "[elExp] @[<v>Unify computation-level types:@,  @[@[%a@]@ ==@ @[%a@]@]@]"
         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_t')
         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,t))
       end;
@@ -1137,55 +1137,61 @@ and elExp' cD cG i =
   | Apx.Comp.Apply (loc, i, e) ->
      dprintf
        (fun p ->
-         p.fmt "[elExp'] Apply at %a" Loc.print_short loc);
-      let (i', tau_theta') = genMApp loc cD (elExp' cD cG i) in
-      let _ = dprint (fun () -> "[elExp'] Apply - generated implicit arguments") in
-        begin match e , tau_theta' with
-          | e , (Int.Comp.TypArr (tau2, tau), theta) ->
-             dprintf
-               begin fun p ->
-               p.fmt "[elExp'] @[<v>i' = @[%a@]@,inferred type: @[%a@]@,\
-                      check argument has type: @[%a@]@,\
-                      result has type: @[%a@]@]"
-                 (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i', Whnf.m_id))
-                 (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (Int.Comp.TypArr (tau2,tau), theta))
-                 (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau2,theta))
-                 (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,theta))
-               end;
-              let tau' = Whnf.cnormCTyp (tau, theta) in
+         p.fmt "[elExp'] Apply at @[%a@]" Loc.print_short loc);
+     let i' = elExp' cD cG i in
+     let (i', tau_theta') = genMApp loc cD i' in
+     dprintf
+       begin fun p ->
+       p.fmt "[elExp'] @[<v>Apply - generated implicit arguments:@,\
+              i' = @[%a@]@]"
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) i'
+       end;
+     begin match e , tau_theta' with
+     | e , (Int.Comp.TypArr (tau2, tau), theta) ->
+        dprintf
+          begin fun p ->
+          p.fmt "[elExp'] @[<v>i' = @[%a@]@,inferred type: @[%a@]@,\
+                 check argument has type: @[%a@]@,\
+                 result has type: @[%a@]@]"
+            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i', Whnf.m_id))
+            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (Int.Comp.TypArr (tau2,tau), theta))
+            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau2,theta))
+            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,theta))
+          end;
+        let tau' = Whnf.cnormCTyp (tau, theta) in
 
-              let e' = elExp cD cG e (tau2, theta) in
+        let e' = elExp cD cG e (tau2, theta) in
 
-              let i'' = Int.Comp.Apply (loc, i', e') in
+        let i'' = Int.Comp.Apply (loc, i', e') in
 
-              (* let tau'' = Whnf.cnormCTyp (tau', Whnf.m_id) in *)
-              dprintf
-                begin fun p ->
-                p.fmt "[elExp'] @[<v>Apply done:@,\
-                       cD = @[%a@]@,\
-                       i'' = @[%a@]@,\
-                       has type: @[%a@]@]"
-                  (P.fmt_ppr_lf_mctx P.l0) cD
-                  (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i'', Whnf.m_id))
-                  (P.fmt_ppr_cmp_typ cD P.l0) tau'
-                end;
-               (*  (i'', (tau, theta))  - not returnig the type in normal form
-      leads to subsequent whnf failure and the fact that indices for context in
-      MetaObj are off *)
-                (i'', (tau', Whnf.m_id))
-          | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
-                let cM = elMetaObj cD mC (ctyp, theta) in
-                (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
-          | _ ->
-             raise
-               ( Check.Comp.Error
-                   ( loc
-                   , Check.Comp.MismatchSyn
-                       (cD, cG, i', Check.Comp.VariantArrow, tau_theta')
-                   )
-               )
-                (* TODO postpone to reconstruction *)
-        end
+        (* let tau'' = Whnf.cnormCTyp (tau', Whnf.m_id) in *)
+        dprintf
+          begin fun p ->
+          p.fmt "[elExp'] @[<v>Apply done:@,\
+                 cD = @[%a@]@,\
+                 i'' = @[%a@]@,\
+                 has type: @[%a@]@]"
+            (P.fmt_ppr_lf_mctx P.l0) cD
+            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i'', Whnf.m_id))
+            (P.fmt_ppr_cmp_typ cD P.l0) tau'
+          end;
+        (*  (i'', (tau, theta))  - not returnig the type in normal form
+            leads to subsequent whnf failure and the fact that indices for context in
+            MetaObj are off *)
+        (i'', (tau', Whnf.m_id))
+     | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (Int.LF.Decl(_,ctyp,_), tau), theta) ->
+        let cM = elMetaObj cD mC (ctyp, theta) in
+        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
+     | _ ->
+        raise
+          ( Check.Comp.Error
+              ( loc
+              , Check.Comp.MismatchSyn
+                  (cD, cG, i', Check.Comp.VariantArrow, tau_theta')
+              )
+          )
+          (* TODO postpone to reconstruction *)
+     end
 
   (* In the following two cases, the substitution is possibly
      representing a *term*. In fact, it must, because afaik BoxVal is

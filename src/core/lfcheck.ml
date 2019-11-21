@@ -495,6 +495,9 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
     | cPsi, Undefs, Null -> ()
     | Null, Shift 0, Null -> ()
 
+    | _, MSVar (offset, mmvar_inst), _ ->
+       Error.violation "[checkSub] encountered MSVar (checking non-whnf substitution)"
+
     | cPhi, SVar (offset, k, s'), cPsi ->
       (*  cD ; cPhi |- SVar (offset, shift, s') : cPsi
           cD(offset) =  Psi'[Phi'] (i.e. Phi'  |- offset  : Psi')

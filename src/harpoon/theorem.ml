@@ -76,7 +76,7 @@ let show_proof (t : t) =
      yet.
    *)
   let s = t.initial_state in
-  printf t "@[<v>Proof so far:@,%a@]"
+  printf t "@[<v>Proof so far:@,%a@,@]"
     (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
 
 let show_subgoals (t : t) =

@@ -48,6 +48,7 @@ module Comp = struct
      *)
 
   open Store.Cid
+  module Loc = Syntax.Loc
   open Syntax.Int.Comp
 
   module S = Substitution
@@ -657,20 +658,45 @@ module Comp = struct
        checkMetaObj cD cM mT t
 
     | Impossible (loc, i), (tau, t) ->
+       dprintf
+         begin fun p ->
+         p.fmt "[syn] [impossible] @[<v>checking (supposedly) impossible expression@,\
+                i = @[%a@]@,\
+                at @[%a@]@]"
+           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+           Loc.print loc
+         end;
        let _, tau_sc, t' = syn cD (cG, cIH) total_decs i in
        let tau_sc = Whnf.cnormCTyp (tau_sc, t') in
+       dprintf
+         begin fun p ->
+         p.fmt "[syn] [impossible] @[<v>synthesized type for scrutinee@,\
+                i = @[%a@]@,\
+                tau_sc[t'] = @[%a@]@]"
+           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+           P.(fmt_ppr_cmp_typ cD l0) tau_sc
+         end;
        let total_pragma, tau_sc, projOpt =
          match i, tau_sc with
          | AnnBox ((l, mC), _), TypBox (loc, mT) ->
+            dprint (fun _ -> "[syn] [impossible] we are splitting on a meta-object");
             let k, mT, projOpt = fixParamTyp mC (Whnf.cnormMetaTyp (mT, C.m_id)) in
             ( decide_ind_maybe (l, mC) k
             , TypBox (loc, mT)
             , projOpt
             )
-         | _, _ -> DataObj, tau_sc, None
+         | _, _ ->
+            dprint (fun _ -> "[syn] [impossible] we are splitting on a comp object");
+            DataObj, tau_sc, None
        in
        if not (Coverage.is_impossible cD tau_sc) then
-         throw loc (NotImpossible (cD, cG, tau_sc, i))
+         throw loc (NotImpossible (cD, cG, tau_sc, i));
+
+       dprintf
+         begin fun p ->
+         p.fmt "[syn] [impossible] passed at %a"
+           Loc.print loc
+         end
 
     | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
        let (total_pragma, tau_sc, projOpt) =

@@ -211,9 +211,7 @@ let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
      cPsi  |- s_proj          : cPhi
      cPsi  |- comp ss' s_proj : cPhi' *)
   let ss_proj = S.LF.comp ss' s_proj in
-  (ss_proj, (cPhi', LF.TClo (tQ, ssi')))
-
-
+  (ss_proj, (cPhi', LF.tclo tQ ssi'))
 
 let eta_expand (tH, tA) =
   let rec eta (tA, s) tS =

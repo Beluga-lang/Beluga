@@ -219,7 +219,8 @@ let eta_expand (tH, tA) =
     | LF.Atom _, s -> LF.Root (Loc.ghost, tH, tS)
     | LF.PiTyp ((LF.TypDecl (x, tB0), _), tB), s ->
        let tM = eta (tB0, s) LF.Nil in
-       LF.Lam (Loc.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS))) in
+       LF.Lam (Loc.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS)))
+  in
   eta (tA, S.LF.id) LF.Nil
 
 (* etaExpandMVstr cPsi sA = tN
@@ -387,7 +388,7 @@ end = struct
     let open Format in
     function
     | Eqn (cg, patt) ->
-       fprintf ppf "%a == %a"
+       fprintf ppf "@[%a@]@ ==@ @[%a@]"
          (fmt_ppr_cov_goal cD) cg
          (fmt_ppr_pattern cD_p) patt
     | _ ->
@@ -396,13 +397,14 @@ end = struct
   let fmt_ppr_equations cD cD_p ppf : eqn list -> unit =
     let open Format in
     fprintf ppf "@[<v>%a@]"
-      (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_equation cD cD_p))
+      (fun ppf ->
+        List.iteri (fun i -> fprintf ppf "%2d. @[%a@]@," (i+1) (fmt_ppr_equation cD cD_p)))
 
   let fmt_ppr_candidate (cD, cG) ppf : candidate -> unit =
     let open Format in
     function
     | Cand (cD_p, cG_p, eqns, splits) ->
-       fprintf ppf "@[<v>@[%a@]; @[%a@]@,@[%a@]; @[%a@] |-@,MATCHES {@,%a@,}@,SPLITS {@,%a@,}@]"
+       fprintf ppf "@[<v>@[%a@]; @[%a@]@,@[%a@]; @[%a@] |-@,MATCHES {@,  @[%a@]@,}@,SPLITS {@,%a@,}@]"
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
          (P.fmt_ppr_lf_mctx P.l0) cD_p
@@ -505,22 +507,26 @@ end = struct
     in
     id t cD'
 
-  let check_branch cD cG tau_sc b =
-    dprintf
-      begin fun p ->
-      let cG = Context.of_list_map cG (fun (x, y, z) -> Comp.CTypDecl (x, y, z)) in
-      p.fmt "@[<v>[trivial check_branch] @[<v>check branch %a@]@]"
-        (P.fmt_ppr_cmp_branch cD cG P.l0) b
-      end;
-    match b with
-    | Comp.Branch (_, cD0, _, patt, t, _) ->
-       begin match patt, tau_sc with
-       | Comp.PatVar _, _ ->
-          is_id cD0 t cD
-       | Comp.PatMetaObj (_, m0), Comp.TypBox (_, mT) ->
-          check_meta_obj cD0 m0 (Whnf.cnormMetaTyp (mT, t)) && is_id cD0 t cD
-       | _ -> false
-       end
+  let rec check_pattern cD cG tau_sc cD_p t = function
+    | Comp.PatAnn (_, patt, _) ->
+       check_pattern cD cG tau_sc cD_p t patt
+    | Comp.PatVar _ -> is_id cD_p t cD
+    | Comp.PatMetaObj (_, mO) ->
+       let Comp.TypBox (_, mT) = tau_sc in
+       check_meta_obj cD_p mO (Whnf.cnormMetaTyp (mT, t)) && is_id cD_p t cD
+    | _ -> false
+
+  let check_branch cD cG tau_sc (Comp.Branch (_, cD_p, _, patt, t, _)) =
+    let b = check_pattern cD cG tau_sc cD_p t patt in
+    if not b then
+      dprintf
+        begin fun p ->
+        let cG = compgctx_of_gctx cG in
+        p.fmt "[check_branch] @[<v>Nontrivial pattern detected:@,\
+               patt = @[%a@]@]"
+          P.(fmt_ppr_cmp_pattern cD_p cG l0) patt
+        end;
+    b
 
   let check cD cG tau_sc =
     List.exists (check_branch cD cG tau_sc)
@@ -721,7 +727,7 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
      | Inst ->
         dprintf
           begin fun p ->
-          p.fmt "[pre_match] Eqn : @[<hv>%a@ == %a@]"
+          p.fmt "[pre_match] Eqn : @[<hov>@[%a@]@ ==@ @[%a@]@]"
             (Prettycov.fmt_ppr_cov_goal cD) covGoal
             (Prettycov.fmt_ppr_pattern cD_p) patt
           end;
@@ -973,6 +979,20 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
     (Comp.PatMetaObj (_, mO'), (Comp.TypBox (_, mT'), t')) ->
      let mT0  = Whnf.cnormMTyp (mT, t) in
      let mT0' = Whnf.cnormMTyp (mT', t') in
+     dprintf begin fun p ->
+       p.fmt "[match_pattern] @[<v>--> match_metaobj for patterns@,\
+              mO  = @[%a@]@,\
+              mO' = @[%a@]@,\
+              and types:@,\
+              mT0  = @[<hov 2>@[%a@] |-@ @[%a@]@]@,\
+              mT0' = @[<hov 2>@[%a@] |-@ @[%a@]@]@]"
+         P.(fmt_ppr_cmp_meta_obj cD l0) mO
+         P.(fmt_ppr_cmp_meta_obj cD_p l0) mO'
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_cmp_meta_typ cD l0) mT0
+         P.(fmt_ppr_lf_mctx l0) cD_p
+         P.(fmt_ppr_cmp_meta_typ cD_p l0) mT0'
+       end;
      match_metaobj cD cD_p (mO, mT0) (mO', mT0') mC sC
 
   | (Comp.PatConst (_, c, pS), (Comp.TypBase _, t)),
@@ -1086,18 +1106,20 @@ let rec genSpine cD cPsi sA tP =
         cPsi |- tN . s <= cPsi', x:A
       *)
      (* let tN = Whnf.etaExpandMV cPsi (tA, s) S.LF.id in *)
-     dprint
-       begin fun _ ->
-       "[genSpine] Pi-type"
-       end;
      let tN = etaExpandMVstr cD cPsi (tA, s) in
+     dprintf
+       begin fun p ->
+       p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
+              tN = @[%a@]@]"
+         P.(fmt_ppr_lf_normal cD cPsi l0) tN
+       end;
      let tS = genSpine cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP in
      LF.App (tN, tS)
 
-  | (LF.Atom (_, a, _) as tQ, s) ->
+  | (LF.Atom (_, _, _) as tQ, s) ->
      dprintf
        begin fun p ->
-       p.fmt "[genSpine] atom type @[%a@]"
+       p.fmt "[genSpine] atomic type @[%a@]"
          (P.fmt_ppr_lf_typ cD cPsi P.l0) tQ
        end;
      U.unifyTyp LF.Empty cPsi (tQ, s) (tP, S.LF.id);
@@ -1118,11 +1140,12 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   (* make a fresh copy of tP[cPsi] *)
   dprintf
     begin fun p ->
-    p.fmt "[genObj] @[cD = %a@]"
-      (P.fmt_ppr_lf_mctx P.l0) cD
+    p.fmt "[genObj] @[cD = %a@,in the beginning there were %d constraints@]"
+      P.(fmt_ppr_lf_mctx l0) cD
+      (List.length !U.globalCnstrs)
     end;
-  (* construct a substitution from cD that maps each contextual
-     variable to an (appropriate) MMVar
+  (* construct a closing substitution for cD that maps each contextual
+     variable to a unification variable (MMVar)
    *)
   let ms = Ctxsub.mctxToMSub cD in
   let tP' = Whnf.cnormTyp (tP, ms) in
@@ -1153,10 +1176,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
    *)
 
   U.forceGlobalCnstr (!U.globalCnstrs);
-  dprint
-    begin fun _ ->
-    "[genObj] global constraints forced!"
-    end;
+  dprint (fun _ -> "[genObj] global constraints forced!");
   let cD', cPsi', tR, tP', ms' =
     try
       Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
@@ -1456,14 +1476,14 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
           | U.Failure "Unresolved constraints" ->
              dprint
                begin fun _ ->
-               "001 – Global constraints failed\n"
+               "001 – Global constraints failed"
                end;
              (* PossSolvable (Cand (cD_p, LF.Empty, mCands, sCands)) *)
              NotSolvable
           | U.GlobalCnstrFailure (_, cnstr) ->
              dprint
                begin fun _ ->
-               "002 – Unification of global constraint " ^ cnstr ^ " failed.\n"
+               "002 – Unification of global constraint " ^ cnstr ^ " failed."
                end;
              NotSolvable
         end
@@ -1525,12 +1545,16 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
         let tA_p' = Whnf.cnormTyp (Whnf.normTyp sA_p, ms) in
         dprintf
           begin fun p ->
-          let dctx = P.fmt_ppr_lf_dctx cD P.l0 in
+          let dctx ppf = function
+            | LF.Null -> Format.fprintf ppf "<empty dctx>"
+            | cPsi -> P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
+          in
           let typ = P.fmt_ppr_lf_typ cD cPsi P.l0 in
           let normal = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-          p.fmt "[solve'] @[<v>@[%a == %a@]@,\
-                 @[%a == %a@]@,\
-                 @[%a == %a@]@]"
+          p.fmt "[solve'] @[<v>trying to match:@,\
+                 dctx: @[<hov>@[%a@]@ ==@ @[%a@]@]@,\
+                 type: @[<hov>@[%a@]@ ==@ @[%a@]@]@,\
+                 term: @[<hov>@[%a@]@ ==@ @[%a@]@]@]"
             dctx cPsi
             dctx cPsi_p'
             typ (Whnf.normTyp sA)
@@ -1541,8 +1565,11 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
         begin
           try
             U.unifyDCtx cD cPsi cPsi_p';
+            dprint (fun _ -> "[solve'] unified dctxs; now trying to match types.");
             U.matchTyp cD cPsi sA (tA_p', S.LF.id);
+            dprint (fun _ -> "[solve'] matched types; now trying to match terms.");
             U.matchTerm cD cPsi (tR, S.LF.id) (tR_p', S.LF.id);
+            dprint (fun _ -> "[solve'] matched terms; now going to solve remaining equations");
             solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
           with
           (* should this case betaken care of during pre_match phase ? *)
@@ -2759,21 +2786,6 @@ let refine ((cD, cG, candidates, patt) as cov_problem) =
        end;
      r_cands
 
-let rec check_all f =
-  function
-  (* iterate through l and collect all open coverage goals;
-     f destructively updates open_cov_problems. *)
-  | [] ->
-     dprintf
-       begin fun p ->
-       p.fmt "*** @[<v>[COVERAGE FAILURE] THERE ARE CASE(S) NOT COVERED:@,\
-              @[%a@]@]"
-         Prettycov.fmt_ppr_open_cov_problems !open_cov_problems
-       end
-  | h :: t ->
-     f h;
-     check_all f t
-
 (* At least one of the candidates in cand_list must be solvable,
    i.e. splitCand = []  and matchCand are solvable
  *)
@@ -2883,9 +2895,7 @@ let rec check_cov_problem cov_problem =
   in
   existsCandidate candidates [] []
 
-and check_coverage (cov_problems : cov_problems) =
-  check_all (function cov_prob -> check_cov_problem cov_prob) cov_problems
-
+and check_coverage x = List.iter check_cov_problem x
 
 (* ****************************************************************************** *)
 
@@ -2913,7 +2923,7 @@ let rec gen_candidates loc cD covGoal =
        begin fun p ->
        p.fmt "[gen_candidates] @[<v>pat = @[%a@]@,pat' = @[%a@]@]"
          (P.fmt_ppr_cmp_pattern cD_p cG_p P.l0) pat
-         (P.fmt_ppr_cmp_pattern cD_p (compgctx_of_gctx cG') P.l0) pat'
+         (P.fmt_ppr_cmp_pattern cD (compgctx_of_gctx cG') P.l0) pat'
        end;
      let ml, sl = match_pattern (cD, cG') (cD_p, cG_p) (pat', ttau') (pat, ttau) [] [] in
      Cand (cD_p, cG_p, ml, sl) :: gen_candidates loc cD covGoal plist
@@ -2963,9 +2973,12 @@ let initialize_coverage problem projOpt : cov_problems =
 
         dprintf
           begin fun p ->
-          p.fmt "[initialize_coverage] @[<v>cD' = @[%a@]@,mC = @[%a@]@]"
+          p.fmt "[initialize_coverage] @[<v>cD' = @[%a@]@,\
+                 mC = @[%a@]@,\
+                 mT = @[%a@]@]"
             (P.fmt_ppr_lf_mctx P.l0) cD'
             (P.fmt_ppr_cmp_pattern cD' (compgctx_of_gctx cG') P.l0) mC
+            P.(fmt_ppr_cmp_typ cD' l0) mT
           end;
         let pat_list = List.map (extract_patterns problem.ctype) problem.branches in
         let cand_list = gen_candidates problem.loc cD' covGoal pat_list in
@@ -3217,18 +3230,25 @@ let covers problem projObj =
      Nontrivial coverage problems are discharged to the main function
      covers'.
    *)
-  if !Total.enabled || !enableCoverage
-  then
-    if TrivialCoverageChecker.check problem.cD problem.cG problem.ctype problem.branches
-    then
-      begin
-        (* print_string "Trival Coverage\n"; *)
-        Success
-      end
-    else
-      covers' problem projObj
-  else
-    Success
+  match () with
+  | _ when not (!Total.enabled || !enableCoverage) ->
+     (* if coverage and totality checking are disabled, then all
+        coverage problems succeed. *)
+     Success
+  | _ when TrivialCoverageChecker.check problem.cD problem.cG problem.ctype problem.branches ->
+     (* The trivial coverage analysis looks for catch-all patterns.
+        In the presence of such a pattern, we don't need to perform a
+        more sophisticated analysis. *)
+     dprintf
+       begin fun p ->
+       p.fmt "[covers] @[<v>the coverage problem is trivial; skipping@,\
+              at: %a@]"
+         Loc.print_short problem.loc
+       end;
+     Success
+  | _ ->
+     dprint (fun _ -> "[covers] the coverage problem is nontrivial");
+     covers' problem projObj
 
 let is_impossible cD tau =
   [] = genPatCGoals cD [] tau []

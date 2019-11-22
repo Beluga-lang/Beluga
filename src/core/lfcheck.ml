@@ -261,7 +261,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
        try
          dprintf
            (fun p ->
-             p.fmt "[ROOT check] %a ; %a |- %a <= %a"
+             p.fmt "[ROOT check] @[<v 2>@[<v>@[%a@];@ @[%a@]@] |-@ @[%a@] <= @[%a@]@]"
                (P.fmt_ppr_lf_mctx P.l0) cD
                (P.fmt_ppr_lf_dctx cD P.l0) cPsi
                (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)

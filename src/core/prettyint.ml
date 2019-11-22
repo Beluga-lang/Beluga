@@ -84,7 +84,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.Atom (_, a, ms) ->
        let cond = lvl > 1 in
-       fprintf ppf "%s%s %a%s"
+       fprintf ppf "%s@[<hov 2>%s@ @[<hov>%a@]@]%s"
          (l_paren_if cond)
          (R.render_cid_typ a)
          (fmt_ppr_lf_spine cD cPsi 2) ms
@@ -317,10 +317,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_spine cD cPsi lvl ppf = function
     | LF.Nil -> ()
     | LF.App(m, LF.Nil) ->
-       fprintf ppf "%a"
+       fprintf ppf "@[%a@]"
          (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
     | LF.App (m, ms) ->
-       fprintf ppf "%a %a"
+       fprintf ppf "@[%a@]@ @[%a@]"
          (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
          (fmt_ppr_lf_spine   cD cPsi lvl) ms
     | LF.SClo (ms, s) ->

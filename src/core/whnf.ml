@@ -1091,14 +1091,14 @@ and whnfTyp (tA, sigma) = match tA with
 (* Check whether constraints are solved *)
 and constraints_solved cnstr = match cnstr with
   | [] -> true
-  | ({contents = Queued} :: cnstrs) ->
+  | ({contents = Queued _} :: cnstrs) ->
       constraints_solved cnstrs
-  | ({contents = Eqn (_cD, _phat, INorm tM, INorm tN)} :: cnstrs) ->
+  | ({contents = Eqn (_, _cD, _phat, INorm tM, INorm tN)} :: cnstrs) ->
       if conv (tM, LF.id) (tN, LF.id) then
         constraints_solved cnstrs
       else
          false
- | ({contents = Eqn (_cD, _phat, IHead h1, IHead h2)} :: cnstrs) ->
+ | ({contents = Eqn (_, _cD, _phat, IHead h1, IHead h2)} :: cnstrs) ->
       if convHead (h1, LF.id) (h2, LF.id) then
         constraints_solved cnstrs
       else false
@@ -1927,8 +1927,10 @@ let mctx_to_list_shifted x =
 let rec etaExpandMV cPsi sA n s' dep =  etaExpandMV' cPsi (whnfTyp sA) n s' dep
 and etaExpandMV' cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMVar (Some (Id.inc n)) (cPsi, TClo(tP,s)) dep in
-        Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
+     let u =
+       newMVar (Some (Id.inc n)) (cPsi, tclo tP s) dep
+     in
+     Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
@@ -1947,8 +1949,10 @@ let rec etaExpandMMV loc cD cPsi sA n s' dep =
 
 and etaExpandMMV' loc cD cPsi sA n s' dep = match sA with
   | (Atom (_, _a, _tS) as tP, s) ->
-      let u = newMMVar (Some (Id.inc n)) (cD , cPsi, TClo(tP,s)) dep in
-        Root (loc, MMVar ((u, m_id), s'), Nil)
+     let u =
+       newMMVar (Some (Id.inc n)) (cD , cPsi, tclo tP s) dep
+     in
+     Root (loc, MMVar ((u, m_id), s'), Nil)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
       Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)

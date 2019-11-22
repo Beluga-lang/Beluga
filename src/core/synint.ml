@@ -134,9 +134,12 @@ module LF = struct
 
   and typ_free_var = Type of typ | TypVar of tvar
 
-  and constrnt =                             (* Constraint                     *)
-    | Queued                                 (* constraint ::= Queued          *)
-    | Eqn of mctx * dctx * iterm * iterm     (*            | Delta; Psi |-(M1 == M2)  *)
+  (* unique identifiers attached to constraints, used for debugging *)
+  and constrnt_id = int
+
+  and constrnt =                                       (* Constraint                     *)
+    | Queued of constrnt_id                            (* constraint ::= Queued          *)
+    | Eqn of constrnt_id * mctx * dctx * iterm * iterm (*            | Delta; Psi |-(M1 == M2)  *)
 
   and cnstr = constrnt ref
 
@@ -296,6 +299,10 @@ module LF = struct
        Some (x, Some k)
 
     | _ -> None
+
+  let get_constraint_id = function
+    | Eqn (id, _, _, _, _) -> id
+    | Queued id -> id
 end
 
 (* Internal Computation Syntax *)

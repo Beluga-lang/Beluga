@@ -253,20 +253,17 @@ let etaExpandHead loc h tA =
 
 let rec constraints_solved cnstr = match cnstr with
   | [] -> true
-  | ({contents = I.Queued} :: cnstrs) ->
+  | {contents = I.Queued _} :: cnstrs ->
       constraints_solved cnstrs
-  | ({contents = I.Eqn (_cD, cPsi, tM, tN)} :: cnstrs) ->
-     if Whnf.convITerm tM tN
-     then constraints_solved cnstrs
-     else
-       let _ =
-         dprintf
-           (fun p ->
-             p.fmt "@[<v 2>Encountered unsolved constraint:@,%a == %a@]@,"
-               (P.fmt_ppr_lf_iterm I.Empty cPsi P.l0) tM
-               (P.fmt_ppr_lf_iterm I.Empty cPsi P.l0) tN)
-       in
-       false
+  | {contents = I.Eqn (_, _, _, tM, tN)} :: cnstrs when Whnf.convITerm tM tN ->
+     constraints_solved cnstrs
+  | {contents = c} :: _ ->
+     dprintf
+       begin fun p ->
+       p.fmt "[constraints_solved] @[<v 2>Encountered unsolved constraint:@,@[%a@]@]"
+         P.fmt_ppr_lf_constraint c
+       end;
+     false
 
 (* Check that a synthesized computation-level type is free of constraints *)
 let rec cnstr_ctyp tau =  match tau  with

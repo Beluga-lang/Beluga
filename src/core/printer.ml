@@ -36,27 +36,29 @@ module Int = struct
     val fmt_ppr_sgn_decl      : formatter -> Sgn.decl  -> unit
 
     (* LF printers *)
-    val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
-    val fmt_ppr_lf_depend     : depend_print_style -> formatter -> LF.depend -> unit
-    val fmt_ppr_lf_kind       : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl  : ?printing_holes:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
-    val fmt_ppr_lf_typ_rec    : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
-    val fmt_ppr_lf_typ        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
-    val fmt_ppr_lf_mtyp       : LF.mctx                    -> formatter -> LF.ctyp  -> unit
-    val fmt_ppr_lf_tuple      : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
-    val fmt_ppr_lf_normal     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
-    val fmt_ppr_lf_head       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
-    val fmt_ppr_lf_spine      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
-    val fmt_ppr_lf_sub        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
-    val fmt_ppr_lf_schema     : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
-    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
-    val fmt_ppr_lf_dctx_hat   : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_dctx       : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
-    val fmt_ppr_lf_ctx_var    : LF.mctx -> formatter -> LF.ctx_var -> unit
-    val fmt_ppr_lf_mfront     : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
-    val fmt_ppr_lf_iterm      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit
-    val fmt_ppr_lf_msub       : LF.mctx -> lvl -> formatter -> LF.msub -> unit
+    val fmt_ppr_lf_svar_class  : formatter -> LF.svar_class -> unit
+    val fmt_ppr_lf_depend      : depend_print_style -> formatter -> LF.depend -> unit
+    val fmt_ppr_lf_kind        : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
+    val fmt_ppr_lf_ctyp_decl   : ?printing_holes:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_typ_rec     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
+    val fmt_ppr_lf_typ         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_mtyp        : LF.mctx                    -> formatter -> LF.ctyp  -> unit
+    val fmt_ppr_lf_tuple       : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
+    val fmt_ppr_lf_normal      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
+    val fmt_ppr_lf_head        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
+    val fmt_ppr_lf_spine       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
+    val fmt_ppr_lf_sub         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
+    val fmt_ppr_lf_schema      : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
+    val fmt_ppr_lf_sch_elem    : lvl -> formatter -> LF.sch_elem   -> unit
+    val fmt_ppr_lf_dctx_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
+    val fmt_ppr_lf_dctx        : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
+    val fmt_ppr_lf_mctx        : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_ctx_var     : LF.mctx -> formatter -> LF.ctx_var -> unit
+    val fmt_ppr_lf_mfront      : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
+    val fmt_ppr_lf_iterm       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit
+    val fmt_ppr_lf_constraint  : formatter -> LF.constrnt -> unit
+    val fmt_ppr_lf_constraints : formatter -> LF.cnstr list -> unit
+    val fmt_ppr_lf_msub        : LF.mctx -> lvl -> formatter -> LF.msub -> unit
 
     (** Prints a typing judgment for an msub: cD' |- theta : cD *)
     val fmt_ppr_lf_msub_typing : formatter -> LF.mctx * LF.msub * LF.mctx -> unit

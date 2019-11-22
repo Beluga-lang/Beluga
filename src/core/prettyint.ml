@@ -831,6 +831,29 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_lf_msub cD' l0) t
       (fmt_ppr_lf_mctx l0) cD
 
+  let fmt_ppr_lf_constraint ppf =
+    let open Format in
+    function
+    | LF.Queued id ->
+       fprintf ppf "@[QUEUED %d@]" id
+    | LF.(Eqn (id, cD, cPsi, INorm tM1, INorm tM2)) ->
+       fprintf ppf "@[%d.@ @[<v>@[%a@]@ =@ @[%a@]@]@]"
+         id
+         (fmt_ppr_lf_normal cD cPsi l0) tM1
+         (fmt_ppr_lf_normal cD cPsi l0) tM2
+    | LF.(Eqn (id, cD, cPsi, IHead h1, IHead h2)) ->
+       fprintf ppf "@[%d.@ @[<v>@[%a@]@ =@ @[%a@]@]@]"
+         id
+         (fmt_ppr_lf_head cD cPsi l0) h1
+         (fmt_ppr_lf_head cD cPsi l0) h2
+
+  let fmt_ppr_lf_constraints ppf =
+    let open Format in
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list
+         ~pp_sep: pp_print_cut
+         (fun ppf x -> fmt_ppr_lf_constraint ppf !x))
+
   (* Computation-level *)
   let rec fmt_ppr_cmp_kind cD lvl ppf = function
     | Comp.Ctype _ -> fprintf ppf "ctype"

@@ -20,6 +20,15 @@ module Loc = Location
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [15])
 open Debug.Fmt
 
+(** Call when creating a new constraint so constraints can have a
+    recognizable identity in debug messages.
+ *)
+let next_constraint_id =
+  let counter = ref 0 in
+  fun () ->
+  incr counter;
+  !counter
+
 let numPruneSub = ref 0
 
 (* let print_trail () =
@@ -122,26 +131,6 @@ module Make (T : TRAIL) : UNIFY = struct
     | (MMVarRef r, MMVarRef r') -> r == r'
 
 (* Printing of constraints *)
-  let rec fmt_ppr_constraints ppf =
-    let open Format in
-    fprintf ppf "@[<v>%a@]"
-      (pp_print_list
-         ~pp_sep: pp_print_cut
-         (fun ppf x -> fmt_ppr_constraint ppf !x))
-
-  and fmt_ppr_constraint ppf =
-    let open Format in
-    function
-    | Queued -> ()
-    | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
-       fprintf ppf "@[%a = %a@]"
-         (P.fmt_ppr_lf_normal cD cPsi P.l0) tM1
-         (P.fmt_ppr_lf_normal cD cPsi P.l0) tM2
-    | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
-       fprintf ppf "@[%a = %a@]"
-         (P.fmt_ppr_lf_head cD cPsi P.l0) h1
-         (P.fmt_ppr_lf_head cD cPsi P.l0) h2
-
 let rec blockdeclInDctx cPsi = match cPsi with
   | Null -> false
   | CtxVar psi -> false
@@ -378,10 +367,17 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
   let unwind () = T.unwind globalTrail undo
 
   let solvedCnstrs cnstrs =
-      List.for_all (fun c -> !c = Queued) cnstrs
+    List.for_all
+      begin fun c ->
+      match !c with
+      | Queued _ -> true
+      | _ -> false
+      end
+      cnstrs
 
   let solveConstraint ({contents=constrnt} as cnstr) =
-    cnstr := Queued;
+    let id = get_constraint_id constrnt in
+    cnstr := Queued id; (* replace the constraint with a queued counterpart *)
     T.log globalTrail (Solve (cnstr, constrnt))
 
   (* trail a function;
@@ -420,17 +416,11 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
   let resetGlobalCnstrs () = globalCnstrs := []
 
   let addConstraint (cnstrs, cnstr) =
-    begin
-      match !cnstr with
-      | (Eqn (cD0, cPsi, INorm tM, INorm tN)) ->
-         dprintf
-           (fun p ->
-             p.fmt "@[<v 2>[addConstraint] adding@,%a = %a@]"
-               (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM
-               (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tN);
-      | _ ->
-         dprint (fun () -> "[addConstraint] adding queued constraint")
-    end;
+    dprintf
+      begin fun p ->
+      p.fmt "[addConstraint] @[<v 2>adding@,@[%a@]@]"
+        P.fmt_ppr_lf_constraint !cnstr
+      end;
     cnstrs := cnstr :: !cnstrs;
     globalCnstrs := cnstr :: !globalCnstrs;
     T.log globalTrail (Add cnstrs)
@@ -1511,10 +1501,12 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
   let rec unifyTerm  mflag cD0 cPsi sN sM =
     dprintf
-      (fun p ->
-        p.fmt "Unifying terms: %a =?= %a"
-          (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sN)
-          (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sM));
+      begin fun p ->
+      p.fmt "[unifyTerm] @[<v>unifying:@,\
+             @[  @[<v>@[%a@]@ =?=@ @[%a@]@]@]@]"
+        (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sN)
+        (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sM)
+      end;
     unifyTerm'  mflag cD0 cPsi (Whnf.norm (Whnf.whnf sN)) (Whnf.norm (Whnf.whnf sM))
 
   and unifyTuple mflag cD0 cPsi sTup1 sTup2 = match (sTup1, sTup2) with
@@ -1780,7 +1772,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             )
        | (_, _) ->
           if not (Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2) then
-            addConstraint (mmvar1.constraints, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
+            let id = next_constraint_id () in
+            addConstraint (mmvar1.constraints, ref (Eqn (id, cD0, cPsi, INorm sN, INorm sM)))
        end
 
     (* MVar-normal case *)
@@ -1800,7 +1793,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                 (P.fmt_ppr_lf_normal cD0 cPsi P.l0) sM1);
           unifyTerm mflag cD0 cPsi (sM1, id) (sM2, id)
        | None ->
-          addConstraint (i.constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+          let id = next_constraint_id () in
+          addConstraint (i.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
     | (sM2, ((Root (_, MVar (Inst i, t), _tS)) as sM1)) when isRenameSub cD0 t ->
@@ -1816,13 +1810,15 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                  (P.fmt_ppr_lf_normal cD0 cPsi P.l0) sM1);
            unifyTerm mflag cD0 cPsi (sM1, id) (sM2, id)
         | None ->
-           addConstraint (i.constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+           let id = next_constraint_id () in
+           addConstraint (i.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
         end
 
 
     | ((Root (_, MVar (Inst mmvar, _), _tS)) as sM1, sM2)
-    | (sM2, ((Root (_, MVar (Inst mmvar, _), _tS)) as sM1))
-      -> addConstraint (mmvar.constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+    | (sM2, ((Root (_, MVar (Inst mmvar, _), _tS)) as sM1)) ->
+       let id = next_constraint_id () in
+       addConstraint (mmvar.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
 
@@ -1839,7 +1835,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
               | (true, true, true, true) ->
                 unifyMMVarMMVar cPsi loc1 q1 q2
               | (_, _, _, _) ->
-                  addConstraint (mmvar1.constraints, ref (Eqn (cD0, cPsi, INorm sN, INorm sM)))
+                 let id = next_constraint_id () in
+                 addConstraint (mmvar1.constraints, ref (Eqn (id, cD0, cPsi, INorm sN, INorm sM)))
        end
 
 
@@ -1871,9 +1868,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
              end
          with
            _ ->
+           let id = next_constraint_id () in
            addConstraint
              ( mmvar2.constraints
-             , ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2))
+             , ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2))
              )
        end
 
@@ -1897,9 +1895,13 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                    unifyMMVarTermProj cD0 cPsi i' mt2 t2 sM1
                 | ( true, true , _ , _ ) ->
                    unifyMMVarTermProj cD0 cPsi i mt1 t1 sM2
-                | _ -> addConstraint (i.constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+                | _ ->
+                   let id = next_constraint_id () in
+                   addConstraint (i.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
            end
-         with NotInvertible -> addConstraint (i.constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+         with NotInvertible ->
+           let id = next_constraint_id () in
+           addConstraint (i.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
     (* MMVar-normal case *)
@@ -1913,7 +1915,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            unifySub mflag cD0 cPsi s1 EmptySub;
            instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS'), !constraints)
          with _ ->
-           addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+           let id = next_constraint_id () in
+           addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
     (* Special case to handle: M[#S[]] = ?M[#?S[]] *)
@@ -1939,7 +1942,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            unifyDCtx1 mflag cD0 cPsi1 cPsi;unifyTyp mflag cD0 cPsi (tP,id) (tQ,id);
            unifySub mflag cD0 cPsi s1 s2;
            instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS'), !constraints)
-         with _ -> addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm sM1, INorm sM2)))
+         with _ ->
+           let id = next_constraint_id () in
+           addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
     | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; depend; _} as i, mt), s), _tS)) as tM1, tM2)
@@ -1971,8 +1976,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                dprint (fun () -> "Calling unifyMMVarTermProj ...");
                unifyMMVarTermProj cD0 cPsi i mt s tM2
              with NotInvertible ->
-               (dprint (fun () -> "(010) Add constraints ");
-                addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
+               let id = next_constraint_id () in
+               dprint (fun () -> "(010) Add constraints ");
+               addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm tM1, INorm tM2)))
            end
         | () when isRenameSub cD0 s && isPatMSub mt ->
            begin match ground_sub cD0 s, tM2, mt with
@@ -2005,7 +2011,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                       f tM1
                       f tM2
                     end;
-                 addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2)))
+                  let id = next_constraint_id () in
+                  addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm tM1, INorm tM2)))
                 end
            | _ , _ , _ ->
               dprnt "craftMMV...";
@@ -2018,12 +2025,13 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                         f tM1 f tM1 f tM2);
                   unifyTerm mflag cD0 cPsi (tM1, id) (tM2, id))
               | None ->
-                 (dprintf
-                    (fun p ->
-                      let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
-                      p.fmt "(0111) Add constraints - @[<v>craftMMV failed:@,%a = %a@]"
-                        f tM1 f tM2);
-                  addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2))))
+                 dprintf
+                   (fun p ->
+                     let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
+                     p.fmt "(0111) Add constraints - @[<v>craftMMV failed:@,%a = %a@]"
+                       f tM1 f tM2);
+                 let id = next_constraint_id () in
+                 addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm tM1, INorm tM2)))
               end
            end
         | () ->
@@ -2032,17 +2040,20 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
                p.fmt "(011) @[<v>Add constraints:@,%a = %a@]"
                  f tM1 f tM2);
-           addConstraint (constraints, ref (Eqn (cD0, cPsi, INorm tM1, INorm tM2)))
+           let id = next_constraint_id () in
+           addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm tM1, INorm tM2)))
         end
 
     | (Root(_, h1,tS1) as sM1, (Root(_, h2, tS2) as sM2)) ->
         dprnt "(020) Root-Root";
         dprintf
-          (fun p ->
-            let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
-            p.fmt "UNIFY: @[<v>normal - normal (non MVar cases)@,%a |- %a == %a "
-              (P.fmt_ppr_lf_mctx P.l0) cD0
-              f sM1 f sM2);
+          begin fun p ->
+          let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
+          p.fmt "UNIFY: @[<v>normal - normal (non MVar cases)@,\
+                 @[  @[<v 2>@[%a@] |-@ @[<v>@[%a@]@ ==@ @[%a@]@]@]@]@]"
+            (P.fmt_ppr_lf_mctx P.l0) cD0
+            f sM1 f sM2
+          end;
 
         (* s1 = s2 = id by whnf *)
         unifyHead  mflag cD0 cPsi h1 h2;
@@ -2100,7 +2111,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        begin match (isPatMSub mt1, isPatSub s1,  isPatMSub mt2, isPatSub s2) with
        | ( true, true, true, true ) -> unifyMMVarMMVar cPsi Syntax.Loc.ghost i1 i2
        | (_, _, _, _) ->
-          addConstraint (mmvar1.constraints, ref (Eqn (cD0, cPsi, IHead head2, IHead head1)))
+          let id = next_constraint_id () in
+          addConstraint (mmvar1.constraints, ref (Eqn (id, cD0, cPsi, IHead head2, IHead head1)))
        end
     | (MPVar (({ typ = ClTyp (PTyp tA1, cPsi1); _ } as i1, mt1), s1) ,
        MPVar (({ typ = ClTyp (PTyp tA2, cPsi2); _ } as i2, mt2), s2) ) ->
@@ -2114,9 +2126,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           unifyMMVarTerm cD0 cPsi i2 mt2 s2 (IHead head1)
 
        | (_, _, _ , _ ) ->
+          let id = next_constraint_id () in
           addConstraint
             ( i1.constraints
-            , ref (Eqn (cD0, cPsi, IHead head1, IHead head2))
+            , ref (Eqn (id, cD0, cPsi, IHead head1, IHead head2))
             )
        end
 
@@ -2233,7 +2246,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           when isPatSub s && isPatMSub mt -> unifyMMVarTerm cD0 cPsi q mt s (ISub s2)
 
       | (MSVar (_, ((mmvar,_),_)) , _ ) | ( _ , MSVar (_, ((mmvar,_),_))) ->
-         addConstraint (mmvar.constraints, ref (Eqn (cD0, cPsi, ISub s1, ISub s2)))
+         let id = next_constraint_id () in
+         addConstraint (mmvar.constraints, ref (Eqn (id, cD0, cPsi, ISub s1, ISub s2)))
 
       | (EmptySub, _) -> ()
       | (_,EmptySub) -> ()
@@ -2304,19 +2318,20 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
    and unifyTyp mflag cD0 cPsi sA sB = unifyTypW mflag cD0 cPsi (Whnf.whnfTyp sA) (Whnf.whnfTyp sB)
 
     and unifyTypW mflag cD0 cPsi sA sB = match (sA, sB) with
-      | ((Atom (_, (a, b), tS1), s1),   (Atom (_, (a', b'), tS2), s2))  ->
-          if a = a' && b = b' then
-            ((* dprint (fun () -> "Unify Atomic types " ^ P.typToString cD0 cPsi sA
-                       ^ " == " ^ P.typToString cD0 cPsi sB);*)
-            unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2))
-          else
-            (dprintf
-               (fun p ->
-                 let f ppf x =
-                   P.fmt_ppr_lf_typ cD0 cPsi P.l0 ppf (Whnf.normTyp x)
-                 in
-                 p.fmt "UnifyTyp %a ==== %a" f sA f sB);
-            raise (Failure "Type constant clash"))
+      | ((Atom (_, (a, b), tS1), s1),
+         (Atom (_, (a', b'), tS2), s2))
+           when a = a' && b = b' ->
+         unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
+
+      | ((Atom (_, _, _), _), (Atom (_, _, _), _)) ->
+         dprintf
+           begin fun p ->
+           let f ppf x =
+             P.fmt_ppr_lf_typ cD0 cPsi P.l0 ppf (Whnf.normTyp x)
+           in
+           p.fmt "UnifyTyp %a ==== %a" f sA f sB
+           end;
+         raise (Failure "Type constant clash")
 
       | ((PiTyp ((TypDecl(x, tA1), dep), tA2), s1), (PiTyp ((TypDecl(_x, tB1), _dep), tB2), s2)) ->
           unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2) ;
@@ -2629,147 +2644,180 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     and forceCnstr mflag constrnt = match constrnt with
       | None       -> () (* dprint (fun () -> "All constraints forced.") *)  (* all constraints are forced *)
       | Some cnstr ->
-          (dprint (fun () -> "Found constraint ...\n");
-          begin match !cnstr with
-            | Queued (* in process elsewhere *) ->
-                (dprint (fun () -> "Constraint is queued\n") ;
-                forceCnstr mflag (nextCnstr ()))
-            | Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
-                let _ = solveConstraint cnstr in
-                (* let tM1 = Whnf.norm (tM1, id) in
-                   let tM2 = Whnf.norm (tM2, id) in   *)
-                (dprintf
-                   (fun p ->
-                     let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                     p.fmt "Solve constraint (N): %a = %a" f tM1 f tM2);
-                   (if Whnf.conv (tM1, id) (tM2, id) then
-                      dprint (fun () ->  "Constraint is  trivial...")
-                   else
-                     (dprint (fun () ->  "Use unification on them...");
-                      unify1 mflag cD cPsi (tM1, id) (tM2, id);
-                      dprintf
-                        (fun p ->
-                          let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                          p.fmt "@[<v 2>Solved constraint (N):@,%a = %a@]"
-                            f tM1 f tM2));
-                  );
-                  forceCnstr mflag (nextCnstr ()))
-            | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
-                let _ = solveConstraint cnstr in
-                (dprintf
-                   (fun p ->
-                     let f = P.fmt_ppr_lf_head cD cPsi P.l0 in
-                     p.fmt "Solve constraint (H): %a = %a"
-                       f h1 f h2);
-                 unifyHead mflag cD cPsi h1 h2 ;
-                 dprintf
-                   (fun p ->
-                     let f = P.fmt_ppr_lf_head cD cPsi P.l0 in
-                     p.fmt "Solved constraint (H): %a = %a"
-                       f h1 f h2);
-                 forceCnstr mflag (nextCnstr ()))
-          end )
+         dprint (fun () -> "Found constraint ...\n");
+         begin match !cnstr with
+         | Queued id (* in process elsewhere *) ->
+            dprintf
+              begin fun p ->
+              p.fmt "[forceCnstr] constraint %d is queued" id
+              end;
+            forceCnstr mflag (nextCnstr ())
+         | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) as c ->
+            let _ = solveConstraint cnstr in
+            (* let tM1 = Whnf.norm (tM1, id) in
+               let tM2 = Whnf.norm (tM2, id) in   *)
+            dprintf
+              begin fun p ->
+              p.fmt "[forceCnstr] @[<v 2>solving constraint (normal):@,\
+                     @[<v 2>c =@ @[%a@]@]@]" P.fmt_ppr_lf_constraint c
+              end;
+            if Whnf.conv (tM1, id) (tM2, id) then
+              dprintf
+                begin fun p ->
+                p.fmt "[forceCnstr] constraint %d is trivial" c_id
+                end
+            else
+              begin
+                dprintf
+                  begin fun p ->
+                  p.fmt "[forceCnstr] try unification on constraint %d"
+                    c_id
+                  end;
+                unify1 mflag cD cPsi (tM1, id) (tM2, id);
+                dprintf
+                  begin fun p ->
+                  p.fmt "@[<v 2>solved constraint (normal):@,\
+                         @[<v 2>c = @ @[%a@]@]@]"
+                    P.fmt_ppr_lf_constraint c
+                  end
+              end;
+            forceCnstr mflag (nextCnstr ())
+         | Eqn (id, cD, cPsi, IHead h1, IHead h2) as c ->
+            let _ = solveConstraint cnstr in
+            dprintf
+               begin fun p ->
+                 p.fmt "[forceCnstr] @[<v 2>solve constraint (head):@,\
+                        @[%a@]@]"
+                   P.fmt_ppr_lf_constraint c
+               end;
+            unifyHead mflag cD cPsi h1 h2 ;
+            dprintf
+              begin fun p ->
+              p.fmt "[forceCnstr] @[<v 2>Solved constraint (head):@,\
+                     @[%a@]@]"
+                P.fmt_ppr_lf_constraint c
+              end;
+            forceCnstr mflag (nextCnstr ())
+         end
 
-    and forceGlobalCnstr cnstr      =
-        (resetGlobalCnstrs ();
-        forceGlobalCnstr' cnstr;
-        begin match !globalCnstrs with
-          | [] -> ()
-          | _ -> raise (Failure "Unresolved constraints")
-        end)
+    and forceGlobalCnstr cnstr =
+      resetGlobalCnstrs ();
+      forceGlobalCnstr' cnstr;
+      match !globalCnstrs with
+      | [] -> ()
+      | _ -> raise (Failure "Unresolved constraints")
 
     and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()
       | c::cnstrs ->
          match !c with
-         | Queued (* in process elsewhere *) -> forceGlobalCnstr cnstrs
-         |  Eqn (cD, cPsi, INorm tM1, INorm tM2) ->
-             let _ = solveConstraint c in
-             let l = List.length (!globalCnstrs) in
-             dprintf
-               (fun p ->
-                 let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                 p.fmt "[forceGlobalCnstr'] @[<v>Solve global constraint:@,%a = %a@]"
-                   f tM1 f tM2
-               );
-             if Whnf.conv (tM1, id) (tM2, id) then
-               (* Note: we test whether tM1 and tM2 are
-                  convertible because some terms which fall
-                  outside of the pattern fragment are convertible,
-                  but not unifiable *)
-               (dprint  (fun () -> "[forceGlobalCnstr'] Constraints are convertible (whnf).");
-                forceGlobalCnstr' cnstrs)
-             else
-               begin
-                 try
-                   dprintf
-                     (fun p ->
-                       p.fmt "[forceGlobalCnstr'] @[<v>Existing Set of constraints (BEFORE UNIFY):@,%a@]"
-                         fmt_ppr_constraints !globalCnstrs);
-                   unify1 Unification cD cPsi (tM1, id) (tM2, id);
-                   (* if l = List.length (!globalCnstrs) then *)
-                   if solvedCnstrs (!globalCnstrs) then
-                     begin
-                       dprintf
-                         (fun p ->
-                           let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                           p.fmt "[forceGlobalCnstr'] @[<v>Solved global constraint (DONE):@,%a = %a@]"
-                           f tM1 f tM2);
-                       forceGlobalCnstr' cnstrs
-                     end
-                   else
-                     begin
-                       dprint
-                         (fun _ ->
-                           "[forceGlobalCnstr'] New constraints generated? "
-                           ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
-                       dprintf
-                         (fun p ->
-                           p.fmt "[forceGlobalCnstr'] @[<v>New set of constraints:@,%a@]"
-                             fmt_ppr_constraints (!globalCnstrs));
-                       raise (Failure "[forceGlobalCnstr'] Constraints generated")
-                     end
-                 with Failure _ ->
-                   let cnstr_string =
-                     let open Format in
-                     let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                     fprintf str_formatter "%a =/= %a" f tM1 f tM2;
-                     flush_str_formatter ()
-                   in
-                   let getLoc tM1 =
-                     match tM1 with
-                     | Root(loc, _, _ ) -> loc
-                     | Lam (loc, _ , _ ) -> loc
-                     | Tuple (loc, _ ) -> loc
-                   in
-                   raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
-               end
-         | Eqn (cD, cPsi, IHead h1, IHead h2)   ->
+         | Queued id (* in process elsewhere *) -> forceGlobalCnstr cnstrs
+         | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) as c' ->
+            solveConstraint c;
+            let l = List.length (!globalCnstrs) in
+            dprintf
+              begin fun p ->
+              p.fmt "[forceGlobalCnstr'] @[<v>@[<v 2>Solve global constraint:@,\
+                     @[%a@]@]@,\
+                     There are %d global constraints right now.@]"
+                P.fmt_ppr_lf_constraint c'
+                l
+              end;
+            if Whnf.conv (tM1, id) (tM2, id) then
+              (* Note: we test whether tM1 and tM2 are
+                 convertible because some terms which fall
+                 outside of the pattern fragment are convertible,
+                 but not unifiable *)
+              begin
+                dprintf
+                  begin fun p ->
+                  p.fmt "[forceGlobalCnstr'] constraint %d is convertible (whnf)."
+                    c_id
+                  end;
+                forceGlobalCnstr' cnstrs
+              end
+            else
+              begin
+                try
+                  dprintf
+                    begin fun p ->
+                    p.fmt "[forceGlobalCnstr'] @[<v 2>Existing Set of constraints (BEFORE UNIFY):@,@[%a@]@]"
+                      P.fmt_ppr_lf_constraints !globalCnstrs
+                    end;
+                  unify1 Unification cD cPsi (tM1, id) (tM2, id);
+                  (* if l = List.length (!globalCnstrs) then *)
+                  if solvedCnstrs (!globalCnstrs) then
+                    begin
+                      dprintf
+                        begin fun p ->
+                        p.fmt "[forceGlobalCnstr'] @[<v 2>Solved global constraint (DONE):@,@[%a@]@]"
+                          P.fmt_ppr_lf_constraint c'
+                        end;
+                      forceGlobalCnstr' cnstrs
+                    end
+                  else
+                    begin
+                      dprint
+                        (fun _ ->
+                          "[forceGlobalCnstr'] New constraints generated? "
+                          ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
+                      dprintf
+                        begin fun p ->
+                        p.fmt "[forceGlobalCnstr'] @[<v 2>New set of constraints:@,@[%a@]@]"
+                          P.fmt_ppr_lf_constraints (!globalCnstrs)
+                        end;
+                      raise (Failure "[forceGlobalCnstr'] Constraints generated")
+                    end
+                with Failure msg ->
+                  let cnstr_string =
+                    let open Format in
+                    let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
+                    fprintf str_formatter "@[<v>%d. @[<v>@[%a@]@ =/=@ @[%a@]@]@,@[%a@]@]"
+                      c_id
+                      f tM1
+                      f tM2
+                      pp_print_string msg;
+                    flush_str_formatter ()
+                  in
+                  let getLoc tM1 =
+                    match tM1 with
+                    | Root(loc, _, _ ) -> loc
+                    | Lam (loc, _ , _ ) -> loc
+                    | Tuple (loc, _ ) -> loc
+                  in
+                  raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
+              end
+         | Eqn (c_id, cD, cPsi, IHead h1, IHead h2)   ->
             let _ = solveConstraint c in
             let l = List.length (!globalCnstrs) in
             let f = P.fmt_ppr_lf_head cD cPsi P.l0 in
-            (dprintf
-               (fun p ->
-                 p.fmt "Solve global constraint (H): %a = %a" f h1 f h2);
-             begin
-               try
-                 unifyHead Unification cD cPsi h1 h2;
-                 if l = List.length (!globalCnstrs) then
-                   (dprintf
-                      (fun p ->
-                        p.fmt "Solved global constraint (H): %a = %a" f h1 f h2);
-                    forceGlobalCnstr' cnstrs)
-                 else raise (Failure "Constraints generated")
-               with Failure _ ->
-                 let cnstr_string =
-                   let open Format in
-                   fprintf str_formatter "%a =/= %a" f h1 f h2;
-                   flush_str_formatter ()
-                 in
-                 let loc = Syntax.Loc.ghost in
-                 raise (GlobalCnstrFailure (loc, cnstr_string))
-             end)
-         | Eqn (cD, cPsi, ISub s1, ISub s2) ->
+            dprintf
+              begin fun p ->
+              p.fmt "Solve global constraint (H): %a = %a" f h1 f h2
+              end;
+            begin
+              try
+                unifyHead Unification cD cPsi h1 h2;
+                if l = List.length (!globalCnstrs) then
+                  let _ =
+                    dprintf
+                      begin fun p ->
+                      p.fmt "Solved global constraint (H): %a = %a" f h1 f h2
+                      end
+                  in
+                  forceGlobalCnstr' cnstrs
+                else
+                  raise (Failure "Constraints generated")
+              with Failure _ ->
+                let cnstr_string =
+                  let open Format in
+                  fprintf str_formatter "%a =/= %a" f h1 f h2;
+                  flush_str_formatter ()
+                in
+                let loc = Syntax.Loc.ghost in
+                raise (GlobalCnstrFailure (loc, cnstr_string))
+            end
+         | Eqn (c_id, cD, cPsi, ISub s1, ISub s2) ->
             let _ = solveConstraint c in
             begin try
                 (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)
@@ -2941,6 +2989,18 @@ let unify_phat psihat phihat =
         unifyTypRec' Unification cD0 cPsi sArec sBrec
 
     let unifyTyp cD0 cPsi sA sB =
+      dprintf
+        begin fun p ->
+        p.fmt "[unifyTyp] @[<v>unifying LF types:@,\
+               s_1[A] = @[%a@]@,\
+               s_2[B] = @[%a@]@,\
+               in cD = @[%a@]@,\
+               and cPsi = @[%a@]@]"
+          P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sA)
+          P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sB)
+          P.(fmt_ppr_lf_mctx l0) cD0
+          P.(fmt_ppr_lf_dctx cD0 l0) cPsi
+        end;
       unifyTyp' Unification cD0 cPsi sA sB
 
 

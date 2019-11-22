@@ -175,6 +175,12 @@ module LF = struct
 
   and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
+  (** Helper for forming TClo LF types, which avoids doing so if the
+      substitution is the identity.
+   *)
+  let tclo tA s = match s with
+    | Shift 0 -> tA
+    | _ -> TClo (tA, s)
 
   let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
 

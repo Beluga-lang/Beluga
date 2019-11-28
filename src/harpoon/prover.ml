@@ -31,7 +31,7 @@ let _ =
       end
     end
 
-type input_source = string Gen.t
+type prompt = string -> string option -> unit -> string option
 
 module Prover = struct
   open Theorem
@@ -41,12 +41,9 @@ module Prover = struct
     (* ^ The theorems currently being proven. *)
     
     ; automation_state : Automation.automation_state
-    ; input_source : input_source
+    ; prompt : prompt
     ; ppf : Format.formatter
     }
-
-  let next_input s =
-    Maybe.get' EndOfInput (Gen.next s.input_source)
 
   let printf (s : state) x =
     Format.fprintf s.ppf x
@@ -65,12 +62,12 @@ module Prover = struct
     
   let make_state
         (ppf : Format.formatter)
-        (input_source : input_source)
+        (prompt : prompt)
       : state =
     let theorems = DynArray.make 16 in
     { theorems
     ; automation_state = Automation.make_automation_state ()
-    ; input_source
+    ; prompt
     ; ppf
     }
 
@@ -270,25 +267,25 @@ module Prover = struct
       In case of a parse error, the prompt is repeated.
       The user can abort the prompt by giving an empty string.
    *)
-  let rec prompt s msg (p : 'a B.Parser.t) : 'a option =
-    printf s "%s: @?" msg;
-    match next_input s with
-    | "" -> None
-    | line ->
+  let rec prompt_with s msg use_history (p : 'a B.Parser.t) : 'a option =
+    match s.prompt msg use_history () with
+    | None -> raise EndOfInput
+    | Some "" -> None
+    | Some line ->
        B.Runparser.parse_string "<prompt>" line (B.Parser.only p)
        |> snd
        |> B.Parser.handle
             begin fun err ->
             printf s "@[<v>Parse error.@,@[%a@]@]@."
               B.Parser.print_error err;
-            prompt s msg p
+            prompt_with s msg use_history p
             end
             Maybe.pure
 
   (** Repeats the prompt even if the user gives an empty response. *)
-  let rec prompt_forever s msg p =
-    match prompt s msg p with
-    | None -> prompt_forever s msg p
+  let rec prompt_forever_with s msg use_history p =
+    match prompt_with s msg use_history p with
+    | None -> prompt_forever_with s msg use_history p
     | Some x -> x
 
   (** Runs the theorem configuration prompt to set up the next batch of theorems.
@@ -298,7 +295,7 @@ module Prover = struct
     let rec do_prompts i : Theorem.Conf.t list =
       printf s "Configuring theorem #%d@." i;
     (* prompt for name, and allow using empty to signal we're done. *)
-      match prompt s "  Name of theorem (empty name to finish)" B.Parser.name with
+      match prompt_with s "  Name of theorem (empty name to finish): " None B.Parser.name with
       | None -> []
       | Some name ->
          let stmt, k =
@@ -308,11 +305,11 @@ module Prover = struct
            B.Reconstruct.reset_fvarCnstr ();
            B.Store.FCVar.clear ();
            (* Now prompt for the statement, and disallow empty to signal we're done. *)
-           prompt_forever s "  Statement of theorem" B.Parser.cmp_typ
+           prompt_forever_with s "  Statement of theorem: " None B.Parser.cmp_typ
            |> Interactive.elaborate_typ LF.Empty
          in
          let order =
-           prompt s "  Induction order (empty for none)" B.Parser.numeric_total_order
+           prompt_with s "  Induction order (empty for none): " None B.Parser.numeric_total_order
            |> Maybe.map (Interactive.elaborate_numeric_order k)
          in
          printf s "@]";
@@ -372,13 +369,17 @@ let rec loop (s : Prover.state) : unit =
         loop s
      | Some g ->
         (* Show the proof state and the prompt *)
-        printf "@,@[<v>@,%a@,There are %d IHs.@,@]%s> @?"
+        printf "@,@[<v>@,%a@,There are %d IHs.@,@]%s"
           P.fmt_ppr_cmp_proof_state g
           (Context.length Comp.(g.context.cIH))
           lambda;
         
         (* Parse the input and run the command *)
-        let input = Prover.next_input s in
+        let input =
+          let open Prover in
+          s.prompt "> " None ()
+          |> Maybe.get' EndOfInput
+        in
         let e =
           let open Either in
           parse_input input
@@ -392,9 +393,9 @@ let rec loop (s : Prover.state) : unit =
         loop s
 
 let start_toplevel
-      (src : input_source)
+      (prompt : prompt)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
-  let s = Prover.make_state ppf src in
+  let s = Prover.make_state ppf prompt in
   Prover.theorem_configuration_wizard s;
   loop s

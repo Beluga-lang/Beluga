@@ -1,10 +1,9 @@
 module Id = Beluga.Id
 module Comp = Beluga.Syntax.Int.Comp
 
-(** The input source for the Harpoon toplevel.
-    It's simply a generator of lines.
-    See helpers in Support.Misc.Gen.
+(** The input prompty for the Harpoon toplevel.
+    See main.ml and linenoise library document for details.
  *)
-type input_source = string Gen.t
+type prompt = string -> string option -> unit -> string option
 
-val start_toplevel : input_source -> Format.formatter -> unit
+val start_toplevel : prompt -> Format.formatter -> unit

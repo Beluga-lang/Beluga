@@ -1,6 +1,6 @@
 (library
   (name beluga)
-  (modules :standard \ old-lexer old-parser)
+  (modules :standard)
   (libraries gen sedlex extlib support unix str)
   (preprocess
     (pps sedlex.ppx)))

@@ -10,5 +10,5 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "gen" "sedlex" "extlib" "dune-build-info"
+  "gen" "sedlex" "extlib" "dune-build-info" "linenoise"
 ]

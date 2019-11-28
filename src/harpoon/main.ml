@@ -289,35 +289,63 @@ let forbid_dangling_arguments = function
   | [] -> ()
   | rest -> Error.(throw (DanglingArguments rest))
 
+(**
+   Module for user interface
+   TODO: Extract this module as a file
+         (It may also need to extract option parsing functions/types)
+ *)
+module Prompt : sig
+  type t = string -> string option -> unit -> string option
+
+  val make_prompt : (string * test_kind) option -> int option -> t
+end = struct
+  type t = string -> string option -> unit -> string option
+
+  let stdin_prompt msg history_file () =
+    let open Maybe in
+    LNoise.linenoise msg
+    $> fun str ->
+       match history_file with
+       | None -> str
+       | Some path ->
+          let _ = LNoise.history_load ~filename:path in
+          let _ = LNoise.history_add str in
+          let _ = LNoise.history_save ~filename:path in
+          str
+
+  let make_file_prompt path (k : test_kind) (test_start : int option) =
+    let h = open_in path in
+    let g =
+      let open GenMisc in
+      of_in_channel_lines h
+      |> iter_through (fun x -> print_string (x ^ "\n"))
+    in
+    begin
+      match test_start with
+      | None -> ()
+      | Some ln -> GenMisc.drop_lines g (ln - 1)
+    end;
+    match k with
+    | `incomplete ->
+       fun msg history_file ->
+       GenMisc.sequence [g; stdin_prompt msg history_file]
+    | `complete ->
+       fun _ _ -> g
+
+  let make_prompt test_file test_start : t =
+    match test_file with
+    | None -> stdin_prompt
+    | Some (path, k) -> make_file_prompt path k test_start
+end
+
 let realMain () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let rest, options = parse_arguments initial_options args in
   forbid_dangling_arguments rest;
   let options = options |> Validate.options |> Elab.options in
-  let input_source =
-    let stdin = GenMisc.of_in_channel_lines stdin in
-    match options.test_file with
-    | None -> stdin
-    | Some (path, k) ->
-       let h = open_in path in
-       let g =
-         let open GenMisc in
-         of_in_channel_lines h
-         |> iter_through (fun x -> print_string (x ^ "\n"))
-       in
-       begin
-         match options.test_start with
-         | None -> ()
-         | Some ln -> GenMisc.drop_lines g (ln - 1)
-       end;
-       match k with
-       | `incomplete ->
-          GenMisc.sequence [g; stdin]
-       | `complete -> g
-  in
   Prover.start_toplevel
-    input_source
+    (Prompt.make_prompt options.test_file options.test_start)
     Format.std_formatter
 
 let main () =

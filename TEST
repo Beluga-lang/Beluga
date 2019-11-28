@@ -19,27 +19,37 @@ declare STOP_ON_FAILURE=""
 
 declare -a BELUGA_FLAGS=()
 
-# Path to the Beluga source distribution.
-declare -r BELUGADIR=${BELUGADIR:-$(dirname "${BASH_SOURCE[0]}")}
-
 # Path to the Beluga executable to test.
-declare -r EXE=${EXE:-"${BELUGADIR}/bin/beluga"}
+declare -r EXE=${EXE:-"beluga"}
 
 # Path to the Beluga lex_check to test.
-declare -r LEX_CHECK=${LEX_CHECK:-"${BELUGADIR}/bin/lex_check"}
+declare -r LEX_CHECK=${LEX_CHECK:-"lex_check"}
 
 # Path to the Beluga replay to test.
-declare -r REPLAY=${REPLAY:-"${BELUGADIR}/bin/replay"}
+declare -r REPLAY=${REPLAY:-"replay"}
 
 # Path to the Harpoon to test.
-declare -r HARPOON=${HARPOON:-"${BELUGADIR}/bin/harpoon"}
+declare -r HARPOON=${HARPOON:-"harpoon"}
 
-declare -r TESTDIR=${TESTDIR:-"${BELUGADIR}/t/code"}
-declare -r EXAMPLEDIR=${EXAMPLEDIR:-"${BELUGADIR}/examples"}
-declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${BELUGADIR}/t/interactive"}
-declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${BELUGADIR}/t/harpoon"}
+declare -r TESTDIR=${TESTDIR:-"./t/code"}
+declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
+declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"./t/interactive"}
+declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"./t/harpoon"}
 
 declare -i TIMEOUT=${TIMEOUT:-10}
+
+die () {
+    echo "Fatal error: " "$@" >&2
+    exit 1
+}
+
+require_program_exists () {
+    command -v "$1" >/dev/null 2>&1 || die "program" "$1" "could not found."
+}
+
+for p in "${EXE}" "${LEX_CHECK}" "${REPLAY}" "${HARPOON}" ; do
+    require_program_exists "${p}"
+done
 
 declare -A TEST_RESULT=(
     [total]=0
@@ -173,13 +183,14 @@ function do_testing {
         for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
             start_test_case "${f}"
 
-            ${REPLAY} "${f}" > /dev/null 2>&1
+            local output="$(${REPLAY} "${EXE}" "${f}")"
             exit_code=$?
 
             if [ "${exit_code}" -eq 152 ] ; then
                 process_result "timeout" "TIMEOUT"
             elif [ "${exit_code}" -ne 0 ] ; then
                 process_result "replay_fail" "FAIL"
+                echo "${output}"
             else
                 process_result "success" "OK"
             fi
@@ -395,7 +406,6 @@ function usage {
 function print_paths {
     echo "Parameters for this run (override as necessary using environment variables):"
     echo
-    echo -e "\t BELUGADIR: ${BELUGADIR}"
     echo -e "\t EXE: ${EXE}"
     echo -e "\t LEX_CHECK: ${LEX_CHECK}"
     echo -e "\t REPLAY: ${REPLAY}"

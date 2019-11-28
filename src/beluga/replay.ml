@@ -124,10 +124,10 @@ module TranscriptRunner = struct
       beluga_in : out_channel;
     }
 
-  let beluga_command = "bin/beluga -I -emacs"
+  let beluga_command exe = exe ^ " -I -emacs"
 
-  let create_env () : env =
-    let (in_chan, out_chan) = Unix.open_process beluga_command in
+  let create_env exe : env =
+    let (in_chan, out_chan) = Unix.open_process (beluga_command exe) in
     { beluga_out =
         in_chan |>
           IStream.of_channel |>
@@ -268,7 +268,8 @@ let rec listify (s : 'a IStream.t) : 'a list =
 
 let main () =
   let real_main () : (error, TranscriptRunner.env) Either.t =
-    let path = Array.get Sys.argv 1 in
+    let exe = Array.get Sys.argv 1 in
+    let path = Array.get Sys.argv 2 in
     let input_chan = open_in path in
     let input = input_chan |> IStream.of_channel |> TranscriptParser.Tokenizer.char_tokenize_from Loc.initial in
     let open Either in
@@ -280,7 +281,7 @@ let main () =
             fun x -> ParseError x) $
       fun transcript ->
       let open TranscriptRunner in
-      let env = create_env () in
+      let env = create_env exe in
       run_transcript transcript env |>
         lmap (fun e -> InteractionError e)
   in

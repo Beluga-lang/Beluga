@@ -15,8 +15,7 @@ shift
 
 sig=$(sed -n '1p' "${input_path}")
 
-exec rlwrap \
-     bin/harpoon \
+exec bin/harpoon \
      --sig "${sig}" \
      --implicit \
      --test "${input_path}" \

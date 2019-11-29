@@ -31,8 +31,6 @@ let _ =
       end
     end
 
-type prompt = string -> string option -> unit -> string option
-
 module Prover = struct
   open Theorem
 
@@ -41,7 +39,7 @@ module Prover = struct
     (* ^ The theorems currently being proven. *)
     
     ; automation_state : Automation.automation_state
-    ; prompt : prompt
+    ; prompt : InputPrompt.t
     ; ppf : Format.formatter
     }
 
@@ -62,7 +60,7 @@ module Prover = struct
     
   let make_state
         (ppf : Format.formatter)
-        (prompt : prompt)
+        (prompt : InputPrompt.t)
       : state =
     let theorems = DynArray.make 16 in
     { theorems
@@ -393,7 +391,7 @@ let rec loop (s : Prover.state) : unit =
         loop s
 
 let start_toplevel
-      (prompt : prompt)
+      (prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let s = Prover.make_state ppf prompt in

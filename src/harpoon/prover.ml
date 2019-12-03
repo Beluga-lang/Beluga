@@ -334,6 +334,13 @@ let parse_input (input : string) : Command.command error =
   |> snd |> Parser.to_either
   |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
 
+let command_hint input : (string * bool) option =
+  match input with
+  | "by" -> Some (" ih/lemma", true)
+  | "by " -> Some ("ih/lemma", true)
+  | _ ->
+     None
+
 (** Runs the given function, trapping exceptions in Either.t
     and converting the exception to a function that prints the
     error with a given formatter.
@@ -380,7 +387,7 @@ let rec loop (s : Prover.state) : unit =
              See https://github.com/ocaml-community/ocaml-linenoise/issues/13
              for detail.
            *)
-          s.prompt.set_hints (Misc.const (Some ("abc", true)));
+          s.prompt.set_hints command_hint;
           s.prompt.get_input "> " None ()
           |> Maybe.get' EndOfInput
         in

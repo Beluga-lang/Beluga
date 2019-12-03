@@ -266,7 +266,8 @@ module Prover = struct
       The user can abort the prompt by giving an empty string.
    *)
   let rec prompt_with s msg use_history (p : 'a B.Parser.t) : 'a option =
-    match s.prompt msg use_history () with
+    let open InputPrompt in
+    match s.prompt.get_input msg use_history () with
     | None -> raise EndOfInput
     | Some "" -> None
     | Some line ->
@@ -292,7 +293,9 @@ module Prover = struct
     assert (DynArray.length s.theorems = 0);
     let rec do_prompts i : Theorem.Conf.t list =
       printf s "Configuring theorem #%d@." i;
-    (* prompt for name, and allow using empty to signal we're done. *)
+      (* prompt for name, and allow using empty to signal we're done. *)
+      let open InputPrompt in
+      s.prompt.set_hints (Misc.const None);
       match prompt_with s "  Name of theorem (empty name to finish): " None B.Parser.name with
       | None -> []
       | Some name ->
@@ -370,13 +373,15 @@ let rec loop (s : Prover.state) : unit =
 
         (* Parse the input and run the command *)
         let input =
+          let open InputPrompt in
           let open Prover in
           (* The lambda character (or any other UTF-8 characters)
              does not work with linenoise.
              See https://github.com/ocaml-community/ocaml-linenoise/issues/13
              for detail.
            *)
-          s.prompt ">" None ()
+          s.prompt.set_hints (Misc.const (Some ("abc", true)));
+          s.prompt.get_input "> " None ()
           |> Maybe.get' EndOfInput
         in
         let e =

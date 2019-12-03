@@ -342,9 +342,6 @@ let run_safe (f : unit -> 'a) : 'a error =
   in
   Either.trap f |> Either.lmap show_error
 
-(* UTF-8 encoding of the lowercase Greek letter lambda. *)
-let lambda : string = "\xCE\xBB"
-
 let rec loop (s : Prover.state) : unit =
   let printf x = Prover.printf s x in
   (* Get the next subgoal *)
@@ -367,15 +364,19 @@ let rec loop (s : Prover.state) : unit =
         loop s
      | Some g ->
         (* Show the proof state and the prompt *)
-        printf "@,@[<v>@,%a@,There are %d IHs.@,@]%s"
+        printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"
           P.fmt_ppr_cmp_proof_state g
-          (Context.length Comp.(g.context.cIH))
-          lambda;
-        
+          (Context.length Comp.(g.context.cIH));
+
         (* Parse the input and run the command *)
         let input =
           let open Prover in
-          s.prompt "> " None ()
+          (* The lambda character (or any other UTF-8 characters)
+             does not work with linenoise.
+             See https://github.com/ocaml-community/ocaml-linenoise/issues/13
+             for detail.
+           *)
+          s.prompt ">" None ()
           |> Maybe.get' EndOfInput
         in
         let e =

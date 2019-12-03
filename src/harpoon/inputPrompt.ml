@@ -5,10 +5,13 @@ type t = string -> string option -> unit -> string option
 let terminal : t =
   fun msg history_file () ->
   let open Maybe in
+  flush_all ();
   LNoise.linenoise msg
   $> fun str ->
      match history_file with
-     | None -> str
+     | None ->
+        let _ = LNoise.history_add str in
+        str
      | Some path ->
         let _ = LNoise.history_load ~filename:path in
         let _ = LNoise.history_add str in

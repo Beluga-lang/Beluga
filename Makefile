@@ -1,10 +1,13 @@
-.PHONY: all clean test all-test
+.PHONY: clean test all-test build
 
-all:
+build:
 	dune build
 
-test:
+test: build
 	dune exec ./TEST
+
+harpoon-test: build
+	dune exec ./TEST -- --harpoon
 
 all-test: test
 	dune exec ./TEST -- +htmltest

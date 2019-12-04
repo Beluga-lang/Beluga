@@ -41,6 +41,7 @@ module Prover = struct
     ; automation_state : Automation.automation_state
     ; prompt : InputPrompt.t
     ; ppf : Format.formatter
+    ; stop : [ `stop | `go_on ]
     }
 
   let printf (s : state) x =
@@ -59,6 +60,7 @@ module Prover = struct
     List.map get_dec (DynArray.to_list s.theorems)
 
   let make_state
+        stop
         (ppf : Format.formatter)
         (prompt : InputPrompt.t)
       : state =
@@ -67,6 +69,7 @@ module Prover = struct
     ; automation_state = Automation.make_automation_state ()
     ; prompt
     ; ppf
+    ; stop
     }
 
     (*
@@ -400,15 +403,20 @@ let rec loop (s : Prover.state) : unit =
             run_safe (fun () -> Prover.process_command s t g cmd)
         in
         Either.eliminate
-          (fun f -> printf "%a" f ())
+          begin fun f ->
+          printf "%a" f ();
+          if Prover.(s.stop) = `stop then
+            exit 1
+          end
           (Misc.const ())
           e;
         loop s
 
 let start_toplevel
+      stop
       (prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
-  let s = Prover.make_state ppf prompt in
+  let s = Prover.make_state stop ppf prompt in
   Prover.theorem_configuration_wizard s;
   loop s

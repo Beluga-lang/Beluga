@@ -6,6 +6,7 @@ type ('a, 'b) t =
   ; all_paths : 'b (* the list of paths resolved from the signature file to load *)
   ; test_file : test_file option (* the harpoon test file to load *)
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
+  ; test_stop : [ `stop | `go_on ] (* whether to stop a test if there's an error *)
   }
 
 type partial_t =

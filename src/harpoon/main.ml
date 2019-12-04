@@ -88,6 +88,7 @@ let realMain () =
   let options = options |> Options.validate |> Options.elaborate in
   let open Options in
   Prover.start_toplevel
+    options.test_stop
     (InputPrompt.create options.test_file options.test_start)
     Format.std_formatter
 

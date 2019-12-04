@@ -448,6 +448,19 @@ module Comp = struct
     | MApp (_, i, _) -> head_of_application i
     | _ as i -> i
 
+  (** Removes all type annotations from a pattern. *)
+  let rec strip_pattern : pattern -> pattern = function
+    | PatPair (loc, p1, p2) ->
+       PatPair (loc, strip_pattern p1, strip_pattern p2)
+    | PatAnn (loc, p, _) -> p
+    | PatConst (loc, c, pS) ->
+       PatConst (loc, c, strip_pattern_spine pS)
+    | p -> p (* no subpatterns *)
+  and strip_pattern_spine : pattern_spine -> pattern_spine = function
+    | PatNil -> PatNil
+    | PatApp (loc, p, pS) ->
+       PatApp (loc, strip_pattern p, strip_pattern_spine pS)
+
   (* Bundle of LF and computational hypotheses. *)
   type hypotheses =
     { cD : LF.mctx (* Delta / meta context / LF assumptions *)

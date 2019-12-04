@@ -1704,15 +1704,28 @@ let rec cnormCtx (cG, ms) =
    then
       cD' |- [ms]matchL
  *)
-let rec cnormEqn matchL ms =
-  match matchL with
-  | [] -> []
-  | (Eqn (CovGoal (cPsi, tR, sA), patt) :: matchL') ->
+
+let cnormEqn eqn ms =
+  match eqn with
+  | Eqn (CovGoal (cPsi, tR, sA), patt) ->
      let tA = Whnf.normTyp sA in
      let cPsi, tR, tA = (Whnf.cnormDCtx (cPsi, ms), Whnf.cnorm (tR, ms), Whnf.cnormTyp (tA, ms)) in
      let covG0 = CovGoal (cPsi, tR, (tA, S.LF.id)) in
-     let matchL0 = cnormEqn matchL' ms in
-     Eqn (covG0, patt) :: matchL0
+     Eqn (covG0, patt)
+  | Eqn (CovSub (cPhi, s, mT), patt) ->
+     let cPhi = Whnf.cnormDCtx (cPhi, ms) in
+     let s = Whnf.cnormSub (s, ms) in
+     let mT = Whnf.cnormClTyp (mT, ms) in
+     let cov = CovSub (cPhi, s, mT) in
+     Eqn (cov, patt)
+  | Eqn (CovPatt (_, _, _), _) ->
+     Error.violation "[cnormEqn] CovPatt"
+  | Eqn (CovCtx _, _) ->
+     Error.violation "[cnormEqn] CovCtx"
+
+(** Contextual normalization for a list of equations. *)
+let cnormEqns matchL ms =
+  List.map (fun eqn -> cnormEqn eqn ms) matchL
 
 (* refine_cand (cD', cG', ms) (cD, cG, cand) = [ms]cand
 
@@ -1723,7 +1736,7 @@ let rec cnormEqn matchL ms =
    cD'; cG' |- [ms]cand
  *)
 let refine_cand (cD', cG', ms) (cD, cG, Cand (cD_p, cG_p, matchL, splitL)) =
-  let matchL' = cnormEqn matchL ms in
+  let matchL' = cnormEqns matchL ms in
   dprintf
     begin fun p ->
     p.fmt "[refine_cand] cD' = %a"
@@ -2956,13 +2969,9 @@ let no_covers = ref 0 (* number of times coverage checking has yielded a negativ
 
 (* ****************************************************************************** *)
 
-let rec extract_patterns tau =
-  function
-  | Comp.Branch (loc, cD, cG, Comp.PatAnn (loc', pat, _), ms, e) ->
-     extract_patterns tau (Comp.Branch (loc, cD, cG, pat, ms, e))
-
-  | Comp.Branch (loc, cD, cG, pat, ms, _) ->
-     (cD, GenPatt (cG, pat, (tau, ms)))
+let extract_patterns tau =
+  fun (Comp.Branch (loc, cD, cG, pat, ms, _)) ->
+  (cD, GenPatt (cG, Comp.strip_pattern pat, (tau, ms)))
 
 let gen_candidate loc cD covGoal (cD_p, GenPatt (cG_p, pat, ttau)) =
   let CovPatt (cG', pat', ttau') = covGoal in

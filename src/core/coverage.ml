@@ -65,7 +65,7 @@ end = struct
     Id.mk_name (Id.SomeString (scheme (string_of_int !cnt)))
 
   let new_parameter_name string =
-    new_name_of_scheme counter (fun suffix -> string ^ suffix)
+    new_name_of_scheme counter (fun suffix -> "#" ^ string ^ suffix)
 
   let new_bvar_name string =
     new_name_of_scheme counter (fun suffix -> string ^ suffix)

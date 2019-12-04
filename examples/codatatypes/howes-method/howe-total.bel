@@ -201,7 +201,7 @@ fun [] [h |- ^] => HNil
 rec howe_ren : {g:ctx}{h:ctx}{$S: [h |-# g]} Howe [|- T] [g |- M] [g |- N]
                -> Howe [|- T] [h |- M[$S]] [h |- N[$S]] =
 / total hr (howe_ren g h s t m n hr) /
-mlam g, h, S => fn hr => case hr of
+mlam g, h, $S => fn hr => case hr of
 | Howe_unit s => Howe_unit (osim_cus [h |- $S] s)
 | Howe_var [g |- #p] s =>
       let os = osim_cus [h |- $S] s in

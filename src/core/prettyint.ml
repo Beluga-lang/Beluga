@@ -370,11 +370,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_lf_sub cD cPsi lvl) s
 
       | LF.SVar (c, _, s) ->
-         fprintf ppf "#%a[%a]"
+         fprintf ppf "%a[%a]"
            (fmt_ppr_lf_offset cD) c
            (self lvl) s
       | LF.MSVar (_, ((_sigma, t),s)) ->
-         fprintf ppf "#?S[%a ; %a]"
+         fprintf ppf "$?S[%a ; %a]"
            (fmt_ppr_lf_msub cD lvl) t
            (self lvl) s
       | LF.Dot (f, s) ->
@@ -399,21 +399,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
       | LF.FSVar (n, (s_name, s)) ->
          fprintf ppf
-           "#^%s FSV %s[%a]"
+           "^%s FSV %s[%a]"
            (R.render_offset n)
            (Id.render_name s_name)
            (self lvl) s
 
       | LF.SVar (c, n, s) ->
          fprintf ppf
-           "#^%s %a[%a]"
+           "^%s %a[%a]"
            (R.render_offset n)
            (fmt_ppr_lf_offset cD) c
            (self lvl) s
 
       | LF.MSVar (n , ((_sigma, t),s)) ->
          fprintf ppf
-           "#^%s #?S [%a][|%a|]"
+           "^%s $?S [%a][|%a|]"
            (R.render_offset n)
            (self lvl) s
            (fmt_ppr_lf_msub cD 0) t

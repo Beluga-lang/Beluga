@@ -188,8 +188,8 @@ let rec tokenize loc lexbuf =
 
   | dot_number -> T.DOT_NUMBER (int_of_string (Misc.String.drop 1 (get_lexeme loc lexbuf)))
   | dots -> const T.DOTS
-  | hash_ident -> T.HASH_IDENT (Misc.String.drop 1 (get_lexeme loc lexbuf))
-  | dollar_ident -> T.DOLLAR_IDENT (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | hash_ident -> T.HASH_IDENT (get_lexeme loc lexbuf)
+  | dollar_ident -> T.DOLLAR_IDENT (get_lexeme loc lexbuf)
   | "." -> const T.DOT
   | "#" -> const T.HASH
   | "$" -> const T.DOLLAR

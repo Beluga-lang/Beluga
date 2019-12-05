@@ -1,16 +1,15 @@
 (** Harpoon
 
 @author Jacob Thomas Errington
+@author Clare Yang
+@author Marcel Goh
 
 Harpoon is an interactive mode for Beluga that uses a small set of
 tactics for elaborating proofs.
 The syntax of Harpoon proofs is defined in Syntax.Ext.Comp; it is a
 part of the computation language.
 
-This module defines the datatypes for Harpoon syntax and operations
-for transforming it.
-
-A Harpoon script is a sequence of statements, of which there are two kinds:
+A Harpoon sessions is a sequence of statements, of which there are two kinds:
 1. Commands: these generally manipulate the context in some way,
    e.g. by invoking an IH or a lemma, unboxing an expression to a
    metavariable, etc.

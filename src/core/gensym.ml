@@ -1,3 +1,11 @@
+(* The stuff in this module is ultimately just a very elaborate way of
+   generating the same thing over and over again, esp. the name_gensym
+   family of functions.
+
+   Perhaps a name generation should be centralized in Store?
+   -je
+ *)
+
 (* Given an alphabet of strings as an array, creates a symbol
    generator over the alphabet *)
 let create_symbols (alphabet : string array) : string Stream.t =
@@ -8,6 +16,17 @@ let create_symbols (alphabet : string array) : string Stream.t =
       if i < length then ""
       else string_of_int (i / length)
     in
+    (* The below comment is interesting.
+       It looks like once upon a time, gensym was used ONLY for
+       debugging, since it would generate unparseable names.
+       I personally like the idea of distinguishing between names that
+       could ostensibly get printed to the user at some point versus
+       names that are purely internal, perhaps with some way of
+       converting from the latter to the former by analyzing the
+       context in which they are being printed and what they are
+       supposed to represent in order to cook up a decent name.
+       -je
+     *)
         (* '%' is a special character denoting a generated symbol.
            This symbol is normally unparsable---the only way to create
            such a name is through gensym.  Thus gensym should always

@@ -191,6 +191,17 @@ module LF = struct
     | Decl (x, tA, ind) -> Decl (f x, tA, ind)
     | DeclOpt x -> DeclOpt (f x)
 
+  (** Gets a list of names of the bound variables in an LF context. *)
+  let rec names_of_dctx = function
+    | DDec (cPsi, d) ->
+       let name =
+         match d with
+         | TypDecl (name, _) -> name
+         | TypDeclOpt name -> name
+       in
+       name :: names_of_dctx cPsi
+    | _ -> []
+
   (**********************)
   (* Type Abbreviations *)
   (**********************)

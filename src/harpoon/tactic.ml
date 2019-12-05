@@ -128,7 +128,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
   (* Compute the coverage goals for the type to split on. *)
   dprintf
     begin fun p ->
-    p.fmt "[harpoon-split] split on %a with type %a"
+    p.fmt "[harpoon-split] %a on %a with type %a"
+      P.fmt_ppr_cmp_split_kind k
       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
     end;

@@ -12,14 +12,17 @@ LF inst : type =
   | app1 : val -> exp -> inst
   | app2 : val -> val -> inst
 ;
+--name inst I.
 
 LF cont : type =
   | init : cont
   | c    : cont -> (val -> inst) -> cont
 ;
+--name cont C.
 
 % Continuation Machine States
 LF state : type =
   | st : cont -> inst -> state
   | answer : val -> state
 ;
+--name state K.

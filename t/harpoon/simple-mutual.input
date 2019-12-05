@@ -8,8 +8,8 @@ size'
 
 split x1
 solve [|- z]
-solve size' [|- Y1]
+solve size' [|- X]
 split z1
 solve [|- z]
-solve add (size [|- X1]) (size' [|- Z1])
+solve add (size [|- X]) (size' [|- X1])
 

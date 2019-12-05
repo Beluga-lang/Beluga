@@ -41,3 +41,8 @@ let fmt_ppr_lf_depend (style : depend_print_style) ppf : LF.depend -> unit =
      | LF.Maybe -> fprintf ppf ""
      | LF.Inductive -> fprintf ppf "*"
      end
+
+let fmt_ppr_cmp_split_kind ppf = function
+  | `split -> fprintf ppf "split"
+  | `invert -> fprintf ppf "invert"
+  | `impossible -> fprintf ppf "impossible"

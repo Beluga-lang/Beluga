@@ -10,6 +10,7 @@ LF term : type =
 | pred : term -> term
 | iszero : term -> term
 ;
+--name term M.
 
 LF value : term -> type =
 | v_z : value z
@@ -17,6 +18,7 @@ LF value : term -> type =
 | v_true : value true
 | v_false : value false
 ;
+--name value V.
 
 LF step : term → term → type =
 | e_if_true : step (if_then_else true M2 M3) M2
@@ -30,11 +32,13 @@ LF step : term → term → type =
 | e_pred : step M N -> step (pred M) (pred N)
 | e_iszero : step M N -> step (iszero M) (iszero N)
 ;
+--name step S.
 
 LF tp : type =
 | bool : tp
 | nat : tp
 ;
+--name tp A.
 
 LF hastype : term -> tp -> type =
 | t_true : hastype true bool
@@ -45,3 +49,4 @@ LF hastype : term -> tp -> type =
 | t_pred : hastype M nat -> hastype (pred M) nat
 | t_iszero : hastype M nat -> hastype (iszero M) bool
 ;
+--name hastype D.

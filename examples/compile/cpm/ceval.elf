@@ -39,12 +39,14 @@ LF step : state -> state -> type =
   | st_return : {C: val -> inst}{K:cont} step (st (c K (\v. C v)) (return V)) (st K  (C V))
   | st_init   : step (st init (return V))  (answer V)
 ;
+--name step T.
 
 %%% Multi-Step Computation
 LF mstep : state -> state -> type =
   | stop : mstep S S
   | next : mstep S'  S'' -> step S  S' -> mstep S S''
 ;
+--name mstep Q.
 
 % Because of evaluation order, computation sequences are displayed
 % in reverse, using "next" as a left-associative infix operator.
@@ -53,3 +55,4 @@ LF mstep : state -> state -> type =
 LF ceval : exp -> val -> type =
   | cev : mstep (st init (ev E))  (answer V) -> ceval E V
 ;
+--name ceval C.

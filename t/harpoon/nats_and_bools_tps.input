@@ -8,24 +8,24 @@ invert y8
 invert y8
 invert y8
 invert y8
-invert [|- X21]
+invert [ |- D ]
 invert y8
 solve [|- t_true]
 invert y8
 solve [|- t_false]
 invert y8
-by ih (tps [|- Y41] [|- X4]) as ih0
+by ih (tps [|- D] [|- S]) as ih0
 unbox (ih0) as IH0
-solve [|- t_if IH0 X41 Z41]
+solve [|- t_if IH0 D1 D2]
 invert y8
-by ih (tps [|- Z43] [|- Z2]) as ih1
+by ih (tps [|- D] [|- S]) as ih1
 unbox (ih1) as IH1
 solve [|- t_succ IH1]
 invert y8
-by ih (tps [|- X47] [|- Z1]) as ih2
+by ih (tps [|- D] [|- S]) as ih2
 unbox (ih2) as IH2
 solve [|- t_pred IH2]
 invert y8
-by ih (tps [|- Y51] [|- Z]) as ih3
+by ih (tps [|- D] [|- S]) as ih3
 unbox (ih3) as IH3
 solve [|- t_iszero IH3]

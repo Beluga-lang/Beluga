@@ -1110,7 +1110,7 @@ let getSchemaElems cD cPsi =
    then
      cD'; cPsi |- tS : sA <= tP
  *)
-let rec genSpine cD cPsi sA tP =
+let rec genSpine names cD cPsi sA tP =
   match Whnf.whnfTyp sA with
   | (LF.PiTyp ((LF.TypDecl (u, tA), _), tB), s) ->
      (* cPsi' |- Pi x:A.B <= typ
@@ -1119,6 +1119,7 @@ let rec genSpine cD cPsi sA tP =
         cPsi |- tN . s <= cPsi', x:A
       *)
      (* let tN = Whnf.etaExpandMV cPsi (tA, s) S.LF.id in *)
+     let u = NameGen.(mvar tA |> renumber names) in
      let tN = etaExpandMVstr (Some u) cD cPsi (tA, s) in
      dprintf
        begin fun p ->
@@ -1126,7 +1127,7 @@ let rec genSpine cD cPsi sA tP =
               tN = @[%a@]@]"
          P.(fmt_ppr_lf_normal cD cPsi l0) tN
        end;
-     let tS = genSpine cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP in
+     let tS = genSpine (u :: names) cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP in
      LF.App (tN, tS)
 
   | (LF.Atom (_, _, _) as tQ, s) ->
@@ -1168,7 +1169,11 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 
   (* now tP', cPsi', tA', tH' are all "closed" but contain MMVars instead of MVars *)
 
-  let spine = genSpine LF.Empty cPsi' (tA', S.LF.id) tP' in
+  let names =
+    Context.to_list_map cD (fun _ -> LF.name_of_ctyp_decl)
+    @ LF.names_of_dctx cPsi
+  in
+  let spine = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
   let tM = LF.Root (Loc.ghost, tH' , spine) in
   (*
     (* This print will crash Beluga sometimes, because it *seems* like

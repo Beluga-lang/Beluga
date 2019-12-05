@@ -4,9 +4,6 @@ val create_symbols : string array -> string Stream.t
 (** Functionality for generating unique symbols *)
 module type GENSYM = sig
 
-  (** Generate a unique symbol.  Generated symbols are guaranteed
-      unique because they always end in [%], making them unparsable
-      and thus impossible to use directly in any program. *)
   val gensym : unit -> string
   val name_gensym : string -> (unit -> string)
 

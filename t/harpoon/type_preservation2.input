@@ -9,7 +9,7 @@ solve z6
 solve z6
 split z6
 by ih (tpr [|- D] [|- E]) as ih0
-split ih0
-by ih (tpr [|- D5 [_,D1]] [|- E1]) as ih1
+invert ih0
+by ih (tpr [|- D2 [_, D1]] [|- E1]) as ih1
 solve ih1
 

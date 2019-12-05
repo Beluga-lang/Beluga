@@ -5,7 +5,7 @@ tp-refl
 
 split [|- A]
 solve [|- eq_i]
-by ih tp-refl [|- EXTRA] [|- Y] as EQ_Y unboxed
-by ih tp-refl [|- EXTRA] [|- X] as EQ_X unboxed
+by ih tp-refl [|- EXTRA] [|- X] as EQ_Y unboxed
+by ih tp-refl [|- EXTRA] [|- X1] as EQ_X unboxed
 solve [|- eq_arr EQ_Y EQ_X]
 

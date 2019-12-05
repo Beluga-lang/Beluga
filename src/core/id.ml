@@ -1,3 +1,8 @@
+open Support
+
+let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
+open Debug.Fmt
+
 type name     = {
   modules : string list;
   hint_name : string ;
@@ -5,6 +10,42 @@ type name     = {
   was_generated : bool ;
   counter : int;
 }
+
+(** Computes a string representation of a name, without modules. *)
+let string_of_name (n : name) : string =
+  let suf =
+    match n.hint_cnt with
+    | None -> ""
+    | Some cnt -> (string_of_int cnt)
+  in
+  n.hint_name ^ suf
+
+(** Computes a string representation of a name, with all modules. *)
+let render_name n =
+  match n.modules with
+  | [] -> string_of_name n
+  | l  -> (String.concat "::" l) ^ "::" ^ (string_of_name n)
+
+(** Does the same as `render_name', but for use with pretty-printing. *)
+let print ppf n =
+  let open Format in
+  fprintf ppf "%a%s"
+    (pp_print_list ~pp_sep: (fun _ _ -> ())
+       (fun ppf x -> fprintf ppf "%s::" x))
+    n.modules
+    (string_of_name n)
+
+(* For reporting whether a name is used in a context. *)
+type max_usage =
+  [ `used of int option
+  | `unused
+  ]
+
+(** Extract the base name of a variable. *)
+let base_name (x : name) : string = x.hint_name
+
+let modify_number f name =
+  { name with hint_cnt = f name.hint_cnt }
 
 let get_module (n : name) : string list = n.modules
 
@@ -31,19 +72,48 @@ let sanitize_name (n : name) : name =
                | Some name_cnt ->
                   Some (int_of_string ((string_of_int name_cnt) ^ (string_of_int old_cnt)))}
 
+let inc_hint_cnt : int option -> int option = function
+  | None -> Some 1
+  | Some k -> Some (k + 1)
 
 let gen_fresh_name (ns : name list) (n : name) : name =
-  let inc_iopt : int option -> int option = function
-    | None -> Some 0
-    | Some j -> Some (j+1) in
   let rec next_unused y xs =
     if List.mem y xs
-    then next_unused (inc_iopt y) xs
+    then next_unused (inc_hint_cnt y) xs
     else y in
   let cnts = List.fold_left
      (fun acc n' -> if n'.hint_name = n.hint_name
                     then n'.hint_cnt::acc else acc) [] ns in
   {n with hint_cnt = next_unused n.hint_cnt cnts}
+
+let max_usage (ctx : name list) (s : string) : max_usage =
+  let same_head s name =
+    name.hint_name = s
+  in
+  let max' k name = max k name.hint_cnt in
+  match Nonempty.of_list (List.filter (same_head s) ctx) with
+  | None ->
+     dprintf
+       begin fun p ->
+       p.fmt "[max_usage] @[<v 2>%s is unused in@,\
+              @[%a@]@]"
+         s
+         Format.(pp_print_list ~pp_sep: pp_print_cut print)
+         ctx
+       end;
+     `unused
+  | Some names ->
+     let k = Nonempty.fold_left (fun x -> x.hint_cnt) max' names in
+     dprintf
+       begin fun p ->
+       p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,\
+              @[%a@]@]"
+         s
+         (Maybe.show Format.pp_print_int) k
+         Format.(pp_print_list ~pp_sep: pp_print_space print)
+         ctx
+       end;
+     `used k
 
 type module_id = int
 
@@ -103,30 +173,6 @@ let mk_name ?(modules=[]) : name_guide -> name =
   | NoName     -> mk_name_helper (Gensym.VarData.gensym ())
   | SomeName x  -> sanitize_name x
   | SomeString x -> mk_name_helper x
-
-(** Computes a string representation of a name, without modules. *)
-let string_of_name (n : name) : string =
-  let suf =
-    match n.hint_cnt with
-    | None -> ""
-    | Some cnt -> (string_of_int cnt)
-  in
-  n.hint_name ^ suf
-
-(** Computes a string representation of a name, with all modules. *)
-let render_name n =
-  match n.modules with
-  | [] -> string_of_name n
-  | l  -> (String.concat "::" l) ^ "::" ^ (string_of_name n)
-
-(** Does the same as `render_name', but for use with pretty-printing. *)
-let print ppf n =
-  let open Format in
-  fprintf ppf "%a%s"
-    (pp_print_list ~pp_sep: (fun _ _ -> ())
-       (fun ppf x -> fprintf ppf "%s::" x))
-    n.modules
-    (string_of_name n)
 
 let equals n1 n2 =
   string_of_name n1 = string_of_name n2

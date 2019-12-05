@@ -727,9 +727,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | [] ->
        fprintf ppf "."
     | _ ->
-       pp_print_list ~pp_sep: sep
-         (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d)
-         ppf
+       fprintf ppf "@[<hov>%a@]"
+         (pp_print_list ~pp_sep: sep
+            (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d))
          ds
 
   and fmt_ppr_lf_kind cPsi lvl ppf = function
@@ -757,17 +757,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_mtyp' cD lvl ppf = function
     | LF.ClTyp (LF.MTyp tA, cPsi) ->
-       fprintf ppf "[@[%a |-@ %a@]]"
+       fprintf ppf "[@[<hov 2>@[%a@] |-@ @[%a@]@]]"
          (fmt_ppr_lf_dctx cD lvl) cPsi
          (fmt_ppr_lf_typ cD cPsi lvl) tA
 
     | LF.ClTyp (LF.PTyp tA, cPsi) ->
-       fprintf ppf "#[@[%a |-@ %a@]]"
+       fprintf ppf "#[@[<hov 2>@[%a@] |-@ @[%a@]@]]"
          (fmt_ppr_lf_dctx cD lvl) cPsi
          (fmt_ppr_lf_typ cD cPsi lvl) tA
 
     | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
-       fprintf ppf "[@[%a |- %a@ %a@]]"
+       fprintf ppf "[@[<hov 2>@[%a@] |- %a@ @[%a@]@]]"
          (fmt_ppr_lf_dctx cD lvl) cPsi
          fmt_ppr_lf_svar_class cl
          (fmt_ppr_lf_dctx cD lvl) cPhi
@@ -792,7 +792,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            then `depend
            else `inductive
          in
-         fprintf ppf "{%s : %a}%a"
+         fprintf ppf "{@[<hov 2>%s :@ @[%a@]@]}%a"
            (if printing_holes
             then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
             else Id.render_name u)

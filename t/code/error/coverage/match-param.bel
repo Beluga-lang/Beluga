@@ -2,11 +2,13 @@
 
 term: type.
 elam:(term -> term) -> term.
+--name term M.
 
 % list of term
 fvlist: type.
 nil:fvlist.
 cons: term -> fvlist -> fvlist.
+--name fvlist L.
 
 schema ctx = term;
 

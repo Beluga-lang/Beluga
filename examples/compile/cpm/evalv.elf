@@ -30,3 +30,4 @@ LF eval : exp -> val -> type =
 % Values
   | ev_vl : eval (vl V) V
 ;
+--name eval E.

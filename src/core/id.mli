@@ -4,10 +4,27 @@
     See `mk_name'. *)
 type name
 
+(* For reporting whether a name is used in a context. *)
+type max_usage =
+  [ `used of int option
+  | `unused
+  ]
+
+val base_name : name -> string
 val get_module : name -> string list
 
+val inc_hint_cnt : int option -> int option
 val gen_fresh_name : name list -> name -> name
 val inc : name -> name
+
+(** Finds the maximum number used for the given name hint in the given
+    context.
+    Returns None if the name hint is unused.
+ *)
+val max_usage : name list -> string -> max_usage
+
+(** Change the number of a variable. *)
+val modify_number : (int option -> int option) -> name -> name
 
 type module_id = int
 

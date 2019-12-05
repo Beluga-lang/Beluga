@@ -4,5 +4,5 @@ halts_step'
 
 
 invert x7
-solve [|- halts/m (onestep S S1) V1]
+solve [|- halts/m (onestep S S1) V]
 

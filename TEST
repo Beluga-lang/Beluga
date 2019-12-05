@@ -20,16 +20,16 @@ declare STOP_ON_FAILURE=""
 declare -a BELUGA_FLAGS=()
 
 # Path to the Beluga executable to test.
-declare -r EXE=${EXE:-"beluga"}
+declare -r EXE=${EXE:-"./bin/beluga"}
 
 # Path to the Beluga lex_check to test.
-declare -r LEX_CHECK=${LEX_CHECK:-"lex_check"}
+declare -r LEX_CHECK=${LEX_CHECK:-"./bin/lex_check"}
 
 # Path to the Beluga replay to test.
-declare -r REPLAY=${REPLAY:-"replay"}
+declare -r REPLAY=${REPLAY:-"./bin/replay"}
 
 # Path to the Harpoon to test.
-declare -r HARPOON=${HARPOON:-"harpoon"}
+declare -r HARPOON=${HARPOON:-"./bin/harpoon"}
 
 declare -r TESTDIR=${TESTDIR:-"./t/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}

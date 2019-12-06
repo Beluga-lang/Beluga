@@ -1,0 +1,5 @@
+LF empty : type = ;
+proof id : [⊢empty] → [⊢ empty] =
+intros { {X : [⊢empty]}
+         | ; solve [⊢ X] }
+       ;

@@ -37,7 +37,7 @@ module Prover = struct
   type state =
     { theorems : Theorem.t DynArray.t
     (* ^ The theorems currently being proven. *)
-    
+
     ; automation_state : Automation.automation_state
     ; prompt : InputPrompt.t
     ; ppf : Format.formatter
@@ -45,7 +45,7 @@ module Prover = struct
 
   let printf (s : state) x =
     Format.fprintf s.ppf x
-    
+
   (** Gets the list of mutual declarations corresponding to the
       currently loaded theorems.
    *)
@@ -57,7 +57,7 @@ module Prover = struct
         ts.order
     in
     List.map get_dec (DynArray.to_list s.theorems)
-    
+
   let make_state
         (ppf : Format.formatter)
         (prompt : InputPrompt.t)
@@ -156,7 +156,7 @@ module Prover = struct
     let mfs = lazy (get_mutual_decs s) in
 
     let open Comp in
-    
+
     let solve_hole (id, Holes.Exists (w, h)) =
       let open Holes in
       dprintf
@@ -219,15 +219,15 @@ module Prover = struct
 
     | Command.ShowSubgoals ->
        Theorem.show_subgoals t
-       
+
     | Command.ToggleAutomation (automation_kind, automation_change) ->
        Automation.toggle_automation s.automation_state automation_kind automation_change
-      
+
     (* Real tactics: *)
     | Command.Unbox (i, name) ->
        let (hs, m, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
        Tactic.unbox m tau name t g
-       
+
     | Command.Intros names ->
        Tactic.intros names t g
 
@@ -251,7 +251,7 @@ module Prover = struct
                     is not an appeal to an induction hypothesis.@]"
             (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
        end
-       
+
     | Command.Solve e ->
        let (hs, e) = elaborate_exp cIH cD cG (Lazy.force mfs) e g.goal in
        dprnt "[harpoon] [solve] elaboration finished";

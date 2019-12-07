@@ -208,7 +208,7 @@ module Comp = struct
     | Directive of Loc.t * directive
 
   and command =
-    | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name
+    | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name * boxity
     | Unbox of Loc.t * exp_syn * name
 
   and directive =

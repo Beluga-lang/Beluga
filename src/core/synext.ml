@@ -244,7 +244,7 @@ module Comp = struct
    | Directive of Loc.t * directive
 
  and command =
-   | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name
+   | By of Loc.t * Syncom.Harpoon.invoke_kind * exp_syn * name * boxity
    | Unbox of Loc.t * exp_syn * name
 
  and directive =
@@ -292,7 +292,7 @@ module Harpoon = struct
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
     | Unbox of Comp.exp_syn * Id.name
-    | By of invoke_kind * Comp.exp_syn * Id.name * boxity
+    | By of invoke_kind * Comp.exp_syn * Id.name * Comp.boxity
 
     (* Administrative commands *)
 

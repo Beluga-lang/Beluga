@@ -2625,6 +2625,12 @@ let sgn_let_decl : Sgn.decl parser =
   $> fun (loc, ((x, tau), i)) ->
      Sgn.Val (loc, x, tau, i)
 
+let boxity =
+  choice
+    [ keyword "boxed" &> pure `boxed
+    ; keyword "unboxed" &> pure `unboxed
+    ]
+
 let harpoon_command : Comp.command parser =
   let invocation_kind =
     choice
@@ -2634,11 +2640,12 @@ let harpoon_command : Comp.command parser =
   in
   token T.KW_BY
   &> choice
-       [ seq3
+       [ seq4
            invocation_kind
            (parens (span cmp_exp_syn) <& token T.KW_AS)
            name
-         $> (fun (k, (loc, i), x) -> Comp.By (loc, k, i, x))
+           (maybe_default boxity `boxed)
+         $> (fun (k, (loc, i), x, b) -> Comp.By (loc, k, i, x, b))
        ; keyword "unboxing" &>
            seq2
              (parens (span cmp_exp_syn) <& token T.KW_AS)
@@ -2881,12 +2888,6 @@ let interactive_harpoon_command =
     alt
       (keyword "ih" &> pure `ih)
       (keyword "lemma" &> pure `lemma)
-  in
-  let boxity =
-    choice
-      [ keyword "boxed" &> pure `boxed
-      ; keyword "unboxed" &> pure `unboxed
-      ]
   in
   let by =
     token T.KW_BY &>

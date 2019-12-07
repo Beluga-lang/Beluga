@@ -46,4 +46,4 @@ val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
     The result of the invocation is assigned to the variable of the
     given name, in cG.
  *)
-val invoke : Command.invoke_kind -> Command.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
+val invoke : Command.invoke_kind -> Comp.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t

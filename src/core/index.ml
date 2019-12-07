@@ -1492,10 +1492,10 @@ let rec index_proof cvars vars fvars = function
      Apx.Comp.Directive (loc, d')
 
 and index_command cvars vars fvars = function
-  | Ext.Comp.By (loc, k, i, x) ->
+  | Ext.Comp.By (loc, k, i, x, b) ->
      let i' = index_exp' cvars vars fvars i in
      let vars = Var.extend vars (Var.mk_entry x) in
-     Apx.Comp.By (loc, k, i', x), vars, cvars
+     Apx.Comp.By (loc, k, i', x, b), vars, cvars
   | Ext.Comp.Unbox (loc, i, x) ->
      let i' = index_exp' cvars vars fvars i in
      let cvars = CVar.extend cvars (CVar.mk_entry x) in

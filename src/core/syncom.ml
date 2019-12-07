@@ -28,6 +28,11 @@ module Comp = struct
   type 'ctx_case generic_case_label =
     | NamedCase of Loc.t * Id.name
     | ContextCase of 'ctx_case
+
+  type boxity =
+    [ `boxed
+    | `unboxed
+    ]
 end
 
 module Harpoon = struct
@@ -45,11 +50,6 @@ module Harpoon = struct
     [ `split
     | `invert
     | `impossible
-    ]
-
-  type boxity =
-    [ `boxed
-    | `unboxed
     ]
 
   type level =

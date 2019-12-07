@@ -483,7 +483,7 @@ let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT)) tau name
 
-let invoke (k : Command.invoke_kind) (b : Command.boxity) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+let invoke (k : Command.invoke_kind) (b : Comp.boxity) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in
   let cmd = By (k, m, name, tau, b) in
   match b with

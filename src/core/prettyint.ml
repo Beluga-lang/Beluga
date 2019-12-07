@@ -1427,9 +1427,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          "ctx-split" i bs
          begin fun ppf case ->
          match case with
-         | EmptyContext ->
+         | EmptyContext _ ->
             fprintf ppf "empty context"
-         | ExtendedBy tA ->
+         | ExtendedBy (_, tA) ->
             fprintf ppf "@[<hov 2>extended by@ @[%a@]@]"
               (fmt_ppr_lf_typ cD LF.Null l0) tA
          end

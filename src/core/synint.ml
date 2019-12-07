@@ -479,9 +479,7 @@ module Comp = struct
     ; cIH : gctx   (* Generated induction hypotheses. *)
     }
 
-  type context_case =
-    | EmptyContext
-    | ExtendedBy of LF.typ
+  type context_case = LF.typ generic_context_case
 
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 

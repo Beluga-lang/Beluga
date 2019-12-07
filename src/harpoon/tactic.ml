@@ -350,8 +350,9 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
            match pat with
            | PatMetaObj (_, (_, LF.CObj cPsi)) ->
               begin match cPsi with
-              | LF.Null -> EmptyContext
-              | LF.(DDec (CtxVar _, TypDecl (x, tA))) -> ExtendedBy (Whnf.cnormTyp (tA, Whnf.m_id))
+              | LF.Null -> EmptyContext Loc.ghost
+              | LF.(DDec (CtxVar _, TypDecl (x, tA))) ->
+                 ExtendedBy (Loc.ghost, Whnf.cnormTyp (tA, Whnf.m_id))
               | _ -> B.Error.violation "[get_context_branch] impossible"
               end
            | _ ->

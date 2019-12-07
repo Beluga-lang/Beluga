@@ -2,6 +2,8 @@
     Beluga syntax.
  *)
 
+module Loc = Location
+
 (** General snoc-lists. *)
 module LF = struct
   type 'a ctx =                          (* Generic context declaration    *)
@@ -18,6 +20,14 @@ end
 
 module Comp = struct
   type case_pragma = PragmaCase | PragmaNotCase
+
+  type 'a generic_context_case =
+    | EmptyContext of Loc.t
+    | ExtendedBy of Loc.t * 'a
+
+  type 'ctx_case generic_case_label =
+    | NamedCase of Loc.t * Id.name
+    | ContextCase of 'ctx_case
 end
 
 module Harpoon = struct

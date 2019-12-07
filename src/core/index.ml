@@ -83,6 +83,12 @@ type lf_indexing_context =
   ; bvars : BVar.t
   }
 
+let empty_lf_indexing_context disambiguate_name =
+  { cvars = CVar.create ()
+  ; bvars = BVar.create ()
+  ; disambiguate_name
+  }
+
 (** Transforms the bound variable list in an indexing context. *)
 let modify_bvars (f : BVar.t -> BVar.t) (c : lf_indexing_context) : lf_indexing_context =
   { c with bvars = f c.bvars }
@@ -1506,9 +1512,34 @@ and index_directive cvars vars fvars = function
      let bs' = List.map (index_split_branch cvars vars fvars) bs in
      Apx.Comp.Split (loc, i', bs')
 
-and index_split_branch cvars vars fvars b =
-  let Ext.Comp.({ case_label; branch_body; split_branch_loc }) = b in
+and index_context_case_label cvars fvars = function
+  | Ext.Comp.EmptyContext loc -> Apx.Comp.EmptyContext loc
+  | Ext.Comp.ExtendedBy (loc, tA) ->
+     dprintf
+       begin fun p ->
+       p.fmt "[index_context_case_label] at %a"
+         Loc.print loc
+       end;
+     let fvars', tA' =
+       index_typ tA
+         { (empty_lf_indexing_context disambiguate_to_fmvars) with
+           cvars
+         }
+         (* free variables are not allowed in a case label *)
+         { fvars with open_flag = `closed_term }
+     in
+     Apx.Comp.ExtendedBy (loc, tA')
+
+and index_case_label cvars fvars = function
+  | Ext.Comp.NamedCase (loc, name) -> Apx.Comp.NamedCase (loc, name)
+  | Ext.Comp.ContextCase case ->
+     let case = index_context_case_label cvars fvars case in
+     Apx.Comp.ContextCase case
+
+and index_split_branch cvars vars fvars =
+  fun Ext.Comp.({ case_label; branch_body; split_branch_loc }) ->
   let branch_body = index_hypothetical branch_body in
+  let case_label = index_case_label cvars fvars case_label in
   Apx.Comp.(
     { case_label
     ; branch_body
@@ -1547,12 +1578,6 @@ let comptypdef (cT, cK) =
     index_comptyp cT (unroll cK' (CVar.create ())) (empty_fvars `closed_term)
   in
   (tau, cK')
-
-let empty_lf_indexing_context disambiguate_name =
-  { cvars = CVar.create ()
-  ; bvars = BVar.create ()
-  ; disambiguate_name
-  }
 
 let run_empty d f =
   f (empty_lf_indexing_context d) (empty_fvars `closed_term)

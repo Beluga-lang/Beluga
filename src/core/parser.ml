@@ -2646,6 +2646,31 @@ let harpoon_command : Comp.command parser =
          $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x)
        ]
 
+let case_label : Comp.case_label parser =
+  let extension_case_label =
+    trying (keyword "extended" &> token T.KW_BY) &> clf_typ
+    |> span
+    |> labelled "context extension case label"
+    $> fun (loc, typ) -> Comp.(ContextCase (ExtendedBy (loc, typ)))
+  in
+  let empty_case_label =
+    trying (keyword "empty" &> keyword "context")
+    |> span
+    |> labelled "empty context case label"
+    $> fun (loc, _) -> Comp.(ContextCase (EmptyContext loc))
+  in
+  let named_case_label =
+    name
+    |> span
+    |> labelled "constructor case label"
+    $> fun (loc, name) -> Comp.NamedCase (loc, name)
+  in
+  choice
+    [ extension_case_label
+    ; empty_case_label
+    ; named_case_label
+    ]
+
 let rec harpoon_proof : Comp.proof parser =
   { run =
       fun s ->
@@ -2728,7 +2753,7 @@ and harpoon_split_branch : Comp.split_branch parser =
       let p =
         token T.KW_CASE &>
           seq2
-            (name <& token T.COLON)
+            (case_label <& token T.COLON)
             harpoon_hypothetical
         |> span
         $> fun (split_branch_loc, (case_label, branch_body)) ->

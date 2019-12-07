@@ -230,6 +230,9 @@ module Comp = struct
 
  type gctx = ctyp_decl LF.ctx
 
+ type context_case = LF.typ generic_context_case
+ type case_label = context_case generic_case_label
+
  type hypotheses =
    { cD : LF.mctx
    ; cG : gctx
@@ -250,7 +253,7 @@ module Comp = struct
    | Split of Loc.t * exp_syn * split_branch list
 
  and split_branch =
-   { case_label : name
+   { case_label : case_label
    ; branch_body : hypothetical
    ; split_branch_loc : Loc.t
    }

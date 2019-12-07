@@ -93,18 +93,18 @@ module LF = struct
 
   and mctx = ctyp_decl ctx
 
- type mfront =
-   | ClObj of dctx * sub
-   (* ClObj doesn't *really* contain just a substitution.
-      The problem is that syntactically, we can't tell
-      whether `[psi |- a]' is a boxed object or
-      substitution! So it turns out that,
-      syntactically, substitutions encompass both
-      possibilities: a substitution beginning with
-      EmptySub and having just one normal term in it
-      can represent a boxed term. We disambiguate
-      substitutions from terms at a later time. *)
-   | CObj of dctx
+  type mfront =
+    | ClObj of dctx * sub
+    (* ClObj doesn't *really* contain just a substitution.
+       The problem is that syntactically, we can't tell
+       whether `[psi |- a]' is a boxed object or
+       substitution! So it turns out that,
+       syntactically, substitutions encompass both
+       possibilities: a substitution beginning with
+       EmptySub and having just one normal term in it
+       can represent a boxed term. We disambiguate
+       substitutions from terms at a later time. *)
+    | CObj of dctx
 
   (** Converts a spine to a list. It is visually "backwards" *)
   let rec list_of_spine (sp : spine) : (Loc.t * normal) list =
@@ -157,24 +157,24 @@ module Comp = struct
    | TypPiBox of Loc.t * LF.ctyp_decl * typ           (*    | Pi u::U.tau        *)
    | TypInd of typ
 
-  and exp_chk =                                 (* Computation-level expressions *)
-     | Syn        of Loc.t * exp_syn                           (*  e ::= i                 *)
-     | Fn         of Loc.t * name * exp_chk                    (*    | fn x => e           *)
-     | Fun        of Loc.t * fun_branches                      (*    | fun fbranches       *)
-     | MLam       of Loc.t * name * exp_chk                    (*    | mlam f => e         *)
-     | Pair       of Loc.t * exp_chk * exp_chk                 (*    | (e1 , e2)           *)
-     | LetPair    of Loc.t * exp_syn * (name * name * exp_chk) (*    | let (x,y) = i in e  *)
-     | Let        of Loc.t * exp_syn * (name * exp_chk)        (*    | let x = i in e      *)
-     | Box        of Loc.t * meta_obj                          (*    | [C]                 *)
-     | Impossible of Loc.t * exp_syn                           (*    | impossible i        *)
-     | Case       of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches *)
-     | Hole       of Loc.t * string option     				         (*    | ?name               *)
+ and exp_chk =                                 (* Computation-level expressions *)
+   | Syn        of Loc.t * exp_syn                           (*  e ::= i                 *)
+   | Fn         of Loc.t * name * exp_chk                    (*    | fn x => e           *)
+   | Fun        of Loc.t * fun_branches                      (*    | fun fbranches       *)
+   | MLam       of Loc.t * name * exp_chk                    (*    | mlam f => e         *)
+   | Pair       of Loc.t * exp_chk * exp_chk                 (*    | (e1 , e2)           *)
+   | LetPair    of Loc.t * exp_syn * (name * name * exp_chk) (*    | let (x,y) = i in e  *)
+   | Let        of Loc.t * exp_syn * (name * exp_chk)        (*    | let x = i in e      *)
+   | Box        of Loc.t * meta_obj                          (*    | [C]                 *)
+   | Impossible of Loc.t * exp_syn                           (*    | impossible i        *)
+   | Case       of Loc.t * case_pragma * exp_syn * branch list  (*    | case i of branches *)
+   | Hole       of Loc.t * string option     				         (*    | ?name               *)
 
-  and exp_syn =
-     | Name   of Loc.t * name                        (*  i ::= x/c               *)
-     | Apply  of Loc.t * exp_syn * exp_chk           (*    | i e                 *)
-     | BoxVal of Loc.t * meta_obj                    (*    | [C]                 *)
-     | PairVal of Loc.t * exp_syn * exp_syn          (*    | (i , i)             *)
+ and exp_syn =
+   | Name   of Loc.t * name                        (*  i ::= x/c               *)
+   | Apply  of Loc.t * exp_syn * exp_chk           (*    | i e                 *)
+   | BoxVal of Loc.t * meta_obj                    (*    | [C]                 *)
+   | PairVal of Loc.t * exp_syn * exp_syn          (*    | (i , i)             *)
   (* Note that observations are missing.
      In the external syntax, observations are syntactically
      indistinguishable from applications, so we parse them as
@@ -207,9 +207,9 @@ module Comp = struct
      | EmptyPattern
 
  type 'a order' =
-      Arg of 'a			(* O ::= x                    *)
-    | Lex of 'a order' list                 (*     | {O1 .. On}           *)
-    | Simul of 'a order' list               (*     | [O1 .. On]           *)
+   | Arg of 'a			(* O ::= x                    *)
+   | Lex of 'a order' list                 (*     | {O1 .. On}           *)
+   | Simul of 'a order' list               (*     | [O1 .. On]           *)
  (* Note: Simul is currently unused. It doesn't even have a parser. -je *)
 
  let rec map_order (f : 'a -> 'b) : 'a order' -> 'b order' =

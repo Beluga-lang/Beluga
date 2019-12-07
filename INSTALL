@@ -5,15 +5,17 @@ Beluga Installation & Configuration Guide
 Table of contents:
 
 1. Installation
-  1.1 Generic prerequisites
+  1.1 Generic Prerequisites
     1.1.1 Debian/Ubuntu
     1.1.2 macOS
     1.1.3 Windows
+      1.1.3.1 Using WSL
+      1.1.3.2 Using Cygwin
   1.2 Building
-    1.2.1 Compilation options
+    1.2.1 Compilation Tips
   1.3 Troubleshooting
 2. Configuration
-  2.1 Running Ruby script to convert to new syntax
+  2.1 Running Ruby Script to Convert to New Syntax
   2.2 Beluga-mode for Emacs
 
 =========================
@@ -25,11 +27,13 @@ Table of contents:
 
 The following packages must be installed to use Beluga:
 
-ocaml 4.07.1+:           http://caml.inria.fr/download.en.html
+ocaml 4.05.0+:           http://caml.inria.fr/download.en.html
 extlib:                  http://code.google.com/p/ocaml-extlib/downloads/list
-ulex:                    http://www.cduce.org/download.html#side
+gen:                     https://github.com/c-cube/gen
+linenoise:               https://github.com/ocaml-community/ocaml-linenoise
+sedlex:                  https://github.com/ocaml-community/sedlex
 
-Optional dependencies (for improved interactive mode):
+Optional dependencies (for improved beli mode):
 
 rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 
@@ -40,12 +44,17 @@ rlwrap:                  http://utopia.knoware.nl/~hlub/uck/rlwrap/
 Under Debian Linux, all the necessary prerequisites can be installed
 with just the following command:
 
-# apt-get install ocaml ocaml-findlib libextlib-ocaml-dev ocaml-ulex
+$ apt-get install opam
+$ opam init --bare
+$ opam switch create ocaml-base-compiler.4.09.0
+$ eval $(opam env)
+# from the Beluga directory
+$ opam install --deps-only .
 
 The interactive mode is greatly improved if you have rlwrap installed,
 so you might also want to consider:
 
-# apt-get install rlwrap
+$ apt-get install rlwrap
 
 These commands may work under other distributions.
 
@@ -55,66 +64,85 @@ These commands may work under other distributions.
 Under macOS, the easiest way to install the prerequisites is via opam,
 and the easiest way to install opam is via Homebrew (https://brew.sh/):
 
-# brew install opam
-# opam init
-# opam switch create ocaml-base-compiler.4.07.1
-# opam install ocamlfind extlib ulex
-# eval $(opam env)
+$ brew install opam
+$ opam init --bare
+$ opam switch create ocaml-base-compiler.4.09.0
+$ eval $(opam env)
+# from the Beluga directory
+$ opam install --deps-only .
 
 The interactive mode is greatly improved if you have rlwrap installed,
 so you might also want to consider:
 
-# brew install rlwrap
+$ brew install rlwrap
 
 1.1.3 Windows
 -------------
 
-Beluga can be executed on Windows through Cygwin. The necessary prerequisites can be installed
-using an OCalm package manager called WODI.
+There are two options for Windows users. If you use Windows 10 or
+later versions, Using WSL (Windows Subsystem for Linux) is
+recommended.
 
-1. Download WODI's graphical installer wodi32/64.exe
-http://wodi.forge.ocamlcore.org/download.html
+1.1.3.1 Using WSL
 
-2. Run wodi32/64.exe and step through the installation wizard
-Note: if you don't already have Cygwin installed, it will be installed for you. The installation directory you select will be the root directory within the WODI Cygwin terminal.
+Install WSL (https://docs.microsoft.com/en-us/windows/wsl/install-win10)
+first, and follow the right instruction according to your distribution.
 
-3. From the start menu, select Wodi32/64 Package Manager. Don't be alarmed if WODI cannot read all PATH entries.
+In Ubuntu WSL distribution, following the instructions for Debian/Ubuntu
+systems will work just as in those systems.
 
-4. Search for each of the prerequisite packages: extlib, ulex, ounit, findlib. Check the box beside each of the packages and click "Apply". The checkbox will be greyed out if the package has already been installed.
+For other WSL distributions, please follow the instruction of opam
+(https://opam.ocaml.org/doc/Install.html) to install opam, then execute
+the following commands.
 
-More inforamtion about WODI: http://wodi.forge.ocamlcore.org/
-More information about Cygwin: http://www.cygwin.com/
+$ opam init --bare
+$ opam switch create ocaml-base-compiler.4.09.0
+$ eval $(opam env)
+# from the Beluga directory
+$ opam install --deps-only .
+
+For more information about WSL
+  https://docs.microsoft.com/en-us/windows/wsl/about
+
+1.1.3.2 Using Cygwin
+
+If you use Windows 8 or earlier versions, you can build and execute
+Beluga on Windows through Cygwin. The necessary prerequisites can be installed
+using opam for Windows.
+
+1. Download opam for Windows' graphical installer OCaml32/64.exe
+  https://fdopen.github.io/opam-repository-mingw/installation/
+
+2. Run OCaml32/64.exe and step through the installation wizard
+  Note: if you don't already have Cygwin installed,
+  it will be installed for you.
+
+3. Run the following commands from Beluga directory within cygwin terminal.
+
+$ opam switch create ocaml-variants.4.09.0+mingw64c
+$ eval $(opam env)
+# from the Beluga directory
+$ opam install --deps-only .
+
+For more inforamtion about opam for Windows
+  https://fdopen.github.io/opam-repository-mingw
+For more information about Cygwin
+  http://www.cygwin.com/
 
 1.2 Building
 ============
 
 Compile by running "make" from the Beluga directory.
 
-./beluga
-# make
+$ make
 
 You can now run Beluga programs with the newly
 "beluga" executable in the "bin" directory
 
-./beluga
-# ./bin/beluga path/to/program.bel
+$ ./bin/beluga path/to/program.bel
 
-1.2.1 Compilation options
+1.2.1 Compilation Tips
 -------------------------
-
-Setting the following environment variables for "make" enables the
-following compilation option:
-
-BYTE:          sets byte-code compilation instead of native
-DEBUG:         enables the -g option of ocamlc
-PROFILE:       enables the -p option of ocamlc
-WARN_PATTERN:  enables warning for non-exhaustive patterns
-VERBOSE:       sets verbosity level of ocamlbuild
-PARALLEL:      sets max number of parallel processes
-
-For instance, to enable byte-code compilation, run:
-
-make BYTE=true
 
 Running `make clean' will clean the directory of compilation results
 
@@ -131,14 +159,13 @@ Error: The files [path/to/file]
 
 Try cleaning the Beluga directory.
 
-./beluga
-# ./make clean all
+$ make clean all
 
 =========================
 2. Configuration
 =========================
 
-2.1 Running Ruby script to convert to new syntax
+2.1 Running Ruby Script to Convert to New Syntax
 ================================================
 
 You will need Ruby 1.9 for running the script.
@@ -146,36 +173,37 @@ You will need Ruby 1.9 for running the script.
 For MAC OS:
 The default version of ruby installed on Mac OS is usually not Ruby 1.9, but
 Ruby 1.8. To install the newest version of Ruby, we recommend installing first
-RVM, the “Ruby Version Manager. This will make installing Ruby 1.9 easy. In your
-home directory, you can say:
+RVM, the “Ruby Version Manager. This will make installing Ruby 1.9 easy.
+In your home directory, you can say:
 
- bash < <(curl -s https://rvm.beginrescueend.com/install/rvm)
+$ bash < <(curl -s https://rvm.beginrescueend.com/install/rvm)
 
 rvm is then installed in .rvm/bin.
 
 Then you can say:
 
-.rvm/bin/rvm install 1.9.3
+$ .rvm/bin/rvm install 1.9.3
 
-Note, you will want to add .rvm/bin to your .bashrc directory, so you will be able to
-find rvm without giving the full path.
+Note, you will want to add .rvm/bin to your .bashrc directory, so you will be
+able to find rvm without giving the full path.
 
 2.2 Beluga-mode for GNU Emacs
 =============================
 
-Beluga includes a major mode for programming in Emacs. The elisp file is locationed in the
-./beluga/tools directory. To configure Beluga-mode:
+Beluga includes a major mode for programming in Emacs. The elisp file is
+located in the ./tools directory. To configure Beluga-mode:
 
-1. Update your ~/.emacs configuration file with the lines written below. XEmacs users must
-update ~/.xemacs and ~/.xema.cs/init.el with the same text. Create any of these files if
-they do not exist already.
+1. Update your ~/.emacs or ~/.emacs.d/init.el file with the lines written below.
+  XEmacs users must update ~/.xemacs or ~/.xema.cs/init.el with the same text.
+  Create any of these files if they do not exist already.
 
-(add-to-list 'load-path "/home/bpientka/complogic/beluga/tools/")
+;; You should replace path/to/beluga with the actual path of the Beluga directory.
+(add-to-list 'load-path "path/to/beluga/tools/")
 (load "beluga-mode.el")
 
-NOTE: Feel free to move ther beluga-mode.el file to another directory so long as you
-ensure its location is included in the Emacs load-path.
+NOTE: Feel free to move the beluga-mode.el file to another directory so long as
+you add its location to the Emacs load-path.
 
 2. Restart Emacs.
- .
-Emacs will now launch in Beluga-mode automatically when you open a Beluga program.
+  Emacs will now launch in Beluga-mode automatically when you open a Beluga
+  program.

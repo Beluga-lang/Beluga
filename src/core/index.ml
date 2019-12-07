@@ -329,6 +329,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
      $> fun s' -> Apx.LF.Atom (loc, a', s')
 
   | Ext.LF.ArrTyp (_loc, a, b) ->
+     (* TODO use contextual name generation here *)
       let x = Id.mk_name Id.NoName in
       seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
       $> fun (a', b') ->

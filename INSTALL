@@ -194,7 +194,7 @@ Beluga includes a major mode for programming in Emacs. The elisp file is
 located in the ./tools directory. To configure Beluga-mode:
 
 1. Update your ~/.emacs or ~/.emacs.d/init.el file with the lines written below.
-  XEmacs users must update ~/.xemacs or ~/.xema.cs/init.el with the same text.
+  XEmacs users must update ~/.emacs or ~/.xemacs/init.el with the same text.
   Create any of these files if they do not exist already.
 
 ;; You should replace path/to/beluga with the actual path of the Beluga directory.

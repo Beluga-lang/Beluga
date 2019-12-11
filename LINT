@@ -46,7 +46,7 @@ function main {
             echo -e "${C[success]}SUCCESS${CEND}"
             (( LINT_RESULT[success]+=1 ))
         else
-            echo -e "${C[fail]}WHITESPACE FAILURE${CEND}"
+            echo -e "${C[fail]}LINT FAILURE - TRAILING WHITESPACES${CEND}"
             (( LINT_RESULT[fail]+=1 ))
 
             echo "${diff_output}" | colorize_diff

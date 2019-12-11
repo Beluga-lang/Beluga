@@ -2,20 +2,17 @@
 
 set -e
 
-incomplete=0
-
-function die() {
-    echo $@ >&2
+if [ $# -eq 0 ]; then
+    echo "no input file specified" >&2
     exit 1
-}
+fi
 
-input_path="$1"
+declare -r input_path="$1"
 shift
-[ -z "${input_path}" ] && die "no input file specified"
 
 sig=$(sed -n '1p' "${input_path}")
 
-exec harpoon \
+exec ./bin/harpoon \
      --sig "${sig}" \
      --implicit \
      --test "${input_path}" \

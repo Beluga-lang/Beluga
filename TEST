@@ -289,20 +289,9 @@ function check_compiler_test_case {
 function check_harpoon {
     local -r file_path=$1
 
-    local sig_path
-    local options
     local output exit_code
 
-    sig_path=$(sed -n '1p' "${file_path}")
-
-    options=(
-        "--sig" "${sig_path}"
-        "--test" "${file_path}"
-        "--test-start" "2"
-        "--implicit"
-    )
-
-    output=$(${HARPOON} "${options[@]}" 2>&1)
+    output=$(./run_harpoon_test.sh "${file_path}" 2>&1)
     check_harpoon_output "${output}"
     exit_code=$?
 

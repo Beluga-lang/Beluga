@@ -10,18 +10,20 @@ the formulas being manipulated.
 
 #### Starting Harpoon
 
-First, start Beluga in interactive mode and with implicit argument printing
-enabled by running `bin/beluga +implicit -I`.
-Second, start the Harpoon interactive mode from the basic interactive mode by
-using `%:prove THM` where `THM` is the name of the theorem to prove.
+Start the Harpoon interactive mode by using `bin/harpoon --implicit --sig SIG` where `SIG`
+is the name of the signature file you will use as a context of your theorem.
 
-* You will be prompted for the statement of the theorem to prove: this is a
-  Beluga type, e.g. `[|- oft M A] -> [|- eval M M'] -> [|- oft M' A]`.
-  Note that free variables will automatically be pibox-quantified at the front.
-* You will be promped for the induction order, i.e. which argument you are doing
-  induction on. This is a number, starting at `1`.
-  In the case of the above example `tps`, you should enter `2`, since the
-  theorem is proven by induction on the evaluation judgment `[|- eval M M']`.
+* You will be prompted for some details of the theorems to prove.
+  * You will be prompted for the name of theorem to prove.
+    When you have no more theorem to prove, put just enter key in.
+  * You will be prompted for the statement of the theorem to prove: this is a
+    Beluga type, e.g. `[|- oft M A] -> [|- eval M M'] -> [|- oft M' A]`.
+    Note that free variables will automatically be pibox-quantified at the front.
+  * You will be promped for the induction order, i.e. which argument you are doing
+    induction on. This is an optional number, starting at `1`.
+    In the case of the above example `tps`, you should enter `2`, since the
+    theorem is proven by induction on the evaluation judgment `[|- eval M M']`.
+    If you do not want any induction, put just enter key in.
 
 You should then arrive at the Harpoon prompt, which is a lambda.
 
@@ -37,6 +39,7 @@ The following are the commands in Harpoon.
 
 Administrative commands:
 * `show-proof`: dumps the entire proof as text.
+* `rename`: rename a variable
 * `defer`: go to the next subgoal
 * `show-ihs`: dumps the currently available induction hypotheses.
 * `show-subgoals`: lists all open subgoals
@@ -80,18 +83,15 @@ The following are the available automatic tactics.
 
 ### Example
 
-* Start the Beluga interactive mode: `bin/beluga +implicit -I`
-* Load the simply-typed lambda calculus: `%:load examples/stlc.bel`
-  You should see a message confirming the loading, and Beluga should print out
-  the internal representation of the file.
-* Begin the Harpoon interactive mode, by giving a name to the theorem:
-  `%:prove tps`
+* Start the Harpoon interactive mode with the simply-typed lambda calculus:
+  `bin/harpoon --implicit --sig examples/stlc.bel`
+* Input some detail of the theorem starting from its name: `tps`
 * Input the statement of the theorem:
   `[ |- oft M A ] -> [ |- eval M M' ] -> [ |- oft M' A ]`
   Free metavariables are permitted in these type signatures, and will
   automatically be abstracted over universally.
-* Harpoon should display the current proof state and present you with the lambda
-  prompt.
+* Harpoon should display the current proof state and present you with the right
+  angle braket prompt.
   The state should be that all the assumptions of the theorem have been
   introduced.
 * Run `show-proof`. You should see that the `--intros` tactic appeared in the

@@ -3,14 +3,14 @@ LF a : type =;
 schema ctx = a;
 
 LF nat : type =
-  | z : nat
-  | s : nat → nat
+  | zero : nat
+  | succ : nat → nat
 ;
 
 rec length : {g : ctx} → [⊢ nat] =
 mlam g ⇒ case [g] of
-  | [] ⇒ [⊢ z]
+  | [] ⇒ [⊢ zero]
   | [g', x : a] ⇒
         let [⊢ N] = length [g'] in
-        [⊢ s N]
+        [⊢ succ N]
 ;

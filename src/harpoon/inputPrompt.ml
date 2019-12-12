@@ -30,12 +30,16 @@ let create_file (path, k) (test_start : int option) : t =
     | None -> ()
     | Some ln -> GenMisc.drop_lines g (ln - 1)
   end;
+  let g_with msg _ =
+    print_string msg;
+    g ()
+  in
   match k with
   | `incomplete ->
      fun msg history_file ->
-     GenMisc.sequence [g; terminal msg history_file]
+     GenMisc.sequence [g_with msg; terminal msg history_file]
   | `complete ->
-     fun _ _ -> g
+     fun msg _ -> g_with msg
 
 let create test_file test_start : t =
   match test_file with

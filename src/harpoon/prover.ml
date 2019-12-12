@@ -393,7 +393,7 @@ let rec loop (s : Prover.state) : unit =
              See https://github.com/ocaml-community/ocaml-linenoise/issues/13
              for detail.
            *)
-          s.prompt ">" None ()
+          s.prompt "> " None ()
           |> Maybe.get' EndOfInput
         in
         let e =

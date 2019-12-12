@@ -17,10 +17,10 @@ main
 rename comp y8 rs
 split [gamma |- M]
 by lemma lookup [gamma] [gamma |- #p3] rs as x
-by ih main [gamma] [gamma |- M11] rs as ih1
+by ih main [gamma] [gamma |- M1] rs as ih1
 invert ih1
-by ih main [gamma] [gamma |- M12] rs as ih2
+by ih main [gamma] [gamma |- M2] rs as ih2
 solve v7 [|- _] ih2
-solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M10] (Dot rs rN)))
+solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M1] (Dot rs rN)))
 solve I [ |- halts/m refl val/c]
 

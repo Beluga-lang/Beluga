@@ -33,107 +33,110 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
+let _ =
+  Error.register_printer
+    begin fun (Error (loc, err)) ->
+    Error.print_with_location loc
+      begin fun ppf ->
       match err with
       | ParamVarInst (cD, cPsi, sA) ->
-            Format.fprintf ppf "Parameter variable of type %a does not appear as a declaration in context %a. @ @ It may be that no parameter variable of this type exists in the context or the type of the parameter variable is a projection of a declaration in the context."
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+         Format.fprintf ppf "Parameter variable of type %a does not appear as a declaration in context %a. @ @ It may be that no parameter variable of this type exists in the context or the type of the parameter variable is a projection of a declaration in the context."
+           (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
 
       | CtxVarMisCheck (c0, cPsi, sA, sEl ) ->
-            Format.fprintf ppf "Type %a doesn't check against schema %a."
-               (P.fmt_ppr_lf_typ c0 cPsi P.l0) (Whnf.normTyp sA)
-               (P.fmt_ppr_lf_schema P.l0) sEl
+         Format.fprintf ppf "Type %a doesn't check against schema %a."
+           (P.fmt_ppr_lf_typ c0 cPsi P.l0) (Whnf.normTyp sA)
+           (P.fmt_ppr_lf_schema P.l0) sEl
 
       | CtxVarMismatch (cO, var, expected) ->
-          Format.fprintf ppf "Context variable %a doesn't check against schema %a."
-            (P.fmt_ppr_lf_ctx_var cO) var
-            (P.fmt_ppr_lf_schema P.l0) expected
+         Format.fprintf ppf "Context variable %a doesn't check against schema %a."
+           (P.fmt_ppr_lf_ctx_var cO) var
+           (P.fmt_ppr_lf_schema P.l0) expected
 
       | CtxVarDiffer (cO, var, var1) ->
-          Format.fprintf ppf "Context variable %a not equal to %a."
-            (P.fmt_ppr_lf_ctx_var cO) var
-            (P.fmt_ppr_lf_ctx_var cO) var1
+         Format.fprintf ppf "Context variable %a not equal to %a."
+           (P.fmt_ppr_lf_ctx_var cO) var
+           (P.fmt_ppr_lf_ctx_var cO) var1
 
-            | MissingType name ->
-               Format.fprintf ppf "Need to know type of %s" name
+      | MissingType name ->
+         Format.fprintf ppf "Need to know type of %s" name
 
       | CheckError (cD, cPsi, sM, sA) ->
-          Format.fprintf ppf
-	    "Expression %a does not check against %a."
-	    (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
-	    (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
+         Format.fprintf ppf
+           "Expression %a does not check against %a."
+           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
+           (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 
       | SigmaMismatch (cD, cPsi, sArec, sBrec) ->
-        Error.report_mismatch ppf
-	  "Sigma type mismatch."
-	  "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sArec)
-	  "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sBrec)
+         Error.report_mismatch ppf
+           "Sigma type mismatch."
+           "Expected type" (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sArec)
+           "Actual type"   (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sBrec)
 
       | TupleArity (cD, cPsi, sM, sA) ->
-	Error.report_mismatch ppf
-	  "Arity of tuple doesn't match type."
-	  "Tuple" (P.fmt_ppr_lf_normal cD cPsi P.l0)  (Whnf.norm sM)
-	  "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sA)
+         Error.report_mismatch ppf
+           "Arity of tuple doesn't match type."
+           "Tuple" (P.fmt_ppr_lf_normal cD cPsi P.l0)  (Whnf.norm sM)
+           "Type"  (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) (Whnf.normTypRec sA)
 
       | KindMismatch (cD, cPsi, sS, sK) ->
-	Error.report_mismatch ppf
-          "Ill-kinded type."
-	  "Expected kind:" (P.fmt_ppr_lf_kind cPsi P.l0) (Whnf.normKind sK)
-	  "for spine:"     (P.fmt_ppr_lf_spine cD cPsi P.l0) (Whnf.normSpine sS)
+         Error.report_mismatch ppf
+           "Ill-kinded type."
+           "Expected kind:" (P.fmt_ppr_lf_kind cPsi P.l0) (Whnf.normKind sK)
+           "for spine:"     (P.fmt_ppr_lf_spine cD cPsi P.l0) (Whnf.normSpine sS)
 
       | TypMismatch (cD, cPsi, sM, sA1, sA2) ->
-        Error.report_mismatch ppf
-          "Ill-typed term."
-	  "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
-	  "Inferred type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA2);
-        Format.fprintf ppf
-          "In expression: %a@."
-          (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
+         Error.report_mismatch ppf
+           "Ill-typed term."
+           "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
+           "Inferred type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA2);
+         Format.fprintf ppf
+           "In expression: %a@."
+           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
 
       | IllTypedSub (cD, cPsi, s, cPsi') ->
-        Format.fprintf ppf "Ill-typed substitution.@.";
-        Format.fprintf ppf "    Substitution: %a@."
-          (P.fmt_ppr_lf_sub cD cPsi P.l0) s;
-        Format.fprintf ppf "    does not take context: %a@."
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi';
-        Format.fprintf ppf "    to context: %a@."
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi;
+         Format.fprintf ppf "Ill-typed substitution.@.";
+         Format.fprintf ppf "    Substitution: %a@."
+           (P.fmt_ppr_lf_sub cD cPsi P.l0) s;
+         Format.fprintf ppf "    does not take context: %a@."
+           (P.fmt_ppr_lf_dctx cD P.l0) cPsi';
+         Format.fprintf ppf "    to context: %a@."
+           (P.fmt_ppr_lf_dctx cD P.l0) cPsi;
 
       | SpineIllTyped (n_expected, n_actual) ->
-	Error.report_mismatch ppf
-	  "Ill-typed spine."
-	  "Expected number of arguments" Format.pp_print_int n_expected
-	  "Actual number of arguments"   Format.pp_print_int n_actual
+         Error.report_mismatch ppf
+           "Ill-typed spine."
+           "Expected number of arguments" Format.pp_print_int n_expected
+           "Actual number of arguments"   Format.pp_print_int n_actual
 
       | LeftoverFV name ->
-	       Format.fprintf ppf "Leftover free variable %a. Perhaps it is misspelled?"
+         Format.fprintf ppf "Leftover free variable %a. Perhaps it is misspelled?"
            Id.print name
       | IllTypedMetaObj (cD, cM, cPsi, mT) ->
-            Format.fprintf ppf
-              "Meta object %a does not have type %a."
-              (P.fmt_ppr_lf_mfront cD P.l0) (ClObj (Context.dctxToHat cPsi, cM))
-              (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
+         Format.fprintf ppf
+           "Meta object %a does not have type %a."
+           (P.fmt_ppr_lf_mfront cD P.l0) (ClObj (Context.dctxToHat cPsi, cM))
+           (P.fmt_ppr_lf_mtyp cD) (ClTyp (mT, cPsi))
       | CtxHatMismatch (cD, cPsi, phat, cM) ->
-          let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
-            Error.report_mismatch ppf
-              "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
-              "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
-              "Given context" (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi;
-              Format.fprintf ppf
-                "In expression: %a@."
-                (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
+         let cPhi = Context.hatToDCtx (Whnf.cnorm_psihat phat Whnf.m_id) in
+         Error.report_mismatch ppf
+           "Type checking encountered ill-typed meta-object. This is a bug in type reconstruction."
+           "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
+           "Given context" (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi;
+         Format.fprintf ppf
+           "In expression: %a@."
+           (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
       | TermWhenVar (cD, cPsi, tM) ->
-	Format.fprintf ppf "A term was found when expecting a variable.@." ;
-	Format.fprintf ppf "Offending term: %a @."
-	  (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
+         Format.fprintf ppf "A term was found when expecting a variable.@." ;
+         Format.fprintf ppf "Offending term: %a @."
+           (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
       | SubWhenRen (cD, cPsi, sub) ->
-	Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
-	Format.fprintf ppf "Offending substitution: %a @."
-	  (P.fmt_ppr_lf_sub cD cPsi P.l0) sub
-  ))
+         Format.fprintf ppf "A substitution was found when expecting a renaming.@." ;
+         Format.fprintf ppf "Offending substitution: %a @."
+           (P.fmt_ppr_lf_sub cD cPsi P.l0) sub
+      end
+    end
 
 exception SpineMismatch
 

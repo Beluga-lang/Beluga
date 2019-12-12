@@ -2064,57 +2064,57 @@ let genCGoals (cD' : LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) li
     | _ -> Dependent
   in
   match cT with
-  | LF.ClTyp (LF.MTyp tA, cPsi) ->
-     dprintf
-       begin fun p ->
-       p.fmt "[SPLIT] CovGoal: @[%a |- %a@]"
-         (P.fmt_ppr_lf_dctx cD' P.l0) cPsi
-         (P.fmt_ppr_lf_typ cD' cPsi P.l0) tA
-       end;
-     let dep0 = dep_of_typ tA in
-     ( genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
-     , dep0
-     )
-
-  | LF.ClTyp (LF.PTyp tA, cPsi) ->
-     begin match cPsi with
-     | LF.CtxVar _ -> ([], Atomic)
-     (* In the interactive mode, prevent splitting on parameter variables
-         whose type is simply a context variable and ask the user to split on
-         the context first; should maybe raise error. *)
-     | _ ->
+  | LF.ClTyp (clTyp, cPsi) ->
+     begin match clTyp with
+     | LF.MTyp tA ->
         dprintf
           begin fun p ->
-          p.fmt "[SPLIT] CovGoal (PVAR): @[%a |- %a@]"
+          p.fmt "[SPLIT] CovGoal: @[%a |- %a@]"
             (P.fmt_ppr_lf_dctx cD' P.l0) cPsi
             (P.fmt_ppr_lf_typ cD' cPsi P.l0) tA
           end;
         let dep0 = dep_of_typ tA in
-        (* bp : This may potentially even loop!;
+        ( genCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
+        , dep0
+        )
+     | LF.PTyp tA ->
+        begin match cPsi with
+        | LF.CtxVar _ -> ([], Atomic)
+        (* In the interactive mode, prevent splitting on parameter variables
+         whose type is simply a context variable and ask the user to split on
+         the context first; should maybe raise error. *)
+        | _ ->
+           dprintf
+             begin fun p ->
+             p.fmt "[SPLIT] CovGoal (PVAR): @[%a |- %a@]"
+               (P.fmt_ppr_lf_dctx cD' P.l0) cPsi
+               (P.fmt_ppr_lf_typ cD' cPsi P.l0) tA
+             end;
+           let dep0 = dep_of_typ tA in
+           (* bp : This may potentially even loop!;
            but this could initiate a potential split of PV including splitting the context
            g |- #A should result in g', x|- x   g', x|- #q
            in this implementation, we assume that the context split has been done separetely,
            and hence we would only loop if we were to split #p (and initiate another context split)
-         *)
-        ( genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
-        , dep0
-        )
-     end
-
-  | LF.ClTyp (sTyp, cPsi) ->
-     begin match cPsi with
-     | LF.CtxVar _ -> ([], Atomic)
-     (* In the interactive mode, prevent splitting on substitution variables
+            *)
+           ( genBCovGoals (cD', cPsi, Whnf.normTyp (tA, S.LF.id))
+           , dep0
+           )
+        end
+     | sTyp ->
+        begin match cPsi with
+        | LF.CtxVar _ -> ([], Atomic)
+        (* In the interactive mode, prevent splitting on substitution variables
          should be postponed until the domain, cPsi, has been refined and is
          either . (empty) or cPsi', _
          if cPsi is simply a context variable and ask the user to split on
          the context first; should maybe raise Split error. *)
-     | _ ->
-        ( genSVCovGoals (cD', (cPsi, sTyp))
-        , Atomic
-        )
+        | _ ->
+           ( genSVCovGoals (cD', (cPsi, sTyp))
+           , Atomic
+           )
+        end
      end
-
 
 let rec best_ctx_cand (cD, cv_list) k cD_tail =
   match cv_list, cD with
@@ -2430,11 +2430,11 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
   | Comp.TypBox (loc, mT) ->
      begin match mT with
      | LF.(ClTyp (tC, cPsi)) ->
-        let tA, f =
+        let f =
           let open LF in
           match tC with
-          | MTyp tA -> tA, fun sA -> MTyp (TClo sA)
-          | PTyp tA -> tA, fun sA -> PTyp (TClo sA)
+          | MTyp _ -> fun sA -> MTyp (TClo sA)
+          | PTyp _ -> fun sA -> PTyp (TClo sA)
         in
         genCGoals cD mT
         |> fst

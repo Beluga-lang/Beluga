@@ -311,12 +311,22 @@ function check_harpoon_output {
     local -r output=$1
     local -r proof_complete_message="Proof complete! (No theorems left.)"
     local -r uncaught_exception_message="Uncaught exception"
+    local -r parse_error_message="Parse error"
+    local -r internal_error_message="Internal error"
 
     if ! grep -q "${proof_complete_message}" <(echo "${output}"); then
         return 1
     fi
 
     if grep -q "${uncaught_exception_message}" <(echo "${output}"); then
+        return 1
+    fi
+
+    if grep -q "${parse_error_message}" <(echo "${output}"); then
+        return 1
+    fi
+
+    if grep -q "${internal_error_message}" <(echo "${output}"); then
         return 1
     fi
 

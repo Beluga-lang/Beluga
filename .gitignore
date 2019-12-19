@@ -19,6 +19,8 @@ _build/
 *.install
 
 # Beluga debug output files
+/input.bel
+/last-output.bel
 debug.out
 
 # ELisp files

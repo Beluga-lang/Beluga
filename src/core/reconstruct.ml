@@ -37,6 +37,7 @@ type error =
   | MCtxIllformed of Int.LF.mctx
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
+  | InvalidHypotheses  of Int.Comp.hypotheses
   | ErrorMsg of string
 
 exception Error of Syntax.Loc.t * error
@@ -1878,10 +1879,16 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   | A.Intros (loc, hyp) ->
       (match hyp with
        | { A.hypotheses = h; A.proof = p; _ } ->
+           let tau = Whnf.cnormCTyp ttau in
            let h' = elHypotheses h in
-           let { I.cD = cD'; I.cG = gamma'; I.cIH = _ } = h' in
-           let p' = elProof cD' gamma' p ttau in
-           I.Intros (I.Hypothetical (h', p')))
+           let { I.cD = cD'; I.cG = cG'; I.cIH = _ } = h' in
+           let (cD1, cG1, tau1) = Check.Comp.unroll cD cG tau in
+           if cD1 != cD' || cG1 != cG' then
+             raise (Error (loc, InvalidHypotheses h'))
+           else (
+             let p' = elProof cD' cG' p (tau1, Whnf.m_id) in
+             I.Intros (I.Hypothetical (h', p'))
+           ))
   | A.Solve (loc, e) -> I.Solve (elExp cD cG e ttau)
   | A.Split (loc, e, s_branches) -> assert false
 

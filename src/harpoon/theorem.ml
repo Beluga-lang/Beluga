@@ -242,3 +242,11 @@ let total_dec (t : t) =
 
 let set_hidden (t : t) b =
   Store.Cid.Comp.set_hidden t.cid (Misc.const b)
+
+(* Invokes the translation procedure on a given theorem *)
+let translate (thm : t) : exp_chk =
+  let state = thm.initial_state in
+  let cD = state.context.cD in
+  let cG = state.context.cG in
+  let (tau, _) = state.goal in
+  Translate.translate_proof cD cG (Option.get state.solution) tau

@@ -37,3 +37,5 @@ val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_stat
 val configure_set : Format.formatter -> (t -> proof_state -> unit) list -> Conf.t list -> t list
 val total_dec : t -> Total.dec
 val set_hidden : t -> bool -> unit
+
+val translate : t -> exp_chk

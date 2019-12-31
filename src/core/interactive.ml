@@ -36,8 +36,9 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
       PExt.(fmt_ppr_cmp_typ l0) tau
       (P.fmt_ppr_lf_mctx P.l0) cD
     end;
-  Index.comptyp tau
-  |> Reconstruct.comptyp
+  let cvars = Store.CVar.of_mctx cD in
+  Index.hcomptyp cvars tau
+  |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)

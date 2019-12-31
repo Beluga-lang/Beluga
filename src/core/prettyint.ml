@@ -881,20 +881,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   let rec fmt_ppr_cmp_typ cD lvl ppf = function
     | Comp.TypBase (_, c, mS)->
        let cond = lvl > 1 in
-       fprintf ppf "%s%s%a%s"
+       fprintf ppf "%s@[<2>%s@[%a@]@]%s"
          (l_paren_if cond)
          (R.render_cid_comp_typ c)
          (fmt_ppr_cmp_meta_spine cD lvl) mS
          (r_paren_if cond)
     | Comp.TypCobase (_, c, mS)->
        let cond = lvl > 1 in
-       fprintf ppf "%s%s%a%s"
+       fprintf ppf "%s%s@[%a@]%s"
          (l_paren_if cond)
          (R.render_cid_comp_cotyp c)
          (fmt_ppr_cmp_meta_spine cD lvl) mS
          (r_paren_if cond)
     | Comp.TypBox (_, mT) ->
-       fprintf ppf "%a"
+       fprintf ppf "@[%a@]"
          (fmt_ppr_cmp_meta_typ cD 0) mT
 
     | Comp.TypArr (tau1, tau2) ->
@@ -907,7 +907,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypCross (tau1, tau2) ->
        let cond = lvl > 0 in
-       fprintf ppf "%s%a * %a%s"
+       fprintf ppf "%s@[<2>@[%a@]@ * @[%a@]@]%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_typ cD 1) tau1
          (fmt_ppr_cmp_typ cD 0) tau2
@@ -1351,25 +1351,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_command_and_proof cD cG ppf =
     let open Comp in
-    let print_invoke_kind ppf : invoke_kind -> unit =
-      function
-      | `ih -> fprintf ppf "ih"
-      | `lemma -> fprintf ppf "lemma"
-    in
     function
     | By (k, t, name, tau, b), proof ->
        begin match b, tau with
        | `boxed, _ ->
           let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
           fprintf ppf "@[<hv>by %a @[%a@]@ as %a@];@,%a"
-            print_invoke_kind k
+            fmt_ppr_invoke_kind k
             (fmt_ppr_cmp_exp_syn cD cG l0) t
             Id.print name
             (fmt_ppr_cmp_proof cD cG') proof
        | `unboxed, TypBox (_, cT) ->
           let cD' = LF.(Dec (cD, Decl (name, cT, No))) in
           fprintf ppf "@[<hv>by %a @[%a@]@ as %a unboxed@];@,%a"
-            print_invoke_kind k
+            fmt_ppr_invoke_kind k
             (fmt_ppr_cmp_exp_syn cD cG l0) t
             Id.print name
             (fmt_ppr_cmp_proof cD' cG) proof
@@ -1408,6 +1403,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     function
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
+    | Suffices (i, ps) ->
+       fprintf ppf "@[<hov 2>suffices by lemma @[%a@] toshow@ @[%a@]@]"
+         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         (pp_print_list ~pp_sep: pp_print_cut
+            (fun ppf (tau, p) ->
+              fprintf ppf "@[<v 2>@[%a@] {@ @[<v>%a@]@]@,}"
+                (fmt_ppr_cmp_typ cD l0) tau
+                (fmt_ppr_cmp_proof cD cG) p))
+         ps
     | ImpossibleSplit i ->
        fprintf ppf "impossible @[%a@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i

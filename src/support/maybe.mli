@@ -48,6 +48,12 @@ val pure : 'a -> 'a option
  *)
 val traverse : ('a -> 'b option) -> 'a list -> 'b list option
 
+(** Maps a function that may fail over a list, and eagerly fails as
+    soon as an individual call fails. The functions themselves may not
+    compute interesting results.
+ *)
+val traverse_ : ('a -> unit option) -> 'a list -> unit option
+
 (** Folds a list with a function that may fail, eagerly failing.
     Note that elements beyond the first failing one will not be
     processed.

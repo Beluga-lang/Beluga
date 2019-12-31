@@ -158,6 +158,10 @@ module Prover = struct
       e
       end
 
+  let elaborate_typ cD tau =
+    let (tau, k) = Interactive.elaborate_typ cD tau in
+    tau
+
   let process_command
         (s : state)
         (t : theorem)
@@ -261,6 +265,18 @@ module Prover = struct
           printf s "@[<v>The expression@,  @[%a@]@,\
                     is not an appeal to an induction hypothesis.@]"
             (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+       end
+
+    | Command.Suffices (`ih, _, _) ->
+       Theorem.printf t "`by ih _ suffices ...` is not currently supported"
+    | Command.Suffices (`lemma, i, tau_list) ->
+       let (hs, i, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
+       begin match hs with
+       | _ :: _ ->
+          Theorem.printf t "holes are not supported for `by lemma _ suffices ...`"
+       | [] ->
+          let tau_list = List.map (elaborate_typ cD) tau_list in
+          Tactic.suffices i tau_list tau t g
        end
 
     | Command.Solve e ->

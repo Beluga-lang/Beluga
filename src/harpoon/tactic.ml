@@ -1,10 +1,12 @@
 open Support
 module B = Beluga
 module Comp = Beluga.Syntax.Int.Comp
+module S = B.Substitution
 module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
 module Whnf = B.Whnf
+module U = B.Unify.StdTrail
 
 module P = B.Pretty.Int.DefaultPrinter
 
@@ -491,3 +493,112 @@ let invoke (k : Command.invoke_kind) (b : Comp.boxity) (m : Comp.exp_syn) (tau :
      solve_with_new_comp_decl (CTypDecl (name, tau, false)) (prepend_commands [cmd])
   | `unboxed ->
      solve_by_unbox m (fun _ -> cmd) tau name
+
+let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t =
+  (* Processes all leading Pis to replace them with unification
+     variables in the following type, and returns the part after all the
+     pis.
+
+     Given cD |- tau
+     and tau = Pi X_1:U_1. ... Pi X_n:U_n. tau'
+     such that tau' contains no more Pis,
+     decompose_function tau (internally) computes an msub
+     t such that
+     cD |- t : cD, X_1:U_1
+     that replaces each X_i with a fresh ?X_i.
+     The msub t is applied to tau' and tau' is returned.
+   *)
+  let decompose_function_type cD : Comp.typ -> (Comp.typ list * Comp.typ) option =
+    let open Maybe in
+    (* Checks that there are no interleaved Pis later and splits
+       nested arrow types into a list of input types and one output type.
+       Returns None if the type contained interleaved Pis (invalid type).
+     *)
+    let rec decomp_arrows : Comp.typ -> (Comp.typ list * Comp.typ) option =
+      function
+      | Comp.TypArr (tau_1, tau_2) ->
+         decomp_arrows tau_2
+         $> fun (inputs, output) -> (tau_1 :: inputs, output)
+      | Comp.TypPiBox (_, _) -> None
+      | tau -> Some ([], tau) (* base type *)
+    in
+    let rec decomp_pis (t : LF.msub) : Comp.typ -> Comp.tclo = function
+      | Comp.TypPiBox (d, tau) ->
+         let u = Whnf.new_mmvar_for_ctyp_decl cD d in
+         let t' =
+           let open LF in
+           MDot
+             ( ClObj
+                 ( null_hat
+                 , MObj (head (MMVar (mm_var_inst u Whnf.m_id S.LF.id)))
+                 )
+             , t
+             )
+         in
+         decomp_pis t' tau
+      | tau -> (tau, t)
+    in
+    let open Misc.Function in
+    decomp_arrows ++ Whnf.cnormCTyp ++ decomp_pis Whnf.m_id
+  in
+  fun t s ->
+  let open Comp in
+  let open Maybe in
+  match decompose_function_type s.context.cD tau with
+  | None ->
+     Theorem.printf t "Failed to decompose function type." (* TODO better error *)
+  | Some (tau_args', tau_out) ->
+     let unify tau_1 tau_2 =
+       try
+         dprintf
+           begin fun p ->
+           p.fmt "[tactic] [suffices] @[<v>unifying @[%a@]@,\
+                  against @[%a@]@]"
+             P.(fmt_ppr_cmp_typ s.context.cD l0) tau_1
+             P.(fmt_ppr_cmp_typ s.context.cD l0) tau_2
+           end;
+         U.unifyCompTyp s.context.cD
+           (tau_1, Whnf.m_id)
+           (tau_2, Whnf.m_id)
+         |> pure
+       with
+       | U.Failure msg ->
+          None
+     in
+     (* Unify all argument types. iter2 will raise if there is a mismatch in lengths *)
+     match
+       try Some (List.map2 (fun x y () -> unify x y) tau_args' tau_args)
+       with Invalid_argument _ -> None
+     with
+     | None ->
+        Theorem.printf t "Argument lengths mismatched."
+     | Some fs ->
+        match traverse_ (fun f -> f ()) fs with
+        | None ->
+           Theorem.printf t "Failed to unify arguments."
+        | Some () ->
+           match
+             unify (Whnf.cnormCTyp s.goal) tau_out
+           with
+           | None ->
+              Theorem.printf t "Failed to unify goal."
+           | Some () ->
+              (* TODO Verify that there are no leftover variables *)
+              Theorem.remove_subgoal t s;
+              (* generate the subgoals for the arguments.
+                 by unification it doesn't matter which list we use. *)
+              let subproofs =
+                Misc.Function.flip List.map tau_args
+                  begin fun tau ->
+                  let new_state =
+                    { context = s.context
+                    ; goal = (tau, Whnf.m_id)
+                    ; solution = None
+                    }
+                  in
+                  Theorem.add_subgoal t new_state;
+                  (tau, incomplete_proof new_state)
+                  end
+              in
+              suffices i subproofs
+              |> Theorem.solve s

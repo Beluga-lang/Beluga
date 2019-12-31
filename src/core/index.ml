@@ -1593,9 +1593,11 @@ let mctx cD =
   cD'
 let compkind = index_compkind (CVar.create ())  (empty_fvars `open_term)
 
-let comptyp tau =
-  let (_, tau') = index_comptyp tau (CVar.create ()) (empty_fvars `open_term) in
+let hcomptyp cvars tau =
+  let (_, tau') = index_comptyp tau cvars (empty_fvars `open_term) in
   tau'
+
+let comptyp = hcomptyp (CVar.create ())
 
 let exp vars e =
   index_exp (CVar.create ()) vars (empty_fvars `closed_term) e

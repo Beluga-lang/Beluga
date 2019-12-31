@@ -156,6 +156,8 @@ let rec tokenize loc lexbuf =
   | "proof" -> const T.KW_PROOF
   | "by" -> const T.KW_BY
   | "as" -> const T.KW_AS
+  | "suffices" -> const T.KW_SUFFICES
+  | "toshow" -> const T.KW_TOSHOW
 
   (* SYMBOLS *)
   | pragma -> T.PRAGMA (Misc.String.drop 2 (get_lexeme loc lexbuf))

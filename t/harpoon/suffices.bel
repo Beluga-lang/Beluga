@@ -1,0 +1,19 @@
+LF nat : type =
+| zero : nat
+| succ : nat -> nat
+;
+--name nat N.
+
+LF add : nat -> nat -> nat -> type =
+| add_zero : add zero N N
+| add_succ : add N M K ->
+             add (succ N) M (succ K)
+;
+--name add A.
+
+LF le : nat -> nat -> type =
+| le_zero : le zero N
+| le_succ : le N K ->
+            le (succ N) (succ K)
+;
+--name le L.

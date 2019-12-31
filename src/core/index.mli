@@ -28,6 +28,7 @@ val mctx     : Ext.LF.mctx -> Apx.LF.mctx
 val compkind : Ext.Comp.kind -> Apx.Comp.kind
 
 val comptyp  : Ext.Comp.typ -> Apx.Comp.typ
+val hcomptyp  : Store.CVar.t -> Ext.Comp.typ -> Apx.Comp.typ
 
 val comptypdef : Ext.Comp.typ * Ext.Comp.kind
               -> Apx.Comp.typ * Apx.Comp.kind

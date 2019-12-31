@@ -185,6 +185,11 @@ module LF = struct
     | Shift 0 -> tA
     | _ -> TClo (tA, s)
 
+  (** Forms an MMVar instantiation by attaching an LF substitution and
+      a meta-substituation to the variable.
+   *)
+  let mm_var_inst (u : mm_var) (t : msub) (s : sub): mm_var_inst = (u, t), s
+
   let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
 
   let rename_ctyp_decl f = function
@@ -201,6 +206,17 @@ module LF = struct
        in
        name :: names_of_dctx cPsi
     | _ -> []
+
+  (** Embeds a head into a normal by using an empty spine.
+      Very useful for constructing variables as normals.
+      Note that the normal will have a ghost location, as heads don't
+      carry a location.
+   *)
+  let head (tH : head) : normal =
+    Root (Loc.ghost, tH, Nil)
+
+  (* Hatted version of LF.Null *)
+  let null_hat : dctx_hat = (None, 0)
 
   (**********************)
   (* Type Abbreviations *)
@@ -512,6 +528,11 @@ module Comp = struct
       of exp_chk
     | ImpossibleSplit
       of exp_syn
+    | Suffices
+      of exp_syn (* i -- the function to invoke *)
+         * (typ * proof) list
+         (* ^ the arguments of the function *)
+
     | MetaSplit (* Splitting on an LF object *)
       of exp_syn (* The object to split on *)
          * typ (* The type of the object that we're splitting on *)
@@ -556,6 +577,9 @@ module Comp = struct
   (** Smart constructor for the intros directive. *)
   let intros (h : hypotheses) (proof : proof) : proof =
     Directive (Intros (Hypothetical (h, proof)))
+
+  let suffices (i : exp_syn) (ps : (typ * proof) list) : proof =
+    Directive (Suffices (i, ps))
 
   let proof_cons (stmt : command) (proof : proof) = Command (stmt, proof)
 

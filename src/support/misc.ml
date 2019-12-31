@@ -98,6 +98,8 @@ module List = struct
       | x :: xs -> go (if p x then x :: acc else acc) xs
     in
     go [] l
+
+  let for_each l f = List.map l f
 end
 
 let id (x : 'a) : 'a = x
@@ -108,4 +110,12 @@ module DynArray = struct
   let rec append_list d = function
     | [] -> ()
     | x :: xs -> DynArray.add d x; append_list d xs
+end
+
+module Function = struct
+  let (++) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c =
+    fun f g x -> f (g x)
+
+  let flip (f : 'a -> 'b -> 'c) : 'b -> 'a -> 'c =
+    fun y x -> f x y
 end

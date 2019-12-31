@@ -47,3 +47,38 @@ val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
     given name, in cG.
  *)
 val invoke : Command.invoke_kind -> Comp.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
+
+(** Solves the current goal with an implication whose conclusion is
+   compatible with the goal type. Subgoals are generated for each
+   premise of the implication.
+
+    The user needs to decide upfront what the types of all the
+   premises are, and these given types must unify with the
+   corresponding premise types. Furthermore, this unification must pin
+   down all universally quantified variables, as there is no way to
+   construct them using Harpoon. (Harpoon can only construct
+   computational objects, not LF objects.)
+
+    Another restriction is that *all* universally quantified variables
+   must appear at the beginning. That is, the type `tau` must be of
+   the form
+
+    tau = Pi X_1:U_1. ... Pi X_n:U_n. tau_1 -> ... -> tau_k -> tau'
+
+    (This is most common form of type for a Beluga function.)
+
+    Subject to the following requirements:
+    - cD; cG |- i ==> tau
+    - tau' unifies with the current goal type.
+    - each tau_i unifies with the corresponding type in the args list.
+
+    After all these unifications, there must be no remaining
+    universally quantified variables. (Such a type would be very
+    strange, so this requirement is quite weak.)
+
+    The concrete syntax of this command piggybacks off the syntax of
+    `by` is
+
+    by <lemma/ih> i suffices tau_1, ..., tau_k
+ *)
+val suffices : Comp.exp_syn -> Comp.typ list -> Comp.typ -> t

@@ -79,6 +79,11 @@ let rec traverse (f : 'a -> 'b option) (xs : 'a list) : 'b list option =
        $ fun ys ->
          pure (y :: ys)
 
+let rec traverse_ (f : 'a -> unit option) (xs : 'a list) : unit option =
+  match xs with
+  | [] -> Some ()
+  | x :: xs -> f x $ fun _ -> traverse_ f xs
+
 let rec fold_left
           (f : 'b -> 'a -> 'b option) (acc : 'b) (xs : 'a list)
         : 'b option =

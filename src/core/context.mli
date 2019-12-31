@@ -19,7 +19,6 @@ val ctxVar      : dctx -> ctx_var option
 val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
 
 val append      : 'a ctx -> 'a ctx -> 'a ctx
-val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
 
 (** General eliminator for contexts. *)
 val fold            : 'b -> ('b -> 'a -> 'b) -> 'a ctx -> 'b

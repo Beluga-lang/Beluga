@@ -287,19 +287,9 @@ let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
 let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find_rev ctx (Misc.const f)
 
-let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypotheses =
-  let open! Comp in
-  let { cD = cD1; cG = cG1; cIH = cIH1 } = h1 in
-  let { cD = cD2; cG = cG2; cIH = cIH2 } = h2 in
-  let cD = append cD1 cD2 in
-  let cG = append cG1 cG2 in
-  let cIH = append cIH1 cIH2 in
-  { cD; cG; cIH }
-
 let rec length cD = match cD with
   | Empty        -> 0
   | Dec (cD', _) -> 1 + length cD'
-
 
 let rec dctxLength = function
   | Null           -> 0

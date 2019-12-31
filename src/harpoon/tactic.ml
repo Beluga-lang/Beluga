@@ -86,7 +86,7 @@ let intros (names : string list option) : t =
   if tau' <> tau then
     let goal' = (tau', theta) in
     let local_context = {cD; cG; cIH = LF.Empty} in
-    let context = B.Context.append_hypotheses s.context local_context in
+    let context = Whnf.append_hypotheses s.context local_context in
     let new_state =
       { context
       ; goal = goal'

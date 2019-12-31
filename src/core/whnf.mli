@@ -160,3 +160,9 @@ val constraints_solved : cnstr list -> bool
   * the shifting, and Whnf depends on Context.
  *)
 val mctx_to_list_shifted : mctx -> ctyp_decl list
+
+(** Appends two sets of hypotheses.
+    This has to be in Whnf instead of Context because we need to
+    perform a shift, and Whnf already depends on Context.
+ *)
+val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses

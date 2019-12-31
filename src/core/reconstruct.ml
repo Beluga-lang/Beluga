@@ -1905,12 +1905,34 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
             (match l with
              | A.ContextCase (A.EmptyContext loc) ->
                  let hyp' = elHypothetical cD cG hyp ttau in
-                 make_ctx_branches ((I.SplitBranch ((A.EmptyContext loc), hyp')) :: acc) s_bs'
+                 make_ctx_branches ((I.SplitBranch (A.EmptyContext loc, hyp')) :: acc) s_bs'
              | A.ContextCase (A.ExtendedBy (loc, a)) ->
                  let a' = Lfrecon.elTyp Lfrecon.Pibox Int.LF.Empty (Context.projectCtxIntoDctx Int.LF.Empty) a in
                  let hyp' = elHypothetical cD cG hyp ttau in
-                 make_ctx_branches ((I.SplitBranch ((A.ExtendedBy (loc, a')), hyp')) :: acc) s_bs'
+                 make_ctx_branches ((I.SplitBranch (A.ExtendedBy (loc, a'), hyp')) :: acc) s_bs'
              | _ -> Error.violation "Expected ContextCase label.")
+      in
+      let rec make_meta_branches psi acc s_bs =
+        match s_bs with
+        | [] -> List.rev acc
+        | { A.case_label = l; A.branch_body = hyp; A.split_branch_loc = _ } :: s_bs' ->
+            (match l with
+             | A.NamedCase (loc, name) ->
+                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let cid_t = Store.Cid.Term.index_of_name name in
+                 make_meta_branches psi ((I.SplitBranch ((psi, Int.LF.Const cid_t), hyp')) :: acc) s_bs'
+             | _ -> Error.violation "Found ContextCase label while constructing meta branch.")
+      in
+      let rec make_comp_branches acc s_bs =
+        match s_bs with
+        | [] -> List.rev acc
+        | { A.case_label = l; A.branch_body = hyp; A.split_branch_loc = _ } :: s_bs' ->
+            (match l with
+             | A.NamedCase (loc, name) ->
+                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let cid_t = Store.Cid.CompConst.index_of_name name in
+                 make_comp_branches ((I.SplitBranch (cid_t, hyp')) :: acc) s_bs'
+             | _ -> Error.violation "Found ContextCase label while constructing comp branch.")
       in
       let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
       let tau1 = Whnf.cnormCTyp (tau, m_sub) in
@@ -1918,11 +1940,13 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
        | I.TypBox (_, (Int.LF.CTyp _)) ->
            let ctx_branches = make_ctx_branches [] s_branches in
            I.ContextSplit (e_syn', tau1, ctx_branches)
-       | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) -> assert false (* meta split *)
-       | I.TypBase (loc, cid_ct, m_spine) -> assert false (* comp split *)
-       | I.TypCross (t1, t2) -> assert false (* comp split *)
+       | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->
+           let meta_branches = make_meta_branches psi [] s_branches in
+           I.MetaSplit (e_syn', tau1, meta_branches)
+       | I.TypBase _ | I.TypCross _ ->
+           let comp_branches = make_comp_branches [] s_branches in
+           I.CompSplit (e_syn', tau1, comp_branches)
        | _ -> Error.violation "Invalid scrutinee type in split directive.")
-
 
 
 (* ******************************************************************************* *)

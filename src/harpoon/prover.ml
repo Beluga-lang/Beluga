@@ -238,6 +238,16 @@ module Prover = struct
     | Command.ToggleAutomation (automation_kind, automation_change) ->
        Automation.toggle_automation s.automation_state automation_kind automation_change
 
+    | Command.Type i ->
+       let (hs, i, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in
+       B.Printer.with_implicits false
+         begin fun () ->
+         Theorem.printf t
+           "- @[<hov 2>@[%a@] :@ @[%a@]@]"
+           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+           P.(fmt_ppr_cmp_typ cD l0) tau
+         end
+
     (* Real tactics: *)
     | Command.Unbox (i, name) ->
        let (hs, m, tau) = elaborate_exp' cIH cD cG (Lazy.force mfs) i in

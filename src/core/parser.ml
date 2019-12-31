@@ -2899,6 +2899,11 @@ let interactive_harpoon_command =
     $> fun (k, i, name, b) ->
       H.By (k, i, name, b)
   in
+  let compute_type =
+    token T.KW_TYPE
+    &> cmp_exp_syn
+    $> fun i -> H.Type i
+  in
   let suffices =
     seq2
       (tokens [T.KW_SUFFICES; T.KW_BY]
@@ -2969,6 +2974,7 @@ let interactive_harpoon_command =
   choice
     ( intros
       :: split
+      :: compute_type
       :: invert
       :: impossible
       :: solve

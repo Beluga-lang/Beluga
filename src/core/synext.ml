@@ -297,6 +297,7 @@ module Harpoon = struct
 
     (* Administrative commands *)
 
+    | Type of Comp.exp_syn
     | Rename of name (* from *)
                 * name (* to *)
                 * level

@@ -1868,7 +1868,8 @@ let rec elProof cD cG (p : Apx.Comp.proof) (tau', theta) =
                 let int_proof = elProof cD' cG p' ttau in
                 I.Command (I.Unbox (e_syn', name, mT), int_proof)
             | _ ->
-                raise (Error (loc, TypMismatch (cD, (tau, m_sub), (I.TypBox (loc, Int.LF.CTyp None), Whnf.m_id))))))
+                let module Chk = Check.Comp in
+                raise (Chk.Error (loc, Chk.MismatchSyn (cD, cG, e_syn', Chk.VariantBox, (tau, m_sub))))))
   | A.Directive (loc, d) -> I.Directive (elDirective cD cG d (tau', theta))
 
 (* elaborate Harpoon directives *)
@@ -1889,8 +1890,18 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
              let p' = elProof cD' cG' p (tau1, Whnf.m_id) in
              I.Intros (I.Hypothetical (h', p'))
            ))
-  | A.Solve (loc, e) -> I.Solve (elExp cD cG e ttau)
-  | A.Split (loc, e, s_branches) -> assert false
+  | A.Solve (loc, e_syn) -> I.Solve (elExp cD cG e_syn ttau)
+  | A.Split (_, e_syn, s_branches) ->
+      let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
+      let tau1 = Whnf.cnormCTyp (tau, m_sub) in
+      (match tau1 with
+       | I.TypBox (loc, (Int.LF.CTyp cid_s_opt)) -> assert false (* context split *)
+       | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) -> assert false (* meta split *)
+       | I.TypBase (loc, cid_ct, m_spine) -> assert false (* comp split *)
+       | I.TypCross (t1, t2) -> assert false (* comp split *)
+       | _ -> Error.violation "Invalid scrutinee type.")
+
+
 
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)

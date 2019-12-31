@@ -36,7 +36,8 @@ let rec translate_proof cD cG (p : C.proof) tau : C.exp_chk =
               let pat = C.PatMetaObj (Loc.ghost, (Loc.ghost, mfront)) in
               let body = translate_proof cD' cG p' tau in
               let b = C.Branch (Loc.ghost, cD', cG, pat, L.MShift 1, body) in
-              C.Case (Loc.ghost, C.PragmaCase, e_syn, [b])))
+              C.Case (Loc.ghost, C.PragmaCase, e_syn, [b])
+          | L.CTyp _ -> Error.violation "Syntax.Int.LF.CTyp found in Unbox."))
 | C.Directive d -> translate_directive cD cG d tau
 
 and translate_directive cD cG (d : C.directive) tau : C.exp_chk =

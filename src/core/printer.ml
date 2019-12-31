@@ -9,6 +9,12 @@ module Control = struct
   let db() = !substitutionStyle = DeBruijn
 end
 
+let with_implicits b' f =
+  let b = !Control.printImplicit in
+  Control.printImplicit := b';
+  f ();
+  Control.printImplicit := b
+
 module Common = struct
   module type T = sig
     open Syntax.Common

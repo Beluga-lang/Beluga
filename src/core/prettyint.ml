@@ -778,26 +778,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD 0 ppf
 
+  (* If a declaration is implicit and you don't want to print it, then
+     it's *YOUR* responsibility to check the plicity of the
+     declaration and skip calling this function. Otherwise, it is
+     impossible to get the spacing to work correctly in the printed
+     material. *)
   and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
     | LF.Decl (u, mtyp,dep) ->
-
-       (* Note: I'm not sure, in meta-context printing, implicit arguements should always be printed or not *)
-       (* This modification won't print it if Printer.Control.printImplicit is false*)
-
-       if ((not !Printer.Control.printImplicit) && (isImplicit dep) || (!Printer.Control.printNormal))
-       then ()
-       else
-         let style =
-           if !Printer.Control.printImplicit
-           then `depend
-           else `inductive
-         in
-         fprintf ppf "{@[<hov 2>%s :@ @[%a@]@]}%a"
-           (if printing_holes
-            then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
-            else Id.render_name u)
-           (fmt_ppr_lf_mtyp cD) mtyp
-           (fmt_ppr_lf_depend style) dep
+       let style =
+         if !Printer.Control.printImplicit
+         then `depend
+         else `inductive
+       in
+       fprintf ppf "{@[<hov 2>%s :@ @[%a@]@]}%a"
+         (if printing_holes
+          then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
+          else Id.render_name u)
+         (fmt_ppr_lf_mtyp cD) mtyp
+         (fmt_ppr_lf_depend style) dep
 
     | LF.DeclOpt name ->
        fprintf ppf "{%s : _}"
@@ -812,6 +810,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.No -> false
     | LF.Maybe -> true
     | LF.Inductive -> false
+
+  and isImplicitDecl = function
+    | LF.Decl (_, _, dep) -> isImplicit dep
+    | LF.DeclOpt _ -> false
 
   and fmt_ppr_lf_iterm cD cPsi lvl ppf = function
     | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi lvl ppf tM
@@ -880,14 +882,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let rec fmt_ppr_cmp_typ cD lvl ppf = function
     | Comp.TypBase (_, c, mS)->
-       let cond = lvl > 1 in
+       let cond = lvl > 10 in
        fprintf ppf "%s@[<2>%s@[%a@]@]%s"
          (l_paren_if cond)
          (R.render_cid_comp_typ c)
          (fmt_ppr_cmp_meta_spine cD lvl) mS
          (r_paren_if cond)
     | Comp.TypCobase (_, c, mS)->
-       let cond = lvl > 1 in
+       let cond = lvl > 10 in
        fprintf ppf "%s%s@[%a@]%s"
          (l_paren_if cond)
          (R.render_cid_comp_cotyp c)
@@ -899,10 +901,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypArr (tau1, tau2) ->
        let cond = lvl > 1 in
-       fprintf ppf "@[<2>%s%a ->@ %a%s@]"
+       fprintf ppf "%s@[<2>%a ->@ %a@]%s"
          (l_paren_if cond)
-         (fmt_ppr_cmp_typ cD 0) tau1
-         (fmt_ppr_cmp_typ cD 0) tau2
+         (fmt_ppr_cmp_typ cD 2) tau1
+         (fmt_ppr_cmp_typ cD 1) tau2
          (r_paren_if cond)
 
     | Comp.TypCross (tau1, tau2) ->
@@ -915,14 +917,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypPiBox (ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
-       let cond = lvl > 1 in
-       fprintf ppf "@[<2>%s%a@ %a%s@]"
-         (l_paren_if cond)
-         (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
-         (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
-         (r_paren_if cond)
+       if isImplicitDecl ctyp_decl then
+         fprintf ppf "%a" (fmt_ppr_cmp_typ (LF.Dec (cD, ctyp_decl)) 1) tau
+       else
+         let cond = lvl > 1 in
+         fprintf ppf "@[<2>%s%a@ %a%s@]"
+           (l_paren_if cond)
+           (fmt_ppr_lf_ctyp_decl cD 0) ctyp_decl
+           (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
+           (r_paren_if cond)
 
-    | Comp.TypClo (_, _ ) ->             fprintf ppf " TypClo! "
+    | Comp.TypClo (_, _ ) ->
+       fprintf ppf "TypClo!"
 
     | Comp.TypInd tau ->
        fprintf ppf "(%a)*"
@@ -1331,7 +1337,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        for _ = 1 to 80 do fprintf ppf "-" done;
        let goal = Whnf.cnormCTyp goal in
        fprintf ppf "@,";
-       fmt_ppr_cmp_typ cD l0 ppf goal;
+       Printer.with_implicits false
+         (fun () -> fmt_ppr_cmp_typ cD l0 ppf goal);
        fprintf ppf "@]";
 
   and fmt_ppr_cmp_proof cD cG ppf =

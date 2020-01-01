@@ -212,7 +212,8 @@ module Cid : sig
       typ                : Comp.typ;
       prog               : Comp.value option;
       mut_rec            : name list;
-      total              : bool
+      total              : bool;
+      hidden             : bool;
     }
 
     val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value option -> name list -> entry
@@ -232,6 +233,8 @@ module Cid : sig
 
     val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t
     val clear         : unit -> unit
+
+    val set_hidden    : Id.cid_prog -> (bool -> bool) -> unit
   end
 
   module Schema : sig

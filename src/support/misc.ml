@@ -110,6 +110,23 @@ module DynArray = struct
   let rec append_list d = function
     | [] -> ()
     | x :: xs -> DynArray.add d x; append_list d xs
+
+  let head = function
+    | d when DynArray.empty d -> None
+    | d -> Some (DynArray.get d 0)
+
+  (** Finds the *last* element in the array satisfying p, and returns also its index. *)
+  let findi_opt (type a) (d : a DynArray.t) (p : a -> bool) : (int * a) option =
+    let rec go = function
+      | -1 -> None
+      | k ->
+         let x = DynArray.get d k in
+         if p x then
+           Some (k, x)
+         else
+           go (k-1)
+    in
+    go (DynArray.length d - 1)
 end
 
 module Function = struct

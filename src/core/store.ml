@@ -971,24 +971,31 @@ module Cid = struct
 
 
   module Comp = struct
+    type entry =
+      { name               : Id.name
+      ; implicit_arguments : int
+      ; typ                : Int.Comp.typ
+      ; prog               : Int.Comp.value option
+      ; mut_rec            : Id.name list
+      ; total              : bool
+      ; hidden             : bool
+      }
 
-    type entry = {
-      name               : Id.name;
-      implicit_arguments : int;
-      typ                : Int.Comp.typ;
-      prog               : Int.Comp.value option;
-      mut_rec            : Id.name list;
-      total              : bool
-    }
+    let mk_entry name typ implicit_arguments total prog mut_rec =
+      { name
+      ; implicit_arguments
+      ; typ
+      ; prog
+      ; mut_rec (* names of functions with which we are mutually recursive *)
+      ; total
 
-    let mk_entry name typ n total v name_list = {
-      name               = name;
-      implicit_arguments = n;
-      typ                = typ;
-      prog               = v;
-      mut_rec            = name_list;  (* names of functions with which n is mutually recursive *)
-      total              = total
-    }
+      (* Hidden entries cannot be looked up by name, which in turn
+         prevents the user from referring to them via external syntax.
+         Harpoon uses this feature when suspending a session to avoid
+         potential circularities between theorems.
+       *)
+      ; hidden = false
+      }
 
     let entry_list : ((Id.cid_prog * Loc.t) list ref) DynArray.t = DynArray.create ()
 
@@ -997,12 +1004,25 @@ module Cid = struct
     (*  directory : (Id.name, Id.cid_prog) Hashtbl.t *)
     let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
 
+    let get ?(fixName=false) (l, n) =
+      let l' = Modules.name_of_id l in
+      let m' =  if fixName && (l <> !Modules.current) &&
+                   not (List.exists (fun x -> x = l) !Modules.opened)
+                then Modules.correct l' else [] in
+      let e = DynArray.get (DynArray.get store l) n in
+      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
+
     let index_of_name : Id.name -> Id.cid_prog = fun (n : Id.name) ->
       let n' = match (Id.get_module n) with
         | [] -> n
-        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
-      let cid = Modules.find n directory (fun x -> Hashtbl.find x n') in
-       cid
+        | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n))
+      in
+      Modules.find n directory
+        begin fun x ->
+        let cid = Hashtbl.find x n' in
+        if (get cid).hidden then raise Not_found;
+        cid
+        end
 
     let add loc f = begin
       let (cid_prog, e) =
@@ -1013,12 +1033,13 @@ module Cid = struct
             while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
             DynArray.add store x;
             x
-          end in
-          let l = DynArray.length store in
-          let cid = (!Modules.current, l) in
-          let e = f cid in
-          DynArray.add store e;
-          (cid, e) in
+            end
+        in
+        let l = DynArray.length store in
+        let cid = (!Modules.current, l) in
+        let e = f cid in
+        DynArray.add store e;
+        (cid, e) in
 
         let directory =
           try DynArray.get directory (!Modules.current)
@@ -1050,20 +1071,16 @@ module Cid = struct
           (None, cid_prog)
         end
 
-    let get ?(fixName=false) (l, n) =
-      let l' = Modules.name_of_id l in
-      let m' =  if fixName && (l <> !Modules.current) &&
-                   not (List.exists (fun x -> x = l) !Modules.opened)
-                then Modules.correct l' else [] in
-      let e = DynArray.get (DynArray.get store l) n in
-      {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
-
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));
       Hashtbl.clear (DynArray.get directory !(Modules.current))
 
+    let set_hidden (l, n) f =
+      let d = DynArray.get store l in
+      let e = DynArray.get d n in
+      let e = { e with hidden = f e.hidden } in
+      DynArray.set d n e
   end
-
 
   module NamedHoles = struct
 

@@ -2949,40 +2949,57 @@ let interactive_harpoon_command =
     &> seq3 level name name
     $> fun (level, x_src, x_dst) -> H.Rename (x_src, x_dst, level)
   in
-  let defer =
-    let level =
-      maybe_default
-        begin
-          choice
-            [ keyword "theorem" &> pure `theorem
-            ; keyword "subgoal" &> pure `subgoal
-            ]
-        end
-        `subgoal
-    in
-    keyword "defer"
-    &> level
-    $> fun k -> H.Defer k
+  let basic_command =
+    choice
+      [ keyword "list" &> pure `list
+      ; keyword "defer" &> pure `defer
+      ]
   in
-  let trivial_command =
-    [ "show-proof", H.ShowProof
-    ; "show-ihs", H.ShowIHs
-    ; "show-subgoals", H.ShowSubgoals
-    ]
-    |> List.map (fun (x, t) -> keyword x &> pure t)
+  let select_command, create_command =
+    let f k = keyword k &> name in
+    ( f "select" $> (fun x -> `select x)
+    , f "create" $> (fun x -> `create x)
+    )
+  in
+  let theorem_command =
+    keyword "theorem" &>
+      choice
+        ( basic_command
+          :: select_command
+          :: List.map (fun (k, k') -> keyword k &> pure k')
+               [ ("show-ihs", `show_ihs)
+               ; ("show-proof", `show_proof)
+               ]
+        )
+    $> fun cmd -> H.Theorem cmd
+  in
+  let session_command =
+    keyword "session"
+    &> choice [ basic_command; select_command; create_command ]
+    $> fun cmd -> H.Session cmd
+  in
+  let subgoal_command =
+    keyword "subgoal"
+    &> basic_command
+    $> fun cmd -> H.Subgoal cmd
+  in
+  let defer =
+    keyword "defer" &> pure (H.Subgoal `defer)
   in
   choice
-    ( intros
-      :: split
-      :: compute_type
-      :: invert
-      :: impossible
-      :: solve
-      :: by
-      :: suffices
-      :: unbox
-      :: toggle_automation
-      :: rename
-      :: defer
-      :: trivial_command
-    )
+    [ intros
+    ; split
+    ; compute_type
+    ; invert
+    ; impossible
+    ; solve
+    ; by
+    ; suffices
+    ; unbox
+    ; toggle_automation
+    ; rename
+    ; defer
+    ; theorem_command
+    ; session_command
+    ; subgoal_command
+    ]

@@ -210,3 +210,12 @@ let configure_set ppf (hooks : (t -> proof_state -> unit) list) (confs : Conf.t 
     configure conf cid ppf hooks
   in
   List.map configure confs
+
+let total_dec (t : t) =
+  Total.make_total_dec
+    t.name
+    (Whnf.cnormCTyp t.initial_state.goal |> Total.strip)
+    t.order
+
+let set_hidden (t : t) b =
+  Store.Cid.Comp.set_hidden t.cid (Misc.const b)

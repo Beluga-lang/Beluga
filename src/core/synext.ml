@@ -284,9 +284,25 @@ module Harpoon = struct
     | `toggle
     ]
 
-  type command =
-    (* Actual tactics *)
+  type basic_command =
+    [ `list
+    | `defer
+    ]
 
+  type command =
+    (* Administrative commands *)
+
+    | Rename of name (* from *)
+                * name (* to *)
+                * level
+    | ToggleAutomation of automation_kind * automation_change
+
+    | Type of Comp.exp_syn
+    | Theorem of [ basic_command | `select of Id.name | `show_ihs | `show_proof ]
+    | Session of [ basic_command | `select of Id.name | `create of Id.name ]
+    | Subgoal of basic_command
+
+    (* Actual tactics *)
     | Intros of string list option (* list of names for introduced variables *)
 
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
@@ -294,19 +310,6 @@ module Harpoon = struct
     | Unbox of Comp.exp_syn * Id.name
     | By of invoke_kind * Comp.exp_syn * Id.name * Comp.boxity
     | Suffices of invoke_kind * Comp.exp_syn * Comp.typ list
-
-    (* Administrative commands *)
-
-    | Type of Comp.exp_syn
-    | Rename of name (* from *)
-                * name (* to *)
-                * level
-    | ShowIHs
-    | ShowProof
-    | Defer of defer_kind (* Defers the current subgoal to later *)
-    | ShowSubgoals (* Lists all open subgoals *)
-
-    | ToggleAutomation of automation_kind * automation_change
 end
 
 

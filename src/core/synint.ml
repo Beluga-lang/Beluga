@@ -237,6 +237,10 @@ module LF = struct
     | FixPrag of name * fix * int * assoc option
     | AbbrevPrag of string list * string
 
+  (**********************)
+  (* Helpers            *)
+  (**********************)
+
   (* val blockLength : typ_rec -> int *)
   let rec blockLength = function
     | SigmaLast _ -> 1
@@ -330,6 +334,11 @@ module LF = struct
   let get_constraint_id = function
     | Eqn (id, _, _, _, _) -> id
     | Queued id -> id
+
+  let rec drop_spine k = function
+    | tS when k = 0 -> tS
+    | Nil -> Nil
+    | App (_, tS') -> drop_spine (k-1) tS'
 end
 
 (* Internal Computation Syntax *)

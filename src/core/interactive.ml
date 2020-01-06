@@ -541,7 +541,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
      fprintf ppf "Computation context:@,  @[<v>%a@]@,"
-       (P.fmt_ppr_cmp_gctx cD P.l0) cG;
+       (P.fmt_ppr_cmp_gctx ~sep: pp_print_cut cD P.l0) cG;
      fprintf ppf "@,";
 
      (* 4. The goal type, i.e. the type of the hole. *)

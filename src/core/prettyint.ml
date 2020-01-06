@@ -726,7 +726,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | [] ->
        fprintf ppf "."
     | _ ->
-       fprintf ppf "@[<hov>%a@]"
+       fprintf ppf "%a"
          (pp_print_list ~pp_sep: sep
             (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d))
          ds
@@ -1518,13 +1518,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.CTypDeclOpt x ->
        fprintf ppf "%a : _" Id.print x
 
-  and fmt_ppr_cmp_gctx cD lvl ppf cG =
+  and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl ppf cG =
     match cG with
     | LF.Empty -> fprintf ppf "."
     | _ ->
        let ds = Context.to_list cG in
-       let comma ppf () = fprintf ppf ",@ " in
-       pp_print_list ~pp_sep: comma (fmt_ppr_cmp_ctyp_decl cD 0) ppf ds
+       fprintf ppf "%a"
+         (pp_print_list ~pp_sep: sep
+            (fmt_ppr_cmp_ctyp_decl cD 0))
+         ds
 
   let fmt_ppr_cmp_gctx_typing ppf (cD, cG) =
     fprintf ppf "@[%a@] |-@ @[%a@]"

@@ -434,7 +434,7 @@ module Prover = struct
     | Command.Solve e ->
        let (hs, e) = Elab.exp cIH cD cG (Lazy.force mfs) e g.goal in
        dprnt "[harpoon] [solve] elaboration finished";
-       State.printf s "Found %d hole(s) in solution@." (List.length hs);
+       (* State.printf s "Found %d hole(s) in solution@." (List.length hs); *)
        List.iter solve_hole hs;
        Check.Comp.check cD cG (Lazy.force mfs) e g.goal;
        (Comp.solve e |> Tactic.solve) t g

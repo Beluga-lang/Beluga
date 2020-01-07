@@ -7,7 +7,7 @@ split [gamma]
 rename meta z7 g
 split [g, x:tm T[] |- #p]
 invert x7
-by ih lookup [g] [g |- #p2] v1 as ih
+by lookup [g] [g |- #p2] v1 as ih
 invert x7
 impossible [|- #p]
 main
@@ -16,17 +16,17 @@ main
 
 rename comp y8 rs
 split [gamma |- M]
-by lemma lookup [gamma] [gamma |- #p3] rs as x
-by ih main [gamma] [gamma |- M1] rs as ih1
+by lookup [gamma] [gamma |- #p3] rs as x
+by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
-by ih main [gamma] [gamma |- M2] rs as ih2
+by main [gamma] [gamma |- M2] rs as ih2
 solve v7 [|- _] ih2
-suffices by lemma Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
+suffices by Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
 defer
 solve [|- halts/m refl val/lam]
 defer
-suffices by lemma bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
-by lemma Dot rs x8 as rs'
-by ih main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
-suffices by lemma I toshow [|- halts c]
+suffices by bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
+by Dot rs x8 as rs'
+by main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
+suffices by I toshow [|- halts c]
 solve [|- halts/m refl val/c]

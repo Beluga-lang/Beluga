@@ -5,7 +5,7 @@ le-refl
 
 split [|- N]
 solve [|- le_zero]
-by ih le-refl [|- N1] as L unboxed
+by le-refl [|- N1] as L unboxed
 solve [|- le_succ L]
 le-succ-1
 [|- le N K] -> [|- le N (succ K)]
@@ -13,13 +13,13 @@ le-succ-1
 
 split z2
 solve [|- le_zero]
-by ih le-succ-1 [|- L] as L_succ unboxed
+by le-succ-1 [|- L] as L_succ unboxed
 solve [|- le_succ L_succ]
 le-add
 [|- add N M K] -> [|- le M K]
 1
 
 split y3
-suffices by lemma le-refl toshow
-suffices by lemma le-succ-1 toshow [|- le M N3]
-by ih le-add [|- A] as done
+suffices by le-refl toshow
+suffices by le-succ-1 toshow [|- le M N3]
+by le-add [|- A] as done

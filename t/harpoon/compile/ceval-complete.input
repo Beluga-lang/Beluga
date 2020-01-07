@@ -7,42 +7,42 @@ split x32
 unbox (z32) as S
 solve [|- next S st_z]
 unbox (z32) as S
-by ih (complete [|- E1] [|- next S (st_return (\v. return (s_val v)) _)]) as ih
+by (complete [|- E1] [|- next S (st_return (\v. return (s_val v)) _)]) as ih
 unbox (ih) as IH
 solve [|- next IH st_s]
-by ih (complete [|- E1] z32) as ih
+by (complete [|- E1] z32) as ih
 unbox (ih) as IH
-by ih (complete [|- E2] [|- next (next IH st_match1_z) (st_return (\v. match1 v M[] (\y. M2[y])) _)]) as ih'
+by (complete [|- E2] [|- next (next IH st_match1_z) (st_return (\v. match1 v M[] (\y. M2[y])) _)]) as ih'
 unbox ih' as IH'
 solve [|- next IH' st_match]
 unbox z32 as S'
-by ih complete [|- E1] [|- S'] as ih
+by complete [|- E1] [|- S'] as ih
 unbox ih as IH
-by ih complete [|- E2] [|- next (next IH st_match1_s) (st_return (\v. match1 v M2[] (\y. M[y])) _)] as ih'
+by complete [|- E2] [|- next (next IH st_match1_s) (st_return (\v. match1 v M2[] (\y. M[y])) _)] as ih'
 unbox ih' as IH'
 solve [|- next IH' st_match]
 unbox z32 as S'
-by ih complete [|- E1] [|- next S' (st_return (\x. return (pair_val V2[] x)) _)] as S2 unboxed
-by ih complete [|- E2] [|- next (next S2 st_pair1) (st_return (\x. pair1 x M[]) _)] as S1 unboxed
+by complete [|- E1] [|- next S' (st_return (\x. return (pair_val V2[] x)) _)] as S2 unboxed
+by complete [|- E2] [|- next (next S2 st_pair1) (st_return (\x. pair1 x M[]) _)] as S1 unboxed
 solve [|- next S1 st_pair]
 unbox z32 as S'
-by ih complete [|- E1] [|- next (next S' st_fst1) (st_return (\v. fst1 v) _)] as S1 unboxed
+by complete [|- E1] [|- next (next S' st_fst1) (st_return (\v. fst1 v) _)] as S1 unboxed
 solve [|- next S1 st_fst]
 unbox z32 as S'
-by ih complete [|- E1] [|- next (next S' st_snd1) (st_return (\v. snd1 v ) _)] as S1 unboxed
+by complete [|- E1] [|- next (next S' st_snd1) (st_return (\v. snd1 v ) _)] as S1 unboxed
 solve [|- next S1 st_snd]
 unbox z32 as S'
 solve [|- next S' st_lam]
-by ih complete [|- E1] z32 as S2 unboxed
-by ih complete [|- E2] [|- next (next S2 st_app2) (st_return (\v. app2 (lam_val (\x. M[x])) v) _)] as S2' unboxed
-by ih complete [|- E3] [|- next (next S2' st_app1) (st_return (\x1. app1 x1 M1[]) _)] as S1 unboxed
+by complete [|- E1] z32 as S2 unboxed
+by complete [|- E2] [|- next (next S2 st_app2) (st_return (\v. app2 (lam_val (\x. M[x])) v) _)] as S2' unboxed
+by complete [|- E3] [|- next (next S2' st_app1) (st_return (\x1. app1 x1 M1[]) _)] as S1 unboxed
 solve [|- next S1 st_app]
-by ih complete [|- E1] z32 as S2 unboxed
-by ih complete [|- E2] [|- next S2 (st_return (\x1. ev (M[x1])) _)] as S1 unboxed
+by complete [|- E1] z32 as S2 unboxed
+by complete [|- E2] [|- next S2 (st_return (\x1. ev (M[x1])) _)] as S1 unboxed
 solve [|- next S1 st_letv]
-by ih complete [|- E1] z32 as S unboxed
+by complete [|- E1] z32 as S unboxed
 solve [|- next S st_letn]
-by ih complete [|- E1] z32 as S unboxed
+by complete [|- E1] z32 as S unboxed
 solve [|- next S st_fix]
 unbox z32 as S'
 solve [|- next S' st_vl]

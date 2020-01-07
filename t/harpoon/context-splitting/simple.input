@@ -6,5 +6,5 @@ length
 split [g]
 solve [|- z]
 toggle-automation auto-solve-trivial off
-by ih length [x] as N unboxed
+by length [x] as N unboxed
 solve [|- s N]

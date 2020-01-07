@@ -5,10 +5,10 @@ vsound
 
 split x7
 solve [|- v_z]
-by ih (vsound [|- D]) as ih
+by (vsound [|- D]) as ih
 unbox (ih) as IH
 solve [|- v_s IH]
-by ih (vsound [|- D]) as ih
+by (vsound [|- D]) as ih
 solve [|- v_lam]
-by ih (vsound [|- D2]) as ih
+by (vsound [|- D2]) as ih
 

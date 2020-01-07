@@ -117,21 +117,12 @@ module Prover = struct
     let cid_is_in_current_theorem_set s c =
       List.exists (fun t -> t.Theorem.cid = c) (DynArray.to_list s.theorems)
 
-    type invocation_status =
-      [ `ok
-      | `not_an_ih
-      ]
-
-    (** Checks that the given term corresponds to the given kind of invocation.
-        Without this, it is possible to invoke lemmas using `by ih`.
+    (** Infer invocation kind based on `exp_syn` and the current theorem
      *)
-    let check_invocation s (k : Comp.invoke_kind) (i : Comp.exp_syn) : invocation_status =
-      match k with
-      | `lemma -> `ok
-      | `ih ->
-         match Comp.head_of_application i with
-         | Comp.Const (_, c) when cid_is_in_current_theorem_set s c -> `ok
-         | _ -> `not_an_ih
+    let infer_invocation_kind s (i : Comp.exp_syn) : Comp.invoke_kind =
+      match Comp.head_of_application i with
+      | Comp.Const (_, c) when cid_is_in_current_theorem_set s c -> `ih
+      | _ -> `lemma
   end
 
   module State = struct
@@ -401,7 +392,7 @@ module Prover = struct
     | Command.Split (split_kind, i) ->
        let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        Tactic.split split_kind m tau (Lazy.force mfs) t g
-    | Command.By (k, i, name, b) ->
+    | Command.By (i, name, b) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        dprintf
          begin fun p ->
@@ -410,25 +401,22 @@ module Prover = struct
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
        List.iter solve_hole hs;
-       (* validate the invocation and call the suspension if it passes. *)
-       begin match Session.check_invocation c k i with
-       | `ok -> Tactic.invoke k b i tau name t g
-       | `not_an_ih ->
-          State.printf s "@[<v>The expression@,  @[%a@]@,\
-                          is not an appeal to an induction hypothesis.@]"
-            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-       end
+       let k = Session.infer_invocation_kind c i in
+       Tactic.invoke k b i tau name t g
 
-    | Command.Suffices (`ih, _, _) ->
-       State.printf s "`by ih _ suffices ...` is not currently supported"
-    | Command.Suffices (`lemma, i, tau_list) ->
+    | Command.Suffices (i, tau_list) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
-       begin match hs with
-       | _ :: _ ->
-          Theorem.printf t "holes are not supported for `by lemma _ suffices ...`"
-       | [] ->
-          let tau_list = List.map (Elab.typ cD) tau_list in
-          Tactic.suffices i tau_list tau t g
+       begin match Session.infer_invocation_kind c i with
+       | `ih ->
+          State.printf s "inductive use of `suffices by _ ...` is not currently supported"
+       | `lemma ->
+          begin match hs with
+          | _ :: _ ->
+             Theorem.printf t "holes are not supported for `suffices by _ ...`"
+          | [] ->
+             let tau_list = List.map (Elab.typ cD) tau_list in
+             Tactic.suffices i tau_list tau t g
+          end
        end
 
     | Command.Solve e ->

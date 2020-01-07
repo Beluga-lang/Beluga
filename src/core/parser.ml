@@ -2884,20 +2884,14 @@ let interactive_harpoon_command =
     &> cmp_exp_chk
     $> fun t -> H.Solve t
   in
-  let invoke_kind =
-    alt
-      (keyword "ih" &> pure `ih)
-      (keyword "lemma" &> pure `lemma)
-  in
   let by =
     token T.KW_BY &>
-      seq4
-        invoke_kind
+      seq3
         cmp_exp_syn
         (token T.KW_AS &> name)
         (maybe_default boxity `boxed)
-    $> fun (k, i, name, b) ->
-      H.By (k, i, name, b)
+    $> fun (i, name, b) ->
+       H.By (i, name, b)
   in
   let compute_type =
     token T.KW_TYPE
@@ -2907,11 +2901,11 @@ let interactive_harpoon_command =
   let suffices =
     seq2
       (tokens [T.KW_SUFFICES; T.KW_BY]
-       &> seq2 invoke_kind cmp_exp_syn)
+       &> cmp_exp_syn)
       (token T.KW_TOSHOW
        &> sep_by0 cmp_typ (token T.COMMA))
-    $> fun ( (k, i), tau_list ) ->
-       H.Suffices (k, i, tau_list)
+    $> fun (i, tau_list) ->
+       H.Suffices (i, tau_list)
   in
   let unbox =
     keyword "unbox" &>

@@ -204,11 +204,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
   and fmt_ppr_lf_head cD cPsi lvl ppf head =
-    let paren s = not (PC.db()) && lvl > 0 && (match s with
-                                                    | LF.EmptySub
-                                                      | LF.Undefs -> false
-                                                    | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
-                                                    | _ -> true)
+    let paren s =
+      not (PC.db()) && lvl > 0
+      && match s with
+         | LF.EmptySub | LF.Undefs -> false
+         | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
+         | _ -> true
     in
     let rec fmt_head_with proj = function
       | LF.HClo (h, s, sigma) ->

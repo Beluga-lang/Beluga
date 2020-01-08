@@ -1310,27 +1310,25 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_proof_state ppf =
     let open Comp in
-    function
-    | { context = {cD; cG; _} ; goal; solution; label } ->
-       fprintf ppf "@[<v>";
-       fprintf ppf "@[<hov 2>%a@]@,"
-         (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf " <-@ ")
-            (fun ppf l -> fprintf ppf "%s" l))
-         label;
-       fprintf ppf "@[<v 2>Meta-context:";
-       Context.iter (Whnf.normMCtx cD)
-         (fun cD v -> fprintf ppf "@,@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) v );
-       fprintf ppf "@]@,";
-       fprintf ppf "@[<v 2>Computational context:";
-       Context.iter' (Whnf.normCtx cG)
-         (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
-       fprintf ppf "@]@,";
-       for _ = 1 to 80 do fprintf ppf "-" done;
-       let goal = Whnf.cnormCTyp goal in
-       fprintf ppf "@,";
-       Printer.with_implicits false
-         (fun () -> fmt_ppr_cmp_typ cD l0 ppf goal);
-       fprintf ppf "@]";
+    fun { context = {cD; cG; _} ; goal; solution; label } ->
+    fprintf ppf "@[<v>";
+    fprintf ppf "@[<hov 2>%a@]@,"
+      (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf " <-@ ")
+         (fun ppf l -> fprintf ppf "%s" l))
+      label;
+    fprintf ppf "@[<v 2>Meta-context:";
+    Context.iter (Whnf.normMCtx cD)
+      (fun cD v -> fprintf ppf "@,@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) v );
+    fprintf ppf "@]@,";
+    fprintf ppf "@[<v 2>Computational context:";
+    Context.iter' (Whnf.normCtx cG)
+      (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
+    fprintf ppf "@]@,";
+    for _ = 1 to 80 do fprintf ppf "-" done;
+    let goal = Whnf.cnormCTyp goal in
+    fprintf ppf "@,";
+    fmt_ppr_cmp_typ cD l0 ppf goal;
+    fprintf ppf "@]";
 
   and fmt_ppr_cmp_proof cD cG ppf =
     let open Comp in

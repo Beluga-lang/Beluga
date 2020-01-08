@@ -61,7 +61,8 @@ module Int = struct
     val fmt_ppr_lf_sch_elem    : lvl -> formatter -> LF.sch_elem   -> unit
     val fmt_ppr_lf_dctx_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
     val fmt_ppr_lf_dctx        : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_mctx        : ?sep:(formatter -> unit -> unit) -> lvl -> formatter -> LF.mctx     -> unit
+    val fmt_ppr_lf_mctx        : ?all: bool -> ?sep: (formatter -> unit -> unit) -> lvl ->
+                                 formatter -> LF.mctx -> unit
     val fmt_ppr_lf_ctx_var     : LF.mctx -> formatter -> LF.ctx_var -> unit
     val fmt_ppr_lf_mfront      : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
     val fmt_ppr_lf_iterm       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit

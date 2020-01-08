@@ -1,6 +1,6 @@
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
-(1) . ; . |- [ |- m_step X3 X4]
+(1)  ;  |- [ |- m_step X3 X4]
 
 ##

@@ -73,6 +73,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.DeclOpt n ->
        let n' = fresh_name_mctx cD n in LF.DeclOpt n'
 
+  (** Prints a context.
+      Prints each element of the context from left to right with the
+      given separator between entries, and using the provided function
+      to print an entry.
+      The given predicate decides whether an entry should be printed.
+      The given printing function receives the subcontext (to the left
+      of the entry) plus the entry itself.
+   *)
+  let fmt_ppr_ctx_filter : type a. ?sep:(formatter -> unit -> unit) -> (a LF.ctx * a -> bool) -> (formatter -> a LF.ctx * a -> unit) -> formatter -> a LF.ctx -> unit =
+    (* the type has to be written in this horrible way to keep OCaml
+       from unnecessarily monomorphizing it. *)
+    fun ?(sep = pp_print_space) p f ppf ctx ->
+    pp_print_list ~pp_sep: sep f ppf (Context.to_sublist_rev ctx |> List.filter p)
+
   (* Contextual Format Based Pretty Printers
    *
    * We assume types, terms, etc are all in normal form.
@@ -88,10 +102,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let Store.Cid.Typ.({ implicit_arguments = k; _ }) = Store.Cid.Typ.get a in
        let ms =
          (* drop implicits *)
-         if !PC.printImplicit then
-           ms
-         else
-           LF.drop_spine k ms
+         if !PC.printImplicit then ms else LF.drop_spine k ms
        in
        fprintf ppf "%s@[<hov 2>%s@ @[<hov>%a@]@]%s"
          (l_paren_if cond)
@@ -137,35 +148,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_tuple cD cPsi lvl) rest
 
   and fmt_ppr_lf_normal cD cPsi lvl ppf =
-    let rec dropSpineLeft ms n = match (ms, n) with
-        (_, 0) -> ms
-      | (LF.Nil, _) -> ms
-      | (LF.App (_m, rest), n) -> dropSpineLeft rest (n - 1)
-
-    in let deimplicitize_spine h ms = match h with
-         | LF.Const c ->
-            let implicit_arguments =
-              if !PC.printImplicit
-              then 0
-              else Store.Cid.Term.get_implicit_arguments c
-            in
-            dropSpineLeft ms implicit_arguments
-
-         | LF.MVar _
-           | LF.BVar _
-           | LF.PVar _
-           | LF.FMVar _
-           | LF.FPVar _
-           | LF.Proj _
-           | LF.FVar _
-           | LF.AnnH _ ->
-            ms
-
-       in function
+    let deimplicitize_spine h ms = match h with
+      | _ when !PC.printImplicit -> ms
+      | LF.Const c ->
+         LF.drop_spine (Store.Cid.Term.get_implicit_arguments c) ms
+      | _ -> ms
+    in
+    function
        | LF.Lam (_, x, m) ->
           let x = fresh_name_dctx cPsi x in
           let cond = lvl > 0 in
-          fprintf ppf "%s\\%s. %a%s"
+          fprintf ppf "%s@[<hov 2>\\%s.@ @[%a@]@]%s"
             (l_paren_if cond)
             (Id.render_name x)
             (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
@@ -466,11 +459,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_mfront' cD _lvl ppf mO = match mO with
     | LF.CObj cPsi ->
-       fprintf ppf "%a"
+       fprintf ppf "@[%a@]"
          (fmt_ppr_lf_dctx cD 0) cPsi
     | LF.ClObj (phat, tM) ->
        let cPsi = Context.hatToDCtx phat in
-       fprintf ppf "%a |- %a"
+       fprintf ppf "@[<hov 2>@[%a@] |-@ @[%a@]@]"
          (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (fmt_ppr_lf_clobj cD 0 cPsi) tM
     | LF.MV k ->
@@ -723,28 +716,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name x)
 
   and fmt_ppr_lf_mctx ?(all = false) ?(sep = Fmt.comma) lvl ppf cD =
-    (* Compute the list of declarations to print *)
-    let ds =
-      let should_print =
-        if all then
-          fun _ -> true
-        else
-          function
-          | (_, LF.Decl (_, _, dep)) ->
-             not !Printer.Control.printNormal && (!Printer.Control.printImplicit || not (isImplicit dep))
-          | _ -> true
-      in
-      Context.to_sublist_rev cD
-      |> Misc.List.filter_rev should_print
+    let should_print =
+      if all then
+        fun _ -> true
+      else
+        function
+        | (_, LF.Decl (_, _, dep)) ->
+           not !Printer.Control.printNormal && (!Printer.Control.printImplicit || not (isImplicit dep))
+        | _ -> true
     in
-    match ds with
-    | [] ->
-       fprintf ppf "."
-    | _ ->
-       fprintf ppf "%a"
-         (pp_print_list ~pp_sep: sep
-            (fun ppf (cD, d) -> fmt_ppr_lf_ctyp_decl cD lvl ppf d))
-         ds
+    fmt_ppr_ctx_filter ~sep: sep should_print (fun ppf (cD', d) -> fmt_ppr_lf_ctyp_decl cD' l0 ppf d) ppf cD
 
   and fmt_ppr_lf_kind cPsi lvl ppf = function
     | LF.Typ ->
@@ -753,7 +734,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.PiKind ((LF.TypDecl (x, a), LF.Maybe), k) ->
        let x = fresh_name_dctx cPsi x in
        let cond = lvl > 0 in
-       fprintf ppf "@[<1>%s{%s : %a}@ %a%s@]"
+       fprintf ppf "@[<2>%s{@[%s :@ @[%a@]@]}@ @[%a@]%s@]"
          (l_paren_if cond)
          (Id.render_name   x)
          (fmt_ppr_lf_typ LF.Empty cPsi  0) a
@@ -799,11 +780,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      material. *)
   and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
     | LF.Decl (u, mtyp,dep) ->
-       let style =
-         if !Printer.Control.printImplicit
-         then `depend
-         else `inductive
-       in
+       let style = if !PC.printImplicit then `depend else `inductive in
        fprintf ppf "%s%a :@ @[%a@]"
          (if printing_holes
           then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
@@ -816,18 +793,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name name)
 
   and getTyp = function
-    | LF.ClTyp (LF.MTyp tA, _)
-      | LF.ClTyp (LF.PTyp tA, _) -> Some tA
+    | LF.(ClTyp ((MTyp tA | PTyp tA), _)) -> Some tA
     | _ -> None
 
   and isImplicit = function
-    | LF.No -> false
     | LF.Maybe -> true
-    | LF.Inductive -> false
+    | LF.(No | Inductive) -> false
 
   and isImplicitDecl = function
-    | LF.Decl (_, _, dep) -> isImplicit dep
-    | LF.DeclOpt _ -> false
+    | LF.Decl (_, _, dep) when isImplicit dep -> true
+    | _ -> false
 
   and fmt_ppr_lf_iterm cD cPsi lvl ppf = function
     | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi lvl ppf tM
@@ -1363,7 +1338,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        begin match b, tau with
        | `boxed, _ ->
           let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
-          fprintf ppf "@[<hv>by %a @[%a@]@ as %a@];@,%a"
+          fprintf ppf "@[<hv 2>by %a@ @[%a@]@ as %a@];@,%a"
             fmt_ppr_invoke_kind k
             (fmt_ppr_cmp_exp_syn cD cG l0) t
             Id.print name
@@ -1378,7 +1353,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        end
     | Unbox (i, name, mT), proof ->
        let cD' = LF.Dec (cD, LF.Decl (name, mT, LF.Maybe)) in
-       fprintf ppf "@[<hv 2>unbox@ (@[%a@])@ as @[%a@]@];@,%a"
+       fprintf ppf "@[<hv 2>unbox@ @[%a@]@ as @[%a@]@];@,%a"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
          (fmt_ppr_cmp_proof cD' (Whnf.cnormCtx (cG, LF.MShift 1))) proof
@@ -1439,7 +1414,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->
-       fprintf ppf "solve (%a)" (fmt_ppr_cmp_exp_chk cD cG l0) t;
+       fprintf ppf "@[<hov 2>solve@ @[%a@]@]" (fmt_ppr_cmp_exp_chk cD cG l0) t;
 
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in
@@ -1454,7 +1429,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let comma_sep_by fmt l = pp_print_list ~pp_sep: Fmt.comma fmt l in
     fun { cD; cG; _ } ->
     fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
-      (comma_sep_by (fun ppf (cD, x) -> fmt_ppr_lf_ctyp_decl cD l0 ppf x))
+      (comma_sep_by
+         begin fun ppf (cD, x) ->
+         fprintf ppf "@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) x
+         end)
       (Context.to_sublist cD)
       (comma_sep_by (fmt_ppr_cmp_ctyp_decl cD l0))
       (Context.to_list cG)
@@ -1516,14 +1494,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "%a : _" Id.print x
 
   and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl ppf cG =
-    match cG with
-    | LF.Empty -> fprintf ppf "."
-    | _ ->
-       let ds = Context.to_list cG in
-       fprintf ppf "%a"
-         (pp_print_list ~pp_sep: sep
-            (fmt_ppr_cmp_ctyp_decl cD 0))
-         ds
+    fmt_ppr_ctx_filter ~sep: sep
+      (Misc.const true)
+      (fun ppf (_, d) -> fmt_ppr_cmp_ctyp_decl cD l0 ppf d)
+      ppf
+      cG
 
   let fmt_ppr_cmp_gctx_typing ppf (cD, cG) =
     fprintf ppf "@[%a@] |-@ @[%a@]"

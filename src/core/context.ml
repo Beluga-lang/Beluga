@@ -143,8 +143,8 @@ let map f ctx =
 
 (** Transforms a context into a list by applying the given function.
     The list order will be the reverse of the context,
-    i.e. the rightmost entry of the context (which is the first entry)
-    will be the rightmost entry of the lsit (which is the last entry).
+    i.e. the rightmost entry of the context (which is its first entry)
+    will be the rightmost entry of the list (which is its last entry).
  *)
 let rec to_list_map_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> 'b) : 'b list =
   match ctx with

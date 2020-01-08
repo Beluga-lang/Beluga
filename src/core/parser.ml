@@ -2869,6 +2869,11 @@ let interactive_harpoon_command =
     &> cmp_exp_syn
     $> fun t -> H.(Split (`split, t))
   in
+  let msplit =
+    keyword "msplit"
+    &> span (alt hash_name name)
+    $> fun (loc, name) -> H.MSplit (loc, name)
+  in
   let invert =
     keyword "invert"
     &> cmp_exp_syn
@@ -2983,6 +2988,7 @@ let interactive_harpoon_command =
   choice
     [ intros
     ; split
+    ; msplit
     ; compute_type
     ; invert
     ; impossible

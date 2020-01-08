@@ -215,6 +215,9 @@ module LF = struct
   let head (tH : head) : normal =
     Root (Loc.ghost, tH, Nil)
 
+  let mvar cvar sub : head =
+    MVar (cvar, sub)
+
   (* Hatted version of LF.Null *)
   let null_hat : dctx_hat = (None, 0)
 

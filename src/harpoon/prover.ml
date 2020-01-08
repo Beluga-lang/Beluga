@@ -14,6 +14,7 @@ module Logic = B.Logic
 module P = B.Pretty.Int.DefaultPrinter
 module Total = B.Total
 module Whnf = B.Whnf
+module S = B.Substitution
 module Debug = B.Debug
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
@@ -67,6 +68,42 @@ module Elab = struct
   let typ cD tau =
     let (tau, k) = Interactive.elaborate_typ cD tau in
     tau
+
+  (** Elaborates a metavariable. *)
+  let mvar cD loc name =
+    (* This is kind of sketchy since we don't parse a head, but rather
+       just a name (or a hash_name), and we do all the elaboration "by
+       hand" here instead of using Lfrecon and Index.
+     *)
+    let p (d, _) = Id.equals name (LF.name_of_ctyp_decl d) in
+    match Context.find_with_index_rev' cD p with
+    | None -> B.Lfrecon.(throw loc (UnboundName name))
+    | Some LF.(Decl (_, cT, dep), k) ->
+       let mF =
+         let open LF in
+         match cT with
+         | ClTyp (mT, cPsi) ->
+            let psi_hat = Context.dctxToHat cPsi in
+            let obj =
+              match mT with
+              | MTyp _ -> MObj (MVar (Offset k, S.LF.id) |> head)
+              | PTyp _ -> PObj (PVar (k, S.LF.id))
+              | STyp _ -> SObj (SVar (k, 0, S.LF.id)) (* XXX not sure about 0 -je *)
+            in
+            ClObj (psi_hat, obj)
+         | LF.CTyp _ ->
+            let cPsi = LF.(CtxVar (CtxOffset k)) in
+            CObj cPsi
+       in
+       let i =
+         Comp.AnnBox ( (loc, mF), cT )
+       in
+       let tau =
+         Comp.TypBox (loc, cT)
+       in
+       (i, tau)
+    | _ -> B.Error.violation "[harpoon] [Elab] [mvar] cD decl has no type"
+
 end
 
 module Prover = struct
@@ -392,6 +429,9 @@ module Prover = struct
     | Command.Split (split_kind, i) ->
        let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        Tactic.split split_kind m tau (Lazy.force mfs) t g
+    | Command.MSplit (loc, name) ->
+       let i, tau = Elab.mvar cD loc name in
+       Tactic.split `split i tau (Lazy.force mfs) t g
     | Command.By (i, name, b) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        dprintf

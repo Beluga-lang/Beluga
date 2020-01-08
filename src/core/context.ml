@@ -257,15 +257,9 @@ let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) o
 (** Find an item satisfying a condition in a context from left to right
     (oldest one first)
  *)
-let rec find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
-  match ctx with
-  | Empty -> None
-  | Dec (ctx', x) ->
-     let open Maybe in
-     Lazy.force
-       ( lazy (find ctx' f)
-         <|> lazy (of_bool (f ctx' x) &> Some x)
-       )
+let find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
+  find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
+  |> Maybe.map fst
 
 let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find ctx (Misc.const f)
@@ -286,6 +280,22 @@ let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
 
 let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find_rev ctx (Misc.const f)
+
+let find_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
+  find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
+  |> Maybe.map snd
+
+let find_index' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
+  find_with_index' ctx (fun (x, _) -> f x)
+  |> Maybe.map snd
+
+let find_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
+  find_with_index_rev ctx (fun ctx' (x, _) -> f ctx' x)
+  |> Maybe.map snd
+
+let find_index_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
+  find_with_index_rev' ctx (fun (x, _) -> f x)
+  |> Maybe.map snd
 
 let rec length cD = match cD with
   | Empty        -> 0

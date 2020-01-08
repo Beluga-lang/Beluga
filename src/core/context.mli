@@ -46,6 +46,13 @@ val find        : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
 val find'       : 'a ctx -> ('a -> bool) -> 'a option
 val find_rev    : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
 val find_rev'   : 'a ctx -> ('a -> bool) -> 'a option
+val find_index  : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
+val find_index' : 'a ctx -> ('a -> bool) -> int option
+val find_index_rev  : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
+val find_index_rev' : 'a ctx -> ('a -> bool) -> int option
+
+(** Finds the leftmost element of the context, together with its
+    index, satisfying the given predicate *)
 val find_with_index     : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
 val find_with_index'    : 'a ctx -> ('a * int -> bool) -> ('a * int) option
 val find_with_index_rev : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option

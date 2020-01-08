@@ -100,6 +100,10 @@ module List = struct
     go [] l
 
   let for_each l f = List.map l f
+
+  let uncons : 'a list -> ('a * 'a list) option = function
+    | [] -> None
+    | x :: xs -> Some (x, xs)
 end
 
 let id (x : 'a) : 'a = x

@@ -1,5 +1,6 @@
 open Support
 module B = Beluga
+module Context = B.Context
 module Comp = Beluga.Syntax.Int.Comp
 module S = B.Substitution
 module Command = Beluga.Syntax.Ext.Harpoon
@@ -25,6 +26,34 @@ let solve (proof : Comp.proof) : t =
   Theorem.solve g proof;
   Theorem.remove_subgoal t g
 
+(** Decides whether the name of the given declaration already occurs
+    in the given context.
+    A message is displayed if it does.
+ *)
+let check_variable_uniqueness variable_kind ctx decl name_of_decl print t =
+  let name = name_of_decl decl in
+  let p d = Id.equals (name_of_decl d) name in
+  match Context.find_rev' ctx p with
+  | Some d ->
+     Theorem.printf t
+       "- @[<v>Error: Defining the %s %a is forbidden@ as it overshadows \
+        the declaration@,  @[%a@]@]"
+       variable_kind
+       Id.print name
+       print d;
+     `duplicate
+  | None -> `unique
+
+let check_computational_variable_uniqueness cD cG decl =
+  check_variable_uniqueness "computational variable" cG decl
+    Comp.name_of_ctyp_decl
+    P.(fmt_ppr_cmp_ctyp_decl cD l0)
+
+let check_metavariable_uniqueness cD decl =
+  check_variable_uniqueness "metavariable" cD decl
+    LF.name_of_ctyp_decl
+    P.(fmt_ppr_lf_ctyp_decl cD l0)
+
 (** Walks a type and collects assumptions into cD and cG,
     returning the conclusion type.
 
@@ -37,8 +66,9 @@ let solve (proof : Comp.proof) : t =
     The given optional names are used for the introduced arguments.
     Else, fresh names are generated internally.
  *)
-let intros' : string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
-              LF.mctx * Comp.gctx * Comp.typ =
+let intros' : Theorem.t ->
+              string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
+              (LF.mctx * Comp.gctx * Comp.typ) option =
   let genVarName tA = B.Store.Cid.Typ.gen_var_name tA in
   let gen_var_for_typ =
     function
@@ -49,26 +79,28 @@ let intros' : string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
     | _ ->
        B.Id.(mk_name NoName)
   in
-  let rec go names cD cG t =
-    let next_name : (string * string list) option =
-      let open Maybe in
-      names
-      $ function
-        | [] -> None
-        | x :: xs -> Some (x , xs)
-    in
-    match t with
-    | Comp.TypArr (t1, t2) ->
+  fun t ->
+  let rec go names cD cG tau =
+    let next_name = Maybe.(names $ Misc.List.uncons) in
+    match tau with
+    | Comp.TypArr (tau_1, tau_2) ->
        let name , names =
          next_name
          |> Maybe.eliminate
-              (fun _ -> gen_var_for_typ t1 , None)
+              (fun _ -> gen_var_for_typ tau_1 , None)
               (fun (name, names) -> B.Id.(mk_name (SomeString name)), Some names)
        in
-       go names cD (LF.Dec (cG, Comp.CTypDecl (name, t1, false))) t2
-    | Comp.TypPiBox (tdec, t2) ->
-       go names (LF.Dec (cD, tdec)) cG t2
-    | _ -> cD, cG, t
+       let d = Comp.CTypDecl (name, tau_1, false) in
+       begin match check_computational_variable_uniqueness cD cG d t with
+       | `unique -> go names cD (LF.Dec (cG, d)) tau_2
+       | `duplicate -> None
+       end
+    | Comp.TypPiBox (d, tau_2) ->
+       begin match check_metavariable_uniqueness cD d t with
+       | `unique -> go names (LF.Dec (cD, d)) cG tau_2
+       | `duplicate -> None
+       end
+    | _ -> Some (cD, cG, tau)
   in
   go
 
@@ -81,26 +113,28 @@ let intros (names : string list option) : t =
   fun t s ->
   let open Comp in
   let (tau, theta) = s.goal in
-  let cD, cG, tau' = intros' names LF.Empty LF.Empty tau in
-  (* only create a new intros node if something actually happened *)
-  if tau' <> tau then
-    let goal' = (tau', theta) in
-    let local_context = {cD; cG; cIH = LF.Empty} in
-    let context = Whnf.append_hypotheses s.context local_context in
-    let new_state =
-      { context
-      ; goal = goal'
-      ; solution = None
-      ; label = "intros" :: s.label
-      }
-    in
-    (* Invoke the callback on the subgoal that we created *)
-    (* Solve the current goal with the subgoal. *)
-    Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
-  else
-    Theorem.printf t
-      "Nothing to introduce.@,\
-       This command works only when the goal is a function type.@,"
+  match intros' t names LF.Empty LF.Empty tau with
+  | None ->
+     Theorem.printf t "Error: intros failed@,"
+  | Some (cD, cG, tau') when tau' <> tau ->
+     (* only create a new intros node if something actually happened *)
+     let goal' = (tau', theta) in
+     let local_context = {cD; cG; cIH = LF.Empty} in
+     let context = Whnf.append_hypotheses s.context local_context in
+     let new_state =
+       { context
+       ; goal = goal'
+       ; solution = None
+       ; label = "intros" :: s.label
+       }
+     in
+     (* Invoke the callback on the subgoal that we created *)
+     (* Solve the current goal with the subgoal. *)
+     Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
+  | _ ->
+     Theorem.printf t
+       "Nothing to introduce.@,\
+        The intros tactic works only when the goal is a function type.@,"
 
 let is_valid_goals_for_split_kind k cgs =
   let n = List.length cgs in
@@ -456,16 +490,25 @@ let extending_comp_context decl g =
 
 (** Solves the current subgoal by keeping it the same, but extending
     the meta context with a new declaration.
-    This will appropriately MShift the goal type.
+    This will appropriately MShift the goal type and the computational
+    context.
  *)
 let solve_with_new_meta_decl decl f t g =
-  Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) f g
+  let Comp.{cD; _} = Comp.(g.context) in
+  match check_metavariable_uniqueness cD decl t with
+  | `duplicate -> ()
+  | `unique ->
+     Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) f g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the computational context with a new declaration.
  *)
 let solve_with_new_comp_decl decl f t g =
-  Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) f g
+  let Comp.{cD; cG; _} = Comp.(g.context) in
+  match check_computational_variable_uniqueness cD cG decl t with
+  | `duplicate -> ()
+  | `unique ->
+     Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) f g
 
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
   solve_with_new_meta_decl LF.(Decl (name, cT, No)) f
@@ -474,19 +517,22 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
   let open Comp in
   fun t g ->
   let {cD; cG; cIH} = g.context in
-  match tau with
-  | TypBox (_, cT) ->
-     solve_by_unbox' (prepend_commands [mk_cmd cT]) cT name t g
-  | _ ->
-     Theorem.printf t "@[<v>The expression@,  @[%a@]@,cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
-       (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
-       (P.fmt_ppr_cmp_typ cD P.l0) tau
+     match tau with
+     | TypBox (_, cT) ->
+        solve_by_unbox' (prepend_commands [mk_cmd cT]) cT name t g
+     | _ ->
+        Theorem.printf t
+          "@[<v>The expression@,  @[%a@]@,\
+           cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
+          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
+          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
 let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT)) tau name
 
-let invoke (k : Command.invoke_kind) (b : Comp.boxity) (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+let invoke (k : Command.invoke_kind) (b : Comp.boxity)
+      (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in
   let cmd = By (k, m, name, tau, b) in
   match b with

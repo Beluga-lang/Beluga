@@ -2,6 +2,8 @@ open Support
 open Format
 open Syntax.Int
 
+module PC = Printer.Control
+
 (* Internal Syntax Pretty Printer Functor *)
 module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   include Prettycom
@@ -83,6 +85,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.Atom (_, a, ms) ->
        let cond = lvl > 1 in
+       let Store.Cid.Typ.({ implicit_arguments = k; _ }) = Store.Cid.Typ.get a in
+       let ms =
+         (* drop implicits *)
+         if !PC.printImplicit then
+           ms
+         else
+           LF.drop_spine k ms
+       in
        fprintf ppf "%s@[<hov 2>%s@ @[<hov>%a@]@]%s"
          (l_paren_if cond)
          (R.render_cid_typ a)
@@ -135,7 +145,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in let deimplicitize_spine h ms = match h with
          | LF.Const c ->
             let implicit_arguments =
-              if !Printer.Control.printImplicit
+              if !PC.printImplicit
               then 0
               else Store.Cid.Term.get_implicit_arguments c
             in
@@ -201,7 +211,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
   and fmt_ppr_lf_head cD cPsi lvl ppf head =
-    let paren s = not (Printer.Control.db()) && lvl > 0 && (match s with
+    let paren s = not (PC.db()) && lvl > 0 && (match s with
                                                     | LF.EmptySub
                                                       | LF.Undefs -> false
                                                     | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
@@ -249,15 +259,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
       | LF.MVar(c, LF.Undefs)
         | LF.MVar(c, LF.EmptySub) ->
-         (match !Printer.Control.substitutionStyle with
-          | Printer.Control.Natural ->
-             fprintf ppf "%a%s"
-               (fmt_ppr_lf_cvar cD) c
-               proj
-          | Printer.Control.DeBruijn ->
-             fprintf ppf "%a%s[e]"
-               (fmt_ppr_lf_cvar cD) c
-               proj)
+         begin match !PC.substitutionStyle with
+         | PC.Natural ->
+            fprintf ppf "%a%s"
+              (fmt_ppr_lf_cvar cD) c
+              proj
+         | PC.DeBruijn ->
+            fprintf ppf "%a%s[e]"
+              (fmt_ppr_lf_cvar cD) c
+              proj
+         end
 
       | LF.MVar (c, s) ->
          if Substitution.LF.isId s then

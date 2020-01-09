@@ -611,14 +611,14 @@ and cnorm_psihat (phat: dctx_hat) t = match phat with
         end
      end
   | (Some (CtxOffset offset), k) ->
-      begin match LF.applyMSub offset t with
-        | CObj(cPsi) ->
-            begin match Context.dctxToHat (cPsi) with
-              | (None, i) -> (None, k+i)
-              | (Some cvar', i) -> (Some cvar', i+k)
-            end
-        | MV offset' -> (Some (CtxOffset offset'), k)
-      end
+     begin match LF.applyMSub offset t with
+     | CObj(cPsi) ->
+        begin match Context.dctxToHat (cPsi) with
+        | (None, i) -> (None, k+i)
+        | (Some cvar', i) -> (Some cvar', i+k)
+        end
+     | MV offset' -> (Some (CtxOffset offset'), k)
+     end
   |  _ -> phat
 
 and cnormHead' (h, t) = match h with

@@ -222,7 +222,7 @@ module Prover = struct
          |> snd
          |> B.Parser.handle
               begin fun err ->
-              printf s "@[<v>Parse error.@,@[%a@]@]@."
+              printf s "@[%a@]@."
                 B.Parser.print_error err;
               prompt_with s msg use_history p
               end

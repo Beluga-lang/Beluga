@@ -647,7 +647,7 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
                     { context = s.context
                     ; goal = (tau, Whnf.m_id)
                     ; solution = None
-                    ; label = ("premise " ^ string_of_int k ^ " of " ^ lemma_name)
+                    ; label = ("premise " ^ string_of_int (k + 1) ^ " of " ^ lemma_name)
                               :: s.label
                     }
                   in

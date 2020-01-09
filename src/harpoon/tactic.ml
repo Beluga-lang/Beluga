@@ -408,7 +408,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
           let label, c =
             let LF.(MObj (Root (_, h, _))) = tM in
-            ( Fmt.stringify P.(fmt_ppr_lf_head LF.Empty LF.Null l0) h
+            ( Fmt.stringify P.(fmt_ppr_lf_head context.cD LF.Null l0) h
             , (B.Context.hatToDCtx cPsi, h)
             )
           in

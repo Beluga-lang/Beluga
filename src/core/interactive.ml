@@ -484,17 +484,15 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
 
   (* 1. The 'hole identification component' contains the hole name (if any) and its number. *)
   fprintf ppf
-    "@[<hov>%a:@ Hole number %a, %a@]@,"
+    "@[<hov>%a:@ Hole number %a, %a@]@,  @[<v>"
     Loc.print loc
     HoleId.fmt_ppr_id i
     HoleId.fmt_ppr_name name;
-  fprintf ppf "@,";
   (* thin_line ppf (); *)
 
   (* 2. The meta-context information. *)
   fprintf ppf "Meta-context:@,  @[<v>%a@]@,"
     (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD;
-  fprintf ppf "@,";
   (* thin_line ppf (); *)
 
   let plural ppf = function
@@ -513,7 +511,6 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      (* 3. format the LF context information *)
      fprintf ppf "LF Context:@,  @[<v>%a@]@,"
        (P.fmt_ppr_lf_dctx cD P.l0) cPsi;
-     fprintf ppf "@,";
 
      (* 4. Format the goal. *)
      thin_line ppf ();
@@ -528,7 +525,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
         in
         if Misc.List.nonempty suggestions then
           fprintf ppf
-            "@,@,Variable%a of this type: @[<h>%a@]"
+            "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
             plural (List.length suggestions = 1)
             (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
      | Some sM ->
@@ -542,10 +539,9 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      (* 3. The (computational) context information. *)
      fprintf ppf "Computation context:@,  @[<v>%a@]@,"
        (P.fmt_ppr_cmp_gctx ~sep: pp_print_cut cD P.l0) cG;
-     fprintf ppf "@,";
 
      (* 4. The goal type, i.e. the type of the hole. *)
-     fprintf ppf "@[Goal:@ %a@]"
+     fprintf ppf "@[<hov>Goal:@ %a@]"
        (P.fmt_ppr_cmp_typ cD P.l0) goal;
 
      begin match compSolution with
@@ -562,4 +558,4 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
      end
   end;
-  fprintf ppf "@]"
+  fprintf ppf "@]@]"

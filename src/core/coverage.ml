@@ -1154,7 +1154,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   (* make a fresh copy of tP[cPsi] *)
   dprintf
     begin fun p ->
-    p.fmt "[genObj] @[cD = %a@,in the beginning there were %d constraints@]"
+    p.fmt "[genObj] @[<v>cD = @[%a@]@,in the beginning there were %d constraints@]"
       P.(fmt_ppr_lf_mctx l0) cD
       (List.length !U.globalCnstrs)
     end;

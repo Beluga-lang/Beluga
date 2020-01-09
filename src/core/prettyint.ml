@@ -726,7 +726,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            not !Printer.Control.printNormal && (!Printer.Control.printImplicit || not (isImplicit dep))
         | _ -> true
     in
-    fmt_ppr_ctx_filter ~sep: sep should_print (fun ppf (cD', d) -> fmt_ppr_lf_ctyp_decl cD' l0 ppf d) ppf cD
+    fmt_ppr_ctx_filter ~sep: sep should_print
+      (fun ppf (cD', d) ->
+        fprintf ppf "@[%a@]"
+          (fmt_ppr_lf_ctyp_decl cD' l0) d)
+      ppf
+      cD
 
   and fmt_ppr_lf_kind cPsi lvl ppf = function
     | LF.Typ ->

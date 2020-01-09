@@ -379,7 +379,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             ; label = ("case " ^ case_label) :: s.label
             }
           in
-          (context, new_state, pat)
+          (context, new_state, pat')
      in
 
      let make_context_branch (context, new_state, pat) =

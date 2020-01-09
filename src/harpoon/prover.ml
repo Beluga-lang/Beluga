@@ -79,6 +79,15 @@ module Elab = struct
     match Context.find_with_index_rev' cD p with
     | None -> B.Lfrecon.(throw loc (UnboundName name))
     | Some LF.(Decl (_, cT, dep), k) ->
+       let cT = Whnf.cnormMTyp (cT, LF.MShift k) in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon] [Elab.mvar] @[<v>found index %d for metavariable@,\
+                @[<hov 2>%a :@ @[%a@]@]@]"
+           k
+           Id.print name
+           P.(fmt_ppr_cmp_meta_typ cD l0) cT
+         end;
        let mF =
          let open LF in
          match cT with

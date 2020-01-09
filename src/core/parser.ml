@@ -2871,7 +2871,7 @@ let interactive_harpoon_command =
   in
   let msplit =
     keyword "msplit"
-    &> span (alt hash_name name)
+    &> span (choice [ dollar_name; hash_name; name ])
     $> fun (loc, name) -> H.MSplit (loc, name)
   in
   let invert =

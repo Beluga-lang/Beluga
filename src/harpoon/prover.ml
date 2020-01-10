@@ -86,7 +86,7 @@ module Elab = struct
                 @[<hov 2>%a :@ @[%a@]@]@]"
            k
            Id.print name
-           P.(fmt_ppr_cmp_meta_typ cD l0) cT
+           P.(fmt_ppr_cmp_meta_typ cD) cT
          end;
        let mF =
          let open LF in

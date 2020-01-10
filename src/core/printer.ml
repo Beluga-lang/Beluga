@@ -48,9 +48,11 @@ module Int = struct
     val fmt_ppr_lf_svar_class  : formatter -> LF.svar_class -> unit
     val fmt_ppr_lf_depend      : depend_print_style -> formatter -> LF.depend -> unit
     val fmt_ppr_lf_kind        : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl   : ?printing_holes:bool -> LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_ctyp_decl   : ?depend:bool -> ?printing_holes:bool ->
+                                 LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
     val fmt_ppr_lf_typ         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
+    val fmt_ppr_lf_mtyp'       : LF.mctx -> string * string -> formatter -> LF.ctyp  -> unit
     val fmt_ppr_lf_mtyp        : LF.mctx                    -> formatter -> LF.ctyp  -> unit
     val fmt_ppr_lf_tuple       : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
     val fmt_ppr_lf_normal      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
@@ -100,7 +102,7 @@ module Int = struct
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> Comp.hypothetical -> unit
     val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
-    val fmt_ppr_cmp_meta_typ      : LF.mctx -> lvl -> formatter -> Comp.meta_typ -> unit
+    val fmt_ppr_cmp_meta_typ      : LF.mctx -> formatter -> Comp.meta_typ -> unit
     val fmt_ppr_cmp_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
     val fmt_ppr_cmp_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 

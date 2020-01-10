@@ -179,7 +179,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        dprintf
          begin fun p ->
          p.fmt "[harpoon-split] fixed parameter variable type: @[%a@]"
-           (P.fmt_ppr_cmp_meta_typ s.context.cD P.l0) mT
+           (P.fmt_ppr_cmp_meta_typ s.context.cD) mT
          end;
        k, TypBox(loc, mT'), p_opt
     | _ -> None, tau, None

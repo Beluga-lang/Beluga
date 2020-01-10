@@ -756,43 +756,55 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
          (r_paren_if cond)
 
-  and fmt_ppr_lf_mtyp' cD lvl ppf = function
+  and fmt_ppr_lf_mtyp' cD (pre, post) ppf = function
     | LF.ClTyp (LF.MTyp tA, cPsi) ->
-       fprintf ppf "[@[<hov 2>@[%a@] |-@ @[%a@]@]]"
-         (fmt_ppr_lf_dctx cD lvl) cPsi
-         (fmt_ppr_lf_typ cD cPsi lvl) tA
+       fprintf ppf "%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
+         pre
+         (fmt_ppr_lf_dctx cD 0) cPsi
+         (fmt_ppr_lf_typ cD cPsi 0) tA
+         post
 
     | LF.ClTyp (LF.PTyp tA, cPsi) ->
-       fprintf ppf "#[@[<hov 2>@[%a@] |-@ @[%a@]@]]"
-         (fmt_ppr_lf_dctx cD lvl) cPsi
-         (fmt_ppr_lf_typ cD cPsi lvl) tA
+       fprintf ppf "#%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
+         pre
+         (fmt_ppr_lf_dctx cD 0) cPsi
+         (fmt_ppr_lf_typ cD cPsi 0) tA
+         post
 
     | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
-       fprintf ppf "[@[<hov 2>@[%a@] |- %a@ @[%a@]@]]"
-         (fmt_ppr_lf_dctx cD lvl) cPsi
+       fprintf ppf "$%s@[<hov 2>@[%a@] |- %a@ @[%a@]@]%s"
+         pre
+         (fmt_ppr_lf_dctx cD 0) cPsi
          fmt_ppr_lf_svar_class cl
-         (fmt_ppr_lf_dctx cD lvl) cPhi
+         (fmt_ppr_lf_dctx cD 0) cPhi
+         post
     | LF.CTyp (Some schemaName) ->
        fprintf ppf "%a"
-         (fmt_ppr_lf_schema lvl) (Store.Cid.Schema.get_schema schemaName)
+         (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
     | LF.CTyp None -> fprintf ppf "CTX"
 
-  and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD 0 ppf
+  and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD ("[", "]") ppf
 
   (* If a declaration is implicit and you don't want to print it, then
      it's *YOUR* responsibility to check the plicity of the
      declaration and skip calling this function. Otherwise, it is
      impossible to get the spacing to work correctly in the printed
      material. *)
-  and fmt_ppr_lf_ctyp_decl ?(printing_holes=false) cD _lvl ppf = function
+  and fmt_ppr_lf_ctyp_decl ?(depend=true) ?(printing_holes=false) cD _lvl ppf = function
     | LF.Decl (u, mtyp,dep) ->
-       let style = if !PC.printImplicit then `depend else `inductive in
+       let print_depend =
+         if depend then
+           let style = if !PC.printImplicit then `depend else `inductive in
+           fmt_ppr_lf_depend style
+         else
+           fun _ _ -> ()
+       in
        fprintf ppf "%s%a :@ @[%a@]"
          (if printing_holes
           then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
           else Id.render_name u)
-         (fmt_ppr_lf_depend style) dep
-         (fmt_ppr_lf_mtyp cD) mtyp
+         print_depend dep
+         (fmt_ppr_lf_mtyp' cD ("(", ")")) mtyp
 
     | LF.DeclOpt name ->
        fprintf ppf "%s : _"
@@ -865,7 +877,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (r_paren_if cond)
        end
 
-  let fmt_ppr_cmp_meta_typ cD lvl ppf = fmt_ppr_lf_mtyp' cD lvl ppf
+  let fmt_ppr_cmp_meta_typ cD ppf = fmt_ppr_lf_mtyp cD ppf
 
   let rec fmt_ppr_cmp_meta_spine cD lvl ppf = function
     | Comp.MetaNil ->
@@ -892,7 +904,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (r_paren_if cond)
     | Comp.TypBox (_, mT) ->
        fprintf ppf "@[%a@]"
-         (fmt_ppr_cmp_meta_typ cD 0) mT
+         (fmt_ppr_cmp_meta_typ cD) mT
 
     | Comp.TypArr (tau1, tau2) ->
        let cond = lvl > 1 in

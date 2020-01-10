@@ -159,7 +159,7 @@ let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
   | I.Dec(cQ, FDecl (MMV (_n,_r), Pure (MetaTyp (mtyp, dep)))) ->
      fprintf ppf "%a MMV%a%a@,"
        fmt_ppr_collection cQ
-       (P.fmt_ppr_cmp_meta_typ I.Empty P.l0) mtyp
+       (P.fmt_ppr_cmp_meta_typ I.Empty) mtyp
        (P.fmt_ppr_lf_depend `depend) dep
   | I.Dec(cQ, FDecl (MMV (_n,_r), Impure)) ->
      fprintf ppf "%a MMV Impure@,"
@@ -168,7 +168,7 @@ let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
      fprintf ppf "%a %a : %a@,"
        fmt_ppr_collection cQ
        Id.print u
-       (P.fmt_ppr_cmp_meta_typ I.Empty P.l0) mtyp
+       (P.fmt_ppr_cmp_meta_typ I.Empty) mtyp
   | I.Dec(cQ, FDecl (FV _n, Impure)) ->
      fprintf ppf "%a, FV _ .@,"
        fmt_ppr_collection cQ

@@ -116,7 +116,7 @@ let _ = Error.register_printer
            Format.fprintf ppf
              "Meta-object type clash.@ \
               Expected meta-object of type: %a"
-             (P.fmt_ppr_cmp_meta_typ cD P.l0) mC;
+             (P.fmt_ppr_cmp_meta_typ cD) mC;
 
        | MissingMetaObj      ->
            Format.fprintf ppf
@@ -446,7 +446,7 @@ let genMetaVar' loc' cD (loc, n , ctyp, t) =
   dprintf
     begin fun p ->
     p.fmt "[genMetaVar'] Type : %a"
-      (P.fmt_ppr_cmp_meta_typ cD P.l0) ctyp
+      (P.fmt_ppr_cmp_meta_typ cD) ctyp
     end;
   let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp') Int.LF.Maybe) ctyp' in
   ((loc',mO), Int.LF.MDot(mO,t))
@@ -558,7 +558,7 @@ and elMetaObj cD (loc,cM) cTt =
     dprintf
       begin fun p ->
       p.fmt "[elMetaObj] @[<v>type = %a@,term = %a@]"
-        (P.fmt_ppr_cmp_meta_typ cD P.l0) ctyp
+        (P.fmt_ppr_cmp_meta_typ cD) ctyp
         (P.fmt_ppr_cmp_meta_obj cD P.l0) (loc,r)
       end;
     loc, r

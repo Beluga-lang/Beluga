@@ -958,7 +958,7 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
      let s =
        let open Format in
        let mobj cD = P.fmt_ppr_cmp_meta_obj cD P.l0 in
-       let mtyp cD = P.fmt_ppr_cmp_meta_typ cD P.l0 in
+       let mtyp cD = P.fmt_ppr_cmp_meta_typ cD in
        fprintf str_formatter "[coverage] @[<v>[match_metaobj] @,\
                               Found covgoal @[%a@ : %a@]@,
                               Pattern: @[%a@ : %a@]"
@@ -989,9 +989,9 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
          P.(fmt_ppr_cmp_meta_obj cD l0) mO
          P.(fmt_ppr_cmp_meta_obj cD_p l0) mO'
          P.(fmt_ppr_lf_mctx l0) cD
-         P.(fmt_ppr_cmp_meta_typ cD l0) mT0
+         P.(fmt_ppr_cmp_meta_typ cD) mT0
          P.(fmt_ppr_lf_mctx l0) cD_p
-         P.(fmt_ppr_cmp_meta_typ cD_p l0) mT0'
+         P.(fmt_ppr_cmp_meta_typ cD_p) mT0'
        end;
      match_metaobj cD cD_p (mO, mT0) (mO', mT0') mC sC
 

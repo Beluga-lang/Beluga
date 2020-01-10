@@ -37,6 +37,11 @@ val to_list : 'a t -> 'a list
 (** Maps a function over the nonempty list. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
+(** Runs an effectful function over the nonempty list. *)
+val iter : ('a -> unit) -> 'a t -> unit
+
+val for_all : ('a -> bool) -> 'a t -> bool
+
 (** Collapses a nonempty sequence to a single element, provided all
     elements are (structurally) equal. *)
 val all_equal : 'a t -> 'a option

@@ -1,0 +1,7 @@
+examples/stlc.bel
+command-sequence-test
+[|- tm] -> [|- tp]
+
+
+by z6 as test1; by test1 as test2
+solve [|- base]

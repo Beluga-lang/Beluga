@@ -47,6 +47,12 @@ let to_list ((x, l) : 'a t) : 'a list =
 let map (f : 'a -> 'b) (x, l : 'a t) : 'b t =
   (f x, List.map f l)
 
+let iter (f : 'a -> unit) (x, l : 'a t) : unit =
+  List.iter f (x :: l)
+
+let for_all (f : 'a -> bool) (x, l : 'a t) : bool =
+  List.for_all f (x :: l)
+
 (** Prints a nonempty sequence with the given separator, which defaults to Format.pp_print_cut. *)
 let print ?(pp_sep = Format.pp_print_cut)
       (f : Format.formatter -> 'a -> unit) (ppf : Format.formatter) (l : 'a t) =

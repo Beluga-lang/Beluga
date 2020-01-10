@@ -50,6 +50,7 @@ val name : Id.name t
 
 (** Parser for a Harpoon command. *)
 val interactive_harpoon_command : Syntax.Ext.Harpoon.command t
+val interactive_harpoon_command_sequence : Syntax.Ext.Harpoon.command Nonempty.t t
 
 val numeric_total_order : Syntax.Ext.Comp.numeric_order t
 val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t

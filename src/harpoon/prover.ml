@@ -237,7 +237,7 @@ module Prover = struct
     (** Runs the theorem configuration prompt to populate the given
         session.
      *)
-    let session_configuration_wizard s c : unit =
+    let session_configuration_wizard' s c : unit =
       assert (DynArray.length c.Session.theorems = 0);
       let rec do_prompts i : Theorem.Conf.t list =
         printf s "Configuring theorem #%d@." i;
@@ -271,6 +271,17 @@ module Prover = struct
 
     let add_session s c = DynArray.insert s.sessions 0 c
     let remove_current_session s = DynArray.delete s.sessions 0
+
+    let session_configuration_wizard s c =
+      session_configuration_wizard' s c;
+      (* c will be populated with theorems; if there are none it's
+         because the session is over. *)
+      begin match DynArray.length Session.(c.theorems) > 0 with
+      | true -> `ok
+      | false -> `aborted
+                   (*
+                    *)
+      end
   end
 
     (*
@@ -285,6 +296,15 @@ module Prover = struct
     in
     loop 0
      *)
+
+  let prompt s =
+    (* The lambda character (or any other UTF-8 characters)
+       does not work with linenoise.
+       See https://github.com/ocaml-community/ocaml-linenoise/issues/13
+       for detail.
+     *)
+    s.State.prompt "> " None ()
+    |> Maybe.get' EndOfInput
 
   let process_command
         (s : State.t)
@@ -382,8 +402,10 @@ module Prover = struct
                Id.print name
           | None ->
              let c = Session.make name in
-             State.session_configuration_wizard s c;
-             State.add_session s c
+             begin match State.session_configuration_wizard s c with
+             | `ok -> State.add_session s c
+             | `aborted -> ()
+             end
           end
        | `select name ->
           begin match
@@ -485,9 +507,9 @@ type 'a error = (Format.formatter -> unit -> unit, 'a) Either.t
 (** Parses the given string to a Syntax.Ext.Harpoon.command or an
     error-printing function.
  *)
-let parse_input (input : string) : Command.command error =
+let parse_input (input : string) : Command.command Nonempty.t error =
   let open B in
-  Runparser.parse_string "<prompt>" input Parser.(only interactive_harpoon_command)
+  Runparser.parse_string "<prompt>" input Parser.(only interactive_harpoon_command_sequence)
   |> snd |> Parser.to_either
   |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
 
@@ -508,86 +530,128 @@ let run_safe (f : unit -> 'a) : 'a error =
          s bt
        end
 
-let rec loop (s : Prover.State.t) : unit =
-  let printf x = Prover.State.printf s x in
-  (* Get the next subgoal *)
+(** Gets the next state triple from the prover.
+ *)
+let with_next_triple (s : Prover.State.t) =
   match Prover.State.next_session s with
-  | None ->
-     let c = Prover.Session.make Id.(mk_name (SomeString "default")) in
-     Prover.State.session_configuration_wizard s c;
-     (* c will be populated with theorems; if there are none it's
-        because the session is over. *)
-     begin match DynArray.length Prover.(c.Session.theorems) > 0 with
-     | true ->
-        Prover.State.add_session s c;
-        loop s
-     | false -> printf "@,Harpoon terminated.@,"
-     end
+  | None -> Either.Left `no_session
   | Some c ->
      match Prover.Session.next_theorem c with
-     | None ->
-        printf "@,Proof complete! (No theorems left.)@,";
-        (* printf "Record proof to file %s? ";
-        s.prompt "[Y/n] " None ()
-         *)
-        Prover.State.remove_current_session s;
-        loop s;
+     | None -> Either.Left (`no_theorem c)
      | Some t ->
         match Theorem.next_subgoal t with
-        | None ->
-           printf "@,Subproof complete! (No subgoals left.)@,";
-           Theorem.show_proof t;
-           Prover.Session.remove_current_theorem c;
-           loop s
-        | Some g ->
-           (* Show the proof state and the prompt *)
-           printf "@,@[<v>@,%a@,@]@?"
-             P.fmt_ppr_cmp_proof_state g;
-           (*
-             printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"
-             P.fmt_ppr_cmp_proof_state g
-             (Context.length Comp.(g.context.cIH));
-            *)
+        | None -> Either.Left (`no_subgoal (c, t))
+        | Some g -> Either.Right (c, t, g)
 
-           (* Parse the input and run the command *)
-           let input =
-             let open Prover in
-             (* The lambda character (or any other UTF-8 characters)
-                does not work with linenoise.
-                See https://github.com/ocaml-community/ocaml-linenoise/issues/13
-                for detail.
-              *)
-             s.State.prompt "> " None ()
-             |> Maybe.get' EndOfInput
-           in
-           let e =
-             let open Either in
-             parse_input input
-             $ fun cmd ->
-               run_safe
-                 begin fun () ->
-                 Prover.process_command s c t g cmd;
-                 Prover.record_command c cmd
-                 end
-           in
-           Either.eliminate
-             begin fun f ->
-             printf "%a" f ();
-             if Prover.(s.State.stop) = `stop then
-               exit 1
-             end
-             (Misc.const ())
-             e;
-           loop s
+(** Parses the user input string and executes it in the given state
+    triple.
+    The input command sequence must be fully executable in the
+    current theorem.
+    Returns:
+    - `ok: all commands were executed in the current theorem
+    - `stopped_short: some commands were not executed because the
+      current theorem is over.
+    - `error: an error occurred. Commands beyond the failed one were
+      not executed.
+ *)
+let process_input s (c, t, g) input =
+  let printf x = Prover.State.printf s x in
+  let e =
+    let open Either in
+    parse_input input
+    $> Nonempty.to_list
+    $ fun cmds ->
+      (* Idea:
+         - count the commands to run
+         - count the commands we were able to process
+       *)
+      let n = List.length cmds in
+      run_safe
+        begin fun () ->
+        let (k, _) =
+          List.fold_left
+            begin fun (k, g) cmd ->
+            match g with
+            | None -> (k, g)
+            | Some g ->
+               Prover.process_command s c t g cmd;
+               Prover.record_command c cmd;
+               (k + 1, Theorem.next_subgoal t)
+            end
+            (0, Some g)
+            cmds
+        in
+        n = k
+        end
+  in
+  Either.eliminate
+    begin fun f ->
+    printf "%a" f ();
+    if Prover.(s.State.stop) = `stop then
+      exit 1;
+    `error
+    end
+    (function
+     | true -> `ok
+     | false -> `stopped_short)
+    e
+
+let rec loop (s : Prover.State.t) : unit =
+  let printf x = Prover.State.printf s x in
+  match with_next_triple s with
+  | Either.Left `no_session ->
+     let c = Prover.Session.make Id.(mk_name (SomeString "default")) in
+     begin match Prover.State.session_configuration_wizard s c with
+     | `ok ->
+        Prover.State.add_session s c;
+        loop s
+     | `aborted ->
+        printf "@,Harpoon terminated.@,"
+     end
+  | Either.Left (`no_theorem _) ->
+     printf "@,Proof complete! (No theorems left.)@,";
+     (* TODO: record proof to file by retrieving the proofs of each
+        theorem in the store.
+      *)
+     (* printf "Record proof to file %s? ";
+        s.prompt "[Y/n] " None ()
+      *)
+     Prover.State.remove_current_session s;
+     loop s
+  | Either.Left (`no_subgoal (c, t)) ->
+     (* TODO: record the proof into the Store *)
+     printf "@,Subproof complete! (No subgoals left.)@,";
+     Theorem.show_proof t;
+     Prover.Session.remove_current_theorem c;
+     loop s
+  | Either.Right (c, t, g) ->
+    (* Show the proof state and the prompt *)
+    printf "@,@[<v>@,%a@,@]@?"
+      P.fmt_ppr_cmp_proof_state g;
+    (*
+      printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"
+      P.fmt_ppr_cmp_proof_state g
+      (Context.length Comp.(g.context.cIH));
+     *)
+
+    (* Parse the input and run the command *)
+    let input = Prover.prompt s in
+    match process_input s (c, t, g) input with
+    | `ok | `error -> loop s
+    | `stopped_short ->
+       printf "@,Warning: theorem proven before all commands were processed.@,";
+       loop s
 
 let start_toplevel
       stop
-      (prompt : InputPrompt.t)
+      (input_prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop ppf prompt in
+  let s = State.make stop ppf input_prompt in
   let c = Session.make Id.(mk_name (SomeString "default")) in
-  Prover.State.session_configuration_wizard s c;
-  State.add_session s c;
-  loop s
+  match Prover.State.session_configuration_wizard s c with
+  | `ok ->
+     State.add_session s c;
+     loop s
+  | `aborted -> ()

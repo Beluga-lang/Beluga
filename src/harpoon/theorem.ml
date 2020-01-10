@@ -182,7 +182,11 @@ let register { name; Conf.stmt; order } mut_names : cid_prog =
       (This will run the subgoal hooks.)
  *)
 let configure { name; Conf.stmt; order } cid ppf hooks =
-  let initial_state = make_proof_state (stmt, Whnf.m_id) in
+  let initial_state =
+    make_proof_state
+      [Id.render_name name]
+      (stmt, Whnf.m_id)
+  in
   let t =
     { cid
     ; order

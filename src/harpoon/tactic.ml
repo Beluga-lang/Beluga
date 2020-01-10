@@ -118,14 +118,14 @@ let intros (names : string list option) : t =
      Theorem.printf t "Error: intros failed@,"
   | Some (cD, cG, tau') when tau' <> tau ->
      (* only create a new intros node if something actually happened *)
-     let goal' = (tau', theta) in
+     let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
      let context = Whnf.append_hypotheses s.context local_context in
      let new_state =
        { context
-       ; goal = goal'
+       ; goal
        ; solution = None
-       ; label = "intros" :: s.label
+       ; label = s.label
        }
      in
      (* Invoke the callback on the subgoal that we created *)
@@ -142,6 +142,14 @@ let is_valid_goals_for_split_kind k cgs =
   | `invert when n <> 1 -> `cant_invert
   | `impossible when n <> 0 -> `not_impossible
   | _ -> `ok
+
+let make_subgoal_path_for_split_kind k label parent_label =
+  match k with
+  | `invert -> parent_label (* ignore new label for inversion *)
+  | `impossible ->
+     B.Error.violation
+       "[harpoon-split] there should be no subgoals for impossible splits"
+  | `split -> label :: parent_label
 
 (** Calls the coverage checker to compute the list of goals for a
     given type in the contexts of the given proof state.
@@ -376,7 +384,10 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
             ; solution = None
-            ; label = ("case " ^ case_label) :: s.label
+            ; label =
+                make_subgoal_path_for_split_kind k
+                  ("split (case " ^ case_label ^ ")")
+                  s.label
             }
           in
           (context, new_state, pat')

@@ -583,10 +583,10 @@ module Comp = struct
   (** Generates a unsolved subgoal with the given goal in an empty
       context, with no label.
    *)
-  let make_proof_state (t : tclo) : proof_state =
+  let make_proof_state label (t : tclo) : proof_state =
     { context = no_hypotheses
     ; goal = t
-    ; label = []
+    ; label
     ; solution = None
     }
 

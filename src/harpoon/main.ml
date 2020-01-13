@@ -42,49 +42,12 @@ proof modus_ponens : {A : [ |- tp]} {B : [ |- tp]}
 ```
  *)
 
-open Support
-
 module B = Beluga
-
-(** Defines error type and formatting. *)
-module Error = struct
-  type t =
-    | DanglingArguments
-      of string list
-
-  exception E of t
-  let throw e = raise (E e)
-
-  open Format
-  let format_error ppf = function
-    | DanglingArguments args ->
-       fprintf ppf "Unexpected remaining command-line arguments:@,  @[%a@]@."
-         (pp_print_list ~pp_sep: Fmt.comma
-            (fun ppf -> fprintf ppf "%s"))
-         args
-end
-
-(* Register error formatting. *)
-let _ =
-  let open Error in
-  B.Error.register_printer'
-    begin fun e ->
-    match e with
-    | E e ->
-       Some (B.Error.print (fun ppf -> format_error ppf e))
-    | _ -> None
-    end
-
-let forbid_dangling_arguments = function
-  | [] -> ()
-  | rest -> Error.(throw (DanglingArguments rest))
 
 let realMain () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
-  let rest, options = Options.parse_arguments args in
-  forbid_dangling_arguments rest;
-  let options = options |> Options.validate |> Options.elaborate in
+  let options = Options.parse_arguments args |> Options.validate |> Options.elaborate in
   let open Options in
   Prover.start_toplevel
     options.test_stop

@@ -18,6 +18,6 @@ type elaborated_t =
 
 val initial_t : partial_t
 
-val parse_arguments : string list -> string list * partial_t
+val parse_arguments : string list -> partial_t
 val validate : partial_t -> valid_t
 val elaborate : valid_t -> elaborated_t

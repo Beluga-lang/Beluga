@@ -15,6 +15,8 @@ module Error = struct
          * string (* hint *)
     | InvalidIncomplete
     | InvalidStop
+    | DanglingArguments
+      of string list
 
   exception E of t
   let throw e = raise (E e)
@@ -35,6 +37,11 @@ module Error = struct
     | InvalidStop ->
        fprintf ppf "%a@."
          pp_print_string "--stop can only be specified with --test and without --incomplete"
+    | DanglingArguments args ->
+       fprintf ppf "Unexpected remaining command-line arguments:@,  @[%a@]@."
+         (pp_print_list ~pp_sep: Fmt.comma
+            (fun ppf -> fprintf ppf "%s"))
+         args
 end
 
 (* Register error formatting. *)
@@ -103,10 +110,14 @@ let usage () : unit =
   Printf.eprintf usageString
     Sys.argv.(0)
 
+let forbid_dangling_arguments = function
+  | [] -> ()
+  | rest -> Error.(throw (DanglingArguments rest))
+
 (** Parses argument list and
     returns parsed result and leftover arguments.
  *)
-let parse_arguments args : string list * partial_t =
+let parse_arguments args : partial_t =
   (** Gets exactly the first `n` elements from a list.
       If the list contains fewer than `n` elements, the length of the
       list is returned on the Left.
@@ -177,7 +188,9 @@ let parse_arguments args : string list * partial_t =
        | _ ->
           rest, options
   in
-  parse_from initial_t args
+  let rest, options = parse_from initial_t args in
+  forbid_dangling_arguments rest;
+  options
 
 (** Checks whether partial options have all mandatory options or not,
     and lift its type to valid_options

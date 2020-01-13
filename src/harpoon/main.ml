@@ -1,7 +1,7 @@
 (** Harpoon
 
 @author Jacob Thomas Errington
-@author Clare Yang
+@author Clare Jang
 @author Marcel Goh
 
 Harpoon is an interactive mode for Beluga that uses a small set of

@@ -113,7 +113,11 @@ let auto_solve_trivial : t =
        end;
      false
   | lazy (Some w) ->
-     Theorem.printf t "@[<v>@,A goal %a is automatically solved.@,@]"
+     Theorem.printf t "@[<v>@,The subgoal@,@[<hov 2>  %a@]@,of type@,@[<v 2>  %a@]@,has been automatically solved."
+       ( Format.pp_print_list
+           ~pp_sep: (fun ppf () -> Format.fprintf ppf " <-@ ")
+           (fun ppf l -> Format.fprintf ppf "%s" l)
+       ) g.label
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
      (solve w |> Tactic.solve) t g;
      true

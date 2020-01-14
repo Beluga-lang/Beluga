@@ -1844,7 +1844,7 @@ let elHypotheses h =
   { Int.Comp.cD = delta'; Int.Comp.cG = gamma'; Int.Comp.cIH = Int.LF.Empty }
 
 (* elaborate hypothetical *)
-let rec elHypothetical cD cG hyp ttau =
+let rec elHypothetical cD cG label hyp ttau =
   let module I = Int.Comp in
   let module A = Apx.Comp in
   let { A.hypotheses = h; A.proof = p; A.hypothetical_loc = loc } = hyp in
@@ -1854,19 +1854,19 @@ let rec elHypothetical cD cG hyp ttau =
   let (cD1, cG1, tau1) = Check.Comp.unroll cD cG tau in
   if cD1 != cD' || cG1 != cG' then
     raise (Error (loc, InvalidHypotheses h'))
-  else (
-    let p' = elProof cD' cG' p (tau1, Whnf.m_id) in
+  else
+    let p' = elProof cD' cG' label p (tau1, Whnf.m_id) in
     I.Hypothetical (h', p')
-  )
 
 (* elaborate Harpoon proofs *)
-and elProof cD cG (p : Apx.Comp.proof) (tau', theta) =
+and elProof cD cG (label : string list) (p : Apx.Comp.proof) (tau', theta) =
   let module A = Apx.Comp in
   let module I = Int.Comp in
   match p with
   | A.Incomplete (loc, str_opt) ->
-      let hyp = { I.cD = cD; I.cG = cG; I.cIH = Int.LF.Empty } in
-      I.Incomplete { I.context = hyp; I.goal = (tau', theta); I.solution = None }
+      let context = I. ({ cD; cG; cIH = Int.LF.Empty }) in
+      let goal = (tau', theta) in
+      I.(Incomplete { context; goal; solution = None; label })
   | A.Command (loc, cmd, p') ->
       let ttau = (tau', Whnf.mcomp theta (Int.LF.MShift 1)) in
       (match cmd with
@@ -1874,27 +1874,27 @@ and elProof cD cG (p : Apx.Comp.proof) (tau', theta) =
            let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
            let tau1 = Whnf.cnormCTyp (tau, m_sub) in
            let gamma' = Int.LF.Dec (cG, I.CTypDecl (name, tau1, false)) in
-           let int_proof = elProof cD gamma' p' ttau in
+           let int_proof = elProof cD gamma' label p' ttau in
            I.Command (I.By (i_kind, e_syn', name, tau, bty), int_proof)
        | A.Unbox (loc, e_syn, name) ->
            let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
            (match tau with
             | I.TypBox (_, mT) ->
                 let cD' = Int.LF.Dec (cD, Int.LF.Decl (name, mT, Syncom.LF.No)) in
-                let int_proof = elProof cD' cG p' ttau in
+                let int_proof = elProof cD' cG label p' ttau in
                 I.Command (I.Unbox (e_syn', name, mT), int_proof)
             | _ ->
                 let module Chk = Check.Comp in
                 raise (Chk.Error (loc, Chk.MismatchSyn (cD, cG, e_syn', Chk.VariantBox, (tau, m_sub))))))
-  | A.Directive (loc, d) -> I.Directive (elDirective cD cG d (tau', theta))
+  | A.Directive (loc, d) -> I.Directive (elDirective cD cG label d (tau', theta))
 
 (* elaborate Harpoon directives *)
-and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
+and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   let module A = Apx.Comp in
   let module I = Int.Comp in
   match d with
   | A.Intros (loc, hyp) ->
-      let hyp' = elHypothetical cD cG hyp ttau in
+      let hyp' = elHypothetical cD cG label hyp ttau in
       I.Intros hyp'
   | A.Solve (loc, e_syn) -> I.Solve (elExp cD cG e_syn ttau)
   | A.Split (_, e_syn, s_branches) ->
@@ -1904,11 +1904,11 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
         | { A.case_label = l; A.branch_body = hyp; A.split_branch_loc = _ } :: s_bs' ->
             (match l with
              | A.ContextCase (A.EmptyContext loc) ->
-                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let hyp' = elHypothetical cD cG label hyp ttau in
                  make_ctx_branches ((I.SplitBranch (A.EmptyContext loc, hyp')) :: acc) s_bs'
              | A.ContextCase (A.ExtendedBy (loc, a)) ->
                  let a' = Lfrecon.elTyp Lfrecon.Pibox Int.LF.Empty (Context.projectCtxIntoDctx Int.LF.Empty) a in
-                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let hyp' = elHypothetical cD cG label hyp ttau in
                  make_ctx_branches ((I.SplitBranch (A.ExtendedBy (loc, a'), hyp')) :: acc) s_bs'
              | _ -> Error.violation "Expected ContextCase label.")
       in
@@ -1918,7 +1918,7 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
         | { A.case_label = l; A.branch_body = hyp; A.split_branch_loc = _ } :: s_bs' ->
             (match l with
              | A.NamedCase (loc, name) ->
-                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let hyp' = elHypothetical cD cG label hyp ttau in
                  let cid_t = Store.Cid.Term.index_of_name name in
                  make_meta_branches psi ((I.SplitBranch ((psi, Int.LF.Const cid_t), hyp')) :: acc) s_bs'
              | _ -> Error.violation "Found ContextCase label while constructing meta branch.")
@@ -1929,7 +1929,7 @@ and elDirective cD cG (d : Apx.Comp.directive) ttau : Int.Comp.directive =
         | { A.case_label = l; A.branch_body = hyp; A.split_branch_loc = _ } :: s_bs' ->
             (match l with
              | A.NamedCase (loc, name) ->
-                 let hyp' = elHypothetical cD cG hyp ttau in
+                 let hyp' = elHypothetical cD cG label hyp ttau in
                  let cid_t = Store.Cid.CompConst.index_of_name name in
                  make_comp_branches ((I.SplitBranch (cid_t, hyp')) :: acc) s_bs'
              | _ -> Error.violation "Found ContextCase label while constructing comp branch.")
@@ -2005,4 +2005,4 @@ let exp' = elExp' Int.LF.Empty
 
 let thm cG t ttau = match t with
   | Apx.Comp.Program e -> Int.Comp.Program (elExp Int.LF.Empty cG e ttau)
-  | Apx.Comp.Proof p -> Int.Comp.Proof (elProof Int.LF.Empty cG p ttau)
+  | Apx.Comp.Proof p -> Int.Comp.Proof (elProof Int.LF.Empty cG [] p ttau)

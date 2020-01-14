@@ -1850,7 +1850,7 @@ let rec elHypothetical cD cG label hyp ttau =
   let { A.hypotheses = h; A.proof = p; A.hypothetical_loc = loc } = hyp in
   let tau = Whnf.cnormCTyp ttau in
   let h' = elHypotheses h in
-  let { I.cD = cD'; I.cG = cG'; I.cIH = _ } = h' in
+  let I. ({ cD = cD'; cG = cG'; cIH = Int.LF.Empty }) = h' in
   let (cD1, cG1, tau1) = Check.Comp.unroll cD cG tau in
   if cD1 != cD' || cG1 != cG' then
     raise (Error (loc, InvalidHypotheses h'))
@@ -1869,23 +1869,24 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) (tau', theta) =
       I.(Incomplete { context; goal; solution = None; label })
   | A.Command (loc, cmd, p') ->
       let ttau = (tau', Whnf.mcomp theta (Int.LF.MShift 1)) in
-      (match cmd with
+      begin match cmd with
        | A.By (loc, i_kind, e_syn, name, bty) ->
            let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
            let tau1 = Whnf.cnormCTyp (tau, m_sub) in
            let gamma' = Int.LF.Dec (cG, I.CTypDecl (name, tau1, false)) in
            let int_proof = elProof cD gamma' label p' ttau in
-           I.Command (I.By (i_kind, e_syn', name, tau, bty), int_proof)
+           I.(Command (By (i_kind, e_syn', name, tau, bty), int_proof))
        | A.Unbox (loc, e_syn, name) ->
            let (e_syn', (tau, m_sub)) = elExp' cD cG e_syn in
-           (match tau with
+           begin match tau with
             | I.TypBox (_, mT) ->
-                let cD' = Int.LF.Dec (cD, Int.LF.Decl (name, mT, Syncom.LF.No)) in
+                let cD' = Int.LF.(Dec (cD, Decl (name, mT, No))) in
                 let int_proof = elProof cD' cG label p' ttau in
-                I.Command (I.Unbox (e_syn', name, mT), int_proof)
+                I.(Command (Unbox (e_syn', name, mT), int_proof))
             | _ ->
-                let module Chk = Check.Comp in
-                raise (Chk.Error (loc, Chk.MismatchSyn (cD, cG, e_syn', Chk.VariantBox, (tau, m_sub))))))
+                raise Check.Comp.(Error (loc, MismatchSyn (cD, cG, e_syn', VariantBox, (tau, m_sub))))
+           end
+      end
   | A.Directive (loc, d) -> I.Directive (elDirective cD cG label d (tau', theta))
 
 (* elaborate Harpoon directives *)

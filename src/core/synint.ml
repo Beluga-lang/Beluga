@@ -509,6 +509,8 @@ module Comp = struct
 
   type context_case = LF.typ generic_context_case
 
+  type subgoal_label = string list
+
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
@@ -526,7 +528,7 @@ module Comp = struct
     { context : hypotheses (* all the assumptions *)
     (* The full context in scope at this point. *)
 
-    ; label : string list
+    ; label : subgoal_label
     (* A list of labels representing where we are in the proof.
        Used to generate a label for the state by assembling them. *)
 

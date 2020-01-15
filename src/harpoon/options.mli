@@ -9,10 +9,8 @@ type ('a, 'b) t =
   ; test_stop : [ `stop | `go_on ] (* whether to stop a test if there's an error *)
   }
 
-type partial_t =
-  (string option, unit) t
-type valid_t =
-  (string, unit) t
+type partial_t
+type valid_t
 type elaborated_t =
   (string, string list) t
 

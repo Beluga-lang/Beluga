@@ -1768,7 +1768,9 @@ let mctxMVarPos cD u =
 
   let cnormThm (t, theta) = match t with
     | Comp.Program e -> Comp.Program (cnormExp (e, theta))
-    | Comp.Proof p -> Misc.not_implemented "cnormThm Proof"
+    | Comp.Proof p ->
+       (* XXX how should contextual substitution work with proofs? *)
+       Comp.Proof p
 
   let rec cwhnfCtx (cG, t) = match cG with
     | Empty  -> Empty

@@ -2,7 +2,6 @@
    @author Renaud Germain
    @author Brigitte Pientka
 *)
-open Support
 open Store
 open Store.Cid
 open Substitution
@@ -1828,7 +1827,8 @@ let abstrThm = function
      let cQ, e' = abstrExp e in
      cQ, Comp.Program e'
   | Comp.Proof p ->
-     Misc.not_implemented "abstraction.ml Proof"
+     (* XXX how should abstraction work for proofs? *)
+     I.Empty, Comp.Proof p
 
 (* Shorter names for export outside of this module. *)
 let kind = abstrKind

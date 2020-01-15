@@ -113,7 +113,12 @@ let auto_solve_trivial : t =
        end;
      false
   | lazy (Some w) ->
-     Theorem.printf t "@[<v>@,The subgoal@,@[<hov 2>  %a@]@,of type@,@[<v 2>  %a@]@,has been automatically solved."
+     Theorem.printf t
+       "@[<v>@,The subgoal\
+        @,  @[<hov 2>%a@]\
+        @,of type\
+        @,  @[<hov 2>%a@]\
+        @,has been automatically solved.@]"
        ( Format.pp_print_list
            ~pp_sep: (fun ppf () -> Format.fprintf ppf " <-@ ")
            (fun ppf l -> Format.fprintf ppf "%s" l)

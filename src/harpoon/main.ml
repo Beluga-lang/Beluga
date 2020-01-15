@@ -58,7 +58,9 @@ let main () =
   try
     realMain ()
   with
-  | e -> print_string (Printexc.to_string e)
+  | e ->
+     print_string (Printexc.to_string e);
+     exit 1
 
 let _ =
   main ()

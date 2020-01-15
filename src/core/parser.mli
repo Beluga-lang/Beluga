@@ -41,6 +41,10 @@ val run : 'a t -> state -> state * 'a result
 (** Require end of input after the given parser. *)
 val only : 'a t -> 'a t
 
+(***** Exported monadic operations *****)
+
+val ($>) : 'a t -> ('a -> 'b) -> 'b t
+
 (***** Exported productions *****)
 
 (** Parser for a full Beluga signature. *)

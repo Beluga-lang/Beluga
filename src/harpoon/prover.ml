@@ -268,8 +268,7 @@ module Prover = struct
              B.Store.FCVar.clear ();
              (* Now prompt for the statement, and disallow empty to signal we're done. *)
              prompt_forever_with s "  Statement of theorem: " None
-               B.Parser.cmp_typ
-             |> Interactive.elaborate_typ LF.Empty
+               B.Parser.(cmp_typ $> Interactive.elaborate_typ LF.Empty)
            in
            dprintf begin fun p ->
              p.fmt "@[<v 2>[harpoon] [session_configuration] elaborated type\

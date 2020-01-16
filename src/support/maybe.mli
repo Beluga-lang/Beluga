@@ -87,6 +87,9 @@ val filter_map : ('a -> 'b option) -> 'a list -> 'b list
  *)
 val cat_options : 'a option list -> 'a list
 
+(** Specialized effectful eliminator for option types. *)
+val when_some : 'a option -> ('a -> unit) -> unit
+
 (**
  * Specialized eliminator for options to print them generally.
  *)

@@ -1,3 +1,5 @@
+open Support
+
 include Format
 
 let enabled = ref false
@@ -878,7 +880,7 @@ struct
 
     | Sgn.Theorem (thm :: t as ts) ->
        let total =
-         Store.Cid.Comp.((get Sgn.(thm.thm_name)).total)
+         Store.Cid.Comp.((get Sgn.(thm.thm_name)).total_decs |> Maybe.is_some)
        in
       List.iter (sexp_thm ppf total) ts
 

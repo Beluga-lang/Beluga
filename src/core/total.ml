@@ -140,12 +140,6 @@ let rec struct_smaller patt = match patt with
   | Comp.PatAnn (_, pat, _) -> struct_smaller pat
   | _ -> false
 
-type dec =
-  { name : Id.name
-  ; typ  : Comp.typ
-  ; order: Comp.order option
-  }
-
 let order_to_string order = match order with
   | None -> " _ "
   | Some (Comp.Arg x) -> string_of_int x
@@ -164,9 +158,6 @@ let is_valid_args tau n =
     | _ -> false
   in
   n = 0 || go tau n
-
-let make_total_dec name typ order =
-  { name; typ; order }
 
 (* Check whether the argument specified by i
    corresponds to a given totality order
@@ -258,16 +249,17 @@ let fmt_ppr_ihctx cD cG ppf cIH =
     (Context.to_list cIH)
 
 (** Converts the list of totality declarations into an induction ordering list *)
-let get_order (mfs : dec list) =
+let get_order (mfs : Comp.total_dec list) =
   let f dec =
-    let tau = dec.typ in
+    let open Comp in
+    let tau = dec.tau in
     (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
         " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
     match dec.order with
-    | Some (Comp.Arg x) ->
+    | Some (Arg x) ->
        (dec.name, Some [x], (tau, Whnf.m_id))
-    | Some (Comp.Lex xs) ->
-       let xs = List.map (function (Comp.Arg x) -> x) xs in
+    | Some (Lex xs) ->
+       let xs = List.map (fun (Arg x) -> x) xs in
        dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
        (dec.name, Some xs, (tau, Whnf.m_id))
     | None -> (dec.name, None, (tau, Whnf.m_id))
@@ -275,11 +267,8 @@ let get_order (mfs : dec list) =
   List.map f mfs
 
 (** Looks up a declaration based on a function name *)
-let rec lookup_dec f : dec list -> dec option =
-  function
-  | [] -> None
-  | d :: _ when Id.equals d.name f -> Some d
-  | _ :: ds -> lookup_dec f ds
+let lookup_dec f : Comp.total_dec list -> Comp.total_dec option =
+  List.find_opt (fun d -> Id.equals Comp.(d.name) f)
 
 (** Gets the induction order for the function with name `f`
     Returns None if the
@@ -288,9 +277,9 @@ let get_order_for mfs f : int list option =
   let rec find decs = match decs with
     | [] -> None
     | dec::decs ->
-       if dec.name = f then
+       if Comp.(dec.name) = f then
          let open Maybe in
-         dec.order $ Order.list_of_order
+         Comp.(dec.order) $ Order.list_of_order
        else
          find decs
   in

@@ -209,12 +209,13 @@ module Cid : sig
       implicit_arguments : int;
       typ                : Comp.typ;
       prog               : Comp.value option;
-      mut_rec            : name list;
-      total              : bool;
+      total_decs         : Comp.total_dec list option;
       hidden             : bool;
     }
 
-    val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value option -> name list -> entry
+    val mk_entry  : name -> Comp.typ -> int ->
+                    Comp.total_dec list option -> Comp.value option ->
+                    entry
 
     (** Selects all entries matching a given predicate. *)
     val filter : (entry -> bool) -> entry list

@@ -1530,24 +1530,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (fmt_ppr_lf_mctx l0) cD
     (fmt_ppr_cmp_typ cD l0) tau
 
+  let fmt_ppr_cmp_total_dec _ = assert false
+
   let fmt_ppr_cmp_comp_prog_info ppf e =
-    let {CompS.name; implicit_arguments; typ; prog; mut_rec; total; hidden} = e in
+    let {CompS.name; implicit_arguments; typ; prog; total_decs; hidden} = e in
     fprintf ppf
       "@[<v>name: @[%a@]\
        @,@[<hv 2>type:@ @[%a@]@]\
        @,implicit parameters: %d\
        @,hidden: %b\
-       @,@[<hv 2>mutual_group:@ @[<v>%a@]@]\
-       @,total: %b\
+       @,@[<hv 2>total_decs:@ @[%a@]@]\
        @,@[<hv 2>definition:@ @[%a@]@]\
        @,@]"
       Id.print name
       (fmt_ppr_cmp_typ LF.Empty l0) typ
       implicit_arguments
       hidden
-      (pp_print_list ~pp_sep: pp_print_cut Id.print)
-      mut_rec
-      total
+      (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) total_decs
       (Maybe.print (fmt_ppr_cmp_value l0)) prog
 
   let fmt_ppr_cmp_thm ppf = function

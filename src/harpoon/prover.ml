@@ -139,7 +139,7 @@ module Prover = struct
     (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
      *)
-    let get_mutual_decs (s : t) : Total.dec list =
+    let get_mutual_decs (s : t) : Comp.total_dec list =
       List.map Theorem.total_dec (DynArray.to_list s.theorems)
 
     (** Unhides cids for all theorems in this session. *)

@@ -35,7 +35,7 @@ val solve_by_replacing_subgoal : t -> proof_state -> (proof -> proof) -> proof_s
 val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> unit
 
 val configure_set : Format.formatter -> (t -> proof_state -> unit) list -> Conf.t list -> t list
-val total_dec : t -> Total.dec
+val total_dec : t -> total_dec
 val set_hidden : t -> bool -> unit
 
 val translate : t -> exp_chk

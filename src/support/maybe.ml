@@ -117,6 +117,11 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
 let cat_options (l : 'a option list) : 'a list =
   filter_map Misc.id l
 
+(** Specialized effectful eliminator for option types. *)
+let when_some (l : 'a option) (f : 'a -> unit) : unit =
+  eliminate (fun _ -> ()) f l
+
+
 (** Eliminate the option into a printer. *)
 let print'
       (none : Format.formatter -> unit -> unit)

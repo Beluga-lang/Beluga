@@ -830,8 +830,7 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau', C.m_id))
          ("Var " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
 
-       (* let _ = print_string ("Looking up " ^ P.expSynToString cD cG e ^
-          " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
+       (* XXX Why the half-assed stripping here? -je *)
        let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with
          | TypInd tau -> tau
          | _ -> tau' in

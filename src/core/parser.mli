@@ -34,6 +34,9 @@ val print_error : Format.formatter -> error -> unit
 
 type 'a t
 
+(** Type of located values, i.e. values paired with their location. *)
+type 'a locd = Loc.t * 'a
+
 (* Eliminator for parsers: *)
 (** Runs a parser on a given state, resulting in a final state and a result. *)
 val run : 'a t -> state -> state * 'a result
@@ -41,8 +44,11 @@ val run : 'a t -> state -> state * 'a result
 (** Require end of input after the given parser. *)
 val only : 'a t -> 'a t
 
+val span : 'a t -> 'a locd t
+
 (***** Exported monadic operations *****)
 
+val map : ('a -> 'b) -> 'a t -> 'b t
 val ($>) : 'a t -> ('a -> 'b) -> 'b t
 
 (***** Exported productions *****)

@@ -1501,9 +1501,12 @@ and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
 let rec raiseCompTyp cD tau =  match cD with
   | I.Empty -> tau
   | I.Dec(cD, mdecl) ->
-     (* XXX can we get a location from the mdecl ?
-        Would that location make sense? *)
-      raiseCompTyp cD (Comp.TypPiBox (Loc.ghost, mdecl, tau))
+     (* Since this function is used in particular to universally
+        quantify over free variables occurring in computational types,
+        we use the location of the known type as the location of the
+        pi type.
+      *)
+     raiseCompTyp cD (Comp.TypPiBox (Comp.loc_of_typ tau, mdecl, tau))
 
 let raiseCompKind cD cK =
   let

@@ -625,7 +625,7 @@ module Comp = struct
     with Whnf.FreeMVar (I.FMVar (u, _ )) ->
       Error.violation ("Free meta-variable " ^ Id.render_name u)
 
-  let rec checkW cD (cG , cIH) (total_decs : Total.dec list) e ttau =
+  let rec checkW cD (cG , cIH) total_decs e ttau =
     let decide_ind cM x =
       if Misc.List.nonempty total_decs && is_indMObj cD x
       then
@@ -814,7 +814,7 @@ module Comp = struct
              | None -> ()
              | Some e -> checkW cD (cG, cIH) total_decs e (tau, t)
 
-  and check cD (cG, cIH) (total_decs : Total.dec list) e (tau, t) =
+  and check cD (cG, cIH) total_decs e (tau, t) =
     dprintf
       begin fun p ->
       p.fmt "[check] %a against %a |- %a"
@@ -858,11 +858,11 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        let e = Comp.get prog in
-       let total = Comp.(e.total) in
+       let total = Comp.(e.total_decs) |> Maybe.is_some in
        let tau = Comp.(e.typ) in
        begin match total_decs with
        | _ :: _ when not total -> throw loc (MissingTotal prog)
-       | _ :: _ when Total.lookup_dec Comp.(e.name) total_decs |> Maybe.is_some ->
+       | _ :: _ when Total.lookup_dec e.Comp.name total_decs |> Maybe.is_some ->
           Some cIH, tau, C.m_id
        | _ -> None, tau, C.m_id
        end
@@ -1129,7 +1129,7 @@ module Comp = struct
        unroll cD cG' t2
     | _ -> (cD, cG, tau)
 
-  let rec proof cD cG cIH (total_decs : Total.dec list) p ttau =
+  let rec proof cD cG cIH total_decs p ttau =
     match p with
     | Incomplete g ->
        (* TODO check that g matches the current proof state *)
@@ -1140,16 +1140,16 @@ module Comp = struct
         | By (i_kind, e_syn, name, tau, bty) ->
            let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
            let tau' = Whnf.cnormCTyp (tau, m_sub) in
-           let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, tau', false)) in
+           let cG' = I.(Dec (cG, CTypDecl (name, tau', false))) in
            proof cD cG' cIH total_decs p' ttau
         | Unbox (_, name, mT) ->
-           let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.Decl (name, mT, Syntax.Int.LF.Maybe)) in
+           let cD' = I.(Dec (cD, Decl (name, mT, No))) in
            proof cD' cG cIH total_decs p' ttau
         end
     | Directive d ->
        directive cD cG cIH total_decs d ttau
 
-  and directive cD cG cIH (total_decs : Total.dec list) (d : directive) ttau =
+  and directive cD cG cIH total_decs (d : directive) ttau =
     match d with
     | Intros (Hypothetical (h, p)) ->
        let tau = Whnf.cnormCTyp ttau in
@@ -1177,11 +1177,11 @@ module Comp = struct
         List.iter handle_branch bs;
         assert false
 
-  let syn cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
+  let syn cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in
     cIH, (tau, ms)
 
-  let check cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
+  let check cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
     check cD (cG,cIH) total_decs e ttau
 
   let thm cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =

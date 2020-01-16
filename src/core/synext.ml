@@ -222,7 +222,7 @@ module Comp = struct
  type numeric_order = int order'
 
  type total_dec =
-   | Total of Loc.t * order option * name * (name option) list
+   | Total of Loc.t * order option * name * name option list
 	 | Trust of Loc.t
 
  type ctyp_decl =

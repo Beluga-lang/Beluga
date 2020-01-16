@@ -975,18 +975,22 @@ module Cid = struct
       ; implicit_arguments : int
       ; typ                : Int.Comp.typ
       ; prog               : Int.Comp.value option
-      ; mut_rec            : Id.name list
-      ; total              : bool
+      ; total_decs         : Int.Comp.total_dec list option
+      (* Totality declarations for all mutually-defined functions.
+         If this is None, then the function is not declared to be total.
+         If it's an empty list, the interpretation is that that the
+         totality is merely being asserted, and not checked.
+       *)
+
       ; hidden             : bool
       }
 
-    let mk_entry name typ implicit_arguments total prog mut_rec =
+    let mk_entry name typ implicit_arguments total_decs prog =
       { name
       ; implicit_arguments
       ; typ
       ; prog
-      ; mut_rec (* names of functions with which we are mutually recursive *)
-      ; total
+      ; total_decs (* totality declarations of mutual functions *)
 
       (* Hidden entries cannot be looked up by name, which in turn
          prevents the user from referring to them via external syntax.

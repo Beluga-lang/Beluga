@@ -379,7 +379,6 @@ module Comp = struct
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
 
-
   (* For ih *)
   type arg =
     | M  of meta_obj
@@ -459,10 +458,19 @@ module Comp = struct
 
   type tclo = typ * LF.msub
 
-  type order =	       	              (* Induction Orders           *)
-    Arg of int			(* O ::= x                    *)
-  | Lex of order list                 (*     | {O1 .. On}           *)
-  | Simul of order list               (*     | [O1 .. On]           *)
+  type order =	          (* Induction Orders           *)
+    | Arg of int			    (* O ::= x                    *)
+    | Lex of order list   (*     | {O1 .. On}           *)
+    | Simul of order list (*     | [O1 .. On]           *)
+
+  type total_dec =
+    { name : Id.name
+    ; tau  : typ
+    ; order: order option (* None for trusted; Some for checked *)
+    }
+
+  let make_total_dec name tau order =
+    { name; tau; order }
 
   (** Decides whether this synthesizable expression is actually an
       annotated box.

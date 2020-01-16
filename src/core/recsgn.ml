@@ -19,8 +19,9 @@ type leftover_vars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 type error =
   | UnexpectedSucess
   | TotalDeclError of name * name
-  | MutualTotalDecl of name
-  | MutualTotalDeclAfter of name
+  | MutualTotalDecl
+    of name list (* functions with total decls *)
+       * name list (* functions without total decls *)
   | NoPositive of string
   | NoStratify of string
   | NoStratifyOrPositive of string
@@ -46,10 +47,15 @@ let _ =
 	      | TotalDeclError (f, f') ->
 	         fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n"
 	           (Id.render_name f) (Id.string_of_name f')
-	      | MutualTotalDecl f ->
-	         fprintf ppf "All functions in a mutual function declaration must be declared total.\nFunction %s does not have a totality declaration.\n" (Id.render_name f)
-	      | MutualTotalDeclAfter f ->
-	         fprintf ppf "Function %s has a totality declaration, but not all mutually recursive functions have a totality declaration.\n" (Id.render_name f)
+	      | MutualTotalDecl (haves, have_nots) ->
+           fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
+                        but the functions@,  @[<hov>%a@]@,are missing totality declarations."
+             pp_print_string
+             "This mutual definition block does not have
+              consistent totality declarations. Either all or none of
+              functions must be declared total."
+             (pp_print_list ~pp_sep: Fmt.comma Id.print) haves
+             (pp_print_list ~pp_sep: Fmt.comma Id.print) have_nots
    	    | NoPositive n ->
 	         fprintf ppf "Positivity checking of constructor %s fails.\n" n
 	      | NoStratify n ->
@@ -641,7 +647,10 @@ let recSgnDecls decls =
          if Holes.none () && is_empty cQ then
 	         begin
              let v = Opsem.eval i'' in
-             let _x = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false (Some v) []) in
+             let _x =
+               Comp.add loc
+                 (fun _ -> Comp.mk_entry x tau' 0 None (Some v))
+             in
 		         Some v
 	         end
 	       else
@@ -704,7 +713,7 @@ let recSgnDecls decls =
 	     let v =
          if Holes.none () && is_empty cQ then
            let v = Opsem.eval i'' in
-           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 false (Some v) []) in
+           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 None (Some v)) in
            Some v
          else
            None
@@ -749,107 +758,98 @@ let recSgnDecls decls =
             Ext.Comp.map_order (fun x -> pos loc x args) order
             |> Order.of_numeric_order
        in
-       let is_total total = Maybe.is_some total in
 
-       let rec preprocess l m = match l with
-         | [] -> ([], Misc.const [], [], [])
-         | thm (* Ext.Comp.RecFun (loc, f, total, tau, _e) *) :: lf ->
-            let Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_order; thm_body } = thm in
-            let apx_tau = Index.comptyp thm_typ in
-            dprintf
-              begin fun p ->
-              p.fmt "[recsgn] Reconstructing function %a"
-                Id.print thm_name
-              end;
-            let tau' =
-              Monitor.timer
-                ( "Function Type Elaboration"
-                , fun () -> Reconstruct.comptyp apx_tau
-                )
-            in
-            Unify.forceGlobalCnstr (!Unify.globalCnstrs);
-            (* Are some FMVars delayed since we can't infer their type? - Not associated with pattsub *)
-            dprintf
-              begin fun p ->
-              p.fmt "[recSgnDecl] elaboration of function %a : %a"
-                Id.print thm_name
-                (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
-              end;
-
-            let (tau', i) =
-              Monitor.timer
-                ( "Function Type Abstraction"
-                , fun () -> Abstract.comptyp tau'
-                )
-            in
-            dprintf
-              begin fun p ->
-              p.fmt "[recSgnDecl] @[<v>Abstracted elaborated function type@,@[%a@] : @[%a@]\
-                     @,with %d implicit parameters@]"
-                Id.print thm_name
-                P.(fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
-                i
-              end;
-
-            Monitor.timer
-              ( "Function Type Check"
-              , fun () -> Check.Comp.checkTyp Int.LF.Empty tau'
-              );
-            dprintf
-              begin fun p ->
-              p.fmt "[recSgnDecl] Checked computation type %a successfully"
-                (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
-              end;
-            FCVar.clear ();
-            (* check that names are unique ? *)
-            let d =
-              match thm_order with
-              | None ->
-                 if !Total.enabled then
-                   raise (Error (loc, MutualTotalDecl thm_name))
-                 else
-                   None
-              | Some (Ext.Comp.Trust _) -> None
-              | Some t ->
-                 if !Total.enabled then
-                   Some (Total.make_total_dec thm_name tau' (mk_total_decl thm_name tau' t))
-                 else
-                   if m = 1 then
-                     begin
-                       (*Coverage.enableCoverage := true; *)
-                       Total.enabled := true;
-                       Some (Total.make_total_dec thm_name tau' (mk_total_decl thm_name tau' t))
-                     end
-                   else
-                     raise (Error (loc, MutualTotalDeclAfter thm_name))
-            in
-            let tau' = Total.strip tau' in (* XXX do we need this strip? -je *)
-            (* Comp.add *)
-            let (thm_list, register, name_list, ds) = preprocess lf (m+1) in
-            let register =
-              (* XXX check for and forbid shadowing? -je *)
-              fun name_list ->
-              let (_, cid) =
-                Comp.add loc
-                  begin fun cid ->
-                  Comp.mk_entry thm_name tau' 0 (is_total thm_order)
-                    None
-                    name_list
-                  end
-              in
-              cid :: register name_list
-            in
-            ( ( thm_name, thm_body, thm_loc, tau') :: thm_list
-            , register
-            , thm_name :: name_list
-            , d :: ds
-            )
-
+       (* Collect all totality declarations. *)
+       (* and check that all or none of the declarations are present. *)
+       let total_decs =
+         let prelim_total_decs =
+           List.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
+         in
+         let go p =
+           Maybe.filter_map
+             (fun (name, x) -> if p x then Some (name, x) else None)
+             prelim_total_decs
+         in
+         match
+           go Maybe.is_some,
+           go Misc.Function.(not ++ Maybe.is_some)
+         with
+         | [], [] ->
+            Error.violation "[recSgn] empty mutual block is impossible"
+         | haves, [] ->
+            Total.enabled := true;
+            Some (List.map Misc.Function.(Maybe.get ++ snd) haves)
+         (* safe because they're haves *)
+         | [], have_nots -> None
+         | haves, have_nots ->
+            throw loc
+              (MutualTotalDecl (List.map fst haves, List.map fst have_nots))
        in
 
-       let (thm_list, register, name_list, total_decs) = preprocess recFuns 1 in
-       let thm_cid_list = register name_list in
-       let total_decs = Maybe.cat_options total_decs in
+       let preprocess =
+         List.map
+           begin fun Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_body; _ } ->
+           let apx_tau = Index.comptyp thm_typ in
+           let tau' =
+             Monitor.timer
+               ( "Function Type Elaboration"
+               , fun () -> Reconstruct.comptyp apx_tau
+               )
+           in
+           Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+           (* Are some FMVars delayed since we can't infer their
+              type? - Not associated with pattsub
+            *)
+           let (tau', _k) =
+             Monitor.timer
+               ( "Function Type Abstraction"
+               , fun () -> Abstract.comptyp tau'
+               )
+           in
+           Monitor.timer
+             ( "Function Type Check"
+             , fun () -> Check.Comp.checkTyp Int.LF.Empty tau'
+             );
+
+           FCVar.clear ();
+
+           let tau' = Total.strip tau' in
+           (* XXX do we need this strip? -je
+              AFAIK tau' is not annotated.
+            *)
+
+           let register =
+             (* XXX check for and forbid shadowing? -je *)
+             fun total_decs ->
+             Comp.add loc
+               (fun cid -> Comp.mk_entry thm_name tau' 0 total_decs None)
+             |> snd
+           in
+           ( ( thm_name, thm_body, thm_loc, tau')
+           , register
+           )
+           end
+       in
+
+       let (thm_list, registers) = List.split (preprocess recFuns) in
+
+       (* We have the elaborated types of the theorems,
+          so we construct the final list of totality declarations for
+          this mutual group. *)
+       let total_decs =
+         Maybe.map
+           (List.map2
+              (fun (thm_name, _, _, tau) decl ->
+                mk_total_decl thm_name tau decl
+                |> Int.Comp.make_total_dec thm_name tau)
+              thm_list)
+         total_decs
+       in
+
+       (* We have the list of all totality declarations for this group,
+          so we can register each theorem in the store.
+        *)
+       let thm_cid_list = Misc.Function.sequence registers total_decs in
 
        let reconThm loc (f, thm, tau) =
          let apx_thm = Index.thm (Var.create ()) thm in
@@ -907,15 +907,11 @@ let recSgnDecls decls =
          let tau_ann =
            match
              let open Maybe in
-             of_bool !Total.enabled
-             $ fun _ ->
-               Total.lookup_dec f total_decs
+             total_decs
+             $ fun ds ->
+               Total.lookup_dec f ds
                $ fun d ->
-                 dprintf
-                   (fun p ->
-                     p.fmt "[recsgn] found total dec for %s"
-                       (Id.render_name f));
-                 Total.(d.order)
+                 Int.Comp.(d.order)
                  $> fun order ->
                     Order.list_of_order order
                     |> Maybe.get'
@@ -939,6 +935,7 @@ let recSgnDecls decls =
          Monitor.timer
            ( "Function Check"
            , fun _ ->
+             let total_decs = Maybe.get_default [] total_decs in
              Check.Comp.thm Int.LF.Empty Int.LF.Empty total_decs thm_r' (tau_ann, C.m_id)
            );
          (thm_r' , tau)
@@ -952,12 +949,7 @@ let recSgnDecls decls =
            let (e_r' , tau') = reconThm loc (thm_name, thm_body, thm_typ) in
            dprintf
              begin fun p ->
-             p.fmt "[reconRecFun] DOUBLE CHECK of function %a successful!"
-               Id.print thm_name
-             end;
-           dprintf
-             begin fun p ->
-             p.fmt "[reconRecFun] adding definition for %a at %a"
+             p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"
                Id.print thm_name
                Loc.print_short thm_loc
              end;
@@ -975,9 +967,15 @@ let recSgnDecls decls =
          List.map reconOne (List.combine thm_cid_list thm_list)
        in
        let decl = Int.Sgn.(Theorem ds) in
-       Total.enabled := false; (* this looks wrong, but it isn't *)
-       Store.Modules.addSgnToCurrent
-         decl;
+       Total.enabled := false;
+       (* ^ this looks wrong, but it isn't.
+          We enable total when the mutual group has totality
+          declarations, and disable it before we process the next
+          declaration.
+          In other words, it is enabled only during elaboration of a
+          mutual group declared to be total.
+        *)
+       Store.Modules.addSgnToCurrent decl;
        decl
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->

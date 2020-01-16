@@ -90,7 +90,7 @@ module Comp : sig
   val thm :
     LF.mctx ->
     gctx ->
-    Total.dec list ->
+    total_dec list ->
     ?cIH: gctx ->
     thm ->
     tclo ->
@@ -101,7 +101,7 @@ module Comp : sig
     (* ^ The meta context *)
     gctx ->
     (* ^ The computation context *)
-    Total.dec list ->
+    total_dec list ->
     (* ^ the group of mutual recursive functions the expression is being checked in *)
     ?cIH: gctx ->
     (* ^ the context of available induction hypotheses *)
@@ -116,7 +116,7 @@ module Comp : sig
     (* ^ The meta context *)
     gctx ->
     (* ^ The computation context *)
-    Total.dec list ->
+    total_dec list ->
     (* ^ The group of mutual recursive functions the expression is being checked in *)
     ?cIH: gctx ->
     (* ^ The context of available induction hypotheses *)

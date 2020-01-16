@@ -908,7 +908,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "@[%a@]"
          (fmt_ppr_cmp_meta_typ cD) mT
 
-    | Comp.TypArr (tau1, tau2) ->
+    | Comp.TypArr (_, tau1, tau2) ->
        let cond = lvl > 1 in
        fprintf ppf "%s@[<2>%a ->@ %a@]%s"
          (l_paren_if cond)
@@ -916,7 +916,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ cD 1) tau2
          (r_paren_if cond)
 
-    | Comp.TypCross (tau1, tau2) ->
+    | Comp.TypCross (_, tau1, tau2) ->
        let cond = lvl > 0 in
        fprintf ppf "%s@[<2>@[%a@]@ * @[%a@]@]%s"
          (l_paren_if cond)
@@ -924,7 +924,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ cD 0) tau2
          (r_paren_if cond)
 
-    | Comp.TypPiBox (ctyp_decl, tau) ->
+    | Comp.TypPiBox (_, ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
        if isImplicitDecl ctyp_decl then
          fprintf ppf "%a" (fmt_ppr_cmp_typ (LF.Dec (cD, ctyp_decl)) 1) tau
@@ -1142,13 +1142,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let (i2', _) = strip_mapp_args' cD cG i2 in
        (Comp.PairVal (loc, i1', i2') , [])
     | _ -> (i, [])
-  and implicitCompArg tau = begin match tau with
-                            | Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.MTyp _,_), LF.Maybe)), tau) ->
-                               (false)::(implicitCompArg tau)
-                            | Comp.TypPiBox (_ , tau) ->
-                               (true)::(implicitCompArg tau)
-                            | _ -> []
-                            end
+  and implicitCompArg tau =
+    match tau with
+    | Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp _,_), LF.Maybe), tau) ->
+       (false)::(implicitCompArg tau)
+    | Comp.TypPiBox (_, _, tau) ->
+       (true)::(implicitCompArg tau)
+    | _ -> []
   and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
     | Comp.Var (_, x) ->
        fprintf ppf "%s"

@@ -1108,20 +1108,20 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state  =
       let (fvars, mU') = index_cltyp loc cvars fvars mU in
         (fvars, Apx.Comp.TypBox (loc, (loc',mU')))
 
-  | Ext.Comp.TypArr (_loc, tau, tau') ->
+  | Ext.Comp.TypArr (loc, tau, tau') ->
       let (fvars, tau1) = index_comptyp tau cvars fvars in
       let (fvars, tau2) = index_comptyp tau' cvars fvars in
-      (fvars, Apx.Comp.TypArr (tau1, tau2))
+      (fvars, Apx.Comp.TypArr (loc, tau1, tau2))
 
-  | Ext.Comp.TypCross (_loc, tau, tau') ->
+  | Ext.Comp.TypCross (loc, tau, tau') ->
       let (fvars, tau) = index_comptyp tau cvars fvars in
       let (fvars, tau') = index_comptyp tau' cvars fvars in
-      (fvars, Apx.Comp.TypCross (tau, tau'))
+      (fvars, Apx.Comp.TypCross (loc, tau, tau'))
 
-  | Ext.Comp.TypPiBox (_loc, cdecl, tau)    ->
+  | Ext.Comp.TypPiBox (loc, cdecl, tau)    ->
       let (cdecl', cvars, fvars) = index_cdecl cvars fvars cdecl in
       let (fvars, tau') = index_comptyp tau cvars fvars in
-      (fvars, Apx.Comp.TypPiBox (cdecl', tau'))
+      (fvars, Apx.Comp.TypPiBox (loc, cdecl', tau'))
 
       (*
   | Ext.Comp.TypInd (tau) ->

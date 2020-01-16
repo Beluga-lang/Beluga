@@ -1005,8 +1005,8 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
     (pat_p, ttau') ->
      (mC, SplitPat ((pat, ttau), (pat_p, ttau')) :: sC)
 
-  | (Comp.PatPair (_, pat1, pat2), (Comp.TypCross (tau1, tau2), t)),
-    (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (tau1', tau2'), t')) ->
+  | (Comp.PatPair (_, pat1, pat2), (Comp.TypCross (_, tau1, tau2), t)),
+    (Comp.PatPair (_, pat1', pat2'), (Comp.TypCross (_, tau1', tau2'), t')) ->
      let mC1, sC1 =
        match_pattern (cD, cG) (cD_p, cG_p)
          (pat1, (tau1,t)) (pat1', (tau1', t')) mC sC
@@ -1025,16 +1025,16 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
   | (Comp.PatNil, _),
     (Comp.PatNil, _) ->
      (mC, sC)
-  | (Comp.PatApp (_, pat, pS), (Comp.TypArr (tau1, tau2), t)),
-    (Comp.PatApp (_, pat', pS'), (Comp.TypArr (tau1', tau2'), t')) ->
+  | (Comp.PatApp (_, pat, pS), (Comp.TypArr (_, tau1, tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypArr (_, tau1', tau2'), t')) ->
      let mC1, sC1 =
        match_pattern (cD, cG) (cD_p, cG_p)
          (pat, (tau1,t)) (pat', (tau1', t')) mC sC
      in
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2,t)) (pS', (tau2', t')) mC1 sC1
-  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.MTyp tA, cPsi), _)), tau2), t)),
-    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.MTyp tA', cPsi'), _)), tau2'), t')) ->
+  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp tA, cPsi), _), tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp tA', cPsi'), _), tau2'), t')) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
      let tau1 = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA, t)), Whnf.cnormDCtx (cPsi, t)) in
@@ -1045,8 +1045,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
-  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox ((LF.Decl (_, LF.CTyp w, _)), tau2), t)),
-    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox ((LF.Decl (_, LF.CTyp w', _)), tau2'), t')) ->
+  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox (_, LF.Decl (_, LF.CTyp w, _), tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox (_, LF.Decl (_, LF.CTyp w', _), tau2'), t')) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
      let tau1 = LF.CTyp w in
@@ -1057,8 +1057,8 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
 
-  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.STyp (cl, cPhi), cPsi), _)), tau2), t)),
-    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox ((LF.Decl (_, LF.ClTyp (LF.STyp (cl', cPhi'), cPsi'), _)), tau2'), t')) ->
+  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.STyp (cl, cPhi), cPsi), _), tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.STyp (cl', cPhi'), cPsi'), _), tau2'), t')) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
      let mk_cltyp cl cPhi cPsi t = LF.(ClTyp (STyp (cl, Whnf.cnormDCtx (cPhi, t)), Whnf.cnormDCtx (cPsi, t))) in
@@ -2168,7 +2168,7 @@ let rec best_cand (cD, mv_list) k cD_tail =
  *)
 let rec genPattSpine =
   function
-  | Comp.TypArr (tau1, tau2), t ->
+  | Comp.TypArr (_, tau1, tau2), t ->
      let pv1 = NameGenerator.new_patvar_name () in
      let pat1 = Comp.PatFVar (Loc.ghost, pv1) in
      let cG, pS, ttau =
@@ -2178,7 +2178,7 @@ let rec genPattSpine =
      , Comp.PatApp (Loc.ghost, pat1, pS)
      , ttau
      )
-  | Comp.TypPiBox ((LF.Decl (x, LF.CTyp sW, _)), tau), t ->
+  | Comp.TypPiBox (_, LF.Decl (x, LF.CTyp sW, _), tau), t ->
      let cPsi' =
        let open! LF in
        let mmvar =
@@ -2206,7 +2206,7 @@ let rec genPattSpine =
      , ttau0
      )
 
-  | Comp.TypPiBox ((LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), _)), tau), t ->
+  | Comp.TypPiBox (_, LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), _), tau), t ->
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
      let tR = etaExpandMVstr (Some u) LF.Empty cPsi' (tP', S.LF.id) in
@@ -2221,7 +2221,7 @@ let rec genPattSpine =
      in
      (cG, Comp.PatApp (Loc.ghost, pat1, pS), ttau0)
 
-  | Comp.TypPiBox (LF.(Decl (u, ClTyp (STyp (cl, cPhi), cPsi), _)), tau), t ->
+  | Comp.TypPiBox (_, LF.(Decl (u, ClTyp (STyp (cl, cPhi), cPsi), _)), tau), t ->
      let cPhi' = Whnf.cnormDCtx (cPhi, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
 
@@ -2351,7 +2351,7 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
     (cD', CovPatt (cG', pat_r, tau_r), ms)
   in
   match tau with
-  | Comp.TypCross (tau1, tau2) ->
+  | Comp.TypCross (_, tau1, tau2) ->
      let pv1 = NameGenerator.new_patvar_name () in
      let pv2 = NameGenerator.new_patvar_name () in
      let cG1' = (pv1, tau1, false) :: (pv2, tau2, false) :: cG1 in

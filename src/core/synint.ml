@@ -366,11 +366,18 @@ module Comp = struct
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
     | TypDef    of Loc.t * cid_comp_typ * meta_spine
     | TypBox of Loc.t * meta_typ
-    | TypArr    of typ * typ
-    | TypCross  of typ * typ
-    | TypPiBox  of LF.ctyp_decl * typ
+    | TypArr    of Loc.t * typ * typ
+    | TypCross  of Loc.t * typ * typ
+    | TypPiBox  of Loc.t * LF.ctyp_decl * typ
     | TypClo    of typ *  LF.msub
     | TypInd of typ
+
+  let rec loc_of_typ : typ -> Loc.t = function
+    | TypBase (l, _, _) | TypCobase (l, _, _) | TypDef (l, _, _)
+      | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _, _)
+      | TypPiBox (l, _, _) ->
+       l
+    | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
 
 
   (* For ih *)

@@ -515,15 +515,15 @@ module Comp = struct
 
     | TypBox (_ , ctyp) -> checkCLFTyp cD ctyp
 
-    | TypArr (tau1, tau2) ->
+    | TypArr (_, tau1, tau2) ->
        checkTyp cD tau1;
        checkTyp cD tau2
 
-    | TypCross (tau1, tau2) ->
+    | TypCross (_, tau1, tau2) ->
        checkTyp cD tau1;
        checkTyp cD tau2
 
-    | TypPiBox (cdecl, tau') ->
+    | TypPiBox (_, cdecl, tau') ->
        dprintf
          begin fun p ->
          p.fmt "[checkCompTyp] @[%a@ |- %a@]"
@@ -641,7 +641,7 @@ module Comp = struct
       Maybe.(get_default (IndexObj cM) (k $> decide_ind cM))
     in
     match (e, ttau) with
-    | (Fn (loc, x, e), (TypArr (tau1, tau2), t)) ->
+    | (Fn (loc, x, e), (TypArr (_, tau1, tau2), t)) ->
        check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Fn " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
@@ -649,13 +649,13 @@ module Comp = struct
     | (Fun (loc, fbr), _) ->
        checkFBranches cD (cG, cIH) total_decs fbr ttau
 
-    | (MLam (loc, u, e), (TypPiBox (cdec, tau), t)) ->
+    | (MLam (loc, u, e), (TypPiBox (_, cdec, tau), t)) ->
        (check (extend_mctx cD (u, cdec, t))
           (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
           ("MLam " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e))
 
-    | (Pair (loc, e1, e2), (TypCross (tau1, tau2), t)) ->
+    | (Pair (loc, e1, e2), (TypCross (_, tau1, tau2), t)) ->
        check cD (cG,cIH) total_decs e1 (tau1, t);
        check cD (cG,cIH) total_decs e2 (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
@@ -673,7 +673,7 @@ module Comp = struct
        let (_ , tau', t') = syn cD (cG,cIH) total_decs i in
        let (tau', t') =  C.cwhnfCTyp (tau',t') in
        begin match (tau',t') with
-       | (TypCross (tau1, tau2), t') ->
+       | (TypCross (_, tau1, tau2), t') ->
           let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'), false)), CTypDecl (y, TypClo(tau2, t'), false)) in
           check cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau,t)
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
@@ -871,7 +871,7 @@ module Comp = struct
        let (cIH_opt , tau1, t1) = syn cD (cG,cIH) total_decs e1 in
        let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
        begin match (tau1, t1) with
-       | (TypArr (tau2, tau), t) ->
+       | (TypArr (_, tau2, tau), t) ->
           check cD (cG,cIH) total_decs e2 (tau2, t);
           Typeinfo.Comp.add
             loc
@@ -886,7 +886,7 @@ module Comp = struct
     | MApp (loc, e, mC) ->
        let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
        begin match (C.cwhnfCTyp (tau1,t1)) with
-       | (TypPiBox ((I.Decl (_ , ctyp, _)), tau), t) ->
+       | (TypPiBox (_, (I.Decl (_ , ctyp, _)), tau), t) ->
           LF.checkMetaObj cD mC (ctyp, t);
           dprintf
             (fun p ->
@@ -909,8 +909,13 @@ module Comp = struct
        let (_, tau2,t2) =  syn cD (cG,cIH) total_decs i2 in
        let (tau1,t1)    = C.cwhnfCTyp (tau1, t1) in
        let (tau2,t2)    = C.cwhnfCTyp (tau2, t2) in
-       (None, TypCross (TypClo (tau1,t1),
-                        TypClo (tau2,t2)), C.m_id)
+       ( None
+       , TypCross
+           ( loc
+           , TypClo (tau1,t1)
+           , TypClo (tau2,t2))
+       , C.m_id
+       )
 
     | AnnBox (cM, cT) ->
        checkMetaObj cD cM cT C.m_id;
@@ -937,7 +942,7 @@ module Comp = struct
        )
     | PatPair (loc, pat1, pat2) ->
        begin match ttau with
-        | (TypCross (tau1, tau2), theta) ->
+        | (TypCross (_, tau1, tau2), theta) ->
            checkPattern cD cG pat1 (tau1, theta);
            checkPattern cD cG pat2 (tau2, theta)
         | _ -> raise (Error (loc, BasicMismatch (`pair, cD, cG, ttau)))
@@ -972,10 +977,10 @@ module Comp = struct
     | PatNil  -> (tau, theta)
     | PatApp (_loc, pat, pat_spine)  ->
        begin match (tau, theta) with
-       | (TypArr (tau1, tau2), theta) ->
+       | (TypArr (_, tau1, tau2), theta) ->
           checkPattern cD cG pat (tau1, theta);
           synPatSpine cD cG pat_spine (tau2, theta)
-       | (TypPiBox (cdecl, tau), theta) ->
+       | (TypPiBox (_, cdecl, tau), theta) ->
           let theta' = checkPatAgainstCDecl cD pat (cdecl, theta) in
           synPatSpine cD cG pat_spine (tau, theta')
        end
@@ -1113,11 +1118,11 @@ module Comp = struct
   (* takes a normalised tau, peels off assumptions, and returns a triple (cD', cG', tau') *)
   let rec unroll cD cG tau =
     match tau with
-    | TypPiBox (c_decl, tau') ->
+    | TypPiBox (_, c_decl, tau') ->
        (* TODO ensure c_decl name is unique in context *)
        let cD' = Syntax.Int.LF.Dec (cD, c_decl) in
        unroll cD' cG tau'
-    | TypArr (t1, t2) ->
+    | TypArr (_, t1, t2) ->
        (* TODO use contextual name generation *)
        let name = Id.mk_name Id.NoName in
        let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, t1, false)) in

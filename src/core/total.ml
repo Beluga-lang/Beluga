@@ -157,10 +157,10 @@ let order_to_string order = match order with
 let is_valid_args tau n =
   let rec go tau n =
     match tau, n with
-    | Comp.TypPiBox (_ , tau), 1
-      | Comp.TypArr   (_ , tau), 1 -> true
-    | Comp.TypPiBox (_ , tau), n
-      | Comp.TypArr   (_ , tau), n -> go tau (n-1)
+    | Comp.TypPiBox (_, _ , tau), 1
+      | Comp.TypArr (_, _, tau), 1 -> true
+    | Comp.TypPiBox (_, _, tau), n
+      | Comp.TypArr (_, _, tau), n -> go tau (n-1)
     | _ -> false
   in
   n = 0 || go tau n
@@ -376,7 +376,7 @@ let rec rec_spine cD (cM, cU)  (i, ttau) =
       (Comp.DC :: spine, tau_r)
       else
    *)
-  | 1 , (Comp.TypPiBox ((LF.Decl (_, cU', _) as _cdecl), tau) , theta)  ->
+  | 1 , (Comp.TypPiBox (_, (LF.Decl (_, cU', _) as _cdecl), tau) , theta)  ->
      begin
        try
          (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
@@ -390,7 +390,7 @@ let rec rec_spine cD (cM, cU)  (i, ttau) =
          raise Not_compatible
      end
 
-  | 1, (Comp.TypArr (Comp.TypBox (loc, LF.ClTyp(LF.MTyp tA, cPsi)), tau), theta) ->
+  | 1, (Comp.TypArr (_, Comp.TypBox (loc, LF.ClTyp(LF.MTyp tA, cPsi)), tau), theta) ->
      let cU' = LF.ClTyp (LF.MTyp tA, cPsi) in
      begin
        try
@@ -409,12 +409,12 @@ let rec rec_spine cD (cM, cU)  (i, ttau) =
            (P.fmt_ppr_cmp_typ cD P.l0) tau);
      raise Not_compatible
 
-  | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
+  | n , (Comp.TypPiBox (_, cdecl, tau) , theta)  ->
      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      let (spine, tau_r)  = rec_spine cD (cM, cU) (n-1, (tau, LF.MDot (ft, theta))) in
      (Comp.M cN :: spine, tau_r)
 
-  | n, (Comp.TypArr (_, tau2), theta)  ->
+  | n, (Comp.TypArr (_, _, tau2), theta)  ->
      let (spine, tau_r) = rec_spine cD (cM, cU) (n-1, (tau2, theta)) in
      (Comp.DC :: spine, tau_r)
 
@@ -428,10 +428,10 @@ let rec rec_spine' cD (x, ttau0)  (i, ttau) = match i, ttau with
      let (spine, tau_r) = rec_spine' cD (x,tau) (i, k-1, (tau,theta)) in
      (Comp.DC :: spine, tau_r)
    *)
-  | 1 , (Comp.TypPiBox (cdecl, tau) , theta)  ->
+  | 1 , (Comp.TypPiBox (_, cdecl, tau) , theta)  ->
      raise Not_compatible (* Error *)
 
-  | 1, (Comp.TypArr (tau1, tau2), theta) ->
+  | 1, (Comp.TypArr (_, tau1, tau2), theta) ->
      begin
        try
          (* print_string ("Can generate IH for arg " ^
@@ -444,12 +444,12 @@ let rec rec_spine' cD (x, ttau0)  (i, ttau) = match i, ttau with
        with
          _ -> raise Not_compatible
      end
-  | n , (Comp.TypPiBox (cdecl, tau) , theta)  ->
+  | n , (Comp.TypPiBox (_, cdecl, tau) , theta)  ->
      let (cN, ft)        = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      let (spine, tau_r)  = rec_spine' cD (x,ttau0) (n-1, (tau, LF.MDot (ft, theta))) in
      (Comp.M cN :: spine, tau_r)
 
-  | n, (Comp.TypArr (_, tau2), theta)  ->
+  | n, (Comp.TypArr (_, _, tau2), theta)  ->
      let (spine, tau_r) = rec_spine' cD (x,ttau0) (n-1, (tau2, theta)) in
      (Comp.DC :: spine, tau_r)
 
@@ -590,8 +590,8 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
 (* Generating recursive calls on computation-level variables *)
 let rec get_return_type cD x ttau =
   match ttau with
-  | Comp.TypArr (_tau1 , tau0)  , theta -> get_return_type cD x (tau0, theta)
-  | Comp.TypPiBox (cdecl, tau0) , theta ->
+  | Comp.TypArr (_, _tau1 , tau0)  , theta -> get_return_type cD x (tau0, theta)
+  | Comp.TypPiBox (_, cdecl, tau0) , theta ->
      let (_cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      get_return_type cD x (tau0,  LF.MDot (ft, theta))
   | tau, _ -> (x, ttau)
@@ -933,20 +933,20 @@ let annotate
     : Syntax.Int.Comp.typ option =
   let open Maybe in
   let rec ann tau pos = match tau , pos with
-  | Comp.TypPiBox (LF.Decl (x, cU, _dep), tau) , 1 ->
-     Comp.TypPiBox (LF.Decl (x, cU, LF.Inductive), tau)
+  | Comp.TypPiBox (loc, LF.Decl (x, cU, _dep), tau) , 1 ->
+     Comp.TypPiBox (loc, LF.Decl (x, cU, LF.Inductive), tau)
      |> pure
-  | Comp.TypArr (tau1, tau2) , 1 ->
-     Comp.TypArr (Comp.TypInd tau1, tau2)
+  | Comp.TypArr (loc, tau1, tau2) , 1 ->
+     Comp.TypArr (loc, Comp.TypInd tau1, tau2)
      |> pure
-  | Comp.TypArr (tau1, tau2) , n ->
+  | Comp.TypArr (loc, tau1, tau2) , n ->
      ann tau2 (n-1)
      $> fun tau2' ->
-        Comp.TypArr (tau1, tau2')
-  | Comp.TypPiBox (cd , tau) , n ->
+        Comp.TypArr (loc, tau1, tau2')
+  | Comp.TypPiBox (loc, cd, tau) , n ->
      ann tau (n-1)
      $> fun tau2' ->
-        Comp.TypPiBox(cd, tau2')
+        Comp.TypPiBox(loc, cd, tau2')
   |  _ , _ -> None
   in
   fold_left (fun tau' x -> ann tau' x) tau order
@@ -955,9 +955,9 @@ let annotate
 let rec strip (tau : Syntax.Int.Comp.typ) : Syntax.Int.Comp.typ =
   match tau with
   | Comp.TypInd tau' -> strip tau'
-  | Comp.TypPiBox (d, tau') -> Comp.TypPiBox (d, strip tau')
-  | Comp.TypArr (tau1, tau2) -> Comp.TypArr (strip tau1, strip tau2)
-  | Comp.TypCross (tau1, tau2) -> Comp.TypCross (strip tau1, strip tau2)
+  | Comp.TypPiBox (loc, d, tau') -> Comp.TypPiBox (loc, d, strip tau')
+  | Comp.TypArr (loc, tau1, tau2) -> Comp.TypArr (loc, strip tau1, strip tau2)
+  | Comp.TypCross (loc, tau1, tau2) -> Comp.TypCross (loc, strip tau1, strip tau2)
   | Comp.TypClo (tau', ms) -> Comp.TypClo (strip tau', ms)
   | tau -> tau
 
@@ -985,9 +985,9 @@ let rec no_occurs a tau =
     | Comp.TypCobase _ ->  raise Unimplemented
     | Comp.TypDef  _  ->  raise Unimplemented
     | Comp.TypBox  _ -> true
-    | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (no_occurs a tau2)
-    | Comp.TypCross (tau1, tau2) -> (no_occurs a tau1) && (no_occurs a tau2)
-    | Comp.TypPiBox (_, tau')    ->  no_occurs a tau'
+    | Comp.TypArr (_, tau1, tau2)   -> (no_occurs a tau1) && (no_occurs a tau2)
+    | Comp.TypCross (_, tau1, tau2) -> (no_occurs a tau1) && (no_occurs a tau2)
+    | Comp.TypPiBox (_, _, tau')    ->  no_occurs a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
 
 let rec check_positive a tau =
@@ -1007,9 +1007,9 @@ let rec check_positive a tau =
     | Comp.TypCobase _  ->  true (* TODO *)
     | Comp.TypDef  _  -> raise Unimplemented
     | Comp.TypBox  _ -> true
-    | Comp.TypArr (tau1, tau2)   -> (no_occurs a tau1) && (check_positive a tau2)
-    | Comp.TypCross (tau1, tau2) -> (check_positive a tau1) && (check_positive a tau2)
-    | Comp.TypPiBox (_, tau')    -> check_positive a tau'
+    | Comp.TypArr (_, tau1, tau2)   -> (no_occurs a tau1) && (check_positive a tau2)
+    | Comp.TypCross (_, tau1, tau2) -> (check_positive a tau1) && (check_positive a tau2)
+    | Comp.TypPiBox (_, _, tau')    -> check_positive a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
 
 
@@ -1019,9 +1019,9 @@ let rec positive a tau =
     | Comp.TypCobase _ -> true
     | Comp.TypDef  _  -> raise Unimplemented
     | Comp.TypBox _   -> true
-    | Comp.TypArr (tau1, tau2)   -> (check_positive a tau1) && (positive a tau2)
-    | Comp.TypCross (tau1, tau2) -> (positive a tau1) && (positive a tau2)
-    | Comp.TypPiBox (_, tau')    -> positive a tau'
+    | Comp.TypArr (_, tau1, tau2)   -> (check_positive a tau1) && (positive a tau2)
+    | Comp.TypCross (_, tau1, tau2) -> (positive a tau1) && (positive a tau2)
+    | Comp.TypPiBox (_, _, tau')    -> positive a tau'
     | Comp.TypClo   _            ->  raise Unimplemented
 
 
@@ -1114,8 +1114,8 @@ return the metaSpine of the target, with context
 let rec get_target cD tau =
   match tau with
     | Comp.TypBase (_, _, mS)      -> (cD,  mS)
-    | Comp.TypArr (tau1, tau2)     ->   get_target cD tau2
-    | Comp.TypPiBox (dec, tau')    ->   get_target (LF.Dec (cD, dec)) tau'
+    | Comp.TypArr (_, tau1, tau2)     ->   get_target cD tau2
+    | Comp.TypPiBox (_, dec, tau')    ->   get_target (LF.Dec (cD, dec)) tau'
     | _   -> raise Not_compatible
 
 let rec mS_size mS =
@@ -1168,18 +1168,14 @@ let rec compare a cD tau1  mC2 n =
         | _ ->  let n =  R.render_cid_comp_typ c in
                 raise (Error (loc, (NoStratifyOrPositiveCheck n)))
         end
-    | Comp.TypArr   (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
-    | Comp.TypCross (tau, tau')  -> (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
-    | Comp.TypPiBox (dec, tau)   ->
+    | Comp.TypArr   (_, tau, tau') | Comp.TypCross (_, tau, tau')  ->
+       (compare a cD tau mC2 n) && (compare a cD tau'  mC2 n)
+    | Comp.TypPiBox (_, dec, tau)   ->
       compare a (LF.Dec (cD, dec))  tau    (Whnf.cnormMetaObj   (mC2 , LF.MShift  1))  n
     | Comp.TypBox _    -> true
     | Comp.TypClo _    -> true
     | Comp.TypCobase _ -> true
     | Comp.TypDef _    -> true
-
-
-
-
 
 (* stratify a tau n = bool
 
@@ -1206,7 +1202,7 @@ let stratify a tau n =
       | Comp.TypCobase _ -> true
       | Comp.TypDef  _   -> raise Unimplemented
       | Comp.TypBox  _   -> true
-      | Comp.TypArr   (tau1, tau2)   ->
+      | Comp.TypArr   (_, tau1, tau2)   ->
 
         (* cD0 |- tau1  *)
         (* cD |- mC   *)
@@ -1217,14 +1213,14 @@ let stratify a tau n =
         let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k- k0)) in
         (compare a cD tau1' mC n) && (strat cD0 tau2)
 
-      | Comp.TypCross (tau1, tau2)   ->
+      | Comp.TypCross (_, tau1, tau2)   ->
         let k0  = Context.length cD0  in
         let k  =  Context.length cD  in
         let tau1' = Whnf.cnormCTyp (tau1, LF.MShift(k-k0)) in
         let tau2' = Whnf.cnormCTyp (tau2, LF.MShift(k-k0)) in
         (compare a cD tau1' mC n) && (compare a cD tau2' mC n)
 
-      | Comp.TypPiBox (dec, tau')    ->  strat (LF.Dec (cD0, dec)) tau'
+      | Comp.TypPiBox (_, dec, tau')    ->  strat (LF.Dec (cD0, dec)) tau'
       | Comp.TypClo  _            -> raise Unimplemented
     in
     strat LF.Empty tau

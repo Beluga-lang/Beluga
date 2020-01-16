@@ -133,9 +133,9 @@ module Comp = struct
    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
    | TypDef of Loc.t * cid_comp_typ * meta_spine
    | TypBox of Loc.t * meta_typ
-   | TypArr     of typ * typ
-   | TypCross   of typ * typ
-   | TypPiBox   of LF.ctyp_decl * typ
+   | TypArr     of Loc.t * typ * typ
+   | TypCross   of Loc.t * typ * typ
+   | TypPiBox   of Loc.t * LF.ctyp_decl * typ
    | TypInd of typ
 
   and exp_chk =

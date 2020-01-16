@@ -549,6 +549,8 @@ let (<&) p1 p2 = p1 $ fun x -> p2 &> pure x
 let ($>) (p : 'a parser) (f : 'a -> 'b) : 'b parser =
   p $ fun x -> pure (f x)
 
+let map x y = Misc.Function.flip ($>) x y
+
              (*
 (** Forgets the result of a parser. *)
 let void (p : 'a parser) : unit parser = p &> pure ()

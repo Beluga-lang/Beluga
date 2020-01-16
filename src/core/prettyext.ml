@@ -21,7 +21,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
   type id_type =
     | Constructor
     | Typ
-    | Fun
+    (* | Fun *)
     | Schema
 
   type html =
@@ -36,7 +36,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | Keyword -> "<keyword>" ^ s ^ "</keyword>"
     | ID Constructor -> Html.addId s; "<span class=\"constructor\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | ID Typ -> Html.addId s; "<span class=\"typ\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
-    | ID Fun -> Html.addId s; "<span class=\"function\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
+    (* | ID Fun -> Html.addId s; "<span class=\"function\" id=\"" ^ s ^ "\">" ^ s ^ "</span>" *)
     | ID Schema -> "<span class=\"schema\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | Link -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
     | LinkOption when Html.idExists s -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"

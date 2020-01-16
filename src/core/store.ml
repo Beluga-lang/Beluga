@@ -1028,62 +1028,67 @@ module Cid = struct
         cid
         end
 
-    let add loc f = begin
+    let add loc f =
+      (* Allocate the cid and construct the entry using f. *)
       let (cid_prog, e) =
         let store =
           try DynArray.get store (!Modules.current)
-          with _ -> begin
+          with _ ->
             let x = DynArray.create () in
             while DynArray.length store < (!Modules.current ) do DynArray.add store (DynArray.create ()) done;
             DynArray.add store x;
             x
-            end
         in
         let l = DynArray.length store in
         let cid = (!Modules.current, l) in
         let e = f cid in
         DynArray.add store e;
-        (cid, e) in
+        (cid, e)
+      in
 
-        let directory =
-          try DynArray.get directory (!Modules.current)
-          with _ -> begin
-            let x = Hashtbl.create 0 in
-            while DynArray.length directory < (!Modules.current) do DynArray.add directory (Hashtbl.create 0) done;
-            DynArray.add directory x;
-            x
-          end in
-        Hashtbl.replace directory e.name cid_prog;
+      let directory =
+        try DynArray.get directory (!Modules.current)
+        with _ ->
+          let x = Hashtbl.create 0 in
+          while DynArray.length directory < (!Modules.current) do DynArray.add directory (Hashtbl.create 0) done;
+          DynArray.add directory x;
+          x
+      in
+      Hashtbl.replace directory e.name cid_prog;
 
-        let entry_list =
-          try DynArray.get entry_list (!Modules.current)
-        with _ -> begin
+      let entry_list =
+        try DynArray.get entry_list (!Modules.current)
+        with _ ->
           let x = ref [] in
           while DynArray.length entry_list < (!Modules.current) do DynArray.add entry_list (ref []) done;
           DynArray.add entry_list x;
           x
-        end in
-        try
-          let cid_prog' = Hashtbl.find directory e.name in
-          let loc' = List.assoc cid_prog'  !entry_list in
-          Hashtbl.replace directory e.name cid_prog;
-          entry_list := (cid_prog,loc)::(List.remove_assoc cid_prog' !entry_list);
-          (Some loc', cid_prog')
-        with Not_found ->
-          Hashtbl.replace directory e.name cid_prog;
-          entry_list := (cid_prog,loc) :: !entry_list;
-          (None, cid_prog)
-        end
+      in
+      try
+        let cid_prog' = Hashtbl.find directory e.name in
+        let loc' = List.assoc cid_prog'  !entry_list in
+        Hashtbl.replace directory e.name cid_prog;
+        entry_list := (cid_prog,loc)::(List.remove_assoc cid_prog' !entry_list);
+        (Some loc', cid_prog')
+      with Not_found ->
+        Hashtbl.replace directory e.name cid_prog;
+        entry_list := (cid_prog,loc) :: !entry_list;
+        (None, cid_prog)
 
     let clear () =
       DynArray.clear (DynArray.get store !(Modules.current));
       Hashtbl.clear (DynArray.get directory !(Modules.current))
 
-    let set_hidden (l, n) f =
+    let set (l, n) f =
       let d = DynArray.get store l in
-      let e = DynArray.get d n in
-      let e = { e with hidden = f e.hidden } in
+      let e = f (DynArray.get d n) in
       DynArray.set d n e
+
+    let set_prog cid f =
+      set cid (fun e -> { e with prog = f e.prog })
+
+    let set_hidden cid f =
+      set cid (fun e -> { e with hidden = f e.hidden })
   end
 
   module NamedHoles = struct

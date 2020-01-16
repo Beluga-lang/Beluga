@@ -224,7 +224,13 @@ module Cid : sig
         entry. Therefore, unlike 'add' functions in other modules,
         this 'add' function expects a function to which it will
         provide the cid_prog it generated to store the entry, thus
-        tying the recursive knot. *)
+        tying the recursive knot.
+
+        The returned location, if any, is the location of the function
+        with the same name that is being shadowed by the current one.
+        Signature elaboration (recsgn) uses this to remove delete
+        holes that originate in the shadowed function.
+     *)
     val add           : Loc.t -> (cid_prog -> entry) -> (Loc.t option * cid_prog)
     val get           : ?fixName:bool -> cid_prog -> entry
 
@@ -233,6 +239,18 @@ module Cid : sig
     val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t
     val clear         : unit -> unit
 
+    (** Update the associated program of an existing entry.
+        This is notably used for two-step elaboration of functions:
+        - a function is added to the store with its type *before* its
+          bodies is elaborated
+        - indexing can find the cid of the function immediately from
+          the store.
+        - when the function body is elaborated, the store entry is
+          updated to hold the body as well.
+     *)
+    val set_prog      : Id.cid_prog -> (Comp.value option -> Comp.value option) -> unit
+
+    (** Update the hidden flag of an existing entry. *)
     val set_hidden    : Id.cid_prog -> (bool -> bool) -> unit
   end
 

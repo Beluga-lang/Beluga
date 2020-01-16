@@ -59,7 +59,7 @@ module Elab = struct
   let exp cIH cD cG mfs t ttau =
     Holes.catch
       begin fun _ ->
-      let e = Interactive.elaborate_exp cD cG t ttau in
+      let e = Interactive.elaborate_exp cD cG t (Pair.lmap Total.strip ttau) in
       let e = Whnf.(cnormExp (e, m_id)) in
       Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
       e
@@ -277,13 +277,39 @@ module Prover = struct
                P.(fmt_ppr_cmp_typ LF.Empty l0) stmt
                k
              end;
-           let order =
-             prompt_with s "  Induction order (empty for none): " None
-               B.Parser.numeric_total_order
-             |> Maybe.map (Interactive.elaborate_numeric_order k)
+           let order_and_stmt =
+             let p =
+               Misc.Function.flip B.Parser.map
+                 B.Parser.(only optional_numeric_total_order |> span)
+                 begin fun (loc, o) ->
+                 Maybe.map
+                   begin fun o ->
+                   let order = Interactive.elaborate_numeric_order k o in
+                   B.Order.list_of_order order
+                   |> Maybe.get'
+                        (Total.Error
+                           ( loc
+                           , Total.NotImplemented "lexicographic order not fully supported"))
+                   |> Total.annotate stmt
+                   |> Maybe.get'
+                        (Total.Error (loc, Total.TooManyArg name))
+                   |> fun tau -> (order, tau)
+                   end
+                   o
+                 end
+             in
+             prompt_forever_with s "  Induction order (empty for none): " None
+               p
            in
            printf s "@]";
-           Theorem.Conf.make name order stmt k :: do_prompts (i + 1)
+           let conf =
+             match order_and_stmt with
+             | Some (order, stmt) ->
+                Theorem.Conf.make name (Some order) stmt k
+             | None ->
+                Theorem.Conf.make name None stmt k
+           in
+           conf :: do_prompts (i + 1)
       in
 
       let confs = do_prompts 1 in
@@ -297,12 +323,9 @@ module Prover = struct
       session_configuration_wizard' s c;
       (* c will be populated with theorems; if there are none it's
          because the session is over. *)
-      begin match DynArray.length Session.(c.theorems) > 0 with
+      match DynArray.length Session.(c.theorems) > 0 with
       | true -> `ok
       | false -> `aborted
-                   (*
-                    *)
-      end
   end
 
     (*

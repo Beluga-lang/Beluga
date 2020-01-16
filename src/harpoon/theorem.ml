@@ -183,7 +183,7 @@ let register { name; Conf.stmt; order; implicit_parameters } mut_names : cid_pro
   let open Store.Cid.Comp in
   add Syntax.Loc.ghost
     begin fun _ ->
-    mk_entry name stmt implicit_parameters
+    mk_entry name (Total.strip stmt) implicit_parameters
       true (* all Harpoon theorems are total *)
       None (* we don't have an evaluated form *)
       mut_names (* all mutual inductive theorems *)

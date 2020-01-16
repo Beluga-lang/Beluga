@@ -855,15 +855,17 @@ module Comp = struct
     (*     (None,(CompDest.get c).CompDest.typ, C.m_id)) *)
 
     | Const (loc,prog) ->
-       (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
-          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
-        if Misc.List.nonempty total_decs then
-          if (Comp.get prog).Comp.total then
-            (None,(Comp.get prog).Comp.typ, C.m_id)
-          else
-            raise (Error (loc, MissingTotal prog))
-        else
-          (None,(Comp.get prog).Comp.typ, C.m_id))
+       Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
+         ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+       let e = Comp.get prog in
+       let total = Comp.(e.total) in
+       let tau = Comp.(e.typ) in
+       begin match total_decs with
+       | _ :: _ when not total -> throw loc (MissingTotal prog)
+       | _ :: _ when Total.lookup_dec Comp.(e.name) total_decs |> Maybe.is_some ->
+          Some cIH, tau, C.m_id
+       | _ -> None, tau, C.m_id
+       end
 
     | Apply (loc , e1, e2) ->
        let (cIH_opt , tau1, t1) = syn cD (cG,cIH) total_decs e1 in

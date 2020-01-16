@@ -106,11 +106,6 @@ let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
 
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
-let rec lookupFun cG f = match cG with
-  | Int.LF.Dec (cG', Int.Comp.CTypDecl (f',  tau, false)) ->
-      if f = f' then tau else
-      lookupFun cG' f
-
 let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypBase (_, a, _ ) -> a
   | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
@@ -721,7 +716,6 @@ let recSgnDecls decls =
        Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x::y) recTyps' recConts')
 
     | Ext.Sgn.Theorem (loc, recFuns) ->
-       let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
        let pos loc x args =
          match Misc.List.index_of (fun a -> a = Some x) args with
          | None -> throw loc (UnboundArg (x, args))
@@ -746,11 +740,10 @@ let recSgnDecls decls =
             Ext.Comp.map_order (fun x -> pos loc x args) order
             |> Order.of_numeric_order
        in
-       let is_total total =
-         match total with None -> false | Some _ -> true in
+       let is_total total = Maybe.is_some total in
 
        let rec preprocess l m = match l with
-         | [] -> (Int.LF.Empty, Var.create (), [], [])
+         | [] -> ([], Misc.const [], [], [])
          | thm (* Ext.Comp.RecFun (loc, f, total, tau, _e) *) :: lf ->
             let Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_order; thm_body } = thm in
             let apx_tau = Index.comptyp thm_typ in
@@ -771,7 +764,7 @@ let recSgnDecls decls =
               begin fun p ->
               p.fmt "[recSgnDecl] elaboration of function %a : %a"
                 Id.print thm_name
-                (P.fmt_ppr_cmp_typ cD P.l0) tau'
+                (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
               end;
 
             let (tau', i) =
@@ -785,68 +778,85 @@ let recSgnDecls decls =
               p.fmt "[recSgnDecl] @[<v>Abstracted elaborated function type@,@[%a@] : @[%a@]\
                      @,with %d implicit parameters@]"
                 Id.print thm_name
-                (P.fmt_ppr_cmp_typ cD P.l0) tau'
+                P.(fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
                 i
               end;
 
-            Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');
+            Monitor.timer
+              ( "Function Type Check"
+              , fun () -> Check.Comp.checkTyp Int.LF.Empty tau'
+              );
             dprintf
               begin fun p ->
               p.fmt "[recSgnDecl] Checked computation type %a successfully"
-                (P.fmt_ppr_cmp_typ cD P.l0) tau'
+                (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau'
               end;
             FCVar.clear ();
             (* check that names are unique ? *)
             let d =
               match thm_order with
               | None ->
-		             if !Total.enabled then
-		               raise (Error (loc, MutualTotalDecl thm_name))
-		             else
+                 if !Total.enabled then
+                   raise (Error (loc, MutualTotalDecl thm_name))
+                 else
                    None
-		          | Some (Ext.Comp.Trust _) -> None
+              | Some (Ext.Comp.Trust _) -> None
               | Some t ->
-		             if !Total.enabled then
-                    Some (Total.make_total_dec thm_name tau' (mk_total_decl thm_name tau' t))
-		             else
-		               if m = 1 then
+                 if !Total.enabled then
+                   Some (Total.make_total_dec thm_name tau' (mk_total_decl thm_name tau' t))
+                 else
+                   if m = 1 then
                      begin
-			                 (*Coverage.enableCoverage := true; *)
+                       (*Coverage.enableCoverage := true; *)
                        Total.enabled := true;
-			                 (* print_string ("Encountered total declaration for " ^ Id.render_name f ^ "\n"); *)
                        Some (Total.make_total_dec thm_name tau' (mk_total_decl thm_name tau' t))
                      end
-		               else
-			               raise (Error (loc, MutualTotalDeclAfter thm_name))
+                   else
+                     raise (Error (loc, MutualTotalDeclAfter thm_name))
             in
-		        let (cG, vars, n_list, ds) = preprocess lf (m+1) in
-            ( Int.LF.Dec(cG, Int.Comp.CTypDecl (thm_name, Total.strip tau',false))
-            , Var.extend vars (Var.mk_entry thm_name)
-            , thm_name::n_list
-            , d::ds
+            let tau' = Total.strip tau' in (* XXX do we need this strip? -je *)
+            (* Comp.add *)
+            let (thm_list, register, name_list, ds) = preprocess lf (m+1) in
+            let register =
+              (* XXX check for and forbid shadowing? -je *)
+              fun name_list ->
+              let (_, cid) =
+                Comp.add loc
+                  begin fun cid ->
+                  Comp.mk_entry thm_name tau' 0 (is_total thm_order)
+                    None
+                    name_list
+                  end
+              in
+              cid :: register name_list
+            in
+            ( ( thm_name, thm_body, thm_loc, tau') :: thm_list
+            , register
+            , thm_name :: name_list
+            , d :: ds
             )
 
        in
 
-       let (cG , vars', n_list, total_decs ) = preprocess recFuns 1 in
+       let (thm_list, register, name_list, total_decs) = preprocess recFuns 1 in
+       let thm_cid_list = register name_list in
        let total_decs = Maybe.cat_options total_decs in
 
-       let reconThm loc f thm =
-         let apx_thm = Index.thm vars' thm in
-         dprint (fun () -> "\n  Indexing expression done \n");
-         let tau' = lookupFun cG f in
+       let reconThm loc (f, thm, tau) =
+         let apx_thm = Index.thm (Var.create ()) thm in
+         dprint (fun () -> "[reconThm] Indexing theorem done.");
          let thm' =
            Monitor.timer
              ( "Function Elaboration",
                fun () ->
-               Reconstruct.thm cG apx_thm (Total.strip tau', C.m_id)
+               Reconstruct.thm Int.LF.Empty apx_thm (Total.strip tau, C.m_id)
              )
          in
          dprintf
            begin fun p ->
-           p.fmt "[recSgnDecl] @[<v>Elaboration of theorem %a : %a@,result: @[%a@]@]"
+           p.fmt "[reconThm] @[<v>Elaboration of theorem %a : %a@,result: @[%a@]@]"
              Id.print f
-             (P.fmt_ppr_cmp_typ cD P.l0) tau'
+             (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau
              P.fmt_ppr_cmp_thm thm'
            end;
          begin
@@ -863,13 +873,11 @@ let recSgnDecls decls =
 
          Unify.resetGlobalCnstrs ();
 
-         (* let e_r     = Monitor.timer ("Function Reconstruction", fun () -> check  cO cD cG e' (tau', C.m_id)) in  *)
-
          dprintf
            begin fun p ->
              p.fmt "[AFTER reconstruction] @[<v>Function %a : %a@,@[%a@]@]"
              Id.print f
-             (P.fmt_ppr_cmp_typ cD P.l0) tau'
+             (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau
              P.fmt_ppr_cmp_thm thm'
            end;
 
@@ -880,14 +888,14 @@ let recSgnDecls decls =
              , fun () -> Abstract.thm thm''
              )
          in
-	       storeLeftoverVars cQ loc;
+         storeLeftoverVars cQ loc;
          (* This abstraction is for detecting leftover metavariables,
             which is an error.
           *)
 
          let thm_r' = Whnf.cnormThm (thm_r, Whnf.m_id) in
 
-	       let tau_ann =
+         let tau_ann =
            match
              let open Maybe in
              of_bool !Total.enabled
@@ -906,105 +914,62 @@ let recSgnDecls decls =
                             ( loc
                             , Total.NotImplemented
                                 "lexicographic order not fully supported"))
-                    |> Total.annotate tau'
+                    |> Total.annotate tau
                     |> Maybe.get'
                          (Total.Error ( loc , Total.TooManyArg f))
            with
-           | None -> tau'
-           | Some x -> x
+           | None -> tau
+           | Some x ->
+              dprintf
+                begin fun p ->
+                p.fmt "[reconThm] @[<v>got annotated type:@,@[%a@]@]"
+                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) x
+                end;
+              x
          in
          Monitor.timer
            ( "Function Check"
            , fun _ ->
-             Check.Comp.thm cD cG total_decs thm_r' (tau_ann, C.m_id)
+             Check.Comp.thm Int.LF.Empty Int.LF.Empty total_decs thm_r' (tau_ann, C.m_id)
            );
-         (thm_r' , tau')
+         (thm_r' , tau)
        in
 
-       let rec reconRecFun recFuns : Int.Sgn.thm_decl list = match recFuns with
-         | [] ->
-            Coverage.enableCoverage := !Coverage.enableCoverage;
-            Total.enabled := false;
-            []
-         | Ext.Sgn.({ thm_name; thm_loc; thm_body; thm_order; _ }) (* Ext.Comp.RecFun (loc, f, total, _tau, e) *) :: lf ->
-            let (e_r' , tau') =
-              reconThm loc thm_name thm_body
-            in
-            dprintf
-              begin fun p ->
-              p.fmt "[reconRecFun] DOUBLE CHECK of function %a successful!"
-                Id.print thm_name
-              end;
-            let (loc_opt, cid) =
-              Comp.add loc
-                begin fun cid ->
-                dprintf
-                  begin fun p ->
-                  p.fmt "[reconRecFun] adding definition for %a at %a"
-                    Id.print thm_name Loc.print_short loc
-                  end;
-                Comp.mk_entry thm_name tau' 0 (is_total thm_order)
-                  (Some (Int.Comp.ThmValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty)))
-                  n_list
-                end
-            in
-            begin match loc_opt with
-            | Some loc -> Holes.destroy_holes_within loc
-            | None -> ()
-            end;
-            let d =
-              let open Int.Sgn in
-              { thm_name = cid
-              ; thm_body = e_r'
-              ; thm_loc
-              ; thm_typ = tau'
-              }
-            in
-            d :: reconRecFun lf
+       if Misc.List.null recFuns then
+         Error.violation "[recsgn] no recursive function defined";
+
+       let ds =
+         let reconOne (thm_cid, (thm_name, thm_body, thm_loc, thm_typ))  =
+           let (e_r' , tau') = reconThm loc (thm_name, thm_body, thm_typ) in
+           dprintf
+             begin fun p ->
+             p.fmt "[reconRecFun] DOUBLE CHECK of function %a successful!"
+               Id.print thm_name
+             end;
+           dprintf
+             begin fun p ->
+             p.fmt "[reconRecFun] adding definition for %a at %a"
+               Id.print thm_name
+               Loc.print_short thm_loc
+             end;
+           let v =
+             Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty))
+           in
+           Comp.set_prog thm_cid (Misc.const (Some v));
+           let open Int.Sgn in
+           { thm_name = thm_cid
+           ; thm_body = e_r'
+           ; thm_loc
+           ; thm_typ = tau'
+           }
+         in
+         List.map reconOne (List.combine thm_cid_list thm_list)
        in
-       (* For checking totality of mutual recursive functions,
-          we should check all functions together by creating a variable
-          which collects all total declarations *)
-       begin match recFuns with
-       | Ext.Sgn.({ thm_loc; thm_name; thm_order; thm_body; _ }) :: lf ->
-          let (thm', tau') =
-            reconThm loc thm_name thm_body
-          in
-          dprintf
-            begin fun p ->
-            p.fmt "[recFuns] DOUBLE CHECK of function %a successful!"
-              Id.print thm_name
-            end;
-          let (loc_opt, cid) =
-            Comp.add loc
-              begin fun cid ->
-              Comp.mk_entry thm_name tau' 0 (is_total thm_order)
-                (Some (Int.Comp.ThmValue (cid, thm', Int.LF.MShift 0, Int.Comp.Empty)))
-                n_list
-              end
-          in
-          begin match loc_opt with
-            | Some loc -> Holes.destroy_holes_within loc
-            | None -> ()
-          end;
-          let sgn =
-            let open Int.Sgn in
-            let d =
-              { thm_name = cid
-              ; thm_typ = tau'
-              ; thm_body = thm'
-              ; thm_loc
-              }
-            in
-            let ds = reconRecFun lf in
-            Int.Sgn.Theorem (d::ds)
-          in
-          Store.Modules.addSgnToCurrent sgn;
-          sgn
-
-       | _ -> raise (Error.Violation "No recursive function defined")
-       end
-
+       let decl = Int.Sgn.(Theorem ds) in
+       Total.enabled := false; (* this looks wrong, but it isn't *)
+       Store.Modules.addSgnToCurrent
+         decl;
+       decl
 
     | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
        dprintf

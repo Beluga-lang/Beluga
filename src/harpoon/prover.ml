@@ -161,7 +161,7 @@ module Prover = struct
     (** Decides whether a given `cid` is in among the currently being
         proven theorems. *)
     let cid_is_in_current_theorem_set s c =
-      List.exists (fun t -> t.Theorem.cid = c) (DynArray.to_list s.theorems)
+      List.exists (fun t -> Theorem.has_cid_of t c) (DynArray.to_list s.theorems)
 
     (** Infer invocation kind based on `exp_syn` and the current theorem
      *)
@@ -262,7 +262,7 @@ module Prover = struct
              |> Maybe.map (Interactive.elaborate_numeric_order k)
            in
            printf s "@]";
-           { Theorem.Conf.name; order; stmt } :: do_prompts (i + 1)
+           Theorem.Conf.make name order stmt :: do_prompts (i + 1)
       in
 
       let confs = do_prompts 1 in
@@ -377,7 +377,7 @@ module Prover = struct
           begin match
             Misc.DynArray.findi_opt
               c.Session.theorems
-              (fun t -> Id.equals t.Theorem.name name)
+              (fun t -> Theorem.has_name_of t name)
           with
           | None ->
              State.printf s "No such theorem by name %a in the current session.@,"

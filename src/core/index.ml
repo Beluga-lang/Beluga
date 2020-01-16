@@ -177,7 +177,6 @@ type error =
   | UnboundCompName      of Id.name
   | UnboundObs           of Id.name
   | UnboundOperator      of Id.name
-  | CompEmptyPattBranch
   | PatVarNotUnique
   | IllFormedCompTyp
   | MisplacedOperator of Id.name
@@ -213,8 +212,6 @@ let print_error ppf =
      fprintf ppf "Unbound computation-level identifier: %a." Id.print n
   | UnboundObs n ->
      fprintf ppf "Unbound computation-level observation: %a." Id.print n
-  | CompEmptyPattBranch ->
-     fprintf ppf "If the pattern in a branch is empty, there should be no branch body."
   | PatVarNotUnique ->
      fprintf ppf "Pattern variable not linear."
   | IllFormedCompTyp ->

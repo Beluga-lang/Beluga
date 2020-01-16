@@ -536,13 +536,13 @@ let collectApxCDecl fMVd cdecl = match cdecl with
   | Apx.LF.Decl (_,Apx.LF.CTyp _,_) -> fMVd
 
 let rec collectApxCompTyp fMVd tau = match tau with
-  | Apx.Comp.TypArr (tau1, tau2) ->
+  | Apx.Comp.TypArr (_, tau1, tau2) ->
+      let fMVd1 = collectApxCompTyp fMVd tau1 in
+	    collectApxCompTyp fMVd1 tau2
+  | Apx.Comp.TypCross (_, tau1, tau2) ->
       let fMVd1 = collectApxCompTyp fMVd tau1 in
 	collectApxCompTyp fMVd1 tau2
-  | Apx.Comp.TypCross (tau1, tau2) ->
-      let fMVd1 = collectApxCompTyp fMVd tau1 in
-	collectApxCompTyp fMVd1 tau2
-  | Apx.Comp.TypPiBox (cdecl, tau) ->
+  | Apx.Comp.TypPiBox (_, cdecl, tau) ->
       let fMVd1 = collectApxCDecl fMVd cdecl in
 	collectApxCompTyp fMVd1 tau
   | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi)))

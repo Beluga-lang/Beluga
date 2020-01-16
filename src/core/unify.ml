@@ -2600,13 +2600,13 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         unifyCLFTyp Unification cD (Whnf.cnormMTyp (mT, t))
                                     (Whnf.cnormMTyp (mT', t'))
 
-      | ((Comp.TypArr (tau1, tau2), t), (Comp.TypArr (tau1', tau2'), t')) ->
+      | ((Comp.TypArr (_, tau1, tau2), t), (Comp.TypArr (_, tau1', tau2'), t')) ->
           (unifyCompTyp cD (tau1, t) (tau1', t') ;
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
 
 
-      | ((Comp.TypCross (tau1, tau2), t), (Comp.TypCross (tau1', tau2'), t')) ->
+      | ((Comp.TypCross (_, tau1, tau2), t), (Comp.TypCross (_, tau1', tau2'), t')) ->
           (unifyCompTyp cD (tau1, t) (tau1', t') ;
            unifyCompTyp cD (tau2, t) (tau2', t')
           )
@@ -2621,8 +2621,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           else
             raise (Failure "CtxPi schema clash")
 *)
-      | ((Comp.TypPiBox ((Decl(u, ctyp1,dep)), tau), t),
-         (Comp.TypPiBox ((Decl(_, ctyp2,_)), tau'), t')) ->
+      | ((Comp.TypPiBox (_, (Decl(u, ctyp1,dep)), tau), t),
+         (Comp.TypPiBox (_, (Decl(_, ctyp2,_)), tau'), t')) ->
         let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
         let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
         (unifyCLFTyp Unification cD ctyp1n ctyp2n;

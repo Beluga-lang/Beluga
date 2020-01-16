@@ -108,13 +108,22 @@ let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
 let rec get_target_cid_comptyp tau = match tau with
   | Int.Comp.TypBase (_, a, _ ) -> a
-  | Int.Comp.TypArr (_ , tau) -> get_target_cid_comptyp tau
-  | Int.Comp.TypPiBox (_, tau) -> get_target_cid_comptyp tau
+  | Int.Comp.TypArr (_, _, tau) -> get_target_cid_comptyp tau
+  | Int.Comp.TypPiBox (_, _, tau) -> get_target_cid_comptyp tau
+  | _ ->
+     Error.violation
+       "[get_target_cid_comptyp] no target comp typ"
 
 let rec get_target_cid_compcotyp tau = match tau with
   | Int.Comp.TypCobase (_, a, _ ) -> a
-  | Int.Comp.TypArr (tau , _) -> get_target_cid_compcotyp tau
-  | Int.Comp.TypPiBox (_, tau) -> get_target_cid_compcotyp tau
+  | Int.Comp.TypArr (_, tau , _) ->
+     get_target_cid_compcotyp tau
+     (* XXX it's strange that this walks backwards, but is called "get *target*".
+        Perhaps for codatatypes this should be "source" ? -je *)
+  | Int.Comp.TypPiBox (_, _, tau) -> get_target_cid_compcotyp tau
+  | _ ->
+     Error.violation
+       "[get_target_cid_compcotyp] no target comp cotyp"
 
 let freeze_from_name tau = match tau with
   |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in

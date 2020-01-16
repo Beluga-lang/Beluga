@@ -127,7 +127,7 @@ type free_var =
 type fctx = free_var I.ctx
 
 let rec prefixCompTyp tau = match tau with
-  | Comp.TypPiBox (_, tau) -> 1 + prefixCompTyp tau
+  | Comp.TypPiBox (_, _, tau) -> 1 + prefixCompTyp tau
   | _ -> 0
 
 let rec prefixCompKind cK = match cK with
@@ -1233,20 +1233,20 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ', mT') = collectMetaTyp loc p cQ mT in
         (cQ', Comp.TypBox (loc, mT'))
 
-  | Comp.TypArr (tau1, tau2) ->
+  | Comp.TypArr (l, tau1, tau2) ->
       let (cQ1, tau1') = collectCompTyp p cQ tau1 in
       let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
-        (cQ2, Comp.TypArr (tau1', tau2'))
+        (cQ2, Comp.TypArr (l, tau1', tau2'))
 
-  | Comp.TypCross (tau1, tau2) ->
+  | Comp.TypCross (l, tau1, tau2) ->
       let (cQ1, tau1') = collectCompTyp p cQ tau1 in
       let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
-        (cQ2, Comp.TypCross (tau1', tau2'))
+        (cQ2, Comp.TypCross (l, tau1', tau2'))
 
-  | Comp.TypPiBox ((cdecl), tau) ->
+  | Comp.TypPiBox (l, (cdecl), tau) ->
       let (cQ', cdecl') = collectCDecl p cQ cdecl in
       let (cQ'', tau') = collectCompTyp p cQ' tau in
-      (cQ'', Comp.TypPiBox (cdecl', tau'))
+      (cQ'', Comp.TypPiBox (l, cdecl', tau'))
 
   | Comp.TypClo _ ->
      dprint (fun () -> "collectCTyp -- TypClo missing");
@@ -1440,15 +1440,22 @@ let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
         Comp.TypCobase (loc, a , cS')
   | Comp.TypBox (loc, mtyp) ->
         Comp.TypBox (loc, abstractMVarMTyp cQ mtyp offset)
-  | Comp.TypArr (tau1, tau2) ->
-      Comp.TypArr (abstractMVarCompTyp cQ offset tau1,
-                   abstractMVarCompTyp cQ offset tau2)
+  | Comp.TypArr (loc, tau1, tau2) ->
+     Comp.TypArr
+       ( loc
+       , abstractMVarCompTyp cQ offset tau1
+       , abstractMVarCompTyp cQ offset tau2 )
 
-  | Comp.TypCross (tau1, tau2) ->
-      Comp.TypCross (abstractMVarCompTyp cQ offset tau1,
-                     abstractMVarCompTyp cQ offset tau2)
-  | Comp.TypPiBox (cdecl, tau) ->
-    Comp.TypPiBox ((abstractMVarCdecl cQ offset cdecl), abstractMVarCompTyp cQ (l,d+1) tau)
+  | Comp.TypCross (loc, tau1, tau2) ->
+     Comp.TypCross
+       ( loc
+       , abstractMVarCompTyp cQ offset tau1
+       , abstractMVarCompTyp cQ offset tau2 )
+  | Comp.TypPiBox (loc, cdecl, tau) ->
+     Comp.TypPiBox
+       ( loc
+       , abstractMVarCdecl cQ offset cdecl
+       , abstractMVarCompTyp cQ (l,d+1) tau )
 
   | Comp.TypInd tau ->
       Comp.TypInd (abstractMVarCompTyp cQ offset tau)
@@ -1493,10 +1500,13 @@ and abstractMVarPatSpine cQ cG offset pat_spine = match pat_spine with
 
 let rec raiseCompTyp cD tau =  match cD with
   | I.Empty -> tau
-  | I.Dec(cD, I.Decl (psi, I.CTyp w, dep)) ->
-      raiseCompTyp cD (Comp.TypPiBox ((I.Decl(psi, I.CTyp w, dep)), tau))
-  | I.Dec(cD ,mdecl) ->
-      raiseCompTyp cD (Comp.TypPiBox ((mdecl), tau))
+  | I.Dec(cD, mdecl) ->
+     (* Since this function is used in particular to universally
+        quantify over free variables occurring in computational types,
+        we use the location of the known type as the location of the
+        pi type.
+      *)
+     raiseCompTyp cD (Comp.TypPiBox (Comp.loc_of_typ tau, mdecl, tau))
 
 let raiseCompKind cD cK =
   let
@@ -1536,9 +1546,10 @@ let rec dropExplicitCTyp = function
   | I.Dec (cD', d) -> I.Dec (dropExplicitCTyp cD', d)
 
 let abstrCompTyp tau =
-  let rec roll tau cQ = match tau with
-    | Comp.TypPiBox (I.Decl(psi, I.CTyp (Some w), dep), tau) ->
-        roll tau (I.Dec(cQ, CtxV (psi, w, dep)))
+  let rec roll tau cQ =
+    match tau with
+    | Comp.TypPiBox (_, I.Decl(psi, I.CTyp (Some w), dep), tau) ->
+       roll tau (I.Dec(cQ, CtxV (psi, w, dep)))
     | tau -> (cQ, tau)
   in
   let tau0        = Whnf.cnormCTyp (tau, Whnf.m_id) in

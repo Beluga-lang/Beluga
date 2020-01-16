@@ -87,7 +87,7 @@ let intros' : Theorem.t ->
   let rec go updated names cD cG tau =
     let next_name = Maybe.(names $ Misc.List.uncons) in
     match tau with
-    | Comp.TypArr (tau_1, tau_2) ->
+    | Comp.TypArr (_, tau_1, tau_2) ->
        let (name, names) =
          next_name
          |> Maybe.eliminate
@@ -99,7 +99,7 @@ let intros' : Theorem.t ->
        | `unique -> go true names cD (LF.Dec (cG, d)) tau_2
        | `duplicate -> Either.Left DuplicatedNames
        end
-    | Comp.TypPiBox (d, tau_2) ->
+    | Comp.TypPiBox (_, d, tau_2) ->
        begin match check_metavariable_uniqueness cD d t with
        | `unique -> go true names (LF.Dec (cD, d)) cG tau_2
        | `duplicate -> Either.Left DuplicatedNames
@@ -581,14 +581,14 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
      *)
     let rec decomp_arrows : Comp.typ -> (Comp.typ list * Comp.typ) option =
       function
-      | Comp.TypArr (tau_1, tau_2) ->
+      | Comp.TypArr (_, tau_1, tau_2) ->
          decomp_arrows tau_2
          $> fun (inputs, output) -> (tau_1 :: inputs, output)
-      | Comp.TypPiBox (_, _) -> None
+      | Comp.TypPiBox (_, _, _) -> None
       | tau -> Some ([], tau) (* base type *)
     in
     let rec decomp_pis (t : LF.msub) : Comp.typ -> Comp.tclo = function
-      | Comp.TypPiBox (d, tau) ->
+      | Comp.TypPiBox (_, d, tau) ->
          let u = Whnf.new_mmvar_for_ctyp_decl cD d in
          let t' =
            let open LF in

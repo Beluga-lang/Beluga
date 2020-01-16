@@ -546,17 +546,17 @@ struct
       fprintf ppf "%a"
     	(sexp_meta_typ cD) mT
 
-    | Comp.TypArr (tau1, tau2) ->
+    | Comp.TypArr (_, tau1, tau2) ->
       fprintf ppf "(TypArr %a  %a)"
         (sexp_cmp_typ cD) tau1
         (sexp_cmp_typ cD) tau2
 
-    | Comp.TypCross (tau1, tau2) ->
+    | Comp.TypCross (_, tau1, tau2) ->
       fprintf ppf "(TypCross %a %a)"
         (sexp_cmp_typ cD) tau1
         (sexp_cmp_typ cD) tau2
 
-    | Comp.TypPiBox (ctyp_decl, tau) ->
+    | Comp.TypPiBox (_, ctyp_decl, tau) ->
       fprintf ppf "(Pi %a %a)"
         (sexp_lf_ctyp_decl cD) ctyp_decl
         (sexp_cmp_typ (LF.Dec(cD, ctyp_decl))) tau

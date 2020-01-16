@@ -207,7 +207,7 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
   in
   let rec crawl cD cG =
     function
-    | Comp.TypArr (t1,t2) ->
+    | Comp.TypArr (_, t1, t2) ->
        begin
          match t1 with
          | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, psi)) ->
@@ -223,7 +223,7 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2  in
             Comp.Fn(Loc.ghost, nam, exp)
        end
-    | Comp.TypPiBox (tdec, t') when not (is_inferred tdec) ->
+    | Comp.TypPiBox (_, tdec, t') when not (is_inferred tdec) ->
        let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
        Comp.MLam (Loc.ghost, nam , exp)

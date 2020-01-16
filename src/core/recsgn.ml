@@ -721,19 +721,13 @@ let recSgnDecls decls =
        Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x::y) recTyps' recConts')
 
     | Ext.Sgn.Theorem (loc, recFuns) ->
-       (* let _       = Printf.printf "\n Indexing function : %s  \n" f.string_of_name  in   *)
        let (cO, cD)   = (Int.LF.Empty, Int.LF.Empty) in
-
-       (* finds the position of `x` in the list of arguments of the function *)
        let pos loc x args =
-         let rec go args' k =
-           match args' with
-           | [] -> throw loc (UnboundArg (x, args))
-           | (Some y)::ys -> if x = y then k else go ys (k+1)
-           | None::ys -> go ys (k+1)
-         in
-         go args 1
+         match Misc.List.index_of (fun a -> a = Some x) args with
+         | None -> throw loc (UnboundArg (x, args))
+         | Some k -> k + 1 (* index_of is 0-based, but we're 1-based *)
        in
+
        let mk_total_decl f tau (Ext.Comp.Total (loc, order, f', args)) =
          (* Validate the inputs: can't have too many args or the wrong name *)
          if not (Total.is_valid_args tau (List.length args)) then

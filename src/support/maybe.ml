@@ -121,6 +121,28 @@ let cat_options (l : 'a option list) : 'a list =
 let when_some (l : 'a option) (f : 'a -> unit) : unit =
   eliminate (fun _ -> ()) f l
 
+type 'a all_or_none =
+  [ `all of 'a list
+  | `mixed of 'a list
+  | `none
+  | `empty
+  ]
+
+(** Checks whether all or none of the list of options has a value. *)
+let rec all_or_none = function
+  | None :: xs ->
+     begin match all_or_none xs with
+     | `all xs | `mixed xs -> `mixed xs
+     | `none | `empty -> `none
+     end
+  | Some x :: xs ->
+     begin match all_or_none xs with
+     | `all xs -> `all (x :: xs)
+     | `empty -> `all [x]
+     | `mixed xs -> `mixed (x :: xs)
+     | `none -> `mixed [x]
+     end
+  | [] -> `empty
 
 (** Eliminate the option into a printer. *)
 let print'

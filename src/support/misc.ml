@@ -66,6 +66,8 @@ let throw (e : exn) : 'b -> 'a =
   fun _ -> raise e
 
 module List = struct
+  include List
+
   (** Gets the last element of a list.
       Raises `invalid_arg` if the list is empty.
    *)
@@ -155,4 +157,7 @@ module Function = struct
 
   let flip (f : 'a -> 'b -> 'c) : 'b -> 'a -> 'c =
     fun y x -> f x y
+
+  let sequence (l : ('a -> 'b) list) (x : 'a) =
+    List.map (fun f -> f x) l
 end

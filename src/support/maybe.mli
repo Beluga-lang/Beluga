@@ -90,6 +90,15 @@ val cat_options : 'a option list -> 'a list
 (** Specialized effectful eliminator for option types. *)
 val when_some : 'a option -> ('a -> unit) -> unit
 
+type 'a all_or_none =
+  [ `all of 'a list
+  | `mixed of 'a list
+  | `none
+  | `empty
+  ]
+
+val all_or_none : 'a option list -> 'a all_or_none
+
 (**
  * Specialized eliminator for options to print them generally.
  *)

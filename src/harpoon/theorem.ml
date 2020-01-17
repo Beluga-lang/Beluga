@@ -49,6 +49,7 @@ type theorem = t
 
 let printf t x = Format.fprintf t.ppf x
 
+let get_name t = t.name
 let has_name_of t name = equals t.name name
 let has_cid_of t cid = t.cid = cid
 

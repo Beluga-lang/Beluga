@@ -360,7 +360,26 @@ module Prover = struct
     (* Administrative commands: *)
     | Command.Theorem cmd ->
        begin match cmd with
-       | `list -> failwith "list theorems in session"
+       | `list ->
+          let theorem_list = DynArray.to_list c.Session.theorems in
+          let theorem_indexed_name_list =
+            List.mapi (fun i thm -> (i, Theorem.get_name thm)) theorem_list
+          in
+          let fmt_ppr_indexed_theorem ppf (i, sName) =
+            Format.fprintf ppf "%d. %a %s"
+              i
+              Id.print sName
+              (if i = 0
+               then "<<< current theorem"
+               else ""
+              )
+          in
+          let fmt_ppr_indexed_theorems =
+            Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_theorem
+          in
+          (* It may be better to add the current session name to this message *)
+          State.printf s "@[<v>Theorems in the current session:@,  @[<v>%a@]@]"
+            fmt_ppr_indexed_theorems theorem_indexed_name_list
        | `defer -> Session.defer_theorem c
        | `show_ihs ->
           let f i =
@@ -389,7 +408,25 @@ module Prover = struct
        end
     | Command.Session cmd ->
        begin match cmd with
-       | `list -> failwith "list sessions in state"
+       | `list ->
+          let session_list = DynArray.to_list s.State.sessions in
+          let session_indexed_name_list =
+            List.mapi (fun i s -> (i, s.Session.name)) session_list
+          in
+          let fmt_ppr_indexed_session ppf (i, sName) =
+            Format.fprintf ppf "%d. %a %s"
+              i
+              Id.print sName
+              (if i = 0
+               then "<<< current session"
+               else ""
+              )
+          in
+          let fmt_ppr_indexed_sessions =
+            Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_session
+          in
+          State.printf s "@[<v>Sessions:@,  @[<v>%a@]@]"
+            fmt_ppr_indexed_sessions session_indexed_name_list
        | `defer -> State.defer_session s
        | `create name ->
           begin match

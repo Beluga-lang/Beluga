@@ -1249,8 +1249,10 @@ let rec collectCompTyp p cQ tau = match tau with
       let (cQ'', tau') = collectCompTyp p cQ' tau in
       (cQ'', Comp.TypPiBox (cdecl', tau'))
 
-  | Comp.TypClo _ -> (dprint (fun () -> "collectCTyp -- TypClo missing");
-                      raise Error.NotImplemented)
+  | Comp.TypClo _ ->
+     dprint (fun () -> "collectCTyp -- TypClo missing");
+     raise Error.NotImplemented
+
   | Comp.TypInd tau ->
       let (cQ', tau') = collectCompTyp p cQ tau in
 	(cQ', Comp.TypInd tau')
@@ -1529,25 +1531,38 @@ let abstrCompKind cK =
   let cK2 = raiseCompKind cD' cK' in
     (cK2, Context.length cD')
 
+let rec dropExplicitCTyp = function
+  | I.Empty -> I.Empty
+  | I.Dec (cD', I.Decl (_, I.CTyp _, I.No)) -> dropExplicitCTyp cD'
+  | I.Dec (cD', d) -> I.Dec (dropExplicitCTyp cD', d)
+
 let abstrCompTyp tau =
   let rec roll tau cQ = match tau with
     | Comp.TypPiBox (I.Decl(psi, I.CTyp (Some w), dep), tau) ->
-        roll tau (I.Dec(cQ, CtxV (psi,w,dep)))
+        roll tau (I.Dec(cQ, CtxV (psi, w, dep)))
     | tau -> (cQ, tau)
   in
   let tau0        = Whnf.cnormCTyp (tau, Whnf.m_id) in
   let (cQ, tau')  = roll tau0 I.Empty in
-  let l'           = lengthCollection cQ in
-  let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
+  (* l': count of leading context quantifiers *)
+  let l'          = lengthCollection cQ in
+  let p           = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
+  (* extend cQ with any variables found in tau' *)
   let (cQ, tau1)  = collectCompTyp (l'+p) cQ tau' in
   let k           = lengthCollection cQ in
   let l           = (k - l') in
+  (* l: count of variables *excluding* leading context variables *)
   let cQ'  = abstractMVarCtx cQ (l-1-p) in
   (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in
-  let cD' = ctxToMCtx (I.Maybe) cQ' in
+  let cD' = ctxToMCtx I.Maybe cQ' in
+
   let tau'' = raiseCompTyp cD' tau' in
-    (tau'', Context.length cD' )
+  (* We can't just subtract l' because l' counts also implicit context quantifications.
+     Instead we drop all explicit context contexts from cD' and then
+     take the length in order to get the correct count of implicit
+     parameters. *)
+  (tau'', Context.length (dropExplicitCTyp cD'))
 
 let abstrCodataTyp cD tau tau' =
   let rec split cD = match cD with

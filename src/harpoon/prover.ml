@@ -256,6 +256,13 @@ module Prover = struct
                B.Parser.cmp_typ
              |> Interactive.elaborate_typ LF.Empty
            in
+           dprintf begin fun p ->
+             p.fmt "@[<v 2>[harpoon] [session_configuration] elaborated type\
+                    @,@[%a@]\
+                    @,with %d implicit parameters@]"
+               P.(fmt_ppr_cmp_typ LF.Empty l0) stmt
+               k
+             end;
            let order =
              prompt_with s "  Induction order (empty for none): " None
                B.Parser.numeric_total_order

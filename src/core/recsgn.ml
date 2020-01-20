@@ -387,9 +387,10 @@ let recSgnDecls decls =
 	     let _         = dprint (fun () -> "Abstracting over comp. type: done") in
 	     dprintf
          begin fun p ->
-         p.fmt "%a : %a"
+         p.fmt "[recsgn] @[<v>@[<hov>@[%a@] :@ @[%a@]@]@,with %d implicit parameters@]"
            Id.print c
 				   (P.fmt_ppr_cmp_typ cD P.l0) tau'
+           i
          end;
 	     Monitor.timer
          ( "Data-type Constant: Type Check"
@@ -779,7 +780,7 @@ let recSgnDecls decls =
                 (P.fmt_ppr_cmp_typ cD P.l0) tau'
               end;
 
-            let (tau', _i) =
+            let (tau', i) =
               Monitor.timer
                 ( "Function Type Abstraction"
                 , fun () -> Abstract.comptyp tau'
@@ -787,9 +788,11 @@ let recSgnDecls decls =
             in
             dprintf
               begin fun p ->
-              p.fmt "[recSgnDecl] @[<v>Abstracted elaborated function type@,@[%a@] : @[%a@]@]"
+              p.fmt "[recSgnDecl] @[<v>Abstracted elaborated function type@,@[%a@] : @[%a@]\
+                     @,with %d implicit parameters@]"
                 Id.print thm_name
                 (P.fmt_ppr_cmp_typ cD P.l0) tau'
+                i
               end;
 
             Monitor.timer ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');

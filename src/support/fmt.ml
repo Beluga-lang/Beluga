@@ -10,8 +10,15 @@ type fmt =
 (** Converts something to a string using a formatting function. *)
 let stringify p x = fprintf str_formatter "%a" p x; flush_str_formatter ()
 
-(** Prints a comma followed by a (breaking) space. *)
-let comma (ppf : Format.formatter) () = fprintf ppf ",@ "
+(** Prints the given string followed by a space break hint. *)
+let punctuation s ppf () = fprintf ppf "%s@ " s
+
+(** Prints a semicolon followed by a space break hint. *)
+let semicolon = punctuation ";"
+
+(** Prints a comma followed by a space break hint. *)
+let comma = punctuation ","
+
 let between before after inside ppf () =
   before ppf ();
   inside ppf ();

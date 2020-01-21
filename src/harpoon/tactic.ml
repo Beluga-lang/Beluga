@@ -54,6 +54,10 @@ let check_metavariable_uniqueness cD decl =
     LF.name_of_ctyp_decl
     P.(fmt_ppr_lf_ctyp_decl cD l0)
 
+type intros'_failure =
+  | DuplicatedNames
+  | NothingToIntro
+
 (** Walks a type and collects assumptions into cD and cG,
     returning the conclusion type.
 
@@ -68,7 +72,7 @@ let check_metavariable_uniqueness cD decl =
  *)
 let intros' : Theorem.t ->
               string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
-              (LF.mctx * Comp.gctx * Comp.typ) option =
+              (intros'_failure, LF.mctx * Comp.gctx * Comp.typ) Either.t =
   let genVarName tA = B.Store.Cid.Typ.gen_var_name tA in
   let gen_var_for_typ =
     function
@@ -80,11 +84,11 @@ let intros' : Theorem.t ->
        B.Id.(mk_name NoName)
   in
   fun t ->
-  let rec go names cD cG tau =
+  let rec go updated names cD cG tau =
     let next_name = Maybe.(names $ Misc.List.uncons) in
     match tau with
     | Comp.TypArr (tau_1, tau_2) ->
-       let name , names =
+       let (name, names) =
          next_name
          |> Maybe.eliminate
               (fun _ -> gen_var_for_typ tau_1 , None)
@@ -92,17 +96,18 @@ let intros' : Theorem.t ->
        in
        let d = Comp.CTypDecl (name, tau_1, false) in
        begin match check_computational_variable_uniqueness cD cG d t with
-       | `unique -> go names cD (LF.Dec (cG, d)) tau_2
-       | `duplicate -> None
+       | `unique -> go true names cD (LF.Dec (cG, d)) tau_2
+       | `duplicate -> Either.Left DuplicatedNames
        end
     | Comp.TypPiBox (d, tau_2) ->
        begin match check_metavariable_uniqueness cD d t with
-       | `unique -> go names (LF.Dec (cD, d)) cG tau_2
-       | `duplicate -> None
+       | `unique -> go true names (LF.Dec (cD, d)) cG tau_2
+       | `duplicate -> Either.Left DuplicatedNames
        end
-    | _ -> Some (cD, cG, tau)
+    | _ when updated -> Either.Right (cD, cG, tau)
+    | _ -> Either.Left NothingToIntro
   in
-  go
+  go false
 
 
 (** Introduces all assumptions present in the current goal.
@@ -114,9 +119,7 @@ let intros (names : string list option) : t =
   let open Comp in
   let (tau, theta) = s.goal in
   match intros' t names LF.Empty LF.Empty tau with
-  | None ->
-     Theorem.printf t "Error: intros failed@,"
-  | Some (cD, cG, tau') when tau' <> tau ->
+  | Either.Right (cD, cG, tau') ->
      (* only create a new intros node if something actually happened *)
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
@@ -131,10 +134,13 @@ let intros (names : string list option) : t =
      (* Invoke the callback on the subgoal that we created *)
      (* Solve the current goal with the subgoal. *)
      Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
-  | _ ->
+  | Either.Left NothingToIntro ->
      Theorem.printf t
        "Nothing to introduce.@,\
         The intros tactic works only when the goal is a function type.@,"
+
+  | Either.Left DuplicatedNames ->
+     Theorem.printf t "Error: intros failed@,"
 
 let is_valid_goals_for_split_kind k cgs =
   let n = List.length cgs in

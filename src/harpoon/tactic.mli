@@ -26,6 +26,15 @@ val solve : Comp.proof -> t
 (** Introduces the arguments to a function type, with the given names, if any. *)
 val intros : string list option -> t
 
+type intros'_failure =
+  | DuplicatedNames
+  | NothingToIntro
+
+(** Introduces the arguments to a function type, with the given names, if any. *)
+val intros' : Theorem.t ->
+              string list option -> Beluga.Syntax.Int.LF.mctx -> Comp.gctx -> Comp.typ ->
+              (intros'_failure, Beluga.Syntax.Int.LF.mctx * Comp.gctx * Comp.typ) Support.Either.t
+
 (** Performs a case analysis on the given synthesizable expression of
     the given type.
     The split_kind is used to perform an additional check on the

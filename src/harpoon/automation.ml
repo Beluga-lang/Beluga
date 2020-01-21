@@ -20,17 +20,56 @@ type t = Theorem.t -> proof_state -> bool
 
 let auto_intros : t =
   fun t g ->
-  let (tau, _) = g.goal in
+  let (tau, theta) = g.goal in
   dprintf
     begin fun p ->
     p.fmt "[auto_intros]: invoked on %a"
       (P.fmt_ppr_cmp_typ g.context.cD P.l0) tau
     end;
-  match tau with
-  | TypArr _ | TypPiBox _ ->
-     Tactic.intros None t g;
+  match Tactic.intros' t None LF.Empty LF.Empty tau with
+  | Either.Right (cD, cG, tau') ->
+     let fmt_ppr_ctx f ppf ctx = Context.iter ctx (f ppf) in
+     let fmt_ppr_lf_ctx ppf =
+       function
+       | LF.Empty -> ()
+       | cD ->
+          Format.fprintf ppf "@,  @[<v 2>Meta-assumptions:";
+          fmt_ppr_ctx (fun ppf cD v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_lf_ctyp_decl cD P.l0) v) ppf cD;
+          Format.fprintf ppf "@]"
+     in
+     let fmt_ppr_cmp_ctx ppf =
+       function
+       | LF.Empty -> ()
+       | cG ->
+          Format.fprintf ppf "@,  @[<v 2>Computational assumptions:";
+          fmt_ppr_ctx (fun ppf _ v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_cmp_ctyp_decl cD P.l0) v) ppf cG;
+          Format.fprintf ppf "@]"
+     in
+     let fmt_ppr_assumptions ppf () =
+       fmt_ppr_lf_ctx ppf cD;
+       fmt_ppr_cmp_ctx ppf cG
+     in
+     Theorem.printf t
+       "@[<v>@,Assumptions%a\
+        @,are automatically introduced for the subgoal of type\
+        @,  @[<v>%a@]\
+        @,@]"
+       fmt_ppr_assumptions ()
+       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
+     let goal = (tau', theta) in
+     let local_context = {cD; cG; cIH = LF.Empty} in
+     let context = Whnf.append_hypotheses g.context local_context in
+     let new_state =
+       { context
+       ; goal
+       ; solution = None
+       ; label = g.label
+       }
+     in
+     ignore (Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) g);
      true
-  | _ -> false
+  | Either.Left _ ->
+     false
 
 (** Solve {v ... -> P -> ... -> P v} case automatically.
     For example,

@@ -11,6 +11,8 @@ end
 type t
 type theorem = t
 
+type 'a subgoal_hook = proof_state -> 'a
+
 (**
    TODO
    hide this from outside of this module

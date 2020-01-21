@@ -14,6 +14,8 @@ module Conf = struct
     ({ Comp.name; order; tau}, implicit_parameters)
 end
 
+type 'a subgoal_hook = Comp.proof_state -> 'a
+
 (** A single theorem. *)
 type t =
   { (* The Store entry for the theorem. *)
@@ -29,7 +31,7 @@ type t =
   ; remaining_subgoals : Comp.proof_state DynArray.t
 
   (* A list of hooks to run on every new subgoal that is added to this theorem. *)
-  ; subgoal_hooks : (Comp.proof_state -> unit) DynArray.t
+  ; subgoal_hooks : unit subgoal_hook DynArray.t
 
   (* So tactics can print messages. *)
   ; ppf : Format.formatter
@@ -118,6 +120,9 @@ let add_subgoal t g =
   DynArray.insert t.remaining_subgoals 0 g;
   run_subgoal_hooks t g
 
+(** Adds a list of subgoals to this theorem.
+    Will run the subgoal hooks.
+ *)
 let add_subgoals t = List.iter (add_subgoal t)
 
 let remove_subgoal t g =

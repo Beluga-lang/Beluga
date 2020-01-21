@@ -11,10 +11,11 @@ module Conf = struct
     { name : Id.name
     ; order : order option
     ; stmt : typ
+    ; implicit_parameters : int
     }
 
-  let make name order stmt =
-    { name; order; stmt }
+  let make name order stmt implicit_parameters =
+    { name; order; stmt; implicit_parameters }
 end
 
 (** A single theorem. *)
@@ -164,11 +165,11 @@ let rename_variable src dst level t g =
   in
   solve_by_replacing_subgoal t g' Misc.id g
 
-let register { name; Conf.stmt; order } mut_names : cid_prog =
+let register { name; Conf.stmt; order; implicit_parameters } mut_names : cid_prog =
   let open Store.Cid.Comp in
   add Syntax.Loc.ghost
     begin fun _ ->
-    mk_entry name stmt 0
+    mk_entry name stmt implicit_parameters
       true (* all Harpoon theorems are total *)
       None (* we don't have an evaluated form *)
       mut_names (* all mutual inductive theorems *)
@@ -185,7 +186,7 @@ let register { name; Conf.stmt; order } mut_names : cid_prog =
     - add the initial state to the subgoal array.
       (This will run the subgoal hooks.)
  *)
-let configure { name; Conf.stmt; order } cid ppf hooks =
+let configure { name; Conf.stmt; order; implicit_parameters } cid ppf hooks =
   let initial_state =
     make_proof_state
       [Id.render_name name]
@@ -211,7 +212,7 @@ let configure { name; Conf.stmt; order } cid ppf hooks =
  *)
 let configure_set ppf (hooks : (t -> proof_state -> unit) list) (confs : Conf.t list) : t list =
   let mut_names = List.map (fun { Conf.name ; _ } -> name) confs in
-  let configure ({ Conf.name; stmt; order } as conf) =
+  let configure ({ Conf.name; stmt; order; _ } as conf) =
     (* add the theorem to the store to get a cid allocated *)
     let cid = register conf mut_names in
     (* configure the theorem *)

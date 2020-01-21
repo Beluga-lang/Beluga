@@ -269,7 +269,7 @@ module Prover = struct
              |> Maybe.map (Interactive.elaborate_numeric_order k)
            in
            printf s "@]";
-           Theorem.Conf.make name order stmt :: do_prompts (i + 1)
+           Theorem.Conf.make name order stmt k :: do_prompts (i + 1)
       in
 
       let confs = do_prompts 1 in

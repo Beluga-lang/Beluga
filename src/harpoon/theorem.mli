@@ -3,7 +3,7 @@ open Syntax.Int.Comp
 
 module Conf : sig
   type t
-  val make : Id.name -> order option -> typ -> t
+  val make : Id.name -> order option -> typ -> int -> t
 end
 
 type t

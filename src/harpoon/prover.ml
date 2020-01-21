@@ -192,7 +192,7 @@ module Prover = struct
       ; stop : [ `stop | `go_on ]
       }
 
-    let recover_theorem ppf hooks mutual_group_id (cid, gs) =
+    let recover_theorem ppf hooks (cid, gs) =
       let e = CompS.get cid in
       let tau, name, prog = CompS.(e.typ, e.name, e.prog) in
       let initial_state =
@@ -213,7 +213,7 @@ module Prover = struct
       let commands = DynArray.create () in
       let theorems =
         Nonempty.(
-          map (recover_theorem ppf hooks mutual_group) thm_confs
+          map (recover_theorem ppf hooks) thm_confs
           |> to_list (* XXX to_list -> of_list is inefficient *)
         )
         |> DynArray.of_list

@@ -493,6 +493,25 @@ module Prover = struct
            P.(fmt_ppr_cmp_typ cD l0) tau
          end
 
+    | Command.Info (k, name) ->
+       begin match k with
+       | `prog ->
+          begin match
+            try
+              Some B.Store.Cid.Comp.(index_of_name name |> get)
+            with
+            | Not_found -> None
+          with
+          | None ->
+             State.printf s
+               "- No such theorem by name %a" Id.print name
+          | Some e ->
+             State.printf s
+               "- @[%a@]"
+               P.fmt_ppr_cmp_comp_prog_info e
+          end
+       end
+
     (* Real tactics: *)
     | Command.Unbox (i, name) ->
        let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in

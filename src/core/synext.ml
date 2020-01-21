@@ -289,6 +289,11 @@ module Harpoon = struct
     | `defer
     ]
 
+  type info_kind =
+    [ `prog
+    ]
+
+
   type command =
     (* Administrative commands *)
 
@@ -298,6 +303,7 @@ module Harpoon = struct
     | ToggleAutomation of automation_kind * automation_change
 
     | Type of Comp.exp_syn
+    | Info of info_kind * Id.name
     | Theorem of [ basic_command | `select of Id.name | `show_ihs | `show_proof ]
     | Session of [ basic_command | `select of Id.name | `create of Id.name ]
     | Subgoal of basic_command

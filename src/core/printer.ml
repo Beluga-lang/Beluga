@@ -1,5 +1,7 @@
 open Format
 
+module CompS = Store.Cid.Comp
+
 module Control = struct
   type substitution_style = Natural | DeBruijn
 
@@ -105,6 +107,8 @@ module Int = struct
     val fmt_ppr_cmp_meta_typ      : LF.mctx -> formatter -> Comp.meta_typ -> unit
     val fmt_ppr_cmp_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
     val fmt_ppr_cmp_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
+
+    val fmt_ppr_cmp_comp_prog_info : formatter -> CompS.entry -> unit
 
     val fmt_ppr_cmp_thm : formatter -> Comp.thm -> unit
     val fmt_ppr_sgn_thm_decl : formatter -> Sgn.thm_decl -> unit

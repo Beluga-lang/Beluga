@@ -2985,8 +2985,19 @@ let interactive_harpoon_command =
   let defer =
     keyword "defer" &> pure (H.Subgoal `defer)
   in
+  let info_kind =
+    choice
+      [ keyword "theorem" &> pure `prog
+      ]
+  in
+  let info =
+    keyword "info"
+    &> seq2 info_kind name
+    $> fun (k, name) -> H.Info (k, name)
+  in
   choice
     [ intros
+    ; info
     ; split
     ; msplit
     ; compute_type

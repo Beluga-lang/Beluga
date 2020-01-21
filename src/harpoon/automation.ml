@@ -157,7 +157,9 @@ let auto_solve_trivial : t =
         @,  @[<hov 2>%a@]\
         @,of type\
         @,  @[<hov 2>%a@]\
-        @,has been automatically solved.@]"
+        @,has been automatically solved.\
+        @,\
+        @,@]"
        ( Format.pp_print_list
            ~pp_sep: (fun ppf () -> Format.fprintf ppf " <-@ ")
            (fun ppf l -> Format.fprintf ppf "%s" l)

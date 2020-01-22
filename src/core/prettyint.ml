@@ -691,7 +691,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (Id.render_name x)
 
-  and fmt_ppr_lf_dctx cD _lvl ppf = function
+  and fmt_ppr_lf_dctx' cD ppf = function
     | LF.Null ->
        fprintf ppf ""
 
@@ -699,7 +699,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fmt_ppr_lf_ctx_var cD ppf ctx_var
 
     | LF.DDec (LF.Null, LF.TypDecl (x, tA)) ->
-       fprintf ppf "%s : %a"
+       fprintf ppf "@[<hv 2>%s :@ @[%a@]@]"
          (Id.render_name x)
          (fmt_ppr_lf_typ cD LF.Null 0) tA
 
@@ -708,15 +708,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name x)
 
     | LF.DDec (cPsi, LF.TypDecl (x, tA)) ->
-       fprintf ppf "%a, %s : %a"
-         (fmt_ppr_lf_dctx cD 0) cPsi
+       fprintf ppf "@[%a@],@ @[<hv 2>%s :@ @[%a@]@]"
+         (fmt_ppr_lf_dctx' cD) cPsi
          (Id.render_name x)
          (fmt_ppr_lf_typ cD cPsi 0) tA
 
     | LF.DDec (cPsi, LF.TypDeclOpt x) ->
-       fprintf ppf "%a, %s : _"
-         (fmt_ppr_lf_dctx cD 0) cPsi
+       fprintf ppf "%a,@ %s : _"
+         (fmt_ppr_lf_dctx' cD) cPsi
          (Id.render_name x)
+
+  and fmt_ppr_lf_dctx cD lvl ppf cPsi =
+    fprintf ppf "@[<hv>%a@]" (fmt_ppr_lf_dctx' cD) cPsi
 
   and fmt_ppr_lf_mctx ?(all = false) ?(sep = Fmt.comma) lvl ppf cD =
     let should_print =

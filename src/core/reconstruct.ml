@@ -23,7 +23,7 @@ module I = Syntax.Int.Comp
 
 let strengthen : bool ref =  Lfrecon.strengthen
 
-let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
+let dprintf, dprint, dprnt = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
 type error =
@@ -478,12 +478,15 @@ let metaObjToFt (loc, m) = m
 
 
 let mmVarToCMetaObj loc' mV = function
-  | Int.LF.MTyp tA   -> (dprint (fun () -> "genMetaVar' [mmVarToCMetaObj]: MObj - MMV \n") ;
-                         Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil)))
-  | Int.LF.PTyp tA   -> (dprint (fun () ->  "genMetaVar' [mmVarToCMetaObj]: PObj - PVar\n");
-                         Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id)))
-  | Int.LF.STyp (_, cPhi) -> (dprint (fun () ->  "genMetaVar' [mmVarToCMetaObj]: PObj - PVar\n");
-                             Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id))))
+  | Int.LF.MTyp tA ->
+     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: MObj - MMV");
+     Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil))
+  | Int.LF.PTyp tA ->
+     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: PObj - MPVar");
+     Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id))
+  | Int.LF.STyp (_, cPhi) ->
+     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: SObj - MSVar");
+     Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id)))
 
 let mmVarToMetaObj loc' mV = function
   | Int.LF.ClTyp (mt, cPsi) ->
@@ -495,26 +498,35 @@ let genMetaVar' loc' cD (loc, n , ctyp, t) =
   let ctyp' = C.cnormMTyp (ctyp, t) in
   dprintf
     begin fun p ->
-    p.fmt "[genMetaVar'] Type : %a"
+    p.fmt "[genMetaVar'] @[<v>generating at type:@,@[%a@]@]"
       (P.fmt_ppr_cmp_meta_typ cD) ctyp
     end;
   let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp') Int.LF.Maybe) ctyp' in
   ((loc',mO), Int.LF.MDot(mO,t))
 
-let rec genMApp loc cD (i, tau_t) = genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
+(** Generates application of implicit arguments (meta-application).
+    The applications are stacked onto `i` and the new `i` is returned
+    together with its type (plus a delayed msub).
+    The count of implicit arguments is also returned.
+ *)
+let rec genMApp loc cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
+  genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
   | (Int.Comp.TypPiBox (_, Int.LF.Decl(n, ctyp, Int.LF.Maybe), tau), theta) ->
+     dprnt "[genMApp] --> genMetaVar'";
     let (cM,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
     genMApp loc cD (Int.Comp.MApp (loc, i, cM), (tau, t'))
+    |> Pair.lmap ((+) 1)
+
   | _ ->
      dprintf
        begin fun p ->
-       p.fmt "[genMApp] done: %a |- %a"
+       p.fmt "[genMApp] @[<v>done:@,@[<hv>@[%a@] |-@ @[%a@]@]@]"
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_t)
        end;
-     (i, tau_t)
+     (0, (i, tau_t))
 
 
 (* elCompKind  cPsi k = K *)
@@ -572,11 +584,6 @@ let elClObj cD loc cPsi' clobj mtyp =
      Int.LF.MObj m
 
   | _, _ ->
-     let x = match mtyp with
-       | Int.LF.PTyp _  -> true
-       | _ -> false
-     in
-     dprintf (fun p -> p.fmt "[elClObj] failure. Is ptyp? %b" x);
      throw loc (MetaObjectClash (cD, Int.LF.ClTyp (mtyp, cPsi')))
 
 let rec elMetaObj' cD loc cM cTt = match cM , cTt with
@@ -949,7 +956,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i1, Whnf.m_id))
         P.fmt_ppr_cmp_typ_typing (cD, Whnf.cnormCTyp tau1)
       end;
-    let (i', tau_t') = genMApp loc cD (i1, tau1) in
+    let (_, (i', tau_t')) = genMApp loc cD (i1, tau1) in
     dprintf
       begin fun p ->
       p.fmt "[elExp] @[<v>Unify computation-level types:@,  @[@[%a@]@ ==@ @[%a@]@]@]"
@@ -1013,7 +1020,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | Apx.Comp.Impossible (loc, i), (tau, theta) ->
      let i', ttau' = elExp' cD cG i in
-     let i', _ = genMApp loc cD (i', ttau') in
+     let _, (i', _) = genMApp loc cD (i', ttau') in
      (* Not sure if we need to work any harder at this point, since we
         don't have any branches to elaborate. *)
      Int.Comp.Impossible (loc, i')
@@ -1030,7 +1037,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
        end;
-     let (i, tau_theta') = genMApp loc cD (i', tau_theta') in
+     let _, (i, tau_theta') = genMApp loc cD (i', tau_theta') in
      let tau_s = Whnf.cnormCTyp tau_theta' in
      let ct = fun pat -> case_type pat i in
      begin
@@ -1209,11 +1216,16 @@ and elExp' cD cG i =
        (fun p ->
          p.fmt "[elExp'] Apply at @[%a@]" Loc.print_short loc);
      let i' = elExp' cD cG i in
-     let (i', tau_theta') = genMApp loc cD i' in
+     dprintf begin fun p ->
+       p.fmt "[elExp'] @[<v>genMApp for@,@[<hv 2>i' =@ @[%a@]@]@]"
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) (fst i')
+       end;
+     let k, (i', tau_theta') = genMApp loc cD i' in
      dprintf
        begin fun p ->
-       p.fmt "[elExp'] @[<v>Apply - generated implicit arguments:@,\
+       p.fmt "[elExp'] @[<v>Apply - generated %d implicit arguments:@,\
               i' = @[%a@]@]"
+         k
          P.(fmt_ppr_cmp_exp_syn cD cG l0) i'
        end;
      begin match e , tau_theta' with
@@ -1255,6 +1267,11 @@ and elExp' cD cG i =
         (i'', (tau', Whnf.m_id))
 
      | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (_, Int.LF.Decl(_,ctyp,_), tau), theta) ->
+        dprintf begin fun p ->
+          p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
+                 @,@[%a@]@]"
+            P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
+          end;
         let cM = elMetaObj cD mC (ctyp, theta) in
         (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
      | _ ->
@@ -1372,8 +1389,8 @@ and elExp' cD cG i =
      end
 
   | Apx.Comp.PairVal (loc, i1, i2) ->
-     let (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in
-     let (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in
+     let _, (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in
+     let _, (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in
      ( Int.Comp.PairVal (loc, i1', i2')
      , ( Int.Comp.TypCross (loc, Whnf.cnormCTyp (tau1,t1), Whnf.cnormCTyp (tau2,t2)),
          C.m_id

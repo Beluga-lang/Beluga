@@ -6,6 +6,7 @@ open Id
 module CompS = Store.Cid.Comp
 
 module P = Pretty.Int.DefaultPrinter
+module F = Misc.Function
 
 module Conf = struct
   type t = Comp.total_dec * int
@@ -232,8 +233,15 @@ let configure cid ppf hooks initial_state gs =
 (** Converts Theorem.Conf.t to Theorem.t by adding all the theorems
     to the store.
  *)
-let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list) : CompS.mutual_group_id * t list =
-  let mutual_group = Store.Cid.Comp.add_mutual_group (Some (List.map fst confs)) in
+let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list)
+    : CompS.mutual_group_id * t list =
+  let strip_conf conf =
+    { conf with Comp.tau = Total.strip Comp.(conf.tau) }
+  in
+  let mutual_group =
+    CompS.add_mutual_group
+      (Some (List.map F.(strip_conf ++ fst) confs))
+  in
   let configure ({ Comp.name; tau; _ }, k) =
     let g =
       Comp.make_proof_state [ Id.render_name name ]

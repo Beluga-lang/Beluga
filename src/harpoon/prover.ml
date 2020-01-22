@@ -307,8 +307,8 @@ module Prover = struct
       | None -> prompt_forever_with s msg use_history p
       | Some x -> x
 
-    (** Runs the theorem configuration prompt to populate the given
-        session.
+    (** Runs the theorem configuration prompt to construct a mutual
+        group of theorems.
      *)
     let session_configuration_wizard' s : CompS.mutual_group_id * Theorem.t list =
       let rec do_prompts i : Theorem.Conf.t list =

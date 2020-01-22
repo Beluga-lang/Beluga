@@ -1,3 +1,5 @@
+type ('a, 'b) t = 'a * 'b
+
 let rmap (f : 'a -> 'b) (p : 'x * 'a) : 'x * 'b =
   let (x, a) = p in (x, f a)
 
@@ -13,3 +15,7 @@ let right (x : 'a) (y : 'b) : 'b * 'a = (y, x)
 
 let swap (p : 'a * 'b) : 'b * 'a =
   let (x, y) = p in (y, x)
+
+let curry f x y = f (x, y)
+
+let uncurry f (x, y) = f x y

@@ -1,3 +1,5 @@
+type ('a, 'b) t = 'a * 'b
+
 (** Transforms the right component of a pair. *)
 val rmap : ('a -> 'b) -> 'x * 'a -> 'x * 'b
 
@@ -15,3 +17,7 @@ val right : 'a -> 'b -> 'b * 'a
 
 (** Swaps a pair. *)
 val swap : 'a * 'b -> 'b * 'a
+
+val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+
+val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c

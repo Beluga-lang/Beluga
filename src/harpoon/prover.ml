@@ -692,9 +692,10 @@ type 'a error = (Format.formatter -> unit -> unit, 'a) Either.t
 (** Parses the given string to a Syntax.Ext.Harpoon.command or an
     error-printing function.
  *)
-let parse_input (input : string) : Command.command Nonempty.t error =
+let parse_input (input : string) : Command.command list error =
   let open B in
-  Runparser.parse_string "<prompt>" input Parser.(only interactive_harpoon_command_sequence)
+  Runparser.parse_string "<prompt>" input
+    Parser.(only interactive_harpoon_command_sequence)
   |> snd |> Parser.to_either
   |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
 
@@ -744,7 +745,6 @@ let process_input s (c, t, g) input =
   let e =
     let open Either in
     parse_input input
-    $> Nonempty.to_list
     $ fun cmds ->
       (* Idea:
          - count the commands to run

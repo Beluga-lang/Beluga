@@ -3019,4 +3019,4 @@ let interactive_harpoon_command =
     ]
 
 let interactive_harpoon_command_sequence =
-  sep_by1 interactive_harpoon_command (token T.SEMICOLON)
+  sep_by0 interactive_harpoon_command (token T.SEMICOLON)

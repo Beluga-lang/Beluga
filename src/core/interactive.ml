@@ -19,11 +19,45 @@ open Debug.Fmt
 (* helper functions *)
 (*********************)
 
-(** Elaborates a numeric induction order by shifting the numbers by
-    the number of implicit parameters `k`.
+(** Elaborates the given numeric induction order by skipping implicit
+    parameters in the given type.
  *)
-let elaborate_numeric_order (k : int) (order : ExtComp.numeric_order) : Comp.order =
-  ExtComp.map_order (fun n -> n + k) order |> Order.of_numeric_order
+let elaborate_numeric_order (tau : Comp.typ) (order : ExtComp.numeric_order) :
+      Comp.order =
+  (** skip tau n uses n units of fuel to travel through the type tau.
+      A fuel unit is spent to cross an explicit function type, but
+      crossing an implicit pi-type costs nothing.
+      The returned integer is the argument number we end up at,
+      counting implicits too.
+   *)
+  let rec skip tau n =
+    match tau, n with
+    | _, 0 -> 0
+    | Comp.TypPiBox (_, LF.Decl (u, cU, dep), tau), n ->
+       begin match dep with
+       | LF.Inductive ->
+          Error.violation "[elaborate_numeric_order] impossible LF.Inductive"
+       | LF.Maybe ->
+          1 + skip tau n (* implicits are free *)
+       | LF.No ->
+          1 + skip tau (n - 1) (* explicits pi-types cost 1 *)
+       end
+    | Comp.TypArr (_, _, tau), n ->
+       1 + skip tau (n - 1) (* simple functions cost 1 *)
+  in
+  ExtComp.map_order
+    (fun k ->
+      let k' = skip tau k in
+      dprintf begin fun p ->
+        p.fmt "[elaborate_numeric_order] @[<v>@[<hv 2>skip@ @[%a@]@ %d@]\
+               @,= %d@]"
+          P.(fmt_ppr_cmp_typ LF.Empty l0) tau
+          k
+          k'
+        end;
+      k')
+    order
+  |> Order.of_numeric_order
 
 (** Elaborates an external syntax type into internal syntax, with abstraction.
     The returned integer is the number of implicit parameters.

@@ -1,12 +1,15 @@
 (* open Support *)
 open Support
 open Beluga
+module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id
 module CompS = Store.Cid.Comp
 
 module P = Pretty.Int.DefaultPrinter
-module F = Misc.Function
+
+let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
+open Debug.Fmt
 
 module Conf = struct
   type t = Comp.total_dec * int
@@ -235,21 +238,49 @@ let configure cid ppf hooks initial_state gs =
  *)
 let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list)
     : CompS.mutual_group_id * t list =
-  let strip_conf conf =
-    { conf with Comp.tau = Total.strip Comp.(conf.tau) }
-  in
   let mutual_group =
     CompS.add_mutual_group
-      (Some (List.map F.(strip_conf ++ fst) confs))
+      (Some (List.map fst confs))
   in
-  let configure ({ Comp.name; tau; _ }, k) =
+  let configure ({ Comp.name; tau; order }, k) =
+    let tau' =
+      Comp.option_of_total_dec_kind order
+      |> Maybe.map
+           begin fun order ->
+           Order.list_of_order order
+           |> Maybe.get'
+                (Error.Violation
+                   "lexicographic order not supported; should \
+                    have checked sooner")
+           |> Total.annotate tau
+           |> Maybe.get'
+                (Error.Violation
+                   "annotation failed; too many arguments? \
+                    Check sooner.")
+           end
+      |> Maybe.get_default tau
+    in
+    dprintf begin fun p ->
+      p.fmt "[configure_set] @[<v>got (possibly) annotated type\
+             @,@[%a@]\
+             @,from total dec\
+             @,@[%a@]\
+             @]"
+        P.(fmt_ppr_cmp_typ LF.Empty l0) tau'
+        P.fmt_ppr_cmp_total_dec_kind order
+      end;
     let g =
+      (* construct the initial state with the annotated type *)
       Comp.make_proof_state [ Id.render_name name ]
-        ( tau, Whnf.m_id )
+        ( tau', Whnf.m_id )
     in
     let p = Comp.incomplete_proof g in
-    (* add the theorem to the store to get a cid allocated *)
-    let cid = register name (Total.strip tau) p mutual_group k in
+    (* add the theorem to the store to get a cid allocated
+       Make sure to register with the original, un-annotated type.
+       Annotating and then stripping here doesn't work, as stripping
+       isn't actually the inverse of annotation.
+     *)
+    let cid = register name tau p mutual_group k in
     (* configure the theorem *)
     configure cid ppf hooks g [g]
   in

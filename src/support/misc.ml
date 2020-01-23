@@ -104,6 +104,13 @@ module List = struct
   let uncons : 'a list -> ('a * 'a list) option = function
     | [] -> None
     | x :: xs -> Some (x, xs)
+
+  (** The "bind" monadic operation for lists.
+      More efficient that separately mapping and concatenating.
+   *)
+  let rec concat_map (f : 'a -> 'b list) : 'a list -> 'b list = function
+    | [] -> []
+    | x :: xs -> f x @ concat_map f xs
 end
 
 let id (x : 'a) : 'a = x

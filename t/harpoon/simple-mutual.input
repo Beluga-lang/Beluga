@@ -6,10 +6,11 @@ size'
 [|- children] -> [|- nat]
 1
 
+toggle-automation auto-solve-trivial off
 split x1
 solve [|- z]
-solve size' [|- X]
+by size' [|- X] as done; solve done
 split z1
 solve [|- z]
-solve add (size [|- X]) (size' [|- X1])
-
+by size [|- X] as N1 unboxed; by size' [|- X1] as N2 unboxed
+solve add (size [|- X]) [|- N2]

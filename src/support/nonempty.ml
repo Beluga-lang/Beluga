@@ -41,6 +41,14 @@ let of_list (l : 'a list) : 'a t option =
   | [] -> None
   | x :: xs -> Some (x, xs)
 
+exception Empty
+
+(** Converts the list to a nonempty list.
+    Raises the exception Empty if the list was empty.
+ *)
+let unsafe_of_list (l : 'a list) : 'a t =
+  Maybe.get' Empty (of_list l)
+
 let to_list ((x, l) : 'a t) : 'a list =
   x :: l
 
@@ -63,6 +71,35 @@ let rec all_equal (x, l : 'a t) : 'a option =
   | [] -> Some x
   | x' :: xs when x = x' -> all_equal (x, xs)
   | _ -> None
+
+let minimum_by (<) (x, l) =
+  List.fold_left (fun min x -> if x < min then x else min) x l
+
+let minimum l = minimum_by (<) l
+
+let maximum l = minimum_by (>) l
+
+let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
+  let h = Hashtbl.create 32 in
+  let () =
+    let insert k x =
+      let d =
+        match Hashtbl.find_opt h k with
+        | None -> DynArray.make 32
+        | Some d -> d
+      in
+      DynArray.add d x;
+      Hashtbl.replace h k d
+    in
+    Misc.List.for_each_ l (fun x -> insert (p x) x)
+  in
+  (* The use of unsafe_of_list here is justified because every
+     dynarray we create has one element added immediately to it, and is
+     hence nonempty
+   *)
+  Hashtbl.to_seq h
+  |> Seq.map (Pair.rmap Misc.Function.(unsafe_of_list ++ DynArray.to_list))
+  |> Misc.Seq.to_list
 
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =

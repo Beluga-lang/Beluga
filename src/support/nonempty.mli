@@ -46,6 +46,29 @@ val for_all : ('a -> bool) -> 'a t -> bool
     elements are (structurally) equal. *)
 val all_equal : 'a t -> 'a option
 
+(** Finds the leftmost minimal element of the sequence according to
+    the given decision procedure for the strict less-than relation on
+    'a.
+ *)
+val minimum_by : ('a -> 'a -> bool) -> 'a t -> 'a
+
+(** Finds the leftmost minimal element of the sequence according to
+    the default ordering for the type 'a.
+ *)
+val minimum : 'a t -> 'a
+
+(** Finds the leftmost maximal element of the sequence according to
+    the default ordering for the type 'a. *)
+val maximum : 'a t -> 'a
+
+(** Groups elements of a list according to a key computed from the
+    element. The input list need not be sorted.
+    (The algorithm inserts every element of the list into a hashtable
+    in order to construct the grouping.)
+    Each group is guaranteed to be nonempty.
+ *)
+val group_by : ('a -> 'key) -> 'a list -> ('key * 'a t) list
+
 val print : ?pp_sep:(Format.formatter -> unit -> unit) ->
             (Format.formatter -> 'a -> unit) ->
             Format.formatter ->

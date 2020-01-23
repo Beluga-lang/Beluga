@@ -44,7 +44,6 @@ module OpPragmas = struct
     end
 
   let pragmaExists name = List.exists (fun x -> x.name = name) !pragmas
-
 end
 
 module Modules = struct
@@ -1003,6 +1002,11 @@ module Cid = struct
 
     (*  directory : (Id.name, Id.cid_prog) Hashtbl.t *)
     let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
+
+    let filter p =
+      DynArray.to_list store
+      |> Misc.List.concat_map (DynArray.to_list)
+      |> List.filter p
 
     let get ?(fixName=false) (l, n) =
       let l' = Modules.name_of_id l in

@@ -645,7 +645,9 @@ module Prover = struct
        dprnt "[harpoon] [solve] elaboration finished";
        (* State.printf s "Found %d hole(s) in solution@." (List.length hs); *)
        List.iter solve_hole hs;
-       Check.Comp.check cD cG (Lazy.force mfs) e g.goal;
+       dprnt "[harpoon] [solve] double-check!";
+       Check.Comp.check cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
+       dprnt "[harpoon] [solve] double-check DONE";
        (Comp.solve e |> Tactic.solve) t g
 
   let record_command c cmd = DynArray.add c.Session.commands cmd

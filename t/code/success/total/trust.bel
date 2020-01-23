@@ -1,0 +1,5 @@
+LF u : type = i : u;
+
+rec fix : ([⊢ u] → [⊢ u]) → [⊢ u] =
+/ trust /
+fn f ⇒ f (fix f);

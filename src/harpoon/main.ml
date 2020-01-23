@@ -51,7 +51,12 @@ let realMain () =
   let options = parse_arguments args |> validate |> elaborate in
 
   let ppf = Format.std_formatter in
-  let stubs = B.Store.Cid.Comp.get_open_subgoals () in
+  let stubs =
+    if options.load_holes then
+      B.Store.Cid.Comp.get_open_subgoals ()
+    else
+      []
+  in
   Prover.start_toplevel
     options.test_stop
     stubs

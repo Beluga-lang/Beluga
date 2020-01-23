@@ -334,12 +334,12 @@ module Prover = struct
                P.(fmt_ppr_cmp_typ LF.Empty l0) tau
                k
              end;
-           let order_and_stmt =
+           let order =
              let p =
                Misc.Function.flip B.Parser.map
                  B.Parser.(numeric_total_order |> span)
                  begin fun (loc, o) ->
-                   let order = Interactive.elaborate_numeric_order k o in
+                   let order = Interactive.elaborate_numeric_order tau o in
                    dprintf begin fun p ->
                      p.fmt "[session_configuration] @[<v>elaborated numeric order\
                             @,  @[%a@]\
@@ -347,36 +347,24 @@ module Prover = struct
                        P.(fmt_ppr_cmp_numeric_order) order
                        k
                      end;
-                   B.Order.list_of_order order
-                   |> Maybe.get'
-                        (Total.Error
-                           ( loc
-                           , Total.NotImplemented "lexicographic order not fully supported"))
-                   |> Total.annotate tau
-                   |> Maybe.get'
-                        (Total.Error (loc, Total.TooManyArg name))
-                   |> fun tau -> (order, tau)
+                   order
+                     (* TODO we should check that the order is legit
+                        here so that we can right away prompt the user
+                        for a correct one; currently this check only
+                        happens very late when the theorem set is
+                        configured. *)
                  end
              in
              prompt_with s "  Induction order (empty for none): " None
                p
            in
            printf s "@]";
-           let conf =
-             match order_and_stmt with
-             | Some (order, tau) ->
-                dprintf begin fun p ->
-                  p.fmt "[session_configuration] @[<v>got inductive order:\
-                         @,  @[%a@]\
-                         @,and annotated type:\
-                         @,  @[%a@]@]"
-                    P.fmt_ppr_cmp_numeric_order order
-                    P.(fmt_ppr_cmp_typ LF.Empty l0) tau
-                  end;
-                Theorem.Conf.make name (`inductive order) tau k
-             | None ->
-                Theorem.Conf.make name `not_recursive tau k
+           let total_dec_kind =
+             match order with
+             | Some order -> `inductive order
+             | None -> `not_recursive
            in
+           let conf = Theorem.Conf.make name total_dec_kind tau k in
            conf :: do_prompts (i + 1)
       in
 

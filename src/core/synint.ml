@@ -463,10 +463,26 @@ module Comp = struct
     | Lex of order list   (*     | {O1 .. On}           *)
     | Simul of order list (*     | [O1 .. On]           *)
 
+  type 'order total_dec_kind =
+    [ `inductive of 'order
+    | `not_recursive
+    | `trust (* trusted *)
+    | `partial (* not total *)
+    ]
+
+  let map_total_dec_kind (f : 'o1 -> 'o2) : 'o1 total_dec_kind -> 'o2 total_dec_kind =
+    function
+    | `inductive o -> `inductive (f o)
+    | x -> x
+
+  let option_of_total_dec_kind = function
+    | `inductive o -> Some o
+    | _ -> None
+
   type total_dec =
     { name : Id.name
     ; tau  : typ
-    ; order: order option (* None for trusted; Some for checked *)
+    ; order: order total_dec_kind
     }
 
   let make_total_dec name tau order =

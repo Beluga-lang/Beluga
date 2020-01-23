@@ -96,10 +96,12 @@ module Int = struct
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
 
+    val fmt_ppr_cmp_numeric_order : formatter -> Comp.order -> unit
+    val fmt_ppr_cmp_total_dec_kind : formatter -> Comp.order Comp.total_dec_kind -> unit
+    val fmt_ppr_cmp_total_dec : formatter -> Comp.total_dec -> unit
     val fmt_ppr_cmp_gctx_typing : formatter -> LF.mctx * Comp.gctx -> unit
     val fmt_ppr_cmp_typ_typing : formatter -> LF.mctx * Comp.typ -> unit
 
-    val fmt_ppr_cmp_order : formatter -> Comp.order -> unit
     val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit

@@ -747,23 +747,29 @@ let recSgnDecls decls =
          | Some k -> k + 1 (* index_of is 0-based, but we're 1-based *)
        in
 
-       let mk_total_decl f tau (Ext.Comp.Total (loc, order, f', args)) =
-         (* Validate the inputs: can't have too many args or the wrong name *)
-         if not (Total.is_valid_args tau (List.length args)) then
-           raise (Error (loc, TotalArgsError f));
+       let mk_total_decl f tau = function
+         | None -> `partial (* no declaration -> partial function *)
+         | Some (Ext.Comp.Trust _) -> `trust
+         | Some (Ext.Comp.Total (loc, order, f', args)) ->
+            match order with
+            | None -> `not_recursive
+            | Some order ->
+               (* Validate the inputs: can't have too many args or the wrong name *)
+               if not (Total.is_valid_args tau (List.length args)) then
+                 raise (Error (loc, TotalArgsError f));
 
-	       if f <> f' then
-           raise (Error (loc, TotalDeclError (f, f')));
+	             if f <> f' then
+                 raise (Error (loc, TotalDeclError (f, f')));
 
-         let open Maybe in
-         order
-         $> fun order ->
-            (* convert to a numeric order by looking up the
-               positions of the specified arguments;
-               then convert to a proper Order.order.
-             *)
-            Ext.Comp.map_order (fun x -> pos loc x args) order
-            |> Order.of_numeric_order
+               (* convert to a numeric order by looking up the
+                  positions of the specified arguments;
+                  then convert to a proper Order.order.
+                *)
+               let order =
+                 Ext.Comp.map_order (fun x -> pos loc x args) order
+                 |> Order.of_numeric_order
+               in
+               `inductive order
        in
 
        (* Collect all totality declarations. *)
@@ -847,7 +853,7 @@ let recSgnDecls decls =
          Maybe.map
            (List.map2
               (fun (thm_name, _, _, tau) decl ->
-                mk_total_decl thm_name tau decl
+                mk_total_decl thm_name tau (Some decl)
                 |> Int.Comp.make_total_dec thm_name tau)
               thm_list)
          total_decs
@@ -921,7 +927,7 @@ let recSgnDecls decls =
              $ fun ds ->
                Total.lookup_dec f ds
                $ fun d ->
-                 Int.Comp.(d.order)
+                 Int.Comp.(option_of_total_dec_kind d.order)
                  $> fun order ->
                     Order.list_of_order order
                     |> Maybe.get'

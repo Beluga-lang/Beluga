@@ -858,13 +858,20 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        let e = Comp.get prog in
-       let total = Comp.(lookup_mutual_group e.mutual_group) |> Maybe.is_some in
        let tau = Comp.(e.typ) in
-       begin match total_decs with
-       | _ :: _ when not total -> throw loc (MissingTotal prog)
-       | _ :: _ when Total.lookup_dec e.Comp.name total_decs |> Maybe.is_some ->
-          Some cIH, tau, C.m_id
-       | _ -> None, tau, C.m_id
+       (* First we need to decide whether we are calling a function in
+          the current mutual block. *)
+       begin match Total.lookup_dec e.Comp.name total_decs with
+       | None -> (* No, we aren't. *)
+          (None, tau, C.m_id)
+       | Some d -> (* Yes we are, and d is its total dec *)
+          (* Second, need to check whether the function we're calling
+             actually requires totality checking. *)
+          match option_of_total_dec_kind d.order with
+          | None -> (* No, it doesn't. *)
+             (None, tau, C.m_id)
+          | Some _ -> (* yes, it actually requires totality checking *)
+             Some cIH, tau, C.m_id
        end
 
     | Apply (loc , e1, e2) ->

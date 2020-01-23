@@ -55,15 +55,20 @@ let serialize ppf (t : t) =
   let fmt_ppr_order =
     Maybe.print
       begin fun ppf ->
-      Format.fprintf ppf "/ @[<hov 2>total@ @[%a@]@] /"
-        P.fmt_ppr_cmp_order
+      function
+      | `inductive order ->
+         Format.fprintf ppf "/ @[<hov 2>total@ @[%a@]@] /"
+           P.fmt_ppr_cmp_numeric_order order
+      | `not_recursive -> Format.fprintf ppf "/ total /"
+      | `partial -> ()
+      | `trust -> Format.fprintf ppf "/ trust /"
       end
   in
   let name = CompS.name t.cid in
   let order =
     let open Maybe in
     Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])
-    $ fun o -> o.Comp.order
+    $> fun o -> o.Comp.order
   in
   Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,;@,@]"
     Id.print name

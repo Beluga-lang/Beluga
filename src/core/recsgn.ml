@@ -936,22 +936,6 @@ let recSgnDecls decls =
             let (e_r' , tau') =
               reconThm loc thm_name thm_body
             in
-            (* begin match total with
-               | None -> ()
-		           | Some (Ext.Comp.Trust _) ->
-		           Printf.printf "\n## Totality checking: %s is trusted. ##\n"
-			         (Id.render_name f)
-		           | Some t ->
-	             let x = get_rec_arg t in
-		           (match x with
-		           | Some x ->
-		           Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-			         (Id.render_name f) (Id.string_of_name x)
-		           | None ->
-		           Printf.printf "\n## Totality checking: %s terminates. ##\n"
-			         (Id.render_name f) )
-
-               end ;*)
             dprintf
               begin fun p ->
               p.fmt "[reconRecFun] DOUBLE CHECK of function %a successful!"
@@ -959,16 +943,18 @@ let recSgnDecls decls =
               end;
             let (loc_opt, cid) =
               Comp.add loc
-		            (fun cid ->
-                  dprintf
-                    (fun p ->
-                      p.fmt "[reconRecFun] adding definition for %a at %a"
-                        Id.print thm_name Loc.print_short loc);
-                  Comp.mk_entry thm_name tau' 0 (is_total thm_order)
-                    (Some (Int.Comp.ThmValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty)))
-                    n_list)
+                begin fun cid ->
+                dprintf
+                  begin fun p ->
+                  p.fmt "[reconRecFun] adding definition for %a at %a"
+                    Id.print thm_name Loc.print_short loc
+                  end;
+                Comp.mk_entry thm_name tau' 0 (is_total thm_order)
+                  (Some (Int.Comp.ThmValue (cid, e_r', Int.LF.MShift 0, Int.Comp.Empty)))
+                  n_list
+                end
             in
-	          begin match loc_opt with
+            begin match loc_opt with
             | Some loc -> Holes.destroy_holes_within loc
             | None -> ()
             end;
@@ -980,49 +966,34 @@ let recSgnDecls decls =
               ; thm_typ = tau'
               }
             in
-		        d :: reconRecFun lf
+            d :: reconRecFun lf
        in
-	     (* For checking totality of mutual recursive functions,
-	        we should check all functions together by creating a variable
-	        which collects all total declarations *)
+       (* For checking totality of mutual recursive functions,
+          we should check all functions together by creating a variable
+          which collects all total declarations *)
        begin match recFuns with
        | Ext.Sgn.({ thm_loc; thm_name; thm_order; thm_body; _ }) :: lf ->
-		      let (thm', tau') =
+          let (thm', tau') =
             reconThm loc thm_name thm_body
           in
-		      (* begin match total with
-		         | None -> ()
-		         | Some (Ext.Comp.Trust _ ) ->
-			       Printf.printf "\n## Totality checking: %s is trusted. ##\n"
-			       (Id.render_name f)
-		         | Some t -> let x = get_rec_arg t in
-			       Total.clear () ;
-			       (match x with
-			       | Some x ->
-			       Printf.printf "\n## Totality checking: %s terminates in position %s ##\n"
-				     (Id.render_name f) (Id.string_of_name x)
-			       | None ->
-			       Printf.printf "\n## Totality checking: %s terminates ##\n"
-				     (Id.render_name f))
-		         end ;*)
-		      dprintf
+          dprintf
             begin fun p ->
             p.fmt "[recFuns] DOUBLE CHECK of function %a successful!"
               Id.print thm_name
             end;
-		      let (loc_opt, cid) =
+          let (loc_opt, cid) =
             Comp.add loc
-		          begin fun cid ->
+              begin fun cid ->
               Comp.mk_entry thm_name tau' 0 (is_total thm_order)
-			          (Some (Int.Comp.ThmValue (cid, thm', Int.LF.MShift 0, Int.Comp.Empty)))
-			          n_list
+                (Some (Int.Comp.ThmValue (cid, thm', Int.LF.MShift 0, Int.Comp.Empty)))
+                n_list
               end
           in
-		      begin match loc_opt with
-		        | Some loc -> Holes.destroy_holes_within loc
-		        | None -> ()
+          begin match loc_opt with
+            | Some loc -> Holes.destroy_holes_within loc
+            | None -> ()
           end;
-		      let sgn =
+          let sgn =
             let open Int.Sgn in
             let d =
               { thm_name = cid
@@ -1034,8 +1005,8 @@ let recSgnDecls decls =
             let ds = reconRecFun lf in
             Int.Sgn.Theorem (d::ds)
           in
-		      Store.Modules.addSgnToCurrent sgn;
-		      sgn
+          Store.Modules.addSgnToCurrent sgn;
+          sgn
 
        | _ -> raise (Error.Violation "No recursive function defined")
        end

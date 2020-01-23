@@ -194,17 +194,25 @@ module Prover = struct
 
     let recover_theorem ppf hooks (cid, gs) =
       let e = CompS.get cid in
-      let tau, name, prog = CompS.(e.typ, e.name, e.prog) in
       let initial_state =
-        Comp.make_proof_state [ Id.render_name name ]
-          (tau, Whnf.m_id)
+        let s =
+          Comp.make_proof_state [Id.render_name e.CompS.name]
+            ( e.CompS.typ, Whnf.m_id )
+        in
+        let p =
+          match e.CompS.prog with
+          | Some (Comp.ThmValue (_, Comp.Proof p, _, _)) -> p
+          | _ -> B.Error.violation "recovered theorem not a proof"
+        in
+        s.Comp.solution <- Some p;
+        s
       in
-      begin match prog with
-      | Some Comp.(ThmValue (_, Proof p, _, _)) ->
-         initial_state.Comp.solution <- Some p
-      | _ -> B.Error.violation "prog not a proof"
-      end;
-      Theorem.configure cid ppf hooks initial_state (Nonempty.to_list gs)
+      Theorem.configure
+        cid
+        ppf
+        hooks
+        initial_state
+        (Nonempty.to_list gs)
 
     let recover_session ppf hooks (mutual_group, thm_confs) =
       let name =

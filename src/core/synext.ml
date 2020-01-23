@@ -218,11 +218,12 @@ module Comp = struct
    | Lex xs -> Lex (List.map (map_order f) xs)
    | Simul xs -> Simul (List.map (map_order f) xs)
 
- type order = name order'
+ type named_order = name order'
  type numeric_order = int order'
 
  type total_dec =
-   | Total of Loc.t * order option * name * name option list
+   | NumericTotal of Loc.t * numeric_order option
+   | NamedTotal of Loc.t * named_order option * name * name option list
 	 | Trust of Loc.t
 
  type ctyp_decl =

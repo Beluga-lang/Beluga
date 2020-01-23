@@ -2349,7 +2349,7 @@ let total_order (arg : 'a Comp.order' t) : 'a Comp.order' t  =
   |> labelled "totality ordering"
 
 (** Parses a totality declaration whose arguments are parsed by `arg` *)
-let total_decl (arg : Comp.order t) : Comp.total_dec t =
+let total_decl : Comp.total_dec t =
   let trust =
     token T.KW_TRUST
     |> span
@@ -2358,12 +2358,21 @@ let total_decl (arg : Comp.order t) : Comp.total_dec t =
   in
   let total =
     token T.KW_TOTAL &>
-      seq2
-        (maybe (total_order arg))
-        (parens (seq2 name (many call_arg)))
-    |> span
-    $> fun (loc, (order, (r, args))) ->
-       Comp.Total (loc, order, r, args)
+      alt
+        begin
+          seq2
+            (trying (maybe (total_order named_total_arg)))
+            (parens (seq2 name (many call_arg)))
+          |> span
+          $> fun (loc, (order, (r, args))) ->
+             Comp.NamedTotal (loc, order, r, args)
+        end
+        begin
+          maybe (total_order numeric_total_arg)
+          |> span
+          $> fun (loc, order) ->
+             Comp.NumericTotal (loc, order)
+        end
   in
   alt trust total
   |> labelled "totality declaration"
@@ -2776,7 +2785,7 @@ let thm p =
   seq4
     (name <& token T.COLON)
     (cmp_typ <& token T.EQUALS)
-    (maybe (bracketed' (token T.SLASH) (total_decl named_total_arg)))
+    (maybe (bracketed' (token T.SLASH) total_decl))
     p
   |> span
   $> fun (thm_loc, (thm_name, thm_typ, thm_order, thm_body)) ->

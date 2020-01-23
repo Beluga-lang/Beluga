@@ -749,11 +749,13 @@ let recSgnDecls decls =
 
        let mk_total_decl f tau = function
          | None -> `partial (* no declaration -> partial function *)
-         | Some (Ext.Comp.Trust _) -> `trust
-         | Some (Ext.Comp.Total (loc, order, f', args)) ->
-            match order with
-            | None -> `not_recursive
-            | Some order ->
+         | Some d ->
+            match d with
+            | Ext.Comp.Trust _ -> `trust
+            | Ext.Comp.NumericTotal (loc, None) -> `not_recursive
+            | Ext.Comp.NumericTotal (loc, Some order) ->
+               `inductive (Interactive.elaborate_numeric_order tau order)
+            | Ext.Comp.NamedTotal (loc, order, f', args) ->
                (* Validate the inputs: can't have too many args or the wrong name *)
                if not (Total.is_valid_args tau (List.length args)) then
                  raise (Error (loc, TotalArgsError f));
@@ -761,15 +763,18 @@ let recSgnDecls decls =
 	             if f <> f' then
                  raise (Error (loc, TotalDeclError (f, f')));
 
-               (* convert to a numeric order by looking up the
-                  positions of the specified arguments;
-                  then convert to a proper Order.order.
-                *)
-               let order =
-                 Ext.Comp.map_order (fun x -> pos loc x args) order
-                 |> Order.of_numeric_order
-               in
-               `inductive order
+               match order with
+               | None -> `not_recursive
+               | Some order ->
+                  (* convert to a numeric order by looking up the
+                     positions of the specified arguments;
+                     then convert to a proper Order.order.
+                   *)
+                  let order =
+                    Ext.Comp.map_order (fun x -> pos loc x args) order
+                    |> Order.of_numeric_order
+                  in
+                  `inductive order
        in
 
        (* Collect all totality declarations. *)

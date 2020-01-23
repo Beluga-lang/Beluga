@@ -9,7 +9,7 @@ module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
 
-let (dprintf, dprint, _) =
+let (dprintf, dprint, dprnt) =
   Debug.makeFunctions' (Debug.toFlags [5])
 open Debug.Fmt
 
@@ -563,8 +563,7 @@ module Comp = struct
 
   let useIH loc cD cG cIH_opt e2 = match cIH_opt with
     | None ->
-       dprint
-         (fun _ -> "[useIH] we are not making a recursive call????");
+       dprnt "[useIH] we are not making a recursive call";
        None
     | Some cIH ->
        (* We are making a recursive call *)
@@ -830,14 +829,15 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau', C.m_id))
          ("Var " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
 
-       (* XXX Why the half-assed stripping here? -je *)
-       let tau = match Whnf.cnormCTyp (tau', Whnf.m_id) with
+       (* We need to strip the type of any variable here because check
+          works with annotated types in general. So variables would
+          get introduced with a star-type, but just one level deep. *)
+       let tau =
+         match Whnf.cnormCTyp (tau', Whnf.m_id) with
          | TypInd tau -> tau
-         | _ -> tau' in
-       if Total.lookup_dec f total_decs |> Maybe.is_some then
-         (Some cIH, tau, C.m_id)
-       else
-         (None, tau, C.m_id)
+         | _ -> tau'
+       in
+       (None, tau, C.m_id)
 
     | DataConst (loc, c) ->
        (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((CompConst.get c).CompConst.typ, C.m_id))

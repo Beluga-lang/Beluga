@@ -7,6 +7,7 @@ type ('a, 'b) t =
   ; test_file : test_file option (* the harpoon test file to load *)
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   ; test_stop : [ `stop | `go_on ] (* whether to stop a test if there's an error *)
+  ; load_holes : bool (* whether begin immediately from holes in the file *)
   }
 
 type partial_t

@@ -65,6 +65,7 @@ type ('a, 'b) t =
   ; test_file : test_file option (* the harpoon test file to load *)
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   ; test_stop : [ `stop | `go_on ] (* whether to stop a test script if there's an error *)
+  ; load_holes : bool
   }
 
 type elaborated_t =
@@ -80,6 +81,7 @@ let initial_t : partial_t =
   ; test_file = None
   ; test_start = None
   ; test_stop = `go_on
+  ; load_holes = true
   }
 
 (** TODO
@@ -182,11 +184,13 @@ let parse_arguments args : partial_t =
             (parse_the_rest_with
                (fun [test_start] ->
                  { options with test_start = Some (int_of_string test_start) }))
+       | "--no-load-holes" ->
+          parse_from { options with load_holes = false } rest
        | "--help" ->
           usage ();
           exit 1
        | _ ->
-          rest, options
+          arg :: rest, options
   in
   let rest, options = parse_from initial_t args in
   forbid_dangling_arguments rest;

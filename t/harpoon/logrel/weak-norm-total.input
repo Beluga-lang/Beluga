@@ -15,7 +15,7 @@ main
 2
 
 rename comp y8 rs
-split [gamma |- M]
+msplit M
 by lookup [gamma] [gamma |- #p3] rs as x
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1

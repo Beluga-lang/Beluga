@@ -46,7 +46,7 @@ val only : 'a t -> 'a t
 
 val span : 'a t -> 'a locd t
 
-(***** Exported monadic operations *****)
+(***** Exported helpers operations *****)
 
 val map : ('a -> 'b) -> 'a t -> 'b t
 val ($>) : 'a t -> ('a -> 'b) -> 'b t
@@ -60,7 +60,7 @@ val name : Id.name t
 
 (** Parser for a Harpoon command. *)
 val interactive_harpoon_command : Syntax.Ext.Harpoon.command t
-val interactive_harpoon_command_sequence : Syntax.Ext.Harpoon.command Nonempty.t t
+val interactive_harpoon_command_sequence : Syntax.Ext.Harpoon.command list t
 
 val numeric_total_order : Syntax.Ext.Comp.numeric_order t
 val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t

@@ -241,7 +241,7 @@ let fmt_ppr_ihctx cD cG ppf cIH =
   let open Format in
   let print_entry ppf = function
     | Comp.WfRec (f, args, tau) ->
-       fprintf ppf "IH: %a" (fmt_ppr_call cD cG) (f, args, tau)
+       fprintf ppf "IH: @[<hv>%a@]" (fmt_ppr_call cD cG) (f, args, tau)
     | _ -> failwith "cIH should contain only WfRec entries"
   in
   fprintf ppf "@[<v>%a@]"
@@ -256,13 +256,13 @@ let get_order (mfs : Comp.total_dec list) =
     (*  let _ = dprint (fun () -> "[get_order] " ^ (R.render_cid_prog dec.name) ^
         " : " ^     P.compTypToString (LF.Empty) dec.typ) in *)
     match dec.order with
-    | Some (Arg x) ->
+    | `inductive (Arg x) ->
        (dec.name, Some [x], (tau, Whnf.m_id))
-    | Some (Lex xs) ->
+    | `inductive (Lex xs) ->
        let xs = List.map (fun (Arg x) -> x) xs in
        dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
        (dec.name, Some xs, (tau, Whnf.m_id))
-    | None -> (dec.name, None, (tau, Whnf.m_id))
+    | `not_recursive | `trust | `partial -> (dec.name, None, (tau, Whnf.m_id))
   in
   List.map f mfs
 
@@ -279,7 +279,7 @@ let get_order_for mfs f : int list option =
     | dec::decs ->
        if Comp.(dec.name) = f then
          let open Maybe in
-         Comp.(dec.order) $ Order.list_of_order
+         Comp.(dec.order |> option_of_total_dec_kind $ Order.list_of_order)
        else
          find decs
   in

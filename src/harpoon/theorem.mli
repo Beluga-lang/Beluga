@@ -5,7 +5,7 @@ module CompS = Store.Cid.Comp
 
 module Conf : sig
   type t
-  val make : Id.name -> order option -> typ -> int -> t
+  val make : Id.name -> order total_dec_kind -> typ -> int -> t
 end
 
 type t
@@ -38,9 +38,9 @@ val solve : proof_state -> proof -> unit
 val solve_by_replacing_subgoal : t -> proof_state -> (proof -> proof) -> proof_state -> unit
 val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> unit
 
-val configure : Id.cid_comp_const -> Format.formatter -> (t -> proof_state -> unit) list ->
+val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook) list ->
                 proof_state -> proof_state list -> t
-val configure_set : Format.formatter -> (t -> proof_state -> unit) list -> Conf.t list ->
+val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
                     CompS.mutual_group_id * t list
 val set_hidden : t -> bool -> unit
 

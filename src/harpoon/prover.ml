@@ -317,7 +317,7 @@ module Prover = struct
         match prompt_with s "  Name of theorem (empty name to finish): " None B.Parser.name with
         | None -> []
         | Some name ->
-           let stmt, k =
+           let tau, k =
              (* XXX These calls are sketchy as hell.
                 There must be a better place to put them -je
               *)
@@ -331,40 +331,51 @@ module Prover = struct
              p.fmt "@[<v 2>[harpoon] [session_configuration] elaborated type\
                     @,@[%a@]\
                     @,with %d implicit parameters@]"
-               P.(fmt_ppr_cmp_typ LF.Empty l0) stmt
+               P.(fmt_ppr_cmp_typ LF.Empty l0) tau
                k
              end;
            let order_and_stmt =
              let p =
                Misc.Function.flip B.Parser.map
-                 B.Parser.(only optional_numeric_total_order |> span)
+                 B.Parser.(numeric_total_order |> span)
                  begin fun (loc, o) ->
-                 Maybe.map
-                   begin fun o ->
                    let order = Interactive.elaborate_numeric_order k o in
+                   dprintf begin fun p ->
+                     p.fmt "[session_configuration] @[<v>elaborated numeric order\
+                            @,  @[%a@]\
+                            @,considering %d implicit arguments.@]"
+                       P.(fmt_ppr_cmp_numeric_order) order
+                       k
+                     end;
                    B.Order.list_of_order order
                    |> Maybe.get'
                         (Total.Error
                            ( loc
                            , Total.NotImplemented "lexicographic order not fully supported"))
-                   |> Total.annotate stmt
+                   |> Total.annotate tau
                    |> Maybe.get'
                         (Total.Error (loc, Total.TooManyArg name))
                    |> fun tau -> (order, tau)
-                   end
-                   o
                  end
              in
-             prompt_forever_with s "  Induction order (empty for none): " None
+             prompt_with s "  Induction order (empty for none): " None
                p
            in
            printf s "@]";
            let conf =
              match order_and_stmt with
-             | Some (order, stmt) ->
-                Theorem.Conf.make name (Some order) stmt k
+             | Some (order, tau) ->
+                dprintf begin fun p ->
+                  p.fmt "[session_configuration] @[<v>got inductive order:\
+                         @,  @[%a@]\
+                         @,and annotated type:\
+                         @,  @[%a@]@]"
+                    P.fmt_ppr_cmp_numeric_order order
+                    P.(fmt_ppr_cmp_typ LF.Empty l0) tau
+                  end;
+                Theorem.Conf.make name (`inductive order) tau k
              | None ->
-                Theorem.Conf.make name None stmt k
+                Theorem.Conf.make name `not_recursive tau k
            in
            conf :: do_prompts (i + 1)
       in
@@ -414,7 +425,21 @@ module Prover = struct
         (g : Comp.proof_state)
         (cmd : Command.command)
       : unit =
-    let mfs = lazy (Session.get_mutual_decs c |> Maybe.get_default []) in
+    let mfs =
+      lazy
+        begin
+          let ds = Session.get_mutual_decs c |> Maybe.get_default [] in
+          dprintf
+            begin fun p ->
+            p.fmt "[harpoon] [mfs] @[<v>got mutual decs:\
+                   @,-> @[<v>%a@]@]"
+              (Format.pp_print_list ~pp_sep: Format.pp_print_cut
+                 P.fmt_ppr_cmp_total_dec)
+              ds
+            end;
+          ds
+        end
+    in
 
     let open Comp in
 

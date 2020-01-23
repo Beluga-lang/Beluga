@@ -203,10 +203,8 @@ module Cid : sig
     val clear         : unit -> unit
   end
 
-
   module Comp : sig
-
-    type entry = private {
+    type entry = {
       name               : name;
       implicit_arguments : int;
       typ                : Comp.typ;
@@ -218,7 +216,8 @@ module Cid : sig
 
     val mk_entry  : name -> Comp.typ -> int -> bool -> Comp.value option -> name list -> entry
 
-
+    (** Selects all entries matching a given predicate. *)
+    val filter : (entry -> bool) -> entry list
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this

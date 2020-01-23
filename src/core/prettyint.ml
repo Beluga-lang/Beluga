@@ -1530,7 +1530,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (fmt_ppr_lf_mctx l0) cD
     (fmt_ppr_cmp_typ cD l0) tau
 
-  let fmt_ppr_cmp_total_dec _ = assert false
+  let rec fmt_ppr_cmp_order ppf = function
+    | Comp.Arg x -> pp_print_int ppf x
+    | Comp.Lex os ->
+       fprintf ppf "{@[%a@]}"
+         (pp_print_list fmt_ppr_cmp_order) os
+    | Comp.Simul os ->
+       fprintf ppf "[@[%a@]]"
+         (pp_print_list fmt_ppr_cmp_order) os
+
+  let fmt_ppr_cmp_total_dec ppf = function
+    | { Comp.name; tau; order } ->
+       fprintf ppf "@[<hv 2>@[%a@] -@ @[<hv 2>@[%a@] :@ @[%a@]@]@]"
+         (Maybe.show fmt_ppr_cmp_order) order
+         Id.print name
+         (fmt_ppr_cmp_typ LF.Empty l0) tau
 
   let fmt_ppr_cmp_comp_prog_info ppf e =
     let {CompS.name; implicit_arguments; typ; prog; total_decs; hidden} = e in

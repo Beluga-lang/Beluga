@@ -101,7 +101,9 @@ module List = struct
     in
     go [] l
 
-  let for_each l f = List.map l f
+  let for_each l f = List.map f l
+
+  let for_each_ l f = List.iter f l
 
   let uncons : 'a list -> ('a * 'a list) option = function
     | [] -> None
@@ -129,6 +131,8 @@ let id (x : 'a) : 'a = x
 type void = { impossible: 'a. 'a }
 
 module DynArray = struct
+  include DynArray
+
   let rec append_list d = function
     | [] -> ()
     | x :: xs -> DynArray.add d x; append_list d xs
@@ -160,4 +164,47 @@ module Function = struct
 
   let sequence (l : ('a -> 'b) list) (x : 'a) =
     List.map (fun f -> f x) l
+end
+
+module Seq = struct
+  include Seq
+
+  let rec to_list s =
+    match s () with
+    | Seq.Nil -> []
+    | Seq.Cons (x, s) -> x :: to_list s
+end
+
+module Hashtbl = struct
+  include Hashtbl
+
+  (** Constructs a new hashtable by mapping the given function over the values.
+      This is somewhat inefficient as the hastable is converted into a
+      sequence, mapped, and converted back, but it should run in
+      linear time in one pass due to the lazy nature of Seq.t.
+   *)
+  let map (f : 'a -> 'b) : ('k, 'a) Hashtbl.t -> ('a, 'b) Hashtbl.t =
+    fun h ->
+    to_seq h
+    |> Seq.map (fun (k, x) -> (k, f x))
+    |> of_seq
+
+  (** Constructs a hashtable from a list by using a function to send
+      each element to a key.
+   *)
+  let group_by (p : 'a -> 'k) (l : 'a list) : ('k, 'a list) Hashtbl.t =
+    let h = Hashtbl.create 32 in
+    let () =
+      let insert k x =
+        let d =
+          match Hashtbl.find_opt h k with
+          | None -> DynArray.make 32
+          | Some d -> d
+        in
+        DynArray.add d x;
+        Hashtbl.replace h k d
+      in
+      List.for_each_ l (fun x -> insert (p x) x)
+    in
+    map DynArray.to_list h
 end

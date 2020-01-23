@@ -880,9 +880,11 @@ struct
 
     | Sgn.Theorem (thm :: t as ts) ->
        let total =
-         Store.Cid.Comp.((get Sgn.(thm.thm_name)).total_decs |> Maybe.is_some)
+         Sgn.(thm.thm_name)
+         |> Store.Cid.Comp.total_decs
+         |> Maybe.is_some
        in
-      List.iter (sexp_thm ppf total) ts
+       List.iter (sexp_thm ppf total) ts
 
     (* Pragmas are not dumped for now *)
     (* | Sgn.Pragma (LF.OpenPrag n) -> *)

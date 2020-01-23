@@ -1,6 +1,8 @@
 open Beluga
 open Syntax.Int.Comp
 
+module CompS = Store.Cid.Comp
+
 module Conf : sig
   type t
   val make : Id.name -> order option -> typ -> int -> t
@@ -34,8 +36,10 @@ val solve : proof_state -> proof -> unit
 val solve_by_replacing_subgoal : t -> proof_state -> (proof -> proof) -> proof_state -> unit
 val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> unit
 
-val configure_set : Format.formatter -> (t -> proof_state -> unit) list -> Conf.t list -> t list
-val total_dec : t -> total_dec
+val configure : Id.cid_comp_const -> Format.formatter -> (t -> proof_state -> unit) list ->
+                proof_state -> proof_state list -> t
+val configure_set : Format.formatter -> (t -> proof_state -> unit) list -> Conf.t list ->
+                    CompS.mutual_group_id * t list
 val set_hidden : t -> bool -> unit
 
 val translate : t -> exp_chk

@@ -1547,12 +1547,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ LF.Empty l0) tau
 
   let fmt_ppr_cmp_comp_prog_info ppf e =
-    let {CompS.name; implicit_arguments; typ; prog; total_decs; hidden} = e in
+    let {CompS.name; implicit_arguments; typ; prog; mutual_group; hidden} = e in
+    let ds = CompS.lookup_mutual_group mutual_group in
     fprintf ppf
       "@[<v>name: @[%a@]\
        @,@[<hv 2>type:@ @[%a@]@]\
        @,implicit parameters: %d\
        @,hidden: %b\
+       @,mutual_group: @[%a@]\
        @,@[<hv 2>total_decs:@ @[%a@]@]\
        @,@[<hv 2>definition:@ @[%a@]@]\
        @,@]"
@@ -1560,7 +1562,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_cmp_typ LF.Empty l0) typ
       implicit_arguments
       hidden
-      (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) total_decs
+      CompS.fmt_ppr_mutual_group_id mutual_group
+      (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) ds
       (Maybe.print (fmt_ppr_cmp_value l0)) prog
 
   let fmt_ppr_cmp_thm ppf = function

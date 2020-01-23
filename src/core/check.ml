@@ -858,7 +858,7 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        let e = Comp.get prog in
-       let total = Comp.(e.total_decs) |> Maybe.is_some in
+       let total = Comp.(lookup_mutual_group e.mutual_group) |> Maybe.is_some in
        let tau = Comp.(e.typ) in
        begin match total_decs with
        | _ :: _ when not total -> throw loc (MissingTotal prog)

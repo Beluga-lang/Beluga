@@ -3,6 +3,7 @@ open Support
 open Beluga
 module Comp = Syntax.Int.Comp
 open Id
+module CompS = Store.Cid.Comp
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -15,14 +16,8 @@ end
 
 (** A single theorem. *)
 type t =
-  { (* The name of the theorem. *)
-    name : name
-
-  (* The Store entry for the theorem. *)
-  ; cid : cid_prog
-
-  (* The induction order for this theorem. *)
-  ; order : Comp.order option
+  { (* The Store entry for the theorem. *)
+    cid : cid_prog
 
   (* It's important to remember the initial proof state, since it
      gives us a way to track the original full statement of the theorem
@@ -45,7 +40,7 @@ type theorem = t
 
 let printf t x = Format.fprintf t.ppf x
 
-let get_name t = t.name
+let get_name t = (CompS.get t.cid).CompS.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
@@ -55,17 +50,24 @@ let theorem_statement (t : t) =
 
 let serialize ppf (t : t) =
   let s = t.initial_state in
-  let fmt_ppr_order ppf =
-    function
-    | Some (Arg o) -> Format.fprintf ppf "/ total %d /" o
-    | None -> ()
-    | _ -> failwith "Invalid order"
+  let fmt_ppr_order =
+    Maybe.print
+      begin fun ppf ->
+      Format.fprintf ppf "/ @[<hov 2>total@ @[%a@]@] /"
+        P.fmt_ppr_cmp_order
+      end
+  in
+  let name = CompS.name t.cid in
+  let order =
+    let open Maybe in
+    Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])
+    $ fun o -> o.Comp.order
   in
   Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,;@,@]"
-    Id.print t.name
-    (P.fmt_ppr_cmp_typ s.context.cD P.l0) (Whnf.cnormCTyp s.goal)
-    fmt_ppr_order t.order
-    (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
+    Id.print name
+    Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) Comp.(Whnf.cnormCTyp s.goal)
+    fmt_ppr_order order
+    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof s)
 
 (** Computes the index of the current subgoal we're working on. *)
 let current_subgoal_index gs = 0
@@ -115,6 +117,8 @@ let run_subgoal_hooks t g =
 let add_subgoal t g =
   DynArray.insert t.remaining_subgoals 0 g;
   run_subgoal_hooks t g
+
+let add_subgoals t = List.iter (add_subgoal t)
 
 let remove_subgoal t g =
   let i = DynArray.index_of (fun g' -> g = g') t.remaining_subgoals in
@@ -175,36 +179,35 @@ let rename_variable src dst level t g =
   in
   solve_by_replacing_subgoal t g' Misc.id g
 
-let register { Comp.name; tau; order } total_decs implicit_parameters : cid_prog =
-  let open Store.Cid.Comp in
-  add Syntax.Loc.ghost
-    begin fun _ ->
-    mk_entry name (Total.strip tau) implicit_parameters
-      total_decs (* all Harpoon theorems are total *)
-      None (* we don't have an evaluated form *)
+(** Registers the theorem in the store.
+    The statement of the theorem must be stripped of totality
+    annotations.
+ *)
+let register name tau p mutual_group k : cid_prog =
+  CompS.add Syntax.Loc.ghost
+    begin fun cid ->
+    let v = Comp.(ThmValue (cid, Proof p, Whnf.m_id, Empty)) in
+    CompS.mk_entry name tau k
+      mutual_group
+      (Some v)
     end
   |> snd
 
-(** Creates the theorem from the configuration and a cid.
+(** Creates a Theorem.t
     (You need to add the theorem to the Store before trying to call
     this function to get a cid allocated.)
-    This function will
-    - construct the initial state;
-    - allocate & populate the array of subgoal hooks;
-    - construct the array of pending subgoals;
-    - add the initial state to the subgoal array.
-      (This will run the subgoal hooks.)
+    The initial state of the theorem is whatever program is in the
+    store associated to this theorem. (There must be an associated
+    program; the prog field cannot be None.)
+    If this is a brand new theorem, configured within Harpoon
+    interactively, then you must construct the initial state and build
+    an incomplete proof holding that state. That state should be
+    passed both as the initial state parameter to this function as
+    well as the only item in the list of states to work on.
  *)
-let configure { Comp.name; tau; order } cid ppf hooks =
-  let initial_state =
-    Comp.make_proof_state
-      [Id.render_name name]
-      (tau, Whnf.m_id)
-  in
+let configure cid ppf hooks initial_state gs =
   let t =
     { cid
-    ; order
-    ; name
     ; initial_state
     ; remaining_subgoals = DynArray.make 16
     ; subgoal_hooks = DynArray.create ()
@@ -213,26 +216,26 @@ let configure { Comp.name; tau; order } cid ppf hooks =
   in
   let hooks = List.map (fun h -> h t) hooks in
   Misc.DynArray.append_list t.subgoal_hooks hooks;
-  add_subgoal t initial_state;
+  add_subgoals t gs;
   t
 
 (** Converts Theorem.Conf.t to Theorem.t by adding all the theorems
     to the store.
  *)
-let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list) : t list =
-  let configure ({ Comp.name; tau; order } as conf, k) =
+let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list) : CompS.mutual_group_id * t list =
+  let mutual_group = Store.Cid.Comp.add_mutual_group (Some (List.map fst confs)) in
+  let configure ({ Comp.name; tau; _ }, k) =
+    let g =
+      Comp.make_proof_state [ Id.render_name name ]
+        ( tau, Whnf.m_id )
+    in
+    let p = Comp.incomplete_proof g in
     (* add the theorem to the store to get a cid allocated *)
-    let cid = register conf (Some (List.map fst confs)) k in
+    let cid = register name (Total.strip tau) p mutual_group k in
     (* configure the theorem *)
-    configure conf cid ppf hooks
+    configure cid ppf hooks g [g]
   in
-  List.map configure confs
-
-let total_dec (t : t) =
-  Comp.make_total_dec
-    t.name
-    Comp.(Whnf.cnormCTyp t.initial_state.goal |> Total.strip)
-    t.order
+  (mutual_group, List.map configure confs)
 
 let set_hidden (t : t) b =
   Store.Cid.Comp.set_hidden t.cid (Misc.const b)

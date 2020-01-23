@@ -47,12 +47,16 @@ module B = Beluga
 let realMain () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
-  let options = Options.parse_arguments args |> Options.validate |> Options.elaborate in
   let open Options in
+  let options = parse_arguments args |> validate |> elaborate in
+
+  let ppf = Format.std_formatter in
+  let stubs = B.Store.Cid.Comp.get_open_subgoals () in
   Prover.start_toplevel
     options.test_stop
+    stubs
     (InputPrompt.create options.test_file options.test_start)
-    Format.std_formatter
+    ppf
 
 let main () =
   try

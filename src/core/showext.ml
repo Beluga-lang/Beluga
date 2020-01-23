@@ -158,9 +158,9 @@ module LF = struct
          show_normal)
       ms
 
-  and show_dctx = assert false
-  and show_typ_rec = assert false
-  and show_tuple = assert false
+  and show_dctx _ = assert false
+  and show_typ_rec _ = assert false
+  and show_tuple _ = assert false
 end
 
 module Comp = struct

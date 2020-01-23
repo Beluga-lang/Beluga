@@ -4,7 +4,7 @@ length
 1
 
 split [g]
-solve [|- z]
 toggle-automation auto-solve-trivial off
 by length [x] as N unboxed
 solve [|- s N]
+solve [|- z]

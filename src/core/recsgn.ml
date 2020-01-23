@@ -649,7 +649,8 @@ let recSgnDecls decls =
              let v = Opsem.eval i'' in
              let _x =
                Comp.add loc
-                 (fun _ -> Comp.mk_entry x tau' 0 None (Some v))
+                 (fun _ ->
+                   Comp.(mk_entry x tau' 0 unchecked_mutual_group (Some v)))
              in
 		         Some v
 	         end
@@ -713,7 +714,13 @@ let recSgnDecls decls =
 	     let v =
          if Holes.none () && is_empty cQ then
            let v = Opsem.eval i'' in
-           let _ = Comp.add loc (fun _ -> Comp.mk_entry x tau' 0 None (Some v)) in
+           let _ =
+             let open Comp in
+             add loc
+               begin fun _ ->
+               mk_entry x tau' 0 unchecked_mutual_group (Some v)
+               end
+           in
            Some v
          else
            None
@@ -849,7 +856,10 @@ let recSgnDecls decls =
        (* We have the list of all totality declarations for this group,
           so we can register each theorem in the store.
         *)
-       let thm_cid_list = Misc.Function.sequence registers total_decs in
+       let thm_cid_list =
+         Comp.add_mutual_group total_decs
+         |> Misc.Function.sequence registers
+       in
 
        let reconThm loc (f, thm, tau) =
          let apx_thm = Index.thm (Var.create ()) thm in

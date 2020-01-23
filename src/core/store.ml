@@ -970,12 +970,16 @@ module Cid = struct
 
 
   module Comp = struct
+    type mutual_group_id = int
+
+    let fmt_ppr_mutual_group_id = Format.pp_print_int
+
     type entry =
       { name               : Id.name
       ; implicit_arguments : int
       ; typ                : Int.Comp.typ
       ; prog               : Int.Comp.value option
-      ; total_decs         : Int.Comp.total_dec list option
+      ; mutual_group       : mutual_group_id
       (* Totality declarations for all mutually-defined functions.
          If this is None, then the function is not declared to be total.
          If it's an empty list, the interpretation is that that the
@@ -985,12 +989,12 @@ module Cid = struct
       ; hidden             : bool
       }
 
-    let mk_entry name typ implicit_arguments total_decs prog =
+    let mk_entry name typ implicit_arguments mutual_group prog =
       { name
       ; implicit_arguments
       ; typ
       ; prog
-      ; total_decs (* totality declarations of mutual functions *)
+      ; mutual_group
 
       (* Hidden entries cannot be looked up by name, which in turn
          prevents the user from referring to them via external syntax.
@@ -1007,10 +1011,38 @@ module Cid = struct
     (*  directory : (Id.name, Id.cid_prog) Hashtbl.t *)
     let directory : ((Id.name, Id.cid_prog) Hashtbl.t) DynArray.t = DynArray.create ()
 
-    let filter p =
+    let mutual_groups = DynArray.of_list [ None; Some [] ]
+
+    (** id for the mutual group that won't check for totality *)
+    let unchecked_mutual_group = 0
+
+    (** id for the mutual group that simply trusts totality *)
+    let trust_mutual_group = 1
+
+    let add_mutual_group decs =
+      DynArray.add mutual_groups decs;
+      DynArray.length mutual_groups - 1
+
+    let filter_map p =
       DynArray.to_list store
       |> Misc.List.concat_map (DynArray.to_list)
-      |> List.filter p
+      |> Maybe.filter_map p
+
+    let filter p =
+      filter_map (fun x -> Maybe.(of_bool (p x) $> Misc.const x))
+
+    let get_open_subgoals () =
+      filter
+        begin fun { prog; typ; _ } ->
+        match prog with
+        | Some Int.Comp.(ThmValue (cid, Proof (Incomplete g), theta, eta)) ->
+           true
+        | _ -> false
+        end
+      |> List.map
+           begin fun { prog = Some Int.Comp.(ThmValue (cid, Proof (Incomplete g), _, _)); _ } ->
+           (cid, g)
+           end
 
     let get ?(fixName=false) (l, n) =
       let l' = Modules.name_of_id l in
@@ -1019,6 +1051,15 @@ module Cid = struct
                 then Modules.correct l' else [] in
       let e = DynArray.get (DynArray.get store l) n in
       {e with name = (Id.mk_name ~modules:m' (Id.SomeString (Id.string_of_name e.name)))}
+
+    let lookup_mutual_group = DynArray.get mutual_groups
+
+    let mutual_group cid = (get cid).mutual_group
+
+    let name cid = (get cid).name
+
+    let total_decs =
+      Misc.Function.(lookup_mutual_group ++ mutual_group)
 
     let index_of_name : Id.name -> Id.cid_prog = fun (n : Id.name) ->
       let n' = match (Id.get_module n) with

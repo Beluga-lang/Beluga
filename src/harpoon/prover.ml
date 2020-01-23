@@ -16,10 +16,11 @@ module Total = B.Total
 module Whnf = B.Whnf
 module S = B.Substitution
 module Debug = B.Debug
+module F = Misc.Function
+module CompS = B.Store.Cid.Comp
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
-
 
 exception EndOfInput
 
@@ -121,12 +122,14 @@ module Prover = struct
       { theorems : Theorem.t DynArray.t
       ; commands : Command.command DynArray.t
       ; name : Id.name
+      ; mutual_group : CompS.mutual_group_id
       }
 
-    let make name =
-      { theorems = DynArray.make 16
+    let make name mutual_group thms =
+      { theorems = thms
       ; commands = DynArray.make 32
       ; name
+      ; mutual_group
       }
 
     let serialize ppf (s : t) =
@@ -139,8 +142,8 @@ module Prover = struct
     (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
      *)
-    let get_mutual_decs (s : t) : Comp.total_dec list =
-      List.map Theorem.total_dec (DynArray.to_list s.theorems)
+    let get_mutual_decs (s : t) : Comp.total_dec list option =
+      CompS.lookup_mutual_group s.mutual_group
 
     (** Unhides cids for all theorems in this session. *)
     let enter (s : t) : unit =
@@ -189,18 +192,46 @@ module Prover = struct
       ; stop : [ `stop | `go_on ]
       }
 
-    (** Creates a prover state no session. *)
-    let make
-          stop
-          (ppf : Format.formatter)
-          (prompt : InputPrompt.t)
-        : t =
-      { sessions = DynArray.make 16
-      ; automation_state = Automation.State.make ()
-      ; prompt
-      ; ppf
-      ; stop
-      }
+    let recover_theorem ppf hooks mutual_group_id (cid, gs) =
+      let e = CompS.get cid in
+      let tau, name, prog = CompS.(e.typ, e.name, e.prog) in
+      let initial_state =
+        Comp.make_proof_state [ Id.render_name name ]
+          (tau, Whnf.m_id)
+      in
+      begin match prog with
+      | Some Comp.(ThmValue (_, Proof p, _, _)) ->
+         initial_state.Comp.solution <- Some p
+      | _ -> B.Error.violation "prog not a proof"
+      end;
+      Theorem.configure cid ppf hooks initial_state (Nonempty.to_list gs)
+
+    let recover_session ppf hooks (mutual_group, thm_confs) =
+      let name =
+        Nonempty.head thm_confs |> fst |> CompS.name
+      in
+      let commands = DynArray.create () in
+      let theorems =
+        Nonempty.(
+          map (recover_theorem ppf hooks mutual_group) thm_confs
+          |> to_list (* XXX to_list -> of_list is inefficient *)
+        )
+        |> DynArray.of_list
+      in
+      { Session.name; commands; theorems; mutual_group }
+
+    let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
+      (* idea:
+         - first group subgoals by theorem
+         - group theorems by mutual group
+         - construct a session for each mutual group
+       *)
+      Nonempty.(
+        group_by fst gs
+        |> List.map (Pair.rmap (map snd))
+        |> group_by F.(CompS.mutual_group ++ fst)
+      )
+      |> fun xs -> List.map (recover_session ppf hooks) xs
 
     let serialize ppf (s : t) =
       let fmt_ppr_sessions =
@@ -220,8 +251,27 @@ module Prover = struct
     let next_session s = Misc.DynArray.head s.sessions
 
     (** Runs proof automation on a given subgoal. *)
-    let run_automation s (t : Theorem.t) (g : Comp.proof_state) =
-      ignore (Automation.execute s.automation_state t g)
+    let run_automation auto_state (t : Theorem.t) (g : Comp.proof_state) =
+      ignore (Automation.execute auto_state t g)
+
+    (** Creates a prover state with sessions recovered from the given
+        list of open subgoals.
+        Use an empty list to generate a prover state with no sessions.
+     *)
+    let make
+          stop
+          (ppf : Format.formatter)
+          (prompt : InputPrompt.t)
+          (gs : Comp.open_subgoal list)
+        : t =
+      let automation_state = Automation.State.make () in
+      let hooks = [run_automation automation_state] in
+      { sessions = DynArray.of_list (recover_sessions ppf hooks gs)
+      ; automation_state
+      ; prompt
+      ; ppf
+      ; stop
+      }
 
     (** Displays the given prompt `msg` and awaits a line of input from the user.
         The line is parsed using the given parser.
@@ -252,8 +302,7 @@ module Prover = struct
     (** Runs the theorem configuration prompt to populate the given
         session.
      *)
-    let session_configuration_wizard' s c : unit =
-      assert (DynArray.length c.Session.theorems = 0);
+    let session_configuration_wizard' s : CompS.mutual_group_id * Theorem.t list =
       let rec do_prompts i : Theorem.Conf.t list =
         printf s "Configuring theorem #%d@." i;
         (* prompt for name, and allow using empty to signal we're done. *)
@@ -313,19 +362,19 @@ module Prover = struct
       in
 
       let confs = do_prompts 1 in
-      let thms = Theorem.configure_set s.ppf [run_automation s] confs in
-      Misc.DynArray.append_list c.Session.theorems thms
+      Theorem.configure_set s.ppf [run_automation s.automation_state] confs
 
     let add_session s c = DynArray.insert s.sessions 0 c
     let remove_current_session s = DynArray.delete s.sessions 0
 
-    let session_configuration_wizard s c =
-      session_configuration_wizard' s c;
+    let session_configuration_wizard name s =
+      let mutual_group, thms = session_configuration_wizard' s in
       (* c will be populated with theorems; if there are none it's
          because the session is over. *)
-      match DynArray.length Session.(c.theorems) > 0 with
-      | true -> `ok
-      | false -> `aborted
+      match thms with
+      | _ :: _ ->
+         `ok (Session.make name mutual_group (DynArray.of_list thms))
+      | [] -> `aborted
   end
 
     (*
@@ -357,7 +406,7 @@ module Prover = struct
         (g : Comp.proof_state)
         (cmd : Command.command)
       : unit =
-    let mfs = lazy (Session.get_mutual_decs c) in
+    let mfs = lazy (Session.get_mutual_decs c |> Maybe.get_default []) in
 
     let open Comp in
 
@@ -482,9 +531,8 @@ module Prover = struct
              State.printf s "A session named %a already exists@,"
                Id.print name
           | None ->
-             let c = Session.make name in
-             begin match State.session_configuration_wizard s c with
-             | `ok -> State.add_session s c
+             begin match State.session_configuration_wizard name s with
+             | `ok c -> State.add_session s c
              | `aborted -> ()
              end
           end
@@ -537,7 +585,7 @@ module Prover = struct
        | `prog ->
           begin match
             try
-              Some B.Store.Cid.Comp.(index_of_name name |> get)
+              Some (CompS.index_of_name name |> CompS.get)
             with
             | Not_found -> None
           with
@@ -702,9 +750,9 @@ let rec loop (s : Prover.State.t) : unit =
   let printf x = Prover.State.printf s x in
   match with_next_triple s with
   | Either.Left `no_session ->
-     let c = Prover.Session.make Id.(mk_name (SomeString "default")) in
-     begin match Prover.State.session_configuration_wizard s c with
-     | `ok ->
+     let name = Id.(mk_name (SomeString "default")) in
+     begin match Prover.State.session_configuration_wizard name s with
+     | `ok c ->
         Prover.State.add_session s c;
         loop s
      | `aborted ->
@@ -744,16 +792,25 @@ let rec loop (s : Prover.State.t) : unit =
        printf "@,Warning: theorem proven before all commands were processed.@,";
        loop s
 
+type interaction_mode = [ `stop | `go_on ]
+
 let start_toplevel
-      stop
+      (stop : interaction_mode)
+      (gs : Comp.open_subgoal list)
       (input_prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop ppf input_prompt in
-  let c = Session.make Id.(mk_name (SomeString "default")) in
-  match Prover.State.session_configuration_wizard s c with
-  | `ok ->
-     State.add_session s c;
-     loop s
-  | `aborted -> ()
+  let s = State.make stop ppf input_prompt gs in
+  (* If no sessions were created by loading the subgoal list
+     then (it must have been empty so) we need to create the default
+     session and configure it. *)
+  if DynArray.empty State.(s.sessions) then
+    let name = Id.(mk_name (SomeString "default")) in
+    match State.session_configuration_wizard name s with
+    | `ok c ->
+       State.add_session s c;
+       loop s
+    | `aborted -> ()
+  else
+    loop s

@@ -204,21 +204,53 @@ module Cid : sig
   end
 
   module Comp : sig
+    type mutual_group_id
+
+    val fmt_ppr_mutual_group_id : Format.formatter -> mutual_group_id -> unit
+
+    val add_mutual_group : Comp.total_dec list option -> mutual_group_id
+    val unchecked_mutual_group : mutual_group_id
+    val trust_mutual_group : mutual_group_id
+
     type entry = {
       name               : name;
       implicit_arguments : int;
       typ                : Comp.typ;
       prog               : Comp.value option;
-      total_decs         : Comp.total_dec list option;
+      mutual_group       : mutual_group_id;
       hidden             : bool;
     }
 
+    (** Gets the name of the given theorem ID. *)
+    val name : cid_comp_const -> name
+
+    (** Looks up the total declarations for the given mutual group. *)
+    val lookup_mutual_group : mutual_group_id -> Comp.total_dec list option
+
+    (** Gets the mutual group ID for a given function reference. *)
+    val mutual_group : cid_comp_const -> mutual_group_id
+
+    (** Looks up the total declarations for the mutual group of the
+        given function.
+     *)
+    val total_decs : cid_comp_const -> Comp.total_dec list option
+
     val mk_entry  : name -> Comp.typ -> int ->
-                    Comp.total_dec list option -> Comp.value option ->
+                    mutual_group_id -> Comp.value option ->
                     entry
 
+      (*
     (** Selects all entries matching a given predicate. *)
     val filter : (entry -> bool) -> entry list
+       *)
+
+    (** Computes a list of all incomplete Harpoon proof scripts
+        together with a reference (cid) to the theorem in which they
+        occur.
+        This is used to automatically start up harpoon sessions from a
+        file.
+     *)
+    val get_open_subgoals : unit -> Comp.open_subgoal list
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this

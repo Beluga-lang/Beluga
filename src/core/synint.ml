@@ -597,6 +597,11 @@ module Comp = struct
       hypotheses (* the full contexts *)
       * proof (* the proof; should make sense in `hypotheses`. *)
 
+  (** An open subgoal is a proof state together with a reference ot the
+      theorem in which it occurs.
+   *)
+  type open_subgoal = cid_comp_const * proof_state
+
   (** Generates a unsolved subgoal with the given goal in an empty
       context, with no label.
    *)

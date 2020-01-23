@@ -99,6 +99,7 @@ module Int = struct
     val fmt_ppr_cmp_gctx_typing : formatter -> LF.mctx * Comp.gctx -> unit
     val fmt_ppr_cmp_typ_typing : formatter -> LF.mctx * Comp.typ -> unit
 
+    val fmt_ppr_cmp_order : formatter -> Comp.order -> unit
     val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit

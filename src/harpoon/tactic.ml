@@ -315,9 +315,10 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             begin fun p ->
             p.fmt "[harpoon-split] @[<v>refined cG and cIH@,\
                    cG_b = @[%a@]@,\
-                   cIH = <elided>@,\
+                   cIH = @[%a@]@,\
                    pat' = @[%a@]@]"
               (P.fmt_ppr_cmp_gctx cD_b P.l0) cG_b
+              (Total.fmt_ppr_ihctx cD_b cG_b) cIH_b
               (P.fmt_ppr_cmp_pattern cD_b cG_b P.l0) pat'
             end;
 

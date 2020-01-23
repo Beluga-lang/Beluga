@@ -929,7 +929,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypPiBox (_, ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
-       if isImplicitDecl ctyp_decl then
+       if not !PC.printImplicit && isImplicitDecl ctyp_decl then
          fprintf ppf "%a" (fmt_ppr_cmp_typ (LF.Dec (cD, ctyp_decl)) 1) tau
        else
          let cond = lvl > 1 in

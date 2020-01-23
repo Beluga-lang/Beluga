@@ -232,7 +232,7 @@ let fmt_ppr_args cD cG ppf : Comp.arg list -> unit =
 
 let fmt_ppr_call cD cG ppf (f, args, tau) =
   let open Format in
-  fprintf ppf "%a %a : %a"
+  fprintf ppf "@[<hv 2>@[%a@] @[%a@] :@ @[%a@]@]"
     Id.print f
     (fmt_ppr_args cD cG) args
     (P.fmt_ppr_cmp_typ cD P.l0) tau
@@ -502,31 +502,35 @@ let valid_args args = match List.rev args with
 let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
   | LF.Empty -> cIH
   | LF.Dec (cD', LF.Decl (u, cU, dep)) when not (is_inductive dep) ->
-     dprintf
-       (fun p ->
-         p.fmt "[gen_rec_calls] ignoring argument %d since it isn't inductive" j);
+     dprintf begin fun p ->
+       p.fmt "[gen_rec_calls] @[<v>ignoring cD' entry %d, i.e.\
+              @,@[<hv 2>%a :@ @[%a@]@]\
+              @,since it isn't inductive\
+              @]"
+         j
+         Id.print u
+         P.(fmt_ppr_cmp_meta_typ cD') cU
+       end;
      gen_rec_calls cD cIH (cD', j+1) mfs
   | LF.Dec (cD', LF.Decl (u, cU, dep)) ->
      let cM  = gen_meta_obj (cU, LF.MShift (j+1)) (j+1) in
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j+1)) in
      let mf_list = get_order mfs in
-     dprintf
-       (fun p ->
-         p.fmt "[gen_rec_calls] Generate rec. calls given variable %a"
-           (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u, cU, dep)));
-     dprint
-       (fun _ ->
-         "Considering a total of "
-         ^ string_of_int (List.length mf_list)
-         ^ " rec. functions\n");
+     dprintf begin fun p ->
+       p.fmt "[gen_rec_calls] @[<v>Generate rec. calls given variable@,@[%a@]\
+              @,considering a total of %d recursive functions@]"
+         (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u, cU, dep))
+         (List.length mf_list)
+       end;
 
      let mk_wfrec (f,x,ttau) =
-       dprintf
-         (fun p ->
-           p.fmt "[mk_wf_rec] @[<v>for %a for position %d@,type of recursive call: %a@]"
-             (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u,cU, dep))
-             x
-             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau));
+       dprintf begin fun p ->
+         p.fmt "[mk_wf_rec] @[<v>for @[%a@] for position %d\
+                @,@[<hv 2>type of recursive call:@ @[%a@]@]@]"
+           (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u,cU, dep))
+           x
+           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+         end;
 
        let (args, tau) = rec_spine cD (cM, cU') (x, ttau) in
        (* rec_spine may raise Not_compatible *)
@@ -546,11 +550,13 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
        | x::xs' ->
           begin
             try
-              dprint
-                (fun _ ->
-                  "[mk_wfrec_all] trying recursive call on argument "
-                  ^ string_of_int x ^ " of function " ^ Id.render_name f);
-              (mk_wfrec (f,x,ttau))::mk_wfrec_all (f,ttau) xs'
+              dprintf begin fun p ->
+                p.fmt "[mk_wfrec_all] @[<v>trying recursive call on argument %d\
+                       @,of function %a@]"
+                  x
+                  Id.print f
+                end;
+              mk_wfrec (f, x, ttau) :: mk_wfrec_all (f,ttau) xs'
             with
             | Not_compatible ->
                dprint

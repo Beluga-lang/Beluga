@@ -74,6 +74,9 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
 val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
              LF.mctx * (LF.dctx * LF.normal * LF.tclo) * LF.msub
 
+val genPatt : LF.mctx * Comp.typ ->
+              Id.cid_comp_typ * Comp.typ ->
+
 val genPatCGoals    : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
 (* val genCtxGoals     : LF.mctx -> LF.ctyp_decl -> (LF.mctx * LF.dctx * LF.msub) list *)
 val genContextGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) list

@@ -1154,66 +1154,64 @@ let genObj (cD, cPsi, tP) (tH, tA) =
     Context.to_list_map cD (fun _ -> LF.name_of_ctyp_decl)
     @ LF.names_of_dctx cPsi
   in
-  let spine = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
-  let tM = LF.Root (Loc.ghost, tH' , spine) in
-  (*
-    (* This print will crash Beluga sometimes, because it *seems* like
+  match
+    try
+      let s = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
+      U.forceGlobalCnstr !U.globalCnstrs;
+      dprint (fun _ -> "[genObj] global constraints forced!");
+      Some s
+    with
+     | U.Failure _ | U.GlobalCnstrFailure (_, _) -> None
+  with
+  | None -> None
+  | Some spine ->
+     let tM = LF.Root (Loc.ghost, tH' , spine) in
+     (*
+       (* This print will crash Beluga sometimes, because it *seems* like
        tA doesn't always make sense in cD.
        This is probably a bug. -je
-     *)
-  dprintf
-    begin fun p ->
-    p.fmt "[genObj] @[<v>Generated Head@,\
-           tH = @[%a@]@,\
-           tA = @[%a@]@,\
-           as suitable head for for [@[%a |-@ %a@]]@]"
+      *)
+      dprintf
+      begin fun p ->
+      p.fmt "[genObj] @[<v>Generated Head@,\
+      tH = @[%a@]@,\
+      tA = @[%a@]@,\
+      as suitable head for for [@[%a |-@ %a@]]@]"
       (P.fmt_ppr_lf_head cD cPsi P.l0) tH
       (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
       (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
-    end;
-   *)
+      end;
+      *)
 
-  U.forceGlobalCnstr (!U.globalCnstrs);
-  dprint (fun _ -> "[genObj] global constraints forced!");
-  let cD', cPsi', tR, tP', ms' =
-    try
-      Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
-    with
-    | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
-       let open Format in
-       fprintf std_formatter "@[<v>WARNING: encountered leftover constraints in higher-order unification@,Coverage goal: @[%a@ : %a@]"
-         (P.fmt_ppr_lf_normal LF.Empty cPsi' P.l0) tM
-         (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
-       raise e
-  in
-  let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
-  dprintf
-    begin fun p ->
-    p.fmt "[genObj] @[<v>finished@,\
-           meta-sub typing: @,  @[%a@]@]"
-      P.fmt_ppr_lf_msub_typing (cD', ms', cD)
-    end;
-  (cD' , (cPsi', tR', (tP', S.LF.id)), ms')
+     let cD', cPsi', tR, tP', ms' =
+       try
+         Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
+       with
+       | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
+          let open Format in
+          fprintf std_formatter "@[<v>WARNING: encountered leftover constraints in higher-order unification@,Coverage goal: @[%a@ : %a@]"
+            (P.fmt_ppr_lf_normal LF.Empty cPsi' P.l0) tM
+            (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
+          raise e
+     in
+     let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
+     dprintf
+       begin fun p ->
+       p.fmt "[genObj] @[<v>finished@,\
+              meta-sub typing: @,  @[%a@]@]"
+         P.fmt_ppr_lf_msub_typing (cD', ms', cD)
+       end;
+     Some (cD' , (cPsi', tR', (tP', S.LF.id)), ms')
 
 let rec genAllObj cg =
-  function
-  | [] -> []
-  | tH_tA :: tHAlist ->
-     let cgs = genAllObj cg tHAlist in
-     begin
-       try
-         let (cD, (cPsi, tR, sP), t) = genObj cg tH_tA in
-         (cD, CovGoal (cPsi, tR, sP), t) :: cgs
-       with
-       | U.Failure _
-         | U.GlobalCnstrFailure _ ->
-          dprint
-            begin fun _ ->
-            "\n [genAllObj] Global Constraint Failure – no genObj generated.\n"
-            end;
-          cgs
-     end
+  let open Maybe in
+  filter_map
+    begin fun tH_tA ->
+    genObj cg tH_tA
+    $> fun (cD, (cPsi, tR, sP), t) ->
+       (cD, CovGoal (cPsi, tR, sP), t)
+    end
 
 let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
   let _ = Types.freeze a in

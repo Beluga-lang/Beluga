@@ -48,25 +48,26 @@ let _ = Error.register_printer
   begin fun (Error (loc, err)) ->
   Error.print_with_location loc
     begin fun ppf ->
+    let open Format in
     match err with
     | NotImplemented f ->
-       Format.fprintf ppf "@[<v 2>Not implemented:@,@[%a@]@]"
+       fprintf ppf "@[<v 2>Not implemented:@,@[%a@]@]"
          f ()
     | MCtxIllformed cD ->
-       Format.fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
+       fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
          (P.fmt_ppr_lf_mctx P.l0) cD
     | UnsupportedTypeAnnotation ->
-       Format.fprintf ppf
+       fprintf ppf
          "Type annotations on context variables and parameter variables not supported at this point."
     | PatternMobj ->
-       Format.fprintf ppf
+       fprintf ppf
          "Expected a meta-object; Found a computation-level pattern"
     | TypeAbbrev a ->
-       Format.fprintf ppf
+       fprintf ppf
          "Type definition %s cannot contain any free meta-variables in its type."
          (Id.render_name a)
     | ValueRestriction (cD, cG, i, theta_tau) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v 2>value restriction [pattern matching]@,\
           expected: closed boxed type@,\
           inferred: @[%a@]@,\
@@ -77,16 +78,16 @@ let _ = Error.register_printer
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
     | IllegalCase (cD, cG, i, theta_tau) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Cannot pattern-match on values of this type.@.";
-       Format.fprintf ppf
+       fprintf ppf
          "  @[<v>Scrutinee: %a@;\
           Type: %a@]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
 
     | CompScrutineeTyp (cD, cG, i, sP, cPsi) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Type [%a . %a]@.\
           of scrutinee %a@.\
           in meta-context %a@. \
@@ -113,22 +114,22 @@ let _ = Error.register_printer
          "Context clash in pattern."
          "Pattern's context"   (P.fmt_ppr_lf_dctx cD P.l0)  cPsi
          "Scrutinee's context" (P.fmt_ppr_lf_dctx cD' P.l0) cPsi';
-       Format.fprintf ppf
+       fprintf ppf
          "Note that we do not allow the context in the pattern@ \
           to be more general than the context in the scrutinee."
 
     | MetaObjectClash (cD, mC) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Meta-object type clash.@ \
           Expected meta-object of type: %a"
          (P.fmt_ppr_cmp_meta_typ cD) mC;
 
     | MissingMetaObj      ->
-       Format.fprintf ppf
+       fprintf ppf
          "Too few meta-objects supplied to data-constructor"
 
     | TooManyMetaObj      ->
-       Format.fprintf ppf
+       fprintf ppf
          "Too many meta-objects supplied to data-constructor"
 
     | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->

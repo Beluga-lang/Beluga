@@ -86,6 +86,14 @@ val mvar_dot1  : msub -> msub
 val pvar_dot1  : msub -> msub
 val mvar_dot   : msub -> mctx -> msub
 
+(** mcomp t1 t2 = t'
+    Eagerly composes the modal substitutions t1 and t2.
+
+    If   cD_2 |- t1 : cD_1
+    and  cD_3 |- t2 : cD_2
+    then cD_3 |- t' : cD_1
+    where t' = mcomp t1 t2
+*)
 val mcomp      : msub -> msub -> msub
 
 val m_invert     : msub -> msub

@@ -1113,47 +1113,63 @@ module Comp = struct
   let rec unroll cD cG tau =
     match tau with
     | TypPiBox (c_decl, tau') ->
-        let cD' = Syntax.Int.LF.Dec (cD, c_decl) in
-        unroll cD' cG tau'
+       (* TODO ensure c_decl name is unique in context *)
+       let cD' = Syntax.Int.LF.Dec (cD, c_decl) in
+       unroll cD' cG tau'
     | TypArr (t1, t2) ->
-        let name = Id.mk_name Id.NoName in
-        let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, t1, false)) in
-        unroll cD cG' t2
+       (* TODO use contextual name generation *)
+       let name = Id.mk_name Id.NoName in
+       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, t1, false)) in
+       unroll cD cG' t2
     | _ -> (cD, cG, tau)
 
-  let rec proof cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) p ttau =
+  let rec proof cD cG cIH (total_decs : Total.dec list) p ttau =
     match p with
-    | Incomplete p_state -> ()
+    | Incomplete g ->
+       (* TODO check that g matches the current proof state *)
+       (* TODO add g to a store of proof holes *)
+       ()
     | Command (cmd, p') ->
-        (match cmd with
-         | By (i_kind, e_syn, name, tau, bty) ->
-             let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
-             let tau' = Whnf.cnormCTyp (tau, m_sub) in
-             let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, tau', false)) in
-             proof cD cG' total_decs ~cIH:cIH p' ttau
-         | Unbox (_, name, mT) ->
-             let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.Decl (name, mT, Syntax.Int.LF.Maybe)) in
-             proof cD' cG total_decs ~cIH:cIH p' ttau)
-    | Directive d -> directive cD cG total_decs ~cIH:cIH d ttau
+        begin match cmd with
+        | By (i_kind, e_syn, name, tau, bty) ->
+           let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
+           let tau' = Whnf.cnormCTyp (tau, m_sub) in
+           let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, tau', false)) in
+           proof cD cG' cIH total_decs p' ttau
+        | Unbox (_, name, mT) ->
+           let cD' = Syntax.Int.LF.Dec (cD, Syntax.Int.LF.Decl (name, mT, Syntax.Int.LF.Maybe)) in
+           proof cD' cG cIH total_decs p' ttau
+        end
+    | Directive d ->
+       directive cD cG cIH total_decs d ttau
 
-  and directive cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) (d : directive) ttau =
+  and directive cD cG cIH (total_decs : Total.dec list) (d : directive) ttau =
     match d with
-    | Syntax.Int.Comp.Intros hyp ->
-        (match hyp with
-         | Hypothetical (h, p) ->
-             let tau = Whnf.cnormCTyp ttau in
-             let (cD', cG', tau') = unroll cD cG tau in
-             (* should we check for equality of cD' = h.cD and cG' = h.cG? *)
-             proof cD' cG' total_decs ~cIH:cIH p (tau', Whnf.m_id))
-    | Solve e_chk -> check cD (cG, cIH) total_decs e_chk ttau
-    | MetaSplit (e_syn, tau, m_branches) ->
+    | Intros (Hypothetical (h, p)) ->
+       let tau = Whnf.cnormCTyp ttau in
+       let (cD', cG', tau') = unroll cD cG tau in
+       (* TODO check that cD and cG are convertible with cD' and cG' *)
+       proof cD' cG' cIH total_decs p (tau', Whnf.m_id)
+
+    | Solve e_chk ->
+       check cD (cG, cIH) total_decs e_chk ttau
+
+    | ContextSplit (i, tau, bs) ->
+       assert false
+
+    | MetaSplit (i, tau, bs) ->
         let handle_branch (SplitBranch ((cD, head), (Hypothetical (h, p_i)))) =
           ()
-        in List.iter handle_branch m_branches
-    | CompSplit (e_syn, tau, c_branches) ->
-        let handle_branch (SplitBranch ((module_id, i), (Hypothetical (h, p_i)))) =
+        in
+        List.iter handle_branch bs;
+        assert false
+
+    | CompSplit (i, tau, bs) ->
+        let handle_branch (SplitBranch (cid, (Hypothetical (h, p_i)))) =
           ()
-        in List.iter handle_branch c_branches
+        in
+        List.iter handle_branch bs;
+        assert false
 
   let syn cD cG (total_decs : Total.dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in
@@ -1165,6 +1181,6 @@ module Comp = struct
   let thm cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
     match t with
     | Syntax.Int.Comp.Program e -> check cD cG total_decs ~cIH: cIH e ttau
-    | Syntax.Int.Comp.Proof p -> proof cD cG total_decs ~cIH:cIH p ttau
+    | Syntax.Int.Comp.Proof p -> proof cD cG cIH total_decs p ttau
 
 end

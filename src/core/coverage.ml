@@ -1204,7 +1204,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
            meta-sub typing: @,  @[%a@]@]"
       P.fmt_ppr_lf_msub_typing (cD', ms', cD)
     end;
-  (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
+  (cD' , (cPsi', tR', (tP', S.LF.id)), ms')
 
 let rec genAllObj cg =
   function
@@ -1213,7 +1213,8 @@ let rec genAllObj cg =
      let cgs = genAllObj cg tHAlist in
      begin
        try
-         (genObj cg tH_tA)::cgs
+         let (cD, (cPsi, tR, sP), t) = genObj cg tH_tA in
+         (cD, CovGoal (cPsi, tR, sP), t) :: cgs
        with
        | U.Failure _
          | U.GlobalCnstrFailure _ ->

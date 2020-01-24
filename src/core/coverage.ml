@@ -1131,18 +1131,7 @@ let rec genSpine names cD cPsi sA tP =
      LF.Nil
 
 
-(* genObj (cD, cPsi, tP) (tH, tA) = (cD', CovGoal (cPsi', tR, tP'), ms)
-
-   if cD; cPsi |- tH => tA   and
-      there exists a spine tS s.t.  cD; cPsi |- tS : A > P
-   then
-
-      R = Root (tH, tS)  and  cD'; [ms]cPsi |- tR <= [ms]tP
-                         and  cD' |- ms : cD
-
- *)
 let genObj (cD, cPsi, tP) (tH, tA) =
-  (* make a fresh copy of tP[cPsi] *)
   dprintf
     begin fun p ->
     p.fmt "[genObj] @[<v>cD = @[%a@]@,in the beginning there were %d constraints@]"
@@ -1159,70 +1148,53 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   let tH' = Whnf.cnormHead (tH, ms) in
 
   (* now tP', cPsi', tA', tH' are all "closed" but contain MMVars instead of MVars *)
+  (* We construct the spine using these types, unify the conclusion
+     types, and then abstract to rebuild delta. *)
 
   let names =
     Context.to_list_map cD (fun _ -> LF.name_of_ctyp_decl)
     @ LF.names_of_dctx cPsi
   in
-  let spine = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
-  let tM = LF.Root (Loc.ghost, tH' , spine) in
-  (*
-    (* This print will crash Beluga sometimes, because it *seems* like
-       tA doesn't always make sense in cD.
-       This is probably a bug. -je
-     *)
-  dprintf
-    begin fun p ->
-    p.fmt "[genObj] @[<v>Generated Head@,\
-           tH = @[%a@]@,\
-           tA = @[%a@]@,\
-           as suitable head for for [@[%a |-@ %a@]]@]"
-      (P.fmt_ppr_lf_head cD cPsi P.l0) tH
-      (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
-      (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-      (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
-    end;
-   *)
-
-  U.forceGlobalCnstr (!U.globalCnstrs);
-  dprint (fun _ -> "[genObj] global constraints forced!");
-  let cD', cPsi', tR, tP', ms' =
+  match
     try
-      Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
+      let s = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
+      U.forceGlobalCnstr !U.globalCnstrs;
+      dprint (fun _ -> "[genObj] global constraints forced!");
+      Some s
     with
-    | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
-       let open Format in
-       fprintf std_formatter "@[<v>WARNING: encountered leftover constraints in higher-order unification@,Coverage goal: @[%a@ : %a@]"
-         (P.fmt_ppr_lf_normal LF.Empty cPsi' P.l0) tM
-         (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
-       raise e
-  in
-  let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
-  dprintf
-    begin fun p ->
-    p.fmt "[genObj] @[<v>finished@,\
-           meta-sub typing: @,  @[%a@]@]"
-      P.fmt_ppr_lf_msub_typing (cD', ms', cD)
-    end;
-  (cD' , CovGoal (cPsi', tR', (tP', S.LF.id)), ms')
-
-let rec genAllObj cg =
-  function
-  | [] -> []
-  | tH_tA :: tHAlist ->
-     let cgs = genAllObj cg tHAlist in
-     begin
+     | U.Failure _ | U.GlobalCnstrFailure (_, _) -> None
+  with
+  | None -> None
+  | Some spine ->
+     let tM = LF.Root (Loc.ghost, tH' , spine) in
+     let cD', cPsi', tR, tP', ms' =
        try
-         (genObj cg tH_tA)::cgs
+         Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
        with
-       | U.Failure _
-         | U.GlobalCnstrFailure _ ->
-          dprint
-            begin fun _ ->
-            "\n [genAllObj] Global Constraint Failure – no genObj generated.\n"
-            end;
-          cgs
-     end
+       | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
+          let open Format in
+          fprintf std_formatter "@[<v>WARNING: encountered leftover constraints in higher-order unification@,Coverage goal: @[%a@ : %a@]"
+            (P.fmt_ppr_lf_normal LF.Empty cPsi' P.l0) tM
+            (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
+          raise e
+     in
+     let (cPsi', tR', tP')  = (Whnf.normDCtx cPsi', Whnf.norm (tR, S.LF.id), Whnf.normTyp (tP', S.LF.id)) in
+     dprintf
+       begin fun p ->
+       p.fmt "[genObj] @[<v>finished@,\
+              meta-sub typing: @,  @[%a@]@]"
+         P.fmt_ppr_lf_msub_typing (cD', ms', cD)
+       end;
+     Some (cD' , (cPsi', tR', (tP', S.LF.id)), ms')
+
+let genAllObj cg =
+  let open Maybe in
+  filter_map
+    begin fun tH_tA ->
+    genObj cg tH_tA
+    $> fun (cD, (cPsi, tR, sP), t) ->
+       (cD, CovGoal (cPsi, tR, sP), t)
+    end
 
 let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
   let _ = Types.freeze a in
@@ -2324,7 +2296,7 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
         begin fun _ ->
         "[genPatt] - Return Coverage Pattern"
         end;
-      Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
+      Some (cD', (ccG', pat', (tau', Whnf.m_id)), ms')
     with
     (* expected type and generated type for spine do not
        unify; therefore c pS is not inhabit tau_v
@@ -2337,16 +2309,14 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
        raise e
   end
 
-let rec genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
-  function
-  | [] -> []
-  | (c, tau_c) :: ctau_list ->
-     begin match genPatt (cD_v, tau_v) (c, tau_c) with
-     | Some (cD, cg, ms) ->
-        let pat_list = genAllPatt (cD_v, tau_v) ctau_list
-        in (cD, cg, ms) :: pat_list
-     | None -> genAllPatt (cD_v, tau_v) ctau_list
-     end
+let genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
+  let open Maybe in
+  filter_map
+    begin fun (c, tau_c) ->
+    genPatt (cD_v, tau_v) (c, tau_c)
+    $> fun (cD, (cG, pat, ttau), t) ->
+       (cD, CovPatt (cG, pat, ttau), t)
+    end
 
 let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
   let remap_cltyp_to_covpatt loc f =

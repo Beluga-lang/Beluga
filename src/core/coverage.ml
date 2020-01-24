@@ -2315,7 +2315,7 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
         begin fun _ ->
         "[genPatt] - Return Coverage Pattern"
         end;
-      Some (cD', CovPatt (ccG', pat', (tau', Whnf.m_id)), ms')
+      Some (cD', (ccG', pat', (tau', Whnf.m_id)), ms')
     with
     (* expected type and generated type for spine do not
        unify; therefore c pS is not inhabit tau_v
@@ -2333,9 +2333,9 @@ let rec genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
   | [] -> []
   | (c, tau_c) :: ctau_list ->
      begin match genPatt (cD_v, tau_v) (c, tau_c) with
-     | Some (cD, cg, ms) ->
+     | Some (cD, (cG, pat, ttau), t) ->
         let pat_list = genAllPatt (cD_v, tau_v) ctau_list
-        in (cD, cg, ms) :: pat_list
+        in (cD, CovPatt (cG, pat, ttau), t) :: pat_list
      | None -> genAllPatt (cD_v, tau_v) ctau_list
      end
 

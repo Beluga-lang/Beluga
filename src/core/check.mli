@@ -84,6 +84,9 @@ module Comp : sig
 
   exception Error of Syntax.Loc.t * error
 
+  (** Raises an error from this module. *)
+  val throw : Syntax.Loc.t -> error -> 'a
+
   val thm :
     LF.mctx ->
     gctx ->

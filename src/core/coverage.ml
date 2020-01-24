@@ -1131,16 +1131,6 @@ let rec genSpine names cD cPsi sA tP =
      LF.Nil
 
 
-(* genObj (cD, cPsi, tP) (tH, tA) = (cD', CovGoal (cPsi', tR, tP'), ms)
-
-   if cD; cPsi |- tH => tA   and
-      there exists a spine tS s.t.  cD; cPsi |- tS : A > P
-   then
-
-      R = Root (tH, tS)  and  cD'; [ms]cPsi |- tR <= [ms]tP
-                         and  cD' |- ms : cD
-
- *)
 let genObj (cD, cPsi, tP) (tH, tA) =
   (* make a fresh copy of tP[cPsi] *)
   dprintf

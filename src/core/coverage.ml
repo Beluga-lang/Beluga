@@ -135,13 +135,11 @@ type cov_goal =
 
 type pattern =
   | MetaPatt of LF.dctx * LF.normal * LF.tclo
-  | MetaCtx of LF.dctx
   | MetaSub of LF.dctx * LF.sub * LF.cltyp
   | GenPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
 type eqn =
   | Eqn of cov_goal * pattern
-  | EqnCtx of LF.dctx * LF.dctx
 
 type split =
   | Split of cov_goal * pattern
@@ -320,8 +318,6 @@ end = struct
   let fmt_ppr_pattern cD ppf : pattern -> unit =
     let open Format in
     function
-    | MetaCtx cPsi ->
-       P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
     | MetaSub (cPsi, s, LF.STyp (_, cPhi)) ->
        fprintf ppf "%a |- %a : %a"
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
@@ -391,8 +387,6 @@ end = struct
        fprintf ppf "@[%a@]@ ==@ @[%a@]"
          (fmt_ppr_cov_goal cD) cg
          (fmt_ppr_pattern cD_p) patt
-    | _ ->
-       failwith "[fmt_ppr_eqn] not an equation"
 
   let fmt_ppr_equations cD cD_p ppf : eqn list -> unit =
     let open Format in
@@ -904,9 +898,6 @@ and pre_match_dctx cD cD_p cPsi cPhi_patt matchCands splitCands =
   match cPsi, cPhi_patt with
   | LF.Null, LF.Null ->
      (matchCands, splitCands)
-  (*
-  | cPsi, LF.CtxVar _ -> ((EqnCtx (cPsi, cPhi_patt) :: matchCands), splitCands)
-   *)
   | cPsi, LF.CtxVar _ ->
      (matchCands, splitCands) (* will be unified as part of the contextual obj *)
   | LF.CtxVar _, cPhi_patt ->
@@ -1629,28 +1620,6 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
                     end;
                   NotSolvable
                end
-        end
-
-     | EqnCtx (cPsi, cPsi_p) ->
-        let cPsi_p' = Whnf.cnormDCtx (cPsi_p, ms) in
-        begin
-          try
-            dprintf
-              begin fun p ->
-              let dctx = P.fmt_ppr_lf_dctx cD P.l0 in
-              p.fmt "EqnCtx @[%a == %a@]"
-                dctx cPsi
-                dctx cPsi_p'
-              end;
-            U.unifyDCtx cD cPsi cPsi_p';
-            solve' cD (mCands, ms) cD_p (mc::mCands') sCands'
-          with
-          | U.Failure msg ->
-             dprint
-               begin fun _ ->
-               "007 UNIFY FAILURE " ^ msg
-               end;
-             NotSolvable
         end
      end
 

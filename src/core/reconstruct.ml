@@ -168,19 +168,21 @@ let mk_name_cdec cdec = match cdec with
 
 
 type case_type  = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
-  | IndexObj of Int.Comp.meta_obj
+  | IndexObj of Int.Comp.pattern * Int.Comp.meta_obj
   | DataObj
 
 (** Decides what the case type is. *)
-let case_type i =
+let case_type pat i =
   match i with
   | Int.Comp.AnnBox (mC, _) ->
-     IndexObj mC
+     IndexObj (Lazy.force pat, mC)
   | _ -> DataObj
 
 let map_case_type f = function
   | DataObj -> DataObj
-  | IndexObj mC -> IndexObj (f mC)
+  | IndexObj (pat, mC) ->
+     let (pat', mC') = f (pat, mC) in
+     IndexObj (pat', mC')
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null ->
@@ -773,7 +775,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) = match tau_s with
 let inferPatTyp cD' (cD_s, tau_s) = inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_s, Whnf.m_id))
 
 (** See documentation in reconstruct.mli *)
-let synPatRefine loc caseT (cD, cD') t pat (tau_s, tau_p) =
+let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
   let unifyPatternType tau_s' tau_p' =
     dprintf
       begin fun p ->
@@ -790,10 +792,9 @@ let synPatRefine loc caseT (cD, cD') t pat (tau_s, tau_p) =
        raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau_s', Whnf.m_id), (tau_p', Whnf.m_id))))
   in
   let unifyScrutinee tau_p' t1 t1t =
-    match caseT, pat with
-    | DataObj, _ -> () (* not dependent pattern matching; nothing to do *)
-    | IndexObj mC, Int.Comp.PatMetaObj (_, mC_p)
-      | IndexObj mC, Int.Comp.(PatAnn (_, PatMetaObj (_, mC_p), _)) ->
+    match caseT with
+    | DataObj -> () (* not dependent pattern matching; nothing to do *)
+    | IndexObj (Int.Comp.(PatMetaObj (_, mC_p) | PatAnn (_, PatMetaObj (_, mC_p), _)), mC) ->
        let mC_p = Whnf.(cnormMetaObj (mC_p, m_id)) in
        (* tau_p' _has_ to be a box type if caseT is an IndexObj  *)
        let Int.Comp.TypBox (_, mT) = tau_p' in
@@ -822,8 +823,8 @@ let synPatRefine loc caseT (cD, cD') t pat (tau_s, tau_p) =
   unifyScrutinee tau_p' t1 t1t;
   let t1', cD'' = Abstract.msub (Whnf.cnormMSub t1) in
   let t' = Whnf.mcomp t t1' in
-  let pat' = Whnf.cnormPattern (pat, t1') in
-  (t', t1', cD'', pat')
+  (* let pat' = Whnf.cnormPattern (pat, t1') in *)
+  (t', t1', cD'')
 
 (* *******************************************************************************)
 
@@ -978,7 +979,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
        end;
      let (i, tau_theta') = genMApp loc cD (i', tau_theta') in
      let tau_s = Whnf.cnormCTyp tau_theta' in
-     let ct = case_type i in
+     let ct = fun pat -> case_type pat i in
      begin
        match (i, tau_s) with
              (* Not only the object but also its type must be closed *)
@@ -1724,7 +1725,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      (* cD |- tau_s and cD, cD1' |- tau_s' *)
      (* cD1' |- tau1 *)
 
-     let (t', t1, cD1'', pat1') =
+     let (t', t1, cD1'') =
        let t = Int.LF.MShift l_cd1' in
        let cD' = Context.append cD cD1' in
        (* since tau1 and pat1 make sense in cD1', they also make sense in cD'
@@ -1746,8 +1747,9 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
            (P.fmt_ppr_cmp_typ cD P.l0) tau_s
            (P.fmt_ppr_cmp_typ cD' P.l0) tau1
          end;
-       synPatRefine loc caseTyp (cD, cD') t pat1 (tau_s, tau1)
+       synPatRefine loc (caseTyp (lazy pat1)) (cD, cD') t (tau_s, tau1)
      in
+     let pat1' = Whnf.cnormPattern (pat1, t1) in
      (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
      let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
      (*   cD1' |- cG1     cD1'' |- t1 : cD, cD1'    cD, cD1' |- ?   cD1' *)

@@ -12,30 +12,40 @@ type case_type
 (** Analyzes the given case scrutinee to decide what kind of case we
     have.
     The case type is used by other elaboration functions to
-    generate appropriate substittions.
+    generate appropriate substitutions.
+    (Specifically, see synPatRefine, which is the main consumer of
+    case_type.)
+
+    The given pattern is passed lazily as it is only needed when the
+    synthesizable expression happens to be a box. (This is related to
+    the implementation of dependent pattern matching.)
+    If you know that the synthesizable expression is definitely not a
+    box, then you can pass
+    lazy (Error.violation "appropriate message")
+    as the pattern.
  *)
-val case_type : Int.Comp.exp_syn -> case_type
+val case_type : Int.Comp.pattern Lazy.t -> Int.Comp.exp_syn -> case_type
 
 (** Transforms a case_type if it was actually an index object. *)
-val map_case_type : (Int.Comp.meta_obj -> Int.Comp.meta_obj) -> case_type -> case_type
+val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj ->
+                     Int.Comp.pattern * Int.Comp.meta_obj) ->
+                    case_type -> case_type
 
 (** Constructs the refinement substitution for a case analysis.
     If
       * cD; cG |- tau_s <= type
       * cD'; cG' |- tau_p <= type
-      * cD'; cG' |- pat => tau_p
       * cD' |- t : cD
       * if caseT = IndexObj C then
         - tau_s = [U]
         - cD; cG |- C <= U
     then
-      synPatRefine' loc caseT (cD, cD') t pat (tau_s, tau_p)
+      synPatRefine' loc caseT (cD, cD') t (tau_s, tau_p)
               =
-      t', t1', cD'', pat'
+      t', t1', cD''
     such that
       * cD'' |- t' : cD
       * cD'' |- t1' : cD'
-      * cD'', [[t1']]cG |- pat' => [[t1']]tau_p
 
     Remark:
       * cD'' is the meta-context in which the branch of the case
@@ -45,9 +55,8 @@ val map_case_type : (Int.Comp.meta_obj -> Int.Comp.meta_obj) -> case_type -> cas
 val synPatRefine : Loc.t -> case_type ->
                    Int.LF.mctx * Int.LF.mctx ->
                    Int.LF.msub ->
-                   Int.Comp.pattern ->
                    Int.Comp.typ * Int.Comp.typ ->
-                   Int.LF.msub * Int.LF.msub * Int.LF.mctx * Int.Comp.pattern
+                   Int.LF.msub * Int.LF.msub * Int.LF.mctx
 
 val kind : Apx.LF.kind -> Int.LF.kind
 val typ : Lfrecon.reconType -> Apx.LF.typ -> Int.LF.typ

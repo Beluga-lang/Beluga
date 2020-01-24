@@ -251,7 +251,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
               (P.fmt_ppr_lf_mctx P.l0) s.context.cD
             end;
 
-          let t', t1', cD_b, pat' =
+          let t', t1', cD_b =
             (* Refine the pattern to compute the branch's
                meta-context, accounting for dependent pattern matching on
                `m`. *)
@@ -273,15 +273,15 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
               end;
             Reconstruct.synPatRefine
               Loc.ghost
-              (Reconstruct.case_type i)
+              (Reconstruct.case_type (lazy pat) i)
               (s.context.cD, cD)
               t
-              pat
               (* We possibly need to Total.strip tau here.
                  So far it seems to work as is.
                  -je *)
               (tau, tau_p)
           in
+          let pat' = Whnf.cnormPattern (pat, t1') in
           dprintf
             begin fun p ->
             p.fmt "@[<v 2>[harpoon-split] [after synPatRefine]@,\

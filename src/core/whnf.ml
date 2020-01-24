@@ -271,19 +271,6 @@ let rec mvar_dot1 t =
 
 
 
-(* mcomp t1 t2 = t'
-
-   Invariant:
-
-   If   D'  |- t1 : D
-   and  D'' |- t2 : D'
-   then t'  =  t1 o t2
-   and  D'' |- t1 o t2 : D
-
-   Note: Eagerly composes the modal substitutions t1 and t2.
-
-*)
-
 and mcomp t1 t2 = match (t1, t2) with
   | (MShift 0, t)         -> t
   | (t, MShift 0)         -> t

@@ -1132,7 +1132,6 @@ let rec genSpine names cD cPsi sA tP =
 
 
 let genObj (cD, cPsi, tP) (tH, tA) =
-  (* make a fresh copy of tP[cPsi] *)
   dprintf
     begin fun p ->
     p.fmt "[genObj] @[<v>cD = @[%a@]@,in the beginning there were %d constraints@]"
@@ -1149,6 +1148,8 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   let tH' = Whnf.cnormHead (tH, ms) in
 
   (* now tP', cPsi', tA', tH' are all "closed" but contain MMVars instead of MVars *)
+  (* We construct the spine using these types, unify the conclusion
+     types, and then abstract to rebuild delta. *)
 
   let names =
     Context.to_list_map cD (fun _ -> LF.name_of_ctyp_decl)
@@ -1166,24 +1167,6 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   | None -> None
   | Some spine ->
      let tM = LF.Root (Loc.ghost, tH' , spine) in
-     (*
-       (* This print will crash Beluga sometimes, because it *seems* like
-       tA doesn't always make sense in cD.
-       This is probably a bug. -je
-      *)
-      dprintf
-      begin fun p ->
-      p.fmt "[genObj] @[<v>Generated Head@,\
-      tH = @[%a@]@,\
-      tA = @[%a@]@,\
-      as suitable head for for [@[%a |-@ %a@]]@]"
-      (P.fmt_ppr_lf_head cD cPsi P.l0) tH
-      (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
-      (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-      (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
-      end;
-      *)
-
      let cD', cPsi', tR, tP', ms' =
        try
          Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
@@ -1204,7 +1187,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
        end;
      Some (cD' , (cPsi', tR', (tP', S.LF.id)), ms')
 
-let rec genAllObj cg =
+let genAllObj cg =
   let open Maybe in
   filter_map
     begin fun tH_tA ->

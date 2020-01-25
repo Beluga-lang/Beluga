@@ -72,7 +72,7 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
     together with its target context cD' are also returned.
  *)
 val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
-             LF.mctx * (LF.dctx * LF.normal * LF.tclo) * LF.msub
+             (LF.mctx * (LF.dctx * LF.normal * LF.tclo) * LF.msub) option
 
 val genPatt : LF.mctx * Comp.typ ->
               Id.cid_comp_typ * Comp.typ ->

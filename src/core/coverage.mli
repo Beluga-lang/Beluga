@@ -74,6 +74,25 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
 val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
              (LF.mctx * (LF.dctx * LF.normal * LF.tclo) * LF.msub) option
 
+(** genPatt (cD, tau_i) (c, tau_c)
+    = None | Some (cD', (cG, pat, ttau_p), t)
+    generates a pattern with the given constructor c that matches the type tau_i.
+
+    If cD |- tau_i <= type
+       .; . |- c <= tau_c
+
+    then genPatt tries to generate a spine S such that
+    pat = c S
+
+    cD'; cG |- pat <= ttau_p
+    cD' |- t : cD
+    (cD' |- ttau_p <= type)
+    (cD' |- cG <= gctx)
+
+    This process can fail, if ttau_p is not unifiable with the
+    conclusion type of tau_c, in which case the constructor `c` is
+    impossible for the scrutinee type `tau_i`.
+ *)
 val genPatt : LF.mctx * Comp.typ ->
               Id.cid_comp_typ * Comp.typ ->
               (LF.mctx * (gctx * Comp.pattern * Comp.tclo) * LF.msub) option

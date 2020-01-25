@@ -2309,16 +2309,14 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
        raise e
   end
 
-let rec genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
-  function
-  | [] -> []
-  | (c, tau_c) :: ctau_list ->
-     begin match genPatt (cD_v, tau_v) (c, tau_c) with
-     | Some (cD, (cG, pat, ttau), t) ->
-        let pat_list = genAllPatt (cD_v, tau_v) ctau_list
-        in (cD, CovPatt (cG, pat, ttau), t) :: pat_list
-     | None -> genAllPatt (cD_v, tau_v) ctau_list
-     end
+let genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
+  let open Maybe in
+  filter_map
+    begin fun (c, tau_c) ->
+    genPatt (cD_v, tau_v) (c, tau_c)
+    $> fun (cD, (cG, pat, ttau), t) ->
+       (cD, CovPatt (cG, pat, ttau), t)
+    end
 
 let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
   let remap_cltyp_to_covpatt loc f =

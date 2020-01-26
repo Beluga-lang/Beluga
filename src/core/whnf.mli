@@ -96,6 +96,15 @@ val mvar_dot   : msub -> mctx -> msub
 *)
 val mcomp      : msub -> msub -> msub
 
+(** Flipped version of mcomp which is more useful as a higher-order function.
+
+    If   cD_2 |- t1 : cD_1
+    and  cD_3 |- t2 : cD_2
+    then cD_3 |- t' : cD_1
+    where t' = mcomp' t2 t1
+ *)
+val mcomp' : msub -> msub -> msub
+
 val m_invert     : msub -> msub
 
 (* val invExp     : Comp.exp_chk * msub -> int -> Comp.exp_chk

@@ -347,7 +347,6 @@ and m_invert s =
     in
       invert' 0 s
 
-
 (* Normalization = applying simultaneous hereditary substitution
  *
  * Applying the substitution ss to an LF term tM yields again
@@ -2080,3 +2079,5 @@ let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypot
   let cG = Context.append (cnormCtx (cG1, MShift k)) cG2 in
   let cIH = Context.append (cnormCtx (cIH1, MShift k)) cIH2 in
   { cD; cG; cIH }
+
+let mcomp' = Misc.Function.flip mcomp

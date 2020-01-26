@@ -1961,7 +1961,7 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
         let cD = Int.LF.(Dec (cD, Decl (name, cU, No))) in
         let shift1 = Int.LF.MShift 1 in
         let cG = Whnf.cnormCtx (cG, shift1) in
-        let ttau = Pair.rmap (Whnf.mcomp shift1) ttau in
+        let ttau = Pair.rmap (Whnf.mcomp' shift1) ttau in
         let int_proof = elProof cD cG label p ttau in
         I.(Command (Unbox (i, name, cU), int_proof))
 
@@ -1994,19 +1994,86 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
           CaseLabelMismatch (`context, `named)
           |> throw loc
      in
-     let make_meta_branch psi { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
+     let make_meta_branch (cU, cPsi) { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
        match l with
        | A.NamedCase (loc, name) ->
-          let hyp' = elHypothetical cD cG label hyp ttau in
-          let cid_t =
+          (* TODO figure out how to reconstruct parameter variable branches
+             In the case of a parameter variable, index_of_name will
+             fail, due to the hash.
+             I would like something more robust that just checking if the name starts with a hash;
+             perhaps one needs a "PVarCase" label.
+           *)
+          let tH, tA =
             try
-              Store.Cid.Term.index_of_name name
+              let open Store.Cid.Term in
+              let cid = index_of_name name in
+              let { typ; _ } = get cid in
+              (Int.LF.Const cid, typ)
             with
             | Not_found ->
                UnboundCaseLabel (`meta, name, cD, Lazy.force tau_i)
                |> throw loc
           in
-          I.SplitBranch ((psi, Int.LF.Const cid_t), hyp')
+          (* XXX Is this always going to be MTyp?
+             Need to think about how this will interact with parameter variables.
+           *)
+          let Int.LF.MTyp tP = cU in
+          begin match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
+          | None ->
+             assert false
+          (* XXX throw an appropriate error
+             Normally this would be a type mismatch, because the user
+             types the full pattern, but here since the user only
+             types the constructor.
+             I'm thinking an error that looks like
+             Impossible constructor.
+             The constructor %a, of type
+               %a
+             is not a possible case for the split scrutinee type
+               %a
+           *)
+          | Some (cD', (cPsi', tR_p, tA_p), t) ->
+             let pat =
+               I.PatMetaObj
+                 ( Loc.ghost
+                 , let open Int.LF in
+                   ( Loc.ghost
+                   , ClObj
+                       ( Context.dctxToHat cPsi'
+                       , MObj tR_p
+                       )
+                   )
+                 )
+             in
+             let tau_p =
+               I.TypBox
+                 ( Loc.ghost
+                 , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
+                 )
+             in
+             (* cD' ; cPsi' |- tR_p <= tA_p
+                cD' |- t : cD
+              *)
+             let (t', t1, cD_b) =
+               synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+                 (Lazy.force tau_i, tau_p)
+             in
+             (* cD_b |- t' : cD
+                cD_b |- t1 : cD'
+              *)
+             let cG_b = Whnf.cnormCtx (cG, t') in
+             let hyp' =
+               elHypothetical cD_b cG_b label hyp
+                 (Pair.rmap (Whnf.mcomp' t') ttau)
+                 (*
+                    ttau = (t, tau)
+                    such that
+                    cD |- [t]tau <= type
+
+                  *)
+             in
+             I.SplitBranch ((cPsi, tH), hyp')
+          end
 
        | A.ContextCase _ ->
           CaseLabelMismatch (`named, `context)
@@ -2014,6 +2081,9 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      in
      let make_comp_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
        match l with
+       | A.ContextCase _ ->
+          CaseLabelMismatch (`named, `context)
+          |> throw loc
        | A.NamedCase (loc, name) ->
           let cid =
             try
@@ -2023,25 +2093,33 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
                UnboundCaseLabel (`comp, name, cD, Lazy.force tau_i)
                |> throw loc
           in
-          (*
           let e = Comp.get cid in
           let tau_c = Comp.(e.typ) in
-           *)
+          let tau_i = Lazy.force tau_i in
 
-          (* Can I generalize synPatRefine to not care about the pattern? *)
-          (* TODO generate pattern from the case label and use
-             synPatRefine to construct the refinement substitution theta
-             and branch context cD_b.
-             - Apply theta to ttau to obtain ttau'
-             - Apply theta to cG to obtain cG'
-             -
-           *)
+          match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
+          | None -> assert false (* Throw an error ? *)
+          | Some (cD', (cG', pat, ttau), t) ->
+             let tau_p = Whnf.cnormCTyp ttau in
+             let cG' = Coverage.compgctx_of_gctx cG' in
+             (* cD' |- t : cD
+                cD' |- cG' ctx
+                cD', cG' |- pat <= tau_p
+              *)
+             let (t', t1, cD_b) =
+               synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
+             in
+             (* cD_b |- t' : cD
+                cD_b |- t1 : cD'
+              *)
+             let cG_b = Whnf.cnormCtx (cG', t1) in
 
-          let hyp' = elHypothetical cD cG label hyp ttau in
-          I.SplitBranch (cid, hyp')
-       | A.ContextCase _ ->
-          CaseLabelMismatch (`named, `context)
-          |> throw loc
+             let hyp' =
+               elHypothetical cD_b cG_b label hyp
+                 (Pair.rmap (Whnf.mcomp t') ttau)
+             in
+
+             I.SplitBranch (cid, hyp')
      in
      let tau_i = Lazy.force tau_i in
      match tau_i with
@@ -2049,7 +2127,7 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
         let ctx_branches = List.map make_ctx_branch s_branches in
         I.ContextSplit (i, tau_i, ctx_branches)
      | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->
-        let meta_branches = List.map (make_meta_branch psi) s_branches in
+        let meta_branches = List.map (make_meta_branch (cl, psi)) s_branches in
         I.MetaSplit (i, tau_i, meta_branches)
      | I.TypBase _ | I.TypCross _ ->
         let comp_branches = List.map make_comp_branch s_branches in

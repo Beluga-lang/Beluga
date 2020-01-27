@@ -129,6 +129,14 @@ module Prover = struct
       ; name
       }
 
+    let serialize ppf (s : t) =
+      let fmt_ppr_theorems =
+        Format.pp_print_list ~pp_sep: Format.pp_print_cut Theorem.serialize
+      in
+      Format.fprintf ppf "@[<v>%a [@,%a]@,@]"
+        Id.print s.name
+        fmt_ppr_theorems (DynArray.to_list s.theorems)
+
     (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
      *)
@@ -194,6 +202,20 @@ module Prover = struct
       ; ppf
       ; stop
       }
+
+    let serialize_stop ppf =
+      function
+      | `stop -> Format.fprintf ppf "stop"
+      | `go_on -> Format.fprintf ppf "go_on"
+
+    let serialize ppf (s : t) =
+      let fmt_ppr_sessions =
+        Format.pp_print_list ~pp_sep: Format.pp_print_cut Session.serialize
+      in
+      Format.fprintf ppf "@[<v>%a@,@,%a@,%a@]"
+        serialize_stop s.stop
+        Automation.State.serialize s.automation_state
+        fmt_ppr_sessions (DynArray.to_list s.sessions)
 
     let printf s x = Format.fprintf s.ppf x
 
@@ -467,6 +489,8 @@ module Prover = struct
              Session.enter c;
              DynArray.insert s.State.sessions 0 c'
           end
+       | `serialize ->
+          State.serialize s.State.ppf s
        end
     | Command.Subgoal cmd ->
        begin match cmd with

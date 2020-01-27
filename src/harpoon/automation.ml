@@ -206,8 +206,8 @@ end = struct
     let items =
       Hashtbl.fold (fun k (v, _) acc -> (k, v) :: acc) st []
     in
-    Format.fprintf ppf "@[<v>%a@,@]"
-      (Format.pp_print_list ~pp_sep: Format.pp_print_cut serialize_item) items
+    Format.fprintf ppf "@[<v>--harpoon @[<h>%a@].@,@]"
+      (Format.pp_print_list ~pp_sep: Format.pp_print_space serialize_item) items
 
   let get_info st (k : Command.automation_kind) : info =
     (* find here is guaranteed to succeed by the external invariant

@@ -401,7 +401,7 @@ module Prover = struct
           Theorem.show_proof t
        | `select name ->
           begin match
-            Misc.DynArray.findi_opt
+            Misc.DynArray.rfind_opt_idx
               c.Session.theorems
               (fun t -> Theorem.has_name_of t name)
           with
@@ -437,7 +437,7 @@ module Prover = struct
        | `defer -> State.defer_session s
        | `create name ->
           begin match
-            Misc.DynArray.findi_opt
+            Misc.DynArray.rfind_opt_idx
               s.State.sessions
               (fun c -> Id.equals c.Session.name name)
           with
@@ -453,7 +453,7 @@ module Prover = struct
           end
        | `select name ->
           begin match
-            Misc.DynArray.findi_opt
+            Misc.DynArray.rfind_opt_idx
               s.State.sessions
               (fun c -> Id.equals c.Session.name name)
           with

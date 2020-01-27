@@ -120,7 +120,7 @@ module DynArray = struct
     | d -> Some (DynArray.get d 0)
 
   (** Finds the *last* element in the array satisfying p, and returns also its index. *)
-  let findi_opt (type a) (d : a DynArray.t) (p : a -> bool) : (int * a) option =
+  let rfind_opt_idx (type a) (d : a DynArray.t) (p : a -> bool) : (int * a) option =
     let rec go = function
       | -1 -> None
       | k ->

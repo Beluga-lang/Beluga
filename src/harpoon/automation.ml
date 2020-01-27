@@ -17,6 +17,7 @@ let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
 open B.Debug.Fmt
 
 type t = Theorem.t -> proof_state -> bool
+type automation = t
 
 let auto_intros : t =
   fun t g ->
@@ -168,46 +169,56 @@ let auto_solve_trivial : t =
      (solve w |> Tactic.solve) t g;
      true
 
-type automation_info = bool ref * t
+module State : sig
+  type t
+  val make : unit -> t
+  val toggle : t -> Command.automation_kind -> Command.automation_change -> unit
+  val execute : t -> automation
+end = struct
+  type info = bool ref * automation
 
-type automation_state =
-  (Command.automation_kind, automation_info) Hashtbl.t
+  type t =
+    (Command.automation_kind, info) Hashtbl.t
 
-let make_automation_state () : automation_state =
-  let hashtbl = Hashtbl.create 2 in
-  let open List in
-  [ (`auto_intros, auto_intros)
-  ; (`auto_solve_trivial, auto_solve_trivial)
-  ]
-  |> iter (fun (k, f) -> Hashtbl.add hashtbl k (ref true, f));
-  hashtbl
+  let make () : t =
+    let hashtbl = Hashtbl.create 2 in
+    let open List in
+    [ (`auto_intros, auto_intros)
+    ; (`auto_solve_trivial, auto_solve_trivial)
+    ]
+    |> iter (fun (k, f) -> Hashtbl.add hashtbl k (ref true, f));
+    hashtbl
 
-let get_automation_info auto_st (k : Command.automation_kind) : automation_info =
-  (* find here is guaranteed to succeed by the external invariant
-     that the hashtable has been populated with all the keys of the
-     polymorphic variant `automation_kind`.
-   *)
-  Hashtbl.find auto_st k
+  let get_info st (k : Command.automation_kind) : info =
+    (* find here is guaranteed to succeed by the external invariant
+       that the hashtable has been populated with all the keys of the
+       polymorphic variant `automation_kind`.
+     *)
+    Hashtbl.find st k
 
-let toggle_automation auto_st (k : Command.automation_kind) (state : Command.automation_change) : unit =
-  let (b, _) = get_automation_info auto_st k in
-  let s =
-    match state with
-    | `on -> true
-    | `off -> false
-    | `toggle -> not !b
-  in
-  b := s
+  let toggle st (k : Command.automation_kind) (inst : Command.automation_change) : unit =
+    let (b, _) = get_info st k in
+    let v =
+      match inst with
+      | `on -> true
+      | `off -> false
+      | `toggle -> not !b
+    in
+    b := v
 
-let exec_automation auto_st : t =
-  fun t g ->
-  let open List in
-  (* The order of automation kinds is important,
-     because it is the order in which automations are executed.
-   *)
-  [ `auto_solve_trivial
-  ; `auto_intros
-  ]
-  |> map (fun k -> get_automation_info auto_st k)
-  |> filter (fun (b, _) -> !b)
-  |> exists (fun (_, auto) -> auto t g)
+  let execute st : automation =
+    fun t g ->
+    let open List in
+    (* The order of automation kinds is important,
+       because it is the order in which automations are executed.
+     *)
+    [ `auto_solve_trivial
+    ; `auto_intros
+    ]
+    |> map (fun k -> get_info st k)
+    |> filter (fun (b, _) -> !b)
+    |> exists (fun (_, auto) -> auto t g)
+end
+
+let toggle = State.toggle
+let execute = State.execute

@@ -176,7 +176,7 @@ module Prover = struct
       { sessions : Session.t DynArray.t
       (* ^ The theorem sets currently being proven. *)
 
-      ; automation_state : Automation.automation_state
+      ; automation_state : Automation.State.t
       ; prompt : InputPrompt.t
       ; ppf : Format.formatter
       ; stop : [ `stop | `go_on ]
@@ -189,7 +189,7 @@ module Prover = struct
           (prompt : InputPrompt.t)
         : t =
       { sessions = DynArray.make 16
-      ; automation_state = Automation.make_automation_state ()
+      ; automation_state = Automation.State.make ()
       ; prompt
       ; ppf
       ; stop
@@ -206,7 +206,7 @@ module Prover = struct
 
     (** Runs proof automation on a given subgoal. *)
     let run_automation s (t : Theorem.t) (g : Comp.proof_state) =
-      ignore (Automation.exec_automation s.automation_state t g)
+      ignore (Automation.execute s.automation_state t g)
 
     (** Displays the given prompt `msg` and awaits a line of input from the user.
         The line is parsed using the given parser.
@@ -478,7 +478,7 @@ module Prover = struct
        Theorem.rename_variable x_src x_dst level t g
 
     | Command.ToggleAutomation (automation_kind, automation_change) ->
-       Automation.toggle_automation
+       Automation.toggle
          s.State.automation_state
          automation_kind
          automation_change

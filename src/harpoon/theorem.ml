@@ -58,8 +58,7 @@ let has_cid_of t cid = t.cid = cid
 let theorem_statement (t : t) =
   Whnf.cnormCTyp t.initial_state.goal
 
-let serialize (t : t) : string =
-  let buf = Buffer.create 256 in
+let serialize ppf (t : t) =
   let s = t.initial_state in
   let fmt_ppr_order ppf =
     function
@@ -67,11 +66,10 @@ let serialize (t : t) : string =
     | None -> ()
     | _ -> failwith "Invalid order"
   in
-  Format.fprintf (Format.formatter_of_buffer buf) "@[<v>%a@,%a@,%a@]@."
+  Format.fprintf ppf "@[<v>%a@,%a@,%a@,@]"
     Id.print t.name
     fmt_ppr_order t.order
-    (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s);
-  Buffer.contents buf
+    (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
 
 (** Computes the index of the current subgoal we're working on. *)
 let current_subgoal_index gs = 0

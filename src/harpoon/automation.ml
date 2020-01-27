@@ -172,6 +172,7 @@ let auto_solve_trivial : t =
 module State : sig
   type t
   val make : unit -> t
+  val serialize : Format.formatter -> t -> unit
   val toggle : t -> Command.automation_kind -> Command.automation_change -> unit
   val execute : t -> automation
 end = struct
@@ -188,6 +189,25 @@ end = struct
     ]
     |> iter (fun (k, f) -> Hashtbl.add hashtbl k (ref true, f));
     hashtbl
+
+  let serialize_kind ppf =
+    function
+    | `auto_intros -> Format.fprintf ppf "auto_intros"
+    | `auto_solve_trivial -> Format.fprintf ppf "auto_solve_trivial"
+
+  let serialize_item ppf : (Command.automation_kind * bool ref) -> unit =
+    function
+    | (k, b) ->
+       Format.fprintf ppf "%a = %B"
+         serialize_kind k
+         !b
+
+  let serialize ppf (st : t) =
+    let items =
+      Hashtbl.fold (fun k (v, _) acc -> (k, v) :: acc) st []
+    in
+    Format.fprintf ppf "@[<v>%a@,@]"
+      (Format.pp_print_list ~pp_sep: Format.pp_print_cut serialize_item) items
 
   let get_info st (k : Command.automation_kind) : info =
     (* find here is guaranteed to succeed by the external invariant

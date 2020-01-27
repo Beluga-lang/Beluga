@@ -62,12 +62,13 @@ let serialize ppf (t : t) =
   let s = t.initial_state in
   let fmt_ppr_order ppf =
     function
-    | Some (Arg o) -> Format.fprintf ppf "%d" o
+    | Some (Arg o) -> Format.fprintf ppf "/ total %d /" o
     | None -> ()
     | _ -> failwith "Invalid order"
   in
-  Format.fprintf ppf "@[<v>%a@,%a@,%a@,@]"
+  Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,;@,@]"
     Id.print t.name
+    (P.fmt_ppr_cmp_typ s.context.cD P.l0) (Whnf.cnormCTyp s.goal)
     fmt_ppr_order t.order
     (P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (incomplete_proof s)
 

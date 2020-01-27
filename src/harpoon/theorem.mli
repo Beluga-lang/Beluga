@@ -20,6 +20,8 @@ val has_name_of : t -> Id.name -> bool
 val has_cid_of : t -> Id.cid_prog -> bool
 val theorem_statement : t -> typ
 
+val serialize : t -> string
+
 val next_subgoal : t -> proof_state option
 val show_proof : t -> unit
 val show_subgoals : t -> unit

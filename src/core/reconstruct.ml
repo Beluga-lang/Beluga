@@ -29,7 +29,7 @@ open Debug.Fmt
 type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
-  | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.LF.tclo * Int.LF.dctx
+  | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.meta_typ
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
@@ -85,29 +85,38 @@ let _ = Error.register_printer
 
     | IllegalCase (cD, cG, i, theta_tau) ->
        fprintf ppf
-         "Cannot pattern-match on values of this type.@.";
-       fprintf ppf
-         "  @[<v>Scrutinee: %a@;\
-          Type: %a@]"
+         "@[<v>Illegal case-expression.\
+          @,Cannot pattern-match on expression\
+          @,  @[%a@]\
+          @,of type\
+          @,  @[%a@]\
+          @]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
 
-    | CompScrutineeTyp (cD, cG, i, sP, cPsi) ->
+    | CompScrutineeTyp (cD, cG, i, cU) ->
        fprintf ppf
-         "Type [%a . %a]@.\
-          of scrutinee %a@.\
-          in meta-context %a@. \
-          and comp. context %a@. \
-          is not closed@ or requires that some meta-variables@ introduced in the pattern@ \
-          are further restricted,@ i.e. some variable dependencies cannot happen.@ \
-          This error may indicate@ that some implicit arguments that are reconstructed@ \
-          should be restricted.@."
-         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-         (P.fmt_ppr_lf_mctx P.l0) (Whnf.normMCtx cD)
-         (P.fmt_ppr_cmp_gctx cD P.l0) (Whnf.cnormCtx (cG, Whnf.m_id))
-
+         "Scrutinee is not closed.\
+          @,The expression\
+          @,  @[%a@]\
+          @,has type\
+          @,  @[%a@]\
+          @,@[%a@]\
+          @,Meta-context:\
+          @,  @[%a@]\
+          @,Computation context:\
+          @,  @[%a@]\
+          @]"
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+         P.(fmt_ppr_cmp_meta_typ cD) cU
+         pp_print_string
+         "which is not closed, or which requires that some \
+          metavariables introduced in the pattern are futher \
+          restricted, i.e. some variable dependencies cannot happen.
+          This error may indicate that some reconstructed implicit
+          arguments should be restricted."
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_cmp_gctx cD l0) cG
 
     | MetaObjContextClash (cD, cPsi, cPhi) ->
        Error.report_mismatch ppf
@@ -1031,7 +1040,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
        | (Int.Comp.AnnBox (_, _) as i, _ ) ->
           raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, Whnf.m_id)))))
 
-       | (i, Int.Comp.TypBox (_, Int.LF.ClTyp (Int.LF.MTyp tP, cPsi))) ->
+       | (i, Int.Comp.TypBox (_, (Int.LF.ClTyp (Int.LF.MTyp tP, cPsi) as cU))) ->
           dprintf
             begin fun p ->
             p.fmt "[elExp] @[<v>Contexts @[<v>cD = @[%a@]@,cG = @[%a@]@]@,\
@@ -1074,7 +1083,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
                 (P.fmt_ppr_cmp_exp_chk cD cG P.l0) b
               end;
             b
-          else raise (Error (loc, CompScrutineeTyp (cD, cG, i', (tP, LF.id), cPsi)))
+          else raise (Error (loc, CompScrutineeTyp (cD, cG, i', cU)))
 
        | (i, _ ) ->
           let recBranch b =

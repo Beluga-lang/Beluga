@@ -1421,7 +1421,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fun cD cG f ppf ->
     let open Comp in
     function
-    | SplitBranch (c, h) ->
+    | SplitBranch (c, _, h) ->
        fprintf ppf "@[<v>case %a:@,%a@]@,"
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h
@@ -1453,17 +1453,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | MetaSplit (i, _, bs) ->
        print_split ppf
-         "meta-split" i bs
+         "split" i bs
          (fun ppf (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h)
 
     | CompSplit (i, _, bs) ->
        print_split ppf
-         "comp-split" i bs
+         "split" i bs
          (fun ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
 
     | ContextSplit (i, _, bs) ->
        print_split ppf
-         "ctx-split" i bs
+         "split" i bs
          (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->

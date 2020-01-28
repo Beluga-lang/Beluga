@@ -837,7 +837,6 @@ let recSgnDecls decls =
             *)
 
            let register =
-             (* XXX check for and forbid shadowing? -je *)
              fun total_decs ->
              Comp.add loc
                (fun cid -> Comp.mk_entry thm_name tau' 0 total_decs None)
@@ -872,7 +871,7 @@ let recSgnDecls decls =
          |> Misc.Function.sequence registers
        in
 
-       let reconThm loc (f, thm, tau) =
+       let reconThm loc (f, cid, thm, tau) =
          let apx_thm = Index.thm (Var.create ()) thm in
          dprint (fun () -> "[reconThm] Indexing theorem done.");
          let thm' =
@@ -957,7 +956,8 @@ let recSgnDecls decls =
            ( "Function Check"
            , fun _ ->
              let total_decs = Maybe.get_default [] total_decs in
-             Check.Comp.thm Int.LF.Empty Int.LF.Empty total_decs thm_r' (tau_ann, C.m_id)
+             Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty total_decs
+               thm_r' (tau_ann, C.m_id)
            );
          (thm_r' , tau)
        in
@@ -967,7 +967,9 @@ let recSgnDecls decls =
 
        let ds =
          let reconOne (thm_cid, (thm_name, thm_body, thm_loc, thm_typ))  =
-           let (e_r' , tau') = reconThm loc (thm_name, thm_body, thm_typ) in
+           let (e_r' , tau') =
+             reconThm loc (thm_name, thm_cid, thm_body, thm_typ)
+           in
            dprintf
              begin fun p ->
              p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"

@@ -1144,7 +1144,7 @@ module Comp = struct
        ()
     | Command (cmd, p') ->
         begin match cmd with
-        | By (i_kind, e_syn, name, tau, bty) ->
+        | By (e_syn, name, tau, bty) ->
            let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
            let tau' = Whnf.cnormCTyp (tau, m_sub) in
            let cG' = I.(Dec (cG, CTypDecl (name, tau', false))) in

@@ -1964,7 +1964,7 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   | A.Command (loc, cmd, p) ->
      (* let ttau = (tau', Whnf.mcomp theta (Int.LF.MShift 1)) in *)
      match cmd with
-     | A.By (loc, i_kind, e_syn, name, bty) ->
+     | A.By (loc, e_syn, name, bty) ->
         let (i, tau_i) =
           elExp' cD cG e_syn
           |> Pair.rmap Whnf.cnormCTyp
@@ -1983,7 +1983,7 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
              (cD, cG, ttau)
         in
         let p' = elProof cD cG label p ttau in
-        I.(Command (By (i_kind, i, name, tau_i, bty), p'))
+        I.(Command (By (i, name, tau_i, bty), p'))
 
      | A.Unbox (loc, e_syn, name) ->
         let (i, tau_i) =

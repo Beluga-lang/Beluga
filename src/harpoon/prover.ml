@@ -643,14 +643,13 @@ module Prover = struct
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
        List.iter solve_hole hs;
-       let k = Session.infer_invocation_kind c i in
-       Tactic.invoke k b i tau name t g
+       Tactic.invoke b i tau name t g
 
     | Command.Suffices (i, tau_list) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        begin match Session.infer_invocation_kind c i with
        | `ih ->
-          State.printf s "inductive use of `suffices by _ ...` is not currently supported"
+          State.printf s "inductive use of `suffices by ...` is not currently supported"
        | `lemma ->
           begin match hs with
           | _ :: _ ->

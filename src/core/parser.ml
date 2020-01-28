@@ -2643,26 +2643,25 @@ let boxity =
     ]
 
 let harpoon_command : Comp.command parser =
-  let invocation_kind =
-    choice
-      [ keyword "ih" &> pure `ih
-      ; keyword "lemma" &> pure `lemma
-      ]
+  let by =
+    token T.KW_BY &>
+      seq3
+        (cmp_exp_syn <& token T.KW_AS)
+        name
+        (maybe_default boxity `boxed)
+    |> span
+    |> labelled "Harpoon command"
+    $> fun (loc, (i, x, b)) ->
+       Comp.By (loc, i, x, b)
   in
-  token T.KW_BY
-  &> choice
-       [ seq4
-           invocation_kind
-           (parens (span cmp_exp_syn) <& token T.KW_AS)
-           name
-           (maybe_default boxity `boxed)
-         $> (fun (k, (loc, i), x, b) -> Comp.By (loc, k, i, x, b))
-       ; keyword "unboxing" &>
-           seq2
-             (parens (span cmp_exp_syn) <& token T.KW_AS)
-             name
-         $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x)
-       ]
+  let unbox =
+    keyword "unbox" &>
+      seq2
+        ((span cmp_exp_syn) <& token T.KW_AS)
+        name
+    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x)
+  in
+  choice [ by; unbox ]
 
 let case_label : Comp.case_label parser =
   let extension_case_label =

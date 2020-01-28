@@ -49,13 +49,14 @@ val split : Command.split_kind -> Comp.exp_syn -> Comp.typ -> Comp.total_dec lis
  *)
 val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
 
-(** Performs the given invocation, namely of an IH or a lemma,
-    according to `invoke_kind`.
-    It is verified that the given expression is an application.
+(** It is verified that the given expression is an application.
     The result of the invocation is assigned to the variable of the
-    given name, in cG.
+    given name, in cG, in case the given boxity is (the default)
+    `boxed.
+    Otherwise, with `unboxed, the name is a new variable declaration
+    in cD.
  *)
-val invoke : Command.invoke_kind -> Comp.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
+val invoke : Comp.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
 
 (** Solves the current goal with an implication whose conclusion is
    compatible with the goal type. Subgoals are generated for each

@@ -1389,19 +1389,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_command_and_proof cD cG ppf =
     let open Comp in
     function
-    | By (k, t, name, tau, b), proof ->
+    | By (t, name, tau, b), proof ->
        begin match b, tau with
        | `boxed, _ ->
           let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
-          fprintf ppf "@[<hv 2>by %a@ @[%a@]@ as %a@];@,%a"
-            fmt_ppr_invoke_kind k
+          fprintf ppf "@[<hv 2>by @[%a@]@ as %a@];@,%a"
             (fmt_ppr_cmp_exp_syn cD cG l0) t
             Id.print name
             (fmt_ppr_cmp_proof cD cG') proof
        | `unboxed, TypBox (_, cT) ->
           let cD' = LF.(Dec (cD, Decl (name, cT, No))) in
-          fprintf ppf "@[<hv>by %a @[%a@]@ as %a unboxed@];@,%a"
-            fmt_ppr_invoke_kind k
+          fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@];@,%a"
             (fmt_ppr_cmp_exp_syn cD cG l0) t
             Id.print name
             (fmt_ppr_cmp_proof cD' cG) proof

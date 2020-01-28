@@ -23,21 +23,23 @@ let rec translate_proof cD cG (p : C.proof) tau : C.exp_chk =
   match p with
 | C.Incomplete p_state -> Error.violation "Proof incomplete."
 | C.Command (cmd, p') ->
-    (match cmd with
-     | C.By (i_kind, e_syn, name, tau, bty) ->
-         let cG' = L.Dec (cG, C.CTypDecl (name, tau, false)) in
-         C.Let (Loc.ghost, e_syn, (name, translate_proof cD cG' p' tau))
-     | C.Unbox (e_syn, name, mT) ->
-         let cD' = L.Dec (cD, L.Decl (name, mT, L.Maybe)) in
-         (match mT with
-          | L.ClTyp (cltyp, psi) ->
-              let n = L.Root (Loc.ghost, L.MVar (L.Offset 1, L.EmptySub), L.Nil) in
-              let mfront = L.ClObj (Context.dctxToHat psi, L.MObj n) in
-              let pat = C.PatMetaObj (Loc.ghost, (Loc.ghost, mfront)) in
-              let body = translate_proof cD' cG p' tau in
-              let b = C.Branch (Loc.ghost, cD', cG, pat, L.MShift 1, body) in
-              C.Case (Loc.ghost, C.PragmaCase, e_syn, [b])
-          | L.CTyp _ -> Error.violation "Syntax.Int.LF.CTyp found in Unbox."))
+    begin match cmd with
+    | C.By (e_syn, name, tau, bty) ->
+       let cG' = L.Dec (cG, C.CTypDecl (name, tau, false)) in
+       C.Let (Loc.ghost, e_syn, (name, translate_proof cD cG' p' tau))
+    | C.Unbox (e_syn, name, mT) ->
+       let cD' = L.Dec (cD, L.Decl (name, mT, L.Maybe)) in
+       begin match mT with
+       | L.ClTyp (cltyp, psi) ->
+          let n = L.Root (Loc.ghost, L.MVar (L.Offset 1, L.EmptySub), L.Nil) in
+          let mfront = L.ClObj (Context.dctxToHat psi, L.MObj n) in
+          let pat = C.PatMetaObj (Loc.ghost, (Loc.ghost, mfront)) in
+          let body = translate_proof cD' cG p' tau in
+          let b = C.Branch (Loc.ghost, cD', cG, pat, L.MShift 1, body) in
+          C.Case (Loc.ghost, C.PragmaCase, e_syn, [b])
+       | L.CTyp _ -> Error.violation "Syntax.Int.LF.CTyp found in Unbox."
+       end
+    end
 | C.Directive d -> translate_directive cD cG d tau
 
 and translate_directive cD cG (d : C.directive) tau : C.exp_chk =

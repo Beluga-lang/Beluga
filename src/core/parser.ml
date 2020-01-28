@@ -2954,11 +2954,11 @@ let interactive_harpoon_command =
       ; keyword "defer" &> pure `defer
       ]
   in
-  let select_command, create_command, serialize_command =
+  let select_command, create_command, save_command =
     let f k = keyword k &> name in
     ( f "select" $> (fun x -> `select x)
     , f "create" $> (fun x -> `create x)
-    , keyword "serialize" &> pure `serialize
+    , keyword "save" &> pure `save
     )
   in
   let theorem_command =
@@ -2975,7 +2975,7 @@ let interactive_harpoon_command =
   in
   let session_command =
     keyword "session"
-    &> choice [ basic_command; select_command; create_command; serialize_command ]
+    &> choice [ basic_command; select_command; create_command; save_command ]
     $> fun cmd -> H.Session cmd
   in
   let subgoal_command =

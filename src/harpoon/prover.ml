@@ -482,7 +482,7 @@ module Prover = struct
              Session.enter c;
              DynArray.insert s.State.sessions 0 c'
           end
-       | `serialize ->
+       | `save ->
           State.serialize s.State.ppf s
        end
     | Command.Subgoal cmd ->

@@ -1023,27 +1023,6 @@ module Cid = struct
       DynArray.add mutual_groups decs;
       DynArray.length mutual_groups - 1
 
-    let filter_map p =
-      DynArray.to_list store
-      |> Misc.List.concat_map (DynArray.to_list)
-      |> Maybe.filter_map p
-
-    let filter p =
-      filter_map (fun x -> Maybe.(of_bool (p x) $> Misc.const x))
-
-    let get_open_subgoals () =
-      filter
-        begin fun { prog; typ; _ } ->
-        match prog with
-        | Some Int.Comp.(ThmValue (cid, Proof (Incomplete g), theta, eta)) ->
-           true
-        | _ -> false
-        end
-      |> List.map
-           begin fun { prog = Some Int.Comp.(ThmValue (cid, Proof (Incomplete g), _, _)); _ } ->
-           (cid, g)
-           end
-
     let get ?(fixName=false) (l, n) =
       let l' = Modules.name_of_id l in
       let m' =  if fixName && (l <> !Modules.current) &&

@@ -239,19 +239,6 @@ module Cid : sig
                     mutual_group_id -> Comp.value option ->
                     entry
 
-      (*
-    (** Selects all entries matching a given predicate. *)
-    val filter : (entry -> bool) -> entry list
-       *)
-
-    (** Computes a list of all incomplete Harpoon proof scripts
-        together with a reference (cid) to the theorem in which they
-        occur.
-        This is used to automatically start up harpoon sessions from a
-        file.
-     *)
-    val get_open_subgoals : unit -> Comp.open_subgoal list
-
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this
         entry. Therefore, unlike 'add' functions in other modules,

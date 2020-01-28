@@ -977,6 +977,9 @@ let parens , braces , bracks , angles =
   (fun p -> f LBRACK RBRACK p),
   (fun p -> f LANGLE RANGLE p)
 
+let bracks_or_opt_parens p =
+  choice [ bracks p; parens p; p ]
+
 (** Helper for parsing something *optionally* between parens. *)
 let opt_parens p = alt (parens p) p
 
@@ -1658,7 +1661,6 @@ and contextual : type a. a parser -> (LF.dctx * a) parser =
   seq2
     (clf_dctx <& token T.TURNSTILE)
     p
-  |> bracks
 
 let meta_obj =
   { run =
@@ -1690,21 +1692,23 @@ let ctype_kind =
     `name : [ dctx |- p ]`
     Note that this doesn't include the braces around the declaration!
  *)
-let contextual_variable_decl name p =
+let contextual_variable_decl box name p =
   seq2
     (name <& token T.COLON)
-    (contextual p)
+    (box (contextual p))
 
 let cltyp : (LF.dctx * typ_or_ctx) parser =
   labelled "boxed type"
     begin
       let typ =
         contextual clf_typ_atomic
+        |> bracks
         $> fun (cPsi, a) ->
            (cPsi, `Typ a)
       in
       let ctx =
         contextual clf_dctx
+        |> bracks
         $> fun (cPsi, cPhi) ->
            (cPsi, `Ctx cPhi)
       in
@@ -1713,16 +1717,81 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
         (label ctx "contextual context type")
     end
 
+let clf_ctyp_decl_bare =
+  { run =
+      fun s ->
+      let hash_variable_decl p =
+        contextual_variable_decl bracks_or_opt_parens hash_name p
+      in
+      let dollar_variable_decl p =
+        contextual_variable_decl bracks_or_opt_parens dollar_name p
+      in
+      let mk_decl ind f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), ind)
+      in
+      let mk_cltyp_decl f d =
+        mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+      in
+
+      let param_variable =
+        labelled "parameter variable declaration"
+          begin
+            hash_variable_decl (trying clf_typ_atomic)
+            |> span
+            $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
+          end
+      in
+      let subst_variable =
+        let subst_class =
+          maybe (token T.HASH)
+          $> Maybe.eliminate (Misc.const LF.Subst) (Misc.const LF.Ren)
+        in
+        labelled "substitution/renaming variable"
+          begin
+            dollar_variable_decl (seq2 subst_class clf_dctx)
+            |> span
+            $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+          end
+      in
+      let q =
+        choice
+          [ param_variable
+          ; subst_variable
+          (* since a name followed by a colon happens in both
+             the case for an mvar and the case for a context
+             variable, we refactor the grammar to parse first the
+             name followed by the colon, and *then* we perform an
+             alternation to see whether we have another name (so
+             a ctx var) or a box (so an mvar)
+           *)
+          ; name <& token T.COLON |> span
+            $ fun (loc1, x) ->
+              alt
+                (span name
+                 $> fun (loc2, ctx) ->
+                    mk_decl LF.No
+                      (fun w -> LF.CTyp w)
+                      (Loc.join loc1 loc2, (x, ctx)))
+                (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
+                 $> fun (loc2, d) ->
+                    mk_cltyp_decl
+                      (fun tA -> LF.MTyp tA)
+                      (Loc.join loc1 loc2, (x, d)))
+          ]
+      in
+      q.run s
+  }
+
 (** Contextual LF contextual type declaration *)
 let clf_ctyp_decl allow_implicit_ctx =
   { run =
       fun s ->
       (* Parses `#name : [ dctx |- p ]` *)
       let hash_variable_decl p =
-        contextual_variable_decl hash_name p
+        contextual_variable_decl bracks_or_opt_parens hash_name p
       in
       let dollar_variable_decl p =
-        contextual_variable_decl dollar_name p
+        contextual_variable_decl bracks_or_opt_parens dollar_name p
       in
       let mk_decl ind f (loc, (p, w)) =
         LF.Decl (p, (loc, f w), ind)
@@ -1759,7 +1828,8 @@ let clf_ctyp_decl allow_implicit_ctx =
               (trying (name <& token T.COLON))
               (name <& not_followed_by meta_obj)
             |> span
-            $> mk_decl LF.Maybe (fun w -> LF.CTyp w)
+            $> mk_decl LF.Maybe
+                 (fun w -> LF.CTyp w)
           end
       in
       let q =
@@ -1781,7 +1851,8 @@ let clf_ctyp_decl allow_implicit_ctx =
                     mk_decl LF.No
                       (fun w -> LF.CTyp w)
                       (Loc.join loc1 loc2, (x, ctx)))
-                (contextual clf_typ_atomic |> span
+                (bracks_or_opt_parens (contextual clf_typ_atomic)
+                 |> span
                  $> fun (loc2, d) ->
                     mk_cltyp_decl
                       (fun tA -> LF.MTyp tA)
@@ -1802,7 +1873,7 @@ let clf_ctyp_decl allow_implicit_ctx =
   }
 
 let mctx =
-  sep_by0 (clf_ctyp_decl false) (token T.COMMA)
+  sep_by0 clf_ctyp_decl_bare (token T.COMMA)
   $> Context.of_list_rev
 
 let pibox ?(allow_implicit_ctx = true) r f =
@@ -1876,7 +1947,7 @@ and cmp_typ_atomic : Comp.typ parser =
       in
       let pbox =
         token T.HASH
-        &> contextual (some clf_normal |> span)
+        &> bracks (contextual (some clf_normal |> span))
         |> span
         $> fun (loc, (cPsi, (loc', ms))) ->
            Comp.TypBox
@@ -1891,7 +1962,7 @@ and cmp_typ_atomic : Comp.typ parser =
       in
       let sub =
         token T.DOLLAR
-        &> contextual clf_dctx
+        &> bracks (contextual clf_dctx)
         |> span
         $> fun (loc, (cPsi, cPhi)) ->
            Comp.TypBox
@@ -2694,6 +2765,7 @@ let rec harpoon_proof : Comp.proof parser =
       let incomplete_proof =
         hole
         |> span
+        |> labelled "Harpoon incomplete proof `?'"
         $> fun (loc, h) -> Comp.Incomplete (loc, h)
       in
       let command_proof =
@@ -2714,6 +2786,7 @@ let rec harpoon_proof : Comp.proof parser =
           ; command_proof
           ; directive_proof
           ]
+        |> labelled "Harpoon proof"
       in
       p.run s
   }
@@ -2733,11 +2806,12 @@ and harpoon_directive : Comp.directive parser =
             $> (fun (loc, e) -> Comp.Solve (loc, e))
           ; keyword "split"
             &> seq2
-                 (parens cmp_exp_syn)
+                 (cmp_exp_syn <& token T.KW_AS)
                  (many harpoon_split_branch)
             |> span
-            $> fun (loc, (i, bs)) -> Comp.Split (loc, i, bs)
+            $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
           ]
+        |> labelled "Harpoon directive"
       in
       p.run s
   }
@@ -2758,6 +2832,7 @@ and harpoon_hypothetical : Comp.hypothetical parser =
           harpoon_proof
         |> braces
         |> span
+        |> labelled "Harpoon hypothetical"
         $> fun (hypothetical_loc, (hypotheses, proof)) ->
            { hypotheses; proof; hypothetical_loc }
       in
@@ -2773,6 +2848,7 @@ and harpoon_split_branch : Comp.split_branch parser =
             (case_label <& token T.COLON)
             harpoon_hypothetical
         |> span
+        |> labelled "Harpoon split branch"
         $> fun (split_branch_loc, (case_label, branch_body)) ->
            let open Comp in
            { case_label; branch_body; split_branch_loc }

@@ -397,10 +397,10 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                   s.label
             }
           in
-          (context, new_state, pat')
+          (context, t', new_state, pat')
      in
 
-     let make_context_branch (context, new_state, pat) =
+     let make_context_branch (context, theta, new_state, pat) =
        match pat with
        | PatMetaObj (_, (_, LF.CObj cPsi)) ->
           let case_label =
@@ -418,10 +418,10 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          context_branch case_label context (incomplete_proof s')
+          context_branch case_label theta context (incomplete_proof s')
        | _ -> assert false
      in
-     let make_meta_branch (context, new_state, pat) =
+     let make_meta_branch (context, theta, new_state, pat) =
        match pat with
        | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
           let label, c =
@@ -432,16 +432,16 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          meta_branch c context (incomplete_proof s')
+          meta_branch c theta context (incomplete_proof s')
        | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
      in
-     let make_comp_branch (context, new_state, pat) =
+     let make_comp_branch (context, theta, new_state, pat) =
        match pat with
        | PatConst (_, cid, _) ->
           let label = Store.Cid.DefaultRenderer.render_cid_comp_const cid in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          comp_branch cid context (incomplete_proof s')
+          comp_branch cid theta context (incomplete_proof s')
        | _ ->
           B.Error.violation "[get_context_branch] pattern not a constant"
      in

@@ -92,6 +92,19 @@ val mvar_dot   : msub -> mctx -> msub
     and  cD_3 |- t2 : cD_2
     then cD_3 |- t' : cD_1
     where t' = mcomp t1 t2
+
+    For example, suppose
+    cD |- tau <= type      for some tau
+    cD' |- t' : cD
+    cD'' |- t'' : cD'
+
+    cnormCTyp (tau, mcomp t' t'')
+    =
+    cnormCTyp (cnormCTyp (tau, t'), t'')
+
+    That is, applying a composition of substitutions is equivalent to
+    applying the composed substitutions from *left-to-right*.
+
 *)
 val mcomp      : msub -> msub -> msub
 
@@ -182,3 +195,14 @@ val mctx_to_list_shifted : mctx -> ctyp_decl list
     perform a shift, and Whnf already depends on Context.
  *)
 val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
+
+(** Applies a Harpoon command to a pair of contexts.
+    Returns the new contexts together with a susbtitution to be
+    applied to the current goal type.
+
+    Concretely, apply_command_to_context (cD, cG) = (cD', cG', t)
+    such that
+    cD' |- t : cD
+    cD' |- cG' ctx
+ *)
+val apply_command_to_context : mctx * Comp.gctx -> Comp.command -> mctx * Comp.gctx * msub

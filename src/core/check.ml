@@ -1122,47 +1122,82 @@ module Comp = struct
     | I.Dec (cD, cdecl) ->
        (wf_mctx cD ; checkCDecl cD cdecl)
 
+  let require_syn_typbox cD cG loc i (tau, t) =
+    match tau with
+    | TypBox (_, cU) -> (cU, t)
+    | _ -> throw loc (MismatchSyn (cD, cG, i, VariantBox, (tau, t)))
+
   (* takes a normalised tau, peels off assumptions, and returns a triple (cD', cG', tau') *)
   let rec unroll cD cG tau =
     match tau with
     | TypPiBox (_, c_decl, tau') ->
        (* TODO ensure c_decl name is unique in context *)
-       let cD' = Syntax.Int.LF.Dec (cD, c_decl) in
+       let cD' = I.Dec (cD, c_decl) in
        unroll cD' cG tau'
     | TypArr (_, t1, t2) ->
        (* TODO use contextual name generation *)
        let name = Id.mk_name Id.NoName in
-       let cG' = Syntax.Int.LF.Dec (cG, Syntax.Int.Comp.CTypDecl (name, t1, false)) in
+       let cG' = I.(Dec (cG, CTypDecl (name, t1, false))) in
        unroll cD cG' t2
     | _ -> (cD, cG, tau)
 
-  let rec proof cD cG cIH total_decs p ttau =
+  let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
     | Incomplete g ->
-       (* TODO check that g matches the current proof state *)
-       (* TODO add g to a store of proof holes *)
-       ()
-    | Command (cmd, p') ->
-        begin match cmd with
-        | By (e_syn, name, tau, bty) ->
-           let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
-           let tau' = Whnf.cnormCTyp (tau, m_sub) in
-           let cG' = I.(Dec (cG, CTypDecl (name, tau', false))) in
-           proof cD cG' cIH total_decs p' ttau
-        | Unbox (_, name, mT) ->
-           let cD' = I.(Dec (cD, Decl (name, mT, No))) in
-           proof cD' cG cIH total_decs p' ttau
-        end
-    | Directive d ->
-       directive cD cG cIH total_decs d ttau
+       (* TODO check that g's contexts the current contexts *)
+       begin match g.solution with
+       | Some p -> proof mcid cD cG cIH total_decs p ttau
+       | None ->
+          match mcid with
+          | None ->
+             Error.violation "[check] [proof] no cid to register subgoal with"
+          | Some cid ->
+             Holes.add_harpoon_subgoal (cid, g)
+       end
 
-  and directive cD cG cIH total_decs (d : directive) ttau =
+    | Command (cmd, p) ->
+       let (cD, cG, t) = command cD cG cIH total_decs cmd in
+       let ttau = Pair.rmap (Whnf.mcomp' t) ttau in
+       proof mcid cD cG cIH total_decs p ttau
+
+    | Directive d ->
+       directive mcid cD cG cIH total_decs d ttau
+
+  and command cD cG cIH total_decs =
+    let extend_meta d =
+      let t = I.MShift 1 in
+      (I.Dec (cD, d), cG, t)
+    in
+    function
+    | By (i, name, _, `unboxed) | Unbox (i, name, _) ->
+       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let (cU, t) = require_syn_typbox cD cG Loc.ghost i (tau', t) in
+       extend_meta I.(Decl (name, Whnf.cnormMTyp (cU, t), No))
+    | By (i, name, _, `boxed) ->
+       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let tau = Whnf.cnormCTyp (tau', t) in
+       let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
+       (cD, cG, Whnf.m_id)
+
+  (** Check a hypothetical derivation.
+      Ensures that the contexts in the hypothetical are convertible
+      with the outer contexts before elaborating the body against
+      ttau.
+   *)
+  and hypothetical mcid cD cG cIH total_decs (Hypothetical (ctx, p) : hypothetical) ttau =
+    let { cD = cD'; cG = cG'; cIH = I.Empty } = ctx in
+    (* TODO context convertibility check *)
+    (* XXX does anything need to be done to cIH ? *)
+    proof mcid cD' cG' cIH total_decs p ttau
+
+
+  and directive mcid cD cG cIH total_decs (d : directive) ttau =
     match d with
     | Intros (Hypothetical (h, p)) ->
        let tau = Whnf.cnormCTyp ttau in
        let (cD', cG', tau') = unroll cD cG tau in
        (* TODO check that cD and cG are convertible with cD' and cG' *)
-       proof cD' cG' cIH total_decs p (tau', Whnf.m_id)
+       proof mcid cD' cG' cIH total_decs p (tau', Whnf.m_id)
 
     | Solve e_chk ->
        check cD (cG, cIH) total_decs e_chk ttau
@@ -1171,18 +1206,26 @@ module Comp = struct
        assert false
 
     | MetaSplit (i, tau, bs) ->
-        let handle_branch (SplitBranch ((cD, head), (Hypothetical (h, p_i)))) =
-          ()
+        let handle_branch (SplitBranch ((cPsi, head), t, h)) =
+          let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
+          dprintf begin fun p ->
+            let Hypothetical (hyp, _) = h in
+            p.fmt "[check] [directive] @[<v>goal outside: @[%a@]\
+                   @,goal inside: @[%a@]\
+                   @]"
+              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+              P.(fmt_ppr_cmp_typ hyp.cD l0) (Whnf.cnormCTyp ttau_b)
+            end;
+          hypothetical mcid cD cG cIH total_decs h ttau_b
         in
-        List.iter handle_branch bs;
-        assert false
+        List.iter handle_branch bs
 
     | CompSplit (i, tau, bs) ->
-        let handle_branch (SplitBranch (cid, (Hypothetical (h, p_i)))) =
-          ()
+        let handle_branch (SplitBranch (cid, t, h)) =
+          let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
+          hypothetical mcid cD cG cIH total_decs h ttau_b
         in
-        List.iter handle_branch bs;
-        assert false
+        List.iter handle_branch bs
 
   let syn cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in
@@ -1191,9 +1234,9 @@ module Comp = struct
   let check cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
     check cD (cG,cIH) total_decs e ttau
 
-  let thm cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
+  let thm mcid cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
     match t with
     | Syntax.Int.Comp.Program e -> check cD cG total_decs ~cIH: cIH e ttau
-    | Syntax.Int.Comp.Proof p -> proof cD cG cIH total_decs p ttau
+    | Syntax.Int.Comp.Proof p -> proof mcid cD cG cIH total_decs p ttau
 
 end

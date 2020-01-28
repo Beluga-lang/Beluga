@@ -603,7 +603,15 @@ module Comp = struct
   and 'b split_branch =
     | SplitBranch
       of 'b (* the name of the constructor for this split *)
+         * LF.msub (* refinement substitution for this branch *)
          * hypothetical (* the derivation for this case *)
+
+  (* Suppose cD and cG are the contexts when checking a split.
+     Suppose we have a branch b = SplitBranch (lbl, t, { cD = cD_b; cG = cG_b; _ }).
+     Then cD_b |- t : cD
+     and the context cG_b to use to check inside the branch is obtained
+     from cG' = [t]cG
+   *)
 
  (** A hypothetical derivation lists meta-hypotheses and hypotheses,
      then proceeds with a proof.
@@ -648,9 +656,9 @@ module Comp = struct
       : proof =
     Directive (ContextSplit (i, tau, bs))
 
-  let context_branch (c : context_case) (h : hypotheses) (d : proof)
+  let context_branch (c : context_case) (t : LF.msub) (h : hypotheses) (d : proof)
       : context_branch =
-    SplitBranch (c, (Hypothetical (h, d)))
+    SplitBranch (c, t, (Hypothetical (h, d)))
 
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
@@ -659,17 +667,17 @@ module Comp = struct
   let impossible_split (i : exp_syn) : proof =
     Directive (ImpossibleSplit i)
 
-  let meta_branch (c : LF.dctx * LF.head) (h : hypotheses) (d : proof)
+  let meta_branch (c : LF.dctx * LF.head) (t : LF.msub) (h : hypotheses) (d : proof)
       : meta_branch =
-    SplitBranch (c, (Hypothetical (h, d)))
+    SplitBranch (c, t, (Hypothetical (h, d)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
       : proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : cid_comp_const) (h : hypotheses) (d : proof)
+  let comp_branch (c : cid_comp_const) (t : LF.msub) (h : hypotheses) (d : proof)
       : comp_branch =
-    SplitBranch (c, (Hypothetical (h, d)))
+    SplitBranch (c, t, (Hypothetical (h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
   let prepend_commands (cmds : command list) (proof : proof)

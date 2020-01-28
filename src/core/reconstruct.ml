@@ -28,7 +28,7 @@ open Debug.Fmt
 
 type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
-  | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
+  | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
   | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.meta_typ
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
@@ -41,7 +41,8 @@ type error =
   | MCtxIllformed of Int.LF.mctx
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
-  | InvalidHypotheses  of Int.Comp.hypotheses
+  | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
+                          * Int.Comp.hypotheses (* actual *)
   | UnboundCaseLabel of [ `comp | `meta ] * Id.name * Int.LF.mctx * Int.Comp.typ
   | CaseLabelMismatch of [ `named | `context ] (* expected *)
                          * [ `named | `context ] (* actual *)
@@ -83,7 +84,7 @@ let _ = Error.register_printer
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
-    | IllegalCase (cD, cG, i, theta_tau) ->
+    | IllegalCase (cD, cG, i, tau) ->
        fprintf ppf
          "@[<v>Illegal case-expression.\
           @,Cannot pattern-match on expression\
@@ -92,7 +93,7 @@ let _ = Error.register_printer
           @,  @[%a@]\
           @]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
 
     | CompScrutineeTyp (cD, cG, i, cU) ->
        fprintf ppf
@@ -181,6 +182,17 @@ let _ = Error.register_printer
          Id.print name
          print_case_label_kind kind
          P.(fmt_ppr_cmp_typ cD l0) tau
+
+    | InvalidHypotheses (exp, act) ->
+       fprintf ppf
+         "@[<v>Invalid hypotheses.\
+          @,Expected hypotheses:\
+          @,  @[%a@]
+          @,Actual hypotheses:\
+          @,  @[%a@]
+          @]"
+         P.fmt_ppr_cmp_hypotheses_listing exp
+         P.fmt_ppr_cmp_hypotheses_listing act
     end
   end
 
@@ -829,7 +841,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
     dprintf
       begin fun p ->
       p.fmt "[synPatRefine] @[<v>unifying scrutinee and pattern types:@,\
-             @[%a@]    ===    @[%a@]@]"
+             @[<v>@[%a@]@,===@,@[%a@]@]@]"
         (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau_s'
         (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau_p'
       end;
@@ -1056,7 +1068,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
             raise (Error (loc, ValueRestriction (cD, cG, i, (tau_s, Whnf.m_id))))
 
        | (Int.Comp.AnnBox (_, _) as i, _ ) ->
-          raise (Error (loc, (IllegalCase (cD, cG, i, (tau_s, Whnf.m_id)))))
+          raise (Error (loc, (IllegalCase (cD, cG, i, tau_s))))
 
        | (i, Int.Comp.TypBox (_, (Int.LF.ClTyp (Int.LF.MTyp tP, cPsi) as cU))) ->
           dprintf
@@ -1916,11 +1928,6 @@ and elFBranch cD cG fbr theta_tau = match fbr with
       end;
     Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
 
-let require_syn_typbox cD cG loc i (tau, theta) =
-  match tau with
-  | I.TypBox (_, cU) -> cU
-  | _ -> Check.Comp.(throw loc (MismatchSyn (cD, cG, i, VariantBox, (tau, theta))))
-
 (* elaborate gamma contexts *)
 let rec elGCtx (delta : Int.LF.mctx) gamma =
   match gamma with
@@ -1939,19 +1946,60 @@ let elHypotheses { A.cD; cG } =
 (* elaborate hypothetical *)
 let rec elHypothetical cD cG label hyp ttau =
   let { A.hypotheses = h; proof = p; hypothetical_loc = loc } = hyp in
-  let tau = Whnf.cnormCTyp ttau in
   let { I.cD = cD'; cG = cG'; cIH = Int.LF.Empty } as h' =
     elHypotheses h
   in
-  let (cD1, cG1, tau1) = Check.Comp.unroll cD cG tau in
-  (* TODO need a less strict check than equality *)
-  if cD1 <> cD' || cG1 <> cG' then
-    raise (Error (loc, InvalidHypotheses h'));
 
-    I.Hypothetical
-      ( h'
-      , elProof cD' cG' label p (tau1, Whnf.m_id)
-      )
+  (* XXX commented out because implementing convertibility for
+     contexts is not obvious
+  (* TODO need a less strict check than equality *)
+  if cD <> cD' || cG <> cG' then
+    throw loc (InvalidHypotheses ({ I.cD; cG; cIH = Int.LF.Empty }, h'));
+   *)
+
+  I.Hypothetical
+    ( h'
+    , elProof cD' cG' label p ttau
+    )
+
+and elCommand cD cG =
+  let extend_meta d c =
+    let t = Int.LF.MShift 1 in
+    (* No need to check for shadowing since that already happened
+       during indexing. *)
+    (Int.LF.Dec (cD, d), Whnf.cnormCtx (cG, t), t, c)
+  in
+  function
+  | A.Unbox (loc, i, name) ->
+     let (i, ttau_i) = elExp' cD cG i in
+     let cU =
+       Check.Comp.require_syn_typbox cD cG loc i ttau_i
+       |> Whnf.cnormMTyp
+     in
+     extend_meta
+       Int.LF.(Decl (name, cU, No))
+       I.(Unbox (i, name, cU))
+
+  | A.By (loc, i, name, `boxed) ->
+     let (i, tau_i) =
+       elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp
+     in
+     let c = I.By (i, name, tau_i, `boxed) in
+     (cD, Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)), Whnf.m_id, c)
+
+  | A.By (loc, i, name, `unboxed) ->
+     (* XXX `by _ as _ unboxed` is redundant with the plain `unbox _ as _` command.
+        Perhaps "unbox" can be implemented as syntax sugar.
+        -je
+      *)
+     let (i, ttau_i) = elExp' cD cG i in
+     let cU =
+       Check.Comp.require_syn_typbox cD cG loc i ttau_i
+       |> Whnf.cnormMTyp
+     in
+     extend_meta
+       Int.LF.(Decl (name, cU, No))
+       I.(By (i, name, TypBox (loc, cU), `unboxed))
 
 (* elaborate Harpoon proofs *)
 and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
@@ -1962,213 +2010,226 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   | A.Directive (loc, d) ->
      I.Directive (elDirective cD cG label d ttau)
   | A.Command (loc, cmd, p) ->
-     (* let ttau = (tau', Whnf.mcomp theta (Int.LF.MShift 1)) in *)
-     match cmd with
-     | A.By (loc, e_syn, name, bty) ->
-        let (i, tau_i) =
-          elExp' cD cG e_syn
-          |> Pair.rmap Whnf.cnormCTyp
-        in
-        let cD, cG, ttau =
-          match bty with
-          | `boxed ->
-             let cG = Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)) in
-             (cD, cG, ttau)
-          | `unboxed ->
-             let cU = require_syn_typbox cD cG loc i (tau_i, Whnf.m_id) in
-             let cD = Int.LF.(Dec (cD, Decl (name, cU, No))) in
-             let shift1 = Int.LF.MShift 1 in
-             let cG = Whnf.cnormCtx (cG, shift1) in
-             let ttau = Pair.rmap (Whnf.mcomp shift1) ttau in
-             (cD, cG, ttau)
-        in
-        let p' = elProof cD cG label p ttau in
-        I.(Command (By (i, name, tau_i, bty), p'))
+     dprnt "[elProof] --> elCommand @[%a@]";
+     let (cD', cG', t, cmd) = elCommand cD cG cmd in
+     let ttau' = Pair.rmap (Whnf.mcomp' t) ttau in
+     dprintf begin fun p ->
+       p.fmt "[elProof] @[<v>elCommand done.\
+              @,cmd = @[%a@]\
+              @,goal before: @[%a@]\
+              @,goal after: @[%a@]@]"
+         P.(fmt_ppr_cmp_command cD cG) cmd
+         P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+         P.(fmt_ppr_cmp_typ cD' l0) (Whnf.cnormCTyp ttau')
+       end;
+     let p = elProof cD' cG' label p ttau' in
+     I.Command (cmd, p)
 
-     | A.Unbox (loc, e_syn, name) ->
-        let (i, tau_i) =
-          elExp' cD cG e_syn |> Pair.rmap Whnf.cnormCTyp
-        in
-        let cU = require_syn_typbox cD cG loc i (tau_i, Whnf.m_id) in
-        (* No need to check for shadowing since that already happened
-           during indexing. *)
-        let cD = Int.LF.(Dec (cD, Decl (name, cU, No))) in
-        let shift1 = Int.LF.MShift 1 in
-        let cG = Whnf.cnormCtx (cG, shift1) in
-        let ttau = Pair.rmap (Whnf.mcomp' shift1) ttau in
-        let int_proof = elProof cD cG label p ttau in
-        I.(Command (Unbox (i, name, cU), int_proof))
+and elSplit loc cD cG label i tau_i bs ttau =
+  let make_ctx_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
+    match l with
+    | A.ContextCase (A.EmptyContext loc) ->
+       let hyp' = elHypothetical cD cG label hyp ttau in
+       (* TODO: synPatRefine *)
+       I.SplitBranch (I.EmptyContext loc, assert false, hyp')
+
+    | A.ContextCase (A.ExtendedBy (loc, a)) ->
+       let a' =
+         (* XXX projectCtxIntoDctx ??? *)
+         Lfrecon.elTyp Lfrecon.Pibox Int.LF.Empty (Context.projectCtxIntoDctx Int.LF.Empty) a
+       in
+       (* TODO: synPatRefine *)
+       let hyp' = elHypothetical cD cG label hyp ttau in
+       I.SplitBranch (I.ExtendedBy (loc, a'), assert false, hyp')
+
+    | A.NamedCase _ ->
+       CaseLabelMismatch (`context, `named)
+       |> throw loc
+  in
+  let make_meta_branch (cU, cPsi) { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
+    match l with
+    | A.NamedCase (loc, name) ->
+       (* TODO figure out how to reconstruct parameter variable branches
+          In the case of a parameter variable, index_of_name will
+          fail, due to the hash.
+          I would like something more robust that just checking if the name starts with a hash;
+          perhaps one needs a "PVarCase" label.
+        *)
+       let tH, tA =
+         try
+           let open Store.Cid.Term in
+           let cid = index_of_name name in
+           let { typ; _ } = get cid in
+           (Int.LF.Const cid, typ)
+         with
+         | Not_found ->
+            UnboundCaseLabel (`meta, name, cD, tau_i)
+            |> throw loc
+       in
+       (* XXX Is this always going to be MTyp?
+          Need to think about how this will interact with parameter variables.
+        *)
+       let Int.LF.MTyp tP = cU in
+       begin match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
+       | None ->
+          assert false
+       (* XXX throw an appropriate error
+          Normally this would be a type mismatch, because the user
+          types the full pattern, but here since the user only
+          types the constructor.
+          I'm thinking an error that looks like
+          Impossible constructor.
+          The constructor %a, of type
+          %a
+          is not a possible case for the split scrutinee type
+          %a
+        *)
+       | Some (cD', (cPsi', tR_p, tA_p), t) ->
+          let pat =
+            I.PatMetaObj
+              ( Loc.ghost
+              , let open Int.LF in
+                ( Loc.ghost
+                , ClObj
+                    ( Context.dctxToHat cPsi'
+                    , MObj tR_p
+                    )
+                )
+              )
+          in
+          let tau_p =
+            I.TypBox
+              ( Loc.ghost
+              , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
+              )
+          in
+          dprintf begin fun p ->
+            p.fmt "[elSplit] @[<v>generated pattern:\
+                   @,@[<hv 2>@[%a@]; . |-@ @[%a@] :@ @[%a@]@]@]"
+              P.(fmt_ppr_lf_mctx ~all: true l0) cD'
+              P.(fmt_ppr_cmp_pattern cD' Int.LF.Empty l0) pat
+              P.(fmt_ppr_cmp_typ cD' l0) tau_p
+            end;
+          (* cD' ; cPsi' |- tR_p <= tA_p
+             cD' |- t : cD
+           *)
+          let (t', t1, cD_b) =
+            synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+              (tau_i, tau_p)
+          in
+          (* cD_b |- t' : cD
+             cD_b |- t1 : cD'
+           *)
+          let cG_b = Whnf.cnormCtx (cG, t') in
+          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+          dprintf begin fun p ->
+            p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
+                   @,goal inside: @[%a@]\
+                   @,msub typing:\
+                   @,  @[%a@]\
+                   @]"
+              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+              P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
+              P.fmt_ppr_lf_msub_typing (cD_b, t', cD)
+            end;
+
+          let hyp' = elHypothetical cD_b cG_b label hyp ttau_b
+          (*
+            ttau = (t, tau)
+            such that
+            cD |- [t]tau <= type
+
+            ttau_b = (t o t', tau)
+            such that
+            cD_b |- [t o t']tau <= type
+           *)
+          in
+          I.SplitBranch ((cPsi, tH), t', hyp')
+       end
+
+    | A.ContextCase _ ->
+       CaseLabelMismatch (`named, `context)
+       |> throw loc
+  in
+  let make_comp_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
+    match l with
+    | A.ContextCase _ ->
+       CaseLabelMismatch (`named, `context)
+       |> throw loc
+    | A.NamedCase (loc, name) ->
+       let cid =
+         try
+           Store.Cid.CompConst.index_of_name name
+         with
+         | Not_found ->
+            UnboundCaseLabel (`comp, name, cD, tau_i)
+            |> throw loc
+       in
+       let e = Comp.get cid in
+       let tau_c = Comp.(e.typ) in
+       let tau_i = tau_i in
+
+       match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
+       | None -> assert false (* Throw an error ? *)
+       | Some (cD', (cG', pat, ttau), t) ->
+          let tau_p = Whnf.cnormCTyp ttau in
+          let cG' = Coverage.compgctx_of_gctx cG' in
+          (* cD' |- t : cD
+             cD' |- cG' ctx
+             cD', cG' |- pat <= tau_p
+           *)
+          let (t', t1, cD_b) =
+            synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
+          in
+          (* cD_b |- t' : cD
+             cD_b |- t1 : cD'
+           *)
+          let cG_b = Whnf.cnormCtx (cG', t1) in
+
+          let hyp' =
+            elHypothetical cD_b cG_b label hyp
+              (Pair.rmap (Whnf.mcomp' t') ttau)
+          in
+
+          I.SplitBranch (cid, t', hyp')
+  in
+  match tau_i with
+  | I.TypBox (_, (Int.LF.CTyp _)) ->
+     let ctx_branches = List.map make_ctx_branch bs in
+     I.ContextSplit (i, tau_i, ctx_branches)
+  | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->
+     let meta_branches = List.map (make_meta_branch (cl, psi)) bs in
+     I.MetaSplit (i, tau_i, meta_branches)
+  | I.TypBase _ | I.TypCross _ ->
+     let comp_branches = List.map make_comp_branch bs in
+     I.CompSplit (i, tau_i, comp_branches)
+  | _ ->
+     (* TODO throw proper error see; see what elab does for Case, if anything? *)
+     throw loc (IllegalCase (cD, cG, i, tau_i))
 
 (* elaborate Harpoon directives *)
 and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   match d with
   | A.Intros (loc, hyp) ->
-     I.Intros (elHypothetical cD cG label hyp ttau)
-  | A.Solve (loc, e_syn) ->
-     I.Solve (elExp cD cG e_syn ttau)
-  | A.Split (_, i, s_branches) ->
-     let (i, ttau_i) = elExp' cD cG i in
-     let tau_i = lazy (Whnf.cnormCTyp ttau_i) in
-
-     let make_ctx_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
-       match l with
-       | A.ContextCase (A.EmptyContext loc) ->
-          let hyp' = elHypothetical cD cG label hyp ttau in
-          I.SplitBranch (I.EmptyContext loc, hyp')
-
-       | A.ContextCase (A.ExtendedBy (loc, a)) ->
-          let a' =
-            (* XXX projectCtxIntoDctx ??? *)
-            Lfrecon.elTyp Lfrecon.Pibox Int.LF.Empty (Context.projectCtxIntoDctx Int.LF.Empty) a
-          in
-          let hyp' = elHypothetical cD cG label hyp ttau in
-          I.SplitBranch (I.ExtendedBy (loc, a'), hyp')
-
-       | A.NamedCase _ ->
-          CaseLabelMismatch (`context, `named)
-          |> throw loc
+     let (cD', cG', tau') =
+       Check.Comp.unroll cD cG (Whnf.cnormCTyp ttau)
      in
-     let make_meta_branch (cU, cPsi) { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
-       match l with
-       | A.NamedCase (loc, name) ->
-          (* TODO figure out how to reconstruct parameter variable branches
-             In the case of a parameter variable, index_of_name will
-             fail, due to the hash.
-             I would like something more robust that just checking if the name starts with a hash;
-             perhaps one needs a "PVarCase" label.
-           *)
-          let tH, tA =
-            try
-              let open Store.Cid.Term in
-              let cid = index_of_name name in
-              let { typ; _ } = get cid in
-              (Int.LF.Const cid, typ)
-            with
-            | Not_found ->
-               UnboundCaseLabel (`meta, name, cD, Lazy.force tau_i)
-               |> throw loc
-          in
-          (* XXX Is this always going to be MTyp?
-             Need to think about how this will interact with parameter variables.
-           *)
-          let Int.LF.MTyp tP = cU in
-          begin match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
-          | None ->
-             assert false
-          (* XXX throw an appropriate error
-             Normally this would be a type mismatch, because the user
-             types the full pattern, but here since the user only
-             types the constructor.
-             I'm thinking an error that looks like
-             Impossible constructor.
-             The constructor %a, of type
-               %a
-             is not a possible case for the split scrutinee type
-               %a
-           *)
-          | Some (cD', (cPsi', tR_p, tA_p), t) ->
-             let pat =
-               I.PatMetaObj
-                 ( Loc.ghost
-                 , let open Int.LF in
-                   ( Loc.ghost
-                   , ClObj
-                       ( Context.dctxToHat cPsi'
-                       , MObj tR_p
-                       )
-                   )
-                 )
-             in
-             let tau_p =
-               I.TypBox
-                 ( Loc.ghost
-                 , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
-                 )
-             in
-             (* cD' ; cPsi' |- tR_p <= tA_p
-                cD' |- t : cD
-              *)
-             let (t', t1, cD_b) =
-               synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
-                 (Lazy.force tau_i, tau_p)
-             in
-             (* cD_b |- t' : cD
-                cD_b |- t1 : cD'
-              *)
-             let cG_b = Whnf.cnormCtx (cG, t') in
-             let hyp' =
-               elHypothetical cD_b cG_b label hyp
-                 (Pair.rmap (Whnf.mcomp' t') ttau)
-                 (*
-                    ttau = (t, tau)
-                    such that
-                    cD |- [t]tau <= type
+     I.Intros (elHypothetical cD' cG' label hyp (tau', Whnf.m_id))
 
-                  *)
-             in
-             I.SplitBranch ((cPsi, tH), hyp')
-          end
+  | A.Solve (loc, e) ->
+     let e = elExp cD cG e ttau in
+     dprintf begin fun p ->
+       p.fmt "[elDirective] [solve] @[<v>elExp done.\
+              @,@[@[%a@] :@ @[%a@]@]@]"
+         P.(fmt_ppr_cmp_exp_chk cD cG l0) e
+         P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+       end;
+     I.Solve e
 
-       | A.ContextCase _ ->
-          CaseLabelMismatch (`named, `context)
-          |> throw loc
-     in
-     let make_comp_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
-       match l with
-       | A.ContextCase _ ->
-          CaseLabelMismatch (`named, `context)
-          |> throw loc
-       | A.NamedCase (loc, name) ->
-          let cid =
-            try
-              Store.Cid.CompConst.index_of_name name
-            with
-            | Not_found ->
-               UnboundCaseLabel (`comp, name, cD, Lazy.force tau_i)
-               |> throw loc
-          in
-          let e = Comp.get cid in
-          let tau_c = Comp.(e.typ) in
-          let tau_i = Lazy.force tau_i in
+  | A.Split (loc, i, bs) ->
+     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     elSplit loc cD cG label i tau_i bs ttau
 
-          match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
-          | None -> assert false (* Throw an error ? *)
-          | Some (cD', (cG', pat, ttau), t) ->
-             let tau_p = Whnf.cnormCTyp ttau in
-             let cG' = Coverage.compgctx_of_gctx cG' in
-             (* cD' |- t : cD
-                cD' |- cG' ctx
-                cD', cG' |- pat <= tau_p
-              *)
-             let (t', t1, cD_b) =
-               synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
-             in
-             (* cD_b |- t' : cD
-                cD_b |- t1 : cD'
-              *)
-             let cG_b = Whnf.cnormCtx (cG', t1) in
-
-             let hyp' =
-               elHypothetical cD_b cG_b label hyp
-                 (Pair.rmap (Whnf.mcomp t') ttau)
-             in
-
-             I.SplitBranch (cid, hyp')
-     in
-     let tau_i = Lazy.force tau_i in
-     match tau_i with
-     | I.TypBox (_, (Int.LF.CTyp _)) ->
-        let ctx_branches = List.map make_ctx_branch s_branches in
-        I.ContextSplit (i, tau_i, ctx_branches)
-     | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->
-        let meta_branches = List.map (make_meta_branch (cl, psi)) s_branches in
-        I.MetaSplit (i, tau_i, meta_branches)
-     | I.TypBase _ | I.TypCross _ ->
-        let comp_branches = List.map make_comp_branch s_branches in
-        I.CompSplit (i, tau_i, comp_branches)
-     | _ ->
-        (* TODO throw proper error see; see what elab does for Case, if anything? *)
-        Error.violation "Invalid scrutinee type in split directive."
 
 
 (* ******************************************************************************* *)

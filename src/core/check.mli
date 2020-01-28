@@ -87,7 +87,14 @@ module Comp : sig
   (** Raises an error from this module. *)
   val throw : Syntax.Loc.t -> error -> 'a
 
+  (** Checks a theorem in the given contexts against the given type.
+      The given list of total declarations is used for totality checking.
+      The cid_comp_const parameter is used for registering Harpoon
+      subgoals. For ordinary Beluga programs or for complete Harpoon
+      proofs, this argument can be None.
+   *)
   val thm :
+    Id.cid_comp_const option -> (* cid of the theorem being checked, if any *)
     LF.mctx ->
     gctx ->
     total_dec list ->
@@ -154,4 +161,11 @@ module Comp : sig
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
   val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ
+
+  (** Requires that the given type be a box-type.
+      require_syn_typbox cD cG loc i (tau, t) = (cU, t) if tau = [cU];
+      else, raises a synthesis mismatch error for the expression i
+      saying that the type of i is expected to be a box-type.
+   *)
+  val require_syn_typbox : LF.mctx -> gctx -> Loc.t -> exp_syn -> tclo -> meta_typ * LF.msub
 end

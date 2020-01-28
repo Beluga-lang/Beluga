@@ -1386,30 +1386,29 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Directive d ->
        fmt_ppr_cmp_directive cD cG ppf d
 
-  and fmt_ppr_cmp_command_and_proof cD cG ppf =
+  and fmt_ppr_cmp_boxity ppf = function
+    | `boxed -> () (* boxed is implicit *)
+    | `unboxed -> fprintf ppf "unboxed"
+
+  and fmt_ppr_cmp_command cD cG ppf =
     let open Comp in
     function
-    | By (t, name, tau, b), proof ->
-       begin match b, tau with
-       | `boxed, _ ->
-          let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
-          fprintf ppf "@[<hv 2>by @[%a@]@ as %a@];@,%a"
-            (fmt_ppr_cmp_exp_syn cD cG l0) t
-            Id.print name
-            (fmt_ppr_cmp_proof cD cG') proof
-       | `unboxed, TypBox (_, cT) ->
-          let cD' = LF.(Dec (cD, Decl (name, cT, No))) in
-          fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@];@,%a"
-            (fmt_ppr_cmp_exp_syn cD cG l0) t
-            Id.print name
-            (fmt_ppr_cmp_proof cD' cG) proof
-       end
-    | Unbox (i, name, mT), proof ->
-       let cD' = LF.Dec (cD, LF.Decl (name, mT, LF.Maybe)) in
-       fprintf ppf "@[<hv 2>unbox@ @[%a@]@ as @[%a@]@];@,%a"
+    | Unbox (i, name, _) ->
+       fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
-         (fmt_ppr_cmp_proof cD' (Whnf.cnormCtx (cG, LF.MShift 1))) proof
+    | By (i, name, _, b) ->
+       fprintf ppf "@[<hv 2>by @[%a@]@ as %a %a@]"
+         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         Id.print name
+         fmt_ppr_cmp_boxity b
+
+  and fmt_ppr_cmp_command_and_proof cD cG ppf (c, p) =
+    let (cD', cG', _) = Whnf.apply_command_to_context (cD, cG) c in
+    fprintf ppf
+      "@[%a@];@,%a"
+      (fmt_ppr_cmp_command cD cG) c
+      (fmt_ppr_cmp_proof cD' cG') p
 
   (** Pretty-prints a Harpoon split branch who's case label is of the
       abstract type `b` using the supplied printing function.
@@ -1421,7 +1420,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fun cD cG f ppf ->
     let open Comp in
     function
-    | SplitBranch (c, h) ->
+    | SplitBranch (c, _, h) ->
        fprintf ppf "@[<v>case %a:@,%a@]@,"
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h

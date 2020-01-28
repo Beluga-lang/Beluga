@@ -125,8 +125,14 @@ val allocate : unit -> HoleId.t
 (** Assigns the hole to the given ID. *)
 val assign : HoleId.t -> some_hole -> unit
 
-(** Clears the main hole array. *)
+(** Clears the hole arrays. *)
 val clear : unit -> unit
 
 (** Gets the current list of holes. *)
 val list : unit -> (HoleId.t * some_hole) list
+
+(** Adds a Harpoon subgoal to the internal list. *)
+val add_harpoon_subgoal : Id.cid_comp_const * Comp.proof_state -> unit
+
+(** Gets the list of Harpoon subgoals. *)
+val get_harpoon_subgoals : unit -> (Id.cid_comp_const * Comp.proof_state) list

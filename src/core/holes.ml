@@ -218,7 +218,15 @@ let unsafe_get (s : lookup_strategy) : HoleId.t * some_hole =
   | None -> throw Loc.ghost (NoSuchHole s)
   | Some h -> h
 
-let clear () = Hashtbl.clear holes
+let harpoon_subgoals = DynArray.create ()
+
+let add_harpoon_subgoal = DynArray.add harpoon_subgoals
+
+let get_harpoon_subgoals () = DynArray.to_list harpoon_subgoals
+
+let clear () =
+  Hashtbl.clear holes;
+  DynArray.clear harpoon_subgoals
 
 let list () =
   let f k h l = (k, h) :: l in

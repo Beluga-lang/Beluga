@@ -1350,27 +1350,26 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   (* cD |- t : cD'  *)
 
-  and fmt_ppr_cmp_proof_state ppf =
-    let open Comp in
-    fun { context = {cD; cG; _} ; goal; solution; label } ->
-    fprintf ppf "@[<v>";
-    fprintf ppf "@[<hov 2>%a@]@,"
+  and fmt_ppr_cmp_subgoal_label ppf label =
+    fprintf ppf "@[<hov 2>%a@]"
       (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf " <-@ ")
          (fun ppf l -> fprintf ppf "%s" l))
-      label;
-    fprintf ppf "@[<v 2>Meta-context:";
-    Context.iter (Whnf.normMCtx cD)
-      (fun cD v -> fprintf ppf "@,@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) v );
-    fprintf ppf "@]@,";
-    fprintf ppf "@[<v 2>Computational context:";
-    Context.iter' (Whnf.normCtx cG)
-      (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
-    fprintf ppf "@]@,";
-    for _ = 1 to 80 do fprintf ppf "-" done;
-    let goal = Whnf.cnormCTyp goal in
-    fprintf ppf "@,";
-    fmt_ppr_cmp_typ cD l0 ppf goal;
-    fprintf ppf "@]";
+      label
+
+  and fmt_ppr_cmp_proof_state ppf =
+    let print_line ppf () = for _ = 1 to 80 do fprintf ppf "-" done in
+    let open Comp in
+    fun { context = {cD; cG; _} as ctx ; goal; solution; label } ->
+    fprintf ppf
+      "@[<v>%a\
+       @,%a\
+       @,%a\
+       @,%a
+       @]"
+      fmt_ppr_cmp_subgoal_label label
+      fmt_ppr_cmp_hypotheses_listing ctx
+      print_line ()
+      (fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp goal)
 
   and fmt_ppr_cmp_proof cD cG ppf =
     let open Comp in
@@ -1471,6 +1470,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Solve t ->
        fprintf ppf "@[<hov 2>solve@ @[%a@]@]" (fmt_ppr_cmp_exp_chk cD cG l0) t;
+
+  and fmt_ppr_cmp_hypotheses_listing ppf =
+    let open Comp in
+    fun { cD; cG; _ } ->
+    fprintf ppf "@[<v 2>Meta-context:";
+    Context.iter (Whnf.normMCtx cD)
+      (fun cD v -> fprintf ppf "@,@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) v );
+    fprintf ppf "@]@,";
+    fprintf ppf "@[<v 2>Computational context:";
+    Context.iter' (Whnf.normCtx cG)
+      (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
+    fprintf ppf "@]@,";
 
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in

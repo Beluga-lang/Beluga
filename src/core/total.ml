@@ -1323,3 +1323,14 @@ let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp_syn) : bool
      $> snd
      $> is_meta_inductive cD
      |> is_some
+
+(** Decides, in the context of a given list of totality declarations,
+    whether the given function (name) requires totality checking.
+    A function requires totality checking only if its totality
+    declaration in the given list, if any, is an `inductive
+    declaraction.
+ *)
+let requires_checking f ds =
+  match lookup_dec f ds with
+  | Some d -> None <> Comp.(d.order |> option_of_total_dec_kind)
+  | None -> false

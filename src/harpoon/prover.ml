@@ -132,12 +132,12 @@ module Prover = struct
       ; mutual_group
       }
 
-    let serialize ppf (s : t) =
-      let fmt_ppr_theorems =
-        Format.pp_print_list ~pp_sep: Format.pp_print_cut Theorem.serialize
-      in
-      Format.fprintf ppf "@[<v>%a@,@]"
-        fmt_ppr_theorems (DynArray.to_list s.theorems)
+    (* let serialize ppf (s : t) =
+     *   let fmt_ppr_theorems =
+     *     Format.pp_print_list ~pp_sep: Format.pp_print_cut Theorem.serialize
+     *   in
+     *   Format.fprintf ppf "@[<v>%a@,@]"
+     *     fmt_ppr_theorems (DynArray.to_list s.theorems) *)
 
     (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
@@ -245,13 +245,13 @@ module Prover = struct
       )
       |> fun xs -> List.map (recover_session ppf hooks) xs
 
-    let serialize ppf (s : t) =
-      let fmt_ppr_sessions =
-        Format.pp_print_list ~pp_sep: Format.pp_print_cut Session.serialize
-      in
-      Format.fprintf ppf "@[<v>%a@,%a@,@]"
-        Automation.State.serialize s.automation_state
-        fmt_ppr_sessions (DynArray.to_list s.sessions)
+    (* let serialize ppf (s : t) =
+     *   let fmt_ppr_sessions =
+     *     Format.pp_print_list ~pp_sep: Format.pp_print_cut Session.serialize
+     *   in
+     *   Format.fprintf ppf "@[<v>%a@,%a@,@]"
+     *     Automation.State.serialize s.automation_state
+     *     fmt_ppr_sessions (DynArray.to_list s.sessions) *)
 
     let printf s x = Format.fprintf s.ppf x
 
@@ -588,7 +588,26 @@ module Prover = struct
              DynArray.insert s.State.sessions 0 c'
           end
        | `serialize ->
-          State.serialize s.State.ppf s
+          let open Misc.List in
+          let holes = Holes.get_harpoon_subgoals () in
+          s.State.sessions
+          |> DynArray.to_list
+          |> concat_map (fun c' -> c'.Session.theorems |> DynArray.to_list)
+          |> List.iter
+               begin fun t' ->
+               match List.find_all (fun hole -> Theorem.has_cid_of t' (fst hole)) holes with
+               | [] ->
+                  (* This is not a real implementation *)
+                  State.printf s "@[<v>add theorem@,%a@]@."
+                    Theorem.serialize t'
+                  (* Do I need to update the locations of all holes? *)
+               | holes' ->
+                  (* This is not a real implementation *)
+                  (* How to update the locations of the holes which are not filled yet? *)
+                  State.printf s "@[fill %d holes@]@."
+                    (List.length holes')
+                  (* Do I need to remove the filled holes? *)
+               end
        end
     | Command.Subgoal cmd ->
        begin match cmd with

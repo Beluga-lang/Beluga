@@ -280,7 +280,13 @@ module Comp = struct
          (P.fmt_ppr_cmp_typ cD P.l0) tau
   let _ =
     Error.register_printer
-      (fun (Error (loc, err)) -> Error.print_with_location loc (fun ppf -> format_error ppf err))
+      begin fun (Error (loc, err)) ->
+      Error.print_with_location loc
+        begin fun ppf ->
+        Format.fprintf ppf "Type-checking error.@.";
+        format_error ppf err
+        end
+      end
 
   type caseType =
     | IndexObj of meta_obj

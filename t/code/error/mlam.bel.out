@@ -1,3 +1,4 @@
+Type-checking error.
 Found
   function abstraction
 but expected expression of type

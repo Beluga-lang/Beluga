@@ -1,3 +1,4 @@
+Type reconstruction error.
 Context of meta-object does not match expected context.
     Expected context:
       g, x : tm

@@ -1,3 +1,4 @@
+Type-checking error.
 Found
   meta abstraction (mlam)
 but expected expression of type

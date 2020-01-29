@@ -1122,6 +1122,11 @@ module Comp = struct
     | I.Dec (cD, cdecl) ->
        (wf_mctx cD ; checkCDecl cD cdecl)
 
+  let require_syn_typbox cD cG loc i (tau, t) =
+    match tau with
+    | TypBox (_, cU) -> (cU, t)
+    | _ -> throw loc (MismatchSyn (cD, cG, i, VariantBox, (tau, t)))
+
   (* takes a normalised tau, peels off assumptions, and returns a triple (cD', cG', tau') *)
   let rec unroll cD cG tau =
     match tau with
@@ -1149,19 +1154,30 @@ module Comp = struct
           | Some cid ->
              Holes.add_harpoon_subgoal (cid, g)
        end
-    | Command (cmd, p') ->
-        begin match cmd with
-        | By (e_syn, name, tau, bty) ->
-           let (_, tau, m_sub) = syn cD (cG, cIH) total_decs e_syn in
-           let tau' = Whnf.cnormCTyp (tau, m_sub) in
-           let cG' = I.(Dec (cG, CTypDecl (name, tau', false))) in
-           proof mcid cD cG' cIH total_decs p' ttau
-        | Unbox (_, name, mT) ->
-           let cD' = I.(Dec (cD, Decl (name, mT, No))) in
-           proof mcid cD' cG cIH total_decs p' ttau
-        end
+
+    | Command (cmd, p) ->
+       let (cD, cG, t) = command cD cG cIH total_decs cmd in
+       let ttau = Pair.rmap (Whnf.mcomp' t) ttau in
+       proof mcid cD cG cIH total_decs p ttau
+
     | Directive d ->
        directive mcid cD cG cIH total_decs d ttau
+
+  and command cD cG cIH total_decs =
+    let extend_meta d =
+      let t = I.MShift 1 in
+      (I.Dec (cD, d), cG, t)
+    in
+    function
+    | By (i, name, _, `unboxed) | Unbox (i, name, _) ->
+       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let (cU, t) = require_syn_typbox cD cG Loc.ghost i (tau', t) in
+       extend_meta I.(Decl (name, Whnf.cnormMTyp (cU, t), No))
+    | By (i, name, _, `boxed) ->
+       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let tau = Whnf.cnormCTyp (tau', t) in
+       let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
+       (cD, cG, Whnf.m_id)
 
   (** Check a hypothetical derivation.
       Ensures that the contexts in the hypothetical are convertible

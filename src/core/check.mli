@@ -161,4 +161,11 @@ module Comp : sig
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
   val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ
+
+  (** Requires that the given type be a box-type.
+      require_syn_typbox cD cG loc i (tau, t) = (cU, t) if tau = [cU];
+      else, raises a synthesis mismatch error for the expression i
+      saying that the type of i is expected to be a box-type.
+   *)
+  val require_syn_typbox : LF.mctx -> gctx -> Loc.t -> exp_syn -> tclo -> meta_typ * LF.msub
 end

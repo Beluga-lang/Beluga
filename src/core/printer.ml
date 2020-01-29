@@ -105,6 +105,7 @@ module Int = struct
     val fmt_ppr_cmp_hypotheses_listing : formatter -> Comp.hypotheses -> unit
     val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
+    val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> Comp.hypothetical -> unit
     val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit

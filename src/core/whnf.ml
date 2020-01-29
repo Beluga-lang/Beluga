@@ -2071,3 +2071,17 @@ let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypot
   { cD; cG; cIH }
 
 let mcomp' = Misc.Function.flip mcomp
+
+let apply_command_to_context (cD, cG) =
+  let extend_meta d =
+    let t = MShift 1 in
+    (Dec (cD, d), cnormCtx (cG, t), t)
+  in
+  function
+  | Comp.Unbox (i, name, cU) -> extend_meta (Decl (name, cU, No))
+  | Comp.By (i, name, tau, `boxed) ->
+     (cD, Dec (cG, Comp.CTypDecl (name, tau, false)), MShift 0)
+  | Comp.By (i, name, tau, `unboxed) ->
+     match tau with
+     | Comp.TypBox (_, cU) -> extend_meta (Decl (name, cU, No))
+     | _ -> Error.violation "[apply_command_to_context] `unboxed not a TypBox"

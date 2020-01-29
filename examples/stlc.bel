@@ -51,12 +51,10 @@ intros
       D : ( |- oft M1 (arr A1 A)),
       D1 : ( |- oft M3 A1)
     | z6 : [ |- oft (app M1 M3) A], y7 : ([ |- eval (app M1 M3) M'])
-    ; by
-        tps ([ |- D]) ([ |- E])
-        as D';
-      by tps ([ |- D]) ([ |- E])
-      as D' unboxed;
-      split [⊢ D'] as
+    ; by tps ([ |- D]) ([ |- E])
+         as D'
+         unboxed;
+      split ([ |- D']) as
       case t_lam:
       { M1 : ( |- tm),
         M3 : ( |- tm),
@@ -68,19 +66,12 @@ intros
         A1 : ( |- tp),
         D : ( |- oft M1 (arr A1 A)),
         D1 : ( |- oft M3 A1),
-        D' : ( |- oft (lam (\y1. M2)) (arr A1 A)),
         D2 : (x : tm, y3 : oft x A1[] |- oft (M2[x]) A[])
-      | z6 : [ |- oft (app M1 M3) A],
-        y7 : ([ |- eval (app M1 M3) M']),
-        oops : [ |- oft (lam (\y1. M2)) (arr A1 A)]
-      ; by
-          tps ([ |- D2[M3, D1]]) ([ |- E1])
-          as ok;
-      ?
+      | z6 : [ |- oft (app M1 M3) A], y7 : [ |- eval (app M1 M3) M']
+        ; by tps [⊢ D2[_, D1]] [⊢ E1] as ok
+             ; solve ok
       }
-
     }
-
   }
   case e_lam:
   { M1 : (y5 : tm |- tm), A : ( |- tp)

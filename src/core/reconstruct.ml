@@ -841,7 +841,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
     dprintf
       begin fun p ->
       p.fmt "[synPatRefine] @[<v>unifying scrutinee and pattern types:@,\
-             @[%a@]    ===    @[%a@]@]"
+             @[<v>@[%a@]@,===@,@[%a@]@]@]"
         (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau_s'
         (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau_p'
       end;
@@ -1928,11 +1928,6 @@ and elFBranch cD cG fbr theta_tau = match fbr with
       end;
     Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
 
-let require_syn_typbox cD cG loc i (tau, theta) =
-  match tau with
-  | I.TypBox (_, cU) -> cU
-  | _ -> Check.Comp.(throw loc (MismatchSyn (cD, cG, i, VariantBox, (tau, theta))))
-
 (* elaborate gamma contexts *)
 let rec elGCtx (delta : Int.LF.mctx) gamma =
   match gamma with
@@ -1967,6 +1962,45 @@ let rec elHypothetical cD cG label hyp ttau =
     , elProof cD' cG' label p ttau
     )
 
+and elCommand cD cG =
+  let extend_meta d c =
+    let t = Int.LF.MShift 1 in
+    (* No need to check for shadowing since that already happened
+       during indexing. *)
+    (Int.LF.Dec (cD, d), Whnf.cnormCtx (cG, t), t, c)
+  in
+  function
+  | A.Unbox (loc, i, name) ->
+     let (i, ttau_i) = elExp' cD cG i in
+     let cU =
+       Check.Comp.require_syn_typbox cD cG loc i ttau_i
+       |> Whnf.cnormMTyp
+     in
+     extend_meta
+       Int.LF.(Decl (name, cU, No))
+       I.(Unbox (i, name, cU))
+
+  | A.By (loc, i, name, `boxed) ->
+     let (i, tau_i) =
+       elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp
+     in
+     let c = I.By (i, name, tau_i, `boxed) in
+     (cD, Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)), Whnf.m_id, c)
+
+  | A.By (loc, i, name, `unboxed) ->
+     (* XXX `by _ as _ unboxed` is redundant with the plain `unbox _ as _` command.
+        Perhaps "unbox" can be implemented as syntax sugar.
+        -je
+      *)
+     let (i, ttau_i) = elExp' cD cG i in
+     let cU =
+       Check.Comp.require_syn_typbox cD cG loc i ttau_i
+       |> Whnf.cnormMTyp
+     in
+     extend_meta
+       Int.LF.(Decl (name, cU, No))
+       I.(By (i, name, TypBox (loc, cU), `unboxed))
+
 (* elaborate Harpoon proofs *)
 and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   match p with
@@ -1976,42 +2010,20 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   | A.Directive (loc, d) ->
      I.Directive (elDirective cD cG label d ttau)
   | A.Command (loc, cmd, p) ->
-     (* let ttau = (tau', Whnf.mcomp theta (Int.LF.MShift 1)) in *)
-     match cmd with
-     | A.By (loc, e_syn, name, bty) ->
-        let (i, tau_i) =
-          elExp' cD cG e_syn
-          |> Pair.rmap Whnf.cnormCTyp
-        in
-        let cD, cG, ttau =
-          match bty with
-          | `boxed ->
-             let cG = Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)) in
-             (cD, cG, ttau)
-          | `unboxed ->
-             let cU = require_syn_typbox cD cG loc i (tau_i, Whnf.m_id) in
-             let cD = Int.LF.(Dec (cD, Decl (name, cU, No))) in
-             let shift1 = Int.LF.MShift 1 in
-             let cG = Whnf.cnormCtx (cG, shift1) in
-             let ttau = Pair.rmap (Whnf.mcomp shift1) ttau in
-             (cD, cG, ttau)
-        in
-        let p' = elProof cD cG label p ttau in
-        I.(Command (By (i, name, tau_i, bty), p'))
-
-     | A.Unbox (loc, e_syn, name) ->
-        let (i, tau_i) =
-          elExp' cD cG e_syn |> Pair.rmap Whnf.cnormCTyp
-        in
-        let cU = require_syn_typbox cD cG loc i (tau_i, Whnf.m_id) in
-        (* No need to check for shadowing since that already happened
-           during indexing. *)
-        let cD = Int.LF.(Dec (cD, Decl (name, cU, No))) in
-        let shift1 = Int.LF.MShift 1 in
-        let cG = Whnf.cnormCtx (cG, shift1) in
-        let ttau = Pair.rmap (Whnf.mcomp' shift1) ttau in
-        let int_proof = elProof cD cG label p ttau in
-        I.(Command (Unbox (i, name, cU), int_proof))
+     dprnt "[elProof] --> elCommand @[%a@]";
+     let (cD', cG', t, cmd) = elCommand cD cG cmd in
+     let ttau' = Pair.rmap (Whnf.mcomp' t) ttau in
+     dprintf begin fun p ->
+       p.fmt "[elProof] @[<v>elCommand done.\
+              @,cmd = @[%a@]\
+              @,goal before: @[%a@]\
+              @,goal after: @[%a@]@]"
+         P.(fmt_ppr_cmp_command cD cG) cmd
+         P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+         P.(fmt_ppr_cmp_typ cD' l0) (Whnf.cnormCTyp ttau')
+       end;
+     let p = elProof cD' cG' label p ttau' in
+     I.Command (cmd, p)
 
 and elSplit loc cD cG label i tau_i bs ttau =
   let make_ctx_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
@@ -2091,6 +2103,13 @@ and elSplit loc cD cG label i tau_i bs ttau =
               , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
               )
           in
+          dprintf begin fun p ->
+            p.fmt "[elSplit] @[<v>generated pattern:\
+                   @,@[<hv 2>@[%a@]; . |-@ @[%a@] :@ @[%a@]@]@]"
+              P.(fmt_ppr_lf_mctx ~all: true l0) cD'
+              P.(fmt_ppr_cmp_pattern cD' Int.LF.Empty l0) pat
+              P.(fmt_ppr_cmp_typ cD' l0) tau_p
+            end;
           (* cD' ; cPsi' |- tR_p <= tA_p
              cD' |- t : cD
            *)
@@ -2106,9 +2125,12 @@ and elSplit loc cD cG label i tau_i bs ttau =
           dprintf begin fun p ->
             p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
                    @,goal inside: @[%a@]\
+                   @,msub typing:\
+                   @,  @[%a@]\
                    @]"
               P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
               P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
+              P.fmt_ppr_lf_msub_typing (cD_b, t', cD)
             end;
 
           let hyp' = elHypothetical cD_b cG_b label hyp ttau_b
@@ -2166,7 +2188,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
 
           let hyp' =
             elHypothetical cD_b cG_b label hyp
-              (Pair.rmap (Whnf.mcomp t') ttau)
+              (Pair.rmap (Whnf.mcomp' t') ttau)
           in
 
           I.SplitBranch (cid, t', hyp')
@@ -2193,8 +2215,17 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
        Check.Comp.unroll cD cG (Whnf.cnormCTyp ttau)
      in
      I.Intros (elHypothetical cD' cG' label hyp (tau', Whnf.m_id))
-  | A.Solve (loc, e_syn) ->
-     I.Solve (elExp cD cG e_syn ttau)
+
+  | A.Solve (loc, e) ->
+     let e = elExp cD cG e ttau in
+     dprintf begin fun p ->
+       p.fmt "[elDirective] [solve] @[<v>elExp done.\
+              @,@[@[%a@] :@ @[%a@]@]@]"
+         P.(fmt_ppr_cmp_exp_chk cD cG l0) e
+         P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+       end;
+     I.Solve e
+
   | A.Split (loc, i, bs) ->
      let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
      elSplit loc cD cG label i tau_i bs ttau

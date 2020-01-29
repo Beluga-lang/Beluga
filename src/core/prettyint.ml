@@ -733,7 +733,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     fmt_ppr_ctx_filter ~sep: sep should_print
       (fun ppf (cD', d) ->
-        fprintf ppf "@[%a@]"
+        fprintf ppf "%a"
           (fmt_ppr_lf_ctyp_decl cD' l0) d)
       ppf
       cD
@@ -804,7 +804,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          else
            fun _ _ -> ()
        in
-       fprintf ppf "%s%a :@ @[%a@]"
+       fprintf ppf "@[<2>%s%a :@ @[%a@]@]"
          (if printing_holes
           then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
           else Id.render_name u)
@@ -834,16 +834,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.ICtx _ -> failwith "printing ICtx is weird because a dctx was also passed in."
 
   let fmt_ppr_lf_typ_typing ppf (cD, cPsi, tA) =
-    fprintf ppf "@[<2>@[%a@] ; @[%a@] |-@ @[%a@]@ : type@]"
+    fprintf ppf "@[<2>@[@[<hv>%a@] ;@ @[<hv>%a@]@] |-@ @[%a@]@ : type@]"
       (fmt_ppr_lf_mctx l0) cD
       (fmt_ppr_lf_dctx cD l0) cPsi
       (fmt_ppr_lf_typ cD cPsi l0) tA
 
   let fmt_ppr_lf_msub_typing ppf (cD', t, cD) =
-    fprintf ppf "@[%a@] |-@ @[%a@]@ : @[%a@]"
-      (fmt_ppr_lf_mctx l0) cD'
+    fprintf ppf "@[<hv>%a@] |-@ @[%a@]@ : @[<hv>%a@]"
+      (fmt_ppr_lf_mctx ~all: true l0) cD'
       (fmt_ppr_lf_msub cD' l0) t
-      (fmt_ppr_lf_mctx l0) cD
+      (fmt_ppr_lf_mctx ~all: true l0) cD
 
   let fmt_ppr_lf_constraint ppf =
     let open Format in
@@ -1300,7 +1300,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                (fmt_ppr_cmp_meta_obj cD1' 0) mO
                (fmt_ppr_cmp_exp_chk cD1' cG 1) e
           | _ ->
-             fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
+             fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
                (fmt_ppr_lf_mctx 0) cD1'
                (fmt_ppr_cmp_meta_obj cD1' 0) mO
                (* NOTE: Technically: cD |- cG ctx and
@@ -1309,7 +1309,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                 *)
                (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
        else
-         fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+         fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
            (fmt_ppr_lf_mctx 0) cD1'
            (fmt_ppr_cmp_meta_obj cD1' 0) mO
            (* this point is where the " : " is in the string above *)
@@ -1386,30 +1386,29 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Directive d ->
        fmt_ppr_cmp_directive cD cG ppf d
 
-  and fmt_ppr_cmp_command_and_proof cD cG ppf =
+  and fmt_ppr_cmp_boxity ppf = function
+    | `boxed -> () (* boxed is implicit *)
+    | `unboxed -> fprintf ppf "unboxed"
+
+  and fmt_ppr_cmp_command cD cG ppf =
     let open Comp in
     function
-    | By (t, name, tau, b), proof ->
-       begin match b, tau with
-       | `boxed, _ ->
-          let cG' = LF.Dec (cG, Comp.CTypDecl (name, tau, false)) in
-          fprintf ppf "@[<hv 2>by @[%a@]@ as %a@];@,%a"
-            (fmt_ppr_cmp_exp_syn cD cG l0) t
-            Id.print name
-            (fmt_ppr_cmp_proof cD cG') proof
-       | `unboxed, TypBox (_, cT) ->
-          let cD' = LF.(Dec (cD, Decl (name, cT, No))) in
-          fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@];@,%a"
-            (fmt_ppr_cmp_exp_syn cD cG l0) t
-            Id.print name
-            (fmt_ppr_cmp_proof cD' cG) proof
-       end
-    | Unbox (i, name, mT), proof ->
-       let cD' = LF.Dec (cD, LF.Decl (name, mT, LF.Maybe)) in
-       fprintf ppf "@[<hv 2>unbox@ @[%a@]@ as @[%a@]@];@,%a"
+    | Unbox (i, name, _) ->
+       fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
-         (fmt_ppr_cmp_proof cD' (Whnf.cnormCtx (cG, LF.MShift 1))) proof
+    | By (i, name, _, b) ->
+       fprintf ppf "@[<hv 2>by @[%a@]@ as %a %a@]"
+         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         Id.print name
+         fmt_ppr_cmp_boxity b
+
+  and fmt_ppr_cmp_command_and_proof cD cG ppf (c, p) =
+    let (cD', cG', _) = Whnf.apply_command_to_context (cD, cG) c in
+    fprintf ppf
+      "@[%a@];@,%a"
+      (fmt_ppr_cmp_command cD cG) c
+      (fmt_ppr_cmp_proof cD' cG') p
 
   (** Pretty-prints a Harpoon split branch who's case label is of the
       abstract type `b` using the supplied printing function.

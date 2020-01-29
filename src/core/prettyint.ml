@@ -1427,9 +1427,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
     let open Comp in
-    let print_split ppf label i bs f =
-      fprintf ppf "@[%s@ (@[%a@])@]@,@[<v>%a@]"
-        label
+    let print_split ppf i bs f =
+      fprintf ppf "@[split@ @[%a@] as@]@,@[<v>%a@]"
         (fmt_ppr_cmp_exp_syn cD cG l0) i
          (pp_print_list ~pp_sep: (fun _ _ -> ())
             (fmt_ppr_cmp_split_branch cD cG f))
@@ -1451,18 +1450,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_syn cD cG l0) i
 
     | MetaSplit (i, _, bs) ->
-       print_split ppf
-         "split" i bs
+       print_split ppf i bs
          (fun ppf (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h)
 
     | CompSplit (i, _, bs) ->
-       print_split ppf
-         "split" i bs
+       print_split ppf i bs
          (fun ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
 
     | ContextSplit (i, _, bs) ->
-       print_split ppf
-         "split" i bs
+       print_split ppf i bs
          (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->

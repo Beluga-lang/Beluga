@@ -56,6 +56,7 @@ let _ = Error.register_printer
   Error.print_with_location loc
     begin fun ppf ->
     let open Format in
+    fprintf ppf "Type reconstruction error.@.";
     match err with
     | NotImplemented f ->
        fprintf ppf "@[<v 2>Not implemented:@,@[%a@]@]"

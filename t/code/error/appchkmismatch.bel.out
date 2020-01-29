@@ -1,3 +1,4 @@
+Type-checking error.
 Ill-typed expression.
     Expected type:
       [h |- target (cross T S)]

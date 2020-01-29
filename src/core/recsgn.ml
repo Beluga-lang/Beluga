@@ -795,7 +795,6 @@ let recSgnDecls decls =
          | [], [] ->
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
-            Total.enabled := true;
             Some (List.map Misc.Function.(Maybe.get ++ snd) haves)
          (* safe because they're haves *)
          | [], have_nots -> None
@@ -956,8 +955,18 @@ let recSgnDecls decls =
            ( "Function Check"
            , fun _ ->
              let total_decs = Maybe.get_default [] total_decs in
+             dprintf begin fun p ->
+               p.fmt "[recThm] @[<v>begin checking theorem %a.\
+                      @,@[<hv 2>total_decs =@ @[<v>%a@]@]@]"
+                 Id.print f
+                 (Format.pp_print_list ~pp_sep: Format.pp_print_cut
+                    P.(fmt_ppr_cmp_total_dec))
+                 total_decs
+               end;
+             Total.enabled := Total.requires_checking f total_decs;
              Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty total_decs
-               thm_r' (tau_ann, C.m_id)
+               thm_r' (tau_ann, C.m_id);
+             Total.enabled := false;
            );
          (thm_r' , tau)
        in
@@ -990,14 +999,6 @@ let recSgnDecls decls =
          List.map reconOne (List.combine thm_cid_list thm_list)
        in
        let decl = Int.Sgn.(Theorem ds) in
-       Total.enabled := false;
-       (* ^ this looks wrong, but it isn't.
-          We enable total when the mutual group has totality
-          declarations, and disable it before we process the next
-          declaration.
-          In other words, it is enabled only during elaboration of a
-          mutual group declared to be total.
-        *)
        Store.Modules.addSgnToCurrent decl;
        decl
 

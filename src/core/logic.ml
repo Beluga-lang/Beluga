@@ -267,10 +267,13 @@ module Convert = struct
     | LF.CtxVar (_) -> invalid_arg
         "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar (_)."
 
-  (* typToQuery (M, i)  = ((g, s), xs)
-     Transform a reconstructed LF.typ into a query, accumulating all
-     the abstracted existential variables into a substitution while
-     storing the MVars into a list `xs' for immediate access.
+  (** typToQuery (M, i)  = ((g, s), xs)
+      Transform a reconstructed LF.typ into a query, accumulating all
+      the abstracted existential variables into a substitution while
+      storing the MVars into a list `xs' for immediate access.
+
+      `i` is the count of abstracted existential variables in the
+      type.
   *)
   let typToQuery cPsi cD (tA, i) =
     let rec typToQuery' (tA, i) s xs = match tA with

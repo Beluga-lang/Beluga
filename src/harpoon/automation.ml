@@ -56,7 +56,7 @@ let auto_intros : t =
         @,  @[<v>%a@]\
         @,@]"
        fmt_ppr_assumptions ()
-       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
+       (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal);
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
      let context = Whnf.append_hypotheses g.context local_context in

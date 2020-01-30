@@ -529,7 +529,7 @@ and genMAppW loc cD (i, tau_t) = match tau_t with
   | (Int.Comp.TypPiBox (_, Int.LF.Decl(n, ctyp, Int.LF.Maybe), tau), theta) ->
      dprnt "[genMApp] --> genMetaVar'";
     let (cM,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
-    genMApp loc cD (Int.Comp.MApp (loc, i, cM), (tau, t'))
+    genMApp loc cD (Int.Comp.MApp (loc, i, cM, `implicit), (tau, t'))
     |> Pair.lmap ((+) 1)
 
   | _ ->
@@ -1286,7 +1286,8 @@ and elExp' cD cG i =
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
         let cM = elMetaObj cD mC (ctyp, theta) in
-        (Int.Comp.MApp (loc, i', cM), (tau, Int.LF.MDot (metaObjToFt cM, theta)))
+        ( Int.Comp.MApp (loc, i', cM, `explicit)
+        , (tau, Int.LF.MDot (metaObjToFt cM, theta)))
      | _ ->
         raise
           ( Check.Comp.Error

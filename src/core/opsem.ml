@@ -188,7 +188,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected FunValue")
       end
 
-    | Comp.MApp (_, i', (l, LF.ClObj(phat, LF.MObj tM))) ->
+    | Comp.MApp (_, i', (l, LF.ClObj(phat, LF.MObj tM)), _) ->
       let tM' = Whnf.cnorm (tM, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -201,7 +201,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue ")
       end
 
-    | Comp.MApp (_, i', (l, LF.ClObj (phat, LF.PObj h))) ->
+    | Comp.MApp (_, i', (l, LF.ClObj (phat, LF.PObj h)), _) ->
         let h' = Whnf.cnormHead (h, theta) in
         let phat = Whnf.cnorm_psihat phat theta in
       begin match eval_syn i' (theta, eta) with
@@ -214,7 +214,7 @@ let rec eval_syn i (theta, eta) =
         | _ -> raise (Error.Violation "Expected MLamValue")
       end
 
-    | Comp.MApp (loc, i', (l, LF.CObj cPsi)) ->
+    | Comp.MApp (loc, i', (l, LF.CObj cPsi), _) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, theta) in
       dprint (fun () -> "EVALUATE CtxApp ");
       dprintf

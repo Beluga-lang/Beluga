@@ -272,11 +272,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
              (fmt_ppr_lf_cvar cD) c
              proj
          else
-           fprintf ppf "%s%a%s[%a]%s"
+           fprintf ppf "%s%a%s[@[%a@]]%s"
              (l_paren_if (paren s))
              (fmt_ppr_lf_cvar cD) c
              proj
-             (fmt_ppr_lf_sub  cD cPsi lvl) s
+             (fmt_ppr_lf_sub cD cPsi lvl) s
              (r_paren_if (paren s))
 
       | LF.PVar (c, s) ->
@@ -350,50 +350,67 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let s = Whnf.normSub s in
     let cPsi = Whnf.normDCtx cPsi in
     let print_front = fmt_ppr_lf_front cD cPsi 1 in
-    let rec fmt_ppr_lf_sub_id ppf cPsi =
+    (* XXX O(n^2) algorithm below.
+       The following algorithm for printing the substitution
+       effectively converts it to a list of items, so these items can
+       be printed using pp_print_list with a comma separator.
+       These items are printing functions of type
+           formatter -> unit -> unit
+       I build the list by appending to the end with `@ [foo]`, so
+       overall this algorithm is O(n^2).
+       This can be improved by building the list in reverse and then
+       printing it in reverse, to recover O(n) performance.
+     *)
+    let rec prepare_lf_sub_id cPsi =
       match cPsi with
-      | LF.Null -> ()
+      | LF.Null ->
+         []
+      | LF.CtxVar _ ->
+         [fun ppf _ -> fprintf ppf ".."]
+      | LF.(DDec (Null, (TypDecl (x, _) | TypDeclOpt x))) ->
+         [fun ppf _ -> Id.print ppf x]
       | LF.DDec (cPsi', LF.TypDecl (x, _))
         | LF.DDec (cPsi', LF.TypDeclOpt x) ->
-         fprintf ppf "%a, %s"
-           fmt_ppr_lf_sub_id cPsi'
-           (Id.render_name x)
-      | LF.CtxVar _ -> fprintf ppf ".."
+         prepare_lf_sub_id cPsi' @ [fun ppf _ -> Id.print ppf x]
     in
     let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
-      | _, 0 -> fmt_ppr_lf_sub_id ppf cPsi
+      | _, 0 -> prepare_lf_sub_id cPsi
       | LF.DDec (cPsi', _), n -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
     in
-    let rec self lvl ppf =
+    let rec self lvl =
       function
-      | LF.EmptySub -> ()
-      | LF.Undefs -> ()
+      | LF.(EmptySub | Undefs) -> []
       | LF.Shift n -> fmt_ppr_lf_sub_shift ppf (cPsi, n)
       | LF.FSVar (_, (s_name, s)) ->
-         fprintf ppf "|- FSV %s[%a]"
-
-           (Id.render_name s_name )
-           (fmt_ppr_lf_sub cD cPsi lvl) s
+         [fun ppf _ ->
+          fprintf ppf "|- FSV %s[%a]"
+            (Id.render_name s_name )
+            (fmt_ppr_lf_sub cD cPsi lvl) s]
 
       | LF.SVar (c, _, s) ->
-         fprintf ppf "%a[%a]"
-           (fmt_ppr_lf_offset cD) c
-           (self lvl) s
+         [fun ppf _ ->
+          fprintf ppf "%a[@[%a@]]"
+            (fmt_ppr_lf_offset cD) c
+            (fmt_ppr_lf_sub_natural cD cPsi lvl) s]
+
       | LF.MSVar (_, ((_sigma, t),s)) ->
-         fprintf ppf "$?S[%a ; %a]"
+         [fun ppf _ ->
+          fprintf ppf "$?S[@[%a@];@ @[%a@]]"
            (fmt_ppr_lf_msub cD lvl) t
-           (self lvl) s
+           (fmt_ppr_lf_sub_natural cD cPsi lvl) s]
+
       | LF.Dot (f, s) ->
-         fprintf ppf "%a, %a"
-           (self lvl) s
-           print_front f
+         self lvl s @ [fun ppf _ -> print_front ppf f]
     in
     match s with
-    | LF.Shift _ when not (Context.hasCtxVar cPsi) ->  (* Print nothing at all, because the user would have written nothing at all *)
+    | LF.Shift _ when not (Context.hasCtxVar cPsi) ->
+       (* Print nothing at all, because the user would have written nothing at all *)
        ()
     | _ ->  (* For anything else, print a space first *)
-       fprintf ppf " %a"
-         (self lvl) s
+       fprintf ppf "%a"
+         (pp_print_list ~pp_sep: Fmt.comma
+            (fun ppf f -> f ppf ()))
+         (self lvl s)
 
   and fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s =
     let rec self lvl ppf = function
@@ -450,7 +467,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "^%s" (string_of_int k)
 
     | LF.MDot (f, s) ->
-       fprintf ppf "%a@ ,@ %a"
+       fprintf ppf "@[%a@],@ @[%a@]"
          (fmt_ppr_lf_msub cD lvl) s
          (fmt_ppr_lf_mfront cD 1) f
 
@@ -795,15 +812,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      declaration and skip calling this function. Otherwise, it is
      impossible to get the spacing to work correctly in the printed
      material. *)
-  and fmt_ppr_lf_ctyp_decl ?(depend=true) ?(printing_holes=false) cD _lvl ppf = function
+  and fmt_ppr_lf_ctyp_decl ?(depend=`clean) ?(printing_holes=false) cD _lvl ppf = function
     | LF.Decl (u, mtyp,dep) ->
-       let print_depend =
-         if depend then
-           let style = if !PC.printImplicit then `depend else `inductive in
-           fmt_ppr_lf_depend style
-         else
-           fun _ _ -> ()
-       in
+       let print_depend = fmt_ppr_lf_depend depend in
        fprintf ppf "@[<2>%s%a :@ @[%a@]@]"
          (if printing_holes
           then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
@@ -943,8 +954,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "TypClo!"
 
     | Comp.TypInd tau ->
-       fprintf ppf "(@[%a@])*"
-         (fmt_ppr_cmp_typ cD 1) tau
+       if !PC.printImplicit then
+         fprintf ppf "@[%a@]*"
+           (fmt_ppr_cmp_typ cD 10) tau
+       else
+         fmt_ppr_cmp_typ cD lvl ppf tau
 
   let rec fmt_ppr_pat_spine cD cG lvl ppf = function
     | Comp.PatNil -> fprintf ppf ""
@@ -1035,7 +1049,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
     | Comp.Syn (_, i) ->
-       fmt_ppr_cmp_exp_syn cD cG lvl ppf (strip_mapp_args cD cG i )
+       fmt_ppr_cmp_exp_syn cD cG lvl ppf i
 
     | Comp.Fn (_, x, e) ->
        let x = fresh_name_gctx cG x in
@@ -1087,7 +1101,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (l_paren_if cond)
          (Id.render_name x)
          (Id.render_name y)
-         (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+         (fmt_ppr_cmp_exp_syn cD cG 0) i
          (fmt_ppr_cmp_exp_chk cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y)) 0) e
          (r_paren_if cond)
 
@@ -1098,16 +1112,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
          (l_paren_if cond)
          (Id.render_name x)
-         (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+         (fmt_ppr_cmp_exp_syn cD cG 0) i
          (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
          (r_paren_if cond)
 
     | Comp.Box (_ , cM) ->
-       let cond = lvl > 1 in
-       fprintf ppf "%s%a%s"
-         (l_paren_if cond)
-         (fmt_ppr_cmp_meta_obj cD 0) cM
-         (r_paren_if cond)
+       fmt_ppr_cmp_meta_obj cD 0 ppf cM
 
     | Comp.Impossible (_, i) ->
        fprintf ppf "impossible @[%a@]"
@@ -1117,12 +1127,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cond = lvl > 0 in
        if !Printer.Control.printNormal then
          fprintf ppf "impossible %a"
-           (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+           (fmt_ppr_cmp_exp_syn cD cG 0) i
        else
          let open Comp in
          fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
            (l_paren_if cond)
-           (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+           (fmt_ppr_cmp_exp_syn cD cG 0) i
            (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
            (fmt_ppr_cmp_branches cD cG 0) bs
            (r_paren_if cond)
@@ -1132,7 +1142,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cond = lvl > 0 in
        fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
          (l_paren_if cond)
-         (fmt_ppr_cmp_exp_syn cD cG 0) (strip_mapp_args cD cG i)
+         (fmt_ppr_cmp_exp_syn cD cG 0) i
          (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
          (fmt_ppr_cmp_branches cD cG 0) bs
          (r_paren_if cond)
@@ -1148,43 +1158,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        with
        | _ -> fprintf ppf "?%s" name
 
-  and strip_mapp_args cD cG i =
-    if !Printer.Control.printImplicit then
-      i
-    else
-      let (i', _ ) = strip_mapp_args' cD cG i in i'
-  and strip_mapp_args' cD cG i = match i with
-    | Comp.Const (_, prog) ->
-       (i,  implicitCompArg  (Store.Cid.Comp.get prog).Store.Cid.Comp.typ)
-    | Comp.DataConst (_, c) ->
-       (i,  implicitCompArg  (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ)
-    | Comp.Var (_, x) ->
-       begin match Context.lookup cG x with
-         None -> (i, [])
-       | Some tau -> (i,  implicitCompArg tau)
-       end
-    | Comp.Apply (loc, i, e) ->
-       let (i', _) = strip_mapp_args' cD cG i in
-       (Comp.Apply (loc, i', e), [])
-
-    | Comp.MApp (loc, i1, mC) ->
-       let (i', stripArg) = strip_mapp_args' cD cG i1 in
-       (match stripArg with
-        | false :: sA -> (i', sA)
-        | true  :: sA -> (Comp.MApp (loc , i', mC), sA)
-        | []          -> (i', [])                )
-    | Comp.PairVal (loc, i1, i2) ->
-       let (i1', _) = strip_mapp_args' cD cG i1 in
-       let (i2', _) = strip_mapp_args' cD cG i2 in
-       (Comp.PairVal (loc, i1', i2') , [])
-    | _ -> (i, [])
-  and implicitCompArg tau =
-    match tau with
-    | Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp _,_), LF.Maybe), tau) ->
-       (false)::(implicitCompArg tau)
-    | Comp.TypPiBox (_, _, tau) ->
-       (true)::(implicitCompArg tau)
-    | _ -> []
   and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
     | Comp.Var (_, x) ->
        fprintf ppf "%s"
@@ -1208,21 +1181,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_exp_syn cD cG 1) i
-         (fmt_ppr_cmp_exp_chk cD cG 2) e
+         (fmt_ppr_cmp_exp_chk cD cG 1) e
          (r_paren_if cond)
 
-    | Comp.MApp (_, i, mC) ->
+    | Comp.MApp (_, i, mC, pl) ->
        let cond = lvl > 1 in
-       fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
-         (l_paren_if cond)
-         (fmt_ppr_cmp_exp_syn cD cG 1) i
-         (fmt_ppr_cmp_meta_obj cD 0) mC
-         (r_paren_if cond)
+       if !PC.printImplicit || pl = `explicit then
+         fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
+           (l_paren_if cond)
+           (fmt_ppr_cmp_exp_syn cD cG 1) i
+           (fmt_ppr_cmp_meta_obj cD 0) mC
+           (r_paren_if cond)
+       else
+         fmt_ppr_cmp_exp_syn cD cG 1 ppf i (* not printing implicits *)
 
     | Comp.PairVal (loc, i1, i2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_exp_syn cD cG 1) i1
-         (fmt_ppr_cmp_exp_syn cD cG 1) i2
+       fprintf ppf "@[( %a@,, %a)@]"
+         (fmt_ppr_cmp_exp_syn cD cG 0) i1
+         (fmt_ppr_cmp_exp_syn cD cG 0) i2
 
     | Comp.AnnBox (cM, _cT) ->
        (* When we are printing refined programs through the interactive mod
@@ -1390,9 +1366,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | `boxed -> () (* boxed is implicit *)
     | `unboxed -> fprintf ppf "unboxed"
 
-  and fmt_ppr_cmp_command cD cG ppf =
+  and fmt_ppr_cmp_command cD cG ppf cmd =
     let open Comp in
-    function
+    match cmd with
     | Unbox (i, name, _) ->
        fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
@@ -1438,7 +1414,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
     | Suffices (i, ps) ->
        fprintf ppf "@[<hov 2>suffices by lemma @[%a@] toshow@ @[%a@]@]"
-         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         (Printer.fmt_ppr_implicits false
+            (fmt_ppr_cmp_exp_syn cD cG l0))
+         i
          (pp_print_list ~pp_sep: pp_print_cut
             (fun ppf (tau, p) ->
               fprintf ppf "@[<v 2>@[%a@] {@ @[<v>%a@]@]@,}"
@@ -1447,7 +1425,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          ps
     | ImpossibleSplit i ->
        fprintf ppf "impossible @[%a@]"
-         (fmt_ppr_cmp_exp_syn cD cG l0) i
+         (Printer.fmt_ppr_implicits false
+            (fmt_ppr_cmp_exp_syn cD cG l0))
+         i
 
     | MetaSplit (i, _, bs) ->
        print_split ppf i bs
@@ -1462,7 +1442,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->
-       fprintf ppf "@[<hov 2>solve@ @[%a@]@]" (fmt_ppr_cmp_exp_chk cD cG l0) t;
+       fprintf ppf "@[<hov 2>solve@ @[%a@]@]"
+         (Printer.fmt_ppr_implicits false
+            (fmt_ppr_cmp_exp_chk cD cG l0))
+         t;
 
   and fmt_ppr_cmp_hypotheses_listing ppf =
     let open Comp in
@@ -1541,7 +1524,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.CTypDecl (x, tau, tag) ->
        fprintf ppf "@[<2>%a%a@ :@ @[%a@]@]"
          Id.print x
-         print_wf_tag tag
+         print_wf_tag (tag && !PC.printImplicit)
          (fmt_ppr_cmp_typ cD lvl) tau
 
     | Comp.WfRec (name, args, typ) ->

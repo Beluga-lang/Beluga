@@ -421,7 +421,7 @@ module Comp = struct
     | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest
     | Const     of Loc.t * cid_prog
     | Apply     of Loc.t * exp_syn * exp_chk
-    | MApp      of Loc.t * exp_syn * meta_obj
+    | MApp      of Loc.t * exp_syn * meta_obj * plicity
     | AnnBox    of meta_obj * meta_typ
     | PairVal   of Loc.t * exp_syn * exp_syn
 
@@ -515,7 +515,7 @@ module Comp = struct
    *)
   let rec head_of_application : exp_syn -> exp_syn = function
     | Apply (_, i, _) -> head_of_application i
-    | MApp (_, i, _) -> head_of_application i
+    | MApp (_, i, _, _) -> head_of_application i
     | _ as i -> i
 
   (** Removes all type annotations from a pattern. *)

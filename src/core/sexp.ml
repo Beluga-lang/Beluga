@@ -697,7 +697,7 @@ struct
         (sexp_cmp_exp_syn cD cG) i
         (sexp_cmp_exp_chk cD cG) e
 
-    | Comp.MApp (_, i, mC) ->
+    | Comp.MApp (_, i, mC, _) ->
       fprintf ppf "(MApp %a %a)"
         (sexp_cmp_exp_syn cD cG) i
         (sexp_meta_obj cD) mC

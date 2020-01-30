@@ -14,7 +14,6 @@ sig=$(sed -n '1p' "${input_path}")
 
 exec ./bin/harpoon \
      --sig "${sig}" \
-     --implicit \
      --test "${input_path}" \
      --test-start 2 \
      $@

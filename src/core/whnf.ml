@@ -1663,8 +1663,8 @@ let mctxMVarPos cD u =
     | (Comp.PairVal (loc, i1, i2), t) ->
         Comp.PairVal (loc, cnormExp' (i1,t), cnormExp' (i2, t))
 
-    | (Comp.MApp (loc, i, cM), t) ->
-        Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t))
+    | (Comp.MApp (loc, i, cM, pl), t) ->
+        Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t), pl)
 
     | (Comp.AnnBox (cM, cT), t') ->
        let cM' = cnormMetaObj (cM, t') in

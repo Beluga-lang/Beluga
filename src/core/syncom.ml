@@ -25,6 +25,11 @@ module Comp = struct
     | EmptyContext of Loc.t
     | ExtendedBy of Loc.t * 'a
 
+  type plicity =
+    [ `implicit
+    | `explicit
+    ]
+
   type 'ctx_case generic_case_label =
     | NamedCase of Loc.t * Id.name
     | ContextCase of 'ctx_case

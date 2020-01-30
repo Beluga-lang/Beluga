@@ -1325,10 +1325,10 @@ and collectExp' cQ i = match i with
       let (cQ'', e') = collectExp cQ' e in
         (cQ'', Comp.Apply (loc, i', e'))
 
-  | Comp.MApp (loc, i, cM) ->
+  | Comp.MApp (loc, i, cM, pl) ->
       let (cQ', i') = collectExp' cQ i  in
       let (cQ'', cM') = collect_meta_obj 0 cQ cM in
-        (cQ'', Comp.MApp (loc, i', cM'))
+        (cQ'', Comp.MApp (loc, i', cM', pl))
 
   | Comp.AnnBox (cM, cT) ->
       let (cQ', cM') = collect_meta_obj 0 cQ cM in

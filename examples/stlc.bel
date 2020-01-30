@@ -27,7 +27,7 @@ schema ctx = some [t:tp] block x : tm, u : oft x t;
 proof tps : [⊢ oft M A] → [⊢ eval M M'] → [⊢ oft M' A] =
 intros
 { M : ( |- tm), A : ( |- tp), M' : ( |- tm)
-| z6 : [ |- oft M A], y7 : ([ |- eval M M'])
+| z6 : [ |- oft M A], y7 : [ |- eval M M']
 ; split y7 as
   case e_app:
   { M1 : ( |- tm),
@@ -36,8 +36,8 @@ intros
     M' : ( |- tm),
     M2 : (y6 : tm |- tm),
     E : ( |- eval M1 (lam (\y1. M2))),
-    E1 : ( |- eval (M2[ M3]) M')
-  | z6 : [ |- oft (app M1 M3) A], y7 : ([ |- eval (app M1 M3) M'])
+    E1 : ( |- eval (M2[M3]) M')
+  | z6 : [ |- oft (app M1 M3) A], y7 : [ |- eval (app M1 M3) M']
   ; split z6 as
     case t_app:
     { M1 : ( |- tm),
@@ -50,11 +50,9 @@ intros
       A1 : ( |- tp),
       D : ( |- oft M1 (arr A1 A)),
       D1 : ( |- oft M3 A1)
-    | z6 : [ |- oft (app M1 M3) A], y7 : ([ |- eval (app M1 M3) M'])
-    ; by tps ([ |- D]) ([ |- E])
-         as D'
-         unboxed;
-      split ([ |- D']) as
+    | z6 : [ |- oft (app M1 M3) A], y7 : [ |- eval (app M1 M3) M']
+    ; by tpr [ |- D] [ |- E] as ih0 ;
+      split ih0 as
       case t_lam:
       { M1 : ( |- tm),
         M3 : ( |- tm),
@@ -67,21 +65,25 @@ intros
         D : ( |- oft M1 (arr A1 A)),
         D1 : ( |- oft M3 A1),
         D2 : (x : tm, y3 : oft x A1[] |- oft (M2[x]) A[])
-      | z6 : [ |- oft (app M1 M3) A], y7 : [ |- eval (app M1 M3) M']
-        ; by tps [⊢ D2[_, D1]] [⊢ E1] as ok
-             ; solve ok
+      | z6 : [ |- oft (app M1 M3) A],
+        y7 : [ |- eval (app M1 M3) M'],
+        ih0 : [ |- oft (lam (\y1. M2)) (arr A1 A)]
+      ; by tpr [ |- D2[M3, D1]] [ |- E1] as ih1 ;
+        solve ih1
       }
+
     }
+
   }
   case e_lam:
   { M1 : (y5 : tm |- tm), A : ( |- tp)
   | z6 : [ |- oft (lam (\y1. M1)) A],
-    y7 : ([ |- eval (lam (\y1. M1)) (lam (\y1. M1))])
+    y7 : [ |- eval (lam (\y1. M1)) (lam (\y1. M1))]
   ; solve z6
   }
   case e_c:
   { A : ( |- tp)
-  | z6 : [ |- oft c A], y7 : ([ |- eval c c])
+  | z6 : [ |- oft c A], y7 : [ |- eval c c]
   ; solve z6
   }
 

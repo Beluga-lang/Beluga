@@ -564,7 +564,7 @@ module Comp = struct
   let rec extract_var i = match i with
     | Var (_, x) -> Some x
     | Apply (_, i, _ ) -> extract_var i
-    | MApp (_, i, _ ) -> extract_var i
+    | MApp (_, i, _ , _) -> extract_var i
     | _ -> None
 
   let useIH loc cD cG cIH_opt e2 = match cIH_opt with
@@ -896,7 +896,7 @@ module Comp = struct
           raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
        end
 
-    | MApp (loc, e, mC) ->
+    | MApp (loc, e, mC, _) ->
        let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
        begin match (C.cwhnfCTyp (tau1,t1)) with
        | (TypPiBox (_, (I.Decl (_ , ctyp, _)), tau), t) ->

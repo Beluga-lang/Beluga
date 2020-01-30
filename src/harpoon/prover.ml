@@ -593,13 +593,10 @@ module Prover = struct
 
     | Command.Type i ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
-       B.Printer.with_implicits false
-         begin fun () ->
-         State.printf s
-           "- @[<hov 2>@[%a@] :@ @[%a@]@]"
-           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-           P.(fmt_ppr_cmp_typ cD l0) tau
-         end
+       State.printf s
+         "- @[<hov 2>@[%a@] :@ @[%a@]@]"
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+         P.(fmt_ppr_cmp_typ cD l0) tau
 
     | Command.Info (k, name) ->
        begin match k with

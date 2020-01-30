@@ -17,6 +17,9 @@ let with_implicits b' f =
   f ();
   Control.printImplicit := b
 
+let fmt_ppr_implicits b f ppf x =
+  with_implicits b (fun () -> f ppf x)
+
 module Common = struct
   module type T = sig
     open Syntax.Common
@@ -24,6 +27,7 @@ module Common = struct
     type depend_print_style =
       [ `depend
       | `inductive
+      | `clean
       ]
 
     val fmt_ppr_lf_depend     : depend_print_style -> formatter -> LF.depend -> unit
@@ -50,7 +54,7 @@ module Int = struct
     val fmt_ppr_lf_svar_class  : formatter -> LF.svar_class -> unit
     val fmt_ppr_lf_depend      : depend_print_style -> formatter -> LF.depend -> unit
     val fmt_ppr_lf_kind        : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl   : ?depend:bool -> ?printing_holes:bool ->
+    val fmt_ppr_lf_ctyp_decl   : ?depend:depend_print_style -> ?printing_holes:bool ->
                                  LF.mctx -> lvl -> formatter -> LF.ctyp_decl -> unit
     val fmt_ppr_lf_typ_rec     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
     val fmt_ppr_lf_typ         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit

@@ -45,7 +45,7 @@ let rec translate_proof cD cG (p : C.proof) tau : C.exp_chk =
 and translate_directive cD cG (d : C.directive) tau : C.exp_chk =
   match d with
 | C.Intros (C.Hypothetical (hyp, p)) ->
-    let (cD', cG', tau') = Check.Comp.unroll cD cG tau in
+    let (cD', cG', tau', _) = Check.Comp.unroll cD cG tau in
     let term = translate_proof cD' cG' p tau in
     unroll cD cG term
 | C.Solve e_chk -> e_chk

@@ -2258,7 +2258,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
 and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   match d with
   | A.Intros (loc, hyp) ->
-     let (cD', cG', tau') =
+     let (cD', cG', tau', _) =
        Check.Comp.unroll cD cG (Whnf.cnormCTyp ttau)
      in
      I.Intros (elHypothetical cD' cG' label hyp (tau', Whnf.m_id))

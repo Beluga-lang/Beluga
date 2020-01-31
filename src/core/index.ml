@@ -1513,6 +1513,18 @@ and index_directive cvars vars fvars = function
      let i' = index_exp' cvars vars fvars i in
      let bs' = List.map (index_split_branch cvars vars fvars) bs in
      Apx.Comp.Split (loc, i', bs')
+  | Ext.Comp.Suffices (loc, i, tau_ps) ->
+     let i' = index_exp' cvars vars fvars i in
+     let ps' =
+       List.map
+         begin fun (loc, tau, p) ->
+         let (_, tau') = index_comptyp tau cvars (empty_fvars `closed_term) in
+         let p' = index_proof cvars vars fvars p in
+         (loc, tau', p')
+         end
+         tau_ps
+     in
+     Apx.Comp.Suffices (loc, i', ps')
 
 and index_context_case_label cvars fvars = function
   | Ext.Comp.EmptyContext loc -> Apx.Comp.EmptyContext loc

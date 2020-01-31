@@ -1413,7 +1413,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     function
     | Intros h -> fprintf ppf "intros@,%a" (fmt_ppr_cmp_hypothetical cD cG) h
     | Suffices (i, ps) ->
-       fprintf ppf "@[<hov 2>suffices by lemma @[%a@] toshow@ @[%a@]@]"
+       fprintf ppf "@[<v>@[<2>suffices by@ @[%a@]@] toshow@,@[<v>%a@]@]"
          (Printer.fmt_ppr_implicits false
             (fmt_ppr_cmp_exp_syn cD cG l0))
          i

@@ -579,7 +579,7 @@ module Comp = struct
       of exp_syn
     | Suffices
       of exp_syn (* i -- the function to invoke *)
-         * (typ * proof) list
+         * suffices_arg list
          (* ^ the arguments of the function *)
 
     | MetaSplit (* Splitting on an LF object *)
@@ -594,6 +594,8 @@ module Comp = struct
       of exp_syn (* The scrutinee *)
          * typ (* The type of the scrutinee *)
          * context_branch list
+
+  and suffices_arg = Loc.t * typ * proof
 
   and context_branch = context_case split_branch
   and meta_branch = (LF.dctx * LF.head) split_branch
@@ -644,7 +646,7 @@ module Comp = struct
   let intros (h : hypotheses) (proof : proof) : proof =
     Directive (Intros (Hypothetical (h, proof)))
 
-  let suffices (i : exp_syn) (ps : (typ * proof) list) : proof =
+  let suffices (i : exp_syn) (ps : suffices_arg list) : proof =
     Directive (Suffices (i, ps))
 
   let proof_cons (stmt : command) (proof : proof) = Command (stmt, proof)

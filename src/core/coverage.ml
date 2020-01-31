@@ -1125,7 +1125,7 @@ let rec genSpine names cD cPsi sA tP =
      dprintf
        begin fun p ->
        p.fmt "[genSpine] atomic type @[%a@]"
-         (P.fmt_ppr_lf_typ cD cPsi P.l0) tQ
+         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, S.LF.id))
        end;
      U.unifyTyp LF.Empty cPsi (tQ, s) (tP, S.LF.id);
      LF.Nil
@@ -2171,10 +2171,20 @@ let rec genPattSpine =
   | Comp.TypArr (_, tau1, tau2), t ->
      let pv1 = NameGenerator.new_patvar_name () in
      let pat1 = Comp.PatFVar (Loc.ghost, pv1) in
+
+     let tau_p = Whnf.cnormCTyp (tau1, t) in
+
+     dprintf begin fun p ->
+       p.fmt "[genPattSpine] @[<v>[TypArr] generated pattern var\
+              @,%a : @[%a@]@]"
+         Id.print pv1
+         P.(fmt_ppr_cmp_typ LF.Empty l0) tau_p
+       end;
+
      let cG, pS, ttau =
        genPattSpine (tau2, t)
      in
-     ( (pv1, Whnf.cnormCTyp (tau1,t), false) :: cG
+     ( (pv1, tau_p, false) :: cG
      , Comp.PatApp (Loc.ghost, pat1, pS)
      , ttau
      )
@@ -2267,47 +2277,71 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
   let pat = Comp.PatConst (Loc.ghost, c, pS) in
   dprintf
     begin fun p ->
-    p.fmt "[genPatt] @[<v>%a : %a@,\
+    p.fmt "[genPatt] @[<v>@[<hv 2>@[%a@] :@ @[%a@]@]@,\
            expected type: @[%a@]@]"
       (P.fmt_ppr_cmp_pattern LF.Empty (compgctx_of_gctx cG) P.l0) pat
       (P.fmt_ppr_cmp_typ LF.Empty P.l0) (Whnf.cnormCTyp (tau, t))
       (P.fmt_ppr_cmp_typ cD_p P.l0) tau_v
     end;
   let ms = Ctxsub.mctxToMSub cD_p in
-  begin
-    try
-      dprintf
-        begin fun p ->
-        p.fmt "[genPatt] @[<v>unifying computational types:@,\
-               tau (generated pattern type) = @[%a@]@,\
-               tau_v (given pattern type) = @[%a@]@]"
-          P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau, t))
-          P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau_v, ms))
-        end;
-      U.unifyCompTyp LF.Empty (tau, t) (tau_v, ms);
-      let cD', cG', pat', tau', ms' =
-        Abstract.covpatt
-          (Whnf.cnormCtx (compgctx_of_gctx cG, Whnf.m_id))
-          (Whnf.cnormPattern (pat, Whnf.m_id))
-          (Whnf.cnormCTyp (tau_v, ms)) (Whnf.cnormMSub ms)
-      in
-      let ccG' = gctx_of_compgctx cG' in
-      dprint
-        begin fun _ ->
-        "[genPatt] - Return Coverage Pattern"
-        end;
-      Some (cD', (ccG', pat', (tau', Whnf.m_id)), ms')
-    with
-    (* expected type and generated type for spine do not
+  dprintf begin fun p ->
+    p.fmt "[genPatt] @[<v>msub to close with MMVars\
+           @,@[%a@]@]"
+      P.fmt_ppr_lf_msub_typing (LF.Empty, ms, cD_p)
+    end;
+  try
+    dprintf
+      begin fun p ->
+      p.fmt "[genPatt] @[<v>unifying computational types:@,\
+             tau (generated pattern type) = @[%a@]@,\
+             tau_v (given pattern type) = @[%a@]@]"
+        P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau, t))
+        P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau_v, ms))
+      end;
+    U.unifyCompTyp LF.Empty (tau, t) (tau_v, ms);
+    let cG = compgctx_of_gctx cG in
+
+    let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
+    let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
+    let tau_v = Whnf.cnormCTyp (tau_v, ms) in
+    let ms = Whnf.cnormMSub ms in
+
+    dprintf begin fun p ->
+      p.fmt "[genPatt] @[<v>--> Abstract.covpatt\
+             @,cG = @[%a@]\
+             @,pat = @[%a@]\
+             @,tau_v = @[%a@]\
+             @,ms = @[%a@]@]"
+        P.(fmt_ppr_cmp_gctx LF.Empty l0) cG
+        P.(fmt_ppr_cmp_pattern LF.Empty LF.Empty l0) pat
+        P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau_v, ms))
+        P.(fmt_ppr_lf_msub LF.Empty l0) ms
+      end;
+    let cD', cG', pat', tau', ms' =
+      Abstract.covpatt
+        cG
+        pat
+        tau_v
+        ms
+    in
+    let ccG' = gctx_of_compgctx cG' in
+    dprintf
+      begin fun p ->
+      p.fmt "[genPatt] @[<v>Return Coverage Pattern\
+             @,cD' = @[<v>%a@]@]"
+        P.(fmt_ppr_lf_mctx l0) cD'
+      end;
+    Some (cD', (ccG', pat', (tau', Whnf.m_id)), ms')
+  with
+  (* expected type and generated type for spine do not
        unify; therefore c pS is not inhabit tau_v
-     *)
-    | U.Failure _ ->
-       None
-    | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
-       print_string
-         "WARNING: Generation of pattern encountered left-over constraints in higher-order unification\n";
-       raise e
-  end
+   *)
+  | U.Failure _ ->
+     None
+  | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
+     print_string
+       "WARNING: Generation of pattern encountered left-over constraints in higher-order unification\n";
+     raise e
 
 let genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
   let open Maybe in

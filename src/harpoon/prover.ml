@@ -525,7 +525,7 @@ module Prover = struct
        | `list ->
           let session_list = DynArray.to_list s.State.sessions in
           let session_indexed_name_list =
-            List.mapi (fun i s -> (i, s.Session.name)) session_list
+            List.mapi (fun i s -> (i + 1, s.Session.name)) session_list
           in
           let fmt_ppr_indexed_session ppf (i, sName) =
             Format.fprintf ppf "%d. %a %s"

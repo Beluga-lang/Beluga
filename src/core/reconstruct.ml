@@ -1959,6 +1959,18 @@ let rec elHypothetical cD cG label hyp ttau =
     throw loc (InvalidHypotheses ({ I.cD; cG; cIH = Int.LF.Empty }, h'));
    *)
 
+  dprintf begin fun p ->
+    let tau = Whnf.cnormCTyp ttau in
+    p.fmt "[elHypothetical] @[<v>outside ttau = @[%a@]\
+           @,inside ttau  = @[%a@]\
+           @,@[<v 2>outside cD =@ @[<v>%a@]@]\
+           @,@[<v 2>inside cD  =@ @[<v>%a@]@]@]"
+      P.(fmt_ppr_cmp_typ cD l0) tau
+      P.(fmt_ppr_cmp_typ cD' l0) tau
+      P.(fmt_ppr_lf_mctx l0) cD
+      P.(fmt_ppr_lf_mctx l0) cD'
+    end;
+
   I.Hypothetical
     ( h'
     , elProof cD' cG' label p ttau
@@ -2161,21 +2173,39 @@ and elSplit loc cD cG label i tau_i bs ttau =
     | A.NamedCase (loc, name) ->
        let cid =
          try
-           Store.Cid.CompConst.index_of_name name
+           CompConst.index_of_name name
          with
          | Not_found ->
             UnboundCaseLabel (`comp, name, cD, tau_i)
             |> throw loc
        in
-       let e = Comp.get cid in
-       let tau_c = Comp.(e.typ) in
-       let tau_i = tau_i in
+       let e = CompConst.get cid in
+       let tau_c = CompConst.(e.typ) in
 
+       dprintf begin fun p ->
+         p.fmt "[make_comp_branch] @[<v>--> genPatt with scrutinee type\
+                @,tau_i = @[%a@]@]"
+           P.(fmt_ppr_cmp_typ cD l0) tau_i
+         end;
        match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
-       | None -> assert false (* Throw an error ? *)
-       | Some (cD', (cG', pat, ttau), t) ->
-          let tau_p = Whnf.cnormCTyp ttau in
+       | None -> assert false (* TODO throw an error *)
+       | Some (cD', (cG', pat, ttau_p), t) ->
+          let tau_p = Whnf.cnormCTyp ttau_p in
           let cG' = Coverage.compgctx_of_gctx cG' in
+
+          dprintf begin fun p ->
+            p.fmt "@[<v 2>[make_comp_branch] for @[%a@]@,\
+                   @[<hv 2>@[<hv>%a@] |-@ @[%a@] :@ @[%a@]@]\
+                   @,current goal = @[%a@]\
+                   @,cG' = @[%a@]@]"
+              Id.print name
+              P.(fmt_ppr_lf_mctx l0) cD'
+              P.(fmt_ppr_cmp_pattern cD' cG' l0) pat
+              P.(fmt_ppr_cmp_typ cD' l0) tau_p
+              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+              P.(fmt_ppr_cmp_gctx cD' l0) cG'
+            end;
+
           (* cD' |- t : cD
              cD' |- cG' ctx
              cD', cG' |- pat <= tau_p
@@ -2188,9 +2218,24 @@ and elSplit loc cD cG label i tau_i bs ttau =
            *)
           let cG_b = Whnf.cnormCtx (cG', t1) in
 
+          let ttau_b =
+            Whnf.cnormCTyp ttau
+            |> (fun tau -> Whnf.cnormCTyp (tau, t))
+            |> (fun tau -> (tau, t1))
+          in
+
+
+          dprintf begin fun p ->
+            p.fmt "[make_comp_branch] @[<v>ttau =   @[%a@]\
+                   @,ttau_b = @[%a@]@,\
+                   @,@[<hv 2>msub:@ @[%a@]@]@]"
+              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+              P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
+              P.(fmt_ppr_lf_msub_typing) (cD_b, t', cD)
+            end;
+
           let hyp' =
-            elHypothetical cD_b cG_b label hyp
-              (Pair.rmap (Whnf.mcomp' t') ttau)
+            elHypothetical cD_b cG_b label hyp ttau_b
           in
 
           I.SplitBranch (cid, t', hyp')
@@ -2230,9 +2275,41 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
 
   | A.Split (loc, i, bs) ->
      let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     dprintf begin fun p ->
+       p.fmt "[elDirective] @[<v>split @[%a@] as...\
+              @,tau_i = @[%a@]@]"
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+         P.(fmt_ppr_cmp_typ cD l0) tau_i
+       end;
      elSplit loc cD cG label i tau_i bs ttau
 
-
+  | A.Suffices (loc, i, ps) ->
+     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     let ps =
+       List.map (fun (loc, tau, p) -> (loc, elCompTyp cD tau, p)) ps
+     in
+     Check.Comp.unify_suffices cD tau_i
+       (List.map (fun (_, tau, _) -> tau) ps)
+       (Whnf.cnormCTyp ttau);
+     let ps =
+       let i_name =
+         I.head_of_application i
+         |> Fmt.stringify P.(fmt_ppr_cmp_exp_syn cD cG l0)
+       in
+       List.mapi
+         begin fun k (loc, tau, p) ->
+         ( loc
+         , tau
+         , elProof cD cG
+             (("premise " ^ string_of_int (k + 1)
+               ^ " of " ^ i_name)
+              :: label)
+             p (tau, Whnf.m_id)
+         )
+         end
+         ps
+     in
+     I.Suffices (i, ps)
 
 (* ******************************************************************************* *)
 (* TOP LEVEL                                                                       *)

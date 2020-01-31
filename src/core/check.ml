@@ -5,6 +5,7 @@
 *)
 
 
+module F = Support.Misc.Function
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
@@ -1128,24 +1129,116 @@ module Comp = struct
     | I.Dec (cD, cdecl) ->
        (wf_mctx cD ; checkCDecl cD cdecl)
 
+  (** See documentation in check.mli *)
+  let decompose_function_type cD =
+    let open Maybe in
+    (* Checks that there are no interleaved Pis later and splits
+       nested arrow types into a list of input types and one output type.
+       Returns None if the type contained interleaved Pis (invalid type).
+     *)
+    let rec decomp_arrows =
+      function
+      | TypArr (_, tau_1, tau_2) ->
+         decomp_arrows tau_2
+         $> fun (inputs, output) -> (tau_1 :: inputs, output)
+      | TypPiBox (_, _, _) -> None
+      | tau -> Some ([], tau) (* base type *)
+    in
+    let rec decomp_pis t = function
+      | TypPiBox (_, d, tau) ->
+         let u = Whnf.new_mmvar_for_ctyp_decl cD d in
+         let t' =
+           let open I in
+           MDot
+             ( ClObj
+                 ( null_hat
+                 , MObj (head (MMVar (mm_var_inst u Whnf.m_id S.LF.id)))
+                 )
+             , t
+             )
+         in
+         decomp_pis t' tau
+      | tau -> (tau, t)
+    in
+    F.(decomp_arrows ++ Whnf.cnormCTyp ++ decomp_pis Whnf.m_id)
+
+  (** See documentation in check.mli *)
+  let unify_suffices cD tau_i tau_anns tau_g =
+    dprintf begin fun p ->
+      p.fmt "[unify_suffices] @[<v>tau_i = @[%a@]\
+             @,@[<v 2>tau_anns =@,@[<v>%a@]@]\
+             @,tau_g = @[%a@]@]"
+        P.(fmt_ppr_cmp_typ cD l0) tau_i
+        (Format.pp_print_list ~pp_sep: Format.pp_print_cut
+           P.(fmt_ppr_cmp_typ cD l0))
+        tau_anns
+        P.(fmt_ppr_cmp_typ cD l0) tau_g
+      end;
+    (* TODO check that there are no leftover vars *)
+    match decompose_function_type cD tau_i with
+    | None -> failwith "failed to decompose" (* TODO real error message *)
+    | Some (tau_args, tau_out) ->
+       let unify tau_1 tau_2 =
+         try
+           dprintf
+             begin fun p ->
+             p.fmt "[unify_suffices] @[<v>unifying @[%a@]@,\
+                    against @[%a@]@]"
+               P.(fmt_ppr_cmp_typ cD l0) tau_1
+               P.(fmt_ppr_cmp_typ cD l0) tau_2
+             end;
+           Unify.unifyCompTyp cD
+             (tau_1, Whnf.m_id)
+             (tau_2, Whnf.m_id);
+           true
+         with
+         | Unify.Failure msg -> false (* TODO real error message here *)
+       in
+       match
+         try Some (List.map2 (fun x y () -> unify x y) tau_args tau_anns)
+         with Invalid_argument _ -> None
+       with
+       | None -> failwith "argument lengths mismatched" (* TODO real error *)
+       | Some fs ->
+          match
+            List.for_all (fun f -> f ()) fs
+            && (dprnt "[unify_suffices] unifying goal"; unify tau_out tau_g)
+          with
+          | false -> failwith "failed to unify arguments or goal"
+          | true -> ()
+
   let require_syn_typbox cD cG loc i (tau, t) =
     match tau with
     | TypBox (_, cU) -> (cU, t)
     | _ -> throw loc (MismatchSyn (cD, cG, i, VariantBox, (tau, t)))
 
-  (* takes a normalised tau, peels off assumptions, and returns a triple (cD', cG', tau') *)
-  let rec unroll cD cG tau =
+  let rec unroll' cD cG tau =
     match tau with
     | TypPiBox (_, c_decl, tau') ->
        (* TODO ensure c_decl name is unique in context *)
        let cD' = I.Dec (cD, c_decl) in
-       unroll cD' cG tau'
+       unroll' cD' cG tau' |> Pair.rmap ( (+) 1 )
     | TypArr (_, t1, t2) ->
        (* TODO use contextual name generation *)
        let name = Id.mk_name Id.NoName in
        let cG' = I.(Dec (cG, CTypDecl (name, t1, false))) in
-       unroll cD cG' t2
-    | _ -> (cD, cG, tau)
+       unroll' cD cG' t2
+    | _ -> (cD, cG, tau), 0
+
+  (** unroll cD cG tau = (cD', cG', tau', t)
+      where cD |- cG <= ctx
+      and   cD |- tau <= type
+      s.t. cD' extends cD
+      and  cG' extends cG
+      and tau' is a subterm of tau
+      and tau' is not an arrow nor a PiBox type
+      and cD' |- t : cD is a weakening meta-substitution.
+   *)
+  let unroll cD cG tau =
+    let (cD', cG', tau'), k = unroll' cD cG tau in
+    (* to compute the weakening, unroll' counts the number of
+       extensions to cD *)
+    (cD', cG', tau', I.MShift k)
 
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
@@ -1201,12 +1294,27 @@ module Comp = struct
     match d with
     | Intros (Hypothetical (h, p)) ->
        let tau = Whnf.cnormCTyp ttau in
-       let (cD', cG', tau') = unroll cD cG tau in
-       (* TODO check that cD and cG are convertible with cD' and cG' *)
-       proof mcid cD' cG' cIH total_decs p (tau', Whnf.m_id)
+       let (cD', cG', tau', t) = unroll cD cG tau in
+       dprintf begin fun p ->
+         p.fmt "[check] [directive] @[<v>[intros] unroll\
+                @,tau  = @[%a@]\
+                @,tau' = @[%a@]\
+                @,cD   = @[<v>%a@]\
+                @,cD'  = @[<v>%a@]\
+                @,cG   = @[<v>%a@]\
+                @,cG'  = @[<v>%a@]@]"
+           P.(fmt_ppr_cmp_typ cD l0) tau
+           P.(fmt_ppr_cmp_typ cD' l0) tau'
+           P.(fmt_ppr_lf_mctx l0) cD
+           P.(fmt_ppr_lf_mctx l0) cD'
+           P.(fmt_ppr_cmp_gctx cD l0) cG
+           P.(fmt_ppr_cmp_gctx cD' l0) cG'
+         end;
+       let cIH' = Whnf.cnormCtx (cIH, t) in
+       proof mcid cD' cG' cIH' total_decs p (tau', Whnf.m_id)
 
-    | Solve e_chk ->
-       check cD (cG, cIH) total_decs e_chk ttau
+    | Solve e ->
+       check cD (cG, cIH) total_decs e ttau
 
     | ContextSplit (i, tau, bs) ->
        assert false
@@ -1232,6 +1340,20 @@ module Comp = struct
           hypothetical mcid cD cG cIH total_decs h ttau_b
         in
         List.iter handle_branch bs
+
+    | Suffices (i, args) ->
+       (* TODO verify that `i` is not an IH call.
+          IH is unsupported with Suffices
+        *)
+       let (cIH_opt, tau_i, t) = syn cD (cG, cIH) total_decs i in
+       let tau_i = Whnf.cnormCTyp (tau_i, t) in
+       let tau_g = Whnf.cnormCTyp ttau in
+       unify_suffices cD tau_i (List.map (fun (_, tau, _) -> tau) args) tau_g;
+       List.iter
+         begin fun (_, tau, p) ->
+         proof mcid cD cG cIH total_decs p (tau, Whnf.m_id)
+         end
+         args
 
   let syn cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
     let cIH, tau, ms = syn cD (cG,cIH) total_decs e in

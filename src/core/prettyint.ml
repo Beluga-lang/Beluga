@@ -87,7 +87,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (* the type has to be written in this horrible way to keep OCaml
        from unnecessarily monomorphizing it. *)
     fun ?(sep = pp_print_space) p f ppf ctx ->
-    pp_print_list ~pp_sep: sep f ppf (Context.to_sublist_rev ctx |> List.filter p)
+    pp_print_list ~pp_sep: sep f ppf (Context.to_sublist ctx |> List.filter p)
 
   (* Contextual Format Based Pretty Printers
    *

@@ -46,17 +46,6 @@ let auto_intros : t =
           fmt_ppr_ctx (fun ppf _ v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_cmp_ctyp_decl cD P.l0) v) ppf cG;
           Format.fprintf ppf "@]"
      in
-     let fmt_ppr_assumptions ppf () =
-       fmt_ppr_lf_ctx ppf cD;
-       fmt_ppr_cmp_ctx ppf cG
-     in
-     Theorem.printf t
-       "@[<v>@,Assumptions%a\
-        @,are automatically introduced for the subgoal of type\
-        @,  @[<v>%a@]\
-        @,@]"
-       fmt_ppr_assumptions ()
-       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
      let context = Whnf.append_hypotheses g.context local_context in
@@ -67,7 +56,15 @@ let auto_intros : t =
        ; label = g.label
        }
      in
-     ignore (Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) g);
+     Theorem.printf t
+       "@[<v>@,Assumptions%a%a\
+        @,are automatically introduced for the subgoal of type\
+        @,  @[<v>%a@]\
+        @,@]"
+       fmt_ppr_lf_ctx context.cD
+       fmt_ppr_cmp_ctx context.cG
+       (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal);
+     Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) g;
      true
   | Either.Left _ ->
      false

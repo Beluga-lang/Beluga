@@ -899,7 +899,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.MetaNil ->
        fprintf ppf ""
     | Comp.MetaApp (mO, mS) ->
-       fprintf ppf " %a%a"
+       fprintf ppf "@ @[%a@]%a"
          (fmt_ppr_cmp_meta_obj  cD (lvl + 1)) mO
          (fmt_ppr_cmp_meta_spine   cD lvl) mS
 
@@ -963,7 +963,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   let rec fmt_ppr_pat_spine cD cG lvl ppf = function
     | Comp.PatNil -> fprintf ppf ""
     | Comp.PatApp (_, pat, pat_spine) ->
-       fprintf ppf "%a %a"
+       fprintf ppf "@[%a@]@ @[%a@]"
          (fmt_ppr_cmp_pattern cD cG (lvl+1)) pat
          (fmt_ppr_pat_spine cD cG lvl) pat_spine
 
@@ -983,15 +983,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     function
     | Comp.PatMetaObj (_, mO) ->
-       let cond = lvl > 1 in
-       fprintf ppf "%s%a%s"
-         (l_paren_if cond)
+       fprintf ppf "@[%a@]"
          (fmt_ppr_cmp_meta_obj cD 0) mO
-         (r_paren_if cond)
     | Comp.PatConst (_, c, pat_spine) ->
        let pat_spine = deimplicitize_spine c pat_spine in
        let cond = lvl > 1 in
-       fprintf ppf "%s%s %a%s"
+       fprintf ppf "%s%s @[%a@]%s"
          (l_paren_if cond)
          (R.render_cid_comp_const c)
          (fmt_ppr_pat_spine cD cG 2) pat_spine
@@ -1418,8 +1415,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             (fmt_ppr_cmp_exp_syn cD cG l0))
          i
          (pp_print_list ~pp_sep: pp_print_cut
-            (fun ppf (tau, p) ->
-              fprintf ppf "@[<v 2>@[%a@] {@ @[<v>%a@]@]@,}"
+            (fun ppf (_, tau, p) ->
+              fprintf ppf "@[<v 2>@[%a@] {@,@[<v>%a@]@]@,}"
                 (fmt_ppr_cmp_typ cD l0) tau
                 (fmt_ppr_cmp_proof cD cG) p))
          ps

@@ -1225,20 +1225,28 @@ module Comp = struct
        unroll' cD cG' t2
     | _ -> (cD, cG, tau), 0
 
-  (** unroll cD cG tau = (cD', cG', tau', t)
-      where cD |- cG <= ctx
-      and   cD |- tau <= type
-      s.t. cD' extends cD
-      and  cG' extends cG
-      and tau' is a subterm of tau
-      and tau' is not an arrow nor a PiBox type
-      and cD' |- t : cD is a weakening meta-substitution.
-   *)
+  (* See documentation in check.mli *)
   let unroll cD cG tau =
-    let (cD', cG', tau'), k = unroll' cD cG tau in
-    (* to compute the weakening, unroll' counts the number of
-       extensions to cD *)
-    (cD', cG', tau', I.MShift k)
+    (* cD |- cG <= ctx
+       If we simply extend cG with the new entries computed from the
+       TypArrs in tau, then the resulting context doesn't make sense
+       anymore.
+       Instead, we pass an initial empty context as cG to unroll' so as to calculate
+       cG' s.t.
+       cD' |- cG' <= ctx
+       Then, we can compute the concatenation [t]cG, cG'
+       as cD' |- [t]cG <= ctx, so
+       cD' |- [t]cG, cG' <= ctx as required.
+     *)
+    let (cD', cG', tau'), k = unroll' cD I.Empty tau in
+    (* to compute the weakening t, unroll' counts the number k of
+       entries added to cD *)
+    let t = I.MShift k in
+    ( cD'
+    , Context.append (Whnf.cnormCtx (cG, t)) cG'
+    , tau'
+    , t
+    )
 
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with

@@ -2810,8 +2810,19 @@ and harpoon_directive : Comp.directive parser =
                  (many harpoon_split_branch)
             |> span
             $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
+          ; let suffices_arg =
+              seq2 cmp_typ (harpoon_proof |> braces)
+              |> span
+              $> fun (loc, (tau, p)) -> (loc, tau, p)
+            in
+            tokens T.[KW_SUFFICES; KW_BY] &>
+              seq2
+                (cmp_exp_syn <& token T.KW_TOSHOW)
+                (many suffices_arg)
+            |> span
+            $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
           ]
-        |> labelled "Harpoon directive"
+        |> shifted "Harpoon directive"
       in
       p.run s
   }

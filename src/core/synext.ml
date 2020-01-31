@@ -252,6 +252,7 @@ module Comp = struct
    | Intros of Loc.t * hypothetical
    | Solve of Loc.t * exp_chk
    | Split of Loc.t * exp_syn * split_branch list
+   | Suffices of Loc.t * exp_syn * (Loc.t * typ * proof) list
 
  and split_branch =
    { case_label : case_label

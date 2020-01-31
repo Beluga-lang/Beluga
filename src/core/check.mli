@@ -158,9 +158,22 @@ module Comp : sig
 
   (** Transfers inductivity annotations from a source context to a
       target context related by a meta-substitution.
+
+      id_map_ind cD' t cD = cD'*
+      where cD' |- t : cD
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
-  val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ
+
+  (** unroll cD cG tau = (cD', cG', tau', t)
+      where cD |- cG <= ctx
+      and   cD |- tau <= type
+      s.t. cD' extends cD
+      and  cG' extends cG
+      and tau' is a subterm of tau
+      and tau' is not an arrow nor a PiBox type
+      and cD' |- t : cD is a weakening meta-substitution.
+   *)
+  val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ * LF.msub
 
   (** Requires that the given type be a box-type.
       require_syn_typbox cD cG loc i (tau, t) = (cU, t) if tau = [cU];
@@ -168,4 +181,40 @@ module Comp : sig
       saying that the type of i is expected to be a box-type.
    *)
   val require_syn_typbox : LF.mctx -> gctx -> Loc.t -> exp_syn -> tclo -> meta_typ * LF.msub
+
+
+  (** Processes all leading PiBoxes to replace them with unification
+      variables in the following type, and returns a further
+      decomposition of the type remaining after all these PiBoxes, which
+      must consist only of simple function types (or a base type).
+
+      Given cD |- tau <= type
+      and tau = Pi X_1:U_1. ... Pi X_n:U_n. tau'
+      and tau' = tau_1 -> tau_2 -> ... -> tau_k
+      (so cD, X_1:U_1, ..., X_n:U_n |- tau' <= type)
+      `decompose_function_type cD tau` calculates an msub
+      t such that
+      cD |- t : cD, X_1:U_1, ..., X_n:U_n
+      that replaces each X_i with a fresh unification variable ?X_i.
+      The msub t is applied to tau' and tau' is further decomposed into
+      a list l = [[t]tau_1; [t]tau_2; ...; [t]tau_(k-1)].
+      This list is returned together with the type [t]tau_k.
+      If the decomposition fails due to an interleaving of PiBox-types
+      and arrow-types, None is returned.
+   *)
+  val decompose_function_type : LF.mctx -> typ -> (typ list * typ) option
+
+  (** Checks that the given type annotations are compatible with a
+      given function type.
+
+      unify_suffices cD tau_i tau_anns tau_g
+      requires
+      1. cD |- tau_i <= type
+      2. cD |- tau_anns <= type (for each type in the list)
+      3. cD |- tau_g <= type
+      It decomposes the function type tau_i (see decompose_function_type)
+      and appropriately unifies the decomposition so as to pin down all
+      instantiations of universally quantified variables.
+   *)
+  val unify_suffices : LF.mctx -> typ -> typ list -> typ -> unit
 end

@@ -501,13 +501,14 @@ module Prover = struct
        | `defer -> Session.defer_theorem c
        | `show_ihs ->
           let f i =
-            State.printf s "%d. %a@,"
+            State.printf s "%d. @[%a@]@,"
               (i + 1)
               (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
           in
-          State.printf s "There are %d IHs:@,"
+          State.printf s "@[<v>There are %d IHs:@,"
             (Context.length g.context.cIH);
-          Context.to_list g.context.cIH |> List.iteri f
+          Context.to_list g.context.cIH |> List.iteri f;
+          State.printf s "@]"
        | `show_proof ->
           Theorem.show_proof t
        | `select name ->
@@ -793,7 +794,7 @@ let rec loop (s : Prover.State.t) : unit =
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
-     printf "@,Subproof complete! (No subgoals left.)@,";
+     printf "@[<v>Subproof complete! (No subgoals left.)@,@]";
      Theorem.show_proof t;
      Prover.Session.remove_current_theorem c;
      loop s

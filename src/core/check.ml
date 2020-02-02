@@ -823,7 +823,8 @@ module Comp = struct
   and check cD (cG, cIH) total_decs e (tau, t) =
     dprintf
       begin fun p ->
-      p.fmt "[check] %a against %a |- %a"
+      p.fmt "[check] @[<v>%a against\
+             @,@[<hv 2>@[<v>%a@] |-@ @[%a@]@]@]"
         (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
         (P.fmt_ppr_lf_mctx P.l0) cD
         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau, t))
@@ -899,8 +900,19 @@ module Comp = struct
 
     | MApp (loc, e, mC, _) ->
        let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
+       dprintf begin fun p ->
+         p.fmt "[syn] @[<v>MApp synthesized function type\
+                @,tau1 = @[%a@]@]"
+           P.(fmt_ppr_cmp_typ cD l0) tau1
+         end;
        begin match (C.cwhnfCTyp (tau1,t1)) with
        | (TypPiBox (_, (I.Decl (_ , ctyp, _)), tau), t) ->
+          dprintf begin fun p ->
+            p.fmt "[syn] @[<v>MApp\
+                   @,@[<hv 2>@[%a@] <=?@ @[%a@]@]@]"
+              P.(fmt_ppr_cmp_meta_obj cD l0) mC
+              P.(fmt_ppr_cmp_meta_typ cD) ctyp
+            end;
           LF.checkMetaObj cD mC (ctyp, t);
           dprintf
             (fun p ->
@@ -1270,6 +1282,7 @@ module Comp = struct
        proof mcid cD cG cIH total_decs p ttau
 
     | Directive d ->
+       dprnt "[check] [proof] --> directive";
        directive mcid cD cG cIH total_decs d ttau
 
   and command cD cG cIH total_decs =
@@ -1280,6 +1293,13 @@ module Comp = struct
     function
     | By (i, name, _, `unboxed) | Unbox (i, name, _) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       dprintf begin fun p ->
+         p.fmt "[check] [command] @[<v>@[<hv 2>by @[%a@] as@ %a@]\
+                @,tau' = @[%a@]@]"
+           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+           Id.print name
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau', t))
+         end;
        let (cU, t) = require_syn_typbox cD cG Loc.ghost i (tau', t) in
        extend_meta I.(Decl (name, Whnf.cnormMTyp (cU, t), No))
     | By (i, name, _, `boxed) ->
@@ -1379,6 +1399,11 @@ module Comp = struct
        unify_suffices cD tau_i (List.map (fun (_, tau, _) -> tau) args) tau_g;
        List.iter
          begin fun (_, tau, p) ->
+         dprintf begin fun p ->
+           p.fmt "[check] [directive] @[<v>suffices\
+                  @,argument of type @[%a@]@]"
+             P.(fmt_ppr_cmp_typ cD l0) tau
+           end;
          proof mcid cD cG cIH total_decs p (tau, Whnf.m_id)
          end
          args

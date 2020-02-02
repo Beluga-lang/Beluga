@@ -1,0 +1,31 @@
+LF tp : type =
+  | base : tp
+  | arr : tp → tp → tp
+;
+
+LF eq : tp → tp → type =
+  | eq_base : eq base base
+  | eq_arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
+;
+
+proof tp-refl : {A : ⊢ tp} [ ⊢ eq A A ] =
+/ total 1 /
+intros
+{ A : ( |- tp)
+|
+; split [ |- A] as
+  case arr:
+  { X : ( |- tp), X1 : ( |- tp)
+  |
+  ; by tp-refl [ |- X] as EQ_X unboxed;
+    by tp-refl [ |- X1] as EQ_X1 unboxed;
+    by tp-refl [ ⊢ arr X X1] as uh-oh;
+    solve [ |- eq_arr EQ_X EQ_X1]
+  }
+  case base:
+  {
+  |
+  ; solve [ |- eq_base]
+  }
+}
+;

@@ -51,7 +51,7 @@ intros
       D : ( |- oft M1 (arr A1 A)),
       D1 : ( |- oft M3 A1)
     | z6 : [ |- oft (app M1 M3) A], y7 : [ |- eval (app M1 M3) M']
-    ; by tpr [ |- D] [ |- E] as ih0 ;
+    ; by tps [ |- D] [ |- E] as ih0 ;
       split ih0 as
       case t_lam:
       { M1 : ( |- tm),
@@ -68,7 +68,7 @@ intros
       | z6 : [ |- oft (app M1 M3) A],
         y7 : [ |- eval (app M1 M3) M'],
         ih0 : [ |- oft (lam (\y1. M2)) (arr A1 A)]
-      ; by tpr [ |- D2[M3, D1]] [ |- E1] as ih1 ;
+      ; by tps [ |- D2[M3, D1]] [ |- E1] as ih1 ;
         solve ih1
       }
 

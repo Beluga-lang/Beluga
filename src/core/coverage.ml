@@ -1916,9 +1916,9 @@ let rec decTomdec cD' ((LF.CtxVar (LF.CtxOffset k)) as cpsi) (d, decls) =
         cO; cD_i |- ms_i   : cD
         cO; cD_i |- cPsi_i : ctx
  *)
-let rec genCtx (LF.Dec (_, LF.Decl _) as cD) cpsi =
+let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
   function
-  | [] -> [(cD, LF.Null, LF.MShift 0)]
+  | [] -> [(cD', LF.Null, LF.MShift 0)]
   | LF.SchElem (decls, trec) :: elems ->
      let cPsi_list = genCtx cD cpsi elems in
      let d = Context.length decls in
@@ -1942,7 +1942,8 @@ let rec genCtx (LF.Dec (_, LF.Decl _) as cD) cpsi =
        end;
      (* cD0; cpsi |- tA : type *)
      (* let ms = gen_mid cD0 cD in *)
-     let ms = LF.MShift (Context.length cD0 - Context.length cD) in
+     (* this +1 is to account for the fact that cD has this extra context variable in it *)
+     let ms = LF.MShift (Context.length cD0 - Context.length cD + 1) in
      (* cD0 |- ms : cD
         cD' |- cPsi' ctx *)
      let cPsi' = LF.DDec (cpsi', LF.TypDecl (NameGenerator.new_bvar_name "x", tA)) in
@@ -2417,8 +2418,6 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
         (* require that a schema be actually present *)
         let Some (LF.Schema elems) = Maybe.map Store.Cid.Schema.get_schema w in
         let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
-        let shift = LF.MShift 1 in
-        let cG' = cnormCtx (cG1, shift) in
         let cPsi = LF.CtxVar (LF.CtxOffset 1) in
 
         genCtx cD' cPsi elems
@@ -2427,8 +2426,8 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
              begin fun (cD', CovCtx cPsi, ms) ->
              let mC = (Loc.ghost, LF.CObj cPsi) in
              ( cD'
-             , CovPatt (cnormCtx (cG', ms), Comp.PatMetaObj (Loc.ghost, mC), (tau, Whnf.m_id))
-             , Whnf.mcomp shift ms
+             , CovPatt (cnormCtx (cG1, ms), Comp.PatMetaObj (Loc.ghost, mC), (tau, Whnf.m_id))
+             , ms
              )
              end
      end

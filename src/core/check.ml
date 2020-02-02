@@ -1251,14 +1251,16 @@ module Comp = struct
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
     | Incomplete g ->
-       (* TODO check that g's contexts the current contexts *)
-       begin match g.solution with
+       (* TODO check that g's contexts match the current contexts *)
+       begin match ! (g.solution) with
        | Some p -> proof mcid cD cG cIH total_decs p ttau
        | None ->
           match mcid with
           | None ->
              Error.violation "[check] [proof] no cid to register subgoal with"
           | Some cid ->
+             let g = { g with context = { cD; cG; cIH } } in
+             (* TODO add g with ambient contexts, and including cIH *)
              Holes.add_harpoon_subgoal (cid, g)
        end
 
@@ -1294,9 +1296,13 @@ module Comp = struct
   and hypothetical mcid cD cG cIH total_decs (Hypothetical (ctx, p) : hypothetical) ttau =
     let { cD = cD'; cG = cG'; cIH = I.Empty } = ctx in
     (* TODO context convertibility check *)
-    (* XXX does anything need to be done to cIH ? *)
+    (* For now we trust that cIH given to us will continue to make
+       sense in the inner context.
+       That is, if cD' =~ cD then cD' |- cIH ctx.
+       (This is because our =~ will even have the entries in the same order.
+       If reordering is possible, then we need an msub to apply to cIH.)
+     *)
     proof mcid cD' cG' cIH total_decs p ttau
-
 
   and directive mcid cD cG cIH total_decs (d : directive) ttau =
     match d with
@@ -1328,22 +1334,36 @@ module Comp = struct
        assert false
 
     | MetaSplit (i, tau, bs) ->
-        let handle_branch (SplitBranch ((cPsi, head), t, h)) =
-          let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
-          dprintf begin fun p ->
-            let Hypothetical (hyp, _) = h in
-            p.fmt "[check] [directive] @[<v>goal outside: @[%a@]\
-                   @,goal inside: @[%a@]\
-                   @]"
-              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
-              P.(fmt_ppr_cmp_typ hyp.cD l0) (Whnf.cnormCTyp ttau_b)
-            end;
-          hypothetical mcid cD cG cIH total_decs h ttau_b
-        in
-        List.iter handle_branch bs
+       let handle_branch (SplitBranch ((cPsi, head), pat, t, h)) =
+         let cIH_b = Whnf.cnormCtx (cIH, t) in
+         let cG_b = Whnf.cnormCtx (cG, t) in
+         let (cD_b, cIH1) =
+           let Hypothetical (ctx, _) = h in
+           if Total.is_inductive_split cD cG i then
+             let cD1 = mvars_in_patt ctx.cD pat in
+             let cIH = Total.wf_rec_calls cD1 I.Empty total_decs in
+             (cD1, cIH)
+           else
+             (ctx.cD, I.Empty)
+         in
+         let cD_b = id_map_ind cD_b t cD in
+         let cIH2 = Total.wf_rec_calls cD_b cG_b total_decs in
+         let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
+         dprintf begin fun p ->
+           let Hypothetical (hyp, _) = h in
+           p.fmt "[check] [directive] @[<v>goal outside: @[%a@]\
+                  @,goal inside: @[%a@]\
+                  @]"
+             P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+             P.(fmt_ppr_cmp_typ hyp.cD l0) (Whnf.cnormCTyp ttau_b)
+           end;
+         let cIH_b = Context.concat [cIH_b; cIH1; cIH2] in
+         hypothetical mcid cD_b cG_b cIH_b total_decs h ttau_b
+       in
+       List.iter handle_branch bs
 
     | CompSplit (i, tau, bs) ->
-        let handle_branch (SplitBranch (cid, t, h)) =
+        let handle_branch (SplitBranch (cid, pat, t, h)) =
           let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
           hypothetical mcid cD cG cIH total_decs h ttau_b
         in

@@ -566,7 +566,7 @@ module Comp = struct
     ; goal : tclo
     (* The goal of this proof state. Contains a type with a delayed msub. *)
 
-    ; mutable solution : proof option
+    ; solution : proof option ref
     (* The solution to this proof obligation. Filled in by a tactic later. *)
     }
 
@@ -604,9 +604,17 @@ module Comp = struct
   (** A general branch of a case analysis. *)
   and 'b split_branch =
     | SplitBranch
-      of 'b (* the name of the constructor for this split *)
-         * LF.msub (* refinement substitution for this branch *)
-         * hypothetical (* the derivation for this case *)
+         (* the case label for this branch *)
+      of 'b
+
+         (* the full pattern generated for this branch *)
+         * pattern
+
+         (* refinement substitution for this branch *)
+         * LF.msub
+
+         (* the derivation for this case *)
+         * hypothetical
 
   (* Suppose cD and cG are the contexts when checking a split.
      Suppose we have a branch b = SplitBranch (lbl, t, { cD = cD_b; cG = cG_b; _ }).
@@ -635,7 +643,7 @@ module Comp = struct
     { context = no_hypotheses
     ; goal = t
     ; label
-    ; solution = None
+    ; solution = ref None
     }
 
   (** Smart constructor for an unfinished proof ending. *)
@@ -658,9 +666,9 @@ module Comp = struct
       : proof =
     Directive (ContextSplit (i, tau, bs))
 
-  let context_branch (c : context_case) (t : LF.msub) (h : hypotheses) (d : proof)
+  let context_branch (c : context_case) pat (t : LF.msub) (h : hypotheses) (p : proof)
       : context_branch =
-    SplitBranch (c, t, (Hypothetical (h, d)))
+    SplitBranch (c, pat, t, (Hypothetical (h, p)))
 
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
@@ -669,17 +677,17 @@ module Comp = struct
   let impossible_split (i : exp_syn) : proof =
     Directive (ImpossibleSplit i)
 
-  let meta_branch (c : LF.dctx * LF.head) (t : LF.msub) (h : hypotheses) (d : proof)
+  let meta_branch (c : LF.dctx * LF.head) pat (t : LF.msub) (h : hypotheses) (p : proof)
       : meta_branch =
-    SplitBranch (c, t, (Hypothetical (h, d)))
+    SplitBranch (c, pat, t, (Hypothetical (h, p)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
       : proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : cid_comp_const) (t : LF.msub) (h : hypotheses) (d : proof)
+  let comp_branch (c : cid_comp_const) pat (t : LF.msub) (h : hypotheses) (d : proof)
       : comp_branch =
-    SplitBranch (c, t, (Hypothetical (h, d)))
+    SplitBranch (c, pat, t, (Hypothetical (h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
   let prepend_commands (cmds : command list) (proof : proof)

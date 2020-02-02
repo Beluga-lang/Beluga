@@ -63,7 +63,7 @@ let auto_intros : t =
      let new_state =
        { context
        ; goal
-       ; solution = None
+       ; solution = ref None
        ; label = g.label
        }
      in

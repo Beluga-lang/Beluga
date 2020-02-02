@@ -199,12 +199,16 @@ module Prover = struct
           Comp.make_proof_state [Id.render_name e.CompS.name]
             ( e.CompS.typ, Whnf.m_id )
         in
-        let p =
+        let prf =
           match e.CompS.prog with
           | Some (Comp.ThmValue (_, Comp.Proof p, _, _)) -> p
           | _ -> B.Error.violation "recovered theorem not a proof"
         in
-        s.Comp.solution <- Some p;
+        dprintf begin fun p ->
+          p.fmt "[recover_theorem] @[<v>proof =@,@[%a@]@]"
+            P.(fmt_ppr_cmp_proof LF.Empty LF.Empty) prf
+          end;
+        s.Comp.solution := Some prf;
         s
       in
       Theorem.configure

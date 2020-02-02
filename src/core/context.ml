@@ -422,3 +422,5 @@ let rename_mctx src dst =
 
 let rename_gctx src dst =
   rename src dst Comp.name_of_ctyp_decl Comp.rename_ctyp_decl
+
+let concat ctxs = List.fold_right append ctxs LF.Empty

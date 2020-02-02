@@ -2040,21 +2040,41 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
      I.Command (cmd, p)
 
 and elSplit loc cD cG label i tau_i bs ttau =
-  let make_ctx_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
+  let make_ctx_branch w { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
     | A.ContextCase (A.EmptyContext loc) ->
        let hyp' = elHypothetical cD cG label hyp ttau in
        (* TODO: synPatRefine *)
-       I.SplitBranch (I.EmptyContext loc, assert false, assert false, hyp')
+       let pat =
+         let mC = (Loc.ghost, Int.LF.(CObj Null)) in
+         I.PatMetaObj (Loc.ghost, mC)
+       in
+       let (t', t1, cD_b) =
+         synPatRefine loc (case_type (lazy pat) i) (cD, cD) Whnf.m_id
+           (tau_i, tau_i)
+       in
+       (* No need to apply the msub to pat, since pat is closed. *)
+       I.SplitBranch (I.EmptyContext loc, pat, t', hyp')
 
     | A.ContextCase (A.ExtendedBy (loc, a)) ->
-       let a' =
-         (* XXX projectCtxIntoDctx ??? *)
-         Lfrecon.elTyp Lfrecon.Pibox Int.LF.Empty (Context.projectCtxIntoDctx Int.LF.Empty) a
+       let a' = Lfrecon.elTyp Lfrecon.Pibox cD Int.LF.Null a in
+       let cD' =
+         let u = Id.mk_name (Whnf.newMTypName (Int.LF.CTyp w)) in
+         Int.LF.(Dec (cD, Decl (u, CTyp w, Maybe)))
        in
        (* TODO: synPatRefine *)
-       let hyp' = elHypothetical cD cG label hyp ttau in
-       I.SplitBranch (I.ExtendedBy (loc, a'), assert false, assert false, hyp')
+       let hyp' = elHypothetical cD' cG label hyp ttau in
+       let pat =
+         let u = Id.mk_name (Whnf.newMTypName Int.LF.(ClTyp (MTyp a', Null))) in
+         let mC = (Loc.ghost, Int.LF.(CObj (DDec (CtxVar (CtxOffset 1), TypDecl (u, a'))))) in
+         I.PatMetaObj (Loc.ghost, mC)
+       in
+       let (t', t1, cD_b) =
+         let t = Int.LF.MShift 1 in
+         synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+           (tau_i, Whnf.cnormCTyp (tau_i, t))
+       in
+       I.SplitBranch (I.ExtendedBy (loc, a'), pat, t', hyp')
 
     | A.NamedCase _ ->
        CaseLabelMismatch (`context, `named)
@@ -2238,8 +2258,8 @@ and elSplit loc cD cG label i tau_i bs ttau =
           I.SplitBranch (cid, pat, t', hyp')
   in
   match tau_i with
-  | I.TypBox (_, (Int.LF.CTyp _)) ->
-     let ctx_branches = List.map make_ctx_branch bs in
+  | I.TypBox (_, (Int.LF.CTyp w)) ->
+     let ctx_branches = List.map (make_ctx_branch w) bs in
      I.ContextSplit (i, tau_i, ctx_branches)
   | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->
      let meta_branches = List.map (make_meta_branch (cl, psi)) bs in

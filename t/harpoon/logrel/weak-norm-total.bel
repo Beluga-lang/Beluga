@@ -40,42 +40,34 @@ stratified Reduce : {A : [⊢ tp]} {M : [ |- tm A] } → ctype =
   -> Reduce [ ⊢ arr A B ] [ |- M]
 ;
 
-rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
-/ total (halts_step) /
- mlam S ⇒ fn h =>
-let [ |- halts/m MS' V] = h in
- [ |- halts/m (onestep S MS') V]
-;
-
-% proof halts_step' : {S : [ ⊢ step M M']} [ ⊢ halts M' ] → [⊢ halts M ] =
-% intros
-% { {A : [ |- tp]},
-%   {M : [ |- tm A]},
-%   {M' : [ |- tm A]},
-%   {S : [ |- step A M M']}
-% | x25 : [ |- halts A M']
-% ; split (x25)
-%   case halts/m:
-%   { {A : [ |- tp]},
-%     {M : [ |- tm A]},
-%     {M' : [ |- tm A]},
-%     {S : [ |- step A M M']},
-%     {M19 : [ |- tm A]},
-%     {S1 : [ |- mstep A M' M19]},
-%     {V1 : [ |- val A M19]}
-%   | x25 : [ |- halts A M']
-%   ; solve ([ |- halts/m A M M19 (onestep A M M' M19 S S1) V1])
-%   }
-% }
+% rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
+% / total (halts_step) /
+%  mlam S ⇒ fn h =>
+% let [ |- halts/m MS' V] = h in
+%  [ |- halts/m (onestep S MS') V]
 % ;
 
-%{{
-Next we prove closure of Reduce under expansion. This follows the
-handwritten proof, proceeding by induction on the type A which is an
-implicit argument. In the base case we appeal to `halts_step`, while
-in the `Arr` case we must also appeal to the induction hypothesis at
-the range type, going inside the function position of applications.
-}}%
+proof halts_step : {S : [ ⊢ step M M']} [ ⊢ halts M' ] → [⊢ halts M ] =
+/ total /
+intros
+{ A : ( |- tp), M : ( |- tm A), M' : ( |- tm A), S : ( |- step M M')
+| x7 : [ |- halts M']
+; split x7 as
+  case halts/m:
+  { A : ( |- tp),
+    M : ( |- tm A),
+    M' : ( |- tm A),
+    S : ( |- step M M'),
+    M2 : ( |- tm A),
+    S1 : ( |- mstep M' M2),
+    V : ( |- val M2)
+  | x7 : [ |- halts M']
+  ; by [ |- onestep S S1] as S' unboxed;
+    solve [ |- halts/m S' V]
+  }
+}
+;
+
 rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
 / total a (bwd_closed' a) /
  mlam A, M, M' => mlam MS => fn r => case [|- A] of
@@ -85,6 +77,77 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Redu
     Arr (halts_step [ |- MS] ha)
 	(mlam N => fn rn =>
 	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
+;
+
+proof bwd_closed' : {A : |- tp} {M : |- tm A} {M' : |- tm A} {S : |- step M M'}
+                    Reduce [|- A] [|- M'] -> Reduce [|- A] [ |- M] =
+/ total 1 /
+intros
+{ A : ( |- tp), M : ( |- tm A), M' : ( |- tm A), S : ( |- step M M')
+| y8 : Reduce [ |- A] [ |- M']
+; split [ |- A] as
+  case arr:
+  { T : ( |- tp),
+    T1 : ( |- tp),
+    M : ( |- tm (arr T T1)),
+    M' : ( |- tm (arr T T1)),
+    S : ( |- step M M')
+  | y8 : Reduce [ |- arr T T1] [ |- M']
+  ; split y8 as
+    case Arr:
+    { T : ( |- tp),
+      T1 : ( |- tp),
+      M : ( |- tm (arr T T1)),
+      M' : ( |- tm (arr T T1)),
+      S : ( |- step M M')
+    | v6 :
+        {N : ( |- tm T)}
+          Reduce [ |- T] [ |- N] -> Reduce [ |- T1] [ |- app M' N],
+      v5 : [ |- halts M'],
+      y8 : Reduce [ |- arr T T1] [ |- M']
+    ; suffices by Arr toshow
+      [ |- halts M] {
+        suffices by halts_step toshow
+        [ |- halts M'] {
+          solve v5
+        }
+      }
+      {N : ( |- tm T)}
+        Reduce [ |- T] [ |- N] -> Reduce [ |- T1] [ |- app M N] {
+        intros
+        { T : ( |- tp),
+          T1 : ( |- tp),
+          M : ( |- tm (arr T T1)),
+          M' : ( |- tm (arr T T1)),
+          S : ( |- step M M'),
+          N : ( |- tm T)
+        | v6 :
+            {N1 : ( |- tm T)}
+              Reduce [ |- T] [ |- N1] -> Reduce [ |- T1] [ |- app M' N1],
+          v5 : [ |- halts M'],
+          y8 : Reduce [ |- arr T T1] [ |- M'],
+          x8 : Reduce [ |- T] [ |- N]
+        ; by v6 [ |- N] x8 as r ;
+          by bwd_closed' [ |- T1] [ |- app M N] [ |- app M' N]
+               [ |- stepapp S] r
+            as r' ;
+          solve r'
+        }
+      }
+    }
+  }
+  case b:
+  { M : ( |- tm b), M' : ( |- tm b), S : ( |- step M M')
+  | y8 : Reduce [ |- b] [ |- M']
+  ; split y8 as
+    case I:
+    { M : ( |- tm b), M' : ( |- tm b), S : ( |- step M M')
+    | v1 : [ |- halts M'], y8 : Reduce [ |- b] [ |- M']
+    ; by halts_step [ |- S] v1 as ok ;
+      solve I ok
+    }
+  }
+}
 ;
 
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =

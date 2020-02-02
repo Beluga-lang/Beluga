@@ -159,7 +159,7 @@ let replace_subgoal t g =
     This doesn't remove the subgoal from the list of pending subgoals!
  *)
 let solve (s : Comp.proof_state) (proof : Comp.proof) : unit =
-  s.Comp.solution <- Some proof
+  s.Comp.solution := Some proof
 
 (** High-level solving tactic.
     solve_by_replacing_subgoal g' f g t
@@ -188,7 +188,7 @@ let rename_variable src dst level t g =
              cD = Context.rename_mctx src dst g.context.cD
            }
         end
-    ; solution = None
+    ; solution = ref None
     }
   in
   solve_by_replacing_subgoal t g' Misc.id g
@@ -296,4 +296,4 @@ let translate (thm : t) : Comp.exp_chk =
   let cD = state.context.cD in
   let cG = state.context.cG in
   let (tau, _) = state.goal in
-  Translate.translate_proof cD cG (Option.get state.solution) tau
+  Translate.translate_proof cD cG (Option.get !(state.solution)) tau

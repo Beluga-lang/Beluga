@@ -86,3 +86,5 @@ val lookupCtxVarSchema : mctx -> ctx_var -> Id.cid_schema
 
 val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx
 val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx
+
+val concat : 'a LF.ctx list -> 'a LF.ctx

@@ -2,6 +2,8 @@ open Support
 open Format
 open Syntax.Int
 
+let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
+
 module CompS = Store.Cid.Comp
 
 module PC = Printer.Control
@@ -1347,11 +1349,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_proof cD cG ppf =
     let open Comp in
     function
-    | Incomplete s ->
+    | Incomplete g ->
        begin
-         match s.solution with
+         match ! (g.solution) with
          | None -> fprintf ppf "?"
-         | Some proof -> fmt_ppr_cmp_proof cD cG ppf proof
+         | Some proof ->
+            dprnt "[fmt_ppr_cmp_proof] chasing pointer!";
+            fmt_ppr_cmp_proof g.context.cD g.context.cG ppf proof
        end
     | Command ( stmt, proof ) ->
        fprintf ppf "%a"
@@ -1393,7 +1397,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fun cD cG f ppf ->
     let open Comp in
     function
-    | SplitBranch (c, _, h) ->
+    | SplitBranch (c, _, _, h) ->
        fprintf ppf "@[<v>case %a:@,%a@]@,"
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h

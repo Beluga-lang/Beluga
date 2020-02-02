@@ -2020,7 +2020,7 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   match p with
   | A.Incomplete (loc, str_opt) ->
      let context = I. ({ cD; cG; cIH = Int.LF.Empty }) in
-     I.(Incomplete { context; goal = ttau; solution = None; label })
+     I.(Incomplete { context; goal = ttau; solution = ref None; label })
   | A.Directive (loc, d) ->
      I.Directive (elDirective cD cG label d ttau)
   | A.Command (loc, cmd, p) ->
@@ -2045,7 +2045,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
     | A.ContextCase (A.EmptyContext loc) ->
        let hyp' = elHypothetical cD cG label hyp ttau in
        (* TODO: synPatRefine *)
-       I.SplitBranch (I.EmptyContext loc, assert false, hyp')
+       I.SplitBranch (I.EmptyContext loc, assert false, assert false, hyp')
 
     | A.ContextCase (A.ExtendedBy (loc, a)) ->
        let a' =
@@ -2054,7 +2054,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
        in
        (* TODO: synPatRefine *)
        let hyp' = elHypothetical cD cG label hyp ttau in
-       I.SplitBranch (I.ExtendedBy (loc, a'), assert false, hyp')
+       I.SplitBranch (I.ExtendedBy (loc, a'), assert false, assert false, hyp')
 
     | A.NamedCase _ ->
        CaseLabelMismatch (`context, `named)
@@ -2131,6 +2131,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
             synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
               (tau_i, tau_p)
           in
+          let pat = Whnf.cnormPattern (pat, t1) in
           (* cD_b |- t' : cD
              cD_b |- t1 : cD'
            *)
@@ -2158,7 +2159,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
             cD_b |- [t o t']tau <= type
            *)
           in
-          I.SplitBranch ((cPsi, tH), t', hyp')
+          I.SplitBranch ((cPsi, tH), pat, t', hyp')
        end
 
     | A.ContextCase _ ->
@@ -2213,17 +2214,13 @@ and elSplit loc cD cG label i tau_i bs ttau =
           let (t', t1, cD_b) =
             synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
           in
+          let pat = Whnf.cnormPattern (pat, t1) in
           (* cD_b |- t' : cD
              cD_b |- t1 : cD'
            *)
           let cG_b = Whnf.cnormCtx (cG', t1) in
 
-          let ttau_b =
-            Whnf.cnormCTyp ttau
-            |> (fun tau -> Whnf.cnormCTyp (tau, t))
-            |> (fun tau -> (tau, t1))
-          in
-
+          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
 
           dprintf begin fun p ->
             p.fmt "[make_comp_branch] @[<v>ttau =   @[%a@]\
@@ -2238,7 +2235,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
             elHypothetical cD_b cG_b label hyp ttau_b
           in
 
-          I.SplitBranch (cid, t', hyp')
+          I.SplitBranch (cid, pat, t', hyp')
   in
   match tau_i with
   | I.TypBox (_, (Int.LF.CTyp _)) ->

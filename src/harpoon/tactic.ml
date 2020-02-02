@@ -125,7 +125,7 @@ let intros (names : string list option) : t =
      let new_state =
        { context
        ; goal
-       ; solution = None
+       ; solution = ref None
        ; label = s.label
        }
      in
@@ -388,7 +388,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let new_state case_label =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
-            ; solution = None
+            ; solution = ref None
             ; label =
                 make_subgoal_path_for_split_kind k
                   ("split (case " ^ case_label ^ ")")
@@ -416,7 +416,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          context_branch case_label theta context (incomplete_proof s')
+          context_branch case_label pat theta context (incomplete_proof s')
        | _ -> assert false
      in
      let make_meta_branch (context, theta, new_state, pat) =
@@ -430,7 +430,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          meta_branch c theta context (incomplete_proof s')
+          meta_branch c pat theta context (incomplete_proof s')
        | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
      in
      let make_comp_branch (context, theta, new_state, pat) =
@@ -439,7 +439,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let label = Store.Cid.DefaultRenderer.render_cid_comp_const cid in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          comp_branch cid theta context (incomplete_proof s')
+          comp_branch cid pat theta context (incomplete_proof s')
        | _ ->
           B.Error.violation "[get_context_branch] pattern not a constant"
      in
@@ -491,7 +491,7 @@ let extending_meta_context decl g =
       ; cIH = Whnf.cnormCtx (g.context.cIH, shift)
       }
   ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
-  ; solution = None
+  ; solution = ref None
   ; label = g.label
   }
 
@@ -502,7 +502,7 @@ let extending_comp_context decl g =
       { g.context with
         cG = LF.Dec (g.context.cG, decl)
       }
-  ; solution = None
+  ; solution = ref None
   }
 
 (** Solves the current subgoal by keeping it the same, but extending
@@ -576,7 +576,7 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
       let new_state =
         { context = s.context
         ; goal = (tau, Whnf.m_id)
-        ; solution = None
+        ; solution = ref None
         ; label =
             ("premise " ^ string_of_int (k + 1)
              ^ " of " ^ lemma_name)

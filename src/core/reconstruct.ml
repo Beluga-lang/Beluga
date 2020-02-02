@@ -26,6 +26,8 @@ let strengthen : bool ref =  Lfrecon.strengthen
 let dprintf, dprint, dprnt = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
+type case_label_variant = [ `named | `context | `pvar ]
+
 type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
@@ -44,8 +46,8 @@ type error =
   | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
                           * Int.Comp.hypotheses (* actual *)
   | UnboundCaseLabel of [ `comp | `meta ] * Id.name * Int.LF.mctx * Int.Comp.typ
-  | CaseLabelMismatch of [ `named | `context ] (* expected *)
-                         * [ `named | `context ] (* actual *)
+  | CaseLabelMismatch of case_label_variant (* expected *)
+                         * case_label_variant (* actual *)
   | NotImplemented of (Format.formatter -> unit -> unit)
 
 exception Error of Syntax.Loc.t * error
@@ -161,6 +163,7 @@ let _ = Error.register_printer
        let print_case_label_kind ppf = function
          | `named -> fprintf ppf "named"
          | `context -> fprintf ppf "context"
+         | `pvar -> fprintf ppf "parameter variable"
        in
        fprintf ppf
          "@[<v>Case label mismatch.\
@@ -1939,6 +1942,11 @@ let rec elGCtx (delta : Int.LF.mctx) gamma =
      let tau' = elCompTyp delta tau in
      Int.LF.Dec (cG, Int.Comp.CTypDecl (name, tau', false))
 
+let variant_of_case_label = function
+  | A.NamedCase _ -> `named
+  | A.ContextCase _ -> `context
+  | A.PVarCase (_, _) -> `pvar
+
 (* elaborate hypotheses *)
 let elHypotheses { A.cD; cG } =
   let cD = elMCtx Lfrecon.Pibox cD in
@@ -2076,12 +2084,15 @@ and elSplit loc cD cG label i tau_i bs ttau =
        in
        I.SplitBranch (I.ExtendedBy (loc, a'), pat, t', hyp')
 
-    | A.NamedCase _ ->
-       CaseLabelMismatch (`context, `named)
+    | _ ->
+       CaseLabelMismatch (`context, variant_of_case_label l)
        |> throw loc
   in
   let make_meta_branch (cU, cPsi) { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
+    | A.PVarCase (loc, k) ->
+       assert false
+
     | A.NamedCase (loc, name) ->
        (* TODO figure out how to reconstruct parameter variable branches
           In the case of a parameter variable, index_of_name will
@@ -2104,93 +2115,91 @@ and elSplit loc cD cG label i tau_i bs ttau =
           Need to think about how this will interact with parameter variables.
         *)
        let Int.LF.MTyp tP = cU in
-       begin match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
-       | None ->
-          assert false
-       (* XXX throw an appropriate error
-          Normally this would be a type mismatch, because the user
-          types the full pattern, but here since the user only
-          types the constructor.
-          I'm thinking an error that looks like
-          Impossible constructor.
-          The constructor %a, of type
-          %a
-          is not a possible case for the split scrutinee type
-          %a
+       let (cD', (cPsi', tR_p, tA_p), t) =
+         match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
+         | None ->
+            assert false
+         (* XXX throw an appropriate error
+            Normally this would be a type mismatch, because the user
+            types the full pattern, but here since the user only
+            types the constructor.
+            I'm thinking an error that looks like
+            Impossible constructor.
+            The constructor %a, of type
+            %a
+            is not a possible case for the split scrutinee type
+            %a
+          *)
+         | Some p -> p
+       in
+       let pat =
+         I.PatMetaObj
+           ( Loc.ghost
+           , let open Int.LF in
+             ( Loc.ghost
+             , ClObj
+                 ( Context.dctxToHat cPsi'
+                 , MObj tR_p
+                 )
+             )
+           )
+       in
+       let tau_p =
+         I.TypBox
+           ( Loc.ghost
+           , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
+           )
+       in
+       dprintf begin fun p ->
+         p.fmt "[elSplit] @[<v>generated pattern:\
+                @,@[<hv 2>@[%a@]; . |-@ @[%a@] :@ @[%a@]@]@]"
+           P.(fmt_ppr_lf_mctx ~all: true l0) cD'
+           P.(fmt_ppr_cmp_pattern cD' Int.LF.Empty l0) pat
+           P.(fmt_ppr_cmp_typ cD' l0) tau_p
+         end;
+       (* cD' ; cPsi' |- tR_p <= tA_p
+          cD' |- t : cD
         *)
-       | Some (cD', (cPsi', tR_p, tA_p), t) ->
-          let pat =
-            I.PatMetaObj
-              ( Loc.ghost
-              , let open Int.LF in
-                ( Loc.ghost
-                , ClObj
-                    ( Context.dctxToHat cPsi'
-                    , MObj tR_p
-                    )
-                )
-              )
-          in
-          let tau_p =
-            I.TypBox
-              ( Loc.ghost
-              , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
-              )
-          in
-          dprintf begin fun p ->
-            p.fmt "[elSplit] @[<v>generated pattern:\
-                   @,@[<hv 2>@[%a@]; . |-@ @[%a@] :@ @[%a@]@]@]"
-              P.(fmt_ppr_lf_mctx ~all: true l0) cD'
-              P.(fmt_ppr_cmp_pattern cD' Int.LF.Empty l0) pat
-              P.(fmt_ppr_cmp_typ cD' l0) tau_p
-            end;
-          (* cD' ; cPsi' |- tR_p <= tA_p
-             cD' |- t : cD
-           *)
-          let (t', t1, cD_b) =
-            synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
-              (tau_i, tau_p)
-          in
-          let pat = Whnf.cnormPattern (pat, t1) in
-          (* cD_b |- t' : cD
-             cD_b |- t1 : cD'
-           *)
-          let cG_b = Whnf.cnormCtx (cG, t') in
-          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
-          dprintf begin fun p ->
-            p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
-                   @,goal inside: @[%a@]\
-                   @,msub typing:\
-                   @,  @[%a@]\
-                   @]"
-              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
-              P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
-              P.fmt_ppr_lf_msub_typing (cD_b, t', cD)
-            end;
+       let (t', t1, cD_b) =
+         synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+           (tau_i, tau_p)
+       in
+       let pat = Whnf.cnormPattern (pat, t1) in
+       (* cD_b |- t' : cD
+          cD_b |- t1 : cD'
+        *)
+       let cG_b = Whnf.cnormCtx (cG, t') in
+       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       dprintf begin fun p ->
+         p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
+                @,goal inside: @[%a@]\
+                @,msub typing:\
+                @,  @[%a@]\
+                @]"
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+           P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
+           P.fmt_ppr_lf_msub_typing (cD_b, t', cD)
+         end;
 
-          let hyp' = elHypothetical cD_b cG_b label hyp ttau_b
-          (*
-            ttau = (t, tau)
-            such that
-            cD |- [t]tau <= type
+       let hyp' = elHypothetical cD_b cG_b label hyp ttau_b
+       (*
+         ttau = (t, tau)
+         such that
+         cD |- [t]tau <= type
 
-            ttau_b = (t o t', tau)
-            such that
-            cD_b |- [t o t']tau <= type
-           *)
-          in
-          I.SplitBranch ((cPsi, tH), pat, t', hyp')
-       end
+         ttau_b = (t o t', tau)
+         such that
+         cD_b |- [t o t']tau <= type
+        *)
+       in
+       I.SplitBranch ((cPsi, tH), pat, t', hyp')
 
-    | A.ContextCase _ ->
-       CaseLabelMismatch (`named, `context)
+    | _ ->
+       CaseLabelMismatch (`named, variant_of_case_label l)
        |> throw loc
   in
   let make_comp_branch { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
-    | A.ContextCase _ ->
-       CaseLabelMismatch (`named, `context)
-       |> throw loc
     | A.NamedCase (loc, name) ->
        let cid =
          try
@@ -2208,54 +2217,60 @@ and elSplit loc cD cG label i tau_i bs ttau =
                 @,tau_i = @[%a@]@]"
            P.(fmt_ppr_cmp_typ cD l0) tau_i
          end;
-       match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
-       | None -> assert false (* TODO throw an error *)
-       | Some (cD', (cG', pat, ttau_p), t) ->
-          let tau_p = Whnf.cnormCTyp ttau_p in
-          let cG' = Coverage.compgctx_of_gctx cG' in
+       let (cD', (cG', pat, ttau_p), t) =
+         match Coverage.genPatt (cD, tau_i) (cid, tau_c) with
+         | None -> assert false (* TODO throw error *)
+         | Some p -> p
+       in
+       let tau_p = Whnf.cnormCTyp ttau_p in
+       let cG' = Coverage.compgctx_of_gctx cG' in
 
-          dprintf begin fun p ->
-            p.fmt "@[<v 2>[make_comp_branch] for @[%a@]@,\
-                   @[<hv 2>@[<hv>%a@] |-@ @[%a@] :@ @[%a@]@]\
-                   @,current goal = @[%a@]\
-                   @,cG' = @[%a@]@]"
-              Id.print name
-              P.(fmt_ppr_lf_mctx l0) cD'
-              P.(fmt_ppr_cmp_pattern cD' cG' l0) pat
-              P.(fmt_ppr_cmp_typ cD' l0) tau_p
-              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
-              P.(fmt_ppr_cmp_gctx cD' l0) cG'
-            end;
+       dprintf begin fun p ->
+         p.fmt "@[<v 2>[make_comp_branch] for @[%a@]@,\
+                @[<hv 2>@[<hv>%a@] |-@ @[%a@] :@ @[%a@]@]\
+                @,current goal = @[%a@]\
+                @,cG' = @[%a@]@]"
+           Id.print name
+           P.(fmt_ppr_lf_mctx l0) cD'
+           P.(fmt_ppr_cmp_pattern cD' cG' l0) pat
+           P.(fmt_ppr_cmp_typ cD' l0) tau_p
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+           P.(fmt_ppr_cmp_gctx cD' l0) cG'
+         end;
 
-          (* cD' |- t : cD
-             cD' |- cG' ctx
-             cD', cG' |- pat <= tau_p
-           *)
-          let (t', t1, cD_b) =
-            synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
-          in
-          let pat = Whnf.cnormPattern (pat, t1) in
-          (* cD_b |- t' : cD
-             cD_b |- t1 : cD'
-           *)
-          let cG_b = Whnf.cnormCtx (cG', t1) in
+       (* cD' |- t : cD
+          cD' |- cG' ctx
+          cD', cG' |- pat <= tau_p
+        *)
+       let (t', t1, cD_b) =
+         synPatRefine loc (case_type (lazy pat) i) (cD, cD') t (tau_i, tau_p)
+       in
+       let pat = Whnf.cnormPattern (pat, t1) in
+       (* cD_b |- t' : cD
+          cD_b |- t1 : cD'
+        *)
+       let cG_b = Whnf.cnormCtx (cG', t1) in
 
-          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
 
-          dprintf begin fun p ->
-            p.fmt "[make_comp_branch] @[<v>ttau =   @[%a@]\
-                   @,ttau_b = @[%a@]@,\
-                   @,@[<hv 2>msub:@ @[%a@]@]@]"
-              P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
-              P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
-              P.(fmt_ppr_lf_msub_typing) (cD_b, t', cD)
-            end;
+       dprintf begin fun p ->
+         p.fmt "[make_comp_branch] @[<v>ttau =   @[%a@]\
+                @,ttau_b = @[%a@]@,\
+                @,@[<hv 2>msub:@ @[%a@]@]@]"
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+           P.(fmt_ppr_cmp_typ cD_b l0) (Whnf.cnormCTyp ttau_b)
+           P.(fmt_ppr_lf_msub_typing) (cD_b, t', cD)
+         end;
 
-          let hyp' =
-            elHypothetical cD_b cG_b label hyp ttau_b
-          in
+       let hyp' =
+         elHypothetical cD_b cG_b label hyp ttau_b
+       in
 
-          I.SplitBranch (cid, pat, t', hyp')
+       I.SplitBranch (cid, pat, t', hyp')
+
+    | _ ->
+       CaseLabelMismatch (`named, variant_of_case_label l)
+       |> throw loc
   in
   match tau_i with
   | I.TypBox (_, (Int.LF.CTyp w)) ->

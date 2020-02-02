@@ -2753,10 +2753,18 @@ let case_label : Comp.case_label parser =
     |> labelled "constructor case label"
     $> fun (loc, name) -> Comp.NamedCase (loc, name)
   in
+  let pvar_case_label =
+    token T.HASH &>
+      maybe (token T.DOT &> integer)
+    |> span
+    |> labelled "parameter variable case label"
+    $> fun (loc, k) -> Comp.PVarCase (loc, k)
+  in
   choice
     [ extension_case_label
     ; empty_case_label
     ; named_case_label
+    ; pvar_case_label
     ]
 
 let rec harpoon_proof : Comp.proof parser =

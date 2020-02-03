@@ -1,3 +1,4 @@
+./t/code/error/infix/infix_assoc.bel, line 16, column 21:
 Ill-typed expression.
     Expected type:
       list ?Y[^0][]

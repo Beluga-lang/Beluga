@@ -1,1 +1,2 @@
+./t/code/error/positivity/positivity_fail0.bel, line 5, column 2:
 Positivity checking of constructor Bad fails.

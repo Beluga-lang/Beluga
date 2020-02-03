@@ -1,16 +1,17 @@
-module Options :
-sig
-  (** Whether to include locations in the output of errors or not.
-      Omitting locations is useful when comparing outputs of two
-      script runs, because locations and their formatting are
-      dependent on the version of Camlp4, not Beluga. *)
-  val print_loc : bool ref
-end
+module Loc = Syntax.Loc
 
 exception Violation of string
+
+(** Raises a Violation exception with the given message. *)
 val violation : string -> 'a
 
-exception NotImplemented
+exception NotImplemented of Loc.t option * string
+
+(** Raises a NotImplemented exception at the given location, with the given message. *)
+val not_implemented : Loc.t -> string -> 'a
+
+(** Raises a NotImplemented exception with the given message. *)
+val not_implemented' : string -> 'a
 
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)

@@ -306,10 +306,7 @@ let unify_phat cD psihat phihat =
             | _ -> ());
            mmvar1.instantiation := Some (ICtx (CtxVar (c_var)))  ; true)
         else
-          begin
-            dprint (fun () -> "[unify_phat - 1] unify ctx_var with a full context");
-            raise Error.NotImplemented
-          end
+          Error.not_implemented' "[unify_phat] ctx_var with a full context";
      | (None , d') ->
         let open Int.LF in
         if d = d' then
@@ -318,10 +315,7 @@ let unify_phat cD psihat phihat =
             true
           end
         else
-          begin
-            dprint (fun () -> "[unify_phat - 2] unify ctx_var with a full context");
-            raise Error.NotImplemented
-          end
+          Error.not_implemented' "[unify_phat] ctx_var with a full context";
      end
 
   | _ -> psihat = phihat

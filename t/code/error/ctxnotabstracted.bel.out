@@ -1,1 +1,2 @@
+./t/code/error/ctxnotabstracted.bel, line 9, column 12:
 Unable to infer type for variable g

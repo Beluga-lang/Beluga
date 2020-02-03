@@ -1,3 +1,4 @@
+./t/code/error/defaultAssocError.bel, line 17, column 19:
 Ill-typed expression.
     Expected type:
       list ?Y[^0][]

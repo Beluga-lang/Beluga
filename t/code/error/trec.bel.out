@@ -1,3 +1,4 @@
+./t/code/error/trec.bel, line 16, column 18:
 Ill-typed expression.
     Expected type:
       exp S

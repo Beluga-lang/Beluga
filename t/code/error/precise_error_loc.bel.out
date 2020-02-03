@@ -1,3 +1,4 @@
+./t/code/error/precise_error_loc.bel, line 9, column 10:
 Ill-typed expression.
     Expected type:
       cat

@@ -1,3 +1,4 @@
+./t/code/error/coverage/systemf.bel, line 107, column 15:
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:

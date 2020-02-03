@@ -1,2 +1,3 @@
+./t/code/error/total-same.bel, line 9, column 13:
 Type-checking error.
 Recursive call not structurally smaller.

@@ -1,3 +1,4 @@
+./t/code/error/funpat1.bel, line 6, column 8:
 Type-checking error.
 Found
   box-expression

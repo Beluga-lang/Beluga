@@ -1,2 +1,3 @@
+./t/code/error/badconstructortype2.bel, line 4, column 9:
 Type reconstruction error.
 Too many meta-objects supplied to data-constructor

@@ -1,2 +1,3 @@
+./t/code/error/total/wf-wrongarg.bel, line 22, column 21:
 Type-checking error.
 Recursive call not structurally smaller.

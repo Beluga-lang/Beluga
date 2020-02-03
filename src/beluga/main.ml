@@ -81,7 +81,7 @@ let process_option arg rest =
        rest
        end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+test" -> Error.Options.print_loc := false; Debug.chatter := 0; Sexp.testing := true ; rest
+  | "+test" -> Debug.chatter := 0; Sexp.testing := true ; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html" | "+HTML" -> Html.genHtml := true; rest

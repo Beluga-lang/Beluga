@@ -1,1 +1,2 @@
+./t/code/error/misnamedproj.bel, line 35, column 46:
 There is no projection named y in type block (x:term, _t:value FMV A[]).

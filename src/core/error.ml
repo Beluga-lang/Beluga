@@ -1,16 +1,17 @@
-module Options =
-struct
-  let print_loc = ref true
-end
+open Support
+
+module Loc = Syntax.Loc
 
 exception Violation of string
 let violation msg = raise (Violation msg)
 
-exception NotImplemented
+exception NotImplemented of Loc.t option * string
+let not_implemented loc msg = raise (NotImplemented (Some loc, msg))
+let not_implemented' msg = raise (NotImplemented (None, msg))
 
 type print_result = string
 
-let error_format_buffer = Buffer.create 200
+let error_format_buffer = Buffer.create 1024
 
 let error_format = Format.formatter_of_buffer error_format_buffer
 
@@ -31,9 +32,11 @@ let print f =
   Buffer.reset error_format_buffer;
   str
 
+let print_location loc =
+  Format.fprintf error_format "%a:@," Syntax.Loc.print loc
+
 let print_with_location loc f =
-  if !Options.print_loc then
-    Format.fprintf error_format "%a:@." Syntax.Loc.print loc;
+  print_location loc;
   print f
 
 (* Since this printer is registered first, it will be executed only if
@@ -48,21 +51,6 @@ let _ = Printexc.register_printer
     Format.fprintf Format.err_formatter
       "Uncaught exception.@ Please report this as a bug.@.";
     None)
-
-let _ = register_printer
-  (fun (Sys_error msg) ->
-    print (fun ppf ->
-      Format.fprintf ppf "System error: %s" msg))
-
-let _ = register_printer
-  (fun (Violation msg) ->
-    print (fun ppf ->
-      Format.fprintf ppf "Internal error (please report as a bug):@;%s" msg))
-
-let _ = register_printer
-  (fun NotImplemented ->
-    print (fun ppf ->
-      Format.fprintf ppf "Not implemented."))
 
 let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
   Format.fprintf ppf "@[<v>%s@," title;
@@ -85,3 +73,30 @@ let getInformation () =
 
 let addInformation message =
   information := message :: !information
+
+(** Register some basic printers. *)
+let _ =
+  register_printer
+    begin fun (Sys_error msg) ->
+    print (fun ppf ->
+        Format.fprintf ppf "System error: %s" msg)
+    end;
+
+  register_printer
+    begin fun (Violation msg) ->
+    print
+      begin fun ppf ->
+      Format.fprintf ppf "@[<v>Internal error (please report as a bug):@,@[%a@]@]"
+        Format.pp_print_string msg
+      end
+    end;
+
+  register_printer
+    begin fun (NotImplemented (loc, msg)) ->
+    print
+      begin fun ppf ->
+      Maybe.when_some loc print_location;
+      Format.fprintf ppf "@[<v>Not implemented.@,@[%a@]@]"
+        Format.pp_print_string msg
+      end
+    end

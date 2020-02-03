@@ -385,7 +385,8 @@ and match_pattern  (v,eta) (pat, mt) =
       | v, Comp.PatVar (_, _) ->
         eta := Comp.Cons (v, !eta)
 
-      | _ -> raise Error.NotImplemented
+      | _ ->
+         Error.not_implemented' "[opsem] [match_pattern] other cases not implemented"
   in loop v pat; !eta
 
 and eval_branch vscrut branch (theta, eta) =

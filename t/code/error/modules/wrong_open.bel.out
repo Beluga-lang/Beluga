@@ -1,1 +1,2 @@
+./t/code/error/modules/wrong_open.bel, line 28, column 1:
 Invalid module in pragma '--open WrongModule'

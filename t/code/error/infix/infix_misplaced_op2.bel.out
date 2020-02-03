@@ -1,1 +1,2 @@
+./t/code/error/infix/infix_misplaced_op2.bel, line 54, column 18:
 Illegal use of operator is_app.

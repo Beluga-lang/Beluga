@@ -1,2 +1,3 @@
+./t/code/error/stratify/evaluator.bel, line 24, column 30:
 Type-checking error.
 Recursive call not structurally smaller.

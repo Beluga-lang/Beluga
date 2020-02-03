@@ -1,3 +1,4 @@
+./t/code/error/argtype.bel, line 21, column 12:
 Type-checking error.
 Found
   box-expression

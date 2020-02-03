@@ -1354,7 +1354,7 @@ let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
      genPVar cov_problem @
        genBVar cov_problem
   | LF.Sigma trec ->
-     raise Error.NotImplemented
+     Error.not_implemented' "[genBCovGoals] not implemented for Sigma types"
   | LF.PiTyp ((tdecl, dep), tA) ->
      let x =
        match tdecl with

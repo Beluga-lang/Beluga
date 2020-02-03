@@ -1,1 +1,2 @@
+./t/code/error/infix/infix_precedence.bel, line 24, column 9:
 Unbound data-level variable (ordinary or meta-variable) or constructor: app.

@@ -1,1 +1,2 @@
+./t/code/error/infix/infix_misplaced_op.bel, line 18, column 31:
 Illegal use of operator app.

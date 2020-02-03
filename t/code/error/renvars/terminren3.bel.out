@@ -1,2 +1,3 @@
+./t/code/error/renvars/terminren3.bel, line 12, column 24:
 A term was found when expecting a variable.
 Offending term: c i 

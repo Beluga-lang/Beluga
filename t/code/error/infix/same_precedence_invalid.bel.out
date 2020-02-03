@@ -1,3 +1,4 @@
+./t/code/error/infix/same_precedence_invalid.bel, line 12, column 7:
 Ill-typed expression.
     Expected type:
       nat

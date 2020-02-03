@@ -1,3 +1,4 @@
+./t/code/error/coverage/cov-unsound.bel, line 10, column 9:
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:

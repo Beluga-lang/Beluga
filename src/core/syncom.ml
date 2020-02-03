@@ -33,7 +33,10 @@ module Comp = struct
   type 'ctx_case generic_case_label =
     | NamedCase of Loc.t * Id.name
     | ContextCase of 'ctx_case
-    | PVarCase of Loc.t * int option (* the number of the projection, if any *)
+    | PVarCase of
+        Loc.t
+        * int (* schema element number (1-based) *)
+        * int option (* the number of the projection, if any (1-based) *)
 
   type boxity =
     [ `boxed

@@ -2755,10 +2755,12 @@ let case_label : Comp.case_label parser =
   in
   let pvar_case_label =
     token T.HASH &>
-      maybe (token T.DOT &> integer)
+      seq2
+        (maybe_default integer 1)
+        (maybe (token T.DOT &> integer))
     |> span
     |> labelled "parameter variable case label"
-    $> fun (loc, k) -> Comp.PVarCase (loc, k)
+    $> fun (loc, (n, k)) -> Comp.PVarCase (loc, n, k)
   in
   choice
     [ extension_case_label

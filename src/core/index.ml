@@ -1546,7 +1546,7 @@ and index_context_case_label cvars fvars = function
 
 and index_case_label cvars fvars = function
   | Ext.Comp.NamedCase (loc, name) -> Apx.Comp.NamedCase (loc, name)
-  | Ext.Comp.PVarCase (loc, k) -> Apx.Comp.PVarCase (loc, k)
+  | Ext.Comp.PVarCase (loc, n, k) -> Apx.Comp.PVarCase (loc, n, k)
   | Ext.Comp.ContextCase case ->
      let case = index_context_case_label cvars fvars case in
      Apx.Comp.ContextCase case

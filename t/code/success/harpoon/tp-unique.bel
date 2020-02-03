@@ -1,0 +1,99 @@
+LF tp : type =
+  | base : tp
+  | arr : tp → tp → tp
+; --name tp A a.
+
+LF tm : type =
+  | lam : tp → (tm → tm) → tm
+  | app : tm → tm → tm
+; --name tm M m.
+
+LF oft : tm → tp → type =
+  | t_lam : ({x : tm} oft x A → oft (M x) B) → oft (lam A \x. M x) (arr A B)
+  | t_app : oft M (arr A B) → oft N A → oft (app M N) B
+; --name oft D d.
+
+schema ctx = some [T : tp] block x : tm, u : oft x T;
+
+LF eq : tp → tp → type =
+  | eq_base : eq base base
+  | eq_arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
+; --name eq E e.
+
+proof tp-refl : {A : ⊢ tp} [⊢ eq A A] =
+/ total 1 /
+intros
+{ A : ( |- tp)
+|
+; split [ |- A] as
+  case arr:
+  { X : ( |- tp), X1 : ( |- tp)
+  |
+  ; by tp-refl [ |- X] as EQ_X unboxed;
+    by tp-refl [ |- X1] as EQ_X1 unboxed;
+    solve [ |- eq_arr EQ_X EQ_X1]
+  }
+  case base:
+  {
+  |
+  ; solve [ |- eq_base]
+  }
+}
+;
+
+proof tp-unique : (g : ctx) [g ⊢ oft M A[]] → [g ⊢ oft M B[]] → [⊢ eq A B] =
+/ total 1 /
+intros
+{ g : ctx, M : (g |- tm), A : ( |- tp), B : ( |- tp)
+| x6 : [g |- oft M A], z6 : [g |- oft M B]
+; split x6 as
+  case t_app:
+  { g : ctx,
+    X : (g |- tm),
+    X3 : (g |- tm),
+    A : ( |- tp),
+    B : ( |- tp),
+    X1 : ( |- tp),
+    X4 : (g |- oft X (arr X1 A)),
+    X5 : (g |- oft X3 X1)
+  | x6 : [g |- oft (app X X3) A], z6 : [g |- oft (app X X3) B]
+  ; ?
+  }
+  case t_lam:
+  { g : ctx,
+    X : ( |- tp),
+    X1 : (g, z3 : tm |- tm),
+    X2 : ( |- tp),
+    B : ( |- tp),
+    X3 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X2)
+  | x6 : [g |- oft (lam X (\x. X1)) (arr X X2)],
+    z6 : [g |- oft (lam X (\x. X1)) B]
+  ; split z6 as
+    case t_lam:
+    { g : ctx,
+      X : ( |- tp),
+      X1 : (g, z3 : tm |- tm),
+      X2 : ( |- tp),
+      X6 : ( |- tp),
+      X3 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X2),
+      X7 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X6)
+    | x6 : [g |- oft (lam X (\x. X1)) (arr X X2)],
+      z6 : [g |- oft (lam X (\x. X1)) (arr X X6)]
+    ; ?
+    }
+  }
+  case #.2:
+  { g : ctx,
+    A : ( |- tp),
+    #p1 : #(g |- block (x:tm, u:oft x A)),
+    B : ( |- tp)
+  | x6 : [g |- oft #p1.1 A], z6 : [g |- oft #p1.1 B]
+  ; split z6 as
+    case #.2:
+    { g : ctx, B : ( |- tp), #p1 : #(g |- block (x:tm, u:oft x B))
+    | x6 : [g |- oft #p1.1 B], z6 : [g |- oft #p1.1 B]
+    ; suffices by tp-refl toshow
+    }
+  }
+}
+;

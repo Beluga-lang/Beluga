@@ -1,0 +1,37 @@
+LF tp : type =
+  | base : tp
+  | arr : tp → tp → tp
+; --name tp A.
+
+LF tm : type =
+  | c : tm
+  | lam : tp → (tm → tm) → tm
+  | app : tm → tm → tm
+; --name tm M.
+
+LF oft : tm → tp → type =
+  | t_c : oft c base
+  | t_lam : ({x : tm} oft x A → oft (M x) B) → oft (lam A M) (arr A B)
+  | t_app : oft M (arr A B) → oft N A → oft (app M N) B
+; --name oft D.
+
+LF eval : tm → tm → type =
+  | e_c : eval c c
+  | e_lam : eval (lam A M) (lam A M)
+  | e_app : eval M (lam A M') → eval (M' N) V → eval (app M N) V
+; --name eval E.
+
+schema ctx = some [t:tp] block x : tm, u : oft x t;
+
+proof tps : [⊢ oft M A] → [⊢ eval M M'] → [⊢ oft M' A] =
+/ total 2 /
+?;
+
+LF eq : tp → tp → type =
+  | eq-base : eq base base
+  | eq-arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
+; --name eq Q.
+
+proof unique : (g : ctx) [g ⊢ oft M A1[]] → [g ⊢ oft M A2[]] → [⊢ eq A1 A2] =
+/ total 1 /
+?;

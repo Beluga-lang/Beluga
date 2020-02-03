@@ -2085,3 +2085,7 @@ let apply_command_to_context (cD, cG) =
      match tau with
      | Comp.TypBox (_, cU) -> extend_meta (Decl (name, cU, No))
      | _ -> Error.violation "[apply_command_to_context] `unboxed not a TypBox"
+
+let collapse_sigma = function
+  | SigmaLast (_, tA) -> tA
+  | SigmaElem _ as typ_rec -> Sigma typ_rec

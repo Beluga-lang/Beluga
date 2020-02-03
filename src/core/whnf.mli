@@ -206,3 +206,7 @@ val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
     cD' |- cG' ctx
  *)
 val apply_command_to_context : mctx * Comp.gctx -> Comp.command -> mctx * Comp.gctx * msub
+
+(** Eliminates the level of indirection from having a Sigma with just
+    one component. *)
+val collapse_sigma : typ_rec -> typ

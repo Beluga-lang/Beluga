@@ -589,24 +589,52 @@ module Prover = struct
           end
        | `serialize ->
           let open Misc.List in
-          let holes = Holes.get_harpoon_subgoals () in
-          s.State.sessions
-          |> DynArray.to_list
-          |> concat_map (fun c' -> c'.Session.theorems |> DynArray.to_list)
+          let get_loc h : B.Location.t = failwith "Not Yet Implemented" in
+          let compare_loc h1 h2 =
+            B.Location.start_offset (get_loc h1) - B.Location.start_offset (get_loc h2)
+          in
+          let holes =
+            Holes.get_harpoon_subgoals ()
+            |> List.sort compare_loc
+          in
+          let theorems =
+            DynArray.to_list s.State.sessions
+            |> concat_map (fun c' -> DynArray.to_list c'.Session.theorems)
+          in
+          let (new_theorems, updated_theorems) =
+            List.partition
+              begin fun t' ->
+              (* If a theorem is in the state,
+               * and it does not have any predefined holes in the loaded files,
+               * that theorem is newly defined in this harpoon process.
+               *)
+              match List.find_all (fun hole -> Theorem.has_cid_of t' (fst hole)) holes with
+              | [] -> true
+              | _ -> false
+              end
+              theorems
+          in
+          holes
+          |> List.sort compare_loc
+          |> List.iter
+               begin fun h ->
+               (* this variable should be used *)
+               let _ =
+                 List.find (fun t' -> Theorem.has_cid_of t' (fst h)) updated_theorems
+               in
+               (* This is not a real implementation *)
+               (* How to update the locations of the holes which are not filled yet? *)
+               State.printf s "@[fill a hole at %a@]@."
+                 B.Location.print (get_loc h);
+               (* Do I need to remove the filled holes? *)
+               end;
+          new_theorems
           |> List.iter
                begin fun t' ->
-               match List.find_all (fun hole -> Theorem.has_cid_of t' (fst hole)) holes with
-               | [] ->
-                  (* This is not a real implementation *)
-                  State.printf s "@[<v>add theorem@,%a@]@."
-                    Theorem.serialize t'
-                  (* Do I need to update the locations of all holes? *)
-               | holes' ->
-                  (* This is not a real implementation *)
-                  (* How to update the locations of the holes which are not filled yet? *)
-                  State.printf s "@[fill %d holes@]@."
-                    (List.length holes')
-                  (* Do I need to remove the filled holes? *)
+               (* This is not a real implementation *)
+               State.printf s "@[<v>add theorem@,%a@]@."
+                 Theorem.serialize t';
+               (* Do I need to update the locations of all holes? *)
                end
        end
     | Command.Subgoal cmd ->

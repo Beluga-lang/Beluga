@@ -703,18 +703,12 @@ module Solver = struct
           try
             trail
               begin fun () ->
-              (*
-                Format.printf "[matchSigma] %s ~=~ %s ?\n"
-                (Printer.P.typToString cD psi (typ, ts))
-                (Printer.P.typToString cD psi (tA, s));
-               *)
-              (* We added k-1 entries to psi at this point, so we need
-                 to weaken the goal type by k-1 before trying to
-                 unify. *)
               U.unifyTyp cD psi (typ, ts) (tA, s);
               dprintf
                 begin fun p ->
-                p.fmt "[logic] [matchSigma] @[<v>Found solution with projection %d of sigma-type:@,@[%a@]@]"
+                p.fmt "[logic] [matchSigma] \
+                       @[<v>Found solution with projection %d of sigma-type:\
+                       @,@[%a@]@]"
                   k
                   (P.fmt_ppr_lf_typ_rec cD psi P.l0) tRec
                 end;

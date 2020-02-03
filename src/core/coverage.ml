@@ -1267,29 +1267,19 @@ let genPVar (cD, cPsi, tP) =
           let pv_list = genPVarCovGoals elems in
           let cPhi = Context.projectCtxIntoDctx decls in
           let cD', s, offset = Ctxsub.ctxToSub_mclosed cD cvar_psi cPhi in
-          (* cO; cD'; psi                   |- [s]trec
-             cO; cD'                        |- (cPsi, mshift offset)
-             cO; cD'; (cPsi, mshift offset) |- (tP, mshift offset)
+          (* cD'; psi                   |- [s]trec
+             cD'                        |- (cPsi, mshift offset)
+             cD'; (cPsi, mshift offset) |- (tP, mshift offset)
            *)
           let trec' = Whnf.normTypRec (trec, s) in
-          let pdecl, tA =
-            match trec' with
-            | LF.SigmaLast (n, tA) ->
-               (LF.Decl
-                  ( NameGenerator.new_parameter_name "p"
-                  , LF.ClTyp (LF.PTyp tA, Whnf.cnormDCtx (cvar_psi, LF.MShift offset))
-                  , LF.Maybe
-                  )
-               , tA
-               )
-            | LF.SigmaElem _ ->
-               (LF.Decl
-                  ( NameGenerator.new_parameter_name "p"
-                  , LF.ClTyp (LF.PTyp (LF.Sigma trec'), Whnf.cnormDCtx (cvar_psi, LF.MShift offset))
-                  , LF.Maybe
-                  )
-               , LF.Sigma trec'
-               )
+          let tA = Whnf.collapse_sigma trec' in
+          let pdecl =
+            let open LF in
+            Decl
+              ( NameGenerator.new_parameter_name "p"
+              , ClTyp (PTyp tA, Whnf.cnormDCtx (cvar_psi, MShift offset))
+              , Maybe
+              )
           in
 
           let cD'_pdecl = LF.Dec (cD', pdecl) in
@@ -1298,7 +1288,7 @@ let genPVar (cD, cPsi, tP) =
           let cg' = (cD'_pdecl, cPsi', tP') in
 
           let id_psi = Substitution.LF.justCtxVar cPsi' in
-          (* cO; cD_ext, pdec  ; cPsi' |- id_psi : cvar_psi  *)
+          (* cD_ext, pdec  ; cPsi' |- id_psi : cvar_psi  *)
 
           let h = LF.PVar (1, id_psi) in
           let tA' = Whnf.normTyp (Whnf.cnormTyp (tA, LF.MShift 1), id_psi) in

@@ -17,7 +17,7 @@ module RR = Store.Cid.NamedRenderer
 let strengthen : bool ref = ref true
 
 
-let (dprintf, dprint, _dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
+let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
 type typeVariant = VariantAtom | VariantPi | VariantSigma
@@ -1512,10 +1512,10 @@ and elTerm' recT cD cPsi r sP = match r with
                     (P.fmt_ppr_lf_dctx cD P.l0) cPsi
                   end;
                 let schema =  getSchema cD (Context.ctxVar (Whnf.cnormDCtx  (cPsi, Whnf.m_id))) loc in
-                let _ = dprint (fun () -> "[ctxVar] done") in
+                dprnt "[ctxVar] done";
                 let h = Int.LF.FPVar (p, Substitution.LF.id) in
                 let (typRec, s_inst,  kIndex) =
-                  begin match synSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
+                  match synSchemaElem loc recT cD cPhi (tP, Substitution.LF.id) (h, proj) schema with
                   | None , _ ->
                      let s =
                        let open Format in
@@ -1526,26 +1526,13 @@ and elTerm' recT cD cPsi r sP = match r with
                      in
                      raise (Error.Violation s)
                   | Some (typrec, subst) , index -> (typrec, subst, index)
-                  end in
-                let tB  =
-                  begin match typRec with
-                  | Int.LF.SigmaLast(n, tA) ->
-                     dprintf
-                       begin fun p ->
-                       p.fmt "[elTerm'] synType for PVar: [SigmaLast] %a"
-                         (P.fmt_ppr_lf_typ cD cPhi P.l0) (Whnf.normTyp (tA, s_inst))
-                       end;
-                     tA
-                  | typRec' ->
-                     dprintf
-                       begin fun p ->
-                       p.fmt "[elTerm'] synType for PVar: [SigmaElem] %a"
-                         (P.fmt_ppr_lf_typ_rec cD cPhi P.l0) (Whnf.normTypRec (typRec', s_inst))
-                       end;
-                       Int.LF.Sigma typRec'
-                  end in
-                  FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Int.LF.Maybe));
-                  Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
+                in
+                let tB = Whnf.collapse_sigma typRec in
+                FCVar.add p
+                  ( cD
+                  , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Maybe))
+                  );
+                Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
 
             | (false, Apx.LF.Nil) -> failwith "Not implemented"
                 (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in *)

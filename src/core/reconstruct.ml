@@ -1945,7 +1945,7 @@ let rec elGCtx (delta : Int.LF.mctx) gamma =
 let variant_of_case_label = function
   | A.NamedCase _ -> `named
   | A.ContextCase _ -> `context
-  | A.PVarCase (_, _) -> `pvar
+  | A.PVarCase (_, _, _) -> `pvar
 
 (* elaborate hypotheses *)
 let elHypotheses { A.cD; cG } =
@@ -2090,16 +2090,40 @@ and elSplit loc cD cG label i tau_i bs ttau =
   in
   let make_meta_branch (cU, cPsi) { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
-    | A.PVarCase (loc, k) ->
-       assert false
+    | A.PVarCase (loc, n, k) -> assert false
+       (*
+       let cvar_psi, elems =
+         match Context.ctxVar cPsi with
+         | None -> assert false (* TODO raise appropriate error *)
+         | Some psi ->
+            let Int.LF.Schema elems =
+              Store.Cid.Schema.get_schema
+                (Context.lookupCtxVarSchema cD psi)
+            in
+            (Int.LF.CtxVar psi, elems)
+       in
+       let typ_rec =
+         match Misc.List.nth_opt elems (n - 1) with
+         | None -> assert false (* TODO raise appropriate error *)
+         | Some typ_rec -> typ_rec
+       in
+       let pdecl =
+         let open Int.LF in
+         Decl
+           ( "p"
+           , ClTyp (PTyp tA
+
+       let mC =
+         ( Loc.ghost
+         , let open Int.LF in
+           Root
+             ( Loc.ghost
+             , begin match k with
+               | None -> Int.LF.PVar
+           Int.LF.PVar
+        *)
 
     | A.NamedCase (loc, name) ->
-       (* TODO figure out how to reconstruct parameter variable branches
-          In the case of a parameter variable, index_of_name will
-          fail, due to the hash.
-          I would like something more robust that just checking if the name starts with a hash;
-          perhaps one needs a "PVarCase" label.
-        *)
        let tH, tA =
          try
            let open Store.Cid.Term in

@@ -237,15 +237,15 @@ let fmt_ppr_call cD cG ppf (f, args, tau) =
     (fmt_ppr_args cD cG) args
     (P.fmt_ppr_cmp_typ cD P.l0) tau
 
+let fmt_ppr_ih cD cG ppf = function
+  | Comp.WfRec (f, args, tau) ->
+     Format.fprintf ppf "IH: @[<hv>%a@]" (fmt_ppr_call cD cG) (f, args, tau)
+  | _ -> failwith "cIH should contain only WfRec entries"
+
 let fmt_ppr_ihctx cD cG ppf cIH =
   let open Format in
-  let print_entry ppf = function
-    | Comp.WfRec (f, args, tau) ->
-       fprintf ppf "IH: @[<hv>%a@]" (fmt_ppr_call cD cG) (f, args, tau)
-    | _ -> failwith "cIH should contain only WfRec entries"
-  in
   fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut print_entry)
+    (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_ih cD cG))
     (Context.to_list cIH)
 
 (** Converts the list of totality declarations into an induction ordering list *)
@@ -898,7 +898,12 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
      let cIH' = filter cD cG cIH (loc, e2) in
      LF.Dec (cIH', Comp.WfRec (f, args, tau))
 
-  | _x, LF.Dec (cIH, _wf) ->
+  | _x, LF.Dec (cIH, wf) ->
+     dprintf begin fun p ->
+       p.fmt "[total] [filter] @[<v>dropped IH\
+              @,@[%a@]@]"
+         (fmt_ppr_ih cD cG) wf
+       end;
      filter cD cG cIH (loc, e2)
 (*      raise (Error (loc, RecCallIncompatible (cD, x, wf))) *)
 (* other cases are invalid /not valid recursive calls *)

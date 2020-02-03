@@ -39,52 +39,59 @@ let ctxShift cPsi = EmptySub (* match cPsi with *)
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 
-   if x1:A1, ... xn:An = cPsi  and
-       . ; cD |- cPsi dctx
+   if x1:A1, ... xn:An = cPsi
+   and cD |- cPsi dctx
 
 
       cD, cD_ext ; psi  |-  s : cPsi
    then
 
    s.t. cD, cD_ext; psi |- u1[id]/x1 ... un[id]/xn : cPsi
-    and where cD_ext = u1:A1[psi], ... un:An[psi]
+        and where cD_ext = u1:A1[psi], ... un:An[psi]
 
-if  ctxToSub_mclosed  cD psi cPsi = (cD',s) then
+   if  ctxToSub_mclosed  cD psi cPsi = (cD',s) then
    cD' ; psi |- s : cPsi
 
+   Concretely, this will extend the input cD with one MVar for each
+   entry in cPsi and construct a substitution s that sends the context
+   cPsi to the context consisting of just a context variable psi.
 *)
-let ctxToSub_mclosed cD psi cPsi =
-  let rec toSub cPsi =  match cPsi with
-    | Null ->
-      (* Substitution.LF.id  --changed 2010-07-26*)
-      (cD, ctxShift psi, 0)
+let rec ctxToSub_mclosed cD psi = function
+  | Null ->
+     (* Substitution.LF.id  --changed 2010-07-26*)
+     (cD, ctxShift psi, 0)
 
-    | DDec (cPsi', TypDecl (_, (Atom _  as tA))) ->
-       dprintf (fun p -> p.fmt "  @[<v>");
-      let (cD', s, k) = toSub cPsi' in  (* cD' ; psi |- s : cPsi' *)
-       dprintf (fun p -> p.fmt "@]");
-        dprint (fun () -> "s = " ^ subToString s);
-        (* For the moment, assume tA atomic. *)
+  | DDec (cPsi', TypDecl (_, (Atom _  as tA))) ->
+     let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in  (* cD' ; psi |- s : cPsi' *)
+     dprint (fun () -> "s = " ^ subToString s);
 
-      let u     = Root(Syntax.Loc.ghost, MVar(Offset 1,  Substitution.LF.id), Nil) in
+     let u = Root (Syntax.Loc.ghost, MVar(Offset 1,  Substitution.LF.id), Nil) in
 
-        (* cD' ; psi |- s : cPsi' *)
-        (* cD' ; psi |- u[id] : [s]tA *)
+     (* cD' ; psi |- s : cPsi' *)
+     (* cD' ; psi |- u[id] : [s]tA *)
 
-      let tA'   = TClo(tA, s) in
-      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
-      let s' = Whnf.cnormSub (s, MShift 1) in
-      let result = Dot(Obj u, s') in
+     let tA'   = TClo(tA, s) in
+     (* cD', u: _   ; psi |- s : cPsi', x:tA *)
+     let s' = Whnf.cnormSub (s, MShift 1) in
+     let result = Dot(Obj u, s') in
 
-      let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
-        (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
-        (Dec (cD', Decl(u_name , ClTyp (MTyp tA', Whnf.cnormDCtx (psi, MShift k)), Maybe)), result, k+1)
-  in
-    toSub cPsi
+     let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
+     (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
+     ( Dec
+        ( cD'
+        , Decl
+            ( u_name
+            , ClTyp (MTyp tA', Whnf.cnormDCtx (psi, MShift k))
+            , Maybe
+            )
+        )
+     , result
+     , k+1
+     )
 
-
-
-
+  | DDec (_, TypDecl (_, _)) ->
+     (* For the moment, assume tA atomic. *)
+     Error.not_implemented' "[ctxToSub_mclosed] non-atomic cPsi entry not supported"
 
 (* ctxToSub' cD cPhi cPsi = s
 

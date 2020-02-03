@@ -14,7 +14,7 @@ module Comp = Int.Comp
 module P = Pretty.Int.DefaultPrinter
 
 
-let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [3])
+let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [3])
 open Debug.Fmt
 
 
@@ -838,7 +838,7 @@ and abstractHead cQ (offset:int) tH = match tH with
       I.BVar ((index_of cQ (FV n)) + offset)
 
   | I.AnnH (_tH, _tA) ->
-      raise Error.NotImplemented
+     Error.not_implemented' "[abstractHead] AnnH case"
 
   (* other cases impossible for object level *)
 
@@ -854,8 +854,7 @@ and subToSpine cQ offset (s,cPsi) tS = match (s, cPsi) with
       subToSpine cQ offset  (s,cPsi') (I.App (tN, tS))
 
   | (I.Dot (I.Head (I.MVar (_u, _r)), _s) , I.DDec(_cPsi', _dec)) ->
-      (Printf.printf "SubToSpine encountered MVar as head\n";
-      raise Error.NotImplemented)
+      Error.not_implemented' "[subToSpine] found MVar as head"
       (* subToSpine cQ offset s (I.App (I.Root (I.BVar k, I.Nil), tS)) *)
 
   | (I.Dot (I.Obj tM, s), I.DDec(cPsi', _dec)) ->
@@ -1018,12 +1017,10 @@ and abstractMVarHead cQ loff tH = match tH with
       I.Const c
 
   | I.AnnH (_tH, _tA) ->
-      raise Error.NotImplemented
+     Error.not_implemented' "[abstractMVarHead] AnnH case"
 
   | I.Proj (head, k) ->
-      let head = abstractMVarHead cQ loff head in   (* ??? -jd *)
-        I.Proj (head, k)
-
+     I.Proj (abstractMVarHead cQ loff head, k)
 
   (* other cases impossible for object level *)
 and abstractMVarSpine cQ offset sS = match sS with
@@ -1249,12 +1246,11 @@ let rec collectCompTyp p cQ tau = match tau with
       (cQ'', Comp.TypPiBox (l, cdecl', tau'))
 
   | Comp.TypClo _ ->
-     dprint (fun () -> "collectCTyp -- TypClo missing");
-     raise Error.NotImplemented
+     Error.violation "[collectCTyp] TypClo case impossible";
 
   | Comp.TypInd tau ->
-      let (cQ', tau') = collectCompTyp p cQ tau in
-	(cQ', Comp.TypInd tau')
+     let (cQ', tau') = collectCompTyp p cQ tau in
+     (cQ', Comp.TypInd tau')
 
 
 let rec collectGctx cQ cG = match cG with

@@ -1,1 +1,2 @@
+./t/code/error/schema-dep.bel, line 10, column 11:
 Type block (x:tm, v:oft x A) doesn't check against schema .

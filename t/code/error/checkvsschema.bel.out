@@ -1,1 +1,2 @@
+./t/code/error/checkvsschema.bel, line 30, column 7:
 Type tp doesn't check against schema .

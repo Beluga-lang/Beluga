@@ -1,1 +1,2 @@
+./t/code/error/modules/invalid_abbrev.bel, line 13, column 0:
 Invalid module in pragma '--abbrev UnboundModule U'

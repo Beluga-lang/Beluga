@@ -1,1 +1,2 @@
+./t/code/error/recon.bel, line 174, column 4:
 Unbound data-level variable (ordinary or meta-variable) or constructor: SN.

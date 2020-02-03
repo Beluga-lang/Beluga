@@ -1,2 +1,3 @@
+./t/code/error/renvars/reconren.bel, line 12, column 55:
 A substitution was found when expecting a renaming.
 Offending substitution: $W[..] 

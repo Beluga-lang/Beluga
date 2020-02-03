@@ -1,3 +1,4 @@
+./t/code/error/extractxabs.bel, line 22, column 6:
 Type-checking error.
 Found
   meta abstraction (mlam)

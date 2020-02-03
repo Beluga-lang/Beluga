@@ -1,1 +1,2 @@
+./t/code/error/modules/invalid_call.bel, line 32, column 16:
 Unbound computation-level identifier: Nats::suc.

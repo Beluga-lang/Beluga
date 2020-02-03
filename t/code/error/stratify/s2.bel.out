@@ -1,1 +1,2 @@
+./t/code/error/stratify/s2.bel, line 5, column 0:
 Stratification or positivity checking of datatype Foo fails.

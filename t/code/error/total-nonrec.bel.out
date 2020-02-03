@@ -1,2 +1,3 @@
+./t/code/error/total-nonrec.bel, line 5, column 8:
 Type-checking error.
 Recursive call not structurally smaller.

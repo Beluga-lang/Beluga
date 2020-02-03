@@ -1,3 +1,4 @@
+./t/code/error/coverage/match-param.bel, line 16, column 8:
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:

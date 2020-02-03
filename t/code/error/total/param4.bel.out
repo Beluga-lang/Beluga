@@ -1,2 +1,3 @@
+./t/code/error/total/param4.bel, line 20, column 26:
 Type-checking error.
 Recursive call not structurally smaller.

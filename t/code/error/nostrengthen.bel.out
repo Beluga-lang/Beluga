@@ -1,3 +1,4 @@
+./t/code/error/nostrengthen.bel, line 40, column 63:
 Ill-typed expression.
     Expected type:
       pf ?Z[^0][]

@@ -1,1 +1,2 @@
+./t/code/error/freevarconstraints.bel, line 16, column 17:
 Cannot reconstruct a type for free variable E (leftover constraints).

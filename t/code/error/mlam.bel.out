@@ -1,3 +1,4 @@
+./t/code/error/mlam.bel, line 32, column 4:
 Type-checking error.
 Found
   function abstraction

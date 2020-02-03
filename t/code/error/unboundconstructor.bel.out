@@ -1,3 +1,4 @@
+./t/code/error/unboundconstructor.bel, line 13, column 21:
 Higher-order meta-variables not (currently) supported
   - The variable plus is free; is this intentional?
   - Maybe you want to eta-expand plus?

@@ -1,3 +1,4 @@
+./t/code/error/coverage/small-step.bel, line 188, column 2:
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:

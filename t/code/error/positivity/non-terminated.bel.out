@@ -1,1 +1,2 @@
+./t/code/error/positivity/non-terminated.bel, line 7, column 3:
 Positivity checking of constructor Con fails.

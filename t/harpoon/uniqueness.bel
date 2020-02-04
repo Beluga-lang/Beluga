@@ -20,3 +20,111 @@ LF eq: tp -> tp -> type =
 ;
 
 schema tctx = some [t:tp] block (x:term, _t:hastype x t);
+
+proof unique : (g : tctx) [g ⊢ hastype M T1[]] → [g ⊢ hastype M T2[]] →
+               [⊢ eq T1 T2] =
+/ total 1 /
+intros
+{ g : tctx, M : (g |- term), T1 : ( |- tp), T2 : ( |- tp)
+| z5 : [g |- hastype M T1[]], y6 : [g |- hastype M T2[]]
+; split z5 as
+  case t_app:
+  { g : tctx,
+    X : (g |- term),
+    X3 : (g |- term),
+    T1 : ( |- tp),
+    T2 : ( |- tp),
+    X1 : ( |- tp),
+    X4 : (g |- hastype X (arr X1[] T1[])),
+    X5 : (g |- hastype X3 X1[])
+  | z5 : [g |- hastype (app X X3) T1[]], y6 : [g |- hastype (app X X3) T2[]]
+  ; split y6 as
+    case t_app:
+    { g : tctx,
+      X : (g |- term),
+      X3 : (g |- term),
+      T1 : ( |- tp),
+      T2 : ( |- tp),
+      X1 : ( |- tp),
+      X4 : (g |- hastype X (arr X1[] T1[])),
+      X5 : (g |- hastype X3 X1[]),
+      X7 : ( |- tp),
+      X10 : (g |- hastype X (arr X7[] T2[])),
+      X11 : (g |- hastype X3 X7[])
+    | z5 : [g |- hastype (app X X3) T1[]],
+      y6 : [g |- hastype (app X X3) T2[]]
+    ; by unique [g |- X4] [g |- X10] as ih1 ;
+      by unique [g |- X5] [g |- X11] as ih2 ;
+      split ih1 as
+      case refl:
+      { g : tctx,
+        X : (g |- term),
+        X3 : (g |- term),
+        T2 : ( |- tp),
+        X7 : ( |- tp),
+        X4 : (g |- hastype X (arr X7[] T2[])),
+        X5 : (g |- hastype X3 X7[]),
+        X10 : (g |- hastype X (arr X7[] T2[])),
+        X11 : (g |- hastype X3 X7[])
+      | z5 : [g |- hastype (app X X3) T2[]],
+        y6 : [g |- hastype (app X X3) T2[]],
+        ih1 : [ |- eq (arr X7 T2) (arr X7 T2)],
+        ih2 : [ |- eq X7 X7]
+      ; solve [ |- refl ]
+      }
+    }
+  }
+  case t_lam:
+  { g : tctx,
+    X : ( |- tp),
+    X1 : (g, z3 : term |- term),
+    X2 : ( |- tp),
+    T2 : ( |- tp),
+    X3 : (g, x : term, x3 : hastype x X[] |- hastype (X1[.., x]) X2[])
+  | z5 : [g |- hastype (lam X[] (\x1. X1)) (arr X[] X2[])],
+    y6 : [g |- hastype (lam X[] (\x1. X1)) T2[]]
+  ; split y6 as
+    case t_lam:
+    { g : tctx,
+      X : ( |- tp),
+      X1 : (g, z3 : term |- term),
+      X2 : ( |- tp),
+      X6 : ( |- tp),
+      X3 : (g, x : term, x3 : hastype x X[] |- hastype (X1[.., x]) X2[]),
+      X7 : (g, x : term, x3 : hastype x X[] |- hastype (X1[.., x]) X6[])
+    | z5 : [g |- hastype (lam X[] (\x1. X1)) (arr X[] X2[])],
+      y6 : [g |- hastype (lam X[] (\x1. X1)) (arr X[] X6[])]
+    ; by unique [g, x1 : block x:term, u:hastype x X[] |- X3[.., x1.1, x1.2]] [g, x1 |- X7[.., x1.1, x1.2]]
+        as ih ;
+      split ih as
+      case refl:
+      { g : tctx,
+        X : ( |- tp),
+        X1 : (g, z3 : term |- term),
+        X6 : ( |- tp),
+        X3 : (g, x : term, x3 : hastype x X[] |- hastype (X1[.., x]) X6[]),
+        X7 : (g, x : term, x3 : hastype x X[] |- hastype (X1[.., x]) X6[])
+      | z5 : [g |- hastype (lam X[] (\x1. X1)) (arr X[] X6[])],
+        y6 : [g |- hastype (lam X[] (\x1. X1)) (arr X[] X6[])],
+        ih : [ |- eq X6 X6]
+      ; solve [ |- refl ]
+      }
+    }
+  }
+  case #.2:
+  { g : tctx,
+    T1 : ( |- tp),
+    #p1 : #(g |- block (x:term, _t:hastype x T1[])),
+    T2 : ( |- tp)
+  | z5 : [g |- hastype #p1.1 T1[]], y6 : [g |- hastype #p1.1 T2[]]
+  ; split y6 as
+    case #.2:
+    { g : tctx,
+      T2 : ( |- tp),
+      #p1 : #(g |- block (x:term, _t:hastype x T2[]))
+    | z5 : [g |- hastype #p1.1 T2[]], y6 : [g |- hastype #p1.1 T2[]]
+    ; solve [ |- refl ]
+    }
+  }
+}
+;

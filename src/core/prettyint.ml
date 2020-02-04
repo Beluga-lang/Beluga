@@ -257,10 +257,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
       | LF.MVar(c, LF.Undefs)
         | LF.MVar(c, LF.EmptySub) ->
+         let f =
+           match Context.ctxVar cPsi with
+           | None -> fun _ () -> ()
+           | Some _ -> fun ppf () -> fprintf ppf "[]"
+         in
          begin match !PC.substitutionStyle with
          | PC.Natural ->
-            fprintf ppf "%a%s"
+            fprintf ppf "%a%a%s"
               (fmt_ppr_lf_cvar cD) c
+              f ()
               proj
          | PC.DeBruijn ->
             fprintf ppf "%a%s[e]"

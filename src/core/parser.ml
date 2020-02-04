@@ -985,8 +985,28 @@ let parens , braces , bracks , angles =
   (fun p -> f LBRACK RBRACK p),
   (fun p -> f LANGLE RANGLE p)
 
+(** bracks_or_opt_parens' prefix p
+    parses p surrounded optionally by square brackets or parentheses,
+    with `prefix` before the square brackets or parentheses, but
+    forbidden in the case that they are omitted.
+ *)
+let bracks_or_opt_parens' prefix p =
+  alt
+    (prefix
+     &> alt (bracks p) (parens p))
+    p
+
+(** See bracks_or_opt_parens'. This is a prefixless instance. *)
 let bracks_or_opt_parens p =
-  choice [ bracks p; parens p; p ]
+  bracks_or_opt_parens' (pure ()) p
+
+(** See bracks_or_opt_parens'.
+    This instance uses an optional hash sign as the prefix and is used
+    for parsing the contextual type of a parameter variable, which has
+    a hash before, optionally.
+ *)
+let hash_bracks_or_opt_parens p =
+  bracks_or_opt_parens' (maybe T.(token HASH)) p
 
 (** Helper for parsing something *optionally* between parens. *)
 let opt_parens p = alt (parens p) p
@@ -1729,7 +1749,10 @@ let clf_ctyp_decl_bare =
   { run =
       fun s ->
       let hash_variable_decl p =
-        contextual_variable_decl bracks_or_opt_parens hash_name p
+        contextual_variable_decl
+          hash_bracks_or_opt_parens
+          hash_name
+          p
       in
       let dollar_variable_decl p =
         contextual_variable_decl bracks_or_opt_parens dollar_name p

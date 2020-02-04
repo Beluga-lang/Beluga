@@ -4,7 +4,9 @@
  *)
 
 open Support
-open Syntax.Int
+
+module Comp = Syntax.Int.Comp
+module LF = Syntax.Int.LF
 
 module Loc = Syntax.Loc
 module Types = Store.Cid.Typ
@@ -14,7 +16,7 @@ module U = Unify.EmptyTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.NamedRenderer
 
-let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [29])
+let dprintf, dprint, dprnt = Debug.makeFunctions' (Debug.toFlags [29])
 open Debug.Fmt
 
 type error =
@@ -1211,7 +1213,11 @@ let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
   genAllObj cg tH_tA_list
 
 
-let genHeads (tH, tA) =
+(** Given a head and its type,
+    expands the head into a list of heads if the head's type is a
+    sigma-type.
+ *)
+let expand_head_sigma (tH, tA) =
   match Whnf.whnfTyp (tA, S.LF.id) with
   | (LF.Sigma tArec, s) ->
      let k = LF.blockLength tArec in
@@ -1230,12 +1236,59 @@ let genBVar ((_, cPsi, _) as cg) =
     then []
     else
       let LF.TypDecl (_, tA) = Context.ctxDec cPsi i in (* x_i : tA in cPsi *)
-      let tH_tA_list = genHeads (LF.BVar i, tA) in
+      let tH_tA_list = expand_head_sigma (LF.BVar i, tA) in
+      (* XXX not sure why we call expand_head_sigma here;
+         IIRC projections are never allowed on bound variables, but
+         rather only on parameter variables. -je
+       *)
       let cov_goals_i = genAllObj cg tH_tA_list in
       cov_goals_i @ genBVarCovGoals (i+1)
   in
   genBVarCovGoals 1
 
+(* See documentation in coverage.mli *)
+let genPVarGoal (LF.SchElem (decls, trec)) (cD : LF.mctx) cPsi psi
+    : LF.mctx * LF.dctx * LF.head * LF.typ * LF.msub =
+  (* convert decls to a proper dctx.
+     . ; cPhi |- trec <= type_rec
+   *)
+  let cPhi = Context.projectCtxIntoDctx decls in
+
+  (* Extend cD with the existential variables from cPhi
+     offset is the number of MVars that were added.
+   *)
+  let cD', s, offset = Ctxsub.ctxToSub_mclosed cD psi cPhi in
+  (* cD'; cPsi                  |- [s]trec
+     cD'                        |- (cPsi, mshift offset)
+     cD'; (cPsi, mshift offset) |- (tP, mshift offset)
+   *)
+  let trec' =
+    (* trec, on its own, has free variables defined in `decls`.
+       We need to apply the calculated substitution `s`
+       so that the resulting trec' will make sense in cD'.
+     *)
+    Whnf.normTypRec (trec, s)
+  in
+  let tA = Whnf.collapse_sigma trec' in
+  let pdecl =
+    let open LF in
+    Decl
+      ( NameGenerator.new_parameter_name "p"
+      , ClTyp (PTyp tA, Whnf.cnormDCtx (LF.CtxVar psi, MShift offset))
+      , Maybe
+      )
+  in
+
+  let cD'_pdecl = LF.Dec (cD', pdecl) in
+  let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift (offset + 1)) in
+  let t = LF.MShift (offset + 1) in
+
+  let id_psi = Substitution.LF.justCtxVar cPsi' in
+  (* cD_ext, pdec  ; cPsi' |- id_psi : cvar_psi  *)
+
+  let h = LF.PVar (1, id_psi) in
+  let tA' = Whnf.normTyp (Whnf.cnormTyp (tA, LF.MShift 1), id_psi) in
+  (cD'_pdecl, cPsi', h, tA', t)
 
 let genPVar (cD, cPsi, tP) =
   dprintf
@@ -1247,65 +1300,28 @@ let genPVar (cD, cPsi, tP) =
     end;
   match Context.ctxVar cPsi with
   | None ->
-     dprint
-       begin fun _ ->
-       "[genPVar] No PVar cases because there is no ctx-var\n"
-       end;
+     dprnt "[genPVar] No PVar cases because there is no ctx-var";
      []
   | Some psi ->
-     dprint
-       begin fun _ ->
-       "[genPVar] found ctxvar, so we are generating pvar cases"
-       end;
-     let cvar_psi = LF.CtxVar psi in
+     dprnt "[genPVar] found ctxvar, so we are generating pvar cases";
      let selems = getSchemaElems cD cPsi in
 
      let rec genPVarCovGoals =
        function
        | [] -> []
-       | LF.SchElem (decls, trec) :: elems ->
+       | e :: elems ->
           let pv_list = genPVarCovGoals elems in
-          let cPhi = Context.projectCtxIntoDctx decls in
-          let cD', s, offset = Ctxsub.ctxToSub_mclosed cD cvar_psi cPhi in
-          (* cD'; psi                   |- [s]trec
-             cD'                        |- (cPsi, mshift offset)
-             cD'; (cPsi, mshift offset) |- (tP, mshift offset)
-           *)
-          let trec' = Whnf.normTypRec (trec, s) in
-          let tA = Whnf.collapse_sigma trec' in
-          let pdecl =
-            let open LF in
-            Decl
-              ( NameGenerator.new_parameter_name "p"
-              , ClTyp (PTyp tA, Whnf.cnormDCtx (cvar_psi, MShift offset))
-              , Maybe
-              )
-          in
 
-          let cD'_pdecl = LF.Dec (cD', pdecl) in
-          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift (offset + 1)) in
-          let tP' = Whnf.cnormTyp (tP, LF.MShift (offset + 1)) in
-          let cg' = (cD'_pdecl, cPsi', tP') in
+          let (cD', cPsi', h, tA', t) = genPVarGoal e cD cPsi psi in
+          let tP' = Whnf.cnormTyp (tP, t) in
+          let cg' = (cD', cPsi', tP') in
 
-          let id_psi = Substitution.LF.justCtxVar cPsi' in
-          (* cD_ext, pdec  ; cPsi' |- id_psi : cvar_psi  *)
-
-          let h = LF.PVar (1, id_psi) in
-          let tA' = Whnf.normTyp (Whnf.cnormTyp (tA, LF.MShift 1), id_psi) in
           (* cO; cD', pdec; cPsi'  |- p[id_psi] : [id_psi](trec[|MShift 1|])
            or to put it differently
            cO; cD', pdec; cPsi'  |- head : trec'
            *)
-          let tH_tA_list = genHeads (h, tA') in
-          dprint
-            begin fun _ ->
-            "#Generated Heads = " ^ string_of_int (List.length tH_tA_list)
-            end;
+          let tH_tA_list = expand_head_sigma (h, tA') in
           let cg_list = genAllObj cg' (tH_tA_list) in
-          dprint
-            begin fun _ ->
-            "#Generated Obj = " ^ string_of_int (List.length cg_list)
-            end;
           (* each cg in cg_list:    (cO_k, cD_k), ms_k
            where cD_k |- ms_k : cD'_pdcl
            we need however:    cD_k |- ms'_k : cD
@@ -1314,8 +1330,8 @@ let genPVar (cD, cPsi, tP) =
            *)
           let cg_list' =
             List.map
-              (fun (cD', cg, ms) ->
-                (cD', cg, Whnf.mcomp (LF.MShift (offset + 1)) ms)
+              (fun (cD', cg, t') ->
+                (cD', cg, Whnf.mcomp t t')
               )
               cg_list
           in

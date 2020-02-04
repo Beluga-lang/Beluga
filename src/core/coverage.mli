@@ -1,4 +1,5 @@
-open Syntax.Int
+module Comp = Syntax.Int.Comp
+module LF = Syntax.Int.LF
 
 type error =
     NoCover of string
@@ -49,6 +50,26 @@ val iter : (coverage_result -> unit) -> unit
 
 (* val covers : problem -> coverage_result *)
 val process : problem -> int option -> unit   (* check coverage immediately *)
+
+(** genPVarGoal sch_elem cD cPsi psi = (cD', cPsi', h, tA', t)
+    calculates a preliminary branch context for a parameter variable
+    referring to the given schema element, without taking projection
+    into account.
+
+    cD |- cPsi ctx
+    cD |- psi ctxvar
+    cD' |- t : cD
+    cD' |- cPsi' ctx
+    cD'; cPsi' |- h <= tA'
+    and h is an LF head, namely the PVar for this case.
+
+    The resulting meta-context cD' will contain an entry for the PVar
+    itself as well as for any existential variables bound by the
+    schema element. The returned substitution t is an appropriate
+    weakening.
+ *)
+val genPVarGoal : LF.sch_elem -> LF.mctx -> LF.dctx -> LF.ctx_var ->
+                  LF.mctx * LF.dctx * LF.head * LF.typ * LF.msub
 
 (** genObj (cD, cPsi, tP) (tH, tA) = (cD', CovGoal (cPsi', tR, tP'), ms)
 

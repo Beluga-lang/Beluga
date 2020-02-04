@@ -92,6 +92,11 @@ let next_subgoal (t : t) : Comp.proof_state option =
   | gs when DynArray.empty gs -> None
   | gs -> Some (DynArray.get gs (current_subgoal_index gs))
 
+let dump_proof ppf t =
+  let s = t.initial_state in
+  Format.fprintf ppf "%a"
+    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof s)
+
 let show_proof (t : t) =
   (* This is a trick to print out the proof resulting from
      the initial state correctly. The initial state's solution
@@ -102,9 +107,8 @@ let show_proof (t : t) =
      printing a `?` if the initial state hasn't been solved
      yet.
    *)
-  let s = t.initial_state in
   printf t "@[<v>Proof so far:@,%a@,@]"
-    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof s)
+    dump_proof t
 
 let show_subgoals (t : t) =
   let f ppf i g =

@@ -200,6 +200,7 @@ type content =
   | `hole of string option
   | `integer of int option
   | `dot_integer
+  | `string_literal
   | `html_comment
   | `eoi
   ]
@@ -217,6 +218,7 @@ let print_content ppf : content -> unit =
      fprintf ppf "token%a"
        (format_option_with (Token.print `TOKEN)) t
   | `dot_integer -> fprintf ppf "dot integer"
+  | `string_literal -> fprintf ppf "string literal"
   | `identifier i ->
      format_with ppf "identifier" string_option i
   | `qualified_identifier i ->
@@ -957,6 +959,12 @@ let fqname =
      Id.mk_name ~modules: ms (Id.SomeString i)
 
 let pragma s = token (T.PRAGMA s)
+
+let string_literal =
+  satisfy' `string_literal
+    (function
+     | T.STRING s -> Some s
+     | _ -> None)
 
 (** Runs the parser `p` between two parsers whose results are
     ignored. *)
@@ -3069,10 +3077,16 @@ let interactive_harpoon_command =
     )
   in
   let theorem_command =
+    let dump_proof =
+      keyword "dump-proof"
+      &> string_literal
+      $> fun s -> `dump_proof s
+    in
     keyword "theorem" &>
       choice
         ( basic_command
           :: select_command
+          :: dump_proof
           :: List.map (fun (k, k') -> keyword k &> pure k')
                [ ("show-ihs", `show_ihs)
                ; ("show-proof", `show_proof)

@@ -424,9 +424,15 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
           let label, c =
             let LF.(MObj (Root (_, h, _))) = tM in
-            ( Fmt.stringify P.(fmt_ppr_lf_head context.cD LF.Null l0) h
-            , (B.Context.hatToDCtx cPsi, h)
-            )
+            let lbl =
+              Fmt.stringify
+                P.(fmt_ppr_lf_head (new_state "").context.cD LF.Null l0)
+                h
+            in
+            match h with
+            | LF.PVar (n, s) -> (lbl, `pvar None)
+            | LF.(Proj (PVar (n, s), k)) -> (lbl, `pvar (Some k))
+            | _ -> (lbl, `constructor (B.Context.hatToDCtx cPsi, h))
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';

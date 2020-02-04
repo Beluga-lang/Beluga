@@ -544,6 +544,11 @@ module Comp = struct
 
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
+  type meta_branch_label =
+    [ `constructor of LF.dctx * LF.head
+    | `pvar of int option
+    ]
+
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
   type proof =
     | Incomplete (* hole *)
@@ -598,7 +603,7 @@ module Comp = struct
   and suffices_arg = Loc.t * typ * proof
 
   and context_branch = context_case split_branch
-  and meta_branch = (LF.dctx * LF.head) split_branch
+  and meta_branch = meta_branch_label split_branch
   and comp_branch = cid_comp_const split_branch
 
   (** A general branch of a case analysis. *)
@@ -677,7 +682,7 @@ module Comp = struct
   let impossible_split (i : exp_syn) : proof =
     Directive (ImpossibleSplit i)
 
-  let meta_branch (c : LF.dctx * LF.head) pat (t : LF.msub) (h : hypotheses) (p : proof)
+  let meta_branch (c : meta_branch_label) pat (t : LF.msub) (h : hypotheses) (p : proof)
       : meta_branch =
     SplitBranch (c, pat, t, (Hypothetical (h, p)))
 

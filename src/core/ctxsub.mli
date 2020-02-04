@@ -17,7 +17,7 @@ val ctxShift : dctx -> sub
    s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
 *)
 val ctxToSub' : mctx -> dctx -> dctx -> sub
-val ctxToSub_mclosed : mctx  -> dctx -> dctx -> mctx * sub * int
+val ctxToSub_mclosed : mctx  -> ctx_var -> dctx -> mctx * sub * int
 
 (** Constructs a meta-substitution consisting of MMVars, with types
     coming from the given meta-context.

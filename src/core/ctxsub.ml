@@ -81,7 +81,7 @@ let rec ctxToSub_mclosed cD psi = function
         ( cD'
         , Decl
             ( u_name
-            , ClTyp (MTyp tA', Whnf.cnormDCtx (psi, MShift k))
+            , ClTyp (MTyp tA', Whnf.cnormDCtx (CtxVar psi, MShift k))
             , Maybe
             )
         )

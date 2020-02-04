@@ -132,7 +132,7 @@ val clear : unit -> unit
 val list : unit -> (HoleId.t * some_hole) list
 
 (** Adds a Harpoon subgoal to the internal list. *)
-val add_harpoon_subgoal : Comp.open_subgoal -> unit
+val add_harpoon_subgoal : Loc.t * Comp.open_subgoal -> unit
 
 (** Gets the list of Harpoon subgoals. *)
-val get_harpoon_subgoals : unit -> Comp.open_subgoal list
+val get_harpoon_subgoals : unit -> (Loc.t * Comp.open_subgoal) list

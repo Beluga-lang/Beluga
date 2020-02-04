@@ -589,7 +589,7 @@ module Prover = struct
           end
        | `serialize ->
           let open Misc.List in
-          let get_loc h : B.Location.t = failwith "Not Yet Implemented" in
+          let get_loc (loc, _) : B.Location.t = loc in
           let compare_loc h1 h2 =
             B.Location.start_offset (get_loc h1) - B.Location.start_offset (get_loc h2)
           in
@@ -608,7 +608,7 @@ module Prover = struct
                * and it does not have any predefined holes in the loaded files,
                * that theorem is newly defined in this harpoon process.
                *)
-              match List.find_all (fun hole -> Theorem.has_cid_of t' (fst hole)) holes with
+              match List.find_all (fun (_, (cid, _)) -> Theorem.has_cid_of t' cid) holes with
               | [] -> true
               | _ -> false
               end
@@ -620,7 +620,7 @@ module Prover = struct
                begin fun h ->
                (* this variable should be used *)
                let _ =
-                 List.find (fun t' -> Theorem.has_cid_of t' (fst h)) updated_theorems
+                 List.find (fun t' -> Theorem.has_cid_of t' (fst (snd h))) updated_theorems
                in
                (* This is not a real implementation *)
                (* How to update the locations of the holes which are not filled yet? *)

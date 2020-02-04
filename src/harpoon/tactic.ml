@@ -416,7 +416,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          context_branch case_label pat theta context (incomplete_proof s')
+          context_branch case_label pat theta context (incomplete_proof Loc.ghost s')
        | _ -> assert false
      in
      let make_meta_branch (context, theta, new_state, pat) =
@@ -436,7 +436,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          meta_branch c pat theta context (incomplete_proof s')
+          meta_branch c pat theta context (incomplete_proof Loc.ghost s')
        | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
      in
      let make_comp_branch (context, theta, new_state, pat) =
@@ -445,7 +445,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let label = Store.Cid.DefaultRenderer.render_cid_comp_const cid in
           let s' = new_state label in
           Theorem.add_subgoal t s';
-          comp_branch cid pat theta context (incomplete_proof s')
+          comp_branch cid pat theta context (incomplete_proof Loc.ghost s')
        | _ ->
           B.Error.violation "[get_context_branch] pattern not a constant"
      in
@@ -590,7 +590,7 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
         }
       in
       Theorem.add_subgoal t new_state;
-      (Loc.ghost, tau, incomplete_proof new_state)
+      (Loc.ghost, tau, incomplete_proof Loc.ghost new_state)
       end
   in
   suffices i subproofs

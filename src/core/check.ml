@@ -1287,7 +1287,7 @@ module Comp = struct
 
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
-    | Incomplete g ->
+    | Incomplete (loc, g) ->
        (* TODO check that g's contexts and goal match the current
           contexts and goal up to inductivity metadata
         *)
@@ -1304,7 +1304,7 @@ module Comp = struct
                  goal = ttau
                }
              in
-             Holes.add_harpoon_subgoal (cid, g)
+             Holes.add_harpoon_subgoal (loc, (cid, g))
        end
 
     | Command (cmd, p) ->

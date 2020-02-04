@@ -5,6 +5,7 @@ module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id
 module CompS = Store.Cid.Comp
+module Loc = Location
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -78,7 +79,7 @@ let serialize ppf (t : t) =
     Id.print name
     Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) Comp.(Whnf.cnormCTyp s.goal)
     fmt_ppr_order order
-    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof s)
+    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
 
 (** Computes the index of the current subgoal we're working on. *)
 let current_subgoal_index gs = 0
@@ -95,7 +96,7 @@ let next_subgoal (t : t) : Comp.proof_state option =
 let dump_proof ppf t =
   let s = t.initial_state in
   Format.fprintf ppf "%a"
-    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof s)
+    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
 
 let show_proof (t : t) =
   (* This is a trick to print out the proof resulting from
@@ -172,7 +173,7 @@ let solve (s : Comp.proof_state) (proof : Comp.proof) : unit =
  *)
 let solve_by_replacing_subgoal t g' f g =
   replace_subgoal t g';
-  f (Comp.incomplete_proof g') |> solve g
+  f (Comp.incomplete_proof Loc.ghost g') |> solve g
 
 (** Renames a variable from `src` to `dst` at the given level
     (`comp or `meta) in the subgoal `g`.
@@ -278,7 +279,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
       Comp.make_proof_state [ Id.render_name name ]
         ( tau', Whnf.m_id )
     in
-    let p = Comp.incomplete_proof g in
+    let p = Comp.incomplete_proof Loc.ghost g in
     (* add the theorem to the store to get a cid allocated
        Make sure to register with the original, un-annotated type.
        Annotating and then stripping here doesn't work, as stripping

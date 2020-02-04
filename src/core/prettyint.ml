@@ -1345,7 +1345,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_proof cD cG ppf =
     let open Comp in
     function
-    | Incomplete g ->
+    | Incomplete (_, g) ->
        begin
          match ! (g.solution) with
          | None -> fprintf ppf "?"

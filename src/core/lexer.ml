@@ -87,6 +87,11 @@ let block_comment_begin = [%sedlex.regexp? "%{"]
 let block_comment_end = [%sedlex.regexp? "}%"]
 let block_comment_char = [%sedlex.regexp? Compl '%' | Compl '}' ]
 
+let string_delimiter = [%sedlex.regexp? '"']
+
+(* XXX This is stupid and doesn't allow any escape characters. *)
+let string_literal = [%sedlex.regexp? string_delimiter, Star (Compl '"'), string_delimiter]
+
 (** Skips the _body_ of a block comment.
     Calls itself recursively upon encountering a nested block comment.
     Consumes the block_comment_end symbol. *)
@@ -122,6 +127,11 @@ let rec tokenize loc lexbuf =
      tokenize loc lexbuf
   | block_comment_end -> throw !loc MismatchedBlockComment
   | line_comment -> skip (); tokenize loc lexbuf
+
+  (* STRING LITERALS *)
+  | string_literal ->
+     let s = get_lexeme loc lexbuf in
+     T.STRING (String.sub s 1 (String.length s - 2))
 
   (* KEYWORDS *)
   | "and" -> const T.KW_AND

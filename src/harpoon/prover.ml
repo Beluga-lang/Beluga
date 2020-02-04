@@ -401,6 +401,13 @@ module Prover = struct
     loop 0
      *)
 
+  let dump_proof t path =
+    let out = open_out path in
+    let ppf = Format.formatter_of_out_channel out in
+    Theorem.dump_proof ppf t;
+    Format.pp_print_newline ppf ();
+    close_out out
+
   let prompt s =
     (* The lambda character (or any other UTF-8 characters)
        does not work with linenoise.
@@ -509,6 +516,8 @@ module Prover = struct
             (Context.length g.context.cIH);
           Context.to_list g.context.cIH |> List.iteri f;
           State.printf s "@]"
+       | `dump_proof path ->
+          dump_proof t path
        | `show_proof ->
           Theorem.show_proof t
        | `select name ->

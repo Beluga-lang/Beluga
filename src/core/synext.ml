@@ -306,7 +306,7 @@ module Harpoon = struct
 
     | Type of Comp.exp_syn
     | Info of info_kind * Id.name
-    | Theorem of [ basic_command | `select of Id.name | `show_ihs | `show_proof ]
+    | Theorem of [ basic_command | `select of Id.name | `show_ihs | `show_proof | `dump_proof of string ]
     | Session of [ basic_command | `select of Id.name | `create of Id.name | `serialize ]
     | Subgoal of basic_command
 

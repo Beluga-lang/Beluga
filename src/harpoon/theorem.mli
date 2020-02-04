@@ -27,6 +27,7 @@ val theorem_statement : t -> typ
 val serialize : Format.formatter -> t -> unit
 
 val next_subgoal : t -> proof_state option
+val dump_proof : Format.formatter -> t -> unit
 val show_proof : t -> unit
 val show_subgoals : t -> unit
 

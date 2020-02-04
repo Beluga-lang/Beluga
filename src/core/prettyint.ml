@@ -1046,6 +1046,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Id.print name
          (fmt_ppr_cmp_typ LF.Empty l0) tau
 
+  let fmt_ppr_cmp_meta_branch_label cD ppf = function
+    | `constructor (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h
+    | `pvar k ->
+       fprintf ppf "#%a"
+         (Maybe.print (fun ppf -> fprintf ppf ".%d"))
+         k
+
   let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
     | Comp.Syn (_, i) ->
        fmt_ppr_cmp_exp_syn cD cG lvl ppf i
@@ -1432,7 +1439,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | MetaSplit (i, _, bs) ->
        print_split ppf i bs
-         (fun ppf (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h)
+         (fmt_ppr_cmp_meta_branch_label cD)
 
     | CompSplit (i, _, bs) ->
        print_split ppf i bs

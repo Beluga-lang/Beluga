@@ -2216,7 +2216,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
          cD_b |- [t o t']tau <= type
         *)
        in
-       I.SplitBranch ((cPsi, tH), pat, t', hyp')
+       I.SplitBranch (`constructor (cPsi, tH), pat, t', hyp')
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)

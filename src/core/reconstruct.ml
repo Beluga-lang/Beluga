@@ -2040,7 +2040,7 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
   match p with
   | A.Incomplete (loc, str_opt) ->
      let context = I. ({ cD; cG; cIH = Int.LF.Empty }) in
-     I.(Incomplete { context; goal = ttau; solution = ref None; label })
+     I.(Incomplete (loc, { context; goal = ttau; solution = ref None; label }))
   | A.Directive (loc, d) ->
      I.Directive (elDirective cD cG label d ttau)
   | A.Command (loc, cmd, p) ->

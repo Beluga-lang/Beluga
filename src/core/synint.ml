@@ -558,7 +558,7 @@ module Comp = struct
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
   type proof =
     | Incomplete (* hole *)
-      of proof_state
+      of Loc.t * proof_state
     | Command of command * proof
     | Directive of directive (* which can end proofs or split into subgoals *)
 
@@ -658,8 +658,8 @@ module Comp = struct
     }
 
   (** Smart constructor for an unfinished proof ending. *)
-  let incomplete_proof (s : proof_state) : proof =
-    Incomplete s
+  let incomplete_proof (l : Loc.t) (s : proof_state) : proof =
+    Incomplete (l, s)
 
   (** Smart constructor for the intros directive. *)
   let intros (h : hypotheses) (proof : proof) : proof =

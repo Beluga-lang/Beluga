@@ -21,7 +21,7 @@ let rec unroll cD cG term : C.exp_chk =
 (* translate a Harpoon proof into Beluga internal syntax *)
 let rec translate_proof cD cG (p : C.proof) tau : C.exp_chk =
   match p with
-| C.Incomplete p_state -> Error.violation "Proof incomplete."
+| C.Incomplete _ -> Error.violation "Proof incomplete."
 | C.Command (cmd, p') ->
     begin match cmd with
     | C.By (e_syn, name, tau, bty) ->

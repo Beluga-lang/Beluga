@@ -178,6 +178,10 @@ module LF = struct
 
   and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
+  let proj_maybe (h : head) : int option -> head = function
+    | None -> h
+    | Some k -> Proj (h, k)
+
   (** Helper for forming TClo LF types, which avoids doing so if the
       substitution is the identity.
    *)

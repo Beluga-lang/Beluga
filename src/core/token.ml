@@ -75,6 +75,8 @@ type t =
   | KW_SUFFICES
   | KW_TOSHOW
 
+  (* A string literal *)
+  | STRING of string
   (* Can mean identifier, operator, etc. *)
   | IDENT  of string
   (* Two dashes followed by an identifier *)
@@ -168,6 +170,7 @@ let print (c : class_or_string) ppf =
   | KW_SUFFICES -> case (lazy (p "suffices")) (lazy (p "KW_SUFFICES"))
   | KW_TOSHOW -> case (lazy (p "toshow")) (lazy (p "KW_TOSHOW"))
 
+  | STRING s -> case (lazy (p "STRING %S" s)) (lazy (p "STRING"))
   | BLOCK_COMMENT s -> case (lazy (p "%%{{ %s %%}}" s)) (lazy (p "BLOCK_COMMENT"))
   | IDENT s -> case (lazy (p "%s" s)) (lazy (p "IDENT"))
   | HOLE s -> case (lazy (p "?%s" s)) (lazy (p "HOLE"))

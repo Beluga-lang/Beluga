@@ -569,13 +569,8 @@ module Comp = struct
     | _ -> None
 
   let useIH loc cD cG cIH_opt e2 = match cIH_opt with
-    | None ->
-       dprnt "[useIH] we are not making a recursive call";
-       None
+    | None -> None
     | Some cIH ->
-       (* We are making a recursive call *)
-       dprint
-         (fun _ -> "[useIH] here we are doing induction today");
        let cIH = match cIH with
          | I.Empty -> raise (Error (loc, InvalidRecCall))
          | cIH  ->

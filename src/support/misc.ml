@@ -167,6 +167,11 @@ module Function = struct
 
   let sequence (l : ('a -> 'b) list) (x : 'a) =
     List.map (fun f -> f x) l
+
+  let rec until (f : unit -> bool) : unit =
+    if f ()
+    then until f
+    else ()
 end
 
 module Seq = struct

@@ -604,6 +604,9 @@ and cnorm_psihat (phat: dctx_hat) t = match phat with
         | (Some cvar', i) -> (Some cvar', i+k)
         end
      | MV offset' -> (Some (CtxOffset offset'), k)
+     | ClObj _ ->
+        Error.violation
+          ("[cnorm_psihat] ClObj impossible; offset " ^ string_of_int offset)
      end
   |  _ -> phat
 

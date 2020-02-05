@@ -65,6 +65,9 @@ let const (x : 'b) : 'a -> 'b =
 let throw (e : exn) : 'b -> 'a =
   fun _ -> raise e
 
+let on f : ('b -> 'b -> 'c) -> 'a -> 'a -> 'c =
+  fun g x y -> g (f x) (f y)
+
 module List = struct
   include List
 

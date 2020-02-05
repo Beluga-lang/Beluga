@@ -957,11 +957,13 @@ let recSgnDecls decls =
              let total_decs = Maybe.get_default [] total_decs in
              dprintf begin fun p ->
                p.fmt "[recThm] @[<v>begin checking theorem %a.\
-                      @,@[<hv 2>total_decs =@ @[<v>%a@]@]@]"
+                      @,@[<hv 2>total_decs =@ @[<v>%a@]@]\
+                      @,tau_ann = @[%a@]@]"
                  Id.print f
                  (Format.pp_print_list ~pp_sep: Format.pp_print_cut
                     P.(fmt_ppr_cmp_total_dec))
                  total_decs
+                 P.(fmt_ppr_cmp_typ Int.LF.Empty l0) tau_ann
                end;
              Total.enabled := Total.requires_checking f total_decs;
              Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty total_decs

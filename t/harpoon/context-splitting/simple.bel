@@ -17,20 +17,5 @@ mlam g ⇒ case [g] of
 
 proof length : {g : ctx} → [⊢ nat] =
 / total 1 /
-intros
-{ g : ctx
-|
-; split [g] as
-  case empty context:
-  {
-  |
-  ; solve [ |- z]
-  }
-  case extended by a:
-  { x : ctx
-  |
-  ; ? % by length [x] as N unboxed;
-    % solve [ |- s N]
-  }
-}
+?
 ;

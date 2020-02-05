@@ -1,9 +1,4 @@
-t/harpoon/uniqueness.bel
-unique
-(g : tctx) [g ⊢ hastype M T1[]] → [g ⊢ hastype M T2[]] → [⊢ eq T1 T2]
-1
-
-
+t/harpoon/uniqueness-stub.bel
 split z5
 invert y6
 solve [|- refl]

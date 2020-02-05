@@ -1274,7 +1274,9 @@ module Comp = struct
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
     | Incomplete g ->
-       (* TODO check that g's contexts match the current contexts *)
+       (* TODO check that g's contexts and goal match the current
+          contexts and goal up to inductivity metadata
+        *)
        begin match ! (g.solution) with
        | Some p -> proof mcid cD cG cIH total_decs p ttau
        | None ->
@@ -1282,8 +1284,12 @@ module Comp = struct
           | None ->
              Error.violation "[check] [proof] no cid to register subgoal with"
           | Some cid ->
-             let g = { g with context = { cD; cG; cIH } } in
-             (* TODO add g with ambient contexts, and including cIH *)
+             let g =
+               { g with
+                 context = { cD; cG; cIH };
+                 goal = ttau
+               }
+             in
              Holes.add_harpoon_subgoal (cid, g)
        end
 

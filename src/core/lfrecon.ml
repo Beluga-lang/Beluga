@@ -39,7 +39,7 @@ type error =
   | LeftoverConstraints of Id.name
   | PruningFailed
   | CompTypAnn
-  | InvalidLFHole
+  | SynthesizableLFHole of string option
   | CompTypAnnSub
   | NotPatternSpine
   | MissingSchemaForCtxVar of Id.name
@@ -172,9 +172,11 @@ let print_error ppf =
   | CompTypAnn ->
      fprintf ppf "Type synthesis of term failed."
 
-  | InvalidLFHole ->
-     fprintf ppf
-       "This LF hole is invalid."
+  | SynthesizableLFHole name ->
+     fprintf ppf "This LF hole%a is appearing in a synthesizable position, but LF holes must appear in checkable positions."
+       (Maybe.print
+          (fun ppf x -> fprintf ppf ", ?%s," x))
+       name
 
   | CompTypAnnSub ->
      fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
@@ -1934,8 +1936,8 @@ and synSchemaElem loc recT  cD cPsi ((_, s) as sP) (head, k) ((Int.LF.Schema ele
             | Not_found -> self (Int.LF.Schema rest)
 
 and elClosedTerm' recT cD cPsi r = match r with
-  | Apx.LF.LFHole (loc, _name) ->
-      throw loc InvalidLFHole
+  | Apx.LF.LFHole (loc, name) ->
+      throw loc (SynthesizableLFHole name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
       let tA = (Term.get c).Term.typ in

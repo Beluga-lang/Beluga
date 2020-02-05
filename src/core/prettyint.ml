@@ -15,34 +15,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   type lvl = int
   let l0 = 0
 
-  module MInstHashedType = struct
+  module InstHashedType = struct
     type t    = LF.iterm option ref
     let equal = (==)
     let hash  = Hashtbl.hash
   end
 
-  module MInstHashtbl = Hashtbl.Make (MInstHashedType)
+  module MInstHashtbl = Hashtbl.Make (InstHashedType)
+  module SInstHashtbl = Hashtbl.Make (InstHashedType)
+  module PInstHashtbl = Hashtbl.Make (InstHashedType)
 
   let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0
-
-  module SInstHashedType = struct
-    type t    = LF.iterm option ref
-    let equal = (==)
-    let hash  = Hashtbl.hash
-  end
-
-  module SInstHashtbl = Hashtbl.Make (SInstHashedType)
-
   let sinst_hashtbl : string SInstHashtbl.t = SInstHashtbl.create 0
-
-  module PInstHashedType = struct
-    type t    = LF.iterm option ref
-    let equal = (==)
-    let hash  = Hashtbl.hash
-  end
-
-  module PInstHashtbl = Hashtbl.Make (PInstHashedType)
-
   let pinst_hashtbl : string PInstHashtbl.t = PInstHashtbl.create 0
 
   (* Fresh name generation *)

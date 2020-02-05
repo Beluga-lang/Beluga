@@ -2696,12 +2696,12 @@ let rec checkDCtx loc recT cD psi w = match psi with
           (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
         end;
       let Syntax.Int.LF.Schema s_elems = Schema.get_schema w in
-      let _ = begin try
-                Check.LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems
-             with _ -> raise (Check.Comp.Error (Syntax.Loc.ghost, Check.Comp.IllegalParamTyp  (cD, cPsi, tA)))
-             end
+      let _ =
+        try
+          Check.LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems
+        with _ -> raise (Check.Comp.Error (Syntax.Loc.ghost, Check.Comp.IllegalParamTyp  (cD, cPsi, tA)))
       in
-        Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
+      Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
 
 
 (* ******************************************************************* *)

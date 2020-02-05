@@ -183,7 +183,7 @@ module Hashtbl = struct
       sequence, mapped, and converted back, but it should run in
       linear time in one pass due to the lazy nature of Seq.t.
    *)
-  let map (f : 'a -> 'b) : ('k, 'a) Hashtbl.t -> ('a, 'b) Hashtbl.t =
+  let map (f : 'a -> 'b) : ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t =
     fun h ->
     to_seq h
     |> Seq.map (fun (k, x) -> (k, f x))

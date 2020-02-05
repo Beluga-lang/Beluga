@@ -18,6 +18,7 @@ module S = B.Substitution
 module Debug = B.Debug
 module F = Misc.Function
 module CompS = B.Store.Cid.Comp
+module Loc = B.Location
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
@@ -115,6 +116,101 @@ module Elab = struct
     | _ -> B.Error.violation "[harpoon] [Elab] [mvar] cD decl has no type"
 
 end
+
+(**
+ * TODO: Move this util into a dedicated module
+ * TODO: Add more abstraction layers for system level operations
+ *)
+let replace_locs (replacees : (Loc.t * (Format.formatter -> unit)) list) : unit =
+  replacees
+  |> Misc.Hashtbl.group_by
+       begin fun (loc, _) ->
+       Loc.filename loc
+       end
+  (* iterate over replacee groups
+   (* open file stream *)
+   (* sort items in the group *)
+   (* iterate over the items
+   (* iterate over file stream and print uchars until it meets the item hole *)
+   (* print the item value *)
+   *)
+   *)
+  |> Hashtbl.iter
+       begin fun (file_name : string) replacees ->
+       let in_ch = open_in file_name in
+       let in_lexbuf = Sedlexing.Utf8.from_channel in_ch in
+       let read_length = ref 0 in
+       let indentation = ref 0 in
+       let raise_edited_error () =
+         B.Error.violation "[harpoon] [serialize] original file is edited"
+       in
+       let with_uchar n f =
+         match Sedlexing.next in_lexbuf with
+         | None -> n ()
+         | Some v ->
+            incr read_length;
+            begin
+              if v != Uchar.of_char '\n'
+              then incr indentation
+              else indentation := 0
+            end;
+            f v
+       in
+       let (temp_file_name, out_ch) = Filename.open_temp_file "beluga_harpoon" "" in
+       try
+         let outbuf = Buffer.create 4 in
+         replacees
+         |> List.sort (Misc.on fst Loc.compare_start)
+         |> List.iter
+              begin fun (loc, printer) ->
+              let start_offset = Loc.start_offset loc in
+              let stop_offset = Loc.stop_offset loc in
+              Misc.Function.until
+                begin fun _ ->
+                if !read_length < start_offset
+                then
+                  with_uchar raise_edited_error
+                    begin fun v ->
+                    Buffer.clear outbuf;
+                    Buffer.add_utf_8_uchar outbuf v;
+                    Buffer.output_buffer out_ch outbuf;
+                    true
+                    end
+                else
+                  false
+                end;
+              let ppf = Format.formatter_of_out_channel out_ch in
+              Format.pp_open_vbox ppf !indentation;
+              printer ppf;
+              Format.pp_close_box ppf ();
+              Format.pp_print_flush ppf ();
+              Misc.Function.until
+                begin fun _ ->
+                if !read_length < stop_offset
+                then
+                  with_uchar raise_edited_error (Misc.const true)
+                else
+                  false
+                end
+              end;
+         Misc.Function.until
+           begin fun _ ->
+           with_uchar (Misc.const false)
+             begin fun v ->
+             Buffer.clear outbuf;
+             Buffer.add_utf_8_uchar outbuf v;
+             Buffer.output_buffer out_ch outbuf;
+             true
+             end
+           end;
+         flush out_ch;
+         Sys.rename temp_file_name file_name
+       with
+       | e ->
+          close_in in_ch;
+          close_out out_ch;
+          Sys.remove temp_file_name
+       end
 
 module Prover = struct
   module Session = struct
@@ -581,53 +677,48 @@ module Prover = struct
              DynArray.insert s.State.sessions 0 c'
           end
        | `save ->
-          let open Misc.List in
-          let get_loc (loc, _) : B.Location.t = loc in
-          let compare_loc h1 h2 =
-            B.Location.start_offset (get_loc h1) - B.Location.start_offset (get_loc h2)
-          in
-          let holes =
+          let has_valid_loc (loc, _) = not (Loc.is_ghost loc) in
+          let existing_holes =
             Holes.get_harpoon_subgoals ()
-            |> List.sort compare_loc
+            |> List.filter has_valid_loc
           in
           let theorems =
             DynArray.to_list s.State.sessions
-            |> concat_map (fun c' -> DynArray.to_list c'.Session.theorems)
+            |> Misc.List.concat_map (fun c' -> DynArray.to_list c'.Session.theorems)
           in
-          let (new_theorems, updated_theorems) =
-            List.partition
+          let new_theorems =
+            List.filter
               begin fun t' ->
               (* If a theorem is in the state,
                * and it does not have any predefined holes in the loaded files,
                * that theorem is newly defined in this harpoon process.
                *)
-              match List.find_all (fun (_, (cid, _)) -> Theorem.has_cid_of t' cid) holes with
+              match List.find_all (fun (_, (cid, _)) -> Theorem.has_cid_of t' cid) existing_holes with
               | [] -> true
               | _ -> false
               end
               theorems
           in
-          holes
-          |> List.sort compare_loc
-          |> List.iter
-               begin fun h ->
-               (* this variable should be used *)
-               let _ =
-                 List.find (fun t' -> Theorem.has_cid_of t' (fst (snd h))) updated_theorems
-               in
-               (* This is not a real implementation *)
-               (* How to update the locations of the holes which are not filled yet? *)
-               State.printf s "@[fill a hole at %a@]@."
-                 B.Location.print (get_loc h);
-               (* Do I need to remove the filled holes? *)
-               end;
+          existing_holes
+          |> Maybe.filter_map
+               begin fun (loc, (_, ps)) ->
+               match !(ps.solution) with
+               | Some p ->
+                  Some
+                    ( loc
+                    , fun fmt ->
+                      Format.fprintf fmt "%a"
+                        (P.fmt_ppr_cmp_proof ps.context.cD ps.context.cG) p
+                    )
+               | None -> None
+               end
+          |> replace_locs;
           new_theorems
           |> List.iter
                begin fun t' ->
                (* This is not a real implementation *)
-               State.printf s "@[<v>add theorem@,%a@]@."
+               State.printf s "@[<v>add a new theorem@,%a@]@."
                  Theorem.serialize t';
-               (* Do I need to update the locations of all holes? *)
                end
        end
     | Command.Subgoal cmd ->

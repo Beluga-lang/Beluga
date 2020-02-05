@@ -80,3 +80,5 @@ let print ppf l =
 
 let start_position s = s.start
 let stop_position s = s.stop
+
+let compare_start l1 l2 = compare l1.start.offset l2.start.offset

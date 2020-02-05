@@ -30,3 +30,5 @@ val print_short : Format.formatter -> t -> unit
 
 val start_position : t -> pos
 val stop_position : t -> pos
+
+val compare_start : t -> t -> int

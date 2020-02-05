@@ -1164,11 +1164,17 @@ and elExp' cD cG i =
     let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
     let (tR, sP) = Lfrecon.elClosedTerm' Lfrecon.Pibox cD cPsi r in
     (* maybe we should detect whether tR is actually a parameter variable
-       and generate a PObj instead of an MObj?
+       and generate a PObj/PTyp instead of an MObj/MTyp?
        Currently this is detected during typechecking, only to make
        sure we generate the appropriate cases during coverage
        checking.
        -je
+       EDIT: generating a PTyp here will cause unification failures
+       later because PTyp cannot unify with MTyp. It's not clear
+       whether such failure is _really_ necessary, but it would be
+       suspect if unification didn't make its inputs equal on success.
+       It depends on whether one considers PTyp/MTyp distinction as
+       metadata or whether it's morally part of the type.
      *)
     let phat = Context.dctxToHat cPsi in
     let cT = Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi) in

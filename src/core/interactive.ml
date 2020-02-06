@@ -568,7 +568,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      end
 
   | Holes.CompInfo, { Holes.cG; Holes.compGoal = (tau, theta); Holes.compSolution } ->
-     let cG = Whnf.normCtx cG in
+     let cG = Whnf.normGCtx cG in
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
      fprintf ppf "Computation context:@,  @[<v>%a@]@,"

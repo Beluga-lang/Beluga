@@ -118,8 +118,6 @@ let auto_solve_trivial : t =
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
-    | WfRec _ ->
-       B.Error.violation "[auto_solve_trivial] Unexpected WfRec"
   in
   let build_cwitness (c : ctyp_decl * int) =
     match c with

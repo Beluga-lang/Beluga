@@ -2308,7 +2308,7 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
     U.unifyCompTyp LF.Empty (tau, t) (tau_v, ms);
     let cG = compgctx_of_gctx cG in
 
-    let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
+    let cG = Whnf.cnormGCtx (cG, Whnf.m_id) in
     let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
     let tau_v = Whnf.cnormCTyp (tau_v, ms) in
     let ms = Whnf.cnormMSub ms in

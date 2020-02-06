@@ -297,17 +297,17 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
              cD_b |- t1' : cD (inside the branch)
              and recall: cD |- t : s.context cD
            *)
-          let refine_ctx_inside ctx = Whnf.cnormCtx (ctx, t1') in
-          let refine_ctx_outside ctx = Whnf.cnormCtx (ctx, t') in
+          let refine_inside f ctx = f (ctx, t1') in
+          let refine_outside f ctx = f (ctx, t') in
 
           (* Compute the gctx inside the branch.*)
           (* cG is given to use by coverage such that
              cD |- cG
              that is, it exists *inside* the branch
            *)
-          let cG_b = refine_ctx_inside cG in
+          let cG_b = refine_inside Whnf.cnormGCtx cG in
           (* cD_b |- cG_b *)
-          let cIH_b =  refine_ctx_outside (Whnf.normCtx s.context.cIH) in
+          let cIH_b = refine_outside Whnf.cnormIHCtx s.context.cIH in
 
           dprintf
             begin fun p ->
@@ -316,7 +316,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                    cIH = @[%a@]@,\
                    pat' = @[%a@]@]"
               (P.fmt_ppr_cmp_gctx cD_b P.l0) cG_b
-              (Total.fmt_ppr_ihctx cD_b cG_b) cIH_b
+              P.(fmt_ppr_cmp_ihctx cD_b cG_b) cIH_b
               (P.fmt_ppr_cmp_pattern cD_b cG_b P.l0) pat'
             end;
 
@@ -347,7 +347,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
               dprintf
                 begin fun p ->
                 p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
-                  (P.fmt_ppr_cmp_gctx cD P.l0) cIH
+                  (P.fmt_ppr_cmp_ihctx cD cG) cIH
                 end;
               (cD1, cIH)
             else
@@ -493,8 +493,8 @@ let extending_meta_context decl g =
   let shift = LF.MShift 1 in
   { context =
       { cD = LF.Dec (g.context.cD, decl)
-      ; cG = Whnf.cnormCtx (g.context.cG, shift)
-      ; cIH = Whnf.cnormCtx (g.context.cIH, shift)
+      ; cG = Whnf.cnormGCtx (g.context.cG, shift)
+      ; cIH = Whnf.cnormIHCtx (g.context.cIH, shift)
       }
   ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
   ; solution = ref None

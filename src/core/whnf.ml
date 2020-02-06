@@ -1763,40 +1763,48 @@ let mctxMVarPos cD u =
     | Empty  -> Empty
     | Dec(cG, Comp.CTypDecl (x, tau, flag)) -> Dec (cwhnfCtx (cG,t), Comp.CTypDecl (x, Comp.TypClo (tau, t), flag))
 
+  let cnormCTypDecl (d, t) = match d with
+    | Comp.CTypDecl (x, tau, flag) ->
+       Comp.CTypDecl (x, cnormCTyp (tau, t), flag)
+    | Comp.CTypDeclOpt x ->
+       Comp.CTypDeclOpt x
 
-  let cnormCtx (cG, t) =
-    Context.map
-      begin fun d ->
-      match d with
-      | Comp.CTypDecl (x, tau, flag) ->
-         Comp.CTypDecl (x, cnormCTyp (tau, t), flag)
-      | Comp.WfRec (f, args, tau) ->
-         Comp.WfRec
-           ( f
-           , List.map
-               begin fun m ->
-               match m with
-               | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
-               | _ -> m
-               end
-               args
-           , cnormCTyp (tau, t)
-           )
-      | Comp.CTypDeclOpt x -> Comp.CTypDeclOpt x
-      end
-      cG
+  let normIHArg =
+    function
+    | Comp.M cM -> Comp.M (normMetaObj (cnormMetaObj (cM, m_id)))
+    | m -> m
 
-  let rec normCtx cG = match cG with
-    | Empty -> Empty
-    | Dec(cG, Comp.CTypDecl (x, tau, flag)) ->
-        Dec (normCtx cG, Comp.CTypDecl(x, normCTyp (cnormCTyp (tau, m_id)), flag))
+  let normIHDecl = function
+    | Comp.WfRec (f, args, tau) ->
+       let tau' = normCTyp (cnormCTyp (tau, m_id)) in
+       let args' = List.map normIHArg args in
+       Comp.WfRec (f, args', tau')
 
-    | Dec(cG, Comp.WfRec (f, args, tau)) ->
-        let tau' = normCTyp (cnormCTyp (tau, m_id)) in
-        let args' = List.map (function m -> match m with
-                                | Comp.M cM -> Comp.M (normMetaObj(cnormMetaObj (cM, m_id)))
-                                | _ -> m) args in
-          Dec (normCtx cG, Comp.WfRec (f, args', tau'))
+  let normCTypDecl = function
+    | Comp.CTypDecl (x, tau, flag) ->
+       Comp.CTypDecl (x, normCTyp (cnormCTyp (tau, m_id)), flag)
+
+  let cnormIHArg (a, t) = match a with
+    | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
+    | _ -> a
+
+  let cnormIHDecl (d, t) = match d with
+    | Comp.WfRec (f, args, tau) ->
+       Comp.WfRec
+         ( f
+         , List.map (fun a -> cnormIHArg (a, t)) args
+         , cnormCTyp (tau, t)
+         )
+
+  let cnormIHCtx (cIH, t) =
+    Context.map (fun d -> cnormIHDecl (d, t)) cIH
+
+  let cnormGCtx (cG, t) =
+    Context.map (fun d -> cnormCTypDecl (d, t)) cG
+
+  let normIHCtx = Context.map normIHDecl
+
+  let normGCtx = Context.map normCTypDecl
 
   let rec normMCtx cD = match cD with
     | Empty -> Empty
@@ -2069,8 +2077,8 @@ let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypot
   let { cD = cD2; cG = cG2; cIH = cIH2 } = h2 in
   let k = Context.length cD2 in
   let cD = Context.append cD1 cD2 in
-  let cG = Context.append (cnormCtx (cG1, MShift k)) cG2 in
-  let cIH = Context.append (cnormCtx (cIH1, MShift k)) cIH2 in
+  let cG = Context.append (cnormGCtx (cG1, MShift k)) cG2 in
+  let cIH = Context.append (cnormIHCtx (cIH1, MShift k)) cIH2 in
   { cD; cG; cIH }
 
 let mcomp' = Misc.Function.flip mcomp
@@ -2078,7 +2086,7 @@ let mcomp' = Misc.Function.flip mcomp
 let apply_command_to_context (cD, cG) =
   let extend_meta d =
     let t = MShift 1 in
-    (Dec (cD, d), cnormCtx (cG, t), t)
+    (Dec (cD, d), cnormGCtx (cG, t), t)
   in
   function
   | Comp.Unbox (i, name, cU) -> extend_meta (Decl (name, cU, No))

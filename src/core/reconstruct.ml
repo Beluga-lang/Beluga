@@ -944,7 +944,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
     , (Int.Comp.TypPiBox(_, (Int.LF.Decl (_,_,Int.LF.No) as cdec), tau), theta)
     ) ->
      let cD' = extend_mctx cD (u, cdec, theta) in
-     let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
+     let cG' = Whnf.cnormGCtx (cG, Int.LF.MShift 1) in
      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
      Int.Comp.MLam (loc, u, e')
 
@@ -952,7 +952,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
     , (Int.Comp.TypPiBox(_, (Int.LF.Decl(_,_,Int.LF.Maybe) as cdec), tau), theta)
     ) ->
      let u = mk_name_cdec cdec in
-     let cG' = Whnf.cnormCtx (cG, Int.LF.MShift 1) in
+     let cG' = Whnf.cnormGCtx (cG, Int.LF.MShift 1) in
      let cD' = extend_mctx cD (u, cdec, theta) in
      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
@@ -1088,7 +1088,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
             end;
           let tP = Whnf.normTyp (Whnf.cnormTyp (tP, Whnf.m_id), LF.id) in
           let cPsi = Whnf.normDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id)) in
-          let cG = Whnf.cnormCtx (cG, Whnf.m_id) in
+          let cG = Whnf.cnormGCtx (cG, Whnf.m_id) in
           if Whnf.closedTyp (tP, LF.id) &&
                Whnf.closedDCtx cPsi
                && Whnf.closedGCtx cG
@@ -1785,7 +1785,11 @@ and recPatObj loc cD pat (cD_s, tau_s) =
       (P.fmt_ppr_cmp_pattern cD cG' P.l0) pat'
     end;
   dprint (fun () -> "[recPatObj] Abstract over pattern and its type");
-  let (cD1, cG1, pat1, tau1) = Abstract.patobj loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) pat' (Whnf.cnormCTyp ttau') in
+  let (cD1, cG1, pat1, tau1) =
+    Abstract.patobj loc cD (Whnf.cnormGCtx (cG', Whnf.m_id))
+      pat'
+      (Whnf.cnormCTyp ttau')
+  in
   begin try
       Check.Comp.wf_mctx cD1 ;
       (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
@@ -1864,13 +1868,13 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
          (P.fmt_ppr_cmp_gctx cD' P.l0) cG1
          (P.fmt_ppr_lf_msub cD1'' P.l0) t1
        end;
-     let cG1'    = Whnf.cnormCtx (Whnf.normCtx cG1, t1) in
+     let cG1'    = Whnf.cnormGCtx ( (* Whnf.normGCtx *) cG1, t1) in
      dprintf
        begin fun p ->
        p.fmt "[elBranch] cD1'' |- cG1 = @[%a@]"
          (P.fmt_ppr_cmp_gctx cD1'' P.l0) cG1'
        end;
-     let cG'     = Whnf.cnormCtx (Whnf.normCtx cG, t') in
+     let cG'     = Whnf.cnormGCtx ( (* Whnf.normGCtx *) cG, t') in
      let cG_ext  = Context.append cG' cG1' in
 
      let e1       = Apxnorm.fmvApxExp [] cD'  (l_cd1, l_delta, 0) e in
@@ -1914,7 +1918,9 @@ and elFBranch cD cG fbr theta_tau = match fbr with
   | Apx.Comp.ConsFBranch (loc, (ps, e), fbr') ->
     let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
     let _ = Lfrecon.solve_constraints cD in
-    let (cD1, cG1, ps1, tau1) = Abstract.pattern_spine loc cD (Whnf.cnormCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2) in
+    let (cD1, cG1, ps1, tau1) =
+      Abstract.pattern_spine loc cD (Whnf.cnormGCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2)
+    in
     let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
             with _ -> raise (Error (loc,MCtxIllformed cD1)) in
       (* cD1 ; cG1 |- pat1 => tau1 (contains no free contextual variables) *)
@@ -1995,7 +2001,7 @@ and elCommand cD cG =
     let t = Int.LF.MShift 1 in
     (* No need to check for shadowing since that already happened
        during indexing. *)
-    (Int.LF.Dec (cD, d), Whnf.cnormCtx (cG, t), t, c)
+    (Int.LF.Dec (cD, d), Whnf.cnormGCtx (cG, t), t, c)
   in
   function
   | A.Unbox (loc, i, name) ->
@@ -2193,7 +2199,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
            (tau_i, tau_p)
        in
        let pat' = Whnf.cnormPattern (pat, t1) in
-       let cG_b = Whnf.cnormCtx (cG, t') in
+       let cG_b = Whnf.cnormGCtx (cG, t') in
 
        (* Compute the goal type inside the branch. *)
        (* cD_b |- ttau_b <== type *)
@@ -2273,7 +2279,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
        (* cD_b |- t' : cD
           cD_b |- t1 : cD'
         *)
-       let cG_b = Whnf.cnormCtx (cG, t') in
+       let cG_b = Whnf.cnormGCtx (cG, t') in
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
        dprintf begin fun p ->
          p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
@@ -2354,7 +2360,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
        (* cD_b |- t' : cD
           cD_b |- t1 : cD'
         *)
-       let cG_b = Whnf.cnormCtx (cG', t1) in
+       let cG_b = Whnf.cnormGCtx (cG', t1) in
 
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
 

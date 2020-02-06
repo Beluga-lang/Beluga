@@ -622,7 +622,7 @@ struct
     | Comp.MLam (_, x, e) ->
       fprintf ppf "(MLam %s %a) "
         (Id.render_name x)
-        (sexp_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormCtx (cG, LF.MShift 1))) e
+        (sexp_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormGCtx (cG, LF.MShift 1))) e
 
     | Comp.Pair (_, e1, e2) ->
       fprintf ppf "(Pair %a %a)"

@@ -581,7 +581,7 @@ module Comp = struct
                  p.fmt "[useIH] @[<v>check whether compatible IH exists@,\
                         cIH = @[%a@]@,\
                         recursive call on: @[%a@]@]"
-                   (Total.fmt_ppr_ihctx cD cG) cIH
+                   P.(fmt_ppr_cmp_ihctx cD cG) cIH
                    (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
                  end;
                Total.filter cD cG cIH (loc, M cM)
@@ -593,7 +593,7 @@ module Comp = struct
        dprintf
          begin fun p ->
          p.fmt "[useIH] Partially used IH: %a"
-           (Total.fmt_ppr_ihctx cD cG) cIH
+           P.(fmt_ppr_cmp_ihctx cD cG) cIH
          end;
        (* We have now partially checked for the recursive call *)
        match cIH with
@@ -626,7 +626,7 @@ module Comp = struct
     with Whnf.FreeMVar (I.FMVar (u, _ )) ->
       Error.violation ("Free meta-variable " ^ Id.render_name u)
 
-  let rec checkW cD (cG , cIH) total_decs e ttau =
+  let rec checkW cD (cG , (cIH : ihctx)) total_decs e ttau =
     let decide_ind cM x =
       if Misc.List.nonempty total_decs && is_indMObj cD x
       then
@@ -652,7 +652,7 @@ module Comp = struct
 
     | (MLam (loc, u, e), (TypPiBox (_, cdec, tau), t)) ->
        (check (extend_mctx cD (u, cdec, t))
-          (C.cnormCtx (cG, I.MShift 1), C.cnormCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
+          (C.cnormGCtx (cG, I.MShift 1), C.cnormIHCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
           ("MLam " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e))
 
@@ -826,7 +826,7 @@ module Comp = struct
       end;
     checkW cD (cG, cIH) total_decs e (C.cwhnfCTyp (tau, t));
 
-  and syn cD (cG,cIH) total_decs e : (gctx option * typ * I.msub) = match e with
+  and syn cD (cG,cIH) total_decs e : (ihctx option * typ * I.msub) = match e with
     | Var (loc, x)   ->
        let (f,tau', _) = lookup cG x in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau', C.m_id))
@@ -916,7 +916,7 @@ module Comp = struct
                 cIH_opt
                 $> fun cIH ->
                    p.fmt "[syn] [MApp] @[<v>cIH = @[%a@]@]"
-                     (Total.fmt_ppr_ihctx cD cG) cIH
+                     P.(fmt_ppr_cmp_ihctx cD cG) cIH
               in
               ()
             );
@@ -1038,8 +1038,8 @@ module Comp = struct
        let TypBox (_, mT) = tau_s in
        (* By invariant: cD1' |- t1 <= cD *)
        let mT1   = Whnf.cnormMTyp (mT, t1) in
-       let cG'   = Whnf.cnormCtx (Whnf.normCtx cG, t1) in
-       let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+       let cG'   = Whnf.cnormGCtx ( (* Whnf.normGCtx *) cG, t1) in
+       let cIH   = Whnf.cnormIHCtx ( (* Whnf.normIHCtx *) cIH, t1) in
        let t''   = Whnf.mcomp t t1 in
        let tau'  = Whnf.cnormCTyp (tau, t'') in
        let (cD1',cIH')  =
@@ -1065,8 +1065,8 @@ module Comp = struct
 
     | Branch (loc, cD1', cG1, pat, t1, e1) ->
        let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-       let cG'   = Whnf.cnormCtx (cG, t1) in
-       let cIH   = Whnf.cnormCtx (Whnf.normCtx cIH, t1) in
+       let cG'   = Whnf.cnormGCtx (cG, t1) in
+       let cIH   = Whnf.cnormIHCtx ( (* Whnf.normIHCtx *) cIH, t1) in
        let t''   = Whnf.mcomp t t1 in
        let tau'  = Whnf.cnormCTyp (tau, t'') in
        dprintf
@@ -1100,7 +1100,7 @@ module Comp = struct
             p.fmt "[checkBranch] @[<v>generated IH from previous cG = @[%a@]@,\
                    cIH0' = @[%a@]@]"
               (P.fmt_ppr_cmp_gctx cD1' P.l0) cG'
-              (Total.fmt_ppr_ihctx cD1' (Context.append cG' cG1')) cIH0'
+              P.(fmt_ppr_cmp_ihctx cD1' (Context.append cG' cG1')) cIH0'
          end;
 
        let cD1' =
@@ -1120,7 +1120,7 @@ module Comp = struct
          e1
          (tau', Whnf.m_id)
 
-  and checkFBranches cD ((cG , cIH) : ctyp_decl I.ctx * ctyp_decl I.ctx) total_decs fbr ttau = match fbr with
+  and checkFBranches cD (cG , cIH) total_decs fbr ttau = match fbr with
     | NilFBranch _ -> ()
     | ConsFBranch (_, (cD', cG', patS, e), fbr') ->
        let (tau2', t') = synPatSpine cD' cG' patS ttau in
@@ -1250,14 +1250,28 @@ module Comp = struct
        entries added to cD *)
     let t = I.MShift k in
     ( cD'
-    , Context.append (Whnf.cnormCtx (cG, t)) cG'
+    , Context.append (Whnf.cnormGCtx (cG, t)) cG'
     , tau'
     , t
     )
 
   let prepare_branch_contexts cD_b pat t cD cG cIH i total_decs =
-    let cIH_b = Whnf.cnormCtx (cIH, t) in
-    let cG_b = Whnf.cnormCtx (cG, t) in
+    let cG_b = Whnf.cnormGCtx (cG, t) in
+    dprintf begin fun p ->
+      p.fmt "@[<v 2>[directive] [check_branch]
+             @,cD    = @[%a@]\
+             @,cG    = @[%a@]\
+             @,cIH   = @[%a@]\
+             @,i     = @[%a@]\
+             @,pat   = @[%a@]\
+             @]"
+        P.(fmt_ppr_lf_mctx l0) cD
+        P.(fmt_ppr_cmp_gctx cD l0) cG
+        P.(fmt_ppr_cmp_ihctx cD cG) cIH
+        P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+        P.(fmt_ppr_cmp_pattern cD_b cG_b l0) pat
+      end;
+    let cIH_b = Whnf.cnormIHCtx (cIH, t) in
     let cD_b, cIH1 =
       if Total.is_inductive_split cD cG i then
         let cD1 = mvars_in_patt cD_b pat in
@@ -1369,20 +1383,23 @@ module Comp = struct
            P.(fmt_ppr_cmp_gctx cD l0) cG
            P.(fmt_ppr_cmp_gctx cD' l0) cG'
          end;
-       let cIH' = Whnf.cnormCtx (cIH, t) in
+       let cIH' = Whnf.cnormIHCtx (cIH, t) in
        proof mcid cD' cG' cIH' total_decs p (tau', Whnf.m_id)
 
     | Solve e ->
        check cD (cG, cIH) total_decs e ttau
 
     | ContextSplit (i, tau, bs) ->
-       List.iter (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+       List.iter
+         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
 
     | MetaSplit (i, tau, bs) ->
-       List.iter (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+       List.iter
+         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
 
     | CompSplit (i, tau, bs) ->
-       List.iter (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+       List.iter
+         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
 
     | Suffices (i, args) ->
        (* TODO verify that `i` is not an IH call.

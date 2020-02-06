@@ -14,7 +14,7 @@ type error =
   | NoStratifyCheck of string
   | NoStratifyOrPositiveCheck of string
   | WrongArgNum  of Id.cid_comp_typ * int
-  | RecCallIncompatible of LF.mctx * Comp.arg * Comp.ctyp_decl
+  | RecCallIncompatible of LF.mctx * Comp.ih_arg * Comp.ih_decl
   | NotImplemented of string
   | TooManyArg of Id.name
 
@@ -77,8 +77,6 @@ let rec shiftIH cIH k = match cIH with
   | LF.Dec (cIH', Comp.WfRec (f, args, tau)) ->
      let args' = List.map (shiftArg k) args in
      LF.Dec (shiftIH cIH' k, Comp.WfRec (f, args', tau))
-  | LF.Dec (cIH', d) ->
-     LF.Dec (shiftIH cIH' k, d)
 
 let shift cIH = shiftIH cIH 1
 
@@ -220,33 +218,6 @@ let is_valid_args tau n =
  | _ -> false
 
  *)
-
-let fmt_ppr_args cD cG ppf : Comp.arg list -> unit =
-  let open Format in
-  let print_arg ppf = function
-    | Comp.M cM -> P.fmt_ppr_cmp_meta_obj cD P.l0 ppf cM
-    | Comp.DC -> fprintf ppf "_"
-    | Comp.V x -> fprintf ppf "(V %s)" (R.render_var cG x)
-  in
-  pp_print_list ~pp_sep: pp_print_space print_arg ppf
-
-let fmt_ppr_call cD cG ppf (f, args, tau) =
-  let open Format in
-  fprintf ppf "@[<hv 2>@[%a@] @[%a@] :@ @[%a@]@]"
-    Id.print f
-    (fmt_ppr_args cD cG) args
-    (P.fmt_ppr_cmp_typ cD P.l0) tau
-
-let fmt_ppr_ih cD cG ppf = function
-  | Comp.WfRec (f, args, tau) ->
-     Format.fprintf ppf "IH: @[<hv>%a@]" (fmt_ppr_call cD cG) (f, args, tau)
-  | _ -> failwith "cIH should contain only WfRec entries"
-
-let fmt_ppr_ihctx cD cG ppf cIH =
-  let open Format in
-  fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_ih cD cG))
-    (Context.to_list cIH)
 
 (** Converts the list of totality declarations into an induction ordering list *)
 let get_order (mfs : Comp.total_dec list) =
@@ -537,12 +508,12 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
        dprintf
          (fun p ->
            p.fmt "[mk_wfrec] generated Arguments for rec. call %a"
-             (fmt_ppr_args cD LF.Empty) args);
+             P.(fmt_ppr_cmp_ih_args cD LF.Empty) args);
        let args = generalize args in
        dprintf
          (fun p ->
            p.fmt "[mk_wfrec] generated recursive Call : %a"
-             (fmt_ppr_call cD LF.Empty) (f, args, tau));
+             P.(fmt_ppr_cmp_ih cD LF.Empty) (Comp.WfRec (f, args, tau)));
        Comp.WfRec (f, args, tau)
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
@@ -617,8 +588,10 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
        let args = generalize args in
        let d = Comp.WfRec (f, args, tau) in
        dprintf
-         (fun p ->
-           p.fmt "Recursive call : %a" (fmt_ppr_call cD cG) (f, args, tau));
+         begin fun p ->
+         p.fmt "[gen_rec_calls'] Recursive call: @[%a@]"
+           P.(fmt_ppr_cmp_ih cD cG) (Comp.WfRec (f, args, tau))
+         end;
        d
      in
      let rec mk_wfrec_all (f,ttau) xs = match xs with
@@ -674,8 +647,10 @@ let wf_rec_calls cD cG mfs =
      let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
      let _ = Unify.resetGlobalCnstrs () in
      dprintf
-       (fun p ->
-         p.fmt "[wf_rec_calls] generated IH = %a" (fmt_ppr_ihctx cD cG) cIH');
+       begin fun p ->
+       p.fmt "[wf_rec_calls] generated IH = %a"
+         P.(fmt_ppr_cmp_ihctx cD cG) cIH'
+       end;
      cIH'
 
 (*  ------------------------------------------------------------------------ *)
@@ -902,7 +877,7 @@ let rec filter cD cG cIH (loc, e2) = match e2, cIH with
      dprintf begin fun p ->
        p.fmt "[total] [filter] @[<v>dropped IH\
               @,@[%a@]@]"
-         (fmt_ppr_ih cD cG) wf
+         P.(fmt_ppr_cmp_ih cD cG) wf
        end;
      filter cD cG cIH (loc, e2)
 (*      raise (Error (loc, RecCallIncompatible (cD, x, wf))) *)

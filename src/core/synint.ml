@@ -383,8 +383,7 @@ module Comp = struct
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
 
-  (* For ih *)
-  type arg =
+  type ih_arg =
     | M  of meta_obj
     | V  of offset
     | E (* what is E? -je *)
@@ -395,16 +394,19 @@ module Comp = struct
   type wf_tag = bool  (* indicates whether the argument is smaller *)
 
   type ctyp_decl =
-    | WfRec of name * arg list * typ
     | CTypDecl    of name * typ * wf_tag
     | CTypDeclOpt of name
 
+  type ih_decl =
+    | WfRec of name * ih_arg list * typ
+
   let rename_ctyp_decl f = function
-    | WfRec (x, args, tau) -> WfRec (f x, args, tau)
     | CTypDecl (x, tau, tag) -> CTypDecl (f x, tau, tag)
     | CTypDeclOpt x -> CTypDeclOpt (f x)
 
   type gctx = ctyp_decl LF.ctx
+
+  type ihctx = ih_decl LF.ctx
 
   and exp_chk =
     | Syn        of Loc.t * exp_syn
@@ -539,7 +541,7 @@ module Comp = struct
   type hypotheses =
     { cD : LF.mctx (* Delta / meta context / LF assumptions *)
     ; cG : gctx    (* Gamma / computation assumptions *)
-    ; cIH : gctx   (* Generated induction hypotheses. *)
+    ; cIH : ihctx   (* Generated induction hypotheses. *)
     }
 
   type context_case = LF.typ generic_context_case
@@ -707,7 +709,6 @@ module Comp = struct
     match d with
     | CTypDecl (name, _, _) -> name
     | CTypDeclOpt name -> name
-    | WfRec (name, _, _) -> name
 
   (** Decides whether the computational term is actually a variable
       index object.

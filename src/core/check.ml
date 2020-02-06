@@ -1256,21 +1256,21 @@ module Comp = struct
     )
 
   let prepare_branch_contexts cD_b pat t cD cG cIH i total_decs =
-    let cG_b = Whnf.cnormGCtx (cG, t) in
     dprintf begin fun p ->
       p.fmt "@[<v 2>[directive] [check_branch]
              @,cD    = @[%a@]\
              @,cG    = @[%a@]\
              @,cIH   = @[%a@]\
              @,i     = @[%a@]\
-             @,pat   = @[%a@]\
+             @,@[<hv 2>t     =@ @[%a@]@]\
              @]"
         P.(fmt_ppr_lf_mctx l0) cD
         P.(fmt_ppr_cmp_gctx cD l0) cG
         P.(fmt_ppr_cmp_ihctx cD cG) cIH
         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-        P.(fmt_ppr_cmp_pattern cD_b cG_b l0) pat
+        P.fmt_ppr_lf_msub_typing (cD_b, t, cD)
       end;
+    let cG_b = Whnf.cnormGCtx (cG, t) in
     let cIH_b = Whnf.cnormIHCtx (cIH, t) in
     let cD_b, cIH1 =
       if Total.is_inductive_split cD cG i then
@@ -1308,7 +1308,7 @@ module Comp = struct
        end
 
     | Command (cmd, p) ->
-       let (cD, cG, t) = command cD cG cIH total_decs cmd in
+       let (cD, cG, cIH, t) = command cD cG cIH total_decs cmd in
        let ttau = Pair.rmap (Whnf.mcomp' t) ttau in
        proof mcid cD cG cIH total_decs p ttau
 
@@ -1319,7 +1319,11 @@ module Comp = struct
   and command cD cG cIH total_decs =
     let extend_meta d =
       let t = I.MShift 1 in
-      (I.Dec (cD, d), cG, t)
+      ( I.Dec (cD, d)
+      , Whnf.cnormGCtx (cG, t)
+      , Whnf.cnormIHCtx (cIH, t)
+      , t
+      )
     in
     function
     | By (i, name, _, `unboxed) | Unbox (i, name, _) ->
@@ -1337,7 +1341,7 @@ module Comp = struct
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        let tau = Whnf.cnormCTyp (tau', t) in
        let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
-       (cD, cG, Whnf.m_id)
+       (cD, cG, cIH, Whnf.m_id)
 
   (** Check a hypothetical derivation.
       Ensures that the contexts in the hypothetical are convertible

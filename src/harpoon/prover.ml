@@ -510,7 +510,7 @@ module Prover = struct
           let f i =
             State.printf s "%d. @[%a@]@,"
               (i + 1)
-              (P.fmt_ppr_cmp_ctyp_decl g.context.cD P.l0)
+              (P.fmt_ppr_cmp_ih g.context.cD g.context.cG)
           in
           State.printf s "@[<v>There are %d IHs:@,"
             (Context.length g.context.cIH);

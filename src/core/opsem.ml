@@ -410,7 +410,7 @@ and eval_branch vscrut branch (theta, eta) =
                    pattern with mvars:@,\
                    @[%a@]@]"
               (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
-              (P.fmt_ppr_cmp_pattern LF.Empty (Whnf.cnormCtx (cG, mt)) P.l0)
+              (P.fmt_ppr_cmp_pattern LF.Empty (Whnf.cnormGCtx (cG, mt)) P.l0)
               (Whnf.cnormPattern (pat, mt))
             end;
           let eta' = match_pattern  (vscrut, eta) (pat, mt) in

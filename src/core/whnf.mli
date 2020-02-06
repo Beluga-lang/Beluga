@@ -142,7 +142,8 @@ val cnormDCtx  : dctx * msub -> dctx
 val cnormMTyp  : ctyp * msub -> ctyp
 val cnormClTyp  : cltyp * msub -> cltyp
 val cnorm_psihat: dctx_hat -> msub -> dctx_hat
-val cnormCtx  :  Comp.gctx * msub -> Comp.gctx
+val cnormGCtx  :  Comp.gctx * msub -> Comp.gctx
+val cnormIHCtx  :  Comp.ihctx * msub -> Comp.ihctx
 
 val cnormPattern  : Comp.pattern * msub -> Comp.pattern
 val cnormPatSpine : Comp.pattern_spine * msub -> Comp.pattern_spine
@@ -163,7 +164,8 @@ val cnormExp   : Comp.exp_chk * msub -> Comp.exp_chk
 val cnormExp'  : Comp.exp_syn * msub -> Comp.exp_syn
 val cnormThm   : Comp.thm * msub -> Comp.thm
 
-val normCtx    : Comp.gctx -> Comp.gctx
+val normGCtx   : Comp.gctx -> Comp.gctx
+val normIHCtx  : Comp.ihctx -> Comp.ihctx
 val normCTyp   : Comp.typ  -> Comp.typ
 
 val convMTyp   : ctyp -> ctyp -> bool

@@ -90,7 +90,6 @@ module Int = struct
     (* computational printers *)
     val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
-    val fmt_ppr_cmp_arg       : LF.mctx -> lvl -> formatter -> Comp.arg -> unit
     val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
     val fmt_ppr_cmp_gctx      : ?sep:(formatter -> unit -> unit) ->
                                 LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
@@ -99,6 +98,9 @@ module Int = struct
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
+    val fmt_ppr_cmp_ih_args   : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_arg list -> unit
+    val fmt_ppr_cmp_ih        : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_decl -> unit
+    val fmt_ppr_cmp_ihctx     : LF.mctx -> Comp.gctx -> formatter -> Comp.ihctx -> unit
 
     val fmt_ppr_cmp_total_dec_kind : formatter -> Comp.order Comp.total_dec_kind -> unit
     val fmt_ppr_cmp_total_dec : formatter -> Comp.total_dec -> unit

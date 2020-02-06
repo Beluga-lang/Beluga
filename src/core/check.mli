@@ -98,7 +98,7 @@ module Comp : sig
     LF.mctx ->
     gctx ->
     total_dec list ->
-    ?cIH: gctx ->
+    ?cIH: ihctx ->
     thm ->
     tclo ->
     unit
@@ -110,7 +110,7 @@ module Comp : sig
     (* ^ The computation context *)
     total_dec list ->
     (* ^ the group of mutual recursive functions the expression is being checked in *)
-    ?cIH: gctx ->
+    ?cIH: ihctx ->
     (* ^ the context of available induction hypotheses *)
     exp_chk ->
     (* ^ The expression to check *)
@@ -125,11 +125,11 @@ module Comp : sig
     (* ^ The computation context *)
     total_dec list ->
     (* ^ The group of mutual recursive functions the expression is being checked in *)
-    ?cIH: gctx ->
+    ?cIH: ihctx ->
     (* ^ The context of available induction hypotheses *)
     exp_syn ->
     (* ^ The expression whose type to synthesize *)
-    gctx option * tclo
+    ihctx option * tclo
   (* ^ A possibly refined context of induction hypotheses and the synthesized type *)
 
   val checkKind   : LF.mctx -> kind                -> unit

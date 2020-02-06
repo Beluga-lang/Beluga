@@ -34,7 +34,6 @@ let usage () =
         ^ "    +realNames         Print holes using real names\n"
         ^ "    +html              Generate an html page of the source code using default CSS\n"
         ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
-        ^ "    +sexp              Dump the elaborated code using S-expressions\n"
         ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
         ^ "    +cssfile [file]    Specify css file to link to from generated HTML page\n"
         ^ "    +annot                Generate a .annot file for use in emacs\n"
@@ -81,11 +80,10 @@ let process_option arg rest =
        rest
        end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+test" -> Debug.chatter := 0; Sexp.testing := true ; rest
+  | "+test" -> Debug.chatter := 0; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest
   | "+html" | "+HTML" -> Html.genHtml := true; rest
-  | "+sexp" -> Sexp.enabled := true ; rest
   | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
   | "+cssfile" ->
      with_arg_for "+cssfile"
@@ -183,16 +181,6 @@ let per_file file_name =
     if !Html.genHtml then begin
         Html.generatePage file_name
       end;
-    (* If requested, dump the elaborated program as S-expressions *)
-    if !Sexp.enabled then
-      begin
-        let sexp_file_name = file_name ^ ".sexp" in
-        let oc = open_out sexp_file_name in
-        Sexp.Printer.sexp_sgn_decls (Format.formatter_of_out_channel oc) sgn' ;
-        flush oc ; close_out oc ;
-        if !Sexp.testing == false then
-          printf "\n## Dumped AST to: %s ##\n" sexp_file_name
-      end
   with e ->
     dprintf
       (fun p ->

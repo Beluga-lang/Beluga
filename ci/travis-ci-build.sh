@@ -8,4 +8,3 @@ eval "$(opam config env)"
 make
 ./TEST
 ./TEST -- +htmltest
-./TEST -- +sexp

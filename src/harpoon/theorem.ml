@@ -75,7 +75,7 @@ let serialize ppf (t : t) =
     Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])
     $> fun o -> o.Comp.order
   in
-  Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,;@,@]"
+  Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,@]"
     Id.print name
     Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) Comp.(Whnf.cnormCTyp s.goal)
     fmt_ppr_order order

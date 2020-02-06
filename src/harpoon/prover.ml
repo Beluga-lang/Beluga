@@ -227,6 +227,25 @@ let update_existing_holes existing_holes =
        end
   |> replace_locs
 
+let add_new_mutual_rec_thmss target_file_name new_mutual_rec_thmss =
+  let out_ch = open_out_gen [Open_append; Open_text] 0o600 target_file_name in
+  let out_ppf = Format.formatter_of_out_channel out_ch in
+  let printf_out fmt = Format.fprintf out_ppf fmt in
+  new_mutual_rec_thmss
+  |> List.iter
+       begin fun thms ->
+       printf_out "@.";
+       printf_out "@[<v>";
+       thms
+       |> List.iteri
+            begin fun i thm ->
+            if i != 0
+            then printf_out "and@,";
+            Format.fprintf out_ppf "%a" Theorem.serialize thm
+            end;
+       printf_out ";@]@."
+       end
+
 module Prover = struct
   module Session = struct
     type t =
@@ -294,6 +313,7 @@ module Prover = struct
       ; prompt : InputPrompt.t
       ; ppf : Format.formatter
       ; stop : [ `stop | `go_on ]
+      ; target_file_name : string
       }
 
     let recover_theorem ppf hooks (cid, gs) =
@@ -369,6 +389,7 @@ module Prover = struct
      *)
     let make
           stop
+          (target_file_name : string)
           (ppf : Format.formatter)
           (prompt : InputPrompt.t)
           (gs : Comp.open_subgoal list)
@@ -380,6 +401,7 @@ module Prover = struct
       ; prompt
       ; ppf
       ; stop
+      ; target_file_name
       }
 
     (** Displays the given prompt `msg` and awaits a line of input from the user.
@@ -690,33 +712,28 @@ module Prover = struct
             Holes.get_harpoon_subgoals ()
             |> List.filter has_file_loc
           in
-          let theorems =
-            DynArray.to_list s.State.sessions
-            |> List.map (fun c' -> c'.Session.theorems)
-            |> Misc.List.concat_map DynArray.to_list
-          in
           (* If a theorem is in the state,
            * and it does not have any predefined holes in the loaded files,
            * that theorem is newly defined in this harpoon process.
            *)
-          let new_theorems =
-            List.filter
-              begin fun t' ->
-              existing_holes
-              |> List.map (fun hole -> hole |> snd |> fst)
-              |> List.find_opt (Theorem.has_cid_of t')
-              |> Option.is_some
-              end
-              theorems
+          let is_new_theorem thm =
+            existing_holes
+            |> List.map (fun hole -> hole |> snd |> fst)
+            |> List.find_opt (Theorem.has_cid_of thm)
+            |> Option.is_none
+          in
+          let new_mutual_rec_thmss =
+            DynArray.to_list s.State.sessions
+            |> List.map
+                 begin fun sess ->
+                 sess.Session.theorems
+                 |> DynArray.to_list
+                 |> List.filter is_new_theorem
+                 end
+            |> List.filter (fun thms -> thms != [])
           in
           update_existing_holes existing_holes;
-          new_theorems
-          |> List.iter
-               begin fun t' ->
-               (* This is not a real implementation *)
-               State.printf s "@[<v>add a new theorem@,%a@]@."
-                 Theorem.serialize t';
-               end
+          add_new_mutual_rec_thmss s.State.target_file_name new_mutual_rec_thmss;
        end
     | Command.Subgoal cmd ->
        begin match cmd with
@@ -957,12 +974,13 @@ type interaction_mode = [ `stop | `go_on ]
 
 let start_toplevel
       (stop : interaction_mode)
+      (target_file_name : string)
       (gs : Comp.open_subgoal list)
       (input_prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop ppf input_prompt gs in
+  let s = State.make stop target_file_name ppf input_prompt gs in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)

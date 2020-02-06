@@ -60,6 +60,7 @@ let realMain () =
   in
   Prover.start_toplevel
     options.test_stop
+    (ExtList.List.last options.all_paths)
     stubs
     (InputPrompt.create options.test_file options.test_start)
     ppf

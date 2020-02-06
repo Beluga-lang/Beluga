@@ -14,5 +14,5 @@ type interaction_mode = [ `stop | `go_on ]
 
 
  *)
-val start_toplevel : interaction_mode -> Comp.open_subgoal list -> InputPrompt.t ->
+val start_toplevel : interaction_mode -> string -> Comp.open_subgoal list -> InputPrompt.t ->
                      Format.formatter -> unit

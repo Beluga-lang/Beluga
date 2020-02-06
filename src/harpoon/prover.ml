@@ -121,7 +121,7 @@ end
  * TODO: Move this util into a dedicated module
  * TODO: Add more abstraction layers for system level operations
  *)
-let replace_locs (replacees : (Loc.t * (Format.formatter -> unit)) list) : unit =
+let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
   |> Misc.Hashtbl.group_by
        begin fun (loc, _) ->
@@ -181,7 +181,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit)) list) : unit 
                 end;
               let ppf = Format.formatter_of_out_channel out_ch in
               Format.pp_open_vbox ppf !indentation;
-              printer ppf;
+              printer ppf ();
               Format.pp_close_box ppf ();
               Format.pp_print_flush ppf ();
               Misc.Function.until
@@ -212,6 +212,21 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit)) list) : unit 
           Sys.remove temp_file_name
        end
 
+let update_existing_holes existing_holes =
+  let open Maybe in
+  existing_holes
+  |> List.map (fun (loc, (_, ps)) -> (loc, ps))
+  |> filter_map
+       begin fun (loc, ps) ->
+       let open Comp in
+       !(ps.solution)
+       $> fun p ->
+          ( loc
+          , fun fmt _ -> P.fmt_ppr_cmp_proof ps.context.cD ps.context.cG fmt p
+          )
+       end
+  |> replace_locs
+
 module Prover = struct
   module Session = struct
     type t =
@@ -227,13 +242,6 @@ module Prover = struct
       ; name
       ; mutual_group
       }
-
-    (* let serialize ppf (s : t) =
-     *   let fmt_ppr_theorems =
-     *     Format.pp_print_list ~pp_sep: Format.pp_print_cut Theorem.serialize
-     *   in
-     *   Format.fprintf ppf "@[<v>%a@,@]"
-     *     fmt_ppr_theorems (DynArray.to_list s.theorems) *)
 
     (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
@@ -341,13 +349,6 @@ module Prover = struct
       )
       |> fun xs -> List.map (recover_session ppf hooks) xs
 
-    (* let serialize ppf (s : t) =
-     *   let fmt_ppr_sessions =
-     *     Format.pp_print_list ~pp_sep: Format.pp_print_cut Session.serialize
-     *   in
-     *   Format.fprintf ppf "@[<v>%a@,%a@,@]"
-     *     Automation.State.serialize s.automation_state
-     *     fmt_ppr_sessions (DynArray.to_list s.sessions) *)
 
     let printf s x = Format.fprintf s.ppf x
 
@@ -684,42 +685,31 @@ module Prover = struct
              DynArray.insert s.State.sessions 0 c'
           end
        | `serialize ->
-          let has_valid_loc (loc, _) = not (Loc.is_ghost loc) in
+          let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
           let existing_holes =
             Holes.get_harpoon_subgoals ()
-            |> List.filter has_valid_loc
+            |> List.filter has_file_loc
           in
           let theorems =
             DynArray.to_list s.State.sessions
-            |> Misc.List.concat_map (fun c' -> DynArray.to_list c'.Session.theorems)
+            |> List.map (fun c' -> c'.Session.theorems)
+            |> Misc.List.concat_map DynArray.to_list
           in
+          (* If a theorem is in the state,
+           * and it does not have any predefined holes in the loaded files,
+           * that theorem is newly defined in this harpoon process.
+           *)
           let new_theorems =
             List.filter
               begin fun t' ->
-              (* If a theorem is in the state,
-               * and it does not have any predefined holes in the loaded files,
-               * that theorem is newly defined in this harpoon process.
-               *)
-              match List.find_all (fun (_, (cid, _)) -> Theorem.has_cid_of t' cid) existing_holes with
-              | [] -> true
-              | _ -> false
+              existing_holes
+              |> List.map (fun hole -> hole |> snd |> fst)
+              |> List.find_opt (Theorem.has_cid_of t')
+              |> Option.is_some
               end
               theorems
           in
-          existing_holes
-          |> Maybe.filter_map
-               begin fun (loc, (_, ps)) ->
-               match !(ps.solution) with
-               | Some p ->
-                  Some
-                    ( loc
-                    , fun fmt ->
-                      Format.fprintf fmt "%a"
-                        (P.fmt_ppr_cmp_proof ps.context.cD ps.context.cG) p
-                    )
-               | None -> None
-               end
-          |> replace_locs;
+          update_existing_holes existing_holes;
           new_theorems
           |> List.iter
                begin fun t' ->

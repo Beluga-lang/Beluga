@@ -3,4 +3,4 @@ Type-checking error.
 Found
   function abstraction
 but expected expression of type
-  {g : expCtx} [g |- exp T] -> [g |- exp T]
+  {g : expCtx} [g |- exp T[]] -> [g |- exp T[]]

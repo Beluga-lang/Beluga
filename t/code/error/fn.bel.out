@@ -2,6 +2,6 @@
 Type-checking error.
 Ill-typed expression.
     Expected type:
-      [g |- opt] -> [g |- exp T]
+      [g |- opt] -> [g |- exp T[]]
     Inferred type:
-      [g |- exp T]
+      [g |- exp T[]]

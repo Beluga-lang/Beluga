@@ -45,53 +45,89 @@ proof tp-unique : (g : ctx) [g ⊢ oft M A[]] → [g ⊢ oft M B[]] → [⊢ eq 
 / total 1 /
 intros
 { g : ctx, M : (g |- tm), A : ( |- tp), B : ( |- tp)
-| x6 : [g |- oft M A], z6 : [g |- oft M B]
-; split x6 as
+| y6 : [g |- oft M A[]], d : [g |- oft M B[]]
+; split y6 as
   case t_app:
   { g : ctx,
-    X : (g |- tm),
-    X3 : (g |- tm),
+    M1 : (g |- tm),
+    M2 : (g |- tm),
     A : ( |- tp),
     B : ( |- tp),
-    X1 : ( |- tp),
-    X4 : (g |- oft X (arr X1 A)),
-    X5 : (g |- oft X3 X1)
-  | x6 : [g |- oft (app X X3) A], z6 : [g |- oft (app X X3) B]
-  ; ?
+    A1 : ( |- tp),
+    D : (g |- oft M1 (arr A1[] A[])),
+    D1 : (g |- oft M2 A1[])
+  | y6 : [g |- oft (app M1 M2) A[]], d : [g |- oft (app M1 M2) B[]]
+  ; split d as
+    case t_app:
+    { g : ctx,
+      M1 : (g |- tm),
+      M2 : (g |- tm),
+      A : ( |- tp),
+      B : ( |- tp),
+      A1 : ( |- tp),
+      D : (g |- oft M1 (arr A1[] A[])),
+      D1 : (g |- oft M2 A1[]),
+      A2 : ( |- tp),
+      D2 : (g |- oft M1 (arr A2[] B[])),
+      D3 : (g |- oft M2 A2[])
+    | y6 : [g |- oft (app M1 M2) A[]], d : [g |- oft (app M1 M2) B[]]
+    ; by tp-unique [g |- D] [g |- D2] as IH unboxed;
+      split [ |- IH] as
+      case eq_arr:
+      { g : ctx,
+        M1 : (g |- tm),
+        M2 : (g |- tm),
+        A : ( |- tp),
+        B : ( |- tp),
+        A1 : ( |- tp),
+        D : (g |- oft M1 (arr A1[] A[])),
+        D1 : (g |- oft M2 A1[]),
+        A2 : ( |- tp),
+        D2 : (g |- oft M1 (arr A2[] B[])),
+        D3 : (g |- oft M2 A2[]),
+        E : ( |- eq A1 A2),
+        E1 : ( |- eq A B)
+      | y6 : [g |- oft (app M1 M2) A[]], d : [g |- oft (app M1 M2) B[]]
+      ; solve [ |- E1]
+      }
+    }
   }
   case t_lam:
   { g : ctx,
-    X : ( |- tp),
-    X1 : (g, z3 : tm |- tm),
-    X2 : ( |- tp),
+    A1 : ( |- tp),
+    M1 : (g, m : tm |- tm),
+    A2 : ( |- tp),
     B : ( |- tp),
-    X3 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X2)
-  | x6 : [g |- oft (lam X (\x. X1)) (arr X X2)],
-    z6 : [g |- oft (lam X (\x. X1)) B]
-  ; split z6 as
+    D : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A2[])
+  | y6 : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A2[])],
+    d : [g |- oft (lam A1[] (\x. M1)) B[]]
+  ; split d as
     case t_lam:
     { g : ctx,
-      X : ( |- tp),
-      X1 : (g, z3 : tm |- tm),
-      X2 : ( |- tp),
-      X6 : ( |- tp),
-      X3 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X2),
-      X7 : (g, x : tm, x3 : oft x X |- oft (X1[.., x]) X6)
-    | x6 : [g |- oft (lam X (\x. X1)) (arr X X2)],
-      z6 : [g |- oft (lam X (\x. X1)) (arr X X6)]
-    ; ?
+      A1 : ( |- tp),
+      M1 : (g, m : tm |- tm),
+      A2 : ( |- tp),
+      A4 : ( |- tp),
+      D : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A2[]),
+      D1 : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A4[])
+    | y6 : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A2[])],
+      d : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A4[])]
+    ; by tp-unique [g, x1:block x:tm, u:oft x A1[] |- D[.., x1.1, x1.2]] [g, x1 |- D1[.., x1.1, x1.2]]
+        as IH unboxed;
+      by tp-refl [ |- A1] as EQ_A1 unboxed;
+      solve [ |- eq_arr EQ_A1 IH]
     }
   }
   case #.2:
   { g : ctx,
     A : ( |- tp),
-    #p1 : #(g |- block (x:tm, u:oft x A)),
+    #p1 : #(g |- block (x:tm, u:oft x A[])),
     B : ( |- tp)
-  | x6 : [g |- oft #p1.1 A], z6 : [g |- oft #p1.1 B]
-  ; split z6 as
+  | y6 : [g |- oft #p1.1 A[]], d : [g |- oft #p1.1 B[]]
+  ; split d as
     case #.2:
-    { g : ctx, B : ( |- tp), #p1 : #(g |- block (x:tm, u:oft x B))
-    | x6 : [g |- oft #p1.1 B], z6 : [g |- oft #p1.1 B]
+    { g : ctx, B : ( |- tp), #p1 : #(g |- block (x:tm, u:oft x B[]))
+    | y6 : [g |- oft #p1.1 B[]], d : [g |- oft #p1.1 B[]]
     ; suffices by tp-refl toshow
     }
   }

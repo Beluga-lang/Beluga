@@ -10,7 +10,6 @@ license: "GPLv3"
 run-test: [
   [ "./TEST" ]
   [ "./TEST -- +htmltest" ]
-  [ "./TEST -- +sexp" ]
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

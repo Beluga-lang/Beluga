@@ -144,6 +144,12 @@ module DynArray = struct
     | d when DynArray.empty d -> None
     | d -> Some (DynArray.get d 0)
 
+  let get_opt d i =
+    try
+      Some (DynArray.get d i)
+    with
+    | DynArray.Invalid_arg _ -> None
+
   (** Finds the *last* element in the array satisfying p, and returns also its index. *)
   let rfind_opt_idx (type a) (d : a DynArray.t) (p : a -> bool) : (int * a) option =
     let rec go = function
@@ -172,6 +178,13 @@ module Function = struct
     if f ()
     then until f
     else ()
+
+  (** A convenient way to execute an effect in the middle of a
+      composition pipeline.
+      ... |> through (fun x -> print_string x) |> ...
+   *)
+  let through (f : 'a -> unit) : 'a -> 'a =
+    fun x -> f x; x
 end
 
 module Seq = struct

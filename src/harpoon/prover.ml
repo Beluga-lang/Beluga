@@ -313,7 +313,8 @@ module Prover = struct
       ; prompt : InputPrompt.t
       ; ppf : Format.formatter
       ; stop : [ `stop | `go_on ]
-      ; all_paths : string list
+      ; sig_path : string (* path to the signature that was loaded *)
+      ; all_paths : string list (* paths to the resolved loaded files *)
       }
 
     let recover_theorem ppf hooks (cid, gs) =
@@ -388,6 +389,7 @@ module Prover = struct
      *)
     let make
           stop
+          (sig_path : string)
           (all_paths : string list)
           (ppf : Format.formatter)
           (prompt : InputPrompt.t)
@@ -400,6 +402,7 @@ module Prover = struct
       ; prompt
       ; ppf
       ; stop
+      ; sig_path
       ; all_paths
       }
 
@@ -407,25 +410,6 @@ module Prover = struct
      * TODO: Make this to preserve the order of sessions and theorems
      *)
     let reset_harpoon s : unit =
-      let forbid_leftover_vars path = function
-        | None -> ()
-        | Some vars ->
-           let open Format in
-           if !Debug.chatter <> 0 then
-             fprintf std_formatter "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@."
-               path
-               B.Recsgn.fmt_ppr_leftover_vars vars;
-           raise (B.Abstract.Error (B.Syntax.Loc.ghost, B.Abstract.LeftoverVars))
-      in
-      let load_file path =
-        let sgn, leftover_vars =
-          B.Parser.(B.Runparser.parse_file path (only sgn) |> extract)
-          |> B.Recsgn.apply_global_pragmas
-          |> B.Recsgn.recSgnDecls
-        in
-        B.Store.Modules.reset ();
-        forbid_leftover_vars path leftover_vars
-      in
       let curr_thm =
         let open Maybe in
         next_session s
@@ -439,10 +423,7 @@ module Prover = struct
       in
       let curr_thm_name = Theorem.get_name curr_thm in
       let curr_sg_label = curr_sg.Comp.label in
-      B.Store.clear ();
-      B.Typeinfo.clear_all ();
-      Holes.clear();
-      List.iter load_file s.all_paths;
+      let _ = B.Load.load s.ppf s.sig_path in
       let gs =
         B.Holes.get_harpoon_subgoals ()
         |> List.map snd
@@ -1045,13 +1026,14 @@ type interaction_mode = [ `stop | `go_on ]
 
 let start_toplevel
       (stop : interaction_mode)
+      (sig_path : string)
       (all_paths : string list)
       (gs : Comp.open_subgoal list)
       (input_prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop all_paths ppf input_prompt gs in
+  let s = State.make stop sig_path all_paths ppf input_prompt gs in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)

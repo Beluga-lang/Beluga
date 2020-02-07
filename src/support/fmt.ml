@@ -36,3 +36,5 @@ let surrounded (by : unit t) (inside : 'a t) : 'a t =
 (** Constructs a formatting function that ignores its argument and
     prints the given string literally. *)
 let string s = fun ppf _ -> fprintf ppf "%s" s
+
+let null_formatter = make_formatter (fun _ _ _ -> ()) (fun _ -> ())

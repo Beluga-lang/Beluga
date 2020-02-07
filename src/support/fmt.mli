@@ -25,3 +25,10 @@ val surrounded : (formatter -> unit -> unit) ->
 (** Constructs a formatting function that ignores its argument and
     prints the given string literally. *)
 val string : string -> formatter -> unit -> unit
+
+(** A formatter that ignores everything.
+    This is inefficient because all formatting functions will still be
+    executed, but it's merely their outputs that are ignored and never
+    get written anywhere.
+ *)
+val null_formatter : formatter

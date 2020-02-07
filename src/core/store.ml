@@ -1,6 +1,8 @@
 open Support
 open Syntax
 
+module DynArray = Misc.DynArray
+
 type error =
   | FrozenType of Id.cid_typ
 
@@ -134,6 +136,18 @@ module Modules = struct
     aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName
 end
 
+let basic_clear store directory =
+  let open Maybe in
+  let _ = DynArray.(get_opt store !Modules.current $> clear) in
+  let _ = DynArray.get_opt directory !Modules.current $> Hashtbl.clear in
+  ()
+
+let clear_entry_list es =
+  let open Maybe in
+  let _ =
+    DynArray.get_opt es !Modules.current $> fun l -> l := []
+  in
+  ()
 
 module Cid = struct
 
@@ -406,9 +420,8 @@ module Cid = struct
             ()
 
     let clear () =
-      (DynArray.get entry_list (!Modules.current)) := [];
-      DynArray.clear (DynArray.get store (!Modules.current));
-      Hashtbl.clear (DynArray.get directory (!Modules.current))
+      clear_entry_list entry_list;
+      basic_clear store directory
 
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
@@ -490,10 +503,7 @@ module Cid = struct
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
-    let clear () =
-      DynArray.clear (DynArray.get store (!Modules.current));
-      Hashtbl.clear (DynArray.get directory  (!Modules.current))
-
+    let clear () = basic_clear store directory
   end
 
 
@@ -564,9 +574,7 @@ module Cid = struct
       | _ -> raise Not_found
 
     let clear () =
-      DynArray.clear (DynArray.get store (!Modules.current));
-      Hashtbl.clear (DynArray.get directory (!Modules.current))
-
+      basic_clear store directory
   end
 
   module CompTyp = struct
@@ -673,9 +681,8 @@ module Cid = struct
         entry.constructors := (c :: !(entry.constructors)))
 
     let clear () =
-      (DynArray.get entry_list !Modules.current) := [];
-      DynArray.clear (DynArray.get store !Modules.current);
-      Hashtbl.clear (DynArray.get directory !Modules.current)
+      clear_entry_list entry_list;
+      basic_clear store directory
   end
 
  module CompCotyp = struct
@@ -747,9 +754,7 @@ module Cid = struct
       let entry = get typ in
         entry.destructors := c :: !(entry.destructors)
 
-    let clear () =
-      DynArray.clear (DynArray.get store (!Modules.current));
-      Hashtbl.clear (DynArray.get directory (!Modules.current))
+    let clear () = basic_clear store directory
   end
 
 
@@ -817,9 +822,7 @@ module Cid = struct
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
-    let clear () =
-      DynArray.clear (DynArray.get store !(Modules.current));
-      Hashtbl.clear (DynArray.get directory !(Modules.current))
+    let clear () = basic_clear store directory
   end
 
   module CompDest = struct
@@ -889,9 +892,7 @@ module Cid = struct
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
-    let clear () =
-      DynArray.clear (DynArray.get store !(Modules.current));
-      Hashtbl.clear (DynArray.get directory !(Modules.current))
+    let clear () = basic_clear store directory
   end
 
 
@@ -962,10 +963,7 @@ module Cid = struct
 
     let get_implicit_arguments c = (get c).implicit_arguments
 
-    let clear () =
-      DynArray.clear (DynArray.get store !(Modules.current));
-      Hashtbl.clear (DynArray.get directory !(Modules.current))
-
+    let clear () = basic_clear store directory
   end
 
 
@@ -1099,9 +1097,7 @@ module Cid = struct
         entry_list := (cid_prog,loc) :: !entry_list;
         (None, cid_prog)
 
-    let clear () =
-      DynArray.clear (DynArray.get store !(Modules.current));
-      Hashtbl.clear (DynArray.get directory !(Modules.current))
+    let clear () = basic_clear store directory
 
     let set (l, n) f =
       let d = DynArray.get store l in

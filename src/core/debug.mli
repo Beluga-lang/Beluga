@@ -29,7 +29,6 @@ type flags
 val enable : unit -> unit
 val init : string option -> unit
 
-val chatter : int ref
 val makeFunctions :
   flags ->
   ((unit -> string) -> unit) * (string -> unit)

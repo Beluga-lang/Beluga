@@ -7,7 +7,7 @@
    @author Joshua Dunfield
 *)
 
-let dump = ref false
+include Options.Subord
 
 open Syntax.Int.LF
 module Types = Store.Cid.Typ

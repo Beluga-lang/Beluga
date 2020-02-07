@@ -228,25 +228,6 @@ let validate (o : partial_t) : valid_t =
  *)
 let elaborate (o : valid_t) : elaborated_t =
   let open B in
-  let forbid_leftover_vars path = function
-    | None -> ()
-    | Some vars ->
-       let open Format in
-       if !Debug.chatter <> 0 then
-         fprintf std_formatter "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@."
-           path
-           Recsgn.fmt_ppr_leftover_vars vars;
-       raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-  in
-  let load_file path =
-    let sgn, leftover_vars =
-      Parser.(Runparser.parse_file path (only sgn) |> extract)
-      |> Recsgn.apply_global_pragmas
-      |> Recsgn.recSgnDecls
-    in
-    Store.Modules.reset ();
-    forbid_leftover_vars path leftover_vars
-  in
-  let all_paths = Cfg.process_file_argument o.path in
-  List.iter load_file all_paths;
+  let ppf = Format.std_formatter in
+  let all_paths = Load.load ppf o.path in
   { o with all_paths }

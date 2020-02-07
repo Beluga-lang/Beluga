@@ -8,9 +8,7 @@
 open Beluga
 open Printf
 module P = Parser
-
-let dprintf, _, _ = Debug.makeFunctions' (Debug.toFlags [11])
-open Debug.Fmt
+module F = Support.Misc.Function
 
 let bailout msg =
   fprintf stderr "%s\n" msg;
@@ -61,14 +59,14 @@ let process_option arg rest =
   match arg with
   (* these strings must be lowercase *)
   | "+d" -> Debug.enable (); Printexc.record_backtrace true; rest
-  | "+ext" -> externall := true; rest
+  | "+ext" -> Options.Testing.print_external_syntax := true; rest
   | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
   | "+implicit" -> PC.printImplicit := true; rest
   | "+t" -> Monitor.on := true; rest
   | "+tfile" -> Monitor.onf := true; rest
   | "+printSubord" -> Subord.dump := true; rest
-  | "-print" -> Debug.chatter := 0; rest
-  | "+print" -> Debug.chatter := 2; rest
+  | "+test" | "-print" -> Chatter.level := 0; rest
+  | "+print" -> Chatter.level := 2; rest
   | "-width" ->
      with_arg_for "-width"
        begin fun arg rest ->
@@ -80,15 +78,22 @@ let process_option arg rest =
        rest
        end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+test" -> Debug.chatter := 0; rest
   | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
-  | "+htmltest" -> Html.genHtml := true; Html.filename := "/dev/null"; rest
-  | "+html" | "+HTML" -> Html.genHtml := true; rest
-  | "-css"  | "-CSS"  -> Html.css := Html.NoCSS; rest
+  | "+htmltest" ->
+     Html.generate := true;
+     Html.filename := None;
+     rest
+  | "+html" | "+HTML" -> Html.generate := true; rest
+  | "-css"  | "-CSS"  -> Html.css := `none; rest
   | "+cssfile" ->
      with_arg_for "+cssfile"
-       (fun arg rest -> Html.css := Html.File arg; rest)
-  | "+annot"      -> Typeinfo.generate_annotations := true; rest
+       begin fun arg rest ->
+       Html.css := `file arg;
+       rest
+       end
+  | "+annot" ->
+     Typeinfo.generate_annotations := true;
+     rest
   | "-I" ->
      begin
        try Beli.run rest
@@ -108,102 +113,17 @@ let rec process_options = function
 
 exception SessionFatal
 
-let per_file file_name =
-  let chatter f = if !Debug.chatter <> 0 then f () in
-  let abort_session () = raise SessionFatal in
-  try
-    let sgn =
-      Parser.(Runparser.parse_file file_name (only sgn) |> extract)
-    in
-    (* If the file starts with a global pragma then process it now. *)
-    let sgn = Recsgn.apply_global_pragmas sgn in
-    if !externall then
-      begin
-        chatter
-          (fun _ -> printf "\n## Pretty-printing of the external syntax : ##\n");
-        let module P = Pretty.Ext.DefaultPrinter in
-        P.fmt_ppr_sgn Format.std_formatter sgn
-      end;
-    chatter (fun _ -> printf "\n## Type Reconstruction: %s ##\n" file_name);
-    let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
-    let _ = Store.Modules.reset () in
-    if !Debug.chatter > 1 then
-      begin
-        let module P = Pretty.Int.DefaultPrinter in
-        List.iter (P.fmt_ppr_sgn_decl Format.std_formatter) sgn'
-      end;
-
-    if !Debug.chatter <> 0 then
-      printf "\n## Type Reconstruction done: %s  ##\n" file_name;
-
-    Coverage.iter
-      begin function
-        | Coverage.Success -> ()
-        | Coverage.Failure message ->
-           if !Coverage.warningOnly then
-             Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
-           else
-             raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
-      end;
-
-    if !Coverage.enableCoverage && !Debug.chatter <> 0 then
-      printf "\n## Coverage checking done: %s  ##\n" file_name;
-
-    if !Subord.dump then begin
-        Subord.dump_subord();
-        (* Subord.dump_typesubord() *)
-      end;
-    print_newline () ;
-    Logic.runLogic ();
-    if not (Holes.none ()) && !Debug.chatter != 0 then
-      begin
-        let open Format in
-        fprintf std_formatter
-          "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@."
-          file_name
-          (pp_print_list Interactive.fmt_ppr_hole) (Holes.list ());
-      end;
-    begin match leftoverVars with
-    | None -> ()
-    | Some vars ->
-      let open Format in
-      if !Debug.chatter <> 0 then
-        fprintf std_formatter "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@."
-          file_name
-          Recsgn.fmt_ppr_leftover_vars vars;
-      raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-    end;
-    if !Typeinfo.generate_annotations then
-      Typeinfo.print_annot file_name;
-    print_newline();
-    if !Monitor.on || !Monitor.onf then
-      Monitor.print_timer () ;
-    if !Html.genHtml then begin
-        Html.generatePage file_name
-      end;
-  with e ->
-    dprintf
-      (fun p ->
-        p.fmt "Backtrace: %s" (Printexc.get_backtrace ()));
-    output_string stderr (Printexc.to_string e);
-    abort_session ()
-
 let main () =
   let args   = List.tl (Array.to_list Sys.argv) in
   let files = process_options args in
   Debug.init None;
-  let status_code =
-    match files with
-    | [file] ->
-       begin
-         try
-           List.iter per_file (Cfg.process_file_argument file) ; 0
-         with SessionFatal -> 1
-       end
-    | _ -> bailout "Wrong number of command line arguments."
-  in
-  printf "%s" (Error.getInformation ());
-  exit status_code
+  begin match files with
+  | [file] ->
+     let _ = Load.load Format.std_formatter file in
+     ()
+  | _ -> bailout "Wrong number of command line arguments."
+  end;
+  printf "%s" (Error.getInformation ())
 
 let _ =
   Format.set_margin 80;

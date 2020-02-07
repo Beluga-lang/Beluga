@@ -9,8 +9,6 @@ type 'a io = 'a -> unit
 module Fmt = Support.Fmt
 open Fmt
 
-let chatter : int ref = ref 1
-
 let r_flags : flags ref = ref 0
 
 let enable () =

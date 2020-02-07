@@ -15,7 +15,8 @@ exception Invalid_Arg
 
 let process_option arg : unit = match arg with
   | "-emacs" ->
-     Options.emacs := true; Debug.chatter := 0
+     Options.emacs := true;
+     Chatter.level := 0
   | _ ->
      raise Invalid_Arg
 
@@ -80,8 +81,7 @@ let run args =
       raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
       end
       in
-        if !Debug.chatter <> 0 then
-          List.iter (P.fmt_ppr_sgn_decl std_formatter) sgn';
+      Chatter.print 1 "%a" P.fmt_ppr_sgn sgn';
       fprintf ppf "The file has been successfully loaded.\n"
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;

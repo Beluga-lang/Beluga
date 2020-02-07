@@ -8,12 +8,13 @@
  *  Last update Mon Jun 15 11:13:24 2009 Dimitri Kirchner
  *)
 
-(*
- * on: is true if we call the interpreter with argument: +t
- * onf: is true if we call the interpreter with argument: +tfile
- *)
 let on = ref false;;
 let onf = ref false;;
+
+(* TODO this module should be rewritten to use hashtable or something
+   and furthermore to use English variable names.
+   -je
+ *)
 
 (*
  * We create four arrays which will contain the differents steps of the type checking

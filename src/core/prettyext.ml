@@ -32,7 +32,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
   let to_html (s : string) (tag : html) : string =
     match tag with
-    | _ when not !Html.printingHtml -> s
+    | _ when not !Html.printing -> s
     | Keyword -> "<keyword>" ^ s ^ "</keyword>"
     | ID Constructor -> Html.addId s; "<span class=\"constructor\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | ID Typ -> Html.addId s; "<span class=\"typ\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
@@ -56,7 +56,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | Lam
 
   let symbol_to_html : symbol -> string =
-    let f s1 s2 = if !Html.printingHtml then s1 else s2 in
+    let f s1 s2 = if !Html.printing then s1 else s2 in
     function
     | Turnstile -> f "&#x22A2" "|-"
     | RArr -> f "&#x2192" "->"

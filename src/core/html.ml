@@ -1,11 +1,7 @@
-type css = Normal | NoCSS | File of string
 
-let genHtml : bool ref = ref false
-let printingHtml : bool ref = ref false
-let css : css ref = ref Normal
-let filename : string ref = ref "out.html"
-let page : Buffer.t = Buffer.create 0
+let page : Buffer.t = Buffer.create 4096
 
+include Options.HTML
 
 (* display:block; border: 1px dashed maroon;
  *)
@@ -38,49 +34,47 @@ let header =
 \n\t</style>\n\
 </head>\n"
 
+let gen_css_link orig page out = function
+  | `none ->
+      out  (page ^ "\n");
+      out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+  | `normal ->
+      out header;
+      out "<body>\n";
+      out  page;
+      out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+      out "\n</body>\n</html>\n"
+  | `file s ->
+      out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
+      out s; out "\">\n</head>\n<body>\n";
+      out page;
+      out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
+      out "\n</body>\n</html>\n"
+
 let generatePage orig =
-  if not (!filename = "/dev/null") then
-    let l = String.length orig in
-    filename := ((String.sub orig 0 (l-3)) ^ "html");
-  begin
-    let orig = Filename.basename orig in
-    (* Merge different code blocks into, as long as there isn't anything inbetween *)
-    let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-    let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
-    let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
-    let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
-    let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
-    let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
-    let page = Str.global_replace (Str.regexp_string "#S") "&sigma;" page in
-    let page = Str.global_replace (Str.regexp_string "phi") "&phi;" page in
-    let page = Str.global_replace (Str.regexp_string "psi") "&psi;" page in
-    let page = Str.global_replace (Str.regexp_string "gamma") "&gamma;" page in
-    let page = Str.global_replace (Str.regexp "\\\\\\([a-z][a-z0-9]*\\.\\)") "&lambda;\\1" page in
-    (* Output the HTML file *)
-    let oc = open_out !filename in
-    let out = output_string oc in
-    begin match !css with
-    | NoCSS -> begin
-        out  (page ^ "\n");
-        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
-      end
-    | Normal -> begin
-        out header;
-        out "<body>\n";
-        out  page;
-        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
-        out "\n</body>\n</html>\n"
-      end
-    | File s -> begin
-        out "<html>\n<head>\n\t<link rel=\"stylesheet\" type=\"text/css\" href=\"";
-        out s; out "\">\n</head>\n<body>\n";
-        out page;
-        out ("<br><br><h3>To download the code: <a href=\"" ^ orig ^ "\" target=\"_blank\">" ^ orig ^ "</a></h3>\n");
-        out "\n</body>\n</html>\n"
-      end
-    end;
-    close_out oc
-  end
+  let out_path =
+    match !filename with
+    | None -> "/dev/null" (* XXX not portable -je *)
+    | Some _ -> String.sub orig 0 (String.length orig - 3) ^ "html"
+  in
+  let orig = Filename.basename orig in
+  (* Merge different code blocks into, as long as there isn't anything inbetween *)
+  let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
+  let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
+  let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
+  let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
+  let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
+  let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
+  let page = Str.global_replace (Str.regexp_string "#S") "&sigma;" page in
+  let page = Str.global_replace (Str.regexp_string "phi") "&phi;" page in
+  let page = Str.global_replace (Str.regexp_string "psi") "&psi;" page in
+  let page = Str.global_replace (Str.regexp_string "gamma") "&gamma;" page in
+  let page = Str.global_replace (Str.regexp "\\\\\\([a-z][a-z0-9]*\\.\\)") "&lambda;\\1" page in
+  (* Output the HTML file *)
+  let oc = open_out out_path in
+  let out = output_string oc in
+  gen_css_link orig page out !css;
+  close_out oc
 
 (* let replaceNewLine = Str.global_replace (Str.regexp "[\n]") "<br>" *)
 

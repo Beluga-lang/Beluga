@@ -32,7 +32,8 @@ let process_bel name chan =
  *)
 let _ =
   let name = Array.get Sys.argv 1 in
-  Beluga.Cfg.process_file_argument name
+  let ppf = Format.std_formatter in
+  Beluga.Load.load ppf name
   |> List.iter
        (fun path ->
          let h = open_in path in

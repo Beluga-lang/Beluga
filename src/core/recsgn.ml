@@ -146,14 +146,14 @@ let sgnDeclToHtml = function
   | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
   | d ->
     let margin = Format.pp_get_margin Format.str_formatter () in
-    let _ = Html.printingHtml := true in
+    let _ = Html.printing := true in
     (* let _ = Format.set_margin 150 in *)
     let _ = Format.pp_set_margin Format.str_formatter 200 in
     let module P = Pretty.Ext.DefaultPrinter in
     let _ = P.fmt_ppr_sgn_decl Format.str_formatter d in
     let _ = Html.append (Format.flush_str_formatter ()) in
     let _ = Format.pp_set_margin (Format.str_formatter) margin in
-    Html.printingHtml := false
+    Html.printing := false
 
 let rec apply_global_pragmas =
   function
@@ -191,8 +191,8 @@ let recSgnDecls decls =
 	           let _ = recSgnDecl not'd_decl in true
 	         with
            | _ ->
-	            if !Debug.chatter != 0 then
-                print_string ("Reconstruction fails for --not'd declaration\n");
+              Chatter.print 1
+                "Reconstruction fails for --not'd declaration@.";
               false
          end in
        if not'd_decl_succeeds
@@ -216,7 +216,7 @@ let recSgnDecls decls =
 
   and recSgnDecl ?(pauseHtml=false) d =
     Reconstruct.reset_fvarCnstr ();  FCVar.clear ();
-    if !Html.genHtml && not pauseHtml then sgnDeclToHtml d;
+    if !Html.generate && not pauseHtml then sgnDeclToHtml d;
     match d with
     | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment(l, s)
     | Ext.Sgn.Pragma(loc, Ext.Sgn.AbbrevPrag(orig, abbrev)) ->

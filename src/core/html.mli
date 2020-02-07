@@ -1,9 +1,9 @@
-type css = Normal | NoCSS | File of string
+type css_file = Options.HTML.css_file
 
-val genHtml : bool ref
-val css : css ref
-val filename : string ref
-val printingHtml : bool ref
+val generate : bool ref
+val css : css_file ref
+val filename : string option ref
+val printing : bool ref
 val generatePage : string -> unit
 
 val append : string -> unit

@@ -297,4 +297,10 @@ let main () =
            exit 1 )
       ( fun _ -> exit 0 )
 
-let _ = main ()
+let _ =
+  try
+    main ()
+  with
+  | e ->
+     Printexc.print_backtrace stdout;
+     print_string (Printexc.to_string e)

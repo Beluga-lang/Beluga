@@ -46,7 +46,7 @@ let chatteron =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          Debug.chatter := 1; fprintf ppf "The chatter is on now;\n@?"
+          Chatter.level := 1; fprintf ppf "The chatter is on now;\n@?"
         );
     help = "Turn on the chatter"
   }
@@ -56,7 +56,8 @@ let chatteroff =
     run =
       command_with_arguments 0
         (fun ppf _ ->
-          Debug.chatter := 0; fprintf ppf "The chatter is off now;\n@?"
+          Chatter.level := 0;
+          fprintf ppf "The chatter is off now;\n@?"
         );
     help = "Turn off the chatter"
   }
@@ -103,32 +104,20 @@ let clearholes =
     help = "Clear all computation level holes"
   }
 
-let load_files ppf file_name files =
-	let per_file f =
-    let sgn =
-      Parser.(Runparser.parse_file file_name (only sgn) |> extract)
-      |> Recsgn.apply_global_pragmas
-      |> Recsgn.recSgnDecls
-      |> function
-        | sgn', None -> sgn'
-        | _, Some _ -> raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
-    in
-    if !Debug.chatter <> 0 then P.fmt_ppr_sgn std_formatter sgn
-	in
-  Holes.clear ();
-  List.iter per_file files;
-  fprintf ppf "The file %s has been successfully loaded;\n@?" (Filename.basename file_name)
-
 let reload, load =
-  let last_load : (string * string list) option ref = ref None in
+  let do_load ppf path =
+    let _ = Load.load ppf path in
+    fprintf ppf "The file %s has been successfully loaded;\n@?"
+      path
+  in
+  let last_load : string option ref = ref None in
   { name = "reload"
   ; run =
       command_with_arguments 0
         (fun ppf arglist ->
           match !last_load with
           | None -> fprintf ppf "- No load to repeat;@?"
-          | Some (file_name, files) ->
-             load_files ppf file_name files
+          | Some path -> do_load ppf path
         )
   ; help = "Repeats the last load command."
   },
@@ -136,10 +125,9 @@ let reload, load =
   ; run =
       command_with_arguments 1
         (fun ppf arglist ->
-          let file_name = List.hd arglist in (* .bel or .cfg *)
-		      let files = Cfg.process_file_argument file_name in
-          last_load := Some (file_name, files);
-          load_files ppf file_name files
+          let path = List.hd arglist in (* .bel or .cfg *)
+          do_load ppf path;
+          last_load := Some path
         )
   ; help = "Load the file \"filename\" into the interpreter"
   }

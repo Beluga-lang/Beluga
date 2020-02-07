@@ -313,7 +313,7 @@ module Prover = struct
       ; prompt : InputPrompt.t
       ; ppf : Format.formatter
       ; stop : [ `stop | `go_on ]
-      ; target_file_name : string
+      ; all_paths : string list
       }
 
     let recover_theorem ppf hooks (cid, gs) =
@@ -369,7 +369,6 @@ module Prover = struct
       )
       |> fun xs -> List.map (recover_session ppf hooks) xs
 
-
     let printf s x = Format.fprintf s.ppf x
 
     let defer_session s =
@@ -389,7 +388,7 @@ module Prover = struct
      *)
     let make
           stop
-          (target_file_name : string)
+          (all_paths : string list)
           (ppf : Format.formatter)
           (prompt : InputPrompt.t)
           (gs : Comp.open_subgoal list)
@@ -401,8 +400,43 @@ module Prover = struct
       ; prompt
       ; ppf
       ; stop
-      ; target_file_name
+      ; all_paths
       }
+
+    (**
+     * TODO: Make this to preserve the order of sessions and theorems
+     *)
+    let reset_harpoon s =
+      let forbid_leftover_vars path = function
+        | None -> ()
+        | Some vars ->
+           let open Format in
+           if !Debug.chatter <> 0 then
+             fprintf std_formatter "@[<v>## Leftover variables: %s  ##@,  @[%a@]@]@."
+               path
+               B.Recsgn.fmt_ppr_leftover_vars vars;
+           raise (B.Abstract.Error (B.Syntax.Loc.ghost, B.Abstract.LeftoverVars))
+      in
+      let load_file path =
+        let sgn, leftover_vars =
+          B.Parser.(B.Runparser.parse_file path (only sgn) |> extract)
+          |> B.Recsgn.apply_global_pragmas
+          |> B.Recsgn.recSgnDecls
+        in
+        B.Store.Modules.reset ();
+        forbid_leftover_vars path leftover_vars
+      in
+      B.Store.clear ();
+      B.Typeinfo.clear_all ();
+      Holes.clear();
+      List.iter load_file s.all_paths;
+      let gs =
+        B.Holes.get_harpoon_subgoals ()
+        |> List.map snd
+      in
+      let hooks = [run_automation s.automation_state] in
+      DynArray.clear s.sessions;
+      DynArray.append s.sessions (DynArray.of_list (recover_sessions s.ppf hooks gs))
 
     (** Displays the given prompt `msg` and awaits a line of input from the user.
         The line is parsed using the given parser.
@@ -733,7 +767,10 @@ module Prover = struct
             |> List.filter (fun thms -> thms != [])
           in
           update_existing_holes existing_holes;
-          add_new_mutual_rec_thmss s.State.target_file_name new_mutual_rec_thmss;
+          add_new_mutual_rec_thmss
+            (ExtList.List.last s.State.all_paths)
+            new_mutual_rec_thmss;
+          State.reset_harpoon s;
        end
     | Command.Subgoal cmd ->
        begin match cmd with
@@ -974,13 +1011,13 @@ type interaction_mode = [ `stop | `go_on ]
 
 let start_toplevel
       (stop : interaction_mode)
-      (target_file_name : string)
+      (all_paths : string list)
       (gs : Comp.open_subgoal list)
       (input_prompt : InputPrompt.t)
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop target_file_name ppf input_prompt gs in
+  let s = State.make stop all_paths ppf input_prompt gs in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)

@@ -251,14 +251,12 @@ module Prover = struct
     type t =
       { theorems : Theorem.t DynArray.t
       ; commands : Command.command DynArray.t
-      ; name : Id.name
       ; mutual_group : CompS.mutual_group_id
       }
 
-    let make name mutual_group thms =
+    let make mutual_group thms =
       { theorems = thms
       ; commands = DynArray.make 32
-      ; name
       ; mutual_group
       }
 
@@ -302,6 +300,21 @@ module Prover = struct
       match Comp.head_of_application i with
       | Comp.Const (_, c) when cid_is_in_current_theorem_set s c -> `ih
       | _ -> `lemma
+
+    (** Selects a theorem by name in the current session.
+        Returns whether the selection succeeded. (A theorem by such name could be found.)
+     *)
+    let select_theorem c name =
+      match
+        Misc.DynArray.rfind_opt_idx
+          c.theorems
+          (fun t -> Theorem.has_name_of t name)
+      with
+      | None -> false
+      | Some (i, t) ->
+         DynArray.delete c.theorems i;
+         DynArray.insert c.theorems 0 t;
+         true
   end
 
   module State = struct
@@ -344,9 +357,6 @@ module Prover = struct
         (Nonempty.to_list gs)
 
     let recover_session ppf hooks (mutual_group, thm_confs) =
-      let name =
-        Nonempty.head thm_confs |> fst |> CompS.name
-      in
       let commands = DynArray.create () in
       let theorems =
         Nonempty.(
@@ -355,7 +365,7 @@ module Prover = struct
         )
         |> DynArray.of_list
       in
-      { Session.name; commands; theorems; mutual_group }
+      { Session.commands; theorems; mutual_group }
 
     let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
       (* idea:
@@ -546,14 +556,37 @@ module Prover = struct
     let add_session s c = DynArray.insert s.sessions 0 c
     let remove_current_session s = DynArray.delete s.sessions 0
 
-    let session_configuration_wizard name s =
+    let session_configuration_wizard s =
       let mutual_group, thms = session_configuration_wizard' s in
       (* c will be populated with theorems; if there are none it's
          because the session is over. *)
       match thms with
       | _ :: _ ->
-         `ok (Session.make name mutual_group (DynArray.of_list thms))
+         `ok (Session.make mutual_group (DynArray.of_list thms))
       | [] -> `aborted
+
+    let select_theorem s name =
+      match
+        Misc.DynArray.rfind_opt_idx
+          s.sessions
+          begin fun c ->
+          List.exists
+            (fun t -> Id.equals (Theorem.get_name t) name)
+            (DynArray.to_list c.Session.theorems)
+          end
+      with
+      | None ->
+         printf s "No session contains a theorem named %a.@,"
+           Id.print name
+      | Some (i, c) -> (* i is the index of session c *)
+         DynArray.delete s.sessions i;
+         let c' = DynArray.get s.sessions 0 in
+         Session.suspend c';
+         Session.enter c;
+         DynArray.insert s.sessions 0 c;
+         if not (Session.select_theorem c name) then
+           B.Error.violation
+             "[select_theorem] selected session does not contain the theorem"
   end
 
     (*
@@ -659,19 +692,14 @@ module Prover = struct
             List.mapi (fun i thm -> (i, Theorem.get_name thm)) theorem_list
           in
           let fmt_ppr_indexed_theorem ppf (i, sName) =
-            Format.fprintf ppf "%d. %a %s"
-              i
-              Id.print sName
-              (if i = 0
-               then "<<< current theorem"
-               else ""
-              )
+            Format.fprintf ppf "%d. %a" i Id.print sName
           in
           let fmt_ppr_indexed_theorems =
             Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_theorem
           in
           (* It may be better to add the current session name to this message *)
-          State.printf s "@[<v>Theorems in the current session:@,  @[<v>%a@]@]"
+          State.printf s
+            "@[<v>Theorems in the current session:@,  @[<v>%a@]@,Current theorem: 1.@]"
             fmt_ppr_indexed_theorems theorem_indexed_name_list
        | `defer -> Session.defer_theorem c
        | `show_ihs ->
@@ -688,72 +716,32 @@ module Prover = struct
           dump_proof t path
        | `show_proof ->
           Theorem.show_proof t
-       | `select name ->
-          begin match
-            Misc.DynArray.rfind_opt_idx
-              c.Session.theorems
-              (fun t -> Theorem.has_name_of t name)
-          with
-          | None ->
-             State.printf s "No such theorem by name %a in the current session.@,"
-               Id.print name
-          | Some (i, t) ->
-             DynArray.delete c.Session.theorems i;
-             DynArray.insert c.Session.theorems 0 t
-          end
        end
     | Command.Session cmd ->
        begin match cmd with
        | `list ->
+          let open Format in
           let session_list = DynArray.to_list s.State.sessions in
-          let session_indexed_name_list =
-            List.mapi (fun i s -> (i + 1, s.Session.name)) session_list
+          let index l = List.mapi Pair.left l in
+          let print_list f ppf x =
+            pp_print_list ~pp_sep: pp_print_cut f ppf x
           in
-          let fmt_ppr_indexed_session ppf (i, sName) =
-            Format.fprintf ppf "%d. %a %s"
-              i
-              Id.print sName
-              (if i = 0
-               then "<<< current session"
-               else ""
-              )
+          let print_indexed_session ppf (i, s) =
+            let thms = DynArray.to_list Session.(s.theorems) in
+            let print_indexed_theorem ppf (i, t) =
+              fprintf ppf "%d. %a" (i + 1) Id.print (Theorem.get_name t)
+            in
+            fprintf ppf "%d. @[<v>%a@]"
+              (i + 1)
+              (print_list print_indexed_theorem) (index thms)
           in
-          let fmt_ppr_indexed_sessions =
-            Format.pp_print_list ~pp_sep: Format.pp_print_cut fmt_ppr_indexed_session
-          in
-          State.printf s "@[<v>Sessions:@,  @[<v>%a@]@]"
-            fmt_ppr_indexed_sessions session_indexed_name_list
+          State.printf s "@[<v>Sessions:@,  @[<v>%a@]@,Current session: 1.@]"
+            (print_list print_indexed_session) (index session_list)
        | `defer -> State.defer_session s
-       | `create name ->
-          begin match
-            Misc.DynArray.rfind_opt_idx
-              s.State.sessions
-              (fun c -> Id.equals c.Session.name name)
-          with
-          | Some _ ->
-             State.printf s "A session named %a already exists@,"
-               Id.print name
-          | None ->
-             begin match State.session_configuration_wizard name s with
-             | `ok c -> State.add_session s c
-             | `aborted -> ()
-             end
-          end
-       | `select name ->
-          begin match
-            Misc.DynArray.rfind_opt_idx
-              s.State.sessions
-              (fun c -> Id.equals c.Session.name name)
-          with
-          | None ->
-             State.printf s "No such session by name %a.@,"
-               Id.print name
-          | Some (i, c) ->
-             DynArray.delete s.State.sessions i;
-             let c' = DynArray.get s.State.sessions 0 in
-             Session.suspend c';
-             Session.enter c;
-             DynArray.insert s.State.sessions 0 c'
+       | `create ->
+          begin match State.session_configuration_wizard s with
+          | `ok c -> State.add_session s c
+          | `aborted -> ()
           end
        | `serialize ->
           let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
@@ -792,6 +780,8 @@ module Prover = struct
        | `list -> Theorem.show_subgoals t
        | `defer -> Theorem.defer_subgoal t
        end
+
+    | Command.SelectTheorem name -> State.select_theorem s name
 
     | Command.Rename (x_src, x_dst, level) ->
        Theorem.rename_variable x_src x_dst level t g
@@ -980,8 +970,7 @@ let rec loop (s : Prover.State.t) : unit =
   let printf x = Prover.State.printf s x in
   match with_next_triple s with
   | Either.Left `no_session ->
-     let name = Id.(mk_name (SomeString "default")) in
-     begin match Prover.State.session_configuration_wizard name s with
+     begin match Prover.State.session_configuration_wizard s with
      | `ok c ->
         Prover.State.add_session s c;
         loop s
@@ -1038,8 +1027,7 @@ let start_toplevel
      then (it must have been empty so) we need to create the default
      session and configure it. *)
   if DynArray.empty State.(s.sessions) then
-    let name = Id.(mk_name (SomeString "default")) in
-    match State.session_configuration_wizard name s with
+    match State.session_configuration_wizard s with
     | `ok c ->
        State.add_session s c;
        loop s

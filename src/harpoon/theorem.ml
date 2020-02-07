@@ -94,7 +94,7 @@ let next_subgoal (t : t) : Comp.proof_state option =
   | gs -> Some (DynArray.get gs (current_subgoal_index gs))
 
 (**
- * Will updating this to change current_subgoal make this simpler?
+ * Will updating this to change current_subgoal_index make this simpler?
  * Or will it lead to chaotic complexity?
  *)
 let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof_state option =
@@ -105,7 +105,7 @@ let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof
   $> begin fun idx ->
      let sg = DynArray.get t.remaining_subgoals idx in
      DynArray.delete t.remaining_subgoals idx;
-     DynArray.insert t.remaining_subgoals idx sg;
+     DynArray.insert t.remaining_subgoals 0 sg;
      sg
      end
 

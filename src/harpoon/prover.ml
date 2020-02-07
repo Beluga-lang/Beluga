@@ -452,7 +452,7 @@ module Prover = struct
            $> begin fun loaded_curr_thm_idx ->
               let loaded_curr_thm = DynArray.get c.Session.theorems loaded_curr_thm_idx in
               DynArray.delete c.Session.theorems loaded_curr_thm_idx;
-              DynArray.insert c.Session.theorems loaded_curr_thm_idx loaded_curr_thm;
+              DynArray.insert c.Session.theorems 0 loaded_curr_thm;
               Theorem.select_subgoal_satisfying
                 loaded_curr_thm
                 begin fun sg ->

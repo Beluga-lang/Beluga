@@ -406,7 +406,7 @@ module Prover = struct
     (**
      * TODO: Make this to preserve the order of sessions and theorems
      *)
-    let reset_harpoon s =
+    let reset_harpoon s : unit =
       let forbid_leftover_vars path = function
         | None -> ()
         | Some vars ->
@@ -426,6 +426,19 @@ module Prover = struct
         B.Store.Modules.reset ();
         forbid_leftover_vars path leftover_vars
       in
+      let curr_thm =
+        let open Maybe in
+        next_session s
+        $ Session.next_theorem
+        |> get
+      in
+      let curr_sg =
+        curr_thm
+        |> Theorem.next_subgoal
+        |> Maybe.get
+      in
+      let curr_thm_name = Theorem.get_name curr_thm in
+      let curr_sg_label = curr_sg.Comp.label in
       B.Store.clear ();
       B.Typeinfo.clear_all ();
       Holes.clear();
@@ -436,7 +449,28 @@ module Prover = struct
       in
       let hooks = [run_automation s.automation_state] in
       DynArray.clear s.sessions;
-      DynArray.append s.sessions (DynArray.of_list (recover_sessions s.ppf hooks gs))
+      DynArray.append s.sessions (DynArray.of_list (recover_sessions s.ppf hooks gs));
+      s.sessions
+      |> DynArray.to_list
+      |> List.find_opt
+           begin fun c ->
+           let open Maybe in
+           c.Session.theorems
+           |> DynArray.to_list
+           |> Misc.List.index_of (fun thm -> Theorem.has_name_of thm curr_thm_name)
+           $> begin fun loaded_curr_thm_idx ->
+              let loaded_curr_thm = DynArray.get c.Session.theorems loaded_curr_thm_idx in
+              DynArray.delete c.Session.theorems loaded_curr_thm_idx;
+              DynArray.insert c.Session.theorems loaded_curr_thm_idx loaded_curr_thm;
+              Theorem.select_subgoal_satisfying
+                loaded_curr_thm
+                begin fun sg ->
+                sg.Comp.label == curr_sg_label
+                end
+              end
+           |> Option.is_some
+           end
+      |> Misc.const ()
 
     (** Displays the given prompt `msg` and awaits a line of input from the user.
         The line is parsed using the given parser.
@@ -770,7 +804,7 @@ module Prover = struct
           add_new_mutual_rec_thmss
             (ExtList.List.last s.State.all_paths)
             new_mutual_rec_thmss;
-          State.reset_harpoon s;
+          State.reset_harpoon s
        end
     | Command.Subgoal cmd ->
        begin match cmd with

@@ -93,6 +93,22 @@ let next_subgoal (t : t) : Comp.proof_state option =
   | gs when DynArray.empty gs -> None
   | gs -> Some (DynArray.get gs (current_subgoal_index gs))
 
+(**
+ * Will updating this to change current_subgoal make this simpler?
+ * Or will it lead to chaotic complexity?
+ *)
+let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof_state option =
+  let open Maybe in
+  t.remaining_subgoals
+  |> DynArray.to_list
+  |> Misc.List.index_of p
+  $> begin fun idx ->
+     let sg = DynArray.get t.remaining_subgoals idx in
+     DynArray.delete t.remaining_subgoals idx;
+     DynArray.insert t.remaining_subgoals idx sg;
+     sg
+     end
+
 let dump_proof ppf t =
   let s = t.initial_state in
   Format.fprintf ppf "%a"

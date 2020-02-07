@@ -1,0 +1,21 @@
+examples/stlc.bel
+foo1
+[|- tm] -> [|- tp]
+
+foo2
+[|- tm] -> [|- tp]
+
+
+session create
+bar
+[|- tm] -> [|- tp]
+
+
+select foo1
+select bar
+select foo2
+select foo1
+select bar
+solve [|- base]
+solve [|- base]
+solve [|- base]

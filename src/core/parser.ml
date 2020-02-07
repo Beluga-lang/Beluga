@@ -3096,11 +3096,12 @@ let interactive_harpoon_command =
       ; keyword "defer" &> pure `defer
       ]
   in
-  let select_command, create_command, save_command =
-    let f k = keyword k &> name in
-    ( f "select" $> (fun x -> `select x)
-    , f "create" $> (fun x -> `create x)
-    , keyword "save" &> pure `save
+  let select_theorem =
+    keyword "select" &> name $> fun x -> H.SelectTheorem x
+  in
+  let create_command, serialize_command =
+    ( keyword "create" &> pure `create
+    , keyword "serialize" &> pure `serialize
     )
   in
   let theorem_command =
@@ -3112,7 +3113,6 @@ let interactive_harpoon_command =
     keyword "theorem" &>
       choice
         ( basic_command
-          :: select_command
           :: dump_proof
           :: List.map (fun (k, k') -> keyword k &> pure k')
                [ ("show-ihs", `show_ihs)
@@ -3123,7 +3123,7 @@ let interactive_harpoon_command =
   in
   let session_command =
     keyword "session"
-    &> choice [ basic_command; select_command; create_command; save_command ]
+    &> choice [ basic_command; create_command; serialize_command ]
     $> fun cmd -> H.Session cmd
   in
   let subgoal_command =
@@ -3159,6 +3159,7 @@ let interactive_harpoon_command =
     ; toggle_automation
     ; rename
     ; defer
+    ; select_theorem
     ; theorem_command
     ; session_command
     ; subgoal_command

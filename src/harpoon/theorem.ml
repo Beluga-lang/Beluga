@@ -93,9 +93,8 @@ let next_subgoal (t : t) : Comp.proof_state option =
   | gs when DynArray.empty gs -> None
   | gs -> Some (DynArray.get gs (current_subgoal_index gs))
 
-(**
- * Will updating this to change current_subgoal_index make this simpler?
- * Or will it lead to chaotic complexity?
+(** Finds the first subgoal in this theorem statisfying a given
+    predicate and makes it the active subgoal.
  *)
 let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof_state option =
   let open Maybe in

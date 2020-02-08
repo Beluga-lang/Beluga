@@ -381,7 +381,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
             ; solution = ref None
-            ; label = Comp.SubgoalPath.append label s.label
+            ; label = Comp.SubgoalPath.append s.label label
             }
           in
           (context, t', new_state, pat')

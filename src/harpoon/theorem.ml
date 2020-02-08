@@ -155,7 +155,7 @@ let add_subgoal t g =
 let add_subgoals t = List.iter (add_subgoal t)
 
 let remove_subgoal t g =
-  let i = DynArray.index_of (fun g' -> g = g') t.remaining_subgoals in
+  let i = DynArray.index_of (Whnf.conv_subgoal g) t.remaining_subgoals in
   DynArray.delete t.remaining_subgoals i
 
 let remove_current_subgoal t =

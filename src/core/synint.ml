@@ -546,14 +546,38 @@ module Comp = struct
 
   type context_case = LF.typ generic_context_case
 
-  type subgoal_label = string list
-
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
   type meta_branch_label =
-    [ `constructor of LF.dctx * LF.head
+    [ `ctor of cid_term
     | `pvar of int option
     ]
+
+  module SubgoalPath = struct
+    type t =
+      | Here
+      | Intros of t
+      | Suffices of exp_syn * int * t
+      | MetaSplit of exp_syn * meta_branch_label * t
+      | CompSplit of exp_syn * cid_comp_const * t
+      | ContextSplit of exp_syn * context_case * t
+
+    let equals p1 p2 = assert false
+
+    type builder = t -> t
+    let start = fun p -> p
+    let append (b1 : builder) (b2 : builder) : builder =
+      fun p -> b1 (b2 p)
+
+    let build_here (b : builder) : t =
+      b Here
+
+    let build_intros = fun p -> Intros p
+    let build_suffices i k = fun p -> Suffices (i, k, p)
+    let build_meta_split i lbl = fun p -> MetaSplit (i, lbl, p)
+    let build_comp_split i lbl = fun p -> CompSplit (i, lbl, p)
+    let build_context_split i lbl = fun p -> ContextSplit (i, lbl, p)
+  end
 
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
   type proof =
@@ -570,7 +594,7 @@ module Comp = struct
     { context : hypotheses (* all the assumptions *)
     (* The full context in scope at this point. *)
 
-    ; label : subgoal_label
+    ; label : SubgoalPath.builder
     (* A list of labels representing where we are in the proof.
        Used to generate a label for the state by assembling them. *)
 

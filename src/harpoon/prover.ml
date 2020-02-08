@@ -20,6 +20,8 @@ module F = Misc.Function
 module CompS = B.Store.Cid.Comp
 module Loc = B.Location
 
+module DynArray = Misc.DynArray
+
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
@@ -334,7 +336,7 @@ module Prover = struct
       let e = CompS.get cid in
       let initial_state =
         let s =
-          Comp.make_proof_state [Id.render_name e.CompS.name]
+          Comp.make_proof_state Comp.SubgoalPath.start
             ( e.CompS.typ, Whnf.m_id )
         in
         let prf =
@@ -359,14 +361,27 @@ module Prover = struct
     let recover_session ppf hooks (mutual_group, thm_confs) =
       let commands = DynArray.create () in
       let theorems =
-        Nonempty.(
-          map (recover_theorem ppf hooks) thm_confs
-          |> to_list (* XXX to_list -> of_list is inefficient *)
-        )
-        |> DynArray.of_list
+        let open Nonempty in
+        map (recover_theorem ppf hooks) thm_confs
+        |> to_list (* XXX to_list -> of_list later is inefficient *)
       in
-      { Session.commands; theorems; mutual_group }
+      dprintf begin fun p ->
+        p.fmt "[recover_session] @[<v>recovered a session with the following theorems:\
+               @,  @[<hv>%a@]@]"
+          (Format.pp_print_list ~pp_sep: Fmt.comma
+             (fun ppf t -> Format.fprintf ppf "%a" Id.print (Theorem.get_name t)))
+          theorems
+        end;
+      { Session.commands
+      ; theorems = DynArray.of_list theorems
+      ; mutual_group
+      }
 
+    (** Constructs a list of sessions from a list of open subgoals.
+        Subgoals are grouped into theorems according to their
+        associated cid, and theorems are grouped into sessions
+        according to their mutual group.
+     *)
     let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
       (* idea:
          - first group subgoals by theorem
@@ -380,8 +395,16 @@ module Prover = struct
       )
       |> fun xs -> List.map (recover_session ppf hooks) xs
 
+    (** Drops all sessions from the prover, replacing with the given
+        list.
+     *)
+    let replace_sessions s ss =
+      DynArray.(clear s.sessions; append_list s.sessions ss)
+
     let printf s x = Format.fprintf s.ppf x
 
+    (** Moves the current session to the back of the session list,
+        making (what was) the second session the active session. *)
     let defer_session s =
       let c = DynArray.get s.sessions 0 in
       DynArray.delete s.sessions 0;
@@ -518,6 +541,25 @@ module Prover = struct
          `ok (Session.make mutual_group (DynArray.of_list thms))
       | [] -> `aborted
 
+    (** Given that session `c` is at index `i` in the sessions list,
+        `select_session s i c` moves it to the front, thus activating
+        it.Takes care of suspending the active session and entering
+        `c`. *)
+    let select_session s i c =
+      (* get the active session *)
+      let c' = DynArray.get s.sessions 0 in
+      (* remove the target session (i.e. c) from the list *)
+      DynArray.delete s.sessions i;
+      (* suspend the current session and enter the target session *)
+      Session.suspend c';
+      Session.enter c;
+      (* make the target session the active session by moving it to position 0 *)
+      DynArray.insert s.sessions 0 c
+
+    (** Finds a session containing a theorem with the given name and
+        selects that session and that theorem.
+        Returns false when no theorem by such name could be found.
+     *)
     let select_theorem s name =
       match
         Misc.DynArray.rfind_opt_idx
@@ -528,18 +570,16 @@ module Prover = struct
             (DynArray.to_list c.Session.theorems)
           end
       with
-      | None ->
-         printf s "No session contains a theorem named %a.@,"
-           Id.print name
-      | Some (i, c) -> (* i is the index of session c *)
-         DynArray.delete s.sessions i;
-         let c' = DynArray.get s.sessions 0 in
-         Session.suspend c';
-         Session.enter c;
-         DynArray.insert s.sessions 0 c;
+      | None -> false
+      | Some (i, c) ->
+         select_session s i c;
+         (* select the desired theorem within the session;
+            this should be guaranteed to succeed due to the
+            List.exists call in the match. *)
          if not (Session.select_theorem c name) then
            B.Error.violation
-             "[select_theorem] selected session does not contain the theorem"
+             "[select_theorem] selected session does not contain the theorem";
+         true
 
     (** Gets the next state triple from the prover. *)
     let next_triple (s : t) =
@@ -553,45 +593,40 @@ module Prover = struct
             | None -> Either.Left (`no_subgoal (c, t))
             | Some g -> Either.Right (c, t, g)
 
-    (**
-     * TODO: Make this to preserve the order of sessions and theorems
+    (** Drops all state and reloads from the signature.
+        Typically, this is called after serialization reflects the
+        state into the signature.
      *)
-    let reset_harpoon s : unit =
-      let curr_thm =
-        let open Maybe in
-        next_session s
-        $ Session.next_theorem
-        |> get
-      in
-      let curr_sg =
-        curr_thm
-        |> Theorem.next_subgoal
-        |> Maybe.get
-      in
-      let curr_thm_name = Theorem.get_name curr_thm in
-      let curr_sg_label = curr_sg.Comp.label in
+    let reset s c t g : unit =
+      let curr_thm_name = Theorem.get_name t in
+      let curr_sg_label = g.Comp.label in
       let _ = B.Load.load s.ppf s.sig_path in
-      let gs =
-        B.Holes.get_harpoon_subgoals ()
-        |> List.map snd
+      let _ =
+        let gs = B.Holes.get_harpoon_subgoals () |> List.map snd in
+        let hooks = [run_automation s.automation_state] in
+        recover_sessions s.ppf hooks gs
+        |> replace_sessions s
       in
-      let hooks = [run_automation s.automation_state] in
-      DynArray.clear s.sessions;
-      DynArray.append s.sessions (DynArray.of_list (recover_sessions s.ppf hooks gs));
-      select_theorem s curr_thm_name;
+      if not (select_theorem s curr_thm_name) then
+        B.Error.violation
+          "[reset] reloaded signature does not contain the theorem \
+           we were working on";
       let t =
         match next_triple s with
         | Either.Right (_, t, _) -> t
         | _ ->
-           B.Error.violation "[reset_harpoon] next_triple didn't give a triple."
+           B.Error.violation
+             "[reset] next_triple didn't give a triple."
       in
       match
         Theorem.select_subgoal_satisfying t
-          (fun g -> g.Comp.label = curr_sg_label)
+          begin fun g ->
+          Whnf.conv_subgoal_path_builder g.Comp.label curr_sg_label
+          end
       with
       | None ->
          B.Error.violation
-           "[reset_harpoon] select_subgoal_satisfying returned None"
+           "[reset] select_subgoal_satisfying returned None"
       | Some _ -> ()
   end
 
@@ -779,7 +814,7 @@ module Prover = struct
           add_new_mutual_rec_thmss
             (ExtList.List.last s.State.all_paths)
             new_mutual_rec_thmss;
-          State.reset_harpoon s
+          State.reset s c t g
        end
     | Command.Subgoal cmd ->
        begin match cmd with
@@ -787,7 +822,11 @@ module Prover = struct
        | `defer -> Theorem.defer_subgoal t
        end
 
-    | Command.SelectTheorem name -> State.select_theorem s name
+    | Command.SelectTheorem name ->
+       if not (State.select_theorem s name) then
+         State.printf s
+           "There is no theorem by name %a."
+           Id.print name
 
     | Command.Rename (x_src, x_dst, level) ->
        Theorem.rename_variable x_src x_dst level t g

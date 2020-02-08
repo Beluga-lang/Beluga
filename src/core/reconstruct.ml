@@ -2036,13 +2036,14 @@ and elCommand cD cG =
        I.(By (i, name, TypBox (loc, cU), `unboxed))
 
 (* elaborate Harpoon proofs *)
-and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
+and elProof cD cG (pb : I.SubgoalPath.builder) (p : Apx.Comp.proof) ttau =
   match p with
   | A.Incomplete (loc, str_opt) ->
      let context = I. ({ cD; cG; cIH = Int.LF.Empty }) in
+     let label = pb in
      I.(Incomplete (loc, { context; goal = ttau; solution = ref None; label }))
   | A.Directive (loc, d) ->
-     I.Directive (elDirective cD cG label d ttau)
+     I.Directive (elDirective cD cG pb d ttau)
   | A.Command (loc, cmd, p) ->
      dprnt "[elProof] --> elCommand @[%a@]";
      let (cD', cG', t, cmd) = elCommand cD cG cmd in
@@ -2056,14 +2057,17 @@ and elProof cD cG (label : string list) (p : Apx.Comp.proof) ttau =
          P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
          P.(fmt_ppr_cmp_typ cD' l0) (Whnf.cnormCTyp ttau')
        end;
-     let p = elProof cD' cG' label p ttau' in
+     let p = elProof cD' cG' pb p ttau' in
      I.Command (cmd, p)
 
-and elSplit loc cD cG label i tau_i bs ttau =
+and elSplit loc cD cG pb i tau_i bs ttau =
   let make_ctx_branch w { A.case_label = l; branch_body = hyp; split_branch_loc = loc } =
     match l with
     | A.ContextCase (A.EmptyContext loc) ->
-       let hyp' = elHypothetical cD cG label hyp ttau in
+       let pb' =
+         I.SubgoalPath.(append pb (build_context_split i I.(EmptyContext loc)))
+       in
+       let hyp' = elHypothetical cD cG pb' hyp ttau in
        let pat =
          let mC = (Loc.ghost, Int.LF.(CObj Null)) in
          I.PatMetaObj (Loc.ghost, mC)
@@ -2077,11 +2081,13 @@ and elSplit loc cD cG label i tau_i bs ttau =
 
     | A.ContextCase (A.ExtendedBy (loc, a)) ->
        let a' = Lfrecon.elTyp Lfrecon.Pibox cD Int.LF.Null a in
+       let l' = I.ExtendedBy (loc, a') in
+       let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
        let cD' =
          let u = Id.mk_name (Whnf.newMTypName (Int.LF.CTyp w)) in
          Int.LF.(Dec (cD, Decl (u, CTyp w, Maybe)))
        in
-       let hyp' = elHypothetical cD' cG label hyp ttau in
+       let hyp' = elHypothetical cD' cG pb' hyp ttau in
        let pat =
          let u = Id.mk_name (Whnf.newMTypName Int.LF.(ClTyp (MTyp a', Null))) in
          let mC = (Loc.ghost, Int.LF.(CObj (DDec (CtxVar (CtxOffset 1), TypDecl (u, a'))))) in
@@ -2205,18 +2211,21 @@ and elSplit loc cD cG label i tau_i bs ttau =
        (* cD_b |- ttau_b <== type *)
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
 
-       (* TODO adjust label -je *)
-       let hyp' = elHypothetical cD_b cG_b label hyp ttau_b in
+       let l' = `pvar k in
+       let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
 
-       I.SplitBranch (`pvar k, pat', t', hyp')
+       (* TODO adjust label -je *)
+       let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
+
+       I.SplitBranch (l', pat', t', hyp')
 
     | A.NamedCase (loc, name) ->
-       let tH, tA =
+       let cid, tA =
          try
            let open Store.Cid.Term in
            let cid = index_of_name name in
            let { typ; _ } = get cid in
-           (Int.LF.Const cid, typ)
+           (cid, typ)
          with
          | Not_found ->
             UnboundCaseLabel (`meta, name, cD, tau_i)
@@ -2227,7 +2236,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
         *)
        let Int.LF.MTyp tP = cU in
        let (cD', (cPsi', tR_p, tA_p), t) =
-         match Coverage.genObj (cD, cPsi, tP) (tH, tA) with
+         match Coverage.genObj (cD, cPsi, tP) (Int.LF.Const cid, tA) with
          | None ->
             assert false
          (* XXX throw an appropriate error
@@ -2292,7 +2301,9 @@ and elSplit loc cD cG label i tau_i bs ttau =
            P.fmt_ppr_lf_msub_typing (cD_b, t', cD)
          end;
 
-       let hyp' = elHypothetical cD_b cG_b label hyp ttau_b
+       let l' = `ctor cid in
+       let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
+       let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b
        (*
          ttau = (t, tau)
          such that
@@ -2303,7 +2314,7 @@ and elSplit loc cD cG label i tau_i bs ttau =
          cD_b |- [t o t']tau <= type
         *)
        in
-       I.SplitBranch (`constructor (cPsi, tH), pat, t', hyp')
+       I.SplitBranch (l', pat, t', hyp')
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)
@@ -2373,8 +2384,9 @@ and elSplit loc cD cG label i tau_i bs ttau =
            P.(fmt_ppr_lf_msub_typing) (cD_b, t', cD)
          end;
 
+       let pb' = I.SubgoalPath.(append pb (build_comp_split i cid)) in
        let hyp' =
-         elHypothetical cD_b cG_b label hyp ttau_b
+         elHypothetical cD_b cG_b pb' hyp ttau_b
        in
 
        I.SplitBranch (cid, pat, t', hyp')
@@ -2398,13 +2410,16 @@ and elSplit loc cD cG label i tau_i bs ttau =
      throw loc (IllegalCase (cD, cG, i, tau_i))
 
 (* elaborate Harpoon directives *)
-and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
+and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   match d with
   | A.Intros (loc, hyp) ->
      let (cD', cG', tau', _) =
        Check.Comp.unroll cD cG (Whnf.cnormCTyp ttau)
      in
-     I.Intros (elHypothetical cD' cG' label hyp (tau', Whnf.m_id))
+     let hyp =
+       elHypothetical cD' cG' I.SubgoalPath.(append pb build_intros) hyp (tau', Whnf.m_id)
+     in
+     I.Intros hyp
 
   | A.Solve (loc, e) ->
      let e = elExp cD cG e ttau in
@@ -2424,7 +2439,7 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
          P.(fmt_ppr_cmp_exp_syn cD cG l0) i
          P.(fmt_ppr_cmp_typ cD l0) tau_i
        end;
-     elSplit loc cD cG label i tau_i bs ttau
+     elSplit loc cD cG pb i tau_i bs ttau
 
   | A.Suffices (loc, i, ps) ->
      let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
@@ -2435,18 +2450,13 @@ and elDirective cD cG label (d : Apx.Comp.directive) ttau : Int.Comp.directive =
        (List.map (fun (_, tau, _) -> tau) ps)
        (Whnf.cnormCTyp ttau);
      let ps =
-       let i_name =
-         I.head_of_application i
-         |> Fmt.stringify P.(fmt_ppr_cmp_exp_syn cD cG l0)
-       in
+       let i_head = I.head_of_application i in
        List.mapi
          begin fun k (loc, tau, p) ->
          ( loc
          , tau
          , elProof cD cG
-             (("premise " ^ string_of_int (k + 1)
-               ^ " of " ^ i_name)
-              :: label)
+             I.SubgoalPath.(append pb (build_suffices i_head k))
              p (tau, Whnf.m_id)
          )
          end
@@ -2510,4 +2520,5 @@ let exp' = elExp' Int.LF.Empty
 
 let thm cG t ttau = match t with
   | Apx.Comp.Program e -> Int.Comp.Program (elExp Int.LF.Empty cG e ttau)
-  | Apx.Comp.Proof p -> Int.Comp.Proof (elProof Int.LF.Empty cG [] p ttau)
+  | Apx.Comp.Proof p ->
+     Int.Comp.(Proof (elProof Int.LF.Empty cG SubgoalPath.start p ttau))

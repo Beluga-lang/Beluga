@@ -212,3 +212,6 @@ val apply_command_to_context : mctx * Comp.gctx -> Comp.command -> mctx * Comp.g
 (** Eliminates the level of indirection from having a Sigma with just
     one component. *)
 val collapse_sigma : typ_rec -> typ
+
+val conv_subgoal_path : Comp.SubgoalPath.t -> Comp.SubgoalPath.t -> bool
+val conv_subgoal_path_builder : Comp.SubgoalPath.builder -> Comp.SubgoalPath.builder -> bool

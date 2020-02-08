@@ -109,6 +109,7 @@ module Int = struct
 
     val fmt_ppr_cmp_numeric_order : formatter -> Comp.order -> unit
     val fmt_ppr_cmp_hypotheses_listing : formatter -> Comp.hypotheses -> unit
+    val fmt_ppr_cmp_subgoal_path : LF.mctx -> Comp.gctx -> formatter -> Comp.SubgoalPath.t -> unit
     val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
     val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
     val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit

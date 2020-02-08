@@ -147,14 +147,6 @@ let is_valid_goals_for_split_kind k cgs =
   | `impossible when n <> 0 -> `not_impossible
   | _ -> `ok
 
-let make_subgoal_path_for_split_kind k label parent_label =
-  match k with
-  | `invert -> parent_label (* ignore new label for inversion *)
-  | `impossible ->
-     B.Error.violation
-       "[harpoon-split] there should be no subgoals for impossible splits"
-  | `split -> label :: parent_label
-
 (** Calls the coverage checker to compute the list of goals for a
     given type in the contexts of the given proof state.
 
@@ -385,14 +377,11 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let cIH0 = Total.wf_rec_calls cD cG mfs in
           let cIH = Context.(append cIH_b (append cIH0 cIH')) in
           let context = { cD; cG; cIH } in
-          let new_state case_label =
+          let new_state label =
             { context
             ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
             ; solution = ref None
-            ; label =
-                make_subgoal_path_for_split_kind k
-                  ("split (case " ^ case_label ^ ")")
-                  s.label
+            ; label = Comp.SubgoalPath.append label s.label
             }
           in
           (context, t', new_state, pat')
@@ -409,10 +398,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             | _ -> B.Error.violation "[get_context_branch] pattern not a context"
           in
           let label =
-            Fmt.stringify
-              P.(fmt_ppr_cmp_context_case
-                 (fmt_ppr_lf_typ context.cD LF.Null l0))
-              case_label
+            Comp.SubgoalPath.build_context_split i case_label
           in
           let s' = new_state label in
           Theorem.add_subgoal t s';
@@ -422,18 +408,17 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      let make_meta_branch (context, theta, new_state, pat) =
        match pat with
        | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
-          let label, c =
+          let c =
             let LF.(MObj (Root (_, h, _))) = tM in
-            let lbl =
-              Fmt.stringify
-                P.(fmt_ppr_lf_head (new_state "").context.cD LF.Null l0)
-                h
-            in
             match h with
-            | LF.PVar (n, s) -> (lbl, `pvar None)
-            | LF.(Proj (PVar (n, s), k)) -> (lbl, `pvar (Some k))
-            | _ -> (lbl, `constructor (B.Context.hatToDCtx cPsi, h))
+            | LF.PVar (n, s) -> `pvar None
+            | LF.(Proj (PVar (n, s), k)) -> `pvar (Some k)
+            | LF.Const cid -> `ctor cid
+            | _ ->
+               B.Error.violation
+                 "[make_meta_branch] head neither pvar (proj) nor const"
           in
+          let label = Comp.SubgoalPath.build_meta_split i c in
           let s' = new_state label in
           Theorem.add_subgoal t s';
           meta_branch c pat theta context (incomplete_proof Loc.ghost s')
@@ -442,7 +427,9 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      let make_comp_branch (context, theta, new_state, pat) =
        match pat with
        | PatConst (_, cid, _) ->
-          let label = Store.Cid.DefaultRenderer.render_cid_comp_const cid in
+          let label =
+            Comp.SubgoalPath.build_comp_split i cid
+          in
           let s' = new_state label in
           Theorem.add_subgoal t s';
           comp_branch cid pat theta context (incomplete_proof Loc.ghost s')
@@ -571,11 +558,7 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
   Theorem.remove_subgoal t s;
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
-  let lemma_name =
-    Fmt.stringify
-      P.(fmt_ppr_cmp_exp_syn s.context.cD s.context.cG l0)
-      i
-  in
+  let i_head = Comp.head_of_application i in
   let subproofs =
     Misc.Function.flip List.mapi tau_args
       begin fun k tau ->
@@ -584,9 +567,7 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
         ; goal = (tau, Whnf.m_id)
         ; solution = ref None
         ; label =
-            ("premise " ^ string_of_int (k + 1)
-             ^ " of " ^ lemma_name)
-            :: s.label
+            Comp.SubgoalPath.(append s.label (build_suffices i_head k))
         }
       in
       Theorem.add_subgoal t new_state;

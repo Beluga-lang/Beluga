@@ -2100,3 +2100,32 @@ let apply_command_to_context (cD, cG) =
 let collapse_sigma = function
   | SigmaLast (_, tA) -> tA
   | SigmaElem _ as typ_rec -> Sigma typ_rec
+
+let rec conv_subgoal_path p1 p2 =
+  let open Comp.SubgoalPath in
+  match p1, p2 with
+  | Here, Here -> true
+  | Intros p1, Intros p2 -> conv_subgoal_path p1 p2
+  | Suffices (_, k1, p1),
+    Suffices (_, k2, p2) when k1 = k2 ->
+     conv_subgoal_path p1 p2
+  | MetaSplit (_, `pvar k1, p1),
+    MetaSplit (_, `pvar k2, p2) when k1 = k2 ->
+     conv_subgoal_path p1 p2
+  | MetaSplit (_, `ctor c1, p1),
+    MetaSplit (_, `ctor c2, p2) when c1 = c2 ->
+     conv_subgoal_path p1 p2
+  | CompSplit (_, c1, p1),
+    CompSplit (_, c2, p2) when c1 = c2 ->
+     conv_subgoal_path p1 p2
+  | ContextSplit (_, Comp.EmptyContext _, p1),
+    ContextSplit (_, Comp.EmptyContext _, p2) ->
+     conv_subgoal_path p1 p2
+  | ContextSplit (_, Comp.ExtendedBy (_, a1), p1),
+    ContextSplit (_, Comp.ExtendedBy (_, a2), p2)
+       when convTyp (a1, LF.id) (a2, LF.id) ->
+     conv_subgoal_path p1 p2
+  | _ -> false
+
+let conv_subgoal_path_builder b1 b2 =
+  Comp.SubgoalPath.(conv_subgoal_path (b1 Here) (b2 Here))

@@ -1,0 +1,6 @@
+t/harpoon/serialization/stlc.bel
+foo
+[|- tm] -> [|- tp]
+
+
+session serialize

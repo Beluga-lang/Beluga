@@ -1036,7 +1036,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ LF.Empty l0) tau
 
   let fmt_ppr_cmp_meta_branch_label cD ppf = function
-    | `constructor (cPsi, h) -> fmt_ppr_lf_head cD cPsi l0 ppf h
+    | `ctor cid -> fprintf ppf "%s" (R.render_cid_term cid)
     | `pvar k ->
        fprintf ppf "#%a"
          (Maybe.print (fun ppf -> fprintf ppf ".%d"))
@@ -1321,11 +1321,58 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   (* cD |- t : cD'  *)
 
-  and fmt_ppr_cmp_subgoal_label ppf label =
-    fprintf ppf "@[<hov 2>%a@]"
+  and fmt_ppr_cmp_subgoal_path cD cG ppf path =
+    let rec format_path =
+      let open Comp.SubgoalPath in
+      function
+      | Here -> []
+      | Suffices (i, k, p) ->
+         let f ppf () =
+           fprintf ppf "premise %d of @[%a@]" k
+             (fmt_ppr_cmp_exp_syn cD cG l0) i
+         in
+         f :: format_path p
+      | Intros p ->
+         (fun ppf () -> fprintf ppf "intros") :: format_path p
+      | MetaSplit (i, lbl, p) ->
+         let print_case ppf : Comp.meta_branch_label -> unit = function
+           | `pvar k ->
+              fprintf ppf "#.%a"
+                (Maybe.print pp_print_int) k
+           | `ctor c -> fprintf ppf "%s" (R.render_cid_term c)
+         in
+         let f ppf () =
+           fprintf ppf "split @[%a@] (case @[%a@])"
+             (fmt_ppr_cmp_exp_syn cD cG l0) i
+             print_case lbl
+         in
+         f :: format_path p
+      | CompSplit (i, c, p) ->
+         let f ppf () =
+           fprintf ppf "split @[%a@] (case %s)"
+             (fmt_ppr_cmp_exp_syn cD cG l0) i
+             (R.render_cid_comp_const c)
+         in
+         f :: format_path p
+      | ContextSplit (i, Comp.EmptyContext _, p) ->
+         let f ppf () =
+           fprintf ppf "split @[%a@] (case empty context)"
+             (fmt_ppr_cmp_exp_syn cD cG l0) i
+         in
+         f :: format_path p
+      | ContextSplit (i, Comp.ExtendedBy (_, a), p) ->
+         let f ppf () =
+           fprintf ppf "split @[%a@] (case extended by @[%a@])"
+             (fmt_ppr_cmp_exp_syn cD cG l0) i
+             (fmt_ppr_lf_typ cD LF.Null l0) a
+         in
+         f :: format_path p
+    in
+    let fs = format_path path in
+    fprintf ppf "@[<hv 2>%a@]"
       (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf " <-@ ")
-         (fun ppf l -> fprintf ppf "%s" l))
-      label
+         (fun ppf f -> f ppf ()))
+      fs
 
   and fmt_ppr_cmp_proof_state ppf =
     let print_line ppf () = for _ = 1 to 80 do fprintf ppf "-" done in
@@ -1337,7 +1384,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        @,%a\
        @,%a
        @]"
-      fmt_ppr_cmp_subgoal_label label
+      (fmt_ppr_cmp_subgoal_path cD cG) (label SubgoalPath.Here)
       fmt_ppr_cmp_hypotheses_listing ctx
       print_line ()
       (fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp goal)

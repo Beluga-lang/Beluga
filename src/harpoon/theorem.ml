@@ -292,7 +292,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
       end;
     let g =
       (* construct the initial state with the annotated type *)
-      Comp.make_proof_state [ Id.render_name name ]
+      Comp.make_proof_state Comp.SubgoalPath.start
         ( tau', Whnf.m_id )
     in
     let p = Comp.incomplete_proof Loc.ghost g in

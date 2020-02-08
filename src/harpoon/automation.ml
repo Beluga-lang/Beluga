@@ -53,7 +53,7 @@ let auto_intros : t =
        { context
        ; goal
        ; solution = ref None
-       ; label = g.label
+       ; label = Comp.SubgoalPath.(append g.label build_intros)
        }
      in
      Theorem.printf t
@@ -156,10 +156,7 @@ let auto_solve_trivial : t =
         @,has been automatically solved.\
         @,\
         @,@]"
-       ( Format.pp_print_list
-           ~pp_sep: (fun ppf () -> Format.fprintf ppf " <-@ ")
-           (fun ppf l -> Format.fprintf ppf "%s" l)
-       ) g.label
+       (P.fmt_ppr_cmp_subgoal_path cD cG) (g.label Comp.SubgoalPath.Here)
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
      (solve w |> Tactic.solve) t g;
      true

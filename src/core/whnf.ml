@@ -2129,3 +2129,11 @@ let rec conv_subgoal_path p1 p2 =
 
 let conv_subgoal_path_builder b1 b2 =
   Comp.SubgoalPath.(conv_subgoal_path (b1 Here) (b2 Here))
+
+let conv_subgoal g1 g2 =
+  let open Comp in
+  (* TODO implement and use conv_hypotheses *)
+  conv_subgoal_path_builder g1.label g2.label
+  && convCTyp g1.goal g2.goal
+  && (g1.solution = g2.solution) (* TODO implement and use convertibility of proofs *)
+  && (g1.context = g2.context)

@@ -393,7 +393,7 @@ module Prover = struct
         |> List.map (Pair.rmap (map snd))
         |> group_by F.(CompS.mutual_group ++ fst)
       )
-      |> fun xs -> List.map (recover_session ppf hooks) xs
+      |> List.map (recover_session ppf hooks)
 
     (** Drops all sessions from the prover, replacing with the given
         list.

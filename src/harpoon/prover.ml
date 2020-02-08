@@ -604,8 +604,13 @@ module Prover = struct
       let _ =
         let gs = B.Holes.get_harpoon_subgoals () |> List.map snd in
         let hooks = [run_automation s.automation_state] in
-        recover_sessions s.ppf hooks gs
-        |> replace_sessions s
+        let ss = recover_sessions s.ppf hooks gs in
+        dprintf begin fun p ->
+          p.fmt "[reset] recovered %d sessions from %d subgoals"
+            (List.length ss)
+            (List.length gs)
+          end;
+        replace_sessions s ss
       in
       if not (select_theorem s curr_thm_name) then
         B.Error.violation
@@ -621,6 +626,14 @@ module Prover = struct
       match
         Theorem.select_subgoal_satisfying t
           begin fun g ->
+          dprintf begin fun p ->
+            let cD, cG = Comp.(g.context.cD, g.context.cG) in
+            p.fmt "[select_subgoal_satisfying] @[<hv>@[%a@]@ =?@ @[%a@]@]"
+              P.(fmt_ppr_cmp_subgoal_path cD cG)
+              Comp.(g.label SubgoalPath.Here)
+              P.(fmt_ppr_cmp_subgoal_path cD cG)
+              Comp.(curr_sg_label SubgoalPath.Here)
+            end;
           Whnf.conv_subgoal_path_builder g.Comp.label curr_sg_label
           end
       with

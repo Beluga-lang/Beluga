@@ -1063,19 +1063,17 @@ let recSgnDecls decls =
          (fun p ->
            p.fmt "[RecSgn Checking] Pragma at %a"
              Syntax.Loc.print_short loc);
-       begin
-         try
-           let cid =
-             match v_name with
-             | None ->
-                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name)) None
-             | Some x ->
-                Typ.addNameConvention typ_name (Some (Gensym.MVarData.name_gensym m_name))
-                  (Some (Gensym.VarData.name_gensym x))
-           in
+       begin match
+         try Some (Typ.index_of_name typ_name)
+         with Not_found -> None
+       with
+       | Some cid ->
+          let m = Some (Gensym.MVarData.name_gensym m_name) in
+          let v = Maybe.(v_name $> Gensym.VarData.name_gensym) in
+          Typ.set_name_convention cid m v;
            Store.Cid.NamedHoles.addNameConvention cid m_name v_name;
            Int.Sgn.Pragma(Int.LF.NamePrag cid)
-         with _ -> (* XXX this should be more specific *)
+       | None ->
            throw loc (UnboundNamePragma typ_name)
        end
 

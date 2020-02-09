@@ -84,7 +84,16 @@ val lookupSchema : mctx -> int -> Id.cid_schema
 val lookupCtxVar : mctx -> ctx_var -> Id.name * Id.cid_schema
 val lookupCtxVarSchema : mctx -> ctx_var -> Id.cid_schema
 
-val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx
-val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx
+(** Renames a variable in a meta-context.
+    Returns None if there is no such variable, and otherwise returns
+    the adjusted context with the name changed.
+ *)
+val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx option
+
+(** Renames a variable in a computational context.
+    Returns None if there is no such variable, and otherwise returns
+    the adjusted context with the name changed.
+ *)
+val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx option
 
 val concat : 'a LF.ctx list -> 'a LF.ctx

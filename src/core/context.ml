@@ -408,12 +408,13 @@ and lookupCtxVar cD cvar =
 and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
 
 let rec rename src dst get_name rename_decl = function
-  | LF.Empty -> LF.Empty
+  | LF.Empty -> None
   | LF.Dec (ctx', d) when Id.equals (get_name d) src ->
-     LF.Dec (ctx', rename_decl (fun _ -> dst) d)
+     Some (LF.Dec (ctx', rename_decl (fun _ -> dst) d))
   | LF.Dec (ctx', d) ->
-     let ctx' = rename src dst get_name rename_decl ctx' in
-     LF.Dec (ctx', d)
+     let open Maybe in
+     rename src dst get_name rename_decl ctx'
+     $> fun ctx' -> LF.Dec (ctx', d)
 
 (** Renames the first (from right to left) variable named `src` to
     `dst`. *)

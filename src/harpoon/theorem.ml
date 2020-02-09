@@ -195,24 +195,19 @@ let solve_by_replacing_subgoal t g' f g =
     (`comp or `meta) in the subgoal `g`.
  *)
 let rename_variable src dst level t g =
-  let g' =
-    let open Comp in
-    { g with
-      context =
-        begin match level with
-        | `comp ->
-           { g.context with
-             cG = Context.rename_gctx src dst g.context.cG
-           }
-        | `meta ->
-           { g.context with
-             cD = Context.rename_mctx src dst g.context.cD
-           }
-        end
-    ; solution = ref None
-    }
-  in
-  solve_by_replacing_subgoal t g' Misc.id g
+  let open Maybe in
+  let open Comp in
+  begin match level with
+  | `comp ->
+     Context.rename_gctx src dst g.context.cG
+     $> fun cG -> { g.context with cG }
+  | `meta ->
+     Context.rename_mctx src dst g.context.cD
+     $> fun cD -> { g.context with cD }
+  end
+  $> (fun context -> { g with context; solution = ref None })
+  $> (fun g' -> solve_by_replacing_subgoal t g' Misc.id g)
+  |> is_some
 
 (** Registers the theorem in the store.
     The statement of the theorem must be stripped of totality

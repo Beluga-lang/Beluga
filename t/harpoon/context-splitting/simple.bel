@@ -14,8 +14,3 @@ mlam g ⇒ case [g] of
         let [⊢ N] = length [g'] in
         [⊢ s N]
 ;
-
-proof length : {g : ctx} → [⊢ nat] =
-/ total 1 /
-?
-;

@@ -1,0 +1,10 @@
+t/harpoon/serialization/split.bel
+test-split
+{X : [|- tm]} [|- tp]
+
+
+msplit X
+session serialize
+solve [|- base]
+solve [|- base]
+solve [|- base]

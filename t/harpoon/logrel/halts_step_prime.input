@@ -3,5 +3,5 @@ halts_step'
 {S : [ ⊢ step M M']} [ ⊢ halts M' ] → [⊢ halts M ]
 
 
-invert x9
+invert y
 solve [|- halts/m (onestep S S1) V]

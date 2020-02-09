@@ -492,9 +492,13 @@ module Prover = struct
       let rec do_prompts i : Theorem.Conf.t list =
         printf s "Configuring theorem #%d@." i;
         (* prompt for name, and allow using empty to signal we're done. *)
-        match prompt_with s "  Name of theorem (empty name to finish): " None B.Parser.name with
-        | None -> []
-        | Some name ->
+        match
+          prompt_with s "  Name of theorem (:quit or empty to finish): "
+            None
+            B.Parser.next_theorem
+        with
+        | None | Some `quit -> []
+        | Some (`next name) ->
            let tau, k =
              (* XXX These calls are sketchy as hell.
                 There must be a better place to put them -je

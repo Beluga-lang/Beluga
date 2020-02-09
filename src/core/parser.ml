@@ -3167,3 +3167,8 @@ let interactive_harpoon_command =
 
 let interactive_harpoon_command_sequence =
   sep_by0 interactive_harpoon_command (token T.SEMICOLON)
+
+let next_theorem =
+  alt
+    (token T.COLON &> keyword "quit" &> pure `quit)
+    (name $> fun name -> `next name)

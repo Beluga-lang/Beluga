@@ -1035,12 +1035,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Id.print name
          (fmt_ppr_cmp_typ LF.Empty l0) tau
 
-  let fmt_ppr_cmp_meta_branch_label cD ppf = function
+  let fmt_ppr_cmp_meta_branch_label ppf = function
     | `ctor cid -> fprintf ppf "%s" (R.render_cid_term cid)
     | `pvar k ->
        fprintf ppf "#%a"
          (Maybe.print (fun ppf -> fprintf ppf ".%d"))
          k
+    | `bvar -> fprintf ppf "head variable"
 
   let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
     | Comp.Syn (_, i) ->
@@ -1335,16 +1336,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | Intros p ->
          (fun ppf () -> fprintf ppf "intros") :: format_path p
       | MetaSplit (i, lbl, p) ->
-         let print_case ppf : Comp.meta_branch_label -> unit = function
-           | `pvar k ->
-              fprintf ppf "#.%a"
-                (Maybe.print pp_print_int) k
-           | `ctor c -> fprintf ppf "%s" (R.render_cid_term c)
-         in
          let f ppf () =
            fprintf ppf "split @[%a@] (case @[%a@])"
              (fmt_ppr_cmp_exp_syn cD cG l0) i
-             print_case lbl
+             fmt_ppr_cmp_meta_branch_label lbl
          in
          f :: format_path p
       | CompSplit (i, c, p) ->
@@ -1475,7 +1470,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | MetaSplit (i, _, bs) ->
        print_split ppf i bs
-         (fmt_ppr_cmp_meta_branch_label cD)
+         fmt_ppr_cmp_meta_branch_label
 
     | CompSplit (i, _, bs) ->
        print_split ppf i bs

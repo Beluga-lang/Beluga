@@ -156,7 +156,6 @@ let parse_arguments args : partial_t =
        match arg with
        | "--debug" ->
           B.Debug.enable ();
-          Printexc.record_backtrace true;
           parse_the_rest ()
        | "--implicit" ->
           PC.printImplicit := true;

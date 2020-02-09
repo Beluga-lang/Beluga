@@ -47,7 +47,7 @@ module PC = Pretty.Control
 
 let process_option arg rest = match arg with
   (* these strings must be lowercase *)
-  | "+d" ->Debug.showAll (); Printexc.record_backtrace true; rest
+  | "+d" ->Debug.showAll (); rest
   | "-d" -> Debug.showNone (); Printexc.record_backtrace false; rest
   | "+ext" -> externall := true; rest
   | "-s=natural" -> PC.substitutionStyle := PC.Natural; rest

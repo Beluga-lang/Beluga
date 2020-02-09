@@ -12,6 +12,7 @@ open Fmt
 let r_flags : flags ref = ref 0
 
 let enable () =
+  Printexc.record_backtrace true;
   r_flags := lnot 0
 
 let out : Format.formatter option ref = ref None

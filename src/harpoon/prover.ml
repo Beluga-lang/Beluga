@@ -25,15 +25,33 @@ module DynArray = Misc.DynArray
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
-exception EndOfInput
+type error =
+  | NoSuchVariable of Id.name * [ `meta | `comp ]
+  | EndOfInput
+
+exception Error of error
+
+let throw e = raise (Error e)
+
+let format_error ppf =
+  let open Format in
+  function
+  | NoSuchVariable (name, level) ->
+     let format_variable_kind ppf = function
+       | `meta -> fprintf ppf "metavariable"
+       | `comp -> fprintf ppf "computational variable"
+     in
+     fprintf ppf "No such %a %a."
+       format_variable_kind level
+       Id.print name
+  | EndOfInput -> fprintf ppf "End of input."
 
 let _ =
-  B.Error.register_printer
-    begin fun EndOfInput ->
-    B.Error.print
-      begin fun ppf ->
-      Format.fprintf ppf "End of input."
-      end
+  B.Error.register_printer'
+    begin fun e ->
+    match e with
+    | Error e -> Some (B.Error.print (fun ppf -> format_error ppf e))
+    | _ -> None
     end
 
 (** High-level elaboration from external to internal syntax. *)
@@ -446,7 +464,7 @@ module Prover = struct
      *)
     let rec prompt_with s msg use_history (p : 'a B.Parser.t) : 'a option =
       match s.prompt msg use_history () with
-      | None -> raise EndOfInput
+      | None -> throw EndOfInput
       | Some "" -> None
       | Some line ->
          B.Runparser.parse_string "<prompt>" line (B.Parser.only p)
@@ -670,7 +688,7 @@ module Prover = struct
        for detail.
      *)
     s.State.prompt "> " None ()
-    |> Maybe.get' EndOfInput
+    |> Maybe.get' (Error EndOfInput)
 
   let process_command
         (s : State.t)
@@ -842,7 +860,8 @@ module Prover = struct
            Id.print name
 
     | Command.Rename (x_src, x_dst, level) ->
-       Theorem.rename_variable x_src x_dst level t g
+       if not (Theorem.rename_variable x_src x_dst level t g) then
+         throw (NoSuchVariable (x_src, level))
 
     | Command.ToggleAutomation (automation_kind, automation_change) ->
        Automation.toggle
@@ -930,12 +949,12 @@ module Prover = struct
 end
 
 (** A computed value of type 'a or a function to print an error. *)
-type 'a error = (Format.formatter -> unit -> unit, 'a) Either.t
+type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
 
 (** Parses the given string to a Syntax.Ext.Harpoon.command or an
     error-printing function.
  *)
-let parse_input (input : string) : Command.command list error =
+let parse_input (input : string) : Command.command list e =
   let open B in
   Runparser.parse_string "<prompt>" input
     Parser.(only interactive_harpoon_command_sequence)
@@ -946,10 +965,16 @@ let parse_input (input : string) : Command.command list error =
     and converting the exception to a function that prints the
     error with a given formatter.
  *)
-let run_safe (f : unit -> 'a) : 'a error =
+let run_safe (f : unit -> 'a) : 'a e =
   try
     Either.Right (f ())
   with
+  | Error e ->
+     Either.Left
+       begin fun ppf () ->
+       Format.fprintf ppf "@[<v>%a@]@."
+         format_error e
+       end
   | e ->
      let s = Printexc.to_string e in
      let bt = Printexc.get_backtrace () in

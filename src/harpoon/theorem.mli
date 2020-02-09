@@ -38,7 +38,12 @@ val defer_subgoal : t -> unit
 
 val solve : proof_state -> proof -> unit
 val solve_by_replacing_subgoal : t -> proof_state -> (proof -> proof) -> proof_state -> unit
-val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> unit
+
+(** Renames the given variable at the given level.
+    Returns true iff such a variable could be renamed.
+    Else, there was no such variable.
+ *)
+val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> bool
 
 val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook) list ->
                 proof_state -> proof_state list -> t

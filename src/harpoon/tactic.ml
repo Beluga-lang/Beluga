@@ -414,7 +414,15 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             | LF.PVar (n, s) -> `pvar None
             | LF.(Proj (PVar (n, s), k)) -> `pvar (Some k)
             | LF.Const cid -> `ctor cid
+            | LF.BVar _ -> `bvar
             | _ ->
+               let g = new_state (fun _ -> Comp.SubgoalPath.Here) in
+               let Comp.({cD; cG; _}) = g.Comp.context in
+               dprintf begin fun p ->
+                 p.fmt "[make_meta_branch] @[<v>ERROR\
+                        @,tM = @[%a@]@]"
+                   P.(fmt_ppr_cmp_pattern cD cG l0) pat
+                 end;
                B.Error.violation
                  "[make_meta_branch] head neither pvar (proj) nor const"
           in

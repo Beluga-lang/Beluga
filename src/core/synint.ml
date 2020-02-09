@@ -551,6 +551,10 @@ module Comp = struct
   type meta_branch_label =
     [ `ctor of cid_term
     | `pvar of int option
+
+    (* used when matching on a pvar in a nonempty context; this means
+       the pvar is actually the head variable in the context. *)
+    | `bvar
     ]
 
   module SubgoalPath = struct

@@ -2115,6 +2115,9 @@ let rec conv_subgoal_path p1 p2 =
   | MetaSplit (_, `ctor c1, p1),
     MetaSplit (_, `ctor c2, p2) when c1 = c2 ->
      conv_subgoal_path p1 p2
+  | MetaSplit (_, `bvar, p1),
+    MetaSplit (_, `bvar, p2) ->
+     conv_subgoal_path p1 p2
   | CompSplit (_, c1, p1),
     CompSplit (_, c2, p2) when c1 = c2 ->
      conv_subgoal_path p1 p2

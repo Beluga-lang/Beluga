@@ -255,26 +255,17 @@ module Cid = struct
     let var_gen cid_tp =  (get cid_tp).var_generator
     let mvar_gen cid_tp =  (get cid_tp).mvar_generator
 
-    let rec gen_var_name tA = match tA with
-      | Int.LF.Atom (_, a, _ ) -> var_gen a
-      | Int.LF.PiTyp(_, tA) -> gen_var_name tA
-      | Int.LF.Sigma typRec -> gen_var_name_typRec typRec
-      | Int.LF.TClo (tA, s) -> gen_var_name tA
+    let rec get_atom_typ = function
+      | Int.LF.Atom (_, a, _ ) -> a
+      | Int.LF.PiTyp(_, tA) -> get_atom_typ tA
+      | Int.LF.Sigma typRec -> get_atom_typ_rec typRec
+      | Int.LF.TClo (tA, s) -> get_atom_typ tA
+    and get_atom_typ_rec = function
+      | Int.LF.SigmaLast (_, tA) -> get_atom_typ tA
+      | Int.LF.SigmaElem(_, _, rest) -> get_atom_typ_rec rest
 
-    and gen_var_name_typRec = function
-      | Int.LF.SigmaLast (_, tA) -> gen_var_name tA
-      | Int.LF.SigmaElem(_, _, rest) -> gen_var_name_typRec rest
-
-    let rec gen_mvar_name tA = match tA with
-      | Int.LF.Atom (_, a, _ ) -> mvar_gen a
-      | Int.LF.PiTyp(_, tA)    -> gen_mvar_name tA
-      | Int.LF.TClo(tA, _)     -> gen_mvar_name tA
-      | Int.LF.Sigma typRec    -> gen_mvar_name_typRec typRec
-
-    and gen_mvar_name_typRec = function
-      | Int.LF.SigmaLast (n, tA) -> gen_mvar_name tA
-      | Int.LF.SigmaElem(_, _, rest) -> gen_mvar_name_typRec rest
-
+    let gen_var_name tA = var_gen (get_atom_typ tA)
+    let gen_mvar_name tA = mvar_gen (get_atom_typ tA)
 
     (* Subordination array:
 

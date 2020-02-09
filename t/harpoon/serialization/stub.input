@@ -1,6 +1,7 @@
-t/harpoon/serialization/stlc.bel
+t/harpoon/serialization/stub.bel
 foo
 [|- tm] -> [|- tp]
 
 
 session serialize
+solve [|- base]

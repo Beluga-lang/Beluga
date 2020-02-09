@@ -74,6 +74,9 @@ val cmp_exp_chk : Comp.exp_chk t
 (** Parser for computation synthesizable expressions. *)
 val cmp_exp_syn : Comp.exp_syn t
 
+(** Parser for the next theorem name in Harpoon. *)
+val next_theorem : [ `quit | `next of Id.name ] t
+
   (*
 (* exports for debugging! *)
 val cmp_kind : Comp.kind t

@@ -88,5 +88,5 @@ end
 
 
 let reset () =
-  VarData.reset()
-; MVarData.reset()
+  VarData.reset();
+  MVarData.reset()

@@ -367,6 +367,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
         let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
         checkSub loc cD cPsi s Subst cPsi';
         (recA, s)
+      | FPVar (name, _) -> raise (Error (loc, LeftoverFV name))
     in
     let (_tA, s) as sA = getType tuple_head srecA target 1 in
     dprintf
@@ -453,7 +454,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
     (* Return p's type from cD *)
     TClo (tA, s)
 
-  | (FVar name | FMVar (name, _)), _ ->
+  | (FVar name | FMVar (name, _) | FPVar (name, _)), _ ->
     raise (Error (loc, LeftoverFV name))
 
 

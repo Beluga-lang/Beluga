@@ -129,8 +129,7 @@ let intros (names : string list option) : t =
        ; label = s.label
        }
      in
-     (* Invoke the callback on the subgoal that we created *)
-     (* Solve the current goal with the subgoal. *)
+     (* Solve the current goal with the intros proof. *)
      Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
   | Either.Left NothingToIntro ->
      Theorem.printf t
@@ -138,7 +137,7 @@ let intros (names : string list option) : t =
         The intros tactic works only when the goal is a function type.@,"
 
   | Either.Left DuplicatedNames ->
-     Theorem.printf t "Error: intros failed@,"
+     Theorem.printf t "Error: intros failed@," (* TODO: improve this error *)
 
 let is_valid_goals_for_split_kind k cgs =
   let n = List.length cgs in

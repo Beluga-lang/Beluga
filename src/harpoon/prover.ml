@@ -554,7 +554,9 @@ module Prover = struct
       Theorem.configure_set s.ppf [run_automation s.automation_state] confs
 
     let add_session s c = DynArray.insert s.sessions 0 c
+                        (*
     let remove_current_session s = DynArray.delete s.sessions 0
+                         *)
 
     let session_configuration_wizard s =
       let mutual_group, thms = session_configuration_wizard' s in
@@ -620,22 +622,33 @@ module Prover = struct
     (** Drops all state and reloads from the signature.
         Typically, this is called after serialization reflects the
         state into the signature.
+        Note that the current state triple is not preserved by this
+        call, and that after it, the prover may be focussing on a
+        different subgoal, possibly in a different session/theorem.
+        To preserve focus, combine this with `keeping_focus`.
      *)
-    let reset s c t g : unit =
+    let reset s : unit =
+      let _ = B.Load.load s.ppf s.sig_path in
+      let gs = B.Holes.get_harpoon_subgoals () |> List.map snd in
+      let hooks = [run_automation s.automation_state] in
+      let ss = recover_sessions s.ppf hooks gs in
+      dprintf begin fun p ->
+        p.fmt "[reset] recovered %d sessions from %d subgoals"
+          (List.length ss)
+          (List.length gs)
+        end;
+      replace_sessions s ss
+
+    (** Takes note of the currently selected theorem and subgoal, runs
+        the given function, and then reselects the theorem and subgoal.
+        This is used by the serialize function to make sure that after
+        serializing the Harpoon state, we're back in the same subgoal
+        we were in before.
+     *)
+    let keeping_focus s c t g f =
       let curr_thm_name = Theorem.get_name t in
       let curr_sg_label = g.Comp.label in
-      let _ = B.Load.load s.ppf s.sig_path in
-      let _ =
-        let gs = B.Holes.get_harpoon_subgoals () |> List.map snd in
-        let hooks = [run_automation s.automation_state] in
-        let ss = recover_sessions s.ppf hooks gs in
-        dprintf begin fun p ->
-          p.fmt "[reset] recovered %d sessions from %d subgoals"
-            (List.length ss)
-            (List.length gs)
-          end;
-        replace_sessions s ss
-      in
+      f ();
       if not (select_theorem s curr_thm_name) then
         B.Error.violation
           "[reset] reloaded signature does not contain the theorem \
@@ -650,14 +663,6 @@ module Prover = struct
       match
         Theorem.select_subgoal_satisfying t
           begin fun g ->
-          dprintf begin fun p ->
-            let cD, cG = Comp.(g.context.cD, g.context.cG) in
-            p.fmt "[select_subgoal_satisfying] @[<hv>@[%a@]@ =?@ @[%a@]@]"
-              P.(fmt_ppr_cmp_subgoal_path cD cG)
-              Comp.(g.label SubgoalPath.Here)
-              P.(fmt_ppr_cmp_subgoal_path cD cG)
-              Comp.(curr_sg_label SubgoalPath.Here)
-            end;
           Whnf.conv_subgoal_path_builder g.Comp.label curr_sg_label
           end
       with
@@ -665,6 +670,42 @@ module Prover = struct
          B.Error.violation
            "[reset] select_subgoal_satisfying returned None"
       | Some _ -> ()
+
+    (** Reflects the current prover state back into the loaded
+        signature file.
+        You should reset the prover state after doing this by calling
+        `reset`.
+     *)
+    let save s =
+      let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
+      let existing_holes =
+        Holes.get_harpoon_subgoals ()
+        |> List.filter has_file_loc
+      in
+      (* If a theorem is in the state,
+       * and it does not have any predefined holes in the loaded files,
+       * that theorem is newly defined in this harpoon process.
+       *)
+      let is_new_theorem thm =
+        existing_holes
+        |> List.map (fun hole -> hole |> snd |> fst)
+        |> List.find_opt (Theorem.has_cid_of thm)
+        |> Option.is_none
+      in
+      let new_mutual_rec_thmss =
+        DynArray.to_list s.sessions
+        |> List.map
+             begin fun sess ->
+             sess.Session.theorems
+             |> DynArray.to_list
+             |> List.filter is_new_theorem
+             end
+        |> List.filter Misc.List.nonempty
+      in
+      update_existing_holes existing_holes;
+      add_new_mutual_rec_thmss
+        (ExtList.List.last s.all_paths)
+        new_mutual_rec_thmss
   end
 
     (*
@@ -822,36 +863,7 @@ module Prover = struct
           | `aborted -> ()
           end
        | `serialize ->
-          let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
-          let existing_holes =
-            Holes.get_harpoon_subgoals ()
-            |> List.filter has_file_loc
-          in
-          (* If a theorem is in the state,
-           * and it does not have any predefined holes in the loaded files,
-           * that theorem is newly defined in this harpoon process.
-           *)
-          let is_new_theorem thm =
-            existing_holes
-            |> List.map (fun hole -> hole |> snd |> fst)
-            |> List.find_opt (Theorem.has_cid_of thm)
-            |> Option.is_none
-          in
-          let new_mutual_rec_thmss =
-            DynArray.to_list s.State.sessions
-            |> List.map
-                 begin fun sess ->
-                 sess.Session.theorems
-                 |> DynArray.to_list
-                 |> List.filter is_new_theorem
-                 end
-            |> List.filter (fun thms -> thms != [])
-          in
-          update_existing_holes existing_holes;
-          add_new_mutual_rec_thmss
-            (ExtList.List.last s.State.all_paths)
-            new_mutual_rec_thmss;
-          State.reset s c t g
+          State.(keeping_focus s c t g (fun _ -> save s; reset s))
        end
     | Command.Subgoal cmd ->
        begin match cmd with
@@ -1055,13 +1067,7 @@ let rec loop (s : Prover.State.t) : unit =
      end
   | Either.Left (`no_theorem _) ->
      printf "@,Proof complete! (No theorems left.)@,";
-     (* TODO: record proof to file by retrieving the proofs of each
-        theorem in the store.
-      *)
-     (* printf "Record proof to file %s? ";
-        s.prompt "[Y/n] " None ()
-      *)
-     Prover.State.remove_current_session s;
+     Prover.State.(save s; reset s);
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)

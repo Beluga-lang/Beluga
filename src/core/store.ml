@@ -217,30 +217,29 @@ module Cid = struct
     let freeze a =
           (get a).frozen := true
 
-    let addNameConvention cid_name mvar_name_generator var_name_generator=
-      let cid_tp = index_of_name cid_name in
+    let set_name_convention cid_tp mvar_name_generator var_name_generator =
       let entry = get cid_tp in
-      let new_entry = {name   = entry.name ;
-                       implicit_arguments = entry.implicit_arguments ;
-                       kind  = entry.kind ;
-                       var_generator    = var_name_generator;
-                       mvar_generator   = mvar_name_generator;
-                       frozen           = entry.frozen;
-                       constructors     = entry.constructors;
-                       subordinates     = entry.subordinates;
-                       typesubordinated = entry.typesubordinated
-                      } in
-        let store =
-          try DynArray.get store (!Modules.current)
-          with _ -> begin
+      let new_entry =
+        { name   = entry.name ;
+          implicit_arguments = entry.implicit_arguments ;
+          kind  = entry.kind ;
+          var_generator    = var_name_generator;
+          mvar_generator   = mvar_name_generator;
+          frozen           = entry.frozen;
+          constructors     = entry.constructors;
+          subordinates     = entry.subordinates;
+          typesubordinated = entry.typesubordinated
+        }
+      in
+      let store =
+        try DynArray.get store (!Modules.current)
+        with _ -> begin
             let x = DynArray.create () in
             DynArray.add store x;
             x
           end in
-        let (_, n) = cid_tp in
-        (DynArray.set store n new_entry;
-         cid_tp)
-
+      let (_, n) = cid_tp in
+      DynArray.set store n new_entry
 
     let rec cid_of_typ : Int.LF.typ -> Id.cid_typ = function
       | Int.LF.Atom (_, a, _ ) -> a

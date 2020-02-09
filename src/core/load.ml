@@ -154,6 +154,7 @@ let load_file_with_backtrace ppf path =
  *)
 let load ppf f =
   let all_paths = resolve_path f in
+  Gensym.reset ();
   Store.clear ();
   Typeinfo.clear_all ();
   Holes.clear();

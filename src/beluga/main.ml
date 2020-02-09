@@ -58,7 +58,7 @@ let process_option arg rest =
   in
   match arg with
   (* these strings must be lowercase *)
-  | "+d" -> Debug.enable (); Printexc.record_backtrace true; rest
+  | "+d" -> Debug.enable (); rest
   | "+ext" -> Options.Testing.print_external_syntax := true; rest
   | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
   | "+implicit" -> PC.printImplicit := true; rest

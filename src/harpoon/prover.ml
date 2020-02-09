@@ -229,7 +229,8 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
        | e ->
           close_in in_ch;
           close_out out_ch;
-          Sys.remove temp_file_name
+          Sys.remove temp_file_name;
+          raise e
        end
 
 let update_existing_holes existing_holes =
@@ -264,7 +265,8 @@ let add_new_mutual_rec_thmss target_file_name new_mutual_rec_thmss =
             Format.fprintf out_ppf "%a" Theorem.serialize thm
             end;
        printf_out ";@]@."
-       end
+       end;
+  close_out out_ch
 
 module Prover = struct
   module Session = struct

@@ -14,12 +14,13 @@ main
 {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
-rename comp y10 rs
+rename comp x9 rs
 msplit M
-by lookup [gamma] [gamma |- #p3] rs as x
+by lookup [gamma] [gamma |- #p1] rs as x
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
-solve v7 [|- _] ih2
+solve v3 [|- _] ih2
 solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M1] (Dot rs rN)))
 solve I [ |- halts/m refl val/c]
+:quit

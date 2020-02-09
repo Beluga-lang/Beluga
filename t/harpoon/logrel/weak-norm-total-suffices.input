@@ -14,19 +14,19 @@ main
 {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
-rename comp y10 rs
+rename comp x9 rs
 split [gamma |- M]
-by lookup [gamma] [gamma |- #p3] rs as x
+by lookup [gamma] [gamma |- #p1] rs as x
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
-solve v7 [|- _] ih2
+solve v3 [|- _] ih2
 suffices by Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
 defer
 solve [|- halts/m refl val/lam]
 defer
 suffices by bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
-by Dot rs x10 as rs'
+by Dot rs z9 as rs'
 by main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
 suffices by I toshow [|- halts c]
 solve [|- halts/m refl val/c]

@@ -19,7 +19,7 @@ le-add
 [|- add N M K] -> [|- le M K]
 1
 
-split y3
+split z2
 suffices by le-refl toshow
 suffices by le-succ-1 toshow [|- le M N3]
 by le-add [|- A] as done

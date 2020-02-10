@@ -1,8 +1,8 @@
-examples/stlc.bel
+t/harpoon/command-sequence.bel
 command-sequence-test
 [|- tm] -> [|- tp]
 
 
-by x8 as test1; by test1 as test2
+by z6 as test1; by test1 as test2
 solve [|- base]
 :quit

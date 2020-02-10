@@ -1,4 +1,4 @@
-examples/stlc.bel
+t/harpoon/select.bel
 foo1
 [|- tm] -> [|- tp]
 

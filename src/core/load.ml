@@ -60,8 +60,6 @@ let resolve_path f =
   then resolve_cfg_paths f
   else [f]
 
-exception LoadFailed
-
 let forbid_leftover_vars path = function
   | None -> ()
   | Some vars ->
@@ -137,21 +135,20 @@ let load_file ppf file_name =
 
   if !Html.generate then Html.generatePage file_name
 
-let load_file_with_backtrace ppf path =
+let load_one ppf path =
   try
     load_file ppf path
   with
   | e ->
      dprintf
-       (fun p ->
-         p.fmt "Backtrace: %s" (Printexc.get_backtrace ()));
-     output_string stderr (Printexc.to_string e)
+       begin fun p ->
+       p.fmt
+         "@[<v 2>[load_one] %s backtrace:@,@[%a@]@]"
+         path
+         Format.pp_print_string (Printexc.get_backtrace ())
+       end;
+     raise e
 
-
-(** Clears all internal state and loads the given path to a cfg or bel
-    file.
-    The list of resolved paths is returned.
- *)
 let load ppf f =
   let all_paths = resolve_path f in
   Gensym.reset ();
@@ -159,6 +156,6 @@ let load ppf f =
   Typeinfo.clear_all ();
   Holes.clear();
   List.iter
-    (load_file_with_backtrace ppf)
+    (load_one ppf)
     all_paths;
   all_paths

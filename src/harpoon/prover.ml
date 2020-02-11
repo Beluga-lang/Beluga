@@ -566,7 +566,7 @@ module Prover = struct
                Misc.Function.flip B.Parser.map
                  B.Parser.(numeric_total_order |> span)
                  begin fun (loc, o) ->
-                   let order = Interactive.elaborate_numeric_order tau o in
+                   let order = B.Reconstruct.numeric_order tau o in
                    dprintf begin fun p ->
                      p.fmt "[session_configuration] @[<v>elaborated numeric order\
                             @,  @[%a@]\

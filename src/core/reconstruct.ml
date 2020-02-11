@@ -242,6 +242,35 @@ let map_case_type f = function
      let (pat', mC') = f (pat, mC) in
      IndexObj (pat', mC')
 
+(** Elaborates the given numeric induction order by skipping implicit
+    parameters in the given type.
+ *)
+let elNumericOrder (tau : I.typ) (order : Ext.Comp.numeric_order)
+    : I.order =
+  (** skip tau n uses n units of fuel to travel through the type tau.
+      A fuel unit is spent to cross an explicit function type, but
+      crossing an implicit pi-type costs nothing.
+      The returned integer is the argument number we end up at,
+      counting implicits too.
+   *)
+  let rec skip tau n =
+    match tau, n with
+    | _, 0 -> 0
+    | I.TypPiBox (_, Int.LF.Decl (u, cU, dep), tau), n ->
+       begin match dep with
+       | Int.LF.Inductive ->
+          Error.violation "[elaborate_numeric_order] impossible LF.Inductive"
+       | Int.LF.Maybe ->
+          1 + skip tau n (* implicits are free *)
+       | Int.LF.No ->
+          1 + skip tau (n - 1) (* explicits pi-types cost 1 *)
+       end
+    | I.TypArr (_, _, tau), n ->
+       1 + skip tau (n - 1) (* simple functions cost 1 *)
+  in
+  Ext.Comp.map_order (skip tau) order
+  |> Order.of_numeric_order
+
 let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
   | Apx.LF.Null ->
      dprintf
@@ -2522,3 +2551,5 @@ let thm cG t ttau = match t with
   | Apx.Comp.Program e -> Int.Comp.Program (elExp Int.LF.Empty cG e ttau)
   | Apx.Comp.Proof p ->
      Int.Comp.(Proof (elProof Int.LF.Empty cG SubgoalPath.start p ttau))
+
+let numeric_order = elNumericOrder

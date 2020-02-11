@@ -477,7 +477,7 @@ let query =
               let tries = List.hd (List.tl arglist) in
               let str = String.concat " " (List.tl (List.tl arglist)) in
               let input = "%query " ^ expected ^ " " ^ tries ^ " " ^ str in
-              Runparser.parse_string "<query>" input Parser.sgn
+              Runparser.parse_string (Location.initial "<query>") input Parser.sgn
               |> Parser.extract
             in
             let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in

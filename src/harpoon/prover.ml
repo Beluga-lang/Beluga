@@ -379,11 +379,14 @@ module Prover = struct
 
       ; automation_state : Automation.State.t
       ; prompt : InputPrompt.t
+      ; prompt_number : int ref (* used to number the prompts to the user *)
       ; ppf : Format.formatter
       ; stop : [ `stop | `go_on ]
       ; sig_path : string (* path to the signature that was loaded *)
       ; all_paths : string list (* paths to the resolved loaded files *)
       }
+
+    let next_prompt_number s = incr s.prompt_number; !(s.prompt_number)
 
     let recover_theorem ppf hooks (cid, gs) =
       let e = CompS.get cid in
@@ -485,6 +488,7 @@ module Prover = struct
       let automation_state = Automation.State.make () in
       let hooks = [run_automation automation_state] in
       { sessions = DynArray.of_list (recover_sessions ppf hooks gs)
+      ; prompt_number = ref 0
       ; automation_state
       ; prompt
       ; ppf
@@ -503,7 +507,10 @@ module Prover = struct
       | None -> throw EndOfInput
       | Some "" -> None
       | Some line ->
-         B.Runparser.parse_string "<prompt>" line (B.Parser.only p)
+         B.Runparser.parse_string
+           (Loc.(move_line (next_prompt_number s) (initial "<prompt>")))
+           line
+           (B.Parser.only p)
          |> snd
          |> B.Parser.handle
               begin fun err ->
@@ -998,9 +1005,9 @@ type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
 (** Parses the given string to a Syntax.Ext.Harpoon.command or an
     error-printing function.
  *)
-let parse_input (input : string) : Command.command list e =
+let parse_input k (input : string) : Command.command list e =
   let open B in
-  Runparser.parse_string "<prompt>" input
+  Runparser.parse_string Loc.(move_line k (initial "<prompt>")) input
     Parser.(only interactive_harpoon_command_sequence)
   |> snd |> Parser.to_either
   |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
@@ -1043,7 +1050,7 @@ let process_input s (c, t, g) input =
   let printf x = Prover.State.printf s x in
   let e =
     let open Either in
-    parse_input input
+    parse_input (Prover.State.next_prompt_number s) input
     $ fun cmds ->
       (* Idea:
          - count the commands to run

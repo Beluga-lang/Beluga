@@ -468,7 +468,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.PObj h -> fprintf ppf "#%a" (fmt_ppr_lf_head cD cPsi lvl) h
 
 
-  and fmt_ppr_lf_mfront' cD _lvl ppf mO = match mO with
+  and fmt_ppr_lf_mfront' cD ppf = function
     | LF.CObj cPsi ->
        fprintf ppf "@[%a@]"
          (fmt_ppr_lf_dctx cD 0) cPsi
@@ -484,10 +484,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "UNDEF"
 
   and fmt_ppr_lf_mfront cD lvl ppf mO =
-    fprintf ppf "[%a]" (fmt_ppr_lf_mfront' cD 0) mO
+    fprintf ppf "[%a]" (fmt_ppr_lf_mfront' cD) mO
 
-  and fmt_ppr_cmp_meta_obj cD lvl ppf (loc,mO) =
+  and fmt_ppr_lf_mfront_typed cD lvl ppf = function
+    | LF.(ClObj (_, tM), ClTyp (_, cPsi)) ->
+       fprintf ppf "@[<hov 2>@[%a@] |-@ @[%a@]@]"
+         (fmt_ppr_lf_dctx cD 0) cPsi
+         (fmt_ppr_lf_clobj cD 0 cPsi) tM
+    | (cM, _) -> fmt_ppr_lf_mfront' cD ppf cM
+
+  and fmt_ppr_cmp_meta_obj cD lvl ppf (_, mO) =
     fmt_ppr_lf_mfront cD lvl ppf mO
+
+  and fmt_ppr_cmp_meta_obj_typed cD lvl ppf ( (_, cM), cU ) =
+    fprintf ppf "[%a]"
+      (fmt_ppr_lf_mfront_typed cD lvl) (cM, cU)
 
   and fmt_ppr_lf_mmvar_uninstantiated ppf (u, typ, dep) =
     match typ with
@@ -1196,16 +1207,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_syn cD cG 0) i1
          (fmt_ppr_cmp_exp_syn cD cG 0) i2
 
-    | Comp.AnnBox (cM, _cT) ->
-       (* When we are printing refined programs through the interactive mod
-          we should not print type annotations.
-          fprintf ppf "%s%a : %a%s"
-          (l_paren_if cond)
-          (fmt_ppr_cmp_exp_chk cD cG 1) e
-          (fmt_ppr_cmp_typ cD 2) (Whnf.cnormCTyp (tau, Whnf.m_id))
-          (r_paren_if cond)
-        *)
-       fmt_ppr_cmp_meta_obj cD 1 ppf cM
+    | Comp.AnnBox (cM, cT) ->
+       fmt_ppr_cmp_meta_obj_typed cD 1 ppf (cM, cT)
 
   and fmt_ppr_cmp_value lvl ppf =
     function

@@ -14,7 +14,7 @@ let process_bel name chan =
   let ppf = formatter_of_out_channel stdout in
   Printexc.record_backtrace true;
   try
-    Runparser.parse_channel name chan target
+    Runparser.parse_channel (Location.initial name) chan target
     |> snd
     |> Parser.handle
          (fun e ->

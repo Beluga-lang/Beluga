@@ -45,7 +45,7 @@ let rec loop ppf =
          Command.do_command ppf cmd
       | `Input input when input <> "" ->
          let (exp, tau) =
-           Runparser.parse_string "<interactive>" input Parser.(only cmp_exp_syn)
+           Runparser.parse_string (Location.initial "<interactive>") input Parser.(only cmp_exp_syn)
            |> Parser.extract
            |> Interactive.elaborate_exp' LF.Empty LF.Empty
            |> Pair.rmap Whnf.cnormCTyp
@@ -74,7 +74,7 @@ let run args =
   if List.length files = 1 then
     try
       let arg = List.hd files in
-      let sgn = Runparser.parse_file arg Parser.(only sgn) |> Parser.extract in
+      let sgn = Runparser.parse_file (Location.initial arg) Parser.(only sgn) |> Parser.extract in
       let sgn' = begin match Recsgn.recSgnDecls sgn with
     | sgn', None -> sgn'
     | _, Some _ ->

@@ -157,80 +157,84 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
    *)
   |> Hashtbl.iter
        begin fun (file_name : string) replacees ->
-       let in_ch = open_in file_name in
-       let in_lexbuf = Sedlexing.Utf8.from_channel in_ch in
-       let read_length = ref 0 in
-       let indentation = ref 0 in
-       let raise_edited_error () =
-         B.Error.violation "[harpoon] [serialize] original file is edited"
-       in
-       let with_uchar n f =
-         match Sedlexing.next in_lexbuf with
-         | None -> n ()
-         | Some v ->
-            incr read_length;
-            begin
+       dprintf begin fun p ->
+         p.fmt "[replace_locs] opening file %s" file_name
+         end;
+       Files.with_in_channel file_name
+         begin fun in_ch ->
+         let in_lexbuf = Sedlexing.Utf8.from_channel in_ch in
+         let read_length = ref 0 in
+         let indentation = ref 0 in
+         let raise_edited_error () =
+           B.Error.violation "[harpoon] [serialize] original file is edited"
+         in
+         let with_uchar n f =
+           match Sedlexing.next in_lexbuf with
+           | None -> n ()
+           | Some v ->
+              incr read_length;
               if v != Uchar.of_char '\n'
               then incr indentation
-              else indentation := 0
-            end;
-            f v
-       in
-       let (temp_file_name, out_ch) = Filename.open_temp_file "beluga_harpoon" "" in
-       try
-         let outbuf = Buffer.create 4 in
-         replacees
-         |> List.sort (Misc.on fst Loc.compare_start)
-         |> List.iter
-              begin fun (loc, printer) ->
-              let start_offset = Loc.start_offset loc in
-              let stop_offset = Loc.stop_offset loc in
-              Misc.Function.until
-                begin fun _ ->
-                if !read_length < start_offset
-                then
-                  with_uchar raise_edited_error
-                    begin fun v ->
-                    Buffer.clear outbuf;
-                    Buffer.add_utf_8_uchar outbuf v;
-                    Buffer.output_buffer out_ch outbuf;
-                    true
-                    end
-                else
-                  false
+              else indentation := 0;
+              f v
+         in
+         dprintf (fun p -> p.fmt "[replace_locs] opening temp file beluga_harpoon");
+         Filename.(Files.with_temp_file (dirname file_name) (basename file_name))
+           begin fun temp_file_name out_ch ->
+           dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
+           let outbuf = Buffer.create 4 in
+           replacees
+           |> List.sort (Misc.on fst Loc.compare_start)
+           |> List.iter
+                begin fun (loc, printer) ->
+                let start_offset = Loc.start_offset loc in
+                let stop_offset = Loc.stop_offset loc in
+                Misc.Function.until
+                  begin fun _ ->
+                  if !read_length < start_offset
+                  then
+                    with_uchar raise_edited_error
+                      begin fun v ->
+                      Buffer.clear outbuf;
+                      Buffer.add_utf_8_uchar outbuf v;
+                      Buffer.output_buffer out_ch outbuf;
+                      true
+                      end
+                  else
+                    false
+                  end;
+                let ppf = Format.formatter_of_out_channel out_ch in
+                Format.pp_open_vbox ppf !indentation;
+                printer ppf ();
+                Format.pp_close_box ppf ();
+                Format.pp_print_flush ppf ();
+                Misc.Function.until
+                  begin fun _ ->
+                  if !read_length < stop_offset
+                  then
+                    with_uchar raise_edited_error (Misc.const true)
+                  else
+                    false
+                  end
                 end;
-              let ppf = Format.formatter_of_out_channel out_ch in
-              Format.pp_open_vbox ppf !indentation;
-              printer ppf ();
-              Format.pp_close_box ppf ();
-              Format.pp_print_flush ppf ();
-              Misc.Function.until
-                begin fun _ ->
-                if !read_length < stop_offset
-                then
-                  with_uchar raise_edited_error (Misc.const true)
-                else
-                  false
-                end
-              end;
-         Misc.Function.until
-           begin fun _ ->
-           with_uchar (Misc.const false)
-             begin fun v ->
-             Buffer.clear outbuf;
-             Buffer.add_utf_8_uchar outbuf v;
-             Buffer.output_buffer out_ch outbuf;
-             true
-             end
-           end;
-         flush out_ch;
-         Sys.rename temp_file_name file_name
-       with
-       | e ->
-          close_in in_ch;
-          close_out out_ch;
-          Sys.remove temp_file_name;
-          raise e
+           Misc.Function.until
+             begin fun _ ->
+             with_uchar (Misc.const false)
+               begin fun v ->
+               Buffer.clear outbuf;
+               Buffer.add_utf_8_uchar outbuf v;
+               Buffer.output_buffer out_ch outbuf;
+               true
+               end
+             end;
+           close_in in_ch;
+           close_out out_ch;
+           dprintf begin fun p ->
+             p.fmt "[replace_locs] moving %s -> %s" temp_file_name file_name
+             end;
+           Sys.rename temp_file_name file_name
+           end
+         end
        end
 
 let update_existing_holes existing_holes =

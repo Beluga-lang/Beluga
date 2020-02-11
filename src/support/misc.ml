@@ -1,5 +1,12 @@
 (** Totally miscellaneous functions. *)
 
+(** Runs a function ignoring all exceptions.
+    In general this is a terrible idea, but it is sometimes necessary
+    when performing cleanup that may fail while in an exception
+    handler.
+ *)
+let noexcept f = try f () with _ -> ()
+
 (** An exception to be raised in unimplemented features.
  * Code that raises this exception should never be committed.
  *)

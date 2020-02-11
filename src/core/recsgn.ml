@@ -754,7 +754,7 @@ let recSgnDecls decls =
             | Ext.Comp.Trust _ -> `trust
             | Ext.Comp.NumericTotal (loc, None) -> `not_recursive
             | Ext.Comp.NumericTotal (loc, Some order) ->
-               `inductive (Interactive.elaborate_numeric_order tau order)
+               `inductive (Reconstruct.numeric_order tau order)
             | Ext.Comp.NamedTotal (loc, order, f', args) ->
                (* Validate the inputs: can't have too many args or the wrong name *)
                if not (Total.is_valid_args tau (List.length args)) then

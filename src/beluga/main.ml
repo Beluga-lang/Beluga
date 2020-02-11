@@ -130,4 +130,9 @@ let _ =
   if Array.length Sys.argv < 2 then
     usage ()
   else
-    main ()
+    try
+      main ()
+    with
+    | e ->
+       prerr_string (Printexc.to_string e);
+       exit 1

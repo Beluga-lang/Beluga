@@ -395,6 +395,8 @@ module Comp = struct
 
   type ctyp_decl =
     | CTypDecl    of name * typ * wf_tag
+
+    (** Used during pretty-printing when going under lambdas. *)
     | CTypDeclOpt of name
 
   type ih_decl =

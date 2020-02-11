@@ -268,16 +268,23 @@ let add_new_mutual_rec_thmss target_file_name new_mutual_rec_thmss =
        end;
   close_out out_ch
 
+let get_existing_holes () =
+  let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
+  Holes.get_harpoon_subgoals ()
+  |> List.filter has_file_loc
+
 module Prover = struct
   module Session = struct
     type t =
       { theorems : Theorem.t DynArray.t
+      ; finished_theorems: Theorem.t DynArray.t
       ; commands : Command.command DynArray.t
       ; mutual_group : CompS.mutual_group_id
       }
 
     let make mutual_group thms =
       { theorems = thms
+      ; finished_theorems = DynArray.make 32
       ; commands = DynArray.make 32
       ; mutual_group
       }
@@ -298,6 +305,11 @@ module Prover = struct
 
     let remove_current_theorem s =
       DynArray.delete s.theorems 0
+
+    let mark_current_theorem_as_proven s  =
+      let t = DynArray.get s.theorems 0 in
+      remove_current_theorem s;
+      DynArray.add s.finished_theorems t
 
     let defer_theorem s =
       let t = DynArray.get s.theorems 0 in
@@ -337,6 +349,27 @@ module Prover = struct
          DynArray.delete c.theorems i;
          DynArray.insert c.theorems 0 t;
          true
+
+    let get_session_kind c : [`introduced | `loaded] =
+      let existing_holes = get_existing_holes () in
+      (* If the theorems in the session do not have
+       * any predefined holes in the loaded files,
+       * that session is newly defined in this harpoon process,
+       *)
+      let is_loaded =
+        List.append
+          (DynArray.to_list c.theorems)
+          (DynArray.to_list c.finished_theorems)
+        |> List.exists
+             begin fun thm ->
+             existing_holes
+             |> List.map (fun x -> x |> snd |> fst)
+             |> List.exists (Theorem.has_cid_of thm)
+             end
+      in
+      if is_loaded
+      then `loaded
+      else `introduced
   end
 
   module State = struct
@@ -394,6 +427,7 @@ module Prover = struct
         end;
       { Session.commands
       ; theorems = DynArray.of_list theorems
+      ; finished_theorems = DynArray.make 32
       ; mutual_group
       }
 
@@ -677,28 +711,20 @@ module Prover = struct
         `reset`.
      *)
     let save s =
-      let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
-      let existing_holes =
-        Holes.get_harpoon_subgoals ()
-        |> List.filter has_file_loc
-      in
-      (* If a theorem is in the state,
-       * and it does not have any predefined holes in the loaded files,
-       * that theorem is newly defined in this harpoon process.
-       *)
-      let is_new_theorem thm =
-        existing_holes
-        |> List.map (fun hole -> hole |> snd |> fst)
-        |> List.find_opt (Theorem.has_cid_of thm)
-        |> Option.is_none
-      in
+      let existing_holes = get_existing_holes () in
       let new_mutual_rec_thmss =
         DynArray.to_list s.sessions
+        |> List.filter
+             begin fun sess ->
+             match Session.get_session_kind sess with
+             | `introduced -> true
+             | `loaded -> false
+             end
         |> List.map
              begin fun sess ->
-             sess.Session.theorems
-             |> DynArray.to_list
-             |> List.filter is_new_theorem
+             List.append
+               (DynArray.to_list sess.Session.theorems)
+               (DynArray.to_list sess.Session.finished_theorems)
              end
         |> List.filter Misc.List.nonempty
       in
@@ -1073,7 +1099,7 @@ let rec loop (s : Prover.State.t) : unit =
      (* TODO: record the proof into the Store *)
      printf "@[<v>Subproof complete! (No subgoals left.)@,@]";
      Theorem.show_proof t;
-     Prover.Session.remove_current_theorem c;
+     Prover.Session.mark_current_theorem_as_proven c;
      loop s
   | Either.Right (c, t, g) ->
     (* Show the proof state and the prompt *)

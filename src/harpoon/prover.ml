@@ -1145,6 +1145,7 @@ let start_toplevel
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)
+  B.Gensym.reset ();
   if DynArray.empty State.(s.sessions) then
     match State.session_configuration_wizard s with
     | `ok c ->

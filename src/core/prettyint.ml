@@ -1,9 +1,11 @@
 open Support
 open Format
-open Syntax.Int
+open Syntax
+open Int
 
 let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
 
+module TermS = Store.Cid.Term
 module CompS = Store.Cid.Comp
 
 module PC = Printer.Control
@@ -134,6 +136,43 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_normal cD cPsi lvl) tM
          (fmt_ppr_lf_tuple cD cPsi lvl) rest
 
+  and fmt_ppr_lf_operator cD cPsi ppf (fixity, name, spine) =
+    match fixity with
+    | Ext.Sgn.Prefix ->
+       fmt_ppr_lf_prefix_operator cD cPsi ppf (name, spine)
+    | Ext.Sgn.Postfix ->
+       fmt_ppr_lf_postfix_operator cD cPsi ppf (name, spine)
+    | Ext.Sgn.Infix ->
+       fmt_ppr_lf_infix_operator cD cPsi ppf (name, spine)
+
+  and fmt_ppr_lf_prefix_operator cD cPsi ppf = function
+    | name, LF.(App (m, Nil)) ->
+       fprintf ppf "%a %a"
+         Id.print name
+         (fmt_ppr_lf_normal cD cPsi 2) m
+    | _ ->
+       Error.violation
+         "[fmt_ppr_lf_prefix_operator] spine length <> 1"
+
+  and fmt_ppr_lf_postfix_operator cD cPsi ppf = function
+    | name, LF.(App (m, Nil)) ->
+       fprintf ppf "%a %a"
+         (fmt_ppr_lf_normal cD cPsi 2) m
+         Id.print name
+    | _ ->
+       Error.violation
+         "[fmt_ppr_lf_postfix_operator] spine length <> 1"
+
+  and fmt_ppr_lf_infix_operator cD cPsi ppf = function
+    | name, LF.(App (m1, App (m2, Nil))) ->
+       fprintf ppf "%a %a %a"
+         (fmt_ppr_lf_normal cD cPsi 2) m1
+         Id.print name
+         (fmt_ppr_lf_normal cD cPsi 2) m2
+    | _ ->
+       Error.violation
+         "[fmt_ppr_lf_infix_operator] spine length <> 2"
+
   and fmt_ppr_lf_normal cD cPsi lvl ppf =
     let deimplicitize_spine h ms = match h with
       | _ when !PC.printImplicit -> ms
@@ -179,16 +218,33 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
           fprintf ppf "%a"
             (fmt_ppr_lf_head cD cPsi lvl) h
 
-       | LF.Root (_, h, ms)  ->
-          let cond = lvl > 1 in
+       | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
+
+       | LF.(Root (_, (Const cid as h), ms))  ->
           let ms = deimplicitize_spine h ms in
+          let TermS.({ name; _ }) = TermS.get cid in
+          begin match Store.OpPragmas.getPragma name with
+          | Some p ->
+             (* TODO limit the printing of parens for operators *)
+             fprintf ppf "(%a)"
+               (fmt_ppr_lf_operator cD cPsi)
+               (Store.OpPragmas.(p.fix), name, ms)
+          | _ ->
+             let cond = lvl > 1 in
+             fprintf ppf "%s%a %a%s"
+               (l_paren_if cond)
+               (fmt_ppr_lf_head cD cPsi lvl) h
+               (fmt_ppr_lf_spine cD cPsi 2)  ms
+               (r_paren_if cond)
+          end
+       | LF.Root (_, h, ms) ->
+          let ms = deimplicitize_spine h ms in
+          let cond = lvl > 1 in
           fprintf ppf "%s%a %a%s"
             (l_paren_if cond)
             (fmt_ppr_lf_head cD cPsi lvl) h
             (fmt_ppr_lf_spine cD cPsi 2)  ms
             (r_paren_if cond)
-
-       | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
   and fmt_ppr_lf_head cD cPsi lvl ppf head =
     let paren s =

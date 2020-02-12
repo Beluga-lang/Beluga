@@ -291,7 +291,7 @@ function check_harpoon {
 
     local output exit_code
 
-    output=$(./run_harpoon_test.sh "${file_path}" 2>&1)
+    output=$(./run_harpoon_test.sh "${file_path}" --stop 2>&1)
     check_harpoon_output "${output}"
     exit_code=$?
 

@@ -558,10 +558,11 @@ let rec genMApp loc cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
   genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
 
 and genMAppW loc cD (i, tau_t) = match tau_t with
-  | (Int.Comp.TypPiBox (_, Int.LF.Decl(n, ctyp, Int.LF.Maybe), tau), theta) ->
+  | (Int.Comp.TypPiBox (_, Int.LF.Decl(n, cU, Int.LF.Maybe), tau), theta) ->
      dprnt "[genMApp] --> genMetaVar'";
-    let (cM,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
-    genMApp loc cD (Int.Comp.MApp (loc, i, cM, `implicit), (tau, t'))
+    let (cM,t') = genMetaVar' loc cD (loc, n, cU, theta) in
+    let i = Int.Comp.MApp (loc, i, cM, Whnf.cnormMTyp (cU, theta), `implicit) in
+    genMApp loc cD (i, (tau, t'))
     |> Pair.lmap ((+) 1)
 
   | _ ->
@@ -1061,7 +1062,9 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
 
   | (Apx.Comp.Box (loc, cM), (Int.Comp.TypBox (_loc, cT), theta)) ->
-     Int.Comp.Box (loc, elMetaObj cD cM (cT, theta))
+     let cM = elMetaObj cD cM (cT, theta) in
+     let cU = Whnf.cnormMTyp (cT, theta) in
+     Int.Comp.Box (loc, cM, cU)
 
   | Apx.Comp.Impossible (loc, i), (tau, theta) ->
      let i', ttau' = elExp' cD cG i in
@@ -1324,7 +1327,7 @@ and elExp' cD cG i =
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
         let cM = elMetaObj cD mC (ctyp, theta) in
-        ( Int.Comp.MApp (loc, i', cM, `explicit)
+        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
         , (tau, Int.LF.MDot (metaObjToFt cM, theta)))
      | _ ->
         raise

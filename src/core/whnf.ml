@@ -1641,8 +1641,10 @@ let mctxMVarPos cD u =
     | (Comp.Let (loc, i, (x, e)), t) ->
         Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
-    | (Comp.Box (loc, cM), t) ->
-        Comp.Box (loc, cnormMetaObj (cM,t))
+    | (Comp.Box (loc, cM, cU), t) ->
+       let cM' = cnormMetaObj (cM, t) in
+       let cU' = cnormMTyp (cU, t) in
+       Comp.Box (loc, cM', cU')
 
     | Comp.Impossible (loc, i), t ->
        Comp.Impossible (loc, cnormExp' (i, t))
@@ -1666,8 +1668,8 @@ let mctxMVarPos cD u =
     | (Comp.PairVal (loc, i1, i2), t) ->
         Comp.PairVal (loc, cnormExp' (i1,t), cnormExp' (i2, t))
 
-    | (Comp.MApp (loc, i, cM, pl), t) ->
-        Comp.MApp (loc, cnormExp' (i, t),  cnormMetaObj (cM, t), pl)
+    | (Comp.MApp (loc, i, cM, cU, pl), t) ->
+        Comp.MApp (loc, cnormExp' (i, t), cnormMetaObj (cM, t), cnormMTyp (cU, t), pl)
 
     | (Comp.AnnBox (cM, cT), t') ->
        let cM' = cnormMetaObj (cM, t') in

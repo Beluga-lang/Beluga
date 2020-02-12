@@ -565,7 +565,7 @@ module Comp = struct
   let rec extract_var i = match i with
     | Var (_, x) -> Some x
     | Apply (_, i, _ ) -> extract_var i
-    | MApp (_, i, _ , _) -> extract_var i
+    | MApp (_, i, _, _, _) -> extract_var i
     | _ -> None
 
   let useIH loc cD cG cIH_opt e2 = match cIH_opt with
@@ -575,7 +575,7 @@ module Comp = struct
          | I.Empty -> raise (Error (loc, InvalidRecCall))
          | cIH  ->
             match e2 with
-            | Box (_,cM) ->
+            | Box (_, cM, _) ->
                dprintf
                  begin fun p ->
                  p.fmt "[useIH] @[<v>check whether compatible IH exists@,\
@@ -680,8 +680,15 @@ module Comp = struct
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
        end
 
-    | (Box (loc, cM), (TypBox (l, mT), t)) ->
-       checkMetaObj cD cM mT t
+    | (Box (loc, cM, cU), (TypBox (l, cU'), t)) ->
+       begin
+         try
+           Unify.unifyMetaTyp cD (cU, C.m_id) (cU', t)
+         with
+         | Unify.Failure _ ->
+            Error.violation "[check] box's type annotation does not unify with target type"
+       end;
+       checkMetaObj cD cM cU' t
 
     | Impossible (loc, i), (tau, t) ->
        dprintf
@@ -893,22 +900,39 @@ module Comp = struct
           raise (Error (loc, MismatchSyn (cD, cG, e1, VariantArrow, (tau,t))))
        end
 
-    | MApp (loc, e, mC, _) ->
+    | MApp (loc, e, mC, cU, _) ->
        let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
        dprintf begin fun p ->
          p.fmt "[syn] @[<v>MApp synthesized function type\
-                @,tau1 = @[%a@]@]"
-           P.(fmt_ppr_cmp_typ cD l0) tau1
+                @,tau1 = @[%a@]\
+                @,cU = @[%a@]@]"
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau1, t1))
+           P.(fmt_ppr_cmp_meta_typ cD) cU
          end;
        begin match (C.cwhnfCTyp (tau1,t1)) with
        | (TypPiBox (_, (I.Decl (_ , ctyp, _)), tau), t) ->
           dprintf begin fun p ->
             p.fmt "[syn] @[<v>MApp\
+                   @,cD = @[%a@]\
+                   @,cU = @[%a@]\
                    @,@[<hv 2>@[%a@] <=?@ @[%a@]@]@]"
+              P.(fmt_ppr_lf_mctx l0) cD
+              P.(fmt_ppr_cmp_meta_typ cD) cU
               P.(fmt_ppr_cmp_meta_obj cD l0) mC
-              P.(fmt_ppr_cmp_meta_typ cD) ctyp
+              P.(fmt_ppr_cmp_meta_typ cD) (C.cnormMTyp (ctyp, t))
             end;
           LF.checkMetaObj cD mC (ctyp, t);
+          begin
+            try
+              (* need to use unification here instead of
+                 convertibility because ctyp might contain MMVars *)
+              Unify.unifyMetaTyp cD (ctyp, t) (cU, C.m_id)
+            with
+            | Unify.Failure _ ->
+               Error.violation
+                 ("[syn] type annotation not unifiable with PiBox type "
+                  ^ Fmt.stringify Loc.print_short loc)
+          end;
           dprintf
             (fun p ->
               let open Maybe in
@@ -920,7 +944,7 @@ module Comp = struct
               in
               ()
             );
-          (useIH loc cD cG cIH_opt (Box (loc, mC)), tau, I.MDot(metaObjToMFront mC, t))
+          (useIH loc cD cG cIH_opt (Box (loc, mC, cU)), tau, I.MDot(metaObjToMFront mC, t))
        | (tau, t) ->
           raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
        end

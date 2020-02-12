@@ -1292,10 +1292,10 @@ let rec collectExp cQ e = match e with
       let (cQ2, e') = collectExp cQi e in
         (cQ2, Comp.Let (loc, i', (x, e')))
 
-  | Comp.Box (loc, cM) ->
-      let (cQ'', cM') = collect_meta_obj 0 cQ cM in
-        (cQ'', Comp.Box (loc, cM'))
-
+  | Comp.Box (loc, cM, cU) ->
+     let (cQ', cM') = collect_meta_obj 0 cQ cM in
+     let (cQ'', cU') = collectMetaTyp loc 0 cQ' cU in
+     (cQ'', Comp.Box (loc, cM', cU'))
 
   | Comp.Case (loc, prag, i, branches) ->
       let (cQ', i') = collectExp' cQ i in
@@ -1321,10 +1321,11 @@ and collectExp' cQ i = match i with
       let (cQ'', e') = collectExp cQ' e in
         (cQ'', Comp.Apply (loc, i', e'))
 
-  | Comp.MApp (loc, i, cM, pl) ->
-      let (cQ', i') = collectExp' cQ i  in
-      let (cQ'', cM') = collect_meta_obj 0 cQ cM in
-        (cQ'', Comp.MApp (loc, i', cM', pl))
+  | Comp.MApp (loc, i, cM, cU, pl) ->
+     let (cQ', i') = collectExp' cQ i  in (* cQ' is unused? -je *)
+     let (cQ'', cM') = collect_meta_obj 0 cQ' cM in
+     let (cQ''', cU') = collectMetaTyp loc 0 cQ'' cU in
+     (cQ''', Comp.MApp (loc, i', cM', cU', pl))
 
   | Comp.AnnBox (cM, cT) ->
       let (cQ', cM') = collect_meta_obj 0 cQ cM in

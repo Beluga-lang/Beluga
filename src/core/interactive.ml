@@ -163,9 +163,9 @@ and mapHoleSyn f = function
       let es' = mapHoleSyn f es in
       let ec' = mapHoleChk f ec in
       Apply(l, es', ec')
-  | MApp (l, es, c, pl) ->
+  | MApp (l, es, cM, cU, pl) ->
      let es' =  mapHoleSyn f es in
-     MApp(l, es', c, pl)
+     MApp(l, es', cM, cU, pl)
   | PairVal(l, es1, es2) ->
       let es1' =  mapHoleSyn f es1 in
       let es2' = mapHoleSyn f es2 in

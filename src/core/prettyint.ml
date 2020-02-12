@@ -1134,8 +1134,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
          (r_paren_if cond)
 
-    | Comp.Box (_ , cM) ->
-       fmt_ppr_cmp_meta_obj cD 0 ppf cM
+    | Comp.Box (_ , cM, cU) ->
+       fmt_ppr_cmp_meta_obj_typed cD 0 ppf (cM, cU)
 
     | Comp.Impossible (_, i) ->
        fprintf ppf "impossible @[%a@]"
@@ -1202,13 +1202,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_chk cD cG 1) e
          (r_paren_if cond)
 
-    | Comp.MApp (_, i, mC, pl) ->
+    | Comp.MApp (_, i, cM, cU, pl) ->
        let cond = lvl > 1 in
        if !PC.printImplicit || pl = `explicit then
          fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
            (l_paren_if cond)
            (fmt_ppr_cmp_exp_syn cD cG 1) i
-           (fmt_ppr_cmp_meta_obj cD 0) mC
+           (fmt_ppr_cmp_meta_obj_typed cD 0) (cM, cU)
            (r_paren_if cond)
        else
          fmt_ppr_cmp_exp_syn cD cG 1 ppf i (* not printing implicits *)

@@ -94,18 +94,24 @@ let auto_solve_trivial : t =
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
-    | (LF.Decl (_, LF.ClTyp (_, dctx), _), idx) ->
+    | (LF.Decl (_, (LF.ClTyp (_, dctx) as cU), _), idx) ->
        let open LF in
        let open Loc in
        let head = MVar (Offset idx, S.LF.id) in
        let clobj = MObj (Root (ghost, head, Nil)) in
        let psi_hat = Context.dctxToHat dctx in
-       Box (ghost, (ghost, ClObj (psi_hat, clobj)))
+       Box
+         ( ghost
+         , (ghost, ClObj (psi_hat, clobj))
+         , Whnf.cnormMTyp (cU, LF.MShift idx)
+         )
     (* The following case is impossible because m_is_witness
        will never return true for a DeclOpt.
      *)
+    | LF.DeclOpt _, _ ->
+       B.Error.violation "[auto_solve_trivial] DeclOpt impossible"
     | _ ->
-       B.Error.violation "[auto_solve_trivial] Impossible case"
+       B.Error.violation "[auto_solve_trivial] impossible case"
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf

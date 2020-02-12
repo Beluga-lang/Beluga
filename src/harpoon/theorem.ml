@@ -57,13 +57,14 @@ let theorem_statement (t : t) =
 
 let serialize ppf (t : t) =
   let s = t.initial_state in
+  let goal = Whnf.cnormCTyp s.Comp.goal in
   let fmt_ppr_order =
     Maybe.print
       begin fun ppf ->
       function
       | `inductive order ->
          Format.fprintf ppf "/ @[<hov 2>total@ @[%a@]@] /"
-           P.fmt_ppr_cmp_numeric_order order
+           P.fmt_ppr_cmp_numeric_order (Erase.numeric_order goal order)
       | `not_recursive -> Format.fprintf ppf "/ total /"
       | `partial -> ()
       | `trust -> Format.fprintf ppf "/ trust /"
@@ -77,7 +78,7 @@ let serialize ppf (t : t) =
   in
   Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,@]"
     Id.print name
-    Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) Comp.(Whnf.cnormCTyp s.goal)
+    Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) goal
     fmt_ppr_order order
     Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
 

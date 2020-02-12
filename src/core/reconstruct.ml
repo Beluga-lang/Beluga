@@ -26,7 +26,7 @@ let strengthen : bool ref =  Lfrecon.strengthen
 let dprintf, dprint, dprnt = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
-type case_label_variant = [ `named | `context | `pvar ]
+type case_label_variant = [ `named | `context | `pvar | `bvar ]
 
 type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
@@ -164,6 +164,7 @@ let _ = Error.register_printer
          | `named -> fprintf ppf "named"
          | `context -> fprintf ppf "context"
          | `pvar -> fprintf ppf "parameter variable"
+         | `bvar -> fprintf ppf "head bound variable"
        in
        fprintf ppf
          "@[<v>Case label mismatch.\
@@ -1990,6 +1991,7 @@ let variant_of_case_label = function
   | A.NamedCase _ -> `named
   | A.ContextCase _ -> `context
   | A.PVarCase (_, _, _) -> `pvar
+  | A.BVarCase _ -> `bvar
 
 (* elaborate hypotheses *)
 let elHypotheses { A.cD; cG } =
@@ -2347,6 +2349,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
         *)
        in
        I.SplitBranch (l', pat, t', hyp')
+
+    | A.BVarCase loc -> Error.not_implemented loc "BVarCase"
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)

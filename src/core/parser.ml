@@ -2793,8 +2793,14 @@ let case_label : Comp.case_label parser =
     |> labelled "parameter variable case label"
     $> fun (loc, (n, k)) -> Comp.PVarCase (loc, n, k)
   in
+  let bvar_case_label =
+    trying (keyword "head" &> keyword "variable")
+    |> span
+    $> fun (loc, _) -> Comp.BVarCase loc
+  in
   choice
-    [ extension_case_label
+    [ bvar_case_label
+    ; extension_case_label
     ; empty_case_label
     ; named_case_label
     ; pvar_case_label

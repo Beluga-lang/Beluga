@@ -32,6 +32,7 @@ module Comp = struct
 
   type 'ctx_case generic_case_label =
     | NamedCase of Loc.t * Id.name
+    | BVarCase of Loc.t
     | ContextCase of 'ctx_case
     | PVarCase of
         Loc.t

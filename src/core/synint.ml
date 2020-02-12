@@ -467,10 +467,7 @@ module Comp = struct
 
   type tclo = typ * LF.msub
 
-  type order =	          (* Induction Orders           *)
-    | Arg of int			    (* O ::= x                    *)
-    | Lex of order list   (*     | {O1 .. On}           *)
-    | Simul of order list (*     | [O1 .. On]           *)
+  type order = int generic_order
 
   type 'order total_dec_kind =
     [ `inductive of 'order

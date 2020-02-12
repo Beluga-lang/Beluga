@@ -42,6 +42,18 @@ module Comp = struct
     [ `boxed
     | `unboxed
     ]
+
+ type 'a generic_order =
+   | Arg of 'a                             (* O ::= x                    *)
+   | Lex of 'a generic_order list                 (*     | {O1 .. On}           *)
+   | Simul of 'a generic_order list               (*     | [O1 .. On]           *)
+ (* Note: Simul is currently unused. It doesn't even have a parser. -je *)
+
+ let rec map_order (f : 'a -> 'b) : 'a generic_order -> 'b generic_order =
+   function
+   | Arg x -> Arg (f x)
+   | Lex xs -> Lex (List.map (map_order f) xs)
+   | Simul xs -> Simul (List.map (map_order f) xs)
 end
 
 module Harpoon = struct

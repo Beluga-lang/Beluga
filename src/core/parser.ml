@@ -2438,13 +2438,13 @@ let call_arg =
     (token T.UNDERSCORE &> pure None)
   |> labelled "call argument"
 
-let named_total_arg : Id.name Comp.order' t =
+let named_total_arg : Comp.named_order t =
   name $> fun x -> Comp.Arg x
 
-let numeric_total_arg : int Comp.order' t =
+let numeric_total_arg : Comp.numeric_order t =
   integer $> fun x -> Comp.Arg x
 
-let total_order (arg : 'a Comp.order' t) : 'a Comp.order' t  =
+let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t  =
   alt
     arg
     (braces (some arg) $> fun args -> Comp.Lex args)

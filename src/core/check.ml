@@ -575,7 +575,7 @@ module Comp = struct
          | I.Empty -> raise (Error (loc, InvalidRecCall))
          | cIH  ->
             match e2 with
-            | Box (_, cM, _) ->
+            | Box (_, cM, _) | Syn (_, AnnBox (cM, _)) ->
                dprintf
                  begin fun p ->
                  p.fmt "[useIH] @[<v>check whether compatible IH exists@,\

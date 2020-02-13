@@ -2248,7 +2248,6 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        let l' = `pvar k in
        let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
 
-       (* TODO adjust label -je *)
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
 
        I.SplitBranch (l', pat', t', hyp')

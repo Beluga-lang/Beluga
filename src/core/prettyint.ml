@@ -1464,7 +1464,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          | None -> fprintf ppf "?"
          | Some proof ->
             dprnt "[fmt_ppr_cmp_proof] chasing pointer!";
-            fmt_ppr_cmp_proof g.context.cD g.context.cG ppf proof
+            fmt_ppr_cmp_proof cD cG ppf proof
        end
     | Command ( stmt, proof ) ->
        fprintf ppf "%a"

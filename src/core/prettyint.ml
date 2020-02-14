@@ -1507,7 +1507,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let open Comp in
     function
     | SplitBranch (c, _, _, h) ->
-       fprintf ppf "@[<v>case %a:@,%a@]@,"
+       fprintf ppf "@[<v>case %a:@,%a@]"
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h
 
@@ -1516,7 +1516,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let print_split ppf i bs f =
       fprintf ppf "@[split@ @[%a@] as@]@,@[<v>%a@]"
         (fmt_ppr_cmp_exp_syn cD cG l0) i
-         (pp_print_list ~pp_sep: (fun _ _ -> ())
+         (pp_print_list ~pp_sep: pp_print_cut
             (fmt_ppr_cmp_split_branch cD cG f))
          bs
     in

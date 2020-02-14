@@ -256,12 +256,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     let rec fmt_head_with proj = function
       | LF.HClo (h, s, sigma) ->
-         fprintf ppf "%s[#%a[%a]]"
+         fprintf ppf "%s[%a[%a]]"
            (R.render_bvar cPsi h)
            (fmt_ppr_lf_offset cD) s
            (fmt_ppr_lf_sub cD cPsi lvl) sigma
       | LF.HMClo (h, ((s, theta),sigma)) ->
-         fprintf ppf "%s[#%a[%a ; %a]]"
+         fprintf ppf "%s[%a[%a ; %a]]"
            (R.render_bvar cPsi h)
            (fmt_ppr_lf_mmvar lvl) s
            (fmt_ppr_lf_msub  cD lvl) theta
@@ -354,7 +354,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (r_paren_if (paren s))
 
       | LF.FPVar (p, s) ->
-         fprintf ppf "%sFPV #%s%s[%a]%s"
+         fprintf ppf "%sFPV %s%s[%a]%s"
            (l_paren_if (paren s))
            (Id.render_name p)
            proj
@@ -522,7 +522,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_clobj cD lvl cPsi ppf = function
     | LF.MObj m -> fmt_ppr_lf_normal cD cPsi lvl ppf m
     | LF.SObj s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
-    | LF.PObj h -> fprintf ppf "#%a" (fmt_ppr_lf_head cD cPsi lvl) h
+    | LF.PObj h -> fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
 
 
   and fmt_ppr_lf_mfront' cD ppf = function

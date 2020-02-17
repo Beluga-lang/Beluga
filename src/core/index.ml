@@ -1504,14 +1504,14 @@ and index_command cvars vars fvars = function
 
 and index_directive cvars vars fvars = function
   | Ext.Comp.Intros (loc, h) ->
-     let h' = index_hypothetical h in
+     let _, _, h' = index_hypothetical h in
      Apx.Comp.Intros (loc, h')
   | Ext.Comp.Solve (loc, e) ->
      let e' = index_exp cvars vars fvars e in
      Apx.Comp.Solve (loc, e')
   | Ext.Comp.Split (loc, i, bs) ->
      let i' = index_exp' cvars vars fvars i in
-     let bs' = List.map (index_split_branch cvars vars fvars) bs in
+     let bs' = List.map index_split_branch bs in
      Apx.Comp.Split (loc, i', bs')
   | Ext.Comp.Suffices (loc, i, tau_ps) ->
      let i' = index_exp' cvars vars fvars i in
@@ -1552,9 +1552,9 @@ and index_case_label cvars fvars = function
      let case = index_context_case_label cvars fvars case in
      Apx.Comp.ContextCase case
 
-and index_split_branch cvars vars fvars =
+and index_split_branch =
   fun Ext.Comp.({ case_label; branch_body; split_branch_loc }) ->
-  let branch_body = index_hypothetical branch_body in
+  let cvars, fvars, branch_body = index_hypothetical branch_body in
   let case_label = index_case_label cvars fvars case_label in
   Apx.Comp.(
     { case_label
@@ -1579,7 +1579,10 @@ and index_hypothetical h =
     index_proof cvars vars (empty_fvars `closed_term) proof in
   let _, cD, cvars, fvars = index_mctx (CVar.create ()) (empty_fvars `closed_term) cD in
   let cG, vars, fvars = index_gctx cvars (Var.create ()) fvars cG in
-  Apx.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc })
+  ( cvars
+  , fvars
+  , Apx.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc })
+  )
 
 let comptypdef (cT, cK) =
   let cK' = index_compkind (CVar.create ())  (empty_fvars `closed_term) cK in

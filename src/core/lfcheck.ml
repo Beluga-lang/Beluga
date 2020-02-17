@@ -60,7 +60,14 @@ let _ =
            (P.fmt_ppr_lf_ctx_var cO) var1
 
       | MissingType name ->
-         Format.fprintf ppf "Need to know type of %s" name
+         Format.fprintf ppf
+           "@[<v>Need to know the type of bound variable %s.\
+            @,@[%a@]@]"
+           name
+           Format.pp_print_string
+           "Typically, a type annotation is required on a bound \
+            variable in order to disambiguate which schema element \
+            the variable is referring to."
 
       | CheckError (cD, cPsi, sM, sA) ->
          Format.fprintf ppf

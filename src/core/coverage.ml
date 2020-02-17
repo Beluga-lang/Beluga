@@ -1876,7 +1876,7 @@ let rec append cD =
 
     and cO'' |- cD'' mctx
  *)
-let rec decTomdec cD' ((LF.CtxVar (LF.CtxOffset k)) as cpsi) (d, decls) =
+let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
   match decls with
   | LF.Empty -> (cD', S.LF.id)
   | LF.(Dec (decls, TypDecl (x, tA))) ->
@@ -1936,7 +1936,7 @@ let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
      dprintf
        begin fun p ->
        p.fmt "[genCtx] @[s =@ @[%a@]@]"
-         (P.fmt_ppr_lf_sub cD0 cpsi P.l0) s
+         (P.fmt_ppr_lf_sub cD0 (LF.CtxVar cpsi) P.l0) s
        end;
      let cpsi' = LF.CtxVar (LF.CtxOffset (d+1)) in
      (* cD0 = cD, decls *)
@@ -1978,7 +1978,7 @@ let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
 let genCtxGoals cD (LF.Decl (x, LF.CTyp (Some schema_cid), dep)) =
   let LF.Schema elems = Store.Cid.Schema.get_schema schema_cid in
   let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some schema_cid), dep)) in
-  genCtx cD' (LF.CtxVar (LF.CtxOffset 1)) elems
+  genCtx cD' (LF.CtxOffset 1) elems
 
 let remap_to_covctx =
   List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms))
@@ -2424,9 +2424,8 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
         (* require that a schema be actually present *)
         let Some (LF.Schema elems) = Maybe.map Store.Cid.Schema.get_schema w in
         let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
-        let cPsi = LF.CtxVar (LF.CtxOffset 1) in
 
-        genCtx cD' cPsi elems
+        genCtx cD' (LF.CtxOffset 1) elems
         |> remap_to_covctx
         |> List.map
              begin fun (cD', CovCtx cPsi, ms) ->

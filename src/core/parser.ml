@@ -2766,10 +2766,10 @@ let harpoon_command : Comp.command parser =
 
 let case_label : Comp.case_label parser =
   let extension_case_label =
-    trying (keyword "extended" &> token T.KW_BY) &> clf_typ
+    trying (keyword "extended" &> token T.KW_BY) &> integer
     |> span
     |> labelled "context extension case label"
-    $> fun (loc, typ) -> Comp.(ContextCase (ExtendedBy (loc, typ)))
+    $> fun (loc, n) -> Comp.(ContextCase (ExtendedBy (loc, n)))
   in
   let empty_case_label =
     trying (keyword "empty" &> keyword "context")

@@ -194,9 +194,6 @@ module Comp = struct
 
   type gctx = ctyp_decl LF.ctx
 
-  type context_case = LF.typ generic_context_case
-  type case_label = context_case generic_case_label
-
   type hypotheses =
     { cD : LF.mctx
     ; cG : gctx

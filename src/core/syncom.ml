@@ -21,19 +21,19 @@ end
 module Comp = struct
   type case_pragma = PragmaCase | PragmaNotCase
 
-  type 'a generic_context_case =
+  type context_case =
     | EmptyContext of Loc.t
-    | ExtendedBy of Loc.t * 'a
+    | ExtendedBy of Loc.t * int (* specifies a schema element *)
 
   type plicity =
     [ `implicit
     | `explicit
     ]
 
-  type 'ctx_case generic_case_label =
+  type case_label =
     | NamedCase of Loc.t * Id.name
     | BVarCase of Loc.t
-    | ContextCase of 'ctx_case
+    | ContextCase of context_case
     | PVarCase of
         Loc.t
         * int (* schema element number (1-based) *)

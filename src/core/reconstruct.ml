@@ -45,6 +45,7 @@ type error =
   | IllegalSubstMatch
   | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
                           * Int.Comp.hypotheses (* actual *)
+  | InvalidSchemaElementIndex of int * Id.cid_schema
   | UnboundCaseLabel of [ `comp | `meta ] * Id.name * Int.LF.mctx * Int.Comp.typ
   | CaseLabelMismatch of case_label_variant (* expected *)
                          * case_label_variant (* actual *)
@@ -198,6 +199,17 @@ let _ = Error.register_printer
           @]"
          P.fmt_ppr_cmp_hypotheses_listing exp
          P.fmt_ppr_cmp_hypotheses_listing act
+
+    | InvalidSchemaElementIndex (n, w) ->
+       let Int.LF.Schema elems as schema = Store.Cid.Schema.get_schema w in
+       fprintf ppf
+         "@[<v>The 1-based index %d is invalid for the schema\
+          @,  @[%a@]\
+          @,which consists of %d only elements.
+          @]"
+         n
+         P.(fmt_ppr_lf_schema ~useName: false l0) schema
+         (List.length elems)
     end
   end
 
@@ -2113,26 +2125,29 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        (* No need to apply the msub to pat, since pat is closed. *)
        I.SplitBranch (I.EmptyContext loc, pat, t', hyp')
 
-    | A.ContextCase (A.ExtendedBy (loc, a)) ->
-       let a' = Lfrecon.elTyp Lfrecon.Pibox cD Int.LF.Null a in
-       let l' = I.ExtendedBy (loc, a') in
-       let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
-       let cD' =
-         let u = Id.mk_name (Whnf.newMTypName (Int.LF.CTyp w)) in
-         Int.LF.(Dec (cD, Decl (u, CTyp w, Maybe)))
-       in
-       let hyp' = elHypothetical cD' cG pb' hyp ttau in
-       let pat =
-         let u = Id.mk_name (Whnf.newMTypName Int.LF.(ClTyp (MTyp a', Null))) in
-         let mC = (Loc.ghost, Int.LF.(CObj (DDec (CtxVar (CtxOffset 1), TypDecl (u, a'))))) in
-         I.PatMetaObj (Loc.ghost, mC)
-       in
-       let (t', t1, cD_b) =
-         let t = Int.LF.MShift 1 in
-         synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
-           (tau_i, Whnf.cnormCTyp (tau_i, t))
-       in
-       I.SplitBranch (I.ExtendedBy (loc, a'), pat, t', hyp')
+    | A.ContextCase (A.ExtendedBy (loc, n)) ->
+       begin match Coverage.genNthSchemaElemGoal cD n w with
+       | None ->
+          throw loc (InvalidSchemaElementIndex (n, w))
+       | Some (cD', cPsi, t) ->
+          (* cD' |- t : cD
+             cD' |- cPsi dctx is the pattern *)
+          let pat =
+            I.PatMetaObj (Loc.ghost, (Loc.ghost, Int.LF.CObj cPsi))
+          in
+          let (t', t1, cD_b) =
+            synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+              (tau_i, Whnf.cnormCTyp (tau_i, t))
+            (* pretty sure [t]tau_i = tau_i because it should just be
+               a typbox of a ctyp of a schema, which is unaffected by
+               substitution. -je *)
+          in
+          let pat' = Whnf.cnormPattern (pat, t1) in
+          let l' = I.ExtendedBy (loc, n) in
+          let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
+          let hyp' = elHypothetical cD' cG pb' hyp ttau in
+          I.SplitBranch (l', pat', t', hyp')
+       end
 
     | _ ->
        CaseLabelMismatch (`context, variant_of_case_label l)
@@ -2432,6 +2447,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
   in
   match tau_i with
   | I.TypBox (_, (Int.LF.CTyp w)) ->
+     let Some w = w in
      let ctx_branches = List.map (make_ctx_branch w) bs in
      I.ContextSplit (i, tau_i, ctx_branches)
   | I.TypBox (loc, (Int.LF.ClTyp (cl, psi))) ->

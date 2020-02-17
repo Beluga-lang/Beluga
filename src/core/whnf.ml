@@ -2126,9 +2126,8 @@ let rec conv_subgoal_path p1 p2 =
   | ContextSplit (_, Comp.EmptyContext _, p1),
     ContextSplit (_, Comp.EmptyContext _, p2) ->
      conv_subgoal_path p1 p2
-  | ContextSplit (_, Comp.ExtendedBy (_, a1), p1),
-    ContextSplit (_, Comp.ExtendedBy (_, a2), p2)
-       when convTyp (a1, LF.id) (a2, LF.id) ->
+  | ContextSplit (_, Comp.ExtendedBy (_, k1), p1),
+    ContextSplit (_, Comp.ExtendedBy (_, k2), p2) when k1 = k2 ->
      conv_subgoal_path p1 p2
   | _ -> false
 

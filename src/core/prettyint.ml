@@ -1421,11 +1421,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
              (fmt_ppr_cmp_exp_syn cD cG l0) i
          in
          f :: format_path p
-      | ContextSplit (i, Comp.ExtendedBy (_, a), p) ->
+      | ContextSplit (i, Comp.ExtendedBy (_, k), p) ->
          let f ppf () =
-           fprintf ppf "split @[%a@] (case extended by @[%a@])"
+           fprintf ppf "split @[%a@] (case extended by %d)"
              (fmt_ppr_cmp_exp_syn cD cG l0) i
-             (fmt_ppr_lf_typ cD LF.Null l0) a
+             k
          in
          f :: format_path p
     in
@@ -1495,7 +1495,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       abstract type `b` using the supplied printing function.
    *)
   and fmt_ppr_cmp_split_branch :
-        type b. LF.mctx -> Comp.gctx -> (LF.mctx -> Format.formatter -> b -> unit) ->
+        type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
         Format.formatter ->
         b Comp.split_branch -> unit =
     fun cD cG f ppf ->
@@ -1504,7 +1504,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | SplitBranch (c, _, _, h) ->
        let Hypothetical (hyp, _) = h in
        fprintf ppf "@[<v>case %a:@,%a@]"
-         (f hyp.cD) c
+         f c
          (fmt_ppr_cmp_hypothetical cD cG) h
 
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
@@ -1536,16 +1536,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          i
 
     | MetaSplit (i, _, bs) ->
-       print_split ppf i bs
-         (fun _ -> fmt_ppr_cmp_meta_branch_label)
+       print_split ppf i bs fmt_ppr_cmp_meta_branch_label
 
     | CompSplit (i, _, bs) ->
        print_split ppf i bs
-         (fun _ ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
+         (fun ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
 
     | ContextSplit (i, _, bs) ->
-       print_split ppf i bs
-         (fun cD -> fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
+       print_split ppf i bs fmt_ppr_cmp_context_case
 
     | Solve t ->
        fprintf ppf "@[<hov 2>solve@ @[%a@]@]"

@@ -1526,36 +1526,9 @@ and index_directive cvars vars fvars = function
      in
      Apx.Comp.Suffices (loc, i', ps')
 
-and index_context_case_label cvars fvars = function
-  | Ext.Comp.EmptyContext loc -> Apx.Comp.EmptyContext loc
-  | Ext.Comp.ExtendedBy (loc, tA) ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_context_case_label] at %a"
-         Loc.print loc
-       end;
-     let fvars', tA' =
-       index_typ tA
-         { (empty_lf_indexing_context disambiguate_to_fmvars) with
-           cvars
-         }
-         (* free variables are not allowed in a case label *)
-         { fvars with open_flag = `closed_term }
-     in
-     Apx.Comp.ExtendedBy (loc, tA')
-
-and index_case_label cvars fvars = function
-  | Ext.Comp.NamedCase (loc, name) -> Apx.Comp.NamedCase (loc, name)
-  | Ext.Comp.BVarCase loc -> Apx.Comp.BVarCase loc
-  | Ext.Comp.PVarCase (loc, n, k) -> Apx.Comp.PVarCase (loc, n, k)
-  | Ext.Comp.ContextCase case ->
-     let case = index_context_case_label cvars fvars case in
-     Apx.Comp.ContextCase case
-
 and index_split_branch =
   fun Ext.Comp.({ case_label; branch_body; split_branch_loc }) ->
   let cvars, fvars, branch_body = index_hypothetical branch_body in
-  let case_label = index_case_label cvars fvars case_label in
   Apx.Comp.(
     { case_label
     ; branch_body

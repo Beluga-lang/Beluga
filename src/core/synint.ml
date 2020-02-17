@@ -544,8 +544,6 @@ module Comp = struct
     ; cIH : ihctx   (* Generated induction hypotheses. *)
     }
 
-  type context_case = LF.typ generic_context_case
-
   let no_hypotheses = { cD = LF.Empty; cG = LF.Empty; cIH = LF.Empty }
 
   type meta_branch_label =

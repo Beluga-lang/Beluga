@@ -2134,3 +2134,29 @@ let rec conv_subgoal_path p1 p2 =
 
 let conv_subgoal_path_builder b1 b2 =
   Comp.SubgoalPath.(conv_subgoal_path (b1 Here) (b2 Here))
+
+(** General convertibility of contexts, provided a function to check
+    convertibility of declarations.
+    This is a quite strong notion of convertibility that requires that
+    both contexts have the same length and that declarations are
+    pairwise convertible.
+ *)
+let conv_ctx conv_decl =
+  let rec go ctx1 ctx2 = match (ctx1, ctx2) with
+    | Empty, Empty -> true
+    | Dec (ctx1, d1), Dec (ctx2, d2) when conv_decl d1 d2 -> go ctx1 ctx2
+    | _ -> false
+  in
+  go
+
+let convGCtx (cG1, t1) (cG2, t2) =
+  let f (Comp.CTypDecl (_, tau1, _)) (Comp.CTypDecl (_, tau2, _)) =
+    convCTyp (tau1, t1) (tau2, t2)
+  in
+  conv_ctx f cG1 cG2
+
+let convMCtx cD1 cD2 =
+  let f (Decl (_, cU1, _)) (Decl (_, cU2, _)) =
+    convMetaTyp cU1 cU2
+  in
+  conv_ctx f cD1 cD2

@@ -215,3 +215,13 @@ val collapse_sigma : typ_rec -> typ
 
 val conv_subgoal_path : Comp.SubgoalPath.t -> Comp.SubgoalPath.t -> bool
 val conv_subgoal_path_builder : Comp.SubgoalPath.builder -> Comp.SubgoalPath.builder -> bool
+
+(** Checks strong convertibility between two meta-contexts.
+    We say _strong_ because reordering of entries is forbidden.
+  *)
+val convMCtx : mctx -> mctx -> bool
+
+(** Checks strong convertibility between two computational contexts.
+    We say _strong_ because reordering of entries is forbidden.
+  *)
+val convGCtx : Comp.gctx * msub -> Comp.gctx * msub -> bool

@@ -1500,15 +1500,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       abstract type `b` using the supplied printing function.
    *)
   and fmt_ppr_cmp_split_branch :
-        type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
+        type b. LF.mctx -> Comp.gctx -> (LF.mctx -> Format.formatter -> b -> unit) ->
         Format.formatter ->
         b Comp.split_branch -> unit =
     fun cD cG f ppf ->
     let open Comp in
     function
     | SplitBranch (c, _, _, h) ->
+       let Hypothetical (hyp, _) = h in
        fprintf ppf "@[<v>case %a:@,%a@]"
-         f c
+         (f hyp.cD) c
          (fmt_ppr_cmp_hypothetical cD cG) h
 
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
@@ -1541,15 +1542,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | MetaSplit (i, _, bs) ->
        print_split ppf i bs
-         fmt_ppr_cmp_meta_branch_label
+         (fun _ -> fmt_ppr_cmp_meta_branch_label)
 
     | CompSplit (i, _, bs) ->
        print_split ppf i bs
-         (fun ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
+         (fun _ ppf c -> fprintf ppf "%s" (R.render_cid_comp_const c))
 
     | ContextSplit (i, _, bs) ->
        print_split ppf i bs
-         (fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
+         (fun cD -> fmt_ppr_cmp_context_case (fmt_ppr_lf_typ cD LF.Null l0))
 
     | Solve t ->
        fprintf ppf "@[<hov 2>solve@ @[%a@]@]"

@@ -56,6 +56,11 @@ let theorem_statement (t : t) =
   Whnf.cnormCTyp t.initial_state.Comp.goal
 
 let serialize ppf (t : t) =
+  let name = CompS.name t.cid in
+  dprintf begin fun p ->
+    p.fmt "[theorem] [serialize] begin serialization of theorem '%a'"
+      Id.print name
+    end;
   let s = t.initial_state in
   let goal = Whnf.cnormCTyp s.Comp.goal in
   let fmt_ppr_order =
@@ -70,7 +75,6 @@ let serialize ppf (t : t) =
       | `trust -> Format.fprintf ppf "/ trust /"
       end
   in
-  let name = CompS.name t.cid in
   let order =
     let open Maybe in
     Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])

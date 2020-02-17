@@ -188,12 +188,15 @@ type refinement_cands =
 (*  | SomePatCands of refinement_candidate list *)
 
 
-let rec lower cPsi sA =
-  match sA with
-  | LF.Atom _, _ -> (cPsi, Whnf.whnfTyp sA)
-  | LF.PiTyp ((decl, _), tB), s -> lower (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s)
-
-
+(** Uses LF type (in)subordination to construct a strengthening
+    substitution for the given atomic type.
+    gen_str cD cPsi tP = (ssp, (cPhi', tQ'))
+    where
+      - cD; cPsi |- tP <= type
+        and tP is atomic.
+      - cPsi |- ssp : cPhi'
+      - cPhi' |- tQ' <= type
+ *)
 let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
   let cPhi, conv_list = ConvSigma.flattenDCtx cD cPsi in
   let s_proj = ConvSigma.gen_conv_sub conv_list in
@@ -1876,12 +1879,13 @@ let rec append cD =
 let rec decTomdec cD' ((LF.CtxVar (LF.CtxOffset k)) as cpsi) (d, decls) =
   match decls with
   | LF.Empty -> (cD', S.LF.id)
-  | LF.Dec (decls, dec) ->
-     let LF.TypDecl (x, tA) = dec in
+  | LF.(Dec (decls, TypDecl (x, tA))) ->
      (* .; decls |- tA : type            *)
      (*  cD'; cpsi, @x: _  |- s' : decls         *)
      let cD'', s' = decTomdec cD' cpsi (d-1, decls) in
-     let cPsi, (LF.Atom (_, a, _) as tP, s) = lower (LF.CtxVar (LF.CtxOffset (k+d))) (tA, s') in
+     let cPsi, (LF.Atom (_, a, _) as tP, s) =
+       Whnf.lowerTyp (LF.CtxVar (LF.CtxOffset (k+d))) (tA, s')
+     in
      dprintf
        begin fun p ->
        p.fmt "[decTomdec] @[<v>cPsi = @[%a@]@,\
@@ -1936,11 +1940,7 @@ let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
        end;
      let cpsi' = LF.CtxVar (LF.CtxOffset (d+1)) in
      (* cD0 = cD, decls *)
-     let tA =
-       match trec with
-       | LF.SigmaLast (_, tA) -> LF.TClo (tA, s)
-       | _ -> LF.TClo (LF.Sigma trec, s)
-     in
+     let tA = LF.tclo (Whnf.collapse_sigma trec) s in
      dprintf
        begin fun p ->
        p.fmt "[genCtx] @[tA =@ @[%a@]@]"

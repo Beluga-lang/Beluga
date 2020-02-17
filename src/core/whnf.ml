@@ -121,7 +121,7 @@ let new_mmvar_for_ctyp_decl cD = function
      Error.violation "[new_mmvar_for_ctyp_decl] can't generate mmvar from DeclOpt"
 
 (******************************)
-(* Lowering of Meta-Variables *)
+(* Lowering                   *)
 (******************************)
 
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
@@ -2160,3 +2160,7 @@ let convMCtx cD1 cD2 =
     convMetaTyp cU1 cU2
   in
   conv_ctx f cD1 cD2
+
+let rec lowerTyp cPsi = function
+  | Atom _, s as sA -> (cPsi, whnfTyp sA)
+  | PiTyp ((decl, _), tB), s -> lowerTyp (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s)

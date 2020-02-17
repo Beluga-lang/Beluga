@@ -225,3 +225,13 @@ val convMCtx : mctx -> mctx -> bool
     We say _strong_ because reordering of entries is forbidden.
   *)
 val convGCtx : Comp.gctx * msub -> Comp.gctx * msub -> bool
+
+(** lowerTyp cPsi (tA, s) = (cPsi', (tA', s'))
+    where
+      - cPsi |- s : cPhi
+      - cPsi |- tA[s] <= type
+      - cPsi' |- tA'[s'] <= type
+      - cPsi' is an extension of cPsi formed by shifting all Pi-type
+        declarations in tA to cPsi.
+ *)
+val lowerTyp : dctx -> tclo -> dctx * tclo

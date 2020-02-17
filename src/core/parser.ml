@@ -1005,8 +1005,8 @@ let bracks_or_opt_parens p =
     for parsing the contextual type of a parameter variable, which has
     a hash before, optionally.
  *)
-let hash_bracks_or_opt_parens p =
-  bracks_or_opt_parens' (maybe T.(token HASH)) p
+let sigil_bracks_or_opt_parens tok p =
+  bracks_or_opt_parens' (maybe (token tok)) p
 
 (** Helper for parsing something *optionally* between parens. *)
 let opt_parens p = alt (parens p) p
@@ -1750,12 +1750,15 @@ let clf_ctyp_decl_bare =
       fun s ->
       let hash_variable_decl p =
         contextual_variable_decl
-          hash_bracks_or_opt_parens
+          (sigil_bracks_or_opt_parens T.HASH)
           hash_name
           p
       in
       let dollar_variable_decl p =
-        contextual_variable_decl bracks_or_opt_parens dollar_name p
+        contextual_variable_decl
+          (sigil_bracks_or_opt_parens T.DOLLAR)
+          dollar_name
+          p
       in
       let mk_decl ind f (loc, (p, w)) =
         LF.Decl (p, (loc, f w), ind)
@@ -1813,8 +1816,20 @@ let clf_ctyp_decl_bare =
       q.run s
   }
 
+(* parses `name : name` *)
+let ctx_variable =
+  labelled "context variable declaration"
+    begin
+      seq2
+        (trying (name <& token T.COLON))
+        (name <& not_followed_by meta_obj)
+      |> span
+      $> fun (loc, (p, w)) ->
+         LF.Decl (p, (loc, LF.CTyp w), LF.Maybe)
+    end
+
 (** Contextual LF contextual type declaration *)
-let clf_ctyp_decl allow_implicit_ctx =
+let clf_ctyp_decl =
   { run =
       fun s ->
       (* Parses `#name : [ dctx |- p ]` *)
@@ -1851,18 +1866,6 @@ let clf_ctyp_decl allow_implicit_ctx =
             $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
           end
       in
-      (* parses `name : name` *)
-      let ctx_variable =
-        labelled "implicit context variable"
-          begin
-            seq2
-              (trying (name <& token T.COLON))
-              (name <& not_followed_by meta_obj)
-            |> span
-            $> mk_decl LF.Maybe
-                 (fun w -> LF.CTyp w)
-          end
-      in
       let q =
         choice
           [ param_variable
@@ -1891,26 +1894,20 @@ let clf_ctyp_decl allow_implicit_ctx =
           ]
         |> braces
       in
-
       let p =
         labelled "contextual type declaration"
-          begin
-            if allow_implicit_ctx
-            then alt (parens ctx_variable) q
-            else q
-          end
+          (alt (parens ctx_variable) q)
       in
       p.run s
   }
 
-let mctx =
-  sep_by0 clf_ctyp_decl_bare (token T.COMMA)
+let mctx ?(sep = token T.COMMA) p =
+  sep_by0 p sep
   $> Context.of_list_rev
 
-let pibox ?(allow_implicit_ctx = true) r f =
+let pibox p r f =
   seq2
-    (clf_ctyp_decl allow_implicit_ctx
-     <& maybe (token T.ARROW))
+    (p <& maybe (token T.ARROW))
     r
   |> span
   $> fun (loc, (ctyp_decl, x)) ->
@@ -1926,9 +1923,15 @@ let arrow atomic r f =
 let rec cmp_typ =
   { run =
       fun s ->
+      let ctx_pibox =
+        labelled "Context variable Pi-box type"
+          (pibox (ctx_variable |> parens) cmp_typ
+             (fun loc decl tau ->
+               Comp.TypPiBox (loc, decl, tau)))
+      in
       let pibox =
         labelled "Pi-box type"
-          (pibox cmp_typ
+          (pibox (clf_ctyp_decl_bare |> braces) cmp_typ
              (fun loc ctyp_decl tau ->
                Comp.TypPiBox (loc, ctyp_decl, tau)))
       in
@@ -1940,6 +1943,7 @@ let rec cmp_typ =
       let p =
         choice
           [ pibox
+          ; ctx_pibox
           ; arr
           ; cmp_typ_cross
           ]
@@ -2039,7 +2043,7 @@ let rec cmp_kind =
         labelled "Pi-box kind"
           begin
             seq2
-              (trying (clf_ctyp_decl true <& maybe (token T.ARROW)))
+              (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
               cmp_kind
             |> span
             $> fun (loc, (ctyp_decl, k)) ->
@@ -2085,11 +2089,6 @@ let rec cmp_kind =
       in
       p.run s
   }
-
-(** Parses a sequence of zero or more clf_ctyp_decl into a context. *)
-let ctyp_decls allow_implicit_ctx =
-  many (clf_ctyp_decl allow_implicit_ctx)
-  $> List.fold_left (fun cd cds -> LF.Dec (cd, cds)) LF.Empty
 
 (** Parses a sequence of `p` separated by commas, in parentheses.
     This is used to parse nested & tuple patterns and expressions
@@ -2138,7 +2137,7 @@ and cmp_branch =
       fun s ->
       let p =
         seq3
-          (ctyp_decls false)
+          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare |> braces))
           cmp_pattern
           (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
@@ -2280,7 +2279,7 @@ and cmp_exp_chk' =
       let lets =
         let let_pattern =
           seq4
-            (ctyp_decls false)
+            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare |> braces))
             (cmp_pattern <& token T.EQUALS)
             (cmp_exp_syn <& token T.KW_IN)
             cmp_exp_chk
@@ -2882,7 +2881,7 @@ and harpoon_hypothetical : Comp.hypothetical parser =
   let open Comp in
   let hypotheses =
     seq2
-      (mctx <& token T.PIPE)
+      (mctx clf_ctyp_decl_bare <& token T.PIPE)
       gctx
     $> fun (cD, cG) -> { cD; cG }
   in

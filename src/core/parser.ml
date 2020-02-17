@@ -2856,7 +2856,7 @@ and harpoon_directive : Comp.directive parser =
                  (many harpoon_split_branch)
             |> span
             $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
-          ; keyword "impossible"
+          ; token T.KW_IMPOSSIBLE
             &> cmp_exp_syn
             |> span
             $> (fun (loc, i) -> Comp.Split (loc, i, []))

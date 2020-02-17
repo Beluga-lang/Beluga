@@ -2455,12 +2455,11 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
         |> fst
         |> List.map (remap_cltyp_to_covpatt loc f)
 
-     | LF.(CTyp w) ->
-        (* require that a schema be actually present *)
-        let Some (LF.Schema elems) = Maybe.map Store.Cid.Schema.get_schema w in
+     | LF.CTyp (Some w) -> (* require that a schema be present *)
+        let LF.Schema elems = Store.Cid.Schema.get_schema w in
         let cD' =
-          let x = Id.mk_name (Whnf.newMTypName (LF.CTyp w)) in
-          LF.Dec (cD, LF.Decl (x, LF.CTyp w, LF.Maybe))
+          let x = Id.mk_name (Whnf.newMTypName (LF.CTyp (Some w))) in
+          LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), LF.Maybe))
         in
         genCtx cD' (LF.CtxOffset 1) elems
         |> List.map

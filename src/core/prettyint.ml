@@ -693,22 +693,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     |  LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
 
   and fmt_ppr_lf_schema ?(useName=true) lvl ppf s =
-    let print_without_name = function
-      | LF.Schema [] -> ()
-
-      | LF.Schema (f :: []) ->
-         fprintf ppf "%a"
-           (fmt_ppr_lf_sch_elem lvl) f
-
-      | LF.Schema (f :: fs) ->
-         fprintf ppf "@[%a@]@ +@ @[%a@]"
-           (fmt_ppr_lf_sch_elem lvl) f
-           (fmt_ppr_lf_schema lvl) (LF.Schema fs)
+    let print_without_name (LF.Schema elems) =
+      fprintf ppf "@[<hv>%a@]"
+        (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf " +@ ")
+           (fmt_ppr_lf_sch_elem l0))
+        elems
     in
     if useName then
       try
         fprintf ppf "%s" (Id.render_name (Store.Cid.Schema.get_name_from_schema s))
-      with | _ -> print_without_name s
+      with
+      | Not_found -> print_without_name s
     else print_without_name s
 
   and frugal_block cD cPsi lvl ppf = function

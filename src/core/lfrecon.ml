@@ -2678,8 +2678,8 @@ let checkCtxVar loc cD c_var w = match c_var with
         throw loc
           (IncompatibleSchemaForCtxVar (cD, Int.LF.CtxOffset offset, w, Context.lookupSchema cD offset))
   | Apx.LF.CtxName psi       ->
-      (FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
-       Int.LF.CtxName psi)
+     FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
+     Int.LF.CtxName psi
 
 let rec checkDCtx loc recT cD psi w = match psi with
   | Apx.LF.Null -> Int.LF.Null

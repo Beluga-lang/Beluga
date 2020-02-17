@@ -51,6 +51,27 @@ val iter : (coverage_result -> unit) -> unit
 (* val covers : problem -> coverage_result *)
 val process : problem -> int option -> unit   (* check coverage immediately *)
 
+(** Generates the coverage goal for the nth schema element in the
+    given schema.
+
+    genNthSchemaElemGoal cD n w = Some (cD', cPsi, t)
+      - provided n is a valid index for the schema elements of w
+      - cD' |- t : cD
+      - cD' |- cPsi dctx is the pattern for this case
+      - cD' will contain an extra context variable (see remark below)
+        as well as new variables for each of the existential variables
+        for the schema element that is looked up.
+
+    Returns None if the schema element index n is out of bounds.
+
+    Remark: this function will internally extend cD with an additional
+    (dummy) context variable. Unification for dependent pattern
+    matching (see Reconstruct.synPatRefine) eliminates this extra
+    variable later.  However, the preliminary branch context
+ *)
+val genNthSchemaElemGoal : LF.mctx -> int -> Id.cid_schema ->
+                           (LF.mctx * LF.dctx * LF.msub) option
+
 (** genPVarGoal sch_elem cD cPsi psi = (cD', cPsi', h, tA', t)
     calculates a preliminary branch context for a parameter variable
     referring to the given schema element, without taking projection
@@ -119,8 +140,8 @@ val genPatt : LF.mctx * Comp.typ ->
               (LF.mctx * (gctx * Comp.pattern * Comp.tclo) * LF.msub) option
 
 val genPatCGoals    : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
-(* val genCtxGoals     : LF.mctx -> LF.ctyp_decl -> (LF.mctx * LF.dctx * LF.msub) list *)
-val genContextGoals : LF.mctx -> LF.ctyp_decl -> (LF.mctx * cov_goal * LF.msub) list
+val genContextGoals : LF.mctx -> Id.name * LF.ctyp * LF.depend ->
+                      (LF.mctx * LF.dctx * LF.msub) list
 val genCGoals       : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
 val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
 val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list

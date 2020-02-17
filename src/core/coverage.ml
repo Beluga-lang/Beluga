@@ -1919,6 +1919,79 @@ let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
      let mv = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, Whnf.cnormSub (ss', LF.MShift 1)), LF.Nil) in
      (LF.Dec (cD'', mdec), LF.Dot (LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1)))
 
+(** Generates the coverage goal for a schema element.
+    genSchemaElemGoal cD psi (cPhi, trec) = (cD', cPsi, t)
+    where
+      - cD |- psi ctxvar
+      - cPhi |- trec is a schema element
+      - cD' |- t : cD is a (preliminary) refinement substitution
+
+    Basically, the schema element's existential variable context cPhi
+    is made to extend the meta-context cD to form cD'.
+    The preliminary refinement t is an appropriate meta-shift.
+    The output context cPsi = psi, x : trec'
+    where trec' is is formed by replacing the bound variables that
+    used to point into cPhi with MVars that point into cD'.
+
+    WARNING:
+    cD must be of the form cD', u : [ctx]
+    with ctx being the schema from which the given element is drawn.
+    Furthermore, psi must be CtxOffset 1, pointing to u.
+ *)
+let genSchemaElemGoal cD psi (LF.SchElem (cPhi, trec)) =
+  let d = Context.length cPhi in
+  (* decTomdec does the hard work of shifting the declarations in the
+     existential variable context into cD and it returns an LF
+     substitution s that maps the variables that used to point into
+     cPhi to MVars that point into cD0.
+   *)
+  let cD0, s = decTomdec cD psi (d-1, cPhi) in
+  dprintf
+    begin fun p ->
+    p.fmt "[genCtx] @[s =@ @[%a@]@]"
+      (P.fmt_ppr_lf_sub cD0 (LF.CtxVar psi) P.l0) s
+    end;
+  let cpsi' = LF.CtxVar (LF.CtxOffset (d+1)) in
+  (* cD0 = cD, decls *)
+  let tA = LF.tclo (Whnf.collapse_sigma trec) s in
+  dprintf
+    begin fun p ->
+    p.fmt "[genCtx] @[tA =@ @[%a@]@]"
+      (P.fmt_ppr_lf_typ cD0 cpsi' P.l0) tA
+    end;
+  (* cD0; cpsi |- tA : type *)
+  (* let ms = gen_mid cD0 cD in *)
+  (* this +1 is to account for the fact that cD has this extra context variable in it *)
+  let t = LF.MShift (Context.length cD0 - Context.length cD + 1) in
+  (* cD0 |- t : cD
+     cD' |- cPsi' ctx *)
+  let cPsi' = LF.DDec (cpsi', LF.TypDecl (NameGenerator.new_bvar_name "x", tA)) in
+  (* TODO use contextual name generation *)
+  dprintf
+    begin fun p ->
+    p.fmt "[genCtx] @[<v>cPsi' = @[%a@]@,\
+           t = @[%a@]@,\
+           cD0 = @[%a@]@,\
+           cD = @[%a@]@]"
+      (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi'
+      (P.fmt_ppr_lf_msub cD0 P.l0) t
+      (P.fmt_ppr_lf_mctx P.l0) cD0
+      (P.fmt_ppr_lf_mctx P.l0) cD
+    end;
+  (cD0, cPsi', t)
+
+let genNthSchemaElemGoal cD n w =
+  let open Maybe in
+  let (LF.Schema elems) = Store.Cid.Schema.get_schema w in
+  List.nth_opt elems n
+  $> fun e ->
+     let cD' =
+       let x = Id.mk_name (Whnf.newMTypName (LF.CTyp (Some w))) in
+       LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), LF.Maybe))
+     in
+     let psi = LF.CtxOffset 1 in
+     genSchemaElemGoal cD' psi e
+
 (* genCtx elems = ctx_goal_list
 
      for each ctx_goal in ctx_goal_list .
@@ -1929,42 +2002,7 @@ let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
 let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
   function
   | [] -> [(cD', LF.Null, LF.MShift 0)]
-  | LF.SchElem (decls, trec) :: elems ->
-     let cPsi_list = genCtx cD cpsi elems in
-     let d = Context.length decls in
-     let cD0, s = decTomdec cD cpsi (d-1, decls) in
-     dprintf
-       begin fun p ->
-       p.fmt "[genCtx] @[s =@ @[%a@]@]"
-         (P.fmt_ppr_lf_sub cD0 (LF.CtxVar cpsi) P.l0) s
-       end;
-     let cpsi' = LF.CtxVar (LF.CtxOffset (d+1)) in
-     (* cD0 = cD, decls *)
-     let tA = LF.tclo (Whnf.collapse_sigma trec) s in
-     dprintf
-       begin fun p ->
-       p.fmt "[genCtx] @[tA =@ @[%a@]@]"
-         (P.fmt_ppr_lf_typ cD0 cpsi' P.l0) tA
-       end;
-     (* cD0; cpsi |- tA : type *)
-     (* let ms = gen_mid cD0 cD in *)
-     (* this +1 is to account for the fact that cD has this extra context variable in it *)
-     let ms = LF.MShift (Context.length cD0 - Context.length cD + 1) in
-     (* cD0 |- ms : cD
-        cD' |- cPsi' ctx *)
-     let cPsi' = LF.DDec (cpsi', LF.TypDecl (NameGenerator.new_bvar_name "x", tA)) in
-     dprintf
-       begin fun p ->
-       p.fmt "[genCtx] @[<v>cPsi' = @[%a@]@,\
-              ms = @[%a@]@,\
-              cD0 = @[%a@]@,\
-              cD = @[%a@]@]"
-         (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi'
-         (P.fmt_ppr_lf_msub cD0 P.l0) ms
-         (P.fmt_ppr_lf_mctx P.l0) cD0
-         (P.fmt_ppr_lf_mctx P.l0) cD
-       end;
-     (cD0, cPsi', ms) :: cPsi_list
+  | e :: elems -> genSchemaElemGoal cD cpsi e :: genCtx cD cpsi elems
 
 (* genCtxGooals cD (psi:W) = goal_list
 
@@ -1975,16 +2013,10 @@ let rec genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
     cD                  |- .
    ]
  *)
-let genCtxGoals cD (LF.Decl (x, LF.CTyp (Some schema_cid), dep)) =
+let genContextGoals cD (x, LF.CTyp (Some schema_cid), dep) =
   let LF.Schema elems = Store.Cid.Schema.get_schema schema_cid in
   let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some schema_cid), dep)) in
   genCtx cD' (LF.CtxOffset 1) elems
-
-let remap_to_covctx =
-  List.map (fun (cD, cPsi, ms) -> (cD, CovCtx cPsi, ms))
-
-let genContextGoals cD ctx_schema =
-  genCtxGoals cD ctx_schema |> remap_to_covctx
 
 (* Find mvar to split on *)
 let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
@@ -2067,10 +2099,13 @@ let genCGoals (cD' : LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) li
 let rec best_ctx_cand (cD, cv_list) k cD_tail =
   match cv_list, cD with
   | [], _ -> NoCandidate
-  | [LF.CtxOffset j], LF.Dec (cD', cd) ->
+  | [LF.CtxOffset j], LF.Dec (cD', d) ->
      if j = k
      then
-       let ctx_goals = genCtxGoals cD' cd in
+       let ctx_goals =
+         let LF.Decl (x, cU, dep) = d in
+         genContextGoals cD' (x, cU, dep)
+       in
        let f (cD', cPhi, ms) =
          (* cD' |- ms : cD *)
          let ms' = LF.MDot (LF.CObj (cPhi), ms) in
@@ -2096,7 +2131,7 @@ let rec best_ctx_cand (cD, cv_list) k cD_tail =
        let ctx_goals' = List.map f ctx_goals in
        SomeCtxCands ctx_goals'
      else
-       best_ctx_cand (cD', cv_list) (k+1) (cd::cD_tail)
+       best_ctx_cand (cD', cv_list) (k+1) (d :: cD_tail)
 
 
 let rec best_cand (cD, mv_list) k cD_tail =
@@ -2423,12 +2458,13 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
      | LF.(CTyp w) ->
         (* require that a schema be actually present *)
         let Some (LF.Schema elems) = Maybe.map Store.Cid.Schema.get_schema w in
-        let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, LF.Maybe)) in
-
+        let cD' =
+          let x = Id.mk_name (Whnf.newMTypName (LF.CTyp w)) in
+          LF.Dec (cD, LF.Decl (x, LF.CTyp w, LF.Maybe))
+        in
         genCtx cD' (LF.CtxOffset 1) elems
-        |> remap_to_covctx
         |> List.map
-             begin fun (cD', CovCtx cPsi, ms) ->
+             begin fun (cD', cPsi, ms) ->
              let mC = (Loc.ghost, LF.CObj cPsi) in
              ( cD'
              , CovPatt (cnormCtx (cG1, ms), Comp.PatMetaObj (Loc.ghost, mC), (tau, Whnf.m_id))

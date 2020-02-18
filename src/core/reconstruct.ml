@@ -2421,7 +2421,11 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        (* cD_b |- t' : cD
           cD_b |- t1 : cD'
         *)
-       let cG_b = Whnf.cnormGCtx (cG', t1) in
+       let cG_b =
+         Context.append
+           (Whnf.cnormGCtx (cG', t1))
+           (Whnf.cnormGCtx (cG, t))
+       in
 
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
 

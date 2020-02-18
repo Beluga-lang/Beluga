@@ -1511,7 +1511,7 @@ and inferCtxSchema loc (cD,cPsi) (cD', cPsi') = match (cPsi , cPsi') with
 
   | _ ->
      let cPsi' = Lfrecon.elDCtx Lfrecon.Pibox cD' cPsi' in
-     raise (Error (loc, PatternContextClash (cD, cPsi, cD', cPsi')))
+     raise (Error (loc, PatternContextClash (cD', cPsi', cD, cPsi)))
 
 (* ********************************************************************************)
 (* Elaborate computation-level patterns *)

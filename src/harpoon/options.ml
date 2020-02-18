@@ -6,13 +6,7 @@ module PC = B.Printer.Control
 
 module Error = struct
   type t =
-    | ArgParseLengthMismatch
-      of string (* option name *)
-         * int (* expected number of arguments *)
-         * int (* actual number of arguments *)
-    | MissingMandatoryOption
-      of string (* option name *)
-         * string (* hint *)
+    | OptparserError of Optparser.Builder.opt_parser_error
     | InvalidIncomplete
     | InvalidStop
     | DanglingArguments
@@ -23,15 +17,24 @@ module Error = struct
 
   open Format
   let format_error ppf = function
-    | ArgParseLengthMismatch (name, exp, act) ->
-       fprintf ppf "Option %s requires %d arguments. Got %d.@."
-         name
-         exp
-         act
-    | MissingMandatoryOption (name, hint) ->
-       fprintf ppf "Mandatory option %s is missing.@,(It %s.)@."
-         name
-         hint
+    | OptparserError e ->
+       let open Optparser.Builder in
+       begin match e with
+       | MissingMandatory name ->
+          fprintf ppf "Mandatory option %s is missing.@."
+            name
+       | InvalidArgLength (name, exp, act) ->
+          fprintf ppf "Option %s requires %d arguments. Got %d.@."
+            name
+            exp
+            act
+       | ArgReaderFailure name ->
+          fprintf ppf "%s"
+            name
+       | NotAnOption name ->
+          fprintf ppf "%s is not an option"
+            name
+       end
     | InvalidIncomplete ->
        fprintf ppf "--incomplete can be specified only after --test@."
     | InvalidStop ->
@@ -73,22 +76,11 @@ type elaborated_t =
   (string, string list) t
 type valid_t =
   (string, unit) t
-type partial_t =
-  (string option, unit) t
-
-let initial_t : partial_t =
-  { path = None
-  ; all_paths = ()
-  ; test_file = None
-  ; test_start = None
-  ; test_stop = `go_on
-  ; load_holes = true
-  ; save_back = true
-  }
+type parsed_t =
+  (string, unit) t
 
 (** TODO
-    Generate this from options if possible.
-    (by ppx or something)
+    Generate this from optparser library
  *)
 let usage () : unit =
   let usageString : (_, out_channel, unit) format =
@@ -114,100 +106,110 @@ let usage () : unit =
   Printf.eprintf usageString
     Sys.argv.(0)
 
-let forbid_dangling_arguments = function
-  | [] -> ()
-  | rest -> Error.(throw (DanglingArguments rest))
+let options_spec : valid_t Optparser.Builder.t =
+  let handle_debug () =
+    B.Debug.enable ();
+    Printexc.record_backtrace true
+  in
+  let handle_implicit () =
+    PC.printImplicit := true
+  in
+  let handle_help () =
+    usage ();
+    exit 1
+  in
+  let open Optparser.Builder in
+  begin fun path test_opt test_kind test_start test_stop no_load_holes no_save_back ->
+  let test_file =
+    match test_opt with
+    | Some test -> Some (test, test_kind)
+    | None when test_kind = `incomplete ->
+       Error.(throw InvalidIncomplete)
+    | None -> None
+  in
+  { path
+  ; all_paths = ()
+  ; test_file
+  ; test_start
+  ; test_stop
+  ; load_holes = not no_load_holes
+  ; save_back = not no_save_back
+  }
+  end
+  <$ string_opt1
+       [ OptSpec.long_name "sig"
+       ; OptSpec.meta_vars ["path"]
+       ; OptSpec.help_msg
+           "specify the input signature"
+       ]
+  <& opt1 (fun s -> Maybe.pure (Maybe.pure s))
+       [ OptSpec.long_name "test"
+       ; OptSpec.meta_vars ["path"]
+       ; OptSpec.optional None
+       ; OptSpec.help_msg
+           ("specify the test input file that is used as "
+            ^ "a test input instead of stdin user input"
+           )
+       ]
+  <& (switch_opt
+        [ OptSpec.long_name "incomplete"
+        ; OptSpec.help_msg
+            ("mark the test input file as incomplete so that stdin user "
+             ^ "input is followed after the test input "
+             ^ "(valid only when --test option is provided)"
+            )
+        ]
+      $> fun b -> if b then `incomplete else `complete
+     )
+  <& opt1 (fun s -> Option.map Maybe.pure (int_of_string_opt s))
+       [ OptSpec.long_name "test-start"
+       ; OptSpec.meta_vars ["number"]
+       ; OptSpec.optional None
+       ; OptSpec.help_msg
+           "specify the first line of test file considered as test input"
+       ]
+  <& (switch_opt
+        [ OptSpec.long_name "stop"
+        ]
+      $> fun b -> if b then `go_on else `stop
+     )
+  <& switch_opt
+       [ OptSpec.long_name "no-load-holes"
+       ]
+  <& switch_opt
+       [ OptSpec.long_name "no-save-back"
+       ]
+  <! impure_opt handle_debug
+       [ OptSpec.long_name "debug"
+       ; OptSpec.help_msg
+           "use debugging mode (writes to debug.out in CWD)"
+       ]
+  <! impure_opt handle_implicit
+       [ OptSpec.long_name "implicit"
+       ; OptSpec.help_msg "print implicit variables"
+       ]
+  <! impure_opt handle_help
+       [ OptSpec.long_name "help"
+       ; OptSpec.help_msg "print this message"
+       ]
+  <! rest_args
+       begin function
+         | [] -> ()
+         | rest -> Error.(throw (DanglingArguments rest))
+       end
 
 (** Parses argument list and
     returns parsed result and leftover arguments.
  *)
-let parse_arguments args : partial_t =
-  (** Gets exactly the first `n` elements from a list.
-      If the list contains fewer than `n` elements, the length of the
-      list is returned on the Left.
-   *)
-  let rec take_exactly n =
-    let open Either in
-    function
-    | xs when n <= 0 -> Right ([], xs)
-    | x :: xs ->
-       bimap
-         (fun k -> k + 1)
-         (Pair.lmap (fun xs -> x :: xs))
-         (take_exactly (n-1) xs)
-    | [] -> Left 0
-  in
-  let rec parse_from options =
-    function
-    | [] -> [], options
-    | arg :: rest ->
-       let with_args_for a n k =
-         let open Either in
-         match take_exactly n rest with
-         | Left k ->
-            let open Error in
-            throw (ArgParseLengthMismatch (a, n, k))
-         | Right (args, rest) -> k args rest
-       in
-       let parse_the_rest_with k x rest =
-         parse_from (k x) rest
-       in
-       let parse_the_rest () =
-         parse_the_rest_with (Misc.id) options rest
-       in
-       match arg with
-       | "--debug" ->
-          B.Debug.enable ();
-          parse_the_rest ()
-       | "--implicit" ->
-          PC.printImplicit := true;
-          parse_the_rest ()
-       | "--sig" ->
-          with_args_for "--sig" 1
-            (parse_the_rest_with
-               (fun [path] ->
-                 { options with path = Some path }))
-       | "--test" ->
-          with_args_for "--test" 1
-            (parse_the_rest_with
-               (fun [test_path] ->
-                 { options with test_file = Some (test_path, `complete) }))
-       | "--stop" ->
-          parse_from { options with test_stop = `stop } rest
-       | "--incomplete" ->
-          begin match options.test_file with
-          | None -> Error.(throw InvalidIncomplete)
-          | Some (f, k) ->
-             parse_from { options with test_file = Some (f, `incomplete) } rest
-          end
-       | "--test-start" ->
-          with_args_for "--test-start" 1
-            (parse_the_rest_with
-               (fun [test_start] ->
-                 { options with test_start = Some (int_of_string test_start) }))
-       | "--no-load-holes" ->
-          parse_from { options with load_holes = false } rest
-       | "--no-save-back" ->
-          parse_from { options with save_back = false } rest
-       | "--help" ->
-          usage ();
-          exit 1
-       | _ ->
-          arg :: rest, options
-  in
-  let rest, options = parse_from initial_t args in
-  forbid_dangling_arguments rest;
-  options
+let parse_arguments args : parsed_t =
+  match Optparser.Builder.parse options_spec args with
+  | Ok options -> options
+  | Error e -> Error.(throw (OptparserError e))
 
 (** Checks whether partial options have all mandatory options or not,
     and lift its type to valid_options
  *)
-let validate (o : partial_t) : valid_t =
-  let check opt_name hint =
-    function
-    | None -> Error.(throw (MissingMandatoryOption (opt_name, hint)))
-    | Some x -> x
-  in
+let validate (o : parsed_t) : valid_t =
   if o.test_stop = `stop then
     begin match o.test_file with
     | None ->
@@ -216,14 +218,7 @@ let validate (o : partial_t) : valid_t =
        Error.(throw InvalidStop)
     | _ -> ()
     end;
-
-  { o with
-    path =
-      check
-        "--sig"
-        "specifies the input signature"
-        o.path
-  }
+  o
 
 (** Loads the specified signature and elaborates the theorem.
     Returns also the path of the last file loaded.

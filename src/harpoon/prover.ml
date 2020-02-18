@@ -147,14 +147,6 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
        begin fun (loc, _) ->
        Loc.filename loc
        end
-  (* iterate over replacee groups
-   (* open file stream *)
-   (* sort items in the group *)
-   (* iterate over the items
-   (* iterate over file stream and print uchars until it meets the item hole *)
-   (* print the item value *)
-   *)
-   *)
   |> Hashtbl.iter
        begin fun (file_name : string) replacees ->
        dprintf begin fun p ->

@@ -2125,7 +2125,6 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        let pb' =
          I.SubgoalPath.(append pb (build_context_split i I.(EmptyContext loc)))
        in
-       let hyp' = elHypothetical cD cG pb' hyp ttau in
        let pat =
          let mC = (Loc.ghost, Int.LF.(CObj Null)) in
          I.PatMetaObj (Loc.ghost, mC)
@@ -2134,6 +2133,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          synPatRefine loc (case_type (lazy pat) i) (cD, cD) Whnf.m_id
            (tau_i, tau_i)
        in
+       let hyp' = elHypothetical cD cG pb' hyp ttau in
        (* No need to apply the msub to pat, since pat is closed. *)
        I.SplitBranch (I.EmptyContext loc, pat, t', hyp')
 
@@ -2154,10 +2154,12 @@ and elSplit loc cD cG pb i tau_i bs ttau =
                a typbox of a ctyp of a schema, which is unaffected by
                substitution. -je *)
           in
+          let cG_b = Whnf.cnormGCtx (cG, t') in
+          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
           let pat' = Whnf.cnormPattern (pat, t1) in
           let l' = I.ExtendedBy (loc, n) in
           let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
-          let hyp' = elHypothetical cD' cG pb' hyp ttau in
+          let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
           I.SplitBranch (l', pat', t', hyp')
        end
 

@@ -1242,9 +1242,13 @@ let genBVar ((_, cPsi, _) as cg) =
     else
       let LF.TypDecl (_, tA) = Context.ctxDec cPsi i in (* x_i : tA in cPsi *)
       let tH_tA_list = expand_head_sigma (LF.BVar i, tA) in
-      (* XXX not sure why we call expand_head_sigma here;
-         IIRC projections are never allowed on bound variables, but
-         rather only on parameter variables. -je
+      (* We call expand_head_sigma here because sometimes the bound
+         variable might have a sigma type and only some of its
+         projections are relevant to the matching.
+         Consider a coverage problem for the type [g, b |- tm]
+         in which we have g : ctx
+         and schema ctx = some [t : tp] block x : tm, u : oft x t
+
        *)
       let cov_goals_i = genAllObj cg tH_tA_list in
       cov_goals_i @ genBVarCovGoals (i+1)
@@ -1372,8 +1376,7 @@ let genPVar (cD, cPsi, tP) =
 let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
   match tA with
   | LF.Atom _ ->
-     genPVar cov_problem @
-       genBVar cov_problem
+     genPVar cov_problem @ genBVar cov_problem
   | LF.Sigma trec ->
      Error.not_implemented' "[genBCovGoals] not implemented for Sigma types"
   | LF.PiTyp ((tdecl, dep), tA) ->

@@ -1554,14 +1554,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_hypotheses_listing ppf =
     let open Comp in
     fun { cD; cG; _ } ->
-    fprintf ppf "@[<v 2>Meta-context:";
-    Context.iter (Whnf.normMCtx cD)
-      (fun cD v -> fprintf ppf "@,@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) v );
-    fprintf ppf "@]@,";
-    fprintf ppf "@[<v 2>Computational context:";
-    Context.iter' (Whnf.normGCtx cG)
-      (fun v -> fprintf ppf "@,@[%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) v );
-    fprintf ppf "@]@,";
+    fprintf ppf
+      "@[<v>Meta-context:\
+       @,  @[<v>%a@]\
+       @,Computational context:\
+       @,  @[<v>%a@]
+       @]"
+      (pp_print_list ~pp_sep: pp_print_cut
+         (fun ppf (cD, d) ->
+           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) d))
+      (Context.to_sublist cD)
+      (pp_print_list ~pp_sep: pp_print_cut
+         (fun ppf d ->
+           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_cmp_ctyp_decl cD l0) d))
+      (Context.to_list cG)
 
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in

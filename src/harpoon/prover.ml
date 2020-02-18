@@ -385,6 +385,7 @@ module Prover = struct
       ; prompt : InputPrompt.t
       ; prompt_number : int ref (* used to number the prompts to the user *)
       ; ppf : Format.formatter
+      ; save_back: bool
       ; stop : [ `stop | `go_on ]
       ; sig_path : string (* path to the signature that was loaded *)
       ; all_paths : string list (* paths to the resolved loaded files *)
@@ -473,6 +474,9 @@ module Prover = struct
 
     let next_session s = Misc.DynArray.head s.sessions
 
+    let remove_current_session s =
+      DynArray.delete s.sessions 0
+
     (** Runs proof automation on a given subgoal. *)
     let run_automation auto_state (t : Theorem.t) (g : Comp.proof_state) =
       ignore (Automation.execute auto_state t g)
@@ -482,6 +486,7 @@ module Prover = struct
         Use an empty list to generate a prover state with no sessions.
      *)
     let make
+          save_back
           stop
           (sig_path : string)
           (all_paths : string list)
@@ -496,6 +501,7 @@ module Prover = struct
       ; automation_state
       ; prompt
       ; ppf
+      ; save_back
       ; stop
       ; sig_path
       ; all_paths
@@ -1114,7 +1120,11 @@ let rec loop (s : Prover.State.t) : unit =
      end
   | Either.Left (`no_theorem _) ->
      printf "@,Proof complete! (No theorems left.)@,";
-     Prover.State.(save s; reset s);
+     begin
+       if s.Prover.State.save_back
+       then Prover.State.(save s; reset s)
+       else Prover.State.remove_current_session s
+     end;
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
@@ -1143,6 +1153,7 @@ let rec loop (s : Prover.State.t) : unit =
 type interaction_mode = [ `stop | `go_on ]
 
 let start_toplevel
+      (save_back : bool)
       (stop : interaction_mode)
       (sig_path : string)
       (all_paths : string list)
@@ -1151,7 +1162,7 @@ let start_toplevel
       (ppf : Format.formatter) (* The formatter used to display messages *)
     : unit =
   let open Prover in
-  let s = State.make stop sig_path all_paths ppf input_prompt gs in
+  let s = State.make save_back stop sig_path all_paths ppf input_prompt gs in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)

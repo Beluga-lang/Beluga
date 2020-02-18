@@ -14,7 +14,8 @@ type interaction_mode = [ `stop | `go_on ]
 
 
  *)
-val start_toplevel : interaction_mode ->
+val start_toplevel : bool ->
+                     interaction_mode ->
                      string -> (* the path to the signature that was loaded *)
                      string list -> (* the resolved paths from the signature *)
                      Comp.open_subgoal list -> (* the open subgoals to recover *)

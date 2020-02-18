@@ -11,13 +11,11 @@ type ('a, 'b) t =
   ; save_back : bool (* whether save finished theorems back to the file *)
   }
 
-type partial_t
+type parsed_t
 type valid_t
 type elaborated_t =
   (string, string list) t
 
-val initial_t : partial_t
-
-val parse_arguments : string list -> partial_t
-val validate : partial_t -> valid_t
+val parse_arguments : string list -> parsed_t
+val validate : parsed_t -> valid_t
 val elaborate : valid_t -> elaborated_t

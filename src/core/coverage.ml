@@ -2350,8 +2350,8 @@ let genPatt (cD_p, tau_v) (c, tau_c) =
     dprintf
       begin fun p ->
       p.fmt "[genPatt] @[<v>unifying computational types:@,\
-             tau (generated pattern type) = @[%a@]@,\
-             tau_v (given pattern type) = @[%a@]@]"
+             @[<hv 2>tau (generated pattern type) =@ @[%a@]@]@,\
+             @[<hv 2>tau_v (given pattern type) =@ @[%a@]@]@]"
         P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau, t))
         P.(fmt_ppr_cmp_typ LF.Empty l0) (Whnf.cnormCTyp (tau_v, ms))
       end;

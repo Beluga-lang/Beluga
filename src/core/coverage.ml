@@ -2411,12 +2411,11 @@ let genAllPatt ((cD_v, tau_v) : LF.mctx * Comp.typ) =
 
 let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
   let remap_cltyp_to_covpatt loc f =
-    fun (cD', cg, ms) ->
-    let CovGoal (cPsi', tR, sA') = cg in
+    fun (cD', CovGoal (cPsi', tR, sA'), t) ->
     dprintf
       begin fun p ->
       p.fmt "[genPatCGoals] @[<v>%a@]"
-        P.fmt_ppr_lf_msub_typing (cD', ms, cD)
+        P.fmt_ppr_lf_msub_typing (cD', t, cD)
       end;
     let m_obj =
       ( Loc.ghost
@@ -2429,7 +2428,7 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
       , Whnf.m_id
       )
     in
-    let cG' = cnormCtx (cG1, ms) @ cnormCtx (cG2,ms) in
+    let cG' = cnormCtx (cG1, t) @ cnormCtx (cG2,t) in
     dprintf
       begin fun p ->
       p.fmt "[genPatCGoals] @[<v>old cG = @[%a@]@,\
@@ -2439,7 +2438,7 @@ let genPatCGoals (cD : LF.mctx) (cG1 : gctx) tau (cG2 : gctx) =
         (P.fmt_ppr_cmp_gctx cD' P.l0)
         (compgctx_of_gctx cG')
       end;
-    (cD', CovPatt (cG', pat_r, tau_r), ms)
+    (cD', CovPatt (cG', pat_r, tau_r), t)
   in
   match tau with
   | Comp.TypCross (_, tau1, tau2) ->

@@ -265,7 +265,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Root (loc, _h, _tS), _s (* id *)), (Atom _, _s') ->
+  | (Root (loc, _h, _tS), _s (* id *)), sA ->
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
      begin
        try
@@ -298,9 +298,6 @@ let rec checkW cD cPsi sM sA = match sM, sA with
          raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
     end
 
-  | (Root (loc, _, _), _), _ ->
-    raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
-
 and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
@@ -317,11 +314,13 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
   let rec spineLength = function
     | Nil -> 0
     | SClo (tS, _) -> spineLength tS
-    | App (_, tS) -> 1 + spineLength tS in
+    | App (_, tS) -> 1 + spineLength tS
+  in
 
   let rec typLength = function
-    | Atom _ -> 0
-    | PiTyp (_, tB2) -> 1 + typLength tB2 in
+    | PiTyp (_, tB2) -> 1 + typLength tB2
+    | _ -> 0
+  in
 
   let rec syn tS sA = match tS, sA with
     | (Nil, _), sP -> sP
@@ -332,7 +331,8 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
       check cD cPsi (tM, s1) (tA1, s2);
       let tB2 = Whnf.whnfTyp (tB2, Dot (Obj (Clo (tM, s1)), s2)) in
-      syn (tS, s1) tB2 in
+      syn (tS, s1) tB2
+  in
 
   let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
   (* Check first that we didn't supply too many arguments. *)

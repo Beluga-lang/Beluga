@@ -28,12 +28,3 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 % with syntax.
 
 let v3 = [ |- switch (succ z) (succ z) false ] ;
-
-% Examples : Invalid Terms
-% (use keyword --not to say that the subsequent line is not true)
-
---not
-let w1 = [ |- iszero] ;
-
---not
-let w2 = [ |- switch z z] ;

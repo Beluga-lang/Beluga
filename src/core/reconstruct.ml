@@ -1105,6 +1105,11 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
        match (i, tau_s) with
              (* Not only the object but also its type must be closed *)
        | (Int.Comp.AnnBox (mC, _) as i, Int.Comp.TypBox (_, mT)) ->
+          begin match mT with
+          | Int.LF.(ClTyp (MTyp (PiTyp _), _)) ->
+             throw loc (IllegalCase (cD, cG, i, tau_s))
+          | _ -> ()
+          end;
           let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
           if Whnf.closedMetaObj mC && Whnf.closedCTyp tau_s then
             let recBranch b =
@@ -1764,10 +1769,12 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
         match tau_s with
         | Int.Comp.TypBox (loc', Int.LF.ClTyp (mT, cPsi)) ->
            begin match mT with
-           | Int.LF.MTyp (Int.LF.Atom(_, a, _)) ->
+           | Int.LF.(MTyp (Atom _ | Sigma _ as tA))->
               let cPsi' = inferCtxSchema loc (cD_s, cPsi) (cD, psi) in
-              let tP'   = mgAtomicTyp cD cPsi' a (Typ.get a).Typ.kind in
+              let tP'   = mgTyp cD cPsi' tA in
               loc', Int.LF.ClTyp (Int.LF.MTyp tP', cPsi')
+           | Int.LF.(MTyp (PiTyp _)) ->
+              Error.violation "[recPatObj'] scrutinee PiTyp is forbidden"
            | Int.LF.STyp (sv_class, cPhi) ->
               let cPsi' = mgCtx cD (cD_s, cPsi) in
               let cPhi' = mgCtx cD (cD_s, cPhi) in
@@ -1778,6 +1785,8 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
                  should generate an error?
                  -je
                *)
+           | Int.LF.PTyp _ ->
+              Error.violation "[recPatObj'] scrutinee PTyp should be impossible"
            end
         | Int.Comp.TypBox (loc', mT) -> raise (Error (loc, MetaObjectClash (cD, mT)))
         | _ ->  raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD_s, Int.LF.Empty, (tau_s, Whnf.m_id))))

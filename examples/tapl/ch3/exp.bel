@@ -15,7 +15,3 @@ LF term  : type =
 % Examples : Valid Terms
 
 let v1 = [ |- if_then_else false true (if_then_else true false true)] ;
-
-
---not
-let w2 = [ |- if_then_else true false] ;

@@ -8,6 +8,7 @@ type ('a, 'b) t =
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   ; test_stop : [ `stop | `go_on ] (* whether to stop a test if there's an error *)
   ; load_holes : bool (* whether begin immediately from holes in the file *)
+  ; save_back : bool (* whether save finished theorems back to the file *)
   }
 
 type partial_t

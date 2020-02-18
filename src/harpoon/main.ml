@@ -59,6 +59,7 @@ let realMain () =
       []
   in
   Prover.start_toplevel
+    options.save_back
     options.test_stop
     options.path
     options.all_paths

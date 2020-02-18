@@ -66,6 +66,7 @@ type ('a, 'b) t =
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
   ; test_stop : [ `stop | `go_on ] (* whether to stop a test script if there's an error *)
   ; load_holes : bool
+  ; save_back : bool
   }
 
 type elaborated_t =
@@ -82,6 +83,7 @@ let initial_t : partial_t =
   ; test_start = None
   ; test_stop = `go_on
   ; load_holes = true
+  ; save_back = true
   }
 
 (** TODO
@@ -185,6 +187,8 @@ let parse_arguments args : partial_t =
                  { options with test_start = Some (int_of_string test_start) }))
        | "--no-load-holes" ->
           parse_from { options with load_holes = false } rest
+       | "--no-save-back" ->
+          parse_from { options with save_back = false } rest
        | "--help" ->
           usage ();
           exit 1

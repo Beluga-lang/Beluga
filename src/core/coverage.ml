@@ -1983,7 +1983,7 @@ let genSchemaElemGoal cD psi (LF.SchElem (cPhi, trec)) =
 let genNthSchemaElemGoal cD n w =
   let open Maybe in
   let (LF.Schema elems) = Store.Cid.Schema.get_schema w in
-  List.nth_opt elems n
+  List.nth_opt elems (n - 1)
   $> fun e ->
      let cD' =
        let x = Id.mk_name (Whnf.newMTypName (LF.CTyp (Some w))) in

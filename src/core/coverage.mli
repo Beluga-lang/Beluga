@@ -53,6 +53,7 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
 
 (** Generates the coverage goal for the nth schema element in the
     given schema.
+    WARNING: Schema element indices are 1-based!
 
     genNthSchemaElemGoal cD n w = Some (cD', cPsi, t)
       - provided n is a valid index for the schema elements of w

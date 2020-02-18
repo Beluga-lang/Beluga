@@ -134,6 +134,10 @@ module List = struct
       | _ :: xs -> go (k + 1) xs
     in
     go 0 l
+
+  (** The cons constructor represented as a function.
+      This is used for partial applications. *)
+  let cons x xs = x :: xs
 end
 
 let id (x : 'a) : 'a = x

@@ -386,14 +386,13 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           (context, t', new_state, pat')
      in
 
-     let make_context_branch (context, theta, new_state, pat) =
+     let make_context_branch k (context, theta, new_state, pat) =
        match pat with
        | PatMetaObj (_, (_, LF.CObj cPsi)) ->
           let case_label =
             match cPsi with
             | LF.Null -> EmptyContext Loc.ghost
-            | LF.(DDec (CtxVar _, TypDecl (x, tA))) ->
-               ExtendedBy (Loc.ghost, Whnf.cnormTyp (tA, Whnf.m_id))
+            | LF.(DDec _) -> ExtendedBy (Loc.ghost, k)
             | _ -> B.Error.violation "[get_context_branch] pattern not a context"
           in
           let label =
@@ -451,9 +450,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | _, B.Coverage.CovPatt (_, PatConst (_, _, _), _), _ -> `comp
        | _ -> B.Error.violation "unhandled pattern type for split"
      in
-     let revCgs = List.rev cgs in
      match
-       List.map decide_split_kind revCgs
+       List.map decide_split_kind cgs
        |> Nonempty.of_list
        |> Maybe.map Nonempty.all_equal
      with
@@ -463,14 +461,29 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      | Some None ->
         B.Error.violation "mixed cases in split (bug in coverage?)"
      | Some (Some k) ->
-        Theorem.remove_subgoal t s;
         let finish f g =
-          let f' cg = f (get_branch cg) in
-          List.map f' revCgs |> g i tau |> Theorem.solve s
+          Theorem.remove_subgoal t s;
+          let f' k cg =
+            (* k is the zero-based coverage goal/branch number
+               and is used by make_context_branch in order to specify
+               the correct schema element index when constructing the
+               `extended by k` syntax.
+               For a context split,
+               goal 0 corresponds to schema element 1
+               goal 1 corresponds to schema element 2
+               ...
+               goal (n-1) corresponds to the last schema element, n.
+               goal n corresponds to the empty context case.
+               We increment k here so that it exactly equals the
+               schema element index
+             *)
+            f k (get_branch cg)
+          in
+          List.mapi f' cgs |> List.rev |> g i tau |> Theorem.solve s
         in
         match k with
-        | `meta -> finish make_meta_branch Comp.meta_split
-        | `comp -> finish make_comp_branch Comp.comp_split
+        | `meta -> finish (Misc.const make_meta_branch) Comp.meta_split
+        | `comp -> finish (Misc.const make_comp_branch) Comp.comp_split
         | `context -> finish make_context_branch Comp.context_split
 
 (** Constructs a new proof state from `g` in which the meta-context is

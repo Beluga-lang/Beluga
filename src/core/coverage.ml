@@ -2034,7 +2034,7 @@ let genContextGoals cD (x, LF.CTyp (Some schema_cid), dep) =
   genCtx cD' (LF.CtxOffset 1) elems
 
 (* Find mvar to split on *)
-let genSVCovGoals (cD, (cPsi, LF.STyp (r0, cPhi))) (* cov_problem *) =
+let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
   match cPhi with
   | LF.Null -> [(cD, CovSub (cPsi, LF.EmptySub, LF.STyp (r0, cPhi)),  LF.MShift 0)]
   | LF.CtxVar _ -> []  (* Split on the context variable first *)
@@ -2096,7 +2096,7 @@ let genCGoals (cD' : LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) li
            , dep0
            )
         end
-     | sTyp ->
+     | LF.STyp (r, cPhi) ->
         begin match cPsi with
         | LF.CtxVar _ -> ([], Atomic)
         (* In the interactive mode, prevent splitting on substitution variables
@@ -2105,7 +2105,7 @@ let genCGoals (cD' : LF.mctx) (cT : LF.ctyp) : (LF.mctx * cov_goal * LF.msub) li
          if cPsi is simply a context variable and ask the user to split on
          the context first; should maybe raise Split error. *)
         | _ ->
-           ( genSVCovGoals (cD', (cPsi, sTyp))
+           ( genSVCovGoals (cD', (cPsi, (r, cPhi)))
            , Atomic
            )
         end

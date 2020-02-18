@@ -559,9 +559,15 @@ module Cid = struct
 
     let get_name_from_schema s =
       let f a b = if (b.schema = s) then Some(b.name) else a in
-      let n = DynArray.fold_left f None (DynArray.get store (!Modules.current)) in match n with
-      | Some(n) -> n
-      | _ -> raise Not_found
+      try
+        let n =
+          DynArray.fold_left f None (DynArray.get store (!Modules.current))
+        in
+        match n with
+        | Some(n) -> n
+        | _ -> raise Not_found
+      with
+      | DynArray.Invalid_arg _ -> raise Not_found
 
     let clear () =
       basic_clear store directory

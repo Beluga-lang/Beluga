@@ -2011,20 +2011,22 @@ let elHypotheses { A.cD; cG } =
   let cG = elGCtx cD cG in
   { I.cD ; cG ; cIH = Int.LF.Empty }
 
+(** Verifies that the pairs of contexts are convertible. *)
+let validateContexts loc (cD, cD') (cG, cG') : unit =
+  if not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id)) then
+    let open I in
+    InvalidHypotheses
+      ( { cD; cG; cIH = Int.LF.Empty }
+      , { cD = cD'; cG = cG'; cIH = Int.LF.Empty }
+      )
+    |> throw loc
+
 (* elaborate hypothetical *)
 let rec elHypothetical cD cG label hyp ttau =
   let { A.hypotheses = h; proof = p; hypothetical_loc = loc } = hyp in
   let { I.cD = cD'; cG = cG'; cIH = Int.LF.Empty } as h' =
     elHypotheses h
   in
-
-  (* XXX commented out because implementing convertibility for
-     contexts is not obvious
-  (* TODO need a less strict check than equality *)
-  if cD <> cD' || cG <> cG' then
-    throw loc (InvalidHypotheses ({ I.cD; cG; cIH = Int.LF.Empty }, h'));
-   *)
-
   dprintf begin fun p ->
     let tau = Whnf.cnormCTyp ttau in
     p.fmt "[elHypothetical] @[<v>outside ttau = @[%a@]\
@@ -2037,6 +2039,7 @@ let rec elHypothetical cD cG label hyp ttau =
       P.(fmt_ppr_lf_mctx l0) cD'
     end;
 
+  validateContexts loc (cD, cD') (cG, cG');
   I.Hypothetical
     ( h'
     , elProof cD' cG' label p ttau

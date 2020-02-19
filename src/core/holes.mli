@@ -128,7 +128,10 @@ val assign : HoleId.t -> some_hole -> unit
 (** Clears the hole arrays. *)
 val clear : unit -> unit
 
-(** Gets the current list of holes. *)
+(** Gets the current list of holes.
+    The list is in sorted order of the hole locations in the source
+    file.
+ *)
 val list : unit -> (HoleId.t * some_hole) list
 
 (** Adds a Harpoon subgoal to the internal list. *)

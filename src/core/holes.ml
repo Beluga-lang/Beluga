@@ -32,6 +32,8 @@ type 'a hole =
   ; info : 'a
   }
 
+let compare_loc {loc = l1; _} {loc = l2; _} = Loc.compare_start l1 l2
+
 type some_hole =
   | Exists : 'a hole_info * 'a hole -> some_hole
 
@@ -231,6 +233,7 @@ let clear () =
 let list () =
   let f k h l = (k, h) :: l in
   Hashtbl.fold f holes []
+  |> List.sort (fun (_, (Exists (_, h1))) (_, (Exists (_, h2))) -> compare_loc h1 h2)
 
 let parse_lookup_strategy (s : string) : lookup_strategy option =
   try

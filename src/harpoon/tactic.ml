@@ -157,7 +157,7 @@ let generate_pattern_coverage_goals
     : (LF.mctx * B.Coverage.cov_goal * LF.msub) list =
   let open Comp in
   let cgs =
-    B.Coverage.genPatCGoals g.context.cD (B.Coverage.gctx_of_compgctx g.context.cG) (B.Total.strip tau) []
+    B.Coverage.genPatCGoals g.context.cD g.context.cG (B.Total.strip tau) LF.Empty
   in
   cgs
 
@@ -220,8 +220,6 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
          | B.Coverage.CovGoal (_, _, _) ->
           B.Error.violation "getPatCGoals must return CovPatt coverage goals"
        | B.Coverage.CovPatt (cG, pat, tau_p) ->
-          let cG = Coverage.compgctx_of_gctx cG in
-
           let tau_p = Whnf.cnormCTyp tau_p in
           dprintf
             begin fun p ->

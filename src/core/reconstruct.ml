@@ -2174,7 +2174,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
           cD'; cPsi' |- h : tA'
           cD' |- t : cD
         *)
-       let (cD', cPsi', h, tA', t) =
+       let (cD', (cPsi', h, tA'), t) =
          let psi, e =
            match Context.ctxVar cPsi with
            (* TODO raise appropriate error
@@ -2409,7 +2409,6 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          | Some p -> p
        in
        let tau_p = Whnf.cnormCTyp ttau_p in
-       let cG' = Coverage.compgctx_of_gctx cG' in
 
        dprintf begin fun p ->
          p.fmt "@[<v 2>[make_comp_branch] for @[%a@]@,\

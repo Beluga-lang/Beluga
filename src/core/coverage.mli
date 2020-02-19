@@ -7,14 +7,13 @@ type error =
   | NothingToRefine
   | NoCoverageGoalsGenerated
 
-type gctx = (Id.name * Comp.typ * Comp.wf_tag) list
-
 type cov_goal =
   | CovGoal of LF.dctx * LF.normal * LF.tclo (*  cPsi |- tR <= sP *)
 	| CovCtx of LF.dctx
 	| CovSub of LF.dctx * LF.sub * LF.cltyp
-	| CovPatt of gctx * Comp.pattern * Comp.tclo
+	| CovPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
+type 'a inside = LF.mctx * 'a * LF.msub
 
 exception Error of Syntax.Loc.t * error
 
@@ -71,7 +70,7 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
     variable later.  However, the preliminary branch context
  *)
 val genNthSchemaElemGoal : LF.mctx -> int -> Id.cid_schema ->
-                           (LF.mctx * LF.dctx * LF.msub) option
+                           LF.dctx inside option
 
 (** genPVarGoal sch_elem cD cPsi psi = (cD', cPsi', h, tA', t)
     calculates a preliminary branch context for a parameter variable
@@ -91,7 +90,7 @@ val genNthSchemaElemGoal : LF.mctx -> int -> Id.cid_schema ->
     weakening.
  *)
 val genPVarGoal : LF.sch_elem -> LF.mctx -> LF.dctx -> LF.ctx_var ->
-                  LF.mctx * LF.dctx * LF.head * LF.typ * LF.msub
+                  (LF.dctx * LF.head * LF.typ) inside
 
 (** genObj (cD, cPsi, tP) (tH, tA) = (cD', CovGoal (cPsi', tR, tP'), ms)
 
@@ -115,7 +114,7 @@ val genPVarGoal : LF.sch_elem -> LF.mctx -> LF.dctx -> LF.ctx_var ->
     together with its target context cD' are also returned.
  *)
 val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
-             (LF.mctx * (LF.dctx * LF.normal * LF.tclo) * LF.msub) option
+             (LF.dctx * LF.normal * LF.tclo) inside option
 
 (** genPatt (cD, tau_i) (c, tau_c)
     = None | Some (cD', (cG, pat, ttau_p), t)
@@ -138,19 +137,25 @@ val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
  *)
 val genPatt : LF.mctx * Comp.typ ->
               Id.cid_comp_typ * Comp.typ ->
-              (LF.mctx * (gctx * Comp.pattern * Comp.tclo) * LF.msub) option
+              (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
-val genPatCGoals    : LF.mctx -> gctx -> Comp.typ -> gctx -> (LF.mctx * cov_goal * LF.msub) list
+val genPatCGoals    : LF.mctx -> Comp.gctx -> Comp.typ -> Comp.gctx -> cov_goal inside list
 val genContextGoals : LF.mctx -> Id.name * LF.ctyp * LF.depend ->
-                      (LF.mctx * LF.dctx * LF.msub) list
+                      LF.dctx inside list
 val genCGoals       : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
-val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub)  list
-val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ) -> (LF.mctx * cov_goal * LF.msub) list
+val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) ->
+                      (LF.dctx * LF.normal * LF.tclo) inside list
+
+val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ) ->
+                      (LF.dctx * LF.normal * LF.tclo) inside list
+
+(** Generates one coverage goal for every bound variable that appears
+    in the given LF context.
+ *)
+val genBVar         : (LF.mctx * LF.dctx * LF.typ) -> int ->
+                      (LF.dctx * LF.normal * LF.tclo) inside list
 
 val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
-
-val compgctx_of_gctx : gctx -> Comp.gctx
-val gctx_of_compgctx : Comp.gctx -> gctx
 
 (** Decide whether a given computational type is impossible. *)
 val is_impossible : LF.mctx -> Comp.typ -> bool

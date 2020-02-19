@@ -9,6 +9,21 @@ open Syntax.Int
 
 exception NoTypAvailable
 
+(** Function form of the LF.Dec constructor with the arguments reversed.
+    Useful for extending contexts multiple times without the need for
+    parentheses.
+    cD |> Context.dec ... |> Context.dec ...
+ *)
+val dec : 'a -> 'a ctx -> 'a ctx
+
+(** Extends a context with multiple entries from left to right.
+    That is,
+        ctx |> decs [d1;d2;d3]
+    is equivalent to
+        ctx |> dec d1 |> dec d2 |> dec d3
+ *)
+val decs : 'a list -> 'a ctx -> 'a ctx
+
 val dctxToHat   : dctx -> dctx_hat
 val addToHat   : dctx_hat -> dctx_hat   (* Lengthen by one declaration *)
 val hatToDCtx   : dctx_hat -> dctx

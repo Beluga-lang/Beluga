@@ -9,6 +9,12 @@ open Syntax.Int
 
 exception NoTypAvailable
 
+let dec d ctx = Dec (ctx, d)
+
+let rec decs ds ctx = match ds with
+  | [] -> ctx
+  | d :: ds -> decs ds (ctx |> dec d)
+
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)
 

@@ -196,6 +196,9 @@ module Function = struct
    *)
   let through (f : 'a -> unit) : 'a -> 'a =
     fun x -> f x; x
+
+  let curry f x y = f (x, y)
+  let uncurry f (x, y) = f x y
 end
 
 module Seq = struct

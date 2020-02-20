@@ -28,6 +28,8 @@ module LF : sig
 
   exception Error of Syntax.Loc.t * error
 
+  val throw : Syntax.Loc.t -> error -> 'a
+
   val check       : mctx -> dctx -> nclo -> tclo -> unit
 
   val syn         : mctx -> dctx -> nclo -> tclo

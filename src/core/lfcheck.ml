@@ -33,6 +33,8 @@ type error =
 
 exception Error of Syntax.Loc.t * error
 
+let throw loc e = raise (Error (loc, e))
+
 let _ =
   Error.register_printer
     begin fun (Error (loc, err)) ->

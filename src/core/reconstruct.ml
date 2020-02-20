@@ -11,6 +11,8 @@ open Substitution
 open Id
 open ConvSigma
 
+module F = Misc.Function
+
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail
 module C     = Whnf
@@ -31,7 +33,7 @@ type case_label_variant = [ `named | `context | `pvar | `bvar ]
 type error =
   | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
-  | CompScrutineeTyp    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.meta_typ
+  | ClosedTermRequired  of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | MetaObjectClash     of Int.LF.mctx * (Int.Comp.meta_typ)
@@ -77,20 +79,10 @@ let _ = Error.register_printer
        fprintf ppf
          "Type definition %s cannot contain any free meta-variables in its type."
          (Id.render_name a)
-    | ValueRestriction (cD, cG, i, theta_tau) ->
-       fprintf ppf
-         "@[<v 2>value restriction [pattern matching]@,\
-          expected: closed boxed type@,\
-          inferred: @[%a@]@,\
-          for expression:@ @[%a@]@,\
-          in context:   @[%a@]@]"
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
-         (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
     | IllegalCase (cD, cG, i, tau) ->
        fprintf ppf
-         "@[<v>Illegal case-expression.\
+         "@[<v>Illegal case analysis.\
           @,Cannot pattern-match on expression\
           @,  @[%a@]\
           @,of type\
@@ -99,9 +91,9 @@ let _ = Error.register_printer
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-    | CompScrutineeTyp (cD, cG, i, cU) ->
+    | ClosedTermRequired (cD, cG, i, tau) ->
        fprintf ppf
-         "Scrutinee is not closed.\
+         "Expression is not closed.\
           @,The expression\
           @,  @[%a@]\
           @,has type\
@@ -113,10 +105,10 @@ let _ = Error.register_printer
           @,  @[%a@]\
           @]"
          P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-         P.(fmt_ppr_cmp_meta_typ cD) cU
+         P.(fmt_ppr_cmp_typ cD l0) tau
          pp_print_string
          "which is not closed, or which requires that some \
-          metavariables introduced in the pattern are futher \
+          metavariables are futher \
           restricted, i.e. some variable dependencies cannot happen.
           This error may indicate that some reconstructed implicit
           arguments should be restricted."
@@ -1103,94 +1095,22 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
        end;
      let _, (i, tau_theta') = genMApp loc cD (i', tau_theta') in
+     let i = Whnf.(cnormExp' (i, m_id)) in
      let tau_s = Whnf.cnormCTyp tau_theta' in
      let ct = fun pat -> case_type pat i in
-     begin
-       match (i, tau_s) with
-             (* Not only the object but also its type must be closed *)
-       | (Int.Comp.AnnBox (mC, _) as i, Int.Comp.TypBox (_, mT)) ->
-          begin match mT with
-          | Int.LF.(ClTyp (MTyp (PiTyp _), _)) ->
-             throw loc (IllegalCase (cD, cG, i, tau_s))
-          | _ -> ()
-          end;
-          let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
-          if Whnf.closedMetaObj mC && Whnf.closedCTyp tau_s then
-            let recBranch b =
-              let b = elBranch ct cD cG b tau_s tau_theta in
-              let _ = Gensym.MVarData.reset () in
-              b in
-            let branches' = List.map recBranch branches in
-            Int.Comp.Case (loc, prag, i, branches')
-          else
-            raise (Error (loc, ValueRestriction (cD, cG, i, (tau_s, Whnf.m_id))))
 
-       | (Int.Comp.AnnBox (_, _) as i, _ ) ->
-          raise (Error (loc, (IllegalCase (cD, cG, i, tau_s))))
+     if not Whnf.(closedExp' i && closedCTyp tau_s && closedGCtx cG) then
+       raise (Error (loc, ClosedTermRequired (cD, cG, i, tau_s)));
 
-       | (i, Int.Comp.TypBox (_, (Int.LF.ClTyp (Int.LF.MTyp tP, cPsi) as cU))) ->
-          dprintf
-            begin fun p ->
-            p.fmt "[elExp] @[<v>Contexts @[<v>cD = @[%a@]@,cG = @[%a@]@]@,\
-                   expected pattern has type: @[%a@]@,\
-                   context of expected pattern type: @[%a@]@,\
-                   checking closedness...@]"
-              (P.fmt_ppr_lf_mctx P.l0) cD
-              (P.fmt_ppr_cmp_gctx cD P.l0) cG
-              (P.fmt_ppr_lf_typ cD cPsi P.l0) tP
-              (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-            end;
-          let tP = Whnf.normTyp (Whnf.cnormTyp (tP, Whnf.m_id), LF.id) in
-          let cPsi = Whnf.normDCtx (Whnf.cnormDCtx (cPsi, Whnf.m_id)) in
-          let cG = Whnf.cnormGCtx (cG, Whnf.m_id) in
-          if Whnf.closedTyp (tP, LF.id) &&
-               Whnf.closedDCtx cPsi
-               && Whnf.closedGCtx cG
-          then
-            let recBranch b =
-              dprintf
-                begin fun p ->
-                p.fmt "[elBranch - DataObj] @[<v>@[%a@]@ of type@ @[%a@]@]"
-                  (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i, Whnf.m_id))
-                  (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-                end;
-              let b = elBranch ct cD cG b tau_s tau_theta in
-              let _ = Gensym.MVarData.reset () in
-              b
-            in
-            let branches' = List.map recBranch branches in
-            let b = Int.Comp.Case (loc, prag, i, branches') in
-            dprintf
-              begin fun p ->
-              p.fmt "[elBranch - DataObj] @[<v>of type @[%a@]@ done@,\
-                     cG = @[%a@]@,\
-                     reconstructed branch:@,\
-                     @[%a@]@]"
-                (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-                (P.fmt_ppr_cmp_gctx cD P.l0) cG
-                (P.fmt_ppr_cmp_exp_chk cD cG P.l0) b
-              end;
-            b
-          else raise (Error (loc, CompScrutineeTyp (cD, cG, i', cU)))
-
-       | (i, _ ) ->
-          let recBranch b =
-            dprintf
-              begin fun p ->
-              p.fmt "[elBranch - PatObj] has type @[%a@]"
-                (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-              end;
-            let b = elBranch ct cD cG b tau_s tau_theta in
-            Gensym.MVarData.reset () ; b in
-
-          let branches' = List.map recBranch branches in
-          dprintf
-            begin fun p ->
-            p.fmt "[elBranch - PatObj] @[<v>of type@,@[%a]@]"
-              (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-            end;
-          Int.Comp.Case (loc, prag, i, branches')
-     end
+     let branches' =
+       List.map
+         begin fun b ->
+         elBranch ct cD cG b tau_s tau_theta
+         |> F.after Gensym.MVarData.reset
+         end
+         branches
+     in
+     Int.Comp.Case (loc, prag, i, branches')
 
   | (Apx.Comp.Hole (loc, name), (tau, theta)) ->
      dprintf

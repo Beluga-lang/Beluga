@@ -2504,7 +2504,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           unifyTerm Unification cD cPsi (tR, id) (tR', id);
     | SObj s , SObj s' , ClTyp (_, cPsi) ->
        unifySub Unification cD cPsi (simplifySub cD cPsi s) (simplifySub cD cPsi s')
-    | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
+    | _ ->
+       dprint (fun () -> "[unifyClObj'] fall through");
+       raise (Failure "MetaObj mismatch")
 
   and unifyClObj cD (mO, t) (mO', t') (cT, mt) =
    unifyClObj' cD (Whnf.cnormClObj mO t) (Whnf.cnormClObj mO' t') (Whnf.cnormMTyp (cT, mt))
@@ -2516,7 +2518,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (ClObj (phat, m1), t) , (ClObj (phat', m2) , t') ->
       unifyClObj cD (m1, t) (m2, t') (cT, mt)
 
-    | _ -> (dprint (fun () -> "[unifyMetaObj] fall through");raise (Failure "MetaObj mismatch"))
+    | _ ->
+       dprint (fun () -> "[unifyMetaObj] fall through");
+       raise (Failure "MetaObj mismatch")
 
 
   and unifyMObj cD (mO, t) (mO', t') (cT, mt) =

@@ -903,9 +903,10 @@ module Comp = struct
     | MApp (loc, e, mC, cU, _) ->
        let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
        dprintf begin fun p ->
-         p.fmt "[syn] @[<v>MApp synthesized function type\
+         p.fmt "[syn] @[<v>MApp synthesized function type at %a\
                 @,tau1 = @[%a@]\
                 @,cU = @[%a@]@]"
+           Loc.print_short loc
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau1, t1))
            P.(fmt_ppr_cmp_meta_typ cD) cU
          end;

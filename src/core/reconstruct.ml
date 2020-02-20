@@ -908,11 +908,13 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
        let Int.Comp.TypBox (_, mT) = tau_p' in
        dprintf
          begin fun p ->
-         p.fmt "[synPatRefine] @[<v>unifying scrutinee and pattern:@,\
-                mC[t1]    = @[%a@]@,
-                mC_p[t1t] = @[%a@]@]"
+         p.fmt "[synPatRefine] @[<v>unifying scrutinee and pattern:\
+                @,mC    = @[%a@]\
+                @,mC_p  = @[%a@]\
+                @,cD    = @[%a@]@]"
            (P.fmt_ppr_cmp_meta_obj cD P.l0) mC
            (P.fmt_ppr_cmp_meta_obj cD' P.l0) mC_p
+           P.(fmt_ppr_lf_mctx l0) cD
          end;
        try
          Unify.unifyMetaObj Int.LF.Empty
@@ -921,7 +923,9 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
            (mT, Whnf.m_id)
        with
          Unify.Failure msg ->
-         Error.violation ("Dependent pattern matching failed: " ^ msg)
+         Error.violation
+           ("Dependent pattern matching failed at "
+            ^ Fmt.stringify Loc.print_short loc ^ ": " ^ msg)
   in
   let t1 = Ctxsub.mctxToMSub cD' in (* . |- t1 : cD' *)
   let t1t = Whnf.mcomp t t1 in (* . |- t1t : cD  since  cD' |- t : cD  and  t1t = t mcomp t1 *)

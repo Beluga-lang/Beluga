@@ -157,7 +157,7 @@ let generate_pattern_coverage_goals
     : (LF.mctx * B.Coverage.cov_goal * LF.msub) list =
   let open Comp in
   let cgs =
-    B.Coverage.genPatCGoals g.context.cD g.context.cG (B.Total.strip tau) LF.Empty
+    B.Coverage.genPatCGoals g.context.cD LF.Empty (B.Total.strip tau) LF.Empty
   in
   cgs
 
@@ -268,6 +268,16 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                  -je *)
               (tau, tau_p)
           in
+          (* cD_b |- t' : s.context.cD (outside the branch)
+             cD_b |- t1' : cD (inside the branch)
+             and recall: cD |- t : s.context cD
+           *)
+
+          (* cD; cG |- pat <= tau_p
+             cD_b; cG_b |- pat' <= [t1']tau_p
+             where
+             cG_b = [t']s.context.cG, [t1']cG
+           *)
           let pat' = Whnf.cnormPattern (pat, t1') in
           dprintf
             begin fun p ->
@@ -282,21 +292,21 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
               (P.fmt_ppr_lf_mctx P.l0) cD
               (P.fmt_ppr_lf_mctx P.l0) cD_b
             end;
-          (* cD_b |- t' : s.context.cD (outside the branch)
-             cD_b |- t1' : cD (inside the branch)
-             and recall: cD |- t : s.context cD
-           *)
-          let refine_inside f ctx = f (ctx, t1') in
-          let refine_outside f ctx = f (ctx, t') in
 
           (* Compute the gctx inside the branch.*)
           (* cG is given to use by coverage such that
              cD |- cG
              that is, it exists *inside* the branch
            *)
-          let cG_b = refine_inside Whnf.cnormGCtx cG in
+          let cG_b =
+            Context.append
+              (Whnf.cnormGCtx (s.context.cG, t'))
+              (Whnf.cnormGCtx (cG, t1'))
+          in
           (* cD_b |- cG_b *)
-          let cIH_b = refine_outside Whnf.cnormIHCtx s.context.cIH in
+          let cIH_b =
+            Whnf.cnormIHCtx (s.context.cIH, t')
+          in
 
           dprintf
             begin fun p ->

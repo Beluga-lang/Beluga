@@ -2227,7 +2227,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
              , let open Int.LF in
                ClObj
                  ( Context.dctxToHat cPsi'
-                 , PObj (proj_maybe h k)
+                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil))
                  )
              )
            )
@@ -2383,7 +2383,47 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        I.SplitBranch (l', pat, t', hyp')
 
-    | A.BVarCase loc -> Error.not_implemented loc "BVarCase"
+    | A.BVarCase loc ->
+       if Context.dctxLength cPsi <> 1 then
+         Error.not_implemented loc
+           "Parameter variable matching is supported only if the LF \
+            context has exactly 1 binder.";
+       let Int.LF.MTyp tA = cU in
+       let (cD', (cPsi', tM, sA), t) =
+         match Coverage.genBVar (cD, cPsi, tA) 1 with
+         | [x] -> x
+         | _ ->
+            Error.violation "[make_meta_branch] genBVar did not generate 1 case"
+       in
+       let pat =
+         I.PatMetaObj
+           ( Loc.ghost
+           , let open Int.LF in
+             ( Loc.ghost
+             , ClObj
+                 ( Context.dctxToHat cPsi'
+                 , MObj tM
+                 )
+             )
+           )
+       in
+       let tau_p =
+         I.TypBox
+           ( Loc.ghost
+           , Int.LF.(ClTyp (MTyp (Whnf.normTyp sA), cPsi'))
+           )
+       in
+       let (t', t1, cD_b) =
+         synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
+           (tau_i, tau_p)
+       in
+       let pat' = Whnf.cnormPattern (pat, t1) in
+       let cG_b = Whnf.cnormGCtx (cG, t') in
+       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let l' = `bvar in
+       let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
+       let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
+       I.SplitBranch (l', pat', t', hyp')
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)
@@ -2441,8 +2481,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
         *)
        let cG_b =
          Context.append
-           (Whnf.cnormGCtx (cG', t1))
            (Whnf.cnormGCtx (cG, t))
+           (Whnf.cnormGCtx (cG', t1))
        in
 
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in

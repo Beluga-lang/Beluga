@@ -197,6 +197,13 @@ module Function = struct
   let through (f : 'a -> unit) : 'a -> 'a =
     fun x -> f x; x
 
+  (** A convenient way to execute an effect *after* running a
+      function, without needing a use a let-expression to store the result
+      of the function.
+   *)
+  let after (f : unit -> unit) : 'a -> 'a =
+    fun x -> f (); x
+
   let curry f x y = f (x, y)
   let uncurry f (x, y) = f x y
 end

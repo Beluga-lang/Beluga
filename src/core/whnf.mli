@@ -175,12 +175,19 @@ val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
 val conv_hat_ctx: dctx_hat -> dctx_hat -> bool
 val convCompCTypDecl : Comp.ctyp_decl -> Comp.ctyp_decl -> bool
 
+(* CLOSEDNESS CHECKING
+   Verifies that the given object does not contain any unification
+   variables.
+ *)
+
 val closed     : nclo -> bool
 val closedTyp  : tclo -> bool
 val closedDCtx : dctx -> bool
 val closedCTyp : Comp.typ -> bool
 val closedGCtx : Comp.gctx -> bool
 val closedMetaObj : Comp.meta_obj -> bool
+val closedExp  : Comp.exp_chk -> bool
+val closedExp' : Comp.exp_syn -> bool
 
 val constraints_solved : cnstr list -> bool
 

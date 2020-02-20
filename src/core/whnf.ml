@@ -14,7 +14,7 @@ open Syntax.Int.LF
 open Syntax.Int
 open Substitution
 
-let dprintf, _, _ = Debug.(makeFunctions' (toFlags [11]))
+let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
 
 module T = Store.Cid.Typ
@@ -1758,6 +1758,7 @@ let mctxMVarPos cD u =
   let cnormThm (t, theta) = match t with
     | Comp.Program e -> Comp.Program (cnormExp (e, theta))
     | Comp.Proof p ->
+       dprnt "[cnormThm] WARNING: normalizing a proof: no-op";
        (* XXX how should contextual substitution work with proofs? *)
        Comp.Proof p
 
@@ -2039,17 +2040,26 @@ and closedMObj = function
   | MObj tM -> closed (tM, LF.id)
   | SObj s -> closedSub s
 
-and closedMetaObj (loc,mO) = match mO with
+and closedMFront = function
   | CObj cPsi -> closedDCtx cPsi
   | ClObj (phat, t) ->
       closedDCtx (Context.hatToDCtx phat) && closedMObj t
+
+and closedMetaObj (_, mF) = closedMFront mF
+
 let closedClTyp = function
   | MTyp tA
   | PTyp tA -> closedTyp (tA, LF.id)
   | STyp (_, cPhi) -> closedDCtx cPhi
+
 let closedMetaTyp cT = match cT with
   | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
   | CTyp _ -> true
+
+let closedDecl = function
+  | Decl (_, cU, _) -> closedMetaTyp cU
+  | DeclOpt _ ->
+     Error.violation "[closedDecl] DeclOpt outside printing"
 
 let rec closedCTyp cT = match cT with
   | Comp.TypBase (_, _c, mS) -> closedMetaSpine mS
@@ -2058,17 +2068,90 @@ let rec closedCTyp cT = match cT with
   | Comp.TypArr (_, cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
   | Comp.TypCross (_, cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
   | Comp.TypPiBox (_, ctyp_decl, cT) ->
-      closedCTyp cT && closedCDecl ctyp_decl
+      closedCTyp cT && closedDecl ctyp_decl
   | Comp.TypClo (cT, t) -> closedCTyp(cnormCTyp (cT, t))  (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
   | Comp.TypInd tau -> closedCTyp tau
 
-and closedCDecl (Decl (_, ctyp, _)) = closedMetaTyp ctyp
+let closedCtx closedDecl =
+  let rec go = function
+    | Empty -> true
+    | Dec (ctx, d) ->
+       closedDecl d && go ctx
+  in
+  go
 
-let rec closedGCtx cG = match cG with
-  | Empty -> true
-  | Dec(cG, Comp.CTypDecl(_ , cT, _)) ->
-      closedCTyp cT && closedGCtx cG
-  | Dec(cG, Comp.CTypDeclOpt _ ) -> closedGCtx cG
+let closedCTypDecl = function
+  | Comp.CTypDecl (_, tau, _) -> closedCTyp tau
+  | Comp.CTypDeclOpt _ ->
+     Error.violation
+       "[closedCTypDecl] CTypDeclOpt outside printing"
+
+let closedGCtx = closedCtx closedCTypDecl
+let closedMCtx = closedCtx closedDecl
+
+let rec closedMSub = function
+  | MShift _ -> true
+  | MDot (mF, t) ->
+     closedMFront mF && closedMSub t
+
+let rec closedExp = function
+  | Comp.Syn (_, i) -> closedExp' i
+  | Comp.Fn (_, _, e) -> closedExp e
+  | Comp.Fun (_, bs) -> closedFunBranches bs
+  | Comp.MLam (_, _, e) -> closedExp e
+  | Comp.Pair (_, e1, e2) -> closedExp e1 && closedExp e2
+  | Comp.LetPair (_, i, (_, _, e)) -> closedExp' i && closedExp e
+  | Comp.Let (_, i, (_, e)) -> closedExp' i && closedExp e
+  | Comp.Box (_, cM, cU) -> closedMetaObj cM && closedMetaTyp cU
+  | Comp.Case (_, _, i, bs) -> closedExp' i && List.for_all closedBranch bs
+  | Comp.Impossible (_, i) -> closedExp' i
+  | Comp.Hole _ -> false
+
+and closedExp' = function
+  | Comp.Var _ | Comp.DataConst _ | Comp.Const _ -> true
+  | Comp.Obs (_, e, t, _) -> closedExp e && closedMSub t
+  | Comp.Apply (_, i, e) -> closedExp' i && closedExp e
+  | Comp.MApp (_, i, cM, cU, _) ->
+     closedExp' i && closedMetaObj cM && closedMetaTyp cU
+  | Comp.AnnBox (cM, cU) ->
+     closedMetaObj cM && closedMetaTyp cU
+  | Comp.PairVal (_, i1, i2) ->
+     closedExp' i1 && closedExp' i2
+
+and closedBranch = function
+  | Comp.Branch (_, cD, cG, pat, t, e) ->
+     closedMCtx cD
+     && closedGCtx cG
+     && closedPattern pat
+     && closedMSub t
+     && closedExp e
+
+and closedFunBranches = function
+  | Comp.NilFBranch _ -> true
+  | Comp.ConsFBranch (_, (cD, cG, patS, e), bs) ->
+     closedMCtx cD
+     && closedGCtx cG
+     && closedPatSpine patS
+     && closedExp e
+     && closedFunBranches bs
+
+and closedPatSpine = function
+  | Comp.PatNil -> true
+  | Comp.PatApp (_, pat, patS) ->
+     closedPattern pat && closedPatSpine patS
+  | Comp.PatObs (_, _, t, patS) ->
+     closedMSub t && closedPatSpine patS
+
+and closedPattern = function
+  | Comp.PatMetaObj (_, cM) -> closedMetaObj cM
+  | Comp.PatConst (_, _, patS) -> closedPatSpine patS
+  | Comp.PatFVar _ ->
+     Error.violation "[closedPattern] PatFVar outside coverage"
+  | Comp.PatVar _ -> true
+  | Comp.PatPair (_, pat1, pat2) ->
+     closedPattern pat1 && closedPattern pat2
+  | Comp.PatAnn (_, pat, tau) ->
+     closedPattern pat && closedCTyp tau
 
 (** Combines two sets of hypotheses.
     IH and computational hypotheses are MShifted by the length of the appended cD !

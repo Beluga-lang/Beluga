@@ -2000,6 +2000,10 @@ and elCommand cD cG =
      let (i, tau_i) =
        elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp
      in
+     let i = Whnf.(cnormExp' (i, m_id)) in
+     let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
+     if not Whnf.(closedExp' i && closedCTyp tau_i) then
+       throw loc (ClosedTermRequired (cD, cG, i, tau_i));
      let c = I.By (i, name, tau_i, `boxed) in
      (cD, Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)), Whnf.m_id, c)
 

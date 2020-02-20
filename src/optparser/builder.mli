@@ -32,6 +32,7 @@ val string_opt1 : string OptSpec.t list -> string t
 val switch_opt : unit OptSpec.t list -> bool t
 
 val impure_opt : (unit -> 'a) -> 'a OptSpec.t list -> 'a t
+val help_opt : ((string -> Format.formatter -> unit -> unit) -> 'a) -> 'a OptSpec.t list -> 'a t
 val rest_args : (string list -> unit) -> unit t
 
 val (<$) : ('a -> 'b) -> 'a t -> 'b t

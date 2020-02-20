@@ -2137,7 +2137,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          synPatRefine loc (case_type (lazy pat) i) (cD, cD) Whnf.m_id
            (tau_i, tau_i)
        in
-       let hyp' = elHypothetical cD cG pb' hyp ttau in
+       let cG_b = Whnf.cnormGCtx (cG, t') in
+       let hyp' = elHypothetical cD_b cG_b pb' hyp ttau in
        (* No need to apply the msub to pat, since pat is closed. *)
        I.SplitBranch (I.EmptyContext loc, pat, t', hyp')
 

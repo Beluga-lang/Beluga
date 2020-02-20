@@ -130,14 +130,13 @@ let rec ctxVar = function
 
 let hasCtxVar cPsi = Maybe.is_some (ctxVar cPsi)
 
-(* append cD1 cD2 = (cD1, cD2) *)
-let rec append cD1 cD2 = match cD2 with
-  | Empty ->
-      cD1
-
-  | Dec (cD2', dec) ->
-      let cD1' = append cD1 cD2' in
-        Dec (cD1', dec)
+(* append (d1,...,dn) (d'1,...,d'k) = (d1,...,dn,d'1,...,d'k) *)
+let append left =
+  let rec go = function
+    | Empty -> left
+    | Dec (ctx, d) -> Dec (go ctx, d)
+  in
+  go
 
 let rec fold (empty : 'b) (f : 'b -> 'a -> 'b) (ctx : 'a LF.ctx) =
   match ctx with

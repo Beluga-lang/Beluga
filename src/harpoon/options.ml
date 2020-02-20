@@ -79,33 +79,6 @@ type valid_t =
 type parsed_t =
   (string, unit) t
 
-(** TODO
-    Generate this from optparser library
- *)
-let usage () : unit =
-  let usageString : (_, out_channel, unit) format =
-    ""
-    ^^ "Usage: %s <mandatory options> <other options>\n"
-    ^^ "\n"
-    ^^ "Mandatory options:\n"
-    ^^ "  --sig path             specify the input signature\n"
-    ^^ "\n"
-    ^^ "Other options:\n"
-    ^^ "  --test path            specify the test input file that is used as\n"
-    ^^ "                         a test input instead of stdin user input\n"
-    ^^ "  --incomplete           mark the test input file as incomplete so that\n"
-    ^^ "                         stdin user input is followed after the test input\n"
-    ^^ "                         (valid only when --test option is provided)\n"
-    ^^ "  --test-start number    specify the first line of test file considered\n"
-    ^^ "                         as test input\n"
-    ^^ "  --debug                use debugging mode (writes to debug.out in CWD)\n"
-    ^^ "  --implicit             print implicit variables\n"
-    ^^ "  --help                 print this message\n"
-    ^^ "\n"
-  in
-  Printf.eprintf usageString
-    Sys.argv.(0)
-
 let options_spec : valid_t Optparser.Builder.t =
   let handle_debug () =
     B.Debug.enable ();
@@ -114,8 +87,13 @@ let options_spec : valid_t Optparser.Builder.t =
   let handle_implicit () =
     PC.printImplicit := true
   in
-  let handle_help () =
-    usage ();
+  let handle_help pp_print_help =
+    let usage_string =
+      Printf.sprintf "Usage: %s <mandatory options> <other options>"
+        Sys.argv.(0)
+    in
+    Format.eprintf "%a"
+      (pp_print_help usage_string) ();
     exit 1
   in
   let open Optparser.Builder in
@@ -188,8 +166,9 @@ let options_spec : valid_t Optparser.Builder.t =
        [ OptSpec.long_name "implicit"
        ; OptSpec.help_msg "print implicit variables"
        ]
-  <! impure_opt handle_help
+  <! help_opt handle_help
        [ OptSpec.long_name "help"
+       ; OptSpec.short_name 'h'
        ; OptSpec.help_msg "print this message"
        ]
   <! rest_args

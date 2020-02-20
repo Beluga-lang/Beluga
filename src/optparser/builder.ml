@@ -38,7 +38,7 @@ module OptSpec : sig
   val lift : unit t -> 'a t
 
   val merge : 'a t list -> 'a t
-    
+
   type 'a checked =
     { name : OptSpecName.t
     ; meta_vars : string list
@@ -107,7 +107,7 @@ end = struct
    *)
   let merge (specs : 'a t list) : 'a t =
     List.fold_left combine (make_empty ()) specs
-    
+
   type 'a checked =
     { name : OptSpecName.t
     ; meta_vars : string list
@@ -154,13 +154,17 @@ type opt_parser_error =
   | NotAnOption
     of string (* option name *)
 
-type help_entry = OptSpecName.t * string option
+type help_entry =
+  OptSpecName.t (* option name *)
+  * int (* expected number of arguments *)
+  * string list (* names for arguments *)
+  * string option (* help message for option *)
 
 type 'a t =
-  { opt_tbl : (string, int * (string list -> unit)) Hashtbl.t
+  { opt_tbl : (string, int * ((string -> Format.formatter -> unit -> unit) -> string list -> unit)) Hashtbl.t
   ; get_value : string list -> ('a, opt_parser_error) result
-  ; mandatory_help : help_entry list
-  ; optional_help : help_entry list
+  ; mandatory_help_entries : help_entry list
+  ; optional_help_entries : help_entry list
   }
 
 exception SpecError of OptSpec.check_error
@@ -172,8 +176,8 @@ let make spec arity arg_parser res_ref =
       |> Seq.map (fun n -> (n, (arity, arg_parser)))
       |> Hashtbl.of_seq
   ; get_value = (fun _ -> !res_ref)
-  ; mandatory_help = []
-  ; optional_help = []
+  ; mandatory_help_entries = []
+  ; optional_help_entries = []
   }
 
 let opt0 (a : 'a) (specs : 'a OptSpec.t list) : 'a t =
@@ -191,7 +195,7 @@ let opt0 (a : 'a) (specs : 'a OptSpec.t list) : 'a t =
     | None -> Error (MissingMandatory opt_name)
   in
   let res_ref = ref initial_res in
-  let arg_parser =
+  let arg_parser _ =
     function
     | [] ->
        res_ref := Ok a
@@ -199,15 +203,15 @@ let opt0 (a : 'a) (specs : 'a OptSpec.t list) : 'a t =
        res_ref := Error (InvalidArgLength (opt_name, arity, List.length args))
   in
   let opt = make spec arity arg_parser res_ref in
-  let help_entry = [(spec.name, spec.help_msg)] in
+  let help_entry = [(spec.name, arity, spec.meta_vars, spec.help_msg)] in
   match spec.optional with
   | Some _ ->
      { opt with
-       optional_help = opt.optional_help @ help_entry
+       optional_help_entries = opt.optional_help_entries @ help_entry
      }
   | None ->
      { opt with
-       mandatory_help = opt.mandatory_help @ help_entry
+       mandatory_help_entries = opt.mandatory_help_entries @ help_entry
      }
 
 let opt1 (read_arg : string -> 'a option) (specs : 'a OptSpec.t list) : 'a t =
@@ -225,7 +229,7 @@ let opt1 (read_arg : string -> 'a option) (specs : 'a OptSpec.t list) : 'a t =
     | None -> Error (MissingMandatory opt_name)
   in
   let res_ref = ref initial_res in
-  let arg_parser =
+  let arg_parser _ =
     function
     | [] ->
        begin match spec.default_argument with
@@ -245,15 +249,15 @@ let opt1 (read_arg : string -> 'a option) (specs : 'a OptSpec.t list) : 'a t =
        res_ref := Error (InvalidArgLength (opt_name, arity, List.length args))
   in
   let opt = make spec arity arg_parser res_ref in
-  let help_entry = [(spec.name, spec.help_msg)] in
+  let help_entry = [(spec.name, arity, spec.meta_vars, spec.help_msg)] in
   match spec.optional with
   | Some _ ->
      { opt with
-       optional_help = opt.optional_help @ help_entry
+       optional_help_entries = opt.optional_help_entries @ help_entry
      }
   | None ->
      { opt with
-       mandatory_help = opt.mandatory_help @ help_entry
+       mandatory_help_entries = opt.mandatory_help_entries @ help_entry
      }
 
 let bool_opt1 : bool OptSpec.t list -> bool t = opt1 bool_of_string_opt
@@ -282,7 +286,7 @@ let impure_opt (impure_fn : unit -> 'a) (specs : 'a OptSpec.t list) : 'a t =
     | None -> Error (MissingMandatory opt_name)
   in
   let res_ref = ref initial_res in
-  let arg_parser =
+  let arg_parser _ =
     function
     | [] ->
        res_ref := Ok (impure_fn ())
@@ -290,22 +294,56 @@ let impure_opt (impure_fn : unit -> 'a) (specs : 'a OptSpec.t list) : 'a t =
        res_ref := Error (InvalidArgLength (opt_name, arity, List.length args))
   in
   let opt = make spec arity arg_parser res_ref in
-  let help_entry = [(spec.name, spec.help_msg)] in
+  let help_entry = [(spec.name, arity, spec.meta_vars, spec.help_msg)] in
   match spec.optional with
   | Some _ ->
      { opt with
-       optional_help = opt.optional_help @ help_entry
+       optional_help_entries = opt.optional_help_entries @ help_entry
      }
   | None ->
      { opt with
-       mandatory_help = opt.mandatory_help @ help_entry
+       mandatory_help_entries = opt.mandatory_help_entries @ help_entry
+     }
+
+let help_opt (impure_fn : (string -> Format.formatter -> unit -> unit) -> 'a) (specs : 'a OptSpec.t list) : 'a t =
+  let open OptSpec in
+  let arity = 0 in
+  let spec =
+    match check (merge specs) with
+    | Error e -> raise (SpecError e)
+    | Ok s -> s
+  in
+  let opt_name = OptSpecName.to_string spec.name in
+  let initial_res =
+    match spec.optional with
+    | Some a -> Ok a
+    | None -> Error (MissingMandatory opt_name)
+  in
+  let res_ref = ref initial_res in
+  let arg_parser build_help_string =
+    function
+    | [] ->
+       res_ref := Ok (impure_fn build_help_string)
+    | args ->
+       res_ref := Error (InvalidArgLength (opt_name, arity, List.length args))
+  in
+  let opt = make spec arity arg_parser res_ref in
+  let help_entry = [(spec.name, arity, spec.meta_vars, spec.help_msg)] in
+  match spec.optional with
+  | Some _ ->
+     { opt with
+       optional_help_entries = opt.optional_help_entries @ help_entry
+     }
+  | None ->
+     { opt with
+       mandatory_help_entries = opt.mandatory_help_entries @ help_entry
      }
 
 let rest_args (impure_fn : string list -> 'a) : 'a t =
   { opt_tbl = Hashtbl.create 0
   ; get_value = (fun args -> Ok (impure_fn args))
-  ; mandatory_help = []
-  ; optional_help = []
+  ; mandatory_help_entries = []
+  ; optional_help_entries = []
   }
 
 (**
@@ -347,8 +385,8 @@ let (<&) (opt_f : ('a -> 'b) t) (opt_a : 'a t) : 'b t =
       | Error e -> Error e
       | Ok f -> Result.map f (opt_a.get_value args)
       end
-  ; mandatory_help = opt_f.mandatory_help @ opt_a.mandatory_help
-  ; optional_help = opt_f.optional_help @ opt_a.optional_help
+  ; mandatory_help_entries = opt_f.mandatory_help_entries @ opt_a.mandatory_help_entries
+  ; optional_help_entries = opt_f.optional_help_entries @ opt_a.optional_help_entries
   }
 
 (**
@@ -361,12 +399,91 @@ let (<!) (opt_a : 'a t) (opt_impure : unit t) : 'a t =
   Hashtbl.add_seq opt_tbl (Hashtbl.to_seq opt_impure.opt_tbl);
   { opt_tbl
   ; get_value = opt_a.get_value
-  ; mandatory_help = opt_a.mandatory_help @ opt_impure.mandatory_help
-  ; optional_help = opt_a.optional_help @ opt_impure.optional_help
+  ; mandatory_help_entries = opt_a.mandatory_help_entries
+  ; optional_help_entries =
+      opt_a.optional_help_entries
+      @ opt_impure.mandatory_help_entries
+      @ opt_impure.optional_help_entries
   }
 
 
 let is_opt arg = String.get arg 0 = '-'
+
+let pp_print_help (opt : 'a t) (usage : string) ppf () : unit =
+  let take_circularly n ls =
+    let rec go n =
+      function
+      | _ when n <= 0 -> []
+      | [] ->
+         go n ls
+      | x :: xs ->
+         x :: go (n - 1) xs
+    in
+    if ls = []
+    then raise (Invalid_argument "'ls' should have more than one element")
+    else go n ls
+  in
+  let entry_to_help_fields (name, arity, meta_vars, desc) =
+    let meta_names = take_circularly arity meta_vars in
+    (OptSpecName.to_string name ^ " " ^ String.concat " " meta_names, desc)
+  in
+  let pp_print_desc ppf desc =
+    let desc_words = String.split_on_char ' ' desc in
+    Format.pp_open_hovbox ppf 0;
+    List.iteri
+      begin fun idx desc_word ->
+      begin
+        if idx != 0
+        then Format.pp_print_space ppf ();
+      end;
+      Format.pp_print_string ppf desc_word;
+      end
+      desc_words;
+    Format.pp_close_box ppf ()
+  in
+  let pp_print_fields max_title_len ppf (title, desc) =
+    Format.fprintf ppf "%-*s%a"
+      ((max_title_len + 3 + (8 - 1)) / 8 * 8)
+      title
+      pp_print_desc desc
+  in
+  let pp_print_fieldss max_title_len ppf fieldss =
+    Format.fprintf ppf "@[<v 2>  %a@,@]"
+      (Format.pp_print_list ~pp_sep:Format.pp_print_cut (pp_print_fields max_title_len)) fieldss
+  in
+  let mandatory_fieldss =
+    opt.mandatory_help_entries
+    |> List.filter_map
+         begin fun (name, arity, meta_vars, msg_opt) ->
+         Option.map (fun msg -> (name, arity, meta_vars, msg)) msg_opt
+         end
+    |> List.map entry_to_help_fields
+  in
+  let optional_fieldss =
+    opt.optional_help_entries
+    |> List.filter_map
+         begin fun (name, arity, meta_vars, msg_opt) ->
+         Option.map (fun msg -> (name, arity, meta_vars, msg)) msg_opt
+         end
+    |> List.map entry_to_help_fields
+  in
+  let max_title_len =
+    mandatory_fieldss @ optional_fieldss
+    |> List.map (fun (title, _) -> String.length title)
+    |> List.fold_left max 0
+  in
+  Format.pp_open_vbox ppf 0;
+  Format.fprintf ppf "%s@,@,"
+    usage;
+  Format.fprintf ppf "Mandatory options:@,";
+  Format.fprintf ppf "%a"
+    (pp_print_fieldss max_title_len) mandatory_fieldss;
+  Format.pp_print_cut ppf ();
+  Format.fprintf ppf "Optional options:@,";
+  Format.fprintf ppf "%a"
+    (pp_print_fieldss max_title_len) optional_fieldss;
+  Format.pp_close_box ppf ();
+  Format.pp_print_newline ppf ()
 
 let parse (opt : 'a t) (args : string list) : ('a, opt_parser_error) result =
   let split n =
@@ -388,7 +505,7 @@ let parse (opt : 'a t) (args : string list) : ('a, opt_parser_error) result =
           begin match Hashtbl.find_opt opt.opt_tbl arg with
           | Some (arity, fn) ->
              let (fn_args, next_args) = split arity sub_args in
-             fn fn_args;
+             fn (pp_print_help opt) fn_args;
              go rest_args next_args
           | None ->
              Error (NotAnOption arg)

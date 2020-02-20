@@ -1970,6 +1970,12 @@ and closedW (tM,s) = match  tM with
   | Root (_ , h, tS) ->
       closedHead h &&
       closedSpine (tS,s)
+  | LFHole _ -> false
+  | Tuple (_, tup) -> closedTuple (tup, s)
+
+and closedTuple = function
+  | Last tM, s -> closedW (tM, s)
+  | Cons (tM, tup), s -> closedW (tM, s) && closedTuple (tup, s)
 
 and closedHead h = match h with
   | (MMVar ((mmvar, _), _) | MVar (Inst mmvar, _)) when not (is_mmvar_instantiated mmvar) ->
@@ -2039,6 +2045,7 @@ let rec closedMetaSpine mS = match mS with
 and closedMObj = function
   | MObj tM -> closed (tM, LF.id)
   | SObj s -> closedSub s
+  | PObj h -> closedHead h
 
 and closedMFront = function
   | CObj cPsi -> closedDCtx cPsi

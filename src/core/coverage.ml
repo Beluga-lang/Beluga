@@ -1144,10 +1144,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
   (* We construct the spine using these types, unify the conclusion
      types, and then abstract to rebuild delta. *)
 
-  let names =
-    Context.to_list_map cD (fun _ -> LF.name_of_ctyp_decl)
-    @ LF.names_of_dctx cPsi
-  in
+  let names = Context.(names_of_mctx cD @ names_of_dctx cPsi) in
   match
     try
       let s = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in

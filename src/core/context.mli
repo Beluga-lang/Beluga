@@ -112,3 +112,7 @@ val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx option
 val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx option
 
 val concat : 'a LF.ctx list -> 'a LF.ctx
+
+val names_of_dctx : LF.dctx -> Id.name list
+val names_of_mctx : LF.mctx -> Id.name list
+val names_of_gctx : Comp.gctx -> Id.name list

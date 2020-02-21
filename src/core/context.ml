@@ -430,3 +430,20 @@ let rename_gctx src dst =
   rename src dst Comp.name_of_ctyp_decl Comp.rename_ctyp_decl
 
 let concat ctxs = List.fold_right append ctxs LF.Empty
+
+(** Gets a list of names of the bound variables in an LF context. *)
+let rec names_of_dctx = function
+  | DDec (cPsi, d) ->
+     let name =
+       match d with
+       | TypDecl (name, _) -> name
+       | TypDeclOpt name -> name
+     in
+     name :: names_of_dctx cPsi
+  | _ -> []
+
+let names_of_mctx cD =
+  to_list_map cD (fun _ -> name_of_ctyp_decl)
+
+let names_of_gctx cG =
+  to_list_map cG (fun _ -> Comp.name_of_ctyp_decl)

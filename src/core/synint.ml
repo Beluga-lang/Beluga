@@ -200,17 +200,6 @@ module LF = struct
     | Decl (x, tA, ind) -> Decl (f x, tA, ind)
     | DeclOpt x -> DeclOpt (f x)
 
-  (** Gets a list of names of the bound variables in an LF context. *)
-  let rec names_of_dctx = function
-    | DDec (cPsi, d) ->
-       let name =
-         match d with
-         | TypDecl (name, _) -> name
-         | TypDeclOpt name -> name
-       in
-       name :: names_of_dctx cPsi
-    | _ -> []
-
   (** Embeds a head into a normal by using an empty spine.
       Very useful for constructing variables as normals.
       Note that the normal will have a ghost location, as heads don't

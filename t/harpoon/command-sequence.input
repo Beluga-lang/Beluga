@@ -3,6 +3,6 @@ command-sequence-test
 [|- tm] -> [|- tp]
 
 
-by y as test1; by test1 as test2
+by x as test1; by test1 as test2
 solve [|- base]
 :quit

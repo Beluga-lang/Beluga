@@ -3,5 +3,6 @@ schroder_heister_elimination
 { S : [t : term ⊢ formula] } { P : [⊢ formula] } [⊢ true (forall (\t. S[t]))] → (({ T : [⊢ term] } [⊢ true S[T]]) → [⊢ true P]) → [⊢ true P]
 
 
-unbox y as A
-solve x mlam T => [|- ALL-E (\t. S[t]) T A]
+unbox x as A
+solve x1 mlam T => [|- ALL-E (\t. S[t]) T A]
+:quit

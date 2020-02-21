@@ -4,23 +4,24 @@ lookup
 1
 
 split [gamma]
-rename meta x g
+rename meta y g
 split [g, x:tm T[] |- #p]
-invert y
-by lookup [g] [g |- #p2] v1 as ih
-invert y
+invert x
+invert x
+by lookup [g] [g |- #p1] x1 as ih
 impossible [|- #p]
 main
 {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
-rename comp x9 rs
+rename comp x rs
 msplit M
-by lookup [gamma] [gamma |- #p1] rs as x
+solve I [ |- halts/m refl val/c]
+solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M1] (Dot rs rN)))
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
-solve v3 [|- _] ih2
-solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M1] (Dot rs rN)))
-solve I [ |- halts/m refl val/c]
+solve x1 [|- _] ih2
+by lookup [gamma] [gamma |- #p] rs as x
+
 :quit

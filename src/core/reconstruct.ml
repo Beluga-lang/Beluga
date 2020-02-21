@@ -31,7 +31,6 @@ open Debug.Fmt
 type case_label_variant = [ `named | `context | `pvar | `bvar ]
 
 type error =
-  | ValueRestriction    of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.tclo
   | IllegalCase         of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
   | ClosedTermRequired  of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx

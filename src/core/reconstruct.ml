@@ -733,27 +733,13 @@ let rec elCompTyp cD tau = match tau with
         Whnf.cnormCTyp (tau, ms)
         (* Int.Comp.TypDef (loc, a, cS') *)
 
-  | Apx.Comp.TypBox (loc, (_,Apx.LF.ClTyp (Apx.LF.MTyp a, psi))) ->
-      let _ = dprint (fun () -> "[elCompTyp] TypBox" ) in
-      let cPsi = Lfrecon.elDCtx (Lfrecon.Pibox) cD psi in
-      dprintf
-        begin fun p ->
-        p.fmt "[elCompTyp] TypBox - cPsi = %a"
-          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-        end;
-      let tA   = Lfrecon.elTyp (Lfrecon.Pibox) cD cPsi a in
-      let tT = Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.MTyp tA, cPsi)) in
-      dprintf
-        begin fun p ->
-        p.fmt "[elCompTyp] %a"
-          (P.fmt_ppr_cmp_typ cD P.l0) tT
-        end;
-      tT
-
-  | Apx.Comp.TypBox (loc, (_,Apx.LF.ClTyp (Apx.LF.STyp (c,psi), phi))) ->
-      let cPsi = Lfrecon.elDCtx Lfrecon.Pibox cD psi in
-      let cPhi = Lfrecon.elDCtx Lfrecon.Pibox cD phi in
-        Int.Comp.TypBox (loc, Int.LF.ClTyp (Int.LF.STyp (elSvar_class c,cPsi), cPhi))
+  | Apx.Comp.TypBox (loc, (_, cU)) ->
+     dprintf
+       begin fun p ->
+       p.fmt "[elCompTyp] TypBox at %a" Loc.print_short loc
+       end;
+     let cU = elCTyp Lfrecon.Pibox cD cU in
+     I.TypBox (loc, cU)
 
   | Apx.Comp.TypArr (loc, tau1, tau2) ->
       let tau1' = elCompTyp cD tau1 in

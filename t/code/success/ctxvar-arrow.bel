@@ -1,0 +1,7 @@
+LF unit : type = u : unit;
+
+schema ctx = unit;
+
+rec foo : [ctx] → [⊢ unit] =
+/ total /
+fn g ⇒ ? ;

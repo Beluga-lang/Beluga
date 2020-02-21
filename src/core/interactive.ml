@@ -292,7 +292,14 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
          match tau with
          | Comp.TypBox (l, _)
            | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
-            let cgs = Cover.genPatCGoals cD0 cG0 tau LF.Empty in
+            let names =
+              Context.(names_of_mctx cD0 @ names_of_gctx cG0)
+            in
+            let cgs =
+              Cover.genPatCGoals names cD0 tau
+              |> List.map
+                   (Cover.(map_inside (fun (cG, pat, tau) -> CovPatt (cG, pat, tau))))
+            in
             let bl = branchCovGoals 0 cG0 cgs in
             Some (matchFromPatterns l (Comp.Var(l, i)) bl)
          | Comp.TypClo (tau, t) -> matchTyp (Whnf.cnormCTyp (tau, t))

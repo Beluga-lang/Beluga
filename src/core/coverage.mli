@@ -15,6 +15,8 @@ type cov_goal =
 
 type 'a inside = LF.mctx * 'a * LF.msub
 
+val map_inside : ('a -> 'b) -> 'a inside -> 'b inside
+
 exception Error of Syntax.Loc.t * error
 
 val enableCoverage : bool ref
@@ -134,14 +136,22 @@ val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
     This process can fail, if ttau_p is not unifiable with the
     conclusion type of tau_c, in which case the constructor `c` is
     impossible for the scrutinee type `tau_i`.
+
+    The given list of names are those in the current scope, to ensure
+    that generated names do not shadow.
  *)
-val genPatt : LF.mctx * Comp.typ ->
+val genPatt : Id.name list ->
+              LF.mctx * Comp.typ ->
               Id.cid_comp_typ * Comp.typ ->
               (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
-val genPatCGoals    : LF.mctx -> Comp.gctx -> Comp.typ -> Comp.gctx -> cov_goal inside list
+val genPatCGoals    : Id.name list ->
+                      LF.mctx -> Comp.typ ->
+                      (Comp.gctx * Comp.pattern * Comp.tclo) inside list
+
 val genContextGoals : LF.mctx -> Id.name * LF.ctyp * LF.depend ->
                       LF.dctx inside list
+
 val genCGoals       : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
 val genCovGoals     : (LF.mctx * LF.dctx * LF.typ) ->
                       (LF.dctx * LF.normal * LF.tclo) inside list

@@ -154,12 +154,12 @@ let is_valid_goals_for_split_kind k cgs =
  *)
 let generate_pattern_coverage_goals
       (tau : Comp.typ) (g : Comp.proof_state) t
-    : (LF.mctx * B.Coverage.cov_goal * LF.msub) list =
+    : (LF.mctx * (Comp.gctx * Comp.pattern * Comp.tclo) * LF.msub) list =
   let open Comp in
-  let cgs =
-    B.Coverage.genPatCGoals g.context.cD LF.Empty (B.Total.strip tau) LF.Empty
+  let names =
+    Context.(names_of_mctx g.context.cD @ names_of_gctx g.context.cG)
   in
-  cgs
+  B.Coverage.genPatCGoals names g.context.cD (B.Total.strip tau)
 
 let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
   let open B in
@@ -210,188 +210,179 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
         invokes the remove_subgoal callback, and constructs the
         Harpoon syntax for this split branch.
       *)
-     let get_branch (cD, cov_goal, t) =
-       match cov_goal with
-       (* Because we called genPatCGoals, I'm pretty sure that the
-          CovCtx and CovGoal constructors are impossible here,
-          but I could be wrong.
+     let get_branch (cD, (cG, pat, tau_p), t) =
+       let tau_p = Whnf.cnormCTyp tau_p in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] @[<v>got pattern type:@,\
+                tau_p = @[%a@]@,\
+                for pattern = @[%a@]@,\
+                in cD = @[%a@]@,\
+                coverage's refinement t =@,\
+                @[%a@]@,\
+                with source context s.context.cD = @,\
+                @[%a@]@]"
+           (P.fmt_ppr_cmp_typ cD P.l0) tau_p
+           (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_lf_msub cD P.l0) t
+           (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+         end;
+
+       let t', t1', cD_b =
+         (* Refine the pattern to compute the branch's
+            meta-context, accounting for dependent pattern matching on
+            `m`. *)
+         dprintf
+           begin fun p ->
+           p.fmt "[harpoon-split] @[<v>before synPatRefine:@,\
+                  cD = @[%a@]@,\
+                  cD' = @[%a@]@,\
+                  cD' |- t : cD = @[%a@]@,\
+                  pat1 = @[%a@]@,\
+                  tau_s = @[%a@]@,\
+                  tau1 = @[%a@]@]"
+             (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+             (P.fmt_ppr_lf_mctx P.l0) cD
+             (P.fmt_ppr_lf_msub cD P.l0) t
+             (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
+             (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
+             (P.fmt_ppr_cmp_typ cD P.l0) tau_p
+           end;
+         Reconstruct.synPatRefine
+           Loc.ghost
+           (Reconstruct.case_type (lazy pat) i)
+           (s.context.cD, cD)
+           t
+           (* We possibly need to Total.strip tau here.
+              So far it seems to work as is.
+              -je *)
+           (tau, tau_p)
+       in
+       (* cD_b |- t' : s.context.cD (outside the branch)
+          cD_b |- t1' : cD (inside the branch)
+          and recall: cD |- t : s.context cD
         *)
-       | B.Coverage.CovCtx _
-         | B.Coverage.CovGoal (_, _, _) ->
-          B.Error.violation "getPatCGoals must return CovPatt coverage goals"
-       | B.Coverage.CovPatt (cG, pat, tau_p) ->
-          let tau_p = Whnf.cnormCTyp tau_p in
-          dprintf
-            begin fun p ->
-            p.fmt "[harpoon-split] @[<v>got pattern type:@,\
-                   tau_p = @[%a@]@,\
-                   for pattern = @[%a@]@,\
-                   in cD = @[%a@]@,\
-                   coverage's refinement t =@,\
-                   @[%a@]@,\
-                   with source context s.context.cD = @,\
-                   @[%a@]@]"
-              (P.fmt_ppr_cmp_typ cD P.l0) tau_p
-              (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
-              (P.fmt_ppr_lf_mctx P.l0) cD
-              (P.fmt_ppr_lf_msub cD P.l0) t
-              (P.fmt_ppr_lf_mctx P.l0) s.context.cD
-            end;
 
-          let t', t1', cD_b =
-            (* Refine the pattern to compute the branch's
-               meta-context, accounting for dependent pattern matching on
-               `m`. *)
-            dprintf
-              begin fun p ->
-              p.fmt "[harpoon-split] @[<v>before synPatRefine:@,\
-                     cD = @[%a@]@,\
-                     cD' = @[%a@]@,\
-                     cD' |- t : cD = @[%a@]@,\
-                     pat1 = @[%a@]@,\
-                     tau_s = @[%a@]@,\
-                     tau1 = @[%a@]@]"
-                (P.fmt_ppr_lf_mctx P.l0) s.context.cD
-                (P.fmt_ppr_lf_mctx P.l0) cD
-                (P.fmt_ppr_lf_msub cD P.l0) t
-                (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
-                (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
-                (P.fmt_ppr_cmp_typ cD P.l0) tau_p
-              end;
-            Reconstruct.synPatRefine
-              Loc.ghost
-              (Reconstruct.case_type (lazy pat) i)
-              (s.context.cD, cD)
-              t
-              (* We possibly need to Total.strip tau here.
-                 So far it seems to work as is.
-                 -je *)
-              (tau, tau_p)
-          in
-          (* cD_b |- t' : s.context.cD (outside the branch)
-             cD_b |- t1' : cD (inside the branch)
-             and recall: cD |- t : s.context cD
-           *)
+       (* cD; cG |- pat <= tau_p
+          cD_b; cG_b |- pat' <= [t1']tau_p
+          where
+          cG_b = [t']s.context.cG, [t1']cG
+        *)
+       let pat' = Whnf.cnormPattern (pat, t1') in
+       dprintf
+         begin fun p ->
+         p.fmt "@[<v 2>[harpoon-split] [after synPatRefine]@,\
+                t' = @[<v>@[%a@]@,: @[%a@]@]@,\
+                t1 = @[<v>@[%a@]@,: @[%a@]@]@,\
+                cD_b (target ctx) = @[%a@]@,\
+                @]"
+           (P.fmt_ppr_lf_msub cD_b P.l0) t'
+           (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+           (P.fmt_ppr_lf_msub cD_b P.l0) t1'
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_lf_mctx P.l0) cD_b
+         end;
 
-          (* cD; cG |- pat <= tau_p
-             cD_b; cG_b |- pat' <= [t1']tau_p
-             where
-             cG_b = [t']s.context.cG, [t1']cG
-           *)
-          let pat' = Whnf.cnormPattern (pat, t1') in
-          dprintf
-            begin fun p ->
-            p.fmt "@[<v 2>[harpoon-split] [after synPatRefine]@,\
-                   t' = @[<v>@[%a@]@,: @[%a@]@]@,\
-                   t1 = @[<v>@[%a@]@,: @[%a@]@]@,\
-                   cD_b (target ctx) = @[%a@]@,\
-                   @]"
-              (P.fmt_ppr_lf_msub cD_b P.l0) t'
-              (P.fmt_ppr_lf_mctx P.l0) s.context.cD
-              (P.fmt_ppr_lf_msub cD_b P.l0) t1'
-              (P.fmt_ppr_lf_mctx P.l0) cD
-              (P.fmt_ppr_lf_mctx P.l0) cD_b
-            end;
+       (* Compute the gctx inside the branch.*)
+       (* cG is given to use by coverage such that
+          cD |- cG
+          that is, it exists *inside* the branch
+        *)
+       let cG_b =
+         Context.append
+           (Whnf.cnormGCtx (s.context.cG, t'))
+           (Whnf.cnormGCtx (cG, t1'))
+       in
+       (* cD_b |- cG_b *)
+       let cIH_b =
+         Whnf.cnormIHCtx (s.context.cIH, t')
+       in
 
-          (* Compute the gctx inside the branch.*)
-          (* cG is given to use by coverage such that
-             cD |- cG
-             that is, it exists *inside* the branch
-           *)
-          let cG_b =
-            Context.append
-              (Whnf.cnormGCtx (s.context.cG, t'))
-              (Whnf.cnormGCtx (cG, t1'))
-          in
-          (* cD_b |- cG_b *)
-          let cIH_b =
-            Whnf.cnormIHCtx (s.context.cIH, t')
-          in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] @[<v>refined cG and cIH@,\
+                cG_b = @[%a@]@,\
+                cIH = @[%a@]@,\
+                pat' = @[%a@]@]"
+           (P.fmt_ppr_cmp_gctx cD_b P.l0) cG_b
+           P.(fmt_ppr_cmp_ihctx cD_b cG_b) cIH_b
+           (P.fmt_ppr_cmp_pattern cD_b cG_b P.l0) pat'
+         end;
 
-          dprintf
-            begin fun p ->
-            p.fmt "[harpoon-split] @[<v>refined cG and cIH@,\
-                   cG_b = @[%a@]@,\
-                   cIH = @[%a@]@,\
-                   pat' = @[%a@]@]"
-              (P.fmt_ppr_cmp_gctx cD_b P.l0) cG_b
-              P.(fmt_ppr_cmp_ihctx cD_b cG_b) cIH_b
-              (P.fmt_ppr_cmp_pattern cD_b cG_b P.l0) pat'
-            end;
-
-          (* cD_b |- cIH_b *)
-          let (cD_b, cIH') =
-            if Total.is_inductive_split s.context.cD s.context.cG i && Total.struct_smaller pat'
-            then
-              let _ =
-                dprintf
-                  begin fun p ->
-                  p.fmt "[harpoon-split] @[<v>marking subterms inductive in:@,\
-                         cD_b = @[%a@]@,\
-                         where pat' = @[%a@]@]"
-                    P.(fmt_ppr_lf_mctx l0) cD_b
-                    P.(fmt_ppr_cmp_pattern cD_b cG_b l0) pat'
-                  end
-              in
-              (* mark subterms in the context as inductive *)
-              let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
-              dprintf
-                begin fun p ->
-                p.fmt "[harpoon-split] @[<v>mvars_in_pat cD_b pat':@,\
-                       cD1 = @[%a@]@]"
-                  P.(fmt_ppr_lf_mctx l0) cD1
-                end;
-              (* Compute the well-founded recursive calls *)
-              let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
-              dprintf
-                begin fun p ->
-                p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
-                  (P.fmt_ppr_cmp_ihctx cD cG) cIH
-                end;
-              (cD1, cIH)
-            else
-              begin
-                dprint
-                  begin fun _ ->
-                  "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable"
-                  end;
-                (cD_b, LF.Empty)
-              end
-          in
-          dprintf
-            begin fun p ->
-            p.fmt "[harpoon-split] cD_b = @[%a@]"
-              (P.fmt_ppr_lf_mctx P.l0) cD_b
-            end;
-          (* propagate inductive annotations *)
-          dprintf
-            begin fun p ->
-            p.fmt "[harpoon-split] @[<v>s.context.cD = @[%a@]@,\
-                   t' = @[%a@]@]"
-              (P.fmt_ppr_lf_mctx P.l0) s.context.cD
-              (P.fmt_ppr_lf_msub cD_b P.l0) t'
-            end;
-          let cD = Check.Comp.id_map_ind cD_b t' s.context.cD in
-          let cG = Total.mark_gctx cG_b in
-          dprintf
-            begin fun p ->
-            let open Format in
-            p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,t'@,%a@,=@,%a@]"
-              (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD_b
-              (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
-              (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD
-            end;
-          let cIH0 = Total.wf_rec_calls cD cG mfs in
-          let cIH = Context.(append cIH_b (append cIH0 cIH')) in
-          let context = { cD; cG; cIH } in
-          let new_state label =
-            { context
-            ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
-            ; solution = ref None
-            ; label = Comp.SubgoalPath.append s.label label
-            }
-          in
-          (context, t', new_state, pat')
+       (* cD_b |- cIH_b *)
+       let (cD_b, cIH') =
+         if Total.is_inductive_split s.context.cD s.context.cG i && Total.struct_smaller pat'
+         then
+           let _ =
+             dprintf
+               begin fun p ->
+               p.fmt "[harpoon-split] @[<v>marking subterms inductive in:@,\
+                      cD_b = @[%a@]@,\
+                      where pat' = @[%a@]@]"
+                 P.(fmt_ppr_lf_mctx l0) cD_b
+                 P.(fmt_ppr_cmp_pattern cD_b cG_b l0) pat'
+               end
+           in
+           (* mark subterms in the context as inductive *)
+           let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
+           dprintf
+             begin fun p ->
+             p.fmt "[harpoon-split] @[<v>mvars_in_pat cD_b pat':@,\
+                    cD1 = @[%a@]@]"
+               P.(fmt_ppr_lf_mctx l0) cD1
+             end;
+           (* Compute the well-founded recursive calls *)
+           let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
+           dprintf
+             begin fun p ->
+             p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
+               (P.fmt_ppr_cmp_ihctx cD cG) cIH
+             end;
+           (cD1, cIH)
+         else
+           begin
+             dprint
+               begin fun _ ->
+               "[harpoon-split] skipped computing WF calls; splitting on non-inductive variable"
+               end;
+             (cD_b, LF.Empty)
+           end
+       in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] cD_b = @[%a@]"
+           (P.fmt_ppr_lf_mctx P.l0) cD_b
+         end;
+       (* propagate inductive annotations *)
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] @[<v>s.context.cD = @[%a@]@,\
+                t' = @[%a@]@]"
+           (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+           (P.fmt_ppr_lf_msub cD_b P.l0) t'
+         end;
+       let cD = Check.Comp.id_map_ind cD_b t' s.context.cD in
+       let cG = Total.mark_gctx cG_b in
+       dprintf
+         begin fun p ->
+         let open Format in
+         p.fmt "[harpoon-split] @[<v 2>id_map_ind@,%a@,t'@,%a@,=@,%a@]"
+           (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD_b
+           (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
+           (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD
+         end;
+       let cIH0 = Total.wf_rec_calls cD cG mfs in
+       let cIH = Context.(append cIH_b (append cIH0 cIH')) in
+       let context = { cD; cG; cIH } in
+       let new_state label =
+         { context
+         ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
+         ; solution = ref None
+         ; label = Comp.SubgoalPath.append s.label label
+         }
+       in
+       (context, t', new_state, pat')
      in
 
      let make_context_branch k (context, theta, new_state, pat) =
@@ -453,9 +444,9 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
 
      let decide_split_kind =
        function
-       | _, B.Coverage.CovPatt (_, PatMetaObj (_, LF.(_, CObj _)), _), _ -> `context
-       | _, B.Coverage.CovPatt (_, PatMetaObj (_, LF.(_, ClObj (_, _))), _), _ -> `meta
-       | _, B.Coverage.CovPatt (_, PatConst (_, _, _), _), _ -> `comp
+       | _, (_, PatMetaObj (_, LF.(_, CObj _)), _), _ -> `context
+       | _, (_, PatMetaObj (_, LF.(_, ClObj (_, _))), _), _ -> `meta
+       | _, (_, PatConst (_, _, _), _), _ -> `comp
        | _ -> B.Error.violation "unhandled pattern type for split"
      in
      match

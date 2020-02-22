@@ -1,5 +1,19 @@
 let id a = a
 
+module List = struct
+  include Stdlib.List
+
+  let filter_map f l =
+    let rec loop = function
+      | [] -> []
+      | h :: t ->
+        match f h with
+        | None -> loop t
+        | Some x -> x :: loop t
+    in
+    loop l
+end
+
 module Option = struct
   let some a = Some a
 

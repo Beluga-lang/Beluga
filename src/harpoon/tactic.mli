@@ -10,7 +10,7 @@
  * Tactics are not obligated to solve the current subgoal!
  *)
 
-module Comp = Beluga.Syntax.Int.Comp
+open Beluga.Syntax.Int
 module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
@@ -27,7 +27,7 @@ val solve : Comp.proof -> t
 val intros : string list option -> t
 
 type intros'_failure =
-  | DuplicatedNames
+  | DuplicateName of LF.mctx * Comp.gctx * Comp.ctyp_decl
   | NothingToIntro
 
 (** Introduces the arguments to a function type, with the given names, if any. *)

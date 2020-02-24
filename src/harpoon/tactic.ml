@@ -1,7 +1,6 @@
 open Support
 module B = Beluga
 module Context = B.Context
-module Comp = Beluga.Syntax.Int.Comp
 module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
@@ -53,7 +52,7 @@ let check_metavariable_uniqueness cD decl =
     P.(fmt_ppr_lf_ctyp_decl cD l0)
 
 type intros'_failure =
-  | DuplicatedNames
+  | DuplicateName of LF.mctx * Comp.gctx * Comp.ctyp_decl
   | NothingToIntro
 
 (** Walks a type and collects assumptions into cD and cG,
@@ -66,46 +65,52 @@ type intros'_failure =
       types in tau.
 
     The given optional names are used for the introduced arguments.
-    Else, fresh names are generated internally.
+    Else, fresh names are generated internally. User-supplied names
+    are used only with computational assumptions, since PiBoxes
+    contain a name already. Names supplied by PiBoxes will be
+    renumbered to be unique. If a user-supplied name is not unique,
+    intros will fail with a DuplicatedNames error
+    (see type intros'_failure). This is used by the main intros tactic
+    to display an appropriate message.
  *)
 let intros' : Theorem.t ->
               string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
               (intros'_failure, LF.mctx * Comp.gctx * Comp.typ) Either.t =
-  let genVarName tA = B.Store.Cid.Typ.gen_var_name tA in
-  let gen_var_for_typ =
-    function
-    | Comp.TypBox (l, LF.(ClTyp (MTyp tA, psi))) ->
-       B.Id.(mk_name (BVarName (genVarName tA)))
-    | Comp.TypBox (l, LF.(ClTyp (PTyp tA, psi))) ->
-       B.Id.(mk_name (PVarName (genVarName tA)))
-    | _ ->
-       B.Id.(mk_name NoName)
+  let gen_var_for_typ active_names tau =
+    B.NameGen.(var tau |> renumber active_names)
   in
   fun t ->
-  let rec go updated names cD cG tau =
-    let next_name = Maybe.(names $ Misc.List.uncons) in
+  let rec go updated active_names user_names cD cG tau =
+    let next_name = Maybe.(user_names $ Misc.List.uncons) in
     match tau with
     | Comp.TypArr (_, tau_1, tau_2) ->
-       let (name, names) =
+       let (name, user_names) =
          next_name
          |> Maybe.eliminate
-              (fun _ -> gen_var_for_typ tau_1 , None)
-              (fun (name, names) -> B.Id.(mk_name (SomeString name)), Some names)
+              (fun _ -> gen_var_for_typ active_names tau_1 , None)
+              begin fun (name, user_names) ->
+              ( B.Id.(mk_name (SomeString name))
+              , Some user_names )
+              end
        in
        let d = Comp.CTypDecl (name, tau_1, false) in
        begin match check_computational_variable_uniqueness cD cG d t with
-       | `unique -> go true names cD (LF.Dec (cG, d)) tau_2
-       | `duplicate -> Either.Left DuplicatedNames
+       | `unique ->
+          go true (name :: active_names) user_names cD (LF.Dec (cG, d))
+            tau_2
+       | `duplicate -> Either.Left (DuplicateName (cD, cG, d))
        end
-    | Comp.TypPiBox (_, d, tau_2) ->
-       begin match check_metavariable_uniqueness cD d t with
-       | `unique -> go true names (LF.Dec (cD, d)) cG tau_2
-       | `duplicate -> Either.Left DuplicatedNames
-       end
+    | Comp.TypPiBox (_, (LF.Decl (x, _, _) as d), tau_2) ->
+       let x = B.NameGen.renumber active_names x in
+       go true (x :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
     | _ when updated -> Either.Right (cD, cG, tau)
     | _ -> Either.Left NothingToIntro
   in
-  go false
+  fun user_names cD cG tau ->
+  let active_names =
+    Context.(names_of_mctx cD @ names_of_gctx cG)
+  in
+  go false active_names user_names cD cG tau
 
 
 (** Introduces all assumptions present in the current goal.
@@ -136,8 +141,16 @@ let intros (names : string list option) : t =
        "Nothing to introduce.@,\
         The intros tactic works only when the goal is a function type.@,"
 
-  | Either.Left DuplicatedNames ->
-     Theorem.printf t "Error: intros failed@," (* TODO: improve this error *)
+  | Either.Left (DuplicateName (cD, cG, d)) ->
+     Theorem.printf t
+       "@[<v>Intros failed.\
+        @,The generated declaration\
+        @,  @[%a@]\
+        @,to be added to the computation context\
+        @,  @[%a@]\
+        @,violates name uniqueness.@]"
+       P.(fmt_ppr_cmp_ctyp_decl cD l0) d
+       P.(fmt_ppr_cmp_gctx cD l0) cG
 
 let is_valid_goals_for_split_kind k cgs =
   let n = List.length cgs in

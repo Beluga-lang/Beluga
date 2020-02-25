@@ -6,7 +6,7 @@ module PC = B.Printer.Control
 
 module Error = struct
   type t =
-    | OptparserError of Optparser.Builder.opt_parser_error
+    | OptparserError of Optparser.OptSpec.error
     | InvalidIncomplete
     | InvalidStop
     | DanglingArguments
@@ -18,7 +18,7 @@ module Error = struct
   open Format
   let format_error ppf = function
     | OptparserError e ->
-       let open Optparser.Builder in
+       let open Optparser.OptSpec in
        begin match e with
        | MissingMandatory name ->
           fprintf ppf "Mandatory option %s is missing.@."
@@ -72,14 +72,12 @@ type ('a, 'b) t =
   ; save_back : bool
   }
 
-type elaborated_t =
-  (string, string list) t
-type valid_t =
-  (string, unit) t
 type parsed_t =
   (string, unit) t
+type elaborated_t =
+  (string, string list) t
 
-let options_spec : valid_t Optparser.Builder.t =
+let options_spec : parsed_t Optparser.OptSpec.t =
   let handle_debug () =
     B.Debug.enable ();
     Printexc.record_backtrace true
@@ -96,14 +94,18 @@ let options_spec : valid_t Optparser.Builder.t =
       (pp_print_help usage_string) ();
     exit 1
   in
-  let open Optparser.Builder in
+  let open Optparser in
+  let open OptSpec in
   begin fun path test_opt test_kind test_start test_stop no_load_holes no_save_back ->
   let test_file =
-    match test_opt with
-    | Some test -> Some (test, test_kind)
-    | None when test_kind = `incomplete ->
+    match test_opt, test_kind, test_stop with
+    | None, `incomplete, _ ->
        Error.(throw InvalidIncomplete)
-    | None -> None
+    | None, _, `stop ->
+       Error.(throw InvalidStop)
+    | Some _, `incomplete, `stop ->
+       Error.(throw InvalidStop)
+    | _ -> Option.map (fun test -> (test, test_kind)) test_opt
   in
   { path
   ; all_paths = ()
@@ -115,23 +117,23 @@ let options_spec : valid_t Optparser.Builder.t =
   }
   end
   <$ string_opt1
-       [ OptSpec.long_name "sig"
-       ; OptSpec.meta_vars ["path"]
-       ; OptSpec.help_msg
+       [ OptInfo.long_name "sig"
+       ; OptInfo.meta_vars ["path"]
+       ; OptInfo.help_msg
            "specify the input signature"
        ]
   <& opt1 (fun s -> Maybe.pure (Maybe.pure s))
-       [ OptSpec.long_name "test"
-       ; OptSpec.meta_vars ["path"]
-       ; OptSpec.optional None
-       ; OptSpec.help_msg
+       [ OptInfo.long_name "test"
+       ; OptInfo.meta_vars ["path"]
+       ; OptInfo.optional None
+       ; OptInfo.help_msg
            ("specify the test input file that is used as "
             ^ "a test input instead of stdin user input"
            )
        ]
   <& (switch_opt
-        [ OptSpec.long_name "incomplete"
-        ; OptSpec.help_msg
+        [ OptInfo.long_name "incomplete"
+        ; OptInfo.help_msg
             ("mark the test input file as incomplete so that stdin user "
              ^ "input is followed after the test input "
              ^ "(valid only when --test option is provided)"
@@ -140,36 +142,36 @@ let options_spec : valid_t Optparser.Builder.t =
       $> fun b -> if b then `incomplete else `complete
      )
   <& opt1 (fun s -> Option.map Maybe.pure (int_of_string_opt s))
-       [ OptSpec.long_name "test-start"
-       ; OptSpec.meta_vars ["number"]
-       ; OptSpec.optional None
-       ; OptSpec.help_msg
+       [ OptInfo.long_name "test-start"
+       ; OptInfo.meta_vars ["number"]
+       ; OptInfo.optional None
+       ; OptInfo.help_msg
            "specify the first line of test file considered as test input"
        ]
   <& (switch_opt
-        [ OptSpec.long_name "stop"
+        [ OptInfo.long_name "stop"
         ]
       $> fun b -> if b then `go_on else `stop
      )
   <& switch_opt
-       [ OptSpec.long_name "no-load-holes"
+       [ OptInfo.long_name "no-load-holes"
        ]
   <& switch_opt
-       [ OptSpec.long_name "no-save-back"
+       [ OptInfo.long_name "no-save-back"
        ]
   <! impure_opt handle_debug
-       [ OptSpec.long_name "debug"
-       ; OptSpec.help_msg
+       [ OptInfo.long_name "debug"
+       ; OptInfo.help_msg
            "use debugging mode (writes to debug.out in CWD)"
        ]
   <! impure_opt handle_implicit
-       [ OptSpec.long_name "implicit"
-       ; OptSpec.help_msg "print implicit variables"
+       [ OptInfo.long_name "implicit"
+       ; OptInfo.help_msg "print implicit variables"
        ]
   <! help_opt handle_help
-       [ OptSpec.long_name "help"
-       ; OptSpec.short_name 'h'
-       ; OptSpec.help_msg "print this message"
+       [ OptInfo.long_name "help"
+       ; OptInfo.short_name 'h'
+       ; OptInfo.help_msg "print this message"
        ]
   <! rest_args
        begin function
@@ -181,29 +183,15 @@ let options_spec : valid_t Optparser.Builder.t =
     returns parsed result and leftover arguments.
  *)
 let parse_arguments args : parsed_t =
-  match Optparser.Builder.parse options_spec args with
+  match Optparser.Parser.parse options_spec args with
   | Ok options -> options
   | Error e -> Error.(throw (OptparserError e))
-
-(** Checks whether partial options have all mandatory options or not,
-    and lift its type to valid_options
- *)
-let validate (o : parsed_t) : valid_t =
-  if o.test_stop = `stop then
-    begin match o.test_file with
-    | None ->
-       Error.(throw InvalidStop)
-    | Some (f, `incomplete) ->
-       Error.(throw InvalidStop)
-    | _ -> ()
-    end;
-  o
 
 (** Loads the specified signature and elaborates the theorem.
     Returns also the path of the last file loaded.
     (This is where Harpoon will store proofs.)
  *)
-let elaborate (o : valid_t) : elaborated_t =
+let elaborate (o : parsed_t) : elaborated_t =
   let open B in
   let ppf = Format.std_formatter in
   let all_paths = Load.load ppf o.path in

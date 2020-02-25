@@ -12,6 +12,19 @@ module List = struct
         | Some x -> x :: loop t
     in
     loop l
+
+  let take_circularly n ls =
+    let rec go n =
+      function
+      | _ when n <= 0 -> []
+      | [] ->
+         go n ls
+      | x :: xs ->
+         x :: go (n - 1) xs
+    in
+    if ls = []
+    then raise (Invalid_argument "'ls' should have more than one element")
+    else go n ls
 end
 
 module Option = struct
@@ -24,10 +37,10 @@ module Option = struct
 
   let map f = fold ~none:None ~some:(fun a -> Some (f a))
 
-  let to_list (opt : 'a option) : 'a list =
-    fold ~none:[] ~some:(fun a -> [a]) opt
-  let to_seq (opt : 'a option) : 'a Seq.t =
-    fold ~none:Seq.empty ~some:Seq.return opt
+  let to_list (a : 'a option) : 'a list =
+    fold ~none:[] ~some:(fun a -> [a]) a
+  let to_seq (a : 'a option) : 'a Seq.t =
+    fold ~none:Seq.empty ~some:Seq.return a
 end
 
 module Result = struct

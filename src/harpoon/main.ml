@@ -48,7 +48,7 @@ let realMain () =
   B.Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let open Options in
-  let options = parse_arguments args |> validate |> elaborate in
+  let options = parse_arguments args |> elaborate in
 
   let ppf = Format.std_formatter in
   let stubs =

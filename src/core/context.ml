@@ -1,3 +1,4 @@
+open Support.Equality
 (** Contexts
 
     @author Brigitte Pientka
@@ -14,6 +15,14 @@ let dec d ctx = Dec (ctx, d)
 let rec decs ds ctx = match ds with
   | [] -> ctx
   | d :: ds -> decs ds (ctx |> dec d)
+
+let is_null = function
+  | Null -> true
+  | _ -> false
+
+let is_empty = function
+  | Empty -> true
+  | _ -> false
 
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)
@@ -398,9 +407,9 @@ and lookupCtxVar cD cvar =
       | Empty -> raise (Error.Violation "Context variable not found")
       | Dec (cD, Decl (psi, CTyp (Some schemaName), _)) ->
           begin match cvar with
-            | CtxName phi when psi = phi ->  (psi, schemaName)
-            | (CtxName _phi)             -> lookup cD (offset+1)
-            | CtxOffset n                ->
+            | CtxName phi when Misc.String.equals psi phi -> (psi, schemaName)
+            | (CtxName _phi) -> lookup cD (offset+1)
+            | CtxOffset n ->
                 if (n - offset) = 1 then
                   (psi, schemaName)
                 else

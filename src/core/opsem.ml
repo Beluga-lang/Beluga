@@ -115,9 +115,11 @@ let rec eval_syn i (theta, eta) =
       let Comp.FunValue fbr = eval_chk e (theta, eta) in
       let rec trim = function
         | Comp.NilValBranch -> FunBranch Comp.NilValBranch
-        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, Comp.PatNil), e, theta, eta), br) when cid = cid' ->
+        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, Comp.PatNil), e, theta, eta), br)
+             when Id.cid_equals cid cid' ->
           Value (eval_chk e (theta, eta)) (* should we append theta' and eta'? *)
-        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, ps), e, theta, eta), br) when cid = cid' ->
+        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, ps), e, theta, eta), br)
+             when Id.cid_equals cid cid' ->
           begin match trim br with
           | FunBranch br' -> FunBranch (Comp.ConsValBranch ((ps, e, theta, eta), br'))
           (* this is kind of a degenerate case where there's a

@@ -116,3 +116,6 @@ val concat : 'a LF.ctx list -> 'a LF.ctx
 val names_of_dctx : LF.dctx -> Id.name list
 val names_of_mctx : LF.mctx -> Id.name list
 val names_of_gctx : Comp.gctx -> Id.name list
+
+val is_null : LF.dctx -> bool
+val is_empty : 'a LF.ctx -> bool

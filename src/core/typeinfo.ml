@@ -1,3 +1,4 @@
+open Support.Equality
 open Support
 module Loc = Syntax.Int.Loc
 module P = Pretty.Int.DefaultPrinter
@@ -114,7 +115,7 @@ module Comp = struct
 
   let add (l : Loc.t) (e : entry) (s : string) =
     match () with
-    | _ when l = Loc.ghost -> ()
+    | _ when Loc.is_ghost l -> ()
     | _ ->
        (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Syntax.Loc.to_string l ^ "\n"); *)
        Fmt.stringify (P.fmt_ppr_cmp_typ e.ctx P.l0) (Whnf.cnormCTyp e.tc)
@@ -143,7 +144,7 @@ module Sgn = struct
 
   let add (l : Loc.t) (e : entry) (_ : string) : unit =
     match () with
-    | _ when l = Loc.ghost -> ()
+    | _ when Loc.is_ghost l -> ()
     | _ ->
        begin
          match e.sgn with

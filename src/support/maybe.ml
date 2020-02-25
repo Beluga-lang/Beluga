@@ -6,7 +6,7 @@ let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a option -> 'b =
   | Some x -> f x
 
 (** Compare options for equality. *)
-let eq ?(by = (=)) o1 o2 =
+let equals by o1 o2 =
   match o1, o2 with
   | Some x, Some y -> by x y
   | None, None -> true
@@ -14,6 +14,9 @@ let eq ?(by = (=)) o1 o2 =
 
 let is_some (o : 'a option) : bool =
   eliminate (fun _ -> false) (fun _ -> true) o
+
+let is_none (o : 'a option) : bool =
+  not (is_some o)
 
 (** Extracts the value from an option, throwing an exception if
     there's None.

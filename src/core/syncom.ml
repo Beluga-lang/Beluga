@@ -16,6 +16,14 @@ module LF = struct
     | Maybe     (* implicit *)
     | No        (* explicit *)
     | Inductive (* used for induction *)
+
+  module Depend = struct
+    let equals d1 d2 = match d1, d2 with
+      | Maybe, Maybe -> true
+      | No, No -> true
+      | Inductive, Inductive -> true
+      | _ -> false
+  end
 end
 
 module Comp = struct
@@ -29,6 +37,14 @@ module Comp = struct
     [ `implicit
     | `explicit
     ]
+
+  let is_explicit : plicity -> bool = function
+    | `explicit -> true
+    | _ -> false
+
+  let is_implicit : plicity -> bool = function
+    | `implicit -> true
+    | _ -> false
 
   type case_label =
     | NamedCase of Loc.t * Id.name

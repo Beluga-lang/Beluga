@@ -1,3 +1,4 @@
+open Support.Equality
 (* module Logic *)
 (* author:
    Costin Badescu
@@ -583,8 +584,7 @@ module Solver = struct
      Compare the cid_typ's of A and the head of dCl.
   *)
   let eqHead tM dCl = match (tM, dCl.tHead) with
-    | (LF.Atom (_, i, _), LF.Atom (_, j, _)) ->
-      i = j
+    | (LF.Atom (_, i, _), LF.Atom (_, j, _)) -> Id.cid_equals i j
     | _ -> false
 
   (* cidFromAtom A = cid_typ *)
@@ -896,7 +896,7 @@ module Frontend = struct
   (* boundEq B1 B2 = b
      Equality function for bounds.
   *)
-  let boundEq x y = Maybe.eq x y
+  let boundEq x y = Maybe.equals (=) x y
 
   (* lowerBound B1 B2 = min (B1, B2) *)
   let lowerBound x y = match (x, y) with

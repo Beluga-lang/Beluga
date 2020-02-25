@@ -1,5 +1,3 @@
-
-
 open Support
 
 module LF = Syntax.Int.LF

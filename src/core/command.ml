@@ -1,3 +1,4 @@
+open Support.Equality
 (**
  * Top level functions invoked by the interactive mode.
  * Each interactive mode command corresponds with a `command` record in this file.
@@ -560,7 +561,7 @@ let register cmd f hp = reg := {name = cmd; run = f; help = hp} :: !reg
 let is_command str =
   let str' = strip str in
   let l = String.length str' in
-  if l > 1 && String.sub str' 0 2 = "%:" then
+  if l > 1 && Misc.String.(equals (sub str' 0 2) "%:") then
     let (_, cmd) = ExtString.String.split str' ":" in
     `Cmd (strip cmd)
   else
@@ -574,9 +575,9 @@ let do_command ppf cmd =
       match args with
       | [] -> pure ()
       | cmd_name :: args ->
-         match trap (fun () -> List.find (fun x -> cmd_name = x.name) !reg) with
-         | Left _ -> pure (fprintf ppf "- No such command %s;\n@?" cmd_name)
-         | Right command -> trap (fun () -> command.run ppf args)
+         match List.find_opt (fun x -> Misc.String.equals cmd_name x.name) !reg with
+         | None -> pure (fprintf ppf "- No such command %s;\n@?" cmd_name)
+         | Some command -> trap (fun () -> command.run ppf args)
   in
   Either.eliminate
     (fun e ->

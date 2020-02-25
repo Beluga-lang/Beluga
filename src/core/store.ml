@@ -1,3 +1,4 @@
+open Support.Equality
 open Support
 open Syntax
 
@@ -36,9 +37,15 @@ module OpPragmas = struct
 
   let addPragma n f p_option a =
   let p = match p_option with Some x -> x | None -> default_precedence in
-    if (List.exists (fun x -> x.name = n) !pragmas) then
-      pragmas := List.map
-        (fun x -> if x.name = n then {name = n; fix = f; precedence = p; assoc = a} else x)
+    if (List.exists (fun x -> Id.equals x.name n) !pragmas) then
+      pragmas :=
+        List.map
+          begin fun x ->
+          if Id.equals x.name n then
+            {name = n; fix = f; precedence = p; assoc = a}
+          else
+            x
+          end
         !pragmas
     else
       let new_entry = {name = n; fix = f; precedence = p; assoc = a} in
@@ -47,12 +54,12 @@ module OpPragmas = struct
   let getPragma name =
     begin
       try
-        Some(List.find ((fun p -> name = p.name)) (!pragmas))
+        Some(List.find ((fun p -> Id.equals name p.name)) (!pragmas))
       with
       | _ -> None
     end
 
-  let pragmaExists name = List.exists (fun x -> x.name = name) !pragmas
+  let pragmaExists name = List.exists (fun x -> Id.equals x.name name) !pragmas
 end
 
 module Modules = struct
@@ -83,7 +90,16 @@ module Modules = struct
 
   let name_of_id (id : Id.module_id) : string list =
     let x = DynArray.get rev_directory id in
-    match List.fold_left (fun acc (ab,o) -> if o=x then Some(ab) else acc) None !abbrevs with
+    match
+      List.fold_left
+        begin fun acc (ab,o) ->
+        if Misc.(List.equals String.equals) o x then
+          Some ab
+        else acc
+        end
+        None
+        !abbrevs
+    with
     | Some s -> [s]
     | None -> x
 
@@ -136,9 +152,9 @@ module Modules = struct
 
   let correct (l : string list) : string list =
     let rec aux m l = match (m, l) with
-      | _ when m = l -> m
+      | _ when Misc.(List.equals String.equals) m l -> m
       | ([], _) -> l
-      | (h::t, h'::t') when h=h' -> aux t t'
+      | (h::t, h'::t') when Misc.String.equals h h' -> aux t t'
       | _ -> m in
     aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName
 end
@@ -562,13 +578,17 @@ module Cid = struct
 
     let get_schema name = (get name).schema
 
-    let get_name_from_schema s =
+
+  (* (* Getting the schema name by finding a schema with the same
+     elements can produce incorrect results, so we don't do it. -je *)
+    let get_name_from_schema by s =
       match
         current_entries ()
-        |> List.find_opt (fun (_, e) -> e.schema = s)
+        |> List.find_opt (fun (_, e) -> by e.schema s)
       with
       | Some (_, e) -> e.name
       | _ -> raise Not_found
+   *)
   end
 
   module CompTyp = struct
@@ -817,8 +837,6 @@ module Cid = struct
 
     let usingRealNames = ref false
 
-    let newNames = ref []
-
     let conventions = ref []
 
     let explicitNames = ref []
@@ -829,21 +847,13 @@ module Cid = struct
       let vgen = match var with None -> None | Some x -> Some(Gensym.create_symbols [|x|]) in
       conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen))::!conventions
 
-    let rec _first_unique gen =
-      let s = Stream.next gen in
-      if List.exists (fun (_, new_name) -> new_name = s) !newNames then _first_unique gen else s
-
-    let haveNameFor n = try
-      Some(List.assoc (Id.string_of_name n) !newNames)
-    with
-    | _ -> None
+    let _first_unique gen = Stream.next gen
 
     let getName n = Id.string_of_name n
 
     let reset () =
       Gensym.MVarData.reset () ;
       Gensym.VarData.reset ();
-      newNames := [];
       conventions :=
         List.map
           begin fun (cid, (mvar, _, var, _)) ->
@@ -945,7 +955,7 @@ module BVar = struct
     let rec loop i = function
       | []      -> raise Not_found
       | e :: es ->
-          if e.name = n then
+          if Id.equals e.name n then
             i
           else
             loop (i + 1) es
@@ -967,33 +977,32 @@ module FVar = struct
 
   let add x tA =
     let rec update str = match str with
-      | ((y, tA')::str') ->
-          if x = y then
-            begin match (tA, tA') with
-              | (Int.LF.Type tB,
-                 Int.LF.TypVar (Int.LF.TInst ({contents = None} as r, _, _, {contents = []}))) ->
-                  (r := Some tB ;
-                  (x, Int.LF.Type tB)::str')
-            end
-          else
-            (y, tA'):: update str'
       | [] -> [(x, tA)]
+      | (y, tA') :: str' ->
+         if Id.equals x y then
+           match (tA, tA') with
+           | (Int.LF.Type tB,
+              Int.LF.TypVar (Int.LF.TInst ({contents = None} as r, _, _, {contents = []}))
+             ) ->
+              r := Some tB;
+              (x, Int.LF.Type tB) :: str'
+         else
+           (y, tA') :: update str'
     in
-      store := update (!store)
+    store := update (!store)
 
   let get x    =
     let rec lookup str = match str with
       | ((y, tA)::str') ->
-          if x = y then tA else lookup str'
+          if Id.equals x y then tA else lookup str'
       | _ -> raise Not_found
     in
-      lookup (!store)
+    lookup (!store)
 
 
   let clear () = (store := [])
 
   let fvar_list () = !store
-
 end
 
 
@@ -1007,7 +1016,7 @@ module FPatVar = struct
   let get x    =
     let rec lookup str = match str with
       | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau, _ ))) ->
-          if x = y then tau else lookup str'
+          if Id.equals x y then tau else lookup str'
       | _ -> raise Not_found
     in
       lookup (!store)
@@ -1035,11 +1044,10 @@ end
 (* Free contextual variables *)
 module FCVar = struct
 
-  let store    = Hashtbl.create 0
-  let add      = Hashtbl.add store
-  let get      = Hashtbl.find store
-  let clear () = Hashtbl.clear store
-
+  let store    = NameTable.create 0
+  let add      = NameTable.add store
+  let get      = NameTable.find store
+  let clear () = NameTable.clear store
 end
 
 (*
@@ -1066,7 +1074,7 @@ module Var = struct
     let rec loop i = function
       | []        -> raise Not_found
       | (e :: es) ->
-          if e.name = n then
+          if Id.equals e.name n then
             i
           else
             loop (i + 1) es

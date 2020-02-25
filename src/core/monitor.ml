@@ -1,3 +1,5 @@
+open Support
+
 (*
  *  monitor.ml
  *
@@ -57,7 +59,7 @@ init_tab ();;
 let writeTime (name, time, array) =
   let found = ref false in
   for i = 1 to 16 do
-    if name = etapes.(i) then
+    if Misc.String.equals name etapes.(i) then
       begin
         (array.(i) <- array.(i) +. time);
         found := true

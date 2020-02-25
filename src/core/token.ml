@@ -94,6 +94,8 @@ type t =
   (* A block comment of the form %{{ ... %}} *)
   | BLOCK_COMMENT of string
 
+let equals (t1 : t) (t2 : t) = (t1 = t2)
+
 type class_or_string = [ `CLASS | `TOKEN ]
 
 let print (c : class_or_string) ppf =

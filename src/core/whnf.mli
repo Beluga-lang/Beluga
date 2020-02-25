@@ -32,6 +32,7 @@ val prefixSchElem : sch_elem     -> sch_elem     -> bool
 val convSub     : sub          -> sub          -> bool
 val convITerm   : iterm        -> iterm        -> bool
 val convMSub    : msub         -> msub         -> bool
+val convCtxVar  : ctx_var      -> ctx_var      -> bool
 val convDCtx    : dctx         -> dctx         -> bool
 val convDCtxHat : dctx_hat     -> dctx_hat     -> bool
 
@@ -172,7 +173,6 @@ val convMTyp   : ctyp -> ctyp -> bool
 val convCTypDecl : ctyp_decl -> ctyp_decl -> bool
 val convCTyp   : (Comp.typ * msub) -> (Comp.typ * msub) -> bool
 val convMetaObj: Comp.meta_obj -> Comp.meta_obj -> bool
-val conv_hat_ctx: dctx_hat -> dctx_hat -> bool
 val convCompCTypDecl : Comp.ctyp_decl -> Comp.ctyp_decl -> bool
 
 (* CLOSEDNESS CHECKING

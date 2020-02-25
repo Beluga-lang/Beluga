@@ -1,3 +1,4 @@
+open Support.Equality
 module Maybe = Support.Maybe
 
 exception NotInitialized

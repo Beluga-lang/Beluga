@@ -1,3 +1,4 @@
+open Support.Equality
 (* Checking termination of a function *)
 
 open Support
@@ -248,7 +249,7 @@ let get_order_for mfs f : int list option =
   let rec find decs = match decs with
     | [] -> None
     | dec::decs ->
-       if Comp.(dec.name) = f then
+       if Id.equals Comp.(dec.name) f then
          let open Maybe in
          Comp.(dec.order |> option_of_total_dec_kind $ Order.list_of_order)
        else
@@ -787,13 +788,13 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
         else
           cM *)
       | l , LF.ClObj (phat', LF.PObj tH) ->
-        if Whnf.conv_hat_ctx phat phat' then
+        if Whnf.convDCtxHat phat phat' then
           let LF.Root (_, tH', _ ) = Whnf.norm (LF.Root (l, tH, LF.Nil), s_proj)  in
             (l, LF.ClObj (phat0, LF.PObj tH'))
         else
           cM
       | l , LF.ClObj (phat', LF.SObj s) ->
-        if Whnf.conv_hat_ctx phat phat' then
+        if Whnf.convDCtxHat phat phat' then
           (l, LF.ClObj (phat0, LF.SObj (Substitution.LF.comp s s_proj)))
         else
           cM
@@ -958,7 +959,7 @@ exception Unimplemented
 let rec no_occurs a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
-      not (a = c) &&
+      not (Id.cid_equals a c) &&
       ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
@@ -981,7 +982,7 @@ let rec no_occurs a tau =
 let rec check_positive a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
-      (a = c) ||
+      (Id.cid_equals a c) ||
       ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
        | Sgn.Positivity -> true
        | Sgn.Stratify _ -> true
@@ -1135,7 +1136,7 @@ cD0 is used to track the common parts, then we shift the differences.
 let rec compare a cD tau1  mC2 n =
   match  tau1 with
     | Comp.TypBase  (loc, c, mS1) ->
-      if a = c then
+      if Id.cid_equals a c then
         begin
           let  mC1 =  find_meta_obj mS1 n in
           let b = less_meta_obj cD mC1 mC2 in
@@ -1281,7 +1282,10 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   let is_inductive_meta_variable (k : offset) : bool =
     Context.lookup_dep cD k
     |> Maybe.get' (Failure "Metavariable out of bounds or missing type")
-    |> fun (_, dep) -> dep = LF.Inductive
+    |> fun (_, dep) ->
+       match dep with
+       | LF.Inductive -> true
+       | _ -> false
   in
   let open Maybe in
   variable_of_mfront mf

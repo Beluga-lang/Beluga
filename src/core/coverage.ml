@@ -1,3 +1,4 @@
+open Support.Equality
 (** Coverage checker
 
     @author Brigitte Pientka
@@ -54,7 +55,7 @@ let _ =
 let lookup (cG : Comp.gctx) x =
   let open Comp in
   let Some (CTypDecl (_, tau, _)) =
-    Context.find' cG (fun (CTypDecl (y, _, _)) -> x = y)
+    Context.find' cG (fun (CTypDecl (y, _, _)) -> Id.equals x y)
   in
   tau
 
@@ -606,7 +607,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
             (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
      end
   | LF.Const c, LF.Const c' ->
-     if c = c'
+     if Id.cid_equals c c'
      then
        let tA = (Const.get c).Const.Entry.typ in
        Yes ((tA, S.LF.id), (tA, S.LF.id))
@@ -834,7 +835,7 @@ and pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
      let tK2 = (Types.get b).Types.Entry.kind in
      let tS1' = Whnf.normSpine (tS1, s1) in
      let tS2' = Whnf.normSpine (tS2, s2) in
-     if a = b then
+     if Id.cid_equals a b then
        pre_match_typ_spine cD cD_p (cPsi, tS1', (tK1, S.LF.id)) (cPhi, tS2', (tK2, S.LF.id))
          matchCands splitCands
      else raise (Error (loc, MatchError "Type Head mismatch"))
@@ -971,7 +972,7 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
 
   | (Comp.PatConst (_, c, pS), (Comp.TypBase _, t)),
     (Comp.PatConst (loc, c', pS'), (Comp.TypBase _, t')) ->
-     if c = c' then
+     if Id.cid_equals c c' then
        let ttau = ((Store.Cid.CompConst.get c).Store.Cid.CompConst.Entry.typ, Whnf.m_id) in
        let ttau' = ((Store.Cid.CompConst.get c').Store.Cid.CompConst.Entry.typ, Whnf.m_id) in
        match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
@@ -2567,7 +2568,7 @@ let best_split_candidate cD candidates =
     p.fmt "[best_split_candidate] @[<v>candidates:@,@[%a@]@]"
       Prettycov.fmt_ppr_mvlist mv_list_sorted
     end;
-  if cv_list_sorted = []
+  if Misc.List.null cv_list_sorted
   then best_cand (cD, mv_list_sorted) 1 []
   else
     begin
@@ -2657,7 +2658,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
 let rec subst_pattern (pat_r, pv) pattern =
   match pattern with
   | Comp.PatFVar (loc, y) ->
-     if y = pv
+     if Id.equals y pv
      then pat_r
      else pattern
   | Comp.PatPair (loc, pat1, pat2) ->
@@ -2685,8 +2686,7 @@ let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) =
   | [] -> (ml, [])
   | (SplitPat ((Comp.PatFVar (_, x), ttau), (patt_p, ttau_p)) as seqn) :: sl ->
      let ml', sl' = subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) sl in
-     if x = pv
-     then
+     if Id.equals x pv then
        begin
          dprintf
            begin fun p ->
@@ -3213,7 +3213,7 @@ let rec revisit_opengoals names : open_cov_problems -> open_cov_problems * open_
 let check_coverage_success problem =
   match problem.prag with
   | Comp.PragmaCase ->
-     if !open_cov_problems = []
+     if Misc.List.null !open_cov_problems
      then
        begin
          dprint
@@ -3234,7 +3234,7 @@ let check_coverage_success problem =
 
   | Comp.PragmaNotCase ->
      let open Format in
-     if !open_cov_problems = []
+     if Misc.List.null !open_cov_problems
      then
        Failure
          (fprintf str_formatter
@@ -3336,7 +3336,7 @@ let covers problem projObj =
 let is_impossible cD tau =
   (* Use an empty list of names here because we don't care about
      whether the generated pattern variables make sense. *)
-  [] = genPatCGoals [] cD tau
+  Misc.List.null (genPatCGoals [] cD tau)
 
 let process problem projObj =
   reset_open_cov_problems ();

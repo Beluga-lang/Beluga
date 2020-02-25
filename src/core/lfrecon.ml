@@ -1,3 +1,4 @@
+open Support.Equality
 open Support
 open Store
 open Store.Cid
@@ -283,12 +284,15 @@ let pruningTyp locOpt cD cPsi phat sA (ms, ss)  =
     with _ ->
       throw locOpt PruningFailed
 
+(** This is very similar to Unify.unify_phat.
+    Why are there two functions for unifying hats?
+ *)
 let unify_phat cD psihat phihat =
   match phihat with
-  | (Some (Int.LF.CInst (mmvar1 (* (_, ({contents = None} as cref), _, Int.LF.CTyp s_cid, _, _) *), _ )), d)
+  | (Some (Int.LF.CInst (mmvar1, _ )), d)
        when not (Int.LF.is_mmvar_instantiated mmvar1) ->
      begin match psihat with
-     | (Some (Int.LF.CInst (mmvar2 (* (_, ({contents = None} as cref'), _, _, _, _) *), _) as c_var) , d')
+     | (Some (Int.LF.CInst (mmvar2, _) as c_var) , d')
           when not (Int.LF.is_mmvar_instantiated mmvar2) ->
         let open Int.LF in
         if mmvar1.instantiation == mmvar2.instantiation then
@@ -320,7 +324,8 @@ let unify_phat cD psihat phihat =
           Error.not_implemented' "[unify_phat] ctx_var with a full context";
      end
 
-  | _ -> psihat = phihat
+  | _ -> Stdlib.(=) psihat phihat
+(* XXX this should not use equality -je *)
 
 (* ******************************************************************* *)
 
@@ -2268,22 +2273,25 @@ and elSub loc recT cD cPsi s cl cPhi =
 
 
       | (Apx.LF.Dot (Apx.LF.Obj m, s),   Int.LF.DDec (cPhi', Int.LF.TypDecl(_, tA))) ->
-        let s' = elSub' loc recT cD cPsi s cPhi' in
-        dprintf
-          begin fun p ->
-          p.fmt "[elSub]: @[<v>s = @[%a |-@ %a : %a@]@,\
-                 in context type: @[%a@]@,\
-                 elaborate argument checking against type: @[%a@]@]"
-            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-            (P.fmt_ppr_lf_sub cD cPsi P.l0) s'
-            (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
-            (P.fmt_ppr_lf_typ cD cPhi' P.l0) tA
-            (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s'))
-          end;
-        let m' = elTerm recT cD cPsi m (tA, s') in
-        Int.LF.Dot (Int.LF.Obj m', s')
-      | (Apx.LF.Dot (Apx.LF.Obj m, _), Int.LF.DDec(_,_)) when cl = Int.LF.Ren ->
-         throw loc (TermWhenVar (cD, cPsi, m))
+         begin match cl with
+         | Int.LF.Ren ->
+            throw loc (TermWhenVar (cD, cPsi, m))
+         | Int.LF.Subst ->
+            let s' = elSub' loc recT cD cPsi s cPhi' in
+            dprintf
+              begin fun p ->
+              p.fmt "[elSub]: @[<v>s = @[%a |-@ %a : %a@]@,\
+                     in context type: @[%a@]@,\
+                     elaborate argument checking against type: @[%a@]@]"
+                (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+                (P.fmt_ppr_lf_sub cD cPsi P.l0) s'
+                (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
+                (P.fmt_ppr_lf_typ cD cPhi' P.l0) tA
+                (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, s'))
+              end;
+            let m' = elTerm recT cD cPsi m (tA, s') in
+            Int.LF.Dot (Int.LF.Obj m', s')
+         end
 
       | (s, cPhi) ->
          dprintf
@@ -2673,11 +2681,12 @@ let rec elDCtx recT cD psi = match psi with
 
 let checkCtxVar loc cD c_var w = match c_var with
   | Apx.LF.CtxOffset offset  ->
-      if Context.lookupSchema cD offset = w then Int.LF.CtxOffset offset
-      else
-        throw loc
-          (IncompatibleSchemaForCtxVar (cD, Int.LF.CtxOffset offset, w, Context.lookupSchema cD offset))
-  | Apx.LF.CtxName psi       ->
+     if Id.cid_equals (Context.lookupSchema cD offset) w then
+       Int.LF.CtxOffset offset
+     else
+       throw loc
+         (IncompatibleSchemaForCtxVar (cD, Int.LF.CtxOffset offset, w, Context.lookupSchema cD offset))
+  | Apx.LF.CtxName psi ->
      FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
      Int.LF.CtxName psi
 
@@ -2790,7 +2799,7 @@ let solve_fcvarCnstr cnstrs =
     in
     match tM, Int.LF.(mmvar.typ) with
     | Apx.LF.(Root (loc, FMVar (u, s), _nil_spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
-       assert (_nil_spine = Apx.LF.Nil);
+       assert (match _nil_spine with Apx.LF.Nil -> true | _ -> false);
        let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _))) =
          lookup_fcvar loc u
        in

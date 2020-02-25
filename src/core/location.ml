@@ -1,3 +1,5 @@
+open Support
+
 type pos =
   { line : int
   ; bol : int
@@ -27,7 +29,7 @@ let join l1 l2 =
   | _ when l1.ghost -> l2
   | _ when l2.ghost -> l1
   | _ ->
-     assert (l1.filename = l2.filename);
+     assert (Misc.String.equals l1.filename l2.filename);
      { filename = l1.filename
      ; start = l1.start
      ; stop = l2.stop

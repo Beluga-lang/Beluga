@@ -97,3 +97,6 @@ val print : Format.formatter -> name -> unit
     type.
  *)
 val equals : name -> name -> bool
+
+(** Decides equality of two cids, of any kind. *)
+val cid_equals : module_id * int -> module_id * int -> bool

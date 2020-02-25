@@ -1,3 +1,4 @@
+open Support.Equality
 module LF = Syntax.Int.LF
 
 let rec project' fuel k tH s = function

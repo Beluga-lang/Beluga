@@ -8,7 +8,10 @@ module Control = struct
   let substitutionStyle = ref Natural
   let printImplicit = ref false
   let printNormal = ref false
-  let db() = !substitutionStyle = DeBruijn
+  let db() =
+    match !substitutionStyle with
+    | DeBruijn -> true
+    | _ -> false
 end
 
 let with_implicits b' f =

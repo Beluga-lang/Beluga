@@ -1,3 +1,4 @@
+open Support.Equality
 (**
 
    @author Brigitte Pientka
@@ -302,8 +303,8 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
      begin
        try
          let (_ , Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _)) = FCVar.get psi in
-         if s_cid = s_cid'
-         then Int.LF.CtxVar (Int.LF.CtxName psi)
+         if Id.cid_equals s_cid s_cid' then
+           Int.LF.CtxVar (Int.LF.CtxName psi)
          else
            let schema = Schema.get_schema s_cid in
            let c_var' = Int.LF.CtxName psi in
@@ -353,7 +354,8 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
 
     | (cPsi, Apx.LF.CtxHole) -> ()
     | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var) , Apx.LF.CtxVar (Apx.LF.CtxOffset psi2_var)) when psi1_var = psi2_var -> ()
-    | (Int.LF.CtxVar (Int.LF.CtxName g) , Apx.LF.CtxVar (Apx.LF.CtxName h)) when g = h -> ()
+    | (Int.LF.CtxVar (Int.LF.CtxName g) , Apx.LF.CtxVar (Apx.LF.CtxName h))
+         when Id.equals g h -> ()
 
     | (Int.LF.DDec (cPsi1, Int.LF.TypDecl(_ , tA1)) ,
        Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(_ , tA2))) ->

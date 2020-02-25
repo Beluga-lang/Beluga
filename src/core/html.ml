@@ -1,3 +1,4 @@
+open Support
 
 let page : Buffer.t = Buffer.create 4096
 
@@ -120,7 +121,7 @@ let ids = ref []
 
 let addId s = ids := s::!ids
 
-let idExists s = List.exists (fun x -> x=s) !ids
+let idExists s = List.exists (Misc.String.equals s) !ids
 
 (* let turnstile = '⊢'
 

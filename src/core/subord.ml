@@ -92,7 +92,7 @@ let rec relevant tA basis = match tA with
      if List.exists
           begin fun type_in_basis ->
           Types.is_subordinate_to type_in_basis a
-          || a = type_in_basis
+          || Id.cid_equals a type_in_basis
           end basis
      then
 	     [a]

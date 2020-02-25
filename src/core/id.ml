@@ -84,14 +84,21 @@ let gen_fresh_name (ns : name list) (n : name) : name =
     if List.mem y xs
     then next_unused (inc_hint_cnt y) xs
     else y in
-  let cnts = List.fold_left
-     (fun acc n' -> if n'.hint_name = n.hint_name
-                    then n'.hint_cnt::acc else acc) [] ns in
+  let cnts =
+    let open Maybe in
+    filter_map
+      begin fun n' ->
+      Misc.String.equals n'.hint_name n.hint_name
+      |> of_bool
+      $> Misc.const n'.hint_cnt
+      end
+      ns
+  in
   {n with hint_cnt = next_unused n.hint_cnt cnts}
 
 let max_usage (ctx : name list) (s : string) : max_usage =
   let same_head s name =
-    name.hint_name = s
+    Misc.String.equals name.hint_name s
   in
   let max' k name = max k name.hint_cnt in
   match Nonempty.of_list (List.filter (same_head s) ctx) with
@@ -173,4 +180,7 @@ let mk_name ?(loc = Location.ghost) ?(modules=[]) : name_guide -> name =
   | SomeString x -> mk_name_helper x
 
 let equals n1 n2 =
-  string_of_name n1 = string_of_name n2
+  Misc.String.equals (string_of_name n1) (string_of_name n2)
+
+let cid_equals (l1, n1) (l2, n2) =
+  l1 = l2 && n1 = n2

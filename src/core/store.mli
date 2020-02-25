@@ -348,7 +348,6 @@ module Cid : sig
     val get             : cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
-    val get_name_from_schema : LF.schema -> name
     val clear           : unit -> unit
   end
 
@@ -356,7 +355,6 @@ module Cid : sig
     val printingHoles : bool ref
     val usingRealNames : bool ref
     val addExplicitName : string -> unit
-    val haveNameFor : name -> string option
     val addNameConvention : cid_typ -> string -> string option -> unit
     val getName : Id.name -> string
     val reset : unit -> unit

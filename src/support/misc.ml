@@ -1,5 +1,7 @@
 (** Totally miscellaneous functions. *)
 
+include Equality
+
 (** Runs a function ignoring all exceptions.
     In general this is a terrible idea, but it is sometimes necessary
     when performing cleanup that may fail while in an exception
@@ -14,12 +16,12 @@ exception NotImplemented of string
 
 let not_implemented (msg : string) : 'a = raise (NotImplemented msg)
 
-module S = String
-
 module String = struct
+  include String
+
   (** Unpacks a string into a list of characters. *)
   let unpack (s : string) : char list =
-    let n = String.length s in
+    let n = length s in
     let rec go i = match () with
       | () when i < n -> String.get s i :: go (i + 1)
       | () -> []
@@ -28,9 +30,11 @@ module String = struct
 
   (** Converts a list of characters into an equivalent string. *)
   let pack (cs : char list) : string =
-    String.concat "" (List.map (String.make 1) cs)
+    concat "" (List.map (make 1) cs)
 
-  let drop n s : string = String.sub s n (String.length s - n)
+  let drop n s : string = sub s n (length s - n)
+
+  let equals s1 s2 = Stdlib.(=) s1 s2
 end
 
 (** Enumerates a list using a state transformer to generate indices.
@@ -145,6 +149,11 @@ module List = struct
   (** The cons constructor represented as a function.
       This is used for partial applications. *)
   let cons x xs = x :: xs
+
+  let rec equals by l1 l2 = match l1, l2 with
+    | [], [] -> true
+    | x :: xs, y :: ys -> by x y && equals by xs ys
+    | _ -> false
 end
 
 let id (x : 'a) : 'a = x
@@ -256,4 +265,8 @@ module Hashtbl = struct
       List.for_each_ l (fun x -> insert (p x) x)
     in
     map DynArray.to_list h
+end
+
+module Char = struct
+  let equals (c1 : char) (c2 : char) = Stdlib.(=) c1 c2
 end

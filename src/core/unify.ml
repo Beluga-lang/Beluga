@@ -1,3 +1,6 @@
+open Support
+open Equality
+
 (**
    @author Brigitte Pientka
    code walk with Joshua Dunfield, Dec 3 2008
@@ -1279,7 +1282,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (MSVar (cshift, ((mmvar, _theta),sigma)), cPsi1) ->
       let s' , cPsi1' = (id, cPsi1) in
 
-      assert (mmvar.instantiation.contents = None);
+      assert (Maybe.is_none mmvar.instantiation.contents);
       let ClTyp (STyp (_, cPhi2), cPhi1) = mmvar.typ in
       let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
       let _ = invSub cD0 phat (sigma, cPhi1') ss rOccur  in
@@ -2065,42 +2068,40 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
   and unifyHead mflag cD0 cPsi head1 head2 =
     match (head1, head2) with
     | (BVar k1, BVar k2) ->
-        if k1 = k2 then
-          ()
-        else
+        if not (k1 = k2) then
           raise (Failure "Bound variable clash")
 
     | (Const ((i, id) as _c1), Const ((i', id') as _c2)) ->
-        if i = i' && id = id' then
-          ()
-        else
-          raise (Failure "Constant clash")
+       if not (i = i' && id = id') then
+         raise (Failure "Constant clash")
 
     | (FVar x1, FVar x2) ->
-        if x1 = x2 then
-          ()
-        else
-          raise (Failure "Free Variable clash")
+       if not (Id.equals x1 x2) then
+         raise (Failure "Free Variable clash")
 
     | (MVar (Offset k, s) , MVar(Offset k', s')) ->
-        if k = k' then unifySub mflag cD0 cPsi s s'
-        else
-          (dprintf (fun p -> p.fmt "[unifyHead] cD0 = %a" (P.fmt_ppr_lf_mctx P.l0) cD0 );
-           raise (Failure (Format.sprintf "Bound MVar clash: %d with %d" k k')))
+       if k = k' then
+         unifySub mflag cD0 cPsi s s'
+       else
+         raise (Failure (Format.sprintf "Bound MVar clash: %d with %d" k k'))
 
     | (FMVar (u, s) , FMVar(u', s')) ->
-        if u = u' then unifySub mflag cD0 cPsi s s'
-        else raise (Failure "Bound FMVar clash'")
+       if Misc.String.equals u u' then
+         unifySub mflag cD0 cPsi s s'
+       else
+         raise (Failure "Bound FMVar clash'")
 
-    | (FPVar (q, s), FPVar (p, s'))
-        ->   (if p = q then
-                unifySub mflag cD0 cPsi s s'
-              else raise (Failure "Front FPVar mismatch"))
+    | (FPVar (q, s), FPVar (p, s')) ->
+       if Misc.String.equals p q then
+         unifySub mflag cD0 cPsi s s'
+       else
+         raise (Failure "Front FPVar mismatch")
 
     | (PVar (k, s) , PVar(k', s')) ->
-        if k = k' then
-           unifySub mflag cD0 cPsi s s'
-        else raise (Failure "Parameter variable clash")
+       if k = k' then
+         unifySub mflag cD0 cPsi s s'
+       else
+         raise (Failure "Parameter variable clash")
 
     (* MPVar - MPVar *)
     | (MPVar ((mmvar1, mt1), s1 as i1) ,
@@ -2207,7 +2208,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
               raise (Error "Substitutions not well-typed")
 
       | (FSVar (n1, (s1, sigma1)), FSVar (n2, (s2, sigma2)))
-        -> if s1 = s2 && n1 = n2 then
+        -> if Id.equals s1 s2 && n1 = n2 then
           unifySub mflag cD0 cPsi sigma1 sigma2
         else raise (Failure "FSVar mismatch")
 
@@ -2269,8 +2270,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         -> if i = k then () else
               raise (Failure "Front BVar mismatch")
 
-      | (Head (Const i), Head (Const k))
-        -> if i = k then () else raise (Failure "Front Constant mismatch")
+      | (Head (Const i), Head (Const k)) ->
+         if not (Id.cid_equals i k) then
+           raise (Failure "Front Constant mismatch")
 
       | (Head (PVar (q, s)), Head (PVar (p, s')))
         -> (if p = q then
@@ -2278,28 +2280,39 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             else raise (Failure "Front PVar mismatch"))
 
 
-      | (Head (FPVar (q, s)), Head (FPVar (p, s')))
-        ->   (if p = q then
-                unifySub mflag cD0 cPsi s s'
-              else raise (Failure "Front FPVar mismatch"))
+      | (Head (FPVar (q, s)), Head (FPVar (p, s'))) ->
+         if Id.equals p q then
+           unifySub mflag cD0 cPsi s s'
+         else
+           raise (Failure "Front FPVar mismatch")
 
-      | (Head (MVar (u, s)), Head (MVar (v, s')))
-        ->  (if u = v then
-               unifySub mflag cD0 cPsi s s'
-             else raise (Failure "Front MVar mismatch"))
+      | (Head (MVar (u, s)), Head (MVar (v, s'))) ->
+         (* XXX THIS IS SKETCHY!
+            It is very suspicious to me that here we just check
+            structural equality of the cvars.
+            Should they not be unified? What if they're actually
+            mmvars inside?
+            -je *)
+         if Stdlib.(=) u v then
+           unifySub mflag cD0 cPsi s s'
+         else
+           raise (Failure "Front MVar mismatch")
 
-      | (Head (FMVar (u, s)), Head (FMVar (v, s')))
-        ->    (if u = v then
-                 unifySub mflag cD0 cPsi s s'
-               else raise (Failure "Front FMVar mismatch"))
+      | (Head (FMVar (u, s)), Head (FMVar (v, s'))) ->
+         if Id.equals u v then
+           unifySub mflag cD0 cPsi s s'
+         else
+           raise (Failure "Front FMVar mismatch")
 
-      | (Head (Proj (head, k)), Head (Proj (head', k')))
-        ->    (if k = k' then
-                 unifyFront mflag cD0 cPsi (Head head) (Head head')
-               else raise (Failure "Front Proj mismatch"))
+      | (Head (Proj (head, k)), Head (Proj (head', k'))) ->
+         if k = k' then
+           unifyFront mflag cD0 cPsi (Head head) (Head head')
+         else
+           raise (Failure "Front Proj mismatch")
 
-      | (Head (FVar x), Head (FVar y))
-        -> if x = y then () else raise (Failure "Front FVar mismatch")
+      | (Head (FVar x), Head (FVar y)) ->
+         if not (Id.equals x y) then
+           raise (Failure "Front FVar mismatch")
 
       | (Obj tM, Obj tN)
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
@@ -2384,7 +2397,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            when not (is_mmvar_instantiated mmvar1) && not (is_mmvar_instantiated mmvar2) ->
          let CTyp schema1, CTyp schema2 = mmvar1.typ, mmvar2.typ in
          if mmvar1.instantiation == mmvar2.instantiation then
-           if schema1 = schema2 then
+           if Maybe.equals Id.cid_equals schema1 schema2 then
              match isPatMSub theta1, isPatMSub theta2 with
              | true, true when Whnf.convMSub theta1 theta2 -> ()
              | true, true ->
@@ -2434,8 +2447,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                  should not happen and is not implemented for now"
            end
 
-      | (CtxVar (CInst (mmvar (* (_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _) *), theta)) , cPsi)
-      | (cPsi , CtxVar (CInst (mmvar (* (_n, ({contents = None} as cvar_ref), _cD, CTyp s_cid, _, _) *), theta) )) ->
+      | ( CtxVar (CInst (mmvar, theta)), cPsi)
+      | ( cPsi , CtxVar (CInst (mmvar, theta))) ->
          let CTyp s_cid = mmvar.typ in
          if isPatMSub theta then
            let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta) in
@@ -2459,7 +2472,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
               context variables are not pattern substitutions \
               should not happen and is not implemented for now"
 
-      | (CtxVar cv , CtxVar cv' ) when cv = cv' -> ()
+      | (CtxVar (CtxName c1), CtxVar (CtxName c2) ) when Id.equals c1 c2 -> ()
+      | (CtxVar (CtxOffset k1), CtxVar (CtxOffset k2)) when k1 = k2 -> ()
       | (CtxVar _, CtxVar _) -> (* else, the variables are unequal *)
          dprintf
            begin fun p ->
@@ -2555,7 +2569,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        unifyDCtx1 Unification cD cPsi1 cPsi2;
        unifyClTyp Unification cD cPsi1 (tp1,tp2)
     | CTyp (schema1) , CTyp (schema2) ->
-       if schema1 = schema2 then () else raise (Failure "CtxPi schema clash")
+       if not (Maybe.equals Id.cid_equals schema1 schema2) then
+         raise (Failure "CtxPi schema clash")
     | _ , _ -> raise (Failure "Computation-level Type Clash")
 
     let rec unifyCompTyp cD tau_t tau_t' =
@@ -2567,7 +2582,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       | tau_t, (Comp.TypInd tau', t') -> unifyCompTyp cD tau_t (tau', t')
 
       | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) ->
-          if c = c' then
+          if Id.cid_equals c c' then
             let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
              (* dprint (fun () -> "[unifyCompTyp] " ^
@@ -2578,7 +2593,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             raise (Failure "Type Constant Clash")
 
       | ((Comp.TypCobase (_, c, mS), t), (Comp.TypCobase (_, c', mS'), t')) ->
-          if c = c' then
+          if Id.cid_equals c c' then
             let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.Entry.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
              (* dprint (fun () -> "[unifyCompTyp] " ^
@@ -2885,7 +2900,6 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       unifyHead Unification cD (Context.hatToDCtx phat) h h'
    (* **************************************************************** *)
 
-
 let unify_phat psihat phihat =
   let psihat = Whnf.cnorm_psihat psihat (MShift 0) in
   let phihat = Whnf.cnorm_psihat phihat (MShift 0) in
@@ -2962,8 +2976,9 @@ let unify_phat psihat phihat =
         end
      end
 
-  | _ when psihat = phihat -> ()
+  | _ when Whnf.convDCtxHat psihat phihat -> ()
   | _ -> fail "Hat context mismatch - 2"
+
 
    (* **************************************************************** *)
 

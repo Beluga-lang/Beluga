@@ -1,3 +1,4 @@
+open Support.Equality
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
@@ -11,6 +12,7 @@ open Syntax.Int.LF
 module Print = Pretty.Int.DefaultPrinter
 
 module Unify = Unify.EmptyTrail
+module S = Substitution
 
 type error =
   | CtxVarMisCheck   of mctx * dctx * tclo * schema
@@ -154,7 +156,7 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
       true
 
   | (Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB))) ->
-      Whnf.convTyp (tA, Substitution.LF.id) (tB, Substitution.LF.id) && convPrefixCtx cPsi1 cPsi2
+      Whnf.convTyp (tA, S.LF.id) (tB, S.LF.id) && convPrefixCtx cPsi1 cPsi2
 
   | _ -> false
 
@@ -168,7 +170,7 @@ let rec convPrefixCtx cPsi cPsi' = match (cPsi, cPsi') with
 *)
 
 let rec dot_k s k = if k = 0 then s
-else dot_k (Substitution.LF.dot1 s) (k-1)
+else dot_k (S.LF.dot1 s) (k-1)
 
 let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
   | ((SigmaLast (_, lastA), s), (SigmaLast (_, lastB), s')) ->
@@ -176,19 +178,19 @@ let rec convPrefixTypRec sArec sBrec  = match (sArec, sBrec) with
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast (x,tB), s')) ->
       Whnf.convTyp (tA, s) (tB, s') ||
-	convPrefixTypRec (recA, Substitution.LF.dot1 s)
-	                 (SigmaLast (x,tB), Substitution.LF.comp s' Substitution.LF.shift)
+	convPrefixTypRec (recA, S.LF.dot1 s)
+	                 (SigmaLast (x,tB), S.LF.comp s' S.LF.shift)
 
   | ((SigmaElem (_xA, tA, recA), s), ((SigmaElem(xB, tB, recB) as rB), s')) ->
       if Whnf.convTyp (tA, s) (tB, s')
-      then convPrefixTypRec (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s')
-      else convPrefixTypRec (recA, Substitution.LF.dot1 s) (rB, Substitution.LF.comp s' Substitution.LF.shift)
+      then convPrefixTypRec (recA, S.LF.dot1 s) (recB, S.LF.dot1 s')
+      else convPrefixTypRec (recA, S.LF.dot1 s) (rB, S.LF.comp s' S.LF.shift)
 
   | ((SigmaLast _ , _ ), _ ) -> false
 
 let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
   convPrefixCtx cSome1 cSome2 &&
-    convPrefixTypRec (typRec1, Substitution.LF.id) (typRec2, Substitution.LF.id)
+    convPrefixTypRec (typRec1, S.LF.id) (typRec2, S.LF.id)
 
 
 (* ctxToSub' cPhi cPsi = s
@@ -199,10 +201,10 @@ let prefixSchElem (SchElem(cSome1, typRec1)) (SchElem(cSome2, typRec2)) =
    s.t. D; cPhi |- u1[id]/x1 ... un[id]/xn : cPsi
 *)
 let rec ctxToSub' cPhi cPsi = match cPsi with
-  | Null -> Ctxsub.ctxShift cPhi (* Substitution.LF.id *)
+  | Null -> Ctxsub.ctxShift cPhi (* S.LF.id *)
   | DDec (cPsi', TypDecl (n, tA)) ->
     let s = ((ctxToSub' cPhi cPsi') : sub) in
-    let u     = Whnf.etaExpandMV cPhi (tA, s) n Substitution.LF.id Maybe in
+    let u     = Whnf.etaExpandMV cPhi (tA, s) n S.LF.id Maybe in
     Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
@@ -221,9 +223,9 @@ let rec ctxToSub' cPhi cPsi = match cPsi with
 let rec checkW cD cPsi sM sA = match sM, sA with
   | (Lam (loc, name, tM), s1), (PiTyp ((TypDecl (_x, _tA) as tX, _), tB), s2) -> (* Offset by 1 *)
     check cD
-      (DDec (cPsi, Substitution.LF.decSub tX s2))
-      (tM, Substitution.LF.dot1 s1)
-      (tB, Substitution.LF.dot1 s2);
+      (DDec (cPsi, S.LF.decSub tX s2))
+      (tM, S.LF.dot1 s1)
+      (tB, S.LF.dot1 s2);
     Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
       (let open Format in
        fprintf str_formatter "Lam %a"
@@ -294,7 +296,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
               (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
             flush_str_formatter ());
          let (tP', tQ') = (Whnf.normTyp sP , Whnf.normTyp sA) in
-         if not (Whnf.convTyp  (tP', Substitution.LF.id) (tQ', Substitution.LF.id)) then
+         if not (Whnf.convTyp  (tP', S.LF.id) (tQ', S.LF.id)) then
            raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        with SpineMismatch ->
          raise (Error (loc, (CheckError (cD, cPsi, sM, sA))))
@@ -328,7 +330,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
     | (Nil, _), sP -> sP
 
     | (SClo (tS, s'), s), sA ->
-      syn (tS, Substitution.LF.comp s' s) sA
+      syn (tS, S.LF.comp s' s) sA
 
     | (App (tM, tS), s1), (PiTyp ((TypDecl (_, tA1), _), tB2), s2) ->
       check cD cPsi (tM, s1) (tA1, s2);
@@ -336,7 +338,7 @@ and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
       syn (tS, s1) tB2
   in
 
-  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, Substitution.LF.id) in
+  let (sA', s') = Whnf.whnfTyp (inferHead loc cD cPsi h Subst, S.LF.id) in
   (* Check first that we didn't supply too many arguments. *)
   if typLength sA' < spineLength tS then
     raise (Error (loc, SpineIllTyped (typLength sA', spineLength tS)));
@@ -371,7 +373,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
               (P.fmt_ppr_lf_head cD cPsi P.l0) tuple_head
               (P.fmt_ppr_lf_typ_rec cD cPsi P.l0) recA
           );
-        (recA, Substitution.LF.id)
+        (recA, S.LF.id)
       | PVar (p, s) ->
         let (_, Sigma recA, cPsi') = Whnf.mctxPDec cD p in
         checkSub loc cD cPsi s Subst cPsi';
@@ -528,7 +530,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
 
     | CtxVar psi, Shift 0, CtxVar psi' ->
       (* if psi = psi' then *)
-      if not (psi = psi') then
+      if not (Whnf.convCtxVar psi psi') then
 (*      if not (subsumes cD psi' psi) then *)
         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
@@ -557,17 +559,18 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
        let _ = checkSub loc cD cPsi' s' cPsi
        (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
        and tA1 = inferHead loc cD cPsi' h cl in
-       if not (Whnf.convTyp (tA1, Substitution.LF.id) (tA2, s')) then
+       if not (Whnf.convTyp (tA1, S.LF.id) (tA2, s')) then
          raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
 
-    | cPsi', Dot (Obj tM, s'), DDec (cPsi, TypDecl (_, tA2)) when cl = Subst ->
-      (* changed order of subgoals here Sun Dec  2 12:15:53 2001 -fp *)
-      let _ = checkSub loc cD cPsi' s' cPsi in
-      (* ensures that s' is well-typed and [s']tA2 is well-defined *)
-      check cD cPsi' (tM, Substitution.LF.id) (tA2, s')
-
-    | _, Dot (Obj tM, _), DDec (_,_) when cl = Ren ->
-       raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
+    | cPsi, Dot (Obj tM, s'), DDec (cPsi'', TypDecl (_, tA2)) ->
+       begin match cl with
+       | Subst ->
+          let _ = checkSub loc cD cPsi s' cPsi'' in
+          (* ensures that s' is well-typed and [s']tA2 is well-defined *)
+          check cD cPsi (tM, S.LF.id) (tA2, s')
+       | Ren ->
+          raise (Error (loc, TermWhenVar (cD, cPsi, tM)))
+       end
 
     | cPsi1, s, cPsi2 ->
        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
@@ -597,7 +600,7 @@ and synKSpine cD cPsi sS1 sK = match sS1, sK with
     sK
 
   | (SClo (tS, s'), s), sK ->
-    synKSpine cD cPsi (tS, Substitution.LF.comp s' s) sK
+    synKSpine cD cPsi (tS, S.LF.comp s' s) sK
 
   | (App (tM, tS), s1), (PiKind ((TypDecl (_, tA1), _), kK), s2) ->
     check cD cPsi (tM, s1) (tA1, s2);
@@ -613,25 +616,24 @@ and synKSpine cD cPsi sS1 sK = match sS1, sK with
  * succeeds iff cD ; cPsi |- [s]tA <= type
  *)
 and checkTyp' cD cPsi (tA, s) =
-
   match tA with
-    | Atom (loc, a, tS) ->
-      let tK = (Typ.get a).Typ.Entry.kind in
-      begin try
-	      let (tK', _s) = synKSpine cD cPsi (tS, s) (tK, Substitution.LF.id) in
-	      if tK' = Typ then
-		()
-	      else
-		raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, Substitution.LF.id)))))
-        with SpineMismatch ->
-          raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, Substitution.LF.id)))))
-      end
+  | Atom (loc, a, tS) ->
+     let tK = (Typ.get a).Typ.Entry.kind in
+     begin
+       try
+	       match synKSpine cD cPsi (tS, s) (tK, S.LF.id) with
+         | (Typ, _) -> ()
+         | _ ->
+		        raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, S.LF.id)))))
+       with SpineMismatch ->
+         raise (Error (loc, (KindMismatch (cD, cPsi, (tS, s), (tK, S.LF.id)))))
+     end
 
-    | PiTyp ((TypDecl (x, tA), _), tB) ->
-      checkTyp cD cPsi (tA, s);
-      checkTyp cD (DDec (cPsi, TypDecl (x, TClo (tA, s)))) (tB, Substitution.LF.dot1 s)
+  | PiTyp ((TypDecl (x, tA), _), tB) ->
+     checkTyp cD cPsi (tA, s);
+     checkTyp cD (DDec (cPsi, TypDecl (x, TClo (tA, s)))) (tB, S.LF.dot1 s)
 
-    | Sigma arec -> checkTypRec cD cPsi (arec, s)
+  | Sigma arec -> checkTypRec cD cPsi (arec, s)
 
 and checkTyp cD cPsi sA = checkTyp' cD cPsi (Whnf.whnfTyp sA)
 
@@ -649,8 +651,8 @@ and checkTypRec cD cPsi (typRec, s) = match typRec with
   | SigmaElem(_x, tA, recA) ->
     checkTyp   cD cPsi (tA, s);
     checkTypRec cD
-      (DDec (cPsi, Substitution.LF.decSub (TypDecl (Id.mk_name Id.NoName, tA)) s))
-      (recA, Substitution.LF.dot1 s)
+      (DDec (cPsi, S.LF.decSub (TypDecl (Id.mk_name Id.NoName, tA)) s))
+      (recA, S.LF.dot1 s)
 
 (* checkKind cD cPsi K
  *
@@ -663,7 +665,7 @@ and checkKind cD cPsi kind = match kind with
     ()
 
   | PiKind ((TypDecl (x, tA), _), kind) ->
-    checkTyp cD cPsi (tA, Substitution.LF.id);
+    checkTyp cD cPsi (tA, S.LF.id);
     checkKind cD (DDec (cPsi, TypDecl (x, tA))) kind
 
 
@@ -686,7 +688,7 @@ and checkDCtx cD cPsi = match cPsi with
   | Null ->  ()
   | DDec (cPsi, tX)     ->
     checkDCtx cD cPsi;
-    checkDec cD cPsi (tX, Substitution.LF.id)
+    checkDec cD cPsi (tX, S.LF.id)
 
   (*    | CtxVar (CtxOffset psi_offset)  ->
         if psi_offset <= (Context.length cO) then
@@ -722,11 +724,11 @@ and checkTypeAgainstSchema loc cD cPsi tA elements =
         (P.fmt_ppr_lf_schema P.l0) (Schema elements));
   match elements with
     | [] ->
-      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, Substitution.LF.id), Schema elements)))
+      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), Schema elements)))
 
     | element :: elements ->
       try
-        instanceOfSchElem cD cPsi (tA, Substitution.LF.id) element
+        instanceOfSchElem cD cPsi (tA, S.LF.id) element
       with
       | (Match_failure _) as exn -> raise exn (* XXX why? -je *)
       | _ -> checkTypeAgainstSchema loc cD cPsi tA elements
@@ -800,12 +802,12 @@ and checkTypeAgainstSchemaProj loc cD cPsi head tA elements =
     end;
   match elements with
     | [] ->
-      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, Substitution.LF.id), Schema elements)))
+      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), Schema elements)))
 
     | element :: elements ->
       try
         let (SchElem (_cPhi, trec)) = element in
-        existsInstOfSchElemProj loc cD cPsi (tA, Substitution.LF.id) (head, 1, blockLength trec) element
+        existsInstOfSchElemProj loc cD cPsi (tA, S.LF.id) (head, 1, blockLength trec) element
       with
         | (Match_failure _) as exn -> raise exn
         | _ -> checkTypeAgainstSchema loc cD cPsi tA elements
@@ -821,7 +823,7 @@ else
 
 
 and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
-  let tA_k (* : tclo *) = getType var (trec, Substitution.LF.id) k 1 in
+  let tA_k (* : tclo *) = getType var (trec, S.LF.id) k 1 in
   let _ = dprint (fun () -> "instanceOfSchElemProj...") in
   let (_tA'_k, subst) =
   instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (None, TClo tA_k)))
@@ -929,7 +931,7 @@ for each tA in tArec, check that  Subord.relevant  tA basis = []
        Some (recA,s)
 
    | ((SigmaElem (_xA, _tA, recA), s), (SigmaElem(_xB, _tB, recB), s')) ->
-       elemPostfix (recA, Substitution.LF.dot1 s) (recB, Substitution.LF.dot1 s')
+       elemPostfix (recA, S.LF.dot1 s) (recB, S.LF.dot1 s')
 
 
 
@@ -937,14 +939,14 @@ and checkSchemaWf (Schema elements ) =
     let rec checkElems elements = match elements with
       | [] -> ()
       | SchElem (cPsi, trec) :: els ->
-          checkTypRec Empty (projectCtxIntoDctx cPsi) (trec, Substitution.LF.id)
+          checkTypRec Empty (projectCtxIntoDctx cPsi) (trec, S.LF.id)
           ; checkElems els
     in
       checkElems elements
 
 and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
   | MObj tM, (MTyp tA, t) ->
-     check cD cPsi' (tM, Substitution.LF.id) (Whnf.cnormTyp (tA, t), Substitution.LF.id)
+     check cD cPsi' (tM, S.LF.id) (Whnf.cnormTyp (tA, t), S.LF.id)
 
   | SObj tM, (STyp (cl, cPhi), t) ->
      dprintf
@@ -958,19 +960,19 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
      checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (cPhi, t))
   | PObj h, (PTyp tA, t)
   | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) ->
-      let tA' = inferHead loc cD cPsi' h Ren in
-      let tA  = Whnf.cnormTyp (tA, t) in
-      dprintf
-        begin fun p ->
-        let f = P.fmt_ppr_lf_typ cD cPsi' P.l0 in
-        p.fmt "[checkClObj] @[<v>check parameter object against:@,\
-               %a@,\
-               inferred type of parameter object:@,\
-               %a@]"
-          f tA f tA'
-        end;
-        if Whnf.convTyp (tA, Substitution.LF.id) (tA', Substitution.LF.id) then ()
-	else raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
+     let tA' = inferHead loc cD cPsi' h Ren in
+     let tA  = Whnf.cnormTyp (tA, t) in
+     dprintf
+       begin fun p ->
+       let f = P.fmt_ppr_lf_typ cD cPsi' P.l0 in
+       p.fmt "[checkClObj] @[<v>check parameter object against:@,\
+              %a@,\
+              inferred type of parameter object:@,\
+              %a@]"
+         f tA f tA'
+       end;
+     if not (Whnf.convTyp (tA, S.LF.id) (tA', S.LF.id)) then
+	     raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
   | _ , _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 

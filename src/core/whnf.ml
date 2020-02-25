@@ -1,3 +1,4 @@
+open Support.Equality
 (**
 
    @author Brigitte Pientka
@@ -1152,7 +1153,7 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
       k1 = k2
 
   | (Const c1, Const c2) ->
-      c1 = c2
+      Id.cid_equals c1 c2
 
   | (MVar (Offset u , s'), MVar (Offset w, s'')) ->
     u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
@@ -1169,10 +1170,10 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
       p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FPVar (p, s'), FPVar (q, s'')) ->
-      p = q && convSub (LF.comp s' s1) (LF.comp s'' s2)
+      Id.equals p q && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FMVar (u, s'), FMVar (w, s'')) ->
-      u = w && convSub (LF.comp s' s1) (LF.comp s'' s2)
+      Id.equals u w && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
       k1 = k2 && i = j
@@ -1182,7 +1183,7 @@ and convHead (head1, s1) (head2, s2) =  match (head1, head2) with
    (* additional case: p[x] = x ? -bp*)
 
   | (FVar x, FVar y) ->
-      x = y
+      Id.equals x y
 
   | (_, _) -> (dprint (fun () -> "[convHead] falls through ") ;
       false)
@@ -1232,7 +1233,7 @@ and convFront front1 front2 = match (front1, front2) with
       i = k
 
   | (Head (Const i), Head (Const k)) ->
-      i = k
+      Id.cid_equals i k
 
   | (Head (MMVar ((u, _t),s)), Head (MMVar ((v, _t'),s'))) ->
       u == v && convSub s s' (* && convMSub ... to be added -bp *)
@@ -1241,19 +1242,19 @@ and convFront front1 front2 = match (front1, front2) with
       p = q && convSub s s'
 
   | (Head (FPVar (q, s)), Head (FPVar (p, s'))) ->
-      p = q && convSub s s'
+      Id.equals p q && convSub s s'
 
   | (Head (MVar (u, s)), Head (MVar (v, s'))) ->
       u == v && convSub s s'
 
   | (Head (FMVar (u, s)), Head (FMVar (v, s'))) ->
-      u = v && convSub s s'
+      Id.equals u v && convSub s s'
 
   | (Head (Proj (head, k)), Head (Proj (head', k'))) ->
      k = k' && convFront (Head head) (Head head')
 
   | (Head (FVar x), Head (FVar y)) ->
-      x = y
+      Id.equals x y
 
   | (Obj tM, Obj tN) ->
       conv (tM, LF.id) (tN, LF.id)
@@ -1302,7 +1303,7 @@ and convMFront front1 front2 = match (front1, front2) with
   | (CObj cPsi, CObj cPhi) ->
       convDCtx cPsi cPhi
   | (ClObj (phat, m1), ClObj (phat', m2)) ->
-      phat = phat' && convClObj m1 m2
+     convDCtxHat phat phat' && convClObj m1 m2
 
 
 and convTyp' sA sB = match (sA, sB) with
@@ -1347,20 +1348,26 @@ and convTypRec sArec sBrec = match (sArec, sBrec) with
   | (_, _) -> (* lengths differ *)
       false
 
+and convCtxVar psi psi' = match psi, psi' with
+  | CtxName n1, CtxName n2 -> Id.equals n1 n2
+  | CtxOffset k1, CtxOffset k2 -> k1 = k2
+  | _ -> false
+
 (* convDCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx
  *)
 and convDCtx cPsi cPsi' = match (cPsi, cPsi') with
   | (Null, Null) ->  true
 
-  | (CtxVar c1, CtxVar c2) ->  c1 = c2
+  | (CtxVar c1, CtxVar c2) -> convCtxVar c1 c2
 
   | (DDec (cPsi1, TypDecl (_, tA)), DDec (cPsi2, TypDecl (_, tB))) ->
      convTyp (tA, LF.id) (tB, LF.id) && convDCtx cPsi1 cPsi2
 
   | (_, _) -> false
 
-and convDCtxHat phat1 phat2 = phat1 = phat2
+and convDCtxHat (c1, d1) (c2, d2) =
+  Maybe.equals convCtxVar c1 c2 && d1 = d2
 
 (* convCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx
@@ -1496,7 +1503,7 @@ let mctxCDec cD k =
 let mctxMVarPos cD u =
   let rec lookup cD k = match cD with
     | Dec (cD, Decl(v, mtyp,_))    ->
-        if v = u then
+        if Id.equals v u then
          (k, cnormMTyp (mtyp, MShift k))
         else
           lookup cD (k+1)
@@ -1819,11 +1826,6 @@ let mctxMVarPos cD u =
      computation-level types
   *)
 
-  let conv_hat_ctx psi_hat phi_hat =
-    let psi = cnorm_psihat psi_hat m_id in
-    let phi = cnorm_psihat phi_hat m_id in
-      psi = phi
-
   let convITerm tM1 tM2 = match (tM1, tM2) with
     | INorm n1, INorm n2 -> conv (n1, LF.id) (n2, LF.id)
     | ISub s1, ISub s2 -> convSub s1 s2
@@ -1845,7 +1847,8 @@ let mctxMVarPos cD u =
 
   let convMTyp thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | (ClTyp (t1, cPsi1)) , (ClTyp (t2, cPsi2)) -> convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
-    | (CTyp cid_schema) , (CTyp cid_schema') -> cid_schema = cid_schema'
+    | (CTyp cid_schema) , (CTyp cid_schema') ->
+       Maybe.equals Id.cid_equals cid_schema cid_schema'
     | _ -> false (* ClTyp is never convertible to CTyp *)
 
   let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
@@ -1854,13 +1857,13 @@ let mctxMVarPos cD u =
 
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | ((Comp.TypBase (_, c1, mS1), _t1), (Comp.TypBase (_, c2, mS2), _t2)) ->
-          if c1 = c2 then
+          if Id.cid_equals c1 c2 then
             (* t1 = t2 = id by invariant *)
             convMetaSpine (cnormMetaSpine (mS1, m_id))  (cnormMetaSpine (mS2, m_id))
           else false
 
     | ((Comp.TypCobase (_, c1, mS1), _t1), (Comp.TypCobase (_, c2, mS2), _t2)) ->
-          if c1 = c2 then
+          if Id.cid_equals c1 c2 then
             (* t1 = t2 = id by invariant *)
             convMetaSpine mS1 mS2
           else false
@@ -1897,7 +1900,7 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
   let convCTypDecl d1 d2 =
     match d1, d2 with
     | Decl (x1, cT1, dep1), Decl (x2, cT2, dep2) ->
-       Id.equals x1 x2 && dep1 = dep2
+       Id.equals x1 x2 && Depend.equals dep1 dep2
        && convMTyp cT1 cT2
     | DeclOpt x1, DeclOpt x2 ->
        Id.equals x1 x2
@@ -1911,7 +1914,7 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
     match d1, d2 with
     | CTypDeclOpt x1, CTypDeclOpt x2 -> Id.equals x1 x2
     | CTypDecl (x1, tau1, w1), CTypDecl (x2, tau2, w2) ->
-       Id.equals x1 x2 && w1 = w2
+       Id.equals x1 x2 && Stdlib.(=) w1 w2
        && convCTyp (tau1, m_id) (tau2, m_id)
 
 let mctx_to_list_shifted x =
@@ -2202,16 +2205,16 @@ let rec conv_subgoal_path p1 p2 =
     Suffices (_, k2, p2) when k1 = k2 ->
      conv_subgoal_path p1 p2
   | MetaSplit (_, `pvar k1, p1),
-    MetaSplit (_, `pvar k2, p2) when k1 = k2 ->
+    MetaSplit (_, `pvar k2, p2) when Maybe.equals (=) k1 k2 ->
      conv_subgoal_path p1 p2
   | MetaSplit (_, `ctor c1, p1),
-    MetaSplit (_, `ctor c2, p2) when c1 = c2 ->
+    MetaSplit (_, `ctor c2, p2) when Id.cid_equals c1 c2 ->
      conv_subgoal_path p1 p2
   | MetaSplit (_, `bvar, p1),
     MetaSplit (_, `bvar, p2) ->
      conv_subgoal_path p1 p2
   | CompSplit (_, c1, p1),
-    CompSplit (_, c2, p2) when c1 = c2 ->
+    CompSplit (_, c2, p2) when Id.cid_equals c1 c2 ->
      conv_subgoal_path p1 p2
   | ContextSplit (_, Comp.EmptyContext _, p1),
     ContextSplit (_, Comp.EmptyContext _, p2) ->

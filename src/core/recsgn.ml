@@ -1,3 +1,4 @@
+open Support.Equality
 open Support
 open Id
 open Store
@@ -232,10 +233,10 @@ let recSgnDecls decls =
        Int.Sgn.Pragma(Int.LF.DefaultAssocPrag a')
     | Ext.Sgn.Pragma(loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) ->
        let _ = dprint(fun () -> "Pragma found for " ^ (Id.render_name name)) in
-       if fix = Ext.Sgn.Prefix then
-         OpPragmas.addPragma name fix (Some precedence) assoc
-       else
-         begin
+       begin match fix with
+       |  Ext.Sgn.Prefix ->
+           OpPragmas.addPragma name fix (Some precedence) assoc
+       | _ ->
            let args_expected = match fix with
              | Ext.Sgn.Postfix -> 1
              | Ext.Sgn.Infix   -> 2 in
@@ -255,7 +256,7 @@ let recSgnDecls decls =
               if args_expected = actual then
 		            OpPragmas.addPragma name fix (Some precedence) assoc
               else raise (Error(loc, IllegalOperatorPrag(name, fix, actual)))
-         end;
+       end;
        let assoc' = match assoc with
          | None -> None
          | Some x -> Some(match x with
@@ -750,7 +751,11 @@ let recSgnDecls decls =
 
     | Ext.Sgn.Theorem (loc, recFuns) ->
        let pos loc x args =
-         match Misc.List.index_of (fun a -> a = Some x) args with
+         match
+           Misc.List.index_of
+             (fun a -> Maybe.equals Id.equals a (Some x))
+             args
+         with
          | None -> throw loc (UnboundArg (x, args))
          | Some k -> k + 1 (* index_of is 0-based, but we're 1-based *)
        in
@@ -768,7 +773,7 @@ let recSgnDecls decls =
                if not (Total.is_valid_args tau (List.length args)) then
                  raise (Error (loc, TotalArgsError f));
 
-	             if f <> f' then
+	             if not (Id.equals f f') then
                  raise (Error (loc, TotalDeclError (f, f')));
 
                match order with

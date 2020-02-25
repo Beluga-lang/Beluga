@@ -1,3 +1,4 @@
+open Support.Equality
 (** Pretty printing for external syntax.
 
     @see http://caml.inria.fr/resources/doc/guides/format.html

@@ -1,3 +1,4 @@
+open Support.Equality
 (**
    @author Renaud Germain
    @author Brigitte Pientka

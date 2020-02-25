@@ -1,3 +1,4 @@
+open Support.Equality
 (** Substitutions
 
     @author Brigitte Pientka

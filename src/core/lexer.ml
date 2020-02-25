@@ -62,7 +62,7 @@ let get_lexeme loc lexbuf =
  *)
 let count_linebreaks loc s =
   let n = ref 0 in
-  String.iter (fun c -> if c = '\n' then incr n) s;
+  String.iter (fun c -> if Misc.Char.equals c '\n' then incr n) s;
   if !n <> 0 then loc := Loc.move_line !n !loc
 
 let arrow =       [%sedlex.regexp? ("->" | 0x2192)]

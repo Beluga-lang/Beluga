@@ -297,7 +297,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | LF.MVar(c, LF.Undefs)
         | LF.MVar(c, LF.EmptySub) ->
          let f =
-           if cPsi = LF.Null then
+           if Context.is_null cPsi then
              fun _ () -> ()
            else
              fun ppf () -> fprintf ppf "[]"
@@ -692,12 +692,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_lf_sch_elem l0))
         elems
     in
+    (* Reversing the names is fundamentally unsafe because multiple
+       schemas with different names could have the same name.
+       For now, we will just print the full schema, until there is a
+       more reliable way of getting the schema name back.
+       -je *)
+    (*
     if useName then
       try
         fprintf ppf "%s" (Id.render_name (Store.Cid.Schema.get_name_from_schema s))
       with
       | Not_found -> print_without_name s
-    else print_without_name s
+
+    else *) print_without_name s
 
   and frugal_block cD cPsi lvl ppf = function
     | LF.SigmaLast(_,  tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
@@ -1245,7 +1252,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.MApp (_, i, cM, cU, pl) ->
        let cond = lvl > 1 in
-       if !PC.printImplicit || pl = `explicit then
+       if !PC.printImplicit || Comp.is_explicit pl then
          fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
            (l_paren_if cond)
            (fmt_ppr_cmp_exp_syn cD cG 1) i

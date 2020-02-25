@@ -127,6 +127,7 @@ module Comp = Syntax.Ext.Comp
 module LF = Syntax.Ext.LF
 module Sgn = Syntax.Ext.Sgn
 module T = Token
+module F = Misc.Function
 
 (***** Parser state definition *****)
 
@@ -854,7 +855,7 @@ let check_datatype_decl loc a cs : unit parser =
      | Sgn.CompConst (_, c, tau) ->
         retname tau
         $ fun a' ->
-          if not (a = a')
+          if not (Id.equals a a')
           then fail (WrongConstructorType (c, a, a'))
           else pure ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
@@ -870,7 +871,7 @@ let check_codatatype_decl loc a cs : unit parser =
      | Sgn.CompDest (_, c, _, tau0, _) ->
         retname tau0
         $ fun a' ->
-          if not (a = a')
+          if not (Id.equals a a')
           then fail (WrongConstructorType (c, a, a'))
           else pure ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
@@ -892,7 +893,7 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
 (** Parses an exact token. *)
 let token (t : T.t) : unit parser =
   satisfy' (`token (Some t))
-    (fun x -> Maybe.of_bool (x = t))
+    (fun x -> Maybe.of_bool (Token.equals x t))
 
 (** Parses an exact sequence of tokens. *)
 let tokens (ts : T.t list) : unit parser =
@@ -905,7 +906,7 @@ let tokens (ts : T.t list) : unit parser =
  *)
 let keyword (kw : string) : unit parser =
   satisfy' (`keyword (Some kw))
-    (fun x -> Maybe.of_bool (x = T.IDENT kw))
+    F.(Maybe.of_bool ++ Token.equals (T.IDENT kw))
 
 let identifier : string parser =
   satisfy' (`identifier None)

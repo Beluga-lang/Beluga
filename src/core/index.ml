@@ -257,7 +257,8 @@ let disambiguate_name :
   fun c fvars ->
   c.disambiguate_name c.cvars c.bvars p s fvars
 
-let lookup_fv' (m : Id.name) fvars = List.mem m fvars.vars
+let lookup_fv' (m : Id.name) fvars =
+  List.exists (Id.equals m) fvars.vars
 
 let lookup_fv (m : Id.name) : bool index =
   Bind.(get_fvars $> lookup_fv' m)

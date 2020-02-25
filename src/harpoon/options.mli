@@ -12,10 +12,8 @@ type ('a, 'b) t =
   }
 
 type parsed_t
-type valid_t
 type elaborated_t =
   (string, string list) t
 
 val parse_arguments : string list -> parsed_t
-val validate : parsed_t -> valid_t
-val elaborate : valid_t -> elaborated_t
+val elaborate : parsed_t -> elaborated_t

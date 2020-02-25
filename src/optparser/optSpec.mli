@@ -1,0 +1,43 @@
+type error =
+  | MissingMandatory
+    of string (* option name *)
+  | InvalidArgLength
+    of string (* option name *)
+       * int (* expected number of arguments *)
+       * int (* actual number of arguments *)
+  | ArgReaderFailure
+    of string (* option name *)
+  | NotAnOption
+    of string (* option name *)
+
+type help_entry =
+  OptName.t (* option name *)
+  * string list (* names for arguments *)
+  * string option (* help message for option *)
+
+type help_printer = string -> Format.formatter -> unit -> unit
+type 'a t
+
+val find_opt : 'a t -> string -> (int option * (help_printer -> string list -> unit)) option
+val get_comp_value : 'a t -> string list -> ('a, error) result
+val get_mandatory_help_entries : 'a t -> help_entry list
+val get_optional_help_entries : 'a t -> help_entry list
+
+val opt0 : 'a -> 'a OptInfo.unchecked list -> 'a t
+val opt1 : (string -> 'a option) -> 'a OptInfo.unchecked list -> 'a t
+
+val bool_opt1 : bool OptInfo.unchecked list -> bool t
+val int_opt1 : int OptInfo.unchecked list -> int t
+val string_opt1 : string OptInfo.unchecked list -> string t
+
+val switch_opt : unit OptInfo.unchecked list -> bool t
+
+val impure_opt : (unit -> 'a) -> 'a OptInfo.unchecked list -> 'a t
+val help_opt : (help_printer -> 'a) -> 'a OptInfo.unchecked list -> 'a t
+val rest_args : (string list -> unit) -> unit t
+
+val (<$) : ('a -> 'b) -> 'a t -> 'b t
+val (<&) : (('a -> 'b) t) -> 'a t -> 'b t
+val ($>) : 'a t -> ('a -> 'b) -> 'b t
+
+val (<!) : 'a t -> unit t -> 'a t

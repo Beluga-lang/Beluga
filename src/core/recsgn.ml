@@ -45,7 +45,7 @@ let _ =
       (fun ppf ->
         match err with
 	      | TotalDeclError (f, f') ->
-	         fprintf ppf "Expected totalilty declaration for %s \nFound totality declaration for %s\n"
+	         fprintf ppf "Expected totality declaration for %s \nFound totality declaration for %s\n"
 	           (Id.render_name f) (Id.string_of_name f')
 	      | MutualTotalDecl (haves, have_nots) ->
            fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \

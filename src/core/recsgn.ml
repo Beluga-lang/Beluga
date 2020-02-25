@@ -545,9 +545,14 @@ let recSgnDecls decls =
        let _          = dprint (fun () -> "Reconstructing term constant " ^ (string_of_name c)) in
 
        let _        = FVar.clear () in
-       let tA       = Monitor.timer ("Constant Elaboration",
-                                     fun () -> (let tA = Reconstruct.typ Lfrecon.Pi  apxT in
-                                                Reconstruct.solve_fvarCnstr Lfrecon.Pi; tA)) in
+       let tA       =
+         Monitor.timer
+           ( "Constant Elaboration"
+           , fun () ->
+             let tA = Reconstruct.typ Lfrecon.Pi  apxT in
+             Reconstruct.solve_fvarCnstr Lfrecon.Pi;
+             tA )
+       in
        let cD       = Int.LF.Empty in
 
        dprintf

@@ -47,7 +47,7 @@ type theorem = t
 
 let printf t x = Format.fprintf t.ppf x
 
-let get_name t = (CompS.get t.cid).CompS.name
+let get_name t = (CompS.get t.cid).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
@@ -219,14 +219,13 @@ let rename_variable src dst level t g =
     annotations.
  *)
 let register name tau p mutual_group k : cid_prog =
-  CompS.add Syntax.Loc.ghost
+  CompS.add
     begin fun cid ->
     let v = Comp.(ThmValue (cid, Proof p, Whnf.m_id, Empty)) in
     CompS.mk_entry name tau k
       mutual_group
       (Some v)
     end
-  |> snd
 
 (** Creates a Theorem.t
     (You need to add the theorem to the Store before trying to call

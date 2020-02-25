@@ -608,7 +608,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
   | LF.Const c, LF.Const c' ->
      if c = c'
      then
-       let tA = (Const.get c).Const.typ in
+       let tA = (Const.get c).Const.Entry.typ in
        Yes ((tA, S.LF.id), (tA, S.LF.id))
      else No
 
@@ -830,8 +830,8 @@ and pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
     end;
   match Whnf.whnfTyp sA, Whnf.whnfTyp sB with
   | (LF.Atom (_, a, tS1), s1), (LF.Atom (loc, b, tS2), s2) ->
-     let tK1 = (Types.get a).Types.kind in
-     let tK2 = (Types.get b).Types.kind in
+     let tK1 = (Types.get a).Types.Entry.kind in
+     let tK2 = (Types.get b).Types.Entry.kind in
      let tS1' = Whnf.normSpine (tS1, s1) in
      let tS2' = Whnf.normSpine (tS2, s2) in
      if a = b then
@@ -972,8 +972,8 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
   | (Comp.PatConst (_, c, pS), (Comp.TypBase _, t)),
     (Comp.PatConst (loc, c', pS'), (Comp.TypBase _, t')) ->
      if c = c' then
-       let ttau = ((Store.Cid.CompConst.get c).Store.Cid.CompConst.typ, Whnf.m_id) in
-       let ttau' = ((Store.Cid.CompConst.get c').Store.Cid.CompConst.typ, Whnf.m_id) in
+       let ttau = ((Store.Cid.CompConst.get c).Store.Cid.CompConst.Entry.typ, Whnf.m_id) in
+       let ttau' = ((Store.Cid.CompConst.get c').Store.Cid.CompConst.Entry.typ, Whnf.m_id) in
        match_spines (cD, cG) (cD_p, cG_p) (pS, ttau) (pS', ttau') mC sC
      else
        raise (Error (loc, MatchError "Const mismatch"))
@@ -1171,14 +1171,14 @@ let genAllObj cg = Maybe.filter_map (genObj cg)
 
 let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
   let _ = Types.freeze a in
-  let constructors = (Types.get a).Types.constructors in
+  let constructors = (Types.get a).Types.Entry.constructors in
   (* Reverse the list so coverage will be checked in the order that the
      constructors were declared, which is more natural to the user *)
   let constructors = List.rev !constructors in
   let tH_tA_list =
     List.map
       (fun c ->
-        (LF.Const c, (Const.get c).Const.typ))
+        (LF.Const c, (Const.get c).Const.Entry.typ))
       constructors
   in
   genAllObj cg tH_tA_list
@@ -2445,12 +2445,12 @@ let genPatCGoals names (cD : LF.mctx) tau =
          (P.fmt_ppr_cmp_typ cD P.l0) tau
        end;
      let constructors =
-       !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.constructors)
+       !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.constructors)
        |> List.rev
      in
      let ctau_list =
        let f c =
-         let tau_c = (Store.Cid.CompConst.get c).Store.Cid.CompConst.typ in
+         let tau_c = (Store.Cid.CompConst.get c).Store.Cid.CompConst.Entry.typ in
          dprintf
            begin fun p ->
            p.fmt "[genPatCGoals] constructor: %s : %a"

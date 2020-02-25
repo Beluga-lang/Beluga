@@ -87,7 +87,7 @@ let rec eval_syn i (theta, eta) =
   match i with
     | Comp.Const (_, cid) ->
       dprint (fun () -> "[eval_syn] Const " ^ R.render_cid_prog cid);
-      begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.prog with
+      begin match (Store.Cid.Comp.get cid).Store.Cid.Comp.Entry.prog with
         | Some (Comp.ThmValue (cid, Comp.Program e', theta', eta')) ->
           dprintf
             begin fun p ->

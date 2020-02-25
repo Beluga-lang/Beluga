@@ -1541,7 +1541,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     let ClTyp (_, cPsi1) = mmvar.typ in
     match sM2 with
     | Root (loc , Const c, _tS2) ->
-       let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in
+       let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
        dprintf
          (fun p ->
            p.fmt "[craftMVTerm] @[<v>cPsi = %a@,cPsi1= %a@]"
@@ -1587,7 +1587,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     match sM2 with
     | Root (loc , Const c, _tS2) ->
 
-       let tA = (Store.Cid.Term.get c).Store.Cid.Term.typ in
+       let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
        dprintf
          begin fun p ->
          p.fmt "[craftMMVTerm] @[<v>cPsi = %a@,cPsi1 = %a@]"
@@ -2568,7 +2568,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
       | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) ->
           if c = c' then
-            let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.kind in
+            let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
              (* dprint (fun () -> "[unifyCompTyp] " ^
                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^
@@ -2579,7 +2579,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
       | ((Comp.TypCobase (_, c, mS), t), (Comp.TypCobase (_, c', mS'), t')) ->
           if c = c' then
-            let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.kind in
+            let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.Entry.kind in
             (unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);
              (* dprint (fun () -> "[unifyCompTyp] " ^
                        P.compTypToString cD (Whnf.cnormCTyp tau_t) ^ " == "  ^

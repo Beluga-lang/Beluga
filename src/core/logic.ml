@@ -345,14 +345,14 @@ module Index = struct
   *)
   let compileSgnClause cidTerm =
     let termEntry = Cid.Term.get cidTerm in
-    let tM = termEntry.Cid.Term.typ in
+    let tM = termEntry.Cid.Term.Entry.typ in
     (cidTerm, Convert.typToClause tM)
 
   (* termName c = Id.name
      Get the string representation of term constant c.
   *)
   let termName cidTerm =
-    (Cid.Term.get cidTerm).Cid.Term.name
+    (Cid.Term.get cidTerm).Cid.Term.Entry.name
 
   (* storeTypConst c = ()
      Add a new entry in `types' for type constant c and fill the DynArray
@@ -361,9 +361,8 @@ module Index = struct
      intrinsic to the Beluga source file, since the constructors for c are
      listed in reverse order.
   *)
-  let storeTypConst cidTyp =
-    let typEntry = Cid.Typ.get cidTyp in
-    let typConstr = !(typEntry.Cid.Typ.constructors) in
+  let storeTypConst (cidTyp, typEntry) =
+    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
       addSgnClause typConst (compileSgnClause cidTerm) in
@@ -385,7 +384,7 @@ module Index = struct
   *)
   let robStore () =
     try
-      List.iter storeTypConst !(DynArray.get Cid.Typ.entry_list !(Modules.current))
+      List.iter storeTypConst (Cid.Typ.current_entries ())
     with _ -> ()
 
   (* iterSClauses f c = ()

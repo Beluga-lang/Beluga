@@ -2,6 +2,7 @@
 
 open Support
 
+module F = Misc.Function
 module P = Pretty.Int.DefaultPrinter
 module PExt = Pretty.Ext.DefaultPrinter
 module Loc = Syntax.Loc
@@ -34,6 +35,7 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   Index.hcomptyp cvars tau
   |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
+  |> F.through (fun (tau, _) -> Check.Comp.checkTyp LF.Empty tau)
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)

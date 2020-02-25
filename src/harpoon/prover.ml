@@ -397,10 +397,10 @@ module Prover = struct
       let initial_state =
         let s =
           Comp.make_proof_state Comp.SubgoalPath.start
-            ( e.CompS.typ, Whnf.m_id )
+            ( e.CompS.Entry.typ, Whnf.m_id )
         in
         let prf =
-          match e.CompS.prog with
+          match e.CompS.Entry.prog with
           | Some (Comp.ThmValue (_, Comp.Proof p, _, _)) -> p
           | _ -> B.Error.violation "recovered theorem not a proof"
         in

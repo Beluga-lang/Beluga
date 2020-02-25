@@ -959,7 +959,7 @@ let rec no_occurs a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
       not (a = c) &&
-      ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with
+      ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
         | Sgn.StratifyAll _ -> true
@@ -982,7 +982,7 @@ let rec check_positive a tau =
   match tau with
     | Comp.TypBase (loc, c , _) ->
       (a = c) ||
-      ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with
+      ( match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
        | Sgn.Positivity -> true
        | Sgn.Stratify _ -> true
        | Sgn.StratifyAll _ -> true
@@ -1149,7 +1149,7 @@ let rec compare a cD tau1  mC2 n =
           b
         end
       else
-        begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity with
+        begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
         | Sgn.StratifyAll _ -> true

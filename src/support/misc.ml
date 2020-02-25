@@ -126,6 +126,13 @@ module List = struct
     | [] -> []
     | x :: xs -> f x @ concat_map f xs
 
+  let concat_mapi (f : int -> 'a -> 'b list) =
+    let rec go i = function
+      | [] -> []
+      | x :: xs -> f i x @ go (i + 1) xs
+    in
+    go 0
+
   (** Finds the index of the element satisfying the predicate. *)
   let index_of (p : 'a -> bool) (l : 'a list) : int option =
     let rec go k = function

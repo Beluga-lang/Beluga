@@ -10,6 +10,8 @@ open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 open Format
 
+open Syntax.Int
+
 (* the type of commands  *)
 type command =
   { name : string
@@ -69,16 +71,15 @@ let types =
       command_with_arguments 0
         (fun ppf _ ->
           let entrylist =
-            List.rev_map Typ.get
-              (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list))
+            List.map snd (Typ.current_entries ())
           in
           let dctx = Synint.LF.Null in
           fprintf ppf "@[<v>%a@];\n@?"
             (pp_print_list ~pp_sep: pp_print_cut
                (fun ppf x ->
                  fprintf ppf "%a : %a"
-                   Id.print x.Typ.name
-                   (P.fmt_ppr_lf_kind dctx P.l0) x.Typ.kind))
+                   Id.print x.Typ.Entry.name
+                   (P.fmt_ppr_lf_kind dctx P.l0) x.Typ.Entry.kind))
             entrylist
         );
     help = "Print out all types currently defined"
@@ -302,20 +303,20 @@ let constructors =
     run =
       command_with_arguments 1
         (fun ppf arglist ->
-          let arg = List.hd arglist in
-          let entrylist = List.rev_map Typ.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Typ.entry_list)) in
-          let entry = List.find (fun x ->
-                          arg = (Id.string_of_name x.Typ.name)) entrylist in
-          let mctx = Synint.LF.Empty in
-          let dctx = Synint.LF.Null in
-          let termlist = List.rev_map (Term.get ~fixName:true) !(entry.Typ.constructors) in
+          let typ_name = Id.(mk_name (SomeString (List.hd arglist))) in
+          let entry =
+            Typ.index_of_name typ_name |> Typ.get
+          in
+          let termlist =
+            List.map Term.get !(entry.Typ.Entry.constructors)
+          in
           fprintf ppf "@[<v>%a@]@.;@."
             (pp_print_list ~pp_sep: pp_print_cut
                (fun ppf x ->
                  fprintf ppf "%a : [%d] %a"
-                   Id.print x.Term.name
-                   x.Term.implicit_arguments
-                   (P.fmt_ppr_lf_typ mctx dctx P.l0) x.Term.typ))
+                   Id.print x.Term.Entry.name
+                   x.Term.Entry.implicit_arguments
+                   (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) x.Term.Entry.typ))
             termlist
         );
     help = "Print all constructors of a given type passed as a parameter"}
@@ -384,18 +385,21 @@ let compconst =
     run =
       command_with_arguments 1
         (fun ppf [arg] ->
+          let name = Id.(mk_name (SomeString arg)) in
           try
-            let entrylist = List.rev_map CompTyp.get (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list CompTyp.entry_list)) in
-            let entry = List.find (fun x -> arg = (Id.string_of_name x.CompTyp.name)) entrylist in
-            let mctx = Synint.LF.Empty in
-            let termlist = List.rev_map (CompConst.get ~fixName:true) (!(entry.CompTyp.constructors)) in
+            let entry =
+              CompTyp.index_of_name name |> CompTyp.get
+            in
+            let termlist =
+              List.map CompConst.get !(entry.CompTyp.Entry.constructors)
+            in
             fprintf ppf "@[<v>%a@]@.;@."
               (pp_print_list ~pp_sep: pp_print_cut
                  (fun ppf x ->
                    fprintf ppf "%s : [%d] %a"
-                     (Id.string_of_name x.CompConst.name)
-                     x.CompConst.implicit_arguments
-                     (P.fmt_ppr_cmp_typ mctx P.l0) x.CompConst.typ))
+                     (Id.string_of_name x.CompConst.Entry.name)
+                     x.CompConst.Entry.implicit_arguments
+                     (P.fmt_ppr_cmp_typ LF.Empty P.l0) x.CompConst.Entry.typ))
               termlist;
           with
           | Not_found -> fprintf ppf "- The type %s does not exist;\n@?" arg);
@@ -408,14 +412,13 @@ let signature =
       command_with_arguments 1
         (fun ppf [arg] ->
           try
-            let (cidlist, _) = List.split (List.fold_left (fun acc l -> acc@(!l)) [] (DynArray.to_list Comp.entry_list)) in
-            let entrylist = List.rev_map Comp.get cidlist in
-            let entry = List.find (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist in
-
-            let mctx = Synint.LF.Empty in
+            let name = Id.(mk_name (SomeString arg)) in
+            let entry =
+              Store.Cid.Comp.index_of_name name |> Store.Cid.Comp.get
+            in
             fprintf ppf "%a : %a;@."
-              Id.print entry.Comp.name
-              (P.fmt_ppr_cmp_typ mctx P.l0) entry.Comp.typ
+              Id.print entry.Store.Cid.Comp.Entry.name
+              (P.fmt_ppr_cmp_typ LF.Empty P.l0) entry.Store.Cid.Comp.Entry.typ
           with
           | Not_found -> fprintf ppf "- The function does not exist;\n@?");
     help = "fsig e : Prints the signature of the function e, if such function is currently defined" }
@@ -426,24 +429,14 @@ let printfun =
       command_with_arguments 1
         (fun ppf [arg] ->
           try
-            let (cidlist, _) =
-              List.split
-                (List.fold_left
-                   (fun acc l -> acc@(!l))
-                   []
-                   (DynArray.to_list Comp.entry_list))
-            in
-            let entrylist = List.rev_map Comp.get cidlist in
-            let entry =
-              List.find
-                (fun x -> arg = (Id.string_of_name x.Comp.name)) entrylist
-            in
-            match Comp.(entry.prog) with
+            let n = Id.(mk_name (SomeString arg)) in
+            let entry = Store.Cid.Comp.(index_of_name n |> get) in
+            match Store.Cid.Comp.Entry.(entry.prog) with
             | Some (Synint.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->
                let d =
                  let open Syntax.Int.Sgn in
                  { thm_name
-                 ; thm_typ = Comp.(entry.typ)
+                 ; thm_typ = Store.Cid.Comp.Entry.(entry.typ)
                  ; thm_body
                  ; thm_loc = Syntax.Loc.ghost
                  }

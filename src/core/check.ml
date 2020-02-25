@@ -453,16 +453,21 @@ module Comp = struct
     let (_, tau, _) = lookup cG k in
     tau
 
-  let rec checkParamTypeValid cD cPsi tA =
+  let rec checkParamTypeValid loc cD cPsi tA =
     let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
       | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
       | Syntax.Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
          let Syntax.Int.LF.Schema s_elems =
            Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
-         begin try
-             let _ = LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems in ()
-           with _ -> raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA)))
+         begin
+           try
+             let _ =
+               LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems
+             in
+             ()
+           with _ ->
+             throw loc (IllegalParamTyp (cD, cPsi, tA))
          end
 
       | Syntax.Int.LF.DDec (cPsi0', Syntax.Int.LF.TypDecl (x, tB)) ->
@@ -483,15 +488,16 @@ module Comp = struct
        LF.checkMetaObj cD mO (ctyp, t);
        checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
 
-  let checkClTyp cD cPsi = function
+  let checkClTyp loc cD cPsi = function
     | I.MTyp tA ->
        LF.checkTyp  cD cPsi (tA, S.LF.id)
     | I.PTyp tA ->
        LF.checkTyp  cD cPsi (tA, S.LF.id);
-       checkParamTypeValid cD cPsi tA
+       checkParamTypeValid loc cD cPsi tA
     | I.STyp (_, cPhi) ->
        LF.checkDCtx cD cPhi
-  let checkCLFTyp cD ctyp = match ctyp with
+
+  let checkCLFTyp loc cD ctyp = match ctyp with
     | I.CTyp (Some schema_cid) ->
        begin try
            let _ = Schema.get_schema schema_cid in ()
@@ -500,10 +506,10 @@ module Comp = struct
     | I.CTyp None -> ()
     | I.ClTyp (tp, cPsi) ->
        LF.checkDCtx cD cPsi;
-       checkClTyp cD cPsi tp
+       checkClTyp loc cD cPsi tp
 
   let checkCDecl cD cdecl = match cdecl with
-    | I.Decl (_, ctyp, _) -> checkCLFTyp cD ctyp
+    | I.Decl (x, ctyp, _) -> checkCLFTyp (Id.loc_of_name x) cD ctyp
 
   let rec checkKind cD cK = match cK with
     | Ctype _ -> ()
@@ -513,14 +519,14 @@ module Comp = struct
 
   let rec checkTyp cD tau =  match tau with
     | TypBase (loc, c, mS) ->
-       let cK = (CompTyp.get c).CompTyp.kind in
+       let cK = (CompTyp.get c).CompTyp.Entry.kind in
        checkMetaSpine loc cD mS (cK , C.m_id)
 
     | TypCobase (loc, c, mS) ->
-       let cK = (CompCotyp.get c).CompCotyp.kind in
+       let cK = (CompCotyp.get c).CompCotyp.Entry.kind in
        checkMetaSpine loc cD mS (cK , C.m_id)
 
-    | TypBox (_ , ctyp) -> checkCLFTyp cD ctyp
+    | TypBox (loc, ctyp) -> checkCLFTyp loc cD ctyp
 
     | TypArr (_, tau1, tau2) ->
        checkTyp cD tau1;
@@ -850,13 +856,15 @@ module Comp = struct
        (None, tau, C.m_id)
 
     | DataConst (loc, c) ->
-       (Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((CompConst.get c).CompConst.typ, C.m_id))
-          ("DataConst " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
-        (None,(CompConst.get c).CompConst.typ, C.m_id))
+       let tau = CompConst.((get c).Entry.typ) in
+       Typeinfo.Comp.add loc
+         (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
+         ("DataConst " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+       (None, tau, C.m_id)
 
     | Obs (loc, e, t, obs) ->
-       let tau0 = (CompDest.get obs).CompDest.obs_type in
-       let tau1 = (CompDest.get obs).CompDest.return_type in
+       let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
+       let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
        check cD (cG, cIH) total_decs e (tau0, t);
        (None, tau1, t)
 
@@ -865,13 +873,13 @@ module Comp = struct
     (*     (None,(CompDest.get c).CompDest.typ, C.m_id)) *)
 
     | Const (loc,prog) ->
-       Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ((Comp.get prog).Comp.typ, C.m_id))
+       let entry = Comp.get prog in
+       let tau = Comp.Entry.(entry.typ) in
+       Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
-       let e = Comp.get prog in
-       let tau = Comp.(e.typ) in
        (* First we need to decide whether we are calling a function in
           the current mutual block. *)
-       begin match Total.lookup_dec e.Comp.name total_decs with
+       begin match Total.lookup_dec entry.Comp.Entry.name total_decs with
        | None -> (* No, we aren't. *)
           (None, tau, C.m_id)
        | Some d -> (* Yes we are, and d is its total dec *)
@@ -1012,7 +1020,7 @@ module Comp = struct
 
   and synPattern cD cG pat = match pat with
     | PatConst (loc, c, pat_spine) ->
-       let tau = (CompConst.get c).CompConst.typ in
+       let tau = (CompConst.get c).CompConst.Entry.typ in
        (loc, synPatSpine cD cG pat_spine (tau , C.m_id))
     | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
     | PatAnn (loc, pat, tau) ->
@@ -1036,8 +1044,8 @@ module Comp = struct
          p.fmt "[synPatSpine] t = %a"
            (P.fmt_ppr_lf_msub cD P.l0) t
          end;
-       let tau0 = (CompDest.get obs).CompDest.obs_type in
-       let tau1 = (CompDest.get obs).CompDest.return_type in
+       let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
+       let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
        if Whnf.convCTyp (tau,theta) (tau0,t) then
          synPatSpine cD cG pat_spine (tau1, t)
        else

@@ -51,28 +51,40 @@ module Modules : sig
 
 end
 
+module type ENTRY = sig
+  type t
+  val name_of_entry : t -> Id.name
+
+  type cid = Id.module_id * int
+end
+
 module Cid : sig
 
   module Typ : sig
 
-    type entry = private {
-      name                 : name;
-      implicit_arguments   : int;
-      kind                 : LF.kind;
-      var_generator        : (unit -> string) option;
-      mvar_generator       : (unit -> string) option;
-      frozen       : bool ref;
-      constructors : Id.cid_term list ref;
-      subordinates : BitSet.t ref;
-      typesubordinated : BitSet.t ref
-    }
+    module Entry : sig
+      type t =
+        private {
+            name                 : name;
+            implicit_arguments   : int;
+            kind                 : LF.kind;
+            var_generator        : (unit -> string) option;
+            mvar_generator       : (unit -> string) option;
+            frozen       : bool ref;
+            constructors : Id.cid_term list ref;
+            subordinates : BitSet.t ref;
+            typesubordinated : BitSet.t ref
+          }
+    end
+    open Entry
+    type entry = t
 
     val freeze : cid_typ -> unit
 
-    val entry_list : (Id.cid_typ list ref) DynArray.t
+    (* val entry_list : (Id.cid_typ list ref) DynArray.t *)
 
     val mk_entry : name -> LF.kind -> int -> entry
-    val add : entry -> cid_typ
+    val add : (cid_typ -> entry) -> cid_typ
     val set_name_convention : cid_typ ->
                               (unit -> string) option ->
                               (unit -> string) option ->
@@ -80,11 +92,12 @@ module Cid : sig
     val gen_var_name : LF.typ -> (unit -> string) option
     val gen_mvar_name : LF.typ -> (unit -> string) option
     val cid_of_typ : LF.typ -> cid_typ
-    val get : ?fixName:bool -> cid_typ -> entry
+    val get : cid_typ -> entry
     val index_of_name : name -> cid_typ
     val addConstructor : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear : unit -> unit
     val args_of_name : name -> int
+    val current_entries : unit -> (cid_typ * entry) list
 
     (* see subord.ml for an explanation of term-level subordination
          and type-level subordination *)
@@ -95,15 +108,21 @@ module Cid : sig
 
   module Term : sig
 
-    type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      typ                : LF.typ;
-    }
+    module Entry : sig
+      type t =
+        private
+          { name : name
+          ; implicit_arguments : int
+          ; typ : LF.typ
+          }
+      type cid = Id.cid_term
+      val name_of_entry : t -> Id.name
+    end
+    type entry = Entry.t
 
     val mk_entry      : name -> LF.typ -> int -> entry
-    val add           : Syntax.Loc.t -> cid_typ -> entry -> cid_term
-    val get           : ?fixName:bool -> cid_term -> entry
+    val get           : cid_term -> entry
+    val add'          : Loc.t -> cid_typ -> (cid_term -> entry) -> cid_term
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val args_of_name  : name -> int
@@ -112,20 +131,26 @@ module Cid : sig
 
   module CompTyp : sig
 
-    type entry = private {
-      name                 : name;
-      implicit_arguments   : int;
-      kind                 : Comp.kind;
-      positivity           : Sgn.positivity_flag;
-      mutable frozen       : bool;
-      constructors : cid_comp_const list ref
-    }
+    module Entry : sig
+      type t =
+        private {
+            name                 : name;
+            implicit_arguments   : int;
+            kind                 : Comp.kind;
+            positivity           : Sgn.positivity_flag;
+            mutable frozen       : bool;
+            constructors : cid_comp_const list ref
+          }
+      val name_of_entry : t -> Id.name
+      type cid = Id.cid_comp_typ
+    end
+    type entry = Entry.t
 
-    val entry_list : (Id.cid_comp_typ list ref) DynArray.t
+    (* val entry_list : (Id.cid_comp_typ list ref) DynArray.t *)
     val mk_entry  : name -> Comp.kind -> int ->  Sgn.positivity_flag -> entry
 
-    val add           : entry -> cid_comp_typ
-    val get           : ?fixName:bool -> cid_comp_typ -> entry
+    val add           : (cid_comp_typ -> entry) -> cid_comp_typ
+    val get           : cid_comp_typ -> entry
     val freeze        : cid_comp_typ -> unit
     val addConstructor: cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : name -> cid_comp_typ
@@ -135,19 +160,25 @@ module Cid : sig
 
   module CompCotyp : sig
 
-    type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      kind               : Comp.kind;
-      frozen             : bool ref;
-      destructors : cid_comp_dest list ref
-    }
+    module Entry : sig
+      type t =
+        private {
+            name               : name;
+            implicit_arguments : int;
+            kind               : Comp.kind;
+            frozen             : bool ref;
+            destructors : cid_comp_dest list ref
+          }
+      type cid = Id.cid_comp_cotyp
+      val name_of_entry : t -> Id.name
+    end
+    type entry = Entry.t
 
     val mk_entry  : name -> Comp.kind -> int -> entry
 
-
-    val add           : entry -> cid_comp_cotyp
-    val get           : ?fixName:bool -> cid_comp_cotyp -> entry
+    val add           : (cid_comp_cotyp -> entry) -> cid_comp_cotyp
+    val fixed_name_of : cid_comp_cotyp -> Id.name
+    val get           : cid_comp_cotyp -> entry
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
     val index_of_name : name -> cid_comp_typ
@@ -156,14 +187,22 @@ module Cid : sig
 
   module CompConst : sig
 
-    type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      typ                : Comp.typ    }
+    module Entry : sig
+      type t =
+        private {
+            name               : name;
+            implicit_arguments : int;
+            typ                : Comp.typ
+          }
+      type cid = Id.cid_comp_const
+      val name_of_entry : t -> Id.name
+    end
+
+    type entry = Entry.t
 
     val mk_entry      : name -> Comp.typ -> int -> entry
-    val add           : cid_comp_typ -> entry -> cid_comp_const
-    val get           : ?fixName:bool -> cid_comp_const -> entry
+    val add           : cid_comp_typ -> (cid_comp_const -> entry) -> cid_comp_const
+    val get           : cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
     val index_of_name : name -> cid_comp_const
     val clear         : unit -> unit
@@ -171,18 +210,24 @@ module Cid : sig
 
   module CompDest : sig
 
-    type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      mctx               : LF.mctx;
-      obs_type           : Comp.typ;
-      return_type        : Comp.typ
-    }
-
+    module Entry : sig
+      type t =
+        private {
+            name               : name;
+            implicit_arguments : int;
+            mctx               : LF.mctx;
+            obs_type           : Comp.typ;
+            return_type        : Comp.typ
+          }
+      type cid = Id.cid_comp_dest
+      val name_of_entry : t -> Id.name
+    end
+    type entry = Entry.t
 
     val mk_entry      : name -> LF.mctx -> Comp.typ -> Comp.typ -> int -> entry
-    val add           : cid_comp_cotyp -> entry -> cid_comp_dest
-    val get           : ?fixName:bool -> cid_comp_dest -> entry
+    val add           : cid_comp_cotyp -> (cid_comp_dest -> entry) -> cid_comp_dest
+    val get           : cid_comp_dest -> entry
+    val fixed_name_of : cid_comp_dest -> Id.name
     val get_implicit_arguments : cid_comp_dest -> int
     val index_of_name : name -> cid_comp_dest
     val clear         : unit -> unit
@@ -190,19 +235,26 @@ module Cid : sig
 
   module CompTypDef : sig
 
-    type entry = private {
-      name               : name;
-      implicit_arguments : int;
-      kind               : Comp.kind;
-      mctx               : LF.mctx;
-      typ                : Comp.typ
-    }
+    module Entry : sig
+      type t =
+        private {
+            name               : name;
+            implicit_arguments : int;
+            kind               : Comp.kind;
+            mctx               : LF.mctx;
+            typ                : Comp.typ
+          }
+      type cid = Id.cid_comp_typdef
+      val name_of_entry : t -> Id.name
+    end
+    type entry = Entry.t
 
     val mk_entry      : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
-    val add           : entry -> cid_comp_typ
-    val get           : ?fixName:bool -> cid_comp_typ -> entry
-    val get_implicit_arguments : cid_comp_typ -> int
-    val index_of_name : name -> cid_comp_typ
+    val add           : (cid_comp_typdef -> entry) -> cid_comp_typdef
+    val get           : cid_comp_typdef -> entry
+    val fixed_name_of : cid_comp_typdef -> Id.name
+    val get_implicit_arguments : cid_comp_typdef -> int
+    val index_of_name : name -> cid_comp_typdef
     val clear         : unit -> unit
   end
 
@@ -215,14 +267,19 @@ module Cid : sig
     val unchecked_mutual_group : mutual_group_id
     val trust_mutual_group : mutual_group_id
 
-    type entry = {
-      name               : name;
-      implicit_arguments : int;
-      typ                : Comp.typ;
-      prog               : Comp.value option;
-      mutual_group       : mutual_group_id;
-      hidden             : bool;
-    }
+      module Entry : sig
+        type t =
+          { name               : name
+          ; implicit_arguments : int
+          ; typ                : Comp.typ
+          ; prog               : Comp.value option
+          ; mutual_group       : mutual_group_id
+          ; hidden             : bool
+          }
+        type cid = Id.cid_prog
+        val name_of_entry : t -> Id.name
+      end
+      type entry = Entry.t
 
     (** Gets the name of the given theorem ID. *)
     val name : cid_comp_const -> name
@@ -248,18 +305,14 @@ module Cid : sig
         this 'add' function expects a function to which it will
         provide the cid_prog it generated to store the entry, thus
         tying the recursive knot.
-
-        The returned location, if any, is the location of the function
-        with the same name that is being shadowed by the current one.
-        Signature elaboration (recsgn) uses this to remove delete
-        holes that originate in the shadowed function.
      *)
-    val add           : Loc.t -> (cid_prog -> entry) -> (Loc.t option * cid_prog)
-    val get           : ?fixName:bool -> cid_prog -> entry
+    val add           : (cid_prog -> entry) -> cid_prog
+    val get           : cid_prog -> entry
 
+    val fixed_name_of : cid_prog -> Id.name
     val index_of_name : name -> cid_prog
 
-    val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t
+    (* val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t *)
     val clear         : unit -> unit
 
     (** Update the associated program of an existing entry.
@@ -279,15 +332,20 @@ module Cid : sig
 
   module Schema : sig
 
-    type entry = private {
-      name   : name;
-      schema : LF.schema
-    }
-
+    module Entry : sig
+      type t =
+        private {
+            name   : name;
+            schema : LF.schema
+          }
+      val name_of_entry : t -> name
+      type cid = Id.cid_schema
+    end
+    type entry = Entry.t
 
     val mk_entry        : name -> LF.schema -> entry
-    val add             : entry -> cid_schema
-    val get             : ?fixName:bool -> cid_schema -> entry
+    val add             : (cid_schema -> entry) -> cid_schema
+    val get             : cid_schema -> entry
     val get_schema      : cid_schema -> LF.schema
     val index_of_name   : name -> cid_schema
     val get_name_from_schema : LF.schema -> name
@@ -300,13 +358,11 @@ module Cid : sig
     val addExplicitName : string -> unit
     val haveNameFor : name -> string option
     val addNameConvention : cid_typ -> string -> string option -> unit
-    val getName : ?tA:LF.typ option -> Id.name -> string
+    val getName : Id.name -> string
     val reset : unit -> unit
   end
 
-
   module type RENDERER = sig
-
     open Id
     open Syntax.Int
     val render_cid_comp_typ   : cid_comp_typ -> string

@@ -390,7 +390,7 @@ and inferHead loc cD cPsi head cl = match head, cl with
 
 
   | Const c, Subst ->
-    (Term.get c).Term.typ
+    (Term.get c).Term.Entry.typ
 
   | MVar (Offset u, s), Subst ->
     (* cD ; cPsi' |- tA <= type *)
@@ -616,7 +616,7 @@ and checkTyp' cD cPsi (tA, s) =
 
   match tA with
     | Atom (loc, a, tS) ->
-      let tK = (Typ.get a).Typ.kind in
+      let tK = (Typ.get a).Typ.Entry.kind in
       begin try
 	      let (tK', _s) = synKSpine cD cPsi (tS, s) (tK, Substitution.LF.id) in
 	      if tK' = Typ then

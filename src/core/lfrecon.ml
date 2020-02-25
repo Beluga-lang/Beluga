@@ -846,8 +846,8 @@ let rec elKind cD cPsi k = match k with
  *)
 and elTyp recT cD cPsi a = match a with
   | Apx.LF.Atom (loc, a, s) ->
-    let tK = (Typ.get a).Typ.kind in
-    let i  = (Typ.get a).Typ.implicit_arguments in
+    let tK = (Typ.get a).Typ.Entry.kind in
+    let i  = (Typ.get a).Typ.Entry.implicit_arguments in
     let s'  = mkShift recT cPsi in
     (* let s' = Substitution.LF.id in *)
     let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
@@ -1001,8 +1001,8 @@ and elTerm' recT cD cPsi r sP = match r with
      Int.LF.LFHole (loc, id, name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-      let tA = (Term.get c).Term.typ in
-      let i  = (Term.get c).Term.implicit_arguments in
+      let tA = (Term.get c).Term.Entry.typ in
+      let i  = (Term.get c).Term.Entry.implicit_arguments in
       (* let s  = mkShift recT cPsi in *)
       let s = Substitution.LF.id in
       let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
@@ -1940,8 +1940,8 @@ and elClosedTerm' recT cD cPsi r = match r with
       throw loc (SynthesizableLFHole name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-      let tA = (Term.get c).Term.typ in
-      let i  = (Term.get c).Term.implicit_arguments in
+      let tA = (Term.get c).Term.Entry.typ in
+      let i  = (Term.get c).Term.Entry.implicit_arguments in
       (* let s  = mkShift recT cPsi in *)
       let s = Substitution.LF.id in
       let (tS, sQ ) = elSpineI loc recT cD cPsi spine i (tA, s)   in
@@ -2334,7 +2334,7 @@ and elHead loc recT cD cPsi head cl = match head, cl with
       with _ -> throw loc (BVarTypMissing (cD, cPsi, Int.LF.BVar x))
       end
   | Apx.LF.Const c, Int.LF.Subst ->
-      let tA = (Term.get c).Term.typ in
+      let tA = (Term.get c).Term.Entry.typ in
         (Int.LF.Const c , (tA, Substitution.LF.id))
 
   | Apx.LF.MVar (Apx.LF.Offset u, s), Int.LF.Subst ->

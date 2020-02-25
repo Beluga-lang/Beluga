@@ -926,7 +926,9 @@ let dollar_identifier : string parser =
      | _ -> None)
 
 let name : Id.name parser =
-  identifier $> fun s -> Id.mk_name (Id.SomeString s)
+  identifier
+  |> span
+  $> fun (loc, s) -> Id.mk_name ~loc: loc (Id.SomeString s)
 
 let dot_name : Id.name parser =
   token T.DOT &> name

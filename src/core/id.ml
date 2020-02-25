@@ -121,21 +121,14 @@ let max_usage (ctx : name list) (s : string) : max_usage =
 type module_id = int
 
 type cid_typ    = module_id * int
-
 type cid_term   = module_id * int
-
 type cid_schema = module_id * int
-
 type cid_coercion = module_id * int
-
 type cid_comp_typ = module_id * int
-
 type cid_comp_cotyp = module_id * int
-
 type cid_comp_const = module_id * int
-
 type cid_comp_dest = module_id * int
-
+type cid_comp_typdef = module_id * int
 type cid_prog   = module_id * int
 
 type offset     = int

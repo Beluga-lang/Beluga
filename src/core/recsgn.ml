@@ -283,7 +283,7 @@ let recSgnDecls decls =
          ("Type abbrev. : Kind Check", fun () -> Check.Comp.checkKind Int.LF.Empty cK);
        Monitor.timer
          ("Type abbrev. : Type Check", fun () -> Check.Comp.checkTyp cD tau);
-       let _a = CompTypDef.add (CompTypDef.mk_entry a i (cD,tau) cK) in
+       let _a = CompTypDef.add (fun _ -> CompTypDef.mk_entry a i (cD,tau) cK) in
        let sgn = Int.Sgn.CompTypAbbrev(loc, a, cK, tau) in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -337,7 +337,7 @@ let recSgnDecls decls =
 	              | Ext.Sgn.InductiveDatatype -> Int.Sgn.Positivity
                ) in
 	     Total.stratNum := -1 ;
-       let _a = CompTyp.add (CompTyp.mk_entry a cK' i p) in
+       let _a = CompTyp.add (fun _ -> CompTyp.mk_entry a cK' i p) in
        let sgn = Int.Sgn.CompTyp(loc, a, cK', p) in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -373,7 +373,7 @@ let recSgnDecls decls =
 		                  fun () -> Check.Comp.checkKind  Int.LF.Empty cK');
        dprint (fun () ->  "\nDOUBLE CHECK for codata type constant " ^(string_of_name a) ^
                             " successful!");
-       let _a = CompCotyp.add (CompCotyp.mk_entry a cK' i) in
+       let _a = CompCotyp.add (fun _ -> CompCotyp.mk_entry a cK' i) in
        let sgn = Int.Sgn.CompCotyp(loc, a, cK') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -407,7 +407,7 @@ let recSgnDecls decls =
          , fun () -> Check.Comp.checkTyp cD tau');
 	     let cid_ctypfamily = get_target_cid_comptyp tau' in
 
-	     let flag = (CompTyp.get cid_ctypfamily).CompTyp.positivity in
+	     let flag = (CompTyp.get cid_ctypfamily).CompTyp.Entry.positivity in
 
 	     (match flag with
 	      | Int.Sgn.Nocheck    -> ()
@@ -428,7 +428,7 @@ let recSgnDecls decls =
 	     (* (if flag then if Total.positive cid_ctypfamily tau' then ()  *)
        (*                        else raise (Error (loc, (NoPositive (string_of_name c)))) *)
 	     (* else () ); *)
-       let _c        = CompConst.add cid_ctypfamily (CompConst.mk_entry c tau' i) in
+       let _ = CompConst.add cid_ctypfamily (fun _ -> CompConst.mk_entry c tau' i) in
        let sgn = Int.Sgn.CompConst(loc, c, tau') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -478,7 +478,10 @@ let recSgnDecls decls =
          ( "Codata-type Constant: Type Check"
          , fun () -> Check.Comp.checkTyp cD1 tau1');
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
-       let _c        = CompDest.add cid_ctypfamily (CompDest.mk_entry c cD1 tau0' tau1' i) in
+       let _ =
+         CompDest.add cid_ctypfamily
+           (fun _ -> CompDest.mk_entry c cD1 tau0' tau1' i)
+       in
        let sgn = Int.Sgn.CompDest(loc, c, cD1, tau0', tau1') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -524,8 +527,8 @@ let recSgnDecls decls =
 				                      " successful!")
        end;
        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "" in
-       let _a = Typ.add (Typ.mk_entry a tK' i) in
-       let sgn = Int.Sgn.Typ(loc, _a, tK') in
+       let cid = Typ.add (fun _ -> Typ.mk_entry a tK' i) in
+       let sgn = Int.Sgn.Typ(loc, cid, tK') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
@@ -571,8 +574,8 @@ let recSgnDecls decls =
            , fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id));
        end;
        let _ = Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "" in
-	     let _c = Term.add loc constructedType (Term.mk_entry c tA' i) in
-       let sgn = Int.Sgn.Const(loc, _c, tA') in
+	     let cid = Term.add' loc constructedType (fun _ -> Term.mk_entry c tA' i) in
+       let sgn = Int.Sgn.Const(loc, cid, tA') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
@@ -606,7 +609,7 @@ let recSgnDecls decls =
          end;
        let _ = Check.LF.checkSchemaWf sW' in
        dprint (fun () -> "\nTYPE CHECK for schema " ^ (string_of_name g) ^ " successful" );
-       let _s = Schema.add (Schema.mk_entry g sW') in
+       let _s = Schema.add (fun _ -> Schema.mk_entry g sW') in
        let sgn = Int.Sgn.Schema(_s, sW') in
        Store.Modules.addSgnToCurrent sgn;
        sgn
@@ -648,7 +651,7 @@ let recSgnDecls decls =
 	         begin
              let v = Opsem.eval i'' in
              let _x =
-               Comp.add loc
+               Comp.add
                  (fun _ ->
                    Comp.(mk_entry x tau' 0 unchecked_mutual_group (Some v)))
              in
@@ -716,7 +719,7 @@ let recSgnDecls decls =
            let v = Opsem.eval i'' in
            let _ =
              let open Comp in
-             add loc
+             add
                begin fun _ ->
                mk_entry x tau' 0 unchecked_mutual_group (Some v)
                end
@@ -837,9 +840,8 @@ let recSgnDecls decls =
 
            let register =
              fun total_decs ->
-             Comp.add loc
+             Comp.add
                (fun cid -> Comp.mk_entry thm_name tau' 0 total_decs None)
-             |> snd
            in
            ( ( thm_name, thm_body, thm_loc, tau')
            , register
@@ -1071,8 +1073,8 @@ let recSgnDecls decls =
           let m = Some (Gensym.MVarData.name_gensym m_name) in
           let v = Maybe.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
-           Store.Cid.NamedHoles.addNameConvention cid m_name v_name;
-           Int.Sgn.Pragma(Int.LF.NamePrag cid)
+          Store.Cid.NamedHoles.addNameConvention cid m_name v_name;
+          Int.Sgn.Pragma(Int.LF.NamePrag cid)
        | None ->
            throw loc (UnboundNamePragma typ_name)
        end

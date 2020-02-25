@@ -523,7 +523,7 @@ let mgAtomicTyp cD cPsi a kK =
 
 let rec mgTyp cD cPsi tA = begin match tA with
   | Int.LF.Atom (_, a, _) ->
-      mgAtomicTyp cD cPsi a (Typ.get a).Typ.kind
+      mgAtomicTyp cD cPsi a (Typ.get a).Typ.Entry.kind
 
   | Int.LF.Sigma trec ->
       Int.LF.Sigma (mgTypRec cD cPsi trec )
@@ -727,7 +727,7 @@ let rec spineToMSub cS' ms = match cS' with
 let rec elCompTyp cD tau = match tau with
   | Apx.Comp.TypBase (loc, a, cS) ->
       let _ = dprint (fun () -> "[elCompTyp] Base : " ^ R.render_cid_comp_typ a) in
-      let tK = (CompTyp.get a).CompTyp.kind in
+      let tK = (CompTyp.get a).CompTyp.Entry.kind in
       dprintf
         begin fun p ->
         p.fmt "[elCompTyp] of kind: %a"
@@ -738,7 +738,7 @@ let rec elCompTyp cD tau = match tau with
 
 | Apx.Comp.TypCobase (loc, a, cS) ->
       let _ = dprint (fun () -> "[elCompCotyp] Cobase : " ^ R.render_cid_comp_cotyp a) in
-      let tK = (CompCotyp.get a).CompCotyp.kind in
+      let tK = (CompCotyp.get a).CompCotyp.Entry.kind in
       dprintf
         begin fun p ->
         p.fmt "[elCompCotyp] of kind: %a"
@@ -748,9 +748,9 @@ let rec elCompTyp cD tau = match tau with
         Int.Comp.TypCobase (loc, a ,cS')
 
   | Apx.Comp.TypDef (loc, a, cS) ->
-      let tK = (CompTypDef.get a).CompTypDef.kind in
+      let tK = (CompTypDef.get a).CompTypDef.Entry.kind in
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
-      let tau = (CompTypDef.get a).CompTypDef.typ in
+      let tau = (CompTypDef.get a).CompTypDef.Entry.typ in
         (* eager expansion of type definitions - to make things simple for now
            -bp *)
       let ms = spineToMSub cS' (Int.LF.MShift 0) in
@@ -794,7 +794,7 @@ let mgCompTypSpine cD (loc, cK) =
   genMetaSpine (cK, Whnf.m_id)
 
 let mgCompCotyp cD (loc, c) =
-  let cK = (CompCotyp.get c).CompCotyp.kind in
+  let cK = (CompCotyp.get c).CompCotyp.Entry.kind in
   let mS = mgCompTypSpine cD (loc, cK) in
   dprintf
     begin fun p ->
@@ -805,7 +805,7 @@ let mgCompCotyp cD (loc, c) =
   Int.Comp.TypCobase (loc, c, mS)
 
 let mgCompTyp cD (loc, c) =
-  let cK = (CompTyp.get c).CompTyp.kind in
+  let cK = (CompTyp.get c).CompTyp.Entry.kind in
   let mS = mgCompTypSpine cD (loc, cK) in
   dprintf
     begin fun p ->
@@ -1178,7 +1178,7 @@ and elExp' cD cG i =
       (Int.Comp.Var (loc, offset), (tau, C.m_id))
 
   | Apx.Comp.DataConst (loc, c) ->
-     let tau = (CompConst.get c).CompConst.typ in
+     let tau = (CompConst.get c).CompConst.Entry.typ in
      dprintf
        begin fun p ->
        p.fmt "[elExp'] @[<v>DataConst %s has type@,@[%a@]@]"
@@ -1188,10 +1188,10 @@ and elExp' cD cG i =
      (Int.Comp.DataConst (loc, c), (tau, C.m_id))
 
   | Apx.Comp.Obs (loc, e, obs) ->
-    let cD' = (CompDest.get obs).CompDest.mctx in
+    let cD' = (CompDest.get obs).CompDest.Entry.mctx in
     let t    = Ctxsub.mctxToMMSub cD cD' in
-    let tau0 = (CompDest.get obs).CompDest.obs_type in
-    let tau1 = (CompDest.get obs).CompDest.return_type in
+    let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
+    let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
     dprintf
       begin fun p ->
       p.fmt "[Obs] @[<v>tau0 = @[%a@]@,tau1 = @[%a@]@,t (before) = @[%a@]@]"
@@ -1215,7 +1215,7 @@ and elExp' cD cG i =
   (*    (Int.Comp.DataDest (loc, c), ((CompDest.get c).CompDest.typ, C.m_id)) *)
 
   | Apx.Comp.Const (loc,prog) ->
-     (Int.Comp.Const (loc,prog), ((Comp.get prog).Comp.typ, C.m_id))
+     (Int.Comp.Const (loc,prog), ((Comp.get prog).Comp.Entry.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
      dprintf
@@ -1536,7 +1536,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
         (cG', Int.Comp.PatAnn (loc, pat', tau'), (tau', Whnf.m_id))
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
-      let tau = (CompConst.get c).CompConst.typ in
+      let tau = (CompConst.get c).CompConst.Entry.typ in
       let _   = dprint (fun () -> "[elPat] PatConst = " ^ R.render_cid_comp_const c)
       in
       let (cG1, pat_spine', ttau') = elPatSpine cD cG pat_spine (tau, Whnf.m_id) in
@@ -1622,17 +1622,17 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatObs (loc, obs, pat_spine') ->
     begin match ttau with
     | (Int.Comp.TypCobase (loc', cid, mspine), theta) ->
-      let cD' = (CompDest.get obs).CompDest.mctx in
+      let cD' = (CompDest.get obs).CompDest.Entry.mctx in
        dprintf
          begin fun p ->
-         let name = (CompDest.get obs).CompDest.name in
+         let name = (CompDest.get obs).CompDest.Entry.name in
          p.fmt "[elPatSpine] @[<v>Observation: %a@,cD = @[%a@]@,cD' = @[%a@]@]"
            Id.print name
            (P.fmt_ppr_lf_mctx P.l0) cD
            (P.fmt_ppr_lf_mctx P.l0) cD'
          end;
-      let tau0 = (CompDest.get obs).CompDest.obs_type in
-      let tau1 = (CompDest.get obs).CompDest.return_type in
+      let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
+      let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
       let t    = Ctxsub.mctxToMMSub cD cD' in
       dprintf
         begin fun p ->
@@ -2226,7 +2226,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          try
            let open Store.Cid.Term in
            let cid = index_of_name name in
-           let { typ; _ } = get cid in
+           let { Entry.typ; _ } = get cid in
            (cid, typ)
          with
          | Not_found ->
@@ -2376,7 +2376,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
             |> throw loc
        in
        let e = CompConst.get cid in
-       let tau_c = CompConst.(e.typ) in
+       let tau_c = CompConst.Entry.(e.typ) in
 
        dprintf begin fun p ->
          p.fmt "[make_comp_branch] @[<v>--> genPatt with scrutinee type\

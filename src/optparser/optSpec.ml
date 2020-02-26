@@ -121,6 +121,22 @@ let switch_opt (infos : unit OptInfo.unchecked list) : bool t =
   |> List.append [optional false]
   |> opt0 true
 
+let takes_all_opt (infos : string list OptInfo.unchecked list) : string list t =
+  let open OptInfo in
+  let build_arg_parser info res_ref _ =
+    function
+    | [] ->
+       begin match info.default_argument with
+       | None ->
+          res_ref := Ok []
+       | Some defArgVal ->
+          res_ref := Ok defArgVal
+       end
+    | args ->
+       res_ref := Ok args
+  in
+  make infos None build_arg_parser
+
 let impure_opt (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in

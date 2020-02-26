@@ -127,7 +127,17 @@ let trying_index (f : unit -> 'a) : 'a option =
 let index_cvar (name : Id.name) : Id.offset option index =
   fun c fvars ->
   ( fvars
-  , trying_index (fun () -> CVar.index_of_name c.cvars name)
+  , trying_index
+      begin fun () ->
+      let k = CVar.index_of_name c.cvars name in
+      dprintf begin fun p ->
+        p.fmt "[index_cvar] indexed %a at %a as %d"
+          Id.print name
+          Loc.print_short (Id.loc_of_name name)
+          k
+        end;
+      k
+      end
   )
 
   (*

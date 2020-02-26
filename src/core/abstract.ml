@@ -995,6 +995,11 @@ and abstractMVarHead cQ loff tH = match tH with
 
   | I.FMVar (u, s) ->
     let (x,s') = abstractFVarSub cQ loff (u, s) in
+    dprintf begin fun p ->
+      p.fmt "[abstractMVarHead] FMV %a --> Offset %d"
+        Id.print u
+        x
+      end;
     I.MVar (I.Offset x, s')
 
   | I.MMVar mi ->

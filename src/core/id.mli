@@ -17,6 +17,11 @@ val inc_hint_cnt : int option -> int option
 val gen_fresh_name : name list -> name -> name
 val inc : name -> name
 
+(** Retrieves the location of this identifier.
+    For identifiers generated internally, this will be a ghost.
+ *)
+val loc_of_name : name -> Location.t
+
 (** Finds the maximum number used for the given name hint in the given
     context.
     Returns None if the name hint is unused.
@@ -53,9 +58,11 @@ type cid_comp_const = module_id * int
 (** A constant identifier for computation-level destructors *)
 type cid_comp_dest = module_id * int
 
+(** A constant identifier for type synonyms. *)
+type cid_comp_typdef = module_id * int
+
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = module_id * int
-
 
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)
@@ -76,7 +83,9 @@ type name_guide =
 
 (** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
-val mk_name : ?modules:string list -> name_guide -> name
+val mk_name : ?loc:Location.t -> ?modules:string list ->
+              name_guide -> name
+
 val string_of_name : name -> string
 val render_name : name -> string
 val print : Format.formatter -> name -> unit

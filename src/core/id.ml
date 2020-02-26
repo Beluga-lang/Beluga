@@ -9,7 +9,10 @@ type name     = {
   hint_cnt : int option;
   was_generated : bool ;
   counter : int;
+  loc : Location.t
 }
+
+let loc_of_name n = n.loc
 
 (** Computes a string representation of a name, without modules. *)
 let string_of_name (n : name) : string =
@@ -148,14 +151,16 @@ type name_guide =
   | SomeName of name
   | SomeString of string
 
-let mk_name ?(modules=[]) : name_guide -> name =
+let mk_name ?(loc = Location.ghost) ?(modules=[]) : name_guide -> name =
   let mk_name_helper (nm: string) : name =
     let nm', cnt = split_name nm in
     { modules = modules;
       hint_name = nm';
       was_generated = true;
       counter = 0;
-      hint_cnt = cnt } in
+      hint_cnt = cnt;
+      loc
+    } in
   function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is

@@ -636,12 +636,17 @@ and fmvApxHead fMVs cD ((l_cd1, l_delta, k) as d_param)  h = match h with
           Apx.LF.PVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.FMVar (u, s) ->
-      let s' = fmvApxSubOpt fMVs cD d_param  s in
-      if List.mem u fMVs then
-        Apx.LF.FMVar (u, s')
-      else
-        let (offset, _) = Whnf.mctxMVarPos cD u  in
-          Apx.LF.MVar (Apx.LF.Offset (offset+k), s')
+     let s' = fmvApxSubOpt fMVs cD d_param  s in
+     if List.exists (Id.equals u) fMVs then
+       Apx.LF.FMVar (u, s')
+     else
+       let (offset, _) = Whnf.mctxMVarPos cD u  in
+       dprintf begin fun p ->
+         p.fmt "[fmvApxHead] FMVar %a --> index %d"
+           Id.print u
+           offset
+         end;
+       Apx.LF.MVar (Apx.LF.Offset (offset+k), s')
 
   | Apx.LF.Proj (pv, j) -> Apx.LF.Proj(fmvApxHead fMVs cD d_param pv, j)
 

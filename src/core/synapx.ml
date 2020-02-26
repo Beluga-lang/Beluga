@@ -176,7 +176,7 @@ module Comp = struct
    | PatObs of Loc.t * cid_comp_dest * pattern_spine
 
   and branch =
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx * LF.ctyp_decl LF.ctx * pattern * exp_chk
+    | Branch of Loc.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
   and fun_branches =
    | NilFBranch of Loc.t

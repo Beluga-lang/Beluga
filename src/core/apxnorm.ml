@@ -370,23 +370,23 @@ and cnormApxBranch cD delta b (cD'', t) =
         Apx.LF.Dec (delta1', dec)
 
   and append_mctx cD'' delta' = match delta' with
-  | Apx.LF.Empty -> cD''
+    | Apx.LF.Empty -> cD''
 
-  | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _,_)) ->
-      let cD1'' = append_mctx cD'' delta2' in
-        Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
+    | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _,_)) ->
+       let cD1'' = append_mctx cD'' delta2' in
+       Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
 
   in
-    match b with
-      | Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e) ->
-          let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
-                                                           mvar_dot_apx t delta') in
-            Apx.Comp.Branch (loc, omega, delta', Apx.Comp.PatMetaObj (loc', mO), e')
+  match b with
+  | Apx.Comp.Branch (loc, delta', Apx.Comp.PatMetaObj (loc', mO), e) ->
+     let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
+                                                      mvar_dot_apx t delta') in
+     Apx.Comp.Branch (loc, delta', Apx.Comp.PatMetaObj (loc', mO), e')
 
-      | Apx.Comp.Branch (loc, omega, delta', pat, e) ->
-          let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
-                                                           mvar_dot_apx t delta') in
-            Apx.Comp.Branch (loc, omega, delta', pat, e')
+  | Apx.Comp.Branch (loc, delta', pat, e) ->
+     let e' = cnormApxExp cD (append delta delta') e (append_mctx cD'' delta',
+                                                      mvar_dot_apx t delta') in
+     Apx.Comp.Branch (loc, delta', pat, e')
 
 and cnormApxFBranches cD delta fbr (cD'', t) = match fbr with
   | Apx.Comp.NilFBranch loc -> fbr
@@ -854,20 +854,20 @@ and fmvApxBranches fMVs cD ((l_cd1, l_delta, k) as d_param)  branches = match br
 
 and fmvApxBranch fMVs cD (l_cd1, l_delta, k)  b =
    match b with
-     | Apx.Comp.Branch (loc, omega, delta, Apx.Comp.PatMetaObj (loc', mO), e) ->
+     | Apx.Comp.Branch (loc, delta, Apx.Comp.PatMetaObj (loc', mO), e) ->
           let fMVd  = collectApxMCtx [] delta in
           let fMVb = collectApxMetaObj fMVd mO in
           let l    = lengthApxMCtx delta in
           let pat =  Apx.Comp.PatMetaObj (loc', mO) in
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
-            Apx.Comp.Branch (loc, omega, delta, pat, e')
+            Apx.Comp.Branch (loc, delta, pat, e')
 
-     | Apx.Comp.Branch (loc, omega, delta, pat, e) ->
+     | Apx.Comp.Branch (loc, delta, pat, e) ->
           let fMVd  = collectApxMCtx [] delta in
           let fMVb  = collectApxPattern fMVd pat in
           let l    = lengthApxMCtx delta in
           let e' = fmvApxExp (fMVs@fMVb) cD (l_cd1, l_delta, (k+l))  e in
-            Apx.Comp.Branch (loc, omega, delta, pat, e')
+            Apx.Comp.Branch (loc, delta, pat, e')
 
 and fmvApxFBranches fMVs cD d_param fbr = match fbr with
   | Apx.Comp.NilFBranch _ -> fbr

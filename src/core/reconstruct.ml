@@ -1790,7 +1790,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
 
 and elBranch caseTyp cD cG branch tau_s (tau, theta) =
   match branch with
-  | Apx.Comp.Branch (loc, _omega, delta, pat, e) ->
+  | Apx.Comp.Branch (loc, delta, pat, e) ->
      dprintf
        begin fun p ->
          p.fmt "[elBranch] @[<v>type@,@[%a@]@,at %a@]"

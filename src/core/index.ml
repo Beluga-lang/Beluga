@@ -997,12 +997,12 @@ let index_cdecl cvars fvars = function
 
 let rec index_mctx cvars fvars = function
   | Ext.LF.Empty ->
-      (Apx.LF.Empty, Apx.LF.Empty, cvars, fvars)
+      (Apx.LF.Empty, cvars, fvars)
 
   | Ext.LF.Dec (delta, cdec) ->
-      let (omega', delta', cvars', fvars') = index_mctx cvars fvars delta in
+      let (delta', cvars', fvars') = index_mctx cvars fvars delta in
       let (cdec', cvars'', fvars'') = index_cdecl cvars' fvars' cdec in
-      (omega', Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
+      (Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
 
 
 (* Translation of external schemas into approximate schemas *)
@@ -1435,7 +1435,7 @@ and index_branch cvars vars fcvars branch =
         (get_ctxvar_mobj mO)
         (empty_fvars `open_term)
     in
-    let (omega, cD', cvars1, fcvars1)  =
+    let (cD', cvars1, fcvars1)  =
       dprintf (fun p -> p.fmt "[index_branch] indexing cD in branch at %a" Loc.print_short loc);
       index_mctx (CVar.create()) fcvars' cD
     in
@@ -1451,12 +1451,12 @@ and index_branch cvars vars fcvars branch =
     in
     dprint (fun _ -> "indexing branch body");
     let e'         = index_exp cvars_all vars fcvars3 e in
-      Apx.Comp.Branch (loc, omega, cD', Apx.Comp.PatMetaObj (loc', mO'), e')
+      Apx.Comp.Branch (loc, cD', Apx.Comp.PatMetaObj (loc', mO'), e')
 
   | Ext.Comp.Branch (loc, cD, pat, e) ->
      let empty_fcvars = empty_fvars `open_term in
      dprintf (fun p -> p.fmt "[index_branch] general pattern at %a" Loc.print_short loc);
-     let (omega, cD', cvars1, fcvars1)  =
+     let (cD', cvars1, fcvars1)  =
        index_mctx (CVar.create()) empty_fcvars cD
      in
      let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ())  pat in
@@ -1471,7 +1471,7 @@ and index_branch cvars vars fcvars branch =
      let fcvars3 = append_fvars fcvars2 fcvars `closed_term in
      dprint (fun _ -> "indexing branch body");
      let e' = index_exp cvars_all vars_all fcvars3 e in
-     Apx.Comp.Branch (loc, omega, cD', pat'', e')
+     Apx.Comp.Branch (loc, cD', pat'', e')
 
 let rec index_gctx cvars vars fvars = function
   | Ext.LF.Empty -> Ext.LF.Empty, vars, fvars
@@ -1553,7 +1553,7 @@ and index_hypothetical h =
   in
   let proof =
     index_proof cvars vars (empty_fvars `closed_term) proof in
-  let _, cD, cvars, fvars = index_mctx (CVar.create ()) (empty_fvars `closed_term) cD in
+  let cD, cvars, fvars = index_mctx (CVar.create ()) (empty_fvars `closed_term) cD in
   let cG, vars, fvars = index_gctx cvars (Var.create ()) fvars cG in
   ( cvars
   , fvars
@@ -1581,7 +1581,7 @@ let kind d k = run_empty d (index_kind k)
 let typ d tA = run_empty d (index_typ tA)
 let schema = index_schema
 let mctx cD =
-  let (_, cD', _, _) =
+  let (cD', _, _) =
     index_mctx (CVar.create ()) (empty_fvars `open_term) cD
   in
   cD'

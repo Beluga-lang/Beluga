@@ -1768,8 +1768,9 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
   | Apx.Comp.Branch (loc, _omega, delta, pat, e) ->
      dprintf
        begin fun p ->
-         p.fmt "[elBranch] @[<v>Reconstruction of general pattern of type@,@[%a@]@]"
+         p.fmt "[elBranch] @[<v>type@,@[%a@]@,at %a@]"
            (P.fmt_ppr_cmp_typ cD P.l0) tau_s
+           Loc.print_short loc
        end;
      let cD' = elMCtx Lfrecon.Pibox delta in
      dprintf

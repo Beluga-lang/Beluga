@@ -123,17 +123,26 @@ and cnormApxObj cD l_delta offset t =
                   | (0, t) -> t
                   | (k, Int.LF.MDot(_ , t') ) -> drop t' (k-1) in
   if offset > l_delta then
-    begin
-      let offset' = (offset - l_delta)  in
-      match Substitution.LF.applyMSub offset t with
-	| Int.LF.MV u -> Apx.LF.Offset u
-	| Int.LF.ClObj (_phat, clobj) ->
-               let (_u, mtyp) = Whnf.mctxLookup cD offset' in
-                let t' = drop t l_delta in
-                let mtyp'  = Whnf.cnormMTyp (mtyp, t')in
-                Apx.LF.MInst (clobj, mtyp')
-    end
-  else Apx.LF.Offset offset
+    let offset' = (offset - l_delta)  in
+    match Substitution.LF.applyMSub offset t with
+    | Int.LF.MV u -> Apx.LF.Offset u
+    | Int.LF.ClObj (_phat, clobj) ->
+       let (u, mtyp) = Whnf.mctxLookup cD offset' in
+       dprintf begin fun p ->
+         p.fmt "[cnormApxObj] @[<v>instantiated with reconstructed object\
+                @,%a : @[%a@]\
+                @,from index %d = %d (offset) - %d (l_delta) in the msub@]"
+           Id.print u
+           P.(fmt_ppr_cmp_meta_typ cD) mtyp
+           offset'
+           offset
+           l_delta
+         end;
+       let t' = drop t l_delta in
+       let mtyp'  = Whnf.cnormMTyp (mtyp, t')in
+       Apx.LF.MInst (clobj, mtyp')
+  else
+    Apx.LF.Offset offset
 
 and cnormApxCVar' cD l_delta cv t = match cv with
   | Apx.LF.Offset offset -> cnormApxObj cD l_delta offset t

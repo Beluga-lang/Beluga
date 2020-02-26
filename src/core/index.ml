@@ -679,11 +679,14 @@ and index_spine (s : Ext.LF.spine) : Apx.LF.spine index =
  *)
 and disambiguate_name' f : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
-  let disambiguation_message kind p =
-    p.fmt "[disambiguate_name] variable %a -> %s (at %a)"
+  let disambiguation_message kind k p =
+    p.fmt "[disambiguate_name] variable %a -> %s (at %a) %a"
       Id.print name
       kind
       Loc.print_short loc
+      (Maybe.print
+         (fun ppf x -> Format.fprintf ppf "--> index %d" x))
+      k
   in
   (* form an LF indexing context so we can invoke index_sub_opt *)
   let c = {cvars; bvars; disambiguate_name = disambiguate_name' f} in
@@ -691,7 +694,7 @@ and disambiguate_name' f : name_disambiguator =
     ( fvars
     , ( let k = BVar.index_of_name bvars name in
         require_no_sub loc `bvar sub_opt;
-        dprintf (disambiguation_message "bound variable");
+        dprintf (disambiguation_message "bound variable" (Some k));
         Apx.LF.BVar k
       (* it's essential to perform `index_of_name` first since it will
          throw the Not_found exception that leads to trying the next case
@@ -704,7 +707,7 @@ and disambiguate_name' f : name_disambiguator =
   with Not_found ->
     if lookup_fv' name fvars then
       let (fvs', o') =
-        dprintf (disambiguation_message "known to be free");
+        dprintf (disambiguation_message "known to be free" None);
         match sub_opt with
         | Some s ->
            let fvs', s' =
@@ -717,7 +720,7 @@ and disambiguate_name' f : name_disambiguator =
     else
       try
         let offset = CVar.index_of_name cvars name in
-        dprintf (disambiguation_message "contextual variable");
+        dprintf (disambiguation_message "contextual variable" (Some offset));
         let (fvs', o') =
           index_sub_opt sub_opt c fvars
         in
@@ -729,7 +732,7 @@ and disambiguate_name' f : name_disambiguator =
           ( fvars
           , ( let k = Term.index_of_name name in
               require_no_sub loc `const sub_opt;
-              dprintf (disambiguation_message "LF constant");
+              dprintf (disambiguation_message "LF constant" None);
               Apx.LF.Const k
               (* similar consideration here as for BVar;
                  we must ascertain that it is in fact a Const before
@@ -738,7 +741,7 @@ and disambiguate_name' f : name_disambiguator =
             )
           )
         with Not_found ->
-          dprintf (disambiguation_message "new free variable");
+          dprintf (disambiguation_message "new free variable" None);
           f c (loc, name) sub_opt fvars
                 (*
           match fvars.open_flag with

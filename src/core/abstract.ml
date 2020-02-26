@@ -492,15 +492,18 @@ and addVar loc p cQ v tp =
      (I.Dec (cQ2, FDecl (v, Pure tp')), tp')
 
 and getType loc p name f =
-  begin try match f with
-  | LF -> let Int.LF.Type tA = FVar.get name in (LFTyp tA)
-  | Comp ->
-    let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get name in
-    let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
-      if !pat_flag then MetaTyp (mtyp', I.No) else
-	MetaTyp (mtyp', dep)
-   with Not_found -> raise (Error (loc, UnknownMTyp name))
-  end
+  try
+    match f with
+    | LF -> let Int.LF.Type tA = FVar.get name in (LFTyp tA)
+    | Comp ->
+       let (cD_d, I.Decl (_, mtyp,dep))  = FCVar.get name in
+       let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
+       if !pat_flag then
+         MetaTyp (mtyp', I.No)
+       else
+         MetaTyp (mtyp', dep)
+  with
+  | Not_found -> raise (Error (loc, UnknownMTyp name))
 
 and collectFVar fl loc p cQ name =
   let (cQ2, _tp) = addVar loc p cQ (FV name) (getType loc p name fl) in

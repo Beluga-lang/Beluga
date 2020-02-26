@@ -854,9 +854,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          fmt_ppr_lf_svar_class cl
          (fmt_ppr_lf_dctx cD 0) cPhi
          post
-    | LF.CTyp (Some schemaName) ->
+    | LF.CTyp (Some cid) ->
+       let x = Store.Cid.Schema.get_name cid in
        fprintf ppf "%a"
-         (fmt_ppr_lf_schema 0) (Store.Cid.Schema.get_schema schemaName)
+         Id.print x
     | LF.CTyp None -> fprintf ppf "CTX"
 
   and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD ("[", "]") ppf

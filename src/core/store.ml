@@ -576,7 +576,8 @@ module Cid = struct
 
     let mk_entry name schema = { name; schema }
 
-    let get_schema name = (get name).schema
+    let get_schema cid = (get cid).schema
+    let get_name cid = (get cid).name
 
 
   (* (* Getting the schema name by finding a schema with the same

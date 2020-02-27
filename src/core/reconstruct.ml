@@ -1749,6 +1749,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
         (cG', pat', ttau')
 
+(* cD is the explicitly given user-context on the branch *)
 and recPatObj loc cD pat (cD_s, tau_s) =
   dprintf
     begin fun p ->
@@ -1778,6 +1779,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
   let (cD1, cG1, pat1, tau1) =
     Abstract.patobj loc cD (Whnf.cnormGCtx (cG', Whnf.m_id))
       pat'
+      (Context.names_of_mctx cD_s)
       (Whnf.cnormCTyp ttau')
   in
   begin try
@@ -1819,9 +1821,18 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      (* cD |- tau_s and cD, cD1' |- tau_s' *)
      (* cD1' |- tau1 *)
 
+     let cD' = Context.append cD cD1' in
+     dprintf begin fun p ->
+       p.fmt "[elBranch] @[<v>cD' =\
+              @,@[<hv 2>cD =@ @[<hv>%a@]@]\
+              @,PLUS\
+              @,@[<hv 2>CD' =@ @[<hv>%a@]@]@]"
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_lf_mctx l0) cD1'
+       end;
+
      let (t', t1, cD1'') =
        let t = Int.LF.MShift l_cd1' in
-       let cD' = Context.append cD cD1' in
        (* since tau1 and pat1 make sense in cD1', they also make sense in cD'
           because cD' is obtained from cD by putting stuff *on the
           left*, so the indices are still valid. *)
@@ -1847,7 +1858,6 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      (*  cD1'' |- t' : cD    and   cD1'' |- t1 : cD, cD1' *)
      let l_cd1    = l_cd1' - l_delta  in   (* l_cd1 is the length of cD1 *)
      (*   cD1' |- cG1     cD1'' |- t1 : cD, cD1'    cD, cD1' |- ?   cD1' *)
-     let cD'      = Context.append cD cD1' in
      dprintf
        begin fun p ->
        p.fmt "[elBranch] @[<v>after synPatRefine@,cD1'' = @[%a@]@,\
@@ -1910,7 +1920,9 @@ and elFBranch cD cG fbr theta_tau = match fbr with
     let (cG', ps', ttau2) = elPatSpine cD cG ps theta_tau in
     let _ = Lfrecon.solve_constraints cD in
     let (cD1, cG1, ps1, tau1) =
-      Abstract.pattern_spine loc cD (Whnf.cnormGCtx (cG', Whnf.m_id)) ps' (Whnf.cnormCTyp ttau2)
+      Abstract.pattern_spine loc cD (Whnf.cnormGCtx (cG', Whnf.m_id)) ps'
+        (Context.names_of_mctx cD)
+        (Whnf.cnormCTyp ttau2)
     in
     let _ = try Check.Comp.wf_mctx cD1 (* Double Check that cD1 is well-formed *)
             with _ -> raise (Error (loc,MCtxIllformed cD1)) in

@@ -387,21 +387,22 @@ let rec ctxToMCtx dep' cQ = match cQ with
        ctxToMCtx dep' cQ'
 
 
-let rec ctxToMCtx_pattern cQ = match cQ with
+let rec ctxToMCtx_pattern names = function
   | I.Empty ->
-      I.Empty
+     I.Empty
 
   | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _dep)))) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (n, ityp, I.No))
+     I.Dec (ctxToMCtx_pattern (n :: names) cQ', I.Decl (n, ityp, I.No))
 
-  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (getName s, ityp, dep))
+  | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, dep)))) ->
+     let n = NameGen.renumber names n in
+     I.Dec (ctxToMCtx_pattern (n :: names) cQ', I.Decl (n, ityp, dep))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx_pattern cQ', I.Decl (x, I.CTyp (Some w), dep))
+     I.Dec (ctxToMCtx_pattern (x :: names) cQ', I.Decl (x, I.CTyp (Some w), dep))
 
-| I.Dec (cQ', FDecl (_, Impure)) ->
-       ctxToMCtx_pattern cQ'
+  | I.Dec (cQ', FDecl (_, Impure)) ->
+     ctxToMCtx_pattern names cQ'
 
 
 (* collectTerm p cQ phat (tM,s) = cQ'
@@ -1636,7 +1637,7 @@ let abstrCodataTyp cD tau tau' =
   let tau_res' = raiseCompTyp cD_res tau_res in
   (cD', tau_obs, tau_res', Context.length cD_res)
 
-let abstrPatObj loc cD cG pat tau =
+let abstrPatObj loc cD cG pat names tau =
   pat_flag := true;
   let pat = Whnf.cnormPattern (pat, Whnf.m_id) in
   let cG = Whnf.cnormGCtx (cG, Whnf.m_id) in
@@ -1649,13 +1650,13 @@ let abstrPatObj loc cD cG pat tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,offset) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx_pattern cQ' in
+  let cD'     = ctxToMCtx_pattern names cQ' in
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
   pat_flag := false;
   (cD, cG', pat', tau')
 
-let abstrPatSpine loc cD cG patSpine tau =
+let abstrPatSpine loc cD cG patSpine names tau =
   pat_flag := true;
   let patSpine = Whnf.cnormPatSpine (patSpine, Whnf.m_id) in
   let cG = Whnf.cnormGCtx (cG, Whnf.m_id) in

@@ -47,9 +47,12 @@ val codatatyp  : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.ty
 val exp      : Comp.exp_chk -> fctx * Comp.exp_chk
 val thm      : Comp.thm -> fctx * Comp.thm
 
-val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
+val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern ->
+                 Id.name list -> Comp.typ ->
                  LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
-val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine -> Comp.typ ->
+val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine ->
+                   Id.name list -> Comp.typ ->
+                   LF.mctx * Comp.gctx * Comp.pattern_spine * Comp.typ
 
 val closedTyp : (LF.dctx * LF.typ) -> bool
 

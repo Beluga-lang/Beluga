@@ -47,16 +47,9 @@ val codatatyp  : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.ty
 val exp      : Comp.exp_chk -> fctx * Comp.exp_chk
 val thm      : Comp.thm -> fctx * Comp.thm
 
-val pattern    : LF.mctx -> LF.dctx -> (LF.dctx_hat * LF.normal) -> LF.typ ->
-                 LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal) * LF.typ
-val mobj       : LF.mctx -> Comp.meta_obj -> Comp.meta_typ ->
-                 LF.mctx * Comp.meta_obj * Comp.meta_typ
 val patobj     : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern -> Comp.typ ->
                  LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine -> Comp.typ ->
-                 LF.mctx * Comp.gctx * Comp.pattern_spine * Comp.typ
-val subpattern : LF.mctx -> LF.dctx -> LF.sub -> LF.dctx ->
-                 LF.mctx * LF.dctx * LF.sub * LF.dctx
 
 val closedTyp : (LF.dctx * LF.typ) -> bool
 

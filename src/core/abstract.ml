@@ -1101,8 +1101,6 @@ and abstractMVarMTyp cQ mtyp loff = match mtyp with
   | I.ClTyp (tp, cPsi) -> I.ClTyp (abstractMVarClTyp cQ loff tp, abstractMVarDctx cQ loff cPsi)
   | I.CTyp sW -> I.CTyp sW
 
-and abstractMVarMetaTyp cQ mtyp loff = abstractMVarMTyp cQ mtyp loff
-
 and abstractMVarCdecl cQ loff cdecl = match cdecl with
   | I.Decl (u, mtyp, dep) -> I.Decl (u, abstractMVarMTyp cQ mtyp loff, dep)
 
@@ -1375,28 +1373,6 @@ and collectPatSpine cQ pat_spine = match pat_spine with
     let (cQ1, ms') = collectMSub 0 cQ ms in
     let (cQ2, pat_spine') = collectPatSpine cQ1 pat_spine in
         (cQ2, Comp.PatObs (loc, obs, ms', pat_spine'))
-
-and collectPattern cQ cD cPsi (phat, tM) tA =
-  let (cQ1, cD') = collectMctx cQ cD in
-  let (cQ2, cPsi') = collectDctx (Syntax.Loc.ghost) 0 cQ1 phat cPsi in
-  let (cQ2', phat') = collectHat 0 cQ2 phat in
-  let (cQ3, tM') = collectTerm 0 cQ2' phat' (tM, LF.id) in
-  let (cQ4, tA') = collectTyp 0 cQ3 phat' (tA, LF.id) in
-    (cQ4, cD', cPsi', (phat', tM'), tA')
-
-
-
-and collectSubPattern cQ cD cPsi sigma cPhi =
-  let (cQ1, cD')    = collectMctx cQ cD in
-  let phat = Context.dctxToHat cPsi in
-  let (cQ2, cPsi')  = collectDctx (Syntax.Loc.ghost) 0 cQ1 phat cPsi in
-  let (cQ3, cPhi')  = collectDctx (Syntax.Loc.ghost) 0 cQ2 phat cPhi in
-  let (cQ4, sigma') = collectSub  0 cQ3 phat sigma in
-
-    (cQ4, cD', cPsi', sigma', cPhi')
-
-
-
 
 and collectBranch cQ branch = match branch with
   | Comp.Branch (loc, cD, cG, pat, msub, e) ->
@@ -1692,65 +1668,11 @@ let abstrPatSpine loc cD cG patSpine tau =
   let cG'     = abstractMVarGctx cQ' (0,offset) cG in
   let patSpine' = abstractMVarPatSpine cQ' cG' (0,offset) patSpine' in
   let tau'    = abstractMVarCompTyp cQ' (0,offset) tau' in
-  let cD'     = ctxToMCtx_pattern cQ' in
+  let cD'     = ctxToMCtx_pattern names cQ' in
   let cD2     = abstractMVarMctx cQ' cD1' (0,offset-1) in
   let cD      = Context.append cD' cD2 in
   pat_flag := false;
   (cD, cG', patSpine', tau')
-
-
-(*
-   1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
-   2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
-
-*)
-let abstrPattern cD1 cPsi1  (phat, tM) tA =
-  pat_flag := true;
-  let (cQ, cD1', cPsi1', (phat, tM'), tA')  = collectPattern I.Empty cD1 cPsi1 (phat,tM) tA in
-  let cQ'     = abstractMVarCtx cQ 0 in
-  let offset  = Context.length cD1' in
-  let cPsi2   = abstractMVarDctx cQ' (0,offset) cPsi1' in
-  let tM2     = abstractMVarTerm cQ' (0,offset) (tM', LF.id) in
-  let tA2     = abstractMVarTyp  cQ' (0,offset) (tA', LF.id) in
-  let cD2     = abstractMVarMctx cQ' cD1' (0, offset-1) in
-(*  let cs1'    = abstractMVarCSub cQ' offset cs1 in
-  let cs'     = abstractMVarCSub cQ' offset cs in *)
-  let cD'     = ctxToMCtx_pattern cQ' in
-  let cD      = Context.append cD' cD2 in
-  pat_flag := false;
-  (cD, cPsi2, (phat, tM2), tA2)
-
-let abstrMObjPatt cD1 cM mT =
-  pat_flag := true;
-  let (cQ1, cD1') = collectMctx I.Empty cD1 in
-  let (cQ2, cM')  = collect_meta_obj 0 cQ1 cM in
-  let (cQ3, mT')  = collectMetaTyp (Syntax.Loc.ghost) 0 cQ2 mT in
-  let cQ'         = abstractMVarCtx cQ3 0 in
-  let offset      = Context.length cD1' in
-  let cM'         = abstractMVarMetaObj cQ' (0, offset) cM' in
-  let mT'         = abstractMVarMetaTyp cQ' mT' (0, offset) in
-  let cD2         = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'         = ctxToMCtx_pattern cQ' in
-  let cD          = Context.append cD' cD2 in
-  pat_flag := false;
-  (cD, cM', mT')
-
-(*
-   1) Collect FMVar and FPVars  in cD1, Psi1, tM and tA
-   2) Abstract FMVar and FPVars in cD1, Psi1, tM and tA
-
-*)
-let abstrSubPattern cD1 cPsi1  sigma cPhi1 =
-  let (cQ, cD1', cPsi1', sigma', cPhi1')  = collectSubPattern I.Empty cD1 cPsi1 sigma cPhi1 in
-  let cQ'      = abstractMVarCtx cQ 0 in
-  let offset   = Context.length cD1' in
-  let cPsi2    = abstractMVarDctx cQ' (0,offset) cPsi1' in
-  let sigma2   = abstractMVarSub cQ' (0,offset) sigma' in
-  let cPhi2    = abstractMVarDctx cQ' (0,offset) cPhi1' in
-  let cD2      = abstractMVarMctx cQ' cD1' (0, offset-1) in
-  let cD'      = ctxToMCtx (I.Maybe) cQ' in
-  let cD       = Context.append cD' cD2 in
-    (cD, cPsi2, sigma2, cPhi2)
 
 let abstrExp e =
   collectExp I.Empty e
@@ -1858,9 +1780,6 @@ let compkind = abstrCompKind
 let comptyp = abstrCompTyp
 let codatatyp = abstrCodataTyp
 let exp = abstrExp
-let pattern = abstrPattern
 let pattern_spine = abstrPatSpine
 let patobj = abstrPatObj
-let subpattern = abstrSubPattern
-let mobj = abstrMObjPatt
 let thm = abstrThm

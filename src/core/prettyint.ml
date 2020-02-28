@@ -733,7 +733,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     in
     fmt_ppr_ctx_filter ~sep: sep should_print
       (fun ppf (cD', d) ->
-        fprintf ppf "@[%a@]"
+        fprintf ppf "%a"
           (fmt_ppr_lf_ctyp_decl cD' l0) d)
       ppf
       cD
@@ -804,7 +804,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          else
            fun _ _ -> ()
        in
-       fprintf ppf "%s%a :@ @[%a@]"
+       fprintf ppf "@[<2>%s%a :@ @[%a@]@]"
          (if printing_holes
           then Store.Cid.NamedHoles.getName ~tA:(getTyp mtyp) u
           else Id.render_name u)
@@ -834,16 +834,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.ICtx _ -> failwith "printing ICtx is weird because a dctx was also passed in."
 
   let fmt_ppr_lf_typ_typing ppf (cD, cPsi, tA) =
-    fprintf ppf "@[<2>@[%a@] ; @[%a@] |-@ @[%a@]@ : type@]"
+    fprintf ppf "@[<2>@[@[<hv>%a@] ;@ @[<hv>%a@]@] |-@ @[%a@]@ : type@]"
       (fmt_ppr_lf_mctx l0) cD
       (fmt_ppr_lf_dctx cD l0) cPsi
       (fmt_ppr_lf_typ cD cPsi l0) tA
 
   let fmt_ppr_lf_msub_typing ppf (cD', t, cD) =
-    fprintf ppf "@[%a@] |-@ @[%a@]@ : @[%a@]"
-      (fmt_ppr_lf_mctx l0) cD'
+    fprintf ppf "@[<hv>%a@] |-@ @[%a@]@ : @[<hv>%a@]"
+      (fmt_ppr_lf_mctx ~all: true l0) cD'
       (fmt_ppr_lf_msub cD' l0) t
-      (fmt_ppr_lf_mctx l0) cD
+      (fmt_ppr_lf_mctx ~all: true l0) cD
 
   let fmt_ppr_lf_constraint ppf =
     let open Format in
@@ -1300,7 +1300,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                (fmt_ppr_cmp_meta_obj cD1' 0) mO
                (fmt_ppr_cmp_exp_chk cD1' cG 1) e
           | _ ->
-             fprintf ppf "@ @[<v2>| @[<v0>%a@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
+             fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
                (fmt_ppr_lf_mctx 0) cD1'
                (fmt_ppr_cmp_meta_obj cD1' 0) mO
                (* NOTE: Technically: cD |- cG ctx and
@@ -1309,7 +1309,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                 *)
                (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
        else
-         fprintf ppf "@ @[<v2>| @[<v0>%a@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
+         fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
            (fmt_ppr_lf_mctx 0) cD1'
            (fmt_ppr_cmp_meta_obj cD1' 0) mO
            (* this point is where the " : " is in the string above *)

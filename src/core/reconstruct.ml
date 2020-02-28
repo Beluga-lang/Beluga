@@ -38,7 +38,6 @@ type error =
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
   | InvalidHypotheses  of Int.Comp.hypotheses
-  | ErrorMsg of string
   | NotImplemented of (Format.formatter -> unit -> unit)
 
 exception Error of Syntax.Loc.t * error

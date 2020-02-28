@@ -1,2 +1,5 @@
 ./t/code/error/subst-printing.bel, line 10, column 11:
-Type block (x:tm, v:oft x A) doesn't check against schema .
+Type
+  block (x : tm, v : oft x A)
+doesn't check against schema
+  xtG = 

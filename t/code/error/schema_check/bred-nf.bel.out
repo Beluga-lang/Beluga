@@ -1,2 +1,14 @@
-_ghost, line 1, column 0:
-Context variable g doesn't check against schema jctx'.
+./t/code/error/schema_check/bred-nf.bel, line 215, column 5:
+Context variable
+  g
+doesn't check against schema
+  jctx' =
+    block (x : tm,
+           y : nf,
+           _r : bred x y,
+           p : p,
+           _pt : path x p,
+           _npt : npath y p) +
+    some [n : tm] block (x : tm,
+                         _b : {u : nf}  bred n u -> bred x u,
+                         _d : {q : p}  path n q -> path x q)

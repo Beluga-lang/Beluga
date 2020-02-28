@@ -4,4 +4,4 @@ Ill-typed expression.
     Expected type:
       [g |- opt]
     Inferred type:
-      [g, x : exp T[] |- opt]
+      [g, x : exp T1[] |- opt]

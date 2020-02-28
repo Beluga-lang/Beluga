@@ -4,29 +4,29 @@ lookup
 1
 
 split [gamma]
-rename meta z9 g
+rename meta y g
 split [g, x:tm T[] |- #p]
-invert x9
-by lookup [g] [g |- #p2] v1 as ih
-invert x9
+invert x
+invert x
+by lookup [g] [g |- #p1] x1 as ih
 impossible [|- #p]
 main
 {gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
-rename comp x9 rs
+rename comp x rs
 split [gamma |- M]
-by lookup [gamma] [gamma |- #p1] rs as x
+suffices by I toshow [|- halts c]
+solve [|- halts/m refl val/c]
+
+suffices by Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
+suffices by bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
+by Dot rs x as rs'
+by main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
+solve [|- halts/m refl val/lam]
+
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
-solve v3 [|- _] ih2
-suffices by Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
-defer
-solve [|- halts/m refl val/lam]
-defer
-suffices by bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
-by Dot rs z9 as rs'
-by main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
-suffices by I toshow [|- halts c]
-solve [|- halts/m refl val/c]
+solve x1 [|- _] ih2
+by lookup [gamma] [gamma |- #p] rs as x

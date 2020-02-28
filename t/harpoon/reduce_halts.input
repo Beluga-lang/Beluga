@@ -3,5 +3,4 @@ rh
 {T: [|- tp]} {M: [|- tm T]} Reduce [|- T] [|- M] -> [|- halts M]
 
 
-split z6
-
+split x

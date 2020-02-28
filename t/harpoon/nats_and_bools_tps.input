@@ -3,29 +3,33 @@ tps
 [|- hastype M A] -> [|- step M N] -> [|- hastype N A]
 2
 
-split x8
-invert y8
-invert y8
-invert y8
-invert y8
+split x1
+invert x
 invert [ |- D ]
-invert y8
-solve [|- t_true]
-invert y8
-solve [|- t_false]
-invert y8
-by (tps [|- D] [|- S]) as ih0
-unbox (ih0) as IH0
-solve [|- t_if IH0 D1 D2]
-invert y8
-by (tps [|- D] [|- S]) as ih1
-unbox (ih1) as IH1
-solve [|- t_succ IH1]
-invert y8
-by (tps [|- D] [|- S]) as ih2
-unbox (ih2) as IH2
-solve [|- t_pred IH2]
-invert y8
-by (tps [|- D] [|- S]) as ih3
-unbox (ih3) as IH3
+by (tps [|- D] [|- S]) as IH3 unboxed
 solve [|- t_iszero IH3]
+
+invert x
+by (tps [|- D] [|- S]) as IH2 unboxed
+solve [|- t_pred IH2]
+
+invert x
+by (tps [|- D] [|- S]) as IH1 unboxed
+solve [|- t_succ IH1]
+
+invert x
+by (tps [|- D] [|- S]) as IH0 unboxed
+solve [|- t_if IH0 D1 D2]
+
+invert x
+solve [|- t_false]
+
+invert x
+solve [|- t_true]
+
+invert x
+invert [|- D]
+
+invert x
+invert x
+invert x

@@ -4,22 +4,22 @@ le-refl
 1
 
 split [|- N]
-solve [|- le_zero]
 by le-refl [|- N1] as L unboxed
 solve [|- le_succ L]
+solve [|- le_zero]
 le-succ-1
 [|- le N K] -> [|- le N (succ K)]
 1
 
-split z2
-solve [|- le_zero]
+split x
 by le-succ-1 [|- L] as L_succ unboxed
 solve [|- le_succ L_succ]
+solve [|- le_zero]
 le-add
 [|- add N M K] -> [|- le M K]
 1
 
-split z2
-suffices by le-refl toshow
+split x
 suffices by le-succ-1 toshow [|- le M N3]
 by le-add [|- A] as done
+suffices by le-refl toshow

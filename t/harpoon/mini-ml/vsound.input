@@ -3,12 +3,11 @@ vsound
 [|- eval E V] -> [|- value V]
 1
 
-split x7
-solve [|- v_z]
+split x
+by (vsound [|- D2]) as ih
+solve [|- v_lam]
+by (vsound [|- D]) as ih
 by (vsound [|- D]) as ih
 unbox (ih) as IH
 solve [|- v_s IH]
-by (vsound [|- D]) as ih
-solve [|- v_lam]
-by (vsound [|- D2]) as ih
-
+solve [|- v_z]

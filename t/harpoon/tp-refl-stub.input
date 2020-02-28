@@ -1,4 +1,0 @@
-t/code/success/harpoon/tp-refl-stub.bel
-by tp-refl [|- X] as EQ_X unboxed
-by tp-refl [|- X1] as EQ_X1 unboxed
-solve [|- eq_arr EQ_X EQ_X1]

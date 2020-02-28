@@ -3,9 +3,8 @@ tpr
 [|- oft M A] -> [|- eval M M'] -> [|- oft M' A]
 2
 
-split y7
-split z6
+split x1
+invert x
 by (tpr [|- D] [|- E]) as ih0
 split ih0
 by (tpr [|- D2 [_, D1]] [|- E1]) as ih1
-

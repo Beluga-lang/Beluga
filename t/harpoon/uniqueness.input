@@ -4,14 +4,17 @@ unique
 1
 
 
-split z5
-invert y6
+split x
+
+invert x1
+by (unique [g |- X4] [g |- X10]) as ih1
+invert ih1
 solve [|- refl]
-invert y6
+
+invert x1
 by (unique [g,b:block x:term, u:hastype x _ |- X3[..,b.1,b.2]] [g,b |- X7[..,b.1,b.2]]) as ih0
 invert ih0
 solve [|- refl]
-invert y6
-by (unique [g |- X4] [g |- X10]) as ih1
-invert ih1
+
+invert x1
 solve [|- refl]

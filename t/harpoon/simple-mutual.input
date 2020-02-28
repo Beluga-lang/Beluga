@@ -7,10 +7,10 @@ size'
 1
 
 toggle-automation auto-solve-trivial off
-split x1
-solve [|- z]
+split x
 by size' [|- X] as done; solve done
-split z1
 solve [|- z]
+split x
 by size [|- X] as N1 unboxed; by size' [|- X1] as N2 unboxed
 solve add (size [|- X]) [|- N2]
+solve [|- z]

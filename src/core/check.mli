@@ -8,8 +8,8 @@ module LF : sig
   open Syntax.Int.LF
 
   type error =
-    | CtxVarMisCheck   of mctx * dctx * tclo * schema
-    | CtxVarMismatch   of mctx * ctx_var * schema
+    | CtxVarMisCheck   of mctx * dctx * tclo * Id.name * schema
+    | CtxVarMismatch   of mctx * ctx_var * Id.name * schema
     | CtxVarDiffer     of mctx * ctx_var * ctx_var
     | CheckError       of mctx * dctx * nclo * tclo
     | TupleArity       of mctx * dctx * nclo * trec_clo
@@ -38,10 +38,19 @@ module LF : sig
   val checkDCtx   : mctx -> dctx                 -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : Syntax.Loc.t -> mctx -> dctx -> schema -> unit
+  val checkSchema : Syntax.Loc.t -> mctx -> dctx -> Id.name -> schema -> unit
   val subsumes    : mctx -> ctx_var -> ctx_var -> bool
 
-  val checkTypeAgainstSchema: Syntax.Loc.t ->  mctx -> dctx -> typ -> sch_elem list -> (typ_rec * sub)
+  (** Checks that a type exists within a given schema.
+      checkTypeAgainstSchema loc cD cPsi tA name es = (tR, s)
+      if cD; cPsi |- tA <== type
+      and tA is an instance of one of the schema elements es.
+      If not, an error will the raised with the given location.
+      The input name will be a part of the error message, and should
+      be the declared name of the schema.
+   *)
+  val checkTypeAgainstSchema: Syntax.Loc.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list ->
+                              typ_rec * sub
   val instanceOfSchElem     : mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 

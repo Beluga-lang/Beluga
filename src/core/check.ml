@@ -17,6 +17,7 @@ open Debug.Fmt
 module LF = Lfcheck
 
 module Comp = struct
+  open Syntax
 
   module Unify = Unify.EmptyTrail
     (* NOTES on handling context variables: -bp
@@ -455,15 +456,16 @@ module Comp = struct
 
   let rec checkParamTypeValid loc cD cPsi tA =
     let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
-      | Syntax.Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
-      | Syntax.Int.LF.CtxVar psi ->
+      | Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp  (cD, cPsi, tA))) *)
+      | Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
-         let Syntax.Int.LF.Schema s_elems =
-           Schema.get_schema (Context.lookupCtxVarSchema cD psi) in
+         let { Schema.Entry.name; schema = Int.LF.Schema elems } =
+           Schema.get (Context.lookupCtxVarSchema cD psi)
+         in
          begin
            try
              let _ =
-               LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems
+               LF.checkTypeAgainstSchema loc cD cPsi tA name elems
              in
              ()
            with _ ->

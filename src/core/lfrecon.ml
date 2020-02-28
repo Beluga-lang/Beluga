@@ -2690,29 +2690,6 @@ let checkCtxVar loc cD c_var w = match c_var with
      FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
      Int.LF.CtxName psi
 
-let rec checkDCtx loc recT cD psi w = match psi with
-  | Apx.LF.Null -> Int.LF.Null
-
-  | Apx.LF.CtxVar (c_var) ->  Int.LF.CtxVar(checkCtxVar loc cD c_var w)
-
-  | Apx.LF.DDec (psi', Apx.LF.TypDecl (x, a)) ->
-      let cPsi = checkDCtx loc recT cD psi' w in
-      let tA   = elTyp  recT cD cPsi a in
-      dprintf
-        begin fun p ->
-        p.fmt "[elDCtx] %a : %a"
-          Id.print x
-          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
-        end;
-      let Syntax.Int.LF.Schema s_elems = Schema.get_schema w in
-      let _ =
-        try
-          Check.LF.checkTypeAgainstSchema (Syntax.Loc.ghost) cD cPsi tA s_elems
-        with _ -> raise (Check.Comp.Error (Syntax.Loc.ghost, Check.Comp.IllegalParamTyp  (cD, cPsi, tA)))
-      in
-      Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
-
-
 (* ******************************************************************* *)
 (* Solve free variable constraints *)
 

@@ -287,16 +287,10 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
     Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Int.LF.Maybe)
 
   | Apx.LF.CtxVar ((Apx.LF.CtxOffset _ ) as c_var) ->
-      let schema = Schema.get_schema s_cid in
+      let { Schema.Entry.name; schema } = Schema.get s_cid in
       let c_var = Lfrecon.elCtxVar c_var in
-      let cPsi' = Int.LF.CtxVar (c_var) in
-      begin
-        try
-          Check.LF.checkSchema loc cD cPsi' schema;
-          cPsi'
-        with
-          _ -> raise (Check.LF.Error (loc, Check.LF.CtxVarMismatch (cD, c_var, schema)))
-      end
+      Int.LF.CtxVar (c_var)
+      |> F.through (fun cPsi' -> Check.LF.checkSchema loc cD cPsi' name schema)
 
   | Apx.LF.CtxVar (Apx.LF.CtxName psi ) ->
       (* This case should only be executed when c_var occurs in a pattern *)
@@ -306,9 +300,9 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid = match psi with
          if Id.cid_equals s_cid s_cid' then
            Int.LF.CtxVar (Int.LF.CtxName psi)
          else
-           let schema = Schema.get_schema s_cid in
+           let { Schema.Entry.name; schema } = Schema.get s_cid in
            let c_var' = Int.LF.CtxName psi in
-           raise (Check.LF.Error (Syntax.Loc.ghost, Check.LF.CtxVarMismatch (cD, c_var', schema)))
+           Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Id.loc_of_name psi))
        with Not_found ->
          FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe));
          Int.LF.CtxVar (Int.LF.CtxName psi)

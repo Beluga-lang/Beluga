@@ -15,8 +15,8 @@ module Unify = Unify.EmptyTrail
 module S = Substitution
 
 type error =
-  | CtxVarMisCheck   of mctx * dctx * tclo * schema
-  | CtxVarMismatch   of mctx * ctx_var * schema
+  | CtxVarMisCheck   of mctx * dctx * tclo * Id.name * schema
+  | CtxVarMismatch   of mctx * ctx_var * Id.name * schema
   | CtxVarDiffer     of mctx * ctx_var * ctx_var
   | CheckError       of mctx * dctx * nclo * tclo
   | TupleArity       of mctx * dctx * nclo * trec_clo
@@ -48,14 +48,25 @@ let _ =
            (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
 
-      | CtxVarMisCheck (c0, cPsi, sA, sEl ) ->
-         Format.fprintf ppf "Type %a doesn't check against schema %a."
+      | CtxVarMisCheck (c0, cPsi, sA, name, sEl) ->
+         Format.fprintf ppf
+           "@[<v>Type\
+            @,  @[%a@]\
+            @,doesn't check against schema\
+            @,  @[<hv 2>%a =@ @[<hv>%a@]@]@]"
            (P.fmt_ppr_lf_typ c0 cPsi P.l0) (Whnf.normTyp sA)
+           Id.print name
            (P.fmt_ppr_lf_schema P.l0) sEl
 
-      | CtxVarMismatch (cO, var, expected) ->
-         Format.fprintf ppf "Context variable %a doesn't check against schema %a."
+      | CtxVarMismatch (cO, var, name, expected) ->
+         Format.fprintf ppf
+           "@[<v>Context variable\
+            @,  @[%a@]\
+            @,doesn't check against schema\
+            @,  @[<hv 2>%a =@ @[<hv>%a@]@]\
+            @]"
            (P.fmt_ppr_lf_ctx_var cO) var
+           Id.print name
            (P.fmt_ppr_lf_schema P.l0) expected
 
       | CtxVarDiffer (cO, var, var1) ->
@@ -475,12 +486,18 @@ and canAppear cD cPsi head sA loc=
                       it is not inhabited *)
 
     | CtxVar ctx_var ->
-      begin let (Schema elems) = Schema.get_schema (lookupCtxVarSchema cD ctx_var) in
-            try let _ = checkTypeAgainstSchemaProj loc cD (* Null *) cPsi head (TClo sA) (* schema *) elems  in
-                true
-            with
-              | (Match_failure _) as exn -> raise exn
-              | _ -> false
+       let { Schema.Entry.name; schema = Schema elems } =
+         Schema.get (lookupCtxVarSchema cD ctx_var)
+       in
+       begin
+         try
+           let _ =
+             checkTypeAgainstSchemaProj loc cD cPsi head (TClo sA) name elems
+           in
+           true
+         with
+         | (Match_failure _) as exn -> raise exn
+         | _ -> false
       end
 
     | DDec (rest, TypDecl(_x, _tB)) ->
@@ -715,7 +732,7 @@ and projectCtxIntoDctx = function
  *   sch = full schema, for error messages
  *   elements = elements to be tried
  *)
-and checkTypeAgainstSchema loc cD cPsi tA elements =
+and checkTypeAgainstSchema loc cD cPsi tA schema_name elements =
   (* if tA is not a Sigma, "promote" it to a one-element typRec *)
   dprintf
     (fun p ->
@@ -724,14 +741,19 @@ and checkTypeAgainstSchema loc cD cPsi tA elements =
         (P.fmt_ppr_lf_schema P.l0) (Schema elements));
   match elements with
     | [] ->
-      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), Schema elements)))
+       CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), schema_name, Schema elements)
+       |> throw loc
 
     | element :: elements ->
       try
         instanceOfSchElem cD cPsi (tA, S.LF.id) element
       with
-      | (Match_failure _) as exn -> raise exn (* XXX why? -je *)
-      | _ -> checkTypeAgainstSchema loc cD cPsi tA elements
+      (* TODO refactor all the schema instance projection stuff to not
+         use exceptions. Or at the very least, make the following
+         match less insane. -je *)
+      | (Match_failure _) as exn -> raise exn
+      | _ ->
+         checkTypeAgainstSchema loc cD cPsi tA schema_name elements
 
 and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
   let _ = dprint (fun () -> "instanceOfSchElem...") in
@@ -792,7 +814,7 @@ and instanceOfSchElem cD cPsi (tA, s) (SchElem (some_part, block_part)) =
  *   sch = full schema, for error messages
  *   elements = elements to be tried
  *)
-and checkTypeAgainstSchemaProj loc cD cPsi head tA elements =
+and checkTypeAgainstSchemaProj loc cD cPsi head tA schema_name elements =
   (* if tA is not a Sigma, "promote" it to a one-element typRec *)
   dprintf
     begin fun p ->
@@ -802,7 +824,8 @@ and checkTypeAgainstSchemaProj loc cD cPsi head tA elements =
     end;
   match elements with
     | [] ->
-      raise (Error (loc, CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), Schema elements)))
+       CtxVarMisCheck (cD, cPsi, (tA, S.LF.id), schema_name, Schema elements)
+       |> throw loc
 
     | element :: elements ->
       try
@@ -810,7 +833,7 @@ and checkTypeAgainstSchemaProj loc cD cPsi head tA elements =
         existsInstOfSchElemProj loc cD cPsi (tA, S.LF.id) (head, 1, blockLength trec) element
       with
         | (Match_failure _) as exn -> raise exn
-        | _ -> checkTypeAgainstSchema loc cD cPsi tA elements
+        | _ -> checkTypeAgainstSchema loc cD cPsi tA schema_name elements
 
 and existsInstOfSchElemProj loc cD cPsi sA (h,i, n) elem = if i > n then
   raise (Error (loc, ParamVarInst (cD, cPsi, sA)))
@@ -864,7 +887,7 @@ and checkElementAgainstSchema cD sch_elem elements =
     | elem::elems -> f elem
 *)
 
-and checkSchema loc cD cPsi (Schema elements as schema) =
+and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
   dprintf
     begin fun p ->
     p.fmt "[checkSchema] @[<v>%a@,against@,%a@]"
@@ -875,23 +898,29 @@ and checkSchema loc cD cPsi (Schema elements as schema) =
     | Null -> ()
     | CtxVar (CInst (mmvar, _ )) ->
        let Some (ICtx cPhi) = mmvar.instantiation.contents in
-       checkSchema loc cD cPhi schema
+       checkSchema loc cD cPhi schema_name schema
     | CtxVar ((CtxOffset _ ) as phi) ->
-      let Schema phiSchemaElements =
-	      Schema.get_schema (lookupCtxVarSchema cD phi)
+      let { Schema.Entry.name; schema = Schema phiSchemaElements } =
+	      Schema.get (lookupCtxVarSchema cD phi)
       in
-      (*            if not (List.forall (fun phiElem -> checkElementAgainstSchema cD phiElem elements) phiSchemaElements) then *)
-      (*            if not (List.for_all (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements ) then *)
-      if List.exists (fun elem -> checkElementAgainstSchema cD elem phiSchemaElements) elements |> not
-      then raise (Error (loc, CtxVarMismatch (cD, phi, schema)))
+      if
+        List.exists
+          begin fun elem ->
+          checkElementAgainstSchema cD elem phiSchemaElements
+          end
+          elements
+        |> not
+      then
+        throw loc (CtxVarMismatch (cD, phi, name, schema))
 
     | DDec (cPsi', decl) ->
-      begin
-        checkSchema loc cD cPsi' schema
-        ; match decl with
-          | TypDecl (_x, tA) ->
-            let _ = checkTypeAgainstSchema loc cD cPsi' tA elements in ()
-      end
+       checkSchema loc cD cPsi' schema_name schema;
+       match decl with
+       | TypDecl (_x, tA) ->
+          let _ = checkTypeAgainstSchema loc cD cPsi' tA schema_name elements in
+          ()
+       | TypDeclOpt _ ->
+          Error.violation "[checkSchema] TypDeclOpt is forbidden"
 
  (* If subsumes psi phi succeeds then there exists  wk_sub
     such that  psi |-  wk_sub : phi
@@ -978,7 +1007,8 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
 
 and checkMetaObj cD (loc,cM) cTt = match  (cM, cTt) with
   | (CObj cPsi, (CTyp (Some w), _)) ->
-      checkSchema loc cD cPsi (Schema.get_schema w)
+     let { Schema.Entry.name; schema } = Schema.get w in
+     checkSchema loc cD cPsi name schema
 
   | (ClObj (phat, tM), (ClTyp (tp, cPsi), t)) ->
       let cPsi' = Whnf.cnormDCtx (cPsi, t) in

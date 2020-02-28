@@ -14,7 +14,8 @@ open Syntax.Int.LF
 module Types = Store.Cid.Typ
 module Schema = Store.Cid.Schema
 
-(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28]) *)
+let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [28]))
+open Debug.Fmt
 
 (*
  * OVERVIEW
@@ -200,54 +201,62 @@ let thin0 cD a cPsi =
 
      Initially, basis is `b' where tP = Atom(_, b, _).
   *)
-  let rec inner (basis : Id.cid_typ list) cPsi = match Whnf.cnormDCtx (cPsi,MShift 0) with
+  let rec inner (basis : Id.cid_typ list) cPsi =
+    match Whnf.cnormDCtx (cPsi,MShift 0) with
     | Null -> (Shift 0,  Null) (* . |- shift(noCtx, 0) : . *)
 
     | CtxVar (psi) ->
-      begin try
-        let schema = begin match psi with
-          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
-          | CInst ({ typ = CTyp (Some cid_schema); _ }, _ ) -> cid_schema
-          | CtxName psi ->
-              let (_,Decl (_, CTyp (Some s_cid), _))  = Store.FCVar.get psi in s_cid
-	  | _ -> raise NoSchema
-        end
-        in
-        if relevantSchema (Schema.get_schema schema) basis then
-          ( (*print_string "Keeping context variable\n"; *)
-            (Shift 0,  CtxVar psi))  (* psi |- shift(noCtx, 0) : psi *)
-        else
-          ( (* print_string ("Denying that the context variable is relevant to anything in " ^
-               basisToString basis ^ "\n"); *)
-            ( EmptySub (* Shift(CtxShift psi, 0) *) ,  Null) )  (* psi |- shift(noCtx, 0) : . *)
-      with NoSchema -> (Shift 0, CtxVar psi) end
+       begin
+         try
+           let schema = match psi with
+             | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
+             | CInst ({ typ = CTyp (Some cid_schema); _ }, _ ) -> cid_schema
+             | CtxName psi ->
+                let (_,Decl (_, CTyp (Some s_cid), _))  = Store.FCVar.get psi in s_cid
+	           | _ -> raise NoSchema
+           in
+           if relevantSchema (Schema.get_schema schema) basis then
+             (Shift 0, CtxVar psi)  (* psi |- shift(noCtx, 0) : psi *)
+           else
+             (EmptySub,  Null)
+               (* psi |- shift(noCtx, 0) : . *)
+         with NoSchema -> (Shift 0, CtxVar psi)
+       end
     | DDec(cPsi, TypDecl(name, tA)) ->
-        begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
-          | [] ->
-            let (thin_s, cPsi') = inner  basis cPsi in
-              (* cPsi |- thin_s : cPsi' *)
-              (Substitution.LF.comp thin_s (Shift 1),  cPsi')
-              (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
-          | nonempty_list ->
-              let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in
-              (* cPsi |- thin_s <= cPsi' *)
-              (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *)
-              let thin_s_inv      = Substitution.LF.invert thin_s in
-		(Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo (tA, thin_s_inv))))
-        end
+       begin match relevant (Whnf.normTyp (tA, Substitution.LF.id)) basis with
+       | [] ->
+          let (thin_s, cPsi') = inner  basis cPsi in
+          (* cPsi |- thin_s : cPsi' *)
+          (Substitution.LF.comp thin_s (Shift 1),  cPsi')
+       (* cPsi, x:tA |- thin_s ^ 1 : cPsi' *)
+       | nonempty_list ->
+          let (thin_s, cPsi') = inner (nonempty_list @ basis) cPsi in
+          (* cPsi |- thin_s <= cPsi' *)
+          (* cPsi,x:tA |- dot1 thin_s <= cPsi', x:tA'  where tA = [thin_s]([thin_s_inv]tA) *)
+          let thin_s_inv      = Substitution.LF.invert thin_s in
+		      (Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo (tA, thin_s_inv))))
+       end
   in
-    inner [a] cPsi
-
+  inner [a] cPsi
 
 let thin' cD a cPsi =
   begin match Context.ctxVar cPsi with
   | Some (CtxName psi) ->
-      begin try
-        let (_,Decl (_, CTyp _, _))  = Store.FCVar.get psi in
-          thin0 cD a cPsi
-      with
-          Not_found -> (Shift 0, cPsi)
-      end
+     begin try
+         dprintf begin fun p ->
+         let (_,Decl (_, CTyp _, _))  = Store.FCVar.get psi in
+           p.fmt "[thin'] CtxName psi = %a FOUND"
+             Id.print psi
+           end;
+         thin0 cD a cPsi
+       with
+       | Not_found ->
+          dprintf begin fun p ->
+            p.fmt "[thin'] CtxName psi = %a NOT FOUND"
+              Id.print psi
+            end;
+          (Shift 0, cPsi)
+     end
   | _ -> thin0 cD a cPsi
   end
 

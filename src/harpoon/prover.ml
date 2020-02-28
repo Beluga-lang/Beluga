@@ -972,8 +972,18 @@ module Prover = struct
            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
-       List.iter solve_hole hs;
-       Tactic.invoke b i tau name t g
+       if Whnf.closedExp' i then
+         (List.iter solve_hole hs; Tactic.invoke b i tau name t g)
+       else
+         State.printf s
+           "@[<v>Elaborated expression\
+            @,  @[%a@]\
+            @,of type\
+            @,  @[%a@]\
+            @,is not closed.\
+            @,Both the expression and its type must be closed for use with `by`.@]"
+           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+           P.(fmt_ppr_cmp_typ cD l0) tau
 
     | Command.Suffices (i, tau_list) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in

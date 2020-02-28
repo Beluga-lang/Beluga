@@ -85,39 +85,35 @@ module Schema = Store.Cid.Schema
       elements in basis
 
 *)
-let rec relevant tA basis = (match tA with
+let rec relevant tA basis = match tA with
   | Atom(_, a, _spine) ->
-      Types.freeze a;
-      if List.exists (fun type_in_basis -> Types.is_subordinate_to type_in_basis a
-                        || a = type_in_basis) basis then
-        (* there is some `b' in basis such that `a'-terms can appear in `b'-terms, that is,
-           `a'-terms can appear in something we need *)
-        ( (* dprint (fun () -> "Claiming that " ^ R.render_cid_typ a ^ *)
-        (*             " can appear in any of the following: " ^ _basisToString basis); *)
-(*          dump_subord () ;
-          dump_typesubord () ; *)
-	 [a])
-      else
-        (
-          (* dprint (fun () -> "Denying that " ^ R.render_cid_typ a ^ *)
-          (*           " can appear in any of the following: " ^ _basisToString basis); *)
-          [])
+     Types.freeze a;
+     if List.exists
+          begin fun type_in_basis ->
+          Types.is_subordinate_to type_in_basis a
+          || a = type_in_basis
+          end basis
+     then
+	     [a]
+     else
+       []
 
   | PiTyp((TypDecl(_x, tA1), _), tA2) ->
-      (* extract_pos returns all types which are in a positive position *)
-      let rec extract_pos tA = match tA with
-	| Atom(_, _a, _spine) -> [tA]
-	| PiTyp ((TypDecl(_x, tA1), _ ), tA2) -> (extract_neg tA1) @ (extract_pos tA2)
-      and extract_neg tA = match tA with
-	| Atom(_, _a, _spine) -> []
-	| PiTyp ((TypDecl(_x, tA1), _ ) , tA2) -> (extract_pos tA1) @ (extract_neg tA2)
-      in
-      (* (relevant tA1 basis) @
-	 If we keep this, then we might not strengthen enough... -bp*)
-	List.fold_left (fun l tA -> (relevant tA basis) @ l) [] (extract_neg tA1)
-	  @ (relevant tA2 basis)
+     (* extract_pos returns all types which are in a positive position *)
+     let rec extract_pos = function
+	     | Atom (_, _a, _spine) -> [tA]
+	     | PiTyp ( (TypDecl(_x, tA1), _ ), tA2) ->
+          extract_neg tA1 @ extract_pos tA2
+     and extract_neg = function
+	     | Atom (_, _a, _spine) -> []
+	     | PiTyp ((TypDecl(_x, tA1), _ ) , tA2) ->
+          extract_pos tA1 @ extract_neg tA2
+     in
+     (* (relevant tA1 basis) @
+	      If we keep this, then we might not strengthen enough... -bp*)
+	   List.fold_left (fun l tA -> (relevant tA basis) @ l) [] (extract_neg tA1)
+	   @ relevant tA2 basis
   | Sigma typRec -> relevantTypRec typRec basis
-                            )
 
 and relevantTypRec tRec basis = (match tRec with
   | SigmaLast (_n, tA) -> relevant tA basis
@@ -189,10 +185,7 @@ let thin cD (tP, cPsi) =
               (Substitution.LF.dot1 thin_s,  DDec(cPsi', TypDecl(name, TClo(tA, thin_s_inv))))
         end
   in
-    inner (match tP with Atom(_, a, _spine) -> [a]) cPsi
-
-
-
+  inner (match tP with Atom(_, a, _spine) -> [a]) cPsi
 
 exception NoSchema
 let thin0 cD a cPsi =

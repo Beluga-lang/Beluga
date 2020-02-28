@@ -462,6 +462,32 @@ let rec elMCtx recT delta = match delta with
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
   let s_proj   = gen_conv_sub conv_list in
+  dprintf begin fun p ->
+    p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
+           @,s_proj = @[%a@]@]"
+      P.(fmt_ppr_lf_dctx cD l0) flat_cPsi
+      P.(fmt_ppr_lf_sub cD cPsi l0) s_proj
+    end;
+  let thinned =
+    lazy
+      begin
+        let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
+        (* cPhi |- ss' : cPhi' *)
+        dprintf begin fun p ->
+          p.fmt "[mgAtomicTyp] @[<v>thinning constructed weakening\
+                 @,@[%a@]\
+                 @,for type %a@]"
+            P.fmt_ppr_lf_sub_typing (cD, flat_cPsi, ss', cPhi')
+            (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Loc.ghost, a, Nil))
+          end;
+        let ssi' = LF.invert ss' in
+        (* cPhi' |- ssi : cPhi *)
+        (* cPhi' |- [ssi]tQ    *)
+        let ss_proj = LF.comp ss' s_proj in
+        (cPhi', ssi', ss_proj)
+      end
+  in
+
   let rec genSpine sK = match sK with
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
@@ -470,13 +496,12 @@ let mgAtomicTyp cD cPsi a kK =
         let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let tR    =
           if !strengthen then
-            (let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
-             (* cPhi |- ss' : cPhi' *)
-             let ssi' = LF.invert ss' in
-             (* cPhi' |- ssi : cPhi *)
-             (* cPhi' |- [ssi]tQ    *)
-             let ss_proj = LF.comp ss' s_proj in
-             Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi' (tA1', ssi') _n ss_proj dep)
+            let lazy (cPhi', ssi', ss_proj) = thinned in
+            dprintf begin fun p ->
+              p.fmt "[mgAtomicTyp] PiKind ssi' = @[%a@]"
+                P.(fmt_ppr_lf_sub cD cPhi' l0) ssi'
+              end;
+            Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi' (tA1', ssi') _n ss_proj dep
           else
             Whnf.etaExpandMMV Syntax.Loc.ghost cD flat_cPsi (tA1', Substitution.LF.id) _n s_proj dep
         in

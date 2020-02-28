@@ -2,9 +2,6 @@ open Syntax.Int.LF
 
 val dump : bool ref
 
-val dump_subord : unit -> unit
-val dump_typesubord : unit -> unit
-
 (* thin (cO, cD) (tP, cPsi)
  *
  * tP must be atomic, i.e. tP = Atom(loc, a, spine)

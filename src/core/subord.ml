@@ -9,11 +9,10 @@
 
 include Options.Subord
 
+open Support
 open Syntax.Int.LF
 module Types = Store.Cid.Typ
 module Schema = Store.Cid.Schema
-
-module R = Store.Cid.NamedRenderer
 
 (* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [28]) *)
 
@@ -71,48 +70,6 @@ module R = Store.Cid.NamedRenderer
  *)
 
 
-let dump_subord () =
-  Printf.printf "## Dumping subordination relation (over %d types) ##\n"
-                (List.length !(DynArray.get Types.entry_list !Store.Modules.current));
-  let typeList = List.rev (!(DynArray.get Types.entry_list !Store.Modules.current)) in
-  let dump_entry a b =
-    if Types.is_subordinate_to a b then print_string (R.render_cid_typ b ^ " ")
-
-  in let dump_line a =
-      print_string ("--   " ^ R.render_cid_typ a ^ "  |>  ");
-      List.iter (dump_entry a) typeList;
-      print_string ("\n")
-  in
-    List.iter (fun a -> dump_line a) typeList
-
-let dump_typesubord () =
-  Printf.printf "## Dumping type-level subordination relation (over %d types) ##\n"
-                (List.length !(DynArray.get Types.entry_list !Store.Modules.current));
-  let typeList = List.rev (!(DynArray.get Types.entry_list !Store.Modules.current)) in
-  let dump_entry a b =
-    if Types.is_typesubordinate_to a b then print_string (R.render_cid_typ b ^ " ")
-
-  in let dump_line a =
-      print_string ("--[type]   " ^ R.render_cid_typ a ^ "  |>  ");
-      List.iter (dump_entry a) typeList;
-      print_string ("\n")
-  in
-    List.iter (fun a -> dump_line a) typeList
-
-
-
-let null = function [] -> true
-                   | _ -> false
-
-let rec separate sep f xs = match xs with
-  | [] -> ""
-  | [x] -> f x
-  | h::t -> f h ^sep ^ separate sep f t
-
-let _basisToString basis =
-  separate ", " (fun type_in_basis -> R.render_cid_typ type_in_basis) basis
-
-
 (*  relevant tA basis = rlist
 
     For every type family occurring in tA,
@@ -168,8 +125,11 @@ and relevantTypRec tRec basis = (match tRec with
       (relevant tA  basis)@ (relevantTypRec typRec basis))
 
 and relevantSchema (Schema sch_elems) basis =
-  List.exists (function SchElem(_some_part, typRec) ->
-                 not (null (relevantTypRec typRec basis))) sch_elems
+  List.exists
+    begin fun (SchElem (_some_part, typRec)) ->
+    Misc.List.nonempty (relevantTypRec typRec basis)
+    end
+    sch_elems
 
 (* thin (cO, cD) (tP, cPsi) = (s, cPsi')
 

@@ -114,8 +114,6 @@ let load_file ppf file_name =
   if !Coverage.enableCoverage then
     Chatter.print 2 "## Coverage checking done: %s  ##@." file_name;
 
-  if !Subord.dump then Subord.dump_subord();
-
   Logic.runLogic (); (* TODO Logic needs to accept a formatter -je *)
   if not (Holes.none ()) then
     begin

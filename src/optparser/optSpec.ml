@@ -1,5 +1,18 @@
+(**
+   A module for the functions that operate on an option and  a set of options.
+   For example,
+   - functions that lift option info into an option
+   - functions that merge option sets
+   - etc.
+   are included.
+   @author Clare Jang
+ *)
 open Util
 
+(**
+   An error type that might be emitted from {!Parser.parse} function.
+   @author Clare Jang
+ *)
 type error =
   | MissingMandatory
     of string (* option name *)
@@ -18,6 +31,15 @@ type help_entry =
   * string option (* help message for option *)
 
 type help_printer = string -> Format.formatter -> unit -> unit
+
+(**
+   A type representing the specification of an option set.
+   There are only three things a user can do with this type.
+   - Add more options
+   - Mapping a result value
+   - Make a parse function by passing a value of this type to {!Parser.parse}
+   @author Clare Jang
+ *)
 type 'a t =
   { opt_tbl : (string, int option * (help_printer -> string list -> unit)) Hashtbl.t
   ; comp_value : string list -> ('a, error) result
@@ -73,6 +95,10 @@ let get_comp_value t = t.comp_value
 let get_mandatory_help_entries t = t.mandatory_help_entries
 let get_optional_help_entries t = t.optional_help_entries
 
+(**
+   A function to define an option with no extra arguments.
+   @author Clare Jang
+ *)
 let opt0 (a : 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in
@@ -85,6 +111,11 @@ let opt0 (a : 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   in
   make infos (Some arity) build_arg_parser
 
+(**
+   A function to define an option with one extra argument.
+   @param read_arg a function that parses the extra argument.
+   @author Clare Jang
+ *)
 let opt1 (read_arg : string -> 'a option) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 1 in
@@ -110,10 +141,32 @@ let opt1 (read_arg : string -> 'a option) (infos : 'a OptInfo.unchecked list) : 
   in
   make infos (Some arity) build_arg_parser
 
+(**
+   A function to define an option with one extra argument which is "true" or "false".
+   @author Clare Jang
+ *)
 let bool_opt1 : bool OptInfo.unchecked list -> bool t = opt1 bool_of_string_opt
+
+(**
+   A function to define an option with one extra argument which is an integer.
+   @author Clare Jang
+ *)
 let int_opt1 : int OptInfo.unchecked list -> int t = opt1 int_of_string_opt
+
+(**
+   A function to define an option with one extra argument which is any string without a space.
+   @author Clare Jang
+ *)
 let string_opt1 : string OptInfo.unchecked list -> string t = opt1 Option.some
 
+(**
+   A function to define an option which does not take any extra arguments,
+   and acts as a switch (an option returning boolean based on whether it is set or not).
+   Because this function defines a switch, the defined option is always optional
+   even when [infos] does not include {!OptInfo.optional}.
+   Furthermore, this function ignores {!OptInfo.optional} value inside of [infos].
+   @author Clare Jang
+ *)
 let switch_opt (infos : unit OptInfo.unchecked list) : bool t =
   let open OptInfo in
   infos
@@ -121,6 +174,11 @@ let switch_opt (infos : unit OptInfo.unchecked list) : bool t =
   |> List.append [optional false]
   |> opt0 true
 
+(**
+   A function to define an option taking all arguments after this,
+   including the arguments (options) starting with "-".
+   @author Clare Jang
+ *)
 let takes_all_opt (infos : string list OptInfo.unchecked list) : string list t =
   let open OptInfo in
   let build_arg_parser info res_ref _ =
@@ -137,6 +195,12 @@ let takes_all_opt (infos : string list OptInfo.unchecked list) : string list t =
   in
   make infos None build_arg_parser
 
+(**
+   A function to define a no-argument option which includes
+   some impure behavior inside of its parsing step.
+   A user probably want to use this with {!(<!)}.
+   @author Clare Jang
+ *)
 let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in
@@ -150,6 +214,12 @@ let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : '
   in
   make infos (Some arity) build_arg_parser
 
+(**
+   A function to define a no-argument option which displays
+   help messsage using [print_fn].
+   A user probably want to use this with {!(<!)}.
+   @author Clare Jang
+ *)
 let help_opt0 (print_fn : (string -> Format.formatter -> unit -> unit) -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in
@@ -162,6 +232,12 @@ let help_opt0 (print_fn : (string -> Format.formatter -> unit -> unit) -> 'a) (i
   in
   make infos (Some arity) arg_parser
 
+(**
+   A function to handle {i left-over arguments}.
+   The {i left-over arguments} include an argument before any options,
+   an argument after all options, and an argument between options but not handled by one of them.
+   @author Clare Jang
+ *)
 let rest_args (impure_fn : string list -> 'a) : 'a t =
   { opt_tbl = Hashtbl.create 0
   ; comp_value = (fun args -> Ok (impure_fn args))
@@ -195,9 +271,18 @@ let rest_args (impure_fn : string list -> 'a) : 'a t =
    ]
  *)
 
+(**
+   The map function of optparser functor.
+   @author Clare Jang
+ *)
 let (<$) (f : 'a -> 'b) (opt : 'a t) : 'b t =
   { opt with comp_value = fun args -> Result.map f (opt.comp_value args)
   }
+
+(**
+   The ap function of optparser apply functor.
+   @author Clare Jang
+ *)
 let (<&) (opt_f : ('a -> 'b) t) (opt_a : 'a t) : 'b t =
   let opt_tbl = Hashtbl.copy opt_f.opt_tbl in
   Hashtbl.add_seq opt_tbl (Hashtbl.to_seq opt_a.opt_tbl);
@@ -213,10 +298,16 @@ let (<&) (opt_f : ('a -> 'b) t) (opt_a : 'a t) : 'b t =
   }
 
 (**
-   reverse of [(<$)]
+   reverse of {!(<$)}
+   @author Clare Jang
  *)
 let ($>) opt f : 'b t = f <$ opt
 
+(**
+   An operator only for adding impure behavior to parsing.
+   This operator ignores the result value of the second parameter.
+   @author Clare Jang
+ *)
 let (<!) (opt_a : 'a t) (opt_impure : unit t) : 'a t =
   let opt_tbl = Hashtbl.copy opt_a.opt_tbl in
   Hashtbl.add_seq opt_tbl (Hashtbl.to_seq opt_impure.opt_tbl);

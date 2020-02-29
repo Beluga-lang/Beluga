@@ -159,16 +159,16 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   <& switch_opt
        [ OptInfo.long_name "no-save-back"
        ]
-  <! impure_opt handle_debug
+  <! impure_opt0 handle_debug
        [ OptInfo.long_name "debug"
        ; OptInfo.help_msg
            "use debugging mode (writes to debug.out in CWD)"
        ]
-  <! impure_opt handle_implicit
+  <! impure_opt0 handle_implicit
        [ OptInfo.long_name "implicit"
        ; OptInfo.help_msg "print implicit variables"
        ]
-  <! help_opt handle_help
+  <! help_opt0 handle_help
        [ OptInfo.long_name "help"
        ; OptInfo.short_name 'h'
        ; OptInfo.help_msg "print this message"

@@ -1,3 +1,8 @@
+(**
+   An internal module for utility functions used in this package.
+   @author Clare Jang
+ *)
+
 let id a = a
 
 module List = struct

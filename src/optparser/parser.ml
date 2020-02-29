@@ -1,3 +1,9 @@
+(**
+   A module provides the {!parse} function which is a core API of this library.
+   The function provides the only way to use {!OptSpec.t}.
+   @author Clare Jang
+ *)
+
 open Util
 
 let is_short_opt arg = String.get arg 0 = '-' && String.get arg 1 != '-'
@@ -65,6 +71,11 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
   Format.pp_close_box ppf ();
   Format.pp_print_newline ppf ()
 
+(**
+   A function parses command line arguments using ['a OptSpec.t], and returns ['a] as
+   the result of the parsing.
+   @author Clare Jang
+ *)
 let parse (spec : 'a OptSpec.t) (args : string list) : ('a, OptSpec.error) result =
   let split n =
     let rec loop n =

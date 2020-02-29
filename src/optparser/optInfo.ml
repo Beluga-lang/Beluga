@@ -42,22 +42,23 @@ let lift (spec : unit unchecked) : 'a unchecked =
   ; optional = None
   }
 
-let combine (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
-  let open Option in
-  { long_name = fold ~none:spec1.long_name ~some spec0.long_name
-  ; short_name = fold ~none:spec1.short_name ~some spec0.short_name
-  ; other_names = fold ~none:spec1.other_names ~some spec0.other_names
-  ; meta_vars = fold ~none:spec1.meta_vars ~some spec0.meta_vars
-  ; help_msg = fold ~none:spec1.help_msg ~some spec0.help_msg
-  ; default_argument = fold ~none:spec1.default_argument ~some spec0.default_argument
-  ; condition = fold ~none:spec1.condition ~some spec0.condition
-  ; optional = fold ~none:spec1.optional ~some spec0.optional
-  }
 (* It's not possible to do eta-conversion.
      By eta-conversion, it loses its polymorphicity,
      and fails to check against its signature
  *)
 let merge (specs : 'a unchecked list) : 'a unchecked =
+  let combine (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
+    let open Option in
+    { long_name = fold ~none:spec1.long_name ~some spec0.long_name
+    ; short_name = fold ~none:spec1.short_name ~some spec0.short_name
+    ; other_names = fold ~none:spec1.other_names ~some spec0.other_names
+    ; meta_vars = fold ~none:spec1.meta_vars ~some spec0.meta_vars
+    ; help_msg = fold ~none:spec1.help_msg ~some spec0.help_msg
+    ; default_argument = fold ~none:spec1.default_argument ~some spec0.default_argument
+    ; condition = fold ~none:spec1.condition ~some spec0.condition
+    ; optional = fold ~none:spec1.optional ~some spec0.optional
+    }
+  in
   List.fold_left combine (make_empty ()) specs
 
 type 'a checked =

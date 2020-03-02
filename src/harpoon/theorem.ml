@@ -308,12 +308,3 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
 
 let set_hidden (t : t) b =
   Store.Cid.Comp.set_hidden t.cid (Misc.const b)
-
-(* Invokes the translation procedure on a given theorem *)
-let translate (thm : t) : Comp.exp_chk =
-  let open Comp in
-  let state = thm.initial_state in
-  let cD = state.context.cD in
-  let cG = state.context.cG in
-  let (tau, _) = state.goal in
-  Translate.translate_proof cD cG (Option.get !(state.solution)) tau

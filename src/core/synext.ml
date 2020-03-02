@@ -296,6 +296,8 @@ module Harpoon = struct
     | Session of [ basic_command | `create | `serialize ]
     | Subgoal of basic_command
 
+    | Translate of Id.name
+
     (* Actual tactics *)
     | Intros of string list option (* list of names for introduced variables *)
 

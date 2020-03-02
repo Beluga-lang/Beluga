@@ -3156,6 +3156,11 @@ let interactive_harpoon_command =
     &> seq2 info_kind name
     $> fun (k, name) -> H.Info (k, name)
   in
+  let translate =
+    keyword "translate"
+    &> name
+    $> fun name -> H.Translate name
+  in
   choice
     [ intros
     ; info
@@ -3168,6 +3173,7 @@ let interactive_harpoon_command =
     ; by
     ; suffices
     ; unbox
+    ; translate
     ; toggle_automation
     ; rename
     ; defer

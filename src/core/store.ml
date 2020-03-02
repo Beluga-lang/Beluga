@@ -171,6 +171,7 @@ module type CIDSTORE = sig
   type cid
 
   val index_of_name : Id.name -> cid
+  val index_of_name_opt : Id.name -> cid option
   val replace_entry : cid -> entry -> unit
   val fixed_name_of : cid -> Id.name
   val get : cid -> entry
@@ -224,6 +225,10 @@ module CidStore (M : ENTRY) : CIDSTORE
         | [] -> n
         | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n)) in
       Modules.find n directory (fun x -> NameTable.find x n')
+
+    let index_of_name_opt (n : Id.name) : cid option =
+      try Some (index_of_name n)
+      with Not_found -> None
 
     let fixed_name_of (l, n) =
       let l' = Modules.name_of_id l in

@@ -50,5 +50,3 @@ val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook
 val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
                     CompS.mutual_group_id * t list
 val set_hidden : t -> bool -> unit
-
-val translate : t -> exp_chk

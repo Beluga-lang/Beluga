@@ -311,6 +311,7 @@ module Cid : sig
 
     val fixed_name_of : cid_prog -> Id.name
     val index_of_name : name -> cid_prog
+    val index_of_name_opt : name -> cid_prog option
 
     (* val entry_list    : ((Id.cid_prog * Loc.t) list ref) DynArray.t *)
     val clear         : unit -> unit

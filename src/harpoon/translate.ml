@@ -81,18 +81,51 @@ let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
      end
   | Comp.Directive d -> directive cD cG d tau
 
+and split_branch cD cG pat t hyp tau =
+  let tau_b = Whnf.cnormCTyp (tau, t) in
+  let Comp.Hypothetical (h, p) = hyp in
+  let cD_b, cG_b = Comp.(h.cD, h.cG) in
+  let e = proof cD_b cG_b p tau_b in
+  Comp.Branch
+    ( Loc.ghost
+    , cD_b
+    , cG_b
+    , pat
+    , t
+    , e
+    )
+
+and meta_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
+  split_branch cD cG pat t hyp tau
+
+and comp_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
+  split_branch cD cG pat t hyp tau
+
+and context_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
+  split_branch cD cG pat t hyp tau
+
 and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   match d with
+  | Comp.Solve e_chk -> e_chk
+
   | Comp.Intros (Comp.Hypothetical (hyp, p)) ->
      let (cD', cG', tau', _) = Check.Comp.unroll cD cG tau in
      let e = proof cD' cG' p tau' in
      let (cD_orig, cG_orig, f) = unroll cD' cG' tau in
      assert Whnf.(convMCtx cD_orig cD && convGCtx (cG_orig, m_id) (cG, m_id));
      f e
-  | Comp.Solve e_chk -> e_chk
-  | Comp.MetaSplit (e_syn, tau, m_branches) -> assert false
-  | Comp.CompSplit (e_syn, tau, c_branches) -> assert false
 
+  | Comp.MetaSplit (i, _, sbs) ->
+     let bs = List.map (fun b -> meta_split_branch cD cG b tau) sbs in
+     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
+
+  | Comp.CompSplit (i, _, sbs) ->
+     let bs = List.map (fun b -> comp_split_branch cD cG b tau) sbs in
+     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
+
+  | Comp.ContextSplit (i, _, sbs) ->
+     let bs = List.map (fun b -> context_split_branch cD cG b tau) sbs in
+     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
 
 let theorem thm tau = match thm with
   | Comp.Proof p -> proof LF.Empty LF.Empty p tau

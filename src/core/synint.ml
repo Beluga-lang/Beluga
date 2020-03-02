@@ -430,7 +430,7 @@ module Comp = struct
     | PatFVar   of Loc.t * name (* used only _internally_ by coverage *)
     | PatVar   of Loc.t * offset
     | PatPair  of Loc.t * pattern * pattern
-    | PatAnn   of Loc.t * pattern * typ
+    | PatAnn   of Loc.t * pattern * typ * plicity
 
   and pattern_spine =
     | PatNil
@@ -513,10 +513,11 @@ module Comp = struct
   let rec strip_pattern : pattern -> pattern = function
     | PatPair (loc, p1, p2) ->
        PatPair (loc, strip_pattern p1, strip_pattern p2)
-    | PatAnn (loc, p, _) -> p
+    | PatAnn (loc, p, _, _) -> p
     | PatConst (loc, c, pS) ->
        PatConst (loc, c, strip_pattern_spine pS)
     | p -> p (* no subpatterns *)
+
   and strip_pattern_spine : pattern_spine -> pattern_spine = function
     | PatNil -> PatNil
     | PatApp (loc, p, pS) ->

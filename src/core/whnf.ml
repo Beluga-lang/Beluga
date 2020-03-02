@@ -1693,9 +1693,13 @@ let mctxMVarPos cD u =
     | Comp.PatPair (loc, pat1, pat2) ->
         Comp.PatPair (loc, cnormPattern (pat1, t),
                       cnormPattern (pat2, t))
-    | Comp.PatAnn (loc, pat, tau) ->
-        Comp.PatAnn (loc, cnormPattern (pat, t),
-                     cnormCTyp (tau, t))
+    | Comp.PatAnn (loc, pat, tau, plicity) ->
+       Comp.PatAnn
+         ( loc
+         , cnormPattern (pat, t)
+         , cnormCTyp (tau, t)
+         , plicity
+         )
 
   and cnormPatSpine (patSpine, t) = match patSpine with
     | Comp.PatNil -> Comp.PatNil
@@ -1733,11 +1737,19 @@ let mctxMVarPos cD u =
 
   *)
   and cnormBranch = function
-    | (Comp.Branch (loc, cD, cG, Comp.PatAnn(loc'', Comp.PatMetaObj (loc', mO), tau), t, e), theta) ->
+    | Comp.Branch
+      ( loc
+      , cD
+      , cG
+      , Comp.PatAnn(loc'', Comp.PatMetaObj (loc', mO), tau, plicity)
+      , t
+      , e
+      )
+    , theta ->
 	Comp.Branch (loc, cD, cG,
 		     Comp.PatAnn(loc'',
 				 Comp.PatMetaObj (loc', normMetaObj mO),
-				 cnormCTyp (tau, m_id)),
+				 cnormCTyp (tau, m_id), plicity),
 		     cnormMSub t,
                      cnormExp (e, m_id))
 
@@ -2160,7 +2172,7 @@ and closedPattern = function
   | Comp.PatVar _ -> true
   | Comp.PatPair (_, pat1, pat2) ->
      closedPattern pat1 && closedPattern pat2
-  | Comp.PatAnn (_, pat, tau) ->
+  | Comp.PatAnn (_, pat, tau, _) ->
      closedPattern pat && closedCTyp tau
 
 (** Combines two sets of hypotheses.

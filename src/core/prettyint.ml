@@ -1060,7 +1060,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "(%a , %a)"
          (fmt_ppr_cmp_pattern cD cG 0) pat1
          (fmt_ppr_cmp_pattern cD cG 0) pat2
-    | Comp.PatAnn (_, pat, tau) ->
+    | Comp.PatAnn (_, pat, _, `implicit) ->
+       fmt_ppr_cmp_pattern cD cG 0 ppf pat
+
+    | Comp.PatAnn (_, pat, tau, `explicit) ->
        fprintf ppf "(%a : %a)"
          (fmt_ppr_cmp_pattern cD cG 0) pat
          (fmt_ppr_cmp_typ cD 0) tau

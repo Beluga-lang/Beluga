@@ -900,7 +900,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
   let unifyScrutinee tau_p' t1 t1t =
     match caseT with
     | DataObj -> () (* not dependent pattern matching; nothing to do *)
-    | IndexObj (Int.Comp.(PatMetaObj (_, mC_p) | PatAnn (_, PatMetaObj (_, mC_p), _)), mC) ->
+    | IndexObj (Int.Comp.(PatMetaObj (_, mC_p) | PatAnn (_, PatMetaObj (_, mC_p), _, _)), mC) ->
        let mC_p = Whnf.(cnormMetaObj (mC_p, m_id)) in
        (* tau_p' _has_ to be a box type if caseT is an IndexObj  *)
        let Int.Comp.TypBox (_, mT) = tau_p' in
@@ -1529,7 +1529,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
   | Apx.Comp.PatAnn (loc, pat, tau) ->
       let tau' = elCompTyp cD tau in
       let (cG', pat') = elPatChk cD cG pat (tau', Whnf.m_id) in
-        (cG', Int.Comp.PatAnn (loc, pat', tau'), (tau', Whnf.m_id))
+        (cG', Int.Comp.PatAnn (loc, pat', tau', `explicit), (tau', Whnf.m_id))
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
       let tau = (CompConst.get c).CompConst.Entry.typ in
@@ -1661,8 +1661,11 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
 
 
 and recPatObj' cD pat (cD_s, tau_s) = match pat with
-  | Apx.Comp.PatAnn (l, (Apx.Comp.PatMetaObj (loc, _) as pat') ,
-                          Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))) ->
+  | Apx.Comp.PatAnn
+    ( l
+    , (Apx.Comp.PatMetaObj (loc, _) as pat')
+    , Apx.Comp.TypBox (loc', (_,Apx.LF.ClTyp(Apx.LF.MTyp a, psi)))
+    ) ->
      dprintf
        begin fun p ->
        p.fmt "[recPatObj' - PatMetaObj] scrutinee has type tau = @[%a@]"
@@ -1675,7 +1678,7 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
      let ttau' = (tau', Whnf.m_id) in
      let (cG', pat') = elPatChk cD Int.LF.Empty pat'  ttau' in
      (* Return annotated pattern? Int.Comp.PatAnn (l, pat', tau') *)
-     (cG',Int.Comp.PatAnn(l, pat', tau'), ttau')
+     (cG', Int.Comp.PatAnn (l, pat', tau', `explicit), ttau')
 
   | Apx.Comp.PatAnn (_ , pat, tau) ->
      dprintf
@@ -1725,7 +1728,9 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
       let tau_p = Int.Comp.TypBox (loc', clTyp) in
       let ttau' = (tau_p, Whnf.m_id) in
       let (cG', pat')  = elPatChk cD Int.LF.Empty pat ttau' in
-      (cG', Int.Comp.PatAnn(loc, pat', tau_p), ttau')
+      (* here the annotation is implicit because it did not appear in
+         the user-supplied syntax; we just reconstructed it. *)
+      (cG', Int.Comp.PatAnn(loc, pat', tau_p, `implicit), ttau')
 
   | _ ->
      dprintf

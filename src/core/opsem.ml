@@ -328,9 +328,14 @@ and match_pattern  (v,eta) (pat, mt) =
   let rec loop v pat =
     match v, pat with
 
-      | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
-	Comp.PatAnn (_, Comp.PatMetaObj (_, (_ , LF.ClObj (_, cObj'))), Comp.TypBox (_, LF.ClTyp (_ , cPsi'))) ->
-	  match_cobj (phat, cObj) (cPsi', cObj', mt)
+    | Comp.BoxValue (_, LF.ClObj (phat, cObj))
+    , Comp.PatAnn
+        ( _
+        , Comp.PatMetaObj (_, (_ , LF.ClObj (_, cObj')))
+        , Comp.TypBox (_, LF.ClTyp (_ , cPsi'))
+        , _
+        ) ->
+	     match_cobj (phat, cObj) (cPsi', cObj', mt)
 
       | Comp.BoxValue (_, LF.ClObj (phat, cObj)) ,
 	Comp.PatMetaObj (_, (_ , LF.ClObj (phat', cObj'))) ->
@@ -364,7 +369,7 @@ and match_pattern  (v,eta) (pat, mt) =
         raise (Error.Violation "Expected context.")
 
 
-      | _, Comp.PatAnn (_, pat', _) ->
+      | _, Comp.PatAnn (_, pat', _, _) ->
         loop v pat'
 
       | Comp.DataValue (cid, spine), Comp.PatConst (_, pat_cid, pat_spine) ->

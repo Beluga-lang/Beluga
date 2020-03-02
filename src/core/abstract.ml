@@ -1353,10 +1353,10 @@ and collectPatObj cQ pat = match pat with
       let (cQ1, pat1') = collectPatObj cQ pat1 in
       let (cQ2, pat2') = collectPatObj cQ1 pat2 in
         (cQ2, Comp.PatPair (loc, pat1', pat2'))
-  | Comp.PatAnn (loc, pat, tau) ->
+  | Comp.PatAnn (loc, pat, tau, plicity) ->
       let (cQ1, pat') = collectPatObj cQ pat in
       let (cQ2, tau') = collectCompTyp 0 cQ1 tau in
-        (cQ2, Comp.PatAnn (loc, pat', tau'))
+        (cQ2, Comp.PatAnn (loc, pat', tau', plicity))
   | Comp.PatConst (loc, c, pat_spine) ->
       let (cQ1, pat_spine') = collectPatSpine cQ pat_spine in
         (cQ1, Comp.PatConst (loc, c, pat_spine'))
@@ -1458,10 +1458,10 @@ let rec abstractMVarPatObj cQ cG offset pat = match pat with
       let pat1' = abstractMVarPatObj cQ cG offset pat1 in
       let pat2' = abstractMVarPatObj cQ cG offset pat2 in
         Comp.PatPair (loc, pat1', pat2')
-  | Comp.PatAnn (loc, pat, tau) ->
+  | Comp.PatAnn (loc, pat, tau, plicity) ->
       let  pat' = abstractMVarPatObj cQ cG offset pat in
       let tau' = abstractMVarCompTyp cQ offset tau in
-        Comp.PatAnn (loc, pat', tau')
+        Comp.PatAnn (loc, pat', tau', plicity)
   | Comp.PatConst (loc, c, pat_spine) ->
       let pat_spine' = abstractMVarPatSpine cQ cG offset pat_spine in
         Comp.PatConst (loc, c, pat_spine')

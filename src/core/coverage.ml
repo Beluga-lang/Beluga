@@ -487,7 +487,7 @@ end = struct
     id t cD'
 
   let rec check_pattern cD cG tau_sc cD_p t = function
-    | Comp.PatAnn (_, patt, _) ->
+    | Comp.PatAnn (_, patt, _, _) ->
        check_pattern cD cG tau_sc cD_p t patt
     | Comp.PatVar _ -> is_id cD_p t cD
     | Comp.PatMetaObj (_, mO) ->
@@ -997,9 +997,9 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
      in
      match_pattern (cD, cG) (cD_p, cG_p)
        (pat2, (tau2,t)) (pat2', (tau2', t')) mC1 sC1
-  | pat_ttau, (Comp.PatAnn (_, pat', tau'), (_, t')) ->
+  | pat_ttau, (Comp.PatAnn (_, pat', tau', _), (_, t')) ->
      match_pattern (cD, cG) (cD_p, cG_p) pat_ttau (pat', (tau', t')) mC sC
-  | (Comp.PatAnn (_, pat', tau'), (_, t')), pat_ttau ->
+  | (Comp.PatAnn (_, pat', tau', _), (_, t')), pat_ttau ->
      match_pattern (cD, cG) (cD_p, cG_p) (pat', (tau', t')) pat_ttau mC sC
   | _ ->
      raise (Error (Loc.ghost, MatchError "Mismatch"))
@@ -2665,9 +2665,9 @@ let rec subst_pattern (pat_r, pv) pattern =
      let pat1' = subst_pattern (pat_r, pv) pat1 in
      let pat2' = subst_pattern (pat_r, pv) pat2 in
      Comp.PatPair (loc, pat1', pat2')
-  | Comp.PatAnn (loc, pat, tau) ->
+  | Comp.PatAnn (loc, pat, tau, plicity) ->
      let pat' = subst_pattern (pat_r, pv) pat in
-     Comp.PatAnn (loc, pat', tau)
+     Comp.PatAnn (loc, pat', tau, plicity)
   | Comp.PatConst (loc, c, pS) ->
      let pS' = subst_pattern_spine (pat_r, pv) pS in
      Comp.PatConst (loc, c, pS')

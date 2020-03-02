@@ -136,7 +136,7 @@ let rec struct_smaller patt = match patt with
   | Comp.PatPair (_, pat1, pat2 ) ->
      (* This is quite naive - possibly one of them being smaller is enough *)
      struct_smaller pat1 && struct_smaller pat2
-  | Comp.PatAnn (_, pat, _) -> struct_smaller pat
+  | Comp.PatAnn (_, pat, _, _) -> struct_smaller pat
   | _ -> false
 
 let order_to_string order = match order with

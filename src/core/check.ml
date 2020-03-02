@@ -384,7 +384,7 @@ module Comp = struct
     | PatVar (_ , _ ) | PatFVar (_, _) -> cD
     | PatPair (_, pat1, pat2) ->  fmv (fmv cD pat1) pat2
     | PatMetaObj (_, cM) -> fmv_mobj cD cM
-    | PatAnn (_, pat, _) -> fmv cD pat
+    | PatAnn (_, pat, _, _) -> fmv cD pat
 
   and fmv_pat_spine cD pat_spine = match pat_spine with
     | PatNil -> cD
@@ -1025,7 +1025,7 @@ module Comp = struct
        let tau = (CompConst.get c).CompConst.Entry.typ in
        (loc, synPatSpine cD cG pat_spine (tau , C.m_id))
     | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
-    | PatAnn (loc, pat, tau) ->
+    | PatAnn (loc, pat, tau, _) ->
        checkPattern cD cG pat (tau, C.m_id);
        (loc, (tau, C.m_id))
 

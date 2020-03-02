@@ -282,14 +282,12 @@ module Prover = struct
     type t =
       { theorems : Theorem.t DynArray.t
       ; finished_theorems: Theorem.t DynArray.t
-      ; commands : Command.command DynArray.t
       ; mutual_group : CompS.mutual_group_id
       }
 
     let make mutual_group thms =
       { theorems = thms
       ; finished_theorems = DynArray.make 32
-      ; commands = DynArray.make 32
       ; mutual_group
       }
 
@@ -420,7 +418,6 @@ module Prover = struct
         (Nonempty.to_list gs)
 
     let recover_session ppf hooks (mutual_group, thm_confs) =
-      let commands = DynArray.create () in
       let theorems =
         let open Nonempty in
         map (recover_theorem ppf hooks) thm_confs
@@ -433,8 +430,7 @@ module Prover = struct
              (fun ppf t -> Format.fprintf ppf "%a" Id.print (Theorem.get_name t)))
           theorems
         end;
-      { Session.commands
-      ; theorems = DynArray.of_list theorems
+      { Session.theorems = DynArray.of_list theorems
       ; finished_theorems = DynArray.make 32
       ; mutual_group
       }
@@ -1069,8 +1065,6 @@ module Prover = struct
        Check.Comp.check cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
        dprnt "[harpoon] [solve] double-check DONE";
        (Comp.solve e |> Tactic.solve) t g
-
-  let record_command c cmd = DynArray.add c.Session.commands cmd
 end
 
 (** A computed value of type 'a or a function to print an error. *)
@@ -1140,7 +1134,6 @@ let process_input s (c, t, g) input =
             | None -> (k, g)
             | Some g ->
                Prover.process_command s c t g cmd;
-               Prover.record_command c cmd;
                (k + 1, Theorem.next_subgoal t)
             end
             (0, Some g)

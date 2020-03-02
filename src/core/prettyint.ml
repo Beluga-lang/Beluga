@@ -1187,32 +1187,38 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fmt_ppr_cmp_meta_obj_typed cD 0 ppf (cM, cU)
 
     | Comp.Impossible (_, i) ->
-       fprintf ppf "impossible @[%a@]"
-         (fmt_ppr_cmp_exp_syn cD cG 0) i
-
-    | Comp.Case (_, prag, i, ([] as bs)) ->
        let cond = lvl > 0 in
-       if !Printer.Control.printNormal then
-         fprintf ppf "impossible %a"
-           (fmt_ppr_cmp_exp_syn cD cG 0) i
-       else
-         let open Comp in
-         fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
-           (l_paren_if cond)
-           (fmt_ppr_cmp_exp_syn cD cG 0) i
-           (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
-           (fmt_ppr_cmp_branches cD cG 0) bs
-           (r_paren_if cond)
-
-    | Comp.Case (_, prag, i, bs) ->
-       let open Comp in
-       let cond = lvl > 0 in
-       fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
+       fprintf ppf "%simpossible @[%a@]%s"
          (l_paren_if cond)
          (fmt_ppr_cmp_exp_syn cD cG 0) i
-         (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
-         (fmt_ppr_cmp_branches cD cG 0) bs
          (r_paren_if cond)
+
+    | Comp.Case (_, prag, i, bs) ->
+       begin match bs with
+       | [] ->
+          let cond = lvl > 0 in
+          fprintf ppf "%simpossible @[%a@]%s"
+            (l_paren_if cond)
+            (fmt_ppr_cmp_exp_syn cD cG 0) i
+            (r_paren_if cond)
+       | [Comp.Branch (_, cD_b, cG_b, pat, t, e)] ->
+          let cond = lvl > 0 in
+          fprintf ppf "@[<hv>%slet @[@[<h>%a@] =@ @[%a@]@]@ in@ @[%a@]%s@]"
+            (l_paren_if cond)
+            (fmt_ppr_cmp_pattern cD_b cG_b 0) pat
+            (fmt_ppr_cmp_exp_syn cD cG 0) i
+            (fmt_ppr_cmp_exp_chk cD_b cG_b 0) e
+            (r_paren_if cond)
+       | bs ->
+          let open Comp in
+          let cond = lvl > 0 in
+          fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
+            (l_paren_if cond)
+            (fmt_ppr_cmp_exp_syn cD cG 0) i
+            (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
+            (fmt_ppr_cmp_branches cD cG 0) bs
+            (r_paren_if cond)
+       end
 
     | Comp.Hole (loc, id, name) ->
        let name =

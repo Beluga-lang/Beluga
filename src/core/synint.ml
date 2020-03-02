@@ -424,10 +424,6 @@ module Comp = struct
     | AnnBox    of meta_obj * meta_typ
     | PairVal   of Loc.t * exp_syn * exp_syn
 
-  and branch_pattern =
-    | NormalPattern of LF.normal * exp_chk
-    | EmptyPattern
-
   and pattern =
     | PatMetaObj of Loc.t * meta_obj
     | PatConst of Loc.t * cid_comp_const * pattern_spine
@@ -442,7 +438,6 @@ module Comp = struct
     | PatObs of Loc.t * cid_comp_dest * LF.msub * pattern_spine
 
   and branch =
-    (* | EmptyBranch of Loc.t * LF.ctyp_decl LF.ctx * pattern * LF.msub *)
     | Branch of
         Loc.t
         * LF.mctx

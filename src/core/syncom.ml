@@ -55,11 +55,6 @@ module Comp = struct
         * int (* schema element number (1-based) *)
         * int option (* the number of the projection, if any (1-based) *)
 
-  type boxity =
-    [ `boxed
-    | `unboxed
-    ]
-
  type 'a generic_order =
    | Arg of 'a                             (* O ::= x                    *)
    | Lex of 'a generic_order list                 (*     | {O1 .. On}           *)

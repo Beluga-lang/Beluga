@@ -1503,14 +1503,10 @@ let rec index_proof cvars vars fvars = function
      Apx.Comp.Directive (loc, d')
 
 and index_command cvars vars fvars = function
-  | Ext.Comp.By (loc, i, x, boxity) ->
+  | Ext.Comp.By (loc, i, x) ->
      let i' = index_exp' cvars vars fvars i in
-     let cvars, vars =
-       match boxity with
-       | `boxed -> cvars, Var.extend vars (Var.mk_entry x)
-       | `unboxed -> CVar.extend cvars (CVar.mk_entry x), vars
-     in
-     Apx.Comp.By (loc, i', x, boxity), vars, cvars
+     let vars = Var.extend vars (Var.mk_entry x) in
+     Apx.Comp.By (loc, i', x), vars, cvars
   | Ext.Comp.Unbox (loc, i, x) ->
      let i' = index_exp' cvars vars fvars i in
      let cvars = CVar.extend cvars (CVar.mk_entry x) in

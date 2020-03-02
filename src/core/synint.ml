@@ -579,7 +579,7 @@ module Comp = struct
     | Directive of directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | By of exp_syn * name * typ * boxity
+    | By of exp_syn * name * typ
     | Unbox of exp_syn * name * LF.ctyp
 
   and proof_state =

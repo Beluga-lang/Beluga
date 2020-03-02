@@ -1464,10 +1464,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Directive d ->
        fmt_ppr_cmp_directive cD cG ppf d
 
-  and fmt_ppr_cmp_boxity ppf = function
-    | `boxed -> () (* boxed is implicit *)
-    | `unboxed -> fprintf ppf "unboxed"
-
   and fmt_ppr_cmp_command cD cG ppf cmd =
     let open Comp in
     match cmd with
@@ -1475,11 +1471,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
-    | By (i, name, _, b) ->
-       fprintf ppf "@[<hv 2>by @[%a@]@ as %a %a@]"
+    | By (i, name, _) ->
+       fprintf ppf "@[<hv 2>by @[%a@]@ as %a@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
-         fmt_ppr_cmp_boxity b
 
   and fmt_ppr_cmp_command_and_proof cD cG ppf (c, p) =
     let (cD', cG', _) = Whnf.apply_command_to_context (cD, cG) c in

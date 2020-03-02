@@ -1998,47 +1998,31 @@ let rec elHypothetical cD cG label hyp ttau =
     )
 
 and elCommand cD cG =
-  let extend_meta d c =
-    let t = Int.LF.MShift 1 in
-    (* No need to check for shadowing since that already happened
-       during indexing. *)
-    (Int.LF.Dec (cD, d), Whnf.cnormGCtx (cG, t), t, c)
-  in
   function
-  | A.Unbox (loc, i, name) ->
+  | A.Unbox (loc, i, x) ->
      let (i, ttau_i) = elExp' cD cG i in
      let cU =
        Check.Comp.require_syn_typbox cD cG loc i ttau_i
        |> Whnf.cnormMTyp
      in
-     extend_meta
-       Int.LF.(Decl (name, cU, No))
-       I.(Unbox (i, name, cU))
+     let d = Int.LF.(Decl (x, cU, No)) in
+     let t = Int.LF.MShift 1 in
+     (* No need to check for shadowing since that already happened
+        during indexing. *)
+     ( Int.LF.Dec (cD, d)
+     , Whnf.cnormGCtx (cG, t)
+     , t
+     , I.Unbox (i, x, cU)
+     )
 
-  | A.By (loc, i, name, `boxed) ->
-     let (i, tau_i) =
-       elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp
-     in
+  | A.By (loc, i, x) ->
+     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
      let i = Whnf.(cnormExp' (i, m_id)) in
      let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
      if not Whnf.(closedExp' i && closedCTyp tau_i) then
        throw loc (ClosedTermRequired (cD, cG, i, tau_i));
-     let c = I.By (i, name, tau_i, `boxed) in
-     (cD, Int.LF.Dec (cG, I.CTypDecl (name, tau_i, false)), Whnf.m_id, c)
-
-  | A.By (loc, i, name, `unboxed) ->
-     (* XXX `by _ as _ unboxed` is redundant with the plain `unbox _ as _` command.
-        Perhaps "unbox" can be implemented as syntax sugar.
-        -je
-      *)
-     let (i, ttau_i) = elExp' cD cG i in
-     let cU =
-       Check.Comp.require_syn_typbox cD cG loc i ttau_i
-       |> Whnf.cnormMTyp
-     in
-     extend_meta
-       Int.LF.(Decl (name, cU, No))
-       I.(By (i, name, TypBox (loc, cU), `unboxed))
+     let c = I.By (i, x, tau_i) in
+     (cD, Int.LF.Dec (cG, I.CTypDecl (x, tau_i, false)), Whnf.m_id, c)
 
 (* elaborate Harpoon proofs *)
 and elProof cD cG (pb : I.SubgoalPath.builder) (p : Apx.Comp.proof) ttau =

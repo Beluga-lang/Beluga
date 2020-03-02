@@ -24,7 +24,7 @@ let rec translate_proof cD cG (p : C.proof) tau : C.exp_chk =
 | C.Incomplete _ -> Error.violation "Proof incomplete."
 | C.Command (cmd, p') ->
     begin match cmd with
-    | C.By (e_syn, name, tau, bty) ->
+    | C.By (e_syn, name, tau) ->
        let cG' = L.Dec (cG, C.CTypDecl (name, tau, false)) in
        C.Let (Loc.ghost, e_syn, (name, translate_proof cD cG' p' tau))
     | C.Unbox (e_syn, name, mT) ->

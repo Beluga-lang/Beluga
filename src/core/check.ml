@@ -1361,7 +1361,7 @@ module Comp = struct
       )
     in
     function
-    | By (i, name, _, `unboxed) | Unbox (i, name, _) ->
+    | Unbox (i, name, _) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        dprintf begin fun p ->
          p.fmt "[check] [command] @[<v>@[<hv 2>by @[%a@] as@ %a@]\
@@ -1372,7 +1372,7 @@ module Comp = struct
          end;
        let (cU, t) = require_syn_typbox cD cG Loc.ghost i (tau', t) in
        extend_meta I.(Decl (name, Whnf.cnormMTyp (cU, t), No))
-    | By (i, name, _, `boxed) ->
+    | By (i, name, _) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        let tau = Whnf.cnormCTyp (tau', t) in
        let cG = I.Dec (cG, CTypDecl (name, tau, false)) in

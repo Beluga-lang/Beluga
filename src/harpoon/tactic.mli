@@ -56,7 +56,7 @@ val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
     Otherwise, with `unboxed, the name is a new variable declaration
     in cD.
  *)
-val invoke : Comp.boxity -> Comp.exp_syn -> Comp.typ -> Id.name -> t
+val invoke : Comp.exp_syn -> Comp.typ -> Id.name -> t
 
 (** Solves the current goal with an implication whose conclusion is
    compatible with the goal type. Subgoals are generated for each

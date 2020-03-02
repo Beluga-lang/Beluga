@@ -2756,7 +2756,9 @@ let harpoon_command : Comp.command parser =
     |> span
     |> labelled "Harpoon command"
     $> fun (loc, (i, x, b)) ->
-       Comp.By (loc, i, x, b)
+       match b with
+       | `boxed -> Comp.By (loc, i, x)
+       | `unboxed -> Comp.Unbox (loc, i, x)
   in
   let unbox =
     keyword "unbox" &>
@@ -3046,7 +3048,9 @@ let interactive_harpoon_command =
         (token T.KW_AS &> name)
         (maybe_default boxity `boxed)
     $> fun (i, name, b) ->
-       H.By (i, name, b)
+       match b with
+       | `unboxed -> H.Unbox (i, name)
+       | `boxed -> H.By (i, name)
   in
   let compute_type =
     token T.KW_TYPE

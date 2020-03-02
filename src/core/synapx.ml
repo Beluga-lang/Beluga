@@ -205,7 +205,7 @@ module Comp = struct
     | Directive of Loc.t * directive
 
   and command =
-    | By of Loc.t * exp_syn * name * boxity
+    | By of Loc.t * exp_syn * name
     | Unbox of Loc.t * exp_syn * name
 
   and directive =

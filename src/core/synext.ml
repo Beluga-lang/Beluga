@@ -230,7 +230,7 @@ module Comp = struct
    | Directive of Loc.t * directive
 
  and command =
-   | By of Loc.t * exp_syn * name * boxity
+   | By of Loc.t * exp_syn * name
    | Unbox of Loc.t * exp_syn * name
 
  and directive =
@@ -303,7 +303,7 @@ module Harpoon = struct
     | MSplit of Loc.t * Id.name (* split on a metavariable *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
     | Unbox of Comp.exp_syn * Id.name
-    | By of Comp.exp_syn * Id.name * Comp.boxity
+    | By of Comp.exp_syn * Id.name
     | Suffices of Comp.exp_syn * Comp.typ list
 end
 

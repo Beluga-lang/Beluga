@@ -573,15 +573,10 @@ let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT)) tau name
 
-let invoke (b : Comp.boxity)
-      (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
+let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in
-  let cmd = By (m, name, tau, b) in
-  match b with
-  | `boxed ->
-     solve_with_new_comp_decl (CTypDecl (name, tau, false)) (prepend_commands [cmd])
-  | `unboxed ->
-     solve_by_unbox m (fun _ -> cmd) tau name
+  solve_with_new_comp_decl (CTypDecl (name, tau, false))
+    (prepend_commands [By (i, name, tau)])
 
 let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t =
   fun t s ->

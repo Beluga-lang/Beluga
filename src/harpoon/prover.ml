@@ -970,7 +970,7 @@ module Prover = struct
     | Command.MSplit (loc, name) ->
        let i, tau = Elab.mvar cD loc name in
        Tactic.split `split i tau (Lazy.force mfs) t g
-    | Command.By (i, name, b) ->
+    | Command.By (i, name) ->
        let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
        dprintf
          begin fun p ->
@@ -979,7 +979,7 @@ module Prover = struct
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
        if Whnf.closedExp' i then
-         (List.iter solve_hole hs; Tactic.invoke b i tau name t g)
+         (List.iter solve_hole hs; Tactic.invoke i tau name t g)
        else
          State.printf s
            "@[<v>Elaborated expression\

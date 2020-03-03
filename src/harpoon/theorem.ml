@@ -47,7 +47,8 @@ type theorem = t
 
 let printf t x = Format.fprintf t.ppf x
 
-let get_name t = (CompS.get t.cid).CompS.Entry.name
+let get_entry t = (CompS.get t.cid)
+let get_name t = (get_entry t).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
@@ -128,7 +129,7 @@ let show_proof (t : t) =
      printing a `?` if the initial state hasn't been solved
      yet.
    *)
-  printf t "@[<v>Proof so far:@,%a@,@]"
+  printf t "@[<v>%a@]"
     dump_proof t
 
 let show_subgoals (t : t) =

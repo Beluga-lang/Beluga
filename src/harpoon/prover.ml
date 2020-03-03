@@ -760,56 +760,25 @@ module Prover = struct
     loop 0
      *)
 
-  let orelse f = function
-    | None -> f (); None
-    | Some x -> Some x
-
-  let translate s name =
-    let open Maybe in
-    CompS.index_of_name_opt name
-    |> orelse begin fun () ->
-         State.printf s
-           "No such theorem by name %a."
-           Id.print name
-         end
-    $ begin fun cid ->
-      let { CompS.Entry.prog; typ; _ } = CompS.get cid in
-      prog $> fun p -> (cid, p, typ)
-      end
-    |> orelse begin fun () ->
-         B.Error.violation
+  let translate s { CompS.Entry.prog; typ = tau; name; _ } =
+    let prog =
+      Maybe.get'
+        (B.Error.Violation
            ("The body of theorem "
-            ^ Id.render_name name ^ " is unknown.")
-         end
-    $> begin fun (cid, prog, tau) ->
-       match prog with
-       | Comp.ThmValue (cid', thm, t, rho) ->
-          assert (match rho with Comp.Empty -> true | _ -> false);
-          assert (Id.cid_equals cid cid');
-          assert (match t with LF.MShift 0 -> true | _ -> false);
-          (thm, tau)
-       | _ ->
-          B.Error.violation
-            "Looked up theorem is not a theorem value."
-       end
-    $> begin fun (thm, tau) ->
-       State.printf s
-         "@[<v>Beginning translation of theorem:\
-          @,  @[<v>%a@]@]@."
-         P.fmt_ppr_cmp_thm thm;
-       match Translate.(trap (fun _ -> theorem thm tau)) with
-       | Either.Right e ->
-          State.printf s
-            "@[<v 2>Translation successful. Resulting program:\
-             @,@[%a@]@]"
-            P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
-       | Either.Left e ->
-          State.printf s
-            "@[<v 2>Translation failed.\
-             @,@[%a@]@]"
-            Translate.fmt_ppr_error e
-       end
-    |> eliminate (Misc.const ()) Misc.id
+            ^ Id.render_name name ^ " is unknown."))
+        prog
+    in
+    let thm =
+      match prog with
+      | Comp.ThmValue (cid', thm, t, rho) ->
+         assert (match rho with Comp.Empty -> true | _ -> false);
+         assert (match t with LF.MShift 0 -> true | _ -> false);
+         thm
+      | _ ->
+         B.Error.violation
+           "Looked up theorem is not a theorem value."
+    in
+    Translate.(trap (fun _ -> theorem thm tau))
 
   let dump_proof t path =
     let out = open_out path in
@@ -1003,8 +972,16 @@ module Prover = struct
           end
        end
 
-    | Command.Translate name -> translate s name
-
+    | Command.Translate x ->
+       let open Maybe in
+       begin match CompS.(index_of_name_opt x $> get) with
+       | Some entry ->
+          State.printf s "%a"
+            Translate.fmt_ppr_result (translate s entry)
+       | None ->
+          State.printf s "No such theorem by name %a defined."
+            Id.print x
+       end
 
     (* Real tactics: *)
     | Command.Unbox (i, name) ->
@@ -1175,8 +1152,14 @@ let rec loop (s : Prover.State.t) : unit =
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
-     printf "@[<v>Subproof complete! (No subgoals left.)@,@]";
-     Theorem.show_proof t;
+     let trans = Prover.translate s (Theorem.get_entry t) in
+     printf
+       "@[<v>Subproof complete! (No subgoals left.)\
+        @,Full proof script:\
+        @,  @[<v>%a@]\
+        @,@[<v>%a@]@]"
+       Theorem.dump_proof t
+       Translate.fmt_ppr_result trans;
      Prover.Session.mark_current_theorem_as_proven c;
      loop s
   | Either.Right (c, t, g) ->

@@ -495,7 +495,7 @@ end = struct
        check_meta_obj cD_p mO (Whnf.cnormMTyp (mT, t)) && is_id cD_p t cD
     | _ -> false
 
-  let check_branch cD cG tau_sc (Comp.Branch (_, cD_p, _, patt, t, _)) =
+  let check_branch cD cG tau_sc (Comp.Branch (_, _, (cD_p, _), patt, t, _)) =
     let b = check_pattern cD cG tau_sc cD_p t patt in
     if not b then
       dprintf
@@ -2989,7 +2989,7 @@ let no_covers = ref 0 (* number of times coverage checking has yielded a negativ
 (* ****************************************************************************** *)
 
 let extract_patterns tau =
-  fun (Comp.Branch (loc, cD, cG, pat, ms, _)) ->
+  fun (Comp.Branch (loc, _, (cD, cG), pat, ms, _)) ->
   (cD, GenPatt (cG, Comp.strip_pattern pat, (tau, ms)))
 
 let gen_candidate loc cD covGoal (cD_p, GenPatt (cG_p, pat, ttau)) =

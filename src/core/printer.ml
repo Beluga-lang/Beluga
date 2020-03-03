@@ -98,8 +98,8 @@ module Int = struct
     val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
     val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
     val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
-    val fmt_ppr_cmp_branches  : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch list -> unit
-    val fmt_ppr_cmp_branch    : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.branch      -> unit
+    val fmt_ppr_cmp_branches  : Comp.gctx -> formatter -> Comp.branch list -> unit
+    val fmt_ppr_cmp_branch    : Comp.gctx -> formatter -> Comp.branch      -> unit
     val fmt_ppr_cmp_ih_args   : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_arg list -> unit
     val fmt_ppr_cmp_ih        : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_decl -> unit
     val fmt_ppr_cmp_ihctx     : LF.mctx -> Comp.gctx -> formatter -> Comp.ihctx -> unit

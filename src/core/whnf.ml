@@ -2141,7 +2141,7 @@ and closedExp' = function
      closedExp' i1 && closedExp' i2
 
 and closedBranch = function
-  | Comp.Branch (_, cD, cG, pat, t, e) ->
+  | Comp.Branch (_, _, (cD, cG), pat, t, e) ->
      closedMCtx cD
      && closedGCtx cG
      && closedPattern pat
@@ -2262,3 +2262,30 @@ let convMCtx cD1 cD2 =
 let rec lowerTyp cPsi = function
   | Atom _, s as sA -> (cPsi, whnfTyp sA)
   | PiTyp ((decl, _), tB), s -> lowerTyp (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s)
+
+let mmVarToClObj loc' (mV : mm_var) : cltyp -> clobj = function
+  | MTyp tA -> MObj (Root(loc', MMVar ((mV, m_id), LF.id), Nil))
+  | PTyp tA -> PObj (MPVar ((mV, m_id), LF.id))
+  | STyp (_, cPhi) -> SObj (MSVar (0, ((mV, m_id), LF.id)))
+
+let mmVarToMFront loc' mV = function
+  | ClTyp (mt, cPsi) ->
+     ClObj (Context.dctxToHat cPsi, mmVarToClObj loc' mV mt)
+  | CTyp schema_cid ->
+     CObj(CtxVar (CInst (mV, m_id)))
+
+
+(** Extends the given meta-substitution with a fresh unification
+    variable for the contextual declaration (u, cU, dep).
+    Returns a meta-object containing the MMVar and the extended
+    substitution.
+
+    dotMMVar loc' cD t (u, cU, dep) = ( cM, t' ) if
+    * cD |- [t]cU metatype
+
+    This function is useful when eliminating PiBoxes via unification.
+ *)
+let dotMMVar loc' cD t (u, cU, dep) =
+  let cU = cnormMTyp (cU, t) in
+  let mO = mmVarToMFront loc' (newMMVar' (Some u) (cD, cU) dep) cU in
+  ( (loc',mO), MDot(mO,t) )

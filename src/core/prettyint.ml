@@ -1179,7 +1179,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.Let(_, i, (x, e)) ->
        let x = fresh_name_gctx cG x in
        let cond = lvl > 1 in
-       fprintf ppf "@[<2>%slet %s = %a@ in %a%s@]"
+       fprintf ppf "%s@[@[<hv 2>let %s =@ @[%a@]@]@ in@ @[%a@]@]%s"
          (l_paren_if cond)
          (Id.render_name x)
          (fmt_ppr_cmp_exp_syn cD cG 0) i
@@ -1204,22 +1204,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             (l_paren_if cond)
             (fmt_ppr_cmp_exp_syn cD cG 0) i
             (r_paren_if cond)
-       | [Comp.Branch (_, cD_b, cG_b, pat, t, e)] ->
-          let cond = lvl > 0 in
-          fprintf ppf "@[<hv>%slet @[@[<h>%a@] =@ @[%a@]@]@ in@ @[%a@]%s@]"
+       | [Comp.Branch (_, cD_prefix, (cD_b, cG_b), pat, t, e)] ->
+          let cond = lvl > 1 in
+          fprintf ppf "%s@[<hv>@[<hv>let @[%a@[<h>%a@] =@ @[%a@]@]@ @]in@ @[%a@]@]%s"
             (l_paren_if cond)
+            (fmt_ppr_lf_mctx ~sep: pp_print_space l0) cD_prefix
             (fmt_ppr_cmp_pattern cD_b cG_b 0) pat
             (fmt_ppr_cmp_exp_syn cD cG 0) i
-            (fmt_ppr_cmp_exp_chk cD_b cG_b 0) e
+            (fmt_ppr_cmp_exp_chk cD_b (Context.append cG cG_b) 0) e
             (r_paren_if cond)
        | bs ->
           let open Comp in
           let cond = lvl > 0 in
-          fprintf ppf "@ %s@[<v>case @[%a@] of%s%a@]@,%s"
+          fprintf ppf "%s@[<v>case @[%a@] of%s@,@[%a@]@]%s"
             (l_paren_if cond)
             (fmt_ppr_cmp_exp_syn cD cG 0) i
             (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
-            (fmt_ppr_cmp_branches cD cG 0) bs
+            (fmt_ppr_cmp_branches cG) bs
             (r_paren_if cond)
        end
 
@@ -1321,78 +1322,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (R.render_cid_comp_const c) print_spine pat_spine
          (r_paren_if cond)
 
-  and fmt_ppr_cmp_branches cD cG lvl ppf = function
-    | [] -> ()
+  and fmt_ppr_cmp_branches cG ppf bs =
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_cmp_branch cG))
+      bs
 
-    | b :: [] ->
-       fprintf ppf "%a"
-         (fmt_ppr_cmp_branch cD cG 0) b
-
-    | b :: bs ->
-       (*          fprintf ppf "%a @ @[<0>| %a@]" *)
-       fprintf ppf "%a%a"
-         (fmt_ppr_cmp_branch cD cG 0) b
-         (fmt_ppr_cmp_branches cD cG lvl) bs
-
-
-  and fmt_ppr_cmp_branch cD cG _lvl ppf = function
-    | Comp.Branch (_, cD1', _cG, Comp.PatMetaObj (_, mO), t, e) ->
-       if !Printer.Control.printNormal then
-         (match e with
-          | Comp.Hole (loc, id, name) ->
-             fprintf ppf "\n@[<v2>| %a => %a@]"
-               (fmt_ppr_cmp_meta_obj cD1' 0) mO
-               (fmt_ppr_cmp_exp_chk cD1' cG 1) e
-          | _ ->
-             fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a@  => @]@ @[<2>@ %a@]@] @]@ "
-               (fmt_ppr_lf_mctx 0) cD1'
-               (fmt_ppr_cmp_meta_obj cD1' 0) mO
-               (* NOTE: Technically: cD |- cG ctx and
-                *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-                * -bp
-                *)
-               (fmt_ppr_cmp_exp_chk cD1' cG 1) e)
-       else
-         fprintf ppf "@ @[<v2>| @[<v0>@[%a@]@[%a : %a  @]  => @]@ @[<2>@ %a@]@]@ "
-           (fmt_ppr_lf_mctx 0) cD1'
-           (fmt_ppr_cmp_meta_obj cD1' 0) mO
-           (* this point is where the " : " is in the string above *)
-           (fmt_ppr_refinement cD1' cD 2) t
-           (* NOTE: Technically: cD |- cG ctx and
-            *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-            * -bp
-            *)
-           (fmt_ppr_cmp_exp_chk cD1' cG 1) e
-
-    | Comp.Branch (_, cD1', cG', pat, t, e) ->
-       let cG_t = cG (* Whnf.cnormCtx (cG, t) *) in
-       let cG_ext = Context.append cG_t cG' in
-
-       if !Printer.Control.printNormal then
-         (* fprintf ppf "@ @[<v2>| @[<v0>%a ; %a@[ |- %a  @]  => @]@ @[<2>@ %a@]@]@ "
-            (fmt_ppr_cmp_branch_prefix  0) cD1'
-            (fmt_ppr_cmp_gctx cD1' 0) cG' *)
-         fprintf ppf "@ @[| %a => %a@]@ "
-           (fmt_ppr_cmp_pattern cD1' cG' 0) pat
-           (* NOTE: Technically: cD |- cG ctx and
-            *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-            * -bp
-            *)
-           (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-       else
-         fprintf ppf "@ @[<v2>| @[<v0>@[%a@] ;@ @[%a@]@[ |- @[%a@] :@ @[%a@]  @] => @]@ @[<2>@ %a@]@]@ "
-           (fmt_ppr_lf_mctx  0) cD1'
-           (fmt_ppr_cmp_gctx cD1' 0) cG'
-           (fmt_ppr_cmp_pattern cD1' cG' 0) pat
-           (* this point is where the " : " is in the string above *)
-           (fmt_ppr_refinement cD1' cD 2) t
-           (* NOTE: Technically: cD |- cG ctx and
-            *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-            * -bp
-            *)
-           (fmt_ppr_cmp_exp_chk cD1' cG_ext 1) e
-
-  (* cD |- t : cD'  *)
+  and fmt_ppr_cmp_branch cG ppf = function
+    | Comp.Branch (_, cD_prefix, (cD1', cG_p), pat, t, e) ->
+       fprintf ppf "@[<v2>| @[%a@]@[%a@] =>@ @[%a@]@]"
+         (fmt_ppr_lf_mctx 0) cD_prefix
+         (fmt_ppr_cmp_pattern cD1' cG_p 0) pat
+         (* NOTE: Technically: cD |- cG ctx and
+          *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+          * -bp
+          *)
+         (fmt_ppr_cmp_exp_chk cD1' (Context.append cG cG_p) 1) e
 
   and fmt_ppr_cmp_subgoal_path cD cG ppf path =
     let rec format_path =
@@ -1590,40 +1534,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (Context.to_sublist cD)
       (comma_sep_by (fmt_ppr_cmp_ctyp_decl cD l0))
       (Context.to_list cG)
-
-  and fmt_ppr_refinement cD cD0 lvl ppf t =
-    match (t, cD0) with
-    | (LF.MShift k, _ ) ->
-       (match !Printer.Control.substitutionStyle with
-        | Printer.Control.Natural -> fprintf ppf ""
-        | Printer.Control.DeBruijn -> fprintf ppf "^%s" (string_of_int k))
-
-    | (LF.MDot (f, LF.MShift k), LF.Dec(cD', decl)) ->
-       (match !Printer.Control.substitutionStyle with
-        | Printer.Control.Natural ->
-           fprintf ppf "%a"
-             (fmt_ppr_refine_elem cD decl 1) f
-        | Printer.Control.DeBruijn ->
-           fprintf ppf "%a@ ,@ ^%s"
-             (fmt_ppr_refine_elem cD decl 1) f
-             (string_of_int k))
-
-
-    | (LF.MDot (f, s), LF.Dec(cD', decl)) ->
-       fprintf ppf "%a@ ,@ %a"
-         (fmt_ppr_refine_elem cD decl 1) f
-         (fmt_ppr_refinement cD cD' lvl) s
-    | _ -> fprintf ppf "No match"
-
-  and fmt_ppr_refine_elem cD decl lvl ppf m =
-    let name =
-      match decl with
-      | LF.Decl(name,_,_) -> name
-      | LF.DeclOpt name -> name
-    in
-    fprintf ppf "%a = %s"
-      (fmt_ppr_lf_mfront cD lvl) m
-      (Id.render_name name)
 
   and fmt_ppr_cmp_ih_arg cD ppf = function
     | Comp.M m_obj -> fmt_ppr_cmp_meta_obj cD l0 ppf m_obj

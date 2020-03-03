@@ -3,11 +3,15 @@ open Beluga
 open Syntax.Int
 module Loc = Location
 
+module P = Pretty.Int.DefaultPrinter
+
 type error =
   | IncompleteProof
 
 exception Error of error
 let throw e = raise (Error e)
+
+type result = (error, Comp.exp_chk) Either.t
 
 (* peels off assumptions, prepending the appropriate mlam- and fn-expressions
  * along the way)
@@ -53,7 +57,7 @@ let unbox cD cG i x cU =
   ( cD'
   , fun e ->
     let open Comp in
-    let b = Branch (Loc.ghost, cD', cG, pat, LF.MShift 1, e) in
+    let b = Branch (Loc.ghost, LF.Empty, (cD', cG), pat, LF.MShift 1, e) in
     Case (Loc.ghost, PragmaCase, i, [b])
   )
 
@@ -81,28 +85,28 @@ let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
      end
   | Comp.Directive d -> directive cD cG d tau
 
-and split_branch cD cG pat t hyp tau =
+and split_branch cD cG (cG_p, pat) t hyp tau =
   let tau_b = Whnf.cnormCTyp (tau, t) in
   let Comp.Hypothetical (h, p) = hyp in
   let cD_b, cG_b = Comp.(h.cD, h.cG) in
   let e = proof cD_b cG_b p tau_b in
   Comp.Branch
     ( Loc.ghost
-    , cD_b
-    , cG_b
+    , LF.Empty
+    , (cD_b, cG_p)
     , pat
     , t
     , e
     )
 
-and meta_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
-  split_branch cD cG pat t hyp tau
+and meta_split_branch cD cG (Comp.SplitBranch (_, (cG_p, pat), t, hyp)) tau =
+  split_branch cD cG (cG_p, pat) t hyp tau
 
-and comp_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
-  split_branch cD cG pat t hyp tau
+and comp_split_branch cD cG (Comp.SplitBranch (_, (cG_p, pat), t, hyp)) tau =
+  split_branch cD cG (cG_p, pat) t hyp tau
 
-and context_split_branch cD cG (Comp.SplitBranch (_, pat, t, hyp)) tau =
-  split_branch cD cG pat t hyp tau
+and context_split_branch cD cG (Comp.SplitBranch (_, (cG_p, pat), t, hyp)) tau =
+  split_branch cD cG (cG_p, pat) t hyp tau
 
 and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   match d with
@@ -127,6 +131,8 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let bs = List.map (fun b -> context_split_branch cD cG b tau) sbs in
      Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
 
+  | Comp.ImpossibleSplit i -> Comp.Impossible (Loc.ghost, i)
+
 let theorem thm tau = match thm with
   | Comp.Proof p -> proof LF.Empty LF.Empty p tau
   | Comp.Program e -> e
@@ -142,3 +148,17 @@ let fmt_ppr_error ppf =
   function
   | IncompleteProof ->
      fprintf ppf "The proof is incomplete."
+
+let fmt_ppr_result ppf =
+  let open Format in
+  function
+  | Either.Right e ->
+     fprintf ppf
+       "@[<v>Translation generated program:\
+        @,  @[%a@]@,@,@]"
+       P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
+  | Either.Left err ->
+     fprintf ppf
+       "@[<v>Translation failed.\
+        @,@[%a@]@]"
+       fmt_ppr_error err

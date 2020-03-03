@@ -398,7 +398,7 @@ and match_pattern  (v,eta) (pat, mt) =
 
 and eval_branch vscrut branch (theta, eta) =
   match branch with
-    | Comp.Branch (loc, cD, cG, pat, theta', e) ->
+    | Comp.Branch (loc, _, (cD, cG), pat, theta', e) ->
       begin
         try
           let mt = Ctxsub.mctxToMSub (Whnf.normMCtx cD) in

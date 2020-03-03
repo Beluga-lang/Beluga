@@ -228,4 +228,12 @@ module Comp : sig
       instantiations of universally quantified variables.
    *)
   val unify_suffices : LF.mctx -> typ -> typ list -> typ -> unit
+
+  (** Generates a meta-application spine consisting of unification
+      variables to eliminate leading PiBox types.
+      Returns the number of generated unification variables as well as
+      the type (together with a delayed meta-substitution) of the
+      produced expression.
+   *)
+  val genMApp : Loc.t -> (LF.ctyp_decl -> bool) -> LF.mctx -> exp_syn * tclo -> int * (exp_syn * tclo)
 end

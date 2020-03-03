@@ -242,3 +242,13 @@ val convGCtx : Comp.gctx * msub -> Comp.gctx * msub -> bool
         declarations in tA to cPsi.
  *)
 val lowerTyp : dctx -> tclo -> dctx * tclo
+
+(** Converts an MMVar to a contextual object according to its
+    contextual type. *)
+val mmVarToClObj : Loc.t -> mm_var -> cltyp -> clobj
+
+(** Converts an MMVar to a meta object according to its meta type. *)
+val mmVarToMFront : Loc.t -> mm_var -> Comp.meta_typ -> mfront
+
+val dotMMVar : Loc.t -> mctx -> msub -> Id.name * ctyp * depend ->
+               Comp.meta_obj * msub

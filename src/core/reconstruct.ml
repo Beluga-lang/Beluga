@@ -546,60 +546,6 @@ let rec mgTyp cD cPsi tA = begin match tA with
 
 let metaObjToFt (loc, m) = m
 
-
-let mmVarToCMetaObj loc' mV = function
-  | Int.LF.MTyp tA ->
-     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: MObj - MMV");
-     Int.LF.MObj (Int.LF.Root(loc', Int.LF.MMVar ((mV, Whnf.m_id), LF.id), Int.LF.Nil))
-  | Int.LF.PTyp tA ->
-     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: PObj - MPVar");
-     Int.LF.PObj (Int.LF.MPVar ((mV, Whnf.m_id), LF.id))
-  | Int.LF.STyp (_, cPhi) ->
-     dprint (fun () -> "[genMetaVar'] [mmVarToCMetaObj]: SObj - MSVar");
-     Int.LF.SObj (Int.LF.MSVar (0, ((mV, Whnf.m_id), LF.id)))
-
-let mmVarToMetaObj loc' mV = function
-  | Int.LF.ClTyp (mt, cPsi) ->
-    Int.LF.ClObj (Context.dctxToHat cPsi, mmVarToCMetaObj loc' mV mt)
-  | Int.LF.CTyp schema_cid ->
-    Int.LF.CObj(Int.LF.CtxVar (Int.LF.CInst (mV, Whnf.m_id)))
-
-let genMetaVar' loc' cD (loc, n , ctyp, t) =
-  let ctyp' = C.cnormMTyp (ctyp, t) in
-  dprintf
-    begin fun p ->
-    p.fmt "[genMetaVar'] @[<v>generating at type:@,@[%a@]@]"
-      (P.fmt_ppr_cmp_meta_typ cD) ctyp
-    end;
-  let mO = mmVarToMetaObj loc' (Whnf.newMMVar' (Some n) (cD, ctyp') Int.LF.Maybe) ctyp' in
-  ((loc',mO), Int.LF.MDot(mO,t))
-
-(** Generates application of implicit arguments (meta-application).
-    The applications are stacked onto `i` and the new `i` is returned
-    together with its type (plus a delayed msub).
-    The count of implicit arguments is also returned.
- *)
-let rec genMApp loc cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
-  genMAppW loc cD (i, Whnf.cwhnfCTyp tau_t)
-
-and genMAppW loc cD (i, tau_t) = match tau_t with
-  | (Int.Comp.TypPiBox (_, Int.LF.Decl(n, cU, Int.LF.Maybe), tau), theta) ->
-     dprnt "[genMApp] --> genMetaVar'";
-    let (cM,t') = genMetaVar' loc cD (loc, n, cU, theta) in
-    let i = Int.Comp.MApp (loc, i, cM, Whnf.cnormMTyp (cU, theta), `implicit) in
-    genMApp loc cD (i, (tau, t'))
-    |> Pair.lmap ((+) 1)
-
-  | _ ->
-     dprintf
-       begin fun p ->
-       p.fmt "[genMApp] @[<v>done:@,@[<hv>@[%a@] |-@ @[%a@]@]@]"
-         (P.fmt_ppr_lf_mctx P.l0) cD
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_t)
-       end;
-     (0, (i, tau_t))
-
-
 (* elCompKind  cPsi k = K *)
 let rec elCompKind cD k = match k with
   | Apx.Comp.Ctype loc ->
@@ -634,7 +580,7 @@ let elClObj cD loc cPsi' clobj mtyp =
   | Apx.LF.Dot (Apx.LF.Obj (Apx.LF.Root (_, Apx.LF.Hole, Apx.LF.Nil)), Apx.LF.EmptySub)
   , Int.LF.PTyp _tA' ->
      let mV = Whnf.newMMVar' (None) (cD, Int.LF.ClTyp (mtyp, cPsi')) Int.LF.Maybe in
-     mmVarToCMetaObj loc mV mtyp
+     Whnf.mmVarToClObj loc mV mtyp
 
   (* ordinary parameter variable elaboration *)
   | Apx.LF.Dot (Apx.LF.Obj (Apx.LF.Root (_, h, Apx.LF.Nil) as tM), Apx.LF.EmptySub)
@@ -707,8 +653,8 @@ and elMetaSpine loc cD s cKt  =
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.Ctype _ , _ )) ->
        raise (Error (loc, TooManyMetaObj))
 
-  | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (n, ctyp, Int.LF.Maybe), cK), theta)) ->
-    let (mO,t') = genMetaVar' loc cD (loc', n, ctyp, theta) in
+  | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (u, cU, Int.LF.Maybe), cK), t)) ->
+    let (mO,t') = Whnf.dotMMVar loc cD t (u, cU, Int.LF.Maybe) in
     Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, t'))
 
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, Int.LF.Decl(_,ctyp,_), cK) , theta)) ->
@@ -783,10 +729,11 @@ let rec elCompTyp cD tau = match tau with
 let mgCompTypSpine cD (loc, cK) =
   let rec genMetaSpine (cK, t) = match (cK, t) with
     | (Int.Comp.Ctype _, _t) -> Int.Comp.MetaNil
-    | (Int.Comp.PiKind (loc', Int.LF.Decl(n,ctyp,_), cK), t) ->
-        let (mO, t') = genMetaVar' loc cD (loc', n , ctyp, t) in
-        let mS = genMetaSpine (cK, t') in
-          Int.Comp.MetaApp (mO, mS) in
+    | (Int.Comp.PiKind (loc', Int.LF.Decl(u, cU, dep), cK), t) ->
+       let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, dep) in
+       let mS = genMetaSpine (cK, t') in
+       Int.Comp.MetaApp (mO, mS)
+  in
   genMetaSpine (cK, Whnf.m_id)
 
 let mgCompCotyp cD (loc, c) =
@@ -1017,7 +964,9 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i1, Whnf.m_id))
         P.fmt_ppr_cmp_typ_typing (cD, Whnf.cnormCTyp tau1)
       end;
-    let (_, (i', tau_t')) = genMApp loc cD (i1, tau1) in
+    let (_, (i', tau_t')) =
+      Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD (i1, tau1)
+    in
     dprintf
       begin fun p ->
       p.fmt "[elExp] @[<v>Unify computation-level types:@,  @[@[%a@]@ ==@ @[%a@]@]@]"
@@ -1083,26 +1032,30 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
 
   | Apx.Comp.Impossible (loc, i), (tau, theta) ->
      let i', ttau' = elExp' cD cG i in
-     let _, (i', _) = genMApp loc cD (i', ttau') in
+     let _, (i', _) =
+       Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD (i', ttau')
+     in
      (* Not sure if we need to work any harder at this point, since we
         don't have any branches to elaborate. *)
      Int.Comp.Impossible (loc, i')
 
-  | (Apx.Comp.Case (loc, prag, i, branches), ((tau, theta) as tau_theta)) ->
+  | (Apx.Comp.Case (loc, prag, i, branches), ttau) ->
      dprintf (fun p -> p.fmt "[elExp] case at %a" Loc.print_short loc);
      dprintf (fun p -> p.fmt "[elExp] elaborating scrutinee");
-     let (i', tau_theta') =  (elExp' cD cG i) in
+     let (i', ttau') =  (elExp' cD cG i) in
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>case on @[@[%a@]@ @[%a@]@]@,cD = @[%a@]@,cG = @[%a@]@]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i', Whnf.m_id))
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_theta')
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
        end;
-     let _, (i, tau_theta') = genMApp loc cD (i', tau_theta') in
+     let _, (i, ttau') =
+       Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD (i', ttau')
+     in
      let i = Whnf.(cnormExp' (i, m_id)) in
-     let tau_s = Whnf.cnormCTyp tau_theta' in
+     let tau_s = Whnf.cnormCTyp ttau' in
      let ct = fun pat -> case_type pat i in
 
      if not Whnf.(closedExp' i && closedCTyp tau_s && closedGCtx cG) then
@@ -1111,7 +1064,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let branches' =
        List.map
          begin fun b ->
-         elBranch ct cD cG b tau_s tau_theta
+         elBranch ct cD cG b tau_s ttau
          |> F.after Gensym.MVarData.reset
          end
          branches
@@ -1222,7 +1175,9 @@ and elExp' cD cG i =
        p.fmt "[elExp'] @[<v>genMApp for@,@[<hv 2>i' =@ @[%a@]@]@]"
          P.(fmt_ppr_cmp_exp_syn cD cG l0) (fst i')
        end;
-     let k, (i', tau_theta') = genMApp loc cD i' in
+     let k, (i', tau_theta') =
+       Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD i'
+     in
      dprintf
        begin fun p ->
        p.fmt "[elExp'] @[<v>Apply - generated %d implicit arguments:@,\
@@ -1392,8 +1347,9 @@ and elExp' cD cG i =
      end
 
   | Apx.Comp.PairVal (loc, i1, i2) ->
-     let _, (i1', (tau1,t1)) = genMApp loc cD (elExp' cD cG i1) in
-     let _, (i2', (tau2,t2)) = genMApp loc cD (elExp' cD cG i2) in
+     let f = F.(not ++ Int.LF.is_explicit) in
+     let _, (i1', (tau1,t1)) = Check.Comp.genMApp loc f cD (elExp' cD cG i1) in
+     let _, (i2', (tau2,t2)) = Check.Comp.genMApp loc f cD (elExp' cD cG i2) in
      ( Int.Comp.PairVal (loc, i1', i2')
      , ( Int.Comp.TypCross (loc, Whnf.cnormCTyp (tau1,t1), Whnf.cnormCTyp (tau2,t2)),
          C.m_id
@@ -1550,8 +1506,8 @@ and elPatSpine (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat_spine ttau =
 and elPatSpineW cD cG pat_spine ttau = match pat_spine with
   | Apx.Comp.PatNil loc ->
       (match ttau with
-        | (Int.Comp.TypPiBox (_, Int.LF.Decl (n, ctyp, Int.LF.Maybe), tau), theta) ->
-          let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+        | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Int.LF.Maybe), tau), t) ->
+          let (mO,t') = Whnf.dotMMVar loc cD t (u, cU, Int.LF.Maybe) in
           let pat'  = Int.Comp.PatMetaObj (loc, mO) in
           let ttau' = (tau, t') in
           let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1570,13 +1526,13 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
          let (cG', pat) = elPatChk cD cG pat' (tau1, theta) in
          let (cG'', pat_spine, ttau2) = elPatSpine cD cG' pat_spine' (tau2, theta) in
          (cG'', Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-      | (Int.Comp.TypPiBox (_, (Int.LF.Decl (n, ctyp, Int.LF.Maybe)), tau), theta) ->
+      | (Int.Comp.TypPiBox (_, (Int.LF.Decl (u, cU, Int.LF.Maybe)), tau), theta) ->
          dprintf
            begin fun p ->
            p.fmt "[elPatSpine] @[<v>TypPiBox implicit ttau =@,@[%a@]@]"
              (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
            end;
-         let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+         let (mO,t') = Whnf.dotMMVar loc cD theta (u, cU, Int.LF.Maybe) in
          let pat'  = Int.Comp.PatMetaObj (loc, mO) in
          let ttau' = (tau, t')
          in
@@ -1649,8 +1605,8 @@ and elPatSpineW cD cG pat_spine ttau = match pat_spine with
       | Unify.Failure _ ->
         raise (Error (loc, TypMismatch (cD, ttau, (tau0, t))))
       end
-    | (Int.Comp.TypPiBox (_, Int.LF.Decl (n, ctyp, Int.LF.Maybe), tau), theta) ->
-     let (mO,t') = genMetaVar' loc cD (loc, n, ctyp, theta) in
+    | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Int.LF.Maybe), tau), theta) ->
+     let (mO,t') = Whnf.dotMMVar loc cD theta (u, cU, Int.LF.Maybe) in
      let pat'  = Int.Comp.PatMetaObj (loc, mO) in
      let ttau' = (tau, t') in
      let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1800,13 +1756,15 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
            (P.fmt_ppr_cmp_typ cD P.l0) tau_s
            Loc.print_short loc
        end;
-     let cD' = elMCtx Lfrecon.Pibox delta in
+     let cD_prefix = elMCtx Lfrecon.Pibox delta in
      dprintf
        begin fun p ->
        p.fmt "[elBranch] @[<v>reconstruction of delta done : cD' (explicit) =@,@[%a@]@]"
-         (P.fmt_ppr_lf_mctx P.l0) cD'
+         (P.fmt_ppr_lf_mctx P.l0) cD_prefix
        end;
-     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1)  =  recPatObj loc cD' pat (cD, tau_s) in
+     let ((l_cd1', l_delta), cD1', cG1,  pat1, tau1) =
+       recPatObj loc cD_prefix pat (cD, tau_s)
+     in
      dprintf
        begin fun p ->
        p.fmt "[recPatObj] @[<v>done@,\
@@ -1910,7 +1868,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
      let eE'      = elExp cD1'' cG_ext  e' (tau', Whnf.m_id) in
      let _        = dprint (fun () -> "[elBranch] Body done (general pattern) \n") in
      let _       = FCVar.clear() in
-     Int.Comp.Branch (loc, cD1'', cG1', pat1', t', eE')
+     Int.Comp.Branch (loc, cD_prefix, (cD1'', cG1'), pat1', t', eE')
 
 
 and elFBranch cD cG fbr theta_tau = match fbr with
@@ -2072,7 +2030,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        let cG_b = Whnf.cnormGCtx (cG, t') in
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau in
        (* No need to apply the msub to pat, since pat is closed. *)
-       I.SplitBranch (I.EmptyContext loc, pat, t', hyp')
+       I.SplitBranch (I.EmptyContext loc, (Int.LF.Empty, pat), t', hyp')
 
     | A.ContextCase (A.ExtendedBy (loc, n)) ->
        begin match Coverage.genNthSchemaElemGoal cD n w with
@@ -2097,7 +2055,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
           let l' = I.ExtendedBy (loc, n) in
           let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
           let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
-          I.SplitBranch (l', pat', t', hyp')
+          I.SplitBranch (l', (Int.LF.Empty, pat'), t', hyp')
        end
 
     | _ ->
@@ -2216,7 +2174,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
 
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
 
-       I.SplitBranch (l', pat', t', hyp')
+       I.SplitBranch (l', (Int.LF.Empty, pat'), t', hyp')
 
     | A.NamedCase (loc, name) ->
        let cid, tA =
@@ -2313,7 +2271,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          cD_b |- [t o t']tau <= type
         *)
        in
-       I.SplitBranch (l', pat, t', hyp')
+       I.SplitBranch (l', (Int.LF.Empty, pat), t', hyp')
 
     | A.BVarCase loc ->
        if Context.dctxLength cPsi <> 1 then
@@ -2355,7 +2313,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        let l' = `bvar in
        let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
-       I.SplitBranch (l', pat', t', hyp')
+       I.SplitBranch (l', (Int.LF.Empty, pat'), t', hyp')
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)
@@ -2415,10 +2373,11 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        (* cD_b |- t' : cD
           cD_b |- t1 : cD'
         *)
+       let cG_pat = (Whnf.cnormGCtx (cG', t1)) in
        let cG_b =
          Context.append
            (Whnf.cnormGCtx (cG, t))
-           (Whnf.cnormGCtx (cG', t1))
+           cG_pat
        in
 
        let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
@@ -2437,7 +2396,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          elHypothetical cD_b cG_b pb' hyp ttau_b
        in
 
-       I.SplitBranch (cid, pat, t', hyp')
+       I.SplitBranch (cid, (cG_pat, pat), t', hyp')
 
     | _ ->
        CaseLabelMismatch (`named, variant_of_case_label l)

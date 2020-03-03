@@ -440,8 +440,8 @@ module Comp = struct
   and branch =
     | Branch of
         Loc.t
-        * LF.mctx
-        * gctx
+        * LF.mctx (* branch prefix *)
+        * (LF.mctx * gctx) (* branch contexts *)
         * pattern
         * LF.msub (* refinement substitution for the branch *)
         * exp_chk
@@ -631,7 +631,7 @@ module Comp = struct
       of 'b
 
          (* the full pattern generated for this branch *)
-         * pattern
+         * (gctx * pattern)
 
          (* refinement substitution for this branch *)
          * LF.msub
@@ -689,9 +689,9 @@ module Comp = struct
       : proof =
     Directive (ContextSplit (i, tau, bs))
 
-  let context_branch (c : context_case) pat (t : LF.msub) (h : hypotheses) (p : proof)
+  let context_branch (c : context_case) (cG_p, pat) (t : LF.msub) (h : hypotheses) (p : proof)
       : context_branch =
-    SplitBranch (c, pat, t, (Hypothetical (h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, p)))
 
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
@@ -700,17 +700,27 @@ module Comp = struct
   let impossible_split (i : exp_syn) : proof =
     Directive (ImpossibleSplit i)
 
-  let meta_branch (c : meta_branch_label) pat (t : LF.msub) (h : hypotheses) (p : proof)
+  let meta_branch
+        (c : meta_branch_label)
+        (cG_p, pat)
+        (t : LF.msub)
+        (h : hypotheses)
+        (p : proof)
       : meta_branch =
-    SplitBranch (c, pat, t, (Hypothetical (h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, p)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
       : proof =
     Directive (CompSplit (t, tau, bs))
 
-  let comp_branch (c : cid_comp_const) pat (t : LF.msub) (h : hypotheses) (d : proof)
+  let comp_branch
+        (c : cid_comp_const)
+        (cG_p, pat)
+        (t : LF.msub)
+        (h : hypotheses)
+        (d : proof)
       : comp_branch =
-    SplitBranch (c, pat, t, (Hypothetical (h, d)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
   let prepend_commands (cmds : command list) (proof : proof)

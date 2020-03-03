@@ -84,8 +84,8 @@ let branchCovGoals i cG0 cgs =
       let id = Holes.allocate () in
       Comp.Branch
         ( Loc.ghost
-        , cD
         , LF.Empty
+        , (cD , LF.Empty)
         , patt
         , ms
         , Comp.Hole (Loc.ghost, id, HoleId.Anonymous)

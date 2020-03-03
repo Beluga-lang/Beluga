@@ -296,16 +296,9 @@ module Comp = struct
     | IndDataObj
     | IndIndexObj of meta_obj
 
-  let is_inductive case_typ = match case_typ with
-    | IndDataObj -> true
-    | IndIndexObj mC -> true
-    | _ -> false
-
   let is_indMObj cD x = match Whnf.mctxLookupDep cD x with
     | (_, _ , I.Inductive) -> true
     | (_, _ , _) -> false
-
-
 
   (** Marks the variable at index k in cD as Inductive. *)
   let mark_ind cD k =
@@ -453,6 +446,107 @@ module Comp = struct
   let lookup' cG k =
     let (_, tau, _) = lookup cG k in
     tau
+
+  (** Prepares the contexts for entering a branch.
+      prepare_branch_contexts cD_b pat t cD cG cIH i total_decs
+      computes (cD_b', cG_b, cIH_b)
+
+      If
+      * cD_b |- t : cD
+      * cD |- cG gctx
+      * cD_b; cG |- pat => tau_p
+      * cD |- cIH ihctx
+      * cD; cG |- i => tau_s
+      then
+      * cD_b' is convertible with cD_b, but containing annotations for
+        induction.
+      * cG_b = [t]cG
+      * cIH_b = [t]cIH, cIH1, cIH2
+        where cIH1 contains IHs generated from mvars in the pattern
+        and cIH2 contains IHs generated from comp vars in the pattern
+   *)
+  let prepare_branch_contexts cD_b pat t cD (cG, cG_pat) cIH i total_decs =
+    (*
+    dprintf begin fun p ->
+      p.fmt "@[<v 2>[directive] [check_branch]
+             @,cD    = @[%a@]\
+             @,cG    = @[%a@]\
+             @,cIH   = @[%a@]\
+             @,i     = @[%a@]\
+             @,@[<hv 2>t     =@ @[%a@]@]\
+             @]"
+        P.(fmt_ppr_lf_mctx l0) cD
+        P.(fmt_ppr_cmp_gctx cD l0) cG
+        P.(fmt_ppr_cmp_ihctx cD cG) cIH
+        P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+        P.fmt_ppr_lf_msub_typing (cD_b, t, cD)
+      end;
+     *)
+    let cD_b, cIH1 =
+      if Total.is_inductive_split cD cG i && Total.struct_smaller pat then
+        let cD1 = mvars_in_patt cD_b pat in
+        let cIH = Total.wf_rec_calls cD1 I.Empty total_decs in
+        dprnt "[prepare_branch_contexts] did it";
+        (cD1, cIH)
+      else
+        (dprnt "[prepare_branch_contexts] nope"; (cD_b, I.Empty))
+    in
+    let cD_b = id_map_ind cD_b t cD in
+    let cG_out_refined = Whnf.cnormGCtx (cG, t) in
+    let cG_b =
+      Context.append cG_out_refined
+        (* if the pattern is smaller, then all comp vars coming from
+           the pattern are potentially usable for induction (subject to
+           compatibility with the totality declarations, later)
+           so we mark all these variables with stars.
+         *)
+        (if Total.struct_smaller pat then
+           Total.mark_gctx cG_pat
+         else
+           cG_pat)
+    in
+    dprintf begin fun p ->
+      p.fmt "[prepare_branch_contexts]\
+             @[<v>@[<hv 2>cG_out =@ @[%a@]@]\
+             @,@[<hv 2>cG_pat =@ @[%a@]@]\
+             @,@[<hv 2>cD_b =@ @[%a@]@]@]"
+      P.(fmt_ppr_cmp_gctx cD_b l0) cG_out_refined
+      P.(fmt_ppr_cmp_gctx cD_b l0) cG_pat
+      P.(fmt_ppr_lf_mctx l0) cD_b
+      end;
+    let cIH_b = Whnf.cnormIHCtx (cIH, t) in
+    let cIH2 = Total.wf_rec_calls cD_b cG_b total_decs in
+    let cIH_b = Context.concat [cIH_b; cIH1; cIH2] in
+    dprintf begin fun p ->
+      p.fmt "[prepare_branch_contexts] @[<hv>cIH_b =@ @[%a@]@]"
+        P.(fmt_ppr_cmp_ihctx cD_b cG_b) cIH_b
+      end;
+    (cD_b, cG_b, cIH_b)
+
+  (** Generates application of leading PiBox arguments (meta-applications).
+      The applications are stacked onto `i` and the new `i` is returned
+      together with its type (plus a delayed msub).
+      The count of implicit arguments is also returned.
+      You can configure the stopping condition via the given function argument.
+   *)
+  let rec genMApp loc (p : Int.LF.ctyp_decl -> bool) cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
+    genMAppW loc p cD (i, Whnf.cwhnfCTyp tau_t)
+
+  and genMAppW loc p cD (i, tau_t) = match tau_t with
+    | (Int.Comp.TypPiBox (_, (Int.LF.Decl(u, cU, dep) as d), tau), theta) when p d ->
+       let (cM,t') = Whnf.dotMMVar loc cD theta (u, cU, dep) in
+       let i = Int.Comp.MApp (loc, i, cM, Whnf.cnormMTyp (cU, theta), `implicit) in
+       genMApp loc p cD (i, (tau, t'))
+       |> Pair.lmap ((+) 1)
+
+    | _ ->
+       dprintf
+         begin fun p ->
+         p.fmt "[genMApp] @[<v>done:@,@[<hv>@[%a@] |-@ @[%a@]@]@]"
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_t)
+         end;
+       (0, (i, tau_t))
 
   let rec checkParamTypeValid loc cD cPsi tA =
     let rec checkParamTypeValid' (cPsi0,n) = match cPsi0 with
@@ -651,7 +745,7 @@ module Comp = struct
     in
     match (e, ttau) with
     | (Fn (loc, x, e), (TypArr (_, tau1, tau2), t)) ->
-       check cD (I.Dec (cG, CTypDecl (x, TypClo(tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
+       check cD (I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Fn " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
@@ -673,7 +767,7 @@ module Comp = struct
     | (Let (loc, i, (x, e)), (tau, t)) ->
        let (_ , tau', t') = syn cD (cG,cIH) total_decs i in
        let (tau', t') =  C.cwhnfCTyp (tau',t') in
-       let cG' = I.Dec (cG, CTypDecl (x, TypClo (tau', t'), false)) in
+       let cG' = I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau', t'), false)) in
        check cD (cG', Total.shift cIH) total_decs e (tau,t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Let " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
@@ -683,7 +777,12 @@ module Comp = struct
        let (tau', t') =  C.cwhnfCTyp (tau',t') in
        begin match (tau',t') with
        | (TypCross (_, tau1, tau2), t') ->
-          let cG' = I.Dec (I.Dec (cG, CTypDecl (x, TypClo (tau1, t'), false)), CTypDecl (y, TypClo(tau2, t'), false)) in
+          let cG' =
+            I.Dec
+              ( I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t'), false))
+              , CTypDecl (y, Whnf.cnormCTyp (tau2, t'), false)
+              )
+          in
           check cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau,t)
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
        end
@@ -1060,100 +1159,21 @@ module Comp = struct
   and checkBranches caseTyp cD cG total_decs (i, branches) tau_s ttau =
     List.iter (fun branch -> checkBranch caseTyp cD cG total_decs (i, branch) tau_s ttau) branches
 
-  and checkBranch caseTyp cD (cG, cIH) total_decs (i, branch) tau_s (tau, t) =
+  and checkBranch caseTyp cD (cG, cIH) total_decs (i, branch) tau_s ttau =
     match branch with
-    | Branch (loc, cD1', _cG, PatMetaObj (loc', mO), t1, e1) ->
-       dprintf
-         begin fun p ->
-           p.fmt "[checkBranch] @[<v>with meta-obj pattern: @[%a@]@,\
-                  where scrutinee has type @[%a@]@]"
-             (P.fmt_ppr_cmp_meta_obj cD1' P.l0) mO
-             (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-         end;
-       let TypBox (_, mT) = tau_s in
-       (* By invariant: cD1' |- t1 <= cD *)
-       let mT1   = Whnf.cnormMTyp (mT, t1) in
-       let cG'   = Whnf.cnormGCtx ( (* Whnf.normGCtx *) cG, t1) in
-       let cIH   = Whnf.cnormIHCtx ( (* Whnf.normIHCtx *) cIH, t1) in
-       let t''   = Whnf.mcomp t t1 in
-       let tau'  = Whnf.cnormCTyp (tau, t'') in
-       let (cD1',cIH')  =
-         if is_inductive caseTyp && Total.struct_smaller (PatMetaObj (loc', mO))
-         then
-           (* marks in the context as inductive all mvars appearing in
-              the pattern *)
-           let cD1' = mvars_in_patt cD1' (PatMetaObj (loc', mO)) in
-           ( cD1'
-           (* ^ cD is the outer meta-context; cD1' is the refined
-              meta-context + induction marks;
-              t1 is the refinement substitution that relates cD to cD1'.
-            *)
-           , Total.wf_rec_calls cD1' I.Empty total_decs
-           )
-         else (cD1', I.Empty)
+    | Branch (loc, _, (cD_b, cG_pat), pat, t', e) ->
+       LF.checkMSub loc cD_b t' cD;
+       let tau_p = Whnf.cnormCTyp (tau_s, t') in
+       let (cD_b, cG_b, cIH_b) =
+         prepare_branch_contexts cD_b pat t' cD (cG, cG_pat) cIH i total_decs
        in
-       let cD1' = id_map_ind cD1' t1 cD in
-       let cIH0' = Total.wf_rec_calls cD1' cG' total_decs in
-       LF.checkMSub loc cD1' t1 cD;
-       LF.checkMetaObj cD1' mO (mT1, C.m_id);
-       check cD1' (cG', Context.append cIH (Context.append cIH0' cIH')) total_decs e1 (tau', Whnf.m_id)
-
-    | Branch (loc, cD1', cG1, pat, t1, e1) ->
-       let tau_p = Whnf.cnormCTyp (tau_s, t1) in
-       let cG'   = Whnf.cnormGCtx (cG, t1) in
-       let cIH   = Whnf.cnormIHCtx ( (* Whnf.normIHCtx *) cIH, t1) in
-       let t''   = Whnf.mcomp t t1 in
-       let tau'  = Whnf.cnormCTyp (tau, t'') in
-       dprintf
-         begin fun p ->
-         p.fmt "[checkBranch] @[<v>at %a with general pattern@,\
-                @[%a@]@,\
-                where scrutinee has type @[%a@]@]"
-           Syntax.Loc.print_short loc
-           (P.fmt_ppr_cmp_pattern cD1' cG P.l0) pat
-           (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-         end;
-       let k     = Context.length cG1 in
-       let cIH0  = Total.shiftIH cIH k in
-       let (cD1', cG1', cIH') =
-         if is_inductive caseTyp && Total.struct_smaller pat
-         then
-           let cG1' = Total.mark_gctx cG1 in
-           let cD1' = mvars_in_patt cD1' pat in
-           ( cD1'
-           , cG1'
-           , Total.wf_rec_calls cD1' cG1' total_decs
-           )
-         else (cD1', cG1, I.Empty)
-       in
-       let cIH0' = Total.shiftIH (Total.wf_rec_calls cD1' cG' total_decs) k in
-       dprintf
-         begin fun p ->
-         match cIH0' with
-         | I.Empty -> ()
-         | _ ->
-            p.fmt "[checkBranch] @[<v>generated IH from previous cG = @[%a@]@,\
-                   cIH0' = @[%a@]@]"
-              (P.fmt_ppr_cmp_gctx cD1' P.l0) cG'
-              P.(fmt_ppr_cmp_ihctx cD1' (Context.append cG' cG1')) cIH0'
-         end;
-
-       let cD1' =
-         if Misc.List.null total_decs
-         then cD1'
-         else id_map_ind cD1' t1 cD
-       in
-
-       LF.checkMSub loc  cD1' t1 cD;
-       checkPattern cD1' cG1' pat (tau_p, Whnf.m_id);
+       checkPattern cD_b cG_b pat (tau_p, Whnf.m_id);
        check
-         cD1'
-         ( Context.append cG' cG1'
-         , Context.append cIH0 (Context.append cIH0' cIH')
-         )
+         cD_b
+         (cG_b, cIH_b)
          total_decs
-         e1
-         (tau', Whnf.m_id)
+         e
+         (Pair.rmap (Whnf.mcomp' t') ttau)
 
   and checkFBranches cD (cG , cIH) total_decs fbr ttau = match fbr with
     | NilFBranch _ -> ()
@@ -1290,36 +1310,6 @@ module Comp = struct
     , t
     )
 
-  let prepare_branch_contexts cD_b pat t cD cG cIH i total_decs =
-    dprintf begin fun p ->
-      p.fmt "@[<v 2>[directive] [check_branch]
-             @,cD    = @[%a@]\
-             @,cG    = @[%a@]\
-             @,cIH   = @[%a@]\
-             @,i     = @[%a@]\
-             @,@[<hv 2>t     =@ @[%a@]@]\
-             @]"
-        P.(fmt_ppr_lf_mctx l0) cD
-        P.(fmt_ppr_cmp_gctx cD l0) cG
-        P.(fmt_ppr_cmp_ihctx cD cG) cIH
-        P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-        P.fmt_ppr_lf_msub_typing (cD_b, t, cD)
-      end;
-    let cG_b = Whnf.cnormGCtx (cG, t) in
-    let cIH_b = Whnf.cnormIHCtx (cIH, t) in
-    let cD_b, cIH1 =
-      if Total.is_inductive_split cD cG i then
-        let cD1 = mvars_in_patt cD_b pat in
-        let cIH = Total.wf_rec_calls cD1 I.Empty total_decs in
-        (cD1, cIH)
-      else
-        (cD_b, I.Empty)
-    in
-    let cD_b = id_map_ind cD_b t cD in
-    let cIH2 = Total.wf_rec_calls cD_b cG_b total_decs in
-    let cIH_b = Context.concat [cIH_b; cIH1; cIH2] in
-    (cD_b, cG_b, cIH_b)
-
   let rec proof mcid cD cG cIH total_decs p ttau =
     match p with
     | Incomplete (loc, g) ->
@@ -1395,10 +1385,10 @@ module Comp = struct
     proof mcid cD' cG' cIH total_decs p ttau
 
   and directive mcid cD cG cIH total_decs (d : directive) ttau =
-    let check_branch pat t h i =
+    let check_branch cG_pat pat t h i =
       let cD_b, cG_b, cIH_b =
         let Hypothetical (ctx, _) = h in
-        prepare_branch_contexts ctx.cD pat t cD cG cIH i total_decs
+        prepare_branch_contexts ctx.cD pat t cD (cG, cG_pat) cIH i total_decs
       in
       let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
       hypothetical mcid cD_b cG_b cIH_b total_decs h ttau_b
@@ -1430,15 +1420,21 @@ module Comp = struct
 
     | ContextSplit (i, tau, bs) ->
        List.iter
-         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+         (fun (SplitBranch (_, (cG_pat, pat), t, h)) ->
+           check_branch cG_pat pat t h i)
+         bs
 
     | MetaSplit (i, tau, bs) ->
        List.iter
-         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+         (fun (SplitBranch (_, (cG_pat, pat), t, h)) ->
+           check_branch cG_pat pat t h i)
+         bs
 
     | CompSplit (i, tau, bs) ->
        List.iter
-         (fun (SplitBranch (_, pat, t, h)) -> check_branch pat t h i) bs
+         (fun (SplitBranch (_, (cG_pat, pat), t, h)) ->
+           check_branch cG_pat pat t h i)
+         bs
 
     | Suffices (i, args) ->
        (* TODO verify that `i` is not an IH call.

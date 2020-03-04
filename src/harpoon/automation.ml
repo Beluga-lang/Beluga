@@ -35,7 +35,7 @@ let auto_intros : t =
        | LF.Empty -> ()
        | cD ->
           Format.fprintf ppf "@,  @[<v 2>Meta-assumptions:";
-          fmt_ppr_ctx (fun ppf cD v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_lf_ctyp_decl cD P.l0) v) ppf cD;
+          fmt_ppr_ctx (fun ppf cD v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_lf_ctyp_decl cD) v) ppf cD;
           Format.fprintf ppf "@]"
      in
      let fmt_ppr_cmp_ctx ppf =
@@ -84,7 +84,7 @@ let auto_solve_trivial : t =
     dprintf
       begin fun p ->
       p.fmt "@[<v>[auto_solve_trivial] witness candidate = %a@]"
-        (P.fmt_ppr_lf_ctyp_decl cD P.l0) m
+        (P.fmt_ppr_lf_ctyp_decl cD) m
       end;
     match m with
     | LF.Decl (_, mtyp, _) ->

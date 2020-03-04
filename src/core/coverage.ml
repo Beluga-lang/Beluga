@@ -3172,7 +3172,7 @@ let rec check_emptiness =
             dprintf
               begin fun p ->
               p.fmt "[check_emptiness] @[%a@] is empty"
-                (P.fmt_ppr_lf_ctyp_decl cD' P.l0) cdecl
+                (P.fmt_ppr_lf_ctyp_decl cD') cdecl
               end;
             true
          | _ -> check_emptiness cD'

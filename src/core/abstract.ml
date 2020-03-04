@@ -160,7 +160,7 @@ let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
      fprintf ppf "%a MMV%a%a@,"
        fmt_ppr_collection cQ
        (P.fmt_ppr_cmp_meta_typ I.Empty) mtyp
-       (P.fmt_ppr_lf_depend `depend) dep
+       P.fmt_ppr_lf_depend dep
   | I.Dec(cQ, FDecl (MMV (_n,_r), Impure)) ->
      fprintf ppf "%a MMV Impure@,"
        fmt_ppr_collection cQ

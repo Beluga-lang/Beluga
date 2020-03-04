@@ -491,7 +491,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
      dprintf begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>Generate rec. calls given variable@,@[%a@]\
               @,considering a total of %d recursive functions@]"
-         (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u, cU, dep))
+         (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, dep))
          (List.length mf_list)
        end;
 
@@ -499,7 +499,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs = match cD' with
        dprintf begin fun p ->
          p.fmt "[mk_wf_rec] @[<v>for @[%a@] for position %d\
                 @,@[<hv 2>type of recursive call:@ @[%a@]@]@]"
-           (P.fmt_ppr_lf_ctyp_decl cD' P.l0) (LF.Decl (u,cU, dep))
+           (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u,cU, dep))
            x
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          end;

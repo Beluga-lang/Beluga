@@ -49,7 +49,7 @@ let check_computational_variable_uniqueness cD cG decl =
 let check_metavariable_uniqueness cD decl =
   check_variable_uniqueness "metavariable" cD decl
     LF.name_of_ctyp_decl
-    P.(fmt_ppr_lf_ctyp_decl cD l0)
+    P.(fmt_ppr_lf_ctyp_decl cD)
 
 type intros'_failure =
   | DuplicateName of LF.mctx * Comp.gctx * Comp.ctyp_decl

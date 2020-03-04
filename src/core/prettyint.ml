@@ -578,7 +578,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          try
            fprintf ppf "?%s%a"
              (MInstHashtbl.find minst_hashtbl u)
-             (fmt_ppr_lf_depend `depend) dep
+             fmt_ppr_lf_depend dep
          with
          | Not_found ->
             (* (* Should probably create a sep. generator for this -dwm *)
@@ -805,7 +805,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fmt_ppr_ctx_filter ~sep: sep should_print
       (fun ppf (cD', d) ->
         fprintf ppf "%a"
-          (fmt_ppr_lf_ctyp_decl cD' l0) d)
+          (fmt_ppr_lf_ctyp_decl cD') d)
       ppf
       cD
 
@@ -867,14 +867,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      declaration and skip calling this function. Otherwise, it is
      impossible to get the spacing to work correctly in the printed
      material. *)
-  and fmt_ppr_lf_ctyp_decl ?(depend=`clean) ?(printing_holes=false) cD _lvl ppf = function
+  and fmt_ppr_lf_ctyp_decl ?(fmt_ppr_depend = fmt_ppr_lf_depend_clean) cD ppf = function
     | LF.Decl (u, mtyp,dep) ->
-       let print_depend = fmt_ppr_lf_depend depend in
-       fprintf ppf "@[<2>%s%a :@ @[%a@]@]"
-         (if printing_holes
-          then Store.Cid.NamedHoles.getName u
-          else Id.render_name u)
-         print_depend dep
+       fprintf ppf "@[<2>%a%a :@ @[%a@]@]"
+         Id.print u
+         fmt_ppr_depend dep
          (fmt_ppr_lf_mtyp' cD ("(", ")")) mtyp
 
     | LF.DeclOpt name ->
@@ -939,7 +936,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        begin
          fprintf ppf "%s@[<2>{@[<2>%a@]}@ %a%s@]"
            (l_paren_if cond)
-           (fmt_ppr_lf_ctyp_decl cD 1) ctyp_decl
+           (fmt_ppr_lf_ctyp_decl cD) ctyp_decl
            (fmt_ppr_cmp_kind (LF.Dec(cD, ctyp_decl)) 1) cK
            (r_paren_if cond)
        end
@@ -996,7 +993,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cond = lvl > 1 in
        fprintf ppf "%s@[<2>(@[<2>%a@])@ @[%a@]%s@]"
          (l_paren_if cond)
-         (fmt_ppr_lf_ctyp_decl cD 0) d
+         (fmt_ppr_lf_ctyp_decl cD) d
          (fmt_ppr_cmp_typ (LF.Dec(cD, d)) 1) tau
          (r_paren_if cond)
 
@@ -1008,7 +1005,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          let cond = lvl > 1 in
          fprintf ppf "%s@[<2>{@[<2>%a@]}@ @[%a@]%s@]"
            (l_paren_if cond)
-           (fmt_ppr_lf_ctyp_decl cD 0) ctyp_decl
+           (fmt_ppr_lf_ctyp_decl cD) ctyp_decl
            (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
            (r_paren_if cond)
 
@@ -1507,7 +1504,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        @]"
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf (cD, d) ->
-           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) d))
+           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_lf_ctyp_decl cD) d))
       (Context.to_sublist cD)
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf d ->
@@ -1529,7 +1526,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
       (comma_sep_by
          begin fun ppf (cD, x) ->
-         fprintf ppf "@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD l0) x
+         fprintf ppf "@[<hov 2>%a@]" (fmt_ppr_lf_ctyp_decl cD) x
          end)
       (Context.to_sublist cD)
       (comma_sep_by (fmt_ppr_cmp_ctyp_decl cD l0))

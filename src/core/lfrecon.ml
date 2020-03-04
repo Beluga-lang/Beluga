@@ -1706,7 +1706,7 @@ and elTerm' recT cD cPsi r sP = match r with
           let (u, tp, dep) = Whnf.mctxLookupDep cD k in
           p.fmt "[elTerm'] elaborating parameter variable at index %d -> %a"
             k
-            (P.fmt_ppr_lf_ctyp_decl cD P.l0) (Int.LF.Decl (u, tp, dep))
+            (P.fmt_ppr_lf_ctyp_decl cD) (Int.LF.Decl (u, tp, dep))
         );
         let (_, tA, cPhi) = Whnf.mctxPDec cD k in
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in

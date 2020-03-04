@@ -475,18 +475,24 @@ module CVar : sig
 
   type cvar = Id.name
 
-  type entry = {
-    name : cvar
-  }
+  type entry =
+    { name : cvar
+    ; plicity : Comp.plicity
+    }
 
-  val mk_entry      : cvar -> entry
+  val mk_entry      : cvar -> Comp.plicity -> entry
 
   type t  (* NOTE: t is an ordered data structure *)
 
   val create        : unit -> t
   val extend        : t -> entry -> t
   val get           : t -> var  -> entry
-  val index_of_name : t -> cvar -> offset
+
+  (** Looks up the index of a given name in scope.
+      Raises Not_found if no such variable is in scope.
+      Returns the plicity of the variable together with its offset.
+   *)
+  val index_of_name : t -> cvar -> Comp.plicity * offset
   val append        : t -> t -> t
   val length        : t -> int
 
@@ -494,5 +500,5 @@ module CVar : sig
   val of_mctx       : LF.mctx -> t
 
   val to_string     : t -> string
-  val of_list       : Id.name list -> t
+  val of_list       : (Id.name * Comp.plicity) list -> t
 end

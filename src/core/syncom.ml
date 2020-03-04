@@ -4,8 +4,25 @@
 
 module Loc = Location
 
+module Common = struct
+  type plicity =
+    [ `implicit
+    | `explicit
+    ]
+
+  let is_explicit : plicity -> bool = function
+    | `explicit -> true
+    | _ -> false
+
+  let is_implicit : plicity -> bool = function
+    | `implicit -> true
+    | _ -> false
+end
+
 (** General snoc-lists. *)
 module LF = struct
+  include Common
+
   type 'a ctx =                          (* Generic context declaration    *)
     | Empty                              (* C ::= Empty                    *)
     | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
@@ -23,28 +40,28 @@ module LF = struct
       | No, No -> true
       | Inductive, Inductive -> true
       | _ -> false
+
+    let of_plicity : plicity -> depend = function
+      | `implicit -> Maybe
+      | `explicit -> No
+
+    let to_plicity : depend -> plicity = function
+      | Maybe -> `implicit
+      | No -> `explicit
+      | Inductive ->
+         Error.violation
+           "[Depend] [to_plicity] Inductive is impossible"
   end
 end
 
 module Comp = struct
+  include Common
+
   type case_pragma = PragmaCase | PragmaNotCase
 
   type context_case =
     | EmptyContext of Loc.t
     | ExtendedBy of Loc.t * int (* specifies a schema element *)
-
-  type plicity =
-    [ `implicit
-    | `explicit
-    ]
-
-  let is_explicit : plicity -> bool = function
-    | `explicit -> true
-    | _ -> false
-
-  let is_implicit : plicity -> bool = function
-    | `implicit -> true
-    | _ -> false
 
   type case_label =
     | NamedCase of Loc.t * Id.name

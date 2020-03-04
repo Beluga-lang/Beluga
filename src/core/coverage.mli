@@ -115,7 +115,7 @@ val genPVarGoal : LF.sch_elem -> LF.mctx -> LF.dctx -> LF.ctx_var ->
     normal makes sense inside the "branch context" cD', so the msub t
     together with its target context cD' are also returned.
  *)
-val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ ->
+val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ * int ->
              (LF.dctx * LF.normal * LF.tclo) inside option
 
 (** genPatt (cD, tau_i) (c, tau_c)

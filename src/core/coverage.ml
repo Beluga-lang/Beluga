@@ -204,10 +204,10 @@ let eta_expand (tH, tA) =
    cPsi  |- ss   <= cPsi'
    cPsi' |- tN   <= [s'][s]A
  *)
-let rec etaExpandMVstr u cD cPsi sA =
-  etaExpandMVstr' u cD cPsi (Whnf.whnfTyp sA)
+let rec etaExpandMVstr u cD dep cPsi sA =
+  etaExpandMVstr' u cD dep cPsi (Whnf.whnfTyp sA)
 
-and etaExpandMVstr' u cD cPsi =
+and etaExpandMVstr' u cD dep cPsi =
   function
   | LF.Atom (_, a, _) as tP, s ->
      let cPhi, conv_list = ConvSigma.flattenDCtx cD cPsi in
@@ -225,7 +225,7 @@ and etaExpandMVstr' u cD cPsi =
      let ssi' = S.LF.invert ss' in
      (* cPhi' |- ssi             : cPhi  *)
      (* cPhi' |- [ssi]tQ                 *)
-     let u = Whnf.newMMVar u (cD, cPhi', LF.TClo (tQ, ssi')) LF.Maybe in
+     let u = Whnf.newMMVar u (cD, cPhi', LF.TClo (tQ, ssi')) dep in
      (* cPhi  |- ss'             : cPhi'
         cPsi  |- s_proj          : cPhi
         cPsi  |- comp ss' s_proj : cPhi' *)
@@ -233,7 +233,7 @@ and etaExpandMVstr' u cD cPsi =
      let tM = LF.Root (Loc.ghost, LF.MMVar ((u, Whnf.m_id), ss_proj),  LF.Nil) in
      tM
   | LF.PiTyp ((LF.TypDecl (x, _) as decl, _), tB), s ->
-     LF.Lam (Loc.ghost, x, etaExpandMVstr u cD (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
+     LF.Lam (Loc.ghost, x, etaExpandMVstr u cD dep (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
 
 (* ****************************************************************************** *)
 (** Printing for debugging
@@ -1084,8 +1084,13 @@ let getSchemaElems cD cPsi =
      {cD}; cPsi |- tP <= typ
    then
      cD'; cPsi |- tS : sA <= tP
+
+   Tries to generate a spine of metavariables according to the given
+   type sA. Returns Some tS if a spine that results in a conclusion
+   type unifiable with the input type tP can be
+   constructed. Otherwise, returns None.
  *)
-let rec genSpine names cD cPsi sA tP =
+let rec genSpine k names cD cPsi sA tP =
   match Whnf.whnfTyp sA with
   | (LF.PiTyp ((LF.TypDecl (u, tA), _), tB), s) ->
      (* cPsi' |- Pi x:A.B <= typ
@@ -1095,15 +1100,17 @@ let rec genSpine names cD cPsi sA tP =
       *)
      (* let tN = Whnf.etaExpandMV cPsi (tA, s) S.LF.id in *)
      let u = NameGen.(mvar tA |> renumber names) in
-     let tN = etaExpandMVstr (Some u) cD cPsi (tA, s) in
+     let dep = if k > 0 then LF.Maybe else LF.No in
+     let tN = etaExpandMVstr (Some u) cD dep cPsi (tA, s) in
      dprintf
        begin fun p ->
        p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
               tN = @[%a@]@]"
          P.(fmt_ppr_lf_normal cD cPsi l0) tN
        end;
-     let tS = genSpine (u :: names) cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP in
-     LF.App (tN, tS)
+     let open Maybe in
+     genSpine (k-1) (u :: names) cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP
+     $> fun tS -> LF.App (tN, tS)
 
   | (LF.Atom (_, _, _) as tQ, s) ->
      dprintf
@@ -1111,11 +1118,22 @@ let rec genSpine names cD cPsi sA tP =
        p.fmt "[genSpine] atomic type @[%a@]"
          (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tQ, S.LF.id))
        end;
-     U.unifyTyp LF.Empty cPsi (tQ, s) (tP, S.LF.id);
-     LF.Nil
+     try
+       U.unifyTyp cD cPsi (tQ, s) (tP, S.LF.id);
+       Some LF.Nil
+     with
+     | U.Failure _ -> None
 
 
-let genObj (cD, cPsi, tP) (tH, tA) =
+(** Tries to generate a pattern with the given head by synthesizing
+    metavariables according to the given type tA.
+    The input integer k is the number of implicit parameters for the
+    head.
+
+    Returns None if the synthesized pattern's type is not unifiable
+    with the coverage goal type tP.
+ *)
+let genObj (cD, cPsi, tP) (tH, tA, k) =
   dprintf
     begin fun p ->
     p.fmt "[genObj] @[<v>cD = @[%a@]@,in the beginning there were %d constraints@]"
@@ -1137,13 +1155,15 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 
   let names = Context.(names_of_mctx cD @ names_of_dctx cPsi) in
   match
-    try
-      let s = genSpine names LF.Empty cPsi' (tA', S.LF.id) tP' in
-      U.forceGlobalCnstr !U.globalCnstrs;
-      dprint (fun _ -> "[genObj] global constraints forced!");
-      Some s
-    with
-     | U.Failure _ | U.GlobalCnstrFailure (_, _) -> None
+    let open Maybe in
+    genSpine k names LF.Empty cPsi' (tA', S.LF.id) tP'
+    $ fun tS ->
+      try
+        U.forceGlobalCnstr !U.globalCnstrs;
+        dprnt "[genObj] global constraints forced!";
+        Some tS
+      with
+      | U.GlobalCnstrFailure _ -> None
   with
   | None -> None
   | Some spine ->
@@ -1154,7 +1174,9 @@ let genObj (cD, cPsi, tP) (tH, tA) =
        with
        | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
           let open Format in
-          fprintf std_formatter "@[<v>WARNING: encountered leftover constraints in higher-order unification@,Coverage goal: @[%a@ : %a@]"
+          fprintf std_formatter
+            "@[<v>WARNING: encountered leftover constraints in higher-order unification\
+             @,Coverage goal: @[%a@ : %a@]@]"
             (P.fmt_ppr_lf_normal LF.Empty cPsi' P.l0) tM
             (P.fmt_ppr_lf_typ LF.Empty cPsi' P.l0) tP';
           raise e
@@ -1170,7 +1192,7 @@ let genObj (cD, cPsi, tP) (tH, tA) =
 
 let genAllObj cg = Maybe.filter_map (genObj cg)
 
-let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
+let genConst  (cD, cPsi, (a, tS)) =
   let _ = Types.freeze a in
   let constructors = (Types.get a).Types.Entry.constructors in
   (* Reverse the list so coverage will be checked in the order that the
@@ -1179,10 +1201,16 @@ let genConst  ((cD, cPsi, LF.Atom (_, a, _tS)) as cg) =
   let tH_tA_list =
     List.map
       (fun c ->
-        (LF.Const c, (Const.get c).Const.Entry.typ))
+        let open Const in
+        let e = get c in
+        ( LF.Const c
+        , e.Entry.typ
+        , e.Entry.implicit_arguments
+        )
+      )
       constructors
   in
-  genAllObj cg tH_tA_list
+  genAllObj (cD, cPsi, LF.(Atom (Loc.ghost, a, tS))) tH_tA_list
 
 (** Given a head and its type,
     expands the head into a list of heads if the head's type is a
@@ -1209,11 +1237,12 @@ let expand_head_sigma (tH, tA) =
  *)
 let genBVar (cD, cPsi, tP) i =
   let LF.TypDecl (_, tA) = Context.ctxDec cPsi i in (* x_i : tA in cPsi *)
-  let tH_tA_list = expand_head_sigma (LF.BVar i, tA) in
   (* We call expand_head_sigma here because it might be *projections*
      of the bound variable that are relevant to the matching.
    *)
-  genAllObj (cD, cPsi, tP) tH_tA_list
+  expand_head_sigma (LF.BVar i, tA)
+  |> List.map (fun (tH, tA) -> (tH, tA, 0))
+  |> genAllObj (cD, cPsi, tP)
 
 let genBVars ((_, cPsi, _) as cg) =
   let k = Context.dctxLength cPsi in
@@ -1277,8 +1306,12 @@ let genPVarCovGoal (cD, cPsi, tP) psi e =
      or to put it differently
      cO; cD', pdec; cPsi'  |- head : trec'
    *)
-  let tH_tA_list = expand_head_sigma (h, tA') in
-  genAllObj cg' (tH_tA_list)
+  (* TODO think about whether implicits make sense for pvars -je
+     For now, we just set to zero.
+   *)
+  expand_head_sigma (h, tA')
+  |> List.map (fun (tH, tA) -> (tH, tA, 0))
+  |> genAllObj cg'
   |> List.map (fun (cD', cg, t') -> (cD', cg, Whnf.mcomp t t'))
   (* each cg in cg_list:    (cO_k, cD_k), ms_k
      where cD_k |- ms_k : cD'_pdcl
@@ -1371,7 +1404,7 @@ let ctyp_to_covgoal (cD, (cPsi, tM, sA), t) =
  *)
 let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.typ)) =
   match tA with
-  | LF.Atom _ ->
+  | LF.Atom (_, a, tS) ->
      let g_pv = genPVar cov_problem in (* (cD', cg, ms) list *)
      dprintf
        begin fun p ->
@@ -1388,7 +1421,7 @@ let rec genCovGoals (((cD, cPsi, tA) as cov_problem) : (LF.mctx * LF.dctx * LF.t
          Prettycov.fmt_ppr_cov_goals
          (List.map ctyp_to_covgoal g_bv)
        end;
-     let g_cv = genConst cov_problem in
+     let g_cv = genConst (cD, cPsi, (a, tS)) in
      dprintf
        begin fun p ->
        p.fmt "[genCovGoals] @[<v>generated const cases:\
@@ -2231,11 +2264,11 @@ let rec genPattSpine names =
      , ttau0
      )
 
-  | Comp.TypPiBox (_, LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), _), tau), t ->
+  | Comp.TypPiBox (_, LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), dep), tau), t ->
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
      let u = NameGen.renumber names u in
-     let tR = etaExpandMVstr (Some u) LF.Empty cPsi' (tP', S.LF.id) in
+     let tR = etaExpandMVstr (Some u) LF.Empty dep cPsi' (tP', S.LF.id) in
      let pat1 =
        Comp.PatMetaObj
          ( Loc.ghost

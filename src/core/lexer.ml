@@ -38,7 +38,9 @@ let number = [%sedlex.regexp? Plus digit]
 let hole = [%sedlex.regexp? '?', Opt ident]
 let pragma = [%sedlex.regexp? "--", Plus alphabetic]
 let hash_ident = [%sedlex.regexp? '#', ident]
+let hash_blank = [%sedlex.regexp? "#_"]
 let dollar_ident = [%sedlex.regexp? '$', ident]
+let dollar_blank = [%sedlex.regexp? "$_"]
 let dot_number = [%sedlex.regexp? '.', number]
 
 let shift_by_lexeme lexbuf loc =
@@ -192,15 +194,17 @@ let rec tokenize loc lexbuf =
   | "*" -> const T.STAR
   | "=" -> const T.EQUALS
   | "/" -> const T.SLASH
-  | "_" -> const T.UNDERSCORE
   | "+" -> const T.PLUS
 
   | hole -> T.HOLE (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | "_" -> const T.UNDERSCORE
   | ident -> T.IDENT (get_lexeme loc lexbuf)
 
   | dot_number -> T.DOT_NUMBER (int_of_string (Misc.String.drop 1 (get_lexeme loc lexbuf)))
   | dots -> const T.DOTS
+  | hash_blank -> T.HASH_BLANK
   | hash_ident -> T.HASH_IDENT (get_lexeme loc lexbuf)
+  | dollar_blank -> T.DOLLAR_BLANK
   | dollar_ident -> T.DOLLAR_IDENT (get_lexeme loc lexbuf)
   | "." -> const T.DOT
   | "#" -> const T.HASH

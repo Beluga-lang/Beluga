@@ -2177,12 +2177,12 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        I.SplitBranch (l', (Int.LF.Empty, pat'), t', hyp')
 
     | A.NamedCase (loc, name) ->
-       let cid, tA =
+       let cid, tA, k =
          try
            let open Store.Cid.Term in
            let cid = index_of_name name in
-           let { Entry.typ; _ } = get cid in
-           (cid, typ)
+           let { Entry.typ; implicit_arguments; _ } = get cid in
+           (cid, typ, implicit_arguments)
          with
          | Not_found ->
             UnboundCaseLabel (`meta, name, cD, tau_i)
@@ -2193,7 +2193,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
         *)
        let Int.LF.MTyp tP = cU in
        let (cD', (cPsi', tR_p, tA_p), t) =
-         match Coverage.genObj (cD, cPsi, tP) (Int.LF.Const cid, tA) with
+         match Coverage.genObj (cD, cPsi, tP) (Int.LF.Const cid, tA, k) with
          | None ->
             assert false
          (* XXX throw an appropriate error

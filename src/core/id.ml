@@ -184,3 +184,7 @@ let equals n1 n2 =
 
 let cid_equals (l1, n1) (l2, n2) =
   l1 = l2 && n1 = n2
+
+let mk_blank = function
+  | Some loc -> mk_name ~loc: loc (SomeString "_")
+  | None -> mk_name (SomeString "_")

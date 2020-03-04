@@ -13,6 +13,9 @@ type max_usage =
 val base_name : name -> string
 val get_module : name -> string list
 
+(** Generate a blank name (underscore). *)
+val mk_blank : Location.t option -> name
+
 val inc_hint_cnt : int option -> int option
 val gen_fresh_name : name list -> name -> name
 val inc : name -> name

@@ -87,6 +87,10 @@ type t =
   | HASH_IDENT of string (* #x *)
   (* A dollar followed by an identifier; used for substitution variables. *)
   | DOLLAR_IDENT of string (* $x *)
+  (* A hash followed by an underscore. *)
+  | HASH_BLANK (* #_ *)
+  (* A dollar followed by an underscore. *)
+  | DOLLAR_BLANK (* $_ *)
   (* A question mark followed by an identifier *)
   | HOLE of string
   (* An integer literal. *)
@@ -181,6 +185,8 @@ let print (c : class_or_string) ppf =
   | HASH_IDENT s -> case (lazy (p "#%s" s)) (lazy (p "HASH_IDENT"))
   | DOLLAR_IDENT s -> case (lazy (p "$%s" s)) (lazy (p "DOLLAR_IDENT"))
   | PRAGMA s -> case (lazy (p "--%s" s)) (lazy (p "PRAGMA"))
+  | HASH_BLANK -> case (lazy (p "#_")) (lazy (p "HASH_BLANK"))
+  | DOLLAR_BLANK -> case (lazy (p "$_")) (lazy (p "DOLLAR_BLANK"))
 
 let to_string t = Fmt.stringify (print `TOKEN) t
 let class_to_string t = Fmt.stringify (print `CLASS) t

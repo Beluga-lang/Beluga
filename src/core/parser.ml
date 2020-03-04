@@ -198,6 +198,8 @@ type content =
   | `keyword of string option
   | `hash_identifier of string option
   | `dollar_identifier of string option
+  | `hash_blank
+  | `dollar_blank
   | `hole of string option
   | `integer of int option
   | `dot_integer
@@ -235,6 +237,10 @@ let print_content ppf : content -> unit =
      format_with ppf "hash identifier" string_option i
   | `dollar_identifier i ->
      format_with ppf "dollar identifier" string_option i
+  | `hash_blank ->
+     fprintf ppf "hash blank"
+  | `dollar_blank ->
+     fprintf ppf "dollar blank"
   | `hole i ->
      format_with ppf "hole" string_option i
   | `keyword i ->
@@ -926,19 +932,76 @@ let dollar_identifier : string parser =
      | T.DOLLAR_IDENT s -> Some s
      | _ -> None)
 
-let name : Id.name parser =
-  identifier
-  |> span
-  $> fun (loc, s) -> Id.mk_name ~loc: loc (Id.SomeString s)
+let hash_blank : unit parser =
+  satisfy' `hash_blank
+    (function
+     | T.HASH_BLANK -> Some ()
+     | _ -> None)
 
-let dot_name : Id.name parser =
+let dollar_blank : unit parser =
+  satisfy' `dollar_blank
+    (function
+     | T.DOLLAR_BLANK -> Some ()
+     | _ -> None)
+
+let namify (p : string t) : Id.name t =
+  p |> span
+  $> fun (loc, x) -> Id.(mk_name ~loc: loc (SomeString x))
+
+let name : Id.name parser =
+  namify identifier
+
+type name_or_blank = [ `name of Id.name | `blank of Loc.t ]
+
+let blankify (p : unit t) : name_or_blank t =
+  p |> span $> fun (loc, _) -> `blank loc
+
+let name_or_blank : name_or_blank parser =
+  alt
+    (name $> fun x -> `name x)
+    (token T.UNDERSCORE |> blankify)
+
+(** Converts a name or blank into a depend and a name. *)
+let dep_name_of_nb = function
+  | `blank loc' -> (LF.Maybe, Id.mk_blank (Some loc'))
+  | `name x -> (LF.No, x)
+
+let dot_name : Id.name t =
   token T.DOT &> name
 
-let hash_name : Id.name parser =
-  hash_identifier $> fun s -> Id.mk_name (Id.SomeString s)
+let hash_name : Id.name t =
+  namify hash_identifier
 
-let dollar_name : Id.name parser =
-  dollar_identifier $> fun s -> Id.mk_name (Id.SomeString s)
+let hash_name_or_blank : name_or_blank t =
+  alt
+    (hash_name $> fun x -> `name x)
+    (hash_blank |> blankify)
+
+let dollar_name : Id.name t =
+  namify dollar_identifier
+
+let dollar_name_or_blank : name_or_blank t =
+  alt
+    (dollar_name $> fun x -> `name x)
+    (dollar_blank |> blankify)
+
+type name_class =
+  [ `ordinary
+  | `dollar
+  | `hash
+  ]
+
+type 'a name_parser = name_class -> 'a t
+
+let name_or_blank' : name_or_blank name_parser = function
+  | `ordinary -> name_or_blank
+  | `dollar -> dollar_name_or_blank
+  | `hash -> hash_name_or_blank
+
+let name' : Id.name name_parser = function
+  | `ordinary -> name
+  | `dollar -> dollar_name
+  | `hash -> hash_name
 
 let integer : int parser =
   satisfy' (`integer None)
@@ -1722,8 +1785,11 @@ let ctype_kind =
 (** Parses a variable declaration for a contextual type.
     `name : [ dctx |- p ]`
     Note that this doesn't include the braces around the declaration!
+    The shape of the box is configurable via the `box` parameter.
  *)
-let contextual_variable_decl box name p =
+let contextual_variable_decl
+      (name : 'name t) (box : (LF.dctx * 'a) t -> 'b t) (p : 'a t)
+    : ('name * 'b) t =
   seq2
     (name <& token T.COLON)
     (box (contextual p))
@@ -1748,47 +1814,47 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
         (label ctx "contextual context type")
     end
 
-let clf_ctyp_decl_bare =
+let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> LF.ctyp_decl t =
+  fun nameclass dep_of_name ->
   { run =
       fun s ->
       let hash_variable_decl p =
         contextual_variable_decl
+          (nameclass `hash)
           (sigil_bracks_or_opt_parens T.HASH)
-          hash_name
           p
       in
       let dollar_variable_decl p =
         contextual_variable_decl
+          (nameclass `dollar)
           (sigil_bracks_or_opt_parens T.DOLLAR)
-          dollar_name
           p
       in
       let mk_decl dep f (loc, (p, w)) =
         LF.Decl (p, (loc, f w), dep)
       in
-      let mk_cltyp_decl f d =
-        mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+      let mk_cltyp_decl dep f d =
+        mk_decl dep (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
       in
-
+      let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
+        let dep, x = dep_of_name nb in
+        mk_cltyp_decl dep f (loc, (x, (cPsi, tA)))
+      in
       let param_variable =
-        labelled "parameter variable declaration"
-          begin
-            hash_variable_decl (trying clf_typ_atomic)
-            |> span
-            $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
-          end
+        hash_variable_decl (trying clf_typ_atomic)
+        |> span
+        $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
+        |> labelled "parameter variable declaration"
       in
       let subst_variable =
         let subst_class =
           maybe (token T.HASH)
           $> Maybe.eliminate (Misc.const LF.Subst) (Misc.const LF.Ren)
         in
-        labelled "substitution/renaming variable"
-          begin
-            dollar_variable_decl (seq2 subst_class clf_dctx)
-            |> span
-            $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
-          end
+        dollar_variable_decl (seq2 subst_class clf_dctx)
+        |> span
+        $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+        |> labelled "substitution/renaming variable"
       in
       let q =
         choice
@@ -1801,17 +1867,19 @@ let clf_ctyp_decl_bare =
              alternation to see whether we have another name (so
              a ctx var) or a box (so an mvar)
            *)
-          ; name <& token T.COLON |> span
-            $ fun (loc1, x) ->
+          ; nameclass `ordinary <& token T.COLON |> span
+            $ fun (loc1, nb) ->
+              let dep, x = dep_of_name nb in
               alt
                 (span name
                  $> fun (loc2, ctx) ->
-                    mk_decl LF.No
+                    mk_decl dep
                       (fun w -> LF.CTyp w)
                       (Loc.join loc1 loc2, (x, ctx)))
                 (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
                  $> fun (loc2, d) ->
                     mk_cltyp_decl
+                      dep
                       (fun tA -> LF.MTyp tA)
                       (Loc.join loc1 loc2, (x, d)))
           ]
@@ -1827,8 +1895,7 @@ let ctx_variable =
         (trying (name <& token T.COLON))
         (name <& not_followed_by meta_obj)
       |> span
-      $> fun (loc, (p, w)) ->
-         LF.Decl (p, (loc, LF.CTyp w), LF.Maybe)
+      $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), LF.Maybe)
     end
 
 (** Contextual LF contextual type declaration *)
@@ -1837,10 +1904,10 @@ let clf_ctyp_decl =
       fun s ->
       (* Parses `#name : [ dctx |- p ]` *)
       let hash_variable_decl p =
-        contextual_variable_decl bracks_or_opt_parens hash_name p
+        contextual_variable_decl hash_name bracks_or_opt_parens p
       in
       let dollar_variable_decl p =
-        contextual_variable_decl bracks_or_opt_parens dollar_name p
+        contextual_variable_decl dollar_name bracks_or_opt_parens p
       in
       let mk_decl dep f (loc, (p, w)) =
         LF.Decl (p, (loc, f w), dep)
@@ -1934,7 +2001,7 @@ let rec cmp_typ =
       in
       let pibox =
         labelled "Pi-box type"
-          (pibox (clf_ctyp_decl_bare |> braces) cmp_typ
+          (pibox (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces) cmp_typ
              (fun loc ctyp_decl tau ->
                Comp.TypPiBox (loc, ctyp_decl, tau)))
       in
@@ -2140,7 +2207,7 @@ and cmp_branch =
       fun s ->
       let p =
         seq3
-          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare |> braces))
+          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
           cmp_pattern
           (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
@@ -2282,7 +2349,7 @@ and cmp_exp_chk' =
       let lets =
         let let_pattern =
           seq4
-            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare |> braces))
+            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
             (cmp_pattern <& token T.EQUALS)
             (cmp_exp_syn <& token T.KW_IN)
             cmp_exp_chk
@@ -2886,7 +2953,7 @@ and harpoon_hypothetical : Comp.hypothetical parser =
   let open Comp in
   let hypotheses =
     seq2
-      (mctx clf_ctyp_decl_bare <& token T.PIPE)
+      (mctx (clf_ctyp_decl_bare name_or_blank' dep_name_of_nb) <& token T.PIPE)
       gctx
     $> fun (cD, cG) -> { cD; cG }
   in

@@ -124,21 +124,32 @@ let get_env : lf_indexing_context index =
 let trying_index (f : unit -> 'a) : 'a option =
   try Some (f ()) with Not_found -> None
 
-let index_cvar (name : Id.name) : Id.offset option index =
-  fun c fvars ->
-  ( fvars
-  , trying_index
-      begin fun () ->
-      let k = CVar.index_of_name c.cvars name in
-      dprintf begin fun p ->
-        p.fmt "[index_cvar] indexed %a at %a as %d"
-          Id.print name
-          Loc.print_short (Id.loc_of_name name)
-          k
-        end;
-      k
-      end
-  )
+type cvar_error_status =
+  [ `implicit
+  | `unbound
+  ]
+
+let cvar_error_to_hint = function
+  | `implicit -> Some `implicit_variable
+  | _ -> None
+
+let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
+  match
+    trying_index (fun _ -> CVar.index_of_name cvars u)
+  with
+  | None -> Either.Left `unbound
+  | Some (`implicit, _) -> Either.Left `implicit
+  | Some (_, k) ->
+     dprintf begin fun p ->
+       p.fmt "[index_cvar'] indexed %a to offset %d at %a"
+         Id.print u
+         k
+         Loc.print_short (Id.loc_of_name u)
+       end;
+     Either.Right k
+
+let index_cvar (name : Id.name) : (cvar_error_status, Id.offset) Either.t index =
+  fun c fvars -> (fvars, index_cvar' c.cvars name)
 
   (*
 let index_bvar (name : Id.name) : Id.offset option index =
@@ -179,6 +190,7 @@ end
 (** Hints can be attached to certain errors. *)
 type hint =
   [ `needs_box
+  | `implicit_variable
   ]
 
 type error =
@@ -200,7 +212,7 @@ exception Error of Syntax.Loc.t * error * hint option
 
 let throw_hint' loc hint e = raise (Error (loc, e, hint))
 let throw loc e = throw_hint' loc None e
-(* let throw_hint loc hint e = throw_hint' loc (Some hint) e *)
+let throw_hint loc hint e = throw_hint' loc (Some hint) e
 
 let print_error ppf =
   let open Format in
@@ -238,7 +250,13 @@ let print_hint ppf : hint -> unit =
   let open Format in
   function
   | `needs_box ->
-     fprintf ppf "This identifier is bound as a contextual variable. Did you mean to write it in a box?"
+     pp_print_string ppf
+       "This identifier is bound as a contextual variable. Did \
+        you mean to write it in a box?"
+  | `implicit_variable ->
+     pp_print_string ppf
+       "This variable is an implicit parameter. It cannot be \
+        accessed directly."
 
 let _ =
   let open Format in
@@ -642,13 +660,13 @@ and index_head (h : Ext.LF.head) : Apx.LF.head index =
        | false ->
           seq2 get_closed_status (index_cvar p) $
             function
-            | `closed_term, None -> throw loc (UnboundName p)
-            | `open_term, None ->
+            | `closed_term, Either.Left _ -> throw loc (UnboundName p)
+            | `open_term, Either.Left _ ->
                index_sub_opt s
                $ fun s' ->
                  modify_fvars (extending_by p)
                  $$ pure (Apx.LF.FPVar (p, s'))
-            | _, Some offset ->
+            | _, Either.Right offset ->
                index_sub_opt s
                $> fun s' ->
                   Apx.LF.PVar (Apx.LF.Offset offset, s')
@@ -734,40 +752,36 @@ and disambiguate_name' f : name_disambiguator =
       in
       (fvs', Apx.LF.FMVar (name, o'))
     else
-      try
-        let offset = CVar.index_of_name cvars name in
-        dprintf (disambiguation_message "contextual variable" (Some offset));
-        let (fvs', o') =
-          index_sub_opt sub_opt c fvars
-        in
-        ( fvs'
-        , Apx.LF.MVar (Apx.LF.Offset offset, o')
-        )
-      with Not_found ->
-        try
-          ( fvars
-          , ( let k = Term.index_of_name name in
-              require_no_sub loc `const sub_opt;
-              dprintf (disambiguation_message "LF constant" None);
-              Apx.LF.Const k
-              (* similar consideration here as for BVar;
-                 we must ascertain that it is in fact a Const before
-                 demanding that there be no substitution.
-               *)
-            )
-          )
-        with Not_found ->
-          dprintf (disambiguation_message "new free variable" None);
-          f c (loc, name) sub_opt fvars
-                (*
-          match fvars.open_flag with
-          | `closed_term -> throw loc (UnboundName name)
-          | `open_term ->
-             let (fvars', s') = index_sub_opt sub_opt c fvars in
-             ( extending_by name fvars'
-             , Apx.LF.FMVar (name, s')
+      match index_cvar' cvars name with
+      | Either.Left `implicit ->
+         throw_hint
+           (Id.loc_of_name name)
+           `implicit_variable
+           (UnboundName name)
+      | Either.Right offset ->
+         dprintf (disambiguation_message "contextual variable" (Some offset));
+         let (fvs', o') =
+           index_sub_opt sub_opt c fvars
+         in
+         ( fvs'
+         , Apx.LF.MVar (Apx.LF.Offset offset, o')
+         )
+      | Either.Left `unbound ->
+         try
+           ( fvars
+           , ( let k = Term.index_of_name name in
+               require_no_sub loc `const sub_opt;
+               dprintf (disambiguation_message "LF constant" None);
+               Apx.LF.Const k
+             (* similar consideration here as for BVar;
+                we must ascertain that it is in fact a Const before
+                demanding that there be no substitution.
+              *)
              )
-                 *)
+           )
+         with Not_found ->
+           dprintf (disambiguation_message "new free variable" None);
+           f c (loc, name) sub_opt fvars
 
 and disambiguate_to_fmvars : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
@@ -831,13 +845,14 @@ and index_sub (s : Ext.LF.sub) : Apx.LF.sub index =
        | false ->
           seq2 get_closed_status (index_cvar u) $
             function
-            | `closed_term, None -> throw loc (UnboundName u)
-            | `open_term, None ->
+            | `closed_term, Either.Left e ->
+               throw_hint' loc (cvar_error_to_hint e) (UnboundName u)
+            | `open_term, Either.Left _ ->
                index_sub_opt s
                $ fun s' ->
                  modify_fvars (extending_by u)
                  $$ pure (Apx.LF.FSVar (u, s'))
-            | _, Some offset ->
+            | _, Either.Right offset ->
                index_sub_opt s
                $> fun s' -> Apx.LF.SVar (Apx.LF.Offset offset, s')
 
@@ -878,23 +893,24 @@ let index_decl disambiguate_name (cvars : CVar.t) (bvars : BVar.t) fvars = funct
     (Apx.LF.TypDeclOpt x, bvars', fvars)
 
 (** Tries to index the given name as a context variable.
-    Computes `None' in case free variables are not permitted and the
-    name is not bound.
+    Computes a cvar_error_status in case free variables are not
+    permitted and the name is not bound.
  *)
-let index_ctx_var name : Apx.LF.dctx option index =
+let index_ctx_var name : (cvar_error_status, Apx.LF.dctx) Either.t index =
   let open Bind in
   lookup_fv name
   $ function
-    | true -> Some (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
+    | true -> Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
     | false ->
        seq2 (get_fvars) (index_cvar name)
        $ function
-         | _, Some k -> Some (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> pure
-         | fvars, None ->
+         | _, Either.Right k ->
+            Either.Right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> pure
+         | fvars, Either.Left e ->
             match fvars.open_flag with
-            | `closed_term -> pure None
+            | `closed_term -> pure (Either.Left e)
             | `open_term ->
-               Some (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
+               Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
                <& modify_fvars (extending_by name)
 
 let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) = function
@@ -905,8 +921,10 @@ let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) = function
      index_ctx_var psi_name {cvars; bvars; disambiguate_name} fvars
      |> Pair.rmap
           (function
-           | Some x -> x
-           | None -> throw loc (UnboundName psi_name))
+           | Either.Right x -> x
+           | Either.Left e ->
+              throw_hint' loc (cvar_error_to_hint e) (UnboundName psi_name)
+          )
      |> fun (fvars, dctx) -> (dctx, bvars, fvars)
 
   | Ext.LF.DDec (psi, decl) ->
@@ -993,8 +1011,6 @@ let index_cltyp loc cvars fvars =
      with Not_found ->
        throw loc (UnboundCtxSchemaName schema_name)
 
-let cltyp_to_cvar n _ = n
-
 let index_dep =
   function
   | Ext.LF.Maybe -> Apx.LF.Maybe
@@ -1003,18 +1019,26 @@ let index_dep =
      Error.violation
        "[index_dep] Inductive not allowed in external syntax"
 
-let index_cdecl cvars fvars = function
+let index_cdecl plicity_of_dep cvars fvars = function
   | Ext.LF.DeclOpt _ ->
      Error.violation
        "[index_cdecl] DeclOpt not allowed in external syntax"
   | Ext.LF.Decl(u, (loc,cl), dep) ->
     let (fvars, cl) = index_cltyp loc cvars fvars cl in
-      try
-        let _ = CVar.index_of_name cvars u in
-        throw loc (NameOvershadowing u)
-      with Not_found ->
-        let cvars = CVar.extend cvars (CVar.mk_entry (cltyp_to_cvar u cl)) in
-        (Apx.LF.Decl(u, cl, index_dep dep), cvars, fvars)
+    dprintf begin fun p ->
+      p.fmt "[index_cdecl] %a at %a"
+        Id.print u
+        Loc.print_short loc
+      end;
+    match index_cvar' cvars u with
+    | Either.Right _ ->
+       throw loc (NameOvershadowing u)
+    | Either.Left _ ->
+       let cvars =
+         CVar.extend cvars
+           (CVar.mk_entry u (plicity_of_dep dep))
+       in
+       (Apx.LF.Decl(u, cl, index_dep dep), cvars, fvars)
 
 let rec index_mctx cvars fvars = function
   | Ext.LF.Empty ->
@@ -1022,7 +1046,9 @@ let rec index_mctx cvars fvars = function
 
   | Ext.LF.Dec (delta, cdec) ->
       let (delta', cvars', fvars') = index_mctx cvars fvars delta in
-      let (cdec', cvars'', fvars'') = index_cdecl cvars' fvars' cdec in
+      let (cdec', cvars'', fvars'') =
+        index_cdecl Ext.LF.Depend.to_plicity cvars' fvars' cdec
+      in
       (Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
 
 
@@ -1096,7 +1122,9 @@ let rec index_compkind cvars fcvars = function
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
 
   | Ext.Comp.PiKind (loc, cdecl, cK) ->
-      let (cdecl', cvars', fcvars') = index_cdecl cvars fcvars cdecl in
+     let (cdecl', cvars', fcvars') =
+       index_cdecl (fun _ -> `explicit) cvars fcvars cdecl
+     in
       let cK' = index_compkind cvars' fcvars' cK in
         Apx.Comp.PiKind (loc, cdecl', cK')
 
@@ -1140,9 +1168,11 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state  =
       (fvars, Apx.Comp.TypCross (loc, tau, tau'))
 
   | Ext.Comp.TypPiBox (loc, cdecl, tau)    ->
-      let (cdecl', cvars, fvars) = index_cdecl cvars fvars cdecl in
-      let (fvars, tau') = index_comptyp tau cvars fvars in
-      (fvars, Apx.Comp.TypPiBox (loc, cdecl', tau'))
+     let (cdecl', cvars, fvars) =
+       index_cdecl (fun _ -> `explicit) cvars fvars cdecl
+     in
+     let (fvars, tau') = index_comptyp tau cvars fvars in
+     (fvars, Apx.Comp.TypPiBox (loc, cdecl', tau'))
 
       (*
   | Ext.Comp.TypInd (tau) ->
@@ -1185,7 +1215,7 @@ let rec index_exp cvars vars fcvars = function
     Apx.Comp.Fun(loc, index_fbranches cvars vars fcvars fbr)
 
   | Ext.Comp.MLam (loc, u, e) ->
-      let cvars' = CVar.extend cvars (CVar.mk_entry u) in
+      let cvars' = CVar.extend cvars (CVar.mk_entry u `explicit) in
         Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.Pair (loc, e1, e2) ->
@@ -1519,7 +1549,7 @@ and index_command cvars vars fvars = function
      Apx.Comp.By (loc, i', x), vars, cvars
   | Ext.Comp.Unbox (loc, i, x) ->
      let i' = index_exp' cvars vars fvars i in
-     let cvars = CVar.extend cvars (CVar.mk_entry x) in
+     let cvars = CVar.extend cvars (CVar.mk_entry x `explicit) in
      Apx.Comp.Unbox (loc, i', x), vars, cvars
 
 and index_directive cvars vars fvars = function
@@ -1560,7 +1590,7 @@ and index_hypothetical h =
   let Ext.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc }) = h in
   let cvars =
     Context.to_list_map_rev cD
-      (fun _ (Ext.LF.Decl (x, _, _)) -> x)
+      Ext.LF.(fun _ (Decl (x, _, dep)) -> (x, Depend.to_plicity dep))
     |> CVar.of_list
   in
   let vars =
@@ -1583,7 +1613,7 @@ let comptypdef (cT, cK) =
     match cK with
     | Apx.Comp.Ctype _ -> cvars
     | Apx.Comp.PiKind (loc, Apx.LF.Decl(u, ctyp,dep), cK) ->
-       let cvars' = CVar.extend cvars (CVar.mk_entry u) in
+       let cvars' = CVar.extend cvars (CVar.mk_entry u `explicit) in
        unroll cK cvars'
   in
   let (_, tau) =

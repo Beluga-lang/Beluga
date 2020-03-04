@@ -362,29 +362,27 @@ let rec ctxToCtx cQ = match cQ with
   | I.Dec (cQ', FDecl (_, Impure)) ->
     ctxToCtx cQ'
 
-let getName = function
-  | MMV (n,_) | FV n -> n
-
-(* dep' indicates whether FVars are treated implicit or explicit *)
-let rec ctxToMCtx dep' cQ = match cQ with
+(* f indicates whether FVars are treated implicit or explicit *)
+let rec ctxToMCtx f cQ = match cQ with
   | I.Empty ->
       I.Empty
 
-  | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, _dep)))) ->
-      I.Dec (ctxToMCtx dep' cQ', I.Decl (n, ityp, dep'))
+  | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx f cQ', I.Decl (n, ityp, f dep))
 
-  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, _dep)))) ->
-      I.Dec (ctxToMCtx dep' cQ', I.Decl (getName s, ityp, dep'))
+  | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx f cQ', I.Decl (n, ityp, f dep))
 
   | I.Dec (cQ', CtxV (x,w, dep)) ->
-      I.Dec (ctxToMCtx dep' cQ', I.Decl (x, I.CTyp (Some w), dep))
+      I.Dec (ctxToMCtx f cQ', I.Decl (x, I.CTyp (Some w), dep))
+  (* f dep here breaks things involving ctxvars... -je *)
 
   (* this case should not happen -bp *)
    | I.Dec (cQ', FDecl (FV _, Pure (LFTyp tA)))->
       raise (Error.Violation "Free variables in computation-level reconstruction.")
 
    | I.Dec (cQ', FDecl (_, Impure)) ->
-       ctxToMCtx dep' cQ'
+       ctxToMCtx f cQ'
 
 
 let rec ctxToMCtx_pattern names = function
@@ -1157,8 +1155,8 @@ and abstractMSub t =
   | I.Empty -> I.Empty
   | I.Dec (cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep)))) ->
       I.Dec (ctxToMCtx' cQ', I.Decl (n, ityp, dep))
-  | I.Dec (cQ', FDecl (s, Pure (MetaTyp (ityp, dep)))) ->
-      I.Dec (ctxToMCtx' cQ', I.Decl (getName s, ityp, dep))
+  | I.Dec (cQ', FDecl (MMV (n, _), Pure (MetaTyp (ityp, dep)))) ->
+      I.Dec (ctxToMCtx' cQ', I.Decl (n, ityp, dep))
   | I.Dec (cQ', CtxV (x,w, dep)) ->
       I.Dec (ctxToMCtx' cQ', I.Decl (x, I.CTyp (Some w), dep))
    | I.Dec (cQ', FDecl (_, Impure)) ->
@@ -1519,7 +1517,7 @@ let abstrCompKind cK =
   let l           = (k - l') in
   let cQ'  = abstractMVarCtx cQ (l-1-p)  in
   let cK' = abstractMVarCompKind cQ' (l,0) cK1 in
-  let cD' = ctxToMCtx (I.Maybe) cQ' in
+  let cD' = ctxToMCtx (fun _ -> I.Maybe) cQ' in
   let cK2 = raiseCompKind cD' cK' in
     (cK2, Context.length cD')
 
@@ -1548,7 +1546,7 @@ let abstrCompTyp tau =
   let cQ'  = abstractMVarCtx cQ (l-1-p) in
   (* let cQ'  = abstractMVarCtx cQ (l-1) in  *)
   let tau' = abstractMVarCompTyp cQ' (l,0) tau1 in
-  let cD' = ctxToMCtx I.Maybe cQ' in
+  let cD' = ctxToMCtx (fun _ -> I.Maybe) cQ' in
 
   let tau'' = raiseCompTyp cD' tau' in
   (* We can't just subtract l' because l' counts also implicit context quantifications.
@@ -1586,7 +1584,7 @@ let abstrCodataTyp cD tau tau' =
   let l = k - l' in
   let cQ'  = abstractMVarCtx cQ3 (l-1-p) in
   let tau_obs = abstractMVarCompTyp cQ' (l,0) tau0' in
-  let cD' = ctxToMCtx (I.Maybe) cQ' in
+  let cD' = ctxToMCtx (fun _ -> I.Maybe) cQ' in
   dprintf
     (fun p ->
       p.fmt "@[<v>tau0' = %a@,tau_obs = %a@]"
@@ -1602,7 +1600,7 @@ let abstrCodataTyp cD tau tau' =
   let l = k - l' in
   let cQ''  = abstractMVarCtx cQ4 0 in
   let tau_res = abstractMVarCompTyp cQ'' (l,0) tau1' in
-  let cD'' = ctxToMCtx (I.Maybe) cQ'' in
+  let cD'' = ctxToMCtx (fun _ -> I.Maybe) cQ'' in
   dprintf
     (fun p ->
       p.fmt "cD'' = %a" (P.fmt_ppr_lf_mctx P.l0) cD'');
@@ -1737,17 +1735,14 @@ let abstrCovGoal cPsi tM tA ms =
   let (cQ2, tA') = collectTyp 0 cQ1 phat (tA, LF.id) in
   let (cQ3, tM')   = collectTerm 0 cQ2 phat (tM, LF.id) in
 
-
   let cQ'     = abstractMVarCtx cQ3 0 in
-
   let ms0     = abstrMSub cQ' ms' in
   let cPsi0   = abstractMVarDctx cQ' (0,0) cPsi' in
   let tM0     = abstractMVarTerm cQ' (0,0) (tM', LF.id) in
   let tA0     = abstractMVarTyp  cQ' (0,0) (tA', LF.id) in
 
-  let cD0     = ctxToMCtx (I.Maybe) cQ' in
-
-    (cD0, cPsi0, tM0, tA0, ms0)
+  let cD0     = ctxToMCtx (fun x -> x) cQ' in
+  (cD0, cPsi0, tM0, tA0, ms0)
 
 let abstrCovPatt cG pat tau ms =
   let (cQ1 , ms') = collectMSub 0 I.Empty ms in
@@ -1759,7 +1754,7 @@ let abstrCovPatt cG pat tau ms =
   let cG'     = abstractMVarGctx cQ' (0,0) cG in
   let pat'    = abstractMVarPatObj cQ' cG' (0,0) pat' in
   let tau'    = abstractMVarCompTyp cQ' (0,0) tau' in
-  let cD'     = ctxToMCtx (I.Maybe) cQ' in
+  let cD'     = ctxToMCtx (fun x -> x) cQ' in
   (cD', cG', pat', tau', ms0)
 
 let abstrThm = function

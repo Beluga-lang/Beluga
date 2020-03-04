@@ -1070,7 +1070,8 @@ end
 (* Computation-level variables *)
 module Var = struct
 
-  type entry = { name : Id.name }
+  type entry =
+    { name : Id.name }
 
   let mk_entry n = { name = n }
 
@@ -1114,22 +1115,30 @@ module CVar = struct
 
   type cvar = Id.name
 
-  type entry = { name : cvar }
+  type entry =
+    { name : cvar
+    ; plicity : Int.Comp.plicity
+    }
 
-  let mk_entry n = { name = n }
+  let mk_entry name plicity =
+    { name; plicity }
 
   type t = entry list
 
-  let index_of_name store n =
+  let lookup store x =
     let rec loop i = function
       | []        -> raise Not_found
       | (e :: es) ->
-          if Id.equals e.name n then
-            i
-          else
-            loop (i + 1) es
+         if Id.equals e.name x then
+           (i, e)
+         else
+           loop (i + 1) es
     in
-      loop 1 store
+    loop 1 store
+
+  let index_of_name store x =
+    let (i, e) = lookup store x in
+    (e.plicity, i)
 
   let create ()     = []
   let extend cvars e = e :: cvars
@@ -1146,11 +1155,16 @@ module CVar = struct
     go "" cvars
 
   let of_mctx (cD : Int.LF.mctx) : t =
-    let f d v = Int.LF.name_of_ctyp_decl d |> mk_entry |> extend v in
+    let f d v =
+      let open Int.LF in
+      match d with
+      | Decl (u, _, Maybe) -> mk_entry u `implicit |> extend v
+      | Decl (u, _, _) -> mk_entry u `explicit |> extend v
+    in
     List.fold_right f (Context.to_list_rev cD) (create ())
 
-  let of_list (l : Id.name list) : t =
-    List.map mk_entry l
+  let of_list (l : (Id.name * Int.Comp.plicity) list) : t =
+    List.map (fun (u, p) -> mk_entry u p) l
 end
 
 let clear () =

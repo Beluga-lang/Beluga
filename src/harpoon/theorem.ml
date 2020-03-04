@@ -81,11 +81,14 @@ let serialize ppf (t : t) =
     Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])
     $> fun o -> o.Comp.order
   in
-  Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,@]"
-    Id.print name
-    Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) goal
-    fmt_ppr_order order
-    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
+  Printer.with_implicits false
+    begin fun _ ->
+    Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,@]"
+      Id.print name
+      Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) goal
+      fmt_ppr_order order
+      Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
+    end
 
 (** Computes the index of the current subgoal we're working on. *)
 let current_subgoal_index gs = 0

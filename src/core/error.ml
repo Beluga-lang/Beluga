@@ -1,6 +1,6 @@
 open Support
 
-module Loc = Syntax.Loc
+module Loc = Location
 
 exception Violation of string
 let violation msg = raise (Violation msg)
@@ -33,7 +33,7 @@ let print f =
   str
 
 let print_location loc =
-  Format.fprintf error_format "%a:@," Syntax.Loc.print loc
+  Format.fprintf error_format "%a:@," Loc.print loc
 
 let print_with_location loc f =
   print_location loc;

@@ -1,4 +1,4 @@
-module Loc = Syntax.Loc
+module Loc = Location
 
 exception Violation of string
 
@@ -34,7 +34,7 @@ val register_printer' : (exn -> print_result option) -> unit
 val print : (Format.formatter -> unit) -> print_result
 
 (** Use supplied formatter for printing errors decorated with location information. *)
-val print_with_location : Syntax.Loc.t -> (Format.formatter -> unit) -> print_result
+val print_with_location : Loc.t -> (Format.formatter -> unit) -> print_result
 
 (** Helper function to construct an error message reporting a mismatch
     between something that was expected and what was actually

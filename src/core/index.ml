@@ -248,7 +248,12 @@ let _ =
         (fun ppf ->
           fprintf ppf "@[<v>%a%a@]"
             print_error err
-            (Maybe.print print_hint) hint
+            (Maybe.print
+               begin fun ppf h ->
+               fprintf ppf "@,- @[<hov>%a@]"
+                 print_hint h
+               end)
+            hint
     ))
 
 (** Require that a substitution be None in the given situation `case'. *)

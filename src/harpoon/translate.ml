@@ -3,6 +3,9 @@ open Beluga
 open Syntax.Int
 module Loc = Location
 
+let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
+open Debug.Fmt
+
 module P = Pretty.Int.DefaultPrinter
 
 type error =
@@ -113,10 +116,22 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   | Comp.Solve e_chk -> e_chk
 
   | Comp.Intros (Comp.Hypothetical (hyp, p)) ->
-     let (cD', cG', tau', _) = Check.Comp.unroll cD cG tau in
+     let (cD', cG', tau', t) = Check.Comp.unroll cD cG tau in
+     (* cD' |- t : cD
+        is a weakening meta-substitution *)
      let e = proof cD' cG' p tau' in
      let (cD_orig, cG_orig, f) = unroll cD' cG' tau in
-     assert Whnf.(convMCtx cD_orig cD && convGCtx (cG_orig, m_id) (cG, m_id));
+     dprintf begin fun p ->
+       p.fmt "[translate] [intros] @[<v>cD = @[%a@]\
+              @,cD_orig = @[%a@]\
+              @,cG = @[%a@]\
+              @,cG_orig = @[%a@]@]"
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_lf_mctx l0) cD_orig
+         P.(fmt_ppr_cmp_gctx cD l0) cG
+         P.(fmt_ppr_cmp_gctx cD_orig l0) cG_orig
+         end;
+     assert Whnf.(convMCtx cD_orig cD && convGCtx (cG_orig, m_id) (cG, t));
      f e
 
   | Comp.MetaSplit (i, _, sbs) ->
@@ -132,6 +147,34 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
 
   | Comp.ImpossibleSplit i -> Comp.Impossible (Loc.ghost, i)
+
+  | Comp.Suffices (i, args) ->
+     (* XXX consider storing tau_i inside Suffices to avoid
+        needing to synthesize it here? -je *)
+     let _, ttau_i = Check.Comp.syn cD cG [] i in
+     let _, (i', ttau_i') =
+       Check.Comp.genMApp
+         Loc.ghost
+         (Misc.const true)
+         cD
+         (i, ttau_i)
+     in
+     let tau_i' = Whnf.cnormCTyp ttau_i' in
+     (* cD; cG |- i' ==> tau_i' *)
+     let tau_args =
+       List.map (fun (_, tau, _) -> tau) args
+     in
+     (* here we use unify_suffices *after* having done genMApp so that
+        the unification will instantiate the MMVars used as MApp
+        arguments.
+        We are essentially skipping the part of unify_suffices that
+        eliminates PiBoxes for us.
+      *)
+     Check.Comp.unify_suffices cD tau_i' tau_args tau;
+     let es =
+       List.map (fun (_, tau_p, p) -> proof cD cG p tau_p) args
+     in
+     Comp.(Syn (Loc.ghost, apply_many i' es))
 
 let theorem thm tau = match thm with
   | Comp.Proof p -> proof LF.Empty LF.Empty p tau
@@ -153,10 +196,13 @@ let fmt_ppr_result ppf =
   let open Format in
   function
   | Either.Right e ->
-     fprintf ppf
-       "@[<v>Translation generated program:\
-        @,  @[%a@]@,@,@]"
-       P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
+     Printer.with_implicits false
+       begin fun _ ->
+       fprintf ppf
+         "@[<v>Translation generated program:\
+          @,  @[%a@]@,@,@]"
+         P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
+       end
   | Either.Left err ->
      fprintf ppf
        "@[<v>Translation failed.\

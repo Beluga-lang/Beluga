@@ -470,6 +470,12 @@ module Comp = struct
     | `inductive o -> Some o
     | _ -> None
 
+  (** Applies a spine of checkable terms to a synthesizable term, from
+      left to right. *)
+  let rec apply_many i = function
+    | [] -> i
+    | e :: es -> apply_many (Apply (Loc.ghost, i, e)) es
+
   type total_dec =
     { name : Id.name
     ; tau  : typ

@@ -1,0 +1,7 @@
+t/harpoon/translation/type_preservation.bel
+foo
+[|- tm] -> [|- tp]
+
+
+translate tpr
+solve [|- base]

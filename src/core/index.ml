@@ -999,9 +999,14 @@ let index_dep =
   function
   | Ext.LF.Maybe -> Apx.LF.Maybe
   | Ext.LF.No -> Apx.LF.No
+  | Ext.LF.Inductive ->
+     Error.violation
+       "[index_dep] Inductive not allowed in external syntax"
 
 let index_cdecl cvars fvars = function
-  (* | Ext.LF.DeclOpt (loc, _) -> *)
+  | Ext.LF.DeclOpt _ ->
+     Error.violation
+       "[index_cdecl] DeclOpt not allowed in external syntax"
   | Ext.LF.Decl(u, (loc,cl), dep) ->
     let (fvars, cl) = index_cltyp loc cvars fvars cl in
       try

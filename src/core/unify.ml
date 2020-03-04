@@ -2086,13 +2086,13 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
          raise (Failure (Format.sprintf "Bound MVar clash: %d with %d" k k'))
 
     | (FMVar (u, s) , FMVar(u', s')) ->
-       if Misc.String.equals u u' then
+       if Id.equals u u' then
          unifySub mflag cD0 cPsi s s'
        else
          raise (Failure "Bound FMVar clash'")
 
     | (FPVar (q, s), FPVar (p, s')) ->
-       if Misc.String.equals p q then
+       if Id.equals p q then
          unifySub mflag cD0 cPsi s s'
        else
          raise (Failure "Front FPVar mismatch")

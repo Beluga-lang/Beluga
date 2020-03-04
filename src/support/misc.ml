@@ -34,7 +34,7 @@ module String = struct
 
   let drop n s : string = sub s n (length s - n)
 
-  let equals s1 s2 = Stdlib.(=) s1 s2
+  let equals (s1 : string) (s2 : string) = Stdlib.(=) s1 s2
 end
 
 (** Enumerates a list using a state transformer to generate indices.

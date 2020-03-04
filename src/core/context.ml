@@ -407,7 +407,7 @@ and lookupCtxVar cD cvar =
       | Empty -> raise (Error.Violation "Context variable not found")
       | Dec (cD, Decl (psi, CTyp (Some schemaName), _)) ->
           begin match cvar with
-            | CtxName phi when Misc.String.equals psi phi -> (psi, schemaName)
+            | CtxName phi when Id.equals psi phi -> (psi, schemaName)
             | (CtxName _phi) -> lookup cD (offset+1)
             | CtxOffset n ->
                 if (n - offset) = 1 then

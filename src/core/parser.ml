@@ -1763,8 +1763,8 @@ let clf_ctyp_decl_bare =
           dollar_name
           p
       in
-      let mk_decl ind f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), ind)
+      let mk_decl dep f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), dep)
       in
       let mk_cltyp_decl f d =
         mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
@@ -1842,8 +1842,8 @@ let clf_ctyp_decl =
       let dollar_variable_decl p =
         contextual_variable_decl bracks_or_opt_parens dollar_name p
       in
-      let mk_decl ind f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), ind)
+      let mk_decl dep f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), dep)
       in
       let mk_cltyp_decl f d =
         mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d

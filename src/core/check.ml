@@ -527,7 +527,9 @@ module Comp = struct
       The applications are stacked onto `i` and the new `i` is returned
       together with its type (plus a delayed msub).
       The count of implicit arguments is also returned.
-      You can configure the stopping condition via the given function argument.
+      You can configure the stopping condition via the given function
+      argument: genMApp will eliminate a leading PiBoxes while the
+      predicate returns true.
    *)
   let rec genMApp loc (p : Int.LF.ctyp_decl -> bool) cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
     genMAppW loc p cD (i, Whnf.cwhnfCTyp tau_t)
@@ -535,7 +537,17 @@ module Comp = struct
   and genMAppW loc p cD (i, tau_t) = match tau_t with
     | (Int.Comp.TypPiBox (_, (Int.LF.Decl(u, cU, dep) as d), tau), theta) when p d ->
        let (cM,t') = Whnf.dotMMVar loc cD theta (u, cU, dep) in
-       let i = Int.Comp.MApp (loc, i, cM, Whnf.cnormMTyp (cU, theta), `implicit) in
+       let i =
+         Int.Comp.MApp
+           ( loc
+           , i
+           , cM
+           , Whnf.cnormMTyp (cU, theta)
+           , Int.LF.Depend.to_plicity dep
+           (* the MApp's plicity depends on the type of the PiBox that
+              it eliminates. *)
+           )
+       in
        genMApp loc p cD (i, (tau, t'))
        |> Pair.lmap ((+) 1)
 

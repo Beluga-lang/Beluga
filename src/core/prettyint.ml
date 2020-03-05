@@ -878,6 +878,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "%s : _"
          (Id.render_name name)
 
+  and fmt_ppr_lf_ctyp_decl_harpoon cD ppf = function
+    | LF.Decl (_, _, dep) as d ->
+       let f =
+         match dep with
+         | LF.Maybe -> fun ppf _ -> fprintf ppf " (not in scope)"
+         | _ -> fun _ _ -> ()
+       in
+       fprintf ppf "@[%a%a@]"
+         (fmt_ppr_lf_ctyp_decl cD) d
+         f ()
+    | LF.DeclOpt _ ->
+       Error.violation "[fmt_ppr_lf_ctyp_decl_harpoon] DeclOpt impossible"
+
   and isImplicit = function
     | LF.Maybe -> true
     | LF.(No | Inductive) -> false
@@ -1504,7 +1517,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        @]"
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf (cD, d) ->
-           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_lf_ctyp_decl cD) d))
+           fprintf ppf "@[<hv 2>%a@]" (fmt_ppr_lf_ctyp_decl_harpoon cD) d))
       (Context.to_sublist cD)
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf d ->

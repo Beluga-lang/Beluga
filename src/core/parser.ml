@@ -1020,9 +1020,10 @@ let fqidentifier = sep_by1 (trying identifier) (token T.DOUBLE_COLON)
 (** A qualified name, with possible module names before. *)
 let fqname =
   fqidentifier
-  $> fun is ->
+  |> span
+  $> fun (loc, is) ->
      let (ms, i) = Nonempty.unsnoc is in
-     Id.mk_name ~modules: ms (Id.SomeString i)
+     Id.mk_name ~loc: loc ~modules: ms (Id.SomeString i)
 
 let pragma s = token (T.PRAGMA s)
 
@@ -2129,7 +2130,7 @@ let rec cmp_kind =
               cmp_kind
             |> span
             $> fun (loc, ((loc', (cPsi, a)), k)) ->
-               let x = Id.mk_name (Id.NoName) in
+               let x = Id.mk_name ~loc: loc (Id.NoName) in
                Comp.PiKind
                  ( loc
                  , LF.Decl

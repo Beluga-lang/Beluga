@@ -76,6 +76,14 @@ let print_short ppf l =
   let open Format in
   fprintf ppf "line %d, column %d" (start_line l) (start_column l)
 
+let print_span_short ppf l =
+  let open Format in
+  fprintf ppf "%d.%d - %d.%d"
+    (start_line l)
+    (start_column l)
+    (stop_line l)
+    (stop_column l)
+
 let print ppf l =
   let open Format in
   fprintf ppf "%s, %a" l.filename print_short l

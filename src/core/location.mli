@@ -28,6 +28,9 @@ val print : Format.formatter -> t -> unit
 (** Prints `line <n>, column <n>'. More suitable for debug prints. *)
 val print_short : Format.formatter -> t -> unit
 
+(** Prints `<n>.<n> - <n>.<n>' indicating start and stop positions. *)
+val print_span_short : Format.formatter -> t -> unit
+
 val start_position : t -> pos
 val stop_position : t -> pos
 

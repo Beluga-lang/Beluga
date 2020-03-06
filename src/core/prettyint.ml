@@ -1160,15 +1160,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (*               (r_paren_if cond); *)
 
 
-    | Comp.MLam (_, x, e) ->
+    | Comp.MLam (_, x, e, `explicit) ->
        let x = fresh_name_mctx cD x in
        let cond = lvl > 0 in
-       fprintf ppf "%smlam %s =>@ "
+       fprintf ppf "%smlam %s =>@ %a%s"
          (l_paren_if cond)
-         (Id.render_name x);
-       fprintf ppf "%a%s"
+         (Id.render_name x)
          (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormGCtx (cG, LF.MShift 1)) 0) e
          (r_paren_if cond);
+
+    | Comp.MLam (_, x, e, `implicit) ->
+       let x = fresh_name_mctx cD x in
+       fmt_ppr_cmp_exp_chk
+         (LF.Dec(cD, LF.DeclOpt x))
+         (Whnf.cnormGCtx (cG, LF.MShift 1))
+         0
+         ppf
+         e
 
     | Comp.Pair (_, e1, e2) ->
        fprintf ppf "(%a , %a)"

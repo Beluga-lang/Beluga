@@ -1286,9 +1286,9 @@ let rec collectExp cQ e = match e with
     let (cQ', fbr') = collectFBranches cQ fbr in
         (cQ', Comp.Fun (loc, fbr'))
 
-  | Comp.MLam (loc, u, e) ->
+  | Comp.MLam (loc, u, e, plicity) ->
       let (cQ', e') = collectExp cQ e in
-        (cQ', Comp.MLam (loc, u, e'))
+        (cQ', Comp.MLam (loc, u, e', plicity))
 
   | Comp.Pair (loc, e1, e2) ->
       let (cQ1, e1') = collectExp cQ e1 in

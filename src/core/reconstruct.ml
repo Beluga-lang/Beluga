@@ -942,7 +942,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let cD' = extend_mctx cD (u, cdec, theta) in
      let cG' = Whnf.cnormGCtx (cG, Int.LF.MShift 1) in
      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-     Int.Comp.MLam (loc, u, e')
+     Int.Comp.MLam (loc, u, e', `explicit)
 
   | ( e
     , (Int.Comp.TypPiBox(_, (Int.LF.Decl(_,_,Int.LF.Maybe) as cdec), tau), theta)
@@ -952,7 +952,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let cD' = extend_mctx cD (u, cdec, theta) in
      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
-     Int.Comp.MLam (Syntax.Loc.ghost, u , e')
+     Int.Comp.MLam (Syntax.Loc.ghost, u , e', `implicit)
 
   | (Apx.Comp.Syn (loc, i), (tau,t)) ->
      dprintf

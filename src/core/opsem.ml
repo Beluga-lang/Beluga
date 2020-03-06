@@ -255,7 +255,7 @@ let rec eval_syn i (theta, eta) =
 and eval_chk (e : Comp.exp_chk) (theta, eta) =
     match e with
       | Comp.Syn (_, i) -> eval_syn i (theta, eta)
-      | Comp.MLam (loc, n, e') ->
+      | Comp.MLam (loc, n, e', _) ->
          Comp.MLamValue (n, e', Whnf.cnormMSub theta, eta)
 
       | Comp.Fn (loc, x, e') ->

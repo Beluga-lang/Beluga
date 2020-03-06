@@ -26,8 +26,12 @@ let rec unroll cD cG = function
      (cD', cG', fun e -> Comp.Fn (Loc.ghost, x, f e))
   | Comp.TypPiBox (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
-     let LF.Dec (cD', LF.Decl (x, cU, _)) = cD' in
-     (cD', cG', fun e -> Comp.MLam (Loc.ghost, x, f e))
+     let LF.Dec (cD', LF.Decl (x, _, dep)) = cD' in
+     ( cD'
+     , cG'
+     , let plicity = LF.Depend.to_plicity dep in
+       fun e -> Comp.MLam (Loc.ghost, x, f e, plicity)
+     )
   | _ -> (cD, cG, fun e -> e)
 
 let by cD cG i x tau =

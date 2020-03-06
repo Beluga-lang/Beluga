@@ -1682,7 +1682,8 @@ let mctxMVarPos cD u =
 
     | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))
 
-    | (Comp.MLam (loc, u, e), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t))
+    | (Comp.MLam (loc, u, e, plicity), t) ->
+       Comp.MLam (loc, u, cnormExp (e, mvar_dot1  t), plicity)
 
     | (Comp.Pair (loc, e1, e2), t) -> Comp.Pair (loc, cnormExp (e1, t), cnormExp (e2, t))
 
@@ -2166,7 +2167,7 @@ let rec closedExp = function
   | Comp.Syn (_, i) -> closedExp' i
   | Comp.Fn (_, _, e) -> closedExp e
   | Comp.Fun (_, bs) -> closedFunBranches bs
-  | Comp.MLam (_, _, e) -> closedExp e
+  | Comp.MLam (_, _, e, plicity) -> closedExp e
   | Comp.Pair (_, e1, e2) -> closedExp e1 && closedExp e2
   | Comp.LetPair (_, i, (_, _, e)) -> closedExp' i && closedExp e
   | Comp.Let (_, i, (_, e)) -> closedExp' i && closedExp e

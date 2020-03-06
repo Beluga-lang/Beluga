@@ -764,7 +764,7 @@ module Comp = struct
     | (Fun (loc, fbr), _) ->
        checkFBranches cD (cG, cIH) total_decs fbr ttau
 
-    | (MLam (loc, u, e), (TypPiBox (_, cdec, tau), t)) ->
+    | (MLam (loc, u, e, _), (TypPiBox (_, cdec, tau), t)) ->
        (check (extend_mctx cD (u, cdec, t))
           (C.cnormGCtx (cG, I.MShift 1), C.cnormIHCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
         Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)

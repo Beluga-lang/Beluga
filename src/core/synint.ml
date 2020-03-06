@@ -419,7 +419,7 @@ module Comp = struct
     | Syn        of Loc.t * exp_syn
     | Fn         of Loc.t * name * exp_chk
     | Fun        of Loc.t * fun_branches
-    | MLam       of Loc.t * name * exp_chk
+    | MLam       of Loc.t * name * exp_chk * plicity
     | Pair       of Loc.t * exp_chk * exp_chk
     | LetPair    of Loc.t * exp_syn * (name * name * exp_chk)
     | Let        of Loc.t * exp_syn * (name * exp_chk)

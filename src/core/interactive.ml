@@ -148,9 +148,9 @@ let rec mapHoleChk f = function
  | Fn (l, n, ec) ->
     let ec' =  mapHoleChk f ec in
     Fn(l, n, ec')
- | MLam (l, n, ec) ->
+ | MLam (l, n, ec, p) ->
    let ec' =  mapHoleChk f ec in
-   MLam (l, n, ec')
+   MLam (l, n, ec', p)
  | Let (t, es, (n, ec)) ->
      let es' =  mapHoleSyn f es in
      let ec' = mapHoleChk f ec  in
@@ -230,7 +230,7 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
     | Comp.TypPiBox (_, tdec, t') when not (is_inferred tdec) ->
        let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
-       Comp.MLam (Loc.ghost, nam , exp)
+       Comp.MLam (Loc.ghost, nam , exp, `explicit)
     | t ->
        let id = Holes.allocate () in
        Comp.Hole (Loc.ghost, id, HoleId.Anonymous)

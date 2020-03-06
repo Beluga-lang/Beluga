@@ -40,9 +40,10 @@ let rec raiseType cPsi tA = match cPsi with
 
 (* Eta-contract elements in substitutions *)
 let etaContract tM = begin match tM with
-  | Root (_, ((BVar _) as h), Nil)
-  | Root (_, ((PVar _) as h), Nil)
-  | Root (_, ((Proj _) as h), Nil) -> Head h
+  | Root (_, ((BVar _) as h), Nil, _)
+  | Root (_, ((PVar _) as h), Nil, _)
+  | Root (_, ((Proj _) as h), Nil, _) ->
+     Head h
   | Lam  _ as tMn ->
       let rec etaUnroll k tM = begin match tM with
         | Lam (_ , _, tN) ->
@@ -52,13 +53,13 @@ let etaContract tM = begin match tM with
       end in
       let rec etaSpine k tS = begin match (k, tS) with
         | (0, Nil) -> true
-        | (k', App(Root(_ , BVar x, Nil), tS')) ->
+        | (k', App(Root(_ , BVar x, Nil, _), tS')) ->
             if k' = x then etaSpine (k'-1)  tS'
             else false
         | _ -> false (* previously (dprint (fun () -> "[etaSpine] _ ") ; raise (Error.Violation ("etaSpine undefined\n"))) *)
       end in
         begin match etaUnroll 0 tMn with
-          | (k, Root( _ , BVar x, tS)) ->
+          | (k, Root( _ , BVar x, tS, _)) ->
               (let _ = dprint (fun () -> "check etaSpine k ="  ^ string_of_int k ^ "\n") in
                  (if etaSpine k tS && x > k then
                     Head(BVar (x-k))
@@ -128,31 +129,32 @@ let new_mmvar_for_ctyp_decl cD = function
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
 let rec lowerMVar' cPsi sA' dep = match sA' with
   | (PiTyp ((decl,_ ), tA'), s') ->
-      let (u', tM) = lowerMVar' (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1
-								    s') dep in
-        (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+     let (u', tM) =
+       lowerMVar'
+         (DDec (cPsi, LF.decSub decl s'))
+         (tA', LF.dot1 s')
+         dep
+     in
+     (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
-      lowerMVar' cPsi (tA, LF.comp s s') dep
+     lowerMVar' cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
-      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  dep in
-        (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil)) (* cvar * normal *)
-
+     let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s')))  dep in
+     (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil, Depend.to_plicity dep)) (* cvar * normal *)
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA  = match (u, sA) with
-  | (Inst {instantiation; typ = ClTyp (_, cPsi); depend; _}, (PiTyp _, _)) ->
-      let (u', tM) = lowerMVar' cPsi sA depend in
-        instantiation := Some (INorm tM); (* [| tM / u |] *)
-        u'            (* this is the new lowered meta-variable of atomic type *)
+  | (Inst {instantiation; typ = ClTyp (_, cPsi); depend; _}
+    , (PiTyp _, _) ) ->
+     let (u', tM) = lowerMVar' cPsi sA depend in
+     instantiation := Some (INorm tM); (* [| tM / u |] *)
+     u'            (* this is the new lowered meta-variable of atomic type *)
 
-  | (_, (TClo (tA, s), s')) ->
-      lowerMVar1 u (tA, LF.comp s s')
+  | (_, (TClo (tA, s), s')) -> lowerMVar1 u (tA, LF.comp s s')
 
-  | (_, (Atom _, _s)) ->
-      u
-
+  | (_, (Atom _, _s)) -> u
 
 (* lowerMVar (u:cvar) = u':cvar
  *
@@ -319,7 +321,7 @@ and m_invert s =
           Some n
         else lookup (n + 1) t' p
 
-    | MDot (ClObj(_phat, MObj (Root(_, MVar (Offset k, Shift 0), Nil))), t') ->
+    | MDot (ClObj(_phat, MObj (Root(_, MVar (Offset k, Shift 0), Nil, _))), t') ->
         if k = p then
           Some n
         else lookup (n + 1) t' p
@@ -328,8 +330,6 @@ and m_invert s =
         if k = p then
           Some n
         else lookup (n + 1) t' p
-
-
   in
 
   let rec invert'' p ti = match p with
@@ -379,9 +379,9 @@ and norm (tM, sigma) = match tM with
   | Clo (tN, s) ->
       norm (tN, LF.comp s sigma)
   | LFHole _ -> tM
-  | Root (loc, h, tS) ->
+  | Root (loc, h, tS, plicity) ->
     begin match normHead (h,sigma) with
-      | Head h' -> Root(loc, h', normSpine (tS, sigma))
+      | Head h' -> Root(loc, h', normSpine (tS, sigma), plicity)
       | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
     end
 
@@ -491,11 +491,20 @@ and normSpine (tS, sigma) =
 and reduce sM spine = reduce' (norm sM, spine)
 
 and reduce' = function
-  | (LFHole (l, _, _), _) -> raise (InvalidLFHole l)
-  | (Root (loc,h,sp), spine) -> Root (loc, h, appendSpine (sp,spine))
-  | (Lam (loc,n,tM'), App(tN, tS)) -> reduce (tM', Dot(Obj tN, LF.id)) tS
-  | (Lam (loc,n,tM'), Nil) -> Lam (loc, n, tM')
-  | (Clo sM, tS) -> reduce sM tS
+  | (LFHole (l, _, _), _) ->
+     raise (InvalidLFHole l)
+
+  | (Root (loc, h, sp, plicity), spine) ->
+     Root (loc, h, appendSpine (sp,spine), plicity)
+
+  | (Lam (loc,n,tM'), App(tN, tS)) ->
+     reduce (tM', Dot(Obj tN, LF.id)) tS
+
+  | (Lam (loc,n,tM'), Nil) ->
+     Lam (loc, n, tM')
+
+  | (Clo sM, tS) ->
+     reduce sM tS
 
 and appendSpine = function
   | (Nil,s) -> s
@@ -666,19 +675,28 @@ and cnormFt' = function
   | (Obj tM, t) -> Obj (cnorm (tM, t))
 
 and cnorm (tM, t) = match tM with
-    | Lam (loc, y, tN)   -> Lam (loc, y, cnorm (tN, t))
+  | Lam (loc, y, tN)   -> Lam (loc, y, cnorm (tN, t))
 
-    | Tuple (loc, tuple) -> Tuple (loc, cnormTuple (tuple, t))
+  | Tuple (loc, tuple) -> Tuple (loc, cnormTuple (tuple, t))
 
-    | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
+  | Clo (tN, s)        -> Clo(cnorm (tN, t), cnormSub(s, t))
 
-    | LFHole (loc, id, name) -> LFHole (loc, id, name)
+  | LFHole (loc, id, name) -> LFHole (loc, id, name)
 
-    | Root (loc, head, tS) ->
-      begin match cnormHead' (head, t) with
-	| Head h' -> Root(loc, h', cnormSpine (tS, t))
-	| Obj tM -> reduce (tM, LF.id) (cnormSpine (tS, t))
-      end
+  | Root (loc, head, tS, plicity) ->
+     match cnormHead' (head, t) with
+	   | Head h' -> Root(loc, h', cnormSpine (tS, t), plicity)
+	   | Obj tM ->
+        dprintf begin fun p ->
+          p.fmt "[cnorm] %a Root -> reduce at %a"
+            Prettycom.fmt_ppr_plicity plicity
+            Loc.print_short loc
+          end;
+        (* in this ends up evaluating to a Root, we want to keep the
+           plicity that we had here *)
+        map_plicity
+          (fun _ -> plicity)
+          (reduce (tM, LF.id) (cnormSpine (tS, t)))
 
 (* cnormHead (h,t) = h'
    requires that h is a head such as bound variable or parameter variable associated with pattern sub
@@ -881,17 +899,25 @@ and whnf sM = match sM with
 
   | (Clo (tN, s), s') -> whnf (tN, LF.comp s s')
 
-  | (Root (loc, BVar i, tS), sigma) ->
-      begin match LF.bvarSub i sigma with
-        | Obj tM        -> whnfRedex ((tM, LF.id), (tS, sigma))
-        | Head (BVar k) -> (Root (loc, BVar k, SClo (tS,sigma)), LF.id)
-        | Head (Proj(BVar k, j)) -> (Root (loc, Proj(BVar k, j), SClo(tS, sigma)), LF.id)
-        | Head head     -> whnf (Root (loc, head, SClo (tS,sigma)), LF.id)
-            (* Undef should not happen! *)
-      end
+  | (Root (loc, BVar i, tS, plicity), sigma) ->
+     begin match LF.bvarSub i sigma with
+     | Obj tM ->
+        whnfRedex ((tM, LF.id), (tS, sigma))
+
+     | Head (BVar k) ->
+        (Root (loc, BVar k, SClo (tS,sigma), plicity), LF.id)
+
+     | Head (Proj(BVar k, j)) ->
+        (Root (loc, Proj(BVar k, j), SClo(tS, sigma), plicity), LF.id)
+
+     | Head head ->
+        whnf (Root (loc, head, SClo (tS,sigma), plicity), LF.id)
+
+     | Undef -> Error.violation "[whnf] Undef impossible"
+     end
 
   (* Meta^2-variable *)
-  | Root (loc, MPVar ((mmvar, t), r), tS), sigma ->
+  | Root (loc, MPVar ((mmvar, t), r), tS, plicity), sigma ->
      (* MPVar must have a PTyp *)
      let ClTyp (PTyp tA, cPsi) = mmvar.typ in
      let u = mmvar.instantiation.contents in
@@ -903,22 +929,24 @@ and whnf sM = match sM with
         | BVar i ->
            begin match LF.bvarSub i (LF.comp r sigma) with
            | Obj tM -> whnfRedex ((tM, LF.id), (tS, sigma))
-           | Head (BVar k) -> (Root (loc, BVar k , SClo (tS, sigma)), LF.id)
-           | Head h        -> whnf (Root (loc, h, SClo (tS, sigma)), LF.id)
-           | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                                    (* Undef should not happen ! *)
+           | Head (BVar k) -> (Root (loc, BVar k , SClo (tS, sigma), plicity), LF.id)
+           | Head h        -> whnf (Root (loc, h, SClo (tS, sigma), plicity), LF.id)
+           | Undef         ->
+              Error.violation ("[whnf] Undef looked up at " ^ string_of_int i)
            end
-        | PVar (p, s) -> whnf (Root (loc, PVar (p, LF.comp (LF.comp s r) sigma), SClo (tS, sigma)), LF.id)
-        | MPVar ((q, t'), r') -> whnf (Root (loc, MPVar ((q, t'), LF.comp r' r), SClo (tS, sigma)), LF.id)
+        | PVar (p, s) ->
+           let h' = PVar (p, LF.comp (LF.comp s r) sigma) in
+           whnf (Root ( loc, h', SClo (tS, sigma), plicity), LF.id)
+        | MPVar ((q, t'), r') -> whnf (Root (loc, MPVar ((q, t'), LF.comp r' r), SClo (tS, sigma), plicity), LF.id)
         end
      | None ->
         (* constraints associated with q must be in solved form *)
         let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
         let p' = {mmvar with typ = ClTyp (PTyp tA', cPsi') } in
-        (Root (loc, MPVar ((p', t), LF.comp r sigma),  SClo(tS, sigma)), LF.id)
+        (Root (loc, MPVar ((p', t), LF.comp r sigma),  SClo(tS, sigma), plicity), LF.id)
      end
 
-  | Root (loc, MMVar ((mmvar, t), r), tS), sigma ->
+  | Root (loc, MMVar ((mmvar, t), r), tS, plicity), sigma ->
      (* MMVar must have an MTyp *)
      let ClTyp (MTyp tA, cPsi) = mmvar.typ in
      let u = mmvar.instantiation.contents in
@@ -936,7 +964,7 @@ and whnf sM = match sM with
         | (Atom (loc', a, tS'), _s (* id *)) ->
            (* meta-variable is of atomic type; tS = Nil  *)
            let u' = { mmvar with typ = ClTyp (MTyp (Atom (loc', a, tS')), cPsi) } in
-           (Root (loc, MMVar ((u', t), LF.comp r sigma), SClo (tS, sigma)), LF.id)
+           (Root (loc, MMVar ((u', t), LF.comp r sigma), SClo (tS, sigma), plicity), LF.id)
         | (PiTyp _, _s)->
            (* Meta-variable is not atomic and tA = Pi x:B1.B2:
             * lower u, and normalize the lowered meta-variable.
@@ -952,13 +980,13 @@ and whnf sM = match sM with
      end
 
   (* Meta-variable *)
-  | (Root (loc, MVar (Offset _k as u, r), tS), sigma) ->
-      (Root (loc, MVar (u, LF.comp (normSub r) sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, MVar (Offset _k as u, r), tS, plicity), sigma) ->
+      (Root (loc, MVar (u, LF.comp (normSub r) sigma), SClo (tS, sigma), plicity), LF.id)
 
-  | (Root (loc, FMVar (u, r), tS), sigma) ->
-      (Root (loc, FMVar (u, LF.comp (normSub r) sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, FMVar (u, r), tS, plicity), sigma) ->
+      (Root (loc, FMVar (u, LF.comp (normSub r) sigma), SClo (tS, sigma), plicity), LF.id)
 
-  | Root (loc, MVar (Inst mmvar as cvar, r), tS) as tM, sigma ->
+  | Root (loc, MVar (Inst mmvar as cvar, r), tS, plicity) as tM, sigma ->
      let u = mmvar.instantiation.contents in
      begin match u with
      | Some (INorm tM) ->
@@ -982,7 +1010,7 @@ and whnf sM = match sM with
         | (Atom (loc', a, tS'), _s (* id *)) ->
            (* meta-variable is of atomic type; tS = Nil  *)
            let u' = Inst { mmvar with typ = ClTyp (MTyp (Atom (loc', a, tS')), cPsi) } in
-           (Root (loc, MVar (u', LF.comp r' sigma), SClo (tS, sigma)), LF.id)
+           (Root (loc, MVar (u', LF.comp r' sigma), SClo (tS, sigma), plicity), LF.id)
         | (PiTyp _, _s)->
            (* Meta-variable is not atomic and tA = Pi x:B1.B2:
             * lower u, and normalize the lowered meta-variable.
@@ -994,34 +1022,39 @@ and whnf sM = match sM with
      end
 
   (* Parameter variable *)
-  | (Root (loc, PVar (p, r), tS), sigma) ->
-      (Root (loc, PVar (p, LF.comp (normSub r) sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, PVar (p, r), tS, plicity), sigma) ->
+      (Root (loc, PVar (p, LF.comp (normSub r) sigma), SClo (tS, sigma), plicity), LF.id)
 
-  | (Root (loc, FPVar (p, r), tS), sigma) ->
-      (Root (loc, FPVar (p, LF.comp (normSub r) sigma), SClo (tS, sigma)), LF.id)
+  | (Root (loc, FPVar (p, r), tS, plicity), sigma) ->
+      (Root (loc, FPVar (p, LF.comp (normSub r) sigma), SClo (tS, sigma), plicity), LF.id)
 
-  | (Root (loc, Proj(FPVar (p, r), k), tS), sigma) ->
+  | (Root (loc, Proj(FPVar (p, r), k), tS, plicity), sigma) ->
       let fpvar = FPVar (p, LF.comp (normSub r) sigma) in
-      (Root (loc, Proj(fpvar,k), SClo(tS,sigma)),  LF.id)
+      (Root (loc, Proj(fpvar,k), SClo(tS,sigma), plicity),  LF.id)
 
   (* Constant *)
-  | (Root (loc, Const c, tS), sigma) ->
-      (Root (loc, Const c, SClo (tS, sigma)), LF.id)
+  | (Root (loc, Const c, tS, plicity), sigma) ->
+      (Root (loc, Const c, SClo (tS, sigma), plicity), LF.id)
 
   (* Projections *)
-  | (Root (loc, Proj (BVar i, k), tS), sigma) ->
-      begin match LF.bvarSub i sigma with
-        | Head (BVar j)      -> (Root (loc, Proj (BVar j, k)     , SClo (tS, sigma)), LF.id)
-        | Head (PVar (q, s)) -> (Root (loc, Proj (PVar (q, s), k), SClo (tS, sigma)), LF.id)
-      end
+  | (Root (loc, Proj (BVar i, k), tS, plicity), sigma) ->
+     begin match LF.bvarSub i sigma with
+     | Head (BVar j)      ->
+        ( Root (loc, Proj (BVar j, k), SClo (tS, sigma), plicity)
+        , LF.id )
+     | Head (PVar (q, s)) ->
+        ( Root (loc, Proj (PVar (q, s), k), SClo (tS, sigma), plicity)
+        , LF.id )
+     end
 
-  | (Root (loc, Proj (PVar (q, s), k), tS), sigma) ->
-      (Root (loc, Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma)), LF.id)
+  | (Root (loc, Proj (PVar (q, s), k), tS, plicity), sigma) ->
+     ( Root (loc, Proj (PVar (q, LF.comp s sigma), k), SClo (tS, sigma), plicity)
+     , LF.id )
 
   (* Free variables *)
-  | (Root (loc, FVar x, tS), sigma) ->
-      (Root (loc, FVar x, SClo (tS, sigma)), LF.id)
-  | (Root (loc, Proj(MPVar ((mmvar, t),r), k), tS), sigma) ->
+  | (Root (loc, FVar x, tS, plicity), sigma) ->
+      (Root (loc, FVar x, SClo (tS, sigma), plicity), LF.id)
+  | (Root (loc, Proj(MPVar ((mmvar, t),r), k), tS, plicity), sigma) ->
      begin match mmvar.instantiation.contents with
      | Some (IHead h) ->
         (* constraints associated with q must be in solved form *)
@@ -1029,20 +1062,31 @@ and whnf sM = match sM with
         begin match h' with
         | BVar i ->
            begin match LF.bvarSub i (LF.comp r sigma) with
-           | Head (BVar x) -> (Root (loc, Proj(BVar x,k) , SClo (tS, sigma)), LF.id)
-           | Head h        -> (Root (loc, Proj(h, k), SClo (tS, sigma)), LF.id)
-           | Undef         -> raise (Error.Violation ("Looking up " ^ string_of_int i ^ "\n"))
-                                    (* Undef should not happen ! *)
+           | Head (BVar x) ->
+              ( Root (loc, Proj(BVar x,k) , SClo (tS, sigma), plicity)
+              , LF.id )
+           | Head h ->
+              ( Root (loc, Proj(h, k), SClo (tS, sigma), plicity)
+              , LF.id )
+           | Undef ->
+              Error.violation ("[whnf] Undef looked up at " ^ string_of_int i)
            end
-        | PVar (p, s) -> (Root (loc, Proj(PVar (p, LF.comp (LF.comp s r) sigma),k), SClo (tS, sigma)), LF.id)
-        | MPVar ((q, t'), r') -> (Root (loc, Proj(MPVar ((q, t'), LF.comp (LF.comp r' r) sigma),k), SClo (tS, sigma)), LF.id)
+        | PVar (p, s) ->
+           let h' = Proj (PVar (p, LF.comp (LF.comp s r) sigma), k) in
+           ( Root (loc, h', SClo (tS, sigma), plicity)
+           , LF.id)
+        | MPVar ((q, t'), r') ->
+           let h' = Proj (MPVar ((q, t'), LF.comp (LF.comp r' r) sigma), k) in
+           (Root (loc, h', SClo (tS, sigma), plicity), LF.id)
         end
      | None ->
         let ClTyp (PTyp tA, cPsi) = mmvar.typ in
       (* constraints associated with q must be in solved form *)
       let (cPsi', tA') = (normDCtx cPsi, normTyp (tA, LF.id)) in
       let p' = { mmvar with typ = ClTyp (PTyp tA', cPsi') } in
-      (Root (loc, Proj(MPVar ((p', t), LF.comp r sigma) , k), SClo(tS, sigma)), LF.id)
+      let h' = Proj (MPVar ((p', t), LF.comp r sigma), k) in
+      ( Root (loc, h', SClo(tS, sigma), plicity)
+      , LF.id)
      end
 
   | (LFHole (loc, id, name), _s) -> (LFHole (loc, id, name), _s)
@@ -1059,7 +1103,7 @@ and whnf sM = match sM with
  *)
 and whnfRedex (sM, sS) = match (sM, sS) with
   | ((LFHole (l, id, name), s1), _) -> raise (InvalidLFHole l)
-  | ((Root (_, _, _) as root, s1), (Nil, _s2)) ->
+  | ((Root (_, _, _, _) as root, s1), (Nil, _s2)) ->
       whnf (root, s1)
 
   | ((Lam (_, _x, tM), s1), (App (tN, tS), s2)) ->
@@ -1127,14 +1171,14 @@ and conv' sM sN = match (sM, sN) with
   | ((Tuple (_, tuple1), s1), (Tuple (_, tuple2), s2)) ->
       convTuple (tuple1, s1) (tuple2, s2)
 
-  | ((Root (_,AnnH (head, _tA), spine1), s1), sN) ->
-       conv' (Root (Syntax.Loc.ghost, head, spine1), s1) sN
+  | ((Root (loc ,AnnH (head, _tA), spine1, plicity), s1), sN) ->
+       conv' (Root (loc, head, spine1, plicity), s1) sN
 
-  | (sM, (Root(_ , AnnH (head, _tA), spine2), s2)) ->
-      conv' sM (Root (Syntax.Loc.ghost, head, spine2), s2)
+  | (sM, (Root(loc , AnnH (head, _tA), spine2, plicity), s2)) ->
+      conv' sM (Root (loc, head, spine2, plicity), s2)
 
-  | ((Root (_, head1, spine1), s1), (Root (_, head2, spine2), s2)) ->
-      convHead (head1,s1) (head2, s2) && convSpine (spine1, s1) (spine2, s2)
+  | ((Root (_, head1, spine1, _), s1), (Root (_, head2, spine2, _), s2)) ->
+      convHead (head1, s1) (head2, s2) && convSpine (spine1, s1) (spine2, s2)
 
   | _ -> false
 
@@ -1943,16 +1987,20 @@ let mctx_to_list_shifted x =
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA n s' dep =  etaExpandMV' cPsi (whnfTyp sA) n s' dep
+let rec etaExpandMV cPsi sA n s' dep =
+  etaExpandMV' cPsi (whnfTyp sA) n s' dep
+
 and etaExpandMV' cPsi sA n s' dep = match sA with
-  | (Atom (_, _a, _tS) as tP, s) ->
-     let u =
-       newMVar (Some (Id.inc n)) (cPsi, tclo tP s) dep
-     in
-     Root (Syntax.Loc.ghost, MVar (u, s'), Nil)
+  | (Atom (loc, _a, _tS) as tP, s) ->
+     let u = newMVar (Some (Id.inc n)) (cPsi, tclo tP s) dep in
+     Root (loc, MVar (u, s'), Nil, Depend.to_plicity dep)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (Syntax.Loc.ghost, x, etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
+     Lam
+       ( Id.loc_of_name x
+       , x
+       , etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep
+       )
 
 (* Coverage.etaExpandMVstr s' cPsi sA *)
 
@@ -1971,18 +2019,16 @@ and etaExpandMMV' loc cD cPsi sA n s' dep = match sA with
      let u =
        newMMVar (Some (Id.inc n)) (cD , cPsi, tclo tP s) dep
      in
-     Root (loc, MMVar ((u, m_id), s'), Nil)
+     Root (loc, MMVar ((u, m_id), s'), Nil, Depend.to_plicity dep)
 
   | (PiTyp ((TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
-
-
+     Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
 
 let rec closed sM = closedW (whnf sM)
 
 and closedW (tM,s) = match  tM with
   | Lam (_ , _x, tM) -> closed (tM, LF.dot1 s)
-  | Root (_ , h, tS) ->
+  | Root (_ , h, tS, _) ->
       closedHead h &&
       closedSpine (tS,s)
   | LFHole _ -> false
@@ -2264,7 +2310,7 @@ let rec lowerTyp cPsi = function
   | PiTyp ((decl, _), tB), s -> lowerTyp (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s)
 
 let mmVarToClObj loc' (mV : mm_var) : cltyp -> clobj = function
-  | MTyp tA -> MObj (Root(loc', MMVar ((mV, m_id), LF.id), Nil))
+  | MTyp tA -> MObj (Root(loc', MMVar ((mV, m_id), LF.id), Nil, `explicit))
   | PTyp tA -> PObj (MPVar ((mV, m_id), LF.id))
   | STyp (_, cPhi) -> SObj (MSVar (0, ((mV, m_id), LF.id)))
 
@@ -2273,7 +2319,6 @@ let mmVarToMFront loc' mV = function
      ClObj (Context.dctxToHat cPsi, mmVarToClObj loc' mV mt)
   | CTyp schema_cid ->
      CObj(CtxVar (CInst (mV, m_id)))
-
 
 (** Extends the given meta-substitution with a fresh unification
     variable for the contextual declaration (u, cU, dep).

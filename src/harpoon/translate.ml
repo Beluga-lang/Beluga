@@ -49,6 +49,7 @@ let unbox cD cG i x cU =
                  ( Loc.ghost
                  , MVar (Offset 1, LF.EmptySub)
                  , Nil
+                 , `explicit
                  )
              in
              ClObj (Context.dctxToHat cPsi, MObj tM)

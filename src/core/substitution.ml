@@ -164,11 +164,11 @@ module LF = struct
 (*              Obj (Clo (nth s (tuple, k))) *)
                 Obj (Clo (fst (nth s (tuple, k)), s'))
 
-	  | Obj (Clo ((Root (_, (PVar _ ), Nil)), _ )) -> failwith "Found Clo - PVar "
-	  | Obj (Clo ((Root (_, (BVar _ ), Nil)), _ )) -> failwith "Found Clo - BVar "
+	  | Obj (Clo ((Root (_, (PVar _ ), Nil, _)), _ )) -> failwith "Found Clo - PVar "
+	  | Obj (Clo ((Root (_, (BVar _ ), Nil, _)), _ )) -> failwith "Found Clo - BVar "
           | Obj (Clo _ ) -> failwith "Found Clo - should not happen"
-          | Obj (Root (_, (PVar _ as h), Nil)) -> Head (Proj (h, k))
-          | Obj (Root (_, (BVar _ as h), Nil)) -> Head (Proj (h, k))
+          | Obj (Root (_, (PVar _ as h), Nil, _)) -> Head (Proj (h, k))
+          | Obj (Root (_, (BVar _ as h), Nil, _)) -> Head (Proj (h, k))
 	  | Obj _ -> failwith "Found Obj which is compatible with taking a proj."
 	  | Head (HClo (_, _, _) as h)  -> Head (Proj (h, k))
 	  | Head (HMClo (_, _) as h)  -> Head (Proj (h, k))

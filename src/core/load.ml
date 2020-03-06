@@ -149,6 +149,15 @@ let load_one ppf path =
 
 let load ppf f =
   let all_paths = resolve_path f in
+  dprintf begin fun p ->
+    p.fmt "[load] @[<v>full load\
+           @,resolved %s =\
+           @,  @[<hv>%a@]@]"
+      f
+      (Format.pp_print_list ~pp_sep: Fmt.comma
+         (fun ppf x -> Format.fprintf ppf "%s" x))
+      all_paths
+    end;
   Gensym.reset ();
   Store.clear ();
   Typeinfo.clear_all ();

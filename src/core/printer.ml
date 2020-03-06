@@ -33,6 +33,7 @@ module Common = struct
       | `clean
       ]
 
+    val fmt_ppr_plicity : formatter -> LF.plicity -> unit
     val fmt_ppr_lf_depend      : formatter -> LF.depend -> unit
     val fmt_ppr_lf_depend_clean : formatter -> LF.depend -> unit
     val fmt_ppr_lf_depend_inductive : formatter -> LF.depend -> unit

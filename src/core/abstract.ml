@@ -227,29 +227,26 @@ let rec lengthCollection cQ = match cQ with
 
 (* Eta-expansion of bound variables which have function type *)
 let etaExpandHead loc h tA =
-  let rec etaExpSpine k tS tA = begin match  tA with
+  let rec etaExpSpine k tS tA =
+    match  tA with
     | I.Atom _  -> (k, tS)
-
     | I.PiTyp (_ , tA') ->
-        let tN = I.Root(loc, I.BVar k, I.Nil) in
-          etaExpSpine (k+1)  (I.App(tN, tS)) tA'
-  end in
-
-  let rec etaExpPrefix loc (tM, tA) = begin match tA with
+       let tN = I.Root(loc, I.BVar k, I.Nil, `explicit) in
+       etaExpSpine (k+1)  (I.App(tN, tS)) tA'
+  in
+  let rec etaExpPrefix loc (tM, tA) =
+    match tA with
     | I.Atom _ -> tM
     | I.PiTyp ((I.TypDecl (x, _ ), _ ) , tA') ->
-        I.Lam (loc, x, etaExpPrefix loc (tM, tA'))
-  end in
-
+       I.Lam (loc, x, etaExpPrefix loc (tM, tA'))
+  in
   let (k, tS') = etaExpSpine 1 (I.Nil) tA in
-  let h'       =  begin match h with
-                    | I.BVar x -> I.BVar (x+k-1)
-                    | I.FVar _ -> h
-                  end  in
-    etaExpPrefix loc (I.Root(loc, h' , tS'), tA)
-
-
-
+  let h' =
+    match h with
+    | I.BVar x -> I.BVar (x+k-1)
+    | I.FVar _ -> h
+  in
+  etaExpPrefix loc (I.Root(loc, h' , tS', `explicit), tA)
 
 let rec constraints_solved cnstr = match cnstr with
   | [] -> true
@@ -280,7 +277,7 @@ and cnstr_typ sA = match sA with
 
 and cnstr_term sM = match sM with
   | (I.Lam(_ , _x , tM), s) -> cnstr_term (tM, LF.dot1 s)
-  | (I.Root (_, h, spine), s) ->
+  | (I.Root (_, h, spine, _), s) ->
       cnstr_head h && cnstr_spine (spine, s)
 
 and cnstr_spine sS = match sS with
@@ -426,19 +423,19 @@ let rec collectTerm p cQ phat sM = collectTermW p cQ phat (Whnf.whnf sM)
 
 and collectTermW p cQ ((cvar, offset) as phat) sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
-      let (cQ', tM') =  collectTerm p cQ (cvar, offset + 1) (tM, LF.dot1 s) in
-        (cQ', I.Lam (loc, x, tM'))
+     let (cQ', tM') =  collectTerm p cQ (cvar, offset + 1) (tM, LF.dot1 s) in
+     (cQ', I.Lam (loc, x, tM'))
 
   | (I.Tuple (loc, tuple), s) ->
-      let (cQ', tuple') = collectTuple p cQ phat (tuple, s) in
-        (cQ', I.Tuple (loc, tuple'))
+     let (cQ', tuple') = collectTuple p cQ phat (tuple, s) in
+     (cQ', I.Tuple (loc, tuple'))
 
-  | (I.Root (loc, h, tS), s) ->
-      let (cQ', h') = collectHead p cQ phat loc (h, s) in
-      let (cQ'', tS') =  collectSpine p cQ' phat (tS, s) in
-        (cQ'', I.Root(loc, h', tS'))
+  | (I.Root (loc, h, tS, plicity), s) ->
+     let (cQ', h') = collectHead p cQ phat loc (h, s) in
+     let (cQ'', tS') =  collectSpine p cQ' phat (tS, s) in
+     (cQ'', I.Root(loc, h', tS', plicity))
   | (I.LFHole (loc, id, name), s) ->
-      (cQ, I.LFHole (loc, id, name))
+     (cQ, I.LFHole (loc, id, name))
 
 
 and collectTuple p cQ phat = function
@@ -818,17 +815,27 @@ and abstractTerm cQ offset sM = abstractTermW cQ offset (Whnf.whnf sM)
 
 and abstractTermW cQ offset sM = match sM with
   | (I.Lam (loc, x, tM), s) ->
-      I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
+     I.Lam (loc, x, abstractTerm cQ (offset + 1) (tM, LF.dot1 s))
 
-  | (I.Root (loc, (I.MVar (I.Inst ( { I.name; I.instantiation; I.typ = I.ClTyp (_, cPsi); _}), s)), _), _)
-  | (I.Root (loc, I.MMVar (({ I.name; I.instantiation; I.typ = I.ClTyp (_, cPsi); _}, _),s), _), _) ->
+  | I.(Root
+         ( loc
+         , (MVar (Inst ( {name; instantiation; typ = ClTyp (_, cPsi); _}) , s)
+            | MMVar (({ name; instantiation; typ = ClTyp (_, cPsi); _}, _), s))
+         , _
+         , plicity
+         )
+      , _
+    ) ->
     (* Since sM is in whnf, _u is MVar (Inst (ref None, tP, _, _)) *)
       let x = index_of cQ (MMV (name, instantiation)) + offset in
-      I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil)
+      I.Root (loc, I.BVar x, subToSpine cQ offset (s,cPsi) I.Nil, plicity)
 
-  | (I.Root (loc, tH, tS), s (* LF.id *)) ->
-      I.Root (loc, abstractHead cQ offset tH, abstractSpine cQ offset (tS, s))
-
+  | (I.Root (loc, tH, tS, plicity), s (* LF.id *)) ->
+     I.Root
+       ( loc
+       , abstractHead cQ offset tH
+       , abstractSpine cQ offset (tS, s)
+       , plicity )
 
 and abstractHead cQ (offset:int) tH = match tH with
   | I.BVar x ->
@@ -956,8 +963,8 @@ and abstractMVarTermW cQ offset sM = match sM with
   | (I.Tuple (loc, tuple), s) ->
       I.Tuple (loc, abstractMVarTuple cQ offset (tuple, s))
 
-  | (I.Root (loc, tH, tS), s (* LF.id *)) ->
-      I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s))
+  | (I.Root (loc, tH, tS, plicity), s (* LF.id *)) ->
+      I.Root (loc, abstractMVarHead cQ offset tH, abstractMVarSpine cQ offset (tS,s), plicity)
 
   | (I.LFHole (loc, id, name), s) ->
       I.LFHole (loc, id, name)

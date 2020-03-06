@@ -27,6 +27,10 @@ type depend_print_style =
   | `clean
   ]
 
+let fmt_ppr_plicity ppf = function
+  | `explicit -> fprintf ppf "explicit"
+  | `implicit -> fprintf ppf "implicit"
+
 let fmt_ppr_lf_depend_clean ppf _ = ()
 
 let fmt_ppr_lf_depend_inductive ppf = function

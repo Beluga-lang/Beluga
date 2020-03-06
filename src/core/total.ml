@@ -92,7 +92,7 @@ let sub_smaller phat s = match phat , s with
 
 let rec smaller_meta_obj cM = match  cM with
   | LF.CObj (LF.DDec (_ , _ )) -> true
-  | LF.ClObj (phat, LF.MObj (LF.Root (l', h, spine))) ->
+  | LF.ClObj (phat, LF.MObj (LF.Root (l', h, spine, plicity))) ->
      begin
        match h with
        | LF.Const _ -> true
@@ -108,7 +108,7 @@ let rec smaller_meta_obj cM = match  cM with
             (LF.ClObj
                ( phat
                , LF.MObj
-                   ( LF.Root (l', h, spine))))
+                   ( LF.Root (l', h, spine, plicity))))
        | LF.MVar (_, s) -> sub_smaller phat  s
        | _ -> false
      end
@@ -422,7 +422,7 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
      let phat  = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
      let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
-     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil) in
+     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, `explicit) in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
 
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
@@ -439,14 +439,15 @@ let gen_meta_obj (cdecl, theta) k = match cdecl with
 
 let uninstantiated_arg cM = match Whnf.cnormMetaObj (cM, Whnf.m_id) with
   | _ , LF.CObj (LF.CtxVar (LF.CInst _)) -> true
-  | _ , LF.ClObj (phat, LF.MObj (LF.Root (_, h, _spine))) ->
+  | _ , LF.ClObj (phat, LF.MObj (LF.Root (_, h, _spine, _))) ->
      (match h with
       | LF.MMVar (_ , _ ) -> true
       | _ -> false)
   | _ , LF.ClObj ((Some _, n), LF.PObj h) ->
      if n > 0 then
-       match h with LF.MPVar (_, _) -> true
-                  | _ -> false
+       match h with
+       | LF.MPVar (_, _) -> true
+       | _ -> false
      else
        false
   | _ , LF.ClObj (_phat, LF.SObj (LF.MSVar (_, _))) -> true
@@ -789,8 +790,10 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
           cM *)
       | l , LF.ClObj (phat', LF.PObj tH) ->
         if Whnf.convDCtxHat phat phat' then
-          let LF.Root (_, tH', _ ) = Whnf.norm (LF.Root (l, tH, LF.Nil), s_proj)  in
-            (l, LF.ClObj (phat0, LF.PObj tH'))
+          let LF.Root (_, tH', _, _) =
+            Whnf.norm (LF.Root (l, tH, LF.Nil, `explicit), s_proj)
+          in
+          (l, LF.ClObj (phat0, LF.PObj tH'))
         else
           cM
       | l , LF.ClObj (phat', LF.SObj s) ->
@@ -1042,25 +1045,26 @@ let rec less_meta_obj cD mC1 mC2 =
     | (_, LF.CObj cPsi1), (_, LF.CObj cPsi2) -> less_dctx cPsi1 cPsi2
 
     | (_, LF.ClObj (phat1, LF.MObj tM1)), (loc2, LF.ClObj (phat2, LF.MObj tM2)) ->
-      (match tM2 with
-        | LF.Root(_, h , tS)  ->
-          let rec leq_some spine =
-            ( match spine with
+       (||)
+         begin match tM2 with
+         | LF.Root(_, h , tS, _)  ->
+            let rec leq_some spine =
+              match spine with
               | LF.App (tM', tS') ->
-              (leq_meta_obj cD mC1 (loc2, LF.ClObj (phat2 , LF.MObj tM')) || leq_some tS')
-            | LF.Nil   ->  false
-              | LF.SClo (_, _) ->  raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
-            ) in  leq_some tS
-        | _  ->   false
-      )
-      ||
-      (
-        let p = prefix_hat phat1 phat2 in
-        match p with
-          | Some 0 -> false
-          | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id) (* this is suspicious -bp *)
-          | _ -> false
-      )
+                 leq_meta_obj cD mC1 (loc2, LF.ClObj (phat2 , LF.MObj tM'))
+                 || leq_some tS'
+              | LF.Nil -> false
+              | LF.SClo (_, _) ->
+                 raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
+            in
+            leq_some tS
+         | _  ->   false
+         end
+         begin match prefix_hat phat1 phat2 with
+         | Some 0 -> false
+         | Some k -> Whnf.conv (tM1, LF.Shift(k)) (tM2, Substitution.LF.id) (* this is suspicious -bp *)
+         | _ -> false
+         end
 
     | (_, LF.ClObj (phat1, LF.PObj tH1)) , (_, LF.ClObj (phat2, LF.PObj tH2)) ->
       (let p = prefix_hat phat1 phat2 in

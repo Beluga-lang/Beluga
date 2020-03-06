@@ -496,8 +496,9 @@ module CVar : sig
   val append        : t -> t -> t
   val length        : t -> int
 
-  (** Erases the context down to a list of names. *)
-  val of_mctx       : LF.mctx -> t
+  (** Erases the context down to a list of names using the given
+      function to interpret the plicity of declarations. *)
+  val of_mctx       : (LF.depend -> Comp.plicity) -> LF.mctx -> t
 
   val to_string     : t -> string
   val of_list       : (Id.name * Comp.plicity) list -> t

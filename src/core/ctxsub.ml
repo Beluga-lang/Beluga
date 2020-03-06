@@ -9,6 +9,8 @@ open Context
 open Syntax.Int.LF
 open Store.Cid
 
+module Loc = Syntax.Loc
+
 let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [12])
 open Debug.Fmt
 
@@ -65,7 +67,14 @@ let rec ctxToSub_mclosed cD psi = function
      let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in  (* cD' ; psi |- s : cPsi' *)
      dprint (fun () -> "s = " ^ subToString s);
 
-     let u = Root (Syntax.Loc.ghost, MVar(Offset 1,  Substitution.LF.id), Nil) in
+     let u =
+       Root
+         ( Loc.ghost
+         , MVar(Offset 1,  Substitution.LF.id)
+         , Nil
+         , `explicit
+         )
+     in
 
      (* cD' ; psi |- s : cPsi' *)
      (* cD' ; psi |- u[id] : [s]tA *)
@@ -154,17 +163,28 @@ let rec ctxToSub' cD cPhi cPsi = match cPsi with
 
 let mdeclToMMVar cD0 n mtyp dep = match mtyp with
   | ClTyp (MTyp tA, cPsi) ->
-    let u     = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep  in
+    let u = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep  in
     let phat  = Context.dctxToHat cPsi in
-    ClObj (phat, MObj (Root (Syntax.Loc.ghost, MMVar ((u, Whnf.m_id), Substitution.LF.id), Nil)))
+    let tR =
+      Root
+        ( Loc.ghost
+        , MMVar ((u, Whnf.m_id), Substitution.LF.id)
+        , Nil
+        , `explicit
+        )
+    in
+    ClObj (phat, MObj tR)
+
   | ClTyp (STyp (cl, cPhi), cPsi) ->
     let u     = Whnf.newMSVar (Some n) (cD0, cl, cPsi, cPhi) dep in
     let phat  = Context.dctxToHat cPsi in
     ClObj (phat, SObj (MSVar (0, ((u, Whnf.m_id), Substitution.LF.id))))
+
   | ClTyp (PTyp tA, cPsi) ->
     let p    = Whnf.newMPVar (Some n) (cD0, cPsi, tA) dep  in
     let phat = dctxToHat cPsi in
     ClObj (phat, PObj (MPVar ((p, Whnf.m_id), Substitution.LF.id)))
+
   | CTyp sW ->
     let cvar = Whnf.newCVar (Some n) cD0 sW dep in
     CObj (CtxVar cvar)

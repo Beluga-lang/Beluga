@@ -585,14 +585,18 @@ let elClObj cD loc cPsi' clobj mtyp =
   (* ordinary parameter variable elaboration *)
   | Apx.LF.Dot (Apx.LF.Obj (Apx.LF.Root (_, h, Apx.LF.Nil) as tM), Apx.LF.EmptySub)
   , Int.LF.PTyp tA' ->
-     let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
+     let Int.LF.Root (_, h, Int.LF.Nil, _) =
+       Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id)
+     in
      Int.LF.PObj h
 
   (* ordinary parameter variable elaboration *)
   | Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)
   , Int.LF.PTyp tA' ->
      let tM = Apx.LF.Root (Loc.ghost, h, Apx.LF.Nil) in
-     let Int.LF.Root (_, h, Int.LF.Nil) = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
+     let Int.LF.Root (_, h, Int.LF.Nil, _) =
+       Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id)
+     in
      Int.LF.PObj h
   | Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)
   , Int.LF.MTyp tA' ->
@@ -2117,7 +2121,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
              , let open Int.LF in
                ClObj
                  ( Context.dctxToHat cPsi'
-                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil))
+                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil, `explicit))
                  )
              )
            )

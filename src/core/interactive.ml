@@ -23,6 +23,11 @@ open Debug.Fmt
 
 (** Elaborates an external syntax type into internal syntax, with abstraction.
     The returned integer is the number of implicit parameters.
+
+    WARNING: elaboration of types as implemented here, by design,
+    allows access to implicit variables in the meta-context.
+    This is so that types given in the `suffices` Harpoon command can
+    access implicit variables.
  *)
 let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   dprintf
@@ -32,7 +37,9 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
       PExt.(fmt_ppr_cmp_typ l0) tau
       (P.fmt_ppr_lf_mctx P.l0) cD
     end;
-  let cvars = Store.CVar.of_mctx cD in
+  let cvars =
+    Store.CVar.of_mctx (fun _ -> `explicit) cD
+  in
   Index.hcomptyp cvars tau
   |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
@@ -51,7 +58,7 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;
   let var_store = Store.Var.of_gctx cG in
-  let cvar_store = Store.CVar.of_mctx cD in
+  let cvar_store = Store.CVar.of_mctx LF.Depend.to_plicity' cD in
   let t = Index.hexp cvar_store var_store t in
   Reconstruct.elExp cD cG t tp
 
@@ -67,7 +74,7 @@ let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;
   let var_store = Store.Var.of_gctx cG in
-  let cvar_store = Store.CVar.of_mctx cD in
+  let cvar_store = Store.CVar.of_mctx LF.Depend.to_plicity' cD in
   let t = Index.hexp' cvar_store var_store t in
   Reconstruct.elExp' cD cG t
 
@@ -337,9 +344,10 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
                   ( phat,
                     LF.MObj
                       (LF.Root
-                         ( Loc.ghost,
-					                 LF.MVar (LF.Offset i, LF.Shift 0),
-					                 LF.Nil
+                         ( Loc.ghost
+                         , LF.MVar (LF.Offset i, LF.Shift 0)
+                         , LF.Nil
+                         , `explicit
                          )
                       )
                   )
@@ -352,9 +360,10 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
                   ( phat,
                     LF.MObj
                       (LF.Root
-                         ( Loc.ghost,
-                           LF.PVar (i, LF.Shift 0),
-                           LF.Nil
+                         ( Loc.ghost
+                         , LF.PVar (i, LF.Shift 0)
+                         , LF.Nil
+                         , `explicit
                          )
                       )
                   )

@@ -38,9 +38,12 @@ module LF = struct
     | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
 
 
+  (* The plicity annotation is set to `implicit when reconstructing an
+     a hole (_) so that when printing, it can be reproduced correctly.
+   *)
   and normal =                                (* normal terms                   *)
     | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine            (*   | h . S                      *)
+    | Root of Loc.t * head * spine * plicity  (*   | h . S                      *)
     | LFHole of Loc.t * HoleId.t * HoleId.name
     | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
@@ -179,6 +182,11 @@ module LF = struct
 
   and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
 
+  let map_plicity f = function
+    | Root (loc, tH, tS, plicity) ->
+       Root (loc, tH, tS, f plicity)
+    | _ as tM -> tM
+
   let proj_maybe (h : head) : int option -> head = function
     | None -> h
     | Some k -> Proj (h, k)
@@ -207,13 +215,20 @@ module LF = struct
       carry a location.
    *)
   let head (tH : head) : normal =
-    Root (Loc.ghost, tH, Nil)
+    Root (Loc.ghost, tH, Nil, `explicit)
 
   let mvar cvar sub : head =
     MVar (cvar, sub)
 
   (* Hatted version of LF.Null *)
   let null_hat : dctx_hat = (None, 0)
+
+  let rec loc_of_normal = function
+    | Lam (loc, _, _) -> loc
+    | Root (loc, _, _, _) -> loc
+    | LFHole (loc, _, _) -> loc
+    | Clo (tM, _) -> loc_of_normal tM
+    | Tuple (loc, _) -> loc
 
   (**********************)
   (* Type Abbreviations *)
@@ -316,13 +331,13 @@ module LF = struct
    *)
   let variable_of_mfront (mf : mfront) : (offset * offset option) option =
     match mf with
-    | ClObj (_, MObj (Root (_, MVar (Offset x,_), _ )))
+    | ClObj (_, MObj (Root (_, MVar (Offset x,_), _, _)))
       | CObj (CtxVar (CtxOffset x))
-      | ClObj (_ , MObj (Root (_, PVar (x,_) , _ )))
+      | ClObj (_ , MObj (Root (_,PVar (x,_), _, _)))
       | ClObj (_ , PObj (PVar (x,_)))  ->
        Some (x, None)
 
-    | ClObj (_, MObj (Root (_, Proj (PVar (x, _), k ), _ )))
+    | ClObj (_, MObj (Root (_, Proj (PVar (x, _), k ),_, _)))
       | ClObj (_, PObj (Proj (PVar (x,_), k))) ->
        Some (x, Some k)
 
@@ -496,7 +511,7 @@ module Comp = struct
   let head_of_meta_obj : meta_obj -> (LF.dctx_hat * LF.head) option =
     let open LF in
     function
-    | (_, ClObj (phat, MObj (Root (_, h, _)))) -> Some (phat, h)
+    | (_, ClObj (phat, MObj (Root (_, h, _, _)))) -> Some (phat, h)
     | _ -> None
 
   let itermToClObj = function

@@ -280,7 +280,7 @@ let rec checkW cD cPsi sM sA = match sM, sA with
   | (Tuple (loc, _), _), _ ->
     raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
 
-  | (Root (loc, _h, _tS), _s (* id *)), sA ->
+  | (Root (loc, _h, _tS, _), _s (* id *)), sA ->
     (* cD ; cPsi |- [s]tA <= type  where sA = [s]tA *)
      begin
        try
@@ -325,7 +325,7 @@ and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =
   loop (tuple, s1) (trec, s2)
 
 
-and syn cD cPsi (Root (loc, h, tS), s (* id *)) =
+and syn cD cPsi (Root (loc, h, tS, _), s (* id *)) =
   let rec spineLength = function
     | Nil -> 0
     | SClo (tS, _) -> spineLength tS
@@ -450,7 +450,8 @@ and inferHead loc cD cPsi head cl = match head, cl with
 
   | Const _, Ren
   | MVar _, Ren
-  | MMVar _, Ren -> raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil)))))
+  | MMVar _, Ren ->
+     raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil, `explicit)))))
 
   | PVar (p, s), _ ->
     (* cD ; cPsi' |- tA <= type *)
@@ -988,7 +989,7 @@ and checkClObj cD loc cPsi' cM cTt = match (cM, cTt) with
        end;
      checkSub loc cD cPsi' tM cl (Whnf.cnormDCtx (cPhi, t))
   | PObj h, (PTyp tA, t)
-  | MObj (Root(_,h,Nil)), (PTyp tA, t) (* This is ugly *) ->
+    | MObj (Root(_, h, Nil, _)), (PTyp tA, t) (* This is ugly *) ->
      let tA' = inferHead loc cD cPsi' h Ren in
      let tA  = Whnf.cnormTyp (tA, t) in
      dprintf

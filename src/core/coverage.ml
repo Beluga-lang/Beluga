@@ -191,7 +191,7 @@ let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
 let eta_expand (tH, tA) =
   let rec eta (tA, s) tS =
     match tA, s with
-    | LF.Atom _, s -> LF.Root (Loc.ghost, tH, tS)
+    | LF.Atom _, s -> LF.Root (Loc.ghost, tH, tS, `explicit)
     | LF.PiTyp ((LF.TypDecl (x, tB0), _), tB), s ->
        let tM = eta (tB0, s) LF.Nil in
        LF.Lam (Loc.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS)))
@@ -230,7 +230,7 @@ and etaExpandMVstr' u cD dep cPsi =
         cPsi  |- s_proj          : cPhi
         cPsi  |- comp ss' s_proj : cPhi' *)
      let ss_proj = S.LF.comp ss' s_proj in
-     let tM = LF.Root (Loc.ghost, LF.MMVar ((u, Whnf.m_id), ss_proj),  LF.Nil) in
+     let tM = LF.Root (Loc.ghost, LF.MMVar ((u, Whnf.m_id), ss_proj), LF.Nil, `explicit) in
      tM
   | LF.PiTyp ((LF.TypDecl (x, _) as decl, _), tB), s ->
      LF.Lam (Loc.ghost, x, etaExpandMVstr u cD dep (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
@@ -453,7 +453,7 @@ end = struct
     | LF.CObj (LF.CtxVar _), _ -> true
     | LF.ClObj (_, clObj), LF.ClTyp (clTyp, cPsi) ->
        begin match clObj, clTyp with
-       | LF.MObj (LF.Root (_, LF.MVar (LF.Offset u, s), LF.Nil)), LF.MTyp _ ->
+       | LF.MObj (LF.Root (_, LF.MVar (LF.Offset u, s), LF.Nil, _)), LF.MTyp _ ->
           let _, _, cPsi' = Whnf.mctxMDec cD u in
           Whnf.convSub s S.LF.id && Whnf.convDCtx cPsi' cPsi
        | LF.PObj (LF.PVar (p, s)), LF.PTyp _ ->
@@ -683,7 +683,7 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
      in
      pre_match cD cD_p covGoal' patt' matchCands splitCands
 
-  | LF.Root (_, tH, tS), LF.Root (loc, tH', tS') ->
+  | LF.Root (_, tH, tS, _), LF.Root (loc, tH', tS', _) ->
      begin match pre_match_head cD cD_p (cPsi, tH) (cPhi, tH') with
      | Yes (sA, sA') ->
         pre_match_spine
@@ -920,8 +920,8 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
     (LF.ClObj (_, LF.PObj tH'), LF.ClTyp (LF.PTyp tA', cPsi')) ->
      let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
      let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-     let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil), (tA, S.LF.id)) in
-     let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil), (tA', S.LF.id)) in
+     let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil, `explicit), (tA, S.LF.id)) in
+     let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil, `explicit), (tA', S.LF.id)) in
      pre_match cD cD_p covGoal pat mC1 sC1
   | (LF.ClObj (_, LF.SObj s), LF.ClTyp (sT, cPsi)),
     (LF.ClObj (_, LF.SObj s'), LF.ClTyp (sT', cPsi')) ->
@@ -1167,7 +1167,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
   with
   | None -> None
   | Some spine ->
-     let tM = LF.Root (Loc.ghost, tH' , spine) in
+     let tM = LF.Root (Loc.ghost, tH', spine, `explicit) in
      let cD', cPsi', tR, tP', ms' =
        try
          Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
@@ -1903,7 +1903,13 @@ let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
          (Whnf.normTyp (tP, ssi))
        end;
      let mdec = LF.Decl (x, LF.ClTyp (LF.MTyp (LF.TClo (tP, ssi)), cPsi'), LF.Maybe) in
-     let mv = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, Whnf.cnormSub (ss', LF.MShift 1)), LF.Nil) in
+     let mv =
+       LF.Root
+         ( Loc.ghost
+         , LF.MVar (LF.Offset 1, Whnf.cnormSub (ss', LF.MShift 1))
+         , LF.Nil
+         , `explicit )
+     in
      (LF.Dec (cD'', mdec), LF.Dot (LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1)))
 
 (** Generates the coverage goal for a schema element.
@@ -2033,7 +2039,7 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let mT = LF.ClTyp (LF.STyp (r0, cPhi'), cPsi) in
      let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName mT), mT, LF.No)) in
      (* if ren = renaming, generate parameter variable *)
-     let tM = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil) in
+     let tM = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil, `explicit) in
      let tA0 = Whnf.cnormTyp (tA, LF.MShift 1) in
      let cPhi0 = Whnf.cnormDCtx (cPhi', LF.MShift 1) in
      let mT' = LF.ClTyp (LF.MTyp tA0, cPhi0) in
@@ -2517,13 +2523,13 @@ let rec mvInSplitCand cD vlist =
 and mvInSplit cD vlist =
   function
   | [] -> vlist
-  | Split (CovGoal (_, LF.Root (_, LF.MVar (u, _), _), _), _) :: sl ->
+  | Split (CovGoal (_, LF.Root (_, LF.MVar (u, _), _, _), _), _) :: sl ->
      let pvlist, cvlist, mvlist = vlist in
      if List.mem u mvlist
      then mvInSplit cD vlist sl
      else mvInSplit cD (pvlist, cvlist, (u :: mvlist)) sl
 
-  | Split (CovGoal (_, LF.Root (_, LF.PVar (k, _), _), _), _) :: sl ->
+  | Split (CovGoal (_, LF.Root (_, LF.PVar (k, _), _, _), _), _) :: sl ->
      let pvlist, cvlist, mvlist = vlist in
      if List.mem (LF.Offset k) mvlist
      then mvInSplit cD vlist sl
@@ -2537,7 +2543,7 @@ and mvInSplit cD vlist =
           mvInSplit cD (pvlist, cvlist, LF.Offset k :: mvlist) sl
        end
 
-  | Split (CovGoal (_, LF.Root (_, LF.Proj _, _), _), _) :: sl ->
+  | Split (CovGoal (_, LF.Root (_, LF.Proj _, _, _), _), _) :: sl ->
      mvInSplit cD vlist sl
 
   | Split (CovSub (_, LF.SVar (u, _, _), _), _) :: sl ->
@@ -3077,7 +3083,7 @@ let initialize_coverage problem projOpt : cov_problems =
         in
         let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
         let mv = LF.MVar (LF.Offset 1, s) in
-        let tM = LF.Root (Loc.ghost, mv, LF.Nil) in
+        let tM = LF.Root (Loc.ghost, mv, LF.Nil, `explicit) in
         let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
         let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
         let mC = Comp.PatMetaObj (Loc.ghost, (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
@@ -3119,7 +3125,7 @@ let initialize_coverage problem projOpt : cov_problems =
        | None -> LF.PVar (1, s)
        | Some k -> LF.Proj (LF.PVar (1, s), k)
      in
-     let tM = LF.Root (Loc.ghost, mv, LF.Nil) in
+     let tM = LF.Root (Loc.ghost, mv, LF.Nil, `explicit) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
      let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
      let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in

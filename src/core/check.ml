@@ -110,13 +110,13 @@ module Comp = struct
    *)
   let fixParamTyp mC mT = match mC with
     (* cases for a parameter variable without a projection *)
-    | I.(ClObj (_, (PObj (PVar (x, _)) | MObj (Root (_, I.PVar (x, _), _))))) ->
+    | I.(ClObj (_, (PObj (PVar (x, _)) | MObj (Root (_, I.PVar (x, _), _, _))))) ->
        Some x, convToParamTyp mT, None
     (* cases for a parameter variable with a projection *)
-    | I.(ClObj (_, (PObj (I.Proj (I.PVar (x, _), k)) | MObj (Root (_, Proj (PVar (x, _), k), _))))) ->
+    | I.(ClObj (_, (PObj (I.Proj (I.PVar (x, _), k)) | MObj (Root (_, Proj (PVar (x, _), k), _, _))))) ->
        Some x, convToParamTyp mT, Some k
     (* cases for a context variable or a metavariable *)
-    | I.(CObj (CtxVar (CtxOffset x)) | ClObj(_, MObj (Root (_, MVar (Offset x, _), _)))) ->
+    | I.(CObj (CtxVar (CtxOffset x)) | ClObj(_, MObj (Root (_, MVar (Offset x, _), _, _)))) ->
        Some x, mT, None
     | _ -> None, mT, None
 
@@ -315,7 +315,7 @@ module Comp = struct
     lookup cD k
 
   let rec fmv_normal (cD:I.mctx) tM = match tM with
-    | I.Root (_, h, tS) -> fmv_spine (fmv_head cD h) tS
+    | I.Root (_, h, tS, _) -> fmv_spine (fmv_head cD h) tS
     | I.Lam (_, _ , tM) -> fmv_normal cD tM
     | I.LFHole _ -> cD
     | I.Tuple (_, tuple) -> fmv_tuple cD tuple
@@ -406,11 +406,11 @@ module Comp = struct
     | I.MDot (mf, ms), I.Dec(cD, I.Decl (_u, mtyp1, dep)) ->
        begin
          match mf with
-         | I.ClObj (_, I.MObj(I.Root (_, I.MVar (I.Offset u, I.Shift 0), I.Nil)))
-           | I.ClObj (_, I.MObj(I.Root (_, I.PVar (u, I.Shift 0), I.Nil)))
-           | I.ClObj (_, I.PObj(I.PVar (u, I.Shift 0)))
-           | I.CObj(I.CtxVar (I.CtxOffset u))
-           | I.ClObj (_ , I.SObj (I.SVar (u, 0, I.Shift 0))) ->
+         | I.(ClObj (_, MObj(Root (_, MVar (Offset u, Shift 0), Nil, _))))
+           | I.(ClObj (_, MObj(Root (_, PVar (u, Shift 0), Nil, _))))
+           | I.(ClObj (_, PObj(PVar (u, Shift 0))))
+           | I.(CObj(CtxVar (CtxOffset u)))
+           | I.(ClObj (_ , SObj (SVar (u, 0, Shift 0)))) ->
             if Total.is_inductive dep then
               let cD1' = mark_ind cD1' u in
               id_map_ind cD1' ms cD

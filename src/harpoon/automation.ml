@@ -98,7 +98,7 @@ let auto_solve_trivial : t =
        let open LF in
        let open Loc in
        let head = MVar (Offset idx, S.LF.id) in
-       let clobj = MObj (Root (ghost, head, Nil)) in
+       let clobj = MObj (Root (ghost, head, Nil, `explicit)) in
        let psi_hat = Context.dctxToHat dctx in
        Box
          ( ghost

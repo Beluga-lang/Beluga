@@ -51,6 +51,13 @@ module LF = struct
       | Inductive ->
          Error.violation
            "[Depend] [to_plicity] Inductive is impossible"
+
+    (** Variant of to_plicity that does not fail on Inductive, instead
+        sending it to `explicit.
+     *)
+    let to_plicity' : depend -> plicity = function
+      | Inductive -> `explicit
+      | d -> to_plicity d
   end
 end
 

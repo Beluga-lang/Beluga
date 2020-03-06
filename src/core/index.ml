@@ -1125,9 +1125,8 @@ let rec index_compkind cvars fcvars = function
      let (cdecl', cvars', fcvars') =
        index_cdecl (fun _ -> `explicit) cvars fcvars cdecl
      in
-      let cK' = index_compkind cvars' fcvars' cK in
-        Apx.Comp.PiKind (loc, cdecl', cK')
-
+     let cK' = index_compkind cvars' fcvars' cK in
+     Apx.Comp.PiKind (loc, cdecl', cK')
 
 let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state  =
   fun fvars ->

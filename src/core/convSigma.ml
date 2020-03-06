@@ -54,12 +54,13 @@ let rec new_index k conv_list = match (conv_list, k) with
 
 let rec strans_norm cD cPsi sM conv_list = strans_normW cD cPsi (Whnf.whnf sM) conv_list
 and strans_normW cD cPsi (tM, s) conv_list = match tM with
-  | Int.LF.Lam(loc,x, tN) -> let tN' = strans_norm cD cPsi (tN, LF.dot1 s) (1::conv_list) in
-      Int.LF.Lam(loc, x, tN')
-  | Int.LF.Root(loc, h, tS) ->
-      let h' = strans_head loc cD cPsi h conv_list in
-      let tS' = strans_spine cD cPsi (tS, s) conv_list in
-        Int.LF.Root(loc, h', tS')
+  | Int.LF.Lam(loc,x, tN) ->
+     let tN' = strans_norm cD cPsi (tN, LF.dot1 s) (1::conv_list) in
+     Int.LF.Lam(loc, x, tN')
+  | Int.LF.Root(loc, h, tS, plicity) ->
+     let h' = strans_head loc cD cPsi h conv_list in
+     let tS' = strans_spine cD cPsi (tS, s) conv_list in
+     Int.LF.Root(loc, h', tS', plicity)
   | Int.LF.LFHole _ as n -> n
 
 and strans_head loc cD cPsi h conv_list = match h with
@@ -281,9 +282,9 @@ let gen_conv_sub' conv_list  =
   and gen_tup pos (k,index) =
     if k = index then
       (* only correct if pos stands for a variable of atomic type *)
-      Int.LF.Last (Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil))
+      Int.LF.Last (Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil, `explicit))
     else
-      let tM = Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil) in
+      let tM = Int.LF.Root (Syntax.Loc.ghost, Int.LF.BVar pos, Int.LF.Nil, `explicit) in
       let tTup = gen_tup (pos-1) (k, index+1) in
 	Int.LF.Cons (tM, tTup)
   in
@@ -306,9 +307,10 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
       let s_proj = gen_conv_sub conv_list in
       let s_tup  = gen_conv_sub' conv_list in
       let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in
-	(*  cPsi |- s_proj : cPhi
-            cPhi |- s_tup : cPsi
-            cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!  *)
+	    (*  cPsi |- s_proj : cPhi
+          cPhi |- s_tup : cPsi
+          cPhi |- tQ   where  cPsi |- tP  !! tQ = [s_tup]tP !!
+       *)
 
       let (ss', cPhi') = Subord.thin' cD a cPhi in
       (* cPhi |- ss' : cPhi' *)
@@ -320,8 +322,16 @@ and etaExpandMMVstr' loc cD cPsi sA  n  = match sA with
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
       let ss_proj = LF.comp ss' s_proj in
-        Int.LF.Root (loc, Int.LF.MMVar ((u, Whnf.m_id), ss_proj), Int.LF.Nil)
+      Int.LF.Root
+        ( loc
+        , Int.LF.MMVar ((u, Whnf.m_id), ss_proj)
+        , Int.LF.Nil
+        , `explicit
+        )
 
   | (Int.LF.PiTyp ((Int.LF.TypDecl (x, _tA) as decl, _ ), tB), s) ->
-      Int.LF.Lam (loc, x,
-           etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n)
+     Int.LF.Lam
+       ( loc
+       , x
+       , etaExpandMMVstr loc cD (Int.LF.DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n
+       )

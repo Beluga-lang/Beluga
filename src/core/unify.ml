@@ -195,8 +195,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
     let ss_proj = Substitution.LF.comp ss' s_proj in
-      Root (loc, MMVar ((u, Whnf.m_id), ss_proj), Nil)
-
+    Root (loc, MMVar ((u, Whnf.m_id), ss_proj), Nil, `explicit)
 
   (* isPatSub s = B
 
@@ -445,7 +444,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     globalCnstrs := cnstrL @ !globalCnstrs
 
   let expandMVarAtType loc (v,(mt,s)) = function
-    | MTyp _ -> INorm (Root (loc, MMVar ((v,mt),s), Nil))
+    | MTyp _ -> INorm (Root (loc, MMVar ((v,mt),s), Nil, `explicit))
     | PTyp _ -> IHead (MPVar ((v,mt),s))
     | STyp _ -> ISub (MSVar (0, ((v,mt),s)))
 
@@ -719,10 +718,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (Lam (loc, x, tM), s) ->
         Lam (loc, x, invNorm cD0 ((cvar, offset + 1), (tM, dot1 s), (ms, dot1 ssubst), rOccur))
 
-    | (Root (loc, MVar (Inst u, t), tS), s) ->
-      invNorm' cD0 (phat, (Root(loc, MMVar((u, MShift 0), t), tS), s), ss, rOccur)
+    | (Root (loc, MVar (Inst u, t), tS, plicity), s) ->
+      invNorm' cD0 (phat, (Root(loc, MMVar((u, MShift 0), t), tS, plicity), s), ss, rOccur)
 
-   | (Root (loc, MMVar (({instantiation; cD; typ = ClTyp (_, cPsi1); _} as u, mt), s'), _tS (* Nil *)), s) ->
+    | (Root (loc, MMVar (({instantiation; cD; typ = ClTyp (_, cPsi1); _} as u, mt), s'), _tS (* Nil *), plicity), s) ->
         (* by invariant tM is in whnf and meta-variables are lowered;
            hence tS = Nil and s = id *)
         if eq_cvarRef (MMVarRef instantiation) rOccur then
@@ -744,51 +743,72 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                  *)
 
                 if isId s0' && isMId mt0 then
-                  Root(loc, MMVar((u, Whnf.mcomp mt ms), comp s0 ssubst), Nil)
+                  Root
+                    ( loc
+                    , MMVar((u, Whnf.mcomp mt ms), comp s0 ssubst)
+                    , Nil
+                    , plicity )
                 else
                   raise NotInvertible
             else (* s0 not patsub *)
-              Root(loc, MMVar((u, invMSub cD0 (mt, cD) ms rOccur),
-                                  invSub cD0 phat (s0, cPsi1) ss rOccur), Nil)
+              Root
+                ( loc
+                , MMVar
+                    ( (u, invMSub cD0 (mt, cD) ms rOccur)
+                    , invSub cD0 phat (s0, cPsi1) ss rOccur )
+                , Nil
+                , plicity )
 
-    | (Root (loc, MVar (Offset u, t), _tS (* Nil *)), s (* id *)) ->
+    | (Root (loc, MVar (Offset u, t), _tS (* Nil *), plicity), s (* id *)) ->
         let t' = comp t s (* t' = t, since s = Id *) in
         let (_, _tA, cPsi1) = Whnf.mctxMDec cD0 u in
-          begin match applyMSub u ms with
-            | MV v ->
-                Root(loc, MVar(Offset v, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
-            | MUndef -> raise NotInvertible
-          end
+        begin match applyMSub u ms with
+        | MV v ->
+           Root
+             ( loc
+             , MVar (Offset v, invSub cD0 phat (t', cPsi1) ss rOccur)
+             , Nil
+             , plicity )
+        | MUndef -> raise NotInvertible
+        end
 
-    | (Root (loc, FMVar (u, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl(_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
-        let d = Context.length cD0 - Context.length cD_d in
-        let cPsi1 = if d = 0 then cPsi1 else
-           Whnf.cnormDCtx (cPsi1, MShift d) in
-        let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-          Root (loc, FMVar (u, s'), Nil)
+    | (Root (loc, FMVar (u, t), _tS (* Nil *), plicity), s (* id *)) ->
+       let (cD_d, Decl(_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
+       let d = Context.length cD0 - Context.length cD_d in
+       let cPsi1 =
+         if d = 0
+         then cPsi1
+         else Whnf.cnormDCtx (cPsi1, MShift d) in
+       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+       Root (loc, FMVar (u, s'), Nil, plicity)
 
-    | (Root (loc, FPVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get p in
-        let d = Context.length cD0 - Context.length cD_d in
-        let cPsi1 = if d = 0 then cPsi1 else
-          Whnf.cnormDCtx (cPsi1, MShift d) in
-        let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
-          Root (loc, FPVar (p, s'), Nil)
+    | (Root (loc, FPVar (p, t), _tS (* Nil *), plicity), s (* id *)) ->
+       let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get p in
+       let d = Context.length cD0 - Context.length cD_d in
+       let cPsi1 =
+         if d = 0
+         then cPsi1
+         else Whnf.cnormDCtx (cPsi1, MShift d) in
+       let s' = invSub cD0 phat (comp t s, cPsi1) ss rOccur in
+       Root (loc, FPVar (p, s'), Nil, plicity)
 
-    | (Root (loc, PVar (p, t), _tS (* Nil *)), s (* id *)) ->
-        let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
-        let t' = comp t s (* t' = t, since s = Id *) in
-          begin match applyMSub p ms with
-            | MV q ->
-                Root(loc, PVar(q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil)
-            | MUndef -> raise NotInvertible
-          end
+    | (Root (loc, PVar (p, t), _tS (* Nil *), plicity), s (* id *)) ->
+       let (_, _tA, cPsi1) = Whnf.mctxPDec cD0 p in
+       let t' = comp t s (* t' = t, since s = Id *) in
+       begin match applyMSub p ms with
+       | MV q ->
+          Root(loc, PVar(q, invSub cD0 phat (t', cPsi1) ss rOccur), Nil, plicity)
+       | MUndef -> raise NotInvertible
+       end
 
 
-    | (Root (loc, head, tS), s (* = id *)) ->
-        Root (loc, invHead  cD0 (phat, head , ss, rOccur),
-              invSpine cD0 (phat, (tS, s), ss, rOccur))
+    | (Root (loc, tH, tS, plicity), s (* = id *)) ->
+       Root
+         ( loc
+         , invHead cD0 (phat, tH , ss, rOccur)
+         , invSpine cD0 (phat, (tS, s), ss, rOccur)
+         , plicity
+         )
 
     | (Tuple(loc, trec), s) ->
          Tuple(loc, invTuple cD0 (phat, (trec,s), ss, rOccur))
@@ -1056,10 +1076,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         let tuple' = pruneTuple cD0 cPsi' phat (tuple, s) ss rOccur in
           Tuple (loc, tuple')
 
-    | (Root (loc, head, tS), s) ->
+    | (Root (loc, head, tS, plicity), s) ->
       let Shift 0 = s in (* Assert s is supposed to be the identity *)
       let newHead = pruneHead cD0 cPsi' (loc,head) ss rOccur in
-      Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur)
+      Root (loc, newHead, pruneSpine cD0 cPsi' phat (tS, s) ss rOccur, plicity)
 
   and pruneBoth cD0 cPsi' ((mt,ts), (cD1, cPsi1)) ((ms,_) as ss) rOccur =
     let (id_msub, cD2) = pruneMCtx cD0 (mt, cD1) ms in
@@ -1099,7 +1119,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       let v = Whnf.newMVar (Some mmvar.name) (cPsi2, tP') mmvar.depend in
       instantiateMVar
         ( mmvar.instantiation
-        , Root (loc, MVar (v, idsub), Nil)
+        , Root (loc, MVar (v, idsub), Nil, `explicit)
         , mmvar.constraints.contents
         );
       (v, comp (comp idsub t) ssubst)
@@ -1543,7 +1563,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
   and craftMVTerm _cD0 _cPsi mmvar sM2 =
     let ClTyp (_, cPsi1) = mmvar.typ in
     match sM2 with
-    | Root (loc , Const c, _tS2) ->
+    | Root (loc , Const c, _tS2, plicity) ->
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
        dprintf
          (fun p ->
@@ -1565,7 +1585,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
          | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
        in
-       let tM1 = Root(loc, Const c, genSpine mmvar.cD cPsi1 (tA, id)) in
+       let tM1 = Root(loc, Const c, genSpine mmvar.cD cPsi1 (tA, id), plicity) in
        instantiateMVar (mmvar.instantiation, tM1, mmvar.constraints.contents);
        Some tM1
     | _ -> None
@@ -1588,7 +1608,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
     in
     match sM2 with
-    | Root (loc , Const c, _tS2) ->
+    | Root (loc , Const c, _tS2, plicity) ->
 
        let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
        dprintf
@@ -1597,15 +1617,24 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            (P.fmt_ppr_lf_dctx _cD0 P.l0) _cPsi
            (P.fmt_ppr_lf_dctx mmvar.cD P.l0) cPsi1
          end;
-       let tM1 = Root(loc, Const c, genSpine mmvar.cD cPsi1 (tA, id)) in
+       let tM1 =
+         Root(loc, Const c, genSpine mmvar.cD cPsi1 (tA, id), plicity)
+       in
        (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
        instantiateMMVar (mmvar.instantiation, tM1, mmvar.constraints.contents);
        Some (tM1)
 
-    | Root (loc, MPVar (_v, _s), _tS) ->
+    | Root (loc, MPVar (_v, _s), _tS, plicity) ->
        dprnt "[craftMMVTerm] MPVar ...";
        let p   = Whnf.newMPVar None (mmvar.cD, cPsi1, tB) Maybe  in
-       let tM1 = Root (loc, MPVar ((p, Whnf.m_id), Substitution.LF.id), genSpine mmvar.cD cPsi1 (tB, id)) in
+       let tM1 =
+         Root
+           ( loc
+           , MPVar ((p, Whnf.m_id), Substitution.LF.id)
+           , genSpine mmvar.cD cPsi1 (tB, id)
+           , plicity
+           )
+       in
        (* cD1 ; cPsi1 |- tM1 : tP and there is a renaming cPsi |- rho : cPsi1 *)
        instantiateMMVar (mmvar.instantiation, tM1, mmvar.constraints.contents);
        Some (tM1)
@@ -1742,8 +1771,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         unifyTerm  mflag cD0 (DDec(cPsi, TypDeclOpt x)) (tN, id) (tM, id)
 
     (* MVar-MVar case *)
-    | ( (Root (_, MVar (Inst mmvar1, t1), _tS1) as _tM1)
-      , (Root (_, MVar (Inst mmvar2, t2), _tS2) as _tM2))
+    | ( (Root (_, MVar (Inst mmvar1, t1), _tS1, _) as _tM1)
+      , (Root (_, MVar (Inst mmvar2, t2), _tS2, _) as _tM2))
          when mmvar1.instantiation == mmvar2.instantiation ->
        let ClTyp (MTyp tP1, cPsi1) = mmvar1.typ in
        let ClTyp (MTyp tP2, cPsi2) = mmvar2.typ in
@@ -1770,7 +1799,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            *)
           instantiateMVar
             ( mmvar1.instantiation
-            , Root(Syntax.Loc.ghost, MVar(w, s'),Nil)
+            , Root(Syntax.Loc.ghost, MVar(w, s'), Nil, `explicit)
             , mmvar1.constraints.contents
             )
        | (_, _) ->
@@ -1780,10 +1809,12 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        end
 
     (* MVar-normal case *)
-    | (Root (_, MVar (Inst i, t), _tS), sM2) when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
-    | (sM2, (Root (_, MVar (Inst i, t), _tS))) when isPatSub t -> unifyMVarTerm cD0 cPsi i t sM2
+    | (Root (_, MVar (Inst i, t), _tS, _), sM2) when isPatSub t ->
+       unifyMVarTerm cD0 cPsi i t sM2
+    | (sM2, (Root (_, MVar (Inst i, t), _tS, _))) when isPatSub t ->
+       unifyMVarTerm cD0 cPsi i t sM2
 
-    | (Root (_, MVar (Inst i, t), _tS) as sM1, sM2) when isRenameSub cD0 t ->
+    | (Root (_, MVar (Inst i, t), _tS, _) as sM1, sM2) when isRenameSub cD0 t ->
        dprintf
          (fun p ->
            p.fmt "01 - craftMVTerm ... in cPsi = %a"
@@ -1800,7 +1831,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           addConstraint (i.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
-    | (sM2, ((Root (_, MVar (Inst i, t), _tS)) as sM1)) when isRenameSub cD0 t ->
+    | (sM2, ((Root (_, MVar (Inst i, t), _tS, _)) as sM1)) when isRenameSub cD0 t ->
        dprintf
          (fun p ->
            p.fmt "02 - craftMVTerm ... in cPsi = %a"
@@ -1818,15 +1849,15 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         end
 
 
-    | ((Root (_, MVar (Inst mmvar, _), _tS)) as sM1, sM2)
-    | (sM2, ((Root (_, MVar (Inst mmvar, _), _tS)) as sM1)) ->
+    | ((Root (_, MVar (Inst mmvar, _), _tS, _)) as sM1, sM2)
+    | (sM2, ((Root (_, MVar (Inst mmvar, _), _tS, _)) as sM1)) ->
        let id = next_constraint_id () in
        addConstraint (mmvar.constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
 
     (* MMVar-MMVar case *)
 
-    | (((Root (loc1, MMVar ((mmvar1, mt1), t1 as q1), Nil))),
-       (((Root (_, MMVar ((mmvar2, mt2), t2 as q2), Nil)))))
+    | (((Root (loc1, MMVar ((mmvar1, mt1), t1 as q1), Nil, _))),
+       (((Root (_, MMVar ((mmvar2, mt2), t2 as q2), Nil, _)))))
        when mmvar1.instantiation == mmvar2.instantiation ->
         dprnt "(010) MMVar-MMVar";
         (* by invariant of whnf:
@@ -1843,10 +1874,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        end
 
 
-    | ((Root (loc' , MMVar (((mmvar1, MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS')) as sM1,
-       (Root (loc  , MMVar  ((mmvar2, MShift 0), EmptySub), _tS) as sM2))
-    | ((Root (loc  , MMVar  ((mmvar2, MShift 0), EmptySub), _tS)) as sM2 ,
-       ((Root (loc', MMVar (((mmvar1, MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS')) as sM1)) ->
+    | ((Root (loc' , MMVar (((mmvar1, MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS', _)) as sM1,
+       (Root (loc  , MMVar  ((mmvar2, MShift 0), EmptySub), _tS, _) as sM2))
+    | ((Root (loc  , MMVar  ((mmvar2, MShift 0), EmptySub), _tS, _)) as sM2 ,
+       ((Root (loc', MMVar (((mmvar1, MShift 0) as mv), ((MSVar (_, _)) as  s1)), tS', _)) as sM1)) ->
        begin
          try
            dprnt "unifyMMVar -- EmptySub";
@@ -1859,7 +1890,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
              end;
            instantiateMMVar
              ( mmvar2.instantiation
-             , Root(loc', MMVar(mv, id), tS')
+             , Root(loc', MMVar(mv, id), tS', `explicit)
              , mmvar2.constraints.contents
              );
            dprintf
@@ -1878,8 +1909,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
              )
        end
 
-    | (((Root (_, MMVar ((i, mt1), t1), Nil))) as sM1,
-       (((Root (_, MMVar ((i', mt2), t2), Nil))) as sM2)) ->
+    | (((Root (_, MMVar ((i, mt1), t1), Nil, _))) as sM1,
+       (((Root (_, MMVar ((i', mt2), t2), Nil, _))) as sM2)) ->
        dprint (fun () -> "(case 0)");
        begin
          try
@@ -1909,28 +1940,28 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
     (* MMVar-normal case *)
     (* Special case to handle: ?N[] = ?M[#?S[]] *)
-    | ((Root (loc, MMVar (({instantiation; typ = ClTyp (MTyp _tP, Null); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
-       ((Root (loc', MVar (Offset u , EmptySub), tS')) as sM2))
-    | ((Root (loc', MVar (Offset u , EmptySub), tS')) as sM2,
-       ((Root (loc, MMVar (({instantiation; typ = ClTyp (MTyp _tP, Null); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1)) ->
+    | ((Root (loc, MMVar (({instantiation; typ = ClTyp (MTyp _tP, Null); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS, _)) as sM1,
+       ((Root (loc', MVar (Offset u , EmptySub), tS', _)) as sM2))
+    | ((Root (loc', MVar (Offset u , EmptySub), tS', _)) as sM2,
+       ((Root (loc, MMVar (({instantiation; typ = ClTyp (MTyp _tP, Null); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS, _)) as sM1)) ->
        begin
          try
            unifySub mflag cD0 cPsi s1 EmptySub;
-           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS'), !constraints)
+           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', `explicit), !constraints)
          with _ ->
            let id = next_constraint_id () in
            addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
     (* Special case to handle: M[#S[]] = ?M[#?S[]] *)
-    | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS)) as sM1,
-       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2))
-    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2) ,
-      ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((MSVar (_, _ )) as s1)), _tS)) as sM1))
-    | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((SVar (_, _, _)) as  s1)), _tS)) as sM1,
-       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2))
-    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS') as sM2) ,
-      ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((SVar (_, _ , _)) as s1)), _tS)) as sM1)) ->
+    | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((MSVar (_, _)) as  s1)), _tS, _)) as sM1,
+       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS', _) as sM2))
+    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS', _) as sM2) ,
+      ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((MSVar (_, _ )) as s1)), _tS, _)) as sM1))
+    | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((SVar (_, _, _)) as  s1)), _tS, _)) as sM1,
+       (Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS', _) as sM2))
+    | ((Root (loc', MVar (Offset u , ((SVar (_, _, _ )) as s2)), tS', _) as sM2) ,
+      ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; _}, MShift 0), ((SVar (_, _ , _)) as s1)), _tS, _)) as sM1)) ->
        let (_, tQ, cPsi) = Whnf.mctxMDec cD0 u in
        dprintf
          (fun p ->
@@ -1944,21 +1975,38 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
          try
            unifyDCtx1 mflag cD0 cPsi1 cPsi;unifyTyp mflag cD0 cPsi (tP,id) (tQ,id);
            unifySub mflag cD0 cPsi s1 s2;
-           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS'), !constraints)
+           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', `explicit), !constraints)
          with _ ->
            let id = next_constraint_id () in
            addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
        end
 
-    | ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; depend; _} as i, mt), s), _tS)) as tM1, tM2)
-    | (tM2, ((Root (loc, MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; depend; _} as i, mt), s), _tS)) as tM1)) ->
-        dprnt "[unifyTerm] MMVar with anything else";
+    | ( ( Root
+            ( loc
+            , MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; depend; _} as i, mt), s)
+            , _tS
+            , plicity)
+        ) as tM1
+      , tM2 )
+      | ( tM2
+        , (( Root
+               ( loc
+               , MMVar (({instantiation; cD; typ = ClTyp (MTyp tP, cPsi1); constraints; depend; _} as i, mt), s)
+               , _tS
+               , plicity )
+           ) as tM1 )
+        ) ->
         dprintf
           begin fun p ->
-          p.fmt "[unifyTerm] @[<v>cPsi = %a@,t' = %a@,mt = %a@]"
+          p.fmt "[unifyTerm] @[<v>MMVar with anything else\
+                 @,cPsi = %a\
+                 @,t' = %a\
+                 @,mt = %a\
+                 @,plicity = %a@]"
             (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi
             (P.fmt_ppr_lf_sub cD0 cPsi P.l0) s
             (P.fmt_ppr_lf_msub cD0 P.l0) mt
+            P.fmt_ppr_plicity plicity
           end;
         begin match () with
         | () when isId s && isMId mt && not (blockdeclInDctx cPsi) ->
@@ -1985,14 +2033,17 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            end
         | () when isRenameSub cD0 s && isPatMSub mt ->
            begin match ground_sub cD0 s, tM2, mt with
-           | false , Root (loc, MVar (Offset u , s'), tS), MShift k ->
+           | false , Root (loc, MVar (Offset u , s'), tS, _), MShift k ->
               let (_, tP0, cPsi0) = Whnf.mctxMDec cD0 u in
               let tP1' = Whnf.cnormTyp (tP, mt) in
               unifyDCtx1 mflag cD0 cPsi0 (Whnf.cnormDCtx (cPsi1, mt));
               unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
-              instantiateMMVar (instantiation, Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS), !constraints);
+              instantiateMMVar
+                ( instantiation
+                , Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS, `explicit)
+                , !constraints );
               unifySub  mflag cD0 cPsi0 s s'
-           | true , Root (loc, MVar (Offset u , s'), tS), MShift k ->
+           | true , Root (loc, MVar (Offset u , s'), tS, _), MShift k ->
               let (_, tP0, cPsi0) = Whnf.mctxMDec cD0 u in
               if Whnf.convSub s s' then
                 let tP1' = Whnf.cnormTyp (tP, mt) in
@@ -2004,7 +2055,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                   end;
                 unifyDCtx1 mflag cD0 cPsi0 (Whnf.cnormDCtx (cPsi1, mt));
                 unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
-                instantiateMMVar (instantiation, Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS), !constraints)
+                instantiateMMVar
+                  ( instantiation
+                  , Root(loc, MVar (Offset (u - k), Substitution.LF.id), tS, `explicit)
+                  , !constraints )
               else
                 begin
                   dprintf
@@ -2047,7 +2101,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
            addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm tM1, INorm tM2)))
         end
 
-    | (Root(_, h1,tS1) as sM1, (Root(_, h2, tS2) as sM2)) ->
+    | (Root(_, h1, tS1, _) as sM1, (Root(_, h2, tS2, _) as sM2)) ->
         dprnt "(020) Root-Root";
         dprintf
           begin fun p ->
@@ -2317,9 +2371,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       | (Obj tM, Obj tN)
         -> unifyTerm mflag cD0 cPsi (tM, id) (tN, id)
 
-      | (Head head, Obj tN)
-      | (Obj tN, Head head)
-        -> unifyTerm mflag cD0 cPsi (Root (Syntax.Loc.ghost, head, Nil), id) (tN, id)
+      | (Head head, Obj tN) | (Obj tN, Head head) ->
+         unifyTerm mflag cD0 cPsi
+           (Root (Syntax.Loc.ghost, head, Nil, `explicit), id)
+           (tN, id)
 
       | (Undef, Undef)
         -> ()
@@ -2798,13 +2853,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                       pp_print_string msg;
                     flush_str_formatter ()
                   in
-                  let getLoc tM1 =
-                    match tM1 with
-                    | Root(loc, _, _ ) -> loc
-                    | Lam (loc, _ , _ ) -> loc
-                    | Tuple (loc, _ ) -> loc
-                  in
-                  raise (GlobalCnstrFailure (getLoc (Whnf.norm (tM1, id)), cnstr_string))
+                  raise (GlobalCnstrFailure (loc_of_normal (Whnf.norm (tM1, id)), cnstr_string))
               end
          | Eqn (c_id, cD, cPsi, IHead h1, IHead h2)   ->
             let _ = solveConstraint c in

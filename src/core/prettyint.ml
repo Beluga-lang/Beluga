@@ -214,13 +214,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
           fprintf ppf "<%a>"
             (fmt_ppr_lf_tuple cD cPsi lvl) tuple
 
-       | LF.Root (_, h, LF.Nil) ->
-          fprintf ppf "%a"
-            (fmt_ppr_lf_head cD cPsi lvl) h
+       | LF.Clo(tM, s) ->
+          fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
-       | LF.Clo(tM, s) -> fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
+       | LF.Root (_, _, _, `implicit) when not !PC.printImplicit ->
+          fprintf ppf "_" (* XXX what to do about spines? -je *)
 
-       | LF.(Root (_, (Const cid as h), ms))  ->
+       | LF.Root (_, h, LF.Nil, _) ->
+          fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
+
+       | LF.(Root (_, (Const cid as h), ms, _))  ->
           let ms = deimplicitize_spine h ms in
           let TermS.Entry.({ name; _ }) = TermS.get cid in
           begin match Store.OpPragmas.getPragma name with
@@ -237,7 +240,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                (fmt_ppr_lf_spine cD cPsi 2)  ms
                (r_paren_if cond)
           end
-       | LF.Root (_, h, ms) ->
+       | LF.Root (_, h, ms, _) ->
           let ms = deimplicitize_spine h ms in
           let cond = lvl > 1 in
           fprintf ppf "%s%a %a%s"

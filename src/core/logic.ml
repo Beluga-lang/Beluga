@@ -142,8 +142,8 @@ end = struct
         let tM = LF.Lam (l, n, shiftNormal tN' k) in
         ignore (decr lR) ; tM
       end
-    | LF.Root (l, tH, tS) ->
-      LF.Root (l, shiftHead tH k, shiftSpine tS k)
+    | LF.Root (l, tH, tS, plicity) ->
+      LF.Root (l, shiftHead tH k, shiftSpine tS k, plicity)
     | LF.Clo (tN, s) ->
       LF.Clo (shiftNormal tN k, s)
     | LF.Tuple (l, tP) ->
@@ -239,7 +239,7 @@ module Convert = struct
     in match tA with
       | LF.Atom (_) as tA ->
         let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
-        LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil)
+        LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
       | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
          LF.Lam (
              Syntax.Loc.ghost, x,
@@ -648,7 +648,7 @@ module Solver = struct
   *)
   and matchAtom dPool cD (cPsi, k) (tA, s) sc =
     (* some shorthands for creating syntax *)
-    let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil) in
+    let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, `explicit) in
     let pvar k = LF.PVar (k, LF.Shift 0) in
     let mvar k = LF.MVar (LF.Offset k, LF.Shift 0) in
     let proj x k = LF.Proj (x, k) in
@@ -672,7 +672,14 @@ module Solver = struct
                   begin fun () ->
                   solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
                     begin fun (u, tS) ->
-                    sc (u, LF.Root (Syntax.Loc.ghost, LF.BVar (k - k'), fS (spineFromRevList tS)))
+                    let tM =
+                      LF.Root
+                        ( Syntax.Loc.ghost
+                        , LF.BVar (k - k')
+                        , fS (spineFromRevList tS)
+                        , `explicit )
+                    in
+                    sc (u, tM)
                     end
                   end
                 end
@@ -827,6 +834,7 @@ module Solver = struct
                 ( Syntax.Loc.ghost
                 , LF.Const (cidTerm)
                 , fS (spineFromRevList tS)
+                , `explicit
                 )
             in
             sc (u, tM)

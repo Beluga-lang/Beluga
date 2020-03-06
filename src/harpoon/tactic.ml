@@ -420,7 +420,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        match pat with
        | PatMetaObj (_, (_, LF.ClObj (cPsi, tM))) ->
           let c =
-            let LF.(MObj (Root (_, h, _))) = tM in
+            let LF.(MObj (Root (_, h, _, _))) = tM in
             match h with
             | LF.PVar (n, s) -> `pvar None
             | LF.(Proj (PVar (n, s), k)) -> `pvar (Some k)
@@ -579,14 +579,22 @@ let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   solve_with_new_comp_decl (CTypDecl (name, tau, false))
     (prepend_commands [By (i, name, tau)])
 
-let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t =
+let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : t =
   fun t s ->
   let open Comp in
-  B.Check.Comp.unify_suffices s.context.cD tau tau_args (Whnf.cnormCTyp s.goal);
+  let i_head = Comp.head_of_application i in
+  let _, (i', ttau_i) =
+    B.Check.Comp.genMApp
+      Loc.ghost
+      (fun _ -> true)
+      s.context.cD
+      (i, (tau_i, Whnf.m_id))
+  in
+  let tau_i' = Whnf.cnormCTyp ttau_i in
+  B.Check.Comp.unify_suffices s.context.cD tau_i' tau_args (Whnf.cnormCTyp s.goal);
   Theorem.remove_subgoal t s;
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
-  let i_head = Comp.head_of_application i in
   let subproofs =
     Misc.Function.flip List.mapi tau_args
       begin fun k tau ->
@@ -602,5 +610,5 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau : Comp.typ) : t 
       (Loc.ghost, tau, incomplete_proof Loc.ghost new_state)
       end
   in
-  suffices i subproofs
+  suffices i' subproofs
   |> Theorem.solve s

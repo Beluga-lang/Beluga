@@ -382,26 +382,28 @@ let getSchema cD ctxvar loc = match ctxvar with
 
 (* Eta-expansion of bound variables which have function type *)
 let etaExpandHead loc h tA =
-  let rec etaExpSpine k tS tA = begin match  tA with
+  let rec etaExpSpine k tS tA =
+    match  tA with
     | Int.LF.Atom _  -> (k, tS)
-
     | Int.LF.PiTyp (_ , tA') ->
-        let tN = Int.LF.Root (loc, Int.LF.BVar k, Int.LF.Nil) in
-          etaExpSpine (k+1)  (Int.LF.App(tN, tS)) tA'
-  end in
+       let tN = Int.LF.Root (loc, Int.LF.BVar k, Int.LF.Nil, `explicit) in
+       etaExpSpine (k+1)  (Int.LF.App(tN, tS)) tA'
+  in
 
-  let rec etaExpPrefix loc (tM, tA) = begin match tA with
+  let rec etaExpPrefix loc (tM, tA) =
+    match tA with
     | Int.LF.Atom _ -> tM
     | Int.LF.PiTyp ((Int.LF.TypDecl (x, _ ), _ ) , tA') ->
-        Int.LF.Lam (loc, x, etaExpPrefix loc (tM, tA'))
-  end in
+       Int.LF.Lam (loc, x, etaExpPrefix loc (tM, tA'))
+  in
 
   let (k, tS') = etaExpSpine 1 (Int.LF.Nil) tA in
-  let h'       =  begin match h with
-                    | Int.LF.BVar x -> Int.LF.BVar (x+k-1)
-                    | Int.LF.FVar _ -> h
-                  end  in
-    etaExpPrefix loc (Int.LF.Root(loc, h' , tS'), tA)
+  let h' =
+    match h with
+    | Int.LF.BVar x -> Int.LF.BVar (x+k-1)
+    | Int.LF.FVar _ -> h
+  in
+  etaExpPrefix loc (Int.LF.Root(loc, h' , tS', `explicit), tA)
 
 
 
@@ -1011,7 +1013,7 @@ and elTerm' recT cD cPsi r sP = match r with
       (* let s  = mkShift recT cPsi in *)
       let s = Substitution.LF.id in
       let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
-      let tR = Int.LF.Root (loc, Int.LF.Const c, tS)  in
+      let tR = Int.LF.Root (loc, Int.LF.Const c, tS, `explicit)  in
       begin
         try
           Unify.unifyTyp cD cPsi sQ sP ;
@@ -1030,8 +1032,8 @@ and elTerm' recT cD cPsi r sP = match r with
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, Substitution.LF.id) in
         begin
           try
-            (Unify.unifyTyp cD  cPsi sQ sP;
-             Int.LF.Root (loc, Int.LF.BVar x, tS))
+            Unify.unifyTyp cD  cPsi sQ sP;
+            Int.LF.Root (loc, Int.LF.BVar x, tS, `explicit)
           with
             | Unify.Failure msg ->
               throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1056,7 +1058,7 @@ and elTerm' recT cD cPsi r sP = match r with
               begin
                 try
                   Unify.unifyTyp cD cPsi sQ sP;
-                  Int.LF.Root (loc, Int.LF.FVar x, tS)
+                  Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)
                 with
                   | Unify.Failure msg ->
                     throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1075,13 +1077,13 @@ and elTerm' recT cD cPsi r sP = match r with
                    *  This will be enforced during abstraction.
                    *)
                   FVar.add x (Int.LF.Type tA);
-                  Int.LF.Root (loc, Int.LF.FVar x, tS)
+                  Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)
                 with NotPatSpine ->
                   (let _ = dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...") in
                    let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
                    let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                    add_fvarCnstr (tAvar, m, v);
-                   Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil))
+                   Int.LF.Root (loc, Int.LF.MVar (v, Substitution.LF.id), Int.LF.Nil, `explicit))
               end
             end
         | Pibox -> throw loc (UnboundName x)
@@ -1099,12 +1101,18 @@ and elTerm' recT cD cPsi r sP = match r with
           *  This will be enforced during abstraction.
           *)
          (* Potentially need to handle eta-expansion -bp *)
+
+         dprintf begin fun p ->
+           p.fmt "[elTerm'] reconstructing hole to implicit root at %a"
+             Loc.print_short loc
+           end;
+
          begin match recT with
          | Pi ->
             (* let u =  Whnf.newMVar (cPsi, tA) in
                Int.LF.Root (loc, Int.LF.MVar(u, Substitution.LF.id), tS) *)
             let u =  Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
-            Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS)
+            Int.LF.Root (loc, Int.LF.MVar(u, sshift), tS, `implicit)
          | Pibox ->
             begin match tA with
             | Int.LF.Atom (_, a, _ ) ->
@@ -1124,13 +1132,15 @@ and elTerm' recT cD cPsi r sP = match r with
                    let ssi' = Substitution.LF.invert ss' in
                    (* cPhi' |- ssi : cPhi *)
                    (* cPhi' |- [ssi]tQ    *)
-                   let u =  Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe in
+                   let u =
+                     Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe
+                   in
                    Int.LF.MMVar((u, Whnf.m_id), Substitution.LF.comp ss'  s_proj)
                  else
                    let u = Whnf.newMMVar None (cD, cPhi, tA')  Int.LF.Maybe in
                    Int.LF.MMVar ((u, Whnf.m_id), s_proj)
                in
-               Int.LF.Root (loc, h, tS)
+               Int.LF.Root (loc, h, tS, `implicit)
             | _ -> throw loc HolesFunction
             end
          end
@@ -1194,7 +1204,7 @@ and elTerm' recT cD cPsi r sP = match r with
            end;
          (* We do not check here that tP approx. [s']tP' --
           * this check is delayed to reconstruction *)
-         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil) in
+         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, `explicit) in
          begin
            try
              Unify.unifyTyp cD  cPsi (tQ', s'') sP ;
@@ -1275,7 +1285,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
               FCVar.add u (cD, Int.LF.Decl(u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
               (*The depend paramater here affects both mlam vars and case vars*)
-              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil)
+              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, `explicit)
            | _ when isProjPatSub s ->
               dprint (fun () -> "Synthesize domain for meta-variable " ^ (string_of_name u) );
               dprint (fun () -> "isProjPatSub ... " );
@@ -1341,7 +1351,7 @@ and elTerm' recT cD cPsi r sP = match r with
                 end;
 
               FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
-              Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil)
+              Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil, `explicit)
 
            | _ ->
 (*  TO BE ADDED, if we want to synthesize the type of meta-variables
@@ -1376,8 +1386,7 @@ and elTerm' recT cD cPsi r sP = match r with
              (* if s = substvar whose type is known *)
               let v = Whnf.newMMVar None (cD, cPsi, Int.LF.TClo sP) Int.LF.Maybe in
               add_fcvarCnstr (m, v);
-              Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), Substitution.LF.id), Int.LF.Nil)
-
+              Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), Substitution.LF.id), Int.LF.Nil, `explicit)
       end
 
 
@@ -1394,7 +1403,7 @@ and elTerm' recT cD cPsi r sP = match r with
 
         let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-        let tR = Int.LF.Root (loc, Int.LF.FPVar (p, s''), tS) in
+        let tR = Int.LF.Root (loc, Int.LF.FPVar (p, s''), tS, `explicit) in
           begin try
             Unify.unifyTyp cD cPsi sQ sP;
             tR
@@ -1439,7 +1448,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   | _ -> ()
                 in
                 FCVar.add p (cD, Int.LF.Decl(p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP,Substitution.LF.id)),  cPhi), Int.LF.Maybe));
-                Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil)
+                Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil, `explicit)
 
             | (Apx.LF.Nil, false) ->
                 (* cD ; cPsi |- #p[s] : sP *)
@@ -1481,7 +1490,7 @@ and elTerm' recT cD cPsi r sP = match r with
           begin
             try
               (Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP ;
-               Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS))
+               Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS, `explicit))
             with
             | Unify.Failure msg ->
                throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1533,7 +1542,7 @@ and elTerm' recT cD cPsi r sP = match r with
                   ( cD
                   , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Maybe))
                   );
-                Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex),  Int.LF.Nil)
+                Int.LF.Root (loc,  Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex), Int.LF.Nil, `explicit)
 
             | (false, Apx.LF.Nil) -> failwith "Not implemented"
                 (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP)  in *)
@@ -1640,12 +1649,9 @@ and elTerm' recT cD cPsi r sP = match r with
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s'), spine) ->
       begin try
         let (_, tA, cPhi) = Whnf.mctxMDec cD u in
-        let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET\n") in
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
-        let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET - ELABORATION elSub DONE \n") in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-        let _ = dprint (fun () -> "\n[elTerm] MVAR CASE - OFFSET - ELABORATION elSpine DONE \n") in
-        let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) in
+        let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, `explicit) in
         dprintf
           begin fun p ->
           p.fmt "cPsi = %a"
@@ -1682,10 +1688,13 @@ and elTerm' recT cD cPsi r sP = match r with
           begin match h with
               | Int.LF.BVar k ->
                   begin match Substitution.LF.bvarSub k s'' with
-                    | Int.LF.Head (Int.LF.BVar j) -> Int.LF.Root (loc, Int.LF.BVar j, tS)
-                    | Int.LF.Head (Int.LF.PVar (p,r'))   -> Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r' s''), tS)
+                  | Int.LF.Head (Int.LF.BVar j) ->
+                     Int.LF.Root (loc, Int.LF.BVar j, tS, `explicit)
+                  | Int.LF.Head (Int.LF.PVar (p,r')) ->
+                     Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r' s''), tS, `explicit)
                   end
-              | Int.LF.PVar (p, r) -> Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r s''), tS)
+              | Int.LF.PVar (p, r) ->
+                 Int.LF.Root (loc, Int.LF.PVar (p, Substitution.LF.comp r s''), tS, `explicit)
               (* | Int.LF.Proj (Int.LF.PVar (p,r), i) -> Int.LF.Root (loc, Int.LF *)
             end
 
@@ -1711,7 +1720,7 @@ and elTerm' recT cD cPsi r sP = match r with
         let (_, tA, cPhi) = Whnf.mctxPDec cD k in
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-        let tR = Int.LF.Root (loc, Int.LF.PVar (k, s''), tS) in
+        let tR = Int.LF.Root (loc, Int.LF.PVar (k, s''), tS, `explicit) in
         begin
           try
             Unify.unifyTyp cD cPsi sQ sP ;
@@ -1742,7 +1751,7 @@ and elTerm' recT cD cPsi r sP = match r with
       begin
         try
           Unify.unifyTyp cD cPsi sQ sP;
-          Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS)
+          Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, `explicit)
         with
           | Unify.Failure msg ->
            throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1769,7 +1778,7 @@ and elTerm' recT cD cPsi r sP = match r with
           begin
             try
               Unify.unifyTyp cD cPsi sQ sP;
-              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS)
+              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS, `explicit)
             with
               | Unify.Failure msg ->
                 throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1807,12 +1816,20 @@ and elTerm' recT cD cPsi r sP = match r with
               | Int.LF.BVar y ->
                   begin match Substitution.LF.bvarSub y s'' with
                     | Int.LF.Head (Int.LF.BVar x) ->
-                        Int.LF.Root (loc, Int.LF.Proj(Int.LF.BVar x, k), tS)
+                        Int.LF.Root (loc, Int.LF.Proj(Int.LF.BVar x, k), tS, `explicit)
                     | Int.LF.Head (Int.LF.PVar (p,r'))   ->
-                        Int.LF.Root (loc, Int.LF.Proj(Int.LF.PVar (p, Substitution.LF.comp r' s''), k), tS)
+                       Int.LF.Root
+                         ( loc
+                         , Int.LF.Proj( Int.LF.PVar (p, Substitution.LF.comp r' s''), k)
+                         , tS
+                         , `explicit )
                   end
               | Int.LF.PVar (p, r) ->
-                  Int.LF.Root (loc, Int.LF.Proj(Int.LF.PVar (p, Substitution.LF.comp r s''), k), tS)
+                 Int.LF.Root
+                   ( loc
+                   , Int.LF.Proj(Int.LF.PVar (p, Substitution.LF.comp r s''), k)
+                   , tS
+                   , `explicit )
             end
 
       with _   ->
@@ -1950,40 +1967,42 @@ and elClosedTerm' recT cD cPsi r = match r with
       (* let s  = mkShift recT cPsi in *)
       let s = Substitution.LF.id in
       let (tS, sQ ) = elSpineI loc recT cD cPsi spine i (tA, s)   in
-        (Int.LF.Root (loc, Int.LF.Const c, tS), sQ)
+        (Int.LF.Root (loc, Int.LF.Const c, tS, `explicit), sQ)
   | Apx.LF.Root (loc, Apx.LF.BVar x, spine) ->
       let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
       let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, Substitution.LF.id) in
-        (Int.LF.Root (loc, Int.LF.BVar x, tS), sQ)
+        (Int.LF.Root (loc, Int.LF.BVar x, tS, `explicit), sQ)
 
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s), spine) ->
-      begin try
-        let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
-        let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
-        let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-          (Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS) , sQ)
-      with Error.Violation msg  ->
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+     begin
+       try
+         let (_ , tA, cPhi) = Whnf.mctxMDec cD u in
+         let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
+         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
+         (Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, `explicit) , sQ)
+       with Error.Violation msg  -> (* XXX this is probably bad -je *)
+         dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
          throw loc CompTypAnn
-      end
+     end
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.Offset p, s'), spine) ->
-      begin try
-        let (_, tA, cPhi) = Whnf.mctxPDec cD p in
-        let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
-        let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-          (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS) , sQ)
-      with Error.Violation msg  ->
-        dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+     begin
+       try
+         let (_, tA, cPhi) = Whnf.mctxPDec cD p in
+         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
+         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
+         (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS, `explicit) , sQ)
+       with Error.Violation msg  -> (* XXX this is probably bad -je *)
+         dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
          throw loc CompTypAnn
-      end
+     end
 
 
   | Apx.LF.Root (loc, Apx.LF.PVar (Apx.LF.MInst (Int.LF.PObj (Int.LF.PVar (p0,s0)), Int.LF.ClTyp (Int.LF.PTyp tA, cPhi)), s'), spine) ->
       begin try
         let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
         let (tS, sQ ) = elSpine loc recT cD cPsi spine (tA, s'')  in
-          (Int.LF.Root(loc, Int.LF.PVar (p0, Substitution.LF.comp s0 s''), tS)  , sQ)
+          (Int.LF.Root(loc, Int.LF.PVar (p0, Substitution.LF.comp s0 s''), tS, `explicit)  , sQ)
       with Error.Violation msg  ->
         dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
          throw loc CompTypAnn
@@ -2010,7 +2029,7 @@ and elClosedTerm' recT cD cPsi r = match r with
           throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, Substitution.LF.id)))
        in
       let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-        (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS) , sQ)
+        (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, `explicit) , sQ)
 
   | Apx.LF.Root (loc,  Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p,t), proj),  spine) ->
       begin match Whnf.mctxPDec cD p with
@@ -2023,7 +2042,7 @@ and elClosedTerm' recT cD cPsi r = match r with
               with _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
             in
             let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS) , sQ)
+              (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,t'), k), tS, `explicit) , sQ)
         | _  ->
            dprintf
              begin fun pr ->
@@ -2043,7 +2062,7 @@ and elClosedTerm' recT cD cPsi r = match r with
               begin try
                 let sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
                 let (tS, sQ) = elSpine loc recT cD  cPsi spine sA in
-            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), k), tS) , sQ)
+            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p,s), k), tS, `explicit) , sQ)
               with _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
               end
 
@@ -2714,7 +2733,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
                begin
                  try
                    Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id);
-                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS)));
+                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)));
                    solve_fvarCnstr recT cD cnstrs
                  with
                  | Unify.Failure msg ->
@@ -2743,7 +2762,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
                  try
                    Unify.unifyTyp cD cPsi sQ (tP, Substitution.LF.id) ;
                    Unify.unify cD cPsi
-                     (Int.LF.Root (loc, Int.LF.FVar x, tS), Substitution.LF.id)
+                     (Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit), Substitution.LF.id)
                      (tR, Substitution.LF.id);
                    (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
                    solve_fvarCnstr recT cD cnstrs
@@ -2782,7 +2801,7 @@ let solve_fcvarCnstr cnstrs =
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
-       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil))))
+       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, `explicit))))
     | Apx.LF.(Root (loc, FPVar (x, s), spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
        let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _))) =
          lookup_fcvar loc x
@@ -2790,7 +2809,7 @@ let solve_fcvarCnstr cnstrs =
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
        let (tS, _) = elSpine loc Pibox Int.LF.(mmvar.cD) cPsi spine (tA, s'') in
-       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS))))
+       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS, `explicit))))
   in
   List.iter solve_one cnstrs
 

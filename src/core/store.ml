@@ -1154,12 +1154,13 @@ module CVar = struct
     in
     go "" cvars
 
-  let of_mctx (cD : Int.LF.mctx) : t =
+  let of_mctx f (cD : Int.LF.mctx) : t =
     let f d v =
       let open Int.LF in
       match d with
-      | Decl (u, _, Maybe) -> mk_entry u `implicit |> extend v
-      | Decl (u, _, _) -> mk_entry u `explicit |> extend v
+      | Decl (u, _, dep) -> mk_entry u (f dep) |> extend v
+      | DeclOpt _ ->
+         Error.violation "[of_mctx] DeclOpt impossible"
     in
     List.fold_right f (Context.to_list_rev cD) (create ())
 

@@ -201,7 +201,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
     let paren s = lvl > 0 && true in
     begin match head with
     | LF.PVar (_,  x, s) ->
-       fprintf ppf "%s#%s%a%s"
+       fprintf ppf "%s%s%a%s"
          (l_paren_if (paren s))
          (Id.render_name x)
          (Maybe.print
@@ -229,7 +229,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
 	       (fmt_ppr_lf_proj lvl) p
 
     | LF.Proj (_, LF.PVar (_,  x, s), p) ->
-	     fprintf ppf "#%s.%a%a"
+	     fprintf ppf "%s.%a%a"
          (Id.render_name x)
 	       (fmt_ppr_lf_proj lvl) p
          (fmt_ppr_lf_sub_opt lvl) s
@@ -269,7 +269,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
   and fmt_ppr_lf_sub ?(pp_empty = fun _ _ -> false) lvl (ppf : Format.formatter) (start, tms : LF.sub) =
 	  let print_tm = fmt_ppr_lf_normal 1 in
     let print_svar s s_opt =
-      fprintf ppf "#%s%a"
+      fprintf ppf "%s%a"
         (Id.render_name s)
         (Maybe.print
            (fun ppf sub ->

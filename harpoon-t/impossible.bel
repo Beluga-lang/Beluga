@@ -1,7 +1,0 @@
-LF empty : type = ;
-LF foo : type = ;
-
-% Eliminate [⊢ empty] to get [⊢ foo] using `impossible`
-proof bot-elim : [⊢ empty] → [⊢ foo] =
-intros { {X : [⊢empty]} | ; impossible [⊢ X] } ;
-                    

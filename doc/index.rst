@@ -1,11 +1,14 @@
-Welcome to Beluga's documentation!
-==================================
+.. _index:
+
+Beluga/Harpoon user's manual
+============================
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-
+   common/index
+   harpoon/index
+   beluga/index
 
 Indices and tables
 ==================

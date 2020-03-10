@@ -137,7 +137,7 @@ let takes_all_opt (infos : string list OptInfo.unchecked list) : string list t =
   in
   make infos None build_arg_parser
 
-let impure_opt (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
+let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in
   let build_arg_parser info res_ref _ =
@@ -150,13 +150,13 @@ let impure_opt (impure_fn : unit -> 'a) (infos : 'a OptInfo.unchecked list) : 'a
   in
   make infos (Some arity) build_arg_parser
 
-let help_opt (impure_fn : (string -> Format.formatter -> unit -> unit) -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
+let help_opt0 (print_fn : (string -> Format.formatter -> unit -> unit) -> 'a) (infos : 'a OptInfo.unchecked list) : 'a t =
   let open OptInfo in
   let arity = 0 in
   let arg_parser info res_ref build_help_string =
     function
     | [] ->
-       res_ref := Ok (impure_fn build_help_string)
+       res_ref := Ok (print_fn build_help_string)
     | args ->
        res_ref := Error (InvalidArgLength (OptName.to_string info.name, arity, List.length args))
   in

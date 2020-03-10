@@ -33,8 +33,8 @@ val string_opt1 : string OptInfo.unchecked list -> string t
 val switch_opt : unit OptInfo.unchecked list -> bool t
 val takes_all_opt : string list OptInfo.unchecked list -> string list t
 
-val impure_opt : (unit -> 'a) -> 'a OptInfo.unchecked list -> 'a t
-val help_opt : (help_printer -> 'a) -> 'a OptInfo.unchecked list -> 'a t
+val impure_opt0 : (unit -> 'a) -> 'a OptInfo.unchecked list -> 'a t
+val help_opt0 : (help_printer -> 'a) -> 'a OptInfo.unchecked list -> 'a t
 val rest_args : (string list -> unit) -> unit t
 
 val (<$) : ('a -> 'b) -> 'a t -> 'b t

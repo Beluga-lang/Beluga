@@ -1,4 +1,4 @@
-.PHONY: clean test all-test build
+.PHONY: clean test all-test build doc
 
 build:
 	dune build
@@ -15,3 +15,6 @@ all-test: test
 
 clean:
 	dune clean
+
+doc:
+	make -C doc html

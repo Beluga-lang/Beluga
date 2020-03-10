@@ -19,6 +19,9 @@ declare STOP_ON_FAILURE=""
 
 declare -a BELUGA_FLAGS=()
 
+declare -r ROOTDIR=${ROOTDIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)}
+declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
+
 # Path to the Beluga executable to test.
 declare -r EXE=${EXE:-"./bin/beluga"}
 
@@ -31,19 +34,28 @@ declare -r REPLAY=${REPLAY:-"./bin/replay"}
 # Path to the Harpoon to test.
 declare -r HARPOON=${HARPOON:-"./bin/harpoon"}
 
-declare -r TESTDIR=${TESTDIR:-"./t/code"}
+declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
+declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
-declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"./t/interactive"}
-declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"./t/harpoon"}
+declare -r INTERACTIVE_TESTDIR=${INTERACTIVE_TESTDIR:-"${TESTROOTDIR}/interactive"}
+declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${TESTROOTDIR}/harpoon"}
 
 declare -i TIMEOUT=${TIMEOUT:-10}
 
-die () {
+function rsync_test_artifacts {
+    ln -s "${ROOTDIR}/bin/" "${TEMPDIR}/bin"
+    rsync -ak "${ROOTDIR}/.admissible-fail" "${TEMPDIR}/.admissible-fail"
+    rsync -ak "${ROOTDIR}/run_harpoon_test.sh" "${TEMPDIR}/run_harpoon_test.sh"
+    rsync -ak "${ROOTDIR}/${TESTROOTDIR}/" "${TEMPDIR}/${TESTROOTDIR}"
+    rsync -ak "${ROOTDIR}/${EXAMPLEDIR}/" "${TEMPDIR}/${EXAMPLEDIR}"
+}
+
+function die {
     echo "Fatal error: " "$@" >&2
     exit 1
 }
 
-require_program_exists () {
+function require_program_exists {
     command -v "$1" >/dev/null 2>&1 || die "program" "$1" "could not found."
 }
 
@@ -85,12 +97,18 @@ declare -Ar TYPE_TO_C=(
 )
 
 function main {
+    cd "${ROOTDIR}"
     parse_opts "$@"
     if [[ -t 1 || -n "${FORCE_COLOR_OUTPUT}" ]]; then
         set_colors
     fi
     print_paths
+    rsync_test_artifacts
+    cd "${TEMPDIR}"
+    echo "${TEMPDIR}"
     do_testing
+    cd "${ROOTDIR}"
+    echo "${TEMPDIR}"
 }
 
 function parse_opts {

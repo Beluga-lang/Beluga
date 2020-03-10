@@ -3,4 +3,4 @@ Ill-typed expression.
     Expected type:
       pf ?Z[^0][]
     Actual type:
-      pf (conj A[] Y)
+      pf (conj _ _)

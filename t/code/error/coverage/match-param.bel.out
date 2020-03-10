@@ -2,6 +2,8 @@
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
-(1)  ;  |- [g, x1 |- cons (elam (\x. M)) L]
+(1)
+M : (g, y : term, x : term |- term), L : (g, y : term |- fvlist) ;  |-
+  [g, x1 |- cons (elam (\x. M)) L]
 
 ##

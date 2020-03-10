@@ -2,6 +2,8 @@
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
-(1)  ;  |- [ |- m_step X3 X4]
+(1)
+N1 : ( |- term), V : ( |- value N1), X3 : ( |- step (succ N1) X1),
+X4 : ( |- mstep X1 M) ;  |- [ |- m_step X3 X4]
 
 ##

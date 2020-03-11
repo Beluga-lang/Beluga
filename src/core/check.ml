@@ -923,7 +923,7 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Hole " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
        let open Holes in
-       match get (by_id id) with
+       begin match get (by_id id) with
        | None ->
           let info = { Holes.cG; compGoal = (tau, t); compSolution = None } in
           let h = { Holes.loc ; name ; cD ; info } in
@@ -940,6 +940,16 @@ module Comp = struct
              match compSolution with
              | None -> ()
              | Some e -> checkW cD (cG, cIH) total_decs e (tau, t)
+       end
+    | e, ttau ->
+       dprintf begin fun p ->
+         p.fmt "[checkW] @[<v>fallthrough for\
+                @,e = @[%a@]\
+                @,tau = @[%a@]@]"
+           P.(fmt_ppr_cmp_exp_chk cD cG l0) e
+           P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
+         end;
+       Error.violation "[checkW] fallthrough"
 
   and check cD (cG, cIH) total_decs e (tau, t) =
     dprintf
@@ -1139,6 +1149,19 @@ module Comp = struct
     | PatAnn (loc, pat, tau, _) ->
        checkPattern cD cG pat (tau, C.m_id);
        (loc, (tau, C.m_id))
+    | PatFVar (_, x) ->
+       dprintf begin fun p ->
+         p.fmt "[synPattern] PatFVar %a impossible"
+           Id.print x
+         end;
+       Error.violation "[synPattern] PatFVar impossible"
+    | _ ->
+       dprintf begin fun p ->
+         p.fmt "[synPattern] @[<v>fallthrough for\
+                @,pat = @[%a@]@]"
+           P.(fmt_ppr_cmp_pattern cD cG l0) pat
+         end;
+       Error.violation "[synPattern] fallthrough"
 
   and synPatSpine cD cG pat_spine (tau, theta) = match pat_spine with
     | PatNil  -> (tau, theta)

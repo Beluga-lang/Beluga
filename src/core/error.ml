@@ -2,8 +2,12 @@ open Support
 
 module Loc = Location
 
+open Debug.Fmt
+
 exception Violation of string
-let violation msg = raise (Violation msg)
+let violation msg =
+  Debug.printf (fun p -> p.fmt "[violation] %s" msg);
+  raise (Violation msg)
 
 exception NotImplemented of Loc.t option * string
 let not_implemented loc msg = raise (NotImplemented (Some loc, msg))

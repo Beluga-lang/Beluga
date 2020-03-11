@@ -80,6 +80,8 @@ let makeFunctions flags =
 let makeFunctions' flags =
   (printf flags, print flags, prnt flags)
 
+let printf f = printf 1 f
+
 let indented dprintf n f =
   dprintf
     (fun p ->

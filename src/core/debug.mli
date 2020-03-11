@@ -73,3 +73,5 @@ val flag : int -> bool
     destroys the backtrace.
  *)
 val indented : Fmt.fmt io io -> int -> (unit -> 'a) -> 'a
+
+val printf : Fmt.fmt io -> unit

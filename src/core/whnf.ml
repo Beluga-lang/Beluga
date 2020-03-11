@@ -244,10 +244,10 @@ and lowerMMVar cD = function
 
 (*************************************)
 
-(* mvar_dot1 psihat t = t'
+(* mvar_dot1 t = t'
    Invariant:
 
-   If  cO ;  cD |- t : D'
+   If  cD |- t : cD'
 
    then t' = u. (mshift t 1)
        and  for all A s.t.  D' ; Psi |- A : type

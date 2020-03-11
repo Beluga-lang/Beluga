@@ -49,6 +49,11 @@ let _ =
       end
     end
 
+type gen_pat_var_strategy = Id.name -> int -> Comp.pattern
+
+let withPatVar name k = Comp.PatVar (Loc.ghost, k)
+let withPatFVar name k = Comp.PatFVar (Loc.ghost, name)
+
 (* ****************************************************************************** *)
 (* Coverage problem *)
 
@@ -2219,12 +2224,15 @@ let rec best_cand (cD, mv_list) k cD_tail =
 
    if cD |- [t] tau_v
    then cD0; cG0 |- pS : [t]tau_v > ttau
+
+   The number k is used so that the pattern program variables that are
+   generated contain the correct index in cG.
  *)
-let rec genPattSpine names =
+let rec genPattSpine names mk_pat_var k =
   function
   | Comp.TypArr (_, tau1, tau2), t ->
      let pv1 = NameGen.(var tau1 |> renumber names) in
-     let pat1 = Comp.PatFVar (Loc.ghost, pv1) in
+     let pat1 = mk_pat_var pv1 k in
 
      let tau_p = Whnf.cnormCTyp (tau1, t) in
 
@@ -2236,7 +2244,7 @@ let rec genPattSpine names =
        end;
 
      let cG, pS, ttau =
-       genPattSpine (pv1 :: names) (tau2, t)
+       genPattSpine (pv1 :: names) mk_pat_var (k + 1) (tau2, t)
      in
      ( LF.Dec (cG, Comp.CTypDecl (pv1, tau_p, false))
      , Comp.PatApp (Loc.ghost, pat1, pS)
@@ -2263,7 +2271,7 @@ let rec genPattSpine names =
          )
      in
      let cG, pS, ttau0 =
-       genPattSpine names (tau, LF.MDot (LF.CObj (cPsi'), t))
+       genPattSpine names mk_pat_var k (tau, LF.MDot (LF.CObj (cPsi'), t))
      in
      ( cG
      , Comp.PatApp (Loc.ghost, pat1, pS)
@@ -2282,7 +2290,7 @@ let rec genPattSpine names =
          )
      in
      let cG, pS, ttau0 =
-       genPattSpine (u :: names)
+       genPattSpine (u :: names) mk_pat_var k
          (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t))
      in
      (cG, Comp.PatApp (Loc.ghost, pat1, pS), ttau0)
@@ -2304,7 +2312,7 @@ let rec genPattSpine names =
      let sO = LF.ClObj (Context.dctxToHat cPsi', LF.SObj s) in
      let pat = Comp.PatMetaObj (Loc.ghost , (Loc.ghost, sO)) in
      let cG, pS, ttau0 =
-       genPattSpine (u :: names) (tau, LF.MDot (sO, t))
+       genPattSpine (u :: names) mk_pat_var k (tau, LF.MDot (sO, t))
      in
      (cG, Comp.PatApp (Loc.ghost, pat, pS), ttau0)
 
@@ -2323,7 +2331,7 @@ let rec genPattSpine names =
     The given input list of names are all names in scope with which
     generated names will be guaranteed not to shadow/conflict.
  *)
-let genPatt names (cD_p, tau_v) (c, tau_c) =
+let genPatt names mk_pat_var (cD_p, tau_v) (c, tau_c) =
   dprintf
     begin fun p ->
     p.fmt "[genPatt] @[<v>generating spine for constructor %s@,\
@@ -2333,7 +2341,7 @@ let genPatt names (cD_p, tau_v) (c, tau_c) =
       (P.fmt_ppr_cmp_typ cD_p P.l0) tau_c
       (P.fmt_ppr_lf_mctx P.l0) cD_p
     end;
-  let cG, pS, ttau = genPattSpine names (tau_c, Whnf.m_id) in
+  let cG, pS, ttau = genPattSpine names mk_pat_var 1 (tau_c, Whnf.m_id) in
   let pat = Comp.PatConst (Loc.ghost, c, pS) in
   dprintf
     begin fun p ->
@@ -2401,11 +2409,11 @@ let genPatt names (cD_p, tau_v) (c, tau_c) =
        "WARNING: Generation of pattern encountered left-over constraints in higher-order unification\n";
      raise e
 
-let genAllPatt names ((cD_v, tau_v) : LF.mctx * Comp.typ) =
+let genAllPatt names mk_pat_var ((cD_v, tau_v) : LF.mctx * Comp.typ) =
   Maybe.filter_map
-    (fun (c, tau_c) -> genPatt names (cD_v, tau_v) (c, tau_c))
+    (fun (c, tau_c) -> genPatt names mk_pat_var (cD_v, tau_v) (c, tau_c))
 
-let genPatCGoals names (cD : LF.mctx) tau =
+let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
   let remap_cltyp_to_covpatt loc f =
     map_inside
       begin fun (CovGoal (cPsi', tR, sA')) ->
@@ -2439,8 +2447,8 @@ let genPatCGoals names (cD : LF.mctx) tau =
      let pat =
        Comp.PatPair
          ( Loc.ghost
-         , Comp.PatFVar (Loc.ghost, pv1)
-         , Comp.PatFVar (Loc.ghost, pv2)
+         , mk_pat_var pv1 2
+         , mk_pat_var pv2 1
          )
      in
      [(cD, (cG1', pat, (tau, Whnf.m_id)), Whnf.m_id)]
@@ -2501,7 +2509,7 @@ let genPatCGoals names (cD : LF.mctx) tau =
        in
        List.map f constructors
      in
-     let r = (genAllPatt names (cD, tau) ctau_list) in
+     let r = genAllPatt names mk_pat_var (cD, tau) ctau_list in
      dprintf
        begin fun p ->
        p.fmt "[genPatCGoals] @[<v>generated %d cases for type @[%a@]:@,\
@@ -2778,7 +2786,7 @@ let rec best_pv_cand' (cD, cG) pvlist (l, bestC) =
   | x :: pvlist ->
      let cov_goals' =
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
-       genPatCGoals names cD (lookup cG x)
+       genPatCGoals names withPatFVar cD (lookup cG x)
      in
      let l' = List.length cov_goals' in
      if l > l'
@@ -2791,7 +2799,7 @@ let best_pv_cand names (cD, cG) (x :: pvlist) =
       begin fun (cD', (cG', pat, tau_p), t) ->
       (cD', (Context.append (Whnf.cnormGCtx (cG, t)) cG', pat, tau_p), t)
       end
-      (genPatCGoals names cD (lookup cG x))
+      (genPatCGoals names withPatFVar cD (lookup cG x))
   in
   dprintf
     begin fun p ->
@@ -3210,7 +3218,7 @@ let rec check_empty_comp names cD = function
   | LF.Dec (cG, Comp.CTypDecl (_, tau, _)) ->
      begin
        try
-         let cov_goals' = genPatCGoals names cD tau in
+         let cov_goals' = genPatCGoals names withPatFVar cD tau in
          match cov_goals' with
          | [] -> true
          | _ -> check_empty_comp names cD cG
@@ -3375,7 +3383,7 @@ let covers problem projObj =
 let is_impossible cD tau =
   (* Use an empty list of names here because we don't care about
      whether the generated pattern variables make sense. *)
-  Misc.List.null (genPatCGoals [] cD tau)
+  Misc.List.null (genPatCGoals [] withPatFVar cD tau)
 
 let process problem projObj =
   reset_open_cov_problems ();

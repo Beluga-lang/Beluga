@@ -172,7 +172,7 @@ let generate_pattern_coverage_goals
   let names =
     Context.(names_of_mctx g.context.cD @ names_of_gctx g.context.cG)
   in
-  B.Coverage.genPatCGoals names g.context.cD (B.Total.strip tau)
+  B.Coverage.(genPatCGoals names withPatVar g.context.cD (B.Total.strip tau))
 
 let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
   let open B in

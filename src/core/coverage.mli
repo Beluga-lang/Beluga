@@ -15,6 +15,11 @@ type cov_goal =
 
 type 'a inside = LF.mctx * 'a * LF.msub
 
+type gen_pat_var_strategy
+
+val withPatFVar : gen_pat_var_strategy
+val withPatVar : gen_pat_var_strategy
+
 val map_inside : ('a -> 'b) -> 'a inside -> 'b inside
 
 exception Error of Syntax.Loc.t * error
@@ -141,11 +146,13 @@ val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ * int ->
     that generated names do not shadow.
  *)
 val genPatt : Id.name list ->
+              gen_pat_var_strategy ->
               LF.mctx * Comp.typ ->
               Id.cid_comp_typ * Comp.typ ->
               (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
 val genPatCGoals    : Id.name list ->
+                      gen_pat_var_strategy ->
                       LF.mctx -> Comp.typ ->
                       (Comp.gctx * Comp.pattern * Comp.tclo) inside list
 

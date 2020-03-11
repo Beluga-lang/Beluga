@@ -306,7 +306,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
               Context.(names_of_mctx cD0 @ names_of_gctx cG0)
             in
             let cgs =
-              Cover.genPatCGoals names cD0 tau
+              Cover.(genPatCGoals names withPatVar cD0 tau)
               |> List.map
                    (Cover.(map_inside (fun (cG, pat, tau) -> CovPatt (cG, pat, tau))))
             in

@@ -2347,7 +2347,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
             variables are computational only.
           *)
          let names = Context.(names_of_gctx cG) in
-         match Coverage.genPatt names (cD, tau_i) (cid, tau_c) with
+         match Coverage.(genPatt names withPatVar (cD, tau_i) (cid, tau_c)) with
          | None -> assert false (* TODO throw error *)
          | Some p -> p
        in

@@ -21,6 +21,7 @@ declare -a BELUGA_FLAGS=()
 
 declare -r ROOTDIR=${ROOTDIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)}
 declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
+declare SKIP_RSYNC=0
 
 # Path to the Beluga executable to test.
 declare -r EXE=${EXE:-"./bin/beluga"}
@@ -103,12 +104,16 @@ function main {
         set_colors
     fi
     print_paths
-    rsync_test_artifacts
-    cd "${TEMPDIR}"
-    echo "${TEMPDIR}"
-    do_testing
-    cd "${ROOTDIR}"
-    echo "${TEMPDIR}"
+    if [ ${SKIP_RSYNC} -eq 1 ] ; then
+        do_testing
+    else
+        rsync_test_artifacts
+        cd "${TEMPDIR}"
+        echo "${TEMPDIR}"
+        do_testing
+        cd "${ROOTDIR}"
+        echo "${TEMPDIR}"
+    fi
 }
 
 function parse_opts {
@@ -128,6 +133,7 @@ function parse_opts {
                 ONLY_EXAMPLES="true"
                 ;;
             --reset)
+                SKIP_RSYNC=1
                 RESET_OUT_FILES="true"
                 ;;
             --interactive)

@@ -39,22 +39,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.DDec (cPsi', LF.TypDecl (n, _))
       | LF.DDec (cPsi', LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
 
-  let rec get_names_mctx : LF.mctx -> Id.name list = function
-    | LF.Empty -> []
-    | LF.Dec (cD', LF.Decl (n, _, _))
-      | LF.Dec (cD', LF.DeclOpt n) -> n :: get_names_mctx cD'
-
-  let rec get_names_gctx : Comp.gctx -> Id.name list = function
-    | LF.Empty -> []
-    | LF.Dec (cG', Comp.CTypDecl (n, _, _ ))
-      | LF.Dec (cG', Comp.CTypDeclOpt n) -> n :: get_names_gctx cG'
-
   let fresh_name_dctx (cPsi : LF.dctx) : Id.name -> Id.name =
     Id.gen_fresh_name (get_names_dctx cPsi)
   let fresh_name_mctx (cD : LF.mctx) : Id.name -> Id.name =
-    Id.gen_fresh_name (get_names_mctx cD)
+    Id.gen_fresh_name (Context.names_of_mctx cD)
   let fresh_name_gctx (cG : Comp.gctx) : Id.name -> Id.name  =
-    Id.gen_fresh_name (get_names_gctx cG)
+    Id.gen_fresh_name (Context.names_of_gctx cG)
 
   let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl = function
     | LF.Decl (n, ct, dep) ->
